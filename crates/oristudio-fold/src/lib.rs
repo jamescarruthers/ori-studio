@@ -37,6 +37,7 @@ pub mod pattern;
 pub mod refusal;
 pub mod sheet;
 pub mod state;
+pub mod turn;
 pub mod view;
 
 pub use fold::{
@@ -47,6 +48,7 @@ pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
 pub use refusal::{Fix, Flap, FoldRefusal, NearMissCause, Refused, Side};
 pub use sheet::{Sheet, SheetShape};
 pub use state::{State, StateParts};
+pub use turn::TurnAxis;
 pub use view::{Direction, StartSide, View};
 
 /// The engine's behaviour version: bumped when the same inputs can land a
