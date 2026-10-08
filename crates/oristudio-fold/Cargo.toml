@@ -1,0 +1,39 @@
+[package]
+name = "oristudio-fold"
+version.workspace = true
+publish.workspace = true
+edition.workspace = true
+# Original work: the Fold workspace's engine. A flat folded state (crease
+# pattern, convex faces, isometries, pairwise layer order, view), the one
+# validating constructor, and the plain fold with its precrease, refold, unfold,
+# turn-over and rotate. The Fold spike under artifacts/fold-spike/core was the
+# reference for behaviour; no code is ported from it, Beloch, Flat-Folder or
+# Oriedita.
+license = "MIT OR Apache-2.0"
+description = "The Fold workspace engine for Ori Studio: flat folded states and the plain fold"
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["origami", "folding", "layer-order"]
+categories = ["algorithms", "mathematics"]
+include = [
+    "Cargo.toml",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "README.md",
+    "src/**",
+    "tests/**",
+    "examples/**",
+]
+
+[lints]
+workspace = true
+
+[dependencies]
+oristudio-geometry = { path = "../oristudio-geometry" }
+oristudio-layer-order = { path = "../oristudio-layer-order" }
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

@@ -3433,6 +3433,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "oristudio-fold"
+version = "0.5.2"
+dependencies = [
+ "oristudio-geometry",
+ "oristudio-layer-order",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "oristudio-geometry"
 version = "0.5.2"
 dependencies = [

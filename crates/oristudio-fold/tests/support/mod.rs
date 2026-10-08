@@ -1,0 +1,114 @@
+//! Shared test helpers: lines, sides, folds that must land, and lookups by
+//! sheet point.
+
+#![allow(dead_code)]
+
+use oristudio_fold::{
+    CreaseKind, Direction, FaceId, Folded, Letter, PlainFold, Refused, Seed, Side, State,
+};
+use oristudio_geometry::Line;
+
+pub type Point = [f64; 2];
+
+pub const V: CreaseKind = CreaseKind::Folded(Letter::Valley);
+pub const M: CreaseKind = CreaseKind::Folded(Letter::Mountain);
+
+/// The vertical line `x = c`.
+pub fn x_eq(c: f64) -> Line {
+    Line::new([1.0, 0.0], c).unwrap_or_else(|| unreachable!())
+}
+
+/// The horizontal line `y = c`.
+pub fn y_eq(c: f64) -> Line {
+    Line::new([0.0, 1.0], c).unwrap_or_else(|| unreachable!())
+}
+
+pub fn through(p: Point, q: Point) -> Line {
+    Line::from_points(p, q).unwrap_or_else(|| panic!("{p:?} = {q:?}"))
+}
+
+/// The line through `p` at `degrees` from the x axis.
+pub fn at_angle(p: Point, degrees: f64) -> Line {
+    let t = degrees.to_radians();
+    Line::from_point_direction(p, [t.cos(), t.sin()]).unwrap_or_else(|| unreachable!())
+}
+
+/// The side of `line` that the model-frame point `p` is on.
+pub fn side(line: &Line, p: Point) -> Side {
+    Side::of_point(line, p).unwrap_or_else(|| panic!("{p:?} is on the line"))
+}
+
+/// A fold of every layer on the side of `line` that `toward` lies on.
+pub fn all(line: Line, toward: Point, direction: Direction) -> PlainFold {
+    PlainFold::new(line, side(&line, toward), direction)
+}
+
+/// The top (valley) or bottom (mountain) `layers` at a sheet point.
+pub fn depth(
+    line: Line,
+    toward: Point,
+    direction: Direction,
+    at: Point,
+    layers: usize,
+) -> PlainFold {
+    all(line, toward, direction).with_seed(Seed::Depth { at, layers })
+}
+
+pub fn fold(state: &State, op: &PlainFold) -> Folded {
+    state
+        .fold(op)
+        .unwrap_or_else(|e| panic!("refused: {e} ({:?}) fixes {:?}", e.refusal, e.fixes))
+}
+
+pub fn precrease(state: &State, op: &PlainFold) -> Folded {
+    state
+        .precrease(op)
+        .unwrap_or_else(|e| panic!("refused: {e} ({:?}) fixes {:?}", e.refusal, e.fixes))
+}
+
+pub fn refused(state: &State, op: &PlainFold) -> Refused {
+    match state.fold(op) {
+        Ok(_) => panic!("{op:?} folded"),
+        Err(e) => e,
+    }
+}
+
+/// The face containing the sheet point.
+pub fn face(state: &State, p: Point) -> FaceId {
+    state
+        .face_at(p)
+        .unwrap_or_else(|| panic!("no face at {p:?}"))
+}
+
+/// The kind of the crease through the sheet point.
+pub fn kind_at(state: &State, p: Point) -> CreaseKind {
+    state
+        .crease_at(p)
+        .unwrap_or_else(|| panic!("no crease at {p:?}"))
+        .kind
+}
+
+pub fn above(state: &State, f: FaceId, g: FaceId) -> bool {
+    state
+        .above(f, g)
+        .unwrap_or_else(|| panic!("{f} and {g} are not ordered"))
+}
+
+/// The full gate from scratch, and the checker with a problem built anew.
+pub fn assert_valid(state: &State) {
+    let report = state.check_full();
+    assert!(report.is_valid(), "{:?}", report.violations);
+    if let Err(e) = State::make(state.parts().clone()) {
+        panic!("the full gate refuses a landed state: {e}");
+    }
+}
+
+pub fn close(a: Point, b: Point) -> bool {
+    (a[0] - b[0]).abs() < 1e-12 && (a[1] - b[1]).abs() < 1e-12
+}
+
+/// The FOLD `faceOrders` sign rule: f lies on the side g's front normal
+/// points to.
+pub fn on_front_side(state: &State, f: FaceId, g: FaceId) -> bool {
+    above(state, f, g) == state.front_up(g).unwrap_or_else(|| unreachable!())
+}
