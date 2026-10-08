@@ -22,6 +22,7 @@ export function SelectRow({
   disabled,
   title,
   help,
+  divider,
   onChange,
   onReset,
   contentProps,
@@ -34,12 +35,22 @@ export function SelectRow({
   title?: string;
   /** What the row means, behind a help mark beside its label: reachable by keyboard and touch, where a title is not. */
   help?: string;
+  /** The rule under the row (`FieldRow.divider`). */
+  divider?: boolean;
   onChange: (value: string) => void;
   onReset?: () => void;
   contentProps?: Omit<ComponentPropsWithoutRef<typeof SelectContent>, 'children'>;
 }) {
   return (
-    <FieldRow label={label} kind="select" disabled={disabled} title={title} help={help} onReset={onReset}>
+    <FieldRow
+      label={label}
+      kind="select"
+      disabled={disabled}
+      title={title}
+      help={help}
+      divider={divider}
+      onReset={onReset}
+    >
       <Select value={value ?? ''} onValueChange={onChange} disabled={disabled}>
         <FieldRowSelectTrigger aria-label={label}>
           <SelectValue placeholder={placeholder} />

@@ -97,6 +97,8 @@ export const STORAGE_KEYS = {
   diagramReferencesMarks: 'diagram-references-marks',
   /** Whether Annotate's tool window is collapsed to its header (`ToolHintWindow`). */
   diagramToolHintCollapsed: 'diagram-tool-hint-collapsed',
+  /** Whether the Fold workspace's tool window is collapsed to its header (`ToolHintWindow`). */
+  foldToolHintCollapsed: 'fold-tool-hint-collapsed',
   /** Play a step's fold on arriving at its card in the References workspace. */
   referencesAutoPlayFolds: 'references-auto-play-folds',
   /**
