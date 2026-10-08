@@ -1,0 +1,134 @@
+import { withReferencedAssets } from '../../diagram/document/diagramDocument';
+import { readDiagram, writeDiagram } from '../../diagram/document/diagramFile';
+import type {
+  NativeProjectDocumentKey,
+  NativeProjectDocumentValues,
+  NativeProjectFile,
+} from '../../lib/nativeProjectFile';
+import type { WorkspaceId } from '../../workspaces/workspaces';
+import { diagramDataBytes, discardDiagramState, pickDiagramState } from './diagramState';
+import type { WorkspaceState } from './types';
+
+/**
+ * The store fields that say whether the project holds each project document:
+ * all the landing and "is there anything here" questions read.
+ */
+export type ProjectDocumentPresence = Pick<WorkspaceState, 'diagram'>;
+
+/** A project document read from a file, to install once nothing else in the open can reset it. */
+export interface ReadProjectDocument {
+  /** Whether the file holds one. */
+  present: boolean;
+  install: (get: () => WorkspaceState) => void;
+}
+
+/**
+ * A project-level document — the Diagram's, and Fold's next — as the
+ * project's save and open handle it.
+ *
+ * Such a document belongs to the project rather than to a design or to the
+ * crease pattern, so it survives everything that replaces either, and goes
+ * only with the project. Every project-level decision that used to name the
+ * diagram asks this registry instead: what each replacement of the project
+ * discards, what a failed open puts back, what a save writes and whether it
+ * left the project clean, whether a crease pattern can still be saved to an
+ * Oriedita file (which has nowhere to put one), whether a project with no
+ * crease pattern and no design is still a project, and where it opens.
+ */
+export interface ProjectDocument<K extends NativeProjectDocumentKey> {
+  /** Its key in the file's `workspace` (`nativeProjectFile`'s slot names its reader version). */
+  key: K;
+  /** Where a project that holds nothing else opens. */
+  landing: WorkspaceId;
+  /** Read what the file carries, leniently. */
+  read: (value: unknown) => ReadProjectDocument;
+  /** What the file stores, or none. */
+  write: (state: WorkspaceState) => NativeProjectDocumentValues[K];
+  isPresent: (state: ProjectDocumentPresence) => boolean;
+  /**
+   * Whether it changed between two states of the store — an edit made while a
+   * save's dialog was up is not in the file, so the save must not report the
+   * project clean.
+   */
+  changedSince: (written: WorkspaceState, now: WorkspaceState) => boolean;
+  /** Everything scoped to it, as a replacement of the project leaves it. */
+  discard: () => Partial<WorkspaceState>;
+  /** Everything scoped to it as it stands, for an open that fails before it replaces the project. */
+  pick: (state: WorkspaceState) => Partial<WorkspaceState>;
+  /** About how many bytes of pictures and assets the file embeds for it, for the save notice. */
+  dataBytes: (state: WorkspaceState) => number;
+}
+
+const DIAGRAM: ProjectDocument<'diagram'> = {
+  key: 'diagram',
+  landing: 'diagram',
+  read: (value) => {
+    const read = readDiagram(value);
+    return { present: read !== null, install: (get) => get().installDiagram(read) };
+  },
+  write: ({ diagram, diagramReadOnly, diagramRaw }) =>
+    diagram ? writeDiagram(diagram, diagramReadOnly ? diagramRaw : null) : null,
+  isPresent: (state) => state.diagram !== null,
+  changedSince: (written, now) => now.diagram !== written.diagram,
+  discard: discardDiagramState,
+  pick: pickDiagramState,
+  // What the file holds: an asset only undo still refers to is not written.
+  dataBytes: ({ diagram }) => diagramDataBytes(diagram && withReferencedAssets(diagram)),
+};
+
+/** Every project document, by its key in the file: a key the file carries with none here is a compile error. */
+const PROJECT_DOCUMENTS: { [K in NativeProjectDocumentKey]: ProjectDocument<K> } = { diagram: DIAGRAM };
+
+const DOCUMENTS = Object.values(PROJECT_DOCUMENTS);
+
+/** Let go of every project document, for a replacement of the project. Spread it into the replacing `set`. */
+export function discardProjectDocuments(): Partial<WorkspaceState> {
+  return DOCUMENTS.reduce<Partial<WorkspaceState>>((state, document) => ({ ...state, ...document.discard() }), {});
+}
+
+/** Every project document's scoped state as it stands, to put back with one `set`. */
+export function pickProjectDocuments(state: WorkspaceState): Partial<WorkspaceState> {
+  return DOCUMENTS.reduce<Partial<WorkspaceState>>((kept, document) => ({ ...kept, ...document.pick(state) }), {});
+}
+
+/**
+ * Read every project document a file carries, before the open changes
+ * anything: whether there is any, and the install that puts each in place.
+ */
+export function readProjectDocuments(workspace: NativeProjectFile['workspace']): ReadProjectDocument {
+  const read = DOCUMENTS.map((document) => document.read(workspace[document.key]));
+  return {
+    present: read.some((document) => document.present),
+    install: (get) => {
+      for (const document of read) document.install(get);
+    },
+  };
+}
+
+/** What a save writes for the project documents: each one's value, none for one the project lacks. */
+export function projectDocumentFileValues(state: WorkspaceState): NativeProjectDocumentValues {
+  // One entry per key: `PROJECT_DOCUMENTS` is keyed by them.
+  return Object.fromEntries(
+    DOCUMENTS.map((document) => [document.key, document.write(state)])
+  ) as unknown as NativeProjectDocumentValues;
+}
+
+/** Whether the project holds any project document. */
+export function hasProjectDocument(state: ProjectDocumentPresence): boolean {
+  return DOCUMENTS.some((document) => document.isPresent(state));
+}
+
+/** Whether any project document changed between `written` and `now`. */
+export function projectDocumentsChangedSince(written: WorkspaceState, now: WorkspaceState): boolean {
+  return DOCUMENTS.some((document) => document.changedSince(written, now));
+}
+
+/** About how many bytes of pictures and assets the file embeds for the project documents. */
+export function projectDocumentDataBytes(state: WorkspaceState): number {
+  return DOCUMENTS.reduce((total, document) => total + document.dataBytes(state), 0);
+}
+
+/** Where a project that holds only project documents opens: the first one's workspace, or null for none. */
+export function projectDocumentLanding(state: ProjectDocumentPresence): WorkspaceId | null {
+  return DOCUMENTS.find((document) => document.isPresent(state))?.landing ?? null;
+}

@@ -22,6 +22,7 @@ import { createDiagramSlice } from './slices/diagramSlice';
 import { resolveEditingContext } from '../../workspaces/editingContext';
 import { installFolded3dAuxLinesSync } from './folded3dAuxLinesSync';
 import { installFoldedFigurePaperMirror } from './foldedFigurePaperMirror';
+import { hasProjectDocument } from './projectDocuments';
 import type { WorkspaceState } from './types';
 
 export const useWorkspaceStore = create<WorkspaceState>()(
@@ -99,7 +100,7 @@ useWorkspaceStore.subscribe((state) => {
   const hasDocument =
     state.oristudioCpDocument !== null ||
     state.importedCreasePattern !== null ||
-    state.diagram !== null ||
+    hasProjectDocument(state) ||
     selectOristudioBpDocument(state) !== null ||
     selectProject(state).edges.length > 0;
   if (hasDocument) useWorkspaceStore.setState({ projectEstablished: true });
