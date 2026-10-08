@@ -48,6 +48,7 @@ import type { PaperPage } from '../../lib/paper/paperPage';
 import { pagePtPerPx, paperSceneToSvg } from '../../lib/paper/paperSvg';
 import { buildSegmentSimulationFold, type CpSegment } from '../../lib/creasePatternSegmentation';
 import { createCpCaptureRuntime } from './cpFoldRuntimeBindings';
+import type { ProjectDocumentCommit } from './projectDocumentHistory';
 import { landSeededFrame, type LandedFirstFrame } from '../../diagram/zoom/zoomFrames';
 import { trackSeeded } from './diagramZoom';
 import { releaseSimulatorClient, retainSimulatorClient } from './simulatorRuntime';
@@ -239,12 +240,7 @@ export function captureFailure(error: unknown): Extract<DiagramCaptureOutcome, {
 }
 
 /** The slice's commit: one undo step, the project dirty, nothing for an edit that changes nothing. */
-export type DiagramCommit = (
-  label: string,
-  edit: (document: DiagramDocument) => DiagramDocument,
-  /** Fold the edit into the newest undo entry instead of recording one. */
-  extend?: boolean
-) => DiagramDocument | null;
+export type DiagramCommit = ProjectDocumentCommit<DiagramDocument>;
 
 /** Capture a step's picture from its pattern as it stands, and commit it. */
 export async function runDiagramCapture(
