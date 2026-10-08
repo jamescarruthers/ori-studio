@@ -110,15 +110,6 @@ pub enum Scope<'a> {
     Faces(&'a BTreeSet<FaceId>),
 }
 
-impl Scope<'_> {
-    fn includes(&self, faces: &[FaceId]) -> bool {
-        match self {
-            Scope::All => true,
-            Scope::Faces(set) => faces.iter().any(|f| set.contains(f)),
-        }
-    }
-}
-
 /// Check an order against a view, building the view's problem.
 pub fn check(view: &FoldedView, order: &LayerOrder) -> CheckReport {
     let problem = ConstraintProblem::build(view);
@@ -139,6 +130,40 @@ pub fn check_problem(
     Ok(report(problem, view, order, scope))
 }
 
+/// A scope resolved against a view: membership by position for the view's
+/// faces, which every loop below asks about many times over.
+struct InScope<'a> {
+    scope: Scope<'a>,
+    view: &'a FoldedView,
+    at: Vec<bool>,
+}
+
+impl<'a> InScope<'a> {
+    fn new(scope: Scope<'a>, view: &'a FoldedView) -> InScope<'a> {
+        let at = match scope {
+            Scope::All => Vec::new(),
+            Scope::Faces(set) => view.faces().iter().map(|f| set.contains(&f.id)).collect(),
+        };
+        InScope { scope, view, at }
+    }
+
+    /// Whether any of the view positions is in scope.
+    fn includes_at(&self, positions: &[usize]) -> bool {
+        matches!(self.scope, Scope::All) || positions.iter().any(|&p| self.at[p])
+    }
+
+    /// Whether any of the faces is in scope.
+    fn includes(&self, faces: &[FaceId]) -> bool {
+        match self.scope {
+            Scope::All => true,
+            Scope::Faces(set) => faces.iter().any(|&f| match self.view.index_of(f) {
+                Some(p) => self.at[p],
+                None => set.contains(&f),
+            }),
+        }
+    }
+}
+
 fn report(
     problem: &ConstraintProblem,
     view: &FoldedView,
@@ -146,27 +171,47 @@ fn report(
     scope: Scope<'_>,
 ) -> CheckReport {
     let mut violations = BTreeSet::new();
+    let scope = InScope::new(scope, view);
 
-    for &pair in problem.variables() {
+    // Variables against the order's pairs, both ascending, in one merge.
+    let mut variables = problem.variables().iter().copied().peekable();
+    for (pair, lo_above) in order.pairs() {
+        while let Some(v) = variables.next_if(|&v| v < pair) {
+            if scope.includes(&v.faces()) {
+                violations.insert(Violation::MissingPair { pair: v });
+            }
+        }
+        let is_variable = variables.next_if_eq(&pair).is_some();
         if !scope.includes(&pair.faces()) {
             continue;
         }
-        if !order.contains(pair.lo(), pair.hi()) {
-            violations.insert(Violation::MissingPair { pair });
-        } else if order.above(pair.lo(), pair.hi()).is_none() {
+        if !is_variable {
+            violations.insert(Violation::ExtraPair { pair });
+        } else if lo_above.is_none() {
             violations.insert(Violation::UndeterminedPair { pair });
         }
     }
-    for (pair, _) in order.pairs() {
-        if scope.includes(&pair.faces()) && problem.variable(pair).is_none() {
-            violations.insert(Violation::ExtraPair { pair });
+    for v in variables {
+        if scope.includes(&v.faces()) {
+            violations.insert(Violation::MissingPair { pair: v });
         }
     }
 
-    cell_cycles(problem, view, order, scope, &mut violations);
+    // The order as a table on view positions, for the cells and the
+    // constraints; a face outside the view falls back to the order itself.
+    let table = PairTable::of_order(view, order);
+    cell_cycles(problem, &table, &scope, &mut violations);
 
+    let above = |f: FaceId, g: FaceId| match (view.index_of(f), view.index_of(g)) {
+        (Some(i), Some(j)) => match table.get(i, j) {
+            1 => Some(true),
+            -1 => Some(false),
+            _ => None,
+        },
+        _ => order.above(f, g),
+    };
     for constraint in problem.constraints() {
-        if scope.includes(constraint.faces()) && constraint.holds(order) == Some(false) {
+        if scope.includes(constraint.faces()) && constraint.holds_by(above) == Some(false) {
             violations.insert(Violation::from_constraint(*constraint));
         }
     }
@@ -236,18 +281,16 @@ pub fn derived_letter(view: &FoldedView, order: &LayerOrder, e: usize) -> Option
 /// sets no other contains (every triple of a cell is one of theirs).
 fn cell_cycles(
     problem: &ConstraintProblem,
-    view: &FoldedView,
-    order: &LayerOrder,
-    scope: Scope<'_>,
+    table: &PairTable<i8>,
+    scope: &InScope<'_>,
     violations: &mut BTreeSet<Violation>,
 ) {
-    let table = PairTable::of_order(view, order);
     let overlay = problem.overlay();
     let mut reported: BTreeSet<[FaceId; 3]> = BTreeSet::new();
     for &c in overlay.maximal_cells() {
         let faces = overlay.cells()[c].faces.as_slice();
         let at = overlay.positions(c);
-        if faces.len() < 3 || !scope.includes(faces) {
+        if faces.len() < 3 || !scope.includes_at(at) {
             continue;
         }
         let k = faces.len();
@@ -284,7 +327,7 @@ fn cell_cycles(
                         [faces[i], faces[l], faces[j]]
                     };
                     let triple = [faces[i], faces[j], faces[l]];
-                    if scope.includes(&triple) && reported.insert(triple) {
+                    if scope.includes_at(&[at[i], at[j], at[l]]) && reported.insert(triple) {
                         violations.insert(Violation::CellCycle {
                             faces: rotate_least_first(cycle),
                             cell: c,

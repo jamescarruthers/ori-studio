@@ -168,6 +168,46 @@ fn rebuilding_over_any_touched_faces_equals_a_full_build() {
     }
 }
 
+/// A check scoped to some faces reports exactly the full check's violations
+/// that name one of them, on the committed states' judged flips (orders that
+/// break pairs, constraints and cells).
+#[test]
+fn a_scoped_check_is_the_full_check_restricted_to_its_faces() {
+    let dir = fixtures();
+    let judged: Value = serde_json::from_str(
+        &fs::read_to_string(dir.join("judged.json")).unwrap_or_else(|e| panic!("judged.json: {e}")),
+    )
+    .unwrap_or_else(|e| panic!("judged.json: {e}"));
+    let mut flips = 0;
+    for (name, entry) in judged.as_object().into_iter().flatten() {
+        let state = load(&dir.join(name));
+        let problem = ConstraintProblem::build(&state.view);
+        let order = order_from_triples(&triples(&entry["dump"]["neg"]), &state.view);
+        let full = report(&problem, &state, &order);
+        flips += usize::from(!full.is_valid());
+        let ids: Vec<FaceId> = state.view.faces().iter().map(|f| f.id).collect();
+        let mut scopes: Vec<BTreeSet<FaceId>> = full
+            .violations
+            .iter()
+            .map(|v| v.faces().into_iter().take(1).collect())
+            .collect();
+        scopes.push(ids.iter().copied().step_by(3).collect());
+        scopes.push(BTreeSet::new());
+        for scope in scopes {
+            let scoped = check_problem(&problem, &state.view, &order, Scope::Faces(&scope))
+                .unwrap_or_else(|e| panic!("{e}"));
+            let want: Vec<Violation> = full
+                .violations
+                .iter()
+                .filter(|v| v.faces().iter().any(|f| scope.contains(f)))
+                .copied()
+                .collect();
+            assert_eq!(scoped.violations, want, "{name}: scope {scope:?}");
+        }
+    }
+    assert!(flips > 0, "no judged flip breaks its state");
+}
+
 #[test]
 fn spike_corpus_passes_and_agrees_with_the_judge() {
     let Some(root) = std::env::var_os(CORPUS_ENV).map(PathBuf::from) else {
