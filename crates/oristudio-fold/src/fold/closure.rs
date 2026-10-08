@@ -224,8 +224,11 @@ pub(crate) fn analyse(
             fixes,
         });
     }
+    // A target the fold splits keeps its stationary part, which is what the
+    // block lands against; one that moves entirely is no target.
     if let Some(t) = &tuck
         && moving[t.target]
+        && !has_stationary[t.target]
     {
         return Err(Refusal::TuckTargetMoves {
             face: faces[t.target].id,

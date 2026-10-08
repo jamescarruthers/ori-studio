@@ -55,7 +55,7 @@ impl fmt::Display for EdgeId {
 }
 
 /// What a crease is now: `B | M | V | F`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind", content = "letter")]
 pub enum CreaseKind {
     /// The paper's raw edge.

@@ -80,6 +80,27 @@ pub fn face(state: &State, p: Point) -> FaceId {
         .unwrap_or_else(|| panic!("no face at {p:?}"))
 }
 
+/// The sheet point of the top layer (in the model frame) at the model-frame
+/// point `p`: what a picker hands the engine as a seed.
+pub fn top_sheet_point(state: &State, p: Point) -> Point {
+    let stack = state
+        .stack_at(p)
+        .unwrap_or_else(|| panic!("no stack at {p:?}"));
+    let top = *stack.first().unwrap_or_else(|| panic!("nothing at {p:?}"));
+    let t = state.isometry(top).unwrap_or_default();
+    t.inverse().apply(p)
+}
+
+/// The crease kinds made at `step`.
+pub fn made_at(state: &State, step: u32) -> Vec<CreaseKind> {
+    state
+        .creases()
+        .iter()
+        .filter(|c| c.made_at == step)
+        .map(|c| c.kind)
+        .collect()
+}
+
 /// The kind of the crease through the sheet point.
 pub fn kind_at(state: &State, p: Point) -> CreaseKind {
     state
