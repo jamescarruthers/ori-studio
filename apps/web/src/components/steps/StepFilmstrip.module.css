@@ -78,6 +78,54 @@
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
+/*
+ * Where a card stands (the `state` field). A frame and a tinted badge, quiet
+ * enough to sit in a strip of ordinary cards, and before the active card's
+ * rule so the selection still reads on the card the reader is on — which a
+ * preview usually is.
+ *
+ * A preview and a new branch are dashed, like a step that makes no crease:
+ * neither is part of the sequence yet. A blocked step's picture fades, since
+ * it shows a fold that will not happen.
+ */
+.card[data-state='preview'] {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent-primary) 60%, var(--border-subtle));
+}
+
+.card[data-state='new-branch'] {
+  border-style: dashed;
+  border-color: var(--status-warning);
+}
+
+.card[data-state='blocked'] {
+  border-color: var(--status-danger);
+}
+
+.card[data-state='imported'] {
+  border-color: var(--status-info);
+}
+
+.card[data-state='preview'] .badge {
+  color: var(--accent-primary);
+}
+
+.card[data-state='new-branch'] .badge {
+  color: var(--status-warning);
+}
+
+.card[data-state='blocked'] .badge {
+  color: var(--status-danger);
+}
+
+.card[data-state='imported'] .badge {
+  color: var(--status-info);
+}
+
+.card[data-state='blocked'] .thumb {
+  opacity: 0.5;
+}
+
 /* The active card. Before the pointer and focus rules, which tie with it and
    win: hovering the active card lightens its border, and the keyboard's ring
    is the wider one. */
@@ -203,6 +251,11 @@
 
 .captionEmpty {
   color: var(--text-tertiary);
+}
+
+/* The active card's tag ("Next", "Jump"), ahead of its number. */
+.captionTag {
+  margin-right: var(--space-1);
 }
 
 /* Its own line, because it qualifies the whole sequence rather than the step

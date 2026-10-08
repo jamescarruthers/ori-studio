@@ -42,6 +42,14 @@ const steps: BranchCard[] = [
   card('half', { number: 1, sentence: 'Valley fold in half.' }),
   card('corner', { number: 2, badge: 'Valley', ways: { count: 2, index: 0 } }),
   card('turn', { kind: 'turn-over', badge: 'Turn over', sentence: 'Turn over.' }),
+  card('pending', {
+    number: 3,
+    badge: 'Preview',
+    sentence: 'Fold the flap up.',
+    state: 'preview',
+    tag: 'Next',
+  }),
+  card('refused', { number: 3, badge: 'Blocked', state: 'blocked' }),
 ];
 
 let root: Root | null = null;
@@ -123,12 +131,43 @@ describe('the picture slot', () => {
       'half',
       'corner',
       'turn',
+      'pending',
+      'refused',
     ]);
   });
 
   it('marks what a card is, for its frame and its badge’s corner', () => {
     show();
-    expect(cards().map((c) => c.getAttribute('data-kind'))).toEqual(['fold', 'fold', 'turn-over']);
+    expect(cards().map((c) => c.getAttribute('data-kind'))).toEqual([
+      'fold',
+      'fold',
+      'turn-over',
+      'fold',
+      'fold',
+    ]);
+  });
+});
+
+describe('a sequence being built', () => {
+  it('marks where each card stands, and leaves a committed step unmarked', () => {
+    show();
+    expect(cards().map((c) => c.getAttribute('data-state'))).toEqual([
+      null,
+      null,
+      null,
+      'preview',
+      'blocked',
+    ]);
+  });
+
+  it('puts the active card’s tag ahead of its number and sentence', () => {
+    show({ activeStep: 3 });
+    const caption = [...(container?.querySelectorAll('p') ?? [])].find((p) =>
+      p.textContent?.includes('Fold the flap up.')
+    );
+    expect(caption?.textContent).toBe('Next3. Fold the flap up.');
+    show({ activeStep: 0 });
+    expect(container?.textContent).not.toContain('Next');
   });
 });
 

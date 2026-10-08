@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { Badge } from '../ui/Badge';
 import { IconButton } from '../ui/IconButton';
 import { useVerticalSwipe } from '../../hooks/useVerticalSwipe';
 import styles from './StepFilmstrip.module.css';
@@ -23,6 +24,21 @@ export interface StepFilmstripWays {
  */
 export type StepFilmstripCardKind = 'fold' | 'turn-over' | 'done';
 
+/**
+ * Where a card stands, for a sequence being built rather than read:
+ *
+ * - `preview`: the step the reader is about to commit, not yet part of the
+ *   sequence;
+ * - `blocked`: a step that cannot be made as asked;
+ * - `new-branch`: a step that, committed, starts a branch rather than
+ *   continuing the one on screen;
+ * - `imported`: a state taken from a crease pattern rather than folded.
+ *
+ * A look only. Say it in words too, in the badge and the sentence: a frame's
+ * colour is no help to a screen reader, or to a reader who cannot tell it.
+ */
+export type StepFilmstripCardState = 'preview' | 'blocked' | 'new-branch' | 'imported';
+
 /** One card: a picture, its chrome, and the sentence under the strip when it is active. */
 export interface StepFilmstripCard {
   key: string;
@@ -37,6 +53,14 @@ export interface StepFilmstripCard {
   sentence: string;
   /** Its ways, when it offers more than one; null otherwise. */
   ways: StepFilmstripWays | null;
+  /** Where it stands; absent for a committed step, which is all References has. */
+  state?: StepFilmstripCardState;
+  /**
+   * A word ahead of the sentence while the card is active — "Next", "Jump" —
+   * for what the sentence describes as against what is on the canvas. Absent
+   * or empty for none.
+   */
+  tag?: string;
 }
 
 /**
@@ -251,6 +275,7 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
                     aria-posinset={item.index + 1}
                     className={styles.card}
                     data-kind={step.kind}
+                    data-state={step.state}
                     data-ways={step.ways ? true : undefined}
                     onClick={() => onSelectStep(item.index)}
                     // Named by its number, described by its sentence: `title`
@@ -302,6 +327,11 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
       <p className={styles.caption} data-swipe-target="active">
         {active ? (
           <>
+            {active.tag && (
+              <span className={styles.captionTag}>
+                <Badge tone="accent">{active.tag}</Badge>
+              </span>
+            )}
             {active.number !== null && (
               <span className={styles.captionNumber}>{active.number}.</span>
             )}{' '}
