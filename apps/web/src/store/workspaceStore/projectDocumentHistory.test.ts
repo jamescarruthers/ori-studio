@@ -138,6 +138,34 @@ describe('createProjectDocumentHistory', () => {
     expect(state().docSelected).toBe(3);
   });
 
+  it('tells the reconcile what the travel replaced, and which way it went', () => {
+    const reconcile = vi.fn(() => ({}));
+    const { kit, add } = harness({ reconcile });
+    add(3);
+    add(4);
+
+    kit.travel('undo');
+    expect(reconcile).toHaveBeenLastCalledWith({ value: 3 }, { before: { value: 7 }, direction: 'undo' });
+    kit.travel('redo');
+    expect(reconcile).toHaveBeenLastCalledWith({ value: 7 }, { before: { value: 3 }, direction: 'redo' });
+  });
+
+  it('never refuses a document with no read-only field as a whole: its own edits guard its parts', () => {
+    let state: State = { ...discard(), docReadOnly: true, dirty: false };
+    const kit = createProjectDocumentHistory<State, Doc | null, Doc>({
+      get: () => state,
+      set: (patch) => (state = { ...state, ...patch }),
+      keys: { document: 'doc', history: 'docHistory', loadId: 'docLoadId' },
+      base: (stored) => stored ?? { value: 0 },
+      discard,
+    });
+
+    // The field is there, but the kit was not told to read it.
+    expect(kit.commit('Add', (doc) => ({ value: doc.value + 1 }))).toEqual({ value: 1 });
+    expect(kit.travel('undo')).toBe(true);
+    expect(state.doc).toBeNull();
+  });
+
   describe('a session', () => {
     it('extends only the entry it made itself', () => {
       const { kit, add, state } = harness();
