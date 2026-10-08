@@ -1513,16 +1513,6 @@
       "title": "참조 분석",
       "unsolved": "작도 방법을 찾지 못함"
     },
-    "axiom": {
-      "free": "이미 종이에 있음",
-      "o1": "두 점을 지나",
-      "o2": "점을 점 위로",
-      "o3": "변을 변 위로",
-      "o4": "점을 지나는 수직선",
-      "o5": "점을 선 위로, 다른 점을 지나",
-      "o6": "두 점을 두 선 위로",
-      "o7": "점을 선 위로, 수직으로"
-    },
     "backToPattern": "패턴 전체로 돌아가기",
     "backToPatterns": "패턴",
     "breakdown": {
@@ -1648,20 +1638,6 @@
       "querying": "{{total}}개 중 {{done}}개 선 탐색 중"
     },
     "recompute": "다시 계산",
-    "ref": {
-      "bottomEdge": "아래쪽 변",
-      "cornerNe": "오른쪽 위 모서리",
-      "cornerNw": "왼쪽 위 모서리",
-      "cornerSe": "오른쪽 아래 모서리",
-      "cornerSw": "왼쪽 아래 모서리",
-      "diagonalNwSe": "왼쪽 위에서 오른쪽 아래로 가는 대각선",
-      "diagonalSwNe": "왼쪽 아래에서 오른쪽 위로 가는 대각선",
-      "leftEdge": "왼쪽 변",
-      "line": "선 {{name}}",
-      "point": "점 {{name}}",
-      "rightEdge": "오른쪽 변",
-      "topEdge": "위쪽 변"
-    },
     "refusedSheet": "이 선택 주변의 종이를 직사각형으로 읽을 수 없었습니다.",
     "searching": "기준점을 찾는 중…",
     "settings": {

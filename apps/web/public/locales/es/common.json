@@ -308,6 +308,31 @@
     "open": "Suelta para abrir",
     "openOrImport": "Suelta para abrir o importar"
   },
+  "foldSentences": {
+    "axiom": {
+      "o1": "por dos puntos",
+      "o2": "punto sobre punto",
+      "o3": "borde sobre borde",
+      "o4": "perpendicular por un punto",
+      "o5": "punto sobre una línea, por un punto",
+      "o6": "dos puntos sobre dos líneas",
+      "o7": "punto sobre una línea, perpendicular"
+    },
+    "ref": {
+      "bottomEdge": "el borde inferior",
+      "cornerNe": "la esquina superior derecha",
+      "cornerNw": "la esquina superior izquierda",
+      "cornerSe": "la esquina inferior derecha",
+      "cornerSw": "la esquina inferior izquierda",
+      "diagonalNwSe": "la diagonal de arriba a la izquierda a abajo a la derecha",
+      "diagonalSwNe": "la diagonal de abajo a la izquierda a arriba a la derecha",
+      "leftEdge": "el borde izquierdo",
+      "line": "la línea {{name}}",
+      "point": "el punto {{name}}",
+      "rightEdge": "el borde derecho",
+      "topEdge": "el borde superior"
+    }
+  },
   "numberField": {
     "decrease": "Disminuir {{label}}",
     "increase": "Aumentar {{label}}"
