@@ -9,19 +9,29 @@
 //!   allowed, undetermined pairs reported), with conversions to FOLD
 //!   `faceOrders` and to Oriedita's convention;
 //! - [`overlay`]: the overlay of convex face images into cells;
-//! - the constraint problem (variables, taco-taco, taco-tortilla and
-//!   tortilla-tortilla buckets, transitivity from shared cells);
-//! - one checker that names faces.
+//! - [`problem`]: the constraint problem (variables, taco-taco, taco-tortilla
+//!   and tortilla-tortilla buckets, transitivity from shared cells), built in
+//!   full or over the faces an operation touched;
+//! - [`check`]: one checker that names faces.
 //!
 //! Everything is decided at the one tolerance, `oristudio_geometry::tol::TOL`,
-//! with the convex primitives of `oristudio_geometry::convex`.
+//! with the convex primitives of `oristudio_geometry::convex`. A search that
+//! completes an order (plan D8: Flat-Folder's, through `treemaker-flatfold`)
+//! consumes [`ConstraintProblem`] as it is.
 
+pub mod check;
 pub mod error;
 pub mod order;
 pub mod overlay;
+pub mod problem;
+mod table;
 pub mod view;
 
+pub use check::{CheckReport, Scope, Violation, check, check_problem, derived_letter};
 pub use error::LayerOrderError;
 pub use order::{FacePair, LayerOrder, OrieditaRelation, Stacking};
 pub use overlay::{Cell, Overlay};
+pub use problem::{
+    Ambiguity, AmbiguityCause, Buckets, Constraint, ConstraintKind, ConstraintProblem,
+};
 pub use view::{Edge, EdgeKind, Face, FaceId, FoldedView, Letter};
