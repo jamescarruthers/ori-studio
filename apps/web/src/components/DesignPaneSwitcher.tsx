@@ -6,6 +6,7 @@ import { isShortcutEditingTarget } from '../keyboard/shortcutDispatcher';
 import { useDesignPaneSwitcher, type DesignPaneOption } from '../hooks/useDesignPaneSwitcher';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
+import styles from './DesignPaneSwitcher.module.css';
 
 /**
  * Moving between a design's panes, on a phone.
@@ -51,7 +52,7 @@ function PaneToggle({
     <Button
       size="md"
       variant="secondary"
-      className="canvas-pill design-pane-switcher"
+      className={`canvas-pill ${styles.pill}`}
       onClick={() => show(other.component, 'switcher')}
     >
       <ArrowLeftRight size={15} aria-hidden="true" />
@@ -111,7 +112,7 @@ function PaneList({
         ref={triggerRef}
         size="md"
         variant="secondary"
-        className="canvas-pill design-pane-switcher"
+        className={`canvas-pill ${styles.pill}`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={listId}
@@ -133,7 +134,7 @@ function PaneList({
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            className="design-pane-sheet"
+            className={styles.backdrop}
             /* `click`, not `pointerdown`: dismissing on pointerdown unmounts the
                backdrop inside the same commit and the browser delivers the rest
                of the tap to whatever is newly underneath. Measured on an iPad —
@@ -144,11 +145,11 @@ function PaneList({
               ref={sheetRef}
               role="document"
               tabIndex={-1}
-              className="design-pane-sheet__sheet"
+              className={styles.sheet}
               onClick={(event) => event.stopPropagation()}
             >
-              <header className="design-pane-sheet__header">
-                <span className="design-pane-sheet__title">{title}</span>
+              <header className={styles.header}>
+                <span className={styles.title}>{title}</span>
                 <IconButton
                   size="sm"
                   aria-label={t('panels:design.paneSwitcher.close', 'Close pane list')}
@@ -157,12 +158,12 @@ function PaneList({
                   <X size={15} />
                 </IconButton>
               </header>
-              <ul className="design-pane-sheet__list">
+              <ul className={styles.list}>
                 {panes.map((pane) => (
                   <li key={pane.component}>
                     <button
                       type="button"
-                      className="design-pane-sheet__item"
+                      className={styles.item}
                       data-active={pane.component === active.component || undefined}
                       aria-current={pane.component === active.component ? 'true' : undefined}
                       onClick={() => {

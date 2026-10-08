@@ -180,7 +180,9 @@ beside the shared step strip (`components/steps/StepFilmstrip`), which
 References now renders through its `ReferencesStepFilmstrip` adapter. The
 phone's snap rules, written against `.references-workspace`, are the strip's
 own coarse-pointer rules; the lookups by class (the active card's focus, the
-swiped card) are by role and data attribute.
+swiped card) are by role and data attribute. And `design-pane-switcher` /
+`design-pane-sheet`, into `DesignPaneSwitcher.module.css`; the reduced-motion
+rule it shared with `view-drawer__sheet` is now one rule in each place.
 
 Still shared:
 
