@@ -23,6 +23,7 @@ import {
   type Vec2,
 } from '../../lib/cubicBezier';
 import { erodeSegment } from '../../lib/paper/paperSvg';
+import { distanceToSegment } from '../picking/lineHitIndex';
 import {
   DIAGRAM_ANGLE_MARK_INK,
   DIAGRAM_ARROWHEAD_INK,
@@ -61,6 +62,16 @@ export interface DiagramSheet {
    * edge is then found along these.
    */
   axes?: { readonly x: readonly [number, number]; readonly y: readonly [number, number] };
+  /**
+   * The paper's outline in the same space, its corners in order round it, for
+   * a sheet that is not the rectangle — a polygon sheet. Absent, the outline
+   * is the rectangle `width` × `height` round `centre` along `axes`, which is
+   * every References sheet. `width` and `height` are the paper's extent along
+   * its axes either way: they are what its size is measured by — erode's
+   * share, the page's scale, the band round it — and `centre` is still the
+   * middle of that extent.
+   */
+  outline?: readonly SheetPoint[];
 }
 
 export interface SvgPoint {
@@ -255,11 +266,10 @@ export type SheetPoint = readonly [number, number];
  * canvas erode the same crease by the same share of the paper — the rule the
  * painter applies to every other surface (`erodeSegment`).
  *
- * The sheet is the rectangle round `sheet.centre` (or its own middle) along
- * `sheet.axes` (or the space's own), which is the paper a step's creases lie
- * on; the boundary is read with a tolerance of a millionth of the sheet,
- * since a crease to the edge is placed there by construction and not by
- * rounding.
+ * The paper a step's creases lie on is the sheet's outline
+ * ({@link onSheetBoundary}); the boundary is read with a tolerance of a
+ * millionth of the sheet, since a crease to the edge is placed there by
+ * construction and not by rounding.
  */
 export function erodeCreaseOnSheet(
   from: SheetPoint,
@@ -281,17 +291,18 @@ export function erodeCreaseOnSheet(
 /**
  * Whether a point lies on the sheet's edge: the rule {@link erodeCreaseOnSheet}
  * reads an endpoint by, and the one a step's export flags an aux line's ends
- * with, so the card, the canvas and the page pull the same ends in. The sheet
- * is the rectangle round `sheet.centre` (or its own middle) along `sheet.axes`
- * (or the space's own); the edge is read with a tolerance of a millionth of
- * the sheet, since a crease to the edge is placed there by construction and
- * not by rounding.
+ * with, so the card, the canvas and the page pull the same ends in. The edge
+ * is the sheet's outline when it has one, else the rectangle round
+ * `sheet.centre` (or its own middle) along `sheet.axes` (or the space's own);
+ * it is read with a tolerance of a millionth of the sheet, since a crease to
+ * the edge is placed there by construction and not by rounding.
  */
 export function onSheetBoundary([x, y]: SheetPoint, sheet: DiagramSheet): boolean {
   const longer = Math.max(sheet.width, sheet.height);
   if (!(longer > 0)) return false;
-  const { centre, xAxis, yAxis } = sheetFrame(sheet);
   const epsilon = longer * 1e-6;
+  if (sheet.outline) return onRing([x, y], sheet.outline, epsilon);
+  const { centre, xAxis, yAxis } = sheetFrame(sheet);
   // The point in the paper's own frame: along its width and its height.
   const u = (x - centre[0]) * xAxis[0] + (y - centre[1]) * xAxis[1];
   const v = (x - centre[0]) * yAxis[0] + (y - centre[1]) * yAxis[1];
@@ -302,12 +313,23 @@ export function onSheetBoundary([x, y]: SheetPoint, sheet: DiagramSheet): boolea
   return (du <= epsilon && withinV) || (dv <= epsilon && withinU);
 }
 
+/** Whether `point` is within `epsilon` of a side of the closed ring `ring`. */
+function onRing([x, y]: SheetPoint, ring: readonly SheetPoint[], epsilon: number): boolean {
+  if (ring.length < 2) return false;
+  return ring.some((from, index) => {
+    const to = ring[(index + 1) % ring.length]!;
+    return distanceToSegment(x, y, { x: from[0], y: from[1] }, { x: to[0], y: to[1] }) <= epsilon;
+  });
+}
+
 /**
- * The sheet's four corners in the primitives' space, from its bottom-left
- * anticlockwise in the paper's own frame — the rectangle
- * {@link onSheetBoundary} reads the edge of, as a ring.
+ * The sheet's corners in the primitives' space, as the ring
+ * {@link onSheetBoundary} reads the edge of: its outline when it has one, else
+ * the rectangle's four, from its bottom-left anticlockwise in the paper's own
+ * frame.
  */
-export function sheetCorners(sheet: DiagramSheet): [SheetPoint, SheetPoint, SheetPoint, SheetPoint] {
+export function sheetCorners(sheet: DiagramSheet): readonly SheetPoint[] {
+  if (sheet.outline) return sheet.outline;
   const { centre, xAxis, yAxis } = sheetFrame(sheet);
   const at = (u: number, v: number): SheetPoint => [
     centre[0] + u * xAxis[0] + v * yAxis[0],

@@ -180,6 +180,44 @@ describe('the sheet', () => {
     expect(creases(result)[0]!.onBoundary).toEqual([true, true]);
   });
 
+  it('is a polygon sheet’s own outline, filled and bordered, measured by its extent', () => {
+    // The unit square with its top-right corner cut away, and a crease from
+    // its left edge to the slanted side.
+    const outline = [
+      [0, 0],
+      [1, 0],
+      [1, 0.5],
+      [0.5, 1],
+      [0, 1],
+    ] as const;
+    const pentagon: StepDiagramModel = {
+      sheet: { width: 1, height: 1, outline },
+      primitives: [line('crease', [0, 0.75], [0.75, 0.75])],
+    };
+    const project = createDiagramProjector(pentagon.sheet, SIZE);
+    const result = diagramToPaperScene(pentagon, {
+      style: DEFAULT_PAPER_STYLE,
+      project,
+    });
+    const [ring] = faces(result)[0]!.rings;
+    expect(ring).toHaveLength(outline.length);
+    ring!.forEach((corner, index) => {
+      const { x, y } = project(outline[index]!);
+      near(corner, [x, y]);
+    });
+    // One edge line for each side, over the crease; the slanted one from
+    // (1, 0.5) to (0.5, 1).
+    const [crease, ...edges] = lines(result);
+    expect(edges.map((item) => item.role)).toEqual(outline.map(() => 'edge'));
+    near(edges[2]!.a, [90, 50]);
+    near(edges[2]!.b, [50, 10]);
+    // Both of the crease's ends are on the paper's edge, the slanted side's included.
+    expect(crease).toMatchObject({ role: 'aux', onBoundary: [true, true] });
+    // The scale and the band are the extent's, as a rectangle's are.
+    expect(result.sheet).toBeCloseTo(SHEET_PX, 9);
+    expect(result.bounds).toEqual({ minX: 0, minY: 0, maxX: SIZE, maxY: SIZE });
+  });
+
   it('bounds the card’s box: the sheet plus the band a letter is pushed into', () => {
     const { bounds } = scene(model());
     expect(bounds).toEqual({ minX: 0, minY: 0, maxX: SIZE, maxY: SIZE });

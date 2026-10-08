@@ -235,8 +235,8 @@ export function diagramToPaperScene(
   // The paper's border. On screen it is drawn for us — the card strokes the
   // sheet rect, the big view has the document's own border creases under the
   // overlay — but a page carries only what the scene says, and a face is
-  // closed with a hairline in its own fill, never the edge pen. Without these
-  // four a light paper on a blank page is invisible but for its creases, where
+  // closed with a hairline in its own fill, never the edge pen. Without its
+  // sides a light paper on a blank page is invisible but for its creases, where
   // every other surface's export draws its outline. Over the step's lines, not
   // under them: a crease that ends on the edge, drawn after it, laid its own
   // grey across the outline and broke it into pieces.
