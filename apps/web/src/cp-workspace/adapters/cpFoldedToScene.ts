@@ -1,5 +1,6 @@
 import earcut from 'earcut';
 import type {
+  PaperFaceItem,
   PaperLineItem,
   PaperLineRole,
   PaperScene,
@@ -14,6 +15,7 @@ import {
   PAPER_STYLE_POLICIES,
   hexToUnitRgb,
   surfacePaperStyle,
+  type SurfaceStylePolicy,
 } from '../../lib/paper/paperStyleResolve';
 import { erodeLine, faceOutlineLines, paperFaceFill, penForRole } from '../../lib/paper/paperSvg';
 import { IDENTITY_FOLDED_PLACEMENT } from '../../engine/oristudioCpTypes';
@@ -622,7 +624,42 @@ export function foldedFigureLocalGeometry(
 }
 
 /**
- * The same, for a 3D figure's stored {@link PaperScene}.
+ * How a stored scene is inked beyond its style: the surface it is read as, and
+ * what the drawing lays over its faces. Every field is optional, and absent
+ * draws Edit's 3D figure as it has always been drawn.
+ */
+export interface FoldedSceneInk {
+  /**
+   * The surface the style is read through: `folded-3d` — Edit's 3D figure,
+   * which draws every fold as an edge — unless the caller names another. Fold's
+   * folded pane reads its scene as `fold`, a step diagram, whose folds and
+   * instructions keep their own pens.
+   */
+  policy?: SurfaceStylePolicy;
+  /** Every face's fill alpha, 0..1. Under 1 is X-ray: see {@link foldedSceneLocalGeometry}. */
+  faceAlpha?: number;
+  /**
+   * Overrides by source face ({@link PaperFaceItem.face}), for every piece of
+   * that face: a moving set picked out over the paper, or the layers above it
+   * made translucent so it shows through them.
+   */
+  faces?: ReadonlyMap<number, FoldedFaceInk>;
+}
+
+/** One face's override. Its fill only: the lines on it keep their pens. */
+export interface FoldedFaceInk {
+  /**
+   * A colour laid over the face's paper at its own alpha — a theme accent on
+   * the faces a fold moves, drawn over the paper and never in place of it.
+   */
+  tint?: Rgba;
+  /** The face's fill alpha in place of {@link FoldedSceneInk.faceAlpha}, 0..1. */
+  alpha?: number;
+}
+
+/**
+ * The same, for a stored {@link PaperScene}: a 3D figure's, or any surface's
+ * that paints one on the folded channel.
  *
  * A scene is already in the figure's local user space and already in painter's
  * order, so this is only ink: each face filled with the colour its side and
@@ -636,35 +673,44 @@ export function foldedFigureLocalGeometry(
  * of a pan without a pixel to show for it; the scene keeps them marked so an
  * export that wants them still has them.
  *
- * Unless `faceAlpha` is under 1, which is X-ray: paper the eye can see through
- * shows the layers behind it, so the hidden test is exactly what must not be
- * applied and every marked piece is drawn in place. That is the one thing that
- * makes "Show another solution" visible — under `Paper5` and `Wire2` a figure's
- * solutions hash alike (`foldedFigureCapabilities.ts`) — and the window draws
- * it that way (`folded3dWindowRenderSettings` passes the same alpha), so the
- * canvas has to as well or a figure would change appearance the moment it lost
- * its window. The *export* stays opaque with every layer kept, which is §11's
- * reading and the painter's: a translucent style has no scene form.
+ * Unless a face is drawn under alpha 1 — every face, by `faceAlpha`, or one by
+ * its override — which is X-ray: the hidden test assumes paper the eye cannot
+ * see through, so once any can be, it is exactly what must not be applied and
+ * every marked piece is drawn in place. A piece behind paper that stays opaque
+ * is still covered by it, in the order the scene gives. That is the one thing
+ * that makes "Show another solution" visible — under `Paper5` and `Wire2` a
+ * figure's solutions hash alike (`foldedFigureCapabilities.ts`) — and the
+ * window draws it that way (`folded3dWindowRenderSettings` passes the same
+ * alpha), so the canvas has to as well or a figure would change appearance the
+ * moment it lost its window. The *export* stays opaque with every layer kept,
+ * which is §11's reading and the painter's: a translucent style has no scene
+ * form.
  *
  * Dashes are not drawn: the folded channel strokes segments in one batch with a
  * colour and a width and no pattern, exactly as it always has. A dashed pen on
  * a folded figure therefore reads solid on the canvas and dashed in the file.
  *
- * `style` is the figure's effective style; the `folded-3d` policy is applied
- * here, where the painter applies it for the same scene, so the canvas and the
- * file cannot draw one crease at two widths.
+ * `style` is the figure's effective style; the policy is applied here, where
+ * the painter applies it for the same scene, so the canvas and the file cannot
+ * draw one crease at two widths.
  */
 export function foldedSceneLocalGeometry(
   scene: PaperScene,
   effective: PaperStyle,
-  faceAlpha = 1
+  ink: FoldedSceneInk = {}
 ): FoldedFigureLocalGeometry {
-  const style = surfacePaperStyle(effective, PAPER_STYLE_POLICIES['folded-3d']);
-  const ink = `${sceneInkKey(style)}|${faceAlpha}`;
+  const style = surfacePaperStyle(effective, ink.policy ?? PAPER_STYLE_POLICIES['folded-3d']);
+  const faceAlpha = ink.faceAlpha ?? 1;
+  const faces = ink.faces;
+  // The policy is in the key through the style it surfaced: two policies that
+  // see a style alike draw it alike.
+  const key = `${sceneInkKey(style)}|${faceAlpha}|${faces ? faceInkKey(faces) : ''}`;
   const cached = sceneGeometryCache.get(scene);
-  if (cached && cached.ink === ink) return cached.geometry;
+  if (cached && cached.ink === key) return cached.geometry;
 
-  const opaque = faceAlpha >= 1;
+  const opaque = faceAlpha >= 1 && !someFaceSeeThrough(faces);
+  const fill = (face: PaperFaceItem): Rgba =>
+    faceFill(paperFaceFill(style, face.side, face.shade), faceAlpha, faces?.get(face.face));
   const builder = new FoldedBuilder();
   const erodePx = style.erode * scene.sheet;
   const steps = scene.items.length + 1;
@@ -681,10 +727,7 @@ export function foldedSceneLocalGeometry(
     builder.depth = (index + 1) / steps;
     if (item.kind === 'face') {
       lastFill = index;
-      builder.addFillRegion(
-        item.rings.map((ring) => ring.map(scenePoint)),
-        rgbaOf(paperFaceFill(style, item.side, item.shade), faceAlpha)
-      );
+      builder.addFillRegion(item.rings.map((ring) => ring.map(scenePoint)), fill(item));
       // At the face's own depth, which the depth test passes over its fill.
       faceOutlineLines(item).forEach(stroke);
     } else if (item.kind === 'line') {
@@ -693,16 +736,77 @@ export function foldedSceneLocalGeometry(
   }
 
   const geometry = builder.buildLocal((lastFill + 1.5) / steps);
-  sceneGeometryCache.set(scene, { ink, geometry });
+  sceneGeometryCache.set(scene, { ink: key, geometry });
   return geometry;
 }
 
 /**
- * Keyed on the scene, and holding the ink it was drawn with — the style's key
- * and the display style's face alpha, which decides which pieces are drawn at
- * all: a scene is replaced whenever the picture changes, and a style change
- * re-inks the same geometry. One entry per scene, because a figure follows one
- * style at a time.
+ * A stored scene as the folded channel's geometry, for a surface that draws a
+ * scene of its own rather than a document's figures: no placement, no figure
+ * entry, no band — the scene's coordinates are the channel's user space.
+ *
+ * The arrays are the ink cache's ({@link foldedSceneLocalGeometry}), handed
+ * over rather than copied, since the renderer only uploads them; nothing may
+ * write to them.
+ */
+export function paperSceneToFoldedGeometry(
+  scene: PaperScene,
+  effective: PaperStyle,
+  ink: FoldedSceneInk = {}
+): FoldedGeometry {
+  const local = foldedSceneLocalGeometry(scene, effective, ink);
+  return {
+    fills: {
+      position: local.fillPos,
+      color: local.fillColor,
+      count: local.fillPos.length / 2,
+      depth: local.fillDepth,
+    },
+    strokes: {
+      a: local.strokeA,
+      b: local.strokeB,
+      color: local.strokeColor,
+      widthMul: local.strokeWidthMul,
+      count: local.strokeA.length / 2,
+      depth: local.strokeDepth,
+    },
+  };
+}
+
+/** A face's fill: its paper, under the override's tint, at the override's alpha or every face's. */
+function faceFill(paper: Hex, faceAlpha: number, override: FoldedFaceInk | undefined): Rgba {
+  const [r, g, b] = hexToUnitRgb(paper);
+  const alpha = unit(override?.alpha ?? faceAlpha);
+  const tint = override?.tint;
+  if (!tint) return [r, g, b, alpha];
+  const over = unit(tint[3]);
+  return [r + (tint[0] - r) * over, g + (tint[1] - g) * over, b + (tint[2] - b) * over, alpha];
+}
+
+function someFaceSeeThrough(faces: FoldedSceneInk['faces']): boolean {
+  if (!faces) return false;
+  for (const face of faces.values()) if (face.alpha !== undefined && face.alpha < 1) return true;
+  return false;
+}
+
+/** The overrides as one string, in face order, so an equal map built afresh hits the cache. */
+function faceInkKey(faces: ReadonlyMap<number, FoldedFaceInk>): string {
+  return [...faces]
+    .sort(([l], [r]) => l - r)
+    .map(([face, { tint, alpha }]) => `${face}:${tint ? tint.join(',') : ''}:${alpha ?? ''}`)
+    .join(';');
+}
+
+function unit(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+/**
+ * Keyed on the scene, and holding the ink it was drawn with — the style's key,
+ * the face alpha and the per-face overrides, which decide which pieces are
+ * drawn at all: a scene is replaced whenever the picture changes, and a style
+ * change re-inks the same geometry. One entry per scene, because a figure
+ * follows one style at a time.
  */
 const sceneGeometryCache = new WeakMap<
   PaperScene,
@@ -763,11 +867,9 @@ export function foldedFigurePicture(
     if (scene.items.length === 0) return null;
     // The alpha is the display style's, not the scene's: a scene is geometry
     // and roles, and X-ray is ink. The flat figure's stream bakes its own.
-    return foldedSceneLocalGeometry(
-      scene,
-      style,
-      folded3dStylePlan(figure.displayStyle).faceAlpha
-    );
+    return foldedSceneLocalGeometry(scene, style, {
+      faceAlpha: folded3dStylePlan(figure.displayStyle).faceAlpha,
+    });
   }
   const snapshot = figure.renderSnapshot;
   return snapshot?.primitives.length ? foldedFigureLocalGeometry(snapshot) : null;

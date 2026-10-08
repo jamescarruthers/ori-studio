@@ -5,7 +5,15 @@ import type {
   PaperLineItem,
   PaperScene,
 } from '@treemaker/origami-simulator';
+import { DEFAULT_PAPER_PAGE } from '../../lib/paper/paperPage';
 import { DEFAULT_PAPER_STYLE, type PaperStyle } from '../../lib/paper/paperStyle';
+import {
+  PAPER_STYLE_POLICIES,
+  surfacePaperStyle,
+  unitRgbToHex,
+  type Vec3,
+} from '../../lib/paper/paperStyleResolve';
+import { paperSceneToSvg } from '../../lib/paper/paperSvg';
 import {
   applyFoldedPlacementToPoint,
   cpContradictionFaceFills,
@@ -16,6 +24,8 @@ import {
   foldedFigureLocalGeometry,
   foldedFigureUserBounds,
   foldedSceneLocalGeometry,
+  paperSceneToFoldedGeometry,
+  type FoldedSceneInk,
 } from './cpFoldedToScene';
 import { cpModelToSvg } from '../../lib/creasePatternViewport';
 import { TRANSPARENT_FACE_ALPHA } from '../folded/folded3dStyle';
@@ -1442,5 +1452,192 @@ describe('a stored PaperScene', () => {
     // A fresh style object of equal value is the common case — the effective
     // style is a merge, so identity would miss on every frame.
     expect(foldedSceneLocalGeometry(entry.scene!, red)).not.toBe(first);
+  });
+
+  /** Every role a scene can hand the channel, one line each, in this order. */
+  const ROLES = [
+    'edge',
+    'mountain',
+    'valley',
+    'diagram-mountain',
+    'diagram-valley',
+    'diagram-hidden',
+    'aux',
+  ] as const;
+
+  /** A style with a pen of its own, dashed or not, for every role. */
+  const everyPenOwn = (): PaperStyle =>
+    style({
+      edges: { width: 0.9, color: '#101010', dash: null, cap: 'butt' },
+      mountainFolds: { width: 1.1, color: '#a00000', dash: null, cap: 'butt' },
+      valleyFolds: { width: 0.7, color: '#0000a0', dash: [3, 1], cap: 'butt' },
+      mountainDiagramCreases: { width: 1.3, color: '#c04000', dash: [8, 2, 1, 2], cap: 'butt' },
+      valleyDiagramCreases: { width: 1.2, color: '#0040c0', dash: [4, 2], cap: 'butt' },
+      auxCreases: { visible: true, pen: { width: 0.4, color: '#808080', dash: [1, 1], cap: 'butt' } },
+    });
+
+  it('reads the style as the surface it is told, the folded figure’s unless told', () => {
+    const lines = ROLES.map((role, i): PaperLineItem => ({ ...MOUNTAIN, role, a: [0, i], b: [10, i] }));
+    const custom = everyPenOwn();
+    const asFigure = foldedSceneLocalGeometry(scene(lines), custom);
+    const asStep = foldedSceneLocalGeometry(scene(lines), custom, {
+      policy: PAPER_STYLE_POLICIES.fold,
+    });
+    const colours = (geometry: { strokeColor: Float32Array }) =>
+      ROLES.map((_, i) => unitRgbToHex([...geometry.strokeColor.slice(i * 4, i * 4 + 3)] as Vec3));
+    // A figure draws every fold and instruction as an edge; a step in its own pens.
+    expect(colours(asFigure)).toEqual(['#101010', '#101010', '#101010', '#101010', '#101010', '#101010', '#808080']);
+    expect(colours(asStep)).toEqual(['#101010', '#a00000', '#0000a0', '#c04000', '#0040c0', '#101010', '#808080']);
+  });
+
+  it('strokes each role in the colour and width the painter writes, under the fold policy', () => {
+    const lines = ROLES.map((role, i): PaperLineItem => ({ ...MOUNTAIN, role, a: [0, i], b: [10, i] }));
+    const custom = everyPenOwn();
+    const fold = PAPER_STYLE_POLICIES.fold;
+    const canvas = foldedSceneLocalGeometry(scene(lines), custom, { policy: fold });
+    // The painter is handed the style as the surface draws it, which is the
+    // export target's `paintStyle`.
+    const { svg } = paperSceneToSvg(scene(lines), surfacePaperStyle(custom, fold), DEFAULT_PAPER_PAGE);
+    const painted = [...svg.matchAll(/<line [^>]*stroke="(#[0-9a-f]{6})" stroke-width="([\d.]+)"/g)];
+    expect(painted).toHaveLength(ROLES.length);
+    expect(canvas.strokeA.length / 2).toBe(ROLES.length);
+    painted.forEach(([, colour, width], i) => {
+      expect(unitRgbToHex([...canvas.strokeColor.slice(i * 4, i * 4 + 3)] as Vec3), ROLES[i]).toBe(colour);
+      // The painter's page is in pt, and a canvas stroke's multiplier is pt.
+      expect(canvas.strokeWidthMul[i], ROLES[i]).toBeCloseTo(Number(width), 2);
+    });
+  });
+
+  describe('per-face ink', () => {
+    const BURIED: PaperFaceItem = { ...FRONT_TRIANGLE, face: 4, hidden: true };
+    const ON_BURIED: PaperLineItem = { ...MOUNTAIN, face: 4, hidden: true };
+    const white = () => style({ paper: { front: '#ffffff', back: '#ffffff' } });
+    const fillOf = (geometry: { fillColor: Float32Array }, vertex: number) => [
+      ...geometry.fillColor.slice(vertex * 4, vertex * 4 + 4),
+    ];
+
+    it('lays a tint over one face’s paper at the tint’s alpha, and leaves the rest alone', () => {
+      const other: PaperFaceItem = { ...FRONT_TRIANGLE, face: 1 };
+      const drawn = foldedSceneLocalGeometry(scene([FRONT_TRIANGLE, other, MOUNTAIN]), white(), {
+        faces: new Map([[1, { tint: [0, 0.5, 0.5, 0.5] }]]),
+      });
+      expect(fillOf(drawn, 0)).toEqual([1, 1, 1, 1]);
+      // Half of white, half of teal: drawn over the paper, never in its place.
+      expect(fillOf(drawn, 3)).toEqual([0.5, 0.75, 0.75, 1]);
+      // The lines on the paper keep their pen.
+      const plain = foldedSceneLocalGeometry(scene([FRONT_TRIANGLE, other, MOUNTAIN]), white());
+      expect([...drawn.strokeColor]).toEqual([...plain.strokeColor]);
+    });
+
+    it('draws one face translucent, and then what it was hiding', () => {
+      const items = [BURIED, ON_BURIED, FRONT_TRIANGLE, MOUNTAIN];
+      const opaque = foldedSceneLocalGeometry(scene(items), white(), {
+        faces: new Map([[4, { tint: [0, 0.5, 0.5, 1] }]]),
+      });
+      // A tint alone reveals nothing: the paper over the buried face is opaque.
+      expect(opaque.fillPos.length / 2).toBe(3);
+      expect(opaque.strokeA.length / 2).toBe(1);
+
+      const peeled = foldedSceneLocalGeometry(scene(items), white(), {
+        faces: new Map([
+          [0, { alpha: 0.4 }],
+          [4, { tint: [0, 0.5, 0.5, 1] }],
+        ]),
+      });
+      // Both faces and both lines, the buried face tinted under the peeled one.
+      expect(peeled.fillPos.length / 2).toBe(6);
+      expect(peeled.strokeA.length / 2).toBe(2);
+      expect(fillOf(peeled, 0)).toEqual([0, 0.5, 0.5, 1]);
+      expect(fillOf(peeled, 3)[3]).toBeCloseTo(0.4, 6);
+    });
+
+    it('keeps an override’s alpha over every face’s', () => {
+      const drawn = foldedSceneLocalGeometry(scene([FRONT_TRIANGLE]), white(), {
+        faceAlpha: 0.3,
+        faces: new Map([[0, { alpha: 1 }]]),
+      });
+      expect(fillOf(drawn, 0)[3]).toBe(1);
+    });
+
+    it('hits the cache for an equal map built afresh, and misses for a changed one', () => {
+      const once = scene([FRONT_TRIANGLE]);
+      const ink = (alpha: number): FoldedSceneInk => ({
+        faces: new Map([[0, { tint: [0, 1, 0, 0.5], alpha }]]),
+      });
+      const first = foldedSceneLocalGeometry(once, white(), ink(0.5));
+      expect(foldedSceneLocalGeometry(once, white(), ink(0.5))).toBe(first);
+      expect(foldedSceneLocalGeometry(once, white(), ink(0.6))).not.toBe(first);
+    });
+  });
+});
+
+describe('paperSceneToFoldedGeometry', () => {
+  const face: PaperFaceItem = {
+    kind: 'face',
+    face: 0,
+    side: 'back',
+    rings: [
+      [
+        [0, 0],
+        [10, 0],
+        [10, 10],
+        [0, 10],
+      ],
+    ],
+    outline: 'edge',
+    shade: 1,
+    hidden: false,
+  };
+  const valley: PaperLineItem = {
+    kind: 'line',
+    role: 'valley',
+    a: [0, 0],
+    b: [10, 10],
+    onBoundary: [false, false],
+    hidden: false,
+  };
+  const scene = (): PaperScene => ({
+    bounds: { minX: 0, minY: 0, maxX: 10, maxY: 10 },
+    sheet: 10,
+    items: [face, valley],
+  });
+
+  it('draws a scene as the channel draws a figure holding it, unplaced', () => {
+    const drawn = paperSceneToFoldedGeometry(scene(), DEFAULT_PAPER_STYLE);
+    const asFigure = cpFoldedToScene(
+      [{ ...figure([]), renderSnapshot: null, scene: scene() }],
+      undefined,
+      undefined,
+      undefined,
+      () => DEFAULT_PAPER_STYLE
+    );
+    expect([...drawn.fills.position]).toEqual([...asFigure.fills.position]);
+    expect([...drawn.fills.color]).toEqual([...asFigure.fills.color]);
+    expect([...drawn.fills.depth!]).toEqual([...asFigure.fills.depth!]);
+    expect([...drawn.strokes.a]).toEqual([...asFigure.strokes.a]);
+    expect([...drawn.strokes.b]).toEqual([...asFigure.strokes.b]);
+    expect([...drawn.strokes.color]).toEqual([...asFigure.strokes.color]);
+    expect([...drawn.strokes.widthMul]).toEqual([...asFigure.strokes.widthMul]);
+    expect([...drawn.strokes.depth!]).toEqual([...asFigure.strokes.depth!]);
+    expect(drawn.fills.count).toBe(6);
+    // The outline's four edges and the valley.
+    expect(drawn.strokes.count).toBe(5);
+    expect(drawn.shadows).toBeUndefined();
+  });
+
+  it('inks it as told: the surface, and the faces', () => {
+    const custom: PaperStyle = {
+      ...DEFAULT_PAPER_STYLE,
+      paper: { front: '#ffffff', back: '#000000' },
+      valleyFolds: { ...DEFAULT_PAPER_STYLE.valleyFolds, color: '#0000ff', width: 2 },
+    };
+    const drawn = paperSceneToFoldedGeometry(scene(), custom, {
+      policy: PAPER_STYLE_POLICIES.fold,
+      faces: new Map([[0, { alpha: 0.5 }]]),
+    });
+    expect(drawn.fills.color[3]).toBe(0.5);
+    // The valley is the scene's last item, so the last segment: its own pen.
+    expect([...drawn.strokes.color.slice(16, 19)]).toEqual([0, 0, 1]);
+    expect(drawn.strokes.widthMul[4]).toBe(2);
   });
 });
