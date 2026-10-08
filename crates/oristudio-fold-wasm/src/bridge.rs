@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 
-use oristudio_fold::{CreaseKind, Direction, Letter, Sheet, State};
+use oristudio_fold::{CreaseKind, Direction, Letter, PlainFold, Sheet, State};
 
 use crate::canonical::canonical_keys;
 use crate::resolve::{Rejection, along_crease, along_line};
@@ -52,25 +52,17 @@ impl Bridge {
     /// closure added. A turn or a rotation moves no paper and is not asked.
     pub fn analyse(&self, state: u32, op: &Op) -> Result<Outcome<Analysed>, BridgeError> {
         let parent = self.state(state)?;
-        let fold = match op {
-            Op::Valley(a) => along_line(parent, a, Direction::Valley),
-            Op::Mountain(a) => along_line(parent, a, Direction::Mountain),
-            Op::Precrease(a) => precrease_direction(a).and_then(|d| along_line(parent, a, d)),
-            Op::Unfold(c) => along_crease(parent, c, true),
-            Op::Refold(c) => along_crease(parent, c, false),
-            Op::CpJump {} => Err(cp_jump()),
-            Op::Turn { .. } | Op::Rotate { .. } => {
+        Ok(match settle(resolve(parent, op))? {
+            Ok(Resolved::Fold { fold, .. }) => match parent.analyse_fold(&fold) {
+                Ok(analysis) => Outcome::Ok(Analysed { analysis }),
+                Err(refused) => Outcome::Refused(refused.into()),
+            },
+            Ok(Resolved::View(_)) => {
                 return Err(BridgeError::InvalidInput(format!(
                     "a {} step moves no paper: there is nothing to analyse",
                     op.kind()
                 )));
             }
-        };
-        Ok(match settle(fold)? {
-            Ok(fold) => match parent.analyse_fold(&fold) {
-                Ok(analysis) => Outcome::Ok(Analysed { analysis }),
-                Err(refused) => Outcome::Refused(refused.into()),
-            },
             Err(refusal) => Outcome::Refused(refusal),
         })
     }
@@ -89,32 +81,19 @@ impl Bridge {
                 BridgeRefusal::UnexpectedChoice { choice }.into(),
             ));
         }
-        let fold = |fold: Result<oristudio_fold::PlainFold, Rejection>, precrease: bool| {
-            settle(fold).map(|resolved| {
-                resolved.and_then(|fold| {
-                    let landed = if precrease {
-                        parent.precrease(&fold)
-                    } else {
-                        parent.fold(&fold)
-                    };
-                    landed
-                        .map(|folded| (folded.state, Some(folded.report)))
-                        .map_err(Refusal::from)
-                })
-            })
-        };
-        let landed = match op {
-            Op::Valley(a) => fold(along_line(parent, a, Direction::Valley), false)?,
-            Op::Mountain(a) => fold(along_line(parent, a, Direction::Mountain), false)?,
-            Op::Precrease(a) => fold(
-                precrease_direction(a).and_then(|d| along_line(parent, a, d)),
-                true,
-            )?,
-            Op::Unfold(c) => fold(along_crease(parent, c, true), false)?,
-            Op::Refold(c) => fold(along_crease(parent, c, false), false)?,
-            Op::Turn { axis } => Ok((parent.turn_over_about(*axis), None)),
-            Op::Rotate { rotate } => Ok((parent.rotate(rotate.angle()), None)),
-            Op::CpJump {} => fold(Err(cp_jump()), false)?,
+        let landed = match settle(resolve(parent, op))? {
+            Ok(Resolved::Fold { fold, precrease }) => {
+                let folded = if precrease {
+                    parent.precrease(&fold)
+                } else {
+                    parent.fold(&fold)
+                };
+                folded
+                    .map(|folded| (folded.state, Some(folded.report)))
+                    .map_err(Refusal::from)
+            }
+            Ok(Resolved::View(state)) => Ok((state, None)),
+            Err(refusal) => Err(refusal),
         };
         Ok(match landed {
             Ok((state, report)) => {
@@ -177,20 +156,35 @@ impl Bridge {
     }
 }
 
-/// A precrease's direction, which its op must give.
-fn precrease_direction(op: &crate::wire::AlongLine) -> Result<Direction, Rejection> {
-    op.direction.ok_or_else(|| {
-        Rejection::Input(BridgeError::InvalidInput(
-            "a precrease needs its direction".to_string(),
-        ))
-    })
+/// An op, resolved against its parent.
+enum Resolved {
+    /// A fold along a line, folded back again when `precrease`.
+    Fold { fold: PlainFold, precrease: bool },
+    /// A turn or a rotation: the same model, seen another way.
+    View(State),
 }
 
-/// Import CP: its loaders and completion are Phase 8's.
-fn cp_jump() -> Rejection {
-    Rejection::Refused(BridgeRefusal::UnsupportedOp {
-        feature: Unsupported::CpJump,
-    })
+fn resolve(parent: &State, op: &Op) -> Result<Resolved, Rejection> {
+    let fold = |fold, precrease| Ok(Resolved::Fold { fold, precrease });
+    match op {
+        Op::Valley(a) => fold(along_line(parent, a, Direction::Valley)?, false),
+        Op::Mountain(a) => fold(along_line(parent, a, Direction::Mountain)?, false),
+        Op::Precrease(a) => {
+            let direction = a.direction.ok_or_else(|| {
+                BridgeError::InvalidInput("a precrease needs its direction".to_string())
+            })?;
+            fold(along_line(parent, a, direction)?, true)
+        }
+        Op::Unfold(c) => fold(along_crease(parent, c, true)?, false),
+        Op::Refold(c) => fold(along_crease(parent, c, false)?, false),
+        Op::Turn { axis } => Ok(Resolved::View(parent.turn_over_about(*axis))),
+        Op::Rotate { rotate } => Ok(Resolved::View(parent.rotate(rotate.angle()))),
+        // Import CP: its loaders and completion are Phase 8's.
+        Op::CpJump {} => Err(BridgeRefusal::UnsupportedOp {
+            feature: Unsupported::CpJump,
+        }
+        .into()),
+    }
 }
 
 /// A resolved fold, a refusal, or (thrown) the caller's mistake.

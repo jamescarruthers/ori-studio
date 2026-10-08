@@ -53,7 +53,7 @@ lands, re-measure below with and without it and decide against the budget.
 
 | Build | `.wasm` raw | gzip -9 |
 |---|---|---|
-| Without `kernel` | 625,778 B (611 KiB) | 233,788 B (228 KiB) |
+| Without `kernel` | 623,468 B (609 KiB) | 233,816 B (228 KiB) |
 | With `kernel` | not yet measured | — |
 
 For scale: the precrease bridge is 861 KiB raw (338 KiB gzipped) and the CP
