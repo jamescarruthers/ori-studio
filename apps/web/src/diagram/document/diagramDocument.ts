@@ -26,6 +26,7 @@ import type { StepDiagramModel } from '../../cp-workspace/references/referenceFi
 import type { WhiteArrowTail } from '../../cp-workspace/references/stepDiagramGeometry';
 import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
+import { randomId, type IdFactory } from '../../lib/documentFile';
 import type { BuiltInPaperPresetId } from '../../lib/paper/paperPresets';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import { xmlText } from '../../lib/xmlEscape';
@@ -1086,9 +1087,9 @@ export interface DiagramDocument {
   assets: Record<string, DiagramAsset>;
 }
 
-export type DiagramIdFactory = (prefix: 'diagram' | 'step' | 'turn' | 'annotation' | 'asset') => string;
+export type DiagramIdFactory = IdFactory<'diagram' | 'step' | 'turn' | 'annotation' | 'asset'>;
 
-export const randomDiagramId: DiagramIdFactory = (prefix) => `${prefix}-${crypto.randomUUID()}`;
+export const randomDiagramId: DiagramIdFactory = randomId;
 
 export const PAGE_MARGIN_MM_RANGE = { min: 0, max: 30 } as const;
 export const PAGE_COLUMNS_RANGE = { min: 2, max: 5 } as const;
