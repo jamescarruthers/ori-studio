@@ -7,10 +7,8 @@ import {
   type SimulatorSettings,
 } from '../../lib/simulatorSettings';
 import { simulatorColorModeLabel } from '../../i18n/enumLabels';
-import {
-  useSimulatorPaperStyle,
-  type SimulatorPenField,
-} from '../../simulator/useSimulatorPaperStyle';
+import type { PaperDisplayPen } from '../../lib/paper/usePaperDisplayStyle';
+import { useSimulatorPaperStyle } from '../../simulator/useSimulatorPaperStyle';
 import { useSimulationInHand } from '../../simulator/useSimulatorShortcuts';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
@@ -45,7 +43,7 @@ export function SimulatorViewControlsPanel() {
   // swatches stop doing anything; showing them live would promise an effect
   // they no longer have.
   const asEdges = paper.style.foldsAsEdges;
-  const penRow = (pen: SimulatorPenField, label: string, disabled = false, divider = true) => (
+  const penRow = (pen: PaperDisplayPen, label: string, disabled = false, divider = true) => (
     <ColorField
       label={label}
       layout="row"
