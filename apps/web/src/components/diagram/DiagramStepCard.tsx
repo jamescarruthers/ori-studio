@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useId, useMemo, useRef, type ForwardedRef } from 'react';
+import { useId, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Compass,
@@ -60,91 +60,78 @@ import { capturedStyleChange } from '../../diagram/pictures/lighting';
  * Adjust pose and Annotate (D24), and an empty one offers to be a turn instead
  * of a step: Turn over and Rotate, beside the ways to give it a picture.
  */
-export const DiagramStepCard = forwardRef<
-  HTMLDivElement,
-  {
-    step: DiagramStep;
-    assets: Readonly<Record<string, DiagramAsset>>;
-    /** The pens a captured picture is painted in. */
-    style: DiagramStyle;
-    /** 1-based, as the page will print it. */
-    number: number;
-    selected: boolean;
-    /** Whether this card is the grid's tab stop. */
-    tabStop: boolean;
-    /** A picture dragged over the grid would land on this card. */
-    dropTarget: boolean;
-    readOnly: boolean;
-    onSelect: (stepId: string) => void;
-    /** Open this step in detail. */
-    onOpen: (stepId: string) => void;
-    /** Pick a picture for this step. Called from the click itself. */
-    onUpload: (stepId: string) => void;
-    /** How the step's link stands; null for a step that is not linked. */
-    link: DiagramLinkStatus | null;
-    /** The pages cut the step's instruction with "…". */
-    textCut: boolean;
-    /**
-     * An enlarged step (Revision 2): the number of the step its area is on,
-     * or null once the area is gone; undefined for a step that is not enlarged.
-     */
-    enlargedFrom?: number | null;
-    /** The step's capture while one runs, and whether its fold can be stopped. */
-    capture: { stoppable: boolean } | null;
-    /** A crease pattern is open to link an empty step to. */
-    patternOpen: boolean;
-    /** Choose a pattern for this step. */
-    onLink: (stepId: string) => void;
-    onStop: (stepId: string) => void;
-    /** Fill this step from the References browser. */
-    onFromReferences: (stepId: string) => void;
-    /** Open this step in Pose or Annotate, from the buttons over its picture. */
-    onOpenIn: (stepId: string, mode: 'pose' | 'annotate') => void;
-    /** Go to Edit: an empty step's way to a pattern when none is open. */
-    onGoToEdit: () => void;
-    /** Make this empty step a turn in its place (D24). */
-    onMakeTurn: (stepId: string, kind: 'turn-over' | 'rotate') => void;
-    /** Delete this step, asking first when it holds work. */
-    onDelete: (stepId: string) => void;
-  }
->(function DiagramStepCard(
-  {
-    step,
-    assets,
-    style,
-    number,
-    selected,
-    tabStop,
-    dropTarget,
-    readOnly,
-    onSelect,
-    onOpen,
-    onUpload,
-    link,
-    textCut,
-    enlargedFrom,
-    capture,
-    patternOpen,
-    onLink,
-    onStop,
-    onFromReferences,
-    onOpenIn,
-    onGoToEdit,
-    onMakeTurn,
-    onDelete,
-  },
-  forwarded
-) {
+export function DiagramStepCard({
+  step,
+  assets,
+  style,
+  number,
+  selected,
+  tabStop,
+  dropTarget,
+  readOnly,
+  onSelect,
+  onOpen,
+  onUpload,
+  link,
+  textCut,
+  enlargedFrom,
+  capture,
+  patternOpen,
+  onLink,
+  onStop,
+  onFromReferences,
+  onOpenIn,
+  onGoToEdit,
+  onMakeTurn,
+  onDelete,
+}: {
+  step: DiagramStep;
+  assets: Readonly<Record<string, DiagramAsset>>;
+  /** The pens a captured picture is painted in. */
+  style: DiagramStyle;
+  /** 1-based, as the page will print it. */
+  number: number;
+  selected: boolean;
+  /** Whether this card is the grid's tab stop. */
+  tabStop: boolean;
+  /** A picture dragged over the grid would land on this card. */
+  dropTarget: boolean;
+  readOnly: boolean;
+  onSelect: (stepId: string) => void;
+  /** Open this step in detail. */
+  onOpen: (stepId: string) => void;
+  /** Pick a picture for this step. Called from the click itself. */
+  onUpload: (stepId: string) => void;
+  /** How the step's link stands; null for a step that is not linked. */
+  link: DiagramLinkStatus | null;
+  /** The pages cut the step's instruction with "…". */
+  textCut: boolean;
+  /**
+   * An enlarged step (Revision 2): the number of the step its area is on,
+   * or null once the area is gone; undefined for a step that is not enlarged.
+   */
+  enlargedFrom?: number | null;
+  /** The step's capture while one runs, and whether its fold can be stopped. */
+  capture: { stoppable: boolean } | null;
+  /** A crease pattern is open to link an empty step to. */
+  patternOpen: boolean;
+  /** Choose a pattern for this step. */
+  onLink: (stepId: string) => void;
+  onStop: (stepId: string) => void;
+  /** Fill this step from the References browser. */
+  onFromReferences: (stepId: string) => void;
+  /** Open this step in Pose or Annotate, from the buttons over its picture. */
+  onOpenIn: (stepId: string, mode: 'pose' | 'annotate') => void;
+  /** Go to Edit: an empty step's way to a pattern when none is open. */
+  onGoToEdit: () => void;
+  /** Make this empty step a turn in its place (D24). */
+  onMakeTurn: (stepId: string, kind: 'turn-over' | 'rotate') => void;
+  /** Delete this step, asking first when it holds work. */
+  onDelete: (stepId: string) => void;
+}) {
   const { t } = useTranslation();
   const labelId = useId();
   const own = useRef<HTMLDivElement | null>(null);
-  const ref = useCallback(
-    (element: HTMLDivElement | null) => {
-      own.current = element;
-      assignRef(forwarded, element);
-    },
-    [forwarded]
-  );
   const locked = isLockedStep(step);
   const text = step.text.trim();
   const picture = stepPictureSource(step, assets);
@@ -176,7 +163,7 @@ export const DiagramStepCard = forwardRef<
 
   return (
     <StepCard
-      ref={ref}
+      ref={own}
       id={step.id}
       selected={selected}
       tabStop={tabStop}
@@ -381,29 +368,36 @@ export const DiagramStepCard = forwardRef<
       )}
     </StepCard>
   );
-});
+}
 
 /**
  * A turn between two steps, in the Diagram's Steps grid (D24): the shared turn
  * card, its glyph drawn in the diagram's pens, as a page prints it.
  */
-export const DiagramTurnCard = forwardRef<
-  HTMLDivElement,
-  {
-    turn: DiagramTurn;
-    /** The numbers of the steps either side; null at an end. */
-    between: TurnBetween;
-    /** The pens the glyph is drawn in, as a page draws it. */
-    style: DiagramStyle;
-    selected: boolean;
-    tabStop: boolean;
-    /** A picture dragged over the grid would land here: a new step after the turn. */
-    dropTarget: boolean;
-    readOnly: boolean;
-    onSelect: (id: string) => void;
-    onDelete: (id: string) => void;
-  }
->(function DiagramTurnCard({ turn, between, style, selected, tabStop, dropTarget, readOnly, onSelect, onDelete }, ref) {
+export function DiagramTurnCard({
+  turn,
+  between,
+  style,
+  selected,
+  tabStop,
+  dropTarget,
+  readOnly,
+  onSelect,
+  onDelete,
+}: {
+  turn: DiagramTurn;
+  /** The numbers of the steps either side; null at an end. */
+  between: TurnBetween;
+  /** The pens the glyph is drawn in, as a page draws it. */
+  style: DiagramStyle;
+  selected: boolean;
+  tabStop: boolean;
+  /** A picture dragged over the grid would land here: a new step after the turn. */
+  dropTarget: boolean;
+  readOnly: boolean;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
   const locked = isLockedTurn(turn);
   const glyph = useMemo(() => {
     const svg = locked ? null : turnGlyphSvg(turn, style);
@@ -411,7 +405,6 @@ export const DiagramTurnCard = forwardRef<
   }, [turn, style, locked]);
   return (
     <TurnCard
-      ref={ref}
       turn={turn}
       between={between}
       glyph={glyph}
@@ -422,7 +415,7 @@ export const DiagramTurnCard = forwardRef<
       onDelete={readOnly ? undefined : onDelete}
     />
   );
-});
+}
 
 /**
  * What the step is, for its badge: where a linked step comes from and how it
@@ -450,9 +443,4 @@ function stepKindLabel(step: DiagramStep, picture: StepPictureSource | null, t: 
       : t('panels:diagram.card.badgeImage', 'Image');
   }
   return t('panels:diagram.card.badgeEmpty', 'Empty');
-}
-
-function assignRef<T>(ref: ForwardedRef<T>, value: T | null): void {
-  if (typeof ref === 'function') ref(value);
-  else if (ref) ref.current = value;
 }
