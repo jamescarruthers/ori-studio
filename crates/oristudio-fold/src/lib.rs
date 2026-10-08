@@ -13,6 +13,12 @@
 //!   refold, unfold, turn over and rotate.
 //! - [`sheet`]: convex sheets — square, rectangle, regular polygon.
 //! - [`numerics`]: one tolerance, line snapping and the minimum feature.
+//! - [`Unordered`] and [`complete`]: parts whose layer order is still to be
+//!   decided, and the one entry that completes it through Flat-Folder's
+//!   search with a true ‹ n of m ›, for Import CP now and compound folds
+//!   later.
+//! - [`witness`]: stored choices with faces named by sheet points, and their
+//!   replay.
 //!
 //! The layer order, its constraint problem and the checker are
 //! `oristudio-layer-order`'s; the tolerance and the convex-polygon primitives
@@ -29,6 +35,7 @@
 //! | Letters | Front-relative: a folded crease is V iff its front-up face lies below. |
 //! | Turn over | Mirrors the view; every `above` inverts *as seen*; no letter changes. |
 
+pub mod complete;
 pub mod fold;
 mod index;
 pub mod isometry;
@@ -37,8 +44,14 @@ pub mod pattern;
 pub mod refusal;
 pub mod sheet;
 pub mod state;
+mod unordered;
 pub mod view;
+pub mod witness;
 
+pub use complete::{
+    ChoiceCount, CompletionLimits, CompletionRefusal, Completions, ComponentChoices, FixedKind,
+    FixedPair,
+};
 pub use fold::{
     ClosurePolicy, FoldAnalysis, FoldReport, Folded, Placement, PlainFold, Refold, Seed, Snap,
 };
@@ -47,7 +60,9 @@ pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
 pub use refusal::{Fix, Flap, FoldRefusal, NearMissCause, Refused, Side};
 pub use sheet::{Sheet, SheetShape};
 pub use state::{State, StateParts};
+pub use unordered::Unordered;
 pub use view::{Direction, StartSide, View};
+pub use witness::{Broken, BrokenWitness, WitnessOrder};
 
 /// The engine's behaviour version: bumped when the same inputs can land a
 /// different state. Stored beside replay caches and on Diagram links for

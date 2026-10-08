@@ -8,7 +8,8 @@ edition.workspace = true
 # validating constructor, and the plain fold with its precrease, refold, unfold,
 # turn-over and rotate. The Fold spike under artifacts/fold-spike/core was the
 # reference for behaviour; no code is ported from it, Beloch, Flat-Folder or
-# Oriedita.
+# Oriedita. Completion calls Flat-Folder's search through treemaker-flatfold's
+# entry point; nothing of it is copied here.
 license = "MIT OR Apache-2.0"
 description = "The Fold workspace engine for Ori Studio: flat folded states and the plain fold"
 repository.workspace = true
@@ -34,6 +35,7 @@ oristudio-geometry = { path = "../oristudio-geometry" }
 oristudio-layer-order = { path = "../oristudio-layer-order" }
 serde.workspace = true
 thiserror.workspace = true
+treemaker-flatfold.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
