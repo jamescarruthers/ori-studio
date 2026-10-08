@@ -15,7 +15,6 @@ import {
   tickFoldRun,
   toggleFoldRun,
   type FoldRun,
-  legPace,
   FOLD_PACE,
   TURN_OVER_PACE,
   easeInOut,
@@ -172,9 +171,6 @@ describe('poseAt', () => {
   });
 
   it('rolls a turn-over over the whole leg at its own pace, easing gently', () => {
-    expect(legPace('turn-over')).toBe(TURN_OVER_PACE);
-    expect(legPace('cp')).toBe(FOLD_PACE);
-    expect(legPace('reference')).toBe(FOLD_PACE);
     // No press at the end of a roll: the sheet is still turning where a flap
     // would be pressing, and lands flat at the very end.
     expect(poseAt(0.9).angle).toBe(Math.PI);
@@ -193,6 +189,6 @@ describe('poseAt', () => {
     expect(runPose(atFoldTime)?.angle).toBeLessThan(Math.PI);
     const landed = tickFoldRun(atFoldTime, TURN_OVER_DURATION_MS - FOLD_DURATION_MS);
     expect(isFolded(landed)).toBe(true);
-    expect(unfoldingLegs(landed.programme)[0]).toMatchObject(TURN_OVER_PACE);
+    expect(unfoldingLegs(landed.forwards)[0]).toMatchObject(TURN_OVER_PACE);
   });
 });

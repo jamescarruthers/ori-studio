@@ -1,12 +1,14 @@
 /**
- * Where a card's animation is, and where it is going.
+ * Where a fold animation is, and where it is going: the state machine any
+ * surface that plays a fold shares, whatever drew the paper.
  *
- * A card plays a **run** of legs. A fold card is one leg — fold — and rests
- * folded; Play again unfolds it. A twin card is two folds shown one after
- * the other: fold the first, hold a moment so the landing can be read,
- * unfold it, then fold the second and rest there, so the second landing can
- * be read the way a single fold's is; Play again unfolds it. A turn-over is
- * one leg too: the whole sheet turning over, and back on the next Play.
+ * A card plays a **run** of legs, each one flap swinging one way. A fold is
+ * one leg — fold — and rests folded; Play again unfolds it. Two flaps shown
+ * one after the other (References' twin card): fold the first, hold a moment
+ * so the landing can be read, unfold it, then fold the second and rest there,
+ * so the second landing can be read the way a single fold's is; Play again
+ * unfolds it. A turn-over is one leg too: the whole sheet turning over, and
+ * back on the next Play.
  *
  * Pressed while it moves, a run pauses; pressed again, it carries on the way
  * it was going. Pure and clock-free: the transport feeds `tickFoldRun` the
@@ -17,10 +19,8 @@
  * shape of the motion — only where along it the paper stopped.
  */
 
-import type { FoldSceneKind } from './foldScene';
-
 export interface FoldPose {
-  /** Which of the card's flaps is moving; the others lie flat. */
+  /** Which of the card's flaps is moving; the others stay where they lie. */
   flap: number;
   /** The swing, in radians: 0 flat, π folded over onto the paper. */
   angle: number;
@@ -52,7 +52,7 @@ export interface FoldLegPace {
 
 export interface FoldRun {
   /** What the card plays forwards; a run may be this or its reverse. */
-  programme: readonly FoldLeg[];
+  forwards: readonly FoldLeg[];
   legs: readonly FoldLeg[];
   /** Index of the leg in progress. */
   leg: number;
@@ -119,14 +119,9 @@ export function poseAt(progress: number, roll = false): Omit<FoldPose, 'flap'> {
   };
 }
 
-/** How a card of this kind goes. */
-export function legPace(kind: FoldSceneKind): FoldLegPace {
-  return kind === 'turn-over' ? TURN_OVER_PACE : FOLD_PACE;
-}
-
 /**
- * What a card plays: one fold for one flap; for a pair, the first folded,
- * held and unfolded, then the second folded — and left folded.
+ * What a card plays: one fold for one flap; for several, each folded, held
+ * and unfolded in turn, then the last folded — and left folded.
  */
 export function foldLegs(flapCount: number, pace: FoldLegPace = FOLD_PACE): FoldLeg[] {
   if (flapCount <= 1) return [{ flap: 0, heading: 'fold', holdMs: 0, ...pace }];
@@ -152,7 +147,7 @@ const endOf = (leg: FoldLeg): number => (leg.heading === 'fold' ? 1 : 0);
 /** A run before it has been played. */
 export function runAtRest(legs: readonly FoldLeg[]): FoldRun {
   const first = legs[0];
-  return { programme: legs, legs, leg: 0, at: first ? startOf(first) : 0, holdLeft: 0, playing: false };
+  return { forwards: legs, legs, leg: 0, at: first ? startOf(first) : 0, holdLeft: 0, playing: false };
 }
 
 /** Nothing on the paper is moved: the pose is null. */
@@ -188,12 +183,12 @@ export function runHeading(run: FoldRun): FoldHeading {
 /**
  * The Play button's one rule. Moving: pause. Paused: carry on. Played
  * through: the folded flap comes back up if it rests folded; the card's
- * programme runs again if it rests flat.
+ * legs run forwards again if it rests flat.
  */
 export function toggleFoldRun(run: FoldRun): FoldRun {
   if (run.playing) return { ...run, playing: false };
   if (isComplete(run)) {
-    const legs = isFolded(run) ? unfoldingLegs(run.programme) : run.programme;
+    const legs = isFolded(run) ? unfoldingLegs(run.forwards) : run.forwards;
     const first = legs[0];
     return { ...run, legs, leg: 0, at: first ? startOf(first) : 0, holdLeft: 0, playing: true };
   }

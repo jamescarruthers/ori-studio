@@ -2,6 +2,11 @@
  * The fold's transport, free of React: the animation frame loop, the pose it
  * pushes to the view, the auto-play settle, and the two facts a button needs.
  *
+ * What it plays is a {@link FoldProgramme}: the legs, what kind of motion they
+ * make, and whether it plays by itself on arrival. Whoever owns the paper —
+ * References' cards, the Fold workspace's steps — adapts its own model to
+ * one; nothing here knows what drew the paper or what a flap is made of.
+ *
  * Progress lives here and reaches the view straight through its handle,
  * never through React state — at sixty frames a second a re-render per frame
  * would starve the loop that produces them (`SimulatorPanel` says the same).
@@ -9,12 +14,10 @@
  * is moving, and whether it has come to rest folded.
  *
  * The clock is injectable so the whole thing runs under a hand-driven one in
- * tests; the default is the browser's.
+ * tests; the default is the browser's, and so is the motion preference.
  */
 import {
-  foldLegs,
   isFolded,
-  legPace,
   runAtRest,
   runHeading,
   runPose,
@@ -22,10 +25,25 @@ import {
   tickFoldRun,
   toggleFoldRun,
   type FoldHeading,
+  type FoldLeg,
   type FoldPose,
   type FoldRun,
 } from './foldPlayback';
-import type { FoldScene, FoldSceneKind } from './foldScene';
+
+/**
+ * When a programme plays by itself on arrival: under the auto-play setting,
+ * or always — a motion that *is* the card, not one there to be asked for.
+ */
+export type FoldArrival = 'auto-play' | 'always';
+
+/** What the transport plays: a card's legs, and what kind of motion they make. */
+export interface FoldProgramme<Kind extends string = string> {
+  /** What moves, as the owner names it: handed back with every play, never read here. */
+  kind: Kind;
+  /** The legs, played forwards from flat. */
+  legs: readonly FoldLeg[];
+  arrival: FoldArrival;
+}
 
 /** Where a pose goes: the view's imperative handle, or anything shaped like it. */
 export interface FoldPoseSink {
@@ -51,17 +69,15 @@ export interface FoldTransportClock {
   clearTimer(handle: number): void;
 }
 
-export interface FoldTransportOptions {
+export interface FoldTransportOptions<P extends FoldProgramme = FoldProgramme> {
   /** The view to pose, looked up at each push: it may not be mounted yet. */
   sink: () => FoldPoseSink | null;
   /** Every play, for the analytics event; a pause is not one. */
-  onPlay?: (
-    trigger: FoldPlayTrigger,
-    heading: FoldHeading,
-    kind: FoldSceneKind,
-    way?: FoldScene['way']
-  ) => void;
-  /** Motion is unwelcome: Play snaps between the rest poses instead. */
+  onPlay?: (trigger: FoldPlayTrigger, heading: FoldHeading, programme: P) => void;
+  /**
+   * Motion is unwelcome: Play snaps between the rest poses instead. Asked at
+   * every play; the browser's `prefers-reduced-motion` by default.
+   */
   reducedMotion?: () => boolean;
   clock?: FoldTransportClock;
 }
@@ -77,22 +93,30 @@ const browserClock: FoldTransportClock = {
   clearTimer: (handle) => window.clearTimeout(handle),
 };
 
+/** The reader's motion preference, false where there is no window to ask. */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 const AT_REST_STATUS: FoldTransportStatus = { available: false, playing: false, folded: false };
 
-export class FoldTransport {
+export class FoldTransport<P extends FoldProgramme = FoldProgramme> {
   private run: FoldRun = runAtRest([]);
-  private scene: FoldScene | null = null;
+  private programme: P | null = null;
   private autoPlay = false;
   private frame = 0;
   private last = 0;
   private timer = 0;
-  private seenScene = false;
+  private seenProgramme = false;
   private snapshot: FoldTransportStatus = AT_REST_STATUS;
   private readonly listeners = new Set<() => void>();
   private readonly clock: FoldTransportClock;
+  private readonly reducedMotion: () => boolean;
 
-  constructor(private readonly options: FoldTransportOptions) {
+  constructor(private readonly options: FoldTransportOptions<P>) {
     this.clock = options.clock ?? browserClock;
+    this.reducedMotion = options.reducedMotion ?? prefersReducedMotion;
   }
 
   /** The status as of the last transition; the same object until it changes. */
@@ -110,26 +134,21 @@ export class FoldTransport {
   }
 
   /**
-   * The card's fold, or none. The same object again changes nothing. A
+   * The card's programme, or none. The same object again changes nothing. A
    * different one lays the paper flat, whatever was playing, and plays it
-   * after a moment when the card asks to be played on arrival — except the
-   * first, which is the card the transport starts on, not one arrived at.
-   *
-   * A fold card asks only with auto-play on: the animation is there to be
-   * asked for, and a reader stepping through with the arrow keys should not
-   * have the paper moving under every card. A turn-over asks regardless:
-   * it has no crease to read and nothing to line up, and the sheet turning
-   * over *is* the card — left flat, it is a symbol on an unchanged sheet
-   * (Zach, 2026-09-16).
+   * after a moment when it plays on arrival — with auto-play on, or always,
+   * as its {@link FoldProgramme.arrival} says — except the first, which is
+   * the card the transport starts on, not one arrived at.
    */
-  setScene(scene: FoldScene | null): void {
-    if (this.seenScene && scene === this.scene) return;
-    const arrival = this.seenScene;
-    this.seenScene = true;
-    this.scene = scene;
+  setProgramme(programme: P | null): void {
+    if (this.seenProgramme && programme === this.programme) return;
+    const arrived = this.seenProgramme;
+    this.seenProgramme = true;
+    this.programme = programme;
     this.clearTimer();
     this.rest();
-    if (arrival && scene && (this.autoPlay || scene.kind === 'turn-over')) {
+    const playable = this.playable();
+    if (arrived && playable && (this.autoPlay || playable.arrival === 'always')) {
       this.timer = this.clock.setTimer(() => {
         this.timer = 0;
         this.play('auto');
@@ -148,18 +167,24 @@ export class FoldTransport {
     this.listeners.clear();
   }
 
+  /** The programme, while it has a leg to play. */
+  private playable(): P | null {
+    const programme = this.programme;
+    return programme && programme.legs.length > 0 ? programme : null;
+  }
+
   private play(trigger: FoldPlayTrigger): void {
-    const scene = this.scene;
-    if (!scene) return;
+    const programme = this.playable();
+    if (!programme) return;
     const before = this.run;
-    const next = this.options.reducedMotion?.() ? snapFoldRun(before) : toggleFoldRun(before);
+    const next = this.reducedMotion() ? snapFoldRun(before) : toggleFoldRun(before);
     this.run = next;
     this.push();
     this.publish();
     if (next.playing) this.start();
     else this.stop();
     // A pause is not a play; everything else that moves the paper is.
-    if (!before.playing) this.options.onPlay?.(trigger, runHeading(next), scene.kind, scene.way);
+    if (!before.playing) this.options.onPlay?.(trigger, runHeading(next), programme);
   }
 
   private start(): void {
@@ -191,8 +216,7 @@ export class FoldTransport {
 
   private rest(): void {
     this.stop();
-    const scene = this.scene;
-    this.run = runAtRest(scene ? foldLegs(scene.flaps.length, legPace(scene.kind)) : []);
+    this.run = runAtRest(this.programme?.legs ?? []);
     this.push();
     this.publish();
   }
@@ -203,7 +227,7 @@ export class FoldTransport {
 
   private publish(): void {
     const next: FoldTransportStatus = {
-      available: this.scene !== null,
+      available: this.playable() !== null,
       playing: this.run.playing,
       folded: isFolded(this.run),
     };
