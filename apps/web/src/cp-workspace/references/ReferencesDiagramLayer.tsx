@@ -8,6 +8,7 @@ import {
   useRef,
 } from 'react';
 import type { FoldPose } from '../../lib/foldMotion/foldPlayback';
+import type { FoldPoseSink } from '../../lib/foldMotion/foldTransport';
 import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
 import type { ReferencesDiagramView } from './ReferencesCpView';
 import {
@@ -24,7 +25,6 @@ import {
 import { foldPosePaper } from './fold/foldPoseGeometry';
 import type { FoldScene } from './fold/foldScene';
 import { symbolFlaps, symbolOpacity } from './fold/foldSymbolFade';
-import type { FoldPoseSink } from './fold/foldTransport';
 import {
   createOverlayProjector,
   offPaperPathData,

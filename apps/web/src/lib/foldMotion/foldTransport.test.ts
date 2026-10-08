@@ -1,31 +1,31 @@
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import {
   FOLD_DURATION_MS,
+  FOLD_PACE,
   TURN_OVER_DURATION_MS,
+  TURN_OVER_PACE,
   TWIN_HOLD_MS,
+  foldLegs,
   type FoldHeading,
-} from '../../../lib/foldMotion/foldPlayback';
-import type { FoldScene, FoldSceneKind } from './foldScene';
+} from './foldPlayback';
 import {
   AUTO_PLAY_SETTLE_MS,
   FoldTransport,
+  prefersReducedMotion,
   type FoldPlayTrigger,
   type FoldPoseSink,
+  type FoldProgramme,
   type FoldTransportClock,
 } from './foldTransport';
 
-const FLAP: FoldScene['flaps'][number] = {
-  chord: [
-    { x: 0, y: 0 },
-    { x: 0, y: 1 },
-  ],
-  side: 1,
-  polygon: [],
-  creased: [],
-};
+/** A fold of `flaps` flaps, played on arrival only under auto-play. */
+function programme(kind = 'cp', flaps = 1): FoldProgramme {
+  return { kind, legs: foldLegs(flaps, FOLD_PACE), arrival: 'auto-play' };
+}
 
-function scene(kind: FoldSceneKind = 'cp', flaps = 1): FoldScene {
-  return { kind, flaps: Array.from({ length: flaps }, () => FLAP), sheetShortSide: 1, reach: 1 };
+/** The whole sheet turning over: its own pace, and played on every arrival. */
+function turnOver(): FoldProgramme {
+  return { kind: 'turn-over', legs: foldLegs(1, TURN_OVER_PACE), arrival: 'always' };
 }
 
 /** A hand-driven clock: frames and timers run when the test says so. */
@@ -78,7 +78,7 @@ class FakeClock implements FoldTransportClock {
 
 let clock: FakeClock;
 let sink: FoldPoseSink;
-let onPlay: Mock<(trigger: FoldPlayTrigger, heading: FoldHeading, kind: FoldSceneKind) => void>;
+let onPlay: Mock<(trigger: FoldPlayTrigger, heading: FoldHeading, programme: FoldProgramme) => void>;
 let reduced = false;
 
 function transport() {
@@ -91,6 +91,11 @@ function transport() {
 }
 
 const lastPose = () => vi.mocked(sink.setFoldPose).mock.lastCall?.[0] ?? null;
+/** What the last play reported: its trigger, its heading and the programme's kind. */
+const lastPlay = () => {
+  const call = onPlay.mock.lastCall;
+  return call ? [call[0], call[1], call[2].kind] : null;
+};
 
 beforeEach(() => {
   clock = new FakeClock();
@@ -104,7 +109,7 @@ describe('FoldTransport', () => {
     const t = transport();
     const changes = vi.fn();
     t.subscribe(changes);
-    t.setScene(scene());
+    t.setProgramme(programme());
     expect(t.status()).toEqual({ available: true, playing: false, folded: false });
     expect(lastPose()).toBeNull();
     t.toggle();
@@ -121,33 +126,34 @@ describe('FoldTransport', () => {
     expect(t.status().folded).toBe(false);
     expect(lastPose()).toBeNull();
     expect(onPlay).toHaveBeenCalledTimes(2);
-    expect(onPlay).toHaveBeenLastCalledWith('user', 'unfold', 'cp', undefined);
+    expect(lastPlay()).toEqual(['user', 'unfold', 'cp']);
     // Available, playing, rested folded, playing, rested flat.
     expect(changes).toHaveBeenCalledTimes(5);
   });
 
-  it('says which way a card with other ways was played on', () => {
+  it('hands the programme itself back with every play, for whatever its owner reports', () => {
     const t = transport();
-    t.setScene({ ...scene(), way: 'alternative' });
+    const played = { ...programme(), way: 'alternative' };
+    t.setProgramme(played);
     t.toggle();
-    expect(onPlay).toHaveBeenLastCalledWith('user', 'fold', 'cp', 'alternative');
+    expect(onPlay).toHaveBeenLastCalledWith('user', 'fold', played);
   });
 
-  it('turns the sheet over at its own, slower pace', () => {
+  it('plays each leg at its own pace', () => {
     const t = transport();
-    t.setScene(scene('turn-over'));
+    t.setProgramme(turnOver());
     t.toggle();
     clock.frame(FOLD_DURATION_MS);
     expect(t.status().playing).toBe(true);
     expect(lastPose()?.angle).toBeLessThan(Math.PI);
     clock.frame(TURN_OVER_DURATION_MS - FOLD_DURATION_MS);
     expect(t.status()).toEqual({ available: true, playing: false, folded: true });
-    expect(onPlay).toHaveBeenLastCalledWith('user', 'fold', 'turn-over', undefined);
+    expect(lastPlay()).toEqual(['user', 'fold', 'turn-over']);
   });
 
   it('pauses without counting a play, and lays the paper flat on a new card', () => {
     const t = transport();
-    t.setScene(scene('press'));
+    t.setProgramme(programme('press'));
     t.toggle();
     clock.frame(200);
     t.toggle();
@@ -158,21 +164,29 @@ describe('FoldTransport', () => {
     expect(clock.pendingFrames).toBe(0);
     t.toggle();
     expect(t.status().playing).toBe(true);
-    t.setScene(scene('press'));
+    const next = programme('press');
+    t.setProgramme(next);
     expect(lastPose()).toBeNull();
     expect(t.status()).toEqual({ available: true, playing: false, folded: false });
     expect(clock.pendingFrames).toBe(0);
     // The same card again changes nothing.
     const calls = vi.mocked(sink.setFoldPose).mock.calls.length;
-    t.setScene(t['scene']);
+    t.setProgramme(next);
     expect(vi.mocked(sink.setFoldPose).mock.calls.length).toBe(calls);
   });
 
-  it('does nothing on a card with no fold', () => {
+  it('does nothing on a card with no fold, or with no leg to play', () => {
     const t = transport();
-    t.setScene(null);
+    t.setProgramme(null);
     expect(t.status().available).toBe(false);
     t.toggle();
+    expect(lastPose()).toBeNull();
+    t.setAutoPlay(true);
+    t.setProgramme({ ...turnOver(), legs: [] });
+    expect(t.status().available).toBe(false);
+    t.toggle();
+    clock.wait(AUTO_PLAY_SETTLE_MS * 2);
+    expect(t.status().playing).toBe(false);
     expect(lastPose()).toBeNull();
     expect(onPlay).not.toHaveBeenCalled();
   });
@@ -180,50 +194,50 @@ describe('FoldTransport', () => {
   it('auto-plays on arrival at a fold card, after a settle, and never on the first card', () => {
     const t = transport();
     t.setAutoPlay(true);
-    t.setScene(scene());
+    t.setProgramme(programme());
     clock.wait(AUTO_PLAY_SETTLE_MS * 2);
     expect(t.status().playing).toBe(false);
-    t.setScene(scene('aux'));
+    t.setProgramme(programme('aux'));
     expect(t.status().playing).toBe(false);
     clock.wait(AUTO_PLAY_SETTLE_MS);
     expect(t.status().playing).toBe(true);
-    expect(onPlay).toHaveBeenLastCalledWith('auto', 'fold', 'aux', undefined);
+    expect(lastPlay()).toEqual(['auto', 'fold', 'aux']);
     // Stepping straight on before it settles starts nothing for the card left.
-    t.setScene(scene());
-    t.setScene(scene());
+    t.setProgramme(programme());
+    t.setProgramme(programme());
     clock.wait(AUTO_PLAY_SETTLE_MS / 2);
     expect(t.status().playing).toBe(false);
     clock.wait(AUTO_PLAY_SETTLE_MS);
     expect(t.status().playing).toBe(true);
     // Off again: the next card stays put.
     t.setAutoPlay(false);
-    t.setScene(scene());
+    t.setProgramme(programme());
     clock.wait(AUTO_PLAY_SETTLE_MS * 2);
     expect(t.status().playing).toBe(false);
   });
 
-  it('turns the sheet over on arrival whatever the setting says, but not on the first card', () => {
+  it('plays a card that always plays on arrival whatever the setting says, but not on the first card', () => {
     const t = transport();
     t.setAutoPlay(false);
-    t.setScene(scene('turn-over'));
+    t.setProgramme(turnOver());
     clock.wait(AUTO_PLAY_SETTLE_MS * 2);
     expect(t.status().playing).toBe(false);
-    t.setScene(scene());
-    t.setScene(scene('turn-over'));
+    t.setProgramme(programme());
+    t.setProgramme(turnOver());
     clock.wait(AUTO_PLAY_SETTLE_MS / 2);
     expect(t.status().playing).toBe(false);
     clock.wait(AUTO_PLAY_SETTLE_MS);
     expect(t.status().playing).toBe(true);
-    expect(onPlay).toHaveBeenLastCalledWith('auto', 'fold', 'turn-over', undefined);
+    expect(lastPlay()).toEqual(['auto', 'fold', 'turn-over']);
     // A fold card after it still waits to be asked.
-    t.setScene(scene());
+    t.setProgramme(programme());
     clock.wait(AUTO_PLAY_SETTLE_MS * 2);
     expect(t.status().playing).toBe(false);
   });
 
   it('plays a twin as three legs and rests folded on the second flap', () => {
     const t = transport();
-    t.setScene(scene('cp', 2));
+    t.setProgramme(programme('cp', 2));
     t.toggle();
     const flaps: number[] = [];
     for (let i = 0; i < 400 && t.status().playing; i += 1) {
@@ -241,7 +255,7 @@ describe('FoldTransport', () => {
   it('snaps to the far end when motion is unwelcome', () => {
     reduced = true;
     const t = transport();
-    t.setScene(scene());
+    t.setProgramme(programme());
     t.toggle();
     expect(t.status()).toEqual({ available: true, playing: false, folded: true });
     expect(lastPose()).toEqual({ flap: 0, angle: Math.PI, press: 1 });
@@ -254,12 +268,25 @@ describe('FoldTransport', () => {
   it('stops everything when disposed', () => {
     const t = transport();
     t.setAutoPlay(true);
-    t.setScene(scene());
-    t.setScene(scene());
+    t.setProgramme(programme());
+    t.setProgramme(programme());
     t.toggle();
     t.dispose();
     clock.frame(AUTO_PLAY_SETTLE_MS * 2);
     expect(clock.pendingFrames).toBe(0);
     expect(onPlay).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('prefersReducedMotion', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('asks the browser, and says no where there is nothing to ask', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce') }));
+    expect(prefersReducedMotion()).toBe(true);
+    vi.stubGlobal('matchMedia', undefined);
+    expect(prefersReducedMotion()).toBe(false);
   });
 });
