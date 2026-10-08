@@ -28,6 +28,22 @@ state, the one constructor that validates it, and the plain fold.
 - `refusal`: typed refusals with stable codes and the fixes the engine can offer
   (include the flaps the closure adds, fold the other way, pick a flap, fold
   along the landmark line).
+- `scene`: per state, a superset of the kernel's folded paper scene, schema 3
+  (faces with sheet vertex ids and edge kinds, the overlay's cells with full
+  stacks, sheet points), in the view's frame the way the kernel carries its
+  rear pass, plus each face's transform, the crease pattern with Fold's edge
+  ids and the step that made each crease, and the faces' lineage.
+- `fold::section`: the cross-section along a fold line (D14): intervals cut
+  where a face's contact with ℓ starts or ends, each with its stack; display
+  layers (faces joined across F creases), ordered topologically with the
+  unordered pairs named and a woven fallback; each row's flap; "Layers". And
+  the depth-choice preview: the distinct moving sets of the top 1, 2, …
+  layers at a point.
+- `fold::action`: a fold's geometry on its parent (D12): ℓ across the
+  silhouette, its visible and hidden spans, the moving faces, and a grip with
+  its image and the layers over each.
+- `summary`: per step, the M/V/F counts, the crease-pattern diff (added,
+  reversed, unfolded, refolded) and "Layers".
 
 See `implementation-plans/fold-workspace.md` (D1–D5) and
 `research/2026-10-08-fold-workspace.md` (§3, §4, §6). The core spike under
@@ -63,6 +79,20 @@ from it.
   On 2026-10-08 it applied 9,224 folds over four seeds (up to 178 faces) with
   no hard failure; the refusals were 1,902 "nothing stays", 1,029 "no moving
   side", 339 slivers, 288 near misses and 23 short creases.
+- `tests/queries.rs`: the output and queries. The cross-section's display
+  layers (a layer crossed by a precrease is one row; two precreased layers are
+  two rows, one flap or two by where the spine is), unordered rows, the depth
+  picker, the action geometry (a hidden line behind, the back view), the
+  summaries, the scene's kernel schema and a golden scene for the kite base
+  (`tests/fixtures/scenes/kite-base.json`, both views; bless as above), then
+  seeded random sequences checking every query against the state: each
+  interval's stack against the stack just inside the moving side, rows within
+  one isometry and one flap, never woven, spans on ℓ, the diff against the
+  fold's report, nested depth choices, each cell's stack.
+- `tests/kernel_scene.rs`: a Fold scene read as the kernel's
+  `FoldedPaperScene`, and the kernel's own folded figure of the same crease
+  pattern (the kite base, a Z-fold) agreeing with it from the front and the
+  back: the same faces up and the same stacks as seen.
 
 ## Performance
 
