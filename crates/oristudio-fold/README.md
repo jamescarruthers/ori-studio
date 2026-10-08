@@ -28,6 +28,11 @@ state, the one constructor that validates it, and the plain fold.
 - `refusal`: typed refusals with stable codes and the fixes the engine can offer
   (include the flaps the closure adds, fold the other way, pick a flap, fold
   along the landmark line).
+- `kernel` (feature `kernel`, which adds `oristudio-cp` and `treemaker-fold`):
+  `fold_cp_to_model`, the one conversion to the CP kernel's model (plan D10):
+  B → `Black0`, M → `Red1`, V → `Blue2`, F remembering X → `None` with the
+  direction hint X, placed where the kernel's FOLD reader puts every pattern
+  (`KernelFrame`), so its FOLD writer and reader return the model to the bit.
 
 See `implementation-plans/fold-workspace.md` (D1–D5) and
 `research/2026-10-08-fold-workspace.md` (§3, §4, §6). The core spike under
@@ -63,6 +68,15 @@ from it.
   On 2026-10-08 it applied 9,224 folds over four seeds (up to 178 faces) with
   no hard failure; the refusals were 1,902 "nothing stays", 1,029 "no moving
   side", 339 slivers, 288 near misses and 23 short creases.
+
+`cargo test -p oristudio-fold --features kernel` adds:
+
+- `tests/kernel.rs`: every state of the classics, a dyadic path and seeded
+  random paths (square, rectangles, polygons) converts with one segment per
+  crease and comes back equal, coordinates to the bit, through the kernel's
+  FOLD writer and reader; through FOLD text, within `serde_json`'s default
+  float parsing (one ulp seen), and to the bit on the dyadic path. The
+  folding colours of all 228 folded states fold to `Solved` in Oriedita.
 
 ## Performance
 

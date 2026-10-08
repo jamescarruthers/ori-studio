@@ -13,6 +13,8 @@
 //!   refold, unfold, turn over and rotate.
 //! - [`sheet`]: convex sheets — square, rectangle, regular polygon.
 //! - [`numerics`]: one tolerance, line snapping and the minimum feature.
+//! - With the `kernel` feature: `kernel`, the one conversion to the CP
+//!   kernel's model (plan D10).
 //!
 //! The layer order, its constraint problem and the checker are
 //! `oristudio-layer-order`'s; the tolerance and the convex-polygon primitives
@@ -32,12 +34,17 @@
 pub mod fold;
 mod index;
 pub mod isometry;
+#[cfg(feature = "kernel")]
+pub mod kernel;
 pub mod numerics;
 pub mod pattern;
 pub mod refusal;
 pub mod sheet;
 pub mod state;
 pub mod view;
+
+#[cfg(feature = "kernel")]
+pub use kernel::{KernelFrame, fold_cp_to_model};
 
 pub use fold::{
     ClosurePolicy, FoldAnalysis, FoldReport, Folded, Placement, PlainFold, Refold, Seed, Snap,
