@@ -10,6 +10,7 @@ import {
 import { stepCanBeAnnotated } from '../../diagram/pictures/pictureFrame';
 import { showsFrame } from '../../diagram/zoom/zoomActions';
 import { ZOOM_FRAME_ID } from '../../diagram/zoom/zoomModel';
+import { loadIdSequence, pickScopedState } from './projectDocumentHistory';
 import { emptySnapshotHistory, type SnapshotHistory } from './snapshotHistory';
 import type { DiagramAnchorPick, WorkspaceState } from './types';
 
@@ -216,17 +217,12 @@ export function selectedDiagramPathNode(
  */
 export type DiagramHistory = SnapshotHistory<DiagramDocument | null>;
 
-let lastDiagramLoadId = 0;
-
 /**
  * A new load id. Every replacement of the diagram takes one, so work started
  * against one diagram — an async capture, a pending text edit — can tell it
  * has been replaced before it writes into its successor.
  */
-export function nextDiagramLoadId(): number {
-  lastDiagramLoadId += 1;
-  return lastDiagramLoadId;
-}
+export const nextDiagramLoadId = loadIdSequence();
 
 /**
  * Let go of the project's diagram, for a replacement that brings its own (or
@@ -257,7 +253,7 @@ export function discardDiagramState(): DiagramScopedState {
 
 /** The diagram-scoped state as it stands, to put back with one `set`. */
 export function pickDiagramState(state: WorkspaceState): DiagramScopedState {
-  return Object.fromEntries(DIAGRAM_SCOPED_KEYS.map((key) => [key, state[key]])) as DiagramScopedState;
+  return pickScopedState(state, DIAGRAM_SCOPED_KEYS);
 }
 
 /**
