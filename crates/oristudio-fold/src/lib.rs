@@ -33,6 +33,7 @@ pub mod anchor;
 pub mod fold;
 mod index;
 pub mod isometry;
+pub mod landmarks;
 pub mod numerics;
 pub mod pattern;
 pub mod refusal;
