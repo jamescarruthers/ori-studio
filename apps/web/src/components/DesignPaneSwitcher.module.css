@@ -1,26 +1,11 @@
 /*
- * Moving between a design's panes on a phone (DesignPaneSwitcher.tsx): the pill
- * in the canvas lane, and the list a kind with more than two panes opens from
- * it. Every rule is under the coarse query, as the lane's are — the switcher
- * renders only in the phone layout, and the desktop stylesheet has nothing for
- * it.
+ * The list a design kind with more than two panes opens from its pill, on a
+ * phone (DesignPaneSwitcher.tsx; the pill is `ui/PaneToggle`'s `PanePill`).
+ * Every rule is under the coarse query, as the canvas lane's are — the
+ * switcher renders only in the phone layout, and the desktop stylesheet has
+ * nothing for it.
  */
 @media (pointer: coarse) {
-  /*
-   * The pill's label is a pane name, which the locale sets the length of
-   * ("Diagnostics", "Diagnostik", "Диагностика"). Capped and truncating, so it
-   * can never push the pills to its right off the row — the lane is anchored
-   * by its right edge, so an overflowing pill would take the others with it
-   * rather than spilling off the left. The pill's look is the lane's shared
-   * `canvas-pill`.
-   */
-  .pill {
-    max-width: 40vw;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
   /*
    * The pane list, for a kind with more than two. Bottom-anchored rather than
    * centred: it is opened from a pill at the top of the screen with a thumb,
