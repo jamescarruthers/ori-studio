@@ -8,7 +8,7 @@
 //! - [`order`]: the pairwise order on overlapping faces (cyclic relations
 //!   allowed, undetermined pairs reported), with conversions to FOLD
 //!   `faceOrders` and to Oriedita's convention;
-//! - the overlay of convex face images into cells;
+//! - [`overlay`]: the overlay of convex face images into cells;
 //! - the constraint problem (variables, taco-taco, taco-tortilla and
 //!   tortilla-tortilla buckets, transitivity from shared cells);
 //! - one checker that names faces.
@@ -18,8 +18,10 @@
 
 pub mod error;
 pub mod order;
+pub mod overlay;
 pub mod view;
 
 pub use error::LayerOrderError;
 pub use order::{FacePair, LayerOrder, OrieditaRelation, Stacking};
+pub use overlay::{Cell, Overlay};
 pub use view::{Edge, EdgeKind, Face, FaceId, FoldedView, Letter};
