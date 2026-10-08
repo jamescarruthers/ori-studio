@@ -1,0 +1,188 @@
+import { act, type ComponentProps } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FoldCreaseDiff } from '../../fold/stepWords';
+import { TooltipProvider } from '../ui/Tooltip';
+import { FoldStepPane, type FoldStepPaneStep } from './FoldStepPane';
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+let host: HTMLDivElement;
+let root: Root;
+beforeEach(() => {
+  host = document.createElement('div');
+  document.body.append(host);
+  root = createRoot(host);
+});
+afterEach(() => {
+  act(() => root.unmount());
+  host.remove();
+});
+
+// The app's root provides the tooltips a row's help mark opens.
+const render = (props: ComponentProps<typeof FoldStepPane>) =>
+  act(() =>
+    root.render(
+      <TooltipProvider>
+        <FoldStepPane {...props} />
+      </TooltipProvider>
+    )
+  );
+
+/** Each static row as label → value, found by the rows' data attributes. */
+function rows(): Record<string, string> {
+  return Object.fromEntries(
+    [...host.querySelectorAll('[data-field-row]')].map((row) => [
+      row.querySelector('[data-field-label]')?.textContent ?? '',
+      row.querySelector('[data-field-value]')?.textContent ?? '',
+    ])
+  );
+}
+
+const heading = () => host.querySelector('h3')?.textContent;
+const notices = () => [...host.querySelectorAll('[role="status"], [role="alert"]')].map((n) => n.textContent);
+const section = (title: string) =>
+  [...host.querySelectorAll('[role="group"]')].find((group) => group.getAttribute('aria-label') === title);
+
+const DIFF: FoldCreaseDiff = { added: { mountain: 1, valley: 1, flat: 0 }, refolded: 0, reversed: 0, unfolded: 0 };
+
+const VALLEY_STEP: FoldStepPaneStep = {
+  words: {
+    op: 'fold',
+    direction: 'valley',
+    line: { via: 'axiom', axiom: 2, inputs: [{ kind: 'corner', corner: 'sw' }, { kind: 'corner', corner: 'ne' }], moving: [1], inHalf: true },
+    scope: { kind: 'all' },
+  },
+  number: 2,
+  layers: 2,
+  creases: { mountain: 1, valley: 2, flat: 1 },
+  diff: DIFF,
+  status: 'ok',
+};
+
+describe('FoldStepPane', () => {
+  it('shows the flat sheet with nothing to describe yet', () => {
+    render({ step: null, startSide: 'front' });
+    expect(heading()).toBe('Flat sheet');
+    expect(host.textContent).toContain('Nothing is folded yet. Fold the sheet to make step 1.');
+    expect(rows()).toEqual({});
+    expect(notices()).toEqual([]);
+  });
+
+  it('says a step by its number, kind, sentence and rows', () => {
+    render({ step: VALLEY_STEP, startSide: 'front' });
+    expect(heading()).toBe('Step 2');
+    expect(host.querySelector('header')?.textContent).toBe('Step 2Valley');
+    expect(host.textContent).toContain(
+      'Valley fold in half, bringing the top-right corner onto the bottom-left corner, through all layers.'
+    );
+    expect(rows()).toEqual({
+      Operation: 'Valley fold',
+      Line: 'Axiom 2 · point onto point',
+      Layers: '2',
+      Changes: 'Adds 2 creases (1 M, 1 V)',
+      Mountain: '1',
+      Valley: '2',
+      Flat: '1',
+    });
+    // The layer count explains what a layer is.
+    expect(host.querySelector('[data-field-help]')?.getAttribute('aria-label')).toContain('deepest stack');
+  });
+
+  it('labels the crease counts as the front’s, and says so plainly when the back starts up', () => {
+    render({ step: VALLEY_STEP, startSide: 'front' });
+    expect(section('Creases')?.textContent).toContain('As seen from the front of the paper.');
+    render({ step: VALLEY_STEP, startSide: 'back' });
+    expect(section('Creases')?.textContent).toContain('which starts face down');
+  });
+
+  it('gives each kind of change its own line', () => {
+    render({
+      step: { ...VALLEY_STEP, diff: { added: { mountain: 0, valley: 0, flat: 2 }, refolded: 1, reversed: 0, unfolded: 1 } },
+      startSide: 'front',
+    });
+    const changes = [...host.querySelectorAll('[data-field-value] > span > span')].map((line) => line.textContent);
+    expect(changes).toEqual(['Adds 2 precreases', 'Refolds 1 precrease', 'Unfolds 1 crease']);
+  });
+
+  it('titles a turn by what it is, with no number, line or layers', () => {
+    render({
+      step: {
+        words: { op: 'turn', turn: { kind: 'turn-over', axis: 'vertical' } },
+        number: null,
+        layers: null,
+        creases: { mountain: 1, valley: 2, flat: 1 },
+        diff: { added: { mountain: 0, valley: 0, flat: 0 }, refolded: 0, reversed: 0, unfolded: 0 },
+        status: 'ok',
+      },
+      startSide: 'front',
+    });
+    expect(host.querySelector('header')?.textContent).toBe('Turn over');
+    expect(host.textContent).toContain('Turn over, side to side.');
+    expect(rows()).toMatchObject({ Operation: 'Turn over, side to side', Changes: 'Changes no creases' });
+    expect(rows()).not.toHaveProperty('Line');
+    expect(rows()).not.toHaveProperty('Layers');
+  });
+
+  it('says an imported crease pattern is one, and where it came from', () => {
+    render({
+      step: { ...VALLEY_STEP, words: { op: 'cp-jump' }, layers: null, origin: 'fold' },
+      startSide: 'front',
+    });
+    expect(rows()).toMatchObject({ Operation: 'Import crease pattern', Source: 'FOLD file' });
+    expect(notices()).toEqual([
+      'Imported crease pattern: this step replaces the folded state with the pattern’s own.',
+    ]);
+  });
+
+  it('offers a broken step’s fixes with its notice, and shows only what it still knows', () => {
+    const remove = vi.fn();
+    render({
+      step: { ...VALLEY_STEP, layers: null, creases: null, diff: null, status: 'broken' },
+      startSide: 'front',
+      fixes: [{ id: 'delete', label: 'Delete this step and what follows', run: remove }],
+    });
+    const notice = host.querySelector('[role="status"]');
+    expect(notice?.getAttribute('data-tone')).toBe('warning');
+    expect(notice?.textContent).toContain('This step no longer folds');
+    act(() => notice?.querySelector('button')?.click());
+    expect(remove).toHaveBeenCalledOnce();
+    expect(rows()).toEqual({ Operation: 'Valley fold', Line: 'Axiom 2 · point onto point' });
+    expect(section('Creases')).toBeUndefined();
+  });
+
+  it('says why a step cannot be read: one before it broke, a newer build, or a changed engine', () => {
+    render({ step: { ...VALLEY_STEP, status: 'brokenAbove' }, startSide: 'front' });
+    expect(notices()).toEqual(['A step before this one no longer folds, so this one cannot be shown.']);
+    render({ step: { ...VALLEY_STEP, words: { op: 'unknown' }, status: 'locked' }, startSide: 'front' });
+    expect(notices()[0]).toContain('made with a newer Ori Studio');
+    expect(host.querySelector('header')?.textContent).toBe('Step 2Newer');
+    render({ step: { ...VALLEY_STEP, status: 'changed' }, startSide: 'front' });
+    expect(notices()).toEqual(['This step folds differently in this version of Ori Studio than when it was saved.']);
+  });
+
+  it('says folding away from the tip starts a branch, at a step or at the sheet', () => {
+    render({ step: VALLEY_STEP, startSide: 'front', branch: { at: 2, total: 5 } });
+    expect(notices()).toEqual(['You are at step 2 of 5: folding here starts a new branch.']);
+    render({ step: null, startSide: 'front', branch: { at: 0, total: 5 } });
+    expect(notices()).toEqual(['You are at the flat sheet: folding here starts a new branch.']);
+  });
+
+  it('shows the fold in progress: its sentence and what it adds', () => {
+    render({
+      step: null,
+      startSide: 'front',
+      pending: {
+        words: { op: 'fold', direction: 'mountain', line: { via: 'free' }, scope: { kind: 'depth', layers: 2 } },
+        diff: { added: { mountain: 2, valley: 2, flat: 0 }, refolded: 0, reversed: 0, unfolded: 0 },
+      },
+    });
+    const pending = section('Pending fold');
+    expect(pending?.textContent).toContain('Mountain fold along the line drawn, folding only the bottom 2 layers.');
+    expect([...(pending?.querySelectorAll('li') ?? [])].map((item) => item.textContent)).toEqual([
+      'Adds 4 creases (2 M, 2 V)',
+    ]);
+    // A section the user can fold away, open to start with.
+    expect(host.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
+  });
+});
