@@ -243,6 +243,10 @@ pub struct ConstraintProblem {
     /// Its pairs are the variables.
     overlay: Overlay,
     ambiguities: Vec<Ambiguity>,
+    /// Each taco-tortilla a folded and a flat crease made, kept or dropped,
+    /// with the flat crease's face that the tuple does not name: it depends
+    /// on that face too, which a rebuild must know.
+    hidden: Vec<(Constraint, FaceId)>,
 }
 
 /// The constraints a build found, and those a missing pair kept out. Runs
@@ -253,6 +257,7 @@ struct Found<'v> {
     is_variable: PairTable<bool>,
     constraints: Vec<Constraint>,
     dropped: Vec<(Constraint, FacePair)>,
+    hidden: Vec<(Constraint, FaceId)>,
 }
 
 impl<'v> Found<'v> {
@@ -269,7 +274,21 @@ impl<'v> Found<'v> {
             is_variable,
             constraints: Vec::new(),
             dropped: Vec::new(),
+            hidden: Vec::new(),
         }
+    }
+
+    /// Record a generated constraint, or the first pair that keeps it out,
+    /// with the face it depends on but does not name.
+    fn add_made(&mut self, made: Option<(Constraint, Option<FaceId>)>) {
+        let Some((constraint, hidden)) = made else {
+            return;
+        };
+        let constraint = constraint.canonical();
+        if let Some(x) = hidden {
+            self.hidden.push((constraint, x));
+        }
+        self.add(Some(constraint));
     }
 
     /// Record a generated constraint, or the first pair that keeps it out.
@@ -305,11 +324,10 @@ impl ConstraintProblem {
                 found.add(edge_face(view, &shapes, &segments, e, h));
             }
             for e2 in e + 1..edges {
-                found.add(edge_edge(view, &segments, e, e2));
+                found.add_made(edge_edge(view, &segments, e, e2));
             }
         }
-        let (constraints, dropped) = (found.constraints, found.dropped);
-        ConstraintProblem::assemble(view, overlay, constraints, dropped)
+        ConstraintProblem::assemble(view, overlay, found)
     }
 
     /// The problem of `view`, a later state of this problem's view, reusing
@@ -323,8 +341,19 @@ impl ConstraintProblem {
     pub fn rebuild(&self, view: &FoldedView, touched: &BTreeSet<FaceId>) -> ConstraintProblem {
         let shapes = Shape::of_view(view);
         let touched = self.overlay.touched_in(view, touched);
-        let untouched = |faces: &[FaceId]| faces.iter().all(|f| !touched.contains(f));
         let overlay = self.overlay.rebuild_from(view, &shapes, &touched);
+        // A taco-tortilla depends on the face across its flat crease, which
+        // its tuple does not name: where that face was touched, its named
+        // face is made again as if it had been.
+        let mut reach = touched;
+        for (c, x) in &self.hidden {
+            if let Constraint::TacoTortilla([_, _, h]) = *c
+                && reach.contains(x)
+            {
+                reach.insert(h);
+            }
+        }
+        let untouched = |faces: &[FaceId]| faces.iter().all(|f| !reach.contains(f));
         let mut found = Found::new(view, overlay.pairs());
         found.constraints = self
             .constraints
@@ -340,55 +369,57 @@ impl ConstraintProblem {
                 _ => None,
             })
             .collect();
+        found.hidden = self
+            .hidden
+            .iter()
+            .filter(|(c, x)| untouched(c.faces()) && !reach.contains(x))
+            .copied()
+            .collect();
 
-        // An edge of a touched face against every face, any other edge
-        // against the touched faces; then the touched faces' edges against
+        // An edge of a reached face against every face, any other edge
+        // against the reached faces; then the reached faces' edges against
         // every edge.
         let n = shapes.len();
-        let touched_faces: Vec<usize> = (0..n)
-            .filter(|&h| touched.contains(&shapes[h].id))
-            .collect();
+        let reached: Vec<usize> = (0..n).filter(|&h| reach.contains(&shapes[h].id)).collect();
         let all_faces: Vec<usize> = (0..n).collect();
         let segments = segments(view);
-        let touched_edge: Vec<bool> = view
+        let reached_edge: Vec<bool> = view
             .edges()
             .iter()
-            .map(|e| e.faces.iter().any(|f| touched.contains(f)))
+            .map(|e| e.faces.iter().any(|f| reach.contains(f)))
             .collect();
-        for (e, &edge_touched) in touched_edge.iter().enumerate() {
-            let faces = if edge_touched {
-                &all_faces
-            } else {
-                &touched_faces
-            };
+        for (e, &edge_reached) in reached_edge.iter().enumerate() {
+            let faces = if edge_reached { &all_faces } else { &reached };
             for &h in faces {
                 found.add(edge_face(view, &shapes, &segments, e, h));
             }
         }
-        for e in (0..touched_edge.len()).filter(|&e| touched_edge[e]) {
-            for (e2, &other_touched) in touched_edge.iter().enumerate() {
-                if e2 != e && (e2 > e || !other_touched) {
-                    found.add(edge_edge(view, &segments, e, e2));
+        for e in (0..reached_edge.len()).filter(|&e| reached_edge[e]) {
+            for (e2, &other_reached) in reached_edge.iter().enumerate() {
+                if e2 != e && (e2 > e || !other_reached) {
+                    found.add_made(edge_edge(view, &segments, e, e2));
                 }
             }
         }
-        let (constraints, dropped) = (found.constraints, found.dropped);
-        ConstraintProblem::assemble(view, overlay, constraints, dropped)
+        ConstraintProblem::assemble(view, overlay, found)
     }
 
     /// Index the constraints by variable and find the ambiguities. Every
     /// constraint relates variables only: generation checked the new ones, and
     /// a kept one relates untouched pairs, which kept their verdicts.
-    fn assemble(
-        view: &FoldedView,
-        overlay: Overlay,
-        mut constraints: Vec<Constraint>,
-        mut dropped: Vec<(Constraint, FacePair)>,
-    ) -> ConstraintProblem {
+    fn assemble(view: &FoldedView, overlay: Overlay, found: Found<'_>) -> ConstraintProblem {
+        let Found {
+            mut constraints,
+            mut dropped,
+            mut hidden,
+            ..
+        } = found;
         constraints.sort_unstable();
         constraints.dedup();
         dropped.sort_unstable();
         dropped.dedup();
+        hidden.sort_unstable();
+        hidden.dedup();
         let n = view.faces().len();
         let variables = overlay.pairs();
         // Per pair of view positions, its variable's index.
@@ -476,6 +507,7 @@ impl ConstraintProblem {
             buckets,
             overlay,
             ambiguities,
+            hidden,
         }
     }
 
@@ -577,8 +609,14 @@ fn edge_face(
 }
 
 /// The constraint two edges make when they run along one line and overlap
-/// for longer than [`TOL`].
-fn edge_edge(view: &FoldedView, segments: &[Segment], e1: usize, e2: usize) -> Option<Constraint> {
+/// for longer than [`TOL`]. A taco-tortilla comes with the flat crease's
+/// other face, which it depends on but does not name.
+fn edge_edge(
+    view: &FoldedView,
+    segments: &[Segment],
+    e1: usize,
+    e2: usize,
+) -> Option<(Constraint, Option<FaceId>)> {
     if !convex::boxes_overlap(&segments[e1].bbox, &segments[e2].bbox, TOL) {
         return None;
     }
@@ -628,9 +666,8 @@ fn edge_edge(view: &FoldedView, segments: &[Segment], e1: usize, e2: usize) -> O
     // pair shares no face with the first.
     let distinct = c != a && c != b && d != a && d != b;
     match (r.kind, o.kind) {
-        (EdgeKind::Folded(_), EdgeKind::Folded(_)) => {
-            (r_left[0] == o_left[0] && distinct).then_some(Constraint::TacoTaco([a, b, c, d]))
-        }
+        (EdgeKind::Folded(_), EdgeKind::Folded(_)) => (r_left[0] == o_left[0] && distinct)
+            .then_some((Constraint::TacoTaco([a, b, c, d]), None)),
         (EdgeKind::Flat, EdgeKind::Flat) => {
             // c' shares a's side, d' shares b's.
             let (c, d) = if o_left[0] == r_left[0] {
@@ -638,15 +675,23 @@ fn edge_edge(view: &FoldedView, segments: &[Segment], e1: usize, e2: usize) -> O
             } else {
                 (d, c)
             };
-            distinct.then_some(Constraint::TortillaTortilla([a, b, c, d]))
+            distinct.then_some((Constraint::TortillaTortilla([a, b, c, d]), None))
         }
         (EdgeKind::Folded(_), EdgeKind::Flat) => {
-            let h = if o_left[0] == r_left[0] { c } else { d };
-            (h != a && h != b).then_some(Constraint::TacoTortilla([a, b, h]))
+            let (h, x) = if o_left[0] == r_left[0] {
+                (c, d)
+            } else {
+                (d, c)
+            };
+            (h != a && h != b).then_some((Constraint::TacoTortilla([a, b, h]), Some(x)))
         }
         (EdgeKind::Flat, EdgeKind::Folded(_)) => {
-            let h = if r_left[0] == o_left[0] { a } else { b };
-            (h != c && h != d).then_some(Constraint::TacoTortilla([c, d, h]))
+            let (h, x) = if r_left[0] == o_left[0] {
+                (a, b)
+            } else {
+                (b, a)
+            };
+            (h != c && h != d).then_some((Constraint::TacoTortilla([c, d, h]), Some(x)))
         }
     }
 }
@@ -733,5 +778,46 @@ mod tests {
         let tk = |a, b, c| Constraint::TacoTortilla([f(a), f(b), f(c)]).canonical();
         assert_eq!(tk(1, 0, 2), tk(0, 1, 2));
         assert_ne!(tk(0, 2, 1), tk(0, 1, 2));
+    }
+
+    /// A taco-tortilla from a fold along a precrease's line names the
+    /// precrease's face on the taco's side, not the one across it; dropping
+    /// that one must drop the constraint (a rebuild that kept every
+    /// constraint of untouched faces once kept it).
+    #[test]
+    fn a_rebuild_drops_a_taco_tortilla_whose_flat_crease_went() {
+        use crate::view::{Edge, Face};
+        let square = |x: f64| vec![[x, 0.0], [x + 1.0, 0.0], [x + 1.0, 1.0], [x, 1.0]];
+        let face = |id, x| Face {
+            id: f(id),
+            polygon: square(x),
+            front_up: id != 1,
+        };
+        let line = [[1.0, 0.0], [1.0, 1.0]];
+        let fold = Edge {
+            faces: [f(0), f(1)],
+            segment: line,
+            kind: EdgeKind::Folded(None),
+        };
+        let precrease = Edge {
+            faces: [f(2), f(3)],
+            segment: line,
+            kind: EdgeKind::Flat,
+        };
+        let before = FoldedView::new(
+            vec![face(0, 0.0), face(1, 0.0), face(2, 0.0), face(3, 1.0)],
+            vec![fold.clone(), precrease],
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let problem = ConstraintProblem::build(&before);
+        let made = Constraint::TacoTortilla([f(0), f(1), f(2)]);
+        assert_eq!(problem.constraints(), &[made]);
+        assert_eq!(problem.hidden, vec![(made, f(3))]);
+
+        let after = FoldedView::new(vec![face(0, 0.0), face(1, 0.0), face(2, 0.0)], vec![fold])
+            .unwrap_or_else(|e| panic!("{e}"));
+        let rebuilt = problem.rebuild(&after, &BTreeSet::new());
+        assert!(rebuilt.constraints().is_empty());
+        assert_eq!(rebuilt, ConstraintProblem::build(&after));
     }
 }
