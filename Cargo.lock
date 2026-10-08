@@ -3444,6 +3444,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "oristudio-fold-wasm"
+version = "0.5.2"
+dependencies = [
+ "console_error_panic_hook",
+ "oristudio-fold",
+ "oristudio-geometry",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "thiserror 2.0.18",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+]
+
+[[package]]
 name = "oristudio-geometry"
 version = "0.5.2"
 dependencies = [

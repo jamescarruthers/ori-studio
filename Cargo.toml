@@ -14,6 +14,7 @@ members = [
     "crates/oristudio-geometry",
     "crates/oristudio-layer-order",
     "crates/oristudio-fold",
+    "crates/oristudio-fold-wasm",
     "crates/oristudio-pdf",
     "crates/oristudio-pdf-wasm",
     "crates/treemaker-flatfold",

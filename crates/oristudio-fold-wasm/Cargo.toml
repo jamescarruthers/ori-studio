@@ -1,0 +1,50 @@
+[package]
+name = "oristudio-fold-wasm"
+version.workspace = true
+publish.workspace = true
+edition.workspace = true
+# Not the workspace GPL default: this wrapper reaches only `oristudio-fold`
+# and, through it, `oristudio-layer-order` and `oristudio-geometry` — original
+# work with no dependency edge to the TreeMaker port — so it carries the same
+# MIT OR Apache-2.0. See LICENSING.md.
+license = "MIT OR Apache-2.0"
+description = "wasm-bindgen package for Ori Studio's Fold workspace engine"
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["origami", "folding", "wasm"]
+categories = ["wasm", "algorithms"]
+include = [
+    "Cargo.toml",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "README.md",
+    "src/**",
+    "tests/**",
+    "!pkg/**",
+]
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Plan D1 enables `oristudio-fold`'s `kernel` feature here by default, so the
+# browser reuses the CP kernel's writers and loaders (Send to Edit, export,
+# Import CP). The feature is being built in parallel and is not on this branch
+# yet; when it lands this line becomes
+# `oristudio-fold = { path = "../oristudio-fold", features = ["kernel"] }`,
+# and README.md's size budget is re-measured with and without it.
+oristudio-fold = { path = "../oristudio-fold" }
+oristudio-geometry = { path = "../oristudio-geometry" }
+console_error_panic_hook.workspace = true
+serde.workspace = true
+serde-wasm-bindgen.workspace = true
+thiserror.workspace = true
+wasm-bindgen.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+wasm-bindgen-test.workspace = true
