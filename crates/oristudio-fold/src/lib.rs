@@ -13,6 +13,9 @@
 //!   refold, unfold, turn over and rotate.
 //! - [`sheet`]: convex sheets — square, rectangle, regular polygon.
 //! - [`numerics`]: one tolerance, line snapping and the minimum feature.
+//! - [`scene`]: what a painter draws a state from (plan D12), a superset of
+//!   the kernel's folded paper scene (schema 3) with each face's transform,
+//!   the crease pattern and the faces' lineage.
 //!
 //! The layer order, its constraint problem and the checker are
 //! `oristudio-layer-order`'s; the tolerance and the convex-polygon primitives
@@ -35,6 +38,7 @@ pub mod isometry;
 pub mod numerics;
 pub mod pattern;
 pub mod refusal;
+pub mod scene;
 pub mod sheet;
 pub mod state;
 pub mod view;
@@ -45,6 +49,7 @@ pub use fold::{
 pub use isometry::Isometry;
 pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
 pub use refusal::{Fix, Flap, FoldRefusal, NearMissCause, Refused, Side};
+pub use scene::{FoldScene, ScenePoint};
 pub use sheet::{Sheet, SheetShape};
 pub use state::{State, StateParts};
 pub use view::{Direction, StartSide, View};

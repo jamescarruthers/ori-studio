@@ -3436,6 +3436,7 @@ dependencies = [
 name = "oristudio-fold"
 version = "0.5.2"
 dependencies = [
+ "oristudio-cp",
  "oristudio-geometry",
  "oristudio-layer-order",
  "serde",
