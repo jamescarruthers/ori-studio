@@ -15,8 +15,8 @@ import { useReferencesCardInks } from './usePaperStyleTokens';
  * side. No letter goes there.
  *
  * The step number and the badge are DOM elements over the picture rather than
- * part of it (`.references-card__number`: 2 px down, 4 px in, 0.72 rem bold,
- * tabular digits; `.references-card__badge`: 0.62 rem, semibold, uppercase,
+ * part of it (`StepFilmstrip.module.css`'s `.number`: 2 px down, 4 px in,
+ * 0.72 rem bold, tabular digits; its `.badge`: 0.62 rem, semibold, uppercase,
  * in the number's place on a card that is not a fold and in the opposite
  * corner on one that is), so the drawing cannot see them and has to be told.
  * Estimated on a 128 px card, whose thumbnail is 118 px after the padding and
