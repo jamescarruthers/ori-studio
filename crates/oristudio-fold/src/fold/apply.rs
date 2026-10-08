@@ -480,8 +480,8 @@ fn carry_and_place(
             if penetration <= TOL {
                 continue;
             }
-            if penetration < MIN_FEATURE {
-                return Err(sliver(next, geometry, a, b, penetration));
+            if penetration < MIN_FEATURE && penetration < thinner(geometry, a, b) - TOL {
+                return Err(sliver(state, new_faces, next, geometry, a, b, penetration));
             }
             let moving_above = match &analysis.tuck {
                 Some(tuck) => !tuck.ends_above[new_faces[b].old],
@@ -497,18 +497,37 @@ fn carry_and_place(
     Ok(order)
 }
 
-/// A sliver between faces at positions `a` and `b`, naming the vertex that
-/// reaches deepest into the other face.
-fn sliver(next: &StateParts, geometry: &Geometry, a: usize, b: usize, penetration: f64) -> Refusal {
-    let (ia, da) = deepest(&geometry.images[a], &geometry.images[b]);
-    let (ib, db) = deepest(&geometry.images[b], &geometry.images[a]);
-    let (owner, at, other) = if da >= db { (a, ia, b) } else { (b, ib, a) };
-    let ring = &next.faces[owner].ring;
-    let front_up = geometry.isometries[owner].front_up();
-    let vertex = ring[ring_position(at, ring.len(), front_up)];
+/// The lesser width of two faces' images.
+///
+/// A face between μ/2 and μ wide is allowed (the thin-piece rule), and lying
+/// across another face it overlaps by its own width, less than μ. That
+/// overlap is the face, not a sliver between two faces, so the sliver rule
+/// only refuses an overlap thinner than both faces. On the random campaign
+/// this exempted 31 of 685 sliver refusals; the rest were overlaps of 1e-4 to
+/// 1e-3 between faces several times wider.
+fn thinner(geometry: &Geometry, a: usize, b: usize) -> f64 {
+    convex::width(&geometry.images[a]).min(convex::width(&geometry.images[b]))
+}
+
+/// A sliver between the moving face at position `a` and the stationary face
+/// at `b`, named in the parent state the user is looking at: the moving
+/// vertex that lands deepest inside the stationary face, and that face (the
+/// parent's face, should the fold have split it).
+fn sliver(
+    state: &State,
+    new_faces: &[NewFace],
+    next: &StateParts,
+    geometry: &Geometry,
+    a: usize,
+    b: usize,
+    penetration: f64,
+) -> Refusal {
+    let (at, _) = deepest(&geometry.images[a], &geometry.images[b]);
+    let ring = &next.faces[a].ring;
+    let front_up = geometry.isometries[a].front_up();
     Refusal::Sliver {
-        vertex,
-        face: next.faces[other].id,
+        vertex: ring[ring_position(at, ring.len(), front_up)],
+        face: state.faces()[new_faces[b].old].id,
         penetration,
     }
 }
