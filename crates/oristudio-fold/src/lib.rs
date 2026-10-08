@@ -34,6 +34,8 @@ mod index;
 pub mod isometry;
 pub mod numerics;
 pub mod pattern;
+#[cfg(feature = "random-sequences")]
+pub mod random;
 pub mod refusal;
 pub mod sheet;
 pub mod state;

@@ -29,6 +29,12 @@ include = [
 [lints]
 workspace = true
 
+[features]
+# `oristudio_fold::random`: seeded random fold sequences, the draws the
+# property tests make, for crates that check the engine from outside it (the
+# oracles in crates/oracle-tests). Test support; nothing that ships enables it.
+random-sequences = []
+
 [dependencies]
 oristudio-geometry = { path = "../oristudio-geometry" }
 oristudio-layer-order = { path = "../oristudio-layer-order" }
