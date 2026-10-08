@@ -73,6 +73,8 @@ export function useWorkspaceCapabilities() {
   const diagramHistoryFutureCount = useWorkspaceStore(
     (state) => state.diagramHistory.future.length
   );
+  const foldHistoryPastCount = useWorkspaceStore((state) => state.foldHistory.past.length);
+  const foldHistoryFutureCount = useWorkspaceStore((state) => state.foldHistory.future.length);
   // Subscribed to the tab itself, which is what carries every design kind's
   // undo stack. An edit replaces the tab object, so this re-renders — the
   // per-kind history subscriptions this replaced were only ever reading the
@@ -86,6 +88,7 @@ export function useWorkspaceCapabilities() {
     {
       cp: hasEditableCreasePattern ? cpHistoryPastCount : 0,
       diagram: diagramHistoryPastCount,
+      fold: foldHistoryPastCount,
     },
     'past'
   );
@@ -95,6 +98,7 @@ export function useWorkspaceCapabilities() {
     {
       cp: hasEditableCreasePattern ? cpHistoryFutureCount : 0,
       diagram: diagramHistoryFutureCount,
+      fold: foldHistoryFutureCount,
     },
     'future'
   );
