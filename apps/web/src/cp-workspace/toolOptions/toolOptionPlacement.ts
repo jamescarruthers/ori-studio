@@ -15,7 +15,9 @@
  * `InlineSimulationLayer` avoids by counter-scaling its badge. Here they are
  * simply a fixed-size block *positioned against* the frame's top edge.
  *
- * Pure, so both rules are testable without a DOM.
+ * Pure, so both rules are testable without a DOM. The camera is a parameter,
+ * never read from a store, so a surface with cameras of its own places a
+ * window the same way Edit does.
  */
 import type { CpOverlayView } from '../CreasePatternWebglCanvas';
 import { overlayModelToCss } from '../annotations/annotationTransform';
