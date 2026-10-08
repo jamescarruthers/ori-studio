@@ -15,7 +15,8 @@ import {
   Upload,
 } from 'lucide-react';
 import type { TFunction } from 'i18next';
-import { turnCardWords, turnLabel, turnPlace, type TurnBetween } from '../../diagram/actions/diagramTurnActions';
+import type { TurnBetween } from '../../lib/steps/turn';
+import { turnCardWords, turnLabel, turnPlace } from '../../lib/steps/turnWords';
 import { turnGlyphSvg } from '../../diagram/annotate/turnGlyph';
 import {
   isLockedStep,
