@@ -29,11 +29,21 @@ include = [
 [lints]
 workspace = true
 
+[features]
+# The one conversion to the CP kernel's model and the FOLD sequence export
+# built on the kernel's own FOLD writer (plan D1, D10). Off by default so the
+# engine stays free of the kernel; `oristudio-fold-wasm` turns it on. Both
+# crates it adds are MIT OR Apache-2.0.
+kernel = ["dep:oristudio-cp", "dep:treemaker-fold", "dep:serde_json"]
+
 [dependencies]
 oristudio-geometry = { path = "../oristudio-geometry" }
 oristudio-layer-order = { path = "../oristudio-layer-order" }
 serde.workspace = true
 thiserror.workspace = true
+oristudio-cp = { workspace = true, optional = true }
+treemaker-fold = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true

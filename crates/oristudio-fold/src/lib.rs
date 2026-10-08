@@ -22,6 +22,9 @@
 //!   1, 2, … layers at a point; [`State::fold_action`], a step's fold line
 //!   with its visible and hidden spans, the faces that move and the arrow's
 //!   grip; and [`summary`], the M/V/F counts and the crease-pattern diff.
+//! - With the `kernel` feature: `kernel`, the one conversion to the CP
+//!   kernel's model (plan D10), and `fold_file`, the FOLD export of a
+//!   sequence path built on the kernel's FOLD writer.
 //!
 //! The layer order, its constraint problem and the checker are
 //! `oristudio-layer-order`'s; the tolerance and the convex-polygon primitives
@@ -39,8 +42,12 @@
 //! | Turn over | Mirrors the view; every `above` inverts *as seen*; no letter changes. |
 
 pub mod fold;
+#[cfg(feature = "kernel")]
+pub mod fold_file;
 mod index;
 pub mod isometry;
+#[cfg(feature = "kernel")]
+pub mod kernel;
 pub mod numerics;
 pub mod pattern;
 pub mod refusal;
@@ -49,6 +56,11 @@ pub mod sheet;
 pub mod state;
 pub mod summary;
 pub mod view;
+
+#[cfg(feature = "kernel")]
+pub use fold_file::{FoldExportError, export_fold_sequence, export_fold_sequence_json};
+#[cfg(feature = "kernel")]
+pub use kernel::{KernelFrame, fold_cp_to_model};
 
 pub use fold::{
     ActionKind, ClosurePolicy, CrossSection, DepthChoice, FoldActionGeometry, FoldAnalysis,

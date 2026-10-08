@@ -44,6 +44,21 @@ state, the one constructor that validates it, and the plain fold.
   its image and the layers over each.
 - `summary`: per step, the M/V/F counts, the crease-pattern diff (added,
   reversed, unfolded, refolded) and "Layers".
+- `kernel` (feature `kernel`, which adds `oristudio-cp` and `treemaker-fold`):
+  `fold_cp_to_model`, the one conversion to the CP kernel's model (plan D10):
+  B → `Black0`, M → `Red1`, V → `Blue2`, F remembering X → `None` with the
+  direction hint X, placed where the kernel's FOLD reader puts every pattern
+  (`KernelFrame`), so its FOLD writer and reader return the model to the bit.
+- `fold_file` (feature `kernel`): the FOLD export of a sequence path,
+  `file_classes: ["diagrams", "singleModel"]`. The root frame is the final
+  crease pattern from the kernel's FOLD writer, which Edit opens like Send to
+  Edit; each state is a flat `foldedForm` frame (`frame_parent: 0`,
+  `frame_inherit: false`) with its vertices folded as the viewer sees them,
+  `F` for unfolded creases, `faceOrders` in FOLD's convention, an
+  `oristudio:fold-step` marker and per-face sheet → folded matrices in
+  Beloch's `beloch:faces_matrix` layout under `oristudio:faces_matrix`. The
+  size is held against the 3D writer's element cap (`interchange.rs`), summed
+  over the whole file.
 
 See `implementation-plans/fold-workspace.md` (D1–D5) and
 `research/2026-10-08-fold-workspace.md` (§3, §4, §6). The core spike under
@@ -93,6 +108,21 @@ from it.
   `FoldedPaperScene`, and the kernel's own folded figure of the same crease
   pattern (the kite base, a Z-fold) agreeing with it from the front and the
   back: the same faces up and the same stacks as seen.
+
+`cargo test -p oristudio-fold --features kernel` adds:
+
+- `tests/kernel.rs`: every state of the classics, a dyadic path and seeded
+  random paths (square, rectangles, polygons) converts with one segment per
+  crease and comes back equal, coordinates to the bit, through the kernel's
+  FOLD writer and reader; through FOLD text, within `serde_json`'s default
+  float parsing (one ulp seen), and to the bit on the dyadic path. The
+  folding colours of all 228 folded states fold to `Solved` in Oriedita.
+- `tests/fold_export.rs`: the root against the kernel writer and Edit's
+  opener; every step frame against its state (vertices, edges, letters,
+  rings); `faceOrders` against FOLD's rule read off the frame's own winding;
+  the matrices against the frame's coordinates; a turn-over and a rotation;
+  the whole-file cap refusing one element short; Edit saving the file with
+  the step frames kept.
 
 ## Performance
 

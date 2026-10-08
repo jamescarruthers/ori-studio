@@ -3442,6 +3442,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+ "treemaker-fold",
 ]
 
 [[package]]
