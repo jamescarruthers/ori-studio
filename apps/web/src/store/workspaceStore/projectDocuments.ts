@@ -1,5 +1,7 @@
 import { withReferencedAssets } from '../../diagram/document/diagramDocument';
 import { readDiagram, writeDiagram } from '../../diagram/document/diagramFile';
+import { readFoldReaderState, writeFoldReaderState } from '../../fold/document/foldReaderState';
+import { readFoldSequences, writeFoldSequences } from '../../fold/document/foldSequenceFile';
 import type {
   NativeProjectDocumentKey,
   NativeProjectDocumentValues,
@@ -7,13 +9,14 @@ import type {
 } from '../../lib/nativeProjectFile';
 import type { WorkspaceId } from '../../workspaces/workspaces';
 import { diagramDataBytes, discardDiagramState, pickDiagramState } from './diagramState';
+import { discardFoldState, foldSequenceDataBytes, pickFoldState } from './foldState';
 import type { WorkspaceState } from './types';
 
 /**
  * The store fields that say whether the project holds each project document:
  * all the landing and "is there anything here" questions read.
  */
-export type ProjectDocumentPresence = Pick<WorkspaceState, 'diagram'>;
+export type ProjectDocumentPresence = Pick<WorkspaceState, 'diagram' | 'foldSequences'>;
 
 /** A project document read from a file, to install once nothing else in the open can reset it. */
 export interface ReadProjectDocument {
@@ -23,7 +26,7 @@ export interface ReadProjectDocument {
 }
 
 /**
- * A project-level document — the Diagram's, and Fold's next — as the
+ * A project-level document — the Diagram's, and Fold's sequences — as the
  * project's save and open handle it.
  *
  * Such a document belongs to the project rather than to a design or to the
@@ -40,10 +43,19 @@ export interface ProjectDocument<K extends NativeProjectDocumentKey> {
   key: K;
   /** Where a project that holds nothing else opens. */
   landing: WorkspaceId;
-  /** Read what the file carries, leniently. */
-  read: (value: unknown) => ReadProjectDocument;
+  /**
+   * Read what the file carries, leniently: the value under its key, and the
+   * file's `workspace.viewState`, where it keeps how it was being read.
+   */
+  read: (value: unknown, viewState: Readonly<Record<string, unknown>>) => ReadProjectDocument;
   /** What the file stores, or none. */
   write: (state: WorkspaceState) => NativeProjectDocumentValues[K];
+  /**
+   * How it was being read, for the file's `workspace.viewState`: entries under
+   * keys of its own, none when there is nothing to say. Never history, never
+   * a reason to save.
+   */
+  writeViewState?: (state: WorkspaceState) => Record<string, unknown>;
   isPresent: (state: ProjectDocumentPresence) => boolean;
   /**
    * Whether it changed between two states of the store — an edit made while a
@@ -76,8 +88,40 @@ const DIAGRAM: ProjectDocument<'diagram'> = {
   dataBytes: ({ diagram }) => diagramDataBytes(diagram && withReferencedAssets(diagram)),
 };
 
+/** Where Fold keeps its reader state in `workspace.viewState` (plan D6). */
+const FOLD_VIEW_STATE_KEY = 'fold';
+
+/**
+ * Fold's sequences (implementation-plans/fold-workspace.md, D7): an array,
+ * each sequence read on its own — a newer build's opens read-only and is
+ * written back as it came. The reader's place rides in `workspace.viewState`,
+ * outside the document, and only beside sequences: a project without them is
+ * written byte for byte as before Fold existed.
+ */
+const FOLD_SEQUENCES: ProjectDocument<'foldSequences'> = {
+  key: 'foldSequences',
+  landing: 'fold',
+  read: (value, viewState) => {
+    const sequences = readFoldSequences(value);
+    const reader = readFoldReaderState(viewState[FOLD_VIEW_STATE_KEY]);
+    return { present: sequences.length > 0, install: (get) => get().installFoldSequences(sequences, reader) };
+  },
+  write: ({ foldSequences }) => writeFoldSequences(foldSequences),
+  writeViewState: ({ foldSequences, foldReader }) =>
+    foldSequences.length > 0 && foldReader ? { [FOLD_VIEW_STATE_KEY]: writeFoldReaderState(foldReader) } : {},
+  isPresent: (state) => state.foldSequences.length > 0,
+  // The reader moving is not a change: it is neither history nor a reason to save.
+  changedSince: (written, now) => now.foldSequences !== written.foldSequences,
+  discard: discardFoldState,
+  pick: pickFoldState,
+  dataBytes: ({ foldSequences }) => foldSequenceDataBytes(foldSequences),
+};
+
 /** Every project document, by its key in the file: a key the file carries with none here is a compile error. */
-const PROJECT_DOCUMENTS: { [K in NativeProjectDocumentKey]: ProjectDocument<K> } = { diagram: DIAGRAM };
+const PROJECT_DOCUMENTS: { [K in NativeProjectDocumentKey]: ProjectDocument<K> } = {
+  diagram: DIAGRAM,
+  foldSequences: FOLD_SEQUENCES,
+};
 
 const DOCUMENTS = Object.values(PROJECT_DOCUMENTS);
 
@@ -96,7 +140,7 @@ export function pickProjectDocuments(state: WorkspaceState): Partial<WorkspaceSt
  * anything: whether there is any, and the install that puts each in place.
  */
 export function readProjectDocuments(workspace: NativeProjectFile['workspace']): ReadProjectDocument {
-  const read = DOCUMENTS.map((document) => document.read(workspace[document.key]));
+  const read = DOCUMENTS.map((document) => document.read(workspace[document.key], workspace.viewState));
   return {
     present: read.some((document) => document.present),
     install: (get) => {
@@ -111,6 +155,14 @@ export function projectDocumentFileValues(state: WorkspaceState): NativeProjectD
   return Object.fromEntries(
     DOCUMENTS.map((document) => [document.key, document.write(state)])
   ) as unknown as NativeProjectDocumentValues;
+}
+
+/** What a save writes for the file's `workspace.viewState`: how each project document was being read. */
+export function projectDocumentViewState(state: WorkspaceState): Record<string, unknown> {
+  return DOCUMENTS.reduce<Record<string, unknown>>(
+    (viewState, document) => ({ ...viewState, ...document.writeViewState?.(state) }),
+    {}
+  );
 }
 
 /** Whether the project holds any project document. */
@@ -128,7 +180,10 @@ export function projectDocumentDataBytes(state: WorkspaceState): number {
   return DOCUMENTS.reduce((total, document) => total + document.dataBytes(state), 0);
 }
 
-/** Where a project that holds only project documents opens: the first one's workspace, or null for none. */
+/**
+ * Where a project that holds only project documents opens: the first one's
+ * workspace — the Diagram before Fold, as they are listed — or null for none.
+ */
 export function projectDocumentLanding(state: ProjectDocumentPresence): WorkspaceId | null {
   return DOCUMENTS.find((document) => document.isPresent(state))?.landing ?? null;
 }

@@ -64,21 +64,22 @@ export { NATIVE_PROJECT_EXTENSION } from './fileFormats';
 export const NATIVE_PROJECT_MIME_TYPE = 'application/vnd.oristudio.project+json';
 export const NATIVE_PROJECT_SCHEMA_VERSION = 8;
 /**
- * The newest `minimumReaderSchemaVersion` this build can honour. A step ahead of
- * the schema version on purpose: a file holding a diagram is still written as
- * schema 8 — nothing else about the format moved — but asks for reader 9, so an
- * older build refuses it ("update Ori Studio") instead of opening it and
- * deleting the diagram on its next save. Files without a diagram stay readable
- * by every build that read them before. At least every project document's
- * reader ({@link NativeProjectDocumentValues}), or this build refuses its own files.
+ * The newest `minimumReaderSchemaVersion` this build can honour. Ahead of the
+ * schema version on purpose: a file holding a diagram is still written as
+ * schema 8 — nothing else about the format moved — but asks for reader 9, and
+ * one holding fold sequences for reader 10, so an older build refuses it
+ * ("update Ori Studio") instead of opening it and deleting the document on its
+ * next save. Files without either stay readable by every build that read them
+ * before. At least every project document's reader
+ * ({@link NativeProjectDocumentValues}), or this build refuses its own files.
  */
-export const NATIVE_PROJECT_READER_VERSION = 9;
+export const NATIVE_PROJECT_READER_VERSION = 10;
 
 /**
  * A `minimumReaderSchemaVersion` a build writes: see
  * {@link NativeProjectFileV1.minimumReaderSchemaVersion}.
  */
-export type NativeProjectReaderVersion = 1 | 8 | 9;
+export type NativeProjectReaderVersion = 1 | 8 | 9 | 10;
 
 /**
  * The project-level documents a file carries, each under its own key of
@@ -95,9 +96,29 @@ export type NativeProjectReaderVersion = 1 | 8 | 9;
 export interface NativeProjectDocumentValues {
   /** The Diagram workspace's document, as `diagram/document/diagramFile.ts` writes it. Reader 9. */
   diagram: Record<string, unknown> | null;
+  /**
+   * The Fold workspace's sequences, as `fold/document/foldSequenceFile.ts`
+   * writes them: an array, each sequence with its own `formatVersion`. Reader
+   * 10 — the Diagram holds 9, and the two may ship in different releases.
+   */
+  foldSequences: Record<string, unknown>[] | null;
 }
 
 export type NativeProjectDocumentKey = keyof NativeProjectDocumentValues;
+
+/**
+ * What a writer takes for the project documents: each one's value, none by
+ * default, and how they were being read. File-level, like `unknownDesigns`:
+ * only the writer of the whole file reads them, never a companion.
+ */
+export interface NativeProjectDocumentsWriteInput extends Partial<NativeProjectDocumentValues> {
+  /**
+   * The file's `workspace.viewState`, each document's under its own key
+   * (`projectDocumentViewState`). Written `{}` when absent, so a project
+   * without one is written as before.
+   */
+  workspaceViewState?: Record<string, unknown>;
+}
 
 /** How the file carries one project document. */
 interface NativeProjectDocumentSlot<V> {
@@ -118,6 +139,16 @@ const PROJECT_DOCUMENT_SLOTS: {
 } = {
   // Anything but an object is no diagram.
   diagram: { readerVersion: 9, carry: (value) => (isRecord(value) ? value : null), isPresent: (value) => value !== null },
+  // Anything but an array is none, and so is an array holding no object: an
+  // entry that is not one is no sequence.
+  foldSequences: {
+    readerVersion: 10,
+    carry: (value) => {
+      const sequences = Array.isArray(value) ? value.filter(isRecord) : [];
+      return sequences.length > 0 ? sequences : null;
+    },
+    isPresent: (value) => value !== null && value.length > 0,
+  },
 };
 
 const PROJECT_DOCUMENT_KEYS = Object.keys(PROJECT_DOCUMENT_SLOTS) as NativeProjectDocumentKey[];
@@ -316,7 +347,7 @@ export interface NativeProjectFileV1 {
    *
    * `1` for anything a v1–v7 build could read losslessly; `8` once the file
    * holds more than the old format could express; raised to what each project
-   * document it holds needs — `9` for a diagram (see
+   * document it holds needs — `9` for a diagram, `10` for fold sequences (see
    * {@link NATIVE_PROJECT_READER_VERSION}). Declarative only in practice —
    * a v7 build already rejects `schemaVersion: 8` because 8 is not in its
    * enumerated list — but it is what makes the refusal say *why*.
@@ -353,9 +384,16 @@ export interface NativeProjectFileV1 {
      * not silently destroy the rest on the next save.
      */
     unknownDesigns: unknown[];
+    /**
+     * How the project's own documents were being read, each under its own
+     * key — Fold's reader state under `fold` — carried, not interpreted, like
+     * the documents (`store/workspaceStore/projectDocuments.ts`). Written
+     * `{}` when there is none.
+     */
     viewState: Record<string, unknown>;
-    // And a key per project document — the diagram — set by the reader, left
-    // out by the writers when there is none: `NativeProjectDocumentValues`.
+    // And a key per project document — the diagram, the fold sequences — set
+    // by the reader, left out by the writers when there is none:
+    // `NativeProjectDocumentValues`.
   } & Partial<NativeProjectDocumentValues>;
   artifacts: {
     fold?: {
@@ -396,12 +434,12 @@ export interface NativeTreeProjectInput {
 }
 
 /**
- * The project documents (`NativeProjectDocumentValues`) are file-level like
- * `unknownDesigns` and `fileExtensions`: only
+ * The project documents (`NativeProjectDocumentsWriteInput`) are file-level
+ * like `unknownDesigns` and `fileExtensions`: only
  * {@link createNativeCreasePatternProjectFile} reads them, never a companion.
  * Each defaults to none.
  */
-export interface NativeCreasePatternProjectInput extends Partial<NativeProjectDocumentValues> {
+export interface NativeCreasePatternProjectInput extends NativeProjectDocumentsWriteInput {
   title: string;
   filename: string;
   path: string | null;
@@ -503,8 +541,8 @@ export interface NativeDesignInput {
   extensions?: Record<string, unknown>;
 }
 
-/** The project documents (`NativeProjectDocumentValues`) each default to none. */
-export interface NativeProjectDocumentsInput extends Partial<NativeProjectDocumentValues> {
+/** The project documents (`NativeProjectDocumentsWriteInput`) each default to none. */
+export interface NativeProjectDocumentsInput extends NativeProjectDocumentsWriteInput {
   /** Workspace-level title (usually the active document's title). */
   workspaceTitle: string;
   filename: string;
@@ -559,21 +597,32 @@ export function isNativeProjectFilename(filename: string): boolean {
  * design survived exactly one save and then vanished, including for the build
  * that *could* read it. Merging here makes the file the union it is supposed to
  * be, and costs nothing for the common case of having none.
+ *
+ * A project document the file holds none of is left out, as the writers leave
+ * it out: the reader sets every key, `null` for none, so a file read and
+ * written again would otherwise gain a key for every project document this
+ * build knows — and stop being the bytes it was.
  */
 export function serializeNativeProjectFile(file: NativeProjectFile): string {
-  const unknown = 'workspace' in file ? (file.workspace.unknownDesigns ?? []) : [];
-  const written =
-    unknown.length === 0
-      ? file
-      : {
-          ...file,
-          workspace: {
-            ...file.workspace,
-            designs: [...file.workspace.designs, ...unknown],
-            unknownDesigns: [],
-          },
-        };
+  const workspace = withoutAbsentProjectDocuments(file.workspace);
+  const unknown = workspace.unknownDesigns ?? [];
+  const written = {
+    ...file,
+    workspace:
+      unknown.length === 0
+        ? workspace
+        : { ...workspace, designs: [...workspace.designs, ...unknown], unknownDesigns: [] },
+  };
   return `${JSON.stringify(written, null, 2)}\n`;
+}
+
+/** `workspace` without the project-document keys that hold none, every other key where it was. */
+function withoutAbsentProjectDocuments<W extends Partial<NativeProjectDocumentValues>>(workspace: W): W {
+  const absent = new Set<string>(
+    PROJECT_DOCUMENT_KEYS.filter((key) => key in workspace && !holdsProjectDocument(workspace, key))
+  );
+  if (absent.size === 0) return workspace;
+  return Object.fromEntries(Object.entries(workspace).filter(([key]) => !absent.has(key))) as W;
 }
 
 export function parseNativeProjectFile(text: string): NativeProjectFile {
@@ -702,7 +751,7 @@ export function createNativeProjectFile(
       // round trip through it.
       unknownDesigns: input.unknownDesigns ?? [],
       ...writtenProjectDocumentValues(input),
-      viewState: {},
+      viewState: input.workspaceViewState ?? {},
     },
     artifacts: referencesArtifacts(input.creasePattern?.referencesPlanCache),
     extensions: input.extensions ?? {},
@@ -779,7 +828,7 @@ export function createNativeCreasePatternProjectFile(
       creasePattern: createNativeCreasePatternDocument(input, CREASE_PATTERN_DOCUMENT_ID),
       unknownDesigns: input.unknownDesigns ?? [],
       ...writtenProjectDocumentValues(input),
-      viewState: {},
+      viewState: input.workspaceViewState ?? {},
     },
     artifacts: {
       ...(input.foldArtifacts && input.foldProjection

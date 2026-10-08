@@ -4,8 +4,9 @@ import type { WorkspaceState } from './types';
 
 /**
  * Which workspace to land in after opening a file: Edit when the file produced a
- * crease pattern, Diagram when it holds nothing but a diagram (a project
- * document's own workspace: `projectDocuments`), otherwise Design. Single
+ * crease pattern, Diagram when it holds nothing but a diagram and Fold when
+ * nothing but fold sequences (a project document's own workspace:
+ * `projectDocuments`, the Diagram first when it holds both), otherwise Design. Single
  * source of truth for every open path — File › Open, the start screen, the
  * desktop open-with handler, and a drop — so they cannot disagree about where a
  * given file opens.
@@ -27,7 +28,7 @@ export function landingWorkspace(
 ): WorkspaceId {
   if (state.oristudioCpDocument !== null || state.importedCreasePattern !== null) return 'edit';
   // A project that is only a diagram — pictures drawn elsewhere, no pattern and
-  // no design — has nothing to show in Design but the chooser.
+  // no design — or only fold sequences has nothing to show in Design but the chooser.
   const hasDesign = state.designTabs.some((tab) => tab.kind !== null);
   return (hasDesign ? null : projectDocumentLanding(state)) ?? 'design';
 }

@@ -2150,3 +2150,127 @@ describe('a project holding a diagram', () => {
     expect(parseNativeProjectFile(JSON.stringify(legacy)).workspace.diagram).toBeNull();
   });
 });
+
+describe('a project holding fold sequences', () => {
+  // Carried, not interpreted: what the Fold document module writes, a key it
+  // does not know included.
+  const foldSequences = [
+    {
+      formatVersion: 1,
+      id: 'fold-1',
+      title: 'Crane',
+      paper: { shape: { kind: 'square' }, startSide: 'front' },
+      steps: [{ id: 'fstep-1', parent: null, op: { kind: 'turn', axis: 'vertical' } }],
+      futureField: { kept: true },
+    },
+  ];
+  // Fold's reader state rides in `workspace.viewState`, outside the document (plan D6).
+  const workspaceViewState = { fold: { v: 1, sequenceId: 'fold-1', cursor: 'fstep-1', activeChild: {} } };
+  const diagram = { formatVersion: 1, id: 'diagram-1', steps: [] };
+
+  /** The reader of the build that brought the Diagram: it knows no `foldSequences`. */
+  const DIAGRAM_BUILD_READER = 9;
+
+  const designOnly = (extra: Record<string, unknown> = {}) =>
+    createNativeProjectFile({
+      workspaceTitle: 'Crane',
+      filename: 'crane.osf',
+      path: null,
+      designs: [],
+      appVersion: '0.0.0',
+      now,
+      ...extra,
+    });
+
+  const cpOnly = (extra: Record<string, unknown> = {}) =>
+    createNativeCreasePatternProjectFile({
+      title: 'CP',
+      filename: 'cp.osf',
+      path: null,
+      document: cpDocument(),
+      source: null,
+      foldProjection: null,
+      foldArtifacts: null,
+      creaseColorMode: 'mvf',
+      selection: emptyOristudioCpSelection(),
+      viewport: DEFAULT_ORISTUDIO_CP_VIEWPORT_OPTIONS,
+      foldedFigures: [],
+      activeFoldedFigureId: null,
+      lineage: importedCpLineage(),
+      appVersion: '0.0.0',
+      now,
+      ...extra,
+    });
+
+  it('round-trips the sequences and the reader state verbatim, and asks for reader 10', () => {
+    const parsed = parseNativeProjectFile(serializeNativeProjectFile(designOnly({ foldSequences, workspaceViewState })));
+    expect(parsed.workspace.foldSequences).toEqual(foldSequences);
+    expect(parsed.workspace.viewState).toEqual(workspaceViewState);
+    expect(parsed.schemaVersion).toBe(8);
+    expect(parsed.minimumReaderSchemaVersion).toBe(10);
+  });
+
+  it('writes them after the diagram, and reads them back to the same place, byte for byte', () => {
+    const written = serializeNativeProjectFile(designOnly({ diagram, foldSequences, workspaceViewState }));
+    const order = ['id', 'title', 'activeDocumentId', 'designs', 'creasePattern', 'unknownDesigns', 'diagram', 'foldSequences', 'viewState'];
+    expect(Object.keys(JSON.parse(written).workspace)).toEqual(order);
+    expect(serializeNativeProjectFile(parseNativeProjectFile(written))).toBe(written);
+  });
+
+  it('writes them, and asks for reader 10, from a crease-pattern save too', () => {
+    const file = cpOnly({ foldSequences, workspaceViewState });
+    expect(file.workspace.foldSequences).toEqual(foldSequences);
+    expect(file.workspace.viewState).toEqual(workspaceViewState);
+    expect(file.minimumReaderSchemaVersion).toBe(10);
+  });
+
+  it('writes a project without sequences exactly as before Fold existed', () => {
+    for (const file of [designOnly(), designOnly({ foldSequences: null }), designOnly({ foldSequences: [] }), cpOnly()]) {
+      const written = serializeNativeProjectFile(file);
+      expect(written).not.toMatch(/"foldSequences"/);
+      expect(JSON.parse(written).workspace.viewState).toEqual({});
+    }
+    // And a file read with none is written again without the key the reader set to none.
+    const parsed = parseNativeProjectFile(serializeNativeProjectFile(designOnly({ diagram })));
+    expect(parsed.workspace.foldSequences).toBeNull();
+    expect(serializeNativeProjectFile(parsed)).not.toMatch(/"foldSequences"/);
+  });
+
+  it('asks for the highest reader any document it holds needs', () => {
+    expect(designOnly({ diagram }).minimumReaderSchemaVersion).toBe(9);
+    expect(designOnly({ diagram, foldSequences }).minimumReaderSchemaVersion).toBe(10);
+    expect(designOnly().minimumReaderSchemaVersion).toBe(1);
+  });
+
+  it('reads anything but a list of objects as no sequences', () => {
+    for (const value of [{ id: 'fold-1' }, 'fold', [], ['not', 'a', 'sequence']]) {
+      const file = JSON.parse(serializeNativeProjectFile(designOnly({ foldSequences })));
+      file.workspace.foldSequences = value;
+      expect(parseNativeProjectFile(JSON.stringify(file)).workspace.foldSequences, JSON.stringify(value)).toBeNull();
+    }
+  });
+
+  it('is refused by a reader that predates fold sequences, rather than opened and its sequences dropped', () => {
+    // The Diagram's build refuses a file whose bar is above its own reader,
+    // 9: that check is its own and cannot run here, so this states the stamp
+    // it reads. Opened, it would drop `foldSequences` — a key it does not
+    // know — on its next save.
+    const file = JSON.parse(serializeNativeProjectFile(designOnly({ diagram, foldSequences })));
+    expect(file.minimumReaderSchemaVersion).toBeGreaterThan(DIAGRAM_BUILD_READER);
+    // The same refusal, run against this build's reader by raising the bar past it.
+    file.minimumReaderSchemaVersion = NATIVE_PROJECT_READER_VERSION + 1;
+    let thrown: unknown;
+    try {
+      parseNativeProjectFile(JSON.stringify(file));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ProjectFileFormatError);
+    expect((thrown as ProjectFileFormatError).code).toBe('project_file_too_new');
+  });
+
+  it('is read by this build, whose reader is at least every project document’s', () => {
+    expect(NATIVE_PROJECT_READER_VERSION).toBeGreaterThanOrEqual(10);
+    expect(() => parseNativeProjectFile(serializeNativeProjectFile(designOnly({ foldSequences })))).not.toThrow();
+  });
+});
