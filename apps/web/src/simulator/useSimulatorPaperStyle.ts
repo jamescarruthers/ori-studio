@@ -85,7 +85,10 @@ function resetRowValue<F extends PaperStyleField>(style: PaperStyle, field: F): 
 }
 
 /** Which of the simulator's surfaces a binding edits from, as `paper style changed` names it. */
-export type SimulatorPaperStyleSource = Exclude<PaperStyleEditSource, 'settings'>;
+export type SimulatorPaperStyleSource = Extract<
+  PaperStyleEditSource,
+  'simulator-view-controls' | 'simulator'
+>;
 
 /**
  * The simulator's rows of the app-wide paper style, bound to the settings

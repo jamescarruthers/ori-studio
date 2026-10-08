@@ -670,10 +670,10 @@ export type PaperPresetExportSource = 'button' | 'card';
 /**
  * Where an edit to the app-wide paper style was made: Settings ▸ Paper, the
  * Simulate options pane (docked, or in the touch View drawer — the name
- * `view drawer opened` gives it), or the Simulate viewport's own verbs, its
- * lighting key binding and context-menu row.
+ * `view drawer opened` gives it), the Simulate viewport's own verbs, its
+ * lighting key binding and context-menu row, or the Fold workspace's Paper tab.
  */
-export type PaperStyleEditSource = 'settings' | 'simulator-view-controls' | 'simulator';
+export type PaperStyleEditSource = 'settings' | 'simulator-view-controls' | 'simulator' | 'fold';
 
 /**
  * The style a slot runs, for the population rather than for an edit: a
