@@ -44,7 +44,8 @@ use oristudio_geometry::convex::{self, Carve, MIN_EDGE};
 use oristudio_geometry::tol::TOL;
 
 use crate::order::FacePair;
-use crate::shape::{Shape, penetration_with};
+use crate::shape::{Shape, carve_along, penetration_with};
+use crate::table::IdSet;
 use crate::view::{FaceId, FoldedView};
 
 type Point = [f64; 2];
@@ -139,13 +140,14 @@ impl Overlay {
         touched: &BTreeSet<FaceId>,
     ) -> Overlay {
         let n = shapes.len();
-        let is_touched: Vec<bool> = shapes.iter().map(|s| touched.contains(&s.id)).collect();
+        let touched = IdSet::new(touched);
+        let is_touched: Vec<bool> = shapes.iter().map(|s| touched.contains(s.id)).collect();
         // Untouched pairs keep their verdict; each touched face is tested
         // against every face, each pair once.
         let mut pairs: Vec<FacePair> = self
             .pairs
             .iter()
-            .filter(|p| !touched.contains(&p.lo()) && !touched.contains(&p.hi()))
+            .filter(|p| !touched.any(&p.faces()))
             .copied()
             .collect();
         for t in (0..n).filter(|&t| is_touched[t]) {
@@ -162,7 +164,7 @@ impl Overlay {
         for pair in self.pairs.iter().chain(&pairs) {
             let [a, b] = pair.faces();
             for (x, y) in [(a, b), (b, a)] {
-                if touched.contains(&x)
+                if touched.contains(x)
                     && let Some(p) = view.index_of(y)
                 {
                     dirty[p] = true;
@@ -357,10 +359,11 @@ fn meet(cell: &Draft, face: &Shape<'_>) -> Meet {
     if !convex::boxes_overlap(&cell.bbox, &face.bbox, 0.0) {
         return Meet::Apart;
     }
-    // The face's half of the separating-axis test, and containment, from the
-    // face's cached planes.
-    let mut inside = true;
-    for plane in &face.planes {
+    // The face's half of the separating-axis test, and which of its edges
+    // the cell crosses (a bit each; past the 64th every edge is carved
+    // along), from the face's cached planes.
+    let (mut crossed, mut any) = (0u64, false);
+    for (k, plane) in face.planes.iter().enumerate() {
         let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
         for &p in &cell.polygon {
             let d = plane.signed_distance(p);
@@ -370,15 +373,24 @@ fn meet(cell: &Draft, face: &Shape<'_>) -> Meet {
         if hi <= TOL {
             return Meet::Apart;
         }
-        inside &= lo >= -MIN_EDGE;
+        if lo < -MIN_EDGE {
+            any = true;
+            crossed |= 1u64.checked_shl(k as u32).unwrap_or(0);
+        }
     }
-    if inside {
+    if !any {
         return Meet::Inside;
     }
     if penetration_with(&cell.polygon, face) <= TOL {
         return Meet::Apart;
     }
-    match convex::carve(&cell.polygon, face.polygon, TOL) {
+    let cutting = face
+        .planes
+        .iter()
+        .enumerate()
+        .filter(|&(k, _)| k >= 64 || crossed >> k & 1 == 1)
+        .map(|(_, p)| p);
+    match carve_along(&cell.polygon, cutting, TOL) {
         Some(carve) => Meet::Cut(carve),
         None => Meet::Apart,
     }
@@ -392,9 +404,9 @@ fn owned_cells(shapes: &[Shape<'_>], owner: usize, partners: &[usize]) -> Vec<Ce
     let (earlier, later) = partners.split_at(split);
     let mut cells = vec![Draft::new(shapes[owner].polygon.to_vec(), vec![id])];
     // Carve out what a face with a smaller id covers.
+    let mut left = Vec::new();
     for &g in earlier {
-        let mut left = Vec::with_capacity(cells.len());
-        for cell in cells {
+        for cell in cells.drain(..) {
             match meet(&cell, &shapes[g]) {
                 Meet::Apart => left.push(cell),
                 Meet::Inside => {}
@@ -403,7 +415,7 @@ fn owned_cells(shapes: &[Shape<'_>], owner: usize, partners: &[usize]) -> Vec<Ce
                 }
             }
         }
-        cells = left;
+        std::mem::swap(&mut cells, &mut left);
         if cells.is_empty() {
             return Vec::new();
         }

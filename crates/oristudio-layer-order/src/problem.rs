@@ -48,7 +48,7 @@ use serde::{Deserialize, Serialize};
 use crate::order::{FacePair, LayerOrder};
 use crate::overlay::Overlay;
 use crate::shape::Shape;
-use crate::table::PairTable;
+use crate::table::{IdSet, PairTable};
 use crate::view::{EdgeKind, FaceId, FoldedView};
 
 /// The three constraint families listed per variable.
@@ -345,15 +345,16 @@ impl ConstraintProblem {
         // A taco-tortilla depends on the face across its flat crease, which
         // its tuple does not name: where that face was touched, its named
         // face is made again as if it had been.
-        let mut reach = touched;
+        let mut reach = touched.clone();
         for (c, x) in &self.hidden {
             if let Constraint::TacoTortilla([_, _, h]) = *c
-                && reach.contains(x)
+                && touched.contains(x)
             {
                 reach.insert(h);
             }
         }
-        let untouched = |faces: &[FaceId]| faces.iter().all(|f| !reach.contains(f));
+        let reach = IdSet::new(&reach);
+        let untouched = |faces: &[FaceId]| !reach.any(faces);
         let mut found = Found::new(view, overlay.pairs());
         found.constraints = self
             .constraints
@@ -372,7 +373,7 @@ impl ConstraintProblem {
         found.hidden = self
             .hidden
             .iter()
-            .filter(|(c, x)| untouched(c.faces()) && !reach.contains(x))
+            .filter(|(c, x)| untouched(c.faces()) && !reach.contains(*x))
             .copied()
             .collect();
 
@@ -380,14 +381,10 @@ impl ConstraintProblem {
         // against the reached faces; then the reached faces' edges against
         // every edge.
         let n = shapes.len();
-        let reached: Vec<usize> = (0..n).filter(|&h| reach.contains(&shapes[h].id)).collect();
+        let reached: Vec<usize> = (0..n).filter(|&h| reach.contains(shapes[h].id)).collect();
         let all_faces: Vec<usize> = (0..n).collect();
         let segments = segments(view);
-        let reached_edge: Vec<bool> = view
-            .edges()
-            .iter()
-            .map(|e| e.faces.iter().any(|f| reach.contains(f)))
-            .collect();
+        let reached_edge: Vec<bool> = view.edges().iter().map(|e| reach.any(&e.faces)).collect();
         for (e, &edge_reached) in reached_edge.iter().enumerate() {
             let faces = if edge_reached { &all_faces } else { &reached };
             for &h in faces {

@@ -5,7 +5,7 @@
 //! The answers are `convex`'s own, from the same half-planes in the same
 //! order; the tests hold them to it bit for bit.
 
-use oristudio_geometry::convex::HalfPlane;
+use oristudio_geometry::convex::{self, Carve, HalfPlane, MIN_EDGE};
 
 use crate::view::{FaceId, FoldedView};
 
@@ -100,10 +100,40 @@ pub(crate) fn penetration_with(polygon: &[Point], shape: &Shape<'_>) -> f64 {
     if depth.is_finite() { depth } else { 0.0 }
 }
 
+/// `convex::carve(subject, window, sliver)`, given the window's planes in
+/// ring order, of which those the subject lies within by [`MIN_EDGE`] may be
+/// left out.
+///
+/// Such a plane never cuts: every point of what is left inside lies within
+/// `MIN_EDGE` of it (up to rounding), so what `convex::split` puts outside it
+/// is at most twice that wide, no wider than any sliver, and carving moves
+/// on. Leaving it out skips a split, an allocation or three and a width.
+pub(crate) fn carve_along<'p>(
+    subject: &[Point],
+    planes: impl Iterator<Item = &'p HalfPlane>,
+    sliver: f64,
+) -> Option<Carve> {
+    let mut inside = subject.to_vec();
+    let mut outside = Vec::new();
+    for plane in planes {
+        let cut = convex::split(&inside, plane, MIN_EDGE);
+        if cut.outside.is_empty() || convex::width(&cut.outside) <= sliver {
+            continue;
+        }
+        if cut.inside.is_empty() || convex::width(&cut.inside) <= sliver {
+            return None;
+        }
+        outside.push(cut.outside);
+        inside = cut.inside;
+    }
+    if convex::width(&inside) <= sliver {
+        return None;
+    }
+    Some(Carve { inside, outside })
+}
+
 #[cfg(test)]
 mod tests {
-    use oristudio_geometry::convex;
-
     use super::*;
 
     /// SplitMix64.
@@ -157,5 +187,48 @@ mod tests {
                 );
             }
         }
+    }
+
+    fn bits(carve: &Option<Carve>) -> Option<Vec<Vec<[u64; 2]>>> {
+        carve.as_ref().map(|c| {
+            std::iter::once(&c.inside)
+                .chain(&c.outside)
+                .map(|p| p.iter().map(|x| x.map(f64::to_bits)).collect())
+                .collect()
+        })
+    }
+
+    #[test]
+    fn carving_along_the_cutting_planes_is_convexs_carve() {
+        let mut rng = Rng(11);
+        let mut skipped = 0;
+        for _ in 0..4000 {
+            let window = convex::normalize(&ring(&mut rng));
+            // Subjects that straddle the window, and some that lie inside it
+            // but for an edge or two.
+            let subject = if rng.next() < 0.5 {
+                convex::normalize(&ring(&mut rng))
+            } else {
+                let c = convex::centroid(&window).unwrap_or([0.5, 0.5]);
+                let k = 0.6 + 0.6 * rng.next();
+                window
+                    .iter()
+                    .map(|p| [c[0] + k * (p[0] - c[0]), c[1] + k * (p[1] - c[1])])
+                    .collect()
+            };
+            let want = convex::carve(&subject, &window, 1e-6);
+            let all = planes(&window);
+            assert_eq!(bits(&carve_along(&subject, all.iter(), 1e-6)), bits(&want));
+            let cutting: Vec<&HalfPlane> = all
+                .iter()
+                .filter(|pl| subject.iter().any(|&x| pl.signed_distance(x) < -MIN_EDGE))
+                .collect();
+            skipped += all.len() - cutting.len();
+            assert_eq!(
+                bits(&carve_along(&subject, cutting.into_iter(), 1e-6)),
+                bits(&want)
+            );
+        }
+        assert!(skipped > 1000, "only {skipped} planes skipped");
     }
 }

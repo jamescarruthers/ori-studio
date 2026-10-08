@@ -1,10 +1,48 @@
 //! A dense table over pairs of a view's face positions, for the loops that
 //! visit every pair of every cell (Σ ply² lookups: tens of millions on a
 //! 300-face state with stacks 200 deep, where ordered-map lookups cost
-//! hundreds of milliseconds).
+//! hundreds of milliseconds); and a set of face ids for the rebuilds, which
+//! ask whether each pair and constraint of the previous problem was touched.
+
+use std::collections::BTreeSet;
 
 use crate::order::LayerOrder;
-use crate::view::FoldedView;
+use crate::view::{FaceId, FoldedView};
+
+/// A set of face ids: a table on the id when its largest id is small enough
+/// for one (the engine's and FOLD's are), else the ordered set.
+pub(crate) enum IdSet {
+    Dense(Vec<bool>),
+    Sparse(BTreeSet<FaceId>),
+}
+
+impl IdSet {
+    pub(crate) fn new(set: &BTreeSet<FaceId>) -> IdSet {
+        match set.last() {
+            Some(&FaceId(last)) if (last as usize) < 64 * set.len() + 4096 => {
+                let mut dense = vec![false; last as usize + 1];
+                for &FaceId(id) in set {
+                    dense[id as usize] = true;
+                }
+                IdSet::Dense(dense)
+            }
+            Some(_) => IdSet::Sparse(set.clone()),
+            None => IdSet::Dense(Vec::new()),
+        }
+    }
+
+    pub(crate) fn contains(&self, face: FaceId) -> bool {
+        match self {
+            IdSet::Dense(dense) => dense.get(face.0 as usize).copied().unwrap_or(false),
+            IdSet::Sparse(set) => set.contains(&face),
+        }
+    }
+
+    /// Whether any of the faces is in the set.
+    pub(crate) fn any(&self, faces: &[FaceId]) -> bool {
+        faces.iter().any(|&f| self.contains(f))
+    }
+}
 
 pub(crate) struct PairTable<T> {
     n: usize,
