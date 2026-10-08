@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   handleShortcutRuntimeKeyDown,
+  registerConditionalScopeExecutor,
   registerCpActionShortcutExecutor,
-  registerDiagramShortcutExecutor,
   hasSimulatorExecutor,
   releaseShortcutViewportSurface,
   setActiveShortcutViewportSurface,
-  registerReferencesShortcutExecutor,
-  registerSimulatorShortcutExecutor,
   registerViewportShortcutExecutor,
   runReferencesCommand,
   runSimulatorCommand,
@@ -48,14 +46,13 @@ describe('shortcut runtime', () => {
     expect(
       shortcutScopeStackForContext({
         activeEditingContext: 'references',
-        referencesFocused: true,
+        registeredExecutors: { references: true },
       })
     ).toEqual(['references', 'viewport', 'global']);
     expect(
       shortcutScopeStackForContext({
         activeEditingContext: 'references',
-        simulatorFocused: true,
-        referencesFocused: true,
+        registeredExecutors: { simulator: true, references: true },
       })
     ).toEqual(['simulator', 'references', 'viewport', 'global']);
     expect(
@@ -68,7 +65,7 @@ describe('shortcut runtime', () => {
   describe('runReferencesCommand', () => {
     it('runs the registered References executor with the id, and says it did', () => {
       const references = vi.fn();
-      cleanupWith(registerReferencesShortcutExecutor(references));
+      cleanupWith(registerConditionalScopeExecutor('references', references));
 
       expect(runReferencesCommand('references.exportAllSteps')).toBe(true);
       expect(references).toHaveBeenCalledTimes(1);
@@ -81,7 +78,7 @@ describe('shortcut runtime', () => {
 
     it('answers false again once the registration is disposed', () => {
       const references = vi.fn();
-      const dispose = registerReferencesShortcutExecutor(references);
+      const dispose = registerConditionalScopeExecutor('references', references);
       dispose();
 
       expect(runReferencesCommand('references.exportAllSteps')).toBe(false);
@@ -91,8 +88,8 @@ describe('shortcut runtime', () => {
     it('keeps a newer registration when an older one is disposed', () => {
       const older = vi.fn();
       const newer = vi.fn();
-      const disposeOlder = registerReferencesShortcutExecutor(older);
-      cleanupWith(registerReferencesShortcutExecutor(newer));
+      const disposeOlder = registerConditionalScopeExecutor('references', older);
+      cleanupWith(registerConditionalScopeExecutor('references', newer));
       disposeOlder();
 
       expect(runReferencesCommand('references.exportAllSteps')).toBe(true);
@@ -109,7 +106,7 @@ describe('shortcut runtime', () => {
 
     it('runs the registered simulator executor with the id, and says it did', () => {
       const simulator = vi.fn(() => true);
-      cleanupWith(registerSimulatorShortcutExecutor(simulator));
+      cleanupWith(registerConditionalScopeExecutor('simulator', simulator));
 
       expect(runSimulatorCommand('simulator.setUpright')).toBe(true);
       expect(simulator).toHaveBeenCalledWith('simulator.setUpright');
@@ -118,7 +115,7 @@ describe('shortcut runtime', () => {
     it('answers false when the simulation in hand declines the verb', () => {
       // An inline window holds the keyboard and has no tools.
       const simulator = vi.fn(() => false);
-      cleanupWith(registerSimulatorShortcutExecutor(simulator));
+      cleanupWith(registerConditionalScopeExecutor('simulator', simulator));
 
       expect(runSimulatorCommand('simulator.tool.pin')).toBe(false);
       expect(simulator).toHaveBeenCalledWith('simulator.tool.pin');
@@ -128,8 +125,8 @@ describe('shortcut runtime', () => {
       const listener = vi.fn();
       cleanupWith(subscribeSimulatorExecutor(listener));
 
-      const disposeOlder = registerSimulatorShortcutExecutor(vi.fn(() => true));
-      const disposeNewer = registerSimulatorShortcutExecutor(vi.fn(() => true));
+      const disposeOlder = registerConditionalScopeExecutor('simulator', vi.fn(() => true));
+      const disposeNewer = registerConditionalScopeExecutor('simulator', vi.fn(() => true));
       // Both unregisters are idempotent, so a failed assertion cannot leave
       // an executor behind for the next test.
       cleanupWith(disposeOlder);
@@ -209,7 +206,7 @@ describe('shortcut runtime', () => {
         'viewport',
         'global',
       ]);
-      cleanupWith(registerDiagramShortcutExecutor(() => true));
+      cleanupWith(registerConditionalScopeExecutor('diagram', () => true));
       // Edit Path's node keys ahead of the steps', on the same executor.
       expect(shortcutScopeStackForContext({ activeEditingContext: 'diagram' })).toEqual([
         'diagram-path',
@@ -229,7 +226,7 @@ describe('shortcut runtime', () => {
       // As the Diagram's does with no node selected: a nudge declines, and the step keys claim.
       let nodeSelected = false;
       const diagram = vi.fn((id: string) => nodeSelected || !id.startsWith('diagram.nudge'));
-      cleanupWith(registerDiagramShortcutExecutor(diagram));
+      cleanupWith(registerConditionalScopeExecutor('diagram', diagram));
       const viewport = vi.fn(() => false);
       cleanupWith(registerViewportShortcutExecutor('diagram', viewport));
       const context = { activeEditingContext: 'diagram' as const, activeViewportSurface: null };
@@ -263,7 +260,7 @@ describe('shortcut runtime', () => {
     it('leaves a focused field its Backspace and arrows, whatever Edit Path holds', () => {
       // An executor that would nudge, and a menu that would delete a node: neither may see a field's keys.
       const diagram = vi.fn(() => true);
-      cleanupWith(registerDiagramShortcutExecutor(diagram));
+      cleanupWith(registerConditionalScopeExecutor('diagram', diagram));
       const menu = vi.fn();
       const context = { activeEditingContext: 'diagram' as const, activeViewportSurface: null };
       const field = document.createElement('textarea');
