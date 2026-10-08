@@ -15,6 +15,7 @@ import {
   hasDeletableDiagramSelection as selectHasDeletableDiagramSelection,
   historyCountForContext,
 } from './capabilities';
+import { hasProjectDocument as selectHasProjectDocument } from './projectDocuments';
 import { useWorkspaceStore } from './store';
 
 export function useWorkspaceCapabilities() {
@@ -63,7 +64,7 @@ export function useWorkspaceCapabilities() {
   const canSaveDesign = useWorkspaceStore((state) =>
     state.designTabs.some((tab) => (tab.kind ? designKind(tab.kind)?.isSavable(tab) : false) ?? false)
   );
-  const hasDiagram = useWorkspaceStore((state) => state.diagram !== null);
+  const hasProjectDocument = useWorkspaceStore(selectHasProjectDocument);
   const diagramStepCount = useWorkspaceStore((state) => state.diagram?.steps.length ?? 0);
   const hasDeletableDiagramSelection = useWorkspaceStore(selectHasDeletableDiagramSelection);
   const diagramDeleteTarget = useWorkspaceStore(diagramDeleteTargetOf);
@@ -127,7 +128,7 @@ export function useWorkspaceCapabilities() {
           oristudioCpSolvablePatternCount,
           hasDeletableDesignSelection,
           canSaveDesign,
-          hasDiagram,
+          hasProjectDocument,
           diagramStepCount,
           hasDeletableDiagramSelection,
           diagramDeleteTarget,
@@ -161,7 +162,7 @@ export function useWorkspaceCapabilities() {
       oristudioCpSolvablePatternCount,
       hasDeletableDesignSelection,
       canSaveDesign,
-      hasDiagram,
+      hasProjectDocument,
       diagramStepCount,
       hasDeletableDiagramSelection,
       diagramDeleteTarget,

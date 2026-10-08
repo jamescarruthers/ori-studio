@@ -23,6 +23,7 @@ import { isSuppressionRegionAnnotation } from '../../cp-workspace/annotations/an
 import { hasAttachedSolveInput } from '../../cp-workspace/annotations/suppressionRegion';
 import type { EditingContext } from '../../workspaces/editingContext';
 import { stepById, turnById } from '../../diagram/document/diagramDocument';
+import { hasProjectDocument } from './projectDocuments';
 import type { WorkspaceState } from './types';
 
 /**
@@ -169,7 +170,7 @@ export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabi
     hasDeletableDesignSelection:
       activeKind?.deletableTarget?.(activeDesignTab(state)) != null,
     canSaveDesign: anyDesignIsSavable(state),
-    hasDiagram: state.diagram !== null,
+    hasProjectDocument: hasProjectDocument(state),
     diagramStepCount: state.diagram?.steps.length ?? 0,
     hasDeletableDiagramSelection: hasDeletableDiagramSelection(state),
     diagramDeleteTarget: diagramDeleteTarget(state),
