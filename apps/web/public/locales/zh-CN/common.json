@@ -308,6 +308,31 @@
     "open": "拖放以打开",
     "openOrImport": "拖放以打开或导入"
   },
+  "foldSentences": {
+    "axiom": {
+      "o1": "通过两点",
+      "o2": "点对点",
+      "o3": "边对边",
+      "o4": "过一点作垂线",
+      "o5": "点落到线上，且过一点",
+      "o6": "两点分别落到两线上",
+      "o7": "点落到线上，且垂直"
+    },
+    "ref": {
+      "bottomEdge": "下边",
+      "cornerNe": "右上角",
+      "cornerNw": "左上角",
+      "cornerSe": "右下角",
+      "cornerSw": "左下角",
+      "diagonalNwSe": "从左上到右下的对角线",
+      "diagonalSwNe": "从左下到右上的对角线",
+      "leftEdge": "左边",
+      "line": "线 {{name}}",
+      "point": "点 {{name}}",
+      "rightEdge": "右边",
+      "topEdge": "上边"
+    }
+  },
   "numberField": {
     "decrease": "减小{{label}}",
     "increase": "增大{{label}}"

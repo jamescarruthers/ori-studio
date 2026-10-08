@@ -1513,16 +1513,6 @@
       "title": "参照の分析",
       "unsolved": "作図方法が見つかりません"
     },
-    "axiom": {
-      "free": "すでに紙の上にあります",
-      "o1": "2 点を通る",
-      "o2": "点を点に重ねる",
-      "o3": "辺を辺に重ねる",
-      "o4": "点を通る垂線",
-      "o5": "点を線に重ね、点を通す",
-      "o6": "2 点を 2 本の線に重ねる",
-      "o7": "点を線に重ね、垂直に"
-    },
     "backToPattern": "パターン全体に戻る",
     "backToPatterns": "パターン",
     "breakdown": {
@@ -1648,20 +1638,6 @@
       "querying": "{{total}} 本中 {{done}} 本を探索中"
     },
     "recompute": "再計算",
-    "ref": {
-      "bottomEdge": "下の辺",
-      "cornerNe": "右上の角",
-      "cornerNw": "左上の角",
-      "cornerSe": "右下の角",
-      "cornerSw": "左下の角",
-      "diagonalNwSe": "左上から右下への対角線",
-      "diagonalSwNe": "左下から右上への対角線",
-      "leftEdge": "左の辺",
-      "line": "線 {{name}}",
-      "point": "点 {{name}}",
-      "rightEdge": "右の辺",
-      "topEdge": "上の辺"
-    },
     "refusedSheet": "この選択の周りの用紙を長方形として読み取れませんでした。",
     "searching": "基準点を探しています…",
     "settings": {

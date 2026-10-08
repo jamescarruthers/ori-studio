@@ -308,6 +308,31 @@
     "open": "Zum Öffnen ablegen",
     "openOrImport": "Zum Öffnen oder Importieren ablegen"
   },
+  "foldSentences": {
+    "axiom": {
+      "o1": "durch zwei Punkte",
+      "o2": "Punkt auf Punkt",
+      "o3": "Kante auf Kante",
+      "o4": "Senkrechte durch einen Punkt",
+      "o5": "Punkt auf eine Linie, durch einen Punkt",
+      "o6": "zwei Punkte auf zwei Linien",
+      "o7": "Punkt auf eine Linie, senkrecht"
+    },
+    "ref": {
+      "bottomEdge": "die untere Kante",
+      "cornerNe": "die obere rechte Ecke",
+      "cornerNw": "die obere linke Ecke",
+      "cornerSe": "die untere rechte Ecke",
+      "cornerSw": "die untere linke Ecke",
+      "diagonalNwSe": "die Diagonale von oben links nach unten rechts",
+      "diagonalSwNe": "die Diagonale von unten links nach oben rechts",
+      "leftEdge": "die linke Kante",
+      "line": "Linie {{name}}",
+      "point": "Punkt {{name}}",
+      "rightEdge": "die rechte Kante",
+      "topEdge": "die obere Kante"
+    }
+  },
   "numberField": {
     "decrease": "{{label}} verringern",
     "increase": "{{label}} erhöhen"

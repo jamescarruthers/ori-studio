@@ -1513,16 +1513,6 @@
       "title": "参照分析",
       "unsolved": "未找到作图方法"
     },
-    "axiom": {
-      "free": "已经在纸上",
-      "o1": "通过两点",
-      "o2": "点对点",
-      "o3": "边对边",
-      "o4": "过一点作垂线",
-      "o5": "点落到线上，且过一点",
-      "o6": "两点分别落到两线上",
-      "o7": "点落到线上，且垂直"
-    },
     "backToPattern": "返回整个折痕图",
     "backToPatterns": "图样",
     "breakdown": {
@@ -1648,20 +1638,6 @@
       "querying": "正在搜索 {{total}} 条线中的 {{done}} 条"
     },
     "recompute": "重新计算",
-    "ref": {
-      "bottomEdge": "下边",
-      "cornerNe": "右上角",
-      "cornerNw": "左上角",
-      "cornerSe": "右下角",
-      "cornerSw": "左下角",
-      "diagonalNwSe": "从左上到右下的对角线",
-      "diagonalSwNe": "从左下到右上的对角线",
-      "leftEdge": "左边",
-      "line": "线 {{name}}",
-      "point": "点 {{name}}",
-      "rightEdge": "右边",
-      "topEdge": "上边"
-    },
     "refusedSheet": "无法将所选位置周围的纸读取为矩形。",
     "searching": "正在查找参考点…",
     "settings": {

@@ -308,6 +308,31 @@
     "open": "Drop to open",
     "openOrImport": "Drop to open or import"
   },
+  "foldSentences": {
+    "axiom": {
+      "o1": "through two points",
+      "o2": "point onto point",
+      "o3": "edge onto edge",
+      "o4": "perpendicular through a point",
+      "o5": "point onto a line, through a point",
+      "o6": "two points onto two lines",
+      "o7": "point onto a line, perpendicular"
+    },
+    "ref": {
+      "bottomEdge": "the bottom edge",
+      "cornerNe": "the top-right corner",
+      "cornerNw": "the top-left corner",
+      "cornerSe": "the bottom-right corner",
+      "cornerSw": "the bottom-left corner",
+      "diagonalNwSe": "the top-left to bottom-right diagonal",
+      "diagonalSwNe": "the bottom-left to top-right diagonal",
+      "leftEdge": "the left edge",
+      "line": "line {{name}}",
+      "point": "point {{name}}",
+      "rightEdge": "the right edge",
+      "topEdge": "the top edge"
+    }
+  },
   "numberField": {
     "decrease": "Decrease {{label}}",
     "increase": "Increase {{label}}"

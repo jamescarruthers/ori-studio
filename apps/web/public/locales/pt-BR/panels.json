@@ -1615,16 +1615,6 @@
       "title": "Análise de referências",
       "unsolved": "nenhuma construção encontrada"
     },
-    "axiom": {
-      "free": "já está na folha",
-      "o1": "por dois pontos",
-      "o2": "ponto sobre ponto",
-      "o3": "borda sobre borda",
-      "o4": "perpendicular por um ponto",
-      "o5": "ponto sobre uma linha, por um ponto",
-      "o6": "dois pontos sobre duas linhas",
-      "o7": "ponto sobre uma linha, perpendicular"
-    },
     "backToPattern": "Voltar ao padrão inteiro",
     "backToPatterns": "Padrões",
     "breakdown": {
@@ -1760,20 +1750,6 @@
       "querying": "Buscando {{done}} de {{total}} linhas"
     },
     "recompute": "Recalcular",
-    "ref": {
-      "bottomEdge": "a borda inferior",
-      "cornerNe": "o canto superior direito",
-      "cornerNw": "o canto superior esquerdo",
-      "cornerSe": "o canto inferior direito",
-      "cornerSw": "o canto inferior esquerdo",
-      "diagonalNwSe": "a diagonal do canto superior esquerdo ao inferior direito",
-      "diagonalSwNe": "a diagonal do canto inferior esquerdo ao superior direito",
-      "leftEdge": "a borda esquerda",
-      "line": "a linha {{name}}",
-      "point": "o ponto {{name}}",
-      "rightEdge": "a borda direita",
-      "topEdge": "a borda superior"
-    },
     "refusedSheet": "A folha ao redor desta seleção não pôde ser lida como um retângulo.",
     "searching": "Procurando referências…",
     "settings": {

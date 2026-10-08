@@ -1562,16 +1562,6 @@
       "title": "Referenzanalyse",
       "unsolved": "keine Konstruktion gefunden"
     },
-    "axiom": {
-      "free": "bereits auf dem Blatt",
-      "o1": "durch zwei Punkte",
-      "o2": "Punkt auf Punkt",
-      "o3": "Kante auf Kante",
-      "o4": "Senkrechte durch einen Punkt",
-      "o5": "Punkt auf eine Linie, durch einen Punkt",
-      "o6": "zwei Punkte auf zwei Linien",
-      "o7": "Punkt auf eine Linie, senkrecht"
-    },
     "backToPattern": "Zurück zum ganzen Muster",
     "backToPatterns": "Muster",
     "breakdown": {
@@ -1702,20 +1692,6 @@
       "querying": "{{done}} von {{total}} Linien werden durchsucht"
     },
     "recompute": "Neu berechnen",
-    "ref": {
-      "bottomEdge": "die untere Kante",
-      "cornerNe": "die obere rechte Ecke",
-      "cornerNw": "die obere linke Ecke",
-      "cornerSe": "die untere rechte Ecke",
-      "cornerSw": "die untere linke Ecke",
-      "diagonalNwSe": "die Diagonale von oben links nach unten rechts",
-      "diagonalSwNe": "die Diagonale von unten links nach oben rechts",
-      "leftEdge": "die linke Kante",
-      "line": "Linie {{name}}",
-      "point": "Punkt {{name}}",
-      "rightEdge": "die rechte Kante",
-      "topEdge": "die obere Kante"
-    },
     "refusedSheet": "Der Bogen um diese Auswahl konnte nicht als Rechteck gelesen werden.",
     "searching": "Referenzen werden gesucht…",
     "settings": {

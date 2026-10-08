@@ -308,6 +308,31 @@
     "open": "놓아서 열기",
     "openOrImport": "놓아서 열거나 가져오기"
   },
+  "foldSentences": {
+    "axiom": {
+      "o1": "두 점을 지나",
+      "o2": "점을 점 위로",
+      "o3": "변을 변 위로",
+      "o4": "점을 지나는 수직선",
+      "o5": "점을 선 위로, 다른 점을 지나",
+      "o6": "두 점을 두 선 위로",
+      "o7": "점을 선 위로, 수직으로"
+    },
+    "ref": {
+      "bottomEdge": "아래쪽 변",
+      "cornerNe": "오른쪽 위 모서리",
+      "cornerNw": "왼쪽 위 모서리",
+      "cornerSe": "오른쪽 아래 모서리",
+      "cornerSw": "왼쪽 아래 모서리",
+      "diagonalNwSe": "왼쪽 위에서 오른쪽 아래로 가는 대각선",
+      "diagonalSwNe": "왼쪽 아래에서 오른쪽 위로 가는 대각선",
+      "leftEdge": "왼쪽 변",
+      "line": "선 {{name}}",
+      "point": "점 {{name}}",
+      "rightEdge": "오른쪽 변",
+      "topEdge": "위쪽 변"
+    }
+  },
   "numberField": {
     "decrease": "{{label}} 줄이기",
     "increase": "{{label}} 늘리기"

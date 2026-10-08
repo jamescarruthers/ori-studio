@@ -24,7 +24,13 @@
  * React-free; literal `t()` keys so the extractor sees them.
  */
 import type { TFunction } from 'i18next';
-import { moverFirst } from '../../lib/foldSentences';
+import {
+  cornerName,
+  diagonalName,
+  edgeName,
+  letteredName,
+  moverFirst,
+} from '../../lib/foldSentences';
 import type { ExtractedStep } from './referenceFinder/extractor';
 import { directionOfGroup, type ReferencesDirection } from './referencesBreakdown';
 import { unitFrame } from './diagram/diagramFrames';
@@ -74,33 +80,31 @@ export function isLineLabel(label: string): boolean {
   return /^[A-O]$/.test(label);
 }
 
-/** A reference's name in a sentence: the sheet's own by description, a step's by letter. */
+/**
+ * A reference's name in a sentence: the sheet's own by description, a step's
+ * by letter — ReferenceFinder's labels read into the shared vocabulary
+ * (`lib/foldSentences`).
+ */
 export function referenceName(t: TFunction, label: string): string {
   switch (label) {
     case 's':
-      return t('panels:references.ref.bottomEdge', 'the bottom edge');
+      return edgeName(t, 'bottom');
     case 'n':
-      return t('panels:references.ref.topEdge', 'the top edge');
+      return edgeName(t, 'top');
     case 'w':
-      return t('panels:references.ref.leftEdge', 'the left edge');
+      return edgeName(t, 'left');
     case 'e':
-      return t('panels:references.ref.rightEdge', 'the right edge');
+      return edgeName(t, 'right');
     case 'sw_ne':
-      return t('panels:references.ref.diagonalSwNe', 'the bottom-left to top-right diagonal');
     case 'nw_se':
-      return t('panels:references.ref.diagonalNwSe', 'the top-left to bottom-right diagonal');
+      return diagonalName(t, label);
     case 'sw':
-      return t('panels:references.ref.cornerSw', 'the bottom-left corner');
     case 'se':
-      return t('panels:references.ref.cornerSe', 'the bottom-right corner');
     case 'nw':
-      return t('panels:references.ref.cornerNw', 'the top-left corner');
     case 'ne':
-      return t('panels:references.ref.cornerNe', 'the top-right corner');
+      return cornerName(t, label);
     default:
-      return isLineLabel(label)
-        ? t('panels:references.ref.line', 'line {{name}}', { name: label })
-        : t('panels:references.ref.point', 'point {{name}}', { name: label });
+      return letteredName(t, isLineLabel(label) ? 'line' : 'point', label);
   }
 }
 
@@ -633,18 +637,7 @@ function describeGridBound(
   /** Across the family's own lines, or along them (the other family's). */
   across = true
 ): string {
-  switch (bound.edge) {
-    case 'left':
-      return t('panels:references.ref.leftEdge', 'the left edge');
-    case 'right':
-      return t('panels:references.ref.rightEdge', 'the right edge');
-    case 'bottom':
-      return t('panels:references.ref.bottomEdge', 'the bottom edge');
-    case 'top':
-      return t('panels:references.ref.topEdge', 'the top edge');
-    case null:
-      break;
-  }
+  if (bound.edge !== null) return edgeName(t, bound.edge);
   const vertical = Math.abs(grid.normal[0]) >= Math.abs(grid.normal[1]) === across;
   const fraction = grid.cells === null ? String(bound.index) : gridFraction(bound.fraction);
   if (bound.line_id !== null) {
@@ -707,28 +700,6 @@ export function describeDirection(t: TFunction, direction: ReferencesDirection):
       return t('panels:references.direction.diagonalDown', 'on the falling diagonal');
     case 'angle':
       return t('panels:references.direction.angle', 'at {{deg}}°', { deg: direction.degrees });
-  }
-}
-
-/** The axiom a row's steps use, as a folder would name the move. */
-export function describeAxiom(t: TFunction, axiom: number): string {
-  switch (axiom) {
-    case 1:
-      return t('panels:references.axiom.o1', 'through two points');
-    case 2:
-      return t('panels:references.axiom.o2', 'point onto point');
-    case 3:
-      return t('panels:references.axiom.o3', 'edge onto edge');
-    case 4:
-      return t('panels:references.axiom.o4', 'perpendicular through a point');
-    case 5:
-      return t('panels:references.axiom.o5', 'point onto a line, through a point');
-    case 6:
-      return t('panels:references.axiom.o6', 'two points onto two lines');
-    case 7:
-      return t('panels:references.axiom.o7', 'point onto a line, perpendicular');
-    default:
-      return t('panels:references.axiom.free', 'already on the sheet');
   }
 }
 
