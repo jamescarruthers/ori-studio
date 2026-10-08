@@ -279,6 +279,213 @@
     "ratio": "Proporção",
     "ratioTitle": "Dividir a linha por uma proporção"
   },
+  "fold": {
+    "fix": {
+      "includeFlap": "Incluir a aba {{number}}",
+      "includeFlaps_one": "Incluir {{count}} aba",
+      "includeFlaps_many": "Incluir as {{count}} abas",
+      "includeFlaps_other": "Incluir as {{count}} abas",
+      "mountainInstead": "Dobra montanha em vez disso",
+      "pickFlap": "Dobrar só a aba {{number}}",
+      "precreaseOtherWay": "Pré-vincar no outro sentido",
+      "useLine": "Usar a linha de referência",
+      "valleyInstead": "Dobra vale em vez disso"
+    },
+    "flap": {
+      "chip_one": "Aba {{number}}, {{count}} camada",
+      "chip_many": "Aba {{number}}, {{count}} camadas",
+      "chip_other": "Aba {{number}}, {{count}} camadas",
+      "chipAdded_one": "Aba {{number}}, {{count}} camada, move-se com a dobra",
+      "chipAdded_many": "Aba {{number}}, {{count}} camadas, move-se com a dobra",
+      "chipAdded_other": "Aba {{number}}, {{count}} camadas, move-se com a dobra",
+      "groupLabel": "Abas a dobrar",
+      "layers_one": "{{count}} camada",
+      "layers_many": "{{count}} camadas",
+      "layers_other": "{{count}} camadas",
+      "name": "Aba {{number}}"
+    },
+    "group": {
+      "fold": "Dobrar",
+      "locate": "Localizar a linha",
+      "model": "Modelo",
+      "planned": "Planejados",
+      "reference": "Pontos de referência"
+    },
+    "line": {
+      "axiom": "Axioma {{number}}: {{phrase}}",
+      "axiom1Help": "A linha que passa por dois pontos.",
+      "axiom2Help": "A linha que leva um ponto sobre outro.",
+      "axiom3Help": "A linha que leva uma borda ou vinco sobre outro.",
+      "axiom4Help": "A linha que passa por um ponto, perpendicular a uma borda ou vinco.",
+      "axiom5Help": "A linha que passa por um pivô e leva um ponto sobre uma borda ou vinco.",
+      "axiom6Help": "A linha que leva ao mesmo tempo dois pontos sobre duas bordas ou vincos.",
+      "axiom7Help": "A linha que leva um ponto sobre uma borda ou vinco, perpendicular a outro.",
+      "crease": "Vinco existente",
+      "creaseHelp": "Um vinco ou borda dobrada que já existe: redobrar um pré-vinco ou desdobrar uma aba.",
+      "free": "Linha livre",
+      "freeHelp": "Uma linha traçada em qualquer lugar, sem referência."
+    },
+    "mark": {
+      "insideReverse": "IR",
+      "mountain": "M",
+      "precrease": "P",
+      "valley": "V"
+    },
+    "note": {
+      "clear": "Esc limpa os pontos escolhidos.",
+      "crease": "Dobrar ao longo de um pré-vinco o redobra; ao longo de uma borda dobrada, desdobra a aba.",
+      "divide": "Contam as bordas, as bordas dobradas e os pré-vincos.",
+      "free": "Sem ajuste: a linha fica exatamente onde você clica.",
+      "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar, sem ajuste.",
+      "snap": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos, pontos médios e bordas."
+    },
+    "op": {
+      "closedSink": "Afundamento fechado",
+      "crimp": "Pinça",
+      "openSink": "Afundamento aberto",
+      "outsideReverse": "Dobra invertida externa",
+      "petal": "Dobra pétala",
+      "rabbitEar": "Orelha de coelho",
+      "squash": "Dobra esmagada",
+      "swivel": "Dobra pivotante",
+      "tuck": "Encaixar",
+      "unsink": "Desfazer afundamento"
+    },
+    "picker": {
+      "close": "Fechar a lista de ferramentas",
+      "title": "Ferramentas de dobra"
+    },
+    "plannedReason": "Planejado: ainda não está no Ori Studio.",
+    "railLabel": "Ferramentas de dobra",
+    "readOnly": {
+      "locked": "Este passo é de uma versão mais nova do Ori Studio, então nada pode ser dobrado a partir dele.",
+      "newer": "Esta sequência é de uma versão mais nova do Ori Studio, então abre somente para leitura."
+    },
+    "refusal": {
+      "closureAddsFlaps": {
+        "textMany_one": "Dobrar estas camadas também move mais {{count}} aba.",
+        "textMany_many": "Dobrar estas camadas também move mais {{count}} abas.",
+        "textMany_other": "Dobrar estas camadas também move mais {{count}} abas.",
+        "textOne": "Dobrar estas camadas também move a aba {{number}}.",
+        "title": "Mais abas se moveriam"
+      },
+      "collision": {
+        "text": "As camadas que se movem atravessariam camadas no caminho.",
+        "title": "Colisão"
+      },
+      "emptySeed": {
+        "text": "Nenhuma camada foi escolhida. Escolha pelo menos uma aba para mover.",
+        "title": "Nada para dobrar"
+      },
+      "invalid": {
+        "text": "Não resultaria em um modelo plano válido.",
+        "title": "Esta dobra não pode ser feita"
+      },
+      "nearMiss": {
+        "text": "A linha passa logo ao lado de um ponto do papel: perto demais para dobrar com precisão, longe demais para passar por ele.",
+        "title": "Perto demais de um ponto"
+      },
+      "noMovingSide": {
+        "text": "Não há papel do lado da linha que se moveria. Troque o lado que se move ou leve a linha para cima do papel.",
+        "title": "Nada para dobrar"
+      },
+      "nothingStays": {
+        "text": "Todas as camadas estão do lado que se move, então nada ficaria parado. Escolha uma aba para dobrar.",
+        "title": "Tudo se moveria"
+      },
+      "pickAgain": {
+        "text": "Esse lugar não está dentro de uma camada do lado que se move. Escolha dentro de uma camada, longe dos vincos.",
+        "title": "Escolha de novo"
+      },
+      "precreaseUnfold": {
+        "text": "Desdobrá-lo moveria mais camadas do que dobrá-lo moveu.",
+        "title": "Este pré-vinco não pode ser desdobrado"
+      },
+      "sliver": {
+        "text": "Um ponto das camadas que se movem cairia por um fio dentro da borda de outra camada.",
+        "title": "Um ponto cai logo dentro de uma borda"
+      },
+      "tooSmall": {
+        "text": "A dobra deixaria um vinco ou uma tira de papel mais fina que o próprio papel.",
+        "title": "Pequeno demais para dobrar"
+      },
+      "tuckTarget": {
+        "text": "Escolha uma camada que fique parada para encaixar a aba nela.",
+        "title": "A camada onde encaixar se moveria"
+      }
+    },
+    "section": {
+      "label": "Camadas na linha de dobra, de cima para baixo",
+      "labelWoven": "Camadas na linha de dobra sob o ponteiro, de cima para baixo",
+      "row": "Camada {{layer}}, {{flap}}",
+      "rowAdded": "Camada {{layer}}, {{flap}}, move-se com a dobra",
+      "rowAddedBeside": "Camada {{layer}}, {{flap}}, move-se com a dobra, ao lado da camada {{above}}",
+      "rowBeside": "Camada {{layer}}, {{flap}}, ao lado da camada {{above}}",
+      "rowStays": "Camada {{layer}}, fica parada",
+      "rowStaysBeside": "Camada {{layer}}, fica parada, ao lado da camada {{above}}",
+      "top": "Topo"
+    },
+    "steps": {
+      "axiom1First": "Clique no primeiro ponto por onde a dobra passa.",
+      "axiom1Second": "Clique no segundo ponto.",
+      "axiom2Land": "Clique onde ele deve cair.",
+      "axiom3Move": "Clique na borda ou vinco a mover.",
+      "axiom3Onto": "Clique na borda ou vinco sobre o qual colocá-lo.",
+      "axiom4Through": "Clique no ponto por onde a dobra passa.",
+      "axiom5Pivot": "Clique no pivô por onde a dobra passa.",
+      "axiom6FirstPoint": "Clique no primeiro ponto a mover.",
+      "axiom6SecondLine": "Clique na borda ou vinco onde esse deve cair.",
+      "axiom6SecondPoint": "Clique no segundo ponto a mover.",
+      "commit": "Pressione Enter para dobrar.",
+      "commitTouch": "Toque em {{action}} para dobrar.",
+      "crease": "Clique no vinco ou borda dobrada ao longo do qual dobrar.",
+      "divide": "Clique em uma borda ou vinco para dividi-lo.",
+      "divideUse": "Use os novos pontos como referências para qualquer dobra.",
+      "finish": "Escolha a dobra e as camadas e pressione Enter.",
+      "finishTouch": "Escolha a dobra e as camadas e toque em {{action}}.",
+      "freeEnd": "Clique onde ela termina.",
+      "freeStart": "Clique onde a linha de dobra começa.",
+      "landOnLine": "Clique na borda ou vinco onde ele deve cair.",
+      "perpendicularTo": "Clique na borda ou vinco ao qual a dobra é perpendicular.",
+      "pickLayers": "Escolha quais camadas se movem.",
+      "pointToMove": "Clique no ponto a mover."
+    },
+    "tool": {
+      "divideLine": "Dividir linha",
+      "divideLineHelp": "Marcar pontos que dividem uma borda ou um vinco em partes iguais.",
+      "insideReverse": "Dobra invertida interna",
+      "insideReverseHelp": "Empurrar uma aba para dentro de si mesma, invertendo sua lombada.",
+      "mountain": "Dobra montanha",
+      "mountainHelp": "Dobrar o lado que se move para longe de você, para que fique por baixo.",
+      "precrease": "Pré-vincar",
+      "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
+      "valley": "Dobra vale",
+      "valleyHelp": "Dobrar o lado que se move na sua direção, para que fique por cima."
+    },
+    "verb": {
+      "rotateHelp": "Girar o modelo um quarto de volta no sentido horário, como um passo próprio.",
+      "turnOverHelp": "Virar o modelo de um lado para o outro, como um passo próprio."
+    },
+    "window": {
+      "cancel": "Cancelar",
+      "finding": "Procurando as camadas na linha…",
+      "instructions": "Instruções",
+      "kind": "Dobra",
+      "label": "Opções da ferramenta de dobra",
+      "layers": "Camadas",
+      "layersHelp": "Clique em uma camada para incluir ou excluir sua aba. Os colchetes mostram onde uma dobra une duas camadas.",
+      "layersHelpWoven": "Estas camadas se entrelaçam, então a pilha mostrada é a que está sob o ponteiro. Clique em uma camada para incluir ou excluir sua aba.",
+      "layersMoving_one": "{{moving}} de {{count}} camada se movendo",
+      "layersMoving_many": "{{moving}} de {{count}} camadas se movendo",
+      "layersMoving_other": "{{moving}} de {{count}} camadas se movendo",
+      "lineMode": "Localizar a linha",
+      "movingSide": "Lado que se move",
+      "settings_one": "{{count}} ajuste",
+      "settings_many": "{{count}} ajustes",
+      "settings_other": "{{count}} ajustes",
+      "swap": "Trocar"
+    }
+  },
   "foldAngleDisplay": {
     "color": "Cor",
     "opacity": "Opacidade"

@@ -271,6 +271,206 @@
     "ratio": "Ratio",
     "ratioTitle": "Divide the line at a ratio"
   },
+  "fold": {
+    "fix": {
+      "includeFlap": "Include flap {{number}}",
+      "includeFlaps_one": "Include the {{count}} flap",
+      "includeFlaps_other": "Include the {{count}} flaps",
+      "mountainInstead": "Mountain fold instead",
+      "pickFlap": "Fold flap {{number}} only",
+      "precreaseOtherWay": "Precrease the other way",
+      "useLine": "Use the landmark line",
+      "valleyInstead": "Valley fold instead"
+    },
+    "flap": {
+      "chip_one": "Flap {{number}}, {{count}} layer",
+      "chip_other": "Flap {{number}}, {{count}} layers",
+      "chipAdded_one": "Flap {{number}}, {{count}} layer, moves with the fold",
+      "chipAdded_other": "Flap {{number}}, {{count}} layers, moves with the fold",
+      "groupLabel": "Flaps to fold",
+      "layers_one": "{{count}} layer",
+      "layers_other": "{{count}} layers",
+      "name": "Flap {{number}}"
+    },
+    "group": {
+      "fold": "Fold",
+      "locate": "Locate line",
+      "model": "Model",
+      "planned": "Planned",
+      "reference": "Reference points"
+    },
+    "line": {
+      "axiom": "Axiom {{number}}: {{phrase}}",
+      "axiom1Help": "The line through two points.",
+      "axiom2Help": "The line that folds one point onto another.",
+      "axiom3Help": "The line that folds one edge or crease onto another.",
+      "axiom4Help": "The line through a point, perpendicular to an edge or crease.",
+      "axiom5Help": "The line through a pivot that folds a point onto an edge or crease.",
+      "axiom6Help": "The line that folds two points onto two edges or creases at once.",
+      "axiom7Help": "The line that folds a point onto an edge or crease, perpendicular to another.",
+      "crease": "Existing crease",
+      "creaseHelp": "A crease or folded edge already there: refold a precrease, or unfold a flap.",
+      "free": "Free line",
+      "freeHelp": "A line drawn anywhere, with no reference."
+    },
+    "mark": {
+      "insideReverse": "IR",
+      "mountain": "M",
+      "precrease": "P",
+      "valley": "V"
+    },
+    "note": {
+      "clear": "Esc clears the picks.",
+      "crease": "Folding along a precrease refolds it; along a folded edge, it unfolds the flap.",
+      "divide": "Edges, folded edges and precreases all count.",
+      "free": "No snapping: the line goes exactly where you click.",
+      "freePoint": "Hold {{modifier}} to put a point down anywhere, without snapping.",
+      "snap": "Points snap to corners, marks, crease crossings, midpoints and edges."
+    },
+    "op": {
+      "closedSink": "Closed sink",
+      "crimp": "Crimp",
+      "openSink": "Open sink",
+      "outsideReverse": "Outside reverse fold",
+      "petal": "Petal fold",
+      "rabbitEar": "Rabbit ear",
+      "squash": "Squash fold",
+      "swivel": "Swivel fold",
+      "tuck": "Tuck",
+      "unsink": "Unsink"
+    },
+    "picker": {
+      "close": "Close tool list",
+      "title": "Fold tools"
+    },
+    "plannedReason": "Planned: not in Ori Studio yet.",
+    "railLabel": "Fold tools",
+    "readOnly": {
+      "locked": "This step is from a newer Ori Studio, so nothing can be folded from it.",
+      "newer": "This sequence is from a newer Ori Studio, so it opens read-only."
+    },
+    "refusal": {
+      "closureAddsFlaps": {
+        "textMany_one": "Folding these layers moves {{count}} more flap too.",
+        "textMany_other": "Folding these layers moves {{count}} more flaps too.",
+        "textOne": "Folding these layers moves flap {{number}} too.",
+        "title": "More flaps would move"
+      },
+      "collision": {
+        "text": "The moving layers would pass through layers in their way.",
+        "title": "Collision"
+      },
+      "emptySeed": {
+        "text": "No layer is picked. Pick at least one flap to move.",
+        "title": "Nothing to fold"
+      },
+      "invalid": {
+        "text": "It would not land on a valid flat model.",
+        "title": "This fold cannot be made"
+      },
+      "nearMiss": {
+        "text": "The line passes just beside a point of the paper: too close to fold cleanly, too far to go through it.",
+        "title": "Too close to a point"
+      },
+      "noMovingSide": {
+        "text": "No paper lies on the side of the line that would move. Swap the moving side, or move the line onto the paper.",
+        "title": "Nothing to fold"
+      },
+      "nothingStays": {
+        "text": "Every layer is on the moving side, so nothing would stay put. Pick a flap to fold.",
+        "title": "Everything would move"
+      },
+      "pickAgain": {
+        "text": "That spot is not inside a layer on the moving side. Pick inside a layer, away from its creases.",
+        "title": "Pick again"
+      },
+      "precreaseUnfold": {
+        "text": "Unfolding it would move more layers than folding it did.",
+        "title": "This precrease cannot unfold"
+      },
+      "sliver": {
+        "text": "A point of the moving layers would land a hair’s breadth inside another layer’s edge.",
+        "title": "A point lands just inside an edge"
+      },
+      "tooSmall": {
+        "text": "The fold would leave a crease or a strip of paper thinner than the paper itself.",
+        "title": "Too small to fold"
+      },
+      "tuckTarget": {
+        "text": "Pick a layer that stays put to tuck the flap against.",
+        "title": "The layer to tuck under would move"
+      }
+    },
+    "section": {
+      "label": "Layers at the fold line, top to bottom",
+      "labelWoven": "Layers at the fold line under the pointer, top to bottom",
+      "row": "Layer {{layer}}, {{flap}}",
+      "rowAdded": "Layer {{layer}}, {{flap}}, moves with the fold",
+      "rowAddedBeside": "Layer {{layer}}, {{flap}}, moves with the fold, beside layer {{above}}",
+      "rowBeside": "Layer {{layer}}, {{flap}}, beside layer {{above}}",
+      "rowStays": "Layer {{layer}}, stays put",
+      "rowStaysBeside": "Layer {{layer}}, stays put, beside layer {{above}}",
+      "top": "Top"
+    },
+    "steps": {
+      "axiom1First": "Click the first point the fold passes through.",
+      "axiom1Second": "Click the second point.",
+      "axiom2Land": "Click where it should land.",
+      "axiom3Move": "Click the edge or crease to move.",
+      "axiom3Onto": "Click the edge or crease to lay it on.",
+      "axiom4Through": "Click the point the fold passes through.",
+      "axiom5Pivot": "Click the pivot the fold passes through.",
+      "axiom6FirstPoint": "Click the first point to move.",
+      "axiom6SecondLine": "Click the edge or crease that one should land on.",
+      "axiom6SecondPoint": "Click the second point to move.",
+      "commit": "Press Enter to fold.",
+      "commitTouch": "Tap {{action}} to fold.",
+      "crease": "Click the crease or folded edge to fold along.",
+      "divide": "Click an edge or crease to divide it.",
+      "divideUse": "Use the new points as references for any fold.",
+      "finish": "Pick the fold and the layers, then press Enter.",
+      "finishTouch": "Pick the fold and the layers, then tap {{action}}.",
+      "freeEnd": "Click where it ends.",
+      "freeStart": "Click where the fold line starts.",
+      "landOnLine": "Click the edge or crease it should land on.",
+      "perpendicularTo": "Click the edge or crease the fold is perpendicular to.",
+      "pickLayers": "Pick which layers move.",
+      "pointToMove": "Click the point to move."
+    },
+    "tool": {
+      "divideLine": "Divide line",
+      "divideLineHelp": "Mark points that divide an edge or a crease into equal parts.",
+      "insideReverse": "Inside reverse fold",
+      "insideReverseHelp": "Push a flap inside itself, reversing its spine.",
+      "mountain": "Mountain fold",
+      "mountainHelp": "Fold the moving side away from you, so it lands underneath.",
+      "precrease": "Precrease",
+      "precreaseHelp": "Fold and unfold, leaving a crease to use later.",
+      "valley": "Valley fold",
+      "valleyHelp": "Fold the moving side toward you, so it lands on top."
+    },
+    "verb": {
+      "rotateHelp": "Rotate the model a quarter turn clockwise, as a step of its own.",
+      "turnOverHelp": "Turn the model over, side to side, as a step of its own."
+    },
+    "window": {
+      "cancel": "Cancel",
+      "finding": "Finding the layers at the line…",
+      "instructions": "Instructions",
+      "kind": "Fold",
+      "label": "Fold tool options",
+      "layers": "Layers",
+      "layersHelp": "Click a layer to include or exclude its flap. Brackets show where a fold joins two layers.",
+      "layersHelpWoven": "These layers weave through each other, so the stack shown is the one under the pointer. Click a layer to include or exclude its flap.",
+      "layersMoving_one": "{{moving}} of {{count}} layer moving",
+      "layersMoving_other": "{{moving}} of {{count}} layers moving",
+      "lineMode": "Locate line",
+      "movingSide": "Moving side",
+      "settings_one": "{{count}} setting",
+      "settings_other": "{{count}} settings",
+      "swap": "Swap"
+    }
+  },
   "foldAngleDisplay": {
     "color": "Color",
     "opacity": "Opacity"

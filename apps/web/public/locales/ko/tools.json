@@ -263,6 +263,199 @@
     "ratio": "비율",
     "ratioTitle": "선을 비율로 분할합니다"
   },
+  "fold": {
+    "fix": {
+      "includeFlap": "플랩 {{number}} 포함",
+      "includeFlaps_other": "플랩 {{count}}개 포함",
+      "mountainInstead": "대신 산접기",
+      "pickFlap": "플랩 {{number}}만 접기",
+      "precreaseOtherWay": "반대 방향으로 미리 접기",
+      "useLine": "기준선 사용",
+      "valleyInstead": "대신 골접기"
+    },
+    "flap": {
+      "chip_other": "플랩 {{number}}, {{count}}겹",
+      "chipAdded_other": "플랩 {{number}}, {{count}}겹, 접기와 함께 움직임",
+      "groupLabel": "접을 플랩",
+      "layers_other": "{{count}}겹",
+      "name": "플랩 {{number}}"
+    },
+    "group": {
+      "fold": "접기",
+      "locate": "선 정하기",
+      "model": "모델",
+      "planned": "예정",
+      "reference": "기준점"
+    },
+    "line": {
+      "axiom": "공리 {{number}}: {{phrase}}",
+      "axiom1Help": "두 점을 지나는 선입니다.",
+      "axiom2Help": "한 점을 다른 점 위로 접는 선입니다.",
+      "axiom3Help": "한 변이나 접는 선을 다른 변이나 접는 선 위로 접는 선입니다.",
+      "axiom4Help": "한 점을 지나고 변이나 접는 선에 수직인 선입니다.",
+      "axiom5Help": "회전점을 지나며 한 점을 변이나 접는 선 위로 접는 선입니다.",
+      "axiom6Help": "두 점을 한 번에 두 변이나 접는 선 위로 접는 선입니다.",
+      "axiom7Help": "한 점을 변이나 접는 선 위로 접고 다른 선에 수직인 선입니다.",
+      "crease": "기존 접는 선",
+      "creaseHelp": "이미 있는 접는 선이나 접힌 변입니다. 미리 접은 선을 다시 접거나 플랩을 펼칩니다.",
+      "free": "자유 선",
+      "freeHelp": "기준 없이 아무 곳에나 그은 선입니다."
+    },
+    "mark": {
+      "insideReverse": "IR",
+      "mountain": "M",
+      "precrease": "P",
+      "valley": "V"
+    },
+    "note": {
+      "clear": "Esc를 누르면 고른 점이 지워집니다.",
+      "crease": "미리 접은 선을 따라 접으면 다시 접히고, 접힌 변을 따라 접으면 플랩이 펼쳐집니다.",
+      "divide": "변, 접힌 변, 미리 접은 선 모두 사용할 수 있습니다.",
+      "free": "스냅 없음: 선이 클릭한 위치를 그대로 지납니다.",
+      "freePoint": "{{modifier}} 키를 누른 채로 두면 스냅 없이 원하는 곳에 점을 놓을 수 있습니다.",
+      "snap": "점은 모서리, 표시, 접는 선의 교차점, 중점, 변에 스냅됩니다."
+    },
+    "op": {
+      "closedSink": "닫힌 가라앉혀 접기",
+      "crimp": "크림프",
+      "openSink": "열린 가라앉혀 접기",
+      "outsideReverse": "바깥 뒤집어 접기",
+      "petal": "꽃잎 접기",
+      "rabbitEar": "토끼 귀 접기",
+      "squash": "눌러 접기",
+      "swivel": "회전 접기",
+      "tuck": "끼워 넣기",
+      "unsink": "가라앉혀 접기 되돌리기"
+    },
+    "picker": {
+      "close": "도구 목록 닫기",
+      "title": "접기 도구"
+    },
+    "plannedReason": "예정: 아직 Ori Studio에 없습니다.",
+    "railLabel": "접기 도구",
+    "readOnly": {
+      "locked": "이 단계는 더 새로운 버전의 Ori Studio에서 만들어져 여기서부터는 접을 수 없습니다.",
+      "newer": "이 시퀀스는 더 새로운 버전의 Ori Studio에서 만들어져 읽기 전용으로 열립니다."
+    },
+    "refusal": {
+      "closureAddsFlaps": {
+        "textMany_other": "이 겹들을 접으면 플랩 {{count}}개도 함께 움직입니다.",
+        "textOne": "이 겹들을 접으면 플랩 {{number}}도 함께 움직입니다.",
+        "title": "다른 플랩도 움직입니다"
+      },
+      "collision": {
+        "text": "움직이는 겹이 길을 막는 겹을 뚫고 지나가게 됩니다.",
+        "title": "충돌"
+      },
+      "emptySeed": {
+        "text": "고른 겹이 없습니다. 움직일 플랩을 하나 이상 고르세요.",
+        "title": "접을 것이 없습니다"
+      },
+      "invalid": {
+        "text": "올바른 평평한 모델이 되지 않습니다.",
+        "title": "이렇게 접을 수 없습니다"
+      },
+      "nearMiss": {
+        "text": "선이 종이의 한 점 바로 옆을 지납니다. 깔끔하게 접기에는 너무 가깝고, 그 점을 지나기에는 너무 멉니다.",
+        "title": "점에 너무 가깝습니다"
+      },
+      "noMovingSide": {
+        "text": "선의 움직이는 쪽에 종이가 없습니다. 움직이는 쪽을 바꾸거나 선을 종이 위로 옮기세요.",
+        "title": "접을 것이 없습니다"
+      },
+      "nothingStays": {
+        "text": "모든 겹이 움직이는 쪽에 있어 아무것도 제자리에 남지 않습니다. 접을 플랩을 고르세요.",
+        "title": "모든 것이 움직입니다"
+      },
+      "pickAgain": {
+        "text": "그곳은 움직이는 쪽 겹의 안쪽이 아닙니다. 접는 선에서 떨어진 겹의 안쪽을 고르세요.",
+        "title": "다시 고르세요"
+      },
+      "precreaseUnfold": {
+        "text": "펼치면 접을 때보다 더 많은 겹이 움직입니다.",
+        "title": "이 미리 접은 선은 펼칠 수 없습니다"
+      },
+      "sliver": {
+        "text": "움직이는 겹의 한 점이 다른 겹의 변 바로 안쪽에 아슬아슬하게 놓입니다.",
+        "title": "점이 변 바로 안쪽에 놓입니다"
+      },
+      "tooSmall": {
+        "text": "종이 자체보다 얇은 접는 선이나 종이 띠가 남습니다.",
+        "title": "너무 작아서 접을 수 없습니다"
+      },
+      "tuckTarget": {
+        "text": "제자리에 남는 겹을 골라 그곳에 플랩을 끼워 넣으세요.",
+        "title": "끼워 넣을 겹이 움직입니다"
+      }
+    },
+    "section": {
+      "label": "접는 선 위치의 겹, 위에서 아래로",
+      "labelWoven": "포인터 아래 접는 선 위치의 겹, 위에서 아래로",
+      "row": "{{layer}}번째 겹, {{flap}}",
+      "rowAdded": "{{layer}}번째 겹, {{flap}}, 접기와 함께 움직임",
+      "rowAddedBeside": "{{layer}}번째 겹, {{flap}}, 접기와 함께 움직임, {{above}}번째 겹 옆",
+      "rowBeside": "{{layer}}번째 겹, {{flap}}, {{above}}번째 겹 옆",
+      "rowStays": "{{layer}}번째 겹, 제자리에 남음",
+      "rowStaysBeside": "{{layer}}번째 겹, 제자리에 남음, {{above}}번째 겹 옆",
+      "top": "위"
+    },
+    "steps": {
+      "axiom1First": "접는 선이 지나는 첫 번째 점을 클릭하세요.",
+      "axiom1Second": "두 번째 점을 클릭하세요.",
+      "axiom2Land": "점이 놓일 곳을 클릭하세요.",
+      "axiom3Move": "움직일 변이나 접는 선을 클릭하세요.",
+      "axiom3Onto": "그 위에 놓을 변이나 접는 선을 클릭하세요.",
+      "axiom4Through": "접는 선이 지나는 점을 클릭하세요.",
+      "axiom5Pivot": "접는 선이 지나는 회전점을 클릭하세요.",
+      "axiom6FirstPoint": "움직일 첫 번째 점을 클릭하세요.",
+      "axiom6SecondLine": "그 점이 놓일 변이나 접는 선을 클릭하세요.",
+      "axiom6SecondPoint": "움직일 두 번째 점을 클릭하세요.",
+      "commit": "Enter 키를 누르면 접힙니다.",
+      "commitTouch": "{{action}}을(를) 탭하면 접힙니다.",
+      "crease": "따라 접을 접는 선이나 접힌 변을 클릭하세요.",
+      "divide": "나눌 변이나 접는 선을 클릭하세요.",
+      "divideUse": "새 점은 어떤 접기에서든 기준으로 쓸 수 있습니다.",
+      "finish": "접기 종류와 겹을 고른 뒤 Enter 키를 누르세요.",
+      "finishTouch": "접기 종류와 겹을 고른 뒤 {{action}}을(를) 탭하세요.",
+      "freeEnd": "선이 끝나는 곳을 클릭하세요.",
+      "freeStart": "접는 선이 시작하는 곳을 클릭하세요.",
+      "landOnLine": "점이 놓일 변이나 접는 선을 클릭하세요.",
+      "perpendicularTo": "접는 선이 수직을 이룰 변이나 접는 선을 클릭하세요.",
+      "pickLayers": "움직일 겹을 고르세요.",
+      "pointToMove": "움직일 점을 클릭하세요."
+    },
+    "tool": {
+      "divideLine": "선 나누기",
+      "divideLineHelp": "변이나 접는 선을 같은 길이로 나누는 점을 표시합니다.",
+      "insideReverse": "안으로 뒤집어 접기",
+      "insideReverseHelp": "플랩을 그 안쪽으로 밀어 넣어 등을 뒤집습니다.",
+      "mountain": "산접기",
+      "mountainHelp": "움직이는 쪽을 바깥쪽으로 접어 아래에 놓습니다.",
+      "precrease": "미리 접기",
+      "precreaseHelp": "접었다 펼쳐 나중에 쓸 접는 선을 남깁니다.",
+      "valley": "골접기",
+      "valleyHelp": "움직이는 쪽을 안쪽으로 접어 위에 놓습니다."
+    },
+    "verb": {
+      "rotateHelp": "모델을 시계 방향으로 1/4바퀴 돌립니다. 별도의 단계로 추가됩니다.",
+      "turnOverHelp": "모델을 좌우로 뒤집습니다. 별도의 단계로 추가됩니다."
+    },
+    "window": {
+      "cancel": "취소",
+      "finding": "선 위의 겹을 찾는 중…",
+      "instructions": "사용법",
+      "kind": "접기",
+      "label": "접기 도구 옵션",
+      "layers": "겹",
+      "layersHelp": "겹을 클릭하면 그 플랩을 포함하거나 제외합니다. 괄호는 접기로 이어진 두 겹을 나타냅니다.",
+      "layersHelpWoven": "이 겹들은 서로 엮여 있어 포인터 아래의 겹 더미를 보여 줍니다. 겹을 클릭하면 그 플랩을 포함하거나 제외합니다.",
+      "layersMoving_other": "{{count}}겹 중 {{moving}}겹이 움직임",
+      "lineMode": "선 정하기",
+      "movingSide": "움직이는 쪽",
+      "settings_other": "설정 {{count}}개",
+      "swap": "바꾸기"
+    }
+  },
   "foldAngleDisplay": {
     "color": "색상",
     "opacity": "불투명도"

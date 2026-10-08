@@ -263,6 +263,199 @@
     "ratio": "比率",
     "ratioTitle": "線を比率で分割します"
   },
+  "fold": {
+    "fix": {
+      "includeFlap": "フラップ {{number}} を含める",
+      "includeFlaps_other": "{{count}} 個のフラップを含める",
+      "mountainInstead": "代わりに山折り",
+      "pickFlap": "フラップ {{number}} だけを折る",
+      "precreaseOtherWay": "逆向きに折り筋をつける",
+      "useLine": "基準線を使う",
+      "valleyInstead": "代わりに谷折り"
+    },
+    "flap": {
+      "chip_other": "フラップ {{number}}、{{count}} 層",
+      "chipAdded_other": "フラップ {{number}}、{{count}} 層、折りと一緒に動く",
+      "groupLabel": "折るフラップ",
+      "layers_other": "{{count}} 層",
+      "name": "フラップ {{number}}"
+    },
+    "group": {
+      "fold": "折る",
+      "locate": "線を決める",
+      "model": "モデル",
+      "planned": "予定",
+      "reference": "基準点"
+    },
+    "line": {
+      "axiom": "公理 {{number}}：{{phrase}}",
+      "axiom1Help": "2 点を通る線。",
+      "axiom2Help": "ある点を別の点に重ねる線。",
+      "axiom3Help": "ある辺や折り線を別の辺や折り線に重ねる線。",
+      "axiom4Help": "点を通り、辺や折り線に垂直な線。",
+      "axiom5Help": "支点を通り、点を辺や折り線に重ねる線。",
+      "axiom6Help": "2 つの点を同時に 2 本の辺や折り線に重ねる線。",
+      "axiom7Help": "点を辺や折り線に重ね、別の辺や折り線に垂直な線。",
+      "crease": "既存の折り線",
+      "creaseHelp": "すでにある折り線か折った辺：折り筋を折り直すか、フラップを開きます。",
+      "free": "自由線",
+      "freeHelp": "基準なしでどこにでも引く線。"
+    },
+    "mark": {
+      "insideReverse": "IR",
+      "mountain": "M",
+      "precrease": "P",
+      "valley": "V"
+    },
+    "note": {
+      "clear": "Esc で選んだ点を消去します。",
+      "crease": "折り筋に沿って折るとそれを折り直し、折った辺に沿って折るとフラップを開きます。",
+      "divide": "辺、折った辺、折り筋のどれも使えます。",
+      "free": "スナップなし：線はクリックした位置をそのまま通ります。",
+      "freePoint": "{{modifier}} を押したままにすると、スナップせずに好きな位置へ点を置けます。",
+      "snap": "点は角、マーク、折り線の交点、中点、辺にスナップします。"
+    },
+    "op": {
+      "closedSink": "閉じた沈め折り",
+      "crimp": "クリンプ",
+      "openSink": "開いた沈め折り",
+      "outsideReverse": "かぶせ折り",
+      "petal": "花弁折り",
+      "rabbitEar": "うさぎの耳折り",
+      "squash": "つぶし折り",
+      "swivel": "回転折り",
+      "tuck": "差し込み",
+      "unsink": "沈め折りを戻す"
+    },
+    "picker": {
+      "close": "ツール一覧を閉じる",
+      "title": "折りツール"
+    },
+    "plannedReason": "予定：まだ Ori Studio にはありません。",
+    "railLabel": "折りツール",
+    "readOnly": {
+      "locked": "このステップは新しいバージョンの Ori Studio で作られたため、ここからは折れません。",
+      "newer": "このシーケンスは新しいバージョンの Ori Studio で作られたため、読み取り専用で開きます。"
+    },
+    "refusal": {
+      "closureAddsFlaps": {
+        "textMany_other": "これらの層を折ると、さらに {{count}} 個のフラップも動きます。",
+        "textOne": "これらの層を折ると、フラップ {{number}} も動きます。",
+        "title": "ほかのフラップも動きます"
+      },
+      "collision": {
+        "text": "動く層が、行く手にある層を突き抜けてしまいます。",
+        "title": "衝突"
+      },
+      "emptySeed": {
+        "text": "層が選ばれていません。動かすフラップを 1 つ以上選んでください。",
+        "title": "折るものがありません"
+      },
+      "invalid": {
+        "text": "有効な平坦なモデルになりません。",
+        "title": "この折りはできません"
+      },
+      "nearMiss": {
+        "text": "線が紙の点のすぐそばを通っています。きれいに折るには近すぎ、点を通すには遠すぎます。",
+        "title": "点に近すぎます"
+      },
+      "noMovingSide": {
+        "text": "線の動く側に紙がありません。動く側を入れ替えるか、線を紙の上に移してください。",
+        "title": "折るものがありません"
+      },
+      "nothingStays": {
+        "text": "すべての層が動く側にあるため、何も残りません。折るフラップを選んでください。",
+        "title": "すべてが動いてしまいます"
+      },
+      "pickAgain": {
+        "text": "その場所は動く側の層の中ではありません。層の内側の、折り線から離れた所を選んでください。",
+        "title": "選び直してください"
+      },
+      "precreaseUnfold": {
+        "text": "開くと、折ったときより多くの層が動いてしまいます。",
+        "title": "この折り筋は開けません"
+      },
+      "sliver": {
+        "text": "動く層の点が、別の層の辺のわずか内側に乗ってしまいます。",
+        "title": "点が辺のすぐ内側に乗ります"
+      },
+      "tooSmall": {
+        "text": "紙そのものより細い折り線や紙の帯が残ってしまいます。",
+        "title": "小さすぎて折れません"
+      },
+      "tuckTarget": {
+        "text": "動かない層を選んで、そこへフラップを差し込んでください。",
+        "title": "差し込み先の層が動いてしまいます"
+      }
+    },
+    "section": {
+      "label": "折り線の位置の層（上から下）",
+      "labelWoven": "ポインター位置の折り線上の層（上から下）",
+      "row": "層 {{layer}}、{{flap}}",
+      "rowAdded": "層 {{layer}}、{{flap}}、折りと一緒に動く",
+      "rowAddedBeside": "層 {{layer}}、{{flap}}、折りと一緒に動く、層 {{above}} の横",
+      "rowBeside": "層 {{layer}}、{{flap}}、層 {{above}} の横",
+      "rowStays": "層 {{layer}}、動かない",
+      "rowStaysBeside": "層 {{layer}}、動かない、層 {{above}} の横",
+      "top": "上"
+    },
+    "steps": {
+      "axiom1First": "折り線が通る 1 つ目の点をクリックします。",
+      "axiom1Second": "2 つ目の点をクリックします。",
+      "axiom2Land": "重ねる先をクリックします。",
+      "axiom3Move": "動かす辺か折り線をクリックします。",
+      "axiom3Onto": "重ねる先の辺か折り線をクリックします。",
+      "axiom4Through": "折り線が通る点をクリックします。",
+      "axiom5Pivot": "折り線が通る支点をクリックします。",
+      "axiom6FirstPoint": "動かす 1 つ目の点をクリックします。",
+      "axiom6SecondLine": "その点を重ねる辺か折り線をクリックします。",
+      "axiom6SecondPoint": "動かす 2 つ目の点をクリックします。",
+      "commit": "Enter を押すと折ります。",
+      "commitTouch": "「{{action}}」をタップすると折ります。",
+      "crease": "沿って折る折り線か折った辺をクリックします。",
+      "divide": "分割する辺か折り線をクリックします。",
+      "divideUse": "新しい点は、どの折りでも基準として使えます。",
+      "finish": "折り方と層を選び、Enter を押します。",
+      "finishTouch": "折り方と層を選び、「{{action}}」をタップします。",
+      "freeEnd": "線の終わる位置をクリックします。",
+      "freeStart": "折り線の始まる位置をクリックします。",
+      "landOnLine": "重ねる先の辺か折り線をクリックします。",
+      "perpendicularTo": "折り線と垂直になる辺か折り線をクリックします。",
+      "pickLayers": "動かす層を選びます。",
+      "pointToMove": "動かす点をクリックします。"
+    },
+    "tool": {
+      "divideLine": "線を分割",
+      "divideLineHelp": "辺や折り線を等分する点をマークします。",
+      "insideReverse": "中割り折り",
+      "insideReverseHelp": "フラップを内側に押し込み、背を反転させます。",
+      "mountain": "山折り",
+      "mountainHelp": "動く側を向こう側へ折り、下に重ねます。",
+      "precrease": "折り筋をつける",
+      "precreaseHelp": "折って開き、後で使う折り筋を残します。",
+      "valley": "谷折り",
+      "valleyHelp": "動く側を手前へ折り、上に重ねます。"
+    },
+    "verb": {
+      "rotateHelp": "モデルを時計回りに 4 分の 1 回転させます（独立したステップ）。",
+      "turnOverHelp": "モデルを左右に裏返します（独立したステップ）。"
+    },
+    "window": {
+      "cancel": "キャンセル",
+      "finding": "線上の層を探しています…",
+      "instructions": "手順",
+      "kind": "折り",
+      "label": "折りツールのオプション",
+      "layers": "層",
+      "layersHelp": "層をクリックすると、そのフラップを含めるか外すかを切り替えます。括弧は、折りでつながった 2 つの層を示します。",
+      "layersHelpWoven": "これらの層は互いに入り組んでいるため、ポインター位置の重なりを表示しています。層をクリックすると、そのフラップを含めるか外すかを切り替えます。",
+      "layersMoving_other": "{{count}} 層中 {{moving}} 層が動く",
+      "lineMode": "線を決める",
+      "movingSide": "動く側",
+      "settings_other": "{{count}} 件の設定",
+      "swap": "入れ替え"
+    }
+  },
   "foldAngleDisplay": {
     "color": "カラー",
     "opacity": "不透明度"

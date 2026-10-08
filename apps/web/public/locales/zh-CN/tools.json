@@ -263,6 +263,199 @@
     "ratio": "比率",
     "ratioTitle": "按比率分割线"
   },
+  "fold": {
+    "fix": {
+      "includeFlap": "包含翼片 {{number}}",
+      "includeFlaps_other": "包含这 {{count}} 个翼片",
+      "mountainInstead": "改为山折",
+      "pickFlap": "只折翼片 {{number}}",
+      "precreaseOtherWay": "向另一方向预折",
+      "useLine": "使用参考线",
+      "valleyInstead": "改为谷折"
+    },
+    "flap": {
+      "chip_other": "翼片 {{number}}，{{count}} 层",
+      "chipAdded_other": "翼片 {{number}}，{{count}} 层，随折叠一起移动",
+      "groupLabel": "要折的翼片",
+      "layers_other": "{{count}} 层",
+      "name": "翼片 {{number}}"
+    },
+    "group": {
+      "fold": "折叠",
+      "locate": "确定折线",
+      "model": "模型",
+      "planned": "计划中",
+      "reference": "参考点"
+    },
+    "line": {
+      "axiom": "公理 {{number}}：{{phrase}}",
+      "axiom1Help": "过两点的线。",
+      "axiom2Help": "把一点折到另一点上的线。",
+      "axiom3Help": "把一条边或折痕折到另一条上的线。",
+      "axiom4Help": "过一点且垂直于一条边或折痕的线。",
+      "axiom5Help": "过一个支点、把一点折到边或折痕上的线。",
+      "axiom6Help": "同时把两点折到两条边或折痕上的线。",
+      "axiom7Help": "把一点折到边或折痕上、且垂直于另一条的线。",
+      "crease": "已有折痕",
+      "creaseHelp": "已经存在的折痕或折边：重新折起预折痕，或展开一个翼片。",
+      "free": "自由线",
+      "freeHelp": "随处画出的线，没有参考。"
+    },
+    "mark": {
+      "insideReverse": "IR",
+      "mountain": "M",
+      "precrease": "P",
+      "valley": "V"
+    },
+    "note": {
+      "clear": "按 Esc 清除已选的点。",
+      "crease": "沿预折痕折叠会把它重新折起；沿折边折叠会展开翼片。",
+      "divide": "边、折边和预折痕都可以。",
+      "free": "不吸附：折线正好经过你单击的位置。",
+      "freePoint": "按住 {{modifier}} 可不吸附地把点放在任意位置。",
+      "snap": "点会吸附到角、标记、折痕交点、中点和边。"
+    },
+    "op": {
+      "closedSink": "闭合沉折",
+      "crimp": "压褶",
+      "openSink": "开放沉折",
+      "outsideReverse": "外翻折",
+      "petal": "花瓣折",
+      "rabbitEar": "兔耳折",
+      "squash": "压平折",
+      "swivel": "旋转折",
+      "tuck": "塞入",
+      "unsink": "反沉折"
+    },
+    "picker": {
+      "close": "关闭工具列表",
+      "title": "折叠工具"
+    },
+    "plannedReason": "计划中：Ori Studio 尚未提供。",
+    "railLabel": "折叠工具",
+    "readOnly": {
+      "locked": "此步骤来自更新版本的 Ori Studio，因此无法从这里继续折叠。",
+      "newer": "此序列来自更新版本的 Ori Studio，因此以只读方式打开。"
+    },
+    "refusal": {
+      "closureAddsFlaps": {
+        "textMany_other": "折叠这些层还会带动另外 {{count}} 个翼片。",
+        "textOne": "折叠这些层还会带动翼片 {{number}}。",
+        "title": "更多翼片会移动"
+      },
+      "collision": {
+        "text": "移动的层会穿过挡在路上的层。",
+        "title": "碰撞"
+      },
+      "emptySeed": {
+        "text": "没有选中任何层。请至少选择一个要移动的翼片。",
+        "title": "没有可折的部分"
+      },
+      "invalid": {
+        "text": "它无法得到有效的平面模型。",
+        "title": "无法进行这次折叠"
+      },
+      "nearMiss": {
+        "text": "折线紧挨着纸上的一个点经过：太近，无法折得干净；太远，又无法穿过它。",
+        "title": "离一个点太近"
+      },
+      "noMovingSide": {
+        "text": "折线会移动的那一侧没有纸。请交换移动的一侧，或把折线移到纸上。",
+        "title": "没有可折的部分"
+      },
+      "nothingStays": {
+        "text": "所有层都在移动的一侧，没有任何部分会留在原处。请选择一个要折的翼片。",
+        "title": "所有部分都会移动"
+      },
+      "pickAgain": {
+        "text": "该位置不在移动一侧的某一层内。请在层内选择，避开它的折痕。",
+        "title": "请重新选择"
+      },
+      "precreaseUnfold": {
+        "text": "展开它会移动比折叠时更多的层。",
+        "title": "无法展开此预折痕"
+      },
+      "sliver": {
+        "text": "移动层上的一个点会落在另一层边缘内侧极近的位置。",
+        "title": "一个点落在边缘内侧"
+      },
+      "tooSmall": {
+        "text": "这次折叠会留下比纸本身还细的折痕或纸条。",
+        "title": "太小，无法折叠"
+      },
+      "tuckTarget": {
+        "text": "请选择一个留在原处的层，把翼片塞到它那里。",
+        "title": "要塞入的层会移动"
+      }
+    },
+    "section": {
+      "label": "折线处的层，从上到下",
+      "labelWoven": "指针下折线处的层，从上到下",
+      "row": "第 {{layer}} 层，{{flap}}",
+      "rowAdded": "第 {{layer}} 层，{{flap}}，随折叠一起移动",
+      "rowAddedBeside": "第 {{layer}} 层，{{flap}}，随折叠一起移动，在第 {{above}} 层旁边",
+      "rowBeside": "第 {{layer}} 层，{{flap}}，在第 {{above}} 层旁边",
+      "rowStays": "第 {{layer}} 层，留在原处",
+      "rowStaysBeside": "第 {{layer}} 层，留在原处，在第 {{above}} 层旁边",
+      "top": "顶部"
+    },
+    "steps": {
+      "axiom1First": "单击折线经过的第一个点。",
+      "axiom1Second": "单击第二个点。",
+      "axiom2Land": "单击它要落到的位置。",
+      "axiom3Move": "单击要移动的边或折痕。",
+      "axiom3Onto": "单击要把它放到其上的边或折痕。",
+      "axiom4Through": "单击折线经过的点。",
+      "axiom5Pivot": "单击折线经过的支点。",
+      "axiom6FirstPoint": "单击要移动的第一个点。",
+      "axiom6SecondLine": "单击该点要落到的边或折痕。",
+      "axiom6SecondPoint": "单击要移动的第二个点。",
+      "commit": "按 Enter 进行折叠。",
+      "commitTouch": "轻点“{{action}}”进行折叠。",
+      "crease": "单击要沿其折叠的折痕或折边。",
+      "divide": "单击要等分的边或折痕。",
+      "divideUse": "新点可用作任何折叠的参考。",
+      "finish": "选择折法和层，然后按 Enter。",
+      "finishTouch": "选择折法和层，然后轻点“{{action}}”。",
+      "freeEnd": "单击折线结束的位置。",
+      "freeStart": "单击折线开始的位置。",
+      "landOnLine": "单击它要落到的边或折痕。",
+      "perpendicularTo": "单击折线要垂直于的边或折痕。",
+      "pickLayers": "选择要移动的层。",
+      "pointToMove": "单击要移动的点。"
+    },
+    "tool": {
+      "divideLine": "等分线",
+      "divideLineHelp": "标出把边或折痕等分的点。",
+      "insideReverse": "内翻折",
+      "insideReverseHelp": "把翼片推入其自身内部，翻转它的脊线。",
+      "mountain": "山折",
+      "mountainHelp": "把移动的一侧向远离你的方向折，使它落在下面。",
+      "precrease": "预折",
+      "precreaseHelp": "折起再展开，留下一条之后用的折痕。",
+      "valley": "谷折",
+      "valleyHelp": "把移动的一侧朝你折，使它落在上面。"
+    },
+    "verb": {
+      "rotateHelp": "将模型顺时针旋转四分之一圈，作为单独的一步。",
+      "turnOverHelp": "将模型左右翻面，作为单独的一步。"
+    },
+    "window": {
+      "cancel": "取消",
+      "finding": "正在查找折线处的层…",
+      "instructions": "操作说明",
+      "kind": "折法",
+      "label": "折叠工具选项",
+      "layers": "层",
+      "layersHelp": "单击某一层可包含或排除它所在的翼片。括号表示折叠把两层连在一起的位置。",
+      "layersHelpWoven": "这些层相互交织，因此显示的是指针下的层叠。单击某一层可包含或排除它所在的翼片。",
+      "layersMoving_other": "{{count}} 层中有 {{moving}} 层移动",
+      "lineMode": "确定折线",
+      "movingSide": "移动的一侧",
+      "settings_other": "{{count}} 项设置",
+      "swap": "交换"
+    }
+  },
   "foldAngleDisplay": {
     "color": "颜色",
     "opacity": "不透明度"
