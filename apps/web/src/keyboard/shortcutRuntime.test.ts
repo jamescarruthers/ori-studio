@@ -62,6 +62,84 @@ describe('shortcut runtime', () => {
     ).toEqual(['viewport', 'global']);
   });
 
+  describe('conditional scopes, keyed by surface', () => {
+    it('pushes every registered surface’s scopes in one order, each only where it may be', () => {
+      cleanupWith(registerConditionalScopeExecutor('diagram', () => true));
+      cleanupWith(registerConditionalScopeExecutor('references', () => true));
+      cleanupWith(registerConditionalScopeExecutor('simulator', () => true));
+
+      // Registration order is not precedence: the table decides.
+      expect(shortcutScopeStackForContext({ activeEditingContext: 'diagram' })).toEqual([
+        'simulator',
+        'references',
+        'diagram-path',
+        'diagram',
+        'viewport',
+        'global',
+      ]);
+      // The Diagram's scopes stay home; the others go wherever their surface is.
+      expect(shortcutScopeStackForContext({ activeEditingContext: 'crease-pattern' })).toEqual([
+        'simulator',
+        'references',
+        'viewport',
+        'crease-pattern',
+        'global',
+      ]);
+    });
+
+    it('lets an override take a registered surface out of the stack', () => {
+      cleanupWith(registerConditionalScopeExecutor('simulator', () => true));
+
+      expect(
+        shortcutScopeStackForContext({
+          activeEditingContext: 'crease-pattern',
+          registeredExecutors: { simulator: false },
+        })
+      ).toEqual(['viewport', 'crease-pattern', 'global']);
+    });
+
+    it('keeps each surface’s registration its own', () => {
+      const listener = vi.fn();
+      cleanupWith(subscribeSimulatorExecutor(listener));
+      const simulator = vi.fn(() => true);
+      cleanupWith(registerConditionalScopeExecutor('simulator', simulator));
+      listener.mockClear();
+
+      // Another surface coming and going is no news to the simulation's subscribers.
+      const disposeReferences = registerConditionalScopeExecutor('references', () => true);
+      disposeReferences();
+      expect(listener).not.toHaveBeenCalled();
+      expect(hasSimulatorExecutor()).toBe(true);
+
+      // And an unregister only ever takes its own surface's executor.
+      registerConditionalScopeExecutor('diagram', () => true)();
+      expect(runSimulatorCommand('simulator.setUpright')).toBe(true);
+      expect(simulator).toHaveBeenCalledWith('simulator.setUpright');
+    });
+
+    it('hands a chord a surface declines to the next scope, and stops at one it claims', () => {
+      const simulator = vi.fn(() => false);
+      const references = vi.fn(() => true);
+      cleanupWith(registerConditionalScopeExecutor('simulator', simulator));
+      cleanupWith(registerConditionalScopeExecutor('references', references));
+      const viewport = vi.fn(() => true);
+      cleanupWith(registerViewportShortcutExecutor('tree', viewport));
+
+      // Escape: the simulator's Exit Tool, declined, then References' Clear Target.
+      const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      expect(
+        handleShortcutRuntimeKeyDown(event, {
+          context: { activeEditingContext: 'references', activeViewportSurface: 'tree' },
+          menu: vi.fn(),
+        })
+      ).toBe(true);
+      expect(simulator).toHaveBeenCalledWith('simulator.tool.exit');
+      expect(references).toHaveBeenCalledWith('references.clearTarget');
+      expect(viewport).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+  });
+
   describe('runReferencesCommand', () => {
     it('runs the registered References executor with the id, and says it did', () => {
       const references = vi.fn();
