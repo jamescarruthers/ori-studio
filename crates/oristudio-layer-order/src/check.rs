@@ -232,7 +232,8 @@ pub fn derived_letter(view: &FoldedView, order: &LayerOrder, e: usize) -> Option
     })
 }
 
-/// Cyclic triples among the faces of each cell, once per distinct face set.
+/// Cyclic triples among the faces of each cell, over the cells whose face
+/// sets no other contains (every triple of a cell is one of theirs).
 fn cell_cycles(
     problem: &ConstraintProblem,
     view: &FoldedView,
@@ -243,7 +244,7 @@ fn cell_cycles(
     let table = PairTable::of_order(view, order);
     let overlay = problem.overlay();
     let mut reported: BTreeSet<[FaceId; 3]> = BTreeSet::new();
-    for &c in overlay.distinct_cells() {
+    for &c in overlay.maximal_cells() {
         let faces = overlay.cells()[c].faces.as_slice();
         let at = overlay.positions(c);
         if faces.len() < 3 || !scope.includes(faces) {

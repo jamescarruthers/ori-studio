@@ -6,50 +6,71 @@
 //!
 //! # Construction
 //!
-//! It starts from one empty cell, a box around every face. Faces are added in
-//! view order, and each cuts every cell it overlaps into the part inside it
-//! (which gains the face) and pieces outside it; at the end the cells no face
-//! covers are dropped. Every cut is [`convex::carve`] at [`TOL`]: nothing
-//! `TOL` wide or less is ever cut off, so every cell is wider than `TOL`, and
-//! a face joins a cell only when it covers more than a sliver of it. There is
-//! no global point merging, the step whose ε heuristic built a wrong
-//! arrangement for 7% of the spike's states in Flat-Folder (research §7).
+//! Every cell has an *owner*, the face with the least id covering it, and a
+//! face's cells are built from its own image and the images of the faces it
+//! overlaps by more than [`TOL`] (its [pairs](Overlay::pairs)), nothing else:
+//! the overlapping faces with smaller ids are carved out of it, in id order,
+//! and what is left is cut by the overlapping faces with larger ids, in id
+//! order, each joining the part inside it. Every cut is [`convex::carve`] at
+//! `TOL`: nothing `TOL` wide or less is ever cut off, so every cell is wider
+//! than `TOL`, and a face joins a cell only when it covers more than a sliver
+//! of it. There is no global point merging, the step whose ε heuristic built
+//! a wrong arrangement for 7% of the spike's states in Flat-Folder (research
+//! §7).
 //!
-//! Cells are a cover up to the tolerance: two may overlap, or leave a gap,
-//! by at most `TOL`. Cutting along whole edge lines splits more finely than
-//! the arrangement would, so cells with equal face sets can sit side by side;
-//! on the spike's states there are one to four cells per face.
+//! Cells are a cover of the faces up to the tolerance: two may overlap, or
+//! leave a gap, by at most `TOL`. Cutting along whole edge lines splits more
+//! finely than the arrangement would, so cells with equal face sets can sit
+//! side by side, always within one owner.
 //!
-//! Taking the uncovered part of each face out of the cells it meets instead
-//! of starting from a box gave nearly the same cells, but cost 1.4 s against
-//! 38 ms on a 315-face state, almost all of it subtracting cells from the
-//! fragments of the face.
+//! Because a face's cells depend on nothing beyond the faces it overlaps, and
+//! on neither the view's face order nor the extent of the state,
+//! [`Overlay::rebuild`] keeps every cell whose owner neither was touched nor
+//! overlaps a touched face, before or after, and builds only the rest; the
+//! result is the overlay [`Overlay::build`] makes of the same view.
+//!
+//! An earlier construction cut one box around the whole state by every face
+//! in view order. It made nearly the same cells, but each cut ran across the
+//! box along the face's whole edge lines, so a change anywhere moved cells
+//! everywhere. Carving the uncovered part of each face out of the cells it
+//! met cost 1.4 s against 38 ms on a 315-face state; carving whole faces out
+//! of a face, as here, is cheaper than either, since a face inside one with a
+//! smaller id (the common case in a stack) is gone after one containment
+//! test.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use oristudio_geometry::convex;
+use oristudio_geometry::convex::{self, Carve, MIN_EDGE};
 use oristudio_geometry::tol::TOL;
 
+use crate::order::FacePair;
+use crate::shape::{Shape, penetration_with};
 use crate::view::{FaceId, FoldedView};
+
+type Point = [f64; 2];
 
 /// One cell of the overlay.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Cell {
     /// Counter-clockwise and convex, wider than [`TOL`].
     pub polygon: Vec<[f64; 2]>,
-    /// The faces covering it, ascending.
+    /// The faces covering it, ascending. The first is its owner.
     pub faces: Vec<FaceId>,
 }
 
 /// The cells of a view, with each face's cells.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Overlay {
+    /// By owner, ascending; each owner's in the order its cuts made them.
     cells: Vec<Cell>,
     faces_cells: BTreeMap<FaceId, Vec<usize>>,
     /// Per cell, its faces' positions in the view, in `faces` order.
     positions: Vec<Vec<usize>>,
-    /// The first cell of each distinct face set, ascending.
-    distinct: Vec<usize>,
+    /// The first cell of each face set that no other cell's set contains,
+    /// ascending.
+    maximal: Vec<usize>,
+    /// The face pairs whose images overlap by more than [`TOL`], ascending.
+    pairs: Vec<FacePair>,
 }
 
 impl Overlay {
@@ -57,76 +78,167 @@ impl Overlay {
     /// unless every cell it overlaps meets it in a sliver;
     /// [`crate::ConstraintProblem`] then reports its overlaps as ambiguous.
     pub fn build(view: &FoldedView) -> Overlay {
-        struct Draft {
-            polygon: Vec<[f64; 2]>,
-            bbox: [f64; 4],
-            faces: Vec<usize>,
-        }
-        let draft = |polygon: Vec<[f64; 2]>, faces: Vec<usize>| Draft {
-            bbox: convex::bounding_box(&polygon),
-            polygon,
-            faces,
-        };
-        let faces = view.faces();
-        let mut cells: Vec<Draft> = Vec::new();
-        if let Some(universe) = universe(view) {
-            cells.push(draft(universe, Vec::new()));
-        }
-        for (i, face) in faces.iter().enumerate() {
-            let bbox = *view.bounding_box(i);
-            for c in 0..cells.len() {
-                let cell = &cells[c];
-                if !convex::boxes_overlap(&cell.bbox, &bbox, 0.0)
-                    || convex::penetration(&cell.polygon, &face.polygon) <= TOL
-                {
-                    continue;
+        Overlay::build_from(view, &Shape::of_view(view))
+    }
+
+    /// [`Overlay::build`] over the view's shapes.
+    pub(crate) fn build_from(view: &FoldedView, shapes: &[Shape<'_>]) -> Overlay {
+        let n = shapes.len();
+        let mut pairs = Vec::new();
+        for i in 0..n {
+            for j in i + 1..n {
+                if let Some(pair) = overlapping(shapes, i, j) {
+                    pairs.push(pair);
                 }
-                let Some(carved) = convex::carve(&cell.polygon, &face.polygon, TOL) else {
-                    continue;
-                };
-                // Pieces outside the face keep the cell's faces; they lie
-                // outside it, so this loop need not visit them.
-                let before = cells[c].faces.clone();
-                cells.extend(carved.outside.into_iter().map(|p| draft(p, before.clone())));
-                cells[c].bbox = convex::bounding_box(&carved.inside);
-                cells[c].polygon = carved.inside;
-                cells[c].faces.push(i);
             }
         }
-        let mut faces_cells: BTreeMap<FaceId, Vec<usize>> =
-            faces.iter().map(|f| (f.id, Vec::new())).collect();
-        let mut positions = Vec::new();
-        let cells: Vec<Cell> = cells
-            .into_iter()
-            .filter(|d| !d.faces.is_empty())
-            .enumerate()
-            .map(|(c, mut d)| {
-                d.faces.sort_unstable_by_key(|&i| faces[i].id);
-                let ids: Vec<FaceId> = d.faces.iter().map(|&i| faces[i].id).collect();
-                for id in &ids {
-                    faces_cells.entry(*id).or_default().push(c);
-                }
-                positions.push(d.faces);
-                Cell {
-                    polygon: d.polygon,
-                    faces: ids,
-                }
-            })
+        pairs.sort_unstable();
+        Overlay::assemble(view, shapes, pairs, |_| None)
+    }
+
+    /// The overlay of `view`, a later state of this overlay's view, keeping
+    /// the cells of every face that neither is in `touched` nor overlaps a
+    /// face in it, in either view. Faces new to the view or gone from it
+    /// count as touched.
+    ///
+    /// A face outside `touched` must have the same image in both views; the
+    /// result then equals [`Overlay::build`] of `view`. (Kept cells are this
+    /// overlay's: where an untouched image moved in its last bits, as the Fold
+    /// engine's re-derived isometries can, so do they.)
+    pub fn rebuild(&self, view: &FoldedView, touched: &BTreeSet<FaceId>) -> Overlay {
+        self.rebuild_from(view, &Shape::of_view(view), &self.touched_in(view, touched))
+    }
+
+    /// `touched`, with the faces new to `view` and those gone from it.
+    pub(crate) fn touched_in(
+        &self,
+        view: &FoldedView,
+        touched: &BTreeSet<FaceId>,
+    ) -> BTreeSet<FaceId> {
+        let mut touched = touched.clone();
+        touched.extend(
+            view.faces()
+                .iter()
+                .map(|f| f.id)
+                .filter(|f| !self.faces_cells.contains_key(f)),
+        );
+        touched.extend(
+            self.faces_cells
+                .keys()
+                .filter(|&&f| view.index_of(f).is_none()),
+        );
+        touched
+    }
+
+    /// [`Overlay::rebuild`] over the view's shapes, with `touched` already
+    /// holding the new and gone faces.
+    pub(crate) fn rebuild_from(
+        &self,
+        view: &FoldedView,
+        shapes: &[Shape<'_>],
+        touched: &BTreeSet<FaceId>,
+    ) -> Overlay {
+        let n = shapes.len();
+        let is_touched: Vec<bool> = shapes.iter().map(|s| touched.contains(&s.id)).collect();
+        // Untouched pairs keep their verdict; each touched face is tested
+        // against every face, each pair once.
+        let mut pairs: Vec<FacePair> = self
+            .pairs
+            .iter()
+            .filter(|p| !touched.contains(&p.lo()) && !touched.contains(&p.hi()))
+            .copied()
             .collect();
-        let mut seen = BTreeSet::new();
-        let distinct = (0..cells.len())
-            .filter(|&c| seen.insert(cells[c].faces.as_slice()))
-            .collect();
+        for t in (0..n).filter(|&t| is_touched[t]) {
+            for j in (0..n).filter(|&j| j != t && (!is_touched[j] || j > t)) {
+                if let Some(pair) = overlapping(shapes, t.min(j), t.max(j)) {
+                    pairs.push(pair);
+                }
+            }
+        }
+        pairs.sort_unstable();
+        // A face keeps its cells unless it, or a face it overlaps now or
+        // overlapped before, was touched.
+        let mut dirty = is_touched;
+        for pair in self.pairs.iter().chain(&pairs) {
+            let [a, b] = pair.faces();
+            for (x, y) in [(a, b), (b, a)] {
+                if touched.contains(&x)
+                    && let Some(p) = view.index_of(y)
+                {
+                    dirty[p] = true;
+                }
+            }
+        }
+        Overlay::assemble(view, shapes, pairs, |p| {
+            (!dirty[p]).then(|| self.owned(shapes[p].id))
+        })
+    }
+
+    /// Index the cells of every owner, in id order. `kept(position)` gives a
+    /// face's cells when they are kept; otherwise they are built.
+    fn assemble<'k>(
+        view: &FoldedView,
+        shapes: &[Shape<'_>],
+        pairs: Vec<FacePair>,
+        kept: impl Fn(usize) -> Option<&'k [Cell]>,
+    ) -> Overlay {
+        let n = shapes.len();
+        // Each face's overlapping faces in id order: the pairs are sorted by
+        // their smaller face, so a face's partners with smaller ids all come
+        // before those with larger ones.
+        let mut partners: Vec<Vec<usize>> = vec![Vec::new(); n];
+        for pair in &pairs {
+            if let (Some(a), Some(b)) = (view.index_of(pair.lo()), view.index_of(pair.hi())) {
+                partners[a].push(b);
+                partners[b].push(a);
+            }
+        }
+        let mut by_id: Vec<usize> = (0..n).collect();
+        by_id.sort_unstable_by_key(|&p| shapes[p].id);
+
+        let mut cells: Vec<Cell> = Vec::new();
+        let mut positions: Vec<Vec<usize>> = Vec::new();
+        let mut faces_cells: Vec<Vec<usize>> = vec![Vec::new(); n];
+        let mut distinct = Vec::new();
+        for &owner in &by_id {
+            let first = cells.len();
+            match kept(owner) {
+                Some(old) => cells.extend_from_slice(old),
+                None => cells.extend(owned_cells(shapes, owner, &partners[owner])),
+            }
+            let mut seen: BTreeSet<&[FaceId]> = BTreeSet::new();
+            for (c, cell) in cells.iter().enumerate().skip(first) {
+                if seen.insert(&cell.faces) {
+                    distinct.push(c);
+                }
+                let at: Vec<usize> = cell
+                    .faces
+                    .iter()
+                    .filter_map(|&f| view.index_of(f))
+                    .collect();
+                for &p in &at {
+                    faces_cells[p].push(c);
+                }
+                positions.push(at);
+            }
+        }
         Overlay {
-            faces_cells,
+            faces_cells: view.faces().iter().map(|f| f.id).zip(faces_cells).collect(),
+            maximal: maximal(&positions, &distinct, n),
             positions,
-            distinct,
             cells,
+            pairs,
         }
     }
 
     pub fn cells(&self) -> &[Cell] {
         &self.cells
+    }
+
+    /// The face pairs whose images overlap by more than [`TOL`]
+    /// (separating-axis penetration), ascending: the layer order's variables.
+    pub fn pairs(&self) -> &[FacePair] {
+        &self.pairs
     }
 
     /// The cells a face covers, ascending; empty for a face not in the view.
@@ -159,28 +271,173 @@ impl Overlay {
         &self.positions[c]
     }
 
-    /// One cell per distinct face set: what a test over each cell's faces
-    /// needs to visit.
-    pub(crate) fn distinct_cells(&self) -> &[usize] {
-        &self.distinct
+    /// One cell per face set that no other cell's set contains: what a test
+    /// over the pairs or triples of each cell's faces needs to visit, since
+    /// a set's pairs and triples are those of any set containing it. On the
+    /// engine's states at 129–256 faces that is a tenth of the work of
+    /// visiting every distinct set.
+    pub(crate) fn maximal_cells(&self) -> &[usize] {
+        &self.maximal
+    }
+
+    /// The cells `owner` owns: a run, since cells are sorted by owner.
+    fn owned(&self, owner: FaceId) -> &[Cell] {
+        let start = self.cells.partition_point(|c| c.faces[0] < owner);
+        let end = self.cells.partition_point(|c| c.faces[0] <= owner);
+        &self.cells[start..end]
     }
 }
 
-/// A box around every face with a margin as wide as the faces' extent, so
-/// no face edge lies near its sides; `None` for a view without faces.
-fn universe(view: &FoldedView) -> Option<Vec<[f64; 2]>> {
-    let n = view.faces().len();
-    let [x0, y0, x1, y1] = (0..n).map(|i| *view.bounding_box(i)).reduce(|a, b| {
-        [
-            a[0].min(b[0]),
-            a[1].min(b[1]),
-            a[2].max(b[2]),
-            a[3].max(b[3]),
-        ]
-    })?;
-    let margin = (x1 - x0).max(y1 - y0).max(1.0);
-    let (x0, y0, x1, y1) = (x0 - margin, y0 - margin, x1 + margin, y1 + margin);
-    Some(vec![[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
+/// Of the `distinct` cells (one per face set), those whose set no other
+/// contains, ascending: largest first, each kept unless a kept one contains
+/// it, by bitsets over view positions.
+fn maximal(positions: &[Vec<usize>], distinct: &[usize], n: usize) -> Vec<usize> {
+    let words = n.div_ceil(64);
+    let bits = |c: usize| {
+        let mut set = vec![0u64; words];
+        for &p in &positions[c] {
+            set[p / 64] |= 1 << (p % 64);
+        }
+        set
+    };
+    let mut by_size = distinct.to_vec();
+    by_size.sort_by_key(|&c| std::cmp::Reverse(positions[c].len()));
+    let mut kept: Vec<(usize, Vec<u64>)> = Vec::new();
+    for c in by_size {
+        let set = bits(c);
+        let inside = |other: &Vec<u64>| set.iter().zip(other).all(|(s, o)| s & !o == 0);
+        if !kept.iter().any(|(_, other)| inside(other)) {
+            kept.push((c, set));
+        }
+    }
+    let mut out: Vec<usize> = kept.into_iter().map(|(c, _)| c).collect();
+    out.sort_unstable();
+    out
+}
+
+/// The pair of view faces `i < j` if their images overlap by more than
+/// [`TOL`].
+fn overlapping(shapes: &[Shape<'_>], i: usize, j: usize) -> Option<FacePair> {
+    let (a, b) = (&shapes[i], &shapes[j]);
+    if !convex::boxes_overlap(&a.bbox, &b.bbox, 0.0) || a.penetration(b) <= TOL {
+        return None;
+    }
+    FacePair::new(a.id, b.id)
+}
+
+/// A cell under construction.
+struct Draft {
+    polygon: Vec<Point>,
+    bbox: [f64; 4],
+    faces: Vec<FaceId>,
+}
+
+impl Draft {
+    fn new(polygon: Vec<Point>, faces: Vec<FaceId>) -> Draft {
+        Draft {
+            bbox: convex::bounding_box(&polygon),
+            polygon,
+            faces,
+        }
+    }
+}
+
+/// How a face meets a cell.
+enum Meet {
+    /// Apart, touching, or meeting in a sliver at most.
+    Apart,
+    /// The cell lies inside the face: every vertex within [`MIN_EDGE`] of
+    /// it, which is exactly when [`convex::carve`] leaves the cell whole.
+    Inside,
+    /// The face cuts the cell.
+    Cut(Carve),
+}
+
+fn meet(cell: &Draft, face: &Shape<'_>) -> Meet {
+    if !convex::boxes_overlap(&cell.bbox, &face.bbox, 0.0) {
+        return Meet::Apart;
+    }
+    // The face's half of the separating-axis test, and containment, from the
+    // face's cached planes.
+    let mut inside = true;
+    for plane in &face.planes {
+        let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
+        for &p in &cell.polygon {
+            let d = plane.signed_distance(p);
+            lo = lo.min(d);
+            hi = hi.max(d);
+        }
+        if hi <= TOL {
+            return Meet::Apart;
+        }
+        inside &= lo >= -MIN_EDGE;
+    }
+    if inside {
+        return Meet::Inside;
+    }
+    if penetration_with(&cell.polygon, face) <= TOL {
+        return Meet::Apart;
+    }
+    match convex::carve(&cell.polygon, face.polygon, TOL) {
+        Some(carve) => Meet::Cut(carve),
+        None => Meet::Apart,
+    }
+}
+
+/// The cells `owner` owns, given the positions of the faces it overlaps in
+/// id order.
+fn owned_cells(shapes: &[Shape<'_>], owner: usize, partners: &[usize]) -> Vec<Cell> {
+    let id = shapes[owner].id;
+    let split = partners.partition_point(|&p| shapes[p].id < id);
+    let (earlier, later) = partners.split_at(split);
+    let mut cells = vec![Draft::new(shapes[owner].polygon.to_vec(), vec![id])];
+    // Carve out what a face with a smaller id covers.
+    for &g in earlier {
+        let mut left = Vec::with_capacity(cells.len());
+        for cell in cells {
+            match meet(&cell, &shapes[g]) {
+                Meet::Apart => left.push(cell),
+                Meet::Inside => {}
+                Meet::Cut(carve) => {
+                    left.extend(carve.outside.into_iter().map(|p| Draft::new(p, vec![id])))
+                }
+            }
+        }
+        cells = left;
+        if cells.is_empty() {
+            return Vec::new();
+        }
+    }
+    // Cut by each face with a larger id; pieces outside it lie outside it,
+    // so its loop need not visit them.
+    for &h in later {
+        let face = &shapes[h];
+        for c in 0..cells.len() {
+            match meet(&cells[c], face) {
+                Meet::Apart => {}
+                Meet::Inside => cells[c].faces.push(face.id),
+                Meet::Cut(carve) => {
+                    let faces = cells[c].faces.clone();
+                    cells.extend(
+                        carve
+                            .outside
+                            .into_iter()
+                            .map(|p| Draft::new(p, faces.clone())),
+                    );
+                    cells[c].bbox = convex::bounding_box(&carve.inside);
+                    cells[c].polygon = carve.inside;
+                    cells[c].faces.push(face.id);
+                }
+            }
+        }
+    }
+    cells
+        .into_iter()
+        .map(|d| Cell {
+            polygon: d.polygon,
+            faces: d.faces,
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -192,17 +449,26 @@ mod tests {
         vec![[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
     }
 
-    fn view(polygons: Vec<Vec<[f64; 2]>>) -> FoldedView {
+    fn view_with_ids(polygons: Vec<(u32, Vec<[f64; 2]>)>) -> FoldedView {
         let faces = polygons
             .into_iter()
-            .enumerate()
-            .map(|(i, polygon)| Face {
-                id: FaceId(i as u32),
+            .map(|(id, polygon)| Face {
+                id: FaceId(id),
                 polygon,
                 front_up: true,
             })
             .collect();
         FoldedView::new(faces, Vec::new()).unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    fn view(polygons: Vec<Vec<[f64; 2]>>) -> FoldedView {
+        view_with_ids(
+            polygons
+                .into_iter()
+                .enumerate()
+                .map(|(i, p)| (i as u32, p))
+                .collect(),
+        )
     }
 
     fn ids(ids: &[u32]) -> Vec<FaceId> {
@@ -246,6 +512,10 @@ mod tests {
         assert_area(&a, &[0, 1], 1.0);
         assert_eq!(a.len(), 3);
         assert!(overlay.share_cell(FaceId(0), FaceId(1)));
+        assert_eq!(
+            overlay.pairs(),
+            &[FacePair::new(FaceId(0), FaceId(1)).unwrap_or_else(|| unreachable!())]
+        );
         for cell in overlay.cells() {
             assert!(convex::is_convex(&cell.polygon, TOL));
             assert!(convex::width(&cell.polygon) > TOL);
@@ -265,6 +535,7 @@ mod tests {
             assert!(!overlay.share_cell(FaceId(f), FaceId(g)), "{f} {g}");
         }
         assert_eq!(overlay.cells().len(), 4);
+        assert!(overlay.pairs().is_empty());
     }
 
     #[test]
@@ -286,10 +557,7 @@ mod tests {
         assert!(overlay.faces_cells(FaceId(9)).is_empty());
     }
 
-    #[test]
-    fn cells_cover_each_face_once() {
-        // Triangles and squares at odd angles: the cells of each face sum to
-        // its area, and no two cells overlap.
+    fn odd_polygons() -> Vec<Vec<[f64; 2]>> {
         let tri = |cx: f64, cy: f64, r: f64, t: f64| -> Vec<[f64; 2]> {
             (0..3)
                 .map(|k| {
@@ -298,14 +566,22 @@ mod tests {
                 })
                 .collect()
         };
-        let polygons = vec![
+        vec![
             tri(0.0, 0.0, 1.0, 0.1),
             tri(0.3, 0.2, 0.8, 0.7),
             rect(-0.5, -0.4, 0.6, 0.3),
             tri(-0.2, 0.1, 0.6, 2.0),
             tri(0.0, 0.0, 1.0, 0.1),
-        ];
-        let v = view(polygons);
+            rect(0.9, 0.9, 1.4, 1.2),
+        ]
+    }
+
+    #[test]
+    fn cells_cover_each_face_once() {
+        // Triangles and squares at odd angles: the cells of each face sum to
+        // its area, no two cells overlap, and a cell's owner is its least
+        // face.
+        let v = view(odd_polygons());
         let overlay = Overlay::build(&v);
         for face in v.faces() {
             let total: f64 = overlay
@@ -322,6 +598,8 @@ mod tests {
         }
         let cells = overlay.cells();
         for i in 0..cells.len() {
+            assert!(cells[i].faces.is_sorted());
+            assert!(i == 0 || cells[i - 1].faces[0] <= cells[i].faces[0]);
             for j in i + 1..cells.len() {
                 assert!(
                     !convex::overlaps(&cells[i].polygon, &cells[j].polygon),
@@ -329,5 +607,53 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn the_cells_do_not_depend_on_the_views_face_order() {
+        let polygons = odd_polygons();
+        let forward = view(polygons.clone());
+        let backward = view_with_ids(
+            polygons
+                .into_iter()
+                .enumerate()
+                .rev()
+                .map(|(i, p)| (i as u32, p))
+                .collect(),
+        );
+        let (a, b) = (Overlay::build(&forward), Overlay::build(&backward));
+        assert_eq!(a.cells(), b.cells());
+        assert_eq!(a.pairs(), b.pairs());
+        for face in forward.faces() {
+            assert_eq!(a.faces_cells(face.id), b.faces_cells(face.id));
+        }
+    }
+
+    #[test]
+    fn a_rebuild_keeps_the_far_cells_and_equals_a_build() {
+        // A row of stacks; the face over the last stack moves onto the first.
+        let mut polygons: Vec<(u32, Vec<[f64; 2]>)> = (0..12)
+            .map(|k| {
+                let x = (k / 3) as f64 * 2.0;
+                (k, rect(x, 0.0, x + 1.0 + 0.1 * (k % 3) as f64, 1.0))
+            })
+            .collect();
+        let before = view_with_ids(polygons.clone());
+        let old = Overlay::build(&before);
+        polygons[11].1 = rect(0.2, 0.2, 0.8, 0.8);
+        // Face 4 splits into 12 and 13.
+        polygons.remove(4);
+        polygons.push((12, rect(2.0, 0.0, 2.5, 1.0)));
+        polygons.push((13, rect(2.5, 0.0, 3.1, 1.0)));
+        let after = view_with_ids(polygons);
+        let touched = BTreeSet::from([FaceId(11)]);
+        let rebuilt = old.rebuild(&after, &touched);
+        assert_eq!(rebuilt, Overlay::build(&after));
+        // The third stack's cells were kept as they were.
+        for owner in [6, 7, 8] {
+            assert_eq!(rebuilt.owned(FaceId(owner)), old.owned(FaceId(owner)));
+        }
+        assert!(rebuilt.share_cell(FaceId(0), FaceId(11)));
+        assert!(!rebuilt.share_cell(FaceId(9), FaceId(11)));
     }
 }

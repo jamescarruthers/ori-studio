@@ -13,9 +13,15 @@ pub(crate) struct PairTable<T> {
 
 impl<T: Copy + Default> PairTable<T> {
     pub(crate) fn new(n: usize) -> PairTable<T> {
+        PairTable::filled(n, T::default())
+    }
+}
+
+impl<T: Copy> PairTable<T> {
+    pub(crate) fn filled(n: usize, value: T) -> PairTable<T> {
         PairTable {
             n,
-            entries: vec![T::default(); n * n],
+            entries: vec![value; n * n],
         }
     }
 

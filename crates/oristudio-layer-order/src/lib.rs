@@ -24,6 +24,7 @@ pub mod error;
 pub mod order;
 pub mod overlay;
 pub mod problem;
+mod shape;
 mod table;
 pub mod view;
 

@@ -3,7 +3,7 @@
 //! research §2.1, r1-theory §3), re-derived here from the face images:
 //!
 //! - **Variables:** the face pairs whose images overlap by more than [`TOL`]
-//!   (separating-axis penetration).
+//!   (separating-axis penetration): the [`Overlay`]'s pairs.
 //! - **Taco-taco:** two folded creases along one line, with all four faces on
 //!   one side: the two pairs nest or stack, never interleave.
 //! - **Taco-tortilla:** a folded crease through a face's interior, or along
@@ -29,8 +29,17 @@
 //! A constraint that needs a non-overlapping pair is left out; a search must
 //! refuse a problem with ambiguities (a cell pair that is no variable would
 //! be a transitivity triple over a missing variable).
+//!
+//! # After an operation
+//!
+//! [`ConstraintProblem::rebuild`] does the geometric work only where a
+//! touched face is involved: pairs and constraints of untouched faces keep
+//! their verdicts, and the overlay keeps the cells of every face that neither
+//! was touched nor overlaps a touched face ([`Overlay::rebuild`]). What is
+//! left is linear in the problem's size: merging the kept and new parts and
+//! indexing them again.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use oristudio_geometry::convex;
 use oristudio_geometry::tol::TOL;
@@ -38,6 +47,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::order::{FacePair, LayerOrder};
 use crate::overlay::Overlay;
+use crate::shape::Shape;
 use crate::table::PairTable;
 use crate::view::{EdgeKind, FaceId, FoldedView};
 
@@ -88,34 +98,47 @@ impl Constraint {
     /// The pairs the constraint relates, in Flat-Folder's order for its type
     /// (see each variant), each `[first, second]`.
     pub fn ordered_pairs(&self) -> Vec<[FaceId; 2]> {
+        let (pairs, len) = self.pair_array();
+        pairs[..len].to_vec()
+    }
+
+    /// [`Constraint::ordered_pairs`] without allocating: the first `len`.
+    fn pair_array(&self) -> ([[FaceId; 2]; 6], usize) {
         match *self {
             Constraint::TacoTaco([a, b, c, d]) => {
-                vec![[a, b], [c, d], [c, b], [a, d], [a, c], [b, d]]
+                ([[a, b], [c, d], [c, b], [a, d], [a, c], [b, d]], 6)
             }
-            Constraint::TacoTortilla([a, b, c]) => vec![[a, c], [c, b]],
-            Constraint::TortillaTortilla([a, b, c, d]) => vec![[a, c], [b, d]],
+            Constraint::TacoTortilla([a, b, c]) => {
+                ([[a, c], [c, b], [a, a], [a, a], [a, a], [a, a]], 2)
+            }
+            Constraint::TortillaTortilla([a, b, c, d]) => {
+                ([[a, c], [b, d], [a, a], [a, a], [a, a], [a, a]], 2)
+            }
         }
     }
 
     /// Whether the order satisfies the constraint; `None` when a pair it
     /// needs is absent or undetermined.
     pub fn holds(&self, order: &LayerOrder) -> Option<bool> {
+        self.holds_by(|f, g| order.above(f, g))
+    }
+
+    /// [`Constraint::holds`] over any `above`.
+    pub(crate) fn holds_by(&self, above: impl Fn(FaceId, FaceId) -> Option<bool>) -> Option<bool> {
         match *self {
             Constraint::TacoTaco(faces) => {
                 let mut rank = [0usize; 4];
                 for i in 0..4 {
                     for j in 0..4 {
-                        if i != j && order.above(faces[i], faces[j])? {
+                        if i != j && above(faces[i], faces[j])? {
                             rank[i] += 1;
                         }
                     }
                 }
                 Some(taco_taco_holds(rank))
             }
-            Constraint::TacoTortilla([a, b, c]) => Some(order.above(c, a)? == order.above(c, b)?),
-            Constraint::TortillaTortilla([a, b, c, d]) => {
-                Some(order.above(a, c)? == order.above(b, d)?)
-            }
+            Constraint::TacoTortilla([a, b, c]) => Some(above(c, a)? == above(c, b)?),
+            Constraint::TortillaTortilla([a, b, c, d]) => Some(above(a, c)? == above(b, d)?),
         }
     }
 
@@ -215,44 +238,78 @@ pub enum AmbiguityCause {
 pub struct ConstraintProblem {
     /// The view's faces, in its order: the positions the overlay records.
     faces: Vec<FaceId>,
-    variables: Vec<FacePair>,
-    variable_index: BTreeMap<FacePair, usize>,
     constraints: Vec<Constraint>,
     buckets: Vec<Buckets>,
+    /// Its pairs are the variables.
     overlay: Overlay,
     ambiguities: Vec<Ambiguity>,
 }
 
-/// What a build reuses from the previous problem.
-#[derive(Default)]
-struct Kept {
-    variables: BTreeSet<FacePair>,
-    constraints: BTreeSet<Constraint>,
-    dropped: BTreeSet<(Constraint, FacePair)>,
+/// The constraints a build found, and those a missing pair kept out. Runs
+/// after every variable is known.
+struct Found<'v> {
+    view: &'v FoldedView,
+    /// Whether a pair of view positions is a variable.
+    is_variable: PairTable<bool>,
+    constraints: Vec<Constraint>,
+    dropped: Vec<(Constraint, FacePair)>,
+}
+
+impl<'v> Found<'v> {
+    fn new(view: &'v FoldedView, variables: &[FacePair]) -> Found<'v> {
+        let mut is_variable = PairTable::new(view.faces().len());
+        for pair in variables {
+            if let (Some(i), Some(j)) = (view.index_of(pair.lo()), view.index_of(pair.hi())) {
+                is_variable.set(i, j, true);
+                is_variable.set(j, i, true);
+            }
+        }
+        Found {
+            view,
+            is_variable,
+            constraints: Vec::new(),
+            dropped: Vec::new(),
+        }
+    }
+
+    /// Record a generated constraint, or the first pair that keeps it out.
+    fn add(&mut self, constraint: Option<Constraint>) {
+        let Some(constraint) = constraint else {
+            return;
+        };
+        let constraint = constraint.canonical();
+        let (pairs, len) = constraint.pair_array();
+        let missing = pairs[..len].iter().find_map(|&[x, y]| {
+            let pair = FacePair::new(x, y)?;
+            let (i, j) = (self.view.index_of(x), self.view.index_of(y));
+            let known = matches!((i, j), (Some(i), Some(j)) if self.is_variable.get(i, j));
+            (!known).then_some(pair)
+        });
+        match missing {
+            Some(pair) => self.dropped.push((constraint, pair)),
+            None => self.constraints.push(constraint),
+        }
+    }
 }
 
 impl ConstraintProblem {
     /// Build everything from the view.
     pub fn build(view: &FoldedView) -> ConstraintProblem {
-        let mut kept = Kept::default();
-        let n = view.faces().len();
-        for i in 0..n {
-            for j in i + 1..n {
-                if let Some(pair) = variable(view, i, j) {
-                    kept.variables.insert(pair);
-                }
-            }
-        }
-        let edges = view.edges().len();
+        let shapes = Shape::of_view(view);
+        let overlay = Overlay::build_from(view, &shapes);
+        let mut found = Found::new(view, overlay.pairs());
+        let segments = segments(view);
+        let (n, edges) = (shapes.len(), segments.len());
         for e in 0..edges {
             for h in 0..n {
-                generated(edge_face(view, e, h), &mut kept);
+                found.add(edge_face(view, &shapes, &segments, e, h));
             }
             for e2 in e + 1..edges {
-                generated(edge_edge(view, e, e2), &mut kept);
+                found.add(edge_edge(view, &segments, e, e2));
             }
         }
-        ConstraintProblem::assemble(view, kept)
+        let (constraints, dropped) = (found.constraints, found.dropped);
+        ConstraintProblem::assemble(view, overlay, constraints, dropped)
     }
 
     /// The problem of `view`, a later state of this problem's view, reusing
@@ -261,139 +318,126 @@ impl ConstraintProblem {
     /// A face is untouched when its image, its orientation and every edge it
     /// shares with another untouched face are unchanged. Faces new to the view
     /// or gone from it count as touched. The result equals
-    /// [`ConstraintProblem::build`] of `view`; the overlay is rebuilt in full.
+    /// [`ConstraintProblem::build`] of `view`; the overlay is rebuilt with
+    /// [`Overlay::rebuild`], so the same holds of its cells.
     pub fn rebuild(&self, view: &FoldedView, touched: &BTreeSet<FaceId>) -> ConstraintProblem {
-        let previous: BTreeSet<FaceId> = self.faces.iter().copied().collect();
-        let mut touched = touched.clone();
-        touched.extend(
-            view.faces()
-                .iter()
-                .map(|f| f.id)
-                .filter(|f| !previous.contains(f)),
-        );
-        touched.extend(self.faces.iter().filter(|&&f| view.face(f).is_none()));
+        let shapes = Shape::of_view(view);
+        let touched = self.overlay.touched_in(view, touched);
         let untouched = |faces: &[FaceId]| faces.iter().all(|f| !touched.contains(f));
+        let overlay = self.overlay.rebuild_from(view, &shapes, &touched);
+        let mut found = Found::new(view, overlay.pairs());
+        found.constraints = self
+            .constraints
+            .iter()
+            .filter(|c| untouched(c.faces()))
+            .copied()
+            .collect();
+        found.dropped = self
+            .ambiguities
+            .iter()
+            .filter_map(|a| match a.cause {
+                AmbiguityCause::Constraint(c) if untouched(c.faces()) => Some((c, a.pair)),
+                _ => None,
+            })
+            .collect();
 
-        let mut kept = Kept {
-            variables: self
-                .variables
-                .iter()
-                .filter(|p| untouched(&p.faces()))
-                .copied()
-                .collect(),
-            constraints: self
-                .constraints
-                .iter()
-                .filter(|c| untouched(c.faces()))
-                .copied()
-                .collect(),
-            dropped: self
-                .ambiguities
-                .iter()
-                .filter_map(|a| match a.cause {
-                    AmbiguityCause::Constraint(c) if untouched(c.faces()) => Some((c, a.pair)),
-                    _ => None,
-                })
-                .collect(),
-        };
-
-        let touched_index: BTreeSet<usize> =
-            touched.iter().filter_map(|&f| view.index_of(f)).collect();
-        let n = view.faces().len();
-        // Each touched face against every face, each pair once.
-        for &t in &touched_index {
-            for j in 0..n {
-                if j != t
-                    && (j > t || !touched_index.contains(&j))
-                    && let Some(pair) = variable(view, t.min(j), t.max(j))
-                {
-                    kept.variables.insert(pair);
-                }
-            }
-        }
         // An edge of a touched face against every face, any other edge
         // against the touched faces; then the touched faces' edges against
         // every edge.
-        let edges = view.edges();
-        let touched_edges: BTreeSet<usize> = (0..edges.len())
-            .filter(|&e| edges[e].faces.iter().any(|f| touched.contains(f)))
+        let n = shapes.len();
+        let touched_faces: Vec<usize> = (0..n)
+            .filter(|&h| touched.contains(&shapes[h].id))
             .collect();
         let all_faces: Vec<usize> = (0..n).collect();
-        let touched_faces: Vec<usize> = touched_index.iter().copied().collect();
-        for e in 0..edges.len() {
-            let faces = if touched_edges.contains(&e) {
+        let segments = segments(view);
+        let touched_edge: Vec<bool> = view
+            .edges()
+            .iter()
+            .map(|e| e.faces.iter().any(|f| touched.contains(f)))
+            .collect();
+        for (e, &edge_touched) in touched_edge.iter().enumerate() {
+            let faces = if edge_touched {
                 &all_faces
             } else {
                 &touched_faces
             };
             for &h in faces {
-                generated(edge_face(view, e, h), &mut kept);
+                found.add(edge_face(view, &shapes, &segments, e, h));
             }
         }
-        for &e in &touched_edges {
-            for e2 in 0..edges.len() {
-                if e2 != e && (e2 > e || !touched_edges.contains(&e2)) {
-                    generated(edge_edge(view, e, e2), &mut kept);
+        for e in (0..touched_edge.len()).filter(|&e| touched_edge[e]) {
+            for (e2, &other_touched) in touched_edge.iter().enumerate() {
+                if e2 != e && (e2 > e || !other_touched) {
+                    found.add(edge_edge(view, &segments, e, e2));
                 }
             }
         }
-        ConstraintProblem::assemble(view, kept)
+        let (constraints, dropped) = (found.constraints, found.dropped);
+        ConstraintProblem::assemble(view, overlay, constraints, dropped)
     }
 
-    /// Index the variables and constraints, overlay the faces, and find the
-    /// ambiguities.
-    fn assemble(view: &FoldedView, kept: Kept) -> ConstraintProblem {
-        let variables: Vec<FacePair> = kept.variables.into_iter().collect();
-        let variable_index: BTreeMap<FacePair, usize> =
-            variables.iter().enumerate().map(|(i, p)| (*p, i)).collect();
-        let mut ambiguities: BTreeSet<Ambiguity> = kept
-            .dropped
+    /// Index the constraints by variable and find the ambiguities. Every
+    /// constraint relates variables only: generation checked the new ones, and
+    /// a kept one relates untouched pairs, which kept their verdicts.
+    fn assemble(
+        view: &FoldedView,
+        overlay: Overlay,
+        mut constraints: Vec<Constraint>,
+        mut dropped: Vec<(Constraint, FacePair)>,
+    ) -> ConstraintProblem {
+        constraints.sort_unstable();
+        constraints.dedup();
+        dropped.sort_unstable();
+        dropped.dedup();
+        let n = view.faces().len();
+        let variables = overlay.pairs();
+        // Per pair of view positions, its variable's index.
+        let mut index: PairTable<u32> = PairTable::filled(n, u32::MAX);
+        for (v, pair) in variables.iter().enumerate() {
+            if let (Some(i), Some(j)) = (view.index_of(pair.lo()), view.index_of(pair.hi())) {
+                index.set(i, j, v as u32);
+                index.set(j, i, v as u32);
+            }
+        }
+        let variable_of = |x: FaceId, y: FaceId| match (view.index_of(x), view.index_of(y)) {
+            (Some(i), Some(j)) if i != j => Some(index.get(i, j)).filter(|&v| v != u32::MAX),
+            _ => None,
+        };
+
+        let mut buckets = vec![Buckets::default(); variables.len()];
+        for (k, c) in constraints.iter().enumerate() {
+            let (pairs, len) = c.pair_array();
+            let mut seen = [u32::MAX; 6];
+            for (s, &[x, y]) in pairs[..len].iter().enumerate() {
+                if let Some(v) = variable_of(x, y)
+                    && !seen[..s].contains(&v)
+                {
+                    seen[s] = v;
+                    buckets[v as usize].push(c.kind(), k);
+                }
+            }
+        }
+
+        let mut ambiguities: Vec<Ambiguity> = dropped
             .iter()
             .map(|&(c, pair)| Ambiguity {
                 pair,
                 cause: AmbiguityCause::Constraint(c),
             })
             .collect();
-        // A constraint stays only if every pair it relates is a variable; the
-        // generation already checked, so this re-check only guards kept ones.
-        let constraints: Vec<Constraint> = kept
-            .constraints
-            .into_iter()
-            .filter(|c| {
-                c.ordered_pairs().iter().all(|&[x, y]| {
-                    FacePair::new(x, y).is_some_and(|p| variable_index.contains_key(&p))
-                })
-            })
-            .collect();
-        let mut buckets = vec![Buckets::default(); variables.len()];
-        for (k, c) in constraints.iter().enumerate() {
-            let mut seen = BTreeSet::new();
-            for [x, y] in c.ordered_pairs() {
-                if let Some(&v) = FacePair::new(x, y).and_then(|p| variable_index.get(&p))
-                    && seen.insert(v)
-                {
-                    buckets[v].push(c.kind(), k);
-                }
-            }
-        }
-
-        let overlay = Overlay::build(view);
-        let mut is_variable = PairTable::new(view.faces().len());
-        for pair in &variables {
-            if let (Some(i), Some(j)) = (view.index_of(pair.lo()), view.index_of(pair.hi())) {
-                is_variable.set(i, j, true);
-                is_variable.set(j, i, true);
-            }
-        }
+        // Pairs that share a cell: every cell's pairs are those of a maximal
+        // one.
         let faces = view.faces();
-        for &c in overlay.distinct_cells() {
+        let mut shared = PairTable::new(n);
+        for &c in overlay.maximal_cells() {
             let cell = overlay.positions(c);
             for (k, &i) in cell.iter().enumerate() {
                 for &j in &cell[k + 1..] {
-                    if !is_variable.get(i, j)
+                    shared.set(i, j, true);
+                    if index.get(i, j) == u32::MAX
                         && let Some(pair) = FacePair::new(faces[i].id, faces[j].id)
                     {
-                        ambiguities.insert(Ambiguity {
+                        ambiguities.push(Ambiguity {
                             pair,
                             cause: AmbiguityCause::SharedCell,
                         });
@@ -401,9 +445,12 @@ impl ConstraintProblem {
                 }
             }
         }
-        for pair in &variables {
-            if !overlay.share_cell(pair.lo(), pair.hi()) {
-                ambiguities.insert(Ambiguity {
+        for pair in variables {
+            if let (Some(i), Some(j)) = (view.index_of(pair.lo()), view.index_of(pair.hi()))
+                && !shared.get(i, j)
+                && !shared.get(j, i)
+            {
+                ambiguities.push(Ambiguity {
                     pair: *pair,
                     cause: AmbiguityCause::NoSharedCell,
                 });
@@ -412,23 +459,23 @@ impl ConstraintProblem {
         for (e, edge) in view.edges().iter().enumerate() {
             if let (EdgeKind::Folded(_), Some(pair)) =
                 (edge.kind, FacePair::new(edge.faces[0], edge.faces[1]))
-                && !variable_index.contains_key(&pair)
+                && variable_of(pair.lo(), pair.hi()).is_none()
             {
-                ambiguities.insert(Ambiguity {
+                ambiguities.push(Ambiguity {
                     pair,
                     cause: AmbiguityCause::FoldedEdge { edge: e },
                 });
             }
         }
+        ambiguities.sort_unstable();
+        ambiguities.dedup();
 
         ConstraintProblem {
-            faces: view.faces().iter().map(|f| f.id).collect(),
-            variables,
-            variable_index,
+            faces: faces.iter().map(|f| f.id).collect(),
             constraints,
             buckets,
             overlay,
-            ambiguities: ambiguities.into_iter().collect(),
+            ambiguities,
         }
     }
 
@@ -445,16 +492,16 @@ impl ConstraintProblem {
 
     /// The overlapping pairs, ascending.
     pub fn variables(&self) -> &[FacePair] {
-        &self.variables
+        self.overlay.pairs()
     }
 
     /// A pair's position in [`ConstraintProblem::variables`].
     pub fn variable(&self, pair: FacePair) -> Option<usize> {
-        self.variable_index.get(&pair).copied()
+        self.variables().binary_search(&pair).ok()
     }
 
     pub fn is_variable(&self, a: FaceId, b: FaceId) -> bool {
-        FacePair::new(a, b).is_some_and(|p| self.variable_index.contains_key(&p))
+        FacePair::new(a, b).is_some_and(|p| self.variable(p).is_some())
     }
 
     /// Every constraint once, ascending.
@@ -478,56 +525,48 @@ impl ConstraintProblem {
     }
 }
 
-/// Record a generated constraint, or the pair that keeps it out. Runs after
-/// every variable is known.
-fn generated(constraint: Option<Constraint>, kept: &mut Kept) {
-    let Some(constraint) = constraint else {
-        return;
-    };
-    let constraint = constraint.canonical();
-    let missing = constraint
-        .ordered_pairs()
-        .into_iter()
-        .filter_map(|[x, y]| FacePair::new(x, y))
-        .find(|pair| !kept.variables.contains(pair));
-    match missing {
-        Some(pair) => {
-            kept.dropped.insert((constraint, pair));
-        }
-        None => {
-            kept.constraints.insert(constraint);
-        }
-    }
+/// Each edge segment's bounding box.
+/// What the edge tests need of each edge segment, computed once per build.
+struct Segment {
+    bbox: [f64; 4],
+    length: f64,
+    /// Left of `segment[0] → segment[1]`; none for a segment too short to
+    /// have a direction (the view refuses those).
+    line: Option<convex::HalfPlane>,
 }
 
-/// The pair of faces `i < j` (view indices) if they overlap by more than
-/// [`TOL`].
-fn variable(view: &FoldedView, i: usize, j: usize) -> Option<FacePair> {
-    if !convex::boxes_overlap(view.bounding_box(i), view.bounding_box(j), 0.0) {
-        return None;
-    }
-    let faces = view.faces();
-    if convex::penetration(&faces[i].polygon, &faces[j].polygon) <= TOL {
-        return None;
-    }
-    FacePair::new(faces[i].id, faces[j].id)
+fn segments(view: &FoldedView) -> Vec<Segment> {
+    view.edges()
+        .iter()
+        .map(|e| {
+            let [p, q] = e.segment;
+            Segment {
+                bbox: convex::bounding_box(&e.segment),
+                length: (q[0] - p[0]).hypot(q[1] - p[1]),
+                line: convex::HalfPlane::left_of(p, q),
+            }
+        })
+        .collect()
 }
 
 /// The constraint edge `e` makes with face `h` when it passes through h's
 /// interior (by more than [`TOL`], for longer than `TOL`).
-fn edge_face(view: &FoldedView, e: usize, h: usize) -> Option<Constraint> {
+fn edge_face(
+    view: &FoldedView,
+    shapes: &[Shape<'_>],
+    segments: &[Segment],
+    e: usize,
+    h: usize,
+) -> Option<Constraint> {
     let edge = &view.edges()[e];
-    let face = &view.faces()[h];
+    let face = &shapes[h];
     let [a, b] = edge.faces;
     if face.id == a || face.id == b {
         return None;
     }
     let [p, q] = edge.segment;
-    if !convex::boxes_overlap(
-        &convex::bounding_box(&edge.segment),
-        view.bounding_box(h),
-        0.0,
-    ) || convex::segment_length_inside(p, q, &face.polygon, TOL) <= TOL
+    if !convex::boxes_overlap(&segments[e].bbox, &face.bbox, 0.0)
+        || face.segment_length_inside(p, q, TOL) <= TOL
     {
         return None;
     }
@@ -539,25 +578,31 @@ fn edge_face(view: &FoldedView, e: usize, h: usize) -> Option<Constraint> {
 
 /// The constraint two edges make when they run along one line and overlap
 /// for longer than [`TOL`].
-fn edge_edge(view: &FoldedView, e1: usize, e2: usize) -> Option<Constraint> {
-    let edges = view.edges();
-    let (s, t) = (&edges[e1], &edges[e2]);
-    let (bs, bt) = (
-        convex::bounding_box(&s.segment),
-        convex::bounding_box(&t.segment),
-    );
-    if !convex::boxes_overlap(&bs, &bt, TOL) {
+fn edge_edge(view: &FoldedView, segments: &[Segment], e1: usize, e2: usize) -> Option<Constraint> {
+    if !convex::boxes_overlap(&segments[e1].bbox, &segments[e2].bbox, TOL) {
         return None;
     }
+    let edges = view.edges();
     // Measure along the longer segment's line.
-    let len = |seg: &[[f64; 2]; 2]| (seg[1][0] - seg[0][0]).hypot(seg[1][1] - seg[0][1]);
-    let (r, o, r_left, o_left) = if len(&s.segment) >= len(&t.segment) {
-        (s, t, view.edge_left(e1), view.edge_left(e2))
+    let (r, o, r_left, o_left, reference) = if segments[e1].length >= segments[e2].length {
+        (
+            &edges[e1],
+            &edges[e2],
+            view.edge_left(e1),
+            view.edge_left(e2),
+            &segments[e1],
+        )
     } else {
-        (t, s, view.edge_left(e2), view.edge_left(e1))
+        (
+            &edges[e2],
+            &edges[e1],
+            view.edge_left(e2),
+            view.edge_left(e1),
+            &segments[e2],
+        )
     };
     let [p, q] = r.segment;
-    let line = convex::HalfPlane::left_of(p, q)?;
+    let line = reference.line?;
     if o.segment
         .iter()
         .any(|&x| line.signed_distance(x).abs() > TOL)
@@ -565,7 +610,7 @@ fn edge_edge(view: &FoldedView, e1: usize, e2: usize) -> Option<Constraint> {
         return None;
     }
     let dir = [q[0] - p[0], q[1] - p[1]];
-    let length = len(&r.segment);
+    let length = reference.length;
     let along = |x: [f64; 2]| ((x[0] - p[0]) * dir[0] + (x[1] - p[1]) * dir[1]) / length;
     let (u, v) = (along(o.segment[0]), along(o.segment[1]));
     if u.max(v).min(length) - u.min(v).max(0.0) <= TOL {
@@ -579,9 +624,11 @@ fn edge_edge(view: &FoldedView, e1: usize, e2: usize) -> Option<Constraint> {
         [!o_left[0], !o_left[1]]
     };
     let ([a, b], [c, d]) = (r.faces, o.faces);
+    // Edges join two faces each, so the four are distinct when the second
+    // pair shares no face with the first.
+    let distinct = c != a && c != b && d != a && d != b;
     match (r.kind, o.kind) {
         (EdgeKind::Folded(_), EdgeKind::Folded(_)) => {
-            let distinct = BTreeSet::from([a, b, c, d]).len() == 4;
             (r_left[0] == o_left[0] && distinct).then_some(Constraint::TacoTaco([a, b, c, d]))
         }
         (EdgeKind::Flat, EdgeKind::Flat) => {
@@ -591,7 +638,6 @@ fn edge_edge(view: &FoldedView, e1: usize, e2: usize) -> Option<Constraint> {
             } else {
                 (d, c)
             };
-            let distinct = BTreeSet::from([a, b, c, d]).len() == 4;
             distinct.then_some(Constraint::TortillaTortilla([a, b, c, d]))
         }
         (EdgeKind::Folded(_), EdgeKind::Flat) => {
