@@ -1,0 +1,76 @@
+import { forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Lock } from 'lucide-react';
+import type { TurnBetween, TurnKind } from '../../../lib/steps/turn';
+import { turnCardWords, turnLabel, turnPlace } from '../../../lib/steps/turnWords';
+import { StepCard, StepCardBadge, StepCardDeleteVerb, StepCardPlaceholder } from './StepCard';
+import styles from './TurnCard.module.css';
+
+/**
+ * A turn between two steps, in a Steps grid (D24): a card the size of a
+ * step's, in its place in the order — its name where a step has its number,
+ * a "No number" badge, the glyph a page prints for it, and how it turns and
+ * where it prints. The cards around it keep their numbers. An option of the
+ * grid's listbox as a step's card is, named by what it is and where; it opens
+ * no detail. Its Delete is a pointer's shortcut, as a step's is.
+ *
+ * A turn a newer build wrote (`unknown`) is a stand-in: it shows no glyph,
+ * says only that it is one, and can still be deleted.
+ */
+export const TurnCard = forwardRef<
+  HTMLDivElement,
+  {
+    turn: TurnKind & { id: string; unknown?: unknown };
+    /** The numbers of the steps either side; null at an end. */
+    between: TurnBetween;
+    /** The glyph as an image's source, drawn as the surface's pages draw it; null when there is none to draw. */
+    glyph: string | null;
+    selected: boolean;
+    tabStop: boolean;
+    /** Something dragged over the grid would land here: after the turn. */
+    dropTarget?: boolean;
+    onSelect: (id: string) => void;
+    /** Delete the turn, from its card's corner; absent where the sequence cannot change. */
+    onDelete?: (id: string) => void;
+  }
+>(function TurnCard({ turn, between, glyph, selected, tabStop, dropTarget = false, onSelect, onDelete }, ref) {
+  const { t } = useTranslation();
+  const locked = turn.unknown !== undefined;
+  const { title, how } = turnCardWords(turn, t);
+  const where = turnPlace(between, t);
+  return (
+    <StepCard
+      ref={ref}
+      id={turn.id}
+      label={turnLabel(turn, between, t)}
+      selected={selected}
+      tabStop={tabStop}
+      dropTarget={dropTarget}
+      attributes={{ 'data-turn-kind': locked ? 'locked' : turn.kind }}
+      title={title}
+      kind={<StepCardBadge>{t('panels:diagram.card.badgeNoNumber', 'No number')}</StepCardBadge>}
+      paper={!locked}
+      verbs={
+        onDelete && (
+          <StepCardDeleteVerb label={t('panels:diagram.turns.delete', 'Delete Turn')} onDelete={() => onDelete(turn.id)} />
+        )
+      }
+      instruction={
+        <>
+          {how}
+          {where && <span className={styles.where}>{where}</span>}
+        </>
+      }
+      onSelect={onSelect}
+    >
+      {glyph ? (
+        <img className={styles.turnGlyph} src={glyph} alt="" draggable={false} />
+      ) : (
+        <StepCardPlaceholder>
+          <Lock size={18} aria-hidden="true" />
+          {t('panels:diagram.card.lockedTurn', 'Made with a newer Ori Studio')}
+        </StepCardPlaceholder>
+      )}
+    </StepCard>
+  );
+});
