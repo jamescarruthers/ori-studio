@@ -1498,6 +1498,536 @@
     "viewTree": "Árvore",
     "viewTreeAndCp": "Árvore e padrão de vincos"
   },
+  "fold": {
+    "actions": {
+      "brokenHint": "Este passo não dobra mais.",
+      "deleteStep": "Excluir este passo",
+      "deleteStepAndFollowing": "Excluir este passo e os seguintes",
+      "exportFold": "Exportar FOLD…",
+      "exportSteps": "Exportar passos…",
+      "foldKind": "Dobra",
+      "importCp": "Importar CP…",
+      "importPolygonHint": "Importar um CP exige uma folha quadrada ou retangular.",
+      "lockedHint": "Este passo foi criado com uma versão mais recente do Ori Studio.",
+      "pathBrokenHint": "Um passo deste caminho não dobra mais.",
+      "pathLockedHint": "Um passo deste caminho foi criado com uma versão mais recente do Ori Studio.",
+      "pathReplayingHint": "Os passos ainda estão sendo dobrados.",
+      "precrease": "Pré-dobra",
+      "readOnlyHint": "Criada com uma versão mais recente do Ori Studio: esta sequência abre somente para leitura.",
+      "replayingHint": "Os passos anteriores ainda estão sendo dobrados.",
+      "sendToEditTitle": "Enviar o padrão de vincos dos passos mostrados para o canvas de Edição",
+      "sheetHint": "A folha plana é onde os passos começam: não há passo para excluir.",
+      "startsBranch": "Começa um novo ramo"
+    },
+    "paper": {
+      "backUp": "Verso para cima",
+      "colors": "Cores",
+      "custom": "Personalizado",
+      "editStyle": "Editar estilo do papel…",
+      "frontUp": "Frente para cima",
+      "height": "Altura",
+      "polygon": "Polígono",
+      "proportions": "Proporções",
+      "rectangle": "Retângulo",
+      "resetColors": "Redefinir cores",
+      "shape": "Forma",
+      "sheet": "Folha",
+      "sides": "Lados",
+      "square": "Quadrado",
+      "start": "Início",
+      "startHelp": "Qual lado do papel fica virado para você antes da primeira dobra. O padrão de vincos é sempre desenhado pela frente.",
+      "startsOver_one": "Mudar a forma recomeça do zero: {{count}} passo da sequência é apagado. Desfazer o traz de volta.",
+      "startsOver_many": "Mudar a forma recomeça do zero: os {{count}} passos da sequência são apagados. Desfazer os traz de volta.",
+      "startsOver_other": "Mudar a forma recomeça do zero: os {{count}} passos da sequência são apagados. Desfazer os traz de volta.",
+      "width": "Largura"
+    },
+    "sentence": {
+      "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
+      "mountain": {
+        "crease": {
+          "all": "Dobre todas as camadas em monte pelo vinco existente.",
+          "depth_one": "Dobre só a camada de baixo em monte pelo vinco existente.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte pelo vinco existente.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte pelo vinco existente.",
+          "flaps_one": "Dobre só a aba indicada em monte pelo vinco existente.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte pelo vinco existente.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte pelo vinco existente."
+        },
+        "free": {
+          "all": "Dobre todas as camadas em monte pela linha marcada.",
+          "depth_one": "Dobre só a camada de baixo em monte pela linha marcada.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte pela linha marcada.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte pela linha marcada.",
+          "flaps_one": "Dobre só a aba indicada em monte pela linha marcada.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte pela linha marcada.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte pela linha marcada."
+        },
+        "o1": {
+          "all": "Dobre todas as camadas em monte pela linha que liga {{a}} e {{b}}.",
+          "depth_one": "Dobre só a camada de baixo em monte pela linha que liga {{a}} e {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte pela linha que liga {{a}} e {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte pela linha que liga {{a}} e {{b}}.",
+          "flaps_one": "Dobre só a aba indicada em monte pela linha que liga {{a}} e {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte pela linha que liga {{a}} e {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte pela linha que liga {{a}} e {{b}}."
+        },
+        "o2": {
+          "all": "Dobre todas as camadas em monte, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de baixo em monte, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada em monte, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}}."
+        },
+        "o2Half": {
+          "all": "Dobre todas as camadas ao meio em monte, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de baixo ao meio em monte, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo ao meio em monte, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo ao meio em monte, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada ao meio em monte, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas ao meio em monte, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas ao meio em monte, levando {{a}} sobre {{b}}."
+        },
+        "o3": {
+          "all": "Dobre todas as camadas em monte, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de baixo em monte, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada em monte, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}}."
+        },
+        "o3Half": {
+          "all": "Dobre todas as camadas ao meio em monte, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de baixo ao meio em monte, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo ao meio em monte, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo ao meio em monte, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada ao meio em monte, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas ao meio em monte, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas ao meio em monte, levando {{a}} sobre {{b}}."
+        },
+        "o4": {
+          "all": "Dobre todas as camadas em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_one": "Dobre só a camada de baixo em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_one": "Dobre só a aba indicada em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha."
+        },
+        "o5": {
+          "all": "Dobre todas as camadas em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_one": "Dobre só a camada de baixo em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_one": "Dobre só a aba indicada em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}."
+        },
+        "o6": {
+          "all": "Dobre todas as camadas em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_one": "Dobre só a camada de baixo em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_one": "Dobre só a aba indicada em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}."
+        },
+        "o7": {
+          "all": "Dobre todas as camadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_one": "Dobre só a camada de baixo em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}."
+        }
+      },
+      "mountainPrecrease": {
+        "crease": {
+          "all": "Dobre todas as camadas em monte pelo vinco existente e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte pelo vinco existente e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte pelo vinco existente e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte pelo vinco existente e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte pelo vinco existente e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte pelo vinco existente e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte pelo vinco existente e desdobre."
+        },
+        "free": {
+          "all": "Dobre todas as camadas em monte pela linha marcada e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte pela linha marcada e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte pela linha marcada e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte pela linha marcada e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte pela linha marcada e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte pela linha marcada e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte pela linha marcada e desdobre."
+        },
+        "o1": {
+          "all": "Dobre todas as camadas em monte pela linha que liga {{a}} e {{b}} e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte pela linha que liga {{a}} e {{b}} e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte pela linha que liga {{a}} e {{b}} e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte pela linha que liga {{a}} e {{b}} e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte pela linha que liga {{a}} e {{b}} e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte pela linha que liga {{a}} e {{b}} e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte pela linha que liga {{a}} e {{b}} e desdobre."
+        },
+        "o2": {
+          "all": "Dobre todas as camadas em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}}, e desdobre."
+        },
+        "o2Half": {
+          "all": "Dobre todas as camadas ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de baixo ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas ao meio em monte, levando {{a}} sobre {{b}}, e desdobre."
+        },
+        "o3": {
+          "all": "Dobre todas as camadas em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}}, e desdobre."
+        },
+        "o3Half": {
+          "all": "Dobre todas as camadas ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de baixo ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas ao meio em monte, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas ao meio em monte, levando {{a}} sobre {{b}}, e desdobre."
+        },
+        "o4": {
+          "all": "Dobre todas as camadas em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre."
+        },
+        "o5": {
+          "all": "Dobre todas as camadas em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre."
+        },
+        "o6": {
+          "all": "Dobre todas as camadas em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre."
+        },
+        "o7": {
+          "all": "Dobre todas as camadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de baixo em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de baixo em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de baixo em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre."
+        }
+      },
+      "turn": "{{turn}}.",
+      "unfold": {
+        "all": "Desdobre todas as camadas pelo vinco existente.",
+        "bottom_one": "Desdobre a camada de baixo.",
+        "bottom_many": "Desdobre as {{count}} camadas de baixo.",
+        "bottom_other": "Desdobre as {{count}} camadas de baixo.",
+        "flaps_one": "Desdobre a aba indicada.",
+        "flaps_many": "Desdobre as {{count}} abas indicadas.",
+        "flaps_other": "Desdobre as {{count}} abas indicadas.",
+        "top_one": "Desdobre a camada de cima.",
+        "top_many": "Desdobre as {{count}} camadas de cima.",
+        "top_other": "Desdobre as {{count}} camadas de cima."
+      },
+      "unknown": "Um passo criado com uma versão mais recente do Ori Studio.",
+      "valley": {
+        "crease": {
+          "all": "Dobre todas as camadas em vale pelo vinco existente.",
+          "depth_one": "Dobre só a camada de cima em vale pelo vinco existente.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale pelo vinco existente.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale pelo vinco existente.",
+          "flaps_one": "Dobre só a aba indicada em vale pelo vinco existente.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale pelo vinco existente.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale pelo vinco existente."
+        },
+        "free": {
+          "all": "Dobre todas as camadas em vale pela linha marcada.",
+          "depth_one": "Dobre só a camada de cima em vale pela linha marcada.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale pela linha marcada.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale pela linha marcada.",
+          "flaps_one": "Dobre só a aba indicada em vale pela linha marcada.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale pela linha marcada.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale pela linha marcada."
+        },
+        "o1": {
+          "all": "Dobre todas as camadas em vale pela linha que liga {{a}} e {{b}}.",
+          "depth_one": "Dobre só a camada de cima em vale pela linha que liga {{a}} e {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale pela linha que liga {{a}} e {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale pela linha que liga {{a}} e {{b}}.",
+          "flaps_one": "Dobre só a aba indicada em vale pela linha que liga {{a}} e {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale pela linha que liga {{a}} e {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale pela linha que liga {{a}} e {{b}}."
+        },
+        "o2": {
+          "all": "Dobre todas as camadas em vale, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima em vale, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada em vale, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}}."
+        },
+        "o2Half": {
+          "all": "Dobre todas as camadas ao meio em vale, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima ao meio em vale, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima ao meio em vale, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima ao meio em vale, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada ao meio em vale, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas ao meio em vale, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas ao meio em vale, levando {{a}} sobre {{b}}."
+        },
+        "o3": {
+          "all": "Dobre todas as camadas em vale, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima em vale, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada em vale, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}}."
+        },
+        "o3Half": {
+          "all": "Dobre todas as camadas ao meio em vale, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima ao meio em vale, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima ao meio em vale, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima ao meio em vale, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada ao meio em vale, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas ao meio em vale, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas ao meio em vale, levando {{a}} sobre {{b}}."
+        },
+        "o4": {
+          "all": "Dobre todas as camadas em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_one": "Dobre só a camada de cima em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_one": "Dobre só a aba indicada em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha."
+        },
+        "o5": {
+          "all": "Dobre todas as camadas em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_one": "Dobre só a camada de cima em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_one": "Dobre só a aba indicada em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}."
+        },
+        "o6": {
+          "all": "Dobre todas as camadas em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_one": "Dobre só a camada de cima em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_one": "Dobre só a aba indicada em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}."
+        },
+        "o7": {
+          "all": "Dobre todas as camadas em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}."
+        }
+      },
+      "valleyPrecrease": {
+        "crease": {
+          "all": "Dobre todas as camadas em vale pelo vinco existente e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale pelo vinco existente e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale pelo vinco existente e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale pelo vinco existente e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale pelo vinco existente e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale pelo vinco existente e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale pelo vinco existente e desdobre."
+        },
+        "free": {
+          "all": "Dobre todas as camadas em vale pela linha marcada e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale pela linha marcada e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale pela linha marcada e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale pela linha marcada e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale pela linha marcada e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale pela linha marcada e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale pela linha marcada e desdobre."
+        },
+        "o1": {
+          "all": "Dobre todas as camadas em vale pela linha que liga {{a}} e {{b}} e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale pela linha que liga {{a}} e {{b}} e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale pela linha que liga {{a}} e {{b}} e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale pela linha que liga {{a}} e {{b}} e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale pela linha que liga {{a}} e {{b}} e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale pela linha que liga {{a}} e {{b}} e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale pela linha que liga {{a}} e {{b}} e desdobre."
+        },
+        "o2": {
+          "all": "Dobre todas as camadas em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}}, e desdobre."
+        },
+        "o2Half": {
+          "all": "Dobre todas as camadas ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de cima ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas ao meio em vale, levando {{a}} sobre {{b}}, e desdobre."
+        },
+        "o3": {
+          "all": "Dobre todas as camadas em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}}, e desdobre."
+        },
+        "o3Half": {
+          "all": "Dobre todas as camadas ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de cima ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas ao meio em vale, levando {{a}} sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas ao meio em vale, levando {{a}} sobre {{b}}, e desdobre."
+        },
+        "o4": {
+          "all": "Dobre todas as camadas em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e desdobre."
+        },
+        "o5": {
+          "all": "Dobre todas as camadas em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, com {{a}} como pivô, levando {{b}} sobre {{c}}, e desdobre."
+        },
+        "o6": {
+          "all": "Dobre todas as camadas em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e desdobre."
+        },
+        "o7": {
+          "all": "Dobre todas as camadas em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "depth_one": "Dobre só a camada de cima em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "depth_many": "Dobre só as {{count}} camadas de cima em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "depth_other": "Dobre só as {{count}} camadas de cima em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "flaps_one": "Dobre só a aba indicada em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas em vale de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre."
+        }
+      }
+    },
+    "step": {
+      "branchSheet": "Você está na folha plana: dobrar aqui começa um novo ramo.",
+      "branchStep": "Você está no passo {{at}} de {{total}}: dobrar aqui começa um novo ramo.",
+      "broken": "Este passo não dobra mais: aquilo de que ele foi feito não está mais no papel antes dele. Ele e os passos seguintes só podem ser excluídos.",
+      "brokenAbove": "Um passo anterior não dobra mais, por isso este não pode ser mostrado.",
+      "changed": "Este passo dobra de outro jeito nesta versão do Ori Studio do que quando foi salvo.",
+      "changes": "Alterações",
+      "creases": "Vincos",
+      "creasesBackUp": "Vistos pela frente do papel, que começa virada para baixo: podem aparecer ao contrário das dobras que você vê.",
+      "creasesFront": "Vistos pela frente do papel.",
+      "flat": "Planos",
+      "flatHelp": "Dobrados uma vez e desdobrados: agora estão planos e lembram para que lado foram dobrados.",
+      "imported": "Padrão de vincos importado: este passo substitui o estado dobrado pelo do padrão.",
+      "layers": "Camadas",
+      "layersHelp": "A pilha mais espessa ao longo da linha de dobra. Camadas que ficam planas dos dois lados de uma pré-dobra contam como uma.",
+      "line": "Linha",
+      "locked": "Este passo foi criado com uma versão mais recente do Ori Studio. Aqui você pode excluí-lo, e ele é salvo exatamente como veio.",
+      "mountain": "Monte",
+      "operation": "Operação",
+      "pending": "Dobra pendente",
+      "sheet": "Folha plana",
+      "sheetNote": "Nada foi dobrado ainda. Dobre a folha para criar o passo 1.",
+      "source": "Origem",
+      "title": "Passo {{number}}",
+      "valley": "Vale"
+    },
+    "words": {
+      "adds_one": "Adiciona {{count}} vinco ({{mountain}} M, {{valley}} V)",
+      "adds_many": "Adiciona {{count}} vincos ({{mountain}} M, {{valley}} V)",
+      "adds_other": "Adiciona {{count}} vincos ({{mountain}} M, {{valley}} V)",
+      "addsPrecreases_one": "Adiciona {{count}} pré-dobra",
+      "addsPrecreases_many": "Adiciona {{count}} pré-dobras",
+      "addsPrecreases_other": "Adiciona {{count}} pré-dobras",
+      "axiomLine": "Axioma {{axiom}} · {{phrase}}",
+      "badgeImported": "Importado",
+      "badgeMountain": "Monte",
+      "badgeNewer": "Mais recente",
+      "badgePrecrease": "Pré-dobra",
+      "badgeValley": "Vale",
+      "cpJump": "Importar padrão de vincos",
+      "existingCrease": "Vinco existente",
+      "freeLine": "Linha livre",
+      "mountainFold": "Dobra monte",
+      "mountainPrecrease": "Dobra monte e desdobra",
+      "noChange": "Não altera nenhum vinco",
+      "originCp": "Arquivo CP",
+      "originEditFoldedFigure": "Figura dobrada do Editar",
+      "originFold": "Arquivo FOLD",
+      "originOrh": "Arquivo ORH",
+      "originOri": "Arquivo ORI",
+      "originSample": "Exemplo",
+      "refolds_one": "Redobra {{count}} pré-dobra",
+      "refolds_many": "Redobra {{count}} pré-dobras",
+      "refolds_other": "Redobra {{count}} pré-dobras",
+      "reverses_one": "Redobra {{count}} pré-dobra ao contrário",
+      "reverses_many": "Redobra {{count}} pré-dobras ao contrário",
+      "reverses_other": "Redobra {{count}} pré-dobras ao contrário",
+      "unfold": "Desdobrar",
+      "unfolds_one": "Desdobra {{count}} vinco",
+      "unfolds_many": "Desdobra {{count}} vincos",
+      "unfolds_other": "Desdobra {{count}} vincos",
+      "unknown": "De uma versão mais recente do Ori Studio",
+      "valleyFold": "Dobra vale",
+      "valleyPrecrease": "Dobra vale e desdobra"
+    }
+  },
   "fold3dVerdict": {
     "localCrossing_one": "O papel atravessa a si mesmo em um vértice.",
     "localCrossing_many": "O papel atravessa a si mesmo em {{count}} vértices.",

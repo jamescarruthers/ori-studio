@@ -1447,6 +1447,439 @@
     "viewTree": "Baum",
     "viewTreeAndCp": "Baum und Faltmuster"
   },
+  "fold": {
+    "actions": {
+      "brokenHint": "Dieser Schritt lässt sich nicht mehr falten.",
+      "deleteStep": "Diesen Schritt löschen",
+      "deleteStepAndFollowing": "Diesen Schritt und alle folgenden löschen",
+      "exportFold": "FOLD exportieren…",
+      "exportSteps": "Schritte exportieren…",
+      "foldKind": "Faltart",
+      "importCp": "CP importieren…",
+      "importPolygonHint": "Zum Importieren eines CP braucht es ein quadratisches oder rechteckiges Blatt.",
+      "lockedHint": "Dieser Schritt wurde mit einem neueren Ori Studio erstellt.",
+      "pathBrokenHint": "Ein Schritt auf diesem Pfad lässt sich nicht mehr falten.",
+      "pathLockedHint": "Ein Schritt auf diesem Pfad wurde mit einem neueren Ori Studio erstellt.",
+      "pathReplayingHint": "Die Schritte werden noch gefaltet.",
+      "precrease": "Vorfalte",
+      "readOnlyHint": "Mit einem neueren Ori Studio erstellt: Diese Folge wird schreibgeschützt geöffnet.",
+      "replayingHint": "Die Schritte davor werden noch gefaltet.",
+      "sendToEditTitle": "Das Faltmuster der gezeigten Schritte an die Bearbeiten-Leinwand senden",
+      "sheetHint": "Beim flachen Blatt beginnen die Schritte: Hier gibt es keinen Schritt zu löschen.",
+      "startsBranch": "Beginnt einen neuen Zweig"
+    },
+    "paper": {
+      "backUp": "Rückseite oben",
+      "colors": "Farben",
+      "custom": "Benutzerdefiniert",
+      "editStyle": "Papierstil bearbeiten…",
+      "frontUp": "Vorderseite oben",
+      "height": "Höhe",
+      "polygon": "Vieleck",
+      "proportions": "Seitenverhältnis",
+      "rectangle": "Rechteck",
+      "resetColors": "Farben zurücksetzen",
+      "shape": "Form",
+      "sheet": "Blatt",
+      "sides": "Seiten",
+      "square": "Quadrat",
+      "start": "Beginn",
+      "startHelp": "Welche Seite des Papiers vor der ersten Faltung zu dir zeigt. Das Faltmuster wird immer von der Vorderseite gezeigt.",
+      "startsOver_one": "Eine neue Form fängt von vorn an: {{count}} Schritt der Folge wird gelöscht. Rückgängig holt ihn zurück.",
+      "startsOver_other": "Eine neue Form fängt von vorn an: Die {{count}} Schritte der Folge werden gelöscht. Rückgängig holt sie zurück.",
+      "width": "Breite"
+    },
+    "sentence": {
+      "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
+      "mountain": {
+        "crease": {
+          "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als Bergfalte.",
+          "depth_one": "Falte nur die unterste Lage entlang der vorhandenen Faltlinie als Bergfalte.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen entlang der vorhandenen Faltlinie als Bergfalte.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der vorhandenen Faltlinie als Bergfalte.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der vorhandenen Faltlinie als Bergfalte."
+        },
+        "free": {
+          "all": "Falte alle Lagen entlang der eingezeichneten Linie als Bergfalte.",
+          "depth_one": "Falte nur die unterste Lage entlang der eingezeichneten Linie als Bergfalte.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen entlang der eingezeichneten Linie als Bergfalte.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der eingezeichneten Linie als Bergfalte.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der eingezeichneten Linie als Bergfalte."
+        },
+        "o1": {
+          "all": "Falte alle Lagen entlang der Linie durch {{a}} und {{b}} als Bergfalte.",
+          "depth_one": "Falte nur die unterste Lage entlang der Linie durch {{a}} und {{b}} als Bergfalte.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen entlang der Linie durch {{a}} und {{b}} als Bergfalte.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der Linie durch {{a}} und {{b}} als Bergfalte.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der Linie durch {{a}} und {{b}} als Bergfalte."
+        },
+        "o2": {
+          "all": "Falte alle Lagen als Bergfalte und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte und lege dabei {{a}} auf {{b}}."
+        },
+        "o2Half": {
+          "all": "Falte alle Lagen als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}."
+        },
+        "o3": {
+          "all": "Falte alle Lagen als Bergfalte und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte und lege dabei {{a}} auf {{b}}."
+        },
+        "o3Half": {
+          "all": "Falte alle Lagen als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte zur Hälfte und lege dabei {{a}} auf {{b}}."
+        },
+        "o4": {
+          "all": "Falte alle Lagen durch {{a}} als Bergfalte, sodass {{b}} auf sich selbst fällt.",
+          "depth_one": "Falte nur die unterste Lage durch {{a}} als Bergfalte, sodass {{b}} auf sich selbst fällt.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen durch {{a}} als Bergfalte, sodass {{b}} auf sich selbst fällt.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als Bergfalte, sodass {{b}} auf sich selbst fällt.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als Bergfalte, sodass {{b}} auf sich selbst fällt."
+        },
+        "o5": {
+          "all": "Falte alle Lagen durch {{a}} als Bergfalte und lege dabei {{b}} auf {{c}}.",
+          "depth_one": "Falte nur die unterste Lage durch {{a}} als Bergfalte und lege dabei {{b}} auf {{c}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen durch {{a}} als Bergfalte und lege dabei {{b}} auf {{c}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als Bergfalte und lege dabei {{b}} auf {{c}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als Bergfalte und lege dabei {{b}} auf {{c}}."
+        },
+        "o6": {
+          "all": "Falte alle Lagen als Bergfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}."
+        },
+        "o7": {
+          "all": "Falte alle Lagen als Bergfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
+        }
+      },
+      "mountainPrecrease": {
+        "crease": {
+          "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als Bergfalte vor.",
+          "depth_one": "Falte nur die unterste Lage entlang der vorhandenen Faltlinie als Bergfalte vor.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen entlang der vorhandenen Faltlinie als Bergfalte vor.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der vorhandenen Faltlinie als Bergfalte vor.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der vorhandenen Faltlinie als Bergfalte vor."
+        },
+        "free": {
+          "all": "Falte alle Lagen entlang der eingezeichneten Linie als Bergfalte vor.",
+          "depth_one": "Falte nur die unterste Lage entlang der eingezeichneten Linie als Bergfalte vor.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen entlang der eingezeichneten Linie als Bergfalte vor.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der eingezeichneten Linie als Bergfalte vor.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der eingezeichneten Linie als Bergfalte vor."
+        },
+        "o1": {
+          "all": "Falte alle Lagen entlang der Linie durch {{a}} und {{b}} als Bergfalte vor.",
+          "depth_one": "Falte nur die unterste Lage entlang der Linie durch {{a}} und {{b}} als Bergfalte vor.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen entlang der Linie durch {{a}} und {{b}} als Bergfalte vor.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der Linie durch {{a}} und {{b}} als Bergfalte vor.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der Linie durch {{a}} und {{b}} als Bergfalte vor."
+        },
+        "o2": {
+          "all": "Falte alle Lagen als Bergfalte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte vor und lege dabei {{a}} auf {{b}}."
+        },
+        "o2Half": {
+          "all": "Falte alle Lagen als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}."
+        },
+        "o3": {
+          "all": "Falte alle Lagen als Bergfalte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte vor und lege dabei {{a}} auf {{b}}."
+        },
+        "o3Half": {
+          "all": "Falte alle Lagen als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}."
+        },
+        "o4": {
+          "all": "Falte alle Lagen durch {{a}} als Bergfalte vor, sodass {{b}} auf sich selbst fällt.",
+          "depth_one": "Falte nur die unterste Lage durch {{a}} als Bergfalte vor, sodass {{b}} auf sich selbst fällt.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen durch {{a}} als Bergfalte vor, sodass {{b}} auf sich selbst fällt.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als Bergfalte vor, sodass {{b}} auf sich selbst fällt.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als Bergfalte vor, sodass {{b}} auf sich selbst fällt."
+        },
+        "o5": {
+          "all": "Falte alle Lagen durch {{a}} als Bergfalte vor und lege dabei {{b}} auf {{c}}.",
+          "depth_one": "Falte nur die unterste Lage durch {{a}} als Bergfalte vor und lege dabei {{b}} auf {{c}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen durch {{a}} als Bergfalte vor und lege dabei {{b}} auf {{c}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als Bergfalte vor und lege dabei {{b}} auf {{c}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als Bergfalte vor und lege dabei {{b}} auf {{c}}."
+        },
+        "o6": {
+          "all": "Falte alle Lagen als Bergfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}."
+        },
+        "o7": {
+          "all": "Falte alle Lagen als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_one": "Falte nur die unterste Lage als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
+        }
+      },
+      "turn": "{{turn}}.",
+      "unfold": {
+        "all": "Falte alle Lagen entlang der vorhandenen Faltlinie auf.",
+        "bottom_one": "Falte die unterste Lage auf.",
+        "bottom_other": "Falte die untersten {{count}} Lagen auf.",
+        "flaps_one": "Falte die gezeigte Klappe auf.",
+        "flaps_other": "Falte die {{count}} gezeigten Klappen auf.",
+        "top_one": "Falte die oberste Lage auf.",
+        "top_other": "Falte die obersten {{count}} Lagen auf."
+      },
+      "unknown": "Ein Schritt aus einem neueren Ori Studio.",
+      "valley": {
+        "crease": {
+          "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als Talfalte.",
+          "depth_one": "Falte nur die oberste Lage entlang der vorhandenen Faltlinie als Talfalte.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der vorhandenen Faltlinie als Talfalte.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der vorhandenen Faltlinie als Talfalte.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der vorhandenen Faltlinie als Talfalte."
+        },
+        "free": {
+          "all": "Falte alle Lagen entlang der eingezeichneten Linie als Talfalte.",
+          "depth_one": "Falte nur die oberste Lage entlang der eingezeichneten Linie als Talfalte.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der eingezeichneten Linie als Talfalte.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der eingezeichneten Linie als Talfalte.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der eingezeichneten Linie als Talfalte."
+        },
+        "o1": {
+          "all": "Falte alle Lagen entlang der Linie durch {{a}} und {{b}} als Talfalte.",
+          "depth_one": "Falte nur die oberste Lage entlang der Linie durch {{a}} und {{b}} als Talfalte.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der Linie durch {{a}} und {{b}} als Talfalte.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der Linie durch {{a}} und {{b}} als Talfalte.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der Linie durch {{a}} und {{b}} als Talfalte."
+        },
+        "o2": {
+          "all": "Falte alle Lagen als Talfalte und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte und lege dabei {{a}} auf {{b}}."
+        },
+        "o2Half": {
+          "all": "Falte alle Lagen als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}."
+        },
+        "o3": {
+          "all": "Falte alle Lagen als Talfalte und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte und lege dabei {{a}} auf {{b}}."
+        },
+        "o3Half": {
+          "all": "Falte alle Lagen als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte zur Hälfte und lege dabei {{a}} auf {{b}}."
+        },
+        "o4": {
+          "all": "Falte alle Lagen durch {{a}} als Talfalte, sodass {{b}} auf sich selbst fällt.",
+          "depth_one": "Falte nur die oberste Lage durch {{a}} als Talfalte, sodass {{b}} auf sich selbst fällt.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen durch {{a}} als Talfalte, sodass {{b}} auf sich selbst fällt.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als Talfalte, sodass {{b}} auf sich selbst fällt.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als Talfalte, sodass {{b}} auf sich selbst fällt."
+        },
+        "o5": {
+          "all": "Falte alle Lagen durch {{a}} als Talfalte und lege dabei {{b}} auf {{c}}.",
+          "depth_one": "Falte nur die oberste Lage durch {{a}} als Talfalte und lege dabei {{b}} auf {{c}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen durch {{a}} als Talfalte und lege dabei {{b}} auf {{c}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als Talfalte und lege dabei {{b}} auf {{c}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als Talfalte und lege dabei {{b}} auf {{c}}."
+        },
+        "o6": {
+          "all": "Falte alle Lagen als Talfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}."
+        },
+        "o7": {
+          "all": "Falte alle Lagen als Talfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
+        }
+      },
+      "valleyPrecrease": {
+        "crease": {
+          "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als Talfalte vor.",
+          "depth_one": "Falte nur die oberste Lage entlang der vorhandenen Faltlinie als Talfalte vor.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der vorhandenen Faltlinie als Talfalte vor.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der vorhandenen Faltlinie als Talfalte vor.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der vorhandenen Faltlinie als Talfalte vor."
+        },
+        "free": {
+          "all": "Falte alle Lagen entlang der eingezeichneten Linie als Talfalte vor.",
+          "depth_one": "Falte nur die oberste Lage entlang der eingezeichneten Linie als Talfalte vor.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der eingezeichneten Linie als Talfalte vor.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der eingezeichneten Linie als Talfalte vor.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der eingezeichneten Linie als Talfalte vor."
+        },
+        "o1": {
+          "all": "Falte alle Lagen entlang der Linie durch {{a}} und {{b}} als Talfalte vor.",
+          "depth_one": "Falte nur die oberste Lage entlang der Linie durch {{a}} und {{b}} als Talfalte vor.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der Linie durch {{a}} und {{b}} als Talfalte vor.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der Linie durch {{a}} und {{b}} als Talfalte vor.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der Linie durch {{a}} und {{b}} als Talfalte vor."
+        },
+        "o2": {
+          "all": "Falte alle Lagen als Talfalte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte vor und lege dabei {{a}} auf {{b}}."
+        },
+        "o2Half": {
+          "all": "Falte alle Lagen als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}."
+        },
+        "o3": {
+          "all": "Falte alle Lagen als Talfalte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte vor und lege dabei {{a}} auf {{b}}."
+        },
+        "o3Half": {
+          "all": "Falte alle Lagen als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte zur Hälfte vor und lege dabei {{a}} auf {{b}}."
+        },
+        "o4": {
+          "all": "Falte alle Lagen durch {{a}} als Talfalte vor, sodass {{b}} auf sich selbst fällt.",
+          "depth_one": "Falte nur die oberste Lage durch {{a}} als Talfalte vor, sodass {{b}} auf sich selbst fällt.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen durch {{a}} als Talfalte vor, sodass {{b}} auf sich selbst fällt.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als Talfalte vor, sodass {{b}} auf sich selbst fällt.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als Talfalte vor, sodass {{b}} auf sich selbst fällt."
+        },
+        "o5": {
+          "all": "Falte alle Lagen durch {{a}} als Talfalte vor und lege dabei {{b}} auf {{c}}.",
+          "depth_one": "Falte nur die oberste Lage durch {{a}} als Talfalte vor und lege dabei {{b}} auf {{c}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen durch {{a}} als Talfalte vor und lege dabei {{b}} auf {{c}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als Talfalte vor und lege dabei {{b}} auf {{c}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als Talfalte vor und lege dabei {{b}} auf {{c}}."
+        },
+        "o6": {
+          "all": "Falte alle Lagen als Talfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte vor und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}."
+        },
+        "o7": {
+          "all": "Falte alle Lagen als Talfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_one": "Falte nur die oberste Lage als Talfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als Talfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_one": "Falte nur die gezeigte Klappe als Talfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Talfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
+        }
+      }
+    },
+    "step": {
+      "branchSheet": "Du bist beim flachen Blatt: Wenn du hier faltest, beginnt ein neuer Zweig.",
+      "branchStep": "Du bist bei Schritt {{at}} von {{total}}: Wenn du hier faltest, beginnt ein neuer Zweig.",
+      "broken": "Dieser Schritt lässt sich nicht mehr falten: Das, woraus er gemacht wurde, liegt vor ihm nicht mehr auf dem Papier. Er und die folgenden Schritte können nur noch gelöscht werden.",
+      "brokenAbove": "Ein früherer Schritt lässt sich nicht mehr falten, deshalb kann dieser nicht gezeigt werden.",
+      "changed": "Dieser Schritt faltet sich in dieser Version von Ori Studio anders als beim Speichern.",
+      "changes": "Änderungen",
+      "creases": "Faltlinien",
+      "creasesBackUp": "Von der Vorderseite des Papiers aus gesehen, die anfangs unten liegt: Sie können umgekehrt zu den Falten wirken, die du siehst.",
+      "creasesFront": "Von der Vorderseite des Papiers aus gesehen.",
+      "flat": "Flach",
+      "flatHelp": "Einmal gefaltet und wieder geöffnet: Sie liegen jetzt flach und merken sich, in welche Richtung sie gingen.",
+      "imported": "Importiertes Faltmuster: Dieser Schritt ersetzt den gefalteten Zustand durch den des Musters.",
+      "layers": "Lagen",
+      "layersHelp": "Der tiefste Stapel entlang der Faltlinie. Lagen, die über eine Vorfalte hinweg flach liegen, zählen als eine.",
+      "line": "Linie",
+      "locked": "Dieser Schritt wurde mit einem neueren Ori Studio erstellt. Er kann hier gelöscht werden und wird genau so gespeichert, wie er war.",
+      "mountain": "Berg",
+      "operation": "Vorgang",
+      "pending": "Geplante Faltung",
+      "sheet": "Flaches Blatt",
+      "sheetNote": "Noch ist nichts gefaltet. Falte das Blatt, um Schritt 1 zu erstellen.",
+      "source": "Quelle",
+      "title": "Schritt {{number}}",
+      "valley": "Tal"
+    },
+    "words": {
+      "adds_one": "Fügt {{count}} Faltlinie hinzu ({{mountain}} M, {{valley}} V)",
+      "adds_other": "Fügt {{count}} Faltlinien hinzu ({{mountain}} M, {{valley}} V)",
+      "addsPrecreases_one": "Fügt {{count}} Vorfalte hinzu",
+      "addsPrecreases_other": "Fügt {{count}} Vorfalten hinzu",
+      "axiomLine": "Axiom {{axiom}} · {{phrase}}",
+      "badgeImported": "Importiert",
+      "badgeMountain": "Berg",
+      "badgeNewer": "Neuer",
+      "badgePrecrease": "Vorfalte",
+      "badgeValley": "Tal",
+      "cpJump": "Faltmuster importieren",
+      "existingCrease": "Vorhandene Faltlinie",
+      "freeLine": "Freie Linie",
+      "mountainFold": "Bergfalte",
+      "mountainPrecrease": "Bergfalte vorfalten",
+      "noChange": "Ändert keine Faltlinien",
+      "originCp": "CP-Datei",
+      "originEditFoldedFigure": "Gefaltete Figur aus Bearbeiten",
+      "originFold": "FOLD-Datei",
+      "originOrh": "ORH-Datei",
+      "originOri": "ORI-Datei",
+      "originSample": "Beispiel",
+      "refolds_one": "Faltet {{count}} Vorfalte wieder",
+      "refolds_other": "Faltet {{count}} Vorfalten wieder",
+      "reverses_one": "Faltet {{count}} Vorfalte andersherum wieder",
+      "reverses_other": "Faltet {{count}} Vorfalten andersherum wieder",
+      "unfold": "Auffalten",
+      "unfolds_one": "Faltet {{count}} Faltlinie auf",
+      "unfolds_other": "Faltet {{count}} Faltlinien auf",
+      "unknown": "Aus einem neueren Ori Studio",
+      "valleyFold": "Talfalte",
+      "valleyPrecrease": "Talfalte vorfalten"
+    }
+  },
   "fold3dVerdict": {
     "localCrossing_one": "Das Papier durchdringt sich an einem Knotenpunkt selbst.",
     "localCrossing_other": "Das Papier durchdringt sich an {{count}} Knotenpunkten selbst.",
