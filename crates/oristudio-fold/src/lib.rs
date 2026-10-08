@@ -29,6 +29,7 @@
 //! | Letters | Front-relative: a folded crease is V iff its front-up face lies below. |
 //! | Turn over | Mirrors the view; every `above` inverts *as seen*; no letter changes. |
 
+pub mod anchor;
 pub mod fold;
 mod index;
 pub mod isometry;
@@ -36,6 +37,7 @@ pub mod numerics;
 pub mod pattern;
 pub mod refusal;
 pub mod sheet;
+pub mod silhouette;
 pub mod state;
 pub mod view;
 
