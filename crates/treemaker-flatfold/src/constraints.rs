@@ -1,16 +1,17 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::Infallible;
 
 use crate::math;
-use crate::{Analysis, ConstraintSummary, FlatFoldError, Result, SolutionLimit};
+use crate::{Analysis, ConstraintSummary, FlatFoldError, OverlapGraph, Result, SolutionLimit};
 use treemaker_fold::Assignment;
 
-type Key = Vec<u16>;
-type ConstraintBuckets = [Vec<Key>; 3];
+pub(crate) type Key = Vec<u16>;
+pub(crate) type ConstraintBuckets = [Vec<Key>; 3];
 
-const TACO_TACO: usize = 0;
-const TACO_TORTILLA: usize = 1;
-const TORTILLA_TORTILLA: usize = 2;
-const TRANSITIVITY: usize = 3;
+pub(crate) const TACO_TACO: usize = 0;
+pub(crate) const TACO_TORTILLA: usize = 1;
+pub(crate) const TORTILLA_TORTILLA: usize = 2;
+pub(crate) const TRANSITIVITY: usize = 3;
 const TYPES: [usize; 4] = [TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA, TRANSITIVITY];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -49,6 +50,124 @@ impl ConstraintState {
             reduced_transitivity: self.transitivity_counts.reduced / 3,
         }
     }
+
+    fn tables<'a>(
+        &'a self,
+        overlap: &'a OverlapGraph,
+        implications: &'a ImplicationMaps,
+    ) -> SearchTables<'a> {
+        SearchTables {
+            variables: &self.variables,
+            variable_index: &self.variable_index,
+            constraints: &self.constraints,
+            transitivity: TransitivitySource {
+                faces_cells: &overlap.faces_cells,
+                cells_faces: &overlap.cells_faces,
+                connected_components: &self.connected_components,
+            },
+            implications,
+        }
+    }
+}
+
+/// Flat-Folder's variables (`BF`, `BI`) and constraint buckets (`BT`) for one
+/// arrangement, before anything is assigned.
+#[derive(Debug, Clone)]
+pub(crate) struct ConstraintTables {
+    pub variables: Vec<Key>,
+    pub variable_index: BTreeMap<Key, usize>,
+    pub constraints: Vec<ConstraintBuckets>,
+}
+
+/// Where the search derives transitivity from, upstream's `FC`, `CF` and `CC`:
+/// three faces sharing a cell must stack consistently, unless a taco-tortilla
+/// component already orders them (`FC_CF_CC_Bf_2_Bt3`). Flat-Folder passes its
+/// own arrangement; the completion entry point passes the caller's cells.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TransitivitySource<'a> {
+    pub faces_cells: &'a [Vec<usize>],
+    pub cells_faces: &'a [Vec<usize>],
+    pub connected_components: &'a [BTreeMap<usize, usize>],
+}
+
+/// Everything propagation and the search read.
+#[derive(Clone, Copy)]
+pub(crate) struct SearchTables<'a> {
+    pub variables: &'a [Key],
+    pub variable_index: &'a BTreeMap<Key, usize>,
+    pub constraints: &'a [ConstraintBuckets],
+    pub transitivity: TransitivitySource<'a>,
+    pub implications: &'a ImplicationMaps,
+}
+
+/// Why propagation stopped: upstream `initial_assignment` returns
+/// `[type, F, E]` for both, and only the Rust error message tells them apart.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ConflictCause {
+    /// The constraint has no valid state under the current assignments.
+    Unsatisfiable,
+    /// Two constraints implied opposite orders for one variable in a level.
+    ImpliedTwice,
+}
+
+/// A constraint propagation could not satisfy, with upstream's `error_faces`:
+/// the faces of every variable the conflict traces back to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SeedConflict {
+    pub constraint_type: usize,
+    pub faces: Vec<usize>,
+    pub error_faces: Vec<usize>,
+    pub cause: ConflictCause,
+}
+
+impl SeedConflict {
+    /// The error `solve_flat_fold` has always returned for this conflict.
+    fn into_flat_fold_error(self) -> FlatFoldError {
+        FlatFoldError::AssignmentConflict(match self.cause {
+            ConflictCause::Unsatisfiable => format!(
+                "unable to resolve constraint type {} on faces {:?}",
+                self.constraint_type, self.faces
+            ),
+            ConflictCause::ImpliedTwice => "conflicting implied assignments".to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum InitialPropagation {
+    Assigned(Vec<u8>),
+    Conflict(SeedConflict),
+}
+
+/// How a variable got its value during initial propagation (upstream `BP`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Parent {
+    /// Assigned before propagation started.
+    Root,
+    /// Implied by constraint `index` of type `constraint_type` in the unpacked
+    /// list of `variable`.
+    Implied {
+        constraint_type: usize,
+        variable: usize,
+        index: usize,
+    },
+}
+
+/// Counts search nodes for `guess_vars`, which asks before each propagation.
+pub(crate) trait NodeMeter {
+    type Stop;
+    fn enter(&mut self) -> std::result::Result<(), Self::Stop>;
+}
+
+/// Flat-Folder's own search has no budget.
+pub(crate) struct Unmetered;
+
+impl NodeMeter for Unmetered {
+    type Stop = Infallible;
+
+    fn enter(&mut self) -> std::result::Result<(), Infallible> {
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,7 +186,7 @@ enum Inference {
     Implied(Vec<(usize, u8)>),
 }
 
-pub(crate) fn build_constraint_state(analysis: &Analysis) -> Result<ConstraintState> {
+pub(crate) fn build_constraint_tables(analysis: &Analysis) -> Result<ConstraintTables> {
     let overlap = analysis
         .overlap
         .as_ref()
@@ -94,13 +213,26 @@ pub(crate) fn build_constraint_state(analysis: &Analysis) -> Result<ConstraintSt
         &overlap.cells_faces,
         &overlap.segments_cells,
     )?;
+    Ok(ConstraintTables {
+        variables,
+        variable_index,
+        constraints,
+    })
+}
+
+pub(crate) fn build_constraint_state(analysis: &Analysis) -> Result<ConstraintState> {
+    let overlap = analysis
+        .overlap
+        .as_ref()
+        .ok_or(FlatFoldError::Unimplemented("overlap graph"))?;
+    let fold = &analysis.normalized.document;
+    let ConstraintTables {
+        variables,
+        variable_index,
+        constraints,
+    } = build_constraint_tables(analysis)?;
     let constraint_counts = count_constraints(&constraints);
-    let connected_components = build_connected_components(
-        &overlap.faces_cells,
-        &variables,
-        &variable_index,
-        &constraints,
-    );
+    let connected_components = build_connected_components(overlap.faces_cells.len(), &constraints);
     let implications = ImplicationMaps::build();
     let initial = initial_assignments(
         &fold.edges_faces,
@@ -109,29 +241,25 @@ pub(crate) fn build_constraint_state(analysis: &Analysis) -> Result<ConstraintSt
         &variables,
         &variable_index,
     );
+    let tables = SearchTables {
+        variables: &variables,
+        variable_index: &variable_index,
+        constraints: &constraints,
+        transitivity: TransitivitySource {
+            faces_cells: &overlap.faces_cells,
+            cells_faces: &overlap.cells_faces,
+            connected_components: &connected_components,
+        },
+        implications: &implications,
+    };
     let mut transitivity_counts = TransitivityCounts::default();
-    let assignments = propagate_initial_assignments(
-        initial,
-        &variables,
-        &constraints,
-        &variable_index,
-        &overlap.faces_cells,
-        &overlap.cells_faces,
-        &connected_components,
-        &implications,
-        &mut transitivity_counts,
-    )?;
-    let groups = variable_groups(
-        &variable_index,
-        &variables,
-        &constraints,
-        &assignments,
-        &overlap.faces_cells,
-        &overlap.cells_faces,
-        &connected_components,
-        &implications,
-        &mut transitivity_counts,
-    );
+    let level = assigned_level(&initial);
+    let assignments =
+        match propagate_initial_assignments(&tables, initial, level, &mut transitivity_counts)? {
+            InitialPropagation::Assigned(assignments) => assignments,
+            InitialPropagation::Conflict(conflict) => return Err(conflict.into_flat_fold_error()),
+        };
+    let groups = variable_groups(&tables, &assignments, &mut transitivity_counts);
     Ok(ConstraintState {
         variables,
         variable_index,
@@ -163,6 +291,7 @@ pub(crate) fn solve_constraint_state(
         .as_ref()
         .ok_or(FlatFoldError::Unimplemented("overlap graph"))?;
     let implications = ImplicationMaps::build();
+    let tables = state.tables(overlap, &implications);
     let mut group_solutions = Vec::with_capacity(state.groups.len());
     let assigned_orders = state.groups.first().map_or_else(Vec::new, |group| {
         group
@@ -173,15 +302,10 @@ pub(crate) fn solve_constraint_state(
     group_solutions.push(vec![math::bit_encode(&assigned_orders)]);
     for (component, group) in state.groups.iter().enumerate().skip(1) {
         let mut assignments = state.assignments.clone();
-        let solutions = guess_vars(
-            group,
-            state,
-            &overlap.faces_cells,
-            &overlap.cells_faces,
-            &implications,
-            &mut assignments,
-            limit,
-        )?;
+        let solutions = match guess_vars(&tables, group, &mut assignments, limit, &mut Unmetered)? {
+            Ok(solutions) => solutions,
+            Err(never) => match never {},
+        };
         if solutions.is_empty() {
             return Err(FlatFoldError::UnsatisfiedComponent(format!(
                 "component {component} has no valid assignments"
@@ -456,13 +580,13 @@ fn count_constraints(constraints: &[ConstraintBuckets]) -> ConstraintCounts {
     counts
 }
 
-fn build_connected_components(
-    faces_cells: &[Vec<usize>],
-    variables: &[Key],
-    _variable_index: &BTreeMap<Key, usize>,
+/// Upstream `FC_BF_BI_BT_2_CC`: per face `c`, the connected components of the
+/// faces that form tacos around it, keyed by face.
+pub(crate) fn build_connected_components(
+    face_count: usize,
     constraints: &[ConstraintBuckets],
 ) -> Vec<BTreeMap<usize, usize>> {
-    let mut face_graphs = vec![BTreeMap::<usize, BTreeSet<usize>>::new(); faces_cells.len()];
+    let mut face_graphs = vec![BTreeMap::<usize, BTreeSet<usize>>::new(); face_count];
     for buckets in constraints {
         for key in &buckets[TACO_TORTILLA] {
             let faces = math::decode(key);
@@ -499,11 +623,10 @@ fn build_connected_components(
         }
         components.push(component_by_face);
     }
-    let _ = variables;
     components
 }
 
-fn initial_assignments(
+pub(crate) fn initial_assignments(
     edges_faces: &[Vec<usize>],
     assignments: &[Assignment],
     faces_flip: &[bool],
@@ -538,89 +661,184 @@ fn initial_assignments(
     out
 }
 
-#[allow(clippy::too_many_arguments)]
-fn propagate_initial_assignments(
-    mut assignments: Vec<u8>,
-    variables: &[Key],
-    constraints: &[ConstraintBuckets],
-    variable_index: &BTreeMap<Key, usize>,
-    faces_cells: &[Vec<usize>],
-    cells_faces: &[Vec<usize>],
-    connected_components: &[BTreeMap<usize, usize>],
-    implications: &ImplicationMaps,
-    transitivity_counts: &mut TransitivityCounts,
-) -> Result<Vec<u8>> {
-    let mut level = assignments
+/// Every assigned variable, in index order: upstream's first propagation level.
+pub(crate) fn assigned_level(assignments: &[u8]) -> Vec<(usize, u8)> {
+    assignments
         .iter()
         .copied()
         .enumerate()
         .filter_map(|(index, assignment)| (assignment != 0).then_some((index, assignment)))
+        .collect()
+}
+
+/// Upstream `initial_assignment`: breadth-first unit propagation from `level`.
+///
+/// Every variable already assigned in `assignments` is a root of the conflict
+/// explanation, but only the variables in `level` are propagated. Flat-Folder
+/// passes every assigned variable; the completion entry point passes its seeds
+/// and leaves carried pairs out. Each level is visited in insertion order, as
+/// upstream's `Map` is, so a conflict names the same constraint upstream does.
+pub(crate) fn propagate_initial_assignments(
+    tables: &SearchTables<'_>,
+    mut assignments: Vec<u8>,
+    mut level: Vec<(usize, u8)>,
+    transitivity_counts: &mut TransitivityCounts,
+) -> Result<InitialPropagation> {
+    let mut parents = assignments
+        .iter()
+        .map(|assignment| (*assignment != 0).then_some(Parent::Root))
         .collect::<Vec<_>>();
+    let mut pending = vec![0u8; assignments.len()];
     while !level.is_empty() {
         for (index, assignment) in &level {
             assignments[*index] = *assignment;
         }
-        let mut new_level = BTreeMap::new();
+        let mut new_level = Vec::new();
         for (index, _) in &level {
-            let faces = math::decode(&variables[*index]);
+            let faces = math::decode(&tables.variables[*index]);
             for constraint_type in TYPES {
                 let constraints_for_type = unpack_constraints(
                     constraint_type,
-                    &constraints[*index],
+                    &tables.constraints[*index],
                     faces[0],
                     faces[1],
-                    faces_cells,
-                    cells_faces,
-                    connected_components,
+                    tables.transitivity,
                     transitivity_counts,
                 );
-                for constraint_faces in constraints_for_type {
-                    match implications.infer(
+                for (constraint_index, constraint_faces) in constraints_for_type.iter().enumerate()
+                {
+                    let cause = match tables.implications.infer(
                         constraint_type,
-                        &constraint_faces,
-                        variable_index,
+                        constraint_faces,
+                        tables.variable_index,
                         &assignments,
                     )? {
-                        Inference::Conflict => {
-                            return Err(FlatFoldError::AssignmentConflict(format!(
-                                "unable to resolve constraint type {constraint_type} on faces {constraint_faces:?}"
-                            )));
-                        }
-                        Inference::Alive | Inference::Dead => {}
+                        Inference::Conflict => Some(ConflictCause::Unsatisfiable),
+                        Inference::Alive | Inference::Dead => None,
                         Inference::Implied(implied) => {
+                            let mut cause = None;
                             for (implied_index, implied_assignment) in implied {
-                                if let Some(existing) = new_level.get(&implied_index).copied() {
-                                    if existing != implied_assignment {
-                                        return Err(FlatFoldError::AssignmentConflict(
-                                            "conflicting implied assignments".to_string(),
-                                        ));
+                                match pending[implied_index] {
+                                    0 => {
+                                        parents[implied_index] = Some(Parent::Implied {
+                                            constraint_type,
+                                            variable: *index,
+                                            index: constraint_index,
+                                        });
+                                        pending[implied_index] = implied_assignment;
+                                        new_level.push((implied_index, implied_assignment));
                                     }
-                                } else {
-                                    new_level.insert(implied_index, implied_assignment);
+                                    existing if existing == implied_assignment => {}
+                                    _ => {
+                                        cause = Some(ConflictCause::ImpliedTwice);
+                                        break;
+                                    }
                                 }
                             }
+                            cause
                         }
+                    };
+                    if let Some(cause) = cause {
+                        return Ok(InitialPropagation::Conflict(SeedConflict {
+                            constraint_type,
+                            faces: constraint_faces.clone(),
+                            error_faces: error_faces(
+                                tables,
+                                constraint_type,
+                                constraint_faces,
+                                &assignments,
+                                &parents,
+                            ),
+                            cause,
+                        }));
                     }
                 }
             }
         }
-        level = new_level.into_iter().collect();
+        for (index, _) in &new_level {
+            pending[*index] = 0;
+        }
+        level = new_level;
     }
-    Ok(assignments)
+    Ok(InitialPropagation::Assigned(assignments))
 }
 
-#[allow(clippy::too_many_arguments)]
-fn variable_groups(
-    variable_index: &BTreeMap<Key, usize>,
-    variables: &[Key],
-    constraints: &[ConstraintBuckets],
+/// Upstream `error_faces`: the faces of every variable a conflict depends on,
+/// found by walking parent pointers back from the conflicting constraint to the
+/// roots. Like upstream, it follows only variables already applied; ones
+/// implied in the level that conflicted are not expanded.
+fn error_faces(
+    tables: &SearchTables<'_>,
+    constraint_type: usize,
+    faces: &[usize],
     assignments: &[u8],
-    faces_cells: &[Vec<usize>],
-    cells_faces: &[Vec<usize>],
-    connected_components: &[BTreeMap<usize, usize>],
-    implications: &ImplicationMaps,
+    parents: &[Option<Parent>],
+) -> Vec<usize> {
+    let variable_of = |[a, b]: [usize; 2]| {
+        tables
+            .variable_index
+            .get(&math::encode_order_pair(a, b))
+            .copied()
+    };
+    let mut stack = pairs_for_type(constraint_type, faces)
+        .into_iter()
+        .filter_map(variable_of)
+        .collect::<Vec<_>>();
+    let mut seen = BTreeSet::new();
+    while let Some(variable) = stack.pop() {
+        seen.insert(variable);
+        if assignments[variable] == 0 {
+            continue;
+        }
+        let Some(Parent::Implied {
+            constraint_type,
+            variable: parent,
+            index,
+        }) = parents[variable]
+        else {
+            continue;
+        };
+        let parent_faces = math::decode(&tables.variables[parent]);
+        let mut scratch = TransitivityCounts::default();
+        let Some(constraint) = unpack_constraints(
+            constraint_type,
+            &tables.constraints[parent],
+            parent_faces[0],
+            parent_faces[1],
+            tables.transitivity,
+            &mut scratch,
+        )
+        .into_iter()
+        .nth(index) else {
+            continue;
+        };
+        for pair in pairs_for_type(constraint_type, &constraint) {
+            if let Some(next) = variable_of(pair)
+                && !seen.contains(&next)
+            {
+                stack.push(next);
+            }
+        }
+    }
+    seen.into_iter()
+        .flat_map(|variable| math::decode(&tables.variables[variable]))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+pub(crate) fn variable_groups(
+    tables: &SearchTables<'_>,
+    assignments: &[u8],
     transitivity_counts: &mut TransitivityCounts,
 ) -> Vec<Vec<usize>> {
+    let SearchTables {
+        variables,
+        variable_index,
+        constraints,
+        transitivity,
+        implications,
+    } = *tables;
     let assigned = assignments
         .iter()
         .enumerate()
@@ -645,9 +863,7 @@ fn variable_groups(
                     &constraints[current],
                     faces[0],
                     faces[1],
-                    faces_cells,
-                    cells_faces,
-                    connected_components,
+                    transitivity,
                     transitivity_counts,
                 );
                 for constraint_faces in constraints_for_type {
@@ -684,29 +900,19 @@ fn variable_groups(
     with_assigned
 }
 
-#[allow(clippy::too_many_arguments)]
 fn unpack_constraints(
     constraint_type: usize,
     buckets: &ConstraintBuckets,
     f1: usize,
     f2: usize,
-    faces_cells: &[Vec<usize>],
-    cells_faces: &[Vec<usize>],
-    connected_components: &[BTreeMap<usize, usize>],
+    transitivity: TransitivitySource<'_>,
     transitivity_counts: &mut TransitivityCounts,
 ) -> Vec<Vec<usize>> {
     if constraint_type == TRANSITIVITY {
-        transitivity_constraints(
-            f1,
-            f2,
-            faces_cells,
-            cells_faces,
-            connected_components,
-            transitivity_counts,
-        )
-        .into_iter()
-        .map(|f3| vec![f1, f2, f3])
-        .collect()
+        transitivity_constraints(f1, f2, transitivity, transitivity_counts)
+            .into_iter()
+            .map(|f3| vec![f1, f2, f3])
+            .collect()
     } else {
         buckets[constraint_type]
             .iter()
@@ -718,11 +924,14 @@ fn unpack_constraints(
 fn transitivity_constraints(
     f1: usize,
     f2: usize,
-    faces_cells: &[Vec<usize>],
-    cells_faces: &[Vec<usize>],
-    connected_components: &[BTreeMap<usize, usize>],
+    source: TransitivitySource<'_>,
     transitivity_counts: &mut TransitivityCounts,
 ) -> Vec<usize> {
+    let TransitivitySource {
+        faces_cells,
+        cells_faces,
+        connected_components,
+    } = source;
     let f1_cells = faces_cells[f1].iter().copied().collect::<BTreeSet<_>>();
     let mut candidates = Vec::new();
     for cell in &faces_cells[f2] {
@@ -754,7 +963,9 @@ fn transitivity_constraints(
     out
 }
 
-fn pairs_for_type(constraint_type: usize, faces: &[usize]) -> Vec<[usize; 2]> {
+/// Upstream `CON.pair_maps`: the face pairs, one per variable, a constraint of
+/// this type reads, in the order its valid-state strings list them.
+pub(crate) fn pairs_for_type(constraint_type: usize, faces: &[usize]) -> Vec<[usize; 2]> {
     match constraint_type {
         TACO_TACO => vec![
             [faces[0], faces[1]],
@@ -775,12 +986,12 @@ fn pairs_for_type(constraint_type: usize, faces: &[usize]) -> Vec<[usize; 2]> {
     }
 }
 
-struct ImplicationMaps {
+pub(crate) struct ImplicationMaps {
     maps: Vec<BTreeMap<String, Inference>>,
 }
 
 impl ImplicationMaps {
-    fn build() -> Self {
+    pub(crate) fn build() -> Self {
         let mut maps = Vec::new();
         for valid in valid_states() {
             let n = valid[0].len();
@@ -903,14 +1114,10 @@ impl ImplicationMaps {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn propagate_assignment(
+    tables: &SearchTables<'_>,
     variable: usize,
     assignment: u8,
-    state: &ConstraintState,
-    faces_cells: &[Vec<usize>],
-    cells_faces: &[Vec<usize>],
-    implications: &ImplicationMaps,
     assignments: &mut [u8],
 ) -> Result<Vec<usize>> {
     let mut assigned = vec![variable];
@@ -919,8 +1126,8 @@ fn propagate_assignment(
     while next < assigned.len() {
         let current = assigned[next];
         next += 1;
-        let faces = math::decode(&state.variables[current]);
-        let buckets = &state.constraints[current];
+        let faces = math::decode(&tables.variables[current]);
+        let buckets = &tables.constraints[current];
         for constraint_type in TYPES {
             let mut transitivity_counts = TransitivityCounts::default();
             let constraints_for_type = unpack_constraints(
@@ -928,16 +1135,14 @@ fn propagate_assignment(
                 buckets,
                 faces[0],
                 faces[1],
-                faces_cells,
-                cells_faces,
-                &state.connected_components,
+                tables.transitivity,
                 &mut transitivity_counts,
             );
             for constraint_faces in constraints_for_type {
-                match implications.infer(
+                match tables.implications.infer(
                     constraint_type,
                     &constraint_faces,
-                    &state.variable_index,
+                    tables.variable_index,
                     assignments,
                 )? {
                     Inference::Conflict => {
@@ -971,16 +1176,16 @@ fn propagate_assignment(
     Ok(assigned)
 }
 
-#[allow(clippy::too_many_arguments)]
-fn guess_vars(
+/// Upstream `guess_vars`: depth-first search over one component, up to `limit`
+/// solutions. `meter` is asked before every propagation; when it stops the
+/// search, the solutions found so far are dropped and its stop is returned.
+pub(crate) fn guess_vars<M: NodeMeter>(
+    tables: &SearchTables<'_>,
     group: &[usize],
-    state: &ConstraintState,
-    faces_cells: &[Vec<usize>],
-    cells_faces: &[Vec<usize>],
-    implications: &ImplicationMaps,
     assignments: &mut [u8],
     limit: usize,
-) -> Result<Vec<Key>> {
+    meter: &mut M,
+) -> Result<std::result::Result<Vec<Key>, M::Stop>> {
     let mut guesses: Vec<Vec<usize>> = Vec::new();
     let mut solutions = Vec::new();
     let mut solution = vec![0u8; group.len()];
@@ -1004,15 +1209,10 @@ fn guess_vars(
                 assignments[*variable] = 0;
             }
             if previous_assignment == 1 {
-                let assigned = propagate_assignment(
-                    group[index],
-                    2,
-                    state,
-                    faces_cells,
-                    cells_faces,
-                    implications,
-                    assignments,
-                )?;
+                if let Err(stop) = meter.enter() {
+                    return Ok(Err(stop));
+                }
+                let assigned = propagate_assignment(tables, group[index], 2, assignments)?;
                 if assigned.is_empty() {
                     guesses.push(vec![group[index]]);
                     assignments[group[index]] = 2;
@@ -1028,20 +1228,15 @@ fn guess_vars(
             }
             solutions.push(math::bit_encode(&solution));
             if solutions.len() >= limit {
-                return Ok(solutions);
+                return Ok(Ok(solutions));
             }
             backtracking = true;
         } else {
             if assignments[group[index]] == 0 {
-                let assigned = propagate_assignment(
-                    group[index],
-                    1,
-                    state,
-                    faces_cells,
-                    cells_faces,
-                    implications,
-                    assignments,
-                )?;
+                if let Err(stop) = meter.enter() {
+                    return Ok(Err(stop));
+                }
+                let assigned = propagate_assignment(tables, group[index], 1, assignments)?;
                 if assigned.is_empty() {
                     guesses.push(vec![group[index]]);
                     assignments[group[index]] = 1;
@@ -1053,7 +1248,7 @@ fn guess_vars(
             index += 1;
         }
     }
-    Ok(solutions)
+    Ok(Ok(solutions))
 }
 
 fn first_solution_face_orders(
@@ -1096,7 +1291,7 @@ fn first_solution_face_orders(
     Ok(face_orders)
 }
 
-fn product_decimal(counts: &[usize]) -> String {
+pub(crate) fn product_decimal(counts: &[usize]) -> String {
     counts.iter().fold("1".to_string(), |product, count| {
         multiply_decimal(&product, *count)
     })
