@@ -33,10 +33,12 @@
 //! in view order. It made nearly the same cells, but each cut ran across the
 //! box along the face's whole edge lines, so a change anywhere moved cells
 //! everywhere. Carving the uncovered part of each face out of the cells it
-//! met cost 1.4 s against 38 ms on a 315-face state; carving whole faces out
-//! of a face, as here, is cheaper than either, since a face inside one with a
-//! smaller id (the common case in a stack) is gone after one containment
-//! test.
+//! met cost 1.4 s against the box's 38 ms on a 315-face state. Carving whole
+//! faces out of a face, as here, is cheaper than the box: a face inside one
+//! with a smaller id (the common case in a stack) is gone after one
+//! containment test, and a cell is carved only along the edges it crosses.
+//! On the Fold perf example's states at 129–256 faces it takes 4 ms where the
+//! box took 15.
 
 use std::collections::{BTreeMap, BTreeSet};
 
