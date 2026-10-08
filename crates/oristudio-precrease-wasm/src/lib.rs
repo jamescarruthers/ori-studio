@@ -547,7 +547,8 @@ fn parse_frame(frame: JsValue) -> Result<Frame, JsValue> {
     }
     // Rebuild through the constructor so a hand-edited y_axis or an
     // unnormalised x_axis cannot produce a non-rigid map.
-    Frame::new(frame.origin, frame.x_axis, frame.width, frame.height).map_err(to_js_precrease_error)
+    Frame::new(frame.origin, frame.x_axis, frame.width, frame.height)
+        .map_err(|error| to_js_precrease_error(error.into()))
 }
 
 fn parse_point(x: f64, y: f64) -> Result<[f64; 2], JsValue> {

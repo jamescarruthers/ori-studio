@@ -191,7 +191,7 @@ impl Line {
     /// within `TOL` still land on opposite ends of the fold. That is why
     /// [`Self::key`] is a hash hint and [`LineIndex`], which probes its
     /// neighbouring buckets and wraps, is the tolerance-aware structure.
-    pub(crate) fn folded_angle_offset(&self) -> (f64, f64) {
+    pub fn folded_angle_offset(&self) -> (f64, f64) {
         let mut theta = self.normal_angle();
         let mut d = self.d;
         if theta < 0.0 {
