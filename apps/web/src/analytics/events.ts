@@ -709,7 +709,8 @@ export type PaperExportSurface =
   | 'inline-simulation'
   | 'folded-3d'
   | 'folded-flat'
-  | 'references';
+  | 'references'
+  | 'fold';
 
 /** A paper export's image format — the file's kind only, never its name. */
 export type PaperExportFormat = 'svg' | 'png';
