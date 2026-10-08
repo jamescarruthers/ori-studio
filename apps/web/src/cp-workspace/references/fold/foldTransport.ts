@@ -14,7 +14,6 @@
 import {
   foldLegs,
   isFolded,
-  legPace,
   runAtRest,
   runHeading,
   runPose,
@@ -24,8 +23,9 @@ import {
   type FoldHeading,
   type FoldPose,
   type FoldRun,
-} from './foldPlayback';
+} from '../../../lib/foldMotion/foldPlayback';
 import type { FoldScene, FoldSceneKind } from './foldScene';
+import { legPace } from './foldSceneProgramme';
 
 /** Where a pose goes: the view's imperative handle, or anything shaped like it. */
 export interface FoldPoseSink {

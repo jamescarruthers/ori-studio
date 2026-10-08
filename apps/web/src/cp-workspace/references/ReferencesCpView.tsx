@@ -44,7 +44,7 @@ import {
   type DiagramPens,
 } from './diagram/diagramInk';
 import { diagramGroundInk } from './diagram/diagramColors';
-import type { FoldPose } from './fold/foldPlayback';
+import type { FoldPose } from '../../lib/foldMotion/foldPlayback';
 import {
   DEFAULT_SURFACE_SHARES,
   EMPTY_FOLDED,

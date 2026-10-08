@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
+import type { FoldPose } from '../../lib/foldMotion/foldPlayback';
 import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
 import type { ReferencesDiagramView } from './ReferencesCpView';
 import {
@@ -20,7 +21,6 @@ import {
   REFERENCES_VIEW_MARKS,
   withReferencesViewFloors,
 } from './diagram/diagramInk';
-import type { FoldPose } from './fold/foldPlayback';
 import { foldPosePaper } from './fold/foldPoseGeometry';
 import type { FoldScene } from './fold/foldScene';
 import { symbolFlaps, symbolOpacity } from './fold/foldSymbolFade';

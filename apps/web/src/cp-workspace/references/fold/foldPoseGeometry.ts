@@ -23,10 +23,10 @@
  * both taken out (2026-09-16): from straight above they read as grey slabs
  * beside the paper, not as height.
  */
+import type { FoldPose } from '../../../lib/foldMotion/foldPlayback';
 import { convexHull, type Point } from '../../../lib/geometry';
 import type { FoldedGeometry, Rgba, StrokeGeometry } from '../../renderer/types';
 import { clipPolygonToSide } from '../diagram/plannerDiagram';
-import type { FoldPose } from './foldPlayback';
 import { chordFrame, fromChordFrame, inChordFrame, type FoldScene } from './foldScene';
 import type { FlapStrokes } from './foldSplit';
 import {

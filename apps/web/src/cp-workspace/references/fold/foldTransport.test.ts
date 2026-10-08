@@ -4,7 +4,7 @@ import {
   TURN_OVER_DURATION_MS,
   TWIN_HOLD_MS,
   type FoldHeading,
-} from './foldPlayback';
+} from '../../../lib/foldMotion/foldPlayback';
 import type { FoldScene, FoldSceneKind } from './foldScene';
 import {
   AUTO_PLAY_SETTLE_MS,
