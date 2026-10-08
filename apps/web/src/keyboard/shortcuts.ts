@@ -47,12 +47,18 @@ export type ShortcutScope = ConditionalShortcutScope | (typeof CONTEXT_SHORTCUT_
  *   fall through to the steps. The steps' arrows and Enter decline in turn
  *   while a focused control uses the key — a tab strip its arrows, a button
  *   its Enter — instead of taking it away.
+ * - `fold` — the Fold workspace, only in its own context, as the Diagram's:
+ *   its steps' arrows, Space and Enter (`implementation-plans/fold-workspace.md`,
+ *   D14) never stack with `crease-pattern`, and its executor declines while a
+ *   focused control owns the key. Registered before its bindings, which land
+ *   with the Fold panel ({@link FOLD_SHORTCUTS}).
  */
 export const CONDITIONAL_SHORTCUT_SCOPES = [
   { scope: 'simulator', target: 'simulator', onlyIn: null },
   { scope: 'references', target: 'references', onlyIn: null },
   { scope: 'diagram-path', target: 'diagram', onlyIn: 'diagram' },
   { scope: 'diagram', target: 'diagram', onlyIn: 'diagram' },
+  { scope: 'fold', target: 'fold', onlyIn: 'fold' },
 ] as const satisfies readonly {
   scope: string;
   target: ConditionalShortcutTarget;
@@ -170,13 +176,20 @@ export type DiagramPathShortcutId =
   | 'diagram.nudgeNodeRightLarge'
   | 'diagram.nudgeNodeUpLarge'
   | 'diagram.nudgeNodeDownLarge';
+/**
+ * The Fold workspace's verbs: none yet. The scope and its executor slot exist
+ * so the panel can claim the keyboard the day its first binding lands in
+ * {@link FOLD_SHORTCUTS}; until then an executor is offered no id at all.
+ */
+export type FoldShortcutId = never;
 export type ShortcutActionId =
   | MenuActionId
   | OristudioCpActionId
   | ViewportShortcutId
   | SimulatorShortcutId
   | ReferencesShortcutId
-  | DiagramShortcutId;
+  | DiagramShortcutId
+  | FoldShortcutId;
 
 /**
  * The ids each conditional surface's executor answers, by the `target` its
@@ -187,6 +200,7 @@ export interface ConditionalShortcutIds {
   simulator: SimulatorShortcutId;
   references: ReferencesShortcutId;
   diagram: DiagramShortcutId;
+  fold: FoldShortcutId;
 }
 export type ConditionalShortcutTarget = keyof ConditionalShortcutIds;
 export type ShortcutTarget = 'menu' | 'cp-action' | 'viewport' | ConditionalShortcutTarget;
@@ -702,6 +716,15 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
 ];
 
 /**
+ * Fold-workspace bindings, in the `fold` scope: empty until the Fold panel
+ * lands the verbs D14 lists — the steps on ←/→ and `[`/`]` as the Diagram's,
+ * the active step's branches on ↑/↓ as References' ways, candidate roots on
+ * Shift+←/→, Space to play the step, Enter to commit. Escape stays
+ * `viewport.cancel`, as it is in the Diagram.
+ */
+const FOLD_SHORTCUTS: ShortcutDefinition[] = [];
+
+/**
  * The viewport verbs whose executor can answer `false` and let the chord fall
  * through to the next scope.
  *
@@ -839,6 +862,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   ...SIMULATOR_SHORTCUTS,
   ...REFERENCES_SHORTCUTS,
   ...DIAGRAM_SHORTCUTS,
+  ...FOLD_SHORTCUTS,
   ...VIEWPORT_SHORTCUTS,
 ];
 

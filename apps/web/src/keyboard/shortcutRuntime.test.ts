@@ -64,6 +64,7 @@ describe('shortcut runtime', () => {
 
   describe('conditional scopes, keyed by surface', () => {
     it('pushes every registered surface’s scopes in one order, each only where it may be', () => {
+      cleanupWith(registerConditionalScopeExecutor('fold', () => true));
       cleanupWith(registerConditionalScopeExecutor('diagram', () => true));
       cleanupWith(registerConditionalScopeExecutor('references', () => true));
       cleanupWith(registerConditionalScopeExecutor('simulator', () => true));
@@ -77,7 +78,15 @@ describe('shortcut runtime', () => {
         'viewport',
         'global',
       ]);
-      // The Diagram's scopes stay home; the others go wherever their surface is.
+      expect(shortcutScopeStackForContext({ activeEditingContext: 'fold' })).toEqual([
+        'simulator',
+        'references',
+        'fold',
+        'viewport',
+        'global',
+      ]);
+      // The Diagram's and Fold's scopes stay home; the others go wherever their
+      // surface is.
       expect(shortcutScopeStackForContext({ activeEditingContext: 'crease-pattern' })).toEqual([
         'simulator',
         'references',
@@ -401,6 +410,55 @@ describe('shortcut runtime', () => {
       });
       expect(cp).not.toHaveBeenCalled();
       releaseShortcutViewportSurface('tree');
+    });
+  });
+
+  describe('the Fold workspace', () => {
+    it('pushes its scope only in its own context, while its panel holds an executor', () => {
+      expect(shortcutScopeStackForContext({ activeEditingContext: 'fold' })).toEqual([
+        'viewport',
+        'global',
+      ]);
+      const dispose = registerConditionalScopeExecutor('fold', () => true);
+      expect(shortcutScopeStackForContext({ activeEditingContext: 'fold' })).toEqual([
+        'fold',
+        'viewport',
+        'global',
+      ]);
+      // Never beside the crease-pattern scope or the Diagram's, even with the
+      // executor left behind.
+      expect(shortcutScopeStackForContext({ activeEditingContext: 'crease-pattern' })).toEqual([
+        'viewport',
+        'crease-pattern',
+        'global',
+      ]);
+      expect(shortcutScopeStackForContext({ activeEditingContext: 'diagram' })).toEqual([
+        'viewport',
+        'global',
+      ]);
+
+      dispose();
+      expect(shortcutScopeStackForContext({ activeEditingContext: 'fold' })).toEqual([
+        'viewport',
+        'global',
+      ]);
+    });
+
+    it('leaves every chord to the scopes beneath while it binds none', () => {
+      // The scope is in the stack with no bindings yet, so the global ones
+      // still answer from Fold: Undo goes to the menu as anywhere else.
+      const fold = vi.fn(() => true);
+      cleanupWith(registerConditionalScopeExecutor('fold', fold));
+      const menu = vi.fn();
+
+      expect(
+        handleShortcutRuntimeKeyDown(
+          new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true, cancelable: true }),
+          { context: { activeEditingContext: 'fold' }, menu }
+        )
+      ).toBe(true);
+      expect(menu).toHaveBeenCalledWith('edit.undo');
+      expect(fold).not.toHaveBeenCalled();
     });
   });
 
