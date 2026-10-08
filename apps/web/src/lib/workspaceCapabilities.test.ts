@@ -26,7 +26,7 @@ function capabilities({
   oristudioCpSolvablePatternCount = 0,
   hasDeletableDesignSelection = false,
   canSaveDesign = activeEditingContext !== 'crease-pattern',
-  hasDiagram = false,
+  hasProjectDocument = false,
   diagramStepCount = 0,
   hasDeletableDiagramSelection = false,
   diagramDeleteTarget = 'step',
@@ -58,7 +58,7 @@ function capabilities({
   oristudioCpSolvablePatternCount?: number;
   hasDeletableDesignSelection?: boolean;
   canSaveDesign?: boolean;
-  hasDiagram?: boolean;
+  hasProjectDocument?: boolean;
   diagramStepCount?: number;
   hasDeletableDiagramSelection?: boolean;
   diagramDeleteTarget?: 'step' | 'annotation' | 'node';
@@ -91,7 +91,7 @@ function capabilities({
     oristudioCpSolvablePatternCount,
     hasDeletableDesignSelection,
     canSaveDesign,
-    hasDiagram,
+    hasProjectDocument,
     diagramStepCount,
     hasDeletableDiagramSelection,
     diagramDeleteTarget,
@@ -299,7 +299,7 @@ describe('workspace capabilities', () => {
       activeEditingContext: 'diagram',
       status: 'optimizing',
       canSaveDesign: false,
-      hasDiagram: true,
+      hasProjectDocument: true,
       historyPastCount: 1,
       historyFutureCount: 1,
       hasDeletableDiagramSelection: true,
@@ -370,9 +370,9 @@ describe('workspace capabilities', () => {
     }
   });
 
-  it('saves a project that has a diagram from any workspace, whatever else it holds', () => {
-    for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'bp-tree'] as const) {
-      const state = capabilities({ activeEditingContext, canSaveDesign: false, hasDiagram: true });
+  it('saves a project that has a project document — a diagram, fold sequences — from any workspace, whatever else it holds', () => {
+    for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'bp-tree', 'fold'] as const) {
+      const state = capabilities({ activeEditingContext, canSaveDesign: false, hasProjectDocument: true });
       expect(state['file.save'], activeEditingContext).toMatchObject({
         enabled: true,
         reason: 'Save Ori Studio project',
@@ -386,34 +386,34 @@ describe('workspace capabilities', () => {
         documentMode: 'crease-pattern',
         hasEditableCreasePattern: true,
         canSaveDesign: false,
-        hasDiagram: true,
+        hasProjectDocument: true,
       })['file.save'].reason
     ).toBe('Save editable crease pattern as an Ori Studio project');
     // And a busy engine still holds it back.
     expect(
-      capabilities({ status: 'optimizing', canSaveDesign: false, hasDiagram: true })['file.save']
+      capabilities({ status: 'optimizing', canSaveDesign: false, hasProjectDocument: true })['file.save']
         .enabled
     ).toBe(false);
   });
 
   it('exports a diagram with a step from any workspace, while an engine works too', () => {
-    expect(capabilities({ hasDiagram: true, diagramStepCount: 0 })['file.exportDiagram']).toMatchObject({
+    expect(capabilities({ hasProjectDocument: true, diagramStepCount: 0 })['file.exportDiagram']).toMatchObject({
       enabled: false,
       reason: 'Add a step to the diagram to export it',
     });
     for (const activeEditingContext of ['diagram', 'treemaker-tree', 'crease-pattern'] as const) {
-      const state = capabilities({ activeEditingContext, status: 'optimizing', hasDiagram: true, diagramStepCount: 3 });
+      const state = capabilities({ activeEditingContext, status: 'optimizing', hasProjectDocument: true, diagramStepCount: 3 });
       expect(state['file.exportDiagram'].enabled, activeEditingContext).toBe(true);
     }
   });
 
   it('prints a diagram with a step from any workspace, as it exports one', () => {
-    expect(capabilities({ hasDiagram: true, diagramStepCount: 0 })['file.printDiagram']).toMatchObject({
+    expect(capabilities({ hasProjectDocument: true, diagramStepCount: 0 })['file.printDiagram']).toMatchObject({
       enabled: false,
       reason: 'Add a step to the diagram to print it',
     });
     for (const activeEditingContext of ['diagram', 'treemaker-tree', 'crease-pattern'] as const) {
-      const state = capabilities({ activeEditingContext, status: 'optimizing', hasDiagram: true, diagramStepCount: 3 });
+      const state = capabilities({ activeEditingContext, status: 'optimizing', hasProjectDocument: true, diagramStepCount: 3 });
       expect(state['file.printDiagram'].enabled, activeEditingContext).toBe(true);
     }
   });

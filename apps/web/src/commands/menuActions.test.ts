@@ -907,7 +907,7 @@ describe('menu actions', () => {
         oristudioCpSelectedCircleCount: 0,
         hasDeletableDesignSelection: false,
         canSaveDesign: true,
-        hasDiagram: false,
+        hasProjectDocument: false,
         diagramStepCount: 0,
         hasDeletableDiagramSelection: false,
         diagramDeleteTarget: 'step',

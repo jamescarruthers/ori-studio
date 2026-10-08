@@ -15,6 +15,7 @@ import {
   hasDeletableDiagramSelection as selectHasDeletableDiagramSelection,
   historyCountForContext,
 } from './capabilities';
+import { hasProjectDocument as selectHasProjectDocument } from './projectDocuments';
 import { useWorkspaceStore } from './store';
 
 export function useWorkspaceCapabilities() {
@@ -63,7 +64,7 @@ export function useWorkspaceCapabilities() {
   const canSaveDesign = useWorkspaceStore((state) =>
     state.designTabs.some((tab) => (tab.kind ? designKind(tab.kind)?.isSavable(tab) : false) ?? false)
   );
-  const hasDiagram = useWorkspaceStore((state) => state.diagram !== null);
+  const hasProjectDocument = useWorkspaceStore(selectHasProjectDocument);
   const diagramStepCount = useWorkspaceStore((state) => state.diagram?.steps.length ?? 0);
   const hasDeletableDiagramSelection = useWorkspaceStore(selectHasDeletableDiagramSelection);
   const diagramDeleteTarget = useWorkspaceStore(diagramDeleteTargetOf);
@@ -73,6 +74,8 @@ export function useWorkspaceCapabilities() {
   const diagramHistoryFutureCount = useWorkspaceStore(
     (state) => state.diagramHistory.future.length
   );
+  const foldHistoryPastCount = useWorkspaceStore((state) => state.foldHistory.past.length);
+  const foldHistoryFutureCount = useWorkspaceStore((state) => state.foldHistory.future.length);
   // Subscribed to the tab itself, which is what carries every design kind's
   // undo stack. An edit replaces the tab object, so this re-renders — the
   // per-kind history subscriptions this replaced were only ever reading the
@@ -86,6 +89,7 @@ export function useWorkspaceCapabilities() {
     {
       cp: hasEditableCreasePattern ? cpHistoryPastCount : 0,
       diagram: diagramHistoryPastCount,
+      fold: foldHistoryPastCount,
     },
     'past'
   );
@@ -95,6 +99,7 @@ export function useWorkspaceCapabilities() {
     {
       cp: hasEditableCreasePattern ? cpHistoryFutureCount : 0,
       diagram: diagramHistoryFutureCount,
+      fold: foldHistoryFutureCount,
     },
     'future'
   );
@@ -123,7 +128,7 @@ export function useWorkspaceCapabilities() {
           oristudioCpSolvablePatternCount,
           hasDeletableDesignSelection,
           canSaveDesign,
-          hasDiagram,
+          hasProjectDocument,
           diagramStepCount,
           hasDeletableDiagramSelection,
           diagramDeleteTarget,
@@ -157,7 +162,7 @@ export function useWorkspaceCapabilities() {
       oristudioCpSolvablePatternCount,
       hasDeletableDesignSelection,
       canSaveDesign,
-      hasDiagram,
+      hasProjectDocument,
       diagramStepCount,
       hasDeletableDiagramSelection,
       diagramDeleteTarget,

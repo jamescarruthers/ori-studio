@@ -8,14 +8,15 @@ import {
 } from './snapshotHistory';
 
 /**
- * The undo kit of a project-level document — the Diagram's, and Fold's next:
- * a document the project holds beside its designs and its crease pattern,
- * snapshotted whole onto a stack of its own (`snapshotHistory`) and replaced
- * whole when the project is.
+ * The undo kit of a project-level document — the Diagram's, and Fold's
+ * sequences: a document the project holds beside its designs and its crease
+ * pattern, snapshotted whole onto a stack of its own (`snapshotHistory`) and
+ * replaced whole when the project is.
  *
  * It holds the rules every such document keeps, so that none can forget one:
  *
- * - nothing changes a read-only document (one a newer build wrote);
+ * - nothing changes a read-only document (one a newer build wrote), for a
+ *   document that is read-only as a whole;
  * - an edit that returns the document it was given changed nothing, and
  *   records nothing — not even the document a first edit would have created;
  * - every other edit records the document as it was, trims the history, and
@@ -66,8 +67,12 @@ export interface ProjectDocumentKeys<T, S> {
   /** The document as stored: what is snapshotted and restored. */
   document: KeysHolding<T, S>;
   history: KeysHolding<T, SnapshotHistory<S>>;
-  /** The document came from a newer build: shown, never changed. */
-  readOnly: KeysHolding<T, boolean>;
+  /**
+   * The document came from a newer build: shown, never changed. None for a
+   * document whose parts are read-only each on its own — Fold's sequences,
+   * one `formatVersion` apiece — whose edits leave such a part as it is.
+   */
+  readOnly?: KeysHolding<T, boolean>;
   /** Bumped on every replacement, so a session never outlives its document. */
   loadId: KeysHolding<T, number>;
 }
@@ -97,8 +102,18 @@ export interface ProjectDocumentHistoryOptions<T extends { dirty: boolean }, S, 
   beforeCommit?: (base: D, edited: D) => ProjectDocumentLanding<T, S, D>;
   /** Drop what the history should not keep, after an edit records an entry. */
   trim?: (history: SnapshotHistory<S>, current: D) => SnapshotHistory<S>;
-  /** The view state an undo or a redo brings into line with what it restores, set with it. */
-  reconcile?: (restored: S) => Partial<T>;
+  /**
+   * The view state an undo or a redo brings into line with what it restores,
+   * set with it: given the document it replaced, and which way it went.
+   */
+  reconcile?: (restored: S, change: ProjectDocumentTravel<S>) => Partial<T>;
+}
+
+/** What an undo or a redo replaced, for {@link ProjectDocumentHistoryOptions.reconcile}. */
+export interface ProjectDocumentTravel<S> {
+  /** The document as it stood before the travel. */
+  before: S;
+  direction: 'undo' | 'redo';
 }
 
 export function createProjectDocumentHistory<T extends { dirty: boolean }, S, D extends S>(
@@ -111,7 +126,7 @@ export function createProjectDocumentHistory<T extends { dirty: boolean }, S, D 
   // through a generic index.
   const stored = (state: T) => state[keys.document] as S;
   const history = (state: T) => state[keys.history] as SnapshotHistory<S>;
-  const readOnly = (state: T) => state[keys.readOnly] as boolean;
+  const readOnly = (state: T) => (keys.readOnly === undefined ? false : (state[keys.readOnly] as boolean));
   const loadId = (state: T) => state[keys.loadId] as number;
   const landed = (document: S, nextHistory: SnapshotHistory<S>) =>
     ({ [keys.document]: document, [keys.history]: nextHistory, dirty: true }) as Partial<T>;
@@ -163,14 +178,15 @@ export function createProjectDocumentHistory<T extends { dirty: boolean }, S, D 
     const state = get();
     if (readOnly(state)) return false;
     openSession = null;
-    const current = snapshotEntry(stored(state), direction);
+    const before = stored(state);
+    const current = snapshotEntry(before, direction);
     const result =
       direction === 'undo'
         ? undoSnapshot(history(state), current)
         : redoSnapshot(history(state), current);
     if (!result) return false;
     const restored = result.restore.snapshot;
-    set({ ...landed(restored, result.history), ...options.reconcile?.(restored) });
+    set({ ...landed(restored, result.history), ...options.reconcile?.(restored, { before, direction }) });
     return true;
   };
 

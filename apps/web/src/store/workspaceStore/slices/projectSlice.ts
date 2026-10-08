@@ -152,6 +152,7 @@ import {
   pickProjectDocuments,
   projectDocumentDataBytes,
   projectDocumentFileValues,
+  projectDocumentViewState,
   projectDocumentsChangedSince,
   readProjectDocuments,
   type ReadProjectDocument,
@@ -849,7 +850,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     set({ status: 'loading_engine', error: null, projectMessage: null });
     await releaseEditableCreasePattern();
     // Before the tree is installed, so the install lands on the tab that survives.
-    // A tree opened on its own is a new project, so the diagram goes too.
+    // A tree opened on its own is a new project, so the project documents (the
+    // diagram, the fold sequences) go too.
     if (source.replacesProject !== false) set({ ...discardAllDesigns(), ...discardProjectDocuments() });
     const api = await getEngine();
     const snapshot = await loadTreeFromText(api, text);
@@ -1321,8 +1323,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
 
     // Retained for a lossless save round-trip: the file-level extension bag, and
     // any design whose kind this build could not read. The previous project's
-    // diagram goes too; the file's own is installed last, once nothing else can
-    // reset it.
+    // documents (its diagram, its fold sequences) go too; the file's own are
+    // installed last, once nothing else can reset them.
     set({
       nativeProjectExtensions: nativeProject.extensions,
       nativeUnknownDesigns: nativeProject.workspace.unknownDesigns,
@@ -1347,7 +1349,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     documents.install(get);
   };
 
-  /** Everything {@link loadNativeProject} installs besides the project documents (the diagram). */
+  /** Everything {@link loadNativeProject} installs besides the project documents (the diagram, the fold sequences). */
   const installNativeProject = async (
     nativeProject: ReturnType<typeof parseNativeProjectFile>,
     documents: ReadProjectDocument,
@@ -1383,7 +1385,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       } else {
         throw new ProjectFileFormatError(
           'project_file_damaged',
-          'Ori Studio project contains neither a design, a crease pattern nor a diagram'
+          'Ori Studio project contains neither a design, a crease pattern, a diagram nor a fold sequence'
         );
       }
       return;
@@ -1679,6 +1681,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
         unknownDesigns: get().nativeUnknownDesigns,
         creasePattern: creasePatternCompanion,
         ...projectDocumentFileValues(get()),
+        workspaceViewState: projectDocumentViewState(get()),
         extensions: get().nativeProjectExtensions,
         appVersion: APP_VERSION,
       })
@@ -1805,6 +1808,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       fileExtensions: get().nativeProjectExtensions,
       extensions: get().oristudioCpDocumentExtensions,
       ...projectDocumentFileValues(get()),
+      workspaceViewState: projectDocumentViewState(get()),
       appVersion: APP_VERSION,
     };
   };
@@ -1975,8 +1979,8 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
       });
       return null;
     }
-    // An Oriedita file has nowhere to put a project document (a diagram), so a
-    // project that has one is saved as `.osf` instead — through a dialog,
+    // An Oriedita file has nowhere to put a project document (a diagram, a fold
+    // sequence), so a project that has one is saved as `.osf` instead — through a dialog,
     // because the target is not a native file (`nativeSaveTarget`), never over
     // the `.ori` it came from.
     const keepsOriedita = !forceSaveAs && !hasProjectDocument(get());
@@ -2097,7 +2101,7 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
     // crease-pattern project and drop every other design in the workspace. A tab
     // that has chosen a kind *is* a design; only a lone untouched chooser is not.
     const hasDesign = get().designTabs.some((tab) => tab.kind !== null);
-    // A project document (a diagram) with no crease pattern beside it has no
+    // A project document (a diagram, a fold sequence) with no crease pattern beside it has no
     // Edit document to save through, so it takes the workspace writer, which
     // writes whatever exists. A read-only imported pattern (one the editor
     // could not take) is not among what it writes — nothing in the `.osf`

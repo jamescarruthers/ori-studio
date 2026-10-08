@@ -110,8 +110,9 @@ The native format and its migration live in
   being clear-eyed about: an older reader does not merely ignore an unknown
   field, it **deletes** it on re-save, because its own literal never names it.
   Raise the minimum only when that deletion is worse than refusing the file
-  outright. Two places are judged so: `unknownDesigns`, which asks for reader 8,
-  and the Diagram workspace's `workspace.diagram`, which asks for reader 9.
+  outright. Three places are judged so: `unknownDesigns`, which asks for reader
+  8, the Diagram workspace's `workspace.diagram`, which asks for reader 9, and
+  the Fold workspace's `workspace.foldSequences`, which asks for reader 10.
 - **The reader bar is its own number.** The check is
   `minimumReaderSchemaVersion > NATIVE_PROJECT_READER_VERSION`, and the reader
   version may run ahead of `NATIVE_PROJECT_SCHEMA_VERSION`. That is what lets a

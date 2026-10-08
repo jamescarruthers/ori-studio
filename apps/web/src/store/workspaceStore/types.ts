@@ -80,6 +80,10 @@ import type {
   StepCaptureStart,
 } from './diagramCapture';
 import type { CapturedPicture } from '../../diagram/capture/captureFolded';
+import type { FoldReaderState } from '../../fold/document/foldReaderState';
+import type { FoldMarkEntry, FoldPaperShape } from '../../fold/document/foldSequenceDocument';
+import type { FoldStepDraft } from '../../fold/document/foldSequenceEdits';
+import type { FoldHistory, FoldSequences } from './foldState';
 import type {
   OristudioCpCommandPayload,
   OristudioCpCommandPreview,
@@ -2303,6 +2307,71 @@ export interface DiagramSliceActions {
 
 export type DiagramSlice = DiagramSliceState & DiagramSliceActions;
 
+export interface FoldSliceState {
+  /**
+   * The project's fold sequences (implementation-plans/fold-workspace.md, D7),
+   * each with the value a newer build's is written back as: saved as an array,
+   * one shown — the first (`shownFoldSequence`). Empty for none, and then the
+   * file holds no key; the first edit creates one.
+   */
+  foldSequences: FoldSequences;
+  /** Whole-array snapshots, its own stack under the `fold` context. */
+  foldHistory: FoldHistory;
+  /** Bumped on every replacement; see `nextFoldLoadId`. */
+  foldLoadId: number;
+  /**
+   * The reader's place in the shown sequence (D6): the step on screen and the
+   * branch each step continues along. Outside the document and outside undo —
+   * never history, never dirty — but saved, in `workspace.viewState.fold`, and
+   * reconciled after every undo, redo and delete. Null with no sequence.
+   */
+  foldReader: FoldReaderState | null;
+}
+
+export interface FoldSliceActions {
+  /**
+   * Install the sequences read from a file (or none) over an empty history,
+   * the reader state held to the one shown.
+   */
+  installFoldSequences: (sequences: FoldSequences, reader: FoldReaderState | null) => void;
+  /**
+   * Commit a step under `draft.parent` in the shown sequence — creating one
+   * for the first — as one undo step, the cursor moved onto it: append-only,
+   * so a parent with children gains a branch. Its id, or null for a parent
+   * that is no step there or is locked, a newer build's sequence, or a
+   * `loadId` the sequences have been replaced since (a preview that outlived
+   * them).
+   */
+  commitFoldStep: (draft: FoldStepDraft, options?: { loadId?: number }) => string | null;
+  /**
+   * "Delete this step and what follows" (D6): the step and its subtree,
+   * locked or not, as one undo step. Whether it changed.
+   */
+  deleteFoldStep: (stepId: string) => boolean;
+  /**
+   * Set a step's note; an empty note clears it. Edits in one `session` at one
+   * step — a sitting at the field — are one undo step; `loadId` drops one
+   * that outlived its sequences. Whether it changed.
+   */
+  setFoldStepNote: (stepId: string, note: string, options?: { session?: number; loadId?: number }) => boolean;
+  /** Replace the marks made on a step, or on the flat sheet for null, as one undo step. Whether it changed. */
+  setFoldMarks: (stepId: string | null, marks: readonly FoldMarkEntry[]) => boolean;
+  /**
+   * Change the sheet's shape — the steps emptied with it (D7) — as one undo
+   * step, creating the sequence when there is none. Whether it changed.
+   */
+  setFoldPaperShape: (shape: FoldPaperShape) => boolean;
+  /**
+   * Put the reader on a step of the shown sequence — the flat sheet for null —
+   * and the active path through it. View state. Whether it moved.
+   */
+  moveFoldCursor: (stepId: string | null) => boolean;
+  undoFold: () => boolean;
+  redoFold: () => boolean;
+}
+
+export type FoldSlice = FoldSliceState & FoldSliceActions;
+
 export type WorkspaceState =
   ProjectSlice &
   ExploriSlice &
@@ -2314,7 +2383,8 @@ export type WorkspaceState =
   OristudioBpSlice &
   SimulatorSlice &
   ReferencesSlice &
-  DiagramSlice;
+  DiagramSlice &
+  FoldSlice;
 
 export type WorkspaceSliceCreator<T> = StateCreator<
   WorkspaceState,

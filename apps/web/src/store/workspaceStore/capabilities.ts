@@ -23,6 +23,7 @@ import { isSuppressionRegionAnnotation } from '../../cp-workspace/annotations/an
 import { hasAttachedSolveInput } from '../../cp-workspace/annotations/suppressionRegion';
 import type { EditingContext } from '../../workspaces/editingContext';
 import { stepById, turnById } from '../../diagram/document/diagramDocument';
+import { hasProjectDocument } from './projectDocuments';
 import type { WorkspaceState } from './types';
 
 /**
@@ -33,13 +34,14 @@ export interface WorkspaceHistoryCounts {
   /** The crease-pattern editor's stack, or 0 with no editable crease pattern. */
   cp: number;
   diagram: number;
+  fold: number;
 }
 
 /**
  * How deep the active context's undo stack is.
  *
- * The crease-pattern editor and the Diagram answer for themselves — they are
- * workspaces, not design kinds — and every design kind answers through its
+ * The crease-pattern editor, the Diagram and Fold answer for themselves — they
+ * are workspaces, not design kinds — and every design kind answers through its
  * descriptor. This used to list the kinds it knew and return 0 for the rest,
  * which *disabled* Undo and Redo for a registered kind rather than merely
  * leaving them unwired, and made the dispatch behind them unreachable. Nothing
@@ -56,6 +58,7 @@ export function historyCountForContext(
 ): number {
   if (context === 'crease-pattern') return counts.cp;
   if (context === 'diagram') return counts.diagram;
+  if (context === 'fold') return counts.fold;
   const kind = kinds ? designKindRegistry(kinds).forContext(context) : designKindForContext(context);
   if (!kind) return 0;
   return kind.history(tab)[which];
@@ -130,6 +133,7 @@ export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabi
     {
       cp: state.oristudioCpDocument ? state.oristudioCpHistoryPast.length : 0,
       diagram: state.diagramHistory.past.length,
+      fold: state.foldHistory.past.length,
     },
     'past'
   );
@@ -139,6 +143,7 @@ export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabi
     {
       cp: state.oristudioCpDocument ? state.oristudioCpHistoryFuture.length : 0,
       diagram: state.diagramHistory.future.length,
+      fold: state.foldHistory.future.length,
     },
     'future'
   );
@@ -165,7 +170,7 @@ export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabi
     hasDeletableDesignSelection:
       activeKind?.deletableTarget?.(activeDesignTab(state)) != null,
     canSaveDesign: anyDesignIsSavable(state),
-    hasDiagram: state.diagram !== null,
+    hasProjectDocument: hasProjectDocument(state),
     diagramStepCount: state.diagram?.steps.length ?? 0,
     hasDeletableDiagramSelection: hasDeletableDiagramSelection(state),
     diagramDeleteTarget: diagramDeleteTarget(state),

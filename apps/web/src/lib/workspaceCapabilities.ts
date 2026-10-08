@@ -177,11 +177,12 @@ export interface WorkspaceCapabilityInput {
    */
   canSaveDesign: boolean;
   /**
-   * Whether the project has a diagram. A diagram is saved whatever else the
+   * Whether the project holds a project document — a diagram, fold sequences
+   * (`store/workspaceStore/projectDocuments`). One is saved whatever else the
    * project holds — alone, beside a crease pattern, or beside designs — and
    * from any workspace, so it makes the project savable by itself.
    */
-  hasDiagram: boolean;
+  hasProjectDocument: boolean;
   /** How many steps the diagram has: one is enough to export it. */
   diagramStepCount: number;
   /**
@@ -269,7 +270,7 @@ export function getWorkspaceCapabilities(
   // focus (`saveActiveProject`), so leaving Edit must not take it away.
   const canSaveEditableCreasePattern = input.hasEditableCreasePattern;
   const canSaveProject =
-    input.canSaveDesign || canSaveEditableCreasePattern || input.hasDiagram;
+    input.canSaveDesign || canSaveEditableCreasePattern || input.hasProjectDocument;
   // A box-pleat design saves as a native .osf (bundling its companion CP).
   const canExportEditableCp = input.hasEditableCreasePattern;
   const canExportCreasePattern = hasCreasePattern && !isBusy;
@@ -345,7 +346,7 @@ export function getWorkspaceCapabilities(
     'file.save': capability(
       canSaveProject && !isBusy,
       t('common:capability.save', 'Save'),
-      input.canSaveDesign || (input.hasDiagram && !canSaveEditableCreasePattern)
+      input.canSaveDesign || (input.hasProjectDocument && !canSaveEditableCreasePattern)
         ? busyOr(t('common:capability.saveProject', 'Save Ori Studio project'), input.status, t)
         : canSaveEditableCreasePattern
           ? busyOr(t('common:capability.saveEditableCpAsProject', 'Save editable crease pattern as an Ori Studio project'), input.status, t)
@@ -354,7 +355,7 @@ export function getWorkspaceCapabilities(
     'file.saveAs': capability(
       canSaveProject && !isBusy,
       t('common:capability.saveAs', 'Save As...'),
-      input.canSaveDesign || (input.hasDiagram && !canSaveEditableCreasePattern)
+      input.canSaveDesign || (input.hasProjectDocument && !canSaveEditableCreasePattern)
         ? busyOr(t('common:capability.saveProjectAsNewFile', 'Save Ori Studio project as a new file'), input.status, t)
         : canSaveEditableCreasePattern
           ? busyOr(t('common:capability.saveEditableCpAsNewProject', 'Save editable crease pattern as a new Ori Studio project'), input.status, t)
