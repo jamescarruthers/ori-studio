@@ -199,16 +199,20 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
 random lines through the middle of the folded model, from the flat square to
 more than 256 faces, 40 runs, bucketed by the landed state's faces like the
 core spike's `perf.mjs`. Apple Silicon, native release build, 2026-10-08, one
-run on a shared machine (load average 16–28; a run at load 50 was twice as
+run on a shared machine (load average 17–23; a run at load 50 was twice as
 slow, so read p95 as pessimistic).
 
 | Faces | Folds | Pairs (mean) | Closure | Fold mean / p95 | Full gate | Checker alone |
 |---|---|---|---|---|---|---|
-| 1–8 | 121 | 11 | 0.004 ms | 0.066 / 0.15 ms | 0.043 ms | 0.034 ms |
-| 9–32 | 86 | 170 | 0.014 ms | 0.71 / 1.6 ms | 0.61 ms | 0.58 ms |
-| 33–64 | 68 | 845 | 0.073 ms | 3.7 / 6.6 ms | 3.3 ms | 3.3 ms |
-| 65–128 | 79 | 2,978 | 0.30 ms | 13.6 / 26.8 ms | 12.7 ms | 12.7 ms |
-| 129–256 | 76 | 9,634 | 1.5 ms | 47.0 / 81.8 ms | 42.5 ms | 42.3 ms |
+| 1–8 | 121 | 11 | 0.004 ms | 0.050 / 0.094 ms | 0.028 ms | 0.020 ms |
+| 9–32 | 86 | 170 | 0.015 ms | 0.34 / 0.68 ms | 0.25 ms | 0.21 ms |
+| 33–64 | 68 | 845 | 0.073 ms | 1.3 / 2.3 ms | 0.97 ms | 0.91 ms |
+| 65–128 | 79 | 2,978 | 0.29 ms | 3.9 / 7.0 ms | 2.8 ms | 2.8 ms |
+| 129–256 | 76 | 9,634 | 1.5 ms | 11.9 / 21.3 ms | 7.6 ms | 7.7 ms |
+
+The same example on the layer order before its rework (commit `c0a3d44`), run
+straight after at load 12–16: 3.7 / 6.6 ms at 33–64 faces and 48.0 / 86.4 ms
+at 129–256, the full gate 43.2 ms.
 
 *Closure* is `State::analyse_fold` (snap, classify, pieces, flaps, U); *fold*
 the whole operation, its incremental gate included; *full gate* `State::make`
@@ -220,17 +224,21 @@ layers, so it is no cheaper.
 - **The fold's own work is small**: fold minus gate is about 0.3 ms at 33–64
   faces and 4 ms at 129–256, under the JS spike's p95 for the op alone (2.2 ms
   and 17.2 ms, research §12).
-- **The gate dominates**, and almost all of it is the layer-order problem: at
-  130–260 faces the overlay into cells is 10–30 ms and the constraint build
-  another 10–25 ms (run the example with `FOLD_PERF_SPLIT=1` for the
-  breakdown). Random all-layer folds touch nearly every face, so the
-  incremental rebuild costs what a full build does, and the overlay is always
-  rebuilt in full.
+- **The gate is most of it**, and almost all of the gate is the layer-order
+  problem: above 128 faces the overlay into cells is 5.0 ms, the rest of the
+  constraint build 2.7 ms and the check on the built problem 0.7 ms (run the
+  example with `FOLD_PERF_SPLIT=1` for the breakdown; before the rework, run
+  back to back, they were 24, 21 and 11 ms).
+- **The drop came from how the overlay is built** (`oristudio-layer-order`'s
+  README) and from tables in place of ordered maps, more than from
+  incrementality: random all-layer folds touch most faces, and nearly every
+  other face overlaps one of them, so the rebuild still costs about what a
+  build does. Where an operation is local it pays: on these states a rebuild
+  naming one face costs 3.9 ms against 6.3 ms for a build (before: 23
+  against 31 ms).
 - These stacks are much deeper than real models (9,600 pairs at 129–256
-  faces; Beloch's crane is 60 faces at step 17). Against the plan's tier-3
-  budget (≤ 50 ms at 256 faces, in wasm) the gate is the part to make
-  incremental: an overlay updated over the touched faces' region, in
-  `oristudio-layer-order`.
+  faces; Beloch's crane is 60 faces at step 17), and the plan's tier-3 budget
+  is ≤ 50 ms at 256 faces in wasm.
 
 `cargo run -p oristudio-fold --release --example landmarks`: every landmark of
 a state and the candidates of an O2 and an O6 over them, on states made the

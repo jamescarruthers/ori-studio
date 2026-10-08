@@ -80,6 +80,10 @@ pub struct FoldedView {
     faces: Vec<Face>,
     edges: Vec<Edge>,
     index: BTreeMap<FaceId, usize>,
+    /// The same index as a table on the id, `u32::MAX` for no face; empty
+    /// when the ids are too sparse for one. The problem and the checker look
+    /// faces up per constraint and per cell, where the map's lookups showed.
+    dense: Vec<u32>,
     boxes: Vec<[f64; 4]>,
     /// Per edge, whether each face lies left of `segment[0] → segment[1]`.
     left: Vec<[bool; 2]>,
@@ -126,6 +130,7 @@ impl FoldedView {
             left.push(edge_sides(e, edge, &checked, &index)?);
         }
         Ok(FoldedView {
+            dense: dense_index(&index),
             faces: checked,
             edges,
             index,
@@ -143,12 +148,18 @@ impl FoldedView {
     }
 
     pub fn face(&self, id: FaceId) -> Option<&Face> {
-        self.index.get(&id).map(|&i| &self.faces[i])
+        self.index_of(id).map(|i| &self.faces[i])
     }
 
     /// The face's position in [`FoldedView::faces`].
     pub fn index_of(&self, id: FaceId) -> Option<usize> {
-        self.index.get(&id).copied()
+        if self.dense.is_empty() {
+            return self.index.get(&id).copied();
+        }
+        match self.dense.get(id.0 as usize) {
+            Some(&p) if p != u32::MAX => Some(p as usize),
+            _ => None,
+        }
     }
 
     pub fn front_up(&self, id: FaceId) -> Option<bool> {
@@ -163,6 +174,23 @@ impl FoldedView {
     pub(crate) fn edge_left(&self, e: usize) -> [bool; 2] {
         self.left[e]
     }
+}
+
+/// The index as a table on the id when the largest id is under eight per face
+/// (the engine's ids grow by two per split; FOLD's are positions); empty
+/// otherwise.
+fn dense_index(index: &BTreeMap<FaceId, usize>) -> Vec<u32> {
+    let Some((&FaceId(last), _)) = index.last_key_value() else {
+        return Vec::new();
+    };
+    if last as usize >= 8 * index.len() + 64 {
+        return Vec::new();
+    }
+    let mut dense = vec![u32::MAX; last as usize + 1];
+    for (&FaceId(id), &p) in index {
+        dense[id as usize] = p as u32;
+    }
+    dense
 }
 
 /// Validate one edge and find which side of it each face lies on.
