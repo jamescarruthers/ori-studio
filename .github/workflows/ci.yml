@@ -398,9 +398,15 @@ jobs:
 
       # The Flat-Folder oracle is a Node script wrapping the vendored JS, so it
       # needs no build. The corpus suite is deliberately not run here: it takes
-      # over ten minutes locally, where flat_folder_oracle takes under a second.
+      # over ten minutes locally, where flat_folder_oracle takes under a second
+      # and flat_folder_verify (the oracle's `verify` command) about three.
       - name: Flat-Folder oracle parity
         env:
           ORACLE_REQUIRED: FLATFOLDER_ORACLE
           FLATFOLDER_ORACLE: tools/flat-folder-oracle/oracle.mjs
-        run: RUSTC_WORKSPACE_WRAPPER="${GITHUB_WORKSPACE}/.github/clippy-driver-wrapper.sh" cargo test -p oracle-tests --test flat_folder_oracle --test oracle_env_guard
+        run: |
+          RUSTC_WORKSPACE_WRAPPER="${GITHUB_WORKSPACE}/.github/clippy-driver-wrapper.sh" \
+            cargo test -p oracle-tests \
+              --test flat_folder_oracle \
+              --test flat_folder_verify \
+              --test oracle_env_guard
