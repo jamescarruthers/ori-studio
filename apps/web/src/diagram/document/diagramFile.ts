@@ -16,6 +16,10 @@
  *   build's, the whole raw value is kept and written back unchanged; what is
  *   shown is a best-effort reading of it.
  *
+ * The rules' machinery — the newer-build sentinel, lists read by id, the
+ * versioned envelope — is `lib/documentFile`'s, for the project file's other
+ * documents to share; what each field reads as is this file's.
+ *
  * Every string a user typed passes through `xmlText` on the way in, so what is
  * stored can always be written into an SVG page. Every uploaded SVG is
  * sanitized again on the way in, and every uploaded bitmap's header checked
@@ -39,6 +43,16 @@ import type { DiagramWhiteArrowWidth } from '../../cp-workspace/references/diagr
 import type { WhiteArrowTail } from '../../cp-workspace/references/stepDiagramGeometry';
 import { readRegionReference } from '../../cp-workspace/regions/regionReference';
 import { readSheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
+import {
+  NEWER,
+  finiteNumber,
+  hasNewerKey,
+  isRecord,
+  readEntries,
+  readVersioned,
+  writeVersioned,
+  type ReadVersioned,
+} from '../../lib/documentFile';
 import { isBuiltInPaperPresetId } from '../../lib/paper/paperPresets';
 import { readPaperScene } from '../../lib/paper/paperSceneValidate';
 import { normalizePaperStyle } from '../../lib/paper/paperStyle';
@@ -137,18 +151,8 @@ import {
 import { validateStepDiagramModel } from './stepDiagramModelFile';
 import { normalizeStepPlace, PLACE_OFFSETS, placeOffset, placeScale } from './stepPlace';
 
-/** A diagram read from a file. */
-export interface ReadDiagram {
-  document: DiagramDocument;
-  /**
-   * The file was written by a newer build (`formatVersion` above this one's).
-   * The document shown is a best-effort reading; nothing may change it, and
-   * {@link raw} is what is written back.
-   */
-  readOnly: boolean;
-  /** The value as read, for writing back a read-only diagram unchanged. */
-  raw: Record<string, unknown>;
-}
+/** A diagram read from a file: read-only when a newer build wrote it. */
+export type ReadDiagram = ReadVersioned<DiagramDocument>;
 
 export interface ReadDiagramOptions {
   newId?: DiagramIdFactory;
@@ -161,25 +165,22 @@ export interface ReadDiagramOptions {
  * object.
  */
 export function readDiagram(value: unknown, options: ReadDiagramOptions = {}): ReadDiagram | null {
-  if (!isRecord(value)) return null;
+  return readVersioned(value, {
+    version: DIAGRAM_FORMAT_VERSION,
+    read: (diagram) => readDiagramDocument(diagram, options),
+    newerField: unknownDocumentField,
+  });
+}
+
+function readDiagramDocument(value: Record<string, unknown>, options: ReadDiagramOptions): DiagramDocument {
   const newId = options.newId ?? randomDiagramId;
-  const formatVersion = typeof value.formatVersion === 'number' ? value.formatVersion : 1;
   // Made only when the diagram holds an SVG, so reading one without needs no DOM.
   let sanitizeEnv = options.sanitizeEnv;
   const env = () => (sanitizeEnv ??= browserSanitizeEnv());
   const assets = readAssets(value.assets, env);
-  const steps: DiagramEntry[] = [];
-  const seen = new Set<string>();
-  for (const entry of Array.isArray(value.steps) ? value.steps : []) {
-    const step = readEntry(entry, assets, env);
-    // Two steps with one id would make every edit by id ambiguous; the first
-    // one wins and the copy is malformed.
-    if (step && !seen.has(step.id)) {
-      seen.add(step.id);
-      steps.push(step);
-    }
-  }
-  const document: DiagramDocument = {
+  // Two steps with one id would make every edit by id ambiguous; the first one wins.
+  const steps = readEntries<DiagramEntry>(value.steps, (id, entry) => readEntry(id, entry, assets, env), lockedTurn);
+  return {
     formatVersion: DIAGRAM_FORMAT_VERSION,
     id: typeof value.id === 'string' && value.id.length > 0 ? value.id : newId('diagram'),
     title: typeof value.title === 'string' ? xmlText(value.title) : '',
@@ -189,8 +190,6 @@ export function readDiagram(value: unknown, options: ReadDiagramOptions = {}): R
     steps,
     assets,
   };
-  const newer = formatVersion > DIAGRAM_FORMAT_VERSION || unknownDocumentField(value) !== null;
-  return { document, readOnly: newer, raw: value };
 }
 
 const DOCUMENT_KEYS = new Set([
@@ -278,10 +277,13 @@ export function writeDiagram(
   current: DiagramDocument,
   readOnlyRaw: Record<string, unknown> | null = null
 ): Record<string, unknown> {
-  if (readOnlyRaw) return readOnlyRaw;
+  return writeVersioned(current, readOnlyRaw, { version: DIAGRAM_FORMAT_VERSION, write: writeDiagramFields });
+}
+
+/** Every field but `formatVersion`, which `writeVersioned` writes first. */
+function writeDiagramFields(current: DiagramDocument): Record<string, unknown> {
   const document = withReferencedAssets(current);
   return {
-    formatVersion: DIAGRAM_FORMAT_VERSION,
     id: document.id,
     title: document.title,
     hanStyle: document.hanStyle,
@@ -482,20 +484,24 @@ const CP_RENDER_FIELDS: Readonly<Record<DiagramCpRender['mode'], ReadonlySet<str
 /**
  * One entry in the order: a turn when it says what kind (D22) — a step never
  * does — and a step otherwise. A turn of a kind, or with a field or value,
- * this build does not know is a newer build's, carried whole as a locked turn:
- * it can be moved or deleted, never changed, and takes no number.
+ * this build does not know is a newer build's, carried whole as a locked turn
+ * ({@link lockedTurn}).
  */
 function readEntry(
-  value: unknown,
+  id: string,
+  value: Record<string, unknown>,
   assets: Record<string, DiagramAsset>,
   env: () => SanitizeEnv
-): DiagramEntry | null {
-  if (!isRecord(value) || !Object.hasOwn(value, 'kind')) return readStep(value, assets, env);
-  const id = value.id;
-  if (typeof id !== 'string' || id.length === 0) return null;
-  const turn = readTurn(id, value);
-  // The kind is a stand-in: a locked turn is never drawn or changed.
-  return turn === NEWER ? { id, kind: 'turn-over', axis: 'vertical', unknown: value } : turn;
+): DiagramEntry | typeof NEWER | null {
+  return Object.hasOwn(value, 'kind') ? readTurn(id, value) : readStep(id, value, assets, env);
+}
+
+/**
+ * A newer build's turn, carried whole: it can be moved or deleted, never
+ * changed, and takes no number. Its kind is a stand-in, never drawn.
+ */
+function lockedTurn(id: string, value: Record<string, unknown>): DiagramEntry {
+  return { id, kind: 'turn-over', axis: 'vertical', unknown: value };
 }
 
 /**
@@ -531,11 +537,6 @@ const SCENE_PICTURE_KEYS: ReadonlySet<string> = new Set([
   'paperFaces',
 ]);
 
-/** A record with a key outside `known`: a field a newer build wrote. */
-function hasNewerKey(value: Record<string, unknown>, known: ReadonlySet<string>): boolean {
-  return Object.keys(value).some((key) => !known.has(key));
-}
-
 /** A scene picture with a field this build has no name for. */
 function isNewerScenePicture(value: unknown): boolean {
   return isRecord(value) && value.kind === 'scene' && hasNewerKey(value, SCENE_PICTURE_KEYS);
@@ -554,13 +555,11 @@ function isNewerScenePicture(value: unknown): boolean {
  * its words.
  */
 function readStep(
-  value: unknown,
+  id: string,
+  value: Record<string, unknown>,
   assets: Record<string, DiagramAsset>,
   env: () => SanitizeEnv
-): DiagramStep | null {
-  if (!isRecord(value)) return null;
-  const id = value.id;
-  if (typeof id !== 'string' || id.length === 0) return null;
+): DiagramStep {
   const zoom = value.zoom === undefined ? undefined : readStepZoom(value.zoom);
   // An enlarged step's marks are in its window's units, and reach as far as its window's reach.
   const reach = zoom && zoom !== NEWER && zoom.frame ? windowReach(zoom.frame) : PICTURE_REACH;
@@ -658,8 +657,7 @@ function isNewerCpSource(value: unknown): boolean {
 function isNewerRender(value: unknown): boolean {
   if (!isRecord(value) || typeof value.mode !== 'string') return false;
   if (!Object.hasOwn(CP_RENDER_FIELDS, value.mode)) return true;
-  const fields = CP_RENDER_FIELDS[value.mode as DiagramCpRender['mode']];
-  if (Object.keys(value).some((key) => !fields.has(key))) return true;
+  if (hasNewerKey(value, CP_RENDER_FIELDS[value.mode as DiagramCpRender['mode']])) return true;
   if (value.mode === 'crease-pattern') return readPatternSide(value.side) === NEWER;
   return value.mode === 'folded-flat' && readSpread(value.spread) === NEWER;
 }
@@ -919,7 +917,7 @@ function readSpread(value: unknown): DiagramLayerSpread | undefined | typeof NEW
   if (!(SPREAD_KINDS as readonly string[]).includes(kind)) return NEWER;
   const known = kind as SpreadKind;
   // A field it has no name for is news before a missing one is damage, as for an annotation.
-  if (Object.keys(value).some((key) => !SPREAD_FIELDS[known].has(key))) return NEWER;
+  if (hasNewerKey(value, SPREAD_FIELDS[known])) return NEWER;
   const amount = finiteNumber(value.amount);
   if (amount === null || amount <= 0) return null;
   const past = amount > SPREAD_AMOUNT_RANGE[known].max;
@@ -948,10 +946,6 @@ function readSpread(value: unknown): DiagramLayerSpread | undefined | typeof NEW
 function normalizeDegrees(degrees: number): number {
   const turned = degrees % 360;
   return turned < 0 ? turned + 360 : turned;
-}
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function readPicture(
@@ -1087,9 +1081,6 @@ const ANNOTATION_FIELDS: Readonly<Record<DiagramAnnotationKind, ReadonlySet<stri
   };
 })();
 
-/** A newer build's value: well formed, but past what this build reads. */
-const NEWER = Symbol('newer');
-
 /** More annotations than a step of this build holds: a newer build's step, not one to cut short. */
 function tooManyAnnotations(value: unknown): boolean {
   return Array.isArray(value) && value.length > MAX_STEP_ANNOTATIONS;
@@ -1103,18 +1094,11 @@ function tooManyAnnotations(value: unknown): boolean {
  * read is dropped.
  */
 function readAnnotations(value: unknown, reach: AnnotationReach): DiagramAnnotation[] {
-  if (!Array.isArray(value)) return [];
-  const out: DiagramAnnotation[] = [];
-  const ids = new Set<string>();
-  for (const entry of value) {
-    if (!isRecord(entry) || typeof entry.id !== 'string' || entry.id.length === 0 || ids.has(entry.id)) continue;
-    const annotation = readAnnotation(entry.id, entry, reach);
-    if (annotation === NEWER) out.push({ id: entry.id, unknown: entry });
-    else if (annotation) out.push(annotation);
-    else continue;
-    ids.add(entry.id);
-  }
-  return out;
+  return readEntries<DiagramAnnotation>(
+    value,
+    (id, entry) => readAnnotation(id, entry, reach),
+    (id, unknown) => ({ id, unknown })
+  );
 }
 
 /**
@@ -1149,8 +1133,7 @@ function readAnnotationOfKind(
   if (typeof entry.kind !== 'string') return null;
   if (!Object.hasOwn(ANNOTATION_FIELDS, entry.kind)) return NEWER;
   const kind = entry.kind as DiagramAnnotationKind;
-  const fields = ANNOTATION_FIELDS[kind];
-  if (Object.keys(entry).some((key) => !fields.has(key))) return NEWER;
+  if (hasNewerKey(entry, ANNOTATION_FIELDS[kind])) return NEWER;
   const from = readAnnotationPoint(entry.from, reach);
   // A sign's, a label's or an enlarge area's one place is `from`; `to` is written as it again.
   const to = isPointKind(kind) || kind === 'zoom' ? from : readAnnotationPoint(entry.to, reach);
@@ -1327,7 +1310,7 @@ function readPath(value: unknown, reach: AnnotationReach): DiagramPathNode[] | t
   const last = value.length - 1;
   const newer = value.some(
     (node, index) =>
-      Object.keys(node).some((key) => !PATH_NODE_FIELDS.has(key)) ||
+      hasNewerKey(node, PATH_NODE_FIELDS) ||
       (index === 0 && node.in !== undefined) ||
       (index === last && node.out !== undefined) ||
       (typeof node.type === 'string' && node.type !== 'corner')
@@ -1746,7 +1729,7 @@ function readTurn(id: string, entry: Record<string, unknown>): DiagramTurn | typ
   if (typeof entry.kind !== 'string') return null;
   if (!Object.hasOwn(TURN_FIELDS, entry.kind)) return NEWER;
   const kind = entry.kind as DiagramTurn['kind'];
-  if (Object.keys(entry).some((key) => !TURN_FIELDS[kind].has(key))) return NEWER;
+  if (hasNewerKey(entry, TURN_FIELDS[kind])) return NEWER;
   if (kind === 'rotate') {
     const rotate = readRotation(entry.rotate);
     return rotate === null || rotate === NEWER ? rotate : { id, kind, rotate };
@@ -1846,8 +1829,4 @@ function readStyle(value: unknown): DiagramStyle {
 
 function wholeNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
