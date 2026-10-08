@@ -140,6 +140,10 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   On 2026-10-08 it applied 9,224 folds over four seeds (up to 178 faces) with
   no hard failure; the refusals were 1,902 "nothing stays", 1,029 "no moving
   side", 339 slivers, 288 near misses and 23 short creases.
+- `random` (feature `random-sequences`): the same draws as a library module,
+  for crates that check the engine from outside it. `crates/oracle-tests`'
+  `fold_oracle` checks its sequences against Oriedita and Flat-Folder. Its own
+  tests: `cargo test -p oristudio-fold --features random-sequences --lib random`.
 - `tests/queries.rs`: the output and queries. The cross-section's display
   layers (a layer crossed by a precrease is one row; two precreased layers are
   two rows, one flap or two by where the spine is), unordered rows, the depth

@@ -25,7 +25,12 @@ fn flat_folder_normalization_matches_js_oracle_when_enabled() {
     if oracle.is_relative() {
         oracle = root.join(oracle);
     }
-    for fixture in ["kabuto.fold", "bad_twist.fold", "r271-s03.fold"] {
+    for fixture in [
+        "kabuto.fold",
+        "bad_twist.fold",
+        "r271-s03.fold",
+        "r069-s07.fold",
+    ] {
         let path = root.join("tests/fixtures/flat-folder").join(fixture);
         let record = run_flat_folder_oracle(&oracle, &root, "overlap", &path);
         assert_eq!(record["status"].as_str(), Some("ok"), "{fixture}");
@@ -72,7 +77,7 @@ fn flat_folder_solver_matches_js_oracle_when_enabled() {
     if oracle.is_relative() {
         oracle = root.join(oracle);
     }
-    for fixture in ["kabuto.fold", "r271-s03.fold"] {
+    for fixture in ["kabuto.fold", "r271-s03.fold", "r069-s07.fold"] {
         let path = root.join("tests/fixtures/flat-folder").join(fixture);
         let record = run_flat_folder_oracle(&oracle, &root, "solve", &path);
         assert_eq!(record["status"].as_str(), Some("ok"), "{fixture}");

@@ -70,6 +70,8 @@ pub mod kernel;
 pub mod landmarks;
 pub mod numerics;
 pub mod pattern;
+#[cfg(feature = "random-sequences")]
+pub mod random;
 pub mod refusal;
 pub mod remedy;
 pub mod scene;

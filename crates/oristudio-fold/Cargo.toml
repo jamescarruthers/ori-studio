@@ -36,6 +36,10 @@ workspace = true
 # engine stays free of the kernel; `oristudio-fold-wasm` turns it on. Both
 # crates it adds are MIT OR Apache-2.0.
 kernel = ["dep:oristudio-cp", "dep:treemaker-fold", "dep:serde_json"]
+# `oristudio_fold::random`: seeded random fold sequences, the draws the
+# property tests make, for crates that check the engine from outside it (the
+# oracles in crates/oracle-tests). Test support; nothing that ships enables it.
+random-sequences = []
 
 [dependencies]
 oristudio-geometry = { path = "../oristudio-geometry" }

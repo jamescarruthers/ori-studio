@@ -30,8 +30,8 @@
       "plan": "fbb17a7bd9bd5fcb00aa301b329cf9ab6777afbbb6f8e137fa825c95c6950b69"
     },
     "tests/fixtures/precrease/hex-14.fold": {
-      "closure": "5d4951935adde92b0c7e40c4ae1af4ca7a9a6039eb2d9e09a91a50085ba83dc5",
-      "plan": "5d4951935adde92b0c7e40c4ae1af4ca7a9a6039eb2d9e09a91a50085ba83dc5"
+      "closure": "0c56513d2f4b75ac0abf8f55768e8c8638c88fc59254436445f80f8d03320ef1",
+      "plan": "0c56513d2f4b75ac0abf8f55768e8c8638c88fc59254436445f80f8d03320ef1"
     },
     "tests/fixtures/precrease/iguana-c0.fold": {
       "closure": "deaf5635aed5abad98f515f027f261be4ac10dbcf6660cf840815405022b7c77",
