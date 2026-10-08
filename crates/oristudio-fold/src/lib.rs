@@ -1,6 +1,6 @@
 //! The Fold workspace's engine: fold a sheet the way a person does
-//! (`implementation-plans/fold-workspace.md`, D1–D5; the evidence is
-//! `research/2026-10-08-fold-workspace.md`).
+//! (`implementation-plans/fold-workspace.md`, D1–D6, D8, D10 and D16; the
+//! evidence is `research/2026-10-08-fold-workspace.md`).
 //!
 //! - [`State`]: a flat folded state — the crease pattern with stable ids
 //!   ([`pattern`]), convex faces with their lineage, every face's isometry
@@ -17,6 +17,8 @@
 //!   decided, and the one entry that completes it through Flat-Folder's
 //!   search with a true ‹ n of m ›, for Import CP now and compound folds
 //!   later.
+//! - [`import`]: Import CP — a crease pattern's sheet, faces and isometries,
+//!   its order completed from its letters, and Edit's folded figure.
 //! - [`witness`]: stored choices with faces named by sheet points, and their
 //!   replay.
 //!
@@ -37,6 +39,7 @@
 
 pub mod complete;
 pub mod fold;
+pub mod import;
 mod index;
 pub mod isometry;
 pub mod numerics;
@@ -54,6 +57,10 @@ pub use complete::{
 };
 pub use fold::{
     ClosurePolicy, FoldAnalysis, FoldReport, Folded, Placement, PlainFold, Refold, Seed, Snap,
+};
+pub use import::{
+    CreasePatternInput, ImportKind, ImportRefusal, ImportSegment, ImportSpace, ImportSummary,
+    ImportTarget, ImportedPattern,
 };
 pub use isometry::Isometry;
 pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
