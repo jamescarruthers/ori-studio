@@ -232,8 +232,12 @@ fn r069_s07_flat_folders_own_constraints_reject_an_order_it_misses() {
             .collect::<Vec<_>>()
     };
     assert_eq!(conflict.constraint, ConstraintKind::TacoTortilla);
-    // A taco of file faces 9 and 11 around tortilla face 0.
-    assert_eq!(file(&conflict.faces), vec![9, 11, 0]);
+    // A taco of file faces 5 and 3 around tortilla face 0. It was the mirror
+    // image, faces 9 and 11, while serde_json read two of the file's
+    // coordinates one ulp off: Flat-Folder numbers faces by area, and that
+    // swapped mirror twins 3 and 9. With `float_roundtrip` the numbering is
+    // the JS oracle's (`flat_folder_oracle` checks r069-s07).
+    assert_eq!(file(&conflict.faces), vec![5, 3, 0]);
 }
 
 #[test]

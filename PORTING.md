@@ -883,13 +883,14 @@ constraints and search, with the ε heuristic and its consequences below.
   boundary that doubles back, a moved vertex image, cells that do not cover a
   face), or does not use Flat-Folder's arrangement at all, as the completion
   entry point below allows.
-- **Known divergence, not yet fixed:** FOLD numbers are parsed with serde_json's
-  default float parser, which is not correctly rounded. In
-  `tests/fixtures/flat-folder/r069-s07.fold` two coordinates come out one ULP
-  away from what JavaScript parses, two faces whose areas agree to about 1e-16
-  swap places in the area sort, and the port's face numbering differs from
-  upstream's there. Counts still agree; face-order hashes do not. serde_json's
-  `float_roundtrip` feature would remove it, workspace-wide.
+- **Float parsing, fixed (2026-10-08):** FOLD numbers were parsed with
+  serde_json's default float parser, which is not correctly rounded. In
+  `tests/fixtures/flat-folder/r069-s07.fold` two coordinates came out one ULP
+  away from what JavaScript parses, two mirror-twin faces whose areas agree to
+  about 1e-16 swapped places in the area sort, and the port's face numbering
+  differed from upstream's: counts agreed, face-order hashes did not. The
+  workspace now enables serde_json's `float_roundtrip`, and the JS parity tests
+  cover r069-s07 (normalization, projection, overlap and solve hashes).
 
 ### r271-s03: an arrangement that loses three taco-taco constraints
 
@@ -921,9 +922,9 @@ finds four. The fifth is `r069-s07.missed-order.json`.
 
 - **Seeded alone into Flat-Folder's own constraints**, through
   `flat_folder_completion_problem` and `complete_layer_order`, the missed order
-  conflicts on a taco-tortilla: the taco of the file's faces 9 and 11 around
-  face 0. Constraint generation rejects a valid state; the search is not at
-  fault. `r069_s07_flat_folders_own_constraints_reject_an_order_it_misses`
+  conflicts on a taco-tortilla: the taco of the file's faces 5 and 3 around
+  face 0 (the mirror image, 9 and 11, under the misread numbering above).
+  Constraint generation rejects a valid state; the search is not at fault. `r069_s07_flat_folders_own_constraints_reject_an_order_it_misses`
   pins it.
 - **The cause is again the arrangement.** Under Flat-Folder's numbering the
   heuristic picks `eps_i` 3, whose arrangement doubles a cell boundary with
