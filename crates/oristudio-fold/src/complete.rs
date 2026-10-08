@@ -93,10 +93,12 @@ pub struct CompletionLimits {
 }
 
 impl CompletionLimits {
-    /// Enough to page through the choices of any real model; the
-    /// preliminary base without its letters needs 18 orders in all.
+    /// Orders listed per component unless the caller asks for fewer. For
+    /// scale: the preliminary base without its letters has 18 orders in all.
     pub const DEFAULT_PER_COMPONENT: usize = 1000;
-    /// About a second of search in a debug build.
+    /// A bound for interactive use, not a measured one: a search that needs
+    /// more reports [`CompletionRefusal::BudgetExceeded`] rather than
+    /// running on.
     pub const DEFAULT_MAX_NODES: u64 = 200_000;
 }
 
