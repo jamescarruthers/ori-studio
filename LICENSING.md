@@ -175,7 +175,7 @@ still permissive on its own terms; it is the combined binary that is GPL.
 | `treemaker-core` | `treemaker-fold` | `GPL-2.0-or-later` — the port |
 | `treemaker-cli` | `treemaker-core`, `oristudio-cp-compiler`, `oristudio-cp`, `treemaker-flatfold`, `treemaker-fold` | `GPL-2.0-or-later` |
 | `treemaker-wasm` | `treemaker-core`, `treemaker-flatfold`, `treemaker-fold` | `GPL-2.0-or-later` |
-| `oracle-tests` | none (dev-only: `treemaker-core`, `treemaker-flatfold`, `treemaker-fold`, `oristudio-geometry`, `oristudio-layer-order`) | `GPL-2.0-or-later` — the edge is a dev-dependency, but the crate is nothing but tests and every test binary links `treemaker-core` |
+| `oracle-tests` | none (dev-only: `treemaker-core`, `treemaker-flatfold`, `treemaker-fold`, `oristudio-cp`, `oristudio-fold`, `oristudio-geometry`, `oristudio-layer-order`) | `GPL-2.0-or-later` — the edge is a dev-dependency, but the crate is nothing but tests and every test binary links `treemaker-core` |
 | `treemaker-fold` | none | MIT OR Apache-2.0 |
 | `treemaker-flatfold` | `treemaker-fold` | MIT OR Apache-2.0 |
 | `oristudio-cp` | `treemaker-fold` | MIT OR Apache-2.0 |
