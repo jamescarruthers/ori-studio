@@ -21,7 +21,7 @@ import type {
   DiagramPointStyleName,
   StepDiagramModel,
   StepDiagramPrimitive,
-} from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+} from '../../lib/stepDiagram/stepDiagramModel';
 import type { DiagramArc, DiagramSheet } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { xmlText } from '../../lib/xmlEscape';
 

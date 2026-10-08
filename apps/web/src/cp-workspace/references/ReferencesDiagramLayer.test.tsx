@@ -7,7 +7,7 @@ import {
   REFERENCES_VIEW_MARKS,
 } from '../../lib/stepDiagram/diagramInk';
 import type { FoldScene } from './fold/foldScene';
-import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import { ReferencesDiagramLayer, type ReferencesDiagramLayerHandle } from './ReferencesDiagramLayer';
 import type { ReferencesDiagramView } from './ReferencesCpView';
 

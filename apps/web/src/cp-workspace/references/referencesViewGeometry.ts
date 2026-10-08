@@ -27,7 +27,7 @@ import {
   penInk,
   type DiagramPens,
 } from '../../lib/stepDiagram/diagramInk';
-import type { DiagramLineStyleName } from './referenceFinderDiagramToPrimitives';
+import type { DiagramLineStyleName } from '../../lib/stepDiagram/stepDiagramModel';
 import type { Pen } from '../../lib/paper/paperStyle';
 import type { SheetStrokeRole } from '../sheets/sheetThumbnail';
 import { creaseRoleAt } from './creaseRole';

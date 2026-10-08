@@ -16,7 +16,7 @@ import { referencesGroundInk } from '../../themes/referencesInk';
 import type {
   DiagramLineStyleName,
   DiagramPointStyleName,
-} from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+} from './stepDiagramModel';
 import type { DiagramInkColors } from './diagramToScene';
 
 /**

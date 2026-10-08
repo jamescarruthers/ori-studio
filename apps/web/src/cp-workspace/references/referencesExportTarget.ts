@@ -26,7 +26,7 @@ import { applyPaperStylePolicy, PAPER_STYLE_POLICIES } from '../../lib/paper/pap
 import { DEFAULT_PAPER_EXPORT_MARKS, PAPER_EXPORT_MARKS } from '../../lib/paperExportSettings';
 import type { PaperExportTarget } from '../../paperExport/paperExportTarget';
 import { diagramScenePaintStyle } from './diagramToPaperScene';
-import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import {
   referencesStepDiagramMarks,
   referencesStepScene,

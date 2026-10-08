@@ -28,7 +28,7 @@
  * Pure: no store, no DOM.
  */
 import { seenFromTheBack } from '../../lib/stepDiagram/diagramModel';
-import type { StepDiagramModel, StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel, StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramModel';
 import { referencesStepDiagramMarks } from '../../cp-workspace/references/referencesStepExport';
 import { arcExtent, type DiagramArc } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { DEFAULT_PAPER_SIZE_MM } from '../../lib/paper/paperPage';

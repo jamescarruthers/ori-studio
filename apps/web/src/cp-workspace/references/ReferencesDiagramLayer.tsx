@@ -9,7 +9,7 @@ import {
 } from 'react';
 import type { FoldPose } from '../../lib/foldMotion/foldPlayback';
 import type { FoldPoseSink } from '../../lib/foldMotion/foldTransport';
-import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import type { ReferencesDiagramView } from './ReferencesCpView';
 import {
   createDiagramRenderContext,

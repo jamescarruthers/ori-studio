@@ -17,7 +17,7 @@ import {
   DIAGRAM_MARK_INK,
   labelWidth,
 } from '../../lib/stepDiagram/diagramInk';
-import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import {
   arcEndPoint,
   arrowheadReach,

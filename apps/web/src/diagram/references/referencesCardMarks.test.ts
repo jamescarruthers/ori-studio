@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { seenFromTheBack } from '../../lib/stepDiagram/diagramModel';
-import type { StepDiagramModel, StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel, StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramModel';
 import { arcSamplePoints, type DiagramArc } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { PT_TO_CSS_PX } from '../../lib/paper/paperStyle';
 import { mmToCssPx } from '../../lib/paper/paperSvg';

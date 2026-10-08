@@ -33,7 +33,8 @@ import {
   type ExtractedStep,
 } from './referenceFinder/extractor';
 import type { Diagram, OriginalMarkName, RawSolution } from './referenceFinder/solution';
-import { finalMarkDiagram, type StepDiagramModel } from './referenceFinderDiagramToPrimitives';
+import { finalMarkDiagram } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import { pinchNote, referenceName, stepSentence } from './referencesStepSentences';
 import { foldArrowArc } from '../../lib/stepDiagram/stepDiagramGeometry';
 

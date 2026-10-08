@@ -16,7 +16,7 @@ import type { StrokeGeometry } from '../../cp-workspace/renderer/types';
 import type {
   DiagramLineStyleName,
   StepDiagramPrimitive,
-} from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+} from './stepDiagramModel';
 import {
   erodeCreaseOnSheet,
   paperSpan,

@@ -69,7 +69,7 @@ import type {
   DiagramLineStyleName,
   StepDiagramModel,
   StepDiagramPrimitive,
-} from '../referenceFinderDiagramToPrimitives';
+} from '../../../lib/stepDiagram/stepDiagramModel';
 import {
   chosenWitness,
   type PrecreaseDirection,

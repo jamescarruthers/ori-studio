@@ -36,7 +36,7 @@ import { plannerFinishedDiagram } from './diagram/plannerDiagram';
 import type {
   DiagramLineStyleName,
   StepDiagramModel,
-} from './referenceFinderDiagramToPrimitives';
+} from '../../lib/stepDiagram/stepDiagramModel';
 import {
   referencesStepPaintStyle,
   referencesStepScene,

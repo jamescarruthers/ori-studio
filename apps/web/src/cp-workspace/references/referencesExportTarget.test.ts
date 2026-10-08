@@ -27,7 +27,7 @@ import {
 } from '../../lib/stepDiagram/diagramInk';
 import type { PaperExportTarget } from '../../paperExport/paperExportTarget';
 import { diagramScenePaintStyle } from './diagramToPaperScene';
-import type { StepDiagramModel, StepDiagramPrimitive } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel, StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramModel';
 import { referencesExportTarget, stepDiagramExportTarget } from './referencesExportTarget';
 import {
   referencesStepDiagramMarks,

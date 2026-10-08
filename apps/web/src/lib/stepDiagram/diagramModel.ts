@@ -11,8 +11,7 @@
  * pattern itself draws under them, because a card and the view beside it
  * disagreeing about this would be worse than either being wrong alone.
  */
-import type { DiagramLineStyleName } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
-import type { StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { DiagramLineStyleName, StepDiagramPrimitive } from './stepDiagramModel';
 
 /**
  * Each pair swaps within itself: an instruction stays an instruction and a

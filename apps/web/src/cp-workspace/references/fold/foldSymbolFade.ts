@@ -12,7 +12,7 @@
 import type { FoldPose } from '../../../lib/foldMotion/foldPlayback';
 import type { Point } from '../../../lib/geometry';
 import { sideOf } from '../diagram/plannerDiagram';
-import type { StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';
+import type { StepDiagramPrimitive } from '../../../lib/stepDiagram/stepDiagramModel';
 import { arcSamplePoints } from '../../../lib/stepDiagram/stepDiagramGeometry';
 import type { FoldFlapScene, FoldScene } from './foldScene';
 

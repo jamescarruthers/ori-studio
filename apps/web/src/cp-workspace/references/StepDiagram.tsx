@@ -1,9 +1,7 @@
 import { useId, useMemo } from 'react';
 import type { Diagram } from './referenceFinder/solution';
-import {
-  referenceFinderDiagramToPrimitives,
-  type StepDiagramModel,
-} from './referenceFinderDiagramToPrimitives';
+import { referenceFinderDiagramToPrimitives } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import { createDiagramRenderContext, diagramShapes } from '../../lib/stepDiagram/DiagramPrimitives';
 import { seenFromTheBack } from '../../lib/stepDiagram/diagramModel';
 import type { Rect } from '../../lib/stepDiagram/labelLayout';

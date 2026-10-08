@@ -50,7 +50,7 @@ import type { PaperScene } from '../../lib/paper/paperScene';
 import { mmToCssPx } from '../../lib/paper/paperSvg';
 import { canvasDiagramInk, canvasDiagramPens } from '../../lib/stepDiagram/diagramInk';
 import { diagramScenePaintStyle, diagramToPaperScene } from './diagramToPaperScene';
-import type { StepDiagramModel, StepDiagramPrimitive } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel, StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramModel';
 import { foldCardNumbers, type ReferencesViewStep } from './referencesSequenceView';
 import { createOverlayProjector, sheetFrame } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { referencesMarkupTokens } from './usePaperStyleTokens';

@@ -70,7 +70,7 @@ import {
   strokeAttributes,
   type DiagramRenderContext,
 } from '../../lib/stepDiagram/DiagramPrimitives';
-import type { StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramModel';
 import { diagramInlineInk, type DiagramInlineInk } from '../../lib/stepDiagram/diagramColors';
 import { markRingWidth } from '../../lib/stepDiagram/labelLayout';
 import { markReach, type DiagramMarkPrimitive } from '../../lib/stepDiagram/markReach';

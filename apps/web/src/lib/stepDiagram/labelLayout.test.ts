@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramPrimitive } from './stepDiagramModel';
 import { createDiagramProjector, createOverlayProjector } from './stepDiagramGeometry';
 import { DIAGRAM_LABEL_INK, labelWidth } from './diagramInk';
 import {

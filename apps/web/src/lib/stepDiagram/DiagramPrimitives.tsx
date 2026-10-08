@@ -48,7 +48,7 @@ import {
 import type {
   DiagramLineStyleName,
   StepDiagramPrimitive,
-} from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+} from './stepDiagramModel';
 import { centredDashOffset } from '../paper/paperSvg';
 import type { DiagramInlineInk, DiagramInlineStroke } from './diagramColors';
 import {

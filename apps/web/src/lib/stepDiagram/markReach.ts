@@ -7,7 +7,7 @@
  * join of a stroke round (`paperSvg`) unless the mark mitres its own.
  */
 import { cubicBounds, type Cubic } from '../cubicBezier';
-import type { StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramPrimitive } from './stepDiagramModel';
 import {
   angleMarkArcPoints,
   angleMarkDrawn,

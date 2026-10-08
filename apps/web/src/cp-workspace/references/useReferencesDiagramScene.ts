@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { CpGeometryTransport } from '../../engine/oristudioCpGeometry';
-import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import { diagramGroundInk, diagramInkColors } from '../../lib/stepDiagram/diagramColors';
 import { diagramToScene, type DiagramScene } from '../../lib/stepDiagram/diagramToScene';
 import { canvasDiagramInk } from '../../lib/stepDiagram/diagramInk';

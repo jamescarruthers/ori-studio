@@ -1,5 +1,5 @@
 import { sheetWithCrease } from '../../lib/paper/paperScene.fixtures';
-import type { StepDiagramModel } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import {
   createStep,
   isTurn,

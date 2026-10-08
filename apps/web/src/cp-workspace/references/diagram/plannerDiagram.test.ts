@@ -3,7 +3,7 @@ import { arcSamplePoints, returnStroke } from '../../../lib/stepDiagram/stepDiag
 import { seenFromTheBack } from '../../../lib/stepDiagram/diagramModel';
 import { modelFrame, unitFrame } from './diagramFrames';
 import { decodePlanModel, planModelPoints } from '../referencesPlanGeometry';
-import type { StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';
+import type { StepDiagramPrimitive } from '../../../lib/stepDiagram/stepDiagramModel';
 import {
   plannerSequenceFixture,
   plannerSequenceWithGridFixture,

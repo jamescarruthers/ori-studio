@@ -25,7 +25,7 @@
  * from.
  */
 import type { Pen } from '../paper/paperStyle';
-import type { DiagramLineStyleName } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { DiagramLineStyleName } from './stepDiagramModel';
 
 /** One ink, as a share of the sheet's longer side. */
 export const DIAGRAM_INK_PER_SHEET = 1 / 96;

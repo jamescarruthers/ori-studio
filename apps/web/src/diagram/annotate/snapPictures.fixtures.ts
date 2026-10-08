@@ -1,4 +1,4 @@
-import type { StepDiagramModel } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import { sheetCorners } from '../../lib/stepDiagram/stepDiagramGeometry';
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import type { DiagramCpRender, DiagramPicture, DiagramStep } from '../document/diagramDocument';

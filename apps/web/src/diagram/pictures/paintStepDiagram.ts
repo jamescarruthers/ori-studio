@@ -25,7 +25,7 @@ import {
   diagramToPaperScene,
   type DiagramToPaperSceneOptions,
 } from '../../cp-workspace/references/diagramToPaperScene';
-import type { StepDiagramModel } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import {
   createOverlayProjector,
   sheetCorners,
