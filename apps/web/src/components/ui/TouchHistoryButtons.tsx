@@ -2,16 +2,17 @@ import { Redo2, Undo2 } from 'lucide-react';
 import { handleMenuAction } from '../../commands/menuActions';
 import { useIsCoarsePointerSurface } from '../../platform/pointerSurface';
 import { useWorkspaceCapabilities } from '../../store/workspaceStore/useWorkspaceCapabilities';
-import { IconButton } from '../ui/IconButton';
+import { IconButton } from './IconButton';
 
 /**
  * Undo and redo as buttons, for a coarse pointer, where the menu bar is the
- * only other way to them. In the Diagram's own headers rather than the canvas
- * pill lane, which would sit over the header (D12). Dispatched through
- * `handleMenuAction`, so they end open edits first and are counted at the
- * chokepoint like the menu items they stand for.
+ * only other way to them. For a workspace whose pane opens with a toolbar —
+ * the Diagram's headers, Fold's — and in that toolbar rather than the canvas
+ * pill lane, which would sit over it (`CanvasHistoryPills` is the lane's).
+ * Dispatched through `handleMenuAction`, so they end open edits first and are
+ * counted at the chokepoint like the menu items they stand for.
  */
-export function DiagramHistoryButtons() {
+export function TouchHistoryButtons() {
   const coarse = useIsCoarsePointerSurface();
   const capabilities = useWorkspaceCapabilities();
   if (!coarse) return null;

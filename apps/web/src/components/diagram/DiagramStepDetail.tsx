@@ -43,8 +43,8 @@ import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { Toolbar } from '../ui/Toolbar';
+import { TouchHistoryButtons } from '../ui/TouchHistoryButtons';
 import { useKeepFocusWithin } from '../../hooks/useKeepFocusWithin';
-import { DiagramHistoryButtons } from './DiagramHistoryButtons';
 import { DiagramLinkedPoseControls } from './DiagramLinkedPoseControls';
 import { DiagramWayChooser } from './DiagramWayChooser';
 import type { ReferencesStepWayChoice } from '../../diagram/references/useReferencesStepWays';
@@ -278,7 +278,7 @@ export function DiagramStepDetail({
           onChange={onMode}
         />
         <div className="panel-toolbar__group">
-          <DiagramHistoryButtons />
+          <TouchHistoryButtons />
           <Button size="sm" variant="primary" onClick={onBack}>
             {t('panels:diagram.detail.done', 'Done')}
           </Button>

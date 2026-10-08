@@ -17,6 +17,9 @@ import { DiagramPanel } from './DiagramPanel';
 import { DiagramStepPanel } from './DiagramStepPanel';
 import { DiagramPagePanel } from './DiagramPagePanel';
 import { DiagramLayersPanel } from './DiagramLayersPanel';
+import { FoldPanel } from './FoldPanel';
+import { FoldPaperPanel } from './FoldPaperPanel';
+import { FoldStepPanel } from './FoldStepPanel';
 import { DiagnosticsPanel } from './DiagnosticsPanel';
 import { ConditionsPanel } from './ConditionsPanel';
 import { withPanelErrorBoundary } from '../errors/withPanelErrorBoundary';
@@ -41,6 +44,9 @@ const panels: Record<string, FC<IDockviewPanelProps>> = {
   'diagram-step': DiagramStepPanel,
   'diagram-page': DiagramPagePanel,
   'diagram-layers': DiagramLayersPanel,
+  fold: FoldPanel,
+  'fold-step': FoldStepPanel,
+  'fold-paper': FoldPaperPanel,
   diagnostics: DiagnosticsPanel,
   conditions: ConditionsPanel,
 };

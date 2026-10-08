@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Download, Loader2, Plus, Printer } from "lucide-react";
 import { Button } from "../ui/Button";
 import { SplitButton } from "../ui/SplitButton";
-import { DiagramHistoryButtons } from "./DiagramHistoryButtons";
+import { TouchHistoryButtons } from "../ui/TouchHistoryButtons";
 import type { DiagramViewMode } from "../../store/workspaceStore/types";
 import { DiagramTitleField } from "./DiagramTitleField";
 import { DiagramViewSwitch } from "./DiagramViewSwitch";
@@ -117,7 +117,7 @@ export function DiagramHeader({
       </div>
       <div className={styles.side} data-side="end">
         <div className={`panel-toolbar__group ${styles.actions}`}>
-          <DiagramHistoryButtons />
+          <TouchHistoryButtons />
           <SplitButton
             size="sm"
             variant="secondary"

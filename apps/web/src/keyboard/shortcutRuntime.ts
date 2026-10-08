@@ -41,9 +41,9 @@ let activeViewportSurface: ViewportSurface | null = null;
  * Each conditional surface's executor, set while that surface owns the
  * keyboard: a simulation in hand (the Simulate workspace panel, or a focused
  * inline window on the Edit canvas), the References panel, the Diagram
- * workspace. Its presence is what pushes the surface's scopes, so their keys
- * take precedence over the CP tools and the viewport only while the surface is
- * actually in hand.
+ * workspace, the Fold workspace. Its presence is what pushes the surface's
+ * scopes, so their keys take precedence over the CP tools and the viewport only
+ * while the surface is actually in hand.
  */
 const conditionalExecutors: ConditionalScopeExecutors = {};
 /**

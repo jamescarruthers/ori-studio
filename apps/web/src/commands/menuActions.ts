@@ -99,6 +99,7 @@ export const MENU_ACTION_IDS = [
   'view.simulator',
   'view.references',
   'view.diagram',
+  'view.fold',
   'view.conditions',
   'view.properties',
   'view.resetLayout',
@@ -376,6 +377,7 @@ const VIEW_PANEL_ACTIONS: Partial<Record<MenuActionId, string>> = {
   'view.simulator': 'simulator',
   'view.references': 'references',
   'view.diagram': 'diagram',
+  'view.fold': 'fold',
   'view.conditions': 'conditions',
   'view.properties': 'cp-properties',
 };

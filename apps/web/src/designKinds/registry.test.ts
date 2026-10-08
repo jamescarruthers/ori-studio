@@ -68,6 +68,8 @@ describe('design kind registry', () => {
       'crease-pattern',
       'simulate',
       'references',
+      'diagram',
+      'fold',
     ] as EditingContext[]) {
       expect(registry.forContext(context)).toBeUndefined();
     }
@@ -264,6 +266,8 @@ describe('extensibility: a third design kind', () => {
       'crease-pattern',
       'simulate',
       'references',
+      'diagram',
+      'fold',
     ] as EditingContext[]) {
       expect(
         maskCapabilitiesForContext(base, context, kinds),

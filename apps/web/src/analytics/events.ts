@@ -397,7 +397,7 @@ export type DiagramPageSetting =
 export type DiagramStyleChoiceName = 'default' | 'diagram' | 'export-style' | 'custom';
 
 /** The five top-level workspaces, plus the share screen. */
-export type WorkspaceScreen = 'design' | 'edit' | 'simulate' | 'references' | 'diagram' | 'share';
+export type WorkspaceScreen = 'design' | 'edit' | 'simulate' | 'references' | 'diagram' | 'fold' | 'share';
 /**
  * A Design workspace's method, for the events that describe *one* design.
  *
@@ -895,7 +895,8 @@ export type ContextMenuSurface =
   | 'design-tree'
   | 'simulator'
   | 'references'
-  | 'diagram';
+  | 'diagram'
+  | 'fold';
 
 /**
  * What the menu was raised *on*, coarsely.
@@ -1600,7 +1601,8 @@ export const ANALYTICS_EVENTS = {
    *
    * `pane` names which side pane the sheet opened on (`cp-view-controls`,
    * `cp-properties`, `simulator-view-controls`, the Diagram's `diagram-step`,
-   * `diagram-page` and `diagram-layers`) — an enum, never content.
+   * `diagram-page` and `diagram-layers`, Fold's `fold-step` and `fold-paper`)
+   * — an enum, never content.
    */
   viewDrawerOpened: 'view drawer opened',
   /**

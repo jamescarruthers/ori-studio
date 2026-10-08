@@ -195,6 +195,7 @@ export function getMenuBarDef(
         { type: 'action', id: 'view.simulate', label: t('menu:view.simulate', 'Simulate') },
         { type: 'action', id: 'view.references', label: t('menu:view.references', 'References') },
         { type: 'action', id: 'view.diagram', label: t('menu:view.diagram', 'Diagram') },
+        { type: 'action', id: 'view.fold', label: t('menu:view.fold', 'Fold') },
         { type: 'separator' },
         { type: 'action', id: 'view.properties', label: t('menu:view.properties', 'Properties') },
         { type: 'separator' },
