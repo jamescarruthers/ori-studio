@@ -453,6 +453,24 @@ describe('the workspace View drawer', () => {
     expect(analytics.track).toHaveBeenLastCalledWith('view drawer opened', { workspace: 'diagram', pane: 'diagram-layers' });
   });
 
+  it('seats the Fold pill in its pane’s slot, on a sheet with its Step and Paper panes', () => {
+    // The Diagram's arrangement: the header offers the slot, and the sheet
+    // opens on the column's lead with the paper a tab beside it.
+    useLayoutStore.setState({ activeWorkspace: 'fold' });
+    render();
+    expect(container?.querySelector('.view-drawer__trigger')).toBeNull();
+
+    seatSlot();
+    expect(seated()?.textContent).toBe('Settings');
+    press(seated());
+
+    expect(tab('Step')?.getAttribute('aria-pressed')).toBe('true');
+    expect(dialog()?.querySelector('section[aria-label="Step"]')).not.toBeNull();
+    expect(analytics.track).toHaveBeenLastCalledWith('view drawer opened', { workspace: 'fold', pane: 'fold-step' });
+    press(tab('Paper'));
+    expect(dialog()?.querySelector('section[aria-label="Paper"]')).not.toBeNull();
+  });
+
   it('closes when the workspace changes under it', () => {
     render();
     press(trigger());

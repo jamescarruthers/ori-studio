@@ -56,6 +56,7 @@ describe('web menu definition', () => {
       'Simulate',
       'References',
       'Diagram',
+      'Fold',
       'Properties',
       'Reset Layout',
     ]);
@@ -65,6 +66,7 @@ describe('web menu definition', () => {
       'view.simulate',
       'view.references',
       'view.diagram',
+      'view.fold',
       'view.properties',
       'view.resetLayout',
     ]);

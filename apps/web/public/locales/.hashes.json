@@ -4268,7 +4268,15 @@
     "common:foldSentences.ref.line": "a6a388d8a310",
     "common:foldSentences.ref.point": "96ac34a1e617",
     "common:foldSentences.ref.rightEdge": "a5bc39717c89",
-    "common:foldSentences.ref.topEdge": "b63184234eff"
+    "common:foldSentences.ref.topEdge": "b63184234eff",
+    "common:capability.fold": "92c122b5b1e2",
+    "common:capability.redoNextFoldEdit": "255e92cd0fdd",
+    "common:capability.showFoldWorkspace": "f326ae1b357d",
+    "common:capability.undoLastFoldEdit": "1880dd4e3bbf",
+    "common:workspaceRail.fold": "f573a8700633",
+    "common:workspaceRail.tabFold": "92c122b5b1e2",
+    "menu:view.fold": "92c122b5b1e2",
+    "panels:sidePane.paper": "35045eff549e"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8539,7 +8547,15 @@
     "common:foldSentences.ref.line": "a6a388d8a310",
     "common:foldSentences.ref.point": "96ac34a1e617",
     "common:foldSentences.ref.rightEdge": "a5bc39717c89",
-    "common:foldSentences.ref.topEdge": "b63184234eff"
+    "common:foldSentences.ref.topEdge": "b63184234eff",
+    "common:capability.fold": "92c122b5b1e2",
+    "common:capability.redoNextFoldEdit": "255e92cd0fdd",
+    "common:capability.showFoldWorkspace": "f326ae1b357d",
+    "common:capability.undoLastFoldEdit": "1880dd4e3bbf",
+    "common:workspaceRail.fold": "f573a8700633",
+    "common:workspaceRail.tabFold": "92c122b5b1e2",
+    "menu:view.fold": "92c122b5b1e2",
+    "panels:sidePane.paper": "35045eff549e"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -12812,7 +12828,15 @@
     "common:foldSentences.ref.line": "a6a388d8a310",
     "common:foldSentences.ref.point": "96ac34a1e617",
     "common:foldSentences.ref.rightEdge": "a5bc39717c89",
-    "common:foldSentences.ref.topEdge": "b63184234eff"
+    "common:foldSentences.ref.topEdge": "b63184234eff",
+    "common:capability.fold": "92c122b5b1e2",
+    "common:capability.redoNextFoldEdit": "255e92cd0fdd",
+    "common:capability.showFoldWorkspace": "f326ae1b357d",
+    "common:capability.undoLastFoldEdit": "1880dd4e3bbf",
+    "common:workspaceRail.fold": "f573a8700633",
+    "common:workspaceRail.tabFold": "92c122b5b1e2",
+    "menu:view.fold": "92c122b5b1e2",
+    "panels:sidePane.paper": "35045eff549e"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -16989,7 +17013,15 @@
     "common:foldSentences.ref.line": "a6a388d8a310",
     "common:foldSentences.ref.point": "96ac34a1e617",
     "common:foldSentences.ref.rightEdge": "a5bc39717c89",
-    "common:foldSentences.ref.topEdge": "b63184234eff"
+    "common:foldSentences.ref.topEdge": "b63184234eff",
+    "common:capability.fold": "92c122b5b1e2",
+    "common:capability.redoNextFoldEdit": "255e92cd0fdd",
+    "common:capability.showFoldWorkspace": "f326ae1b357d",
+    "common:capability.undoLastFoldEdit": "1880dd4e3bbf",
+    "common:workspaceRail.fold": "f573a8700633",
+    "common:workspaceRail.tabFold": "92c122b5b1e2",
+    "menu:view.fold": "92c122b5b1e2",
+    "panels:sidePane.paper": "35045eff549e"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -21166,7 +21198,15 @@
     "common:foldSentences.ref.line": "a6a388d8a310",
     "common:foldSentences.ref.point": "96ac34a1e617",
     "common:foldSentences.ref.rightEdge": "a5bc39717c89",
-    "common:foldSentences.ref.topEdge": "b63184234eff"
+    "common:foldSentences.ref.topEdge": "b63184234eff",
+    "common:capability.fold": "92c122b5b1e2",
+    "common:capability.redoNextFoldEdit": "255e92cd0fdd",
+    "common:capability.showFoldWorkspace": "f326ae1b357d",
+    "common:capability.undoLastFoldEdit": "1880dd4e3bbf",
+    "common:workspaceRail.fold": "f573a8700633",
+    "common:workspaceRail.tabFold": "92c122b5b1e2",
+    "menu:view.fold": "92c122b5b1e2",
+    "panels:sidePane.paper": "35045eff549e"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -25437,7 +25477,15 @@
     "common:foldSentences.ref.line": "a6a388d8a310",
     "common:foldSentences.ref.point": "96ac34a1e617",
     "common:foldSentences.ref.rightEdge": "a5bc39717c89",
-    "common:foldSentences.ref.topEdge": "b63184234eff"
+    "common:foldSentences.ref.topEdge": "b63184234eff",
+    "common:capability.fold": "92c122b5b1e2",
+    "common:capability.redoNextFoldEdit": "255e92cd0fdd",
+    "common:capability.showFoldWorkspace": "f326ae1b357d",
+    "common:capability.undoLastFoldEdit": "1880dd4e3bbf",
+    "common:workspaceRail.fold": "f573a8700633",
+    "common:workspaceRail.tabFold": "92c122b5b1e2",
+    "menu:view.fold": "92c122b5b1e2",
+    "panels:sidePane.paper": "35045eff549e"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -29708,7 +29756,15 @@
     "common:foldSentences.ref.line": "a6a388d8a310",
     "common:foldSentences.ref.point": "96ac34a1e617",
     "common:foldSentences.ref.rightEdge": "a5bc39717c89",
-    "common:foldSentences.ref.topEdge": "b63184234eff"
+    "common:foldSentences.ref.topEdge": "b63184234eff",
+    "common:capability.fold": "92c122b5b1e2",
+    "common:capability.redoNextFoldEdit": "255e92cd0fdd",
+    "common:capability.showFoldWorkspace": "f326ae1b357d",
+    "common:capability.undoLastFoldEdit": "1880dd4e3bbf",
+    "common:workspaceRail.fold": "f573a8700633",
+    "common:workspaceRail.tabFold": "92c122b5b1e2",
+    "menu:view.fold": "92c122b5b1e2",
+    "panels:sidePane.paper": "35045eff549e"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -33885,6 +33941,14 @@
     "common:foldSentences.ref.line": "a6a388d8a310",
     "common:foldSentences.ref.point": "96ac34a1e617",
     "common:foldSentences.ref.rightEdge": "a5bc39717c89",
-    "common:foldSentences.ref.topEdge": "b63184234eff"
+    "common:foldSentences.ref.topEdge": "b63184234eff",
+    "common:capability.fold": "92c122b5b1e2",
+    "common:capability.redoNextFoldEdit": "255e92cd0fdd",
+    "common:capability.showFoldWorkspace": "f326ae1b357d",
+    "common:capability.undoLastFoldEdit": "1880dd4e3bbf",
+    "common:workspaceRail.fold": "f573a8700633",
+    "common:workspaceRail.tabFold": "92c122b5b1e2",
+    "menu:view.fold": "92c122b5b1e2",
+    "panels:sidePane.paper": "35045eff549e"
   }
 }

@@ -311,6 +311,65 @@ describe('workspace capabilities', () => {
     expect(busy['file.save'].enabled).toBe(false);
   });
 
+  it('gives Fold its own live undo and redo, and nothing that authors a pattern or tree', () => {
+    const idle = capabilities({ activeEditingContext: 'fold', canSaveDesign: false });
+    expect(idle['edit.undo']).toMatchObject({
+      visible: true,
+      enabled: false,
+      reason: 'Undo the last change to the fold sequence',
+    });
+    expect(idle['edit.redo']).toMatchObject({
+      visible: true,
+      enabled: false,
+      reason: 'Redo the next change to the fold sequence',
+    });
+
+    // Not the read-only arm: undo and redo work, and a TreeMaker build or
+    // optimize running elsewhere does not hold them back, as the Diagram's.
+    const live = capabilities({
+      activeEditingContext: 'fold',
+      status: 'optimizing',
+      canSaveDesign: false,
+      historyPastCount: 2,
+      historyFutureCount: 1,
+      // Selections and a clipboard elsewhere that no Fold verb acts on.
+      hasEditableCreasePattern: true,
+      oristudioCpSelectedLineCount: 3,
+      hasDeletableDesignSelection: true,
+      clipboard: { kind: 'cp-lines', lines: [] },
+    });
+    expect(live['edit.undo']).toMatchObject({ visible: true, enabled: true });
+    expect(live['edit.redo']).toMatchObject({ visible: true, enabled: true });
+    for (const id of [
+      'edit.cut',
+      'edit.copy',
+      'edit.paste',
+      'edit.delete',
+      'edit.selectAll',
+      'edit.triangulateTree',
+      'cp.build',
+      'cp.checkCamv',
+      'cp.makeMountain',
+      'optimize.scale',
+      'insert.image',
+      'insert.text',
+    ] as const) {
+      expect(live[id], id).toMatchObject({ visible: false, enabled: false });
+    }
+    expect(live['view.fold']).toMatchObject({ visible: true, enabled: true, label: 'Fold' });
+    expect(live['view.edit'].visible).toBe(true);
+    expect(live['file.open'].visible).toBe(true);
+  });
+
+  it('shows the Fold workspace from every context', () => {
+    for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'simulate', 'diagram', 'fold'] as const) {
+      expect(capabilities({ activeEditingContext })['view.fold'], activeEditingContext).toMatchObject({
+        visible: true,
+        enabled: true,
+      });
+    }
+  });
+
   it('saves a project that has a diagram from any workspace, whatever else it holds', () => {
     for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'bp-tree'] as const) {
       const state = capabilities({ activeEditingContext, canSaveDesign: false, hasDiagram: true });

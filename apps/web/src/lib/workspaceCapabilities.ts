@@ -68,6 +68,7 @@ export type WorkspaceCapabilityId =
   | 'view.simulator'
   | 'view.references'
   | 'view.diagram'
+  | 'view.fold'
   | 'view.conditions'
   | 'view.properties'
   | 'view.resetLayout'
@@ -230,6 +231,10 @@ export function getWorkspaceCapabilities(
   const treeMode = input.activeEditingContext === 'treemaker-tree';
   const creasePatternMode = input.activeEditingContext === 'crease-pattern';
   const diagramMode = input.activeEditingContext === 'diagram';
+  const foldMode = input.activeEditingContext === 'fold';
+  // The workspaces whose undo stack belongs to them rather than to a design or
+  // the crease pattern.
+  const ownHistory = diagramMode || foldMode;
   const activeCpSurface =
     input.activeEditingContext === 'crease-pattern' && input.hasEditableCreasePattern;
   const isBusy = isWorkspaceBusy(input.status);
@@ -469,25 +474,29 @@ export function getWorkspaceCapabilities(
         ? t('common:capability.printDiagramHint', 'Print the diagram’s pages, as the PDF prints them')
         : t('common:capability.noDiagramToPrint', 'Add a step to the diagram to print it')
     ),
-    // The Diagram's history is its own: a TreeMaker build or optimize running
-    // in another workspace is no reason to hold its Undo back.
+    // The Diagram's and Fold's histories are their own: a TreeMaker build or
+    // optimize running in another workspace is no reason to hold their Undo back.
     'edit.undo': capability(
-      input.historyPastCount > 0 && (diagramMode || !isBusy),
+      input.historyPastCount > 0 && (ownHistory || !isBusy),
       t('common:capability.undo', 'Undo'),
       diagramMode
         ? t('common:capability.undoLastDiagramEdit', 'Undo the last diagram edit')
-        : activeCpSurface
-          ? t('common:capability.undoLastCpEdit', 'Undo the last crease-pattern edit')
-          : t('common:capability.undoLastTreeEdit', 'Undo the last tree edit')
+        : foldMode
+          ? t('common:capability.undoLastFoldEdit', 'Undo the last change to the fold sequence')
+          : activeCpSurface
+            ? t('common:capability.undoLastCpEdit', 'Undo the last crease-pattern edit')
+            : t('common:capability.undoLastTreeEdit', 'Undo the last tree edit')
     ),
     'edit.redo': capability(
-      input.historyFutureCount > 0 && (diagramMode || !isBusy),
+      input.historyFutureCount > 0 && (ownHistory || !isBusy),
       t('common:capability.redo', 'Redo'),
       diagramMode
         ? t('common:capability.redoNextDiagramEdit', 'Redo the next diagram edit')
-        : activeCpSurface
-          ? t('common:capability.redoNextCpEdit', 'Redo the next crease-pattern edit')
-          : t('common:capability.redoNextTreeEdit', 'Redo the next tree edit')
+        : foldMode
+          ? t('common:capability.redoNextFoldEdit', 'Redo the next change to the fold sequence')
+          : activeCpSurface
+            ? t('common:capability.redoNextCpEdit', 'Redo the next crease-pattern edit')
+            : t('common:capability.redoNextTreeEdit', 'Redo the next tree edit')
     ),
     // In the Diagram, Cut, Copy and Paste act on its annotations alone: a
     // selection or clipboard left in another workspace is not theirs.
@@ -755,6 +764,11 @@ export function getWorkspaceCapabilities(
       true,
       t('common:capability.diagram', 'Diagram'),
       t('common:capability.showDiagramWorkspace', 'Show the diagram workspace')
+    ),
+    'view.fold': capability(
+      true,
+      t('common:capability.fold', 'Fold'),
+      t('common:capability.showFoldWorkspace', 'Show the fold workspace')
     ),
     'view.conditions': capability(
       true,
@@ -1185,6 +1199,23 @@ const DIAGRAM_VISIBLE_EDIT = new Set<WorkspaceCapabilityId>([
   'edit.delete',
 ]);
 
+/**
+ * What stays in the Edit menu while folding: undo and redo, live on the fold
+ * sequence's own stack. The rest of `edit.*` authors a tree or the crease
+ * pattern; a Fold verb that earns a row joins here.
+ */
+const FOLD_VISIBLE_EDIT = new Set<WorkspaceCapabilityId>(['edit.undo', 'edit.redo']);
+
+/**
+ * The contexts that author a document of their own, neither the crease pattern
+ * nor a tree, by the `edit.*` verbs each keeps. They share one mask arm, as the
+ * read-only contexts do; a third joins here rather than growing another `if`.
+ */
+const OWN_DOCUMENT_VISIBLE_EDIT: Partial<Record<EditingContext, ReadonlySet<WorkspaceCapabilityId>>> = {
+  diagram: DIAGRAM_VISIBLE_EDIT,
+  fold: FOLD_VISIBLE_EDIT,
+};
+
 export function maskCapabilitiesForContext(
   capabilities: WorkspaceCapabilities,
   context: EditingContext,
@@ -1221,16 +1252,18 @@ export function maskCapabilitiesForContext(
     }
   }
 
-  if (context === 'diagram') {
-    // The Diagram authors its own document, not the crease pattern or a tree:
-    // only navigation, file operations and its own Edit verbs apply. It is not
-    // a read-only context — undo, redo and Delete act on the diagram.
+  const ownEdit = OWN_DOCUMENT_VISIBLE_EDIT[context];
+  if (ownEdit) {
+    // The Diagram and Fold author their own documents, not the crease pattern
+    // or a tree: only navigation, file operations and their own Edit verbs
+    // apply. Neither is a read-only context — undo and redo act on the diagram
+    // or the fold sequence.
     for (const id of ids) {
       const foreign =
         id.startsWith('cp.') ||
         id.startsWith('optimize.') ||
         id.startsWith('insert.') ||
-        (id.startsWith('edit.') && !DIAGRAM_VISIBLE_EDIT.has(id));
+        (id.startsWith('edit.') && !ownEdit.has(id));
       if (foreign) hide(id);
     }
     return masked;

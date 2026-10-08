@@ -15,6 +15,8 @@ import { CpViewControlsPanel } from './panels/CpViewControlsPanel';
 import { DiagramLayersPanel } from './panels/DiagramLayersPanel';
 import { DiagramPagePanel } from './panels/DiagramPagePanel';
 import { DiagramStepPanel } from './panels/DiagramStepPanel';
+import { FoldPaperPanel } from './panels/FoldPaperPanel';
+import { FoldStepPanel } from './panels/FoldStepPanel';
 import { ReferencesViewControlsPanel } from './panels/ReferencesViewControlsPanel';
 import { SimulatorViewControlsPanel } from './panels/SimulatorViewControlsPanel';
 import { Button } from './ui/Button';
@@ -37,6 +39,8 @@ const VIEW_DRAWER_BODIES: Record<SidePaneId, ComponentType> = {
   'diagram-step': DiagramStepPanel,
   'diagram-page': DiagramPagePanel,
   'diagram-layers': DiagramLayersPanel,
+  'fold-step': FoldStepPanel,
+  'fold-paper': FoldPaperPanel,
 };
 
 /**

@@ -6,13 +6,14 @@ import {
 } from './workspaces';
 
 describe('workspace definitions', () => {
-  it('defines the five primary workspaces in rail order', () => {
+  it('defines the six primary workspaces in rail order', () => {
     expect(WORKSPACE_DEFINITIONS.map((workspace) => workspace.id)).toEqual([
       'edit',
       'design',
       'simulate',
       'references',
       'diagram',
+      'fold',
     ]);
     expect(WORKSPACE_DEFINITIONS.map((workspace) => workspace.label)).toEqual([
       'Edit',
@@ -20,7 +21,15 @@ describe('workspace definitions', () => {
       'Simulate',
       'References',
       'Diagram',
+      'Fold',
     ]);
+  });
+
+  it('names each workspace its own command and primary pane', () => {
+    for (const workspace of WORKSPACE_DEFINITIONS) {
+      expect(workspaceForCommandId(workspace.commandId), workspace.id).toBe(workspace.id);
+      expect(workspaceForPanelId(workspace.primaryPanelId), workspace.id).toBe(workspace.id);
+    }
   });
 
   it('maps panels and compatibility commands to their owning workspaces', () => {
@@ -35,10 +44,14 @@ describe('workspace definitions', () => {
     expect(workspaceForPanelId('references-view-controls')).toBe('references');
     expect(workspaceForPanelId('diagram')).toBe('diagram');
     expect(workspaceForPanelId('diagram-step')).toBe('diagram');
+    expect(workspaceForPanelId('fold')).toBe('fold');
+    expect(workspaceForPanelId('fold-step')).toBe('fold');
+    expect(workspaceForPanelId('fold-paper')).toBe('fold');
 
     expect(workspaceForCommandId('view.creasePattern')).toBe('edit');
     expect(workspaceForCommandId('view.simulator')).toBe('simulate');
     expect(workspaceForCommandId('view.references')).toBe('references');
     expect(workspaceForCommandId('view.diagram')).toBe('diagram');
+    expect(workspaceForCommandId('view.fold')).toBe('fold');
   });
 });

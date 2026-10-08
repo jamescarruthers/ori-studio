@@ -12,6 +12,7 @@ import {
   Compass,
   DraftingCompass,
   MessageCircle,
+  Origami,
   PenTool,
   Send,
   Settings,
@@ -63,6 +64,8 @@ const workspaceIcons: Record<WorkspaceId, typeof DraftingCompass> = {
   simulate: Box,
   references: Compass,
   diagram: BookOpen,
+  // The mark Edit's Fold verb wears: this is where a sheet is folded by hand.
+  fold: Origami,
 };
 
 /**
@@ -90,6 +93,8 @@ function workspaceTooltip(t: TFunction, id: WorkspaceId): string {
       return t('common:workspaceRail.references', 'References workspace');
     case 'diagram':
       return t('common:workspaceRail.diagram', 'Diagram workspace');
+    case 'fold':
+      return t('common:workspaceRail.fold', 'Fold workspace');
   }
 }
 
@@ -113,6 +118,8 @@ function workspaceTabLabel(t: TFunction, id: WorkspaceId): string {
       return t('common:workspaceRail.tabReferences', 'References');
     case 'diagram':
       return t('common:workspaceRail.tabDiagram', 'Diagram');
+    case 'fold':
+      return t('common:workspaceRail.tabFold', 'Fold');
   }
 }
 
