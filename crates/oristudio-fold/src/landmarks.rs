@@ -32,11 +32,11 @@
 //! above often has its own edge or crease exactly over it (a crease folded
 //! through several layers; a corner stacked on a corner). So coverage is not
 //! tested at the feature, where such a layer only touches it, but at a probe
-//! [`PROBE`] inside each of its faces: a feature on the silhouette, or along
-//! the edge of the layer above it, is visible, and one under a stacked twin is
-//! not. A segment is visible over the parts where that holds; a visible part
-//! shorter than half the minimum feature (a gap between two covering faces,
-//! say) is no part.
+//! a tenth of the minimum feature inside each of its faces: a feature on the
+//! silhouette, or along the edge of the layer above it, is visible, and one
+//! under a stacked twin is not. A segment is visible over the parts where
+//! that holds; a visible part shorter than half the minimum feature (a gap
+//! between two covering faces, say) is no part.
 
 use oristudio_geometry::convex::{self, HalfPlane};
 use oristudio_geometry::{Line, LineIndex, PointGrid};
