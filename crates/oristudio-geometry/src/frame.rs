@@ -1,8 +1,9 @@
-//! One rectangular sheet in model space and its maps to the planner's unit
-//! rectangle and to ReferenceFinder's rectangle.
+//! One rectangular sheet in model space and its maps to the unit rectangle
+//! (the sheet frame of the precrease planner and the Fold engine) and to
+//! ReferenceFinder's rectangle.
 //!
 //! Oriedita model space is **y-down** (screen coordinates, default paper
-//! ±200). The planner's unit rectangle is **y-up** with a lower-left origin
+//! ±200). The unit rectangle is **y-up** with a lower-left origin
 //! and its longer side equal to 1, which is also ReferenceFinder's paper
 //! (bottom-left origin, y-up, `(w, h)` with `max(w, h) = 1`). The map from
 //! model space to the unit rectangle therefore contains a reflection: the
@@ -17,7 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::PrecreaseError;
+use crate::error::GeometryError;
 use crate::line::Line;
 use crate::tol::TOL;
 
@@ -62,15 +63,15 @@ impl Frame {
         x_axis: [f64; 2],
         width: f64,
         height: f64,
-    ) -> Result<Frame, PrecreaseError> {
+    ) -> Result<Frame, GeometryError> {
         let len = (x_axis[0] * x_axis[0] + x_axis[1] * x_axis[1]).sqrt();
         if !len.is_finite() || len <= 0.0 {
-            return Err(PrecreaseError::DegenerateFrame {
+            return Err(GeometryError::DegenerateFrame {
                 reason: "x_axis has no direction",
             });
         }
         if !width.is_finite() || !height.is_finite() || width <= 0.0 || height <= 0.0 {
-            return Err(PrecreaseError::DegenerateFrame {
+            return Err(GeometryError::DegenerateFrame {
                 reason: "sides must be positive",
             });
         }
@@ -104,9 +105,9 @@ impl Frame {
         y_axis: [f64; 2],
         width: f64,
         height: f64,
-    ) -> Result<Frame, PrecreaseError> {
+    ) -> Result<Frame, GeometryError> {
         if !width.is_finite() || !height.is_finite() || width <= 0.0 || height <= 0.0 {
-            return Err(PrecreaseError::DegenerateFrame {
+            return Err(GeometryError::DegenerateFrame {
                 reason: "sides must be positive",
             });
         }
@@ -122,10 +123,10 @@ impl Frame {
     /// An axis-aligned sheet from a model-space rectangle `[x0, y0, x1, y1]`.
     /// The origin is the on-screen bottom-left corner `(x0, y1)` because
     /// model space is y-down.
-    pub fn axis_aligned(rect: [f64; 4]) -> Result<Frame, PrecreaseError> {
+    pub fn axis_aligned(rect: [f64; 4]) -> Result<Frame, GeometryError> {
         let [x0, y0, x1, y1] = rect;
         if rect.iter().any(|v| !v.is_finite()) || x1 <= x0 || y1 <= y0 {
-            return Err(PrecreaseError::InvalidPaperFallback);
+            return Err(GeometryError::InvalidRect);
         }
         Frame::new([x0, y1], [1.0, 0.0], x1 - x0, y1 - y0)
     }
@@ -316,9 +317,25 @@ mod tests {
 
     #[test]
     fn degenerate_frames_are_errors() {
-        assert!(Frame::new([0.0, 0.0], [0.0, 0.0], 1.0, 1.0).is_err());
-        assert!(Frame::new([0.0, 0.0], [1.0, 0.0], 0.0, 1.0).is_err());
-        assert!(Frame::axis_aligned([0.0, 0.0, 0.0, 1.0]).is_err());
-        assert!(Frame::axis_aligned([0.0, 0.0, f64::NAN, 1.0]).is_err());
+        assert!(matches!(
+            Frame::new([0.0, 0.0], [0.0, 0.0], 1.0, 1.0),
+            Err(GeometryError::DegenerateFrame { .. })
+        ));
+        assert!(matches!(
+            Frame::new([0.0, 0.0], [1.0, 0.0], 0.0, 1.0),
+            Err(GeometryError::DegenerateFrame { .. })
+        ));
+        assert!(matches!(
+            Frame::with_axes([0.0, 0.0], [1.0, 0.0], [0.0, -1.0], 1.0, f64::INFINITY),
+            Err(GeometryError::DegenerateFrame { .. })
+        ));
+        assert_eq!(
+            Frame::axis_aligned([0.0, 0.0, 0.0, 1.0]),
+            Err(GeometryError::InvalidRect)
+        );
+        assert_eq!(
+            Frame::axis_aligned([0.0, 0.0, f64::NAN, 1.0]),
+            Err(GeometryError::InvalidRect)
+        );
     }
 }

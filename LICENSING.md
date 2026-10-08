@@ -185,8 +185,8 @@ still permissive on its own terms; it is the combined binary that is GPL.
 | `oristudio-cp-detect` | `oristudio-cp-compiler`, `oristudio-cp-eval`, + their closure | MIT OR Apache-2.0 |
 | `oristudio-cp-detect-inspector` | `oristudio-cp-detect`, `oristudio-cp-compiler`, `oristudio-cp-eval` | MIT OR Apache-2.0 |
 | `oristudio-cp-detect-wasm` | `oristudio-cp-detect`, `oristudio-cp-detect-inspector`, + their closure | MIT OR Apache-2.0 |
-| `oristudio-precrease` | none | MIT OR Apache-2.0 — original precrease planner; consumes ReferenceFinder's output at runtime, links none of its code |
-| `oristudio-precrease-wasm` | `oristudio-precrease` | MIT OR Apache-2.0 |
+| `oristudio-precrease` | `oristudio-geometry` | MIT OR Apache-2.0 — original precrease planner; consumes ReferenceFinder's output at runtime, links none of its code |
+| `oristudio-precrease-wasm` | `oristudio-precrease`, `oristudio-geometry` | MIT OR Apache-2.0 |
 | `oristudio-geometry` | none | MIT OR Apache-2.0 — original: the shared tolerance, lines, frames, Huzita–Justin constructions and convex-polygon primitives |
 | `oristudio-layer-order` | `oristudio-geometry` | MIT OR Apache-2.0 — original: pairwise layer order, cell overlay, constraints and checker |
 | `oristudio-pdf` | none | MIT OR Apache-2.0 — original: the Diagram's pages as one PDF, through krilla |

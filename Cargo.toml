@@ -130,6 +130,11 @@ opt-level = 3
 
 # Exhaustive precrease fixture tests spent ~15 minutes in unoptimized geometry
 # search on CI. Optimize this test package while retaining test-profile debug
-# assertions and overflow checks; no fixtures or assertions are skipped.
+# assertions and overflow checks; no fixtures or assertions are skipped. That
+# geometry (lines, indexes, the constructions) is `oristudio-geometry`'s, so it
+# gets the same level or the precrease tests run it unoptimised.
 [profile.test.package.oristudio-precrease]
+opt-level = 2
+
+[profile.test.package.oristudio-geometry]
 opt-level = 2
