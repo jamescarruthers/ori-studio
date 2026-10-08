@@ -100,12 +100,16 @@ export function FoldPaperPane({
             {
               id: 'front',
               label: t('panels:fold.paper.frontUp', 'Front up'),
-              icon: <span className={styles.swatch} style={{ background: paper.style.paper.front }} />,
+              icon: (
+                <span className={styles.swatch} style={{ background: paper.style.paper.front }} aria-hidden="true" />
+              ),
             },
             {
               id: 'back',
               label: t('panels:fold.paper.backUp', 'Back up'),
-              icon: <span className={styles.swatch} style={{ background: paper.style.paper.back }} />,
+              icon: (
+                <span className={styles.swatch} style={{ background: paper.style.paper.back }} aria-hidden="true" />
+              ),
             },
           ]}
           onChange={(side) => {
