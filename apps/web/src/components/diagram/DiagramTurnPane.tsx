@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, Trash2, type LucideIcon } from 'lucide-react';
-import { turnLabels, turnName, turnPlace } from '../../diagram/actions/diagramTurnActions';
+import { turnLabels } from '../../diagram/actions/diagramTurnActions';
+import { turnName, turnPlace } from '../../lib/steps/turnWords';
 import type { DiagramStepAction } from '../../diagram/actions/diagramActions';
 import { DEFAULT_ROTATION } from '../../diagram/annotate/annotationModel';
 import { isLockedTurn, type DiagramTurn, type DiagramTurnKind } from '../../diagram/document/diagramDocument';

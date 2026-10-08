@@ -1,7 +1,8 @@
 import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { diagramStepMenuItems } from './diagramContextMenu';
-import { buildDiagramTurnActions, turnName, type DiagramTurnActionState } from './diagramTurnActions';
+import { turnName } from '../../lib/steps/turnWords';
+import { buildDiagramTurnActions, type DiagramTurnActionState } from './diagramTurnActions';
 
 const t = ((_key: string, fallback: string, values?: Record<string, unknown>) =>
   fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''))) as unknown as TFunction;

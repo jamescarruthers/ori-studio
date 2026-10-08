@@ -1,7 +1,7 @@
 /*
- * The Steps grid (DiagramStepsGrid.tsx). As many columns as fit at 220px, one
- * on a phone. It fills the pane's height so a press anywhere below the cards
- * lands on it, which is how it tells "empty space" from "a card".
+ * The Steps grid (StepsGrid.tsx). As many columns as fit at 220px, one on a
+ * phone. It fills the pane's height so a press anywhere below the cards lands
+ * on it, which is how it tells "empty space" from "a card".
  */
 .grid {
   /* The space between cards: where a step can be added between two. */
@@ -59,7 +59,7 @@
 }
 
 /*
- * The gap before a card, and a step added there: the whole gap is the target,
+ * The gap before a card, and an entry added there: the whole gap is the target,
  * a line and a "+" between the cards showing on a hover. Over the gap only, so
  * it never covers a card. The first card's is the grid's padding.
  */
@@ -176,7 +176,7 @@
   }
 }
 
-/* Pictures dragged over the space between cards go in after the selected step. */
+/* Something dragged over the space between cards: a Diagram's pictures go in after the selected step. */
 .grid[data-drop-target] {
   outline: 2px dashed color-mix(in srgb, var(--accent-primary) 60%, transparent);
   outline-offset: -6px;

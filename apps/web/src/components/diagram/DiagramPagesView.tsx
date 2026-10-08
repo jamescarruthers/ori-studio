@@ -19,7 +19,8 @@ import { PAGES_PAD, PAGES_PX_PER_MM, usePagesView } from '../../diagram/pages/us
 import { ViewportToolbar } from '../panels/ViewportToolbar';
 import { DiagramPageBand } from './DiagramPageBand';
 import styles from './DiagramPagesView.module.css';
-import { turnLabel, type TurnBetween } from '../../diagram/actions/diagramTurnActions';
+import type { TurnBetween } from '../../lib/steps/turn';
+import { turnLabel } from '../../lib/steps/turnWords';
 
 /** How far a cut instruction's outline stands off its text, in mm. */
 const CUT_OUTLINE_MM = 1;

@@ -28,6 +28,7 @@ import type { RegionReference } from '../../cp-workspace/regions/regionReference
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import type { BuiltInPaperPresetId } from '../../lib/paper/paperPresets';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
+import { sameTurnKind, type TurnKind, type TurnRotation } from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
 import { withCarriedAnnotations } from '../annotate/annotationCarry';
 import { cleanAnnotation, MAX_STEP_ANNOTATIONS, sameAnnotation, withAnnotationReach } from '../annotate/annotationModel';
@@ -748,11 +749,8 @@ export interface DiagramBehind {
   to?: number;
 }
 
-/** How far, and which way, a rotate glyph turns the model. */
-export interface DiagramRotation {
-  amount: 'eighth' | 'quarter' | 'half';
-  direction: 'cw' | 'ccw';
-}
+/** How far, and which way, a rotate glyph turns the model: a turn's rotation (`lib/steps/turn.ts`). */
+export type DiagramRotation = TurnRotation;
 
 /**
  * A node of a shaped arrow's path, in picture units like everything else an
@@ -1031,11 +1029,10 @@ export interface DiagramStep {
 
 /**
  * Turning the whole model between two steps (D22): over, about an axis, or
- * round by a part of a turn. What a turn is, without its id.
+ * round by a part of a turn. What a turn is, without its id — the turn every
+ * sequence of steps shares (`lib/steps/turn.ts`).
  */
-export type DiagramTurnKind =
-  | { kind: 'turn-over'; axis: 'vertical' | 'horizontal' }
-  | { kind: 'rotate'; rotate: DiagramRotation };
+export type DiagramTurnKind = TurnKind;
 
 /**
  * A turn in the diagram's order (D22): an entry beside the steps, selected,
@@ -2057,16 +2054,10 @@ export function stepToTurn(
 export function setTurn(document: DiagramDocument, turnId: string, kind: DiagramTurnKind): DiagramDocument {
   const index = stepIndex(document, turnId);
   const turn = document.steps[index];
-  if (!turn || !isTurn(turn) || isLockedTurn(turn) || sameTurn(turn, kind)) return document;
+  if (!turn || !isTurn(turn) || isLockedTurn(turn) || sameTurnKind(turn, kind)) return document;
   const steps = document.steps.slice();
   steps[index] = createTurn(kind, () => turn.id);
   return { ...document, steps };
-}
-
-/** Whether two turns turn the model the same way, field by field. */
-function sameTurn(a: DiagramTurnKind, b: DiagramTurnKind): boolean {
-  if (a.kind === 'turn-over') return b.kind === 'turn-over' && a.axis === b.axis;
-  return b.kind === 'rotate' && a.rotate.amount === b.rotate.amount && a.rotate.direction === b.rotate.direction;
 }
 
 /** Edit one step; a turn, an unknown id or a newer build's step is left as it is. */
