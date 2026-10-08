@@ -14,7 +14,8 @@
 //! - [`sheet`]: convex sheets — square, rectangle, regular polygon.
 //! - [`numerics`]: one tolerance, line snapping and the minimum feature.
 //! - With the `kernel` feature: `kernel`, the one conversion to the CP
-//!   kernel's model (plan D10).
+//!   kernel's model (plan D10), and `fold_file`, the FOLD export of a
+//!   sequence path built on the kernel's FOLD writer.
 //!
 //! The layer order, its constraint problem and the checker are
 //! `oristudio-layer-order`'s; the tolerance and the convex-polygon primitives
@@ -32,6 +33,8 @@
 //! | Turn over | Mirrors the view; every `above` inverts *as seen*; no letter changes. |
 
 pub mod fold;
+#[cfg(feature = "kernel")]
+pub mod fold_file;
 mod index;
 pub mod isometry;
 #[cfg(feature = "kernel")]
@@ -43,6 +46,8 @@ pub mod sheet;
 pub mod state;
 pub mod view;
 
+#[cfg(feature = "kernel")]
+pub use fold_file::{FoldExportError, export_fold_sequence, export_fold_sequence_json};
 #[cfg(feature = "kernel")]
 pub use kernel::{KernelFrame, fold_cp_to_model};
 
