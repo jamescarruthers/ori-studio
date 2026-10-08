@@ -1,17 +1,39 @@
 //! Forward constructors for the seven Huzita–Justin axioms, and the
 //! certificate that ties an inverse witness to a target line.
 //!
-//! # Provenance (licence tier 2)
+//! Each construction folds a [`Paper`]: the precrease planner's rectangular
+//! [`Sheet`](crate::sheet::Sheet), and the Fold engine's folded silhouette
+//! (plan D9 of `implementation-plans/fold-workspace.md`).
 //!
-//! Every constructor here is derived from the axiom's *definition* — a
-//! statement about what one fold line ℓ must align — by solving that
-//! statement for ℓ. The validity filters are re-derived from a single
-//! principle, **a fold must align in-paper material**: every point the fold
-//! moves must land on the sheet, a line folded onto another must have an
-//! in-paper segment that lands on the other's in-paper segment, and the fold
-//! itself must cross the sheet. Nothing in this module is transcribed from
-//! ReferenceFinder's `refLine*.cpp`; ReferenceFinder's answers are used only
-//! as a test oracle (the Node cross-check in `tools/precrease-rf-crosscheck`).
+//! # Licensing tiers
+//!
+//! Original work under `MIT OR Apache-2.0`, written beside Robert J. Lang's
+//! ReferenceFinder (GPL) under the discipline `oristudio-precrease` states for
+//! its three tiers (that crate's `src/lib.rs`; plan decision D3 of
+//! `implementation-plans/reference-finder-integration.md`). Two of the tiers
+//! are about this module:
+//!
+//! - **Tier 2, geometry derived from the Huzita–Justin definitions.** Every
+//!   constructor here is derived from the axiom's *definition* — a statement
+//!   about what one fold line ℓ must align — by solving that statement for ℓ.
+//!   The validity filters are re-derived from a single principle, **a fold
+//!   must align in-paper material**: every point the fold moves must land on
+//!   the paper, a line folded onto another must have an in-paper segment that
+//!   lands on the other's in-paper segment, and the fold itself must cross the
+//!   paper.
+//! - **Tier 3, no expression copied.** Nothing in this module is transcribed
+//!   from ReferenceFinder's `src/core` or `src/app` (`refLine*.cpp` included).
+//!   The author has read that code, so this is not a clean room; the
+//!   permissive claim rests on that discipline plus the Node cross-check in
+//!   `tools/precrease-rf-crosscheck/`, which uses ReferenceFinder's answers as
+//!   a test oracle and lives inside the GPL whole rather than here. If any
+//!   code is ever transcribed, this crate becomes GPL and gets its own rows in
+//!   `LICENSING.md`.
+//!
+//! Tier 1 — ReferenceFinder's behavioural constants and heuristics, adopted
+//! as facts — stays in `oristudio-precrease`'s `constants`; nothing here
+//! depends on it. Lang's O6 same-side rule is tier 1 too: the Fold engine
+//! adopts it in its own crate (plan D9), never in these filters.
 //!
 //! # The axioms as alignment statements
 //!
@@ -48,7 +70,7 @@
 //! accepted (the polish makes the check meaningful at `TOL`).
 
 use crate::line::Line;
-use crate::sheet::Sheet;
+use crate::paper::Paper;
 use crate::tol::TOL;
 
 /// A point in the unit frame.
@@ -122,35 +144,48 @@ impl Construction {
         }
     }
 
-    /// Every valid fold this construction yields on `sheet`.
-    pub fn lines(&self, sheet: &Sheet) -> Vec<Root> {
+    /// Every valid fold this construction yields on `paper`.
+    pub fn lines<P: Paper>(&self, paper: &P) -> Vec<Root> {
         let mut out = match self {
             Construction::O1 { p, q } => o1(*p, *q),
             Construction::O2 { p, q } => o2(*p, *q),
-            Construction::O3 { m1, m2 } => o3(sheet, m1, m2),
-            Construction::O4 { p, m } => o4(sheet, *p, m),
-            Construction::O5 { pivot, p, m1 } => o5(sheet, *pivot, *p, m1),
-            Construction::O6 { p1, m1, p2, m2 } => o6(sheet, *p1, m1, *p2, m2),
-            Construction::O7 { p, m1, m2 } => o7(sheet, *p, m1, m2),
+            Construction::O3 { m1, m2 } => o3(paper, m1, m2),
+            Construction::O4 { p, m } => o4(paper, *p, m),
+            Construction::O5 { pivot, p, m1 } => o5(paper, *pivot, *p, m1),
+            Construction::O6 { p1, m1, p2, m2 } => o6(paper, *p1, m1, *p2, m2),
+            Construction::O7 { p, m1, m2 } => o7(paper, *p, m1, m2),
         };
-        out.retain(|r| sheet.crosses(&r.line));
+        out.retain(|r| paper.crosses(&r.line));
         out
     }
 
-    /// The certificate that this construction reproduces `target` within
-    /// `TOL` on `sheet`, choosing the closest root when several do.
-    pub fn certify(&self, sheet: &Sheet, target: &Line) -> Option<Certificate> {
-        self.lines(sheet)
+    /// The root on `paper` nearest `target` under [`line_residual`], however
+    /// far: `None` only when the construction yields no fold at all. The
+    /// first of equally near roots wins.
+    ///
+    /// Replay needs this rather than [`Self::certify`]. A root is only an
+    /// enumeration index (the O5 chord end, the O6 cubic root in ascending
+    /// order), so when an earlier step moves the inputs the indices can swap,
+    /// and the moved line can sit further than `TOL` from the stored one. The
+    /// stored line names the choice; the nearest root recovers it.
+    pub fn nearest_root<P: Paper>(&self, paper: &P, target: &Line) -> Option<Certificate> {
+        self.lines(paper)
             .into_iter()
-            .filter_map(|r| {
-                let err = line_residual(&r.line, target);
-                (err <= TOL).then_some(Certificate {
-                    root: r.root,
-                    err,
-                    line: r.line,
-                })
+            .map(|r| Certificate {
+                root: r.root,
+                err: line_residual(&r.line, target),
+                line: r.line,
             })
             .min_by(|a, b| a.err.total_cmp(&b.err))
+    }
+
+    /// The certificate that this construction reproduces `target` within
+    /// `TOL` on `paper`, choosing the closest root when several do.
+    pub fn certify<P: Paper>(&self, paper: &P, target: &Line) -> Option<Certificate> {
+        // Every root as near as the nearest one passes the filter whenever the
+        // nearest does, so this is the closest root within `TOL`.
+        self.nearest_root(paper, target)
+            .filter(|cert| cert.err <= TOL)
     }
 }
 
@@ -166,23 +201,24 @@ fn o2(p: Pt, q: Pt) -> Vec<Root> {
         .unwrap_or_default()
 }
 
-/// Parameter interval of the in-paper segment of `m` mapped by `fold` onto
-/// `onto`, intersected with `onto`'s own in-paper interval; positive when
-/// the folded material overlaps the reference line's material.
-fn folded_overlap(sheet: &Sheet, fold: &Line, m: &Line, onto: &Line) -> f64 {
-    let Some((a, b)) = sheet.clip(m) else {
-        return 0.0;
-    };
-    let Some((c0, c1)) = sheet.clip_parameters(onto) else {
-        return 0.0;
-    };
-    let ta = onto.parameter(fold.reflect_point(a));
-    let tb = onto.parameter(fold.reflect_point(b));
-    let (lo, hi) = if ta < tb { (ta, tb) } else { (tb, ta) };
-    hi.min(c1) - lo.max(c0)
+/// How much in-paper material of `m`, mapped by `fold` onto `onto`, lands on
+/// `onto`'s own in-paper material: the longest overlap, along `onto`, of any
+/// run of `m` with any run of `onto`, and `0` when none overlap. On a
+/// rectangle each line has one run, so this is that one overlap.
+fn folded_overlap<P: Paper>(paper: &P, fold: &Line, m: &Line, onto: &Line) -> f64 {
+    let mut longest = 0.0f64;
+    for (t0, t1) in paper.intervals(m) {
+        let ta = onto.parameter(fold.reflect_point(m.point_at(t0)));
+        let tb = onto.parameter(fold.reflect_point(m.point_at(t1)));
+        let (lo, hi) = if ta < tb { (ta, tb) } else { (tb, ta) };
+        for (c0, c1) in paper.intervals(onto) {
+            longest = longest.max(hi.min(c1) - lo.max(c0));
+        }
+    }
+    longest
 }
 
-fn o3(sheet: &Sheet, m1: &Line, m2: &Line) -> Vec<Root> {
+fn o3<P: Paper>(paper: &P, m1: &Line, m2: &Line) -> Vec<Root> {
     if m1.approx_eq(m2) {
         return Vec::new();
     }
@@ -216,25 +252,25 @@ fn o3(sheet: &Sheet, m1: &Line, m2: &Line) -> Vec<Root> {
                 return false;
             }
             // … and in-paper material of m1 lands on in-paper material of m2.
-            folded_overlap(sheet, &r.line, m1, m2) > TOL
+            folded_overlap(paper, &r.line, m1, m2) > TOL
         })
         .collect()
 }
 
-fn o4(sheet: &Sheet, p: Pt, m: &Line) -> Vec<Root> {
+fn o4<P: Paper>(paper: &P, p: Pt, m: &Line) -> Vec<Root> {
     let Some(line) = Line::new(m.direction(), dot(m.direction(), p)) else {
         return Vec::new();
     };
-    // The crease meets m at the foot of p on m, which must be on the sheet.
+    // The crease meets m at the foot of p on m, which must be on the paper.
     let s = m.signed_distance(p);
     let foot = [p[0] - s * m.n[0], p[1] - s * m.n[1]];
-    if !sheet.contains(foot, TOL) {
+    if !paper.contains(foot, TOL) {
         return Vec::new();
     }
     vec![Root { line, root: 0 }]
 }
 
-fn o5(sheet: &Sheet, pivot: Pt, p: Pt, m1: &Line) -> Vec<Root> {
+fn o5<P: Paper>(paper: &P, pivot: Pt, p: Pt, m1: &Line) -> Vec<Root> {
     // A point already on its landing line has nothing to align.
     if m1.distance_to_point(p) <= TOL {
         return Vec::new();
@@ -254,7 +290,7 @@ fn o5(sheet: &Sheet, pivot: Pt, p: Pt, m1: &Line) -> Vec<Root> {
             break; // tangent: one landing point only
         }
         let r = [foot[0] + sign * h * u[0], foot[1] + sign * h * u[1]];
-        if !sheet.contains(r, TOL) || dist(r, p) < TOL {
+        if !paper.contains(r, TOL) || dist(r, p) < TOL {
             continue;
         }
         let Some(line) = Line::perpendicular_bisector(p, r) else {
@@ -368,7 +404,7 @@ fn cubic_roots(a: f64, b: f64, c: f64) -> Vec<f64> {
     ts.into_iter().map(|t| t - shift).collect()
 }
 
-fn o6(sheet: &Sheet, p1: Pt, m1: &Line, p2: Pt, m2: &Line) -> Vec<Root> {
+fn o6<P: Paper>(paper: &P, p1: Pt, m1: &Line, p2: Pt, m2: &Line) -> Vec<Root> {
     // Points already on their landing lines have nothing to align, and a
     // fold must move two distinct points onto two distinct lines.
     if m1.distance_to_point(p1) <= TOL
@@ -401,12 +437,12 @@ fn o6(sheet: &Sheet, p1: Pt, m1: &Line, p2: Pt, m2: &Line) -> Vec<Root> {
         let Some(line) = Line::perpendicular_bisector(p1, r1) else {
             continue;
         };
-        // Re-check both alignments at the tolerance, on the sheet.
+        // Re-check both alignments at the tolerance, on the paper.
         let r2 = line.reflect_point(p2);
         if m1.distance_to_point(r1) > TOL
             || m2.distance_to_point(r2) > TOL
-            || !sheet.contains(r1, TOL)
-            || !sheet.contains(r2, TOL)
+            || !paper.contains(r1, TOL)
+            || !paper.contains(r2, TOL)
         {
             continue;
         }
@@ -421,7 +457,7 @@ fn o6(sheet: &Sheet, p1: Pt, m1: &Line, p2: Pt, m2: &Line) -> Vec<Root> {
     out
 }
 
-fn o7(sheet: &Sheet, p: Pt, m1: &Line, m2: &Line) -> Vec<Root> {
+fn o7<P: Paper>(paper: &P, p: Pt, m1: &Line, m2: &Line) -> Vec<Root> {
     if m1.distance_to_point(p) <= TOL {
         return Vec::new();
     }
@@ -438,7 +474,7 @@ fn o7(sheet: &Sheet, p: Pt, m1: &Line, m2: &Line) -> Vec<Root> {
         return Vec::new();
     };
     let r = line.reflect_point(p);
-    if !sheet.contains(x, TOL) || !sheet.contains(r, TOL) || m1.distance_to_point(r) > TOL {
+    if !paper.contains(x, TOL) || !paper.contains(r, TOL) || m1.distance_to_point(r) > TOL {
         return Vec::new();
     }
     vec![Root { line, root: 0 }]
@@ -447,6 +483,7 @@ fn o7(sheet: &Sheet, p: Pt, m1: &Line, m2: &Line) -> Vec<Root> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sheet::Sheet;
 
     fn line(n: [f64; 2], d: f64) -> Line {
         Line::new(n, d).expect("line")
@@ -767,5 +804,127 @@ mod tests {
         let roots = real_roots([2.0, -3.0, 0.0, 1.0]);
         assert!(roots.iter().any(|r| (r + 2.0).abs() < 1e-9));
         assert!(roots.iter().any(|r| (r - 1.0).abs() < 1e-6));
+    }
+
+    #[test]
+    fn nearest_root_recovers_a_moved_line_that_certify_refuses() {
+        let sheet = Sheet::unit_square();
+        // The pivot's circle through p meets y = 0.3 twice on the sheet.
+        let c = Construction::O5 {
+            pivot: [0.5, 0.5],
+            p: [0.5, 0.1],
+            m1: line([0.0, 1.0], 0.3),
+        };
+        let roots = c.lines(&sheet);
+        assert_eq!(roots.len(), 2, "{roots:?}");
+        for r in &roots {
+            // Unmoved, the two agree.
+            assert_eq!(c.nearest_root(&sheet, &r.line), c.certify(&sheet, &r.line));
+            // Moved by 1e-4 — a hundred tolerances — certify refuses and the
+            // nearest root is still the same one.
+            let moved = line(r.line.n, r.line.d + 1e-4);
+            assert!(c.certify(&sheet, &moved).is_none());
+            let nearest = c.nearest_root(&sheet, &moved).expect("a root");
+            assert_eq!(nearest.root, r.root);
+            assert_eq!(nearest.line, r.line);
+            assert!((nearest.err - 1e-4).abs() < 1e-12, "{}", nearest.err);
+        }
+        // No fold at all: nothing to be near.
+        let none = Construction::O5 {
+            pivot: [0.0, 0.0],
+            p: [0.3, 0.5],
+            m1: line([0.0, 1.0], 0.5),
+        };
+        assert!(none.nearest_root(&sheet, &roots[0].line).is_none());
+    }
+
+    /// The unit square with the slot `0.4 < x < 0.6` cut out: every vertical
+    /// line through the slot misses it, and every horizontal line has two runs.
+    struct Slotted;
+
+    impl Slotted {
+        const STRIPS: [[f64; 4]; 2] = [[0.0, 0.0, 0.4, 1.0], [0.6, 0.0, 1.0, 1.0]];
+    }
+
+    fn clip_box(line: &Line, [x0, y0, x1, y1]: [f64; 4]) -> Option<(f64, f64)> {
+        let f = line.foot();
+        let dir = line.direction();
+        let (mut t0, mut t1) = (f64::NEG_INFINITY, f64::INFINITY);
+        for (origin, slope, lo, hi) in [(f[0], dir[0], x0, x1), (f[1], dir[1], y0, y1)] {
+            if slope.abs() < 1e-15 {
+                if origin < lo - TOL || origin > hi + TOL {
+                    return None;
+                }
+                continue;
+            }
+            let (a, b) = ((lo - origin) / slope, (hi - origin) / slope);
+            t0 = t0.max(a.min(b));
+            t1 = t1.min(a.max(b));
+        }
+        (t0 <= t1 + TOL).then_some((t0, t1.max(t0)))
+    }
+
+    impl Paper for Slotted {
+        fn contains(&self, p: [f64; 2], pad: f64) -> bool {
+            Self::STRIPS.iter().any(|&[x0, y0, x1, y1]| {
+                p[0] >= x0 - pad && p[0] <= x1 + pad && p[1] >= y0 - pad && p[1] <= y1 + pad
+            })
+        }
+
+        fn intervals(&self, line: &Line) -> impl Iterator<Item = (f64, f64)> {
+            Self::STRIPS
+                .into_iter()
+                .filter_map(|strip| clip_box(line, strip))
+        }
+    }
+
+    #[test]
+    fn the_filters_ask_the_paper_not_the_rectangle() {
+        let sheet = Sheet::unit_square();
+        // O1 along the slot: on the square a fold, on the slotted paper a
+        // line with no material to crease (the trait's default `crosses`).
+        let o1 = Construction::O1 {
+            p: [0.5, 0.1],
+            q: [0.5, 0.9],
+        };
+        assert_eq!(o1.lines(&sheet).len(), 1);
+        assert!(o1.lines(&Slotted).is_empty());
+        // O4 whose crease meets m in the slot: the foot is not on the paper.
+        let o4 = Construction::O4 {
+            p: [0.1, 0.5],
+            m: line([1.0, 0.0], 0.5),
+        };
+        assert_eq!(o4.lines(&sheet).len(), 1);
+        assert!(o4.lines(&Slotted).is_empty());
+        // O3 folding the slot's centre line onto y = 0.5: it has no material
+        // to fold, so neither diagonal aligns anything.
+        let o3 = Construction::O3 {
+            m1: line([1.0, 0.0], 0.5),
+            m2: line([0.0, 1.0], 0.5),
+        };
+        assert_eq!(o3.lines(&sheet).len(), 2);
+        assert!(o3.lines(&Slotted).is_empty());
+    }
+
+    #[test]
+    fn folded_overlap_looks_at_every_run() {
+        // y = 0.3 has two runs on the slotted paper. Folded onto x = 0.9 by
+        // the diagonal y = x − 0.6 its left run lands below the paper and only
+        // its right run lands on x = 0.9's material.
+        let m1 = line([0.0, 1.0], 0.3);
+        let m2 = line([1.0, 0.0], 0.9);
+        let diagonal = Line::from_points([0.6, 0.0], [1.0, 0.4]).expect("line");
+        let runs: Vec<_> = Slotted.intervals(&m1).collect();
+        assert_eq!(runs.len(), 2);
+        let overlap = folded_overlap(&Slotted, &diagonal, &m1, &m2);
+        assert!((overlap - 0.4).abs() < 1e-12, "{overlap}");
+        let roots = Construction::O3 { m1, m2 }.lines(&Slotted);
+        assert!(
+            roots.iter().any(|r| r.line.approx_eq(&diagonal)),
+            "{roots:?}"
+        );
+        // On the square the same fold aligns the same 0.4 of material.
+        let square = folded_overlap(&Sheet::unit_square(), &diagonal, &m1, &m2);
+        assert!((square - 0.4).abs() < 1e-12, "{square}");
     }
 }

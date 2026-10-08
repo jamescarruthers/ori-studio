@@ -1,15 +1,16 @@
-//! The planner's sheet: the unit rectangle `[0, w] × [0, h]` with
+//! The precrease planner's sheet: the unit rectangle `[0, w] × [0, h]` with
 //! `max(w, h) = 1`, plus the in-paper tests every axiom needs (a reflected
 //! point must land on the paper, a fold must cross it, a reference line has
-//! an in-paper segment).
+//! an in-paper segment). Constructions fold it as a [`Paper`].
 
 use serde::{Deserialize, Serialize};
 
 use crate::frame::Frame;
 use crate::line::Line;
+use crate::paper::Paper;
 use crate::tol::TOL;
 
-/// The sheet as a rectangle in the planner's unit frame.
+/// The sheet as a rectangle in the unit frame.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Sheet {
     pub width: f64,
@@ -195,8 +196,8 @@ impl Sheet {
 
     /// Aspect ratio (short side over long side) of the bounding box of the
     /// piece of the sheet on one side of `line`. A flap thinner than
-    /// [`crate::constants::SKINNY_FLAP_ASPECT`] on either side is hard to
-    /// fold accurately.
+    /// `oristudio_precrease::constants::SKINNY_FLAP_ASPECT` on either side is
+    /// hard to fold accurately.
     pub fn flap_aspects(&self, line: &Line) -> Option<[f64; 2]> {
         let (a, b) = self.clip(line)?;
         let mut aspects = [1.0f64; 2];
@@ -223,6 +224,22 @@ impl Sheet {
             aspects[k] = if long <= TOL { 0.0 } else { w.min(h) / long };
         }
         Some(aspects)
+    }
+}
+
+/// The rectangle answers through its own methods, so a construction folds a
+/// `Sheet` exactly as it did before [`Paper`] existed.
+impl Paper for Sheet {
+    fn contains(&self, p: [f64; 2], pad: f64) -> bool {
+        Sheet::contains(self, p, pad)
+    }
+
+    fn intervals(&self, line: &Line) -> impl Iterator<Item = (f64, f64)> {
+        self.clip_parameters(line).into_iter()
+    }
+
+    fn crosses(&self, line: &Line) -> bool {
+        Sheet::crosses(self, line)
     }
 }
 
@@ -278,5 +295,46 @@ mod tests {
         let mid = Line::new([1.0, 0.0], 0.5).expect("line");
         let a = s.flap_aspects(&mid).expect("aspects");
         assert!((a[0] - 0.5).abs() < 1e-12 && (a[1] - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn the_paper_impl_is_the_rectangle_itself() {
+        fn as_paper<P: Paper>(
+            paper: &P,
+            line: &Line,
+            p: [f64; 2],
+        ) -> (bool, Vec<(f64, f64)>, bool) {
+            (
+                paper.contains(p, TOL),
+                paper.intervals(line).collect(),
+                paper.crosses(line),
+            )
+        }
+        let s = Sheet::new(0.75, 1.0).expect("sheet");
+        let diag = Line::from_points([0.0, 0.0], [0.75, 1.0]).expect("line");
+        let graze = Line::from_points([0.0, 0.0], [1.0, -1.0]).expect("line");
+        let miss = Line::new([0.0, 1.0], 1.5).expect("line");
+        for (line, p) in [(diag, [0.75, 0.5]), (graze, [0.8, 0.5]), (miss, [0.0, 0.0])] {
+            let (contains, intervals, crosses) = as_paper(&s, &line, p);
+            assert_eq!(contains, s.contains(p, TOL));
+            assert_eq!(
+                intervals,
+                s.clip_parameters(&line).into_iter().collect::<Vec<_>>()
+            );
+            assert_eq!(crosses, s.crosses(&line));
+        }
+        // The trait's default `crosses` agrees with the rectangle's own.
+        struct ByIntervals(Sheet);
+        impl Paper for ByIntervals {
+            fn contains(&self, p: [f64; 2], pad: f64) -> bool {
+                self.0.contains(p, pad)
+            }
+            fn intervals(&self, line: &Line) -> impl Iterator<Item = (f64, f64)> {
+                self.0.clip_parameters(line).into_iter()
+            }
+        }
+        for line in [diag, graze, miss] {
+            assert_eq!(ByIntervals(s).crosses(&line), s.crosses(&line));
+        }
     }
 }

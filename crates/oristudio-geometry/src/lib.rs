@@ -10,14 +10,15 @@
 //! - [`frame`]: one rectangular sheet in Oriedita model space and its maps to
 //!   the unit rectangle; [`outline`]: border creases chained into rectangular
 //!   frames (rectangles only); [`sheet`]: the unit rectangle itself.
-//! - [`construct`]: the seven Huzita–Justin constructions, with their
-//!   certificates.
+//! - [`construct`]: the seven Huzita–Justin constructions over a [`Paper`]
+//!   ([`paper`]), with their certificates. Its header states the licensing
+//!   tiers.
 //! - [`convex`]: convex-polygon primitives (orientation, clipping, half-plane
 //!   splits, overlap) used by the layer-order crate and the Fold engine.
 //!
-//! Everything but `convex` moved here from `oristudio-precrease`, which
-//! re-exports the modules so its paths and wire shapes are unchanged; see
-//! `implementation-plans/fold-workspace.md` (D9).
+//! Everything but `paper` and `convex` moved here from `oristudio-precrease`,
+//! which re-exports the modules so its paths and wire shapes are unchanged;
+//! see `implementation-plans/fold-workspace.md` (D9).
 //!
 //! # Coordinate space
 //!
@@ -31,6 +32,7 @@ pub mod error;
 pub mod frame;
 pub mod line;
 pub mod outline;
+pub mod paper;
 pub mod pointgrid;
 pub mod sheet;
 pub mod tol;
@@ -40,6 +42,7 @@ pub use error::GeometryError;
 pub use frame::{Frame, FrameAffines, RfRect};
 pub use line::{Line, LineIndex};
 pub use outline::RefusalReason;
+pub use paper::Paper;
 pub use pointgrid::PointGrid;
 pub use sheet::{CornerName, EdgeSide, Sheet};
 pub use tol::{SNAP_RADIUS, TOL};
