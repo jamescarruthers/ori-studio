@@ -13,6 +13,12 @@
 //!   refold, unfold, turn over and rotate.
 //! - [`sheet`]: convex sheets — square, rectangle, regular polygon.
 //! - [`numerics`]: one tolerance, line snapping and the minimum feature.
+//! - The axioms on flat and folded forms (plan Phase 3): [`anchor`]s, the
+//!   sheet points and segments a step names paper by; [`landmarks`] with
+//!   provenance and visibility; the folded [`silhouette`] as the paper the
+//!   constructions fold; [`axioms`] O1–O7 with who moves and replay;
+//!   [`anchored`] folds along an axiom, an existing crease or a free line;
+//!   and the sliver [`remedy`].
 //!
 //! The layer order, its constraint problem and the checker are
 //! `oristudio-layer-order`'s; the tolerance and the convex-polygon primitives
@@ -30,6 +36,8 @@
 //! | Turn over | Mirrors the view; every `above` inverts *as seen*; no letter changes. |
 
 pub mod anchor;
+pub mod anchored;
+pub mod axioms;
 pub mod fold;
 mod index;
 pub mod isometry;
@@ -37,18 +45,27 @@ pub mod landmarks;
 pub mod numerics;
 pub mod pattern;
 pub mod refusal;
+pub mod remedy;
 pub mod sheet;
 pub mod silhouette;
 pub mod state;
 pub mod view;
 
+pub use anchor::SheetSegment;
+pub use anchored::{AnchoredFold, AnchoredRefused, FoldLine, LineRefusal, Resolved};
+pub use axioms::{Axiom, AxiomCandidate, AxiomReplay};
 pub use fold::{
     ClosurePolicy, FoldAnalysis, FoldReport, Folded, Placement, PlainFold, Refold, Seed, Snap,
 };
 pub use isometry::Isometry;
+pub use landmarks::{
+    Landmarks, LineLandmark, PointKind, PointLandmark, PointSource, SegmentKind, SegmentLandmark,
+};
 pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
 pub use refusal::{Fix, Flap, FoldRefusal, NearMissCause, Refused, Side};
+pub use remedy::{Pin, SliverRemedy};
 pub use sheet::{Sheet, SheetShape};
+pub use silhouette::Silhouette;
 pub use state::{State, StateParts};
 pub use view::{Direction, StartSide, View};
 
