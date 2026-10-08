@@ -29,6 +29,29 @@ state, the one constructor that validates it, and the plain fold.
   (include the flaps the closure adds, fold the other way, pick a flap, fold
   along the landmark line).
 
+The axioms on flat and folded forms (plan Phase 3):
+
+- `anchor`: what a stored step names paper by — sheet points and sheet
+  segments — resolved in a state's model frame, boundaries included.
+- `landmarks`: vertex images, raw edges, bends, visible creases, crossings and
+  Divide-line marks (passed in as sheet points), deduplicated within the
+  tolerance with every source kept, each source with the anchor a step stores.
+  Visibility comes from the layer order as the viewer sees it, probed just
+  inside each of a feature's faces. Also the existing-crease pick and the top
+  visible layer at a point, where a mark goes.
+- `silhouette`: the union of the face images as the `Paper` the constructions
+  fold: per-face runs along a line merged within the tolerance.
+- `axioms`: O1–O7 on anchors through `oristudio_geometry::construct`, each root
+  with its moving side from the axiom's movers; Lang's O6 same-side rule (a
+  tier 1 fact); replay to the candidate nearest the stored line.
+- `anchored`: a plain fold whose line is an axiom and its root, an existing
+  crease or bend, or a free line through two sheet points; its side from the
+  axiom, a `toward` point or the seed; the axiom's movers must be on layers
+  that move.
+- `remedy`: a fold refused as a sliver is offered the exact O5 or O7 line its
+  pins allow (a point the line passes through, a line it is perpendicular to),
+  as a step it can store, only if that lands.
+
 See `implementation-plans/fold-workspace.md` (D1–D5) and
 `research/2026-10-08-fold-workspace.md` (§3, §4, §6). The core spike under
 `artifacts/fold-spike/core/` was the behavioural reference; nothing is ported
@@ -63,6 +86,15 @@ from it.
   On 2026-10-08 it applied 9,224 folds over four seeds (up to 178 faces) with
   no hard failure; the refusals were 1,902 "nothing stays", 1,029 "no moving
   side", 339 slivers, 288 near misses and 23 short creases.
+- `tests/axioms.rs`: every axiom on flat sheets (a square, a rectangle, a
+  precreased square) against `oristudio-geometry`'s construction on the
+  rectangle, hundreds of roots each; every axiom on the book fold and on four
+  stacked layers, both stacked copies of a mover landing on its target; axioms
+  over the landmarks of random folded forms, each candidate stating its axiom
+  before the fold and each landed fold after it; Lang's rule; replay after an
+  inserted precrease and after a fold that takes one root's landing away; the
+  existing-crease mode unfolding and refolding; a mover left behind; and the
+  sliver remedy for an O4, a free line and an O2 (none).
 
 ## Performance
 
@@ -102,5 +134,20 @@ layers, so it is no cheaper.
   budget (≤ 50 ms at 256 faces, in wasm) the gate is the part to make
   incremental: an overlay updated over the touched faces' region, in
   `oristudio-layer-order`.
+
+`cargo run -p oristudio-fold --release --example landmarks`: every landmark of
+a state and the candidates of an O2 and an O6 over them, on states made the
+same way. 2026-10-08, one run at load average 138, so pessimistic:
+
+| Faces | States | Points | Segments | Landmarks mean / p95 | O2 candidates | O6 candidates |
+|---|---|---|---|---|---|---|
+| 1–8 | 120 | 17 | 13 | 0.04 / 0.08 ms | 0.003 ms | 0.003 ms |
+| 9–32 | 85 | 76 | 50 | 0.36 / 0.77 ms | 0.005 ms | 0.008 ms |
+| 33–64 | 62 | 190 | 110 | 1.64 / 2.78 ms | 0.012 ms | 0.017 ms |
+| 65–128 | 78 | 395 | 211 | 5.84 / 11.1 ms | 0.023 ms | 0.029 ms |
+| 129–256 | 54 | 697 | 363 | 18.1 / 32.1 ms | 0.036 ms | 0.050 ms |
+
+Landmarks are once per state, cached with it (plan D14 tier 2); a candidate
+list is once per set of picked inputs.
 
 Original work under `MIT OR Apache-2.0`.
