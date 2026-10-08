@@ -69,6 +69,14 @@ describe('the active path', () => {
     expect(withFoldCursor(state, tree(), 'missing')).toBe(state);
     expect(withFoldCursor(state, tree(), null)).toEqual({ ...state, cursor: null });
   });
+
+  it('keeps an active child under any id a file spells, `__proto__` included', () => {
+    const document = sequenceOf([step('__proto__', null), step('x', '__proto__'), step('y', '__proto__')]);
+    const state = withFoldCursor(initialFoldReaderState('fold-a'), document, 'x');
+    expect(pathIds(state, document)).toEqual(['__proto__', 'x']);
+    const read = readFoldReaderState(JSON.parse(JSON.stringify(writeFoldReaderState(state))))!;
+    expect(pathIds(read, document)).toEqual(['__proto__', 'x']);
+  });
 });
 
 describe('settleFoldReaderState', () => {

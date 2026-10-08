@@ -114,8 +114,11 @@ export function withFoldCursor(
   if (id === null) return withState(state, null, state.activeChild);
   const path = pathTo(foldStepTree(document.steps), id);
   if (!path) return state;
-  const activeChild: Record<string, string> = { ...state.activeChild };
-  for (const node of path) activeChild[parentKey(node)] = node.id;
+  // Built from entries, so every id is an own key, whatever it is spelled.
+  const activeChild = Object.fromEntries([
+    ...Object.entries(state.activeChild),
+    ...path.map((node) => [parentKey(node), node.id] as const),
+  ]);
   return withState(state, id, activeChild);
 }
 
