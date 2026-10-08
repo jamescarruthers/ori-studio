@@ -174,6 +174,14 @@ composes `FieldRow`, its inline layout has a label of its own
 design inspector's rows are `FieldRow`s and `TextRow`s. `control-row__input`
 stays global; see below.
 
+Moved by `implementation-plans/fold-workspace.md` (decision B):
+`references-filmstrip` and `references-card`, into `StepFilmstrip.module.css`
+beside the shared step strip (`components/steps/StepFilmstrip`), which
+References now renders through its `ReferencesStepFilmstrip` adapter. The
+phone's snap rules, written against `.references-workspace`, are the strip's
+own coarse-pointer rules; the lookups by class (the active card's focus, the
+swiped card) are by role and data attribute.
+
 Still shared:
 
 - **Panel frame**: `panel-shell`, `panel-toolbar`, `panel-body`,
@@ -198,8 +206,7 @@ Still shared:
   `cp-tool-option`, `cp-inline-simulation` and
   `cp-folded-figure-window` (with `canvasWindowPlacement`), `cp-webgl-layer`,
   `cp-operation-frame`
-- **References**: `step-diagram`, `references-card`, `sheet-card`,
-  `sheet-grid`
+- **References**: `step-diagram`, `sheet-card`, `sheet-grid`
 - **Design scene** (TreeScene, sceneDom, DesignPanel, BpPackingPanel):
   `tree-node`, `tree-edge`, `node-label`, `edge-label`, `symmetry-*`,
   `design-canvas`, `design-panel`, `paper-hit-area`, `paper-shadow`
