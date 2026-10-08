@@ -29,7 +29,7 @@ use crate::fold::{ClosurePolicy, Placement, ResolvedSeed};
 use crate::index::BoxIndex;
 use crate::numerics::TOL;
 use crate::pattern::FaceId;
-use crate::refusal::{Fix, Flap, Refusal, Refused};
+use crate::refusal::{Fix, Flap, FoldRefusal, Refused};
 use crate::state::{State, sort_top_first};
 use crate::view::Direction;
 
@@ -103,7 +103,7 @@ pub(crate) fn analyse(
     // Pieces: each face with a vertex on the moving side.
     let half = axis
         .moving_half_plane()
-        .ok_or(Refusal::NoMovingSide)
+        .ok_or(FoldRefusal::NoMovingSide)
         .map_err(Refused::from)?;
     let mut pieces: Vec<Option<Vec<Point>>> = vec![None; nf];
     let mut has_stationary = vec![false; nf];
@@ -124,7 +124,7 @@ pub(crate) fn analyse(
         }
     }
     if pieces.iter().all(Option::is_none) {
-        return Err(Refusal::NoMovingSide.into());
+        return Err(FoldRefusal::NoMovingSide.into());
     }
 
     // Rule (i): creases with an end on the moving side.
@@ -152,7 +152,7 @@ pub(crate) fn analyse(
             let target = state
                 .face_at(*at)
                 .and_then(|id| state.face_position(id))
-                .ok_or(Refusal::WitnessNotInFace { point: *at })
+                .ok_or(FoldRefusal::WitnessNotInFace { point: *at })
                 .map_err(Refused::from)?;
             Some(tuck(
                 state,
@@ -220,7 +220,7 @@ pub(crate) fn analyse(
             Vec::new()
         };
         return Err(Refused {
-            refusal: Refusal::NothingStays,
+            refusal: FoldRefusal::NothingStays,
             fixes,
         });
     }
@@ -230,7 +230,7 @@ pub(crate) fn analyse(
         && moving[t.target]
         && !has_stationary[t.target]
     {
-        return Err(Refusal::TuckTargetMoves {
+        return Err(FoldRefusal::TuckTargetMoves {
             face: faces[t.target].id,
         }
         .into());
@@ -248,7 +248,7 @@ pub(crate) fn analyse(
         .collect();
     if policy == ClosurePolicy::Refuse && !added.is_empty() {
         return Err(Refused {
-            refusal: Refusal::ClosureAddsFlaps {
+            refusal: FoldRefusal::ClosureAddsFlaps {
                 added: added.clone(),
             },
             fixes: vec![Fix::IncludeFlaps { flaps: added }],
@@ -338,7 +338,7 @@ fn resolve_seed(
         state
             .face_at(p)
             .and_then(|id| state.face_position(id))
-            .ok_or(Refusal::WitnessNotInFace { point: p }.into())
+            .ok_or(FoldRefusal::WitnessNotInFace { point: p }.into())
     };
     let faces: Vec<usize> = match seed {
         ResolvedSeed::All => (0..pieces.len()).filter(|&f| pieces[f].is_some()).collect(),
@@ -353,7 +353,7 @@ fn resolve_seed(
                 let f = in_face(p)?;
                 let image = state.geometry().isometries[f].apply(p);
                 if pieces[f].is_none() || axis.distance(image) <= TOL {
-                    return Err(Refusal::SeedNotOnMovingSide { point: p }.into());
+                    return Err(FoldRefusal::SeedNotOnMovingSide { point: p }.into());
                 }
                 out.push(f);
             }
@@ -363,7 +363,7 @@ fn resolve_seed(
             let f = in_face(*at)?;
             let image = state.geometry().isometries[f].apply(*at);
             if axis.distance(image) <= TOL {
-                return Err(Refusal::SeedNotOnMovingSide { point: *at }.into());
+                return Err(FoldRefusal::SeedNotOnMovingSide { point: *at }.into());
             }
             let ids: Vec<FaceId> = (0..pieces.len())
                 .filter(|&g| {
@@ -373,7 +373,7 @@ fn resolve_seed(
                 .map(|g| state.faces()[g].id)
                 .collect();
             let stack = sort_top_first(&ids, state.order()).ok_or_else(|| {
-                Refused::from(Refusal::LayerOrder {
+                Refused::from(FoldRefusal::LayerOrder {
                     violations: unstacked(state, &ids),
                 })
             })?;
@@ -389,7 +389,7 @@ fn resolve_seed(
         }
     };
     if faces.is_empty() {
-        return Err(Refusal::EmptySeed.into());
+        return Err(FoldRefusal::EmptySeed.into());
     }
     Ok(faces)
 }
@@ -410,7 +410,7 @@ fn unstacked(state: &State, faces: &[FaceId]) -> Vec<Violation> {
 }
 
 fn missing_pair(f: FaceId, g: FaceId) -> Refused {
-    Refusal::LayerOrder {
+    FoldRefusal::LayerOrder {
         violations: FacePair::new(f, g)
             .map(|pair| Violation::MissingPair { pair })
             .into_iter()

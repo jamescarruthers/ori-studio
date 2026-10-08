@@ -18,7 +18,7 @@ use oristudio_layer_order::{CheckReport, ConstraintProblem, FoldedView, LayerOrd
 use crate::isometry::Isometry;
 use crate::numerics::TOL;
 use crate::pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, VertexId};
-use crate::refusal::Refusal;
+use crate::refusal::FoldRefusal;
 use crate::sheet::Sheet;
 use crate::view::{StartSide, View};
 
@@ -66,7 +66,7 @@ pub struct State {
 impl State {
     /// The only constructor: derive the isometries and check everything
     /// (see [`gate`]). Faces and creases are put in id order first.
-    pub fn make(parts: StateParts) -> Result<State, Refusal> {
+    pub fn make(parts: StateParts) -> Result<State, FoldRefusal> {
         State::make_with(parts, None)
     }
 
@@ -78,14 +78,14 @@ impl State {
         parts: StateParts,
         previous: &State,
         touched: &BTreeSet<FaceId>,
-    ) -> Result<State, Refusal> {
+    ) -> Result<State, FoldRefusal> {
         State::make_with(parts, Some((previous, touched)))
     }
 
     fn make_with(
         mut parts: StateParts,
         previous: Option<(&State, &BTreeSet<FaceId>)>,
-    ) -> Result<State, Refusal> {
+    ) -> Result<State, FoldRefusal> {
         parts.faces.sort_by_key(|f| f.id);
         parts.creases.sort_by_key(|c| c.id);
         let derived = gate::run(&parts, previous)?;
@@ -96,7 +96,7 @@ impl State {
     }
 
     /// The unfolded sheet, with `start` toward the viewer.
-    pub fn flat(sheet: Sheet, start: StartSide) -> Result<State, Refusal> {
+    pub fn flat(sheet: Sheet, start: StartSide) -> Result<State, FoldRefusal> {
         let n = sheet.outline().len();
         let vertices = sheet.outline().to_vec();
         let creases = (0..n)

@@ -14,7 +14,7 @@ use oristudio_geometry::convex;
 
 use crate::isometry::Isometry;
 use crate::pattern::{CreaseKind, VertexId};
-use crate::refusal::Refusal;
+use crate::refusal::FoldRefusal;
 use crate::state::StateParts;
 
 type Point = [f64; 2];
@@ -33,21 +33,21 @@ pub(crate) struct Topology {
 }
 
 impl Topology {
-    pub(crate) fn build(parts: &StateParts) -> Result<Topology, Refusal> {
+    pub(crate) fn build(parts: &StateParts) -> Result<Topology, FoldRefusal> {
         let nv = parts.vertices.len();
         let mut lookup = HashMap::with_capacity(parts.creases.len());
         for (k, crease) in parts.creases.iter().enumerate() {
             let [a, b] = crease.vertices;
             for v in [a, b] {
                 if v.index() >= nv {
-                    return Err(Refusal::CreaseUnknownVertex {
+                    return Err(FoldRefusal::CreaseUnknownVertex {
                         edge: crease.id,
                         vertex: v,
                     });
                 }
             }
             if lookup.insert(key(a, b), k).is_some() || a == b {
-                return Err(Refusal::DuplicateId {
+                return Err(FoldRefusal::DuplicateId {
                     what: "crease between one pair of vertices",
                     id: crease.id.0,
                 });
@@ -59,20 +59,20 @@ impl Topology {
         for (f, face) in parts.faces.iter().enumerate() {
             let n = face.ring.len();
             if n < 3 {
-                return Err(Refusal::FaceTooSmall { face: face.id });
+                return Err(FoldRefusal::FaceTooSmall { face: face.id });
             }
             let mut ring_creases = Vec::with_capacity(n);
             for i in 0..n {
                 let (a, b) = (face.ring[i], face.ring[(i + 1) % n]);
                 if a.index() >= nv {
-                    return Err(Refusal::UnknownVertex {
+                    return Err(FoldRefusal::UnknownVertex {
                         face: face.id,
                         vertex: a,
                     });
                 }
                 used[a.index()] = true;
                 let Some(&k) = lookup.get(&key(a, b)) else {
-                    return Err(Refusal::MissingCrease {
+                    return Err(FoldRefusal::MissingCrease {
                         face: face.id,
                         vertices: [a, b],
                     });
@@ -89,14 +89,14 @@ impl Topology {
                 2
             };
             if faces.len() != want || (want == 2 && faces[0] == faces[1]) {
-                return Err(Refusal::CreaseFaceCount {
+                return Err(FoldRefusal::CreaseFaceCount {
                     edge: parts.creases[k].id,
                     faces: faces.len(),
                 });
             }
         }
         if let Some(v) = used.iter().position(|&u| !u) {
-            return Err(Refusal::UnusedVertex {
+            return Err(FoldRefusal::UnusedVertex {
                 vertex: VertexId(v as u32),
             });
         }
@@ -145,7 +145,7 @@ impl Geometry {
         topology: &Topology,
         root: usize,
         tolerance: f64,
-    ) -> Result<Geometry, Refusal> {
+    ) -> Result<Geometry, FoldRefusal> {
         let nf = parts.faces.len();
         let mut isometries: Vec<Option<Isometry>> = vec![None; nf];
         let mut visit = Vec::with_capacity(nf);
@@ -178,7 +178,7 @@ impl Geometry {
             match t {
                 Some(t) => done.push(t),
                 None => {
-                    return Err(Refusal::UnreachedFace {
+                    return Err(FoldRefusal::UnreachedFace {
                         face: parts.faces[f].id,
                     });
                 }
@@ -206,7 +206,7 @@ impl Geometry {
         if let Some((w, vertex, f)) = worst
             && (w > tolerance || w.is_nan())
         {
-            return Err(Refusal::Residual {
+            return Err(FoldRefusal::Residual {
                 vertex,
                 face: parts.faces[f].id,
                 residual: w,

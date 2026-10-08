@@ -13,8 +13,8 @@ mod support;
 use std::path::PathBuf;
 
 use oristudio_fold::{
-    CreaseKind, Direction, Folded, Letter, Placement, PlainFold, Refusal, Seed, Sheet, SheetShape,
-    StartSide, State,
+    CreaseKind, Direction, FoldRefusal, Folded, Letter, Placement, PlainFold, Seed, Sheet,
+    SheetShape, StartSide, State,
 };
 use serde::{Deserialize, Serialize};
 use support::*;
@@ -333,7 +333,7 @@ fn a_tuck_under_the_top_layer() {
         .with_placement(Placement::Under { at: [0.75, 0.5] });
     let e = refused(&s, &both);
     assert!(
-        matches!(e.refusal, Refusal::LayerOrder { .. }),
+        matches!(e.refusal, FoldRefusal::LayerOrder { .. }),
         "{:?}",
         e.refusal
     );

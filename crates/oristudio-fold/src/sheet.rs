@@ -10,7 +10,7 @@ use oristudio_geometry::convex;
 use serde::{Deserialize, Serialize};
 
 use crate::numerics::{MIN_FEATURE, TOL};
-use crate::refusal::Refusal;
+use crate::refusal::FoldRefusal;
 
 type Point = [f64; 2];
 
@@ -45,7 +45,7 @@ pub struct Sheet {
 }
 
 impl Sheet {
-    pub fn new(shape: &SheetShape) -> Result<Sheet, Refusal> {
+    pub fn new(shape: &SheetShape) -> Result<Sheet, FoldRefusal> {
         match shape {
             SheetShape::Square => Ok(Sheet::square()),
             SheetShape::Rectangle { width, height } => Sheet::rectangle(*width, *height),
@@ -62,9 +62,9 @@ impl Sheet {
     }
 
     /// A `width : height` rectangle, scaled to longer side 1.
-    pub fn rectangle(width: f64, height: f64) -> Result<Sheet, Refusal> {
+    pub fn rectangle(width: f64, height: f64) -> Result<Sheet, FoldRefusal> {
         if !(width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0) {
-            return Err(Refusal::InvalidRectangle);
+            return Err(FoldRefusal::InvalidRectangle);
         }
         let longer = width.max(height);
         let (w, h) = (width / longer, height / longer);
@@ -73,9 +73,9 @@ impl Sheet {
 
     /// A regular polygon with its first vertex at −π/2, counter-clockwise,
     /// placed in the unit frame.
-    pub fn regular(sides: u32) -> Result<Sheet, Refusal> {
+    pub fn regular(sides: u32) -> Result<Sheet, FoldRefusal> {
         if !(3..=MAX_REGULAR_SIDES).contains(&sides) {
-            return Err(Refusal::InvalidSides { sides });
+            return Err(FoldRefusal::InvalidSides { sides });
         }
         let n = f64::from(sides);
         let ring: Vec<Point> = (0..sides)
@@ -97,19 +97,19 @@ impl Sheet {
     /// side shorter than the minimum feature, and its bounding box at the
     /// origin with longer side 1. Either orientation is accepted and stored
     /// counter-clockwise.
-    pub fn polygon(points: Vec<Point>) -> Result<Sheet, Refusal> {
+    pub fn polygon(points: Vec<Point>) -> Result<Sheet, FoldRefusal> {
         let n = points.len();
         if n < 3 {
-            return Err(Refusal::SheetTooFewPoints { count: n });
+            return Err(FoldRefusal::SheetTooFewPoints { count: n });
         }
         if points.iter().flatten().any(|c| !c.is_finite()) {
-            return Err(Refusal::SheetNotFinite);
+            return Err(FoldRefusal::SheetNotFinite);
         }
         for i in 0..n {
             let (a, b) = (points[i], points[(i + 1) % n]);
             let length = (b[0] - a[0]).hypot(b[1] - a[1]);
             if length < MIN_FEATURE {
-                return Err(Refusal::SheetSideTooShort { index: i, length });
+                return Err(FoldRefusal::SheetSideTooShort { index: i, length });
             }
         }
         let mut outline = points;
@@ -117,11 +117,11 @@ impl Sheet {
             outline.reverse();
         }
         if !convex::is_convex(&outline, TOL) {
-            return Err(Refusal::SheetNotConvex);
+            return Err(FoldRefusal::SheetNotConvex);
         }
         let [x0, y0, x1, y1] = convex::bounding_box(&outline);
         if x0.abs() > TOL || y0.abs() > TOL || ((x1 - x0).max(y1 - y0) - 1.0).abs() > TOL {
-            return Err(Refusal::SheetNotInUnitFrame);
+            return Err(FoldRefusal::SheetNotInUnitFrame);
         }
         Ok(Sheet { outline })
     }
@@ -152,10 +152,13 @@ mod tests {
         assert!((s.area() - 0.5).abs() < 1e-12);
         let tall = Sheet::rectangle(3.0, 4.0).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(tall.outline()[2], [0.75, 1.0]);
-        assert_eq!(Sheet::rectangle(0.0, 1.0), Err(Refusal::InvalidRectangle));
+        assert_eq!(
+            Sheet::rectangle(0.0, 1.0),
+            Err(FoldRefusal::InvalidRectangle)
+        );
         assert_eq!(
             Sheet::rectangle(f64::NAN, 1.0),
-            Err(Refusal::InvalidRectangle)
+            Err(FoldRefusal::InvalidRectangle)
         );
     }
 
@@ -172,22 +175,25 @@ mod tests {
             assert!((first[0] - (x0 + x1) / 2.0).abs() < 1e-12);
             assert!(convex::is_convex(s.outline(), TOL));
         }
-        assert_eq!(Sheet::regular(2), Err(Refusal::InvalidSides { sides: 2 }));
+        assert_eq!(
+            Sheet::regular(2),
+            Err(FoldRefusal::InvalidSides { sides: 2 })
+        );
     }
 
     #[test]
     fn malformed_outlines_are_refused() {
         assert_eq!(
             Sheet::polygon(vec![[0.0, 0.0], [1.0, 0.0]]),
-            Err(Refusal::SheetTooFewPoints { count: 2 })
+            Err(FoldRefusal::SheetTooFewPoints { count: 2 })
         );
         assert_eq!(
             Sheet::polygon(vec![[0.0, 0.0], [f64::INFINITY, 0.0], [0.0, 1.0]]),
-            Err(Refusal::SheetNotFinite)
+            Err(FoldRefusal::SheetNotFinite)
         );
         // An arrowhead: not convex.
         let dart = vec![[0.0, 0.0], [1.0, 0.0], [0.5, 0.3], [0.5, 1.0]];
-        assert_eq!(Sheet::polygon(dart), Err(Refusal::SheetNotConvex));
+        assert_eq!(Sheet::polygon(dart), Err(FoldRefusal::SheetNotConvex));
         // A side shorter than the minimum feature.
         let notch = vec![
             [0.0, 0.0],
@@ -198,11 +204,14 @@ mod tests {
         ];
         assert!(matches!(
             Sheet::polygon(notch),
-            Err(Refusal::SheetSideTooShort { index: 2, .. })
+            Err(FoldRefusal::SheetSideTooShort { index: 2, .. })
         ));
         // Not in the unit frame.
         let shifted = vec![[1.0, 0.0], [2.0, 0.0], [2.0, 1.0], [1.0, 1.0]];
-        assert_eq!(Sheet::polygon(shifted), Err(Refusal::SheetNotInUnitFrame));
+        assert_eq!(
+            Sheet::polygon(shifted),
+            Err(FoldRefusal::SheetNotInUnitFrame)
+        );
     }
 
     #[test]

@@ -44,7 +44,7 @@ pub use fold::{
 };
 pub use isometry::Isometry;
 pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
-pub use refusal::{Fix, Flap, NearMissCause, Refusal, Refused, Side};
+pub use refusal::{Fix, Flap, FoldRefusal, NearMissCause, Refused, Side};
 pub use sheet::{Sheet, SheetShape};
 pub use state::{State, StateParts};
 pub use view::{Direction, StartSide, View};

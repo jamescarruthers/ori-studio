@@ -7,7 +7,7 @@
 mod support;
 
 use oristudio_fold::{
-    CreaseKind, Direction, Fix, Isometry, Letter, Refusal, Seed, Sheet, StartSide, State,
+    CreaseKind, Direction, Fix, FoldRefusal, Isometry, Letter, Seed, Sheet, StartSide, State,
 };
 use oristudio_layer_order::Violation;
 use support::*;
@@ -212,7 +212,7 @@ fn g10_unfold_a_flap() {
 #[test]
 fn g11_everything_moving_is_refused_with_pick_a_flap() {
     let everything = refused(&book(), &all(x_eq(0.5), [0.25, 0.5], Valley));
-    assert_eq!(everything.refusal, Refusal::NothingStays);
+    assert_eq!(everything.refusal, FoldRefusal::NothingStays);
     let picks: Vec<&Fix> = everything
         .fixes
         .iter()
@@ -238,7 +238,7 @@ fn g11_everything_moving_is_refused_with_pick_a_flap() {
             // The bottom one would drag the top one along by rule (ii) and
             // move everything again; a mountain takes it alone.
             let e = refused(&s, &op);
-            assert_eq!(e.refusal, Refusal::NothingStays);
+            assert_eq!(e.refusal, FoldRefusal::NothingStays);
             assert!(e.fixes.contains(&Fix::OppositeDirection), "{:?}", e.fixes);
         }
     }
@@ -272,7 +272,7 @@ fn near_misses_and_slivers_are_refused() {
     let s = State::flat(strip, StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
     let s = fold(&s, &all(x_eq(0.3), [0.1, 0.25], Valley)).state;
     let e = refused(&s, &all(x_eq(0.79995), [0.9, 0.25], Valley));
-    let Refusal::Sliver {
+    let FoldRefusal::Sliver {
         penetration,
         face: f,
         vertex,
@@ -324,9 +324,75 @@ fn closure_ignores_a_hinge_on_the_stationary_side() {
     assert_eq!(r.state.faces().len(), 3);
 }
 
+/// The same strip, picking the body (the bottom layer) instead: a valley
+/// carries the layer lying on it along (rule (ii)), which the report names as
+/// an added flap, or which a strict pick refuses with the fix to include it.
+#[test]
+fn the_closure_reports_the_flaps_it_adds() {
+    use oristudio_fold::ClosurePolicy;
+
+    let strip = Sheet::rectangle(0.25, 1.0).unwrap_or_else(|e| panic!("{e}"));
+    let s = State::flat(strip, StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+    let s = fold(&s, &all(y_eq(0.2), [0.1, 0.1], Valley)).state;
+    let (body, layer) = (face(&s, [0.1, 0.5]), face(&s, [0.1, 0.05]));
+    let pick_body = |direction| {
+        all(y_eq(0.3), [0.1, 0.35], direction).with_seed(Seed::Flaps {
+            at: vec![[0.1, 0.5]],
+        })
+    };
+
+    let r = fold(&s, &pick_body(Valley));
+    let a = &r.report.analysis;
+    assert_eq!(a.moving, vec![body.min(layer), body.max(layer)]);
+    let [picked] = a.picked[..] else {
+        panic!("{:?}", a.picked);
+    };
+    assert_eq!(a.flaps[picked].faces, vec![body]);
+    let [added] = a.added[..] else {
+        panic!("{:?}", a.added);
+    };
+    assert_eq!(a.flaps[added].faces, vec![layer]);
+    assert_valid(&r.state);
+
+    let strict = pick_body(Valley).with_closure(ClosurePolicy::Refuse);
+    let e = refused(&s, &strict);
+    assert_eq!(
+        e.refusal,
+        FoldRefusal::ClosureAddsFlaps { added: vec![added] }
+    );
+    assert!(e.fixes.contains(&Fix::IncludeFlaps { flaps: vec![added] }));
+    // A mountain takes the body alone, so that is offered too.
+    assert!(e.fixes.contains(&Fix::OppositeDirection), "{:?}", e.fixes);
+    let alone = fold(&s, &pick_body(Mountain));
+    assert_eq!(alone.report.analysis.moving, vec![body]);
+    assert!(alone.report.analysis.added.is_empty());
+}
+
+/// A depth is counted from the side the viewer's direction implies: turned
+/// over, the book fold's bottom layer is the one the viewer sees on top, and
+/// a valley as seen takes it alone.
+#[test]
+fn a_turned_over_state_counts_depth_from_the_viewer() {
+    let s = book().turn_over();
+    let (left, right) = (face(&s, [0.25, 0.5]), face(&s, [0.75, 0.5]));
+    assert_eq!(s.seen_above(left, right), Some(true));
+    let r = fold(&s, &depth(x_eq(0.5), [0.25, 0.5], Valley, [0.25, 0.5], 1));
+    assert_valid(&r.state);
+    assert_eq!(r.report.analysis.moving, vec![left]);
+    assert_eq!(r.report.analysis.direction, Mountain);
+    assert_eq!(
+        kind_at(&r.state, [0.5, 0.5]),
+        CreaseKind::Flat(Letter::Valley)
+    );
+    // Flat again, seen from the front.
+    for f in r.state.faces() {
+        assert_eq!(r.state.seen_front_up(f.id), Some(true));
+    }
+}
+
 // --- Negative controls on G5: the gate refuses each corruption -----------
 
-fn corrupted(edit: impl FnOnce(&mut oristudio_fold::StateParts)) -> Refusal {
+fn corrupted(edit: impl FnOnce(&mut oristudio_fold::StateParts)) -> FoldRefusal {
     let (_, s) = quarters();
     let mut parts = s.into_parts();
     edit(&mut parts);
@@ -336,9 +402,9 @@ fn corrupted(edit: impl FnOnce(&mut oristudio_fold::StateParts)) -> Refusal {
     }
 }
 
-fn violations(refusal: &Refusal) -> &[Violation] {
+fn violations(refusal: &FoldRefusal) -> &[Violation] {
     match refusal {
-        Refusal::LayerOrder { violations } => violations,
+        FoldRefusal::LayerOrder { violations } => violations,
         other => panic!("{other:?}"),
     }
 }
@@ -399,7 +465,9 @@ fn a_pair_that_does_not_overlap_is_refused() {
     let mut parts = s.into_parts();
     let (a, b) = (parts.faces[0].id, parts.faces[1].id);
     assert!(parts.order.set_above(a, b).is_ok());
-    let refusal = State::make(parts).err().unwrap_or(Refusal::NothingStays);
+    let refusal = State::make(parts)
+        .err()
+        .unwrap_or(FoldRefusal::NothingStays);
     assert!(
         violations(&refusal)
             .iter()
@@ -416,7 +484,7 @@ fn geometric_corruptions_are_refused() {
         }
     });
     assert!(
-        matches!(refusal, Refusal::HingeOrientation { .. }),
+        matches!(refusal, FoldRefusal::HingeOrientation { .. }),
         "{refusal:?}"
     );
     // A vertex moved: the isometries no longer agree.
@@ -427,7 +495,9 @@ fn geometric_corruptions_are_refused() {
     assert!(
         matches!(
             refusal,
-            Refusal::Residual { .. } | Refusal::NonConvexFace { .. } | Refusal::AreaMismatch { .. }
+            FoldRefusal::Residual { .. }
+                | FoldRefusal::NonConvexFace { .. }
+                | FoldRefusal::AreaMismatch { .. }
         ),
         "{refusal:?}"
     );
@@ -436,7 +506,7 @@ fn geometric_corruptions_are_refused() {
     assert!(
         matches!(
             refusal,
-            Refusal::NonConvexFace { .. } | Refusal::CreaseFaceCount { .. }
+            FoldRefusal::NonConvexFace { .. } | FoldRefusal::CreaseFaceCount { .. }
         ),
         "{refusal:?}"
     );
@@ -450,11 +520,11 @@ fn geometric_corruptions_are_refused() {
     assert!(
         matches!(
             refusal,
-            Refusal::CreaseFaceCount { .. } | Refusal::UnusedVertex { .. }
+            FoldRefusal::CreaseFaceCount { .. } | FoldRefusal::UnusedVertex { .. }
         ),
         "{refusal:?}"
     );
     // An unknown root.
     let refusal = corrupted(|parts| parts.root = oristudio_fold::FaceId(99));
-    assert!(matches!(refusal, Refusal::UnknownRoot { .. }));
+    assert!(matches!(refusal, FoldRefusal::UnknownRoot { .. }));
 }

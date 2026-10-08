@@ -21,7 +21,7 @@ use serde::Serialize;
 use crate::isometry::Isometry;
 use crate::numerics::{Band, EXACT, TOL};
 use crate::pattern::VertexId;
-use crate::refusal::{Fix, NearMissCause, Refusal, Refused, Side};
+use crate::refusal::{Fix, FoldRefusal, NearMissCause, Refused, Side};
 
 type Point = [f64; 2];
 
@@ -167,7 +167,7 @@ pub(crate) fn classify(images: &[Point], requested: Axis) -> Result<Classified, 
                 _ => Vec::new(),
             };
             return Err(Refused {
-                refusal: Refusal::NearMiss {
+                refusal: FoldRefusal::NearMiss {
                     vertex,
                     distance,
                     cause,
@@ -287,7 +287,7 @@ mod tests {
         };
         assert!(matches!(
             refused.refusal,
-            Refusal::NearMiss {
+            FoldRefusal::NearMiss {
                 cause: NearMissCause::Band,
                 ..
             }
@@ -317,7 +317,7 @@ mod tests {
         };
         assert!(matches!(
             refused.refusal,
-            Refusal::NearMiss {
+            FoldRefusal::NearMiss {
                 vertex: VertexId(2),
                 ..
             }

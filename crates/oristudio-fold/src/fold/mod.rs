@@ -30,7 +30,7 @@ use oristudio_geometry::Line;
 use serde::Serialize;
 
 use crate::pattern::{CreaseKind, EdgeId, FaceId};
-use crate::refusal::{Fix, Flap, Refusal, Refused, Side};
+use crate::refusal::{Fix, Flap, FoldRefusal, Refused, Side};
 use crate::state::State;
 use crate::view::Direction;
 
@@ -250,7 +250,7 @@ impl State {
             step,
         )?;
         if unfolded.report.analysis.moving.len() != first.moving_faces.len() {
-            return Err(Refusal::PrecreaseUnfoldMovedMore.into());
+            return Err(FoldRefusal::PrecreaseUnfoldMovedMore.into());
         }
         // Report the net change: the new creases (now flat), and the creases
         // on ℓ whose state differs from the parent's. A hinge on ℓ that the
@@ -330,10 +330,10 @@ impl State {
     ) -> Refused {
         let depends_on_direction = !matches!(
             refused.refusal,
-            Refusal::NearMiss { .. }
-                | Refusal::NoMovingSide
-                | Refusal::WitnessNotInFace { .. }
-                | Refusal::SeedNotOnMovingSide { .. }
+            FoldRefusal::NearMiss { .. }
+                | FoldRefusal::NoMovingSide
+                | FoldRefusal::WitnessNotInFace { .. }
+                | FoldRefusal::SeedNotOnMovingSide { .. }
         );
         if depends_on_direction {
             let other = PlainFold {

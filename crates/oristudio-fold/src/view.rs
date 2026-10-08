@@ -94,8 +94,10 @@ impl View {
         }
     }
 
-    /// Rotated by `angle` radians, counter-clockwise on the display.
+    /// Rotated by `angle` radians, counter-clockwise on the display. A
+    /// non-finite angle is no rotation.
     pub fn rotated(&self, angle: f64) -> View {
+        let angle = if angle.is_finite() { angle } else { 0.0 };
         View {
             flipped: self.flipped,
             rotation: normalize_angle(self.rotation + angle),
@@ -147,5 +149,7 @@ mod tests {
         let v = View::default().rotated(3.0).rotated(3.0);
         assert!(v.rotation > -std::f64::consts::PI && v.rotation <= std::f64::consts::PI);
         assert!((v.rotation - (6.0 - std::f64::consts::TAU)).abs() < 1e-12);
+        assert_eq!(v.rotated(f64::NAN), v);
+        assert_eq!(v.rotated(f64::INFINITY), v);
     }
 }

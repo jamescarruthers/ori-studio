@@ -2,7 +2,7 @@
 //! naming the faces, vertices and creases involved, with the fixes it can
 //! offer. A refusal is never a crash and never an approximation.
 //!
-//! [`Refusal::code`] is the stable identifier the bridge, the UI and the
+//! [`FoldRefusal::code`] is the stable identifier the bridge, the UI and the
 //! `fold refused` analytics event use (plan D18).
 
 use oristudio_geometry::Line;
@@ -31,7 +31,7 @@ pub enum NearMissCause {
 /// Everything the engine refuses.
 #[derive(Debug, Clone, PartialEq, Serialize, Error)]
 #[serde(rename_all = "snake_case", tag = "code")]
-pub enum Refusal {
+pub enum FoldRefusal {
     // --- The sheet -------------------------------------------------------
     #[error("a sheet outline needs at least three points, got {count}")]
     SheetTooFewPoints { count: usize },
@@ -137,67 +137,67 @@ pub enum Refusal {
     PrecreaseUnfoldMovedMore,
 }
 
-impl Refusal {
+impl FoldRefusal {
     /// The stable snake_case code.
     pub fn code(&self) -> &'static str {
         match self {
-            Refusal::SheetTooFewPoints { .. } => "sheet_too_few_points",
-            Refusal::SheetNotFinite => "sheet_not_finite",
-            Refusal::SheetNotConvex => "sheet_not_convex",
-            Refusal::SheetSideTooShort { .. } => "sheet_side_too_short",
-            Refusal::SheetNotInUnitFrame => "sheet_not_in_unit_frame",
-            Refusal::InvalidRectangle => "invalid_rectangle",
-            Refusal::InvalidSides { .. } => "invalid_sides",
-            Refusal::DuplicateId { .. } => "duplicate_id",
-            Refusal::UnknownVertex { .. } => "unknown_vertex",
-            Refusal::CreaseUnknownVertex { .. } => "crease_unknown_vertex",
-            Refusal::UnusedVertex { .. } => "unused_vertex",
-            Refusal::FaceTooSmall { .. } => "face_too_small",
-            Refusal::MissingCrease { .. } => "missing_crease",
-            Refusal::CreaseFaceCount { .. } => "crease_face_count",
-            Refusal::NonConvexFace { .. } => "non_convex_face",
-            Refusal::AreaMismatch { .. } => "area_mismatch",
-            Refusal::UnknownRoot { .. } => "unknown_root",
-            Refusal::UnreachedFace { .. } => "unreached_face",
-            Refusal::Residual { .. } => "residual",
-            Refusal::HingeOrientation { .. } => "hinge_orientation",
-            Refusal::FoldedImage { .. } => "folded_image",
-            Refusal::LayerOrder { .. } => "layer_order",
-            Refusal::NoMovingSide => "no_moving_side",
-            Refusal::NearMiss { .. } => "near_miss",
-            Refusal::WitnessNotInFace { .. } => "witness_not_in_face",
-            Refusal::SeedNotOnMovingSide { .. } => "seed_not_on_moving_side",
-            Refusal::EmptySeed => "empty_seed",
-            Refusal::NothingStays => "nothing_stays",
-            Refusal::ClosureAddsFlaps { .. } => "closure_adds_flaps",
-            Refusal::TuckTargetMoves { .. } => "tuck_target_moves",
-            Refusal::DegenerateSplit { .. } => "degenerate_split",
-            Refusal::ShortCrease { .. } => "short_crease",
-            Refusal::ThinPiece { .. } => "thin_piece",
-            Refusal::Sliver { .. } => "sliver",
-            Refusal::PredictionMismatch { .. } => "prediction_mismatch",
-            Refusal::PrecreaseUnfoldMovedMore => "precrease_unfold_moved_more",
+            FoldRefusal::SheetTooFewPoints { .. } => "sheet_too_few_points",
+            FoldRefusal::SheetNotFinite => "sheet_not_finite",
+            FoldRefusal::SheetNotConvex => "sheet_not_convex",
+            FoldRefusal::SheetSideTooShort { .. } => "sheet_side_too_short",
+            FoldRefusal::SheetNotInUnitFrame => "sheet_not_in_unit_frame",
+            FoldRefusal::InvalidRectangle => "invalid_rectangle",
+            FoldRefusal::InvalidSides { .. } => "invalid_sides",
+            FoldRefusal::DuplicateId { .. } => "duplicate_id",
+            FoldRefusal::UnknownVertex { .. } => "unknown_vertex",
+            FoldRefusal::CreaseUnknownVertex { .. } => "crease_unknown_vertex",
+            FoldRefusal::UnusedVertex { .. } => "unused_vertex",
+            FoldRefusal::FaceTooSmall { .. } => "face_too_small",
+            FoldRefusal::MissingCrease { .. } => "missing_crease",
+            FoldRefusal::CreaseFaceCount { .. } => "crease_face_count",
+            FoldRefusal::NonConvexFace { .. } => "non_convex_face",
+            FoldRefusal::AreaMismatch { .. } => "area_mismatch",
+            FoldRefusal::UnknownRoot { .. } => "unknown_root",
+            FoldRefusal::UnreachedFace { .. } => "unreached_face",
+            FoldRefusal::Residual { .. } => "residual",
+            FoldRefusal::HingeOrientation { .. } => "hinge_orientation",
+            FoldRefusal::FoldedImage { .. } => "folded_image",
+            FoldRefusal::LayerOrder { .. } => "layer_order",
+            FoldRefusal::NoMovingSide => "no_moving_side",
+            FoldRefusal::NearMiss { .. } => "near_miss",
+            FoldRefusal::WitnessNotInFace { .. } => "witness_not_in_face",
+            FoldRefusal::SeedNotOnMovingSide { .. } => "seed_not_on_moving_side",
+            FoldRefusal::EmptySeed => "empty_seed",
+            FoldRefusal::NothingStays => "nothing_stays",
+            FoldRefusal::ClosureAddsFlaps { .. } => "closure_adds_flaps",
+            FoldRefusal::TuckTargetMoves { .. } => "tuck_target_moves",
+            FoldRefusal::DegenerateSplit { .. } => "degenerate_split",
+            FoldRefusal::ShortCrease { .. } => "short_crease",
+            FoldRefusal::ThinPiece { .. } => "thin_piece",
+            FoldRefusal::Sliver { .. } => "sliver",
+            FoldRefusal::PredictionMismatch { .. } => "prediction_mismatch",
+            FoldRefusal::PrecreaseUnfoldMovedMore => "precrease_unfold_moved_more",
         }
     }
 
     /// The faces the refusal names, ascending.
     pub fn faces(&self) -> Vec<FaceId> {
         let mut faces = match self {
-            Refusal::UnknownVertex { face, .. }
-            | Refusal::FaceTooSmall { face }
-            | Refusal::MissingCrease { face, .. }
-            | Refusal::NonConvexFace { face }
-            | Refusal::UnknownRoot { face }
-            | Refusal::UnreachedFace { face }
-            | Refusal::Residual { face, .. }
-            | Refusal::TuckTargetMoves { face }
-            | Refusal::DegenerateSplit { face }
-            | Refusal::ThinPiece { face, .. }
-            | Refusal::Sliver { face, .. }
-            | Refusal::PredictionMismatch { face, .. } => vec![*face],
-            Refusal::HingeOrientation { faces, .. } => faces.to_vec(),
-            Refusal::FoldedImage { faces, .. } => faces.clone(),
-            Refusal::LayerOrder { violations } => {
+            FoldRefusal::UnknownVertex { face, .. }
+            | FoldRefusal::FaceTooSmall { face }
+            | FoldRefusal::MissingCrease { face, .. }
+            | FoldRefusal::NonConvexFace { face }
+            | FoldRefusal::UnknownRoot { face }
+            | FoldRefusal::UnreachedFace { face }
+            | FoldRefusal::Residual { face, .. }
+            | FoldRefusal::TuckTargetMoves { face }
+            | FoldRefusal::DegenerateSplit { face }
+            | FoldRefusal::ThinPiece { face, .. }
+            | FoldRefusal::Sliver { face, .. }
+            | FoldRefusal::PredictionMismatch { face, .. } => vec![*face],
+            FoldRefusal::HingeOrientation { faces, .. } => faces.to_vec(),
+            FoldRefusal::FoldedImage { faces, .. } => faces.clone(),
+            FoldRefusal::LayerOrder { violations } => {
                 violations.iter().flat_map(Violation::faces).collect()
             }
             _ => Vec::new(),
@@ -210,15 +210,14 @@ impl Refusal {
     /// The vertices the refusal names.
     pub fn vertices(&self) -> Vec<VertexId> {
         match self {
-            Refusal::UnknownVertex { vertex, .. }
-            | Refusal::CreaseUnknownVertex { vertex, .. }
-            | Refusal::UnusedVertex { vertex }
-            | Refusal::Residual { vertex, .. }
-            | Refusal::NearMiss { vertex, .. }
-            | Refusal::Sliver { vertex, .. } => vec![*vertex],
-            Refusal::MissingCrease { vertices, .. } | Refusal::ShortCrease { vertices, .. } => {
-                vertices.to_vec()
-            }
+            FoldRefusal::UnknownVertex { vertex, .. }
+            | FoldRefusal::CreaseUnknownVertex { vertex, .. }
+            | FoldRefusal::UnusedVertex { vertex }
+            | FoldRefusal::Residual { vertex, .. }
+            | FoldRefusal::NearMiss { vertex, .. }
+            | FoldRefusal::Sliver { vertex, .. } => vec![*vertex],
+            FoldRefusal::MissingCrease { vertices, .. }
+            | FoldRefusal::ShortCrease { vertices, .. } => vertices.to_vec(),
             _ => Vec::new(),
         }
     }
@@ -284,12 +283,12 @@ pub enum Fix {
 #[derive(Debug, Clone, PartialEq, Serialize, Error)]
 #[error("{refusal}")]
 pub struct Refused {
-    pub refusal: Refusal,
+    pub refusal: FoldRefusal,
     pub fixes: Vec<Fix>,
 }
 
-impl From<Refusal> for Refused {
-    fn from(refusal: Refusal) -> Refused {
+impl From<FoldRefusal> for Refused {
+    fn from(refusal: FoldRefusal) -> Refused {
         Refused {
             refusal,
             fixes: Vec::new(),
@@ -303,7 +302,7 @@ mod tests {
 
     #[test]
     fn codes_are_snake_case_and_name_their_faces() {
-        let r = Refusal::Sliver {
+        let r = FoldRefusal::Sliver {
             vertex: VertexId(4),
             face: FaceId(9),
             penetration: 1e-4,
@@ -316,15 +315,15 @@ mod tests {
     #[test]
     fn the_serialized_tag_is_the_code() {
         let refusals = [
-            Refusal::NothingStays,
-            Refusal::SheetNotConvex,
-            Refusal::NearMiss {
+            FoldRefusal::NothingStays,
+            FoldRefusal::SheetNotConvex,
+            FoldRefusal::NearMiss {
                 vertex: VertexId(1),
                 distance: 1e-4,
                 cause: NearMissCause::Band,
             },
-            Refusal::ClosureAddsFlaps { added: vec![2] },
-            Refusal::LayerOrder {
+            FoldRefusal::ClosureAddsFlaps { added: vec![2] },
+            FoldRefusal::LayerOrder {
                 violations: Vec::new(),
             },
         ];

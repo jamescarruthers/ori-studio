@@ -27,7 +27,7 @@ use oristudio_layer_order::{
 
 use crate::numerics::TOL;
 use crate::pattern::{CreaseKind, FaceId};
-use crate::refusal::Refusal;
+use crate::refusal::FoldRefusal;
 use crate::state::derive::{Geometry, Topology};
 use crate::state::{Derived, State, StateParts};
 
@@ -38,10 +38,10 @@ use crate::state::{Derived, State, StateParts};
 pub(super) fn run(
     parts: &StateParts,
     previous: Option<(&State, &BTreeSet<FaceId>)>,
-) -> Result<Derived, Refusal> {
+) -> Result<Derived, FoldRefusal> {
     for pair in parts.faces.windows(2) {
         if pair[0].id == pair[1].id {
-            return Err(Refusal::DuplicateId {
+            return Err(FoldRefusal::DuplicateId {
                 what: "face",
                 id: pair[0].id.0,
             });
@@ -49,7 +49,7 @@ pub(super) fn run(
     }
     for pair in parts.creases.windows(2) {
         if pair[0].id == pair[1].id {
-            return Err(Refusal::DuplicateId {
+            return Err(FoldRefusal::DuplicateId {
                 what: "crease",
                 id: pair[0].id.0,
             });
@@ -58,7 +58,7 @@ pub(super) fn run(
     let root = parts
         .faces
         .binary_search_by_key(&parts.root, |f| f.id)
-        .map_err(|_| Refusal::UnknownRoot { face: parts.root })?;
+        .map_err(|_| FoldRefusal::UnknownRoot { face: parts.root })?;
 
     let topology = Topology::build(parts)?;
 
@@ -70,13 +70,13 @@ pub(super) fn run(
             .map(|v| parts.vertices[v.index()])
             .collect();
         if !convex::is_convex(&ring, TOL) {
-            return Err(Refusal::NonConvexFace { face: face.id });
+            return Err(FoldRefusal::NonConvexFace { face: face.id });
         }
         area += convex::signed_area(&ring);
     }
     let sheet_area = parts.sheet.area();
     if (area - sheet_area).abs() > TOL {
-        return Err(Refusal::AreaMismatch {
+        return Err(FoldRefusal::AreaMismatch {
             faces_area: area,
             sheet_area,
         });
@@ -97,7 +97,7 @@ pub(super) fn run(
             geometry.isometries[g].front_up(),
         );
         if folded == (f_up == g_up) {
-            return Err(Refusal::HingeOrientation {
+            return Err(FoldRefusal::HingeOrientation {
                 edge: crease.id,
                 faces: [parts.faces[f].id, parts.faces[g].id],
                 kind: if folded { "folded" } else { "flat" },
@@ -153,7 +153,7 @@ pub(super) fn run(
         violations.extend(pair_completeness(&problem, &parts.order));
     }
     if !violations.is_empty() {
-        return Err(Refusal::LayerOrder {
+        return Err(FoldRefusal::LayerOrder {
             violations: violations.into_iter().collect(),
         });
     }
@@ -214,7 +214,7 @@ fn folded_image(
     parts: &StateParts,
     topology: &Topology,
     view_creases: &[usize],
-) -> Refusal {
+) -> FoldRefusal {
     let faces = match error {
         LayerOrderError::DuplicateFace(f)
         | LayerOrderError::NonConvexFace(f)
@@ -238,7 +238,7 @@ fn folded_image(
             .unwrap_or_default(),
         LayerOrderError::InvalidFaceOrder { .. } | LayerOrderError::ProblemMismatch => Vec::new(),
     };
-    Refusal::FoldedImage {
+    FoldRefusal::FoldedImage {
         message: error.to_string(),
         faces,
     }

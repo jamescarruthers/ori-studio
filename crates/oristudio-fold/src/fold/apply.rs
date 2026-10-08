@@ -33,7 +33,7 @@ use crate::fold::closure::Analysis;
 use crate::index::BoxIndex;
 use crate::numerics::{MIN_FEATURE, TOL};
 use crate::pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, VertexId};
-use crate::refusal::Refusal;
+use crate::refusal::FoldRefusal;
 use crate::state::{Geometry, State, StateParts, Topology, ring_position};
 use crate::view::Direction;
 
@@ -73,7 +73,7 @@ pub(crate) fn land(
     state: &State,
     analysis: &Analysis,
     step: u32,
-) -> Result<(State, Landed), Refusal> {
+) -> Result<(State, Landed), FoldRefusal> {
     let parts = state.parts();
     let topology = state.topology();
     let geometry = state.geometry();
@@ -105,7 +105,7 @@ pub(crate) fn land(
             let length = (q[0] - p[0]).hypot(q[1] - p[1]);
             for (end, part) in [(lo, t * length), (hi, (1.0 - t) * length)] {
                 if part < MIN_FEATURE {
-                    return Err(Refusal::ShortCrease {
+                    return Err(FoldRefusal::ShortCrease {
                         vertices: [end, VertexId(vertices.len() as u32)],
                         length: part,
                     });
@@ -139,7 +139,7 @@ pub(crate) fn land(
         }
         if !split[f] {
             if ring.len() != face.ring.len() {
-                return Err(Refusal::DegenerateSplit { face: face.id });
+                return Err(FoldRefusal::DegenerateSplit { face: face.id });
             }
             kept.push(NewFace {
                 face: face.clone(),
@@ -149,17 +149,17 @@ pub(crate) fn land(
             continue;
         }
         let (moving_ring, stationary_ring) =
-            split_ring(&ring, &class_of).ok_or(Refusal::DegenerateSplit { face: face.id })?;
+            split_ring(&ring, &class_of).ok_or(FoldRefusal::DegenerateSplit { face: face.id })?;
         let chord = [moving_ring[0], stationary_ring[0]];
         if chord.iter().all(|v| v.index() < old_vertices)
             && topology.crease_between(chord[0], chord[1]).is_some()
         {
-            return Err(Refusal::DegenerateSplit { face: face.id });
+            return Err(FoldRefusal::DegenerateSplit { face: face.id });
         }
         let [p, q] = chord.map(|v| vertices[v.index()]);
         let length = (q[0] - p[0]).hypot(q[1] - p[1]);
         if length < MIN_FEATURE {
-            return Err(Refusal::ShortCrease {
+            return Err(FoldRefusal::ShortCrease {
                 vertices: chord,
                 length,
             });
@@ -168,7 +168,7 @@ pub(crate) fn land(
             let polygon: Vec<Point> = piece.iter().map(|v| vertices[v.index()]).collect();
             let width = convex::width(&polygon);
             if width < MIN_FEATURE / 2.0 {
-                return Err(Refusal::ThinPiece {
+                return Err(FoldRefusal::ThinPiece {
                     face: face.id,
                     width,
                 });
@@ -231,13 +231,13 @@ pub(crate) fn land(
     let root = {
         let r = state
             .face_position(parts.root)
-            .ok_or(Refusal::UnknownRoot { face: parts.root })?;
+            .ok_or(FoldRefusal::UnknownRoot { face: parts.root })?;
         child_of[r]
             .iter()
             .copied()
             .find(|&a| !new_faces[a].moving)
             .or_else(|| new_faces.iter().position(|n| !n.moving))
-            .ok_or(Refusal::NothingStays)?
+            .ok_or(FoldRefusal::NothingStays)?
     };
     let mut next = StateParts {
         sheet: parts.sheet.clone(),
@@ -276,7 +276,7 @@ pub(crate) fn land(
                 unfolded.push(crease.id);
             }
             _ => {
-                return Err(Refusal::DegenerateSplit {
+                return Err(FoldRefusal::DegenerateSplit {
                     face: new_faces[f].face.id,
                 });
             }
@@ -296,7 +296,7 @@ pub(crate) fn land(
         let points = nfce.face.ring.iter().map(|v| next.vertices[v.index()]);
         let residual = new_geometry.isometries[a].distance_on(&predicted, points);
         if residual > TOL || residual.is_nan() {
-            return Err(Refusal::PredictionMismatch {
+            return Err(FoldRefusal::PredictionMismatch {
                 face: nfce.face.id,
                 residual,
             });
@@ -406,7 +406,7 @@ fn carry_and_place(
     child_of: &[Vec<usize>],
     next: &StateParts,
     geometry: &Geometry,
-) -> Result<LayerOrder, Refusal> {
+) -> Result<LayerOrder, FoldRefusal> {
     let faces = state.faces();
     let touched_old: Vec<bool> = (0..faces.len())
         .map(|f| analysis.moving[f] || child_of[f].len() > 1)
@@ -419,7 +419,7 @@ fn carry_and_place(
     let set = |order: &mut LayerOrder, upper: usize, lower: usize| {
         order
             .set_above(id(upper), id(lower))
-            .map_err(|_| Refusal::DuplicateId {
+            .map_err(|_| FoldRefusal::DuplicateId {
                 what: "face",
                 id: id(upper).0,
             })
@@ -521,11 +521,11 @@ fn sliver(
     a: usize,
     b: usize,
     penetration: f64,
-) -> Refusal {
+) -> FoldRefusal {
     let (at, _) = deepest(&geometry.images[a], &geometry.images[b]);
     let ring = &next.faces[a].ring;
     let front_up = geometry.isometries[a].front_up();
-    Refusal::Sliver {
+    FoldRefusal::Sliver {
         vertex: ring[ring_position(at, ring.len(), front_up)],
         face: state.faces()[new_faces[b].old].id,
         penetration,
@@ -558,12 +558,12 @@ fn derived_letter(
     topology: &Topology,
     geometry: &Geometry,
     k: usize,
-) -> Result<Letter, Refusal> {
+) -> Result<Letter, FoldRefusal> {
     let crease = &next.creases[k];
     let [f, g] = match topology.crease_faces[k][..] {
         [f, g] => [f, g],
         _ => {
-            return Err(Refusal::CreaseFaceCount {
+            return Err(FoldRefusal::CreaseFaceCount {
                 edge: crease.id,
                 faces: topology.crease_faces[k].len(),
             });
@@ -575,7 +575,7 @@ fn derived_letter(
     );
     let ids = [next.faces[f].id, next.faces[g].id];
     if f_up == g_up {
-        return Err(Refusal::HingeOrientation {
+        return Err(FoldRefusal::HingeOrientation {
             edge: crease.id,
             faces: ids,
             kind: "folded",
@@ -589,7 +589,7 @@ fn derived_letter(
     match next.order.above(other, up) {
         Some(true) => Ok(Letter::Valley),
         Some(false) => Ok(Letter::Mountain),
-        None => Err(Refusal::LayerOrder {
+        None => Err(FoldRefusal::LayerOrder {
             violations: FacePair::new(up, other)
                 .map(|pair| Violation::MissingPair { pair })
                 .into_iter()
