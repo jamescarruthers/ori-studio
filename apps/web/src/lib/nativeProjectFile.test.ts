@@ -2047,6 +2047,20 @@ describe('a crease-pattern-only save', () => {
     // Absent rather than null: a file without a diagram is written as before.
     expect('diagram' in createNativeCreasePatternProjectFile(cpInput()).workspace).toBe(false);
   });
+
+  it('writes the diagram where it always has, after the carried designs', () => {
+    const file = createNativeCreasePatternProjectFile(cpInput({ diagram: { formatVersion: 1 } }));
+    expect(Object.keys(JSON.parse(serializeNativeProjectFile(file)).workspace)).toEqual([
+      'id',
+      'title',
+      'activeDocumentId',
+      'designs',
+      'creasePattern',
+      'unknownDesigns',
+      'diagram',
+      'viewState',
+    ]);
+  });
 });
 
 describe('a project holding a diagram', () => {
@@ -2073,6 +2087,14 @@ describe('a project holding a diagram', () => {
     const parsed = parseNativeProjectFile(serializeNativeProjectFile(designOnly({ diagram })));
     expect(parsed.workspace.diagram).toEqual(diagram);
     expect(parsed.minimumReaderSchemaVersion).toBe(9);
+  });
+
+  it('writes the diagram where it always has, and reads it back to the same place', () => {
+    const written = serializeNativeProjectFile(designOnly({ diagram }));
+    const order = ['id', 'title', 'activeDocumentId', 'designs', 'creasePattern', 'unknownDesigns', 'diagram', 'viewState'];
+    expect(Object.keys(JSON.parse(written).workspace)).toEqual(order);
+    // So opening a file and saving it again writes the same bytes.
+    expect(serializeNativeProjectFile(parseNativeProjectFile(written))).toBe(written);
   });
 
   it('writes a project without a diagram exactly as before diagrams existed', () => {
