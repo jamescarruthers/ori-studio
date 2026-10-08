@@ -37,3 +37,6 @@ thiserror.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+# `tests/kernel_scene.rs`: the scene against the kernel's folded paper scene
+# of the same crease pattern, and read back as one.
+oristudio-cp = { path = "../oristudio-cp" }

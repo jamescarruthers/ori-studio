@@ -22,9 +22,11 @@
 //! sees it, resolved against the parent's view. Seeds and tuck targets are
 //! sheet points, never face ids, so a stored step survives replay (plan D6).
 
+mod action;
 mod apply;
 mod closure;
 mod line;
+mod section;
 
 use oristudio_geometry::Line;
 use serde::Serialize;
@@ -34,8 +36,10 @@ use crate::refusal::{Fix, Flap, FoldRefusal, Refused, Side};
 use crate::state::State;
 use crate::view::Direction;
 
+pub use action::{ActionKind, FoldActionGeometry, FoldLineSpan, Grip, Pleat, Push};
 pub use apply::Refold;
 pub use line::Snap;
+pub use section::{CrossSection, DepthChoice, RowOrder, SectionInterval, SectionRow};
 
 use closure::Analysis;
 use line::Axis;
