@@ -33,6 +33,12 @@
 //!   its order completed from its letters, and Edit's folded figure.
 //! - [`witness`]: stored choices with faces named by sheet points, and their
 //!   replay.
+//! - The axioms on flat and folded forms (plan Phase 3): [`anchor`]s, the
+//!   sheet points and segments a step names paper by; [`landmarks`] with
+//!   provenance and visibility; the folded [`silhouette`] as the paper the
+//!   constructions fold; [`axioms`] O1–O7 with who moves and replay;
+//!   [`anchored`] folds along an axiom, an existing crease or a free line;
+//!   and the sliver [`remedy`].
 //!
 //! The layer order, its constraint problem and the checker are
 //! `oristudio-layer-order`'s; the tolerance and the convex-polygon primitives
@@ -49,6 +55,9 @@
 //! | Letters | Front-relative: a folded crease is V iff its front-up face lies below. |
 //! | Turn over | Mirrors the view; every `above` inverts *as seen*; no letter changes. |
 
+pub mod anchor;
+pub mod anchored;
+pub mod axioms;
 pub mod complete;
 pub mod fold;
 #[cfg(feature = "kernel")]
@@ -58,11 +67,14 @@ mod index;
 pub mod isometry;
 #[cfg(feature = "kernel")]
 pub mod kernel;
+pub mod landmarks;
 pub mod numerics;
 pub mod pattern;
 pub mod refusal;
+pub mod remedy;
 pub mod scene;
 pub mod sheet;
+pub mod silhouette;
 pub mod state;
 pub mod summary;
 mod unordered;
@@ -74,6 +86,9 @@ pub use fold_file::{FoldExportError, export_fold_sequence, export_fold_sequence_
 #[cfg(feature = "kernel")]
 pub use kernel::{KernelFrame, fold_cp_to_model};
 
+pub use anchor::SheetSegment;
+pub use anchored::{AnchoredFold, AnchoredRefused, FoldLine, LineRefusal, Resolved};
+pub use axioms::{Axiom, AxiomCandidate, AxiomReplay};
 pub use complete::{
     ChoiceCount, CompletionLimits, CompletionRefusal, Completions, ComponentChoices, FixedKind,
     FixedPair,
@@ -88,10 +103,15 @@ pub use import::{
     ImportTarget, ImportedPattern,
 };
 pub use isometry::Isometry;
+pub use landmarks::{
+    Landmarks, LineLandmark, PointKind, PointLandmark, PointSource, SegmentKind, SegmentLandmark,
+};
 pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
 pub use refusal::{Fix, Flap, FoldRefusal, NearMissCause, Refused, Side};
+pub use remedy::{Pin, SliverRemedy};
 pub use scene::{FoldScene, ScenePoint};
 pub use sheet::{Sheet, SheetShape};
+pub use silhouette::Silhouette;
 pub use state::{State, StateParts};
 pub use summary::{CreaseCounts, CreaseDiff, StepSummary};
 pub use unordered::Unordered;
