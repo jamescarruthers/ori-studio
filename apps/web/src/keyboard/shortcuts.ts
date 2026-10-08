@@ -9,31 +9,65 @@ import { ORIEDITA_DEFAULT_HOTKEYS } from '../lib/orieditaImport/orieditaDefaultH
 import { parseOrieditaKeyStrokeStrict } from '../lib/orieditaImport/parseKeyStroke';
 import { isApplePlatform } from '../lib/platform';
 import { isDesktopRuntime, isWindowsPlatform } from '../platform/runtime';
+import type { EditingContext } from '../workspaces/editingContext';
 
 /**
  * Scopes are searched front-to-back, so a more specific one wins a chord it
- * shares with a broader one. `simulator` sits ahead of `crease-pattern` and is
- * pushed only while a simulation owns the keyboard — a focused inline window on
- * the Edit canvas, or the Simulate workspace. Without it, the simulator's bare
- * letters (F, C, R, L) and Space would fight the CP tools bound to the same
- * keys, and Space is already space-to-pan on the Edit canvas. `references` is
- * the same arrangement for the References workspace: pushed only while its
- * panel has registered an executor, so its arrows and zoom keys never reach the
- * Edit canvas. `diagram` is the same again for the Diagram workspace, with one
- * difference: its executor may decline, as a viewport's does, so its arrows
- * stand down for a focused button or tab strip instead of taking their keys.
- * `diagram-path` sits just ahead of it, with the same executor: Annotate's Edit
- * Path claims the arrows there to nudge a selected node (decision 6), and
- * declines them otherwise, so they fall through to the steps.
+ * shares with a broader one. The conditional scopes come first, each pushed
+ * only while its surface owns the keyboard ({@link CONDITIONAL_SHORTCUT_SCOPES});
+ * then the ones a stack has by its editing context
+ * ({@link CONTEXT_SHORTCUT_SCOPES}).
  */
-export type ShortcutScope =
-  | 'global'
-  | 'crease-pattern'
-  | 'viewport'
-  | 'simulator'
-  | 'references'
-  | 'diagram-path'
-  | 'diagram';
+export type ShortcutScope = ConditionalShortcutScope | (typeof CONTEXT_SHORTCUT_SCOPES)[number];
+
+/**
+ * The scopes in the stack only while a surface holds the keyboard, front to
+ * back: the order `shortcutScopeStackForContext` pushes them in, and the
+ * precedence the conflict rules read. A surface holds the keyboard by
+ * registering an executor for the scope's `target`, which is also the target
+ * its bindings dispatch to (`registerConditionalScopeExecutor`). `onlyIn`
+ * names the one editing context a scope is pushed in; `null`, any.
+ *
+ * Every executor answers whether it claims the chord, and a decline lets the
+ * next scope have it (`ShortcutExecutors`):
+ *
+ * - `simulator` — a focused inline window on the Edit canvas, or the Simulate
+ *   workspace. Ahead of everything: without it, the simulator's bare letters
+ *   (F, C, R, L) and Space would fight the CP tools bound to the same keys, and
+ *   Space is already space-to-pan on the Edit canvas. It declines the tool
+ *   verbs where there are no tools — an inline window has none — so its Escape
+ *   never swallows `viewport.cancel`, and O and P stay live beneath it.
+ * - `references` — the References workspace, so its arrows and zoom keys never
+ *   reach the Edit canvas. It claims every chord: none of its verbs ever
+ *   stands down.
+ * - `diagram-path`, then `diagram` — the Diagram workspace, one executor for
+ *   both, and only in the Diagram's own context, so neither ever stacks with
+ *   `crease-pattern`. Annotate's Edit Path claims the arrows in `diagram-path`
+ *   to nudge a selected node (decision 6), and declines them otherwise, so they
+ *   fall through to the steps. The steps' arrows and Enter decline in turn
+ *   while a focused control uses the key — a tab strip its arrows, a button
+ *   its Enter — instead of taking it away.
+ */
+export const CONDITIONAL_SHORTCUT_SCOPES = [
+  { scope: 'simulator', target: 'simulator', onlyIn: null },
+  { scope: 'references', target: 'references', onlyIn: null },
+  { scope: 'diagram-path', target: 'diagram', onlyIn: 'diagram' },
+  { scope: 'diagram', target: 'diagram', onlyIn: 'diagram' },
+] as const satisfies readonly {
+  scope: string;
+  target: ConditionalShortcutTarget;
+  onlyIn: EditingContext | null;
+}[];
+
+export type ConditionalShortcutScope = (typeof CONDITIONAL_SHORTCUT_SCOPES)[number]['scope'];
+
+/**
+ * Behind every conditional scope, front to back, the ones a stack has by its
+ * editing context: `viewport` and `global` always, `crease-pattern` while the
+ * crease pattern is what is being edited.
+ */
+const CONTEXT_SHORTCUT_SCOPES = ['viewport', 'crease-pattern', 'global'] as const;
+
 export type ViewportShortcutId =
   | 'viewport.zoomIn'
   | 'viewport.zoomOut'
@@ -143,13 +177,19 @@ export type ShortcutActionId =
   | SimulatorShortcutId
   | ReferencesShortcutId
   | DiagramShortcutId;
-export type ShortcutTarget =
-  | 'menu'
-  | 'cp-action'
-  | 'viewport'
-  | 'simulator'
-  | 'references'
-  | 'diagram';
+
+/**
+ * The ids each conditional surface's executor answers, by the `target` its
+ * bindings dispatch to — one executor per surface, though the Diagram's
+ * answers two scopes ({@link CONDITIONAL_SHORTCUT_SCOPES}).
+ */
+export interface ConditionalShortcutIds {
+  simulator: SimulatorShortcutId;
+  references: ReferencesShortcutId;
+  diagram: DiagramShortcutId;
+}
+export type ConditionalShortcutTarget = keyof ConditionalShortcutIds;
+export type ShortcutTarget = 'menu' | 'cp-action' | 'viewport' | ConditionalShortcutTarget;
 export type ReservedKeyClassification = 'allowed' | 'soft-reserved' | 'hard-reserved';
 
 export interface KeyChord {
@@ -1265,9 +1305,9 @@ export interface ShortcutShadowing {
   /**
    * Whether the loser is dead outright, or merely deferred.
    *
-   * Two claimants defer rather than kill. `simulator` and `references` are the
-   * scopes that are not always in the stack — `shortcutScopeStackForContext`
-   * pushes each only while its surface owns the keyboard. So a simulator binding
+   * Two claimants defer rather than kill. The conditional scopes are not always
+   * in the stack — `shortcutScopeStackForContext` pushes each only while its
+   * surface owns the keyboard ({@link CONDITIONAL_SHORTCUT_SCOPES}). So a simulator binding
    * over a non-simulator one takes the chord *while a simulation is focused* and
    * gives it back otherwise, which is the documented intent at the top of this
    * file rather than a collision. A viewport binding that {@link shortcutMayDecline} is the same
@@ -1290,29 +1330,22 @@ export interface ShortcutShadowing {
 /**
  * Scope precedence exactly as the dispatcher sees it — the order
  * `shortcutScopeStackForContext` builds, with every optional scope present at
- * once, which is the arrangement in which shadowing actually happens.
+ * once, which is the arrangement in which shadowing actually happens. Every
+ * {@link ShortcutScope} is in one of the two lists, so each has a place.
  */
-const SHORTCUT_SCOPE_PRECEDENCE: Record<ShortcutScope, number> = {
-  simulator: 0,
-  references: 1,
-  'diagram-path': 2,
-  diagram: 3,
-  viewport: 4,
-  'crease-pattern': 5,
-  global: 6,
-};
+const SHORTCUT_SCOPE_ORDER: readonly ShortcutScope[] = [
+  ...CONDITIONAL_SHORTCUT_SCOPES.map(({ scope }) => scope),
+  ...CONTEXT_SHORTCUT_SCOPES,
+];
 
 /**
  * The scopes `shortcutScopeStackForContext` pushes only while a surface has
  * registered an executor. A claim from one of these is a deferral rather than a
  * death for anything beneath it — see {@link ShortcutShadowing.kind}.
  */
-const CONDITIONAL_SCOPES: ReadonlySet<ShortcutScope> = new Set([
-  'simulator',
-  'references',
-  'diagram-path',
-  'diagram',
-]);
+const CONDITIONAL_SCOPES: ReadonlySet<ShortcutScope> = new Set(
+  CONDITIONAL_SHORTCUT_SCOPES.map(({ scope }) => scope)
+);
 
 /**
  * Whether bindings in `scope` are dispatched only while their surface owns the
@@ -1325,7 +1358,7 @@ export function isConditionalShortcutScope(scope: ShortcutScope): boolean {
 
 /** True when `a` is the definition `handleShortcutKeyDown` reaches first. */
 function shortcutDispatchPrecedes(a: ShortcutDefinition, b: ShortcutDefinition): boolean {
-  const scopeDelta = SHORTCUT_SCOPE_PRECEDENCE[a.scope] - SHORTCUT_SCOPE_PRECEDENCE[b.scope];
+  const scopeDelta = SHORTCUT_SCOPE_ORDER.indexOf(a.scope) - SHORTCUT_SCOPE_ORDER.indexOf(b.scope);
   if (scopeDelta !== 0) return scopeDelta < 0;
   // Within one scope the dispatcher takes `SHORTCUT_DEFINITIONS.find`'s answer,
   // so registry order decides.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import {
   registerArmedMode,
-  registerDiagramShortcutExecutor,
+  registerConditionalScopeExecutor,
   registerViewportShortcutExecutor,
   releaseShortcutViewportSurface,
   setActiveShortcutViewportSurface,
@@ -164,7 +164,7 @@ export function useDiagramShortcuts(handlers: {
 
   useEffect(() => {
     setActiveShortcutViewportSurface('diagram');
-    const offScope = registerDiagramShortcutExecutor((id: DiagramShortcutId) => {
+    const offScope = registerConditionalScopeExecutor('diagram', (id: DiagramShortcutId) => {
       // Enter belongs to whatever else has focus (a button clicks on it, a
       // link follows); the arrows only to the controls that use them.
       // Annotate's letters belong to no control that is not a field, and the
