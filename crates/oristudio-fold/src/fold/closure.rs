@@ -267,6 +267,63 @@ pub(crate) fn analyse(
     })
 }
 
+/// The moving side of a classified line before any seed: what [`analyse`]
+/// computes before it resolves one.
+pub(crate) struct MovingSide {
+    /// Per face position, its image clipped to the moving side; none for a
+    /// face with no vertex there.
+    pub(crate) pieces: Vec<Option<Vec<Point>>>,
+    pub(crate) flaps: Vec<Flap>,
+    /// Per face position, its flap; none for a face without a piece.
+    pub(crate) flap_of: Vec<Option<usize>>,
+}
+
+/// The pieces and flaps of `classified`'s moving side, for the queries that
+/// need them without a seed or a closure (the cross-section, plan D14). The
+/// same pieces, rule (i) and flaps as [`analyse`]; `fold::section`'s tests
+/// hold the two to the same flaps.
+pub(crate) fn moving_side(state: &State, classified: &Classified) -> Result<MovingSide, Refused> {
+    let faces = state.faces();
+    let geometry = state.geometry();
+    let classes = &classified.classes;
+    let axis = classified.axis;
+    let half = axis
+        .moving_half_plane()
+        .ok_or(FoldRefusal::NoMovingSide)
+        .map_err(Refused::from)?;
+    let pieces: Vec<Option<Vec<Point>>> = faces
+        .iter()
+        .enumerate()
+        .map(|(f, face)| {
+            face.ring
+                .iter()
+                .any(|v| classes[v.index()] == 1)
+                .then(|| convex::split(&geometry.images[f], &half, TOL).inside)
+                .filter(|piece| piece.len() >= 3)
+        })
+        .collect();
+    if pieces.iter().all(Option::is_none) {
+        return Err(FoldRefusal::NoMovingSide.into());
+    }
+    let mut adjacent: Vec<Vec<usize>> = vec![Vec::new(); faces.len()];
+    for (k, crease) in state.creases().iter().enumerate() {
+        let [a, b] = crease.vertices;
+        if classes[a.index()].max(classes[b.index()]) < 1 {
+            continue;
+        }
+        if let [f, g] = state.topology().crease_faces[k][..] {
+            adjacent[f].push(g);
+            adjacent[g].push(f);
+        }
+    }
+    let (flaps, flap_of) = flaps_of(state, &pieces, &adjacent, &axis);
+    Ok(MovingSide {
+        pieces,
+        flaps,
+        flap_of,
+    })
+}
+
 /// The components of rule (i) among the faces with a moving piece, ordered
 /// by their least face id, each with a witness; and each face's flap.
 fn flaps_of(

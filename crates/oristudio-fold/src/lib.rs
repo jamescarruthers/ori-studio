@@ -44,7 +44,9 @@ pub mod state;
 pub mod view;
 
 pub use fold::{
-    ClosurePolicy, FoldAnalysis, FoldReport, Folded, Placement, PlainFold, Refold, Seed, Snap,
+    ActionKind, ClosurePolicy, CrossSection, DepthChoice, FoldActionGeometry, FoldAnalysis,
+    FoldLineSpan, FoldReport, Folded, Grip, Placement, PlainFold, Pleat, Push, Refold, RowOrder,
+    SectionInterval, SectionRow, Seed, Snap,
 };
 pub use isometry::Isometry;
 pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
