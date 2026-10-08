@@ -3433,6 +3433,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "oristudio-geometry"
+version = "0.5.2"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "oristudio-layer-order"
+version = "0.5.2"
+dependencies = [
+ "oristudio-geometry",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "oristudio-pdf"
 version = "0.5.2"
 dependencies = [
