@@ -273,6 +273,21 @@ fn unfold_and_refold_fold_along_an_existing_crease() {
         }),
     );
     assert_eq!(folded["refusal"]["code"], "crease_not_flat");
+    // The sheet's border is neither flat nor folded.
+    for (kind, code) in [
+        ("refold", "crease_not_flat"),
+        ("unfold", "crease_not_folded"),
+    ] {
+        let border = refuse(
+            &mut bridge,
+            book,
+            json!({
+                "kind": kind, "crease": [0.25, 0.0], "direction": "valley",
+                "moving": [0.25, 0.5], "seed": { "scope": "all" }
+            }),
+        );
+        assert_eq!(border["refusal"]["code"], code);
+    }
     let nowhere = refuse(
         &mut bridge,
         book,

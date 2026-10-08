@@ -67,17 +67,14 @@ pub fn along_line(
 }
 
 /// An unfold or refold op: a plain fold along the crease's line, which must
-/// be folded (`folded`) or flat.
+/// be folded (`folded`) or flat. The sheet's border is neither.
 pub fn along_crease(state: &State, op: &AlongCrease, folded: bool) -> Result<PlainFold, Rejection> {
     let (line, kind) = crease(state, op.crease)?;
-    if kind.is_folded() != folded {
-        let point = op.crease;
-        return Err(if folded {
-            BridgeRefusal::CreaseNotFolded { point }
-        } else {
-            BridgeRefusal::CreaseNotFlat { point }
-        }
-        .into());
+    let point = op.crease;
+    match (folded, kind) {
+        (true, CreaseKind::Folded(_)) | (false, CreaseKind::Flat(_)) => {}
+        (true, _) => return Err(BridgeRefusal::CreaseNotFolded { point }.into()),
+        (false, _) => return Err(BridgeRefusal::CreaseNotFlat { point }.into()),
     }
     plain(state, line, false, op.direction, &op.motion)
 }
