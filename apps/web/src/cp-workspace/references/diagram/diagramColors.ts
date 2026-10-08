@@ -151,6 +151,13 @@ export const DIAGRAM_INLINE_TOKENS = [
 export type DiagramInlineToken = (typeof DIAGRAM_INLINE_TOKENS)[number];
 export type DiagramInlineTokens = Readonly<Record<DiagramInlineToken, string>>;
 
+/**
+ * Every token but the ground: what the surface a drawing is made for gives
+ * it — the paper, the pens' inks and the letters' accent — where the ground
+ * is the page's own.
+ */
+export type DiagramMarkupTokens = Omit<DiagramInlineTokens, '--bg-primary'>;
+
 /** A line style's stroke, and the opacity it draws at when that is not 1. */
 export interface DiagramInlineStroke {
   color: string;

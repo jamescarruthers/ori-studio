@@ -46,14 +46,14 @@
 import type { PaperPage, PaperSheetSize } from '../../lib/paper/paperPage';
 import type { PaperExportMarks } from '../../lib/paperExportSettings';
 import { PT_TO_CSS_PX, type PaperStyle } from '../../lib/paper/paperStyle';
-import { PAPER_STYLE_POLICIES, surfacePaperStyle } from '../../lib/paper/paperStyleResolve';
 import type { PaperScene } from '../../lib/paper/paperScene';
 import { mmToCssPx } from '../../lib/paper/paperSvg';
 import { canvasDiagramInk, canvasDiagramPens } from './diagram/diagramInk';
-import { diagramToPaperScene } from './diagramToPaperScene';
+import { diagramScenePaintStyle, diagramToPaperScene } from './diagramToPaperScene';
 import type { StepDiagramModel, StepDiagramPrimitive } from './referenceFinderDiagramToPrimitives';
 import { foldCardNumbers, type ReferencesViewStep } from './referencesSequenceView';
 import { createOverlayProjector, sheetFrame } from './stepDiagramGeometry';
+import { referencesMarkupTokens } from './usePaperStyleTokens';
 
 /**
  * The sheet's longer side on the page, in CSS px, for the page's sheet size:
@@ -65,9 +65,13 @@ export function referencesStepSheetCssPx(sheet: PaperSheetSize): number {
   return mmToCssPx(sheet.mm);
 }
 
-/** What the step's scene is built from. */
-export interface ReferencesStepSceneOptions {
-  /** The export style; the `references` policy is applied here. */
+/**
+ * What a step's scene is built from at its page, whatever surface the step is
+ * drawn for: the half of it the export dialog decides
+ * (`stepDiagramExportTarget`).
+ */
+export interface StepDiagramPageInput {
+  /** The export style, before the surface's policy. */
   style: PaperStyle;
   /** The picture is of the paper's back — the side the reader is on. */
   mirrored: boolean;
@@ -76,12 +80,16 @@ export interface ReferencesStepSceneOptions {
    * export builds at the page's sheet size ({@link referencesStepSheetCssPx}).
    */
   sheetCssPx: number;
+  /** The page's background — what a letter off the paper is haloed in — or null for a transparent page. */
+  background: PaperPage['background'];
+}
+
+/** What a References step's scene is built from; the `references` policy is applied to its style. */
+export interface ReferencesStepSceneOptions extends StepDiagramPageInput {
   /** The reader's crease width, which is the diagram's pen on the big view. */
   lineWidth: number;
   /** The References "Show auxiliary creases" option; null follows the style. */
   showAux?: boolean | null;
-  /** The page's background — what a letter off the paper is haloed in — or null for a transparent page. */
-  background: PaperPage['background'];
 }
 
 /**
@@ -112,9 +120,11 @@ export function referencesStepScene(
   );
   return diagramToPaperScene(diagram, {
     style,
+    surface: 'references',
     project,
     mirrored,
     showAux,
+    markupTokens: referencesMarkupTokens,
     ...(background === null ? {} : { ground: background }),
   });
 }
@@ -148,15 +158,12 @@ export function referencesStepDiagramMarks(
 }
 
 /**
- * The style the painter draws a step's scene with: the style as the view sees
- * it — the policy applied, and every crease in its own pen, as the other
- * surfaces hand theirs. Its aux switch stays on: the scene already holds
- * exactly the aux-pen lines the page carries, and the creases an earlier step
- * made are among them.
+ * The style the painter draws a References step's scene with
+ * ({@link diagramScenePaintStyle} through the `references` policy): the style
+ * as the view sees it, every crease in its own pen, its aux switch on.
  */
 export function referencesStepPaintStyle(style: PaperStyle): PaperStyle {
-  const painted = surfacePaperStyle(style, PAPER_STYLE_POLICIES.references);
-  return { ...painted, auxCreases: { ...painted.auxCreases, visible: true } };
+  return diagramScenePaintStyle(style, 'references');
 }
 
 /** Which diagram is being exported, for the file's name. */

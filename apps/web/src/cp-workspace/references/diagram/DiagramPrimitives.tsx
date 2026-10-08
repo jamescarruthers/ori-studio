@@ -194,9 +194,10 @@ export interface DiagramRenderOptions {
   inline?: DiagramInlineInk | null;
   /**
    * The outline the paper is filled with, in the primitives' own space.
-   * Absent, the sheet's rectangle (`sheetCorners`) — what a card fills. The big
-   * view passes the hull the canvas fills (`sheetOutline`), so a letter's halo
-   * and a mark's ink agree with the paper the reader sees.
+   * Absent, the sheet's own (`sheetCorners`): its rectangle — what a card
+   * fills — or a polygon sheet's outline. The big view passes the hull the
+   * canvas fills (`sheetOutline`), so a letter's halo and a mark's ink agree
+   * with the paper the reader sees.
    */
   outline?: readonly SheetPoint[];
   /**

@@ -897,6 +897,51 @@ describe('the sheet’s edge', () => {
   });
 });
 
+describe('a polygon sheet', () => {
+  // The unit square with its top-right corner cut away: a pentagon whose
+  // slanted side runs from (1, 0.5) to (0.5, 1). Its extent is still 1 × 1.
+  const outline = [
+    [0, 0],
+    [1, 0],
+    [1, 0.5],
+    [0.5, 1],
+    [0, 1],
+  ] as const;
+  const pentagon = { width: 1, height: 1, outline };
+  const round = (p: readonly number[]) => p.map((v) => Number(v.toFixed(6)));
+
+  it('has its outline for corners, every one of them on its edge', () => {
+    expect(sheetCorners(pentagon)).toBe(outline);
+    for (const corner of outline) expect(onSheetBoundary(corner, pentagon)).toBe(true);
+  });
+
+  it('has its outline for an edge, not the rectangle of its extent', () => {
+    // On the slanted side, and on a straight one.
+    expect(onSheetBoundary([0.75, 0.75], pentagon)).toBe(true);
+    expect(onSheetBoundary([0, 0.5], pentagon)).toBe(true);
+    // The corner the cut took and the box's edge beside it are off the paper.
+    expect(onSheetBoundary([1, 1], pentagon)).toBe(false);
+    expect(onSheetBoundary([1, 0.75], pentagon)).toBe(false);
+    expect(onSheetBoundary([0.5, 0.5], pentagon)).toBe(false);
+    // Read to a millionth of the sheet, as the rectangle's edge is.
+    expect(onSheetBoundary([0.75 + 1e-7, 0.75], pentagon)).toBe(true);
+    expect(onSheetBoundary([0.75 + 1e-4, 0.75], pentagon)).toBe(false);
+  });
+
+  it('is eroded at its own edge, by the share of its extent’s longer side', () => {
+    const fold = erodeCreaseOnSheet([0.75, 0.75], [0, 0.75], pentagon, 0.1)!;
+    expect(fold.map(round)).toEqual([
+      [0.65, 0.75],
+      [0.1, 0.75],
+    ]);
+    // An end inside stays.
+    expect(erodeCreaseOnSheet([0.75, 0.75], [0.5, 0.5], pentagon, 0.1)!.map(round)).toEqual([
+      round([0.75 - 0.1 * Math.SQRT1_2, 0.75 - 0.1 * Math.SQRT1_2]),
+      [0.5, 0.5],
+    ]);
+  });
+});
+
 describe('arcPolyline', () => {
   it('runs from the start to the end in the direction of travel, on the circle', () => {
     const arc: DiagramArc = { center: [0, 0], radius: 2, from: 0, to: Math.PI / 2, ccw: true };
