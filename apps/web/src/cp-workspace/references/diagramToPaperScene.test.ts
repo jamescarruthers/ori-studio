@@ -7,6 +7,11 @@ import type {
   PaperScene,
 } from '../../lib/paper/paperScene';
 import { DEFAULT_PAPER_STYLE, PT_TO_CSS_PX, type PaperStyle } from '../../lib/paper/paperStyle';
+import {
+  applyPaperStylePolicy,
+  PAPER_STYLE_POLICIES,
+  type PaperSurface,
+} from '../../lib/paper/paperStyleResolve';
 import { PT_PER_CSS_PX, mmToCssPx, pageMarginPt, paperSceneToSvg } from '../../lib/paper/paperSvg';
 import { REFERENCE_COLORS } from '../../themes/applyTheme';
 import { plannerSequenceWithGridFixture } from './__fixtures__/plannerSequence';
@@ -29,6 +34,10 @@ import {
   withPens,
   type DiagramArc,
 } from './stepDiagramGeometry';
+import { referencesMarkupTokens } from './usePaperStyleTokens';
+
+/** A References step: its style read through its policy, its markup in its workspace's tokens. */
+const REFERENCES = { surface: 'references', markupTokens: referencesMarkupTokens } as const;
 
 /** The card's box: the unit sheet at 80 px with the 10 px band round it. */
 const SIZE = 100;
@@ -53,6 +62,7 @@ function scene(
   options: { style?: PaperStyle; mirrored?: boolean; ground?: string } = {}
 ): PaperScene {
   return diagramToPaperScene(diagram, {
+    ...REFERENCES,
     style: options.style ?? DEFAULT_PAPER_STYLE,
     project: createDiagramProjector(diagram.sheet, SIZE, options.mirrored ?? false),
     ...(options.ground ? { ground: options.ground } : {}),
@@ -124,6 +134,7 @@ describe('the sheet', () => {
     expect(canvas.mirrored).toBe(true);
     const diagram = model(line('mountain', [0, 0.5], [1, 0.5]));
     const front = diagramToPaperScene(diagram, {
+      ...REFERENCES,
       style: DEFAULT_PAPER_STYLE,
       project: canvas,
       mirrored: false,
@@ -131,6 +142,7 @@ describe('the sheet', () => {
     expect(faces(front)[0]!.side).toBe('front');
     expect(creases(front)[0]!.role).toBe('diagram-mountain');
     const back = diagramToPaperScene(diagram, {
+      ...REFERENCES,
       style: DEFAULT_PAPER_STYLE,
       project: canvas,
       mirrored: true,
@@ -150,6 +162,7 @@ describe('the sheet', () => {
     );
     const halo = (mirrored: boolean) => {
       const result = diagramToPaperScene(lettered, {
+        ...REFERENCES,
         style: DEFAULT_PAPER_STYLE,
         project: canvas,
         mirrored,
@@ -171,6 +184,7 @@ describe('the sheet', () => {
       primitives: [line('crease', [9, 10], [11, 10])],
     };
     const result = diagramToPaperScene(placed, {
+      ...REFERENCES,
       style: DEFAULT_PAPER_STYLE,
       project: createDiagramProjector(placed.sheet, SIZE),
     });
@@ -196,6 +210,7 @@ describe('the sheet', () => {
     };
     const project = createDiagramProjector(pentagon.sheet, SIZE);
     const result = diagramToPaperScene(pentagon, {
+      ...REFERENCES,
       style: DEFAULT_PAPER_STYLE,
       project,
     });
@@ -233,6 +248,7 @@ describe('the sheet', () => {
       { kind: 'label', at: [0, 1], text: 'A', style: 'highlight' }
     );
     const lettered = diagramToPaperScene(corner, {
+      ...REFERENCES,
       style: DEFAULT_PAPER_STYLE,
       project: createOverlayProjector({ origin: [0, 0], ex: [40, 0], ey: [0, 40] }, 1),
       mirrored: false,
@@ -254,6 +270,7 @@ describe('the sheet', () => {
     );
     const at = (marksInBounds: boolean) =>
       diagramToPaperScene(marked, {
+        ...REFERENCES,
         style: heavy,
         project: createOverlayProjector({ origin: [0, 0], ex: [12, 0], ey: [0, -12] }, 1),
         mirrored: false,
@@ -352,6 +369,7 @@ describe('the sheet', () => {
       primitives: [line('crease', [9, 10], [11, 10])],
     };
     const view = diagramToPaperScene(placed, {
+      ...REFERENCES,
       style: DEFAULT_PAPER_STYLE,
       project: createDiagramProjector(placed.sheet, SIZE),
     });
@@ -399,6 +417,7 @@ describe('the lines', () => {
     const drawn = (style: PaperStyle, showAux?: boolean | null) =>
       creases(
         diagramToPaperScene(diagram, {
+          ...REFERENCES,
           style,
           project: createDiagramProjector(diagram.sheet, SIZE, false),
           showAux,
@@ -557,6 +576,39 @@ describe('the markup', () => {
     // A card's own arrow, for comparison, is the table's weight in ink.
     const ink = SHEET_PX * DIAGRAM_INK_PER_SHEET;
     expect(widthPx).not.toBeCloseTo(DIAGRAM_LINE_INK.arrow.width * ink, 3);
+  });
+
+  it('is inked from the tokens the caller hands it, from the style read through its surface', () => {
+    const style: PaperStyle = {
+      ...DEFAULT_PAPER_STYLE,
+      arrows: { width: 1.5, color: '#405060', dash: null, cap: 'round' },
+    };
+    const accent = '#00a651';
+    const read: PaperStyle[] = [];
+    const over = (surface: PaperSurface) =>
+      markups(
+        diagramToPaperScene(symbols, {
+          style,
+          surface,
+          project: createDiagramProjector(symbols.sheet, SIZE),
+          markupTokens: (seen) => {
+            read.push(seen);
+            return { ...referencesMarkupTokens(seen), '--cp-reference-input': accent };
+          },
+        })
+      ).at(-1)!.svg;
+    // The accent handed in is every letter's ink; the arrow is the style's pen.
+    const step = over('references');
+    expect(read[0]).toEqual(applyPaperStylePolicy(style, PAPER_STYLE_POLICIES.references));
+    expect(elements(step, 'text')[0]!.fill).toBe(accent);
+    expect(heads(step).map((p) => p.fill)).toEqual(['#405060', '#405060']);
+    // A surface whose policy has no arrow reads the style's as the default pen.
+    const flat = over('folded-flat');
+    expect(read[1]!.arrows).toEqual(DEFAULT_PAPER_STYLE.arrows);
+    expect(heads(flat).map((p) => p.fill)).toEqual([
+      DEFAULT_PAPER_STYLE.arrows.color,
+      DEFAULT_PAPER_STYLE.arrows.color,
+    ]);
   });
 
   it('is absent when the step has no symbols', () => {

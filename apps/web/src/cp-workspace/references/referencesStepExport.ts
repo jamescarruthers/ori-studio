@@ -54,6 +54,7 @@ import { diagramToPaperScene } from './diagramToPaperScene';
 import type { StepDiagramModel, StepDiagramPrimitive } from './referenceFinderDiagramToPrimitives';
 import { foldCardNumbers, type ReferencesViewStep } from './referencesSequenceView';
 import { createOverlayProjector, sheetFrame } from './stepDiagramGeometry';
+import { referencesMarkupTokens } from './usePaperStyleTokens';
 
 /**
  * The sheet's longer side on the page, in CSS px, for the page's sheet size:
@@ -112,9 +113,11 @@ export function referencesStepScene(
   );
   return diagramToPaperScene(diagram, {
     style,
+    surface: 'references',
     project,
     mirrored,
     showAux,
+    markupTokens: referencesMarkupTokens,
     ...(background === null ? {} : { ground: background }),
   });
 }
