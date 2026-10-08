@@ -13,7 +13,6 @@
  */
 import type { DiagramLineStyleName } from '../referenceFinderDiagramToPrimitives';
 import type { StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';
-import type { PrecreaseDirection } from '../precreaseSequence';
 
 /**
  * Each pair swaps within itself: an instruction stays an instruction and a
@@ -28,8 +27,11 @@ const OTHER_FACE: Partial<Record<DiagramLineStyleName, DiagramLineStyleName>> = 
   'fold-valley': 'fold-mountain',
 };
 
-/** The same crease, named from the other face. */
-export function flipDirection<D extends PrecreaseDirection>(direction: D): D {
+/**
+ * The same crease, named from the other face: a mountain and a valley swap,
+ * and any other name (a precrease's `unassigned`) is the same from either.
+ */
+export function flipDirection<D extends string>(direction: D): D {
   if (direction === 'mountain') return 'valley' as D;
   if (direction === 'valley') return 'mountain' as D;
   return direction;
