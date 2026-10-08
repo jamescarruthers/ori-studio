@@ -12,7 +12,7 @@
 //! - [`problem`]: the constraint problem (variables, taco-taco, taco-tortilla
 //!   and tortilla-tortilla buckets, transitivity from shared cells), built in
 //!   full or over the faces an operation touched;
-//! - [`check`]: one checker that names faces.
+//! - [`check`](mod@check): one checker that names faces.
 //!
 //! Everything is decided at the one tolerance, `oristudio_geometry::tol::TOL`,
 //! with the convex primitives of `oristudio_geometry::convex`. A search that
