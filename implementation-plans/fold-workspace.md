@@ -455,10 +455,11 @@ and the oracle tests.
 - **Existing stages stay bit-for-bit** under the JS oracle. The search's
   transitivity source becomes a parameter. That is a small, gated change to a
   ported inner loop, not purely additive.
-- **Untested:** the prototype ran over Flat-Folder's *own* arrangement and
-  re-propagated seeds. That caller-built constraints avoid both measured defects
-  is **[derived]**. Before D16 relies on "a true n of m", Phase 1c attributes the
-  unexplained `r069-s07` miss (§7.1).
+- **Built and measured (Phase 1c, 2026-10-08):** `complete_layer_order` in
+  `treemaker-flatfold`. On a validated arrangement Flat-Folder's search finds
+  every order: the `r069-s07` miss and the `r271-s03` extra state both trace to
+  the heuristic-ε arrangement, not to the search (PORTING.md, Flat-Folder
+  section). Caller-built constraints therefore give a true ‹ n of m ›.
 
 **Not reused, by measurement:**
 
@@ -841,7 +842,7 @@ edit_folded_figure`), never a file name.
 5. Fold builds faces, isometries and constraints itself.
 6. **Complete, seeded by the imported M/V letters** (U creases stay unknown),
    through D8.
-   - The count is a true "n of m" once `r069-s07` is attributed (D8).
+   - The count is a true "n of m": Fold builds its own constraints (D8).
    - The stored order must reproduce the imported letters.
 
 **Orientation and placement:**
@@ -1034,8 +1035,9 @@ None is pending.
 - `tests/fixtures/flat-folder/r271-s03.fold`;
 - `tests/fixtures/beloch/`;
 - `tests/fixtures/fold-sequences/` (goldens and samples);
-- `PORTING.md`: a new Flat-Folder section covering the `ExE_fill_BT` quirk, the
-  arrangement's numbering dependence, and the entry point's contract;
+- `PORTING.md`: a new Flat-Folder section covering the heuristic-ε arrangement
+  (its numbering dependence and the r271-s03 / r069-s07 cases) and the entry
+  point's contract (done);
 - `docs/analytics.md`;
 - optionally, the repository layout in `AGENTS.md`.
 
@@ -1125,57 +1127,57 @@ None is pending.
 
 ### Phase 1 — Shared Rust foundations (pre-work)
 
-- [ ] **1a `oristudio-geometry`.**
-  - [ ] **First commit, on the unchanged base:** committed full sha256
+- [x] **1a `oristudio-geometry`.**
+  - [x] **First commit, on the unchanged base:** committed full sha256
     baselines of `dump_closure`, with and without `--plan`, for every fixture
     in `tests/fixtures/precrease/`, plus `bird_base.fold` and `kabuto.fold`.
-  - [ ] Move `tol`, `line`, `pointgrid`, `frame` (with `GeometryError`),
+  - [x] Move `tol`, `line`, `pointgrid`, `frame` (with `GeometryError`),
     `sheet`, `outline` and `construct`.
-  - [ ] Add `Paper`, the generic `lines`/`certify`, `nearest_root` and
+  - [x] Add `Paper`, the generic `lines`/`certify`, `nearest_root` and
     `convex`.
-  - [ ] Precrease re-exports everything; the one wasm call-site change.
-  - [ ] Gates, in order:
-    - [ ] the `dump_closure` hashes;
-    - [ ] `cargo test -p oristudio-precrease`;
-    - [ ] the RF cross-check `--strict`;
-    - [ ] `wasm-pack test --node crates/oristudio-precrease-wasm` (the
+  - [x] Precrease re-exports everything; the one wasm call-site change.
+  - [x] Gates, in order:
+    - [x] the `dump_closure` hashes;
+    - [x] `cargo test -p oristudio-precrease`;
+    - [x] the RF cross-check `--strict`;
+    - [x] `wasm-pack test --node crates/oristudio-precrease-wasm` (the
       `invalid_frame` code);
-    - [ ] `precreasePlan.wasm.test.ts`.
-- [ ] **1b `oristudio-layer-order`.**
-  - [ ] The order type and its conversions.
-  - [ ] The convex overlay into cells.
-  - [ ] The constraint problem (incremental), and the checker naming faces.
-  - [ ] Tests: the spike's golden conventions; negative controls; a woven
+    - [x] `precreasePlan.wasm.test.ts`.
+- [x] **1b `oristudio-layer-order`.**
+  - [x] The order type and its conversions.
+  - [x] The convex overlay into cells.
+  - [x] The constraint problem (incremental), and the checker naming faces.
+  - [x] Tests: the spike's golden conventions; negative controls; a woven
     (cyclic) state.
-- [ ] **1c `treemaker-flatfold` entry point.**
-  - [ ] Caller-supplied variables, buckets and cells; transitivity source
+- [x] **1c `treemaker-flatfold` entry point.**
+  - [x] Caller-supplied variables, buckets and cells; transitivity source
     parameterised; carried vs seed.
-  - [ ] Budget; per-component solutions; `error_faces`.
-  - [ ] Existing oracle tests unchanged.
-  - [ ] Attribute the `r069-s07` miss (constraint generation or search).
-  - [ ] Commit `tests/fixtures/flat-folder/r271-s03.fold` with an oracle case.
-  - [ ] Add the `PORTING.md` Flat-Folder section.
+  - [x] Budget; per-component solutions; `error_faces`.
+  - [x] Existing oracle tests unchanged.
+  - [x] Attribute the `r069-s07` miss (constraint generation or search).
+  - [x] Commit `tests/fixtures/flat-folder/r271-s03.fold` with an oracle case.
+  - [x] Add the `PORTING.md` Flat-Folder section.
 
 ### Phase 2 — Engine core: plain folds (`oristudio-fold`)
 
-- [ ] **State.**
-  - [ ] `State::make`: residual, hinge consistency, convexity, order
+- [x] **State.**
+  - [x] `State::make`: residual, hinge consistency, convexity, order
     completeness, constraints, letters. Refusal codes.
-  - [ ] Isometries; the pair store with a bounding-box index; incremental update.
-- [ ] **Plain fold (D3).**
-  - [ ] The closure (i) qualifier, with a unit test: a strip folded at y=0.2,
+  - [x] Isometries; the pair store with a bounding-box index; incremental update.
+- [x] **Plain fold (D3).**
+  - [x] The closure (i) qualifier, with a unit test: a strip folded at y=0.2,
     then the top layer folded at y=0.3, gives U = {that layer}.
-  - [ ] Flaps; the closure report; refusals with fixes.
-  - [ ] Precrease, refold, unfold, turn, rotate.
-- [ ] **Numerics (D5).**
-  - [ ] The snap invariant, with a property test that no applied fold changes a
+  - [x] Flaps; the closure report; refusals with fixes.
+  - [x] Precrease, refold, unfold, turn, rotate.
+- [x] **Numerics (D5).**
+  - [x] The snap invariant, with a property test that no applied fold changes a
     vertex's class.
-  - [ ] μ checks, including image–image.
+  - [x] μ checks, including image–image.
 - [ ] **Output and queries.**
   - [ ] Scene emission (D12) and `FoldActionGeometry`.
   - [ ] The cross-section query (D14 spec), with a precrease-row test.
   - [ ] Per-step summaries and the crease-pattern diff.
-  - [ ] Convex polygon sheets; non-convex sheets refused.
+  - [x] Convex polygon sheets; non-convex sheets refused.
 - [ ] **Kernel feature.**
   - [ ] `fold_cp_to_model` and its inverse.
   - [ ] Round-trip test: Send to Edit, then Import CP, gives the same state.
@@ -1186,7 +1188,7 @@ None is pending.
     with the refusal arm tested.
   - [ ] Beloch-compatible face matrices.
 - [ ] **Tests.**
-  - [ ] Property tests and classic sequences as fixtures.
+  - [x] Property tests and classic sequences as fixtures.
   - [ ] Oracle binaries (D8) wired into CI.
 - [ ] Native performance recorded against real sequences.
 
@@ -1257,47 +1259,47 @@ as small PRs with Phase 1, ahead of the Fold feature PRs (decision B).
 Each item is behaviour-preserving, with its existing users' tests as the gate,
 unless marked.
 
-- [ ] **CSS-module moves (decision B):** References' step filmstrip
+- [x] **CSS-module moves (decision B):** References' step filmstrip
   (`references-filmstrip` / `references-card`), extracted into a shared component
   with a picture slot, card states and a caption tag. Gate: computed-style checks
   in both themes and under a coarse pointer, plus References' tests.
-- [ ] `DiagramStepsGrid` shell extraction (the Diagram's grid tests are the gate).
-- [ ] Keyed conditional-scope registry, migrating simulator, references and
+- [x] `DiagramStepsGrid` shell extraction (the Diagram's grid tests are the gate).
+- [x] Keyed conditional-scope registry, migrating simulator, references and
   diagram.
-- [ ] `Notice`: `danger` tone and `actions`. `ToolHintInstructions`: `ordered` and
+- [x] `Notice`: `danger` tone and `actions`. `ToolHintInstructions`: `ordered` and
   `current`.
-- [ ] `lib/documentFile/`, migrating the Diagram's reader onto it.
-- [ ] The store kit and the `projectSlice` document registry, migrating the
+- [x] `lib/documentFile/`, migrating the Diagram's reader onto it.
+- [x] The store kit and the `projectSlice` document registry, migrating the
   Diagram.
 - [ ] The arrows/marks vocabulary moved to a neutral module.
 
-- [ ] `useCpSurface`.
-- [ ] `PaperSurface 'fold'` + `STEP_DIAGRAM_FIELDS` + the analytics enums.
-- [ ] `foldedSceneLocalGeometry`:
-  - [ ] the policy parameter;
-  - [ ] `paperSceneToFoldedGeometry`;
-  - [ ] the per-face override;
+- [x] `useCpSurface`.
+- [x] `PaperSurface 'fold'` + `STEP_DIAGRAM_FIELDS` + the analytics enums.
+- [x] `foldedSceneLocalGeometry`:
+  - [x] the policy parameter;
+  - [x] `paperSceneToFoldedGeometry`;
+  - [x] the per-face override;
   - [ ] with the `fold` policy, canvas colour, width and dash equal the SVG's for
     each role, on both panes.
 - [ ] **Separate PR, a visible change:** folded-channel dashes.
   - [ ] Default and Diagram presets pixel-identical in both themes.
   - [ ] Dashed custom pens compared against the SVG export.
-  - [ ] A unit test for dash runs.
-- [ ] The display-style binding generalised; Simulate's Front/Back rows shared
+  - [x] A unit test for dash runs.
+- [x] The display-style binding generalised; Simulate's Front/Back rows shared
   (Simulate unchanged).
-- [ ] `diagramToPaperScene` / `referencesExportTarget` generalised: polygon
+- [x] `diagramToPaperScene` / `referencesExportTarget` generalised: polygon
   outline, policy, aux and ink parameters. Gate: `referencesStepExport.test.ts`
   and its golden.
-- [ ] `foldPlayback` / `foldTransport`.
-- [ ] `DiagramTurnKind` lifted to a neutral module (the Diagram's tests are the
+- [x] `foldPlayback` / `foldTransport`.
+- [x] `DiagramTurnKind` lifted to a neutral module (the Diagram's tests are the
   gate).
-- [ ] `CpToolOptionLayer` taking a projection.
-- [ ] `sendToEditActions` taking sources.
-- [ ] Sentence vocabulary and the i18n key move.
-- [ ] `PaneToggle`:
-  - [ ] first commit: move the `.design-pane-switcher` rules into a module,
+- [x] `CpToolOptionLayer` taking a projection.
+- [x] `sendToEditActions` taking sources.
+- [x] Sentence vocabulary and the i18n key move.
+- [x] `PaneToggle`:
+  - [x] first commit: move the `.design-pane-switcher` rules into a module,
     verified with a computed-style check;
-  - [ ] second commit: generalise, gated by `DesignPaneSwitcher`'s tests.
+  - [x] second commit: generalise, gated by `DesignPaneSwitcher`'s tests.
 
 ### Phase 6 — Workspace shell and UI
 

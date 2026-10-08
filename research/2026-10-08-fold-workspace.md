@@ -927,21 +927,24 @@ our faces (0 unmapped).
 
 1. **Flat-Folder's arrangement depends on face numbering.** Face 0 sets the
    folded frame the arrangement is built in.
-2. **Flat-Folder drops taco-taco constraints depending on face numbering**, even
-   on a validated arrangement.
-   - In an 8-face repro (`corpus-v2/random/r271-s03.fold`), it finds 1 state
-     under our numbering and 2 under area-sorted numbering, and the extra one
-     is invalid.
-   - The repo's JS oracle reproduces it, so it is upstream behaviour
-     (`conversion.js:603` `ExE_fill_BT`).
-   - It sits in constraint generation, so constraints built by the caller
-     should avoid it **[derived]**.
+2. **Flat-Folder can lose constraints depending on face numbering.**
+   - In an 8-face repro (`r271-s03`, now committed as
+     `tests/fixtures/flat-folder/r271-s03.fold`), it finds 1 state under our
+     numbering and 2 under area-sorted numbering, and the extra one is invalid.
+   - **Corrected after Phase 1c:** the cause is the arrangement, not
+     `ExE_fill_BT`. Under area-sorted numbering the ε heuristic picks
+     `eps_i` 3, at which the sweep assigns an overlap of two edges to one of
+     them, so `ExE_fill_BT` never pairs them. The repo's JS oracle reproduces
+     it (upstream behaviour). The new `verify` command rejects that arrangement
+     ("edge not covered by its segments") and rebuilds it; on the rebuilt one
+     the extra state conflicts.
 
-**One miss is not attributed.** On r069-s07 Flat-Folder found 4 of the 5 valid
-orders, with a matching arrangement and the real order verified. Until it is
-re-solved through Fold-built constraints and traced to constraint generation
-(bypassed) or to the search (a third defect), Flat-Folder's ‹ n of m › is a
-count of what it found, not a proven total.
+**The r069-s07 miss is attributed (Phase 1c): constraint generation.** Seeded
+alone into Flat-Folder's own constraints, the order it missed conflicts on a
+taco-tortilla; the heuristic arrangement at `eps_i` 3 doubles a cell boundary.
+On a validated arrangement the order is valid and Flat-Folder's search finds all
+5. So there is no third defect: on a correct arrangement, or on constraints Fold
+builds itself, Flat-Folder's ‹ n of m › is a true total (PORTING.md).
 
 **Conclusion.**
 
@@ -1339,9 +1342,9 @@ document made):
   flaps, 3+ stacks, multi-vertex collapses and double sinks are untested.
 - **Motion is not validated.** A valid end state may not be reachable by the
   named manoeuvre.
-- **Completion over caller-built constraints is unbuilt.** The bypass of
-  Flat-Folder's defects and a trustworthy ‹ n of m › total both rest on it, and
-  r069-s07 is unexplained (§7.1).
+- **Completion over caller-built constraints** is built
+  (`complete_layer_order`, Phase 1c) but has not yet been run on Fold-built
+  constraints; that is Phase 8 (Import CP) and Phase 9.
 - **Interaction with Diagram work in flight.** Both edit the same seams:
   workspace unions, the project reader version, the keyboard scope precedence,
   the folded scene schema (`folding.rs`, `oristudioCpTypes.ts`),
