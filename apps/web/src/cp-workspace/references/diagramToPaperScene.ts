@@ -35,6 +35,7 @@ import { PT_TO_CSS_PX, type Hex, type PaperStyle } from '../../lib/paper/paperSt
 import {
   applyPaperStylePolicy,
   PAPER_STYLE_POLICIES,
+  surfacePaperStyle,
   type PaperSurface,
 } from '../../lib/paper/paperStyleResolve';
 import {
@@ -273,6 +274,18 @@ export function diagramToPaperScene(
   const over = markupItem(drawn, symbols, context, bounds);
   if (over) items.push(over);
   return { bounds, sheet: sheetPx, items };
+}
+
+/**
+ * The style the painter draws a step's scene with: the style as the
+ * surface's renderers draw it — the policy applied, and every crease in its
+ * own pen (`surfacePaperStyle`), as the other surfaces hand theirs. Its aux
+ * switch stays on: the scene already holds exactly the aux-pen lines the page
+ * carries, and the creases an earlier step made are among them.
+ */
+export function diagramScenePaintStyle(style: PaperStyle, surface: PaperSurface): PaperStyle {
+  const painted = surfacePaperStyle(style, PAPER_STYLE_POLICIES[surface]);
+  return { ...painted, auxCreases: { ...painted.auxCreases, visible: true } };
 }
 
 /**
