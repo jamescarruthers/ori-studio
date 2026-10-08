@@ -421,18 +421,6 @@ export function concatOverlayPoints(
   };
 }
 
-/** The movement below which a press-and-release counts as a click, CSS px. */
-export const REFERENCES_CLICK_MOVE_THRESHOLD_CSS = 4;
-
-/** Whether a pointer that went down at `press` and came up at `release` clicked. */
-export function isClick(
-  press: { x: number; y: number },
-  release: { x: number; y: number },
-  threshold = REFERENCES_CLICK_MOVE_THRESHOLD_CSS
-): boolean {
-  return Math.hypot(release.x - press.x, release.y - press.y) < threshold;
-}
-
 /** What a step does to each of the document's creases. */
 export interface ReferencesCreaseVisibility {
   /**
