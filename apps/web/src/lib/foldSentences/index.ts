@@ -6,8 +6,11 @@
  * builder), because a sentence joined from clauses breaks word order in ja and
  * ko. What is shared is what has to agree across them:
  *
- * - the letters a step's references go by, on the picture and in the text.
+ * - the letters a step's references go by, on the picture and in the text;
+ * - the rule that a sentence names the input that swings first, the one the
+ *   arrow and the animation move.
  *
  * React-free and store-free.
  */
 export { letterInputs, type InputLetters, type ReferenceKind } from './inputLetters';
+export { moverFirst } from './moverFirst';

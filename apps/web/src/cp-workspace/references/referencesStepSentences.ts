@@ -24,6 +24,7 @@
  * React-free; literal `t()` keys so the extractor sees them.
  */
 import type { TFunction } from 'i18next';
+import { moverFirst } from '../../lib/foldSentences';
 import type { ExtractedStep } from './referenceFinder/extractor';
 import { directionOfGroup, type ReferencesDirection } from './referencesBreakdown';
 import { unitFrame } from './diagram/diagramFrames';
@@ -349,16 +350,17 @@ export function describePlannerStep(
 
 /**
  * The two inputs of a fold that brings one onto the other, the one that
- * swings first. The picture's call (`movingInputs`): the crate's mover
- * unless that sits on the larger flap, in which case the other is brought
- * onto it — and the caption has to name them the way round the arrow goes.
+ * swings first ({@link moverFirst}). The picture's call (`movingInputs`): the
+ * crate's mover unless that sits on the larger flap, in which case the other
+ * is brought onto it — and the caption has to name them the way round the
+ * arrow goes.
  */
 function pairOrder(
   sequence: PrecreaseSequence,
   step: PrecreaseStep,
   witness: PrecreaseWitness
 ): [number, number] {
-  return movingInputs(sequence, unitFrame(sequence), step, witness).includes(1) ? [1, 0] : [0, 1];
+  return moverFirst(movingInputs(sequence, unitFrame(sequence), step, witness), [0, 1]);
 }
 
 /**
@@ -490,8 +492,8 @@ function witnessClause(
     case 6: {
       // `[p1, m1, p2, m2]`, each pair the way round the picture swings it.
       const moving = movingInputs(sequence, unitFrame(sequence), step, witness);
-      const [a, b] = moving.includes(1) ? [1, 0] : [0, 1];
-      const [c, d] = moving.includes(3) ? [3, 2] : [2, 3];
+      const [a, b] = moverFirst(moving, [0, 1]);
+      const [c, d] = moverFirst(moving, [2, 3]);
       sentence = t(
         'panels:references.planStep.axiom6',
         'Fold {{a}} onto {{b}} and {{c}} onto {{d}}.',
