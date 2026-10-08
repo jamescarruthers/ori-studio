@@ -59,11 +59,34 @@ state, the one constructor that validates it, and the plain fold.
   Beloch's `beloch:faces_matrix` layout under `oristudio:faces_matrix`. The
   size is held against the 3D writer's element cap (`interchange.rs`), summed
   over the whole file.
+- `Unordered` and `complete`: parts whose layer order is still to be decided
+  (the gate's checks up to the order, a crease whose letter is unknown folded
+  without one), and the engine's one "complete the rest" entry: an adapter
+  from `oristudio-layer-order`'s constraint problem and cells to
+  `treemaker-flatfold`'s `complete_layer_order`, with fixed pairs *carried* or
+  *seed*, per-component choices, a true ‹ n of m › with truncation reported,
+  and a node or deadline budget. Import CP uses it now; compound folds will.
+- `import`: Import CP (plan D16, D10's inverse) from plain segments, no kernel.
+  The sheet from the border (`outline::detect_border_loops`, one loop, square
+  or rectangle), matched against the sequence's sheet (a quarter turn when
+  that is what fits) or adopted by an empty sequence; B, M, V kept,
+  unassigned with a hint a precrease, unassigned without one folded with its
+  letter left to the completion, aux a guide; the planar graph and convex
+  faces, refusing a crease that is no full chord; the root continuing the
+  previous state's. Completion is seeded by the letters, and "Start from
+  Edit's folded figure" adds Oriedita's relations as seeds. Refusals have
+  `import_*` codes and name points in the input's coordinates.
+- `witness`: stored choices (plan D6) with faces named by interior sheet
+  points and pairs as FOLD `faceOrders` triples, which read the same whatever
+  the root's orientation; Import CP's `orderJson` and a compound fold's pick.
+  Replay resolves the witnesses and completes: exactly one order, or the node
+  is broken.
 
-See `implementation-plans/fold-workspace.md` (D1–D5) and
-`research/2026-10-08-fold-workspace.md` (§3, §4, §6). The core spike under
-`artifacts/fold-spike/core/` was the behavioural reference; nothing is ported
-from it.
+See `implementation-plans/fold-workspace.md` (D1–D6, D8, D10, D12, D14, D16) and
+`research/2026-10-08-fold-workspace.md` (§3, §4, §6, §7, §10). The core spike
+under `artifacts/fold-spike/core/` and the sink spike's importer were the
+behavioural references; nothing is ported from them, and Flat-Folder's search
+is called through `treemaker-flatfold`, not copied.
 
 ## Tests
 
@@ -108,6 +131,16 @@ from it.
   `FoldedPaperScene`, and the kernel's own folded figure of the same crease
   pattern (the kite base, a Z-fold) agreeing with it from the front and the
   back: the same faces up and the same stacks as seen.
+- `tests/import.rs`: Import CP on hand-built patterns. The preliminary and
+  waterbomb bases with the sink spike's assignments import to 1 order with
+  their letters and 18 without (the spike's Flat-Folder counts), the one
+  stacked as the spike derived; a book fold to 1 and 2; the shape and chord
+  refusals; a stored order replayed under renumbering and against a
+  pattern whose letters contradict it; every pick of the open base replayed;
+  the budget; Edit's folded figure through Oriedita's relations from either
+  orientation; and a round trip of 129 seeded random folded states (2 to 52
+  faces) through their crease patterns, each state's own order among the
+  choices its letters leave.
 
 `cargo test -p oristudio-fold --features kernel` adds:
 

@@ -1,6 +1,6 @@
 //! The Fold workspace's engine: fold a sheet the way a person does
-//! (`implementation-plans/fold-workspace.md`, D1–D5; the evidence is
-//! `research/2026-10-08-fold-workspace.md`).
+//! (`implementation-plans/fold-workspace.md`, D1–D6, D8, D10, D12, D14 and D16; the
+//! evidence is `research/2026-10-08-fold-workspace.md`).
 //!
 //! - [`State`]: a flat folded state — the crease pattern with stable ids
 //!   ([`pattern`]), convex faces with their lineage, every face's isometry
@@ -25,6 +25,14 @@
 //! - With the `kernel` feature: `kernel`, the one conversion to the CP
 //!   kernel's model (plan D10), and `fold_file`, the FOLD export of a
 //!   sequence path built on the kernel's FOLD writer.
+//! - [`Unordered`] and [`complete`]: parts whose layer order is still to be
+//!   decided, and the one entry that completes it through Flat-Folder's
+//!   search with a true ‹ n of m ›, for Import CP now and compound folds
+//!   later.
+//! - [`import`]: Import CP — a crease pattern's sheet, faces and isometries,
+//!   its order completed from its letters, and Edit's folded figure.
+//! - [`witness`]: stored choices with faces named by sheet points, and their
+//!   replay.
 //!
 //! The layer order, its constraint problem and the checker are
 //! `oristudio-layer-order`'s; the tolerance and the convex-polygon primitives
@@ -41,9 +49,11 @@
 //! | Letters | Front-relative: a folded crease is V iff its front-up face lies below. |
 //! | Turn over | Mirrors the view; every `above` inverts *as seen*; no letter changes. |
 
+pub mod complete;
 pub mod fold;
 #[cfg(feature = "kernel")]
 pub mod fold_file;
+pub mod import;
 mod index;
 pub mod isometry;
 #[cfg(feature = "kernel")]
@@ -55,17 +65,27 @@ pub mod scene;
 pub mod sheet;
 pub mod state;
 pub mod summary;
+mod unordered;
 pub mod view;
+pub mod witness;
 
 #[cfg(feature = "kernel")]
 pub use fold_file::{FoldExportError, export_fold_sequence, export_fold_sequence_json};
 #[cfg(feature = "kernel")]
 pub use kernel::{KernelFrame, fold_cp_to_model};
 
+pub use complete::{
+    ChoiceCount, CompletionLimits, CompletionRefusal, Completions, ComponentChoices, FixedKind,
+    FixedPair,
+};
 pub use fold::{
     ActionKind, ClosurePolicy, CrossSection, DepthChoice, FoldActionGeometry, FoldAnalysis,
     FoldLineSpan, FoldReport, Folded, Grip, Placement, PlainFold, Pleat, Push, Refold, RowOrder,
     SectionInterval, SectionRow, Seed, Snap,
+};
+pub use import::{
+    CreasePatternInput, ImportKind, ImportRefusal, ImportSegment, ImportSpace, ImportSummary,
+    ImportTarget, ImportedPattern,
 };
 pub use isometry::Isometry;
 pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
@@ -74,7 +94,9 @@ pub use scene::{FoldScene, ScenePoint};
 pub use sheet::{Sheet, SheetShape};
 pub use state::{State, StateParts};
 pub use summary::{CreaseCounts, CreaseDiff, StepSummary};
+pub use unordered::Unordered;
 pub use view::{Direction, StartSide, View};
+pub use witness::{Broken, BrokenWitness, WitnessOrder};
 
 /// The engine's behaviour version: bumped when the same inputs can land a
 /// different state. Stored beside replay caches and on Diagram links for
