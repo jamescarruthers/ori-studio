@@ -14,7 +14,7 @@
  * reader, per point: the face the reader is on until the paper turns past
  * edge-on, the other face after. Paper colour follows it, and so do the inks
  * and dashes that name a direction — a mountain seen from the back is a
- * valley (`diagram/diagramModel.flipDirection`), so a crease riding the flap
+ * valley (`lib/stepDiagram/diagramModel.flipDirection`), so a crease riding the flap
  * over swaps to the other face's naming where that face shows. A face is
  * shaded by how far it tilts from the reader, which is what makes the bend
  * read as a rounded ridge rather than a stripe.

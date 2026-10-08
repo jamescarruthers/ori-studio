@@ -4,10 +4,10 @@ import {
   referenceFinderDiagramToPrimitives,
   type StepDiagramModel,
 } from './referenceFinderDiagramToPrimitives';
-import { createDiagramRenderContext, diagramShapes } from './diagram/DiagramPrimitives';
-import { seenFromTheBack } from './diagram/diagramModel';
-import type { Rect } from './diagram/labelLayout';
-import { createDiagramProjector } from './stepDiagramGeometry';
+import { createDiagramRenderContext, diagramShapes } from '../../lib/stepDiagram/DiagramPrimitives';
+import { seenFromTheBack } from '../../lib/stepDiagram/diagramModel';
+import type { Rect } from '../../lib/stepDiagram/labelLayout';
+import { createDiagramProjector } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { useReferencesCardInks } from './usePaperStyleTokens';
 
 /**

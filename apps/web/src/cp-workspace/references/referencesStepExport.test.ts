@@ -16,7 +16,7 @@ import {
   referencesStepsArchiveName,
   type ReferencesStepExportSubject,
 } from './referencesStepExport';
-import { DIAGRAM_PADDING } from './stepDiagramGeometry';
+import { DIAGRAM_PADDING } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { plannerSequenceWithGridFixture } from './__fixtures__/plannerSequence';
 import { planFilmstrip } from './referencesFilmstrip';
 import type { ReferencesPlanVariant } from './referencesResults';

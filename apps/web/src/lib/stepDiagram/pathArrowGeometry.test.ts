@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cubicTangent, measurePath, nearestOnPath, pathPointAt, type Cubic, type Vec2 } from '../../lib/cubicBezier';
+import { cubicTangent, measurePath, nearestOnPath, pathPointAt, type Cubic, type Vec2 } from '../cubicBezier';
 import {
   arrowheadReach,
   arrowheadSize,

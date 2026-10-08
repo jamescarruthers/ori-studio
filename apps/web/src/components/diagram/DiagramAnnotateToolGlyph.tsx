@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { MousePointer2, RotateCw, SplinePointer, Type } from 'lucide-react';
-import { TURN_OVER_BOX, TURN_OVER_HEAD_PATH, TURN_OVER_PATH } from '../../cp-workspace/references/stepDiagramGeometry';
+import { TURN_OVER_BOX, TURN_OVER_HEAD_PATH, TURN_OVER_PATH } from '../../lib/stepDiagram/stepDiagramGeometry';
 import {
   ANGLE_BISECTOR,
   EDIT_PATH,

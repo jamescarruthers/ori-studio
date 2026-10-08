@@ -35,7 +35,7 @@ import {
   arcThroughPoints,
   dashRulerAlong,
   type DiagramArc,
-} from './stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 
 type Pair = readonly [number, number];
 

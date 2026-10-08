@@ -18,8 +18,8 @@
  *
  * Pure: no DOM, no store.
  */
-import { canvasDiagramInk, canvasDiagramPens } from '../../cp-workspace/references/diagram/diagramInk';
-import type { LabelPlacement } from '../../cp-workspace/references/diagram/labelLayout';
+import { canvasDiagramInk, canvasDiagramPens } from '../../lib/stepDiagram/diagramInk';
+import type { LabelPlacement } from '../../lib/stepDiagram/labelLayout';
 import {
   diagramLetterPlacements,
   diagramToPaperScene,
@@ -31,7 +31,7 @@ import {
   sheetCorners,
   sheetFrame,
   type DiagramProjector,
-} from '../../cp-workspace/references/stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 import { referencesMarkupTokens } from '../../cp-workspace/references/usePaperStyleTokens';
 import { STEP_DIAGRAM_LINE_WIDTH } from '../annotate/canvasInk';
 import type { PaperPage } from '../../lib/paper/paperPage';

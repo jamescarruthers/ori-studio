@@ -14,7 +14,7 @@
  */
 import type { ExtractedSolution } from './referenceFinder/extractor';
 import type { Diagram, RawSolution } from './referenceFinder/solution';
-import type { DiagramWhiteArrowFill, DiagramWhiteArrowWidth } from './diagram/diagramInk';
+import type { DiagramWhiteArrowFill, DiagramWhiteArrowWidth } from '../../lib/stepDiagram/diagramInk';
 import type {
   DiagramArc,
   DiagramCubic,
@@ -22,7 +22,7 @@ import type {
   HiddenStretches,
   PathArrowFold,
   WhiteArrowTail,
-} from './stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 
 export type DiagramLineStyleName =
   /** A crease an earlier step made: the paper as it stands. */

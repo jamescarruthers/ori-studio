@@ -10,7 +10,7 @@ import type { ExtractedSolution } from '../referenceFinder/extractor';
 import type { RawSolution } from '../referenceFinder/solution';
 import type { StepDiagramModel } from '../referenceFinderDiagramToPrimitives';
 import type { PrecreaseFrame } from '../sheetFrames';
-import { foldArrowArc } from '../stepDiagramGeometry';
+import { foldArrowArc } from '../../../lib/stepDiagram/stepDiagramGeometry';
 import { diagonalStepDiagram } from '../referencesCandidateSteps';
 import { diagramInModel } from '../referenceFinderStepInModel';
 

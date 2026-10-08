@@ -22,7 +22,7 @@ import type {
   StepDiagramModel,
   StepDiagramPrimitive,
 } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
-import type { DiagramArc, DiagramSheet } from '../../cp-workspace/references/stepDiagramGeometry';
+import type { DiagramArc, DiagramSheet } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { xmlText } from '../../lib/xmlEscape';
 
 /** More than any card draws: a dense sheet's last step carries a few thousand. */

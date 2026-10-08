@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { arcSamplePoints, returnStroke } from '../stepDiagramGeometry';
-import { seenFromTheBack } from './diagramModel';
+import { arcSamplePoints, returnStroke } from '../../../lib/stepDiagram/stepDiagramGeometry';
+import { seenFromTheBack } from '../../../lib/stepDiagram/diagramModel';
 import { modelFrame, unitFrame } from './diagramFrames';
 import { decodePlanModel, planModelPoints } from '../referencesPlanGeometry';
 import type { StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';

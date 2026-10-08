@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
 import { diagramInModel, rfToModel } from './referenceFinderStepInModel';
 import type { PrecreaseFrame } from './sheetFrames';
-import { arcEndPoint, arcSamplePoints } from './stepDiagramGeometry';
+import { arcEndPoint, arcSamplePoints } from '../../lib/stepDiagram/stepDiagramGeometry';
 
 /**
  * A 100-unit square whose model y runs down while ReferenceFinder's runs up:

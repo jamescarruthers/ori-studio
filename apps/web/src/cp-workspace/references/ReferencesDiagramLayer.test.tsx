@@ -5,7 +5,7 @@ import {
   canvasDiagramInk,
   DIAGRAM_MARKS,
   REFERENCES_VIEW_MARKS,
-} from './diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import type { FoldScene } from './fold/foldScene';
 import type { StepDiagramModel } from './referenceFinderDiagramToPrimitives';
 import { ReferencesDiagramLayer, type ReferencesDiagramLayerHandle } from './ReferencesDiagramLayer';

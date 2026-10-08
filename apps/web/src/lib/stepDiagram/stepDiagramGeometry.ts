@@ -21,9 +21,9 @@ import {
   type Cubic as PathCubic,
   type PathMeasure,
   type Vec2,
-} from '../../lib/cubicBezier';
-import { erodeSegment } from '../../lib/paper/paperSvg';
-import { distanceToSegment } from '../picking/lineHitIndex';
+} from '../cubicBezier';
+import { erodeSegment } from '../paper/paperSvg';
+import { distanceToSegment } from '../../cp-workspace/picking/lineHitIndex';
 import {
   DIAGRAM_ANGLE_MARK_INK,
   DIAGRAM_ARROWHEAD_INK,
@@ -42,8 +42,8 @@ import {
   type DiagramPens,
   type DiagramWhiteArrowWidth,
   type DivisionsPen,
-} from './diagram/diagramInk';
-import { markRingWidth } from './diagram/labelLayout';
+} from './diagramInk';
+import { markRingWidth } from './labelLayout';
 
 export interface DiagramSheet {
   width: number;
@@ -100,7 +100,7 @@ export interface DiagramProjector {
    *
    * Every weight, dash run and letter is a multiple of it, so the picture
    * scales with its box instead of being pinned to screen pixels. See
-   * `diagram/diagramInk.ts`.
+   * `diagramInk.ts`.
    */
   ink: number;
   /**

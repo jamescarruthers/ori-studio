@@ -11,18 +11,18 @@
  * whatever the pattern's size — which is what makes the DOM half safe. The same
  * reasoning, in the same words, is why `CpMeasureLayer` exists.
  */
-import type { Rgba } from '../../renderer/types';
-import type { StrokeGeometry } from '../../renderer/types';
+import type { Rgba } from '../../cp-workspace/renderer/types';
+import type { StrokeGeometry } from '../../cp-workspace/renderer/types';
 import type {
   DiagramLineStyleName,
   StepDiagramPrimitive,
-} from '../referenceFinderDiagramToPrimitives';
+} from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
 import {
   erodeCreaseOnSheet,
   paperSpan,
   type DiagramSheet,
   type SheetPoint,
-} from '../stepDiagramGeometry';
+} from './stepDiagramGeometry';
 import { DEFAULT_DIAGRAM_CREASES, canLeavePaper, type DiagramCreaseOptions } from './DiagramPrimitives';
 import {
   DIAGRAM_LINE_INK,

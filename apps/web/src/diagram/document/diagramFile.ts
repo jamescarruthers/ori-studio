@@ -39,8 +39,8 @@ import {
   type SpreadKeep,
   type SpreadKind,
 } from '../../cp-workspace/folded/foldedLayerSpread';
-import type { DiagramWhiteArrowWidth } from '../../cp-workspace/references/diagram/diagramInk';
-import type { WhiteArrowTail } from '../../cp-workspace/references/stepDiagramGeometry';
+import type { DiagramWhiteArrowWidth } from '../../lib/stepDiagram/diagramInk';
+import type { WhiteArrowTail } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { readRegionReference } from '../../cp-workspace/regions/regionReference';
 import { readSheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import {

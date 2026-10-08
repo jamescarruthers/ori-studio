@@ -28,10 +28,10 @@ import {
 import { paperSceneToSvg } from '../../lib/paper/paperSvg';
 import { useSettingsStore } from '../../store/settingsStore';
 import { plannerSequenceWithGridFixture } from './__fixtures__/plannerSequence';
-import { diagramInkColors } from './diagram/diagramColors';
+import { diagramInkColors } from '../../lib/stepDiagram/diagramColors';
 import { unitFrame } from './diagram/diagramFrames';
 import { DEFAULT_ORISTUDIO_CP_LINE_WIDTH } from '../../lib/creasePatternViewport';
-import { canvasDiagramInk, REFERENCES_VIEW_FLOORS } from './diagram/diagramInk';
+import { canvasDiagramInk, REFERENCES_VIEW_FLOORS } from '../../lib/stepDiagram/diagramInk';
 import { plannerFinishedDiagram } from './diagram/plannerDiagram';
 import type {
   DiagramLineStyleName,
@@ -43,7 +43,7 @@ import {
   referencesStepSheetCssPx,
 } from './referencesStepExport';
 import { StepDiagram } from './StepDiagram';
-import { DIAGRAM_CARD_DASH_SCALE } from './stepDiagramGeometry';
+import { DIAGRAM_CARD_DASH_SCALE } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { referencesCanvasPens, referencesPaperTokens } from './usePaperStyleTokens';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

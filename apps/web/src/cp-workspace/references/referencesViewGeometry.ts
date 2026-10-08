@@ -19,14 +19,14 @@ import type {
 import { VERTEX_RADIUS_FACTOR } from '../adapters/cpPointsToScene';
 import { previewGroupsToStrokes, type PreviewStrokeGroup } from '../renderer/previewStrokes';
 import type { LineHitIndex } from '../picking/lineHitIndex';
-import { dashRulerAlong } from './stepDiagramGeometry';
+import { dashRulerAlong } from '../../lib/stepDiagram/stepDiagramGeometry';
 import {
   DIAGRAM_LINE_INK,
   diagramDashPatterns,
   diagramDashSlot,
   penInk,
   type DiagramPens,
-} from './diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import type { DiagramLineStyleName } from './referenceFinderDiagramToPrimitives';
 import type { Pen } from '../../lib/paper/paperStyle';
 import type { SheetStrokeRole } from '../sheets/sheetThumbnail';
@@ -514,7 +514,7 @@ export function applyCreaseVisibility(
   strokes: StrokeGeometry,
   segmentCount: number,
   visibility: ReferencesCreaseVisibility,
-  /** The diagram's pen, for the dash runs — see `diagram/diagramInk`. */
+  /** The diagram's pen, for the dash runs — see `lib/stepDiagram/diagramInk`. */
   inkCss: number,
   /** The pens those runs are in, and a directed crease's width (`referencesCreasePens`). */
   pens: DiagramPens = DIAGRAM_LINE_INK
@@ -676,7 +676,7 @@ export function referencesCreasePens(
   segmentCount: number,
   options: {
     pens: DiagramPens;
-    /** The pens' ink, CSS px per unit — see `diagram/diagramInk`. */
+    /** The pens' ink, CSS px per unit — see `lib/stepDiagram/diagramInk`. */
     inkCss: number;
     /** Each pen's colour on this canvas: the fold pens' inks for a direction. */
     ink: Readonly<Record<CreasePen, Rgba>>;

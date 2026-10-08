@@ -10,7 +10,7 @@ import {
   DIAGRAM_RIGHT_ANGLE_INK,
   REFERENCES_VIEW_MARKS,
   type DivisionsPen,
-} from './diagram/diagramInk';
+} from './diagramInk';
 import {
   angleMarkArcPoints,
   angleMarkDrawn,
@@ -83,7 +83,7 @@ import {
   type DiagramArc,
   type SvgPoint,
 } from './stepDiagramGeometry';
-import { markRingWidth } from './diagram/labelLayout';
+import { markRingWidth } from './labelLayout';
 
 const UNIT = { width: 1, height: 1 };
 const CENTRE: readonly [number, number] = [0.5, 0.5];

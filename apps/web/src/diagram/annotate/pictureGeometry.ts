@@ -23,7 +23,7 @@
  */
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { distanceToSegment, LineHitIndex, type IndexedSegment } from '../../cp-workspace/picking/lineHitIndex';
-import { sheetCorners } from '../../cp-workspace/references/stepDiagramGeometry';
+import { sheetCorners } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { referencesShowsAux } from '../../cp-workspace/references/referencesAuxCreases';
 import type {
   DiagramAsset,

@@ -16,7 +16,7 @@ import {
   CP_CREASE_WIDTH_FACTOR,
   DIAGRAM_LINE_INK,
   REFERENCES_VIEW_FLOORS,
-} from './diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import { useReferencesDiagramScene } from './useReferencesDiagramScene';
 import {
   REFERENCES_PAPER_TOKENS,

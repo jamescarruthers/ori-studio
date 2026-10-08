@@ -15,13 +15,13 @@ import {
   createDiagramRenderContext,
   diagramShapes,
   type DiagramRenderContext,
-} from './diagram/DiagramPrimitives';
+} from '../../lib/stepDiagram/DiagramPrimitives';
 import {
   canvasDiagramInk,
   canvasDiagramPens,
   REFERENCES_VIEW_MARKS,
   withReferencesViewFloors,
-} from './diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import { foldPosePaper } from './fold/foldPoseGeometry';
 import type { FoldScene } from './fold/foldScene';
 import { symbolFlaps, symbolOpacity } from './fold/foldSymbolFade';
@@ -30,7 +30,7 @@ import {
   offPaperPathData,
   paperRingPoints,
   type SheetPoint,
-} from './stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 
 /**
  * The half of a step's diagram the crease-pattern renderer cannot draw.

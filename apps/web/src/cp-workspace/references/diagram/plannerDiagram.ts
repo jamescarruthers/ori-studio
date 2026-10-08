@@ -61,7 +61,7 @@ import {
   dashZeroOf,
   foldArrowArc,
   type DiagramSheet,
-} from '../stepDiagramGeometry';
+} from '../../../lib/stepDiagram/stepDiagramGeometry';
 import { alsoLetters, inputLetters, sameRef, type InputLetters } from './inputLetters';
 import type { Point } from '../../../lib/geometry';
 import type { DiagramFrame, DiagramGridLine, DiagramSegment } from './diagramFrames';

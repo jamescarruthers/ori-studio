@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Rgba } from '../../renderer/types';
-import type { DiagramLineStyleName, StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';
+import type { Rgba } from '../../cp-workspace/renderer/types';
+import type { DiagramLineStyleName, StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
 import { DIAGRAM_LINE_INK, canvasDiagramPens, diagramDashSlot } from './diagramInk';
 import { diagramToScene, type DiagramInkColors } from './diagramToScene';
 

@@ -24,7 +24,7 @@ import {
   DIAGRAM_PUSH_INK,
   DIAGRAM_RIGHT_ANGLE_INK,
   DIAGRAM_WHITE_ARROW_INK,
-} from '../../cp-workspace/references/diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import {
   angleMarkArcPoints,
   angleMarkShape,
@@ -48,7 +48,7 @@ import {
   type PleatArrowShape,
   type RightAngleShape,
   type SvgPoint,
-} from '../../cp-workspace/references/stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 import { flattenPath } from '../../lib/cubicBezier';
 import {
   DEFAULT_PLEAT_KINKS,

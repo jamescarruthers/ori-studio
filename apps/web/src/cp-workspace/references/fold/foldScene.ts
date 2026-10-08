@@ -27,7 +27,7 @@ import type {
 } from '../referencesResults';
 import type { ReferencesViewStep } from '../referencesSequenceView';
 import { cardWays } from '../referencesWays';
-import { arcSamplePoints } from '../stepDiagramGeometry';
+import { arcSamplePoints } from '../../../lib/stepDiagram/stepDiagramGeometry';
 import type { PrecreaseFrame } from '../sheetFrames';
 
 export interface FoldFlapScene {

@@ -19,8 +19,8 @@ import {
   CP_CREASE_WIDTH_FACTOR,
   DIAGRAM_LINE_INK,
   type DiagramPens,
-} from './diagram/diagramInk';
-import { diagramGroundInk } from './diagram/diagramColors';
+} from '../../lib/stepDiagram/diagramInk';
+import { diagramGroundInk } from '../../lib/stepDiagram/diagramColors';
 import type { FoldPose } from '../../lib/foldMotion/foldPlayback';
 import {
   DEFAULT_SURFACE_SHARES,
@@ -142,7 +142,7 @@ export interface ReferencesCpViewProps {
    * The step's own lines, already packed for the preview channel.
    *
    * Built from the same primitives the filmstrip card draws
-   * (`diagram/diagramToScene.ts`), so the two pictures cannot disagree about
+   * (`lib/stepDiagram/diagramToScene.ts`), so the two pictures cannot disagree about
    * what a step contains. The symbols that go with them — arcs, arrowheads,
    * the turn-over glyph, letters, the rings round the marks — are drawn by
    * `ReferencesDiagramLayer` over this canvas, because this renderer has no

@@ -15,8 +15,8 @@ import {
 import { PT_PER_CSS_PX, mmToCssPx, pageMarginPt, paperSceneToSvg } from '../../lib/paper/paperSvg';
 import { REFERENCE_COLORS } from '../../themes/applyTheme';
 import { plannerSequenceWithGridFixture } from './__fixtures__/plannerSequence';
-import { DIAGRAM_INK_PER_SHEET, DIAGRAM_LINE_INK, penInk } from './diagram/diagramInk';
-import { createDiagramRenderContext } from './diagram/DiagramPrimitives';
+import { DIAGRAM_INK_PER_SHEET, DIAGRAM_LINE_INK, penInk } from '../../lib/stepDiagram/diagramInk';
+import { createDiagramRenderContext } from '../../lib/stepDiagram/DiagramPrimitives';
 import { unitFrame } from './diagram/diagramFrames';
 import { plannerStepDiagram } from './diagram/plannerDiagram';
 import { diagramToPaperScene } from './diagramToPaperScene';
@@ -33,7 +33,7 @@ import {
   foldArrowArc,
   withPens,
   type DiagramArc,
-} from './stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 import { referencesMarkupTokens } from './usePaperStyleTokens';
 
 /** A References step: its style read through its policy, its markup in its workspace's tokens. */

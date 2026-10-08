@@ -6,8 +6,8 @@
  * picture holds what is drawn in it. Measured as a page paints them, every
  * join of a stroke round (`paperSvg`) unless the mark mitres its own.
  */
-import { cubicBounds, type Cubic } from '../../../lib/cubicBezier';
-import type { StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';
+import { cubicBounds, type Cubic } from '../cubicBezier';
+import type { StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
 import {
   angleMarkArcPoints,
   angleMarkDrawn,
@@ -32,7 +32,7 @@ import {
   type DiagramArc,
   type DiagramProjector,
   type SvgPoint,
-} from '../stepDiagramGeometry';
+} from './stepDiagramGeometry';
 import { markOuterRadius, markRingWidth } from './labelLayout';
 
 /** The primitives that are marks on a diagram, drawn over its lines in the arrow's pen or a ring's. */
