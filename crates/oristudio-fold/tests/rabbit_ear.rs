@@ -11,8 +11,8 @@ mod vertex;
 use std::collections::BTreeMap;
 
 use oristudio_fold::{
-    Broken, BrokenWitness, CompoundRefused, Direction, Fix, FoldRefusal, Letter, RabbitEar, Seed,
-    State, Swivel, VertexChoices, VertexOutcome, WitnessOrder,
+    Broken, BrokenWitness, CompoundRefused, Direction, Fix, FoldRefusal, Letter, PairChoice,
+    RabbitEar, Seed, State, Swivel, VertexChoices, VertexOutcome,
 };
 use vertex::cases::{self, EarCase, candidates_of, every, landed};
 use vertex::check;
@@ -218,9 +218,10 @@ fn the_ridge_makes_the_ear_unique() {
     }
 }
 
-/// Plan D6: a choice is stored as the pairs it decided, by witnesses, and
-/// replays to the state it was chosen as; a witness off the paper breaks
-/// the step.
+/// Plan D6: a choice is stored as the pairs it decided, each face by a
+/// witness, in the document's shape (`FoldPairChoice`), and replays to the
+/// state it was chosen as; a witness off the paper, or a pair that
+/// conflicts, breaks the step.
 #[test]
 fn a_stored_choice_replays_or_breaks() {
     let case = case("3a both layers");
@@ -241,29 +242,45 @@ fn a_stored_choice_replays_or_breaks() {
     for k in 0..2 {
         let picked = choice.pick(&[k]).unwrap_or_else(|e| panic!("{e}"));
         let stored = picked.report.stored.clone();
-        assert!(stored.order.is_some());
+        assert!(!stored.completion.is_empty());
         let replayed = landed(case.state.rabbit_ear(&op, &stored));
         assert_eq!(replayed.state.parts(), picked.state.parts());
-        // Through JSON, as a document stores it.
-        let json = serde_json::to_string(&stored).unwrap_or_default();
-        let back: VertexChoices = serde_json::from_str(&json).unwrap_or_else(|e| panic!("{e}"));
+        // Through JSON, as the document stores it (`FoldPairChoice`).
+        let json = serde_json::to_value(&stored).unwrap_or_default();
+        assert!(json["completion"][0]["above"].is_array(), "{json}");
+        let back: VertexChoices = serde_json::from_value(json).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(
             landed(case.state.rabbit_ear(&op, &back)).state.parts(),
             picked.state.parts()
         );
     }
-    let mut off: WitnessOrder = choice
+    let stored = choice
         .pick(&[0])
-        .ok()
-        .and_then(|f| f.report.stored.order)
-        .unwrap_or_else(|| unreachable!());
-    off.faces[0] = [3.0, 3.0];
+        .map(|f| f.report.stored)
+        .unwrap_or_else(|e| panic!("{e}"));
+    // A witness off the paper.
+    let mut off = stored.clone();
+    off.completion[0].above = [3.0, 3.0];
     assert!(matches!(
-        case.state
-            .rabbit_ear(&op, &VertexChoices { order: Some(off) }),
+        case.state.rabbit_ear(&op, &off),
         Err(CompoundRefused::Broken(Broken::Witness {
             witness: BrokenWitness::NoFace { witness: 0, .. }
         }))
+    ));
+    // A pair stored both ways round conflicts.
+    let pair = stored.completion[0];
+    let both = VertexChoices {
+        completion: vec![
+            pair,
+            PairChoice {
+                above: pair.below,
+                below: pair.above,
+            },
+        ],
+    };
+    assert!(matches!(
+        case.state.rabbit_ear(&op, &both),
+        Err(CompoundRefused::Broken(Broken::Completion { .. }))
     ));
 }
 

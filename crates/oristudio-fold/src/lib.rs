@@ -118,7 +118,8 @@ pub use compound::reverse::{
 pub use compound::squash::{NoFlap, Squash, SquashAnalysis};
 pub use compound::swivel::Swivel;
 pub use compound::vertex::{
-    VertexChoice, VertexChoices, VertexFoldKind, VertexFolded, VertexOutcome, VertexReport,
+    PairChoice, VertexChoice, VertexChoices, VertexFoldKind, VertexFolded, VertexOutcome,
+    VertexReport,
 };
 pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
 pub use fold::{

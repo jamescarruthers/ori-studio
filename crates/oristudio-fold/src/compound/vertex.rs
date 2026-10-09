@@ -32,10 +32,11 @@ use crate::compound::{
     Across, Against, CompoundFolded, CompoundRefused, CompoundReport, Pending, Prepared, no_order,
 };
 use crate::isometry::Isometry;
+use crate::pattern::FaceId;
 use crate::refusal::{Fix, FoldRefusal, Refused};
 use crate::state::State;
 use crate::view::Direction;
-use crate::witness::WitnessOrder;
+use crate::witness::{Broken, BrokenWitness};
 
 type Point = [f64; 2];
 
@@ -52,9 +53,21 @@ pub enum VertexFoldKind {
 /// A vertex fold's choices as a step stores them (plan D6).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct VertexChoices {
-    /// The pairs the completion left free, as they were chosen.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub order: Option<WitnessOrder>,
+    /// The pairs the completion left free, as they were chosen: empty when
+    /// the fold had one order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub completion: Vec<PairChoice>,
+}
+
+/// One free pair of a completion as a step stores it (plan D6, the Fold
+/// document's `FoldPairChoice`): the face holding the sheet point `above`
+/// lies above the face holding `below`, in the model frame. The model frame
+/// is the parent's (what stays keeps its isometry), so the pair reads the
+/// same on every replay.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PairChoice {
+    pub above: Point,
+    pub below: Point,
 }
 
 /// What a vertex fold did.
@@ -103,10 +116,35 @@ impl VertexChoice {
     }
 
     /// Land the order `choice` names (one listed order per component); the
-    /// report's `stored` holds what the step stores for it.
+    /// report's `stored` holds what the step stores for it: the pairs it
+    /// decided beyond the forced ones, by witnesses.
     pub fn pick(&self, choice: &[usize]) -> Result<VertexFolded, FoldRefusal> {
-        let (folded, order) = self.pending.pick(choice)?;
-        Ok(self.context.report(folded, Some(order)))
+        let completions = &self.pending.completions;
+        let prepared = &self.pending.prepared;
+        let no_such = || FoldRefusal::NoSuchChoice {
+            choice: choice.to_vec(),
+        };
+        let order = completions.order(choice).ok_or_else(no_such)?;
+        let witness = |f| {
+            prepared
+                .unordered
+                .face_witness(f)
+                .ok_or_else(|| FoldRefusal::Internal {
+                    message: "a chosen pair names a face with no witness".to_string(),
+                })
+        };
+        let completion = completions
+            .chosen_pairs(choice)
+            .ok_or_else(no_such)?
+            .into_iter()
+            .map(|[upper, lower]| {
+                Ok(PairChoice {
+                    above: witness(upper)?,
+                    below: witness(lower)?,
+                })
+            })
+            .collect::<Result<Vec<_>, FoldRefusal>>()?;
+        Ok(self.context.report(prepared.land(order)?, completion))
     }
 }
 
@@ -215,12 +253,11 @@ impl Compiled {
             turns: self.turns.clone(),
             direction: self.direction,
         };
-        if let Some(stored) = &choices.order {
-            let folded = prepared
-                .replay(stored, limits)
-                .map_err(CompoundRefused::Broken)?;
+        if !choices.completion.is_empty() {
+            let folded =
+                replay(&prepared, &choices.completion, limits).map_err(CompoundRefused::Broken)?;
             return Ok(VertexOutcome::Landed(Box::new(
-                context.report(folded, Some(stored.clone())),
+                context.report(folded, choices.completion.clone()),
             )));
         }
         let completions = match prepared.complete(&[], limits) {
@@ -251,7 +288,7 @@ impl Compiled {
                 .land(order)
                 .map_err(|r| CompoundRefused::Refused(r.into()))?;
             return Ok(VertexOutcome::Landed(Box::new(
-                context.report(folded, None),
+                context.report(folded, Vec::new()),
             )));
         }
         Ok(VertexOutcome::ChooseOrder(Box::new(VertexChoice {
@@ -264,6 +301,65 @@ impl Compiled {
     }
 }
 
+/// Replay a stored choice (plan D6): its witnesses resolved to the landed
+/// faces, its pairs fixed beside the seeds, exactly one order, or broken. A
+/// witness in no face, or two in one face, breaks it.
+fn replay(
+    prepared: &Prepared,
+    completion: &[PairChoice],
+    limits: &CompletionLimits,
+) -> Result<CompoundFolded, Broken> {
+    let unordered = &prepared.unordered;
+    let mut named: Vec<(Point, FaceId)> = Vec::new();
+    let mut resolve = |point: Point| -> Result<FaceId, Broken> {
+        if let Some(&(_, face)) = named.iter().find(|(p, _)| *p == point) {
+            return Ok(face);
+        }
+        let witness = named.len();
+        let face = point
+            .iter()
+            .all(|c| c.is_finite())
+            .then(|| unordered.face_at(point))
+            .flatten()
+            .ok_or(Broken::Witness {
+                witness: BrokenWitness::NoFace { witness, point },
+            })?;
+        if let Some(other) = named.iter().position(|&(_, f)| f == face) {
+            return Err(Broken::Witness {
+                witness: BrokenWitness::SharedFace {
+                    witnesses: [other, witness],
+                },
+            });
+        }
+        named.push((point, face));
+        Ok(face)
+    };
+    let mut pairs = Vec::with_capacity(completion.len());
+    for pair in completion {
+        pairs.push(FixedPair {
+            upper: resolve(pair.above)?,
+            lower: resolve(pair.below)?,
+            kind: FixedKind::Seed,
+        });
+    }
+    let completions = prepared
+        .complete(&pairs, limits)
+        .map_err(|refusal| Broken::Completion { refusal })?;
+    if !completions.is_unique() {
+        return Err(Broken::NotUnique {
+            orders: completions.count(),
+        });
+    }
+    let order = completions
+        .order(&vec![0; completions.components().len()])
+        .ok_or(Broken::NotUnique {
+            orders: completions.count(),
+        })?;
+    prepared
+        .land(order)
+        .map_err(|refusal| Broken::Gate { refusal })
+}
+
 /// What turns a landed compound fold into a vertex fold's report.
 #[derive(Debug, Clone)]
 struct Context {
@@ -274,7 +370,7 @@ struct Context {
 }
 
 impl Context {
-    fn report(&self, folded: CompoundFolded, order: Option<WitnessOrder>) -> VertexFolded {
+    fn report(&self, folded: CompoundFolded, completion: Vec<PairChoice>) -> VertexFolded {
         let blocks: Vec<StagedBlock> = folded
             .report
             .blocks
@@ -310,7 +406,7 @@ impl Context {
                 direction: self.direction,
                 fold: folded.report,
                 motion,
-                stored: VertexChoices { order },
+                stored: VertexChoices { completion },
             },
         }
     }
