@@ -95,6 +95,13 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | With `kernel` and the io calls, before the queries | 1,594,829 B (1,557 KiB) | 655,855 B (640 KiB) |
 | With `kernel`, the io calls, the queries and axiom ops | 1,879,638 B (1,836 KiB) | 752,479 B (735 KiB) |
 
+The last row is the bridge that ships. Rebuilt at `44005c2d9`, with the
+Fold workspace's UI merged, it is the same 1,879,638 B raw, and 752,480 B
+through this machine's `gzip -9`. The rows without `kernel` cannot be
+rebuilt at that commit: `kernel` has been linked since the io branch
+merged, and the bridge has no switch to leave it out. They were measured on
+branches before it, the second in another worktree.
+
 The io branch measured `kernel`'s cost before the queries, against the
 Wave 2 bridge built in the same worktree (638,301 B raw, 236,078 B
 gzipped): **+956,528 B raw (+934 KiB), +419,777 B gzipped (+410 KiB)**.
@@ -126,18 +133,29 @@ emits, so this is paid by every installed visitor on their first load.
 
 - Without `kernel`: **768 KiB raw, 288 KiB gzipped**, set before the queries
   as a quarter of headroom for the scene, cross-section and axioms. **The
-  build with them is over it** by 118 KiB raw, 41 KiB gzipped: the owner's
-  call whether to raise it (to 1 MiB raw, 384 KiB gzipped, say, about the
-  precrease bridge's size) or to trim.
+  build with them is over it** by 118 KiB raw, 41 KiB gzipped (907,733 B
+  and 336,478 B against 786,432 B and 294,912 B).
 - `kernel` may add at most **512 KiB gzipped** over the build without it
   (about a third of the CP bridge every visitor already downloads). Past
   that, take D1's fallback: `kernel` stays native and test-only, and Send to
   Edit, export and Import CP go through the existing CP worker as FOLD text.
+  It adds about 406 KiB, within it.
 
-**Decision (2026-10-08): `kernel` stays in the bridge.** It adds 410 KiB
-gzipped, within the 512 KiB allowance, so D1's fallback is not taken. The
-102 KiB gzipped left is what the kernel's other writers (`.cp`, `.ori` and
-`.orh` export, D10), not linked yet, would have to fit in.
+Together the two allow 800 KiB gzipped, and the bridge that ships is
+735 KiB. That is inside their sum only because `kernel` uses less than its
+allowance; the engine's own share is over its line, and the budget has not
+been raised.
+
+**Open, for the owner: the budget without `kernel`.** Raise it (to 1 MiB
+raw, 384 KiB gzipped, say, about the precrease bridge's size) or trim the
+engine side by 41 KiB gzipped. The two levers tried (above) did not move it.
+
+**Decision (2026-10-08): `kernel` stays in the bridge.** Measured before the
+queries it added 410 KiB gzipped, within the 512 KiB allowance, so D1's
+fallback is not taken. After the queries it adds about 406 KiB (the
+difference between two worktrees' builds, so approximate), which leaves
+about 106 KiB gzipped for the kernel's other writers (`.cp`, `.ori` and
+`.orh` export, D10), not linked yet.
 
 ## Performance
 
