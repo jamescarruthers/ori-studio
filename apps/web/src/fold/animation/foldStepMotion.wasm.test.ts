@@ -13,6 +13,7 @@ import {
   foldStepFrame,
   foldStepFrameAt,
   foldStepMotion,
+  foldStepPaneAt,
   foldStepProgramme,
   type FoldStepMotion,
 } from './foldStepMotion';
@@ -28,13 +29,14 @@ const ROOT = process.cwd();
 const WASM = resolve(ROOT, 'src/generated/oristudio-fold-wasm/oristudio_fold_wasm_bg.wasm');
 const available = existsSync(WASM);
 
-/** The pane's placement, as a y-up model drawn y-down: 100 px to the sheet. */
+/** The pane's placement, as a y-up model drawn y-down: 100 px to the sheet, every state alike. */
 const SCALE = 100;
 const PLACE: FoldedFlatPaperSceneOptions = {
   markHidden: true,
   toScenePx: (p) => [p.x * SCALE, -p.y * SCALE],
   scale: SCALE,
 };
+const PANE = foldStepPaneAt(PLACE);
 
 const BOOK: FoldOp = {
   kind: 'valley',
@@ -82,7 +84,7 @@ async function motionOf(ops: readonly FoldOp[]): Promise<FoldStepMotion> {
       action: landed(calls.stepAction(state)).action,
       report,
     },
-    PLACE
+    PANE
   );
 }
 
@@ -267,12 +269,12 @@ describe.skipIf(!available)('a step’s motion from the engine’s scenes', () =
     const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
     const folded = landed(calls.step(sheet, BOOK));
     const input = { before: calls.scene(sheet), after: calls.scene(folded.state), action: null, report: null };
-    const imported = foldStepMotion({ ...input, op: { kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' } }, PLACE);
+    const imported = foldStepMotion({ ...input, op: { kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' } }, PANE);
     expect(imported.step).toBe('import');
     expect(imported.motion.kind).toBe('crossfade');
     expect(foldStepFrameAt(imported, 0.5).faces?.size).toBeGreaterThan(0);
     // No picture of the step to hinge it about: never a motion invented.
-    expect(foldStepMotion({ ...input, op: BOOK }, PLACE).motion.kind).toBe('crossfade');
+    expect(foldStepMotion({ ...input, op: BOOK }, PANE).motion.kind).toBe('crossfade');
     expect(book.motion.kind).toBe('hinge');
   });
 

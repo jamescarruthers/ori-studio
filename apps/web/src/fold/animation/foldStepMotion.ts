@@ -4,10 +4,12 @@
  * and what it did (`FoldReport`). Built once per step; a frame of it is then
  * arithmetic on two `PaperScene`s (`foldStepPoses.ts`).
  *
- * Both scenes are built here with the folded pane's own placement
- * (`foldedFlatPaperScene` and the options the pane builds its scene with), so
- * the last frame is the landed state exactly as the pane draws it, the first
- * the parent's, and ℓ and the view's turn are measured in the same px.
+ * Both scenes are pictured here as the folded pane pictures each state
+ * ({@link FoldStepPane}: its placement, and the paper it paints there), so
+ * the last frame is the landed state exactly as the pane draws it and the
+ * first the parent's. Each end is placed as the pane places that state: a
+ * turn changes the view, and with it where the pane puts the paper, so the
+ * view's turn is measured from the parent's placement to the step's.
  *
  * Which motion a step makes:
  * - valley, mountain, unfold, refold and precrease turn on a hinge about ℓ,
@@ -95,6 +97,20 @@ export interface FoldStepMotion {
 /** A step's programme, carrying its kind for the analytics event. */
 export type FoldStepProgramme = FoldProgramme<FoldStepPlayKind>;
 
+/** How the folded pane pictures a state: where it places the scene frame, and the paper it paints there. */
+export interface FoldPanePicture {
+  place: FoldedFlatPaperSceneOptions;
+  scene: PaperScene;
+}
+
+/** The folded pane's picture of a state, by its scene: what each end of a step is drawn as. */
+export type FoldStepPane = (scene: FoldScene) => FoldPanePicture;
+
+/** Every state placed alike and painted as the flat folded figure: a surface with no placement of its own, or a test. */
+export function foldStepPaneAt(place: FoldedFlatPaperSceneOptions): FoldStepPane {
+  return (scene) => ({ place, scene: foldedFlatPaperScene(scene, place) });
+}
+
 /** A rotation: no edge to follow round, so quicker than a turn-over, and as gently eased. */
 export const ROTATE_PACE: FoldLegPace = { durationMs: 900, roll: true };
 /** Import CP: a change of picture, not a motion, so it is brief. */
@@ -109,10 +125,12 @@ export interface FoldStepMoment {
 // ---------------------------------------------------------------------------
 // Building
 
-/** The step's motion, its two scenes built with the pane's placement. */
-export function foldStepMotion(input: FoldStepMotionInput, place: FoldedFlatPaperSceneOptions): FoldStepMotion {
-  const before = foldedFlatPaperScene(input.before, place);
-  const after = foldedFlatPaperScene(input.after, place);
+/** The step's motion, its two scenes pictured as the pane pictures each state. */
+export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): FoldStepMotion {
+  const from = pane(input.before);
+  const to = pane(input.after);
+  const before = from.scene;
+  const after = to.scene;
   const step = playKind(input.op);
   const crossfade = (): FoldStepMotion => ({ step, before, after, motion: crossfadeMotion(before, after) });
   switch (input.op.kind) {
@@ -121,12 +139,14 @@ export function foldStepMotion(input: FoldStepMotionInput, place: FoldedFlatPape
     case 'unfold':
     case 'refold':
     case 'precrease': {
-      const hinge = hingeOf(input, before, after, place);
+      // Posed from the landed scene, so ℓ is placed as it is. A fold keeps
+      // the view, so the parent's frame, which ℓ is in, is the step's.
+      const hinge = hingeOf(input, before, after, to.place);
       return hinge ? { step, before, after, motion: hinge } : crossfade();
     }
     case 'turn':
     case 'rotate': {
-      const turn = turnOf(input, before, after, place);
+      const turn = turnOf(input, before, after, from.place, to.place);
       return turn ? { step, before, after, motion: turn } : crossfade();
     }
     case 'cp-jump':
@@ -169,14 +189,15 @@ function hingeOf(
 
 /**
  * The view's turn in the pane's px: the map from the parent's scene frame to
- * the step's (the model frame does not move in a turn), conjugated by the
- * pane's placement and read off three points.
+ * the step's (the model frame does not move in a turn), from where the pane
+ * places the parent to where it places the step, read off three points.
  */
 function turnOf(
   input: FoldStepMotionInput,
   before: PaperScene,
   after: PaperScene,
-  place: FoldedFlatPaperSceneOptions
+  placeBefore: FoldedFlatPaperSceneOptions,
+  placeAfter: FoldedFlatPaperSceneOptions
 ): FoldTurnMotion | null {
   const inverse = invertIsometry(input.before.view_transform);
   if (!inverse) return null;
@@ -187,8 +208,8 @@ function turnOf(
     { x: size, y: 0 },
     { x: 0, y: size },
   ];
-  const from = corners.map((p) => place.toScenePx(p)) as [ScenePoint, ScenePoint, ScenePoint];
-  const to = corners.map((p) => place.toScenePx(toAfter(p))) as [ScenePoint, ScenePoint, ScenePoint];
+  const from = corners.map((p) => placeBefore.toScenePx(p)) as [ScenePoint, ScenePoint, ScenePoint];
+  const to = corners.map((p) => placeAfter.toScenePx(toAfter(p))) as [ScenePoint, ScenePoint, ScenePoint];
   const map = affineThrough(from, to);
   if (!map) return null;
   // A half turn is the same matrix either way round: the op says which, in

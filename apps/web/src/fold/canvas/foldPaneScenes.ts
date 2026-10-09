@@ -24,6 +24,7 @@
 import type { Point } from '../../lib/geometry';
 import type { PaperItem, PaperLineItem, PaperLineRole, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { foldedFlatPaperScene, type FoldedFlatPaperSceneOptions } from '../../cp-workspace/folded/foldedFlatScene';
+import type { FoldStepPane } from '../animation/foldStepMotion';
 import type { FoldDirection } from '../document/foldSequenceDocument';
 import type { FoldLetter, FoldScene, FoldSceneCrease } from '../engine/foldEngineWire';
 import { applyIsometry, FOLD_USER_PER_UNIT, foldUnitToScenePx, toPoint } from './foldCanvasGeometry';
@@ -96,6 +97,20 @@ export function foldedPanePlacement(offset: Point = ORIGIN): FoldedFlatPaperScen
 export function foldedPaneScene(scene: FoldScene, display: FoldPaneDisplay, offset: Point = ORIGIN): PaperScene {
   const painted = foldedFlatPaperScene(scene, foldedPanePlacement(offset));
   return display.precreases ? painted : withoutFlatCreases(painted);
+}
+
+/**
+ * How the folded pane pictures each state of a sheet (`FoldStepPane`): at the
+ * state's own display offset, which a turn changes, painted as the pane
+ * paints it. A step's motion pictures its parent and itself with this, so its
+ * first frame is the pane's picture of the parent, its last the pane's of the
+ * step, and a turn rolls in place rather than from a sheet away.
+ */
+export function foldedPanePictures(sheet: readonly (readonly [number, number])[]): FoldStepPane {
+  return (scene) => {
+    const place = foldedPanePlacement(foldedDisplayOffset(scene, sheet));
+    return { place, scene: foldedFlatPaperScene(scene, place) };
+  };
 }
 
 /** How far a fold line runs past the paper, as a share of its length: enough to read past the edge. */
