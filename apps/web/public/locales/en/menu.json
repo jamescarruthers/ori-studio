@@ -118,6 +118,8 @@
     "samplePleatInEighths": "Pleat in Eighths",
     "samplePreliminaryBase": "Square Base",
     "sampleWaterbombBase": "Waterbomb Base",
+    "sendPathToDiagram": "Send Steps to Diagram",
+    "sendToDiagram": "Send Step to Diagram",
     "sendToEdit": "Send to Edit",
     "sendToEditPrecreasesAsAux": "Send to Edit (Precreases as Auxiliary Lines)",
     "startFromEditFigure": "Start from Edit’s Folded Figure",

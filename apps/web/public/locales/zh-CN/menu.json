@@ -118,6 +118,8 @@
     "samplePleatInEighths": "八等分褶",
     "samplePreliminaryBase": "正方基本形",
     "sampleWaterbombBase": "水雷基本形",
+    "sendPathToDiagram": "将至此的步骤发送到图解",
+    "sendToDiagram": "将此步骤发送到图解",
     "sendToEdit": "发送到编辑",
     "sendToEditPrecreasesAsAux": "发送到编辑（预折作为辅助线）",
     "startFromEditFigure": "从编辑中的折叠模型开始",

@@ -42,7 +42,7 @@ function keyState(state: WorkspaceState): DiagramKeyState {
     focusedStepId: focusedStepId(),
     readOnly: state.diagramReadOnly,
     detailOpen: state.diagramDetail !== null,
-    browserOpen: state.diagramReferencesBrowser !== null,
+    browserOpen: state.diagramReferencesBrowser !== null || state.diagramFoldBrowser !== null,
     anchorPick: activeAnchorPick(state) !== null,
     annotate:
       isDiagramAnnotating(state)

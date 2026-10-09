@@ -93,6 +93,8 @@ import {
 } from '../upload/svgSanitize';
 import {
   DEFAULT_DIAGRAM_STYLE,
+  DIAGRAM_FOLD_MOMENTS,
+  DIAGRAM_FOLD_SHOW_AS,
   DIAGRAM_FORMAT_VERSION,
   DIAGRAM_PAGE_SIDES,
   DIAGRAM_SHOW_AS,
@@ -124,6 +126,8 @@ import {
   type DiagramCpSource,
   type DiagramDocument,
   type DiagramEntry,
+  type DiagramFoldMoment,
+  type DiagramFoldStepSource,
   type DiagramReferencesSource,
   type DiagramFixedPicture,
   type DiagramPicture,
@@ -465,7 +469,26 @@ function writeAsset(asset: DiagramAsset): Record<string, unknown> {
 }
 
 /** The source kinds this build reads. Any other is a newer build's. */
-const SOURCE_KINDS = new Set(['upload', 'cp', 'references-step']);
+const SOURCE_KINDS = new Set(['upload', 'cp', 'references-step', 'fold-step']);
+/**
+ * The keys a Fold step's source is written with, in the order it is written
+ * (`readFoldStepSource` builds it so): any other is a newer build's field.
+ */
+const FOLD_SOURCE_KEYS: ReadonlySet<string> = new Set([
+  'kind',
+  'sequence',
+  'step',
+  'moment',
+  'path',
+  'state',
+  'engine',
+  'thumbnail',
+  'render',
+  'remembered',
+  'sentence',
+]);
+/** The render modes a Fold step is shown in (`DIAGRAM_FOLD_SHOW_AS`): any other is a newer build's. */
+const FOLD_RENDER_MODES: ReadonlySet<string> = new Set(['crease-pattern', 'folded-flat']);
 /** The picture kinds this build reads. */
 const PICTURE_KINDS = new Set(['asset', 'scene', 'fixed', 'step-diagram']);
 /** Within a crease-pattern source: the scopes this build reads. */
@@ -587,6 +610,7 @@ function readStep(
     isNewerKind(value.source, SOURCE_KINDS) ||
     isNewerKind(value.picture, PICTURE_KINDS) ||
     isNewerCpSource(value.source) ||
+    isNewerFoldSource(value.source) ||
     isNewerStepDiagram(value.picture) ||
     namesUnknownAsset(value.source, assets) ||
     namesUnknownAsset(value.picture, assets) ||
@@ -614,12 +638,15 @@ function readStep(
     // a scene, a fixed picture, or a capture too detailed to keep as vector,
     // kept as a bitmap asset. A flat fold's scene keeps its faces when they
     // agree with it.
-    const flat = source.render.mode === 'folded-flat' ? source.render : null;
-    const faces =
-      picture?.kind === 'scene' && flat && paperFaces && paperFacesFitScene(paperFaces.faces, picture, flat.spread !== undefined)
-        ? { ...picture, paperFaces: paperFaces.json }
-        : picture;
+    const faces = withFittingFaces(picture, source.render, paperFaces);
     return { ...enlarged, source, picture: faces?.kind === 'step-diagram' ? null : faces };
+  }
+  if (source?.kind === 'fold-step') {
+    // A Fold step's picture is a scene of its state, or one too detailed to
+    // keep as vector, kept as a bitmap; every state it shows has a layer
+    // order, so there is no see-through development.
+    const faces = withFittingFaces(picture, source.render, paperFaces);
+    return { ...enlarged, source, picture: faces?.kind === 'scene' || faces?.kind === 'asset' ? faces : null };
   }
   if (source?.kind === 'references-step') {
     // A References step's picture is its card's diagram, or none.
@@ -627,6 +654,46 @@ function readStep(
   }
   // A picture with no source to say what it is of is left out.
   return enlarged;
+}
+
+/**
+ * A posed picture with the faces on the paper it was read with, when they
+ * agree with its scene and its pose is a flat fold; else as it was read,
+ * without them.
+ */
+function withFittingFaces(
+  picture: DiagramPicture | null,
+  render: DiagramCpRender,
+  paperFaces: ReturnType<typeof readPaperFaces> | undefined
+): DiagramPicture | null {
+  const flat = render.mode === 'folded-flat' ? render : null;
+  return picture?.kind === 'scene' &&
+    flat &&
+    paperFaces &&
+    paperFaces !== NEWER_PAPER_FACES &&
+    paperFacesFitScene(paperFaces.faces, picture, flat.spread !== undefined)
+    ? { ...picture, paperFaces: paperFaces.json }
+    : picture;
+}
+
+/**
+ * A Fold step's source a newer build wrote: a field this build has no name
+ * for, a moment it does not know, or a render — shown, or remembered for the
+ * other way — of a mode a Fold step is not shown in here, or one a newer
+ * build wrote (`isNewerRender`). Read here, it would be written back without
+ * what this build cannot name, so the step is carried whole instead.
+ */
+function isNewerFoldSource(value: unknown): boolean {
+  if (!isRecord(value) || value.kind !== 'fold-step') return false;
+  if (hasNewerKey(value, FOLD_SOURCE_KEYS)) return true;
+  if (typeof value.moment === 'string' && !(DIAGRAM_FOLD_MOMENTS as readonly string[]).includes(value.moment)) return true;
+  const newerMode = (render: unknown) =>
+    isRecord(render) && typeof render.mode === 'string' && !FOLD_RENDER_MODES.has(render.mode);
+  if (newerMode(value.render) || isNewerRender(value.render)) return true;
+  if (!isRecord(value.remembered)) return false;
+  return Object.entries(value.remembered).some(
+    ([way, render]) => !(DIAGRAM_FOLD_SHOW_AS as readonly string[]).includes(way) || newerMode(render) || isNewerRender(render)
+  );
 }
 
 /** A References card drawn with a primitive kind or style this build does not draw. */
@@ -695,6 +762,7 @@ function readSource(value: unknown, assets: Record<string, DiagramAsset>): Diagr
   if (!isRecord(value)) return null;
   if (value.kind === 'cp') return readCpSource(value);
   if (value.kind === 'references-step') return readReferencesSource(value);
+  if (value.kind === 'fold-step') return readFoldStepSource(value);
   if (value.kind !== 'upload') return null;
   const assetId = value.assetId;
   if (typeof assetId !== 'string' || !hasKnownAsset(assets, assetId)) return null;
@@ -745,6 +813,60 @@ function readRememberedPoses(
     if (pose && showAsOf(pose) === way && way !== showAsOf(render)) remembered[way] = pose;
   }
   return Object.keys(remembered).length > 0 ? remembered : null;
+}
+
+/**
+ * A Fold step's source as a step stores it: through the file's own reader, as
+ * {@link storedCpSource} is, so what a capture writes is field for field what
+ * a load reads back. Null for one the reader refuses.
+ */
+export function storedFoldStepSource(source: DiagramFoldStepSource): DiagramFoldStepSource | null {
+  return readFoldStepSource(JSON.parse(JSON.stringify(source)) as Record<string, unknown>);
+}
+
+/**
+ * A Fold step's source, every field checked, in the order it is written;
+ * null when any does not read. A render a Fold step is not shown in — 3D,
+ * simulated, a flat fold at another layer order than the sequence's — is
+ * damage here: a newer build's mode made the step a newer build's before
+ * this was reached. A remembered pose that does not read is dropped alone,
+ * as a linked pattern's is; so is a sentence that is not a string.
+ */
+function readFoldStepSource(value: Record<string, unknown>): DiagramFoldStepSource | null {
+  const { sequence, step, moment, path, state } = value;
+  const ids = [sequence, step, path, state];
+  if (ids.some((id) => typeof id !== 'string' || id.length === 0)) return null;
+  if (typeof moment !== 'string' || !(DIAGRAM_FOLD_MOMENTS as readonly string[]).includes(moment)) return null;
+  const engine = wholeNumber(value.engine);
+  const thumbnail = readSheetThumbnail(value.thumbnail);
+  const render = readFoldStepRender(value.render);
+  if (engine === null || !thumbnail || !render) return null;
+  const remembered = readRememberedPoses(value.remembered, render);
+  const kept = remembered
+    ? Object.fromEntries(
+        Object.entries(remembered).filter(([, pose]) => readFoldStepRender(pose) !== null)
+      )
+    : null;
+  return {
+    kind: 'fold-step',
+    sequence: sequence as string,
+    step: step as string,
+    moment: moment as DiagramFoldMoment,
+    path: path as string,
+    state: state as string,
+    engine,
+    thumbnail,
+    render,
+    ...(kept && Object.keys(kept).length > 0 ? { remembered: kept } : {}),
+    ...(typeof value.sentence === 'string' ? { sentence: xmlText(value.sentence) } : {}),
+  };
+}
+
+/** A render a Fold step is shown in: a crease pattern, or a flat fold at the sequence's one layer order. */
+function readFoldStepRender(value: unknown): DiagramCpRender | null {
+  const render = readCpRender(value);
+  if (!render || !FOLD_RENDER_MODES.has(render.mode)) return null;
+  return render.mode === 'folded-flat' && render.foldCase !== 1 ? null : render;
 }
 
 /**

@@ -1031,6 +1031,30 @@
       "title": "Começar um diagrama",
       "upload": "Enviar imagens…"
     },
+    "fold": {
+      "badgeCreasePattern": "{{origin}} · Padrão de vincos",
+      "badgeFolded": "{{origin}} · Dobrado",
+      "card": "Passo {{number}}",
+      "cardMissing": "Passo ausente",
+      "currentHint": "Já mostra o passo como ele está",
+      "empty": "Dobre um passo em Dobrar e os passos da sequência aparecerão aqui.",
+      "finishedSentence": "O modelo como os passos o deixam.",
+      "fromFold": "De Dobrar…",
+      "missing": "Passo ausente em Dobrar",
+      "missingHint": "O passo não está mais em Dobrar ou não dobra mais",
+      "noStepsHint": "Dobre um passo em Dobrar para trazê-lo de lá",
+      "notLanded": "Dobrar ainda não dobrou este passo, então ele ainda não pode ser adicionado.",
+      "openFold": "Abrir Dobrar",
+      "openInFold": "Abrir em Dobrar",
+      "sourceAfter": "Resultado de um passo de Dobrar · {{shown}}",
+      "sourceBefore": "Um passo de Dobrar · {{shown}}",
+      "stale": "Desatualizado: a sequência de Dobrar mudou",
+      "steps": "Passos",
+      "titleEnd": "Adicionar de Dobrar",
+      "turnCard": "Giro",
+      "unknown": "Ainda não verificado: Dobrar ainda está dobrando os passos",
+      "withTurn": "Com o giro anterior"
+    },
     "grid": {
       "addStep": "Adicionar passo",
       "insertHere": "Adicionar um passo aqui",
@@ -1069,6 +1093,11 @@
     "layers": {
       "empty": "Abra um passo em Anotar para ver suas camadas.",
       "list": "Camadas"
+    },
+    "link": {
+      "originEdit": "Editar",
+      "originFold": "Dobrar",
+      "originReferences": "Referências"
     },
     "pagePane": {
       "columns": "Colunas",
@@ -2068,6 +2097,11 @@
       "source": "Origem",
       "title": "Passo {{number}}",
       "valley": "Vale"
+    },
+    "toDiagram": {
+      "sendPath": "Enviar passos para o Diagrama",
+      "sendStep": "Enviar passo para o Diagrama",
+      "sheetHint": "A folha plana é onde os passos começam: dobre um passo para enviá-lo."
     },
     "words": {
       "adds_one": "Adiciona {{count}} vinco ({{mountain}} M, {{valley}} V)",

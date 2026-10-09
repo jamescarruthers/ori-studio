@@ -18,3 +18,11 @@ export function trackFoldCpImported(origin: FoldCpOrigin): void {
 export function trackFoldSequenceSentToEdit(variant: FoldSendToEditAnalyticsVariant): void {
   track(ANALYTICS_EVENTS.foldSequenceSentToEdit, { variant });
 }
+
+/** Where Fold steps were sent to the Diagram from: Fold's Send to Diagram, or the Diagram's Fold browser. */
+export type FoldSentToDiagramVia = 'fold' | 'diagram_browser';
+
+/** Fold steps became Diagram steps (plan D17), from where, one or many: enums only. */
+export function trackFoldStepSentToDiagram(via: FoldSentToDiagramVia, scope: 'one' | 'many'): void {
+  track(ANALYTICS_EVENTS.foldStepSentToDiagram, { via, scope });
+}

@@ -32,6 +32,8 @@ describe('Fold’s imports and hand-offs in the menu', () => {
       'fold.start-from-edit-folded-figure',
       'fold.send-to-edit',
       'fold.send-to-edit-precreases-as-aux',
+      'fold.send-to-diagram',
+      'fold.send-path-to-diagram',
       'fold.export-fold',
       'fold.export-step',
       'fold.export-steps',
@@ -52,6 +54,8 @@ describe('Fold’s imports and hand-offs in the menu', () => {
     expect(await ran('fold.import-sample-waterbomb-base')).toEqual({ kind: 'import-sample', sample: 'waterbomb-base' });
     expect(await ran('fold.start-from-edit-folded-figure')).toEqual({ kind: 'start-from-edit-folded-figure' });
     expect(await ran('fold.send-to-edit-precreases-as-aux')).toEqual({ kind: 'send-to-edit', variant: 'precreases-as-aux' });
+    expect(await ran('fold.send-to-diagram')).toEqual({ kind: 'send-to-diagram', scope: 'step' });
+    expect(await ran('fold.send-path-to-diagram')).toEqual({ kind: 'send-to-diagram', scope: 'path' });
     expect(await ran('fold.export-fold')).toEqual({ kind: 'export-fold' });
     expect(await ran('fold.export-step')).toEqual({ kind: 'export-steps', scope: 'this' });
     expect(await ran('fold.export-steps')).toEqual({ kind: 'export-steps', scope: 'all' });

@@ -1,0 +1,143 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FoldOp } from '../../fold/document/foldSequenceDocument';
+import { createFoldEngineCalls } from '../../fold/engine/foldEngineCalls';
+import { createFoldSession, type FoldSession } from '../../fold/session/foldSession';
+import { inProcessFoldRuntime, settle } from '../../fold/session/foldSession.fixtures';
+import { DEFAULT_DIAGRAM_STYLE, isStep, type DiagramFoldStepSource, type DiagramStep } from '../document/diagramDocument';
+import { readDiagram, writeDiagram } from '../document/diagramFile';
+import { paintScene, stepPictureSource } from '../pictures/paintDiagramStep';
+
+/**
+ * The Diagram link end to end (plan D17), over the real Fold bridge in-process
+ * and the real store: a three-step sequence folded in Fold, its second step
+ * sent to the Diagram, drawn there; an edit upstream — the sheet's start side
+ * flipped, which keeps every step and mirrors what it folds — turns the link
+ * stale, Refresh brings it back current, and Open in Fold goes to the step.
+ *
+ * The app's one session (`foldSession()`) is this test's, over the bridge.
+ * Skipped when the bridge has not been built (a fresh worktree before
+ * `build:wasm`); CI builds it before the web tests run.
+ */
+const ROOT = process.cwd();
+const WASM = resolve(ROOT, 'src/generated/oristudio-fold-wasm/oristudio_fold_wasm_bg.wasm');
+const available = existsSync(WASM);
+
+const held = vi.hoisted(() => ({ session: null as FoldSession | null }));
+vi.mock('../../store/workspaceStore/foldSession', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../store/workspaceStore/foldSession')>()),
+  foldSession: () => {
+    if (!held.session) throw new Error('no test session');
+    return held.session;
+  },
+}));
+
+const { useWorkspaceStore } = await import('../../store/workspaceStore/store');
+const { foldSessionDocumentSource } = await import('../../store/workspaceStore/foldSession');
+const { useLayoutStore } = await import('../../store/layoutStore');
+const { pullFromFold } = await import('./foldBrowserActions');
+const { openDiagramStepInFold, refreshDiagramFoldStep } = await import('./foldStepActions');
+const { foldLinkContextNow } = await import('./useFoldLinkContext');
+const { foldStepLinkStatus } = await import('./foldStepLink');
+
+const T = Math.tan(Math.PI / 8);
+
+/** The kite base, as the tools store it: precrease the diagonal, then fold each lower edge to it. */
+const KITE: FoldOp[] = [
+  {
+    kind: 'precrease',
+    direction: 'valley',
+    line: { via: 'free', through: [[0, 0], [1, 1]] },
+    moving: [0.75, 0.25],
+    seed: { scope: 'all' },
+  },
+  { kind: 'valley', line: { via: 'free', through: [[0, 0], [1, T]] }, moving: [0.9, 0.1], seed: { scope: 'all' } },
+  { kind: 'valley', line: { via: 'free', through: [[0, 0], [T, 1]] }, moving: [0.1, 0.9], seed: { scope: 'all' } },
+];
+
+async function bridge() {
+  const wasm = await import('../../generated/oristudio-fold-wasm/oristudio_fold_wasm');
+  wasm.initSync({ module: readFileSync(WASM) });
+  return inProcessFoldRuntime(() => createFoldEngineCalls(new wasm.FoldEngine()), wasm.fold_engine_version());
+}
+
+const state = () => useWorkspaceStore.getState();
+
+/** The diagram's only step. */
+function onlyStep(): DiagramStep {
+  const steps = state().diagram?.steps.filter(isStep) ?? [];
+  expect(steps).toHaveLength(1);
+  return steps[0]!;
+}
+
+const statusOf = (step: DiagramStep) => foldStepLinkStatus(step.source as DiagramFoldStepSource, foldLinkContextNow());
+
+describe.skipIf(!available)('a Fold step in the Diagram, over the real bridge (D17)', () => {
+  beforeEach(async () => {
+    useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
+    held.session = createFoldSession({ document: foldSessionDocumentSource(useWorkspaceStore), runtime: await bridge() });
+    held.session.retain();
+    await settle();
+    for (const op of KITE) {
+      const committed = await held.session.commitStep(op);
+      if (committed.status !== 'committed') throw new Error(`commit: ${committed.status}`);
+      await settle();
+    }
+  });
+
+  afterEach(() => {
+    held.session?.dispose();
+    held.session = null;
+  });
+
+  it('draws a step sent from Fold on a page, turns it stale after an edit upstream, and refreshes it', async () => {
+    const [, second] = state().foldSequences[0]!.document.steps;
+    expect(await pullFromFold([{ kind: 'step', step: second!.id, moment: 'before' }], { kind: 'end' }, { via: 'fold' })).toBe(1);
+
+    // Linked, drawn folded, with the fold's line and arrow, in Fold's words.
+    const sent = onlyStep();
+    const source = sent.source as DiagramFoldStepSource;
+    expect(source).toMatchObject({ kind: 'fold-step', step: second!.id, moment: 'before' });
+    expect(source.path).toMatch(/^fh1:/);
+    expect(source.state).toMatch(/^fs1:/);
+    expect(sent.text.length).toBeGreaterThan(0);
+    expect(sent.annotations.map((mark) => (mark.unknown ? 'unknown' : mark.kind))).toEqual(
+      expect.arrayContaining(['valley-line', 'valley-arrow'])
+    );
+    expect(sent.annotations.every((mark) => !mark.unknown && mark.imported === 'untouched')).toBe(true);
+    const picture = stepPictureSource(sent, state().diagram!.assets);
+    expect(picture).toMatchObject({ kind: 'scene', pattern: false });
+    const painted = picture?.kind === 'scene' ? paintScene(picture, DEFAULT_DIAGRAM_STYLE) : null;
+    expect(painted?.svg).toContain('<path');
+    // And it is a file's: written and read back as it is.
+    const read = readDiagram(JSON.parse(JSON.stringify(writeDiagram(state().diagram!))));
+    expect(read?.document.steps).toEqual(state().diagram!.steps);
+
+    expect(statusOf(sent)).toBe('current');
+
+    // Upstream: Back up keeps the steps and mirrors what each folds.
+    expect(state().setFoldStartSide('back')).toBe(true);
+    await settle(10);
+    expect(statusOf(onlyStep())).toBe('stale');
+
+    const refreshed = await refreshDiagramFoldStep(sent.id);
+    expect(refreshed).toMatchObject({ status: 'captured', changed: true });
+    expect(statusOf(onlyStep())).toBe('current');
+    // Its marks came again with the new state, still Fold's.
+    expect(onlyStep().annotations.every((mark) => !mark.unknown && mark.imported === 'untouched')).toBe(true);
+  });
+
+  it('goes back to its step in Fold, and is missing once the step is deleted there', async () => {
+    const [, second] = state().foldSequences[0]!.document.steps;
+    await pullFromFold([{ kind: 'step', step: second!.id, moment: 'before' }], { kind: 'end' }, { via: 'fold' });
+    state().moveFoldCursor(null);
+    openDiagramStepInFold(onlyStep().id);
+    expect(state().foldReader?.cursor).toBe(second!.id);
+    expect(useLayoutStore.getState().activeWorkspace).toBe('fold');
+
+    expect(state().deleteFoldStep(second!.id)).toBe(true);
+    await settle();
+    expect(statusOf(onlyStep())).toBe('missing');
+  });
+});

@@ -356,8 +356,11 @@ export type DiagramShowAsName = 'crease_pattern' | 'folded' | 'simulated';
  */
 export type DiagramShowAsVia = 'pane' | 'picker' | 'card' | 'duplicate';
 
-/** The workspace a diagram step's Open in… went to: its pattern in Edit, or its sheet in References. */
-export type DiagramSourceWorkspace = 'edit' | 'references';
+/**
+ * The workspace a diagram step's Open in… went to: its pattern in Edit, its
+ * sheet in References, or its step in Fold.
+ */
+export type DiagramSourceWorkspace = 'edit' | 'references' | 'fold';
 
 /** The list the References browser pulled cards from: a planned pattern's sequence, or the Find answer. */
 export type DiagramPulledMode = 'sequence' | 'find';
@@ -1616,6 +1619,13 @@ export const ANALYTICS_EVENTS = {
    * menu's.
    */
   foldSequenceSentToEdit: 'fold sequence sent to edit',
+  /**
+   * Fold steps became Diagram steps (fold-workspace plan D17): sent from
+   * Fold — the step on screen, or the active path up to it — or pulled by the
+   * Diagram's Fold browser, one or many. Whether the Diagram is where a Fold
+   * sequence ends up, and from which side the link is made.
+   */
+  foldStepSentToDiagram: 'fold step sent to diagram',
   themeChanged: 'theme changed',
   localeChanged: 'locale changed',
   landingViewed: 'landing viewed',

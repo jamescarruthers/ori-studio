@@ -998,6 +998,30 @@
       "title": "Start a diagram",
       "upload": "Upload pictures…"
     },
+    "fold": {
+      "badgeCreasePattern": "{{origin}} · Crease pattern",
+      "badgeFolded": "{{origin}} · Folded",
+      "card": "Step {{number}}",
+      "cardMissing": "Step missing",
+      "currentHint": "Already shows its step as it is",
+      "empty": "Fold a step in Fold, and the sequence’s steps appear here.",
+      "finishedSentence": "The model as the steps leave it.",
+      "fromFold": "From Fold…",
+      "missing": "Step missing from Fold",
+      "missingHint": "Its step is gone from Fold, or no longer folds",
+      "noStepsHint": "Fold a step in Fold to take it from there",
+      "notLanded": "Fold hasn’t folded this step, so it can’t be added yet.",
+      "openFold": "Open Fold",
+      "openInFold": "Open in Fold",
+      "sourceAfter": "A Fold step’s result · {{shown}}",
+      "sourceBefore": "A Fold step · {{shown}}",
+      "stale": "Out of date: the Fold sequence changed",
+      "steps": "Steps",
+      "titleEnd": "Add from Fold",
+      "turnCard": "Turn",
+      "unknown": "Not checked yet: Fold is still folding its steps",
+      "withTurn": "With the turn before it"
+    },
     "grid": {
       "addStep": "Add step",
       "insertHere": "Add a step here",
@@ -1033,6 +1057,11 @@
     "layers": {
       "empty": "Open a step in Annotate to see its layers.",
       "list": "Layers"
+    },
+    "link": {
+      "originEdit": "Edit",
+      "originFold": "Fold",
+      "originReferences": "References"
     },
     "pagePane": {
       "columns": "Columns",
@@ -1921,6 +1950,11 @@
       "source": "Source",
       "title": "Step {{number}}",
       "valley": "Valley"
+    },
+    "toDiagram": {
+      "sendPath": "Send Steps to Diagram",
+      "sendStep": "Send Step to Diagram",
+      "sheetHint": "The flat sheet is where the steps start: fold a step to send it."
     },
     "words": {
       "adds_one": "Adds {{count}} crease ({{mountain}} M, {{valley}} V)",

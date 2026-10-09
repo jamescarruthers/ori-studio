@@ -12,14 +12,14 @@
  *
  * The thumbnails are `SheetThumbnail`s, fitted as the pattern pickers fit one
  * (`fitSheetThumbnail`) and held to what a Diagram file takes back
- * (`withinStoredBudget`, snapped to a tenth as a captured step's is), so a
+ * (`storedSheetThumbnail`, snapped to a tenth as a captured step's is), so a
  * Diagram step linked to a Fold step can keep the same picture (plan D17).
  *
  * Pure: no React, no store, no engine.
  */
 import {
   fitSheetThumbnail,
-  withinStoredBudget,
+  storedSheetThumbnail,
   type SheetStroke,
   type SheetStrokeRole,
   type SheetThumbnail,
@@ -192,16 +192,7 @@ function stroke(from: readonly [number, number], to: readonly [number, number], 
 /** Fitted, snapped to a tenth of its 100-unit box and held to what a file takes back, as a captured step's is. */
 function storedThumbnail(strokes: readonly SheetStroke[]): SheetThumbnail | null {
   const fitted = fitSheetThumbnail(strokes);
-  if (!fitted) return null;
-  const snap = (value: number) => Math.round(value * 10) / 10 + 0;
-  const snapped = fitted.strokes.map((each) => ({
-    x1: snap(each.x1),
-    y1: snap(each.y1),
-    x2: snap(each.x2),
-    y2: snap(each.y2),
-    role: each.role,
-  }));
-  return { viewBox: fitted.viewBox, strokes: withinStoredBudget(snapped) };
+  return fitted ? storedSheetThumbnail(fitted) : null;
 }
 
 /** The crease pattern in sheet coordinates, by its letters as stored: from the front. */

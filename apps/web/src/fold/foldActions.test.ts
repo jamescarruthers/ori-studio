@@ -20,6 +20,7 @@ function deps(): FoldActionDeps {
     deleteStep: vi.fn(),
     importCp: vi.fn(),
     sendToEdit: vi.fn(),
+    sendToDiagram: vi.fn(),
     exportFold: vi.fn(),
     exportSteps: vi.fn(),
   };
@@ -64,11 +65,26 @@ describe('buildFoldActions', () => {
       'import-cp',
       '—',
       'send-to-edit',
+      'send-to-diagram',
+      'send-path-to-diagram',
       'export-fold',
       'export-steps',
       '—',
       'delete-step',
     ]);
+  });
+
+  it('sends the step in context, or the steps to it, to the Diagram, and nothing from the flat sheet (D17)', () => {
+    const bound = deps();
+    const actions = buildFoldActions(CONTEXT, bound);
+    command(actions, 'send-to-diagram').run();
+    command(actions, 'send-path-to-diagram').run();
+    expect(bound.sendToDiagram).toHaveBeenNthCalledWith(1, 'step');
+    expect(bound.sendToDiagram).toHaveBeenNthCalledWith(2, 'path');
+    const sheet = buildFoldActions({ ...CONTEXT, step: null }, deps());
+    expect(command(sheet, 'send-to-diagram')).toMatchObject({ disabled: true, hint: expect.stringContaining('flat sheet') });
+    const replaying = buildFoldActions({ ...CONTEXT, state: 'replaying' }, deps());
+    expect(command(replaying, 'send-path-to-diagram').disabled).toBe(true);
   });
 
   it('offers the three fold kinds, the armed one checked, each setting itself', () => {

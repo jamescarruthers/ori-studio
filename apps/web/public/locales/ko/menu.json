@@ -118,6 +118,8 @@
     "samplePleatInEighths": "8등분 주름",
     "samplePreliminaryBase": "정사각 기본형",
     "sampleWaterbombBase": "물풍선 기본형",
+    "sendPathToDiagram": "여기까지의 단계를 도해로 보내기",
+    "sendToDiagram": "이 단계를 도해로 보내기",
     "sendToEdit": "편집으로 보내기",
     "sendToEditPrecreasesAsAux": "편집으로 보내기 (사전 접기를 보조선으로)",
     "startFromEditFigure": "편집의 접힌 모델에서 시작",

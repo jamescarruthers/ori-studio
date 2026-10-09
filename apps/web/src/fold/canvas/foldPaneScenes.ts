@@ -125,8 +125,14 @@ export function diagramRole(direction: FoldDirection | FoldLetter): PaperLineRol
   return direction === 'mountain' ? 'diagram-mountain' : 'diagram-valley';
 }
 
-function lineItem(role: PaperLineRole, a: Point, b: Point, face?: number, offset: Point = ORIGIN): PaperLineItem {
-  const place = shifted(offset);
+function lineItem(
+  role: PaperLineRole,
+  a: Point,
+  b: Point,
+  face?: number,
+  offset: Point = ORIGIN,
+  place: (point: Point) => ScenePoint = shifted(offset)
+): PaperLineItem {
   return {
     kind: 'line',
     role,
@@ -188,26 +194,37 @@ export interface CreasePatternPaneOptions {
    * step's own. Null when nothing is previewed.
    */
   instruction?: ReadonlySet<number> | null;
+  /**
+   * Where the sheet goes: a map from sheet coordinates to scene px, and how
+   * many scene px the sheet's longer side is. The pane's own by default
+   * (`foldUnitToScenePx`); a Diagram step places it at the capture scale.
+   */
+  place?: { toScenePx: (point: Point) => ScenePoint; sheetPx: number };
+  /** The paper's colour: the front's, or the back's (a Diagram step's Front | Back). The front by default. */
+  side?: 'front' | 'back';
 }
 
 /**
  * The crease pattern of a state, as the crease-pattern pane paints it: the
- * sheet front up, filled with the front's paper, and its creases in their
- * pens, the border over them so a crease that ends on the edge never breaks
- * the outline (`diagramToPaperScene`'s order).
+ * sheet front up, filled with the front's paper — or, asked, the back's,
+ * nothing else changed — and its creases in their pens, the border over them
+ * so a crease that ends on the edge never breaks the outline
+ * (`diagramToPaperScene`'s order).
  */
 export function creasePatternPaneScene(scene: FoldScene, options: CreasePatternPaneOptions): PaperScene {
   const { display, step } = options;
   const instruction = options.instruction ?? null;
-  const ring: ScenePoint[] = options.sheet.map(([x, y]) => foldUnitToScenePx({ x, y }));
-  const items: PaperItem[] = [{ kind: 'face', face: 0, side: 'front', rings: [ring], shade: 1, hidden: false }];
+  const toScenePx = options.place?.toScenePx ?? foldUnitToScenePx;
+  const ring: ScenePoint[] = options.sheet.map(([x, y]) => toScenePx({ x, y }));
+  const side = options.side ?? 'front';
+  const items: PaperItem[] = [{ kind: 'face', face: 0, side, rings: [ring], shade: 1, hidden: false }];
   const border: PaperLineItem[] = [];
   const aux: PaperLineItem[] = [];
   const folds: PaperLineItem[] = [];
   for (const crease of scene.creases) {
     const role = creaseRole(crease, { display, step, instruction });
     if (!role) continue;
-    const item = lineItem(role, crease.from, crease.to, 0);
+    const item = lineItem(role, crease.from, crease.to, 0, ORIGIN, toScenePx);
     if (role === 'edge') border.push(item);
     else if (role === 'aux') aux.push({ ...item, onBoundary: onSheetEnds(crease, options.sheet) });
     else folds.push(item);
@@ -223,7 +240,7 @@ export function creasePatternPaneScene(scene: FoldScene, options: CreasePatternP
       maxX: Math.max(...xs),
       maxY: Math.max(...ys),
     },
-    sheet: FOLD_USER_PER_UNIT,
+    sheet: options.place?.sheetPx ?? FOLD_USER_PER_UNIT,
     items,
   };
 }

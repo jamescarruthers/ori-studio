@@ -128,6 +128,8 @@ export type FoldIoCapabilityId =
   | 'fold.start-from-edit-folded-figure'
   | 'fold.send-to-edit'
   | 'fold.send-to-edit-precreases-as-aux'
+  | 'fold.send-to-diagram'
+  | 'fold.send-path-to-diagram'
   | 'fold.export-fold'
   | 'fold.export-step'
   | 'fold.export-steps';
@@ -1272,6 +1274,18 @@ function foldIoCapabilities(
       t(
         'common:capability.foldSendToEditPrecreasesAsAuxHint',
         'Send the crease pattern with its precreases as auxiliary lines'
+      )
+    ),
+    // A step on screen to send is the session's to say when the verb runs, as a path's steps folding is.
+    'fold.send-to-diagram': out(
+      t('common:capability.foldSendToDiagram', 'Send Step to Diagram'),
+      t('common:capability.foldSendToDiagramHint', 'Add the step on screen to the end of the diagram, linked to it')
+    ),
+    'fold.send-path-to-diagram': out(
+      t('common:capability.foldSendPathToDiagram', 'Send Steps to Diagram'),
+      t(
+        'common:capability.foldSendPathToDiagramHint',
+        'Add every step up to the one on screen to the end of the diagram, linked to them'
       )
     ),
     'fold.export-fold': out(

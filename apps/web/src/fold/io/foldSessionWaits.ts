@@ -12,8 +12,10 @@
  * Pure: no React, no store.
  */
 
+import type { FoldPathDigest, FoldStateFingerprint } from '../document/foldDigest';
 import type { FoldOp, FoldPaper } from '../document/foldSequenceDocument';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
+import type { FoldReport } from '../engine/foldEngineWire';
 import type { FoldSession } from '../session/foldSession';
 import { selectFoldCursorNode, type FoldSessionNode, type FoldSessionSnapshot } from '../session/foldSessionState';
 
@@ -82,6 +84,77 @@ export function foldCursorReady(session: FoldSession): Promise<FoldCursorReady |
       cursor: snapshot.cursor,
       empty: (snapshot.sequence?.steps.length ?? 0) === 0,
       paper: snapshot.paper,
+    };
+  });
+}
+
+/** A step of the shown sequence and the state it folds from, both landed: what a Diagram step is drawn from (plan D17). */
+export interface FoldStepReady {
+  readonly status: 'ready';
+  /** The step's own state, and its `fs1`. */
+  readonly state: FoldEngineStateHandle;
+  readonly fingerprint: FoldStateFingerprint;
+  /** The state it folds from — its parent's, or the sheet's — and its `fs1`. */
+  readonly parentState: FoldEngineStateHandle;
+  readonly parentFingerprint: FoldStateFingerprint;
+  /** Its parent's id; null when it folds from the sheet. */
+  readonly parent: string | null;
+  /** Its path's identity. */
+  readonly path: FoldPathDigest;
+  readonly op: FoldOp;
+  /** What the fold did; null for a turn, a rotation or an import. */
+  readonly report: FoldReport | null;
+}
+
+/**
+ * Why a step cannot be drawn from: the session is not held, the step is not
+ * in the sequence Fold shows (`not-shown` — it shows one, plan D7), there is
+ * no such step (`missing`), it no longer folds (`broken`), or a newer build
+ * made it or a step above it (`locked`).
+ */
+export type FoldStepWaitRefusal = {
+  readonly status: 'unavailable';
+  readonly reason: 'not-live' | 'not-shown' | 'missing' | 'broken' | 'locked';
+};
+
+const refused = (reason: FoldStepWaitRefusal['reason']): FoldStepWaitRefusal => ({ status: 'unavailable', reason });
+
+/** A step of sequence `sequenceId` once it and the state it folds from have landed, or why it cannot be drawn from. */
+export function foldStepReady(
+  session: FoldSession,
+  sequenceId: string,
+  stepId: string
+): Promise<FoldStepReady | FoldStepWaitRefusal> {
+  return untilAnswered(session, (snapshot): FoldStepReady | FoldStepWaitRefusal | undefined => {
+    if (!snapshot.live) return refused('not-live');
+    if (snapshot.sequence?.id !== sequenceId) return refused('not-shown');
+    const held = snapshot.sequence.steps.find((node) => node.id === stepId);
+    const node = snapshot.nodes.get(stepId);
+    if (!held || !node) return refused('missing');
+    if (node.status === 'broken') return refused('broken');
+    if (node.status === 'locked' || held.op === undefined) return refused('locked');
+    const parentNode = held.parent === null ? snapshot.sheet : snapshot.nodes.get(held.parent);
+    if (!parentNode) return refused('missing');
+    const state = landedState(node, snapshot);
+    const parentState = landedState(parentNode, snapshot);
+    if (state === undefined || parentState === undefined) return undefined;
+    // Pending with the replay stopped short is the engine's failing, not the step's.
+    if (state === null || parentState === null) {
+      return refused(node.status === 'pending' || parentNode.status === 'pending' ? 'not-live' : 'broken');
+    }
+    // One engine's handles: a loss mid-wait renumbers them, and the replay then lands them again.
+    if (state.generation !== parentState.generation) return undefined;
+    if (!node.fingerprint || !parentNode.fingerprint || !node.path) return undefined;
+    return {
+      status: 'ready',
+      state,
+      fingerprint: node.fingerprint,
+      parentState,
+      parentFingerprint: parentNode.fingerprint,
+      parent: held.parent,
+      path: node.path,
+      op: held.op,
+      report: node.report,
     };
   });
 }

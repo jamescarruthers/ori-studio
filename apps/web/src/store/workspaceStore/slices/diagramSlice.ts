@@ -36,6 +36,9 @@ import {
   stepNumber,
   turnById,
   type DiagramEntry,
+  type DiagramPullAnchor,
+  type PulledMarks,
+  type SentDiagramEntry,
   setReferencesWay,
   anchorTakesCard,
   makeCardMarksEditable,
@@ -46,6 +49,7 @@ import { annotationEventKind } from '../../../diagram/annotate/annotationEventKi
 import { cardMarkEdits } from '../../../diagram/document/cardMarks';
 import { requestConfirmation } from '../../commandDialogStore';
 import { commitStepCapture, runDiagramCapture, stopDiagramCapture } from '../diagramCapture';
+import { runDiagramFoldCapture } from '../diagramFoldCapture';
 import { discardDiagramState, selectedDiagramAnnotation, trimDiagramHistory } from '../diagramState';
 import { pathNodesOf } from '../../../diagram/annotate/annotationPath';
 import { showsFrame } from '../../../diagram/zoom/zoomActions';
@@ -224,6 +228,35 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
    * with; each counted as its frame is placed. `edit` returns the diagram and
    * the steps it made and filled; null when the edit changed nothing.
    */
+  /**
+   * Steps pulled where `anchor` says — References cards or Fold steps, and
+   * the turns between them — as one undo step, the last selected and either
+   * browser closed. Null when nothing was added.
+   */
+  const pull = (
+    sent: readonly SentDiagramEntry[],
+    anchor: DiagramPullAnchor,
+    label: string
+  ): ({ stepIds: string[]; turnIds: string[] } & PulledMarks) | null => {
+    let pulled: { stepIds: string[]; turnIds: string[] } & PulledMarks = { stepIds: [], turnIds: [], baked: [], replaced: 0 };
+    // A filled step lands the frame it was enlarged with, and each card made a step after an enlarged one starts enlarged (Revision 2).
+    const next = commitMade(label, (document) => {
+      // The step a card fills or replaces is not a new one; a filled one gets its first picture.
+      const taking = anchor.kind !== 'end' && anchorTakesCard(document, anchor) ? anchor.stepId : undefined;
+      const { document: pulledInto, ...ids } = pullReferencesSteps(document, sent, anchor);
+      pulled = ids;
+      return {
+        document: pulledInto,
+        made: ids.stepIds.filter((id) => id !== taking),
+        ...(taking !== undefined && ids.stepIds.includes(taking) ? { filled: taking } : {}),
+      };
+    });
+    const last = pulled.stepIds.at(-1) ?? pulled.turnIds.at(-1);
+    if (!next || last === undefined) return null;
+    set({ ...selection(last), diagramReferencesBrowser: null, diagramFoldBrowser: null });
+    return pulled;
+  };
+
   const commitMade = (
     label: string,
     edit: (document: DiagramDocument) => { document: DiagramDocument; made: readonly string[]; filled?: string }
@@ -575,8 +608,10 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
           opening: (browserOpenings += 1),
         },
         // A modal over the Diagram: a step's detail stays open behind it; the
-        // pattern picker, the other way to give a step its picture, closes.
+        // pattern picker, the other way to give a step its picture, closes,
+        // and so does the Fold browser: one browser at a time.
         diagramPatternPicker: null,
+        diagramFoldBrowser: null,
       });
       return true;
     },
@@ -594,28 +629,30 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       if (loadId !== get().diagramLoadId || sent.length === 0) return null;
       // Pressed in a browser that has closed since: it adds nothing, and closes nothing.
       if (opening !== undefined && get().diagramReferencesBrowser?.opening !== opening) return null;
-      let pulled: { stepIds: string[]; turnIds: string[]; baked: string[]; replaced: number } = {
-        stepIds: [],
-        turnIds: [],
-        baked: [],
-        replaced: 0,
-      };
-      // A filled step lands the frame it was enlarged with, and each card made a step after an enlarged one starts enlarged (Revision 2).
-      const next = commitMade(label, (document) => {
-        // The step a card fills or replaces is not a new one; a filled one gets its first picture.
-        const taking = anchor.kind !== 'end' && anchorTakesCard(document, anchor) ? anchor.stepId : undefined;
-        const { document: pulledInto, ...ids } = pullReferencesSteps(document, sent, anchor);
-        pulled = ids;
-        return {
-          document: pulledInto,
-          made: ids.stepIds.filter((id) => id !== taking),
-          ...(taking !== undefined && ids.stepIds.includes(taking) ? { filled: taking } : {}),
-        };
+      return pull(sent, anchor, label);
+    },
+
+    openDiagramFoldBrowser: (anchor) => {
+      const { diagram, diagramReadOnly } = get();
+      if (diagramReadOnly) return false;
+      set({
+        ...(anchor.kind !== 'end' && diagram && stepIndex(diagram, anchor.stepId) >= 0 ? selection(anchor.stepId) : {}),
+        diagramFoldBrowser: { anchor, opening: (browserOpenings += 1) },
+        // One browser at a time, and the pattern picker closes, as for References.
+        diagramReferencesBrowser: null,
+        diagramPatternPicker: null,
       });
-      const last = pulled.stepIds.at(-1) ?? pulled.turnIds.at(-1);
-      if (!next || last === undefined) return null;
-      set({ ...selection(last), diagramReferencesBrowser: null });
-      return pulled;
+      return true;
+    },
+
+    closeDiagramFoldBrowser: () => {
+      if (get().diagramFoldBrowser !== null) set({ diagramFoldBrowser: null });
+    },
+
+    pullFoldDiagramSteps: (sent, anchor, { loadId, label, opening }) => {
+      if (loadId !== get().diagramLoadId || sent.length === 0) return null;
+      if (opening !== undefined && get().diagramFoldBrowser?.opening !== opening) return null;
+      return pull(sent, anchor, label);
     },
 
     openDiagramStep: (stepId, mode = 'pose') => {
@@ -630,6 +667,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
         ...selection(stepId),
         diagramDetail: mode,
         diagramReferencesBrowser: null,
+        diagramFoldBrowser: null,
         ...(opening ? { diagramAnnotateTool: null } : {}),
       });
       return true;
@@ -648,6 +686,8 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
 
     captureDiagramStep: (stepId, request) =>
       runDiagramCapture({ get, set }, commit, stepId, request),
+
+    captureDiagramFoldStep: (stepId, request) => runDiagramFoldCapture({ get, set }, commit, stepId, request),
 
     stopDiagramCapture: (stepId) => stopDiagramCapture({ get, set }, stepId),
 

@@ -23,10 +23,12 @@ import { isCardMark } from '../document/cardMarks';
 import {
   creasePatternSide,
   isKnownAnnotation,
+  isPosedSource,
   sameSpread,
   type DiagramAnnotation,
   type DiagramAsset,
   type DiagramCpSource,
+  type DiagramPosedSource,
   type DiagramScenePicture,
   type DiagramStep,
   type KnownDiagramAnnotation,
@@ -128,6 +130,25 @@ function sameRegion(from: DiagramCpSource, to: DiagramCpSource): boolean {
 }
 
 /**
+ * Whether two posed captures are of one thing, so a change of pose alone
+ * moves what they show by a known amount: a linked pattern's same region and
+ * creases, or a Fold step's same state seen at the same moment.
+ */
+function samePosedLink(from: DiagramPosedSource, to: DiagramPosedSource): boolean {
+  if (from.kind === 'fold-step' || to.kind === 'fold-step') {
+    return (
+      from.kind === 'fold-step' &&
+      to.kind === 'fold-step' &&
+      from.sequence === to.sequence &&
+      from.step === to.step &&
+      from.moment === to.moment &&
+      from.state === to.state
+    );
+  }
+  return from.fingerprint === to.fingerprint && sameRegion(from, to);
+}
+
+/**
  * Whether `after`'s picture is `before`'s in another colour and nothing else:
  * a crease pattern's paper put on the other side's colour (the Step pane's
  * Front | Back), of the same region and creases at the same turn — so every
@@ -136,7 +157,7 @@ function sameRegion(from: DiagramCpSource, to: DiagramCpSource): boolean {
 function recolouredOnly(before: DiagramStep, after: DiagramStep): boolean {
   const [from, to] = [before.source, after.source];
   const [was, is] = [before.picture, after.picture];
-  if (from?.kind !== 'cp' || to?.kind !== 'cp' || !was || !is || was.kind !== is.kind) return false;
+  if (!isPosedSource(from) || !isPosedSource(to) || !was || !is || was.kind !== is.kind) return false;
   if (was.kind === 'scene' && is.kind === 'scene' && was.paperScale !== is.paperScale) return false;
   const [wasRender, isRender] = [from.render, to.render];
   return (
@@ -144,8 +165,7 @@ function recolouredOnly(before: DiagramStep, after: DiagramStep): boolean {
     isRender.mode === 'crease-pattern' &&
     wasRender.rotationDeg === isRender.rotationDeg &&
     creasePatternSide(wasRender) !== creasePatternSide(isRender) &&
-    from.fingerprint === to.fingerprint &&
-    sameRegion(from, to)
+    samePosedLink(from, to)
   );
 }
 
@@ -174,13 +194,12 @@ function pictureMove(
     return frame ? { ...mirrorMove(frame), otherSide: true } : null;
   }
   if (
-    from?.kind === 'cp' &&
-    to?.kind === 'cp' &&
+    isPosedSource(from) &&
+    isPosedSource(to) &&
     before.picture?.kind === 'scene' &&
     after.picture?.kind === 'scene' &&
     before.picture.paperScale === after.picture.paperScale &&
-    from.fingerprint === to.fingerprint &&
-    sameRegion(from, to)
+    samePosedLink(from, to)
   ) {
     const [was, is] = [from.render, to.render];
     // Turned, its layers spread otherwise, or both, and nothing else: the same

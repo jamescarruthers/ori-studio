@@ -110,6 +110,22 @@ export function DiagramStepPose({
     );
   }
 
+  if (source?.kind === 'fold-step' && step.picture) {
+    // A Fold step's pose is a capture from its state (plan D17): its turn, and a flat fold's side.
+    const { render } = source;
+    return section(
+      <>
+        {(render.mode === 'crease-pattern' || render.mode === 'folded-flat') && (
+          <FieldRow label={t('panels:diagram.pose.rotation', 'Rotation')} kind="text">
+            {t('panels:diagram.pose.degrees', '{{degrees}}° clockwise', { degrees: render.rotationDeg })}
+          </FieldRow>
+        )}
+        {render.mode === 'folded-flat' &&
+          sideRow({ side: render.side, turnOver: actions.find((action) => action.id === 'turn-over') })}
+      </>
+    );
+  }
+
   if (source?.kind !== 'cp' || !linkedPose) return enlarged && step.picture ? section(null) : null;
   const { render } = source;
   const linked = linkedPose.actions;

@@ -1031,6 +1031,30 @@
       "title": "Empezar un diagrama",
       "upload": "Subir imágenes…"
     },
+    "fold": {
+      "badgeCreasePattern": "{{origin}} · Patrón de pliegues",
+      "badgeFolded": "{{origin}} · Plegado",
+      "card": "Paso {{number}}",
+      "cardMissing": "Falta el paso",
+      "currentHint": "Ya muestra su paso tal como está",
+      "empty": "Pliega un paso en Plegar y los pasos de la secuencia aparecerán aquí.",
+      "finishedSentence": "El modelo tal como lo dejan los pasos.",
+      "fromFold": "Desde Plegar…",
+      "missing": "Falta el paso en Plegar",
+      "missingHint": "Su paso ya no está en Plegar o ya no se puede plegar",
+      "noStepsHint": "Pliega un paso en Plegar para tomarlo desde allí",
+      "notLanded": "Plegar aún no ha plegado este paso, así que todavía no se puede añadir.",
+      "openFold": "Abrir Plegar",
+      "openInFold": "Abrir en Plegar",
+      "sourceAfter": "Resultado de un paso de Plegar · {{shown}}",
+      "sourceBefore": "Un paso de Plegar · {{shown}}",
+      "stale": "Desactualizado: la secuencia de Plegar cambió",
+      "steps": "Pasos",
+      "titleEnd": "Añadir desde Plegar",
+      "turnCard": "Giro",
+      "unknown": "Aún sin comprobar: Plegar todavía está plegando sus pasos",
+      "withTurn": "Con el giro anterior"
+    },
     "grid": {
       "addStep": "Añadir paso",
       "insertHere": "Añadir un paso aquí",
@@ -1069,6 +1093,11 @@
     "layers": {
       "empty": "Abre un paso en Anotar para ver sus capas.",
       "list": "Capas"
+    },
+    "link": {
+      "originEdit": "Editar",
+      "originFold": "Plegar",
+      "originReferences": "Referencias"
     },
     "pagePane": {
       "columns": "Columnas",
@@ -2068,6 +2097,11 @@
       "source": "Origen",
       "title": "Paso {{number}}",
       "valley": "Valle"
+    },
+    "toDiagram": {
+      "sendPath": "Enviar pasos al Diagrama",
+      "sendStep": "Enviar paso al Diagrama",
+      "sheetHint": "La hoja plana es donde empiezan los pasos: pliega un paso para enviarlo."
     },
     "words": {
       "adds_one": "Añade {{count}} pliegue ({{mountain}} M, {{valley}} V)",

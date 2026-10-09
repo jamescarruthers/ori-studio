@@ -965,6 +965,30 @@
       "title": "折り図を始める",
       "upload": "図をアップロード…"
     },
+    "fold": {
+      "badgeCreasePattern": "{{origin}} · 展開図",
+      "badgeFolded": "{{origin}} · 折り上がり",
+      "card": "ステップ {{number}}",
+      "cardMissing": "ステップなし",
+      "currentHint": "ステップの現在の状態をすでに表示しています",
+      "empty": "折りでステップを折ると、シーケンスのステップがここに表示されます。",
+      "finishedSentence": "ステップを終えたときのモデル。",
+      "fromFold": "折りから…",
+      "missing": "折りにステップがありません",
+      "missingHint": "ステップが折りからなくなったか、もう折れません",
+      "noStepsHint": "折りでステップを折ると、ここから取り込めます",
+      "notLanded": "折りがまだこのステップを折っていないため、まだ追加できません。",
+      "openFold": "折りを開く",
+      "openInFold": "折りで開く",
+      "sourceAfter": "折りのステップの結果 · {{shown}}",
+      "sourceBefore": "折りのステップ · {{shown}}",
+      "stale": "要更新：折りのシーケンスが変更されました",
+      "steps": "ステップ",
+      "titleEnd": "折りから追加",
+      "turnCard": "向きの変更",
+      "unknown": "未確認：折りがまだステップを折っています",
+      "withTurn": "直前の向きの変更も含める"
+    },
     "grid": {
       "addStep": "ステップを追加",
       "insertHere": "ここにステップを追加",
@@ -997,6 +1021,11 @@
     "layers": {
       "empty": "ステップを注記で開くと、そのレイヤーが表示されます。",
       "list": "レイヤー"
+    },
+    "link": {
+      "originEdit": "編集",
+      "originFold": "折り",
+      "originReferences": "リファレンス"
     },
     "pagePane": {
       "columns": "列",
@@ -1776,6 +1805,11 @@
       "source": "元",
       "title": "ステップ {{number}}",
       "valley": "谷"
+    },
+    "toDiagram": {
+      "sendPath": "ここまでのステップを折り図に送る",
+      "sendStep": "このステップを折り図に送る",
+      "sheetHint": "平らな紙はステップの出発点です。送るにはステップを 1 つ折ってください。"
     },
     "words": {
       "adds_other": "折り筋を {{count}} 本追加（M {{mountain}}、V {{valley}}）",

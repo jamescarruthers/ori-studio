@@ -40,6 +40,7 @@ export type FoldActionIcon =
   | 'rotate-cw'
   | 'import-cp'
   | 'send-to-edit'
+  | 'send-to-diagram'
   | 'export-fold'
   | 'export-steps'
   | 'delete';
@@ -50,6 +51,8 @@ export type FoldCommandId =
   | 'rotate-cw'
   | 'import-cp'
   | 'send-to-edit'
+  | 'send-to-diagram'
+  | 'send-path-to-diagram'
   | 'export-fold'
   | 'export-steps'
   | 'delete-step';
@@ -134,6 +137,11 @@ export interface FoldActionDeps {
   /** Open Import CP's dialog. */
   importCp: () => void;
   sendToEdit: () => void;
+  /**
+   * Add the step in context — or every step from the first to it — to the
+   * end of the Diagram, linked to it (plan D17).
+   */
+  sendToDiagram: (scope: 'step' | 'path') => void;
   /** Open the FOLD export. */
   exportFold: () => void;
   /** Open the paper export on the steps (`surface: 'fold'`, one page per step). */
@@ -220,6 +228,26 @@ function pathBlock(t: TFunction, path: FoldStateStatus, stepCount: number): stri
   }
 }
 
+/**
+ * Why the step in context cannot be sent to the Diagram, or null when it can:
+ * the flat sheet is no step, and a step is drawn from its landed state.
+ */
+function diagramBlock(t: TFunction, context: FoldActionContext): string | null {
+  if (context.step === null) {
+    return t('panels:fold.toDiagram.sheetHint', 'The flat sheet is where the steps start: fold a step to send it.');
+  }
+  switch (context.state) {
+    case 'ready':
+      return null;
+    case 'replaying':
+      return t('panels:fold.actions.replayingHint', 'Still folding the steps before this one.');
+    case 'broken':
+      return t('panels:fold.actions.brokenHint', 'This step no longer folds.');
+    case 'locked':
+      return t('panels:fold.actions.lockedHint', 'This step was made with a newer Ori Studio.');
+  }
+}
+
 /** Why Import CP cannot start here, or null when it can. */
 function importBlock(t: TFunction, context: FoldActionContext): string | null {
   const blocked = addStepBlock(t, context);
@@ -245,6 +273,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
   const outBlock = pathBlock(t, context.path, context.stepCount);
   const importHint = importBlock(t, context);
   const sendToEdit = sendToEditPrimary(t, foldSendToEditSource(t));
+  const toDiagram = diagramBlock(t, context);
   const step = context.step;
 
   const turnCommand = (id: 'turn-over' | 'rotate-ccw' | 'rotate-cw', turn: TurnKind): FoldCommand => ({
@@ -304,6 +333,25 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
     },
     { kind: 'separator', id: 'after-import' },
     outCommand('send-to-edit', sendToEdit.label, deps.sendToEdit),
+    // The step in context and the steps to it: the Diagram links each, so it follows them (plan D17).
+    {
+      kind: 'command',
+      id: 'send-to-diagram',
+      label: t('panels:fold.toDiagram.sendStep', 'Send Step to Diagram'),
+      icon: 'send-to-diagram',
+      disabled: toDiagram !== null,
+      hint: toDiagram ?? undefined,
+      run: () => deps.sendToDiagram('step'),
+    },
+    {
+      kind: 'command',
+      id: 'send-path-to-diagram',
+      label: t('panels:fold.toDiagram.sendPath', 'Send Steps to Diagram'),
+      icon: 'send-to-diagram',
+      disabled: toDiagram !== null,
+      hint: toDiagram ?? undefined,
+      run: () => deps.sendToDiagram('path'),
+    },
     outCommand('export-fold', t('panels:fold.actions.exportFold', 'Export FOLD…'), deps.exportFold),
     outCommand('export-steps', t('panels:fold.actions.exportSteps', 'Export steps…'), deps.exportSteps),
     { kind: 'separator', id: 'before-delete' },
