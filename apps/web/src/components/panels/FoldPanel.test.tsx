@@ -230,7 +230,14 @@ describe('the Fold panel', () => {
     await render();
     act(() => button('Import CP…')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     expect(menu.handleMenuAction).toHaveBeenCalledWith('fold.import-cp');
-    // Nothing on the path to send or export yet but the sheet, which is ready.
+    // Nothing on the path to send or export yet but the sheet: nothing to carry.
+    expect(button('Send to Edit')?.disabled).toBe(true);
+    await act(async () => {
+      await app.session!.commitStep(valleyAt(0.5));
+      await settle();
+    });
     expect(button('Send to Edit')?.disabled).toBe(false);
+    act(() => button('Send to Edit')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(menu.handleMenuAction).toHaveBeenCalledWith('fold.send-to-edit');
   });
 });

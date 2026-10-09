@@ -197,6 +197,9 @@ describe('buildFoldActions', () => {
       const blocked = buildFoldActions(at({ path }), deps());
       for (const id of out) expect(command(blocked, id)).toMatchObject({ disabled: true, hint });
     }
+    // The flat sheet alone has nothing to carry, as the menu's capability says.
+    const empty = buildFoldActions(at({ stepCount: 0 }), deps());
+    for (const id of out) expect(command(empty, id)).toMatchObject({ disabled: true, hint: 'Fold a step first' });
   });
 
   it('opens Import CP through its binding', () => {

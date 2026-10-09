@@ -188,8 +188,14 @@ function addStepBlock(t: TFunction, context: FoldActionContext): string | null {
   }
 }
 
-/** Why the active path cannot be sent or exported, or null when it can. */
-function pathBlock(t: TFunction, path: FoldStateStatus): string | null {
+/**
+ * Why the active path cannot be sent or exported, or null when it can. A
+ * sequence with no step has nothing to carry: the menu's capability refuses
+ * it in the same words (`common:capability.foldNoSteps`), so a button here
+ * never looks pressable while the chokepoint would turn it down.
+ */
+function pathBlock(t: TFunction, path: FoldStateStatus, stepCount: number): string | null {
+  if (stepCount === 0) return t('common:capability.foldNoSteps', 'Fold a step first');
   switch (path) {
     case 'ready':
       return null;
@@ -224,7 +230,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
   const { t } = deps;
   const addBlock = addStepBlock(t, context);
   const branchNote = context.atTip ? undefined : t('panels:fold.actions.startsBranch', 'Starts a new branch');
-  const outBlock = pathBlock(t, context.path);
+  const outBlock = pathBlock(t, context.path, context.stepCount);
   const importHint = importBlock(t, context);
   const sendToEdit = sendToEditPrimary(t, foldSendToEditSource(t));
   const step = context.step;
