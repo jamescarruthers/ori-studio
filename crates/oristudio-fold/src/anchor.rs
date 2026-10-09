@@ -1,6 +1,7 @@
 //! Anchors: how a stored step names paper (plan D6). A sheet point names one
 //! point of the paper; a [`SheetSegment`] names a straight piece of it by its
-//! two end points — an edge or a crease, or any segment lying on one face.
+//! two end points — an edge or a crease, or any segment of the paper that no
+//! folded crease bends.
 //!
 //! Anchors survive replay where face and vertex ids do not: folding only adds
 //! creases, so every later face is a subset of an earlier one and a sheet point
@@ -8,6 +9,12 @@
 //! renumbered (research §10). This module resolves them in a state's model
 //! frame, boundaries included: a vertex or a point on a crease lies on several
 //! faces, whose isometries agree there within the residual the gate allows.
+//!
+//! A segment resolves while the paper along it is one rigid piece. One face
+//! holds it, or the faces it crosses meet across flat creases (a precrease
+//! made after the segment was picked splits it, and moves nothing) or along
+//! it (a segment on a hinge, which both faces map alike). A folded crease
+//! across it bends it, and it names no line.
 
 use oristudio_geometry::{Line, convex};
 use serde::{Deserialize, Serialize};
@@ -65,9 +72,10 @@ impl State {
         Some(self.geometry().isometries[f].apply(p))
     }
 
-    /// The faces holding the whole segment, both ends included, in id order:
-    /// one for a segment inside a face or along a raw edge, two along a
-    /// crease.
+    /// The faces holding the segment, in id order (see the module docs): one
+    /// for a segment inside a face or along a raw edge, two along a crease,
+    /// every face it crosses across flat creases; none when a folded crease
+    /// bends it.
     pub fn faces_holding_segment(&self, segment: &SheetSegment) -> Vec<FaceId> {
         self.segment_positions(segment)
             .into_iter()
@@ -77,8 +85,7 @@ impl State {
 
     /// The model-frame line the segment's image lies on. None when the
     /// segment is shorter than the minimum feature (its direction would be
-    /// set by rounding) or no single face holds it (a segment a later fold
-    /// bent has no one line).
+    /// set by rounding) or a folded crease bends it (see the module docs).
     pub fn resolve_segment(&self, segment: &SheetSegment) -> Option<Line> {
         if segment.length() < MIN_FEATURE {
             return None;
@@ -95,14 +102,41 @@ impl State {
             .collect()
     }
 
-    /// Positions of the faces holding both ends of `segment`.
+    /// Positions of the faces holding `segment` as one rigid piece of paper:
+    /// those holding both of its ends, or else every face holding a piece of
+    /// it longer than the tolerance, when they all map its line alike. Empty
+    /// when an end is off the paper or the faces disagree (a folded crease
+    /// bends it).
     pub(crate) fn segment_positions(&self, segment: &SheetSegment) -> Vec<usize> {
-        (0..self.faces().len())
+        let polygons: Vec<Vec<Point>> = (0..self.faces().len())
+            .map(|f| self.sheet_polygon(f))
+            .collect();
+        let whole: Vec<usize> = (0..polygons.len())
+            .filter(|&f| holds(&polygons[f], segment.a) && holds(&polygons[f], segment.b))
+            .collect();
+        if !whole.is_empty() {
+            return whole;
+        }
+        // The sheet is convex, so with both ends on it the faces it crosses
+        // cover the segment.
+        if self.holding_positions(segment.a).is_empty()
+            || self.holding_positions(segment.b).is_empty()
+        {
+            return Vec::new();
+        }
+        let pieces: Vec<usize> = (0..polygons.len())
             .filter(|&f| {
-                let polygon = self.sheet_polygon(f);
-                holds(&polygon, segment.a) && holds(&polygon, segment.b)
+                convex::segment_length_inside(segment.a, segment.b, &polygons[f], -TOL) > TOL
             })
-            .collect()
+            .collect();
+        // Two isometries that agree at both ends agree along the whole line.
+        let isometries = &self.geometry().isometries;
+        let rigid = pieces.split_first().is_some_and(|(&first, rest)| {
+            rest.iter().all(|&f| {
+                isometries[f].distance_on(&isometries[first], [segment.a, segment.b]) <= TOL
+            })
+        });
+        if rigid { pieces } else { Vec::new() }
     }
 }
 
@@ -155,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn segments_resolve_on_one_face_only() {
+    fn segments_resolve_on_a_face_or_a_hinge_and_not_where_bent() {
         let s = book();
         // The right raw edge lands on x = 0; the bend stays at x = 0.5.
         let edge = SheetSegment::new([1.0, 0.0], [1.0, 1.0]);
@@ -174,5 +208,73 @@ mod tests {
         // Too short to have a direction.
         let short = SheetSegment::new([0.2, 0.2], [0.2, 0.2 + MIN_FEATURE / 2.0]);
         assert!(s.resolve_segment(&short).is_none());
+    }
+
+    #[test]
+    fn segments_resolve_across_flat_creases_and_not_across_folded_ones() {
+        let flat = State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+        let precrease = |s: &State, l: Line, side: Side| {
+            s.precrease(&PlainFold::new(l, side, Direction::Valley))
+                .unwrap_or_else(|e| panic!("{e}"))
+                .state
+        };
+        // A precrease at x = 0.5, then one at y = 0.5: the bottom edge is
+        // split in two, a slanted segment in three, and neither moved.
+        let s = precrease(&flat, line([1.0, 0.0], 0.5), Side::Positive);
+        let s = precrease(&s, line([0.0, 1.0], 0.5), Side::Positive);
+        assert_eq!(s.faces().len(), 4);
+        let bottom = SheetSegment::new([0.0, 0.0], [1.0, 0.0]);
+        assert_eq!(s.faces_holding_segment(&bottom).len(), 2);
+        assert!(
+            s.resolve_segment(&bottom)
+                .is_some_and(|l| l.approx_eq(&line([0.0, 1.0], 0.0)))
+        );
+        let slanted = SheetSegment::new([0.1, 0.2], [0.9, 0.6]);
+        assert_eq!(s.faces_holding_segment(&slanted).len(), 3);
+        let through = Line::from_points(slanted.a, slanted.b).unwrap_or_else(|| unreachable!());
+        assert!(
+            s.resolve_segment(&slanted)
+                .is_some_and(|l| l.approx_eq(&through))
+        );
+        // Ends off the paper still name nothing.
+        let long = SheetSegment::new([0.0, 0.0], [1.2, 0.0]);
+        assert!(s.resolve_segment(&long).is_none());
+        let s2 = 0.5_f64.sqrt();
+
+        // Folded across the diagonal y = x, the midline y = 0.5 is bent
+        // where it crosses it.
+        let folded = flat
+            .fold(&PlainFold::new(
+                line([-s2, s2], 0.0),
+                Side::Positive,
+                Direction::Valley,
+            ))
+            .unwrap_or_else(|e| panic!("{e}"))
+            .state;
+        let across = SheetSegment::new([0.2, 0.5], [0.8, 0.5]);
+        assert!(folded.faces_holding_segment(&across).is_empty());
+        assert!(folded.resolve_segment(&across).is_none());
+        // On the diagonal itself, a hinge, both faces map it alike.
+        let hinge = SheetSegment::new([0.2, 0.2], [0.7, 0.7]);
+        assert_eq!(folded.faces_holding_segment(&hinge).len(), 2);
+        assert!(folded.resolve_segment(&hinge).is_some());
+
+        // The book fold's bottom edge, bent back on itself, and the same
+        // edge with a precrease across both layers first: still bent.
+        let book = book();
+        let book_precreased = precrease(&book, line([1.0, 0.0], 0.25), Side::Negative);
+        for s in [&book, &book_precreased] {
+            let bottom = SheetSegment::new([0.0, 0.0], [1.0, 0.0]);
+            assert!(s.faces_holding_segment(&bottom).is_empty());
+            assert!(s.resolve_segment(&bottom).is_none());
+        }
+        // Its left half, split by that precrease, is one piece of paper.
+        let left_half = SheetSegment::new([0.0, 0.0], [0.5, 0.0]);
+        assert_eq!(book_precreased.faces_holding_segment(&left_half).len(), 2);
+        assert!(
+            book_precreased
+                .resolve_segment(&left_half)
+                .is_some_and(|l| l.approx_eq(&line([0.0, 1.0], 0.0)))
+        );
     }
 }

@@ -57,8 +57,13 @@ state, the one constructor that validates it, and the plain fold.
   `F` for unfolded creases, `faceOrders` in FOLD's convention, an
   `oristudio:fold-step` marker and per-face sheet → folded matrices in
   Beloch's `beloch:faces_matrix` layout under `oristudio:faces_matrix`. The
-  size is held against the 3D writer's element cap (`interchange.rs`), summed
-  over the whole file.
+  step frames and their matrices are in the unit sheet frame, y up; the root
+  is in Oriedita's model space, y down (`KernelFrame`), with its faces
+  clockwise. The two are mirror images, so a viewer draws the root mirrored
+  against a flat step of the same paper; each frame reads right by itself,
+  and a reader that relates a frame to the root maps through `KernelFrame`.
+  The size is held against the 3D writer's element cap (`interchange.rs`),
+  summed over the whole file.
 - `Unordered` and `complete`: parts whose layer order is still to be decided
   (the gate's checks up to the order, a crease whose letter is unknown folded
   without one), and the engine's one "complete the rest" entry: an adapter
@@ -85,7 +90,9 @@ state, the one constructor that validates it, and the plain fold.
 The axioms on flat and folded forms (plan Phase 3):
 
 - `anchor`: what a stored step names paper by — sheet points and sheet
-  segments — resolved in a state's model frame, boundaries included.
+  segments — resolved in a state's model frame, boundaries included. A
+  segment resolves while no folded crease bends it: across flat creases (a
+  precrease inserted before the step splits it) and along a hinge.
 - `landmarks`: vertex images, raw edges, bends, visible creases, crossings and
   Divide-line marks (passed in as sheet points), deduplicated within the
   tolerance with every source kept, each source with the anchor a step stores.
@@ -95,8 +102,10 @@ The axioms on flat and folded forms (plan Phase 3):
 - `silhouette`: the union of the face images as the `Paper` the constructions
   fold: per-face runs along a line merged within the tolerance.
 - `axioms`: O1–O7 on anchors through `oristudio_geometry::construct`, each root
-  with its moving side from the axiom's movers; Lang's O6 same-side rule (a
-  tier 1 fact); replay to the candidate nearest the stored line.
+  with its moving side from the axiom's movers, or none for the step to name
+  (O1, O4, an O3 whose `m1` straddles the fold, an O6 whose points lie on
+  opposite sides: either side moves one point and the other's line); replay
+  to the candidate nearest the stored line.
 - `anchored`: a plain fold whose line is an axiom and its root, an existing
   crease or bend, or a free line through two sheet points; its side from the
   axiom, a `toward` point or the seed; the axiom's movers must be on layers
@@ -173,15 +182,23 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   orientation; and a round trip of 129 seeded random folded states (2 to 52
   faces) through their crease patterns, each state's own order among the
   choices its letters leave.
+- `tests/beloch_replay.rs`: every Beloch fixture's final frame
+  (`tests/beloch/`) through Import CP with its own `faceOrders` stored by
+  witnesses. 55 of 56 replay, each with one face per frame face, all placed
+  by one rigid motion of the frame's matrices, and the frame's folded
+  creases; join-edge's L-shaped sheet is refused by name.
 - `tests/axioms.rs`: every axiom on flat sheets (a square, a rectangle, a
   precreased square) against `oristudio-geometry`'s construction on the
   rectangle, hundreds of roots each; every axiom on the book fold and on four
   stacked layers, both stacked copies of a mover landing on its target; axioms
   over the landmarks of random folded forms, each candidate stating its axiom
-  before the fold and each landed fold after it; Lang's rule; replay after an
-  inserted precrease and after a fold that takes one root's landing away; the
-  existing-crease mode unfolding and refolding; a mover left behind; and the
-  sliver remedy for an O4, a free line and an O2 (none).
+  before the fold and each landed fold after it; O6 roots with the points on
+  opposite sides folded from either side, on the flat square (every such root
+  of 4,000 random inputs) and on the book fold, with the mover check; replay
+  after an inserted precrease (renumbering the faces a point anchor names,
+  and splitting a segment anchor) and after a fold that takes one root's
+  landing away; the existing-crease mode unfolding and refolding; a mover
+  left behind; and the sliver remedy for an O4, a free line and an O2 (none).
 
 `cargo test -p oristudio-fold --features kernel` adds:
 
@@ -258,11 +275,12 @@ layers, so it is no cheaper.
 `cargo run -p oristudio-fold --release --example sequences`: the same steps
 on real sequences. Every state of the classic sequences with the sequence's
 own next fold or precrease, and the final frame of each Beloch fixture
-(`tests/fixtures/beloch/`) that replays: the file's crease pattern through
-Import CP with the frame's own `faceOrders` as the stored order, a valley
-fold along each of the state's crease lines from either side standing in
-for the next step. Each time is the median of 15 runs; 2026-10-08, load
-average 9–14.
+(`tests/fixtures/beloch/`) that replays: the frame's own crease pattern
+through Import CP with its own `faceOrders` as the stored order
+(`tests/beloch/`), a valley fold along each of the state's crease lines from
+either side standing in for the next step. Each time is the median of 15
+runs; 2026-10-08, load average 9–14 for the classics and the crane, 19 for
+the other Beloch rows.
 
 | Sequence | States | Faces | Pairs | Scene | Landmarks | Cross-section mean / max | Depth choices mean / max | Fold mean / max (landed of tried) |
 |---|---|---|---|---|---|---|---|---|
@@ -270,18 +288,27 @@ average 9–14.
 | precrease-four-layers | 5 | 8 | 28 | 0.002 ms | 0.023 ms | 0.002 / 0.003 ms | 0.007 / 0.012 ms | 0.023 / 0.048 ms (4 of 4) |
 | top-layer-corner | 5 | 7 | 17 | 0.004 ms | 0.025 ms | 0.002 / 0.003 ms | 0.009 / 0.019 ms | 0.017 / 0.029 ms (4 of 4) |
 | tuck-under-top | 3 | 3 | 3 | 0.001 ms | 0.008 ms | 0.002 / 0.002 ms | 0.003 / 0.005 ms | 0.010 / 0.012 ms (2 of 2) |
-| Beloch, 2–8 faces | 42 | 8 | 28 | 0.003 ms | 0.029 ms | 0.002 / 0.006 ms | 0.009 / 0.049 ms | 0.011 / 0.056 ms (86 of 204) |
-| Beloch, 9–16 faces | 4 | 16 | 120 | 0.007 ms | 0.106 ms | 0.005 / 0.012 ms | 0.050 / 0.238 ms | 0.036 / 0.111 ms (22 of 48) |
+| Beloch, 2–8 faces | 48 | 8 | 28 | 0.003 ms | 0.029 ms | 0.002 / 0.010 ms | 0.009 / 0.051 ms | 0.011 / 0.130 ms (108 of 240) |
+| Beloch, 9–16 faces | 5 | 16 | 120 | 0.007 ms | 0.104 ms | 0.005 / 0.028 ms | 0.043 / 0.231 ms | 0.039 / 0.233 ms (32 of 58) |
+| Beloch cube-root | 1 | 28 | 45 | 0.014 ms | 0.083 ms | 0.006 / 0.011 ms | 0.019 / 0.045 ms | 0.204 / 0.284 ms (30 of 34) |
 | Beloch crane | 1 | 60 | 770 | 0.28 ms | 1.1 ms | 0.040 / 0.089 ms | 1.75 / 3.37 ms | 1.10 / 1.91 ms (34 of 38) |
 
 Faces and pairs are the most in a row; scene and landmarks the slowest
-state's. 47 of the 56 Beloch fixtures replay. The rest, with the engine's
-reason: cube-root, mark-overlay-regression and marks-demo (the file's crease
-pattern does not fold flat as Import CP reads it), def-diagonals (its four
-faces have no valid order), x-midpoint (the frame's order breaks a
-taco-taco constraint on the imported faces), side-preliminary-1 to 3 (a
-frame face's centroid lies in no imported face) and join-edge (a `J` edge,
-which Import CP does not read).
+state's. 55 of the 56 Beloch fixtures replay (`tests/beloch_replay.rs`
+checks each against its frame: one face per frame face, all placed by one
+rigid motion of the frame's matrices). The one that does not is join-edge,
+an L-shaped sheet, which Import CP refuses as `import_shape_unsupported`:
+V0 imports a square or a rectangle.
+
+The crease pattern read is the final frame's, not the file's root. Reading
+the root, 9 fixtures failed, none of them for the engine: Beloch 0.3.0-dev
+writes a precreased crease into the root with its letter, `V`, where the
+final frame has it flat, `F`, so cube-root, mark-overlay-regression,
+marks-demo, def-diagonals and x-midpoint imported a pattern folded
+differently from the frame (four valleys at a vertex, or the frame's order
+against faces the frame never folded); and side-preliminary-1 to 3 carry a
+construction line in the root that no frame has, which splits a frame face
+so its centroid fell on the line.
 
 Against D14's tiers, natively and nothing near a budget: per line, side and
 direction (tier 2, which while a free line is dragged comes once per

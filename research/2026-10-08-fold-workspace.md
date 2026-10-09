@@ -156,7 +156,10 @@ checks each step.
   - O2, O3, O5, O6 and O7 move a feature onto another, so on a folded form they
     also say which side moves. O1 and O4 do not.
   - Lang adds a realizability rule for O6: only roots where both moving points
-    lie on the same side of the fold line can be folded.
+    lie on the same side of the fold line can be folded. (Corrected in
+    review: the rule assumes the points move and the lines stay put. Roots
+    with the points on opposite sides fold too, moving one point and the
+    other's line; see `r1-theory.md`.)
 - **Simple folds** — Akitaya, Demaine & Ku, "Simple Folding is Really Hard"
   (JIP 25, 2017). This is the formal model V0 implements. A simple fold of a
   flat folding (Σ, f, λ) is fixed by a directed axis and a folded region U. It

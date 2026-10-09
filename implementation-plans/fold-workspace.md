@@ -522,8 +522,11 @@ and the oracle tests.
 - **One call site changes:** `oristudio-precrease-wasm/src/lib.rs:550` maps the
   frame error with `.into()`.
 - `Line::folded_angle_offset` becomes `pub`.
-- The licensing-tier header moves with `construct.rs`. Lang's O6 same-side rule
-  stays in Fold (tier 1).
+- The licensing-tier header moves with `construct.rs`. Who moves in an O6
+  stays in Fold, out of the shared filters. (Fold first adopted Lang's
+  same-side rule there and dropped opposite-side roots; review found the rule
+  assumes the points move and the lines stay, so Fold now keeps those roots
+  and the step names the side: one point and the other's line move.)
 
 **Evidence:**
 - the probe showed the `Paper`-trait filters bit-identical over 600,000
@@ -1201,7 +1204,8 @@ None is pending.
   creases); visibility from the order.
 - [x] O1–O7 through `Paper` on the folded silhouette:
   - [x] who moves;
-  - [x] Lang's O6 rule;
+  - [x] O6 with its points on opposite sides: kept, the step names the
+    side (Lang's same-side rule, first adopted, assumes only points move);
   - [x] `nearest_root` on replay.
 - [x] The existing-crease line mode.
 - [x] The sliver remedy deferred from Phase 2 (O5/O7 lines offered as fixes).
