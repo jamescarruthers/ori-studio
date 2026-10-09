@@ -53,8 +53,10 @@ import {
   FOLD_CP_ORIGINS,
   FOLD_DIRECTIONS,
   FOLD_MARK_MAX_PARTS,
+  FOLD_MODEL_LINE_MIN_NORMAL,
   FOLD_POLYGON_MAX_SIDES,
   FOLD_POLYGON_MIN_SIDES,
+  FOLD_SEED_MAX_LAYERS,
   FOLD_SEQUENCE_FORMAT_VERSION,
   FOLD_START_SIDES,
   SQUARE_PAPER,
@@ -409,7 +411,11 @@ function readSeed(value: unknown): FoldSeed | null {
     case 'depth': {
       const at = readPoint(value.at);
       const { layers } = value;
-      return at && typeof layers === 'number' && Number.isInteger(layers) && layers > 0
+      return at &&
+        typeof layers === 'number' &&
+        Number.isInteger(layers) &&
+        layers > 0 &&
+        layers <= FOLD_SEED_MAX_LAYERS
         ? { scope: 'depth', at, layers }
         : null;
     }
@@ -529,7 +535,7 @@ function readModelLine(value: unknown): FoldModelLine | null {
   if (!isRecord(value) || hasNewerKey(value, MODEL_LINE_KEYS)) return null;
   const n = readPoint(value.n);
   const d = finiteNumber(value.d);
-  return n && d !== null && (n[0] !== 0 || n[1] !== 0) ? { n, d } : null;
+  return n && d !== null && Math.hypot(n[0], n[1]) >= FOLD_MODEL_LINE_MIN_NORMAL ? { n, d } : null;
 }
 
 function readPair(value: unknown): FoldPairChoice | null {

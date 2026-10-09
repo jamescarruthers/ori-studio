@@ -91,6 +91,9 @@ describe('the step tree', () => {
     const malformed = [
       { ...valleyOp, moving: undefined },
       { ...valleyOp, seed: { scope: 'depth', at: [0.5, 0.75], layers: 0 } },
+      // More layers than the engine's 32-bit usize holds.
+      { ...valleyOp, seed: { scope: 'depth', at: [0.5, 0.75], layers: 2 ** 32 } },
+      { ...valleyOp, seed: { scope: 'depth', at: [0.5, 0.75], layers: 1e20 } },
       { ...valleyOp, seed: { scope: 'flaps', at: [] } },
       { ...valleyOp, line: { via: 'free', through: [[0, 0.5]] } },
       { ...valleyOp, line: { via: 'axiom', axiom: 4, inputs: [{ kind: 'point', at: [0, 0] }] } },
@@ -115,9 +118,21 @@ describe('the step tree', () => {
     }
   });
 
+  it('reads every seed and root the engine can take, up to its limits', () => {
+    const { document } = readSteps([
+      raw('a', null, { op: { ...valleyOp, seed: { scope: 'depth', at: [0.5, 0.75], layers: 2 ** 32 - 1 } } }),
+      // A short normal the engine normalises.
+      raw('b', 'a', { choices: { root: { n: [1e-6, 0], d: 0 } } }),
+    ]);
+    expect(document.steps.map(isLockedStep)).toEqual([false, false]);
+  });
+
   it('locks a node with choices that do not read, or a key it does not know', () => {
     const cases = [
       { choices: { root: { n: [0, 0], d: 1 } } },
+      // A normal the engine's line cannot be made from: shorter than its tolerance.
+      { choices: { root: { n: [1e-200, 0], d: 1 } } },
+      { choices: { root: { n: [5e-7, 5e-7], d: 0 } } },
       { choices: { completion: [{ above: [0, 0] }] } },
       { choices: { pocket: [[0, 0]] } },
       { choices: { rootIndex: 2 } },

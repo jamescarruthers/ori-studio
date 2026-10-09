@@ -227,14 +227,29 @@ describe('the Fold session: replay', () => {
     expect(snapshot().progress.done).toBe(true);
   });
 
-  it('reports a replay that fails for any other reason, and replays again on a retry', async () => {
-    let failing = true;
+  it('marks a stored step the bridge cannot read broken, and replays its siblings', async () => {
     const { session, snapshot, reported, statuses } = setup({
-      engine: { fail: () => (failing ? { code: 'invalid_input', message: 'op must be an object' } : null) },
+      engine: {
+        fail: (op) => (foldOpLabel(op) === 'valley@0.25' ? { code: 'invalid_input', message: 'expected usize' } : null),
+      },
     });
     session.retain();
     await settle();
-    expect(snapshot().error).toEqual({ code: 'invalid_input', message: 'op must be an object' });
+    expect(statuses()).toEqual({ a: 'ok', b: 'broken', c: 'ok' });
+    expect(snapshot().nodes.get('b')?.refusal).toEqual({ at: 'b', code: 'invalid_input' });
+    expect(snapshot().error).toBeNull();
+    expect(reported).toEqual([]);
+  });
+
+  it('reports a replay that fails for any other reason, and replays again on a retry', async () => {
+    let failing = true;
+    const failure = { code: 'oristudio_fold_wasm_error', message: 'unreachable' };
+    const { session, snapshot, reported, statuses } = setup({
+      engine: { fail: () => (failing ? failure : null) },
+    });
+    session.retain();
+    await settle();
+    expect(snapshot().error).toEqual(failure);
     expect(reported).toEqual([snapshot().error]);
     expect(snapshot().progress.replaying).toBe(false);
 

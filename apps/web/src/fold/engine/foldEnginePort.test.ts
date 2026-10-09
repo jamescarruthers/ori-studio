@@ -123,6 +123,26 @@ describe('the Fold engine port', () => {
     });
   });
 
+  it('takes a stored value the bridge cannot read as a refusal, and throws every other error on', async () => {
+    const { source } = fakeSource();
+    const port = createFoldEnginePort(source, 1);
+    const unreadable = { code: 'invalid_input', message: 'expected usize' };
+    vi.mocked(source.step).mockRejectedValueOnce(unreadable);
+    await expect(port.step({ generation: 0, id: 1 }, { op: BOOK })).resolves.toEqual({
+      landed: false,
+      code: 'invalid_input',
+    });
+    vi.mocked(source.sheet).mockRejectedValueOnce(unreadable);
+    await expect(port.sheet({ shape: { kind: 'square' }, startSide: 'front' })).resolves.toEqual({
+      landed: false,
+      code: 'invalid_input',
+    });
+
+    const crashed = { code: 'oristudio_fold_wasm_error', message: 'unreachable' };
+    vi.mocked(source.step).mockRejectedValueOnce(crashed);
+    await expect(port.step({ generation: 0, id: 1 }, { op: BOOK })).rejects.toEqual(crashed);
+  });
+
   it('refuses a handle whose engine has gone, rather than fold another state of its number', async () => {
     const { source, lose } = fakeSource();
     const port = createFoldEnginePort(source, 1);
