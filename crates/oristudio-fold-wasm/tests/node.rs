@@ -116,6 +116,7 @@ fn analysis_and_refusals_are_values() {
                     "line": { "via": "crease", "at": [0.5, 0.5] },
                     "seed": { "scope": "flaps", "at": [[0.75, 0.5]] }
                 })),
+                JsValue::UNDEFINED,
             )
             .expect("analyse"),
     );
@@ -189,7 +190,11 @@ fn a_callers_mistakes_are_thrown_envelopes() {
         .expect_err("no such shape");
     assert_eq!(code(bad_paper), "invalid_input");
     let turn = engine
-        .analyse(sheet, js(json!({ "kind": "turn", "axis": "vertical" })))
+        .analyse(
+            sheet,
+            js(json!({ "kind": "turn", "axis": "vertical" })),
+            JsValue::UNDEFINED,
+        )
         .expect_err("nothing to analyse");
     assert_eq!(code(turn), "invalid_input");
     let error = json_of(
@@ -203,4 +208,98 @@ fn a_callers_mistakes_are_thrown_envelopes() {
             .as_str()
             .is_some_and(|m| m.starts_with("choices"))
     );
+    let side = engine
+        .cross_section(
+            sheet,
+            js(json!({ "n": [1.0, 0.0], "d": 0.5 })),
+            js(json!("left")),
+        )
+        .expect_err("no such side");
+    assert_eq!(code(side), "invalid_input");
+}
+
+/// Every query on a handle, across the boundary: plain objects out, a
+/// step's queries asked of the child, an axiom op folding along its root.
+#[wasm_bindgen_test]
+fn queries_on_a_handle_answer_in_plain_objects() {
+    let mut engine = FoldEngine::new();
+    let sheet = square(&mut engine);
+    let o2 = json!({
+        "via": "axiom", "axiom": 2,
+        "inputs": [{ "kind": "point", "at": [1.0, 0.0] }, { "kind": "point", "at": [0.0, 1.0] }]
+    });
+    let candidates = json_of(engine.axiom_candidates(sheet, js(o2.clone())).expect("candidates"));
+    assert_eq!(candidates["status"], "ok", "{candidates}");
+    let root = candidates["candidates"][0]["line"].clone();
+    let triangle = json!({ "kind": "valley", "line": o2, "seed": { "scope": "all" } });
+    let landed = json_of(
+        engine
+            .apply(sheet, js(triangle), js(json!({ "root": root })))
+            .expect("apply"),
+    );
+    assert_eq!(landed["status"], "ok", "{landed}");
+    let triangle = landed["state"].as_u64().expect("handle") as u32;
+
+    let scene = json_of(engine.scene(triangle).expect("scene"));
+    assert_eq!(scene["schema_version"].as_f64(), Some(3.0));
+    assert_eq!(scene["faces"].as_array().map(Vec::len), Some(2));
+    assert!(scene["creases"][0]["made_at"].is_number());
+    let summary = json_of(engine.step_summary(triangle).expect("summary"));
+    assert_eq!(summary["summary"]["counts"]["valley"].as_f64(), Some(1.0));
+    assert_eq!(summary["summary"]["layers"].as_f64(), Some(1.0));
+    let action = json_of(engine.step_action(triangle).expect("action"));
+    assert_eq!(action["action"]["kind"], "fold");
+    let preview = json_of(
+        engine
+            .action(sheet, js(book_step()), JsValue::UNDEFINED)
+            .expect("preview"),
+    );
+    assert_eq!(preview["action"]["grip"]["hidden_image"], Value::Null);
+
+    let section = json_of(
+        engine
+            .cross_section(
+                triangle,
+                js(json!({ "n": [1.0, 0.0], "d": 0.5 })),
+                js(json!("negative")),
+            )
+            .expect("section"),
+    );
+    assert_eq!(section["status"], "ok", "{section}");
+    assert!(section["section"]["joins"].is_array());
+    assert!(section["section"]["rows"].is_array());
+    let depths = json_of(
+        engine
+            .depth_choices(
+                triangle,
+                js(json!({
+                    "kind": "valley",
+                    "line": { "via": "free", "through": [[0.0, 0.5], [0.5, 0.5]] },
+                    "moving": [0.1, 0.9], "seed": { "scope": "all" }
+                })),
+                JsValue::UNDEFINED,
+                js(json!([0.1, 0.9])),
+            )
+            .expect("depths"),
+    );
+    assert_eq!(depths["status"], "ok", "{depths}");
+
+    let landmarks = json_of(
+        engine
+            .landmarks(triangle, js(json!([[0.1, 0.5]])))
+            .expect("landmarks"),
+    );
+    assert!(landmarks["points"].is_array() && landmarks["segments"].is_array());
+    let top = json_of(
+        engine
+            .top_visible_at(triangle, js(json!([0.1, 0.5])))
+            .expect("top"),
+    );
+    assert!(top["face"].is_number(), "{top}");
+    let off = json_of(
+        engine
+            .top_visible_at(triangle, js(json!([5.0, 5.0])))
+            .expect("off"),
+    );
+    assert_eq!(off, Value::Null);
 }
