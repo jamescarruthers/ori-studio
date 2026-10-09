@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
+use std::sync::OnceLock;
 
 use crate::math;
 use crate::{Analysis, ConstraintSummary, FlatFoldError, OverlapGraph, Result, SolutionLimit};
@@ -157,6 +158,12 @@ enum Parent {
 pub(crate) trait NodeMeter {
     type Stop;
     fn enter(&mut self) -> std::result::Result<(), Self::Stop>;
+
+    /// Asked once per variable the initial propagation visits, which no node
+    /// counts: a meter that stops on a clock stops there too.
+    fn tick(&mut self) -> std::result::Result<(), Self::Stop> {
+        Ok(())
+    }
 }
 
 /// Flat-Folder's own search has no budget.
@@ -254,11 +261,19 @@ pub(crate) fn build_constraint_state(analysis: &Analysis) -> Result<ConstraintSt
     };
     let mut transitivity_counts = TransitivityCounts::default();
     let level = assigned_level(&initial);
-    let assignments =
-        match propagate_initial_assignments(&tables, initial, level, &mut transitivity_counts)? {
-            InitialPropagation::Assigned(assignments) => assignments,
-            InitialPropagation::Conflict(conflict) => return Err(conflict.into_flat_fold_error()),
-        };
+    let assignments = match propagate_initial_assignments(
+        &tables,
+        initial,
+        level,
+        &mut transitivity_counts,
+        &mut Unmetered,
+    )? {
+        Ok(InitialPropagation::Assigned(assignments)) => assignments,
+        Ok(InitialPropagation::Conflict(conflict)) => {
+            return Err(conflict.into_flat_fold_error());
+        }
+        Err(never) => match never {},
+    };
     let groups = variable_groups(&tables, &assignments, &mut transitivity_counts);
     Ok(ConstraintState {
         variables,
@@ -678,12 +693,15 @@ pub(crate) fn assigned_level(assignments: &[u8]) -> Vec<(usize, u8)> {
 /// passes every assigned variable; the completion entry point passes its seeds
 /// and leaves carried pairs out. Each level is visited in insertion order, as
 /// upstream's `Map` is, so a conflict names the same constraint upstream does.
-pub(crate) fn propagate_initial_assignments(
+/// `meter` is ticked once per variable visited, and its stop ends the
+/// propagation without an answer.
+pub(crate) fn propagate_initial_assignments<M: NodeMeter>(
     tables: &SearchTables<'_>,
     mut assignments: Vec<u8>,
     mut level: Vec<(usize, u8)>,
     transitivity_counts: &mut TransitivityCounts,
-) -> Result<InitialPropagation> {
+    meter: &mut M,
+) -> Result<std::result::Result<InitialPropagation, M::Stop>> {
     let mut parents = assignments
         .iter()
         .map(|assignment| (*assignment != 0).then_some(Parent::Root))
@@ -695,6 +713,9 @@ pub(crate) fn propagate_initial_assignments(
         }
         let mut new_level = Vec::new();
         for (index, _) in &level {
+            if let Err(stop) = meter.tick() {
+                return Ok(Err(stop));
+            }
             let faces = math::decode(&tables.variables[*index]);
             for constraint_type in TYPES {
                 let constraints_for_type = unpack_constraints(
@@ -739,7 +760,7 @@ pub(crate) fn propagate_initial_assignments(
                         }
                     };
                     if let Some(cause) = cause {
-                        return Ok(InitialPropagation::Conflict(SeedConflict {
+                        return Ok(Ok(InitialPropagation::Conflict(SeedConflict {
                             constraint_type,
                             faces: constraint_faces.clone(),
                             error_faces: error_faces(
@@ -750,7 +771,7 @@ pub(crate) fn propagate_initial_assignments(
                                 &parents,
                             ),
                             cause,
-                        }));
+                        })));
                     }
                 }
             }
@@ -760,7 +781,7 @@ pub(crate) fn propagate_initial_assignments(
         }
         level = new_level;
     }
-    Ok(InitialPropagation::Assigned(assignments))
+    Ok(Ok(InitialPropagation::Assigned(assignments)))
 }
 
 /// Upstream `error_faces`: the faces of every variable a conflict depends on,
@@ -991,6 +1012,14 @@ pub(crate) struct ImplicationMaps {
 }
 
 impl ImplicationMaps {
+    /// The tables built once per process and shared by every completion:
+    /// they depend on nothing but the families' valid states, and building
+    /// them took about 0.65 ms of each call.
+    pub(crate) fn shared() -> &'static Self {
+        static SHARED: OnceLock<ImplicationMaps> = OnceLock::new();
+        SHARED.get_or_init(Self::build)
+    }
+
     pub(crate) fn build() -> Self {
         let mut maps = Vec::new();
         for valid in valid_states() {
