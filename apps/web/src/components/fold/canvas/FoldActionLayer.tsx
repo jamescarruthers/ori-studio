@@ -8,7 +8,15 @@ import { applyPaperStylePolicy, PAPER_STYLE_POLICIES } from '../../../lib/paper/
 import { PT_TO_CSS_PX, type PaperStyle } from '../../../lib/paper/paperStyle';
 import { createDiagramRenderContext, diagramShapes } from '../../../lib/stepDiagram/DiagramPrimitives';
 import { diagramInlineInk } from '../../../lib/stepDiagram/diagramColors';
-import { canvasDiagramInk, canvasDiagramPens, CP_CREASE_WIDTH_FACTOR } from '../../../lib/stepDiagram/diagramInk';
+import { DEFAULT_ORISTUDIO_CP_LINE_WIDTH } from '../../../lib/creasePatternViewport';
+import {
+  canvasDiagramInk,
+  canvasDiagramPens,
+  CP_CREASE_WIDTH_FACTOR,
+  DIAGRAM_MARKS,
+  REFERENCES_VIEW_MARKS,
+  type DiagramMarks,
+} from '../../../lib/stepDiagram/diagramInk';
 import {
   createOverlayProjector,
   foldArrowArc,
@@ -18,6 +26,23 @@ import type { StepDiagramPrimitive } from '../../../lib/stepDiagram/stepDiagramM
 import styles from './FoldCanvas.module.css';
 
 const NO_LETTERS: readonly FoldLetteredReference[] = [];
+
+/**
+ * The marks the folded pane letters its references with, at `ink` (the
+ * style's edge pen, which the arrow is drawn with): References' and the
+ * Diagram's step-diagram letters and rings, at the size the References view
+ * draws them — on screen, whatever the paper style's pens — so a letter on
+ * the folded pane reads as one in the step diagrams does. A print pen of the
+ * style's would draw them a few px tall beside the paper.
+ */
+export function foldActionMarks(ink: number): DiagramMarks {
+  const scale = canvasDiagramInk(DEFAULT_ORISTUDIO_CP_LINE_WIDTH) / ink;
+  return {
+    ...DIAGRAM_MARKS,
+    ringRadius: REFERENCES_VIEW_MARKS.ringRadius * scale,
+    labelSize: REFERENCES_VIEW_MARKS.labelSize * scale,
+  };
+}
 
 /**
  * A located fold's arrow over the folded pane (plan D11): from the grip on
@@ -56,7 +81,8 @@ export function FoldActionLayer({
   const seen = useMemo(() => applyPaperStylePolicy(style, PAPER_STYLE_POLICIES.fold), [style]);
   const model = useMemo(() => {
     const grip = action?.grip ?? null;
-    if (!grip && letters.length === 0) return null;
+    const push = action?.push ?? null;
+    if (!grip && !push && letters.length === 0) return null;
     const hull = convexHull(outline);
     const centre: SheetPoint | null = hull.length
       ? [hull.reduce((sum, p) => sum + p.x, 0) / hull.length, hull.reduce((sum, p) => sum + p.y, 0) / hull.length]
@@ -71,6 +97,8 @@ export function FoldActionLayer({
         action.kind === 'precrease' ? { kind: 'fold-arrow', out } : { kind: 'one-way-arrow', out, fold: action.direction }
       );
     }
+    // A reverse fold's push: the hollow arrow at the spine, pushing it in.
+    if (push) primitives.push({ kind: 'push-arrow', from: [push.at.x, push.at.y], to: [push.toward.x, push.toward.y] });
     for (const { kind, at, letter } of letters) {
       if (kind === 'point') primitives.push({ kind: 'point', at: [at.x, at.y], style: 'highlight' });
       primitives.push({ kind: 'label', at: [at.x, at.y], text: letter, style: 'highlight' });
@@ -88,10 +116,12 @@ export function FoldActionLayer({
     // The pen every diagram stroke is measured from: the style's edge pen, as
     // References' view measures its own.
     const lineWidth = (seen.edges.width * PT_TO_CSS_PX) / CP_CREASE_WIDTH_FACTOR;
+    const ink = canvasDiagramInk(lineWidth);
     const project = createOverlayProjector(
       view,
-      canvasDiagramInk(lineWidth),
-      canvasDiagramPens(lineWidth, seen.arrows.width * PT_TO_CSS_PX)
+      ink,
+      canvasDiagramPens(lineWidth, seen.arrows.width * PT_TO_CSS_PX),
+      foldActionMarks(ink)
     );
     return createDiagramRenderContext(model.primitives, model.sheet, project, {
       outline: model.hull.map((p): SheetPoint => [p.x, p.y]),
