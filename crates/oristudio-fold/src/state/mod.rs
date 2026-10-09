@@ -3,12 +3,13 @@
 //! they determine — every face's isometry and image, checked.
 //!
 //! [`State::make`] is the only way to produce one: every state has passed the
-//! gate (`state/gate.rs`), in order: structure; convex faces covering the
-//! sheet; isometries from the root, every vertex landing in one place; hinge
-//! consistency; the folded image as the layer order sees it; and the layer
-//! order through `oristudio-layer-order`'s checker. Each refusal names what
-//! failed. Turning over and rotating change only the view, which no check
-//! depends on, so they keep the model they were given.
+//! gate (`state/gate.rs`), in order: structure (a view at a finite angle
+//! among it); convex faces covering the sheet, every vertex on it and the
+//! border along its sides; isometries from a rigid root, every vertex landing
+//! in one place; hinge consistency; the folded image as the layer order sees
+//! it; and the layer order through `oristudio-layer-order`'s checker. Each
+//! refusal names what failed. Turning over and rotating change only the view,
+//! which no other check depends on, so they keep the model they were given.
 
 mod derive;
 mod gate;

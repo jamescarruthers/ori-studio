@@ -105,8 +105,9 @@ impl CheckReport {
 pub enum Scope<'a> {
     /// Everything.
     All,
-    /// What involves at least one of these faces: after an operation, the
-    /// faces it touched.
+    /// What names at least one of these faces: after an operation,
+    /// [`ConstraintProblem::scope_for`] the faces it touched, which adds the
+    /// faces of constraints that can be new without naming a touched face.
     Faces(&'a BTreeSet<FaceId>),
 }
 

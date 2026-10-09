@@ -189,6 +189,126 @@ fn random_sequences_hold_their_invariants() {
     }
 }
 
+/// `op` as a tuck over or under a random face it leaves where it is, named by
+/// the centroid of its sheet polygon; none when everything moves. The target
+/// is one of those the moving faces overlap now, where there are any: a tuck
+/// is made into the layers it lies among.
+fn tuck(state: &State, op: &PlainFold, rng: &mut Rng) -> Option<PlainFold> {
+    use oristudio_fold::Placement;
+    use oristudio_geometry::convex;
+
+    let moving: BTreeSet<_> = state.analyse_fold(op).ok()?.moving.into_iter().collect();
+    let all: Vec<_> = state
+        .faces()
+        .iter()
+        .filter(|f| !moving.contains(&f.id))
+        .collect();
+    let among: Vec<_> = all
+        .iter()
+        .copied()
+        .filter(|f| moving.iter().any(|&m| state.above(f.id, m).is_some()))
+        .collect();
+    let stationary = if among.is_empty() { all } else { among };
+    let target = stationary.get(rng.below(stationary.len()))?;
+    let ring: Vec<Point> = target
+        .ring
+        .iter()
+        .map(|v| state.vertices()[v.0 as usize])
+        .collect();
+    let at = convex::centroid(&ring)?;
+    Some(op.clone().with_placement(if rng.chance(0.5) {
+        Placement::Over { at }
+    } else {
+        Placement::Under { at }
+    }))
+}
+
+/// The flap of one of a folded crease's faces, folded along the crease's
+/// line: it unfolds the crease (or, the other way, sweeps its partner along),
+/// the move a tuck that unfolds is made of.
+fn flap_along_a_crease(state: &State, rng: &mut Rng) -> Option<PlainFold> {
+    let folded: Vec<_> = state
+        .creases()
+        .iter()
+        .filter(|c| matches!(c.kind, CreaseKind::Folded(_)))
+        .collect();
+    let crease = folded.get(rng.below(folded.len()))?;
+    let line = state.crease_line(crease.id)?;
+    let [a, b] = crease.vertices;
+    let faces: Vec<_> = state
+        .faces()
+        .iter()
+        .filter(|f| {
+            let n = f.ring.len();
+            (0..n).any(|i| {
+                let (p, q) = (f.ring[i], f.ring[(i + 1) % n]);
+                (p, q) == (a, b) || (p, q) == (b, a)
+            })
+        })
+        .collect();
+    let face = faces.get(rng.below(faces.len()))?;
+    let image = state.face_image(face.id)?;
+    let n = image.len() as f64;
+    let centre = image
+        .iter()
+        .fold([0.0, 0.0], |s, p| [s[0] + p[0] / n, s[1] + p[1] / n]);
+    let side = Side::of_point(&line, centre)?;
+    let direction = if rng.chance(0.5) {
+        oristudio_fold::Direction::Valley
+    } else {
+        oristudio_fold::Direction::Mountain
+    };
+    let op = PlainFold::new(line, side, direction);
+    let flaps = state.analyse_fold(&op).ok()?.flaps;
+    let flap = flaps.iter().find(|flap| flap.faces.contains(&face.id))?;
+    Some(op.with_seed(oristudio_fold::Seed::Flaps {
+        at: vec![flap.witness],
+    }))
+}
+
+/// Tucks over and under random stationary faces, on the states the campaign
+/// reaches: its own folds, and single flaps folded along a folded crease's
+/// line. Every tuck that lands holds the per-fold invariants, the full gate
+/// from scratch among them. The incremental gate once landed a tuck that the
+/// full check refuses (`incremental_order.rs`: a tuck that unfolds a crease
+/// beside a folded crease's line), and the campaign draws no tucks.
+#[test]
+fn random_tucks_land_only_valid_states() {
+    let mut rng = Rng::new(0x7c4);
+    let (mut landed, mut unfolded) = (0, 0);
+    let mut refused: BTreeMap<&'static str, usize> = BTreeMap::new();
+    for sequence in 0..300u64 {
+        let drawn = Sequence::new(0x7c4_0000 ^ sequence, 10, 48).unwrap_or_else(|e| panic!("{e}"));
+        for step in drawn {
+            let (Op::Fold(drawn_op), Outcome::Landed(_)) = (&step.op, &step.outcome) else {
+                continue;
+            };
+            let parent = &step.parent;
+            let ops = [
+                Some(drawn_op.clone()),
+                flap_along_a_crease(parent, &mut rng),
+            ];
+            for op in ops.into_iter().flatten() {
+                let Some(tuck) = tuck(parent, &op, &mut rng) else {
+                    continue;
+                };
+                match parent.fold(&tuck) {
+                    Ok(folded) => {
+                        check_fold(parent, &tuck, &folded, false);
+                        landed += 1;
+                        unfolded += usize::from(!folded.report.unfolded.is_empty());
+                    }
+                    Err(e) => *refused.entry(e.refusal.code()).or_default() += 1,
+                }
+            }
+        }
+    }
+    eprintln!("{landed} tucks landed ({unfolded} unfolding a crease), refused {refused:?}");
+    // 171 and 17 when written; most tucks into random layers are refused.
+    assert!(landed >= 150, "only {landed} tucks landed");
+    assert!(unfolded >= 12, "only {unfolded} tucks unfolded a crease");
+}
+
 /// A face between μ/2 and μ wide (which the thin-piece rule allows) landing
 /// across another overlaps it by its own width, less than μ. That is the face,
 /// not a sliver between two faces, so it lands (found by the campaign on a

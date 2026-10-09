@@ -27,6 +27,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::error::LayerOrderError;
+use crate::table::PairTable;
 use crate::view::{FaceId, FoldedView};
 
 /// An unordered pair of distinct faces.
@@ -284,6 +285,63 @@ impl LayerOrder {
     }
 }
 
+/// A [`LayerOrder`] as a table on a view's face positions, for the loops that
+/// ask about every pair of every cell: Σ ply² lookups, which through the
+/// order's map cost a painter over a hundred milliseconds on a 256-face state
+/// with stacks fifty deep. It holds `n²` bytes for `n` faces, as the checker's
+/// own table does.
+pub struct OrderTable {
+    table: PairTable<i8>,
+    n: usize,
+}
+
+impl OrderTable {
+    pub fn new(view: &FoldedView, order: &LayerOrder) -> OrderTable {
+        OrderTable {
+            table: PairTable::of_order(view, order),
+            n: view.faces().len(),
+        }
+    }
+
+    /// Whether the face at view position `i` lies above the one at `j`, as
+    /// [`LayerOrder::above`] says of their ids: `None` when the pair is
+    /// absent or undetermined, or a position is not the view's.
+    pub fn above(&self, i: usize, j: usize) -> Option<bool> {
+        if i >= self.n || j >= self.n {
+            return None;
+        }
+        match self.table.get(i, j) {
+            1 => Some(true),
+            -1 => Some(false),
+            _ => None,
+        }
+    }
+
+    /// Faces that all overlap one another (a cell's, say), as view
+    /// positions, top first: ranked by how many of the others each lies
+    /// above. `None` unless the ranks are 0, 1, …, n − 1, a strict total
+    /// order; a valid state's cells always are.
+    pub fn top_first(&self, positions: &[usize]) -> Option<Vec<usize>> {
+        let n = positions.len();
+        let mut ranked: Vec<(usize, usize)> = Vec::with_capacity(n);
+        for &i in positions {
+            let mut below = 0;
+            for &j in positions {
+                if i != j && self.above(i, j)? {
+                    below += 1;
+                }
+            }
+            ranked.push((below, i));
+        }
+        ranked.sort_unstable_by(|a, b| b.cmp(a));
+        ranked
+            .iter()
+            .enumerate()
+            .all(|(r, &(below, _))| below == n - 1 - r)
+            .then(|| ranked.into_iter().map(|(_, i)| i).collect())
+    }
+}
+
 /// A new [`LayerOrder`] set pair by pair, as [`LayerOrder::set_above`] and
 /// [`LayerOrder::set_undetermined`] set one, and built at the end in one
 /// sort rather than a tree insertion per pair: a fold sets thousands at once.
@@ -401,6 +459,55 @@ mod tests {
         assert!(order.len() > 1000);
         assert_eq!(builder.build(), order);
         assert_eq!(LayerOrderBuilder::default().build(), LayerOrder::new());
+    }
+
+    /// The table answers as the order does, by view position, and stacks a
+    /// strict order top first; a cycle, a missing pair or an undetermined
+    /// one has no stack.
+    #[test]
+    fn a_table_answers_as_the_order_and_stacks_it() {
+        let square = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+        // Ids out of position order: the table is by position.
+        let ids = [7, 3, 9, 4];
+        let view = FoldedView::new(
+            ids.iter()
+                .map(|&id| Face {
+                    id: f(id),
+                    polygon: square.clone(),
+                    front_up: true,
+                })
+                .collect(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let mut order = LayerOrder::new();
+        // 4 above 7 above 9 above 3, every pair given.
+        for (upper, lower) in [(4, 7), (4, 9), (4, 3), (7, 9), (7, 3), (9, 3)] {
+            assert!(order.set_above(f(upper), f(lower)).is_ok());
+        }
+        let table = OrderTable::new(&view, &order);
+        for (i, &a) in ids.iter().enumerate() {
+            for (j, &b) in ids.iter().enumerate() {
+                assert_eq!(table.above(i, j), order.above(f(a), f(b)), "{a} {b}");
+            }
+        }
+        assert_eq!(table.above(0, 4), None);
+        // Positions of 4, 7, 9, 3.
+        assert_eq!(table.top_first(&[0, 1, 2, 3]), Some(vec![3, 0, 2, 1]));
+        assert_eq!(table.top_first(&[1, 2]), Some(vec![2, 1]));
+        assert_eq!(table.top_first(&[]), Some(vec![]));
+
+        let mut cyclic = order.clone();
+        assert!(cyclic.set_above(f(3), f(4)).is_ok());
+        assert_eq!(
+            OrderTable::new(&view, &cyclic).top_first(&[0, 1, 2, 3]),
+            None
+        );
+        let mut open = order.clone();
+        assert!(open.set_undetermined(f(7), f(9)).is_ok());
+        assert_eq!(OrderTable::new(&view, &open).top_first(&[0, 2]), None);
+        assert!(order.remove(f(9), f(3)));
+        assert_eq!(OrderTable::new(&view, &order).top_first(&[1, 2]), None);
     }
 
     #[test]

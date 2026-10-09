@@ -93,129 +93,15 @@ pub(crate) fn analyse(
     placement: &Placement,
     policy: ClosurePolicy,
 ) -> Result<Analysis, Refused> {
-    let faces = state.faces();
-    let nf = faces.len();
-    let axis = classified.axis;
-    let MovingSide {
-        pieces,
-        adjacent,
-        flaps,
-        flap_of,
-    } = moving_side(state, &classified)?;
-    let has_stationary: Vec<bool> = faces
-        .iter()
-        .map(|face| {
-            face.ring
-                .iter()
-                .any(|v| classified.classes[v.index()] == -1)
-        })
-        .collect();
-
-    let seed_faces = resolve_seed(state, &pieces, direction, seed, &axis)?;
-    let mut picked: Vec<usize> = seed_faces.iter().filter_map(|&f| flap_of[f]).collect();
-    picked.sort_unstable();
-    picked.dedup();
-
-    let tuck = match placement {
-        Placement::OnTop => None,
-        Placement::Over { at } | Placement::Under { at } => {
-            let target = state
-                .face_at(*at)
-                .and_then(|id| state.face_position(id))
-                .ok_or(FoldRefusal::WitnessNotInFace { point: *at })
-                .map_err(Refused::from)?;
-            Some(tuck(
-                state,
-                target,
-                matches!(placement, Placement::Under { .. }),
-                direction,
-            ))
-        }
-    };
-
-    // The closure.
-    let boxes: Vec<[f64; 4]> = pieces
-        .iter()
-        .map(|p| match p {
-            Some(p) => convex::bounding_box(p),
-            None => convex::bounding_box(&[]),
-        })
-        .collect();
-    let index = BoxIndex::new(boxes.clone());
-    let wants_above = direction == Direction::Valley;
-    let mut moving = vec![false; nf];
-    let mut queue = VecDeque::new();
-    for &f in &seed_faces {
-        if !moving[f] {
-            moving[f] = true;
-            queue.push_back(f);
-        }
+    let side = moving_side(state, &classified)?;
+    let seed_faces = resolve_seed(state, &side.pieces, direction, seed, &classified.axis)?;
+    let mut closure = Closure::new(state, classified, direction, side, placement)?;
+    closure.grow(&seed_faces)?;
+    if let Some(refused) = closure.refusal() {
+        return Err(refused);
     }
-    while let Some(q) = queue.pop_front() {
-        for &p in &adjacent[q] {
-            if !moving[p] {
-                moving[p] = true;
-                queue.push_back(p);
-            }
-        }
-        let Some(piece_q) = &pieces[q] else {
-            continue;
-        };
-        for p in index.query(&boxes[q], TOL) {
-            if moving[p] || tuck.as_ref().is_some_and(|t| t.keep[p]) {
-                continue;
-            }
-            let Some(piece_p) = &pieces[p] else {
-                continue;
-            };
-            if convex::penetration(piece_p, piece_q) <= TOL {
-                continue;
-            }
-            let Some(above) = state.above(faces[p].id, faces[q].id) else {
-                return Err(missing_pair(faces[p].id, faces[q].id));
-            };
-            if above == wants_above {
-                moving[p] = true;
-                queue.push_back(p);
-            }
-        }
-    }
-
-    if (0..nf).all(|f| moving[f] && !has_stationary[f]) {
-        let fixes = if flaps.len() > 1 {
-            vec![Fix::PickFlap {
-                flaps: flaps.clone(),
-            }]
-        } else {
-            Vec::new()
-        };
-        return Err(Refused {
-            refusal: FoldRefusal::NothingStays,
-            fixes,
-        });
-    }
-    // A target the fold splits keeps its stationary part, which is what the
-    // block lands against; one that moves entirely is no target.
-    if let Some(t) = &tuck
-        && moving[t.target]
-        && !has_stationary[t.target]
-    {
-        return Err(FoldRefusal::TuckTargetMoves {
-            face: faces[t.target].id,
-        }
-        .into());
-    }
-
-    let mut moving_flaps: Vec<usize> = (0..nf)
-        .filter(|&f| moving[f])
-        .filter_map(|f| flap_of[f])
-        .collect();
-    moving_flaps.sort_unstable();
-    moving_flaps.dedup();
-    let added: Vec<usize> = moving_flaps
-        .into_iter()
-        .filter(|f| picked.binary_search(f).is_err())
-        .collect();
+    let picked = closure.picked(&seed_faces);
+    let added = closure.added(&picked);
     if policy == ClosurePolicy::Refuse && !added.is_empty() {
         return Err(Refused {
             refusal: FoldRefusal::ClosureAddsFlaps {
@@ -224,17 +110,219 @@ pub(crate) fn analyse(
             fixes: vec![Fix::IncludeFlaps { flaps: added }],
         });
     }
-
+    let Closure {
+        classified,
+        direction,
+        side,
+        has_stationary,
+        tuck,
+        moving,
+        ..
+    } = closure;
     Ok(Analysis {
         classified,
         direction,
         has_stationary,
         moving,
-        flaps,
+        flaps: side.flaps,
         picked,
         added,
         tuck,
     })
+}
+
+/// U while it grows: the moving side, the tuck, and the faces in U so far.
+///
+/// [`analyse`] closes it once from a seed. The closure is monotone and
+/// idempotent: both rules only ever add faces, and what a tuck keeps in place
+/// does not depend on U. So the closure of a larger seed contains that of a
+/// smaller one, and growing U by more faces from where it stopped gives the
+/// closure of the larger seed from scratch. The depth preview
+/// (`State::depth_choices`) grows it one layer at a time on that account.
+pub(crate) struct Closure<'s> {
+    state: &'s State,
+    classified: Classified,
+    direction: Direction,
+    side: MovingSide,
+    /// Per face position: whether it has a vertex on the stationary side.
+    has_stationary: Vec<bool>,
+    tuck: Option<Tuck>,
+    /// Per face position, its piece's box (an empty box for no piece).
+    boxes: Vec<[f64; 4]>,
+    index: BoxIndex,
+    /// Per face position: whether it is in U.
+    moving: Vec<bool>,
+}
+
+impl<'s> Closure<'s> {
+    /// An empty U on `side`, the moving side of `classified`. Refused when a
+    /// tuck's target is in no face.
+    pub(crate) fn new(
+        state: &'s State,
+        classified: Classified,
+        direction: Direction,
+        side: MovingSide,
+        placement: &Placement,
+    ) -> Result<Closure<'s>, Refused> {
+        let has_stationary: Vec<bool> = state
+            .faces()
+            .iter()
+            .map(|face| {
+                face.ring
+                    .iter()
+                    .any(|v| classified.classes[v.index()] == -1)
+            })
+            .collect();
+        let tuck = match placement {
+            Placement::OnTop => None,
+            Placement::Over { at } | Placement::Under { at } => {
+                let target = state
+                    .face_at(*at)
+                    .and_then(|id| state.face_position(id))
+                    .ok_or(FoldRefusal::WitnessNotInFace { point: *at })
+                    .map_err(Refused::from)?;
+                Some(tuck(
+                    state,
+                    target,
+                    matches!(placement, Placement::Under { .. }),
+                    direction,
+                ))
+            }
+        };
+        let boxes: Vec<[f64; 4]> = side
+            .pieces
+            .iter()
+            .map(|p| match p {
+                Some(p) => convex::bounding_box(p),
+                None => convex::bounding_box(&[]),
+            })
+            .collect();
+        let index = BoxIndex::new(boxes.clone());
+        Ok(Closure {
+            state,
+            moving: vec![false; has_stationary.len()],
+            classified,
+            direction,
+            side,
+            has_stationary,
+            tuck,
+            boxes,
+            index,
+        })
+    }
+
+    /// Put `faces` (positions with a moving piece) in U and close it under
+    /// both rules; whether U grew. Refused when a piece overlaps a member of
+    /// U with their pair missing from the order, which a state that passed
+    /// the gate never has (pieces overlap no more than their faces do).
+    pub(crate) fn grow(&mut self, faces: &[usize]) -> Result<bool, Refused> {
+        let state = self.state;
+        let ids = state.faces();
+        let wants_above = self.direction == Direction::Valley;
+        let mut queue = VecDeque::new();
+        for &f in faces {
+            if !self.moving[f] {
+                self.moving[f] = true;
+                queue.push_back(f);
+            }
+        }
+        let grew = !queue.is_empty();
+        while let Some(q) = queue.pop_front() {
+            for &p in &self.side.adjacent[q] {
+                if !self.moving[p] {
+                    self.moving[p] = true;
+                    queue.push_back(p);
+                }
+            }
+            let Some(piece_q) = &self.side.pieces[q] else {
+                continue;
+            };
+            for p in self.index.query(&self.boxes[q], TOL) {
+                if self.moving[p] || self.tuck.as_ref().is_some_and(|t| t.keep[p]) {
+                    continue;
+                }
+                let Some(piece_p) = &self.side.pieces[p] else {
+                    continue;
+                };
+                if convex::penetration(piece_p, piece_q) <= TOL {
+                    continue;
+                }
+                let Some(above) = state.above(ids[p].id, ids[q].id) else {
+                    return Err(missing_pair(ids[p].id, ids[q].id));
+                };
+                if above == wants_above {
+                    self.moving[p] = true;
+                    queue.push_back(p);
+                }
+            }
+        }
+        Ok(grew)
+    }
+
+    /// Why U cannot be folded: everything moves, or a tuck's target does.
+    /// Both stay true as U grows.
+    pub(crate) fn refusal(&self) -> Option<Refused> {
+        let faces = self.state.faces();
+        let moving = &self.moving;
+        if (0..faces.len()).all(|f| moving[f] && !self.has_stationary[f]) {
+            let flaps = &self.side.flaps;
+            let fixes = if flaps.len() > 1 {
+                vec![Fix::PickFlap {
+                    flaps: flaps.clone(),
+                }]
+            } else {
+                Vec::new()
+            };
+            return Some(Refused {
+                refusal: FoldRefusal::NothingStays,
+                fixes,
+            });
+        }
+        // A target the fold splits keeps its stationary part, which is what
+        // the block lands against; one that moves entirely is no target.
+        if let Some(t) = &self.tuck
+            && moving[t.target]
+            && !self.has_stationary[t.target]
+        {
+            return Some(
+                FoldRefusal::TuckTargetMoves {
+                    face: faces[t.target].id,
+                }
+                .into(),
+            );
+        }
+        None
+    }
+
+    /// The flaps of the seed's faces, ascending.
+    pub(crate) fn picked(&self, seed_faces: &[usize]) -> Vec<usize> {
+        let mut picked: Vec<usize> = seed_faces
+            .iter()
+            .filter_map(|&f| self.side.flap_of[f])
+            .collect();
+        picked.sort_unstable();
+        picked.dedup();
+        picked
+    }
+
+    /// The flaps in U beyond `picked`, ascending.
+    pub(crate) fn added(&self, picked: &[usize]) -> Vec<usize> {
+        let mut moving_flaps: Vec<usize> = (0..self.moving.len())
+            .filter(|&f| self.moving[f])
+            .filter_map(|f| self.side.flap_of[f])
+            .collect();
+        moving_flaps.sort_unstable();
+        moving_flaps.dedup();
+        moving_flaps
+            .into_iter()
+            .filter(|f| picked.binary_search(f).is_err())
+            .collect()
+    }
+
+    /// U's faces, in id order.
+    pub(crate) fn moved_faces(&self) -> Vec<FaceId> {
+        moved(self.state, &self.moving)
+    }
 }
 
 /// The moving side of a classified line before any seed: its pieces, rule

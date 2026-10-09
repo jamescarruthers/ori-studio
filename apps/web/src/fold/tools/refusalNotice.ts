@@ -247,6 +247,10 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'crease_face_count':
     case 'non_convex_face':
     case 'area_mismatch':
+    case 'vertex_off_sheet':
+    case 'border_off_outline':
+    case 'root_not_rigid':
+    case 'view_not_finite':
     case 'unknown_root':
     case 'unreached_face':
     case 'residual':

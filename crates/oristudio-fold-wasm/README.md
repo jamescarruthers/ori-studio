@@ -161,18 +161,36 @@ landed state's. Times include crossing the boundary.
 An earlier run (40 runs, seed 7) agreed within a few tenths at 33–64 and
 within 15% at 129–256.
 
+**Since then** the scene stacks its cells through a table of the order on
+face positions (`oristudio_layer_order::OrderTable`) instead of the order's
+map, and `depth_choices` grows one closure layer by layer instead of
+analysing every depth. Both give the same output: an A/B of the two builds
+over the same folds (80 runs, two interleaved passes, load average about
+15–20) hashed every landed state's subfaces and every depth answer, the same
+for both. 118 states and 55 depth previews fell at 129–256 faces:
+
+| Call | before mean / p95 | after mean / p95 |
+|---|---|---|
+| `depth_choices` | 17–18 / 80 ms | 0.65–0.81 / 1.3–2.1 ms |
+| `scene` (per state) | 37 / 114–129 ms | 4.5–5.5 / 8.3–12.7 ms |
+| Tier 3: `apply`, `step_summary`, `scene` | 45–47 / 125–141 ms | 13–16 / 27–32 ms |
+
+The A/B's states are deeper than the table's above (lines through the
+sheet's lower left quarter rather than its middle), so its "before" is
+slower than the table's.
+
 - **The plain fold** is at the JS spike's p95 (research §12: ≤ 2.2 ms at
   33–64, ≤ 17.2 ms at 129–256): 2.45 ms and 15.9 ms here, under load.
-- **Tier 3 is within 50 ms at 256 faces on average, not at p95**, and the
-  scene is most of it: computing it, not serializing it (the scene alone,
-  computed with nothing returned, is 22 of its 25 ms at 129–256; through
-  `JSON.parse` instead of serde-wasm-bindgen is no faster). Its subface
-  stacks are the engine's, in `oristudio-fold`'s `scene.rs`.
+- **Tier 3 is within D14's 50 ms at 256 faces, at p95 too**, since the
+  scene's subface stacks went through a table: they had been most of it
+  (the scene alone, computed with nothing returned, was 22 of its 25 ms at
+  129–256). What is left of it is mostly `apply`.
 - **No tier-2 cache in the bridge.** The calls keyed by line, side and
   direction take a few milliseconds at 256 faces, and the tools ask once per
-  line. The costly ones are `depth_choices` (keyed by a point as well) and
-  `landmarks` and `scene`, which are per state: a state is immutable under
-  its handle, so the web side keeps them by handle.
+  line; `depth_choices`, keyed by a point as well, is as cheap since it grows
+  one closure. The costly ones are `landmarks` and `scene`, which are per
+  state: a state is immutable under its handle, so the web side keeps them by
+  handle.
 
 ## Tests
 
