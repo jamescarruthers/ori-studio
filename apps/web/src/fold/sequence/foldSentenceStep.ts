@@ -120,7 +120,7 @@ function sentenceLine(line: FoldEngineLine | FoldLineInput, seed: FoldSeed, cont
 }
 
 /** The sheet point an input stands at: a point's own, a line's middle. */
-function anchorOf(input: FoldRef): SheetPoint {
+export function anchorOf(input: FoldRef): SheetPoint {
   return input.kind === 'edge' ? [(input.a[0] + input.b[0]) / 2, (input.a[1] + input.b[1]) / 2] : input.at;
 }
 

@@ -41,6 +41,7 @@ import type {
 } from '../document/foldSequenceDocument';
 import type { FoldAxiomCandidate, FoldAxiomLine, FoldEngineRefused, FoldScene } from '../engine/foldEngineWire';
 import {
+  alongLine,
   applyIsometry,
   chordOfConvex,
   clipConvex,
@@ -49,7 +50,9 @@ import {
   pointOnLine,
   polygonArea,
   polygonCentroid,
+  sideOf,
   toPair,
+  toPoint,
   transformLine,
 } from '../canvas/foldCanvasGeometry';
 import { pickRef, type FoldPick, type FoldPickIndex, type FoldPointPick, type FoldSegmentPick } from '../canvas/foldPicking';
@@ -80,6 +83,12 @@ export interface FoldBuiltStep {
   movingSign: 1 | -1;
   via: FoldLineVia;
   scope: FoldSeedScope;
+  /**
+   * A free line drawn on the crease pattern across faces the folded form
+   * puts apart: the fold runs through the two points as they lie folded, so
+   * the creases it leaves are not the line drawn.
+   */
+  acrossLayers?: true;
 }
 
 export type FoldStepBuild =
@@ -184,6 +193,38 @@ export function freeLineThrough(index: FoldPickIndex, line: FoldModelLine): [She
   return a && b ? [a, b] : null;
 }
 
+/** How far, in sheet units, a stretch of the drawn line may land off the fold line and still be on it. */
+const ON_LINE = 1e-7;
+
+/**
+ * Whether the straight sheet line from `p` to `q` is the crease a fold along
+ * the scene line `line` leaves there: every stretch of it, on whichever face
+ * it crosses, lands on the fold line through that face's transform. On one
+ * face, or on faces the folded form keeps in line, it does; across faces it
+ * puts apart, the fold runs through `p` and `q` as they lie folded and
+ * creases the sheet along another path.
+ */
+export function freeLineAsDrawn(scene: FoldScene, line: FoldModelLine, p: SheetPoint, q: SheetPoint): boolean {
+  const drawn = lineThrough(toPoint(p), toPoint(q));
+  if (!drawn) return true;
+  const ends = [alongLine(drawn, toPoint(p)), alongLine(drawn, toPoint(q))];
+  const [from, to] = [Math.min(...ends), Math.max(...ends)];
+  for (const [face, { points }] of scene.faces.entries()) {
+    const outline = points.map((vertex) => scene.sheet_points[vertex]);
+    const transform = scene.face_transforms[face];
+    if (!transform || outline.some((corner) => corner === undefined)) continue;
+    const chord = chordOfConvex(outline as Point[], drawn);
+    if (!chord) continue;
+    const a = Math.max(chord[0], from);
+    const b = Math.min(chord[1], to);
+    if (!(b - a > ON_LINE)) continue;
+    for (const t of [a, b]) {
+      if (Math.abs(sideOf(line, applyIsometry(transform, pointOnLine(drawn, t)))) > ON_LINE) return false;
+    }
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // The step
 
@@ -219,6 +260,7 @@ interface Located {
   implied: 1 | -1 | null;
   choices?: FoldChoices;
   crease?: FoldSegmentPick;
+  acrossLayers?: true;
 }
 
 /**
@@ -250,7 +292,15 @@ function locate(intent: FoldStepIntent, index: FoldPickIndex): Located | FoldEng
     if (!sceneLine) return null;
     const through = freeLineThrough(index, sceneLine);
     if (!through) return clientRefusal('no_moving_side');
-    return { line: { via: 'free', through }, sceneLine, implied: null };
+    // Drawn on the crease pattern, the line is where it was drawn only while
+    // the faces under it lie in line in the folded form.
+    const acrossLayers =
+      p.pane === 'crease-pattern' &&
+      q.pane === 'crease-pattern' &&
+      p.sheet !== null &&
+      q.sheet !== null &&
+      !freeLineAsDrawn(index.scene, sceneLine, p.sheet, q.sheet);
+    return { line: { via: 'free', through }, sceneLine, implied: null, ...(acrossLayers ? { acrossLayers: true } : {}) };
   }
   const [crease] = intent.picks;
   if (crease?.kind !== 'segment') return null;
@@ -269,7 +319,7 @@ export function buildFoldStep(intent: FoldStepIntent, index: FoldPickIndex): Fol
   const located = locate(intent, index);
   if (!located) return { status: 'unlocated' };
   if ('status' in located) return { status: 'refused', refused: located };
-  const { line, sceneLine, implied, choices, crease } = located;
+  const { line, sceneLine, implied, choices, crease, acrossLayers } = located;
   const unfolding = crease?.segment === 'bend' && intent.kind !== 'precrease';
   const base = implied ?? defaultMovingSign(index, sceneLine, unfolding);
   const movingSign: 1 | -1 = intent.swapped ? (-base as 1 | -1) : base;
@@ -306,5 +356,6 @@ export function buildFoldStep(intent: FoldStepIntent, index: FoldPickIndex): Fol
     movingSign,
     via: line.via,
     scope: stored.scope,
+    ...(acrossLayers ? { acrossLayers } : {}),
   };
 }

@@ -16,8 +16,9 @@ const BRACKET_BULGE = 4;
  * Keyboard: ↑ / ↓ move between the rows, Home and End to the ends, Space
  * picks or unpicks the row's flap. The listbox owns those keys while it has
  * focus (`data-own-arrows`, the Diagram's marker for a control that keeps its
- * arrows); Enter is left to the workspace, which commits the fold. Hovering a
- * row names its flap to the canvas, which lights it.
+ * arrows); Enter is the workspace's, which commits the fold
+ * (`data-fold-layer-pick`, `focusLeavesEnterToFold`). Hovering a row names
+ * its flap to the canvas, which lights it.
  */
 export function FoldCrossSectionPicker({
   model,
@@ -47,6 +48,8 @@ export function FoldCrossSectionPicker({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>, index: number) => {
+    // A key the workspace's keyboard already acted on is not the row's too.
+    if (event.defaultPrevented) return;
     const last = model.rows.length - 1;
     switch (event.key) {
       case 'ArrowDown':
@@ -84,6 +87,7 @@ export function FoldCrossSectionPicker({
           aria-orientation="vertical"
           className={styles.rows}
           data-own-arrows=""
+          data-fold-layer-pick=""
           onMouseLeave={() => onHover?.(null)}
         >
           {model.rows.map((row, index) => (

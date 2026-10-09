@@ -15,6 +15,7 @@ import {
 } from '../document/foldSequenceDocument';
 import type { FoldFlap } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
+import { wovenIntervalAt } from '../tools/crossSection';
 import { isFoldKind, type FoldLineModeId, type FoldToolId } from '../tools/foldToolCatalog';
 import { nextStep } from '../tools/foldToolRegistry';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
@@ -41,7 +42,8 @@ export interface FoldCanvasVerbs {
   hitTest: (pane: FoldPaneId, at: { x: number; y: number }, radii: FoldHitRadii) => FoldHit | null;
   /** A click landed on a pane. */
   pick: (hit: FoldHit | null) => void;
-  swapSide: () => void;
+  /** Fold the other side; whether there was a located line to swap the side of. */
+  swapSide: () => boolean;
   toggleFlap: (flap: number) => void;
   hoverFlap: (flap: number | null) => void;
   includeFlaps: (flaps: readonly number[]) => void;
@@ -166,8 +168,12 @@ export function useFoldCanvasVerbs(
         const model = foldToolInput(tool);
         const step = model ? nextStep(model, tool.picks.length) : null;
         // Located: a click on the paper picks layers, so what is under the
-        // pointer is the paper itself, never a reference.
-        if (!step) return { pane, at, pick: null };
+        // pointer is the paper itself, never a reference — and over a woven
+        // section, which of its stacks the layer picker shows.
+        if (!step) {
+          const interval = pane === 'folded' ? wovenIntervalAt(live.current.preview.section, at) : null;
+          return interval === null ? { pane, at, pick: null } : { pane, at, pick: null, interval };
+        }
         const pick = resolveFoldPick(index, pane, at, radii, { snap: step.snap, edges: step.edges, free: freePointHeld() });
         return { pane, at, pick };
       },

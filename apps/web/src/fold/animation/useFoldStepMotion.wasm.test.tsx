@@ -4,7 +4,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import type { FoldedFlatPaperSceneOptions } from '../../cp-workspace/folded/foldedFlatScene';
 import { sequenceOf, step } from '../document/foldSequence.fixtures';
 import type { FoldOp, FoldStepNode } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
@@ -16,7 +15,7 @@ import {
   type FoldSessionNode,
   type FoldSessionSnapshot,
 } from '../session/foldSessionState';
-import type { FoldStepMotion } from './foldStepMotion';
+import { foldStepPaneAt, type FoldStepMotion, type FoldStepPane } from './foldStepMotion';
 import { useFoldStepMotion } from './useFoldStepMotion';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -45,11 +44,11 @@ const BOOK: FoldOp = {
 };
 const TURN: FoldOp = { kind: 'turn', axis: 'vertical' };
 
-const PLACE: FoldedFlatPaperSceneOptions = {
+const PANE = foldStepPaneAt({
   markHidden: true,
   toScenePx: (p) => [p.x * 100, -p.y * 100],
   scale: 100,
-};
+});
 
 function landed<T>(outcome: FoldEngineOutcome<T>): T {
   if (outcome.status !== 'ok') throw new Error(`refused: ${JSON.stringify(outcome.refusal)}`);
@@ -105,8 +104,8 @@ function sessionOver(
 
 let seen: (FoldStepMotion | null)[] = [];
 /** Captured in an effect, which `act` flushes. */
-function Probe({ id, place }: { id: string | null; place: FoldedFlatPaperSceneOptions | null }) {
-  const motion = useFoldStepMotion(id, place);
+function Probe({ id, pane }: { id: string | null; pane: FoldStepPane | null }) {
+  const motion = useFoldStepMotion(id, pane);
   useEffect(() => {
     seen.push(motion);
   });
@@ -115,9 +114,9 @@ function Probe({ id, place }: { id: string | null; place: FoldedFlatPaperSceneOp
 
 let container: HTMLDivElement;
 let root: Root;
-const render = async (id: string | null, place: FoldedFlatPaperSceneOptions | null = PLACE) => {
+const render = async (id: string | null, pane: FoldStepPane | null = PANE) => {
   await act(async () => {
-    root.render(<Probe id={id} place={place} />);
+    root.render(<Probe id={id} pane={pane} />);
   });
   // Let the queries answer and their answers render.
   for (let i = 0; i < 4; i += 1) await act(async () => {});
@@ -171,7 +170,7 @@ describe.skipIf(!available)('useFoldStepMotion', () => {
     expect(latest()?.motion.kind).toBe('turn');
   });
 
-  it('has none for the sheet, an unknown step, or without a placement', async () => {
+  it('has none for the sheet, an unknown step, or without a pane', async () => {
     const over = await bookAndTurn();
     app.session = over.session;
     const asked = vi.spyOn(over.session, 'query');

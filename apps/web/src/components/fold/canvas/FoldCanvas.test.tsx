@@ -62,7 +62,22 @@ vi.mock("../../../fold/session/useFoldSession", () => ({
   useFoldStateQuery: () => null,
 }));
 
+/** What the canvas hands its playback, the real hook running under it. */
+const playbackInputs = vi.hoisted(() => [] as ({ reveal?: () => void } | null)[]);
+vi.mock("../../../fold/canvas/useFoldPanePlayback", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../fold/canvas/useFoldPanePlayback")>();
+  return {
+    ...actual,
+    useFoldPanePlayback: (...args: Parameters<typeof actual.useFoldPanePlayback>) => {
+      playbackInputs.push(args[0]);
+      return actual.useFoldPanePlayback(...args);
+    },
+  };
+});
+
+import { foldPhonePane, showFoldPhonePane } from "../../../fold/canvas/foldPhonePane";
 import { foldTools } from "../../../fold/tools/foldToolState";
+import { PHONE_MEDIA_QUERY } from "../../../platform/phoneLayout";
 import { byRole } from "../../../test/roleQueries";
 import { TooltipProvider } from "../../ui/Tooltip";
 import { FoldCanvas } from "./FoldCanvas";
@@ -149,6 +164,32 @@ describe("the Fold canvas", () => {
     );
     expect(chip?.textContent).toContain("Step 0");
     expect(chip?.textContent).toContain("Click the point to move.");
+  });
+
+  it("turns a phone to the folded pane when the step is played, where its frames are drawn", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query === PHONE_MEDIA_QUERY,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })),
+    );
+    playbackInputs.length = 0;
+    showFoldPhonePane("crease-pattern");
+    const canvas = mount();
+    expect(canvas.querySelector('[data-fold-pane="folded"]')).toBeNull();
+    const reveal = playbackInputs.at(-1)?.reveal;
+    expect(reveal).toBeTypeOf("function");
+    act(() => reveal?.());
+    expect(foldPhonePane()).toBe("folded");
+    expect(canvas.querySelector('[data-fold-pane="folded"]')).not.toBeNull();
+  });
+
+  it("brings no pane forward where both are on screen", () => {
+    playbackInputs.length = 0;
+    mount();
+    expect(playbackInputs.at(-1)?.reveal).toBeUndefined();
   });
 
   // The tool window waits for a laid-out viewport, which jsdom never has; its

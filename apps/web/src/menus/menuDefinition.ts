@@ -1,5 +1,5 @@
 import type { MenuActionId } from '../commands/menuActions';
-import { shortcutLabelForAction, type ShortcutResolutionInput } from '../keyboard/shortcuts';
+import { shortcutLabelForAction, type FoldShortcutId, type ShortcutResolutionInput } from '../keyboard/shortcuts';
 import { isDesktopRuntime } from '../platform/runtime';
 
 /**
@@ -50,6 +50,28 @@ export type MenuDef = {
 
 function shortcut(id: MenuActionId, resolution?: ShortcutResolutionInput): string | undefined {
   return shortcutLabelForAction(id, resolution);
+}
+
+/**
+ * The Fold menu's rows a key of the `fold` scope also runs — the same verb by
+ * another route (`fold/canvas/useFoldCanvasShortcuts`): V, M and P take the
+ * fold in hand as the menu's kinds arm it, T and R add the turns its turn-over
+ * and clockwise rotation add. Their hint is that key, as the user's layout
+ * resolves it. The hint only: the native menu reads its accelerators by the
+ * row's own id, which binds nothing, so a bare letter is never taken from a
+ * text field there.
+ */
+const FOLD_ROW_KEYS: Partial<Record<MenuActionId, FoldShortcutId>> = {
+  'fold.valley': 'fold.toolValley',
+  'fold.mountain': 'fold.toolMountain',
+  'fold.precrease': 'fold.toolPrecrease',
+  'fold.turn-over': 'fold.turnOver',
+  'fold.rotate-cw': 'fold.rotate',
+};
+
+function foldRowKey(id: MenuActionId, resolution?: ShortcutResolutionInput): string | undefined {
+  const key = FOLD_ROW_KEYS[id];
+  return key ? shortcutLabelForAction(key, resolution) : shortcut(id, resolution);
 }
 
 export function getMenuBarDef(
@@ -313,13 +335,13 @@ export function getMenuBarDef(
       // everywhere else.
       label: t('menu:menubar.fold', 'Fold'),
       items: [
-        { type: 'action', id: 'fold.valley', label: t('menu:fold.valley', 'Valley Fold'), shortcut: shortcut('fold.valley', resolution) },
-        { type: 'action', id: 'fold.mountain', label: t('menu:fold.mountain', 'Mountain Fold'), shortcut: shortcut('fold.mountain', resolution) },
-        { type: 'action', id: 'fold.precrease', label: t('menu:fold.precrease', 'Precrease'), shortcut: shortcut('fold.precrease', resolution) },
+        { type: 'action', id: 'fold.valley', label: t('menu:fold.valley', 'Valley Fold'), shortcut: foldRowKey('fold.valley', resolution) },
+        { type: 'action', id: 'fold.mountain', label: t('menu:fold.mountain', 'Mountain Fold'), shortcut: foldRowKey('fold.mountain', resolution) },
+        { type: 'action', id: 'fold.precrease', label: t('menu:fold.precrease', 'Precrease'), shortcut: foldRowKey('fold.precrease', resolution) },
         { type: 'separator' },
-        { type: 'action', id: 'fold.turn-over', label: t('menu:fold.turn-over', 'Turn Over'), shortcut: shortcut('fold.turn-over', resolution) },
-        { type: 'action', id: 'fold.rotate-ccw', label: t('menu:fold.rotate-ccw', 'Rotate Counterclockwise'), shortcut: shortcut('fold.rotate-ccw', resolution) },
-        { type: 'action', id: 'fold.rotate-cw', label: t('menu:fold.rotate-cw', 'Rotate Clockwise'), shortcut: shortcut('fold.rotate-cw', resolution) },
+        { type: 'action', id: 'fold.turn-over', label: t('menu:fold.turn-over', 'Turn Over'), shortcut: foldRowKey('fold.turn-over', resolution) },
+        { type: 'action', id: 'fold.rotate-ccw', label: t('menu:fold.rotate-ccw', 'Rotate Counterclockwise'), shortcut: foldRowKey('fold.rotate-ccw', resolution) },
+        { type: 'action', id: 'fold.rotate-cw', label: t('menu:fold.rotate-cw', 'Rotate Clockwise'), shortcut: foldRowKey('fold.rotate-cw', resolution) },
         { type: 'separator' },
         { type: 'action', id: 'fold.delete-step', label: t('menu:fold.delete-step', 'Delete Step'), shortcut: shortcut('fold.delete-step', resolution) },
         { type: 'separator' },

@@ -365,10 +365,11 @@
       "valley": "V"
     },
     "note": {
+      "acrossLayers": "Ces points sont sur des couches que le pliage a écartées : la ligne passe par eux là où ils se trouvent dans la forme pliée. Le patron de plis montre les plis qu’elle crée.",
       "clear": "Échap efface les points choisis.",
       "crease": "Plier le long d’un pré-pli le replie ; le long d’un bord plié, cela déplie le rabat.",
       "divide": "Les bords, les bords pliés et les pré-plis comptent tous.",
-      "free": "Sans magnétisme : la ligne passe exactement là où vous cliquez.",
+      "free": "Sans magnétisme : la ligne passe exactement par les points où vous cliquez.",
       "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où, sans magnétisme.",
       "snap": "Les points s’accrochent aux coins, aux repères, aux croisements de plis, aux milieux et aux bords."
     },

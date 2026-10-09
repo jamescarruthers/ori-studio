@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
 import type { FoldShortcutId, ViewportShortcutId } from '../../keyboard/shortcuts';
 import { registerFoldCancel, registerFoldKeyHandler, registerFoldViewCamera } from '../sequence/foldKeys';
+import { focusInFoldLayerPick } from '../sequence/foldLayerPickFocus';
 import {
   FOLD_LINE_MODE_SHORTCUTS,
   FOLD_MODEL_TURNS,
@@ -15,13 +16,14 @@ import { foldCanvasVerbs } from './foldCanvasCommands';
 export const FOLD_PANE_ATTRIBUTE = 'data-fold-pane';
 
 /**
- * Whether Enter at this focus is the canvas's: focus on nothing, or on a pane
- * (a press focuses it). Anything else that holds focus — a button, a tab, a
- * field — keeps its own Enter, as the Diagram's steps leave it.
+ * Whether Enter at this focus is the canvas's: focus on nothing, on a pane
+ * (a press focuses it), or in the layer controls, the step before Enter.
+ * Anything else that holds focus — a button, a tab, a field — keeps its own
+ * Enter, as the Diagram's steps leave it.
  */
 export function focusLeavesEnterToFold(element: Element | null): boolean {
   if (element === null || element === element.ownerDocument.body) return true;
-  return element.closest(`[${FOLD_PANE_ATTRIBUTE}]`) !== null;
+  return element.closest(`[${FOLD_PANE_ATTRIBUTE}]`) !== null || focusInFoldLayerPick(element);
 }
 
 const TOOL_BY_SHORTCUT = new Map<FoldShortcutId, FoldToolId>(
@@ -59,8 +61,8 @@ export function runFoldCanvasShortcut(id: FoldShortcutId, focus: Element | null)
       verbs.turn(FOLD_MODEL_TURNS.rotate);
       return true;
     case 'fold.swapSide':
-      verbs.swapSide();
-      return true;
+      // Nothing located, no side to swap: S falls through.
+      return verbs.swapSide();
     case 'fold.previousCandidate':
     case 'fold.nextCandidate':
       // A control that moves with the arrows keeps them; with one root or none, the step keys may have them.
@@ -68,7 +70,10 @@ export function runFoldCanvasShortcut(id: FoldShortcutId, focus: Element | null)
       return verbs.stepRoot(id === 'fold.nextCandidate' ? 1 : -1);
     case 'fold.commit':
       if (!focusLeavesEnterToFold(focus)) return false;
-      return verbs.commit();
+      // In the layer controls Enter is the fold's even while there is none
+      // to commit (still landing, or refused): let through, a chip's own
+      // Enter would press it and put its flap back.
+      return verbs.commit() || focusInFoldLayerPick(focus);
     default:
       // Another Fold surface's key: its own handler answers it.
       return false;

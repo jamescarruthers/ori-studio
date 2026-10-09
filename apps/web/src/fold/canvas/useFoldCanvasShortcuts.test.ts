@@ -13,7 +13,7 @@ function verbs(roots = 1): FoldCanvasVerbs {
     turn: vi.fn(),
     hitTest: vi.fn(),
     pick: vi.fn(),
-    swapSide: vi.fn(),
+    swapSide: vi.fn(() => true),
     toggleFlap: vi.fn(),
     hoverFlap: vi.fn(),
     includeFlaps: vi.fn(),
@@ -52,6 +52,14 @@ describe('the Fold canvas’s keys', () => {
     expect(runFoldCanvasShortcut('fold.toolInsideReverse', null)).toBe(false);
   });
 
+  it('swaps the side on S only while there is one to swap', () => {
+    const bound = verbs();
+    release = registerFoldCanvasVerbs(bound);
+    expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(true);
+    vi.mocked(bound.swapSide).mockReturnValue(false);
+    expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(false);
+  });
+
   it('commits on Enter unless a focused control owns it', () => {
     const bound = verbs();
     release = registerFoldCanvasVerbs(bound);
@@ -65,6 +73,24 @@ describe('the Fold canvas’s keys', () => {
     expect(runFoldCanvasShortcut('fold.commit', button)).toBe(false);
     expect(runFoldCanvasShortcut('fold.commit', pane)).toBe(true);
     expect(bound.commit).toHaveBeenCalledTimes(1);
+  });
+
+  it('commits on Enter from the layer controls, and keeps Enter there while there is nothing to commit', () => {
+    const bound = verbs();
+    release = registerFoldCanvasVerbs(bound);
+    const layers = document.createElement('div');
+    layers.setAttribute('data-fold-layer-pick', '');
+    const chip = document.createElement('button');
+    layers.append(chip);
+    document.body.append(layers);
+    expect(focusLeavesEnterToFold(chip)).toBe(true);
+    expect(runFoldCanvasShortcut('fold.commit', chip)).toBe(true);
+    expect(bound.commit).toHaveBeenCalledTimes(1);
+    // Still landing, or refused: claimed all the same, or the chip's own Enter would press it.
+    vi.mocked(bound.commit).mockReturnValue(false);
+    expect(runFoldCanvasShortcut('fold.commit', chip)).toBe(true);
+    // Off the layer controls a declined commit lets the key go.
+    expect(runFoldCanvasShortcut('fold.commit', document.body)).toBe(false);
   });
 
   it('steps the roots on Shift+arrows while there are several, and leaves the keys to a control that uses them', () => {

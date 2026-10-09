@@ -4317,7 +4317,7 @@
     "tools:fold.note.clear": "d886acf1c74a",
     "tools:fold.note.crease": "f791216f7414",
     "tools:fold.note.divide": "303dfdc4b39b",
-    "tools:fold.note.free": "51c1f3fa7ec8",
+    "tools:fold.note.free": "1671ad6bafc2",
     "tools:fold.note.freePoint": "737547fe2d86",
     "tools:fold.note.snap": "cd4713730ca5",
     "tools:fold.op.closedSink": "952f50fe472c",
@@ -4985,7 +4985,8 @@
     "toasts:foldIo.noStep": "16108942b13a",
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
-    "toasts:foldIo.unavailable": "4a3b3605057d"
+    "toasts:foldIo.unavailable": "4a3b3605057d",
+    "tools:fold.note.acrossLayers": "e74cc7d32019"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9305,7 +9306,7 @@
     "tools:fold.note.clear": "d886acf1c74a",
     "tools:fold.note.crease": "f791216f7414",
     "tools:fold.note.divide": "303dfdc4b39b",
-    "tools:fold.note.free": "51c1f3fa7ec8",
+    "tools:fold.note.free": "1671ad6bafc2",
     "tools:fold.note.freePoint": "737547fe2d86",
     "tools:fold.note.snap": "cd4713730ca5",
     "tools:fold.op.closedSink": "952f50fe472c",
@@ -9973,7 +9974,8 @@
     "toasts:foldIo.noStep": "16108942b13a",
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
-    "toasts:foldIo.unavailable": "4a3b3605057d"
+    "toasts:foldIo.unavailable": "4a3b3605057d",
+    "tools:fold.note.acrossLayers": "e74cc7d32019"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -14295,7 +14297,7 @@
     "tools:fold.note.clear": "d886acf1c74a",
     "tools:fold.note.crease": "f791216f7414",
     "tools:fold.note.divide": "303dfdc4b39b",
-    "tools:fold.note.free": "51c1f3fa7ec8",
+    "tools:fold.note.free": "1671ad6bafc2",
     "tools:fold.note.freePoint": "737547fe2d86",
     "tools:fold.note.snap": "cd4713730ca5",
     "tools:fold.op.closedSink": "952f50fe472c",
@@ -14963,7 +14965,8 @@
     "toasts:foldIo.noStep": "16108942b13a",
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
-    "toasts:foldIo.unavailable": "4a3b3605057d"
+    "toasts:foldIo.unavailable": "4a3b3605057d",
+    "tools:fold.note.acrossLayers": "e74cc7d32019"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -19185,7 +19188,7 @@
     "tools:fold.note.clear": "d886acf1c74a",
     "tools:fold.note.crease": "f791216f7414",
     "tools:fold.note.divide": "303dfdc4b39b",
-    "tools:fold.note.free": "51c1f3fa7ec8",
+    "tools:fold.note.free": "1671ad6bafc2",
     "tools:fold.note.freePoint": "737547fe2d86",
     "tools:fold.note.snap": "cd4713730ca5",
     "tools:fold.op.closedSink": "952f50fe472c",
@@ -19745,7 +19748,8 @@
     "toasts:foldIo.noStep": "16108942b13a",
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
-    "toasts:foldIo.unavailable": "4a3b3605057d"
+    "toasts:foldIo.unavailable": "4a3b3605057d",
+    "tools:fold.note.acrossLayers": "e74cc7d32019"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -23967,7 +23971,7 @@
     "tools:fold.note.clear": "d886acf1c74a",
     "tools:fold.note.crease": "f791216f7414",
     "tools:fold.note.divide": "303dfdc4b39b",
-    "tools:fold.note.free": "51c1f3fa7ec8",
+    "tools:fold.note.free": "1671ad6bafc2",
     "tools:fold.note.freePoint": "737547fe2d86",
     "tools:fold.note.snap": "cd4713730ca5",
     "tools:fold.op.closedSink": "952f50fe472c",
@@ -24527,7 +24531,8 @@
     "toasts:foldIo.noStep": "16108942b13a",
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
-    "toasts:foldIo.unavailable": "4a3b3605057d"
+    "toasts:foldIo.unavailable": "4a3b3605057d",
+    "tools:fold.note.acrossLayers": "e74cc7d32019"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -28847,7 +28852,7 @@
     "tools:fold.note.clear": "d886acf1c74a",
     "tools:fold.note.crease": "f791216f7414",
     "tools:fold.note.divide": "303dfdc4b39b",
-    "tools:fold.note.free": "51c1f3fa7ec8",
+    "tools:fold.note.free": "1671ad6bafc2",
     "tools:fold.note.freePoint": "737547fe2d86",
     "tools:fold.note.snap": "cd4713730ca5",
     "tools:fold.op.closedSink": "952f50fe472c",
@@ -29515,7 +29520,8 @@
     "toasts:foldIo.noStep": "16108942b13a",
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
-    "toasts:foldIo.unavailable": "4a3b3605057d"
+    "toasts:foldIo.unavailable": "4a3b3605057d",
+    "tools:fold.note.acrossLayers": "e74cc7d32019"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -33835,7 +33841,7 @@
     "tools:fold.note.clear": "d886acf1c74a",
     "tools:fold.note.crease": "f791216f7414",
     "tools:fold.note.divide": "303dfdc4b39b",
-    "tools:fold.note.free": "51c1f3fa7ec8",
+    "tools:fold.note.free": "1671ad6bafc2",
     "tools:fold.note.freePoint": "737547fe2d86",
     "tools:fold.note.snap": "cd4713730ca5",
     "tools:fold.op.closedSink": "952f50fe472c",
@@ -34503,7 +34509,8 @@
     "toasts:foldIo.noStep": "16108942b13a",
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
-    "toasts:foldIo.unavailable": "4a3b3605057d"
+    "toasts:foldIo.unavailable": "4a3b3605057d",
+    "tools:fold.note.acrossLayers": "e74cc7d32019"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -38725,7 +38732,7 @@
     "tools:fold.note.clear": "d886acf1c74a",
     "tools:fold.note.crease": "f791216f7414",
     "tools:fold.note.divide": "303dfdc4b39b",
-    "tools:fold.note.free": "51c1f3fa7ec8",
+    "tools:fold.note.free": "1671ad6bafc2",
     "tools:fold.note.freePoint": "737547fe2d86",
     "tools:fold.note.snap": "cd4713730ca5",
     "tools:fold.op.closedSink": "952f50fe472c",
@@ -39285,6 +39292,7 @@
     "toasts:foldIo.noStep": "16108942b13a",
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
-    "toasts:foldIo.unavailable": "4a3b3605057d"
+    "toasts:foldIo.unavailable": "4a3b3605057d",
+    "tools:fold.note.acrossLayers": "e74cc7d32019"
   }
 }

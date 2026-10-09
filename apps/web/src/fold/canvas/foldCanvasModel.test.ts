@@ -8,7 +8,7 @@ import { foldMovingTint } from './foldPaneOverlays';
 import { foldPickIndex } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 
-const free = (x: number, y: number): FoldPick => ({ kind: 'free', scene: { x, y } });
+const free = (x: number, y: number): FoldPick => ({ kind: 'free', pane: 'folded', scene: { x, y }, sheet: null });
 
 const flaps = [
   { faces: [2], witness: [0.75, 0.5] as [number, number] },
@@ -71,6 +71,11 @@ describe('the Fold canvas model', () => {
       },
     }));
     expect(picked?.seed).toEqual([1]);
+  });
+
+  it('hands the window the woven stack the pointer is over, the first while it has been over none', () => {
+    expect(foldWindowPreview(located, preview())?.interval).toBeNull();
+    expect(foldWindowPreview(located, preview(), 1)?.interval).toBe(1);
   });
 
   it('tints the faces a refusal names, by their index in the scene, not their id', () => {

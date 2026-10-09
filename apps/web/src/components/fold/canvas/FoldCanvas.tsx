@@ -21,7 +21,7 @@ import { chooserBounds, foldPromptWords, foldWindowPreview, sceneLayers } from '
 import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { FOLD_PANE_DISPLAY_DEFAULT, type FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
-import { useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
+import { revealFoldedPane, useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
 import { useFoldCanvasInks } from '../../../fold/canvas/useFoldCanvasInks';
 import { useFoldCanvasPaint } from '../../../fold/canvas/useFoldCanvasPaint';
 import { marksMadeAt, useFoldCanvasVerbs } from '../../../fold/canvas/useFoldCanvasVerbs';
@@ -29,6 +29,8 @@ import { useFoldCanvasShortcuts } from '../../../fold/canvas/useFoldCanvasShortc
 import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
+import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
+import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
 import { ViewportStatusReadout } from '../../ui/ViewportStatusReadout';
@@ -121,10 +123,17 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const framingKey = `${sequenceId}:${sheetKey}`;
 
   // --- The step on screen played from its parent, on the folded pane, with its transport on the bar.
-  const playback = useFoldPanePlayback(session.cursorId, paint.folded.offset);
+  // A phone shows one pane: a play turns it to the folded form, where the frames are drawn.
+  const playback = useFoldPanePlayback({
+    stepId: session.cursorId,
+    sheet: summary?.sheet ?? null,
+    display,
+    reveal: phone ? revealFoldedPane : undefined,
+  });
 
   // --- The tool's feedback on each pane.
-  const freeFrom = toolState.lineMode === 'free' && toolState.picks[0]?.kind === 'free' && toolState.picks.length === 1 ? toolState.picks[0].scene : null;
+  const firstPick = toolState.picks[0];
+  const freeFrom = toolState.lineMode === 'free' && firstPick?.kind === 'free' && toolState.picks.length === 1 ? firstPick : null;
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks
@@ -143,9 +152,13 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
 
+  // --- The letters the step's sentence names its references by, on the folded pane.
+  const letters = useFoldStepLetters(session, view, preview, toolState.picks.length > 0);
+
   // --- The tool window, and the root chooser over the folded pane.
   const sequence = useWorkspaceStore((state) => shownFoldSequence(state)?.document ?? null);
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
+  const woven = useFoldWovenInterval(preview.section);
   const windowModel = foldToolWindow(
     t,
     {
@@ -153,7 +166,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       lineMode: toolState.lineMode,
       readOnly,
       picks: toolState.picks.length,
-      preview: foldWindowPreview(toolState, preview),
+      preview: foldWindowPreview(toolState, preview, woven.interval),
       divide: { settings: toolState.divide, marks: marksHere },
     },
     { ...verbs, setDivide: tools.setDivide },
@@ -235,6 +248,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               contentBounds={paint.folded.contentBounds}
               hitTest={(at, radii) => verbs.hitTest('folded', at, radii)}
               overlay={foldedOverlay}
+              onHover={woven.onHover}
               onZoomPercentChange={setZoomPercent}
               status={foldedStatus}
               posedScene={playback.frames}
@@ -243,6 +257,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
                   {inks && (
                     <FoldActionLayer
                       action={preview.action}
+                      letters={letters}
                       view={camera}
                       style={style}
                       outline={view.scene?.subfaces.flatMap((cell) => cell.polygon) ?? []}

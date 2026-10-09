@@ -59,9 +59,15 @@ export interface FoldToolPreview {
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
 
+/** The line and the side a built step folds, as the tools located them: what a new seed leaves alone. */
+const lineSideKey = (build: FoldStepBuild) =>
+  build.status === 'built'
+    ? `${build.sceneLine.n[0]},${build.sceneLine.n[1]},${build.sceneLine.d}:${build.movingSign}`
+    : null;
+
 /** The axiom line a fold tool's picks locate, once every click is in. */
-function axiomLineOf(tools: FoldToolState): FoldAxiomLine | null {
-  return isFoldKind(tools.tool) ? axiomLineOfPicks(tools.lineMode, tools.picks) : null;
+function axiomLineOf({ tool, lineMode, picks }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): FoldAxiomLine | null {
+  return isFoldKind(tool) ? axiomLineOfPicks(lineMode, picks) : null;
 }
 
 /**
@@ -88,16 +94,21 @@ export function useFoldToolPreview(
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
 
-  // --- The axiom's roots, once per set of picks on a state.
-  const axiomLine = useMemo(() => axiomLineOf(tools), [tools]);
+  // --- The axiom's roots, once per set of picks on a state: a root stepped
+  // through, a flap hovered or a side swapped asks nothing. The picks change
+  // identity only with a pick or a restart.
+  const { tool, lineMode, picks } = tools;
+  const axiomLine = useMemo(() => axiomLineOf({ tool, lineMode, picks }), [tool, lineMode, picks]);
   const axiomKey = axiomLine && stateKey ? `${stateKey}|${canonicalJson(axiomLine)}` : null;
   const [roots, setRoots] = useState<{
     key: string;
     candidates: FoldAxiomCandidate[] | null;
     refused: FoldEngineRefused | null;
   } | null>(null);
+  // Each choice offered is counted once, by the line it was offered for.
+  const offered = useRef<string | null>(null);
   useEffect(() => {
-    if (!axiomLine || axiomKey === null) return undefined;
+    if (!axiomLine || axiomKey === null || roots?.key === axiomKey) return undefined;
     let current = true;
     void withCursor((engine, at) => engine.axiomCandidates(at, axiomLine)).then(
       (answer) => {
@@ -110,7 +121,10 @@ export function useFoldToolPreview(
             // No fold here: worded as the engine words a stored step's root that is gone.
             refused: outcome.candidates.length === 0 ? clientRefusal('no_root') : null,
           });
-          if (outcome.candidates.length > 1) trackFoldChoiceOffered('axiom_root', outcome.candidates.length);
+          if (outcome.candidates.length > 1 && offered.current !== axiomKey) {
+            offered.current = axiomKey;
+            trackFoldChoiceOffered('axiom_root', outcome.candidates.length);
+          }
         } else {
           setRoots({ key: axiomKey, candidates: null, refused: outcome });
         }
@@ -120,7 +134,7 @@ export function useFoldToolPreview(
     return () => {
       current = false;
     };
-  }, [withCursor, axiomLine, axiomKey]);
+  }, [withCursor, axiomLine, axiomKey, roots?.key]);
   const ownRoots = roots && roots.key === axiomKey ? roots : null;
   const candidates = ownRoots?.candidates ?? null;
   const candidate = candidates ? (candidates[tools.root] ?? candidates[0] ?? null) : null;
@@ -182,7 +196,12 @@ export function useFoldToolPreview(
   const analysis = analysisFor?.status === 'analysed' ? analysisFor.analysis : null;
 
   // --- The section, once per line and side on a state: a new seed of the same line asks nothing.
-  const [section, setSection] = useState<{ key: string; section: FoldCrossSection } | null>(null);
+  const lineSide = tools.override ? null : lineSideKey(build);
+  const [section, setSection] = useState<{
+    key: string;
+    lineSide: string | null;
+    section: FoldCrossSection;
+  } | null>(null);
   const wantedSection = analysis && stateKey ? `${stateKey}|${sectionKey(analysis)}` : null;
   useEffect(() => {
     if (!analysis || wantedSection === null || section?.key === wantedSection) return undefined;
@@ -190,14 +209,24 @@ export function useFoldToolPreview(
     void withCursor((engine, at) => engine.crossSection(at, analysis.line, analysis.side)).then(
       (answer) => {
         if (!current || answer.status !== 'answered' || answer.value.status !== 'ok') return;
-        setSection({ key: wantedSection, section: answer.value.section });
+        setSection({ key: wantedSection, lineSide, section: answer.value.section });
       },
       (error: unknown) => reportError(error, { surface: 'fold:cross-section' })
     );
     return () => {
       current = false;
     };
-  }, [withCursor, analysis, wantedSection, section?.key]);
+  }, [withCursor, analysis, wantedSection, section?.key, lineSide]);
+  // A new seed of the same line and side is the same section: it stays on
+  // show while that seed is analysed, so the picker the folder is pressing
+  // (and the focus in it) is not taken away and put back under them.
+  const analysing = step !== null && (analysisFor === null || analysisFor.status === 'working');
+  const shownSection =
+    section &&
+    (section.key === wantedSection ||
+      (analysing && lineSide !== null && section.lineSide === lineSide && section.key.startsWith(`${stateKey}|`)))
+      ? section.section
+      : null;
 
   // --- The landed state's scene and its added creases, for the crease-pattern pane.
   // Asked as every surface asks them (`FoldSession.query`), so a commit of
@@ -248,7 +277,7 @@ export function useFoldToolPreview(
     build,
     step,
     analysis,
-    section: section && section.key === wantedSection ? section.section : null,
+    section: shownSection,
     action: action && step && action.key === step.key ? action.action : null,
     landed: landed && landed.key === landedKey ? landed.landed : null,
     refused,
