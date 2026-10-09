@@ -34,6 +34,7 @@ import type {
 } from '../store/workspaceStore/types';
 import type { EditingContext } from '../workspaces/editingContext';
 import type { FoldIoCommand } from '../fold/io/foldIoCommands';
+import type { FoldSendToDiagramScope } from '../diagram/fold/foldBrowserActions';
 import type {
 } from '../engine/oristudioBpTypes';
 import type { CreaseExportOptions } from '../lib/creaseExport';
@@ -434,11 +435,20 @@ const FOLD_IO_ACTIONS: Partial<Record<MenuActionId, FoldIoCommand>> = {
   'fold.start-from-edit-folded-figure': { kind: 'start-from-edit-folded-figure' },
   'fold.send-to-edit': { kind: 'send-to-edit', variant: 'plain' },
   'fold.send-to-edit-precreases-as-aux': { kind: 'send-to-edit', variant: 'precreases-as-aux' },
-  'fold.send-to-diagram': { kind: 'send-to-diagram', scope: 'step' },
-  'fold.send-path-to-diagram': { kind: 'send-to-diagram', scope: 'path' },
   'fold.export-fold': { kind: 'export-fold' },
   'fold.export-step': { kind: 'export-steps', scope: 'this' },
   'fold.export-steps': { kind: 'export-steps', scope: 'all' },
+};
+
+/**
+ * Fold's Send to Diagram, by what it sends: the Diagram's own pull run from
+ * Fold's side (plan D17, `diagram/fold/foldBrowserActions`, loaded when first
+ * asked for). Dispatched here rather than through Fold's io verbs, so Fold
+ * names the verb by its menu id and never imports the Diagram.
+ */
+const FOLD_TO_DIAGRAM_ACTIONS: Partial<Record<MenuActionId, FoldSendToDiagramScope>> = {
+  'fold.send-to-diagram': 'step',
+  'fold.send-path-to-diagram': 'path',
 };
 
 export function isMenuActionId(id: string): id is MenuActionId {
@@ -605,6 +615,11 @@ export function createMenuActionHandler(deps: MenuActionDependencies) {
     const foldIo = FOLD_IO_ACTIONS[id];
     if (foldIo) {
       return (await import('../fold/io/foldIoCommands')).runFoldIoCommand(foldIo, deps.fileService);
+    }
+
+    const toDiagram = FOLD_TO_DIAGRAM_ACTIONS[id];
+    if (toDiagram) {
+      return (await import('../diagram/fold/foldBrowserActions')).sendFoldStepsToDiagram(toDiagram);
     }
 
     switch (id) {

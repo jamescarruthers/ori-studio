@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 const io = vi.hoisted(() => ({
   runFoldIoCommand: vi.fn<(command: unknown, fileService?: unknown) => Promise<boolean>>(async () => true),
+  sendFoldStepsToDiagram: vi.fn<(scope: unknown) => Promise<boolean>>(async () => true),
 }));
 vi.mock('../fold/io/foldIoCommands', () => ({ runFoldIoCommand: io.runFoldIoCommand }));
+vi.mock('../diagram/fold/foldBrowserActions', () => ({ sendFoldStepsToDiagram: io.sendFoldStepsToDiagram }));
 
 import { getMenuBarDef, type MenuItemDef } from '../menus/menuDefinition';
 import { createMenuActionHandler, isMenuActionId, type MenuActionDependencies } from './menuActions';
@@ -54,11 +56,19 @@ describe('Fold’s imports and hand-offs in the menu', () => {
     expect(await ran('fold.import-sample-waterbomb-base')).toEqual({ kind: 'import-sample', sample: 'waterbomb-base' });
     expect(await ran('fold.start-from-edit-folded-figure')).toEqual({ kind: 'start-from-edit-folded-figure' });
     expect(await ran('fold.send-to-edit-precreases-as-aux')).toEqual({ kind: 'send-to-edit', variant: 'precreases-as-aux' });
-    expect(await ran('fold.send-to-diagram')).toEqual({ kind: 'send-to-diagram', scope: 'step' });
-    expect(await ran('fold.send-path-to-diagram')).toEqual({ kind: 'send-to-diagram', scope: 'path' });
     expect(await ran('fold.export-fold')).toEqual({ kind: 'export-fold' });
     expect(await ran('fold.export-step')).toEqual({ kind: 'export-steps', scope: 'this' });
     expect(await ran('fold.export-steps')).toEqual({ kind: 'export-steps', scope: 'all' });
+  });
+
+  it('runs Send to Diagram as the Diagram’s own pull, by what it sends, not as a Fold io verb', async () => {
+    const handle = createMenuActionHandler({} as unknown as MenuActionDependencies);
+    io.runFoldIoCommand.mockClear();
+    io.sendFoldStepsToDiagram.mockClear();
+    await expect(handle('fold.send-to-diagram')).resolves.toBe(true);
+    await expect(handle('fold.send-path-to-diagram')).resolves.toBe(true);
+    expect(io.sendFoldStepsToDiagram.mock.calls).toEqual([['step'], ['path']]);
+    expect(io.runFoldIoCommand).not.toHaveBeenCalled();
   });
 
   it('runs none while its capability is disabled', async () => {
