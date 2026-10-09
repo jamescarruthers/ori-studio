@@ -2,9 +2,9 @@
 //! moving faces, change the hinges, re-derive the isometries, carry and place
 //! the order, derive the letters, and pass the gate.
 //!
-//! - **Split.** Each crossed crease gets exactly one new vertex, at its sheet
-//!   parameter, so the two faces it bounds cannot disagree about where it is.
-//!   Each split ring has exactly two transitions; anything else is refused.
+//! - **Split** the moving faces that cross ℓ, through the one scoring step
+//!   every fold shares (`super::score`): one new vertex per crossed crease,
+//!   two transitions per split ring.
 //! - **Hinges on ℓ** between a moving and a stationary face toggle: flat to
 //!   folded is a refold (the remembered letter is reported beside the new
 //!   one), folded to flat an unfold (the letter is remembered). Any other
@@ -24,15 +24,16 @@
 //!   iff the front-up face lies below. Every other letter is checked by the
 //!   gate, so a drifted letter is refused there.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 
 use oristudio_geometry::convex::{self, HalfPlane};
 use oristudio_layer_order::{FacePair, LayerOrder, LayerOrderBuilder, Letter, Violation};
 
 use crate::fold::closure::Analysis;
+use crate::fold::score::{self, Piece};
 use crate::index::BoxIndex;
 use crate::numerics::{MIN_FEATURE, TOL};
-use crate::pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, VertexId};
+use crate::pattern::{CreaseKind, EdgeId, Face, FaceId, VertexId};
 use crate::refusal::FoldRefusal;
 use crate::state::{Geometry, State, StateParts, Topology, ring_position};
 use crate::view::Direction;
@@ -75,159 +76,47 @@ pub(crate) fn land(
     step: u32,
 ) -> Result<(State, Landed), FoldRefusal> {
     let parts = state.parts();
-    let topology = state.topology();
     let geometry = state.geometry();
     let classes = &analysis.classified.classes;
-    let distances = &analysis.classified.distances;
     let nf = parts.faces.len();
-    let (mut next_face, mut next_crease) = state.next_ids();
     let split: Vec<bool> = (0..nf)
         .map(|f| analysis.moving[f] && analysis.has_stationary[f])
         .collect();
 
-    // One new vertex per crossed crease, by its sheet parameter.
-    let mut vertices = parts.vertices.clone();
-    let mut cut: HashMap<usize, VertexId> = HashMap::new();
-    for f in (0..nf).filter(|&f| split[f]) {
-        for (i, &k) in topology.face_creases[f].iter().enumerate() {
-            if cut.contains_key(&k) {
-                continue;
-            }
-            let ring = &parts.faces[f].ring;
-            let (a, b) = (ring[i], ring[(i + 1) % ring.len()]);
-            if classes[a.index()] * classes[b.index()] != -1 {
-                continue;
-            }
-            let [lo, hi] = parts.creases[k].vertices;
-            let (dl, dh) = (distances[lo.index()], distances[hi.index()]);
-            let t = dl / (dl - dh);
-            let (p, q) = (vertices[lo.index()], vertices[hi.index()]);
-            let length = (q[0] - p[0]).hypot(q[1] - p[1]);
-            for (end, part) in [(lo, t * length), (hi, (1.0 - t) * length)] {
-                if part < MIN_FEATURE {
-                    return Err(FoldRefusal::ShortCrease {
-                        vertices: [end, VertexId(vertices.len() as u32)],
-                        length: part,
-                    });
-                }
-            }
-            cut.insert(k, VertexId(vertices.len() as u32));
-            vertices.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])]);
-        }
-    }
-    let old_vertices = parts.vertices.len();
-    let class_of = |v: VertexId| -> i8 {
-        if v.index() < old_vertices {
-            classes[v.index()]
-        } else {
-            0
-        }
-    };
-
-    // Rings: unsplit faces keep theirs (and their ids), split faces become
-    // a moving and a stationary child.
-    let mut kept: Vec<NewFace> = Vec::with_capacity(nf);
-    let mut children: Vec<NewFace> = Vec::new();
-    let mut chords: Vec<[VertexId; 2]> = Vec::new();
-    for (f, face) in parts.faces.iter().enumerate() {
-        let mut ring = Vec::with_capacity(face.ring.len() + 2);
-        for (i, &v) in face.ring.iter().enumerate() {
-            ring.push(v);
-            if let Some(&x) = cut.get(&topology.face_creases[f][i]) {
-                ring.push(x);
-            }
-        }
-        if !split[f] {
-            if ring.len() != face.ring.len() {
-                return Err(FoldRefusal::DegenerateSplit { face: face.id });
-            }
-            kept.push(NewFace {
-                face: face.clone(),
-                moving: analysis.moving[f],
-                old: f,
-            });
-            continue;
-        }
-        let (moving_ring, stationary_ring) =
-            split_ring(&ring, &class_of).ok_or(FoldRefusal::DegenerateSplit { face: face.id })?;
-        let chord = [moving_ring[0], stationary_ring[0]];
-        if chord.iter().all(|v| v.index() < old_vertices)
-            && topology.crease_between(chord[0], chord[1]).is_some()
-        {
-            return Err(FoldRefusal::DegenerateSplit { face: face.id });
-        }
-        let [p, q] = chord.map(|v| vertices[v.index()]);
-        let length = (q[0] - p[0]).hypot(q[1] - p[1]);
-        if length < MIN_FEATURE {
-            return Err(FoldRefusal::ShortCrease {
-                vertices: chord,
-                length,
-            });
-        }
-        for piece in [&moving_ring, &stationary_ring] {
-            let polygon: Vec<Point> = piece.iter().map(|v| vertices[v.index()]).collect();
-            let width = convex::width(&polygon);
-            if width < MIN_FEATURE / 2.0 {
-                return Err(FoldRefusal::ThinPiece {
-                    face: face.id,
-                    width,
-                });
-            }
-        }
-        chords.push(chord);
-        for (ring, moving) in [(moving_ring, true), (stationary_ring, false)] {
-            children.push(NewFace {
-                face: Face {
-                    id: FaceId(next_face),
-                    ring,
-                    parent: Some(face.id),
-                    born: step,
-                },
-                moving,
-                old: f,
-            });
-            next_face += 1;
-        }
-    }
-    // Kept faces in old (id) order, then the children: id order.
-    let new_faces: Vec<NewFace> = kept.into_iter().chain(children).collect();
-    let mut child_of: Vec<Vec<usize>> = vec![Vec::new(); nf];
-    for (a, nfce) in new_faces.iter().enumerate() {
-        child_of[nfce.old].push(a);
-    }
-
-    // Creases: split halves, then the chords, after the kept ones (id
-    // order).
-    let mut kept_creases = Vec::with_capacity(parts.creases.len());
-    let mut new_creases = Vec::new();
-    for (k, crease) in parts.creases.iter().enumerate() {
-        match cut.get(&k) {
-            None => kept_creases.push(crease.clone()),
-            Some(&x) => {
-                let [a, b] = crease.vertices;
-                for vertices in [[a, x], [x, b]] {
-                    new_creases.push(Crease {
-                        id: EdgeId(next_crease),
-                        vertices,
-                        ..crease.clone()
-                    });
-                    next_crease += 1;
-                }
-            }
-        }
-    }
-    let mut created = Vec::with_capacity(chords.len());
-    for chord in &chords {
-        created.push(EdgeId(next_crease));
-        new_creases.push(Crease {
-            id: EdgeId(next_crease),
-            vertices: *chord,
-            // Its letter is derived from the order below.
-            kind: CreaseKind::Folded(Letter::Valley),
-            made_at: step,
-        });
-        next_crease += 1;
-    }
+    // Split the moving faces that cross ℓ; a whole face moves with U, a
+    // piece with its side.
+    let scored = score::score(
+        parts,
+        state.topology(),
+        classes,
+        &analysis.classified.distances,
+        &split,
+        step,
+        state.next_ids(),
+    )?;
+    let new_faces: Vec<NewFace> = scored
+        .faces
+        .iter()
+        .map(|s| NewFace {
+            face: s.face.clone(),
+            moving: match s.piece {
+                Piece::Whole => analysis.moving[s.old],
+                Piece::Positive => true,
+                Piece::Negative => false,
+            },
+            old: s.old,
+        })
+        .collect();
+    let pending_from = scored.chords_from();
+    let class_of = |v: VertexId| score::class_of(classes, v);
+    let score::Scored {
+        vertices,
+        child_of,
+        creases,
+        created,
+        split: split_count,
+        ..
+    } = scored;
     let root = {
         let r = state
             .face_position(parts.root)
@@ -242,7 +131,7 @@ pub(crate) fn land(
     let mut next = StateParts {
         sheet: parts.sheet.clone(),
         vertices,
-        creases: kept_creases.into_iter().chain(new_creases).collect(),
+        creases,
         faces: new_faces.iter().map(|n| n.face.clone()).collect(),
         root: new_faces[root].face.id,
         root_isometry: geometry.isometries[new_faces[root].old],
@@ -253,7 +142,6 @@ pub(crate) fn land(
     let new_topology = Topology::build(&next)?;
 
     // Hinges: creases between a moving and a stationary face.
-    let pending_from = next.creases.len() - chords.len();
     let mut unfolded = Vec::new();
     let mut refolds: Vec<(usize, Letter)> = Vec::new();
     for k in 0..next.creases.len() {
@@ -343,58 +231,9 @@ pub(crate) fn land(
             created,
             unfolded,
             refolded,
-            split: chords.len(),
+            split: split_count,
         },
     ))
-}
-
-/// Split an augmented ring at its two transitions between the moving (+1)
-/// and stationary (−1) runs, each through exactly one vertex on the line.
-/// Returns the moving ring, then the stationary ring; each starts at the
-/// other's last vertex, so `[moving[0], stationary[0]]` is the chord.
-fn split_ring(
-    ring: &[VertexId],
-    class_of: &impl Fn(VertexId) -> i8,
-) -> Option<(Vec<VertexId>, Vec<VertexId>)> {
-    let n = ring.len();
-    let nonzero: Vec<usize> = (0..n).filter(|&j| class_of(ring[j]) != 0).collect();
-    let (mut enter, mut leave, mut cuts) = (None, None, 0);
-    for (k, &i) in nonzero.iter().enumerate() {
-        let j = nonzero[(k + 1) % nonzero.len()];
-        let (ci, cj) = (class_of(ring[i]), class_of(ring[j]));
-        if ci == cj {
-            continue;
-        }
-        if (j + n - i - 1) % n != 1 {
-            return None;
-        }
-        cuts += 1;
-        let at = (i + 1) % n;
-        if ci == -1 {
-            enter = Some(at);
-        } else {
-            leave = Some(at);
-        }
-    }
-    let (enter, leave) = (enter?, leave?);
-    if cuts != 2 {
-        return None;
-    }
-    let arc = |from: usize, to: usize| {
-        let mut out = Vec::new();
-        let mut j = from;
-        loop {
-            out.push(ring[j]);
-            if j == to {
-                break;
-            }
-            j = (j + 1) % n;
-        }
-        out
-    };
-    let moving = arc(enter, leave);
-    let stationary = arc(leave, enter);
-    (moving.len() >= 3 && stationary.len() >= 3).then_some((moving, stationary))
 }
 
 /// The new order: untouched pairs kept, children of old pairs carried by
@@ -621,39 +460,6 @@ fn derived_letter(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn rings_split_at_two_transitions() {
-        // A square 0..3 crossed by a line through new vertices 4 (on 0–1) and
-        // 5 (on 2–3): 0 and 3 stationary, 1 and 2 moving.
-        let ring: Vec<VertexId> = [0, 4, 1, 2, 5, 3].map(VertexId).to_vec();
-        let class = |v: VertexId| match v.0 {
-            0 | 3 => -1,
-            1 | 2 => 1,
-            _ => 0,
-        };
-        let Some((m, s)) = split_ring(&ring, &class) else {
-            panic!("no split");
-        };
-        assert_eq!(m, [4, 1, 2, 5].map(VertexId).to_vec());
-        assert_eq!(s, [5, 3, 0, 4].map(VertexId).to_vec());
-        // Through a vertex on the line (1) and a new one (5).
-        let ring: Vec<VertexId> = [0, 1, 2, 5, 3].map(VertexId).to_vec();
-        let class = |v: VertexId| match v.0 {
-            0 | 3 => -1,
-            2 => 1,
-            _ => 0,
-        };
-        let Some((m, s)) = split_ring(&ring, &class) else {
-            panic!("no split");
-        };
-        assert_eq!(m, [1, 2, 5].map(VertexId).to_vec());
-        assert_eq!(s, [5, 3, 0, 1].map(VertexId).to_vec());
-        // A transition with no vertex on the line is not a split.
-        let ring: Vec<VertexId> = [0, 1, 2, 3].map(VertexId).to_vec();
-        let class = |v: VertexId| if v.0 < 2 { 1 } else { -1 };
-        assert!(split_ring(&ring, &class).is_none());
-    }
 
     #[test]
     fn the_deepest_vertex_names_the_sliver() {

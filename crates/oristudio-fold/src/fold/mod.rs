@@ -25,7 +25,8 @@
 mod action;
 mod apply;
 mod closure;
-mod line;
+pub(crate) mod line;
+pub(crate) mod score;
 mod section;
 
 use oristudio_geometry::Line;
