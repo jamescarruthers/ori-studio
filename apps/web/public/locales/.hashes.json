@@ -4866,7 +4866,15 @@
     "tools:fold.keys.nextBranch": "89ae9fb01b7c",
     "tools:fold.keys.nextStep": "226366c3301a",
     "tools:fold.keys.previousBranch": "ca426e331b2c",
-    "tools:fold.keys.previousStep": "f1fe8694fccd"
+    "tools:fold.keys.previousStep": "f1fe8694fccd",
+    "panels:fold.playback.label": "39d4f05a34fd",
+    "panels:fold.playback.pause": "858e4ba7a29f",
+    "panels:fold.playback.percent": "f67899daf99f",
+    "panels:fold.playback.play": "3687637fdeee",
+    "panels:fold.playback.replay": "b48d4c57f30b",
+    "panels:fold.playback.scrub": "b9393a3068a5",
+    "panels:fold.playback.stepForward": "b3c9193c8a31",
+    "tools:fold.playStep": "2eba08ae6fbd"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9735,7 +9743,15 @@
     "tools:fold.keys.nextBranch": "89ae9fb01b7c",
     "tools:fold.keys.nextStep": "226366c3301a",
     "tools:fold.keys.previousBranch": "ca426e331b2c",
-    "tools:fold.keys.previousStep": "f1fe8694fccd"
+    "tools:fold.keys.previousStep": "f1fe8694fccd",
+    "panels:fold.playback.label": "39d4f05a34fd",
+    "panels:fold.playback.pause": "858e4ba7a29f",
+    "panels:fold.playback.percent": "f67899daf99f",
+    "panels:fold.playback.play": "3687637fdeee",
+    "panels:fold.playback.replay": "b48d4c57f30b",
+    "panels:fold.playback.scrub": "b9393a3068a5",
+    "panels:fold.playback.stepForward": "b3c9193c8a31",
+    "tools:fold.playStep": "2eba08ae6fbd"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -14606,7 +14622,15 @@
     "tools:fold.keys.nextBranch": "89ae9fb01b7c",
     "tools:fold.keys.nextStep": "226366c3301a",
     "tools:fold.keys.previousBranch": "ca426e331b2c",
-    "tools:fold.keys.previousStep": "f1fe8694fccd"
+    "tools:fold.keys.previousStep": "f1fe8694fccd",
+    "panels:fold.playback.label": "39d4f05a34fd",
+    "panels:fold.playback.pause": "858e4ba7a29f",
+    "panels:fold.playback.percent": "f67899daf99f",
+    "panels:fold.playback.play": "3687637fdeee",
+    "panels:fold.playback.replay": "b48d4c57f30b",
+    "panels:fold.playback.scrub": "b9393a3068a5",
+    "panels:fold.playback.stepForward": "b3c9193c8a31",
+    "tools:fold.playStep": "2eba08ae6fbd"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -19272,7 +19296,15 @@
     "tools:fold.keys.nextBranch": "89ae9fb01b7c",
     "tools:fold.keys.nextStep": "226366c3301a",
     "tools:fold.keys.previousBranch": "ca426e331b2c",
-    "tools:fold.keys.previousStep": "f1fe8694fccd"
+    "tools:fold.keys.previousStep": "f1fe8694fccd",
+    "panels:fold.playback.label": "39d4f05a34fd",
+    "panels:fold.playback.pause": "858e4ba7a29f",
+    "panels:fold.playback.percent": "f67899daf99f",
+    "panels:fold.playback.play": "3687637fdeee",
+    "panels:fold.playback.replay": "b48d4c57f30b",
+    "panels:fold.playback.scrub": "b9393a3068a5",
+    "panels:fold.playback.stepForward": "b3c9193c8a31",
+    "tools:fold.playStep": "2eba08ae6fbd"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -23938,7 +23970,15 @@
     "tools:fold.keys.nextBranch": "89ae9fb01b7c",
     "tools:fold.keys.nextStep": "226366c3301a",
     "tools:fold.keys.previousBranch": "ca426e331b2c",
-    "tools:fold.keys.previousStep": "f1fe8694fccd"
+    "tools:fold.keys.previousStep": "f1fe8694fccd",
+    "panels:fold.playback.label": "39d4f05a34fd",
+    "panels:fold.playback.pause": "858e4ba7a29f",
+    "panels:fold.playback.percent": "f67899daf99f",
+    "panels:fold.playback.play": "3687637fdeee",
+    "panels:fold.playback.replay": "b48d4c57f30b",
+    "panels:fold.playback.scrub": "b9393a3068a5",
+    "panels:fold.playback.stepForward": "b3c9193c8a31",
+    "tools:fold.playStep": "2eba08ae6fbd"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -28807,7 +28847,15 @@
     "tools:fold.keys.nextBranch": "89ae9fb01b7c",
     "tools:fold.keys.nextStep": "226366c3301a",
     "tools:fold.keys.previousBranch": "ca426e331b2c",
-    "tools:fold.keys.previousStep": "f1fe8694fccd"
+    "tools:fold.keys.previousStep": "f1fe8694fccd",
+    "panels:fold.playback.label": "39d4f05a34fd",
+    "panels:fold.playback.pause": "858e4ba7a29f",
+    "panels:fold.playback.percent": "f67899daf99f",
+    "panels:fold.playback.play": "3687637fdeee",
+    "panels:fold.playback.replay": "b48d4c57f30b",
+    "panels:fold.playback.scrub": "b9393a3068a5",
+    "panels:fold.playback.stepForward": "b3c9193c8a31",
+    "tools:fold.playStep": "2eba08ae6fbd"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -33676,7 +33724,15 @@
     "tools:fold.keys.nextBranch": "89ae9fb01b7c",
     "tools:fold.keys.nextStep": "226366c3301a",
     "tools:fold.keys.previousBranch": "ca426e331b2c",
-    "tools:fold.keys.previousStep": "f1fe8694fccd"
+    "tools:fold.keys.previousStep": "f1fe8694fccd",
+    "panels:fold.playback.label": "39d4f05a34fd",
+    "panels:fold.playback.pause": "858e4ba7a29f",
+    "panels:fold.playback.percent": "f67899daf99f",
+    "panels:fold.playback.play": "3687637fdeee",
+    "panels:fold.playback.replay": "b48d4c57f30b",
+    "panels:fold.playback.scrub": "b9393a3068a5",
+    "panels:fold.playback.stepForward": "b3c9193c8a31",
+    "tools:fold.playStep": "2eba08ae6fbd"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -38342,6 +38398,14 @@
     "tools:fold.keys.nextBranch": "89ae9fb01b7c",
     "tools:fold.keys.nextStep": "226366c3301a",
     "tools:fold.keys.previousBranch": "ca426e331b2c",
-    "tools:fold.keys.previousStep": "f1fe8694fccd"
+    "tools:fold.keys.previousStep": "f1fe8694fccd",
+    "panels:fold.playback.label": "39d4f05a34fd",
+    "panels:fold.playback.pause": "858e4ba7a29f",
+    "panels:fold.playback.percent": "f67899daf99f",
+    "panels:fold.playback.play": "3687637fdeee",
+    "panels:fold.playback.replay": "b48d4c57f30b",
+    "panels:fold.playback.scrub": "b9393a3068a5",
+    "panels:fold.playback.stepForward": "b3c9193c8a31",
+    "tools:fold.playStep": "2eba08ae6fbd"
   }
 }

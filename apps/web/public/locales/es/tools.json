@@ -390,6 +390,7 @@
       "trigger": "Herramientas"
     },
     "plannedReason": "Previsto: aún no está en Ori Studio.",
+    "playStep": "Reproducir paso",
     "railLabel": "Herramientas de plegado",
     "readOnly": {
       "locked": "Este paso es de una versión más reciente de Ori Studio, así que no se puede plegar a partir de él.",

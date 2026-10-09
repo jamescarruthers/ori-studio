@@ -19,6 +19,9 @@ import {
   TURN_OVER_PACE,
   easeInOut,
   easeInOutSine,
+  isComplete,
+  runProgress,
+  seekFoldRun,
 } from './foldPlayback';
 
 const single = () => runAtRest(foldLegs(1));
@@ -190,5 +193,72 @@ describe('poseAt', () => {
     const landed = tickFoldRun(atFoldTime, TURN_OVER_DURATION_MS - FOLD_DURATION_MS);
     expect(isFolded(landed)).toBe(true);
     expect(unfoldingLegs(landed.forwards)[0]).toMatchObject(TURN_OVER_PACE);
+  });
+});
+
+describe('a scrubber', () => {
+  /** Fold, hold, unfold: a precrease's legs, whose timeline has a hold in it. */
+  const foldBack = () =>
+    runAtRest([
+      { flap: 0, heading: 'fold', holdMs: 400, ...FOLD_PACE },
+      { flap: 0, heading: 'unfold', holdMs: 0, ...FOLD_PACE },
+    ]);
+  const total = 2 * FOLD_DURATION_MS + 400;
+
+  it('reads a run’s progress by the time it has played, holds included', () => {
+    const run = foldBack();
+    expect(runProgress(run)).toBe(0);
+    const going = toggleFoldRun(run);
+    expect(runProgress(tickFoldRun(going, FOLD_DURATION_MS / 2))).toBeCloseTo(FOLD_DURATION_MS / 2 / total, 9);
+    // A tick that ends a leg starts its hold; the next one runs the hold down.
+    const landed = tickFoldRun(going, FOLD_DURATION_MS);
+    expect(runProgress(landed)).toBeCloseTo(FOLD_DURATION_MS / total, 9);
+    const holding = tickFoldRun(landed, 100);
+    expect(holding.holdLeft).toBe(300);
+    expect(runProgress(holding)).toBeCloseTo((FOLD_DURATION_MS + 100) / total, 9);
+    const back = tickFoldRun(tickFoldRun(holding, 300), FOLD_DURATION_MS / 4);
+    expect(back.leg).toBe(1);
+    expect(runProgress(back)).toBeCloseTo((FOLD_DURATION_MS * 1.25 + 400) / total, 9);
+    expect(runProgress(playOut(going))).toBe(1);
+  });
+
+  it('puts a run where its progress says, paused, and plays on from there', () => {
+    const run = foldBack();
+    for (const progress of [0, 0.1, 0.3, 0.45, 0.5, 0.62, 0.9, 1]) {
+      const sought = seekFoldRun(toggleFoldRun(run), progress);
+      expect(sought.playing).toBe(false);
+      expect(runProgress(sought)).toBeCloseTo(progress, 9);
+    }
+    // Inside the hold: folded, with the rest of the hold still to come.
+    const held = seekFoldRun(run, (FOLD_DURATION_MS + 100) / total);
+    expect(held).toMatchObject({ leg: 0, at: 1, holdLeft: 300 });
+    // The hold's end is the next leg's start.
+    expect(seekFoldRun(run, (FOLD_DURATION_MS + 400) / total)).toMatchObject({ leg: 1, at: 1, holdLeft: 0 });
+    // Resumed, it plays out the rest of its time and no more.
+    const halfway = seekFoldRun(run, 0.5);
+    const resumed = toggleFoldRun(halfway);
+    expect(resumed.playing).toBe(true);
+    expect(isComplete(tickFoldRun(resumed, total / 2 - 1))).toBe(false);
+    expect(isComplete(playOut(resumed, 1, total / 2 + 5))).toBe(true);
+  });
+
+  it('seeks to either end, and clamps past them', () => {
+    const run = single();
+    expect(seekFoldRun(run, 0)).toMatchObject({ leg: 0, at: 0, playing: false });
+    expect(isFlat(seekFoldRun(run, -1))).toBe(true);
+    const end = seekFoldRun(run, 2);
+    expect(isComplete(end)).toBe(true);
+    expect(isFolded(end)).toBe(true);
+    // Played through and sought back to the start, Play folds again.
+    expect(toggleFoldRun(seekFoldRun(end, 0)).legs[0]?.heading).toBe('fold');
+  });
+
+  it('seeks a run playing back on its forwards legs', () => {
+    const folded = playOut(toggleFoldRun(single()));
+    const back = tickFoldRun(toggleFoldRun(folded), FOLD_DURATION_MS / 2);
+    expect(back.legs[0]?.heading).toBe('unfold');
+    const sought = seekFoldRun(back, 0.25);
+    expect(sought.legs).toBe(sought.forwards);
+    expect(sought.at).toBeCloseTo(0.25, 9);
   });
 });

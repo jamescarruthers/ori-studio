@@ -11,8 +11,10 @@
  * back on the next Play.
  *
  * Pressed while it moves, a run pauses; pressed again, it carries on the way
- * it was going. Pure and clock-free: the transport feeds `tickFoldRun` the
- * time that passed, and everything else here is arithmetic on the result.
+ * it was going. A scrubber reads and sets it by the share of its time that has
+ * played (`runProgress`, `seekFoldRun`). Pure and clock-free: the transport
+ * feeds `tickFoldRun` the time that passed, and everything else here is
+ * arithmetic on the result.
  *
  * Progress within a leg runs linearly with time from flat to folded and the
  * easing lives in {@link poseAt}, so a pause and a resume cannot change the
@@ -218,6 +220,71 @@ export function tickFoldRun(run: FoldRun, elapsedMs: number): FoldRun {
   const hasNext = run.leg + 1 < run.legs.length;
   if (hasNext && leg.holdMs > 0) return { ...run, at, holdLeft: leg.holdMs };
   return nextLeg({ ...run, at });
+}
+
+/**
+ * A run's legs laid end to end in time: each leg's motion, then the hold after
+ * it where another leg follows — the stretches `tickFoldRun` plays through, so
+ * a share of the timeline is a share of the time the run takes.
+ */
+function timeline(legs: readonly FoldLeg[]): { leg: number; ms: number; hold: boolean }[] {
+  return legs.flatMap((leg, index) => {
+    const motion = { leg: index, ms: Math.max(0, leg.durationMs), hold: false };
+    return index + 1 < legs.length && leg.holdMs > 0
+      ? [motion, { leg: index, ms: leg.holdMs, hold: true }]
+      : [motion];
+  });
+}
+
+const totalMs = (spans: readonly { ms: number }[]): number => spans.reduce((sum, span) => sum + span.ms, 0);
+
+/**
+ * How far through its legs a run is, 0 to 1 by the time they take: 0 before
+ * it has moved, 1 played through. For a scrubber's thumb; nothing plays by it.
+ */
+export function runProgress(run: FoldRun): number {
+  const spans = timeline(run.legs);
+  const total = totalMs(spans);
+  const leg = run.legs[run.leg];
+  if (!leg) return 0;
+  if (total <= 0) return isComplete(run) ? 1 : 0;
+  let elapsed = 0;
+  for (const span of spans) {
+    if (span.leg < run.leg) elapsed += span.ms;
+  }
+  const along = leg.heading === 'fold' ? run.at : 1 - run.at;
+  elapsed += along * Math.max(0, leg.durationMs);
+  if (run.holdLeft > 0) elapsed += leg.holdMs - Math.min(leg.holdMs, run.holdLeft);
+  return clamp01(elapsed / total);
+}
+
+/**
+ * The run paused `progress` of the way through its forwards legs, by the time
+ * they take: a scrubber let go, or a step of it. A run playing back is put on
+ * its forwards legs again first, since the timeline is theirs. Inside a hold
+ * the paper rests at that leg's end, with the rest of the hold still to come.
+ */
+export function seekFoldRun(run: FoldRun, progress: number): FoldRun {
+  const legs = run.forwards;
+  const spans = timeline(legs);
+  const total = totalMs(spans);
+  const paused = { ...run, legs, holdLeft: 0, playing: false };
+  const first = legs[0];
+  if (!first || total <= 0) return { ...paused, leg: 0, at: first ? startOf(first) : 0 };
+  let left = clamp01(progress) * total;
+  for (const [index, span] of spans.entries()) {
+    const leg = legs[span.leg]!;
+    // The end of a hold is the next leg's start; the end of a motion is its own.
+    const past = span.hold ? left >= span.ms : left > span.ms;
+    if (past && index < spans.length - 1) {
+      left -= span.ms;
+      continue;
+    }
+    if (span.hold) return { ...paused, leg: span.leg, at: endOf(leg), holdLeft: span.ms - left };
+    const share = span.ms > 0 ? clamp01(left / span.ms) : 1;
+    return { ...paused, leg: span.leg, at: leg.heading === 'fold' ? share : 1 - share };
+  }
+  return paused;
 }
 
 /**

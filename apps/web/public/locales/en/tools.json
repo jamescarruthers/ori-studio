@@ -377,6 +377,7 @@
       "trigger": "Tools"
     },
     "plannedReason": "Planned: not in Ori Studio yet.",
+    "playStep": "Play Step",
     "railLabel": "Fold tools",
     "readOnly": {
       "locked": "This step is from a newer Ori Studio, so nothing can be folded from it.",

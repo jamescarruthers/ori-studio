@@ -1577,6 +1577,15 @@
       "startsOver_other": "Cambiar la forma empieza de nuevo: se borran los {{count}} pasos de la secuencia. Deshacer los recupera.",
       "width": "Ancho"
     },
+    "playback": {
+      "label": "Reproducción del paso",
+      "pause": "Pausa",
+      "percent": "{{value}}%",
+      "play": "Reproducir paso",
+      "replay": "Repetir paso",
+      "scrub": "Progreso del paso",
+      "stepForward": "Avanzar un poco"
+    },
     "sentence": {
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
       "mountain": {

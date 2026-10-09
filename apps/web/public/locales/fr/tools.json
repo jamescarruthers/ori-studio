@@ -390,6 +390,7 @@
       "trigger": "Outils"
     },
     "plannedReason": "Prévu : pas encore dans Ori Studio.",
+    "playStep": "Lire l’étape",
     "railLabel": "Outils de pliage",
     "readOnly": {
       "locked": "Cette étape vient d’une version plus récente d’Ori Studio : on ne peut rien plier à partir d’elle.",

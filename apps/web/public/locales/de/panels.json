@@ -1524,6 +1524,15 @@
       "startsOver_other": "Eine neue Form fängt von vorn an: Die {{count}} Schritte der Folge werden gelöscht. Rückgängig holt sie zurück.",
       "width": "Breite"
     },
+    "playback": {
+      "label": "Wiedergabe des Schritts",
+      "pause": "Pause",
+      "percent": "{{value}} %",
+      "play": "Schritt abspielen",
+      "replay": "Schritt erneut abspielen",
+      "scrub": "Fortschritt des Schritts",
+      "stepForward": "Ein Stück weiter"
+    },
     "sentence": {
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
       "mountain": {

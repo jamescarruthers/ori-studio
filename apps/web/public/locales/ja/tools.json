@@ -364,6 +364,7 @@
       "trigger": "ツール"
     },
     "plannedReason": "予定：まだ Ori Studio にはありません。",
+    "playStep": "ステップを再生",
     "railLabel": "折りツール",
     "readOnly": {
       "locked": "このステップは新しいバージョンの Ori Studio で作られたため、ここからは折れません。",

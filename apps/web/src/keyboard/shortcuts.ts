@@ -209,7 +209,9 @@ export type FoldShortcutId =
   | 'fold.swapSide'
   | 'fold.previousCandidate'
   | 'fold.nextCandidate'
-  | 'fold.commit';
+  | 'fold.commit'
+  // Playback (D15): the step on screen played from its parent.
+  | 'fold.playStep';
 export type ShortcutActionId =
   | MenuActionId
   | OristudioCpActionId
@@ -801,6 +803,10 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.nextCandidate', 'Next Root', { shift: true, key: 'arrowright' }),
   // Declines while a focused control owns Enter, as the Diagram's does.
   foldShortcut('fold.commit', 'Commit Fold', { key: 'enter' }),
+  // Space plays the step on screen (D15), as References' Play Fold: the two
+  // scopes are never in the stack together, and space-to-pan belongs to the
+  // crease-pattern scope, which Fold's context never stacks.
+  foldShortcut('fold.playStep', 'Play Step', { key: ' ' }),
 ];
 
 /**

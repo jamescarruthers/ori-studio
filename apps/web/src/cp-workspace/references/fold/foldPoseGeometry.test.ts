@@ -5,10 +5,10 @@ import {
   foldPoseGeometry,
   foldPoseOutline,
   foldPosePaper,
-  PAPER_TILT_SHADE,
   type FoldPaint,
   type FoldSurfaceShares,
 } from './foldPoseGeometry';
+import { PAPER_TILT_SHADE } from '../../../lib/foldMotion/foldHinge';
 import type { FoldScene } from './foldScene';
 import type { FlapStrokes } from './foldSplit';
 import { DEFAULT_PAPER_STYLE } from '../../../lib/paper/paperStyle';

@@ -11,7 +11,8 @@ import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
 import { hexToUnitRgb } from '../../lib/paper/paperStyleResolve';
 import type { Rgba } from '../renderer/types';
 import { diagramDashSlot } from '../../lib/stepDiagram/diagramInk';
-import { PAPER_TILT_SHADE, type FoldPaint } from './fold/foldPoseGeometry';
+import { PAPER_TILT_SHADE } from '../../lib/foldMotion/foldHinge';
+import type { FoldPaint } from './fold/foldPoseGeometry';
 import type { ReferencesOverlayColors } from './referencesViewGeometry';
 
 /** A token's colour, or `fallback` where it is unset. */

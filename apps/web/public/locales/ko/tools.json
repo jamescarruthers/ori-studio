@@ -364,6 +364,7 @@
       "trigger": "도구"
     },
     "plannedReason": "예정: 아직 Ori Studio에 없습니다.",
+    "playStep": "단계 재생",
     "railLabel": "접기 도구",
     "readOnly": {
       "locked": "이 단계는 더 새로운 버전의 Ori Studio에서 만들어져 여기서부터는 접을 수 없습니다.",

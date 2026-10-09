@@ -1524,6 +1524,15 @@
       "startsOver_other": "Changing the shape starts over: the sequence’s {{count}} steps are cleared. Undo brings them back.",
       "width": "Width"
     },
+    "playback": {
+      "label": "Step playback",
+      "pause": "Pause",
+      "percent": "{{value}}%",
+      "play": "Play step",
+      "replay": "Replay step",
+      "scrub": "Step progress",
+      "stepForward": "Step forward"
+    },
     "sentence": {
       "cpJump": "Collapse into the imported crease pattern.",
       "mountain": {
