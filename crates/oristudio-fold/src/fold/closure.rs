@@ -104,7 +104,11 @@ pub(crate) fn analyse(
     } = moving_side(state, &classified)?;
     let has_stationary: Vec<bool> = faces
         .iter()
-        .map(|face| face.ring.iter().any(|v| classified.classes[v.index()] == -1))
+        .map(|face| {
+            face.ring
+                .iter()
+                .any(|v| classified.classes[v.index()] == -1)
+        })
         .collect();
 
     let seed_faces = resolve_seed(state, &pieces, direction, seed, &axis)?;
