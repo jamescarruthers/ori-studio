@@ -1498,6 +1498,536 @@
     "viewTree": "Árbol",
     "viewTreeAndCp": "Árbol y patrón de pliegues"
   },
+  "fold": {
+    "actions": {
+      "brokenHint": "Este paso ya no se puede doblar.",
+      "deleteStep": "Eliminar este paso",
+      "deleteStepAndFollowing": "Eliminar este paso y los siguientes",
+      "exportFold": "Exportar FOLD…",
+      "exportSteps": "Exportar pasos…",
+      "foldKind": "Pliegue",
+      "importCp": "Importar CP…",
+      "importPolygonHint": "Para importar un CP hace falta una hoja cuadrada o rectangular.",
+      "lockedHint": "Este paso se creó con una versión más reciente de Ori Studio.",
+      "pathBrokenHint": "Un paso de este camino ya no se puede doblar.",
+      "pathLockedHint": "Un paso de este camino se creó con una versión más reciente de Ori Studio.",
+      "pathReplayingHint": "Todavía se están doblando los pasos.",
+      "precrease": "Prepliegue",
+      "readOnlyHint": "Creada con una versión más reciente de Ori Studio: esta secuencia se abre en modo de solo lectura.",
+      "replayingHint": "Todavía se están doblando los pasos anteriores.",
+      "sendToEditTitle": "Enviar el patrón de pliegues de los pasos mostrados al lienzo de edición",
+      "sheetHint": "La hoja plana es donde empiezan los pasos: no hay ningún paso que eliminar.",
+      "startsBranch": "Empieza una rama nueva"
+    },
+    "paper": {
+      "backUp": "Reverso arriba",
+      "colors": "Colores",
+      "custom": "Personalizado",
+      "editStyle": "Editar el estilo del papel…",
+      "frontUp": "Anverso arriba",
+      "height": "Alto",
+      "polygon": "Polígono",
+      "proportions": "Proporciones",
+      "rectangle": "Rectángulo",
+      "resetColors": "Restablecer colores",
+      "shape": "Forma",
+      "sheet": "Hoja",
+      "sides": "Lados",
+      "square": "Cuadrado",
+      "start": "Inicio",
+      "startHelp": "Qué cara del papel mira hacia ti antes del primer pliegue. El patrón de pliegues siempre se dibuja desde el anverso.",
+      "startsOver_one": "Cambiar la forma empieza de nuevo: se borra {{count}} paso de la secuencia. Deshacer lo recupera.",
+      "startsOver_many": "Cambiar la forma empieza de nuevo: se borran los {{count}} pasos de la secuencia. Deshacer los recupera.",
+      "startsOver_other": "Cambiar la forma empieza de nuevo: se borran los {{count}} pasos de la secuencia. Deshacer los recupera.",
+      "width": "Ancho"
+    },
+    "sentence": {
+      "cpJump": "Pliega el papel según el patrón de pliegues importado.",
+      "mountain": {
+        "crease": {
+          "all": "Dobla todas las capas en monte por el pliegue existente.",
+          "depth_one": "Dobla solo la capa de abajo en monte por el pliegue existente.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por el pliegue existente.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por el pliegue existente.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por el pliegue existente.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por el pliegue existente.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por el pliegue existente."
+        },
+        "free": {
+          "all": "Dobla todas las capas en monte por la línea marcada.",
+          "depth_one": "Dobla solo la capa de abajo en monte por la línea marcada.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por la línea marcada.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por la línea marcada.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por la línea marcada.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por la línea marcada.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por la línea marcada."
+        },
+        "o1": {
+          "all": "Dobla todas las capas en monte por la línea que pasa por {{a}} y {{b}}.",
+          "depth_one": "Dobla solo la capa de abajo en monte por la línea que pasa por {{a}} y {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por la línea que pasa por {{a}} y {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por la línea que pasa por {{a}} y {{b}}."
+        },
+        "o2": {
+          "all": "Dobla todas las capas en monte, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de abajo en monte, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}}."
+        },
+        "o2Half": {
+          "all": "Dobla todas las capas por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de abajo por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas por la mitad en monte, llevando {{a}} sobre {{b}}."
+        },
+        "o3": {
+          "all": "Dobla todas las capas en monte, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de abajo en monte, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}}."
+        },
+        "o3Half": {
+          "all": "Dobla todas las capas por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de abajo por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas por la mitad en monte, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas por la mitad en monte, llevando {{a}} sobre {{b}}."
+        },
+        "o4": {
+          "all": "Dobla todas las capas en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_one": "Dobla solo la capa de abajo en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea."
+        },
+        "o5": {
+          "all": "Dobla todas las capas en monte por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_one": "Dobla solo la capa de abajo en monte por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por {{a}}, llevando {{b}} sobre {{c}}."
+        },
+        "o6": {
+          "all": "Dobla todas las capas en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_one": "Dobla solo la capa de abajo en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_one": "Dobla solo la solapa indicada en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}."
+        },
+        "o7": {
+          "all": "Dobla todas las capas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de abajo en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}."
+        }
+      },
+      "mountainPrecrease": {
+        "crease": {
+          "all": "Dobla todas las capas en monte por el pliegue existente y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte por el pliegue existente y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por el pliegue existente y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por el pliegue existente y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por el pliegue existente y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por el pliegue existente y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por el pliegue existente y desdobla."
+        },
+        "free": {
+          "all": "Dobla todas las capas en monte por la línea marcada y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte por la línea marcada y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por la línea marcada y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por la línea marcada y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por la línea marcada y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por la línea marcada y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por la línea marcada y desdobla."
+        },
+        "o1": {
+          "all": "Dobla todas las capas en monte por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por la línea que pasa por {{a}} y {{b}} y desdobla."
+        },
+        "o2": {
+          "all": "Dobla todas las capas en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}}, y desdobla."
+        },
+        "o2Half": {
+          "all": "Dobla todas las capas por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla."
+        },
+        "o3": {
+          "all": "Dobla todas las capas en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}}, y desdobla."
+        },
+        "o3Half": {
+          "all": "Dobla todas las capas por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas por la mitad en monte, llevando {{a}} sobre {{b}}, y desdobla."
+        },
+        "o4": {
+          "all": "Dobla todas las capas en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla."
+        },
+        "o5": {
+          "all": "Dobla todas las capas en monte por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte por {{a}}, llevando {{b}} sobre {{c}}, y desdobla."
+        },
+        "o6": {
+          "all": "Dobla todas las capas en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla."
+        },
+        "o7": {
+          "all": "Dobla todas las capas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de abajo en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de abajo en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de abajo en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla."
+        }
+      },
+      "turn": "{{turn}}.",
+      "unfold": {
+        "all": "Desdobla todas las capas por el pliegue existente.",
+        "bottom_one": "Desdobla la capa de abajo.",
+        "bottom_many": "Desdobla las {{count}} capas de abajo.",
+        "bottom_other": "Desdobla las {{count}} capas de abajo.",
+        "flaps_one": "Desdobla la solapa indicada.",
+        "flaps_many": "Desdobla las {{count}} solapas indicadas.",
+        "flaps_other": "Desdobla las {{count}} solapas indicadas.",
+        "top_one": "Desdobla la capa de arriba.",
+        "top_many": "Desdobla las {{count}} capas de arriba.",
+        "top_other": "Desdobla las {{count}} capas de arriba."
+      },
+      "unknown": "Un paso creado con una versión más reciente de Ori Studio.",
+      "valley": {
+        "crease": {
+          "all": "Dobla todas las capas en valle por el pliegue existente.",
+          "depth_one": "Dobla solo la capa de arriba en valle por el pliegue existente.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por el pliegue existente.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por el pliegue existente.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por el pliegue existente.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por el pliegue existente.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por el pliegue existente."
+        },
+        "free": {
+          "all": "Dobla todas las capas en valle por la línea marcada.",
+          "depth_one": "Dobla solo la capa de arriba en valle por la línea marcada.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por la línea marcada.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por la línea marcada.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por la línea marcada.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por la línea marcada.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por la línea marcada."
+        },
+        "o1": {
+          "all": "Dobla todas las capas en valle por la línea que pasa por {{a}} y {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba en valle por la línea que pasa por {{a}} y {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por la línea que pasa por {{a}} y {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por la línea que pasa por {{a}} y {{b}}."
+        },
+        "o2": {
+          "all": "Dobla todas las capas en valle, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba en valle, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}}."
+        },
+        "o2Half": {
+          "all": "Dobla todas las capas por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas por la mitad en valle, llevando {{a}} sobre {{b}}."
+        },
+        "o3": {
+          "all": "Dobla todas las capas en valle, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba en valle, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}}."
+        },
+        "o3Half": {
+          "all": "Dobla todas las capas por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas por la mitad en valle, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas por la mitad en valle, llevando {{a}} sobre {{b}}."
+        },
+        "o4": {
+          "all": "Dobla todas las capas en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_one": "Dobla solo la capa de arriba en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea."
+        },
+        "o5": {
+          "all": "Dobla todas las capas en valle por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_one": "Dobla solo la capa de arriba en valle por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por {{a}}, llevando {{b}} sobre {{c}}."
+        },
+        "o6": {
+          "all": "Dobla todas las capas en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_one": "Dobla solo la capa de arriba en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_one": "Dobla solo la solapa indicada en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}."
+        },
+        "o7": {
+          "all": "Dobla todas las capas en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}."
+        }
+      },
+      "valleyPrecrease": {
+        "crease": {
+          "all": "Dobla todas las capas en valle por el pliegue existente y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle por el pliegue existente y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por el pliegue existente y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por el pliegue existente y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por el pliegue existente y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por el pliegue existente y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por el pliegue existente y desdobla."
+        },
+        "free": {
+          "all": "Dobla todas las capas en valle por la línea marcada y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle por la línea marcada y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por la línea marcada y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por la línea marcada y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por la línea marcada y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por la línea marcada y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por la línea marcada y desdobla."
+        },
+        "o1": {
+          "all": "Dobla todas las capas en valle por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por la línea que pasa por {{a}} y {{b}} y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por la línea que pasa por {{a}} y {{b}} y desdobla."
+        },
+        "o2": {
+          "all": "Dobla todas las capas en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}}, y desdobla."
+        },
+        "o2Half": {
+          "all": "Dobla todas las capas por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla."
+        },
+        "o3": {
+          "all": "Dobla todas las capas en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}}, y desdobla."
+        },
+        "o3Half": {
+          "all": "Dobla todas las capas por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas por la mitad en valle, llevando {{a}} sobre {{b}}, y desdobla."
+        },
+        "o4": {
+          "all": "Dobla todas las capas en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por {{a}}, de modo que {{b}} caiga sobre su propia línea, y desdobla."
+        },
+        "o5": {
+          "all": "Dobla todas las capas en valle por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle por {{a}}, llevando {{b}} sobre {{c}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle por {{a}}, llevando {{b}} sobre {{c}}, y desdobla."
+        },
+        "o6": {
+          "all": "Dobla todas las capas en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y desdobla."
+        },
+        "o7": {
+          "all": "Dobla todas las capas en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "depth_one": "Dobla solo la capa de arriba en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "flaps_one": "Dobla solo la solapa indicada en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas en valle de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla."
+        }
+      }
+    },
+    "step": {
+      "branchSheet": "Estás en la hoja plana: si doblas aquí, empieza una rama nueva.",
+      "branchStep": "Estás en el paso {{at}} de {{total}}: si doblas aquí, empieza una rama nueva.",
+      "broken": "Este paso ya no se puede doblar: aquello de lo que se hizo ya no está en el papel antes de él. Este paso y los siguientes solo se pueden eliminar.",
+      "brokenAbove": "Un paso anterior ya no se puede doblar, así que este no se puede mostrar.",
+      "changed": "Este paso se dobla de otra forma en esta versión de Ori Studio que cuando se guardó.",
+      "changes": "Cambios",
+      "creases": "Pliegues",
+      "creasesBackUp": "Vistos desde el anverso del papel, que empieza boca abajo: pueden leerse al revés que los pliegues que ves.",
+      "creasesFront": "Vistos desde el anverso del papel.",
+      "flat": "Planos",
+      "flatHelp": "Doblados una vez y desdoblados: ahora están planos y recuerdan hacia dónde se doblaron.",
+      "imported": "Patrón de pliegues importado: este paso sustituye el estado plegado por el del patrón.",
+      "layers": "Capas",
+      "layersHelp": "La pila más gruesa a lo largo de la línea de pliegue. Las capas que quedan planas a ambos lados de un prepliegue cuentan como una.",
+      "line": "Línea",
+      "locked": "Este paso se creó con una versión más reciente de Ori Studio. Aquí puedes eliminarlo, y se guarda exactamente como estaba.",
+      "mountain": "Monte",
+      "operation": "Operación",
+      "pending": "Pliegue pendiente",
+      "sheet": "Hoja plana",
+      "sheetNote": "Todavía no hay nada doblado. Dobla la hoja para crear el paso 1.",
+      "source": "Origen",
+      "title": "Paso {{number}}",
+      "valley": "Valle"
+    },
+    "words": {
+      "adds_one": "Añade {{count}} pliegue ({{mountain}} M, {{valley}} V)",
+      "adds_many": "Añade {{count}} pliegues ({{mountain}} M, {{valley}} V)",
+      "adds_other": "Añade {{count}} pliegues ({{mountain}} M, {{valley}} V)",
+      "addsPrecreases_one": "Añade {{count}} prepliegue",
+      "addsPrecreases_many": "Añade {{count}} prepliegues",
+      "addsPrecreases_other": "Añade {{count}} prepliegues",
+      "axiomLine": "Axioma {{axiom}} · {{phrase}}",
+      "badgeImported": "Importado",
+      "badgeMountain": "Monte",
+      "badgeNewer": "Más reciente",
+      "badgePrecrease": "Prepliegue",
+      "badgeValley": "Valle",
+      "cpJump": "Importar patrón de pliegues",
+      "existingCrease": "Pliegue existente",
+      "freeLine": "Línea libre",
+      "mountainFold": "Pliegue monte",
+      "mountainPrecrease": "Pliegue monte y desdoblar",
+      "noChange": "No cambia ningún pliegue",
+      "originCp": "Archivo CP",
+      "originEditFoldedFigure": "Figura plegada de Editar",
+      "originFold": "Archivo FOLD",
+      "originOrh": "Archivo ORH",
+      "originOri": "Archivo ORI",
+      "originSample": "Ejemplo",
+      "refolds_one": "Vuelve a doblar {{count}} prepliegue",
+      "refolds_many": "Vuelve a doblar {{count}} prepliegues",
+      "refolds_other": "Vuelve a doblar {{count}} prepliegues",
+      "reverses_one": "Vuelve a doblar {{count}} prepliegue al revés",
+      "reverses_many": "Vuelve a doblar {{count}} prepliegues al revés",
+      "reverses_other": "Vuelve a doblar {{count}} prepliegues al revés",
+      "unfold": "Desdoblar",
+      "unfolds_one": "Desdobla {{count}} pliegue",
+      "unfolds_many": "Desdobla {{count}} pliegues",
+      "unfolds_other": "Desdobla {{count}} pliegues",
+      "unknown": "De una versión más reciente de Ori Studio",
+      "valleyFold": "Pliegue valle",
+      "valleyPrecrease": "Pliegue valle y desdoblar"
+    }
+  },
   "fold3dVerdict": {
     "localCrossing_one": "El papel se atraviesa a sí mismo en un vértice.",
     "localCrossing_many": "El papel se atraviesa a sí mismo en {{count}} vértices.",

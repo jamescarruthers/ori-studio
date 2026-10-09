@@ -1447,6 +1447,439 @@
     "viewTree": "Tree",
     "viewTreeAndCp": "Tree and crease pattern"
   },
+  "fold": {
+    "actions": {
+      "brokenHint": "This step no longer folds.",
+      "deleteStep": "Delete this step",
+      "deleteStepAndFollowing": "Delete this step and what follows",
+      "exportFold": "Export FOLD…",
+      "exportSteps": "Export steps…",
+      "foldKind": "Fold",
+      "importCp": "Import CP…",
+      "importPolygonHint": "Import CP needs a square or rectangle sheet.",
+      "lockedHint": "This step was made with a newer Ori Studio.",
+      "pathBrokenHint": "A step on this path no longer folds.",
+      "pathLockedHint": "A step on this path was made with a newer Ori Studio.",
+      "pathReplayingHint": "Still folding the steps.",
+      "precrease": "Precrease",
+      "readOnlyHint": "Made with a newer Ori Studio: this sequence opens read-only.",
+      "replayingHint": "Still folding the steps before this one.",
+      "sendToEditTitle": "Send the crease pattern of the steps shown to the Edit canvas",
+      "sheetHint": "The flat sheet is where the steps start: there is no step to delete.",
+      "startsBranch": "Starts a new branch"
+    },
+    "paper": {
+      "backUp": "Back up",
+      "colors": "Colors",
+      "custom": "Custom",
+      "editStyle": "Edit paper style…",
+      "frontUp": "Front up",
+      "height": "Height",
+      "polygon": "Polygon",
+      "proportions": "Proportions",
+      "rectangle": "Rectangle",
+      "resetColors": "Reset colors",
+      "shape": "Shape",
+      "sheet": "Sheet",
+      "sides": "Sides",
+      "square": "Square",
+      "start": "Start",
+      "startHelp": "Which side of the paper faces you before the first fold. The crease pattern is always drawn from the front.",
+      "startsOver_one": "Changing the shape starts over: the sequence’s {{count}} step is cleared. Undo brings it back.",
+      "startsOver_other": "Changing the shape starts over: the sequence’s {{count}} steps are cleared. Undo brings them back.",
+      "width": "Width"
+    },
+    "sentence": {
+      "cpJump": "Collapse into the imported crease pattern.",
+      "mountain": {
+        "crease": {
+          "all": "Mountain fold along the existing crease, through all layers.",
+          "depth_one": "Mountain fold along the existing crease, folding only the bottom layer.",
+          "depth_other": "Mountain fold along the existing crease, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold along the existing crease, folding only the flap shown.",
+          "flaps_other": "Mountain fold along the existing crease, folding only the {{count}} flaps shown."
+        },
+        "free": {
+          "all": "Mountain fold along the line drawn, through all layers.",
+          "depth_one": "Mountain fold along the line drawn, folding only the bottom layer.",
+          "depth_other": "Mountain fold along the line drawn, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold along the line drawn, folding only the flap shown.",
+          "flaps_other": "Mountain fold along the line drawn, folding only the {{count}} flaps shown."
+        },
+        "o1": {
+          "all": "Mountain fold along the line joining {{a}} and {{b}}, through all layers.",
+          "depth_one": "Mountain fold along the line joining {{a}} and {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold along the line joining {{a}} and {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold along the line joining {{a}} and {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold along the line joining {{a}} and {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o2": {
+          "all": "Mountain fold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Mountain fold, bringing {{a}} onto {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold, bringing {{a}} onto {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o2Half": {
+          "all": "Mountain fold in half, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Mountain fold in half, bringing {{a}} onto {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold in half, bringing {{a}} onto {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold in half, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold in half, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o3": {
+          "all": "Mountain fold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Mountain fold, bringing {{a}} onto {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold, bringing {{a}} onto {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o3Half": {
+          "all": "Mountain fold in half, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Mountain fold in half, bringing {{a}} onto {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold in half, bringing {{a}} onto {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold in half, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold in half, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o4": {
+          "all": "Mountain fold {{b}} onto itself, pivoting on {{a}}, through all layers.",
+          "depth_one": "Mountain fold {{b}} onto itself, pivoting on {{a}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold {{b}} onto itself, pivoting on {{a}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold {{b}} onto itself, pivoting on {{a}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold {{b}} onto itself, pivoting on {{a}}, folding only the {{count}} flaps shown."
+        },
+        "o5": {
+          "all": "Mountain fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, through all layers.",
+          "depth_one": "Mountain fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the {{count}} flaps shown."
+        },
+        "o6": {
+          "all": "Mountain fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, through all layers.",
+          "depth_one": "Mountain fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the {{count}} flaps shown."
+        },
+        "o7": {
+          "all": "Mountain fold {{self}} onto itself so that {{a}} lands on {{b}}, through all layers.",
+          "depth_one": "Mountain fold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the {{count}} flaps shown."
+        }
+      },
+      "mountainPrecrease": {
+        "crease": {
+          "all": "Mountain fold and unfold along the existing crease, through all layers.",
+          "depth_one": "Mountain fold and unfold along the existing crease, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold along the existing crease, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold along the existing crease, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold along the existing crease, folding only the {{count}} flaps shown."
+        },
+        "free": {
+          "all": "Mountain fold and unfold along the line drawn, through all layers.",
+          "depth_one": "Mountain fold and unfold along the line drawn, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold along the line drawn, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold along the line drawn, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold along the line drawn, folding only the {{count}} flaps shown."
+        },
+        "o1": {
+          "all": "Mountain fold and unfold along the line joining {{a}} and {{b}}, through all layers.",
+          "depth_one": "Mountain fold and unfold along the line joining {{a}} and {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold along the line joining {{a}} and {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold along the line joining {{a}} and {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold along the line joining {{a}} and {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o2": {
+          "all": "Mountain fold and unfold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Mountain fold and unfold, bringing {{a}} onto {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold, bringing {{a}} onto {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o2Half": {
+          "all": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o3": {
+          "all": "Mountain fold and unfold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Mountain fold and unfold, bringing {{a}} onto {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold, bringing {{a}} onto {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o3Half": {
+          "all": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold in half, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o4": {
+          "all": "Mountain fold and unfold {{b}} onto itself, pivoting on {{a}}, through all layers.",
+          "depth_one": "Mountain fold and unfold {{b}} onto itself, pivoting on {{a}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold {{b}} onto itself, pivoting on {{a}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold {{b}} onto itself, pivoting on {{a}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold {{b}} onto itself, pivoting on {{a}}, folding only the {{count}} flaps shown."
+        },
+        "o5": {
+          "all": "Mountain fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, through all layers.",
+          "depth_one": "Mountain fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the {{count}} flaps shown."
+        },
+        "o6": {
+          "all": "Mountain fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, through all layers.",
+          "depth_one": "Mountain fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the {{count}} flaps shown."
+        },
+        "o7": {
+          "all": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, through all layers.",
+          "depth_one": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the bottom layer.",
+          "depth_other": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the bottom {{count}} layers.",
+          "flaps_one": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the flap shown.",
+          "flaps_other": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the {{count}} flaps shown."
+        }
+      },
+      "turn": "{{turn}}.",
+      "unfold": {
+        "all": "Unfold along the existing crease, through all layers.",
+        "bottom_one": "Unfold the bottom layer.",
+        "bottom_other": "Unfold the bottom {{count}} layers.",
+        "flaps_one": "Unfold the flap shown.",
+        "flaps_other": "Unfold the {{count}} flaps shown.",
+        "top_one": "Unfold the top layer.",
+        "top_other": "Unfold the top {{count}} layers."
+      },
+      "unknown": "A step made with a newer Ori Studio.",
+      "valley": {
+        "crease": {
+          "all": "Valley fold along the existing crease, through all layers.",
+          "depth_one": "Valley fold along the existing crease, folding only the top layer.",
+          "depth_other": "Valley fold along the existing crease, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold along the existing crease, folding only the flap shown.",
+          "flaps_other": "Valley fold along the existing crease, folding only the {{count}} flaps shown."
+        },
+        "free": {
+          "all": "Valley fold along the line drawn, through all layers.",
+          "depth_one": "Valley fold along the line drawn, folding only the top layer.",
+          "depth_other": "Valley fold along the line drawn, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold along the line drawn, folding only the flap shown.",
+          "flaps_other": "Valley fold along the line drawn, folding only the {{count}} flaps shown."
+        },
+        "o1": {
+          "all": "Valley fold along the line joining {{a}} and {{b}}, through all layers.",
+          "depth_one": "Valley fold along the line joining {{a}} and {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold along the line joining {{a}} and {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold along the line joining {{a}} and {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold along the line joining {{a}} and {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o2": {
+          "all": "Valley fold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Valley fold, bringing {{a}} onto {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold, bringing {{a}} onto {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o2Half": {
+          "all": "Valley fold in half, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Valley fold in half, bringing {{a}} onto {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold in half, bringing {{a}} onto {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold in half, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold in half, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o3": {
+          "all": "Valley fold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Valley fold, bringing {{a}} onto {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold, bringing {{a}} onto {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o3Half": {
+          "all": "Valley fold in half, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Valley fold in half, bringing {{a}} onto {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold in half, bringing {{a}} onto {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold in half, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold in half, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o4": {
+          "all": "Valley fold {{b}} onto itself, pivoting on {{a}}, through all layers.",
+          "depth_one": "Valley fold {{b}} onto itself, pivoting on {{a}}, folding only the top layer.",
+          "depth_other": "Valley fold {{b}} onto itself, pivoting on {{a}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold {{b}} onto itself, pivoting on {{a}}, folding only the flap shown.",
+          "flaps_other": "Valley fold {{b}} onto itself, pivoting on {{a}}, folding only the {{count}} flaps shown."
+        },
+        "o5": {
+          "all": "Valley fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, through all layers.",
+          "depth_one": "Valley fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the top layer.",
+          "depth_other": "Valley fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the flap shown.",
+          "flaps_other": "Valley fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the {{count}} flaps shown."
+        },
+        "o6": {
+          "all": "Valley fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, through all layers.",
+          "depth_one": "Valley fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the top layer.",
+          "depth_other": "Valley fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the flap shown.",
+          "flaps_other": "Valley fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the {{count}} flaps shown."
+        },
+        "o7": {
+          "all": "Valley fold {{self}} onto itself so that {{a}} lands on {{b}}, through all layers.",
+          "depth_one": "Valley fold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the {{count}} flaps shown."
+        }
+      },
+      "valleyPrecrease": {
+        "crease": {
+          "all": "Valley fold and unfold along the existing crease, through all layers.",
+          "depth_one": "Valley fold and unfold along the existing crease, folding only the top layer.",
+          "depth_other": "Valley fold and unfold along the existing crease, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold along the existing crease, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold along the existing crease, folding only the {{count}} flaps shown."
+        },
+        "free": {
+          "all": "Valley fold and unfold along the line drawn, through all layers.",
+          "depth_one": "Valley fold and unfold along the line drawn, folding only the top layer.",
+          "depth_other": "Valley fold and unfold along the line drawn, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold along the line drawn, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold along the line drawn, folding only the {{count}} flaps shown."
+        },
+        "o1": {
+          "all": "Valley fold and unfold along the line joining {{a}} and {{b}}, through all layers.",
+          "depth_one": "Valley fold and unfold along the line joining {{a}} and {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold along the line joining {{a}} and {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold along the line joining {{a}} and {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold along the line joining {{a}} and {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o2": {
+          "all": "Valley fold and unfold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Valley fold and unfold, bringing {{a}} onto {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold, bringing {{a}} onto {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o2Half": {
+          "all": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o3": {
+          "all": "Valley fold and unfold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Valley fold and unfold, bringing {{a}} onto {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold, bringing {{a}} onto {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o3Half": {
+          "all": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold in half, bringing {{a}} onto {{b}}, folding only the {{count}} flaps shown."
+        },
+        "o4": {
+          "all": "Valley fold and unfold {{b}} onto itself, pivoting on {{a}}, through all layers.",
+          "depth_one": "Valley fold and unfold {{b}} onto itself, pivoting on {{a}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold {{b}} onto itself, pivoting on {{a}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold {{b}} onto itself, pivoting on {{a}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold {{b}} onto itself, pivoting on {{a}}, folding only the {{count}} flaps shown."
+        },
+        "o5": {
+          "all": "Valley fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, through all layers.",
+          "depth_one": "Valley fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold, pivoting on {{a}}, bringing {{b}} onto {{c}}, folding only the {{count}} flaps shown."
+        },
+        "o6": {
+          "all": "Valley fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, through all layers.",
+          "depth_one": "Valley fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, folding only the {{count}} flaps shown."
+        },
+        "o7": {
+          "all": "Valley fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, through all layers.",
+          "depth_one": "Valley fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the top layer.",
+          "depth_other": "Valley fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the top {{count}} layers.",
+          "flaps_one": "Valley fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the flap shown.",
+          "flaps_other": "Valley fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the {{count}} flaps shown."
+        }
+      }
+    },
+    "step": {
+      "branchSheet": "You are at the flat sheet: folding here starts a new branch.",
+      "branchStep": "You are at step {{at}} of {{total}}: folding here starts a new branch.",
+      "broken": "This step no longer folds: what it was made from is not on the paper before it. It and the steps after it can only be deleted.",
+      "brokenAbove": "A step before this one no longer folds, so this one cannot be shown.",
+      "changed": "This step folds differently in this version of Ori Studio than when it was saved.",
+      "changes": "Changes",
+      "creases": "Creases",
+      "creasesBackUp": "As seen from the front of the paper, which starts face down: they can read the other way to the folds you see.",
+      "creasesFront": "As seen from the front of the paper.",
+      "flat": "Flat",
+      "flatHelp": "Folded once and unfolded: these lie flat now, and remember which way they went.",
+      "imported": "Imported crease pattern: this step replaces the folded state with the pattern’s own.",
+      "layers": "Layers",
+      "layersHelp": "The deepest stack along the fold line. Layers that lie flat across a precrease count as one.",
+      "line": "Line",
+      "locked": "This step was made with a newer Ori Studio. It can be deleted here, and is saved exactly as it came.",
+      "mountain": "Mountain",
+      "operation": "Operation",
+      "pending": "Pending fold",
+      "sheet": "Flat sheet",
+      "sheetNote": "Nothing is folded yet. Fold the sheet to make step 1.",
+      "source": "Source",
+      "title": "Step {{number}}",
+      "valley": "Valley"
+    },
+    "words": {
+      "adds_one": "Adds {{count}} crease ({{mountain}} M, {{valley}} V)",
+      "adds_other": "Adds {{count}} creases ({{mountain}} M, {{valley}} V)",
+      "addsPrecreases_one": "Adds {{count}} precrease",
+      "addsPrecreases_other": "Adds {{count}} precreases",
+      "axiomLine": "Axiom {{axiom}} · {{phrase}}",
+      "badgeImported": "Imported",
+      "badgeMountain": "Mountain",
+      "badgeNewer": "Newer",
+      "badgePrecrease": "Precrease",
+      "badgeValley": "Valley",
+      "cpJump": "Import crease pattern",
+      "existingCrease": "Existing crease",
+      "freeLine": "Free line",
+      "mountainFold": "Mountain fold",
+      "mountainPrecrease": "Mountain fold and unfold",
+      "noChange": "Changes no creases",
+      "originCp": "CP file",
+      "originEditFoldedFigure": "Edit’s folded figure",
+      "originFold": "FOLD file",
+      "originOrh": "ORH file",
+      "originOri": "ORI file",
+      "originSample": "Sample",
+      "refolds_one": "Refolds {{count}} precrease",
+      "refolds_other": "Refolds {{count}} precreases",
+      "reverses_one": "Refolds {{count}} precrease the other way",
+      "reverses_other": "Refolds {{count}} precreases the other way",
+      "unfold": "Unfold",
+      "unfolds_one": "Unfolds {{count}} crease",
+      "unfolds_other": "Unfolds {{count}} creases",
+      "unknown": "From a newer Ori Studio",
+      "valleyFold": "Valley fold",
+      "valleyPrecrease": "Valley fold and unfold"
+    }
+  },
   "fold3dVerdict": {
     "localCrossing_one": "The paper passes through itself at one vertex.",
     "localCrossing_other": "The paper passes through itself at {{count}} vertices.",
