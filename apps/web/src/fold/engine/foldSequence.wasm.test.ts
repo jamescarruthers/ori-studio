@@ -240,7 +240,7 @@ describe.skipIf(!available)('the Fold engine over the real bridge', () => {
     const others: [FoldEngineOp, string][] = [
       [{ ...BOOK, line: { via: 'crease', at: [0.3, 0.5] } }, 'crease_not_found'],
       [{ ...BOOK, line: { via: 'axiom', axiom: 1, inputs: [] } }, 'unsupported_op'],
-      [{ kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' }, 'unsupported_op'],
+      [{ kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' }, 'import_stored_unreadable'],
       [refold, 'crease_not_flat'],
       [{ ...BOOK, moving: [0.25, 1.5] }, 'point_off_paper'],
     ];

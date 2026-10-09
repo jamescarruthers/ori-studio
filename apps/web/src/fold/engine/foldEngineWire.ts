@@ -20,6 +20,7 @@
  */
 
 import type { TurnOverAxis, TurnRotation } from '../../lib/steps/turn';
+import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
 
 /** A point in sheet coordinates: the unit sheet frame, y-up, longer side 1. */
 export type FoldSheetPoint = readonly [number, number];
@@ -99,7 +100,11 @@ export type FoldEngineOp =
   | ({ kind: 'unfold' | 'refold'; crease: FoldSheetPoint; direction: FoldDirection } & FoldEngineMotion)
   | { kind: 'turn'; axis: TurnOverAxis }
   | { kind: 'rotate'; rotate: TurnRotation }
-  /** Import CP: refused as `unsupported_op` until Phase 8. */
+  /**
+   * Import CP's stored step: landed after its parent, or refused with an
+   * `import_*` code (`foldEngineIoWire.ts`). An `origin` outside the
+   * document's `FoldCpOrigin` is the caller's mistake and throws.
+   */
   | { kind: 'cp-jump'; cpJson: string; orderJson: string; origin: string };
 
 /**
@@ -165,6 +170,8 @@ export const FOLD_REFUSAL_CODES = [
   'crease_not_folded',
   'moving_side_missing',
   'moving_side_on_line',
+  // A stored cp-jump that no longer lands, under Import CP's own codes.
+  ...FOLD_IMPORT_REFUSAL_CODES,
 ] as const;
 
 export type FoldRefusalCode = (typeof FOLD_REFUSAL_CODES)[number];
