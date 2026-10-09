@@ -131,6 +131,7 @@ export function PullBrowserFrame({
   list,
   title,
   addLabel,
+  turnLabel,
   screen,
   lead,
   tools,
@@ -141,6 +142,8 @@ export function PullBrowserFrame({
   list: PullBrowserList;
   title: string;
   addLabel: string;
+  /** The footer's offer of the turn just before the selection; References' turn-over card's by default. */
+  turnLabel?: string;
   /** The phone screen shown (`usePhoneListDetail`), or null on any other layout. */
   screen?: 'list' | 'detail' | null;
   /** Before the title in the bar: a phone's way back to the rail. */
@@ -217,7 +220,7 @@ export function PullBrowserFrame({
           {rail}
           <div className={styles.main}>{children}</div>
         </div>
-        <BrowserFooter list={list} addLabel={addLabel} />
+        <BrowserFooter list={list} addLabel={addLabel} turnLabel={turnLabel} />
       </div>
     </div>
   );
@@ -476,7 +479,15 @@ function BrowserCards({ browser, style }: { browser: ReferencesBrowser; style: D
 }
 
 /** What is selected, and the verb that adds it. */
-function BrowserFooter({ list, addLabel: label }: { list: PullBrowserList; addLabel: string }) {
+function BrowserFooter({
+  list,
+  addLabel: label,
+  turnLabel,
+}: {
+  list: PullBrowserList;
+  addLabel: string;
+  turnLabel?: string;
+}) {
   const { t } = useTranslation();
   const selected = list.selection.indices.size;
   return (
@@ -497,7 +508,7 @@ function BrowserFooter({ list, addLabel: label }: { list: PullBrowserList; addLa
             checked={list.withTurnOver}
             onChange={(event) => list.setWithTurnOver(event.currentTarget.checked)}
           />
-          {t('panels:diagram.references.withTurnOver', 'With the turn-over before it')}
+          {turnLabel ?? t('panels:diagram.references.withTurnOver', 'With the turn-over before it')}
         </label>
       )}
       <Button size="sm" variant="ghost" className={styles.cancel} onClick={list.close}>

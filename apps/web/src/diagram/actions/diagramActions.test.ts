@@ -425,4 +425,50 @@ describe('the diagram step verbs', () => {
     expect(diagramStepCommand(actions, 'delete')?.danger).toBe(true);
     expect(diagramStepCommand(actions, 'duplicate')?.danger).toBeUndefined();
   });
+
+  describe('a step linked to a Fold step (fold-workspace D17)', () => {
+    const fold = (state: Partial<DiagramStepActionState> = {}) =>
+      build({ linkKind: 'fold', link: 'stale', hasSource: true, hasPicture: true, showAs: 'folded', patternOpen: false, ...state });
+
+    it('is refreshed and shown as from Fold, with no crease pattern open in Edit', () => {
+      const bound = deps();
+      const actions = fold();
+      expect(diagramStepCommand(actions, 'refresh-picture')).toMatchObject({ disabled: false });
+      expect(diagramStepCommand(actions, 'open-in-edit')).toBeNull();
+      expect(diagramStepCommand(actions, 'open-in-fold')).toMatchObject({ label: 'Open in Fold', disabled: false });
+      diagramStepCommand(build({ linkKind: 'fold', link: 'current', hasSource: true }, bound), 'open-in-fold')?.run();
+      expect(bound.openInFold).toHaveBeenCalledOnce();
+    });
+
+    it('shows its crease pattern or its folded form, never simulated', () => {
+      expect(diagramStepChoice(fold(), 'show-as')?.options.map((option) => option.id)).toEqual(['crease-pattern', 'folded']);
+      expect(diagramStepChoice(fold(), 'show-as')?.disabled).toBe(false);
+    });
+
+    it('says why it cannot be refreshed: up to date, or its step gone from Fold', () => {
+      expect(diagramStepCommand(fold({ link: 'current' }), 'refresh-picture')).toMatchObject({
+        disabled: true,
+        hint: 'Already shows its step as it is',
+      });
+      const missing = fold({ link: 'missing' });
+      expect(diagramStepCommand(missing, 'refresh-picture')).toMatchObject({ disabled: true, hint: expect.stringContaining('Fold') });
+      expect(diagramStepCommand(missing, 'open-in-fold')?.disabled).toBe(true);
+      // Not checked yet, a capture finds out.
+      expect(diagramStepCommand(fold({ link: 'unknown' }), 'refresh-picture')?.disabled).toBe(false);
+    });
+
+    it('opens on a read-only diagram too', () => {
+      expect(diagramStepCommand(fold({ readOnly: true, link: 'current' }), 'open-in-fold')?.disabled).toBe(false);
+    });
+  });
+
+  it('fills an empty step from Fold, only while the project has a Fold step to pull', () => {
+    expect(diagramStepCommand(build({}), 'from-fold')).toBeNull();
+    const bound = deps();
+    const offered = build({ foldSteps: true }, bound);
+    expect(diagramStepCommand(offered, 'from-fold')).toMatchObject({ label: 'From Fold…', disabled: false });
+    diagramStepCommand(offered, 'from-fold')?.run();
+    expect(bound.fromFold).toHaveBeenCalledOnce();
+    expect(diagramStepCommand(build({ foldSteps: true, hasSource: true }), 'from-fold')).toBeNull();
+  });
 });

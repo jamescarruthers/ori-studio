@@ -74,6 +74,8 @@ export function DiagramFoldBrowser({
       list={list}
       title={browserTitle(browser, t)}
       addLabel={addLabel(browser, t)}
+      // A Fold turn is a turn over or a rotation.
+      turnLabel={t('panels:diagram.fold.withTurn', 'With the turn before it')}
       tools={
         <Button size="sm" variant="ghost" onClick={browser.openFold}>
           <FoldVertical size={14} aria-hidden="true" />
