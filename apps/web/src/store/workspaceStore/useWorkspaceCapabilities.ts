@@ -92,7 +92,6 @@ export function useWorkspaceCapabilities() {
   // Fold's imports and hand-offs: primitives, so an edit that changes none re-renders nothing.
   const foldStepCount = useWorkspaceStore((state) => shownFoldSequence(state)?.document.steps.length ?? 0);
   const foldPolygon = useWorkspaceStore((state) => shownFoldSequence(state)?.document.paper.shape.kind === 'polygon');
-  const foldReadOnly = useWorkspaceStore((state) => shownFoldSequence(state)?.readOnlyRaw != null);
   const hasFoldStartingFigure = useWorkspaceStore((state) => foldStartingFigure(state) !== null);
   const historyPastCount = historyCountForContext(
     activeEditingContext,
@@ -159,7 +158,6 @@ export function useWorkspaceCapabilities() {
     [
       foldStepCount,
       foldPolygon,
-      foldReadOnly,
       hasFoldStartingFigure,
       clipboard,
       creaseCount,

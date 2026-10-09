@@ -201,7 +201,7 @@ function foldSequenceCapabilityInput(state: WorkspaceState): WorkspaceCapability
   return {
     stepCount: shown?.document.steps.length ?? 0,
     polygon: shown?.document.paper.shape.kind === 'polygon',
-    readOnly: shown?.readOnlyRaw != null,
+    readOnly: isShownFoldSequenceReadOnly(state),
   };
 }
 

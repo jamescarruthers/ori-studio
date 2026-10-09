@@ -117,6 +117,10 @@ export type WorkspaceCapabilityId =
   | 'insert.image'
   | 'insert.text'
   | FoldSequenceCapabilityId
+  | FoldIoCapabilityId;
+
+/** Fold's imports, hand-offs and exports: `fold.` and the action catalog's id where it has one. */
+export type FoldIoCapabilityId =
   | 'fold.import-cp'
   | 'fold.import-sample-preliminary-base'
   | 'fold.import-sample-waterbomb-base'
@@ -1200,8 +1204,6 @@ export function getWorkspaceCapabilities(
 
   return maskCapabilitiesForContext(capabilities, input.activeEditingContext);
 }
-
-type FoldIoCapabilityId = Extract<WorkspaceCapabilityId, `fold.${string}`>;
 
 /**
  * Fold's imports and hand-offs (plan D16, D10, D11): shown only while

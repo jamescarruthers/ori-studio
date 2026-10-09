@@ -15,9 +15,16 @@ function actionIds(items: MenuItemDef[]): string[] {
 }
 
 describe('Fold’s imports and hand-offs in the menu', () => {
-  it('lists every one in a Fold menu, dispatched by the shared handler', () => {
+  it('lists every one in the Fold menu, after the sequence’s verbs, dispatched by the shared handler', () => {
     const fold = getMenuBarDef().find((menu) => menu.label === 'Fold');
     expect(fold && actionIds(fold.items)).toEqual([
+      'fold.valley',
+      'fold.mountain',
+      'fold.precrease',
+      'fold.turn-over',
+      'fold.rotate-ccw',
+      'fold.rotate-cw',
+      'fold.delete-step',
       'fold.import-cp',
       'fold.import-sample-preliminary-base',
       'fold.import-sample-waterbomb-base',
