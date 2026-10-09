@@ -234,6 +234,12 @@ function requestOf(op: FoldEngineOp, choices: FoldEngineChoices | undefined): Fo
   return choices ? { op, choices } : { op };
 }
 
+/** An analysis the engine answered, which a later ask of the same line from the same state can reuse. */
+type FoldAnalysisAnswer = Extract<FoldPendingAnalysis, { status: 'analysed' | 'refused' }>;
+
+/** How many analyses the session keeps. */
+const ANALYSES_KEPT = 64;
+
 /** The step on screen, as a step folds from it. */
 interface FoldingFrom {
   parent: FoldEngineStateHandle;
@@ -271,6 +277,13 @@ export function createFoldSession({
   let pendingAnswer: Promise<FoldPreviewOutcome> | null = null;
   let analysis: FoldPendingAnalysis = FOLD_IDLE;
   let analysisTicket = 0;
+  /**
+   * What the engine said of each line, by the state it was asked of and the
+   * op (D14 tier 2: once per line, side and direction). A pointer that snaps
+   * keeps landing on the same few lines, and a state's analyses never change,
+   * so the newest are kept until the states go.
+   */
+  const analyses = new Map<string, FoldAnalysisAnswer>();
   let committing = false;
   const previewChannel = runtime.createChannel();
   const analysisChannel = runtime.createChannel();
@@ -355,6 +368,7 @@ export function createFoldSession({
   const forgetStates = () => {
     dropPending();
     dropAnalysis();
+    analyses.clear();
     runTicket += 1;
     replaying = false;
     progress = null;
@@ -608,6 +622,15 @@ export function createFoldSession({
     return answer;
   };
 
+  const remember = (key: string, settled: FoldAnalysisAnswer) => {
+    analyses.delete(key);
+    analyses.set(key, settled);
+    for (const oldest of analyses.keys()) {
+      if (analyses.size <= ANALYSES_KEPT) break;
+      analyses.delete(oldest);
+    }
+  };
+
   const analyse = (op: FoldEngineOp): Promise<FoldAnalyseOutcome> => {
     const from = foldableFrom();
     if (!(from instanceof Promise)) return analyseFrom(from, op);
@@ -621,16 +644,24 @@ export function createFoldSession({
     dropAnalysis();
     const ticket = analysisTicket;
     const { parent } = from;
+    const key = `${parent.generation}:${parent.id}:${foldStepInputKey({ op })}`;
+    const known = analyses.get(key);
+    if (known) {
+      analysis = known;
+      render();
+      return Promise.resolve(known);
+    }
     analysis = { status: 'working', op, parent };
     render();
     return analysisChannel.request((worker) => guarded(parent, () => worker.analyse(parent.id, op))).then(
       (result): FoldAnalyseOutcome => {
         if (result.status === 'superseded' || ticket !== analysisTicket) return SUPERSEDED;
         const value = result.value;
-        const settled: FoldAnalyseOutcome =
+        const settled: FoldAnalysisAnswer =
           value.status === 'ok'
             ? { status: 'analysed', op, parent, analysis: value.analysis }
             : { status: 'refused', op, parent, refused: value };
+        remember(key, settled);
         analysis = settled;
         render();
         return settled;

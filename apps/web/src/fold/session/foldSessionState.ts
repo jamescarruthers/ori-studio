@@ -244,9 +244,16 @@ function sameNode(a: FoldSessionNode, b: FoldSessionNode): boolean {
   );
 }
 
-/** The flat sheet's path: the paper alone. */
+const SHEET_PATHS = new WeakMap<FoldPaper, FoldPathDigest>();
+
+/** The flat sheet's path: the paper alone. Memoised on the paper, which a document never mutates. */
 export function foldSheetPath(paper: FoldPaper): FoldPathDigest {
-  return foldPathDigest(paper, []);
+  let path = SHEET_PATHS.get(paper);
+  if (path === undefined) {
+    path = foldPathDigest(paper, []);
+    SHEET_PATHS.set(paper, path);
+  }
+  return path;
 }
 
 /**

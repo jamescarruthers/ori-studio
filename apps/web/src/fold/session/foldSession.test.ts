@@ -356,6 +356,28 @@ describe('the Fold session: the step a tool folds', () => {
     expect(snapshot().analysis).toBe(analysed);
   });
 
+  it('asks the engine once per line from a state, until the state is gone', async () => {
+    const { session, source, runtime, engine } = setup();
+    session.retain();
+    await settle();
+    const first = await session.analyse(valleyAt(0.9));
+    await session.analyse(valleyAt(0.8));
+    // Back on the first line, and back on this step after leaving it: answered from memory.
+    await expect(session.analyse(valleyAt(0.9))).resolves.toBe(first);
+    source.set({ reader: readerOn(branching(), 'b') });
+    source.set({ reader: readerOn(branching(), 'c') });
+    await expect(session.analyse(valleyAt(0.9))).resolves.toBe(first);
+    expect(engine().log.filter((call) => call.startsWith('analyse'))).toEqual([
+      'analyse:valley@0.9',
+      'analyse:valley@0.8',
+    ]);
+
+    runtime.lose('crashed');
+    await settle();
+    await expect(session.analyse(valleyAt(0.9))).resolves.toMatchObject({ status: 'analysed' });
+    expect(engine().log.filter((call) => call.startsWith('analyse'))).toEqual(['analyse:valley@0.9']);
+  });
+
   it('lets the pending step go when the cursor moves', async () => {
     const { session, source, snapshot, engine } = setup();
     session.retain();
