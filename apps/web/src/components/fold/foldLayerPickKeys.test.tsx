@@ -71,7 +71,7 @@ let root: Root | null = null;
 let host: HTMLDivElement | null = null;
 const releases: (() => void)[] = [];
 let bound: FoldCanvasVerbs;
-let onToggle: ReturnType<typeof vi.fn>;
+let onToggle = vi.fn<(flap: number) => void>();
 /** The step on screen has a motion: Space would play it. */
 const playback = { available: true, toggle: vi.fn() };
 
@@ -98,7 +98,7 @@ beforeEach(() => {
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  onToggle = vi.fn();
+  onToggle = vi.fn<(flap: number) => void>();
   act(() =>
     root?.render(
       <>
