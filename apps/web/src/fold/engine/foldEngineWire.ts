@@ -136,6 +136,14 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'sliver',
   'prediction_mismatch',
   'precrease_unfold_moved_more',
+  // A compound fold (plan D4) and the reverse fold on it.
+  'no_order',
+  'budget_exceeded',
+  'no_such_choice',
+  'reverse_no_opening',
+  'reverse_tip_not_free',
+  'reverse_kind_infeasible',
+  'internal',
 ] as const;
 
 /**
@@ -227,7 +235,9 @@ export type FoldFix =
    * `{ via: 'model', line }` with `side`. A sliver remedy also carries the
    * `step` to commit; a near miss's landmark line has none.
    */
-  | { readonly fix: 'use_line'; readonly line: FoldModelLine; readonly side: FoldSide; readonly step?: FoldStoredStep };
+  | { readonly fix: 'use_line'; readonly line: FoldModelLine; readonly side: FoldSide; readonly step?: FoldStoredStep }
+  /** The same reverse fold of the other kind is valid. */
+  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' };
 
 export interface FoldEngineRefused {
   status: 'refused';

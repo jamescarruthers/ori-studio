@@ -230,6 +230,9 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       };
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
+    // With them, a compound fold's (plan D4, from `no_order` on): no tool
+    // folds one yet, so until the reverse fold's tool says them in its own
+    // words they read as a fold that cannot be made.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -256,6 +259,13 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'hinge_orientation':
     case 'folded_image':
     case 'prediction_mismatch':
+    case 'no_order':
+    case 'budget_exceeded':
+    case 'no_such_choice':
+    case 'reverse_no_opening':
+    case 'reverse_tip_not_free':
+    case 'reverse_kind_infeasible':
+    case 'internal':
       return {
         title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
         text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
@@ -328,6 +338,9 @@ function fixActions(
       }));
     case 'use_line':
       return [{ id: `line-${position}`, label: lineFixLabel(t, fix), run: () => verbs.useLine(fix), disabled }];
+    case 'other_kind':
+      // A reverse fold's, which no tool folds yet: nothing to bind it to.
+      return [];
   }
 }
 
