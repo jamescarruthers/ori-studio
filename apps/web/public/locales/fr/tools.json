@@ -440,6 +440,7 @@
         "title": "Ce pli est impossible"
       },
       "kindInfeasible": {
+        "neither": "Aucun type de pli inversé ne convient ici : aucun empilement des couches ne permet à la pointe de tourner. Déplacez la ligne, ou inversez d’autres rabats.",
         "text": "Aucun empilement des couches ne permet ici à la pointe de tourner de ce côté. L’autre type de pli inversé conviendra peut-être."
       },
       "moverStays": {

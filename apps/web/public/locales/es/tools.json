@@ -440,6 +440,7 @@
         "title": "Este pliegue no se puede hacer"
       },
       "kindInfeasible": {
+        "neither": "Aquí no cabe ningún tipo de pliegue invertido: ninguna forma de apilar las capas deja girar la punta. Mueve la línea o invierte otras solapas.",
         "text": "Ninguna forma de apilar las capas deja que la punta gire hacia este lado aquí. Puede que el otro tipo de pliegue invertido encaje."
       },
       "moverStays": {

@@ -5170,7 +5170,8 @@
     "tools:fold.reverse.outside": "dacf15163a11",
     "tools:fold.reverse.previous": "a57b08a480b8",
     "tools:fold.reverse.tipSide": "fc2580cb8053",
-    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6"
+    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6",
+    "tools:fold.refusal.kindInfeasible.neither": "43c11026b79d"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -10343,7 +10344,8 @@
     "tools:fold.reverse.outside": "dacf15163a11",
     "tools:fold.reverse.previous": "a57b08a480b8",
     "tools:fold.reverse.tipSide": "fc2580cb8053",
-    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6"
+    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6",
+    "tools:fold.refusal.kindInfeasible.neither": "43c11026b79d"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15518,7 +15520,8 @@
     "tools:fold.reverse.outside": "dacf15163a11",
     "tools:fold.reverse.previous": "a57b08a480b8",
     "tools:fold.reverse.tipSide": "fc2580cb8053",
-    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6"
+    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6",
+    "tools:fold.refusal.kindInfeasible.neither": "43c11026b79d"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -20447,7 +20450,8 @@
     "tools:fold.reverse.outside": "dacf15163a11",
     "tools:fold.reverse.previous": "a57b08a480b8",
     "tools:fold.reverse.tipSide": "fc2580cb8053",
-    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6"
+    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6",
+    "tools:fold.refusal.kindInfeasible.neither": "43c11026b79d"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -25376,7 +25380,8 @@
     "tools:fold.reverse.outside": "dacf15163a11",
     "tools:fold.reverse.previous": "a57b08a480b8",
     "tools:fold.reverse.tipSide": "fc2580cb8053",
-    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6"
+    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6",
+    "tools:fold.refusal.kindInfeasible.neither": "43c11026b79d"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -30549,7 +30554,8 @@
     "tools:fold.reverse.outside": "dacf15163a11",
     "tools:fold.reverse.previous": "a57b08a480b8",
     "tools:fold.reverse.tipSide": "fc2580cb8053",
-    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6"
+    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6",
+    "tools:fold.refusal.kindInfeasible.neither": "43c11026b79d"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -35722,7 +35728,8 @@
     "tools:fold.reverse.outside": "dacf15163a11",
     "tools:fold.reverse.previous": "a57b08a480b8",
     "tools:fold.reverse.tipSide": "fc2580cb8053",
-    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6"
+    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6",
+    "tools:fold.refusal.kindInfeasible.neither": "43c11026b79d"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -40651,6 +40658,7 @@
     "tools:fold.reverse.outside": "dacf15163a11",
     "tools:fold.reverse.previous": "a57b08a480b8",
     "tools:fold.reverse.tipSide": "fc2580cb8053",
-    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6"
+    "tools:fold.steps.pickFlapsToReverse": "5bd884a903a6",
+    "tools:fold.refusal.kindInfeasible.neither": "43c11026b79d"
   }
 }

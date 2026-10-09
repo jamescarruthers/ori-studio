@@ -426,6 +426,7 @@
         "title": "This fold cannot be made"
       },
       "kindInfeasible": {
+        "neither": "Neither kind of reverse fold fits here: no way of stacking the layers lets the tip turn. Move the line, or reverse other flaps.",
         "text": "No way of stacking the layers lets the tip turn this way here. The other kind of reverse fold may fit."
       },
       "moverStays": {

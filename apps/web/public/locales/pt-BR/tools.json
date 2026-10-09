@@ -440,6 +440,7 @@
         "title": "Esta dobra não pode ser feita"
       },
       "kindInfeasible": {
+        "neither": "Nenhum tipo de dobra invertida cabe aqui: nenhum jeito de empilhar as camadas deixa a ponta virar. Mova a linha ou inverta outras abas.",
         "text": "Nenhum jeito de empilhar as camadas deixa a ponta virar para este lado aqui. O outro tipo de dobra invertida talvez se encaixe."
       },
       "moverStays": {

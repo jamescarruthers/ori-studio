@@ -2239,7 +2239,7 @@
     },
     "step": {
       "blocks": "Blocs",
-      "blocksHelp": "Piles de papier qui tournent d’un seul tenant : la partie basse et la partie haute de chaque ouverture, et chaque rabat qui bouge en entier.",
+      "blocksHelp": "Piles de papier qui tournent d’un seul tenant\u00a0: la partie basse et la partie haute de chaque ouverture, et chaque rabat qui bouge en entier.",
       "branchSheet": "Vous êtes sur la feuille à plat\u00a0: plier ici commence une nouvelle branche.",
       "branchStep": "Vous êtes à l’étape {{at}} sur {{total}}\u00a0: plier ici commence une nouvelle branche.",
       "broken": "Cette étape ne se plie plus\u00a0: ce dont elle est faite n’est plus sur le papier avant elle. Elle et les étapes suivantes ne peuvent qu’être supprimées.",
@@ -2261,7 +2261,7 @@
       "mountain": "Montagne",
       "onlyOne": "La seule possible",
       "opening": "Ouverture",
-      "openingHelp": "Là où le rabat s’écarte pour laisser passer la pointe : les couches qui restent dessous et celles du dessus.",
+      "openingHelp": "Là où le rabat s’écarte pour laisser passer la pointe\u00a0: les couches qui restent dessous et celles du dessus.",
       "operation": "Opération",
       "pending": "Pli en cours",
       "pendingRefused": "Résolvez le problème dans la fenêtre de l’outil pour voir les plis qu’il crée.",

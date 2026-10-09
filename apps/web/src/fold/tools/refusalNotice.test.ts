@@ -101,6 +101,21 @@ describe('foldRefusalNotice', () => {
     expect(calls.pickFlap).toHaveBeenCalledWith(flaps[1]);
   });
 
+  it('points a reverse fold that cannot go one way to the other kind only when the engine says that one lands', () => {
+    const refusal = { code: 'reverse_kind_infeasible', kind: 'inside', faces: [1] } as unknown as FoldRefusalBody;
+    const other = foldRefusalNotice(t, { refusal, fixes: [{ fix: 'other_kind', kind: 'outside' }] }, context({ kind: 'reverse' }), {
+      ...verbs(),
+      otherKind: vi.fn(),
+    });
+    expect(other.text).toContain('The other kind of reverse fold may fit.');
+    expect(other.actions.map((action) => action.label)).toEqual(['Outside reverse fold instead']);
+    const neither = foldRefusalNotice(t, { refusal, fixes: [] }, context({ kind: 'reverse' }), verbs());
+    expect(neither.title).toBe('It cannot go inside');
+    expect(neither.text).toContain('Neither kind of reverse fold fits here');
+    expect(neither.text).not.toContain('may fit');
+    expect(neither.actions).toEqual([]);
+  });
+
   it('offers the landmark line for a near miss', () => {
     const calls = verbs();
     const fix: FoldUseLineFix = { fix: 'use_line', line, side: 'positive' };

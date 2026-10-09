@@ -265,10 +265,16 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
           refusal.kind === 'inside'
             ? t('tools:fold.refusal.insideInfeasible.title', 'It cannot go inside')
             : t('tools:fold.refusal.outsideInfeasible.title', 'It cannot wrap round the outside'),
-        text: t(
-          'tools:fold.refusal.kindInfeasible.text',
-          'No way of stacking the layers lets the tip turn this way here. The other kind of reverse fold may fit.'
-        ),
+        // The other kind is pointed to only when the engine says it lands.
+        text: refused.fixes.some((fix) => fix.fix === 'other_kind')
+          ? t(
+              'tools:fold.refusal.kindInfeasible.text',
+              'No way of stacking the layers lets the tip turn this way here. The other kind of reverse fold may fit.'
+            )
+          : t(
+              'tools:fold.refusal.kindInfeasible.neither',
+              'Neither kind of reverse fold fits here: no way of stacking the layers lets the tip turn. Move the line, or reverse other flaps.'
+            ),
       };
     case 'reverse_tip_not_free':
       return {

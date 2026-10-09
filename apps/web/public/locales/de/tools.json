@@ -426,6 +426,7 @@
         "title": "Diese Faltung ist nicht möglich"
       },
       "kindInfeasible": {
+        "neither": "Hier passt keine Art von Gegenbruch: Bei keiner Stapelung der Lagen kann die Spitze umschlagen. Verschiebe die Linie oder kehre andere Laschen um.",
         "text": "Bei keiner Stapelung der Lagen kann die Spitze hier in diese Richtung umschlagen. Die andere Art von Gegenbruch passt vielleicht."
       },
       "moverStays": {
