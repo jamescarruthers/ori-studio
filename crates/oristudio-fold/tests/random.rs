@@ -261,6 +261,39 @@ fn random_campaign() {
     }
 }
 
+/// A digest of everything the larger campaign's steps produce: each
+/// operation and its outcome, landed parts (every coordinate to the bit, as
+/// `Debug` prints an `f64`) and reports, or the refusal. A change meant to
+/// leave the engine's results alone (a faster path) prints the same digest
+/// as the build before it:
+/// `cargo test -p oristudio-fold --release --test random -- --ignored campaign_digest --nocapture`.
+#[test]
+#[ignore = "prints a digest to compare between builds; run with --release --ignored"]
+fn campaign_digest() {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    let mut steps = 0;
+    for seed in 2..6u64 {
+        for sequence in 0..400u64 {
+            let named = seed.wrapping_mul(0x2545_f491_4f6c_dd1d) ^ sequence;
+            let drawn = Sequence::new(named, 12, 160).unwrap_or_else(|e| panic!("{e}"));
+            for step in drawn {
+                format!("{:?}", step.op).hash(&mut hasher);
+                match &step.outcome {
+                    Outcome::Landed(folded) => {
+                        format!("{:?} {:?}", folded.state.parts(), folded.report).hash(&mut hasher);
+                    }
+                    Outcome::Viewed(state) => format!("{:?}", state.view()).hash(&mut hasher),
+                    Outcome::Refused(refused) => format!("{refused:?}").hash(&mut hasher),
+                }
+                steps += 1;
+            }
+        }
+    }
+    eprintln!("{steps} steps, digest {:016x}", hasher.finish());
+}
+
 #[test]
 fn every_crease_kind_is_reached() {
     // The campaign exercises unfolds and refolds, not only new creases.
