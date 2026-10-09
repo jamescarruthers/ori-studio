@@ -137,6 +137,16 @@ export function foldToolInput(state: Pick<FoldToolState, 'tool' | 'lineMode'>): 
   return toolInput(state.tool, state.lineMode);
 }
 
+/**
+ * What the tools have been asked to fold, as a key: the tool, its line and
+ * every pick and choice made along it — not the flap hovered, which asks for
+ * nothing. Any change to it is another fold.
+ */
+export function foldToolInputKey(state: FoldToolState): string {
+  const { hoveredFlap: _hovered, ...input } = state;
+  return JSON.stringify(input);
+}
+
 /** Every click is in: the line is located (or, for the Divide line, the segment). */
 export function isLocated(state: FoldToolState): boolean {
   const model = foldToolInput(state);

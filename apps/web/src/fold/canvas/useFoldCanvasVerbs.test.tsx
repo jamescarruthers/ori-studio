@@ -100,7 +100,7 @@ describe('the Fold canvas’s commit', () => {
     expect(bound!.queued).toBe(false);
   });
 
-  it('lets a queued commit go when the preview is refused, or another step replaces it', () => {
+  it('lets a queued commit go when the preview is refused, or the tools are asked for another fold', () => {
     const commitStep = vi.fn<FoldSessionSurface['commitStep']>(() => Promise.resolve({ status: 'stale' as const }));
     const surface = session(commitStep);
     const tools = createFoldTools();
@@ -111,18 +111,78 @@ describe('the Fold canvas’s commit', () => {
     expect(bound!.queued).toBe(false);
     render(preview({ landing: true }));
     act(() => void bound!.verbs.commit());
+    act(() => tools.selectTool('mountain'));
     render(preview({ landing: false, step: { op: BOOK, key: 'another' } }));
     expect(commitStep).not.toHaveBeenCalled();
   });
 
-  it('decides a queued commit from the step it was asked for', () => {
+  it('decides a queued commit from the tools’ input it was asked for', () => {
     const shown = preview({ landing: true });
-    expect(queuedCommit(null, shown, false)).toBe('idle');
-    expect(queuedCommit('book', shown, false)).toBe('wait');
-    expect(queuedCommit('book', { ...shown, landing: false }, false)).toBe('commit');
-    expect(queuedCommit('book', { ...shown, landing: false }, true)).toBe('drop');
-    expect(queuedCommit('other', shown, false)).toBe('drop');
-    expect(queuedCommit('book', { ...shown, step: null }, false)).toBe('drop');
+    const refused = { status: 'refused' as const, refusal: { code: 'layer_order' as const }, fixes: [], faces: [], vertices: [] };
+    expect(queuedCommit(null, shown, false, 'in')).toBe('idle');
+    expect(queuedCommit('in', shown, false, 'in')).toBe('wait');
+    expect(queuedCommit('in', { ...shown, landing: false }, false, 'in')).toBe('commit');
+    expect(queuedCommit('in', { ...shown, landing: false }, true, 'in')).toBe('drop');
+    expect(queuedCommit('in', shown, false, 'another')).toBe('drop');
+    expect(queuedCommit('in', { ...shown, refused }, false, 'in')).toBe('drop');
+    // Its step still being built: it waits for it.
+    expect(queuedCommit('in', { ...shown, step: null, landing: false }, false, 'in')).toBe('wait');
+  });
+
+  /** The reverse tool with a free line located (after mount, which starts the tools over). */
+  function locatedReverse(surface: FoldSessionSurface) {
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'inside-reverse', lineMode: 'free' });
+    const render = (shown: FoldToolPreview) => act(() => root.render(<Harness session={surface} tools={tools} preview={shown} />));
+    // The tip still being asked about: no step yet.
+    render(preview({ step: null, landing: false }));
+    const free = (x: number, y: number) => ({ kind: 'free' as const, pane: 'folded' as const, scene: { x, y }, sheet: [x, y] as [number, number] });
+    act(() => {
+      tools.pick(free(0.5, 0));
+      tools.pick(free(0.5, 1));
+    });
+    render(preview({ step: null, landing: false }));
+    return { tools, render };
+  }
+
+  it('queues Enter pressed before a located fold’s step is built, and commits it once it is in and landed', () => {
+    const commitStep = vi.fn<FoldSessionSurface['commitStep']>(() => Promise.resolve({ status: 'stale' as const }));
+    const surface = session(commitStep);
+    const { render } = locatedReverse(surface);
+    let claimed = false;
+    act(() => {
+      claimed = bound!.verbs.commit();
+    });
+    expect(claimed).toBe(true);
+    expect(bound!.queued).toBe(true);
+    render(preview({ landing: true }));
+    expect(commitStep).not.toHaveBeenCalled();
+    render(preview({ landing: false }));
+    expect(commitStep).toHaveBeenCalledWith(BOOK, undefined);
+    expect(bound!.queued).toBe(false);
+  });
+
+  it('lets a commit queued before its step go when the tools are asked for another fold', () => {
+    const commitStep = vi.fn<FoldSessionSurface['commitStep']>(() => Promise.resolve({ status: 'stale' as const }));
+    const surface = session(commitStep);
+    const { tools, render } = locatedReverse(surface);
+    act(() => void bound!.verbs.commit());
+    expect(bound!.queued).toBe(true);
+    act(() => void tools.swapSide());
+    render(preview({ landing: false }));
+    expect(commitStep).not.toHaveBeenCalled();
+    expect(bound!.queued).toBe(false);
+  });
+
+  it('does not claim Enter while nothing is located', () => {
+    const surface = session(vi.fn());
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'inside-reverse', lineMode: 'free' });
+    act(() => root.render(<Harness session={surface} tools={tools} preview={preview({ step: null })} />));
+    let claimed = true;
+    act(() => {
+      claimed = bound!.verbs.commit();
+    });
+    expect(claimed).toBe(false);
+    expect(bound!.queued).toBe(false);
   });
 });
 

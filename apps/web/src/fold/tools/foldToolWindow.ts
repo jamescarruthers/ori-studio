@@ -363,9 +363,13 @@ function previewInstructions(
   };
 }
 
-/** Enter pressed before the preview landed: said, so the press is not taken for lost. */
+/**
+ * Enter pressed before the preview landed — or before its step was built, a
+ * reverse fold's tip still being asked about: said, so the press is not
+ * taken for lost. A queued commit is only ever one still waiting.
+ */
 export function queuedNote(t: TFunction, preview: FoldPreview): string[] {
-  return preview.queued && preview.landing
+  return preview.queued && !preview.refused
     ? [t('tools:fold.note.queued', 'Folding as soon as the preview is ready…')]
     : [];
 }

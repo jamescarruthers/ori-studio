@@ -165,10 +165,13 @@ describe('FoldToolWindow', () => {
     expect(calls.otherKind).toHaveBeenCalledWith('outside');
   });
 
-  it('says a commit asked for while the preview lands is waiting for it', () => {
+  it('says a commit asked for before the preview landed is waiting for it, and nothing once none is', () => {
     render({ preview: preview({ landing: true, queued: true }) });
     expect(fold()!.textContent).toContain('Folding as soon as the preview is ready…');
+    // Asked for before the step was built: still waiting.
     render({ preview: preview({ landing: false, queued: true }) });
+    expect(fold()!.textContent).toContain('Folding as soon as the preview is ready…');
+    render({ preview: preview({ landing: true }) });
     expect(fold()!.textContent).not.toContain('Folding as soon as the preview is ready…');
   });
 

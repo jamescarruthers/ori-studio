@@ -24,7 +24,7 @@ import { isLineTool, type FoldLineModeId, type FoldToolId } from '../tools/foldT
 import { nextStep } from '../tools/foldToolRegistry';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
-import { foldToolInput, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
+import { foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
 import { isFoldAltLatched } from './foldAltLatch';
 import { transformLine } from './foldCanvasGeometry';
 import { resolveFoldPick, topSheetPointAt, type FoldHit, type FoldHitRadii, type FoldPaneId } from './foldPicking';
@@ -97,20 +97,23 @@ export interface FoldCanvasVerbBinding {
 }
 
 /**
- * What a commit asked for while the preview landed (`queued`, the step's
- * key) does now: nothing queued; wait while that step is still landing;
- * commit once it has landed; drop it when it was refused, the step changed,
- * or nothing can be committed.
+ * What a commit asked for before the preview landed does now — asked for the
+ * tools' input then (`queued`, `foldToolInputKey`), with `input` theirs now:
+ * nothing queued; wait while that input's step is still being built (a
+ * reverse fold's tip or an axiom's roots still being asked about) or is
+ * landing; commit once it has landed; drop it when it was refused, the input
+ * changed, or nothing can be committed.
  */
 export function queuedCommit(
   queued: string | null,
   preview: Pick<FoldToolPreview, 'step' | 'refused' | 'landing'>,
-  readOnly: boolean
+  readOnly: boolean,
+  input: string
 ): 'idle' | 'wait' | 'commit' | 'drop' {
   if (queued === null) return 'idle';
   const { step, refused, landing } = preview;
-  if (!step || step.key !== queued || refused || readOnly) return 'drop';
-  return landing ? 'wait' : 'commit';
+  if (input !== queued || refused || readOnly) return 'drop';
+  return !step || landing ? 'wait' : 'commit';
 }
 
 /** Which of the previewed fold's choices the canvas's chooser shows, and of how many: the one a folder makes last. */
@@ -209,16 +212,17 @@ export function useFoldCanvasVerbs(
     [tools]
   );
 
-  // A commit asked for while the preview was landing, by the step it was
-  // asked for: committed when that step lands, let go when it is refused or
-  // the step changes. Never dropped without a word: the window says it waits.
+  // A commit asked for before the preview landed, by the tools' input it was
+  // asked for: committed when that input's step lands, let go when it is
+  // refused or the input changes. Never dropped without a word: the window
+  // says it waits.
   const [queued, setQueued] = useState<string | null>(null);
   useEffect(() => {
-    const now = queuedCommit(queued, preview, session.readOnly);
+    const now = queuedCommit(queued, preview, session.readOnly, foldToolInputKey(tools.store.getState()));
     if (now === 'idle' || now === 'wait') return;
     setQueued(null);
     if (now === 'commit' && preview.step) commitOp(preview.step.op, preview.step.choices);
-  }, [queued, preview, session.readOnly, commitOp]);
+  }, [queued, preview, session.readOnly, commitOp, tools]);
 
   const verbs = useMemo<FoldCanvasVerbs>(() => {
     const state = () => tools.store.getState();
@@ -400,12 +404,15 @@ export function useFoldCanvasVerbs(
 
       commit: () => {
         const { step, refused, landing } = live.current.preview;
-        if (!step || refused || live.current.session.readOnly) return false;
-        // Still landing: committed once it lands, never silently dropped.
-        if (landing) {
-          setQueued(step.key);
+        if (refused || live.current.session.readOnly) return false;
+        // Located, its step still being built (a reverse fold's tip, an
+        // axiom's roots, being asked about) or still landing: committed once
+        // it lands, never silently dropped.
+        if (!step ? isLocated(state()) : landing) {
+          setQueued(foldToolInputKey(state()));
           return true;
         }
+        if (!step) return false;
         commitOp(step.op, step.choices);
         return true;
       },
