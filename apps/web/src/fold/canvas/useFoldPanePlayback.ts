@@ -70,11 +70,8 @@ export function useFoldPanePlayback({ stepId, sheet, display, reveal }: FoldPane
   );
   const motion = useFoldStepMotion(stepId, pane);
   const playback = useFoldStepPlayback({ motion });
-  const revealRef = useRef(reveal);
-  useEffect(() => {
-    revealRef.current = reveal;
-  });
-  const surface = useMemo(() => revealingPlayback(playback, () => revealRef.current?.()), [playback]);
+  // `reveal` should keep its identity (a module function), or the surface is new each render.
+  const surface = useMemo(() => (reveal ? revealingPlayback(playback, reveal) : playback), [playback, reveal]);
   const latest = useRef(surface);
   useEffect(() => {
     latest.current = surface;

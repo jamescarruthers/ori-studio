@@ -1,4 +1,4 @@
-import { act } from 'react';
+import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { FoldCrossSection } from '../engine/foldEngineWire';
@@ -11,8 +11,12 @@ const sectionA = { order: { kind: 'woven' } } as unknown as FoldCrossSection;
 const sectionB = { order: { kind: 'woven' } } as unknown as FoldCrossSection;
 
 let seen: FoldWovenInterval | null = null;
+/** Captured in an effect, which `act` flushes. */
 function Probe({ section }: { section: FoldCrossSection | null }) {
-  seen = useFoldWovenInterval(section);
+  const woven = useFoldWovenInterval(section);
+  useEffect(() => {
+    seen = woven;
+  });
   return null;
 }
 

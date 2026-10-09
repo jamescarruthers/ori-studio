@@ -1,4 +1,4 @@
-import { act } from 'react';
+import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -88,8 +88,12 @@ const session = (): FoldSessionSurface =>
 const view = { index: foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []) } as unknown as FoldStateView;
 
 let seen: FoldToolPreview | null = null;
+/** Captured in an effect, which `act` flushes. */
 function Probe({ tools }: { tools: FoldToolState }) {
-  seen = useFoldToolPreview(session(), view, tools);
+  const preview = useFoldToolPreview(session(), view, tools);
+  useEffect(() => {
+    seen = preview;
+  });
   return null;
 }
 
