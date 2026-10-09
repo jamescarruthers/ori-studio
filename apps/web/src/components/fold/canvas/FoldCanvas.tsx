@@ -21,7 +21,7 @@ import { chooserBounds, foldPromptWords, foldWindowPreview, sceneLayers } from '
 import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { FOLD_PANE_DISPLAY_DEFAULT, type FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
-import { useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
+import { revealFoldedPane, useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
 import { useFoldCanvasInks } from '../../../fold/canvas/useFoldCanvasInks';
 import { useFoldCanvasPaint } from '../../../fold/canvas/useFoldCanvasPaint';
 import { marksMadeAt, useFoldCanvasVerbs } from '../../../fold/canvas/useFoldCanvasVerbs';
@@ -121,7 +121,13 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const framingKey = `${sequenceId}:${sheetKey}`;
 
   // --- The step on screen played from its parent, on the folded pane, with its transport on the bar.
-  const playback = useFoldPanePlayback(session.cursorId, summary?.sheet ?? null, display);
+  // A phone shows one pane: a play turns it to the folded form, where the frames are drawn.
+  const playback = useFoldPanePlayback({
+    stepId: session.cursorId,
+    sheet: summary?.sheet ?? null,
+    display,
+    reveal: phone ? revealFoldedPane : undefined,
+  });
 
   // --- The tool's feedback on each pane.
   const freeFrom = toolState.lineMode === 'free' && toolState.picks[0]?.kind === 'free' && toolState.picks.length === 1 ? toolState.picks[0].scene : null;
