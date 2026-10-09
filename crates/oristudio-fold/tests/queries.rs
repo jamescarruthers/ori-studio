@@ -14,6 +14,7 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use oristudio_fold::numerics::{MIN_FEATURE, TOL};
+use oristudio_fold::random::Rng;
 use oristudio_fold::{
     ActionKind, CrossSection, Direction, FaceId, FoldRefusal, FoldScene, Folded, Isometry,
     PlainFold, RowOrder, ScenePoint, Seed, Sheet, Side, StartSide, State, VertexId,
@@ -553,23 +554,6 @@ fn the_scene_carries_the_kernel_schema() {
 
 // --- Seeded random sequences -----------------------------------------------
 
-/// SplitMix64.
-struct Rng(u64);
-
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
-        let mut z = self.0;
-        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
-    }
-
-    fn below(&mut self, n: usize) -> usize {
-        ((self.next() * n as f64) as usize).min(n.saturating_sub(1))
-    }
-}
-
 /// A line through landmarks: two vertex images, their perpendicular bisector,
 /// or a crease's image.
 fn random_line(state: &State, rng: &mut Rng) -> Option<Line> {
@@ -594,7 +578,7 @@ fn moving_point(state: &State, line: &Line, side: Side, rng: &mut Rng) -> Option
     for _ in 0..8 {
         let face = state.faces()[rng.below(state.faces().len())].id;
         let image = state.face_image(face)?;
-        let w: Vec<f64> = image.iter().map(|_| rng.next() + 0.05).collect();
+        let w: Vec<f64> = image.iter().map(|_| rng.next_f64() + 0.05).collect();
         let total: f64 = w.iter().sum();
         let p = image.iter().zip(&w).fold([0.0, 0.0], |s, (q, w)| {
             [s[0] + q[0] * w / total, s[1] + q[1] * w / total]
@@ -800,7 +784,7 @@ fn check_queries(
 fn queries_hold_on_random_sequences() {
     let mut tally = Tally::default();
     for sequence in 0..90u64 {
-        let mut rng = Rng(0x5eed ^ sequence.wrapping_mul(0x2545_f491_4f6c_dd1d));
+        let mut rng = Rng::new(0x5eed ^ sequence.wrapping_mul(0x2545_f491_4f6c_dd1d));
         let sheet = match sequence % 3 {
             0 => Sheet::square(),
             1 => Sheet::rectangle(1.0, 0.6).unwrap_or_else(|e| panic!("{e}")),
@@ -816,7 +800,7 @@ fn queries_hold_on_random_sequences() {
             if state.faces().len() > 40 {
                 break;
             }
-            let x = rng.next();
+            let x = rng.next_f64();
             if x < 0.08 {
                 state = state.turn_over();
                 continue;
@@ -824,14 +808,18 @@ fn queries_hold_on_random_sequences() {
             let Some(line) = random_line(&state, &mut rng) else {
                 continue;
             };
-            let side = if rng.next() < 0.5 {
+            let side = if rng.next_f64() < 0.5 {
                 Side::Positive
             } else {
                 Side::Negative
             };
-            let direction = if rng.next() < 0.5 { Valley } else { Mountain };
+            let direction = if rng.next_f64() < 0.5 {
+                Valley
+            } else {
+                Mountain
+            };
             let mut op = PlainFold::new(line, side, direction);
-            if rng.next() < 0.5
+            if rng.next_f64() < 0.5
                 && let Some(at) = moving_point(&state, &line, side, &mut rng)
                 && let Some(stack) = state.image_of(at).and_then(|p| state.stack_at(p))
             {

@@ -126,12 +126,12 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   each recorded under `tests/fixtures/classics/` as its operations and the
   canonical outcome of every step, and replayed from the JSON alone.
   Regenerate with `ORISTUDIO_FOLD_BLESS=1` and review the diff.
-- `tests/random.rs`: seeded random sequences along lines through landmarks.
-  Every landed state passes the full gate from scratch and a freshly built
-  checker; every applied fold keeps each vertex's band between the line asked
-  for and the line folded along, moves vertices rigidly and leaves creases off
-  the line alone. About 760 folds per run (2 s in debug). A larger campaign
-  is ignored by default:
+- `tests/random.rs`: seeded random sequences along lines through landmarks,
+  drawn by the `random` module below. Every landed state passes the full gate
+  from scratch and a freshly built checker; every applied fold keeps each
+  vertex's band between the line asked for and the line folded along, moves
+  vertices rigidly and leaves creases off the line alone. About 760 folds per
+  run (2 s in debug). A larger campaign is ignored by default:
 
   ```sh
   cargo test -p oristudio-fold --release --test random -- --ignored --nocapture
@@ -139,11 +139,16 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
 
   On 2026-10-08 it applied 9,224 folds over four seeds (up to 178 faces) with
   no hard failure; the refusals were 1,902 "nothing stays", 1,029 "no moving
-  side", 339 slivers, 288 near misses and 23 short creases.
-- `random` (feature `random-sequences`): the same draws as a library module,
-  for crates that check the engine from outside it. `crates/oracle-tests`'
-  `fold_oracle` checks its sequences against Oriedita and Flat-Folder. Its own
-  tests: `cargo test -p oristudio-fold --features random-sequences --lib random`.
+  side", 339 slivers, 288 near misses and 23 short creases. Its ignored
+  `campaign_digest` prints a hash of every step's outcome over the same
+  campaign, landed states to the bit: a change meant to leave the engine's
+  results alone must print the digest the build before it does.
+- `random` (feature `random-sequences`): the seeded sequences and their
+  SplitMix64 generator as a library module, so the oracles replay exactly the
+  draws the property tests make: `crates/oracle-tests`' `fold_oracle` checks
+  the campaign's sequences against Oriedita and Flat-Folder. The crate is its
+  own dev-dependency with the feature, so every test and example here draws
+  from it and `cargo test -p oristudio-fold` runs its tests too.
 - `tests/queries.rs`: the output and queries. The cross-section's display
   layers (a layer crossed by a precrease is one row; two precreased layers are
   two rows, one flap or two by where the spine is), unordered rows, the depth
@@ -199,20 +204,26 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
 random lines through the middle of the folded model, from the flat square to
 more than 256 faces, 40 runs, bucketed by the landed state's faces like the
 core spike's `perf.mjs`. Apple Silicon, native release build, 2026-10-08, one
-run on a shared machine (load average 17–23; a run at load 50 was twice as
+run on a shared machine (load average 9–15; a run at load 50 was twice as
 slow, so read p95 as pessimistic).
 
 | Faces | Folds | Pairs (mean) | Closure | Fold mean / p95 | Full gate | Checker alone |
 |---|---|---|---|---|---|---|
-| 1–8 | 121 | 11 | 0.004 ms | 0.050 / 0.094 ms | 0.028 ms | 0.020 ms |
-| 9–32 | 86 | 170 | 0.015 ms | 0.34 / 0.68 ms | 0.25 ms | 0.21 ms |
-| 33–64 | 68 | 845 | 0.073 ms | 1.3 / 2.3 ms | 0.97 ms | 0.91 ms |
-| 65–128 | 79 | 2,978 | 0.29 ms | 3.9 / 7.0 ms | 2.8 ms | 2.8 ms |
-| 129–256 | 76 | 9,634 | 1.5 ms | 11.9 / 21.3 ms | 7.6 ms | 7.7 ms |
+| 1–8 | 121 | 11 | 0.003 ms | 0.045 / 0.082 ms | 0.025 ms | 0.017 ms |
+| 9–32 | 86 | 170 | 0.008 ms | 0.29 / 0.56 ms | 0.23 ms | 0.19 ms |
+| 33–64 | 68 | 845 | 0.021 ms | 1.05 / 1.74 ms | 0.89 ms | 0.83 ms |
+| 65–128 | 79 | 2,978 | 0.049 ms | 3.0 / 5.4 ms | 2.6 ms | 2.5 ms |
+| 129–256 | 76 | 9,634 | 0.14 ms | 8.4 / 13.2 ms | 7.1 ms | 7.1 ms |
 
-The same example on the layer order before its rework (commit `c0a3d44`), run
-straight after at load 12–16: 3.7 / 6.6 ms at 33–64 faces and 48.0 / 86.4 ms
-at 129–256, the full gate 43.2 ms.
+Against the engine before its closure index and landing were reworked (the
+Wave 2 integration, `00954c01f`), three runs of each build alternated at
+load 8–17: at 129–256 faces the fold was 11.8–12.1 / 21.9–22.6 ms (mean /
+p95) and is 8.1–8.4 / 12.7–13.1 ms; the closure 1.6 ms and 0.14 ms; the full
+gate 7.5–8.0 ms and 6.9–7.1 ms. At 65–128 faces, 3.8–4.0 / 6.9–7.1 ms and
+2.9–3.2 / 5.2–6.7 ms. Every result is the same: the random campaign's
+digest (`campaign_digest` in `tests/random.rs`, every landed state to the
+bit over 14,774 steps) is identical on both builds. The layer order before
+its own rework (commit `c0a3d44`) took 48.0 / 86.4 ms at 129–256.
 
 *Closure* is `State::analyse_fold` (snap, classify, pieces, flaps, U); *fold*
 the whole operation, its incremental gate included; *full gate* `State::make`
@@ -221,24 +232,65 @@ check with a newly built problem. The example also times a top-layer fold on
 each landed state; on these random stacks rule (i) usually still joins most
 layers, so it is no cheaper.
 
-- **The fold's own work is small**: fold minus gate is about 0.3 ms at 33–64
-  faces and 4 ms at 129–256, under the JS spike's p95 for the op alone (2.2 ms
-  and 17.2 ms, research §12).
+- **The fold's own work is small**: fold minus gate is about 0.2 ms at 33–64
+  faces and 1.3 ms at 129–256, under the JS spike's p95 for the op alone
+  (2.2 ms and 17.2 ms, research §12). Most of what it was went to two
+  places: the box index returned each of a stack's large boxes once per grid
+  cell and sorted the repeats away, which was most of the closure; and
+  landing tested every touched pair's children for overlap with a fresh
+  penetration (a `hypot` per edge per test) and inserted the new order pair
+  by pair. The index now takes a box in one cell and sizes its cells to the
+  boxes; landing keeps each face's edge planes, stops an overlap test at the
+  first plane that settles it, and builds the order in one sort.
 - **The gate is most of it**, and almost all of the gate is the layer-order
-  problem: above 128 faces the overlay into cells is 5.0 ms, the rest of the
-  constraint build 2.7 ms and the check on the built problem 0.7 ms (run the
-  example with `FOLD_PERF_SPLIT=1` for the breakdown; before the rework, run
-  back to back, they were 24, 21 and 11 ms).
-- **The drop came from how the overlay is built** (`oristudio-layer-order`'s
-  README) and from tables in place of ordered maps, more than from
-  incrementality: random all-layer folds touch most faces, and nearly every
-  other face overlaps one of them, so the rebuild still costs about what a
-  build does. Where an operation is local it pays: on these states a rebuild
-  naming one face costs 3.9 ms against 6.3 ms for a build (before: 23
-  against 31 ms).
+  problem: above 128 faces the constraint build is 6.5 ms, 4.0 ms of it the
+  overlay into cells, and the check on the built problem 0.7 ms (run the
+  example with `FOLD_PERF_SPLIT=1` for the breakdown; before the layer
+  order's rework they were 45 ms, 24 of it the overlay, and 11 ms).
+- **Incrementality pays where an operation is local**: random all-layer
+  folds touch most faces, and nearly every other face overlaps one of them,
+  so their rebuild costs about what a build does. On these states a rebuild
+  naming one face cost 3.9 ms against 6.3 ms for a build.
 - These stacks are much deeper than real models (9,600 pairs at 129–256
-  faces; Beloch's crane is 60 faces at step 17), and the plan's tier-3 budget
-  is ≤ 50 ms at 256 faces in wasm.
+  faces; Beloch's crane is 60 faces and 770 pairs), and the plan's tier-3
+  budget is ≤ 50 ms at 256 faces in wasm.
+
+`cargo run -p oristudio-fold --release --example sequences`: the same steps
+on real sequences. Every state of the classic sequences with the sequence's
+own next fold or precrease, and the final frame of each Beloch fixture
+(`tests/fixtures/beloch/`) that replays: the file's crease pattern through
+Import CP with the frame's own `faceOrders` as the stored order, a valley
+fold along each of the state's crease lines from either side standing in
+for the next step. Each time is the median of 15 runs; 2026-10-08, load
+average 9–14.
+
+| Sequence | States | Faces | Pairs | Scene | Landmarks | Cross-section mean / max | Depth choices mean / max | Fold mean / max (landed of tried) |
+|---|---|---|---|---|---|---|---|---|
+| kite-base | 5 | 4 | 2 | 0.001 ms | 0.008 ms | 0.002 / 0.002 ms | 0.003 / 0.006 ms | 0.012 / 0.015 ms (4 of 4) |
+| precrease-four-layers | 5 | 8 | 28 | 0.002 ms | 0.023 ms | 0.002 / 0.003 ms | 0.007 / 0.012 ms | 0.023 / 0.048 ms (4 of 4) |
+| top-layer-corner | 5 | 7 | 17 | 0.004 ms | 0.025 ms | 0.002 / 0.003 ms | 0.009 / 0.019 ms | 0.017 / 0.029 ms (4 of 4) |
+| tuck-under-top | 3 | 3 | 3 | 0.001 ms | 0.008 ms | 0.002 / 0.002 ms | 0.003 / 0.005 ms | 0.010 / 0.012 ms (2 of 2) |
+| Beloch, 2–8 faces | 42 | 8 | 28 | 0.003 ms | 0.029 ms | 0.002 / 0.006 ms | 0.009 / 0.049 ms | 0.011 / 0.056 ms (86 of 204) |
+| Beloch, 9–16 faces | 4 | 16 | 120 | 0.007 ms | 0.106 ms | 0.005 / 0.012 ms | 0.050 / 0.238 ms | 0.036 / 0.111 ms (22 of 48) |
+| Beloch crane | 1 | 60 | 770 | 0.28 ms | 1.1 ms | 0.040 / 0.089 ms | 1.75 / 3.37 ms | 1.10 / 1.91 ms (34 of 38) |
+
+Faces and pairs are the most in a row; scene and landmarks the slowest
+state's. 47 of the 56 Beloch fixtures replay. The rest, with the engine's
+reason: cube-root, mark-overlay-regression and marks-demo (the file's crease
+pattern does not fold flat as Import CP reads it), def-diagonals (its four
+faces have no valid order), x-midpoint (the frame's order breaks a
+taco-taco constraint on the imported faces), side-preliminary-1 to 3 (a
+frame face's centroid lies in no imported face) and join-edge (a `J` edge,
+which Import CP does not read).
+
+Against D14's tiers, natively and nothing near a budget: per line, side and
+direction (tier 2, which while a free line is dragged comes once per
+pointer move, so held to tier 1's 4 ms) the crane's cross-section takes at
+most 0.09 ms and its depth choices 3.4 ms, the closest to a budget, since
+they analyse the fold once per layer at the point; per state (tier 2) its
+scene takes 0.28 ms and its landmarks 1.1 ms; and a landed fold (tier 3,
+≤ 50 ms at 256 faces in wasm) at most 1.9 ms, with the random 129–256-face
+stacks at 13 ms p95.
 
 `cargo run -p oristudio-fold --release --example landmarks`: every landmark of
 a state and the candidates of an O2 and an O6 over them, on states made the

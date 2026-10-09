@@ -16,6 +16,9 @@
 //!    overlapping pairs, transitive in every cell, the taco-taco,
 //!    taco-tortilla and tortilla-tortilla families, and every letter derived
 //!    from the order.
+//!
+//! Steps 1–5 are [`before_order`], which `Unordered` also runs on parts whose
+//! order is still to be decided.
 
 use std::collections::BTreeSet;
 
@@ -26,7 +29,7 @@ use oristudio_layer_order::{
 };
 
 use crate::numerics::TOL;
-use crate::pattern::{CreaseKind, FaceId};
+use crate::pattern::{CreaseKind, EdgeId, FaceId};
 use crate::refusal::FoldRefusal;
 use crate::state::derive::{Geometry, Topology};
 use crate::state::{Derived, State, StateParts};
@@ -39,6 +42,68 @@ pub(super) fn run(
     parts: &StateParts,
     previous: Option<(&State, &BTreeSet<FaceId>)>,
 ) -> Result<Derived, FoldRefusal> {
+    let BeforeOrder {
+        topology,
+        geometry,
+        view,
+        edge_creases,
+    } = before_order(parts, &BTreeSet::new())?;
+
+    let (problem, scope_faces) = match previous {
+        Some((previous, touched)) => {
+            let mut scope: BTreeSet<FaceId> = touched.clone();
+            scope.extend(
+                parts
+                    .faces
+                    .iter()
+                    .map(|f| f.id)
+                    .filter(|&id| previous.face_position(id).is_none()),
+            );
+            (previous.derived.problem.rebuild(&view, &scope), Some(scope))
+        }
+        None => (ConstraintProblem::build(&view), None),
+    };
+    let scope = match &scope_faces {
+        Some(faces) => Scope::Faces(faces),
+        None => Scope::All,
+    };
+    let report = check_problem(&problem, &view, &parts.order, scope)
+        .map_err(|e| folded_image(&e, parts, &topology, &edge_creases))?;
+    let mut violations: BTreeSet<Violation> = report.violations.into_iter().collect();
+    if scope_faces.is_some() {
+        violations.extend(pair_completeness(&problem, &parts.order));
+    }
+    if !violations.is_empty() {
+        return Err(FoldRefusal::LayerOrder {
+            violations: violations.into_iter().collect(),
+        });
+    }
+    Ok(Derived {
+        topology,
+        geometry,
+        view,
+        problem,
+    })
+}
+
+/// What steps 1–5 derive: everything the layer order does not decide.
+pub(crate) struct BeforeOrder {
+    pub(crate) topology: Topology,
+    pub(crate) geometry: Geometry,
+    /// The folded image as the layer order sees it.
+    pub(crate) view: FoldedView,
+    /// Per folded-view edge, its crease's position.
+    pub(crate) edge_creases: Vec<usize>,
+}
+
+/// Steps 1–5 on parts whose faces and creases are in id order; their order
+/// is not read. A folded crease in `unknown` enters the folded view without
+/// a letter, for the order to decide (`crate::unordered`); the gate itself
+/// passes none.
+pub(crate) fn before_order(
+    parts: &StateParts,
+    unknown: &BTreeSet<EdgeId>,
+) -> Result<BeforeOrder, FoldRefusal> {
     for pair in parts.faces.windows(2) {
         if pair[0].id == pair[1].id {
             return Err(FoldRefusal::DuplicateId {
@@ -85,7 +150,7 @@ pub(super) fn run(
     let geometry = Geometry::derive(parts, &topology, root, TOL)?;
 
     let mut edges = Vec::new();
-    let mut view_creases = Vec::new();
+    let mut edge_creases = Vec::new();
     for (k, crease) in parts.creases.iter().enumerate() {
         if crease.kind == CreaseKind::Border {
             continue;
@@ -108,11 +173,12 @@ pub(super) fn run(
             faces: [parts.faces[f].id, parts.faces[g].id],
             segment: crease.vertices.map(|v| t.apply(parts.vertices[v.index()])),
             kind: match crease.kind {
+                CreaseKind::Folded(_) if unknown.contains(&crease.id) => EdgeKind::Folded(None),
                 CreaseKind::Folded(letter) => EdgeKind::Folded(Some(letter)),
                 _ => EdgeKind::Flat,
             },
         });
-        view_creases.push(k);
+        edge_creases.push(k);
     }
     let faces = parts
         .faces
@@ -126,42 +192,12 @@ pub(super) fn run(
         })
         .collect();
     let view = FoldedView::new(faces, edges)
-        .map_err(|e| folded_image(&e, parts, &topology, &view_creases))?;
-
-    let (problem, scope_faces) = match previous {
-        Some((previous, touched)) => {
-            let mut scope: BTreeSet<FaceId> = touched.clone();
-            scope.extend(
-                parts
-                    .faces
-                    .iter()
-                    .map(|f| f.id)
-                    .filter(|&id| previous.face_position(id).is_none()),
-            );
-            (previous.derived.problem.rebuild(&view, &scope), Some(scope))
-        }
-        None => (ConstraintProblem::build(&view), None),
-    };
-    let scope = match &scope_faces {
-        Some(faces) => Scope::Faces(faces),
-        None => Scope::All,
-    };
-    let report = check_problem(&problem, &view, &parts.order, scope)
-        .map_err(|e| folded_image(&e, parts, &topology, &view_creases))?;
-    let mut violations: BTreeSet<Violation> = report.violations.into_iter().collect();
-    if scope_faces.is_some() {
-        violations.extend(pair_completeness(&problem, &parts.order));
-    }
-    if !violations.is_empty() {
-        return Err(FoldRefusal::LayerOrder {
-            violations: violations.into_iter().collect(),
-        });
-    }
-    Ok(Derived {
+        .map_err(|e| folded_image(&e, parts, &topology, &edge_creases))?;
+    Ok(BeforeOrder {
         topology,
         geometry,
         view,
-        problem,
+        edge_creases,
     })
 }
 
@@ -207,13 +243,13 @@ fn pair_completeness(problem: &ConstraintProblem, order: &LayerOrder) -> Vec<Vio
     out
 }
 
-/// A malformed folded image, with the faces it involves. `view_creases` maps
+/// A malformed folded image, with the faces it involves. `edge_creases` maps
 /// the folded view's edges to crease positions.
 fn folded_image(
     error: &LayerOrderError,
     parts: &StateParts,
     topology: &Topology,
-    view_creases: &[usize],
+    edge_creases: &[usize],
 ) -> FoldRefusal {
     let faces = match error {
         LayerOrderError::DuplicateFace(f)
@@ -227,7 +263,7 @@ fn folded_image(
         | LayerOrderError::EdgeOffFace { face, .. } => vec![*face],
         LayerOrderError::ContradictoryOrder { pair } => pair.faces().to_vec(),
         LayerOrderError::EdgeKindMismatch { edge, .. }
-        | LayerOrderError::DegenerateEdge { edge, .. } => view_creases
+        | LayerOrderError::DegenerateEdge { edge, .. } => edge_creases
             .get(*edge)
             .map(|&k| {
                 topology.crease_faces[k]

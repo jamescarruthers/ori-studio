@@ -19,20 +19,9 @@
 
 use std::time::Instant;
 
+use oristudio_fold::random::Rng;
 use oristudio_fold::{Direction, PlainFold, Sheet, Side, StartSide, State, VertexId};
 use oristudio_geometry::Line;
-
-struct Rng(u64);
-
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
-        let mut z = self.0;
-        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
-    }
-}
 
 #[derive(Default)]
 struct Bucket {
@@ -60,10 +49,10 @@ fn top_layer(state: &State, rng: &mut Rng) -> Option<PlainFold> {
         |b, p| (b.0.min(p[0]), b.1.min(p[1]), b.2.max(p[0]), b.3.max(p[1])),
     );
     let c = [
-        x0 + (0.3 + 0.4 * rng.next()) * (x1 - x0),
-        y0 + (0.3 + 0.4 * rng.next()) * (y1 - y0),
+        x0 + (0.3 + 0.4 * rng.next_f64()) * (x1 - x0),
+        y0 + (0.3 + 0.4 * rng.next_f64()) * (y1 - y0),
     ];
-    let a = rng.next() * std::f64::consts::PI;
+    let a = rng.next_f64() * std::f64::consts::PI;
     let line = Line::from_point_direction(c, [a.cos(), a.sin()])?;
     let p = [c[0] + 0.02 * line.n[0], c[1] + 0.02 * line.n[1]];
     let top = *state.stack_at(p)?.first()?;
@@ -94,7 +83,7 @@ fn main() {
     let ranges = [(1, 8), (9, 32), (33, 64), (65, 128), (129, 256)];
     let mut buckets: Vec<Bucket> = ranges.iter().map(|_| Bucket::default()).collect();
     for run in 0..40u64 {
-        let mut rng = Rng(4242 + run);
+        let mut rng = Rng::new(4242 + run);
         let mut state = match State::flat(Sheet::square(), StartSide::Front) {
             Ok(s) => s,
             Err(e) => panic!("{e}"),
@@ -115,19 +104,19 @@ fn main() {
                 |b, p| (b.0.min(p[0]), b.1.min(p[1]), b.2.max(p[0]), b.3.max(p[1])),
             );
             let c = [
-                x0 + (0.3 + 0.4 * rng.next()) * (x1 - x0),
-                y0 + (0.3 + 0.4 * rng.next()) * (y1 - y0),
+                x0 + (0.3 + 0.4 * rng.next_f64()) * (x1 - x0),
+                y0 + (0.3 + 0.4 * rng.next_f64()) * (y1 - y0),
             ];
-            let a = rng.next() * std::f64::consts::PI;
+            let a = rng.next_f64() * std::f64::consts::PI;
             let Some(line) = Line::from_point_direction(c, [a.cos(), a.sin()]) else {
                 continue;
             };
-            let side = if rng.next() < 0.5 {
+            let side = if rng.next_f64() < 0.5 {
                 Side::Positive
             } else {
                 Side::Negative
             };
-            let direction = if rng.next() < 0.5 {
+            let direction = if rng.next_f64() < 0.5 {
                 Direction::Valley
             } else {
                 Direction::Mountain

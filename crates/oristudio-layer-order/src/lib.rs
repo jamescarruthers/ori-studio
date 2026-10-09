@@ -31,7 +31,7 @@ pub mod view;
 
 pub use check::{CheckReport, Scope, Violation, check, check_problem, derived_letter};
 pub use error::LayerOrderError;
-pub use order::{FacePair, LayerOrder, OrieditaRelation, Stacking};
+pub use order::{FacePair, LayerOrder, LayerOrderBuilder, OrieditaRelation, Stacking};
 pub use overlay::{Cell, Overlay};
 pub use problem::{
     Ambiguity, AmbiguityCause, Buckets, Constraint, ConstraintKind, ConstraintProblem,

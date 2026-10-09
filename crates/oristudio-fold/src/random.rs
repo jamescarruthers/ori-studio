@@ -10,10 +10,10 @@
 //! vertex at a sixteenth of a turn, plus a few free lines. Seeds are all
 //! layers, a depth at a sheet point on the moving side, or one of the flaps.
 //!
-//! The draws are `tests/random.rs`'s, made in the same order, so a generator
-//! started from the same state gives the same sequence there and here.
-//! Everything replays exactly from the seed: the generator is SplitMix64 and
-//! no draw depends on anything but the state and the generator.
+//! `tests/random.rs` runs its property campaign on these sequences, and every
+//! other seeded test and example in the crate draws from [`Rng`]. Everything
+//! replays exactly from the seed: the generator is SplitMix64 and no draw
+//! depends on anything but the state and the generator.
 
 use std::collections::BTreeSet;
 use std::f64::consts::{PI, TAU};
@@ -205,6 +205,13 @@ pub fn sheet(rng: &mut Rng) -> Result<Sheet, FoldRefusal> {
 /// coincident landmarks, parallel creases, no moving-side point found).
 pub fn plain_fold(state: &State, rng: &mut Rng) -> Option<PlainFold> {
     let line = line(state, rng)?;
+    plain_fold_along(state, line, rng)
+}
+
+/// A drawn plain fold of `state` along `line`: the side, direction and seed
+/// [`plain_fold`] draws after its line, for a test that draws lines its own
+/// way. None when a depth seed finds no moving-side point.
+pub fn plain_fold_along(state: &State, line: Line, rng: &mut Rng) -> Option<PlainFold> {
     let side = if rng.chance(0.5) {
         Side::Positive
     } else {

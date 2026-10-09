@@ -36,7 +36,7 @@ fn export(path: &[State]) -> FoldDocument {
 fn export_paths() -> Vec<(String, Vec<State>)> {
     let mut paths = classic_paths();
     paths.push(("dyadic".to_string(), dyadic_path()));
-    let mut rng = Rng(0xf01d);
+    let mut rng = Rng::new(0xf01d);
     for (s, sheet) in sheets().into_iter().enumerate() {
         paths.push((format!("random sheet {s}"), random_path(&mut rng, sheet, 8)));
     }
@@ -272,7 +272,7 @@ fn turning_over_mirrors_a_frame_and_keeps_its_triples() {
 /// under the cap that refuses the file.
 #[test]
 fn the_whole_file_is_capped() {
-    let mut rng = Rng(0xca9);
+    let mut rng = Rng::new(0xca9);
     let path = random_path(&mut rng, sheets()[0].clone(), 12);
     let doc = export(&path);
     let size = |f: &FoldDocument| {

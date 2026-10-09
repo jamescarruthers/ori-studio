@@ -27,7 +27,7 @@
 use std::collections::{BTreeSet, HashMap};
 
 use oristudio_geometry::convex::{self, HalfPlane};
-use oristudio_layer_order::{FacePair, LayerOrder, Letter, Violation};
+use oristudio_layer_order::{FacePair, LayerOrder, LayerOrderBuilder, Letter, Violation};
 
 use crate::fold::closure::Analysis;
 use crate::index::BoxIndex;
@@ -411,12 +411,32 @@ fn carry_and_place(
     let touched_old: Vec<bool> = (0..faces.len())
         .map(|f| analysis.moving[f] || child_of[f].len() > 1)
         .collect();
+    // Each new face meets many others: its edges' planes once, not per test.
+    let planes: Vec<Vec<HalfPlane>> = geometry
+        .images
+        .iter()
+        .map(|image| convex::edge_planes(image))
+        .collect();
+    let depth = |a: usize, b: usize| {
+        convex::penetration_with_planes(
+            &geometry.images[a],
+            &planes[a],
+            &geometry.images[b],
+            &planes[b],
+        )
+    };
     let overlap = |a: usize, b: usize| {
         convex::boxes_overlap(&geometry.boxes[a], &geometry.boxes[b], 0.0)
-            && convex::penetration(&geometry.images[a], &geometry.images[b]) > TOL
+            && convex::overlaps_with_planes(
+                &geometry.images[a],
+                &planes[a],
+                &geometry.images[b],
+                &planes[b],
+                TOL,
+            )
     };
     let id = |a: usize| next.faces[a].id;
-    let set = |order: &mut LayerOrder, upper: usize, lower: usize| {
+    let set = |order: &mut LayerOrderBuilder, upper: usize, lower: usize| {
         order
             .set_above(id(upper), id(lower))
             .map_err(|_| FoldRefusal::DuplicateId {
@@ -425,7 +445,7 @@ fn carry_and_place(
             })
     };
 
-    let mut order = LayerOrder::new();
+    let mut order = LayerOrderBuilder::with_capacity(state.order().len());
     for (pair, lo_above) in state.order().pairs() {
         let Some(lo_above) = lo_above else {
             continue;
@@ -476,7 +496,7 @@ fn carry_and_place(
     let on_top = analysis.direction == Direction::Valley;
     for a in (0..new_faces.len()).filter(|&a| new_faces[a].moving) {
         for b in index.query(&geometry.boxes[a], 0.0) {
-            let penetration = convex::penetration(&geometry.images[a], &geometry.images[b]);
+            let penetration = depth(a, b);
             if penetration <= TOL {
                 continue;
             }
@@ -494,7 +514,7 @@ fn carry_and_place(
             }
         }
     }
-    Ok(order)
+    Ok(order.build())
 }
 
 /// The lesser width of two faces' images.

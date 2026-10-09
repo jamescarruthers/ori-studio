@@ -17,33 +17,12 @@
 //! larger one:
 //! `cargo test -p oristudio-fold --release --test incremental_order -- --ignored`.
 
-use oristudio_fold::numerics::MIN_FEATURE;
-use oristudio_fold::{Direction, PlainFold, Seed, Sheet, Side, StartSide, State, VertexId};
+use oristudio_fold::random::{Rng, plain_fold_along};
+use oristudio_fold::{PlainFold, Sheet, StartSide, State, VertexId};
 use oristudio_geometry::Line;
 use oristudio_layer_order::ConstraintProblem;
 
 type Point = [f64; 2];
-
-/// SplitMix64, so the campaign needs no dependency and replays exactly.
-struct Rng(u64);
-
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
-        let mut z = self.0;
-        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
-    }
-
-    fn below(&mut self, n: usize) -> usize {
-        ((self.next() * n as f64) as usize).min(n.saturating_sub(1))
-    }
-
-    fn chance(&mut self, p: f64) -> bool {
-        self.next() < p
-    }
-}
 
 fn images(state: &State) -> Vec<Point> {
     (0..state.vertices().len())
@@ -73,65 +52,20 @@ fn random_line(state: &State, rng: &mut Rng) -> Option<Line> {
         _ => {
             let [x0, y0, x1, y1] = oristudio_geometry::convex::bounding_box(&points);
             let c = [
-                x0 + (0.3 + 0.4 * rng.next()) * (x1 - x0),
-                y0 + (0.3 + 0.4 * rng.next()) * (y1 - y0),
+                x0 + (0.3 + 0.4 * rng.next_f64()) * (x1 - x0),
+                y0 + (0.3 + 0.4 * rng.next_f64()) * (y1 - y0),
             ];
-            let a = rng.next() * std::f64::consts::PI;
+            let a = rng.next_f64() * std::f64::consts::PI;
             Line::from_point_direction(c, [a.cos(), a.sin()])
         }
     }
 }
 
-/// A sheet point of a random face whose image lies on the moving side.
-fn moving_side_point(state: &State, line: &Line, side: Side, rng: &mut Rng) -> Option<Point> {
-    for _ in 0..8 {
-        let face = state.faces()[rng.below(state.faces().len())].id;
-        let image = state.face_image(face)?;
-        let weights: Vec<f64> = image.iter().map(|_| rng.next() + 0.05).collect();
-        let total: f64 = weights.iter().sum();
-        let p = image.iter().zip(&weights).fold([0.0, 0.0], |s, (q, w)| {
-            [s[0] + q[0] * w / total, s[1] + q[1] * w / total]
-        });
-        let d = line.signed_distance(p);
-        let d = if side == Side::Positive { d } else { -d };
-        if d > MIN_FEATURE {
-            return Some(state.isometry(face)?.inverse().apply(p));
-        }
-    }
-    None
-}
-
+/// A fold along a line drawn here, with the side, direction and seed
+/// `oristudio_fold::random` draws.
 fn random_op(state: &State, rng: &mut Rng) -> Option<PlainFold> {
     let line = random_line(state, rng)?;
-    let side = if rng.chance(0.5) {
-        Side::Positive
-    } else {
-        Side::Negative
-    };
-    let direction = if rng.chance(0.5) {
-        Direction::Valley
-    } else {
-        Direction::Mountain
-    };
-    let op = PlainFold::new(line, side, direction);
-    let x = rng.next();
-    let seed = if x < 0.4 {
-        Seed::All
-    } else if x < 0.85 {
-        let at = moving_side_point(state, &line, side, rng)?;
-        let stack = state.stack_at(state.image_of(at)?)?.len().max(1);
-        Seed::Depth {
-            at,
-            layers: 1 + rng.below(stack),
-        }
-    } else {
-        let flaps = state.analyse_fold(&op).ok()?.flaps;
-        let flap = flaps.get(rng.below(flaps.len()))?;
-        Seed::Flaps {
-            at: vec![flap.witness],
-        }
-    };
-    Some(op.with_seed(seed))
+    plain_fold_along(state, line, rng)
 }
 
 /// What differs between the state's problem and a fresh build, if anything.
@@ -176,10 +110,12 @@ fn mismatch(state: &State) -> Option<String> {
 fn campaign(seed: u64, sequences: u64, steps: usize, max_faces: usize) -> (usize, usize) {
     let (mut checked, mut largest) = (0, 0);
     for s in 0..sequences {
-        let mut rng = Rng(seed + s);
+        let mut rng = Rng::new(seed + s);
         let sheet = match rng.below(3) {
             0 => Sheet::square(),
-            1 => Sheet::rectangle(0.5 + 0.5 * rng.next(), 1.0).unwrap_or_else(|e| panic!("{e}")),
+            1 => {
+                Sheet::rectangle(0.5 + 0.5 * rng.next_f64(), 1.0).unwrap_or_else(|e| panic!("{e}"))
+            }
             _ => Sheet::regular(3 + rng.below(6) as u32).unwrap_or_else(|e| panic!("{e}")),
         };
         let mut state = State::flat(sheet, StartSide::Front).unwrap_or_else(|e| panic!("{e}"));

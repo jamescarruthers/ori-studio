@@ -95,51 +95,21 @@ pub(crate) fn analyse(
 ) -> Result<Analysis, Refused> {
     let faces = state.faces();
     let nf = faces.len();
-    let geometry = state.geometry();
-    let topology = state.topology();
-    let classes = &classified.classes;
     let axis = classified.axis;
-
-    // Pieces: each face with a vertex on the moving side.
-    let half = axis
-        .moving_half_plane()
-        .ok_or(FoldRefusal::NoMovingSide)
-        .map_err(Refused::from)?;
-    let mut pieces: Vec<Option<Vec<Point>>> = vec![None; nf];
-    let mut has_stationary = vec![false; nf];
-    for (f, face) in faces.iter().enumerate() {
-        let mut has_moving = false;
-        for v in &face.ring {
-            match classes[v.index()] {
-                1 => has_moving = true,
-                -1 => has_stationary[f] = true,
-                _ => {}
-            }
-        }
-        if has_moving {
-            let piece = convex::split(&geometry.images[f], &half, TOL).inside;
-            if piece.len() >= 3 {
-                pieces[f] = Some(piece);
-            }
-        }
-    }
-    if pieces.iter().all(Option::is_none) {
-        return Err(FoldRefusal::NoMovingSide.into());
-    }
-
-    // Rule (i): creases with an end on the moving side.
-    let mut adjacent: Vec<Vec<usize>> = vec![Vec::new(); nf];
-    for (k, crease) in state.creases().iter().enumerate() {
-        let [a, b] = crease.vertices;
-        if classes[a.index()].max(classes[b.index()]) < 1 {
-            continue;
-        }
-        if let [f, g] = topology.crease_faces[k][..] {
-            adjacent[f].push(g);
-            adjacent[g].push(f);
-        }
-    }
-    let (flaps, flap_of) = flaps_of(state, &pieces, &adjacent, &axis);
+    let MovingSide {
+        pieces,
+        adjacent,
+        flaps,
+        flap_of,
+    } = moving_side(state, &classified)?;
+    let has_stationary: Vec<bool> = faces
+        .iter()
+        .map(|face| {
+            face.ring
+                .iter()
+                .any(|v| classified.classes[v.index()] == -1)
+        })
+        .collect();
 
     let seed_faces = resolve_seed(state, &pieces, direction, seed, &axis)?;
     let mut picked: Vec<usize> = seed_faces.iter().filter_map(|&f| flap_of[f]).collect();
@@ -267,21 +237,23 @@ pub(crate) fn analyse(
     })
 }
 
-/// The moving side of a classified line before any seed: what [`analyse`]
-/// computes before it resolves one.
+/// The moving side of a classified line before any seed: its pieces, rule
+/// (i) and the flaps. [`analyse`] closes it from a seed; the cross-section
+/// (plan D14) reads it as it is, so the two report the same flaps.
 pub(crate) struct MovingSide {
     /// Per face position, its image clipped to the moving side; none for a
     /// face with no vertex there.
     pub(crate) pieces: Vec<Option<Vec<Point>>>,
+    /// Per face position, the faces rule (i) joins it to: across a crease
+    /// with an end on the moving side.
+    pub(crate) adjacent: Vec<Vec<usize>>,
     pub(crate) flaps: Vec<Flap>,
     /// Per face position, its flap; none for a face without a piece.
     pub(crate) flap_of: Vec<Option<usize>>,
 }
 
-/// The pieces and flaps of `classified`'s moving side, for the queries that
-/// need them without a seed or a closure (the cross-section, plan D14). The
-/// same pieces, rule (i) and flaps as [`analyse`]; `fold::section`'s tests
-/// hold the two to the same flaps.
+/// The pieces, adjacency and flaps of `classified`'s moving side. Refused
+/// when no face has a piece there.
 pub(crate) fn moving_side(state: &State, classified: &Classified) -> Result<MovingSide, Refused> {
     let faces = state.faces();
     let geometry = state.geometry();
@@ -291,6 +263,7 @@ pub(crate) fn moving_side(state: &State, classified: &Classified) -> Result<Movi
         .moving_half_plane()
         .ok_or(FoldRefusal::NoMovingSide)
         .map_err(Refused::from)?;
+    // Pieces: each face with a vertex on the moving side, clipped to it.
     let pieces: Vec<Option<Vec<Point>>> = faces
         .iter()
         .enumerate()
@@ -305,6 +278,7 @@ pub(crate) fn moving_side(state: &State, classified: &Classified) -> Result<Movi
     if pieces.iter().all(Option::is_none) {
         return Err(FoldRefusal::NoMovingSide.into());
     }
+    // Rule (i): creases with an end on the moving side.
     let mut adjacent: Vec<Vec<usize>> = vec![Vec::new(); faces.len()];
     for (k, crease) in state.creases().iter().enumerate() {
         let [a, b] = crease.vertices;
@@ -319,6 +293,7 @@ pub(crate) fn moving_side(state: &State, classified: &Classified) -> Result<Movi
     let (flaps, flap_of) = flaps_of(state, &pieces, &adjacent, &axis);
     Ok(MovingSide {
         pieces,
+        adjacent,
         flaps,
         flap_of,
     })
