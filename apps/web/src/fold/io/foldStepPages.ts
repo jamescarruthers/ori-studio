@@ -134,6 +134,8 @@ export function foldStepsExportTarget({ pages, current, title, exportStyle, t }:
   }));
   return stepDiagramExportTarget({
     surface: 'fold',
+    // A page is the crease pattern: no letters, no reference lines to leave out.
+    marks: [],
     steps,
     current: Math.min(Math.max(current, 0), Math.max(steps.length - 1, 0)),
     title: t('dialogs:paperExport.titleStep', 'Export step {{number}}', { number: onShow?.number ?? 1 }),

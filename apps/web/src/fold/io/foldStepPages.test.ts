@@ -71,6 +71,8 @@ describe('the steps’ export target', () => {
 
   it('is Fold’s surface, a page per step named as References names its step pages', () => {
     expect(target.surface).toBe('fold');
+    // A crease pattern has no letters or reference lines for the dialog to offer to leave out.
+    expect(target.marks).toEqual([]);
     expect(target.title).toBe('Export step 2');
     expect(target.fileStem).toBe('Crane step 2');
     expect(target.pages).toEqual({
