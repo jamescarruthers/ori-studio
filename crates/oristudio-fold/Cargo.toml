@@ -6,7 +6,8 @@ edition.workspace = true
 # Original work: the Fold workspace's engine. A flat folded state (crease
 # pattern, convex faces, isometries, pairwise layer order, view), the one
 # validating constructor, the plain fold with its precrease, refold, unfold,
-# turn-over and rotate, and the compound folds' pipeline with the reverse fold.
+# turn-over and rotate, and the compound folds' pipeline with the reverse fold
+# and the vertex folds (squash, petal fold, rabbit ear, swivel).
 # The Fold spikes under artifacts/fold-spike (core, compound) were the
 # reference for behaviour; no code is ported from them, Beloch, Flat-Folder or
 # Oriedita. Completion calls Flat-Folder's search through treemaker-flatfold's

@@ -33,8 +33,12 @@
 //!   macro, score, hinge diff, derive, gate, carry, seed, complete, letters,
 //!   validate), and on it [`State::reverse_fold`], the inside and outside
 //!   reverse fold with per-flap openings, kind feasibility, refusals with
-//!   fixes and stored choices; and the [`StepMotion`] a compound step's
-//!   animation draws (plan D15).
+//!   fixes and stored choices; the vertex folds (research §5.3) —
+//!   [`State::squash`] with per-layer creases, [`State::petal_fold`] over
+//!   precreases, [`State::rabbit_ear`] with its ridge and [`State::swivel`]
+//!   — each a direction-seeded completion with its preconditions refused up
+//!   front; and the [`StepMotion`] a compound step's animation draws (plan
+//!   D15).
 //! - [`import`]: Import CP — a crease pattern's sheet, faces and isometries,
 //!   its order completed from its letters, and Edit's folded figure.
 //! - [`witness`]: stored choices with faces named by sheet points, and their
@@ -103,10 +107,18 @@ pub use complete::{
     ChoiceCount, CompletionLimits, CompletionRefusal, Completions, ComponentChoices, FixedKind,
     FixedPair,
 };
+pub use compound::fan::FanAnalysis;
 pub use compound::motion::{LegName, MotionGroup, MotionKind, MotionLeg, Stacking, StepMotion};
+pub use compound::petal::{NoPetal, PetalAnalysis, PetalCrease, PetalFold};
+pub use compound::rabbit::{RabbitEar, incenter};
 pub use compound::reverse::{
     NoOpening, Opening, ReverseAnalysis, ReverseChoice, ReverseChoices, ReverseFold, ReverseFolded,
     ReverseKind, ReverseOutcome, ReverseReport, StoredOpening, TipFlap,
+};
+pub use compound::squash::{NoFlap, Squash, SquashAnalysis};
+pub use compound::swivel::Swivel;
+pub use compound::vertex::{
+    VertexChoice, VertexChoices, VertexFoldKind, VertexFolded, VertexOutcome, VertexReport,
 };
 pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
 pub use fold::{

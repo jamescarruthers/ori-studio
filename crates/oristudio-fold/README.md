@@ -2,7 +2,8 @@
 
 The Fold workspace's engine: fold a sheet the way a person does. A flat folded
 state, the one constructor that validates it, the plain fold, and the one
-pipeline compound folds land through, with the inside reverse fold on it.
+pipeline compound folds land through, with the reverse folds and the vertex
+folds (squash, petal fold, rabbit ear, swivel) on it.
 
 - `state`: the crease pattern with stable ids (`B | M | V | F`, an F crease
   remembering its last letter, every crease the step that made it; letters
@@ -90,12 +91,15 @@ pipeline compound folds land through, with the inside reverse fold on it.
   Replay resolves the witnesses and completes: exactly one order, or the node
   is broken.
 
-Compound folds (plan D4, D15, Phase 9):
+Compound folds (plan D4, D15, Phases 9 and 11):
 
-- `compound`: the one pipeline every compound fold lands through. A macro (a
-  score line; the faces that move, partitioned into blocks, each with its
+- `compound`: the one pipeline every compound fold lands through. A macro (its
+  scores; the faces that move, partitioned into blocks, each with its
   motion; placements of a block against named faces; the rule for pairs
-  across blocks) is scored through the plain fold's split (`fold::score`);
+  across blocks) is scored through the plain fold's split (`fold::score`) —
+  along one line, along a line per layer in turn, or as a fan of rays from a
+  point inside the paper — and from there every macro shares one
+  implementation (`compound::pieces`):
   the hinge diff follows from the motions (a crease folds where its faces'
   orientations differ); the isometries are derived from the stayer and
   checked against the prediction; the image–image guard refuses slivers
@@ -119,11 +123,37 @@ Compound folds (plan D4, D15, Phase 9):
   or the flaps that open. Stored choices: each ambiguous flap's upper block
   and the order, by witnesses; a stored opening that names none breaks the
   step.
+- `compound::vertex`: the vertex folds (research §5.3). Each macro puts every
+  piece in a block by its motion class (the product of the reflections
+  across the creases between it and the paper that stays); the direction
+  seed puts every block above what stays (valley) or below it; pairs across
+  blocks are left to the completion. One report, outcome and stored choice
+  for all four (`VertexReport`, `VertexOutcome`, `VertexChoices`).
+  - `compound::squash`: a two-layer flap by a point on its upper layer, the
+    spine's target (default the hinge line) and the direction. Its layers
+    crease on lines of their own (h + (1 ± μ)D/2: one shared line closes only
+    when the spine lands on the hinge). Refused up front, naming faces: no
+    two-layer flap, an upper layer held by its spine alone, a flap held off
+    its hinge (`squash_flap_not_free`), paper over or inside it
+    (`squash_flap_covered`), a target outside the wedge.
+  - `compound::petal`: H and the direction on a flap whose kite creases and
+    H are precreased (`petal_not_precreased` otherwise, naming the paper
+    they would cross); scores nothing, eight hinges change, six blocks with
+    what stays.
+  - `compound::fan`, `compound::rabbit`, `compound::swivel`: four rays from a
+    point inside the chosen layers — a triangle's incenter to its corners,
+    or a free vertex toward given points — the fourth one of Kawasaki's
+    candidates (three at most, offered by the analysis; a refused ray offers
+    the ones that land, `use_emergent`). A ray into paper that does not fold
+    with the layers is `fan_ray_blocked`. The rabbit ear's ridge (one of the
+    far wedge's rays) seeds the order the direction leaves open.
 - `compound::motion`: a compound step's `StepMotion` (plan D15): legs of
   groups turning about a hinge with exact endpoints. A reverse fold is
   *visual* (it has no rigid path short of unfolding the vertex flat): its
   blocks turn opposite ways about ℓ, stacked as the parent until edge-on and
-  as the landed state after.
+  as the landed state after. A vertex fold is staged: one half turn per
+  crease a block turns across, a stage each, every leg placing every moving
+  face.
 
 The axioms on flat and folded forms (plan Phase 3):
 
@@ -263,6 +293,29 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   order of every choice passes the gate), 3,261 had no order and 57 were
   slivers or short creases. The letter rules held on 32,788 creases; 2,696
   landed states were compared against the plain fold of their tip.
+- `tests/squash.rs`, `tests/petal.rs`, `tests/rabbit_ear.rs`: the vertex
+  spike's named cases (`r2-spike-squash-petal-rabbit`, built in
+  `tests/vertex/cases.rs`, which `crates/oracle-tests` shares). Two squashes
+  along the diagonal route are Beloch's `side-preliminary-1.fold` (folded in
+  mirror image; the spike's route matches it under x ↦ 1 − x), the midline
+  route the waterbomb base, an asymmetric squash creases each layer on its
+  own line; two petal folds on that base are `bird-base-petal.fold`'s
+  creases, with eight hinge changes each; each rabbit ear's emergent ray
+  comes to the spike's ‹ n of m › (two with the direction alone, one with
+  the ridge), each blocked ray refused with the rays that land, and every
+  swivel ray is unique. Every landed state passes `tests/vertex`: the full
+  gate, and a staged motion whose every leg places every moving face,
+  starting at the parent and ending at the landed state, never jumping. The
+  squash campaign draws a squash on each of 400 seeded states; at the
+  spike's size it is ignored by default:
+
+  ```sh
+  cargo test -p oristudio-fold --release --test squash -- --ignored --nocapture
+  ```
+
+  On 2026-10-09: 3,000 draws; 529 landed, every one with one order (the
+  spike: 416 of 416 free, uncovered flaps); 1,676 had no two-layer flap
+  there, 673 were held off the hinge, 120 covered and 2 near misses.
 - `tests/crane.rs`: the traditional crane by Ida's route (`tests/ida`, as
   Beloch writes it in `crane.bel`): the triangle, two inside reverses to the
   preliminary base, four to the side corners and two petal folds to the bird

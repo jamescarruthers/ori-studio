@@ -1,15 +1,20 @@
 //! Compound folds through one pipeline (plan D4, research §5.1).
 //!
-//! Every compound fold — the inside reverse fold now; the outside reverse,
-//! crimp, tuck, squash, petal, rabbit ear, swivel and sinks later — compiles
-//! to a `Macro` and lands through the same steps:
+//! Every compound fold — the reverse folds, and the vertex folds (squash,
+//! petal, rabbit ear, swivel); crimps, tucks and sinks later — compiles to
+//! its macro and lands through the same steps:
 //!
-//! 1. **Macro.** The operation's inputs become a score line, a partition of
-//!    the faces that move into *blocks* (faces whose mutual stacking moves as
+//! 1. **Macro.** The operation's inputs become scores, a partition of the
+//!    faces that move into *blocks* (faces whose mutual stacking moves as
 //!    one stack), each block's motion, and seeds.
-//! 2. **Score** the block faces the line crosses, through the one split
-//!    every fold shares (`fold::score`): one new vertex per crossed crease,
-//!    the line snapped and every vertex classified first (`fold::line`).
+//! 2. **Score** the faces the creases cross, through the one split every
+//!    fold shares (`fold::score`): one new vertex per crossed crease, the
+//!    line snapped and every vertex classified first (`fold::line`). A
+//!    reverse fold scores one line (`Macro`, [`prepare`]); a squash one line
+//!    per layer (`pieces::score_cuts`); a rabbit ear or a swivel a fan of
+//!    rays from a point inside the paper ([`fan`]); a petal fold nothing.
+//!    From here on the steps are one implementation for all of them
+//!    (`pieces::prepare_pieces`).
 //! 3. **Hinge diff.** A crease folds where its two faces' new orientations
 //!    differ and lies flat where they agree. That is the fold, unfold or
 //!    toggle the declared motions imply, so a macro never lists hinges beside
@@ -25,8 +30,10 @@
 //!    kept under a rotation, reversed under a reflection. Never because two
 //!    isometries happen to be equal: every block of a reverse fold moves by
 //!    the same reflection, yet the blocks keep their absolute order (§5.2).
-//! 7. **Seed** the macro's placements (a block against named faces) and the
-//!    pairs across blocks, by the macro's rule (`Across`).
+//! 7. **Seed** the macro's placements (a block against named faces: its own
+//!    body for a reverse fold, everything that stays for a vertex fold's
+//!    direction seed) and the pairs across blocks, by the macro's rule
+//!    (`Across`).
 //! 8. **Complete** the rest (`crate::complete`), searching only around the
 //!    faces that moved.
 //! 9. **Letters** from the order, and **validate** through `State::make`.
@@ -38,25 +45,34 @@
 pub mod motion;
 pub mod reverse;
 
-use std::collections::BTreeSet;
+// The vertex folds (research §5.3): blocks are motion classes, seeded by a
+// direction (`vertex`), the rabbit ear's and the swivel's scored as a fan
+// (`fan`). `pieces` is the pipeline's steps 3–7 for any scoring, which
+// `prepare` shares.
+pub mod fan;
+pub mod petal;
+pub(crate) mod pieces;
+pub mod rabbit;
+pub mod squash;
+pub mod swivel;
+pub mod vertex;
 
-use oristudio_geometry::convex;
 use oristudio_layer_order::{LayerOrder, Violation};
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::complete::{CompletionLimits, CompletionRefusal, Completions, FixedKind, FixedPair};
+use crate::complete::{CompletionLimits, CompletionRefusal, Completions, FixedPair};
 use crate::fold::Refold;
-use crate::fold::apply::{deepest, thinner};
 use crate::fold::line::Classified;
 use crate::fold::score::{self, Piece};
 use crate::isometry::Isometry;
-use crate::numerics::{MIN_FEATURE, TOL};
 use crate::pattern::{CreaseKind, EdgeId, FaceId, Letter};
 use crate::refusal::{FoldRefusal, Refused};
-use crate::state::{State, StateParts, Topology, ring_position};
+use crate::state::State;
 use crate::unordered::Unordered;
 use crate::witness::{Broken, WitnessOrder};
+
+use pieces::{Pieces, Scoring, prepare_pieces};
 
 /// How the pairs of two faces in different blocks are ordered (step 7).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,6 +81,9 @@ pub(crate) enum Across {
     /// (research §5.2, `crossBlock: "keep"`). Seeds, since the blocks'
     /// creases between them change.
     Keep,
+    /// Left to the completion: the vertex folds, whose blocks land in
+    /// different places (research §5.3), seeded only against what stays.
+    Free,
 }
 
 /// A block placed against the pieces of some parent faces that stay: above
@@ -154,13 +173,14 @@ pub(crate) struct Prepared {
     split: usize,
 }
 
-/// Steps 2–7 of `m` on `state`, as its next step.
+/// Steps 2–7 of `m` on `state`, as its next step: the score along its one
+/// line (a block face the line crosses keeps its positive piece in the
+/// block; the rest of it stays), then the steps every scoring shares
+/// ([`pieces`]).
 pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal> {
     let parts = state.parts();
-    let geometry = state.geometry();
     let classes = &m.line.classes;
     let nf = parts.faces.len();
-    let step = state.step() + 1;
     let has = |f: usize, class: i8| {
         parts.faces[f]
             .ring
@@ -172,9 +192,6 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
             face: parts.faces[f].id,
         });
     }
-
-    // 2. Score: a block face the line crosses keeps its positive piece in
-    // the block; the rest of it stays.
     let split: Vec<bool> = (0..nf)
         .map(|f| m.block_of[f].is_some() && has(f, -1))
         .collect();
@@ -184,7 +201,7 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
         classes,
         &m.line.distances,
         &split,
-        step,
+        state.step() + 1,
         state.next_ids(),
     )?;
     let block_of: Vec<Option<usize>> = scored
@@ -195,263 +212,16 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
             Piece::Whole | Piece::Positive => m.block_of[s.old],
         })
         .collect();
-    let predicted: Vec<Isometry> = scored
-        .faces
-        .iter()
-        .zip(&block_of)
-        .map(|(s, block)| {
-            let old = geometry.isometries[s.old];
-            match block {
-                Some(b) => m.blocks[*b].after(&old),
-                None => old,
-            }
-        })
-        .collect();
-    let root = {
-        let r = state
-            .face_position(parts.root)
-            .ok_or(FoldRefusal::UnknownRoot { face: parts.root })?;
-        scored.child_of[r]
-            .iter()
-            .copied()
-            .find(|&a| block_of[a].is_none())
-            .or_else(|| block_of.iter().position(Option::is_none))
-            .ok_or(FoldRefusal::NothingStays)?
-    };
-    let chords_from = scored.chords_from();
-    let score::Scored {
-        vertices,
-        faces,
-        child_of,
-        creases,
-        created,
-        split: split_count,
-    } = scored;
-    let old_of: Vec<usize> = faces.iter().map(|s| s.old).collect();
-    let mut next = StateParts {
-        sheet: parts.sheet.clone(),
-        vertices,
-        creases,
-        faces: faces.into_iter().map(|s| s.face).collect(),
-        root: FaceId(0),
-        root_isometry: geometry.isometries[old_of[root]],
-        order: LayerOrder::new(),
-        view: parts.view,
-        step,
-    };
-    next.root = next.faces[root].id;
-    let topology = Topology::build(&next)?;
-
-    // 3. The hinge diff the motions imply.
-    let mut unknown = Vec::new();
-    let mut unfolded = Vec::new();
-    let mut refolds = Vec::new();
-    let mut relettered = Vec::new();
-    for k in 0..next.creases.len() {
-        let [f, g] = match topology.crease_faces[k][..] {
-            [f, g] => [f, g],
-            _ => continue,
-        };
-        let folds = predicted[f].front_up() != predicted[g].front_up();
-        let crease = &mut next.creases[k];
-        if k >= chords_from {
-            if !folds {
-                return Err(FoldRefusal::HingeOrientation {
-                    edge: crease.id,
-                    faces: [next.faces[f].id, next.faces[g].id],
-                    kind: "folded",
-                });
-            }
-            unknown.push(crease.id);
-            continue;
-        }
-        match (crease.kind, folds) {
-            (CreaseKind::Folded(letter), true) if block_of[f] != block_of[g] => {
-                unknown.push(crease.id);
-                relettered.push((k, letter));
-            }
-            (CreaseKind::Folded(letter), false) => {
-                crease.kind = CreaseKind::Flat(letter);
-                unfolded.push(crease.id);
-            }
-            (CreaseKind::Flat(letter), true) => {
-                crease.kind = CreaseKind::Folded(letter);
-                unknown.push(crease.id);
-                refolds.push((k, letter));
-            }
-            _ => {}
-        }
-    }
-
-    // 4–5. Derive from the stayer and gate the geometry.
-    let ids: Vec<FaceId> = next.faces.iter().map(|f| f.id).collect();
-    let touched: BTreeSet<FaceId> = (0..ids.len())
-        .filter(|&a| block_of[a].is_some() || split[old_of[a]])
-        .map(|a| ids[a])
-        .collect();
-    let focus: BTreeSet<FaceId> = (0..ids.len())
-        .filter(|&a| block_of[a].is_some())
-        .map(|a| ids[a])
-        .collect();
-    let rings: Vec<Vec<[f64; 2]>> = next
-        .faces
-        .iter()
-        .map(|f| f.ring.iter().map(|v| next.vertices[v.index()]).collect())
-        .collect();
-    let unordered = Unordered::after(next, unknown, state, touched, focus)?;
-    // The parts keep their id order, so positions are the scored ones.
-    let landed = unordered.geometry();
-    for (a, ring) in rings.iter().enumerate() {
-        let residual = landed.isometries[a].distance_on(&predicted[a], ring.iter().copied());
-        if residual > TOL || residual.is_nan() {
-            return Err(FoldRefusal::PredictionMismatch {
-                face: ids[a],
-                residual,
-            });
-        }
-    }
-    let position = |id: FaceId| ids.binary_search(&id).ok();
-    image_guard(state, &unordered, m, &block_of, &old_of, &position)?;
-    if !unordered.problem().ambiguities().is_empty() {
-        return Err(FoldRefusal::LayerOrder {
-            violations: unordered
-                .problem()
-                .ambiguities()
-                .iter()
-                .map(|&ambiguity| Violation::AmbiguousOverlap { ambiguity })
-                .collect(),
-        });
-    }
-
-    // 6–7. Carry and seed.
-    let problem = unordered.problem();
-    let mut fixed = Vec::new();
-    let mut push = |upper: usize, lower: usize, kind: FixedKind| {
-        if problem.is_variable(ids[upper], ids[lower]) {
-            fixed.push(FixedPair {
-                upper: ids[upper],
-                lower: ids[lower],
-                kind,
-            });
-        }
-    };
-    for (pair, lo_above) in state.order().pairs() {
-        let Some(lo_above) = lo_above else {
-            continue;
-        };
-        let (Some(f), Some(g)) = (
-            state.face_position(pair.lo()),
-            state.face_position(pair.hi()),
-        ) else {
-            continue;
-        };
-        for &a in &child_of[f] {
-            for &b in &child_of[g] {
-                let (a_above, kind) = match (block_of[a], block_of[b]) {
-                    (None, None) => (lo_above, FixedKind::Carried),
-                    // A block turns over under a reflection: its inner order
-                    // reverses.
-                    (Some(x), Some(y)) if x == y => {
-                        (lo_above == m.blocks[x].front_up(), FixedKind::Carried)
-                    }
-                    (Some(_), Some(_)) => match m.across {
-                        Across::Keep => (lo_above, FixedKind::Seed),
-                    },
-                    _ => continue,
-                };
-                if a_above {
-                    push(a, b, kind);
-                } else {
-                    push(b, a, kind);
-                }
-            }
-        }
-    }
-    for against in &m.against {
-        let body: Vec<usize> = against
-            .faces
-            .iter()
-            .flat_map(|&p| child_of[p].iter().copied())
-            .filter(|&s| block_of[s].is_none())
-            .collect();
-        for a in (0..ids.len()).filter(|&a| block_of[a] == Some(against.block)) {
-            for &s in &body {
-                if against.above {
-                    push(a, s, FixedKind::Seed);
-                } else {
-                    push(s, a, FixedKind::Seed);
-                }
-            }
-        }
-    }
-
-    let moving = (0..nf)
-        .filter(|&f| m.block_of[f].is_some())
-        .map(|f| parts.faces[f].id)
-        .collect();
-    unfolded.sort_unstable();
-    Ok(Prepared {
-        unordered,
-        fixed,
-        block_of,
-        blocks: m.blocks.len(),
-        moving,
-        created,
-        unfolded,
-        refolds,
-        relettered,
-        split: split_count,
-    })
-}
-
-/// The image–image guard (plan D5, research §6): every pair whose relative
-/// motion changed — a moving face against one that stays, and faces of two
-/// blocks that move differently — that overlaps by more than the tolerance
-/// but less than the minimum feature is a sliver, named by the moving vertex
-/// deepest inside the other face and that face in the parent.
-fn image_guard(
-    state: &State,
-    unordered: &Unordered,
-    m: &Macro,
-    block_of: &[Option<usize>],
-    old_of: &[usize],
-    position: &impl Fn(FaceId) -> Option<usize>,
-) -> Result<(), FoldRefusal> {
-    let geometry = unordered.geometry();
-    let same_motion = |x: usize, y: usize| {
-        let (p, q) = (m.blocks[x].0, m.blocks[y].0);
-        p.iter().zip(&q).all(|(a, b)| (a - b).abs() <= 1e-12)
-    };
-    for pair in unordered.problem().variables() {
-        let (Some(a), Some(b)) = (position(pair.lo()), position(pair.hi())) else {
-            continue;
-        };
-        let changed = match (block_of[a], block_of[b]) {
-            (None, None) => false,
-            (Some(x), Some(y)) => x != y && !same_motion(x, y),
-            _ => true,
-        };
-        if !changed {
-            continue;
-        }
-        let penetration = convex::penetration(&geometry.images[a], &geometry.images[b]);
-        if penetration < MIN_FEATURE && penetration < thinner(geometry, a, b) - TOL {
-            let (mover, other) = if block_of[a].is_some() {
-                (a, b)
-            } else {
-                (b, a)
-            };
-            let (at, _) = deepest(&geometry.images[mover], &geometry.images[other]);
-            let ring = &unordered.parts().faces[mover].ring;
-            let front_up = geometry.isometries[mover].front_up();
-            return Err(FoldRefusal::Sliver {
-                vertex: ring[ring_position(at, ring.len(), front_up)],
-                face: state.faces()[old_of[other]].id,
-                penetration,
-            });
-        }
-    }
-    Ok(())
+    prepare_pieces(
+        state,
+        Pieces {
+            scoring: Scoring::of(scored),
+            block_of,
+            blocks: m.blocks.clone(),
+            against: m.against.clone(),
+            across: m.across,
+        },
+    )
 }
 
 impl Prepared {
