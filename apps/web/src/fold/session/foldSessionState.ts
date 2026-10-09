@@ -124,25 +124,36 @@ export type FoldPendingStep =
       readonly error: WasmErrorEnvelope;
     };
 
-/** What a fold along a line would move, before anything is folded (plan D14 tier 2). */
+/**
+ * What a fold along a line would move, before anything is folded (plan D14
+ * tier 2). `choices` is an axiom's root, when the op was asked with one.
+ */
 export type FoldPendingAnalysis =
   | { readonly status: 'idle' }
-  | { readonly status: 'working'; readonly op: FoldEngineOp; readonly parent: FoldEngineStateHandle }
+  | {
+      readonly status: 'working';
+      readonly op: FoldEngineOp;
+      readonly choices?: FoldChoices;
+      readonly parent: FoldEngineStateHandle;
+    }
   | {
       readonly status: 'analysed';
       readonly op: FoldEngineOp;
+      readonly choices?: FoldChoices;
       readonly parent: FoldEngineStateHandle;
       readonly analysis: FoldAnalysis;
     }
   | {
       readonly status: 'refused';
       readonly op: FoldEngineOp;
+      readonly choices?: FoldChoices;
       readonly parent: FoldEngineStateHandle;
       readonly refused: FoldEngineRefused;
     }
   | {
       readonly status: 'failed';
       readonly op: FoldEngineOp;
+      readonly choices?: FoldChoices;
       readonly parent: FoldEngineStateHandle;
       readonly error: WasmErrorEnvelope;
     };
