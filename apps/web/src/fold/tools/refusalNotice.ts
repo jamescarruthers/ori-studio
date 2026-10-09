@@ -194,12 +194,12 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
           'Unfold along a folded edge, and refold along a flat crease.'
         ),
       };
-    // A stored step this build cannot fold as it is: nothing a folder asked for.
+    // A stored step this build cannot fold as it is, an Import CP step among
+    // them: nothing a folder asked for. The Import CP picker words its own
+    // refusals; the import codes reach a notice only from a replay.
     case 'unsupported_op':
     case 'unexpected_choice':
     case 'root_missing':
-    // A stored Import CP step that no longer lands. The Import CP picker
-    // words its own refusals; these reach a notice only from a replay.
     case 'import_not_finite':
     case 'import_no_border':
     case 'import_outline_loops':
