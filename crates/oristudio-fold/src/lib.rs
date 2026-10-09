@@ -125,8 +125,7 @@ pub use compound::tuck::{
     TuckTarget,
 };
 pub use compound::vertex::{
-    PairChoice, VertexChoice, VertexChoices, VertexFoldKind, VertexFolded, VertexOutcome,
-    VertexReport,
+    VertexChoice, VertexChoices, VertexFoldKind, VertexFolded, VertexOutcome, VertexReport,
 };
 pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
 pub use fold::{

@@ -129,7 +129,7 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
 
     const picked = landed(engine.vertex.vertexPick(tried.pending, [1]));
     const completion = picked.vertex.stored.completion;
-    expect(completion?.length).toBeGreaterThan(0);
+    expect(completion?.orders.length).toBeGreaterThan(0);
     const replayed = landed(engine.calls.step(tri, ear, { completion }));
     expect(replayed.fingerprint).toEqual(picked.fingerprint);
     // The other pick is another state.
@@ -139,7 +139,7 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
 
     // A stored step with no choice leaves one it does not store.
     const needed = refused(engine.calls.step(tri, ear));
-    expect(needed.refusal.code).toBe('choice_needed');
+    expect(needed.refusal).toEqual({ code: 'choice_needed', choice: 'completion' });
     expect(FOLD_REFUSAL_CODES).toContain(needed.refusal.code);
   });
 

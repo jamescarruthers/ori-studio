@@ -683,11 +683,6 @@ pub enum BridgeRefusal {
     #[serde(untagged)]
     #[error(transparent)]
     Io(crate::io::IoRefusal),
-    /// A stored vertex fold whose choice no longer resolves, or that leaves
-    /// one it does not store (`ops_squash_family::VertexRefusal`).
-    #[serde(untagged)]
-    #[error(transparent)]
-    Vertex(crate::ops_squash_family::VertexRefusal),
 }
 
 impl BridgeRefusal {
@@ -702,7 +697,6 @@ impl BridgeRefusal {
             BridgeRefusal::ChoiceNeeded { .. } => "choice_needed",
             BridgeRefusal::ChoiceBroken { .. } => "choice_broken",
             BridgeRefusal::Io(refusal) => refusal.code(),
-            BridgeRefusal::Vertex(refusal) => refusal.code(),
         }
     }
 }

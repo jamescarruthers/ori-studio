@@ -169,7 +169,8 @@ fn a_rabbit_ears_choice_is_held_picked_stored_and_replayed() {
     let handle = tried["pending"].as_u64().unwrap_or_default() as u32;
     let picked = ok(pending.pick(&mut bridge, handle, &[1]));
     let stored = picked["vertex"]["stored"].clone();
-    assert!(stored["completion"][0]["above"].is_array(), "{stored}");
+    // The document's completion: FOLD triples over witnesses.
+    assert!(stored["completion"]["orders"][0].is_array(), "{stored}");
     let picked_state = picked["state"].as_u64().unwrap_or_default() as u32;
     // A pick that names no order.
     let none = json_of(
@@ -189,14 +190,16 @@ fn a_rabbit_ears_choice_is_held_picked_stored_and_replayed() {
     assert_eq!(parts(replayed_state), parts(picked_state));
     // Without it: a choice the step does not store.
     let needed = apply(&mut bridge, tri, step.clone(), json!({}));
-    assert_eq!(needed["refusal"]["code"], "choice_needed");
-    assert_eq!(needed["refusal"]["orders"]["orders"], 2);
+    assert_eq!(
+        needed["refusal"],
+        json!({ "code": "choice_needed", "choice": "completion" })
+    );
     // A witness off the paper: broken.
     let mut off = stored.clone();
-    off["completion"][0]["above"] = json!([3.0, 3.0]);
+    off["completion"]["faces"][0] = json!([3.0, 3.0]);
     let broken = apply(&mut bridge, tri, step, off);
     assert_eq!(broken["refusal"]["code"], "choice_broken");
-    assert_eq!(broken["refusal"]["broken"]["broken"], "witness");
+    assert_eq!(broken["refusal"]["broken"], "witness");
 }
 
 #[test]

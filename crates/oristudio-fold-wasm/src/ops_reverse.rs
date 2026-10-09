@@ -255,7 +255,9 @@ impl Bridge {
             }
         };
         // The bridge's own check first, as `apply` makes it.
-        if let Some(choice) = choices.unexpected(op.is_axiom(), op.is_compound()) {
+        if let Some(choice) =
+            choices.unexpected(op.is_axiom(), op.takes_completion(), op.takes_opening())
+        {
             return Ok(Outcome::Refused(
                 BridgeRefusal::UnexpectedChoice { choice }.into(),
             ));

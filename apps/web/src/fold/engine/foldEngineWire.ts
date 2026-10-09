@@ -37,7 +37,7 @@ import type {
 } from '../document/foldSequenceDocument';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
 import type { FoldNoOpening, FoldReverseKind, FoldReverseReport } from './foldEngineReverseWire';
-import { FOLD_VERTEX_REFUSAL_CODES, type FoldVertexReport } from './foldEngineSquashWire';
+import type { FoldVertexReport } from './foldEngineSquashWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
 export type FoldSide = 'positive' | 'negative';
@@ -204,9 +204,6 @@ export const FOLD_REFUSAL_CODES = [
   // A stored cp-jump that no longer lands, or an io call's refusal, under
   // Import CP's own codes (`BridgeRefusal::Io`).
   ...FOLD_IMPORT_REFUSAL_CODES,
-  // A stored vertex fold whose choice no longer decides it
-  // (`BridgeRefusal::Vertex`).
-  ...FOLD_VERTEX_REFUSAL_CODES,
 ] as const;
 
 export type FoldRefusalCode = (typeof FOLD_REFUSAL_CODES)[number];
@@ -398,8 +395,8 @@ export type FoldCompoundReport = FoldReverseReport;
  * Paper turning about one hinge during one leg of a compound step's motion
  * (plan D15, `StepMotion`): the landed state's faces that turn together, the
  * hinge in the model frame, the side they start on, and the turn at the
- * leg's start and end — 0 where the parent had them, ±π where they land,
- * positive toward +z of the model frame.
+ * leg's start and end — 0 where they lay before this turn, ±π where it
+ * leaves them, positive toward +z of the model frame.
  */
 export interface FoldMotionGroup {
   faces: number[];
@@ -407,8 +404,11 @@ export interface FoldMotionGroup {
   side: FoldSide;
   from: number;
   to: number;
-  /** Where ±π puts the faces from where they land, when not there: a crimp's tip about ℓ1. */
-  before?: FoldIsometry;
+  /**
+   * What the faces still do after this turn, in the model frame; absent when
+   * it lands them: a vertex fold's paper turning twice, a crimp's tip about ℓ1.
+   */
+  then?: FoldIsometry;
 }
 
 /**

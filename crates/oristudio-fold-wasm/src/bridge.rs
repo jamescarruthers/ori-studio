@@ -237,6 +237,7 @@ impl Bridge {
                         // A crimp's or tuck's report is its own calls'.
                         compound: None,
                         summary,
+                        vertex: None,
                     })
                 }
                 Err(refusal) => Outcome::Refused(refusal),
@@ -319,6 +320,7 @@ impl Bridge {
                 parent,
             }),
             report: None,
+            compound: None,
             summary,
             vertex,
         }

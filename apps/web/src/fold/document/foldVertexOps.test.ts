@@ -111,7 +111,19 @@ describe('the vertex folds’ ops', () => {
       key(step('x', null, ear)),
       key(step('x', null, { ...ear, emergent: [0, -1] })),
       key(step('x', null, { ...ear, ridge: [-1, 0] })),
-      key(step('x', null, ear, { choices: { completion: [{ above: [0.2, 0.2], below: [0.6, 0.2] }] } })),
+      key(
+        step('x', null, ear, {
+          choices: {
+            completion: {
+              faces: [
+                [0.2, 0.2],
+                [0.6, 0.2],
+              ],
+              orders: [[0, 1, 1]],
+            },
+          },
+        })
+      ),
     ];
     expect(new Set(keys).size).toBe(keys.length);
     // The written op is what fh1 spells: no key for an absent direction.

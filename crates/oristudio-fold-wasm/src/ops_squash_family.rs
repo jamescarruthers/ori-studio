@@ -40,15 +40,15 @@
 use std::collections::HashMap;
 
 use oristudio_fold::{
-    Broken, ChoiceCount, CompoundRefused, Direction, FanAnalysis, PetalAnalysis, PetalFold,
-    RabbitEar, Squash, SquashAnalysis, State, Swivel, VertexChoice, VertexChoices, VertexFolded,
+    ChoiceCount, CompoundRefused, Direction, FanAnalysis, PetalAnalysis, PetalFold, RabbitEar,
+    Squash, SquashAnalysis, State, Swivel, VertexChoice, VertexChoices, VertexFolded,
     VertexOutcome,
 };
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
 use crate::bridge::Bridge;
+use crate::compound::{NeededChoice, choice_needed, compound_refusal};
 use crate::resolve::{Rejection, finite_point};
 use crate::wire::{
     Applied, BridgeError, BridgeRefusal, Choices, Op, Outcome, Point, Refusal, SeedInput,
@@ -206,7 +206,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
     Ok(VertexFold {
         op,
         choices: VertexChoices {
-            completion: choices.completion.clone().unwrap_or_default(),
+            completion: choices.completion().cloned(),
         },
     })
 }
@@ -236,56 +236,18 @@ fn fold(parent: &State, fold: &VertexFold) -> Result<VertexOutcome, CompoundRefu
 }
 
 /// Land a stored step (replay): the one state its op and choice name, or a
-/// refusal.
+/// refusal — the compound folds' `choice_needed` and `choice_broken` among
+/// them (`crate::compound`).
 pub fn land(parent: &State, vertex: &VertexFold) -> Result<VertexFolded, Refusal> {
     match fold(parent, vertex) {
         Ok(VertexOutcome::Landed(folded)) => Ok(*folded),
-        Ok(VertexOutcome::ChooseOrder(choice)) => Err(VertexRefusal::ChoiceNeeded {
-            orders: choice.count(),
-        }
-        .into()),
-        Err(refused) => Err(refusal(refused)),
-    }
-}
-
-fn refusal(refused: CompoundRefused) -> Refusal {
-    match refused {
-        CompoundRefused::Refused(refused) => refused.into(),
-        CompoundRefused::Broken(broken) => VertexRefusal::ChoiceBroken { broken }.into(),
+        Ok(VertexOutcome::ChooseOrder(_)) => Err(choice_needed(NeededChoice::Completion)),
+        Err(refused) => Err(compound_refusal(refused)),
     }
 }
 
 // ---------------------------------------------------------------------------
 // Outputs
-
-/// What the bridge refuses of a stored vertex fold beyond the engine's
-/// refusals: its replay marks the step broken.
-#[derive(Debug, Clone, PartialEq, Serialize, Error)]
-#[serde(tag = "code", rename_all = "snake_case")]
-pub enum VertexRefusal {
-    /// The completion leaves `orders` orders and the step stores no choice
-    /// among them.
-    #[error("the fold leaves {} orders and the step stores no choice", orders.orders)]
-    ChoiceNeeded { orders: ChoiceCount },
-    /// The stored choice no longer resolves (plan D6).
-    #[error("the stored choice no longer resolves: {broken}")]
-    ChoiceBroken { broken: Broken },
-}
-
-impl VertexRefusal {
-    pub fn code(&self) -> &'static str {
-        match self {
-            VertexRefusal::ChoiceNeeded { .. } => "choice_needed",
-            VertexRefusal::ChoiceBroken { .. } => "choice_broken",
-        }
-    }
-}
-
-impl From<VertexRefusal> for Refusal {
-    fn from(refusal: VertexRefusal) -> Refusal {
-        BridgeRefusal::Vertex(refusal).into()
-    }
-}
 
 /// A vertex op before it folds, by kind.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -380,7 +342,7 @@ impl Pending {
                     components,
                 }))
             }
-            Err(refused) => Outcome::Refused(refusal(refused)),
+            Err(refused) => Outcome::Refused(compound_refusal(refused)),
         })
     }
 
