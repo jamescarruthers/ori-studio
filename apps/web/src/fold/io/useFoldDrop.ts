@@ -3,35 +3,38 @@ import { dragCarriesFiles, isImageOnlyDrag, type DropTargetPolicy } from '../../
 import { foldImportFileSource, foldImportFormatOf } from './foldImportFiles';
 import { useFoldImportUiStore } from './foldImportUiStore';
 
-/** The Fold canvas's drop policy: a crease pattern becomes a step; anything else is the workspace's. */
-export const FOLD_CANVAS_DROP_POLICY: DropTargetPolicy = 'import-crease-pattern';
+/** The Fold workspace's drop policy: a crease pattern becomes a step; anything else is the app's. */
+export const FOLD_DROP_POLICY: DropTargetPolicy = 'import-crease-pattern';
 
-export interface FoldCanvasDrop {
-  /** Spread on the canvas's container, which also wears `file-drop-region`. */
+export interface FoldDrop {
+  /** Spread on the Fold panel, which also wears `file-drop-region`. */
   dropTargetProps: {
     onDragEnter: (event: ReactDragEvent<HTMLElement>) => void;
     onDragOver: (event: ReactDragEvent<HTMLElement>) => void;
     onDragLeave: (event: ReactDragEvent<HTMLElement>) => void;
     onDrop: (event: ReactDragEvent<HTMLElement>) => void;
   };
-  /** A file drag is over the canvas: show `FileDropOverlay` with {@link FOLD_CANVAS_DROP_POLICY}. */
+  /** A file drag is over the workspace: show `FileDropOverlay` with {@link FOLD_DROP_POLICY}. */
   isDragActive: boolean;
 }
 
 /**
- * Crease patterns dropped on the Fold canvas (plan D14, D16): Import CP, as
- * a step after the step on screen, through the import dialog — which reads
- * the file, offers its layer orders and says why one is refused.
+ * Crease patterns dropped anywhere on the Fold workspace (plan D14, D16) —
+ * its panes, its step strip, its header or the Steps view: Import CP, as a
+ * step after the step on screen, through the import dialog — which reads the
+ * file, offers its layer orders and says why one is refused. One target for
+ * the whole panel, so a file means the same a few pixels either side of the
+ * strip's edge.
  *
- * The canvas claims every file drag that is not only pictures, and keeps its
- * enter, over and leave to itself, so the workspace's own target never shows
- * its "open or import" overlay over the canvas: during a drag the browser
- * withholds the files, and a crease pattern has no MIME type to tell it by.
- * On the drop the files are known. The first crease pattern among them is
- * imported and the drop consumed; a drop with none — a project, a tree —
- * goes on to the workspace's target, which opens it as it would anywhere.
+ * It claims every file drag that is not only pictures, and keeps its enter,
+ * over and leave to itself, so the app's own target never shows its "open or
+ * import" overlay over Fold: during a drag the browser withholds the files,
+ * and a crease pattern has no MIME type to tell it by. On the drop the files
+ * are known. The first crease pattern among them is imported and the drop
+ * consumed; a drop with none — a project, a tree — goes on to the app's
+ * target, which opens it as it would anywhere.
  */
-export function useFoldCanvasDrop(): FoldCanvasDrop {
+export function useFoldDrop(): FoldDrop {
   const [isDragActive, setDragActive] = useState(false);
   /** Nested enter/leave pairs: moving onto a child fires leave, then enter. */
   const depth = useRef(0);
