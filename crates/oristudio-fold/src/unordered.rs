@@ -15,16 +15,15 @@
 //! ([`crate::import`]); a compound fold will start here with the pairs its
 //! blocks carry.
 //!
-//! The checks are the gate's steps 1–5 (`state::gate`) on parts with no
-//! order yet. The gate builds the same folded view; this one differs only in
-//! entering a crease whose letter is unknown without one.
+//! The checks are the gate's steps 1–5 (`state::gate`'s `before_order`), the
+//! one implementation the gate itself runs, on parts with no order yet; a
+//! crease whose letter is unknown enters the folded view without one.
 
 use std::collections::BTreeSet;
 
 use oristudio_geometry::convex;
 use oristudio_layer_order::{
-    ConstraintProblem, Edge, EdgeKind, Face as ViewFace, FoldedView, LayerOrder, LayerOrderError,
-    Letter, derived_letter,
+    ConstraintProblem, EdgeKind, FoldedView, LayerOrder, Letter, derived_letter,
 };
 
 use crate::complete::{CompletionLimits, CompletionRefusal, Completions, FixedKind, FixedPair};
@@ -32,7 +31,7 @@ use crate::isometry::Isometry;
 use crate::numerics::TOL;
 use crate::pattern::{CreaseKind, EdgeId, FaceId};
 use crate::refusal::FoldRefusal;
-use crate::state::{Geometry, State, StateParts, Topology};
+use crate::state::{BeforeOrder, Geometry, State, StateParts, before_order};
 use crate::witness::{Broken, WitnessOrder};
 
 type Point = [f64; 2];
@@ -63,42 +62,6 @@ impl Unordered {
         parts.faces.sort_by_key(|f| f.id);
         parts.creases.sort_by_key(|c| c.id);
         parts.order = LayerOrder::new();
-        for pair in parts.faces.windows(2) {
-            if pair[0].id == pair[1].id {
-                return Err(FoldRefusal::DuplicateId {
-                    what: "face",
-                    id: pair[0].id.0,
-                });
-            }
-        }
-        for pair in parts.creases.windows(2) {
-            if pair[0].id == pair[1].id {
-                return Err(FoldRefusal::DuplicateId {
-                    what: "crease",
-                    id: pair[0].id.0,
-                });
-            }
-        }
-        let root = parts
-            .faces
-            .binary_search_by_key(&parts.root, |f| f.id)
-            .map_err(|_| FoldRefusal::UnknownRoot { face: parts.root })?;
-        let topology = Topology::build(&parts)?;
-        let mut area = 0.0;
-        for (f, face) in parts.faces.iter().enumerate() {
-            let ring = sheet_polygon(&parts, f);
-            if !convex::is_convex(&ring, TOL) {
-                return Err(FoldRefusal::NonConvexFace { face: face.id });
-            }
-            area += convex::signed_area(&ring);
-        }
-        let sheet_area = parts.sheet.area();
-        if (area - sheet_area).abs() > TOL {
-            return Err(FoldRefusal::AreaMismatch {
-                faces_area: area,
-                sheet_area,
-            });
-        }
         let unknown: BTreeSet<EdgeId> = unknown
             .into_iter()
             .filter(|id| {
@@ -108,53 +71,12 @@ impl Unordered {
                     .is_ok_and(|k| parts.creases[k].kind.is_folded())
             })
             .collect();
-
-        let geometry = Geometry::derive(&parts, &topology, root, TOL)?;
-
-        let mut edges = Vec::new();
-        let mut edge_creases = Vec::new();
-        for (k, crease) in parts.creases.iter().enumerate() {
-            if crease.kind == CreaseKind::Border {
-                continue;
-            }
-            let [f, g] = [topology.crease_faces[k][0], topology.crease_faces[k][1]];
-            let folded = crease.kind.is_folded();
-            let (f_up, g_up) = (
-                geometry.isometries[f].front_up(),
-                geometry.isometries[g].front_up(),
-            );
-            if folded == (f_up == g_up) {
-                return Err(FoldRefusal::HingeOrientation {
-                    edge: crease.id,
-                    faces: [parts.faces[f].id, parts.faces[g].id],
-                    kind: if folded { "folded" } else { "flat" },
-                });
-            }
-            let t = &geometry.isometries[f];
-            edges.push(Edge {
-                faces: [parts.faces[f].id, parts.faces[g].id],
-                segment: crease.vertices.map(|v| t.apply(parts.vertices[v.index()])),
-                kind: match crease.kind {
-                    CreaseKind::Folded(_) if unknown.contains(&crease.id) => EdgeKind::Folded(None),
-                    CreaseKind::Folded(letter) => EdgeKind::Folded(Some(letter)),
-                    _ => EdgeKind::Flat,
-                },
-            });
-            edge_creases.push(k);
-        }
-        let faces = parts
-            .faces
-            .iter()
-            .zip(&geometry.images)
-            .zip(&geometry.isometries)
-            .map(|((face, image), t)| ViewFace {
-                id: face.id,
-                polygon: image.clone(),
-                front_up: t.front_up(),
-            })
-            .collect();
-        let view = FoldedView::new(faces, edges)
-            .map_err(|e| folded_image(&e, &parts, &topology, &edge_creases))?;
+        let BeforeOrder {
+            geometry,
+            view,
+            edge_creases,
+            ..
+        } = before_order(&parts, &unknown)?;
         let problem = ConstraintProblem::build(&view);
         Ok(Unordered {
             parts,
@@ -324,43 +246,6 @@ fn sheet_polygon(parts: &StateParts, f: usize) -> Vec<Point> {
         .iter()
         .map(|v| parts.vertices[v.index()])
         .collect()
-}
-
-/// A malformed folded image, with the faces it involves. `edge_creases` maps
-/// the folded view's edges to crease positions.
-fn folded_image(
-    error: &LayerOrderError,
-    parts: &StateParts,
-    topology: &Topology,
-    edge_creases: &[usize],
-) -> FoldRefusal {
-    let faces = match error {
-        LayerOrderError::DuplicateFace(f)
-        | LayerOrderError::NonConvexFace(f)
-        | LayerOrderError::DegenerateFace(f)
-        | LayerOrderError::SameFace(f)
-        | LayerOrderError::FaceNotInView(f) => vec![*f],
-        LayerOrderError::InvalidPolygon { face, .. }
-        | LayerOrderError::UnknownEdgeFace { face, .. }
-        | LayerOrderError::SelfEdge { face, .. }
-        | LayerOrderError::EdgeOffFace { face, .. } => vec![*face],
-        LayerOrderError::ContradictoryOrder { pair } => pair.faces().to_vec(),
-        LayerOrderError::EdgeKindMismatch { edge, .. }
-        | LayerOrderError::DegenerateEdge { edge, .. } => edge_creases
-            .get(*edge)
-            .map(|&k| {
-                topology.crease_faces[k]
-                    .iter()
-                    .map(|&f| parts.faces[f].id)
-                    .collect()
-            })
-            .unwrap_or_default(),
-        LayerOrderError::InvalidFaceOrder { .. } | LayerOrderError::ProblemMismatch => Vec::new(),
-    };
-    FoldRefusal::FoldedImage {
-        message: error.to_string(),
-        faces,
-    }
 }
 
 #[cfg(test)]
@@ -535,6 +420,43 @@ mod tests {
                 refusal: CompletionRefusal::FixedContradictory { .. }
             })
         ));
+    }
+
+    /// The checks before the order are the gate's own: a landed state's parts
+    /// give back its folded view and problem, and parts malformed before the
+    /// order are refused exactly as `State::make` refuses them.
+    #[test]
+    fn the_checks_before_the_order_are_the_gates() {
+        let u = unordered(CreaseKind::Folded(Letter::Valley), &[]);
+        let completions = u
+            .complete(&u.letter_seeds(), &CompletionLimits::default())
+            .unwrap_or_else(|e| panic!("{e}"));
+        let state = u
+            .state(completions.order(&[]).unwrap_or_default())
+            .unwrap_or_else(|e| panic!("{e}"));
+        let again = Unordered::new(state.parts().clone(), []).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(again.view(), state.folded_view());
+        assert_eq!(again.problem(), state.problem());
+
+        let book = || book(CreaseKind::Folded(Letter::Valley));
+        let mut duplicate = book();
+        duplicate.faces[1].id = FaceId(0);
+        let mut unknown_root = book();
+        unknown_root.root = FaceId(9);
+        let mut missing = book();
+        missing.faces.pop();
+        let mut stretched = book();
+        stretched.vertices[2] = [1.2, 0.0];
+        for (name, parts) in [
+            ("duplicate", duplicate),
+            ("unknown root", unknown_root),
+            ("missing", missing),
+            ("stretched", stretched),
+        ] {
+            let gate = State::make(parts.clone()).map(|_| ()).err();
+            assert!(gate.is_some(), "{name}: the gate admits it");
+            assert_eq!(Unordered::new(parts, []).map(|_| ()).err(), gate, "{name}");
+        }
     }
 
     #[test]

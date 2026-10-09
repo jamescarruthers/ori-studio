@@ -23,6 +23,7 @@ use crate::sheet::Sheet;
 use crate::view::{StartSide, View};
 
 pub(crate) use derive::{Geometry, Topology, ring_position};
+pub(crate) use gate::{BeforeOrder, before_order};
 
 type Point = [f64; 2];
 
