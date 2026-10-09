@@ -19,8 +19,6 @@
 //!   free(): void;
 //!   /** The flat sheet: `{ status: 'ok', state, summary }` or a refusal. */
 //!   sheet(paper: FoldPaper): Outcome<{ state: number; summary: Summary }>;
-//!   /** What a fold along a line would move, without folding (D14 tier 2). */
-//!   analyse(state: number, op: FoldOp): Outcome<{ analysis: FoldAnalysis }>;
 //!   /** One step: a new handle, the fold's report (null for a turn or rotate)
 //!    *  and a summary. `choices` may be undefined. The parent stays held. */
 //!   apply(state: number, op: FoldOp, choices?: FoldChoices):
@@ -33,30 +31,54 @@
 //!   clear(): void;
 //!   /** How many states are held. */
 //!   live(): number;
+//!
+//!   // Queries on a handle (plan D12, D14). `choices` carries an axiom
+//!   // op's root, as `apply`'s does.
+//!   /** What a fold along a line would move, without folding (tier 2). */
+//!   analyse(state: number, op: FoldOp, choices?: FoldChoices): Outcome<{ analysis: FoldAnalysis }>;
+//!   /** That fold's picture on `state`, before it lands. */
+//!   action(state: number, op: FoldOp, choices?: FoldChoices): Outcome<{ action: FoldActionGeometry }>;
+//!   /** The moving sets a depth seed at the sheet point `at` can pick. */
+//!   depth_choices(state: number, op: FoldOp, choices: FoldChoices | undefined, at: Point):
+//!     Outcome<{ choices: DepthChoice[] }>;
+//!   /** The layers along a model line on one side of it, with their joins. */
+//!   cross_section(state: number, line: Line, side: Side): Outcome<{ section: Section }>;
+//!   /** An axiom line's folds here: root number, line, who moves. */
+//!   axiom_candidates(state: number, line: AxiomLine): Outcome<{ candidates: AxiomCandidate[] }>;
+//!   /** The step that landed `state`, while its parent is held: its summary
+//!    *  (null for a sheet) and its picture (null for a sheet, turn or rotate). */
+//!   step_summary(state: number): Outcome<{ summary: StepSummary | null }>;
+//!   step_action(state: number): Outcome<{ action: FoldActionGeometry | null }>;
+//!   scene(state: number): FoldScene;
+//!   /** Landmarks with provenance and visibility; marks are sheet points. */
+//!   landmarks(state: number, marks: Point[]): Landmarks;
+//!   /** The face seen at a model-frame point, and the sheet point there. */
+//!   top_visible_at(state: number, at: Point): { face: number; sheet: Point } | null;
 //! }
 //! ```
 //!
-//! Later waves add their calls to [`FoldEngine`] the same way — the scene and
-//! the cross-section as queries on a handle, axiom lines and Import CP as op
-//! kinds the [`wire::Op`] enum already names and refuses as `unsupported_op`.
+//! Import CP's op kind is the one [`wire::Op`] still names and refuses as
+//! `unsupported_op`; its loaders arrive as calls of their own.
 //!
 //! Without `oristudio-fold`'s `kernel` feature for now (it is being built in
 //! parallel): see `Cargo.toml` and the size budget in `README.md`.
 
 pub mod bridge;
 pub mod canonical;
+pub mod joins;
 pub mod resolve;
 pub mod wire;
 
 use std::sync::Once;
 
-use oristudio_fold::FOLD_ENGINE_VERSION;
+use oristudio_fold::{FOLD_ENGINE_VERSION, Side};
+use oristudio_geometry::Line;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use wasm_bindgen::prelude::*;
 
 use crate::bridge::Bridge;
-use crate::wire::{BridgeError, Choices, Op, Paper};
+use crate::wire::{BridgeError, Choices, LineInput, Op, Paper, Point};
 
 static PANIC_HOOK: Once = Once::new();
 
@@ -102,20 +124,10 @@ impl FoldEngine {
         to_js_value(&self.inner.sheet(&paper))
     }
 
-    /// What a fold along a line would move, without folding.
-    pub fn analyse(&self, state: u32, op: JsValue) -> Result<JsValue, JsValue> {
-        let op: Op = parse("op", op)?;
-        to_js_value(&self.inner.analyse(state, &op).map_err(bridge_error)?)
-    }
-
     /// One step from `state`; `choices` may be `undefined` or `null`.
     pub fn apply(&mut self, state: u32, op: JsValue, choices: JsValue) -> Result<JsValue, JsValue> {
         let op: Op = parse("op", op)?;
-        let choices: Choices = if choices.is_undefined() || choices.is_null() {
-            Choices::default()
-        } else {
-            parse("choices", choices)?
-        };
+        let choices = parse_choices(choices)?;
         to_js_value(
             &self
                 .inner
@@ -148,11 +160,119 @@ impl FoldEngine {
     pub fn live(&self) -> u32 {
         u32::try_from(self.inner.len()).unwrap_or(u32::MAX)
     }
+
+    // --- Queries on a handle (plan D12, D14) -------------------------------
+
+    /// What a fold along a line would move, without folding.
+    pub fn analyse(&self, state: u32, op: JsValue, choices: JsValue) -> Result<JsValue, JsValue> {
+        let op: Op = parse("op", op)?;
+        let choices = parse_choices(choices)?;
+        to_js_value(
+            &self
+                .inner
+                .analyse(state, &op, &choices)
+                .map_err(bridge_error)?,
+        )
+    }
+
+    /// The picture of the fold the op would make, before it lands.
+    pub fn action(&self, state: u32, op: JsValue, choices: JsValue) -> Result<JsValue, JsValue> {
+        let op: Op = parse("op", op)?;
+        let choices = parse_choices(choices)?;
+        to_js_value(
+            &self
+                .inner
+                .action(state, &op, &choices)
+                .map_err(bridge_error)?,
+        )
+    }
+
+    /// The moving sets a depth seed at the sheet point `at` can pick.
+    pub fn depth_choices(
+        &self,
+        state: u32,
+        op: JsValue,
+        choices: JsValue,
+        at: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let op: Op = parse("op", op)?;
+        let choices = parse_choices(choices)?;
+        let at: Point = parse("at", at)?;
+        to_js_value(
+            &self
+                .inner
+                .depth_choices(state, &op, &choices, at)
+                .map_err(bridge_error)?,
+        )
+    }
+
+    /// The layers along a model line on one side of it, with their joins.
+    pub fn cross_section(
+        &self,
+        state: u32,
+        line: JsValue,
+        side: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        let line: Line = parse("line", line)?;
+        let side: Side = parse("side", side)?;
+        to_js_value(
+            &self
+                .inner
+                .cross_section(state, &line, side)
+                .map_err(bridge_error)?,
+        )
+    }
+
+    /// An axiom line's folds here, for the candidate chooser.
+    pub fn axiom_candidates(&self, state: u32, line: JsValue) -> Result<JsValue, JsValue> {
+        let line: LineInput = parse("line", line)?;
+        to_js_value(
+            &self
+                .inner
+                .axiom_candidates(state, &line)
+                .map_err(bridge_error)?,
+        )
+    }
+
+    /// The summary of the step that landed `state`.
+    pub fn step_summary(&self, state: u32) -> Result<JsValue, JsValue> {
+        to_js_value(&self.inner.step_summary(state).map_err(bridge_error)?)
+    }
+
+    /// The picture of the step that landed `state`.
+    pub fn step_action(&self, state: u32) -> Result<JsValue, JsValue> {
+        to_js_value(&self.inner.step_action(state).map_err(bridge_error)?)
+    }
+
+    pub fn scene(&self, state: u32) -> Result<JsValue, JsValue> {
+        to_js_value(&self.inner.scene(state).map_err(bridge_error)?)
+    }
+
+    /// Landmarks with provenance and visibility; `marks` are sheet points.
+    pub fn landmarks(&self, state: u32, marks: JsValue) -> Result<JsValue, JsValue> {
+        let marks: Vec<Point> = parse("marks", marks)?;
+        to_js_value(&self.inner.landmarks(state, &marks).map_err(bridge_error)?)
+    }
+
+    /// The face seen at a model-frame point, and the sheet point there.
+    pub fn top_visible_at(&self, state: u32, at: JsValue) -> Result<JsValue, JsValue> {
+        let at: Point = parse("at", at)?;
+        to_js_value(&self.inner.top_visible_at(state, at).map_err(bridge_error)?)
+    }
 }
 
 fn parse<T: DeserializeOwned>(name: &str, value: JsValue) -> Result<T, JsValue> {
     serde_wasm_bindgen::from_value(value)
         .map_err(|error| js_error("invalid_input", format!("{name}: {error}")))
+}
+
+/// A step's choices, or none: `undefined` and `null` are none.
+fn parse_choices(choices: JsValue) -> Result<Choices, JsValue> {
+    if choices.is_undefined() || choices.is_null() {
+        Ok(Choices::default())
+    } else {
+        parse("choices", choices)
+    }
 }
 
 fn bridge_error(error: BridgeError) -> JsValue {

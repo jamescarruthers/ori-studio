@@ -2,8 +2,8 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
+import type { FoldCrossSection } from '../../fold/engine/foldEngineWire';
 import { foldFlapChips, foldSectionPicker, type FoldSeedView } from '../../fold/tools/crossSection';
-import type { FoldCrossSection } from '../../fold/tools/engineContracts';
 import { foldRefusalNotice } from '../../fold/tools/refusalNotice';
 import { allByRole, byRole } from '../../test/roleQueries';
 import { FoldCrossSectionPicker } from './FoldCrossSectionPicker';
@@ -35,31 +35,36 @@ function mount(node: React.ReactNode): HTMLDivElement {
 }
 
 /**
- * Two flaps of two layers at the line, and under them a layer that stays and
- * lies beside the flaps rather than under them.
+ * Two flaps of two layers at the line, each pair joined by its bend, and a
+ * last layer of the second flap that lies beside the others rather than under
+ * them.
  */
 const section: FoldCrossSection = {
+  line: { n: [0, 1], d: 0.5 },
+  side: 'positive',
+  from: { x: 0, y: 0.5 },
+  to: { x: 1, y: 0.5 },
   flaps: [
     { faces: [2, 3], witness: [0.2, 0.7] },
-    { faces: [0, 1], witness: [0.2, 0.2] },
+    { faces: [0, 1, 4, 5], witness: [0.2, 0.2] },
   ],
-  layers: [
-    { faces: [3], span: [0, 0.6], flap: 0, unordered: false },
-    { faces: [2], span: [0, 0.6], flap: 0, unordered: false },
-    { faces: [1], span: [0, 0.6], flap: 1, unordered: false },
-    { faces: [0], span: [0, 0.6], flap: 1, unordered: false },
-    { faces: [4, 5], span: [0.7, 1], flap: null, unordered: true },
+  rows: [
+    { faces: [3], spans: [[0, 0.6]], flap: 0 },
+    { faces: [2], spans: [[0, 0.6]], flap: 0 },
+    { faces: [1], spans: [[0, 0.6]], flap: 1 },
+    { faces: [0], spans: [[0, 0.6]], flap: 1 },
+    { faces: [4, 5], spans: [[0.7, 1]], flap: 1 },
   ],
   intervals: [
-    { span: [0, 0.6], faces: [3, 2, 1, 0], layers: [0, 1, 2, 3] },
-    { span: [0.7, 1], faces: [4, 5], layers: [4] },
+    { start: 0, end: 0.6, faces: [3, 2, 1, 0], rows: [0, 1, 2, 3] },
+    { start: 0.7, end: 1, faces: [4, 5], rows: [4] },
   ],
+  order: { kind: 'layered', unordered: [[3, 4]] },
+  layers: 4,
   joins: [
     { upper: 0, lower: 1, at: 0.6 },
     { upper: 2, lower: 3, at: 0 },
   ],
-  depth: 4,
-  woven: false,
 };
 
 const seed = (picked: number[], added: number[] = [], needed: number[] = []): FoldSeedView => ({
@@ -96,18 +101,18 @@ describe('FoldCrossSectionPicker', () => {
       ['Layer 2, Flap 1', 'true'],
       ['Layer 3, Flap 2', 'false'],
       ['Layer 4, Flap 2', 'false'],
-      ['Layer 5, stays put, beside layer 4', 'false'],
+      ['Layer 5, Flap 2, beside layer 4', 'false'],
     ]);
-    const stays = byRole(list, 'option', 'Layer 5, stays put, beside layer 4');
-    expect(stays.getAttribute('aria-disabled')).toBe('true');
-    expect(stays.hasAttribute('data-unordered')).toBe(true);
+    const beside = byRole(list, 'option', 'Layer 5, Flap 2, beside layer 4');
+    expect(beside.hasAttribute('aria-disabled')).toBe(false);
+    expect(beside.hasAttribute('data-unordered')).toBe(true);
   });
 
-  it('picks a row’s flap on a click, and does nothing for a layer that stays', () => {
+  it('picks a row’s flap on a click, whichever of its rows', () => {
     const { list, onToggle } = renderPicker([0]);
     act(() => byRole(list, 'option', 'Layer 4, Flap 2').click());
-    act(() => byRole(list, 'option', 'Layer 5, stays put, beside layer 4').click());
-    expect(onToggle.mock.calls).toEqual([[1]]);
+    act(() => byRole(list, 'option', 'Layer 5, Flap 2, beside layer 4').click());
+    expect(onToggle.mock.calls).toEqual([[1], [1]]);
   });
 
   it('moves between the rows with the arrows, Home and End, and picks with Space', () => {
@@ -121,9 +126,9 @@ describe('FoldCrossSectionPicker', () => {
     key(document.activeElement as HTMLElement, ' ');
     expect(onToggle).toHaveBeenLastCalledWith(0);
     key(document.activeElement as HTMLElement, 'End');
-    expect(document.activeElement?.getAttribute('aria-label')).toBe('Layer 5, stays put, beside layer 4');
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Layer 5, Flap 2, beside layer 4');
     key(document.activeElement as HTMLElement, 'ArrowDown');
-    expect(document.activeElement?.getAttribute('aria-label')).toBe('Layer 5, stays put, beside layer 4');
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Layer 5, Flap 2, beside layer 4');
     key(document.activeElement as HTMLElement, 'Home');
     expect(document.activeElement?.getAttribute('aria-label')).toBe('Layer 1, Flap 1');
     // One tab stop, where focus is.
@@ -171,7 +176,7 @@ describe('FoldFlapChips', () => {
     const view = mount(<FoldFlapChips chips={foldFlapChips(t, section, seed([1], [0]))} onToggle={onToggle} />);
     const group = byRole(view, 'group', 'Flaps to fold');
     const first = byRole(group, 'button', 'Flap 1, 2 layers, moves with the fold');
-    const second = byRole(group, 'button', 'Flap 2, 2 layers');
+    const second = byRole(group, 'button', 'Flap 2, 3 layers');
     expect(first.getAttribute('aria-pressed')).toBe('false');
     expect(second.getAttribute('aria-pressed')).toBe('true');
     act(() => first.click());
@@ -185,7 +190,7 @@ describe('FoldFlapChips', () => {
     );
     const first = byRole(view, 'button', 'Flap 1, 2 layers');
     expect(first.querySelector('svg')).not.toBeNull();
-    expect(byRole(view, 'button', 'Flap 2, 2 layers').querySelector('svg')).toBeNull();
+    expect(byRole(view, 'button', 'Flap 2, 3 layers').querySelector('svg')).toBeNull();
     expect((first as HTMLButtonElement).disabled).toBe(true);
   });
 

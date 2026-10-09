@@ -1,13 +1,8 @@
 /**
- * The Fold engine as a document replay drives it: the port the replay
- * orchestrator calls (`fold/document/foldReplay.ts`'s `FoldEnginePort`, on the
- * document branch), implemented over the bridge's calls.
- *
- * The types here are that port's, structurally — `engineVersion`, `sheet`,
- * `step`, an optional `release`, and outcomes that either landed with a state
- * and its `fs1` fingerprint or did not, with the refusal's code — so the
- * replayer takes this adapter as it is. When the two branches meet, these
- * declarations give way to the document's.
+ * The Fold engine as a document replay drives it: `fold/document/foldReplay`'s
+ * {@link FoldEnginePort}, implemented over the bridge's calls. The document
+ * declares the port and its outcomes; this adapts the bridge to them, the
+ * document's paper, ops and choices crossing to the engine unchanged.
  *
  * **Handles carry their engine's generation.** A worker that is terminated
  * (to stop work) or crashes takes every state it held with it, and the one
@@ -21,13 +16,13 @@
  */
 
 import type { WasmErrorEnvelope } from '../../engine/types';
+import type { FoldStateFingerprint } from '../document/foldDigest';
+import type { FoldEngineOutcome, FoldEnginePort } from '../document/foldReplay';
+import type { FoldChoices, FoldPaper } from '../document/foldSequenceDocument';
 import type {
-  FoldEngineChoices,
   FoldEngineOp,
-  FoldEngineOutcome,
-  FoldEnginePaper,
+  FoldEngineOutcome as FoldEngineAnswer,
   FoldSheetLanded,
-  FoldStateFingerprint,
   FoldStepFingerprinted,
 } from './foldEngineWire';
 
@@ -37,37 +32,12 @@ export interface FoldEngineStateHandle {
   readonly id: number;
 }
 
-/** What the engine made of one step, or of the sheet. */
-export type FoldEngineReplayOutcome<S> =
-  | { landed: true; state: S; fingerprint: FoldStateFingerprint }
-  /** The inputs no longer resolve, or a stored choice no longer does: the refusal's code. */
-  | { landed: false; code: string };
-
-/** The engine as replay drives it. `S` names a landed state to the engine. */
-export interface FoldEnginePort<S> {
-  /** The engine's `FOLD_ENGINE_VERSION`, stored beside every cached state. */
-  readonly engineVersion: number;
-  /** The flat sheet a sequence starts from. */
-  sheet(paper: FoldEnginePaper): Promise<FoldEngineReplayOutcome<S>>;
-  /** One step, from its parent's landed state. */
-  step(
-    parent: S,
-    step: { op: FoldEngineOp; choices?: FoldEngineChoices }
-  ): Promise<FoldEngineReplayOutcome<S>>;
-  /** Let go of a state the cache no longer holds. */
-  release?(state: S): void;
-}
-
 /** Where the engine runs: the worker's client, or the wasm in-process (tests). */
 export interface FoldEngineSource {
   /** The engine instance now answering; it changes whenever the old one and its states are gone. */
   generation(): number;
-  sheet(paper: FoldEnginePaper): Promise<FoldEngineOutcome<FoldSheetLanded>>;
-  step(
-    state: number,
-    op: FoldEngineOp,
-    choices?: FoldEngineChoices
-  ): Promise<FoldEngineOutcome<FoldStepFingerprinted>>;
+  sheet(paper: FoldPaper): Promise<FoldEngineAnswer<FoldSheetLanded>>;
+  step(state: number, op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineAnswer<FoldStepFingerprinted>>;
   release(states: readonly number[]): Promise<unknown>;
 }
 
@@ -101,12 +71,12 @@ export function createFoldEnginePort(
   };
 
   const landing = <T extends { state: number; fingerprint: FoldStateFingerprint }>(
-    outcome: FoldEngineOutcome<T>,
+    answer: FoldEngineAnswer<T>,
     generation: number
-  ): FoldEngineReplayOutcome<FoldEngineStateHandle> =>
-    outcome.status === 'ok'
-      ? { landed: true, state: { generation, id: outcome.state }, fingerprint: outcome.fingerprint }
-      : { landed: false, code: outcome.refusal.code };
+  ): FoldEngineOutcome<FoldEngineStateHandle> =>
+    answer.status === 'ok'
+      ? { landed: true, state: { generation, id: answer.state }, fingerprint: answer.fingerprint }
+      : { landed: false, code: answer.refusal.code };
 
   return {
     engineVersion,

@@ -15,16 +15,22 @@
 //! **Outputs** are the engine's serde types (snake_case, as every bridge's)
 //! in an envelope tagged by `status`: `ok`, or `refused` with the refusal's
 //! stable `code`, its fixes and the faces and vertices it names. A refusal
-//! never carries a sentence: the UI words it from the code.
+//! never carries a sentence: the UI words it from the code. A sliver
+//! remedy's `use_line` fix also carries the step that folds along it, in the
+//! document's shapes, so the tools commit it as it is ([`StoredStep`]).
 
 use oristudio_fold::{
-    ClosurePolicy, Direction, FaceId, Fix, FoldRefusal, Placement, Refused, SheetShape, Side,
-    StartSide, TurnAxis, VertexId, View,
+    AnchoredFold, Axiom, AxiomCandidate, ClosurePolicy, CrossSection, DepthChoice, Direction,
+    FaceId, Fix as EngineFix, Flap, FoldActionGeometry, FoldLine, FoldRefusal, LineRefusal,
+    Placement, Refused, Seed, SheetSegment, SheetShape, Side, StartSide, StepSummary, TurnAxis,
+    VertexId, View,
 };
 use oristudio_geometry::Line;
 use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::joins::SectionJoin;
 
 pub type Point = [f64; 2];
 
@@ -103,6 +109,16 @@ impl Op {
             Op::CpJump {} => "cp-jump",
         }
     }
+
+    /// Whether its fold line is an axiom's, the one line that takes a stored
+    /// root.
+    pub fn is_axiom(&self) -> bool {
+        matches!(
+            self,
+            Op::Valley(a) | Op::Mountain(a) | Op::Precrease(a)
+                if matches!(a.line, LineInput::Axiom { .. })
+        )
+    }
 }
 
 /// A fold along a line: the document's `FoldAlongLine`, plus the tools'
@@ -132,11 +148,12 @@ pub struct AlongCrease {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Motion {
     /// A sheet point whose image lies on the moving side. The document
-    /// stores it only when the seed does not imply the side.
+    /// stores it only when neither the line (an axiom that carries a point)
+    /// nor the seed implies the side.
     #[serde(default)]
     pub moving: Option<Point>,
-    /// The tools' alternative to `moving`: a side of the line, relative to
-    /// its normal as given. Never both.
+    /// The tools' alternative to `moving` for a model line: a side of it,
+    /// relative to its normal as given. Never both.
     #[serde(default)]
     pub side: Option<Side>,
     pub seed: SeedInput,
@@ -154,19 +171,67 @@ pub enum LineInput {
     Free { through: [Point; 2] },
     /// Along the crease whose sheet segment holds this point.
     Crease { at: Point },
-    /// A line `n · p = d` in the parent's model frame.
+    /// An axiom on anchors, in the shared crate's input order
+    /// (`AXIOM_SLOTS`); the root it gave is the step's `choices.root`.
+    Axiom { axiom: u8, inputs: Vec<RefInput> },
+    /// A line `n · p = d` in the parent's model frame: the tools'.
     Model { line: Line },
-    /// An axiom's root: the engine's axioms are Phase 3.
-    Axiom {},
+}
+
+/// An axiom input (`FoldRef`): a sheet point, a mark's resolved sheet point,
+/// or a line by two sheet points on it (an edge or a crease).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum RefInput {
+    Point {
+        at: Point,
+    },
+    /// The mark's id rides along for the sentence and provenance only:
+    /// replay reads `at`.
+    Mark {
+        at: Point,
+        mark: String,
+    },
+    Edge {
+        a: Point,
+        b: Point,
+    },
 }
 
 /// `FoldSeed`.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "scope", rename_all = "snake_case")]
 pub enum SeedInput {
     All,
     Depth { at: Point, layers: usize },
     Flaps { at: Vec<Point> },
+}
+
+impl SeedInput {
+    /// The engine's seed.
+    pub fn seed(&self) -> Seed {
+        match self {
+            SeedInput::All => Seed::All,
+            SeedInput::Depth { at, layers } => Seed::Depth {
+                at: *at,
+                layers: *layers,
+            },
+            SeedInput::Flaps { at } => Seed::Flaps { at: at.clone() },
+        }
+    }
+}
+
+impl From<&Seed> for SeedInput {
+    fn from(seed: &Seed) -> SeedInput {
+        match seed {
+            Seed::All => SeedInput::All,
+            Seed::Depth { at, layers } => SeedInput::Depth {
+                at: *at,
+                layers: *layers,
+            },
+            Seed::Flaps { at } => SeedInput::Flaps { at: at.clone() },
+        }
+    }
 }
 
 /// How far, and which way, a rotate step turns the model (`TurnRotation`).
@@ -206,14 +271,15 @@ impl Rotation {
     }
 }
 
-/// `FoldChoices`, read only for which are present: no op this build folds
-/// takes one yet (axiom roots arrive with Phase 3, completions and openings
-/// with the compound folds), and a stored choice the op cannot use breaks
-/// its step rather than being dropped.
+/// `FoldChoices`. An axiom's `root` is read; the rest only for whether they
+/// are present: no op this build folds takes one yet (completions and
+/// openings arrive with the compound folds), and a stored choice the op
+/// cannot use breaks its step rather than being dropped.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 pub struct Choices {
+    /// The line the axiom's chosen root gave, in the parent's model frame.
     #[serde(default)]
-    pub root: Option<IgnoredAny>,
+    pub root: Option<Line>,
     #[serde(default)]
     pub completion: Option<Vec<IgnoredAny>>,
     #[serde(default)]
@@ -223,10 +289,11 @@ pub struct Choices {
 }
 
 impl Choices {
-    /// The first choice present, by its document key. An empty list is no
+    /// The first choice present that an op takes none of, by its document
+    /// key: `root` unless the op folds along an axiom. An empty list is no
     /// choice, as the document reads it.
-    pub fn first_present(&self) -> Option<&'static str> {
-        if self.root.is_some() {
+    pub fn unexpected(&self, takes_root: bool) -> Option<&'static str> {
+        if self.root.is_some() && !takes_root {
             Some("root")
         } else if self.completion.as_ref().is_some_and(|c| !c.is_empty()) {
             Some("completion")
@@ -267,12 +334,22 @@ impl<T> Outcome<T> {
     }
 }
 
+impl<T> From<Result<T, Refusal>> for Outcome<T> {
+    fn from(result: Result<T, Refusal>) -> Outcome<T> {
+        match result {
+            Ok(value) => Outcome::Ok(value),
+            Err(refusal) => Outcome::Refused(refusal),
+        }
+    }
+}
+
 /// A refusal on the wire: its body (`{ code, … }`), the fixes the engine
 /// offers, and every face and vertex it names, so the UI can highlight them
-/// without knowing each code's fields.
+/// without knowing each code's fields. The body is boxed: a refusal is the
+/// rare answer, and every `Result` that may carry one stays small.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Refusal {
-    pub refusal: RefusalBody,
+    pub refusal: Box<RefusalBody>,
     pub fixes: Vec<Fix>,
     pub faces: Vec<FaceId>,
     pub vertices: Vec<VertexId>,
@@ -282,9 +359,19 @@ impl Refusal {
     pub fn code(&self) -> &'static str {
         self.refusal.code()
     }
+
+    fn of(refusal: RefusalBody) -> Refusal {
+        Refusal {
+            refusal: Box::new(refusal),
+            fixes: Vec::new(),
+            faces: Vec::new(),
+            vertices: Vec::new(),
+        }
+    }
 }
 
-/// The refusal itself, tagged by `code`.
+/// The refusal itself, tagged by `code`: the engine's, a line that does not
+/// resolve, or the bridge's own.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum RefusalBody {
@@ -295,6 +382,9 @@ pub enum RefusalBody {
         code: &'static str,
         faces: Vec<FaceId>,
     },
+    /// An anchored fold's line or side that does not resolve
+    /// (`oristudio_fold::LineRefusal`).
+    Line(LineRefusal),
     Bridge(BridgeRefusal),
 }
 
@@ -303,6 +393,7 @@ impl RefusalBody {
         match self {
             RefusalBody::Engine(r) => r.code(),
             RefusalBody::FoldedImage { code, .. } => code,
+            RefusalBody::Line(r) => r.code(),
             RefusalBody::Bridge(r) => r.code(),
         }
     }
@@ -320,8 +411,8 @@ impl From<Refused> for Refusal {
             other => RefusalBody::Engine(other),
         };
         Refusal {
-            refusal,
-            fixes: refused.fixes,
+            refusal: Box::new(refusal),
+            fixes: refused.fixes.into_iter().map(Fix::from).collect(),
             faces,
             vertices,
         }
@@ -334,21 +425,147 @@ impl From<FoldRefusal> for Refusal {
     }
 }
 
+impl From<LineRefusal> for Refusal {
+    fn from(refusal: LineRefusal) -> Refusal {
+        Refusal::of(RefusalBody::Line(refusal))
+    }
+}
+
 impl From<BridgeRefusal> for Refusal {
     fn from(refusal: BridgeRefusal) -> Refusal {
-        Refusal {
-            refusal: RefusalBody::Bridge(refusal),
-            fixes: Vec::new(),
-            faces: Vec::new(),
-            vertices: Vec::new(),
+        Refusal::of(RefusalBody::Bridge(refusal))
+    }
+}
+
+/// A remedy offered with a refusal (plan D14): the engine's
+/// `oristudio_fold::Fix`, with a sliver remedy's storable step.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case", tag = "fix")]
+pub enum Fix {
+    /// Include these flaps, which the closure would move anyway.
+    IncludeFlaps { flaps: Vec<usize> },
+    /// The same fold the other way is valid.
+    OppositeDirection,
+    /// Everything would move: pick one of these flaps to fold.
+    PickFlap { flaps: Vec<Flap> },
+    /// Fold along this line instead, with the same moving side: send it back
+    /// as `{ via: 'model', line }` with `side` to preview it. A sliver
+    /// remedy also names it as an axiom on anchors, the step to commit
+    /// (plan D5); a near miss's landmark line has none.
+    UseLine {
+        line: Line,
+        side: Side,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        step: Option<StoredStep>,
+    },
+}
+
+impl From<EngineFix> for Fix {
+    fn from(fix: EngineFix) -> Fix {
+        match fix {
+            EngineFix::IncludeFlaps { flaps } => Fix::IncludeFlaps { flaps },
+            EngineFix::OppositeDirection => Fix::OppositeDirection,
+            EngineFix::PickFlap { flaps } => Fix::PickFlap { flaps },
+            EngineFix::UseLine { line, side } => Fix::UseLine {
+                line,
+                side,
+                step: None,
+            },
         }
     }
 }
 
-/// What the bridge refuses before the engine sees the op: an anchor that no
-/// longer resolves in the parent, or an op this build cannot fold. A replay
-/// marks the step broken, exactly as for an engine refusal; the codes never
-/// collide with the engine's.
+/// A step as the document stores it (`FoldStep`'s `op` and `choices`): a
+/// sliver remedy, an axiom fold whose root is its choice.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct StoredStep {
+    pub op: StoredOp,
+    pub choices: StoredChoices,
+}
+
+/// The document's valley, mountain or precrease op along an axiom.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum StoredOp {
+    Valley(StoredFold),
+    Mountain(StoredFold),
+    Precrease(StoredFold),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct StoredFold {
+    pub line: StoredLine,
+    /// A precrease's; a valley or mountain is its kind.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub direction: Option<Direction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moving: Option<Point>,
+    pub seed: SeedInput,
+}
+
+/// `FoldLineInput`'s axiom form.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "via", rename_all = "snake_case")]
+pub enum StoredLine {
+    Axiom { axiom: u8, inputs: Vec<RefInput> },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct StoredChoices {
+    pub root: Line,
+}
+
+impl StoredStep {
+    /// The step that folds `fold`, a fold along an axiom (what a sliver
+    /// remedy names), as a precrease or not. None for any other line, and
+    /// for a tuck, which the document cannot store.
+    pub fn of(fold: &AnchoredFold, precrease: bool) -> Option<StoredStep> {
+        let FoldLine::Axiom { axiom, root } = &fold.line else {
+            return None;
+        };
+        if fold.placement != Placement::OnTop {
+            return None;
+        }
+        let stored = |direction| StoredFold {
+            line: StoredLine::Axiom {
+                axiom: axiom.number(),
+                inputs: axiom_inputs(axiom),
+            },
+            direction,
+            moving: fold.toward,
+            seed: SeedInput::from(&fold.seed),
+        };
+        let op = match (precrease, fold.direction) {
+            (true, direction) => StoredOp::Precrease(stored(Some(direction))),
+            (false, Direction::Valley) => StoredOp::Valley(stored(None)),
+            (false, Direction::Mountain) => StoredOp::Mountain(stored(None)),
+        };
+        Some(StoredStep {
+            op,
+            choices: StoredChoices { root: *root },
+        })
+    }
+}
+
+/// An axiom's inputs as the document spells them, in the crate's slot
+/// order (`AXIOM_SLOTS`): the inverse of `resolve::axiom_of`.
+pub fn axiom_inputs(axiom: &Axiom) -> Vec<RefInput> {
+    let p = |at: &Point| RefInput::Point { at: *at };
+    let m = |s: &SheetSegment| RefInput::Edge { a: s.a, b: s.b };
+    match axiom {
+        Axiom::O1 { p: a, q } | Axiom::O2 { p: a, q } => vec![p(a), p(q)],
+        Axiom::O3 { m1, m2 } => vec![m(m1), m(m2)],
+        Axiom::O4 { p: a, m: l } => vec![p(a), m(l)],
+        Axiom::O5 { pivot, p: a, m1 } => vec![p(pivot), p(a), m(m1)],
+        Axiom::O6 { p1, m1, p2, m2 } => vec![p(p1), m(m1), p(p2), m(m2)],
+        Axiom::O7 { p: a, m1, m2 } => vec![p(a), m(m1), m(m2)],
+    }
+}
+
+/// What the bridge refuses before the engine sees the op: a crease that no
+/// longer resolves in the parent, a stored choice the op cannot use, or an op
+/// this build cannot fold. A replay marks the step broken, exactly as for an
+/// engine refusal; the codes never collide with the engine's.
 #[derive(Debug, Clone, PartialEq, Serialize, Error)]
 #[serde(tag = "code", rename_all = "snake_case")]
 pub enum BridgeRefusal {
@@ -356,20 +573,14 @@ pub enum BridgeRefusal {
     UnsupportedOp { feature: Unsupported },
     #[error("the op takes no {choice} choice")]
     UnexpectedChoice { choice: &'static str },
-    #[error("the sheet point {point:?} is not on the paper")]
-    PointOffPaper { point: Point },
-    #[error("the line's two points land closer than the minimum feature")]
-    DegenerateLine,
+    #[error("a fold along an axiom needs the root it chose")]
+    RootMissing,
     #[error("no crease passes through the sheet point {point:?}")]
     CreaseNotFound { point: Point },
     #[error("the crease through {point:?} is not flat, so it cannot be refolded")]
     CreaseNotFlat { point: Point },
     #[error("the crease through {point:?} is not folded, so it cannot be unfolded")]
     CreaseNotFolded { point: Point },
-    #[error("a fold of every layer needs its moving side")]
-    MovingSideMissing,
-    #[error("the sheet point {point:?} lands on the fold line, so it names no side")]
-    MovingSideOnLine { point: Point },
 }
 
 impl BridgeRefusal {
@@ -378,13 +589,10 @@ impl BridgeRefusal {
         match self {
             BridgeRefusal::UnsupportedOp { .. } => "unsupported_op",
             BridgeRefusal::UnexpectedChoice { .. } => "unexpected_choice",
-            BridgeRefusal::PointOffPaper { .. } => "point_off_paper",
-            BridgeRefusal::DegenerateLine => "degenerate_line",
+            BridgeRefusal::RootMissing => "root_missing",
             BridgeRefusal::CreaseNotFound { .. } => "crease_not_found",
             BridgeRefusal::CreaseNotFlat { .. } => "crease_not_flat",
             BridgeRefusal::CreaseNotFolded { .. } => "crease_not_folded",
-            BridgeRefusal::MovingSideMissing => "moving_side_missing",
-            BridgeRefusal::MovingSideOnLine { .. } => "moving_side_on_line",
         }
     }
 }
@@ -393,8 +601,6 @@ impl BridgeRefusal {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Unsupported {
-    /// A line from an axiom (Phase 3).
-    AxiomLine,
     /// Import CP (Phase 8).
     CpJump,
 }
@@ -420,6 +626,61 @@ pub struct Applied {
     /// What the fold did; none for a turn or a rotation.
     pub report: Option<oristudio_fold::FoldReport>,
     pub summary: Summary,
+}
+
+/// A fold's picture on the state it starts from (plan D12, per step).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Acted {
+    pub action: FoldActionGeometry,
+}
+
+/// The picture of the step that landed a state; none for a step that folds
+/// nothing, or for the sheet.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct StepActed {
+    pub action: Option<FoldActionGeometry>,
+}
+
+/// The cross-section at a fold line (plan D14): the engine's, and where a
+/// bend joins two of its rows.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Sectioned {
+    pub section: Section,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Section {
+    #[serde(flatten)]
+    pub section: CrossSection,
+    /// Ascending by rows, then along the line.
+    pub joins: Vec<SectionJoin>,
+}
+
+/// The distinct moving sets a depth seed can pick at a point.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DepthChosen {
+    pub choices: Vec<DepthChoice>,
+}
+
+/// A step's summary (plan D14): front-relative counts, the crease-pattern
+/// diff and "Layers"; none for the flat sheet.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Summarised {
+    pub summary: Option<StepSummary>,
+}
+
+/// The folds an axiom yields here, for the candidate chooser.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Candidates {
+    pub candidates: Vec<AxiomCandidate>,
+}
+
+/// The face the viewer sees at a model-frame point, and the sheet point
+/// there: where a mark made by a pick goes.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct TopVisible {
+    pub face: FaceId,
+    pub sheet: Point,
 }
 
 /// A state at a glance.
@@ -457,6 +718,8 @@ pub enum BridgeError {
     InvalidInput(String),
     #[error("no state {0}: it was released, or never made by this engine")]
     UnknownState(u32),
+    #[error("state {state} was folded from state {parent}, which has been released")]
+    ParentReleased { state: u32, parent: u32 },
 }
 
 impl BridgeError {
@@ -464,6 +727,7 @@ impl BridgeError {
         match self {
             BridgeError::InvalidInput(_) => "invalid_input",
             BridgeError::UnknownState(_) => "unknown_state",
+            BridgeError::ParentReleased { .. } => "parent_released",
         }
     }
 }

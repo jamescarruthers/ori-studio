@@ -1,10 +1,13 @@
 /**
- * The replay port over a fake engine source: outcomes map to landed or not,
- * handles carry their engine's generation, and releases batch per turn and
- * never reach an engine that did not make them.
+ * The replay port over a fake engine source: the document's ops cross as
+ * they are, outcomes map to landed or not, handles carry their engine's
+ * generation, and releases batch per turn and never reach an engine that did
+ * not make them.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { createFoldEnginePort, type FoldEngineSource } from './foldEnginePort';
+import type { FoldEnginePort } from '../document/foldReplay';
+import type { FoldOp } from '../document/foldSequenceDocument';
+import { createFoldEnginePort, type FoldEngineSource, type FoldEngineStateHandle } from './foldEnginePort';
 import type { FoldEngineOp, FoldStateSummary } from './foldEngineWire';
 
 const SUMMARY: FoldStateSummary = {
@@ -17,7 +20,7 @@ const SUMMARY: FoldStateSummary = {
   sheet: [],
 };
 
-const BOOK: FoldEngineOp = {
+const BOOK: FoldOp = {
   kind: 'valley',
   line: { via: 'free', through: [[0.5, 0], [0.5, 1]] },
   moving: [0.75, 0.5],
@@ -69,6 +72,27 @@ function fakeSource() {
 }
 
 describe('the Fold engine port', () => {
+  it('is the document’s port, its ops and choices handed to the engine as they are', async () => {
+    const { source } = fakeSource();
+    // The replayer's own port type, not a copy of it.
+    const port: FoldEnginePort<FoldEngineStateHandle> = createFoldEnginePort(source, 1);
+    const axiom: FoldOp = {
+      kind: 'valley',
+      line: {
+        via: 'axiom',
+        axiom: 2,
+        inputs: [
+          { kind: 'point', at: [1, 0] },
+          { kind: 'mark', at: [0, 1], mark: 'fmark-1' },
+        ],
+      },
+      seed: { scope: 'all' },
+    };
+    const choices = { root: { n: [-Math.SQRT1_2, Math.SQRT1_2] as const, d: 0 } };
+    await port.step({ generation: 0, id: 1 }, { op: axiom, choices });
+    expect(source.step).toHaveBeenCalledWith(1, axiom, choices);
+  });
+
   it('lands states as handles of the generation that made them', async () => {
     const { source } = fakeSource();
     const port = createFoldEnginePort(source, 3);
@@ -92,7 +116,7 @@ describe('the Fold engine port', () => {
   it('a refusal is the step not landing, with its code', async () => {
     const { source } = fakeSource();
     const port = createFoldEnginePort(source, 1);
-    const jump: FoldEngineOp = { kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' };
+    const jump: FoldOp = { kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' };
     await expect(port.step({ generation: 0, id: 1 }, { op: jump })).resolves.toEqual({
       landed: false,
       code: 'unsupported_op',
@@ -102,7 +126,7 @@ describe('the Fold engine port', () => {
   it('refuses a handle whose engine has gone, rather than fold another state of its number', async () => {
     const { source, lose } = fakeSource();
     const port = createFoldEnginePort(source, 1);
-    const sheet = await port.sheet({ shape: { kind: 'square' } });
+    const sheet = await port.sheet({ shape: { kind: 'square' }, startSide: 'front' });
     if (!sheet.landed) throw new Error('sheet');
     lose();
     await expect(port.step(sheet.state, { op: BOOK })).rejects.toMatchObject({ code: 'fold_state_lost' });

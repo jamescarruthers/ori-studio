@@ -17,12 +17,13 @@
  * React-free and store-free: it takes a view and bound verbs and returns data.
  */
 import type { TFunction } from 'i18next';
-import type { FoldCrossSection, FoldRefused } from './engineContracts';
+import type { FoldCrossSection } from '../engine/foldEngineWire';
 import {
   flapNumbers,
   foldFlapChips,
   foldLayersSummary,
   foldSectionPicker,
+  isWoven,
   type FoldFlapChip,
   type FoldSectionPickerModel,
 } from './crossSection';
@@ -39,7 +40,13 @@ import {
   type FoldShortcutId,
 } from './foldToolCatalog';
 import type { FoldRailVerbs, FoldToolsView } from './foldRailGroups';
-import { foldRefusalNotice, neededFlaps, type FoldFixVerbs, type FoldRefusalNoticeModel } from './refusalNotice';
+import {
+  foldRefusalNotice,
+  neededFlaps,
+  type FoldFixVerbs,
+  type FoldRefused,
+  type FoldRefusalNoticeModel,
+} from './refusalNotice';
 
 /** A located line under preview: what the engine said about it, tier by tier (D14 Interaction cost). */
 export interface FoldPreview {
@@ -245,7 +252,8 @@ function layersSection(
     needed: neededFlaps(preview.refused),
   };
   const picker = section ? foldSectionPicker(t, section, seed, { interval: preview.interval }) : null;
-  const help = section?.woven
+  const help =
+    section && isWoven(section)
     ? t(
         'tools:fold.window.layersHelpWoven',
         'These layers weave through each other, so the stack shown is the one under the pointer. Click a layer to include or exclude its flap.'

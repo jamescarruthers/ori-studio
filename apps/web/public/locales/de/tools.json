@@ -279,6 +279,8 @@
       "mountainInstead": "Stattdessen Bergfalte",
       "pickFlap": "Nur Lasche {{number}} falten",
       "precreaseOtherWay": "Andersherum vorfalten",
+      "slideToEdge": "Die Linie verschieben, bis der Punkt auf der Kante liegt",
+      "turnToEdge": "Die Linie drehen, bis der Punkt auf der Kante liegt",
       "useLine": "Die Bezugslinie verwenden",
       "valleyInstead": "Stattdessen Talfalte"
     },
@@ -368,6 +370,10 @@
         "text": "Sie ergäbe kein gültiges flaches Modell.",
         "title": "Diese Faltung ist nicht möglich"
       },
+      "moverStays": {
+        "text": "Die Lage, die den zu bewegenden Punkt trägt, ist nicht unter den Lagen, die gefaltet werden. Nimm ihre Lasche hinzu oder falte alle Lagen.",
+        "title": "Der Punkt bliebe liegen"
+      },
       "nearMiss": {
         "text": "Die Linie verläuft knapp neben einem Punkt des Papiers: zu nah, um sauber zu falten, zu weit weg, um durch ihn zu gehen.",
         "title": "Zu nah an einem Punkt"
@@ -376,13 +382,29 @@
         "text": "Auf der Seite der Linie, die sich bewegen würde, liegt kein Papier. Tausche die bewegte Seite oder lege die Linie aufs Papier.",
         "title": "Nichts zu falten"
       },
+      "noRoot": {
+        "text": "Diese Bezüge ergeben auf dem Papier, wie es gefaltet ist, keine Faltlinie. Wähle andere Bezüge.",
+        "title": "Hier gibt es keine Faltung"
+      },
+      "noSide": {
+        "text": "Nichts legt fest, welche Seite der Linie sich bewegt. Wähle einen Punkt neben der Linie, auf der Seite, die sich bewegen soll.",
+        "title": "Welche Seite bewegt sich?"
+      },
       "nothingStays": {
         "text": "Jede Lage liegt auf der bewegten Seite, also bliebe nichts liegen. Wähle eine Lasche zum Falten.",
         "title": "Alles würde sich bewegen"
       },
+      "offPaper": {
+        "text": "Ein Punkt oder eine Kante, von der aus die Linie bestimmt wurde, liegt nicht auf dem Papier, wie es jetzt gefaltet ist. Bestimme die Linie neu.",
+        "title": "Ein Bezug liegt nicht auf dem Papier"
+      },
       "pickAgain": {
         "text": "Diese Stelle liegt in keiner Lage auf der bewegten Seite. Wähle innerhalb einer Lage, abseits ihrer Faltlinien.",
         "title": "Erneut wählen"
+      },
+      "pointsTooClose": {
+        "text": "Die beiden Punkte liegen auf dem gefalteten Papier an derselben Stelle und ergeben keine Linie. Wähle zwei Punkte, die weiter auseinanderliegen.",
+        "title": "Die Punkte liegen zu nah beieinander"
       },
       "precreaseUnfold": {
         "text": "Das Aufklappen würde mehr Lagen bewegen als das Falten.",
@@ -399,6 +421,14 @@
       "tuckTarget": {
         "text": "Wähle eine Lage, die liegen bleibt, an der die Lasche eingesteckt werden soll.",
         "title": "Die Lage zum Einstecken würde sich bewegen"
+      },
+      "unsupported": {
+        "text": "Diese Version von Ori Studio kann ihn so, wie er gespeichert ist, nicht falten.",
+        "title": "Dieser Schritt lässt sich nicht falten"
+      },
+      "wrongCrease": {
+        "text": "Klappe entlang einer gefalteten Kante auf und falte entlang einer flachen Faltlinie wieder.",
+        "title": "Nicht diese Art von Faltlinie"
       }
     },
     "section": {
@@ -408,8 +438,6 @@
       "rowAdded": "Lage {{layer}}, {{flap}}, wird mitgefaltet",
       "rowAddedBeside": "Lage {{layer}}, {{flap}}, wird mitgefaltet, neben Lage {{above}}",
       "rowBeside": "Lage {{layer}}, {{flap}}, neben Lage {{above}}",
-      "rowStays": "Lage {{layer}}, bleibt liegen",
-      "rowStaysBeside": "Lage {{layer}}, bleibt liegen, neben Lage {{above}}",
       "top": "Oben"
     },
     "steps": {

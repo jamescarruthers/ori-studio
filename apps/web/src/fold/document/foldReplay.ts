@@ -3,8 +3,9 @@
  * every node's status (plan D6, research §10).
  *
  * States are never stored. Opening a sequence, undoing, redoing or committing
- * replays it against the engine through a {@link FoldEnginePort} — the wasm
- * bridge's worker implements it; tests mock it — and caches what landed in
+ * replays it against the engine through a {@link FoldEnginePort} —
+ * `fold/engine/foldEnginePort.ts` adapts the wasm bridge's worker to it; tests
+ * mock it — and caches what landed in
  * memory, keyed by the path's `fh1` with the engine version beside it. Replay
  * is deterministic, so a cached path is never asked of the engine twice: undo
  * recomputes nothing, and a sequence reopened in the same session replays
@@ -51,9 +52,11 @@ export type FoldEngineOutcome<S> =
   | { landed: false; code: string };
 
 /**
- * The engine as replay drives it: a TypeScript port the wasm bridge
- * implements. `S` is whatever names a landed state to the engine — a handle
- * into a worker, or the state itself.
+ * The engine as replay drives it: the one declaration of the port, which
+ * `createFoldEnginePort` implements over the wasm bridge. The paper, ops and
+ * choices are the document's own, and cross to the engine unchanged. `S` is
+ * whatever names a landed state to the engine — a handle into a worker, or
+ * the state itself.
  */
 export interface FoldEnginePort<S> {
   /** The engine's `FOLD_ENGINE_VERSION`, stored beside every cached state. */

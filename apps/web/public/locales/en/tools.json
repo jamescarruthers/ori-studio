@@ -279,6 +279,8 @@
       "mountainInstead": "Mountain fold instead",
       "pickFlap": "Fold flap {{number}} only",
       "precreaseOtherWay": "Precrease the other way",
+      "slideToEdge": "Slide the line to land the point on the edge",
+      "turnToEdge": "Turn the line to land the point on the edge",
       "useLine": "Use the landmark line",
       "valleyInstead": "Valley fold instead"
     },
@@ -368,6 +370,10 @@
         "text": "It would not land on a valid flat model.",
         "title": "This fold cannot be made"
       },
+      "moverStays": {
+        "text": "The layer that carries the point to move is not among the layers folding. Include its flap, or fold every layer.",
+        "title": "The point would stay put"
+      },
       "nearMiss": {
         "text": "The line passes just beside a point of the paper: too close to fold cleanly, too far to go through it.",
         "title": "Too close to a point"
@@ -376,13 +382,29 @@
         "text": "No paper lies on the side of the line that would move. Swap the moving side, or move the line onto the paper.",
         "title": "Nothing to fold"
       },
+      "noRoot": {
+        "text": "These references give no fold line on the paper as it is folded. Pick other references.",
+        "title": "No fold here"
+      },
+      "noSide": {
+        "text": "Nothing says which side of the line moves. Pick a point off the line, on the side to move.",
+        "title": "Which side moves?"
+      },
       "nothingStays": {
         "text": "Every layer is on the moving side, so nothing would stay put. Pick a flap to fold.",
         "title": "Everything would move"
       },
+      "offPaper": {
+        "text": "A point or edge the line was located from does not lie on the paper as it is folded now. Locate the line again.",
+        "title": "A reference is not on the paper"
+      },
       "pickAgain": {
         "text": "That spot is not inside a layer on the moving side. Pick inside a layer, away from its creases.",
         "title": "Pick again"
+      },
+      "pointsTooClose": {
+        "text": "The two points land in the same place on the folded paper, so they make no line. Pick two points farther apart.",
+        "title": "The points are too close"
       },
       "precreaseUnfold": {
         "text": "Unfolding it would move more layers than folding it did.",
@@ -399,6 +421,14 @@
       "tuckTarget": {
         "text": "Pick a layer that stays put to tuck the flap against.",
         "title": "The layer to tuck under would move"
+      },
+      "unsupported": {
+        "text": "This version of Ori Studio cannot fold it as it is stored.",
+        "title": "This step cannot be folded"
+      },
+      "wrongCrease": {
+        "text": "Unfold along a folded edge, and refold along a flat crease.",
+        "title": "Not that kind of crease"
       }
     },
     "section": {
@@ -408,8 +438,6 @@
       "rowAdded": "Layer {{layer}}, {{flap}}, moves with the fold",
       "rowAddedBeside": "Layer {{layer}}, {{flap}}, moves with the fold, beside layer {{above}}",
       "rowBeside": "Layer {{layer}}, {{flap}}, beside layer {{above}}",
-      "rowStays": "Layer {{layer}}, stays put",
-      "rowStaysBeside": "Layer {{layer}}, stays put, beside layer {{above}}",
       "top": "Top"
     },
     "steps": {

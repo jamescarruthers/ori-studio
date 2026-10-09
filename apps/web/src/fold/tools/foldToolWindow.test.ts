@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
-import type { FoldCrossSection } from './engineContracts';
+import type { FoldCrossSection } from '../engine/foldEngineWire';
 import {
   foldToolWindow,
   type FoldPreview,
@@ -41,20 +41,24 @@ const view = (extra: Partial<FoldToolWindowView> = {}): FoldToolWindowView => ({
 
 /** Two flaps of two layers each at the line: the square folded in half twice. */
 const section: FoldCrossSection = {
+  line: { n: [0, 1], d: 0.5 },
+  side: 'positive',
+  from: { x: 0, y: 0.5 },
+  to: { x: 1, y: 0.5 },
   flaps: [
     { faces: [2, 3], witness: [0.2, 0.7] },
     { faces: [0, 1], witness: [0.2, 0.2] },
   ],
-  layers: [
-    { faces: [3], span: [0, 1], flap: 0, unordered: false },
-    { faces: [2], span: [0, 1], flap: 0, unordered: false },
-    { faces: [1], span: [0, 1], flap: 1, unordered: false },
-    { faces: [0], span: [0, 1], flap: 1, unordered: false },
+  rows: [
+    { faces: [3], spans: [[0, 1]], flap: 0 },
+    { faces: [2], spans: [[0, 1]], flap: 0 },
+    { faces: [1], spans: [[0, 1]], flap: 1 },
+    { faces: [0], spans: [[0, 1]], flap: 1 },
   ],
-  intervals: [{ span: [0, 1], faces: [3, 2, 1, 0], layers: [0, 1, 2, 3] }],
+  intervals: [{ start: 0, end: 1, faces: [3, 2, 1, 0], rows: [0, 1, 2, 3] }],
+  order: { kind: 'layered', unordered: [] },
+  layers: 4,
   joins: [{ upper: 0, lower: 1, at: 1 }],
-  depth: 4,
-  woven: false,
 };
 
 const preview = (extra: Partial<FoldPreview> = {}): FoldPreview => ({

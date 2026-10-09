@@ -288,6 +288,8 @@
       "mountainInstead": "Plutôt un pli montagne",
       "pickFlap": "Plier seulement le rabat {{number}}",
       "precreaseOtherWay": "Pré-plier dans l’autre sens",
+      "slideToEdge": "Faire glisser la ligne pour poser le point sur le bord",
+      "turnToEdge": "Faire pivoter la ligne pour poser le point sur le bord",
       "useLine": "Utiliser la ligne de repère",
       "valleyInstead": "Plutôt un pli vallée"
     },
@@ -381,6 +383,10 @@
         "text": "Il ne donnerait pas un modèle plat valide.",
         "title": "Ce pli est impossible"
       },
+      "moverStays": {
+        "text": "La couche qui porte le point à déplacer ne fait pas partie des couches qui se plient. Incluez son rabat, ou pliez toutes les couches.",
+        "title": "Le point ne bougerait pas"
+      },
       "nearMiss": {
         "text": "La ligne passe juste à côté d’un point du papier : trop près pour plier proprement, trop loin pour passer par lui.",
         "title": "Trop près d’un point"
@@ -389,13 +395,29 @@
         "text": "Aucun papier ne se trouve du côté de la ligne qui bougerait. Inversez le côté qui bouge, ou placez la ligne sur le papier.",
         "title": "Rien à plier"
       },
+      "noRoot": {
+        "text": "Ces repères ne donnent aucune ligne de pli sur le papier tel qu’il est plié. Choisissez d’autres repères.",
+        "title": "Aucun pli ici"
+      },
+      "noSide": {
+        "text": "Rien n’indique quel côté de la ligne bouge. Choisissez un point hors de la ligne, du côté à déplacer.",
+        "title": "Quel côté bouge ?"
+      },
       "nothingStays": {
         "text": "Toutes les couches sont du côté qui bouge : rien ne resterait en place. Choisissez un rabat à plier.",
         "title": "Tout bougerait"
       },
+      "offPaper": {
+        "text": "Un point ou un bord à partir duquel la ligne a été placée ne se trouve pas sur le papier tel qu’il est plié maintenant. Placez la ligne à nouveau.",
+        "title": "Un repère n’est pas sur le papier"
+      },
       "pickAgain": {
         "text": "Cet endroit n’est dans aucune couche du côté qui bouge. Choisissez à l’intérieur d’une couche, loin de ses plis.",
         "title": "Choisissez à nouveau"
+      },
+      "pointsTooClose": {
+        "text": "Les deux points tombent au même endroit du papier plié, ils ne forment donc aucune ligne. Choisissez deux points plus éloignés.",
+        "title": "Les points sont trop proches"
       },
       "precreaseUnfold": {
         "text": "Le déplier déplacerait plus de couches que le plier.",
@@ -412,6 +434,14 @@
       "tuckTarget": {
         "text": "Choisissez une couche qui reste en place contre laquelle rentrer le rabat.",
         "title": "La couche où rentrer bougerait"
+      },
+      "unsupported": {
+        "text": "Cette version d’Ori Studio ne peut pas la plier telle qu’elle est enregistrée.",
+        "title": "Cette étape ne peut pas être pliée"
+      },
+      "wrongCrease": {
+        "text": "Dépliez le long d’un bord plié, et repliez le long d’un pli à plat.",
+        "title": "Ce n’est pas le bon type de pli"
       }
     },
     "section": {
@@ -421,8 +451,6 @@
       "rowAdded": "Couche {{layer}}, {{flap}}, bouge avec le pli",
       "rowAddedBeside": "Couche {{layer}}, {{flap}}, bouge avec le pli, à côté de la couche {{above}}",
       "rowBeside": "Couche {{layer}}, {{flap}}, à côté de la couche {{above}}",
-      "rowStays": "Couche {{layer}}, reste en place",
-      "rowStaysBeside": "Couche {{layer}}, reste en place, à côté de la couche {{above}}",
       "top": "Haut"
     },
     "steps": {

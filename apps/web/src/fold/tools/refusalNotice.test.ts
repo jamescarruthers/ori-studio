@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
-import { FOLD_REFUSAL_CODES, type FoldRefusal, type FoldRefused } from './engineContracts';
-import { foldRefusalNotice, neededFlaps, type FoldFixVerbs, type FoldRefusalContext } from './refusalNotice';
+import { FOLD_REFUSAL_CODES, type FoldRefusalBody } from '../engine/foldEngineWire';
+import {
+  foldRefusalNotice,
+  neededFlaps,
+  type FoldFixVerbs,
+  type FoldRefused,
+  type FoldRefusalContext,
+  type FoldUseLineFix,
+} from './refusalNotice';
 
 const t = i18n.t.bind(i18n);
 
@@ -20,9 +27,17 @@ const context = (extra: Partial<FoldRefusalContext> = {}): FoldRefusalContext =>
 const line = { n: [0, 1] as const, d: 0.5 };
 
 describe('foldRefusalNotice', () => {
-  it('words every refusal the engine can give', () => {
+  it('words every refusal the engine and the bridge can give', () => {
     for (const code of FOLD_REFUSAL_CODES) {
-      const refusal = { code, added: [0], vertex: 1, distance: 1e-4, cause: 'band', face: 2, penetration: 1e-4 } as FoldRefusal;
+      const refusal = {
+        code,
+        added: [0],
+        vertex: 1,
+        distance: 1e-4,
+        cause: 'band',
+        face: 2,
+        penetration: 1e-4,
+      } as FoldRefusalBody;
       const notice = foldRefusalNotice(t, { refusal, fixes: [] }, context(), verbs());
       expect(notice.code).toBe(code);
       expect(notice.title, code).not.toBe('');
@@ -88,19 +103,62 @@ describe('foldRefusalNotice', () => {
 
   it('offers the landmark line for a near miss', () => {
     const calls = verbs();
+    const fix: FoldUseLineFix = { fix: 'use_line', line, side: 'positive' };
     const notice = foldRefusalNotice(
       t,
-      {
-        refusal: { code: 'near_miss', vertex: 4, distance: 4e-4, cause: 'band' },
-        fixes: [{ fix: 'use_line', line, side: 'positive' }],
-      },
+      { refusal: { code: 'near_miss', vertex: 4, distance: 4e-4, cause: 'band' }, fixes: [fix] },
       context(),
       calls
     );
     expect(notice.title).toBe('Too close to a point');
     expect(notice.actions.map((action) => action.label)).toEqual(['Use the landmark line']);
     notice.actions[0]?.run();
-    expect(calls.useLine).toHaveBeenCalledWith(line, 'positive');
+    expect(calls.useLine).toHaveBeenCalledWith(fix);
+  });
+
+  it('offers a sliver’s remedies by how they move the line, each with the step it commits', () => {
+    const calls = verbs();
+    const remedy = (axiom: 5 | 7): FoldUseLineFix => ({
+      fix: 'use_line',
+      line: { n: [1, 0], d: 0.8 },
+      side: 'positive',
+      step: {
+        op: {
+          kind: 'valley',
+          line: {
+            via: 'axiom',
+            axiom,
+            inputs:
+              axiom === 5
+                ? [
+                    { kind: 'point', at: [0.8, 0] },
+                    { kind: 'point', at: [1, 0] },
+                    { kind: 'edge', a: [0.6, 0], b: [0.6, 0.5] },
+                  ]
+                : [
+                    { kind: 'point', at: [1, 0] },
+                    { kind: 'edge', a: [0.6, 0], b: [0.6, 0.5] },
+                    { kind: 'edge', a: [0.3, 0], b: [1, 0] },
+                  ],
+          },
+          seed: { scope: 'all' },
+        },
+        choices: { root: { n: [1, 0], d: 0.8 } },
+      },
+    });
+    const notice = foldRefusalNotice(
+      t,
+      { refusal: { code: 'sliver', vertex: 3, face: 1, penetration: 1e-4 }, fixes: [remedy(5), remedy(7)] },
+      context(),
+      calls
+    );
+    expect(notice.title).toBe('A point lands just inside an edge');
+    expect(notice.actions.map((action) => action.label)).toEqual([
+      'Turn the line to land the point on the edge',
+      'Slide the line to land the point on the edge',
+    ]);
+    notice.actions[1]?.run();
+    expect(calls.useLine).toHaveBeenCalledWith(remedy(7));
   });
 
   it('keeps every fix in the engine’s order, and holds them on a read-only sequence', () => {

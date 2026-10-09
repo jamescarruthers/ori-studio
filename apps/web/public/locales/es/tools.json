@@ -288,6 +288,8 @@
       "mountainInstead": "Mejor un pliegue de monte",
       "pickFlap": "Plegar solo la solapa {{number}}",
       "precreaseOtherWay": "Premarcar en el otro sentido",
+      "slideToEdge": "Deslizar la línea hasta que el punto quede en el borde",
+      "turnToEdge": "Girar la línea hasta que el punto quede en el borde",
       "useLine": "Usar la línea de referencia",
       "valleyInstead": "Mejor un pliegue de valle"
     },
@@ -381,6 +383,10 @@
         "text": "No daría un modelo plano válido.",
         "title": "Este pliegue no se puede hacer"
       },
+      "moverStays": {
+        "text": "La capa que lleva el punto que hay que mover no está entre las capas que se pliegan. Incluye su solapa o pliega todas las capas.",
+        "title": "El punto no se movería"
+      },
       "nearMiss": {
         "text": "La línea pasa justo al lado de un punto del papel: demasiado cerca para plegar limpiamente, demasiado lejos para pasar por él.",
         "title": "Demasiado cerca de un punto"
@@ -389,13 +395,29 @@
         "text": "No hay papel en el lado de la línea que se movería. Cambia el lado que se mueve o lleva la línea sobre el papel.",
         "title": "Nada que plegar"
       },
+      "noRoot": {
+        "text": "Estas referencias no dan ninguna línea de pliegue en el papel tal como está plegado. Elige otras referencias.",
+        "title": "Aquí no hay pliegue"
+      },
+      "noSide": {
+        "text": "Nada indica qué lado de la línea se mueve. Elige un punto fuera de la línea, en el lado que quieres mover.",
+        "title": "¿Qué lado se mueve?"
+      },
       "nothingStays": {
         "text": "Todas las capas están en el lado que se mueve, así que nada se quedaría quieto. Elige una solapa para plegar.",
         "title": "Se movería todo"
       },
+      "offPaper": {
+        "text": "Un punto o un borde a partir del cual se situó la línea no está sobre el papel tal como está plegado ahora. Vuelve a situar la línea.",
+        "title": "Una referencia no está sobre el papel"
+      },
       "pickAgain": {
         "text": "Ese lugar no está dentro de una capa del lado que se mueve. Elige dentro de una capa, lejos de sus pliegues.",
         "title": "Vuelve a elegir"
+      },
+      "pointsTooClose": {
+        "text": "Los dos puntos caen en el mismo sitio del papel plegado, así que no forman ninguna línea. Elige dos puntos más separados.",
+        "title": "Los puntos están demasiado cerca"
       },
       "precreaseUnfold": {
         "text": "Desplegarlo movería más capas que las que movió al plegarlo.",
@@ -412,6 +434,14 @@
       "tuckTarget": {
         "text": "Elige una capa que se quede quieta para remeter la solapa contra ella.",
         "title": "La capa donde remeter se movería"
+      },
+      "unsupported": {
+        "text": "Esta versión de Ori Studio no puede plegarlo tal como está guardado.",
+        "title": "Este paso no se puede plegar"
+      },
+      "wrongCrease": {
+        "text": "Despliega a lo largo de un borde plegado y vuelve a plegar a lo largo de un pliegue plano.",
+        "title": "No es ese tipo de pliegue"
       }
     },
     "section": {
@@ -421,8 +451,6 @@
       "rowAdded": "Capa {{layer}}, {{flap}}, se mueve con el pliegue",
       "rowAddedBeside": "Capa {{layer}}, {{flap}}, se mueve con el pliegue, junto a la capa {{above}}",
       "rowBeside": "Capa {{layer}}, {{flap}}, junto a la capa {{above}}",
-      "rowStays": "Capa {{layer}}, se queda quieta",
-      "rowStaysBeside": "Capa {{layer}}, se queda quieta, junto a la capa {{above}}",
       "top": "Arriba"
     },
     "steps": {
