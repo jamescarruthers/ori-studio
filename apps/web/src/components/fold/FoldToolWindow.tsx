@@ -3,6 +3,7 @@ import { ArrowLeftRight } from 'lucide-react';
 import type { FoldKeyLabel, FoldKind, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
 import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
 import { STORAGE_KEYS } from '../../lib/storage';
+import { useIsPhoneLayout } from '../../platform/phoneLayout';
 import { Button } from '../ui/Button';
 import { FieldRow } from '../ui/fieldRows/FieldRow';
 import { NumberRow } from '../ui/fieldRows/NumberRow';
@@ -31,6 +32,10 @@ import styles from './FoldToolWindow.module.css';
  *
  * Mounted outside any element with a context-menu handler: the window is
  * portaled, and portal events still bubble through React (`ToolHintWindow`).
+ *
+ * On a phone it starts collapsed to its title bar, so the paper stays in view
+ * while points are picked, and opens by itself while a fold waits to be
+ * decided and committed; a tap on the bar opens or closes it.
  */
 export function FoldToolWindow({
   container,
@@ -44,6 +49,7 @@ export function FoldToolWindow({
   keyLabel?: FoldKeyLabel;
 }) {
   const { t } = useTranslation();
+  const phone = useIsPhoneLayout();
   if (!model) return null;
   const titled = (label: string, shortcut: FoldShortcutId) => {
     const key = keyLabel?.(shortcut);
@@ -58,6 +64,11 @@ export function FoldToolWindow({
       title={model.title}
       meta={model.meta}
       ariaLabel={t('tools:fold.window.label', 'Fold tool options')}
+      // A phone's pane is the paper the tool picks points on: the open window
+      // would cover it, so it starts as its title bar, and opens by itself
+      // once there is a fold to decide and commit.
+      startsCollapsed={phone}
+      needsAttention={phone && model.phase === 'preview'}
     >
       <div className={styles.section}>
         <ToolHintInstructions

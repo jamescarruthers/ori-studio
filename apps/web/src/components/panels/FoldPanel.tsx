@@ -12,7 +12,6 @@ import { useFoldSession } from '../../fold/session/useFoldSession';
 import { useLayoutStore } from '../../store/layoutStore';
 import { FileDropOverlay } from '../FileDropOverlay';
 import { FoldCanvas } from '../fold/canvas/FoldCanvas';
-import { FoldPhoneCanvasPills } from '../fold/canvas/FoldPhoneCanvasPills';
 import { FoldHeader } from '../fold/FoldHeader';
 import { FoldStepStrip } from '../fold/steps/FoldStepStrip';
 import { FoldStepsGrid } from '../fold/steps/FoldStepsGrid';
@@ -31,9 +30,10 @@ import styles from './FoldPanel.module.css';
  * the strip, and the grid. The verbs are the action catalog's, at the step on
  * screen (`foldActionsAt`), as the menus and the keys build it, so the three
  * agree; Send to Edit is the split button every design kind's is
- * (`useFoldSendToEditButton`), its variants behind the caret. On a phone the canvas's own pills (its tools, and the pane switch)
- * are seated in the header: the canvas pill lane would sit over it, as it
- * would over the Diagram's. A crease pattern dropped anywhere on the panel —
+ * (`useFoldSendToEditButton`), its variants behind the caret. On a phone the
+ * header keeps to one row, seating the drawer's pill (the canvas pill lane
+ * would sit over it, as it would over the Diagram's), and the canvas's own
+ * controls are on its bar. A crease pattern dropped anywhere on the panel —
  * the panes, the strip, the header or the Steps view — is Import CP
  * (`useFoldDrop`).
  */
@@ -67,7 +67,6 @@ export function FoldPanel() {
         stepCount={foldedStepCount(sequence.entries)}
         actions={actions}
         sendToEdit={sendToEdit}
-        paneToggle={view === 'fold' ? <FoldPhoneCanvasPills /> : undefined}
         drawerSlot={setViewDrawerSlot}
       />
       {view === 'steps' ? (

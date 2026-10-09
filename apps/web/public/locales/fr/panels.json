@@ -1550,6 +1550,7 @@
       "fold": "Plier",
       "foldHint": "L’étape affichée, pliée et en patron de plis",
       "moreExports": "Autres façons d’exporter",
+      "moreVerbs": "Importer, envoyer et exporter",
       "steps": "Étapes",
       "stepsHint": "Chaque étape du parcours sous forme de carte",
       "views": "Vue"

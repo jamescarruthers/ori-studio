@@ -1498,6 +1498,7 @@
       "fold": "Falten",
       "foldHint": "Der angezeigte Schritt, gefaltet und als Faltmuster",
       "moreExports": "Weitere Exportmöglichkeiten",
+      "moreVerbs": "Importieren, senden und exportieren",
       "steps": "Schritte",
       "stepsHint": "Jeder Schritt des Pfads als Karte",
       "views": "Ansicht"

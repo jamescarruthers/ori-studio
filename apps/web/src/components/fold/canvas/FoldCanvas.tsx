@@ -38,6 +38,7 @@ import { FoldToolWindow } from '../FoldToolWindow';
 import { FoldActionLayer } from './FoldActionLayer';
 import { FoldAltLatchToggle } from './FoldAltLatchToggle';
 import { FoldPane } from './FoldPane';
+import { FoldPhoneBarControls } from './FoldPhoneBarControls';
 import { FoldViewportToolbar } from './FoldViewportToolbar';
 import { useFoldPanePlayback } from '../../../fold/canvas/useFoldPanePlayback';
 import { FoldPlaybackControls } from '../FoldPlaybackControls';
@@ -51,9 +52,10 @@ import styles from './FoldCanvas.module.css';
  * viewport's corner; the viewport toolbar along the bottom, with the step's
  * transport (Play draws the step from its parent on the folded pane,
  * `useFoldPanePlayback`). A crease pattern dropped on it is the panel's to
- * import (`useFoldDrop`, in `FoldPanel`). On a phone, one
- * pane at a time, the rail's tools in the header's sheet
- * (`FoldPhoneCanvasPills`).
+ * import (`useFoldDrop`, in `FoldPanel`). On a phone, one pane at a time,
+ * and the rail's tools in a sheet opened from the bar, beside the pane switch
+ * (`FoldPhoneBarControls`); the tool window starts as its title bar, so the
+ * paper stays in view while points are picked (`FoldToolWindow`).
  *
  * A composition site: what the tools do is `fold/tools` (the state, the
  * registry, the step builder) and `fold/canvas` (picking, the pipeline to the
@@ -279,6 +281,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           display={display}
           onDisplay={setDisplay}
           playback={<FoldPlaybackControls playback={playback} shortcuts={shortcuts} compact={phone} />}
+          phoneControls={phone ? <FoldPhoneBarControls /> : undefined}
           sendToEdit={sendToEdit}
         />
       </div>

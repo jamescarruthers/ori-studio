@@ -114,7 +114,7 @@ describe('FoldHeader', () => {
     expect(button('Import CP…')).toMatchObject({ disabled: true, title: 'Import CP needs a square or rectangle sheet.' });
   });
 
-  it('gives Import CP and Send to Edit their icons alone on a phone, named by their labels', async () => {
+  it('keeps to one row on a phone: the tabs their icons, no count, and the verbs in one menu', async () => {
     const { PHONE_MEDIA_QUERY } = await import('../../platform/phoneLayout');
     vi.stubGlobal(
       'matchMedia',
@@ -124,14 +124,42 @@ describe('FoldHeader', () => {
         removeEventListener: () => {},
       }))
     );
-    const bound = render({});
-    const importCp = host.querySelector<HTMLButtonElement>('button[aria-label="Import CP…"]');
-    expect(importCp?.textContent).toBe('');
-    act(() => importCp?.click());
+    const run = vi.fn();
+    const bound = render({
+      stepCount: 3,
+      sendToEdit: {
+        label: 'Send to Edit',
+        title: 'Send it',
+        disabled: false,
+        menuLabel: 'More',
+        run,
+        actions: [{ id: 'precreases-as-aux', label: 'Send to Edit (precreases as auxiliary lines)', onSelect: vi.fn() }],
+      },
+    });
+    expect(host.querySelector('[data-phone]')).not.toBeNull();
+    // Named still, by their titles, out of sight.
+    expect(tabs().map((tab) => tab.textContent)).toEqual(['Fold', 'Steps']);
+    expect(host.querySelector('[role="tab"] [data-hidden]')).not.toBeNull();
+    expect(host.textContent).not.toContain('3 steps');
+    // No verb on the row itself.
+    for (const name of ['Import CP…', 'Send to Edit', 'Export FOLD…']) {
+      expect(button(name), name).toBeUndefined();
+      expect(host.querySelector(`button[aria-label="${name}"]`), name).toBeNull();
+    }
+    const more = host.querySelector<HTMLButtonElement>('button[aria-label="Import, send and export"]');
+    act(() => {
+      more?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+    });
+    const rows = [...document.querySelectorAll<HTMLElement>('[role="menu"] [role^="menuitem"]')];
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'Import CP…',
+      'Send to Edit',
+      'Send to Edit (precreases as auxiliary lines)',
+      'Export FOLD…',
+      'Export steps…',
+    ]);
+    act(() => rows[0]?.click());
     expect(bound.importCp).toHaveBeenCalledOnce();
-    expect(host.querySelector('button[aria-label="Send to Edit"]')).not.toBeNull();
-    // The export keeps its words: it is the header's one primary verb.
-    expect(button('Export FOLD…')).toBeDefined();
   });
 
   it('makes Send to Edit the shared split button when given its model, the variants behind the caret', () => {
@@ -165,10 +193,5 @@ describe('FoldHeader', () => {
       },
     });
     expect(button('Send to Edit')).toMatchObject({ disabled: true, title: 'A step on this path no longer folds.' });
-  });
-
-  it('seats the phone’s pane switch beside the drawer’s slot', () => {
-    render({ paneToggle: <button type="button">Crease pattern</button> });
-    expect(button('Crease pattern')).toBeDefined();
   });
 });

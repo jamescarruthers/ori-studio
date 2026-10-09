@@ -1448,6 +1448,7 @@
       "fold": "접기",
       "foldHint": "화면의 단계를 접은 모습과 전개도로",
       "moreExports": "다른 내보내기 방법",
+      "moreVerbs": "가져오기, 보내기, 내보내기",
       "steps": "단계",
       "stepsHint": "경로의 모든 단계를 카드로",
       "views": "보기"

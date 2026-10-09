@@ -10,6 +10,10 @@ import { ViewportToolbar, type ViewportToolbarGroupSpec } from '../../panels/Vie
  * panes' two display switches — the step's own creases drawn as its
  * instruction, and the precreases — the step's transport (`playback`), and a
  * slot for Send to Edit, which the panel supplies.
+ *
+ * A phone's bar leads with the canvas's own controls (`phoneControls`: the
+ * tools and the pane switch), then the transport; the display switches and
+ * Fit are in its `⋯` menu, the zoom left to a pinch.
  */
 export function FoldViewportToolbar({
   zoomPercent,
@@ -17,6 +21,7 @@ export function FoldViewportToolbar({
   display,
   onDisplay,
   playback,
+  phoneControls,
   sendToEdit,
 }: {
   zoomPercent: number;
@@ -30,10 +35,13 @@ export function FoldViewportToolbar({
   onDisplay: (display: FoldPaneDisplay) => void;
   /** The step's transport controls (`FoldPlaybackControls`). */
   playback?: ReactNode;
+  /** A phone's: the tools and the pane switch (`FoldPhoneBarControls`), at the head of the bar. */
+  phoneControls?: ReactNode;
   sendToEdit?: ReactNode;
 }) {
   const { t } = useTranslation();
   const groups: ViewportToolbarGroupSpec[] = [
+    { id: 'phone', items: [phoneControls ? { kind: 'node', id: 'fold-phone-controls', node: phoneControls } : null] },
     {
       id: 'display',
       items: [
@@ -48,6 +56,8 @@ export function FoldViewportToolbar({
           icon: <PenLine size={14} />,
           checked: display.stepCreases,
           pinned: true,
+          // A phone's bar is the tools' and the transport's: this goes to its menu.
+          onPhone: 'collapse',
           onSelect: () => onDisplay({ ...display, stepCreases: !display.stepCreases }),
         },
         {
@@ -58,6 +68,7 @@ export function FoldViewportToolbar({
           icon: <Layers size={14} />,
           checked: display.precreases,
           pinned: true,
+          onPhone: 'collapse',
           onSelect: () => onDisplay({ ...display, precreases: !display.precreases }),
         },
       ],
@@ -74,9 +85,9 @@ export function FoldViewportToolbar({
       fitToView={camera.fit}
       setZoomLevel={(scale) => camera.setZoomPercent(scale * 100)}
       groups={groups}
-      // A phone's bar is the step's: its display switches and its transport,
-      // with the zoom buttons left to a pinch and Fit in the overflow menu.
-      // Inline, the transport wrapped the bar onto a second row over the paper.
+      // A phone's bar is the canvas's tools and the step's transport, with
+      // the zoom buttons left to a pinch, and Fit and the display switches in
+      // the overflow menu. Inline, they wrapped the bar onto a second row.
       phoneViewControls="collapsed"
     />
   );

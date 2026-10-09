@@ -32,7 +32,8 @@ function renderStepPicture(card: FoldStripCard) {
  *
  * The shared `StepFilmstrip` with Fold's pictures and words in it; a
  * right-click on a card offers that step's verbs. On a phone the chevrons go,
- * and a swipe up or down on a card chooses its branch.
+ * the cards are smaller so the paper keeps the height, and a swipe up or down
+ * on a card chooses its branch.
  */
 export function FoldStepStrip({ view }: { view: FoldSequenceView }) {
   const { t } = useTranslation();
@@ -66,6 +67,7 @@ export function FoldStepStrip({ view }: { view: FoldSequenceView }) {
         previousLabel={strip.previousLabel}
         nextLabel={strip.nextLabel}
         navigation={!phone}
+        compact={phone}
         previousDisabled={strip.previousDisabled}
         nextDisabled={strip.nextDisabled}
         onPreviousWay={strip.onPreviousWay}
