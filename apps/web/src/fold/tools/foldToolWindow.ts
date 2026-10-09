@@ -48,8 +48,14 @@ import {
   type FoldLineModeId,
   type FoldShortcutId,
 } from './foldToolCatalog';
+import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldRailVerbs, FoldToolsView } from './foldRailGroups';
 import type { FoldDivideSettings } from './foldToolState';
+import {
+  reverseToolWindow,
+  type FoldReverseControls,
+  type FoldReverseWindowView,
+} from './reverse/reverseToolWindow';
 import {
   foldRefusalNotice,
   neededFlaps,
@@ -74,6 +80,8 @@ export interface FoldPreview {
   landing: boolean;
   /** A free line drawn on the crease pattern across layers the folded form puts apart (`FoldBuiltStep.acrossLayers`). */
   acrossLayers?: boolean;
+  /** Enter was pressed while the preview was landing: the fold commits as soon as it has. */
+  queued?: boolean;
 }
 
 export interface FoldToolWindowView extends FoldToolsView {
@@ -86,6 +94,8 @@ export interface FoldToolWindowView extends FoldToolsView {
    * (what Clear marks clears); absent where the surface offers none.
    */
   divide?: { settings: FoldDivideSettings; marks: number };
+  /** The reverse tool's kind and choices, while it previews (`tools/reverse/reverseToolWindow`). */
+  reverse?: FoldReverseWindowView;
 }
 
 /** What the window can promise on this device. */
@@ -109,6 +119,11 @@ export interface FoldToolWindowVerbs extends Pick<FoldRailVerbs, 'selectTool' | 
   setDivide?: (divide: Partial<FoldDivideSettings>) => void;
   /** Clear the marks made on the step on screen: one undo entry. */
   clearMarks?: () => void;
+  // A compound fold's choices (`tools/reverse/reverseToolWindow`).
+  setReverseKind?: (kind: FoldReverseKind) => void;
+  /** Step through the ways the tip opens, or the layer orders listed. */
+  stepOpening?: (delta: number) => void;
+  stepOrder?: (delta: number) => void;
 }
 
 /** The Divide line's controls: count or exact ratio (Edit's ratio expression), and clearing what is made. */
@@ -200,6 +215,8 @@ export interface FoldToolWindowModel {
   refusal: FoldRefusalNoticeModel | null;
   /** The Divide line's settings; null for every other tool, or where the surface offers none. */
   divide: FoldDivideControls | null;
+  /** A compound fold's kind and choices (`tools/reverse/reverseToolWindow`); absent for every other tool. */
+  compound?: FoldReverseControls;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
 }
 
@@ -266,7 +283,7 @@ function divideControls(
   };
 }
 
-function settingsMeta(t: TFunction, count: number): string {
+export function settingsMeta(t: TFunction, count: number): string {
   if (count === 0) return t('tools:fold.window.instructions', 'Instructions');
   return t('tools:fold.window.settings', {
     count,
@@ -296,16 +313,15 @@ function lineModeNotes(t: TFunction, mode: FoldLineModeId, host: FoldToolHost): 
   ];
 }
 
-function locateInstructions(
+/** How to locate the line, step by step, then pick and commit: `action` is the tool's name, the commit button's. */
+export function locateInstructions(
   t: TFunction,
   view: FoldToolWindowView,
-  kind: FoldKind,
+  action: string,
   host: FoldToolHost
 ): FoldToolInstructions {
   const finish = host.coarse
-    ? t('tools:fold.steps.finishTouch', 'Pick the fold and the layers, then tap {{action}}.', {
-        action: foldToolLabel(t, kind),
-      })
+    ? t('tools:fold.steps.finishTouch', 'Pick the fold and the layers, then tap {{action}}.', { action })
     : t('tools:fold.steps.finish', 'Pick the fold and the layers, then press Enter.');
   const items = [...lineModeSteps(t, view.lineMode), finish];
   return {
@@ -333,18 +349,32 @@ function previewInstructions(
     // Picking layers is optional: every layer on the moving side folds unless
     // narrowed, so the window leads with the pick and never marks it done.
     current: 0,
-    notes: preview.acrossLayers
-      ? [
-          t(
-            'tools:fold.note.acrossLayers',
-            'These points lie on layers that are folded apart, so the line runs through them where they lie in the folded form. The crease pattern shows the creases it makes.'
-          ),
-        ]
-      : [],
+    notes: [
+      ...(preview.acrossLayers
+        ? [
+            t(
+              'tools:fold.note.acrossLayers',
+              'These points lie on layers that are folded apart, so the line runs through them where they lie in the folded form. The crease pattern shows the creases it makes.'
+            ),
+          ]
+        : []),
+      ...queuedNote(t, preview),
+    ],
   };
 }
 
-function lineModeSelect(t: TFunction, view: FoldToolWindowView, verbs: FoldToolWindowVerbs): FoldLineModeSelect {
+/**
+ * Enter pressed before the preview landed — or before its step was built, a
+ * reverse fold's tip still being asked about: said, so the press is not
+ * taken for lost. A queued commit is only ever one still waiting.
+ */
+export function queuedNote(t: TFunction, preview: FoldPreview): string[] {
+  return preview.queued && !preview.refused
+    ? [t('tools:fold.note.queued', 'Folding as soon as the preview is ready…')]
+    : [];
+}
+
+export function lineModeSelect(t: TFunction, view: FoldToolWindowView, verbs: FoldToolWindowVerbs): FoldLineModeSelect {
   return {
     label: t('tools:fold.window.lineMode', 'Locate line'),
     value: view.lineMode,
@@ -356,7 +386,7 @@ function lineModeSelect(t: TFunction, view: FoldToolWindowView, verbs: FoldToolW
   };
 }
 
-function layersSection(
+export function layersSection(
   t: TFunction,
   preview: FoldPreview,
   verbs: FoldToolWindowVerbs,
@@ -429,6 +459,7 @@ export function foldToolWindow(
       footer: null,
     };
   }
+  if (view.tool === 'inside-reverse') return reverseToolWindow(t, view, verbs, host);
   if (!isFoldKind(view.tool)) return null;
   const kind = view.tool;
   const title = foldToolLabel(t, kind);
@@ -439,7 +470,7 @@ export function foldToolWindow(
       phase: 'locate',
       title,
       meta: settingsMeta(t, 1),
-      instructions: locateInstructions(t, view, kind, host),
+      instructions: locateInstructions(t, view, title, host),
       lineMode: lineModeSelect(t, view, verbs),
       kind: null,
       movingSide: null,

@@ -17,8 +17,9 @@ import { foldStepInputKey } from '../session/foldSessionEngine';
 import { FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
-import { isFoldKind } from '../tools/foldToolCatalog';
+import { isFoldKind, isLineTool } from '../tools/foldToolCatalog';
 import type { FoldToolState } from '../tools/foldToolState';
+import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
 import type { FoldStateView } from './useFoldStateView';
 
 /** The step a fold tool previews and commits: the document's op and choices, keyed as the session keys them. */
@@ -55,6 +56,8 @@ export interface FoldToolPreview {
   refused: FoldEngineRefused | null;
   /** Tier 3 is in flight: nothing to commit yet. */
   landing: boolean;
+  /** The reverse tool's: the tip as the engine described it, and the kind, opening and order taken. */
+  reverse: FoldReversePreview | null;
 }
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
@@ -67,7 +70,7 @@ const lineSideKey = (build: FoldStepBuild) =>
 
 /** The axiom line a fold tool's picks locate, once every click is in. */
 function axiomLineOf({ tool, lineMode, picks }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): FoldAxiomLine | null {
-  return isFoldKind(tool) ? axiomLineOfPicks(lineMode, picks) : null;
+  return isLineTool(tool) ? axiomLineOfPicks(lineMode, picks) : null;
 }
 
 /**
@@ -139,8 +142,11 @@ export function useFoldToolPreview(
   const candidates = ownRoots?.candidates ?? null;
   const candidate = candidates ? (candidates[tools.root] ?? candidates[0] ?? null) : null;
 
-  // --- The step, built from the picks and every choice made since.
-  const build = useMemo<FoldStepBuild>(() => {
+  // --- The step, built from the picks and every choice made since: a
+  // plain fold's at once, a reverse fold's once the engine has described
+  // its tip (`useFoldReverseStep`).
+  const reverseStep = useFoldReverseStep(session, index, tools, candidate, tools.tool === 'inside-reverse');
+  const plainBuild = useMemo<FoldStepBuild>(() => {
     if (!index || !isFoldKind(tools.tool)) return { status: 'unlocated' };
     return buildFoldStep(
       {
@@ -155,11 +161,16 @@ export function useFoldToolPreview(
       index
     );
   }, [index, tools, candidate]);
+  const reversing = tools.tool === 'inside-reverse';
+  const build = reversing ? reverseStep.build : plainBuild;
   const step = useMemo<FoldToolStep | null>(() => {
-    const chosen = tools.override ?? (build.status === 'built' ? { op: build.op, choices: build.choices } : null);
+    // A plain fold's override is the whole step; a reverse fold's is its
+    // line, which its build already folds along.
+    const override = reversing ? null : tools.override;
+    const chosen = override ?? (build.status === 'built' ? { op: build.op, choices: build.choices } : null);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [tools.override, build]);
+  }, [reversing, tools.override, build]);
 
   // --- Tier 2 and 3, asked whenever the step changes; let go when there is none.
   const asked = useRef<string | null>(null);
@@ -259,6 +270,7 @@ export function useFoldToolPreview(
   const refused =
     (build.status === 'refused' ? build.refused : null) ??
     ownRoots?.refused ??
+    reverseStep.refused ??
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
 
@@ -282,5 +294,6 @@ export function useFoldToolPreview(
     landed: landed && landed.key === landedKey ? landed.landed : null,
     refused,
     landing: step !== null && (pendingFor === null || pendingFor.status === 'working'),
+    reverse: reverseStep.reverse,
   };
 }

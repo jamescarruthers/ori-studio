@@ -37,7 +37,8 @@ describe('the Fold tools’ input registry', () => {
     expect(lineModeInput('free').steps.map((step) => step.snap)).toEqual(['free', 'free']);
     expect(lineModeInput('crease').steps).toEqual([{ snap: 'crease-required', slot: null, edges: false }]);
     expect(toolInput('divide-line', 'axiom-2')?.steps).toEqual([{ snap: 'crease-required', slot: null, edges: true }]);
-    expect(toolInput('inside-reverse', 'axiom-2')).toBeNull();
+    // The reverse fold locates its line as every fold does.
+    expect(toolInput('inside-reverse', 'axiom-2')).toBe(lineModeInput('axiom-2'));
     expect(nextStep(lineModeInput('crease'), 1)).toBeNull();
   });
 

@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import type { FoldLayerScope } from './stepSentence';
 import {
   plainFoldSentence,
+  reverseFoldSentence,
   unfoldSentence,
   type PlainFoldSentenceOp,
   type SentenceClause,
@@ -129,6 +130,56 @@ describe('the plain-fold sentence catalog', () => {
         expect(new Set(read), `${op}.${line}`).toEqual(new Set(Object.keys(last().values)));
       }
     }
+  });
+});
+
+// Compound folds (plan D4), one block per family.
+describe('the reverse fold’s sentences', () => {
+  const KINDS = { inside: 'Inside reverse fold', outside: 'Outside reverse fold' } as const;
+  /** A reverse fold is never "in half": those lines read as their plain forms. */
+  const PLAIN: Partial<Record<SentenceLine, SentenceLine>> = { o2Half: 'o2', o3Half: 'o3' };
+
+  it('holds every kind × line × layer scope to one key and one pattern, counting layers from the top', () => {
+    const keys = new Set<string>();
+    for (const kind of ['inside', 'outside'] as const) {
+      for (const line of LINE_KEYS) {
+        const keyed = PLAIN[line] ?? line;
+        const { clause, names } = LINES[keyed];
+        const base = `${KINDS[kind]}${clause}`;
+        const expectedNames = Object.fromEntries(names.map((name) => [name, NAMES[name]]));
+        const key = `panels:fold.sentence.${kind}Reverse.${keyed}`;
+        const { t, last } = recorder();
+        const sentence = (scope: FoldLayerScope) => reverseFoldSentence(t, kind, { line, names: NAMES }, scope);
+
+        sentence({ kind: 'all' });
+        expect(last(), `${kind}.${line}`).toEqual({
+          key: `${key}.all`,
+          defaults: { default: `${base}, through all layers.` },
+          values: expectedNames,
+        });
+        sentence({ kind: 'depth', layers: 2 });
+        expect(last(), `${kind}.${line}`).toEqual({
+          key: `${key}.depth`,
+          defaults: {
+            one: `${base}, reversing only the top layer.`,
+            other: `${base}, reversing only the top {{count}} layers.`,
+          },
+          values: { ...expectedNames, count: 2 },
+        });
+        sentence({ kind: 'flaps', flaps: 1 });
+        expect(last(), `${kind}.${line}`).toEqual({
+          key: `${key}.flaps`,
+          defaults: {
+            one: `${base}, reversing only the flap shown.`,
+            other: `${base}, reversing only the {{count}} flaps shown.`,
+          },
+          values: { ...expectedNames, count: 1 },
+        });
+        for (const scope of ['all', 'depth', 'flaps']) keys.add(`${kind}.${keyed}.${scope}`);
+      }
+    }
+    // Two kinds, nine lines (no "in half"), three scopes.
+    expect(keys.size).toBe(2 * 9 * 3);
   });
 });
 

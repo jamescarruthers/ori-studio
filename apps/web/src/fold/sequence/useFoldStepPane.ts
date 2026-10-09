@@ -8,6 +8,7 @@ import { foldCommand } from '../foldActions';
 import { FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import { useFoldStateQuery } from '../session/useFoldSession';
 import { foldActionsAt, foldCommandActionId } from './foldCommands';
+import { foldCompoundPaneRows } from './foldCompoundRows';
 import { foldedStepCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
 import { foldCreaseDiff } from './foldStepDiff';
 import type { FoldSequenceView } from './useFoldSequenceView';
@@ -65,6 +66,7 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
             diff: summary && !imported ? foldCreaseDiff(summary, frame?.creases ?? null) : null,
             status: paneStatus(entry.status),
             ...(imported ? { origin: imported.origin } : {}),
+            ...(entry.session.compound ? { compound: foldCompoundPaneRows(entry.session.compound) } : {}),
           }
         : null;
     const landedSummary = pendingSummary?.summary ?? null;

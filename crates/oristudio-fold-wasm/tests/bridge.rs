@@ -529,11 +529,21 @@ fn a_choice_the_op_cannot_use_breaks_it() {
         &mut bridge,
         sheet,
         book_step(),
-        json!({ "completion": [{ "above": [0.1, 0.1], "below": [0.9, 0.1] }] }),
+        json!({ "completion": { "faces": [[0.1, 0.1], [0.9, 0.1]], "orders": [[0, 1, 1]] } }),
     );
     assert_eq!(
         refused["refusal"],
         json!({ "code": "unexpected_choice", "choice": "completion" })
+    );
+    let opening = refuse_with(
+        &mut bridge,
+        sheet,
+        book_step(),
+        json!({ "opening": [{ "upper": [[0.9, 0.1]] }] }),
+    );
+    assert_eq!(
+        opening["refusal"],
+        json!({ "code": "unexpected_choice", "choice": "opening" })
     );
     // A root is an axiom fold's choice only.
     let root = refuse_with(
@@ -546,8 +556,14 @@ fn a_choice_the_op_cannot_use_breaks_it() {
         root["refusal"],
         json!({ "code": "unexpected_choice", "choice": "root" })
     );
-    // An empty list is no choice.
-    land_with(&mut bridge, sheet, book_step(), json!({ "completion": [] }));
+    // An empty list is no choice, and nor is a completion that orders nothing.
+    land_with(&mut bridge, sheet, book_step(), json!({ "opening": [] }));
+    land_with(
+        &mut bridge,
+        sheet,
+        book_step(),
+        json!({ "completion": { "faces": [], "orders": [] } }),
+    );
 }
 
 #[test]

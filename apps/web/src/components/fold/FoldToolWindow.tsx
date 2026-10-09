@@ -17,6 +17,7 @@ import { FoldCrossSectionPicker } from './FoldCrossSectionPicker';
 import { FoldFlapChips } from './FoldFlapChips';
 import { FoldKindMark } from './FoldKindMark';
 import { FoldRefusalNotice } from './FoldRefusalNotice';
+import { FoldReverseChoices, FoldReverseKindControl } from './reverse/FoldReverseControls';
 import styles from './FoldToolWindow.module.css';
 
 /**
@@ -55,7 +56,7 @@ export function FoldToolWindow({
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
   };
-  const { instructions, lineMode, kind, movingSide, layers, refusal, divide, footer } = model;
+  const { instructions, lineMode, kind, movingSide, layers, refusal, divide, compound, footer } = model;
 
   return (
     <ToolHintWindow
@@ -69,6 +70,9 @@ export function FoldToolWindow({
       // once there is a fold to decide and commit.
       startsCollapsed={phone}
       needsAttention={phone && model.phase === 'preview'}
+      // Open, it keeps to a third of a phone's height, so the fold it
+      // previews stays in view above it.
+      height={phone ? 'capped' : 'default'}
     >
       <div className={styles.section}>
         <ToolHintInstructions
@@ -159,6 +163,11 @@ export function FoldToolWindow({
           </FieldRow>
         </div>
       )}
+      {compound && (
+        <div className={styles.section} data-fold-reverse-kind="">
+          <FoldReverseKindControl controls={compound} />
+        </div>
+      )}
       {movingSide && (
         <div className={styles.section}>
           <FieldRow label={movingSide.label} kind="static" divider={false} disabled={movingSide.disabled}>
@@ -200,6 +209,11 @@ export function FoldToolWindow({
             onToggle={layers.toggle}
             onHover={layers.hover}
           />
+        </div>
+      )}
+      {compound && (compound.opening || compound.order) && (
+        <div className={styles.section} data-fold-choices="">
+          <FoldReverseChoices controls={compound} />
         </div>
       )}
       {refusal && (

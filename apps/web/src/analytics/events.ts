@@ -26,8 +26,21 @@ export type DiagramStepAddedSource =
   | 'svg'
   | 'raster';
 
-/** A Fold step's op, as `fold step added` names it (the document's `FoldOpKind`, without Import CP's). */
-export type FoldStepAddedOpKind = 'valley' | 'mountain' | 'precrease' | 'unfold' | 'refold' | 'turn' | 'rotate';
+/**
+ * A Fold step's op, as `fold step added` names it (the document's `FoldOpKind`, without Import CP's,
+ * snake_case): the plain folds and turns, then the compound folds, one block per family.
+ */
+export type FoldStepAddedOpKind =
+  | 'valley'
+  | 'mountain'
+  | 'precrease'
+  | 'unfold'
+  | 'refold'
+  | 'turn'
+  | 'rotate'
+  // The reverse fold.
+  | 'inside_reverse'
+  | 'outside_reverse';
 
 /** How much of the moving side a Fold step took: every layer, flaps picked, or a depth at a point. */
 export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
@@ -43,10 +56,11 @@ export type FoldStepPlayVia = 'space' | 'button' | 'replay';
 
 /**
  * Which choice the Fold engine offered: an axiom's roots, the stacks a depth
- * pick can take, or the layer orders one part of an imported crease pattern
- * folds to (Import CP's chooser).
+ * pick can take, the layer orders one part of an imported crease pattern
+ * folds to (Import CP's chooser), or a compound fold's: the ways a flap opens
+ * (`opening`) and the orders its completion leaves (`order`).
  */
-export type FoldChoiceKind = 'axiom_root' | 'depth' | 'import_order';
+export type FoldChoiceKind = 'axiom_root' | 'depth' | 'import_order' | 'opening' | 'order';
 
 /**
  * Which control added a diagram step. `grid` is the Diagram workspace's own:

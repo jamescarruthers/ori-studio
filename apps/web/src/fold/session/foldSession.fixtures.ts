@@ -96,6 +96,17 @@ function refusalBody(code: FoldRefusalCode): FoldRefusalBody {
       return { code, vertex: 0, distance: 0.0002, cause: 'band' };
     case 'sliver':
       return { code, vertex: 0, face: 0, penetration: 0.0002 };
+    // Compound folds' (plan D4), one block per family.
+    case 'choice_needed':
+      return { code, choice: 'opening' };
+    case 'choice_broken':
+      return { code, broken: 'opening', opening: 0 };
+    case 'reverse_no_opening':
+      return { code, faces: [0], cause: 'no_spine' };
+    case 'reverse_kind_infeasible':
+      return { code, kind: 'inside', faces: [0] };
+    case 'reverse_tip_not_free':
+      return { code, blocking: [0], faces: [0] };
     default:
       return { code };
   }

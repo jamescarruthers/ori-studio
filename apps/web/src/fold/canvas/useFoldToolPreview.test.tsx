@@ -62,6 +62,12 @@ const engine = {
   })),
   crossSection: vi.fn(async () => ({ status: 'ok', section: SECTION })),
   action: vi.fn(async () => ({ status: 'refused' })),
+  // A tip whose flaps cannot open.
+  reverse: vi.fn(async () => ({
+    status: 'refused',
+    refusal: { code: 'reverse_no_opening', faces: [0], cause: 'no_spine' },
+    fixes: [],
+  })),
 };
 
 let analysis: FoldPendingAnalysis = { status: 'idle' };
@@ -182,6 +188,41 @@ describe('the layers at the line', () => {
     expect(seen?.section).toBe(SECTION);
     // The same line and side: nothing asked twice.
     expect(engine.crossSection).toHaveBeenCalledTimes(1);
+  });
+
+  it('stay on show for a reverse fold’s tip the engine refused, so its flaps can be narrowed there', async () => {
+    const reverse: FoldToolState = { ...FREE_LINE, tool: 'inside-reverse' };
+    await render(reverse);
+    expect(engine.reverse).toHaveBeenCalledTimes(1);
+    expect(seen?.refused?.refusal.code).toBe('reverse_no_opening');
+    // Refused, the tip is still a step: analysed like any other, its layers shown.
+    expect(analyse).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'inside-reverse' }), undefined);
+    answer('analysed');
+    await render(reverse);
+    expect(seen?.section).toBe(SECTION);
+    expect(seen?.refused?.refusal.code).toBe('reverse_no_opening');
+  });
+
+  it('take a reverse fold along a fix’s line in place of the picks’, asked about and folded along it', async () => {
+    const fixed = {
+      kind: 'inside-reverse' as const,
+      line: { via: 'free' as const, through: [[0.25, 0.5], [0.75, 0.5]] as [[number, number], [number, number]] },
+      moving: [0.5, 0.75] as [number, number],
+      seed: { scope: 'all' as const },
+    };
+    const reverse: FoldToolState = {
+      ...FOLD_TOOL_INITIAL,
+      tool: 'inside-reverse',
+      lineMode: 'axiom-2',
+      picks: [point(0, 0), point(0, 1)],
+      override: { op: fixed },
+    };
+    await render(reverse);
+    // Asked about along the fix's line, not the axiom's.
+    expect(engine.reverse).toHaveBeenLastCalledWith(PARENT, expect.objectContaining({ line: fixed.line }), undefined);
+    // Folded along it, with no root: a free line has none.
+    expect(seen?.step?.op).toMatchObject({ kind: 'inside-reverse', line: fixed.line });
+    expect(seen?.step?.choices?.root).toBeUndefined();
   });
 
   it('let the other side’s section go until it is asked for', async () => {

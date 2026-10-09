@@ -259,8 +259,19 @@ describe('foldToolWindow for the other tools', () => {
     ]);
   });
 
-  it('has no window for the planned inside reverse fold', () => {
-    expect(foldToolWindow(t, view({ tool: 'inside-reverse' }), verbs(), mouse)).toBeNull();
+  it('locates the reverse fold’s line, then names the window for the kind it folds', () => {
+    const locating = foldToolWindow(t, view({ tool: 'inside-reverse' }), verbs(), mouse);
+    expect(locating).toMatchObject({ phase: 'locate', title: 'Inside reverse fold', kind: null });
+    expect(locating?.lineMode?.value).toBe('axiom-2');
+    const reverse = { kind: 'outside' as const, kinds: ['outside' as const], known: true, ways: 0, way: 0, orders: 0, order: 0 };
+    const previewing = foldToolWindow(t, view({ tool: 'inside-reverse', preview: preview(), reverse }), verbs(), mouse);
+    expect(previewing).toMatchObject({ phase: 'preview', title: 'Outside reverse fold', kind: null });
+    expect(previewing?.compound?.kind.options.map((option) => [option.value, option.disabled])).toEqual([
+      ['inside', true],
+      ['outside', false],
+    ]);
+    expect(previewing?.compound?.opening).toBeNull();
+    expect(previewing?.footer?.commit.label).toBe('Outside reverse fold');
   });
 
   it('offers the Divide line’s count, its exact ratio, and clearing the marks made here', () => {

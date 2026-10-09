@@ -894,3 +894,87 @@ fn completing_around_the_moved_faces_is_completing_everything() {
     }
     assert!(compared >= 30, "only {compared} compared");
 }
+
+// --- The picture, the summary and the orders to choose ----------------------
+
+/// A reverse fold's picture is a plain fold's of the whole tip, a mountain
+/// as the viewer sees an inside fold and a valley an outside one. An inside
+/// fold pushes the spine in from the side with no paper, between ℓ and the
+/// tip; an outside fold wraps round and is not pushed. Landed, the grip's
+/// image has its cover, and the summary reverses the spine.
+#[test]
+fn a_reverse_folds_picture_pushes_the_spine_and_its_summary_reverses_it() {
+    let tri = triangle();
+    let inside = reverse(y_eq(0.5), [0.9, 0.2], Seed::All, INSIDE);
+    let before = tri
+        .reverse_action(&inside, &none())
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(before.direction, Direction::Mountain);
+    let analysis = tri
+        .analyse_reverse(&inside)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(before.moving, analysis.tip);
+    let push = before.push.unwrap_or_else(|| panic!("no push"));
+    // The spine is the diagonal x + y = 1, reaching from ℓ at (½, ½) to the
+    // corner b = (1, 0); the paper is on its c side, x + y > 1.
+    let toward = [push.toward.x, push.toward.y];
+    let at = [push.at.x, push.at.y];
+    assert!(close(toward, [0.7, 0.3]), "{toward:?}");
+    assert!(close(at, [0.45, 0.05]), "{at:?}");
+    assert!(before.grip.is_some_and(|g| g.hidden_image.is_none()));
+
+    let folded = landed(&tri, &inside, &none());
+    let after = folded.action(&tri).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(after.push, before.push);
+    assert_eq!(after.line, before.line);
+    assert!(after.grip.is_some_and(|g| g.hidden_image.is_some()));
+    let summary = folded.summary(&tri).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(summary.layers, Some(2));
+    assert!(!summary.diff.reversed.is_empty());
+    assert_eq!(summary.diff.reversed, folded.report.fold.reversed);
+
+    let outside = reverse(x_eq(0.5), [0.9, 0.5], Seed::All, OUTSIDE);
+    let wrapped = tri
+        .reverse_action(&outside, &none())
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(wrapped.direction, Direction::Valley);
+    assert_eq!(wrapped.push, None);
+
+    // Turned over, the viewer sees an inside fold as a mountain still, and
+    // the push mirrors with the view.
+    let turned = tri.turn_over_about(oristudio_fold::TurnAxis::Vertical);
+    let seen = turned
+        .reverse_action(&inside, &none())
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(seen.direction, Direction::Mountain);
+    let mirrored = seen.push.unwrap_or_else(|| panic!("no push"));
+    assert!((mirrored.toward.y - push.toward.y).abs() < 1e-12);
+}
+
+/// The orders a choice lists are every pick it takes, one listed order per
+/// component, capped; each lands a state of its own.
+#[test]
+fn a_choice_lists_its_orders_as_picks() {
+    let (state, op) = ambiguous();
+    let Ok(ReverseOutcome::ChooseOrder(choice)) = state.reverse_fold(&op, &none()) else {
+        panic!("case s1-287 no longer leaves a choice");
+    };
+    let (all, more) = choice.choices(16);
+    assert_eq!(all, vec![vec![0], vec![1]]);
+    assert!(!more);
+    let (one, more) = choice.choices(1);
+    assert_eq!(one, vec![vec![0]]);
+    assert!(more);
+    let stored: Vec<_> = all
+        .iter()
+        .map(|pick| {
+            let folded = choice.pick(pick).unwrap_or_else(|e| panic!("{e}"));
+            folded
+                .report
+                .stored
+                .order
+                .unwrap_or_else(|| panic!("no order"))
+        })
+        .collect();
+    assert_ne!(stored[0], stored[1]);
+}

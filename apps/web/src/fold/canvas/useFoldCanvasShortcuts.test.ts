@@ -20,7 +20,10 @@ function verbs(roots = 1): FoldCanvasVerbs {
     foldOtherWay: vi.fn(),
     pickFlap: vi.fn(),
     useLine: vi.fn(),
-    stepRoot: vi.fn(() => roots > 1),
+    stepChoice: vi.fn(() => roots > 1),
+    setReverseKind: vi.fn(),
+    stepOpening: vi.fn(),
+    stepOrder: vi.fn(),
     commit: vi.fn(() => true),
     cancel: vi.fn(() => true),
     clearMarks: vi.fn(),
@@ -48,8 +51,9 @@ describe('the Fold canvas’s keys', () => {
     expect(bound.selectLineMode).toHaveBeenCalledWith('axiom-5');
     expect(runFoldCanvasShortcut('fold.turnOver', null)).toBe(true);
     expect(bound.turn).toHaveBeenCalledWith({ kind: 'turn-over', axis: 'vertical' });
-    // A planned tool takes no key: the chord falls through.
-    expect(runFoldCanvasShortcut('fold.toolInsideReverse', null)).toBe(false);
+    // The reverse fold is a tool like the others now.
+    expect(runFoldCanvasShortcut('fold.toolInsideReverse', null)).toBe(true);
+    expect(bound.selectTool).toHaveBeenCalledWith('inside-reverse');
   });
 
   it('swaps the side on S only while there is one to swap', () => {
@@ -93,7 +97,7 @@ describe('the Fold canvas’s keys', () => {
     expect(runFoldCanvasShortcut('fold.commit', document.body)).toBe(false);
   });
 
-  it('steps the roots on Shift+arrows while there are several, and leaves the keys to a control that uses them', () => {
+  it('steps the chooser on Shift+arrows while it has several, and leaves the keys to a control that uses them', () => {
     const one = verbs(1);
     release = registerFoldCanvasVerbs(one);
     expect(runFoldCanvasShortcut('fold.nextCandidate', null)).toBe(false);
@@ -101,7 +105,7 @@ describe('the Fold canvas’s keys', () => {
     const two = verbs(2);
     release = registerFoldCanvasVerbs(two);
     expect(runFoldCanvasShortcut('fold.previousCandidate', null)).toBe(true);
-    expect(two.stepRoot).toHaveBeenCalledWith(-1);
+    expect(two.stepChoice).toHaveBeenCalledWith(-1);
     const tabs = document.createElement('div');
     tabs.setAttribute('role', 'tablist');
     document.body.append(tabs);

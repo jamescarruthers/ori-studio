@@ -87,20 +87,30 @@ export function useFoldCanvasPaint(
     [scene, preview, inks]
   );
   const { analysis, refused, section } = preview;
+  // While the reverse fold's opening is being chosen, the way it opens is
+  // lit instead: its blocks over the paper, the upper block lit again.
+  const opening = preview.reverse && preview.reverse.ways.length > 1 ? preview.reverse.way : null;
   const tint = useMemo(() => {
     if (!index || !inks || !analysis || refused) return null;
-    const hovered = hoveredFlap === null ? [] : (section?.flaps[hoveredFlap]?.faces ?? []);
+    const lit = opening
+      ? {
+          faces: opening.openings.flatMap((each) => [...each.lower, ...each.upper]),
+          hovered: opening.openings.flatMap((each) => each.upper),
+        }
+      : {
+          faces: analysis.moving,
+          hovered: hoveredFlap === null ? [] : (section?.flaps[hoveredFlap]?.faces ?? []),
+        };
     return foldMovingTint(
       index,
       {
         line: transformLine(index.scene.view_transform, analysis.line),
         sign: analysis.side === 'positive' ? 1 : -1,
-        faces: analysis.moving,
-        hovered,
+        ...lit,
       },
       inks.accent
     );
-  }, [index, inks, analysis, refused, section, hoveredFlap]);
+  }, [index, inks, analysis, refused, section, hoveredFlap, opening]);
   const foldedBounds = useMemo(() => {
     const form = scene
       ? boundsOf(scene.subfaces.flatMap((cell) => cell.polygon.map((p) => ({ x: p.x + offset.x, y: p.y + offset.y }))))

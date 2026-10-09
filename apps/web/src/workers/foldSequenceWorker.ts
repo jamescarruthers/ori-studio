@@ -25,6 +25,8 @@ import type { FoldStateFingerprint } from '../fold/document/foldDigest';
 import type { FoldChoices, FoldModelLine, FoldPaper, SheetPoint } from '../fold/document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../fold/engine/foldEngineCalls';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from '../fold/engine/foldEngineIoCalls';
+import { createFoldEngineReverseCalls, type FoldEngineReverseCalls } from '../fold/engine/foldEngineReverseCalls';
+import type { FoldEngineReverseOp, FoldReverseAsked } from '../fold/engine/foldEngineReverseWire';
 import type {
   FoldExported,
   FoldImportFingerprinted,
@@ -55,8 +57,8 @@ import type {
   FoldTopVisible,
 } from '../fold/engine/foldEngineWire';
 
-/** The step calls and the io calls, over one engine. */
-type FoldWorkerCalls = FoldEngineCalls & FoldEngineIoCalls;
+/** The step calls, the io calls and each compound fold's query, over one engine. */
+type FoldWorkerCalls = FoldEngineCalls & FoldEngineIoCalls & FoldEngineReverseCalls;
 
 let ready: Promise<FoldWorkerCalls> | null = null;
 
@@ -70,7 +72,11 @@ function ensureReady(): Promise<FoldWorkerCalls> {
   if (ready) return ready;
   const starting = init().then(() => {
     const engine = new FoldEngine();
-    return { ...createFoldEngineCalls(engine), ...createFoldEngineIoCalls(engine) };
+    return {
+      ...createFoldEngineCalls(engine),
+      ...createFoldEngineIoCalls(engine),
+      ...createFoldEngineReverseCalls(engine),
+    };
   });
   ready = starting;
   starting.catch(() => {
@@ -257,6 +263,17 @@ const api = {
   /** The FOLD file of a path of states. */
   async exportFold(states: readonly number[], title?: string): Promise<FoldEngineOutcome<FoldExported>> {
     return call((calls) => calls.exportFold(states, title));
+  },
+
+  // Compound folds' queries, one block per family.
+
+  /** What a reverse fold moves, which kinds land and the choice it still needs (`foldEngineReverseCalls.ts`). */
+  async reverse(
+    state: number,
+    op: FoldEngineReverseOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldReverseAsked>> {
+    return call((calls) => calls.reverse(state, op, choices));
   },
 };
 

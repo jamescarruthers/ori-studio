@@ -6,7 +6,14 @@ import { foldPickIndex, resolveFoldPick, type FoldPaneId, type FoldPick, type Fo
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import type { FoldAxiomLine, FoldEngineOutcome } from '../engine/foldEngineWire';
 import type { FoldChoices, FoldOp } from '../document/foldSequenceDocument';
-import { axiomLineOfPicks, buildFoldStep, freeLineThrough, movingPoint, type FoldStepIntent } from './foldStepBuilder';
+import {
+  axiomLineOfPicks,
+  besideBend,
+  buildFoldStep,
+  freeLineThrough,
+  movingPoint,
+  type FoldStepIntent,
+} from './foldStepBuilder';
 import type { FoldLineModeId } from './foldToolCatalog';
 import { lineModeInput, nextStep } from './foldToolRegistry';
 
@@ -126,6 +133,26 @@ describe.skipIf(!available)('the Fold step builder over the real bridge', () => 
     const summary = calls.summary(kite.state);
     expect(summary.faces).toBe(4);
     expect(summary.creases).toMatchObject({ valley: 2, flat: 1 });
+
+    // Unfold the first flap by its bend: the seed is the face hinged on that
+    // bend, just beside its middle — not a cell picked by area, where the
+    // kite's two flaps tie and one browser's rounding took the other.
+    index = indexOf(calls, kite.state);
+    const bend = clicks(index, 'crease', [p(0.5, 0.2071)])[0];
+    if (bend?.kind !== 'segment') throw new Error('no bend picked');
+    const built = buildFoldStep(intent({ lineMode: 'crease', picks: [bend] }), index);
+    if (built.status !== 'built' || built.op.kind !== 'unfold' || built.op.seed.scope !== 'depth') {
+      throw new Error(`not an unfold by depth: ${JSON.stringify(built)}`);
+    }
+    const [sx, sy] = built.op.seed.at;
+    // Below the bend y = x tan 22.5° on the sheet: the flap folded from the bottom edge.
+    expect(sy).toBeLessThan(sx * Math.tan(Math.PI / 8));
+    const beside = besideBend(index, bend, built.sceneLine, built.movingSign);
+    expect(beside?.sheet).toEqual(built.op.seed.at);
+    const middle = { x: (bend.scene[0].x + bend.scene[1].x) / 2, y: (bend.scene[0].y + bend.scene[1].y) / 2 };
+    expect(Math.hypot((beside?.scene.x ?? 9) - middle.x, (beside?.scene.y ?? 9) - middle.y)).toBeLessThan(1e-3);
+    const unfolded = landed(calls.step(kite.state, built.op, built.choices));
+    expect(calls.summary(unfolded.state).creases).toMatchObject({ valley: 1, flat: 2 });
   });
 
   it('folds a book along a free line and unfolds its top half along the bend', async () => {

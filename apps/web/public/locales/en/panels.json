@@ -1564,6 +1564,71 @@
     },
     "sentence": {
       "cpJump": "Collapse into the imported crease pattern.",
+      "insideReverse": {
+        "crease": {
+          "all": "Inside reverse fold along the existing crease, through all layers.",
+          "depth_one": "Inside reverse fold along the existing crease, reversing only the top layer.",
+          "depth_other": "Inside reverse fold along the existing crease, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold along the existing crease, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold along the existing crease, reversing only the {{count}} flaps shown."
+        },
+        "free": {
+          "all": "Inside reverse fold along the line drawn, through all layers.",
+          "depth_one": "Inside reverse fold along the line drawn, reversing only the top layer.",
+          "depth_other": "Inside reverse fold along the line drawn, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold along the line drawn, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold along the line drawn, reversing only the {{count}} flaps shown."
+        },
+        "o1": {
+          "all": "Inside reverse fold along the line joining {{a}} and {{b}}, through all layers.",
+          "depth_one": "Inside reverse fold along the line joining {{a}} and {{b}}, reversing only the top layer.",
+          "depth_other": "Inside reverse fold along the line joining {{a}} and {{b}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold along the line joining {{a}} and {{b}}, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold along the line joining {{a}} and {{b}}, reversing only the {{count}} flaps shown."
+        },
+        "o2": {
+          "all": "Inside reverse fold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the top layer.",
+          "depth_other": "Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the {{count}} flaps shown."
+        },
+        "o3": {
+          "all": "Inside reverse fold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the top layer.",
+          "depth_other": "Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the {{count}} flaps shown."
+        },
+        "o4": {
+          "all": "Inside reverse fold {{b}} onto itself, pivoting on {{a}}, through all layers.",
+          "depth_one": "Inside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the top layer.",
+          "depth_other": "Inside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the {{count}} flaps shown."
+        },
+        "o5": {
+          "all": "Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, through all layers.",
+          "depth_one": "Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the top layer.",
+          "depth_other": "Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the {{count}} flaps shown."
+        },
+        "o6": {
+          "all": "Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, through all layers.",
+          "depth_one": "Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the top layer.",
+          "depth_other": "Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the {{count}} flaps shown."
+        },
+        "o7": {
+          "all": "Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, through all layers.",
+          "depth_one": "Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the top layer.",
+          "depth_other": "Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the flap shown.",
+          "flaps_other": "Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the {{count}} flaps shown."
+        }
+      },
       "mountain": {
         "crease": {
           "all": "Mountain fold along the existing crease, through all layers.",
@@ -1720,6 +1785,71 @@
           "depth_other": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the bottom {{count}} layers.",
           "flaps_one": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the flap shown.",
           "flaps_other": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the {{count}} flaps shown."
+        }
+      },
+      "outsideReverse": {
+        "crease": {
+          "all": "Outside reverse fold along the existing crease, through all layers.",
+          "depth_one": "Outside reverse fold along the existing crease, reversing only the top layer.",
+          "depth_other": "Outside reverse fold along the existing crease, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold along the existing crease, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold along the existing crease, reversing only the {{count}} flaps shown."
+        },
+        "free": {
+          "all": "Outside reverse fold along the line drawn, through all layers.",
+          "depth_one": "Outside reverse fold along the line drawn, reversing only the top layer.",
+          "depth_other": "Outside reverse fold along the line drawn, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold along the line drawn, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold along the line drawn, reversing only the {{count}} flaps shown."
+        },
+        "o1": {
+          "all": "Outside reverse fold along the line joining {{a}} and {{b}}, through all layers.",
+          "depth_one": "Outside reverse fold along the line joining {{a}} and {{b}}, reversing only the top layer.",
+          "depth_other": "Outside reverse fold along the line joining {{a}} and {{b}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold along the line joining {{a}} and {{b}}, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold along the line joining {{a}} and {{b}}, reversing only the {{count}} flaps shown."
+        },
+        "o2": {
+          "all": "Outside reverse fold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the top layer.",
+          "depth_other": "Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the {{count}} flaps shown."
+        },
+        "o3": {
+          "all": "Outside reverse fold, bringing {{a}} onto {{b}}, through all layers.",
+          "depth_one": "Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the top layer.",
+          "depth_other": "Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the {{count}} flaps shown."
+        },
+        "o4": {
+          "all": "Outside reverse fold {{b}} onto itself, pivoting on {{a}}, through all layers.",
+          "depth_one": "Outside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the top layer.",
+          "depth_other": "Outside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the {{count}} flaps shown."
+        },
+        "o5": {
+          "all": "Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, through all layers.",
+          "depth_one": "Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the top layer.",
+          "depth_other": "Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the {{count}} flaps shown."
+        },
+        "o6": {
+          "all": "Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, through all layers.",
+          "depth_one": "Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the top layer.",
+          "depth_other": "Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the {{count}} flaps shown."
+        },
+        "o7": {
+          "all": "Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, through all layers.",
+          "depth_one": "Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the top layer.",
+          "depth_other": "Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the top {{count}} layers.",
+          "flaps_one": "Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the flap shown.",
+          "flaps_other": "Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the {{count}} flaps shown."
         }
       },
       "turn": "{{turn}}.",
@@ -1925,23 +2055,30 @@
       "tagNext": "Next"
     },
     "step": {
+      "blocks": "Blocks",
+      "blocksHelp": "Stacks of paper that turn as one: each opening’s lower and upper part, and each flap that moves whole.",
       "branchSheet": "You are at the flat sheet: folding here starts a new branch.",
       "branchStep": "You are at step {{at}} of {{total}}: folding here starts a new branch.",
       "broken": "This step no longer folds: what it was made from is not on the paper before it. It and the steps after it can only be deleted.",
       "brokenAbove": "A step before this one no longer folds, so this one cannot be shown.",
       "changed": "This step folds differently in this version of Ori Studio than when it was saved.",
       "changes": "Changes",
+      "chosen": "Chosen among several",
       "creases": "Creases",
       "creasesBackUp": "As seen from the front of the paper, which starts face down: they can read the other way to the folds you see.",
       "creasesFront": "As seen from the front of the paper.",
       "flat": "Flat",
       "flatHelp": "Folded once and unfolded: these lie flat now, and remember which way they went.",
       "imported": "Imported crease pattern: this step replaces the folded state with the pattern’s own.",
+      "layerOrder": "Layer order",
       "layers": "Layers",
       "layersHelp": "The deepest stack along the fold line. Layers that lie flat across a precrease count as one.",
       "line": "Line",
       "locked": "This step was made with a newer Ori Studio. It can be deleted here, and is saved exactly as it came.",
       "mountain": "Mountain",
+      "onlyOne": "The only one",
+      "opening": "Opening",
+      "openingHelp": "Where the flap parts to let the tip through: the layers that stay below it and the ones above.",
       "operation": "Operation",
       "pending": "Pending fold",
       "pendingRefused": "Resolve the issue in the tool window to see the creases it makes.",
@@ -1963,13 +2100,16 @@
       "addsPrecreases_other": "Adds {{count}} precreases",
       "axiomLine": "Axiom {{axiom}} · {{phrase}}",
       "badgeImported": "Imported",
+      "badgeInsideReverse": "Inside reverse",
       "badgeMountain": "Mountain",
       "badgeNewer": "Newer",
+      "badgeOutsideReverse": "Outside reverse",
       "badgePrecrease": "Precrease",
       "badgeValley": "Valley",
       "cpJump": "Import crease pattern",
       "existingCrease": "Existing crease",
       "freeLine": "Free line",
+      "insideReverse": "Inside reverse fold",
       "mountainFold": "Mountain fold",
       "mountainPrecrease": "Mountain fold and unfold",
       "noChange": "Changes no creases",
@@ -1979,6 +2119,7 @@
       "originOrh": "ORH file",
       "originOri": "ORI file",
       "originSample": "Sample",
+      "outsideReverse": "Outside reverse fold",
       "refolds_one": "Refolds {{count}} precrease",
       "refolds_other": "Refolds {{count}} precreases",
       "reverses_one": "Refolds {{count}} precrease the other way",

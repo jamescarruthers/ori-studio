@@ -24,11 +24,29 @@ export type FoldKind = 'valley' | 'mountain' | 'precrease';
 
 export const FOLD_KINDS: readonly FoldKind[] = ['valley', 'mountain', 'precrease'];
 
-/** A tool taken in hand. Inside reverse is the design's fourth fold, planned for V0.5. */
+/**
+ * A tool taken in hand. Inside reverse is the design's fourth fold; it folds
+ * outside too, as its kind control's other value (plan Phase 9, research
+ * §5.2: the kind is usually forced by the geometry).
+ */
 export type FoldToolId = FoldKind | 'inside-reverse' | 'divide-line';
 
 export function isFoldKind(id: FoldToolId): id is FoldKind {
   return id === 'valley' || id === 'mountain' || id === 'precrease';
+}
+
+/** A tool that folds along a located line: the plain folds, and the compound folds along one. */
+export type FoldLineToolId = FoldKind | 'inside-reverse';
+
+export function isLineTool(id: FoldToolId): id is FoldLineToolId {
+  return isFoldKind(id) || id === 'inside-reverse';
+}
+
+/** A reverse fold's kind, as the reverse tool's kind control names it. */
+export function foldReverseKindLabel(t: TFunction, kind: 'inside' | 'outside'): string {
+  return kind === 'inside'
+    ? t('tools:fold.tool.insideReverse', 'Inside reverse fold')
+    : t('tools:fold.op.outsideReverse', 'Outside reverse fold');
 }
 
 /** How a fold's line is located: an axiom, a line drawn freely, or a crease already there (D3 "existing crease"). */
@@ -92,9 +110,12 @@ export const FOLD_MODEL_TURNS: Readonly<Record<FoldModelVerbId, TurnKind>> = {
   rotate: { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } },
 };
 
-/** The compound folds later phases add (plan Phases 9 and 11), listed so the rail can say they are coming. */
+/**
+ * The compound folds later phases add (plan Phase 11), listed so the rail can
+ * say they are coming. The outside reverse fold is the reverse tool's other
+ * kind, not a tool of its own.
+ */
 export type FoldPlannedOpId =
-  | 'outside-reverse'
   | 'crimp'
   | 'tuck'
   | 'squash'
@@ -106,7 +127,6 @@ export type FoldPlannedOpId =
   | 'unsink';
 
 export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = [
-  'outside-reverse',
   'crimp',
   'tuck',
   'squash',
@@ -325,8 +345,6 @@ export function foldModelVerbDescription(t: TFunction, id: FoldModelVerbId): str
 
 export function foldPlannedOpLabel(t: TFunction, id: FoldPlannedOpId): string {
   switch (id) {
-    case 'outside-reverse':
-      return t('tools:fold.op.outsideReverse', 'Outside reverse fold');
     case 'crimp':
       return t('tools:fold.op.crimp', 'Crimp');
     case 'tuck':

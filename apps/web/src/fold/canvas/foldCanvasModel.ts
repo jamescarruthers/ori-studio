@@ -11,6 +11,7 @@ import type { Rgba } from '../../cp-workspace/renderer/types';
 import type { CpToolOptionBounds } from '../../cp-workspace/toolOptions/toolOptionWindow';
 import type { FoldFlap, FoldScene } from '../engine/foldEngineWire';
 import type { FoldPreview } from '../tools/foldToolWindow';
+import type { FoldReverseWindowView } from '../tools/reverse/reverseToolWindow';
 import { isLocated, type FoldToolState } from '../tools/foldToolState';
 import { lineModeLabel, lineModeSteps } from '../tools/foldToolCatalog';
 import { boundsOf } from './foldCanvasGeometry';
@@ -34,7 +35,8 @@ function sectionIndex(section: readonly FoldFlap[], flap: FoldFlap): number {
 export function foldWindowPreview(
   tools: FoldToolState,
   preview: FoldToolPreview,
-  interval: number | null = null
+  interval: number | null = null,
+  queued = false
 ): FoldPreview | null {
   if (!isLocated(tools)) return null;
   const section = preview.section;
@@ -66,6 +68,29 @@ export function foldWindowPreview(
     refused: preview.refused,
     landing: preview.landing,
     acrossLayers: preview.build.status === 'built' && preview.build.acrossLayers === true && !tools.override,
+    ...(queued ? { queued } : {}),
+  };
+}
+
+/**
+ * The reverse tool's window view (`reverseToolWindow`): the kind folded and
+ * the kinds that land, the ways the tip opens and the orders it leaves, each
+ * with the one taken. Absent for every other tool, and while nothing is
+ * located.
+ */
+export function foldReverseWindowView(tools: FoldToolState, preview: FoldToolPreview): FoldReverseWindowView | undefined {
+  const reverse = preview.reverse;
+  if (tools.tool !== 'inside-reverse' || !reverse || !isLocated(tools)) return undefined;
+  const ways = reverse.ways.length;
+  const orders = reverse.orders.length;
+  return {
+    kind: reverse.kind,
+    kinds: reverse.kinds,
+    known: reverse.asked !== null,
+    ways,
+    way: ways > 0 ? Math.min(tools.compound.opening, ways - 1) : 0,
+    orders,
+    order: orders > 0 ? Math.min(tools.compound.order, orders - 1) : 0,
   };
 }
 
@@ -119,6 +144,24 @@ export function foldPromptWords(t: TFunction, tools: FoldToolState): string | nu
   if (isLocated(tools)) return null;
   const step = lineModeSteps(t, tools.lineMode)[tools.picks.length];
   return step ? `${lineModeLabel(t, tools.lineMode)} · ${step}` : null;
+}
+
+/** What the canvas's chooser says of the choice it steps through. */
+export function foldChoiceNote(t: TFunction, kind: 'order' | 'opening' | 'root'): string {
+  switch (kind) {
+    case 'root':
+      return t('tools:fold.chooser.note', 'This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.');
+    case 'opening':
+      return t(
+        'tools:fold.chooser.openingNote',
+        'The flap opens more than one way: the lit layers stay together. Step through them, or press Shift+← / Shift+→.'
+      );
+    case 'order':
+      return t(
+        'tools:fold.chooser.orderNote',
+        'The layers can land stacked more than one way. Step through them, or press Shift+← / Shift+→.'
+      );
+  }
 }
 
 /** Where the root chooser frames: round the fold line on the folded pane, or the paper when there is none yet. */

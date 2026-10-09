@@ -1513,6 +1513,53 @@
     },
     "sentence": {
       "cpJump": "按导入的折痕图折叠。",
+      "insideReverse": {
+        "crease": {
+          "all": "将所有层沿已有的折痕内翻折。",
+          "depth_other": "只将最上面的 {{count}} 层沿已有的折痕内翻折。",
+          "flaps_other": "只将所示的 {{count}} 个翼片沿已有的折痕内翻折。"
+        },
+        "free": {
+          "all": "将所有层沿画出的线内翻折。",
+          "depth_other": "只将最上面的 {{count}} 层沿画出的线内翻折。",
+          "flaps_other": "只将所示的 {{count}} 个翼片沿画出的线内翻折。"
+        },
+        "o1": {
+          "all": "将所有层沿连接 {{a}} 和 {{b}} 的线内翻折。",
+          "depth_other": "只将最上面的 {{count}} 层沿连接 {{a}} 和 {{b}} 的线内翻折。",
+          "flaps_other": "只将所示的 {{count}} 个翼片沿连接 {{a}} 和 {{b}} 的线内翻折。"
+        },
+        "o2": {
+          "all": "将所有层内翻折，使 {{a}} 落在 {{b}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层内翻折，使 {{a}} 落在 {{b}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片内翻折，使 {{a}} 落在 {{b}} 上。"
+        },
+        "o3": {
+          "all": "将所有层内翻折，使 {{a}} 落在 {{b}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层内翻折，使 {{a}} 落在 {{b}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片内翻折，使 {{a}} 落在 {{b}} 上。"
+        },
+        "o4": {
+          "all": "将所有层以 {{a}} 为支点内翻折，使 {{b}} 与自身重合。",
+          "depth_other": "只将最上面的 {{count}} 层以 {{a}} 为支点内翻折，使 {{b}} 与自身重合。",
+          "flaps_other": "只将所示的 {{count}} 个翼片以 {{a}} 为支点内翻折，使 {{b}} 与自身重合。"
+        },
+        "o5": {
+          "all": "将所有层以 {{a}} 为支点内翻折，使 {{b}} 落在 {{c}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层以 {{a}} 为支点内翻折，使 {{b}} 落在 {{c}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片以 {{a}} 为支点内翻折，使 {{b}} 落在 {{c}} 上。"
+        },
+        "o6": {
+          "all": "将所有层内翻折，使 {{a}} 落在 {{b}} 上，{{c}} 落在 {{d}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层内翻折，使 {{a}} 落在 {{b}} 上，{{c}} 落在 {{d}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片内翻折，使 {{a}} 落在 {{b}} 上，{{c}} 落在 {{d}} 上。"
+        },
+        "o7": {
+          "all": "将所有层内翻折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层内翻折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片内翻折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上。"
+        }
+      },
       "mountain": {
         "crease": {
           "all": "将所有层沿已有的折痕山折。",
@@ -1625,6 +1672,53 @@
           "all": "将所有层山折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上，然后展开。",
           "depth_other": "只将最下面的 {{count}} 层山折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上，然后展开。",
           "flaps_other": "只将所示的 {{count}} 个翼片山折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上，然后展开。"
+        }
+      },
+      "outsideReverse": {
+        "crease": {
+          "all": "将所有层沿已有的折痕外翻折。",
+          "depth_other": "只将最上面的 {{count}} 层沿已有的折痕外翻折。",
+          "flaps_other": "只将所示的 {{count}} 个翼片沿已有的折痕外翻折。"
+        },
+        "free": {
+          "all": "将所有层沿画出的线外翻折。",
+          "depth_other": "只将最上面的 {{count}} 层沿画出的线外翻折。",
+          "flaps_other": "只将所示的 {{count}} 个翼片沿画出的线外翻折。"
+        },
+        "o1": {
+          "all": "将所有层沿连接 {{a}} 和 {{b}} 的线外翻折。",
+          "depth_other": "只将最上面的 {{count}} 层沿连接 {{a}} 和 {{b}} 的线外翻折。",
+          "flaps_other": "只将所示的 {{count}} 个翼片沿连接 {{a}} 和 {{b}} 的线外翻折。"
+        },
+        "o2": {
+          "all": "将所有层外翻折，使 {{a}} 落在 {{b}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层外翻折，使 {{a}} 落在 {{b}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片外翻折，使 {{a}} 落在 {{b}} 上。"
+        },
+        "o3": {
+          "all": "将所有层外翻折，使 {{a}} 落在 {{b}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层外翻折，使 {{a}} 落在 {{b}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片外翻折，使 {{a}} 落在 {{b}} 上。"
+        },
+        "o4": {
+          "all": "将所有层以 {{a}} 为支点外翻折，使 {{b}} 与自身重合。",
+          "depth_other": "只将最上面的 {{count}} 层以 {{a}} 为支点外翻折，使 {{b}} 与自身重合。",
+          "flaps_other": "只将所示的 {{count}} 个翼片以 {{a}} 为支点外翻折，使 {{b}} 与自身重合。"
+        },
+        "o5": {
+          "all": "将所有层以 {{a}} 为支点外翻折，使 {{b}} 落在 {{c}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层以 {{a}} 为支点外翻折，使 {{b}} 落在 {{c}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片以 {{a}} 为支点外翻折，使 {{b}} 落在 {{c}} 上。"
+        },
+        "o6": {
+          "all": "将所有层外翻折，使 {{a}} 落在 {{b}} 上，{{c}} 落在 {{d}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层外翻折，使 {{a}} 落在 {{b}} 上，{{c}} 落在 {{d}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片外翻折，使 {{a}} 落在 {{b}} 上，{{c}} 落在 {{d}} 上。"
+        },
+        "o7": {
+          "all": "将所有层外翻折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上。",
+          "depth_other": "只将最上面的 {{count}} 层外翻折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上。",
+          "flaps_other": "只将所示的 {{count}} 个翼片外翻折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上。"
         }
       },
       "turn": "{{turn}}。",
@@ -1780,23 +1874,30 @@
       "tagNext": "下一步"
     },
     "step": {
+      "blocks": "整块",
+      "blocksHelp": "作为整体一起转动的纸叠：每处张开的下部与上部，以及整体移动的每个翼片。",
       "branchSheet": "你位于平整的纸：在这里折叠会开始新的分支。",
       "branchStep": "你位于第 {{at}} 步（共 {{total}} 步）：在这里折叠会开始新的分支。",
       "broken": "此步骤已无法折叠：构成它的元素在它之前的纸上已不存在。此步骤及之后的步骤只能删除。",
       "brokenAbove": "此前的某个步骤已无法折叠，因此无法显示此步骤。",
       "changed": "在此版本的 Ori Studio 中，此步骤的折叠结果与保存时不同。",
       "changes": "变化",
+      "chosen": "从多种中选定",
       "creases": "折痕",
       "creasesBackUp": "从纸的正面看。正面一开始朝下，因此可能与你看到的折法相反。",
       "creasesFront": "从纸的正面看。",
       "flat": "平折痕",
       "flatHelp": "折过一次又展开：现在是平的，并记得曾经朝哪个方向折。",
       "imported": "导入的折痕图：此步骤用折痕图的状态取代折叠状态。",
+      "layerOrder": "层序",
       "layers": "层数",
       "layersHelp": "沿折线最厚的叠层。跨过预折痕平铺相连的层算作一层。",
       "line": "折线",
       "locked": "此步骤由更新版本的 Ori Studio 创建。可以在这里删除它，保存时会原样保留。",
       "mountain": "山折",
+      "onlyOne": "仅此一种",
+      "opening": "张开方式",
+      "openingHelp": "翼片分开让尖端穿过的位置：留在其下方的层与上方的层。",
       "operation": "操作",
       "pending": "待折",
       "pendingRefused": "在工具窗口中解决问题后，即可看到它产生的折痕。",
@@ -1816,13 +1917,16 @@
       "addsPrecreases_other": "新增 {{count}} 条预折痕",
       "axiomLine": "公理 {{axiom}} · {{phrase}}",
       "badgeImported": "已导入",
+      "badgeInsideReverse": "内翻折",
       "badgeMountain": "山折",
       "badgeNewer": "较新",
+      "badgeOutsideReverse": "外翻折",
       "badgePrecrease": "预折",
       "badgeValley": "谷折",
       "cpJump": "导入折痕图",
       "existingCrease": "已有折痕",
       "freeLine": "自由线",
+      "insideReverse": "内翻折",
       "mountainFold": "山折",
       "mountainPrecrease": "山折后展开",
       "noChange": "折痕没有变化",
@@ -1832,6 +1936,7 @@
       "originOrh": "ORH 文件",
       "originOri": "ORI 文件",
       "originSample": "示例",
+      "outsideReverse": "外翻折",
       "refolds_other": "重新折起 {{count}} 条预折痕",
       "reverses_other": "反向重新折起 {{count}} 条预折痕",
       "unfold": "展开",

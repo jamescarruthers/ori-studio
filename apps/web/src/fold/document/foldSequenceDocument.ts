@@ -266,8 +266,40 @@ export interface FoldCpJumpOp {
   origin: FoldCpOrigin;
 }
 
+// --- Compound folds (plan D4), one block per family -------------------------
+
+/**
+ * A reverse fold (plan Phase 9, research §5.2): the tip — the paper on the
+ * moving side grown from the seed across every crease off the line — pushed
+ * inside its flaps (`inside-reverse`) or wrapped round them
+ * (`outside-reverse`). The line and the tip side are stored as a fold along
+ * a line stores its line and moving side, and the seed is what the tip grows
+ * from: every layer on that side, the top layers at a point as the viewer
+ * sees them, or flaps. Its openings and its order, when it has a choice of
+ * either, are its {@link FoldChoices}.
+ */
+export interface FoldReverseOp extends FoldAlongLine {
+  kind: 'inside-reverse' | 'outside-reverse';
+}
+
+export type FoldReverseKind = 'inside' | 'outside';
+
+/** A reverse op's kind, as the engine names it. */
+export function reverseKindOf(op: FoldReverseOp): FoldReverseKind {
+  return op.kind === 'inside-reverse' ? 'inside' : 'outside';
+}
+
+// ---------------------------------------------------------------------------
+
 /** What a step does. A kind this build does not know locks its node and subtree. */
-export type FoldOp = FoldPlainOp | FoldPrecreaseOp | FoldCreaseOp | FoldTurnOp | FoldRotateOp | FoldCpJumpOp;
+export type FoldOp =
+  | FoldPlainOp
+  | FoldPrecreaseOp
+  | FoldCreaseOp
+  | FoldTurnOp
+  | FoldRotateOp
+  | FoldCpJumpOp
+  | FoldReverseOp;
 
 export type FoldOpKind = FoldOp['kind'];
 
@@ -280,6 +312,8 @@ export const FOLD_OP_KINDS: readonly FoldOpKind[] = [
   'turn',
   'rotate',
   'cp-jump',
+  'inside-reverse',
+  'outside-reverse',
 ];
 
 /** The turn a turn or rotate step makes, as the Diagram's turn entries spell it (`lib/steps/turn`). */
@@ -291,12 +325,22 @@ export function turnKindOf(op: FoldTurnOp | FoldRotateOp): TurnKind {
 // Choices
 
 /**
- * One free pair of a completion: the face witnessed by `above` lies above the
- * one witnessed by `below`, in the model frame.
+ * A pair of faces ordered by a completion: FOLD's `faceOrders` triple over
+ * the completion's witnesses, `[f, g, s]` with `s = 1` when face `f` lies on
+ * the side face `g`'s front faces and `-1` when it lies on its back.
  */
-export interface FoldPairChoice {
-  above: SheetPoint;
-  below: SheetPoint;
+export type FoldFaceOrder = readonly [number, number, 1 | -1];
+
+/**
+ * The pairs a completion left free, as they were chosen: the engine's
+ * `WitnessOrder`, one interior sheet point per face named and the pairs over
+ * them. Stored as FOLD triples rather than "above" because which side of a
+ * face another lies on does not depend on which face is the root, so a
+ * replay that reaches the model frame another way reads them the same.
+ */
+export interface FoldCompletionChoice {
+  faces: readonly SheetPoint[];
+  orders: readonly FoldFaceOrder[];
 }
 
 /** One flap's opening of a reverse fold, crimp or tuck: the faces of its upper block, by witnesses. */
@@ -317,7 +361,7 @@ export interface FoldChoices {
    * Replay fixes them and completes: exactly one result resolves; a conflict
    * or more than one breaks the step.
    */
-  completion?: readonly FoldPairChoice[];
+  completion?: FoldCompletionChoice;
   /** A sink's pocket: sheet points on the two faces that bound it. */
   pocket?: readonly [SheetPoint, SheetPoint];
   /** A reverse fold's, crimp's or tuck's opening, per flap. */

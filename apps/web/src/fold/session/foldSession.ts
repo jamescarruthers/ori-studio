@@ -672,6 +672,7 @@ export function createFoldSession({
                   state: { generation: parent.generation, id: value.state },
                   summary: value.summary,
                   report: value.report,
+                  ...(value.compound ? { compound: value.compound } : {}),
                 }
               : { status: 'refused', request, parent, refused: value };
           pending = settled;
@@ -771,7 +772,10 @@ export function createFoldSession({
     if (shown.status === 'landed' && isThis(shown)) {
       // Taken, not released: the commit hands it to the replay. It stays on
       // screen meanwhile, so nothing goes back to the step it folds from.
-      landed = { state: shown.state, details: { summary: shown.summary, report: shown.report } };
+      landed = {
+        state: shown.state,
+        details: { summary: shown.summary, report: shown.report, ...(shown.compound ? { compound: shown.compound } : {}) },
+      };
       taken = shown.state;
     } else if (shown.status === 'refused' && isThis(shown)) {
       return { status: 'refused', refused: shown.refused };
@@ -790,7 +794,11 @@ export function createFoldSession({
         }
         landed = {
           state: { generation: parent.generation, id: answer.state },
-          details: { summary: answer.summary, report: answer.report },
+          details: {
+            summary: answer.summary,
+            report: answer.report,
+            ...(answer.compound ? { compound: answer.compound } : {}),
+          },
         };
       }
       const { state } = landed;

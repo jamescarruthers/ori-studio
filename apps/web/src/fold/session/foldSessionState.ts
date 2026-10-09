@@ -30,6 +30,7 @@ import { foldStepTree, pathTo } from '../document/foldStepTree';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type {
   FoldAnalysis,
+  FoldCompoundReport,
   FoldEngineOp,
   FoldEngineRefused,
   FoldReport,
@@ -46,8 +47,10 @@ export const FOLD_BLANK_SEQUENCE: FoldSequenceDocument = createFoldSequence(SQUA
 /** What the engine said of a landed state, beside its handle. */
 export interface FoldStateDetails {
   readonly summary: FoldStateSummary;
-  /** What the step did; null for the sheet, a turn and a rotation. */
+  /** What a plain fold did; null for the sheet, a turn, a rotation, an import and a compound fold. */
   readonly report: FoldReport | null;
+  /** What a compound fold did, by its op; absent for any other step. */
+  readonly compound?: FoldCompoundReport;
 }
 
 /** A node of the shown sequence, or its sheet, as the surfaces read it. */
@@ -62,6 +65,8 @@ export interface FoldSessionNode {
   readonly summary: FoldStateSummary | null;
   /** What the step did, once landed; null for the sheet, a turn and a rotation. */
   readonly report: FoldReport | null;
+  /** What a compound fold did, once landed; absent for any other step. */
+  readonly compound?: FoldCompoundReport;
   /** Set when broken: the node that refused (null for the sheet) and the engine's code. */
   readonly refusal: FoldReplayRefusal | null;
 }
@@ -111,6 +116,7 @@ export type FoldPendingStep =
       readonly state: FoldEngineStateHandle;
       readonly summary: FoldStateSummary;
       readonly report: FoldReport | null;
+      readonly compound?: FoldCompoundReport;
     }
   | {
       readonly status: 'refused';
@@ -238,6 +244,7 @@ function sessionNode(
     fingerprint: replay.fingerprint,
     summary: known?.summary ?? null,
     report: known?.report ?? null,
+    ...(known?.compound ? { compound: known.compound } : {}),
     refusal: replay.refusal,
   };
   return previous && sameNode(previous, node) ? previous : node;
@@ -251,6 +258,7 @@ function sameNode(a: FoldSessionNode, b: FoldSessionNode): boolean {
     a.fingerprint === b.fingerprint &&
     a.summary === b.summary &&
     a.report === b.report &&
+    a.compound === b.compound &&
     a.refusal?.at === b.refusal?.at &&
     a.refusal?.code === b.refusal?.code
   );

@@ -10,7 +10,6 @@ import {
   Flower2,
   IterationCw,
   Rabbit,
-  Redo2,
   RotateCw,
   Shrink,
   type LucideIcon,
@@ -133,7 +132,6 @@ function lineModeGlyph(mode: FoldLineModeId): ReactElement {
 }
 
 const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
-  'outside-reverse': Redo2,
   crimp: ChevronsDownUp,
   tuck: BetweenHorizontalStart,
   squash: Shrink,

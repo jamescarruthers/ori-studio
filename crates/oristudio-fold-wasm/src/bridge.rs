@@ -24,6 +24,7 @@ use oristudio_fold::{
 use oristudio_geometry::Line;
 
 use crate::canonical::canonical_keys;
+use crate::compound::CompoundLanded;
 use crate::joins::section_joins;
 use crate::resolve::{Rejection, Resolved, axiom_of, finite_point, model_line, resolve};
 use crate::wire::{
@@ -55,6 +56,11 @@ enum Held {
     /// An imported crease pattern (a `cp-jump`, plan D16), landed after a
     /// state it replaces.
     Jump(State),
+    /// A compound fold of `parent` (`crate::compound`).
+    Compound {
+        landed: Box<dyn CompoundLanded>,
+        parent: u32,
+    },
 }
 
 impl Held {
@@ -62,6 +68,7 @@ impl Held {
         match self {
             Held::Sheet(state) | Held::View { state, .. } | Held::Jump(state) => state,
             Held::Fold { folded, .. } => &folded.state,
+            Held::Compound { landed, .. } => landed.state(),
         }
     }
 }
@@ -113,14 +120,16 @@ impl Bridge {
         choices: &Choices,
     ) -> Result<Outcome<Acted>, BridgeError> {
         let parent = self.state(state)?;
-        Ok(analysis(parent, op, choices)?
-            .and_then(|(analysis, kind)| {
+        let action = match settle(resolve(parent, op, choices))? {
+            // A compound fold pictures itself: a reverse fold's push.
+            Ok(Resolved::Compound(compound)) => compound.action(parent),
+            resolved => analysis_of(parent, op, resolved)?.and_then(|(analysis, kind)| {
                 parent
                     .fold_action(&analysis, kind, None)
                     .map_err(Refusal::from)
-            })
-            .map(|action| Acted { action })
-            .into())
+            }),
+        };
+        Ok(action.map(|action| Acted { action }).into())
     }
 
     /// The distinct moving sets of the top 1, 2, … layers at the sheet point
@@ -228,18 +237,26 @@ impl Bridge {
                 parent: state,
             }),
             Ok(Resolved::Jump(landed)) => Ok(Held::Jump(landed)),
+            Ok(Resolved::Compound(compound)) => {
+                compound.apply(parent).map(|landed| Held::Compound {
+                    landed,
+                    parent: state,
+                })
+            }
             Err(refusal) => Err(refusal),
         };
         Ok(match landed {
             Ok(held) => {
                 let summary = summary(held.state());
-                let report = match &held {
-                    Held::Fold { folded, .. } => Some(folded.report.clone()),
-                    Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => None,
+                let (report, compound) = match &held {
+                    Held::Fold { folded, .. } => (Some(folded.report.clone()), None),
+                    Held::Compound { landed, .. } => (None, Some(landed.report())),
+                    Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => (None, None),
                 };
                 Outcome::Ok(Applied {
                     state: self.hold(held),
                     report,
+                    compound,
                     summary,
                 })
             }
@@ -271,6 +288,9 @@ impl Bridge {
                 .summary(self.parent(state, *parent)?)
                 .map(Some)
                 .map_err(Refusal::from),
+            Held::Compound { landed, parent } => {
+                landed.summary(self.parent(state, *parent)?).map(Some)
+            }
             Held::Jump(child) => Ok(Some(imported(child))),
         };
         Ok(summary.map(|summary| Summarised { summary }).into())
@@ -291,6 +311,9 @@ impl Bridge {
                 .action(self.parent(state, *parent)?, *kind)
                 .map(Some)
                 .map_err(Refusal::from),
+            Held::Compound { landed, parent } => {
+                landed.action(self.parent(state, *parent)?).map(Some)
+            }
         };
         Ok(action.map(|action| StepActed { action }).into())
     }
@@ -382,7 +405,16 @@ fn analysis(
     op: &Op,
     choices: &Choices,
 ) -> Result<Result<(FoldAnalysis, ActionKind), Refusal>, BridgeError> {
-    Ok(match settle(resolve(parent, op, choices))? {
+    analysis_of(parent, op, settle(resolve(parent, op, choices))?)
+}
+
+/// [`analysis`] of an op already resolved.
+fn analysis_of(
+    parent: &State,
+    op: &Op,
+    resolved: Result<Resolved, Refusal>,
+) -> Result<Result<(FoldAnalysis, ActionKind), Refusal>, BridgeError> {
+    Ok(match resolved {
         Ok(Resolved::Anchored { fold, kind }) => parent
             .analyse_anchored(&fold)
             .map(|analysis| (analysis, kind))
@@ -391,6 +423,9 @@ fn analysis(
             .analyse_fold(&fold)
             .map(|analysis| (analysis, kind))
             .map_err(Refusal::from),
+        Ok(Resolved::Compound(compound)) => compound
+            .analysis(parent)
+            .map(|analysis| (analysis, ActionKind::Fold)),
         Ok(Resolved::View(_) | Resolved::Jump(_)) => return Err(moves_no_paper(op)),
         Err(refusal) => Err(refusal),
     })

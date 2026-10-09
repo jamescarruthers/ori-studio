@@ -107,9 +107,92 @@ function render(view: Partial<FoldToolWindowView>, calls = verbs(), keyLabel?: (
 const fold = () => document.querySelector<HTMLElement>('[aria-label="Fold tool options"]');
 
 describe('FoldToolWindow', () => {
-  it('shows nothing when the tool has no window', () => {
-    render({ tool: 'inside-reverse' });
-    expect(fold()).toBeNull();
+  it('locates the reverse fold’s line as every fold does', () => {
+    render({ tool: 'inside-reverse', picks: 1 });
+    const window = fold()!;
+    expect(byRole(window, 'button', /^Inside reverse fold/).getAttribute('aria-expanded')).toBe('true');
+    expect(byRole(window, 'combobox', 'Locate line')).toBeTruthy();
+    expect(queryByRole(window, 'group', 'Kind')).toBeNull();
+  });
+
+  it('takes the reverse fold’s kind that fits, offers the other only when it fits too, and steps its choices', () => {
+    const calls = {
+      ...verbs(),
+      setReverseKind: vi.fn(),
+      stepOpening: vi.fn(),
+      stepOrder: vi.fn(),
+      otherKind: vi.fn(),
+    } satisfies FoldToolWindowVerbs;
+    const reverse = { kind: 'outside' as const, kinds: ['outside' as const], known: true, ways: 0, way: 0, orders: 3, order: 1 };
+    render({ tool: 'inside-reverse', preview: preview(), reverse }, calls);
+    let window = fold()!;
+    // Named for the kind folded: the only one that fits here.
+    expect(byRole(window, 'button', /^Outside reverse fold \d settings/).getAttribute('aria-expanded')).toBe('true');
+    expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Outside reverse fold')).toBeTruthy();
+    const kinds = byRole(window, 'group', 'Kind');
+    // Disabled as an option is, still focusable so its tooltip can say why.
+    expect(byRole(kinds, 'button', 'Inside').getAttribute('aria-disabled')).toBe('true');
+    expect(byRole(kinds, 'button', 'Outside').getAttribute('aria-pressed')).toBe('true');
+    expect(window.textContent).toContain('Only the outside reverse fold fits here.');
+    expect(window.textContent).toContain('Tip side');
+    // One of three orders: a stepper, and no opening to choose.
+    expect(window.textContent).toContain('2 of 3');
+    expect(queryByRole(window, 'button', 'Opening: Next')).toBeNull();
+    act(() => byRole(window, 'button', 'Layer order: Next').click());
+    expect(calls.stepOrder).toHaveBeenCalledWith(1);
+
+    // Both fit: either can be taken.
+    render({ tool: 'inside-reverse', preview: preview(), reverse: { ...reverse, kinds: ['inside', 'outside'], orders: 0, ways: 2 } }, calls);
+    window = fold()!;
+    act(() => byRole(byRole(window, 'group', 'Kind'), 'button', 'Inside').click());
+    expect(calls.setReverseKind).toHaveBeenCalledWith('inside');
+    act(() => byRole(window, 'button', 'Opening: Previous').click());
+    expect(calls.stepOpening).toHaveBeenCalledWith(-1);
+
+    // A kind that does not fit is refused with the other as its fix.
+    render(
+      {
+        tool: 'inside-reverse',
+        preview: preview({
+          refused: { refusal: { code: 'reverse_kind_infeasible', kind: 'inside', faces: [1] }, fixes: [{ fix: 'other_kind', kind: 'outside' }] },
+        }),
+        reverse: { ...reverse, kind: 'inside', kinds: [], known: true },
+      },
+      calls
+    );
+    const alert = byRole(fold()!, 'alert', /^It cannot go inside/);
+    act(() => byRole(alert, 'button', 'Outside reverse fold instead').click());
+    expect(calls.otherKind).toHaveBeenCalledWith('outside');
+  });
+
+  it('says a commit asked for before the preview landed is waiting for it, and nothing once none is', () => {
+    render({ preview: preview({ landing: true, queued: true }) });
+    expect(fold()!.textContent).toContain('Folding as soon as the preview is ready…');
+    // Asked for before the step was built: still waiting.
+    render({ preview: preview({ landing: false, queued: true }) });
+    expect(fold()!.textContent).toContain('Folding as soon as the preview is ready…');
+    render({ preview: preview({ landing: true }) });
+    expect(fold()!.textContent).not.toContain('Folding as soon as the preview is ready…');
+  });
+
+  it('keeps to a third of a phone’s height, so the paper it folds stays in view', async () => {
+    const { PHONE_MEDIA_QUERY } = await import('../../platform/phoneLayout');
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === PHONE_MEDIA_QUERY,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }))
+    );
+    try {
+      render({ preview: preview() });
+      expect(fold()?.getAttribute('data-height')).toBe('capped');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    render({ preview: preview() });
+    expect(fold()?.hasAttribute('data-height')).toBe(false);
   });
 
   it('numbers the steps to locate the line, marks the one in hand, and offers the line modes', () => {

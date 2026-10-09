@@ -9,6 +9,7 @@
  */
 import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
+import type { FoldNoOpening, FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
 import type { FoldKind } from './foldToolCatalog';
 
@@ -31,6 +32,8 @@ export interface FoldFixVerbs {
    * line, and commit its `step` when it has one.
    */
   useLine: (fix: FoldUseLineFix) => void;
+  /** The same reverse fold of the other kind. */
+  otherKind?: (kind: FoldReverseKind) => void;
 }
 
 export interface FoldRefusalNoticeModel {
@@ -43,7 +46,8 @@ export interface FoldRefusalNoticeModel {
 
 /** What the notice is read against: the fold asked for, and how its flaps are numbered on screen. */
 export interface FoldRefusalContext {
-  kind: FoldKind;
+  /** A plain fold's kind, or the reverse fold's (`reverse`'s kind, which its fixes are worded for). */
+  kind: FoldKind | 'reverse';
   /** A flap's number on screen, by its engine index (`flapNumbers`). */
   flapNumber: (flap: number) => number;
   /** Nothing can change: the fixes are shown, but none can be taken. */
@@ -228,11 +232,62 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
         title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
         text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),
       };
+    // Compound folds (plan D4), one block per family. A choice still to make
+    // reads as the chooser's prompt; a stored one that no longer resolves as
+    // a step this build cannot fold as it is stored.
+    case 'choice_needed':
+      return refusal.choice === 'opening'
+        ? {
+            title: t('tools:fold.refusal.chooseOpening.title', 'Choose how it opens'),
+            text: t('tools:fold.refusal.chooseOpening.text', 'The flap opens more than one way. Pick one to fold.'),
+          }
+        : {
+            title: t('tools:fold.refusal.chooseOrder.title', 'Choose how the layers stack'),
+            text: t(
+              'tools:fold.refusal.chooseOrder.text',
+              'The fold can land with its layers stacked more than one way. Pick one to fold.'
+            ),
+          };
+    case 'choice_broken':
+      return {
+        title: t('tools:fold.refusal.choiceBroken.title', 'A choice no longer fits'),
+        text: t(
+          'tools:fold.refusal.choiceBroken.text',
+          'The opening or the layer order this step stored no longer fits the paper before it, so it cannot be folded as it is stored.'
+        ),
+      };
+    // The reverse fold's.
+    case 'reverse_no_opening':
+      return { title: t('tools:fold.refusal.reverseNoOpening.title', 'This flap cannot open'), text: noOpening(t, refusal.cause) };
+    case 'reverse_kind_infeasible':
+      return {
+        title:
+          refusal.kind === 'inside'
+            ? t('tools:fold.refusal.insideInfeasible.title', 'It cannot go inside')
+            : t('tools:fold.refusal.outsideInfeasible.title', 'It cannot wrap round the outside'),
+        // The other kind is pointed to only when the engine says it lands.
+        text: refused.fixes.some((fix) => fix.fix === 'other_kind')
+          ? t(
+              'tools:fold.refusal.kindInfeasible.text',
+              'No way of stacking the layers lets the tip turn this way here. The other kind of reverse fold may fit.'
+            )
+          : t(
+              'tools:fold.refusal.kindInfeasible.neither',
+              'Neither kind of reverse fold fits here: no way of stacking the layers lets the tip turn. Move the line, or reverse other flaps.'
+            ),
+      };
+    case 'reverse_tip_not_free':
+      return {
+        title: t('tools:fold.refusal.tipNotFree.title', 'Layers are in the way'),
+        text: t(
+          'tools:fold.refusal.tipNotFree.text',
+          'Other layers lie where the tip would turn. Include their flaps in the fold, or reverse it somewhere else.'
+        ),
+      };
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
-    // With them, a compound fold's (plan D4, from `no_order` on): no tool
-    // folds one yet, so until the reverse fold's tool says them in its own
-    // words they read as a fold that cannot be made.
+    // With them, the compound pipeline's own: no order at all, a search that
+    // ran out, a pick that names nothing, a defect.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -262,9 +317,6 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'no_order':
     case 'budget_exceeded':
     case 'no_such_choice':
-    case 'reverse_no_opening':
-    case 'reverse_tip_not_free':
-    case 'reverse_kind_infeasible':
     case 'internal':
       return {
         title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
@@ -273,7 +325,33 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
   }
 }
 
-function otherWayLabel(t: TFunction, kind: FoldKind): string {
+/** Why a flap of a reverse fold's tip has no opening (`NoOpening`), in a folder's words. */
+function noOpening(t: TFunction, cause: FoldNoOpening): string {
+  switch (cause) {
+    case 'no_spine':
+      return t(
+        'tools:fold.refusal.reverseNoOpening.noSpine',
+        'A single layer has no folded edge to reverse along. Reverse a flap of layers joined by a fold.'
+      );
+    case 'no_split':
+      return t(
+        'tools:fold.refusal.reverseNoOpening.noSplit',
+        'Its layers cannot be parted along a fold without a lower layer ending up over an upper one.'
+      );
+    case 'no_body':
+      return t(
+        'tools:fold.refusal.reverseNoOpening.noBody',
+        'Parted along its folds, one half would hang on nothing that stays put at the line.'
+      );
+    case 'bodies_cross':
+      return t(
+        'tools:fold.refusal.reverseNoOpening.bodiesCross',
+        'Parted along its folds, the paper each half hangs on would cross the other’s.'
+      );
+  }
+}
+
+function otherWayLabel(t: TFunction, kind: FoldKind | 'reverse'): string {
   switch (kind) {
     case 'valley':
       return t('tools:fold.fix.mountainInstead', 'Mountain fold instead');
@@ -281,6 +359,9 @@ function otherWayLabel(t: TFunction, kind: FoldKind): string {
       return t('tools:fold.fix.valleyInstead', 'Valley fold instead');
     case 'precrease':
       return t('tools:fold.fix.precreaseOtherWay', 'Precrease the other way');
+    // The engine never offers a reverse fold the other way round; it offers the other kind.
+    case 'reverse':
+      return t('tools:fold.fix.swapInstead', 'Swap the moving side');
   }
 }
 
@@ -332,15 +413,30 @@ function fixActions(
       // section's flaps are in, so their numbers are the chips' numbers.
       return fix.flaps.map((flap, index) => ({
         id: `pick-${position}-${index}`,
-        label: t('tools:fold.fix.pickFlap', 'Fold flap {{number}} only', { number: context.flapNumber(index) }),
+        label:
+          context.kind === 'reverse'
+            ? t('tools:fold.fix.reverseFlap', 'Reverse flap {{number}} only', { number: context.flapNumber(index) })
+            : t('tools:fold.fix.pickFlap', 'Fold flap {{number}} only', { number: context.flapNumber(index) }),
         run: () => verbs.pickFlap(flap),
         disabled,
       }));
     case 'use_line':
       return [{ id: `line-${position}`, label: lineFixLabel(t, fix), run: () => verbs.useLine(fix), disabled }];
-    case 'other_kind':
-      // A reverse fold's, which no tool folds yet: nothing to bind it to.
-      return [];
+    case 'other_kind': {
+      const { otherKind } = verbs;
+      if (!otherKind) return [];
+      return [
+        {
+          id: `kind-${position}`,
+          label:
+            fix.kind === 'inside'
+              ? t('tools:fold.fix.insideInstead', 'Inside reverse fold instead')
+              : t('tools:fold.fix.outsideInstead', 'Outside reverse fold instead'),
+          run: () => otherKind(fix.kind),
+          disabled,
+        },
+      ];
+    }
   }
 }
 

@@ -274,7 +274,9 @@
   "fold": {
     "categoryLabel": "Falt-Arbeitsbereich",
     "chooser": {
-      "note": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
+      "note": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
+      "openingNote": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
+      "orderNote": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
     },
     "divide": {
       "clear_one": "Die hier gesetzte Markierung entfernen",
@@ -291,10 +293,14 @@
       "includeFlap": "Lasche {{number}} einbeziehen",
       "includeFlaps_one": "Die {{count}} Lasche einbeziehen",
       "includeFlaps_other": "Die {{count}} Laschen einbeziehen",
+      "insideInstead": "Stattdessen innerer Gegenbruch",
       "mountainInstead": "Stattdessen Bergfalte",
+      "outsideInstead": "Stattdessen äußerer Gegenbruch",
       "pickFlap": "Nur Lasche {{number}} falten",
       "precreaseOtherWay": "Andersherum vorfalten",
+      "reverseFlap": "Nur Lasche {{number}} als Gegenbruch falten",
       "slideToEdge": "Die Linie verschieben, bis der Punkt auf der Kante liegt",
+      "swapInstead": "Die bewegte Seite tauschen",
       "turnToEdge": "Die Linie drehen, bis der Punkt auf der Kante liegt",
       "useLine": "Die Bezugslinie verwenden",
       "valleyInstead": "Stattdessen Talfalte"
@@ -358,6 +364,7 @@
       "divide": "Kanten, gefaltete Kanten und Vorfaltungen zählen alle.",
       "free": "Kein Einrasten: Die Linie verläuft genau durch die Punkte, die du anklickst.",
       "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt ohne Einrasten frei zu setzen.",
+      "queued": "Wird gefaltet, sobald die Vorschau bereit ist…",
       "snap": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien, Mittelpunkten und Kanten ein."
     },
     "op": {
@@ -385,6 +392,18 @@
       "newer": "Diese Sequenz stammt aus einer neueren Version von Ori Studio und wird daher schreibgeschützt geöffnet."
     },
     "refusal": {
+      "choiceBroken": {
+        "text": "Die Öffnung oder die Lagenreihenfolge, die dieser Schritt gespeichert hat, passt nicht mehr zum Papier davor. So, wie er gespeichert ist, lässt er sich deshalb nicht falten.",
+        "title": "Eine Wahl passt nicht mehr"
+      },
+      "chooseOpening": {
+        "text": "Die Lasche lässt sich auf mehr als eine Weise öffnen. Wähle eine aus, um zu falten.",
+        "title": "Wähle, wie sie sich öffnet"
+      },
+      "chooseOrder": {
+        "text": "Die Lagen der Faltung können auf mehr als eine Weise gestapelt landen. Wähle eine aus, um zu falten.",
+        "title": "Wähle, wie die Lagen liegen"
+      },
       "closureAddsFlaps": {
         "textMany_one": "Das Falten dieser Lagen bewegt auch {{count}} weitere Lasche.",
         "textMany_other": "Das Falten dieser Lagen bewegt auch {{count}} weitere Laschen.",
@@ -399,9 +418,16 @@
         "text": "Keine Lage ist gewählt. Wähle mindestens eine Lasche, die sich bewegen soll.",
         "title": "Nichts zu falten"
       },
+      "insideInfeasible": {
+        "title": "Nach innen geht es nicht"
+      },
       "invalid": {
         "text": "Sie ergäbe kein gültiges flaches Modell.",
         "title": "Diese Faltung ist nicht möglich"
+      },
+      "kindInfeasible": {
+        "neither": "Hier passt keine Art von Gegenbruch: Bei keiner Stapelung der Lagen kann die Spitze umschlagen. Verschiebe die Linie oder kehre andere Laschen um.",
+        "text": "Bei keiner Stapelung der Lagen kann die Spitze hier in diese Richtung umschlagen. Die andere Art von Gegenbruch passt vielleicht."
       },
       "moverStays": {
         "text": "Die Lage, die den zu bewegenden Punkt trägt, ist nicht unter den Lagen, die gefaltet werden. Nimm ihre Lasche hinzu oder falte alle Lagen.",
@@ -431,6 +457,9 @@
         "text": "Ein Punkt oder eine Kante, von der aus die Linie bestimmt wurde, liegt nicht auf dem Papier, wie es jetzt gefaltet ist. Bestimme die Linie neu.",
         "title": "Ein Bezug liegt nicht auf dem Papier"
       },
+      "outsideInfeasible": {
+        "title": "Außen herum geht es nicht"
+      },
       "pickAgain": {
         "text": "Diese Stelle liegt in keiner Lage auf der bewegten Seite. Wähle innerhalb einer Lage, abseits ihrer Faltlinien.",
         "title": "Erneut wählen"
@@ -443,9 +472,20 @@
         "text": "Das Aufklappen würde mehr Lagen bewegen als das Falten.",
         "title": "Diese Vorfaltung lässt sich nicht aufklappen"
       },
+      "reverseNoOpening": {
+        "bodiesCross": "Entlang ihrer Falten geteilt, würde das Papier, an dem jede Hälfte hängt, das der anderen kreuzen.",
+        "noBody": "Entlang ihrer Falten geteilt, hinge eine Hälfte an nichts, das an der Linie liegen bleibt.",
+        "noSpine": "Eine einzelne Lage hat keine gefaltete Kante, an der sie sich umkehren ließe. Falte eine Lasche aus Lagen, die durch eine Falte verbunden sind, als Gegenbruch.",
+        "noSplit": "Ihre Lagen lassen sich nicht entlang einer Falte teilen, ohne dass eine untere Lage über eine obere gerät.",
+        "title": "Diese Lasche lässt sich nicht öffnen"
+      },
       "sliver": {
         "text": "Ein Punkt der bewegten Lagen käme um Haaresbreite innerhalb der Kante einer anderen Lage zu liegen.",
         "title": "Ein Punkt landet knapp innerhalb einer Kante"
+      },
+      "tipNotFree": {
+        "text": "Wo die Spitze umschlagen würde, liegen andere Lagen. Nimm ihre Laschen in die Faltung auf oder setze den Gegenbruch an einer anderen Stelle.",
+        "title": "Lagen sind im Weg"
       },
       "tooSmall": {
         "text": "Die Faltung hinterließe eine Faltlinie oder einen Papierstreifen, der dünner ist als das Papier selbst.",
@@ -463,6 +503,21 @@
         "text": "Klappe entlang einer gefalteten Kante auf und falte entlang einer flachen Faltlinie wieder.",
         "title": "Nicht diese Art von Faltlinie"
       }
+    },
+    "reverse": {
+      "bothFit": "Hier passen beide Arten: Wähle, wohin die Spitze geht.",
+      "doesNotFit": "Passt hier nicht",
+      "inside": "Innen",
+      "kind": "Art",
+      "next": "Weiter",
+      "ofCount": "{{index}} von {{total}}",
+      "onlyInside": "Hier passt nur der innere Gegenbruch.",
+      "onlyOutside": "Hier passt nur der äußere Gegenbruch.",
+      "opening": "Öffnung",
+      "order": "Lagenreihenfolge",
+      "outside": "Außen",
+      "previous": "Zurück",
+      "tipSide": "Seite der Spitze"
     },
     "scopeLabel": "falten",
     "section": {
@@ -496,6 +551,7 @@
       "freeStart": "Klicke dorthin, wo die Faltlinie beginnt.",
       "landOnLine": "Klicke auf die Kante oder Faltlinie, auf der er landen soll.",
       "perpendicularTo": "Klicke auf die Kante oder Faltlinie, zu der die Faltung senkrecht steht.",
+      "pickFlapsToReverse": "Wähle die Laschen für den Gegenbruch.",
       "pickLayers": "Wähle, welche Lagen sich bewegen.",
       "pointToMove": "Klicke auf den Punkt, der bewegt werden soll."
     },

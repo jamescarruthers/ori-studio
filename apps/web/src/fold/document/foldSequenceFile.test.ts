@@ -133,7 +133,11 @@ describe('the step tree', () => {
       // A normal the engine's line cannot be made from: shorter than its tolerance.
       { choices: { root: { n: [1e-200, 0], d: 1 } } },
       { choices: { root: { n: [5e-7, 5e-7], d: 0 } } },
-      { choices: { completion: [{ above: [0, 0] }] } },
+      // A completion is FOLD triples over its witnesses: a sign of 1 or -1, whole indices.
+      { choices: { completion: [{ above: [0, 0], below: [1, 1] }] } },
+      { choices: { completion: { faces: [[0, 0]], orders: [[0, 1, 0]] } } },
+      { choices: { completion: { faces: [[0, 0]], orders: [[0.5, 1, 1]] } } },
+      { choices: { completion: { faces: [[0, 0]], orders: [[0, 1, 1]], pinned: true } } },
       { choices: { pocket: [[0, 0]] } },
       { choices: { rootIndex: 2 } },
       { choices: 'first' },
@@ -266,7 +270,10 @@ describe('marks, notes and expect', () => {
   });
 
   it('reads empty choices as none', () => {
-    const { document } = readSteps([raw('a', null, { choices: { completion: [] } }), raw('b', null, { choices: {} })]);
+    const { document } = readSteps([
+      raw('a', null, { choices: { completion: { faces: [], orders: [] }, opening: [] } }),
+      raw('b', null, { choices: {} }),
+    ]);
     expect(document.steps[0]).not.toHaveProperty('choices');
     expect(document.steps[1]).not.toHaveProperty('choices');
   });

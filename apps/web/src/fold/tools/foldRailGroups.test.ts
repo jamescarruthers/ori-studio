@@ -37,7 +37,6 @@ describe('foldRailGroups', () => {
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
       ['turn-over', 'rotate'],
       [
-        'outside-reverse',
         'crimp',
         'tuck',
         'squash',
@@ -66,10 +65,16 @@ describe('foldRailGroups', () => {
     expect(item(groups, 'squash').shortcut).toBeNull();
   });
 
-  it('shows the inside reverse fold and the later folds as planned: there to read, never taken', () => {
+  it('takes the reverse fold as a tool, its line mode marked, and shows the later folds as planned', () => {
     const calls = verbs();
-    const groups = foldRailGroups(t, view(), calls);
-    for (const id of ['inside-reverse', 'squash', 'unsink']) {
+    const groups = foldRailGroups(t, view({ tool: 'inside-reverse', lineMode: 'free' }), calls);
+    const reverse = item(groups, 'inside-reverse');
+    expect(reverse).toMatchObject({ kind: 'tool', available: true, reason: null, active: true });
+    expect(item(groups, 'free').active).toBe(true);
+    reverse.select();
+    expect(calls.selectTool).toHaveBeenCalledWith('inside-reverse');
+    calls.selectTool.mockClear();
+    for (const id of ['crimp', 'squash', 'unsink']) {
       const planned = item(groups, id);
       expect(planned.kind).toBe('planned');
       expect(planned.available).toBe(false);
@@ -117,8 +122,9 @@ describe('foldRailGroups', () => {
       expect(item(groups, id).available).toBe(false);
       expect(item(groups, id).reason).toBe('This sequence is from a newer Ori Studio, so it opens read-only.');
     }
+    expect(item(groups, 'inside-reverse').available).toBe(false);
     // What is planned stays planned, whatever the sequence.
-    expect(item(groups, 'inside-reverse').reason).toBe('Planned: not in Ori Studio yet.');
+    expect(item(groups, 'crimp').reason).toBe('Planned: not in Ori Studio yet.');
   });
 
   it('builds a tooltip from the name, the key and what it does, or why it cannot', () => {

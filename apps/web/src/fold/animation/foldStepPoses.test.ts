@@ -7,7 +7,9 @@ import {
   crossfadeFrame,
   crossfadeMotion,
   hingeMotion,
+  legsMotion,
   poseHinge,
+  poseLegs,
   poseTurn,
   turnMotion,
   type SceneAffine,
@@ -261,6 +263,55 @@ describe('a crossfade', () => {
     expect(lines(0.5)).toEqual(['aux']);
     const late = crossfadeFrame(motion, 0.9).scene.items.find((item) => item.kind === 'line') as PaperLineItem;
     expect(late.face).toBe(2);
+  });
+});
+
+describe('a compound step’s legs', () => {
+  /**
+   * An inside reverse of a two-layer flap, drawn top-down: before it, the
+   * still layer 2 and the flap's lower layer 0 under its upper layer 1, the
+   * tip right of ℓ; landed, the tip's pieces (faces 3 and 4, of 0 and 1)
+   * mirrored left, turned between the layers: the upper piece now under the
+   * lower. Faces 0 and 1 keep their pieces that stay.
+   */
+  const before = () => sceneOf([face(2, 'front', LEFT), face(0, 'front', RIGHT), face(1, 'back', RIGHT)]);
+  const landed = () =>
+    sceneOf([face(2, 'front', LEFT), face(4, 'front', LEFT), face(3, 'back', LEFT), face(0, 'front', LEFT), face(1, 'back', LEFT)]);
+  const parents = new Map([
+    [3, 0],
+    [4, 1],
+    [0, 0],
+    [1, 1],
+    [2, 2],
+  ]);
+  const legs = () =>
+    legsMotion(before(), landed(), new Set([3, 4]), (face) => parents.get(face) ?? null, L, [
+      { from: 0, to: Math.PI / 2, stacking: 'parent' },
+      { from: Math.PI / 2, to: Math.PI, stacking: 'landed' },
+    ]);
+  const ring = (scene: PaperScene, id: number) =>
+    (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).rings[0]!;
+
+  it('turns every group from where the parent had it to where it lands, the paper that stays still', () => {
+    const start = poseLegs(legs(), 0);
+    RIGHT.forEach((p, k) => close(ring(start, 3)[k === 0 ? 1 : k === 1 ? 0 : k === 2 ? 3 : 2]!, p));
+    const end = poseLegs(legs(), Math.PI);
+    LEFT.forEach((p, k) => close(ring(end, 4)[k]!, p));
+    expect(ring(poseLegs(legs(), 1.1), 2)).toEqual(LEFT);
+    for (const p of ring(poseLegs(legs(), Math.PI / 2), 3)) expect(p[0]).toBeCloseTo(50, 9);
+  });
+
+  it('stacks the spread as the parent did and the close as the landed state does', () => {
+    // The spread: each piece ranked as the face it is a piece of lay — the
+    // lower layer's under the upper's, both pieces of each together.
+    expect(facesIn(poseLegs(legs(), 0.4))).toEqual([2, 3, 0, 4, 1]);
+    // The close: the landed order, so the last frame is the landed scene.
+    expect(facesIn(poseLegs(legs(), Math.PI / 2 + 0.2))).toEqual([2, 4, 3, 0, 1]);
+    // Showing the side they showed until edge-on.
+    const side = (scene: PaperScene, id: number) =>
+      (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).side;
+    expect(side(poseLegs(legs(), 0.4), 3)).toBe('front');
+    expect(side(poseLegs(legs(), Math.PI - 0.2), 3)).toBe('back');
   });
 });
 

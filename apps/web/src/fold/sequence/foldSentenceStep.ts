@@ -44,8 +44,11 @@ export interface FoldSentenceContext {
   parent: FoldStateFrame | null;
   /** The state it lands. */
   child: FoldStateFrame | null;
-  /** What the fold did: its line and moving side, in the parent's model frame. */
-  report: FoldReport | null;
+  /**
+   * What the fold did: its line and moving side, in the parent's model frame
+   * — a plain fold's report, or a compound fold's (a reverse fold's tip side).
+   */
+  report: Pick<FoldReport, 'line' | 'side'> | null;
 }
 
 /** How close a point is to a corner or a side, in sheet units, to be named as one. */
@@ -82,6 +85,16 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
       return { op: 'turn', turn: turnKindOf(op) };
     case 'cp-jump':
       return { op: 'cp-jump' };
+    // Compound folds (plan D4), one block per family.
+    case 'inside-reverse':
+    case 'outside-reverse':
+      return {
+        op: 'reverse',
+        kind: op.kind === 'inside-reverse' ? 'inside' : 'outside',
+        // Never "in half": a reverse fold reflects only its tip.
+        line: sentenceLine(op.line, null, context),
+        scope: scopeOf(op.seed),
+      };
   }
 }
 
@@ -97,7 +110,12 @@ function scopeOf(seed: FoldSeed): FoldLayerScope {
   }
 }
 
-function sentenceLine(line: FoldEngineLine | FoldLineInput, seed: FoldSeed, context: FoldSentenceContext): FoldSentenceLine {
+/** How the line was found; `seed` says whether the fold may be "in half", null that it never is. */
+function sentenceLine(
+  line: FoldEngineLine | FoldLineInput,
+  seed: FoldSeed | null,
+  context: FoldSentenceContext
+): FoldSentenceLine {
   switch (line.via) {
     // A line a tool gives in the model frame is one the user placed: free.
     case 'free':
@@ -107,7 +125,7 @@ function sentenceLine(line: FoldEngineLine | FoldLineInput, seed: FoldSeed, cont
       return { via: 'crease' };
     case 'axiom': {
       const moving = movingInputs(line.inputs, context);
-      const inHalf = seed.scope === 'all' && (line.axiom === 2 || line.axiom === 3) && foldsInHalf(context);
+      const inHalf = seed?.scope === 'all' && (line.axiom === 2 || line.axiom === 3) && foldsInHalf(context);
       return {
         via: 'axiom',
         axiom: line.axiom,
