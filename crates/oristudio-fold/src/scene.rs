@@ -46,6 +46,7 @@
 //!   made it.
 
 use oristudio_geometry::convex;
+use oristudio_layer_order::OrderTable;
 use serde::{Deserialize, Serialize};
 
 use crate::isometry::Isometry;
@@ -241,6 +242,9 @@ impl State {
             face_transforms.push(transform);
         }
 
+        // Every cell's stack ranks each pair of its faces: through a table,
+        // not the order's map (a fifty-deep stack is 2,500 lookups).
+        let table = OrderTable::new(self.folded_view(), self.order());
         let subfaces = self
             .problem()
             .overlay()
@@ -248,10 +252,12 @@ impl State {
             .iter()
             .map(|cell| {
                 let mut polygon: Vec<ScenePoint> = cell.polygon.iter().map(|&p| scene(p)).collect();
-                let mut stack: Vec<usize> = top_first(self, &cell.faces)
-                    .into_iter()
-                    .filter_map(|id| self.face_position(id))
+                let positions: Vec<usize> = cell
+                    .faces
+                    .iter()
+                    .filter_map(|&id| self.face_position(id))
                     .collect();
+                let mut stack = top_first_at(&table, &positions);
                 if view.flipped {
                     polygon.reverse();
                     stack.reverse();
@@ -299,6 +305,27 @@ impl State {
                 .collect(),
         }
     }
+}
+
+/// [`top_first`] on face positions, through the order's table: the same
+/// stack, or the same ranking with ties by id when the order does not stack
+/// the faces strictly (positions follow ids).
+fn top_first_at(table: &OrderTable, positions: &[usize]) -> Vec<usize> {
+    if let Some(stack) = table.top_first(positions) {
+        return stack;
+    }
+    let mut ranked: Vec<(usize, usize)> = positions
+        .iter()
+        .map(|&i| {
+            let below = positions
+                .iter()
+                .filter(|&&j| j != i && table.above(i, j) == Some(true))
+                .count();
+            (below, i)
+        })
+        .collect();
+    ranked.sort_unstable_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    ranked.into_iter().map(|(_, i)| i).collect()
 }
 
 /// Faces that all overlap one another (one cell's, or one point's), top
@@ -455,6 +482,71 @@ mod tests {
         for (a, b) in plain.subfaces.iter().zip(&turned.subfaces) {
             assert_eq!(a.faces_top_to_bottom, b.faces_top_to_bottom);
         }
+    }
+
+    /// The scene stacks each cell through the order's table; the stacks are
+    /// those [`top_first`] gives through the order itself, cell by cell.
+    #[test]
+    fn every_cell_stacks_as_the_order_does() {
+        let x = |c: f64| Line::new([1.0, 0.0], c).unwrap_or_else(|| unreachable!());
+        let y = |c: f64| Line::new([0.0, 1.0], c).unwrap_or_else(|| unreachable!());
+        let diagonal = Line::from_points([0.0, 0.0], [1.0, 1.0]).unwrap_or_else(|| unreachable!());
+        let mut state = book();
+        let mut cells = 0;
+        for op in [
+            PlainFold::new(y(0.5), Side::Positive, Direction::Mountain),
+            PlainFold::new(x(0.25), Side::Negative, Direction::Valley),
+            PlainFold::new(diagonal, Side::Negative, Direction::Valley),
+        ] {
+            state = state.fold(&op).unwrap_or_else(|e| panic!("{e}")).state;
+            for view in [state.clone(), state.turn_over()] {
+                let scene = view.scene();
+                let overlay = view.problem().overlay();
+                assert_eq!(scene.subfaces.len(), overlay.cells().len());
+                for (sub, cell) in scene.subfaces.iter().zip(overlay.cells()) {
+                    let mut want: Vec<usize> = top_first(&view, &cell.faces)
+                        .into_iter()
+                        .filter_map(|id| view.face_position(id))
+                        .collect();
+                    if view.view().flipped {
+                        want.reverse();
+                    }
+                    assert_eq!(sub.faces_top_to_bottom, want);
+                    cells += usize::from(want.len() > 2);
+                }
+            }
+        }
+        // 8 when written, counting both views.
+        assert!(cells >= 6, "only {cells} cells of three layers or more");
+    }
+
+    /// Where the order stacks nothing strictly, the table ranks as
+    /// [`top_first`] does: by how many each lies above, ties by id.
+    #[test]
+    fn a_table_ranks_an_order_that_stacks_nothing() {
+        use oristudio_layer_order::{Face as ViewFace, FoldedView, LayerOrder};
+        let square = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+        let view = FoldedView::new(
+            (0..4)
+                .map(|id| ViewFace {
+                    id: FaceId(id),
+                    polygon: square.clone(),
+                    front_up: true,
+                })
+                .collect(),
+            Vec::new(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let mut order = LayerOrder::new();
+        // 0 > 1 > 2 > 0, and 3 above 1 only.
+        for (upper, lower) in [(0, 1), (1, 2), (2, 0), (3, 1)] {
+            assert!(order.set_above(FaceId(upper), FaceId(lower)).is_ok());
+        }
+        let table = OrderTable::new(&view, &order);
+        // Each of 0, 1, 2 and 3 lies above one other: all tie, so by id.
+        assert_eq!(top_first_at(&table, &[3, 2, 1, 0]), vec![0, 1, 2, 3]);
+        // Without 2: 0 above 1, 3 above 1, 0 and 3 unrelated.
+        assert_eq!(top_first_at(&table, &[1, 3, 0]), vec![0, 3, 1]);
     }
 
     #[test]
