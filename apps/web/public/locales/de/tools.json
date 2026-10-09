@@ -346,6 +346,7 @@
       "title": "Falt-Werkzeuge"
     },
     "plannedReason": "Geplant: noch nicht in Ori Studio.",
+    "playStep": "Schritt abspielen",
     "railLabel": "Falt-Werkzeuge",
     "readOnly": {
       "locked": "Dieser Schritt stammt aus einer neueren Version von Ori Studio, daher lässt sich von ihm aus nichts falten.",

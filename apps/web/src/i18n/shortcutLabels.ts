@@ -177,6 +177,9 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return t('tools:diagram.nudgeNodeUpLarge', 'Nudge Node Up (Large)');
     case 'diagram.nudgeNodeDownLarge':
       return t('tools:diagram.nudgeNodeDownLarge', 'Nudge Node Down (Large)');
+    // The Fold workspace's playback.
+    case 'fold.playStep':
+      return t('tools:fold.playStep', 'Play Step');
     default:
       return definition.label;
   }

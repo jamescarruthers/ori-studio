@@ -334,6 +334,7 @@
       "title": "折叠工具"
     },
     "plannedReason": "计划中：Ori Studio 尚未提供。",
+    "playStep": "播放步骤",
     "railLabel": "折叠工具",
     "readOnly": {
       "locked": "此步骤来自更新版本的 Ori Studio，因此无法从这里继续折叠。",

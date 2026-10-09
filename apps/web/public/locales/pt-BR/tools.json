@@ -358,6 +358,7 @@
       "title": "Ferramentas de dobra"
     },
     "plannedReason": "Planejado: ainda não está no Ori Studio.",
+    "playStep": "Reproduzir passo",
     "railLabel": "Ferramentas de dobra",
     "readOnly": {
       "locked": "Este passo é de uma versão mais nova do Ori Studio, então nada pode ser dobrado a partir dele.",

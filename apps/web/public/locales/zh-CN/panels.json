@@ -1439,6 +1439,15 @@
       "startsOver_other": "更改形状会从头开始：序列中的 {{count}} 个步骤将被清除。撤销可以恢复。",
       "width": "宽"
     },
+    "playback": {
+      "label": "步骤播放",
+      "pause": "暂停",
+      "percent": "{{value}}%",
+      "play": "播放步骤",
+      "replay": "重新播放步骤",
+      "scrub": "步骤进度",
+      "stepForward": "向前一点"
+    },
     "sentence": {
       "cpJump": "按导入的折痕图折叠。",
       "mountain": {

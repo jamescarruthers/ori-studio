@@ -177,11 +177,12 @@ export type DiagramPathShortcutId =
   | 'diagram.nudgeNodeUpLarge'
   | 'diagram.nudgeNodeDownLarge';
 /**
- * The Fold workspace's verbs: none yet. The scope and its executor slot exist
- * so the panel can claim the keyboard the day its first binding lands in
- * {@link FOLD_SHORTCUTS}; until then an executor is offered no id at all.
+ * The Fold workspace's verbs, each a row of {@link FOLD_SHORTCUTS}, answered
+ * by the executor the Fold panel registers for the `fold` scope.
  */
-export type FoldShortcutId = never;
+export type FoldShortcutId =
+  // Playback (D15): the step on screen played from its parent.
+  | 'fold.playStep';
 export type ShortcutActionId =
   | MenuActionId
   | OristudioCpActionId
@@ -716,13 +717,26 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
 ];
 
 /**
- * Fold-workspace bindings, in the `fold` scope: empty until the Fold panel
- * lands the verbs D14 lists — the steps on ←/→ and `[`/`]` as the Diagram's,
+ * Fold-workspace bindings, in the `fold` scope: the verbs D14 lists, as the
+ * Fold panel lands them — the steps on ←/→ and `[`/`]` as the Diagram's,
  * the active step's branches on ↑/↓ as References' ways, candidate roots on
  * Shift+←/→, Space to play the step, Enter to commit. Escape stays
  * `viewport.cancel`, as it is in the Diagram.
  */
-const FOLD_SHORTCUTS: ShortcutDefinition[] = [];
+const FOLD_SHORTCUTS: ShortcutDefinition[] = [
+  // Space plays the step on screen (D15), as References' Play Fold: the two
+  // scopes are never in the stack together, and space-to-pan belongs to the
+  // crease-pattern scope, which Fold's context never stacks.
+  {
+    id: 'fold.playStep',
+    label: 'Play Step',
+    category: 'Fold',
+    scope: 'fold',
+    target: 'fold',
+    defaultChord: normalizeDefaultChords({ key: ' ' })[0] ?? null,
+    defaultChords: normalizeDefaultChords({ key: ' ' }),
+  },
+];
 
 /**
  * The viewport verbs whose executor can answer `false` and let the chord fall
