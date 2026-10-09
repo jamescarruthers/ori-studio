@@ -47,6 +47,11 @@ export function FoldImportPicker({
     const file = await getFileService().openBinaryFile({
       title: t('dialogs:foldImport.pickTitle', 'Import Crease Pattern'),
       extensions: [...FOLD_IMPORT_EXTENSIONS],
+      // As every document open offers it (`inputAccept`): none of these formats
+      // is registered with Apple, and iOS greys out a file it cannot match. The
+      // import reads the format from the name, and refuses one it cannot.
+      mimeTypes: ['application/octet-stream'],
+      filterName: 'Ori Studio',
     });
     if (!file) return;
     onRequest({ kind: 'file', name: file.name, source: foldImportFileSource(file.name, file.bytes) });
