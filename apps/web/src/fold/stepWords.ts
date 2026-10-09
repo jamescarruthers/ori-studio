@@ -14,6 +14,7 @@ import type { TFunction } from 'i18next';
 import { axiomPhrase } from '../lib/foldSentences';
 import { turnCardWords, turnName } from '../lib/steps/turnWords';
 import type { FoldSentenceLine, FoldSentenceStep } from './stepSentence';
+import { vertexBadge, vertexLabel } from './stepSentenceVertex';
 
 /** Creases by letter, front-relative: folded mountain, folded valley, and flat (folded once, now unfolded). */
 export interface FoldCreaseCounts {
@@ -70,6 +71,8 @@ export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
       return step.direction === 'valley'
         ? t('panels:fold.words.tuckValley', 'Valley fold and tuck')
         : t('panels:fold.words.tuckMountain', 'Mountain fold and tuck');
+    case 'vertex':
+      return vertexLabel(t, step.fold);
     case 'unknown':
       return t('panels:fold.words.unknown', 'From a newer Ori Studio');
   }
@@ -99,6 +102,8 @@ export function operationBadge(t: TFunction, step: FoldSentenceStep): string {
       return t('panels:fold.words.badgeCrimp', 'Crimp');
     case 'tuck':
       return t('panels:fold.words.badgeTuck', 'Tuck');
+    case 'vertex':
+      return vertexBadge(t, step.fold);
     case 'unknown':
       return t('panels:fold.words.badgeNewer', 'Newer');
   }

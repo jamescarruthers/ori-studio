@@ -38,6 +38,8 @@ import {
 } from '../lib/foldSentences';
 import type { TurnKind } from '../lib/steps/turn';
 import { turnName } from '../lib/steps/turnWords';
+import type { FoldVertexOpKind } from './document/foldSequenceDocument';
+import { vertexSentence } from './stepSentenceVertex';
 import {
   plainFoldSentence,
   reverseFoldSentence,
@@ -112,6 +114,8 @@ export type FoldSentenceStep =
   | { op: 'crimp'; crimp: 'inside' | 'outside' }
   /** A fold slid under the chosen layer (a valley) or over it (a mountain), as the viewer sees it. */
   | { op: 'tuck'; direction: FoldDirection }
+  /** A vertex fold (plan Phase 11): its creases are its own, so it names no line (`stepSentenceVertex`). */
+  | { op: 'vertex'; fold: FoldVertexOpKind; direction: FoldDirection }
   /** An operation a newer build wrote: locked, never described (plan D6). */
   | { op: 'unknown' };
 
@@ -247,6 +251,8 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
       return step.direction === 'valley'
         ? t('panels:fold.sentence.tuckValley', 'Valley fold and tuck the flap in, under the chosen layer.')
         : t('panels:fold.sentence.tuckMountain', 'Mountain fold and tuck the flap in at the back, over the chosen layer.');
+    case 'vertex':
+      return vertexSentence(t, step.fold);
     case 'unknown':
       return t('panels:fold.sentence.unknown', 'A step made with a newer Ori Studio.');
   }

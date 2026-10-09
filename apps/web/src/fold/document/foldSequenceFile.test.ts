@@ -76,11 +76,11 @@ describe('the step tree', () => {
   });
 
   it('keeps a node with an unknown op kind verbatim, locked, and writes it back unchanged', () => {
-    const newer = { id: 'b', parent: 'a', op: { kind: 'squash', axis: [0, 1] }, note: 'Squash it.' };
+    const newer = { id: 'b', parent: 'a', op: { kind: 'stretch', axis: [0, 1] }, note: 'Stretch it.' };
     const held = readSteps([raw('a', null), newer, raw('c', 'b')]);
     const locked = held.document.steps[1];
     expect(isLockedStep(locked)).toBe(true);
-    expect(locked).toMatchObject({ id: 'b', parent: 'a', note: 'Squash it.' });
+    expect(locked).toMatchObject({ id: 'b', parent: 'a', note: 'Stretch it.' });
     expect((writeFoldSequence(held).steps as unknown[])[1]).toBe(newer);
     // Its child still reads, and is locked with it.
     expect(ids(held.document.steps)).toEqual(['a', 'b', 'c']);

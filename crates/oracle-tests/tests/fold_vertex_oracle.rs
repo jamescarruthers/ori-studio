@@ -1,0 +1,231 @@
+//! The Fold engine's vertex folds checked from outside (plan D8, D19, Phase
+//! 11): the states its squash, petal fold, rabbit ear and swivel land,
+//! verified by the two oracles `fold_oracle` uses, which share no code with
+//! it.
+//!
+//! - **The seeded squash campaign** (`r2-spike-squash-petal-rabbit`,
+//!   `campaign.mjs`), drawn by `oristudio_fold::random` as the engine's own
+//!   `tests/squash.rs` draws it: every squash that lands.
+//! - **The spike's named cases** (`cases.mjs`), built by the engine's own
+//!   `tests/vertex/cases.rs`: the preliminary base by the diagonal route (and
+//!   in mirror image) and the waterbomb base by the midline route, each
+//!   squash; the bird base's two petal folds, both ways; every rabbit ear's
+//!   every emergent ray and every order it offers; every swivel ray.
+//!
+//! Seeded Oriedita (`fold_support::oriedita`) runs in process; Flat-Folder's
+//! `verify` (`fold_support::flat_folder`) when `FLATFOLDER_ORACLE` is set.
+//! Each has the negative control `fold_oracle` has: a pair of a state's order
+//! flipped where the engine's checker refuses the flip must not verify.
+
+#[path = "../../oristudio-fold/tests/vertex/cases.rs"]
+mod cases;
+mod fold_support;
+mod support;
+
+use fold_support::flat_folder::{self, Job};
+use fold_support::oriedita::{Seeded, Verdict};
+use fold_support::{flipped, has_flat_creases, pick, verify_frame, verify_order};
+use oristudio_fold::random::{self, Rng};
+use oristudio_fold::{RabbitEar, State, Swivel, VertexChoices};
+use oristudio_layer_order::check;
+
+/// The campaign's first seed and how many of its draws; the engine's own
+/// test runs the same draws.
+const SEED: u64 = 1;
+const SETUPS: u64 = 400;
+
+/// A state a vertex fold landed.
+struct Landed {
+    label: String,
+    state: State,
+}
+
+/// Every state the seeded squash campaign lands.
+fn campaign() -> Vec<Landed> {
+    let mut out = Vec::new();
+    for i in 0..SETUPS {
+        let mut rng = Rng::new(SEED * 7919 + i);
+        let Ok(state) = random::folded(&mut rng) else {
+            continue;
+        };
+        if state.faces().len() > 60 {
+            continue;
+        }
+        let Some(op) = random::squash(&state, &mut rng) else {
+            continue;
+        };
+        for (k, folded) in cases::every(state.squash(&op, &VertexChoices::default()))
+            .into_iter()
+            .enumerate()
+        {
+            out.push(Landed {
+                label: format!("squash s{SEED}-{i:04}-c{k}"),
+                state: folded.state,
+            });
+        }
+    }
+    out
+}
+
+/// Every state of the spike's named cases.
+fn named() -> Vec<Landed> {
+    let mut out = Vec::new();
+    let mut push = |label: String, state: State| out.push(Landed { label, state });
+    for (name, route) in [
+        ("preliminary", cases::preliminary(false)),
+        ("preliminary mirrored", cases::preliminary(true)),
+        ("waterbomb", cases::waterbomb()),
+        ("bird base", cases::bird_base(false)),
+        ("bird base mirrored", cases::bird_base(true)),
+    ] {
+        for (k, (_, folded)) in route.steps.into_iter().enumerate() {
+            push(format!("{name} step {k}"), folded.state);
+        }
+    }
+    for case in cases::ear_cases() {
+        for (deg, emergent) in cases::candidates_of(&case.state, &case.op) {
+            let op = RabbitEar {
+                emergent,
+                ..case.op.clone()
+            };
+            for (k, folded) in cases::every(case.state.rabbit_ear(&op, &VertexChoices::default()))
+                .into_iter()
+                .enumerate()
+            {
+                push(format!("{} {deg}° c{k}", case.name), folded.state);
+            }
+        }
+    }
+    let (square, op) = cases::swivel_case();
+    let analysis = square.analyse_swivel(&op).unwrap_or_else(|e| panic!("{e}"));
+    for (k, &emergent) in analysis.candidates.iter().enumerate() {
+        let op = Swivel {
+            emergent,
+            ..op.clone()
+        };
+        for folded in cases::every(square.swivel(&op, &VertexChoices::default())) {
+            push(format!("swivel ray {k}"), folded.state);
+        }
+    }
+    out
+}
+
+#[test]
+fn every_vertex_fold_verifies_against_seeded_oriedita() {
+    let states: Vec<Landed> = campaign().into_iter().chain(named()).collect();
+    let (mut verified, mut unrepresentable, mut seeded_pairs) = (0, 0, 0);
+    let mut failures = Vec::new();
+    for landed in &states {
+        let seeded = Seeded::new(&landed.state).unwrap_or_else(|e| panic!("{}: {e}", landed.label));
+        match seeded.verify(landed.state.order()) {
+            Verdict::Verified { seeded } => {
+                verified += 1;
+                seeded_pairs += seeded;
+            }
+            Verdict::Unrepresentable => unrepresentable += 1,
+            other => failures.push(format!("{}: {other:?}", landed.label)),
+        }
+    }
+    eprintln!(
+        "{verified} of {} vertex-fold states verified ({unrepresentable} unrepresentable); \
+         {seeded_pairs} seeded pairs",
+        states.len()
+    );
+    assert!(failures.is_empty(), "{failures:#?}");
+    assert!(
+        verified >= 80 && seeded_pairs >= 300,
+        "{verified} verified, {seeded_pairs} pairs"
+    );
+}
+
+/// Oriedita sees only folding colours, so the control runs where every face
+/// is an Oriedita face of its own: few vertex folds leave none flat (a
+/// squash unfolds its spine), so each such state has four pairs flipped.
+#[test]
+fn seeded_oriedita_refuses_flips_of_vertex_folds() {
+    let (mut refused, mut valid) = (0, 0);
+    let mut missed = Vec::new();
+    for (n, landed) in campaign().into_iter().chain(named()).enumerate() {
+        if has_flat_creases(&landed.state) || landed.state.order().is_empty() {
+            continue;
+        }
+        let order = landed.state.order();
+        let pairs: Vec<_> = order.pairs().map(|(pair, _)| pair).collect();
+        let seeded = Seeded::new(&landed.state).unwrap_or_else(|e| panic!("{}: {e}", landed.label));
+        for k in 0..4 {
+            let pair = pairs[pick(n as u64, landed.state.step() + k, pairs.len())];
+            let Some(flip) = flipped(order, pair) else {
+                continue;
+            };
+            if check(landed.state.folded_view(), &flip).is_valid() {
+                valid += 1;
+                continue;
+            }
+            match seeded.verify(&flip) {
+                Verdict::Verified { .. } => missed.push(format!("{} {pair}", landed.label)),
+                _ => refused += 1,
+            }
+        }
+    }
+    eprintln!("{refused} flips refused; {valid} flips valid");
+    assert!(missed.is_empty(), "Oriedita verified flips: {missed:#?}");
+    assert!(refused >= 20, "only {refused} flips tried");
+}
+
+#[test]
+fn every_vertex_fold_verifies_with_flat_folder_when_enabled() {
+    let Some(oracle) = flat_folder::oracle() else {
+        return;
+    };
+    let states: Vec<Landed> = campaign().into_iter().chain(named()).collect();
+    let mut jobs = Vec::new();
+    for (n, landed) in states.iter().enumerate() {
+        let frame = verify_frame(&landed.state).unwrap_or_else(|e| panic!("{}: {e}", landed.label));
+        jobs.push(Job {
+            name: landed.label.clone(),
+            frame: frame.clone(),
+            order: frame.face_orders.clone(),
+        });
+        let order = landed.state.order();
+        let pairs: Vec<_> = order.pairs().map(|(pair, _)| pair).collect();
+        if pairs.is_empty() {
+            continue;
+        }
+        let pair = pairs[pick(n as u64, landed.state.step(), pairs.len())];
+        if let Some(flip) = flipped(order, pair)
+            && !check(landed.state.folded_view(), &flip).is_valid()
+        {
+            jobs.push(Job {
+                name: format!("{}-flip", landed.label),
+                frame,
+                order: verify_order(&landed.state, &flip)
+                    .unwrap_or_else(|e| panic!("{}: {e}", landed.label)),
+            });
+        }
+    }
+    let records = flat_folder::verify_all(&oracle, &jobs);
+    let (mut valid, mut refused) = (0, 0);
+    let mut failures = Vec::new();
+    for (Job { name, .. }, record) in jobs.iter().zip(&records) {
+        let verdict = record["verify"]["verdict"].as_str().unwrap_or_default();
+        if name.ends_with("-flip") {
+            if verdict == "valid" {
+                failures.push(format!("{name}: Flat-Folder accepted the flip"));
+            } else {
+                refused += 1;
+            }
+        } else if record["status"] == "ok" && verdict == "valid" {
+            valid += 1;
+        } else {
+            let mut text = record.to_string();
+            text.truncate(400);
+            failures.push(format!("{name}: {text}"));
+        }
+    }
+    eprintln!(
+        "{valid} of {} vertex-fold states valid, {refused} flips refused",
+        states.len()
+    );
+    assert!(failures.is_empty(), "{failures:#?}");
+    assert_eq!(valid, states.len());
+}

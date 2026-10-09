@@ -114,8 +114,17 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | Without `kernel`, with the queries and axiom ops | 907,733 B (886 KiB) | 336,478 B (329 KiB) |
 | With `kernel` and the io calls, before the queries | 1,594,829 B (1,557 KiB) | 655,855 B (640 KiB) |
 | With `kernel`, the io calls, the queries and axiom ops | 1,879,638 B (1,836 KiB) | 752,479 B (735 KiB) |
+| The same at `d0990bbde`, with the compound pipeline and the reverse folds (2026-10-09) | 1,916,660 B (1,872 KiB) | 768,949 B (751 KiB) |
+| With the vertex folds: squash, petal fold, rabbit ear, swivel (2026-10-09) | 2,162,136 B (2,111 KiB) | 862,907 B (843 KiB) |
 
-The last row is the bridge that ships. Rebuilt at `44005c2d9`, with the
+The vertex folds add **245,476 B raw (+240 KiB), 93,958 B gzipped
+(+92 KiB)**: the staged motions, the fan scoring and the general pieces
+pipeline in the engine, and the four ops, the held-choice store and their
+serializers in the bridge. The last row is now the bridge that ships, and it
+is **over the two budgets' 800 KiB sum by 43 KiB gzipped**; the open
+question below now covers it too.
+
+The fourth row was the bridge that shipped when the budget was set. Rebuilt at `44005c2d9`, with the
 Fold workspace's UI merged, it is the same 1,879,638 B raw, and 752,480 B
 through this machine's `gzip -9`. The rows without `kernel` cannot be
 rebuilt at that commit: `kernel` has been linked since the io branch
@@ -161,14 +170,15 @@ emits, so this is paid by every installed visitor on their first load.
   Edit, export and Import CP go through the existing CP worker as FOLD text.
   It adds about 406 KiB, within it.
 
-Together the two allow 800 KiB gzipped, and the bridge that ships is
-735 KiB. That is inside their sum only because `kernel` uses less than its
-allowance; the engine's own share is over its line, and the budget has not
-been raised.
+Together the two allow 800 KiB gzipped. The bridge that shipped when they
+were set was 735 KiB, inside their sum only because `kernel` used less than
+its allowance; the engine's own share was over its line. With the vertex
+folds it is 843 KiB, over the sum, and the budget has not been raised.
 
 **Open, for the owner: the budget without `kernel`.** Raise it (to 1 MiB
 raw, 384 KiB gzipped, say, about the precrease bridge's size) or trim the
-engine side by 41 KiB gzipped. The two levers tried (above) did not move it.
+engine side by 41 KiB gzipped — about 149 KiB since the compound pipeline
+(16 KiB) and the vertex folds (92 KiB), taking `kernel`'s share as fixed. The two levers tried (above) did not move it.
 
 **Decision (2026-10-08): `kernel` stays in the bridge.** Measured before the
 queries it added 410 KiB gzipped, within the 512 KiB allowance, so D1's

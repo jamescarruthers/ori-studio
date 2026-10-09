@@ -84,6 +84,10 @@ pub mod wire;
 // Compound folds, one module per family (`compound`).
 pub mod ops_reverse;
 
+// The compound folds, one module per family. The vertex folds (squash,
+// petal, rabbit ear, swivel) hold their pending choices on `FoldEngine`.
+pub mod ops_squash_family;
+
 use std::sync::Once;
 
 use oristudio_fold::{FOLD_ENGINE_VERSION, Side};
@@ -117,6 +121,9 @@ pub struct FoldEngine {
     inner: Bridge,
     /// Imported crease patterns waiting for an order to be picked (`io`).
     imports: io::Imports,
+    /// Vertex folds waiting for an order to be picked
+    /// (`ops_squash_family`).
+    vertex: ops_squash_family::Pending,
 }
 
 impl Default for FoldEngine {
@@ -133,6 +140,7 @@ impl FoldEngine {
         FoldEngine {
             inner: Bridge::new(),
             imports: io::Imports::new(),
+            vertex: ops_squash_family::Pending::new(),
         }
     }
 
@@ -169,10 +177,11 @@ impl FoldEngine {
         u32::try_from(released).unwrap_or(u32::MAX)
     }
 
-    /// Let every state go, and every import.
+    /// Let every state go, every import and every pending choice.
     pub fn clear(&mut self) {
         self.inner.clear();
         self.imports.clear();
+        self.vertex.clear();
     }
 
     /// How many states are held.

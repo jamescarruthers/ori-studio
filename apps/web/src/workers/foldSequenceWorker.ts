@@ -40,6 +40,13 @@ import type {
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from '../fold/engine/foldEngineIoCalls';
 import { createFoldEngineReverseCalls, type FoldEngineReverseCalls } from '../fold/engine/foldEngineReverseCalls';
 import type { FoldEngineReverseOp, FoldReverseAsked } from '../fold/engine/foldEngineReverseWire';
+import { createFoldEngineVertexCalls, type FoldEngineVertexCalls } from '../fold/engine/foldEngineSquashCalls';
+import type {
+  FoldVertexAnalysed,
+  FoldVertexFingerprinted,
+  FoldVertexTried,
+} from '../fold/engine/foldEngineSquashWire';
+import type { FoldVertexOp } from '../fold/document/foldSequenceDocument';
 import type {
   FoldExported,
   FoldImportFingerprinted,
@@ -71,7 +78,11 @@ import type {
 } from '../fold/engine/foldEngineWire';
 
 /** The step calls, the io calls and each compound fold's calls, over one engine. */
-type FoldWorkerCalls = FoldEngineCalls & FoldEngineIoCalls & FoldEngineReverseCalls & FoldEngineCrimpTuckCalls;
+type FoldWorkerCalls = FoldEngineCalls &
+  FoldEngineIoCalls &
+  FoldEngineReverseCalls &
+  FoldEngineCrimpTuckCalls &
+  FoldEngineVertexCalls;
 
 let ready: Promise<FoldWorkerCalls> | null = null;
 
@@ -90,6 +101,7 @@ function ensureReady(): Promise<FoldWorkerCalls> {
       ...createFoldEngineIoCalls(engine),
       ...createFoldEngineReverseCalls(engine),
       ...createFoldEngineCrimpTuckCalls(engine),
+      ...createFoldEngineVertexCalls(engine),
     };
   });
   ready = starting;
@@ -322,6 +334,33 @@ const api = {
   /** Fold a tuck: landed, or the orders to choose from. */
   async tuck(state: number, op: FoldEngineTuckOp, choices?: FoldChoices): Promise<FoldCompoundOutcome<FoldTuckReport>> {
     return call((calls) => calls.tuck(state, op, choices));
+  },
+
+  // The vertex folds: squash, petal fold, rabbit ear, swivel
+  // (`fold/engine/foldEngineSquashCalls.ts`).
+
+  /** The flap, petal or fan a vertex op names, before it folds. */
+  async vertexAnalysis(state: number, op: FoldVertexOp): Promise<FoldEngineOutcome<FoldVertexAnalysed>> {
+    return call((calls) => calls.vertexAnalysis(state, op));
+  },
+
+  /** Fold it: landed with its fingerprint, or a choice of orders held under a handle. */
+  async vertexFold(
+    state: number,
+    op: FoldVertexOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldVertexTried>> {
+    return call((calls) => calls.vertexFold(state, op, choices));
+  },
+
+  /** Land one listed order per component, with the choices the step stores. */
+  async vertexPick(pending: number, choice: readonly number[]): Promise<FoldEngineOutcome<FoldVertexFingerprinted>> {
+    return call((calls) => calls.vertexPick(pending, choice));
+  },
+
+  /** Let pending choices go; how many were held. */
+  async releaseVertexChoices(pending: readonly number[]): Promise<number> {
+    return call((calls) => calls.releaseVertexChoices(pending));
   },
 };
 

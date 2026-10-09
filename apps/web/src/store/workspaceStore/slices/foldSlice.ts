@@ -30,6 +30,10 @@ const STEP_LABELS: Record<FoldOpKind, string> = {
   'outside-reverse': 'Outside reverse fold',
   crimp: 'Crimp',
   tuck: 'Tuck',
+  squash: 'Squash fold',
+  petal: 'Petal fold',
+  'rabbit-ear': 'Rabbit ear',
+  swivel: 'Swivel fold',
 };
 
 /**

@@ -102,6 +102,11 @@ pub enum Op {
     /// A crimp and a tuck (plan Phase 11), folded by `ops_crimp_tuck`.
     Crimp(crate::ops_crimp_tuck::CrimpOp),
     Tuck(crate::ops_crimp_tuck::TuckOp),
+    /// The vertex folds (plan Phase 11): `ops_squash_family`.
+    Squash(crate::ops_squash_family::SquashOp),
+    Petal(crate::ops_squash_family::PetalOp),
+    RabbitEar(crate::ops_squash_family::RabbitEarOp),
+    Swivel(crate::ops_squash_family::SwivelOp),
 }
 
 impl Op {
@@ -120,7 +125,36 @@ impl Op {
             Op::OutsideReverse(_) => "outside-reverse",
             Op::Crimp(_) => "crimp",
             Op::Tuck(_) => "tuck",
+            Op::Squash(_) => "squash",
+            Op::Petal(_) => "petal",
+            Op::RabbitEar(_) => "rabbit-ear",
+            Op::Swivel(_) => "swivel",
         }
+    }
+
+    /// Whether it ends at a completion, whose choice it stores as
+    /// `completion`: every compound fold (plan D6).
+    pub fn takes_completion(&self) -> bool {
+        matches!(
+            self,
+            Op::InsideReverse(_)
+                | Op::OutsideReverse(_)
+                | Op::Crimp(_)
+                | Op::Tuck(_)
+                | Op::Squash(_)
+                | Op::Petal(_)
+                | Op::RabbitEar(_)
+                | Op::Swivel(_)
+        )
+    }
+
+    /// Whether it opens flaps, whose choice it stores as `opening`: the
+    /// reverse folds and the crimp.
+    pub fn takes_opening(&self) -> bool {
+        matches!(
+            self,
+            Op::InsideReverse(_) | Op::OutsideReverse(_) | Op::Crimp(_)
+        )
     }
 
     /// Whether its fold line is an axiom's, the one line that takes a stored
@@ -135,15 +169,6 @@ impl Op {
             }
             _ => false,
         }
-    }
-
-    /// Whether it ends at a completion with openings to choose: the compound
-    /// folds, which store an `opening` and a `completion` (plan D6).
-    pub fn is_compound(&self) -> bool {
-        matches!(
-            self,
-            Op::InsideReverse(_) | Op::OutsideReverse(_) | Op::Crimp(_) | Op::Tuck(_)
-        )
     }
 }
 
@@ -309,6 +334,7 @@ pub struct Choices {
     /// The line the axiom's chosen root gave, in the parent's model frame.
     #[serde(default)]
     pub root: Option<Line>,
+    /// The pairs a completion left free, as chosen (`FoldCompletionChoice`).
     #[serde(default)]
     pub completion: Option<WitnessOrder>,
     #[serde(default)]
@@ -319,17 +345,23 @@ pub struct Choices {
 
 impl Choices {
     /// The first choice present that an op takes none of, by its document
-    /// key: `root` unless the op folds along an axiom, `completion` and
-    /// `opening` unless it is a compound fold. An empty list is no choice,
-    /// as the document reads it, and so is a completion that orders nothing.
-    pub fn unexpected(&self, takes_root: bool, compound: bool) -> Option<&'static str> {
+    /// key: `root` unless the op folds along an axiom, `completion` unless
+    /// it ends at one (`Op::takes_completion`), `opening` unless it opens
+    /// flaps (`Op::takes_opening`). An empty list is no choice, as the
+    /// document reads it, and so is a completion that orders nothing.
+    pub fn unexpected(
+        &self,
+        takes_root: bool,
+        takes_completion: bool,
+        takes_opening: bool,
+    ) -> Option<&'static str> {
         if self.root.is_some() && !takes_root {
             Some("root")
-        } else if !compound && self.completion().is_some() {
+        } else if !takes_completion && self.completion().is_some() {
             Some("completion")
         } else if self.pocket.is_some() {
             Some("pocket")
-        } else if !compound && !self.openings().is_empty() {
+        } else if !takes_opening && !self.openings().is_empty() {
             Some("opening")
         } else {
             None
@@ -503,6 +535,9 @@ pub enum Fix {
     /// The same tuck against this layer instead is valid: send its sheet
     /// point back as the tuck's `target`.
     TuckTarget { face: FaceId, at: Point },
+    /// The same rabbit ear or swivel with this emergent ray (a direction in
+    /// the parent's model frame) lands: store it as the op's `emergent`.
+    UseEmergent { direction: Point },
 }
 
 impl From<EngineFix> for Fix {
@@ -518,6 +553,7 @@ impl From<EngineFix> for Fix {
             },
             EngineFix::OtherKind { kind } => Fix::OtherKind { kind },
             EngineFix::TuckTarget { face, at } => Fix::TuckTarget { face, at },
+            EngineFix::UseEmergent { direction } => Fix::UseEmergent { direction },
         }
     }
 }
@@ -647,6 +683,11 @@ pub enum BridgeRefusal {
     #[serde(untagged)]
     #[error(transparent)]
     Io(crate::io::IoRefusal),
+    /// A stored vertex fold whose choice no longer resolves, or that leaves
+    /// one it does not store (`ops_squash_family::VertexRefusal`).
+    #[serde(untagged)]
+    #[error(transparent)]
+    Vertex(crate::ops_squash_family::VertexRefusal),
 }
 
 impl BridgeRefusal {
@@ -661,6 +702,7 @@ impl BridgeRefusal {
             BridgeRefusal::ChoiceNeeded { .. } => "choice_needed",
             BridgeRefusal::ChoiceBroken { .. } => "choice_broken",
             BridgeRefusal::Io(refusal) => refusal.code(),
+            BridgeRefusal::Vertex(refusal) => refusal.code(),
         }
     }
 }
@@ -690,6 +732,10 @@ pub struct Applied {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compound: Option<crate::compound::CompoundStepReport>,
     pub summary: Summary,
+    /// What a vertex fold did, with its motion (plan D15); absent for every
+    /// other step.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vertex: Option<Box<oristudio_fold::VertexReport>>,
 }
 
 /// A fold's picture on the state it starts from (plan D12, per step).

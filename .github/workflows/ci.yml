@@ -402,10 +402,11 @@ jobs:
       # flat_folder_verify (the oracle's `verify` command) about three, and
       # fold_oracle (`verify` on the Fold engine's random states and their
       # flips) about five, fold_compound_oracle (its reverse folds and the
-      # crane) about nine, and fold_crimp_tuck_oracle (its outside reverse
-      # folds, crimps and tucks) about four. The fold oracles' seeded
-      # Oriedita tests need no oracle, so the workspace step runs them as
-      # well.
+      # crane) about nine, fold_crimp_tuck_oracle (its outside reverse folds,
+      # crimps and tucks) about four, and fold_vertex_oracle (its squashes,
+      # petal folds, rabbit ears and swivels) about three. The fold oracles'
+      # seeded Oriedita tests need no oracle, so the workspace step runs them
+      # as well.
       - name: Flat-Folder oracle parity
         env:
           ORACLE_REQUIRED: FLATFOLDER_ORACLE
@@ -418,4 +419,5 @@ jobs:
               --test fold_oracle \
               --test fold_compound_oracle \
               --test fold_crimp_tuck_oracle \
+              --test fold_vertex_oracle \
               --test oracle_env_guard

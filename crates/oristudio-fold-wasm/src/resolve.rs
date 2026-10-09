@@ -70,25 +70,30 @@ pub enum Resolved {
     Jump(State),
     /// A compound fold (`crate::compound`).
     Compound(Box<dyn CompoundOp>),
+    /// A vertex fold, its anchors resolved, with its stored choice
+    /// (`ops_squash_family`).
+    Vertex(crate::ops_squash_family::VertexFold),
 }
 
 impl Resolved {
     /// The plain fold it names: the line, side and seed the engine folds
     /// along — a compound fold's line, side and anchor. None for a view
-    /// change or a jump.
+    /// change, a jump or a vertex fold, which folds along no one line.
     pub fn plain(&self, parent: &State) -> Option<Result<PlainFold, LineRefusal>> {
         match self {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
             Resolved::Compound(op) => Some(Ok(op.plain())),
-            Resolved::View(_) | Resolved::Jump(_) => None,
+            Resolved::View(_) | Resolved::Jump(_) | Resolved::Vertex(_) => None,
         }
     }
 }
 
 /// The op and its choices, resolved in `parent`.
 pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, Rejection> {
-    if let Some(choice) = choices.unexpected(op.is_axiom(), op.is_compound()) {
+    if let Some(choice) =
+        choices.unexpected(op.is_axiom(), op.takes_completion(), op.takes_opening())
+    {
         return Err(BridgeRefusal::UnexpectedChoice { choice }.into());
     }
     let root = choices.root.as_ref();
@@ -124,6 +129,10 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
             op.kind()
         ))
         .into()),
+        // The vertex folds: their sheet anchors in the parent.
+        Op::Squash(_) | Op::Petal(_) | Op::RabbitEar(_) | Op::Swivel(_) => {
+            crate::ops_squash_family::resolve(parent, op, choices).map(Resolved::Vertex)
+        }
     }
 }
 

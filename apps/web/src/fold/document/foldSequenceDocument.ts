@@ -318,6 +318,83 @@ export interface FoldTuckOp extends FoldAlongLine {
   target: SheetPoint;
 }
 
+// The vertex folds (plan Phase 11): paper turned about a vertex. Each ends
+// at a completion, whose choice is `FoldChoices.completion`.
+
+/**
+ * A direction in the parent's model frame, any length: what a step stores
+ * for a choice among rays. Replay takes the nearest the engine offers, as it
+ * takes the nearest root of an axiom.
+ */
+export type FoldModelDirection = readonly [number, number];
+
+/**
+ * A squash: the flap by a sheet point on its upper layer as the viewer sees
+ * it (the top layer for a valley, the bottom one for a mountain), and where
+ * its spine lands — a direction from the flap's vertex, absent for its hinge
+ * line (the symmetric squash). The engine creases each layer on a line of
+ * its own.
+ */
+export interface FoldSquashOp {
+  kind: 'squash';
+  flap: SheetPoint;
+  target?: FoldModelDirection;
+  direction: FoldDirection;
+}
+
+/**
+ * A petal fold over its precreases: H by a sheet point inside its
+ * precrease's sheet segment, the petal by a sheet point on the flap's top
+ * layer below H.
+ */
+export interface FoldPetalOp {
+  kind: 'petal';
+  crease: SheetPoint;
+  petal: SheetPoint;
+  direction: FoldDirection;
+}
+
+/**
+ * A rabbit ear: the triangle's corners as sheet points; the emergent ray, a
+ * direction from the incenter; the layers at the incenter; a sheet point on
+ * paper that stays; and the ridge, a direction naming one of the far wedge's
+ * rays, absent to leave the two orders it decides to the completion.
+ */
+export interface FoldRabbitEarOp {
+  kind: 'rabbit-ear';
+  corners: readonly [SheetPoint, SheetPoint, SheetPoint];
+  emergent: FoldModelDirection;
+  seed: FoldSeed;
+  stayer: SheetPoint;
+  direction: FoldDirection;
+  ridge?: FoldModelDirection;
+}
+
+/**
+ * A swivel at a free vertex: the vertex and the points its three given rays
+ * run toward as sheet points, the emergent ray, the layers at the vertex and
+ * a sheet point on paper that stays.
+ */
+export interface FoldSwivelOp {
+  kind: 'swivel';
+  vertex: SheetPoint;
+  toward: readonly [SheetPoint, SheetPoint, SheetPoint];
+  emergent: FoldModelDirection;
+  seed: FoldSeed;
+  stayer: SheetPoint;
+  direction: FoldDirection;
+}
+
+export type FoldVertexOp = FoldSquashOp | FoldPetalOp | FoldRabbitEarOp | FoldSwivelOp;
+
+export type FoldVertexOpKind = FoldVertexOp['kind'];
+
+export const FOLD_VERTEX_OP_KINDS: readonly FoldVertexOpKind[] = ['squash', 'petal', 'rabbit-ear', 'swivel'];
+
+export function isVertexOp(op: FoldOp): op is FoldVertexOp {
+  return (FOLD_VERTEX_OP_KINDS as readonly string[]).includes(op.kind);
+}
+
 // ---------------------------------------------------------------------------
 
 /** What a step does. A kind this build does not know locks its node and subtree. */
@@ -330,7 +407,8 @@ export type FoldOp =
   | FoldCpJumpOp
   | FoldReverseOp
   | FoldCrimpOp
-  | FoldTuckOp;
+  | FoldTuckOp
+  | FoldVertexOp;
 
 export type FoldOpKind = FoldOp['kind'];
 
@@ -347,6 +425,7 @@ export const FOLD_OP_KINDS: readonly FoldOpKind[] = [
   'outside-reverse',
   'crimp',
   'tuck',
+  ...FOLD_VERTEX_OP_KINDS,
 ];
 
 /** The turn a turn or rotate step makes, as the Diagram's turn entries spell it (`lib/steps/turn`). */

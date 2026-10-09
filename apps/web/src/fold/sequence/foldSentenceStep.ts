@@ -99,6 +99,11 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
       return { op: 'crimp', crimp: op.crimp };
     case 'tuck':
       return { op: 'tuck', direction: op.direction };
+    case 'squash':
+    case 'petal':
+    case 'rabbit-ear':
+    case 'swivel':
+      return { op: 'vertex', fold: op.kind, direction: op.direction };
   }
 }
 

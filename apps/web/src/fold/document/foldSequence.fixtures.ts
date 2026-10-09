@@ -218,6 +218,60 @@ export function writtenSequence(): Record<string, unknown> {
           target: [0.75, 0.5],
         },
       },
+      // The vertex folds, each with its optional direction where it has one.
+      {
+        id: 'fstep-14',
+        parent: 'fstep-9',
+        op: { kind: 'squash', flap: [0.1, 0.4], target: [-1, 0.5], direction: 'valley' },
+      },
+      {
+        id: 'fstep-15',
+        parent: 'fstep-14',
+        op: { kind: 'petal', crease: [0.3, 0.2], petal: [0.25, 0.1], direction: 'valley' },
+        choices: {
+          completion: {
+            faces: [
+              [0.3, 0.1],
+              [0.6, 0.1],
+            ],
+            orders: [[0, 1, 1]],
+          },
+        },
+      },
+      {
+        id: 'fstep-16',
+        parent: 'fstep-15',
+        op: {
+          kind: 'rabbit-ear',
+          corners: [
+            [0, 0],
+            [1, 0],
+            [0, 0.5],
+          ],
+          emergent: [-1, 0],
+          seed: { scope: 'depth', at: [0.2, 0.1], layers: 1 },
+          stayer: [0.8, 0.4],
+          direction: 'mountain',
+          ridge: [0, -1],
+        },
+      },
+      {
+        id: 'fstep-17',
+        parent: 'fstep-16',
+        op: {
+          kind: 'swivel',
+          vertex: [0.5, 0.2],
+          toward: [
+            [1, 0.4],
+            [0, 0.4],
+            [0.5, 0],
+          ],
+          emergent: [0, 1],
+          seed: { scope: 'all' },
+          stayer: [0.3, 0.45],
+          direction: 'valley',
+        },
+      },
     ],
   };
 }

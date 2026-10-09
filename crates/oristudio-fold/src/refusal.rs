@@ -11,7 +11,9 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::complete::BudgetLimit;
+use crate::compound::petal::{NoPetal, PetalCrease};
 use crate::compound::reverse::{NoOpening, ReverseKind};
+use crate::compound::squash::NoFlap;
 use crate::compound::tuck::TuckSide;
 use crate::pattern::{EdgeId, FaceId, VertexId};
 
@@ -217,6 +219,58 @@ pub enum FoldRefusal {
         blocking: Vec<FaceId>,
         faces: Vec<FaceId>,
     },
+
+    // --- The vertex folds (plan Phase 11, research §5.3) -----------------
+    /// No two-layer flap to squash at the point: `faces` are the layers
+    /// there, in the parent.
+    #[error("there is no two-layer flap to squash at faces {faces:?} ({cause:?})")]
+    SquashNoFlap { faces: Vec<FaceId>, cause: NoFlap },
+    /// The flap is attached off its hinge line, to `faces`; `flap` is its
+    /// own faces.
+    #[error("the flap is not free: faces {faces:?} hold it off its hinge")]
+    SquashFlapNotFree {
+        faces: Vec<FaceId>,
+        flap: Vec<FaceId>,
+    },
+    /// Other paper lies over the flap, or inside it, on the side it squashes
+    /// toward: `faces`; `flap` is its own faces.
+    #[error("the flap is covered by faces {faces:?}")]
+    SquashFlapCovered {
+        faces: Vec<FaceId>,
+        flap: Vec<FaceId>,
+    },
+    /// The spine's target is outside the wedge between the hinge and the
+    /// spine, or no direction.
+    #[error("the spine cannot land there: outside the wedge between its hinge and itself")]
+    SquashTargetOutside,
+    /// A petal fold's line or kite crease crosses `faces` instead of
+    /// bounding them: it must be precreased first.
+    #[error("the petal fold's {missing:?} is not precreased across faces {faces:?}")]
+    PetalNotPrecreased {
+        faces: Vec<FaceId>,
+        missing: PetalCrease,
+    },
+    /// The top layer below the petal fold's line, `faces`, is no petal's.
+    #[error("faces {faces:?} make no flap to petal fold ({cause:?})")]
+    PetalNoFlap { faces: Vec<FaceId>, cause: NoPetal },
+    /// A rabbit ear's or a swivel's center is not inside layer `faces` by
+    /// half the minimum feature: on a crease, or off the layer.
+    #[error("the fan's center is not inside faces {faces:?}")]
+    FanCenter { faces: Vec<FaceId> },
+    /// A ray crosses into paper that does not fold with the fan's layers,
+    /// or paper joins two of its wedges: `faces`, which hold it.
+    #[error("the fan's paper is held by faces {faces:?}")]
+    FanRayBlocked { faces: Vec<FaceId> },
+    /// The rays fold flat no way: no Kawasaki candidate for the fourth, or
+    /// two rays coincide.
+    #[error("the fan's rays cannot fold flat")]
+    FanNotFlat,
+    /// The ridge names no ray of the far wedge.
+    #[error("the ridge is not one of the far wedge's rays")]
+    FanRidgeNotRay,
+    /// The paper at the stayer point is joined to none of the fan's wedges.
+    #[error("the paper at {point:?} holds none of the fan's wedges")]
+    FanStayerDetached { point: Point },
     /// A defect, never the input's fault.
     #[error("internal error: {message}")]
     Internal { message: String },
@@ -278,6 +332,17 @@ impl FoldRefusal {
             FoldRefusal::CrimpNoOpening { .. } => "crimp_no_opening",
             FoldRefusal::CrimpKindInfeasible { .. } => "crimp_kind_infeasible",
             FoldRefusal::CrimpTipNotFree { .. } => "crimp_tip_not_free",
+            FoldRefusal::SquashNoFlap { .. } => "squash_no_flap",
+            FoldRefusal::SquashFlapNotFree { .. } => "squash_flap_not_free",
+            FoldRefusal::SquashFlapCovered { .. } => "squash_flap_covered",
+            FoldRefusal::SquashTargetOutside => "squash_target_outside",
+            FoldRefusal::PetalNotPrecreased { .. } => "petal_not_precreased",
+            FoldRefusal::PetalNoFlap { .. } => "petal_no_flap",
+            FoldRefusal::FanCenter { .. } => "fan_center",
+            FoldRefusal::FanRayBlocked { .. } => "fan_ray_blocked",
+            FoldRefusal::FanNotFlat => "fan_not_flat",
+            FoldRefusal::FanRidgeNotRay => "fan_ridge_not_ray",
+            FoldRefusal::FanStayerDetached { .. } => "fan_stayer_detached",
             FoldRefusal::Internal { .. } => "internal",
         }
     }
@@ -305,7 +370,14 @@ impl FoldRefusal {
             | FoldRefusal::ReverseKindInfeasible { faces, .. }
             | FoldRefusal::CrimpLinesMeet { faces }
             | FoldRefusal::CrimpNoOpening { faces }
-            | FoldRefusal::CrimpKindInfeasible { faces, .. } => faces.clone(),
+            | FoldRefusal::CrimpKindInfeasible { faces, .. }
+            | FoldRefusal::SquashNoFlap { faces, .. }
+            | FoldRefusal::SquashFlapNotFree { faces, .. }
+            | FoldRefusal::SquashFlapCovered { faces, .. }
+            | FoldRefusal::PetalNotPrecreased { faces, .. }
+            | FoldRefusal::PetalNoFlap { faces, .. }
+            | FoldRefusal::FanCenter { faces }
+            | FoldRefusal::FanRayBlocked { faces } => faces.clone(),
             FoldRefusal::ReverseTipNotFree { blocking, .. }
             | FoldRefusal::CrimpTipNotFree { blocking, .. } => blocking.clone(),
             FoldRefusal::TuckInfeasible { target, faces, .. } => {
@@ -398,6 +470,9 @@ pub enum Fix {
     /// The same tuck against this layer instead is valid: its face, and the
     /// sheet point that names it.
     TuckTarget { face: FaceId, at: Point },
+    /// The same rabbit ear or swivel with this emergent ray (a direction in
+    /// the parent's model frame) lands.
+    UseEmergent { direction: Point },
 }
 
 /// A refused operation and what could be done instead.

@@ -75,6 +75,7 @@ import {
   type FoldLockedStep,
   type FoldMark,
   type FoldMarkEntry,
+  type FoldModelDirection,
   type FoldModelLine,
   type FoldOp,
   type FoldOpeningChoice,
@@ -85,6 +86,8 @@ import {
   type FoldSequenceDocument,
   type FoldStep,
   type FoldStepNode,
+  type FoldVertexOp,
+  type FoldVertexOpKind,
   type SheetPoint,
 } from './foldSequenceDocument';
 import { FOLD_SHEET_KEY, childrenOf, foldStepTree } from './foldStepTree';
@@ -317,6 +320,10 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['outside-reverse', ALONG_LINE_KEYS],
   ['crimp', new Set([...ALONG_LINE_KEYS, 'second', 'crimp'])],
   ['tuck', new Set([...ALONG_LINE_KEYS, 'direction', 'target'])],
+  ['squash', new Set(['kind', 'flap', 'target', 'direction'])],
+  ['petal', new Set(['kind', 'crease', 'petal', 'direction'])],
+  ['rabbit-ear', new Set(['kind', 'corners', 'emergent', 'seed', 'stayer', 'direction', 'ridge'])],
+  ['swivel', new Set(['kind', 'vertex', 'toward', 'emergent', 'seed', 'stayer', 'direction'])],
 ]);
 
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
@@ -387,9 +394,68 @@ function readOp(value: unknown): FoldOp | null {
       const target = readPoint(value.target);
       return along && direction && target && { kind, direction, target, ...along };
     }
+    case 'squash':
+    case 'petal':
+    case 'rabbit-ear':
+    case 'swivel':
+      return readVertexOp(kind, value);
     default:
       return null;
   }
+}
+
+// The vertex folds' ops: sheet points, and the directions their choices
+// among rays stored. An optional direction absent is none; present, it must
+// read.
+
+function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): FoldVertexOp | null {
+  const direction = readDirection(value.direction);
+  if (!direction) return null;
+  const optional = (key: string): FoldModelDirection | undefined | null =>
+    value[key] === undefined ? undefined : readModelDirection(value[key]);
+  switch (kind) {
+    case 'squash': {
+      const flap = readPoint(value.flap);
+      const target = optional('target');
+      return flap && target !== null ? { kind, flap, ...(target ? { target } : {}), direction } : null;
+    }
+    case 'petal': {
+      const crease = readPoint(value.crease);
+      const petal = readPoint(value.petal);
+      return crease && petal && { kind, crease, petal, direction };
+    }
+    case 'rabbit-ear': {
+      const corners = readTriple(value.corners);
+      const emergent = readModelDirection(value.emergent);
+      const seed = readSeed(value.seed);
+      const stayer = readPoint(value.stayer);
+      const ridge = optional('ridge');
+      return corners && emergent && seed && stayer && ridge !== null
+        ? { kind, corners, emergent, seed, stayer, direction, ...(ridge ? { ridge } : {}) }
+        : null;
+    }
+    case 'swivel': {
+      const vertex = readPoint(value.vertex);
+      const toward = readTriple(value.toward);
+      const emergent = readModelDirection(value.emergent);
+      const seed = readSeed(value.seed);
+      const stayer = readPoint(value.stayer);
+      return vertex && toward && emergent && seed && stayer
+        ? { kind, vertex, toward, emergent, seed, stayer, direction }
+        : null;
+    }
+  }
+}
+
+/** A direction: two finite numbers, not both (nearly) zero. */
+function readModelDirection(value: unknown): FoldModelDirection | null {
+  const direction = readPoint(value);
+  return direction && Math.hypot(direction[0], direction[1]) >= FOLD_MODEL_LINE_MIN_NORMAL ? direction : null;
+}
+
+function readTriple(value: unknown): readonly [SheetPoint, SheetPoint, SheetPoint] | null {
+  const points = readPoints(value);
+  return points && points.length === 3 ? [points[0], points[1], points[2]] : null;
 }
 
 function readDirection(value: unknown): FoldDirection | null {
@@ -756,6 +822,43 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
         direction: op.direction,
         ...writeMotion(op),
         target: writePoint(op.target),
+      };
+    case 'squash':
+    case 'petal':
+    case 'rabbit-ear':
+    case 'swivel':
+      return writeVertexOp(op);
+  }
+}
+
+/** A vertex fold's op, every field named in a fixed order; an absent direction left out. */
+function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
+  const optional = (key: string, direction: FoldModelDirection | undefined) =>
+    direction ? { [key]: writePoint(direction) } : {};
+  switch (op.kind) {
+    case 'squash':
+      return { kind: op.kind, flap: writePoint(op.flap), ...optional('target', op.target), direction: op.direction };
+    case 'petal':
+      return { kind: op.kind, crease: writePoint(op.crease), petal: writePoint(op.petal), direction: op.direction };
+    case 'rabbit-ear':
+      return {
+        kind: op.kind,
+        corners: op.corners.map(writePoint),
+        emergent: writePoint(op.emergent),
+        seed: writeSeed(op.seed),
+        stayer: writePoint(op.stayer),
+        direction: op.direction,
+        ...optional('ridge', op.ridge),
+      };
+    case 'swivel':
+      return {
+        kind: op.kind,
+        vertex: writePoint(op.vertex),
+        toward: op.toward.map(writePoint),
+        emergent: writePoint(op.emergent),
+        seed: writeSeed(op.seed),
+        stayer: writePoint(op.stayer),
+        direction: op.direction,
       };
   }
 }

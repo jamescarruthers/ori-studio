@@ -23,6 +23,7 @@ use oristudio_geometry::convex::{self, HalfPlane};
 
 use crate::compound::crimp::CrimpFold;
 use crate::compound::reverse::{ReverseFold, ReverseKind};
+use crate::compound::squash::Squash;
 use crate::compound::tuck::TuckFold;
 use crate::fold::{Folded, PlainFold, Seed};
 use crate::numerics::{MIN_FEATURE, TOL};
@@ -489,6 +490,38 @@ pub fn tuck_fold(state: &State, rng: &mut Rng) -> Option<TuckFold> {
         });
     }
     None
+}
+
+/// A drawn valley squash of `state`, as the vertex spike's campaign draws
+/// them (research `r2-spike-squash-petal-rabbit`, `campaign.mjs`): a face's
+/// image centroid, the flap named by the top layer there as the viewer sees
+/// it; half the time symmetric, otherwise its spine landing at a share
+/// drawn from −0.8 to 0.8 of the flap's wedge. None when the point lies on
+/// no layer. A flap the squash refuses is drawn too, symmetric: the squash
+/// says why.
+pub fn squash(state: &State, rng: &mut Rng) -> Option<Squash> {
+    let faces = state.faces();
+    let face = faces.get(rng.below(faces.len()))?;
+    let at = convex::centroid(state.face_image(face.id)?)?;
+    let mut stack = state.stack_at(at)?;
+    if state.view().flipped {
+        stack.reverse();
+    }
+    let top = *stack.first()?;
+    let flap = state.isometry(top)?.inverse().apply(at);
+    let symmetric = rng.chance(0.5);
+    let share = rng.next_f64() * 1.6 - 0.8;
+    let mut op = Squash {
+        flap,
+        target: None,
+        direction: Direction::Valley,
+    };
+    if !symmetric && let Ok(analysis) = state.analyse_squash(&op) {
+        let (s, c) = (share * analysis.wedge).sin_cos();
+        let h = analysis.hinge_direction;
+        op.target = Some([c * h[0] - s * h[1], s * h[0] + c * h[1]]);
+    }
+    Some(op)
 }
 
 /// The distinct vertex images, in vertex order.

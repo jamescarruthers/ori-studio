@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 use oristudio_fold::{
     ActionKind, AnchoredRefused, CreaseDiff, CreaseKind, FoldAnalysis, Folded, Letter, Sheet, Side,
-    State, StepSummary,
+    State, StepSummary, VertexFolded,
 };
 use oristudio_geometry::Line;
 
@@ -66,6 +66,12 @@ enum Held {
     /// its parent need not stay held: its picture is its motion, in its
     /// report.
     Summarised { state: State, step: StepSummary },
+    /// A vertex fold of `parent` (`ops_squash_family`): its summary is the
+    /// diff from its parent; it folds along no one line to picture.
+    Vertex {
+        folded: Box<VertexFolded>,
+        parent: u32,
+    },
 }
 
 impl Held {
@@ -77,6 +83,7 @@ impl Held {
             | Held::Summarised { state, .. } => state,
             Held::Fold { folded, .. } => &folded.state,
             Held::Compound { landed, .. } => landed.state(),
+            Held::Vertex { folded, .. } => &folded.state,
         }
     }
 }
@@ -267,28 +274,54 @@ impl Bridge {
                     parent: state,
                 })
             }
+            Ok(Resolved::Vertex(fold)) => {
+                crate::ops_squash_family::land(parent, &fold).map(|folded| Held::Vertex {
+                    folded: Box::new(folded),
+                    parent: state,
+                })
+            }
             Err(refusal) => Err(refusal),
         };
         Ok(match landed {
             Ok(held) => {
                 let summary = summary(held.state());
-                let (report, compound) = match &held {
-                    Held::Fold { folded, .. } => (Some(folded.report.clone()), None),
-                    Held::Compound { landed, .. } => (None, Some(landed.report())),
+                let (report, compound, vertex) = match &held {
+                    Held::Fold { folded, .. } => (Some(folded.report.clone()), None, None),
+                    Held::Compound { landed, .. } => (None, Some(landed.report()), None),
+                    Held::Vertex { folded, .. } => {
+                        (None, None, Some(Box::new(folded.report.clone())))
+                    }
                     Held::Sheet(_)
                     | Held::View { .. }
                     | Held::Jump(_)
-                    | Held::Summarised { .. } => (None, None),
+                    | Held::Summarised { .. } => (None, None, None),
                 };
                 Outcome::Ok(Applied {
                     state: self.hold(held),
                     report,
                     compound,
                     summary,
+                    vertex,
                 })
             }
             Err(refusal) => Outcome::Refused(refusal),
         })
+    }
+
+    /// Hold a vertex fold of the held state `parent`, as `apply` would have
+    /// landed it: its handle and its step as `apply` returns it.
+    pub(crate) fn hold_vertex(&mut self, folded: VertexFolded, parent: u32) -> Applied {
+        let summary = summary(&folded.state);
+        let vertex = Some(Box::new(folded.report.clone()));
+        Applied {
+            state: self.hold(Held::Vertex {
+                folded: Box::new(folded),
+                parent,
+            }),
+            report: None,
+            summary,
+            vertex,
+        }
     }
 
     pub fn summary(&self, state: u32) -> Result<Summary, BridgeError> {
@@ -311,6 +344,11 @@ impl Bridge {
                 child,
                 None,
             ))),
+            Held::Vertex { folded, parent } => Ok(Some(StepSummary::new(
+                self.parent(state, *parent)?,
+                &folded.state,
+                None,
+            ))),
             Held::Fold { folded, parent, .. } => folded
                 .summary(self.parent(state, *parent)?)
                 .map(Some)
@@ -330,9 +368,11 @@ impl Bridge {
     /// still be held.
     pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
-            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) | Held::Summarised { .. } => {
-                Ok(None)
-            }
+            Held::Sheet(_)
+            | Held::View { .. }
+            | Held::Jump(_)
+            | Held::Summarised { .. }
+            | Held::Vertex { .. } => Ok(None),
             Held::Fold {
                 folded,
                 parent,
@@ -463,6 +503,9 @@ fn analysis_of(
             .analysis(parent)
             .map(|analysis| (analysis, ActionKind::Fold)),
         Ok(Resolved::View(_) | Resolved::Jump(_)) => return Err(moves_no_paper(op)),
+        // A vertex fold folds along no one line: its own analysis is the
+        // tools' (`ops_squash_family`).
+        Ok(Resolved::Vertex(_)) => return Err(no_line(op)),
         Err(refusal) => Err(refusal),
     })
 }
@@ -482,6 +525,13 @@ fn imported(state: &State) -> StepSummary {
 fn moves_no_paper(op: &Op) -> BridgeError {
     BridgeError::InvalidInput(format!(
         "a {} step moves no paper: there is nothing to analyse",
+        op.kind()
+    ))
+}
+
+fn no_line(op: &Op) -> BridgeError {
+    BridgeError::InvalidInput(format!(
+        "a {} step folds along no one line: ask `vertex_analysis`",
         op.kind()
     ))
 }

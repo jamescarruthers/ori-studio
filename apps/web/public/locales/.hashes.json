@@ -5181,7 +5181,19 @@
     "panels:fold.words.crimpInside": "f5e206f5410a",
     "panels:fold.words.crimpOutside": "d703ecc2da03",
     "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
-    "panels:fold.words.tuckValley": "bf043b0b968f"
+    "panels:fold.words.tuckValley": "bf043b0b968f",
+    "panels:fold.sentence.petal": "a65d4fc5bc64",
+    "panels:fold.sentence.rabbitEar": "2a1ce307fbc0",
+    "panels:fold.sentence.squash": "e58dc126989a",
+    "panels:fold.sentence.swivel": "72b7ca35b5f4",
+    "panels:fold.words.badgePetal": "b83a3f99e94c",
+    "panels:fold.words.badgeRabbitEar": "aa73c76ff298",
+    "panels:fold.words.badgeSquash": "9f9a8456f0ee",
+    "panels:fold.words.badgeSwivel": "23eb23dbc3c0",
+    "panels:fold.words.petal": "07d16812c5a2",
+    "panels:fold.words.rabbitEar": "aa73c76ff298",
+    "panels:fold.words.squash": "ab4ac7cea36a",
+    "panels:fold.words.swivel": "39a5972e2697"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -10365,7 +10377,19 @@
     "panels:fold.words.crimpInside": "f5e206f5410a",
     "panels:fold.words.crimpOutside": "d703ecc2da03",
     "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
-    "panels:fold.words.tuckValley": "bf043b0b968f"
+    "panels:fold.words.tuckValley": "bf043b0b968f",
+    "panels:fold.sentence.petal": "a65d4fc5bc64",
+    "panels:fold.sentence.rabbitEar": "2a1ce307fbc0",
+    "panels:fold.sentence.squash": "e58dc126989a",
+    "panels:fold.sentence.swivel": "72b7ca35b5f4",
+    "panels:fold.words.badgePetal": "b83a3f99e94c",
+    "panels:fold.words.badgeRabbitEar": "aa73c76ff298",
+    "panels:fold.words.badgeSquash": "9f9a8456f0ee",
+    "panels:fold.words.badgeSwivel": "23eb23dbc3c0",
+    "panels:fold.words.petal": "07d16812c5a2",
+    "panels:fold.words.rabbitEar": "aa73c76ff298",
+    "panels:fold.words.squash": "ab4ac7cea36a",
+    "panels:fold.words.swivel": "39a5972e2697"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15551,7 +15575,19 @@
     "panels:fold.words.crimpInside": "f5e206f5410a",
     "panels:fold.words.crimpOutside": "d703ecc2da03",
     "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
-    "panels:fold.words.tuckValley": "bf043b0b968f"
+    "panels:fold.words.tuckValley": "bf043b0b968f",
+    "panels:fold.sentence.petal": "a65d4fc5bc64",
+    "panels:fold.sentence.rabbitEar": "2a1ce307fbc0",
+    "panels:fold.sentence.squash": "e58dc126989a",
+    "panels:fold.sentence.swivel": "72b7ca35b5f4",
+    "panels:fold.words.badgePetal": "b83a3f99e94c",
+    "panels:fold.words.badgeRabbitEar": "aa73c76ff298",
+    "panels:fold.words.badgeSquash": "9f9a8456f0ee",
+    "panels:fold.words.badgeSwivel": "23eb23dbc3c0",
+    "panels:fold.words.petal": "07d16812c5a2",
+    "panels:fold.words.rabbitEar": "aa73c76ff298",
+    "panels:fold.words.squash": "ab4ac7cea36a",
+    "panels:fold.words.swivel": "39a5972e2697"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -20491,7 +20527,19 @@
     "panels:fold.words.crimpInside": "f5e206f5410a",
     "panels:fold.words.crimpOutside": "d703ecc2da03",
     "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
-    "panels:fold.words.tuckValley": "bf043b0b968f"
+    "panels:fold.words.tuckValley": "bf043b0b968f",
+    "panels:fold.sentence.petal": "a65d4fc5bc64",
+    "panels:fold.sentence.rabbitEar": "2a1ce307fbc0",
+    "panels:fold.sentence.squash": "e58dc126989a",
+    "panels:fold.sentence.swivel": "72b7ca35b5f4",
+    "panels:fold.words.badgePetal": "b83a3f99e94c",
+    "panels:fold.words.badgeRabbitEar": "aa73c76ff298",
+    "panels:fold.words.badgeSquash": "9f9a8456f0ee",
+    "panels:fold.words.badgeSwivel": "23eb23dbc3c0",
+    "panels:fold.words.petal": "07d16812c5a2",
+    "panels:fold.words.rabbitEar": "aa73c76ff298",
+    "panels:fold.words.squash": "ab4ac7cea36a",
+    "panels:fold.words.swivel": "39a5972e2697"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -25431,7 +25479,19 @@
     "panels:fold.words.crimpInside": "f5e206f5410a",
     "panels:fold.words.crimpOutside": "d703ecc2da03",
     "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
-    "panels:fold.words.tuckValley": "bf043b0b968f"
+    "panels:fold.words.tuckValley": "bf043b0b968f",
+    "panels:fold.sentence.petal": "a65d4fc5bc64",
+    "panels:fold.sentence.rabbitEar": "2a1ce307fbc0",
+    "panels:fold.sentence.squash": "e58dc126989a",
+    "panels:fold.sentence.swivel": "72b7ca35b5f4",
+    "panels:fold.words.badgePetal": "b83a3f99e94c",
+    "panels:fold.words.badgeRabbitEar": "aa73c76ff298",
+    "panels:fold.words.badgeSquash": "9f9a8456f0ee",
+    "panels:fold.words.badgeSwivel": "23eb23dbc3c0",
+    "panels:fold.words.petal": "07d16812c5a2",
+    "panels:fold.words.rabbitEar": "aa73c76ff298",
+    "panels:fold.words.squash": "ab4ac7cea36a",
+    "panels:fold.words.swivel": "39a5972e2697"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -30615,7 +30675,19 @@
     "panels:fold.words.crimpInside": "f5e206f5410a",
     "panels:fold.words.crimpOutside": "d703ecc2da03",
     "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
-    "panels:fold.words.tuckValley": "bf043b0b968f"
+    "panels:fold.words.tuckValley": "bf043b0b968f",
+    "panels:fold.sentence.petal": "a65d4fc5bc64",
+    "panels:fold.sentence.rabbitEar": "2a1ce307fbc0",
+    "panels:fold.sentence.squash": "e58dc126989a",
+    "panels:fold.sentence.swivel": "72b7ca35b5f4",
+    "panels:fold.words.badgePetal": "b83a3f99e94c",
+    "panels:fold.words.badgeRabbitEar": "aa73c76ff298",
+    "panels:fold.words.badgeSquash": "9f9a8456f0ee",
+    "panels:fold.words.badgeSwivel": "23eb23dbc3c0",
+    "panels:fold.words.petal": "07d16812c5a2",
+    "panels:fold.words.rabbitEar": "aa73c76ff298",
+    "panels:fold.words.squash": "ab4ac7cea36a",
+    "panels:fold.words.swivel": "39a5972e2697"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -35799,7 +35871,19 @@
     "panels:fold.words.crimpInside": "f5e206f5410a",
     "panels:fold.words.crimpOutside": "d703ecc2da03",
     "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
-    "panels:fold.words.tuckValley": "bf043b0b968f"
+    "panels:fold.words.tuckValley": "bf043b0b968f",
+    "panels:fold.sentence.petal": "a65d4fc5bc64",
+    "panels:fold.sentence.rabbitEar": "2a1ce307fbc0",
+    "panels:fold.sentence.squash": "e58dc126989a",
+    "panels:fold.sentence.swivel": "72b7ca35b5f4",
+    "panels:fold.words.badgePetal": "b83a3f99e94c",
+    "panels:fold.words.badgeRabbitEar": "aa73c76ff298",
+    "panels:fold.words.badgeSquash": "9f9a8456f0ee",
+    "panels:fold.words.badgeSwivel": "23eb23dbc3c0",
+    "panels:fold.words.petal": "07d16812c5a2",
+    "panels:fold.words.rabbitEar": "aa73c76ff298",
+    "panels:fold.words.squash": "ab4ac7cea36a",
+    "panels:fold.words.swivel": "39a5972e2697"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -40739,6 +40823,18 @@
     "panels:fold.words.crimpInside": "f5e206f5410a",
     "panels:fold.words.crimpOutside": "d703ecc2da03",
     "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
-    "panels:fold.words.tuckValley": "bf043b0b968f"
+    "panels:fold.words.tuckValley": "bf043b0b968f",
+    "panels:fold.sentence.petal": "a65d4fc5bc64",
+    "panels:fold.sentence.rabbitEar": "2a1ce307fbc0",
+    "panels:fold.sentence.squash": "e58dc126989a",
+    "panels:fold.sentence.swivel": "72b7ca35b5f4",
+    "panels:fold.words.badgePetal": "b83a3f99e94c",
+    "panels:fold.words.badgeRabbitEar": "aa73c76ff298",
+    "panels:fold.words.badgeSquash": "9f9a8456f0ee",
+    "panels:fold.words.badgeSwivel": "23eb23dbc3c0",
+    "panels:fold.words.petal": "07d16812c5a2",
+    "panels:fold.words.rabbitEar": "aa73c76ff298",
+    "panels:fold.words.squash": "ab4ac7cea36a",
+    "panels:fold.words.swivel": "39a5972e2697"
   }
 }

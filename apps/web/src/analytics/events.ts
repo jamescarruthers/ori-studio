@@ -28,7 +28,8 @@ export type DiagramStepAddedSource =
 
 /**
  * A Fold step's op, as `fold step added` names it (the document's `FoldOpKind`, without Import CP's,
- * snake_case): the plain folds and turns, then the compound folds, one block per family.
+ * snake_case: the rabbit ear is `rabbit_ear`): the plain folds and turns, then the compound folds,
+ * one block per family.
  */
 export type FoldStepAddedOpKind =
   | 'valley'
@@ -43,7 +44,12 @@ export type FoldStepAddedOpKind =
   | 'outside_reverse'
   // The crimp and the tuck.
   | 'crimp'
-  | 'tuck';
+  | 'tuck'
+  // The vertex folds.
+  | 'squash'
+  | 'petal'
+  | 'rabbit_ear'
+  | 'swivel';
 
 /** How much of the moving side a Fold step took: every layer, flaps picked, or a depth at a point. */
 export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';

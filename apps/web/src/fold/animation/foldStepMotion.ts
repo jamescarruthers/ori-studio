@@ -85,7 +85,11 @@ export type FoldStepPlayKind =
   | 'inside_reverse'
   | 'outside_reverse'
   | 'crimp'
-  | 'tuck';
+  | 'tuck'
+  | 'squash'
+  | 'petal'
+  | 'rabbit_ear'
+  | 'swivel';
 
 /** What a step's motion is built from: all of it the session's (`fold/session`). */
 export interface FoldStepMotionInput {
@@ -180,6 +184,14 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
     case 'crimp':
     case 'tuck':
       return crossfade();
+    // A vertex fold's motion is the engine's staged legs
+    // (`FoldVertexReport.motion`), which no pose plays yet: until one does,
+    // it crossfades rather than inventing a hinge.
+    case 'squash':
+    case 'petal':
+    case 'rabbit-ear':
+    case 'swivel':
+      return crossfade();
   }
 }
 
@@ -191,6 +203,8 @@ function playKind(op: FoldOp): FoldStepPlayKind {
       return 'inside_reverse';
     case 'outside-reverse':
       return 'outside_reverse';
+    case 'rabbit-ear':
+      return 'rabbit_ear';
     default:
       return op.kind;
   }

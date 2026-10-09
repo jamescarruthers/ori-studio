@@ -7,6 +7,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { shownFoldSequence } from '../../store/workspaceStore/foldState';
 import {
   isLockedStep,
+  isVertexOp,
   randomFoldId,
   type FoldMark,
   type FoldMarkEntry,
@@ -147,6 +148,8 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
       return 'inside_reverse';
     case 'outside-reverse':
       return 'outside_reverse';
+    case 'rabbit-ear':
+      return 'rabbit_ear';
     default:
       return op.kind;
   }
@@ -155,7 +158,8 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
 function trackCommitted(op: FoldOp): void {
   const kind = opKindOf(op);
   if (!kind) return;
-  if (op.kind === 'turn' || op.kind === 'rotate' || op.kind === 'cp-jump') {
+  // A vertex fold takes no line and no layer scope of a plain fold's.
+  if (op.kind === 'turn' || op.kind === 'rotate' || op.kind === 'cp-jump' || isVertexOp(op)) {
     trackFoldStepAdded(kind);
     return;
   }
