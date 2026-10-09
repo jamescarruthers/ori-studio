@@ -1,0 +1,38 @@
+import type { FoldCanvasVerbs } from './useFoldCanvasVerbs';
+
+/**
+ * The Fold canvas's verbs, for what is not inside it: the keyboard's
+ * executor (`useFoldCanvasShortcuts`) and the phone's header pills, which
+ * sit in the panel's header beside the canvas. The canvas registers its
+ * verbs while it is mounted; with none mounted there is nothing to press,
+ * and every caller declines.
+ *
+ * One live set at a time, as `registerConditionalScopeExecutor` holds one
+ * executor per surface: a newer registration replaces an older one, whose
+ * release then leaves it be.
+ */
+let current: FoldCanvasVerbs | null = null;
+const listeners = new Set<() => void>();
+
+export function registerFoldCanvasVerbs(verbs: FoldCanvasVerbs): () => void {
+  current = verbs;
+  for (const listener of listeners) listener();
+  return () => {
+    if (current !== verbs) return;
+    current = null;
+    for (const listener of listeners) listener();
+  };
+}
+
+/** The canvas's verbs, while one is mounted. */
+export function foldCanvasVerbs(): FoldCanvasVerbs | null {
+  return current;
+}
+
+/** Hear when a canvas comes or goes: shaped for `useSyncExternalStore`, with {@link foldCanvasVerbs}. */
+export function subscribeFoldCanvasVerbs(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
