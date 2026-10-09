@@ -103,7 +103,13 @@ export function writtenSequence(): Record<string, unknown> {
         },
         choices: {
           root: { n: [0.6, 0.8], d: 0.4 },
-          completion: [{ above: [0.2, 0.2], below: [0.8, 0.3] }],
+          completion: {
+            faces: [
+              [0.2, 0.2],
+              [0.8, 0.3],
+            ],
+            orders: [[0, 1, -1]],
+          },
           pocket: [
             [0.1, 0.1],
             [0.2, 0.2],
@@ -147,6 +153,32 @@ export function writtenSequence(): Record<string, unknown> {
           moving: [0.5, 0.4],
           seed: { scope: 'all' },
         },
+      },
+      // Compound folds (plan D4), one block per family.
+      {
+        id: 'fstep-10',
+        parent: 'fstep-9',
+        op: {
+          kind: 'inside-reverse',
+          line: { via: 'free', through: [[0.6, 0.1], [0.9, 0.2]] },
+          moving: [0.9, 0.05],
+          seed: { scope: 'all' },
+        },
+        choices: {
+          completion: {
+            faces: [
+              [0.8, 0.1],
+              [0.7, 0.3],
+            ],
+            orders: [[1, 0, 1]],
+          },
+          opening: [{ upper: [[0.85, 0.12]] }],
+        },
+      },
+      {
+        id: 'fstep-11',
+        parent: 'fstep-10',
+        op: { kind: 'outside-reverse', line: { via: 'crease', at: [0.5, 0.25] }, seed: { scope: 'flaps', at: [[0.4, 0.2]] } },
       },
     ],
   };

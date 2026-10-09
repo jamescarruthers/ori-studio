@@ -36,6 +36,7 @@ import type {
   SheetPoint,
 } from '../document/foldSequenceDocument';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
+import type { FoldNoOpening, FoldReverseKind, FoldReverseReport } from './foldEngineReverseWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
 export type FoldSide = 'positive' | 'negative';
@@ -169,6 +170,9 @@ export const FOLD_BRIDGE_REFUSAL_CODES = [
   'crease_not_found',
   'crease_not_flat',
   'crease_not_folded',
+  // A compound fold's choices (`oristudio-fold-wasm/src/compound.rs`).
+  'choice_needed',
+  'choice_broken',
 ] as const;
 
 /** Every refusal code: the stable ids the UI and analytics use (D18). They never collide. */
@@ -199,10 +203,28 @@ export type FoldRefusalBody =
       readonly cause: FoldNearMissCause;
     }
   | { readonly code: 'sliver'; readonly vertex: number; readonly face: number; readonly penetration: number }
+  | FoldCompoundRefusalBody
   | {
-      readonly code: Exclude<FoldRefusalCode, 'closure_adds_flaps' | 'near_miss' | 'sliver'>;
+      readonly code: Exclude<
+        FoldRefusalCode,
+        'closure_adds_flaps' | 'near_miss' | 'sliver' | FoldCompoundRefusalBody['code']
+      >;
       readonly [field: string]: unknown;
     };
+
+/**
+ * A compound fold's refusals the tools read the fields of (plan D4, D14),
+ * one block per family. `choice_needed` names the choice a step's stored
+ * choices leave open; `choice_broken` is a stored choice that no longer
+ * resolves, with the engine's cause (`Broken`).
+ */
+export type FoldCompoundRefusalBody =
+  | { readonly code: 'choice_needed'; readonly choice: 'opening' | 'completion' }
+  | { readonly code: 'choice_broken'; readonly broken: string; readonly [field: string]: unknown }
+  // The reverse fold (`foldEngineReverseWire.ts`).
+  | { readonly code: 'reverse_no_opening'; readonly faces: readonly number[]; readonly cause: FoldNoOpening }
+  | { readonly code: 'reverse_kind_infeasible'; readonly kind: FoldReverseKind; readonly faces: readonly number[] }
+  | { readonly code: 'reverse_tip_not_free'; readonly blocking: readonly number[]; readonly faces: readonly number[] };
 
 /**
  * A flap: a connected part of the moving side, joined across creases with an
@@ -329,9 +351,46 @@ export interface FoldSheetLanded {
 
 export interface FoldStepLanded {
   state: number;
-  /** Null for a turn or a rotation. */
+  /** A plain fold's; null for a turn, a rotation, an import or a compound fold. */
   report: FoldReport | null;
+  /** A compound fold's, by its op; absent for any other step. */
+  compound?: FoldCompoundReport;
   summary: FoldStateSummary;
+}
+
+/** What a landed compound fold did, tagged by its op (`compound.rs`'s `CompoundStepReport`), one per family. */
+export type FoldCompoundReport = FoldReverseReport;
+
+/**
+ * Paper turning about one hinge during one leg of a compound step's motion
+ * (plan D15, `StepMotion`): the landed state's faces that turn together, the
+ * hinge in the model frame, the side they start on, and the turn at the
+ * leg's start and end — 0 where the parent had them, ±π where they land,
+ * positive toward +z of the model frame.
+ */
+export interface FoldMotionGroup {
+  faces: number[];
+  axis: FoldModelLine;
+  side: FoldSide;
+  from: number;
+  to: number;
+}
+
+/**
+ * One leg of a compound step's motion: its groups turning at once, drawn
+ * stacked as the parent stacks them (`spread`, flat to edge-on) or as the
+ * landed state does (`close`, edge-on to landed).
+ */
+export interface FoldMotionLeg {
+  name: 'spread' | 'close';
+  stacking: 'parent' | 'landed';
+  groups: FoldMotionGroup[];
+}
+
+/** A compound step's motion: `visual` when only its ends are states, the frames between a picture. */
+export interface FoldStepMotionLegs {
+  kind: 'rigid' | 'visual';
+  legs: FoldMotionLeg[];
 }
 
 export interface FoldStepFingerprinted extends FoldStepLanded {

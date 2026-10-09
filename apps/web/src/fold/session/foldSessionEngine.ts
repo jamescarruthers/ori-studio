@@ -100,7 +100,11 @@ export function createFoldSessionEngine(source: FoldEngineSource, engineVersion:
       const generation = source.generation();
       const answer = await source.step(state, op, choices);
       if (answer.status === 'ok') {
-        details.set(handleKey({ generation, id: answer.state }), { summary: answer.summary, report: answer.report });
+        details.set(handleKey({ generation, id: answer.state }), {
+          summary: answer.summary,
+          report: answer.report,
+          ...(answer.compound ? { compound: answer.compound } : {}),
+        });
       }
       return answer;
     },

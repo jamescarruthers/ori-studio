@@ -131,7 +131,10 @@ describe('canonicalJson', () => {
   it('spells empty choices as none', () => {
     const plain = step('a', null);
     expect(foldStepKey({ ...plain, choices: {} })).toBe(foldStepKey({ ...plain }));
-    expect(foldStepKey({ ...plain, choices: { completion: [] } })).toBe(foldStepKey({ ...plain }));
+    expect(foldStepKey({ ...plain, choices: { completion: { faces: [], orders: [] } } })).toBe(
+      foldStepKey({ ...plain })
+    );
+    expect(foldStepKey({ ...plain, choices: { opening: [] } })).toBe(foldStepKey({ ...plain }));
   });
 });
 
