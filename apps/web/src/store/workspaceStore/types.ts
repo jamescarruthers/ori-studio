@@ -79,6 +79,7 @@ import type {
   DiagramCaptureRun,
   StepCaptureStart,
 } from './diagramCapture';
+import type { DiagramFoldCaptureOutcome, DiagramFoldCaptureRequest } from './diagramFoldCapture';
 import type { CapturedPicture } from '../../diagram/capture/captureFolded';
 import type { FoldReaderState } from '../../fold/document/foldReaderState';
 import type { FoldMarkEntry, FoldPaperShape, FoldStartSide } from '../../fold/document/foldSequenceDocument';
@@ -2175,6 +2176,13 @@ export interface DiagramSliceActions {
    * and Pose's Done. Resolves what happened, for the caller to say.
    */
   captureDiagramStep: (stepId: string, request: DiagramCaptureRequest) => Promise<DiagramCaptureOutcome>;
+  /**
+   * Capture a step's picture from a Fold step as it is now — linking it, or
+   * refreshing or re-posing a step linked to one (fold-workspace plan D17) —
+   * and commit it as one undo step, the fold's marks swapped for the
+   * capture's own (`setFoldStepPicture`).
+   */
+  captureDiagramFoldStep: (stepId: string, request: DiagramFoldCaptureRequest) => Promise<DiagramFoldCaptureOutcome>;
   /** Stop a step's capture, if it is folding. */
   stopDiagramCapture: (stepId: string) => boolean;
   /**

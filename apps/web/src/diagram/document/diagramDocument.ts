@@ -1546,6 +1546,69 @@ export function setLinkedPicture(
   );
 }
 
+/** A Fold step's capture: its source and picture, and the marks its fold brings (plan D17). */
+export interface CapturedFoldStep extends CapturedLink {
+  source: DiagramFoldStepSource;
+  /** The step's line and arrow, tagged as the source's, in the picture's units; empty when it brings none. */
+  marks: readonly KnownDiagramAnnotation[];
+}
+
+/**
+ * Link a step to a Fold step, or give a Fold step's step a new capture: its
+ * source and picture become the capture's, and it keeps its instruction and
+ * the author's marks — carried with a turn, as a linked pattern's are.
+ *
+ * The marks the fold brought are the source's (`isCardMark`): they follow the
+ * picture through a turn of the same state, and otherwise — another state
+ * after a change upstream, the other side, the other way of showing it — are
+ * swapped for the capture's own, edited ones too, as a References card's are
+ * on Replace (RM6); how many edited ones went is `replaced`. A capture that
+ * changes nothing is no edit, as {@link setLinkedPicture}'s.
+ */
+export function setFoldStepPicture(
+  document: DiagramDocument,
+  stepId: string,
+  link: CapturedFoldStep
+): { document: DiagramDocument; replaced: number } {
+  const step = stepById(document, stepId);
+  if (!step || isLockedStep(step)) return { document, replaced: 0 };
+  const source = withRememberedPoses(step.source, link.source);
+  if (
+    (step.picture?.key ?? null) === (link.picture?.key ?? null) &&
+    paperFacesOn(step.picture) === paperFacesOn(link.picture) &&
+    JSON.stringify(step.source) === JSON.stringify(source)
+  ) {
+    return { document, replaced: 0 };
+  }
+  const withAsset = withAssets(document, link.asset ? [link.asset] : []);
+  const was = step.source?.kind === 'fold-step' ? step.source : null;
+  // The same state, from the same side and shown the same way: only turned or spread, which the carry follows.
+  const posedOnly =
+    was !== null &&
+    was.sequence === source.sequence &&
+    was.step === source.step &&
+    was.moment === source.moment &&
+    was.state === source.state &&
+    showAsOf(was.render) === showAsOf(source.render) &&
+    renderSide(was.render) === renderSide(source.render);
+  let replaced = 0;
+  const next = updateStep(withAsset, stepId, (current) => {
+    const captured: DiagramStep = { ...current, source, picture: link.picture, revision: current.revision + 1 };
+    const carried = withCarriedAnnotations(current, captured, withAsset.assets);
+    if (posedOnly) return carried;
+    const swapped = swapCardMarks(current, carried, link.marks, withAsset.assets);
+    replaced = editedCardMarksGone(current, swapped);
+    return swapped;
+  });
+  return { document: next, replaced };
+}
+
+/** The side of the paper a render shows: a flat fold's, or a crease pattern's paper colour. */
+function renderSide(render: DiagramCpRender): 'front' | 'back' {
+  if (render.mode === 'crease-pattern') return creasePatternSide(render);
+  return render.mode === 'simulated' ? 'front' : render.side;
+}
+
 /**
  * A picture's faces on the paper, as stored: a capture that adds them to a
  * picture drawn the same (its key unchanged) is still an edit, which keeps
@@ -1571,11 +1634,31 @@ export interface SentReferencesStep {
   text: string;
 }
 
-/** A References card split (17d): its sheet — the paper, as it stands — and its marks, lifted. */
-export interface LiftedCard {
-  picture: DiagramStepDiagramPicture;
+/**
+ * A References card split (17d): its sheet — the paper, as it stands — and
+ * its marks, lifted. A Fold step arrives split the same way, its state the
+ * picture and its fold's line and arrow the marks (`P` its picture's kind).
+ */
+export interface LiftedCard<P extends DiagramPicture = DiagramStepDiagramPicture> {
+  picture: P;
   annotations: KnownDiagramAnnotation[];
 }
+
+/**
+ * One Fold step, as a step is made from it (plan D17): its state's picture
+ * and the marks its fold brings, tagged as the source's — never past what a
+ * step holds, which a fold's line and arrow are not — and its sentence.
+ */
+export interface SentFoldStep {
+  source: DiagramFoldStepSource;
+  picture: DiagramScenePicture | DiagramAssetPicture;
+  lifted: LiftedCard<DiagramScenePicture | DiagramAssetPicture>;
+  /** The step's sentence (`source.sentence`), or none for the state after it. */
+  text: string;
+}
+
+/** A step a pull makes: from a References card, or from a Fold step. */
+export type SentDiagramStep = SentReferencesStep | SentFoldStep;
 
 /** What a pull did beyond making steps (17d): the steps a card was pulled baked into, and the edited marks a Replace swapped away. */
 export interface PulledMarks {
@@ -1601,25 +1684,29 @@ export type DiagramPullAnchor =
 /** What References sends: a card, made a step; or a turn-over card, made a turn (D22). */
 export type SentReferencesEntry = SentReferencesStep | DiagramTurnKind;
 
+/** What a pull sends: a References card or a Fold step, each made a step, or a turn between them (D22). */
+export type SentDiagramEntry = SentDiagramStep | DiagramTurnKind;
+
 /**
- * Cards pulled from References, placed by `anchor`, in order: each a step, a
- * turn-over card a turn (D22). An anchor whose step is gone, or can no longer
- * be filled or replaced (it got a picture, it is a newer build's), places the
- * cards after it, or at the end. A step filled or replaced takes the first
- * card that makes a step; turns sent before it go before it, never into it.
- * The steps the cards became, in order — a filled or replaced step first —
- * and the turns.
+ * Cards pulled from References — or steps from Fold (plan D17), which pull
+ * the same way — placed by `anchor`, in order: each a step, a turn-over card
+ * (a Fold turn or rotation) a turn (D22). An anchor whose step is gone, or
+ * can no longer be filled or replaced (it got a picture, it is a newer
+ * build's), places the cards after it, or at the end. A step filled or
+ * replaced takes the first card that makes a step; turns sent before it go
+ * before it, never into it. The steps the cards became, in order — a filled
+ * or replaced step first — and the turns.
  */
 export function pullReferencesSteps(
   document: DiagramDocument,
-  sent: readonly SentReferencesEntry[],
+  sent: readonly SentDiagramEntry[],
   anchor: DiagramPullAnchor,
   { newId = randomDiagramId }: { newId?: DiagramIdFactory } = {}
 ): { document: DiagramDocument; stepIds: string[]; turnIds: string[] } & PulledMarks {
   const baked: string[] = [];
   if (sent.length === 0) return { document, stepIds: [], turnIds: [], baked, replaced: 0 };
   /** The card as a new step: its marks lifted, in step with its sheet, when they fit (17d). */
-  const make = (card: SentReferencesEntry): DiagramEntry => {
+  const make = (card: SentDiagramEntry): DiagramEntry => {
     if ('kind' in card) return createTurn(card, newId);
     const step = createStep(newId);
     const lifted = card.lifted && card.lifted.annotations.length <= MAX_STEP_ANNOTATIONS ? card.lifted : null;
@@ -1633,7 +1720,7 @@ export function pullReferencesSteps(
       text: xmlText(card.text),
     };
   };
-  const insertAt = (index: number, cards: readonly SentReferencesEntry[], into = document) => {
+  const insertAt = (index: number, cards: readonly SentDiagramEntry[], into = document) => {
     const entries = cards.map(make);
     return {
       document: insertSteps(into, entries, index),
@@ -1651,20 +1738,20 @@ export function pullReferencesSteps(
     const before = target && firstStep < 0 && anchor.kind !== 'after' && anchorTakesCard(document, anchor);
     return { ...insertAt(at < 0 ? document.steps.length : before ? at : at + 1, sent), baked, replaced: 0 };
   }
-  const first = sent[firstStep] as SentReferencesStep;
+  const first = sent[firstStep] as SentDiagramStep;
   const leading = sent.slice(0, firstStep);
   const rest = sent.slice(firstStep + 1);
   const words = (step: DiagramStep): string => {
     if (anchor.kind === 'fill') return step.text.trim() === '' ? xmlText(first.text) : step.text;
     // Replaced: still the old card's words, they become the new card's; edited, they are the reader's.
-    const own = step.source?.kind === 'references-step' ? step.source.sentence : undefined;
+    const own = sourceSentenceOf(step.source);
     return own !== undefined && step.text === own ? xmlText(first.text) : step.text;
   };
   // The card's marks follow the card (RM6): every one the old card brought
   // goes, edited or not, the new card's arrive, and the author's stay.
   let replaced = 0;
   const taken = updateStep(document, target.id, (step) => {
-    const lifted = fits(step, first.lifted) ? first.lifted : null;
+    const lifted = fits<DiagramPicture>(step, first.lifted) ? first.lifted : null;
     if (!lifted && first.lifted !== undefined) baked.push(step.id);
     const next: DiagramStep = {
       ...step,
@@ -1689,8 +1776,17 @@ export function pullReferencesSteps(
 }
 
 /** Whether a card's lifted marks fit on `step` beside the author's own (17d): a step holds no more than a file keeps. */
-function fits(step: DiagramStep, lifted: LiftedCard | null | undefined): lifted is LiftedCard {
+function fits<P extends DiagramPicture>(step: DiagramStep, lifted: LiftedCard<P> | null | undefined): lifted is LiftedCard<P> {
   return !!lifted && lifted.annotations.length + authorMarksOf(step).length <= MAX_STEP_ANNOTATIONS;
+}
+
+/**
+ * The words a source's step was pulled with: a References card's, or a Fold
+ * step's. While a step's instruction still equals them they are the
+ * source's, and a source that brings others replaces them.
+ */
+export function sourceSentenceOf(source: DiagramStepSource | null): string | undefined {
+  return source?.kind === 'references-step' || source?.kind === 'fold-step' ? source.sentence : undefined;
 }
 
 /**

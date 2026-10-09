@@ -22,9 +22,17 @@ const EMPTY_THUMBNAIL: SheetThumbnail = { viewBox: '0 0 100 100', strokes: [] };
  * region is found by its rim in it.
  */
 export function creasesThumbnail(creases: StepCreases, segmentation: FoldArtifacts): SheetThumbnail {
-  const thumbnail = segmentSheetThumbnail(segmentation.fold, creases.segment);
+  return storedSheetThumbnail(segmentSheetThumbnail(segmentation.fold, creases.segment));
+}
+
+/**
+ * A fitted thumbnail as a step keeps it, whatever drew it — a region of
+ * Edit's pattern, a Fold step's crease pattern: its strokes to a tenth of the
+ * 100-unit box — plenty for a corner, and short in the file — within what a
+ * file takes back. An empty one for nothing drawable.
+ */
+export function storedSheetThumbnail(thumbnail: SheetThumbnail | null): SheetThumbnail {
   if (!thumbnail) return EMPTY_THUMBNAIL;
-  // To a tenth of the 100-unit box: plenty for a corner, and short in the file.
   const snap = (value: number) => Math.round(value * 10) / 10 + 0;
   const snapped = thumbnail.strokes.map((stroke) => ({
     x1: snap(stroke.x1),

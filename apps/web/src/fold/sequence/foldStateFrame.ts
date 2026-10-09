@@ -23,7 +23,7 @@ import {
   type SheetStrokeRole,
   type SheetThumbnail,
 } from '../../cp-workspace/sheets/sheetThumbnail';
-import { withinStoredBudget } from '../../diagram/capture/captureThumbnail';
+import { storedSheetThumbnail } from '../../diagram/capture/captureThumbnail';
 import type { Point } from '../../lib/geometry';
 import type { SheetPoint } from '../document/foldSequenceDocument';
 import type { FoldIsometry, FoldModelPoint, FoldScene, FoldSceneCrease } from '../engine/foldEngineWire';
@@ -192,16 +192,7 @@ function stroke(from: readonly [number, number], to: readonly [number, number], 
 /** Fitted, snapped to a tenth of its 100-unit box and held to what a file takes back, as a captured step's is. */
 function storedThumbnail(strokes: readonly SheetStroke[]): SheetThumbnail | null {
   const fitted = fitSheetThumbnail(strokes);
-  if (!fitted) return null;
-  const snap = (value: number) => Math.round(value * 10) / 10 + 0;
-  const snapped = fitted.strokes.map((each) => ({
-    x1: snap(each.x1),
-    y1: snap(each.y1),
-    x2: snap(each.x2),
-    y2: snap(each.y2),
-    role: each.role,
-  }));
-  return { viewBox: fitted.viewBox, strokes: withinStoredBudget(snapped) };
+  return fitted ? storedSheetThumbnail(fitted) : null;
 }
 
 /** The crease pattern in sheet coordinates, by its letters as stored: from the front. */

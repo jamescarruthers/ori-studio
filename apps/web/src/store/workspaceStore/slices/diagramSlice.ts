@@ -46,6 +46,7 @@ import { annotationEventKind } from '../../../diagram/annotate/annotationEventKi
 import { cardMarkEdits } from '../../../diagram/document/cardMarks';
 import { requestConfirmation } from '../../commandDialogStore';
 import { commitStepCapture, runDiagramCapture, stopDiagramCapture } from '../diagramCapture';
+import { runDiagramFoldCapture } from '../diagramFoldCapture';
 import { discardDiagramState, selectedDiagramAnnotation, trimDiagramHistory } from '../diagramState';
 import { pathNodesOf } from '../../../diagram/annotate/annotationPath';
 import { showsFrame } from '../../../diagram/zoom/zoomActions';
@@ -648,6 +649,8 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
 
     captureDiagramStep: (stepId, request) =>
       runDiagramCapture({ get, set }, commit, stepId, request),
+
+    captureDiagramFoldStep: (stepId, request) => runDiagramFoldCapture({ get, set }, commit, stepId, request),
 
     stopDiagramCapture: (stepId) => stopDiagramCapture({ get, set }, stepId),
 
