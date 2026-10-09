@@ -39,7 +39,7 @@ import type {
   FoldSeedScope,
   SheetPoint,
 } from '../document/foldSequenceDocument';
-import type { FoldAxiomCandidate, FoldEngineRefused, FoldScene } from '../engine/foldEngineWire';
+import type { FoldAxiomCandidate, FoldAxiomLine, FoldEngineRefused, FoldScene } from '../engine/foldEngineWire';
 import {
   applyIsometry,
   chordOfConvex,
@@ -200,6 +200,19 @@ function seedOf(seed: FoldToolSeed): FoldSeed {
 
 const isReference = (pick: FoldPick): pick is FoldPointPick | FoldSegmentPick => pick.kind !== 'free';
 
+/**
+ * The axiom line the picks locate once every click is in — its inputs the
+ * picks' sheet anchors in the axiom's own slot order — or null for another
+ * line mode, or before then: what the engine is asked for the axiom's roots.
+ */
+export function axiomLineOfPicks(lineMode: FoldLineModeId, picks: readonly FoldPick[]): FoldAxiomLine | null {
+  const axiom = lineModeAxiom(lineMode);
+  if (axiom === null) return null;
+  const slots = inSlotOrder(lineModeInput(lineMode), picks);
+  if (!slots || !slots.every(isReference)) return null;
+  return { via: 'axiom', axiom, inputs: slots.map(pickRef) };
+}
+
 interface Located {
   line: FoldLineInput;
   sceneLine: FoldModelLine;
@@ -217,13 +230,12 @@ interface Located {
 function locate(intent: FoldStepIntent, index: FoldPickIndex): Located | FoldEngineRefused | null {
   const model = lineModeInput(intent.lineMode);
   if (intent.picks.length < model.steps.length) return null;
-  const axiom = lineModeAxiom(intent.lineMode);
-  if (axiom !== null) {
-    const slots = inSlotOrder(model, intent.picks);
-    if (!slots || !slots.every(isReference) || !intent.candidate) return null;
+  if (lineModeAxiom(intent.lineMode) !== null) {
+    const line = axiomLineOfPicks(intent.lineMode, intent.picks);
+    if (!line || !intent.candidate) return null;
     const { candidate } = intent;
     return {
-      line: { via: 'axiom', axiom, inputs: slots.map(pickRef) },
+      line,
       // The engine's line and side are the model frame's; the view turns
       // both alike, so the side is the same sign against the scene's line.
       sceneLine: transformLine(index.scene.view_transform, candidate.line),

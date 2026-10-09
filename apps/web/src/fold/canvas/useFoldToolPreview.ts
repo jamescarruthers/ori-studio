@@ -16,10 +16,8 @@ import type {
 import { canonicalJson } from '../document/foldDigest';
 import { foldStepInputKey } from '../session/foldSessionEngine';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { pickRef, type FoldPick, type FoldPointPick, type FoldSegmentPick } from './foldPicking';
-import { buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
-import { isFoldKind, lineModeAxiom } from '../tools/foldToolCatalog';
-import { inSlotOrder, lineModeInput } from '../tools/foldToolRegistry';
+import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
+import { isFoldKind } from '../tools/foldToolCatalog';
 import type { FoldToolState } from '../tools/foldToolState';
 import type { FoldStateView } from './useFoldStateView';
 
@@ -61,16 +59,9 @@ export interface FoldToolPreview {
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
 
-const isReference = (pick: FoldPick): pick is FoldPointPick | FoldSegmentPick => pick.kind !== 'free';
-
-/** The axiom line the picks locate, once every click is in. */
+/** The axiom line a fold tool's picks locate, once every click is in. */
 function axiomLineOf(tools: FoldToolState): FoldAxiomLine | null {
-  if (!isFoldKind(tools.tool)) return null;
-  const axiom = lineModeAxiom(tools.lineMode);
-  if (axiom === null) return null;
-  const slots = inSlotOrder(lineModeInput(tools.lineMode), tools.picks);
-  if (!slots || !slots.every(isReference)) return null;
-  return { via: 'axiom', axiom, inputs: slots.map(pickRef) };
+  return isFoldKind(tools.tool) ? axiomLineOfPicks(tools.lineMode, tools.picks) : null;
 }
 
 /**
