@@ -32,12 +32,23 @@ export type StepFilmstripCardKind = 'fold' | 'turn-over' | 'done';
  * - `blocked`: a step that cannot be made as asked;
  * - `new-branch`: a step that, committed, starts a branch rather than
  *   continuing the one on screen;
- * - `imported`: a state taken from a crease pattern rather than folded.
+ * - `imported`: a state taken from a crease pattern rather than folded;
+ * - `changed`: a step that folds to another state than the one it was saved
+ *   at — the software changed, not the step;
+ * - `locked`: a step a newer build wrote, kept as it came and never folded;
+ * - `pending`: a step whose state is still being worked out.
  *
  * A look only. Say it in words too, in the badge and the sentence: a frame's
  * colour is no help to a screen reader, or to a reader who cannot tell it.
  */
-export type StepFilmstripCardState = 'preview' | 'blocked' | 'new-branch' | 'imported';
+export type StepFilmstripCardState =
+  | 'preview'
+  | 'blocked'
+  | 'new-branch'
+  | 'imported'
+  | 'changed'
+  | 'locked'
+  | 'pending';
 
 /** One card: a picture, its chrome, and the sentence under the strip when it is active. */
 export interface StepFilmstripCard {

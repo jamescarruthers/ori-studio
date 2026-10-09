@@ -128,8 +128,17 @@ export function useFoldActivePath(): readonly string[] {
  * ```
  */
 export function useFoldNodeQuery<T>(id: string | null, call: FoldStateCall<T>): T | null {
+  return useFoldStateQuery(useFoldNode(id)?.state ?? null, call);
+}
+
+/**
+ * The answer to a query on a landed state — a step's, or the one a tool is
+ * folding — asked again whenever the state changes: null until it answers,
+ * and for no state. As {@link useFoldNodeQuery}, the query should be a
+ * module-level function or memoised.
+ */
+export function useFoldStateQuery<T>(state: FoldEngineStateHandle | null, call: FoldStateCall<T>): T | null {
   const session = foldSession();
-  const state = useFoldNode(id)?.state ?? null;
   const [answer, setAnswer] = useState<{ state: FoldEngineStateHandle; call: FoldStateCall<T>; value: T } | null>(
     null
   );
