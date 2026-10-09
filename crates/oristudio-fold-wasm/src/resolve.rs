@@ -15,11 +15,12 @@
 //! an op takes.
 
 use oristudio_fold::{
-    ActionKind, AnchoredFold, Axiom, CreaseKind, Direction, FoldLine, LineRefusal, PlainFold, Seed,
-    SheetSegment, Side, State,
+    ActionKind, AnchoredFold, Axiom, CreaseKind, Direction, FoldLine, LineRefusal, PlainFold,
+    ReverseKind, Seed, SheetSegment, Side, State,
 };
 use oristudio_geometry::Line;
 
+use crate::compound::CompoundOp;
 use crate::wire::{
     AlongCrease, AlongLine, BridgeError, BridgeRefusal, Choices, LineInput, Motion, Op, Point,
     RefInput, Refusal, SeedInput,
@@ -53,7 +54,7 @@ impl From<LineRefusal> for Rejection {
 }
 
 /// An op, resolved against its parent.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Resolved {
     /// A fold whose line and side anchors name: the engine resolves them.
     Anchored {
@@ -67,15 +68,19 @@ pub enum Resolved {
     /// Import CP's jump to a new model (plan D16): the state replaces the
     /// parent's rather than folding it.
     Jump(State),
+    /// A compound fold (`crate::compound`).
+    Compound(Box<dyn CompoundOp>),
 }
 
 impl Resolved {
     /// The plain fold it names: the line, side and seed the engine folds
-    /// along. None for a view change or a jump.
+    /// along — a compound fold's line, side and anchor. None for a view
+    /// change or a jump.
     pub fn plain(&self, parent: &State) -> Option<Result<PlainFold, LineRefusal>> {
         match self {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
+            Resolved::Compound(op) => Some(Ok(op.plain())),
             Resolved::View(_) | Resolved::Jump(_) => None,
         }
     }
@@ -83,7 +88,7 @@ impl Resolved {
 
 /// The op and its choices, resolved in `parent`.
 pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, Rejection> {
-    if let Some(choice) = choices.unexpected(op.is_axiom()) {
+    if let Some(choice) = choices.unexpected(op.is_axiom(), op.is_compound()) {
         return Err(BridgeRefusal::UnexpectedChoice { choice }.into());
     }
     let root = choices.root.as_ref();
@@ -105,11 +110,19 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
         Op::CpJump(jump) => crate::io::land(parent, jump)
             .map(Resolved::Jump)
             .map_err(Rejection::from),
+        // Compound folds (`crate::compound`), one arm per family.
+        Op::InsideReverse(r) => {
+            crate::ops_reverse::resolve(parent, r, ReverseKind::Inside, choices)
+        }
+        Op::OutsideReverse(r) => {
+            crate::ops_reverse::resolve(parent, r, ReverseKind::Outside, choices)
+        }
     }
 }
 
-/// A valley, mountain or precrease op.
-fn along_line(
+/// A valley, mountain or precrease op — and a compound fold's line, side
+/// and anchor, which resolve as a fold's do.
+pub(crate) fn along_line(
     parent: &State,
     op: &AlongLine,
     direction: Direction,

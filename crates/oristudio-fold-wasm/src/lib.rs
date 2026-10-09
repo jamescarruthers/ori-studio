@@ -62,13 +62,21 @@
 //! Edit's folded figure, Send to Edit and the FOLD export are [`io`]'s, on
 //! `FoldEngine` beside these calls, and a stored `cp-jump` op is applied like
 //! any other step. `README.md` records the size that costs.
+//!
+//! Compound folds (plan D4) are steps like any other — `apply`, the queries,
+//! a step's summary and picture — through one seam ([`compound`]), each
+//! family in a module of its own with its own query on `FoldEngine`
+//! ([`ops_reverse`]: `reverse`).
 
 pub mod bridge;
 pub mod canonical;
+pub mod compound;
 pub mod io;
 pub mod joins;
 pub mod resolve;
 pub mod wire;
+// Compound folds, one module per family (`compound`).
+pub mod ops_reverse;
 
 use std::sync::Once;
 

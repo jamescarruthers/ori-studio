@@ -51,6 +51,23 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   choices that fold along it. Only a caller's mistake — malformed input, a
   handle this engine does not hold — throws, as the `{ code, message }`
   envelope every bridge uses.
+- **Compound folds** (plan D4, `src/compound.rs`) are steps like any other —
+  `apply`, `analyse`, `action`, `depth_choices`, a step's summary and
+  picture — through one seam: a family's op resolves to a `CompoundOp`, and
+  what it lands is held as a `CompoundLanded`, so each family is a module of
+  its own (`src/ops_<family>.rs`) with an arm in `wire.rs` and
+  `resolve.rs`. A landed one reports beside a plain fold's `report` as
+  `compound`, tagged by its `op`. Their choices are the engine's own
+  (plan D6): `opening`, per flap, its upper block by witnesses, and
+  `completion`, the free pairs as FOLD `faceOrders` over witnesses. A step
+  whose stored choices leave several results is refused as `choice_needed`
+  (naming `opening` or `completion`), and one whose stored choice no longer
+  resolves as `choice_broken` with the engine's cause; a replay marks
+  either broken. The reverse fold (`src/ops_reverse.rs`: `inside-reverse`,
+  `outside-reverse`) adds `reverse(state, op, choices)`, the tools' one
+  query: the tip and each flap's openings, the kinds that land, and the
+  choice still needed — an opening, or up to eight orders, each the
+  `completion` that picks it.
 - **`fs1` keys** (`src/canonical.rs`): one per fact of the state, none naming
   a face, vertex or crease by its number; the digest over them is
   TypeScript's `keyDigest`.
@@ -224,7 +241,12 @@ slower than the table's.
   following the state rather than its numbering, and `oristudio-fold`'s
   classic sequences replayed through the bridge to the outcomes their
   fixtures record, along model lines and again along O1 axioms with their
-  roots.
+  roots. `tests/reverse.rs`: the reverse fold through the same JSON — the
+  preliminary base from the triangle by two inside reverses, the kinds the
+  query says land and the other kind offered as the fix, an opening and an
+  order (the engine's campaign case s1-287, its plain folds as model-line
+  steps) chosen through the query, stored and replayed, `choice_needed` and
+  `choice_broken`.
 - `cargo test -p oristudio-fold-wasm --test io`: `tests/io.rs`, the io
   calls natively — Send to Edit, then Import CP, giving the same state
   (`fs1` keys equal) over the classics and 364 seeded random states, with
