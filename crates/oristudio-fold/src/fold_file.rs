@@ -37,7 +37,7 @@ use oristudio_cp::folding3d::interchange::{
 };
 use oristudio_cp::io::IoError;
 use oristudio_cp::io::fold::{export_fold_document, export_fold_file_json, export_folded_frames};
-use oristudio_layer_order::LayerOrderError;
+use oristudio_layer_order::{LayerOrder, LayerOrderError};
 use serde_json::{Value, json};
 use thiserror::Error;
 use treemaker_fold::{Assignment, FoldDocument};
@@ -181,7 +181,7 @@ pub fn step_frame(state: &State) -> Result<FoldDocument, FoldExportError> {
         .iter()
         .map(|f| f.ring.iter().map(|v| v.index()).collect())
         .collect();
-    frame.face_orders = face_orders(state)?;
+    frame.face_orders = fold_face_orders(state, state.order())?;
     let matrices: Vec<Value> = geometry
         .isometries
         .iter()
@@ -264,11 +264,17 @@ fn beloch_layout(t: &Isometry) -> [f64; 6] {
     [a, b, d, e, c, f]
 }
 
-/// The order's FOLD triples with faces named by their position in
-/// `faces_vertices`. The triples do not depend on the view: turning over
-/// inverts both which face is above and which way each one faces.
-fn face_orders(state: &State) -> Result<Vec<[i64; 3]>, LayerOrderError> {
-    let triples = state.order().to_fold_face_orders(state.folded_view())?;
+/// `order`, an order on `state`'s faces, as FOLD `faceOrders` with faces
+/// named by their position in `faces_vertices`: what [`step_frame`] writes
+/// for the state's own order. Another order is for a check that hands one
+/// beside a frame (the Flat-Folder oracle's flipped pairs). The triples do not
+/// depend on the view: turning over inverts both which face is above and
+/// which way each one faces.
+pub fn fold_face_orders(
+    state: &State,
+    order: &LayerOrder,
+) -> Result<Vec<[i64; 3]>, LayerOrderError> {
+    let triples = order.to_fold_face_orders(state.folded_view())?;
     let position = |index: usize, id: i64| {
         u32::try_from(id)
             .ok()
