@@ -67,6 +67,8 @@ pub enum Resolved {
     /// Import CP's jump to a new model (plan D16): the state replaces the
     /// parent's rather than folding it.
     Jump(State),
+    /// A sink or an unsink, with its stored choices (`ops_sinks`).
+    Sink(Box<crate::ops_sinks::SinkResolved>),
 }
 
 impl Resolved {
@@ -76,14 +78,16 @@ impl Resolved {
         match self {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
-            Resolved::View(_) | Resolved::Jump(_) => None,
+            Resolved::View(_) | Resolved::Jump(_) | Resolved::Sink(_) => None,
         }
     }
 }
 
 /// The op and its choices, resolved in `parent`.
 pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, Rejection> {
-    if let Some(choice) = choices.unexpected(op.is_axiom()) {
+    // A sink checks its own: it takes a pocket and a completion.
+    let sink = matches!(op, Op::OpenSink(_) | Op::ClosedSink(_) | Op::Unsink(_));
+    if !sink && let Some(choice) = choices.unexpected(op.is_axiom()) {
         return Err(BridgeRefusal::UnexpectedChoice { choice }.into());
     }
     let root = choices.root.as_ref();
@@ -105,11 +109,17 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
         Op::CpJump(jump) => crate::io::land(parent, jump)
             .map(Resolved::Jump)
             .map_err(Rejection::from),
+        // Sinks (plan Phase 11): the engine's, along the line as a fold's.
+        Op::OpenSink(sink) | Op::ClosedSink(sink) | Op::Unsink(sink) => {
+            crate::ops_sinks::resolve(parent, op, sink, choices)
+                .map(|resolved| Resolved::Sink(Box::new(resolved)))
+        }
     }
 }
 
-/// A valley, mountain or precrease op.
-fn along_line(
+/// A valley, mountain or precrease op; and a sink's line, which `ops_sinks`
+/// resolves as a fold's.
+pub(crate) fn along_line(
     parent: &State,
     op: &AlongLine,
     direction: Direction,

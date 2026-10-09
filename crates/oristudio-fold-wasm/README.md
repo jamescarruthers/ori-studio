@@ -75,6 +75,18 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
     writes it; `orderJson`, the order by sheet-point witnesses — is applied
     like any op: imported after its parent, its witnesses deciding the
     order, or refused (`import_*`) and the step broken.
+- **Sinks** (`src/ops_sinks.rs`; plan Phase 11): `open-sink`, `closed-sink`
+  and `unsink` ops land through `apply`, their line resolved as a fold's,
+  the seed naming the point (or the sunk tip), and `choices.pocket` (a
+  sheet point either side of a closed sink's pocket) and
+  `choices.completion` (the engine's `WitnessOrder`, as `orderJson` holds a
+  whole order) stored as results. `apply`'s answer carries the engine's
+  `sink` report, its motion's legs among it. A sink that needs a choice the
+  step does not store is refused `choice_missing`; a stored one that no
+  longer resolves, `choice_broken`. `sink_analysis` previews the point (its
+  outline, outside letter, apex, the square line, why an open sink is
+  refused, the pockets with what a step stores), `sink_orders` counts what a
+  completion leaves, and `sink_pick` gives the completion a step stores.
 
 ## The `kernel` feature
 
@@ -235,6 +247,10 @@ slower than the table's.
   sent), an empty sequence adopting the pattern's sheet, stored ops that no
   longer land refused; and Edit's folded figure, folded by the kernel from
   114 states, front and rear, landing the state it was folded from.
+- `cargo test -p oristudio-fold-wasm --test sink`: `tests/sink.rs`, the
+  sinks natively on the samples as Import CP lands them — open and closed
+  sinks and the unsink back by `apply`, the pocket asked for, stored and
+  replayed, the tilted line's fixes, the choices a sink takes, the queries.
 - `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs` and
   `tests/io_node.rs`, the same calls across the wasm boundary (plain objects
   in and out, refusals as values, thrown envelopes, the kernel's scene object

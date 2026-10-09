@@ -22,8 +22,8 @@
 use oristudio_fold::{
     AnchoredFold, Axiom, AxiomCandidate, ClosurePolicy, CrossSection, DepthChoice, Direction,
     FaceId, Fix as EngineFix, Flap, FoldActionGeometry, FoldLine, FoldRefusal, LineRefusal,
-    Placement, Refused, ReverseKind, Seed, SheetSegment, SheetShape, Side, StartSide, StepSummary,
-    TurnAxis, VertexId, View,
+    Placement, Refused, ReverseKind, Seed, SheetSegment, SheetShape, Side, SinkKind, StartSide,
+    StepSummary, TurnAxis, VertexId, View, WitnessOrder,
 };
 use oristudio_geometry::Line;
 use serde::de::IgnoredAny;
@@ -94,6 +94,10 @@ pub enum Op {
     /// Import CP (plan D16): a stored crease pattern and its order, landed
     /// as a new model (`io::jump`).
     CpJump(crate::io::CpJump),
+    // Sinks (plan Phase 11, `ops_sinks`).
+    OpenSink(crate::ops_sinks::SinkOp),
+    ClosedSink(crate::ops_sinks::SinkOp),
+    Unsink(crate::ops_sinks::SinkOp),
 }
 
 impl Op {
@@ -108,6 +112,9 @@ impl Op {
             Op::Turn { .. } => "turn",
             Op::Rotate { .. } => "rotate",
             Op::CpJump(_) => "cp-jump",
+            Op::OpenSink(_) => "open-sink",
+            Op::ClosedSink(_) => "closed-sink",
+            Op::Unsink(_) => "unsink",
         }
     }
 
@@ -272,19 +279,25 @@ impl Rotation {
     }
 }
 
-/// `FoldChoices`. An axiom's `root` is read; the rest only for whether they
-/// are present: no op this build folds takes one yet (completions and
-/// openings arrive with the compound folds), and a stored choice the op
+/// `FoldChoices`. An axiom's `root`, a compound fold's `completion` and a
+/// closed sink's `pocket` are read; `opening` only for whether it is
+/// present, until the reverse fold's ops arrive. A stored choice the op
 /// cannot use breaks its step rather than being dropped.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 pub struct Choices {
     /// The line the axiom's chosen root gave, in the parent's model frame.
     #[serde(default)]
     pub root: Option<Line>,
+    /// The pairs a compound fold's completion left free, as chosen: FOLD
+    /// `faceOrders` triples over interior sheet-point witnesses
+    /// (`oristudio_fold::WitnessOrder`), as `cp-jump`'s `orderJson` holds
+    /// a whole order.
     #[serde(default)]
-    pub completion: Option<Vec<IgnoredAny>>,
+    pub completion: Option<WitnessOrder>,
+    /// A closed sink's pocket: a sheet point on the face just above it and
+    /// on the face just below it.
     #[serde(default)]
-    pub pocket: Option<IgnoredAny>,
+    pub pocket: Option<[Point; 2]>,
     #[serde(default)]
     pub opening: Option<Vec<IgnoredAny>>,
 }
@@ -292,11 +305,16 @@ pub struct Choices {
 impl Choices {
     /// The first choice present that an op takes none of, by its document
     /// key: `root` unless the op folds along an axiom. An empty list is no
-    /// choice, as the document reads it.
+    /// choice, as the document reads it, and so is a completion that names
+    /// no pair.
     pub fn unexpected(&self, takes_root: bool) -> Option<&'static str> {
         if self.root.is_some() && !takes_root {
             Some("root")
-        } else if self.completion.as_ref().is_some_and(|c| !c.is_empty()) {
+        } else if self
+            .completion
+            .as_ref()
+            .is_some_and(|c| !c.orders.is_empty())
+        {
             Some("completion")
         } else if self.pocket.is_some() {
             Some("pocket")
@@ -461,6 +479,8 @@ pub enum Fix {
     },
     /// The same reverse fold of the other kind is valid.
     OtherKind { kind: ReverseKind },
+    /// The same point sinks the other way: closed, or open.
+    OtherSink { kind: SinkKind },
 }
 
 impl From<EngineFix> for Fix {
@@ -475,6 +495,7 @@ impl From<EngineFix> for Fix {
                 step: None,
             },
             EngineFix::OtherKind { kind } => Fix::OtherKind { kind },
+            EngineFix::OtherSink { kind } => Fix::OtherSink { kind },
         }
     }
 }
@@ -585,6 +606,14 @@ pub enum BridgeRefusal {
     CreaseNotFlat { point: Point },
     #[error("the crease through {point:?} is not folded, so it cannot be unfolded")]
     CreaseNotFolded { point: Point },
+    /// A compound fold needs a choice the step does not store: a closed
+    /// sink's `pocket` among several, or a `completion` among several
+    /// orders. A tool asks for the choices first (`ops_sinks`).
+    #[error("the step needs its {choice} choice")]
+    ChoiceMissing { choice: &'static str },
+    /// A compound fold's stored choice no longer resolves (plan D6).
+    #[error("a stored choice no longer resolves: {broken}")]
+    ChoiceBroken { broken: oristudio_fold::Broken },
     /// A stored `cp-jump` that no longer lands, or an io call's refusal,
     /// under its own `import_*` or `fold_export_*` code (`io::IoRefusal`).
     #[serde(untagged)]
@@ -601,6 +630,8 @@ impl BridgeRefusal {
             BridgeRefusal::CreaseNotFound { .. } => "crease_not_found",
             BridgeRefusal::CreaseNotFlat { .. } => "crease_not_flat",
             BridgeRefusal::CreaseNotFolded { .. } => "crease_not_folded",
+            BridgeRefusal::ChoiceMissing { .. } => "choice_missing",
+            BridgeRefusal::ChoiceBroken { .. } => "choice_broken",
             BridgeRefusal::Io(refusal) => refusal.code(),
         }
     }
@@ -624,8 +655,11 @@ pub struct Analysed {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Applied {
     pub state: u32,
-    /// What the fold did; none for a turn or a rotation.
+    /// What the fold did; none for a turn or a rotation, or a compound fold.
     pub report: Option<oristudio_fold::FoldReport>,
+    /// What a sink or an unsink did, its motion's legs among it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sink: Option<oristudio_fold::SinkReport>,
     pub summary: Summary,
 }
 

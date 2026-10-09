@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 use oristudio_fold::{
     ActionKind, AnchoredRefused, CreaseDiff, CreaseKind, FoldAnalysis, Folded, Letter, Sheet, Side,
-    State, StepSummary,
+    SinkFolded, State, StepSummary,
 };
 use oristudio_geometry::Line;
 
@@ -55,6 +55,11 @@ enum Held {
     /// An imported crease pattern (a `cp-jump`, plan D16), landed after a
     /// state it replaces.
     Jump(State),
+    /// A sink or an unsink of `parent` (`ops_sinks`), with its report.
+    Sink {
+        folded: Box<SinkFolded>,
+        parent: u32,
+    },
 }
 
 impl Held {
@@ -62,6 +67,7 @@ impl Held {
         match self {
             Held::Sheet(state) | Held::View { state, .. } | Held::Jump(state) => state,
             Held::Fold { folded, .. } => &folded.state,
+            Held::Sink { folded, .. } => &folded.state,
         }
     }
 }
@@ -228,18 +234,26 @@ impl Bridge {
                 parent: state,
             }),
             Ok(Resolved::Jump(landed)) => Ok(Held::Jump(landed)),
+            Ok(Resolved::Sink(sink)) => {
+                crate::ops_sinks::land(parent, &sink).map(|folded| Held::Sink {
+                    folded: Box::new(folded),
+                    parent: state,
+                })
+            }
             Err(refusal) => Err(refusal),
         };
         Ok(match landed {
             Ok(held) => {
                 let summary = summary(held.state());
-                let report = match &held {
-                    Held::Fold { folded, .. } => Some(folded.report.clone()),
-                    Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => None,
+                let (report, sink) = match &held {
+                    Held::Fold { folded, .. } => (Some(folded.report.clone()), None),
+                    Held::Sink { folded, .. } => (None, Some(folded.report.clone())),
+                    Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => (None, None),
                 };
                 Outcome::Ok(Applied {
                     state: self.hold(held),
                     report,
+                    sink,
                     summary,
                 })
             }
@@ -271,6 +285,10 @@ impl Bridge {
                 .summary(self.parent(state, *parent)?)
                 .map(Some)
                 .map_err(Refusal::from),
+            Held::Sink { folded, parent } => folded
+                .summary(self.parent(state, *parent)?)
+                .map(Some)
+                .map_err(Refusal::from),
             Held::Jump(child) => Ok(Some(imported(child))),
         };
         Ok(summary.map(|summary| Summarised { summary }).into())
@@ -278,11 +296,11 @@ impl Bridge {
 
     /// The picture of the step that landed `state` (plan D12, per step), on
     /// its parent with the landed state's cover at the arrow's head. None for
-    /// a flat sheet, a turn, a rotation or an import. A fold's parent must
-    /// still be held.
+    /// a flat sheet, a turn, a rotation or an import, and for now a sink,
+    /// whose push arrow is still to come. A fold's parent must still be held.
     pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
-            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => Ok(None),
+            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) | Held::Sink { .. } => Ok(None),
             Held::Fold {
                 folded,
                 parent,
@@ -392,6 +410,12 @@ fn analysis(
             .map(|analysis| (analysis, kind))
             .map_err(Refusal::from),
         Ok(Resolved::View(_) | Resolved::Jump(_)) => return Err(moves_no_paper(op)),
+        Ok(Resolved::Sink(_)) => {
+            return Err(BridgeError::InvalidInput(format!(
+                "a {} step is a sink: ask sink_analysis",
+                op.kind()
+            )));
+        }
         Err(refusal) => Err(refusal),
     })
 }

@@ -62,11 +62,15 @@
 //! Edit's folded figure, Send to Edit and the FOLD export are [`io`]'s, on
 //! `FoldEngine` beside these calls, and a stored `cp-jump` op is applied like
 //! any other step. `README.md` records the size that costs.
+//!
+//! The sinks (plan Phase 11): `open-sink`, `closed-sink` and `unsink` ops
+//! land through `apply`, and a sink tool's queries are [`ops_sinks`]'s.
 
 pub mod bridge;
 pub mod canonical;
 pub mod io;
 pub mod joins;
+pub mod ops_sinks;
 pub mod resolve;
 pub mod wire;
 
