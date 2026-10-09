@@ -119,6 +119,19 @@ Compound folds (plan D4, D15, Phase 9):
   or the flaps that open. Stored choices: each ambiguous flap's upper block
   and the order, by witnesses; a stored opening that names none breaks the
   step.
+- `compound::sink`: the open sink, the closed sink and the unsink (research
+  §5.4). The point is one flap; its geometry is the plain fold of the whole
+  point, so only letters and order are decided. Refused up front: an open
+  point (raw edges at its crown), and for an open sink an outline of both
+  letters, no axis (two straight sides, beside a flat top), or a line off
+  square to the axis, offering the square line and the closed sink. The open
+  sink is a block per display layer, each tip face anchored directly
+  against its own piece that stays on its pocket side (per-face anchors,
+  `compound::Anchor`); the closed sink is an inside reverse of the whole
+  point into a pocket (a split along outline creases whose gap one display
+  layer bounds; the twisted splits are left out), stored by a face on each
+  side of a seam; the unsink reflects the sunk tip back and leaves its whole
+  order to the completion (`Across::Free`).
 - `compound::motion`: a compound step's `StepMotion` (plan D15): legs of
   groups turning about a hinge with exact endpoints. A reverse fold is
   *visual* (it has no rigid path short of unfolding the vertex flat): its
@@ -237,6 +250,15 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   and splitting a segment anchor) and after a fold that takes one root's
   landing away; the existing-crease mode unfolding and refolding; a mover
   left behind; and the sliver remedy for an O4, a free line and an O2 (none).
+- `tests/sink.rs`: the sink spike's named cases (`r2-spike-sinks`, shared
+  through `tests/sinks` with `crates/oracle-tests`' `fold_sink_oracle`) on the
+  preliminary and waterbomb samples: the open sink one state at every depth,
+  its letters the outline's and its order the inverted nest; each closed
+  sink pocket one state, 6 M and 2 V on the ring, only the seams turning;
+  unsinks back to the base, letters and order; deep sinks; tilt killing the
+  open sink but not the closed; the open point, the fan point's seven
+  pockets, a precreased ring overwritten, a second sink; and stored pockets
+  and orders that replay or break.
 - `tests/reverse.rs`: the reverse spike's named cases (`r2-spike-reverse-
   crimp-tuck`): the triangle's corner reversing inside only, outside only or
   both (1a–1d), the refused kind offering the other; the preliminary base by

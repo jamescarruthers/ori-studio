@@ -1091,8 +1091,8 @@ impl Bodies {
 /// and the pairs `(upper, lower)` of overlapping faces, the sets of pieces
 /// closed under "lies under". Pieces that lie under one another both ways
 /// must stay together. At most `cap` sets; `None` when everything is one
-/// piece.
-fn down_sets(
+/// piece. A closed sink's pockets are these splits too ([`super::sink`]).
+pub(crate) fn down_sets(
     piece_of: &[usize],
     over: &[(usize, usize)],
     local: &impl Fn(usize) -> usize,

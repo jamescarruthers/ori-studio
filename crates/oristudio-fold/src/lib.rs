@@ -33,8 +33,9 @@
 //!   macro, score, hinge diff, derive, gate, carry, seed, complete, letters,
 //!   validate), and on it [`State::reverse_fold`], the inside and outside
 //!   reverse fold with per-flap openings, kind feasibility, refusals with
-//!   fixes and stored choices; and the [`StepMotion`] a compound step's
-//!   animation draws (plan D15).
+//!   fixes and stored choices; [`State::sink`] and [`State::unsink`], the
+//!   open and closed sink of a closed point and the unsink back; and the
+//!   [`StepMotion`] a compound step's animation draws (plan D15).
 //! - [`import`]: Import CP — a crease pattern's sheet, faces and isometries,
 //!   its order completed from its letters, and Edit's folded figure.
 //! - [`witness`]: stored choices with faces named by sheet points, and their
@@ -107,6 +108,10 @@ pub use compound::motion::{LegName, MotionGroup, MotionKind, MotionLeg, Stacking
 pub use compound::reverse::{
     NoOpening, Opening, ReverseAnalysis, ReverseChoice, ReverseChoices, ReverseFold, ReverseFolded,
     ReverseKind, ReverseOutcome, ReverseReport, StoredOpening, TipFlap,
+};
+pub use compound::sink::{
+    Pocket, SinkChoice, SinkChoices, SinkFold, SinkFolded, SinkKind, SinkOutcome, SinkPoint,
+    SinkReport, SinkStep, StoredPocket, Unsink,
 };
 pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
 pub use fold::{
