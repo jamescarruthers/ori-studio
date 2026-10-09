@@ -1593,7 +1593,10 @@ export function setFoldStepPicture(
     renderSide(was.render) === renderSide(source.render);
   let replaced = 0;
   const next = updateStep(withAsset, stepId, (current) => {
-    const captured: DiagramStep = { ...current, source, picture: link.picture, revision: current.revision + 1 };
+    // Its words are Fold's while they are still the sentence it was captured with (D20's rule): they follow the step's.
+    const own = was?.sentence;
+    const text = own !== undefined && current.text === own ? xmlText(source.sentence ?? '') : current.text;
+    const captured: DiagramStep = { ...current, source, picture: link.picture, text, revision: current.revision + 1 };
     const carried = withCarriedAnnotations(current, captured, withAsset.assets);
     if (posedOnly) return carried;
     const swapped = swapCardMarks(current, carried, link.marks, withAsset.assets);
