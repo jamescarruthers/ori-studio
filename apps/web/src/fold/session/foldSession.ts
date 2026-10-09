@@ -41,7 +41,7 @@ import type { FoldChoices, FoldOp } from '../document/foldSequenceDocument';
 import type { HeldFoldSequence } from '../document/foldSequenceFile';
 import type { FoldStepDraft } from '../document/foldSequenceEdits';
 import { foldStateLostError, type FoldEngineSource, type FoldEngineStateHandle } from '../engine/foldEnginePort';
-import type { FoldEngineChoices, FoldEngineOp, FoldEngineRefused } from '../engine/foldEngineWire';
+import type { FoldEngineOp, FoldEngineRefused } from '../engine/foldEngineWire';
 import { createFoldSessionEngine, foldStepInputKey, type FoldSessionEngine } from './foldSessionEngine';
 import {
   deriveFoldSessionNodes,
@@ -179,7 +179,7 @@ export interface FoldSession {
   /** What a fold along a line would move, from the step on screen (D14 tier 2). */
   analyse(op: FoldEngineOp): Promise<FoldAnalyseOutcome>;
   /** Fold a step from the step on screen without committing it (D14 tier 3). */
-  preview(op: FoldEngineOp, choices?: FoldEngineChoices): Promise<FoldPreviewOutcome>;
+  preview(op: FoldEngineOp, choices?: FoldChoices): Promise<FoldPreviewOutcome>;
   /** Fold a step from the step on screen and append it to the shown sequence, the cursor moved onto it. */
   commitStep(op: FoldOp, choices?: FoldChoices): Promise<FoldCommitOutcome>;
   /** Let go of the pending step and the analysis. */
@@ -230,7 +230,7 @@ const SUPERSEDED: FoldSuperseded = Object.freeze({ status: 'superseded' });
 
 const unavailable = (reason: FoldUnavailableReason): FoldUnavailable => ({ status: 'unavailable', reason });
 
-function requestOf(op: FoldEngineOp, choices: FoldEngineChoices | undefined): FoldStepRequest {
+function requestOf(op: FoldEngineOp, choices: FoldChoices | undefined): FoldStepRequest {
   return choices ? { op, choices } : { op };
 }
 
@@ -556,7 +556,7 @@ export function createFoldSession({
   const guarded = <T>(state: FoldEngineStateHandle, call: () => Promise<T>): Promise<T> =>
     state.generation === runtime.generation() ? call() : Promise.reject(foldStateLostError(state));
 
-  const preview = (op: FoldEngineOp, choices?: FoldEngineChoices): Promise<FoldPreviewOutcome> => {
+  const preview = (op: FoldEngineOp, choices?: FoldChoices): Promise<FoldPreviewOutcome> => {
     const from = foldableFrom();
     if (!(from instanceof Promise)) return previewFrom(from, op, choices);
     // A newer request while this one waits supersedes it.
@@ -568,7 +568,7 @@ export function createFoldSession({
   const previewFrom = (
     from: FoldingFrom | FoldUnavailable,
     op: FoldEngineOp,
-    choices: FoldEngineChoices | undefined
+    choices: FoldChoices | undefined
   ): Promise<FoldPreviewOutcome> => {
     if ('status' in from) return Promise.resolve(from);
     dropPending();

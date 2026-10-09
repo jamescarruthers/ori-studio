@@ -25,13 +25,13 @@ import {
   type FoldEngineSource,
   type FoldEngineStateHandle,
 } from '../engine/foldEnginePort';
-import type { FoldEngineChoices, FoldEngineOp } from '../engine/foldEngineWire';
+import type { FoldEngineOp } from '../engine/foldEngineWire';
 import type { FoldStateDetails } from './foldSessionState';
 
 /** A step as replay asks for it, or a tool previews it. */
 export interface FoldEngineStepInput {
   op: FoldOp | FoldEngineOp;
-  choices?: FoldChoices | FoldEngineChoices;
+  choices?: FoldChoices;
 }
 
 /** A state a tool landed, ready to stand for a step once it is committed. */

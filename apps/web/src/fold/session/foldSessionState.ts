@@ -22,13 +22,13 @@ import type {
 import {
   createFoldSequence,
   SQUARE_PAPER,
+  type FoldChoices,
   type FoldPaper,
   type FoldSequenceDocument,
 } from '../document/foldSequenceDocument';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type {
   FoldAnalysis,
-  FoldEngineChoices,
   FoldEngineOp,
   FoldEngineRefused,
   FoldReport,
@@ -92,7 +92,7 @@ export interface FoldSessionProgress {
 /** A step a tool asks about: an op and its choices, folded from the step on screen. */
 export interface FoldStepRequest {
   readonly op: FoldEngineOp;
-  readonly choices?: FoldEngineChoices;
+  readonly choices?: FoldChoices;
 }
 
 /**

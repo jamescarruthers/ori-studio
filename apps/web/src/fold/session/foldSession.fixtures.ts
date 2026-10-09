@@ -18,6 +18,7 @@ import type {
   FoldAnalysis,
   FoldEngineOp,
   FoldEngineRefused,
+  FoldRefusalBody,
   FoldRefusalCode,
   FoldReport,
   FoldStateSummary,
@@ -86,6 +87,25 @@ const ANALYSIS: FoldAnalysis = {
   moving: [0],
 };
 
+/** A refusal's body, with the fields the codes that type them carry. */
+function refusalBody(code: FoldRefusalCode): FoldRefusalBody {
+  switch (code) {
+    case 'closure_adds_flaps':
+      return { code, added: [0] };
+    case 'near_miss':
+      return { code, vertex: 0, distance: 0.0002, cause: 'band' };
+    case 'sliver':
+      return { code, vertex: 0, face: 0, penetration: 0.0002 };
+    default:
+      return { code };
+  }
+}
+
+/** A query the fake does not model: the session's tests never ask it. */
+function notFaked(call: string): never {
+  throw { code: 'not_faked', message: `the fake fold engine has no ${call}` };
+}
+
 const fingerprintOf = (trail: readonly string[]) =>
   foldStateFingerprint({ keys: trail.map((label, k) => `${k}:${label}`) });
 
@@ -116,7 +136,7 @@ export function fakeFoldEngine({ refuse, fail }: FakeFoldEngineOptions = {}): Fa
   };
   const refused = (code: FoldRefusalCode): FoldEngineRefused => ({
     status: 'refused',
-    refusal: { code },
+    refusal: refusalBody(code),
     fixes: [{ fix: 'opposite_direction' }],
     faces: [0],
     vertices: [],
@@ -181,6 +201,16 @@ export function fakeFoldEngine({ refuse, fail }: FakeFoldEngineOptions = {}): Fa
     },
 
     live: () => states.size,
+
+    action: () => notFaked('action'),
+    depthChoices: () => notFaked('depthChoices'),
+    crossSection: () => notFaked('crossSection'),
+    axiomCandidates: () => notFaked('axiomCandidates'),
+    stepSummary: () => notFaked('stepSummary'),
+    stepAction: () => notFaked('stepAction'),
+    scene: () => notFaked('scene'),
+    landmarks: () => notFaked('landmarks'),
+    topVisibleAt: () => notFaked('topVisibleAt'),
   };
 }
 
