@@ -5,13 +5,17 @@ import { reportError } from '../../monitoring';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldScene } from '../engine/foldEngineWire';
-import type { FoldSession, FoldStateCall } from '../session/foldSession';
+import type { FoldSession } from '../session/foldSession';
+import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
 import { foldStateFrame, type FoldStateFrame } from './foldStateFrame';
 
 /**
- * Each landed state's frame (`foldStateFrame`), asked of the engine once per
- * state and kept for every surface: the strip, the Steps grid and the Step
- * pane read the same states, and a state never changes under its handle.
+ * Each landed state's frame (`foldStateFrame`), built once per state from its
+ * scene and kept for every surface: the strip, the Steps grid and the Step
+ * pane read the same states, and a state never changes under its handle. The
+ * scene is the one the canvas asks for (`FOLD_SCENE_QUERY` through
+ * `FoldSession.query`), so the engine is asked it once, and a state whose
+ * scene is already in — a committed preview's — has its frame at once.
  *
  * Kept by handle, newest last, up to {@link MAX_FRAMES}: a long sequence's
  * path and its neighbours, with room. A handle from a newer engine lets every
@@ -26,7 +30,17 @@ const asking = new Set<string>();
 
 const handleKey = (state: FoldEngineStateHandle) => `${state.generation}:${state.id}`;
 
-const askScene: FoldStateCall<FoldScene> = (engine, state) => engine.scene(state);
+/** Frames built from a scene the session already had, by the scene: built once, kept until it goes. */
+const builtFrom = new WeakMap<FoldScene, FoldStateFrame>();
+
+function frameOf(scene: FoldScene): FoldStateFrame {
+  let frame = builtFrom.get(scene);
+  if (!frame) {
+    frame = foldStateFrame(scene);
+    builtFrom.set(scene, frame);
+  }
+  return frame;
+}
 
 function keep(state: FoldEngineStateHandle, frame: FoldStateFrame): void {
   const next = new Map<string, FoldStateFrame>();
@@ -46,11 +60,11 @@ export function requestFoldStateFrame(session: FoldSession, state: FoldEngineSta
   const key = handleKey(state);
   if (frames.getState().byHandle.has(key) || asking.has(key)) return;
   asking.add(key);
-  session.withState(state, askScene).then(
+  session.query(state, FOLD_SCENE_QUERY).then(
     (answer) => {
       asking.delete(key);
       // A state that went with its engine is asked again under its next handle.
-      if (answer.status === 'answered') keep(state, foldStateFrame(answer.value));
+      if (answer.status === 'answered') keep(state, frameOf(answer.value));
     },
     (error: unknown) => {
       asking.delete(key);
@@ -82,7 +96,15 @@ export function useFoldStateFrames(states: readonly (FoldEngineStateHandle | nul
     for (const state of states) if (state) requestFoldStateFrame(session, state);
   }, [session, states]);
   return useMemo(
-    () => states.map((state) => (state ? (byHandle.get(handleKey(state)) ?? null) : null)),
-    [byHandle, states]
+    () =>
+      states.map((state) => {
+        if (!state) return null;
+        const held = byHandle.get(handleKey(state));
+        if (held) return held;
+        // A scene the session already has, from another surface: its frame now, not a turn later.
+        const scene = session.peek(state, FOLD_SCENE_QUERY);
+        return scene ? frameOf(scene.value) : null;
+      }),
+    [session, byHandle, states]
   );
 }

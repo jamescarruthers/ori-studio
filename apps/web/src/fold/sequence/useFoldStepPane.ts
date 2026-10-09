@@ -4,29 +4,13 @@ import { handleMenuAction } from '../../commands/menuActions';
 import type { FoldBranchPosition, FoldPendingFold, FoldStepPaneStep, FoldStepStatus } from '../../components/fold/FoldStepPane';
 import type { NoticeAction } from '../../components/ui/Notice';
 import { isLockedStep } from '../document/foldSequenceDocument';
-import { isFoldParentReleased, type FoldStepSummarised } from '../engine/foldEngineWire';
 import { foldCommand } from '../foldActions';
-import type { FoldStateCall } from '../session/foldSession';
+import { FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import { useFoldStateQuery } from '../session/useFoldSession';
 import { foldActionsAt, foldCommandActionId } from './foldCommands';
 import { foldedStepCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
 import { foldCreaseDiff } from './foldStepDiff';
 import type { FoldSequenceView } from './useFoldSequenceView';
-
-/**
- * The engine's summary of the step that landed a state: its counts, its diff
- * and its layers (plan D14). Without one — refused, or the state's parent no
- * longer held — the pane shows what it knows without it.
- */
-const askStepSummary: FoldStateCall<FoldStepSummarised> = async (engine, state) => {
-  try {
-    const answer = await engine.stepSummary(state);
-    return answer.status === 'ok' ? { summary: answer.summary } : { summary: null };
-  } catch (error) {
-    if (isFoldParentReleased(error)) return { summary: null };
-    throw error;
-  }
-};
 
 /** A path entry's standing as the Step pane says it: a step still folding stands as it should, rows to come. */
 function paneStatus(status: FoldEntryStatus): FoldStepStatus {
@@ -61,8 +45,8 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
   const { t } = useTranslation();
   const { document, entries, frames, words, cursor, pending, readOnly } = view;
   const entry = entries[cursor];
-  const summarised = useFoldStateQuery(entry?.id ? entry.session.state : null, askStepSummary);
-  const pendingSummary = useFoldStateQuery(pending?.state ?? null, askStepSummary);
+  const summarised = useFoldStateQuery(entry?.id ? entry.session.state : null, FOLD_STEP_SUMMARY_QUERY);
+  const pendingSummary = useFoldStateQuery(pending?.state ?? null, FOLD_STEP_SUMMARY_QUERY);
   const frame = frames[cursor] ?? null;
 
   return useMemo((): FoldStepPaneModel => {

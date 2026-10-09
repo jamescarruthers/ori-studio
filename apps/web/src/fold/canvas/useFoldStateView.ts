@@ -3,11 +3,9 @@ import { visibleMarks } from '../document/foldStepTree';
 import { markPoints, type FoldMark, type FoldSequenceDocument } from '../document/foldSequenceDocument';
 import type { FoldLandmarks, FoldScene, FoldStateSummary } from '../engine/foldEngineWire';
 import type { FoldStateCall } from '../session/foldSession';
+import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
 import { useFoldCursor, useFoldNodeQuery, useFoldSessionState } from '../session/useFoldSession';
 import { foldPickIndex, type FoldMarkPoint, type FoldPickIndex } from './foldPicking';
-
-/** The scene of a state: one module-level query, so every pane asks it once per state. */
-export const FOLD_SCENE_QUERY: FoldStateCall<FoldScene> = (engine, state) => engine.scene(state);
 
 /** What the canvas knows about the state on screen, from the engine and the document. */
 export interface FoldStateView {
