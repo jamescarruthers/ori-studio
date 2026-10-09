@@ -1512,6 +1512,7 @@
       "stepForward": "조금 앞으로"
     },
     "sentence": {
+      "closedSink": "끝을 닫힌 가라앉혀 접기로 접습니다. 층을 겹친 채로 끝을 밀어 넣습니다.",
       "cpJump": "가져온 전개도대로 접습니다.",
       "mountain": {
         "crease": {
@@ -1627,6 +1628,7 @@
           "flaps_other": "표시된 플랩 {{count}}개만, {{self}}이(가) 자기 자신 위로 겹치고 {{a}}이(가) {{b}} 위에 오도록 산접기했다가 펼칩니다."
         }
       },
+      "openSink": "끝을 열린 가라앉혀 접기로 접습니다. 끝을 밀어 넣으며 모든 층을 뒤집습니다.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "모든 층을 한꺼번에, 기존 접은 선을 따라 펼칩니다.",
@@ -1635,6 +1637,7 @@
         "top_other": "맨 위 {{count}}겹을 펼칩니다."
       },
       "unknown": "최신 Ori Studio에서 만든 단계입니다.",
+      "unsink": "가라앉혀 접기를 되돌립니다. 끝을 다시 끌어냅니다.",
       "valley": {
         "crease": {
           "all": "모든 층을 한꺼번에, 기존 접은 선을 따라 골접기합니다.",
@@ -1820,12 +1823,14 @@
       "badgeNewer": "최신",
       "badgePrecrease": "사전 접기",
       "badgeValley": "골접기",
+      "closedSink": "닫힌 가라앉혀 접기",
       "cpJump": "전개도 가져오기",
       "existingCrease": "기존 접은 선",
       "freeLine": "자유 선",
       "mountainFold": "산접기",
       "mountainPrecrease": "산접기 후 펼치기",
       "noChange": "접은 선 변화 없음",
+      "openSink": "열린 가라앉혀 접기",
       "originCp": "CP 파일",
       "originEditFoldedFigure": "편집의 접힌 모형",
       "originFold": "FOLD 파일",
@@ -1837,6 +1842,7 @@
       "unfold": "펼치기",
       "unfolds_other": "접은 선 {{count}}개를 펼침",
       "unknown": "최신 Ori Studio의 단계",
+      "unsink": "가라앉혀 접기 되돌리기",
       "valleyFold": "골접기",
       "valleyPrecrease": "골접기 후 펼치기"
     }

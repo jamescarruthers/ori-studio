@@ -103,7 +103,13 @@ export function writtenSequence(): Record<string, unknown> {
         },
         choices: {
           root: { n: [0.6, 0.8], d: 0.4 },
-          completion: [{ above: [0.2, 0.2], below: [0.8, 0.3] }],
+          completion: {
+            faces: [
+              [0.2, 0.2],
+              [0.8, 0.3],
+            ],
+            orders: [[0, 1, -1]],
+          },
           pocket: [
             [0.1, 0.1],
             [0.2, 0.2],
@@ -146,6 +152,48 @@ export function writtenSequence(): Record<string, unknown> {
           line: { via: 'free', through: [[0, 0.25], [1, 0.25]] },
           moving: [0.5, 0.4],
           seed: { scope: 'all' },
+        },
+      },
+      // Sinks (plan Phase 11).
+      {
+        id: 'fstep-10',
+        parent: 'fstep-8',
+        op: {
+          kind: 'open-sink',
+          line: { via: 'free', through: [[0.35, 0.35], [0.2, 0.5]] },
+          seed: { scope: 'flaps', at: [[0.4, 0.45]] },
+        },
+      },
+      {
+        id: 'fstep-11',
+        parent: 'fstep-8',
+        op: {
+          kind: 'closed-sink',
+          line: { via: 'free', through: [[0.35, 0.35], [0.2, 0.5]] },
+          moving: [0.45, 0.45],
+          seed: { scope: 'all' },
+        },
+        choices: {
+          completion: {
+            faces: [
+              [0.4, 0.45],
+              [0.6, 0.45],
+            ],
+            orders: [[1, 0, 1]],
+          },
+          pocket: [
+            [0.15, 0.4],
+            [0.15, 0.6],
+          ],
+        },
+      },
+      {
+        id: 'fstep-12',
+        parent: 'fstep-10',
+        op: {
+          kind: 'unsink',
+          line: { via: 'crease', at: [0.275, 0.425] },
+          seed: { scope: 'flaps', at: [[0.4, 0.45]] },
         },
       },
     ],

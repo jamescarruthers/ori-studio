@@ -69,7 +69,11 @@ export type FoldStepPlayKind =
   | 'refold'
   | 'turn'
   | 'rotate'
-  | 'import';
+  | 'import'
+  // Sinks (plan Phase 11).
+  | 'open-sink'
+  | 'closed-sink'
+  | 'unsink';
 
 /** What a step's motion is built from: all of it the session's (`fold/session`). */
 export interface FoldStepMotionInput {
@@ -150,6 +154,12 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
       return turn ? { step, before, after, motion: turn } : crossfade();
     }
     case 'cp-jump':
+      return crossfade();
+    // A sink's motion is legs about its ring (the engine's `StepMotion`,
+    // in its report); until the pane poses compound legs it crossfades.
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
       return crossfade();
   }
 }

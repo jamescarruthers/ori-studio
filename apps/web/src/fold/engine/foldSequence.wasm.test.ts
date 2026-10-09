@@ -311,7 +311,13 @@ describe.skipIf(!available)('the Fold engine over the real bridge', () => {
       codes.push(refusal.refusal.code);
       expect(JSON.stringify(refusal)).not.toMatch(/"message"/);
     }
-    const completion: FoldChoices['completion'] = [{ above: [0.1, 0.1], below: [0.9, 0.1] }];
+    const completion: FoldChoices['completion'] = {
+      faces: [
+        [0.1, 0.1],
+        [0.9, 0.1],
+      ],
+      orders: [[0, 1, 1]],
+    };
     const choice = refused(calls.apply(book, BOOK, { completion }));
     codes.push(choice.refusal.code);
     expect(choice.refusal).toEqual({ code: 'unexpected_choice', choice: 'completion' });

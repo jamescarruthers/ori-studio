@@ -60,9 +60,20 @@ export interface FoldCanvasVerbs {
   clearMarks: () => void;
 }
 
-/** What a committed op is called in `fold step added`; null for Import CP, which the canvas never commits. */
+/**
+ * What a committed op is called in `fold step added`; null for Import CP and
+ * the sinks, which the canvas does not commit (no sink tool is on the rail yet).
+ */
 function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
-  return op.kind === 'cp-jump' ? null : op.kind;
+  switch (op.kind) {
+    case 'cp-jump':
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
+      return null;
+    default:
+      return op.kind;
+  }
 }
 
 function trackCommitted(op: FoldOp): void {

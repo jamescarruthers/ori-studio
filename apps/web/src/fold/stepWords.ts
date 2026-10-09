@@ -13,7 +13,7 @@
 import type { TFunction } from 'i18next';
 import { axiomPhrase } from '../lib/foldSentences';
 import { turnCardWords, turnName } from '../lib/steps/turnWords';
-import type { FoldSentenceLine, FoldSentenceStep } from './stepSentence';
+import type { FoldSentenceLine, FoldSentenceStep, FoldSinkSentenceKind } from './stepSentence';
 
 /** Creases by letter, front-relative: folded mountain, folded valley, and flat (folded once, now unfolded). */
 export interface FoldCreaseCounts {
@@ -58,8 +58,22 @@ export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
       return turnName(step.turn, t);
     case 'cp-jump':
       return t('panels:fold.words.cpJump', 'Import crease pattern');
+    case 'sink':
+      return sinkLabel(t, step.kind);
     case 'unknown':
       return t('panels:fold.words.unknown', 'From a newer Ori Studio');
+  }
+}
+
+/** A sink's name, label and badge alike: each is already a word or two. */
+function sinkLabel(t: TFunction, kind: FoldSinkSentenceKind): string {
+  switch (kind) {
+    case 'open':
+      return t('panels:fold.words.openSink', 'Open sink');
+    case 'closed':
+      return t('panels:fold.words.closedSink', 'Closed sink');
+    case 'unsink':
+      return t('panels:fold.words.unsink', 'Unsink');
   }
 }
 
@@ -79,6 +93,8 @@ export function operationBadge(t: TFunction, step: FoldSentenceStep): string {
       return turnCardWords(step.turn, t).title;
     case 'cp-jump':
       return t('panels:fold.words.badgeImported', 'Imported');
+    case 'sink':
+      return sinkLabel(t, step.kind);
     case 'unknown':
       return t('panels:fold.words.badgeNewer', 'Newer');
   }
@@ -92,6 +108,7 @@ export function lineLabel(t: TFunction, step: FoldSentenceStep): string | null {
   switch (step.op) {
     case 'fold':
     case 'precrease':
+    case 'sink':
       return lineWords(t, step.line);
     case 'unfold':
       return lineWords(t, { via: 'crease' });

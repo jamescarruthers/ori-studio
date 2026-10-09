@@ -1512,6 +1512,7 @@
       "stepForward": "少し進める"
     },
     "sentence": {
+      "closedSink": "角を閉じた沈め折りにします。層を重ねたまま先端を押し込みます。",
       "cpJump": "インポートした展開図のとおりに折りたたみます。",
       "mountain": {
         "crease": {
@@ -1627,6 +1628,7 @@
           "flaps_other": "示したフラップ {{count}} 枚だけを、{{self}} を自身に重ね、{{a}} が {{b}} に載るように山折りして戻します。"
         }
       },
+      "openSink": "角を開いた沈め折りにします。先端を押し込み、すべての層を裏返します。",
       "turn": "{{turn}}。",
       "unfold": {
         "all": "すべての層をまとめて、既存の折り筋で開きます。",
@@ -1635,6 +1637,7 @@
         "top_other": "上の {{count}} 枚を開きます。"
       },
       "unknown": "新しい Ori Studio で作られたステップです。",
+      "unsink": "沈め折りを戻します。先端を引き出します。",
       "valley": {
         "crease": {
           "all": "すべての層をまとめて、既存の折り筋で谷折りします。",
@@ -1820,12 +1823,14 @@
       "badgeNewer": "新しい版",
       "badgePrecrease": "下折り",
       "badgeValley": "谷折り",
+      "closedSink": "閉じた沈め折り",
       "cpJump": "展開図をインポート",
       "existingCrease": "既存の折り筋",
       "freeLine": "自由な線",
       "mountainFold": "山折り",
       "mountainPrecrease": "山折りして戻す",
       "noChange": "折り筋は変わりません",
+      "openSink": "開いた沈め折り",
       "originCp": "CP ファイル",
       "originEditFoldedFigure": "編集の折り図形",
       "originFold": "FOLD ファイル",
@@ -1837,6 +1842,7 @@
       "unfold": "開く",
       "unfolds_other": "折り筋 {{count}} 本を開く",
       "unknown": "新しい Ori Studio のステップ",
+      "unsink": "沈め折りを戻す",
       "valleyFold": "谷折り",
       "valleyPrecrease": "谷折りして戻す"
     }

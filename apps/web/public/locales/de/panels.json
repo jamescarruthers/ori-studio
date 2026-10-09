@@ -1563,6 +1563,7 @@
       "stepForward": "Ein Stück weiter"
     },
     "sentence": {
+      "closedSink": "Versenke die Spitze geschlossen: Drücke sie hinein, ihre Lagen bleiben zusammen.",
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
       "mountain": {
         "crease": {
@@ -1722,6 +1723,7 @@
           "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
         }
       },
+      "openSink": "Versenke die Spitze offen: Drücke sie hinein und stülpe dabei jede Lage um.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "Falte alle Lagen entlang der vorhandenen Faltlinie auf.",
@@ -1733,6 +1735,7 @@
         "top_other": "Falte die obersten {{count}} Lagen auf."
       },
       "unknown": "Ein Schritt aus einem neueren Ori Studio.",
+      "unsink": "Hebe das Versenken auf: Ziehe die Spitze wieder heraus.",
       "valley": {
         "crease": {
           "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als Talfalte.",
@@ -1967,12 +1970,14 @@
       "badgeNewer": "Neuer",
       "badgePrecrease": "Vorfalte",
       "badgeValley": "Tal",
+      "closedSink": "Geschlossenes Versenken",
       "cpJump": "Faltmuster importieren",
       "existingCrease": "Vorhandene Faltlinie",
       "freeLine": "Freie Linie",
       "mountainFold": "Bergfalte",
       "mountainPrecrease": "Bergfalte vorfalten",
       "noChange": "Ändert keine Faltlinien",
+      "openSink": "Offenes Versenken",
       "originCp": "CP-Datei",
       "originEditFoldedFigure": "Gefaltete Figur aus Bearbeiten",
       "originFold": "FOLD-Datei",
@@ -1987,6 +1992,7 @@
       "unfolds_one": "Faltet {{count}} Faltlinie auf",
       "unfolds_other": "Faltet {{count}} Faltlinien auf",
       "unknown": "Aus einem neueren Ori Studio",
+      "unsink": "Versenken aufheben",
       "valleyFold": "Talfalte",
       "valleyPrecrease": "Talfalte vorfalten"
     }

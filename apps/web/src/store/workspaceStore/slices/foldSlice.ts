@@ -25,6 +25,9 @@ const STEP_LABELS: Record<FoldOpKind, string> = {
   turn: 'Turn over',
   rotate: 'Rotate',
   'cp-jump': 'Import crease pattern',
+  'open-sink': 'Open sink',
+  'closed-sink': 'Closed sink',
+  unsink: 'Unsink',
 };
 
 /**

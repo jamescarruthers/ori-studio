@@ -1616,6 +1616,7 @@
       "stepForward": "Avanzar un poco"
     },
     "sentence": {
+      "closedSink": "Hunde la punta en hundido cerrado: empújala hacia dentro con sus capas juntas.",
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
       "mountain": {
         "crease": {
@@ -1819,6 +1820,7 @@
           "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla."
         }
       },
+      "openSink": "Hunde la punta en hundido abierto: empújala hacia dentro dando la vuelta a cada capa.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "Desdobla todas las capas por el pliegue existente.",
@@ -1833,6 +1835,7 @@
         "top_other": "Desdobla las {{count}} capas de arriba."
       },
       "unknown": "Un paso creado con una versión más reciente de Ori Studio.",
+      "unsink": "Deshaz el hundido: vuelve a sacar la punta.",
       "valley": {
         "crease": {
           "all": "Dobla todas las capas en valle por el pliegue existente.",
@@ -2116,12 +2119,14 @@
       "badgeNewer": "Más reciente",
       "badgePrecrease": "Prepliegue",
       "badgeValley": "Valle",
+      "closedSink": "Hundido cerrado",
       "cpJump": "Importar patrón de pliegues",
       "existingCrease": "Pliegue existente",
       "freeLine": "Línea libre",
       "mountainFold": "Pliegue monte",
       "mountainPrecrease": "Pliegue monte y desdoblar",
       "noChange": "No cambia ningún pliegue",
+      "openSink": "Hundido abierto",
       "originCp": "Archivo CP",
       "originEditFoldedFigure": "Figura plegada de Editar",
       "originFold": "Archivo FOLD",
@@ -2139,6 +2144,7 @@
       "unfolds_many": "Desdobla {{count}} pliegues",
       "unfolds_other": "Desdobla {{count}} pliegues",
       "unknown": "De una versión más reciente de Ori Studio",
+      "unsink": "Deshacer hundido",
       "valleyFold": "Pliegue valle",
       "valleyPrecrease": "Pliegue valle y desdoblar"
     }

@@ -157,7 +157,15 @@ describe('createFoldReplayer', () => {
   });
 
   it('breaks a step whose stored choice conflicts, and marks one whose state drifted as changed', async () => {
-    const conflicting: FoldChoices = { completion: [{ above: [0.2, 0.2], below: [0.8, 0.8] }] };
+    const conflicting: FoldChoices = {
+      completion: {
+        faces: [
+          [0.2, 0.2],
+          [0.8, 0.8],
+        ],
+        orders: [[0, 1, 1]],
+      },
+    };
     const { port } = mockPort({ refuse: (_op, choices) => (choices?.completion ? 'choice_conflict' : null) });
     const landedA = ['sheet:square:front', 'valley@0.5'];
     const sequence = sequenceOf([

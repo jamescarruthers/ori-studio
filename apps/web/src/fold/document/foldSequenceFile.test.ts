@@ -108,6 +108,10 @@ describe('the step tree', () => {
       { kind: 'turn', axis: 'diagonal' },
       { kind: 'rotate', rotate: { amount: 'third', direction: 'cw' } },
       { kind: 'cp-jump', cpJson: '{}', orderJson: '[]', origin: 'my-file.cp' },
+      // A sink through every layer names its side; it has no direction.
+      { kind: 'open-sink', line: valleyOp.line, seed: { scope: 'all' } },
+      { kind: 'closed-sink', line: valleyOp.line, moving: [0.5, 0.75], seed: { scope: 'all' }, direction: 'valley' },
+      { kind: 'unsink', line: { via: 'crease' }, seed: { scope: 'flaps', at: [[0.5, 0.75]] } },
       'valley',
       null,
     ];
@@ -133,7 +137,10 @@ describe('the step tree', () => {
       // A normal the engine's line cannot be made from: shorter than its tolerance.
       { choices: { root: { n: [1e-200, 0], d: 1 } } },
       { choices: { root: { n: [5e-7, 5e-7], d: 0 } } },
-      { choices: { completion: [{ above: [0, 0] }] } },
+      { choices: { completion: [{ above: [0, 0], below: [1, 1] }] } },
+      { choices: { completion: { faces: [[0, 0]], orders: [[0, 1, 0]] } } },
+      { choices: { completion: { faces: [[0, 0]], orders: [[0, -1, 1]] } } },
+      { choices: { completion: { faces: [[0, 0]], orders: [], pinned: true } } },
       { choices: { pocket: [[0, 0]] } },
       { choices: { rootIndex: 2 } },
       { choices: 'first' },
@@ -266,7 +273,10 @@ describe('marks, notes and expect', () => {
   });
 
   it('reads empty choices as none', () => {
-    const { document } = readSteps([raw('a', null, { choices: { completion: [] } }), raw('b', null, { choices: {} })]);
+    const { document } = readSteps([
+      raw('a', null, { choices: { completion: { faces: [], orders: [] } } }),
+      raw('b', null, { choices: {} }),
+    ]);
     expect(document.steps[0]).not.toHaveProperty('choices');
     expect(document.steps[1]).not.toHaveProperty('choices');
   });

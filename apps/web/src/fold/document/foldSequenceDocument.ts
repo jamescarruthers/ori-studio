@@ -266,8 +266,27 @@ export interface FoldCpJumpOp {
   origin: FoldCpOrigin;
 }
 
+/**
+ * A sink of a closed point (plan Phase 11, research §5.4) along `line`: the
+ * point the seed names, its tip on the moving side. An open sink turns every
+ * layer inside out against its own; a closed sink reverses the whole point
+ * into a pocket (`choices.pocket` when it has several). An unsink turns a
+ * sunk tip back out: its line is the ring's (an existing crease of it), and
+ * its seed and `moving` name the tip and the side it lies on now.
+ */
+export interface FoldSinkOp extends FoldAlongLine {
+  kind: 'open-sink' | 'closed-sink' | 'unsink';
+}
+
 /** What a step does. A kind this build does not know locks its node and subtree. */
-export type FoldOp = FoldPlainOp | FoldPrecreaseOp | FoldCreaseOp | FoldTurnOp | FoldRotateOp | FoldCpJumpOp;
+export type FoldOp =
+  | FoldPlainOp
+  | FoldPrecreaseOp
+  | FoldCreaseOp
+  | FoldTurnOp
+  | FoldRotateOp
+  | FoldCpJumpOp
+  | FoldSinkOp;
 
 export type FoldOpKind = FoldOp['kind'];
 
@@ -280,6 +299,10 @@ export const FOLD_OP_KINDS: readonly FoldOpKind[] = [
   'turn',
   'rotate',
   'cp-jump',
+  // Sinks (plan Phase 11).
+  'open-sink',
+  'closed-sink',
+  'unsink',
 ];
 
 /** The turn a turn or rotate step makes, as the Diagram's turn entries spell it (`lib/steps/turn`). */
@@ -291,12 +314,16 @@ export function turnKindOf(op: FoldTurnOp | FoldRotateOp): TurnKind {
 // Choices
 
 /**
- * One free pair of a completion: the face witnessed by `above` lies above the
- * one witnessed by `below`, in the model frame.
+ * The pairs a completion left free, as they were chosen: FOLD `faceOrders`
+ * triples `[f, g, s]` over `faces`, each face named by an interior sheet-point
+ * witness — face `f` lies on the side face `g`'s front faces (`s = 1`) or its
+ * back (`s = −1`). Which side of a face another lies on does not depend on
+ * which face is the root, as "above" would. It is the engine's
+ * `WitnessOrder`, the shape `cp-jump`'s `orderJson` holds a whole order in.
  */
-export interface FoldPairChoice {
-  above: SheetPoint;
-  below: SheetPoint;
+export interface FoldCompletionChoice {
+  faces: readonly SheetPoint[];
+  orders: readonly (readonly [number, number, 1 | -1])[];
 }
 
 /** One flap's opening of a reverse fold, crimp or tuck: the faces of its upper block, by witnesses. */
@@ -317,7 +344,7 @@ export interface FoldChoices {
    * Replay fixes them and completes: exactly one result resolves; a conflict
    * or more than one breaks the step.
    */
-  completion?: readonly FoldPairChoice[];
+  completion?: FoldCompletionChoice;
   /** A sink's pocket: sheet points on the two faces that bound it. */
   pocket?: readonly [SheetPoint, SheetPoint];
   /** A reverse fold's, crimp's or tuck's opening, per flap. */

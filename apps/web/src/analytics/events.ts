@@ -1124,7 +1124,8 @@ export const ANALYTICS_EVENTS = {
    * its parent's picture to its landing. `trigger` is `user` (the Play button,
    * Space) or `auto` (arriving at a step under auto-play); `step_kind` is the
    * step's kind — `valley`, `mountain`, `precrease`, `unfold`, `refold`,
-   * `turn`, `rotate` or `import` (Import CP, a crossfade); and on a `user`
+   * `turn`, `rotate`, `import` (Import CP, a crossfade), or `open-sink`,
+   * `closed-sink` or `unsink` (a crossfade for now); and on a `user`
    * play, `via` is how — `space`, `button`, or `replay` for a step already
    * played through, by either. A pause, a scrub or a Step is not counted;
    * carrying on after a pause is. Nothing about the step itself.

@@ -1512,6 +1512,7 @@
       "stepForward": "向前一点"
     },
     "sentence": {
+      "closedSink": "将尖角闭合沉折：把尖端压入，各层保持在一起。",
       "cpJump": "按导入的折痕图折叠。",
       "mountain": {
         "crease": {
@@ -1627,6 +1628,7 @@
           "flaps_other": "只将所示的 {{count}} 个翼片山折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上，然后展开。"
         }
       },
+      "openSink": "将尖角开放沉折：把尖端压入，每一层都翻转过来。",
       "turn": "{{turn}}。",
       "unfold": {
         "all": "将所有层沿已有的折痕展开。",
@@ -1635,6 +1637,7 @@
         "top_other": "将最上面的 {{count}} 层展开。"
       },
       "unknown": "由更新版本的 Ori Studio 创建的步骤。",
+      "unsink": "反沉折：把尖端拉回来。",
       "valley": {
         "crease": {
           "all": "将所有层沿已有的折痕谷折。",
@@ -1820,12 +1823,14 @@
       "badgeNewer": "较新",
       "badgePrecrease": "预折",
       "badgeValley": "谷折",
+      "closedSink": "闭合沉折",
       "cpJump": "导入折痕图",
       "existingCrease": "已有折痕",
       "freeLine": "自由线",
       "mountainFold": "山折",
       "mountainPrecrease": "山折后展开",
       "noChange": "折痕没有变化",
+      "openSink": "开放沉折",
       "originCp": "CP 文件",
       "originEditFoldedFigure": "编辑中的折叠图形",
       "originFold": "FOLD 文件",
@@ -1837,6 +1842,7 @@
       "unfold": "展开",
       "unfolds_other": "展开 {{count}} 条折痕",
       "unknown": "来自更新版本的 Ori Studio",
+      "unsink": "反沉折",
       "valleyFold": "谷折",
       "valleyPrecrease": "谷折后展开"
     }

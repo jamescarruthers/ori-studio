@@ -65,6 +65,7 @@ import {
   randomFoldId,
   rectangleShape,
   type FoldChoices,
+  type FoldCompletionChoice,
   type FoldDirection,
   type FoldDivide,
   type FoldIdFactory,
@@ -75,7 +76,6 @@ import {
   type FoldModelLine,
   type FoldOp,
   type FoldOpeningChoice,
-  type FoldPairChoice,
   type FoldPaper,
   type FoldPaperShape,
   type FoldRef,
@@ -310,6 +310,10 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['turn', new Set(['kind', 'axis'])],
   ['rotate', new Set(['kind', 'rotate'])],
   ['cp-jump', new Set(['kind', 'cpJson', 'orderJson', 'origin'])],
+  // Sinks (plan Phase 11): a fold along a line's fields.
+  ['open-sink', ALONG_LINE_KEYS],
+  ['closed-sink', ALONG_LINE_KEYS],
+  ['unsink', ALONG_LINE_KEYS],
 ]);
 
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
@@ -360,6 +364,12 @@ function readOp(value: unknown): FoldOp | null {
       return origin && typeof cpJson === 'string' && typeof orderJson === 'string'
         ? { kind, cpJson, orderJson, origin }
         : null;
+    }
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink': {
+      const along = readAlongLine(value);
+      return along && { kind, ...along };
     }
     default:
       return null;
@@ -496,15 +506,18 @@ function readRef(value: unknown, slot: ReferenceKind): FoldRef | null {
 
 const CHOICE_KEYS = new Set(['root', 'completion', 'pocket', 'opening']);
 const MODEL_LINE_KEYS = new Set(['n', 'd']);
-const PAIR_KEYS = new Set(['above', 'below']);
+const COMPLETION_KEYS = new Set(['faces', 'orders']);
 const OPENING_KEYS = new Set(['upper']);
 
-/** Choices, or null for ones this build cannot read. An empty list reads as no choice of its kind. */
+/**
+ * Choices, or null for ones this build cannot read. An empty list reads as no
+ * choice of its kind, and a completion that orders no pair as none.
+ */
 function readChoices(value: unknown): FoldChoices | null {
   if (!isRecord(value) || hasNewerKey(value, CHOICE_KEYS)) return null;
   const choices: {
     root?: FoldModelLine;
-    completion?: FoldPairChoice[];
+    completion?: FoldCompletionChoice;
     pocket?: [SheetPoint, SheetPoint];
     opening?: FoldOpeningChoice[];
   } = {};
@@ -514,9 +527,9 @@ function readChoices(value: unknown): FoldChoices | null {
     choices.root = root;
   }
   if (value.completion !== undefined) {
-    const completion = readList(value.completion, readPair);
+    const completion = readCompletion(value.completion);
     if (!completion) return null;
-    if (completion.length > 0) choices.completion = completion;
+    if (completion.orders.length > 0) choices.completion = completion;
   }
   if (value.pocket !== undefined) {
     const pocket = readPoints(value.pocket);
@@ -538,11 +551,23 @@ function readModelLine(value: unknown): FoldModelLine | null {
   return n && d !== null && Math.hypot(n[0], n[1]) >= FOLD_MODEL_LINE_MIN_NORMAL ? { n, d } : null;
 }
 
-function readPair(value: unknown): FoldPairChoice | null {
-  if (!isRecord(value) || hasNewerKey(value, PAIR_KEYS)) return null;
-  const above = readPoint(value.above);
-  const below = readPoint(value.below);
-  return above && below && { above, below };
+/**
+ * A completion's witnesses and triples. Only the structure is judged: a
+ * triple naming a witness there is not, or a face against itself, is the
+ * engine's to call broken on replay.
+ */
+function readCompletion(value: unknown): FoldCompletionChoice | null {
+  if (!isRecord(value) || hasNewerKey(value, COMPLETION_KEYS)) return null;
+  const faces = readPoints(value.faces);
+  const orders = readList(value.orders, readTriple);
+  return faces && orders && { faces, orders };
+}
+
+function readTriple(value: unknown): readonly [number, number, 1 | -1] | null {
+  if (!Array.isArray(value) || value.length !== 3) return null;
+  const [f, g, s] = value as unknown[];
+  const index = (x: unknown): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0;
+  return index(f) && index(g) && (s === 1 || s === -1) ? [f, g, s] : null;
 }
 
 function readOpening(value: unknown): FoldOpeningChoice | null {
@@ -694,6 +719,10 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
       return { kind: op.kind, rotate: { amount: op.rotate.amount, direction: op.rotate.direction } };
     case 'cp-jump':
       return { kind: op.kind, cpJson: op.cpJson, orderJson: op.orderJson, origin: op.origin };
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
+      return { kind: op.kind, line: writeLine(op.line), ...writeMotion(op) };
   }
 }
 
@@ -739,8 +768,13 @@ export function writeFoldChoices(choices: FoldChoices): Record<string, unknown> 
   const { root, completion, pocket, opening } = choices;
   const written = {
     ...(root ? { root: { n: writePoint(root.n), d: root.d } } : {}),
-    ...(completion && completion.length > 0
-      ? { completion: completion.map(({ above, below }) => ({ above: writePoint(above), below: writePoint(below) })) }
+    ...(completion && completion.orders.length > 0
+      ? {
+          completion: {
+            faces: completion.faces.map(writePoint),
+            orders: completion.orders.map(([f, g, s]) => [f, g, s]),
+          },
+        }
       : {}),
     ...(pocket ? { pocket: pocket.map(writePoint) } : {}),
     ...(opening && opening.length > 0

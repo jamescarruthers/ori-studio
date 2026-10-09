@@ -1616,6 +1616,7 @@
       "stepForward": "Avancer un peu"
     },
     "sentence": {
+      "closedSink": "Enfoncez la pointe en enfoncement fermé : poussez-la vers l’intérieur, ses couches restant ensemble.",
       "cpJump": "Repliez le papier selon le patron de plis importé.",
       "mountain": {
         "crease": {
@@ -1819,6 +1820,7 @@
           "flaps_other": "Pliez seulement les {{count}} rabats indiqués en montagne de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis dépliez."
         }
       },
+      "openSink": "Enfoncez la pointe en enfoncement ouvert : poussez-la vers l’intérieur en retournant chaque couche.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "Dépliez toutes les couches le long du pli existant.",
@@ -1833,6 +1835,7 @@
         "top_other": "Dépliez les {{count}} couches du dessus."
       },
       "unknown": "Une étape créée avec une version plus récente d’Ori Studio.",
+      "unsink": "Désenfoncez la pointe : ressortez-la.",
       "valley": {
         "crease": {
           "all": "Pliez toutes les couches en vallée le long du pli existant.",
@@ -2116,12 +2119,14 @@
       "badgeNewer": "Plus récente",
       "badgePrecrease": "Prépliage",
       "badgeValley": "Vallée",
+      "closedSink": "Enfoncement fermé",
       "cpJump": "Importer un patron de plis",
       "existingCrease": "Pli existant",
       "freeLine": "Ligne libre",
       "mountainFold": "Pli montagne",
       "mountainPrecrease": "Pli montagne puis dépli",
       "noChange": "Ne modifie aucun pli",
+      "openSink": "Enfoncement ouvert",
       "originCp": "Fichier CP",
       "originEditFoldedFigure": "Figure pliée d’Édition",
       "originFold": "Fichier FOLD",
@@ -2139,6 +2144,7 @@
       "unfolds_many": "Déplie {{count}} plis",
       "unfolds_other": "Déplie {{count}} plis",
       "unknown": "D’une version plus récente d’Ori Studio",
+      "unsink": "Désenfoncer",
       "valleyFold": "Pli vallée",
       "valleyPrecrease": "Pli vallée puis dépli"
     }

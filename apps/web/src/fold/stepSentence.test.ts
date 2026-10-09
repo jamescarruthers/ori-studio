@@ -173,6 +173,19 @@ describe('foldStepSentence', () => {
     expect(foldStepSentence(t, { op: 'cp-jump' })).toBe('Collapse into the imported crease pattern.');
     expect(foldStepSentence(t, { op: 'unknown' })).toBe('A step made with a newer Ori Studio.');
   });
+
+  it('says each sink by the move, its line the picture’s', () => {
+    const line = { via: 'free' } as const;
+    expect(foldStepSentence(t, { op: 'sink', kind: 'open', line })).toBe(
+      'Open-sink the point: push its tip in, turning every layer inside out.'
+    );
+    expect(foldStepSentence(t, { op: 'sink', kind: 'closed', line })).toBe(
+      'Closed-sink the point: push its tip in, its layers kept together.'
+    );
+    expect(foldStepSentence(t, { op: 'sink', kind: 'unsink', line: { via: 'crease' } })).toBe(
+      'Unsink the point: pull its tip back out.'
+    );
+  });
 });
 
 describe('sentenceInputLetters', () => {

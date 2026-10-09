@@ -5032,7 +5032,13 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.closedSink": "a48812232b18",
+    "panels:fold.sentence.openSink": "cd165e977340",
+    "panels:fold.sentence.unsink": "4cc0752c6176",
+    "panels:fold.words.closedSink": "952f50fe472c",
+    "panels:fold.words.openSink": "b4dbec1be926",
+    "panels:fold.words.unsink": "392440499927"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -10067,7 +10073,13 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.closedSink": "a48812232b18",
+    "panels:fold.sentence.openSink": "cd165e977340",
+    "panels:fold.sentence.unsink": "4cc0752c6176",
+    "panels:fold.words.closedSink": "952f50fe472c",
+    "panels:fold.words.openSink": "b4dbec1be926",
+    "panels:fold.words.unsink": "392440499927"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15104,7 +15116,13 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.closedSink": "a48812232b18",
+    "panels:fold.sentence.openSink": "cd165e977340",
+    "panels:fold.sentence.unsink": "4cc0752c6176",
+    "panels:fold.words.closedSink": "952f50fe472c",
+    "panels:fold.words.openSink": "b4dbec1be926",
+    "panels:fold.words.unsink": "392440499927"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -19931,7 +19949,13 @@
     "toasts:diagram.fold.sent_other": "55817be52772",
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.closedSink": "a48812232b18",
+    "panels:fold.sentence.openSink": "cd165e977340",
+    "panels:fold.sentence.unsink": "4cc0752c6176",
+    "panels:fold.words.closedSink": "952f50fe472c",
+    "panels:fold.words.openSink": "b4dbec1be926",
+    "panels:fold.words.unsink": "392440499927"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -24758,7 +24782,13 @@
     "toasts:diagram.fold.sent_other": "55817be52772",
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.closedSink": "a48812232b18",
+    "panels:fold.sentence.openSink": "cd165e977340",
+    "panels:fold.sentence.unsink": "4cc0752c6176",
+    "panels:fold.words.closedSink": "952f50fe472c",
+    "panels:fold.words.openSink": "b4dbec1be926",
+    "panels:fold.words.unsink": "392440499927"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -29793,7 +29823,13 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.closedSink": "a48812232b18",
+    "panels:fold.sentence.openSink": "cd165e977340",
+    "panels:fold.sentence.unsink": "4cc0752c6176",
+    "panels:fold.words.closedSink": "952f50fe472c",
+    "panels:fold.words.openSink": "b4dbec1be926",
+    "panels:fold.words.unsink": "392440499927"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -34828,7 +34864,13 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.closedSink": "a48812232b18",
+    "panels:fold.sentence.openSink": "cd165e977340",
+    "panels:fold.sentence.unsink": "4cc0752c6176",
+    "panels:fold.words.closedSink": "952f50fe472c",
+    "panels:fold.words.openSink": "b4dbec1be926",
+    "panels:fold.words.unsink": "392440499927"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -39655,6 +39697,12 @@
     "toasts:diagram.fold.sent_other": "55817be52772",
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.closedSink": "a48812232b18",
+    "panels:fold.sentence.openSink": "cd165e977340",
+    "panels:fold.sentence.unsink": "4cc0752c6176",
+    "panels:fold.words.closedSink": "952f50fe472c",
+    "panels:fold.words.openSink": "b4dbec1be926",
+    "panels:fold.words.unsink": "392440499927"
   }
 }

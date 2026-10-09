@@ -77,6 +77,22 @@ describe('lineLabel', () => {
     expect(lineLabel(t, { op: 'unfold', direction: 'valley', scope: ALL })).toBe('Existing crease');
     expect(lineLabel(t, { op: 'turn', turn: { kind: 'turn-over', axis: 'vertical' } })).toBeNull();
     expect(lineLabel(t, { op: 'cp-jump' })).toBeNull();
+    // A sink's line is found as a fold's; an unsink's is the ring's crease.
+    expect(lineLabel(t, { op: 'sink', kind: 'open', line: { via: 'free' } })).toBe('Free line');
+    expect(lineLabel(t, { op: 'sink', kind: 'unsink', line: { via: 'crease' } })).toBe('Existing crease');
+  });
+});
+
+describe('a sink’s words', () => {
+  it('names each sink, label and badge alike', () => {
+    const steps: FoldSentenceStep[] = (['open', 'closed', 'unsink'] as const).map((kind) => ({
+      op: 'sink',
+      kind,
+      line: { via: 'free' },
+    }));
+    const names = ['Open sink', 'Closed sink', 'Unsink'];
+    expect(steps.map((step) => operationLabel(t, step))).toEqual(names);
+    expect(steps.map((step) => operationBadge(t, step))).toEqual(names);
   });
 });
 
