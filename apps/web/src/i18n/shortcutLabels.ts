@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import type { ShortcutDefinition, ShortcutScope } from '../keyboard/shortcuts';
+import { foldModelVerbLabel, foldToolLabel, lineModeLabel } from '../fold/tools/foldToolCatalog';
 import { cpActionLabelById } from './cpVocab';
 
 /**
@@ -177,6 +178,47 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return t('tools:diagram.nudgeNodeUpLarge', 'Nudge Node Up (Large)');
     case 'diagram.nudgeNodeDownLarge':
       return t('tools:diagram.nudgeNodeDownLarge', 'Nudge Node Down (Large)');
+    // The Fold canvas's tools, in the words the rail names them by.
+    case 'fold.toolValley':
+      return foldToolLabel(t, 'valley');
+    case 'fold.toolMountain':
+      return foldToolLabel(t, 'mountain');
+    case 'fold.toolPrecrease':
+      return foldToolLabel(t, 'precrease');
+    case 'fold.toolInsideReverse':
+      return foldToolLabel(t, 'inside-reverse');
+    case 'fold.toolDivideLine':
+      return foldToolLabel(t, 'divide-line');
+    case 'fold.turnOver':
+      return foldModelVerbLabel(t, 'turn-over');
+    case 'fold.rotate':
+      return foldModelVerbLabel(t, 'rotate');
+    case 'fold.lineAxiom1':
+      return lineModeLabel(t, 'axiom-1');
+    case 'fold.lineAxiom2':
+      return lineModeLabel(t, 'axiom-2');
+    case 'fold.lineAxiom3':
+      return lineModeLabel(t, 'axiom-3');
+    case 'fold.lineAxiom4':
+      return lineModeLabel(t, 'axiom-4');
+    case 'fold.lineAxiom5':
+      return lineModeLabel(t, 'axiom-5');
+    case 'fold.lineAxiom6':
+      return lineModeLabel(t, 'axiom-6');
+    case 'fold.lineAxiom7':
+      return lineModeLabel(t, 'axiom-7');
+    case 'fold.lineFree':
+      return lineModeLabel(t, 'free');
+    case 'fold.lineCrease':
+      return lineModeLabel(t, 'crease');
+    case 'fold.swapSide':
+      return t('tools:fold.key.swapSide', 'Swap moving side');
+    case 'fold.previousCandidate':
+      return t('tools:fold.key.previousRoot', 'Previous root');
+    case 'fold.nextCandidate':
+      return t('tools:fold.key.nextRoot', 'Next root');
+    case 'fold.commit':
+      return t('tools:fold.key.commit', 'Commit fold');
     default:
       return definition.label;
   }
@@ -196,6 +238,8 @@ export function shortcutScopeLabel(t: TFunction, scope: ShortcutScope): string {
       return t('tools:diagram.scopeLabel', 'diagram');
     case 'diagram-path':
       return t('tools:diagram.pathScopeLabel', 'edit path');
+    case 'fold':
+      return t('tools:fold.scopeLabel', 'fold');
     default:
       return scope;
   }
@@ -242,6 +286,8 @@ export function shortcutCategoryLabel(t: TFunction, category: string): string {
       return t('tools:references.categoryLabel', 'References');
     case 'Diagram':
       return t('tools:diagram.categoryLabel', 'Diagram');
+    case 'Fold Workspace':
+      return t('tools:fold.categoryLabel', 'Fold workspace');
     default:
       return category;
   }

@@ -14,6 +14,7 @@
  * React-free and store-free; literal `t()` keys so the extractor sees them.
  */
 import type { TFunction } from 'i18next';
+import type { FoldShortcutId as RegistryFoldShortcutId } from '../../keyboard/shortcuts';
 import { axiomPhrase, type FoldAxiom } from '../../lib/foldSentences';
 import type { TurnKind } from '../../lib/steps/turn';
 import { turnCardWords } from '../../lib/steps/turnWords';
@@ -121,30 +122,12 @@ export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = [
 export type FoldRailItemId = FoldToolId | FoldLineModeId | FoldModelVerbId | FoldPlannedOpId;
 
 /**
- * The registry ids the Fold scope binds (plan D14 Keyboard), and Escape's,
- * which runs through the viewport's cancel ladder. Named here so a tooltip and
- * the scope agree; the surface resolves each to the user's key.
+ * The registry ids the Fold scope binds (plan D14 Keyboard, `keyboard/shortcuts.ts`'s
+ * `FOLD_SHORTCUTS`), and Escape's, which runs through the viewport's cancel
+ * ladder. One list with the registry's, so a tooltip and the scope cannot
+ * disagree; the surface resolves each to the user's key.
  */
-export type FoldShortcutId =
-  | 'fold.toolValley'
-  | 'fold.toolMountain'
-  | 'fold.toolPrecrease'
-  | 'fold.toolInsideReverse'
-  | 'fold.toolDivideLine'
-  | 'fold.turnOver'
-  | 'fold.rotate'
-  | 'fold.lineAxiom1'
-  | 'fold.lineAxiom2'
-  | 'fold.lineAxiom3'
-  | 'fold.lineAxiom4'
-  | 'fold.lineAxiom5'
-  | 'fold.lineAxiom6'
-  | 'fold.lineAxiom7'
-  | 'fold.lineFree'
-  | 'fold.lineCrease'
-  | 'fold.swapSide'
-  | 'fold.commit'
-  | 'viewport.cancel';
+export type FoldShortcutId = RegistryFoldShortcutId | 'viewport.cancel';
 
 /** Resolves a key's id to the label the user's layout gives it, or undefined while it has none. */
 export type FoldKeyLabel = (id: FoldShortcutId) => string | undefined;
