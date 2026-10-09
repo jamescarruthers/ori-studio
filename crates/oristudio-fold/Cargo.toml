@@ -33,8 +33,9 @@ workspace = true
 [features]
 # The one conversion to the CP kernel's model and the FOLD sequence export
 # built on the kernel's own FOLD writer (plan D1, D10). Off by default so the
-# engine stays free of the kernel; `oristudio-fold-wasm` turns it on. Both
-# crates it adds are MIT OR Apache-2.0.
+# engine stays free of the kernel; `oristudio-fold-wasm` turns it on, and its
+# README records what that costs the browser. Both crates it adds are
+# MIT OR Apache-2.0.
 kernel = ["dep:oristudio-cp", "dep:treemaker-fold", "dep:serde_json"]
 # `oristudio_fold::random`: seeded random fold sequences, the draws the
 # property tests make, for crates that check the engine from outside it (the
