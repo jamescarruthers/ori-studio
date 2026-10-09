@@ -86,6 +86,11 @@ function useReverseAsk(
  * each the folder's or the first the engine lists (`tools/reverse/
  * reverseStep`). While an answer is on its way there is no step, so nothing
  * is previewed against a tip the engine has not described.
+ *
+ * A fix that puts another line in place of the picks' — a near miss's
+ * landmark line, which the tools hold as their override — is the tip's line
+ * from then on: asked about and folded along, its kind, opening and order
+ * still chosen here.
  */
 export function useFoldReverseStep(
   session: FoldSessionSurface,
@@ -96,7 +101,8 @@ export function useFoldReverseStep(
 ): FoldReverseStepAnswer {
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
-  const { lineMode, picks, swapped, seed, compound } = tools;
+  const { lineMode, picks, swapped, seed, compound, override } = tools;
+  const fixed = override && (override.op.kind === 'inside-reverse' || override.op.kind === 'outside-reverse') ? override.op : null;
 
   // The tip: the line, side and anchor, as either kind would fold them.
   const located = useMemo<FoldStepBuild>(() => {
@@ -106,7 +112,12 @@ export function useFoldReverseStep(
       index
     );
   }, [enabled, index, lineMode, picks, candidate, swapped, seed]);
-  const tip = located.status === 'built' ? { op: located.op, ...(located.choices ? { choices: located.choices } : {}) } : null;
+  const tip =
+    located.status !== 'built'
+      ? null
+      : fixed
+        ? { op: { ...fixed, kind: 'inside-reverse' as const } }
+        : { op: located.op, ...(located.choices ? { choices: located.choices } : {}) };
   const first = useReverseAsk(session, stateKey, tip);
   const described = first?.asked ?? null;
   const ways = useMemo(() => (described ? reverseOpenWays(described.analysis) : []), [described]);
@@ -114,9 +125,9 @@ export function useFoldReverseStep(
   // With a flap's opening chosen, the kinds and orders are that opening's.
   const opened = useMemo(
     () => (tip && way ? { op: tip.op, choices: { ...tip.choices, opening: way.stored } } : null),
-    // The tip is rebuilt on every render; its identity is the located build's.
+    // The tip is rebuilt on every render; its identity is the located build's, or the fix's.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [located, way]
+    [located, fixed, way]
   );
   const second = useReverseAsk(session, stateKey, opened);
   const answer = way ? second : first;
@@ -150,11 +161,25 @@ export function useFoldReverseStep(
     // other: the layers at its line stay on show for the flaps to be narrowed
     // there, and its preview says the same refusal.
     if (!asked && !refusedTip) return { status: 'unlocated' };
-    return buildReverseStep(
+    const built = buildReverseStep(
       { lineMode, picks, candidate, swapped, seed, kind, openings: way?.stored ?? [], completion: order },
       index
     );
-  }, [located, index, asked, refusedTip, lineMode, picks, candidate, swapped, seed, kind, way, order]);
+    if (!fixed || built.status !== 'built') return built;
+    // Along the fix's line: its free line in place of the picks', which no
+    // axiom's root belongs to.
+    const choices: FoldChoices = {
+      ...(order ? { completion: order } : {}),
+      ...(way ? { opening: way.stored } : {}),
+    };
+    const { choices: _picked, ...rest } = built;
+    return {
+      ...rest,
+      op: { ...fixed, kind: kind === 'inside' ? 'inside-reverse' : 'outside-reverse' },
+      ...(Object.keys(choices).length > 0 ? { choices } : {}),
+      via: fixed.line.via,
+    };
+  }, [located, index, asked, refusedTip, fixed, lineMode, picks, candidate, swapped, seed, kind, way, order]);
 
   if (!enabled) return { build: { status: 'unlocated' }, reverse: null, refused: null };
   return {

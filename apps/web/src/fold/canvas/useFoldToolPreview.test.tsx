@@ -203,6 +203,28 @@ describe('the layers at the line', () => {
     expect(seen?.refused?.refusal.code).toBe('reverse_no_opening');
   });
 
+  it('take a reverse fold along a fix’s line in place of the picks’, asked about and folded along it', async () => {
+    const fixed = {
+      kind: 'inside-reverse' as const,
+      line: { via: 'free' as const, through: [[0.25, 0.5], [0.75, 0.5]] as [[number, number], [number, number]] },
+      moving: [0.5, 0.75] as [number, number],
+      seed: { scope: 'all' as const },
+    };
+    const reverse: FoldToolState = {
+      ...FOLD_TOOL_INITIAL,
+      tool: 'inside-reverse',
+      lineMode: 'axiom-2',
+      picks: [point(0, 0), point(0, 1)],
+      override: { op: fixed },
+    };
+    await render(reverse);
+    // Asked about along the fix's line, not the axiom's.
+    expect(engine.reverse).toHaveBeenLastCalledWith(PARENT, expect.objectContaining({ line: fixed.line }), undefined);
+    // Folded along it, with no root: a free line has none.
+    expect(seen?.step?.op).toMatchObject({ kind: 'inside-reverse', line: fixed.line });
+    expect(seen?.step?.choices?.root).toBeUndefined();
+  });
+
   it('let the other side’s section go until it is asked for', async () => {
     await render(FREE_LINE);
     answer('analysed');

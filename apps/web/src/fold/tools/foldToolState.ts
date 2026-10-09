@@ -306,11 +306,13 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => (state.hoveredFlap === hoveredFlap ? state : { ...state, hoveredFlap }));
     },
 
+    // A compound fold's choices are made along its line: a fix's line in
+    // place of the picks' (the override) is kept through them.
     setReverseKind(reverseKind) {
       set((state) =>
         state.compound.reverseKind === reverseKind
           ? state
-          : { ...state, override: null, compound: { ...state.compound, reverseKind, order: 0 } }
+          : { ...state, compound: { ...state.compound, reverseKind, order: 0 } }
       );
     },
 
@@ -318,7 +320,6 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       if (count <= 1) return;
       set((state) => ({
         ...state,
-        override: null,
         compound: { ...state.compound, opening: (((state.compound.opening + delta) % count) + count) % count, order: 0 },
       }));
     },
@@ -327,7 +328,6 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       if (count <= 1) return;
       set((state) => ({
         ...state,
-        override: null,
         compound: { ...state.compound, order: (((state.compound.order + delta) % count) + count) % count },
       }));
     },

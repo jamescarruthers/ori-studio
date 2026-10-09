@@ -161,12 +161,16 @@ export function useFoldToolPreview(
       index
     );
   }, [index, tools, candidate]);
-  const build = tools.tool === 'inside-reverse' ? reverseStep.build : plainBuild;
+  const reversing = tools.tool === 'inside-reverse';
+  const build = reversing ? reverseStep.build : plainBuild;
   const step = useMemo<FoldToolStep | null>(() => {
-    const chosen = tools.override ?? (build.status === 'built' ? { op: build.op, choices: build.choices } : null);
+    // A plain fold's override is the whole step; a reverse fold's is its
+    // line, which its build already folds along.
+    const override = reversing ? null : tools.override;
+    const chosen = override ?? (build.status === 'built' ? { op: build.op, choices: build.choices } : null);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [tools.override, build]);
+  }, [reversing, tools.override, build]);
 
   // --- Tier 2 and 3, asked whenever the step changes; let go when there is none.
   const asked = useRef<string | null>(null);

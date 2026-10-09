@@ -181,11 +181,12 @@ export function defaultMovingSign(index: FoldPickIndex, line: FoldModelLine, unf
 }
 
 /**
- * A free line through the scene line `line`: two sheet points on it, as far
- * apart along it as the paper reaches, each just inside the stretch of a
- * subface it crosses. Null when the line misses the paper.
+ * The scene line `line`'s two ends on the paper, as far apart along it as the
+ * paper reaches, each a tenth in from the end of the subface it crosses there
+ * (clear of its corners), with that subface's top face. Null when the line
+ * misses the paper.
  */
-export function freeLineThrough(index: FoldPickIndex, line: FoldModelLine): [SheetPoint, SheetPoint] | null {
+function paperEnds(index: FoldPickIndex, line: FoldModelLine): [{ at: Point; top: number }, { at: Point; top: number }] | null {
   let first: { from: number; to: number; top: number } | null = null;
   let last: { from: number; to: number; top: number } | null = null;
   for (const subface of index.subfaces) {
@@ -198,10 +199,40 @@ export function freeLineThrough(index: FoldPickIndex, line: FoldModelLine): [She
     if (!last || to > last.to) last = { from, to, top };
   }
   if (!first || !last) return null;
-  // A tenth in from each end: inside the subface, clear of its corners.
-  const a = sheetOf(index.scene, first.top, pointOnLine(line, first.from + (first.to - first.from) * 0.1));
-  const b = sheetOf(index.scene, last.top, pointOnLine(line, last.to - (last.to - last.from) * 0.1));
+  return [
+    { at: pointOnLine(line, first.from + (first.to - first.from) * 0.1), top: first.top },
+    { at: pointOnLine(line, last.to - (last.to - last.from) * 0.1), top: last.top },
+  ];
+}
+
+/**
+ * A free line through the scene line `line`: two sheet points on it, as far
+ * apart along it as the paper reaches, each just inside the stretch of a
+ * subface it crosses. Null when the line misses the paper.
+ */
+export function freeLineThrough(index: FoldPickIndex, line: FoldModelLine): [SheetPoint, SheetPoint] | null {
+  const ends = paperEnds(index, line);
+  if (!ends) return null;
+  const a = sheetOf(index.scene, ends[0].top, ends[0].at);
+  const b = sheetOf(index.scene, ends[1].top, ends[1].at);
   return a && b ? [a, b] : null;
+}
+
+/**
+ * The scene line `line` located as a free line, as two clicks on the folded
+ * pane would locate it: its two ends on the paper, in the order that draws it
+ * with `line`'s own normal, so each side of the one is that side of the
+ * other. Null when the line misses the paper.
+ */
+export function freePicksAlong(index: FoldPickIndex, line: FoldModelLine): [FoldPick, FoldPick] | null {
+  const ends = paperEnds(index, line);
+  if (!ends) return null;
+  const [p, q] = ends.map((end) => end.at) as [Point, Point];
+  const drawn = lineThrough(p, q);
+  if (!drawn) return null;
+  const [from, to] = drawn.n[0] * line.n[0] + drawn.n[1] * line.n[1] < 0 ? [q, p] : [p, q];
+  const free = (at: Point): FoldPick => ({ kind: 'free', pane: 'folded', scene: at, sheet: topSheetPointAt(index, at) });
+  return [free(from), free(to)];
 }
 
 /** How far, in sheet units, a stretch of the drawn line may land off the fold line and still be on it. */

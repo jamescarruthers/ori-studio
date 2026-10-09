@@ -11,6 +11,9 @@ import {
   type FoldMark,
   type FoldMarkEntry,
   type FoldOp,
+  type FoldPlainOp,
+  type FoldPrecreaseOp,
+  type FoldReverseOp,
   type FoldSequenceDocument,
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
@@ -20,7 +23,7 @@ import { wovenIntervalAt } from '../tools/crossSection';
 import { isLineTool, type FoldLineModeId, type FoldToolId } from '../tools/foldToolCatalog';
 import { nextStep } from '../tools/foldToolRegistry';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
-import { freeLineThrough, movingPoint } from '../tools/foldStepBuilder';
+import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
 import { foldToolInput, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
 import { isFoldAltLatched } from './foldAltLatch';
 import { transformLine } from './foldCanvasGeometry';
@@ -31,6 +34,17 @@ import type { FoldStateView } from './useFoldStateView';
 /** A free point: Alt held, or on a touch screen its latch. */
 export function freePointHeld(): boolean {
   return readHeldModifiers().alt || isFoldAltLatched();
+}
+
+/** A fold along a located line, whose line a near miss's landmark line can take the place of. */
+function isAlongLine(op: FoldOp | undefined): op is FoldPlainOp | FoldPrecreaseOp | FoldReverseOp {
+  return (
+    op?.kind === 'valley' ||
+    op?.kind === 'mountain' ||
+    op?.kind === 'precrease' ||
+    op?.kind === 'inside-reverse' ||
+    op?.kind === 'outside-reverse'
+  );
 }
 
 /** Every verb the canvas, its window, its rail and its keys share: one path whichever one presses. */
@@ -340,11 +354,25 @@ export function useFoldCanvasVerbs(
           return;
         }
         // A near miss's landmark line: a model line, stored as the free line
-        // through it, the same side moving.
+        // through it, the same side moving. A reverse fold's too: its tool
+        // takes the line from the override and keeps choosing its kind,
+        // opening and order along it (`useFoldReverseStep`).
         const op = previewed.step?.op;
         const index = shown.index;
-        if (!op || !index || (op.kind !== 'valley' && op.kind !== 'mountain' && op.kind !== 'precrease')) return;
+        if (!index) return;
         const sceneLine = transformLine(index.scene.view_transform, fix.line);
+        if (!op) {
+          // No step to put it in: an axiom whose roots were refused as a
+          // near miss. The landmark line is located as a free line instead,
+          // its side the fix's.
+          const picks = freePicksAlong(index, sceneLine);
+          if (!picks) return;
+          tools.selectLineMode('free');
+          for (const pick of picks) tools.pick(pick);
+          if (defaultMovingSign(index, sceneLine, false) !== (fix.side === 'positive' ? 1 : -1)) tools.swapSide();
+          return;
+        }
+        if (!isAlongLine(op)) return;
         const through = freeLineThrough(index, sceneLine);
         const moving = movingPoint(index, sceneLine, fix.side === 'positive' ? 1 : -1);
         if (!through || !moving) return;

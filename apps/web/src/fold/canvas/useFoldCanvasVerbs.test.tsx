@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FoldOp } from '../document/foldSequenceDocument';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { createFoldTools, FOLD_TOOL_INITIAL, type FoldTools } from '../tools/foldToolState';
+import { buildReverseStep } from '../tools/reverse/reverseStep';
+import { flatSquareLandmarks, flatSquareScene } from './foldCanvas.fixtures';
+import { foldPickIndex } from './foldPicking';
 import { foldCanvasChoice, queuedCommit, useFoldCanvasVerbs, type FoldCanvasVerbBinding } from './useFoldCanvasVerbs';
 import type { FoldStateView } from './useFoldStateView';
 import type { FoldToolPreview } from './useFoldToolPreview';
@@ -57,8 +60,8 @@ let host: HTMLDivElement;
 let root: Root;
 let bound: FoldCanvasVerbBinding | null;
 
-function Harness(props: { session: FoldSessionSurface; tools: FoldTools; preview: FoldToolPreview }) {
-  const binding = useFoldCanvasVerbs(props.session, props.tools, {} as FoldStateView, props.preview);
+function Harness(props: { session: FoldSessionSurface; tools: FoldTools; preview: FoldToolPreview; view?: FoldStateView }) {
+  const binding = useFoldCanvasVerbs(props.session, props.tools, props.view ?? ({} as FoldStateView), props.preview);
   useEffect(() => {
     bound = binding;
   });
@@ -120,6 +123,49 @@ describe('the Fold canvas’s commit', () => {
     expect(queuedCommit('book', { ...shown, landing: false }, true)).toBe('drop');
     expect(queuedCommit('other', shown, false)).toBe('drop');
     expect(queuedCommit('book', { ...shown, step: null }, false)).toBe('drop');
+  });
+});
+
+describe('a near miss’s fix', () => {
+  it('puts the landmark line in place of a reverse fold’s line, as of a plain fold’s', () => {
+    const surface = session(vi.fn());
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'inside-reverse' });
+    const view = { index: foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []) } as unknown as FoldStateView;
+    const reverse: FoldOp = {
+      kind: 'inside-reverse',
+      line: { via: 'free', through: [[0.501, 0], [0.499, 1]] },
+      moving: [0.75, 0.5],
+      seed: { scope: 'all' },
+    };
+    act(() => root.render(<Harness session={surface} tools={tools} preview={preview({ step: { op: reverse, key: 'near' } })} view={view} />));
+    act(() => bound!.verbs.useLine({ fix: 'use_line', line: { n: [1, 0], d: 0.5 }, side: 'positive' }));
+    const override = tools.store.getState().override?.op;
+    expect(override).toMatchObject({ kind: 'inside-reverse', line: { via: 'free' }, seed: { scope: 'all' } });
+    if (override?.kind !== 'inside-reverse' || override.line.via !== 'free') throw new Error('no landmark line');
+    // On x = ½ exactly, the side x > ½ moving.
+    for (const [x] of override.line.through) expect(x).toBeCloseTo(0.5, 9);
+    expect(override.moving?.[0]).toBeGreaterThan(0.5);
+  });
+
+  it('locates the landmark line as a free line when an axiom’s roots were refused, and there is no step to put it in', () => {
+    const surface = session(vi.fn());
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'inside-reverse', lineMode: 'axiom-1' });
+    const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
+    const view = { index } as unknown as FoldStateView;
+    act(() => root.render(<Harness session={surface} tools={tools} preview={preview({ step: null })} view={view} />));
+    act(() => bound!.verbs.useLine({ fix: 'use_line', line: { n: [1, 0], d: 0.5 }, side: 'positive' }));
+    const state = tools.store.getState();
+    expect(state.tool).toBe('inside-reverse');
+    expect(state.lineMode).toBe('free');
+    expect(state.picks).toHaveLength(2);
+    for (const pick of state.picks) {
+      if (pick.kind !== 'free') throw new Error('not a free pick');
+      expect(pick.scene.x).toBeCloseTo(0.5, 9);
+    }
+    // The fix's side moves: x > ½, which an even split does not take unswapped.
+    const built = buildReverseStep({ ...state, candidate: null, kind: 'inside', openings: [], completion: null }, index);
+    if (built.status !== 'built' || built.op.kind !== 'inside-reverse') throw new Error('not built');
+    expect(built.op.moving?.[0]).toBeGreaterThan(0.5);
   });
 });
 
