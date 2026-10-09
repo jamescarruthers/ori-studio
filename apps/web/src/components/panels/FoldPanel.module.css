@@ -1,10 +1,11 @@
 /*
- * The Fold workspace panel (FoldPanel.tsx) before its canvas lands: the
- * workspace's mark, centred in the pane, as the Diagram's empty state centres
- * its own.
+ * The Fold workspace panel (FoldPanel.tsx): the canvas's place under the step
+ * strip — the workspace's mark, centred, until the canvas lands — and the
+ * Steps view's, which scrolls.
  */
 .body {
   display: grid;
+  min-height: 0;
   place-items: center;
 }
 
@@ -17,4 +18,10 @@
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
   color: color-mix(in srgb, var(--accent-primary) 78%, var(--text-secondary));
+}
+
+.steps {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
 }

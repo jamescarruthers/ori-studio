@@ -185,4 +185,15 @@ describe('FoldStepPane', () => {
     // A section the user can fold away, open to start with.
     expect(host.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded')).toBe('true');
   });
+
+  it('says a refused fold has nothing to change until it is resolved, and a landing one nothing yet', () => {
+    const words = { op: 'fold', direction: 'valley', line: { via: 'free' }, scope: { kind: 'all' } } as const;
+    render({ step: null, startSide: 'front', pending: { words, diff: null, refused: true } });
+    expect(section('Pending fold')?.textContent).toContain(
+      'Resolve the issue in the tool window to see the creases it makes.'
+    );
+    render({ step: null, startSide: 'front', pending: { words, diff: null } });
+    expect(section('Pending fold')?.querySelectorAll('li')).toHaveLength(0);
+    expect(section('Pending fold')?.textContent).not.toContain('Resolve');
+  });
 });

@@ -1,0 +1,13 @@
+/* The Fold step strip (FoldStepStrip.tsx): the shared strip, and the stand-in for a picture not ready yet. */
+.strip {
+  display: contents;
+}
+
+/* A card whose step has no state to draw: still folding, or not foldable. */
+.blank {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-tertiary) 8%, transparent);
+}

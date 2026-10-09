@@ -53,7 +53,10 @@ export interface FoldStepPaneStep {
 /** The fold being made and not yet committed, as the preview landed it. */
 export interface FoldPendingFold {
   words: FoldSentenceStep;
-  diff: FoldCreaseDiff;
+  /** What committing it would change; null until the engine has said. */
+  diff: FoldCreaseDiff | null;
+  /** The engine refused it: the tool window says why, and there is nothing to change yet. */
+  refused?: boolean;
 }
 
 /**
@@ -308,11 +311,19 @@ function PendingFold({ pending }: { pending: FoldPendingFold }) {
   return (
     <CollapsibleSection title={t('panels:fold.step.pending', 'Pending fold')} collapsible defaultOpen>
       <p className={styles.pendingSentence}>{foldStepSentence(t, pending.words)}</p>
-      <ul className={styles.pendingChanges}>
-        {creaseDiffLines(t, pending.diff).map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
+      {pending.refused ? (
+        <p className={styles.pendingSentence}>
+          {t('panels:fold.step.pendingRefused', 'Resolve the issue in the tool window to see the creases it makes.')}
+        </p>
+      ) : (
+        pending.diff && (
+          <ul className={styles.pendingChanges}>
+            {creaseDiffLines(t, pending.diff).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )
+      )}
     </CollapsibleSection>
   );
 }
