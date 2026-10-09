@@ -18,7 +18,8 @@
  *   (the scene, the cross-section, a step's summary and picture, landmarks)
  *   are asked of a handle.
  *
- * Pure types and constants: no React, no store, no wasm.
+ * Pure types, constants and the one predicate on a thrown code: no React, no
+ * store, no wasm.
  */
 
 import type { OristudioCpFoldedPaperEdgeKind, OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
@@ -416,7 +417,7 @@ export interface FoldActed {
   action: FoldActionGeometry;
 }
 
-/** The picture of the step that landed a state; null for a sheet, a turn or a rotation. */
+/** The picture of the step that landed a state; null for a sheet, a turn, a rotation or an import. */
 export interface FoldStepActed {
   action: FoldActionGeometry | null;
 }
@@ -504,19 +505,33 @@ export interface FoldDepthChosen {
   choices: FoldDepthChoice[];
 }
 
-/** A step's summary (plan D14). */
+/**
+ * A step's summary (plan D14). An import's is the pattern it brings: it
+ * replaces the state before it rather than changing it, so its diff is empty.
+ */
 export interface FoldStepSummary {
   /** The child's crease pattern, front-relative. */
   counts: { mountain: number; valley: number; flat: number };
   /** The child's edge ids that the step added, reversed, unfolded and refolded. */
   diff: { added: number[]; reversed: number[]; unfolded: number[]; refolded: FoldRefold[] };
-  /** The display layers the fold went through; null for a turn or a rotation. */
+  /** The display layers the fold went through; null for a turn, a rotation or an import. */
   layers: number | null;
 }
 
 /** The summary of the step that landed a state; null for the flat sheet. */
 export interface FoldStepSummarised {
   summary: FoldStepSummary | null;
+}
+
+/**
+ * Whether `stepSummary` or `stepAction` threw because the state's parent is
+ * no longer held. The bridge compares a fold, a turn or a rotation with its
+ * parent, and the replay's cache can keep a step after letting its parent go
+ * (undo, then redo after a trim): the step simply has no summary or picture
+ * until it is landed again. Not a fault to report.
+ */
+export function isFoldParentReleased(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'parent_released');
 }
 
 /** One fold an axiom yields on a state. */

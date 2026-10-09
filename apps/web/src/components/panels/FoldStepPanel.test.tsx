@@ -28,20 +28,28 @@ import { FoldStepPanel } from './FoldStepPanel';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
+vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
+
+const ONE_VALLEY: ReturnType<FoldEngineCalls['stepSummary']> = {
+  status: 'ok',
+  summary: {
+    counts: { mountain: 0, valley: 1, flat: 0 },
+    diff: { added: [4], reversed: [], unfolded: [], refolded: [] },
+    layers: 1,
+  },
+};
+
+/** What the fake engine says of a step; a test may replace it. */
+let stepSummary: FoldEngineCalls['stepSummary'] = () => ONE_VALLEY;
+
 /** The fake engine, with a scene and a step summary: every step folds the square in half along its diagonal. */
 function engine(): FoldEngineCalls {
   const fake = fakeFoldEngine({ refuse: (op) => (op.kind === 'mountain' ? 'layer_order' : null) });
   return {
     ...fake,
     scene: (state) => (fake.trail(state)?.length === 1 ? squareScene() : diagonalHalfScene()),
-    stepSummary: () => ({
-      status: 'ok',
-      summary: {
-        counts: { mountain: 0, valley: 1, flat: 0 },
-        diff: { added: [4], reversed: [], unfolded: [], refolded: [] },
-        layers: 1,
-      },
-    }),
+    stepSummary: (state) => stepSummary(state),
   };
 }
 
@@ -51,6 +59,8 @@ let root: Root;
 beforeEach(async () => {
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   menu.handleMenuAction.mockClear();
+  monitoring.reportError.mockClear();
+  stepSummary = () => ONE_VALLEY;
   clearFoldStateFrames();
   app.session = createFoldSession({
     document: foldSessionDocumentSource(useWorkspaceStore),
@@ -124,6 +134,54 @@ describe('the Fold Step pane', () => {
       await settle();
     });
     expect(host.textContent).toContain('Resolve the issue in the tool window to see the creases it makes.');
+  });
+
+  it('says what an import is: where it came from and the pattern it brings, with no change to list', async () => {
+    stepSummary = () => ({
+      status: 'ok',
+      summary: {
+        counts: { mountain: 2, valley: 3, flat: 1 },
+        diff: { added: [], reversed: [], unfolded: [], refolded: [] },
+        layers: null,
+      },
+    });
+    const jump = { kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'sample' } as const;
+    useWorkspaceStore.getState().installFoldSequences(
+      [
+        {
+          document: {
+            formatVersion: 1,
+            id: 'fold-import',
+            title: '',
+            paper: { shape: { kind: 'square' }, startSide: 'front' },
+            steps: [{ id: 'fstep-cp', parent: null, op: jump }],
+          },
+          readOnlyRaw: null,
+        },
+      ],
+      { v: 1, sequenceId: 'fold-import', cursor: 'fstep-cp', activeChild: {} }
+    );
+    await act(async () => settle());
+
+    expect(host.textContent).toContain('Imported crease pattern');
+    expect(rows()).toMatchObject({ Source: 'Sample', Mountain: '2', Valley: '3' });
+    // Not "Changes no creases": an import replaces the pattern rather than changing it.
+    expect(rows()).not.toHaveProperty('Changes');
+    expect(rows()).not.toHaveProperty('Layers');
+  });
+
+  it('shows a step whose parent is no longer held without its summary, and reports nothing', async () => {
+    stepSummary = () => {
+      throw { code: 'parent_released', message: 'state 3 was folded from state 2, which has been released' };
+    };
+    await act(async () => {
+      await app.session!.commitStep(valleyAt(0.5));
+      await settle();
+    });
+    expect(host.querySelector('h3')?.textContent).toBe('Step 1');
+    expect(rows()).toMatchObject({ Operation: 'Valley fold' });
+    expect(rows()).not.toHaveProperty('Changes');
+    expect(monitoring.reportError).not.toHaveBeenCalled();
   });
 
   it('offers a broken step its Delete, through the verb every surface runs', async () => {

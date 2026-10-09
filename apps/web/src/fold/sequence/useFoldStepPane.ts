@@ -4,7 +4,7 @@ import { handleMenuAction } from '../../commands/menuActions';
 import type { FoldBranchPosition, FoldPendingFold, FoldStepPaneStep, FoldStepStatus } from '../../components/fold/FoldStepPane';
 import type { NoticeAction } from '../../components/ui/Notice';
 import { isLockedStep } from '../document/foldSequenceDocument';
-import type { FoldStepSummarised } from '../engine/foldEngineWire';
+import { isFoldParentReleased, type FoldStepSummarised } from '../engine/foldEngineWire';
 import { foldCommand } from '../foldActions';
 import type { FoldStateCall } from '../session/foldSession';
 import { useFoldStateQuery } from '../session/useFoldSession';
@@ -13,11 +13,19 @@ import { foldedStepCount, type FoldEntryStatus, type FoldPathEntry } from './fol
 import { foldCreaseDiff } from './foldStepDiff';
 import type { FoldSequenceView } from './useFoldSequenceView';
 
-/** The engine's summary of the step that landed a state: its counts, its diff and its layers (plan D14). */
+/**
+ * The engine's summary of the step that landed a state: its counts, its diff
+ * and its layers (plan D14). Without one — refused, or the state's parent no
+ * longer held — the pane shows what it knows without it.
+ */
 const askStepSummary: FoldStateCall<FoldStepSummarised> = async (engine, state) => {
-  const answer = await engine.stepSummary(state);
-  // A step whose parent is no longer held is refused; the pane shows what it knows without the summary.
-  return answer.status === 'ok' ? { summary: answer.summary } : { summary: null };
+  try {
+    const answer = await engine.stepSummary(state);
+    return answer.status === 'ok' ? { summary: answer.summary } : { summary: null };
+  } catch (error) {
+    if (isFoldParentReleased(error)) return { summary: null };
+    throw error;
+  }
 };
 
 /** A path entry's standing as the Step pane says it: a step still folding stands as it should, rows to come. */
@@ -60,6 +68,7 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
   return useMemo((): FoldStepPaneModel => {
     const node = entry?.node ?? null;
     const summary = summarised?.summary ?? null;
+    const imported = node !== null && !isLockedStep(node) && node.op.kind === 'cp-jump' ? node.op : null;
     const step: FoldStepPaneStep | null =
       entry && node
         ? {
@@ -67,9 +76,11 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
             number: entry.number,
             layers: summary?.layers ?? null,
             creases: summary?.counts ?? null,
-            diff: summary ? foldCreaseDiff(summary, frame?.creases ?? null) : null,
+            // An import replaces the crease pattern rather than changing it:
+            // its pattern is the counts, and there is no change to list.
+            diff: summary && !imported ? foldCreaseDiff(summary, frame?.creases ?? null) : null,
             status: paneStatus(entry.status),
-            ...(!isLockedStep(node) && node.op.kind === 'cp-jump' ? { origin: node.op.origin } : {}),
+            ...(imported ? { origin: imported.origin } : {}),
           }
         : null;
     const landedSummary = pendingSummary?.summary ?? null;

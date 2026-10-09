@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import type { FoldedFlatPaperSceneOptions } from '../../cp-workspace/folded/foldedFlatScene';
 import type { FoldStep } from '../document/foldSequenceDocument';
-import type { FoldActionGeometry, FoldScene } from '../engine/foldEngineWire';
+import { isFoldParentReleased, type FoldActionGeometry, type FoldScene } from '../engine/foldEngineWire';
 import type { FoldStateCall } from '../session/foldSession';
 import type { FoldSessionSnapshot } from '../session/foldSessionState';
 import { useFoldNode, useFoldNodeQuery, useFoldSessionState } from '../session/useFoldSession';
@@ -11,11 +11,17 @@ const sceneOf: FoldStateCall<FoldScene> = (engine, state) => engine.scene(state)
 
 /**
  * The step's picture on its parent, wrapped so an answer of "none" (a turn, a
- * rotation, an import) is told from no answer yet.
+ * rotation, an import) is told from no answer yet. A fold whose parent is no
+ * longer held has none either, and crossfades.
  */
 const actionOf: FoldStateCall<{ action: FoldActionGeometry | null }> = async (engine, state) => {
-  const acted = await engine.stepAction(state);
-  return { action: acted.status === 'ok' ? acted.action : null };
+  try {
+    const acted = await engine.stepAction(state);
+    return { action: acted.status === 'ok' ? acted.action : null };
+  } catch (error) {
+    if (isFoldParentReleased(error)) return { action: null };
+    throw error;
+  }
 };
 
 /**
