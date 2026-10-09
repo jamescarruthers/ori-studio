@@ -122,6 +122,11 @@ export interface StepFilmstripProps<Card extends StepFilmstripCard> {
    * then the cards alone, edge to edge.
    */
   navigation?: boolean;
+  /**
+   * Smaller cards, for a phone whose canvas is under the strip: the pictures
+   * are still there to read and to tap, and the paper keeps the height.
+   */
+  compact?: boolean;
   /** Whether each chevron is dead, from the same catalog the labels come from. */
   previousDisabled: boolean;
   nextDisabled: boolean;
@@ -163,6 +168,8 @@ export interface StepFilmstripProps<Card extends StepFilmstripCard> {
  * scrollbar before the first measurement and nothing after it.
  */
 const CARD_STRIDE_PX = 136;
+/** The same, for a `compact` strip: its `--card-size` and the trailing gap. */
+const COMPACT_CARD_STRIDE_PX = 96;
 
 function StepFilmstripView<Card extends StepFilmstripCard>({
   steps,
@@ -176,6 +183,7 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
   note,
   previousLabel,
   navigation = true,
+  compact = false,
   nextLabel,
   previousDisabled,
   nextDisabled,
@@ -198,7 +206,7 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
     horizontal: true,
     count: steps.length,
     getScrollElement: () => listRef.current,
-    estimateSize: () => CARD_STRIDE_PX,
+    estimateSize: () => (compact ? COMPACT_CARD_STRIDE_PX : CARD_STRIDE_PX),
     // By step key, not index: a recompute reorders the strip, and a card that
     // is still the same step should not be remounted — and so redrawn — just
     // because the steps before it changed.
@@ -242,7 +250,12 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
   });
 
   return (
-    <div className={styles.filmstrip} data-ways={active?.ways ? true : undefined} {...swipe}>
+    <div
+      className={styles.filmstrip}
+      data-ways={active?.ways ? true : undefined}
+      data-compact={compact || undefined}
+      {...swipe}
+    >
       <div className={styles.strip} data-bare={navigation ? undefined : true}>
         {navigation && (
           <IconButton

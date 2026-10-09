@@ -120,6 +120,65 @@ describe('ToolHintWindow', () => {
     expect(document.querySelector('.probe-body')).toBeNull();
   });
 
+  const renderWith = (props: { startsCollapsed?: boolean; needsAttention?: boolean }) =>
+    act(() =>
+      root.render(
+        <ToolHintWindow
+          container={container}
+          collapseKey={STORAGE_KEYS.cpToolHintCollapsed}
+          title="Valley fold"
+          meta="3 settings"
+          ariaLabel="Tool options"
+          {...props}
+        >
+          <p className="probe-body">Pick which layers move</p>
+        </ToolHintWindow>
+      )
+    );
+  const toggle = () => act(() => windowEl()?.querySelector<HTMLButtonElement>('button[aria-expanded]')?.click());
+  const open = () => document.querySelector('.probe-body') !== null;
+
+  it('starts collapsed when told to, and keeps a choice once made', () => {
+    renderWith({ startsCollapsed: true });
+    expect(open()).toBe(false);
+    toggle();
+    expect(open()).toBe(true);
+    expect(localStorage.getItem(KEY)).toBe('false');
+    // A choice made is the one read back, whatever the surface would start with.
+    act(() => root.unmount());
+    root = createRoot(host);
+    renderWith({ startsCollapsed: true });
+    expect(open()).toBe(true);
+  });
+
+  it('opens for a decision, closes for it alone, and is as the preference says once it passes', () => {
+    renderWith({ startsCollapsed: true });
+    expect(open()).toBe(false);
+    renderWith({ startsCollapsed: true, needsAttention: true });
+    expect(open()).toBe(true);
+    // Closed for this decision: the preference is untouched.
+    toggle();
+    expect(open()).toBe(false);
+    expect(localStorage.getItem(KEY)).toBeNull();
+    toggle();
+    expect(open()).toBe(true);
+    expect(localStorage.getItem(KEY)).toBeNull();
+    // The decision made: collapsed, as preferred.
+    renderWith({ startsCollapsed: true, needsAttention: false });
+    expect(open()).toBe(false);
+    // The next decision opens it again.
+    renderWith({ startsCollapsed: true, needsAttention: true });
+    expect(open()).toBe(true);
+  });
+
+  it('leaves a window someone keeps open as it is, decision or none', () => {
+    renderWith({ needsAttention: true });
+    expect(open()).toBe(true);
+    toggle();
+    expect(open()).toBe(false);
+    expect(localStorage.getItem(KEY)).toBe('true');
+  });
+
   it('renders a header action beside the header', () => {
     act(() =>
       root.render(
