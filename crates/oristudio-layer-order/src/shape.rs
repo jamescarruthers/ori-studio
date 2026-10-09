@@ -3,9 +3,9 @@
 //! hundreds of times, and `oristudio_geometry::convex` normalises every edge
 //! again on each call (a `hypot` per edge, which was most of a pair test).
 //! The answers are `convex`'s own, from the same half-planes in the same
-//! order; the tests hold them to it bit for bit.
+//! order (`convex::edge_planes`); the tests hold them to it bit for bit.
 
-use oristudio_geometry::convex::{self, Carve, HalfPlane, MIN_EDGE};
+use oristudio_geometry::convex::{self, Carve, HalfPlane, MIN_EDGE, edge_planes};
 
 use crate::view::{FaceId, FoldedView};
 
@@ -27,7 +27,7 @@ impl<'a> Shape<'a> {
             id,
             polygon,
             bbox,
-            planes: planes(polygon),
+            planes: edge_planes(polygon),
         }
     }
 
@@ -42,8 +42,7 @@ impl<'a> Shape<'a> {
 
     /// `convex::penetration(self.polygon, other.polygon)`.
     pub(crate) fn penetration(&self, other: &Shape<'_>) -> f64 {
-        let depth = reach(&self.planes, other.polygon).min(reach(&other.planes, self.polygon));
-        if depth.is_finite() { depth } else { 0.0 }
+        convex::penetration_with_planes(self.polygon, &self.planes, other.polygon, &other.planes)
     }
 
     /// `convex::segment_length_inside(a, b, self.polygon, margin)`.
@@ -72,32 +71,9 @@ impl<'a> Shape<'a> {
     }
 }
 
-/// The half-planes left of a ring's edges, skipping edges with no direction.
-pub(crate) fn planes(polygon: &[Point]) -> Vec<HalfPlane> {
-    let n = polygon.len();
-    (0..n)
-        .filter_map(|i| HalfPlane::left_of(polygon[i], polygon[(i + 1) % n]))
-        .collect()
-}
-
-/// For each plane, how far the points reach into it; the least of those.
-/// Infinite when there is no plane.
-pub(crate) fn reach(planes: &[HalfPlane], points: &[Point]) -> f64 {
-    let mut depth = f64::INFINITY;
-    for plane in planes {
-        let reach = points
-            .iter()
-            .map(|&x| plane.signed_distance(x))
-            .fold(f64::NEG_INFINITY, f64::max);
-        depth = depth.min(reach);
-    }
-    depth
-}
-
 /// `convex::penetration(polygon, shape.polygon)` for a polygon met once.
 pub(crate) fn penetration_with(polygon: &[Point], shape: &Shape<'_>) -> f64 {
-    let depth = reach(&planes(polygon), shape.polygon).min(reach(&shape.planes, polygon));
-    if depth.is_finite() { depth } else { 0.0 }
+    convex::penetration_with_planes(polygon, &edge_planes(polygon), shape.polygon, &shape.planes)
 }
 
 /// `convex::carve(subject, window, sliver)`, given the window's planes in
@@ -217,7 +193,7 @@ mod tests {
                     .collect()
             };
             let want = convex::carve(&subject, &window, 1e-6);
-            let all = planes(&window);
+            let all = edge_planes(&window);
             assert_eq!(bits(&carve_along(&subject, all.iter(), 1e-6)), bits(&want));
             let cutting: Vec<&HalfPlane> = all
                 .iter()

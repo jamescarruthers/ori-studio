@@ -213,21 +213,19 @@ pub fn split(poly: &[Point], plane: &HalfPlane, eps: f64) -> Split {
     if n < 3 {
         return Split::default();
     }
-    let side: Vec<i8> = poly
-        .iter()
-        .map(|&p| {
-            let d = plane.signed_distance(p);
-            if d > eps {
-                1
-            } else if d < -eps {
-                -1
-            } else {
-                0
-            }
-        })
-        .collect();
-    let has_in = side.contains(&1);
-    let has_out = side.contains(&-1);
+    // Recomputed where needed rather than kept: cheaper than allocating.
+    let side = |i: usize| -> i8 {
+        let d = plane.signed_distance(poly[i]);
+        if d > eps {
+            1
+        } else if d < -eps {
+            -1
+        } else {
+            0
+        }
+    };
+    let has_in = (0..n).any(|i| side(i) == 1);
+    let has_out = (0..n).any(|i| side(i) == -1);
     if !has_out {
         let inside = if has_in { poly.to_vec() } else { Vec::new() };
         return Split {
@@ -243,10 +241,13 @@ pub fn split(poly: &[Point], plane: &HalfPlane, eps: f64) -> Split {
     }
     let mut inside = Vec::with_capacity(n + 1);
     let mut outside = Vec::with_capacity(n + 1);
+    let first = side(0);
+    let mut side_i = first;
     for i in 0..n {
         let j = (i + 1) % n;
+        let side_j = if j == 0 { first } else { side(j) };
         let (a, b) = (poly[i], poly[j]);
-        match side[i] {
+        match side_i {
             1 => inside.push(a),
             -1 => outside.push(a),
             _ => {
@@ -254,7 +255,7 @@ pub fn split(poly: &[Point], plane: &HalfPlane, eps: f64) -> Split {
                 outside.push(a);
             }
         }
-        if side[i] * side[j] == -1 {
+        if side_i * side_j == -1 {
             let da = plane.signed_distance(a);
             let db = plane.signed_distance(b);
             let t = da / (da - db);
@@ -262,6 +263,7 @@ pub fn split(poly: &[Point], plane: &HalfPlane, eps: f64) -> Split {
             inside.push(x);
             outside.push(x);
         }
+        side_i = side_j;
     }
     Split {
         inside: proper(inside),
@@ -349,6 +351,65 @@ pub fn penetration(p: &[Point], q: &[Point]) -> f64 {
     if depth.is_finite() { depth } else { 0.0 }
 }
 
+/// The half-planes left of a counter-clockwise ring's edges, in ring order,
+/// skipping edges shorter than [`MIN_EDGE`]: the planes every test here
+/// takes from the ring. Each costs a `hypot`, which is most of a
+/// [`penetration`], so a polygon met in many tests keeps them
+/// ([`penetration_with_planes`]).
+pub fn edge_planes(poly: &[Point]) -> Vec<HalfPlane> {
+    edges(poly)
+        .filter_map(|(a, b)| HalfPlane::left_of(a, b))
+        .collect()
+}
+
+/// How far `points` reach into each plane (the greatest signed distance),
+/// and the least of those; infinite with no plane.
+pub fn reach(planes: &[HalfPlane], points: &[Point]) -> f64 {
+    let mut depth = f64::INFINITY;
+    for plane in planes {
+        let reach = points
+            .iter()
+            .map(|&x| plane.signed_distance(x))
+            .fold(f64::NEG_INFINITY, f64::max);
+        depth = depth.min(reach);
+    }
+    depth
+}
+
+/// [`penetration`] of `p` and `q` given their [`edge_planes`]: the same
+/// answer, bit for bit.
+pub fn penetration_with_planes(
+    p: &[Point],
+    p_planes: &[HalfPlane],
+    q: &[Point],
+    q_planes: &[HalfPlane],
+) -> f64 {
+    let depth = reach(p_planes, q).min(reach(q_planes, p));
+    if depth.is_finite() { depth } else { 0.0 }
+}
+
+/// Whether [`penetration_with_planes`] of finite polygons is more than `tol`
+/// (≥ 0): the same answer, without the depth. The penetration is the least
+/// reach over every
+/// plane, so the first plane the other polygon reaches no further than `tol`
+/// into settles it, and a plane is reached far enough at the first point
+/// beyond `tol`.
+pub fn overlaps_with_planes(
+    p: &[Point],
+    p_planes: &[HalfPlane],
+    q: &[Point],
+    q_planes: &[HalfPlane],
+    tol: f64,
+) -> bool {
+    let reaches = |planes: &[HalfPlane], points: &[Point]| {
+        planes
+            .iter()
+            .all(|plane| points.iter().any(|&x| plane.signed_distance(x) > tol))
+    };
+    // No plane at all is a penetration of 0, which is no overlap.
+    (!p_planes.is_empty() || !q_planes.is_empty()) && reaches(p_planes, q) && reaches(q_planes, p)
+}
+
 /// Whether two convex polygons overlap with positive area at [`TOL`].
 pub fn overlaps(p: &[Point], q: &[Point]) -> bool {
     penetration(p, q) > TOL
@@ -357,9 +418,21 @@ pub fn overlaps(p: &[Point], q: &[Point]) -> bool {
 /// The least width of a counter-clockwise convex polygon: over its edges, the
 /// distance of the farthest vertex from the edge's line. It is
 /// `penetration(poly, poly)`, so a polygon no wider than [`TOL`] overlaps
-/// nothing. Zero for a polygon with no usable edge.
+/// nothing, with each edge's plane made once rather than twice. Zero for a
+/// polygon with no usable edge.
 pub fn width(poly: &[Point]) -> f64 {
-    penetration(poly, poly)
+    let mut depth = f64::INFINITY;
+    for (a, b) in edges(poly) {
+        let Some(plane) = HalfPlane::left_of(a, b) else {
+            continue;
+        };
+        let reach = poly
+            .iter()
+            .map(|&x| plane.signed_distance(x))
+            .fold(f64::NEG_INFINITY, f64::max);
+        depth = depth.min(reach);
+    }
+    if depth.is_finite() { depth } else { 0.0 }
 }
 
 /// Whether `p` lies inside a counter-clockwise convex polygon by more than
@@ -420,8 +493,8 @@ fn edges(poly: &[Point]) -> impl Iterator<Item = (Point, Point)> + '_ {
 
 /// A split side as a polygon: merged near-duplicates, and empty unless at
 /// least three points and positive area remain.
-fn proper(points: Vec<Point>) -> Vec<Point> {
-    let ring = dedup(&points);
+fn proper(mut ring: Vec<Point>) -> Vec<Point> {
+    dedup_in_place(&mut ring);
     if ring.len() < 3 || signed_area(&ring) <= 0.0 {
         return Vec::new();
     }
@@ -431,16 +504,26 @@ fn proper(points: Vec<Point>) -> Vec<Point> {
 /// Merge consecutive points closer than [`MIN_EDGE`], the wrap-around
 /// included.
 fn dedup(poly: &[Point]) -> Vec<Point> {
-    let mut out: Vec<Point> = Vec::with_capacity(poly.len());
-    for &p in poly {
-        if out.last().is_none_or(|&q| norm(sub(p, q)) >= MIN_EDGE) {
-            out.push(p);
+    let mut out = poly.to_vec();
+    dedup_in_place(&mut out);
+    out
+}
+
+/// [`dedup`] without a second vector: each point is compared with the last
+/// one kept.
+fn dedup_in_place(ring: &mut Vec<Point>) {
+    let mut kept = 0;
+    for i in 0..ring.len() {
+        let p = ring[i];
+        if kept == 0 || norm(sub(p, ring[kept - 1])) >= MIN_EDGE {
+            ring[kept] = p;
+            kept += 1;
         }
     }
-    while out.len() > 1 && norm(sub(out[0], out[out.len() - 1])) < MIN_EDGE {
-        out.pop();
+    ring.truncate(kept);
+    while ring.len() > 1 && norm(sub(ring[0], ring[ring.len() - 1])) < MIN_EDGE {
+        ring.pop();
     }
-    out
 }
 
 fn sub(a: Point, b: Point) -> Point {
@@ -756,6 +839,51 @@ mod tests {
         assert!(contains_point(&square, [0.9, 0.9], TOL));
         // The same square without the near-duplicate agrees.
         assert!(close(penetration(&rect(0.0, 0.0, 1.0, 1.0), &quarter), p));
+    }
+
+    /// Kept planes answer as the plain test does, to the bit: random pairs,
+    /// a ring with a direction-less edge, and degenerate input.
+    #[test]
+    fn penetration_with_planes_is_penetration() {
+        let mut rng = Rng(11);
+        let noisy = vec![
+            [0.0, 0.0],
+            [-4e-17, -3e-17],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+        ];
+        let mut polygons: Vec<Vec<Point>> = (0..300).map(|_| rng.convex()).collect();
+        polygons.extend([noisy, rect(0.2, 0.2, 0.7, 0.5), Vec::new()]);
+        let planes: Vec<Vec<HalfPlane>> = polygons.iter().map(|p| edge_planes(p)).collect();
+        assert_eq!(
+            planes[300].len(),
+            4,
+            "the noisy ring's short edge is left out"
+        );
+        let mut overlapping = 0;
+        for i in 0..polygons.len() {
+            for j in (0..polygons.len()).step_by(7) {
+                let (p, q) = (&polygons[i], &polygons[j]);
+                let kept = penetration_with_planes(p, &planes[i], q, &planes[j]);
+                assert_eq!(kept.to_bits(), penetration(p, q).to_bits(), "{p:?} {q:?}");
+                for tol in [0.0, TOL, 1e-3, 0.1, kept, kept.next_down()] {
+                    let tol = tol.max(0.0);
+                    assert_eq!(
+                        overlaps_with_planes(p, &planes[i], q, &planes[j], tol),
+                        kept > tol,
+                        "{p:?} {q:?} at {tol}"
+                    );
+                }
+                overlapping += usize::from(kept > TOL);
+            }
+            let own = penetration_with_planes(&polygons[i], &planes[i], &polygons[i], &planes[i]);
+            assert_eq!(own.to_bits(), width(&polygons[i]).to_bits());
+            let plain = penetration(&polygons[i], &polygons[i]);
+            assert_eq!(plain.to_bits(), width(&polygons[i]).to_bits());
+        }
+        let pairs = polygons.len() * polygons.len().div_ceil(7);
+        assert!(overlapping > 1000 && overlapping < pairs, "{overlapping}");
     }
 
     #[test]
