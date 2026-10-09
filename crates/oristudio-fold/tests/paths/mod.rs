@@ -1,6 +1,7 @@
 //! Paths of states for the kernel conversion and FOLD export tests: the
 //! classic sequences replayed from their fixtures, a path whose every
-//! coordinate is dyadic, and seeded random paths.
+//! coordinate is dyadic, and seeded random paths. The `sequences` example
+//! times the classics through [`classics`].
 
 #![allow(dead_code)]
 
@@ -16,10 +17,18 @@ type Point = [f64; 2];
 /// The operations `tests/classics.rs` records.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "op")]
-enum Op {
+pub enum Op {
     Fold { fold: PlainFold },
     Precrease { fold: PlainFold },
     TurnOver,
+}
+
+/// A classic sequence: its states, the flat sheet first, and the operation
+/// that leads from each to the next.
+pub struct Classic {
+    pub name: String,
+    pub path: Vec<State>,
+    pub ops: Vec<Op>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -39,6 +48,11 @@ fn flat(sheet: &SheetShape, start: StartSide) -> State {
 
 /// Every classic sequence as its path of states, the flat sheet first.
 pub fn classic_paths() -> Vec<(String, Vec<State>)> {
+    classics().into_iter().map(|c| (c.name, c.path)).collect()
+}
+
+/// Every classic sequence replayed from its fixture.
+pub fn classics() -> Vec<Classic> {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/classics");
     let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
         .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
@@ -46,28 +60,34 @@ pub fn classic_paths() -> Vec<(String, Vec<State>)> {
         .filter(|p| p.extension().is_some_and(|x| x == "json"))
         .collect();
     files.sort();
-    let paths: Vec<(String, Vec<State>)> = files
+    let classics: Vec<Classic> = files
         .iter()
         .map(|file| {
             let text = std::fs::read_to_string(file).unwrap_or_default();
             let fixture: Fixture =
                 serde_json::from_str(&text).unwrap_or_else(|e| panic!("{}: {e}", file.display()));
             let mut path = vec![flat(&fixture.sheet, fixture.start)];
-            for (op, _) in &fixture.steps {
+            let mut ops = Vec::with_capacity(fixture.steps.len());
+            for (op, _) in fixture.steps {
                 let state = &path[path.len() - 1];
-                let next = match op {
+                let next = match &op {
                     Op::Fold { fold } => state.fold(fold).map(|f| f.state),
                     Op::Precrease { fold } => state.precrease(fold).map(|f| f.state),
                     Op::TurnOver => Ok(state.turn_over()),
                 }
                 .unwrap_or_else(|e| panic!("{}: {e}", fixture.name));
                 path.push(next);
+                ops.push(op);
             }
-            (fixture.name, path)
+            Classic {
+                name: fixture.name,
+                path,
+                ops,
+            }
         })
         .collect();
-    assert!(paths.len() >= 4, "only {} classics", paths.len());
-    paths
+    assert!(classics.len() >= 4, "only {} classics", classics.len());
+    classics
 }
 
 fn line(n: Point, d: f64) -> Line {
