@@ -54,6 +54,34 @@ impl From<CpFormat> for CpOrigin {
     }
 }
 
+/// What a file to import is: its format, and whether it is one of the
+/// samples that ship with Fold, which its step records as its origin
+/// instead of the format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub struct CpFile {
+    pub format: CpFormat,
+    #[serde(default)]
+    pub sample: bool,
+}
+
+impl CpFile {
+    pub fn of(format: CpFormat) -> CpFile {
+        CpFile {
+            format,
+            sample: false,
+        }
+    }
+
+    /// The origin its step stores.
+    pub fn origin(&self) -> CpOrigin {
+        if self.sample {
+            CpOrigin::Sample
+        } else {
+            self.format.into()
+        }
+    }
+}
+
 /// Import CP's step (`FoldCpJumpOp` without its `kind`): see [`crate::io`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

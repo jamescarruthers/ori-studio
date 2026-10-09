@@ -34,8 +34,8 @@ use oristudio_fold_wasm::bridge::Bridge;
 use oristudio_fold_wasm::canonical::canonical_keys;
 use oristudio_fold_wasm::io::kernel::{cp_json, input_of_cp_json, load};
 use oristudio_fold_wasm::io::{
-    CpFormat, CpJump, CpOrigin, Imports, IoCallError, JumpOp, Landed, Limits, Opened, Target,
-    export_fold, import_figure, jump, land, send_to_edit, send_to_edit_text,
+    CpFile, CpFormat, CpJump, CpOrigin, Imports, IoCallError, JumpOp, Landed, Limits, Opened,
+    Target, export_fold, import_figure, jump, land, send_to_edit, send_to_edit_text,
 };
 use oristudio_fold_wasm::wire::{Choices, Op, Outcome, Paper};
 use oristudio_geometry::convex;
@@ -276,11 +276,17 @@ fn kite_fold() -> String {
 /// An import into an empty sequence through the bridge, its first order
 /// picked.
 fn import_empty(format: CpFormat, text: &str, start: StartSide) -> (Bridge, Landed, Opened) {
+    import_file(CpFile::of(format), text, start)
+}
+
+/// [`import_empty`] of a file described in full.
+fn import_file(file: CpFile, text: &str, start: StartSide) -> (Bridge, Landed, Opened) {
+    let format = file.format;
     let mut bridge = Bridge::new();
     let mut imports = Imports::new();
     let opened = match imports.open(
         &bridge,
-        format,
+        file,
         text.as_bytes(),
         Target::Empty { start_side: start },
         &Limits::default(),
@@ -373,7 +379,13 @@ fn every_sample_imports_to_its_one_order() {
         ] {
             assert!(fold[key].is_string(), "{name}: no {key}");
         }
-        let (bridge, landed, opened) = import_empty(CpFormat::Fold, text, StartSide::Front);
+        let sample = CpFile {
+            format: CpFormat::Fold,
+            sample: true,
+        };
+        let (bridge, landed, opened) = import_file(sample, text, StartSide::Front);
+        let JumpOp::CpJump(op) = &landed.op;
+        assert_eq!(op.origin, CpOrigin::Sample, "{name}");
         // Their letters decide one order (the spike's bases have 18 without).
         assert_eq!(
             (opened.count.orders, opened.count.exact),
@@ -495,7 +507,7 @@ fn assert_offers_itself(
     let text = send_to_edit(bridge, state, None).unwrap_or_default();
     let opened = match imports.open(
         bridge,
-        CpFormat::Fold,
+        CpFile::of(CpFormat::Fold),
         text.as_bytes(),
         Target::After { state },
         &Limits::default(),
@@ -572,7 +584,7 @@ fn opening_after_a_state_offers_its_order_and_a_pick_lands_it() {
     );
     let unknown = imports.open(
         &bridge,
-        CpFormat::Fold,
+        CpFile::of(CpFormat::Fold),
         text.as_bytes(),
         Target::After { state: 999 },
         &Limits::default(),
@@ -649,9 +661,13 @@ fn imports_that_cannot_land_are_refusals_with_import_codes() {
     let after = Target::After { state: flat };
     let limits = Limits::default();
     let refused =
-        |imports: &mut Imports, format, text: &[u8], target, limits: &Limits| match imports
-            .open(&bridge, format, text, target, limits)
-        {
+        |imports: &mut Imports, format, text: &[u8], target, limits: &Limits| match imports.open(
+            &bridge,
+            CpFile::of(format),
+            text,
+            target,
+            limits,
+        ) {
             Ok(Outcome::Refused(r)) => json_of(&r.refusal),
             other => panic!("{other:?}"),
         };
@@ -687,9 +703,13 @@ fn imports_that_cannot_land_are_refusals_with_import_codes() {
             [0.5, 0.0], [1.0, 0.25], [1.0, 0.75], [0.5, 1.0], [0.0, 0.75], [0.0, 0.25]
         ] } }),
     );
-    let mut refused = |format, text: &[u8], target, limits: &Limits| match imports
-        .open(&bridge, format, text, target, limits)
-    {
+    let mut refused = |format, text: &[u8], target, limits: &Limits| match imports.open(
+        &bridge,
+        CpFile::of(format),
+        text,
+        target,
+        limits,
+    ) {
         Ok(Outcome::Refused(r)) => json_of(&r.refusal),
         other => panic!("{other:?}"),
     };
@@ -714,7 +734,7 @@ fn imports_that_cannot_land_are_refusals_with_import_codes() {
     // Within the budget the same pattern lists every order.
     let Ok(Outcome::Ok(opened)) = imports.open(
         &bridge,
-        CpFormat::Fold,
+        CpFile::of(CpFormat::Fold),
         plus_unknown().as_bytes(),
         after,
         &limits,
@@ -732,7 +752,7 @@ fn a_stored_import_whose_witnesses_no_longer_resolve_is_broken() {
     let mut imports = Imports::new();
     let Ok(Outcome::Ok(opened)) = imports.open(
         &bridge,
-        CpFormat::Fold,
+        CpFile::of(CpFormat::Fold),
         plus_unknown().as_bytes(),
         Target::After { state: flat },
         &Limits::default(),

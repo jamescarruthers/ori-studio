@@ -120,7 +120,7 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
       expect(opened.paper, id).toEqual({ kind: 'square' });
       expect(opened.components).toEqual([]);
       const picked = landed(io.importPick(opened.import, []));
-      expect(picked.op).toMatchObject({ kind: 'cp-jump', origin: 'fold' });
+      expect(picked.op).toMatchObject({ kind: 'cp-jump', origin: 'sample' });
       expect(picked.summary.faces, id).toBe(8);
       expect(picked.fingerprint).toMatch(/^fs1:[0-9a-f]{16}$/);
 

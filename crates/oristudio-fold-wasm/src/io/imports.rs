@@ -22,8 +22,8 @@ use oristudio_fold::{
 use super::jump;
 use super::kernel::{cp_json, input_of_cp_json, load};
 use super::wire::{
-    AdoptedPaper, ComponentCount, CpFormat, CpJump, CpOrigin, IoCallError, IoRefusal, JumpOp,
-    Landed, Limits, Opened, Target,
+    AdoptedPaper, ComponentCount, CpFile, CpJump, CpOrigin, IoCallError, IoRefusal, JumpOp, Landed,
+    Limits, Opened, Target,
 };
 use crate::bridge::Bridge;
 use crate::wire::{Choices, Op, Outcome, Paper};
@@ -88,19 +88,19 @@ impl Imports {
         Imports::default()
     }
 
-    /// Read `bytes` as `format`, import the crease pattern against `target`
-    /// and complete its order within `limits`.
+    /// Read `bytes` as `file` says, import the crease pattern against
+    /// `target` and complete its order within `limits`.
     pub fn open(
         &mut self,
         bridge: &Bridge,
-        format: CpFormat,
+        file: CpFile,
         bytes: &[u8],
         target: Target,
         limits: &Limits,
     ) -> Result<Outcome<Opened>, IoCallError> {
         let parent = Parent::of(bridge, target)?;
         let opened = (|| -> Result<_, IoRefusal> {
-            let cp_json = cp_json(&load(format, bytes)?)?;
+            let cp_json = cp_json(&load(file.format, bytes)?)?;
             // The stored text, read back: what every replay will import.
             let input = input_of_cp_json(&cp_json)?;
             let (pattern, placed) = import(&input, parent)?;
@@ -125,7 +125,7 @@ impl Imports {
         let import = self.hold(Held {
             placed,
             cp_json,
-            origin: format.into(),
+            origin: file.origin(),
             pattern,
             completions,
         });

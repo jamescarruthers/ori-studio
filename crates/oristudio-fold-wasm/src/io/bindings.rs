@@ -4,9 +4,11 @@
 //! // `apps/web/src/fold/engine/foldEngineIoWire.ts` holds these shapes in full.
 //! class FoldEngine {
 //!   /** Import CP: read the file, import it against the target and
-//!    *  complete its order. `limits` may be undefined. */
-//!   import_cp(format: 'cp' | 'fold' | 'ori' | 'orh', bytes: Uint8Array,
-//!     target: ImportTarget, limits?: ImportLimits): Outcome<ImportOpened>;
+//!    *  complete its order. A sample's step records `origin: 'sample'`.
+//!    *  `limits` may be undefined. */
+//!   import_cp(file: { format: 'cp' | 'fold' | 'ori' | 'orh'; sample?: boolean },
+//!     bytes: Uint8Array, target: ImportTarget, limits?: ImportLimits):
+//!     Outcome<ImportOpened>;
 //!   /** Land one listed order per component as a step: its state and op. */
 //!   import_pick(import: number, choice: Uint32Array): Outcome<ImportLanded>;
 //!   /** Start from Edit's folded figure: the kernel's folded paper scene. */
@@ -28,27 +30,27 @@ use wasm_bindgen::prelude::*;
 
 use super::export::{export_fold, send_to_edit};
 use super::figure::import_figure;
-use super::wire::{CpFormat, IoCallError, Limits, Target};
+use super::wire::{CpFile, IoCallError, Limits, Target};
 use crate::{FoldEngine, js_error, parse, to_js_value};
 
 #[wasm_bindgen]
 impl FoldEngine {
-    /// Import CP: read `bytes` as `format`, import the crease pattern
+    /// Import CP: read `bytes` as `file` says, import the crease pattern
     /// against `target` and complete its order within `limits`, which may be
     /// `undefined` or `null`.
     pub fn import_cp(
         &mut self,
-        format: JsValue,
+        file: JsValue,
         bytes: &[u8],
         target: JsValue,
         limits: JsValue,
     ) -> Result<JsValue, JsValue> {
-        let format: CpFormat = parse("format", format)?;
+        let file: CpFile = parse("file", file)?;
         let target: Target = parse("target", target)?;
         let limits: Limits = optional("limits", limits)?;
         let opened = self
             .imports
-            .open(&self.inner, format, bytes, target, &limits)
+            .open(&self.inner, file, bytes, target, &limits)
             .map_err(thrown)?;
         to_js_value(&opened)
     }

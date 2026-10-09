@@ -32,7 +32,7 @@ import type { FoldEngineOutcome } from './foldEngineWire';
 
 /** The wasm class's io surface, as the generated `FoldEngine` has it. */
 export interface FoldWasmIoEngine {
-  import_cp(format: unknown, bytes: Uint8Array, target: unknown, limits: unknown): unknown;
+  import_cp(file: unknown, bytes: Uint8Array, target: unknown, limits: unknown): unknown;
   import_pick(importHandle: number, choice: Uint32Array): unknown;
   import_edit_folded_figure(scene: unknown, target: unknown, limits: unknown): unknown;
   release_imports(imports: Uint32Array): number;
@@ -119,7 +119,8 @@ export function createFoldEngineIoCalls(engine: FoldWasmIoEngine): FoldEngineIoC
   return {
     importCp(source, to, within) {
       requireObject('source', source);
-      return engine.import_cp(source.format, requireBytes(source), target(to), limits(within)) as FoldEngineOutcome<
+      const file = { format: source.format, sample: source.sample === true };
+      return engine.import_cp(file, requireBytes(source), target(to), limits(within)) as FoldEngineOutcome<
         FoldImportOpened
       >;
     },

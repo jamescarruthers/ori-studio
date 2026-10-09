@@ -32,10 +32,15 @@ import type { FoldSheetPoint, FoldStateFingerprint, FoldStateSummary } from './f
 /** The formats the CP kernel's loaders read: the same four Edit imports. */
 export type FoldImportFormat = ImportedCreasePatternFormat;
 
-/** A crease pattern file: its bytes, or its text (sent as UTF-8; `.orh` is better sent as bytes). */
-export type FoldImportSource =
-  | { format: FoldImportFormat; bytes: Uint8Array }
-  | { format: FoldImportFormat; text: string };
+/**
+ * A crease pattern file: its bytes, or its text (sent as UTF-8; `.orh` is
+ * better sent as bytes). A sample that ships with Fold says so, and its step
+ * records `origin: 'sample'` rather than its format.
+ */
+export type FoldImportSource = { format: FoldImportFormat; sample?: boolean } & (
+  | { bytes: Uint8Array }
+  | { text: string }
+);
 
 /**
  * Where an import lands:

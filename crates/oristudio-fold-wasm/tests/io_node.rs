@@ -53,7 +53,7 @@ fn a_sample_opens_and_its_pick_is_a_step_the_engine_replays() {
     let opened = json_of(
         engine
             .import_cp(
-                js(json!("fold")),
+                js(json!({ "format": "fold", "sample": true })),
                 PRELIMINARY.as_bytes(),
                 js(json!({ "kind": "empty", "startSide": "front" })),
                 JsValue::UNDEFINED,
@@ -74,7 +74,7 @@ fn a_sample_opens_and_its_pick_is_a_step_the_engine_replays() {
     );
     assert_eq!(picked["status"], "ok", "{picked}");
     assert_eq!(picked["op"]["kind"], "cp-jump");
-    assert_eq!(picked["op"]["origin"], "fold");
+    assert_eq!(picked["op"]["origin"], "sample");
     assert!(picked["op"]["cpJson"].is_string() && picked["op"]["orderJson"].is_string());
     assert_eq!(picked["summary"]["faces"].as_f64(), Some(8.0));
     let state = handle(&picked, "state");
@@ -123,7 +123,7 @@ fn send_to_edit_and_import_cp_give_the_state_back_and_a_path_exports() {
     let opened = json_of(
         engine
             .import_cp(
-                js(json!("fold")),
+                js(json!({ "format": "fold" })),
                 text.as_bytes(),
                 js(json!({ "kind": "after", "state": book })),
                 js(json!({ "maxNodes": 1000 })),
@@ -204,9 +204,10 @@ fn refusals_are_values_and_mistakes_are_thrown() {
     let mut engine = FoldEngine::new();
     let sheet = square(&mut engine);
     let after = js(json!({ "kind": "after", "state": sheet }));
+    let cp = || js(json!({ "format": "cp" }));
     let refused = json_of(
         engine
-            .import_cp(js(json!("cp")), b"1 2 3", after.clone(), JsValue::UNDEFINED)
+            .import_cp(cp(), b"1 2 3", after.clone(), JsValue::UNDEFINED)
             .expect("a refusal is a value"),
     );
     assert_eq!(refused["status"], "refused");
@@ -218,16 +219,25 @@ fn refusals_are_values_and_mistakes_are_thrown() {
 
     let code = |error: JsValue| json_of(error)["code"].clone();
     let thrown = engine
-        .import_cp(js(json!("svg")), b"", after.clone(), JsValue::UNDEFINED)
+        .import_cp(
+            js(json!({ "format": "svg" })),
+            b"",
+            after.clone(),
+            JsValue::UNDEFINED,
+        )
         .expect_err("no such format");
     assert_eq!(code(thrown), "invalid_input");
     let thrown = engine
-        .import_cp(js(json!("cp")), b"", after, js(json!("lots")))
+        .import_cp(js(json!("cp")), b"", after.clone(), JsValue::UNDEFINED)
+        .expect_err("the file is an object");
+    assert_eq!(code(thrown), "invalid_input");
+    let thrown = engine
+        .import_cp(cp(), b"", after, js(json!("lots")))
         .expect_err("limits are an object");
     assert_eq!(code(thrown), "invalid_input");
     let thrown = engine
         .import_cp(
-            js(json!("cp")),
+            cp(),
             b"",
             js(json!({ "kind": "after", "state": sheet + 9 })),
             JsValue::UNDEFINED,

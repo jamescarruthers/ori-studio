@@ -36,9 +36,11 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   TypeScript's `keyDigest`.
 - **Import CP, Send to Edit and the FOLD export** (`src/io.rs`; plan D10,
   D16), through the CP kernel's own loaders and writers (below):
-  - `import_cp(format, bytes, target, limits)` reads a `.cp`, `.fold`, `.ori`
-    or `.orh` file, imports it into an empty sequence (which adopts its
-    square or rectangle) or after a state, and completes its layer order
+  - `import_cp(file, bytes, target, limits)` reads a `.cp`, `.fold`, `.ori`
+    or `.orh` file (`file` is its format, and whether it is one of the
+    samples, `tests/fixtures/fold-samples`), imports it into an empty
+    sequence (which adopts its square or rectangle) or after a state, and
+    completes its layer order
     from its letters: a true ‹ n of m ›, within a node budget, held under an
     import handle. `import_pick(import, choice)` lands one order as a step
     and returns the `cp-jump` op that stores it, landed by `apply` exactly
@@ -75,8 +77,8 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | Build | `.wasm` raw | gzip -9 |
 |---|---|---|
 | Without `kernel` (the Wave 2 bridge) | 638,301 B (623 KiB) | 236,078 B (231 KiB) |
-| With `kernel` (and the io calls) | 1,593,982 B (1,557 KiB) | 655,285 B (640 KiB) |
-| Difference | +955,681 B (+933 KiB) | **+419,207 B (+409 KiB)** |
+| With `kernel` (and the io calls) | 1,594,829 B (1,557 KiB) | 655,855 B (640 KiB) |
+| Difference | +956,528 B (+934 KiB) | **+419,777 B (+410 KiB)** |
 
 Phase 4a first measured the bridge without `kernel` at 609 KiB raw (228 KiB
 gzipped); the calls added since bring it to the first row. By `twiggy` on an
@@ -99,9 +101,9 @@ emits, so this is paid by every installed visitor on their first load.
   that, take D1's fallback: `kernel` stays native and test-only, and Send to
   Edit, export and Import CP go through the existing CP worker as FOLD text.
 
-**Decision (2026-10-08): `kernel` stays in the bridge.** It adds 409 KiB
+**Decision (2026-10-08): `kernel` stays in the bridge.** It adds 410 KiB
 gzipped, within the 512 KiB allowance, so D1's fallback is not taken. The
-103 KiB gzipped left is what the kernel's other writers (`.cp`, `.ori` and
+102 KiB gzipped left is what the kernel's other writers (`.cp`, `.ori` and
 `.orh` export, D10), not linked yet, would have to fit in.
 
 ## Performance

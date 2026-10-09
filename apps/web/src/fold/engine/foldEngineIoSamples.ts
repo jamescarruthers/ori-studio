@@ -26,7 +26,7 @@ export const FOLD_SAMPLES: readonly FoldSample[] = [
   { id: 'pleat-in-eighths', text: pleatInEighths },
 ];
 
-/** A sample as an import's source. */
+/** A sample as an import's source: its step records `origin: 'sample'`. */
 export function foldSampleSource(sample: FoldSample): FoldImportSource {
-  return { format: 'fold', text: sample.text };
+  return { format: 'fold', sample: true, text: sample.text };
 }
