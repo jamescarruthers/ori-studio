@@ -1,12 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
-import {
-  registerViewportShortcutExecutor,
-  releaseShortcutViewportSurface,
-  setActiveShortcutViewportSurface,
-} from '../../keyboard/shortcutRuntime';
 import type { FoldShortcutId, ViewportShortcutId } from '../../keyboard/shortcuts';
-import { registerFoldShortcutHandler } from '../foldShortcutScope';
+import { registerFoldCancel, registerFoldKeyHandler, registerFoldViewCamera } from '../sequence/foldKeys';
 import {
   FOLD_LINE_MODE_SHORTCUTS,
   FOLD_MODEL_TURNS,
@@ -90,27 +85,23 @@ export interface FoldCanvasCamera {
 
 /**
  * Bind the Fold canvas's keys while it is mounted, focus-independently
- * (AGENTS.md › Panel components): its tool rows in the `fold` scope's shared
- * executor (`registerFoldShortcutHandler`), and the `fold` viewport surface —
- * Escape's cancel ladder, and the zoom keys on the panes' cameras.
- *
- * The canvas claims the viewport surface on mount and on every press inside
- * it (`onPointerDownCapture`, returned here), and gives it up on unmount, so
- * the next workspace's viewport keys never go to a canvas that is gone.
+ * (AGENTS.md › Panel components), through the Fold panel's one executor for
+ * the `fold` scope and viewport surface (`fold/sequence/foldKeys`): its tool
+ * rows as a key handler, the tool's picks as a rung of Escape's cancel
+ * ladder, and the panes' cameras for the zoom keys. The panel claims the
+ * viewport surface, on mount and on every press inside it.
  */
-export function useFoldCanvasShortcuts(camera: FoldCanvasCamera): { onPointerDownCapture: () => void } {
+export function useFoldCanvasShortcuts(camera: FoldCanvasCamera): void {
   const cameraRef = useRef(camera);
   useEffect(() => {
     cameraRef.current = camera;
   });
 
   useEffect(() => {
-    setActiveShortcutViewportSurface('fold');
-    const offScope = registerFoldShortcutHandler((id) => runFoldCanvasShortcut(id, document.activeElement));
-    const offViewport = registerViewportShortcutExecutor('fold', (id: ViewportShortcutId) => {
+    const offKeys = registerFoldKeyHandler((id) => runFoldCanvasShortcut(id, document.activeElement));
+    const offCancel = registerFoldCancel(() => foldCanvasVerbs()?.cancel() ?? false);
+    const offCamera = registerFoldViewCamera((id: ViewportShortcutId) => {
       switch (id) {
-        case 'viewport.cancel':
-          return foldCanvasVerbs()?.cancel() ?? false;
         case 'viewport.zoomIn':
           cameraRef.current.zoomIn();
           return true;
@@ -128,12 +119,9 @@ export function useFoldCanvasShortcuts(camera: FoldCanvasCamera): { onPointerDow
       }
     });
     return () => {
-      offScope();
-      offViewport();
-      releaseShortcutViewportSurface('fold');
+      offKeys();
+      offCancel();
+      offCamera();
     };
   }, []);
-
-  const onPointerDownCapture = useCallback(() => setActiveShortcutViewportSurface('fold'), []);
-  return { onPointerDownCapture };
 }

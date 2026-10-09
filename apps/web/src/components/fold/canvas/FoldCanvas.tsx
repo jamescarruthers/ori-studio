@@ -100,7 +100,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     () => ({ zoomIn, zoomOut, fit, actualSize: () => setZoom(100), setZoomPercent: setZoom }),
     [zoomIn, zoomOut, fit, setZoom]
   );
-  const { onPointerDownCapture } = useFoldCanvasShortcuts(camera);
+  useFoldCanvasShortcuts(camera);
 
   // --- What each pane paints, and frames: the camera fits on a new sequence or sheet, never on a fold.
   const summary = view.summary;
@@ -204,7 +204,6 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       className={styles.root}
       data-fold-canvas=""
       data-rail={phone ? undefined : ''}
-      onPointerDownCapture={onPointerDownCapture}
     >
       {!phone && (
         <FoldToolRail groups={groups} keyLabel={keyLabel} header={coarse ? <FoldAltLatchToggle fill /> : undefined} />

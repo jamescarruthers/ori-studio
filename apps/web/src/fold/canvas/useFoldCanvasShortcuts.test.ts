@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { handleShortcutRuntimeKeyDown } from '../../keyboard/shortcutRuntime';
+import { handleShortcutRuntimeKeyDown, registerConditionalScopeExecutor } from '../../keyboard/shortcutRuntime';
 import { getResolvedShortcuts, SHORTCUT_DEFINITIONS } from '../../keyboard/shortcuts';
-import { registerFoldShortcutHandler } from '../foldShortcutScope';
+import { registerFoldKeyHandler, runFoldKey } from '../sequence/foldKeys';
 import { registerFoldCanvasVerbs } from './foldCanvasCommands';
 import type { FoldCanvasVerbs } from './useFoldCanvasVerbs';
 import { focusLeavesEnterToFold, runFoldCanvasShortcut } from './useFoldCanvasShortcuts';
@@ -99,10 +99,12 @@ describe('the fold scope’s shared executor', () => {
     });
 
   it('asks every Fold surface’s handler in turn, a second never replacing the first', () => {
+    // The Fold panel's executor, as `useFoldKeyboard` registers it.
+    const offScope = registerConditionalScopeExecutor('fold', runFoldKey);
     const tools = vi.fn((id: string) => id === 'fold.toolValley');
     const steps = vi.fn((id: string) => id === 'fold.commit');
-    const offTools = registerFoldShortcutHandler(tools);
-    const offSteps = registerFoldShortcutHandler(steps);
+    const offTools = registerFoldKeyHandler(tools);
+    const offSteps = registerFoldKeyHandler(steps);
     expect(press('v')).toBe(true);
     expect(tools).toHaveBeenCalledWith('fold.toolValley');
     expect(press('Enter')).toBe(true);
@@ -111,7 +113,8 @@ describe('the fold scope’s shared executor', () => {
     // The other surface still has the keyboard.
     expect(press('Enter')).toBe(true);
     offSteps();
-    // With none left, the scope is out of the stack and the key falls through.
+    // With none left to claim it, the key falls through.
     expect(press('v')).toBe(false);
+    offScope();
   });
 });
