@@ -5,10 +5,10 @@
 //! 1. Snap ℓ through landmarks within tol, refusing a snap that changes any
 //!    vertex's class ([`line`]).
 //! 2. Classify each vertex once.
-//! 3. Compute the moving set U by closure, and the flaps ([`closure`]).
+//! 3. Compute the moving set U by closure, and the flaps (`closure`).
 //! 4. Split the moving faces, once per crossed crease; toggle hinges on ℓ;
 //!    re-derive and check the isometries; carry and place the order; derive
-//!    the letters; pass the gate ([`apply`]).
+//!    the letters; pass the gate (`apply`).
 //!
 //! Precrease, refold, unfold and turn-over are this operation, or trivial:
 //! a precrease folds and folds back the faces it moved; refolding a precrease

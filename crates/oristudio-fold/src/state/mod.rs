@@ -3,8 +3,12 @@
 //! they determine — every face's isometry and image, checked.
 //!
 //! [`State::make`] is the only way to produce one: every state has passed the
-//! gate (see [`gate`]). Turning over and rotating change only the view, which
-//! no check depends on, so they keep the model they were given.
+//! gate (`state/gate.rs`), in order: structure; convex faces covering the
+//! sheet; isometries from the root, every vertex landing in one place; hinge
+//! consistency; the folded image as the layer order sees it; and the layer
+//! order through `oristudio-layer-order`'s checker. Each refusal names what
+//! failed. Turning over and rotating change only the view, which no check
+//! depends on, so they keep the model they were given.
 
 mod derive;
 mod gate;
@@ -66,7 +70,7 @@ pub struct State {
 
 impl State {
     /// The only constructor: derive the isometries and check everything
-    /// (see [`gate`]). Faces and creases are put in id order first.
+    /// (see the module docs). Faces and creases are put in id order first.
     pub fn make(parts: StateParts) -> Result<State, FoldRefusal> {
         State::make_with(parts, None)
     }
