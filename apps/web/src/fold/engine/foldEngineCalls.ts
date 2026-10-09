@@ -66,18 +66,18 @@ export interface FoldWasmEngine {
 /** The largest handle the engine can hand out: a `u32`. */
 const MAX_HANDLE = 0xffff_ffff;
 
-function invalidInput(message: string): WasmErrorEnvelope {
+export function invalidInput(message: string): WasmErrorEnvelope {
   return { code: 'invalid_input', message };
 }
 
-function requireHandle(name: string, value: unknown): number {
+export function requireHandle(name: string, value: unknown): number {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > MAX_HANDLE) {
-    throw invalidInput(`${name} must be a state handle (a whole number from 1), got ${String(value)}`);
+    throw invalidInput(`${name} must be a handle (a whole number from 1), got ${String(value)}`);
   }
   return value;
 }
 
-function requireObject<T>(name: string, value: T): T {
+export function requireObject<T>(name: string, value: T): T {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw invalidInput(`${name} must be an object`);
   }

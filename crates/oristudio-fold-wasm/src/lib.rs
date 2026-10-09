@@ -57,14 +57,14 @@
 //! }
 //! ```
 //!
-//! Import CP's op kind is the one [`wire::Op`] still names and refuses as
-//! `unsupported_op`; its loaders arrive as calls of their own.
-//!
-//! Without `oristudio-fold`'s `kernel` feature for now (it is being built in
-//! parallel): see `Cargo.toml` and the size budget in `README.md`.
+//! With `oristudio-fold`'s `kernel` feature (plan D1): Import CP, Start from
+//! Edit's folded figure, Send to Edit and the FOLD export are [`io`]'s, on
+//! `FoldEngine` beside these calls, and a stored `cp-jump` op is applied like
+//! any other step. `README.md` records the size that costs.
 
 pub mod bridge;
 pub mod canonical;
+pub mod io;
 pub mod joins;
 pub mod resolve;
 pub mod wire;
@@ -100,6 +100,8 @@ pub fn fold_engine_version() -> u32 {
 #[wasm_bindgen]
 pub struct FoldEngine {
     inner: Bridge,
+    /// Imported crease patterns waiting for an order to be picked (`io`).
+    imports: io::Imports,
 }
 
 impl Default for FoldEngine {
@@ -115,6 +117,7 @@ impl FoldEngine {
         PANIC_HOOK.call_once(console_error_panic_hook::set_once);
         FoldEngine {
             inner: Bridge::new(),
+            imports: io::Imports::new(),
         }
     }
 
@@ -151,9 +154,10 @@ impl FoldEngine {
         u32::try_from(released).unwrap_or(u32::MAX)
     }
 
-    /// Let every state go.
+    /// Let every state go, and every import.
     pub fn clear(&mut self) {
         self.inner.clear();
+        self.imports.clear();
     }
 
     /// How many states are held.

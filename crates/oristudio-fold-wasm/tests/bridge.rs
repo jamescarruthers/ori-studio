@@ -501,9 +501,10 @@ fn anchors_that_do_not_resolve_are_refusals() {
             }),
             json!({ "code": "point_off_paper", "point": [1.5, 0.5] }),
         ),
+        // A stored import whose order no longer reads (`tests/io.rs` has the rest).
         (
             json!({ "kind": "cp-jump", "cpJson": "{}", "orderJson": "{}", "origin": "cp" }),
-            json!({ "code": "unsupported_op", "feature": "cp_jump" }),
+            json!({ "code": "import_stored_unreadable", "field": "order_json" }),
         ),
     ];
     for (step, expected) in cases {

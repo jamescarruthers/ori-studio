@@ -22,7 +22,7 @@ use oristudio_geometry::Line;
 
 use crate::wire::{
     AlongCrease, AlongLine, BridgeError, BridgeRefusal, Choices, LineInput, Motion, Op, Point,
-    RefInput, Refusal, SeedInput, Unsupported,
+    RefInput, Refusal, SeedInput,
 };
 
 /// Why an op did not reach the engine.
@@ -62,7 +62,8 @@ pub enum Resolved {
     },
     /// A fold along a line the tools gave in the parent's model frame.
     Plain { fold: PlainFold, kind: ActionKind },
-    /// A turn or a rotation: the same model, seen another way.
+    /// A state landed whole: a turn or a rotation (the same model, seen
+    /// another way), or Import CP's jump to a new model.
     View(State),
 }
 
@@ -97,11 +98,11 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
         Op::Refold(c) => along_crease(parent, c, false),
         Op::Turn { axis } => Ok(Resolved::View(parent.turn_over_about(*axis))),
         Op::Rotate { rotate } => Ok(Resolved::View(parent.rotate(rotate.angle()))),
-        // Import CP: its loaders and completion are Phase 8's.
-        Op::CpJump {} => Err(BridgeRefusal::UnsupportedOp {
-            feature: Unsupported::CpJump,
-        }
-        .into()),
+        // Import CP: the stored pattern and order, landed whole after the
+        // parent (plan D16).
+        Op::CpJump(jump) => crate::io::land(parent, jump)
+            .map(Resolved::View)
+            .map_err(Rejection::from),
     }
 }
 

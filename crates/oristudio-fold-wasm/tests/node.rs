@@ -148,7 +148,7 @@ fn analysis_and_refusals_are_values() {
     );
     assert_eq!(
         jump["refusal"],
-        json!({ "code": "unsupported_op", "feature": "cp_jump" })
+        json!({ "code": "import_stored_unreadable", "field": "order_json" })
     );
     let choice = json_of(
         engine

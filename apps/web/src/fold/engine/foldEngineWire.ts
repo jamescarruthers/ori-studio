@@ -34,6 +34,7 @@ import type {
   FoldSeed,
   SheetPoint,
 } from '../document/foldSequenceDocument';
+import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
 export type FoldSide = 'positive' | 'negative';
@@ -82,7 +83,10 @@ type WithTools<O> = O extends { line: FoldLineInput }
 
 /**
  * What the bridge folds: any document op as it is stored ({@link FoldOp}
- * is assignable to it), or one the tools are previewing.
+ * is assignable to it), or one the tools are previewing. A stored `cp-jump`
+ * lands after its parent or is refused with an `import_*` code
+ * (`foldEngineIoWire.ts`); an `origin` outside the document's `FoldCpOrigin`
+ * is the caller's mistake and throws.
  */
 export type FoldEngineOp = WithTools<FoldOp>;
 
@@ -153,6 +157,9 @@ export const FOLD_BRIDGE_REFUSAL_CODES = [
   'crease_not_found',
   'crease_not_flat',
   'crease_not_folded',
+  // A stored cp-jump that no longer lands, or an io call's refusal, under
+  // Import CP's own codes (`BridgeRefusal::Io`).
+  ...FOLD_IMPORT_REFUSAL_CODES,
 ] as const;
 
 /** Every refusal code: the stable ids the UI and analytics use (D18). They never collide. */

@@ -43,7 +43,8 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   `free_line_too_short`, `no_root`, `no_side`, `side_on_line`,
   `mover_stays`, …) and the bridge's own (`unsupported_op`,
   `unexpected_choice`, `root_missing`, `crease_not_found`,
-  `crease_not_flat`, `crease_not_folded`); they never collide. A sliver
+  `crease_not_flat`, `crease_not_folded`, and Import CP's `import_*` for a
+  stored `cp-jump` that no longer lands); they never collide. A sliver
   remedy's `use_line` fix also carries `step`, the document's op and
   choices that fold along it. Only a caller's mistake — malformed input, a
   handle this engine does not hold — throws, as the `{ code, message }`
@@ -51,16 +52,36 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
 - **`fs1` keys** (`src/canonical.rs`): one per fact of the state, none naming
   a face, vertex or crease by its number; the digest over them is
   TypeScript's `keyDigest`.
-
-Import CP is the one op kind `wire::Op` still names and refuses as
-`unsupported_op`; its loaders arrive as calls of their own.
+- **Import CP, Send to Edit and the FOLD export** (`src/io.rs`; plan D10,
+  D16), through the CP kernel's own loaders and writers (below):
+  - `import_cp(file, bytes, target, limits)` reads a `.cp`, `.fold`, `.ori`
+    or `.orh` file (`file` is its format, and whether it is one of the
+    samples, `tests/fixtures/fold-samples`), imports it into an empty
+    sequence (which adopts its square or rectangle) or after a state, and
+    completes its layer order
+    from its letters: a true ‹ n of m ›, within a node budget, held under an
+    import handle. `import_pick(import, choice)` lands one order as a step
+    and returns the `cp-jump` op that stores it, landed by `apply` exactly
+    as every replay will land it; `release_imports`, `live_imports`.
+  - `import_edit_folded_figure(scene, target, limits)` starts from Edit's
+    folded figure: the kernel's folded paper scene, whose stacks decide the
+    order (Oriedita's relations, `ImportedPattern::from_oriedita`).
+  - `send_to_edit(state, title)` is the state's crease pattern as the FOLD
+    text Edit's import takes; `export_fold(states, title)` a path of states
+    as one FOLD file.
+  - A stored `cp-jump` — `cpJson`, the pattern as the kernel's FOLD writer
+    writes it; `orderJson`, the order by sheet-point witnesses — is applied
+    like any op: imported after its parent, its witnesses deciding the
+    order, or refused (`import_*`) and the step broken.
 
 ## The `kernel` feature
 
-Plan D1 enables `oristudio-fold`'s `kernel` feature here by default, so the
-browser reuses the CP kernel's writers and loaders. It is being built in
-parallel and is not enabled yet; `Cargo.toml` says where it goes. When it
-lands, re-measure below with and without it and decide against the budget.
+`oristudio-fold`'s `kernel` feature is on (plan D1), so the browser reuses
+the CP kernel's loaders and writers rather than a second copy of them: Import
+CP reads files with them, Send to Edit and the FOLD export write with them,
+and a step's `cpJson` is the kernel's FOLD. The bridge now links
+`oristudio-cp` (the Oriedita port) and `treemaker-fold`, both MIT OR
+Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 
 ## Size
 
@@ -71,7 +92,24 @@ lands, re-measure below with and without it and decide against the budget.
 |---|---|---|
 | Without `kernel`, before the queries (sheet, analyse, apply, summary, keys; the same engine) | 641,223 B (626 KiB) | 236,181 B (231 KiB) |
 | Without `kernel`, with the queries and axiom ops | 907,733 B (886 KiB) | 336,478 B (329 KiB) |
-| With `kernel` | not yet measured | — |
+| With `kernel` and the io calls, before the queries | 1,594,829 B (1,557 KiB) | 655,855 B (640 KiB) |
+| With `kernel`, the io calls, the queries and axiom ops | 1,879,638 B (1,836 KiB) | 752,479 B (735 KiB) |
+
+The io branch measured `kernel`'s cost before the queries, against the
+Wave 2 bridge built in the same worktree (638,301 B raw, 236,078 B
+gzipped): **+956,528 B raw (+934 KiB), +419,777 B gzipped (+410 KiB)**.
+After both merged, the last row is +971,905 B raw (+949 KiB) and
+**+416,001 B gzipped (+406 KiB)** over the row without `kernel` with the
+queries; that row was built in another worktree the same day, so read the
+difference as approximate.
+
+Phase 4a first measured the bridge without `kernel` at 609 KiB raw (228 KiB
+gzipped); the calls added since bring it to the first row. By `twiggy` on an
+unoptimized build, most of `kernel`'s difference is
+`serde_json` (with the workspace's `float_roundtrip` parser), the serde code
+for FOLD documents and the folded paper scene, the kernel's loaders and FOLD
+writer, and `encoding_rs`'s decoders and tables for `.orh`'s Japanese and
+Chinese charsets.
 
 The queries and axioms link in the engine they reach — the scene, the
 cross-section and depth choices, landmarks, the constructions, anchored
@@ -95,6 +133,11 @@ emits, so this is paid by every installed visitor on their first load.
   (about a third of the CP bridge every visitor already downloads). Past
   that, take D1's fallback: `kernel` stays native and test-only, and Send to
   Edit, export and Import CP go through the existing CP worker as FOLD text.
+
+**Decision (2026-10-08): `kernel` stays in the bridge.** It adds 410 KiB
+gzipped, within the 512 KiB allowance, so D1's fallback is not taken. The
+102 KiB gzipped left is what the kernel's other writers (`.cp`, `.ori` and
+`.orh` export, D10), not linked yet, would have to fit in.
 
 ## Performance
 
@@ -144,12 +187,23 @@ within 15% at 129–256.
   classic sequences replayed through the bridge to the outcomes their
   fixtures record, along model lines and again along O1 axioms with their
   roots.
-- `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs`, the
-  same calls across the wasm boundary (plain objects in and out, refusals as
-  values, thrown envelopes). CI runs no wasm-pack tests, so this is a local
-  gate.
+- `cargo test -p oristudio-fold-wasm --test io`: `tests/io.rs`, the io
+  calls natively — Send to Edit, then Import CP, giving the same state
+  (`fs1` keys equal) over the classics and 364 seeded random states, with
+  the import's completion offering that order; an Import-CP golden through
+  `.cp` and `.fold` (the same state, its valleys where the files draw them,
+  the flaps showing their backs); the samples each importing to their one
+  order; open and pick (every listed order landed, exactly one the state
+  sent), an empty sequence adopting the pattern's sheet, stored ops that no
+  longer land refused; and Edit's folded figure, folded by the kernel from
+  114 states, front and rear, landing the state it was folded from.
+- `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs` and
+  `tests/io_node.rs`, the same calls across the wasm boundary (plain objects
+  in and out, refusals as values, thrown envelopes, the kernel's scene object
+  as input). CI runs no wasm-pack tests, so this is a local gate.
 - `apps/web/src/fold/engine/foldSequence.wasm.test.ts` drives the built
   bridge from TypeScript, every call included, and an axiom step through the
-  document's replayer.
+  document's replayer; `foldEngineIo.wasm.test.ts` drives the io calls and
+  folds Edit's figure with the CP kernel's bridge in the same process.
 
 Original work under `MIT OR Apache-2.0`.
