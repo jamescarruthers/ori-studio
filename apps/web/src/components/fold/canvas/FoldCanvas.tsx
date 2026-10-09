@@ -283,7 +283,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           camera={camera}
           display={display}
           onDisplay={setDisplay}
-          playback={<FoldPlaybackControls playback={playback} shortcuts={shortcuts} />}
+          playback={<FoldPlaybackControls playback={playback} shortcuts={shortcuts} compact={phone} />}
           sendToEdit={sendToEdit}
         />
       </div>

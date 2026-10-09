@@ -74,6 +74,10 @@ export function FoldViewportToolbar({
       fitToView={camera.fit}
       setZoomLevel={(scale) => camera.setZoomPercent(scale * 100)}
       groups={groups}
+      // A phone's bar is the step's: its display switches and its transport,
+      // with the zoom buttons left to a pinch and Fit in the overflow menu.
+      // Inline, the transport wrapped the bar onto a second row over the paper.
+      phoneViewControls="collapsed"
     />
   );
 }

@@ -13,6 +13,11 @@ export interface FoldPlaybackControlsProps {
   playback: FoldStepPlaybackSurface;
   /** The user's chords, for the tooltip that names Space. */
   shortcuts?: ShortcutResolutionInput;
+  /**
+   * Play and Step alone, without the scrubber: a phone's bar, which holds one
+   * row and wraps the scrubber onto a second over the paper.
+   */
+  compact?: boolean;
 }
 
 /**
@@ -24,7 +29,7 @@ export interface FoldPlaybackControlsProps {
  * Every press goes to the playback, which Space reaches too
  * (`runFoldPlaybackShortcut`), so the button and the key are one verb.
  */
-export function FoldPlaybackControls({ playback, shortcuts }: FoldPlaybackControlsProps) {
+export function FoldPlaybackControls({ playback, shortcuts, compact = false }: FoldPlaybackControlsProps) {
   const { t } = useTranslation();
   const disabled = !playback.available;
   const play = playback.playing
@@ -48,7 +53,7 @@ export function FoldPlaybackControls({ playback, shortcuts }: FoldPlaybackContro
       <IconButton size="sm" title={stepOn} aria-label={stepOn} disabled={disabled} onClick={() => playback.step(1)}>
         <StepForward size={14} />
       </IconButton>
-      <FoldPlaybackScrub position={playback.position} disabled={disabled} onSeek={playback.seek} />
+      {!compact && <FoldPlaybackScrub position={playback.position} disabled={disabled} onSeek={playback.seek} />}
     </div>
   );
 }

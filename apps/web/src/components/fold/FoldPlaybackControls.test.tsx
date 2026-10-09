@@ -61,11 +61,11 @@ function surface(): FoldStepPlaybackSurface {
   };
 }
 
-const render = () =>
+const render = (compact = false) =>
   act(() =>
     root.render(
       <TooltipProvider>
-        <FoldPlaybackControls playback={surface()} />
+        <FoldPlaybackControls playback={surface()} compact={compact} />
       </TooltipProvider>
     )
   );
@@ -126,6 +126,14 @@ describe('FoldPlaybackControls', () => {
     });
     expect(seek).toHaveBeenCalledWith(0.25);
     expect(slider()?.getAttribute('aria-valuetext')).toBe('25%');
+  });
+
+  it('keeps Play and Step without the scrubber when compact, for a phone’s one-row bar', () => {
+    playback.setMotion(book());
+    render(true);
+    expect(button('Play step')?.disabled).toBe(false);
+    expect(button('Step forward')).not.toBeNull();
+    expect(slider()).toBeNull();
   });
 
   it('steps an eighth on', () => {
