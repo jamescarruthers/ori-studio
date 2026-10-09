@@ -2,7 +2,7 @@
 //!
 //! Every compound fold — the inside reverse fold now; the outside reverse,
 //! crimp, tuck, squash, petal, rabbit ear, swivel and sinks later — compiles
-//! to a [`Macro`] and lands through the same steps:
+//! to a `Macro` and lands through the same steps:
 //!
 //! 1. **Macro.** The operation's inputs become a score line, a partition of
 //!    the faces that move into *blocks* (faces whose mutual stacking moves as
@@ -26,7 +26,7 @@
 //!    isometries happen to be equal: every block of a reverse fold moves by
 //!    the same reflection, yet the blocks keep their absolute order (§5.2).
 //! 7. **Seed** the macro's placements (a block against named faces) and the
-//!    pairs across blocks, by the macro's rule ([`Across`]).
+//!    pairs across blocks, by the macro's rule (`Across`).
 //! 8. **Complete** the rest (`crate::complete`), searching only around the
 //!    faces that moved.
 //! 9. **Letters** from the order, and **validate** through `State::make`.

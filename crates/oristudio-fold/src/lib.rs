@@ -27,8 +27,14 @@
 //!   sequence path built on the kernel's FOLD writer.
 //! - [`Unordered`] and [`complete`]: parts whose layer order is still to be
 //!   decided, and the one entry that completes it through Flat-Folder's
-//!   search with a true ‹ n of m ›, for Import CP now and compound folds
-//!   later.
+//!   search with a true ‹ n of m ›, for Import CP and the compound folds
+//!   (around the faces a fold moved, [`complete::complete_around`]).
+//! - [`compound`]: the one pipeline compound folds land through (plan D4:
+//!   macro, score, hinge diff, derive, gate, carry, seed, complete, letters,
+//!   validate), and on it [`State::reverse_fold`], the inside and outside
+//!   reverse fold with per-flap openings, kind feasibility, refusals with
+//!   fixes and stored choices; and the [`StepMotion`] a compound step's
+//!   animation draws (plan D15).
 //! - [`import`]: Import CP — a crease pattern's sheet, faces and isometries,
 //!   its order completed from its letters, and Edit's folded figure.
 //! - [`witness`]: stored choices with faces named by sheet points, and their
