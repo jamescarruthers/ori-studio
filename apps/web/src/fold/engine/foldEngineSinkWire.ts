@@ -13,8 +13,9 @@
  * through {@link sinkStoredChoices}.
  *
  * A landed sink's report carries its motion (plan D15): legs, each turning
- * groups of faces about a hinge, with exact endpoints. The engine's
- * `StepMotion` is every compound fold's; it is here, beside its first user.
+ * groups of faces about a hinge, with exact endpoints — the engine's
+ * `StepMotion`, every compound fold's (`FoldStepMotionLegs`,
+ * `foldEngineWire.ts`).
  *
  * Pure types, constants and one conversion: no React, no store, no wasm.
  */
@@ -34,6 +35,7 @@ import type {
   FoldRefold,
   FoldSide,
   FoldSnap,
+  FoldStepMotionLegs,
 } from './foldEngineWire';
 
 /** Which way a point sinks. */
@@ -109,43 +111,6 @@ export interface FoldSinkAnalysed {
   analysis: FoldSinkPoint;
   /** Why an open sink of this point is refused, with its fixes; null when one may land. */
   open: Omit<FoldEngineRefused, 'status'> | null;
-}
-
-// ---------------------------------------------------------------------------
-// The motion (plan D15)
-
-/** Whether every frame is a pose the paper can take, or only the ends are states. */
-export type FoldMotionKind = 'rigid' | 'visual';
-
-/** A leg: the moving paper lifting to edge-on, or coming down to where it lands. */
-export type FoldMotionLegName = 'spread' | 'close';
-
-/** Which state's layer order draws the turning paper during a leg. */
-export type FoldMotionStacking = 'parent' | 'landed';
-
-/** Paper turning about one hinge during one leg. */
-export interface FoldMotionGroup {
-  /** The landed state's faces that turn together. */
-  faces: number[];
-  /** The hinge, in the parent's model frame. */
-  axis: FoldModelLine;
-  /** The side of `axis` the faces start on. */
-  side: FoldSide;
-  /** The turn at the leg's start and end, radians: 0 where they lay in the parent, ±π where they land; positive lifts toward +z. */
-  from: number;
-  to: number;
-}
-
-export interface FoldMotionLeg {
-  name: FoldMotionLegName;
-  stacking: FoldMotionStacking;
-  groups: FoldMotionGroup[];
-}
-
-/** A compound step's motion: its legs, played in order. */
-export interface FoldStepMotionLegs {
-  kind: FoldMotionKind;
-  legs: FoldMotionLeg[];
 }
 
 // ---------------------------------------------------------------------------

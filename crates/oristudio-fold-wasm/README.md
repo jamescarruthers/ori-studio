@@ -100,8 +100,9 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   `choices.completion` (the engine's `WitnessOrder`, as `orderJson` holds a
   whole order) stored as results. `apply`'s answer carries the engine's
   `sink` report, its motion's legs among it. A sink that needs a choice the
-  step does not store is refused `choice_missing`; a stored one that no
-  longer resolves, `choice_broken`. `sink_analysis` previews the point (its
+  step does not store is refused `choice_needed` (`pocket` or `completion`);
+  a stored one that no longer resolves, `choice_broken` — the compound
+  folds' own codes (`src/compound.rs`). `sink_analysis` previews the point (its
   outline, outside letter, apex, the square line, why an open sink is
   refused, the pockets with what a step stores), `sink_orders` counts what a
   completion leaves, and `sink_pick` gives the completion a step stores.

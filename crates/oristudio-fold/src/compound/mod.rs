@@ -75,7 +75,7 @@ use crate::fold::score::{self, Piece};
 use crate::isometry::Isometry;
 use crate::pattern::{CreaseKind, EdgeId, FaceId, Letter};
 use crate::refusal::{FoldRefusal, Refused};
-use crate::state::State;
+use crate::state::{State, StateParts};
 use crate::unordered::Unordered;
 use crate::witness::{Broken, WitnessOrder};
 

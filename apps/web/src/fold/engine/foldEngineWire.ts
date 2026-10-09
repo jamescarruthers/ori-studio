@@ -243,7 +243,7 @@ export type FoldRefusalBody =
  * resolves, with the engine's cause (`Broken`).
  */
 export type FoldCompoundRefusalBody =
-  | { readonly code: 'choice_needed'; readonly choice: 'opening' | 'completion' }
+  | { readonly code: 'choice_needed'; readonly choice: 'opening' | 'pocket' | 'completion' }
   | { readonly code: 'choice_broken'; readonly broken: string; readonly [field: string]: unknown }
   // The reverse fold (`foldEngineReverseWire.ts`).
   | { readonly code: 'reverse_no_opening'; readonly faces: readonly number[]; readonly cause: FoldNoOpening }

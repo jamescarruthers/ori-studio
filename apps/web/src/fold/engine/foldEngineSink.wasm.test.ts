@@ -140,7 +140,7 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
     const base = importSample(engine, 'preliminary-base');
     const op = sinkOp('closed-sink', 0.3);
     const missing = refused(calls.step(base.state, op));
-    expect(missing.refusal).toEqual({ code: 'choice_missing', choice: 'pocket' });
+    expect(missing.refusal).toEqual({ code: 'choice_needed', choice: 'pocket' });
 
     const { analysis, open } = landed(sinks.sinkAnalysis(base.state, op));
     expect(open).toBeNull();

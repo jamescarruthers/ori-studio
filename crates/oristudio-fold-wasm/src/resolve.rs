@@ -86,9 +86,7 @@ impl Resolved {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
             Resolved::Compound(op) => Some(Ok(op.plain())),
-            Resolved::View(_) | Resolved::Jump(_) | Resolved::Vertex(_) | Resolved::Sink(_) => {
-                None
-            }
+            Resolved::View(_) | Resolved::Jump(_) | Resolved::Vertex(_) | Resolved::Sink(_) => None,
         }
     }
 }

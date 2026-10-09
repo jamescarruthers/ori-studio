@@ -26,7 +26,6 @@ use oristudio_fold::{
     StartSide, StepSummary, StoredOpening, TurnAxis, VertexId, View, WitnessOrder,
 };
 use oristudio_geometry::Line;
-use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -152,6 +151,9 @@ impl Op {
                 | Op::Petal(_)
                 | Op::RabbitEar(_)
                 | Op::Swivel(_)
+                | Op::OpenSink(_)
+                | Op::ClosedSink(_)
+                | Op::Unsink(_)
         )
     }
 

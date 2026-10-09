@@ -71,6 +71,8 @@ pub enum CompoundStepReport {
 pub enum NeededChoice {
     /// A flap opens more than one way (reverse folds, crimps, tucks).
     Opening,
+    /// A closed sink's point has more than one pocket to sink into.
+    Pocket,
     /// The completion leaves more than one order.
     Completion,
 }

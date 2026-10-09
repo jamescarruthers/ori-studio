@@ -30,8 +30,9 @@
 //! The stored pocket and completion are the engine's: a sheet point on the
 //! faces either side of the pocket, and FOLD `faceOrders` triples over
 //! witnesses. A sink that needs a choice the step does not store is refused
-//! `choice_missing`; one whose stored choice no longer resolves,
-//! `choice_broken`. Either marks a replayed step broken.
+//! `choice_needed` (its `pocket` or its `completion`); one whose stored
+//! choice no longer resolves, `choice_broken` — the compound folds' own
+//! (`crate::compound`). Either marks a replayed step broken.
 
 use oristudio_fold::{
     ActionKind, ChoiceCount, CompoundRefused, Direction, Side, SinkChoices, SinkFold, SinkFolded,
@@ -41,6 +42,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use crate::bridge::Bridge;
+use crate::compound::{NeededChoice, choice_needed, compound_refusal};
 use crate::io::ComponentCount;
 use crate::resolve::{Rejection, Resolved, along_line, finite_point, resolve as resolve_op};
 use crate::wire::{
@@ -197,9 +199,9 @@ pub fn resolve(
 pub fn land(parent: &State, sink: &SinkResolved) -> Result<SinkFolded, Refusal> {
     match sink.outcome(parent) {
         Ok(SinkOutcome::Landed(folded)) => Ok(*folded),
-        Ok(SinkOutcome::ChoosePocket(_)) => Err(missing("pocket")),
-        Ok(SinkOutcome::ChooseOrder(_)) => Err(missing("completion")),
-        Err(refused) => Err(refusal(refused)),
+        Ok(SinkOutcome::ChoosePocket(_)) => Err(choice_needed(NeededChoice::Pocket)),
+        Ok(SinkOutcome::ChooseOrder(_)) => Err(choice_needed(NeededChoice::Completion)),
+        Err(refused) => Err(compound_refusal(refused)),
     }
 }
 
@@ -261,8 +263,8 @@ pub fn sink_orders(
                 })
                 .collect(),
         }),
-        Ok(SinkOutcome::ChoosePocket(_)) => Outcome::Refused(missing("pocket")),
-        Err(refused) => Outcome::Refused(refusal(refused)),
+        Ok(SinkOutcome::ChoosePocket(_)) => Outcome::Refused(choice_needed(NeededChoice::Pocket)),
+        Err(refused) => Outcome::Refused(compound_refusal(refused)),
     })
 }
 
@@ -287,8 +289,8 @@ pub fn sink_pick(
             }),
             Err(refusal) => Outcome::Refused(refusal.into()),
         },
-        Ok(SinkOutcome::ChoosePocket(_)) => Outcome::Refused(missing("pocket")),
-        Err(refused) => Outcome::Refused(refusal(refused)),
+        Ok(SinkOutcome::ChoosePocket(_)) => Outcome::Refused(choice_needed(NeededChoice::Pocket)),
+        Err(refused) => Outcome::Refused(compound_refusal(refused)),
     })
 }
 
@@ -309,18 +311,6 @@ fn sink_of<'b>(
         ))),
         Err(Rejection::Refused(refusal)) => Ok(Err(refusal)),
         Err(Rejection::Input(error)) => Err(error),
-    }
-}
-
-fn missing(choice: &'static str) -> Refusal {
-    BridgeRefusal::ChoiceMissing { choice }.into()
-}
-
-/// A sink's refusal on the wire: the engine's, or a stored choice broken.
-fn refusal(refused: CompoundRefused) -> Refusal {
-    match refused {
-        CompoundRefused::Refused(refused) => refused.into(),
-        CompoundRefused::Broken(broken) => BridgeRefusal::ChoiceBroken { broken }.into(),
     }
 }
 

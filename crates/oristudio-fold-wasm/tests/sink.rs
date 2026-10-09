@@ -240,7 +240,7 @@ fn a_closed_sink_asks_for_its_pocket_and_replays_it() {
     let missing = refused(&mut bridge, start, &step, json!({}));
     assert_eq!(
         missing["refusal"],
-        json!({ "code": "choice_missing", "choice": "pocket" })
+        json!({ "code": "choice_needed", "choice": "pocket" })
     );
     let analysis = ok(
         sink_analysis(&bridge, start, &op(step.clone()), &Choices::default())
@@ -273,7 +273,8 @@ fn a_closed_sink_asks_for_its_pocket_and_replays_it() {
         json!({ "pocket": [[2.0, 2.0], [0.1, 0.1]] }),
     );
     assert_eq!(broken["refusal"]["code"], "choice_broken");
-    assert_eq!(broken["refusal"]["broken"]["broken"], "witness");
+    // The engine's cause, flattened beside the code (`crate::compound`).
+    assert_eq!(broken["refusal"]["broken"], "witness");
 }
 
 /// A tilted model line: the open sink is refused, offering the square line

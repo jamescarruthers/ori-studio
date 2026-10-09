@@ -214,6 +214,10 @@ function playKind(op: FoldOp): FoldStepPlayKind {
       return 'outside_reverse';
     case 'rabbit-ear':
       return 'rabbit_ear';
+    case 'open-sink':
+      return 'open_sink';
+    case 'closed-sink':
+      return 'closed_sink';
     default:
       return op.kind;
   }

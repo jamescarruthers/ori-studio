@@ -242,6 +242,7 @@ impl Bridge {
                         report: None,
                         // A crimp's or tuck's report is its own calls'.
                         compound: None,
+                        sink: None,
                         summary,
                         vertex: None,
                     })
@@ -335,6 +336,7 @@ impl Bridge {
             }),
             report: None,
             compound: None,
+            sink: None,
             summary,
             vertex,
         }
