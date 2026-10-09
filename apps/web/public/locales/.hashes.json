@@ -4743,7 +4743,9 @@
     "panels:fold.words.unfolds_other": "05d50d377a98",
     "panels:fold.words.unknown": "9c6cf5eaba88",
     "panels:fold.words.valleyFold": "37ab012602df",
-    "panels:fold.words.valleyPrecrease": "8bced6713cfd"
+    "panels:fold.words.valleyPrecrease": "8bced6713cfd",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9489,7 +9491,9 @@
     "panels:fold.words.unfolds_other": "05d50d377a98",
     "panels:fold.words.unknown": "9c6cf5eaba88",
     "panels:fold.words.valleyFold": "37ab012602df",
-    "panels:fold.words.valleyPrecrease": "8bced6713cfd"
+    "panels:fold.words.valleyPrecrease": "8bced6713cfd",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -14237,7 +14241,9 @@
     "panels:fold.words.unfolds_other": "05d50d377a98",
     "panels:fold.words.unknown": "9c6cf5eaba88",
     "panels:fold.words.valleyFold": "37ab012602df",
-    "panels:fold.words.valleyPrecrease": "8bced6713cfd"
+    "panels:fold.words.valleyPrecrease": "8bced6713cfd",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -18785,7 +18791,9 @@
     "panels:fold.words.unfolds_other": "05d50d377a98",
     "panels:fold.words.unknown": "9c6cf5eaba88",
     "panels:fold.words.valleyFold": "37ab012602df",
-    "panels:fold.words.valleyPrecrease": "8bced6713cfd"
+    "panels:fold.words.valleyPrecrease": "8bced6713cfd",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -23333,7 +23341,9 @@
     "panels:fold.words.unfolds_other": "05d50d377a98",
     "panels:fold.words.unknown": "9c6cf5eaba88",
     "panels:fold.words.valleyFold": "37ab012602df",
-    "panels:fold.words.valleyPrecrease": "8bced6713cfd"
+    "panels:fold.words.valleyPrecrease": "8bced6713cfd",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -28079,7 +28089,9 @@
     "panels:fold.words.unfolds_other": "05d50d377a98",
     "panels:fold.words.unknown": "9c6cf5eaba88",
     "panels:fold.words.valleyFold": "37ab012602df",
-    "panels:fold.words.valleyPrecrease": "8bced6713cfd"
+    "panels:fold.words.valleyPrecrease": "8bced6713cfd",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -32825,7 +32837,9 @@
     "panels:fold.words.unfolds_other": "05d50d377a98",
     "panels:fold.words.unknown": "9c6cf5eaba88",
     "panels:fold.words.valleyFold": "37ab012602df",
-    "panels:fold.words.valleyPrecrease": "8bced6713cfd"
+    "panels:fold.words.valleyPrecrease": "8bced6713cfd",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -37373,6 +37387,8 @@
     "panels:fold.words.unfolds_other": "05d50d377a98",
     "panels:fold.words.unknown": "9c6cf5eaba88",
     "panels:fold.words.valleyFold": "37ab012602df",
-    "panels:fold.words.valleyPrecrease": "8bced6713cfd"
+    "panels:fold.words.valleyPrecrease": "8bced6713cfd",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   }
 }
