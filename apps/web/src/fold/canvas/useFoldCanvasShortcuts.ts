@@ -61,8 +61,8 @@ export function runFoldCanvasShortcut(id: FoldShortcutId, focus: Element | null)
       verbs.turn(FOLD_MODEL_TURNS.rotate);
       return true;
     case 'fold.swapSide':
-      verbs.swapSide();
-      return true;
+      // Nothing located, no side to swap: S falls through.
+      return verbs.swapSide();
     case 'fold.previousCandidate':
     case 'fold.nextCandidate':
       // A control that moves with the arrows keeps them; with one root or none, the step keys may have them.

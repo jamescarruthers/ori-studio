@@ -41,7 +41,8 @@ export interface FoldCanvasVerbs {
   hitTest: (pane: FoldPaneId, at: { x: number; y: number }, radii: FoldHitRadii) => FoldHit | null;
   /** A click landed on a pane. */
   pick: (hit: FoldHit | null) => void;
-  swapSide: () => void;
+  /** Fold the other side; whether there was a located line to swap the side of. */
+  swapSide: () => boolean;
   toggleFlap: (flap: number) => void;
   hoverFlap: (flap: number | null) => void;
   includeFlaps: (flaps: readonly number[]) => void;

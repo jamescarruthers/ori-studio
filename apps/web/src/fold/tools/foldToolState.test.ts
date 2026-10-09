@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import type { FoldPick } from '../canvas/foldPicking';
-import { clampDivideParts, createFoldTools, hasToolInput, isLocated } from './foldToolState';
+import { flatSquareLandmarks, flatSquareScene } from '../canvas/foldCanvas.fixtures';
+import { foldPickIndex, type FoldPick } from '../canvas/foldPicking';
+import { foldStepInputKey } from '../session/foldSessionEngine';
+import { buildFoldStep } from './foldStepBuilder';
+import {
+  clampDivideParts,
+  createFoldTools,
+  FOLD_TOOL_INITIAL,
+  hasToolInput,
+  isLocated,
+  type FoldToolState,
+} from './foldToolState';
 
 const point = (x: number, y: number): FoldPick => ({
   kind: 'point',
@@ -47,6 +57,51 @@ describe('the Fold tools’ state', () => {
     expect(hasToolInput(tools.store.getState())).toBe(true);
     tools.clear();
     expect(tools.store.getState()).toMatchObject({ picks: [], swapped: false, root: 0, seed: { scope: 'all' } });
+  });
+
+  it('swaps the side only once the line is located, and folds the new side whole', () => {
+    const tools = createFoldTools();
+    tools.pick(point(1, 0));
+    // No line yet, no side: nothing is latched for the line to come.
+    expect(tools.swapSide()).toBe(false);
+    expect(tools.store.getState().swapped).toBe(false);
+    tools.pick(point(0, 1));
+    tools.toggleFlap(flapA, [flapA, flapB]);
+    expect(tools.swapSide()).toBe(true);
+    // The flap picked was the other side's.
+    expect(tools.store.getState()).toMatchObject({ swapped: true, seed: { scope: 'all' } });
+  });
+
+  it('folds the other side on a swap under a flap seed', () => {
+    const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
+    const free = (x: number, y: number): FoldPick => ({ kind: 'free', scene: { x, y } });
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, lineMode: 'free' });
+    tools.pick(free(0, 0.5));
+    tools.pick(free(1, 0.5));
+    tools.setSeed({ scope: 'flaps', flaps: [{ faces: [0], witness: [0.5, 0.25] }] });
+    const stepOf = (state: FoldToolState) => {
+      const built = buildFoldStep(
+        {
+          kind: 'valley',
+          lineMode: state.lineMode,
+          picks: state.picks,
+          candidate: null,
+          swapped: state.swapped,
+          seed: state.seed,
+          precreaseDirection: state.precreaseDirection,
+        },
+        index
+      );
+      if (built.status !== 'built') throw new Error(built.status);
+      return built;
+    };
+    const before = stepOf(tools.store.getState());
+    tools.swapSide();
+    const after = stepOf(tools.store.getState());
+    expect(foldStepInputKey({ op: after.op })).not.toBe(foldStepInputKey({ op: before.op }));
+    expect(after.movingSign).toBe(-before.movingSign);
+    // The new side folds whole, by a point of it.
+    expect(after.op).toMatchObject({ seed: { scope: 'all' } });
   });
 
   it('picks flaps one by one, every flap picked being every layer again', () => {

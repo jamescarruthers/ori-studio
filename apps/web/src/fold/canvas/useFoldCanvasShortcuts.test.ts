@@ -13,7 +13,7 @@ function verbs(roots = 1): FoldCanvasVerbs {
     turn: vi.fn(),
     hitTest: vi.fn(),
     pick: vi.fn(),
-    swapSide: vi.fn(),
+    swapSide: vi.fn(() => true),
     toggleFlap: vi.fn(),
     hoverFlap: vi.fn(),
     includeFlaps: vi.fn(),
@@ -50,6 +50,14 @@ describe('the Fold canvas’s keys', () => {
     expect(bound.turn).toHaveBeenCalledWith({ kind: 'turn-over', axis: 'vertical' });
     // A planned tool takes no key: the chord falls through.
     expect(runFoldCanvasShortcut('fold.toolInsideReverse', null)).toBe(false);
+  });
+
+  it('swaps the side on S only while there is one to swap', () => {
+    const bound = verbs();
+    release = registerFoldCanvasVerbs(bound);
+    expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(true);
+    vi.mocked(bound.swapSide).mockReturnValue(false);
+    expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(false);
   });
 
   it('commits on Enter unless a focused control owns it', () => {

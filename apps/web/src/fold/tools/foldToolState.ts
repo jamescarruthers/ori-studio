@@ -130,7 +130,11 @@ export interface FoldTools {
   pick(pick: FoldPick): boolean;
   /** Let go of the clicks and every choice made since: Escape's rung, and what a commit leaves. */
   clear(): void;
-  swapSide(): void;
+  /**
+   * Fold the other side. Whether there was a side to swap: none until the
+   * line is located, so a swap is never latched for a line not yet there.
+   */
+  swapSide(): boolean;
   /** Step through the axiom's roots, of `count`. */
   stepRoot(delta: number, count: number): void;
   setSeed(seed: FoldToolSeed): void;
@@ -208,7 +212,11 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
     },
 
     swapSide() {
-      set((state) => ({ ...state, swapped: !state.swapped, override: null }));
+      if (!isLocated(store.getState())) return false;
+      // The flaps picked, or the stack a depth pick went down, are the old
+      // side's: the new side folds whole until something of it is picked.
+      set((state) => ({ ...state, swapped: !state.swapped, seed: { scope: 'all' }, override: null }));
+      return true;
     },
 
     stepRoot(delta, count) {
