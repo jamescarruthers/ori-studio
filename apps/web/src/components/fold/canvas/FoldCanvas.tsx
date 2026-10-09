@@ -15,7 +15,8 @@ import { useFoldSession } from '../../../fold/session/useFoldSession';
 import { foldTools, useFoldTools } from '../../../fold/tools/foldToolState';
 import type { FoldKeyLabel } from '../../../fold/tools/foldToolCatalog';
 import { foldToolWindow } from '../../../fold/tools/foldToolWindow';
-import { registerFoldCanvasVerbs } from '../../../fold/canvas/foldCanvasCommands';
+import { foldToolKindControl, registerFoldCanvasVerbs } from '../../../fold/canvas/foldCanvasCommands';
+import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
 import { chooserBounds, foldPromptWords, foldWindowPreview, sceneLayers } from '../../../fold/canvas/foldCanvasModel';
 import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { FOLD_PANE_DISPLAY_DEFAULT, type FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
@@ -65,6 +66,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const preview = useFoldToolPreview(session, view, toolState);
   const verbs = useFoldCanvasVerbs(session, tools, view, preview);
   useEffect(() => registerFoldCanvasVerbs(verbs), [verbs]);
+  // The menus' and the step cards' Valley / Mountain / Precrease arm the tools' fold.
+  useEffect(() => registerFoldKindControl(foldToolKindControl(tools)), [tools]);
 
   const phone = useIsPhoneLayout();
   const coarse = useIsCoarsePointerSurface();

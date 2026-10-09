@@ -1,4 +1,22 @@
+import type { FoldKindControl } from '../sequence/foldCommands';
+import { isFoldKind } from '../tools/foldToolCatalog';
+import type { FoldTools } from '../tools/foldToolState';
 import type { FoldCanvasVerbs } from './useFoldCanvasVerbs';
+
+/**
+ * The fold kind the menus and the step cards arm (`registerFoldKindControl`),
+ * as the tools hold it: the fold in hand, or Valley while the Divide line is.
+ * Arming a kind takes that fold in hand, as V, M and P do.
+ */
+export function foldToolKindControl(tools: FoldTools): FoldKindControl {
+  return {
+    kind: () => {
+      const tool = tools.store.getState().tool;
+      return isFoldKind(tool) ? tool : 'valley';
+    },
+    arm: (kind) => tools.selectTool(kind),
+  };
+}
 
 /**
  * The Fold canvas's verbs, for what is not inside it: the keyboard's
