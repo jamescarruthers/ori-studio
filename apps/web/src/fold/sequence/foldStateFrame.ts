@@ -19,11 +19,11 @@
  */
 import {
   fitSheetThumbnail,
+  withinStoredBudget,
   type SheetStroke,
   type SheetStrokeRole,
   type SheetThumbnail,
 } from '../../cp-workspace/sheets/sheetThumbnail';
-import { withinStoredBudget } from '../../diagram/capture/captureThumbnail';
 import type { Point } from '../../lib/geometry';
 import type { SheetPoint } from '../document/foldSequenceDocument';
 import type { FoldIsometry, FoldModelPoint, FoldScene, FoldSceneCrease } from '../engine/foldEngineWire';
