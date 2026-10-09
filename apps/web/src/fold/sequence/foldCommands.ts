@@ -6,7 +6,8 @@
  * - **Ids are the catalog's**, under `fold.`: a command's own id
  *   (`fold.turn-over`, `fold.delete-step`, …) and each fold kind's
  *   (`fold.valley`, …). The import, Send to Edit and export verbs are
- *   dispatched by the same rule; their handlers live with Import CP and the
+ *   dispatched by the same rule, through fold/io's bindings
+ *   (`FOLD_IO_ACTION_DEPS`); their handlers live with Import CP and the
  *   exports.
  * - **Gating is the catalog's.** A command runs only while the catalog offers
  *   it enabled, built from the session and the store as they are when it
@@ -17,7 +18,6 @@
  *   and until it does the kind is not offered.
  */
 import type { TFunction } from 'i18next';
-import { handleMenuAction } from '../../commands/menuActions';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import type { TurnKind } from '../../lib/steps/turn';
@@ -31,6 +31,7 @@ import {
   type FoldKind,
   type FoldStateStatus,
 } from '../foldActions';
+import { FOLD_IO_ACTION_DEPS } from '../io/foldIoActions';
 import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionSnapshot } from '../session/foldSessionState';
 import { paneShapeOf } from './foldPaperShapes';
 import { cursorIndex, foldPathEntries, followerCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
@@ -156,10 +157,8 @@ export function foldActionsAt(
     deleteStep: (id) => {
       useWorkspaceStore.getState().deleteFoldStep(id);
     },
-    importCp: () => void handleMenuAction(foldCommandActionId('import-cp')),
-    sendToEdit: () => void handleMenuAction(foldCommandActionId('send-to-edit')),
-    exportFold: () => void handleMenuAction(foldCommandActionId('export-fold')),
-    exportSteps: () => void handleMenuAction(foldCommandActionId('export-steps')),
+    // Import CP, Send to Edit and the exports: fold/io's bindings, each its menu row through the chokepoint.
+    ...FOLD_IO_ACTION_DEPS,
   }).map((action) =>
     // No tools, no kind to arm: said, rather than offering rows that do nothing.
     action.kind === 'choice' && !control

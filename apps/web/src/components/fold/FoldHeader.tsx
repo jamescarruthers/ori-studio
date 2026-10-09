@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutGrid, Origami } from 'lucide-react';
+import type { SendToEditButtonModel } from '../../designKinds/sendToEditActions';
 import { foldCommand, type FoldAction, type FoldCommand } from '../../fold/foldActions';
 import type { FoldView } from '../../fold/sequence/foldViewMode';
 import { stepCountLabel } from '../../fold/sequence/foldSequenceWords';
@@ -48,6 +49,9 @@ function CommandButton({ command, compact }: { command: FoldCommand; compact: bo
  * catalog words and gates them (`fold/foldActions`), so they read here as they
  * do in the menus.
  *
+ * Send to Edit is the design kinds' split button when `sendToEdit` is given
+ * (its variants behind the caret), and the catalog's plain button otherwise.
+ *
  * It wears the shared `panel-toolbar` frame, so it meets the Step pane's tab
  * bar at the same height. On a coarse pointer it carries undo and redo, the
  * phone's pane switch (`paneToggle`) and the slot the touch drawer seats its
@@ -59,6 +63,7 @@ export function FoldHeader({
   onViewChange,
   stepCount,
   actions,
+  sendToEdit: sendToEditButton,
   paneToggle,
   drawerSlot,
 }: {
@@ -68,6 +73,8 @@ export function FoldHeader({
   stepCount: number;
   /** The catalog, for the step on screen. */
   actions: readonly FoldAction[];
+  /** Send to Edit as the shared split button model (`useFoldSendToEditButton`). */
+  sendToEdit?: SendToEditButtonModel;
   /** The phone's switch between the two canvases, mounted by the canvas. */
   paneToggle?: ReactNode;
   /** Where the touch layer seats the Step pane's pill (`viewDrawerSlot`). */
@@ -109,7 +116,22 @@ export function FoldHeader({
       <div className={`panel-toolbar__group ${styles.actions}`}>
         <TouchHistoryButtons />
         {importCp && <CommandButton command={importCp} compact={phone} />}
-        {sendToEdit && <CommandButton command={sendToEdit} compact={phone} />}
+        {sendToEdit &&
+          (sendToEditButton && !phone ? (
+            <SplitButton
+              size="sm"
+              variant="secondary"
+              icon={<FoldActionIcon icon={sendToEdit.icon} />}
+              label={sendToEditButton.label}
+              title={sendToEditButton.title}
+              disabled={sendToEditButton.disabled || sendToEdit.disabled}
+              onClick={sendToEditButton.run}
+              menuLabel={sendToEditButton.menuLabel}
+              actions={sendToEditButton.actions}
+            />
+          ) : (
+            <CommandButton command={sendToEdit} compact={phone} />
+          ))}
         {exportFold && (
           <SplitButton
             size="sm"

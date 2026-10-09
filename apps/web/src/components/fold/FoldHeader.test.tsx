@@ -134,6 +134,29 @@ describe('FoldHeader', () => {
     expect(button('Export FOLD…')).toBeDefined();
   });
 
+  it('makes Send to Edit the shared split button when given its model, the variants behind the caret', () => {
+    const run = vi.fn();
+    render({
+      sendToEdit: {
+        label: 'Send to Edit',
+        title: 'Open the folded state in Edit',
+        disabled: false,
+        menuLabel: 'More ways to send to Edit',
+        run,
+        actions: [{ id: 'precreases-as-aux', label: 'Precreases as Auxiliary Lines', onSelect: vi.fn() }],
+      },
+    });
+    act(() => button('Send to Edit')?.click());
+    expect(run).toHaveBeenCalledOnce();
+    expect(host.querySelector('button[aria-label="More ways to send to Edit"]')).not.toBeNull();
+    // The catalog's gate still holds over the button's own.
+    render({
+      context: { ...CONTEXT, path: 'broken' },
+      sendToEdit: { label: 'Send to Edit', title: '', disabled: false, menuLabel: 'More', run, actions: [] },
+    });
+    expect(button('Send to Edit')?.disabled).toBe(true);
+  });
+
   it('seats the phone’s pane switch beside the drawer’s slot', () => {
     render({ paneToggle: <button type="button">Crease pattern</button> });
     expect(button('Crease pattern')).toBeDefined();

@@ -125,6 +125,7 @@ beforeEach(() => {
   capabilities.value = {
     'edit.undo': { enabled: true, visible: true, label: 'Undo', reason: 'Undo' },
     'edit.redo': { enabled: false, visible: true, label: 'Redo', reason: 'Redo' },
+    'fold.send-to-edit': { enabled: true, visible: true, label: 'Send to Edit', reason: 'Send to Edit' },
   };
   const engine = () => ({ ...fakeFoldEngine(), scene: () => squareScene() });
   app.session = createFoldSession({
