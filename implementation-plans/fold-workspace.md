@@ -915,6 +915,7 @@ already tracked at the chokepoint.
 | Event | Properties |
 |---|---|
 | `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth, via: axiom\|crease\|free}` |
+| `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
 | `fold refused` | `{code}` |
 | `fold choice offered` | `{kind, count_bucket}` |
 | `fold sequence sent to edit` | — |

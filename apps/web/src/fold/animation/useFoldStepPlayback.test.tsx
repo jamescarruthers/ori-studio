@@ -83,19 +83,32 @@ afterEach(() => {
 });
 
 describe('useFoldStepPlayback', () => {
-  it('is available only with a motion, and counts each play by its trigger and kind', () => {
+  it('is available only with a motion, and counts each play by its trigger, kind and how it was asked for', () => {
     render(null);
     expect(surface?.available).toBe(false);
     const motion = book();
     render(motion);
     expect(surface).toMatchObject({ available: true, playing: false, complete: false });
-    act(() => surface?.toggle());
+    act(() => surface?.toggle('space'));
     expect(surface?.complete).toBe(true);
-    expect(track).toHaveBeenCalledWith('fold step played', { trigger: 'user', step_kind: 'mountain' });
-    // Played through, Play replays it.
-    act(() => surface?.toggle());
+    expect(track).toHaveBeenLastCalledWith('fold step played', { trigger: 'user', step_kind: 'mountain', via: 'space' });
+    // Played through, Play replays it, whichever was pressed.
+    act(() => surface?.toggle('button'));
+    expect(track).toHaveBeenLastCalledWith('fold step played', { trigger: 'user', step_kind: 'mountain', via: 'replay' });
     expect(track).toHaveBeenCalledTimes(2);
     expect(surface?.complete).toBe(true);
+  });
+
+  it('counts the Play button as the button', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'performance', 'setTimeout'] });
+    try {
+      render(book());
+      act(() => surface?.toggle('button'));
+      expect(track).toHaveBeenLastCalledWith('fold step played', { trigger: 'user', step_kind: 'mountain', via: 'button' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps its sources live through the development double mount', () => {
@@ -117,7 +130,7 @@ describe('useFoldStepPlayback', () => {
     vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'performance', 'setTimeout'] });
     try {
       render(book());
-      act(() => surface?.toggle());
+      act(() => surface?.toggle('button'));
       expect(surface?.playing).toBe(true);
       act(() => {
         vi.advanceTimersByTime(3000);

@@ -46,7 +46,7 @@ export function FoldPlaybackControls({ playback, shortcuts, compact = false }: F
         title={chord ? `${play} (${chord})` : play}
         aria-label={play}
         disabled={disabled}
-        onClick={playback.toggle}
+        onClick={() => playback.toggle('button')}
       >
         {playback.playing ? <Pause size={14} /> : playback.complete ? <RotateCcw size={14} /> : <Play size={14} />}
       </IconButton>

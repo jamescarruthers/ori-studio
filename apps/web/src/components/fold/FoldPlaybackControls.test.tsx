@@ -53,7 +53,7 @@ let playback: FoldStepPlayback;
 function surface(): FoldStepPlaybackSurface {
   return {
     ...playback.status(),
-    toggle: () => playback.toggle(),
+    toggle: (press) => playback.toggle(press),
     seek: (progress) => playback.seek(progress),
     step: (direction) => playback.step(direction),
     frames: playback.frames,
@@ -98,8 +98,11 @@ describe('FoldPlaybackControls', () => {
 
   it('plays, names Pause while it moves, and Replay once it has played', () => {
     playback.setMotion(book());
+    const toggle = vi.spyOn(playback, 'toggle');
     render();
     act(() => button('Play step')?.click());
+    // The button says it was the button, for the play's report.
+    expect(toggle).toHaveBeenCalledWith('button');
     render();
     expect(button('Pause')).not.toBeNull();
     act(() => {

@@ -22,6 +22,7 @@
  * The clock and the motion preference are injectable, as the transport's are.
  */
 
+import type { FoldStepPlayVia } from '../../analytics/events';
 import {
   FoldTransport,
   type FoldPlayTrigger,
@@ -56,9 +57,16 @@ export interface FoldStepPlaybackStatus {
   complete: boolean;
 }
 
+/** What the reader pressed to play: Space, or the Play button. */
+export type FoldPlayPress = Exclude<FoldStepPlayVia, 'replay'>;
+
 export interface FoldStepPlaybackOptions {
-  /** Every play, for the analytics event; a pause or a scrub is not one. */
-  onPlay?: (trigger: FoldPlayTrigger, programme: FoldStepProgramme) => void;
+  /**
+   * Every play, for the analytics event; a pause or a scrub is not one. A
+   * play the reader asked for says how (`via`): what they pressed, or
+   * `replay` for a step already played through.
+   */
+  onPlay?: (trigger: FoldPlayTrigger, programme: FoldStepProgramme, via?: FoldStepPlayVia) => void;
   /** Motion is unwelcome: Play shows the landed step at once. The browser's preference by default. */
   reducedMotion?: () => boolean;
   clock?: FoldTransportClock;
@@ -78,6 +86,8 @@ export class FoldStepPlayback {
   /** The reader has asked for the step since it came on screen: frames replace the pane's own scene. */
   private engaged = false;
   private snapshot: FoldStepPlaybackStatus = UNAVAILABLE;
+  /** How the press under way played, while {@link toggle} hands it to the transport, which reports a play at once. */
+  private via: FoldStepPlayVia | null = null;
   private readonly statusListeners = new Set<() => void>();
   private readonly frameListeners = new Set<() => void>();
   private readonly transport: FoldTransport<FoldStepProgramme>;
@@ -90,7 +100,9 @@ export class FoldStepPlayback {
         // An auto-play engages the step as a press does; it is the first
         // frame after its first push that shows it.
         this.engaged = true;
-        options.onPlay?.(trigger, programme);
+        const via = trigger === 'user' ? this.via : null;
+        if (via) options.onPlay?.(trigger, programme, via);
+        else options.onPlay?.(trigger, programme);
       },
       ...(options.reducedMotion ? { reducedMotion: options.reducedMotion } : {}),
       ...(options.clock ? { clock: options.clock } : {}),
@@ -159,13 +171,21 @@ export class FoldStepPlayback {
     this.changed();
   }
 
-  /** Play, Space and the menu row: play from the parent, pause, resume — and, played through, replay. */
-  toggle(): void {
+  /**
+   * Play and Space: play from the parent, pause, resume — and, played
+   * through, replay. `press` is which, for the play's report.
+   */
+  toggle(press: FoldPlayPress = 'button'): void {
     const { available, complete } = this.status();
     if (!available) return;
     this.engaged = true;
     if (complete) this.transport.seek(0);
-    this.transport.toggle();
+    this.via = complete ? 'replay' : press;
+    try {
+      this.transport.toggle();
+    } finally {
+      this.via = null;
+    }
     this.changed();
   }
 

@@ -17,7 +17,7 @@ export function runFoldPlaybackShortcut(
   switch (id) {
     case 'fold.playStep':
       if (!playback.available) return false;
-      playback.toggle();
+      playback.toggle('space');
       return true;
     default:
       return false;
