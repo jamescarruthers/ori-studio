@@ -29,10 +29,10 @@ type ViewportExecutor = (id: ViewportShortcutId) => boolean;
 /**
  * Which viewport currently owns keyboard shortcuts. This is the document modes
  * plus the Box Pleating packing pane, which is its own focusable viewport
- * surface distinct from the tree (design) pane, and the Diagram workspace, whose
- * views share one surface with one owner at a time.
+ * surface distinct from the tree (design) pane, and the Diagram and Fold
+ * workspaces, whose views share one surface each with one owner at a time.
  */
-export type ViewportSurface = DocumentMode | 'bp-editor' | 'diagram';
+export type ViewportSurface = DocumentMode | 'bp-editor' | 'diagram' | 'fold';
 
 const viewportExecutors: Partial<Record<ViewportSurface, ViewportExecutor>> = {};
 let cpActionExecutor: CpActionExecutor | null = null;
@@ -66,6 +66,7 @@ function viewportSurfaceForContext(context: EditingContext): ViewportSurface {
   if (context === 'crease-pattern') return 'crease-pattern';
   if (context === 'bp-packing') return 'bp-editor';
   if (context === 'diagram') return 'diagram';
+  if (context === 'fold') return 'fold';
   return 'tree';
 }
 

@@ -115,7 +115,18 @@ export type WorkspaceCapabilityId =
   | 'cp.organizeCircles'
   | 'cp.setActiveCreaseAngle'
   | 'insert.image'
-  | 'insert.text';
+  | 'insert.text'
+  | FoldSequenceCapabilityId;
+
+/** The Fold sequence's verbs, by the action catalog's ids (`fold/foldActions`). */
+export type FoldSequenceCapabilityId =
+  | 'fold.valley'
+  | 'fold.mountain'
+  | 'fold.precrease'
+  | 'fold.turn-over'
+  | 'fold.rotate-ccw'
+  | 'fold.rotate-cw'
+  | 'fold.delete-step';
 
 export interface WorkspaceCapability {
   enabled: boolean;
@@ -200,6 +211,10 @@ export interface WorkspaceCapabilityInput {
   canCopyDiagramAnnotation: boolean;
   /** Whether Paste has a step to put annotations on: the one open in Annotate, on a diagram that can change. */
   canPasteDiagramAnnotations: boolean;
+  /** The Fold reader is on a step, not the flat sheet: Delete Step has one. Absent reads as no. */
+  foldStepAtCursor?: boolean;
+  /** The shown fold sequence is a newer build's, shown and never changed (plan D7). Absent reads as no. */
+  foldReadOnly?: boolean;
   historyPastCount: number;
   historyFutureCount: number;
   clipboard: unknown | null;
@@ -1161,6 +1176,7 @@ export function getWorkspaceCapabilities(
           )
         : t('common:capability.openEditableCpFirst', 'Open an editable crease pattern first')
     ),
+    ...foldSequenceCapabilities(input, foldMode, t),
   };
 
   return maskCapabilitiesForContext(capabilities, input.activeEditingContext);
@@ -1317,6 +1333,44 @@ export function isWorkspaceBusy(status: AppStatus): boolean {
 
 function capability(enabled: boolean, label: string, reason: string): WorkspaceCapability {
   return { enabled, visible: true, label, reason };
+}
+
+/**
+ * The Fold sequence's verbs (`fold/sequence/foldCommands`): shown only while
+ * folding, and enabled on a sequence this build may change — Delete Step
+ * also on a step to delete. Finer gating (a step still folding, or broken) is
+ * the action catalog's, asked when the verb runs; the store does not know it.
+ */
+function foldSequenceCapabilities(
+  input: WorkspaceCapabilityInput,
+  foldMode: boolean,
+  t: TFunction
+): Record<FoldSequenceCapabilityId, WorkspaceCapability> {
+  const canChange = foldMode && input.foldReadOnly !== true;
+  const blocked = foldMode
+    ? t('common:capability.foldReadOnly', 'This sequence was made with a newer Ori Studio and opens read-only')
+    : t('common:capability.openFoldFirst', 'Open the Fold workspace first');
+  const verb = (enabled: boolean, label: string, reason: string, why = blocked): WorkspaceCapability => ({
+    enabled,
+    visible: foldMode,
+    label,
+    reason: enabled ? reason : why,
+  });
+  const canDelete = canChange && input.foldStepAtCursor === true;
+  return {
+    'fold.valley': verb(canChange, t('common:capability.foldValley', 'Valley Fold'), t('common:capability.armValleyFold', 'Fold the moving side toward you')),
+    'fold.mountain': verb(canChange, t('common:capability.foldMountain', 'Mountain Fold'), t('common:capability.armMountainFold', 'Fold the moving side away from you')),
+    'fold.precrease': verb(canChange, t('common:capability.foldPrecrease', 'Precrease'), t('common:capability.armPrecrease', 'Fold and unfold, leaving a crease')),
+    'fold.turn-over': verb(canChange, t('common:capability.foldTurnOver', 'Turn Over'), t('common:capability.addTurnOver', 'Turn the model over, as a step of its own')),
+    'fold.rotate-ccw': verb(canChange, t('common:capability.foldRotateCcw', 'Rotate Counterclockwise'), t('common:capability.addRotateCcw', 'Rotate the model a quarter turn counterclockwise, as a step of its own')),
+    'fold.rotate-cw': verb(canChange, t('common:capability.foldRotateCw', 'Rotate Clockwise'), t('common:capability.addRotateCw', 'Rotate the model a quarter turn clockwise, as a step of its own')),
+    'fold.delete-step': verb(
+      canDelete,
+      t('common:capability.foldDeleteStep', 'Delete Step'),
+      t('common:capability.deleteFoldStep', 'Delete the step on screen and every step that follows it'),
+      canChange ? t('common:capability.foldSheetNoStep', 'The flat sheet is where the steps start: there is no step to delete') : blocked
+    ),
+  };
 }
 
 function selectedCpLineCapability(

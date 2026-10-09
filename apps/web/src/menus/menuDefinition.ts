@@ -307,6 +307,23 @@ export function getMenuBarDef(
       ],
     },
     {
+      // The Fold sequence's verbs, in the action catalog's order
+      // (`fold/foldActions`). Every item is visible only while folding, so
+      // `menuHasVisibleItems` drops the menu everywhere else.
+      label: t('menu:menubar.fold', 'Fold'),
+      items: [
+        { type: 'action', id: 'fold.valley', label: t('menu:fold.valley', 'Valley Fold'), shortcut: shortcut('fold.valley', resolution) },
+        { type: 'action', id: 'fold.mountain', label: t('menu:fold.mountain', 'Mountain Fold'), shortcut: shortcut('fold.mountain', resolution) },
+        { type: 'action', id: 'fold.precrease', label: t('menu:fold.precrease', 'Precrease'), shortcut: shortcut('fold.precrease', resolution) },
+        { type: 'separator' },
+        { type: 'action', id: 'fold.turn-over', label: t('menu:fold.turn-over', 'Turn Over'), shortcut: shortcut('fold.turn-over', resolution) },
+        { type: 'action', id: 'fold.rotate-ccw', label: t('menu:fold.rotate-ccw', 'Rotate Counterclockwise'), shortcut: shortcut('fold.rotate-ccw', resolution) },
+        { type: 'action', id: 'fold.rotate-cw', label: t('menu:fold.rotate-cw', 'Rotate Clockwise'), shortcut: shortcut('fold.rotate-cw', resolution) },
+        { type: 'separator' },
+        { type: 'action', id: 'fold.delete-step', label: t('menu:fold.delete-step', 'Delete Step'), shortcut: shortcut('fold.delete-step', resolution) },
+      ],
+    },
+    {
       label: t('menu:menubar.help', 'Help'),
       items: [
         // Desktop only: the browser build updates by reloading. Spread-gated

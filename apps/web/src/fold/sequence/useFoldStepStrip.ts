@@ -1,0 +1,108 @@
+import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { StepFilmstripWays } from '../../components/steps/StepFilmstrip';
+import { useWorkspaceStore } from '../../store/workspaceStore/store';
+import { foldPathMoves } from './foldSequencePath';
+import { branchReadout, branchesLabel, moveLabel, replayNote, stripLabel } from './foldSequenceWords';
+import { foldStripCards, type FoldStripCard } from './foldStripCards';
+import { moveFoldReader } from './foldKeys';
+import type { FoldSequenceView } from './useFoldSequenceView';
+
+/** Everything the strip takes but its pictures: the cards, which is active, the moves and their words. */
+export interface FoldStepStripModel {
+  cards: FoldStripCard[];
+  active: number;
+  label: string;
+  note: string;
+  onSelectStep: (index: number) => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  previousLabel: string;
+  nextLabel: string;
+  previousDisabled: boolean;
+  nextDisabled: boolean;
+  onPreviousWay: () => void;
+  onNextWay: () => void;
+  onShiftWay: (index: number, delta: -1 | 1) => void;
+  previousWayLabel: string;
+  nextWayLabel: string;
+  previousWayDisabled: boolean;
+  nextWayDisabled: boolean;
+  waysLabel: string;
+  wayReadout: (ways: StepFilmstripWays, short: boolean) => string;
+}
+
+const previous = () => void moveFoldReader('previous');
+const next = () => void moveFoldReader('next');
+const previousBranch = () => void moveFoldReader('previousBranch');
+const nextBranch = () => void moveFoldReader('nextBranch');
+
+/**
+ * The step strip of the sequence on screen (plan D14): its cards, and the
+ * moves its chevrons, its branch row and a swipe make — the same moves as the
+ * keys (`moveFoldReader`), so the two cannot step differently.
+ */
+export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
+  const { t } = useTranslation();
+  const { paper, entries, frames, words, cursor, pending, progress, failed } = view;
+  const { cards, active } = useMemo(
+    () =>
+      foldStripCards(t, {
+        paper,
+        entries,
+        words,
+        pictures: frames.map((frame) => frame?.form ?? null),
+        cursor,
+        pending: pending && {
+          refused: pending.status === 'refused',
+          words: pending.words,
+          picture: pending.frame?.form ?? null,
+          branch: pending.branch,
+        },
+      }),
+    [t, paper, entries, words, frames, cursor, pending]
+  );
+  const moves = foldPathMoves(entries, cursor);
+
+  const onSelectStep = useCallback(
+    (index: number) => {
+      const entry = cards[index]?.entry;
+      // The step being folded is not a step yet: there is nothing to go to.
+      if (entry === null || entry === undefined) return;
+      useWorkspaceStore.getState().moveFoldCursor(entries[entry]?.id ?? null);
+    },
+    [cards, entries]
+  );
+  const onShiftWay = useCallback(
+    // The strip has put the reader on the card first.
+    (_index: number, delta: -1 | 1) => void moveFoldReader(delta > 0 ? 'nextBranch' : 'previousBranch'),
+    []
+  );
+  const wayReadout = useCallback(
+    (ways: StepFilmstripWays, short: boolean) => branchReadout(t, ways.index, ways.count, short),
+    [t]
+  );
+
+  return {
+    cards,
+    active,
+    label: stripLabel(t),
+    note: replayNote(t, progress, failed),
+    onSelectStep,
+    onPrevious: previous,
+    onNext: next,
+    previousLabel: moveLabel(t, 'previous'),
+    nextLabel: moveLabel(t, 'next'),
+    previousDisabled: moves.previous === undefined,
+    nextDisabled: moves.next === undefined,
+    onPreviousWay: previousBranch,
+    onNextWay: nextBranch,
+    onShiftWay,
+    previousWayLabel: moveLabel(t, 'previousBranch'),
+    nextWayLabel: moveLabel(t, 'nextBranch'),
+    previousWayDisabled: moves.previousBranch === undefined,
+    nextWayDisabled: moves.nextBranch === undefined,
+    waysLabel: branchesLabel(t),
+    wayReadout,
+  };
+}

@@ -177,6 +177,15 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return t('tools:diagram.nudgeNodeUpLarge', 'Nudge Node Up (Large)');
     case 'diagram.nudgeNodeDownLarge':
       return t('tools:diagram.nudgeNodeDownLarge', 'Nudge Node Down (Large)');
+    // The Fold workspace's steps and branches.
+    case 'fold.previousStep':
+      return t('tools:fold.keys.previousStep', 'Previous Step');
+    case 'fold.nextStep':
+      return t('tools:fold.keys.nextStep', 'Next Step');
+    case 'fold.previousBranch':
+      return t('tools:fold.keys.previousBranch', 'Previous Branch');
+    case 'fold.nextBranch':
+      return t('tools:fold.keys.nextBranch', 'Next Branch');
     default:
       return definition.label;
   }
@@ -196,6 +205,8 @@ export function shortcutScopeLabel(t: TFunction, scope: ShortcutScope): string {
       return t('tools:diagram.scopeLabel', 'diagram');
     case 'diagram-path':
       return t('tools:diagram.pathScopeLabel', 'edit path');
+    case 'fold':
+      return t('tools:fold.keys.scopeLabel', 'fold');
     default:
       return scope;
   }
@@ -242,6 +253,8 @@ export function shortcutCategoryLabel(t: TFunction, category: string): string {
       return t('tools:references.categoryLabel', 'References');
     case 'Diagram':
       return t('tools:diagram.categoryLabel', 'Diagram');
+    case 'Fold Workspace':
+      return t('tools:fold.keys.categoryLabel', 'Fold workspace');
     default:
       return category;
   }

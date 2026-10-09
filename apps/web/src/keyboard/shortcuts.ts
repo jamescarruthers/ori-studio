@@ -177,11 +177,16 @@ export type DiagramPathShortcutId =
   | 'diagram.nudgeNodeUpLarge'
   | 'diagram.nudgeNodeDownLarge';
 /**
- * The Fold workspace's verbs: none yet. The scope and its executor slot exist
- * so the panel can claim the keyboard the day its first binding lands in
- * {@link FOLD_SHORTCUTS}; until then an executor is offered no id at all.
+ * The Fold workspace's verbs ({@link FOLD_SHORTCUTS}), answered by the one
+ * executor the Fold panel registers (`fold/sequence/foldKeys.ts`), which hands
+ * each id to the surface that owns it.
  */
-export type FoldShortcutId = never;
+export type FoldShortcutId =
+  // The steps and their branches (the sequence chrome).
+  | 'fold.previousStep'
+  | 'fold.nextStep'
+  | 'fold.previousBranch'
+  | 'fold.nextBranch';
 export type ShortcutActionId =
   | MenuActionId
   | OristudioCpActionId
@@ -715,14 +720,38 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
   diagramShortcut('diagram.nudgeNodeDownLarge', 'Nudge Node Down (Large)', { shift: true, key: 'arrowdown' }, 'diagram-path'),
 ];
 
+function foldShortcut(
+  id: FoldShortcutId,
+  label: string,
+  defaultChord: KeyChord | KeyChord[] | null
+): ShortcutDefinition {
+  const defaultChords = normalizeDefaultChords(defaultChord);
+  return {
+    id,
+    label,
+    category: 'Fold Workspace',
+    scope: 'fold',
+    target: 'fold',
+    defaultChord: defaultChords[0] ?? null,
+    defaultChords,
+  };
+}
+
 /**
- * Fold-workspace bindings, in the `fold` scope: empty until the Fold panel
- * lands the verbs D14 lists — the steps on ←/→ and `[`/`]` as the Diagram's,
- * the active step's branches on ↑/↓ as References' ways, candidate roots on
- * Shift+←/→, Space to play the step, Enter to commit. Escape stays
- * `viewport.cancel`, as it is in the Diagram.
+ * Fold-workspace bindings, in the `fold` scope (plan D14's keyboard table):
+ * the steps on ←/→ and `[`/`]` as the Diagram's, the active step's branches
+ * on ↑/↓ as References' ways, candidate roots on Shift+←/→, Space to play the
+ * step, Enter to commit. Escape stays `viewport.cancel`, as it is in the
+ * Diagram. The steps' and branches' keys decline while a focused control
+ * owns the arrows (`focusOwnsArrowKeys`), as the Diagram's do.
  */
-const FOLD_SHORTCUTS: ShortcutDefinition[] = [];
+const FOLD_SHORTCUTS: ShortcutDefinition[] = [
+  // The steps and their branches (the sequence chrome).
+  foldShortcut('fold.previousStep', 'Previous Step', [{ key: 'arrowleft' }, { key: '[' }]),
+  foldShortcut('fold.nextStep', 'Next Step', [{ key: 'arrowright' }, { key: ']' }]),
+  foldShortcut('fold.previousBranch', 'Previous Branch', { key: 'arrowup' }),
+  foldShortcut('fold.nextBranch', 'Next Branch', { key: 'arrowdown' }),
+];
 
 /**
  * The viewport verbs whose executor can answer `false` and let the chord fall
