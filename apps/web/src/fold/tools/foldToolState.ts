@@ -1,0 +1,273 @@
+/**
+ * The Fold tools' interaction state (plan D13, D14): the tool in hand, the
+ * line mode, the references clicked so far, and every choice made while a
+ * fold is previewed — the root, the moving side, what moves, the fixes taken.
+ *
+ * Interaction state, not the document: nothing here is saved or undone, and a
+ * commit, a cancel or a move to another step lets it go. Module state in a
+ * vanilla store, as Simulate's tool state is, because the keyboard executor
+ * and the canvas read and write it from callbacks that must not re-subscribe;
+ * React reads it through {@link useFoldTools}.
+ *
+ * The clicks are counted by the surface-agnostic reducer the registry hands
+ * out (`createStepSequenceTool` through `createToolRuntime`); this holds what
+ * each click picked, which the reducer, counting points, has no word for.
+ */
+import { createStore, type StoreApi } from 'zustand/vanilla';
+import { useStore } from 'zustand';
+import { createToolRuntime, type ToolRuntime } from '../../cp-workspace/tools/runtime';
+import type { Point } from '../../lib/geometry';
+import type { OristudioCpRatioExpression } from '../../lib/oristudioCpToolSettings';
+import { ratioExpressionFromHalves } from '../../lib/oristudioCpToolSettings';
+import type { FoldPick } from '../canvas/foldPicking';
+import {
+  FOLD_MARK_MAX_PARTS,
+  type FoldChoices,
+  type FoldDirection,
+  type FoldOp,
+  type SheetPoint,
+} from '../document/foldSequenceDocument';
+import type { FoldFlap } from '../engine/foldEngineWire';
+import { isFoldKind, type FoldKind, type FoldLineModeId, type FoldToolId } from './foldToolCatalog';
+import { locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
+
+/**
+ * What a fold takes along with the moving side (D6's seed, before it names
+ * sheet points): every layer, the flaps picked — as the engine named them,
+ * so a new section of the same line finds them again — or the stack at a
+ * point of the folded pane, at the depth a repeated click went down to.
+ */
+export type FoldToolSeed =
+  | { scope: 'all' }
+  | { scope: 'flaps'; flaps: readonly FoldFlap[] }
+  | { scope: 'depth'; at: SheetPoint; scene: Point; choice: number };
+
+/** A fold a refusal's fix offers, folded in place of the one the picks locate until they change. */
+export interface FoldToolOverride {
+  op: FoldOp;
+  choices?: FoldChoices;
+}
+
+/** How a Divide-line mark divides its segment (D6), as the window edits it. */
+export interface FoldDivideSettings {
+  mode: 'count' | 'ratio';
+  parts: number;
+  ratio: OristudioCpRatioExpression;
+}
+
+export const FOLD_DIVIDE_DEFAULT: FoldDivideSettings = {
+  mode: 'count',
+  parts: 2,
+  ratio: ratioExpressionFromHalves({ a: 1, b: 0, c: 0 }, { a: 1, b: 0, c: 0 }),
+};
+
+export interface FoldToolState {
+  tool: FoldToolId;
+  lineMode: FoldLineModeId;
+  /** The references clicked so far, in click order. */
+  picks: readonly FoldPick[];
+  /** The axiom root chosen, by index into the candidates the engine gave for the picks. */
+  root: number;
+  /** The moving side is the other one from the default. */
+  swapped: boolean;
+  seed: FoldToolSeed;
+  /** The way a precrease folds before it unfolds. */
+  precreaseDirection: FoldDirection;
+  override: FoldToolOverride | null;
+  divide: FoldDivideSettings;
+  /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
+  hoveredFlap: number | null;
+}
+
+export const FOLD_TOOL_INITIAL: FoldToolState = {
+  tool: 'valley',
+  // The design opens on point to point, the first fold of most models.
+  lineMode: 'axiom-2',
+  picks: [],
+  root: 0,
+  swapped: false,
+  seed: { scope: 'all' },
+  precreaseDirection: 'valley',
+  override: null,
+  divide: FOLD_DIVIDE_DEFAULT,
+  hoveredFlap: null,
+};
+
+/** What a new locate starts from: the tool, the line mode and the Divide settings stay. */
+function located(state: FoldToolState): FoldToolState {
+  return {
+    ...state,
+    picks: [],
+    root: 0,
+    swapped: false,
+    seed: { scope: 'all' },
+    override: null,
+    hoveredFlap: null,
+  };
+}
+
+/** The clicks the state's tool and line mode collect. */
+export function foldToolInput(state: Pick<FoldToolState, 'tool' | 'lineMode'>): FoldInputModel | null {
+  return toolInput(state.tool, state.lineMode);
+}
+
+/** Every click is in: the line is located (or, for the Divide line, the segment). */
+export function isLocated(state: FoldToolState): boolean {
+  const model = foldToolInput(state);
+  return model !== null && state.picks.length >= model.steps.length;
+}
+
+/** Whether anything is under way that Escape would let go. */
+export function hasToolInput(state: FoldToolState): boolean {
+  return state.picks.length > 0 || state.override !== null;
+}
+
+export interface FoldTools {
+  readonly store: StoreApi<FoldToolState>;
+  selectTool(tool: FoldToolId): void;
+  selectLineMode(mode: FoldLineModeId): void;
+  /** A click: the pick it made. Whether it was taken (a click past the last is not). */
+  pick(pick: FoldPick): boolean;
+  /** Let go of the clicks and every choice made since: Escape's rung, and what a commit leaves. */
+  clear(): void;
+  swapSide(): void;
+  /** Step through the axiom's roots, of `count`. */
+  stepRoot(delta: number, count: number): void;
+  setSeed(seed: FoldToolSeed): void;
+  /** Pick or unpick a flap; `all` is the section's every flap, so picking the last unpicked one is `all` again. */
+  toggleFlap(flap: FoldFlap, all: readonly FoldFlap[]): void;
+  setPrecreaseDirection(direction: FoldDirection): void;
+  setOverride(override: FoldToolOverride | null): void;
+  setDivide(divide: Partial<FoldDivideSettings>): void;
+  setHoveredFlap(flap: number | null): void;
+}
+
+const sameFlap = (a: FoldFlap, b: FoldFlap) =>
+  a.faces.length === b.faces.length && a.faces.every((face, k) => face === b.faces[k]);
+
+/** The parts a Divide-line count may take: two up to the Diagram's divisions' limit. */
+export function clampDivideParts(parts: number): number {
+  return Math.min(FOLD_MARK_MAX_PARTS, Math.max(2, Math.round(Number.isFinite(parts) ? parts : 2)));
+}
+
+export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): FoldTools {
+  const store = createStore<FoldToolState>(() => initial);
+  // The reducer that counts the clicks, rebuilt whenever what is clicked for changes.
+  let runtime: ToolRuntime | null = null;
+  let runtimeFor: FoldInputModel | null = null;
+  const counter = (model: FoldInputModel): ToolRuntime => {
+    if (runtime && runtimeFor === model) return runtime;
+    runtime = createToolRuntime(locateEngine(model));
+    runtimeFor = model;
+    return runtime;
+  };
+  const set = (next: (state: FoldToolState) => FoldToolState) => {
+    const before = store.getState();
+    const after = next(before);
+    if (after !== before) store.setState(after, true);
+  };
+  const restart = (state: FoldToolState): FoldToolState => {
+    runtime?.reset();
+    return located(state);
+  };
+
+  return {
+    store,
+
+    selectTool(tool) {
+      set((state) => {
+        if (state.tool === tool) return state;
+        // V, M and P fold the same line: switching between them keeps it, as
+        // the window's V / M / P control promises. Anything else locates anew.
+        const keeps = isFoldKind(tool) && isFoldKind(state.tool);
+        return keeps ? { ...state, tool, override: null } : { ...restart(state), tool };
+      });
+    },
+
+    selectLineMode(lineMode) {
+      set((state) => {
+        // A line mode belongs to the folds: choosing one from the Divide line takes a fold in hand.
+        const tool: FoldKind = isFoldKind(state.tool) ? state.tool : 'valley';
+        if (state.lineMode === lineMode && state.tool === tool) return state;
+        return { ...restart(state), tool, lineMode };
+      });
+    },
+
+    pick(pick) {
+      const state = store.getState();
+      const model = foldToolInput(state);
+      if (!model || state.picks.length >= model.steps.length) return false;
+      const out = counter(model).feed({ kind: 'down', point: pickPoint(pick) });
+      if (out.ignored) return false;
+      store.setState({ ...state, picks: [...state.picks, pick], override: null }, true);
+      return true;
+    },
+
+    clear() {
+      set((state) => (hasToolInput(state) || state.seed.scope !== 'all' || state.swapped ? restart(state) : state));
+    },
+
+    swapSide() {
+      set((state) => ({ ...state, swapped: !state.swapped, override: null }));
+    },
+
+    stepRoot(delta, count) {
+      if (count <= 1) return;
+      set((state) => ({ ...state, root: (((state.root + delta) % count) + count) % count, swapped: false, override: null }));
+    },
+
+    setSeed(seed) {
+      set((state) => ({ ...state, seed, override: null }));
+    },
+
+    toggleFlap(flap, all) {
+      set((state) => {
+        const picked = state.seed.scope === 'flaps' ? state.seed.flaps : state.seed.scope === 'all' ? all : [];
+        const has = picked.some((each) => sameFlap(each, flap));
+        const next = has ? picked.filter((each) => !sameFlap(each, flap)) : [...picked, flap];
+        const everything = all.length > 0 && all.every((each) => next.some((other) => sameFlap(each, other)));
+        const seed: FoldToolSeed = everything ? { scope: 'all' } : { scope: 'flaps', flaps: next };
+        return { ...state, seed, override: null };
+      });
+    },
+
+    setPrecreaseDirection(precreaseDirection) {
+      set((state) => (state.precreaseDirection === precreaseDirection ? state : { ...state, precreaseDirection, override: null }));
+    },
+
+    setOverride(override) {
+      set((state) => ({ ...state, override }));
+    },
+
+    setDivide(divide) {
+      set((state) => {
+        const next = { ...state.divide, ...divide };
+        return { ...state, divide: { ...next, parts: clampDivideParts(next.parts) } };
+      });
+    },
+
+    setHoveredFlap(hoveredFlap) {
+      set((state) => (state.hoveredFlap === hoveredFlap ? state : { ...state, hoveredFlap }));
+    },
+  };
+}
+
+/** Where a pick is, for the reducer that counts it: it reads positions, never what was picked. */
+function pickPoint(pick: FoldPick): Point {
+  if (pick.kind === 'free') return pick.scene;
+  if (pick.kind === 'point') return { x: pick.sheet[0], y: pick.sheet[1] };
+  return { x: pick.sheet[0][0], y: pick.sheet[0][1] };
+}
+
+let tools: FoldTools | null = null;
+
+/** The app's Fold tools, made on first use. */
+export function foldTools(): FoldTools {
+  tools ??= createFoldTools();
+  return tools;
+}
+
+/** Any part of the tools' state; the selector must return what the state holds, not a new object. */
+export function useFoldTools<T>(selector: (state: FoldToolState) => T): T {
+  return useStore(foldTools().store, selector);
+}
