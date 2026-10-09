@@ -719,8 +719,8 @@ vocabulary. **Not** `inputModelRegistry`, which is keyed to kernel operations.
 | Right panes | `fold-step`, `fold-paper` side panes; `FieldRow` static rows; `CollapsibleSection` |
 | Step strip with branches "1/2" | References' `ReferencesStepFilmstrip`, extracted, with a picture slot, card states and a caption tag; its "ways" become branches (shared CSS block → decision **B**) |
 | Steps grid | #436's `DiagramStepsGrid` shell, extracted as pre-work. It is CSS-module based (no decision B); it numbers steps and leaves turns unnumbered; Fold supplies its card body |
-| Phone two-pane switch | `PaneToggle` extracted from `DesignPaneSwitcher` into `components/ui/`. Its single-owner `.design-pane-switcher` rules move into a module; it keeps wearing the shared `canvas-pill` class. Mounted in `CanvasPillLane` |
-| Touch undo | `CanvasHistoryPills`: add `'fold'` to `HISTORY_PILL_WORKSPACES` |
+| Phone two-pane switch | `PaneToggle` extracted from `DesignPaneSwitcher` into `components/ui/`. Its single-owner `.design-pane-switcher` rules move into a module; it keeps wearing the shared `canvas-pill` class. Mounted in Fold's header, not `CanvasPillLane`: the lane sits over the dock's top-right corner, which on a phone is Fold's header (measured at 375px) |
+| Touch undo | `TouchHistoryButtons` (the Diagram's header buttons, moved to `components/ui/`) in Fold's header, for the same reason; `HISTORY_PILL_WORKSPACES` stays `['edit']` |
 | Free point on touch | A coarse-pointer Alt latch modelled on `touchModifiers/shiftLatch.ts`, OR'd with `readHeldModifiers().alt` |
 | Import CP | `useModalDialog` (on #436), the app's parsers, a drop policy for the Fold canvas |
 | Send to Edit | The existing verb, label, `SplitButton` model and payload path |
@@ -1173,66 +1173,71 @@ None is pending.
   - [x] The snap invariant, with a property test that no applied fold changes a
     vertex's class.
   - [x] μ checks, including image–image.
-- [ ] **Output and queries.**
-  - [ ] Scene emission (D12) and `FoldActionGeometry`.
-  - [ ] The cross-section query (D14 spec), with a precrease-row test.
-  - [ ] Per-step summaries and the crease-pattern diff.
+- [x] **Output and queries.**
+  - [x] Scene emission (D12) and `FoldActionGeometry`.
+  - [x] The cross-section query (D14 spec), with a precrease-row test.
+  - [x] Per-step summaries and the crease-pattern diff.
   - [x] Convex polygon sheets; non-convex sheets refused.
 - [ ] **Kernel feature.**
-  - [ ] `fold_cp_to_model` and its inverse.
+  - [x] `fold_cp_to_model`, lossless through the kernel's FOLD writer and reader.
+  - [ ] Its inverse through the kernel's loaders. Import CP's kernel-free input
+    (`CreasePatternInput`) is done; the loaders go in the bridge.
   - [ ] Round-trip test: Send to Edit, then Import CP, gives the same state.
-- [ ] **FOLD export.**
-  - [ ] `diagrams` class and a kernel root frame.
-  - [ ] Flat step frames with a `oristudio:fold-step` marker.
-  - [ ] Size checked through `interchange.rs`'s types, against a whole-file cap,
+- [x] **FOLD export.**
+  - [x] `diagrams` class and a kernel root frame.
+  - [x] Flat step frames with a `oristudio:fold-step` marker.
+  - [x] Size checked through `interchange.rs`'s types, against a whole-file cap,
     with the refusal arm tested.
-  - [ ] Beloch-compatible face matrices.
-- [ ] **Tests.**
+  - [x] Beloch-compatible face matrices (under `oristudio:faces_matrix`).
+- [x] **Tests.**
   - [x] Property tests and classic sequences as fixtures.
-  - [ ] Oracle binaries (D8) wired into CI.
-- [ ] Native performance recorded against real sequences.
+  - [x] Oracle binaries (D8) wired into CI.
+- [ ] Native performance recorded against real sequences. (The random perf
+  example is recorded: the fold at 129–256 faces is 11.9 ms mean, 21.3 ms p95.)
 
 ### Phase 3 — Axioms on flat and folded forms
 
-- [ ] Landmarks with provenance (vertices, edges, crossings, marks, existing
+- [x] Landmarks with provenance (vertices, edges, crossings, marks, existing
   creases); visibility from the order.
-- [ ] O1–O7 through `Paper` on the folded silhouette:
-  - [ ] who moves;
-  - [ ] Lang's O6 rule;
-  - [ ] `nearest_root` on replay.
-- [ ] The existing-crease line mode.
-- [ ] Tests:
-  - [ ] each axiom on a flat sheet against precrease;
-  - [ ] each axiom on folded forms;
-  - [ ] replay stability.
+- [x] O1–O7 through `Paper` on the folded silhouette:
+  - [x] who moves;
+  - [x] Lang's O6 rule;
+  - [x] `nearest_root` on replay.
+- [x] The existing-crease line mode.
+- [x] The sliver remedy deferred from Phase 2 (O5/O7 lines offered as fixes).
+- [x] Tests:
+  - [x] each axiom on a flat sheet against the shared constructions;
+  - [x] each axiom on folded forms;
+  - [x] replay stability.
 
 ### Phase 4a — Bridge and document
 
 - [ ] `oristudio-fold-wasm`:
   - [ ] `kernel` enabled;
-  - [ ] coarse calls; refusals as codes;
-  - [ ] `wasm-pack test --node`;
-  - [ ] **size measured with and without `kernel`, against a budget**.
-- [ ] `build:oristudio-fold-wasm` in `apps/web/package.json`; `npm run
-  build:web` in a fresh worktree; `npm run typecheck:web`.
-- [ ] `foldSequenceWorker` and the runtime:
-  - [ ] terminate and respawn to stop work (`precreaseRuntime`'s `dropWorker` /
+  - [x] coarse calls; refusals as codes;
+  - [x] `wasm-pack test --node`;
+  - [ ] **size measured with and without `kernel`, against a budget** (without:
+    609 KiB raw, 228 KiB gzipped; budget in the crate README).
+- [ ] `build:oristudio-fold-wasm` in `apps/web/package.json` (done); `npm run
+  build:web` in a fresh worktree; `npm run typecheck:web` (done).
+- [x] `foldSequenceWorker` and the runtime:
+  - [x] terminate and respawn to stop work (`precreaseRuntime`'s `dropWorker` /
     `whileClientAlive`);
-  - [ ] latest request wins for previews.
-- [ ] The `FoldSequenceDocument` reader and writer, with one test per D6/D7
+  - [x] latest request wins for previews.
+- [x] The `FoldSequenceDocument` reader and writer, with one test per D6/D7
   rule:
-  - [ ] dropped subtrees;
-  - [ ] locked unknown ops;
-  - [ ] duplicates, orphans and cycles;
-  - [ ] a newer `formatVersion` opens read-only;
-  - [ ] an empty array leaves the file byte-identical;
-  - [ ] unknown keys carried.
-- [ ] Replay:
-  - [ ] the active path first, step by step, with progress;
-  - [ ] the load id;
-  - [ ] the `fh1` cache;
-  - [ ] `expect` drift;
-  - [ ] tests: siblings differing only in `choices`, and otherwise identical
+  - [x] dropped subtrees;
+  - [x] locked unknown ops;
+  - [x] duplicates, orphans and cycles;
+  - [x] a newer `formatVersion` opens read-only;
+  - [x] an empty array leaves the file byte-identical;
+  - [x] unknown keys carried.
+- [x] Replay:
+  - [x] the active path first, step by step, with progress;
+  - [x] the load id;
+  - [x] the `fh1` cache;
+  - [x] `expect` drift;
+  - [x] tests: siblings differing only in `choices`, and otherwise identical
     sequences differing only in `paper`, get different `fh1`; a note edit
     leaves `fh1` unchanged; a stored choice that conflicts →
     broken; one that drifts → changed.
@@ -1243,12 +1248,12 @@ None is pending.
 
 ### Phase 4b — Store and project file
 
-- [ ] The Fold slice, against the store kit extracted in Phase 5.
-- [ ] A `fold` branch in `historySlice`.
-- [ ] Reader-state reconciliation (D6), with the undo/redo/delete tests.
-- [ ] `workspace.foldSequences` with reader version 10 (decision A); a test that
+- [x] The Fold slice, against the store kit extracted in Phase 5.
+- [x] A `fold` branch in `historySlice`.
+- [x] Reader-state reconciliation (D6), with the undo/redo/delete tests.
+- [x] `workspace.foldSequences` with reader version 10 (decision A); a test that
   an older reader refuses the file rather than dropping the sequences.
-- [ ] `keepsOriedita` extended; landing; New/Open discard.
+- [x] `keepsOriedita` extended; landing; New/Open discard.
 
 ### Phase 5 — Front-end extractions (pre-work)
 
@@ -1271,7 +1276,7 @@ unless marked.
 - [x] `lib/documentFile/`, migrating the Diagram's reader onto it.
 - [x] The store kit and the `projectSlice` document registry, migrating the
   Diagram.
-- [ ] The arrows/marks vocabulary moved to a neutral module.
+- [x] The arrows/marks vocabulary moved to a neutral module (`lib/stepDiagram/`).
 
 - [x] `useCpSurface`.
 - [x] `PaperSurface 'fold'` + `STEP_DIAGRAM_FIELDS` + the analytics enums.
@@ -1303,9 +1308,11 @@ unless marked.
 
 ### Phase 6 — Workspace shell and UI
 
-- [ ] Registration touchpoints, including `useCanvasHistoryPills` and every test
-  that lists workspaces.
-- [ ] The panel:
+- [x] Registration touchpoints and every test that lists workspaces. Touch undo
+  is in Fold's header (`TouchHistoryButtons`), not the history pill lane; see
+  D14.
+- [ ] The panel (the rail, tool window, cross-section picker, flap chips and
+  refusal notice are built as standalone components; mounting is open):
   - [ ] the split canvas on `useCpSurface`;
   - [ ] the phone `PaneToggle`;
   - [ ] the rail and phone picker;

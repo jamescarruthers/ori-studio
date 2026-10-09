@@ -190,7 +190,7 @@ still permissive on its own terms; it is the combined binary that is GPL.
 | `oristudio-geometry` | none | MIT OR Apache-2.0 — original: the shared tolerance, lines, frames, Huzita–Justin constructions and convex-polygon primitives |
 | `oristudio-layer-order` | `oristudio-geometry` | MIT OR Apache-2.0 — original: pairwise layer order, cell overlay, constraints and checker |
 | `oristudio-fold` | `oristudio-geometry`, `oristudio-layer-order`, `treemaker-flatfold`, `treemaker-fold`; with the `kernel` feature also `oristudio-cp` | MIT OR Apache-2.0 — original: the Fold workspace's engine (flat folded states and the plain fold); the Fold spike was its behavioural reference, and no Beloch, Flat-Folder or Oriedita code is ported (completion calls Flat-Folder's search through `treemaker-flatfold`) |
-| `oristudio-fold-wasm` | `oristudio-fold`, `oristudio-geometry`, `oristudio-layer-order` | MIT OR Apache-2.0 — original: the Fold engine's wasm-bindgen bridge |
+| `oristudio-fold-wasm` | `oristudio-fold`, `oristudio-geometry`, `oristudio-layer-order`, `treemaker-flatfold`, `treemaker-fold` | MIT OR Apache-2.0 — original: the Fold engine's wasm-bindgen bridge |
 | `oristudio-pdf` | none | MIT OR Apache-2.0 — original: the Diagram's pages as one PDF, through krilla |
 | `oristudio-pdf-wasm` | `oristudio-pdf` | MIT OR Apache-2.0 |
 | `oristudio-bp` | none | MIT |
