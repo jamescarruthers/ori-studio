@@ -722,7 +722,7 @@ vocabulary. **Not** `inputModelRegistry`, which is keyed to kernel operations.
 | Right panes | `fold-step`, `fold-paper` side panes; `FieldRow` static rows; `CollapsibleSection` |
 | Step strip with branches "1/2" | References' `ReferencesStepFilmstrip`, extracted, with a picture slot, card states and a caption tag; its "ways" become branches (shared CSS block → decision **B**) |
 | Steps grid | #436's `DiagramStepsGrid` shell, extracted as pre-work. It is CSS-module based (no decision B); it numbers steps and leaves turns unnumbered; Fold supplies its card body |
-| Phone two-pane switch | `PaneToggle` extracted from `DesignPaneSwitcher` into `components/ui/`. Its single-owner `.design-pane-switcher` rules move into a module; it keeps wearing the shared `canvas-pill` class. Mounted in Fold's header, not `CanvasPillLane`: the lane sits over the dock's top-right corner, which on a phone is Fold's header (measured at 375px) |
+| Phone two-pane switch | `PaneToggle` extracted from `DesignPaneSwitcher` into `components/ui/`. Its single-owner `.design-pane-switcher` rules move into a module; it keeps wearing the shared `canvas-pill` class. Fold's phone switch is a button on the canvas's bar (`FoldPhoneBarControls`, named by the pane it shows next), beside the Tools sheet, so the header keeps to one row; not `CanvasPillLane`, which sits over the dock's top-right corner, which on a phone is Fold's header (measured at 375px) |
 | Touch undo | `TouchHistoryButtons` (the Diagram's header buttons, moved to `components/ui/`) in Fold's header, for the same reason; `HISTORY_PILL_WORKSPACES` stays `['edit']` |
 | Free point on touch | A coarse-pointer Alt latch modelled on `touchModifiers/shiftLatch.ts`, OR'd with `readHeldModifiers().alt` |
 | Import CP | `useModalDialog` (on #436), the app's parsers, a drop policy for the whole Fold workspace (`useFoldDrop`: panes, strip, header and Steps view alike) |
@@ -924,7 +924,6 @@ values; this table is the plan's summary of it.
 | `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
 | `fold refused` | `{code}` |
 | `fold choice offered` | `{kind, count_bucket}` |
-| `fold step played` | `{trigger: user\|auto, step_kind}` |
 | `fold view switched` | `{view: fold\|steps}` |
 | `fold sequence sent to edit` | `{variant: plain\|precreases-as-aux}` |
 | `fold cp imported` | `{origin}` (D16's enum) |
@@ -1336,7 +1335,8 @@ unless marked.
   D14.
 - [x] The panel, every piece mounted (`FoldPanel` → `FoldCanvas`):
   - [x] the split canvas on `useCpSurface` (`FoldPane`, one per pane);
-  - [x] the phone `PaneToggle` (`FoldPhoneCanvasPills`, in the header's slot);
+  - [x] the phone pane switch and the Tools sheet, on the canvas's bar
+    (`FoldPhoneBarControls`), so the header keeps to one row;
   - [x] the rail and phone picker (`FoldToolRail`, `FoldToolPickerSheet`);
   - [x] the tool-window model (`fold/tools/foldToolWindow.ts`);
   - [x] the accessible cross-section picker (a listbox, keyboard tested);
