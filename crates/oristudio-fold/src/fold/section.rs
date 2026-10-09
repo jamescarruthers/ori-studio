@@ -42,14 +42,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use oristudio_geometry::{Line, convex};
 use serde::Serialize;
 
-use crate::fold::closure::{MovingSide, moving_side};
+use crate::fold::PlainFold;
+use crate::fold::closure::{Closure, MovingSide, moving_side};
 use crate::fold::line::{Axis, Classified, classify};
-use crate::fold::{ClosurePolicy, PlainFold, Seed};
 use crate::numerics::TOL;
 use crate::pattern::{CreaseKind, FaceId};
 use crate::refusal::{Flap, FoldRefusal, Refused, Side};
 use crate::scene::{ScenePoint, top_first};
-use crate::state::State;
+use crate::state::{State, sort_top_first};
+use crate::view::Direction;
 
 type Point = [f64; 2];
 
@@ -316,44 +317,76 @@ impl State {
     /// analysis is refused (everything would move, say) is left out; the
     /// choices are analysed, not landed, so one can still be refused when it
     /// lands (a sliver).
+    ///
+    /// Each depth's answer is what [`State::analyse_fold`] gives for a
+    /// [`Seed::Depth`](crate::Seed::Depth) of that many layers, but the
+    /// closure is grown one layer at a time rather than redone per depth (see
+    /// `closure::Closure`): a layer already in U moves nothing new, and once
+    /// a depth is refused, every deeper one is too.
     pub fn depth_choices(&self, op: &PlainFold, at: Point) -> Result<Vec<DepthChoice>, Refused> {
-        let along = Along::new(self, &op.line, op.side)?;
+        let classified = classify(&self.geometry().vertex_images, Axis::new(&op.line, op.side))?;
+        let side = moving_side(self, &classified)?;
         let face = self
             .face_at(at)
             .and_then(|id| self.face_position(id))
             .ok_or(FoldRefusal::WitnessNotInFace { point: at })?;
         let geometry = self.geometry();
         let image = geometry.isometries[face].apply(at);
-        if along.classified.axis.distance(image) <= TOL {
+        if classified.axis.distance(image) <= TOL {
             return Err(FoldRefusal::SeedNotOnMovingSide { point: at }.into());
         }
-        let depth = geometry
+        // The layers at the point on the moving side, as a depth seed reads
+        // them: top first in the model frame, from the bottom for a mountain.
+        let ids: Vec<FaceId> = geometry
             .images
             .iter()
-            .zip(&along.moving.pieces)
-            .filter(|(polygon, piece)| {
+            .zip(&side.pieces)
+            .enumerate()
+            .filter(|(_, (polygon, piece))| {
                 piece.is_some() && convex::contains_point(polygon, image, TOL)
             })
-            .count();
+            .map(|(f, _)| self.faces()[f].id)
+            .collect();
+        let direction = self.view().model_direction(op.direction);
+        // A stack with a pair missing, or a tuck target in no face, refuses
+        // every depth alike.
+        let Some(mut stack) = sort_top_first(&ids, self.order()) else {
+            return Ok(Vec::new());
+        };
+        if direction == Direction::Mountain {
+            stack.reverse();
+        }
+        let Ok(mut closure) = Closure::new(self, classified, direction, side, &op.placement) else {
+            return Ok(Vec::new());
+        };
+        let mut seed: Vec<usize> = Vec::with_capacity(stack.len());
         let mut choices: Vec<DepthChoice> = Vec::new();
-        for layers in 1..=depth {
-            let probe = PlainFold {
-                seed: Seed::Depth { at, layers },
-                closure: ClosurePolicy::Include,
-                ..op.clone()
+        for (k, id) in stack.into_iter().enumerate() {
+            let layers = k + 1;
+            let Some(f) = self.face_position(id) else {
+                break;
             };
-            let Ok(analysis) = self.analyse_fold(&probe) else {
-                continue;
+            seed.push(f);
+            // Refused only for an overlap whose pair the order lacks, which
+            // the gate never lets a state have.
+            let Ok(grew) = closure.grow(&[f]) else {
+                break;
             };
-            match choices.iter_mut().find(|c| c.moving == analysis.moving) {
-                Some(choice) => choice.through = layers,
-                None => choices.push(DepthChoice {
-                    layers,
-                    through: layers,
-                    moving: analysis.moving,
-                    picked: analysis.picked,
-                    added: analysis.added,
-                }),
+            match choices.last_mut() {
+                Some(choice) if !grew => choice.through = layers,
+                _ => {
+                    if closure.refusal().is_some() {
+                        break;
+                    }
+                    let picked = closure.picked(&seed);
+                    choices.push(DepthChoice {
+                        layers,
+                        through: layers,
+                        moving: closure.moved_faces(),
+                        added: closure.added(&picked),
+                        picked,
+                    });
+                }
             }
         }
         Ok(choices)

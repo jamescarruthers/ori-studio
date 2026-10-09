@@ -16,8 +16,9 @@ use std::path::PathBuf;
 use oristudio_fold::numerics::{MIN_FEATURE, TOL};
 use oristudio_fold::random::Rng;
 use oristudio_fold::{
-    ActionKind, CrossSection, Direction, FaceId, FoldRefusal, FoldScene, Folded, Isometry,
-    PlainFold, RowOrder, ScenePoint, Seed, Sheet, Side, StartSide, State, VertexId,
+    ActionKind, ClosurePolicy, CrossSection, DepthChoice, Direction, FaceId, FoldRefusal,
+    FoldScene, Folded, Isometry, PlainFold, RowOrder, ScenePoint, Seed, Sheet, Side, StartSide,
+    State, VertexId,
 };
 use oristudio_geometry::Line;
 use serde_json::Value;
@@ -259,6 +260,121 @@ fn depth_choices_at_a_four_layer_corner() {
         on_a_crease.map_err(|e| e.refusal),
         Err(FoldRefusal::WitnessNotInFace { .. })
     ));
+}
+
+/// `State::depth_choices` by its definition: an analysis of every depth at
+/// the point, its moving sets told apart. The engine grows one closure layer
+/// by layer instead; the two must agree.
+fn depth_choices_by_analysis(state: &State, op: &PlainFold, at: Point) -> Vec<DepthChoice> {
+    let depth = state
+        .image_of(at)
+        .and_then(|p| state.stack_at(p))
+        .map_or(0, |stack| stack.len());
+    let mut choices: Vec<DepthChoice> = Vec::new();
+    for layers in 1..=depth {
+        let probe = op
+            .clone()
+            .with_seed(Seed::Depth { at, layers })
+            .with_closure(ClosurePolicy::Include);
+        let Ok(analysis) = state.analyse_fold(&probe) else {
+            continue;
+        };
+        match choices.iter_mut().find(|c| c.moving == analysis.moving) {
+            Some(choice) => choice.through = layers,
+            None => choices.push(DepthChoice {
+                layers,
+                through: layers,
+                moving: analysis.moving,
+                picked: analysis.picked,
+                added: analysis.added,
+            }),
+        }
+    }
+    choices
+}
+
+/// Stacks up to a few dozen layers deep, valley and mountain, plain and
+/// tucked: the layer-by-layer closure gives what an analysis per depth gives.
+/// (The random campaign above compares every depth seed it draws as well.)
+#[test]
+fn depth_choices_on_deep_stacks_match_an_analysis_per_depth() {
+    use oristudio_fold::Placement;
+
+    let (mut compared, mut several, mut deepest) = (0, 0, 0);
+    for seed in 0..5u64 {
+        let mut rng = Rng::new(0xdee9 + seed);
+        let mut state = square();
+        if seed == 1 {
+            state = state.turn_over();
+        }
+        let mut tries = 0;
+        while state.faces().len() < 24 && tries < 200 {
+            tries += 1;
+            let Some(line) = random_line(&state, &mut rng) else {
+                continue;
+            };
+            let direction = if rng.chance(0.5) { Valley } else { Mountain };
+            if let Ok(folded) = state.fold(&PlainFold::new(line, Side::Positive, direction)) {
+                state = folded.state;
+            }
+        }
+        // Free lines through the middle of the model cut the layers at
+        // different places, so stacks split into more flaps than along a
+        // landmark line.
+        let images: Vec<Point> = (0..state.vertices().len())
+            .filter_map(|v| state.vertex_image(VertexId(v as u32)))
+            .collect();
+        let [x0, y0, x1, y1] = oristudio_geometry::convex::bounding_box(&images);
+        for _ in 0..10 {
+            let c = [
+                x0 + (0.3 + 0.4 * rng.next_f64()) * (x1 - x0),
+                y0 + (0.3 + 0.4 * rng.next_f64()) * (y1 - y0),
+            ];
+            let a = rng.next_f64() * std::f64::consts::PI;
+            let Some(line) = Line::from_point_direction(c, [a.cos(), a.sin()]) else {
+                continue;
+            };
+            let side = if rng.chance(0.5) {
+                Side::Positive
+            } else {
+                Side::Negative
+            };
+            let Some(at) = moving_point(&state, &line, side, &mut rng) else {
+                continue;
+            };
+            for direction in [Valley, Mountain] {
+                let mut op = PlainFold::new(line, side, direction);
+                if rng.chance(0.4) {
+                    let target = state.faces()[rng.below(state.faces().len())].ring.clone();
+                    let ring: Vec<Point> = target
+                        .iter()
+                        .map(|v| state.vertices()[v.0 as usize])
+                        .collect();
+                    let n = ring.len() as f64;
+                    let c = ring
+                        .iter()
+                        .fold([0.0, 0.0], |s, p| [s[0] + p[0] / n, s[1] + p[1] / n]);
+                    op = op.with_placement(if rng.chance(0.5) {
+                        Placement::Over { at: c }
+                    } else {
+                        Placement::Under { at: c }
+                    });
+                }
+                let Ok(choices) = state.depth_choices(&op, at) else {
+                    continue;
+                };
+                assert_eq!(choices, depth_choices_by_analysis(&state, &op, at));
+                compared += 1;
+                several += usize::from(choices.len() > 1);
+                deepest = deepest.max(choices.last().map_or(0, |c| c.through));
+            }
+        }
+    }
+    eprintln!("{compared} points compared, {several} with several choices, deepest {deepest}");
+    // 84, 7 and 32 when written.
+    assert!(compared >= 60, "only {compared} points compared");
+    assert!(several >= 5, "only {several} points offer several choices");
+    assert!(deepest >= 16, "the deepest choice is {deepest} layers");
 }
 
 #[test]
@@ -737,6 +853,7 @@ fn check_queries(
         let choices = parent
             .depth_choices(op, at)
             .unwrap_or_else(|e| panic!("no depth choices: {e}"));
+        assert_eq!(choices, depth_choices_by_analysis(parent, op, at));
         for pair in choices.windows(2) {
             assert!(pair[0].through < pair[1].layers);
             let (x, y): (BTreeSet<FaceId>, BTreeSet<FaceId>) = (
