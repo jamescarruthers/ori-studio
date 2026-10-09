@@ -401,8 +401,9 @@ jobs:
       # over ten minutes locally, where flat_folder_oracle takes under a second,
       # flat_folder_verify (the oracle's `verify` command) about three, and
       # fold_oracle (`verify` on the Fold engine's random states and their
-      # flips) about five. fold_oracle's seeded Oriedita tests need no oracle,
-      # so the workspace step runs them as well.
+      # flips) about five, and fold_compound_oracle (its reverse folds and the
+      # crane) about nine. The fold oracles' seeded Oriedita tests need no
+      # oracle, so the workspace step runs them as well.
       - name: Flat-Folder oracle parity
         env:
           ORACLE_REQUIRED: FLATFOLDER_ORACLE
@@ -413,4 +414,5 @@ jobs:
               --test flat_folder_oracle \
               --test flat_folder_verify \
               --test fold_oracle \
+              --test fold_compound_oracle \
               --test oracle_env_guard
