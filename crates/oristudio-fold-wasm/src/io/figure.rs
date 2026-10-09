@@ -161,3 +161,86 @@ pub fn import_figure(
         Err(refusal) => Ok(Outcome::Refused(refusal.into())),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::{Value, json};
+
+    use super::*;
+
+    /// The unit square folded in half at x = 0.5 as the kernel's scene has
+    /// it, y down: the left face shows its front, the right lies on it.
+    fn book() -> Value {
+        let edge = |kind: &str| json!({ "from": { "x": 0, "y": 0 }, "to": { "x": 0, "y": 0 }, "kind": kind });
+        json!({
+            "schema_version": 3, "flipped": false, "sheet": 1.0, "aux_lines": [],
+            "sheet_points": [
+                { "x": 0, "y": 0 }, { "x": 0.5, "y": 0 }, { "x": 1, "y": 0 },
+                { "x": 1, "y": 1 }, { "x": 0.5, "y": 1 }, { "x": 0, "y": 1 }
+            ],
+            "faces": [
+                { "outline": [], "points": [0, 1, 4, 5], "front_up": true,
+                  "edges": [edge("border"), edge("fold"), edge("border"), edge("border")] },
+                { "outline": [], "points": [1, 2, 3, 4], "front_up": false,
+                  "edges": [edge("border"), edge("border"), edge("border"), edge("fold")] }
+            ],
+            "subfaces": [{ "polygon": [], "faces_top_to_bottom": [1, 0] }]
+        })
+    }
+
+    fn scene(value: Value) -> FoldedPaperScene {
+        serde_json::from_value(value).unwrap_or_else(|e| panic!("scene: {e}"))
+    }
+
+    fn gap(value: Value) -> Option<FigureGap> {
+        match read_figure(&scene(value)) {
+            Err(IoRefusal::FigureIncomplete { gap }) => Some(gap),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn a_figure_reads_as_its_faces_rings_and_its_stacks() {
+        let figure = read_figure(&scene(book())).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(figure.input.space, ImportSpace::Model);
+        // Seven edges, the shared fold once: six borders and the fold.
+        assert_eq!(figure.input.segments.len(), 7);
+        let folds: Vec<&ImportSegment> = figure
+            .input
+            .segments
+            .iter()
+            .filter(|s| s.kind == ImportKind::Unassigned { hint: None })
+            .collect();
+        assert_eq!(folds.len(), 1);
+        assert_eq!(figure.start, [0.25, 0.5]);
+        assert_eq!(figure.relations, vec![[[0.75, 0.5], [0.25, 0.5]]]);
+
+        // Seen from the rear pass, the first face shows its back: the stack
+        // reads from behind, and each pair turns over to name the same order.
+        let mut rear = book();
+        rear["faces"][0]["front_up"] = json!(false);
+        rear["faces"][1]["front_up"] = json!(true);
+        rear["subfaces"][0]["faces_top_to_bottom"] = json!([0, 1]);
+        let figure = read_figure(&scene(rear)).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(figure.relations, vec![[[0.75, 0.5], [0.25, 0.5]]]);
+    }
+
+    #[test]
+    fn a_figure_without_what_an_import_needs_is_refused() {
+        let mut none = book();
+        none["faces"] = json!([]);
+        assert_eq!(gap(none), Some(FigureGap::Faces));
+        let mut old = book();
+        old["sheet_points"] = json!([]);
+        assert_eq!(gap(old), Some(FigureGap::SheetPoints));
+        let mut unnamed = book();
+        unnamed["faces"][1]["points"] = json!([]);
+        assert_eq!(gap(unnamed), Some(FigureGap::FaceRing { face: 1 }));
+        let mut outside = book();
+        outside["faces"][0]["points"] = json!([0, 1, 4, 9]);
+        assert_eq!(gap(outside), Some(FigureGap::FaceRing { face: 0 }));
+        let mut stack = book();
+        stack["subfaces"][0]["faces_top_to_bottom"] = json!([1, 2]);
+        assert_eq!(gap(stack), Some(FigureGap::Stack { subface: 0 }));
+    }
+}
