@@ -1,6 +1,7 @@
 import { useId, useMemo } from 'react';
 import type { CpOverlayView } from '../../../cp-workspace/CreasePatternWebglCanvas';
 import { referencesMarkupTokens } from '../../../cp-workspace/references/usePaperStyleTokens';
+import type { FoldLetteredReference } from '../../../fold/canvas/foldStepLetters';
 import type { FoldActionGeometry } from '../../../fold/engine/foldEngineWire';
 import { convexHull, type Point } from '../../../lib/geometry';
 import { applyPaperStylePolicy, PAPER_STYLE_POLICIES } from '../../../lib/paper/paperStyleResolve';
@@ -16,6 +17,8 @@ import {
 import type { StepDiagramPrimitive } from '../../../lib/stepDiagram/stepDiagramModel';
 import styles from './FoldCanvas.module.css';
 
+const NO_LETTERS: readonly FoldLetteredReference[] = [];
+
 /**
  * A located fold's arrow over the folded pane (plan D11): from the grip on
  * the moving paper to where the fold puts it, drawn by the step diagram's own
@@ -24,15 +27,23 @@ import styles from './FoldCanvas.module.css';
  * pen, through the pane's camera. The fold line itself is painted with the
  * paper (`withFoldLine`); the renderer has no curve or arrowhead, so the
  * arrow is this one SVG over it, as References' marks are.
+ *
+ * With it, the letters the step's sentence names its references by
+ * (`useFoldStepLetters`), as References' cards letter theirs: a point ringed
+ * and lettered, a line lettered on itself, each letter placed clear of the
+ * others by the diagram's own label layout.
  */
 export function FoldActionLayer({
   action,
+  letters = NO_LETTERS,
   view,
   style,
   outline,
   ground,
 }: {
   action: FoldActionGeometry | null;
+  /** The references the step's sentence names by letter, in the pane's frame. */
+  letters?: readonly FoldLetteredReference[];
   /** The pane's camera: its frame → CSS px of the canvas box. */
   view: CpOverlayView;
   style: PaperStyle;
@@ -44,22 +55,33 @@ export function FoldActionLayer({
   const id = useId();
   const seen = useMemo(() => applyPaperStylePolicy(style, PAPER_STYLE_POLICIES.fold), [style]);
   const model = useMemo(() => {
-    const grip = action?.grip;
-    if (!action || !grip) return null;
+    const grip = action?.grip ?? null;
+    if (!grip && letters.length === 0) return null;
     const hull = convexHull(outline);
-    const centre: SheetPoint = hull.length
+    const centre: SheetPoint | null = hull.length
       ? [hull.reduce((sum, p) => sum + p.x, 0) / hull.length, hull.reduce((sum, p) => sum + p.y, 0) / hull.length]
-      : [grip.at.x, grip.at.y];
-    const out = foldArrowArc([grip.at.x, grip.at.y], [grip.image.x, grip.image.y], centre);
-    if (!out) return null;
+      : grip
+        ? [grip.at.x, grip.at.y]
+        : null;
+    if (!centre) return null;
+    const primitives: StepDiagramPrimitive[] = [];
+    const out = grip ? foldArrowArc([grip.at.x, grip.at.y], [grip.image.x, grip.image.y], centre) : null;
+    if (action && out) {
+      primitives.push(
+        action.kind === 'precrease' ? { kind: 'fold-arrow', out } : { kind: 'one-way-arrow', out, fold: action.direction }
+      );
+    }
+    for (const { kind, at, letter } of letters) {
+      if (kind === 'point') primitives.push({ kind: 'point', at: [at.x, at.y], style: 'highlight' });
+      primitives.push({ kind: 'label', at: [at.x, at.y], text: letter, style: 'highlight' });
+    }
+    if (primitives.length === 0) return null;
     const xs = hull.map((p) => p.x);
     const ys = hull.map((p) => p.y);
     const width = xs.length ? Math.max(...xs) - Math.min(...xs) : 1;
     const height = ys.length ? Math.max(...ys) - Math.min(...ys) : 1;
-    const primitive: StepDiagramPrimitive =
-      action.kind === 'precrease' ? { kind: 'fold-arrow', out } : { kind: 'one-way-arrow', out, fold: action.direction };
-    return { primitives: [primitive], sheet: { width, height, centre }, hull };
-  }, [action, outline]);
+    return { primitives, sheet: { width, height, centre }, hull };
+  }, [action, letters, outline]);
 
   const context = useMemo(() => {
     if (!model) return null;

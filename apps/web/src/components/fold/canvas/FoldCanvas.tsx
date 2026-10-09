@@ -29,6 +29,7 @@ import { useFoldCanvasShortcuts } from '../../../fold/canvas/useFoldCanvasShortc
 import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
+import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
@@ -151,6 +152,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
 
+  // --- The letters the step's sentence names its references by, on the folded pane.
+  const letters = useFoldStepLetters(session, view, preview, toolState.picks.length > 0);
+
   // --- The tool window, and the root chooser over the folded pane.
   const sequence = useWorkspaceStore((state) => shownFoldSequence(state)?.document ?? null);
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
@@ -253,6 +257,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
                   {inks && (
                     <FoldActionLayer
                       action={preview.action}
+                      letters={letters}
                       view={camera}
                       style={style}
                       outline={view.scene?.subfaces.flatMap((cell) => cell.polygon) ?? []}
