@@ -189,7 +189,9 @@ describe.skipIf(!available)('the reverse fold over the real bridge', () => {
     expect(acted?.push).toBeUndefined();
     expect(acted?.direction).toBe('valley');
     // Asked for inside regardless, it is refused, offering the outside fold.
-    const inside = calls.step(tri.state, { ...across.op, kind: 'inside-reverse' }, across.choices);
+    const outside = across.op;
+    if (outside.kind !== 'outside-reverse') throw new Error('not an outside reverse');
+    const inside = calls.step(tri.state, { ...outside, kind: 'inside-reverse' }, across.choices);
     expect(inside).toMatchObject({
       status: 'refused',
       refusal: { code: 'reverse_kind_infeasible', kind: 'inside' },
