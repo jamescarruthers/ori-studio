@@ -103,6 +103,9 @@ pub use complete::{
     ChoiceCount, CompletionLimits, CompletionRefusal, Completions, ComponentChoices, FixedKind,
     FixedPair,
 };
+pub use compound::crimp::{
+    CrimpAnalysis, CrimpChoice, CrimpFold, CrimpFolded, CrimpOutcome, CrimpReport,
+};
 pub use compound::motion::{LegName, MotionGroup, MotionKind, MotionLeg, Stacking, StepMotion};
 pub use compound::reverse::{
     NoOpening, Opening, ReverseAnalysis, ReverseChoice, ReverseChoices, ReverseFold, ReverseFolded,

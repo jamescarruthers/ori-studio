@@ -21,10 +21,12 @@ use std::f64::consts::{PI, TAU};
 use oristudio_geometry::Line;
 use oristudio_geometry::convex::{self, HalfPlane};
 
+use crate::compound::crimp::CrimpFold;
 use crate::compound::reverse::{ReverseFold, ReverseKind};
+use crate::compound::tuck::TuckFold;
 use crate::fold::{Folded, PlainFold, Seed};
 use crate::numerics::{MIN_FEATURE, TOL};
-use crate::pattern::VertexId;
+use crate::pattern::{FaceId, VertexId};
 use crate::refusal::{FoldRefusal, Refused, Side};
 use crate::sheet::Sheet;
 use crate::state::State;
@@ -340,6 +342,153 @@ pub fn reverse_fold(state: &State, rng: &mut Rng, perpendicular: f64) -> Option<
         anchor: Seed::Flaps { at },
         kind: ReverseKind::Inside,
     })
+}
+
+/// A drawn crimp of `state`, as the reverse spike's crimp campaign draws
+/// them (`campaign-crimp.mjs`): a folded crease at least 0.12 long as the
+/// spine, a random end of it as the tip's; two points on it, the first
+/// 15–65% along and the second 8% or more past it short of 85%; ℓ1 and ℓ2
+/// through them, both perpendicular to the spine with probability
+/// `parallel`, otherwise each at 20°–160° to it; the tip side of ℓ1 the
+/// second point's, and the tip grown from the spine's two faces. Inside;
+/// a test asks for the other kind itself. None when the drawn crease is too
+/// short, the lines meet over the model (within 0.05 of its box), or
+/// neither face has paper on the tip side.
+pub fn crimp_fold(state: &State, rng: &mut Rng, parallel: f64) -> Option<CrimpFold> {
+    let folded: Vec<usize> = (0..state.creases().len())
+        .filter(|&k| state.creases()[k].kind.is_folded())
+        .collect();
+    let k = rng.pick(&folded)?;
+    let [a, b] = state.creases()[k].vertices.map(|v| state.vertex_image(v));
+    let (mut a, mut b) = (a?, b?);
+    let length = (b[0] - a[0]).hypot(b[1] - a[1]);
+    if length < 0.12 {
+        return None;
+    }
+    if rng.chance(0.5) {
+        std::mem::swap(&mut a, &mut b);
+    }
+    let t1 = 0.15 + 0.5 * rng.next_f64();
+    let t2 = t1 + 0.08 + (0.85 - t1 - 0.08) * rng.next_f64();
+    let at = |t: f64| [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+    let (q1, q2) = (at(t1), at(t2));
+    let u = [(b[0] - a[0]) / length, (b[1] - a[1]) / length];
+    let both = rng.chance(parallel);
+    let mut direction = || {
+        let angle = if both {
+            PI / 2.0
+        } else {
+            (20.0 + 140.0 * rng.next_f64()).to_radians()
+        };
+        let (s, c) = angle.sin_cos();
+        [u[0] * c - u[1] * s, u[0] * s + u[1] * c]
+    };
+    let (d1, d2) = (direction(), direction());
+    let first = Line::from_point_direction(q1, d1)?;
+    let second = Line::from_point_direction(q2, d2)?;
+    if !both && let Some(x) = first.intersect(&second) {
+        let images: Vec<Point> = (0..state.vertices().len())
+            .filter_map(|v| state.vertex_image(VertexId(v as u32)))
+            .collect();
+        let (x0, y0, x1, y1) = images.iter().fold(
+            (
+                f64::INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::NEG_INFINITY,
+            ),
+            |e, p| (e.0.min(p[0]), e.1.min(p[1]), e.2.max(p[0]), e.3.max(p[1])),
+        );
+        if x[0] > x0 - 0.05 && x[0] < x1 + 0.05 && x[1] > y0 - 0.05 && x[1] < y1 + 0.05 {
+            return None;
+        }
+    }
+    let side = Side::of_point(&first, q2)?;
+    let half = HalfPlane::new(
+        match side {
+            Side::Positive => first.n,
+            Side::Negative => [-first.n[0], -first.n[1]],
+        },
+        match side {
+            Side::Positive => first.d,
+            Side::Negative => -first.d,
+        },
+    )?;
+    let anchor: Vec<Point> = state.topology().crease_faces[k]
+        .iter()
+        .filter_map(|&f| {
+            let id = state.faces()[f].id;
+            let piece = convex::split(state.face_image(id)?, &half, TOL).inside;
+            let centroid = convex::centroid(&piece)?;
+            (half.signed_distance(centroid) > TOL)
+                .then(|| state.isometry(id).map(|t| t.inverse().apply(centroid)))
+                .flatten()
+        })
+        .collect();
+    (!anchor.is_empty()).then_some(CrimpFold {
+        first,
+        second,
+        side,
+        anchor: Seed::Flaps { at: anchor },
+        kind: ReverseKind::Inside,
+    })
+}
+
+/// A drawn tuck of `state`, as the reverse spike's tuck campaign draws them
+/// (`campaign-tuck.mjs`): up to eight drawn plain folds ([`plain_fold`])
+/// until one lands, and T among the layers wholly on the side that stays
+/// which its landed block lies on, named by its witness. The fold's
+/// direction makes it a valley tuck (under T) or a mountain tuck (over T).
+/// None when no drawn fold lands on such a layer.
+pub fn tuck_fold(state: &State, rng: &mut Rng) -> Option<TuckFold> {
+    for _ in 0..8 {
+        let Some(plain) = plain_fold(state, rng) else {
+            continue;
+        };
+        let Ok(folded) = state.fold(&plain) else {
+            continue;
+        };
+        let analysis = &folded.report.analysis;
+        let toward = |p: Point| {
+            let d = analysis.line.signed_distance(p);
+            if analysis.side == Side::Positive {
+                d
+            } else {
+                -d
+            }
+        };
+        let landing: Vec<&[Point]> = folded
+            .report
+            .moving_faces
+            .iter()
+            .filter_map(|&f| folded.state.face_image(f))
+            .collect();
+        let targets: Vec<FaceId> = state
+            .faces()
+            .iter()
+            .map(|f| f.id)
+            .filter(|f| !analysis.moving.contains(f))
+            .filter(|&f| {
+                state.face_image(f).is_some_and(|image| {
+                    image.iter().all(|&p| toward(p) <= TOL)
+                        && landing
+                            .iter()
+                            .any(|landed| convex::penetration(landed, image) > TOL)
+                })
+            })
+            .collect();
+        let Some(target) = rng.pick(&targets) else {
+            continue;
+        };
+        return Some(TuckFold {
+            line: plain.line,
+            side: plain.side,
+            direction: plain.direction,
+            seed: plain.seed,
+            target: state.face_witness(target)?,
+        });
+    }
+    None
 }
 
 /// The distinct vertex images, in vertex order.

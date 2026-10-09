@@ -35,6 +35,7 @@
 //! one is the result; more than one is a choice, whose result is stored as
 //! the pairs it decided, keyed by witnesses (plan D6), and replayed.
 
+pub mod crimp;
 pub mod motion;
 pub mod reverse;
 pub mod tuck;

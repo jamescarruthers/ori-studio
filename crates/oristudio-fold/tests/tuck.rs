@@ -11,12 +11,11 @@ mod support;
 
 use std::collections::BTreeSet;
 
-use oristudio_fold::random::{self, Rng};
 use oristudio_fold::{
     CompletionLimits, CompoundRefused, Direction, FaceId, Fix, FoldRefusal, PlainFold, Seed, Sheet,
     StartSide, State, TuckChoices, TuckFold, TuckFolded, TuckOutcome, TuckSide,
 };
-use oristudio_geometry::{Line, convex};
+use oristudio_geometry::Line;
 use support::*;
 
 fn square() -> State {
@@ -342,71 +341,12 @@ fn a_tuck_with_two_orders_stores_its_choice() {
 
 // --- The campaign ----------------------------------------------------------------
 
-/// Draw `i` of seed `seed`: as the spike's `campaign-tuck.mjs`, a random
-/// state (two to four plain folds, at most 60 faces), then up to eight
-/// drawn plain folds until one lands, and T among the layers wholly on the
-/// side that stays which the landed block lies on; a valley is tucked under
+/// Draw `i` of seed `seed` of the spike's campaign
+/// ([`compound::tuck_case`]): T among the layers wholly on the side that
+/// stays which a landed plain fold's block lies on; a valley is tucked under
 /// T, a mountain over it.
 fn tuck_case(seed: u64, i: u64) -> Option<(State, TuckFold)> {
-    let mut rng = Rng::new(seed * 9001 + i);
-    let state = random::folded_between(&mut rng, 2, 4).ok()?;
-    if state.faces().len() > 60 {
-        return None;
-    }
-    for _ in 0..8 {
-        let Some(plain) = random::plain_fold(&state, &mut rng) else {
-            continue;
-        };
-        let Ok(folded) = state.fold(&plain) else {
-            continue;
-        };
-        let line = folded.report.analysis.line;
-        let side = folded.report.analysis.side;
-        let toward = |p: Point| {
-            let d = line.signed_distance(p);
-            if side == oristudio_fold::Side::Positive {
-                d
-            } else {
-                -d
-            }
-        };
-        let moving: BTreeSet<FaceId> = folded.report.analysis.moving.iter().copied().collect();
-        let landing: Vec<Vec<Point>> = folded
-            .report
-            .moving_faces
-            .iter()
-            .filter_map(|&f| folded.state.face_image(f).map(<[Point]>::to_vec))
-            .collect();
-        let candidates: Vec<FaceId> = state
-            .faces()
-            .iter()
-            .map(|f| f.id)
-            .filter(|f| !moving.contains(f))
-            .filter(|&f| {
-                state
-                    .face_image(f)
-                    .is_some_and(|image| image.iter().all(|&p| toward(p) <= 1e-6))
-            })
-            .filter(|&f| {
-                let image = state.face_image(f).unwrap_or_default();
-                landing.iter().any(|l| convex::penetration(l, image) > 1e-6)
-            })
-            .collect();
-        let Some(target) = rng.pick(&candidates) else {
-            continue;
-        };
-        return Some((
-            state.clone(),
-            TuckFold {
-                line: plain.line,
-                side: plain.side,
-                direction: plain.direction,
-                seed: plain.seed,
-                target: state.face_witness(target)?,
-            },
-        ));
-    }
-    None
+    compound::tuck_case(seed, i)
 }
 
 #[derive(Debug, Default)]

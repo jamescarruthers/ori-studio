@@ -413,8 +413,8 @@ impl State {
 
     /// The tip of `op`: its line classified, the moving side's flaps, and the
     /// flaps the anchor grows over. Everything moving is refused, offering
-    /// the flaps to pick.
-    fn tip(&self, op: &ReverseFold) -> Result<Tip, Refused> {
+    /// the flaps to pick. A crimp's first line has the same tip.
+    pub(super) fn tip(&self, op: &ReverseFold) -> Result<Tip, Refused> {
         let classified =
             line::classify(&self.geometry().vertex_images, Axis::new(&op.line, op.side))?;
         let side = moving_side(self, &classified)?;
@@ -513,15 +513,15 @@ impl State {
     }
 }
 
-/// A reverse fold's tip on a state.
+/// A reverse fold's tip on a state (and a crimp's, at its first line).
 #[derive(Debug, Clone)]
-struct Tip {
-    classified: Classified,
-    side: MovingSide,
+pub(super) struct Tip {
+    pub(super) classified: Classified,
+    pub(super) side: MovingSide,
     /// The moving side's flaps the tip grows over, ascending.
-    flaps: Vec<usize>,
+    pub(super) flaps: Vec<usize>,
     /// Per face position.
-    in_tip: Vec<bool>,
+    pub(super) in_tip: Vec<bool>,
     has_stationary: Vec<bool>,
     /// Per flap of the tip (in `flaps` order), its openings.
     openings: Vec<FlapOpenings>,
@@ -529,13 +529,13 @@ struct Tip {
 
 /// How a tip's flaps move.
 #[derive(Debug, Clone, PartialEq)]
-struct Plan {
+pub(super) struct Plan {
     /// Each opening flap's opening, in the tip's flap order.
-    openings: Vec<RawOpening>,
+    pub(super) openings: Vec<RawOpening>,
     /// The flaps with no spine to open along, moving whole beside them.
-    whole: Vec<Vec<usize>>,
+    pub(super) whole: Vec<Vec<usize>>,
     /// The openings chosen among several, as a step stores them.
-    stored: Vec<StoredOpening>,
+    pub(super) stored: Vec<StoredOpening>,
 }
 
 /// A flap's openings, by face positions.
@@ -548,17 +548,17 @@ struct FlapOpenings {
 
 /// An opening by face and crease positions.
 #[derive(Debug, Clone, PartialEq)]
-struct RawOpening {
-    lower: Vec<usize>,
-    upper: Vec<usize>,
+pub(super) struct RawOpening {
+    pub(super) lower: Vec<usize>,
+    pub(super) upper: Vec<usize>,
     spine: Line,
     across: Vec<usize>,
-    lower_body: Vec<usize>,
-    upper_body: Vec<usize>,
+    pub(super) lower_body: Vec<usize>,
+    pub(super) upper_body: Vec<usize>,
 }
 
 impl RawOpening {
-    fn public(&self, state: &State) -> Opening {
+    pub(super) fn public(&self, state: &State) -> Opening {
         let ids = |faces: &[usize]| faces.iter().map(|&f| state.faces()[f].id).collect();
         let mut across: Vec<EdgeId> = self.across.iter().map(|&k| state.creases()[k].id).collect();
         across.sort_unstable();
@@ -634,15 +634,15 @@ impl Tip {
         Ok(tip)
     }
 
-    fn line(&self) -> Line {
+    pub(super) fn line(&self) -> Line {
         self.classified.axis.line_and_side().0
     }
 
-    fn side(&self) -> Side {
+    pub(super) fn side(&self) -> Side {
         self.classified.axis.line_and_side().1
     }
 
-    fn analysis(&self, state: &State) -> ReverseAnalysis {
+    pub(super) fn analysis(&self, state: &State) -> ReverseAnalysis {
         ReverseAnalysis {
             line: self.line(),
             side: self.side(),
@@ -671,7 +671,7 @@ impl Tip {
     /// a flap opens several ways and no stored opening names one; refused
     /// when no flap opens, or one with a spine cannot; broken when a stored
     /// opening names no opening.
-    fn choose(
+    pub(super) fn choose(
         &self,
         state: &State,
         choices: &ReverseChoices,
