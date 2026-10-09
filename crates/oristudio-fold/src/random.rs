@@ -250,13 +250,19 @@ pub fn plain_fold_along(state: &State, line: Line, rng: &mut Rng) -> Option<Plai
 /// drawn by [`plain_fold`], of a square, or a fifth of the time a 1:2
 /// rectangle, in at most ten draws.
 pub fn folded(rng: &mut Rng) -> Result<State, FoldRefusal> {
+    folded_between(rng, 1, 4)
+}
+
+/// [`folded`] with `least` to `most` plain folds: the tuck spike's start
+/// (`campaign-tuck.mjs`) takes two to four.
+pub fn folded_between(rng: &mut Rng, least: usize, most: usize) -> Result<State, FoldRefusal> {
     let sheet = if rng.chance(0.2) {
         Sheet::rectangle(1.0, 2.0)?
     } else {
         Sheet::square()
     };
     let mut state = State::flat(sheet, StartSide::Front)?;
-    let want = 1 + rng.below(4);
+    let want = least + rng.below(most.saturating_sub(least) + 1);
     let mut landed = 0;
     for _ in 0..10 {
         if landed >= want {

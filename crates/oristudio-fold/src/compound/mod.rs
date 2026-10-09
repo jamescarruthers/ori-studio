@@ -37,6 +37,7 @@
 
 pub mod motion;
 pub mod reverse;
+pub mod tuck;
 
 use std::collections::BTreeSet;
 
@@ -562,8 +563,32 @@ impl Prepared {
     /// with the rest by [`Prepared::lands_flipped`]. A pair of faces that do
     /// not overlap is left out.
     pub(crate) fn place(&mut self, pairs: impl IntoIterator<Item = [FaceId; 2]>) {
+        let placed = self.seeds(pairs);
+        self.fixed.extend(placed);
+    }
+
+    /// Whether the same fold placed another way — `pairs` in place of every
+    /// placement it has, such as a tuck against another target — has an
+    /// order; none when the budget ran out first.
+    pub(crate) fn lands_placed(
+        &self,
+        pairs: impl IntoIterator<Item = [FaceId; 2]>,
+        limits: &CompletionLimits,
+    ) -> Option<bool> {
+        let mut fixed = self.fixed[..self.placed].to_vec();
+        fixed.extend(self.seeds(pairs));
+        match self.unordered.complete(&fixed, &first(limits)) {
+            Ok(_) => Some(true),
+            Err(CompletionRefusal::BudgetExceeded { .. }) => None,
+            Err(_) => Some(false),
+        }
+    }
+
+    /// Pairs `[upper, lower]` as seeds, leaving out faces that do not
+    /// overlap.
+    fn seeds(&self, pairs: impl IntoIterator<Item = [FaceId; 2]>) -> Vec<FixedPair> {
         let problem = self.unordered.problem();
-        let placed: Vec<FixedPair> = pairs
+        pairs
             .into_iter()
             .filter(|&[upper, lower]| problem.is_variable(upper, lower))
             .map(|[upper, lower]| FixedPair {
@@ -571,8 +596,7 @@ impl Prepared {
                 lower,
                 kind: FixedKind::Seed,
             })
-            .collect();
-        self.fixed.extend(placed);
+            .collect()
     }
 
     /// Whether some order fits: a search that stops at the first order of

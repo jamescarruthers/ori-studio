@@ -11,6 +11,7 @@ use oristudio_fold::random::{self, Rng};
 use oristudio_fold::{
     ClosurePolicy, CreaseKind, Direction, EdgeId, FaceId, Letter, PlainFold, ReverseAnalysis,
     ReverseChoices, ReverseFold, ReverseFolded, ReverseKind, ReverseOutcome, Seed, State,
+    StepMotion,
 };
 
 use crate::support::{Point, assert_valid};
@@ -195,14 +196,19 @@ pub fn assert_plain_fold_geometry(
 /// The motion's legs start at the parent and end at the landed state, to
 /// the bit for the landed end.
 pub fn assert_motion_endpoints(parent: &State, folded: &ReverseFolded) {
-    let motion = &folded.report.motion;
+    assert_motion(parent, &folded.state, &folded.report.motion);
+}
+
+/// A compound step's motion starts at `parent` and ends at `landed`: each
+/// group's faces where the parent had them at its first leg's start, and
+/// where they land at its last leg's end.
+pub fn assert_motion(parent: &State, landed: &State, motion: &StepMotion) {
     let (Some(first), Some(last)) = (motion.legs.first(), motion.legs.last()) else {
         panic!("no legs");
     };
     for (start, end) in first.groups.iter().zip(&last.groups) {
         assert_eq!(start.faces, end.faces);
         for &face in &end.faces {
-            let landed = &folded.state;
             let t = landed.isometry(face).unwrap_or_default();
             let lineage = landed
                 .face(face)

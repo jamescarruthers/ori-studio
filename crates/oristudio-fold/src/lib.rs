@@ -108,6 +108,10 @@ pub use compound::reverse::{
     NoOpening, Opening, ReverseAnalysis, ReverseChoice, ReverseChoices, ReverseFold, ReverseFolded,
     ReverseKind, ReverseOutcome, ReverseReport, StoredOpening, TipFlap,
 };
+pub use compound::tuck::{
+    TuckAnalysis, TuckChoice, TuckChoices, TuckFold, TuckFolded, TuckOutcome, TuckReport, TuckSide,
+    TuckTarget,
+};
 pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
 pub use fold::{
     ActionKind, ClosurePolicy, CrossSection, DepthChoice, FoldActionGeometry, FoldAnalysis,

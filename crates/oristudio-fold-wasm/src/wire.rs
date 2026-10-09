@@ -459,8 +459,11 @@ pub enum Fix {
         #[serde(skip_serializing_if = "Option::is_none")]
         step: Option<StoredStep>,
     },
-    /// The same reverse fold of the other kind is valid.
+    /// The same reverse fold, or crimp, of the other kind is valid.
     OtherKind { kind: ReverseKind },
+    /// The same tuck against this layer instead is valid: send its sheet
+    /// point back as the tuck's `target`.
+    TuckTarget { face: FaceId, at: Point },
 }
 
 impl From<EngineFix> for Fix {
@@ -475,6 +478,7 @@ impl From<EngineFix> for Fix {
                 step: None,
             },
             EngineFix::OtherKind { kind } => Fix::OtherKind { kind },
+            EngineFix::TuckTarget { face, at } => Fix::TuckTarget { face, at },
         }
     }
 }
