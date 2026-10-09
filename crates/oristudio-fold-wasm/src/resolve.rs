@@ -67,23 +67,26 @@ pub enum Resolved {
     /// Import CP's jump to a new model (plan D16): the state replaces the
     /// parent's rather than folding it.
     Jump(State),
+    /// A vertex fold, its anchors resolved, with its stored choice
+    /// (`ops_squash_family`).
+    Vertex(crate::ops_squash_family::VertexFold),
 }
 
 impl Resolved {
     /// The plain fold it names: the line, side and seed the engine folds
-    /// along. None for a view change or a jump.
+    /// along. None for a view change, a jump or a vertex fold.
     pub fn plain(&self, parent: &State) -> Option<Result<PlainFold, LineRefusal>> {
         match self {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
-            Resolved::View(_) | Resolved::Jump(_) => None,
+            Resolved::View(_) | Resolved::Jump(_) | Resolved::Vertex(_) => None,
         }
     }
 }
 
 /// The op and its choices, resolved in `parent`.
 pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, Rejection> {
-    if let Some(choice) = choices.unexpected(op.is_axiom()) {
+    if let Some(choice) = choices.unexpected(op.is_axiom(), op.takes_completion()) {
         return Err(BridgeRefusal::UnexpectedChoice { choice }.into());
     }
     let root = choices.root.as_ref();
@@ -105,6 +108,10 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
         Op::CpJump(jump) => crate::io::land(parent, jump)
             .map(Resolved::Jump)
             .map_err(Rejection::from),
+        // The vertex folds: their sheet anchors in the parent.
+        Op::Squash(_) | Op::Petal(_) | Op::RabbitEar(_) | Op::Swivel(_) => {
+            crate::ops_squash_family::resolve(parent, op, choices).map(Resolved::Vertex)
+        }
     }
 }
 

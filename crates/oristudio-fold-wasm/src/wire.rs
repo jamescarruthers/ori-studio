@@ -94,6 +94,11 @@ pub enum Op {
     /// Import CP (plan D16): a stored crease pattern and its order, landed
     /// as a new model (`io::jump`).
     CpJump(crate::io::CpJump),
+    // The vertex folds (plan Phase 11): `ops_squash_family`.
+    Squash(crate::ops_squash_family::SquashOp),
+    Petal(crate::ops_squash_family::PetalOp),
+    RabbitEar(crate::ops_squash_family::RabbitEarOp),
+    Swivel(crate::ops_squash_family::SwivelOp),
 }
 
 impl Op {
@@ -108,7 +113,20 @@ impl Op {
             Op::Turn { .. } => "turn",
             Op::Rotate { .. } => "rotate",
             Op::CpJump(_) => "cp-jump",
+            Op::Squash(_) => "squash",
+            Op::Petal(_) => "petal",
+            Op::RabbitEar(_) => "rabbit-ear",
+            Op::Swivel(_) => "swivel",
         }
+    }
+
+    /// Whether it ends at a completion, whose choice it stores as
+    /// `completion`.
+    pub fn takes_completion(&self) -> bool {
+        matches!(
+            self,
+            Op::Squash(_) | Op::Petal(_) | Op::RabbitEar(_) | Op::Swivel(_)
+        )
     }
 
     /// Whether its fold line is an axiom's, the one line that takes a stored
@@ -272,17 +290,19 @@ impl Rotation {
     }
 }
 
-/// `FoldChoices`. An axiom's `root` is read; the rest only for whether they
-/// are present: no op this build folds takes one yet (completions and
-/// openings arrive with the compound folds), and a stored choice the op
-/// cannot use breaks its step rather than being dropped.
+/// `FoldChoices`. An axiom's `root` and a vertex fold's `completion` are
+/// read; the rest only for whether they are present: no op this build folds
+/// takes one yet (openings and pockets arrive with the other compound
+/// folds), and a stored choice the op cannot use breaks its step rather than
+/// being dropped.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 pub struct Choices {
     /// The line the axiom's chosen root gave, in the parent's model frame.
     #[serde(default)]
     pub root: Option<Line>,
+    /// The pairs a completion left free, as chosen (`FoldPairChoice`).
     #[serde(default)]
-    pub completion: Option<Vec<IgnoredAny>>,
+    pub completion: Option<Vec<oristudio_fold::PairChoice>>,
     #[serde(default)]
     pub pocket: Option<IgnoredAny>,
     #[serde(default)]
@@ -291,12 +311,12 @@ pub struct Choices {
 
 impl Choices {
     /// The first choice present that an op takes none of, by its document
-    /// key: `root` unless the op folds along an axiom. An empty list is no
-    /// choice, as the document reads it.
-    pub fn unexpected(&self, takes_root: bool) -> Option<&'static str> {
+    /// key: `root` unless the op folds along an axiom, `completion` unless
+    /// it ends at one. An empty list is no choice, as the document reads it.
+    pub fn unexpected(&self, takes_root: bool, takes_completion: bool) -> Option<&'static str> {
         if self.root.is_some() && !takes_root {
             Some("root")
-        } else if self.completion.as_ref().is_some_and(|c| !c.is_empty()) {
+        } else if self.completion.as_ref().is_some_and(|c| !c.is_empty()) && !takes_completion {
             Some("completion")
         } else if self.pocket.is_some() {
             Some("pocket")
@@ -461,6 +481,9 @@ pub enum Fix {
     },
     /// The same reverse fold of the other kind is valid.
     OtherKind { kind: ReverseKind },
+    /// The same rabbit ear or swivel with this emergent ray (a direction in
+    /// the parent's model frame) lands: store it as the op's `emergent`.
+    UseEmergent { direction: Point },
 }
 
 impl From<EngineFix> for Fix {
@@ -475,6 +498,7 @@ impl From<EngineFix> for Fix {
                 step: None,
             },
             EngineFix::OtherKind { kind } => Fix::OtherKind { kind },
+            EngineFix::UseEmergent { direction } => Fix::UseEmergent { direction },
         }
     }
 }
@@ -590,6 +614,11 @@ pub enum BridgeRefusal {
     #[serde(untagged)]
     #[error(transparent)]
     Io(crate::io::IoRefusal),
+    /// A stored vertex fold whose choice no longer resolves, or that leaves
+    /// one it does not store (`ops_squash_family::VertexRefusal`).
+    #[serde(untagged)]
+    #[error(transparent)]
+    Vertex(crate::ops_squash_family::VertexRefusal),
 }
 
 impl BridgeRefusal {
@@ -602,6 +631,7 @@ impl BridgeRefusal {
             BridgeRefusal::CreaseNotFlat { .. } => "crease_not_flat",
             BridgeRefusal::CreaseNotFolded { .. } => "crease_not_folded",
             BridgeRefusal::Io(refusal) => refusal.code(),
+            BridgeRefusal::Vertex(refusal) => refusal.code(),
         }
     }
 }
@@ -627,6 +657,10 @@ pub struct Applied {
     /// What the fold did; none for a turn or a rotation.
     pub report: Option<oristudio_fold::FoldReport>,
     pub summary: Summary,
+    /// What a vertex fold did, with its motion (plan D15); absent for every
+    /// other step.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vertex: Option<Box<oristudio_fold::VertexReport>>,
 }
 
 /// A fold's picture on the state it starts from (plan D12, per step).
