@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { WasmErrorEnvelope } from '../../engine/types';
 import { initialFoldReaderState, withFoldCursor, type FoldReaderState } from '../document/foldReaderState';
 import { sequenceOf, step, valleyAt } from '../document/foldSequence.fixtures';
-import { setFoldStepNote } from '../document/foldSequenceEdits';
+import { setFoldStartSide, setFoldStepNote } from '../document/foldSequenceEdits';
 import type { FoldSequenceDocument } from '../document/foldSequenceDocument';
 import { createFoldSession, MAX_RESTARTS, type FoldSession } from './foldSession';
 import {
@@ -188,6 +188,32 @@ describe('the Fold session: replay', () => {
     // The first load's step was folded, late, and never shown.
     expect(engine().log).toContain('step:valley@0.1');
     expect(published.some((state) => state.nodes.get('d')?.status === 'ok')).toBe(false);
+  });
+
+  it('holds no step at the old side once the start side changes, so nothing is folded from it', async () => {
+    const { session, source, runtime, snapshot, statuses, cursor, engine } = setup({
+      document: sequenceOf([step('a', null, valleyAt(0.5))]),
+      cursor: 'a',
+    });
+    session.retain();
+    await settle();
+    expect(cursor()).toMatchObject({ status: 'ok' });
+
+    // The start side changes while the engine is busy: every step keeps its id, and none its path.
+    runtime.hold();
+    const turned = setFoldStartSide(snapshot().sequence!, 'back');
+    source.set({ held: { document: turned, readOnlyRaw: null } });
+    expect(statuses()).toEqual({ a: 'pending' });
+    expect(cursor().state).toBeNull();
+    const committing = session.commitStep(valleyAt(0.25));
+    await runtime.open();
+
+    await expect(committing).resolves.toMatchObject({ status: 'committed' });
+    await settle();
+    // The second step folded from the first as it lands on the back, and was committed at that.
+    expect(Object.values(statuses())).toEqual(['ok', 'ok']);
+    const second = engine().trail(cursor().state!.id);
+    expect(second).toEqual(['sheet:square:back', 'valley@0.5', 'valley@0.25']);
   });
 
   it('marks a step broken, with the refusal, and what folds from it', async () => {

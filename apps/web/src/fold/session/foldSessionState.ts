@@ -270,8 +270,10 @@ export function foldSheetPath(paper: FoldPaper): FoldPathDigest {
 /**
  * Every node of `document` from the newest replay progress of its load.
  *
- * A step's path never changes under its id — commits append, and only a new
- * load or a change of paper (which empties the steps) can bring different
+ * Every path begins with the paper, so progress made for another paper holds
+ * nothing of this document: neither its sheet nor any step, whose ids a
+ * change of start side keeps. For the same paper, a step's path never
+ * changes under its id — commits append, and a change of shape empties the
  * steps — so a step the progress already holds keeps its status while a
  * replay of a newer edit runs, and a step it does not hold yet is pending.
  * The sheet is matched by its path, so it survives the first commit giving
@@ -283,9 +285,9 @@ export function deriveFoldSessionNodes(
   details: (state: FoldEngineStateHandle) => FoldStateDetails | undefined,
   previous: Pick<FoldSessionSnapshot, 'sheet' | 'nodes'> | null
 ): { sheet: FoldSessionNode; nodes: ReadonlyMap<string, FoldSessionNode> } {
-  const sheetReplay = progress && progress.sheet.path === foldSheetPath(document.paper) ? progress.sheet : null;
-  const sheet = sheetReplay ? sessionNode(sheetReplay, details, previous?.sheet) : FOLD_PENDING_NODE;
-  const steps = progress?.sequenceId === document.id ? progress.steps : null;
+  const samePaper = progress !== null && progress.sheet.path === foldSheetPath(document.paper);
+  const sheet = samePaper ? sessionNode(progress.sheet, details, previous?.sheet) : FOLD_PENDING_NODE;
+  const steps = samePaper && progress.sequenceId === document.id ? progress.steps : null;
   const nodes = new Map<string, FoldSessionNode>();
   let unchanged = previous !== null && previous.nodes.size === document.steps.length;
   for (const { id } of document.steps) {
