@@ -48,6 +48,7 @@ export function ToolHintWindow({
   inside = false,
   startsCollapsed = false,
   needsAttention = false,
+  height = 'default',
   children,
 }: {
   /**
@@ -89,6 +90,13 @@ export function ToolHintWindow({
    * preference; once the need passes, the window is as the preference says.
    */
   needsAttention?: boolean;
+  /**
+   * How tall the open window may grow: `default`, most of the viewport;
+   * `capped`, about a third of it, the body scrolling — for a tool whose
+   * work is on the canvas beneath, so the paper stays in view while the
+   * window is open (a phone's Fold canvas).
+   */
+  height?: 'default' | 'capped';
   children: ReactNode;
 }) {
   const [preferCollapsed, setPreferCollapsed] = useToolHintCollapsed(collapseKey, startsCollapsed);
@@ -125,6 +133,7 @@ export function ToolHintWindow({
       // Pinned by its bottom edge, so it grows and shrinks at the top.
       pin="bottom"
       data-collapsed={collapsed || undefined}
+      data-height={height === 'default' ? undefined : height}
       style={{ left: placement.left, bottom: placement.bottom, width: placement.width }}
       aria-label={ariaLabel}
       // Portaled out of the panel, so these no longer shield the window from the

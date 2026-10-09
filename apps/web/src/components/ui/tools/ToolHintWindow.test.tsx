@@ -78,6 +78,26 @@ describe('ToolHintWindow', () => {
     expect(windowEl()).toBeNull();
   });
 
+  it('keeps to its default height unless asked to cap it, as a phone canvas whose paper must stay in view does', () => {
+    render();
+    expect(windowEl()?.hasAttribute('data-height')).toBe(false);
+    act(() =>
+      root.render(
+        <ToolHintWindow
+          container={container}
+          collapseKey={STORAGE_KEYS.cpToolHintCollapsed}
+          title="Fold"
+          meta="Instructions"
+          ariaLabel="Tool options"
+          height="capped"
+        >
+          <p>Pick the layers</p>
+        </ToolHintWindow>
+      )
+    );
+    expect(windowEl()?.getAttribute('data-height')).toBe('capped');
+  });
+
   it('renders nothing while the viewport is laid out but not displayed', () => {
     render(viewportElement(0, 0));
     expect(windowEl()).toBeNull();
