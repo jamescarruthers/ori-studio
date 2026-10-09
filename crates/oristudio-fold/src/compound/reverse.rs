@@ -60,8 +60,9 @@ type Point = [f64; 2];
 pub const MAX_OPENINGS: usize = 64;
 
 /// The most ways to open a grown tip that a refusal tries before it offers
-/// to grow the tip.
-const MAX_FIX_PLANS: usize = 16;
+/// to grow the tip: each is a completion, and a refusal of a large model
+/// should not cost many.
+const MAX_FIX_PLANS: usize = 4;
 
 /// Which way the tip goes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -774,7 +775,8 @@ impl Tip {
             .collect()
     }
 
-    /// Whether the plan of this kind has at least one order.
+    /// Whether the plan of this kind has at least one order: a search that
+    /// stops at the first order of each component.
     fn lands(
         &self,
         state: &State,
@@ -782,9 +784,13 @@ impl Tip {
         kind: ReverseKind,
         limits: &CompletionLimits,
     ) -> bool {
+        let first = CompletionLimits {
+            per_component: 1,
+            ..*limits
+        };
         self.prepare(state, plan, kind)
             .ok()
-            .is_some_and(|prepared| prepared.complete(&[], limits).is_ok())
+            .is_some_and(|prepared| prepared.complete(&[], &first).is_ok())
     }
 
     /// The compound fold of a plan, through the pipeline's steps 2–7: each
