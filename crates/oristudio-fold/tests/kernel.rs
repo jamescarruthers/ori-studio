@@ -1,12 +1,11 @@
 //! The conversion to the CP kernel's model (plan D10), through the kernel's own
 //! FOLD writer and reader (`oristudio_cp::io::fold`) and its Oriedita fold.
 //!
-//! - Through the FOLD document the model comes back equal, coordinates to
-//!   the bit, on the classics, a dyadic path and seeded random paths over
-//!   square, rectangular and polygonal sheets.
-//! - Through FOLD text the segments, colours and hints come back equal; the
-//!   coordinates do to the bit on the dyadic path, and elsewhere within
-//!   `serde_json`'s default float parsing (see `oristudio_fold::kernel`).
+//! - Through the FOLD document and through FOLD text the model comes back
+//!   equal, coordinates to the bit, on the classics, a dyadic path and seeded
+//!   random paths over square, rectangular and polygonal sheets. Text is exact
+//!   because the workspace enables `serde_json`'s `float_roundtrip` (see
+//!   `oristudio_fold::kernel`).
 //! - The folding colours of every folded state fold to `Solved`.
 
 #![cfg(feature = "kernel")]
@@ -22,10 +21,6 @@ use oristudio_cp::model::CreasePatternModel;
 use oristudio_fold::{CreaseKind, KernelFrame, Letter, State, fold_cp_to_model};
 use paths::*;
 use treemaker_fold::Assignment;
-
-/// How far FOLD text may move a coordinate: a few ulps at the far edge of the
-/// widest test sheet (one ulp at 400 is 5.7e-14).
-const TEXT_DRIFT: f64 = 1e-12;
 
 /// The classics, the dyadic path, and four random paths per test sheet.
 fn test_paths() -> Vec<(String, Vec<State>)> {
@@ -49,27 +44,6 @@ fn document_round_trip(model: &CreasePatternModel) -> CreasePatternModel {
 fn text_round_trip(model: &CreasePatternModel) -> CreasePatternModel {
     let text = export_fold_json(model, None).unwrap_or_else(|e| panic!("{e}"));
     import_fold_json(&text).unwrap_or_else(|e| panic!("the kernel refuses its own FOLD: {e}"))
-}
-
-/// The largest coordinate difference, with the segments otherwise equal.
-fn drift(model: &CreasePatternModel, back: &CreasePatternModel) -> f64 {
-    assert_eq!(back.line_segments.len(), model.line_segments.len());
-    let mut worst = 0.0f64;
-    for (x, y) in model.line_segments.iter().zip(&back.line_segments) {
-        assert_eq!(
-            LineSegment {
-                a: y.a,
-                b: y.b,
-                ..*x
-            },
-            *y,
-            "everything but the coordinates"
-        );
-        for (p, q) in [(x.a, y.a), (x.b, y.b)] {
-            worst = worst.max((p.x - q.x).abs()).max((p.y - q.y).abs());
-        }
-    }
-    worst
 }
 
 /// One segment per crease, in id order, coloured by its kind, at the state's
@@ -102,33 +76,25 @@ fn assert_converts(state: &State) -> CreasePatternModel {
 #[test]
 fn the_kernel_fold_writer_and_reader_return_the_model_exactly() {
     let mut states = 0;
-    let mut worst_text = 0.0f64;
     for (name, path) in test_paths() {
         for state in &path {
             let model = assert_converts(state);
             assert_eq!(
                 document_round_trip(&model),
                 model,
-                "{name} step {}",
+                "{name} step {} through the document",
                 state.step()
             );
-            worst_text = worst_text.max(drift(&model, &text_round_trip(&model)));
+            assert_eq!(
+                text_round_trip(&model),
+                model,
+                "{name} step {} through text",
+                state.step()
+            );
             states += 1;
         }
     }
-    assert!(
-        worst_text <= TEXT_DRIFT,
-        "text moved a coordinate by {worst_text}"
-    );
     assert!(states > 150, "only {states} states");
-}
-
-#[test]
-fn a_dyadic_path_survives_fold_text_to_the_bit() {
-    for state in dyadic_path() {
-        let model = fold_cp_to_model(&state);
-        assert_eq!(text_round_trip(&model), model, "step {}", state.step());
-    }
 }
 
 /// Folded creases are written as M and V, precreases as U with the hint
