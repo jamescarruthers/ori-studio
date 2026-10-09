@@ -35,7 +35,7 @@ import { Button } from '../ui/Button';
 import { FieldRow } from '../ui/fieldRows';
 import { ActionList, type ActionListItem } from '../ui/ActionList';
 import { Notice } from '../ui/Notice';
-import { DiagramSheetThumbnail } from './DiagramSheetThumbnail';
+import { PatternThumbnail } from '../ui/PatternThumbnail';
 import styles from './DiagramStepPicture.module.css';
 
 /** The picture's verbs, by what they are about: its pattern, then the picture itself. */
@@ -156,7 +156,7 @@ export function DiagramStepPicture({
         <FieldRow label={t('panels:diagram.picture.pattern', 'Pattern')} kind="text">
           <span className={styles.pattern}>
             <span className={styles.patternThumb}>
-              <DiagramSheetThumbnail thumbnail={source.thumbnail} />
+              <PatternThumbnail thumbnail={source.thumbnail} />
             </span>
             <span data-link={capture ? 'capturing' : (link ?? undefined)}>
               {capture

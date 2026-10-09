@@ -7,7 +7,7 @@ import { FOLD_IMPORT_EXTENSIONS, foldImportFileSource, foldSampleSummary } from 
 import type { FoldImportRequest } from '../../../fold/io/foldImportFlow';
 import { getFileService } from '../../../platform/fileService';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
-import { DiagramSheetThumbnail } from '../../diagram/DiagramSheetThumbnail';
+import { PatternThumbnail } from '../../ui/PatternThumbnail';
 import styles from './FoldImportPicker.module.css';
 
 /** A sample's name, as the dialog and the menu say it. */
@@ -90,7 +90,7 @@ export function FoldImportPicker({
                 onClick={() => onRequest({ kind: 'sample', sample: sample.id })}
               >
                 <span className={styles.picture}>
-                  {summary.thumbnail && <DiagramSheetThumbnail thumbnail={summary.thumbnail} />}
+                  {summary.thumbnail && <PatternThumbnail thumbnail={summary.thumbnail} />}
                 </span>
                 <span className={styles.name}>{foldSampleName(t, sample.id)}</span>
                 <span className={styles.note}>

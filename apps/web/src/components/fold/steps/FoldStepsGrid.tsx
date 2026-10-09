@@ -21,7 +21,7 @@ import type { FoldSequenceView } from '../../../fold/sequence/useFoldSequenceVie
 import { foldStepSentence, type FoldSentenceStep } from '../../../fold/stepSentence';
 import { operationBadge } from '../../../fold/stepWords';
 import { useWorkspaceStore } from '../../../store/workspaceStore/store';
-import { DiagramSheetThumbnail } from '../../diagram/DiagramSheetThumbnail';
+import { PatternThumbnail } from '../../ui/PatternThumbnail';
 import { ContextMenu } from '../../ui/ContextMenu';
 import { StepCard, StepCardBadge, StepCardDeleteVerb, StepCardPlaceholder } from '../../ui/steps/StepCard';
 import { StepsGrid, type StepsGridCardProps } from '../../ui/steps/StepsGrid';
@@ -177,7 +177,7 @@ function FoldStepCard({
       onOpen={open}
     >
       {picture ? (
-        <DiagramSheetThumbnail thumbnail={picture} className={styles.picture} />
+        <PatternThumbnail thumbnail={picture} className={styles.picture} />
       ) : (
         <StepCardPlaceholder>
           {entry.status === 'locked' && <Lock size={18} aria-hidden="true" />}
