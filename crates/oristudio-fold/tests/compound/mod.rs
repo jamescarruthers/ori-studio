@@ -7,9 +7,10 @@
 
 use std::collections::BTreeMap;
 
+use oristudio_fold::random::{self, Rng};
 use oristudio_fold::{
-    ClosurePolicy, CreaseKind, Direction, EdgeId, FaceId, Letter, PlainFold, ReverseChoices,
-    ReverseFold, ReverseFolded, ReverseKind, ReverseOutcome, Seed, State,
+    ClosurePolicy, CreaseKind, Direction, EdgeId, FaceId, Letter, PlainFold, ReverseAnalysis,
+    ReverseChoices, ReverseFold, ReverseFolded, ReverseKind, ReverseOutcome, Seed, State,
 };
 
 use crate::support::{Point, assert_valid};
@@ -245,4 +246,61 @@ pub fn landed(state: &State, op: &ReverseFold, choices: &ReverseChoices) -> Reve
         Ok(ReverseOutcome::ChooseOrder(c)) => panic!("{op:?}: choose an order of {:?}", c.count()),
         Err(e) => panic!("{op:?}: {e} {e:?}"),
     }
+}
+
+/// Draw `i` of seed `seed` of the reverse spike's campaign
+/// (`campaign-reverse.mjs`): a random state of one to four plain folds of at
+/// most 60 faces, then up to six draws of a reverse fold until one has a tip
+/// whose every flap opens. Inside; a test asks for the other kind itself.
+pub fn reverse_case(seed: u64, i: u64) -> Option<(State, ReverseFold)> {
+    let mut rng = Rng::new(seed * 7777 + i);
+    let state = random::folded(&mut rng).ok()?;
+    if state.faces().len() > 60 {
+        return None;
+    }
+    for _ in 0..6 {
+        let Some(op) = random::reverse_fold(&state, &mut rng, 0.2) else {
+            continue;
+        };
+        let Ok(analysis) = state.analyse_reverse(&op) else {
+            continue;
+        };
+        if analysis.flaps.iter().all(|f| !f.openings.is_empty()) {
+            return Some((state, op));
+        }
+    }
+    None
+}
+
+/// Every choice of one order per component, given each component's count.
+pub fn picks(sizes: &[usize]) -> Vec<Vec<usize>> {
+    let mut picks = vec![Vec::new()];
+    for &n in sizes {
+        picks = picks
+            .into_iter()
+            .flat_map(|p: Vec<usize>| {
+                (0..n).map(move |k| {
+                    let mut q = p.clone();
+                    q.push(k);
+                    q
+                })
+            })
+            .collect();
+    }
+    picks
+}
+
+/// The choices that open the campaign's first flap its `k`-th way: none
+/// when it opens only one way.
+pub fn first_flap_opened(analysis: &ReverseAnalysis, k: usize) -> Option<ReverseChoices> {
+    let first = analysis.flaps.first()?;
+    let opening = first.openings.get(k)?;
+    Some(ReverseChoices {
+        openings: if first.openings.len() > 1 {
+            vec![opening.stored.clone()]
+        } else {
+            Vec::new()
+        },
+        order: None,
+    })
 }

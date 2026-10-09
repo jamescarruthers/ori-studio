@@ -13,7 +13,6 @@ mod support;
 use std::collections::BTreeSet;
 
 use oristudio_fold::complete::{complete, complete_around};
-use oristudio_fold::random::{self, Rng};
 use oristudio_fold::{
     Broken, BrokenWitness, ChoiceCount, CompletionLimits, CompoundRefused, CreasePatternInput,
     Direction, FaceId, Fix, FixedKind, FixedPair, FoldRefusal, ImportTarget, ImportedPattern,
@@ -679,27 +678,10 @@ fn stored_openings_replay_or_break() {
 
 // --- The campaign --------------------------------------------------------------
 
-/// Draw `i` of seed `seed` of the spike's campaign: a random state of one to
-/// four plain folds of at most 60 faces, then up to six draws of a reverse
-/// fold until one has a tip whose every flap opens.
+/// Draw `i` of seed `seed` of the spike's campaign
+/// ([`compound::reverse_case`]).
 fn campaign_case(seed: u64, i: u64) -> Option<(State, ReverseFold)> {
-    let mut rng = Rng::new(seed * 7777 + i);
-    let state = random::folded(&mut rng).ok()?;
-    if state.faces().len() > 60 {
-        return None;
-    }
-    for _ in 0..6 {
-        let Some(op) = random::reverse_fold(&state, &mut rng, 0.2) else {
-            continue;
-        };
-        let Ok(analysis) = state.analyse_reverse(&op) else {
-            continue;
-        };
-        if analysis.flaps.iter().all(|f| !f.openings.is_empty()) {
-            return Some((state, op));
-        }
-    }
-    None
+    compound::reverse_case(seed, i)
 }
 
 #[derive(Debug, Default)]
@@ -756,20 +738,7 @@ fn campaign(seeds: std::ops::RangeInclusive<u64>, setups: u64) -> Tally {
                             .iter()
                             .map(|c| c.orders.len())
                             .collect();
-                        let mut picks = vec![Vec::new()];
-                        for n in sizes {
-                            picks = picks
-                                .into_iter()
-                                .flat_map(|p: Vec<usize>| {
-                                    (0..n).map(move |k| {
-                                        let mut q = p.clone();
-                                        q.push(k);
-                                        q
-                                    })
-                                })
-                                .collect();
-                        }
-                        for pick in picks {
+                        for pick in compound::picks(&sizes) {
                             landed.push(
                                 choice
                                     .pick(&pick)
