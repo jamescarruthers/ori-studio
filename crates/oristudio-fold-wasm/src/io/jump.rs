@@ -42,6 +42,6 @@ pub fn order_json(state: &State) -> Result<String, IoRefusal> {
 
 impl From<IoRefusal> for Rejection {
     fn from(refusal: IoRefusal) -> Rejection {
-        Rejection::Refused(BridgeRefusal::Io(refusal))
+        BridgeRefusal::Io(refusal).into()
     }
 }

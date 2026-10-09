@@ -17,8 +17,8 @@
  */
 
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
+import { foldStateFingerprint } from '../document/foldDigest';
 import { invalidInput, requireHandle, requireObject } from './foldEngineCalls';
-import { foldEngineFingerprint } from './foldEngineFingerprint';
 import type {
   FoldExported,
   FoldImportFingerprinted,
@@ -110,7 +110,7 @@ export interface FoldEngineIoCalls {
 export function createFoldEngineIoCalls(engine: FoldWasmIoEngine): FoldEngineIoCalls {
   const fingerprinted = (landed: FoldEngineOutcome<FoldImportLanded>): FoldEngineOutcome<FoldImportFingerprinted> =>
     landed.status === 'ok'
-      ? { ...landed, fingerprint: foldEngineFingerprint(engine.canonical_keys(landed.state)) }
+      ? { ...landed, fingerprint: foldStateFingerprint({ keys: engine.canonical_keys(landed.state) }) }
       : landed;
   const target = (value: FoldImportTarget) => requireObject('target', value);
   const limits = (value: FoldImportLimits | undefined) =>

@@ -16,6 +16,7 @@ import {
   free_folded_figure,
   load_fold_file,
 } from '../../generated/oristudio-cp-wasm/oristudio_cp_wasm';
+import { SQUARE_PAPER } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from './foldEngineCalls';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from './foldEngineIoCalls';
 import { FOLD_SAMPLES, foldSampleSource, type FoldSampleId } from './foldEngineIoSamples';
@@ -126,7 +127,7 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
 
       // The document stores the adopted paper and the op; a replay lands
       // the step from that paper's sheet to the same fingerprint.
-      const sheet = landed(calls.sheet({ shape: opened.paper ?? { kind: 'square' } })).state;
+      const sheet = landed(calls.sheet({ shape: opened.paper ?? { kind: 'square' }, startSide: 'front' })).state;
       const replayed = landed(calls.step(sheet, picked.op));
       expect(replayed.fingerprint, id).toBe(picked.fingerprint);
       expect(replayed.report).toBeNull();
@@ -174,7 +175,7 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
 
   it('offers a true n of m after a state, and picks each order as its own step', async () => {
     const { calls, io } = await makeEngine();
-    const sheet = landed(calls.sheet({ shape: { kind: 'square' } })).state;
+    const sheet = landed(calls.sheet(SQUARE_PAPER)).state;
     const bytes = new TextEncoder().encode(PLUS);
     const opened = landed(io.importCp({ format: 'fold', bytes }, { kind: 'after', state: sheet }));
     expect(opened.paper).toBeNull();
@@ -199,7 +200,7 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
 
   it('exports a path as one FOLD file, and refuses or throws as the Rust side does', async () => {
     const { calls, io } = await makeEngine();
-    const sheet = landed(calls.sheet({ shape: { kind: 'square' } })).state;
+    const sheet = landed(calls.sheet(SQUARE_PAPER)).state;
     const book = landed(
       calls.step(sheet, {
         kind: 'valley',

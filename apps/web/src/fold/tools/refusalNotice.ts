@@ -198,6 +198,33 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'unsupported_op':
     case 'unexpected_choice':
     case 'root_missing':
+    // A stored Import CP step that no longer lands. The Import CP picker
+    // words its own refusals; these reach a notice only from a replay.
+    case 'import_not_finite':
+    case 'import_no_border':
+    case 'import_outline_loops':
+    case 'import_outline_invalid':
+    case 'import_shape_unsupported':
+    case 'import_shape_mismatch':
+    case 'import_crease_off_sheet':
+    case 'import_conflicting_creases':
+    case 'import_crease_not_chord':
+    case 'import_disconnected_creases':
+    case 'import_non_convex_face':
+    case 'import_not_flat_foldable':
+    case 'import_ambiguous_overlap':
+    case 'import_no_order':
+    case 'import_budget_exceeded':
+    case 'import_order_open':
+    case 'import_witness_not_in_face':
+    case 'import_relation_one_face':
+    case 'import_internal':
+    case 'import_unreadable':
+    case 'import_folded_form':
+    case 'import_stored_unreadable':
+    case 'import_order_broken':
+    case 'import_figure_incomplete':
+    case 'fold_export_too_large':
       return {
         title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
         text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),

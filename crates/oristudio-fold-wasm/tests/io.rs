@@ -803,7 +803,10 @@ fn a_stored_import_whose_witnesses_no_longer_resolve_is_broken() {
     let jump: Op = serde_json::from_value(op(&stored.cp_json, &stored.order_json))
         .unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(
-        bridge.analyse(flat, &jump).err().map(|e| e.code()),
+        bridge
+            .analyse(flat, &jump, &Choices::default())
+            .err()
+            .map(|e| e.code()),
         Some("invalid_input")
     );
 }

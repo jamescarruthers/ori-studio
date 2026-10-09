@@ -22,9 +22,10 @@
  * Pure types and constants: no React, no store, no wasm.
  */
 
-import type { FoldCpJumpOp } from '../document/foldSequenceDocument';
+import type { FoldStateFingerprint } from '../document/foldDigest';
+import type { FoldCpJumpOp, SheetPoint } from '../document/foldSequenceDocument';
 import type { ImportedCreasePatternFormat } from '../../lib/fileFormats';
-import type { FoldSheetPoint, FoldStateFingerprint, FoldStateSummary } from './foldEngineWire';
+import type { FoldStateSummary } from './foldEngineWire';
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -84,7 +85,7 @@ export interface FoldImportSummary {
   /** Folded creases whose letter the completion decides. */
   unknown_letters: number;
   /** The pattern's auxiliary lines: guides, never creases, for the caller to keep as marks or drop. */
-  guides: [FoldSheetPoint, FoldSheetPoint][];
+  guides: [SheetPoint, SheetPoint][];
   /** Segments, or pieces of them, that added nothing. */
   dropped: number;
 }
