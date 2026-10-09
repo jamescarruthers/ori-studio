@@ -32,8 +32,9 @@
 //!
 //! Tier 1 — ReferenceFinder's behavioural constants and heuristics, adopted
 //! as facts — stays in `oristudio-precrease`'s `constants`; nothing here
-//! depends on it. Lang's O6 same-side rule is tier 1 too: the Fold engine
-//! adopts it in its own crate (plan D9), never in these filters.
+//! depends on it. Which side of a fold moves is not a filter here either: an
+//! O6 root is kept with its points on either side, and the Fold engine
+//! decides who moves in its own crate (plan D9).
 //!
 //! # The axioms as alignment statements
 //!

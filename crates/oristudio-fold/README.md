@@ -95,8 +95,10 @@ The axioms on flat and folded forms (plan Phase 3):
 - `silhouette`: the union of the face images as the `Paper` the constructions
   fold: per-face runs along a line merged within the tolerance.
 - `axioms`: O1–O7 on anchors through `oristudio_geometry::construct`, each root
-  with its moving side from the axiom's movers; Lang's O6 same-side rule (a
-  tier 1 fact); replay to the candidate nearest the stored line.
+  with its moving side from the axiom's movers, or none for the step to name
+  (O1, O4, an O3 whose `m1` straddles the fold, an O6 whose points lie on
+  opposite sides: either side moves one point and the other's line); replay
+  to the candidate nearest the stored line.
 - `anchored`: a plain fold whose line is an axiom and its root, an existing
   crease or bend, or a free line through two sheet points; its side from the
   axiom, a `toward` point or the seed; the axiom's movers must be on layers
@@ -178,10 +180,12 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   rectangle, hundreds of roots each; every axiom on the book fold and on four
   stacked layers, both stacked copies of a mover landing on its target; axioms
   over the landmarks of random folded forms, each candidate stating its axiom
-  before the fold and each landed fold after it; Lang's rule; replay after an
-  inserted precrease and after a fold that takes one root's landing away; the
-  existing-crease mode unfolding and refolding; a mover left behind; and the
-  sliver remedy for an O4, a free line and an O2 (none).
+  before the fold and each landed fold after it; O6 roots with the points on
+  opposite sides folded from either side, on the flat square (every such root
+  of 4,000 random inputs) and on the book fold, with the mover check; replay
+  after an inserted precrease and after a fold that takes one root's landing
+  away; the existing-crease mode unfolding and refolding; a mover left behind;
+  and the sliver remedy for an O4, a free line and an O2 (none).
 
 `cargo test -p oristudio-fold --features kernel` adds:
 

@@ -16,11 +16,11 @@
 //! the moving side, so the step stores a side only when the seed does not
 //! imply one (plan D6).
 //!
-//! Once the fold's moving set is known, every feature the axiom carries must
-//! be on a layer that moves: a seed narrower than every layer can leave the
-//! mover's own layer in place, and the fold would not do what the axiom says
-//! (research §8). A sliver refusal comes with the exact lines the line's pins
-//! allow instead ([`crate::remedy`]).
+//! Once the fold's moving set is known, every feature the axiom carries from
+//! the moving side must be on a layer that moves: a seed narrower than every
+//! layer can leave the mover's own layer in place, and the fold would not do
+//! what the axiom says (research §8). A sliver refusal comes with the exact
+//! lines the line's pins allow instead ([`crate::remedy`]).
 
 use oristudio_geometry::Line;
 use serde::{Deserialize, Serialize};
@@ -203,20 +203,17 @@ pub(crate) enum Kind {
 impl State {
     /// The plain fold an anchored fold names here.
     pub fn resolve_anchored(&self, op: &AnchoredFold) -> Result<Resolved, LineRefusal> {
-        let (line, implied, movers, replay) = match &op.line {
+        let (line, implied, axiom, replay) = match &op.line {
             FoldLine::Axiom { axiom, root } => {
                 let replay = self.axiom_root(axiom, root)?;
-                let side = replay.candidate.side;
-                // Without an implied side the axiom carries nothing the side
-                // could leave behind.
-                let movers = if side.is_some() {
-                    axiom.movers()
-                } else {
-                    Vec::new()
-                };
-                (replay.candidate.line, side, movers, Some(replay))
+                (
+                    replay.candidate.line,
+                    replay.candidate.side,
+                    Some(axiom),
+                    Some(replay),
+                )
             }
-            FoldLine::Crease { segment } => (self.anchor_segment(segment)?, None, Vec::new(), None),
+            FoldLine::Crease { segment } => (self.anchor_segment(segment)?, None, None, None),
             FoldLine::Free { a, b } => {
                 let (ia, ib) = (self.anchor_point(*a)?, self.anchor_point(*b)?);
                 let distance = (ib[0] - ia[0]).hypot(ib[1] - ia[1]);
@@ -227,12 +224,18 @@ impl State {
                         b: *b,
                         distance,
                     })?;
-                (line, None, Vec::new(), None)
+                (line, None, None, None)
             }
         };
         let side = match implied {
             Some(side) => side,
             None => self.side_from_points(&line, op)?,
+        };
+        // What the axiom carries from the side that moves: all of its movers
+        // when it implies the side, an O6's point on the side the step chose.
+        let movers = match axiom {
+            Some(axiom) => self.movers_on(axiom, &line, side)?,
+            None => Vec::new(),
         };
         Ok(Resolved {
             fold: PlainFold {

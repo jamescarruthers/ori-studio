@@ -61,7 +61,9 @@ Lang derives the O6 locus as a cubic curve. Any line l2 meets it at most three t
 
 He also notes a physical-realizability restriction. He assumes the points move and the lines stay put. Then for each solution the two points must lie on the same side of the fold line, which holds everywhere on the curve except inside its loop. So **only the part of the curve outside the loop can be folded** [V].
 
-ReferenceFinder encodes the same idea: it records "who moves" from a same-side test (`refLineP2LP2L.cpp:221-243`). With `sVisibilityMatters` set, it also requires the moving feature to be on the paper's edge, because hidden alignments can't be checked on opaque paper [V].
+*Correction (Fold hardening review):* the restriction follows from that who-moves assumption, not from whether the fold exists. With the points on opposite sides, either side of the fold moves one point and the other point's line, and both alignments hold in the folded state (a probe folded all 123 such roots of 4,000 random O6 inputs from both sides). The Fold engine keeps these roots and leaves the side to the step (`crates/oristudio-fold/src/axioms.rs`).
+
+ReferenceFinder encodes the same idea: it records "who moves" from a same-side test (`refLineP2LP2L.cpp:221-243`). It does not drop the opposite-side roots; it records that one point and one line move (`WHOMOVES_P1L2` or `WHOMOVES_P2L1`). With `sVisibilityMatters` set, it also requires the moving feature to be on the paper's edge, because hidden alignments can't be checked on opaque paper [V].
 
 RF solves the cubic with Cardano's formula (lines 133-166) [V]. That is numerically fragile near double roots; a robust solver (trig form or companion matrix, then Newton polishing) is preferable [I].
 

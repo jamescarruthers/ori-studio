@@ -1,6 +1,7 @@
 //! The axioms on flat and folded forms (plan Phase 3): each axiom on a flat
 //! sheet against `oristudio-geometry`'s constructions on the rectangle; each
-//! on folded forms with stacked references; Lang's O6 rule; replay of a stored
+//! on folded forms with stacked references; O6 with its points on opposite
+//! sides of the fold, from either side; replay of a stored
 //! root after an inserted earlier step; the existing-crease line mode; the
 //! mover check; and the sliver remedy.
 
@@ -209,7 +210,8 @@ impl Rng {
 }
 
 /// The sides an axiom's root moves, worked out from the definitions alone:
-/// `None` when the root is dropped (a mover on the line, or Lang's O6 rule).
+/// `None` when the root is dropped (a mover on the line), `Some(None)` when
+/// the step chooses (an O6 with its points on opposite sides among them).
 fn expected_side(axiom: &Axiom, line: &Line) -> Option<Option<Side>> {
     let of = |p: Point| Side::of_point(line, p);
     match axiom {
@@ -221,7 +223,7 @@ fn expected_side(axiom: &Axiom, line: &Line) -> Option<Option<Side>> {
             (Some(s), Some(t)) => Some((s == t).then_some(s)),
         },
         Axiom::O6 { p1, p2, .. } => match (of(*p1), of(*p2)) {
-            (Some(s), Some(t)) if s == t => Some(Some(s)),
+            (Some(s), Some(t)) => Some((s == t).then_some(s)),
             _ => None,
         },
     }
@@ -229,8 +231,7 @@ fn expected_side(axiom: &Axiom, line: &Line) -> Option<Option<Side>> {
 
 /// On a flat sheet — a square, a rectangle, a square with precreases — the
 /// model frame is the sheet frame, and every axiom's candidates are the
-/// rectangle's construction roots, less those who-moves and Lang's rule
-/// drop.
+/// rectangle's construction roots, less those who-moves drops.
 #[test]
 fn each_axiom_on_a_flat_sheet_is_the_construction_on_the_rectangle() {
     let precreased = {
@@ -252,6 +253,7 @@ fn each_axiom_on_a_flat_sheet_is_the_construction_on_the_rectangle() {
     ];
     let mut compared = [0usize; 8];
     let mut dropped = [0usize; 8];
+    let mut opposite = 0usize;
     let mut rng = Rng(0x00a1_c0de);
     for (state, rectangle) in &cases {
         assert!(state.faces().len() == 1 || state.faces().len() == 4);
@@ -279,6 +281,7 @@ fn each_axiom_on_a_flat_sheet_is_the_construction_on_the_rectangle() {
                     Some(c) => {
                         assert_eq!(Some(c.side), side, "{axiom:?} root {r:?}");
                         compared[number as usize] += 1;
+                        opposite += usize::from(number == 6 && c.side.is_none());
                     }
                     None => {
                         assert_eq!(side, None, "{axiom:?} dropped {r:?}");
@@ -288,20 +291,22 @@ fn each_axiom_on_a_flat_sheet_is_the_construction_on_the_rectangle() {
             }
         }
     }
-    // About 110 to 430 roots per axiom on 2026-10-08, and about 100 O6
-    // roots dropped by Lang's rule.
+    // On 2026-10-08, about 110 to 430 roots per axiom, and no O6 root
+    // dropped: a random point is never on a root's line.
     for (number, &count) in compared.iter().enumerate().skip(1) {
         assert!(count >= 100, "O{number}: {count} roots compared");
     }
-    assert!(dropped[6] > 0, "Lang's rule never fired");
+    assert!(opposite > 0, "no O6 root with its points on opposite sides");
+    assert_eq!(dropped[6], 0);
 }
 
-/// Lang's O6 rule on the flat square: (0, 0) onto the top edge and (1, 1)
-/// onto the bottom has two folds, the midline and the anti-diagonal, and
-/// both leave the two points on opposite sides; a pair on one side keeps its
-/// root.
+/// An O6 whose points lie on opposite sides of a root keeps the root and
+/// leaves the side to the step: (0, 0) onto the top edge and (1, 1) onto the
+/// bottom has two folds, the midline and the anti-diagonal. Folding either
+/// side lands both alignments — the moving point on its line, and the moving
+/// line through the point that stays. A pair on one side keeps its side.
 #[test]
-fn lang_rule_keeps_only_o6_roots_that_move_both_points() {
+fn o6_roots_with_the_points_on_opposite_sides_leave_the_side_to_the_step() {
     let s = flat(Sheet::square());
     let opposite = Axiom::O6 {
         p1: [0.0, 0.0],
@@ -309,14 +314,38 @@ fn lang_rule_keeps_only_o6_roots_that_move_both_points() {
         p2: [1.0, 1.0],
         m2: seg([0.0, 0.0], [1.0, 0.0]),
     };
-    let construction = s
-        .axiom_construction(&opposite)
-        .unwrap_or_else(|e| panic!("{e}"));
-    assert!(construction.lines(&s.silhouette()).len() >= 2);
-    assert!(candidates(&s, &opposite).is_empty());
+    let got = candidates(&s, &opposite);
+    for line in [y_eq(0.5), through([1.0, 0.0], [0.0, 1.0])] {
+        let c = find(&got, &line);
+        assert_eq!(c.side, None, "{c:?}");
+        // Without a side the step must name one.
+        let op = AnchoredFold::new(
+            FoldLine::Axiom {
+                axiom: opposite.clone(),
+                root: c.line,
+            },
+            Valley,
+        );
+        assert_eq!(
+            s.fold_anchored(&op).err().map(|e| e.code()),
+            Some("no_side")
+        );
+        for toward in [[0.0, 0.0], [1.0, 1.0]] {
+            let landed = along(&s, &opposite, &c.line, Some(toward));
+            // (0, 0) meets the top edge's point above or across it, and
+            // (1, 1) the bottom edge's.
+            let (r1, r2) = (
+                line.reflect_point([0.0, 0.0]),
+                line.reflect_point([1.0, 1.0]),
+            );
+            assert!(near(image(&landed, [0.0, 0.0]), image(&landed, r1)));
+            assert!(near(image(&landed, [1.0, 1.0]), image(&landed, r2)));
+        }
+    }
     assert_eq!(
-        s.axiom_root(&opposite, &y_eq(0.5)),
-        Err(LineRefusal::NoRoot { axiom: 6 })
+        s.axiom_root(&opposite, &y_eq(0.5))
+            .map(|r| r.candidate.side),
+        Ok(None)
     );
 
     // (0, 0) onto x = 1 and (0, 0.5) onto x + y = 1.5: x = 0.5 takes both,
@@ -464,15 +493,141 @@ fn each_axiom_on_a_folded_form_with_stacked_references() {
     }
 
     // O6 on the book fold: (0, 0) onto the bend and (0.5, 1) onto x = 0 are
-    // only taken by folds that leave the two on opposite sides.
+    // only taken by folds that leave the two on opposite sides, so the step
+    // names the side.
     let o6 = Axiom::O6 {
         p1: [0.0, 0.0],
         m1: bend,
         p2: [0.5, 1.0],
         m2: seg([0.0, 0.0], [0.0, 1.0]),
     };
-    assert!(!silhouette_roots(&o6).is_empty());
-    assert!(candidates(&s, &o6).is_empty());
+    let got = candidates(&s, &o6);
+    consistent(&o6, &got);
+    assert!(!got.is_empty());
+    assert!(got.iter().all(|c| c.side.is_none()), "{got:?}");
+}
+
+/// O6 on the book fold with its points on opposite sides of x + y = 0.3,
+/// which cuts the corner at (0, 0) off both layers and keeps clear of the
+/// bend. `p1`, the top layer's copy of (0.12, 0.05), reaches x = 0.25 at
+/// (0.25, 0.18); `p2` at (0.2, 0.15) is reached by y = 0.1, the top layer's
+/// segment in the corner. Folding the corner lands `p1` on x = 0.25 and
+/// brings y = 0.1 through `p2`; folding the rest lands `p2` on y = 0.1 and
+/// brings x = 0.25 through `p1`. A seed that moves only the top layer carries
+/// the top layer's `p1`, and refuses the bottom layer's.
+#[test]
+fn an_o6_with_its_points_on_opposite_sides_lands_from_either_side_on_a_folded_form() {
+    let s = book();
+    let corner = through([0.3, 0.0], [0.0, 0.3]);
+    let o6 = |p1: Point| Axiom::O6 {
+        p1,
+        m1: seg([0.25, 0.1], [0.25, 0.4]),
+        p2: [0.2, 0.15],
+        m2: seg([0.97, 0.1], [0.83, 0.1]),
+    };
+    let top = o6([0.88, 0.05]);
+    let c = find(&candidates(&s, &top), &corner);
+    assert_eq!(c.side, None);
+    assert!(near(image(&s, [0.88, 0.05]), [0.12, 0.05]));
+
+    // The corner moves: p1 onto x = 0.25, and y = 0.1 through p2.
+    let landed = along(&s, &top, &c.line, Some([0.88, 0.05]));
+    assert!(near(image(&landed, [0.88, 0.05]), [0.25, 0.18]));
+    assert!(near(image(&landed, [0.2, 0.15]), [0.2, 0.15]));
+    let moved = line_of(&landed, &seg([0.97, 0.1], [0.83, 0.1]));
+    assert!(on(&moved, [0.2, 0.15], 1e-9), "{moved:?}");
+
+    // The rest moves: p2 onto y = 0.1, and x = 0.25 through p1.
+    let landed = along(&s, &top, &c.line, Some([0.2, 0.15]));
+    assert!(near(image(&landed, [0.2, 0.15]), [0.15, 0.1]));
+    assert!(near(image(&landed, [0.88, 0.05]), [0.12, 0.05]));
+    let moved = line_of(&landed, &seg([0.25, 0.1], [0.25, 0.4]));
+    assert!(on(&moved, [0.12, 0.05], 1e-9), "{moved:?}");
+
+    // Only the top layer's corner moves: its p1 goes with it, the bottom
+    // layer's stays behind.
+    let top_layer = |axiom: Axiom| {
+        AnchoredFold::new(
+            FoldLine::Axiom {
+                axiom,
+                root: c.line,
+            },
+            Valley,
+        )
+        .with_seed(Seed::Depth {
+            at: [0.95, 0.05],
+            layers: 1,
+        })
+    };
+    let landed = s
+        .fold_anchored(&top_layer(top))
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_valid(&landed.state);
+    assert_eq!(landed.report.analysis.moving.len(), 1);
+    assert!(near(image(&landed.state, [0.88, 0.05]), [0.25, 0.18]));
+    assert_eq!(
+        s.fold_anchored(&top_layer(o6([0.12, 0.05]))).err(),
+        Some(AnchoredRefused::Line(LineRefusal::MoverStays {
+            point: [0.12, 0.05]
+        }))
+    );
+}
+
+/// Every O6 root on the flat square with its points on opposite sides, over
+/// random points and the sheet's edges as lines (the review's probe, seed
+/// 7): each is a candidate that leaves the side to the step, and folding
+/// either side brings each point together with the point of its line it
+/// reaches. On the flat square the sheet is the model frame, so that point is
+/// the point's reflection.
+#[test]
+fn opposite_side_o6_roots_on_the_flat_square_fold_from_either_side() {
+    let s = flat(Sheet::square());
+    let edges = [
+        seg([0.0, 0.0], [1.0, 0.0]),
+        seg([1.0, 0.0], [1.0, 1.0]),
+        seg([1.0, 1.0], [0.0, 1.0]),
+        seg([0.0, 1.0], [0.0, 0.0]),
+    ];
+    let mut rng = oristudio_fold::random::Rng::new(7);
+    let (mut opposite, mut folded) = (0, 0);
+    for _ in 0..4000 {
+        let p1 = [rng.next_f64(), rng.next_f64()];
+        let p2 = [rng.next_f64(), rng.next_f64()];
+        let (m1, m2) = (edges[rng.below(4)], edges[rng.below(4)]);
+        let axiom = Axiom::O6 { p1, m1, p2, m2 };
+        let Ok(construction) = s.axiom_construction(&axiom) else {
+            continue;
+        };
+        let got = candidates(&s, &axiom);
+        for root in construction.lines(&s.silhouette()) {
+            let sides = [p1, p2].map(|p| Side::of_point(&root.line, p));
+            let [Some(a), Some(b)] = sides else {
+                continue;
+            };
+            if a == b {
+                continue;
+            }
+            opposite += 1;
+            let c = find(&got, &root.line);
+            assert_eq!(c.side, None, "{axiom:?} {c:?}");
+            let (r1, r2) = (root.line.reflect_point(p1), root.line.reflect_point(p2));
+            for toward in [p1, p2] {
+                let landed = along(&s, &axiom, &c.line, Some(toward));
+                for (p, r) in [(p1, r1), (p2, r2)] {
+                    let (i, j) = (image(&landed, p), image(&landed, r));
+                    assert!(
+                        (i[0] - j[0]).hypot(i[1] - j[1]) < 1e-9,
+                        "{axiom:?} along {:?} toward {toward:?}: {p:?} at {i:?}, {r:?} at {j:?}",
+                        c.line
+                    );
+                }
+                folded += 1;
+            }
+        }
+    }
+    // 123 such roots on 2026-10-08, each folded from both sides.
+    assert!(opposite >= 100, "{opposite} opposite-side roots");
+    assert_eq!(folded, 2 * opposite);
 }
 
 /// O6 on four stacked layers: the corner (0, 0) onto the vertical bend and
@@ -947,15 +1102,18 @@ fn landmark_segment(l: &Landmarks, rng: &mut Rng) -> SheetSegment {
     l.segments[rng.below(l.segments.len())].sheet
 }
 
-/// An O6 with a same-side root to find. Drawn from landmarks alone, an O6
-/// almost never has one: when `p1` lies on `m2` and `p2` on `m1`, as
-/// vertices on edges often do, the bisector of `p1 p2` is a root with the two
-/// points on opposite sides — an O2 in disguise, which Lang's rule drops. So
-/// take two landmark points on one side of a line between two others, and
-/// aim each at a short segment through its reflection, on the layer seen
-/// there.
+/// An O6 with a root through a fold between landmarks. Drawn from landmarks
+/// alone, an O6 almost never has a root with both points on one side: when
+/// `p1` lies on `m2` and `p2` on `m1`, as vertices on edges often do, the
+/// bisector of `p1 p2` is a root with the two points on opposite sides — an
+/// O2 in disguise. So take two landmark points at least 0.05 off a line
+/// between two others, on one side of it or on opposite sides, and aim each
+/// at a short segment through its reflection, on the layer seen there. Each
+/// segment lies whole on the side its point does not: when only the other
+/// point moves, it moves with it and carries its line through the point that
+/// stays.
 fn o6_through_a_fold(s: &State, l: &Landmarks, rng: &mut Rng) -> Option<Axiom> {
-    (0..40).find_map(|_| o6_attempt(s, l, rng))
+    (0..100).find_map(|_| o6_attempt(s, l, rng))
 }
 
 fn o6_attempt(s: &State, l: &Landmarks, rng: &mut Rng) -> Option<Axiom> {
@@ -966,8 +1124,10 @@ fn o6_attempt(s: &State, l: &Landmarks, rng: &mut Rng) -> Option<Axiom> {
     let fold = Line::perpendicular_bisector(a, b)?;
     let (p1, p2) = (landmark_point(l, rng), landmark_point(l, rng));
     let (i1, i2) = (image(s, p1), image(s, p2));
-    let (s1, s2) = (Side::of_point(&fold, i1)?, Side::of_point(&fold, i2)?);
-    if s1 != s2 || (i1[0] - i2[0]).hypot(i1[1] - i2[1]) < 0.05 {
+    if fold.distance_to_point(i1) < 0.05
+        || fold.distance_to_point(i2) < 0.05
+        || (i1[0] - i2[0]).hypot(i1[1] - i2[1]) < 0.05
+    {
         return None;
     }
     let mut aim = |p: Point| {
@@ -1048,9 +1208,38 @@ fn landed_as_stated(before: &State, after: &State, axiom: &Axiom, tol: f64) -> b
         }
         Axiom::O4 { p, .. } => stays(p),
         Axiom::O5 { pivot, p, m1 } => stays(pivot) && lands_on(p, m1),
-        Axiom::O6 { p1, m1, p2, m2 } => lands_on(p1, m1) && lands_on(p2, m2),
+        // Each point lands on its line, or stays while its line comes to it:
+        // with the points on opposite sides, one point and the other's line
+        // move. A segment that moved whole carries its line through the
+        // point; one the fold left in place or split names the line only
+        // before the fold, where `states` holds it.
+        Axiom::O6 { p1, m1, p2, m2 } => [(p1, m1), (p2, m2)].iter().all(|&(p, m)| {
+            if !stays(p) {
+                return lands_on(p, m);
+            }
+            let moved = !stays(&m.a) && !stays(&m.b);
+            !moved
+                || after
+                    .resolve_segment(m)
+                    .is_some_and(|line| on(&line, now(p), tol))
+        }),
         Axiom::O7 { p, m1, .. } => lands_on(p, m1),
     }
+}
+
+/// Whether an O6 fold moved one point and the other's segment whole: what
+/// [`landed_as_stated`] checks in the folded state when the points were on
+/// opposite sides.
+fn moved_one_point_and_a_line(before: &State, after: &State, axiom: &Axiom) -> bool {
+    let Axiom::O6 { p1, m1, p2, m2 } = axiom else {
+        return false;
+    };
+    let moved = |q: &Point| {
+        let (a, b) = (image(before, *q), image(after, *q));
+        (a[0] - b[0]).hypot(a[1] - b[1]) > 1e-5
+    };
+    let whole = |m: &SheetSegment| moved(&m.a) && moved(&m.b);
+    (moved(p1) && !moved(p2) && whole(m2)) || (moved(p2) && !moved(p1) && whole(m1))
 }
 
 /// Axioms over the landmarks of random folded forms — every input a
@@ -1061,12 +1250,13 @@ fn landed_as_stated(before: &State, after: &State, axiom: &Axiom, tol: f64) -> b
 fn axioms_over_landmarks_hold_after_the_fold_on_random_forms() {
     let mut rng = Rng(0x0f01_d5ee);
     let mut landed = [0usize; 8];
+    let mut opposite = 0usize;
     let mut refused: BTreeMap<&'static str, usize> = BTreeMap::new();
     for form in 0..36 {
         let s = random_form(&mut rng, 1 + form % 3);
         let l = s.landmarks(&[]);
         for _ in 0..60 {
-            // O6 drawn three times as often: its same-side roots are rare.
+            // O6 drawn three times as often: an O6 with a root takes a search.
             let number = [1, 2, 3, 4, 5, 6, 6, 6, 7][rng.below(9)];
             let mut point = || landmark_point(&l, &mut rng);
             let axiom = match number {
@@ -1135,15 +1325,21 @@ fn axioms_over_landmarks_hold_after_the_fold_on_random_forms() {
                             f.report.analysis.line
                         );
                         landed[number as usize] += 1;
+                        opposite += usize::from(moved_one_point_and_a_line(&s, &f.state, &axiom));
                     }
                     Err(e) => *refused.entry(e.code()).or_default() += 1,
                 }
             }
         }
     }
-    // On 2026-10-08: 39 to 179 landed folds per axiom; the 281 refusals were
-    // all "nothing stays" (lines along the folded form's edges).
+    // On 2026-10-08: 32 to 179 landed folds per axiom, 21 of the 69 O6 folds
+    // moving one point and the other's line; the 255 refusals were all
+    // "nothing stays" (lines along the folded form's edges).
     for (number, &count) in landed.iter().enumerate().skip(1) {
         assert!(count >= 20, "O{number}: {count} landed ({refused:?})");
     }
+    assert!(
+        opposite >= 10,
+        "{opposite} O6 folds moved one point and the other's line"
+    );
 }
