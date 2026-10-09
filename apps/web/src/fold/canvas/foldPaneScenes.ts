@@ -102,14 +102,18 @@ export function foldedPaneScene(scene: FoldScene, display: FoldPaneDisplay, offs
 /**
  * How the folded pane pictures each state of a sheet (`FoldStepPane`): at the
  * state's own display offset, which a turn changes, painted as the pane
- * paints it. A step's motion pictures its parent and itself with this, so its
- * first frame is the pane's picture of the parent, its last the pane's of the
- * step, and a turn rolls in place rather than from a sheet away.
+ * paints it under its display switches. A step's motion pictures its parent
+ * and itself with this, so its first frame is the pane's picture of the
+ * parent and its last the pane's of the step — a turn starts where the
+ * parent lies, and with Precreases off no frame between draws one.
  */
-export function foldedPanePictures(sheet: readonly (readonly [number, number])[]): FoldStepPane {
+export function foldedPanePictures(
+  sheet: readonly (readonly [number, number])[],
+  display: FoldPaneDisplay = FOLD_PANE_DISPLAY_DEFAULT
+): FoldStepPane {
   return (scene) => {
-    const place = foldedPanePlacement(foldedDisplayOffset(scene, sheet));
-    return { place, scene: foldedFlatPaperScene(scene, place) };
+    const offset = foldedDisplayOffset(scene, sheet);
+    return { place: foldedPanePlacement(offset), scene: foldedPaneScene(scene, display, offset) };
   };
 }
 

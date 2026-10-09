@@ -63,6 +63,45 @@ function faceBounds(scene: PaperScene): Box {
 const apart = (a: Box, b: Box) =>
   Math.max(Math.abs(a.minX - b.minX), Math.abs(a.maxX - b.maxX), Math.abs(a.minY - b.minY), Math.abs(a.maxY - b.maxY));
 
+/** A flat crease drawn in a picture: an aux line, or a face outlined in the aux pen. */
+const flatCreases = (scene: PaperScene) =>
+  scene.items.filter((item) => (item.kind === 'line' && item.role === 'aux') || (item.kind === 'face' && item.outline === 'aux'))
+    .length;
+
+describe.skipIf(!available)('a step played on the folded pane with Precreases off', () => {
+  it('draws no precrease in any frame, as the pane at rest draws none', async () => {
+    const wasm = await import('../../generated/oristudio-fold-wasm/oristudio_fold_wasm');
+    wasm.initSync({ module: readFileSync(WASM) });
+    const calls = createFoldEngineCalls(new wasm.FoldEngine());
+    const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
+    const DIAGONAL: FoldOp = {
+      kind: 'precrease',
+      direction: 'valley',
+      line: { via: 'free', through: [[0, 0], [1, 1]] },
+      moving: [0.75, 0.25],
+      seed: { scope: 'all' },
+    };
+    const parent = landed(calls.step(sheet, DIAGONAL)).state;
+    const book = landed(calls.step(parent, BOOK));
+    const input = {
+      op: BOOK,
+      before: calls.scene(parent),
+      after: calls.scene(book.state),
+      action: landed(calls.stepAction(book.state)).action,
+      report: book.report,
+    };
+    const shown = foldStepMotion(input, foldedPanePictures(SHEET));
+    expect(shown.motion.kind).toBe('hinge');
+    // The precrease is there to hide: drawn with the switch on.
+    expect(flatCreases(foldStepFrameAt(shown, 0.5).scene)).toBeGreaterThan(0);
+
+    const hidden = foldStepMotion(input, foldedPanePictures(SHEET, { ...FOLD_PANE_DISPLAY_DEFAULT, precreases: false }));
+    for (let k = 0; k <= 20; k += 1) {
+      expect(flatCreases(foldStepFrameAt(hidden, k / 20).scene), `at ${k / 20}`).toBe(0);
+    }
+  });
+});
+
 describe.skipIf(!available)('a turn played on the folded pane', () => {
   it.each([
     ['turned over', { kind: 'turn', axis: 'vertical' } as FoldOp],

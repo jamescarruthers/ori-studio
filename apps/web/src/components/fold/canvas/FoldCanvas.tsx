@@ -121,7 +121,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const framingKey = `${sequenceId}:${sheetKey}`;
 
   // --- The step on screen played from its parent, on the folded pane, with its transport on the bar.
-  const playback = useFoldPanePlayback(session.cursorId, summary?.sheet ?? null);
+  const playback = useFoldPanePlayback(session.cursorId, summary?.sheet ?? null, display);
 
   // --- The tool's feedback on each pane.
   const freeFrom = toolState.lineMode === 'free' && toolState.picks[0]?.kind === 'free' && toolState.picks.length === 1 ? toolState.picks[0].scene : null;
