@@ -1555,6 +1555,20 @@ export const ANALYTICS_EVENTS = {
   exploriResultOpened: 'explori result opened',
   exploriSentToEdit: 'explori sent to edit',
   designSentToEdit: 'design sent to edit',
+  /**
+   * A crease pattern became a step of a Fold sequence (plan D16): a file, a
+   * sample, or Edit's folded figure, by the step's closed `origin` — never a
+   * name, a crease or an order. Whether Import CP is how people start in
+   * Fold, and from where.
+   */
+  foldCpImported: 'fold cp imported',
+  /**
+   * A Fold sequence's crease pattern reached the Edit canvas, by `variant`:
+   * the plain one, or with its precreases as auxiliary lines. Its toolbar
+   * button calls the hand-off directly, so the menu chokepoint sees only the
+   * menu's.
+   */
+  foldSequenceSentToEdit: 'fold sequence sent to edit',
   themeChanged: 'theme changed',
   localeChanged: 'locale changed',
   landingViewed: 'landing viewed',

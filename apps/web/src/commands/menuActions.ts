@@ -33,6 +33,7 @@ import type {
   WorkspaceState,
 } from '../store/workspaceStore/types';
 import type { EditingContext } from '../workspaces/editingContext';
+import type { FoldIoCommand } from '../fold/io/foldIoCommands';
 import type {
 } from '../engine/oristudioBpTypes';
 import type { CreaseExportOptions } from '../lib/creaseExport';
@@ -147,6 +148,18 @@ export const MENU_ACTION_IDS = [
   'cp.setActiveCreaseAngle',
   'insert.image',
   'insert.text',
+  // Fold's imports and hand-offs (plan D16, D10, D11): `fold.` and the action
+  // catalog's command id (`fold/foldActions.ts`) where it has one.
+  'fold.import-cp',
+  'fold.import-sample-preliminary-base',
+  'fold.import-sample-waterbomb-base',
+  'fold.import-sample-pleat-in-eighths',
+  'fold.start-from-edit-folded-figure',
+  'fold.send-to-edit',
+  'fold.send-to-edit-precreases-as-aux',
+  'fold.export-fold',
+  'fold.export-step',
+  'fold.export-steps',
   'help.about',
   'help.checkForUpdates',
 ] as const;
@@ -382,6 +395,24 @@ const VIEW_PANEL_ACTIONS: Partial<Record<MenuActionId, string>> = {
   'view.properties': 'cp-properties',
 };
 
+/**
+ * Fold's imports and hand-offs, by the verb each runs (`fold/io/foldIoCommands`,
+ * loaded when one is first asked for: the engine bridge and the dialogs behind
+ * it stay out of the shell's chunk).
+ */
+const FOLD_IO_ACTIONS: Partial<Record<MenuActionId, FoldIoCommand>> = {
+  'fold.import-cp': { kind: 'import-cp' },
+  'fold.import-sample-preliminary-base': { kind: 'import-sample', sample: 'preliminary-base' },
+  'fold.import-sample-waterbomb-base': { kind: 'import-sample', sample: 'waterbomb-base' },
+  'fold.import-sample-pleat-in-eighths': { kind: 'import-sample', sample: 'pleat-in-eighths' },
+  'fold.start-from-edit-folded-figure': { kind: 'start-from-edit-folded-figure' },
+  'fold.send-to-edit': { kind: 'send-to-edit', variant: 'plain' },
+  'fold.send-to-edit-precreases-as-aux': { kind: 'send-to-edit', variant: 'precreases-as-aux' },
+  'fold.export-fold': { kind: 'export-fold' },
+  'fold.export-step': { kind: 'export-steps', scope: 'this' },
+  'fold.export-steps': { kind: 'export-steps', scope: 'all' },
+};
+
 export function isMenuActionId(id: string): id is MenuActionId {
   return (MENU_ACTION_IDS as readonly string[]).includes(id);
 }
@@ -536,6 +567,11 @@ export function createMenuActionHandler(deps: MenuActionDependencies) {
       deps.layout.activatePanel(viewPanel);
       showWorkspace();
       return true;
+    }
+
+    const foldIo = FOLD_IO_ACTIONS[id];
+    if (foldIo) {
+      return (await import('../fold/io/foldIoCommands')).runFoldIoCommand(foldIo, deps.fileService);
     }
 
     switch (id) {

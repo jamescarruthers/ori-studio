@@ -16,6 +16,8 @@ import {
   historyCountForContext,
 } from './capabilities';
 import { hasProjectDocument as selectHasProjectDocument } from './projectDocuments';
+import { foldStartingFigure } from '../../fold/io/foldEditFigure';
+import { shownFoldSequence } from './foldState';
 import { useWorkspaceStore } from './store';
 
 export function useWorkspaceCapabilities() {
@@ -83,6 +85,11 @@ export function useWorkspaceCapabilities() {
   const activeDesign = useWorkspaceStore(activeDesignTab);
   const clipboard = useWorkspaceStore((state) => state.clipboard);
   const selection = useWorkspaceStore((state) => selectSelection(state));
+  // Fold's imports and hand-offs: primitives, so an edit that changes none re-renders nothing.
+  const foldStepCount = useWorkspaceStore((state) => shownFoldSequence(state)?.document.steps.length ?? 0);
+  const foldPolygon = useWorkspaceStore((state) => shownFoldSequence(state)?.document.paper.shape.kind === 'polygon');
+  const foldReadOnly = useWorkspaceStore((state) => shownFoldSequence(state)?.readOnlyRaw != null);
+  const hasFoldStartingFigure = useWorkspaceStore((state) => foldStartingFigure(state) !== null);
   const historyPastCount = historyCountForContext(
     activeEditingContext,
     activeDesign,
@@ -138,10 +145,16 @@ export function useWorkspaceCapabilities() {
           historyFutureCount,
           clipboard,
           selection,
+          foldSequence: { stepCount: foldStepCount, polygon: foldPolygon, readOnly: foldReadOnly },
+          hasFoldStartingFigure,
         },
         t
       ),
     [
+      foldStepCount,
+      foldPolygon,
+      foldReadOnly,
+      hasFoldStartingFigure,
       clipboard,
       creaseCount,
       activeEditingContext,
