@@ -434,8 +434,12 @@ fn rounded(value: Value) -> Value {
                 .map_or(Value::Null, Value::Number)
         }
         Value::Array(items) => Value::Array(items.into_iter().map(rounded).collect()),
+        // Sorted here, not by serde_json: a workspace build turns on
+        // `preserve_order` (oristudio-bp asks for it), which keeps field order.
         Value::Object(map) => {
-            Value::Object(map.into_iter().map(|(k, v)| (k, rounded(v))).collect())
+            let mut entries: Vec<_> = map.into_iter().map(|(k, v)| (k, rounded(v))).collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            Value::Object(entries.into_iter().collect())
         }
         other => other,
     }
