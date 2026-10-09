@@ -268,6 +268,20 @@ fn reflect_line(mirror: &Line, line: &Line) -> Line {
     Line::from_points(mirror.reflect_point(foot), mirror.reflect_point(along)).unwrap_or(*line)
 }
 
+/// ℓ2's score composed with ℓ1's (`State::score_second`): what the shared
+/// steps 3–7 take, and what the crimp places its tip against.
+struct SecondScore {
+    /// The parent scored along both lines, each face's `old` its parent
+    /// face, the chords last.
+    scored: Scored,
+    /// Per scored face, its block: a strip block's paper beyond ℓ2 in its
+    /// tip block; none for a face that stays.
+    block_of: Vec<Option<usize>>,
+    /// Per strip block, the landed faces of the strip hinged on ℓ2 to its
+    /// tip.
+    bodies: Vec<Vec<FaceId>>,
+}
+
 /// A crimp's tip at ℓ1 and its two scores' first: everything before a plan
 /// says how the flaps open.
 struct Crimp {
@@ -554,8 +568,11 @@ impl State {
             }
         }
         let strip_blocks = 2 * plan.openings.len() + plan.whole.len();
-        let (scored, scored_block_of, bodies) =
-            self.score_second(crimp, &block_of, strip_blocks)?;
+        let SecondScore {
+            scored,
+            block_of: scored_block_of,
+            bodies,
+        } = self.score_second(crimp, &block_of, strip_blocks)?;
         // Each opening flap reaches past ℓ2 with both blocks, or neither,
         // and each block that does has its strip there to hinge to.
         for (k, opening) in plan.openings.iter().enumerate() {
@@ -634,7 +651,7 @@ impl State {
         crimp: &Crimp,
         parent_block: &[Option<usize>],
         strip_blocks: usize,
-    ) -> Result<(Scored, Vec<Option<usize>>, Vec<Vec<FaceId>>), FoldRefusal> {
+    ) -> Result<SecondScore, FoldRefusal> {
         let first = &crimp.first;
         let (next_face, next_crease) = self.next_ids();
         let step = self.step() + 1;
@@ -782,7 +799,11 @@ impl State {
             split: first.split + second.split,
         };
         let bodies = strip_bodies(&scored, &block_of, strip_blocks);
-        Ok((scored, block_of, bodies))
+        Ok(SecondScore {
+            scored,
+            block_of,
+            bodies,
+        })
     }
 
     /// Fixes for a crimp no order fits: the other kind when it lands. The
