@@ -130,6 +130,24 @@ describe('fh1', () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it('spells a sink as a build that locks it does: the file as written, its choices the engine’s', () => {
+    // A build older than the sinks reads each of these as locked, and spells
+    // it from the raw node: the same `fh1`, so a link to it holds either way.
+    const raw = writtenSequence().steps as Record<string, unknown>[];
+    const sinks = raw.filter((node) => String((node.op as { kind: string }).kind).includes('sink'));
+    expect(sinks.map((node) => (node.op as { kind: string }).kind)).toEqual(['open-sink', 'closed-sink', 'unsink']);
+    const held = readFoldSequence(writtenSequence())!;
+    for (const node of sinks) {
+      const known = held.document.steps.find((s) => s.id === node.id)!;
+      const locked: FoldLockedStep = { id: String(node.id), parent: String(node.parent), unknown: node };
+      expect(foldStepKey(locked), String(node.id)).toBe(foldStepKey(known));
+    }
+    // The pocket and the completion are the path's: another of either is another state.
+    const closed = held.document.steps.find((s) => s.id === 'fstep-19') as FoldStep;
+    const otherPocket = { ...closed, choices: { ...closed.choices, pocket: [[0.15, 0.6], [0.15, 0.4]] as const } };
+    expect(foldStepKey(otherPocket)).not.toBe(foldStepKey(closed));
+  });
+
   it('is null for a node the document does not hold', () => {
     expect(foldNodeDigest(sequenceOf([step('a', null)]), 'missing')).toBeNull();
   });

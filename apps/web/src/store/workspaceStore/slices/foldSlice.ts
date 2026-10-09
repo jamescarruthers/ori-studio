@@ -34,6 +34,9 @@ const STEP_LABELS: Record<FoldOpKind, string> = {
   petal: 'Petal fold',
   'rabbit-ear': 'Rabbit ear',
   swivel: 'Swivel fold',
+  'open-sink': 'Open sink',
+  'closed-sink': 'Closed sink',
+  unsink: 'Unsink',
 };
 
 /**

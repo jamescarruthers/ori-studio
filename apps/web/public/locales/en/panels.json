@@ -1563,6 +1563,7 @@
       "stepForward": "Step forward"
     },
     "sentence": {
+      "closedSink": "Closed-sink the point: push its tip in, its layers kept together.",
       "cpJump": "Collapse into the imported crease pattern.",
       "crimpInside": "Inside crimp along the two lines.",
       "crimpOutside": "Outside crimp along the two lines.",
@@ -1789,6 +1790,7 @@
           "flaps_other": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the {{count}} flaps shown."
         }
       },
+      "openSink": "Open-sink the point: push its tip in, turning every layer inside out.",
       "outsideReverse": {
         "crease": {
           "all": "Outside reverse fold along the existing crease, through all layers.",
@@ -1871,6 +1873,7 @@
         "top_other": "Unfold the top {{count}} layers."
       },
       "unknown": "A step made with a newer Ori Studio.",
+      "unsink": "Unsink the point: pull its tip back out.",
       "valley": {
         "crease": {
           "all": "Valley fold along the existing crease, through all layers.",
@@ -2120,6 +2123,7 @@
       "badgeSwivel": "Swivel",
       "badgeTuck": "Tuck",
       "badgeValley": "Valley",
+      "closedSink": "Closed sink",
       "cpJump": "Import crease pattern",
       "crimpInside": "Inside crimp",
       "crimpOutside": "Outside crimp",
@@ -2129,6 +2133,7 @@
       "mountainFold": "Mountain fold",
       "mountainPrecrease": "Mountain fold and unfold",
       "noChange": "Changes no creases",
+      "openSink": "Open sink",
       "originCp": "CP file",
       "originEditFoldedFigure": "Edit’s folded figure",
       "originFold": "FOLD file",
@@ -2150,6 +2155,7 @@
       "unfolds_one": "Unfolds {{count}} crease",
       "unfolds_other": "Unfolds {{count}} creases",
       "unknown": "From a newer Ori Studio",
+      "unsink": "Unsink",
       "valleyFold": "Valley fold",
       "valleyPrecrease": "Valley fold and unfold"
     }

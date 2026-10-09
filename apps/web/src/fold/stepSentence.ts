@@ -95,6 +95,9 @@ export type FoldLayerScope =
   /** Picked flaps. */
   | { kind: 'flaps'; flaps: number };
 
+/** Which way a point sinks, or the unsink back. */
+export type FoldSinkSentenceKind = 'open' | 'closed' | 'unsink';
+
 /** A step as its sentence reads it. */
 export type FoldSentenceStep =
   | { op: 'fold'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope }
@@ -116,6 +119,8 @@ export type FoldSentenceStep =
   | { op: 'tuck'; direction: FoldDirection }
   /** A vertex fold (plan Phase 11): its creases are its own, so it names no line (`stepSentenceVertex`). */
   | { op: 'vertex'; fold: FoldVertexOpKind; direction: FoldDirection }
+  /** A sink of the point a seed names, or the unsink of a sunk one (plan Phase 11). */
+  | { op: 'sink'; kind: FoldSinkSentenceKind; line: FoldSentenceLine }
   /** An operation a newer build wrote: locked, never described (plan D6). */
   | { op: 'unknown' };
 
@@ -253,7 +258,21 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
         : t('panels:fold.sentence.tuckMountain', 'Mountain fold and tuck the flap in at the back, over the chosen layer.');
     case 'vertex':
       return vertexSentence(t, step.fold);
+    case 'sink':
+      return sinkSentence(t, step.kind);
     case 'unknown':
       return t('panels:fold.sentence.unknown', 'A step made with a newer Ori Studio.');
+  }
+}
+
+/** A sink's sentence: the line is the picture's, so the words name only the move. */
+function sinkSentence(t: TFunction, kind: FoldSinkSentenceKind): string {
+  switch (kind) {
+    case 'open':
+      return t('panels:fold.sentence.openSink', 'Open-sink the point: push its tip in, turning every layer inside out.');
+    case 'closed':
+      return t('panels:fold.sentence.closedSink', 'Closed-sink the point: push its tip in, its layers kept together.');
+    case 'unsink':
+      return t('panels:fold.sentence.unsink', 'Unsink the point: pull its tip back out.');
   }
 }

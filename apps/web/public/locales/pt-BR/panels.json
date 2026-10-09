@@ -1616,6 +1616,7 @@
       "stepForward": "Avançar um pouco"
     },
     "sentence": {
+      "closedSink": "Afunde a ponta em afundamento fechado: empurre-a para dentro com as camadas juntas.",
       "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
       "crimpInside": "Faça um crimp interno ao longo das duas linhas.",
       "crimpOutside": "Faça um crimp externo ao longo das duas linhas.",
@@ -1904,6 +1905,7 @@
           "flaps_other": "Dobre só as {{count}} abas indicadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre."
         }
       },
+      "openSink": "Afunde a ponta em afundamento aberto: empurre-a para dentro, virando cada camada do avesso.",
       "outsideReverse": {
         "crease": {
           "all": "Dobre todas as camadas com uma dobra invertida externa pelo vinco existente.",
@@ -2007,6 +2009,7 @@
         "top_other": "Desdobre as {{count}} camadas de cima."
       },
       "unknown": "Um passo criado com uma versão mais recente do Ori Studio.",
+      "unsink": "Desfaça o afundamento: puxe a ponta de volta para fora.",
       "valley": {
         "crease": {
           "all": "Dobre todas as camadas em vale pelo vinco existente.",
@@ -2305,6 +2308,7 @@
       "badgeSwivel": "Giro",
       "badgeTuck": "Encaixe",
       "badgeValley": "Vale",
+      "closedSink": "Afundamento fechado",
       "cpJump": "Importar padrão de vincos",
       "crimpInside": "Crimp interno",
       "crimpOutside": "Crimp externo",
@@ -2314,6 +2318,7 @@
       "mountainFold": "Dobra monte",
       "mountainPrecrease": "Dobra monte e desdobra",
       "noChange": "Não altera nenhum vinco",
+      "openSink": "Afundamento aberto",
       "originCp": "Arquivo CP",
       "originEditFoldedFigure": "Figura dobrada do Editar",
       "originFold": "Arquivo FOLD",
@@ -2338,6 +2343,7 @@
       "unfolds_many": "Desdobra {{count}} vincos",
       "unfolds_other": "Desdobra {{count}} vincos",
       "unknown": "De uma versão mais recente do Ori Studio",
+      "unsink": "Desfazer afundamento",
       "valleyFold": "Dobra vale",
       "valleyPrecrease": "Dobra vale e desdobra"
     }

@@ -81,6 +81,10 @@ pub enum Broken {
     /// one of a flap's openings, or names a flap another one already does.
     #[error("stored opening {opening} names no opening of the tip")]
     Opening { opening: usize },
+    /// A closed sink's stored pocket no longer names exactly one of the
+    /// point's pockets.
+    #[error("the stored pocket names no one pocket of the point")]
+    Pocket,
 }
 
 impl WitnessOrder {

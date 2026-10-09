@@ -287,10 +287,10 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
     // With them, the compound pipeline's own: no order at all, a search that
-    // ran out, a pick that names nothing, a defect. And a tuck's, a crimp's
-    // and the vertex folds' (from `squash_no_flap` on): no tool folds one
-    // yet, so until their tools say them in their own words they read as a
-    // fold that cannot be made.
+    // ran out, a pick that names nothing, a defect. And a tuck's, a crimp's,
+    // the vertex folds' (from `squash_no_flap` on) and the sinks': no tool
+    // folds one yet, so until their tools say them in their own words they
+    // read as a fold that cannot be made.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -337,6 +337,13 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'fan_not_flat':
     case 'fan_ridge_not_ray':
     case 'fan_stayer_detached':
+    case 'sink_several_points':
+    case 'sink_point_open':
+    case 'sink_outline_mixed':
+    case 'sink_no_axis':
+    case 'sink_line_tilted':
+    case 'sink_no_pocket':
+    case 'unsink_not_sunk':
     case 'internal':
       return {
         title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
@@ -462,6 +469,9 @@ function fixActions(
       return [];
     case 'use_emergent':
       // A rabbit ear's or a swivel's, likewise.
+      return [];
+    case 'other_sink':
+      // A sink's, likewise.
       return [];
   }
 }

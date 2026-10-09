@@ -37,6 +37,7 @@ import type {
 } from '../document/foldSequenceDocument';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
 import type { FoldNoOpening, FoldReverseKind, FoldReverseReport } from './foldEngineReverseWire';
+import { FOLD_SINK_REFUSAL_CODES, type FoldSinkKind, type FoldSinkReport } from './foldEngineSinkWire';
 import type { FoldVertexReport } from './foldEngineSquashWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
@@ -164,6 +165,8 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'fan_not_flat',
   'fan_ridge_not_ray',
   'fan_stayer_detached',
+  // Sinks (plan Phase 11).
+  ...FOLD_SINK_REFUSAL_CODES,
   'internal',
 ] as const;
 
@@ -284,7 +287,9 @@ export type FoldFix =
   /** The same tuck against this layer is valid: send `at` back as the tuck's `target`. */
   | { readonly fix: 'tuck_target'; readonly face: number; readonly at: SheetPoint }
   /** The same rabbit ear or swivel with this emergent ray, a direction in the parent's model frame, lands. */
-  | { readonly fix: 'use_emergent'; readonly direction: FoldModelPoint };
+  | { readonly fix: 'use_emergent'; readonly direction: FoldModelPoint }
+  /** The same point sinks the other way: closed where an open sink is refused, open where a closed one is. */
+  | { readonly fix: 'other_sink'; readonly kind: FoldSinkKind };
 
 export interface FoldEngineRefused {
   status: 'refused';
@@ -383,6 +388,8 @@ export interface FoldStepLanded {
    * or a tuck, whose reports their own calls give.
    */
   compound?: FoldCompoundReport;
+  /** What a sink or an unsink did, its motion's legs among it (`foldEngineSinkWire.ts`). */
+  sink?: FoldSinkReport;
   summary: FoldStateSummary;
   /** What a vertex fold did, with its motion (`foldEngineSquashWire.ts`); absent for every other step. */
   vertex?: FoldVertexReport;

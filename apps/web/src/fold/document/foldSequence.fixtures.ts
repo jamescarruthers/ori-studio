@@ -272,6 +272,48 @@ export function writtenSequence(): Record<string, unknown> {
           direction: 'valley',
         },
       },
+      // Sinks.
+      {
+        id: 'fstep-18',
+        parent: 'fstep-8',
+        op: {
+          kind: 'open-sink',
+          line: { via: 'free', through: [[0.35, 0.35], [0.2, 0.5]] },
+          seed: { scope: 'flaps', at: [[0.4, 0.45]] },
+        },
+      },
+      {
+        id: 'fstep-19',
+        parent: 'fstep-8',
+        op: {
+          kind: 'closed-sink',
+          line: { via: 'free', through: [[0.35, 0.35], [0.2, 0.5]] },
+          moving: [0.45, 0.45],
+          seed: { scope: 'all' },
+        },
+        choices: {
+          completion: {
+            faces: [
+              [0.4, 0.45],
+              [0.6, 0.45],
+            ],
+            orders: [[1, 0, 1]],
+          },
+          pocket: [
+            [0.15, 0.4],
+            [0.15, 0.6],
+          ],
+        },
+      },
+      {
+        id: 'fstep-20',
+        parent: 'fstep-18',
+        op: {
+          kind: 'unsink',
+          line: { via: 'crease', at: [0.275, 0.425] },
+          seed: { scope: 'flaps', at: [[0.4, 0.45]] },
+        },
+      },
     ],
   };
 }

@@ -40,6 +40,13 @@ import type {
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from '../fold/engine/foldEngineIoCalls';
 import { createFoldEngineReverseCalls, type FoldEngineReverseCalls } from '../fold/engine/foldEngineReverseCalls';
 import type { FoldEngineReverseOp, FoldReverseAsked } from '../fold/engine/foldEngineReverseWire';
+import { createFoldEngineSinkCalls, type FoldEngineSinkCalls } from '../fold/engine/foldEngineSinkCalls';
+import type {
+  FoldEngineSinkOp,
+  FoldSinkAnalysed,
+  FoldSinkOrders,
+  FoldSinkPicked,
+} from '../fold/engine/foldEngineSinkWire';
 import { createFoldEngineVertexCalls, type FoldEngineVertexCalls } from '../fold/engine/foldEngineSquashCalls';
 import type {
   FoldVertexAnalysed,
@@ -82,7 +89,8 @@ type FoldWorkerCalls = FoldEngineCalls &
   FoldEngineIoCalls &
   FoldEngineReverseCalls &
   FoldEngineCrimpTuckCalls &
-  FoldEngineVertexCalls;
+  FoldEngineVertexCalls &
+  FoldEngineSinkCalls;
 
 let ready: Promise<FoldWorkerCalls> | null = null;
 
@@ -102,6 +110,7 @@ function ensureReady(): Promise<FoldWorkerCalls> {
       ...createFoldEngineReverseCalls(engine),
       ...createFoldEngineCrimpTuckCalls(engine),
       ...createFoldEngineVertexCalls(engine),
+      ...createFoldEngineSinkCalls(engine),
     };
   });
   ready = starting;
@@ -361,6 +370,37 @@ const api = {
   /** Let pending choices go; how many were held. */
   async releaseVertexChoices(pending: readonly number[]): Promise<number> {
     return call((calls) => calls.releaseVertexChoices(pending));
+  },
+
+  // A sink tool's queries (`fold/engine/foldEngineSinkCalls.ts`); a sink
+  // itself lands through `step`.
+
+  /** The point a sink op names and how it sinks. */
+  async sinkAnalysis(
+    state: number,
+    op: FoldEngineSinkOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldSinkAnalysed>> {
+    return call((calls) => calls.sinkAnalysis(state, op, choices));
+  },
+
+  /** How many orders the sink leaves with these choices. */
+  async sinkOrders(
+    state: number,
+    op: FoldEngineSinkOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldSinkOrders>> {
+    return call((calls) => calls.sinkOrders(state, op, choices));
+  },
+
+  /** The completion a step stores for one listed order per component. */
+  async sinkPick(
+    state: number,
+    op: FoldEngineSinkOp,
+    choice: readonly number[],
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldSinkPicked>> {
+    return call((calls) => calls.sinkPick(state, op, choice, choices));
   },
 };
 

@@ -1,8 +1,8 @@
 //! Compound folds through one pipeline (plan D4, research §5.1).
 //!
-//! Every compound fold — the reverse folds, the crimp and the tuck, and the
-//! vertex folds (squash, petal, rabbit ear, swivel); sinks later — compiles
-//! to its macro and lands through the same steps:
+//! Every compound fold — the reverse folds, the crimp and the tuck, the
+//! vertex folds (squash, petal, rabbit ear, swivel), and the sinks and the
+//! unsink — compiles to its macro and lands through the same steps:
 //!
 //! 1. **Macro.** The operation's inputs become scores, a partition of the
 //!    faces that move into *blocks* (faces whose mutual stacking moves as
@@ -47,6 +47,7 @@ pub mod crimp;
 pub mod motion;
 pub mod reverse;
 pub mod reverse_step;
+pub mod sink;
 pub mod tuck;
 
 // The vertex folds (research §5.3): blocks are motion classes, seeded by a
@@ -60,6 +61,8 @@ pub mod rabbit;
 pub mod squash;
 pub mod swivel;
 pub mod vertex;
+
+use std::collections::HashSet;
 
 use oristudio_layer_order::{LayerOrder, Violation};
 use serde::Serialize;
@@ -92,7 +95,9 @@ pub(crate) enum Across {
     /// afresh.
     Alike,
     /// Left to the completion: the vertex folds, whose blocks land in
-    /// different places (research §5.3), seeded only against what stays.
+    /// different places (research §5.3), seeded only against what stays; and
+    /// an unsink, whose order back is the completion's alone (research
+    /// §5.4).
     Free,
 }
 
@@ -393,6 +398,104 @@ impl Prepared {
             split: self.split,
         };
         CompoundFolded { state, report }
+    }
+}
+
+/// A moving face placed directly against the nearest of some faces that
+/// stay, on one side of it (step 7). Nothing lies between them, so every
+/// other face that stays and overlaps both lies on the same side of the
+/// moving face as of that one. A sink anchors each tip face this way: one
+/// anchor per block leaves pairs open (research §5.4, 16 on the preliminary
+/// base).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Anchor {
+    /// Landed positions: the moving face, and the faces that stay it may
+    /// lie against. It lies against the nearest of those it overlaps (the
+    /// highest when it lies above them, the lowest when below), and the
+    /// several nearest where they do not overlap one another.
+    pub(crate) face: usize,
+    pub(crate) to: Vec<usize>,
+    pub(crate) above: bool,
+}
+
+impl Prepared {
+    /// The landed parts (faces and creases in id order) and, per landed
+    /// face position, its block: what an operation reads to anchor faces.
+    pub(crate) fn landed(&self) -> (&StateParts, &[Option<usize>]) {
+        (self.unordered.parts(), &self.block_of)
+    }
+
+    /// Seed `anchors` beside the macro's seeds (see [`Anchor`]). The order of
+    /// the faces that stay is the carried one: exactly their pairs that
+    /// overlap once landed.
+    pub(crate) fn anchor(&mut self, anchors: &[Anchor]) {
+        let ids: Vec<FaceId> = self.unordered.parts().faces.iter().map(|f| f.id).collect();
+        let problem = self.unordered.problem();
+        let stays = |a: usize| self.block_of.get(a).is_some_and(Option::is_none);
+        let carried: HashSet<(FaceId, FaceId)> = self
+            .fixed
+            .iter()
+            .filter(|p| p.kind == FixedKind::Carried)
+            .map(|p| (p.upper, p.lower))
+            .collect();
+        // Whether `a` lies above `b`, both staying; none where they do not
+        // overlap.
+        let higher = |a: usize, b: usize| -> Option<bool> {
+            if carried.contains(&(ids[a], ids[b])) {
+                Some(true)
+            } else if carried.contains(&(ids[b], ids[a])) {
+                Some(false)
+            } else {
+                None
+            }
+        };
+        let mut known: HashSet<(FaceId, FaceId)> =
+            self.fixed.iter().map(|p| (p.upper, p.lower)).collect();
+        let mut seeds = Vec::new();
+        let mut push = |upper: FaceId, lower: FaceId| {
+            if known.insert((upper, lower)) {
+                seeds.push(FixedPair {
+                    upper,
+                    lower,
+                    kind: FixedKind::Seed,
+                });
+            }
+        };
+        for anchor in anchors {
+            let t = ids[anchor.face];
+            let near: Vec<usize> = anchor
+                .to
+                .iter()
+                .copied()
+                .filter(|&s| stays(s) && problem.is_variable(t, ids[s]))
+                .collect();
+            // Not one with another candidate between it and the moving face.
+            let nearest = near.iter().copied().filter(|&s| {
+                !near
+                    .iter()
+                    .any(|&o| o != s && higher(o, s) == Some(anchor.above))
+            });
+            for s in nearest {
+                if anchor.above {
+                    push(t, ids[s]);
+                } else {
+                    push(ids[s], t);
+                }
+                // Nothing lies between the two, so what lies above the face
+                // it lies against lies above it, and what lies below, below.
+                for x in (0..ids.len()).filter(|&x| x != s && stays(x)) {
+                    if !problem.is_variable(t, ids[x]) {
+                        continue;
+                    }
+                    match higher(s, x) {
+                        Some(true) => push(t, ids[x]),
+                        Some(false) => push(ids[x], t),
+                        None => {}
+                    }
+                }
+            }
+        }
+        self.fixed.extend(seeds);
     }
 }
 

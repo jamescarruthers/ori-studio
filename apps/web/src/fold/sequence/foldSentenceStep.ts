@@ -104,8 +104,15 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
     case 'rabbit-ear':
     case 'swivel':
       return { op: 'vertex', fold: op.kind, direction: op.direction };
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
+      return { op: 'sink', kind: SINK_KINDS[op.kind], line: sentenceLine(op.line, op.seed, context) };
   }
 }
+
+/** A sink op's kind, as its sentence reads it. */
+const SINK_KINDS = { 'open-sink': 'open', 'closed-sink': 'closed', unsink: 'unsink' } as const;
 
 /** Which layers a seed takes (plan D18's `layer_scope`). */
 function scopeOf(seed: FoldSeed): FoldLayerScope {

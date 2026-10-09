@@ -13,6 +13,7 @@ use thiserror::Error;
 use crate::complete::BudgetLimit;
 use crate::compound::petal::{NoPetal, PetalCrease};
 use crate::compound::reverse::{NoOpening, ReverseKind};
+use crate::compound::sink::SinkKind;
 use crate::compound::squash::NoFlap;
 use crate::compound::tuck::TuckSide;
 use crate::pattern::{EdgeId, FaceId, VertexId};
@@ -271,6 +272,41 @@ pub enum FoldRefusal {
     /// The paper at the stayer point is joined to none of the fan's wedges.
     #[error("the paper at {point:?} holds none of the fan's wedges")]
     FanStayerDetached { point: Point },
+
+    // --- Sinks (plan Phase 11, research §5.4) ---------------------------
+    /// The anchor names more than one of the moving side's flaps: a sink
+    /// takes one point. `faces` are theirs, in the parent.
+    #[error("the anchor names {flaps} points; a sink takes one")]
+    SinkSeveralPoints { flaps: usize, faces: Vec<FaceId> },
+    /// Raw edges lie on the point's outline at its crown, the paper farthest
+    /// from ℓ: it is open (free corners), and nothing decides a sink of it.
+    /// `faces` hold those edges.
+    #[error("the point is open: faces {faces:?} have raw edges at its tip")]
+    SinkPointOpen { faces: Vec<FaceId> },
+    /// The point's outline creases carry both letters: it has no one
+    /// outside, so it does not open-sink. `faces` are the point's.
+    #[error("the point's outline creases carry both letters; it has no one outside")]
+    SinkOutlineMixed { faces: Vec<FaceId> },
+    /// The point's outline creases do not lie on two straight sides (beside
+    /// a flat top square to them), so it has no axis for an open sink to be
+    /// square to.
+    #[error("the point's outline is not two straight sides; it has no axis")]
+    SinkNoAxis { faces: Vec<FaceId> },
+    /// ℓ meets the point's two sides `offset` apart in their distance from
+    /// its tip: an open sink needs it exactly square to the point's axis.
+    #[error("the sink line is {offset} off square to the point's axis")]
+    SinkLineTilted { offset: f64, faces: Vec<FaceId> },
+    /// No split of the point along its outline creases is a pocket a closed
+    /// sink can go into. `faces` are the point's.
+    #[error("the point has no pocket to sink into")]
+    SinkNoPocket { faces: Vec<FaceId> },
+    /// The paper grown from the anchor across every crease off the line is
+    /// not a sunk point: it reaches across the line, or no folded crease on
+    /// the line joins it to the rest. `faces` are those in the way, or the
+    /// whole region.
+    #[error("faces {faces:?} are not a sunk point on this line")]
+    UnsinkNotSunk { faces: Vec<FaceId> },
+
     /// A defect, never the input's fault.
     #[error("internal error: {message}")]
     Internal { message: String },
@@ -343,6 +379,13 @@ impl FoldRefusal {
             FoldRefusal::FanNotFlat => "fan_not_flat",
             FoldRefusal::FanRidgeNotRay => "fan_ridge_not_ray",
             FoldRefusal::FanStayerDetached { .. } => "fan_stayer_detached",
+            FoldRefusal::SinkSeveralPoints { .. } => "sink_several_points",
+            FoldRefusal::SinkPointOpen { .. } => "sink_point_open",
+            FoldRefusal::SinkOutlineMixed { .. } => "sink_outline_mixed",
+            FoldRefusal::SinkNoAxis { .. } => "sink_no_axis",
+            FoldRefusal::SinkLineTilted { .. } => "sink_line_tilted",
+            FoldRefusal::SinkNoPocket { .. } => "sink_no_pocket",
+            FoldRefusal::UnsinkNotSunk { .. } => "unsink_not_sunk",
             FoldRefusal::Internal { .. } => "internal",
         }
     }
@@ -377,7 +420,14 @@ impl FoldRefusal {
             | FoldRefusal::PetalNotPrecreased { faces, .. }
             | FoldRefusal::PetalNoFlap { faces, .. }
             | FoldRefusal::FanCenter { faces }
-            | FoldRefusal::FanRayBlocked { faces } => faces.clone(),
+            | FoldRefusal::FanRayBlocked { faces }
+            | FoldRefusal::SinkSeveralPoints { faces, .. }
+            | FoldRefusal::SinkPointOpen { faces }
+            | FoldRefusal::SinkOutlineMixed { faces }
+            | FoldRefusal::SinkNoAxis { faces }
+            | FoldRefusal::SinkLineTilted { faces, .. }
+            | FoldRefusal::SinkNoPocket { faces }
+            | FoldRefusal::UnsinkNotSunk { faces } => faces.clone(),
             FoldRefusal::ReverseTipNotFree { blocking, .. }
             | FoldRefusal::CrimpTipNotFree { blocking, .. } => blocking.clone(),
             FoldRefusal::TuckInfeasible { target, faces, .. } => {
@@ -473,6 +523,9 @@ pub enum Fix {
     /// The same rabbit ear or swivel with this emergent ray (a direction in
     /// the parent's model frame) lands.
     UseEmergent { direction: Point },
+    /// The same point sinks the other way: closed where an open sink is
+    /// refused, open where a closed one is.
+    OtherSink { kind: SinkKind },
 }
 
 /// A refused operation and what could be done instead.

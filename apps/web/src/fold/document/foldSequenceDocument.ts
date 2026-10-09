@@ -395,6 +395,18 @@ export function isVertexOp(op: FoldOp): op is FoldVertexOp {
   return (FOLD_VERTEX_OP_KINDS as readonly string[]).includes(op.kind);
 }
 
+/**
+ * A sink of a closed point (plan Phase 11, research §5.4) along `line`: the
+ * point the seed names, its tip on the moving side. An open sink turns every
+ * layer inside out against its own; a closed sink reverses the whole point
+ * into a pocket (`choices.pocket` when it has several). An unsink turns a
+ * sunk tip back out: its line is the ring's (an existing crease of it), and
+ * its seed and `moving` name the tip and the side it lies on now.
+ */
+export interface FoldSinkOp extends FoldAlongLine {
+  kind: 'open-sink' | 'closed-sink' | 'unsink';
+}
+
 // ---------------------------------------------------------------------------
 
 /** What a step does. A kind this build does not know locks its node and subtree. */
@@ -408,7 +420,8 @@ export type FoldOp =
   | FoldReverseOp
   | FoldCrimpOp
   | FoldTuckOp
-  | FoldVertexOp;
+  | FoldVertexOp
+  | FoldSinkOp;
 
 export type FoldOpKind = FoldOp['kind'];
 
@@ -426,6 +439,9 @@ export const FOLD_OP_KINDS: readonly FoldOpKind[] = [
   'crimp',
   'tuck',
   ...FOLD_VERTEX_OP_KINDS,
+  'open-sink',
+  'closed-sink',
+  'unsink',
 ];
 
 /** The turn a turn or rotate step makes, as the Diagram's turn entries spell it (`lib/steps/turn`). */

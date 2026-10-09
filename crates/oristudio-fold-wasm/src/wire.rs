@@ -22,8 +22,8 @@
 use oristudio_fold::{
     AnchoredFold, Axiom, AxiomCandidate, Broken, ClosurePolicy, CrossSection, DepthChoice,
     Direction, FaceId, Fix as EngineFix, Flap, FoldActionGeometry, FoldLine, FoldRefusal,
-    LineRefusal, Placement, Refused, ReverseKind, Seed, SheetSegment, SheetShape, Side, StartSide,
-    StepSummary, StoredOpening, TurnAxis, VertexId, View, WitnessOrder,
+    LineRefusal, Placement, Refused, ReverseKind, Seed, SheetSegment, SheetShape, Side, SinkKind,
+    StartSide, StepSummary, StoredOpening, TurnAxis, VertexId, View, WitnessOrder,
 };
 use oristudio_geometry::Line;
 use serde::de::IgnoredAny;
@@ -107,6 +107,10 @@ pub enum Op {
     Petal(crate::ops_squash_family::PetalOp),
     RabbitEar(crate::ops_squash_family::RabbitEarOp),
     Swivel(crate::ops_squash_family::SwivelOp),
+    /// Sinks (plan Phase 11, `ops_sinks`).
+    OpenSink(crate::ops_sinks::SinkOp),
+    ClosedSink(crate::ops_sinks::SinkOp),
+    Unsink(crate::ops_sinks::SinkOp),
 }
 
 impl Op {
@@ -129,6 +133,9 @@ impl Op {
             Op::Petal(_) => "petal",
             Op::RabbitEar(_) => "rabbit-ear",
             Op::Swivel(_) => "swivel",
+            Op::OpenSink(_) => "open-sink",
+            Op::ClosedSink(_) => "closed-sink",
+            Op::Unsink(_) => "unsink",
         }
     }
 
@@ -325,10 +332,9 @@ impl Rotation {
 /// `FoldChoices`, as the engine reads them: an axiom's `root`; a compound
 /// fold's `opening`s (each flap's upper block by witnesses) and its
 /// `completion` (the free pairs chosen, FOLD `faceOrders` over witnesses,
-/// as `orderJson` stores Import CP's order: the engine's [`WitnessOrder`]).
-/// A sink's `pocket` is read only for whether it is there: no op this build
-/// folds takes one, and a stored choice the op cannot use breaks its step
-/// rather than being dropped.
+/// as `orderJson` stores Import CP's order: the engine's [`WitnessOrder`]);
+/// a closed sink's `pocket`. A stored choice the op cannot use breaks its
+/// step rather than being dropped.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 pub struct Choices {
     /// The line the axiom's chosen root gave, in the parent's model frame.
@@ -337,8 +343,10 @@ pub struct Choices {
     /// The pairs a completion left free, as chosen (`FoldCompletionChoice`).
     #[serde(default)]
     pub completion: Option<WitnessOrder>,
+    /// A closed sink's pocket: a sheet point on the face just above it and
+    /// on the face just below it.
     #[serde(default)]
-    pub pocket: Option<IgnoredAny>,
+    pub pocket: Option<[Point; 2]>,
     #[serde(default)]
     pub opening: Option<Vec<StoredOpening>>,
 }
@@ -347,8 +355,9 @@ impl Choices {
     /// The first choice present that an op takes none of, by its document
     /// key: `root` unless the op folds along an axiom, `completion` unless
     /// it ends at one (`Op::takes_completion`), `opening` unless it opens
-    /// flaps (`Op::takes_opening`). An empty list is no choice, as the
-    /// document reads it, and so is a completion that orders nothing.
+    /// flaps (`Op::takes_opening`), and `pocket` always: a sink checks its
+    /// own (`ops_sinks`). An empty list is no choice, as the document reads
+    /// it, and so is a completion that orders nothing.
     pub fn unexpected(
         &self,
         takes_root: bool,
@@ -538,6 +547,8 @@ pub enum Fix {
     /// The same rabbit ear or swivel with this emergent ray (a direction in
     /// the parent's model frame) lands: store it as the op's `emergent`.
     UseEmergent { direction: Point },
+    /// The same point sinks the other way: closed, or open.
+    OtherSink { kind: SinkKind },
 }
 
 impl From<EngineFix> for Fix {
@@ -554,6 +565,7 @@ impl From<EngineFix> for Fix {
             EngineFix::OtherKind { kind } => Fix::OtherKind { kind },
             EngineFix::TuckTarget { face, at } => Fix::TuckTarget { face, at },
             EngineFix::UseEmergent { direction } => Fix::UseEmergent { direction },
+            EngineFix::OtherSink { kind } => Fix::OtherSink { kind },
         }
     }
 }
@@ -665,8 +677,9 @@ pub enum BridgeRefusal {
     #[error("the crease through {point:?} is not folded, so it cannot be unfolded")]
     CreaseNotFolded { point: Point },
     /// A compound fold whose stored choices leave more than one result: a
-    /// flap opens several ways (`opening`) or more than one order fits
-    /// (`completion`), and nothing stored names which (`crate::compound`).
+    /// flap opens several ways (`opening`), a closed sink has several
+    /// pockets (`pocket`) or more than one order fits (`completion`), and
+    /// nothing stored names which (`crate::compound`).
     #[error("the step needs its {choice:?} chosen")]
     ChoiceNeeded {
         choice: crate::compound::NeededChoice,
@@ -725,6 +738,9 @@ pub struct Applied {
     /// What a compound fold did, by its op; absent for any other step.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compound: Option<crate::compound::CompoundStepReport>,
+    /// What a sink or an unsink did, its motion's legs among it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sink: Option<oristudio_fold::SinkReport>,
     pub summary: Summary,
     /// What a vertex fold did, with its motion (plan D15); absent for every
     /// other step.

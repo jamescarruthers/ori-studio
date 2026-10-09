@@ -324,6 +324,10 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['petal', new Set(['kind', 'crease', 'petal', 'direction'])],
   ['rabbit-ear', new Set(['kind', 'corners', 'emergent', 'seed', 'stayer', 'direction', 'ridge'])],
   ['swivel', new Set(['kind', 'vertex', 'toward', 'emergent', 'seed', 'stayer', 'direction'])],
+  // Sinks: a fold along a line's fields.
+  ['open-sink', ALONG_LINE_KEYS],
+  ['closed-sink', ALONG_LINE_KEYS],
+  ['unsink', ALONG_LINE_KEYS],
 ]);
 
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
@@ -399,6 +403,12 @@ function readOp(value: unknown): FoldOp | null {
     case 'rabbit-ear':
     case 'swivel':
       return readVertexOp(kind, value);
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink': {
+      const along = readAlongLine(value);
+      return along && { kind, ...along };
+    }
     default:
       return null;
   }
@@ -806,6 +816,9 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
     // Compound folds (plan D4), one block per family.
     case 'inside-reverse':
     case 'outside-reverse':
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
       return { kind: op.kind, line: writeLine(op.line), ...writeMotion(op) };
     case 'crimp':
       return {

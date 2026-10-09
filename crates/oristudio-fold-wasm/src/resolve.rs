@@ -73,6 +73,8 @@ pub enum Resolved {
     /// A vertex fold, its anchors resolved, with its stored choice
     /// (`ops_squash_family`).
     Vertex(crate::ops_squash_family::VertexFold),
+    /// A sink or an unsink, with its stored choices (`ops_sinks`).
+    Sink(Box<crate::ops_sinks::SinkResolved>),
 }
 
 impl Resolved {
@@ -84,15 +86,21 @@ impl Resolved {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
             Resolved::Compound(op) => Some(Ok(op.plain())),
-            Resolved::View(_) | Resolved::Jump(_) | Resolved::Vertex(_) => None,
+            Resolved::View(_) | Resolved::Jump(_) | Resolved::Vertex(_) | Resolved::Sink(_) => {
+                None
+            }
         }
     }
 }
 
 /// The op and its choices, resolved in `parent`.
 pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, Rejection> {
-    if let Some(choice) =
-        choices.unexpected(op.is_axiom(), op.takes_completion(), op.takes_opening())
+    // A sink checks its own (`ops_sinks::resolve`): a closed sink takes a
+    // pocket, and an axiom line's root wherever it comes from.
+    let sink = matches!(op, Op::OpenSink(_) | Op::ClosedSink(_) | Op::Unsink(_));
+    if !sink
+        && let Some(choice) =
+            choices.unexpected(op.is_axiom(), op.takes_completion(), op.takes_opening())
     {
         return Err(BridgeRefusal::UnexpectedChoice { choice }.into());
     }
@@ -133,12 +141,17 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
         Op::Squash(_) | Op::Petal(_) | Op::RabbitEar(_) | Op::Swivel(_) => {
             crate::ops_squash_family::resolve(parent, op, choices).map(Resolved::Vertex)
         }
+        // Sinks (plan Phase 11): the engine's, along the line as a fold's.
+        Op::OpenSink(sink) | Op::ClosedSink(sink) | Op::Unsink(sink) => {
+            crate::ops_sinks::resolve(parent, op, sink, choices)
+                .map(|resolved| Resolved::Sink(Box::new(resolved)))
+        }
     }
 }
 
 /// A valley, mountain or precrease op — and a compound fold's line, side
-/// and anchor (a reverse fold's, a crimp's or a tuck's), which resolve as a
-/// fold's do.
+/// and anchor (a reverse fold's, a crimp's, a tuck's or a sink's), which
+/// resolve as a fold's do.
 pub(crate) fn along_line(
     parent: &State,
     op: &AlongLine,

@@ -558,6 +558,17 @@ fn a_choice_the_op_cannot_use_breaks_it() {
         root["refusal"],
         json!({ "code": "unexpected_choice", "choice": "root" })
     );
+    // A pocket is a closed sink's only.
+    let pocket = refuse_with(
+        &mut bridge,
+        sheet,
+        book_step(),
+        json!({ "pocket": [[0.1, 0.1], [0.9, 0.1]] }),
+    );
+    assert_eq!(
+        pocket["refusal"],
+        json!({ "code": "unexpected_choice", "choice": "pocket" })
+    );
     // An empty list is no choice, and nor is a completion that orders nothing.
     land_with(&mut bridge, sheet, book_step(), json!({ "opening": [] }));
     land_with(

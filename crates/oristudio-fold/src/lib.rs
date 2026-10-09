@@ -37,8 +37,9 @@
 //!   [`State::squash`] with per-layer creases, [`State::petal_fold`] over
 //!   precreases, [`State::rabbit_ear`] with its ridge and [`State::swivel`]
 //!   — each a direction-seeded completion with its preconditions refused up
-//!   front; and the [`StepMotion`] a compound step's animation draws (plan
-//!   D15).
+//!   front; [`State::sink`] and [`State::unsink`], the open and closed sink
+//!   of a closed point and the unsink back; and the [`StepMotion`] a
+//!   compound step's animation draws (plan D15).
 //! - [`import`]: Import CP — a crease pattern's sheet, faces and isometries,
 //!   its order completed from its letters, and Edit's folded figure.
 //! - [`witness`]: stored choices with faces named by sheet points, and their
@@ -117,6 +118,10 @@ pub use compound::rabbit::{RabbitEar, incenter};
 pub use compound::reverse::{
     NoOpening, Opening, ReverseAnalysis, ReverseChoice, ReverseChoices, ReverseFold, ReverseFolded,
     ReverseKind, ReverseOutcome, ReverseReport, StoredOpening, TipFlap,
+};
+pub use compound::sink::{
+    Pocket, SinkChoice, SinkChoices, SinkFold, SinkFolded, SinkKind, SinkOutcome, SinkPoint,
+    SinkReport, SinkStep, StoredPocket, Unsink,
 };
 pub use compound::squash::{NoFlap, Squash, SquashAnalysis};
 pub use compound::swivel::Swivel;

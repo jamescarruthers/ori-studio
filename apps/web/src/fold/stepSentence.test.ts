@@ -184,6 +184,19 @@ describe('foldStepSentence', () => {
       'Mountain fold and tuck the flap in at the back, over the chosen layer.'
     );
   });
+
+  it('says each sink by the move, its line the picture’s', () => {
+    const line = { via: 'free' } as const;
+    expect(foldStepSentence(t, { op: 'sink', kind: 'open', line })).toBe(
+      'Open-sink the point: push its tip in, turning every layer inside out.'
+    );
+    expect(foldStepSentence(t, { op: 'sink', kind: 'closed', line })).toBe(
+      'Closed-sink the point: push its tip in, its layers kept together.'
+    );
+    expect(foldStepSentence(t, { op: 'sink', kind: 'unsink', line: { via: 'crease' } })).toBe(
+      'Unsink the point: pull its tip back out.'
+    );
+  });
 });
 
 describe('sentenceInputLetters', () => {

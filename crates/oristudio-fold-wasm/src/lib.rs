@@ -72,6 +72,9 @@
 //! analyses and their folds, which land, ask for an opening or land every
 //! order to choose from, are calls of their own on `FoldEngine`, and a stored
 //! `crimp` or `tuck` is applied like any other step.
+//!
+//! The sinks (plan Phase 11): `open-sink`, `closed-sink` and `unsink` ops
+//! land through `apply`, and a sink tool's queries are [`ops_sinks`]'s.
 
 pub mod bridge;
 pub mod canonical;
@@ -79,6 +82,7 @@ pub mod compound;
 pub mod io;
 pub mod joins;
 pub mod ops_crimp_tuck;
+pub mod ops_sinks;
 pub mod resolve;
 pub mod wire;
 // Compound folds, one module per family (`compound`).

@@ -138,10 +138,16 @@ export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState)
   return roots > 1 ? { kind: 'root', index: Math.min(tools.root, roots - 1), count: roots } : null;
 }
 
-/** What a committed op is called in `fold step added`; null for Import CP, which the canvas never commits. */
+/**
+ * What a committed op is called in `fold step added`; null for Import CP and
+ * the sinks, which the canvas does not commit (no sink tool is on the rail yet).
+ */
 function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
   switch (op.kind) {
     case 'cp-jump':
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
       return null;
     // Compound folds, snake_case as the event's enums are.
     case 'inside-reverse':

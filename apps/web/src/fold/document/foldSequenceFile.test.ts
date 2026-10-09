@@ -122,6 +122,10 @@ describe('the step tree', () => {
       { ...valleyOp, kind: 'tuck', direction: 'sideways', target: [0.5, 0.5] },
       { ...valleyOp, kind: 'tuck', direction: 'valley', target: [0.5, Number.NaN] },
       { ...valleyOp, kind: 'tuck', direction: 'valley', target: [0.5, 0.5], placement: 'under' },
+      // A sink through every layer names its side; it has no direction.
+      { kind: 'open-sink', line: valleyOp.line, seed: { scope: 'all' } },
+      { kind: 'closed-sink', line: valleyOp.line, moving: [0.5, 0.75], seed: { scope: 'all' }, direction: 'valley' },
+      { kind: 'unsink', line: { via: 'crease' }, seed: { scope: 'flaps', at: [[0.5, 0.75]] } },
       'valley',
       null,
     ];
@@ -156,6 +160,8 @@ describe('the step tree', () => {
       { choices: { completion: { faces: [[0, 0]], orders: [[0, 1, 1]], pinned: true } } },
       { choices: { completion: { faces: [[0, 0], [1, 1]], orders: [[0, 1]] } } },
       { choices: { completion: { faces: [], orders: [], pairs: [] } } },
+      { choices: { completion: { faces: [[0, 0]], orders: [[0, -1, 1]] } } },
+      { choices: { completion: { faces: [[0, 0]], orders: [], pinned: true } } },
       { choices: { pocket: [[0, 0]] } },
       { choices: { rootIndex: 2 } },
       { choices: 'first' },
