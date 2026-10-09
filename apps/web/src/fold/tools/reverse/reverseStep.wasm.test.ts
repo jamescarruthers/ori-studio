@@ -125,7 +125,11 @@ function triangle({ calls }: Engine, sheet: number): { op: FoldOp; state: number
 const fixture = (path: string) => new Uint8Array(readFileSync(resolve(FIXTURES, path)));
 
 describe.skipIf(!available)('the reverse fold over the real bridge', () => {
-  it('folds the preliminary base by two inside reverses of the triangle, and replays it from the document', async () => {
+  // The preliminary base's silhouette by the triangle's corners b and d
+  // reversed inside. It is not the classic base: that also creases the
+  // diagonal ac (8 faces), which two reverses of a once-folded triangle
+  // leave flat (6 faces).
+  it('reverses the triangle’s two corners inside to the preliminary base’s square, and replays it from the document', async () => {
     const engined = await engine();
     const { calls, version } = engined;
     const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
