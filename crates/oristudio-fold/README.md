@@ -85,7 +85,9 @@ state, the one constructor that validates it, and the plain fold.
 The axioms on flat and folded forms (plan Phase 3):
 
 - `anchor`: what a stored step names paper by — sheet points and sheet
-  segments — resolved in a state's model frame, boundaries included.
+  segments — resolved in a state's model frame, boundaries included. A
+  segment resolves while no folded crease bends it: across flat creases (a
+  precrease inserted before the step splits it) and along a hinge.
 - `landmarks`: vertex images, raw edges, bends, visible creases, crossings and
   Divide-line marks (passed in as sheet points), deduplicated within the
   tolerance with every source kept, each source with the anchor a step stores.
@@ -183,9 +185,10 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   before the fold and each landed fold after it; O6 roots with the points on
   opposite sides folded from either side, on the flat square (every such root
   of 4,000 random inputs) and on the book fold, with the mover check; replay
-  after an inserted precrease and after a fold that takes one root's landing
-  away; the existing-crease mode unfolding and refolding; a mover left behind;
-  and the sliver remedy for an O4, a free line and an O2 (none).
+  after an inserted precrease (renumbering the faces a point anchor names,
+  and splitting a segment anchor) and after a fold that takes one root's
+  landing away; the existing-crease mode unfolding and refolding; a mover
+  left behind; and the sliver remedy for an O4, a free line and an O2 (none).
 
 `cargo test -p oristudio-fold --features kernel` adds:
 

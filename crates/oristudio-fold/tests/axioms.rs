@@ -114,8 +114,8 @@ impl Rng {
         p
     }
 
-    /// A segment through `at` in a random direction, kept when one face
-    /// holds it.
+    /// A segment through `at` in a random direction, kept when it names a
+    /// line (no folded crease bends it).
     fn segment_through(&mut self, state: &State, at: Point) -> Option<SheetSegment> {
         let t = self.next() * std::f64::consts::PI;
         let (u, v) = (0.03 + 0.1 * self.next(), 0.03 + 0.1 * self.next());
@@ -750,6 +750,58 @@ fn replay_takes_the_nearest_root_after_an_inserted_step() {
         ))
         .unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(resolved.fold.line, chosen.line);
+}
+
+/// A segment anchor that a precrease inserted before its step splits still
+/// names its line: an O7 carrying (0.3, 0.4) onto the bottom edge,
+/// perpendicular to the left edge, is y = 0.2 on the flat square, and on the
+/// square precreased at x = 0.5, which splits the bottom edge in two. So is
+/// an O3 whose moving edge the precrease splits. A fold that bends the edge
+/// still refuses it.
+#[test]
+fn a_segment_anchor_split_by_an_inserted_precrease_replays() {
+    let bottom = seg([0.0, 0.0], [1.0, 0.0]);
+    let o7 = Axiom::O7 {
+        p: [0.3, 0.4],
+        m1: bottom,
+        m2: seg([0.0, 0.0], [0.0, 1.0]),
+    };
+    let s = flat(Sheet::square());
+    let chosen = find(&candidates(&s, &o7), &y_eq(0.2));
+    let original = along(&s, &o7, &chosen.line, None);
+
+    let e = precrease(&s, &all(x_eq(0.5), [0.75, 0.5], Valley)).state;
+    assert_eq!(e.faces_holding_segment(&bottom).len(), 2);
+    let replay = e
+        .axiom_root(&o7, &chosen.line)
+        .unwrap_or_else(|err| panic!("{err}"));
+    assert!(replay.err < 1e-12, "{replay:?}");
+    assert_eq!(replay.candidate.side, chosen.side);
+    let replayed = along(&e, &o7, &chosen.line, None);
+    for p in [[0.3, 0.4], [0.9, 0.9], [0.1, 1.0]] {
+        assert!(near(image(&replayed, p), image(&original, p)), "{p:?}");
+    }
+    assert!(near(image(&replayed, [0.3, 0.4]), [0.3, 0.0]));
+
+    // O3: the split bottom edge onto the top edge, y = 0.5; both halves of
+    // the edge move and land on it.
+    let o3 = Axiom::O3 {
+        m1: bottom,
+        m2: seg([0.0, 1.0], [1.0, 1.0]),
+    };
+    let c = find(&candidates(&e, &o3), &y_eq(0.5));
+    assert_eq!(c.side, Some(side(&y_eq(0.5), [0.5, 0.0])));
+    let landed = along(&e, &o3, &c.line, None);
+    for p in [[0.0, 0.0], [0.5, 0.0], [1.0, 0.0]] {
+        assert!((image(&landed, p)[1] - 1.0).abs() < 1e-9, "{p:?}");
+    }
+
+    // Bent by a fold, the edge names no line.
+    let bent = fold(&e, &all(x_eq(0.5), [0.75, 0.5], Valley)).state;
+    assert_eq!(
+        bent.axiom_candidates(&o7),
+        Err(LineRefusal::SegmentNotOnAFace { segment: bottom })
+    );
 }
 
 /// The existing-crease mode: the book fold's bend, picked from the

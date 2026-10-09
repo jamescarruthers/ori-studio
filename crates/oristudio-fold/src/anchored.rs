@@ -122,7 +122,9 @@ pub enum LineRefusal {
     PointOffPaper { point: Point },
     #[error("the segment {segment:?} is shorter than the minimum feature")]
     SegmentTooShort { segment: SheetSegment },
-    #[error("the segment {segment:?} does not lie on one face")]
+    /// A folded crease bends it, or it leaves the paper (the code predates
+    /// segments that cross flat creases, which resolve).
+    #[error("the segment {segment:?} is bent by a fold or leaves the paper")]
     SegmentNotOnAFace { segment: SheetSegment },
     #[error("the free line's points land {distance} apart, closer than the minimum feature")]
     FreeLineTooShort { a: Point, b: Point, distance: f64 },
