@@ -59,6 +59,12 @@ export interface FoldToolPreview {
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
 
+/** The line and the side a built step folds, as the tools located them: what a new seed leaves alone. */
+const lineSideKey = (build: FoldStepBuild) =>
+  build.status === 'built'
+    ? `${build.sceneLine.n[0]},${build.sceneLine.n[1]},${build.sceneLine.d}:${build.movingSign}`
+    : null;
+
 /** The axiom line a fold tool's picks locate, once every click is in. */
 function axiomLineOf(tools: FoldToolState): FoldAxiomLine | null {
   return isFoldKind(tools.tool) ? axiomLineOfPicks(tools.lineMode, tools.picks) : null;
@@ -182,7 +188,12 @@ export function useFoldToolPreview(
   const analysis = analysisFor?.status === 'analysed' ? analysisFor.analysis : null;
 
   // --- The section, once per line and side on a state: a new seed of the same line asks nothing.
-  const [section, setSection] = useState<{ key: string; section: FoldCrossSection } | null>(null);
+  const lineSide = tools.override ? null : lineSideKey(build);
+  const [section, setSection] = useState<{
+    key: string;
+    lineSide: string | null;
+    section: FoldCrossSection;
+  } | null>(null);
   const wantedSection = analysis && stateKey ? `${stateKey}|${sectionKey(analysis)}` : null;
   useEffect(() => {
     if (!analysis || wantedSection === null || section?.key === wantedSection) return undefined;
@@ -190,14 +201,24 @@ export function useFoldToolPreview(
     void withCursor((engine, at) => engine.crossSection(at, analysis.line, analysis.side)).then(
       (answer) => {
         if (!current || answer.status !== 'answered' || answer.value.status !== 'ok') return;
-        setSection({ key: wantedSection, section: answer.value.section });
+        setSection({ key: wantedSection, lineSide, section: answer.value.section });
       },
       (error: unknown) => reportError(error, { surface: 'fold:cross-section' })
     );
     return () => {
       current = false;
     };
-  }, [withCursor, analysis, wantedSection, section?.key]);
+  }, [withCursor, analysis, wantedSection, section?.key, lineSide]);
+  // A new seed of the same line and side is the same section: it stays on
+  // show while that seed is analysed, so the picker the folder is pressing
+  // (and the focus in it) is not taken away and put back under them.
+  const analysing = step !== null && (analysisFor === null || analysisFor.status === 'working');
+  const shownSection =
+    section &&
+    (section.key === wantedSection ||
+      (analysing && lineSide !== null && section.lineSide === lineSide && section.key.startsWith(`${stateKey}|`)))
+      ? section.section
+      : null;
 
   // --- The landed state's scene and its added creases, for the crease-pattern pane.
   const pending = session.pending;
@@ -250,7 +271,7 @@ export function useFoldToolPreview(
     build,
     step,
     analysis,
-    section: section && section.key === wantedSection ? section.section : null,
+    section: shownSection,
     action: action && step && action.key === step.key ? action.action : null,
     landed: landed && landed.key === landedKey ? landed.landed : null,
     refused,
