@@ -40,12 +40,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::complete::{ChoiceCount, CompletionLimits, Completions};
 use crate::compound::motion::{StepMotion, Turn};
+use crate::compound::pieces::{Pieces, Scoring, prepare_pieces};
 use crate::compound::reverse::{
     Opening, Plan, ReverseAnalysis, ReverseChoices, ReverseFold, ReverseKind, Tip,
 };
 use crate::compound::{
-    Across, Against, CompoundFolded, CompoundRefused, CompoundReport, Macro, Pending, Prepared,
-    Scoring, no_order, prepare_scored,
+    Across, Against, CompoundFolded, CompoundRefused, CompoundReport, Pending, Prepared, no_order,
 };
 use crate::fold::line::{self, Axis, Classified};
 use crate::fold::score::{self, Scored, ScoredFace};
@@ -274,8 +274,6 @@ struct Crimp {
     tip: Tip,
     /// The tip scored along ℓ1: every tip face, whatever the plan.
     first: Scored,
-    /// Per parent face position, whether ℓ1 split it.
-    first_split: Vec<bool>,
     /// ℓ2 oriented toward the tip and snapped, with every vertex of `first`
     /// classified.
     second: Classified,
@@ -510,12 +508,7 @@ impl State {
             Side::Negative
         };
         let second = line::classify(&images, Axis::new(&op.second, toward))?;
-        let crimp = Crimp {
-            tip,
-            first,
-            first_split,
-            second,
-        };
+        let crimp = Crimp { tip, first, second };
         if !(0..crimp.first.faces.len()).any(|a| crimp.in_tip(a) && crimp.beyond(a)) {
             return Err(FoldRefusal::CrimpMissesTip.into());
         }
@@ -561,11 +554,12 @@ impl State {
             }
         }
         let strip_blocks = 2 * plan.openings.len() + plan.whole.len();
-        let (scoring, bodies) = self.score_second(crimp, &block_of, strip_blocks)?;
+        let (scored, scored_block_of, bodies) =
+            self.score_second(crimp, &block_of, strip_blocks)?;
         // Each opening flap reaches past ℓ2 with both blocks, or neither,
         // and each block that does has its strip there to hinge to.
         for (k, opening) in plan.openings.iter().enumerate() {
-            let reach = |b: usize| scoring.block_of.contains(&Some(strip_blocks + b));
+            let reach = |b: usize| scored_block_of.contains(&Some(strip_blocks + b));
             let hinged = |b: usize| !bodies[b].is_empty();
             let (lower, upper) = (2 * k, 2 * k + 1);
             let opens = match (reach(lower), reach(upper)) {
@@ -589,16 +583,15 @@ impl State {
         let tip = first.after(&second);
         let mut blocks = vec![first; strip_blocks];
         blocks.extend(vec![tip; strip_blocks]);
-        let mut prepared = prepare_scored(
+        let mut prepared = prepare_pieces(
             self,
-            &Macro {
-                line: crimp.tip.classified.clone(),
-                block_of,
+            Pieces {
+                scoring: Scoring::of(scored),
+                block_of: scored_block_of,
                 blocks,
                 against,
                 across: Across::Alike,
             },
-            scoring,
         )?;
         // Each tip block against its strip on ℓ2, as the second reverse
         // places it.
@@ -641,7 +634,7 @@ impl State {
         crimp: &Crimp,
         parent_block: &[Option<usize>],
         strip_blocks: usize,
-    ) -> Result<(Scoring, Vec<Vec<FaceId>>), FoldRefusal> {
+    ) -> Result<(Scored, Vec<Option<usize>>, Vec<Vec<FaceId>>), FoldRefusal> {
         let first = &crimp.first;
         let (next_face, next_crease) = self.next_ids();
         let step = self.step() + 1;
@@ -778,14 +771,8 @@ impl State {
                 crease
             })
             .collect();
-        let split_parent: Vec<bool> = (0..self.faces().len())
-            .map(|p| {
-                crimp.first_split[p]
-                    || first.child_of[p]
-                        .iter()
-                        .any(|&a| second.child_of[a].len() > 1)
-            })
-            .collect();
+        // A parent face either score split has more than one landed face:
+        // what the shared steps read as split (`pieces::prepare_pieces`).
         let scored = Scored {
             vertices: second.vertices,
             faces,
@@ -795,14 +782,7 @@ impl State {
             split: first.split + second.split,
         };
         let bodies = strip_bodies(&scored, &block_of, strip_blocks);
-        Ok((
-            Scoring {
-                scored,
-                block_of,
-                split: split_parent,
-            },
-            bodies,
-        ))
+        Ok((scored, block_of, bodies))
     }
 
     /// Fixes for a crimp no order fits: the other kind when it lands. The

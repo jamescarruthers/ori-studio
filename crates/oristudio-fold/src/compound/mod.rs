@@ -124,14 +124,6 @@ pub(crate) struct Macro {
     pub(crate) across: Across,
 }
 
-impl Macro {
-    /// Whether blocks `x` and `y` move by the same motion.
-    fn alike(&self, x: usize, y: usize) -> bool {
-        let (p, q) = (self.blocks[x].0, self.blocks[y].0);
-        p.iter().zip(&q).all(|(a, b)| (a - b).abs() <= 1e-12)
-    }
-}
-
 /// What a compound fold did, beside the state it landed.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CompoundReport {

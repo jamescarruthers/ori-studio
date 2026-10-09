@@ -156,8 +156,20 @@ impl StepMotion {
         StepMotion {
             kind,
             legs: vec![
-                turn.leg(LegName::Spread, Stacking::Parent, 0.0, groups, Isometry::IDENTITY),
-                turn.leg(LegName::Close, Stacking::Landed, FRAC_PI_2, groups, Isometry::IDENTITY),
+                turn.leg(
+                    LegName::Spread,
+                    Stacking::Parent,
+                    0.0,
+                    groups,
+                    Isometry::IDENTITY,
+                ),
+                turn.leg(
+                    LegName::Close,
+                    Stacking::Landed,
+                    FRAC_PI_2,
+                    groups,
+                    Isometry::IDENTITY,
+                ),
             ],
         }
     }

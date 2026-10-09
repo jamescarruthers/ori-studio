@@ -391,23 +391,21 @@ pub(crate) fn prepare_pieces(state: &State, pieces: Pieces) -> Result<Prepared, 
     // 6–7. Carry and seed.
     let problem = unordered.problem();
     let mut fixed = Vec::new();
-    let mut push = |upper: usize, lower: usize, kind: FixedKind| {
-        if problem.is_variable(ids[upper], ids[lower]) {
-            fixed.push(FixedPair {
+    let pair = |upper: usize, lower: usize, kind: FixedKind| {
+        problem
+            .is_variable(ids[upper], ids[lower])
+            .then_some(FixedPair {
                 upper: ids[upper],
                 lower: ids[lower],
                 kind,
-            });
-        }
+            })
     };
-    for (pair, lo_above) in state.order().pairs() {
+    for (old, lo_above) in state.order().pairs() {
         let Some(lo_above) = lo_above else {
             continue;
         };
-        let (Some(f), Some(g)) = (
-            state.face_position(pair.lo()),
-            state.face_position(pair.hi()),
-        ) else {
+        let (Some(f), Some(g)) = (state.face_position(old.lo()), state.face_position(old.hi()))
+        else {
             continue;
         };
         for &a in &child_of[f] {
@@ -419,20 +417,23 @@ pub(crate) fn prepare_pieces(state: &State, pieces: Pieces) -> Result<Prepared, 
                     (Some(x), Some(y)) if x == y => {
                         (lo_above == blocks[x].front_up(), FixedKind::Carried)
                     }
-                    (Some(_), Some(_)) => match across {
+                    (Some(x), Some(y)) => match across {
                         Across::Keep => (lo_above, FixedKind::Seed),
-                        Across::Free => continue,
+                        Across::Alike if alike(&blocks, x, y) => (lo_above, FixedKind::Seed),
+                        Across::Alike | Across::Free => continue,
                     },
                     _ => continue,
                 };
-                if a_above {
-                    push(a, b, kind);
+                fixed.extend(if a_above {
+                    pair(a, b, kind)
                 } else {
-                    push(b, a, kind);
-                }
+                    pair(b, a, kind)
+                });
             }
         }
     }
+    // Every pair from here on places a block against paper it lands on.
+    let placed = fixed.len();
     for against in &against {
         let body: Vec<usize> = against
             .faces
@@ -442,11 +443,11 @@ pub(crate) fn prepare_pieces(state: &State, pieces: Pieces) -> Result<Prepared, 
             .collect();
         for a in (0..ids.len()).filter(|&a| block_of[a] == Some(against.block)) {
             for &s in &body {
-                if against.above {
-                    push(a, s, FixedKind::Seed);
+                fixed.extend(if against.above {
+                    pair(a, s, FixedKind::Seed)
                 } else {
-                    push(s, a, FixedKind::Seed);
-                }
+                    pair(s, a, FixedKind::Seed)
+                });
             }
         }
     }
@@ -459,6 +460,7 @@ pub(crate) fn prepare_pieces(state: &State, pieces: Pieces) -> Result<Prepared, 
     Ok(Prepared {
         unordered,
         fixed,
+        placed,
         block_of,
         blocks: blocks.len(),
         moving,
@@ -468,6 +470,12 @@ pub(crate) fn prepare_pieces(state: &State, pieces: Pieces) -> Result<Prepared, 
         relettered,
         split: split_count,
     })
+}
+
+/// Whether blocks `x` and `y` move by the same motion.
+fn alike(blocks: &[Isometry], x: usize, y: usize) -> bool {
+    let (p, q) = (blocks[x].0, blocks[y].0);
+    p.iter().zip(&q).all(|(a, b)| (a - b).abs() <= 1e-12)
 }
 
 /// The image–image guard (plan D5, research §6): every pair whose relative
@@ -484,17 +492,13 @@ fn image_guard(
     position: &impl Fn(FaceId) -> Option<usize>,
 ) -> Result<(), FoldRefusal> {
     let geometry = unordered.geometry();
-    let same_motion = |x: usize, y: usize| {
-        let (p, q) = (blocks[x].0, blocks[y].0);
-        p.iter().zip(&q).all(|(a, b)| (a - b).abs() <= 1e-12)
-    };
     for pair in unordered.problem().variables() {
         let (Some(a), Some(b)) = (position(pair.lo()), position(pair.hi())) else {
             continue;
         };
         let changed = match (block_of[a], block_of[b]) {
             (None, None) => false,
-            (Some(x), Some(y)) => x != y && !same_motion(x, y),
+            (Some(x), Some(y)) => x != y && !alike(blocks, x, y),
             _ => true,
         };
         if !changed {
