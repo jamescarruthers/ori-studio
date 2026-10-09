@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
 import type { FoldShortcutId, ViewportShortcutId } from '../../keyboard/shortcuts';
 import { registerFoldCancel, registerFoldKeyHandler, registerFoldViewCamera } from '../sequence/foldKeys';
+import { focusInFoldLayerPick } from '../sequence/foldLayerPickFocus';
 import {
   FOLD_LINE_MODE_SHORTCUTS,
   FOLD_MODEL_TURNS,
@@ -13,19 +14,6 @@ import { foldCanvasVerbs } from './foldCanvasCommands';
 
 /** Marks a pane of the Fold canvas: where Enter belongs to the canvas, which commits. */
 export const FOLD_PANE_ATTRIBUTE = 'data-fold-pane';
-
-/**
- * Marks the tool window's layer controls — the layer picker and the flap
- * chips — where the fold's two steps meet: "Pick which layers move", then
- * "Press Enter to fold". Enter there is the canvas's, which commits; Space is
- * the control's, which picks.
- */
-export const FOLD_LAYER_PICK_ATTRIBUTE = 'data-fold-layer-pick';
-
-/** Whether focus is in the tool window's layer controls ({@link FOLD_LAYER_PICK_ATTRIBUTE}). */
-export function focusInFoldLayerPick(element: Element | null): boolean {
-  return element !== null && element.closest(`[${FOLD_LAYER_PICK_ATTRIBUTE}]`) !== null;
-}
 
 /**
  * Whether Enter at this focus is the canvas's: focus on nothing, on a pane

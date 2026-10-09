@@ -26,6 +26,9 @@ export function useFoldPanePlayback(stepId: string | null, offset: Point): FoldS
   useEffect(() => {
     latest.current = playback;
   });
-  useEffect(() => registerFoldKeyHandler((id) => runFoldPlaybackShortcut(id, latest.current)), []);
+  useEffect(
+    () => registerFoldKeyHandler((id) => runFoldPlaybackShortcut(id, latest.current, document.activeElement)),
+    []
+  );
   return playback;
 }

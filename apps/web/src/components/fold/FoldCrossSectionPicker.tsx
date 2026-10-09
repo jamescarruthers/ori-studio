@@ -48,6 +48,8 @@ export function FoldCrossSectionPicker({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>, index: number) => {
+    // A key the workspace's keyboard already acted on is not the row's too.
+    if (event.defaultPrevented) return;
     const last = model.rows.length - 1;
     switch (event.key) {
       case 'ArrowDown':

@@ -15,6 +15,22 @@ describe('runFoldPlaybackShortcut', () => {
     expect(toggle).not.toHaveBeenCalled();
   });
 
+  it('leaves Space to the layer controls while one has focus, and takes it from any other control', () => {
+    const toggle = vi.fn();
+    const layers = document.createElement('div');
+    layers.setAttribute('data-fold-layer-pick', '');
+    const chip = document.createElement('button');
+    layers.append(chip);
+    const rail = document.createElement('button');
+    document.body.append(layers, rail);
+    expect(runFoldPlaybackShortcut('fold.playStep', { available: true, toggle }, chip)).toBe(false);
+    expect(toggle).not.toHaveBeenCalled();
+    expect(runFoldPlaybackShortcut('fold.playStep', { available: true, toggle }, rail)).toBe(true);
+    expect(toggle).toHaveBeenCalledTimes(1);
+    layers.remove();
+    rail.remove();
+  });
+
   it('binds Space in the Fold workspace’s own scope', () => {
     expect(getShortcutDefinition('fold.playStep')).toMatchObject({ scope: 'fold', target: 'fold' });
     expect(shortcutLabelForAction('fold.playStep')).toBe('Space');

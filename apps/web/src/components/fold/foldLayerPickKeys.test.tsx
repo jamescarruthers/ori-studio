@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import type { FoldCrossSection } from '../../fold/engine/foldEngineWire';
+import { runFoldPlaybackShortcut } from '../../fold/animation/foldPlaybackShortcuts';
 import { registerFoldCanvasVerbs } from '../../fold/canvas/foldCanvasCommands';
 import { runFoldCanvasShortcut } from '../../fold/canvas/useFoldCanvasShortcuts';
 import type { FoldCanvasVerbs } from '../../fold/canvas/useFoldCanvasVerbs';
@@ -71,6 +72,8 @@ let host: HTMLDivElement | null = null;
 const releases: (() => void)[] = [];
 let bound: FoldCanvasVerbs;
 let onToggle: ReturnType<typeof vi.fn>;
+/** The step on screen has a motion: Space would play it. */
+const playback = { available: true, toggle: vi.fn() };
 
 beforeEach(() => {
   // What Fold has mounted while the canvas is up: the app's listener, the
@@ -85,7 +88,10 @@ beforeEach(() => {
     registerConditionalScopeExecutor('fold', runFoldKey)
   );
   bound = verbs();
+  playback.toggle.mockClear();
   releases.push(
+    // As the canvas registers them: the playback's, then the tools' (asked first).
+    registerFoldKeyHandler((id) => runFoldPlaybackShortcut(id, playback, document.activeElement)),
     registerFoldCanvasVerbs(bound),
     registerFoldKeyHandler((id) => runFoldCanvasShortcut(id, document.activeElement))
   );
@@ -147,5 +153,31 @@ describe('Enter in the layer controls', () => {
     const enter = press('Enter');
     expect(bound.commit).toHaveBeenCalledTimes(1);
     expect(enter.defaultPrevented).toBe(true);
+  });
+});
+
+describe('Space in the layer controls', () => {
+  it('picks a focused row’s flap, and plays nothing', () => {
+    act(() => row().focus());
+    const space = press(' ');
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(onToggle).toHaveBeenCalledWith(0);
+    expect(playback.toggle).not.toHaveBeenCalled();
+    // The row's own: prevented by the row, so the listbox does not scroll.
+    expect(space.defaultPrevented).toBe(true);
+  });
+
+  it('is left to a focused chip, which a button presses on Space', () => {
+    act(() => chip().focus());
+    const space = press(' ');
+    expect(playback.toggle).not.toHaveBeenCalled();
+    expect(space.defaultPrevented).toBe(false);
+  });
+
+  it('still plays the step from anywhere else', () => {
+    act(() => (document.activeElement as HTMLElement | null)?.blur());
+    press(' ');
+    expect(playback.toggle).toHaveBeenCalledTimes(1);
+    expect(onToggle).not.toHaveBeenCalled();
   });
 });
