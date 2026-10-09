@@ -15,11 +15,15 @@
 //!
 //! # What Oriedita can see
 //!
-//! Only folding colours reach its flat fold (`B`, `M`, `V`); a flat crease is
-//! dropped, so faces on either side of a precrease are one Oriedita face. Each
-//! of our faces is matched to the Oriedita face containing its centroid; pairs
-//! within one Oriedita face are not seeded, and two of our pairs on one
-//! Oriedita pair must agree, or the order is one Oriedita cannot state.
+//! The crease pattern reaches it as Edit's does, through the one conversion
+//! to the kernel's model (`fold_cp_to_model`, plan D10), in Oriedita's model
+//! space. Only folding colours reach its flat fold (`B`, `M`, `V`), as Edit
+//! filters them; a flat crease becomes an unassigned line and is dropped, so
+//! faces on either side of a precrease are one Oriedita face. Each of our
+//! faces is matched to the Oriedita face containing its centroid, placed by
+//! the same `KernelFrame`; pairs within one Oriedita face are not seeded, and
+//! two of our pairs on one Oriedita pair must agree, or the order is one
+//! Oriedita cannot state.
 //!
 //! # Convention
 //!
@@ -37,13 +41,10 @@ use oristudio_cp::folding::{
     face_position_wireframe_from_segments, initial_hierarchy_from_segments,
     validate_initial_hierarchy,
 };
-use oristudio_cp::geometry::{LineColor, LineSegment, Point as CpPoint};
-use oristudio_fold::{CreaseKind, FaceId, Letter, State};
+use oristudio_cp::geometry::LineSegment;
+use oristudio_fold::{FaceId, KernelFrame, State, fold_cp_to_model};
 use oristudio_geometry::convex;
 use oristudio_layer_order::LayerOrder;
-
-/// Oriedita's sheet is about 400 units across; ours is 1.
-const SCALE: f64 = 400.0;
 
 /// Oriedita's starting face, as the shipped fold calls it.
 const STARTING_FACE: i32 = 1;
@@ -85,7 +86,8 @@ pub struct Seeded {
 
 impl Seeded {
     pub fn new(state: &State) -> Result<Seeded, String> {
-        let segments = segments(state);
+        let segments = folding_segments(state);
+        let frame = KernelFrame::of(state.sheet());
         let wireframe = face_position_wireframe_from_segments(&segments, STARTING_FACE)
             .map_err(|e| format!("wireframe: {e}"))?
             .ok_or("Oriedita finds no faces")?;
@@ -110,7 +112,7 @@ impl Seeded {
                 .collect();
             let centroid =
                 convex::centroid(&sheet).ok_or(format!("face {} has no centroid", face.id))?;
-            let at = [centroid[0] * SCALE, centroid[1] * SCALE];
+            let at = frame.to_model(centroid);
             let hits: Vec<usize> = (0..polygons.len())
                 .filter(|&k| polygons[k].len() >= 3 && contains(&polygons[k], at))
                 .collect();
@@ -248,26 +250,14 @@ impl Seeded {
     }
 }
 
-/// The folding colours of the state's crease pattern, at Oriedita's scale:
-/// border black, mountain red, valley blue; flat creases dropped.
-fn segments(state: &State) -> Vec<LineSegment> {
-    let point = |v: oristudio_fold::VertexId| {
-        let p = state.vertices()[v.0 as usize];
-        CpPoint::new(p[0] * SCALE, p[1] * SCALE)
-    };
-    state
-        .creases()
-        .iter()
-        .filter_map(|crease| {
-            let color = match crease.kind {
-                CreaseKind::Border => LineColor::Black0,
-                CreaseKind::Folded(Letter::Mountain) => LineColor::Red1,
-                CreaseKind::Folded(Letter::Valley) => LineColor::Blue2,
-                CreaseKind::Flat(_) => return None,
-            };
-            let [a, b] = crease.vertices.map(point);
-            Some(LineSegment::with_color(a, b, color))
-        })
+/// The folding colours of the state's crease pattern as the kernel holds it:
+/// border black, mountain red, valley blue; the unassigned lines precreases
+/// become are left out, as Edit leaves them out of its fold.
+fn folding_segments(state: &State) -> Vec<LineSegment> {
+    fold_cp_to_model(state)
+        .line_segments
+        .into_iter()
+        .filter(|s| s.color.is_folding_line())
         .collect()
 }
 

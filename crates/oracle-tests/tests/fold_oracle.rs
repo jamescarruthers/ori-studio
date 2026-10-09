@@ -8,11 +8,14 @@
 //! rectangular and polygonal sheets. Every state a fold or precrease lands is
 //! checked; a turn-over or rotation changes only the view.
 //!
-//! - **Oriedita, seeded** (`fold_support::oriedita`), in process. It always
-//!   runs.
-//! - **Flat-Folder's `verify`** (`fold_support::flat_folder`), in Node, gated
-//!   on `FLATFOLDER_ORACLE`, with its arrangement validated and rebuilt at
-//!   halved ε when wrong.
+//! Each oracle reads a state the way the engine hands it out, so the way out
+//! is checked with it:
+//!
+//! - **Oriedita, seeded** (`fold_support::oriedita`), in process, on the
+//!   crease pattern `fold_cp_to_model` gives Edit (plan D10). It always runs.
+//! - **Flat-Folder's `verify`** (`fold_support::flat_folder`), in Node, on the
+//!   FOLD export's step frame of the state, gated on `FLATFOLDER_ORACLE`, with
+//!   its arrangement validated and rebuilt at halved ε when wrong.
 //!
 //! Each has a negative control: one pair of a state's order flipped, where the
 //! engine's own checker refuses the flip, must not verify. A flip the checker
@@ -22,8 +25,9 @@
 mod fold_support;
 mod support;
 
+use fold_support::flat_folder::{self, Job};
 use fold_support::oriedita::{Seeded, Verdict};
-use fold_support::{flat_folder, flipped, fold_document, has_flat_creases, pick};
+use fold_support::{flipped, has_flat_creases, pick, verify_frame, verify_order};
 use oristudio_fold::State;
 use oristudio_fold::random::{Outcome, Sequence};
 use oristudio_layer_order::{FacePair, LayerOrder, check};
@@ -148,22 +152,28 @@ fn every_random_state_verifies_with_flat_folder_when_enabled() {
     let mut jobs = Vec::new();
     let mut flips = Vec::new();
     for landed in &states {
-        let order = landed.state.order();
-        let document =
-            fold_document(&landed.state, order).unwrap_or_else(|e| panic!("{}: {e}", landed.label));
-        jobs.push((landed.label.clone(), document));
+        let frame = verify_frame(&landed.state).unwrap_or_else(|e| panic!("{}: {e}", landed.label));
+        jobs.push(Job {
+            name: landed.label.clone(),
+            frame: frame.clone(),
+            order: frame.face_orders.clone(),
+        });
         if let Some((pair, flip)) = refused_flip(landed) {
-            let document = fold_document(&landed.state, &flip)
+            let order = verify_order(&landed.state, &flip)
                 .unwrap_or_else(|e| panic!("{}: {e}", landed.label));
             flips.push(format!("{} {pair}", landed.label));
-            jobs.push((format!("{}-flip", landed.label), document));
+            jobs.push(Job {
+                name: format!("{}-flip", landed.label),
+                frame,
+                order,
+            });
         }
     }
     let records = flat_folder::verify_all(&oracle, &jobs);
 
     let (mut valid, mut refused, mut retried) = (0, 0, 0);
     let mut failures = Vec::new();
-    for ((name, _), record) in jobs.iter().zip(&records) {
+    for (Job { name, .. }, record) in jobs.iter().zip(&records) {
         let verdict = record["verify"]["verdict"].as_str().unwrap_or_default();
         retried += usize::from(record["arrangement"]["retries"].as_u64().unwrap_or(0) > 0);
         if name.ends_with("-flip") {

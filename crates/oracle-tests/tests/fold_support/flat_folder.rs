@@ -1,8 +1,8 @@
 //! The Flat-Folder oracle's `verify` command (`tools/flat-folder-oracle`,
-//! README "verify") on Fold states: the vendored JavaScript builds its own
-//! arrangement of the state's crease pattern, checks it and rebuilds it at
-//! halved ε until it passes, then seeds the order into its own constraints.
-//! It reads face indices as the FOLD file gives them.
+//! README "verify") on Fold states' FOLD step frames: the vendored JavaScript
+//! builds its own arrangement of the frame's crease pattern, checks it and
+//! rebuilds it at halved ε until it passes, then seeds the order into its own
+//! constraints. It reads face indices as the FOLD file gives them.
 //!
 //! Gated on `FLATFOLDER_ORACLE` (the script's path, relative to the
 //! repository root or absolute); the CI "Flat-Folder oracle parity" step sets
@@ -32,11 +32,19 @@ pub fn oracle() -> Option<PathBuf> {
     })
 }
 
-/// `verify` on each document, a few processes at a time; the records in input
-/// order. Each is written under the test's temporary directory as
-/// `<name>.fold`, and its `faceOrders` beside it as `<name>.order.json`: an
-/// empty order is no key at all in the FOLD file, but still an order.
-pub fn verify_all(oracle: &Path, jobs: &[(String, FoldDocument)]) -> Vec<Value> {
+/// One `verify` run: a step frame and an order on its faces.
+pub struct Job {
+    pub name: String,
+    pub frame: FoldDocument,
+    /// FOLD `faceOrders` by face position: the frame's own, or a flip.
+    pub order: Vec<[i64; 3]>,
+}
+
+/// `verify` on each job, a few processes at a time; the records in input
+/// order. Each frame is written under the test's temporary directory as
+/// `<name>.fold`, and the order beside it as `<name>.order.json`: an empty
+/// order is no key at all in the FOLD file, but still an order.
+pub fn verify_all(oracle: &Path, jobs: &[Job]) -> Vec<Value> {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("fold-oracle");
     std::fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
     let records = Mutex::new(vec![Value::Null; jobs.len()]);
@@ -47,14 +55,19 @@ pub fn verify_all(oracle: &Path, jobs: &[(String, FoldDocument)]) -> Vec<Value> 
             scope.spawn(|| {
                 loop {
                     let job = next.fetch_add(1, Ordering::Relaxed);
-                    let Some((name, document)) = jobs.get(job) else {
+                    let Some(Job {
+                        name,
+                        frame,
+                        order: triples,
+                    }) = jobs.get(job)
+                    else {
                         return;
                     };
                     let fold = dir.join(format!("{name}.fold"));
                     let order = dir.join(format!("{name}.order.json"));
                     for (path, text) in [
-                        (&fold, serde_json::to_string(document)),
-                        (&order, serde_json::to_string(&document.face_orders)),
+                        (&fold, serde_json::to_string(frame)),
+                        (&order, serde_json::to_string(triples)),
                     ] {
                         let text = text.unwrap_or_else(|e| panic!("{name}: {e}"));
                         std::fs::write(path, text)

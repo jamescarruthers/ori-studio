@@ -1,66 +1,33 @@
-//! What the Fold oracles share: Fold states as FOLD files, single-pair flips,
-//! the seeded Oriedita verification ([`oriedita`]) and the Flat-Folder
-//! `verify` runner ([`flat_folder`]).
+//! What the Fold oracles share: Fold states as the engine's FOLD step frames,
+//! single-pair flips, the seeded Oriedita verification ([`oriedita`]) and the
+//! Flat-Folder `verify` runner ([`flat_folder`]).
 
 #![allow(dead_code)]
 
 pub mod flat_folder;
 pub mod oriedita;
 
-use std::collections::BTreeMap;
-
-use oristudio_fold::{CreaseKind, FaceId, Letter, State};
+use oristudio_fold::fold_file::{fold_face_orders, step_frame};
+use oristudio_fold::{CreaseKind, State};
 use oristudio_layer_order::{FacePair, LayerOrder};
-use treemaker_fold::{Assignment, FoldDocument};
+use treemaker_fold::FoldDocument;
 
-/// The state as a FOLD crease pattern with its layer order, view-independent:
-/// sheet coordinates; `B`, `M`, `V` and `F` for border, folded and flat
-/// creases; faces counter-clockwise in id order; and `faceOrders` naming faces
-/// by their index in that order, as `verify` reads them.
-pub fn fold_document(state: &State, order: &LayerOrder) -> Result<FoldDocument, String> {
-    let vertices = state.vertices().iter().map(|p| p.to_vec()).collect();
-    let edges = state
-        .creases()
-        .iter()
-        .map(|crease| crease.vertices.map(|v| v.0 as usize))
-        .collect();
-    let mut document = FoldDocument::new(vertices, edges);
-    document.file_creator = Some("ori-studio oracle-tests".to_string());
-    document.edges_assignment = state
-        .creases()
-        .iter()
-        .map(|crease| match crease.kind {
-            CreaseKind::Border => Assignment::Boundary,
-            CreaseKind::Folded(Letter::Mountain) => Assignment::Mountain,
-            CreaseKind::Folded(Letter::Valley) => Assignment::Valley,
-            CreaseKind::Flat(_) => Assignment::Flat,
-        })
-        .collect();
-    document.faces_vertices = state
-        .faces()
-        .iter()
-        .map(|face| face.ring.iter().map(|v| v.0 as usize).collect())
-        .collect();
-    let index: BTreeMap<FaceId, i64> = state
-        .faces()
-        .iter()
-        .enumerate()
-        .map(|(i, face)| (face.id, i as i64))
-        .collect();
-    let id = |face: i64| {
-        u32::try_from(face)
-            .ok()
-            .and_then(|face| index.get(&FaceId(face)))
-            .copied()
-            .ok_or_else(|| format!("face {face} is not in the state"))
-    };
-    document.face_orders = order
-        .to_fold_face_orders(state.folded_view())
-        .map_err(|e| e.to_string())?
-        .into_iter()
-        .map(|[f, g, s]| Ok([id(f)?, id(g)?, s]))
-        .collect::<Result<_, String>>()?;
-    Ok(document)
+/// A state as Flat-Folder's `verify` reads it: the engine's own FOLD step
+/// frame (`fold_file::step_frame`, what the FOLD export writes), with its
+/// faces, `B`/`M`/`V`/`F` edges and `faceOrders` by face position, over the
+/// crease pattern. A step frame's vertices sit at their folded images and
+/// `verify` folds the crease pattern itself, so they go back to the sheet
+/// coordinates the frame's face matrices start from.
+pub fn verify_frame(state: &State) -> Result<FoldDocument, String> {
+    let mut frame = step_frame(state).map_err(|e| e.to_string())?;
+    frame.vertices_coords = state.vertices().iter().map(|p| p.to_vec()).collect();
+    Ok(frame)
+}
+
+/// Another order on a state's faces as the `faceOrders` its step frame would
+/// carry: what a negative control hands `verify` beside the frame.
+pub fn verify_order(state: &State, order: &LayerOrder) -> Result<Vec<[i64; 3]>, String> {
+    fold_face_orders(state, order).map_err(|e| e.to_string())
 }
 
 /// Whether any crease is flat: a precrease, or a fold since undone. Oriedita
