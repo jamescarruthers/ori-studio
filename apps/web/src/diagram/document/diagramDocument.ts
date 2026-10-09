@@ -363,17 +363,76 @@ export interface DiagramCpSource {
 }
 
 /**
- * A source whose picture is captured in a pose (D5, D19): a linked pattern
- * shown as its creases, folded or simulated. Its `render` is the pose and
- * `remembered` the one each other way last had, so every pose verb, Show as,
- * the spread a new pose starts from, the carry of marks and how its picture
- * is measured read one shape, whatever made the picture.
+ * Which state of a Fold step a picture shows (fold-workspace plan D17): the
+ * state the step folds from, with what the step does drawn on it, as a
+ * References card shows its step (`before`); or the state it lands, as the
+ * Finished card shows the end (`after`).
  */
-export type DiagramPosedSource = DiagramCpSource;
+export type DiagramFoldMoment = 'before' | 'after';
+
+export const DIAGRAM_FOLD_MOMENTS: readonly DiagramFoldMoment[] = ['before', 'after'];
+
+/**
+ * A step drawn from a step of a Fold sequence, and linked to it (plan D17).
+ *
+ * The link names the step by its ids, which the Fold document owns and never
+ * reassigns (its steps are an append-only tree), and remembers two digests,
+ * one role each: `path`, the step's `fh1:` — its path's identity — and
+ * `state`, the `fs1:` of the state the picture shows, which alone says whether
+ * the picture still shows it. `engine` is the Fold engine's version that
+ * captured it, for diagnostics only: a new engine that lands the same state
+ * leaves the link current.
+ *
+ * Its pose is a linked pattern's (`posedRenderOf`), in two of its ways: the
+ * crease pattern of the step, or its flat folded form — its layer order is
+ * the sequence's, never a choice, so `foldCase` is always 1. A fold's `side`
+ * is the paper's as Fold shows it: `front` is the model as the sequence's
+ * view has it, `back` the same model turned over.
+ */
+export interface DiagramFoldStepSource {
+  kind: 'fold-step';
+  /** The sequence, `fold-<uuid>`. */
+  sequence: string;
+  /** The step whose fold the picture shows, `fstep-<uuid>`. */
+  step: string;
+  moment: DiagramFoldMoment;
+  /** The step's path as captured: `fh1:…`. */
+  path: string;
+  /** The state shown as captured: `fs1:…`. */
+  state: string;
+  /** The Fold engine's version that captured it; diagnostic only. */
+  engine: number;
+  /** The step's crease pattern as it was linked, for the card and a step whose sequence is gone. */
+  thumbnail: SheetThumbnail;
+  /** A crease pattern or a flat fold (`foldCase` 1), never 3D or simulated. */
+  render: DiagramCpRender;
+  /** The pose the other way of showing it last had, as a linked pattern's (D19); absent when empty. */
+  remembered?: Partial<Record<DiagramShowAs, DiagramCpRender>>;
+  /**
+   * The step's generated sentence as it was pulled (XML-clean): while the
+   * step's instruction still equals it the words are Fold's, and a refresh
+   * that words the step otherwise brings its own; edited, they are the
+   * reader's. Absent for a step whose fold says nothing (the flat sheet).
+   */
+  sentence?: string;
+}
+
+/** The ways a Fold step is shown: its crease pattern or its folded form, never simulated. */
+export const DIAGRAM_FOLD_SHOW_AS: readonly DiagramShowAs[] = ['crease-pattern', 'folded'];
+
+/**
+ * A source whose picture is captured in a pose (D5, D19): a linked pattern
+ * shown as its creases, folded or simulated, or a Fold step shown as its
+ * crease pattern or folded. Its `render` is the pose and `remembered` the one
+ * each other way last had, so every pose verb, Show as, the spread a new pose
+ * starts from, the carry of marks and how its picture is measured read one
+ * shape, whatever made the picture.
+ */
+export type DiagramPosedSource = DiagramCpSource | DiagramFoldStepSource;
 
 /** Whether a source is captured in a pose ({@link DiagramPosedSource}). */
 export function isPosedSource(source: DiagramStepSource | null | undefined): source is DiagramPosedSource {
-  return source?.kind === 'cp';
+  return source?.kind === 'cp' || source?.kind === 'fold-step';
 }
 
 /**
@@ -510,7 +569,11 @@ export interface DiagramReferencesSource {
  * build them, and a source this build does not know makes the step an
  * unknown, locked one (see {@link DiagramStep.unknown}).
  */
-export type DiagramStepSource = DiagramUploadSource | DiagramCpSource | DiagramReferencesSource;
+export type DiagramStepSource =
+  | DiagramUploadSource
+  | DiagramCpSource
+  | DiagramReferencesSource
+  | DiagramFoldStepSource;
 
 /**
  * A picture held in the assets table: an upload, or (from Phase 3) a capture
@@ -1438,7 +1501,7 @@ export function setStepPicture(
 
 /** A linked step's picture as a capture made it: its source, and the picture with any bitmap it is kept as. */
 export interface CapturedLink {
-  source: DiagramCpSource;
+  source: DiagramPosedSource;
   picture: DiagramPicture | null;
   /** The bitmap a picture too detailed to keep as vector is kept as; `picture` names it. */
   asset?: KnownDiagramAsset;
