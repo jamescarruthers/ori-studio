@@ -231,10 +231,16 @@
 }
 
 /* A fold that needs a badge (approximate, a grid pleat) carries both: its
-   number where every fold's is, and the badge in the opposite corner. */
+   number where every fold's is, and the badge in the opposite corner — on one
+   line, short of the number: a long one ("Outside reverse" on a phone's
+   narrow card) ends in an ellipsis rather than running over it. */
 .card[data-kind='fold'] .badge {
   left: auto;
   right: 4px;
+  max-width: calc(100% - 1.75rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* A card that offers more than one way: a dot per way along its foot, the one
