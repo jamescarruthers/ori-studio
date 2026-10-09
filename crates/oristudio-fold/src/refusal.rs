@@ -10,6 +10,8 @@ use oristudio_layer_order::Violation;
 use serde::Serialize;
 use thiserror::Error;
 
+use crate::complete::BudgetLimit;
+use crate::compound::reverse::{NoOpening, ReverseKind};
 use crate::pattern::{EdgeId, FaceId, VertexId};
 
 type Point = [f64; 2];
@@ -135,6 +137,40 @@ pub enum FoldRefusal {
     PredictionMismatch { face: FaceId, residual: f64 },
     #[error("unfolding the precrease moved more than the folded layers")]
     PrecreaseUnfoldMovedMore,
+
+    // --- A compound fold (plan D4) --------------------------------------
+    /// No layer order puts the moved paper anywhere: the faces the conflict
+    /// traces to, in the landed state.
+    #[error("no layer order fits the fold; faces {faces:?} conflict")]
+    NoOrder { faces: Vec<FaceId> },
+    #[error("the layer-order search hit its {limit:?} budget after {nodes} nodes")]
+    BudgetExceeded { limit: BudgetLimit, nodes: u64 },
+    #[error("the choice {choice:?} names no listed order")]
+    NoSuchChoice { choice: Vec<usize> },
+    /// A flap of a reverse fold's tip cannot open: its faces, in the parent.
+    #[error("flap {faces:?} has no opening to reverse it through ({cause:?})")]
+    ReverseNoOpening {
+        faces: Vec<FaceId>,
+        cause: NoOpening,
+    },
+    /// The tip cannot swing: layers that are not part of it lie in its way.
+    /// `blocking` are those layers' faces in the parent; `faces` every face
+    /// the conflict traces to in the landed state.
+    #[error("the tip is not free: faces {blocking:?} are in its way")]
+    ReverseTipNotFree {
+        blocking: Vec<FaceId>,
+        faces: Vec<FaceId>,
+    },
+    /// No layer order fits a reverse fold of this kind: the faces the
+    /// conflict traces to, in the landed state.
+    #[error("no {kind:?} reverse fold fits; faces {faces:?} conflict")]
+    ReverseKindInfeasible {
+        kind: ReverseKind,
+        faces: Vec<FaceId>,
+    },
+    /// A defect, never the input's fault.
+    #[error("internal error: {message}")]
+    Internal { message: String },
 }
 
 impl FoldRefusal {
@@ -177,6 +213,13 @@ impl FoldRefusal {
             FoldRefusal::Sliver { .. } => "sliver",
             FoldRefusal::PredictionMismatch { .. } => "prediction_mismatch",
             FoldRefusal::PrecreaseUnfoldMovedMore => "precrease_unfold_moved_more",
+            FoldRefusal::NoOrder { .. } => "no_order",
+            FoldRefusal::BudgetExceeded { .. } => "budget_exceeded",
+            FoldRefusal::NoSuchChoice { .. } => "no_such_choice",
+            FoldRefusal::ReverseNoOpening { .. } => "reverse_no_opening",
+            FoldRefusal::ReverseTipNotFree { .. } => "reverse_tip_not_free",
+            FoldRefusal::ReverseKindInfeasible { .. } => "reverse_kind_infeasible",
+            FoldRefusal::Internal { .. } => "internal",
         }
     }
 
@@ -196,7 +239,11 @@ impl FoldRefusal {
             | FoldRefusal::Sliver { face, .. }
             | FoldRefusal::PredictionMismatch { face, .. } => vec![*face],
             FoldRefusal::HingeOrientation { faces, .. } => faces.to_vec(),
-            FoldRefusal::FoldedImage { faces, .. } => faces.clone(),
+            FoldRefusal::FoldedImage { faces, .. }
+            | FoldRefusal::NoOrder { faces }
+            | FoldRefusal::ReverseNoOpening { faces, .. }
+            | FoldRefusal::ReverseKindInfeasible { faces, .. } => faces.clone(),
+            FoldRefusal::ReverseTipNotFree { blocking, .. } => blocking.clone(),
             FoldRefusal::LayerOrder { violations } => {
                 violations.iter().flat_map(Violation::faces).collect()
             }
@@ -277,6 +324,8 @@ pub enum Fix {
     PickFlap { flaps: Vec<Flap> },
     /// Fold along this landmark line instead, with the same moving side.
     UseLine { line: Line, side: Side },
+    /// The same reverse fold of the other kind is valid (plan D14).
+    OtherKind { kind: ReverseKind },
 }
 
 /// A refused operation and what could be done instead.

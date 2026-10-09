@@ -21,6 +21,7 @@
 //! order is still to be decided.
 
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use oristudio_geometry::convex;
 use oristudio_layer_order::{
@@ -38,9 +39,12 @@ use crate::state::{Derived, State, StateParts};
 /// the layer-order problem is rebuilt incrementally and its constraints are
 /// checked where they involve a touched face; pair completeness is always
 /// checked in full, so a pair an operation forgot to carry is never missed.
+/// A `prebuilt` problem is that rebuild, done already for these faces; one
+/// for other faces is not used.
 pub(super) fn run(
     parts: &StateParts,
     previous: Option<(&State, &BTreeSet<FaceId>)>,
+    prebuilt: Option<Arc<ConstraintProblem>>,
 ) -> Result<Derived, FoldRefusal> {
     let BeforeOrder {
         topology,
@@ -49,19 +53,20 @@ pub(super) fn run(
         edge_creases,
     } = before_order(parts, &BTreeSet::new())?;
 
+    let prebuilt = prebuilt.filter(|problem| problem.is_for(&view));
     let (problem, scope_faces) = match previous {
         Some((previous, touched)) => {
-            let mut scope: BTreeSet<FaceId> = touched.clone();
-            scope.extend(
-                parts
-                    .faces
-                    .iter()
-                    .map(|f| f.id)
-                    .filter(|&id| previous.face_position(id).is_none()),
-            );
-            (previous.derived.problem.rebuild(&view, &scope), Some(scope))
+            let scope = touched_scope(parts, previous, touched);
+            let problem = match prebuilt {
+                Some(problem) => problem,
+                None => Arc::new(previous.derived.problem.rebuild(&view, &scope)),
+            };
+            (problem, Some(scope))
         }
-        None => (ConstraintProblem::build(&view), None),
+        None => (
+            prebuilt.unwrap_or_else(|| Arc::new(ConstraintProblem::build(&view))),
+            None,
+        ),
     };
     let scope = match &scope_faces {
         Some(faces) => Scope::Faces(faces),
@@ -84,6 +89,24 @@ pub(super) fn run(
         view,
         problem,
     })
+}
+
+/// The faces whose constraints an incremental check covers: those an
+/// operation touched, and any `previous` does not have.
+pub(crate) fn touched_scope(
+    parts: &StateParts,
+    previous: &State,
+    touched: &BTreeSet<FaceId>,
+) -> BTreeSet<FaceId> {
+    let mut scope: BTreeSet<FaceId> = touched.clone();
+    scope.extend(
+        parts
+            .faces
+            .iter()
+            .map(|f| f.id)
+            .filter(|&id| previous.face_position(id).is_none()),
+    );
+    scope
 }
 
 /// What steps 1–5 derive: everything the layer order does not decide.

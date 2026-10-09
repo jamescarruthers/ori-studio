@@ -22,8 +22,8 @@
 use oristudio_fold::{
     AnchoredFold, Axiom, AxiomCandidate, ClosurePolicy, CrossSection, DepthChoice, Direction,
     FaceId, Fix as EngineFix, Flap, FoldActionGeometry, FoldLine, FoldRefusal, LineRefusal,
-    Placement, Refused, Seed, SheetSegment, SheetShape, Side, StartSide, StepSummary, TurnAxis,
-    VertexId, View,
+    Placement, Refused, ReverseKind, Seed, SheetSegment, SheetShape, Side, StartSide, StepSummary,
+    TurnAxis, VertexId, View,
 };
 use oristudio_geometry::Line;
 use serde::de::IgnoredAny;
@@ -459,6 +459,8 @@ pub enum Fix {
         #[serde(skip_serializing_if = "Option::is_none")]
         step: Option<StoredStep>,
     },
+    /// The same reverse fold of the other kind is valid.
+    OtherKind { kind: ReverseKind },
 }
 
 impl From<EngineFix> for Fix {
@@ -472,6 +474,7 @@ impl From<EngineFix> for Fix {
                 side,
                 step: None,
             },
+            EngineFix::OtherKind { kind } => Fix::OtherKind { kind },
         }
     }
 }

@@ -77,6 +77,10 @@ pub enum Broken {
     /// The one order it resolves to does not pass the gate.
     #[error("{refusal}")]
     Gate { refusal: FoldRefusal },
+    /// A stored reverse-fold opening (`openings[opening]`) no longer names
+    /// one of a flap's openings, or names a flap another one already does.
+    #[error("stored opening {opening} names no opening of the tip")]
+    Opening { opening: usize },
 }
 
 impl WitnessOrder {

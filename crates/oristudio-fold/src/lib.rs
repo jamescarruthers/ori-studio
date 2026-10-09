@@ -59,6 +59,7 @@ pub mod anchor;
 pub mod anchored;
 pub mod axioms;
 pub mod complete;
+pub mod compound;
 pub mod fold;
 #[cfg(feature = "kernel")]
 pub mod fold_file;
@@ -96,6 +97,12 @@ pub use complete::{
     ChoiceCount, CompletionLimits, CompletionRefusal, Completions, ComponentChoices, FixedKind,
     FixedPair,
 };
+pub use compound::motion::{LegName, MotionGroup, MotionKind, MotionLeg, Stacking, StepMotion};
+pub use compound::reverse::{
+    NoOpening, Opening, ReverseAnalysis, ReverseChoice, ReverseChoices, ReverseFold, ReverseFolded,
+    ReverseKind, ReverseOutcome, ReverseReport, StoredOpening, TipFlap,
+};
+pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
 pub use fold::{
     ActionKind, ClosurePolicy, CrossSection, DepthChoice, FoldActionGeometry, FoldAnalysis,
     FoldLineSpan, FoldReport, Folded, Grip, Placement, PlainFold, Pleat, Push, Refold, RowOrder,

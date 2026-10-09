@@ -364,7 +364,7 @@ fn carry_and_place(
 /// only refuses an overlap thinner than both faces. On the random campaign
 /// this exempted 31 of 685 sliver refusals; the rest were overlaps of 1e-4 to
 /// 1e-3 between faces several times wider.
-fn thinner(geometry: &Geometry, a: usize, b: usize) -> f64 {
+pub(crate) fn thinner(geometry: &Geometry, a: usize, b: usize) -> f64 {
     convex::width(&geometry.images[a]).min(convex::width(&geometry.images[b]))
 }
 
@@ -393,7 +393,7 @@ fn sliver(
 
 /// The vertex of `p` deepest inside `q` (the least distance to `q`'s edge
 /// lines), and that depth.
-fn deepest(p: &[Point], q: &[Point]) -> (usize, f64) {
+pub(crate) fn deepest(p: &[Point], q: &[Point]) -> (usize, f64) {
     let planes: Vec<HalfPlane> = (0..q.len())
         .filter_map(|i| HalfPlane::left_of(q[i], q[(i + 1) % q.len()]))
         .collect();

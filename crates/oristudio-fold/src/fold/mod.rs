@@ -23,8 +23,8 @@
 //! sheet points, never face ids, so a stored step survives replay (plan D6).
 
 mod action;
-mod apply;
-mod closure;
+pub(crate) mod apply;
+pub(crate) mod closure;
 pub(crate) mod line;
 pub(crate) mod score;
 mod section;

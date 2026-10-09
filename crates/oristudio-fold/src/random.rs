@@ -19,9 +19,11 @@ use std::collections::BTreeSet;
 use std::f64::consts::{PI, TAU};
 
 use oristudio_geometry::Line;
+use oristudio_geometry::convex::{self, HalfPlane};
 
+use crate::compound::reverse::{ReverseFold, ReverseKind};
 use crate::fold::{Folded, PlainFold, Seed};
-use crate::numerics::MIN_FEATURE;
+use crate::numerics::{MIN_FEATURE, TOL};
 use crate::pattern::VertexId;
 use crate::refusal::{FoldRefusal, Refused, Side};
 use crate::sheet::Sheet;
@@ -241,6 +243,97 @@ pub fn plain_fold_along(state: &State, line: Line, rng: &mut Rng) -> Option<Plai
         }
     };
     Some(op.with_seed(seed))
+}
+
+/// A drawn starting state for a compound-fold campaign, as the compound
+/// spike's start (`campaign-reverse.mjs`): one to four plain folds, each
+/// drawn by [`plain_fold`], of a square, or a fifth of the time a 1:2
+/// rectangle, in at most ten draws.
+pub fn folded(rng: &mut Rng) -> Result<State, FoldRefusal> {
+    let sheet = if rng.chance(0.2) {
+        Sheet::rectangle(1.0, 2.0)?
+    } else {
+        Sheet::square()
+    };
+    let mut state = State::flat(sheet, StartSide::Front)?;
+    let want = 1 + rng.below(4);
+    let mut landed = 0;
+    for _ in 0..10 {
+        if landed >= want {
+            break;
+        }
+        let Some(op) = plain_fold(&state, rng) else {
+            continue;
+        };
+        if let Ok(folded) = state.fold(&op) {
+            state = folded.state;
+            landed += 1;
+        }
+    }
+    Ok(state)
+}
+
+/// A drawn inside reverse fold of `state`, as the compound spike's campaign
+/// draws them (research `r2-spike-reverse-crimp-tuck`, `campaign-reverse.mjs`):
+/// a folded crease at least 0.05 long as the spine, a point a random
+/// 15–85% along it, and ℓ through that point perpendicular to the spine with
+/// probability `perpendicular`, otherwise at 12°–168° to it; a random tip
+/// side; the tip grown from the spine's two faces (each named by a sheet
+/// point of its paper on the tip side). None when the drawn crease is too
+/// short or neither face has paper on the drawn side.
+pub fn reverse_fold(state: &State, rng: &mut Rng, perpendicular: f64) -> Option<ReverseFold> {
+    let folded: Vec<usize> = (0..state.creases().len())
+        .filter(|&k| state.creases()[k].kind.is_folded())
+        .collect();
+    let k = rng.pick(&folded)?;
+    let [a, b] = state.creases()[k].vertices.map(|v| state.vertex_image(v));
+    let (a, b) = (a?, b?);
+    let length = (b[0] - a[0]).hypot(b[1] - a[1]);
+    if length < 0.05 {
+        return None;
+    }
+    let t = 0.15 + 0.7 * rng.next_f64();
+    let q = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+    let u = [(b[0] - a[0]) / length, (b[1] - a[1]) / length];
+    let angle = if rng.chance(perpendicular) {
+        PI / 2.0
+    } else {
+        (12.0 + 156.0 * rng.next_f64()).to_radians()
+    };
+    let (s, c) = angle.sin_cos();
+    let line = Line::from_point_direction(q, [u[0] * c - u[1] * s, u[0] * s + u[1] * c])?;
+    let side = if rng.chance(0.5) {
+        Side::Positive
+    } else {
+        Side::Negative
+    };
+    let half = HalfPlane::new(
+        match side {
+            Side::Positive => line.n,
+            Side::Negative => [-line.n[0], -line.n[1]],
+        },
+        match side {
+            Side::Positive => line.d,
+            Side::Negative => -line.d,
+        },
+    )?;
+    let at: Vec<Point> = state.topology().crease_faces[k]
+        .iter()
+        .filter_map(|&f| {
+            let id = state.faces()[f].id;
+            let piece = convex::split(state.face_image(id)?, &half, TOL).inside;
+            let centroid = convex::centroid(&piece)?;
+            (half.signed_distance(centroid) > TOL)
+                .then(|| state.isometry(id).map(|t| t.inverse().apply(centroid)))
+                .flatten()
+        })
+        .collect();
+    (!at.is_empty()).then_some(ReverseFold {
+        line,
+        side,
+        anchor: Seed::Flaps { at },
+        kind: ReverseKind::Inside,
+    })
 }
 
 /// The distinct vertex images, in vertex order.

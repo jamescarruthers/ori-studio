@@ -24,6 +24,8 @@
 //! incremental gate (tier 3: 50 ms at 256 faces in wasm). Each time is the
 //! median of [`REPEATS`] runs.
 
+#[path = "../tests/beloch/mod.rs"]
+mod beloch;
 #[path = "../tests/paths/mod.rs"]
 mod paths;
 
@@ -31,16 +33,10 @@ use std::hint::black_box;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use oristudio_fold::{
-    CompletionLimits, CreaseKind, CreasePatternInput, Direction, ImportKind, ImportSegment,
-    ImportSpace, ImportTarget, ImportedPattern, Letter, PlainFold, Side, StartSide, State,
-    WitnessOrder,
-};
-use oristudio_geometry::{Line, convex};
+use oristudio_fold::{CreaseKind, Direction, PlainFold, Side, State};
+use oristudio_geometry::Line;
 use paths::{Op, classics};
 use serde_json::Value;
-
-type Point = [f64; 2];
 
 const REPEATS: usize = 15;
 
@@ -126,130 +122,6 @@ impl Row {
     }
 }
 
-fn point(value: &Value) -> Option<Point> {
-    Some([value.get(0)?.as_f64()?, value.get(1)?.as_f64()?])
-}
-
-fn points(value: &Value) -> Option<Vec<Point>> {
-    value.as_array()?.iter().map(point).collect()
-}
-
-fn indices(value: &Value) -> Option<Vec<usize>> {
-    value
-        .as_array()?
-        .iter()
-        .map(|v| v.as_u64().map(|v| v as usize))
-        .collect()
-}
-
-/// A table point taken back to the paper by Beloch's paper-to-table matrix
-/// `[a, b, c, d, tx, ty]` (`x' = a x + b y + tx`, `y' = c x + d y + ty`).
-fn to_paper(m: &[f64], p: Point) -> Point {
-    let det = m[0] * m[3] - m[1] * m[2];
-    let (x, y) = (p[0] - m[4], p[1] - m[5]);
-    [(m[3] * x - m[1] * y) / det, (m[0] * y - m[2] * x) / det]
-}
-
-/// A Beloch fixture's final frame as a state: its crease pattern imported,
-/// the frame's order replayed onto it.
-fn beloch_state(document: &Value) -> Result<State, String> {
-    let coords = points(&document["vertices_coords"]).ok_or("no vertices")?;
-    let edges = document["edges_vertices"]
-        .as_array()
-        .ok_or("no edges")?
-        .iter()
-        .map(indices)
-        .collect::<Option<Vec<_>>>()
-        .ok_or("an edge is not two vertices")?;
-    let assignments = document["edges_assignment"]
-        .as_array()
-        .ok_or("no assignments")?;
-    let mut segments = Vec::with_capacity(edges.len());
-    for (edge, assignment) in edges.iter().zip(assignments) {
-        let kind = match assignment.as_str() {
-            Some("B") => ImportKind::Border,
-            Some("M") => ImportKind::Mountain,
-            Some("V") => ImportKind::Valley,
-            // A flat crease remembers no letter in FOLD; any will do.
-            Some("F") => ImportKind::Unassigned {
-                hint: Some(Letter::Valley),
-            },
-            Some("U") => ImportKind::Unassigned { hint: None },
-            other => return Err(format!("an edge assigned {other:?}")),
-        };
-        let &[a, b] = edge.as_slice() else {
-            return Err("an edge is not two vertices".into());
-        };
-        segments.push(ImportSegment {
-            from: *coords.get(a).ok_or("a missing vertex")?,
-            to: *coords.get(b).ok_or("a missing vertex")?,
-            kind,
-        });
-    }
-    let input = CreasePatternInput {
-        space: ImportSpace::Sheet,
-        segments,
-    };
-    let imported = ImportedPattern::new(
-        &input,
-        ImportTarget::Empty {
-            start: StartSide::Front,
-        },
-    )
-    .map_err(|e| e.to_string())?;
-
-    let frame = document["file_frames"]
-        .as_array()
-        .and_then(|frames| frames.last())
-        .ok_or("no frame")?;
-    let table = points(&frame["vertices_coords"]).ok_or("no frame vertices")?;
-    let rings = frame["faces_vertices"]
-        .as_array()
-        .ok_or("no frame faces")?
-        .iter()
-        .map(indices)
-        .collect::<Option<Vec<_>>>()
-        .ok_or("a face is not a vertex list")?;
-    let matrices = frame["beloch:faces_matrix"]
-        .as_array()
-        .ok_or("no face matrices")?;
-    let mut witnesses = Vec::with_capacity(rings.len());
-    for (ring, matrix) in rings.iter().zip(matrices) {
-        let m: Vec<f64> = matrix
-            .as_array()
-            .and_then(|m| m.iter().map(Value::as_f64).collect())
-            .ok_or("a matrix is not six numbers")?;
-        if m.len() != 6 {
-            return Err("a matrix is not six numbers".into());
-        }
-        let paper: Vec<Point> = ring
-            .iter()
-            .map(|&v| table.get(v).map(|&p| to_paper(&m, p)))
-            .collect::<Option<_>>()
-            .ok_or("a face names a missing vertex")?;
-        let centroid = convex::centroid(&convex::normalize(&paper)).ok_or("a face has no area")?;
-        witnesses.push(imported.to_sheet(centroid));
-    }
-    let orders = frame["faceOrders"]
-        .as_array()
-        .map(Vec::as_slice)
-        .unwrap_or_default()
-        .iter()
-        .map(|t| {
-            let [f, g, s] = [0, 1, 2].map(|k| t.get(k).and_then(Value::as_i64));
-            Some((u32::try_from(f?).ok()?, u32::try_from(g?).ok()?, s? as i8))
-        })
-        .collect::<Option<Vec<_>>>()
-        .ok_or("a face order is not three integers")?;
-    let stored = WitnessOrder {
-        faces: witnesses,
-        orders,
-    };
-    imported
-        .replay(&stored, &CompletionLimits::default())
-        .map_err(|e| e.to_string())
-}
-
 /// The state's distinct crease lines, borders left out.
 fn crease_lines(state: &State) -> Vec<Line> {
     let mut lines: Vec<Line> = Vec::new();
@@ -294,8 +166,7 @@ fn main() {
         row.print(&classic.name);
     }
 
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/beloch");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
+    let mut files: Vec<PathBuf> = std::fs::read_dir(beloch::dir())
         .map(|entries| entries.filter_map(|e| e.ok().map(|e| e.path())).collect())
         .unwrap_or_default();
     files.retain(|p| p.extension().is_some_and(|x| x == "fold"));
@@ -311,7 +182,7 @@ fn main() {
         let replayed = std::fs::read_to_string(file)
             .map_err(|e| e.to_string())
             .and_then(|text| serde_json::from_str::<Value>(&text).map_err(|e| e.to_string()))
-            .and_then(|document| beloch_state(&document));
+            .and_then(|document| beloch::final_state(&document));
         let state = match replayed {
             Ok(state) if state.faces().len() >= 2 => state,
             Ok(_) => continue,
