@@ -35,7 +35,7 @@ import type { PaperScene, SceneBounds } from '../../lib/paper/paperScene';
 import { turnClockwise } from '../../lib/geometry';
 import { rectangleAngle, type PicturePoint } from '../annotate/annotationModel';
 import { CAPTURE_PX_PER_UNIT, storedSceneStep } from '../capture/captureGeometry';
-import type { DiagramScenePicture, DiagramStep, DiagramZoomOutline } from '../document/diagramDocument';
+import { posedRenderOf, type DiagramScenePicture, type DiagramStep, type DiagramZoomOutline } from '../document/diagramDocument';
 import { readPaperFaces } from '../document/paperFacesFile';
 import { storedScene } from '../pictures/pictureFrame';
 import { distanceOutside, distanceToSegment, zoomCore, zoomShapeOf } from './zoomModel';
@@ -75,9 +75,9 @@ const memo = new WeakMap<DiagramScenePicture, { render: string; faces: StepFaces
  * capture made before it kept them, none at all). Read once per picture.
  */
 export function paperFacesOf(step: DiagramStep): StepFaces | null {
-  const { picture, source } = step;
-  if (step.unknown || picture?.kind !== 'scene' || source?.kind !== 'cp') return null;
-  const { render } = source;
+  const { picture } = step;
+  const render = posedRenderOf(step.source);
+  if (step.unknown || picture?.kind !== 'scene' || !render) return null;
   if (render.mode !== 'folded-flat' && render.mode !== 'crease-pattern') return null;
   const key = JSON.stringify(render);
   const cached = memo.get(picture);

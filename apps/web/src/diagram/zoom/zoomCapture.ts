@@ -15,6 +15,7 @@ import {
   isTurn,
   stepById,
   stepIndex,
+  posedRenderOf,
   type DiagramCpRender,
   type DiagramDocument,
   type DiagramLayerSpread,
@@ -312,10 +313,9 @@ export function seededZoom(document: DiagramDocument, stepId: string): DiagramSt
  */
 export function firstLinkPose(document: DiagramDocument, stepId: string, spread?: DiagramLayerSpread): DiagramCpRender | null {
   const step = stepById(document, stepId);
-  if (!step?.zoom || step.source?.kind === 'cp') return null;
-  const source = captureSource(document, stepId)?.step.source;
-  if (source?.kind !== 'cp') return null;
-  const { render } = source;
+  if (!step?.zoom || posedRenderOf(step.source)) return null;
+  const render = posedRenderOf(captureSource(document, stepId)?.step.source);
+  if (!render) return null;
   switch (render.mode) {
     case 'crease-pattern':
       return { mode: 'crease-pattern', rotationDeg: render.rotationDeg };

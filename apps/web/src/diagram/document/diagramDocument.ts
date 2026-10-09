@@ -247,9 +247,9 @@ export function nearestEarlierSpread(
 ): DiagramLayerSpread | null {
   for (let index = stepIndex(document, stepId) - 1; index >= 0; index -= 1) {
     const entry = document.steps[index]!;
-    if (isTurn(entry) || isLockedStep(entry) || entry.source?.kind !== 'cp') continue;
-    const { render } = entry.source;
-    if (render.mode === 'folded-flat' && render.spread && (kind === undefined || render.spread.kind === kind)) {
+    if (isTurn(entry) || isLockedStep(entry)) continue;
+    const render = posedRenderOf(entry.source);
+    if (render?.mode === 'folded-flat' && render.spread && (kind === undefined || render.spread.kind === kind)) {
       return render.spread;
     }
   }
@@ -363,6 +363,29 @@ export interface DiagramCpSource {
 }
 
 /**
+ * A source whose picture is captured in a pose (D5, D19): a linked pattern
+ * shown as its creases, folded or simulated. Its `render` is the pose and
+ * `remembered` the one each other way last had, so every pose verb, Show as,
+ * the spread a new pose starts from, the carry of marks and how its picture
+ * is measured read one shape, whatever made the picture.
+ */
+export type DiagramPosedSource = DiagramCpSource;
+
+/** Whether a source is captured in a pose ({@link DiagramPosedSource}). */
+export function isPosedSource(source: DiagramStepSource | null | undefined): source is DiagramPosedSource {
+  return source?.kind === 'cp';
+}
+
+/**
+ * The pose a step's source is captured in: the one seam every pose reader
+ * goes through, so a source that is not a region of Edit's pattern shares
+ * them. Null for a source with no pose — an upload, a References card.
+ */
+export function posedRenderOf(source: DiagramStepSource | null | undefined): DiagramCpRender | null {
+  return isPosedSource(source) ? source.render : null;
+}
+
+/**
  * The pose to show a linked pattern in, as `way` (D19): the one it is shown in
  * now when that is the way, else the one that way last had, else that way's
  * start — a crease pattern or a flat fold lying as the step lies now, from the
@@ -375,7 +398,7 @@ export interface DiagramCpSource {
  * nearest earlier step's, `spreadStartsFor`); one remembered keeps its own.
  */
 export function renderToShowAs(
-  source: Pick<DiagramCpSource, 'render' | 'remembered'>,
+  source: Pick<DiagramPosedSource, 'render' | 'remembered'>,
   way: DiagramShowAs,
   spread?: DiagramLayerSpread
 ): DiagramCpRender {
@@ -405,15 +428,16 @@ export function renderToShowAs(
  * `after`, a new capture's source, keeping what the step's source before it
  * remembered and, when the way it is shown changes, the pose it had (D19).
  */
-export function withRememberedPoses(before: DiagramStepSource | null, after: DiagramCpSource): DiagramCpSource {
+export function withRememberedPoses<S extends DiagramPosedSource>(before: DiagramStepSource | null, after: S): S {
   const { remembered: _ignored, ...rest } = after;
-  const kept: Partial<Record<DiagramShowAs, DiagramCpRender>> =
-    before?.kind === 'cp' ? { ...before.remembered } : {};
-  if (before?.kind === 'cp' && showAsOf(before.render) !== showAsOf(after.render)) {
-    kept[showAsOf(before.render)] = before.render;
+  // Only a pose of the same kind of source is the same picture's other way.
+  const same = isPosedSource(before) && before.kind === after.kind ? before : null;
+  const kept: Partial<Record<DiagramShowAs, DiagramCpRender>> = same ? { ...same.remembered } : {};
+  if (same && showAsOf(same.render) !== showAsOf(after.render)) {
+    kept[showAsOf(same.render)] = same.render;
   }
   delete kept[showAsOf(after.render)];
-  return Object.keys(kept).length > 0 ? { ...rest, remembered: kept } : rest;
+  return (Object.keys(kept).length > 0 ? { ...rest, remembered: kept } : rest) as S;
 }
 
 /** The planner settings a References plan was made with (D6): what made its steps the ones they are. */

@@ -23,6 +23,7 @@ import { PT_PER_CSS_PX, pageMarginPt, pagePtPerPx, paperSceneToSvg } from '../..
 import { readPaperScene } from '../../lib/paper/paperSceneValidate';
 import {
   isLockedStep,
+  posedRenderOf,
   type DiagramAsset,
   type DiagramFixedPicture,
   type DiagramScenePicture,
@@ -156,8 +157,11 @@ export function stepPictureSource(
         pose: { rotationQuarterTurns: pose.rotationQuarterTurns, mirrored: pose.mirrored },
       };
     }
-    case 'scene':
-      return { kind: 'scene', picture, pattern: !(source?.kind === 'cp' && source.render.mode !== 'crease-pattern') };
+    case 'scene': {
+      // Measured as a pattern sheet unless its pose folds it.
+      const render = posedRenderOf(source);
+      return { kind: 'scene', picture, pattern: !(render && render.mode !== 'crease-pattern') };
+    }
     case 'fixed':
       return { kind: 'fixed', picture };
     case 'step-diagram':
