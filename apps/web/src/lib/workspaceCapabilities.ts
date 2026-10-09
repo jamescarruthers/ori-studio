@@ -1448,7 +1448,8 @@ function capability(enabled: boolean, label: string, reason: string): WorkspaceC
  * The Fold sequence's verbs (`fold/sequence/foldCommands`): shown only while
  * folding, and enabled on a sequence this build may change — Delete Step
  * also on a step to delete. Finer gating (a step still folding, or broken) is
- * the action catalog's, asked when the verb runs; the store does not know it.
+ * the action catalog's, asked when the verb runs, which toasts its reason when
+ * it turns one down (`runFoldMenuVerb`); the store does not know it.
  */
 function foldSequenceCapabilities(
   input: WorkspaceCapabilityInput,
