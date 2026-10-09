@@ -725,7 +725,7 @@ vocabulary. **Not** `inputModelRegistry`, which is keyed to kernel operations.
 | Phone two-pane switch | `PaneToggle` extracted from `DesignPaneSwitcher` into `components/ui/`. Its single-owner `.design-pane-switcher` rules move into a module; it keeps wearing the shared `canvas-pill` class. Mounted in Fold's header, not `CanvasPillLane`: the lane sits over the dock's top-right corner, which on a phone is Fold's header (measured at 375px) |
 | Touch undo | `TouchHistoryButtons` (the Diagram's header buttons, moved to `components/ui/`) in Fold's header, for the same reason; `HISTORY_PILL_WORKSPACES` stays `['edit']` |
 | Free point on touch | A coarse-pointer Alt latch modelled on `touchModifiers/shiftLatch.ts`, OR'd with `readHeldModifiers().alt` |
-| Import CP | `useModalDialog` (on #436), the app's parsers, a drop policy for the Fold canvas |
+| Import CP | `useModalDialog` (on #436), the app's parsers, a drop policy for the whole Fold workspace (`useFoldDrop`: panes, strip, header and Steps view alike) |
 | Send to Edit | The existing verb, label, `SplitButton` model and payload path |
 
 Genuinely new, kept inside Fold: the **cross-section layer picker** and the
@@ -918,6 +918,7 @@ already tracked at the chokepoint.
 | Event | Properties |
 |---|---|
 | `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth, via: axiom\|crease\|free}` |
+| `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
 | `fold refused` | `{code}` |
 | `fold choice offered` | `{kind, count_bucket}` |
 | `fold sequence sent to edit` | — |
@@ -1355,7 +1356,8 @@ unless marked.
   - [ ] colour inverse;
   - [ ] letter-seeded completion;
   - [ ] witness-keyed `orderJson`;
-  - [ ] the drop policy.
+  - [ ] the drop policy, over the whole workspace (`useFoldDrop` on the
+    panel), so a crease pattern is Import CP wherever on Fold it lands.
 - [ ] Samples as attributed fixtures, each importing to ≥ 1 order.
 - [ ] An Import-CP golden through `.cp` and `.fold`, checking letters and
   front/back.

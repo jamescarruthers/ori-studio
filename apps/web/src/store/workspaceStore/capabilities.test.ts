@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { createCpSuppressionRegion } from '../../cp-workspace/annotations/suppressionRegion';
 import {
   cpSolvablePatternCount,
+  foldPageAtCursor,
   hasDeletableDiagramSelection,
   historyCountForContext,
 } from './capabilities';
+import { initialFoldReaderState } from '../../fold/document/foldReaderState';
+import { sequenceOf, step, valleyAt } from '../../fold/document/foldSequence.fixtures';
 import { createDiagram, createStep, insertSteps } from '../../diagram/document/diagramDocument';
 import { discardDiagramState } from './diagramState';
 import type { WorkspaceState } from './types';
@@ -143,5 +146,35 @@ describe('hasDeletableDiagramSelection', () => {
     expect(hasDeletableDiagramSelection(state({ diagramSelectedStepId: 'gone' }))).toBe(false);
     expect(hasDeletableDiagramSelection(state({ diagramReadOnly: true }))).toBe(false);
     expect(hasDeletableDiagramSelection(state({ diagram: null }))).toBe(false);
+  });
+});
+
+/**
+ * Export Step opens on the step on screen, or the numbered step before it: a
+ * turn takes no number and gets no page, so a turn before the first step has
+ * nothing to open on, as the sheet has not.
+ */
+describe('foldPageAtCursor', () => {
+  const document = sequenceOf([
+    step('t', null, { kind: 'turn', axis: 'vertical' }),
+    step('a', 't', valleyAt(0.5)),
+    step('r', 'a', { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } }),
+  ]);
+  const at = (cursor: string | null) =>
+    foldPageAtCursor({
+      foldSequences: [{ document, readOnlyRaw: null }],
+      foldReader: { ...initialFoldReaderState(document.id), cursor },
+    });
+
+  it('is a numbered step at the reader or before it on its path', () => {
+    expect(at('a')).toBe(true);
+    // A turn after a step: that step's page.
+    expect(at('r')).toBe(true);
+  });
+
+  it('is none on the sheet, on a turn before the first step, or with no sequence', () => {
+    expect(at(null)).toBe(false);
+    expect(at('t')).toBe(false);
+    expect(foldPageAtCursor({ foldSequences: [], foldReader: null })).toBe(false);
   });
 });

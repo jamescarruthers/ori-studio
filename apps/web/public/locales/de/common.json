@@ -144,6 +144,7 @@
     "foldExportStepHint": "Das Faltmuster des angezeigten Schritts als SVG oder PNG exportieren",
     "foldExportSteps": "Schritte exportieren...",
     "foldExportStepsHint": "Das Faltmuster jedes Schritts exportieren, als ein ZIP",
+    "foldGoToStep": "Gehe zu einem Schritt, um ihn zu exportieren",
     "foldImportCp": "CP importieren...",
     "foldImportCpHint": "Einen Schritt hinzufügen, der das Papier zu einem Faltmuster zusammenlegt",
     "foldImportPolygon": "Zum Importieren eines CP braucht es ein quadratisches oder rechteckiges Blatt.",

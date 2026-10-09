@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from 'react';
+import type { Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutGrid, Origami } from 'lucide-react';
 import type { SendToEditButtonModel } from '../../designKinds/sendToEditActions';
@@ -6,40 +6,88 @@ import { foldCommand, type FoldAction, type FoldCommand } from '../../fold/foldA
 import type { FoldView } from '../../fold/sequence/foldViewMode';
 import { stepCountLabel } from '../../fold/sequence/foldSequenceWords';
 import { useIsPhoneLayout } from '../../platform/phoneLayout';
+import { ViewportToolbarOverflowMenu } from '../panels/ViewportToolbarOverflowMenu';
+import type { ViewportToolbarAction, ViewportToolbarOverflowGroup } from '../panels/viewportToolbarLayout';
 import { Button } from '../ui/Button';
-import { IconButton } from '../ui/IconButton';
 import { SplitButton } from '../ui/SplitButton';
 import { TouchHistoryButtons } from '../ui/TouchHistoryButtons';
 import { WorkspaceTab, WorkspaceTabStrip } from '../ui/WorkspaceTabStrip';
 import { FoldActionIcon } from './FoldActionIcon';
 import styles from './FoldHeader.module.css';
 
-/**
- * A catalog command as a header button: its icon, label and gating. On a
- * phone its icon alone, named by its label — three verbs, undo and redo and
- * the drawer's pill are wider together than the screen.
- */
-function CommandButton({ command, compact }: { command: FoldCommand; compact: boolean }) {
-  if (compact) {
-    return (
-      <IconButton
-        size="sm"
-        variant="toolbar"
-        aria-label={command.label}
-        title={command.hint ?? command.label}
-        disabled={command.disabled}
-        onClick={command.run}
-      >
-        <FoldActionIcon icon={command.icon} size={15} />
-      </IconButton>
-    );
-  }
+/** A catalog command as a header button: its icon, label and gating. */
+function CommandButton({ command }: { command: FoldCommand }) {
   return (
     <Button size="sm" variant="secondary" disabled={command.disabled} title={command.hint} onClick={command.run}>
       <FoldActionIcon icon={command.icon} />
       {command.label}
     </Button>
   );
+}
+
+/** A catalog command as a row of the phone's `⋯` menu. */
+function commandRow(command: FoldCommand | undefined, opensDialog: boolean): ViewportToolbarAction | null {
+  return command
+    ? {
+        kind: 'action',
+        id: command.id,
+        label: command.label,
+        title: command.hint,
+        icon: <FoldActionIcon icon={command.icon} />,
+        disabled: command.disabled,
+        opensDialog,
+        onSelect: command.run,
+      }
+    : null;
+}
+
+/**
+ * The verbs for the whole sequence as the phone's `⋯` menu holds them, in the
+ * header's order: Import CP; Send to Edit and its variants, as the split
+ * button offers them; the two exports.
+ */
+function phoneVerbGroups(
+  actions: readonly FoldAction[],
+  sendToEditButton: SendToEditButtonModel | undefined
+): ViewportToolbarOverflowGroup[] {
+  const sendToEdit = foldCommand(actions, 'send-to-edit');
+  const send: (ViewportToolbarAction | null)[] =
+    sendToEdit && sendToEditButton
+      ? [
+          {
+            kind: 'action',
+            id: sendToEdit.id,
+            label: sendToEditButton.label,
+            title: sendToEditButton.title,
+            icon: <FoldActionIcon icon={sendToEdit.icon} />,
+            disabled: sendToEditButton.disabled,
+            onSelect: sendToEditButton.run,
+          },
+          ...sendToEditButton.actions.map(
+            (variant): ViewportToolbarAction => ({
+              kind: 'action',
+              id: `${sendToEdit.id}-${variant.id}`,
+              // A variant names the verb itself ("Send to Edit (precreases as auxiliary lines)").
+              label: variant.label,
+              title: variant.title,
+              icon: <FoldActionIcon icon={sendToEdit.icon} />,
+              disabled: sendToEditButton.disabled || variant.disabled,
+              onSelect: variant.onSelect,
+            })
+          ),
+        ]
+      : [commandRow(sendToEdit, false)];
+  const groups: { id: string; items: (ViewportToolbarAction | null)[] }[] = [
+    { id: 'in', items: [commandRow(foldCommand(actions, 'import-cp'), true)] },
+    { id: 'send', items: send },
+    {
+      id: 'out',
+      items: [commandRow(foldCommand(actions, 'export-fold'), true), commandRow(foldCommand(actions, 'export-steps'), true)],
+    },
+  ];
+  return groups
+    .map((group) => ({ id: group.id, items: group.items.filter((item): item is ViewportToolbarAction => item !== null) }))
+    .filter((group) => group.items.length > 0);
 }
 
 /**
@@ -53,10 +101,13 @@ function CommandButton({ command, compact }: { command: FoldCommand; compact: bo
  * (its variants behind the caret), and the catalog's plain button otherwise.
  *
  * It wears the shared `panel-toolbar` frame, so it meets the Step pane's tab
- * bar at the same height. On a coarse pointer it carries undo and redo, the
- * phone's pane switch (`paneToggle`) and the slot the touch drawer seats its
- * pill in (`drawerSlot`): the canvas pill lane would sit over this header.
- * Presentation only: the view, the verbs and every call are props.
+ * bar at the same height. On a coarse pointer it carries undo and redo and the
+ * slot the touch drawer seats its pill in (`drawerSlot`): the canvas pill lane
+ * would sit over this header. On a phone it keeps to one row — the tabs their
+ * icons alone, the count left to the strip's numbers, and the verbs in one
+ * `⋯` menu — so the paper keeps the height; the canvas's own pills (its tools,
+ * the pane switch) are on the canvas's bar. Presentation only: the view, the
+ * verbs and every call are props.
  */
 export function FoldHeader({
   view,
@@ -64,7 +115,6 @@ export function FoldHeader({
   stepCount,
   actions,
   sendToEdit: sendToEditButton,
-  paneToggle,
   drawerSlot,
 }: {
   view: FoldView;
@@ -73,10 +123,12 @@ export function FoldHeader({
   stepCount: number;
   /** The catalog, for the step on screen. */
   actions: readonly FoldAction[];
-  /** Send to Edit as the shared split button model (`useFoldSendToEditButton`). */
+  /**
+   * Send to Edit as the shared split button model (`useFoldSendToEditButton`),
+   * built over the catalog's Send to Edit: its gate and its tooltip are the
+   * model's, so a reason it is disabled is said in the one place.
+   */
   sendToEdit?: SendToEditButtonModel;
-  /** The phone's switch between the two canvases, mounted by the canvas. */
-  paneToggle?: ReactNode;
   /** Where the touch layer seats the Step pane's pill (`viewDrawerSlot`). */
   drawerSlot: Ref<HTMLDivElement>;
 }) {
@@ -87,7 +139,7 @@ export function FoldHeader({
   const exportFold = foldCommand(actions, 'export-fold');
   const exportSteps = foldCommand(actions, 'export-steps');
   return (
-    <div className={`panel-toolbar ${styles.header}`}>
+    <div className={`panel-toolbar ${styles.header}`} data-phone={phone || undefined}>
       <div className={styles.lead}>
         <WorkspaceTabStrip
           className={styles.views}
@@ -96,69 +148,79 @@ export function FoldHeader({
           label={t('panels:fold.header.views', 'View')}
           embedded
           tone="peers"
-          fill={phone}
         >
           <WorkspaceTab
             value="fold"
-            icon={<Origami size={13} aria-hidden="true" />}
+            icon={<Origami size={phone ? 16 : 13} aria-hidden="true" />}
             title={t('panels:fold.header.fold', 'Fold')}
             hint={t('panels:fold.header.foldHint', 'The step on screen, folded and as a crease pattern')}
+            iconOnly={phone}
           />
           <WorkspaceTab
             value="steps"
-            icon={<LayoutGrid size={13} aria-hidden="true" />}
+            icon={<LayoutGrid size={phone ? 16 : 13} aria-hidden="true" />}
             title={t('panels:fold.header.steps', 'Steps')}
             hint={t('panels:fold.header.stepsHint', 'Every step of the path as a card')}
+            iconOnly={phone}
           />
         </WorkspaceTabStrip>
-        <span className={styles.count}>{stepCountLabel(t, stepCount)}</span>
+        {!phone && <span className={styles.count}>{stepCountLabel(t, stepCount)}</span>}
       </div>
       <div className={`panel-toolbar__group ${styles.actions}`}>
         <TouchHistoryButtons />
-        {importCp && <CommandButton command={importCp} compact={phone} />}
-        {sendToEdit &&
-          (sendToEditButton && !phone ? (
-            <SplitButton
-              size="sm"
-              variant="secondary"
-              icon={<FoldActionIcon icon={sendToEdit.icon} />}
-              label={sendToEditButton.label}
-              title={sendToEditButton.title}
-              disabled={sendToEditButton.disabled || sendToEdit.disabled}
-              onClick={sendToEditButton.run}
-              menuLabel={sendToEditButton.menuLabel}
-              actions={sendToEditButton.actions}
-            />
-          ) : (
-            <CommandButton command={sendToEdit} compact={phone} />
-          ))}
-        {exportFold && (
-          <SplitButton
-            size="sm"
-            variant="primary"
-            icon={<FoldActionIcon icon={exportFold.icon} />}
-            label={exportFold.label}
-            title={exportFold.hint}
-            disabled={exportFold.disabled}
-            onClick={exportFold.run}
-            menuLabel={t('panels:fold.header.moreExports', 'More ways to export')}
-            actions={
-              exportSteps
-                ? [
-                    {
-                      id: exportSteps.id,
-                      label: exportSteps.label,
-                      title: exportSteps.hint,
-                      disabled: exportSteps.disabled,
-                      opensDialog: true,
-                      onSelect: exportSteps.run,
-                    },
-                  ]
-                : []
-            }
+        {phone ? (
+          <ViewportToolbarOverflowMenu
+            groups={phoneVerbGroups(actions, sendToEditButton)}
+            label={t('panels:fold.header.moreVerbs', 'Import, send and export')}
+            side="bottom"
           />
+        ) : (
+          <>
+            {importCp && <CommandButton command={importCp} />}
+            {sendToEdit &&
+              (sendToEditButton ? (
+                <SplitButton
+                  size="sm"
+                  variant="secondary"
+                  icon={<FoldActionIcon icon={sendToEdit.icon} />}
+                  label={sendToEditButton.label}
+                  title={sendToEditButton.title}
+                  disabled={sendToEditButton.disabled}
+                  onClick={sendToEditButton.run}
+                  menuLabel={sendToEditButton.menuLabel}
+                  actions={sendToEditButton.actions}
+                />
+              ) : (
+                <CommandButton command={sendToEdit} />
+              ))}
+            {exportFold && (
+              <SplitButton
+                size="sm"
+                variant="primary"
+                icon={<FoldActionIcon icon={exportFold.icon} />}
+                label={exportFold.label}
+                title={exportFold.hint}
+                disabled={exportFold.disabled}
+                onClick={exportFold.run}
+                menuLabel={t('panels:fold.header.moreExports', 'More ways to export')}
+                actions={
+                  exportSteps
+                    ? [
+                        {
+                          id: exportSteps.id,
+                          label: exportSteps.label,
+                          title: exportSteps.hint,
+                          disabled: exportSteps.disabled,
+                          opensDialog: true,
+                          onSelect: exportSteps.run,
+                        },
+                      ]
+                    : []
+                }
+              />
+            )}
+          </>
         )}
-        {paneToggle}
         <div className="panel-toolbar__pills" ref={drawerSlot} />
       </div>
     </div>

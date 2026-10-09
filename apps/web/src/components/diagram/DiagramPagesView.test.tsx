@@ -21,7 +21,8 @@ import { bandPath } from '../../diagram/pages/composeDiagramPage';
 import { preparedPages, type PreparedDiagramPages } from '../../diagram/pages/diagramPages';
 import { clearPathColorPick, publishPathColorPick } from '../../diagram/pages/pathColorPick';
 import { TooltipProvider } from '../ui/Tooltip';
-import { focusLeavesEnterToSteps, focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
+import { focusLeavesEnterToSteps } from '../../diagram/actions/diagramShortcuts';
+import { focusOwnsArrowKeys } from '../../keyboard/arrowKeyOwners';
 import { DiagramPagesView } from './DiagramPagesView';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

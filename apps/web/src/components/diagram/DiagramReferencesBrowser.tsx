@@ -17,7 +17,7 @@ import { SegmentedControl } from '../ui/SegmentedControl';
 import { dialogOpener, useModalDialog } from '../ui/useModalDialog';
 import { DiagramReferencesCard } from './DiagramReferencesCard';
 import { DiagramReferencesShowMenu } from './DiagramReferencesShowMenu';
-import { DiagramSheetThumbnail } from './DiagramSheetThumbnail';
+import { PatternThumbnail } from '../ui/PatternThumbnail';
 import styles from './DiagramReferencesBrowser.module.css';
 
 /**
@@ -216,7 +216,7 @@ function PatternRail({ browser, onOpen }: { browser: ReferencesBrowser; onOpen: 
             aria-current={entry.id === shown?.id || undefined}
             onClick={() => onOpen(entry.id)}
           >
-            <span className={styles.patternThumb}>{thumbnail && <DiagramSheetThumbnail thumbnail={thumbnail} />}</span>
+            <span className={styles.patternThumb}>{thumbnail && <PatternThumbnail thumbnail={thumbnail} />}</span>
             <span className={styles.patternText}>
               <span className={styles.patternName}>
                 {t('panels:diagram.references.pattern', 'Pattern {{number}}', { number: entry.number })}

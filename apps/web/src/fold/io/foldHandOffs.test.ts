@@ -120,6 +120,17 @@ describe('Fold’s hand-offs', () => {
     ]);
   });
 
+  it('names the files by the rule every export is named by, so a title is never read as a path', async () => {
+    const { deps, asked, saved } = setup();
+    deps.title = () => 'Crane 1/2: base';
+    await expect(exportFoldSequence(deps)).resolves.toBe(true);
+    await expect(sendFoldSequenceToEdit(deps, 'plain')).resolves.toBe(true);
+    expect(saved.map((options) => options.suggestedName)).toEqual(['Crane-1-2-base.fold']);
+    expect(vi.mocked(deps.sendToEdit).mock.calls[0]?.[0].filename).toBe('Crane-1-2-base.fold');
+    // The title inside the file is the sequence's, as it is written.
+    expect(asked.every((call) => call.endsWith(':Crane 1/2: base'))).toBe(true);
+  });
+
   it('says when a FOLD file would be too large', async () => {
     const { deps, saved } = setup(sequence(), 'c', 'fold_export_too_large');
     await expect(exportFoldSequence(deps)).resolves.toBe(false);
@@ -139,11 +150,25 @@ describe('Fold’s hand-offs', () => {
     expect(target.pages?.current).toBe(0);
   });
 
-  it('has no step to export with the flat sheet on screen, but every step for all of them', async () => {
+  it('has no step to export with the flat sheet on screen, and says to go to one, but every step for all of them', async () => {
     const { deps } = setup(sequence(), null);
     await expect(openFoldStepsExport(deps, 'this')).resolves.toBe(false);
-    expect(deps.blocked).toHaveBeenCalledWith('no-step');
+    expect(deps.blocked).toHaveBeenCalledExactlyOnceWith('sheet-on-screen');
     await expect(openFoldStepsExport(deps, 'all')).resolves.toBe(true);
+  });
+
+  it('has no page for a turn before the first step, though the sequence has steps', async () => {
+    const document = sequenceOf([step('t', null, { kind: 'turn', axis: 'vertical' }), step('a', 't', valleyAt(0.5))]);
+    const { deps } = setup(document, 't');
+    await expect(openFoldStepsExport(deps, 'this')).resolves.toBe(false);
+    expect(deps.blocked).toHaveBeenCalledExactlyOnceWith('sheet-on-screen');
+  });
+
+  it('has nothing to export from a path of turns alone', async () => {
+    const document = sequenceOf([step('t', null, { kind: 'turn', axis: 'vertical' })]);
+    const { deps } = setup(document, 't');
+    await expect(openFoldStepsExport(deps, 'all')).resolves.toBe(false);
+    expect(deps.blocked).toHaveBeenCalledExactlyOnceWith('no-step');
   });
 
   it('hands off no path with a step that does not land', async () => {

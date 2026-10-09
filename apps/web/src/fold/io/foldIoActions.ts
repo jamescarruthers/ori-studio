@@ -15,7 +15,7 @@ import {
   type SendToEditVariant,
 } from '../../designKinds/sendToEditActions';
 import { useWorkspaceCapabilities } from '../../store/workspaceStore/useWorkspaceCapabilities';
-import { foldSendToEditSource, type FoldActionDeps } from '../foldActions';
+import { foldSendToEditSource, type FoldActionDeps, type FoldCommand } from '../foldActions';
 
 /** The action catalog's io commands, by the menu id each dispatches. */
 export const FOLD_IO_COMMAND_MENU_IDS = {
@@ -46,18 +46,26 @@ function sendToEditMenuId(variant: SendToEditVariant): MenuActionId {
  * The Send to Edit button for a Fold sequence (plan D10, D14): the shared
  * model every design kind's button is (`sendToEditButtonModel`) over Fold's
  * source — its tooltip, and its precreases as auxiliary lines behind the
- * caret — gated by the menu row's capability.
+ * caret — gated by the menu row's capability and by the action catalog's
+ * command (`command`, the catalog's Send to Edit for the step on screen),
+ * which knows what the store does not: a path still folding, or one with a
+ * step that no longer folds. Disabled, its tooltip says why, in the words of
+ * whichever turned it down.
  */
-export function useFoldSendToEditButton(): SendToEditButtonModel {
+export function useFoldSendToEditButton(
+  command?: Pick<FoldCommand, 'disabled' | 'hint'>
+): SendToEditButtonModel {
   const { t } = useTranslation();
   const capability = useWorkspaceCapabilities()['fold.send-to-edit'];
+  const blocked = command?.disabled === true;
+  const hint = command?.hint;
   return useMemo(
     () =>
       sendToEditButtonModel(foldSendToEditSource(t), t, {
         send: (variant) => void handleMenuAction(sendToEditMenuId(variant)),
-        disabled: !capability.enabled,
-        reason: capability.reason,
+        disabled: !capability.enabled || blocked,
+        reason: capability.enabled ? hint : capability.reason,
       }),
-    [t, capability.enabled, capability.reason]
+    [t, capability.enabled, capability.reason, blocked, hint]
   );
 }

@@ -227,8 +227,6 @@ export interface WorkspaceCapabilityInput {
   canPasteDiagramAnnotations: boolean;
   /** The Fold reader is on a step, not the flat sheet: Delete Step has one. Absent reads as no. */
   foldStepAtCursor?: boolean;
-  /** The shown fold sequence is a newer build's, shown and never changed (plan D7). Absent reads as no. */
-  foldReadOnly?: boolean;
   historyPastCount: number;
   historyFutureCount: number;
   clipboard: unknown | null;
@@ -239,11 +237,14 @@ export interface WorkspaceCapabilityInput {
    */
   cpDetectAvailable?: boolean;
   /**
-   * The Fold sequence on screen, for its imports and hand-offs: how many
-   * steps it has, whether it folds a polygon sheet, and whether it is a
-   * newer build's. Absent reads as an empty square that can change.
+   * The Fold sequence on screen, for its verbs, imports and hand-offs: how
+   * many steps it has, whether it folds a polygon sheet, whether it is a
+   * newer build's — shown and never changed (plan D7) — and whether a
+   * numbered step is at the reader or before it on its path — the page
+   * Export Step opens on; a turn before the first step has none. Absent reads
+   * as an empty square that can change.
    */
-  foldSequence?: { stepCount: number; polygon: boolean; readOnly: boolean };
+  foldSequence?: { stepCount: number; polygon: boolean; readOnly: boolean; pageAtCursor: boolean };
   /** Whether Edit has a flat, solved folded figure a Fold sequence can start from. */
   hasFoldStartingFigure?: boolean;
 }
@@ -1210,15 +1211,16 @@ export function getWorkspaceCapabilities(
  * folding. An import adds a step, so a sequence a newer build wrote takes
  * none, and a polygon sheet with steps takes none (V0 imports square and
  * rectangle sheets; an empty sequence adopts the pattern's). What leaves the
- * sequence needs a step to carry; whether every step of the path still folds
- * is the session's to say when the verb runs.
+ * sequence needs a step to carry, and Export Step a page to open on: a
+ * numbered step at the reader or before it. Whether every step of the path
+ * still folds is the session's to say when the verb runs.
  */
 function foldIoCapabilities(
   input: WorkspaceCapabilityInput,
   foldMode: boolean,
   t: TFunction
 ): Record<FoldIoCapabilityId, WorkspaceCapability> {
-  const sequence = input.foldSequence ?? { stepCount: 0, polygon: false, readOnly: false };
+  const sequence = input.foldSequence ?? { stepCount: 0, polygon: false, readOnly: false, pageAtCursor: false };
   const importBlock = sequence.readOnly
     ? t('common:capability.foldReadOnly', 'This sequence was made with a newer Ori Studio and opens read-only')
     : sequence.polygon && sequence.stepCount > 0
@@ -1236,6 +1238,9 @@ function foldIoCapabilities(
   const outBlock =
     sequence.stepCount > 0 ? null : t('common:capability.foldNoSteps', 'Fold a step first');
   const out = (label: string, reason: string) => fold(label, reason, outBlock);
+  // The step on screen's page: none with the sheet on screen, or a turn before the first step.
+  const pageBlock =
+    outBlock ?? (sequence.pageAtCursor ? null : t('common:capability.foldGoToStep', 'Go to a step to export it'));
   return {
     'fold.import-cp': importing(
       t('common:capability.foldImportCp', 'Import CP...'),
@@ -1273,9 +1278,10 @@ function foldIoCapabilities(
       t('common:capability.foldExportFold', 'Export FOLD...'),
       t('common:capability.foldExportFoldHint', 'Export the steps shown as one FOLD file, a frame per step')
     ),
-    'fold.export-step': out(
+    'fold.export-step': fold(
       t('common:capability.foldExportStep', 'Export Step...'),
-      t('common:capability.foldExportStepHint', 'Export the step on screen’s crease pattern as SVG or PNG')
+      t('common:capability.foldExportStepHint', 'Export the step on screen’s crease pattern as SVG or PNG'),
+      pageBlock
     ),
     'fold.export-steps': out(
       t('common:capability.foldExportSteps', 'Export Steps...'),
@@ -1441,14 +1447,15 @@ function capability(enabled: boolean, label: string, reason: string): WorkspaceC
  * The Fold sequence's verbs (`fold/sequence/foldCommands`): shown only while
  * folding, and enabled on a sequence this build may change — Delete Step
  * also on a step to delete. Finer gating (a step still folding, or broken) is
- * the action catalog's, asked when the verb runs; the store does not know it.
+ * the action catalog's, asked when the verb runs, which toasts its reason when
+ * it turns one down (`runFoldMenuVerb`); the store does not know it.
  */
 function foldSequenceCapabilities(
   input: WorkspaceCapabilityInput,
   foldMode: boolean,
   t: TFunction
 ): Record<FoldSequenceCapabilityId, WorkspaceCapability> {
-  const canChange = foldMode && input.foldReadOnly !== true;
+  const canChange = foldMode && input.foldSequence?.readOnly !== true;
   const blocked = foldMode
     ? t('common:capability.foldReadOnly', 'This sequence was made with a newer Ori Studio and opens read-only')
     : t('common:capability.openFoldFirst', 'Open the Fold workspace first');

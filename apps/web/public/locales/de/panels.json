@@ -1486,7 +1486,6 @@
     "grid": {
       "broken": "Dieser Schritt lässt sich nicht mehr falten",
       "brokenAbove": "Ein Schritt davor lässt sich nicht mehr falten",
-      "delete": "Diesen Schritt und alle folgenden löschen",
       "flat": "Flach",
       "folding": "Wird gefaltet…",
       "label": "Schritte",
@@ -1499,6 +1498,7 @@
       "fold": "Falten",
       "foldHint": "Der angezeigte Schritt, gefaltet und als Faltmuster",
       "moreExports": "Weitere Exportmöglichkeiten",
+      "moreVerbs": "Importieren, senden und exportieren",
       "steps": "Schritte",
       "stepsHint": "Jeder Schritt des Pfads als Karte",
       "views": "Ansicht"

@@ -1436,7 +1436,6 @@
     "grid": {
       "broken": "这一步已无法折叠",
       "brokenAbove": "之前的某一步已无法折叠",
-      "delete": "删除此步骤及之后的步骤",
       "flat": "平折痕",
       "folding": "正在折叠…",
       "label": "步骤",
@@ -1449,6 +1448,7 @@
       "fold": "折叠",
       "foldHint": "屏幕上的步骤：折叠后的样子和折痕图",
       "moreExports": "更多导出方式",
+      "moreVerbs": "导入、发送和导出",
       "steps": "步骤",
       "stepsHint": "路径上的每一步都显示为卡片",
       "views": "视图"

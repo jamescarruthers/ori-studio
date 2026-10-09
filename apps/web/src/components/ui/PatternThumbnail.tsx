@@ -1,16 +1,16 @@
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
-import styles from './DiagramSheetThumbnail.module.css';
+import styles from './PatternThumbnail.module.css';
 
 /**
  * A pattern drawn small, as the pattern pickers draw one: hairlines in the
  * theme's crease inks (the `--sheet-thumb-*` tokens), never the paper style's
- * dashes, which at this size are a field of dots. The Diagram's own, for the
- * pattern picker and a linked card's corner; the rails' `SheetGrid` keeps its
- * cards.
+ * dashes, which at this size are a field of dots. The Diagram's pattern picker
+ * and a linked card's corner draw one, and Fold's step strip, Steps grid and
+ * Import CP's samples; the rails' `SheetGrid` keeps its cards.
  *
  * Decorative: what it shows is said in words beside it.
  */
-export function DiagramSheetThumbnail({
+export function PatternThumbnail({
   thumbnail,
   className,
 }: {

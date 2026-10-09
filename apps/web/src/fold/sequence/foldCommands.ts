@@ -18,6 +18,7 @@
  *   and until it does the kind is not offered.
  */
 import type { TFunction } from 'i18next';
+import { toast } from 'sonner';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import type { TurnKind } from '../../lib/steps/turn';
@@ -26,6 +27,7 @@ import {
   buildFoldActions,
   type FoldAction,
   type FoldActionContext,
+  type FoldChoice,
   type FoldCommand,
   type FoldCommandId,
   type FoldKind,
@@ -171,18 +173,34 @@ export function foldActionsAt(
   );
 }
 
-/** Run one of this module's verbs, as the catalog offers it now. Whether it ran. */
-export function runFoldMenuVerb(t: TFunction, verb: FoldMenuVerb): boolean {
+/**
+ * Run one of this module's verbs, as the catalog offers it now. Whether it ran.
+ *
+ * The menu bar's row and a key are enabled by the store's coarser gate (the
+ * capability knows nothing of a step still folding, a broken one, or the
+ * tools being off screen), so the catalog can turn one down after it was
+ * pressed. It says why, in the words the step card's menu shows beside the
+ * same row, rather than doing nothing.
+ */
+export function runFoldMenuVerb(t: TFunction, verb: FoldMenuVerb, refused: (why: string) => void = toast.info): boolean {
   const actions = currentFoldActions(t);
   if (verb.kind === 'fold-kind') {
-    const choice = actions.find((action) => action.kind === 'choice');
-    const option = choice?.kind === 'choice' && !choice.disabled ? choice.options.find((each) => each.id === verb.id) : undefined;
+    const choice = actions.find((action): action is FoldChoice => action.kind === 'choice');
+    if (choice?.disabled) {
+      if (choice.hint) refused(choice.hint);
+      return false;
+    }
+    const option = choice?.options.find((each) => each.id === verb.id);
     if (!option) return false;
     option.run();
     return true;
   }
   const command = actions.find((action): action is FoldCommand => action.kind === 'command' && action.id === verb.id);
-  if (!command || command.disabled) return false;
+  if (!command) return false;
+  if (command.disabled) {
+    if (command.hint) refused(command.hint);
+    return false;
+  }
   command.run();
   return true;
 }

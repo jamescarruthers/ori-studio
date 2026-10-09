@@ -119,6 +119,22 @@ describe('running the verbs', () => {
     expect(choice).toMatchObject({ disabled: true });
   });
 
+  it('says why, in the catalog’s words, when the catalog turns down a verb the menu bar or a key ran', () => {
+    const refused = vi.fn();
+    // No tools on screen (the Steps view): no kind to arm.
+    expect(runFoldMenuVerb(t, { kind: 'fold-kind', id: 'valley' }, refused)).toBe(false);
+    expect(refused).toHaveBeenLastCalledWith('Take a fold tool on the canvas to choose its kind.');
+    // The flat sheet on screen: no step to delete.
+    expect(runFoldMenuVerb(t, { kind: 'command', id: 'delete-step' }, refused)).toBe(false);
+    expect(refused).toHaveBeenLastCalledWith('The flat sheet is where the steps start: there is no step to delete.');
+    expect(refused).toHaveBeenCalledTimes(2);
+    // A verb that runs says nothing.
+    const release = registerFoldKindControl({ kind: () => 'valley', arm: vi.fn() });
+    expect(runFoldMenuVerb(t, { kind: 'fold-kind', id: 'mountain' }, refused)).toBe(true);
+    release();
+    expect(refused).toHaveBeenCalledTimes(2);
+  });
+
   it('dispatches Import CP, Send to Edit and the exports by the catalog’s ids', () => {
     for (const id of ['import-cp', 'send-to-edit', 'export-fold', 'export-steps'] as const) {
       const command = currentFoldActions(t).find((action) => action.kind === 'command' && action.id === id);

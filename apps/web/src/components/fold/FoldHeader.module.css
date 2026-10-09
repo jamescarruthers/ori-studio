@@ -2,7 +2,8 @@
  * What the Fold header (FoldHeader.tsx) adds to the shared toolbar frame: the
  * Fold | Steps tabs and the count on the left, the sequence's verbs on the
  * right. A row too narrow for both wraps, the verbs right-aligned under the
- * tabs, rather than squeezing either.
+ * tabs, rather than squeezing either — except on a phone, where the header
+ * has made itself one row's worth (`data-phone`).
  */
 .header {
   flex-wrap: wrap;
@@ -41,24 +42,40 @@
 }
 
 /*
- * On a phone the tabs share a row of their own, then the verbs, wrapping
- * within theirs rather than off a 375 px edge: undo and redo, the three verbs,
- * the pane switch and the drawer's pill are wider together than the screen.
+ * A pane too narrow for the tabs and the verbs together, short of a phone: the
+ * tabs share a row of their own, then the verbs, wrapping within theirs rather
+ * than off the pane's edge.
  */
 @media (max-width: 720px) {
-  .lead {
+  .header:not([data-phone]) .lead {
     flex: 1 1 100%;
     padding-block: var(--space-1);
   }
 
-  .views {
+  .header:not([data-phone]) .views {
     flex: 1 1 auto;
   }
 
-  .actions {
+  .header:not([data-phone]) .actions {
     flex-basis: 100%;
     flex-wrap: wrap;
     row-gap: var(--space-1);
     padding-block: var(--space-1);
   }
+}
+
+/*
+ * A phone: one row. The tabs are their icons, the verbs one `⋯` menu, and the
+ * row ends in undo, redo and the drawer's pill — what fits at 375 px.
+ */
+.header[data-phone] {
+  flex-wrap: nowrap;
+}
+
+.header[data-phone] .lead {
+  flex: 0 0 auto;
+}
+
+.header[data-phone] .actions {
+  min-width: 0;
 }

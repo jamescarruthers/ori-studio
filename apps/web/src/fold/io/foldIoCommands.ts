@@ -53,6 +53,8 @@ function blockedMessage(why: FoldHandOffBlock): string {
       return t('toasts:foldIo.unavailable', 'The fold engine stopped before it finished. Try again.');
     case 'no-step':
       return t('toasts:foldIo.noStep', 'There is no step to export yet.');
+    case 'sheet-on-screen':
+      return t('toasts:foldIo.sheetOnScreen', 'Go to a step to export it.');
     case 'too-large':
       return t('toasts:foldIo.tooLarge', 'This sequence is too large to export as one FOLD file.');
   }

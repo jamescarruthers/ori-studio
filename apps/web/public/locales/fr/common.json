@@ -144,6 +144,7 @@
     "foldExportStepHint": "Exporter le patron de plis de l’étape affichée en SVG ou PNG",
     "foldExportSteps": "Exporter les étapes...",
     "foldExportStepsHint": "Exporter le patron de plis de chaque étape, dans un ZIP",
+    "foldGoToStep": "Allez à une étape pour l’exporter",
     "foldImportCp": "Importer un CP...",
     "foldImportCpHint": "Ajouter une étape qui replie le papier selon un patron de plis",
     "foldImportPolygon": "L’import d’un CP demande une feuille carrée ou rectangulaire.",

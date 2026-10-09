@@ -36,6 +36,12 @@ export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
 export type FoldStepVia = 'axiom' | 'crease' | 'free';
 
 /**
+ * How the reader set a Fold step moving: Space, the Play button, or either on
+ * a step already played through (Replay).
+ */
+export type FoldStepPlayVia = 'space' | 'button' | 'replay';
+
+/**
  * Which choice the Fold engine offered: an axiom's roots, the stacks a depth
  * pick can take, or the layer orders one part of an imported crease pattern
  * folds to (Import CP's chooser).
@@ -1115,9 +1121,10 @@ export const ANALYTICS_EVENTS = {
    * its parent's picture to its landing. `trigger` is `user` (the Play button,
    * Space) or `auto` (arriving at a step under auto-play); `step_kind` is the
    * step's kind — `valley`, `mountain`, `precrease`, `unfold`, `refold`,
-   * `turn`, `rotate` or `import` (Import CP, a crossfade). A pause, a scrub or
-   * a Step is not counted; carrying on after a pause is. Nothing about the
-   * step itself.
+   * `turn`, `rotate` or `import` (Import CP, a crossfade); and on a `user`
+   * play, `via` is how — `space`, `button`, or `replay` for a step already
+   * played through, by either. A pause, a scrub or a Step is not counted;
+   * carrying on after a pause is. Nothing about the step itself.
    */
   foldStepPlayed: 'fold step played',
   /**

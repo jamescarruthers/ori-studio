@@ -6,7 +6,8 @@ describe('runFoldPlaybackShortcut', () => {
   it('plays the step on Space while it has something to play', () => {
     const toggle = vi.fn();
     expect(runFoldPlaybackShortcut('fold.playStep', { available: true, toggle })).toBe(true);
-    expect(toggle).toHaveBeenCalledTimes(1);
+    // Said to be Space, for the play's report.
+    expect(toggle).toHaveBeenCalledExactlyOnceWith('space');
   });
 
   it('leaves Space to the scopes beneath when the step has nothing to play', () => {

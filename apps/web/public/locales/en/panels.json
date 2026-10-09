@@ -1486,7 +1486,6 @@
     "grid": {
       "broken": "This step no longer folds",
       "brokenAbove": "A step before this one no longer folds",
-      "delete": "Delete this step and what follows",
       "flat": "Flat",
       "folding": "Folding…",
       "label": "Steps",
@@ -1499,6 +1498,7 @@
       "fold": "Fold",
       "foldHint": "The step on screen, folded and as a crease pattern",
       "moreExports": "More ways to export",
+      "moreVerbs": "Import, send and export",
       "steps": "Steps",
       "stepsHint": "Every step of the path as a card",
       "views": "View"

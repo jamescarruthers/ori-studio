@@ -4818,7 +4818,6 @@
     "menu:menubar.fold": "92c122b5b1e2",
     "panels:fold.grid.broken": "aa64f460a33e",
     "panels:fold.grid.brokenAbove": "fa7b88b33737",
-    "panels:fold.grid.delete": "ad5e80cdaf25",
     "panels:fold.grid.flat": "9285cedcf26a",
     "panels:fold.grid.folding": "73700a8434f9",
     "panels:fold.grid.label": "1de3df70ddf4",
@@ -4986,7 +4985,10 @@
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
     "toasts:foldIo.unavailable": "4a3b3605057d",
-    "tools:fold.note.acrossLayers": "e74cc7d32019"
+    "tools:fold.note.acrossLayers": "e74cc7d32019",
+    "common:capability.foldGoToStep": "d19a69145797",
+    "toasts:foldIo.sheetOnScreen": "1635617e7fd9",
+    "panels:fold.header.moreVerbs": "c58aaeff8080"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9807,7 +9809,6 @@
     "menu:menubar.fold": "92c122b5b1e2",
     "panels:fold.grid.broken": "aa64f460a33e",
     "panels:fold.grid.brokenAbove": "fa7b88b33737",
-    "panels:fold.grid.delete": "ad5e80cdaf25",
     "panels:fold.grid.flat": "9285cedcf26a",
     "panels:fold.grid.folding": "73700a8434f9",
     "panels:fold.grid.label": "1de3df70ddf4",
@@ -9975,7 +9976,10 @@
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
     "toasts:foldIo.unavailable": "4a3b3605057d",
-    "tools:fold.note.acrossLayers": "e74cc7d32019"
+    "tools:fold.note.acrossLayers": "e74cc7d32019",
+    "common:capability.foldGoToStep": "d19a69145797",
+    "toasts:foldIo.sheetOnScreen": "1635617e7fd9",
+    "panels:fold.header.moreVerbs": "c58aaeff8080"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -14798,7 +14802,6 @@
     "menu:menubar.fold": "92c122b5b1e2",
     "panels:fold.grid.broken": "aa64f460a33e",
     "panels:fold.grid.brokenAbove": "fa7b88b33737",
-    "panels:fold.grid.delete": "ad5e80cdaf25",
     "panels:fold.grid.flat": "9285cedcf26a",
     "panels:fold.grid.folding": "73700a8434f9",
     "panels:fold.grid.label": "1de3df70ddf4",
@@ -14966,7 +14969,10 @@
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
     "toasts:foldIo.unavailable": "4a3b3605057d",
-    "tools:fold.note.acrossLayers": "e74cc7d32019"
+    "tools:fold.note.acrossLayers": "e74cc7d32019",
+    "common:capability.foldGoToStep": "d19a69145797",
+    "toasts:foldIo.sheetOnScreen": "1635617e7fd9",
+    "panels:fold.header.moreVerbs": "c58aaeff8080"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -19587,7 +19593,6 @@
     "menu:menubar.fold": "92c122b5b1e2",
     "panels:fold.grid.broken": "aa64f460a33e",
     "panels:fold.grid.brokenAbove": "fa7b88b33737",
-    "panels:fold.grid.delete": "ad5e80cdaf25",
     "panels:fold.grid.flat": "9285cedcf26a",
     "panels:fold.grid.folding": "73700a8434f9",
     "panels:fold.grid.label": "1de3df70ddf4",
@@ -19749,7 +19754,10 @@
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
     "toasts:foldIo.unavailable": "4a3b3605057d",
-    "tools:fold.note.acrossLayers": "e74cc7d32019"
+    "tools:fold.note.acrossLayers": "e74cc7d32019",
+    "common:capability.foldGoToStep": "d19a69145797",
+    "toasts:foldIo.sheetOnScreen": "1635617e7fd9",
+    "panels:fold.header.moreVerbs": "c58aaeff8080"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -24370,7 +24378,6 @@
     "menu:menubar.fold": "92c122b5b1e2",
     "panels:fold.grid.broken": "aa64f460a33e",
     "panels:fold.grid.brokenAbove": "fa7b88b33737",
-    "panels:fold.grid.delete": "ad5e80cdaf25",
     "panels:fold.grid.flat": "9285cedcf26a",
     "panels:fold.grid.folding": "73700a8434f9",
     "panels:fold.grid.label": "1de3df70ddf4",
@@ -24532,7 +24539,10 @@
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
     "toasts:foldIo.unavailable": "4a3b3605057d",
-    "tools:fold.note.acrossLayers": "e74cc7d32019"
+    "tools:fold.note.acrossLayers": "e74cc7d32019",
+    "common:capability.foldGoToStep": "d19a69145797",
+    "toasts:foldIo.sheetOnScreen": "1635617e7fd9",
+    "panels:fold.header.moreVerbs": "c58aaeff8080"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -29353,7 +29363,6 @@
     "menu:menubar.fold": "92c122b5b1e2",
     "panels:fold.grid.broken": "aa64f460a33e",
     "panels:fold.grid.brokenAbove": "fa7b88b33737",
-    "panels:fold.grid.delete": "ad5e80cdaf25",
     "panels:fold.grid.flat": "9285cedcf26a",
     "panels:fold.grid.folding": "73700a8434f9",
     "panels:fold.grid.label": "1de3df70ddf4",
@@ -29521,7 +29530,10 @@
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
     "toasts:foldIo.unavailable": "4a3b3605057d",
-    "tools:fold.note.acrossLayers": "e74cc7d32019"
+    "tools:fold.note.acrossLayers": "e74cc7d32019",
+    "common:capability.foldGoToStep": "d19a69145797",
+    "toasts:foldIo.sheetOnScreen": "1635617e7fd9",
+    "panels:fold.header.moreVerbs": "c58aaeff8080"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -34342,7 +34354,6 @@
     "menu:menubar.fold": "92c122b5b1e2",
     "panels:fold.grid.broken": "aa64f460a33e",
     "panels:fold.grid.brokenAbove": "fa7b88b33737",
-    "panels:fold.grid.delete": "ad5e80cdaf25",
     "panels:fold.grid.flat": "9285cedcf26a",
     "panels:fold.grid.folding": "73700a8434f9",
     "panels:fold.grid.label": "1de3df70ddf4",
@@ -34510,7 +34521,10 @@
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
     "toasts:foldIo.unavailable": "4a3b3605057d",
-    "tools:fold.note.acrossLayers": "e74cc7d32019"
+    "tools:fold.note.acrossLayers": "e74cc7d32019",
+    "common:capability.foldGoToStep": "d19a69145797",
+    "toasts:foldIo.sheetOnScreen": "1635617e7fd9",
+    "panels:fold.header.moreVerbs": "c58aaeff8080"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -39131,7 +39145,6 @@
     "menu:menubar.fold": "92c122b5b1e2",
     "panels:fold.grid.broken": "aa64f460a33e",
     "panels:fold.grid.brokenAbove": "fa7b88b33737",
-    "panels:fold.grid.delete": "ad5e80cdaf25",
     "panels:fold.grid.flat": "9285cedcf26a",
     "panels:fold.grid.folding": "73700a8434f9",
     "panels:fold.grid.label": "1de3df70ddf4",
@@ -39293,6 +39306,9 @@
     "toasts:foldIo.pathBroken": "7b38ca1e2bd5",
     "toasts:foldIo.tooLarge": "69f194117687",
     "toasts:foldIo.unavailable": "4a3b3605057d",
-    "tools:fold.note.acrossLayers": "e74cc7d32019"
+    "tools:fold.note.acrossLayers": "e74cc7d32019",
+    "common:capability.foldGoToStep": "d19a69145797",
+    "toasts:foldIo.sheetOnScreen": "1635617e7fd9",
+    "panels:fold.header.moreVerbs": "c58aaeff8080"
   }
 }

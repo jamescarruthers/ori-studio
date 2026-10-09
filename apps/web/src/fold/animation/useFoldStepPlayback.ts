@@ -4,6 +4,7 @@ import type { FoldStepMotion } from './foldStepMotion';
 import {
   FoldStepPlayback,
   type FoldPlaybackPosition,
+  type FoldPlayPress,
   type FoldPosedSceneSource,
   type FoldStepPlaybackStatus,
 } from './foldStepPlayback';
@@ -17,8 +18,8 @@ export interface FoldStepPlaybackInput {
 
 /** What the folded pane, the transport controls and the `fold` scope read and press. */
 export interface FoldStepPlaybackSurface extends FoldStepPlaybackStatus {
-  /** Play from the parent, pause, resume, replay: the Play button and Space. */
-  toggle: () => void;
+  /** Play from the parent, pause, resume, replay: the Play button and Space, each saying which it is. */
+  toggle: (press: FoldPlayPress) => void;
   /** The scrubber, 0 to 1 by time. */
   seek: (progress: number) => void;
   /** The scrubber moved by an eighth. */
@@ -41,8 +42,11 @@ export function useFoldStepPlayback({ motion, autoPlay = false }: FoldStepPlayba
   const [playback] = useState(
     () =>
       new FoldStepPlayback({
-        onPlay: (trigger, programme) =>
-          track(ANALYTICS_EVENTS.foldStepPlayed, { trigger, step_kind: programme.kind }),
+        onPlay: (trigger, programme, via) =>
+          track(
+            ANALYTICS_EVENTS.foldStepPlayed,
+            via ? { trigger, step_kind: programme.kind, via } : { trigger, step_kind: programme.kind }
+          ),
       })
   );
   useEffect(() => {
@@ -53,7 +57,7 @@ export function useFoldStepPlayback({ motion, autoPlay = false }: FoldStepPlayba
   }, [playback, motion]);
   useEffect(() => () => playback.dispose(), [playback]);
   const status = useSyncExternalStore(playback.subscribe, playback.status, playback.status);
-  const toggle = useCallback(() => playback.toggle(), [playback]);
+  const toggle = useCallback((press: FoldPlayPress) => playback.toggle(press), [playback]);
   const seek = useCallback((progress: number) => playback.seek(progress), [playback]);
   const step = useCallback((direction: 1 | -1) => playback.step(direction), [playback]);
   return useMemo(

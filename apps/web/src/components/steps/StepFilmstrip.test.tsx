@@ -124,6 +124,16 @@ afterEach(() => {
   }
 });
 
+describe('a compact strip', () => {
+  it('is marked compact only when asked, and keeps every card and picture', () => {
+    show();
+    expect(container?.querySelector('[data-compact]')).toBeNull();
+    show({ compact: true });
+    expect(container?.querySelector('[data-compact]')).not.toBeNull();
+    expect(cards()).toHaveLength(steps.length);
+  });
+});
+
 describe('the picture slot', () => {
   it('draws each card’s picture from the caller, inside the card', () => {
     show();

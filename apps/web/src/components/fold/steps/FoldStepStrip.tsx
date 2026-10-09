@@ -6,7 +6,7 @@ import { useFoldStepMenu } from '../../../fold/sequence/useFoldStepMenu';
 import { useFoldStepStrip } from '../../../fold/sequence/useFoldStepStrip';
 import type { FoldSequenceView } from '../../../fold/sequence/useFoldSequenceView';
 import { useIsPhoneLayout } from '../../../platform/phoneLayout';
-import { DiagramSheetThumbnail } from '../../diagram/DiagramSheetThumbnail';
+import { PatternThumbnail } from '../../ui/PatternThumbnail';
 import { StepFilmstrip } from '../../steps/StepFilmstrip';
 import { ContextMenu } from '../../ui/ContextMenu';
 import styles from './FoldStepStrip.module.css';
@@ -18,7 +18,7 @@ import styles from './FoldStepStrip.module.css';
  */
 function renderStepPicture(card: FoldStripCard) {
   return card.picture ? (
-    <DiagramSheetThumbnail thumbnail={card.picture} className={styles.picture} />
+    <PatternThumbnail thumbnail={card.picture} className={styles.picture} />
   ) : (
     <span className={styles.blank} data-fold-picture="none" />
   );
@@ -32,7 +32,8 @@ function renderStepPicture(card: FoldStripCard) {
  *
  * The shared `StepFilmstrip` with Fold's pictures and words in it; a
  * right-click on a card offers that step's verbs. On a phone the chevrons go,
- * and a swipe up or down on a card chooses its branch.
+ * the cards are smaller so the paper keeps the height, and a swipe up or down
+ * on a card chooses its branch.
  */
 export function FoldStepStrip({ view }: { view: FoldSequenceView }) {
   const { t } = useTranslation();
@@ -66,6 +67,7 @@ export function FoldStepStrip({ view }: { view: FoldSequenceView }) {
         previousLabel={strip.previousLabel}
         nextLabel={strip.nextLabel}
         navigation={!phone}
+        compact={phone}
         previousDisabled={strip.previousDisabled}
         nextDisabled={strip.nextDisabled}
         onPreviousWay={strip.onPreviousWay}

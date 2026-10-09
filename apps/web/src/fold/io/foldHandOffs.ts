@@ -19,6 +19,7 @@ import type { TFunction } from 'i18next';
 import type { SendToEditPayload } from '../../designKinds/types';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import type { PaperExportScope, PaperExportTarget } from '../../paperExport/paperExportTarget';
+import { exportFilename } from '../../platform/exportFilename';
 import type { FileService } from '../../platform/fileService';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import { foldSendToEditPayload } from '../engine/foldEngineIoSendToEdit';
@@ -41,8 +42,10 @@ export type FoldHandOffBlock =
   | 'path-broken'
   /** The engine could not be reached, or went away mid-way. */
   | 'unavailable'
-  /** "This step" with the flat sheet on screen: there is no step to export. */
+  /** The path has no numbered step: nothing to export. */
   | 'no-step'
+  /** "This step" with the flat sheet on screen, or a turn before the first step: no page to open on. */
+  | 'sheet-on-screen'
   /** The FOLD file would be over the export's size cap. */
   | 'too-large';
 
@@ -64,9 +67,18 @@ export interface FoldHandOffDeps {
   openPaperExport: (target: PaperExportTarget, scope: PaperExportScope) => void;
 }
 
-/** The base of a file's name: the title, or "Untitled". */
+/** The title the engine writes into a file: the sequence's, or "Untitled". */
 function stem(title: string): string {
   return title.trim() || 'Untitled';
+}
+
+/**
+ * A file's name from the title, by the rule every export's name is made by
+ * (`exportFilename`): a title with a slash or a colon in it is no path, and a
+ * desktop dialog would read it as one.
+ */
+function foldFilename(title: string): string {
+  return exportFilename(title, 'fold');
 }
 
 /**
@@ -120,7 +132,7 @@ export async function sendFoldSequenceToEdit(deps: FoldHandOffDeps, variant: Fol
     if (text === null) return false;
     const payload = foldSendToEditPayload(text, {
       label: deps.t('common:toolbar.sendToEdit', 'Send to Edit'),
-      filename: `${title}.fold`,
+      filename: foldFilename(title),
       precreasesAsAux: variant === 'precreases-as-aux',
     });
     const sent = await deps.sendToEdit(payload);
@@ -143,7 +155,7 @@ export async function exportFoldSequence(deps: FoldHandOffDeps): Promise<boolean
     const saved = await deps.fileService().saveTextFile({
       title: deps.t('dialogs:foldExport.title', 'Export Fold Sequence'),
       contents: exported.text,
-      suggestedName: `${title}.fold`,
+      suggestedName: foldFilename(title),
       extensions: ['fold'],
     });
     return saved !== null;
@@ -177,7 +189,7 @@ export async function openFoldStepsExport(deps: FoldHandOffDeps, scope: PaperExp
       if (step.id === cursor) current = pages.length - 1;
     }
     if (pages.length === 0 || (scope === 'this' && current < 0)) {
-      deps.blocked('no-step');
+      deps.blocked(pages.length === 0 ? 'no-step' : 'sheet-on-screen');
       return false;
     }
     const target = foldStepsExportTarget({

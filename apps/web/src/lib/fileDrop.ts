@@ -72,7 +72,7 @@ export function isOpenableKind(kind: DroppedFileKind): boolean {
 /**
  * Where the drop landed, which decides whether merging is even on offer.
  * `import-crease-pattern` is a target that takes a crease pattern as a step
- * of its own document — the Fold canvas (`useFoldCanvasDrop`) — and leaves
+ * of its own document — the Fold workspace (`useFoldDrop`) — and leaves
  * every other file to the workspace's target.
  */
 export type DropTargetPolicy = 'open-only' | 'open-or-import' | 'import-crease-pattern';

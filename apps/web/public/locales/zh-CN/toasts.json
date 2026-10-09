@@ -75,6 +75,7 @@
   "foldIo": {
     "noStep": "还没有可导出的步骤。",
     "pathBroken": "此序列中有步骤已无法折叠，因此无法发送或导出这些步骤。",
+    "sheetOnScreen": "请先转到一个步骤再导出。",
     "tooLarge": "此序列太大，无法导出为单个 FOLD 文件。",
     "unavailable": "折叠引擎在完成前停止了。请重试。"
   },

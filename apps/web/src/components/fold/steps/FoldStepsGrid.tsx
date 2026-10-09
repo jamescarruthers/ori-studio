@@ -3,8 +3,6 @@ import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Lock } from 'lucide-react';
 import type { SheetThumbnail } from '../../../cp-workspace/sheets/sheetThumbnail';
-import { DEFAULT_DIAGRAM_STYLE } from '../../../diagram/document/diagramDocument';
-import { turnGlyphSvg } from '../../../diagram/annotate/turnGlyph';
 import { handleMenuAction } from '../../../commands/menuActions';
 import { FOLD_SHEET_KEY } from '../../../fold/document/foldStepTree';
 import { foldCommandActionId } from '../../../fold/sequence/foldCommands';
@@ -14,16 +12,16 @@ import {
   type FoldGridStep,
   type FoldGridTurn,
 } from '../../../fold/sequence/foldGridEntries';
-import { foldedStepCount, type FoldPathEntry } from '../../../fold/sequence/foldSequencePath';
+import { foldedStepCount, followerCount, type FoldPathEntry } from '../../../fold/sequence/foldSequencePath';
+import { foldDeleteStepLabel } from '../../../fold/foldActions';
 import { sheetBadge, sheetSentence, statusBadge, stepCountLabel } from '../../../fold/sequence/foldSequenceWords';
 import { setFoldView } from '../../../fold/sequence/foldViewMode';
 import { useFoldStepMenu } from '../../../fold/sequence/useFoldStepMenu';
 import type { FoldSequenceView } from '../../../fold/sequence/useFoldSequenceView';
 import { foldStepSentence, type FoldSentenceStep } from '../../../fold/stepSentence';
 import { operationBadge } from '../../../fold/stepWords';
-import type { TurnKind } from '../../../lib/steps/turn';
 import { useWorkspaceStore } from '../../../store/workspaceStore/store';
-import { DiagramSheetThumbnail } from '../../diagram/DiagramSheetThumbnail';
+import { PatternThumbnail } from '../../ui/PatternThumbnail';
 import { ContextMenu } from '../../ui/ContextMenu';
 import { StepCard, StepCardBadge, StepCardDeleteVerb, StepCardPlaceholder } from '../../ui/steps/StepCard';
 import { StepsGrid, type StepsGridCardProps } from '../../ui/steps/StepsGrid';
@@ -49,26 +47,27 @@ const remove = (key: string) => {
 
 const stepKeyAt = (target: Element) => target.closest<HTMLElement>('[data-step-id]')?.dataset.stepId ?? null;
 
-/** A turn's glyph as its card shows it, drawn as a Diagram page prints it. */
-function turnGlyph(turn: TurnKind): string | null {
-  const svg = turnGlyphSvg(turn, DEFAULT_DIAGRAM_STYLE);
-  return svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null;
-}
-
 /**
  * The Steps view (plan D14, shot-steps): the sheet and every step of the path
  * as cards — its crease pattern, number, sentence and standing — on the shared
- * Steps grid. A turn is a card of its own, numbered none. Selecting a card
+ * Steps grid. A turn is a card of its own, numbered none, its glyph in the
+ * theme's ink on the well the crease patterns are on. Selecting a card
  * puts the reader there; a double-click goes back to the fold at that step; a
  * right-click offers the step's verbs.
  */
 export function FoldStepsGrid({ view }: { view: FoldSequenceView }) {
   const { t } = useTranslation();
-  const { entries, frames, words, cursor, readOnly, paper } = view;
+  const { document, entries, frames, words, cursor, readOnly, paper } = view;
   const gridEntries = useMemo(() => foldGridEntries(entries), [entries]);
-  const glyphs = useMemo(
-    () => new Map(gridEntries.filter(isFoldGridTurn).map((entry) => [entry.id, turnGlyph(entry.turn)])),
-    [gridEntries]
+  // A turn is a step like any other: deleting one takes what folds from it, and the card says so.
+  const deleteLabels = useMemo(
+    () =>
+      new Map(
+        entries.flatMap((entry) =>
+          entry.id === null ? [] : [[entry.key, foldDeleteStepLabel(t, followerCount(document, entry.id))] as const]
+        )
+      ),
+    [t, document, entries]
   );
   const menu = useFoldStepMenu(stepKeyAt);
 
@@ -100,11 +99,11 @@ export function FoldStepsGrid({ view }: { view: FoldSequenceView }) {
             <TurnCard
               turn={{ ...slot.entry.turn, id: slot.entry.id }}
               between={slot.entry.between}
-              glyph={glyphs.get(slot.entry.id) ?? null}
               selected={card.selected}
               tabStop={card.tabStop}
               onSelect={select}
               onDelete={readOnly ? undefined : remove}
+              deleteLabel={deleteLabels.get(slot.entry.id)}
             />
           ) : (
             <FoldStepCard
@@ -114,6 +113,7 @@ export function FoldStepsGrid({ view }: { view: FoldSequenceView }) {
               picture={frames[slot.entry.index]?.pattern ?? null}
               card={card}
               readOnly={readOnly}
+              deleteLabel={deleteLabels.get(slot.entry.id) ?? null}
             />
           )
         }
@@ -138,6 +138,7 @@ function FoldStepCard({
   picture,
   card,
   readOnly,
+  deleteLabel,
 }: {
   entry: FoldPathEntry;
   words: FoldSentenceStep;
@@ -146,6 +147,8 @@ function FoldStepCard({
   picture: SheetThumbnail | null;
   card: StepsGridCardProps;
   readOnly: boolean;
+  /** What its Delete says it takes (`foldDeleteStepLabel`); null for the sheet, which has none. */
+  deleteLabel: string | null;
 }) {
   const { t } = useTranslation();
   const status = statusBadge(t, entry.status);
@@ -165,8 +168,8 @@ function FoldStepCard({
       }
       paper={false}
       verbs={
-        entry.id !== null && !readOnly ? (
-          <StepCardDeleteVerb label={t('panels:fold.grid.delete', 'Delete this step and what follows')} onDelete={() => remove(entry.key)} />
+        deleteLabel !== null && !readOnly ? (
+          <StepCardDeleteVerb label={deleteLabel} onDelete={() => remove(entry.key)} />
         ) : undefined
       }
       instruction={sheet ?? foldStepSentence(t, words)}
@@ -174,7 +177,7 @@ function FoldStepCard({
       onOpen={open}
     >
       {picture ? (
-        <DiagramSheetThumbnail thumbnail={picture} className={styles.picture} />
+        <PatternThumbnail thumbnail={picture} className={styles.picture} />
       ) : (
         <StepCardPlaceholder>
           {entry.status === 'locked' && <Lock size={18} aria-hidden="true" />}

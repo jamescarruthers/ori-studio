@@ -32,6 +32,13 @@ export interface OpenBinaryFileOptions {
   title: string;
   extensions: string[];
   mimeTypes?: string[];
+  /**
+   * What the desktop dialog calls its filter. "Image" unless said otherwise:
+   * every binary pick was a picture's until a crease pattern was read as
+   * bytes (Fold's Import CP), which says "Ori Studio", as every document
+   * open's filter does.
+   */
+  filterName?: string;
 }
 
 export interface OpenBinaryFileResult {
@@ -642,7 +649,7 @@ class TauriFileService implements FileService {
     const selected = await open({
       title: options.title,
       multiple: false,
-      filters: [{ name: 'Image', extensions: options.extensions }],
+      filters: [{ name: options.filterName ?? 'Image', extensions: options.extensions }],
     });
     if (typeof selected !== 'string') return null;
     return {
@@ -658,7 +665,7 @@ class TauriFileService implements FileService {
     const selected = await open({
       title: options.title,
       multiple: options.multiple ?? true,
-      filters: [{ name: 'Image', extensions: options.extensions }],
+      filters: [{ name: options.filterName ?? 'Image', extensions: options.extensions }],
     });
     const paths = Array.isArray(selected) ? selected : typeof selected === 'string' ? [selected] : [];
     return paths.length > 0 ? paths.map(pickedFileFromPath) : null;

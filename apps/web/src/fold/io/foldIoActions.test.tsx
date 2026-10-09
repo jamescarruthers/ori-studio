@@ -20,8 +20,8 @@ let root: Root;
 /** The model the probe last rendered with. */
 const seen: { model: SendToEditButtonModel | null } = { model: null };
 
-function Probe() {
-  const model = useFoldSendToEditButton();
+function Probe({ command }: { command?: { disabled: boolean; hint?: string } }) {
+  const model = useFoldSendToEditButton(command);
   useEffect(() => {
     seen.model = model;
   });
@@ -67,5 +67,13 @@ describe('Fold’s io verbs beside the menu', () => {
     capability.value = { enabled: false, visible: true, label: 'Send to Edit', reason: 'Fold a step first' };
     act(() => root.render(<Probe />));
     expect(seen.model).toMatchObject({ disabled: true, title: 'Fold a step first' });
+  });
+
+  it('take the catalog’s gate too, and say its reason: a path still folding or broken is not one the store knows', () => {
+    capability.value = { enabled: true, visible: true, label: 'Send to Edit', reason: 'Send it' };
+    act(() => root.render(<Probe command={{ disabled: true, hint: 'A step on this path no longer folds.' }} />));
+    expect(seen.model).toMatchObject({ disabled: true, title: 'A step on this path no longer folds.' });
+    act(() => root.render(<Probe command={{ disabled: false }} />));
+    expect(seen.model).toMatchObject({ disabled: false, title: 'Send the crease pattern of the steps shown to the Edit canvas' });
   });
 });

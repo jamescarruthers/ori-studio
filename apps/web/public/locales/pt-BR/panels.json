@@ -1538,7 +1538,6 @@
     "grid": {
       "broken": "Este passo não dobra mais",
       "brokenAbove": "Um passo anterior não dobra mais",
-      "delete": "Excluir este passo e os seguintes",
       "flat": "Planos",
       "folding": "Dobrando…",
       "label": "Passos",
@@ -1551,6 +1550,7 @@
       "fold": "Dobrar",
       "foldHint": "O passo na tela, dobrado e como padrão de vincos",
       "moreExports": "Mais formas de exportar",
+      "moreVerbs": "Importar, enviar e exportar",
       "steps": "Passos",
       "stepsHint": "Cada passo do caminho como um cartão",
       "views": "Visualização"

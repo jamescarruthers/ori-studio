@@ -31,7 +31,7 @@
  * group does in Edit's window, and has to read as the same kind of thing.
  */
 import { createPortal } from 'react-dom';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useToolHintAnchor } from './useToolHintAnchor';
 import { useToolHintCollapsed } from './useToolHintCollapsed';
 import styles from './ToolHintWindow.module.css';
@@ -46,6 +46,8 @@ export function ToolHintWindow({
   ariaLabel,
   headerAction,
   inside = false,
+  startsCollapsed = false,
+  needsAttention = false,
   children,
 }: {
   /**
@@ -74,9 +76,37 @@ export function ToolHintWindow({
    * pane beyond has fields the overhang would cover (`toolHintPlacement`).
    */
   inside?: boolean;
+  /**
+   * Collapsed until someone opens it, rather than open until someone closes it
+   * (`useToolHintCollapsed`'s fallback): for a window that would otherwise
+   * cover what the tool works on.
+   */
+  startsCollapsed?: boolean;
+  /**
+   * The tool has something to decide that is in the body — a fold ready to
+   * commit. A window collapsed by preference opens for it, and a toggle while
+   * it lasts opens or closes the window for this decision only, never the
+   * preference; once the need passes, the window is as the preference says.
+   */
+  needsAttention?: boolean;
   children: ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useToolHintCollapsed(collapseKey);
+  const [preferCollapsed, setPreferCollapsed] = useToolHintCollapsed(collapseKey, startsCollapsed);
+  // Closed again for the decision in hand; forgotten with it.
+  const [dismissed, setDismissed] = useState(false);
+  if (!needsAttention && dismissed) setDismissed(false);
+  const attending = needsAttention && preferCollapsed;
+  const collapsed = attending ? dismissed : preferCollapsed;
+  const setCollapsed = (next: boolean) => {
+    if (attending) {
+      setDismissed(next);
+      return;
+    }
+    setPreferCollapsed(next);
+    // Collapsed mid-decision from open: closed for this decision too, or the
+    // decision would open it again the moment the preference changed.
+    if (needsAttention) setDismissed(next);
+  };
   const placement = useToolHintAnchor(container, inside);
   const { attachFrame, attachContent, attachScroller, closing } = useAnimatedHeight({
     collapsed,

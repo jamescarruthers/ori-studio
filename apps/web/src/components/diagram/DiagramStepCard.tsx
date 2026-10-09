@@ -36,7 +36,7 @@ import {
   StepCardVerb,
 } from '../ui/steps/StepCard';
 import { TurnCard } from '../ui/steps/TurnCard';
-import { DiagramSheetThumbnail } from './DiagramSheetThumbnail';
+import { PatternThumbnail } from '../ui/PatternThumbnail';
 import styles from './DiagramStepCard.module.css';
 import { capturedStyleChange } from '../../diagram/pictures/lighting';
 
@@ -187,7 +187,7 @@ export function DiagramStepCard({
           )}
           {linked && (
             <span className={styles.pattern}>
-              <DiagramSheetThumbnail thumbnail={linked.thumbnail} />
+              <PatternThumbnail thumbnail={linked.thumbnail} />
             </span>
           )}
           <StepCardBadge id={`${labelId}-kind`}>

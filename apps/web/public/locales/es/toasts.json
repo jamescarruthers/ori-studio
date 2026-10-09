@@ -95,6 +95,7 @@
   "foldIo": {
     "noStep": "Todavía no hay ningún paso que exportar.",
     "pathBroken": "Un paso de esta secuencia ya no se puede plegar, así que los pasos no se pueden enviar ni exportar.",
+    "sheetOnScreen": "Ve a un paso para exportarlo.",
     "tooLarge": "Esta secuencia es demasiado grande para exportarla como un solo archivo FOLD.",
     "unavailable": "El motor de plegado se detuvo antes de terminar. Inténtalo de nuevo."
   },

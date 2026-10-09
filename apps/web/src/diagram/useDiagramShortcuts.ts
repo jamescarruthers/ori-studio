@@ -22,9 +22,9 @@ import { annotationActionEdit, nudgePathNodeEdit, offersAnnotationAction } from 
 import { flipChangesArc } from './annotate/annotationModel';
 import { applyAnnotationEdit } from './annotate/applyAnnotationEdit';
 import { indexForStepNumber, stepById, stepsOf, type KnownDiagramAnnotation } from './document/diagramDocument';
+import { focusOwnsArrowKeys } from '../keyboard/arrowKeyOwners';
 import {
   focusLeavesEnterToSteps,
-  focusOwnsArrowKeys,
   isAnnotateShortcut,
   runDiagramCancel,
   runDiagramShortcut,

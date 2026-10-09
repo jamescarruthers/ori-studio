@@ -25,7 +25,7 @@ export function runFoldPlaybackShortcut(
   switch (id) {
     case 'fold.playStep':
       if (!playback.available || focusInFoldLayerPick(focus)) return false;
-      playback.toggle();
+      playback.toggle('space');
       return true;
     default:
       return false;

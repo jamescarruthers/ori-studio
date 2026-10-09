@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
+import { focusOwnsArrowKeys } from '../../keyboard/arrowKeyOwners';
 import {
   registerConditionalScopeExecutor,
   registerViewportShortcutExecutor,

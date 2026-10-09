@@ -31,6 +31,7 @@ vi.mock('../../store/workspaceStore/foldSession', async (importOriginal) => ({
 }));
 
 import { valleyAt } from '../../fold/document/foldSequence.fixtures';
+import { useFoldImportUiStore } from '../../fold/io/foldImportUiStore';
 import { setFoldView } from '../../fold/sequence/foldViewMode';
 import { clearFoldStateFrames } from '../../fold/sequence/useFoldStateFrames';
 import { squareScene } from '../../fold/sequence/foldScene.fixtures';
@@ -239,5 +240,38 @@ describe('the Fold panel', () => {
     expect(button('Send to Edit')?.disabled).toBe(false);
     act(() => button('Send to Edit')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     expect(menu.handleMenuAction).toHaveBeenCalledWith('fold.send-to-edit');
+  });
+
+  it('imports a crease pattern dropped anywhere on it — the strip, the header, the Steps view — as the panes do', async () => {
+    stubPointer(false);
+    await render();
+    /** A drag event carrying `files`, as a browser sends one. */
+    const drag = (type: string, files: File[]) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'dataTransfer', {
+        value: { types: ['Files'], items: files.map((file) => ({ kind: 'file', type: file.type })), files, dropEffect: 'none' },
+      });
+      return event;
+    };
+    const cp = new File(['1 0 0 1 1'], 'crane.cp');
+    const overlay = () => panel()?.querySelector('.file-drop-overlay')?.textContent ?? null;
+    const dropOn = async (target: Element | null | undefined) => {
+      act(() => {
+        target?.dispatchEvent(drag('dragenter', [cp]));
+      });
+      expect(overlay()).toBe('Drop a crease pattern to import it');
+      await act(async () => {
+        target?.dispatchEvent(drag('drop', [cp]));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(overlay()).toBeNull();
+      expect(useFoldImportUiStore.getState().opening?.request).toMatchObject({ kind: 'file', name: 'crane.cp' });
+      act(() => useFoldImportUiStore.getState().close());
+    };
+
+    await dropOn(stripCards()[0]);
+    await dropOn(tab('Fold'));
+    press(tab('Steps'));
+    await dropOn(gridCards()[0]);
   });
 });

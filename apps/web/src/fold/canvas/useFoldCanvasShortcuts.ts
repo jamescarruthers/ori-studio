@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
+import { focusOwnsArrowKeys } from '../../keyboard/arrowKeyOwners';
 import type { FoldShortcutId, ViewportShortcutId } from '../../keyboard/shortcuts';
 import { registerFoldCancel, registerFoldKeyHandler, registerFoldViewCamera } from '../sequence/foldKeys';
 import { focusInFoldLayerPick } from '../sequence/foldLayerPickFocus';

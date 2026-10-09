@@ -7,7 +7,7 @@ import { FOLD_IMPORT_EXTENSIONS, foldImportFileSource, foldSampleSummary } from 
 import type { FoldImportRequest } from '../../../fold/io/foldImportFlow';
 import { getFileService } from '../../../platform/fileService';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
-import { DiagramSheetThumbnail } from '../../diagram/DiagramSheetThumbnail';
+import { PatternThumbnail } from '../../ui/PatternThumbnail';
 import styles from './FoldImportPicker.module.css';
 
 /** A sample's name, as the dialog and the menu say it. */
@@ -47,6 +47,11 @@ export function FoldImportPicker({
     const file = await getFileService().openBinaryFile({
       title: t('dialogs:foldImport.pickTitle', 'Import Crease Pattern'),
       extensions: [...FOLD_IMPORT_EXTENSIONS],
+      // As every document open offers it (`inputAccept`): none of these formats
+      // is registered with Apple, and iOS greys out a file it cannot match. The
+      // import reads the format from the name, and refuses one it cannot.
+      mimeTypes: ['application/octet-stream'],
+      filterName: 'Ori Studio',
     });
     if (!file) return;
     onRequest({ kind: 'file', name: file.name, source: foldImportFileSource(file.name, file.bytes) });
@@ -85,7 +90,7 @@ export function FoldImportPicker({
                 onClick={() => onRequest({ kind: 'sample', sample: sample.id })}
               >
                 <span className={styles.picture}>
-                  {summary.thumbnail && <DiagramSheetThumbnail thumbnail={summary.thumbnail} />}
+                  {summary.thumbnail && <PatternThumbnail thumbnail={summary.thumbnail} />}
                 </span>
                 <span className={styles.name}>{foldSampleName(t, sample.id)}</span>
                 <span className={styles.note}>

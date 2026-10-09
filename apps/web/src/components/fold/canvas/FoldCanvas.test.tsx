@@ -147,6 +147,41 @@ describe("the Fold canvas", () => {
     ).toBe(true);
   });
 
+  it("leads a phone’s bar with the tools and the pane switch, the display switches in its menu", async () => {
+    const { PHONE_MEDIA_QUERY } = await import("../../../platform/phoneLayout");
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query === PHONE_MEDIA_QUERY || query.includes("pointer: coarse"),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })),
+    );
+    const canvas = mount();
+    const bar = canvas.querySelector<HTMLElement>("[data-viewport-toolbar]");
+    const names = [...(bar?.querySelectorAll("button") ?? [])].map(
+      (button) => button.getAttribute("aria-label") ?? button.textContent,
+    );
+    // The tools, then the pane the switch shows next; the transport; the menu.
+    expect(names.slice(0, 2)).toEqual(["Tools", "Crease pattern"]);
+    expect(names).not.toContain("Step creases");
+    expect(names).not.toContain("Precreases");
+    // One pane at a time, the folded form first; the switch shows the other.
+    expect(canvas.querySelector('[data-fold-pane="crease-pattern"]')).toBeNull();
+    act(() =>
+      bar?.querySelector<HTMLButtonElement>('button[aria-label="Crease pattern"]')?.click(),
+    );
+    expect(canvas.querySelector('[data-fold-pane="crease-pattern"]')).not.toBeNull();
+    expect(canvas.querySelector('[data-fold-pane="folded"]')).toBeNull();
+    act(() => bar?.querySelector<HTMLButtonElement>('button[aria-label="Folded"]')?.click());
+    // The tools open as a sheet, from the bar.
+    const tools = bar?.querySelector<HTMLButtonElement>('button[aria-label="Tools"]');
+    expect(tools?.getAttribute("aria-haspopup")).toBe("dialog");
+    act(() => tools?.click());
+    expect(tools?.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(tools?.getAttribute("aria-controls") ?? "")).not.toBeNull();
+  });
+
   it("puts the step’s transport on the bar, waiting while the sheet has no step to play", () => {
     const canvas = mount();
     const transport = byRole(canvas, "group", "Step playback");
