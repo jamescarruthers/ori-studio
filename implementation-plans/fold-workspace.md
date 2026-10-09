@@ -1186,11 +1186,14 @@ None is pending.
   - [x] The cross-section query (D14 spec), with a precrease-row test.
   - [x] Per-step summaries and the crease-pattern diff.
   - [x] Convex polygon sheets; non-convex sheets refused.
-- [ ] **Kernel feature.**
+- [x] **Kernel feature.**
   - [x] `fold_cp_to_model`, lossless through the kernel's FOLD writer and reader.
-  - [ ] Its inverse through the kernel's loaders. Import CP's kernel-free input
-    (`CreasePatternInput`) is done; the loaders go in the bridge.
-  - [ ] Round-trip test: Send to Edit, then Import CP, gives the same state.
+  - [x] Its inverse through the kernel's loaders, in the bridge
+    (`oristudio-fold-wasm/src/io/kernel.rs`), into Import CP's kernel-free
+    input (`CreasePatternInput`).
+  - [x] Round-trip test: Send to Edit, then Import CP, gives the same state
+    (`oristudio-fold-wasm/tests/io.rs`, over the classics and seeded random
+    states).
 - [x] **FOLD export.**
   - [x] `diagrams` class and a kernel root frame.
   - [x] Flat step frames with a `oristudio:fold-step` marker.
@@ -1200,8 +1203,10 @@ None is pending.
 - [x] **Tests.**
   - [x] Property tests and classic sequences as fixtures.
   - [x] Oracle binaries (D8) wired into CI.
-- [ ] Native performance recorded against real sequences. (The random perf
-  example is recorded: the fold at 129–256 faces is 11.9 ms mean, 21.3 ms p95.)
+- [x] Native performance recorded against real sequences: the classics and
+  Beloch's fixtures (`examples/sequences.rs`), beside the random stacks
+  (`examples/perf.rs`). The figures are in `oristudio-fold`'s README,
+  "Performance".
 
 ### Phase 3 — Axioms on flat and folded forms
 
@@ -1221,11 +1226,12 @@ None is pending.
 ### Phase 4a — Bridge and document
 
 - [ ] `oristudio-fold-wasm`:
-  - [ ] `kernel` enabled;
+  - [x] `kernel` enabled (the decision is in the crate README);
   - [x] coarse calls; refusals as codes;
   - [x] `wasm-pack test --node`;
-  - [ ] **size measured with and without `kernel`, against a budget** (without:
-    609 KiB raw, 228 KiB gzipped; budget in the crate README).
+  - [x] size measured with and without `kernel` (the crate README, "Size");
+  - [ ] **within its budget.** The build without `kernel` is over it; raising
+    the budget or trimming is the owner's call (the crate README, "Budget").
 - [ ] `build:oristudio-fold-wasm` in `apps/web/package.json` (done); `npm run
   build:web` in a fresh worktree; `npm run typecheck:web` (done).
 - [x] `foldSequenceWorker` and the runtime:
@@ -1249,10 +1255,14 @@ None is pending.
     sequences differing only in `paper`, get different `fh1`; a note edit
     leaves `fh1` unchanged; a stored choice that conflicts →
     broken; one that drifts → changed.
-- [ ] Wasm performance: the plain-fold op (split, carry and place the order,
-  residual) at or below the JS spike's p95 (≤ 2.2 ms at 33–64 faces, ≤ 17.2 ms
-  at 129–256; research §12, `r2-spike-core`), and the full tier-3 preview (D14)
-  within 50 ms at 256 faces.
+- [ ] Wasm performance (the bridge README, "Performance", for the figures):
+  - [ ] the plain-fold op (split, carry and place the order, residual) at or
+    below the JS spike's p95 (≤ 2.2 ms at 33–64 faces, ≤ 17.2 ms at 129–256;
+    research §12, `r2-spike-core`). Below it at 129–256 faces; over it at
+    33–64, by a quarter of a millisecond, in the one run recorded, on a
+    loaded machine. Open until a quieter run settles it;
+  - [ ] the full tier-3 preview (D14) within 50 ms at 256 faces: within it on
+    the mean, not at p95.
 
 ### Phase 4b — Store and project file
 
@@ -1319,22 +1329,23 @@ unless marked.
 - [x] Registration touchpoints and every test that lists workspaces. Touch undo
   is in Fold's header (`TouchHistoryButtons`), not the history pill lane; see
   D14.
-- [ ] The panel (the rail, tool window, cross-section picker, flap chips and
-  refusal notice are built as standalone components; mounting is open):
-  - [ ] the split canvas on `useCpSurface`;
-  - [ ] the phone `PaneToggle`;
-  - [ ] the rail and phone picker;
-  - [ ] the tool-window model;
-  - [ ] the accessible cross-section picker;
-  - [ ] flap chips;
-  - [ ] the refusal notice with fixes;
-  - [ ] the candidate chooser;
-  - [ ] the Alt latch.
-- [ ] Header, step strip with branches, Steps grid, Step and Paper panes; delete
+- [x] The panel, every piece mounted (`FoldPanel` → `FoldCanvas`):
+  - [x] the split canvas on `useCpSurface` (`FoldPane`, one per pane);
+  - [x] the phone `PaneToggle` (`FoldPhoneCanvasPills`, in the header's slot);
+  - [x] the rail and phone picker (`FoldToolRail`, `FoldToolPickerSheet`);
+  - [x] the tool-window model (`fold/tools/foldToolWindow.ts`);
+  - [x] the accessible cross-section picker (a listbox, keyboard tested);
+  - [x] flap chips;
+  - [x] the refusal notice with fixes;
+  - [x] the candidate chooser: axiom roots through `ToolOptionLayer`, and
+    Import CP's orders in its dialog (openings and completions arrive with
+    Phases 9 and 11);
+  - [x] the Alt latch (`FoldAltLatchToggle`, on a coarse pointer).
+- [x] Header, step strip with branches, Steps grid, Step and Paper panes; delete
   step.
-- [ ] The Divide-line tool (count and exact ratio; marks stored per D6; one undo
-  entry per add or clear).
-- [ ] Keyboard scope, action catalog, analytics, i18n (9 locales).
+- [x] The Divide-line tool (count and exact ratio; marks stored per D6; one undo
+  entry per add or clear, counted in `foldSlice.test.ts`).
+- [x] Keyboard scope, action catalog, analytics, i18n (9 locales).
 - [ ] Browser verification, desktop and phone (tap-only), both themes:
   - [ ] a kite base;
   - [ ] a precrease through 4 layers, then a refold;
@@ -1345,27 +1356,31 @@ unless marked.
 
 ### Phase 7 — Animation
 
-- [ ] Posed-`PaperScene` group motion with draw-order reversal; a fixed camera.
-- [ ] Play, step, scrub, Space; reduced motion; injectable-clock tests; a
-  frame-continuity test.
+- [x] Posed-`PaperScene` group motion with draw-order reversal; a fixed camera
+  (`foldStepPoses`, `foldStepMotion`).
+- [x] Play, step, scrub, Space; reduced motion; injectable-clock tests; a
+  frame-continuity test (`foldStepPlayback`, `foldPlaybackShortcuts`,
+  `foldStepMotion.wasm.test.ts`).
 
 ### Phase 8 — Import CP, exports, hand-offs
 
-- [ ] **Import CP (D16):**
-  - [ ] loaders in the bridge;
-  - [ ] `outline` sheet recovery;
-  - [ ] shape refusals, with tests (a rectangle against a polygon sequence with
-    steps);
-  - [ ] colour inverse;
-  - [ ] letter-seeded completion;
-  - [ ] witness-keyed `orderJson`;
-  - [ ] the drop policy.
-- [ ] Samples as attributed fixtures, each importing to ≥ 1 order.
-- [ ] An Import-CP golden through `.cp` and `.fold`, checking letters and
+- [x] **Import CP (D16):**
+  - [x] loaders in the bridge;
+  - [x] `outline` sheet recovery;
+  - [x] shape refusals, with tests (a rectangle against a polygon sequence with
+    steps: `imports_that_cannot_land_are_refusals_with_import_codes`);
+  - [x] colour inverse;
+  - [x] letter-seeded completion;
+  - [x] witness-keyed `orderJson`;
+  - [x] the drop policy.
+- [x] Samples as attributed fixtures, each importing to ≥ 1 order
+  (`tests/fixtures/fold-samples/`).
+- [x] An Import-CP golden through `.cp` and `.fold`, checking letters and
   front/back.
-- [ ] "Start from Edit's folded figure".
-- [ ] Send to Edit, with the precreases-as-aux variant.
-- [ ] FOLD export and the paper export target in the menu.
+- [x] "Start from Edit's folded figure".
+- [x] Send to Edit, with the precreases-as-aux variant.
+- [x] FOLD export and the paper export target in the menu (`fold.export-fold`,
+  `fold.export-step`, `fold.export-steps`).
 
 ### Phase 9 — Inside reverse fold (V0.5)
 
