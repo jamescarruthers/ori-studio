@@ -43,8 +43,6 @@ export function runFoldCanvasShortcut(id: FoldShortcutId, focus: Element | null)
   if (!verbs) return false;
   const tool = TOOL_BY_SHORTCUT.get(id);
   if (tool !== undefined) {
-    // A planned tool takes no key: it falls through rather than doing nothing.
-    if (tool === 'inside-reverse') return false;
     verbs.selectTool(tool);
     return true;
   }
@@ -65,9 +63,9 @@ export function runFoldCanvasShortcut(id: FoldShortcutId, focus: Element | null)
       return verbs.swapSide();
     case 'fold.previousCandidate':
     case 'fold.nextCandidate':
-      // A control that moves with the arrows keeps them; with one root or none, the step keys may have them.
+      // A control that moves with the arrows keeps them; with one candidate or none, the step keys may have them.
       if (focusOwnsArrowKeys(focus)) return false;
-      return verbs.stepRoot(id === 'fold.nextCandidate' ? 1 : -1);
+      return verbs.stepChoice(id === 'fold.nextCandidate' ? 1 : -1);
     case 'fold.commit':
       if (!focusLeavesEnterToFold(focus)) return false;
       // In the layer controls Enter is the fold's even while there is none

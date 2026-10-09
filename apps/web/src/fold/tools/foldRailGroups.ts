@@ -25,7 +25,7 @@ import {
   foldReadOnlyReason,
   foldToolDescription,
   foldToolLabel,
-  isFoldKind,
+  isLineTool,
   lineModeDescription,
   lineModeLabel,
   type FoldLineModeId,
@@ -81,8 +81,8 @@ export interface FoldRailGroup {
 
 const FOLD_GROUP_TOOLS: readonly FoldToolId[] = ['valley', 'mountain', 'precrease', 'inside-reverse'];
 
-/** Tools not built yet: shown so the rail says what is coming, never taken. */
-const PLANNED_TOOLS: ReadonlySet<FoldToolId> = new Set(['inside-reverse']);
+/** Tools not built yet: shown so the rail says what is coming, never taken. Every fold tool is built now. */
+const PLANNED_TOOLS: ReadonlySet<FoldToolId> = new Set();
 
 function groupLabel(t: TFunction, id: FoldRailGroupId): string {
   switch (id) {
@@ -133,7 +133,7 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
     reason: locked,
     shortcut: FOLD_LINE_MODE_SHORTCUTS[id],
     // A line mode stays chosen under the Divide line, but is not what the canvas is doing then.
-    active: view.lineMode === id && isFoldKind(view.tool),
+    active: view.lineMode === id && isLineTool(view.tool),
     available: locked === null,
     select: () => verbs.selectLineMode(id),
   });

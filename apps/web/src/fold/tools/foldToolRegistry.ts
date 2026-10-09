@@ -103,17 +103,16 @@ export function lineModeInput(mode: FoldLineModeId): FoldInputModel {
   return mode === 'free' ? FREE_LINE : EXISTING_CREASE;
 }
 
-/** The clicks the tool in hand collects; null for a tool that takes none (a planned one). */
-export function toolInput(tool: FoldToolId, mode: FoldLineModeId): FoldInputModel | null {
+/** The clicks the tool in hand collects: a fold's, its line mode's; the Divide line's, its segment. */
+export function toolInput(tool: FoldToolId, mode: FoldLineModeId): FoldInputModel {
   switch (tool) {
     case 'valley':
     case 'mountain':
     case 'precrease':
+    case 'inside-reverse':
       return lineModeInput(mode);
     case 'divide-line':
       return DIVIDE_LINE;
-    case 'inside-reverse':
-      return null;
   }
 }
 

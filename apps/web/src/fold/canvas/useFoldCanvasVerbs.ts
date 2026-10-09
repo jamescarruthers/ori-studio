@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { trackFoldChoiceOffered, trackFoldStepAdded } from '../../analytics';
 import type { FoldStepAddedOpKind } from '../../analytics';
 import { readHeldModifiers } from '../../keyboard/heldModifiers';
@@ -13,14 +13,15 @@ import {
   type FoldOp,
   type FoldSequenceDocument,
 } from '../document/foldSequenceDocument';
+import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { wovenIntervalAt } from '../tools/crossSection';
-import { isFoldKind, type FoldLineModeId, type FoldToolId } from '../tools/foldToolCatalog';
+import { isLineTool, type FoldLineModeId, type FoldToolId } from '../tools/foldToolCatalog';
 import { nextStep } from '../tools/foldToolRegistry';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { freeLineThrough, movingPoint } from '../tools/foldStepBuilder';
-import { foldToolInput, isLocated, type FoldTools } from '../tools/foldToolState';
+import { foldToolInput, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
 import { isFoldAltLatched } from './foldAltLatch';
 import { transformLine } from './foldCanvasGeometry';
 import { resolveFoldPick, topSheetPointAt, type FoldHit, type FoldHitRadii, type FoldPaneId } from './foldPicking';
@@ -50,14 +51,73 @@ export interface FoldCanvasVerbs {
   foldOtherWay: () => void;
   pickFlap: (flap: FoldFlap) => void;
   useLine: (fix: FoldUseLineFix) => void;
-  /** Step through the axiom's roots; whether there was more than one to step through. */
-  stepRoot: (delta: number) => boolean;
-  /** Commit the fold previewed; whether there was one to commit. */
+  /**
+   * Step through the choice the canvas's chooser shows (`foldCanvasChoice`):
+   * the layer orders, the ways the tip opens, or the axiom's roots; whether
+   * there was more than one to step through.
+   */
+  stepChoice: (delta: number) => boolean;
+  /**
+   * Commit the fold previewed; whether there was one to commit. Pressed while
+   * the preview is still landing, it commits once it lands (or lets go if it
+   * is refused), and says so.
+   */
   commit: () => boolean;
   /** Escape's rung: let go of what the tool holds; whether it held anything. */
   cancel: () => boolean;
   /** Clear the Divide-line marks made on the step on screen. */
   clearMarks: () => void;
+  // A compound fold's choices, one block per family.
+  /** The reverse fold's kind. */
+  setReverseKind: (kind: FoldReverseKind) => void;
+  /** Step through the ways the tip opens, and the layer orders listed. */
+  stepOpening: (delta: number) => void;
+  stepOrder: (delta: number) => void;
+}
+
+/** The verbs, and whether a commit waits for the preview to land. */
+export interface FoldCanvasVerbBinding {
+  verbs: FoldCanvasVerbs;
+  /** Enter was pressed before the preview landed: it commits once it has. */
+  queued: boolean;
+}
+
+/**
+ * What a commit asked for while the preview landed (`queued`, the step's
+ * key) does now: nothing queued; wait while that step is still landing;
+ * commit once it has landed; drop it when it was refused, the step changed,
+ * or nothing can be committed.
+ */
+export function queuedCommit(
+  queued: string | null,
+  preview: Pick<FoldToolPreview, 'step' | 'refused' | 'landing'>,
+  readOnly: boolean
+): 'idle' | 'wait' | 'commit' | 'drop' {
+  if (queued === null) return 'idle';
+  const { step, refused, landing } = preview;
+  if (!step || step.key !== queued || refused || readOnly) return 'drop';
+  return landing ? 'wait' : 'commit';
+}
+
+/** Which of the previewed fold's choices the canvas's chooser shows, and of how many: the one a folder makes last. */
+export type FoldCanvasChoice = { kind: 'order' | 'opening' | 'root'; index: number; count: number };
+
+/**
+ * The chooser on the canvas: the deepest choice with more than one answer —
+ * the layer order, then the way the tip opens, then the axiom's root — since
+ * each earlier choice resets the ones after it. Null when none has more than
+ * one.
+ */
+export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState): FoldCanvasChoice | null {
+  const reverse = preview.reverse;
+  if (reverse && reverse.orders.length > 1) {
+    return { kind: 'order', index: Math.min(tools.compound.order, reverse.orders.length - 1), count: reverse.orders.length };
+  }
+  if (reverse && reverse.ways.length > 1) {
+    return { kind: 'opening', index: Math.min(tools.compound.opening, reverse.ways.length - 1), count: reverse.ways.length };
+  }
+  const roots = preview.candidates?.length ?? 0;
+  return roots > 1 ? { kind: 'root', index: Math.min(tools.root, roots - 1), count: roots } : null;
 }
 
 /** What a committed op is called in `fold step added`; null for Import CP, which the canvas never commits. */
@@ -110,7 +170,7 @@ export function useFoldCanvasVerbs(
   tools: FoldTools,
   view: FoldStateView,
   preview: FoldToolPreview
-): FoldCanvasVerbs {
+): FoldCanvasVerbBinding {
   const live = useRef({ session, view, preview });
   // Before any handler can run: effects land ahead of the next event.
   useEffect(() => {
@@ -124,16 +184,30 @@ export function useFoldCanvasVerbs(
     tools.clear();
   }, [tools, cursorId]);
 
-  return useMemo<FoldCanvasVerbs>(() => {
-    const state = () => tools.store.getState();
-
-    const commitOp = (op: FoldOp, choices?: Parameters<FoldSessionSurface['commitStep']>[1]) => {
+  const commitOp = useCallback(
+    (op: FoldOp, choices?: Parameters<FoldSessionSurface['commitStep']>[1]) => {
       void live.current.session.commitStep(op, choices).then((outcome) => {
         if (outcome.status !== 'committed') return;
         trackCommitted(op);
         tools.clear();
       });
-    };
+    },
+    [tools]
+  );
+
+  // A commit asked for while the preview was landing, by the step it was
+  // asked for: committed when that step lands, let go when it is refused or
+  // the step changes. Never dropped without a word: the window says it waits.
+  const [queued, setQueued] = useState<string | null>(null);
+  useEffect(() => {
+    const now = queuedCommit(queued, preview, session.readOnly);
+    if (now === 'idle' || now === 'wait') return;
+    setQueued(null);
+    if (now === 'commit' && preview.step) commitOp(preview.step.op, preview.step.choices);
+  }, [queued, preview, session.readOnly, commitOp]);
+
+  const verbs = useMemo<FoldCanvasVerbs>(() => {
+    const state = () => tools.store.getState();
 
     /** A click on the folded paper while a fold is previewed: the stack there, one layer deeper each time. */
     const pickDepth = (at: { x: number; y: number }) => {
@@ -193,7 +267,7 @@ export function useFoldCanvasVerbs(
         if (!hit || live.current.session.readOnly || live.current.session.cursor.status === 'locked') return;
         const tool = state();
         if (isLocated(tool)) {
-          if (hit.pane === 'folded' && isFoldKind(tool.tool)) pickDepth(hit.at);
+          if (hit.pane === 'folded' && isLineTool(tool.tool)) pickDepth(hit.at);
           return;
         }
         if (!hit.pick) return;
@@ -251,6 +325,12 @@ export function useFoldCanvasVerbs(
         else if (tool.tool === 'precrease') tools.setPrecreaseDirection(tool.precreaseDirection === 'valley' ? 'mountain' : 'valley');
       },
 
+      setReverseKind: (kind) => tools.setReverseKind(kind),
+
+      stepOpening: (delta) => tools.stepOpening(delta, live.current.preview.reverse?.ways.length ?? 0),
+
+      stepOrder: (delta) => tools.stepOrder(delta, live.current.preview.reverse?.orders.length ?? 0),
+
       pickFlap: (flap) => tools.setSeed({ scope: 'flaps', flaps: [flap] }),
 
       useLine: (fix) => {
@@ -273,16 +353,31 @@ export function useFoldCanvasVerbs(
         tools.setOverride({ op: { ...rest, line: { via: 'free', through }, ...seed } });
       },
 
-      stepRoot: (delta) => {
-        const count = live.current.preview.candidates?.length ?? 0;
-        if (count <= 1) return false;
-        tools.stepRoot(delta, count);
+      stepChoice: (delta) => {
+        const choice = foldCanvasChoice(live.current.preview, state());
+        if (!choice) return false;
+        switch (choice.kind) {
+          case 'order':
+            tools.stepOrder(delta, choice.count);
+            break;
+          case 'opening':
+            tools.stepOpening(delta, choice.count);
+            break;
+          case 'root':
+            tools.stepRoot(delta, choice.count);
+            break;
+        }
         return true;
       },
 
       commit: () => {
         const { step, refused, landing } = live.current.preview;
-        if (!step || refused || landing || live.current.session.readOnly) return false;
+        if (!step || refused || live.current.session.readOnly) return false;
+        // Still landing: committed once it lands, never silently dropped.
+        if (landing) {
+          setQueued(step.key);
+          return true;
+        }
         commitOp(step.op, step.choices);
         return true;
       },
@@ -291,6 +386,7 @@ export function useFoldCanvasVerbs(
         const tool = state();
         const held = tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'all' || tool.swapped;
         if (!held) return false;
+        setQueued(null);
         tools.clear();
         live.current.session.cancel();
         return true;
@@ -301,5 +397,7 @@ export function useFoldCanvasVerbs(
         useWorkspaceStore.getState().setFoldMarks(cursor, []);
       },
     };
-  }, [tools]);
+  }, [tools, commitOp]);
+
+  return { verbs, queued: queued !== null };
 }

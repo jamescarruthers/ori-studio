@@ -17,14 +17,21 @@ import type { FoldKeyLabel } from '../../../fold/tools/foldToolCatalog';
 import { foldToolWindow } from '../../../fold/tools/foldToolWindow';
 import { foldToolKindControl, registerFoldCanvasVerbs } from '../../../fold/canvas/foldCanvasCommands';
 import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
-import { chooserBounds, foldPromptWords, foldWindowPreview, sceneLayers } from '../../../fold/canvas/foldCanvasModel';
+import {
+  chooserBounds,
+  foldChoiceNote,
+  foldPromptWords,
+  foldReverseWindowView,
+  foldWindowPreview,
+  sceneLayers,
+} from '../../../fold/canvas/foldCanvasModel';
 import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { FOLD_PANE_DISPLAY_DEFAULT, type FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
 import { revealFoldedPane, useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
 import { useFoldCanvasInks } from '../../../fold/canvas/useFoldCanvasInks';
 import { useFoldCanvasPaint } from '../../../fold/canvas/useFoldCanvasPaint';
-import { marksMadeAt, useFoldCanvasVerbs } from '../../../fold/canvas/useFoldCanvasVerbs';
+import { foldCanvasChoice, marksMadeAt, useFoldCanvasVerbs } from '../../../fold/canvas/useFoldCanvasVerbs';
 import { useFoldCanvasShortcuts } from '../../../fold/canvas/useFoldCanvasShortcuts';
 import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
@@ -73,7 +80,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const tools = foldTools();
   const toolState = useFoldTools((state) => state);
   const preview = useFoldToolPreview(session, view, toolState);
-  const verbs = useFoldCanvasVerbs(session, tools, view, preview);
+  const { verbs, queued } = useFoldCanvasVerbs(session, tools, view, preview);
   useEffect(() => registerFoldCanvasVerbs(verbs), [verbs]);
   // The menus' and the step cards' Valley / Mountain / Precrease arm the tools' fold.
   useEffect(() => registerFoldKindControl(foldToolKindControl(tools)), [tools]);
@@ -158,6 +165,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const sequence = useWorkspaceStore((state) => shownFoldSequence(state)?.document ?? null);
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
   const woven = useFoldWovenInterval(preview.section);
+  const reverseView = foldReverseWindowView(toolState, preview);
   const windowModel = foldToolWindow(
     t,
     {
@@ -165,22 +173,24 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       lineMode: toolState.lineMode,
       readOnly,
       picks: toolState.picks.length,
-      preview: foldWindowPreview(toolState, preview, woven.interval),
+      preview: foldWindowPreview(toolState, preview, woven.interval, queued),
       divide: { settings: toolState.divide, marks: marksHere },
+      ...(reverseView ? { reverse: reverseView } : {}),
     },
-    { ...verbs, setDivide: tools.setDivide },
+    { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind },
     { coarse, alt: altModifierLabel() }
   );
-  const candidates = preview.candidates;
+  // The chooser over the folded pane: the deepest choice with more than one answer.
+  const choice = foldCanvasChoice(preview, toolState);
   const bounds = chooserBounds(preview, view.scene);
   const chooser: CpToolOptionWindow | null =
-    candidates && candidates.length > 1 && bounds
+    choice && bounds
       ? {
           bounds,
-          index: Math.min(toolState.root, candidates.length - 1),
-          count: candidates.length,
-          note: t('tools:fold.chooser.note', 'This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.'),
-          onStep: (delta) => verbs.stepRoot(delta),
+          index: choice.index,
+          count: choice.count,
+          note: foldChoiceNote(t, choice.kind),
+          onStep: (delta) => verbs.stepChoice(delta),
           onApply: () => verbs.commit(),
           onCancel: () => verbs.cancel(),
         }

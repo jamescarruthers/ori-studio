@@ -54,8 +54,9 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
     landed: null,
     refused: null,
     landing: false,
+    reverse: null,
     ...extra,
-  };
+  } as FoldToolPreview;
 }
 
 const located: FoldToolState = { ...FOLD_TOOL_INITIAL, lineMode: 'free', picks: [free(0, 0.5), free(1, 0.5)] };

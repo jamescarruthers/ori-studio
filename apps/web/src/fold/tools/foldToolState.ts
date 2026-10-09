@@ -27,8 +27,9 @@ import {
   type FoldOp,
   type SheetPoint,
 } from '../document/foldSequenceDocument';
+import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
-import { isFoldKind, type FoldKind, type FoldLineModeId, type FoldToolId } from './foldToolCatalog';
+import { isLineTool, type FoldLineModeId, type FoldLineToolId, type FoldToolId } from './foldToolCatalog';
 import { locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
 
 /**
@@ -61,6 +62,23 @@ export const FOLD_DIVIDE_DEFAULT: FoldDivideSettings = {
   ratio: ratioExpressionFromHalves({ a: 1, b: 0, c: 0 }, { a: 1, b: 0, c: 0 }),
 };
 
+/**
+ * A compound fold's choices while it is previewed, one block per family: the
+ * reverse fold's kind (`tools/reverse`), and the opening and the order taken
+ * among those the engine lists — by index, as the axiom's root is: what the
+ * step stores is the result each names (plan D6), never the index.
+ */
+export interface FoldCompoundToolChoices {
+  /** The kind the folder chose; null while the tool takes the one that lands (inside when both do). */
+  reverseKind: FoldReverseKind | null;
+  /** The way the flaps open, by index into the ways the engine lists. */
+  opening: number;
+  /** The layer order, by index into the orders the engine lists for the kind. */
+  order: number;
+}
+
+export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = { reverseKind: null, opening: 0, order: 0 };
+
 export interface FoldToolState {
   tool: FoldToolId;
   lineMode: FoldLineModeId;
@@ -77,6 +95,7 @@ export interface FoldToolState {
   divide: FoldDivideSettings;
   /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
   hoveredFlap: number | null;
+  compound: FoldCompoundToolChoices;
 }
 
 export const FOLD_TOOL_INITIAL: FoldToolState = {
@@ -91,6 +110,7 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   override: null,
   divide: FOLD_DIVIDE_DEFAULT,
   hoveredFlap: null,
+  compound: FOLD_COMPOUND_CHOICES_INITIAL,
 };
 
 /** What a new locate starts from: the tool, the line mode and the Divide settings stay. */
@@ -103,7 +123,13 @@ function located(state: FoldToolState): FoldToolState {
     seed: { scope: 'all' },
     override: null,
     hoveredFlap: null,
+    compound: FOLD_COMPOUND_CHOICES_INITIAL,
   };
+}
+
+/** A new tip — another side, another seed, another root — opens and stacks anew: the kind stays chosen. */
+function anotherTip(compound: FoldCompoundToolChoices): FoldCompoundToolChoices {
+  return compound.opening === 0 && compound.order === 0 ? compound : { ...compound, opening: 0, order: 0 };
 }
 
 /** The clicks the state's tool and line mode collect. */
@@ -144,6 +170,13 @@ export interface FoldTools {
   setOverride(override: FoldToolOverride | null): void;
   setDivide(divide: Partial<FoldDivideSettings>): void;
   setHoveredFlap(flap: number | null): void;
+  // A compound fold's choices, one block per family.
+  /** The reverse fold's kind; null takes the one that lands. */
+  setReverseKind(kind: FoldReverseKind | null): void;
+  /** Step through the ways the flaps open, of `count`. */
+  stepOpening(delta: number, count: number): void;
+  /** Step through the layer orders listed, of `count`. */
+  stepOrder(delta: number, count: number): void;
 }
 
 const sameFlap = (a: FoldFlap, b: FoldFlap) =>
@@ -181,17 +214,20 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
     selectTool(tool) {
       set((state) => {
         if (state.tool === tool) return state;
-        // V, M and P fold the same line: switching between them keeps it, as
-        // the window's V / M / P control promises. Anything else locates anew.
-        const keeps = isFoldKind(tool) && isFoldKind(state.tool);
-        return keeps ? { ...state, tool, override: null } : { ...restart(state), tool };
+        // Every fold along a line folds the same line: switching between V,
+        // M, P and the reverse fold keeps it, as the window's V / M / P control
+        // promises. Anything else locates anew.
+        const keeps = isLineTool(tool) && isLineTool(state.tool);
+        return keeps
+          ? { ...state, tool, override: null, compound: anotherTip(state.compound) }
+          : { ...restart(state), tool };
       });
     },
 
     selectLineMode(lineMode) {
       set((state) => {
         // A line mode belongs to the folds: choosing one from the Divide line takes a fold in hand.
-        const tool: FoldKind = isFoldKind(state.tool) ? state.tool : 'valley';
+        const tool: FoldLineToolId = isLineTool(state.tool) ? state.tool : 'valley';
         if (state.lineMode === lineMode && state.tool === tool) return state;
         return { ...restart(state), tool, lineMode };
       });
@@ -215,17 +251,29 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       if (!isLocated(store.getState())) return false;
       // The flaps picked, or the stack a depth pick went down, are the old
       // side's: the new side folds whole until something of it is picked.
-      set((state) => ({ ...state, swapped: !state.swapped, seed: { scope: 'all' }, override: null }));
+      set((state) => ({
+        ...state,
+        swapped: !state.swapped,
+        seed: { scope: 'all' },
+        override: null,
+        compound: anotherTip(state.compound),
+      }));
       return true;
     },
 
     stepRoot(delta, count) {
       if (count <= 1) return;
-      set((state) => ({ ...state, root: (((state.root + delta) % count) + count) % count, swapped: false, override: null }));
+      set((state) => ({
+        ...state,
+        root: (((state.root + delta) % count) + count) % count,
+        swapped: false,
+        override: null,
+        compound: anotherTip(state.compound),
+      }));
     },
 
     setSeed(seed) {
-      set((state) => ({ ...state, seed, override: null }));
+      set((state) => ({ ...state, seed, override: null, compound: anotherTip(state.compound) }));
     },
 
     toggleFlap(flap, all) {
@@ -235,7 +283,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         const next = has ? picked.filter((each) => !sameFlap(each, flap)) : [...picked, flap];
         const everything = all.length > 0 && all.every((each) => next.some((other) => sameFlap(each, other)));
         const seed: FoldToolSeed = everything ? { scope: 'all' } : { scope: 'flaps', flaps: next };
-        return { ...state, seed, override: null };
+        return { ...state, seed, override: null, compound: anotherTip(state.compound) };
       });
     },
 
@@ -256,6 +304,32 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
 
     setHoveredFlap(hoveredFlap) {
       set((state) => (state.hoveredFlap === hoveredFlap ? state : { ...state, hoveredFlap }));
+    },
+
+    setReverseKind(reverseKind) {
+      set((state) =>
+        state.compound.reverseKind === reverseKind
+          ? state
+          : { ...state, override: null, compound: { ...state.compound, reverseKind, order: 0 } }
+      );
+    },
+
+    stepOpening(delta, count) {
+      if (count <= 1) return;
+      set((state) => ({
+        ...state,
+        override: null,
+        compound: { ...state.compound, opening: (((state.compound.opening + delta) % count) + count) % count, order: 0 },
+      }));
+    },
+
+    stepOrder(delta, count) {
+      if (count <= 1) return;
+      set((state) => ({
+        ...state,
+        override: null,
+        compound: { ...state.compound, order: (((state.compound.order + delta) % count) + count) % count },
+      }));
     },
   };
 }

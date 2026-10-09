@@ -63,11 +63,14 @@ describe('FoldToolRail', () => {
     const calls = verbs();
     const rail = mount(<FoldToolRail groups={foldRailGroups(t, view, calls)} />);
     act(() => byRole(rail, 'button', 'Mountain fold').click());
+    act(() => byRole(rail, 'button', 'Inside reverse fold').click());
     act(() => byRole(rail, 'button', 'Axiom 6: two points onto two lines').click());
     act(() => byRole(rail, 'button', 'Turn over').click());
-    const planned = byRole(rail, 'button', 'Inside reverse fold');
+    // The planned folds are collapsed until asked for.
+    act(() => byRole(rail, 'button', 'Planned').click());
+    const planned = byRole(rail, 'button', 'Crimp');
     act(() => planned.click());
-    expect(calls.selectTool.mock.calls).toEqual([['mountain']]);
+    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['inside-reverse']]);
     expect(calls.selectLineMode.mock.calls).toEqual([['axiom-6']]);
     expect(calls.turn).toHaveBeenCalledWith({ kind: 'turn-over', axis: 'vertical' });
     expect(planned.getAttribute('aria-disabled')).toBe('true');
