@@ -234,6 +234,14 @@ function requestOf(op: FoldEngineOp, choices: FoldEngineChoices | undefined): Fo
   return choices ? { op, choices } : { op };
 }
 
+/** The step on screen, as a step folds from it. */
+interface FoldingFrom {
+  parent: FoldEngineStateHandle;
+  /** The step's id; null for the sheet. */
+  parentId: string | null;
+  loadId: number;
+}
+
 export function createFoldSession({
   document: source,
   runtime,
@@ -494,10 +502,8 @@ export function createFoldSession({
   // -------------------------------------------------------------------------
   // Folding from the step on screen
 
-  /** The state on screen, if a step can be folded from it. */
-  const foldingFrom = ():
-    | { parent: FoldEngineStateHandle; parentId: string | null; loadId: number }
-    | FoldUnavailable => {
+  /** The state on screen, if a step can be folded from it now. */
+  const foldingFrom = (): FoldingFrom | FoldUnavailable => {
     const snapshot = store.getState();
     if (!snapshot.live) return unavailable('not-live');
     if (snapshot.readOnly) return unavailable('read-only');
@@ -506,12 +512,50 @@ export function createFoldSession({
     return { parent: state, parentId: snapshot.cursor, loadId: snapshot.loadId };
   };
 
+  /** The step on screen is pending, and a replay under way or about to start will land it. */
+  const landing = () =>
+    (replaying || replayScheduled || starting) && selectFoldCursorNode(store.getState()).status === 'pending';
+
+  /**
+   * The state on screen, waiting for it while a replay lands it: a commit
+   * puts the cursor on a step the replay that follows has yet to land, and a
+   * second commit, or the tool's next preview, folds from that step. Every
+   * replay ends by publishing (`replaying` goes false, or the session stops),
+   * so the wait always ends.
+   */
+  const foldableFrom = (): FoldingFrom | FoldUnavailable | Promise<FoldingFrom | FoldUnavailable> => {
+    const ready = (from: FoldingFrom | FoldUnavailable) =>
+      !('status' in from) || from.reason !== 'no-state' || !landing();
+    const now = foldingFrom();
+    if (ready(now)) return now;
+    return new Promise((resolve) => {
+      const unsubscribe = store.subscribe(() => {
+        const next = foldingFrom();
+        if (!ready(next)) return;
+        unsubscribe();
+        resolve(next);
+      });
+    });
+  };
+
   /** `call`, unless `state` belongs to an engine that has since gone. */
   const guarded = <T>(state: FoldEngineStateHandle, call: () => Promise<T>): Promise<T> =>
     state.generation === runtime.generation() ? call() : Promise.reject(foldStateLostError(state));
 
   const preview = (op: FoldEngineOp, choices?: FoldEngineChoices): Promise<FoldPreviewOutcome> => {
-    const from = foldingFrom();
+    const from = foldableFrom();
+    if (!(from instanceof Promise)) return previewFrom(from, op, choices);
+    // A newer request while this one waits supersedes it.
+    dropPending();
+    const ticket = pendingTicket;
+    return from.then((ready) => (ticket === pendingTicket ? previewFrom(ready, op, choices) : SUPERSEDED));
+  };
+
+  const previewFrom = (
+    from: FoldingFrom | FoldUnavailable,
+    op: FoldEngineOp,
+    choices: FoldEngineChoices | undefined
+  ): Promise<FoldPreviewOutcome> => {
     if ('status' in from) return Promise.resolve(from);
     dropPending();
     const ticket = pendingTicket;
@@ -565,7 +609,14 @@ export function createFoldSession({
   };
 
   const analyse = (op: FoldEngineOp): Promise<FoldAnalyseOutcome> => {
-    const from = foldingFrom();
+    const from = foldableFrom();
+    if (!(from instanceof Promise)) return analyseFrom(from, op);
+    dropAnalysis();
+    const ticket = analysisTicket;
+    return from.then((ready) => (ticket === analysisTicket ? analyseFrom(ready, op) : SUPERSEDED));
+  };
+
+  const analyseFrom = (from: FoldingFrom | FoldUnavailable, op: FoldEngineOp): Promise<FoldAnalyseOutcome> => {
     if ('status' in from) return Promise.resolve(from);
     dropAnalysis();
     const ticket = analysisTicket;
@@ -598,7 +649,7 @@ export function createFoldSession({
   const pendingNow = (): FoldPendingStep => pending;
 
   const commit = async (
-    { parent, parentId, loadId }: { parent: FoldEngineStateHandle; parentId: string | null; loadId: number },
+    { parent, parentId, loadId }: FoldingFrom,
     op: FoldOp,
     choices: FoldChoices | undefined
   ): Promise<FoldCommitOutcome> => {
@@ -710,10 +761,10 @@ export function createFoldSession({
 
     async commitStep(op, choices) {
       if (committing) return unavailable('busy');
-      const from = foldingFrom();
-      if ('status' in from) return from;
       committing = true;
       try {
+        const from = await foldableFrom();
+        if ('status' in from) return from;
         return await commit(from, op, choices);
       } finally {
         committing = false;

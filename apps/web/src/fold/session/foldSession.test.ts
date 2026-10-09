@@ -407,6 +407,35 @@ describe('the Fold session: the step a tool folds', () => {
     expect(cursor()).toMatchObject({ status: 'ok', fingerprint: committed.fingerprint });
   });
 
+  it('folds from a step a commit just made, once the replay lands it', async () => {
+    const { session, source, runtime, cursor, engine } = setup();
+    session.retain();
+    await settle();
+
+    // A step committed, its replay not landed yet: a preview waits for it.
+    runtime.hold();
+    const d = source.commit({ parent: 'c', op: valleyAt(0.9) }, 1);
+    await settle();
+    expect(cursor().status).toBe('pending');
+    const preview = session.preview(valleyAt(0.92));
+    await runtime.open();
+    const landed = await preview;
+    if (landed.status !== 'landed') throw new Error(landed.status);
+    expect(landed.parent).toBe(cursor().state);
+
+    // And so does a commit.
+    runtime.hold();
+    const e = source.commit({ parent: d, op: valleyAt(0.93) }, 1);
+    await settle();
+    const committing = session.commitStep(valleyAt(0.95));
+    await runtime.open();
+    const committed = await committing;
+    if (committed.status !== 'committed') throw new Error(committed.status);
+    expect(source.commits.at(-1)).toMatchObject({ parent: e });
+    await settle();
+    expect(engine().trail(cursor().state!.id)?.slice(-3)).toEqual(['valley@0.9', 'valley@0.93', 'valley@0.95']);
+  });
+
   it('commits nothing that is refused, read-only, stale or already under way', async () => {
     const { session, source, snapshot, engine } = setup({
       engine: { refuse: (op) => (op.kind === 'mountain' ? 'nothing_stays' : null) },
@@ -445,6 +474,8 @@ describe('the Fold session: the step a tool folds', () => {
     await settle();
     runtime.hold();
     const crashed = session.commitStep(valleyAt(0.9));
+    // The step is in the engine when it goes.
+    await settle();
     runtime.lose('crashed');
     await expect(crashed).resolves.toMatchObject({ status: 'failed', error: { code: 'fold_sequence_client_lost' } });
     expect(reported.map((error) => error.code)).toEqual(['fold_sequence_client_lost']);
@@ -452,6 +483,7 @@ describe('the Fold session: the step a tool folds', () => {
 
     runtime.hold();
     const stopped = session.commitStep(valleyAt(0.9));
+    await settle();
     runtime.lose('stopped');
     await expect(stopped).resolves.toMatchObject({ status: 'failed' });
     expect(reported).toHaveLength(1);
