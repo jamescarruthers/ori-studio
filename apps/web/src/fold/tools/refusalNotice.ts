@@ -234,30 +234,9 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       };
     // Compound folds (plan D4), one block per family. A choice still to make
     // reads as the chooser's prompt; a stored one that no longer resolves as
-    // a step this build cannot fold as it is stored. A closed sink's pocket
-    // has no chooser yet (no sink tool is on the rail), so a stored sink
-    // without one reads as a step this build cannot fold as it is stored.
+    // a step this build cannot fold as it is stored.
     case 'choice_needed':
-      switch (refusal.choice) {
-        case 'opening':
-          return {
-            title: t('tools:fold.refusal.chooseOpening.title', 'Choose how it opens'),
-            text: t('tools:fold.refusal.chooseOpening.text', 'The flap opens more than one way. Pick one to fold.'),
-          };
-        case 'completion':
-          return {
-            title: t('tools:fold.refusal.chooseOrder.title', 'Choose how the layers stack'),
-            text: t(
-              'tools:fold.refusal.chooseOrder.text',
-              'The fold can land with its layers stacked more than one way. Pick one to fold.'
-            ),
-          };
-        case 'pocket':
-          return {
-            title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
-            text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),
-          };
-      }
+      return choiceNeededWords(t, refusal.choice);
     case 'choice_broken':
       return {
         title: t('tools:fold.refusal.choiceBroken.title', 'A choice no longer fits'),
@@ -358,6 +337,38 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       return {
         title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
         text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
+      };
+  }
+}
+
+/**
+ * A choice a stored compound step still needs, as its chooser prompts for it.
+ * A closed sink's pocket has no chooser yet (no sink tool is on the rail), so
+ * a stored sink without one reads as a step this build cannot fold as it is
+ * stored.
+ */
+function choiceNeededWords(
+  t: TFunction,
+  choice: 'opening' | 'pocket' | 'completion'
+): { title: string; text: string } {
+  switch (choice) {
+    case 'opening':
+      return {
+        title: t('tools:fold.refusal.chooseOpening.title', 'Choose how it opens'),
+        text: t('tools:fold.refusal.chooseOpening.text', 'The flap opens more than one way. Pick one to fold.'),
+      };
+    case 'completion':
+      return {
+        title: t('tools:fold.refusal.chooseOrder.title', 'Choose how the layers stack'),
+        text: t(
+          'tools:fold.refusal.chooseOrder.text',
+          'The fold can land with its layers stacked more than one way. Pick one to fold.'
+        ),
+      };
+    case 'pocket':
+      return {
+        title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
+        text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),
       };
   }
 }
