@@ -26,6 +26,18 @@ export type DiagramStepAddedSource =
   | 'svg'
   | 'raster';
 
+/** A Fold step's op, as `fold step added` names it (the document's `FoldOpKind`, without Import CP's). */
+export type FoldStepAddedOpKind = 'valley' | 'mountain' | 'precrease' | 'unfold' | 'refold' | 'turn' | 'rotate';
+
+/** How much of the moving side a Fold step took: every layer, flaps picked, or a depth at a point. */
+export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
+
+/** How a Fold step's line was located: an axiom, an existing crease, or a free line. */
+export type FoldStepVia = 'axiom' | 'crease' | 'free';
+
+/** Which choice the Fold engine offered: an axiom's roots, or the stacks a depth pick can take. */
+export type FoldChoiceKind = 'axiom_root' | 'depth';
+
 /**
  * Which control added a diagram step. `grid` is the Diagram workspace's own:
  * the header's Add step, the empty state, and Insert before / after.
@@ -1471,6 +1483,20 @@ export const ANALYTICS_EVENTS = {
    */
   diagramTurnAdded: 'diagram turn added',
   /**
+   * The Fold workspace's canvas tools (plan D18). `fold step added` is a step
+   * committed from the canvas — a fold, a precrease, an unfold or refold, a
+   * turn — with how much it took (`layer_scope`) and how its line was located
+   * (`via`); never the axiom (per-step axiom codes would add up to the axiom
+   * histogram this document forbids). `fold refused` is a refusal shown to the
+   * folder, by the engine's stable `code`, once per fold asked for; `fold
+   * choice offered` is the engine handing back more than one answer the folder
+   * then chooses between — an axiom's roots, or the stacks a depth pick can
+   * take — with how many, bucketed.
+   */
+  foldStepAdded: 'fold step added',
+  foldRefused: 'fold refused',
+  foldChoiceOffered: 'fold choice offered',
+  /**
    * One file of an upload into the Diagram, and what became of it: whether
    * people's own drawings survive the sanitizer, and how big they are.
    */
@@ -1736,6 +1762,14 @@ export const DIAGRAM_EMPTY_STEP_BUCKETS = [0, 1, 5, 20] as const;
 
 /** Default threshold ladder for element counts (nodes, lines, etc.). */
 export const COUNT_BUCKETS = [1, 5, 10, 20, 50, 100, 200, 500] as const;
+
+/**
+ * Threshold ladder for how many answers a Fold choice offered. An axiom gives
+ * at most three roots, and a depth pick one stack per layer under the point,
+ * so the question is "two, a few, or a deep stack" and the general ladder
+ * would put every choice in its first bucket.
+ */
+export const FOLD_CHOICE_COUNT_BUCKETS = [2, 3, 4, 8] as const;
 
 /**
  * Threshold ladder for how many designs are open at once.
