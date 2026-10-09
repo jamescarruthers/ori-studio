@@ -1,12 +1,16 @@
 //! The gate every state passes (research §3.3, plan D4): the checks
 //! [`super::State::make`] runs, in order, each refusal naming what failed.
 //!
-//! 1. Structure: unique ids, a root, every ring side a crease, every crease
-//!    bounding one face (border) or two.
+//! 1. Structure: a view at a finite angle, unique ids, a root, every ring
+//!    side a crease, every crease bounding one face (border) or two.
 //! 2. Faces convex and counter-clockwise in sheet coordinates, covering the
-//!    sheet.
-//! 3. Isometries from the root, every vertex landing in one place
-//!    (residual ≤ tol).
+//!    sheet: every vertex finite and on it, every border crease along one of
+//!    its sides, and the faces' areas adding up to its area. With the faces
+//!    on both sides of every other crease (step 5), that is coverage: the
+//!    border winds once around the sheet, so each point of it lies in one
+//!    face.
+//! 3. Isometries from the root, whose own isometry must be a rigid motion,
+//!    every vertex landing in one place (residual ≤ tol).
 //! 4. Hinge consistency: a folded crease joins faces of opposite orientation,
 //!    a flat one faces of the same. The residual alone once admitted a state
 //!    that broke this (the squash spike, research §3.3).
@@ -29,7 +33,7 @@ use oristudio_layer_order::{
 };
 
 use crate::numerics::TOL;
-use crate::pattern::{CreaseKind, EdgeId, FaceId};
+use crate::pattern::{CreaseKind, EdgeId, FaceId, VertexId};
 use crate::refusal::FoldRefusal;
 use crate::state::derive::{Geometry, Topology};
 use crate::state::{Derived, State, StateParts};
@@ -109,6 +113,9 @@ pub(crate) fn before_order(
     parts: &StateParts,
     unknown: &BTreeSet<EdgeId>,
 ) -> Result<BeforeOrder, FoldRefusal> {
+    if !parts.view.rotation.is_finite() {
+        return Err(FoldRefusal::ViewNotFinite);
+    }
     for pair in parts.faces.windows(2) {
         if pair[0].id == pair[1].id {
             return Err(FoldRefusal::DuplicateId {
@@ -132,6 +139,7 @@ pub(crate) fn before_order(
 
     let topology = Topology::build(parts)?;
 
+    on_the_sheet(parts)?;
     let mut area = 0.0;
     for face in &parts.faces {
         let ring: Vec<[f64; 2]> = face
@@ -152,6 +160,11 @@ pub(crate) fn before_order(
         });
     }
 
+    // Every isometry is derived from the root's, so they all agree whatever
+    // it is; only a rigid one makes them isometries.
+    if !parts.root_isometry.is_rigid(TOL) {
+        return Err(FoldRefusal::RootNotRigid { face: parts.root });
+    }
     let geometry = Geometry::derive(parts, &topology, root, TOL)?;
 
     let mut edges = Vec::new();
@@ -204,6 +217,38 @@ pub(crate) fn before_order(
         view,
         edge_creases,
     })
+}
+
+/// Every vertex finite and on the sheet (outside it by at most the
+/// tolerance), and every border crease along one of the sheet's sides. Runs
+/// after [`Topology::build`], which found every crease's vertices.
+fn on_the_sheet(parts: &StateParts) -> Result<(), FoldRefusal> {
+    let sheet = &parts.sheet;
+    for (v, p) in parts.vertices.iter().enumerate() {
+        // A NaN coordinate compares as inside, so finiteness comes first.
+        if !(p[0].is_finite() && p[1].is_finite() && sheet.contains(*p, -TOL)) {
+            return Err(FoldRefusal::VertexOffSheet {
+                vertex: VertexId(v as u32),
+            });
+        }
+    }
+    let outline = sheet.outline();
+    let sides: Vec<convex::HalfPlane> = (0..outline.len())
+        .filter_map(|i| convex::HalfPlane::left_of(outline[i], outline[(i + 1) % outline.len()]))
+        .collect();
+    for crease in parts
+        .creases
+        .iter()
+        .filter(|c| c.kind == CreaseKind::Border)
+    {
+        let ends = crease.vertices.map(|v| parts.vertices[v.index()]);
+        let along =
+            |side: &convex::HalfPlane| ends.iter().all(|&p| side.signed_distance(p).abs() <= TOL);
+        if !sides.iter().any(along) {
+            return Err(FoldRefusal::BorderOffOutline { edge: crease.id });
+        }
+    }
+    Ok(())
 }
 
 /// Missing, undetermined and extra pairs over the whole state, by one merge

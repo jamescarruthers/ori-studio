@@ -68,6 +68,17 @@ impl Isometry {
         self.det() > 0.0
     }
 
+    /// Whether this is a rigid motion within `tolerance`: every entry
+    /// finite and the linear part orthonormal (unit columns, at right
+    /// angles). [`Isometry::inverse`] holds only for one.
+    pub fn is_rigid(&self, tolerance: f64) -> bool {
+        let [a, b, _, d, e, _] = self.0;
+        self.0.iter().all(|x| x.is_finite())
+            && (a * a + d * d - 1.0).abs() <= tolerance
+            && (b * b + e * e - 1.0).abs() <= tolerance
+            && (a * b + d * e).abs() <= tolerance
+    }
+
     /// The inverse, using that the linear part is orthogonal (its inverse is
     /// its transpose).
     pub fn inverse(&self) -> Isometry {
@@ -123,6 +134,22 @@ mod tests {
         // Reflect in x = 0.5, then in y = 0.5: (1, 0) → (0, 0) → (0, 1).
         assert!(close(t.after(&r).apply([1.0, 0.0]), [0.0, 1.0]));
         assert!(t.after(&r).front_up());
+    }
+
+    #[test]
+    fn rigid_motions_are_told_from_other_maps() {
+        let m = Isometry::rotation(0.7).after(&Isometry::reflection([0.6, 0.8], 0.3));
+        assert!(m.is_rigid(1e-12));
+        assert!(Isometry::IDENTITY.is_rigid(0.0));
+        assert!(Isometry::MIRROR_X.is_rigid(0.0));
+        for not in [
+            Isometry([2.0, 0.0, 0.0, 0.0, 2.0, 0.0]),
+            Isometry([1.0, 0.5, 0.0, 0.0, 1.0, 0.0]),
+            Isometry([1.0, 0.0, f64::NAN, 0.0, 1.0, 0.0]),
+            Isometry([1.0, 0.0, 0.0, 0.0, 1.0, f64::INFINITY]),
+        ] {
+            assert!(!not.is_rigid(1e-6), "{not:?}");
+        }
     }
 
     #[test]

@@ -487,10 +487,14 @@ fn geometric_corruptions_are_refused() {
         matches!(refusal, FoldRefusal::HingeOrientation { .. }),
         "{refusal:?}"
     );
-    // A vertex moved: the isometries no longer agree.
+    // A vertex inside the sheet moved off the diagonal, so the angles
+    // around it no longer fold flat: the isometries no longer agree. (One on
+    // its edge moved inward takes its border creases off the edge.)
     let refusal = corrupted(|parts| {
-        let v = parts.vertices.len() - 1;
-        parts.vertices[v][0] += 0.01;
+        let Some(v) = parts.vertices.iter().position(|&p| close(p, [0.5, 0.5])) else {
+            unreachable!()
+        };
+        parts.vertices[v] = [0.51, 0.51];
     });
     assert!(
         matches!(
@@ -527,4 +531,69 @@ fn geometric_corruptions_are_refused() {
     // An unknown root.
     let refusal = corrupted(|parts| parts.root = oristudio_fold::FaceId(99));
     assert!(matches!(refusal, FoldRefusal::UnknownRoot { .. }));
+}
+
+/// Parts that every other check agrees with, but that are no flat folded
+/// state of the sheet: a root map that is no rigid motion (every isometry
+/// is derived from it, so they all agree), paper moved off the sheet or
+/// turned on it (the area still matches), a border that is not the sheet's
+/// edge, and a view that is no angle. Each was accepted once.
+#[test]
+fn invariant_corruptions_are_refused() {
+    let root = |refusal: FoldRefusal| matches!(refusal, FoldRefusal::RootNotRigid { .. });
+    // Twice the size: the layers agree, but the paper is not the sheet.
+    assert!(root(corrupted(|parts| {
+        parts.root_isometry = Isometry([2.0, 0.0, 0.0, 0.0, 2.0, 0.0]);
+    })));
+    // Sheared.
+    assert!(root(corrupted(|parts| {
+        parts.root_isometry = Isometry([1.0, 0.5, 0.0, 0.0, 1.0, 0.0]);
+    })));
+    // Not a number.
+    assert!(root(corrupted(|parts| {
+        parts.root_isometry.0[2] = f64::NAN;
+    })));
+    // Turned and moved in the model frame, the model is rigid: still a
+    // state, with the same order.
+    let (_, s) = quarters();
+    let mut parts = s.parts().clone();
+    let moved = Isometry([1.0, 0.0, 3.0, 0.0, 1.0, -2.0]).after(&Isometry::rotation(0.7));
+    parts.root_isometry = moved.after(&parts.root_isometry);
+    let turned = State::make(parts).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(turned.order(), s.order());
+
+    let off_sheet = |refusal: FoldRefusal| matches!(refusal, FoldRefusal::VertexOffSheet { .. });
+    // Every vertex moved off the sheet together: nothing else disagrees.
+    assert!(off_sheet(corrupted(|parts| {
+        for p in &mut parts.vertices {
+            *p = [p[0] + 5.0, p[1] + 5.0];
+        }
+    })));
+    // A vertex that is not a number.
+    assert!(off_sheet(
+        corrupted(|parts| parts.vertices[0][1] = f64::NAN)
+    ));
+    // A 1 × ½ sheet whose one face is the rectangle turned a quarter: the
+    // same area, half of it off the sheet.
+    let sheet = Sheet::rectangle(1.0, 0.5).unwrap_or_else(|e| panic!("{e}"));
+    let flat = State::flat(sheet, StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+    let mut parts = flat.into_parts();
+    parts.vertices = vec![[0.5, 0.0], [0.5, 1.0], [0.0, 1.0], [0.0, 0.0]];
+    let refusal = State::make(parts).err();
+    assert!(refusal.is_some_and(off_sheet));
+
+    // A corner pulled in: its two border creases cut across the sheet.
+    let mut parts = square().into_parts();
+    parts.vertices[2] = [0.9, 0.9];
+    let refusal = State::make(parts).err();
+    assert!(
+        matches!(refusal, Some(FoldRefusal::BorderOffOutline { .. })),
+        "{refusal:?}"
+    );
+
+    // A view that is no angle.
+    for rotation in [f64::NAN, f64::INFINITY] {
+        let refusal = corrupted(|parts| parts.view.rotation = rotation);
+        assert_eq!(refusal, FoldRefusal::ViewNotFinite);
+    }
 }

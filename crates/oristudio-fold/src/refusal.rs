@@ -72,6 +72,14 @@ pub enum FoldRefusal {
     NonConvexFace { face: FaceId },
     #[error("the faces cover {faces_area} of the sheet's {sheet_area}")]
     AreaMismatch { faces_area: f64, sheet_area: f64 },
+    #[error("vertex {vertex} is not on the sheet")]
+    VertexOffSheet { vertex: VertexId },
+    #[error("border crease {edge} does not lie along a side of the sheet")]
+    BorderOffOutline { edge: EdgeId },
+    #[error("the root face {face}'s isometry is not a rigid motion")]
+    RootNotRigid { face: FaceId },
+    #[error("the view's rotation is not a finite angle")]
+    ViewNotFinite,
     #[error("the root face {face} is not in the state")]
     UnknownRoot { face: FaceId },
     #[error("face {face} is not connected to the root face")]
@@ -157,6 +165,10 @@ impl FoldRefusal {
             FoldRefusal::CreaseFaceCount { .. } => "crease_face_count",
             FoldRefusal::NonConvexFace { .. } => "non_convex_face",
             FoldRefusal::AreaMismatch { .. } => "area_mismatch",
+            FoldRefusal::VertexOffSheet { .. } => "vertex_off_sheet",
+            FoldRefusal::BorderOffOutline { .. } => "border_off_outline",
+            FoldRefusal::RootNotRigid { .. } => "root_not_rigid",
+            FoldRefusal::ViewNotFinite => "view_not_finite",
             FoldRefusal::UnknownRoot { .. } => "unknown_root",
             FoldRefusal::UnreachedFace { .. } => "unreached_face",
             FoldRefusal::Residual { .. } => "residual",
@@ -188,6 +200,7 @@ impl FoldRefusal {
             | FoldRefusal::MissingCrease { face, .. }
             | FoldRefusal::NonConvexFace { face }
             | FoldRefusal::UnknownRoot { face }
+            | FoldRefusal::RootNotRigid { face }
             | FoldRefusal::UnreachedFace { face }
             | FoldRefusal::Residual { face, .. }
             | FoldRefusal::TuckTargetMoves { face }
@@ -213,6 +226,7 @@ impl FoldRefusal {
             FoldRefusal::UnknownVertex { vertex, .. }
             | FoldRefusal::CreaseUnknownVertex { vertex, .. }
             | FoldRefusal::UnusedVertex { vertex }
+            | FoldRefusal::VertexOffSheet { vertex }
             | FoldRefusal::Residual { vertex, .. }
             | FoldRefusal::NearMiss { vertex, .. }
             | FoldRefusal::Sliver { vertex, .. } => vec![*vertex],
