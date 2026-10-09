@@ -7,7 +7,8 @@
 //! // `apps/web/src/fold/engine/foldEngineReverseWire.ts` holds these shapes in full.
 //! class FoldEngine {
 //!   /** What a reverse fold from `state` moves, which kinds land, and the
-//!    *  choice it still needs: an opening, or one of the orders listed. */
+//!    *  choice it still needs: an opening, or one of the orders listed per
+//!    *  kind. The op's kind is not read: the answer is both kinds'. */
 //!   reverse(state: number, op: FoldReverseOp, choices?: FoldChoices): Outcome<ReverseAsked>;
 //! }
 //! ```
@@ -28,8 +29,9 @@
 //! - **Asking** ([`Bridge::reverse`]): the tip and each flap's openings, the
 //!   kinds that land with the openings named — a tool pre-selects the only
 //!   one, and offers the other only when it lands too — and what is still to
-//!   choose: an opening, or the orders the completion leaves, each listed as
-//!   the `completion` that picks it, the first [`MAX_ORDERS`] of them.
+//!   choose: an opening, or, per kind, the orders the completion leaves,
+//!   each listed as the `completion` that picks it, the first [`MAX_ORDERS`]
+//!   of them. Of both kinds, so the answer does not wait on the kind.
 
 use oristudio_fold::{
     ChoiceCount, ClosurePolicy, Direction, FoldActionGeometry, FoldAnalysis, Placement, PlainFold,
@@ -200,7 +202,8 @@ impl CompoundLanded for Landed {
     }
 }
 
-/// What the tools learn of a reverse fold before it lands.
+/// What the tools learn of a reverse fold before it lands: of both kinds,
+/// so one answer serves a kind control that has not chosen yet.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ReverseAsked {
     /// The tip, the line it folds along and each flap's openings.
@@ -208,27 +211,26 @@ pub struct ReverseAsked {
     /// The kinds that land with the openings named; none while a flap's
     /// opening is still to choose.
     pub kinds: Vec<ReverseKind>,
-    /// What the step still has to choose; none when it lands as asked, or is
-    /// refused (which `apply` says).
-    pub needs: Option<ReverseNeeds>,
+    /// A flap opens more than one way and the choices name none of its
+    /// openings (`analysis.flaps[k].openings[j].stored`): no kind lands until
+    /// one is stored.
+    pub opening: bool,
+    /// Per kind that lands with more than one order, the orders to choose
+    /// from; a kind that lands with one has none.
+    pub orders: Vec<ReverseOrders>,
 }
 
-/// A choice a reverse fold still needs.
+/// The orders a reverse fold of one kind leaves (research §5.2: the ~1%
+/// that are genuine alternatives, mostly two or three).
 #[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(tag = "choice", rename_all = "snake_case")]
-pub enum ReverseNeeds {
-    /// A flap opens more than one way: store one of its openings
-    /// (`analysis.flaps[k].openings[j].stored`).
-    Opening,
-    /// More than one order fits: store one of `orders` as the `completion`.
-    Completion {
-        /// The true ‹ n of m ›.
-        count: ChoiceCount,
-        /// The first [`MAX_ORDERS`], each the `completion` that picks it.
-        orders: Vec<WitnessOrder>,
-        /// More are listed than `orders` holds.
-        more: bool,
-    },
+pub struct ReverseOrders {
+    pub kind: ReverseKind,
+    /// The true ‹ n of m ›.
+    pub count: ChoiceCount,
+    /// The first [`MAX_ORDERS`], each the `completion` that picks it.
+    pub orders: Vec<WitnessOrder>,
+    /// More are listed than `orders` holds.
+    pub more: bool,
 }
 
 impl Bridge {
@@ -267,31 +269,55 @@ impl Bridge {
     }
 }
 
+/// The answer for `step`'s line, side, anchor and openings, of both kinds.
+/// A stored completion is not asked about: the orders are listed whichever
+/// one is stored, so a chooser can move between them.
 fn ask(parent: &State, step: &ReverseStep) -> Result<ReverseAsked, Refusal> {
+    let choices = ReverseChoices {
+        openings: step.choices.openings.clone(),
+        order: None,
+    };
     let analysis = parent.analyse_reverse(&step.op).map_err(Refusal::from)?;
     let kinds = parent
-        .reverse_kinds(&step.op, &step.choices)
+        .reverse_kinds(&step.op, &choices)
         .map_err(compound_refusal)?;
-    let needs = match parent.reverse_fold(&step.op, &step.choices) {
-        Ok(ReverseOutcome::Landed(_)) | Err(_) => None,
-        Ok(ReverseOutcome::ChooseOpening(_)) => Some(ReverseNeeds::Opening),
-        Ok(ReverseOutcome::ChooseOrder(choice)) => {
-            let (picks, more) = choice.choices(MAX_ORDERS);
-            let orders = picks
+    // An opening to choose: a flap with several that the choices name none of.
+    let opening = analysis.flaps.iter().any(|flap| {
+        flap.openings.len() > 1
+            && !flap
+                .openings
                 .iter()
-                .filter_map(|pick| choice.pick(pick).ok()?.report.stored.order)
-                .collect();
-            Some(ReverseNeeds::Completion {
-                count: choice.count(),
-                orders,
-                more,
-            })
+                .any(|o| choices.openings.contains(&o.stored))
+    });
+    let mut orders = Vec::new();
+    // Only the kinds that land are folded: a refusal is the preview's to
+    // say, and its diagnosis is the costly part.
+    for &kind in &kinds {
+        let op = ReverseFold {
+            kind,
+            ..step.op.clone()
+        };
+        match parent.reverse_fold(&op, &choices) {
+            Ok(ReverseOutcome::ChooseOrder(choice)) => {
+                let (picks, more) = choice.choices(MAX_ORDERS);
+                orders.push(ReverseOrders {
+                    kind,
+                    count: choice.count(),
+                    orders: picks
+                        .iter()
+                        .filter_map(|pick| choice.pick(pick).ok()?.report.stored.order)
+                        .collect(),
+                    more,
+                });
+            }
+            Ok(ReverseOutcome::Landed(_) | ReverseOutcome::ChooseOpening(_)) | Err(_) => {}
         }
-    };
+    }
     Ok(ReverseAsked {
         analysis,
         kinds,
-        needs,
+        opening,
+        orders,
     })
 }
 

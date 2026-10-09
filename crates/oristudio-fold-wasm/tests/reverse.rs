@@ -191,9 +191,11 @@ fn the_query_says_which_kinds_land_and_the_other_kind_is_the_fix() {
     let asked = ask(&bridge, tri, corner_b("inside-reverse"), json!({}));
     assert_eq!(asked["status"], "ok", "{asked}");
     assert_eq!(asked["kinds"], json!(["inside"]));
-    assert_eq!(asked["needs"], Value::Null);
+    assert_eq!(asked["opening"], false);
+    assert_eq!(asked["orders"], json!([]));
     assert_eq!(asked["analysis"]["flaps"].as_array().map(Vec::len), Some(1));
-    let other = ask(&bridge, tri, corner_b_across("outside-reverse"), json!({}));
+    // Of both kinds, whichever the op names.
+    let other = ask(&bridge, tri, corner_b_across("inside-reverse"), json!({}));
     assert_eq!(other["kinds"], json!(["outside"]));
 
     let refused = refuse(
@@ -259,7 +261,7 @@ fn an_opening_is_chosen_through_the_query_and_stored() {
         "seed": { "scope": "all" }
     });
     let asked = ask(&bridge, strip, step.clone(), json!({}));
-    assert_eq!(asked["needs"], json!({ "choice": "opening" }));
+    assert_eq!(asked["opening"], true);
     assert_eq!(asked["kinds"], json!([]));
     let openings = asked["analysis"]["flaps"][0]["openings"]
         .as_array()
@@ -276,7 +278,8 @@ fn an_opening_is_chosen_through_the_query_and_stored() {
     let chosen = json!({ "opening": [openings[1]["stored"]] });
     let asked = ask(&bridge, strip, step.clone(), chosen.clone());
     assert_eq!(asked["kinds"], json!(["inside", "outside"]));
-    assert_eq!(asked["needs"], Value::Null);
+    assert_eq!(asked["opening"], false);
+    assert_eq!(asked["orders"], json!([]));
     let (_, landed) = land(&mut bridge, strip, step.clone(), chosen.clone());
     assert_eq!(landed["compound"]["stored"]["openings"], chosen["opening"]);
     assert_eq!(landed["summary"]["faces"], 8);
@@ -313,17 +316,23 @@ fn an_order_is_chosen_through_the_query_and_replays() {
 
     let step = reverse_step(&reverse);
     let asked = ask(&bridge, handle, step.clone(), json!({}));
-    assert_eq!(asked["needs"]["choice"], "completion", "{asked}");
-    assert_eq!(
-        asked["needs"]["count"],
-        json!({ "orders": 2, "exact": true })
-    );
-    assert_eq!(asked["needs"]["more"], false);
-    let orders = asked["needs"]["orders"]
+    let listed = asked["orders"]
         .as_array()
+        .and_then(|per| per.iter().find(|o| o["kind"] == "inside"))
         .cloned()
-        .unwrap_or_default();
+        .unwrap_or_else(|| panic!("no inside orders: {asked}"));
+    assert_eq!(listed["count"], json!({ "orders": 2, "exact": true }));
+    assert_eq!(listed["more"], false);
+    let orders = listed["orders"].as_array().cloned().unwrap_or_default();
     assert_eq!(orders.len(), 2);
+    // A stored order lists them still, for a chooser moving between them.
+    let again = ask(
+        &bridge,
+        handle,
+        step.clone(),
+        json!({ "completion": orders[1] }),
+    );
+    assert_eq!(again["orders"], asked["orders"]);
     assert_eq!(
         refuse(&mut bridge, handle, step.clone(), json!({}))["refusal"],
         json!({ "code": "choice_needed", "choice": "completion" })

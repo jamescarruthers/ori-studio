@@ -66,8 +66,9 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   either broken. The reverse fold (`src/ops_reverse.rs`: `inside-reverse`,
   `outside-reverse`) adds `reverse(state, op, choices)`, the tools' one
   query: the tip and each flap's openings, the kinds that land, and the
-  choice still needed — an opening, or up to eight orders, each the
-  `completion` that picks it.
+  choice still needed — an opening, or, per kind, up to eight orders, each
+  the `completion` that picks it — of both kinds at once, so the answer
+  does not wait on the kind.
 - **`fs1` keys** (`src/canonical.rs`): one per fact of the state, none naming
   a face, vertex or crease by its number; the digest over them is
   TypeScript's `keyDigest`.

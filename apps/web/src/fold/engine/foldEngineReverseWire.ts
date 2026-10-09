@@ -88,25 +88,30 @@ export interface FoldChoiceCount {
   exact: boolean;
 }
 
-/** A choice a reverse fold still needs before it lands. */
-export type FoldReverseNeeds =
-  | { choice: 'opening' }
-  | {
-      choice: 'completion';
-      count: FoldChoiceCount;
-      /** The first few, each the `completion` that picks it. */
-      orders: FoldCompletionChoice[];
-      /** More are listed than `orders` holds. */
-      more: boolean;
-    };
+/** The orders a reverse fold of one kind leaves, when its completion leaves more than one. */
+export interface FoldReverseOrders {
+  kind: FoldReverseKind;
+  count: FoldChoiceCount;
+  /** The first few, each the `completion` that picks it. */
+  orders: FoldCompletionChoice[];
+  /** More are listed than `orders` holds. */
+  more: boolean;
+}
 
-/** The `reverse` query's answer. */
+/**
+ * The `reverse` query's answer, of both kinds whichever the op names: what
+ * the tip is, which kinds land, and what is still to choose. A stored
+ * completion is not asked about, so the orders stay listed while one is
+ * chosen.
+ */
 export interface FoldReverseAsked {
   analysis: FoldReverseAnalysis;
   /** The kinds that land with the openings named; none while an opening is still to choose. */
   kinds: FoldReverseKind[];
-  /** What is still to choose; null when it lands as asked, or is refused (which a preview says). */
-  needs: FoldReverseNeeds | null;
+  /** A flap opens more than one way and the choices name none of its openings. */
+  opening: boolean;
+  /** Per kind that lands with more than one order, the orders. */
+  orders: FoldReverseOrders[];
 }
 
 /** What a landed reverse fold did (`ReverseReport`), as a compound step reports it. */
