@@ -7,7 +7,8 @@
  *   paper, an undo, a redo, a load — replays it through `foldReplay`: the
  *   active path first, reporting progress; every path cached by `fh1`, so an
  *   undo or a note edit asks the engine nothing; a run for a document since
- *   replaced dropped by the load id.
+ *   replaced is superseded by the run its replacement starts, and its
+ *   progress, which names the load it replayed, is never shown for another.
  * - **Handles die with their engine.** A worker that is terminated or crashes
  *   takes every state with it, and its successor numbers states from 1 again
  *   (the generation rule, `foldEnginePort`). The session forgets every handle
