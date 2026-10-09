@@ -144,6 +144,7 @@
     "foldExportStepHint": "将屏幕上步骤的折痕图导出为 SVG 或 PNG",
     "foldExportSteps": "导出步骤...",
     "foldExportStepsHint": "将每个步骤的折痕图导出为一个 ZIP",
+    "foldGoToStep": "请先转到一个步骤再导出",
     "foldImportCp": "导入 CP...",
     "foldImportCpHint": "添加一步，把纸按折痕图折叠",
     "foldImportPolygon": "导入 CP 需要正方形或长方形的纸。",

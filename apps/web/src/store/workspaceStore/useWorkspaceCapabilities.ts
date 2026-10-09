@@ -12,6 +12,7 @@ import { designKind, designKindForContext } from '../../designKinds';
 import { activeDesignTab } from './designTabs';
 import {
   cpSolvablePatternCount,
+  foldPageAtCursor as selectFoldPageAtCursor,
   foldStepAtCursor as selectFoldStepAtCursor,
   hasDeletableDiagramSelection as selectHasDeletableDiagramSelection,
   historyCountForContext,
@@ -92,6 +93,7 @@ export function useWorkspaceCapabilities() {
   // Fold's imports and hand-offs: primitives, so an edit that changes none re-renders nothing.
   const foldStepCount = useWorkspaceStore((state) => shownFoldSequence(state)?.document.steps.length ?? 0);
   const foldPolygon = useWorkspaceStore((state) => shownFoldSequence(state)?.document.paper.shape.kind === 'polygon');
+  const foldPageAtCursor = useWorkspaceStore(selectFoldPageAtCursor);
   const hasFoldStartingFigure = useWorkspaceStore((state) => foldStartingFigure(state) !== null);
   const historyPastCount = historyCountForContext(
     activeEditingContext,
@@ -150,7 +152,12 @@ export function useWorkspaceCapabilities() {
           historyFutureCount,
           clipboard,
           selection,
-          foldSequence: { stepCount: foldStepCount, polygon: foldPolygon, readOnly: foldReadOnly },
+          foldSequence: {
+            stepCount: foldStepCount,
+            polygon: foldPolygon,
+            readOnly: foldReadOnly,
+            pageAtCursor: foldPageAtCursor,
+          },
           hasFoldStartingFigure,
         },
         t
@@ -158,6 +165,7 @@ export function useWorkspaceCapabilities() {
     [
       foldStepCount,
       foldPolygon,
+      foldPageAtCursor,
       hasFoldStartingFigure,
       clipboard,
       creaseCount,

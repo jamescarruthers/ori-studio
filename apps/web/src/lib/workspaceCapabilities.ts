@@ -240,10 +240,12 @@ export interface WorkspaceCapabilityInput {
   cpDetectAvailable?: boolean;
   /**
    * The Fold sequence on screen, for its imports and hand-offs: how many
-   * steps it has, whether it folds a polygon sheet, and whether it is a
-   * newer build's. Absent reads as an empty square that can change.
+   * steps it has, whether it folds a polygon sheet, whether it is a newer
+   * build's, and whether a numbered step is at the reader or before it on
+   * its path — the page Export Step opens on; a turn before the first step
+   * has none. Absent reads as an empty square that can change.
    */
-  foldSequence?: { stepCount: number; polygon: boolean; readOnly: boolean };
+  foldSequence?: { stepCount: number; polygon: boolean; readOnly: boolean; pageAtCursor: boolean };
   /** Whether Edit has a flat, solved folded figure a Fold sequence can start from. */
   hasFoldStartingFigure?: boolean;
 }
@@ -1210,15 +1212,16 @@ export function getWorkspaceCapabilities(
  * folding. An import adds a step, so a sequence a newer build wrote takes
  * none, and a polygon sheet with steps takes none (V0 imports square and
  * rectangle sheets; an empty sequence adopts the pattern's). What leaves the
- * sequence needs a step to carry; whether every step of the path still folds
- * is the session's to say when the verb runs.
+ * sequence needs a step to carry, and Export Step a page to open on: a
+ * numbered step at the reader or before it. Whether every step of the path
+ * still folds is the session's to say when the verb runs.
  */
 function foldIoCapabilities(
   input: WorkspaceCapabilityInput,
   foldMode: boolean,
   t: TFunction
 ): Record<FoldIoCapabilityId, WorkspaceCapability> {
-  const sequence = input.foldSequence ?? { stepCount: 0, polygon: false, readOnly: false };
+  const sequence = input.foldSequence ?? { stepCount: 0, polygon: false, readOnly: false, pageAtCursor: false };
   const importBlock = sequence.readOnly
     ? t('common:capability.foldReadOnly', 'This sequence was made with a newer Ori Studio and opens read-only')
     : sequence.polygon && sequence.stepCount > 0
@@ -1236,6 +1239,9 @@ function foldIoCapabilities(
   const outBlock =
     sequence.stepCount > 0 ? null : t('common:capability.foldNoSteps', 'Fold a step first');
   const out = (label: string, reason: string) => fold(label, reason, outBlock);
+  // The step on screen's page: none with the sheet on screen, or a turn before the first step.
+  const pageBlock =
+    outBlock ?? (sequence.pageAtCursor ? null : t('common:capability.foldGoToStep', 'Go to a step to export it'));
   return {
     'fold.import-cp': importing(
       t('common:capability.foldImportCp', 'Import CP...'),
@@ -1273,9 +1279,10 @@ function foldIoCapabilities(
       t('common:capability.foldExportFold', 'Export FOLD...'),
       t('common:capability.foldExportFoldHint', 'Export the steps shown as one FOLD file, a frame per step')
     ),
-    'fold.export-step': out(
+    'fold.export-step': fold(
       t('common:capability.foldExportStep', 'Export Step...'),
-      t('common:capability.foldExportStepHint', 'Export the step on screen’s crease pattern as SVG or PNG')
+      t('common:capability.foldExportStepHint', 'Export the step on screen’s crease pattern as SVG or PNG'),
+      pageBlock
     ),
     'fold.export-steps': out(
       t('common:capability.foldExportSteps', 'Export Steps...'),

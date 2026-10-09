@@ -24,7 +24,10 @@ import { hasAttachedSolveInput } from '../../cp-workspace/annotations/suppressio
 import type { EditingContext } from '../../workspaces/editingContext';
 import { stepById, turnById } from '../../diagram/document/diagramDocument';
 import { hasProjectDocument } from './projectDocuments';
+import type { FoldStepNode } from '../../fold/document/foldSequenceDocument';
+import { foldStepTree, pathTo, type FoldStepTree } from '../../fold/document/foldStepTree';
 import { foldStartingFigure } from '../../fold/io/foldEditFigure';
+import { isTurnStep } from '../../fold/sequence/foldSequencePath';
 import { isShownFoldSequenceReadOnly, shownFoldSequence } from './foldState';
 import type { WorkspaceState } from './types';
 
@@ -129,6 +132,26 @@ export function foldStepAtCursor(state: Pick<WorkspaceState, 'foldReader' | 'fol
   return cursor !== null && state.foldSequences[0]?.document.steps.some((node) => node.id === cursor) === true;
 }
 
+/** Each sequence's step tree, built once per edit: the selector below runs on every change to the store. */
+const foldTrees = new WeakMap<readonly FoldStepNode[], FoldStepTree>();
+
+/**
+ * Whether a numbered step is at the Fold reader's cursor or before it on its
+ * path: the page Export Step opens on. Not with the sheet on screen, nor on
+ * a turn before the first step, which takes no number and gets no page.
+ */
+export function foldPageAtCursor(state: Pick<WorkspaceState, 'foldReader' | 'foldSequences'>): boolean {
+  const cursor = state.foldReader?.cursor ?? null;
+  const steps = state.foldSequences[0]?.document.steps;
+  if (cursor === null || !steps) return false;
+  let tree = foldTrees.get(steps);
+  if (!tree) {
+    tree = foldStepTree(steps);
+    foldTrees.set(steps, tree);
+  }
+  return pathTo(tree, cursor)?.some((node) => !isTurnStep(node)) === true;
+}
+
 export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabilityInput {
   const context = state.activeEditingContext;
   const activeKind = designKindForContext(context);
@@ -202,6 +225,7 @@ function foldSequenceCapabilityInput(state: WorkspaceState): WorkspaceCapability
     stepCount: shown?.document.steps.length ?? 0,
     polygon: shown?.document.paper.shape.kind === 'polygon',
     readOnly: isShownFoldSequenceReadOnly(state),
+    pageAtCursor: foldPageAtCursor(state),
   };
 }
 

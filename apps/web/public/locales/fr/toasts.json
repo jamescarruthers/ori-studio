@@ -95,6 +95,7 @@
   "foldIo": {
     "noStep": "Il n’y a encore aucune étape à exporter.",
     "pathBroken": "Une étape de cette séquence ne se plie plus\u00a0: les étapes ne peuvent être ni envoyées ni exportées.",
+    "sheetOnScreen": "Allez à une étape pour l’exporter.",
     "tooLarge": "Cette séquence est trop grande pour être exportée dans un seul fichier FOLD.",
     "unavailable": "Le moteur de pliage s’est arrêté avant d’avoir fini. Réessayez."
   },

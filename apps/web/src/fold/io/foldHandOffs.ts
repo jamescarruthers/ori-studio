@@ -42,8 +42,10 @@ export type FoldHandOffBlock =
   | 'path-broken'
   /** The engine could not be reached, or went away mid-way. */
   | 'unavailable'
-  /** "This step" with the flat sheet on screen: there is no step to export. */
+  /** The path has no numbered step: nothing to export. */
   | 'no-step'
+  /** "This step" with the flat sheet on screen, or a turn before the first step: no page to open on. */
+  | 'sheet-on-screen'
   /** The FOLD file would be over the export's size cap. */
   | 'too-large';
 
@@ -187,7 +189,7 @@ export async function openFoldStepsExport(deps: FoldHandOffDeps, scope: PaperExp
       if (step.id === cursor) current = pages.length - 1;
     }
     if (pages.length === 0 || (scope === 'this' && current < 0)) {
-      deps.blocked('no-step');
+      deps.blocked(pages.length === 0 ? 'no-step' : 'sheet-on-screen');
       return false;
     }
     const target = foldStepsExportTarget({

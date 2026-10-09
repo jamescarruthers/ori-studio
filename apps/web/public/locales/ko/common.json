@@ -144,6 +144,7 @@
     "foldExportStepHint": "화면의 단계 전개도를 SVG 또는 PNG로 내보내기",
     "foldExportSteps": "단계 내보내기...",
     "foldExportStepsHint": "각 단계의 전개도를 ZIP 하나로 내보내기",
+    "foldGoToStep": "내보낼 단계로 이동하세요",
     "foldImportCp": "CP 가져오기...",
     "foldImportCpHint": "종이를 전개도대로 접는 단계 추가",
     "foldImportPolygon": "CP를 가져오려면 정사각형이나 직사각형 종이가 필요합니다.",

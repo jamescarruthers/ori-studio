@@ -95,6 +95,7 @@
   "foldIo": {
     "noStep": "Ainda não há nenhum passo para exportar.",
     "pathBroken": "Um passo desta sequência não dobra mais, então os passos não podem ser enviados nem exportados.",
+    "sheetOnScreen": "Vá até um passo para exportá-lo.",
     "tooLarge": "Esta sequência é grande demais para ser exportada como um único arquivo FOLD.",
     "unavailable": "O motor de dobras parou antes de terminar. Tente de novo."
   },

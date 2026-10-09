@@ -150,11 +150,25 @@ describe('Fold’s hand-offs', () => {
     expect(target.pages?.current).toBe(0);
   });
 
-  it('has no step to export with the flat sheet on screen, but every step for all of them', async () => {
+  it('has no step to export with the flat sheet on screen, and says to go to one, but every step for all of them', async () => {
     const { deps } = setup(sequence(), null);
     await expect(openFoldStepsExport(deps, 'this')).resolves.toBe(false);
-    expect(deps.blocked).toHaveBeenCalledWith('no-step');
+    expect(deps.blocked).toHaveBeenCalledExactlyOnceWith('sheet-on-screen');
     await expect(openFoldStepsExport(deps, 'all')).resolves.toBe(true);
+  });
+
+  it('has no page for a turn before the first step, though the sequence has steps', async () => {
+    const document = sequenceOf([step('t', null, { kind: 'turn', axis: 'vertical' }), step('a', 't', valleyAt(0.5))]);
+    const { deps } = setup(document, 't');
+    await expect(openFoldStepsExport(deps, 'this')).resolves.toBe(false);
+    expect(deps.blocked).toHaveBeenCalledExactlyOnceWith('sheet-on-screen');
+  });
+
+  it('has nothing to export from a path of turns alone', async () => {
+    const document = sequenceOf([step('t', null, { kind: 'turn', axis: 'vertical' })]);
+    const { deps } = setup(document, 't');
+    await expect(openFoldStepsExport(deps, 'all')).resolves.toBe(false);
+    expect(deps.blocked).toHaveBeenCalledExactlyOnceWith('no-step');
   });
 
   it('hands off no path with a step that does not land', async () => {

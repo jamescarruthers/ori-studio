@@ -144,6 +144,7 @@
     "foldExportStepHint": "表示中のステップの展開図を SVG または PNG でエクスポート",
     "foldExportSteps": "ステップをエクスポート...",
     "foldExportStepsHint": "各ステップの展開図を 1 つの ZIP としてエクスポート",
+    "foldGoToStep": "エクスポートするステップに移動してください",
     "foldImportCp": "CP をインポート...",
     "foldImportCpHint": "紙を展開図どおりに折りたたむステップを追加",
     "foldImportPolygon": "CP のインポートには正方形か長方形の紙が必要です。",

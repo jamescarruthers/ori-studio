@@ -144,6 +144,7 @@
     "foldExportStepHint": "Exportar el patrón de pliegues del paso en pantalla como SVG o PNG",
     "foldExportSteps": "Exportar pasos...",
     "foldExportStepsHint": "Exportar el patrón de pliegues de cada paso, en un ZIP",
+    "foldGoToStep": "Ve a un paso para exportarlo",
     "foldImportCp": "Importar CP...",
     "foldImportCpHint": "Añadir un paso que pliega el papel según un patrón de pliegues",
     "foldImportPolygon": "Para importar un CP hace falta una hoja cuadrada o rectangular.",
