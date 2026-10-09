@@ -279,6 +279,213 @@
     "ratio": "Rapport",
     "ratioTitle": "Diviser la ligne selon un rapport"
   },
+  "fold": {
+    "fix": {
+      "includeFlap": "Inclure le rabat {{number}}",
+      "includeFlaps_one": "Inclure {{count}} rabat",
+      "includeFlaps_many": "Inclure les {{count}} rabats",
+      "includeFlaps_other": "Inclure les {{count}} rabats",
+      "mountainInstead": "Plutôt un pli montagne",
+      "pickFlap": "Plier seulement le rabat {{number}}",
+      "precreaseOtherWay": "Pré-plier dans l’autre sens",
+      "useLine": "Utiliser la ligne de repère",
+      "valleyInstead": "Plutôt un pli vallée"
+    },
+    "flap": {
+      "chip_one": "Rabat {{number}}, {{count}} couche",
+      "chip_many": "Rabat {{number}}, {{count}} couches",
+      "chip_other": "Rabat {{number}}, {{count}} couches",
+      "chipAdded_one": "Rabat {{number}}, {{count}} couche, bouge avec le pli",
+      "chipAdded_many": "Rabat {{number}}, {{count}} couches, bouge avec le pli",
+      "chipAdded_other": "Rabat {{number}}, {{count}} couches, bouge avec le pli",
+      "groupLabel": "Rabats à plier",
+      "layers_one": "{{count}} couche",
+      "layers_many": "{{count}} couches",
+      "layers_other": "{{count}} couches",
+      "name": "Rabat {{number}}"
+    },
+    "group": {
+      "fold": "Plier",
+      "locate": "Placer la ligne",
+      "model": "Modèle",
+      "planned": "Prévus",
+      "reference": "Points de repère"
+    },
+    "line": {
+      "axiom": "Axiome {{number}} : {{phrase}}",
+      "axiom1Help": "La ligne qui passe par deux points.",
+      "axiom2Help": "La ligne qui amène un point sur un autre.",
+      "axiom3Help": "La ligne qui amène un bord ou un pli sur un autre.",
+      "axiom4Help": "La ligne qui passe par un point, perpendiculaire à un bord ou à un pli.",
+      "axiom5Help": "La ligne qui passe par un pivot et amène un point sur un bord ou un pli.",
+      "axiom6Help": "La ligne qui amène à la fois deux points sur deux bords ou plis.",
+      "axiom7Help": "La ligne qui amène un point sur un bord ou un pli, perpendiculaire à un autre.",
+      "crease": "Pli existant",
+      "creaseHelp": "Un pli ou un bord plié déjà là : replier un pré-pli, ou déplier un rabat.",
+      "free": "Ligne libre",
+      "freeHelp": "Une ligne tracée n’importe où, sans repère."
+    },
+    "mark": {
+      "insideReverse": "IR",
+      "mountain": "M",
+      "precrease": "P",
+      "valley": "V"
+    },
+    "note": {
+      "clear": "Échap efface les points choisis.",
+      "crease": "Plier le long d’un pré-pli le replie ; le long d’un bord plié, cela déplie le rabat.",
+      "divide": "Les bords, les bords pliés et les pré-plis comptent tous.",
+      "free": "Sans magnétisme : la ligne passe exactement là où vous cliquez.",
+      "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où, sans magnétisme.",
+      "snap": "Les points s’accrochent aux coins, aux repères, aux croisements de plis, aux milieux et aux bords."
+    },
+    "op": {
+      "closedSink": "Enfoncement fermé",
+      "crimp": "Pli serti",
+      "openSink": "Enfoncement ouvert",
+      "outsideReverse": "Pli inversé extérieur",
+      "petal": "Pli pétale",
+      "rabbitEar": "Oreille de lapin",
+      "squash": "Pli écrasé",
+      "swivel": "Pli pivoté",
+      "tuck": "Rentrer",
+      "unsink": "Désenfoncer"
+    },
+    "picker": {
+      "close": "Fermer la liste des outils",
+      "title": "Outils de pliage"
+    },
+    "plannedReason": "Prévu : pas encore dans Ori Studio.",
+    "railLabel": "Outils de pliage",
+    "readOnly": {
+      "locked": "Cette étape vient d’une version plus récente d’Ori Studio : on ne peut rien plier à partir d’elle.",
+      "newer": "Cette séquence vient d’une version plus récente d’Ori Studio : elle s’ouvre en lecture seule."
+    },
+    "refusal": {
+      "closureAddsFlaps": {
+        "textMany_one": "Plier ces couches déplace aussi {{count}} autre rabat.",
+        "textMany_many": "Plier ces couches déplace aussi {{count}} autres rabats.",
+        "textMany_other": "Plier ces couches déplace aussi {{count}} autres rabats.",
+        "textOne": "Plier ces couches déplace aussi le rabat {{number}}.",
+        "title": "D’autres rabats bougeraient"
+      },
+      "collision": {
+        "text": "Les couches qui bougent traverseraient des couches sur leur passage.",
+        "title": "Collision"
+      },
+      "emptySeed": {
+        "text": "Aucune couche n’est choisie. Choisissez au moins un rabat à déplacer.",
+        "title": "Rien à plier"
+      },
+      "invalid": {
+        "text": "Il ne donnerait pas un modèle plat valide.",
+        "title": "Ce pli est impossible"
+      },
+      "nearMiss": {
+        "text": "La ligne passe juste à côté d’un point du papier : trop près pour plier proprement, trop loin pour passer par lui.",
+        "title": "Trop près d’un point"
+      },
+      "noMovingSide": {
+        "text": "Aucun papier ne se trouve du côté de la ligne qui bougerait. Inversez le côté qui bouge, ou placez la ligne sur le papier.",
+        "title": "Rien à plier"
+      },
+      "nothingStays": {
+        "text": "Toutes les couches sont du côté qui bouge : rien ne resterait en place. Choisissez un rabat à plier.",
+        "title": "Tout bougerait"
+      },
+      "pickAgain": {
+        "text": "Cet endroit n’est dans aucune couche du côté qui bouge. Choisissez à l’intérieur d’une couche, loin de ses plis.",
+        "title": "Choisissez à nouveau"
+      },
+      "precreaseUnfold": {
+        "text": "Le déplier déplacerait plus de couches que le plier.",
+        "title": "Ce pré-pli ne peut pas se déplier"
+      },
+      "sliver": {
+        "text": "Un point des couches qui bougent se poserait à un cheveu à l’intérieur du bord d’une autre couche.",
+        "title": "Un point tombe juste à l’intérieur d’un bord"
+      },
+      "tooSmall": {
+        "text": "Le pli laisserait un pli ou une bande de papier plus fine que le papier lui-même.",
+        "title": "Trop petit pour être plié"
+      },
+      "tuckTarget": {
+        "text": "Choisissez une couche qui reste en place contre laquelle rentrer le rabat.",
+        "title": "La couche où rentrer bougerait"
+      }
+    },
+    "section": {
+      "label": "Couches sur la ligne de pli, de haut en bas",
+      "labelWoven": "Couches sur la ligne de pli sous le pointeur, de haut en bas",
+      "row": "Couche {{layer}}, {{flap}}",
+      "rowAdded": "Couche {{layer}}, {{flap}}, bouge avec le pli",
+      "rowAddedBeside": "Couche {{layer}}, {{flap}}, bouge avec le pli, à côté de la couche {{above}}",
+      "rowBeside": "Couche {{layer}}, {{flap}}, à côté de la couche {{above}}",
+      "rowStays": "Couche {{layer}}, reste en place",
+      "rowStaysBeside": "Couche {{layer}}, reste en place, à côté de la couche {{above}}",
+      "top": "Haut"
+    },
+    "steps": {
+      "axiom1First": "Cliquez sur le premier point par lequel passe le pli.",
+      "axiom1Second": "Cliquez sur le second point.",
+      "axiom2Land": "Cliquez là où il doit arriver.",
+      "axiom3Move": "Cliquez sur le bord ou le pli à déplacer.",
+      "axiom3Onto": "Cliquez sur le bord ou le pli sur lequel le poser.",
+      "axiom4Through": "Cliquez sur le point par lequel passe le pli.",
+      "axiom5Pivot": "Cliquez sur le pivot par lequel passe le pli.",
+      "axiom6FirstPoint": "Cliquez sur le premier point à déplacer.",
+      "axiom6SecondLine": "Cliquez sur le bord ou le pli sur lequel celui-ci doit arriver.",
+      "axiom6SecondPoint": "Cliquez sur le second point à déplacer.",
+      "commit": "Appuyez sur Entrée pour plier.",
+      "commitTouch": "Touchez {{action}} pour plier.",
+      "crease": "Cliquez sur le pli ou le bord plié le long duquel plier.",
+      "divide": "Cliquez sur un bord ou un pli pour le diviser.",
+      "divideUse": "Utilisez les nouveaux points comme repères pour n’importe quel pli.",
+      "finish": "Choisissez le pli et les couches, puis appuyez sur Entrée.",
+      "finishTouch": "Choisissez le pli et les couches, puis touchez {{action}}.",
+      "freeEnd": "Cliquez là où elle se termine.",
+      "freeStart": "Cliquez là où commence la ligne de pli.",
+      "landOnLine": "Cliquez sur le bord ou le pli sur lequel il doit arriver.",
+      "perpendicularTo": "Cliquez sur le bord ou le pli auquel le pli est perpendiculaire.",
+      "pickLayers": "Choisissez les couches qui bougent.",
+      "pointToMove": "Cliquez sur le point à déplacer."
+    },
+    "tool": {
+      "divideLine": "Diviser une ligne",
+      "divideLineHelp": "Marquer des points qui divisent un bord ou un pli en parties égales.",
+      "insideReverse": "Pli inversé intérieur",
+      "insideReverseHelp": "Rentrer un rabat à l’intérieur de lui-même, en inversant son dos.",
+      "mountain": "Pli montagne",
+      "mountainHelp": "Plier le côté qui bouge en l’éloignant de vous, pour qu’il passe dessous.",
+      "precrease": "Pré-plier",
+      "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
+      "valley": "Pli vallée",
+      "valleyHelp": "Plier le côté qui bouge vers vous, pour qu’il passe dessus."
+    },
+    "verb": {
+      "rotateHelp": "Tourner le modèle d’un quart de tour dans le sens horaire, en une étape à part.",
+      "turnOverHelp": "Retourner le modèle de gauche à droite, en une étape à part."
+    },
+    "window": {
+      "cancel": "Annuler",
+      "finding": "Recherche des couches sur la ligne…",
+      "instructions": "Instructions",
+      "kind": "Pli",
+      "label": "Options de l’outil de pliage",
+      "layers": "Couches",
+      "layersHelp": "Cliquez sur une couche pour inclure ou exclure son rabat. Les crochets montrent où un pli relie deux couches.",
+      "layersHelpWoven": "Ces couches s’entrecroisent : la pile affichée est celle sous le pointeur. Cliquez sur une couche pour inclure ou exclure son rabat.",
+      "layersMoving_one": "{{moving}} sur {{count}} couche bouge",
+      "layersMoving_many": "{{moving}} sur {{count}} couches bougent",
+      "layersMoving_other": "{{moving}} sur {{count}} couches bougent",
+      "lineMode": "Placer la ligne",
+      "movingSide": "Côté qui bouge",
+      "settings_one": "{{count}} réglage",
+      "settings_many": "{{count}} réglages",
+      "settings_other": "{{count}} réglages",
+      "swap": "Inverser"
+    }
+  },
   "foldAngleDisplay": {
     "color": "Couleur",
     "opacity": "Opacité"

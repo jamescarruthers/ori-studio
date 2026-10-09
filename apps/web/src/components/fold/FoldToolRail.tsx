@@ -1,0 +1,41 @@
+import { useTranslation } from 'react-i18next';
+import type { FoldKeyLabel } from '../../fold/tools/foldToolCatalog';
+import { foldRailTooltip, type FoldRailGroup } from '../../fold/tools/foldRailGroups';
+import { ToolRail, type ToolRailGroup } from '../ui/ToolRail';
+import { FoldToolGlyph } from './FoldToolGlyph';
+
+/**
+ * The Fold tools down the left of the canvas (plan D14): the app's `ToolRail`,
+ * in `foldRailGroups()`'s groups — the folds, Reference points, Locate line,
+ * the model verbs, and the planned folds collapsed. Icon-only; each names its
+ * key in its tooltip, resolved against the user's layout by `keyLabel`. A
+ * phone has no rail, and shows the same groups in `FoldToolPickerSheet`.
+ */
+export function FoldToolRail({
+  groups,
+  keyLabel,
+}: {
+  groups: readonly FoldRailGroup[];
+  /** The label of a Fold key; without it the tooltips name none. */
+  keyLabel?: FoldKeyLabel;
+}) {
+  const { t } = useTranslation();
+  const railGroups: ToolRailGroup[] = groups.map((group) => ({
+    id: group.id,
+    label: group.label,
+    railLabel: group.label,
+    collapsedByDefault: group.collapsedByDefault,
+    content: {
+      tools: group.items.map((item) => ({
+        id: item.id,
+        label: item.label,
+        tooltip: foldRailTooltip(item, item.shortcut ? keyLabel?.(item.shortcut) : undefined),
+        glyph: <FoldToolGlyph id={item.id} />,
+        active: item.active,
+        available: item.available,
+        onSelect: item.select,
+      })),
+    },
+  }));
+  return <ToolRail aria-label={t('tools:fold.railLabel', 'Fold tools')} idPrefix="fold-rail-group" groups={railGroups} />;
+}

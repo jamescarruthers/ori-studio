@@ -271,6 +271,206 @@
     "ratio": "Verhältnis",
     "ratioTitle": "Die Linie nach einem Verhältnis teilen"
   },
+  "fold": {
+    "fix": {
+      "includeFlap": "Lasche {{number}} einbeziehen",
+      "includeFlaps_one": "Die {{count}} Lasche einbeziehen",
+      "includeFlaps_other": "Die {{count}} Laschen einbeziehen",
+      "mountainInstead": "Stattdessen Bergfalte",
+      "pickFlap": "Nur Lasche {{number}} falten",
+      "precreaseOtherWay": "Andersherum vorfalten",
+      "useLine": "Die Bezugslinie verwenden",
+      "valleyInstead": "Stattdessen Talfalte"
+    },
+    "flap": {
+      "chip_one": "Lasche {{number}}, {{count}} Lage",
+      "chip_other": "Lasche {{number}}, {{count}} Lagen",
+      "chipAdded_one": "Lasche {{number}}, {{count}} Lage, wird mitgefaltet",
+      "chipAdded_other": "Lasche {{number}}, {{count}} Lagen, wird mitgefaltet",
+      "groupLabel": "Zu faltende Laschen",
+      "layers_one": "{{count}} Lage",
+      "layers_other": "{{count}} Lagen",
+      "name": "Lasche {{number}}"
+    },
+    "group": {
+      "fold": "Falten",
+      "locate": "Linie bestimmen",
+      "model": "Modell",
+      "planned": "Geplant",
+      "reference": "Bezugspunkte"
+    },
+    "line": {
+      "axiom": "Axiom {{number}}: {{phrase}}",
+      "axiom1Help": "Die Linie durch zwei Punkte.",
+      "axiom2Help": "Die Linie, die einen Punkt auf einen anderen faltet.",
+      "axiom3Help": "Die Linie, die eine Kante oder Faltlinie auf eine andere faltet.",
+      "axiom4Help": "Die Linie durch einen Punkt, senkrecht zu einer Kante oder Faltlinie.",
+      "axiom5Help": "Die Linie durch einen Drehpunkt, die einen Punkt auf eine Kante oder Faltlinie faltet.",
+      "axiom6Help": "Die Linie, die zwei Punkte zugleich auf zwei Kanten oder Faltlinien faltet.",
+      "axiom7Help": "Die Linie, die einen Punkt auf eine Kante oder Faltlinie faltet, senkrecht zu einer anderen.",
+      "crease": "Vorhandene Faltlinie",
+      "creaseHelp": "Eine Faltlinie oder gefaltete Kante, die schon da ist: eine Vorfaltung wieder falten oder eine Lasche aufklappen.",
+      "free": "Freie Linie",
+      "freeHelp": "Eine beliebig gezogene Linie, ohne Bezug."
+    },
+    "mark": {
+      "insideReverse": "IR",
+      "mountain": "M",
+      "precrease": "P",
+      "valley": "V"
+    },
+    "note": {
+      "clear": "Esc verwirft die gewählten Punkte.",
+      "crease": "Entlang einer Vorfaltung wird sie wieder gefaltet; entlang einer gefalteten Kante wird die Lasche aufgeklappt.",
+      "divide": "Kanten, gefaltete Kanten und Vorfaltungen zählen alle.",
+      "free": "Kein Einrasten: Die Linie liegt genau dort, wo du klickst.",
+      "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt ohne Einrasten frei zu setzen.",
+      "snap": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien, Mittelpunkten und Kanten ein."
+    },
+    "op": {
+      "closedSink": "Geschlossenes Versenken",
+      "crimp": "Stauchfalte",
+      "openSink": "Offenes Versenken",
+      "outsideReverse": "Äußerer Gegenbruch",
+      "petal": "Blütenblattfalte",
+      "rabbitEar": "Hasenohr",
+      "squash": "Quetschfalte",
+      "swivel": "Schwenkfalte",
+      "tuck": "Einstecken",
+      "unsink": "Versenken aufheben"
+    },
+    "picker": {
+      "close": "Werkzeugliste schließen",
+      "title": "Falt-Werkzeuge"
+    },
+    "plannedReason": "Geplant: noch nicht in Ori Studio.",
+    "railLabel": "Falt-Werkzeuge",
+    "readOnly": {
+      "locked": "Dieser Schritt stammt aus einer neueren Version von Ori Studio, daher lässt sich von ihm aus nichts falten.",
+      "newer": "Diese Sequenz stammt aus einer neueren Version von Ori Studio und wird daher schreibgeschützt geöffnet."
+    },
+    "refusal": {
+      "closureAddsFlaps": {
+        "textMany_one": "Das Falten dieser Lagen bewegt auch {{count}} weitere Lasche.",
+        "textMany_other": "Das Falten dieser Lagen bewegt auch {{count}} weitere Laschen.",
+        "textOne": "Das Falten dieser Lagen bewegt auch Lasche {{number}}.",
+        "title": "Weitere Laschen würden sich bewegen"
+      },
+      "collision": {
+        "text": "Die bewegten Lagen würden durch Lagen hindurchgehen, die ihnen im Weg sind.",
+        "title": "Kollision"
+      },
+      "emptySeed": {
+        "text": "Keine Lage ist gewählt. Wähle mindestens eine Lasche, die sich bewegen soll.",
+        "title": "Nichts zu falten"
+      },
+      "invalid": {
+        "text": "Sie ergäbe kein gültiges flaches Modell.",
+        "title": "Diese Faltung ist nicht möglich"
+      },
+      "nearMiss": {
+        "text": "Die Linie verläuft knapp neben einem Punkt des Papiers: zu nah, um sauber zu falten, zu weit weg, um durch ihn zu gehen.",
+        "title": "Zu nah an einem Punkt"
+      },
+      "noMovingSide": {
+        "text": "Auf der Seite der Linie, die sich bewegen würde, liegt kein Papier. Tausche die bewegte Seite oder lege die Linie aufs Papier.",
+        "title": "Nichts zu falten"
+      },
+      "nothingStays": {
+        "text": "Jede Lage liegt auf der bewegten Seite, also bliebe nichts liegen. Wähle eine Lasche zum Falten.",
+        "title": "Alles würde sich bewegen"
+      },
+      "pickAgain": {
+        "text": "Diese Stelle liegt in keiner Lage auf der bewegten Seite. Wähle innerhalb einer Lage, abseits ihrer Faltlinien.",
+        "title": "Erneut wählen"
+      },
+      "precreaseUnfold": {
+        "text": "Das Aufklappen würde mehr Lagen bewegen als das Falten.",
+        "title": "Diese Vorfaltung lässt sich nicht aufklappen"
+      },
+      "sliver": {
+        "text": "Ein Punkt der bewegten Lagen käme um Haaresbreite innerhalb der Kante einer anderen Lage zu liegen.",
+        "title": "Ein Punkt landet knapp innerhalb einer Kante"
+      },
+      "tooSmall": {
+        "text": "Die Faltung hinterließe eine Faltlinie oder einen Papierstreifen, der dünner ist als das Papier selbst.",
+        "title": "Zu klein zum Falten"
+      },
+      "tuckTarget": {
+        "text": "Wähle eine Lage, die liegen bleibt, an der die Lasche eingesteckt werden soll.",
+        "title": "Die Lage zum Einstecken würde sich bewegen"
+      }
+    },
+    "section": {
+      "label": "Lagen an der Faltlinie, von oben nach unten",
+      "labelWoven": "Lagen an der Faltlinie unter dem Zeiger, von oben nach unten",
+      "row": "Lage {{layer}}, {{flap}}",
+      "rowAdded": "Lage {{layer}}, {{flap}}, wird mitgefaltet",
+      "rowAddedBeside": "Lage {{layer}}, {{flap}}, wird mitgefaltet, neben Lage {{above}}",
+      "rowBeside": "Lage {{layer}}, {{flap}}, neben Lage {{above}}",
+      "rowStays": "Lage {{layer}}, bleibt liegen",
+      "rowStaysBeside": "Lage {{layer}}, bleibt liegen, neben Lage {{above}}",
+      "top": "Oben"
+    },
+    "steps": {
+      "axiom1First": "Klicke auf den ersten Punkt, durch den die Faltung verläuft.",
+      "axiom1Second": "Klicke auf den zweiten Punkt.",
+      "axiom2Land": "Klicke dorthin, wo er landen soll.",
+      "axiom3Move": "Klicke auf die Kante oder Faltlinie, die bewegt werden soll.",
+      "axiom3Onto": "Klicke auf die Kante oder Faltlinie, auf die sie gelegt werden soll.",
+      "axiom4Through": "Klicke auf den Punkt, durch den die Faltung verläuft.",
+      "axiom5Pivot": "Klicke auf den Drehpunkt, durch den die Faltung verläuft.",
+      "axiom6FirstPoint": "Klicke auf den ersten Punkt, der bewegt werden soll.",
+      "axiom6SecondLine": "Klicke auf die Kante oder Faltlinie, auf der dieser landen soll.",
+      "axiom6SecondPoint": "Klicke auf den zweiten Punkt, der bewegt werden soll.",
+      "commit": "Drücke die Eingabetaste, um zu falten.",
+      "commitTouch": "Tippe auf {{action}}, um zu falten.",
+      "crease": "Klicke auf die Faltlinie oder gefaltete Kante, entlang der gefaltet werden soll.",
+      "divide": "Klicke auf eine Kante oder Faltlinie, um sie zu teilen.",
+      "divideUse": "Verwende die neuen Punkte als Bezug für jede Faltung.",
+      "finish": "Wähle die Faltung und die Lagen, dann drücke die Eingabetaste.",
+      "finishTouch": "Wähle die Faltung und die Lagen, dann tippe auf {{action}}.",
+      "freeEnd": "Klicke dorthin, wo sie endet.",
+      "freeStart": "Klicke dorthin, wo die Faltlinie beginnt.",
+      "landOnLine": "Klicke auf die Kante oder Faltlinie, auf der er landen soll.",
+      "perpendicularTo": "Klicke auf die Kante oder Faltlinie, zu der die Faltung senkrecht steht.",
+      "pickLayers": "Wähle, welche Lagen sich bewegen.",
+      "pointToMove": "Klicke auf den Punkt, der bewegt werden soll."
+    },
+    "tool": {
+      "divideLine": "Linie teilen",
+      "divideLineHelp": "Punkte markieren, die eine Kante oder Faltlinie in gleiche Teile teilen.",
+      "insideReverse": "Innerer Gegenbruch",
+      "insideReverseHelp": "Eine Lasche in sich selbst hineindrücken und ihren Rücken umkehren.",
+      "mountain": "Bergfalte",
+      "mountainHelp": "Die bewegte Seite von dir weg falten, sodass sie unten landet.",
+      "precrease": "Vorfalten",
+      "precreaseHelp": "Falten und wieder öffnen: eine Faltlinie für später.",
+      "valley": "Talfalte",
+      "valleyHelp": "Die bewegte Seite zu dir hin falten, sodass sie oben landet."
+    },
+    "verb": {
+      "rotateHelp": "Das Modell eine Vierteldrehung im Uhrzeigersinn drehen, als eigener Schritt.",
+      "turnOverHelp": "Das Modell seitlich umdrehen, als eigener Schritt."
+    },
+    "window": {
+      "cancel": "Abbrechen",
+      "finding": "Lagen an der Linie werden ermittelt …",
+      "instructions": "Anleitung",
+      "kind": "Faltung",
+      "label": "Optionen des Falt-Werkzeugs",
+      "layers": "Lagen",
+      "layersHelp": "Klicke auf eine Lage, um ihre Lasche ein- oder auszuschließen. Klammern zeigen, wo eine Faltung zwei Lagen verbindet.",
+      "layersHelpWoven": "Diese Lagen sind ineinander verflochten, daher wird der Stapel unter dem Zeiger gezeigt. Klicke auf eine Lage, um ihre Lasche ein- oder auszuschließen.",
+      "layersMoving_one": "{{moving}} von {{count}} Lage bewegt sich",
+      "layersMoving_other": "{{moving}} von {{count}} Lagen bewegen sich",
+      "lineMode": "Linie bestimmen",
+      "movingSide": "Bewegte Seite",
+      "settings_one": "{{count}} Einstellung",
+      "settings_other": "{{count}} Einstellungen",
+      "swap": "Tauschen"
+    }
+  },
   "foldAngleDisplay": {
     "color": "Farbe",
     "opacity": "Deckkraft"

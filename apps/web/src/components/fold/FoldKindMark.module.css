@@ -1,0 +1,36 @@
+/*
+ * A fold's letter (FoldKindMark.tsx), in the ink of the crease it leaves: the
+ * theme's crease inks, so it agrees with the crease-pattern pane.
+ */
+.mark {
+  font-size: 0.8rem;
+  font-weight: 780;
+  line-height: 1;
+}
+
+.mark[data-size='lg'] {
+  font-size: 0.95rem;
+}
+
+.mark[data-kind='valley'] {
+  color: var(--fold-valley);
+}
+
+.mark[data-kind='mountain'] {
+  color: var(--fold-mountain);
+}
+
+/* A precrease leaves a flat crease. */
+.mark[data-kind='precrease'] {
+  color: var(--fold-flat);
+}
+
+/* Two letters in one cell, so a step smaller. */
+.mark[data-kind='inside-reverse'] {
+  color: var(--accent-primary);
+  font-size: 0.7rem;
+}
+
+.mark[data-kind='inside-reverse'][data-size='lg'] {
+  font-size: 0.85rem;
+}

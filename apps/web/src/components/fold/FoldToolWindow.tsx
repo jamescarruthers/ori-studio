@@ -1,0 +1,180 @@
+import { useTranslation } from 'react-i18next';
+import { ArrowLeftRight } from 'lucide-react';
+import type { FoldKeyLabel, FoldKind, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
+import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
+import { STORAGE_KEYS } from '../../lib/storage';
+import { Button } from '../ui/Button';
+import { FieldRow } from '../ui/fieldRows/FieldRow';
+import { SelectRow } from '../ui/fieldRows/SelectRow';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { ToolHintInstructions } from '../ui/tools/ToolHintInstructions';
+import { ToolHintWindow } from '../ui/tools/ToolHintWindow';
+import { FoldCrossSectionPicker } from './FoldCrossSectionPicker';
+import { FoldFlapChips } from './FoldFlapChips';
+import { FoldKindMark } from './FoldKindMark';
+import { FoldRefusalNotice } from './FoldRefusalNotice';
+import styles from './FoldToolWindow.module.css';
+
+/**
+ * The Fold canvas's tool window: the app's window chrome (`ToolHintWindow`)
+ * with what the tool in hand has to say inside it — how to locate the line and
+ * the line mode while it is being located; then the fold's kind, the moving
+ * side, the layers at the line, a refusal with its fixes, and Cancel / commit.
+ *
+ * One renderer for every Fold tool. What a tool shows is its model, built in
+ * `fold/tools/foldToolWindow.ts`; nothing here knows which tool it draws.
+ * Enter and Escape reach the commit and the cancel through the workspace's
+ * keys, not these buttons; the buttons name those keys in their titles.
+ *
+ * Mounted outside any element with a context-menu handler: the window is
+ * portaled, and portal events still bubble through React (`ToolHintWindow`).
+ */
+export function FoldToolWindow({
+  container,
+  model,
+  keyLabel,
+}: {
+  /** The viewport cell the window anchors to. */
+  container: HTMLElement | null;
+  model: FoldToolWindowModel | null;
+  /** The label of a Fold key; without it the buttons name none. */
+  keyLabel?: FoldKeyLabel;
+}) {
+  const { t } = useTranslation();
+  if (!model) return null;
+  const titled = (label: string, shortcut: FoldShortcutId) => {
+    const key = keyLabel?.(shortcut);
+    return key ? `${label} (${key})` : label;
+  };
+  const { instructions, lineMode, kind, movingSide, layers, refusal, footer } = model;
+
+  return (
+    <ToolHintWindow
+      container={container}
+      collapseKey={STORAGE_KEYS.foldToolHintCollapsed}
+      title={model.title}
+      meta={model.meta}
+      ariaLabel={t('tools:fold.window.label', 'Fold tool options')}
+    >
+      <div className={styles.section}>
+        <ToolHintInstructions
+          heading={instructions.heading}
+          items={instructions.items}
+          ordered
+          current={instructions.current}
+        />
+        {instructions.notes.map((note) => (
+          <p key={note} className={styles.note}>
+            {note}
+          </p>
+        ))}
+      </div>
+      {/* No dividers: the window divides its own sections. */}
+      {lineMode && (
+        <div className={styles.section}>
+          <SelectRow
+            label={lineMode.label}
+            value={lineMode.value}
+            options={lineMode.options}
+            disabled={lineMode.disabled}
+            divider={false}
+            onChange={lineMode.set}
+          />
+        </div>
+      )}
+      {kind && (
+        <div className={styles.section}>
+          <FieldRow label={kind.label} kind="segmented" divider={false} disabled={kind.disabled}>
+            <SegmentedControl<FoldKind>
+              size="sm"
+              iconsOnly
+              aria-label={kind.label}
+              value={kind.value}
+              disabled={kind.disabled}
+              options={kind.options.map((option) => ({
+                value: option.value,
+                label: option.label,
+                icon: <FoldKindMark kind={option.value} />,
+                // A letter names nothing to someone who has not met it.
+                tooltip: option.label,
+              }))}
+              onChange={kind.set}
+            />
+          </FieldRow>
+        </div>
+      )}
+      {movingSide && (
+        <div className={styles.section}>
+          <FieldRow label={movingSide.label} kind="static" divider={false} disabled={movingSide.disabled}>
+            <Button
+              size="sm"
+              variant="secondary"
+              title={titled(movingSide.swapLabel, movingSide.shortcut)}
+              disabled={movingSide.disabled}
+              onClick={movingSide.swap}
+            >
+              <ArrowLeftRight size={13} aria-hidden="true" />
+              {movingSide.swapLabel}
+            </Button>
+          </FieldRow>
+        </div>
+      )}
+      {layers && (
+        <div className={styles.section} data-fold-layers="">
+          <div className={styles.layersHeader}>
+            <span className={styles.heading}>{layers.title}</span>
+            {layers.summary && <span className={styles.summary}>{layers.summary}</span>}
+          </div>
+          {layers.picker ? (
+            <FoldCrossSectionPicker
+              model={layers.picker}
+              disabled={layers.disabled}
+              onToggle={layers.toggle}
+              onHover={layers.hover}
+            />
+          ) : (
+            <p className={styles.note} role="status">
+              {layers.finding}
+            </p>
+          )}
+          {layers.picker && <p className={styles.note}>{layers.help}</p>}
+          <FoldFlapChips
+            chips={layers.chips}
+            disabled={layers.disabled}
+            onToggle={layers.toggle}
+            onHover={layers.hover}
+          />
+        </div>
+      )}
+      {refusal && (
+        <div className={styles.section}>
+          <FoldRefusalNotice notice={refusal} />
+        </div>
+      )}
+      {footer && (
+        <div className={styles.section} data-footer="">
+          <div className={styles.footer}>
+            <Button
+              size="sm"
+              variant="secondary"
+              title={titled(footer.cancel.label, footer.cancel.shortcut)}
+              disabled={footer.cancel.disabled}
+              onClick={footer.cancel.run}
+            >
+              {footer.cancel.label}
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              title={titled(footer.commit.label, footer.commit.shortcut)}
+              disabled={footer.commit.disabled}
+              onClick={footer.commit.run}
+            >
+              {footer.commit.label}
+            </Button>
+          </div>
+        </div>
+      )}
+    </ToolHintWindow>
+  );
+}

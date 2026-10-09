@@ -279,6 +279,213 @@
     "ratio": "Proporción",
     "ratioTitle": "Dividir la línea según una proporción"
   },
+  "fold": {
+    "fix": {
+      "includeFlap": "Incluir la solapa {{number}}",
+      "includeFlaps_one": "Incluir {{count}} solapa",
+      "includeFlaps_many": "Incluir las {{count}} solapas",
+      "includeFlaps_other": "Incluir las {{count}} solapas",
+      "mountainInstead": "Mejor un pliegue de monte",
+      "pickFlap": "Plegar solo la solapa {{number}}",
+      "precreaseOtherWay": "Premarcar en el otro sentido",
+      "useLine": "Usar la línea de referencia",
+      "valleyInstead": "Mejor un pliegue de valle"
+    },
+    "flap": {
+      "chip_one": "Solapa {{number}}, {{count}} capa",
+      "chip_many": "Solapa {{number}}, {{count}} capas",
+      "chip_other": "Solapa {{number}}, {{count}} capas",
+      "chipAdded_one": "Solapa {{number}}, {{count}} capa, se mueve con el pliegue",
+      "chipAdded_many": "Solapa {{number}}, {{count}} capas, se mueve con el pliegue",
+      "chipAdded_other": "Solapa {{number}}, {{count}} capas, se mueve con el pliegue",
+      "groupLabel": "Solapas que se pliegan",
+      "layers_one": "{{count}} capa",
+      "layers_many": "{{count}} capas",
+      "layers_other": "{{count}} capas",
+      "name": "Solapa {{number}}"
+    },
+    "group": {
+      "fold": "Plegar",
+      "locate": "Situar la línea",
+      "model": "Modelo",
+      "planned": "Previstos",
+      "reference": "Puntos de referencia"
+    },
+    "line": {
+      "axiom": "Axioma {{number}}: {{phrase}}",
+      "axiom1Help": "La línea que pasa por dos puntos.",
+      "axiom2Help": "La línea que lleva un punto sobre otro.",
+      "axiom3Help": "La línea que lleva un borde o pliegue sobre otro.",
+      "axiom4Help": "La línea que pasa por un punto, perpendicular a un borde o pliegue.",
+      "axiom5Help": "La línea que pasa por un pivote y lleva un punto sobre un borde o pliegue.",
+      "axiom6Help": "La línea que lleva a la vez dos puntos sobre dos bordes o pliegues.",
+      "axiom7Help": "La línea que lleva un punto sobre un borde o pliegue, perpendicular a otro.",
+      "crease": "Pliegue existente",
+      "creaseHelp": "Un pliegue o borde plegado que ya existe: volver a plegar un premarcado o desplegar una solapa.",
+      "free": "Línea libre",
+      "freeHelp": "Una línea trazada en cualquier lugar, sin referencia."
+    },
+    "mark": {
+      "insideReverse": "IR",
+      "mountain": "M",
+      "precrease": "P",
+      "valley": "V"
+    },
+    "note": {
+      "clear": "Esc borra los puntos elegidos.",
+      "crease": "Plegar por un premarcado lo vuelve a plegar; por un borde plegado, despliega la solapa.",
+      "divide": "Cuentan los bordes, los bordes plegados y los premarcados.",
+      "free": "Sin ajuste: la línea va exactamente donde haces clic.",
+      "freePoint": "Mantén {{modifier}} para colocar un punto en cualquier lugar, sin ajuste.",
+      "snap": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues, puntos medios y bordes."
+    },
+    "op": {
+      "closedSink": "Hundido cerrado",
+      "crimp": "Pinza",
+      "openSink": "Hundido abierto",
+      "outsideReverse": "Pliegue invertido exterior",
+      "petal": "Pliegue pétalo",
+      "rabbitEar": "Oreja de conejo",
+      "squash": "Pliegue aplastado",
+      "swivel": "Pliegue pivotante",
+      "tuck": "Remeter",
+      "unsink": "Deshacer hundido"
+    },
+    "picker": {
+      "close": "Cerrar la lista de herramientas",
+      "title": "Herramientas de plegado"
+    },
+    "plannedReason": "Previsto: aún no está en Ori Studio.",
+    "railLabel": "Herramientas de plegado",
+    "readOnly": {
+      "locked": "Este paso es de una versión más reciente de Ori Studio, así que no se puede plegar a partir de él.",
+      "newer": "Esta secuencia es de una versión más reciente de Ori Studio, así que se abre en modo de solo lectura."
+    },
+    "refusal": {
+      "closureAddsFlaps": {
+        "textMany_one": "Plegar estas capas mueve también {{count}} solapa más.",
+        "textMany_many": "Plegar estas capas mueve también {{count}} solapas más.",
+        "textMany_other": "Plegar estas capas mueve también {{count}} solapas más.",
+        "textOne": "Plegar estas capas mueve también la solapa {{number}}.",
+        "title": "Se moverían más solapas"
+      },
+      "collision": {
+        "text": "Las capas que se mueven atravesarían capas que están en su camino.",
+        "title": "Colisión"
+      },
+      "emptySeed": {
+        "text": "No hay ninguna capa elegida. Elige al menos una solapa para mover.",
+        "title": "Nada que plegar"
+      },
+      "invalid": {
+        "text": "No daría un modelo plano válido.",
+        "title": "Este pliegue no se puede hacer"
+      },
+      "nearMiss": {
+        "text": "La línea pasa justo al lado de un punto del papel: demasiado cerca para plegar limpiamente, demasiado lejos para pasar por él.",
+        "title": "Demasiado cerca de un punto"
+      },
+      "noMovingSide": {
+        "text": "No hay papel en el lado de la línea que se movería. Cambia el lado que se mueve o lleva la línea sobre el papel.",
+        "title": "Nada que plegar"
+      },
+      "nothingStays": {
+        "text": "Todas las capas están en el lado que se mueve, así que nada se quedaría quieto. Elige una solapa para plegar.",
+        "title": "Se movería todo"
+      },
+      "pickAgain": {
+        "text": "Ese lugar no está dentro de una capa del lado que se mueve. Elige dentro de una capa, lejos de sus pliegues.",
+        "title": "Vuelve a elegir"
+      },
+      "precreaseUnfold": {
+        "text": "Desplegarlo movería más capas que las que movió al plegarlo.",
+        "title": "Este premarcado no se puede desplegar"
+      },
+      "sliver": {
+        "text": "Un punto de las capas que se mueven quedaría a un pelo por dentro del borde de otra capa.",
+        "title": "Un punto cae justo dentro de un borde"
+      },
+      "tooSmall": {
+        "text": "El pliegue dejaría un pliegue o una tira de papel más fina que el propio papel.",
+        "title": "Demasiado pequeño para plegar"
+      },
+      "tuckTarget": {
+        "text": "Elige una capa que se quede quieta para remeter la solapa contra ella.",
+        "title": "La capa donde remeter se movería"
+      }
+    },
+    "section": {
+      "label": "Capas en la línea de pliegue, de arriba abajo",
+      "labelWoven": "Capas en la línea de pliegue bajo el puntero, de arriba abajo",
+      "row": "Capa {{layer}}, {{flap}}",
+      "rowAdded": "Capa {{layer}}, {{flap}}, se mueve con el pliegue",
+      "rowAddedBeside": "Capa {{layer}}, {{flap}}, se mueve con el pliegue, junto a la capa {{above}}",
+      "rowBeside": "Capa {{layer}}, {{flap}}, junto a la capa {{above}}",
+      "rowStays": "Capa {{layer}}, se queda quieta",
+      "rowStaysBeside": "Capa {{layer}}, se queda quieta, junto a la capa {{above}}",
+      "top": "Arriba"
+    },
+    "steps": {
+      "axiom1First": "Haz clic en el primer punto por el que pasa el pliegue.",
+      "axiom1Second": "Haz clic en el segundo punto.",
+      "axiom2Land": "Haz clic donde debe caer.",
+      "axiom3Move": "Haz clic en el borde o pliegue que se mueve.",
+      "axiom3Onto": "Haz clic en el borde o pliegue sobre el que se coloca.",
+      "axiom4Through": "Haz clic en el punto por el que pasa el pliegue.",
+      "axiom5Pivot": "Haz clic en el pivote por el que pasa el pliegue.",
+      "axiom6FirstPoint": "Haz clic en el primer punto que se mueve.",
+      "axiom6SecondLine": "Haz clic en el borde o pliegue sobre el que debe caer ese.",
+      "axiom6SecondPoint": "Haz clic en el segundo punto que se mueve.",
+      "commit": "Pulsa Intro para plegar.",
+      "commitTouch": "Toca {{action}} para plegar.",
+      "crease": "Haz clic en el pliegue o borde plegado por el que plegar.",
+      "divide": "Haz clic en un borde o pliegue para dividirlo.",
+      "divideUse": "Usa los puntos nuevos como referencias para cualquier pliegue.",
+      "finish": "Elige el pliegue y las capas y pulsa Intro.",
+      "finishTouch": "Elige el pliegue y las capas y toca {{action}}.",
+      "freeEnd": "Haz clic donde termina.",
+      "freeStart": "Haz clic donde empieza la línea de pliegue.",
+      "landOnLine": "Haz clic en el borde o pliegue sobre el que debe caer.",
+      "perpendicularTo": "Haz clic en el borde o pliegue al que el pliegue es perpendicular.",
+      "pickLayers": "Elige qué capas se mueven.",
+      "pointToMove": "Haz clic en el punto que se mueve."
+    },
+    "tool": {
+      "divideLine": "Dividir línea",
+      "divideLineHelp": "Marcar puntos que dividen un borde o un pliegue en partes iguales.",
+      "insideReverse": "Pliegue invertido interior",
+      "insideReverseHelp": "Empujar una solapa hacia dentro de sí misma, invirtiendo su lomo.",
+      "mountain": "Pliegue de monte",
+      "mountainHelp": "Plegar el lado que se mueve alejándolo de ti, para que quede debajo.",
+      "precrease": "Premarcar",
+      "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
+      "valley": "Pliegue de valle",
+      "valleyHelp": "Plegar el lado que se mueve hacia ti, para que quede encima."
+    },
+    "verb": {
+      "rotateHelp": "Girar el modelo un cuarto de vuelta en el sentido de las agujas del reloj, como un paso propio.",
+      "turnOverHelp": "Dar la vuelta al modelo, de lado a lado, como un paso propio."
+    },
+    "window": {
+      "cancel": "Cancelar",
+      "finding": "Buscando las capas en la línea…",
+      "instructions": "Instrucciones",
+      "kind": "Pliegue",
+      "label": "Opciones de la herramienta de plegado",
+      "layers": "Capas",
+      "layersHelp": "Haz clic en una capa para incluir o excluir su solapa. Los corchetes muestran dónde un pliegue une dos capas.",
+      "layersHelpWoven": "Estas capas se entrelazan, así que se muestra la pila que hay bajo el puntero. Haz clic en una capa para incluir o excluir su solapa.",
+      "layersMoving_one": "Se mueven {{moving}} de {{count}} capa",
+      "layersMoving_many": "Se mueven {{moving}} de {{count}} capas",
+      "layersMoving_other": "Se mueven {{moving}} de {{count}} capas",
+      "lineMode": "Situar la línea",
+      "movingSide": "Lado que se mueve",
+      "settings_one": "{{count}} ajuste",
+      "settings_many": "{{count}} ajustes",
+      "settings_other": "{{count}} ajustes",
+      "swap": "Cambiar"
+    }
+  },
   "foldAngleDisplay": {
     "color": "Color",
     "opacity": "Opacidad"
