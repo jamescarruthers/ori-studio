@@ -410,6 +410,69 @@ fn every_sample_imports_to_its_one_order() {
     }
 }
 
+/// An import's step summary is the pattern it brings — its letters, no diff,
+/// no layers — and needs no parent: a pick into an empty sequence lands it
+/// after a sheet it has already let go, and one after a state outlives that
+/// state.
+#[test]
+fn an_import_summarises_as_its_pattern_without_its_parent() {
+    let expect_pattern = |bridge: &Bridge, state: u32, name: &str| {
+        let summarised = match bridge.step_summary(state) {
+            Ok(Outcome::Ok(summarised)) => json_of(&summarised),
+            other => panic!("{name}: {other:?}"),
+        };
+        let held = bridge.state(state).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            summarised["summary"],
+            json!({
+                "counts": json_of(&held.crease_counts()),
+                "diff": { "added": [], "reversed": [], "unfolded": [], "refolded": [] },
+                "layers": null,
+            }),
+            "{name}"
+        );
+        assert!(
+            summarised["summary"]["counts"]["valley"].as_u64() > Some(0),
+            "{name}: its own creases"
+        );
+        let acted = match bridge.step_action(state) {
+            Ok(Outcome::Ok(acted)) => json_of(&acted),
+            other => panic!("{name}: {other:?}"),
+        };
+        assert_eq!(acted["action"], Value::Null, "{name}");
+    };
+
+    for (name, text) in samples() {
+        let sample = CpFile {
+            format: CpFormat::Fold,
+            sample: true,
+        };
+        let (bridge, landed, _) = import_file(sample, &text, StartSide::Front);
+        // The sheet the pick landed it after is gone already.
+        assert_eq!(bridge.len(), 1, "{name}");
+        expect_pattern(&bridge, landed.state, &name);
+    }
+
+    let mut bridge = Bridge::new();
+    let flat = square(&mut bridge);
+    let mut imports = Imports::new();
+    let Ok(Outcome::Ok(opened)) = imports.open(
+        &bridge,
+        CpFile::of(CpFormat::Fold),
+        kite_fold().as_bytes(),
+        Target::After { state: flat },
+        &Limits::default(),
+    ) else {
+        panic!("open");
+    };
+    let choice = vec![0; opened.components.len()];
+    let Ok(Outcome::Ok(picked)) = imports.pick(&mut bridge, opened.import, &choice) else {
+        panic!("pick");
+    };
+    assert!(bridge.release(flat));
+    expect_pattern(&bridge, picked.state, "kite after a released sheet");
+}
+
 // --- Opening and picking through the bridge ----------------------------------
 
 fn paper(value: Value) -> Paper {

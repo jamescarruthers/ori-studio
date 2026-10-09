@@ -670,7 +670,8 @@ pub struct DepthChosen {
 }
 
 /// A step's summary (plan D14): front-relative counts, the crease-pattern
-/// diff and "Layers"; none for the flat sheet.
+/// diff and "Layers"; none for the flat sheet. An import's diff is empty: it
+/// replaces the state before it rather than changing it.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Summarised {
     pub summary: Option<StepSummary>,

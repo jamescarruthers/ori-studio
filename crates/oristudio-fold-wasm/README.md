@@ -27,7 +27,9 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   it, so `step_summary(state)` (counts, the crease-pattern diff, "Layers")
   and `step_action(state)` (the step's picture with the landed cover) are
   asked of the child alone, while its parent is still held
-  (`parent_released` otherwise).
+  (`parent_released` otherwise). An import keeps no parent: it replaces the
+  state, so its summary is the pattern it brings (its counts, an empty diff,
+  no layers) and it has no picture.
 - **The document's shapes in** (`src/wire.rs`). A stored step crosses
   unchanged and resolves in its parent (`src/resolve.rs`) through
   `oristudio-fold`'s anchored folds: a free line through two sheet points'

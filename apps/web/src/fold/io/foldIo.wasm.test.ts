@@ -132,6 +132,20 @@ describe.skipIf(!available)('Import CP and the hand-offs over the built bridge',
       const node = selectFoldCursorNode(session.store.getState());
       expect(node.status, sample.id).toBe('ok');
       expect(node.fingerprint).toBe(jump && 'expect' in jump ? jump.expect : null);
+      // The step on screen is the state the import landed after a sheet of its
+      // own, since let go: its summary is the pattern it brings, which needs none.
+      const summarised = await session.withCursor((engine, state) => engine.stepSummary(state));
+      expect(summarised, sample.id).toMatchObject({
+        status: 'answered',
+        value: {
+          status: 'ok',
+          summary: {
+            counts: { mountain: node.summary?.creases.mountain, valley: node.summary?.creases.valley },
+            diff: { added: [], reversed: [], unfolded: [], refolded: [] },
+            layers: null,
+          },
+        },
+      });
     }
   });
 

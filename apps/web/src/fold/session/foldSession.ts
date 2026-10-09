@@ -785,7 +785,10 @@ export function createFoldSession({
    * A landed import: offered to the replay under the state it was landed
    * after, as a preview is. One that adopts a sheet is offered under the
    * sheet on screen: the same sheet takes it, a new one lands the step again
-   * and the offer is let go when that replay finishes.
+   * and the offer is let go when that replay finishes. The sheet it was
+   * landed after is the engine's own, already let go; an import keeps no
+   * parent (nothing about it is asked of one), so the state stands for the
+   * step as well as one landed after the sheet on screen.
    */
   const commitLandedFrom = (
     { parent, parentId, loadId }: FoldingFrom,
