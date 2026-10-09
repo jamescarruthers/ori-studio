@@ -1419,6 +1419,20 @@
       "sheetHint": "步骤从平整的纸开始：这里没有可删除的步骤。",
       "startsBranch": "开始新的分支"
     },
+    "canvas": {
+      "adds": "虚线：这次折叠新增的折痕",
+      "creasePattern": "折痕图",
+      "creasePatternLabel": "到目前为止的折痕图，正面朝上。单击其中的点和折痕来确定折线。",
+      "folded": "折叠后",
+      "foldedLabel": "折叠后的形状。单击其中的点和折痕来确定折线；拖动以平移，滚动以缩放。",
+      "layers_other": "{{count}} 层",
+      "precreases": "预折痕",
+      "precreasesTitle": "显示平折痕：预折痕和已展开的折叠",
+      "step": "第 {{number}} 步",
+      "stepCreases": "本步折痕",
+      "stepCreasesTitle": "用图解画笔把当前步骤产生的折痕画成该步骤的说明",
+      "toolbar": "折叠视图"
+    },
     "paper": {
       "backUp": "背面朝上",
       "colors": "颜色",

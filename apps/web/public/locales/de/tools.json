@@ -272,6 +272,21 @@
     "ratioTitle": "Die Linie nach einem Verhältnis teilen"
   },
   "fold": {
+    "categoryLabel": "Falt-Arbeitsbereich",
+    "chooser": {
+      "note": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
+    },
+    "divide": {
+      "clear_one": "Die hier gesetzte Markierung entfernen",
+      "clear_other": "Die {{count}} hier gesetzten Markierungen entfernen",
+      "computed": "Berechnetes Verhältnis {{s}} : {{t}}",
+      "count": "Gleiche Teile",
+      "left": "Vom Anfang",
+      "mode": "Teilen",
+      "parts": "Teile",
+      "ratio": "Verhältnis",
+      "right": "Bis zum Ende"
+    },
     "fix": {
       "includeFlap": "Lasche {{number}} einbeziehen",
       "includeFlaps_one": "Die {{count}} Lasche einbeziehen",
@@ -300,6 +315,15 @@
       "model": "Modell",
       "planned": "Geplant",
       "reference": "Bezugspunkte"
+    },
+    "key": {
+      "commit": "Faltung ausführen",
+      "nextRoot": "Nächste Lösung",
+      "previousRoot": "Vorherige Lösung",
+      "swapSide": "Bewegte Seite tauschen"
+    },
+    "latch": {
+      "freePoint": "Freier Punkt"
     },
     "line": {
       "axiom": "Axiom {{number}}: {{phrase}}",
@@ -343,7 +367,8 @@
     },
     "picker": {
       "close": "Werkzeugliste schließen",
-      "title": "Falt-Werkzeuge"
+      "title": "Falt-Werkzeuge",
+      "trigger": "Werkzeuge"
     },
     "plannedReason": "Geplant: noch nicht in Ori Studio.",
     "railLabel": "Falt-Werkzeuge",
@@ -431,6 +456,7 @@
         "title": "Nicht diese Art von Faltlinie"
       }
     },
+    "scopeLabel": "falten",
     "section": {
       "label": "Lagen an der Faltlinie, von oben nach unten",
       "labelWoven": "Lagen an der Faltlinie unter dem Zeiger, von oben nach unten",

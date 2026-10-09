@@ -280,6 +280,22 @@
     "ratioTitle": "Diviser la ligne selon un rapport"
   },
   "fold": {
+    "categoryLabel": "Espace de pliage",
+    "chooser": {
+      "note": "Cet axiome donne ici plus d’un pli. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
+    },
+    "divide": {
+      "clear_one": "Effacer la marque faite ici",
+      "clear_many": "Effacer les {{count}} marques faites ici",
+      "clear_other": "Effacer les {{count}} marques faites ici",
+      "computed": "Rapport calculé {{s}} : {{t}}",
+      "count": "Parts égales",
+      "left": "Depuis le début",
+      "mode": "Diviser",
+      "parts": "Parts",
+      "ratio": "Rapport",
+      "right": "Jusqu’à la fin"
+    },
     "fix": {
       "includeFlap": "Inclure le rabat {{number}}",
       "includeFlaps_one": "Inclure {{count}} rabat",
@@ -312,6 +328,15 @@
       "model": "Modèle",
       "planned": "Prévus",
       "reference": "Points de repère"
+    },
+    "key": {
+      "commit": "Faire le pli",
+      "nextRoot": "Solution suivante",
+      "previousRoot": "Solution précédente",
+      "swapSide": "Inverser le côté qui bouge"
+    },
+    "latch": {
+      "freePoint": "Point libre"
     },
     "line": {
       "axiom": "Axiome {{number}} : {{phrase}}",
@@ -355,7 +380,8 @@
     },
     "picker": {
       "close": "Fermer la liste des outils",
-      "title": "Outils de pliage"
+      "title": "Outils de pliage",
+      "trigger": "Outils"
     },
     "plannedReason": "Prévu : pas encore dans Ori Studio.",
     "railLabel": "Outils de pliage",
@@ -444,6 +470,7 @@
         "title": "Ce n’est pas le bon type de pli"
       }
     },
+    "scopeLabel": "pliage",
     "section": {
       "label": "Couches sur la ligne de pli, de haut en bas",
       "labelWoven": "Couches sur la ligne de pli sous le pointeur, de haut en bas",

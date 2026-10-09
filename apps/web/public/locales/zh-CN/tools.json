@@ -264,6 +264,20 @@
     "ratioTitle": "按比率分割线"
   },
   "fold": {
+    "categoryLabel": "折叠工作区",
+    "chooser": {
+      "note": "此公理在这里给出不止一种折法。逐个查看，或按 Shift+← / Shift+→。"
+    },
+    "divide": {
+      "clear_other": "清除在这里做的 {{count}} 个标记",
+      "computed": "计算比率 {{s}} : {{t}}",
+      "count": "等分",
+      "left": "从起点",
+      "mode": "等分方式",
+      "parts": "份数",
+      "ratio": "比率",
+      "right": "到终点"
+    },
     "fix": {
       "includeFlap": "包含翼片 {{number}}",
       "includeFlaps_other": "包含这 {{count}} 个翼片",
@@ -288,6 +302,15 @@
       "model": "模型",
       "planned": "计划中",
       "reference": "参考点"
+    },
+    "key": {
+      "commit": "完成折叠",
+      "nextRoot": "下一个解",
+      "previousRoot": "上一个解",
+      "swapSide": "交换移动的一侧"
+    },
+    "latch": {
+      "freePoint": "自由点"
     },
     "line": {
       "axiom": "公理 {{number}}：{{phrase}}",
@@ -331,7 +354,8 @@
     },
     "picker": {
       "close": "关闭工具列表",
-      "title": "折叠工具"
+      "title": "折叠工具",
+      "trigger": "工具"
     },
     "plannedReason": "计划中：Ori Studio 尚未提供。",
     "railLabel": "折叠工具",
@@ -418,6 +442,7 @@
         "title": "折痕类型不对"
       }
     },
+    "scopeLabel": "折叠",
     "section": {
       "label": "折线处的层，从上到下",
       "labelWoven": "指针下折线处的层，从上到下",

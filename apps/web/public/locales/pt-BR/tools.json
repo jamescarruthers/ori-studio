@@ -280,6 +280,22 @@
     "ratioTitle": "Dividir a linha por uma proporção"
   },
   "fold": {
+    "categoryLabel": "Espaço de dobra",
+    "chooser": {
+      "note": "Este axioma dá mais de uma dobra aqui. Percorra-as ou pressione Shift+← / Shift+→."
+    },
+    "divide": {
+      "clear_one": "Apagar a marca feita aqui",
+      "clear_many": "Apagar as {{count}} marcas feitas aqui",
+      "clear_other": "Apagar as {{count}} marcas feitas aqui",
+      "computed": "Proporção calculada {{s}} : {{t}}",
+      "count": "Partes iguais",
+      "left": "Desde o início",
+      "mode": "Dividir",
+      "parts": "Partes",
+      "ratio": "Proporção",
+      "right": "Até o fim"
+    },
     "fix": {
       "includeFlap": "Incluir a aba {{number}}",
       "includeFlaps_one": "Incluir {{count}} aba",
@@ -312,6 +328,15 @@
       "model": "Modelo",
       "planned": "Planejados",
       "reference": "Pontos de referência"
+    },
+    "key": {
+      "commit": "Fazer a dobra",
+      "nextRoot": "Solução seguinte",
+      "previousRoot": "Solução anterior",
+      "swapSide": "Trocar o lado que se move"
+    },
+    "latch": {
+      "freePoint": "Ponto livre"
     },
     "line": {
       "axiom": "Axioma {{number}}: {{phrase}}",
@@ -355,7 +380,8 @@
     },
     "picker": {
       "close": "Fechar a lista de ferramentas",
-      "title": "Ferramentas de dobra"
+      "title": "Ferramentas de dobra",
+      "trigger": "Ferramentas"
     },
     "plannedReason": "Planejado: ainda não está no Ori Studio.",
     "railLabel": "Ferramentas de dobra",
@@ -444,6 +470,7 @@
         "title": "Não é esse tipo de vinco"
       }
     },
+    "scopeLabel": "dobra",
     "section": {
       "label": "Camadas na linha de dobra, de cima para baixo",
       "labelWoven": "Camadas na linha de dobra sob o ponteiro, de cima para baixo",

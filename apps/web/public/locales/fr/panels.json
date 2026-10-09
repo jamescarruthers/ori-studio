@@ -1519,6 +1519,22 @@
       "sheetHint": "La feuille à plat est le point de départ des étapes\u00a0: il n’y a pas d’étape à supprimer.",
       "startsBranch": "Commence une nouvelle branche"
     },
+    "canvas": {
+      "adds": "En tirets : les plis que ce pliage ajoute",
+      "creasePattern": "Patron de plis",
+      "creasePatternLabel": "Le patron de plis jusqu’ici, recto en haut. Cliquez sur ses points et ses plis pour situer un pliage.",
+      "folded": "Plié",
+      "foldedLabel": "La forme pliée. Cliquez sur ses points et ses plis pour situer un pliage ; faites glisser pour vous déplacer, défilez pour zoomer.",
+      "layers_one": "{{count}} couche",
+      "layers_many": "{{count}} couches",
+      "layers_other": "{{count}} couches",
+      "precreases": "Prépliages",
+      "precreasesTitle": "Afficher les plis à plat : prépliages et plis défaits",
+      "step": "Étape {{number}}",
+      "stepCreases": "Plis de l’étape",
+      "stepCreasesTitle": "Dessiner les plis faits par l’étape affichée comme son instruction, avec les stylos du diagramme",
+      "toolbar": "Vue de pliage"
+    },
     "paper": {
       "backUp": "Verso dessus",
       "colors": "Couleurs",

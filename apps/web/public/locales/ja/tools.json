@@ -264,6 +264,20 @@
     "ratioTitle": "線を比率で分割します"
   },
   "fold": {
+    "categoryLabel": "折りワークスペース",
+    "chooser": {
+      "note": "この公理はここで複数の折りを与えます。順に切り替えるか、Shift+← / Shift+→ を押します。"
+    },
+    "divide": {
+      "clear_other": "ここで付けた {{count}} 個の印を消す",
+      "computed": "計算された比率 {{s}} : {{t}}",
+      "count": "等分",
+      "left": "始点から",
+      "mode": "分割",
+      "parts": "分割数",
+      "ratio": "比率",
+      "right": "終点まで"
+    },
     "fix": {
       "includeFlap": "フラップ {{number}} を含める",
       "includeFlaps_other": "{{count}} 個のフラップを含める",
@@ -288,6 +302,15 @@
       "model": "モデル",
       "planned": "予定",
       "reference": "基準点"
+    },
+    "key": {
+      "commit": "折りを確定",
+      "nextRoot": "次の解",
+      "previousRoot": "前の解",
+      "swapSide": "動く側を入れ替え"
+    },
+    "latch": {
+      "freePoint": "自由な点"
     },
     "line": {
       "axiom": "公理 {{number}}：{{phrase}}",
@@ -331,7 +354,8 @@
     },
     "picker": {
       "close": "ツール一覧を閉じる",
-      "title": "折りツール"
+      "title": "折りツール",
+      "trigger": "ツール"
     },
     "plannedReason": "予定：まだ Ori Studio にはありません。",
     "railLabel": "折りツール",
@@ -418,6 +442,7 @@
         "title": "この種類の折り線ではありません"
       }
     },
+    "scopeLabel": "折り",
     "section": {
       "label": "折り線の位置の層（上から下）",
       "labelWoven": "ポインター位置の折り線上の層（上から下）",
