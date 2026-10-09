@@ -284,6 +284,53 @@ impl LayerOrder {
     }
 }
 
+/// A new [`LayerOrder`] set pair by pair, as [`LayerOrder::set_above`] and
+/// [`LayerOrder::set_undetermined`] set one, and built at the end in one
+/// sort rather than a tree insertion per pair: a fold sets thousands at once.
+/// The same calls refuse the same pairs, and a later entry for a pair still
+/// replaces an earlier one.
+#[derive(Debug, Clone, Default)]
+pub struct LayerOrderBuilder {
+    entries: Vec<(FacePair, Option<bool>)>,
+}
+
+impl LayerOrderBuilder {
+    pub fn with_capacity(pairs: usize) -> LayerOrderBuilder {
+        LayerOrderBuilder {
+            entries: Vec::with_capacity(pairs),
+        }
+    }
+
+    /// [`LayerOrder::set_above`].
+    pub fn set_above(&mut self, upper: FaceId, lower: FaceId) -> Result<(), LayerOrderError> {
+        let pair = FacePair::new(upper, lower).ok_or(LayerOrderError::SameFace(upper))?;
+        self.entries.push((pair, Some(pair.lo == upper)));
+        Ok(())
+    }
+
+    /// [`LayerOrder::set_undetermined`].
+    pub fn set_undetermined(&mut self, a: FaceId, b: FaceId) -> Result<(), LayerOrderError> {
+        let pair = FacePair::new(a, b).ok_or(LayerOrderError::SameFace(a))?;
+        self.entries.push((pair, None));
+        Ok(())
+    }
+
+    pub fn build(mut self) -> LayerOrder {
+        // Stable, so a pair's entries keep their order and the last is kept.
+        self.entries.sort_by_key(|&(pair, _)| pair);
+        let mut kept: Vec<(FacePair, Option<bool>)> = Vec::with_capacity(self.entries.len());
+        for entry in self.entries {
+            match kept.last_mut() {
+                Some(last) if last.0 == entry.0 => *last = entry,
+                _ => kept.push(entry),
+            }
+        }
+        LayerOrder {
+            pairs: kept.into_iter().collect(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -325,6 +372,35 @@ mod tests {
         assert!(order.remove(f(5), f(2)));
         assert!(!order.remove(f(5), f(2)));
         assert!(order.is_empty());
+    }
+
+    /// A builder gives what the same calls on an order give: pairs set in
+    /// any order, set again either way round or left open, and the same
+    /// refusal.
+    #[test]
+    fn a_builder_sets_pairs_as_an_order_does() {
+        let mut state = 0x5eed_u64;
+        let mut next = |n: u64| {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (state >> 33) % n
+        };
+        let mut order = LayerOrder::new();
+        let mut builder = LayerOrderBuilder::with_capacity(4000);
+        for _ in 0..4000 {
+            let (a, b) = (f(next(60) as u32), f(next(60) as u32));
+            let undetermined = next(10) == 0;
+            let (set, built) = if undetermined {
+                (order.set_undetermined(a, b), builder.set_undetermined(a, b))
+            } else {
+                (order.set_above(a, b), builder.set_above(a, b))
+            };
+            assert_eq!(set, built);
+        }
+        assert!(order.len() > 1000);
+        assert_eq!(builder.build(), order);
+        assert_eq!(LayerOrderBuilder::default().build(), LayerOrder::new());
     }
 
     #[test]
