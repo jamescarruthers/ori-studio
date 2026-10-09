@@ -34,7 +34,7 @@ function viewOf(document: FoldSequenceDocument, path: string[], readOnly = false
     words: [],
     cursor: 0,
     pending: null,
-    progress: { replaying: false, activeSettled: 0, activeTotal: 0, settled: 0, total: 0 },
+    progress: { replaying: false, activeSettled: 0, activeTotal: 0, settled: 0, total: 0, done: true },
     failed: false,
   };
 }
