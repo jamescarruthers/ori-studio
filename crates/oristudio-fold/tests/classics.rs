@@ -150,8 +150,8 @@ impl Recorder {
             }
             return;
         }
-        // Compared as text: serde_json's default float parsing is not exact
-        // to the last bit, its printing is.
+        // Compared as text, so a pass means blessing would leave the file
+        // byte for byte as it is, field order and layout included.
         let stored = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("{}: {e} (bless to create it)", path.display()));
         assert!(

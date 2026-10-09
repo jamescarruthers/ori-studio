@@ -151,13 +151,25 @@ describe('the Fold slice', () => {
   it('marks a step or the sheet as one undo step each, and clears them', () => {
     const { a } = foldTwo();
     const mark: FoldMark = { id: 'fmark-1', from: [0, 0], to: [1, 0], divide: { mode: 'count', parts: 3 } };
+    const another: FoldMark = { id: 'fmark-2', from: [0, 0], to: [0, 1], divide: { mode: 'count', parts: 2 } };
+    const past = state().foldHistory.past.length;
 
     expect(state().setFoldMarks(null, [mark])).toBe(true);
     expect(state().setFoldMarks(a, [mark])).toBe(true);
+    // A second mark on the same step, as the Divide line appends it, is an entry of its own.
+    expect(state().setFoldMarks(a, [mark, another])).toBe(true);
+    expect(state().foldHistory.past).toHaveLength(past + 3);
     expect(shown().sheetMarks).toEqual([mark]);
-    expect(shown().steps[0]).toMatchObject({ marks: [mark] });
+    expect(shown().steps[0]).toMatchObject({ marks: [mark, another] });
+
+    // Clearing every mark made on a step is one entry, and one undo brings them all back.
     expect(state().setFoldMarks(a, [])).toBe(true);
+    expect(state().foldHistory.past).toHaveLength(past + 4);
     expect(shown().steps[0]).not.toHaveProperty('marks');
+    expect(state().undoFold()).toBe(true);
+    expect(shown().steps[0]).toMatchObject({ marks: [mark, another] });
+    expect(state().undoFold()).toBe(true);
+    expect(shown().steps[0]).toMatchObject({ marks: [mark] });
   });
 
   it('changes the shape as one undo step that empties the steps, and the reader goes to the sheet', () => {

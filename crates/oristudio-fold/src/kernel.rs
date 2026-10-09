@@ -37,11 +37,10 @@
 //! million random points). [`KernelFrame::to_model`] applies that rounding
 //! once; it is idempotent, so every coordinate it leaves is one the reader
 //! maps to itself and the kernel's FOLD writer and reader return the model to
-//! the bit. FOLD *text* adds one more rounding outside this crate: without its
-//! `float_roundtrip` feature, which the workspace does not enable,
-//! `serde_json` parses about one printed coordinate in eight an ulp away. The
-//! kernel welds points within `Epsilon::POINT` (2.5e-4 model units), about
-//! 10⁹ ulps, so nothing downstream can see it.
+//! the bit. So does FOLD *text*: `serde_json` prints each coordinate as the
+//! shortest string that reads back to it, and the workspace enables its
+//! `float_roundtrip` feature (root `Cargo.toml`), which parses that string to
+//! the same `f64`. `tests/kernel.rs` asserts both round trips exactly.
 
 use oristudio_cp::geometry::{FoldDirection, LineColor, LineSegment, Point as KernelPoint};
 use oristudio_cp::model::CreasePatternModel;

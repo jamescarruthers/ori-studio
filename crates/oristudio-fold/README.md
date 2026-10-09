@@ -205,9 +205,9 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
 - `tests/kernel.rs`: every state of the classics, a dyadic path and seeded
   random paths (square, rectangles, polygons) converts with one segment per
   crease and comes back equal, coordinates to the bit, through the kernel's
-  FOLD writer and reader; through FOLD text, within `serde_json`'s default
-  float parsing (one ulp seen), and to the bit on the dyadic path. The
-  folding colours of all 228 folded states fold to `Solved` in Oriedita.
+  FOLD writer and reader, and through FOLD text too (the workspace enables
+  `serde_json`'s `float_roundtrip`). The folding colours of all 228 folded
+  states fold to `Solved` in Oriedita.
 - `tests/fold_export.rs`: the root against the kernel writer and Edit's
   opener; every step frame against its state (vertices, edges, letters,
   rings); `faceOrders` against FOLD's rule read off the frame's own winding;
