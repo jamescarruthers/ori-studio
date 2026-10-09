@@ -228,7 +228,11 @@ fn queries_on_a_handle_answer_in_plain_objects() {
         "via": "axiom", "axiom": 2,
         "inputs": [{ "kind": "point", "at": [1.0, 0.0] }, { "kind": "point", "at": [0.0, 1.0] }]
     });
-    let candidates = json_of(engine.axiom_candidates(sheet, js(o2.clone())).expect("candidates"));
+    let candidates = json_of(
+        engine
+            .axiom_candidates(sheet, js(o2.clone()))
+            .expect("candidates"),
+    );
     assert_eq!(candidates["status"], "ok", "{candidates}");
     let root = candidates["candidates"][0]["line"].clone();
     let triangle = json!({ "kind": "valley", "line": o2, "seed": { "scope": "all" } });

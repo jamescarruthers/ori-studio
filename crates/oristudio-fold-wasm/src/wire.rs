@@ -628,10 +628,16 @@ pub struct Applied {
     pub summary: Summary,
 }
 
-/// A fold's picture on the state it starts from (plan D12, per step); none
-/// for a step that folds nothing.
+/// A fold's picture on the state it starts from (plan D12, per step).
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Acted {
+    pub action: FoldActionGeometry,
+}
+
+/// The picture of the step that landed a state; none for a step that folds
+/// nothing, or for the sheet.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct StepActed {
     pub action: Option<FoldActionGeometry>,
 }
 

@@ -23,11 +23,11 @@ use oristudio_geometry::Line;
 
 use crate::canonical::canonical_keys;
 use crate::joins::section_joins;
-use crate::resolve::{Rejection, Resolved, finite_point, model_line, resolve};
+use crate::resolve::{Rejection, Resolved, axiom_of, finite_point, model_line, resolve};
 use crate::wire::{
     Acted, Analysed, Applied, BridgeError, Candidates, Choices, CreaseCounts, DepthChosen, Fix,
-    LineInput, Op, Outcome, Paper, Point, Refusal, Section, Sectioned, SheetMade, StoredStep,
-    Summarised, Summary, TopVisible,
+    LineInput, Op, Outcome, Paper, Point, Refusal, Section, Sectioned, SheetMade, StepActed,
+    StoredStep, Summarised, Summary, TopVisible,
 };
 
 /// Every landed state the caller still holds.
@@ -114,9 +114,7 @@ impl Bridge {
                     .fold_action(&analysis, kind, None)
                     .map_err(Refusal::from)
             })
-            .map(|action| Acted {
-                action: Some(action),
-            })
+            .map(|action| Acted { action })
             .into())
     }
 
@@ -182,7 +180,7 @@ impl Bridge {
                     .to_string(),
             ));
         };
-        let axiom = crate::resolve::axiom_of(*axiom, inputs)?;
+        let axiom = axiom_of(*axiom, inputs)?;
         Ok(parent
             .axiom_candidates(&axiom)
             .map(|candidates| Candidates { candidates })
@@ -273,7 +271,7 @@ impl Bridge {
     /// The picture of the step that landed `state` (plan D12, per step), on
     /// its parent with the landed state's cover at the arrow's head. None for
     /// a flat sheet, a turn or a rotation. The parent must still be held.
-    pub fn step_action(&self, state: u32) -> Result<Outcome<Acted>, BridgeError> {
+    pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
             Held::Sheet(_) | Held::View { .. } => Ok(None),
             Held::Fold {
@@ -285,7 +283,7 @@ impl Bridge {
                 .map(Some)
                 .map_err(Refusal::from),
         };
-        Ok(action.map(|action| Acted { action }).into())
+        Ok(action.map(|action| StepActed { action }).into())
     }
 
     /// The state's scene (plan D12).
