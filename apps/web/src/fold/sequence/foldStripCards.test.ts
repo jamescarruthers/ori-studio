@@ -83,8 +83,10 @@ describe('foldStripCards', () => {
     // The path goes on after it, numbered as it was.
     expect(branch.cards[4]?.number).toBe(2);
 
-    const refused = strip(OK, 4, { refused: true, words: TURN, picture: null, branch: false });
+    const refused = strip(OK, 4, { refused: true, words: TURN, picture: null, branch: true });
     expect(refused.cards[5]).toMatchObject({ number: null, kind: 'turn-over', badge: 'Blocked', state: 'blocked' });
+    // It will be nothing once committed: there is nothing to commit.
+    expect(refused.cards[5]).not.toHaveProperty('tag');
   });
 
   it('says a polygon sheet by its sides, and the back up', () => {

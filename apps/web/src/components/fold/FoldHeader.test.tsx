@@ -114,6 +114,26 @@ describe('FoldHeader', () => {
     expect(button('Import CP…')).toMatchObject({ disabled: true, title: 'Import CP needs a square or rectangle sheet.' });
   });
 
+  it('gives Import CP and Send to Edit their icons alone on a phone, named by their labels', async () => {
+    const { PHONE_MEDIA_QUERY } = await import('../../platform/phoneLayout');
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === PHONE_MEDIA_QUERY,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }))
+    );
+    const bound = render({});
+    const importCp = host.querySelector<HTMLButtonElement>('button[aria-label="Import CP…"]');
+    expect(importCp?.textContent).toBe('');
+    act(() => importCp?.click());
+    expect(bound.importCp).toHaveBeenCalledOnce();
+    expect(host.querySelector('button[aria-label="Send to Edit"]')).not.toBeNull();
+    // The export keeps its words: it is the header's one primary verb.
+    expect(button('Export FOLD…')).toBeDefined();
+  });
+
   it('seats the phone’s pane switch beside the drawer’s slot', () => {
     render({ paneToggle: <button type="button">Crease pattern</button> });
     expect(button('Crease pattern')).toBeDefined();

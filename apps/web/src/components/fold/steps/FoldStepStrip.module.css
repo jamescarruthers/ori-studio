@@ -3,6 +3,12 @@
   display: contents;
 }
 
+/* The picture, inset from the card's corners, where its number and badge sit. */
+.picture {
+  box-sizing: border-box;
+  padding: 16% 10% 10%;
+}
+
 /* A card whose step has no state to draw: still folding, or not foldable. */
 .blank {
   display: block;

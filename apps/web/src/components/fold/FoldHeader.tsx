@@ -6,16 +6,35 @@ import type { FoldView } from '../../fold/sequence/foldViewMode';
 import { stepCountLabel } from '../../fold/sequence/foldSequenceWords';
 import { useIsPhoneLayout } from '../../platform/phoneLayout';
 import { Button } from '../ui/Button';
+import { IconButton } from '../ui/IconButton';
 import { SplitButton } from '../ui/SplitButton';
 import { TouchHistoryButtons } from '../ui/TouchHistoryButtons';
 import { WorkspaceTab, WorkspaceTabStrip } from '../ui/WorkspaceTabStrip';
 import { FoldActionIcon } from './FoldActionIcon';
 import styles from './FoldHeader.module.css';
 
-/** A catalog command as a header button: its icon, label and gating. */
-function CommandButton({ command, variant = 'secondary' }: { command: FoldCommand; variant?: 'primary' | 'secondary' }) {
+/**
+ * A catalog command as a header button: its icon, label and gating. On a
+ * phone its icon alone, named by its label — three verbs, undo and redo and
+ * the drawer's pill are wider together than the screen.
+ */
+function CommandButton({ command, compact }: { command: FoldCommand; compact: boolean }) {
+  if (compact) {
+    return (
+      <IconButton
+        size="sm"
+        variant="toolbar"
+        aria-label={command.label}
+        title={command.hint ?? command.label}
+        disabled={command.disabled}
+        onClick={command.run}
+      >
+        <FoldActionIcon icon={command.icon} size={15} />
+      </IconButton>
+    );
+  }
   return (
-    <Button size="sm" variant={variant} disabled={command.disabled} title={command.hint} onClick={command.run}>
+    <Button size="sm" variant="secondary" disabled={command.disabled} title={command.hint} onClick={command.run}>
       <FoldActionIcon icon={command.icon} />
       {command.label}
     </Button>
@@ -89,8 +108,8 @@ export function FoldHeader({
       </div>
       <div className={`panel-toolbar__group ${styles.actions}`}>
         <TouchHistoryButtons />
-        {importCp && <CommandButton command={importCp} />}
-        {sendToEdit && <CommandButton command={sendToEdit} />}
+        {importCp && <CommandButton command={importCp} compact={phone} />}
+        {sendToEdit && <CommandButton command={sendToEdit} compact={phone} />}
         {exportFold && (
           <SplitButton
             size="sm"

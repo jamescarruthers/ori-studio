@@ -18,7 +18,7 @@ import styles from './FoldStepStrip.module.css';
  */
 function renderStepPicture(card: FoldStripCard) {
   return card.picture ? (
-    <DiagramSheetThumbnail thumbnail={card.picture} />
+    <DiagramSheetThumbnail thumbnail={card.picture} className={styles.picture} />
   ) : (
     <span className={styles.blank} data-fold-picture="none" />
   );

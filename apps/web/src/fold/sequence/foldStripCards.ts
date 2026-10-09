@@ -119,7 +119,8 @@ export function foldStripCards(
     sentence: foldStepSentence(t, pending.words),
     ways: null,
     state: pending.refused ? 'blocked' : pending.branch ? 'new-branch' : 'preview',
-    tag: pendingTag(t, pending.branch),
+    // What it will be once committed; a refused one will not be.
+    ...(pending.refused ? {} : { tag: pendingTag(t, pending.branch) }),
     entry: null,
     picture: pending.refused ? null : pending.picture,
   });
