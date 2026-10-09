@@ -37,6 +37,7 @@
 
 pub mod motion;
 pub mod reverse;
+pub mod reverse_step;
 
 use std::collections::BTreeSet;
 
