@@ -24,8 +24,8 @@ import {
   type TextStyle,
 } from './textStyle';
 import { cjkRunAdvance, labelAdvance } from './labelAdvances';
-import type { DiagramWhiteArrowFill, DiagramWhiteArrowWidth } from '../../cp-workspace/references/diagram/diagramInk';
-import type { WhiteArrowTail } from '../../cp-workspace/references/stepDiagramGeometry';
+import type { DiagramWhiteArrowFill, DiagramWhiteArrowWidth } from '../../lib/stepDiagram/diagramInk';
+import type { WhiteArrowTail } from '../../lib/stepDiagram/stepDiagramGeometry';
 import {
   randomDiagramId,
   type DiagramTicks,

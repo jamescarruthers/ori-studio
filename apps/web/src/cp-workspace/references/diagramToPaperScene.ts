@@ -42,17 +42,17 @@ import {
   createDiagramRenderContext,
   diagramShapes,
   type DiagramRenderContext,
-} from './diagram/DiagramPrimitives';
-import { diagramInlineInk, type DiagramMarkupTokens } from './diagram/diagramColors';
-import { placeLabels, type LabelLayoutOptions, type LabelPlacement } from './diagram/labelLayout';
-import { penInk } from './diagram/diagramInk';
-import { isDiagramMark, markReach } from './diagram/markReach';
-import { seenFromTheBack } from './diagram/diagramModel';
+} from '../../lib/stepDiagram/DiagramPrimitives';
+import { diagramInlineInk, type DiagramMarkupTokens } from '../../lib/stepDiagram/diagramColors';
+import { placeLabels, type LabelLayoutOptions, type LabelPlacement } from '../../lib/stepDiagram/labelLayout';
+import { penInk } from '../../lib/stepDiagram/diagramInk';
+import { isDiagramMark, markReach } from '../../lib/stepDiagram/markReach';
+import { seenFromTheBack } from '../../lib/stepDiagram/diagramModel';
 import type {
   DiagramLineStyleName,
   StepDiagramModel,
   StepDiagramPrimitive,
-} from './referenceFinderDiagramToPrimitives';
+} from '../../lib/stepDiagram/stepDiagramModel';
 import {
   DIAGRAM_PADDING,
   arcExtremes,
@@ -62,7 +62,7 @@ import {
   withPens,
   type DiagramProjector,
   type SheetPoint,
-} from './stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 
 export interface DiagramToPaperSceneOptions {
   /** The style the step is painted in, before the surface's policy. */

@@ -17,7 +17,7 @@ import {
   divisionsStrokes,
   rightAnglePathData,
   type SvgPoint,
-} from '../../cp-workspace/references/stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 import { pathNodesOf, pathNodesPolyline, visiblePathHandles } from '../../diagram/annotate/annotationPath';
 import { annotationDrawing } from '../../diagram/annotate/annotationPrimitives';
 import { useCloseUpInsides } from '../../diagram/annotate/useCloseUpInsides';

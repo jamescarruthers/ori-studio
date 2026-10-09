@@ -6,8 +6,8 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useThemeStore } from '../../store/themeStore';
 import { REFERENCE_COLORS } from '../../themes/applyTheme';
 import { referencesCreaseAlpha } from '../../themes/referencesInk';
-import type { DiagramCreaseOptions } from './diagram/DiagramPrimitives';
-import type { DiagramMarkupTokens } from './diagram/diagramColors';
+import type { DiagramCreaseOptions } from '../../lib/stepDiagram/DiagramPrimitives';
+import type { DiagramMarkupTokens } from '../../lib/stepDiagram/diagramColors';
 import {
   canvasDiagramInk,
   canvasDiagramPens,
@@ -15,7 +15,7 @@ import {
   CP_CREASE_WIDTH_FACTOR,
   withReferencesViewFloors,
   type DiagramPens,
-} from './diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import { referencesShowsAux } from './referencesAuxCreases';
 
 /**

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PAPER_STYLE, type PaperStyle } from '../../../lib/paper/paperStyle';
-import { PT_PER_CSS_PX, PT_PER_MM } from '../../../lib/paper/paperSvg';
-import { MAX_DASH_SLOTS } from '../../renderer/types';
-import { ARROWHEAD_ASPECT } from '../stepDiagramGeometry';
+import { DEFAULT_PAPER_STYLE, type PaperStyle } from '../paper/paperStyle';
+import { PT_PER_CSS_PX, PT_PER_MM } from '../paper/paperSvg';
+import { MAX_DASH_SLOTS } from '../../cp-workspace/renderer/types';
+import { ARROWHEAD_ASPECT } from './stepDiagramGeometry';
 
 /** The defaults with solid folds: the Default preset dashes them. */
 const SOLID_FOLDS: PaperStyle = {

@@ -10,13 +10,13 @@
  * A colour changed in one place and not the other shows up the moment a card
  * and the view are on screen together, which is always.
  */
-import { parseCssColor, readCssVarColor, readCssVarNumber } from '../../renderer/cssColor';
-import type { Rgba } from '../../renderer/types';
-import { referencesGroundInk } from '../../../themes/referencesInk';
+import { parseCssColor, readCssVarColor, readCssVarNumber } from '../../cp-workspace/renderer/cssColor';
+import type { Rgba } from '../../cp-workspace/renderer/types';
+import { referencesGroundInk } from '../../themes/referencesInk';
 import type {
   DiagramLineStyleName,
   DiagramPointStyleName,
-} from '../referenceFinderDiagramToPrimitives';
+} from './stepDiagramModel';
 import type { DiagramInkColors } from './diagramToScene';
 
 /**

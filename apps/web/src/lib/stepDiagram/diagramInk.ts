@@ -24,8 +24,8 @@
  * `diagramInk.test.ts`, which pins every value against the stylesheet it came
  * from.
  */
-import type { Pen } from '../../../lib/paper/paperStyle';
-import type { DiagramLineStyleName } from '../referenceFinderDiagramToPrimitives';
+import type { Pen } from '../paper/paperStyle';
+import type { DiagramLineStyleName } from './stepDiagramModel';
 
 /** One ink, as a share of the sheet's longer side. */
 export const DIAGRAM_INK_PER_SHEET = 1 / 96;

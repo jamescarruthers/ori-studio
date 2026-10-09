@@ -24,8 +24,8 @@
  * margin it was aimed at empty. The canvas's projector is a camera, which is
  * the same argument again.
  */
-import type { StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';
-import type { DiagramProjector, DiagramSheet, SvgPoint } from '../stepDiagramGeometry';
+import type { StepDiagramPrimitive } from './stepDiagramModel';
+import type { DiagramProjector, DiagramSheet, SvgPoint } from './stepDiagramGeometry';
 import { DIAGRAM_LABEL_INK, DIAGRAM_MARK_INK, labelWidth } from './diagramInk';
 
 export interface Rect {

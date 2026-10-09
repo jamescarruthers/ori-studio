@@ -10,7 +10,7 @@ import {
   DIAGRAM_LINE_INK,
   diagramDashPatterns,
   diagramDashSlot,
-} from './diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
 import {
   applyCreaseVisibility,

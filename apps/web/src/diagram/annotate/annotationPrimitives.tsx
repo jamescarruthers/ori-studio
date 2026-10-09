@@ -69,16 +69,16 @@ import {
   labelOnPaper,
   strokeAttributes,
   type DiagramRenderContext,
-} from '../../cp-workspace/references/diagram/DiagramPrimitives';
-import type { StepDiagramPrimitive } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
-import { diagramInlineInk, type DiagramInlineInk } from '../../cp-workspace/references/diagram/diagramColors';
-import { markRingWidth } from '../../cp-workspace/references/diagram/labelLayout';
-import { markReach, type DiagramMarkPrimitive } from '../../cp-workspace/references/diagram/markReach';
+} from '../../lib/stepDiagram/DiagramPrimitives';
+import type { StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramModel';
+import { diagramInlineInk, type DiagramInlineInk } from '../../lib/stepDiagram/diagramColors';
+import { markRingWidth } from '../../lib/stepDiagram/labelLayout';
+import { markReach, type DiagramMarkPrimitive } from '../../lib/stepDiagram/markReach';
 import {
   canvasDiagramInk,
   canvasDiagramPens,
   penInk,
-} from '../../cp-workspace/references/diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import {
   arcThroughPoints,
   createOverlayProjector,
@@ -86,7 +86,7 @@ import {
   strokePieces,
   type HiddenStretches,
   type PathArrowFold,
-} from '../../cp-workspace/references/stepDiagramGeometry';
+} from '../../lib/stepDiagram/stepDiagramGeometry';
 import { referencesPaperTokens } from '../../cp-workspace/references/usePaperStyleTokens';
 import type { PaperItem, PaperLineItem, PaperLineRole, PaperScene } from '../../lib/paper/paperScene';
 import { mmToCssPx, penForRole } from '../../lib/paper/paperSvg';

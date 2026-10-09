@@ -8,13 +8,13 @@ import {
   pathTangentAt,
   type Cubic,
   type Vec2,
-} from '../../lib/cubicBezier';
+} from '../cubicBezier';
 import {
   DIAGRAM_PUSH_INK,
   DIAGRAM_WHITE_ARROW_INK,
   canvasDiagramInk,
   type DiagramWhiteArrowWidth,
-} from './diagram/diagramInk';
+} from './diagramInk';
 import {
   createOverlayProjector,
   outlineDistance,

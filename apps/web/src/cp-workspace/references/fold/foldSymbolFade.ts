@@ -12,8 +12,8 @@
 import type { FoldPose } from '../../../lib/foldMotion/foldPlayback';
 import type { Point } from '../../../lib/geometry';
 import { sideOf } from '../diagram/plannerDiagram';
-import type { StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';
-import { arcSamplePoints } from '../stepDiagramGeometry';
+import type { StepDiagramPrimitive } from '../../../lib/stepDiagram/stepDiagramModel';
+import { arcSamplePoints } from '../../../lib/stepDiagram/stepDiagramGeometry';
 import type { FoldFlapScene, FoldScene } from './foldScene';
 
 /** The swing by which a symbol on the moving paper has faded out entirely. */

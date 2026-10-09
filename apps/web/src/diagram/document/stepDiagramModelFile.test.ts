@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { StepDiagramModel } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
 import { referencesStrip } from './referencesSteps.fixtures';
 import {
   STEP_DIAGRAM_MAX_ARROWS,

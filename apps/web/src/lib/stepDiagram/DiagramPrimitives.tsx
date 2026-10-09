@@ -4,7 +4,7 @@ import type {
   DiagramSheet,
   SheetPoint,
   SvgPoint,
-} from '../stepDiagramGeometry';
+} from './stepDiagramGeometry';
 import {
   HIDDEN_STROKE_DASH,
   ROTATE_FRACTION,
@@ -44,12 +44,12 @@ import {
   turnOverDrawn,
   whiteArrowDrawn,
   WHITE_ARROW_MITER_LIMIT,
-} from '../stepDiagramGeometry';
+} from './stepDiagramGeometry';
 import type {
   DiagramLineStyleName,
   StepDiagramPrimitive,
-} from '../referenceFinderDiagramToPrimitives';
-import { centredDashOffset } from '../../../lib/paper/paperSvg';
+} from './stepDiagramModel';
+import { centredDashOffset } from '../paper/paperSvg';
 import type { DiagramInlineInk, DiagramInlineStroke } from './diagramColors';
 import {
   DIAGRAM_LABEL_INK,

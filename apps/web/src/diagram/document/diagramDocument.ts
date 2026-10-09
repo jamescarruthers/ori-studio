@@ -21,9 +21,9 @@ import type {
   LayerSpreadOptions,
   SpreadKind,
 } from '../../cp-workspace/folded/foldedLayerSpread';
-import type { DiagramWhiteArrowWidth } from '../../cp-workspace/references/diagram/diagramInk';
-import type { StepDiagramModel } from '../../cp-workspace/references/referenceFinderDiagramToPrimitives';
-import type { WhiteArrowTail } from '../../cp-workspace/references/stepDiagramGeometry';
+import type { DiagramWhiteArrowWidth } from '../../lib/stepDiagram/diagramInk';
+import type { StepDiagramModel } from '../../lib/stepDiagram/stepDiagramModel';
+import type { WhiteArrowTail } from '../../lib/stepDiagram/stepDiagramGeometry';
 import type { RegionReference } from '../../cp-workspace/regions/regionReference';
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import { randomId, type IdFactory } from '../../lib/documentFile';

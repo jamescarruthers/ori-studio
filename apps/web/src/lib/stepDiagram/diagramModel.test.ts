@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { StepDiagramPrimitive } from '../referenceFinderDiagramToPrimitives';
+import type { StepDiagramPrimitive } from './stepDiagramModel';
 import { flipDirection, seenFromTheBack } from './diagramModel';
 
 /**

@@ -24,17 +24,17 @@ import {
   DIAGRAM_ARROWHEAD_INK,
   DIAGRAM_LABEL_INK,
   DIAGRAM_MARK_INK,
-} from './diagram/diagramInk';
+} from '../../lib/stepDiagram/diagramInk';
 import type { PaperExportTarget } from '../../paperExport/paperExportTarget';
 import { diagramScenePaintStyle } from './diagramToPaperScene';
-import type { StepDiagramModel, StepDiagramPrimitive } from './referenceFinderDiagramToPrimitives';
+import type { StepDiagramModel, StepDiagramPrimitive } from '../../lib/stepDiagram/stepDiagramModel';
 import { referencesExportTarget, stepDiagramExportTarget } from './referencesExportTarget';
 import {
   referencesStepDiagramMarks,
   referencesStepSheetCssPx,
   type StepDiagramPageInput,
 } from './referencesStepExport';
-import { ARROWHEAD_MIN_STROKES } from './stepDiagramGeometry';
+import { ARROWHEAD_MIN_STROKES } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { decodePlanModel, planModelPoints, planStepScene } from './referencesPlanGeometry';
 
 /**
