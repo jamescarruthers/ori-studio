@@ -1617,6 +1617,8 @@
     },
     "sentence": {
       "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
+      "crimpInside": "Faça um crimp interno ao longo das duas linhas.",
+      "crimpOutside": "Faça um crimp externo ao longo das duas linhas.",
       "mountain": {
         "crease": {
           "all": "Dobre todas as camadas em monte pelo vinco existente.",
@@ -1819,6 +1821,8 @@
           "flaps_other": "Dobre só as {{count}} abas indicadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre."
         }
       },
+      "tuckMountain": "Dobre em monte e encaixe a aba por trás, sobre a camada escolhida.",
+      "tuckValley": "Dobre em vale e encaixe a aba sob a camada escolhida.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "Desdobre todas as camadas pelo vinco existente.",
@@ -2111,12 +2115,16 @@
       "addsPrecreases_many": "Adiciona {{count}} pré-dobras",
       "addsPrecreases_other": "Adiciona {{count}} pré-dobras",
       "axiomLine": "Axioma {{axiom}} · {{phrase}}",
+      "badgeCrimp": "Crimp",
       "badgeImported": "Importado",
       "badgeMountain": "Monte",
       "badgeNewer": "Mais recente",
       "badgePrecrease": "Pré-dobra",
+      "badgeTuck": "Encaixe",
       "badgeValley": "Vale",
       "cpJump": "Importar padrão de vincos",
+      "crimpInside": "Crimp interno",
+      "crimpOutside": "Crimp externo",
       "existingCrease": "Vinco existente",
       "freeLine": "Linha livre",
       "mountainFold": "Dobra monte",
@@ -2134,6 +2142,8 @@
       "reverses_one": "Redobra {{count}} pré-dobra ao contrário",
       "reverses_many": "Redobra {{count}} pré-dobras ao contrário",
       "reverses_other": "Redobra {{count}} pré-dobras ao contrário",
+      "tuckMountain": "Dobra monte e encaixar",
+      "tuckValley": "Dobra vale e encaixar",
       "unfold": "Desdobrar",
       "unfolds_one": "Desdobra {{count}} vinco",
       "unfolds_many": "Desdobra {{count}} vincos",

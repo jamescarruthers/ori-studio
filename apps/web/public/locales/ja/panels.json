@@ -1513,6 +1513,8 @@
     },
     "sentence": {
       "cpJump": "インポートした展開図のとおりに折りたたみます。",
+      "crimpInside": "2本の線で段中割り折りをします。",
+      "crimpOutside": "2本の線で段かぶせ折りをします。",
       "mountain": {
         "crease": {
           "all": "すべての層をまとめて、既存の折り筋で山折りします。",
@@ -1627,6 +1629,8 @@
           "flaps_other": "示したフラップ {{count}} 枚だけを、{{self}} を自身に重ね、{{a}} が {{b}} に載るように山折りして戻します。"
         }
       },
+      "tuckMountain": "山折りして、裏側で選んだ層の上にフラップを差し込みます。",
+      "tuckValley": "谷折りして、選んだ層の下にフラップを差し込みます。",
       "turn": "{{turn}}。",
       "unfold": {
         "all": "すべての層をまとめて、既存の折り筋で開きます。",
@@ -1815,12 +1819,16 @@
       "adds_other": "折り筋を {{count}} 本追加（M {{mountain}}、V {{valley}}）",
       "addsPrecreases_other": "下折りを {{count}} 本追加",
       "axiomLine": "公理 {{axiom}} · {{phrase}}",
+      "badgeCrimp": "クリンプ",
       "badgeImported": "インポート",
       "badgeMountain": "山折り",
       "badgeNewer": "新しい版",
       "badgePrecrease": "下折り",
+      "badgeTuck": "差し込み",
       "badgeValley": "谷折り",
       "cpJump": "展開図をインポート",
+      "crimpInside": "段中割り折り",
+      "crimpOutside": "段かぶせ折り",
       "existingCrease": "既存の折り筋",
       "freeLine": "自由な線",
       "mountainFold": "山折り",
@@ -1834,6 +1842,8 @@
       "originSample": "サンプル",
       "refolds_other": "下折り {{count}} 本を折り直す",
       "reverses_other": "下折り {{count}} 本を逆向きに折り直す",
+      "tuckMountain": "山折りして差し込む",
+      "tuckValley": "谷折りして差し込む",
       "unfold": "開く",
       "unfolds_other": "折り筋 {{count}} 本を開く",
       "unknown": "新しい Ori Studio のステップ",

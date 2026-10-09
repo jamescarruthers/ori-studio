@@ -1564,6 +1564,8 @@
     },
     "sentence": {
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
+      "crimpInside": "Falte einen inneren Crimp entlang der beiden Linien.",
+      "crimpOutside": "Falte einen äußeren Crimp entlang der beiden Linien.",
       "mountain": {
         "crease": {
           "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als Bergfalte.",
@@ -1722,6 +1724,8 @@
           "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
         }
       },
+      "tuckMountain": "Falte als Bergfalte und stecke die Lasche hinten über die gewählte Lage.",
+      "tuckValley": "Falte als Talfalte und stecke die Lasche unter die gewählte Lage.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "Falte alle Lagen entlang der vorhandenen Faltlinie auf.",
@@ -1962,12 +1966,16 @@
       "addsPrecreases_one": "Fügt {{count}} Vorfalte hinzu",
       "addsPrecreases_other": "Fügt {{count}} Vorfalten hinzu",
       "axiomLine": "Axiom {{axiom}} · {{phrase}}",
+      "badgeCrimp": "Crimp",
       "badgeImported": "Importiert",
       "badgeMountain": "Berg",
       "badgeNewer": "Neuer",
       "badgePrecrease": "Vorfalte",
+      "badgeTuck": "Einstecken",
       "badgeValley": "Tal",
       "cpJump": "Faltmuster importieren",
+      "crimpInside": "Innerer Crimp",
+      "crimpOutside": "Äußerer Crimp",
       "existingCrease": "Vorhandene Faltlinie",
       "freeLine": "Freie Linie",
       "mountainFold": "Bergfalte",
@@ -1983,6 +1991,8 @@
       "refolds_other": "Faltet {{count}} Vorfalten wieder",
       "reverses_one": "Faltet {{count}} Vorfalte andersherum wieder",
       "reverses_other": "Faltet {{count}} Vorfalten andersherum wieder",
+      "tuckMountain": "Bergfalte und einstecken",
+      "tuckValley": "Talfalte und einstecken",
       "unfold": "Auffalten",
       "unfolds_one": "Faltet {{count}} Faltlinie auf",
       "unfolds_other": "Faltet {{count}} Faltlinien auf",

@@ -1564,6 +1564,8 @@
     },
     "sentence": {
       "cpJump": "Collapse into the imported crease pattern.",
+      "crimpInside": "Inside crimp along the two lines.",
+      "crimpOutside": "Outside crimp along the two lines.",
       "mountain": {
         "crease": {
           "all": "Mountain fold along the existing crease, through all layers.",
@@ -1722,6 +1724,8 @@
           "flaps_other": "Mountain fold and unfold {{self}} onto itself so that {{a}} lands on {{b}}, folding only the {{count}} flaps shown."
         }
       },
+      "tuckMountain": "Mountain fold and tuck the flap in at the back, over the chosen layer.",
+      "tuckValley": "Valley fold and tuck the flap in, under the chosen layer.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "Unfold along the existing crease, through all layers.",
@@ -1962,12 +1966,16 @@
       "addsPrecreases_one": "Adds {{count}} precrease",
       "addsPrecreases_other": "Adds {{count}} precreases",
       "axiomLine": "Axiom {{axiom}} · {{phrase}}",
+      "badgeCrimp": "Crimp",
       "badgeImported": "Imported",
       "badgeMountain": "Mountain",
       "badgeNewer": "Newer",
       "badgePrecrease": "Precrease",
+      "badgeTuck": "Tuck",
       "badgeValley": "Valley",
       "cpJump": "Import crease pattern",
+      "crimpInside": "Inside crimp",
+      "crimpOutside": "Outside crimp",
       "existingCrease": "Existing crease",
       "freeLine": "Free line",
       "mountainFold": "Mountain fold",
@@ -1983,6 +1991,8 @@
       "refolds_other": "Refolds {{count}} precreases",
       "reverses_one": "Refolds {{count}} precrease the other way",
       "reverses_other": "Refolds {{count}} precreases the other way",
+      "tuckMountain": "Mountain fold and tuck",
+      "tuckValley": "Valley fold and tuck",
       "unfold": "Unfold",
       "unfolds_one": "Unfolds {{count}} crease",
       "unfolds_other": "Unfolds {{count}} creases",

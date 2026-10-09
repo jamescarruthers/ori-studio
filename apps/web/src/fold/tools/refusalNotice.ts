@@ -199,6 +199,8 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     // refusals; the import codes reach a notice only from a replay.
     case 'unexpected_choice':
     case 'root_missing':
+    case 'choice_needed':
+    case 'choice_broken':
     case 'import_not_finite':
     case 'import_no_border':
     case 'import_outline_loops':
@@ -230,9 +232,9 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       };
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
-    // With them, a compound fold's (plan D4, from `no_order` on): no tool
-    // folds one yet, so until the reverse fold's tool says them in its own
-    // words they read as a fold that cannot be made.
+    // With them, a compound fold's (plan D4, from `no_order` on), a tuck's
+    // and a crimp's: no tool folds one yet, so until their tools say them in
+    // their own words they read as a fold that cannot be made.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -265,6 +267,12 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'reverse_no_opening':
     case 'reverse_tip_not_free':
     case 'reverse_kind_infeasible':
+    case 'tuck_infeasible':
+    case 'crimp_lines_meet':
+    case 'crimp_misses_tip':
+    case 'crimp_no_opening':
+    case 'crimp_kind_infeasible':
+    case 'crimp_tip_not_free':
     case 'internal':
       return {
         title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
@@ -339,7 +347,8 @@ function fixActions(
     case 'use_line':
       return [{ id: `line-${position}`, label: lineFixLabel(t, fix), run: () => verbs.useLine(fix), disabled }];
     case 'other_kind':
-      // A reverse fold's, which no tool folds yet: nothing to bind it to.
+    case 'tuck_target':
+      // A reverse fold's or a tuck's, which no tool folds yet: nothing to bind it to.
       return [];
   }
 }

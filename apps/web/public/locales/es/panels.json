@@ -1617,6 +1617,8 @@
     },
     "sentence": {
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
+      "crimpInside": "Haz un crimp interior a lo largo de las dos líneas.",
+      "crimpOutside": "Haz un crimp exterior a lo largo de las dos líneas.",
       "mountain": {
         "crease": {
           "all": "Dobla todas las capas en monte por el pliegue existente.",
@@ -1819,6 +1821,8 @@
           "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla."
         }
       },
+      "tuckMountain": "Pliega en monte y remete la solapa por detrás, sobre la capa elegida.",
+      "tuckValley": "Pliega en valle y remete la solapa bajo la capa elegida.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "Desdobla todas las capas por el pliegue existente.",
@@ -2111,12 +2115,16 @@
       "addsPrecreases_many": "Añade {{count}} prepliegues",
       "addsPrecreases_other": "Añade {{count}} prepliegues",
       "axiomLine": "Axioma {{axiom}} · {{phrase}}",
+      "badgeCrimp": "Crimp",
       "badgeImported": "Importado",
       "badgeMountain": "Monte",
       "badgeNewer": "Más reciente",
       "badgePrecrease": "Prepliegue",
+      "badgeTuck": "Remeter",
       "badgeValley": "Valle",
       "cpJump": "Importar patrón de pliegues",
+      "crimpInside": "Crimp interior",
+      "crimpOutside": "Crimp exterior",
       "existingCrease": "Pliegue existente",
       "freeLine": "Línea libre",
       "mountainFold": "Pliegue monte",
@@ -2134,6 +2142,8 @@
       "reverses_one": "Vuelve a doblar {{count}} prepliegue al revés",
       "reverses_many": "Vuelve a doblar {{count}} prepliegues al revés",
       "reverses_other": "Vuelve a doblar {{count}} prepliegues al revés",
+      "tuckMountain": "Pliegue monte y remeter",
+      "tuckValley": "Pliegue valle y remeter",
       "unfold": "Desdoblar",
       "unfolds_one": "Desdobla {{count}} pliegue",
       "unfolds_many": "Desdobla {{count}} pliegues",

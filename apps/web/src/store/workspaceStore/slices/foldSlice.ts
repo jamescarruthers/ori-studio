@@ -25,6 +25,8 @@ const STEP_LABELS: Record<FoldOpKind, string> = {
   turn: 'Turn over',
   rotate: 'Rotate',
   'cp-jump': 'Import crease pattern',
+  crimp: 'Crimp',
+  tuck: 'Tuck',
 };
 
 /**

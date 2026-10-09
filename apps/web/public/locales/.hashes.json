@@ -5032,7 +5032,17 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.crimpInside": "98d64a3c2097",
+    "panels:fold.sentence.crimpOutside": "65e996a670dc",
+    "panels:fold.sentence.tuckMountain": "b1333f72d1c6",
+    "panels:fold.sentence.tuckValley": "c111509b6429",
+    "panels:fold.words.badgeCrimp": "4b098c678da6",
+    "panels:fold.words.badgeTuck": "249eb9ca794c",
+    "panels:fold.words.crimpInside": "f5e206f5410a",
+    "panels:fold.words.crimpOutside": "d703ecc2da03",
+    "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
+    "panels:fold.words.tuckValley": "bf043b0b968f"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -10067,7 +10077,17 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.crimpInside": "98d64a3c2097",
+    "panels:fold.sentence.crimpOutside": "65e996a670dc",
+    "panels:fold.sentence.tuckMountain": "b1333f72d1c6",
+    "panels:fold.sentence.tuckValley": "c111509b6429",
+    "panels:fold.words.badgeCrimp": "4b098c678da6",
+    "panels:fold.words.badgeTuck": "249eb9ca794c",
+    "panels:fold.words.crimpInside": "f5e206f5410a",
+    "panels:fold.words.crimpOutside": "d703ecc2da03",
+    "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
+    "panels:fold.words.tuckValley": "bf043b0b968f"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15104,7 +15124,17 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.crimpInside": "98d64a3c2097",
+    "panels:fold.sentence.crimpOutside": "65e996a670dc",
+    "panels:fold.sentence.tuckMountain": "b1333f72d1c6",
+    "panels:fold.sentence.tuckValley": "c111509b6429",
+    "panels:fold.words.badgeCrimp": "4b098c678da6",
+    "panels:fold.words.badgeTuck": "249eb9ca794c",
+    "panels:fold.words.crimpInside": "f5e206f5410a",
+    "panels:fold.words.crimpOutside": "d703ecc2da03",
+    "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
+    "panels:fold.words.tuckValley": "bf043b0b968f"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -19931,7 +19961,17 @@
     "toasts:diagram.fold.sent_other": "55817be52772",
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.crimpInside": "98d64a3c2097",
+    "panels:fold.sentence.crimpOutside": "65e996a670dc",
+    "panels:fold.sentence.tuckMountain": "b1333f72d1c6",
+    "panels:fold.sentence.tuckValley": "c111509b6429",
+    "panels:fold.words.badgeCrimp": "4b098c678da6",
+    "panels:fold.words.badgeTuck": "249eb9ca794c",
+    "panels:fold.words.crimpInside": "f5e206f5410a",
+    "panels:fold.words.crimpOutside": "d703ecc2da03",
+    "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
+    "panels:fold.words.tuckValley": "bf043b0b968f"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -24758,7 +24798,17 @@
     "toasts:diagram.fold.sent_other": "55817be52772",
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.crimpInside": "98d64a3c2097",
+    "panels:fold.sentence.crimpOutside": "65e996a670dc",
+    "panels:fold.sentence.tuckMountain": "b1333f72d1c6",
+    "panels:fold.sentence.tuckValley": "c111509b6429",
+    "panels:fold.words.badgeCrimp": "4b098c678da6",
+    "panels:fold.words.badgeTuck": "249eb9ca794c",
+    "panels:fold.words.crimpInside": "f5e206f5410a",
+    "panels:fold.words.crimpOutside": "d703ecc2da03",
+    "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
+    "panels:fold.words.tuckValley": "bf043b0b968f"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -29793,7 +29843,17 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.crimpInside": "98d64a3c2097",
+    "panels:fold.sentence.crimpOutside": "65e996a670dc",
+    "panels:fold.sentence.tuckMountain": "b1333f72d1c6",
+    "panels:fold.sentence.tuckValley": "c111509b6429",
+    "panels:fold.words.badgeCrimp": "4b098c678da6",
+    "panels:fold.words.badgeTuck": "249eb9ca794c",
+    "panels:fold.words.crimpInside": "f5e206f5410a",
+    "panels:fold.words.crimpOutside": "d703ecc2da03",
+    "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
+    "panels:fold.words.tuckValley": "bf043b0b968f"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -34828,7 +34888,17 @@
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_one": "b34bf1ff811c",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.crimpInside": "98d64a3c2097",
+    "panels:fold.sentence.crimpOutside": "65e996a670dc",
+    "panels:fold.sentence.tuckMountain": "b1333f72d1c6",
+    "panels:fold.sentence.tuckValley": "c111509b6429",
+    "panels:fold.words.badgeCrimp": "4b098c678da6",
+    "panels:fold.words.badgeTuck": "249eb9ca794c",
+    "panels:fold.words.crimpInside": "f5e206f5410a",
+    "panels:fold.words.crimpOutside": "d703ecc2da03",
+    "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
+    "panels:fold.words.tuckValley": "bf043b0b968f"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -39655,6 +39725,16 @@
     "toasts:diagram.fold.sent_other": "55817be52772",
     "toasts:diagram.fold.sequenceGone": "6109110a8f34",
     "toasts:diagram.fold.someFailed_other": "27a291847c56",
-    "toasts:diagram.fold.stepGone": "a7c28d7345b7"
+    "toasts:diagram.fold.stepGone": "a7c28d7345b7",
+    "panels:fold.sentence.crimpInside": "98d64a3c2097",
+    "panels:fold.sentence.crimpOutside": "65e996a670dc",
+    "panels:fold.sentence.tuckMountain": "b1333f72d1c6",
+    "panels:fold.sentence.tuckValley": "c111509b6429",
+    "panels:fold.words.badgeCrimp": "4b098c678da6",
+    "panels:fold.words.badgeTuck": "249eb9ca794c",
+    "panels:fold.words.crimpInside": "f5e206f5410a",
+    "panels:fold.words.crimpOutside": "d703ecc2da03",
+    "panels:fold.words.tuckMountain": "e23dfeb8b8d4",
+    "panels:fold.words.tuckValley": "bf043b0b968f"
   }
 }

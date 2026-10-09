@@ -51,6 +51,7 @@ import { xmlText } from '../../lib/xmlEscape';
 import {
   AXIOM_SLOTS,
   FOLD_CP_ORIGINS,
+  FOLD_CRIMP_KINDS,
   FOLD_DIRECTIONS,
   FOLD_MARK_MAX_PARTS,
   FOLD_MODEL_LINE_MIN_NORMAL,
@@ -75,7 +76,6 @@ import {
   type FoldModelLine,
   type FoldOp,
   type FoldOpeningChoice,
-  type FoldPairChoice,
   type FoldPaper,
   type FoldPaperShape,
   type FoldRef,
@@ -83,6 +83,7 @@ import {
   type FoldSequenceDocument,
   type FoldStep,
   type FoldStepNode,
+  type FoldStoredOrder,
   type SheetPoint,
 } from './foldSequenceDocument';
 import { FOLD_SHEET_KEY, childrenOf, foldStepTree } from './foldStepTree';
@@ -310,6 +311,9 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['turn', new Set(['kind', 'axis'])],
   ['rotate', new Set(['kind', 'rotate'])],
   ['cp-jump', new Set(['kind', 'cpJson', 'orderJson', 'origin'])],
+  // The compound folds of plan Phase 11.
+  ['crimp', new Set([...ALONG_LINE_KEYS, 'second', 'crimp'])],
+  ['tuck', new Set([...ALONG_LINE_KEYS, 'direction', 'target'])],
 ]);
 
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
@@ -360,6 +364,19 @@ function readOp(value: unknown): FoldOp | null {
       return origin && typeof cpJson === 'string' && typeof orderJson === 'string'
         ? { kind, cpJson, orderJson, origin }
         : null;
+    }
+    case 'crimp': {
+      const along = readAlongLine(value);
+      const second = readLine(value.second);
+      const crimp = FOLD_CRIMP_KINDS.find((known) => known === value.crimp);
+      // ℓ2 has no root of its own to replay: an axiom there does not read.
+      return along && second && second.via !== 'axiom' && crimp ? { kind, second, crimp, ...along } : null;
+    }
+    case 'tuck': {
+      const along = readAlongLine(value);
+      const direction = readDirection(value.direction);
+      const target = readPoint(value.target);
+      return along && direction && target && { kind, direction, target, ...along };
     }
     default:
       return null;
@@ -496,15 +513,15 @@ function readRef(value: unknown, slot: ReferenceKind): FoldRef | null {
 
 const CHOICE_KEYS = new Set(['root', 'completion', 'pocket', 'opening']);
 const MODEL_LINE_KEYS = new Set(['n', 'd']);
-const PAIR_KEYS = new Set(['above', 'below']);
+const STORED_ORDER_KEYS = new Set(['faces', 'orders']);
 const OPENING_KEYS = new Set(['upper']);
 
-/** Choices, or null for ones this build cannot read. An empty list reads as no choice of its kind. */
+/** Choices, or null for ones this build cannot read. An empty list or order reads as no choice of its kind. */
 function readChoices(value: unknown): FoldChoices | null {
   if (!isRecord(value) || hasNewerKey(value, CHOICE_KEYS)) return null;
   const choices: {
     root?: FoldModelLine;
-    completion?: FoldPairChoice[];
+    completion?: FoldStoredOrder;
     pocket?: [SheetPoint, SheetPoint];
     opening?: FoldOpeningChoice[];
   } = {};
@@ -514,9 +531,9 @@ function readChoices(value: unknown): FoldChoices | null {
     choices.root = root;
   }
   if (value.completion !== undefined) {
-    const completion = readList(value.completion, readPair);
+    const completion = readStoredOrder(value.completion);
     if (!completion) return null;
-    if (completion.length > 0) choices.completion = completion;
+    if (completion.faces.length > 0 || completion.orders.length > 0) choices.completion = completion;
   }
   if (value.pocket !== undefined) {
     const pocket = readPoints(value.pocket);
@@ -538,11 +555,24 @@ function readModelLine(value: unknown): FoldModelLine | null {
   return n && d !== null && Math.hypot(n[0], n[1]) >= FOLD_MODEL_LINE_MIN_NORMAL ? { n, d } : null;
 }
 
-function readPair(value: unknown): FoldPairChoice | null {
-  if (!isRecord(value) || hasNewerKey(value, PAIR_KEYS)) return null;
-  const above = readPoint(value.above);
-  const below = readPoint(value.below);
-  return above && below && { above, below };
+/**
+ * A stored order: witnesses, and triples naming two different ones each
+ * with a side of ±1. Whether the witnesses still name faces is the engine's
+ * to say on replay.
+ */
+function readStoredOrder(value: unknown): FoldStoredOrder | null {
+  if (!isRecord(value) || hasNewerKey(value, STORED_ORDER_KEYS)) return null;
+  const faces = readPoints(value.faces);
+  if (!faces) return null;
+  const orders = readList(value.orders, (entry): readonly [number, number, 1 | -1] | null => {
+    if (!Array.isArray(entry) || entry.length !== 3) return null;
+    const [f, g, s] = entry as unknown[];
+    const index = (i: unknown) => typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < faces.length;
+    return index(f) && index(g) && f !== g && (s === 1 || s === -1)
+      ? [f as number, g as number, s]
+      : null;
+  });
+  return orders && { faces, orders };
 }
 
 function readOpening(value: unknown): FoldOpeningChoice | null {
@@ -694,6 +724,22 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
       return { kind: op.kind, rotate: { amount: op.rotate.amount, direction: op.rotate.direction } };
     case 'cp-jump':
       return { kind: op.kind, cpJson: op.cpJson, orderJson: op.orderJson, origin: op.origin };
+    case 'crimp':
+      return {
+        kind: op.kind,
+        line: writeLine(op.line),
+        second: writeLine(op.second),
+        crimp: op.crimp,
+        ...writeMotion(op),
+      };
+    case 'tuck':
+      return {
+        kind: op.kind,
+        line: writeLine(op.line),
+        direction: op.direction,
+        ...writeMotion(op),
+        target: writePoint(op.target),
+      };
   }
 }
 
@@ -739,8 +785,13 @@ export function writeFoldChoices(choices: FoldChoices): Record<string, unknown> 
   const { root, completion, pocket, opening } = choices;
   const written = {
     ...(root ? { root: { n: writePoint(root.n), d: root.d } } : {}),
-    ...(completion && completion.length > 0
-      ? { completion: completion.map(({ above, below }) => ({ above: writePoint(above), below: writePoint(below) })) }
+    ...(completion && (completion.faces.length > 0 || completion.orders.length > 0)
+      ? {
+          completion: {
+            faces: completion.faces.map(writePoint),
+            orders: completion.orders.map(([f, g, s]) => [f, g, s]),
+          },
+        }
       : {}),
     ...(pocket ? { pocket: pocket.map(writePoint) } : {}),
     ...(opening && opening.length > 0

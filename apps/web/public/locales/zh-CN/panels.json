@@ -1513,6 +1513,8 @@
     },
     "sentence": {
       "cpJump": "按导入的折痕图折叠。",
+      "crimpInside": "沿两条线做内翻阶梯折。",
+      "crimpOutside": "沿两条线做外翻阶梯折。",
       "mountain": {
         "crease": {
           "all": "将所有层沿已有的折痕山折。",
@@ -1627,6 +1629,8 @@
           "flaps_other": "只将所示的 {{count}} 个翼片山折，使 {{self}} 与自身重合，{{a}} 落在 {{b}} 上，然后展开。"
         }
       },
+      "tuckMountain": "山折，在背面把翼片塞到所选层的上面。",
+      "tuckValley": "谷折，把翼片塞到所选层的下面。",
       "turn": "{{turn}}。",
       "unfold": {
         "all": "将所有层沿已有的折痕展开。",
@@ -1815,12 +1819,16 @@
       "adds_other": "新增 {{count}} 条折痕（M {{mountain}}，V {{valley}}）",
       "addsPrecreases_other": "新增 {{count}} 条预折痕",
       "axiomLine": "公理 {{axiom}} · {{phrase}}",
+      "badgeCrimp": "阶梯折",
       "badgeImported": "已导入",
       "badgeMountain": "山折",
       "badgeNewer": "较新",
       "badgePrecrease": "预折",
+      "badgeTuck": "塞入",
       "badgeValley": "谷折",
       "cpJump": "导入折痕图",
+      "crimpInside": "内翻阶梯折",
+      "crimpOutside": "外翻阶梯折",
       "existingCrease": "已有折痕",
       "freeLine": "自由线",
       "mountainFold": "山折",
@@ -1834,6 +1842,8 @@
       "originSample": "示例",
       "refolds_other": "重新折起 {{count}} 条预折痕",
       "reverses_other": "反向重新折起 {{count}} 条预折痕",
+      "tuckMountain": "山折并塞入",
+      "tuckValley": "谷折并塞入",
       "unfold": "展开",
       "unfolds_other": "展开 {{count}} 条折痕",
       "unknown": "来自更新版本的 Ori Studio",

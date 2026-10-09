@@ -58,6 +58,14 @@ export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
       return turnName(step.turn, t);
     case 'cp-jump':
       return t('panels:fold.words.cpJump', 'Import crease pattern');
+    case 'crimp':
+      return step.crimp === 'inside'
+        ? t('panels:fold.words.crimpInside', 'Inside crimp')
+        : t('panels:fold.words.crimpOutside', 'Outside crimp');
+    case 'tuck':
+      return step.direction === 'valley'
+        ? t('panels:fold.words.tuckValley', 'Valley fold and tuck')
+        : t('panels:fold.words.tuckMountain', 'Mountain fold and tuck');
     case 'unknown':
       return t('panels:fold.words.unknown', 'From a newer Ori Studio');
   }
@@ -79,6 +87,10 @@ export function operationBadge(t: TFunction, step: FoldSentenceStep): string {
       return turnCardWords(step.turn, t).title;
     case 'cp-jump':
       return t('panels:fold.words.badgeImported', 'Imported');
+    case 'crimp':
+      return t('panels:fold.words.badgeCrimp', 'Crimp');
+    case 'tuck':
+      return t('panels:fold.words.badgeTuck', 'Tuck');
     case 'unknown':
       return t('panels:fold.words.badgeNewer', 'Newer');
   }

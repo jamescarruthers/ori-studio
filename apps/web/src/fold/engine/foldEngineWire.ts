@@ -143,6 +143,13 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'reverse_no_opening',
   'reverse_tip_not_free',
   'reverse_kind_infeasible',
+  // The tuck and the crimp (plan Phase 11).
+  'tuck_infeasible',
+  'crimp_lines_meet',
+  'crimp_misses_tip',
+  'crimp_no_opening',
+  'crimp_kind_infeasible',
+  'crimp_tip_not_free',
   'internal',
 ] as const;
 
@@ -169,6 +176,10 @@ export const FOLD_BRIDGE_REFUSAL_CODES = [
   'crease_not_found',
   'crease_not_flat',
   'crease_not_folded',
+  // A stored compound fold (a crimp, a tuck) whose stored choices do not
+  // decide it, or no longer resolve (`foldEngineCrimpTuckWire.ts`).
+  'choice_needed',
+  'choice_broken',
 ] as const;
 
 /** Every refusal code: the stable ids the UI and analytics use (D18). They never collide. */
@@ -237,7 +248,9 @@ export type FoldFix =
    */
   | { readonly fix: 'use_line'; readonly line: FoldModelLine; readonly side: FoldSide; readonly step?: FoldStoredStep }
   /** The same reverse fold of the other kind is valid. */
-  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' };
+  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' }
+  /** The same tuck against this layer is valid: send `at` back as the tuck's `target`. */
+  | { readonly fix: 'tuck_target'; readonly face: number; readonly at: SheetPoint };
 
 export interface FoldEngineRefused {
   status: 'refused';
@@ -329,7 +342,7 @@ export interface FoldSheetLanded {
 
 export interface FoldStepLanded {
   state: number;
-  /** Null for a turn or a rotation. */
+  /** Null for a turn or a rotation, and for a crimp or a tuck, whose reports their own calls give. */
   report: FoldReport | null;
   summary: FoldStateSummary;
 }

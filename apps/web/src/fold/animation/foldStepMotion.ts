@@ -18,7 +18,9 @@
  *   scenes' view transforms;
  * - Import CP crossfades, and so does any step whose rigid motion cannot be
  *   built from what it has (no line, nothing moving, a degenerate placement):
- *   a step always has a motion, and a wrong one is never invented.
+ *   a step always has a motion, and a wrong one is never invented. A crimp
+ *   and a tuck crossfade too, for now: their legs come with their reports
+ *   (`foldEngineCrimpTuckWire.ts`), which no player draws yet.
  *
  * The transport plays a step as one programme (`lib/foldMotion/foldTransport`):
  * a fold is one leg resting landed, a precrease folds, holds and comes back, a
@@ -69,7 +71,9 @@ export type FoldStepPlayKind =
   | 'refold'
   | 'turn'
   | 'rotate'
-  | 'import';
+  | 'import'
+  | 'crimp'
+  | 'tuck';
 
 /** What a step's motion is built from: all of it the session's (`fold/session`). */
 export interface FoldStepMotionInput {
@@ -150,6 +154,8 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
       return turn ? { step, before, after, motion: turn } : crossfade();
     }
     case 'cp-jump':
+    case 'crimp':
+    case 'tuck':
       return crossfade();
   }
 }

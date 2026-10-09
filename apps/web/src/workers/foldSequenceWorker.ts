@@ -24,6 +24,19 @@ import type { WasmErrorEnvelope } from '../engine/types';
 import type { FoldStateFingerprint } from '../fold/document/foldDigest';
 import type { FoldChoices, FoldModelLine, FoldPaper, SheetPoint } from '../fold/document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../fold/engine/foldEngineCalls';
+import {
+  createFoldEngineCrimpTuckCalls,
+  type FoldCompoundOutcome,
+  type FoldEngineCrimpTuckCalls,
+} from '../fold/engine/foldEngineCrimpTuckCalls';
+import type {
+  FoldCrimpAnalysed,
+  FoldCrimpReport,
+  FoldEngineCrimpOp,
+  FoldEngineTuckOp,
+  FoldTuckAnalysed,
+  FoldTuckReport,
+} from '../fold/engine/foldEngineCrimpTuckWire';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from '../fold/engine/foldEngineIoCalls';
 import type {
   FoldExported,
@@ -55,8 +68,8 @@ import type {
   FoldTopVisible,
 } from '../fold/engine/foldEngineWire';
 
-/** The step calls and the io calls, over one engine. */
-type FoldWorkerCalls = FoldEngineCalls & FoldEngineIoCalls;
+/** The step calls, the io calls and the compound folds', over one engine. */
+type FoldWorkerCalls = FoldEngineCalls & FoldEngineIoCalls & FoldEngineCrimpTuckCalls;
 
 let ready: Promise<FoldWorkerCalls> | null = null;
 
@@ -70,7 +83,11 @@ function ensureReady(): Promise<FoldWorkerCalls> {
   if (ready) return ready;
   const starting = init().then(() => {
     const engine = new FoldEngine();
-    return { ...createFoldEngineCalls(engine), ...createFoldEngineIoCalls(engine) };
+    return {
+      ...createFoldEngineCalls(engine),
+      ...createFoldEngineIoCalls(engine),
+      ...createFoldEngineCrimpTuckCalls(engine),
+    };
   });
   ready = starting;
   starting.catch(() => {
@@ -257,6 +274,40 @@ const api = {
   /** The FOLD file of a path of states. */
   async exportFold(states: readonly number[], title?: string): Promise<FoldEngineOutcome<FoldExported>> {
     return call((calls) => calls.exportFold(states, title));
+  },
+
+  // The crimp and the tuck (`fold/engine/foldEngineCrimpTuckCalls.ts`).
+
+  /** A crimp's tip and openings, what lies beyond ℓ2, and the kinds that land. */
+  async analyseCrimp(
+    state: number,
+    op: FoldEngineCrimpOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldCrimpAnalysed>> {
+    return call((calls) => calls.analyseCrimp(state, op, choices));
+  },
+
+  /** What a tuck moves and the layers its block can be tucked against. */
+  async analyseTuck(
+    state: number,
+    op: FoldEngineTuckOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldTuckAnalysed>> {
+    return call((calls) => calls.analyseTuck(state, op, choices));
+  },
+
+  /** Fold a crimp: landed, an opening to choose, or the orders to choose from. */
+  async crimp(
+    state: number,
+    op: FoldEngineCrimpOp,
+    choices?: FoldChoices
+  ): Promise<FoldCompoundOutcome<FoldCrimpReport>> {
+    return call((calls) => calls.crimp(state, op, choices));
+  },
+
+  /** Fold a tuck: landed, or the orders to choose from. */
+  async tuck(state: number, op: FoldEngineTuckOp, choices?: FoldChoices): Promise<FoldCompoundOutcome<FoldTuckReport>> {
+    return call((calls) => calls.tuck(state, op, choices));
   },
 };
 

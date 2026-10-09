@@ -101,6 +101,35 @@ describe('fh1', () => {
     expect(foldStepKey(locked)).toBe(foldStepKey(known));
   });
 
+  it('tells apart crimps and tucks by every field they fold by, and by their stored order', () => {
+    const line = { via: 'free', through: [[0, 0.5], [1, 0.5]] } as const;
+    const second = { via: 'free', through: [[0, 0.3], [1, 0.3]] } as const;
+    const crimp = step('x', 'a', { kind: 'crimp', line, second, crimp: 'inside', seed: { scope: 'all' } });
+    const tuck = step('x', 'a', { kind: 'tuck', line, direction: 'valley', seed: { scope: 'all' }, target: [0.5, 0.75] });
+    const order = (s: 1 | -1) => ({
+      completion: {
+        faces: [
+          [0.1, 0.1],
+          [0.9, 0.1],
+        ] as const,
+        orders: [[0, 1, s]] as const,
+      },
+    });
+    const keys = [
+      crimp,
+      { ...crimp, op: { ...crimp.op, crimp: 'outside' } },
+      { ...crimp, op: { ...crimp.op, second: line } },
+      { ...crimp, choices: { opening: [{ upper: [[0.2, 0.2]] }] } },
+      { ...crimp, choices: order(1) },
+      { ...crimp, choices: order(-1) },
+      tuck,
+      { ...tuck, op: { ...tuck.op, direction: 'mountain' } },
+      { ...tuck, op: { ...tuck.op, target: [0.5, 0.8] } },
+      { ...tuck, choices: order(1) },
+    ].map((node) => foldStepKey(node as FoldStep));
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
   it('is null for a node the document does not hold', () => {
     expect(foldNodeDigest(sequenceOf([step('a', null)]), 'missing')).toBeNull();
   });
@@ -131,7 +160,9 @@ describe('canonicalJson', () => {
   it('spells empty choices as none', () => {
     const plain = step('a', null);
     expect(foldStepKey({ ...plain, choices: {} })).toBe(foldStepKey({ ...plain }));
-    expect(foldStepKey({ ...plain, choices: { completion: [] } })).toBe(foldStepKey({ ...plain }));
+    expect(foldStepKey({ ...plain, choices: { completion: { faces: [], orders: [] } } })).toBe(
+      foldStepKey({ ...plain })
+    );
   });
 });
 

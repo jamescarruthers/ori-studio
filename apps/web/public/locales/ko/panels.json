@@ -1513,6 +1513,8 @@
     },
     "sentence": {
       "cpJump": "가져온 전개도대로 접습니다.",
+      "crimpInside": "두 선을 따라 안으로 계단 뒤집어 접기를 합니다.",
+      "crimpOutside": "두 선을 따라 바깥으로 계단 뒤집어 접기를 합니다.",
       "mountain": {
         "crease": {
           "all": "모든 층을 한꺼번에, 기존 접은 선을 따라 산접기합니다.",
@@ -1627,6 +1629,8 @@
           "flaps_other": "표시된 플랩 {{count}}개만, {{self}}이(가) 자기 자신 위로 겹치고 {{a}}이(가) {{b}} 위에 오도록 산접기했다가 펼칩니다."
         }
       },
+      "tuckMountain": "산접기하고, 뒤쪽에서 고른 겹 위로 플랩을 끼워 넣습니다.",
+      "tuckValley": "골접기하고, 고른 겹 아래로 플랩을 끼워 넣습니다.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "모든 층을 한꺼번에, 기존 접은 선을 따라 펼칩니다.",
@@ -1815,12 +1819,16 @@
       "adds_other": "접은 선 {{count}}개 추가 (M {{mountain}}, V {{valley}})",
       "addsPrecreases_other": "사전 접기 {{count}}개 추가",
       "axiomLine": "공리 {{axiom}} · {{phrase}}",
+      "badgeCrimp": "계단 접기",
       "badgeImported": "가져옴",
       "badgeMountain": "산접기",
       "badgeNewer": "최신",
       "badgePrecrease": "사전 접기",
+      "badgeTuck": "끼워 넣기",
       "badgeValley": "골접기",
       "cpJump": "전개도 가져오기",
+      "crimpInside": "안으로 계단 뒤집어 접기",
+      "crimpOutside": "바깥으로 계단 뒤집어 접기",
       "existingCrease": "기존 접은 선",
       "freeLine": "자유 선",
       "mountainFold": "산접기",
@@ -1834,6 +1842,8 @@
       "originSample": "샘플",
       "refolds_other": "사전 접기 {{count}}개를 다시 접음",
       "reverses_other": "사전 접기 {{count}}개를 반대로 다시 접음",
+      "tuckMountain": "산접기해서 끼워 넣기",
+      "tuckValley": "골접기해서 끼워 넣기",
       "unfold": "펼치기",
       "unfolds_other": "접은 선 {{count}}개를 펼침",
       "unknown": "최신 Ori Studio의 단계",

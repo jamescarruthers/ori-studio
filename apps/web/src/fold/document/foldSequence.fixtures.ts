@@ -103,7 +103,17 @@ export function writtenSequence(): Record<string, unknown> {
         },
         choices: {
           root: { n: [0.6, 0.8], d: 0.4 },
-          completion: [{ above: [0.2, 0.2], below: [0.8, 0.3] }],
+          completion: {
+            faces: [
+              [0.2, 0.2],
+              [0.8, 0.3],
+              [0.5, 0.9],
+            ],
+            orders: [
+              [0, 1, 1],
+              [2, 1, -1],
+            ],
+          },
           pocket: [
             [0.1, 0.1],
             [0.2, 0.2],
@@ -146,6 +156,40 @@ export function writtenSequence(): Record<string, unknown> {
           line: { via: 'free', through: [[0, 0.25], [1, 0.25]] },
           moving: [0.5, 0.4],
           seed: { scope: 'all' },
+        },
+      },
+      {
+        id: 'fstep-10',
+        parent: 'fstep-9',
+        op: {
+          kind: 'crimp',
+          line: { via: 'crease', at: [0.3, 0.1] },
+          second: { via: 'free', through: [[0, 0.2], [1, 0.3]] },
+          crimp: 'outside',
+          moving: [0.8, 0.1],
+          seed: { scope: 'flaps', at: [[0.8, 0.1]] },
+        },
+        choices: {
+          completion: {
+            faces: [
+              [0.8, 0.1],
+              [0.7, 0.2],
+            ],
+            orders: [[1, 0, -1]],
+          },
+          opening: [{ upper: [[0.75, 0.15]] }],
+        },
+      },
+      {
+        id: 'fstep-11',
+        parent: 'fstep-9',
+        op: {
+          kind: 'tuck',
+          line: { via: 'free', through: [[0, 0.3], [0.3, 0]] },
+          direction: 'mountain',
+          moving: [0.05, 0.05],
+          seed: { scope: 'flaps', at: [[0.05, 0.05]] },
+          target: [0.75, 0.5],
         },
       },
     ],

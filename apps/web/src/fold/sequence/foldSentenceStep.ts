@@ -82,6 +82,10 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
       return { op: 'turn', turn: turnKindOf(op) };
     case 'cp-jump':
       return { op: 'cp-jump' };
+    case 'crimp':
+      return { op: 'crimp', crimp: op.crimp };
+    case 'tuck':
+      return { op: 'tuck', direction: op.direction };
   }
 }
 
