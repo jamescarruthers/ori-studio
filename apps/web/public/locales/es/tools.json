@@ -280,6 +280,22 @@
     "ratioTitle": "Dividir la línea según una proporción"
   },
   "fold": {
+    "categoryLabel": "Espacio de plegado",
+    "chooser": {
+      "note": "Este axioma da más de un pliegue aquí. Recórrelos o pulsa Mayús+← / Mayús+→."
+    },
+    "divide": {
+      "clear_one": "Borrar la marca hecha aquí",
+      "clear_many": "Borrar las {{count}} marcas hechas aquí",
+      "clear_other": "Borrar las {{count}} marcas hechas aquí",
+      "computed": "Proporción calculada {{s}} : {{t}}",
+      "count": "Partes iguales",
+      "left": "Desde el inicio",
+      "mode": "Dividir",
+      "parts": "Partes",
+      "ratio": "Proporción",
+      "right": "Hasta el final"
+    },
     "fix": {
       "includeFlap": "Incluir la solapa {{number}}",
       "includeFlaps_one": "Incluir {{count}} solapa",
@@ -312,6 +328,15 @@
       "model": "Modelo",
       "planned": "Previstos",
       "reference": "Puntos de referencia"
+    },
+    "key": {
+      "commit": "Hacer el pliegue",
+      "nextRoot": "Solución siguiente",
+      "previousRoot": "Solución anterior",
+      "swapSide": "Cambiar el lado que se mueve"
+    },
+    "latch": {
+      "freePoint": "Punto libre"
     },
     "line": {
       "axiom": "Axioma {{number}}: {{phrase}}",
@@ -355,7 +380,8 @@
     },
     "picker": {
       "close": "Cerrar la lista de herramientas",
-      "title": "Herramientas de plegado"
+      "title": "Herramientas de plegado",
+      "trigger": "Herramientas"
     },
     "plannedReason": "Previsto: aún no está en Ori Studio.",
     "railLabel": "Herramientas de plegado",
@@ -444,6 +470,7 @@
         "title": "No es ese tipo de pliegue"
       }
     },
+    "scopeLabel": "plegado",
     "section": {
       "label": "Capas en la línea de pliegue, de arriba abajo",
       "labelWoven": "Capas en la línea de pliegue bajo el puntero, de arriba abajo",

@@ -272,6 +272,21 @@
     "ratioTitle": "Divide the line at a ratio"
   },
   "fold": {
+    "categoryLabel": "Fold workspace",
+    "chooser": {
+      "note": "This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→."
+    },
+    "divide": {
+      "clear_one": "Clear the mark made here",
+      "clear_other": "Clear the {{count}} marks made here",
+      "computed": "Computed ratio {{s}} : {{t}}",
+      "count": "Equal parts",
+      "left": "From the start",
+      "mode": "Divide",
+      "parts": "Parts",
+      "ratio": "Ratio",
+      "right": "To the end"
+    },
     "fix": {
       "includeFlap": "Include flap {{number}}",
       "includeFlaps_one": "Include the {{count}} flap",
@@ -300,6 +315,15 @@
       "model": "Model",
       "planned": "Planned",
       "reference": "Reference points"
+    },
+    "key": {
+      "commit": "Commit fold",
+      "nextRoot": "Next root",
+      "previousRoot": "Previous root",
+      "swapSide": "Swap moving side"
+    },
+    "latch": {
+      "freePoint": "Free point"
     },
     "line": {
       "axiom": "Axiom {{number}}: {{phrase}}",
@@ -343,7 +367,8 @@
     },
     "picker": {
       "close": "Close tool list",
-      "title": "Fold tools"
+      "title": "Fold tools",
+      "trigger": "Tools"
     },
     "plannedReason": "Planned: not in Ori Studio yet.",
     "railLabel": "Fold tools",
@@ -431,6 +456,7 @@
         "title": "Not that kind of crease"
       }
     },
+    "scopeLabel": "fold",
     "section": {
       "label": "Layers at the fold line, top to bottom",
       "labelWoven": "Layers at the fold line under the pointer, top to bottom",

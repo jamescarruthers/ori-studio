@@ -264,6 +264,20 @@
     "ratioTitle": "선을 비율로 분할합니다"
   },
   "fold": {
+    "categoryLabel": "접기 작업 공간",
+    "chooser": {
+      "note": "이 공리는 여기서 접기가 둘 이상 나옵니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요."
+    },
+    "divide": {
+      "clear_other": "여기서 만든 표시 {{count}}개 지우기",
+      "computed": "계산된 비율 {{s}} : {{t}}",
+      "count": "등분",
+      "left": "시작부터",
+      "mode": "나누기",
+      "parts": "등분 수",
+      "ratio": "비율",
+      "right": "끝까지"
+    },
     "fix": {
       "includeFlap": "플랩 {{number}} 포함",
       "includeFlaps_other": "플랩 {{count}}개 포함",
@@ -288,6 +302,15 @@
       "model": "모델",
       "planned": "예정",
       "reference": "기준점"
+    },
+    "key": {
+      "commit": "접기 확정",
+      "nextRoot": "다음 해",
+      "previousRoot": "이전 해",
+      "swapSide": "움직이는 쪽 바꾸기"
+    },
+    "latch": {
+      "freePoint": "자유 점"
     },
     "line": {
       "axiom": "공리 {{number}}: {{phrase}}",
@@ -331,7 +354,8 @@
     },
     "picker": {
       "close": "도구 목록 닫기",
-      "title": "접기 도구"
+      "title": "접기 도구",
+      "trigger": "도구"
     },
     "plannedReason": "예정: 아직 Ori Studio에 없습니다.",
     "railLabel": "접기 도구",
@@ -418,6 +442,7 @@
         "title": "이런 종류의 접는 선이 아닙니다"
       }
     },
+    "scopeLabel": "접기",
     "section": {
       "label": "접는 선 위치의 겹, 위에서 아래로",
       "labelWoven": "포인터 아래 접는 선 위치의 겹, 위에서 아래로",

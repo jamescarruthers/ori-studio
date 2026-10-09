@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import type { FoldCrossSection } from '../engine/foldEngineWire';
+import { FOLD_DIVIDE_DEFAULT, type FoldDivideSettings } from './foldToolState';
 import {
   foldToolWindow,
   type FoldPreview,
@@ -251,5 +252,33 @@ describe('foldToolWindow for the other tools', () => {
 
   it('has no window for the planned inside reverse fold', () => {
     expect(foldToolWindow(t, view({ tool: 'inside-reverse' }), verbs(), mouse)).toBeNull();
+  });
+
+  it('offers the Divide line’s count, its exact ratio, and clearing the marks made here', () => {
+    const setDivide = vi.fn();
+    const clearMarks = vi.fn();
+    const divide = (settings: Partial<FoldDivideSettings>, marks = 2) => ({
+      settings: { ...FOLD_DIVIDE_DEFAULT, ...settings },
+      marks,
+    });
+    const bound = { ...verbs(), setDivide, clearMarks };
+    const counted = foldToolWindow(t, view({ tool: 'divide-line', divide: divide({}) }), bound, mouse)?.divide;
+    expect(counted?.parts).toMatchObject({ value: 2, min: 2, max: 32 });
+    expect(counted?.ratio).toBeNull();
+    expect(counted?.clear).toMatchObject({ label: 'Clear the 2 marks made here', disabled: false });
+    counted?.clear.run();
+    expect(clearMarks).toHaveBeenCalled();
+
+    const ratio = foldToolWindow(t, view({ tool: 'divide-line', divide: divide({ mode: 'ratio' }, 0) }), bound, mouse)
+      ?.divide;
+    expect(ratio?.parts).toBeNull();
+    expect(ratio?.ratio?.readout).toBe('Computed ratio 1 : 1');
+    expect(ratio?.clear.disabled).toBe(true);
+    // Edit's ratio fields' spelling: a radical is accepted, nonsense is not.
+    expect(ratio?.ratio?.right.set('sqrt(2)')).toBe(true);
+    expect(setDivide).toHaveBeenLastCalledWith({ ratio: { a: 1, b: 0, c: 0, d: 0, e: 1, f: 2 } });
+    expect(ratio?.ratio?.left.set('two')).toBe(false);
+    // Without the verbs, a surface offers none.
+    expect(foldToolWindow(t, view({ tool: 'divide-line', divide: divide({}) }), verbs(), mouse)?.divide).toBeNull();
   });
 });

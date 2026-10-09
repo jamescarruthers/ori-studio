@@ -17,6 +17,15 @@
  * React-free and store-free: it takes a view and bound verbs and returns data.
  */
 import type { TFunction } from 'i18next';
+import {
+  evaluateOrieditaRatioExpression,
+  formatOrieditaRatioHalf,
+  formatOrieditaRatioNumber,
+  parseOrieditaRatioHalfInput,
+  ratioExpressionFromHalves,
+  ratioHalvesFromExpression,
+} from '../../lib/oristudioCpToolSettings';
+import { FOLD_MARK_MAX_PARTS } from '../document/foldSequenceDocument';
 import type { FoldCrossSection } from '../engine/foldEngineWire';
 import {
   flapNumbers,
@@ -40,6 +49,7 @@ import {
   type FoldShortcutId,
 } from './foldToolCatalog';
 import type { FoldRailVerbs, FoldToolsView } from './foldRailGroups';
+import type { FoldDivideSettings } from './foldToolState';
 import {
   foldRefusalNotice,
   neededFlaps,
@@ -69,6 +79,11 @@ export interface FoldToolWindowView extends FoldToolsView {
   picks: number;
   /** The located line, or null while it is being located. */
   preview: FoldPreview | null;
+  /**
+   * The Divide line's settings, and how many marks the step on screen holds
+   * (what Clear marks clears); absent where the surface offers none.
+   */
+  divide?: { settings: FoldDivideSettings; marks: number };
 }
 
 /** What the window can promise on this device. */
@@ -88,6 +103,31 @@ export interface FoldToolWindowVerbs extends Pick<FoldRailVerbs, 'selectTool' | 
   hoverFlap?: (flap: number | null) => void;
   cancel: () => void;
   commit: () => void;
+  /** Change how the next Divide-line mark divides its segment. */
+  setDivide?: (divide: Partial<FoldDivideSettings>) => void;
+  /** Clear the marks made on the step on screen: one undo entry. */
+  clearMarks?: () => void;
+}
+
+/** The Divide line's controls: count or exact ratio (Edit's ratio expression), and clearing what is made. */
+export interface FoldDivideControls {
+  mode: {
+    label: string;
+    value: FoldDivideSettings['mode'];
+    options: readonly { id: FoldDivideSettings['mode']; label: string }[];
+    set: (mode: FoldDivideSettings['mode']) => void;
+  };
+  /** The equal parts, in count mode; null in ratio mode. */
+  parts: { label: string; value: number; min: number; max: number; set: (parts: number) => void } | null;
+  /** The two halves of the ratio, as Edit's ratio fields spell them, in ratio mode; null in count mode. */
+  ratio: {
+    left: { label: string; value: string; set: (value: string) => boolean };
+    right: { label: string; value: string; set: (value: string) => boolean };
+    /** "Computed ratio 1 : 1.414". */
+    readout: string;
+  } | null;
+  clear: { label: string; disabled: boolean; run: () => void };
+  disabled: boolean;
 }
 
 export interface FoldToolInstructions {
@@ -156,7 +196,72 @@ export interface FoldToolWindowModel {
   movingSide: FoldMovingSideControl | null;
   layers: FoldLayersSection | null;
   refusal: FoldRefusalNoticeModel | null;
+  /** The Divide line's settings; null for every other tool, or where the surface offers none. */
+  divide: FoldDivideControls | null;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
+}
+
+function divideControls(
+  t: TFunction,
+  divide: NonNullable<FoldToolWindowView['divide']>,
+  verbs: FoldToolWindowVerbs,
+  readOnly: boolean
+): FoldDivideControls | null {
+  const { setDivide, clearMarks } = verbs;
+  if (!setDivide || !clearMarks) return null;
+  const { settings } = divide;
+  const halves = ratioHalvesFromExpression(settings.ratio);
+  const computed = evaluateOrieditaRatioExpression(settings.ratio);
+  const half = (side: 'left' | 'right') => (value: string) => {
+    const parsed = parseOrieditaRatioHalfInput(value);
+    if (!parsed) return false;
+    setDivide({
+      ratio: ratioExpressionFromHalves(side === 'left' ? parsed : halves.left, side === 'right' ? parsed : halves.right),
+    });
+    return true;
+  };
+  return {
+    mode: {
+      label: t('tools:fold.divide.mode', 'Divide'),
+      value: settings.mode,
+      options: [
+        { id: 'count', label: t('tools:fold.divide.count', 'Equal parts') },
+        { id: 'ratio', label: t('tools:fold.divide.ratio', 'Ratio') },
+      ],
+      set: (mode) => setDivide({ mode }),
+    },
+    parts:
+      settings.mode === 'count'
+        ? {
+            label: t('tools:fold.divide.parts', 'Parts'),
+            value: settings.parts,
+            min: 2,
+            max: FOLD_MARK_MAX_PARTS,
+            set: (parts) => setDivide({ parts }),
+          }
+        : null,
+    ratio:
+      settings.mode === 'ratio'
+        ? {
+            left: { label: t('tools:fold.divide.left', 'From the start'), value: formatOrieditaRatioHalf(halves.left), set: half('left') },
+            right: { label: t('tools:fold.divide.right', 'To the end'), value: formatOrieditaRatioHalf(halves.right), set: half('right') },
+            readout: t('tools:fold.divide.computed', 'Computed ratio {{s}} : {{t}}', {
+              s: formatOrieditaRatioNumber(computed.ratioS),
+              t: formatOrieditaRatioNumber(computed.ratioT),
+            }),
+          }
+        : null,
+    clear: {
+      label: t('tools:fold.divide.clear', {
+        count: divide.marks,
+        defaultValue_one: 'Clear the mark made here',
+        defaultValue_other: 'Clear the {{count}} marks made here',
+      }),
+      disabled: readOnly || divide.marks === 0,
+      run: clearMarks,
+    },
+    disabled: readOnly,
+  };
 }
 
 function settingsMeta(t: TFunction, count: number): string {
@@ -287,10 +392,11 @@ export function foldToolWindow(
 ): FoldToolWindowModel | null {
   const readOnly = view.readOnly !== null;
   if (view.tool === 'divide-line') {
+    const divide = view.divide ? divideControls(t, view.divide, verbs, readOnly) : null;
     return {
       phase: 'divide',
       title: foldToolLabel(t, 'divide-line'),
-      meta: settingsMeta(t, 0),
+      meta: settingsMeta(t, divide ? 1 : 0),
       instructions: {
         heading: t('tools:fold.window.instructions', 'Instructions'),
         items: [
@@ -305,6 +411,7 @@ export function foldToolWindow(
       movingSide: null,
       layers: null,
       refusal: null,
+      divide,
       footer: null,
     };
   }
@@ -324,6 +431,7 @@ export function foldToolWindow(
       movingSide: null,
       layers: null,
       refusal: null,
+      divide: null,
       footer: null,
     };
   }
@@ -349,7 +457,9 @@ export function foldToolWindow(
       disabled: readOnly,
       swap: verbs.swapSide,
     },
-    layers: layersSection(t, preview, verbs, readOnly),
+    // A fold refused before its layers were found has none to show: the
+    // refusal says why, and "finding the layers" would never end.
+    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly) : null,
     refusal: preview.refused
       ? foldRefusalNotice(
           t,
@@ -358,6 +468,7 @@ export function foldToolWindow(
           verbs
         )
       : null,
+    divide: null,
     footer: {
       cancel: {
         label: t('tools:fold.window.cancel', 'Cancel'),

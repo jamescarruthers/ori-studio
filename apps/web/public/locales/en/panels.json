@@ -1468,6 +1468,21 @@
       "sheetHint": "The flat sheet is where the steps start: there is no step to delete.",
       "startsBranch": "Starts a new branch"
     },
+    "canvas": {
+      "adds": "Dashed: creases this fold adds",
+      "creasePattern": "Crease pattern",
+      "creasePatternLabel": "The crease pattern so far, front up. Click its points and creases to locate a fold.",
+      "folded": "Folded",
+      "foldedLabel": "The folded form. Click its points and creases to locate a fold; drag to pan, scroll to zoom.",
+      "layers_one": "{{count}} layer",
+      "layers_other": "{{count}} layers",
+      "precreases": "Precreases",
+      "precreasesTitle": "Draw the flat creases: precreases, and folds undone",
+      "step": "Step {{number}}",
+      "stepCreases": "Step creases",
+      "stepCreasesTitle": "Draw the creases the step on show made as its instruction, in the diagram pens",
+      "toolbar": "Fold view"
+    },
     "paper": {
       "backUp": "Back up",
       "colors": "Colors",

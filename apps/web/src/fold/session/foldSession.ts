@@ -176,8 +176,11 @@ export interface FoldSession {
    * every state go.
    */
   retain(): () => void;
-  /** What a fold along a line would move, from the step on screen (D14 tier 2). */
-  analyse(op: FoldEngineOp): Promise<FoldAnalyseOutcome>;
+  /**
+   * What a fold along a line would move, from the step on screen (D14 tier 2).
+   * `choices` carries an axiom's root, which its line does not resolve without.
+   */
+  analyse(op: FoldEngineOp, choices?: FoldChoices): Promise<FoldAnalyseOutcome>;
   /** Fold a step from the step on screen without committing it (D14 tier 3). */
   preview(op: FoldEngineOp, choices?: FoldChoices): Promise<FoldPreviewOutcome>;
   /** Fold a step from the step on screen and append it to the shown sequence, the cursor moved onto it. */
@@ -631,36 +634,41 @@ export function createFoldSession({
     }
   };
 
-  const analyse = (op: FoldEngineOp): Promise<FoldAnalyseOutcome> => {
+  const analyse = (op: FoldEngineOp, choices?: FoldChoices): Promise<FoldAnalyseOutcome> => {
     const from = foldableFrom();
-    if (!(from instanceof Promise)) return analyseFrom(from, op);
+    if (!(from instanceof Promise)) return analyseFrom(from, op, choices);
     dropAnalysis();
     const ticket = analysisTicket;
-    return from.then((ready) => (ticket === analysisTicket ? analyseFrom(ready, op) : SUPERSEDED));
+    return from.then((ready) => (ticket === analysisTicket ? analyseFrom(ready, op, choices) : SUPERSEDED));
   };
 
-  const analyseFrom = (from: FoldingFrom | FoldUnavailable, op: FoldEngineOp): Promise<FoldAnalyseOutcome> => {
+  const analyseFrom = (
+    from: FoldingFrom | FoldUnavailable,
+    op: FoldEngineOp,
+    choices: FoldChoices | undefined
+  ): Promise<FoldAnalyseOutcome> => {
     if ('status' in from) return Promise.resolve(from);
     dropAnalysis();
     const ticket = analysisTicket;
     const { parent } = from;
-    const key = `${parent.generation}:${parent.id}:${foldStepInputKey({ op })}`;
+    const key = `${parent.generation}:${parent.id}:${foldStepInputKey({ op, choices })}`;
     const known = analyses.get(key);
     if (known) {
       analysis = known;
       render();
       return Promise.resolve(known);
     }
-    analysis = { status: 'working', op, parent };
+    const asked = choices ? { op, choices } : { op };
+    analysis = { status: 'working', ...asked, parent };
     render();
-    return analysisChannel.request((worker) => guarded(parent, () => worker.analyse(parent.id, op))).then(
+    return analysisChannel.request((worker) => guarded(parent, () => worker.analyse(parent.id, op, choices))).then(
       (result): FoldAnalyseOutcome => {
         if (result.status === 'superseded' || ticket !== analysisTicket) return SUPERSEDED;
         const value = result.value;
         const settled: FoldAnalysisAnswer =
           value.status === 'ok'
-            ? { status: 'analysed', op, parent, analysis: value.analysis }
-            : { status: 'refused', op, parent, refused: value };
+            ? { status: 'analysed', ...asked, parent, analysis: value.analysis }
+            : { status: 'refused', ...asked, parent, refused: value };
         remember(key, settled);
         analysis = settled;
         render();
@@ -668,7 +676,7 @@ export function createFoldSession({
       },
       (failure: unknown): FoldAnalyseOutcome => {
         if (ticket !== analysisTicket || isEngineLoss(failure)) return SUPERSEDED;
-        const settled: FoldAnalyseOutcome = { status: 'failed', op, parent, error: envelopeOf(failure) };
+        const settled: FoldAnalyseOutcome = { status: 'failed', ...asked, parent, error: envelopeOf(failure) };
         analysis = settled;
         render();
         return settled;

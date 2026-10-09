@@ -1519,6 +1519,22 @@
       "sheetHint": "A folha plana é onde os passos começam: não há passo para excluir.",
       "startsBranch": "Começa um novo ramo"
     },
+    "canvas": {
+      "adds": "Tracejados: vincos que esta dobra acrescenta",
+      "creasePattern": "Padrão de vincos",
+      "creasePatternLabel": "O padrão de vincos até agora, com a frente para cima. Clique em seus pontos e vincos para posicionar uma dobra.",
+      "folded": "Dobrado",
+      "foldedLabel": "A forma dobrada. Clique em seus pontos e vincos para posicionar uma dobra; arraste para mover, role para dar zoom.",
+      "layers_one": "{{count}} camada",
+      "layers_many": "{{count}} camadas",
+      "layers_other": "{{count}} camadas",
+      "precreases": "Pré-vincos",
+      "precreasesTitle": "Mostrar os vincos planos: pré-vincos e dobras desfeitas",
+      "step": "Passo {{number}}",
+      "stepCreases": "Vincos do passo",
+      "stepCreasesTitle": "Desenhar os vincos feitos pelo passo mostrado como sua instrução, com as canetas do diagrama",
+      "toolbar": "Visualização da dobra"
+    },
     "paper": {
       "backUp": "Verso para cima",
       "colors": "Cores",

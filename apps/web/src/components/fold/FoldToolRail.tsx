@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FoldKeyLabel } from '../../fold/tools/foldToolCatalog';
 import { foldRailTooltip, type FoldRailGroup } from '../../fold/tools/foldRailGroups';
@@ -14,10 +15,13 @@ import { FoldToolGlyph } from './FoldToolGlyph';
 export function FoldToolRail({
   groups,
   keyLabel,
+  header,
 }: {
   groups: readonly FoldRailGroup[];
   /** The label of a Fold key; without it the tooltips name none. */
   keyLabel?: FoldKeyLabel;
+  /** A full-width row above the groups: a touch tablet's free-point latch. */
+  header?: ReactNode;
 }) {
   const { t } = useTranslation();
   const railGroups: ToolRailGroup[] = groups.map((group) => ({
@@ -37,5 +41,12 @@ export function FoldToolRail({
       })),
     },
   }));
-  return <ToolRail aria-label={t('tools:fold.railLabel', 'Fold tools')} idPrefix="fold-rail-group" groups={railGroups} />;
+  return (
+    <ToolRail
+      aria-label={t('tools:fold.railLabel', 'Fold tools')}
+      idPrefix="fold-rail-group"
+      groups={railGroups}
+      header={header}
+    />
+  );
 }

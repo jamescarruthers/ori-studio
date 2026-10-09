@@ -5,7 +5,10 @@ import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
 import { STORAGE_KEYS } from '../../lib/storage';
 import { Button } from '../ui/Button';
 import { FieldRow } from '../ui/fieldRows/FieldRow';
+import { NumberRow } from '../ui/fieldRows/NumberRow';
+import { SegmentedRow } from '../ui/fieldRows/SegmentedRow';
 import { SelectRow } from '../ui/fieldRows/SelectRow';
+import { TextRow } from '../ui/fieldRows/TextRow';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { ToolHintInstructions } from '../ui/tools/ToolHintInstructions';
 import { ToolHintWindow } from '../ui/tools/ToolHintWindow';
@@ -46,7 +49,7 @@ export function FoldToolWindow({
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
   };
-  const { instructions, lineMode, kind, movingSide, layers, refusal, footer } = model;
+  const { instructions, lineMode, kind, movingSide, layers, refusal, divide, footer } = model;
 
   return (
     <ToolHintWindow
@@ -70,6 +73,48 @@ export function FoldToolWindow({
         ))}
       </div>
       {/* No dividers: the window divides its own sections. */}
+      {divide && (
+        <div className={styles.section} data-fold-divide="">
+          <SegmentedRow
+            label={divide.mode.label}
+            value={divide.mode.value}
+            options={divide.mode.options}
+            disabled={divide.disabled}
+            onChange={(mode) => divide.mode.set(mode === 'ratio' ? 'ratio' : 'count')}
+          />
+          {divide.parts && (
+            <NumberRow
+              label={divide.parts.label}
+              value={divide.parts.value}
+              min={divide.parts.min}
+              max={divide.parts.max}
+              step={1}
+              disabled={divide.disabled}
+              onCommit={divide.parts.set}
+            />
+          )}
+          {divide.ratio && (
+            <>
+              <TextRow
+                label={divide.ratio.left.label}
+                value={divide.ratio.left.value}
+                disabled={divide.disabled}
+                onCommit={divide.ratio.left.set}
+              />
+              <TextRow
+                label={divide.ratio.right.label}
+                value={divide.ratio.right.value}
+                disabled={divide.disabled}
+                onCommit={divide.ratio.right.set}
+              />
+              <p className={styles.note}>{divide.ratio.readout}</p>
+            </>
+          )}
+          <Button size="sm" variant="secondary" disabled={divide.clear.disabled} onClick={divide.clear.run}>
+            {divide.clear.label}
+          </Button>
+        </div>
+      )}
       {lineMode && (
         <div className={styles.section}>
           <SelectRow

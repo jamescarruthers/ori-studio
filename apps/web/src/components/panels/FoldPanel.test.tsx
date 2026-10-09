@@ -13,6 +13,13 @@ vi.mock('../../store/workspaceStore/useWorkspaceCapabilities', () => ({
   useWorkspaceCapabilities: () => capabilities.value,
 }));
 
+/**
+ * The canvas holds the Fold engine's worker and two WebGL surfaces, neither of
+ * which jsdom has; it is tested on its own (`components/fold/canvas`). The
+ * subject here is the shell around it.
+ */
+vi.mock('../fold/canvas/FoldCanvas', () => ({ FoldCanvas: () => null }));
+
 import { useLayoutStore } from '../../store/layoutStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { FoldPanel } from './FoldPanel';

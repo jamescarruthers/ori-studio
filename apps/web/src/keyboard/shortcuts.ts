@@ -177,11 +177,32 @@ export type DiagramPathShortcutId =
   | 'diagram.nudgeNodeUpLarge'
   | 'diagram.nudgeNodeDownLarge';
 /**
- * The Fold workspace's verbs: none yet. The scope and its executor slot exist
- * so the panel can claim the keyboard the day its first binding lands in
- * {@link FOLD_SHORTCUTS}; until then an executor is offered no id at all.
+ * The Fold workspace's verbs ({@link FOLD_SHORTCUTS}), one block per surface
+ * that binds them.
  */
-export type FoldShortcutId = never;
+export type FoldShortcutId =
+  // The canvas's tools: the folds and the Divide line, the line modes, the
+  // model verbs, the moving side, the axiom's roots and the commit.
+  | 'fold.toolValley'
+  | 'fold.toolMountain'
+  | 'fold.toolPrecrease'
+  | 'fold.toolInsideReverse'
+  | 'fold.toolDivideLine'
+  | 'fold.turnOver'
+  | 'fold.rotate'
+  | 'fold.lineAxiom1'
+  | 'fold.lineAxiom2'
+  | 'fold.lineAxiom3'
+  | 'fold.lineAxiom4'
+  | 'fold.lineAxiom5'
+  | 'fold.lineAxiom6'
+  | 'fold.lineAxiom7'
+  | 'fold.lineFree'
+  | 'fold.lineCrease'
+  | 'fold.swapSide'
+  | 'fold.previousCandidate'
+  | 'fold.nextCandidate'
+  | 'fold.commit';
 export type ShortcutActionId =
   | MenuActionId
   | OristudioCpActionId
@@ -715,14 +736,56 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
   diagramShortcut('diagram.nudgeNodeDownLarge', 'Nudge Node Down (Large)', { shift: true, key: 'arrowdown' }, 'diagram-path'),
 ];
 
+function foldShortcut(id: FoldShortcutId, label: string, defaultChord: KeyChord | KeyChord[] | null): ShortcutDefinition {
+  const defaultChords = normalizeDefaultChords(defaultChord);
+  return {
+    id,
+    label,
+    category: 'Fold Workspace',
+    scope: 'fold',
+    target: 'fold',
+    defaultChord: defaultChords[0] ?? null,
+    defaultChords,
+  };
+}
+
 /**
- * Fold-workspace bindings, in the `fold` scope: empty until the Fold panel
- * lands the verbs D14 lists — the steps on ←/→ and `[`/`]` as the Diagram's,
- * the active step's branches on ↑/↓ as References' ways, candidate roots on
- * Shift+←/→, Space to play the step, Enter to commit. Escape stays
- * `viewport.cancel`, as it is in the Diagram.
+ * Fold-workspace bindings, in the `fold` scope (plan D14): pushed only in
+ * Fold's own context, so its letters never meet the crease-pattern tools'
+ * bound to the same keys. Escape stays `viewport.cancel`, through the Fold
+ * canvas's cancel ladder, as it is in the Diagram.
  */
-const FOLD_SHORTCUTS: ShortcutDefinition[] = [];
+const FOLD_SHORTCUTS: ShortcutDefinition[] = [
+  // The canvas's tools. The folds by their letters, the Divide line by D, as
+  // the rail shows them. The axioms on the bare digits, as the rail numbers
+  // them: in Fold they shadow the viewport's digit keys (pan, rotate, zoom),
+  // whose verbs the canvas reaches by ⌘= / ⌘−, the toolbar and a pinch — the
+  // shadowing D14 left to the design, which numbers the line modes. Inside
+  // reverse is planned (V0.5) and takes no key until it lands. Rotate is R,
+  // since `[` and `]` are the steps'.
+  foldShortcut('fold.toolValley', 'Valley Fold', { key: 'v' }),
+  foldShortcut('fold.toolMountain', 'Mountain Fold', { key: 'm' }),
+  foldShortcut('fold.toolPrecrease', 'Precrease', { key: 'p' }),
+  foldShortcut('fold.toolInsideReverse', 'Inside Reverse Fold', null),
+  foldShortcut('fold.toolDivideLine', 'Divide Line', { key: 'd' }),
+  foldShortcut('fold.turnOver', 'Turn Over', { key: 't' }),
+  foldShortcut('fold.rotate', 'Rotate a Quarter Turn', { key: 'r' }),
+  foldShortcut('fold.lineAxiom1', 'Axiom 1', { key: '1' }),
+  foldShortcut('fold.lineAxiom2', 'Axiom 2', { key: '2' }),
+  foldShortcut('fold.lineAxiom3', 'Axiom 3', { key: '3' }),
+  foldShortcut('fold.lineAxiom4', 'Axiom 4', { key: '4' }),
+  foldShortcut('fold.lineAxiom5', 'Axiom 5', { key: '5' }),
+  foldShortcut('fold.lineAxiom6', 'Axiom 6', { key: '6' }),
+  foldShortcut('fold.lineAxiom7', 'Axiom 7', { key: '7' }),
+  foldShortcut('fold.lineFree', 'Free Line', { key: 'f' }),
+  foldShortcut('fold.lineCrease', 'Existing Crease', { key: 'c' }),
+  foldShortcut('fold.swapSide', 'Swap Moving Side', { key: 's' }),
+  // The axiom's roots, on Shift+arrows: the arrows alone are the steps'.
+  foldShortcut('fold.previousCandidate', 'Previous Root', { shift: true, key: 'arrowleft' }),
+  foldShortcut('fold.nextCandidate', 'Next Root', { shift: true, key: 'arrowright' }),
+  // Declines while a focused control owns Enter, as the Diagram's does.
+  foldShortcut('fold.commit', 'Commit Fold', { key: 'enter' }),
+];
 
 /**
  * The viewport verbs whose executor can answer `false` and let the chord fall
