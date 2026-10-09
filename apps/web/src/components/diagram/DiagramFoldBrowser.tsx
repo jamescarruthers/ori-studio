@@ -12,6 +12,7 @@ import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramFoldBrowserState } from '../../store/workspaceStore/types';
 import { Button } from '../ui/Button';
+import { PatternThumbnail } from '../ui/PatternThumbnail';
 import {
   PullBrowserFrame,
   PullBrowserGrid,
@@ -20,7 +21,6 @@ import {
   type PullBrowserList,
 } from './DiagramReferencesBrowser';
 import { DiagramPullCard, DiagramPullCardThumbnail } from './DiagramReferencesCard';
-import { DiagramSheetThumbnail } from './DiagramSheetThumbnail';
 
 /**
  * The Fold browser (fold-workspace plan D17): a modal over the Diagram, from
@@ -121,7 +121,7 @@ function FoldCards({ browser }: { browser: FoldBrowser }) {
           picture={
             card.picture ? (
               <DiagramPullCardThumbnail>
-                <DiagramSheetThumbnail thumbnail={card.picture} />
+                <PatternThumbnail thumbnail={card.picture} />
               </DiagramPullCardThumbnail>
             ) : null
           }
