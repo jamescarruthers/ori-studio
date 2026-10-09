@@ -4757,7 +4757,9 @@
     "tools:fold.refusal.unsupported.text": "0058eac7159c",
     "tools:fold.refusal.unsupported.title": "34c79d217a58",
     "tools:fold.refusal.wrongCrease.text": "dfd1493af514",
-    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa"
+    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -9517,7 +9519,9 @@
     "tools:fold.refusal.unsupported.text": "0058eac7159c",
     "tools:fold.refusal.unsupported.title": "34c79d217a58",
     "tools:fold.refusal.wrongCrease.text": "dfd1493af514",
-    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa"
+    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -14279,7 +14283,9 @@
     "tools:fold.refusal.unsupported.text": "0058eac7159c",
     "tools:fold.refusal.unsupported.title": "34c79d217a58",
     "tools:fold.refusal.wrongCrease.text": "dfd1493af514",
-    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa"
+    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -18841,7 +18847,9 @@
     "tools:fold.refusal.unsupported.text": "0058eac7159c",
     "tools:fold.refusal.unsupported.title": "34c79d217a58",
     "tools:fold.refusal.wrongCrease.text": "dfd1493af514",
-    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa"
+    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -23403,7 +23411,9 @@
     "tools:fold.refusal.unsupported.text": "0058eac7159c",
     "tools:fold.refusal.unsupported.title": "34c79d217a58",
     "tools:fold.refusal.wrongCrease.text": "dfd1493af514",
-    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa"
+    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -28163,7 +28173,9 @@
     "tools:fold.refusal.unsupported.text": "0058eac7159c",
     "tools:fold.refusal.unsupported.title": "34c79d217a58",
     "tools:fold.refusal.wrongCrease.text": "dfd1493af514",
-    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa"
+    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -32923,7 +32935,9 @@
     "tools:fold.refusal.unsupported.text": "0058eac7159c",
     "tools:fold.refusal.unsupported.title": "34c79d217a58",
     "tools:fold.refusal.wrongCrease.text": "dfd1493af514",
-    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa"
+    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -37485,6 +37499,8 @@
     "tools:fold.refusal.unsupported.text": "0058eac7159c",
     "tools:fold.refusal.unsupported.title": "34c79d217a58",
     "tools:fold.refusal.wrongCrease.text": "dfd1493af514",
-    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa"
+    "tools:fold.refusal.wrongCrease.title": "3a85c0591dfa",
+    "errors:worker.foldSequence": "edc8e6ed1ea6",
+    "errors:worker.foldSequenceLost": "235769d04c7d"
   }
 }
