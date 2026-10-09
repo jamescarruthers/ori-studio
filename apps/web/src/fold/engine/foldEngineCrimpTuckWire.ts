@@ -24,12 +24,12 @@
 
 import type { FoldStateFingerprint } from '../document/foldDigest';
 import type {
+  FoldCompletionChoice,
   FoldCrimpKind,
   FoldCrimpOp,
   FoldDirection,
   FoldModelLine,
   FoldOpeningChoice,
-  FoldStoredOrder,
   FoldTuckOp,
 } from '../document/foldSequenceDocument';
 import type {
@@ -225,7 +225,7 @@ export interface FoldTuckReport extends FoldCompoundReport {
 /** What a landed crimp or tuck stores beside its line's root: the document's choice keys. */
 export interface FoldCompoundStored {
   opening?: FoldOpeningChoice[];
-  completion?: FoldStoredOrder;
+  completion?: FoldCompletionChoice;
 }
 
 /** A landed crimp or tuck, held under `state`. */

@@ -227,6 +227,8 @@ impl Bridge {
                     Outcome::Ok(Applied {
                         state: self.hold_compound_state(landed, step),
                         report: None,
+                        // A crimp's or tuck's report is its own calls'.
+                        compound: None,
                         summary,
                     })
                 }
@@ -273,9 +275,10 @@ impl Bridge {
                 let (report, compound) = match &held {
                     Held::Fold { folded, .. } => (Some(folded.report.clone()), None),
                     Held::Compound { landed, .. } => (None, Some(landed.report())),
-                    Held::Sheet(_) | Held::View { .. } | Held::Jump(_) | Held::Summarised { .. } => {
-                        (None, None)
-                    }
+                    Held::Sheet(_)
+                    | Held::View { .. }
+                    | Held::Jump(_)
+                    | Held::Summarised { .. } => (None, None),
                 };
                 Outcome::Ok(Applied {
                     state: self.hold(held),

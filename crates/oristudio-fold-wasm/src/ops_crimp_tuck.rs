@@ -43,6 +43,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use crate::bridge::Bridge;
+use crate::compound::{NeededChoice, choice_needed, compound_refusal};
 use crate::resolve::{self, Rejection, finite_point, model_line};
 use crate::wire::{
     AlongLine, BridgeError, BridgeRefusal, Choices, LineInput, Motion, Op, Outcome, Point, Refusal,
@@ -332,12 +333,9 @@ fn tuck_fold(parent: &State, op: &TuckOp, choices: &Choices) -> Result<TuckFold,
 }
 
 /// A compound fold's refusal on the wire: the engine's, or a stored choice
-/// that no longer resolves.
+/// that no longer resolves (the seam's, `crate::compound`).
 fn refused(refusal: CompoundRefused) -> Refusal {
-    match refusal {
-        CompoundRefused::Refused(refused) => refused.into(),
-        CompoundRefused::Broken(broken) => BridgeRefusal::ChoiceBroken { broken }.into(),
-    }
+    compound_refusal(refusal)
 }
 
 /// A resolved op, a refusal, or (thrown) the caller's mistake.
@@ -563,13 +561,10 @@ pub(crate) fn replay(parent: &State, op: &Op, choices: &Choices) -> Option<Repla
                 let layers = layers(parent, &fold.first, fold.side);
                 match parent.crimp_fold(&fold, &crimp_choices(choices)) {
                     Ok(CrimpOutcome::Landed(folded)) => Ok((folded.state, layers)),
-                    Ok(CrimpOutcome::ChooseOpening(_)) => {
-                        Err(BridgeRefusal::ChoiceNeeded { choice: "opening" }.into())
+                    Ok(CrimpOutcome::ChooseOpening(_)) => Err(choice_needed(NeededChoice::Opening)),
+                    Ok(CrimpOutcome::ChooseOrder(_)) => {
+                        Err(choice_needed(NeededChoice::Completion))
                     }
-                    Ok(CrimpOutcome::ChooseOrder(_)) => Err(BridgeRefusal::ChoiceNeeded {
-                        choice: "completion",
-                    }
-                    .into()),
                     Err(refusal) => Err(refused(refusal)),
                 }
             })
@@ -582,10 +577,7 @@ pub(crate) fn replay(parent: &State, op: &Op, choices: &Choices) -> Option<Repla
                 };
                 match parent.tuck_fold(&fold, &stored) {
                     Ok(TuckOutcome::Landed(folded)) => Ok((folded.state, layers)),
-                    Ok(TuckOutcome::ChooseOrder(_)) => Err(BridgeRefusal::ChoiceNeeded {
-                        choice: "completion",
-                    }
-                    .into()),
+                    Ok(TuckOutcome::ChooseOrder(_)) => Err(choice_needed(NeededChoice::Completion)),
                     Err(refusal) => Err(refused(refusal)),
                 }
             })

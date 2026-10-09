@@ -430,5 +430,6 @@ fn a_tuck_with_two_orders_lands_both_and_stores_each() {
         Outcome::Ok(_) => panic!("a broken order landed"),
     };
     assert_eq!(refusal["refusal"]["code"], "choice_broken");
-    assert_eq!(refusal["refusal"]["broken"]["broken"], "witness");
+    // The engine's cause, flattened beside the code (`crate::compound`).
+    assert_eq!(refusal["refusal"]["broken"], "witness");
 }
