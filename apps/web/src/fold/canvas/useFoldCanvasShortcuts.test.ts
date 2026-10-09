@@ -67,6 +67,24 @@ describe('the Fold canvas’s keys', () => {
     expect(bound.commit).toHaveBeenCalledTimes(1);
   });
 
+  it('commits on Enter from the layer controls, and keeps Enter there while there is nothing to commit', () => {
+    const bound = verbs();
+    release = registerFoldCanvasVerbs(bound);
+    const layers = document.createElement('div');
+    layers.setAttribute('data-fold-layer-pick', '');
+    const chip = document.createElement('button');
+    layers.append(chip);
+    document.body.append(layers);
+    expect(focusLeavesEnterToFold(chip)).toBe(true);
+    expect(runFoldCanvasShortcut('fold.commit', chip)).toBe(true);
+    expect(bound.commit).toHaveBeenCalledTimes(1);
+    // Still landing, or refused: claimed all the same, or the chip's own Enter would press it.
+    vi.mocked(bound.commit).mockReturnValue(false);
+    expect(runFoldCanvasShortcut('fold.commit', chip)).toBe(true);
+    // Off the layer controls a declined commit lets the key go.
+    expect(runFoldCanvasShortcut('fold.commit', document.body)).toBe(false);
+  });
+
   it('steps the roots on Shift+arrows while there are several, and leaves the keys to a control that uses them', () => {
     const one = verbs(1);
     release = registerFoldCanvasVerbs(one);

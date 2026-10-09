@@ -10,6 +10,9 @@ import styles from './FoldFlapChips.module.css';
  * picker that shows where they lie. "Flap 2 · 2 layers", numbered as the
  * picker and the refusal's fixes number them. A flap a refusal says is in the
  * way carries the alert mark the notice explains.
+ *
+ * Space presses a chip; Enter is the workspace's, which commits the fold
+ * (`data-fold-layer-pick`, `focusLeavesEnterToFold`), as the picker leaves it.
  */
 export function FoldFlapChips({
   chips,
@@ -25,7 +28,12 @@ export function FoldFlapChips({
   const { t } = useTranslation();
   if (chips.length === 0) return null;
   return (
-    <div className={styles.chips} role="group" aria-label={t('tools:fold.flap.groupLabel', 'Flaps to fold')}>
+    <div
+      className={styles.chips}
+      role="group"
+      aria-label={t('tools:fold.flap.groupLabel', 'Flaps to fold')}
+      data-fold-layer-pick=""
+    >
       {chips.map((chip) => (
         <Chip
           key={chip.flap}

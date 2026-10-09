@@ -15,13 +15,27 @@ import { foldCanvasVerbs } from './foldCanvasCommands';
 export const FOLD_PANE_ATTRIBUTE = 'data-fold-pane';
 
 /**
- * Whether Enter at this focus is the canvas's: focus on nothing, or on a pane
- * (a press focuses it). Anything else that holds focus — a button, a tab, a
- * field — keeps its own Enter, as the Diagram's steps leave it.
+ * Marks the tool window's layer controls — the layer picker and the flap
+ * chips — where the fold's two steps meet: "Pick which layers move", then
+ * "Press Enter to fold". Enter there is the canvas's, which commits; Space is
+ * the control's, which picks.
+ */
+export const FOLD_LAYER_PICK_ATTRIBUTE = 'data-fold-layer-pick';
+
+/** Whether focus is in the tool window's layer controls ({@link FOLD_LAYER_PICK_ATTRIBUTE}). */
+export function focusInFoldLayerPick(element: Element | null): boolean {
+  return element !== null && element.closest(`[${FOLD_LAYER_PICK_ATTRIBUTE}]`) !== null;
+}
+
+/**
+ * Whether Enter at this focus is the canvas's: focus on nothing, on a pane
+ * (a press focuses it), or in the layer controls, the step before Enter.
+ * Anything else that holds focus — a button, a tab, a field — keeps its own
+ * Enter, as the Diagram's steps leave it.
  */
 export function focusLeavesEnterToFold(element: Element | null): boolean {
   if (element === null || element === element.ownerDocument.body) return true;
-  return element.closest(`[${FOLD_PANE_ATTRIBUTE}]`) !== null;
+  return element.closest(`[${FOLD_PANE_ATTRIBUTE}]`) !== null || focusInFoldLayerPick(element);
 }
 
 const TOOL_BY_SHORTCUT = new Map<FoldShortcutId, FoldToolId>(
@@ -68,7 +82,10 @@ export function runFoldCanvasShortcut(id: FoldShortcutId, focus: Element | null)
       return verbs.stepRoot(id === 'fold.nextCandidate' ? 1 : -1);
     case 'fold.commit':
       if (!focusLeavesEnterToFold(focus)) return false;
-      return verbs.commit();
+      // In the layer controls Enter is the fold's even while there is none
+      // to commit (still landing, or refused): let through, a chip's own
+      // Enter would press it and put its flap back.
+      return verbs.commit() || focusInFoldLayerPick(focus);
     default:
       // Another Fold surface's key: its own handler answers it.
       return false;
