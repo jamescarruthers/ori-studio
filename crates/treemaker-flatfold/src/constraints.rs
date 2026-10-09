@@ -31,7 +31,7 @@ pub(crate) struct TransitivityCounts {
 #[derive(Debug, Clone)]
 pub(crate) struct ConstraintState {
     pub variables: Vec<Key>,
-    pub variable_index: BTreeMap<Key, usize>,
+    pub pairs: PairIndex,
     pub constraints: Vec<ConstraintBuckets>,
     pub connected_components: Vec<BTreeMap<usize, usize>>,
     pub assignments: Vec<u8>,
@@ -59,7 +59,7 @@ impl ConstraintState {
     ) -> SearchTables<'a> {
         SearchTables {
             variables: &self.variables,
-            variable_index: &self.variable_index,
+            pairs: &self.pairs,
             constraints: &self.constraints,
             transitivity: TransitivitySource {
                 faces_cells: &overlap.faces_cells,
@@ -95,10 +95,58 @@ pub(crate) struct TransitivitySource<'a> {
 #[derive(Clone, Copy)]
 pub(crate) struct SearchTables<'a> {
     pub variables: &'a [Key],
-    pub variable_index: &'a BTreeMap<Key, usize>,
+    /// Each pair's variable by face numbers, for the lookups inside the
+    /// propagation's loop.
+    pub pairs: &'a PairIndex,
     pub constraints: &'a [ConstraintBuckets],
     pub transitivity: TransitivitySource<'a>,
     pub implications: &'a ImplicationMaps,
+}
+
+/// The variable of each pair of faces: per smaller face, the larger faces it
+/// pairs with and their variables, ascending. Propagation looks up every
+/// pair of every constraint it reads; this answers without building a key.
+#[derive(Debug, Clone)]
+pub(crate) struct PairIndex {
+    rows: Vec<Vec<(usize, usize)>>,
+}
+
+impl PairIndex {
+    /// From variables whose keys each hold two faces.
+    pub(crate) fn new(variables: &[Key]) -> Self {
+        Self::of_pairs(variables.iter().map(|key| {
+            let faces = math::decode(key);
+            [
+                faces.first().copied().unwrap_or_default(),
+                faces.get(1).copied().unwrap_or_default(),
+            ]
+        }))
+    }
+
+    /// From face pairs in variable order.
+    pub(crate) fn of_pairs(pairs: impl IntoIterator<Item = [usize; 2]>) -> Self {
+        let mut rows: Vec<Vec<(usize, usize)>> = Vec::new();
+        for (variable, [a, b]) in pairs.into_iter().enumerate() {
+            let (lo, hi) = (a.min(b), a.max(b));
+            if rows.len() <= lo {
+                rows.resize_with(lo + 1, Vec::new);
+            }
+            rows[lo].push((hi, variable));
+        }
+        for row in &mut rows {
+            row.sort_unstable();
+        }
+        Self { rows }
+    }
+
+    /// The variable of faces `a` and `b`, in either order.
+    pub(crate) fn get(&self, a: usize, b: usize) -> Option<usize> {
+        let row = self.rows.get(a.min(b))?;
+        let hi = a.max(b);
+        row.binary_search_by_key(&hi, |&(face, _)| face)
+            .ok()
+            .map(|at| row[at].1)
+    }
 }
 
 /// Why propagation stopped: upstream `initial_assignment` returns
@@ -240,7 +288,7 @@ pub(crate) fn build_constraint_state(analysis: &Analysis) -> Result<ConstraintSt
     } = build_constraint_tables(analysis)?;
     let constraint_counts = count_constraints(&constraints);
     let connected_components = build_connected_components(overlap.faces_cells.len(), &constraints);
-    let implications = ImplicationMaps::build();
+    let pairs = PairIndex::new(&variables);
     let initial = initial_assignments(
         &fold.edges_faces,
         &fold.edges_assignment,
@@ -250,14 +298,14 @@ pub(crate) fn build_constraint_state(analysis: &Analysis) -> Result<ConstraintSt
     );
     let tables = SearchTables {
         variables: &variables,
-        variable_index: &variable_index,
+        pairs: &pairs,
         constraints: &constraints,
         transitivity: TransitivitySource {
             faces_cells: &overlap.faces_cells,
             cells_faces: &overlap.cells_faces,
             connected_components: &connected_components,
         },
-        implications: &implications,
+        implications: ImplicationMaps::shared(),
     };
     let mut transitivity_counts = TransitivityCounts::default();
     let level = assigned_level(&initial);
@@ -277,7 +325,7 @@ pub(crate) fn build_constraint_state(analysis: &Analysis) -> Result<ConstraintSt
     let groups = variable_groups(&tables, &assignments, &mut transitivity_counts);
     Ok(ConstraintState {
         variables,
-        variable_index,
+        pairs,
         constraints,
         connected_components,
         assignments,
@@ -305,8 +353,7 @@ pub(crate) fn solve_constraint_state(
         .overlap
         .as_ref()
         .ok_or(FlatFoldError::Unimplemented("overlap graph"))?;
-    let implications = ImplicationMaps::build();
-    let tables = state.tables(overlap, &implications);
+    let tables = state.tables(overlap, ImplicationMaps::shared());
     let mut group_solutions = Vec::with_capacity(state.groups.len());
     let assigned_orders = state.groups.first().map_or_else(Vec::new, |group| {
         group
@@ -731,7 +778,7 @@ pub(crate) fn propagate_initial_assignments<M: NodeMeter>(
                     let cause = match tables.implications.infer(
                         constraint_type,
                         constraint_faces,
-                        tables.variable_index,
+                        tables.pairs,
                         &assignments,
                     )? {
                         Inference::Conflict => Some(ConflictCause::Unsatisfiable),
@@ -795,12 +842,7 @@ fn error_faces(
     assignments: &[u8],
     parents: &[Option<Parent>],
 ) -> Vec<usize> {
-    let variable_of = |[a, b]: [usize; 2]| {
-        tables
-            .variable_index
-            .get(&math::encode_order_pair(a, b))
-            .copied()
-    };
+    let variable_of = |[a, b]: [usize; 2]| tables.pairs.get(a, b);
     let mut stack = pairs_for_type(constraint_type, faces)
         .into_iter()
         .filter_map(variable_of)
@@ -855,10 +897,11 @@ pub(crate) fn variable_groups(
 ) -> Vec<Vec<usize>> {
     let SearchTables {
         variables,
-        variable_index,
+        pairs,
         constraints,
         transitivity,
         implications,
+        ..
     } = *tables;
     let assigned = assignments
         .iter()
@@ -888,20 +931,16 @@ pub(crate) fn variable_groups(
                     transitivity_counts,
                 );
                 for constraint_faces in constraints_for_type {
-                    let Ok(inference) = implications.infer(
-                        constraint_type,
-                        &constraint_faces,
-                        variable_index,
-                        assignments,
-                    ) else {
+                    let Ok(inference) =
+                        implications.infer(constraint_type, &constraint_faces, pairs, assignments)
+                    else {
                         continue;
                     };
                     if inference == Inference::Dead {
                         continue;
                     }
                     for pair in pairs_for_type(constraint_type, &constraint_faces) {
-                        let key = math::encode_order_pair(pair[0], pair[1]);
-                        if let Some(next_variable) = variable_index.get(&key).copied()
+                        if let Some(next_variable) = pairs.get(pair[0], pair[1])
                             && !seen.contains(&next_variable)
                             && assignments[next_variable] == 0
                         {
@@ -953,15 +992,29 @@ fn transitivity_constraints(
         cells_faces,
         connected_components,
     } = source;
-    let f1_cells = faces_cells[f1].iter().copied().collect::<BTreeSet<_>>();
+    // The third faces of f1's and f2's shared cells, each once, in the order
+    // first met. A deep stack's cells hold many faces, so membership is a
+    // mark per face rather than a scan of what was met.
+    let mut f1_cells = faces_cells[f1].clone();
+    f1_cells.sort_unstable();
+    let mut met = vec![false; faces_cells.len()];
     let mut candidates = Vec::new();
     for cell in &faces_cells[f2] {
-        if !f1_cells.contains(cell) {
+        if f1_cells.binary_search(cell).is_err() {
             continue;
         }
-        for face in &cells_faces[*cell] {
-            if *face != f1 && *face != f2 && !candidates.contains(face) {
-                candidates.push(*face);
+        for &face in &cells_faces[*cell] {
+            if face == f1 || face == f2 {
+                continue;
+            }
+            match met.get_mut(face) {
+                Some(seen) if *seen => {}
+                Some(seen) => {
+                    *seen = true;
+                    candidates.push(face);
+                }
+                None if !candidates.contains(&face) => candidates.push(face),
+                None => {}
             }
         }
     }
@@ -1007,8 +1060,14 @@ pub(crate) fn pairs_for_type(constraint_type: usize, faces: &[usize]) -> Vec<[us
     }
 }
 
+/// Upstream's `CON.implied`: per constraint family, what each assignment of
+/// its pairs (0 for unassigned, 1, 2) implies.
 pub(crate) struct ImplicationMaps {
-    maps: Vec<BTreeMap<String, Inference>>,
+    /// Per family, indexed by the assignment read as a base-3 number, its
+    /// first pair the least significant digit. Upstream keys the same table
+    /// by the assignment's string, which every inference built and looked
+    /// up in the propagation's innermost loop.
+    tables: Vec<Vec<Inference>>,
 }
 
 impl ImplicationMaps {
@@ -1096,40 +1155,59 @@ impl ImplicationMaps {
             }
             maps.push(map);
         }
-        Self { maps }
+        // Every one of the 3^n assignments is a key; an index the table
+        // lacks would read as a conflict, as a key the map lacked did.
+        let tables = maps
+            .into_iter()
+            .map(|map| {
+                let mut table = vec![Inference::Conflict; map.len()];
+                for (key, inference) in map {
+                    let code = key
+                        .bytes()
+                        .rev()
+                        .fold(0usize, |code, digit| 3 * code + usize::from(digit - b'0'));
+                    if let Some(slot) = table.get_mut(code) {
+                        *slot = inference;
+                    }
+                }
+                table
+            })
+            .collect();
+        Self { tables }
     }
 
     fn infer(
         &self,
         constraint_type: usize,
         faces: &[usize],
-        variable_index: &BTreeMap<Key, usize>,
+        index: &PairIndex,
         assignments: &[u8],
     ) -> Result<Inference> {
         const FLIP: [[u8; 3]; 2] = [[0, 1, 2], [0, 2, 1]];
         let pairs = pairs_for_type(constraint_type, faces);
-        let mut tuple = Vec::with_capacity(pairs.len());
-        for [x, y] in &pairs {
-            let key = math::encode_order_pair(*x, *y);
-            let Some(index) = variable_index.get(&key).copied() else {
+        // Each pair's variable, kept for the implied orders below.
+        let mut variables = [0usize; 6];
+        let (mut code, mut place) = (0usize, 1usize);
+        for (slot, [x, y]) in variables.iter_mut().zip(&pairs) {
+            let Some(variable) = index.get(*x, *y) else {
                 return Err(FlatFoldError::InvalidInput(
                     "inference references missing variable".to_string(),
                 ));
             };
-            tuple.push(FLIP[usize::from(y < x)][assignments[index] as usize]);
+            *slot = variable;
+            code += place * usize::from(FLIP[usize::from(y < x)][assignments[variable] as usize]);
+            place *= 3;
         }
-        let key = tuple_key(&tuple);
-        let inference = self.maps[constraint_type]
-            .get(&key)
-            .cloned()
-            .unwrap_or(Inference::Conflict);
+        let inference = self
+            .tables
+            .get(constraint_type)
+            .and_then(|table| table.get(code));
         Ok(match inference {
-            Inference::Implied(implied) => {
-                let mut out = Vec::new();
-                for (pair_index, assignment) in implied {
-                    let [x, y] = pairs[pair_index];
-                    let key = math::encode_order_pair(x, y);
-                    let Some(variable) = variable_index.get(&key).copied() else {
+            Some(Inference::Implied(implied)) => {
+                let mut out = Vec::with_capacity(implied.len());
+                for &(pair_index, assignment) in implied {
+                    let ([x, y], Some(&variable)) = (pairs[pair_index], variables.get(pair_index))
+                    else {
                         return Err(FlatFoldError::InvalidInput(
                             "implied assignment references missing variable".to_string(),
                         ));
@@ -1138,7 +1216,8 @@ impl ImplicationMaps {
                 }
                 Inference::Implied(out)
             }
-            other => other,
+            Some(other) => other.clone(),
+            None => Inference::Conflict,
         })
     }
 }
@@ -1171,7 +1250,7 @@ fn propagate_assignment(
                 match tables.implications.infer(
                     constraint_type,
                     &constraint_faces,
-                    tables.variable_index,
+                    tables.pairs,
                     assignments,
                 )? {
                     Inference::Conflict => {

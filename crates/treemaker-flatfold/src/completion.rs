@@ -14,8 +14,8 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::constraints::{
-    self, ConstraintBuckets, ImplicationMaps, InitialPropagation, Key, NodeMeter, SearchTables,
-    SeedConflict, TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA, TransitivityCounts,
+    self, ConstraintBuckets, ImplicationMaps, InitialPropagation, Key, NodeMeter, PairIndex,
+    SearchTables, SeedConflict, TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA, TransitivityCounts,
     TransitivitySource,
 };
 use crate::{Analysis, FlatFoldError, SolutionLimit, math};
@@ -439,7 +439,7 @@ pub fn flat_folder_completion_problem(analysis: &Analysis) -> crate::Result<Comp
 /// A validated problem's tables in the solver's encoding.
 struct SearchInput {
     variables: Vec<Key>,
-    variable_index: BTreeMap<Key, usize>,
+    pairs: PairIndex,
     constraints: Vec<ConstraintBuckets>,
     connected_components: Vec<BTreeMap<usize, usize>>,
 }
@@ -546,7 +546,7 @@ impl SearchInput {
             constraints::build_connected_components(face_count, &constraints);
         Ok(Self {
             variables,
-            variable_index,
+            pairs: PairIndex::of_pairs(problem.variables.iter().copied()),
             constraints,
             connected_components,
         })
@@ -559,7 +559,7 @@ impl SearchInput {
     ) -> SearchTables<'a> {
         SearchTables {
             variables: &self.variables,
-            variable_index: &self.variable_index,
+            pairs: &self.pairs,
             constraints: &self.constraints,
             transitivity: TransitivitySource {
                 faces_cells: &problem.faces_cells,
