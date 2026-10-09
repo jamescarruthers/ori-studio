@@ -21,6 +21,8 @@ import {
   runAtRest,
   runHeading,
   runPose,
+  runProgress,
+  seekFoldRun,
   snapFoldRun,
   tickFoldRun,
   toggleFoldRun,
@@ -159,6 +161,28 @@ export class FoldTransport<P extends FoldProgramme = FoldProgramme> {
   /** The Play button, Space and the menu row: play, pause, resume, play back. */
   toggle(): void {
     this.play('user');
+  }
+
+  /**
+   * How far through its legs the paper is, 0 to 1 by time
+   * (`runProgress`): read at a push, never published, so a scrubber can follow
+   * the frames without a render per transition.
+   */
+  readonly progress = (): number => runProgress(this.run);
+
+  /**
+   * A scrubber: the paper paused `progress` of the way through the
+   * programme's legs (`seekFoldRun`), whatever was playing, and a pending
+   * auto-play overtaken. Play then carries on from there. Not a play: nothing
+   * is reported.
+   */
+  seek(progress: number): void {
+    if (!this.playable()) return;
+    this.clearTimer();
+    this.stop();
+    this.run = seekFoldRun(this.run, progress);
+    this.push();
+    this.publish();
   }
 
   dispose(): void {

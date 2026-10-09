@@ -15,8 +15,8 @@ import {
   type FoldPlayTrigger,
   type FoldPoseSink,
   type FoldProgramme,
-  type FoldTransportClock,
 } from './foldTransport';
+import { FakeFoldClock } from './foldTransport.fixtures';
 
 /** A fold of `flaps` flaps, played on arrival only under auto-play. */
 function programme(kind = 'cp', flaps = 1): FoldProgramme {
@@ -28,55 +28,7 @@ function turnOver(): FoldProgramme {
   return { kind: 'turn-over', legs: foldLegs(1, TURN_OVER_PACE), arrival: 'always' };
 }
 
-/** A hand-driven clock: frames and timers run when the test says so. */
-class FakeClock implements FoldTransportClock {
-  time = 0;
-  private frames = new Map<number, (now: number) => void>();
-  private timers = new Map<number, { at: number; callback: () => void }>();
-  private next = 1;
-  now = () => this.time;
-  requestFrame = (callback: (now: number) => void) => {
-    const handle = this.next++;
-    this.frames.set(handle, callback);
-    return handle;
-  };
-  cancelFrame = (handle: number) => {
-    this.frames.delete(handle);
-  };
-  setTimer = (callback: () => void, ms: number) => {
-    const handle = this.next++;
-    this.timers.set(handle, { at: this.time + ms, callback });
-    return handle;
-  };
-  clearTimer = (handle: number) => {
-    this.timers.delete(handle);
-  };
-  /** One animation frame, `ms` later. */
-  frame(ms: number) {
-    this.time += ms;
-    const due = [...this.frames.values()];
-    this.frames.clear();
-    for (const callback of due) callback(this.time);
-    this.fireTimers();
-  }
-  /** Time passing with no frame drawn. */
-  wait(ms: number) {
-    this.time += ms;
-    this.fireTimers();
-  }
-  private fireTimers() {
-    for (const [handle, timer] of [...this.timers]) {
-      if (timer.at > this.time) continue;
-      this.timers.delete(handle);
-      timer.callback();
-    }
-  }
-  get pendingFrames() {
-    return this.frames.size;
-  }
-}
-
-let clock: FakeClock;
+let clock: FakeFoldClock;
 let sink: FoldPoseSink;
 let onPlay: Mock<(trigger: FoldPlayTrigger, heading: FoldHeading, programme: FoldProgramme) => void>;
 let reduced = false;
@@ -98,7 +50,7 @@ const lastPlay = () => {
 };
 
 beforeEach(() => {
-  clock = new FakeClock();
+  clock = new FakeFoldClock();
   sink = { setFoldPose: vi.fn() };
   onPlay = vi.fn();
   reduced = false;
@@ -263,6 +215,45 @@ describe('FoldTransport', () => {
     t.toggle();
     expect(lastPose()).toBeNull();
     expect(onPlay).toHaveBeenCalledTimes(2);
+  });
+
+  it('seeks: pauses where the scrubber is, pushes that pose, and plays on from it', () => {
+    const t = transport();
+    t.setProgramme(programme());
+    t.toggle();
+    clock.frame(FOLD_DURATION_MS / 4);
+    expect(t.progress()).toBeCloseTo(0.25, 9);
+    t.seek(0.5);
+    expect(t.status().playing).toBe(false);
+    expect(t.progress()).toBe(0.5);
+    expect(lastPose()?.angle).toBeGreaterThan(0);
+    expect(clock.pendingFrames).toBe(0);
+    // A seek is not a play.
+    expect(onPlay).toHaveBeenCalledTimes(1);
+    t.toggle();
+    for (let i = 0; i < 100 && t.status().playing; i += 1) clock.frame(25);
+    expect(t.status()).toEqual({ available: true, playing: false, folded: true });
+    expect(t.progress()).toBe(1);
+    // Back to the start: flat, the pose gone, and Play folds again.
+    t.seek(0);
+    expect(lastPose()).toBeNull();
+    expect(t.status().folded).toBe(false);
+    t.toggle();
+    expect(lastPlay()).toEqual(['user', 'fold', 'cp']);
+  });
+
+  it('overtakes a pending auto-play with a seek, and ignores one with nothing to play', () => {
+    const t = transport();
+    t.setAutoPlay(true);
+    t.setProgramme(programme());
+    t.setProgramme(programme());
+    t.seek(0.3);
+    clock.wait(AUTO_PLAY_SETTLE_MS * 2);
+    expect(t.status().playing).toBe(false);
+    expect(t.progress()).toBeCloseTo(0.3, 9);
+    t.setProgramme(null);
+    t.seek(0.5);
+    expect(t.progress()).toBe(0);
   });
 
   it('stops everything when disposed', () => {
