@@ -142,20 +142,24 @@ export function useFoldReverseStep(
     }
   }, [tipKey, ways.length, orders.length, answer?.key, kind]);
 
+  const refusedTip = answer?.refused ?? null;
   const build = useMemo<FoldStepBuild>(() => {
     if (located.status !== 'built' || !index) return located;
-    // No step until the engine has described the tip, and its opening.
-    if (!asked) return { status: 'unlocated' };
+    // No step until the engine has described the tip, and its opening — or
+    // refused it. A refused tip is still a step, so it is analysed like any
+    // other: the layers at its line stay on show for the flaps to be narrowed
+    // there, and its preview says the same refusal.
+    if (!asked && !refusedTip) return { status: 'unlocated' };
     return buildReverseStep(
       { lineMode, picks, candidate, swapped, seed, kind, openings: way?.stored ?? [], completion: order },
       index
     );
-  }, [located, index, asked, lineMode, picks, candidate, swapped, seed, kind, way, order]);
+  }, [located, index, asked, refusedTip, lineMode, picks, candidate, swapped, seed, kind, way, order]);
 
   if (!enabled) return { build: { status: 'unlocated' }, reverse: null, refused: null };
   return {
     build,
     reverse: { asked, kind, kinds, ways, way, orders, order },
-    refused: answer?.refused ?? null,
+    refused: refusedTip,
   };
 }

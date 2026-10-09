@@ -62,6 +62,12 @@ const engine = {
   })),
   crossSection: vi.fn(async () => ({ status: 'ok', section: SECTION })),
   action: vi.fn(async () => ({ status: 'refused' })),
+  // A tip whose flaps cannot open.
+  reverse: vi.fn(async () => ({
+    status: 'refused',
+    refusal: { code: 'reverse_no_opening', faces: [0], cause: 'no_spine' },
+    fixes: [],
+  })),
 };
 
 let analysis: FoldPendingAnalysis = { status: 'idle' };
@@ -182,6 +188,19 @@ describe('the layers at the line', () => {
     expect(seen?.section).toBe(SECTION);
     // The same line and side: nothing asked twice.
     expect(engine.crossSection).toHaveBeenCalledTimes(1);
+  });
+
+  it('stay on show for a reverse fold’s tip the engine refused, so its flaps can be narrowed there', async () => {
+    const reverse: FoldToolState = { ...FREE_LINE, tool: 'inside-reverse' };
+    await render(reverse);
+    expect(engine.reverse).toHaveBeenCalledTimes(1);
+    expect(seen?.refused?.refusal.code).toBe('reverse_no_opening');
+    // Refused, the tip is still a step: analysed like any other, its layers shown.
+    expect(analyse).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'inside-reverse' }), undefined);
+    answer('analysed');
+    await render(reverse);
+    expect(seen?.section).toBe(SECTION);
+    expect(seen?.refused?.refusal.code).toBe('reverse_no_opening');
   });
 
   it('let the other side’s section go until it is asked for', async () => {
