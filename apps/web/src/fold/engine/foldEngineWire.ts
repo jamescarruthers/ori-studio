@@ -157,9 +157,6 @@ export const FOLD_BRIDGE_REFUSAL_CODES = [
   'crease_not_found',
   'crease_not_flat',
   'crease_not_folded',
-  // A stored cp-jump that no longer lands, or an io call's refusal, under
-  // Import CP's own codes (`BridgeRefusal::Io`).
-  ...FOLD_IMPORT_REFUSAL_CODES,
 ] as const;
 
 /** Every refusal code: the stable ids the UI and analytics use (D18). They never collide. */
@@ -167,6 +164,9 @@ export const FOLD_REFUSAL_CODES = [
   ...FOLD_ENGINE_REFUSAL_CODES,
   ...FOLD_LINE_REFUSAL_CODES,
   ...FOLD_BRIDGE_REFUSAL_CODES,
+  // A stored cp-jump that no longer lands, or an io call's refusal, under
+  // Import CP's own codes (`BridgeRefusal::Io`).
+  ...FOLD_IMPORT_REFUSAL_CODES,
 ] as const;
 
 export type FoldRefusalCode = (typeof FOLD_REFUSAL_CODES)[number];
