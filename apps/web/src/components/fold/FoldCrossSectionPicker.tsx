@@ -8,10 +8,10 @@ const BRACKET_BULGE = 4;
 
 /**
  * The layers at the fold line (plan D14), as a listbox: a row per display
- * layer, top to bottom, each a bar where it meets the line, with brackets
- * where a fold joins two rows and its flap's name at the side. Picking a row
- * picks its flap — every row of that flap with it — which is what the seed
- * names (D6); a layer that stays is shown and cannot be picked.
+ * layer on the moving side, top to bottom, each a bar where it meets the
+ * line, with brackets where a bend joins two rows and its flap's name at the
+ * side. Picking a row picks its flap — every row of that flap with it — which
+ * is what the seed names (D6).
  *
  * Keyboard: ↑ / ↓ move between the rows, Home and End to the ends, Space
  * picks or unpicks the row's flap. The listbox owns those keys while it has
@@ -37,11 +37,8 @@ export function FoldCrossSectionPicker({
   // The tab stop: the row last moved to, else the first picked, else the top.
   const stop = focused !== null && focused < model.rows.length ? focused : Math.max(0, firstPicked);
 
-  const pickable = (row: FoldSectionRow | undefined): row is FoldSectionRow & { flap: number } =>
-    row !== undefined && row.flap !== null && !disabled;
-
   const toggle = (row: FoldSectionRow | undefined) => {
-    if (pickable(row)) onToggle(row.flap);
+    if (row && !disabled) onToggle(row.flap);
   };
 
   const moveTo = (index: number) => {
@@ -98,7 +95,7 @@ export function FoldCrossSectionPicker({
               role="option"
               aria-label={row.label}
               aria-selected={row.state === 'picked'}
-              aria-disabled={row.flap === null || disabled || undefined}
+              aria-disabled={disabled || undefined}
               tabIndex={index === stop ? 0 : -1}
               className={styles.row}
               data-state={row.state}
@@ -135,7 +132,7 @@ export function FoldCrossSectionPicker({
               const bulge = bracket.side === 'end' ? BRACKET_BULGE : -BRACKET_BULGE;
               const y1 = bracket.upper + 0.5;
               const y2 = bracket.lower + 0.5;
-              const state = model.rows[bracket.upper]?.state ?? 'stays';
+              const state = model.rows[bracket.upper]?.state ?? 'excluded';
               return (
                 <path
                   key={`${bracket.upper}-${bracket.lower}-${bracket.at}`}

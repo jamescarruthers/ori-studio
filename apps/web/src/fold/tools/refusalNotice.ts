@@ -2,15 +2,21 @@
  * A refused fold, as the tool window says it (plan D14, Refusals and fixes):
  * what went wrong in a sentence a folder reads, and the engine's fixes as
  * buttons — include flap N, fold the other way, pick a flap, use the landmark
- * line. The engine decides which fixes exist; this only names them and binds
- * each to its verb.
+ * line, land a point exactly on an edge. The engine decides which fixes exist;
+ * this only names them and binds each to its verb.
  *
  * React-free and store-free.
  */
 import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
-import type { FoldFix, FoldFlap, FoldLine, FoldRefusalCode, FoldRefused, FoldSide } from './engineContracts';
+import type { FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
 import type { FoldKind } from './foldToolCatalog';
+
+/** What a notice reads of a refusal: the bridge's, with or without its envelope. */
+export type FoldRefused = Pick<FoldEngineRefused, 'refusal' | 'fixes'>;
+
+/** A fold along another line: a near miss's landmark line, or a sliver remedy with its storable step. */
+export type FoldUseLineFix = Extract<FoldFix, { fix: 'use_line' }>;
 
 /** The calls a fix makes; the store binds them. */
 export interface FoldFixVerbs {
@@ -20,8 +26,11 @@ export interface FoldFixVerbs {
   foldOtherWay: () => void;
   /** Fold this flap alone. */
   pickFlap: (flap: FoldFlap) => void;
-  /** Fold along this line instead, moving the same side. */
-  useLine: (line: FoldLine, side: FoldSide) => void;
+  /**
+   * Fold along this line instead, moving the same side: preview it as a model
+   * line, and commit its `step` when it has one.
+   */
+  useLine: (fix: FoldUseLineFix) => void;
 }
 
 export interface FoldRefusalNoticeModel {
@@ -131,6 +140,68 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
         title: t('tools:fold.refusal.tuckTarget.title', 'The layer to tuck under would move'),
         text: t('tools:fold.refusal.tuckTarget.text', 'Pick a layer that stays put to tuck the flap against.'),
       };
+    // A line located from references that do not name paper of this state.
+    case 'point_off_paper':
+    case 'segment_too_short':
+    case 'segment_not_on_a_face':
+    case 'crease_not_found':
+      return {
+        title: t('tools:fold.refusal.offPaper.title', 'A reference is not on the paper'),
+        text: t(
+          'tools:fold.refusal.offPaper.text',
+          'A point or edge the line was located from does not lie on the paper as it is folded now. Locate the line again.'
+        ),
+      };
+    case 'free_line_too_short':
+      return {
+        title: t('tools:fold.refusal.pointsTooClose.title', 'The points are too close'),
+        text: t(
+          'tools:fold.refusal.pointsTooClose.text',
+          'The two points land in the same place on the folded paper, so they make no line. Pick two points farther apart.'
+        ),
+      };
+    case 'no_root':
+      return {
+        title: t('tools:fold.refusal.noRoot.title', 'No fold here'),
+        text: t(
+          'tools:fold.refusal.noRoot.text',
+          'These references give no fold line on the paper as it is folded. Pick other references.'
+        ),
+      };
+    case 'no_side':
+    case 'side_on_line':
+      return {
+        title: t('tools:fold.refusal.noSide.title', 'Which side moves?'),
+        text: t(
+          'tools:fold.refusal.noSide.text',
+          'Nothing says which side of the line moves. Pick a point off the line, on the side to move.'
+        ),
+      };
+    case 'mover_stays':
+      return {
+        title: t('tools:fold.refusal.moverStays.title', 'The point would stay put'),
+        text: t(
+          'tools:fold.refusal.moverStays.text',
+          'The layer that carries the point to move is not among the layers folding. Include its flap, or fold every layer.'
+        ),
+      };
+    case 'crease_not_flat':
+    case 'crease_not_folded':
+      return {
+        title: t('tools:fold.refusal.wrongCrease.title', 'Not that kind of crease'),
+        text: t(
+          'tools:fold.refusal.wrongCrease.text',
+          'Unfold along a folded edge, and refold along a flat crease.'
+        ),
+      };
+    // A stored step this build cannot fold as it is: nothing a folder asked for.
+    case 'unsupported_op':
+    case 'unexpected_choice':
+    case 'root_missing':
+      return {
+        title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
+        text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),
+      };
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
     case 'sheet_too_few_points':
@@ -173,6 +244,19 @@ function otherWayLabel(t: TFunction, kind: FoldKind): string {
   }
 }
 
+/**
+ * A line fix's button: a near miss's landmark line, or a sliver remedy that
+ * turns the line about a point it keeps (O5) or slides it along the line it
+ * stays square to (O7) until the point lands exactly on the edge.
+ */
+function lineFixLabel(t: TFunction, fix: FoldUseLineFix): string {
+  const line = fix.step?.op.line;
+  if (line?.via !== 'axiom') return t('tools:fold.fix.useLine', 'Use the landmark line');
+  return line.axiom === 7
+    ? t('tools:fold.fix.slideToEdge', 'Slide the line to land the point on the edge')
+    : t('tools:fold.fix.turnToEdge', 'Turn the line to land the point on the edge');
+}
+
 function fixActions(
   t: TFunction,
   fix: FoldFix,
@@ -213,14 +297,7 @@ function fixActions(
         disabled,
       }));
     case 'use_line':
-      return [
-        {
-          id: `line-${position}`,
-          label: t('tools:fold.fix.useLine', 'Use the landmark line'),
-          run: () => verbs.useLine(fix.line, fix.side),
-          disabled,
-        },
-      ];
+      return [{ id: `line-${position}`, label: lineFixLabel(t, fix), run: () => verbs.useLine(fix), disabled }];
   }
 }
 

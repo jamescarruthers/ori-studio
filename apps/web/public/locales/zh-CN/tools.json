@@ -270,6 +270,8 @@
       "mountainInstead": "改为山折",
       "pickFlap": "只折翼片 {{number}}",
       "precreaseOtherWay": "向另一方向预折",
+      "slideToEdge": "平移折线，让该点正好落在边上",
+      "turnToEdge": "转动折线，让该点正好落在边上",
       "useLine": "使用参考线",
       "valleyInstead": "改为谷折"
     },
@@ -355,6 +357,10 @@
         "text": "它无法得到有效的平面模型。",
         "title": "无法进行这次折叠"
       },
+      "moverStays": {
+        "text": "带着要移动的点的那一层不在要折的层里。请把它的翼片加进来，或折叠所有层。",
+        "title": "该点不会移动"
+      },
       "nearMiss": {
         "text": "折线紧挨着纸上的一个点经过：太近，无法折得干净；太远，又无法穿过它。",
         "title": "离一个点太近"
@@ -363,13 +369,29 @@
         "text": "折线会移动的那一侧没有纸。请交换移动的一侧，或把折线移到纸上。",
         "title": "没有可折的部分"
       },
+      "noRoot": {
+        "text": "在纸现在折好的样子上，这些参考得不出任何折线。请选择其他参考。",
+        "title": "这里没有折法"
+      },
+      "noSide": {
+        "text": "没有指明折线的哪一侧移动。请在要移动的一侧、折线以外选一个点。",
+        "title": "哪一侧移动？"
+      },
       "nothingStays": {
         "text": "所有层都在移动的一侧，没有任何部分会留在原处。请选择一个要折的翼片。",
         "title": "所有部分都会移动"
       },
+      "offPaper": {
+        "text": "用来确定折线的某个点或边，已不在纸现在折好的样子上。请重新确定折线。",
+        "title": "有参考不在纸上"
+      },
       "pickAgain": {
         "text": "该位置不在移动一侧的某一层内。请在层内选择，避开它的折痕。",
         "title": "请重新选择"
+      },
+      "pointsTooClose": {
+        "text": "这两个点落在折好的纸上的同一位置，连不成线。请选两个相距更远的点。",
+        "title": "两点太近"
       },
       "precreaseUnfold": {
         "text": "展开它会移动比折叠时更多的层。",
@@ -386,6 +408,14 @@
       "tuckTarget": {
         "text": "请选择一个留在原处的层，把翼片塞到它那里。",
         "title": "要塞入的层会移动"
+      },
+      "unsupported": {
+        "text": "此版本的 Ori Studio 无法按保存的样子折出这一步。",
+        "title": "这一步无法折叠"
+      },
+      "wrongCrease": {
+        "text": "展开要沿着折起的边，重新折叠要沿着平的折痕。",
+        "title": "折痕类型不对"
       }
     },
     "section": {
@@ -395,8 +425,6 @@
       "rowAdded": "第 {{layer}} 层，{{flap}}，随折叠一起移动",
       "rowAddedBeside": "第 {{layer}} 层，{{flap}}，随折叠一起移动，在第 {{above}} 层旁边",
       "rowBeside": "第 {{layer}} 层，{{flap}}，在第 {{above}} 层旁边",
-      "rowStays": "第 {{layer}} 层，留在原处",
-      "rowStaysBeside": "第 {{layer}} 层，留在原处，在第 {{above}} 层旁边",
       "top": "顶部"
     },
     "steps": {

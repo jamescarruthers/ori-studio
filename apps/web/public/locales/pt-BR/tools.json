@@ -288,6 +288,8 @@
       "mountainInstead": "Dobra montanha em vez disso",
       "pickFlap": "Dobrar só a aba {{number}}",
       "precreaseOtherWay": "Pré-vincar no outro sentido",
+      "slideToEdge": "Deslizar a linha até o ponto ficar na borda",
+      "turnToEdge": "Girar a linha até o ponto ficar na borda",
       "useLine": "Usar a linha de referência",
       "valleyInstead": "Dobra vale em vez disso"
     },
@@ -381,6 +383,10 @@
         "text": "Não resultaria em um modelo plano válido.",
         "title": "Esta dobra não pode ser feita"
       },
+      "moverStays": {
+        "text": "A camada que leva o ponto a mover não está entre as camadas que dobram. Inclua a aba dela ou dobre todas as camadas.",
+        "title": "O ponto ficaria parado"
+      },
       "nearMiss": {
         "text": "A linha passa logo ao lado de um ponto do papel: perto demais para dobrar com precisão, longe demais para passar por ele.",
         "title": "Perto demais de um ponto"
@@ -389,13 +395,29 @@
         "text": "Não há papel do lado da linha que se moveria. Troque o lado que se move ou leve a linha para cima do papel.",
         "title": "Nada para dobrar"
       },
+      "noRoot": {
+        "text": "Estas referências não dão nenhuma linha de dobra no papel como ele está dobrado. Escolha outras referências.",
+        "title": "Não há dobra aqui"
+      },
+      "noSide": {
+        "text": "Nada indica qual lado da linha se move. Escolha um ponto fora da linha, no lado que vai se mover.",
+        "title": "Qual lado se move?"
+      },
       "nothingStays": {
         "text": "Todas as camadas estão do lado que se move, então nada ficaria parado. Escolha uma aba para dobrar.",
         "title": "Tudo se moveria"
       },
+      "offPaper": {
+        "text": "Um ponto ou uma borda usado para posicionar a linha não está sobre o papel como ele está dobrado agora. Posicione a linha de novo.",
+        "title": "Uma referência não está sobre o papel"
+      },
       "pickAgain": {
         "text": "Esse lugar não está dentro de uma camada do lado que se move. Escolha dentro de uma camada, longe dos vincos.",
         "title": "Escolha de novo"
+      },
+      "pointsTooClose": {
+        "text": "Os dois pontos caem no mesmo lugar do papel dobrado, então não formam nenhuma linha. Escolha dois pontos mais afastados.",
+        "title": "Os pontos estão perto demais"
       },
       "precreaseUnfold": {
         "text": "Desdobrá-lo moveria mais camadas do que dobrá-lo moveu.",
@@ -412,6 +434,14 @@
       "tuckTarget": {
         "text": "Escolha uma camada que fique parada para encaixar a aba nela.",
         "title": "A camada onde encaixar se moveria"
+      },
+      "unsupported": {
+        "text": "Esta versão do Ori Studio não consegue dobrá-lo como está salvo.",
+        "title": "Este passo não pode ser dobrado"
+      },
+      "wrongCrease": {
+        "text": "Desdobre ao longo de uma borda dobrada e redobre ao longo de um vinco plano.",
+        "title": "Não é esse tipo de vinco"
       }
     },
     "section": {
@@ -421,8 +451,6 @@
       "rowAdded": "Camada {{layer}}, {{flap}}, move-se com a dobra",
       "rowAddedBeside": "Camada {{layer}}, {{flap}}, move-se com a dobra, ao lado da camada {{above}}",
       "rowBeside": "Camada {{layer}}, {{flap}}, ao lado da camada {{above}}",
-      "rowStays": "Camada {{layer}}, fica parada",
-      "rowStaysBeside": "Camada {{layer}}, fica parada, ao lado da camada {{above}}",
       "top": "Topo"
     },
     "steps": {

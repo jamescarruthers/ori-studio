@@ -2,7 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
-import type { FoldCrossSection } from '../../fold/tools/engineContracts';
+import type { FoldCrossSection } from '../../fold/engine/foldEngineWire';
 import type { FoldShortcutId } from '../../fold/tools/foldToolCatalog';
 import {
   foldToolWindow,
@@ -57,20 +57,24 @@ function verbs() {
 }
 
 const section: FoldCrossSection = {
+  line: { n: [0, 1], d: 0.5 },
+  side: 'positive',
+  from: { x: 0, y: 0.5 },
+  to: { x: 1, y: 0.5 },
   flaps: [
     { faces: [2, 3], witness: [0.2, 0.7] },
     { faces: [0, 1], witness: [0.2, 0.2] },
   ],
-  layers: [
-    { faces: [3], span: [0, 1], flap: 0, unordered: false },
-    { faces: [2], span: [0, 1], flap: 0, unordered: false },
-    { faces: [1], span: [0, 1], flap: 1, unordered: false },
-    { faces: [0], span: [0, 1], flap: 1, unordered: false },
+  rows: [
+    { faces: [3], spans: [[0, 1]], flap: 0 },
+    { faces: [2], spans: [[0, 1]], flap: 0 },
+    { faces: [1], spans: [[0, 1]], flap: 1 },
+    { faces: [0], spans: [[0, 1]], flap: 1 },
   ],
-  intervals: [{ span: [0, 1], faces: [3, 2, 1, 0], layers: [0, 1, 2, 3] }],
+  intervals: [{ start: 0, end: 1, faces: [3, 2, 1, 0], rows: [0, 1, 2, 3] }],
+  order: { kind: 'layered', unordered: [] },
+  layers: 4,
   joins: [],
-  depth: 4,
-  woven: false,
 };
 
 const preview = (extra: Partial<FoldPreview> = {}): FoldPreview => ({

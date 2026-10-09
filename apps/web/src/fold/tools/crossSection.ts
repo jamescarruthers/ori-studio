@@ -1,19 +1,20 @@
 /**
  * The cross-section at the fold line, as the tool window shows it (plan D14):
  * the layer picker's rows, the flap chips and the "n of m layers moving" line,
- * from the engine's section and what the seed asks for.
+ * from the bridge's section (`FoldCrossSection`) and what the seed asks for.
  *
- * The engine does the geometry — the intervals, the display layers, their
- * order, the flaps. This decides what each row is called and how it reads:
- * picked, moved anyway, left behind, or staying put; where its bar runs; and
- * which flap is numbered 1. Every surface that names a flap — a chip, a row, a
- * refusal's fix — numbers it through {@link flapNumbers}, so "Flap 2" is the
- * same flap everywhere.
+ * The engine does the geometry — the intervals, the display layers and their
+ * order, the flaps, the bends that join rows. Every row is paper on the moving
+ * side, in one flap. This decides what each row is called and how it reads:
+ * picked, moved anyway, or left behind; where its bar runs; and which flap is
+ * numbered 1. Every surface that names a flap — a chip, a row, a refusal's
+ * fix — numbers it through {@link flapNumbers}, so "Flap 2" is the same flap
+ * everywhere.
  *
  * React-free and store-free.
  */
 import type { TFunction } from 'i18next';
-import type { FoldCrossSection, FoldSectionLayer } from './engineContracts';
+import type { FoldCrossSection, FoldCrossSectionRow } from '../engine/foldEngineWire';
 
 /** What moves by request, and what the engine says moves besides. */
 export interface FoldSeedView {
@@ -25,8 +26,8 @@ export interface FoldSeedView {
   needed: ReadonlySet<number>;
 }
 
-/** How a row reads: its flap picked, moved anyway, left behind; or a layer that stays. */
-export type FoldSectionRowState = 'picked' | 'added' | 'excluded' | 'stays';
+/** How a row reads: its flap picked, moved anyway by the closure, or left behind. */
+export type FoldSectionRowState = 'picked' | 'added' | 'excluded';
 
 export interface FoldSectionRow {
   /** Stable among the rows: the React key and the option's id suffix. */
@@ -35,8 +36,8 @@ export interface FoldSectionRow {
   layer: number;
   /** The option's accessible name. */
   label: string;
-  /** Its flap (an index into the section's flaps), or null for a layer that stays. */
-  flap: number | null;
+  /** Its flap: an index into the section's flaps. */
+  flap: number;
   /** "Flap 2", on the first row of a run of the flap's rows; null on the rest. */
   tag: string | null;
   state: FoldSectionRowState;
@@ -49,7 +50,7 @@ export interface FoldSectionRow {
   to: number;
 }
 
-/** A bracket between two rows where a fold joins them, at a fraction along the line. */
+/** A bracket between two rows where a bend joins them, at a fraction along the line. */
 export interface FoldSectionBracket {
   upper: number;
   lower: number;
@@ -82,6 +83,11 @@ export interface FoldFlapChip {
   needed: boolean;
 }
 
+/** Grouping faces into rows made a cycle: only one interval's stack at a time means anything. */
+export function isWoven(section: FoldCrossSection): boolean {
+  return section.order.kind === 'woven';
+}
+
 /**
  * Each flap's number on screen (1-based), indexed by the engine's flap index:
  * top to bottom by the flap's first row at the line, as a folder reads the
@@ -90,8 +96,8 @@ export interface FoldFlapChip {
  */
 export function flapNumbers(section: FoldCrossSection | null, flapCount: number): number[] {
   const order: number[] = [];
-  for (const layer of section?.layers ?? []) {
-    if (layer.flap !== null && layer.flap < flapCount && !order.includes(layer.flap)) order.push(layer.flap);
+  for (const row of section?.rows ?? []) {
+    if (row.flap < flapCount && !order.includes(row.flap)) order.push(row.flap);
   }
   for (let flap = 0; flap < flapCount; flap += 1) {
     if (!order.includes(flap)) order.push(flap);
@@ -108,8 +114,7 @@ export function flapName(t: TFunction, number: number): string {
   return t('tools:fold.flap.name', 'Flap {{number}}', { number });
 }
 
-function rowState(flap: number | null, seed: FoldSeedView): FoldSectionRowState {
-  if (flap === null) return 'stays';
+function rowState(flap: number, seed: FoldSeedView): FoldSectionRowState {
   if (seed.picked.has(flap)) return 'picked';
   return seed.added.has(flap) ? 'added' : 'excluded';
 }
@@ -118,19 +123,8 @@ function rowState(flap: number | null, seed: FoldSeedView): FoldSectionRowState 
  * The option's name. Whole sentences per case rather than clauses joined, so
  * a locale can order them (plan D14, Sentences).
  */
-function rowLabel(
-  t: TFunction,
-  layer: number,
-  flap: string | null,
-  state: FoldSectionRowState,
-  unordered: boolean
-): string {
+function rowLabel(t: TFunction, layer: number, flap: string, state: FoldSectionRowState, unordered: boolean): string {
   const above = layer - 1;
-  if (flap === null) {
-    return unordered
-      ? t('tools:fold.section.rowStaysBeside', 'Layer {{layer}}, stays put, beside layer {{above}}', { layer, above })
-      : t('tools:fold.section.rowStays', 'Layer {{layer}}, stays put', { layer });
-  }
   if (state === 'added') {
     return unordered
       ? t('tools:fold.section.rowAddedBeside', 'Layer {{layer}}, {{flap}}, moves with the fold, beside layer {{above}}', {
@@ -145,26 +139,40 @@ function rowLabel(
     : t('tools:fold.section.row', 'Layer {{layer}}, {{flap}}', { layer, flap });
 }
 
-/** The rows on show: every display layer, or for a woven section the stack of one interval. */
-function shownLayers(
+/** Where a row meets the line: from its first span's start to its last's end (a display layer is convex, so one span). */
+function extent(row: FoldCrossSectionRow): readonly [number, number] {
+  const first = row.spans[0] ?? [0, 0];
+  const last = row.spans[row.spans.length - 1] ?? first;
+  return [first[0], last[1]];
+}
+
+/** The stacks do not order row `index` against the row above it: they meet the line apart. */
+function unorderedAbove(section: FoldCrossSection, index: number): boolean {
+  return (
+    section.order.kind === 'layered' && section.order.unordered.some(([i, j]) => i === index - 1 && j === index)
+  );
+}
+
+/** The rows on show: every display layer, or for a woven section the stack of one interval, across it. */
+function shownRows(
   section: FoldCrossSection,
   interval: number | null
-): { layers: { layer: FoldSectionLayer; index: number }[]; span: readonly [number, number] | null } {
-  if (section.woven) {
+): { rows: { row: FoldCrossSectionRow; index: number }[]; span: readonly [number, number] | null } {
+  if (isWoven(section)) {
     const shown = section.intervals[interval ?? 0] ?? section.intervals[0];
-    if (!shown) return { layers: [], span: null };
-    const layers = shown.layers.flatMap((index) => {
-      const layer = section.layers[index];
-      return layer ? [{ layer, index }] : [];
+    if (!shown) return { rows: [], span: null };
+    const rows = shown.rows.flatMap((index) => {
+      const row = section.rows[index];
+      return row ? [{ row, index }] : [];
     });
-    return { layers, span: shown.span };
+    return { rows, span: [shown.start, shown.end] };
   }
-  return { layers: section.layers.map((layer, index) => ({ layer, index })), span: null };
+  return { rows: section.rows.map((row, index) => ({ row, index })), span: null };
 }
 
 /**
  * The layer picker: a row per display layer, top to bottom, each named and
- * placed; and the brackets where a fold joins two of them. For a woven
+ * placed; and the brackets where a bend joins two of them. For a woven
  * section, the stack of the interval under the pointer (`interval`, else the
  * first), every row across the interval, and no brackets: there is no one
  * row order for them to join.
@@ -175,61 +183,61 @@ export function foldSectionPicker(
   seed: FoldSeedView,
   { interval = null, multiple = true }: { interval?: number | null; multiple?: boolean } = {}
 ): FoldSectionPickerModel {
+  const woven = isWoven(section);
   const numbers = flapNumbers(section, section.flaps.length);
-  const { layers, span } = shownLayers(section, interval);
-  const spans = layers.map(({ layer }) => span ?? layer.span);
+  const { rows: shown, span } = shownRows(section, interval);
+  const spans = shown.map(({ row }) => span ?? extent(row));
   const start = Math.min(...spans.map(([from]) => from));
-  const extent = Math.max(...spans.map(([, to]) => to)) - start;
+  const length = Math.max(...spans.map(([, to]) => to)) - start;
   // A section with no length (one point on the line, or no rows) draws each bar whole.
-  const measured = extent > 0;
-  const fraction = (at: number) => (measured ? Math.min(1, Math.max(0, (at - start) / extent)) : 0);
+  const measured = length > 0;
+  const fraction = (at: number) => (measured ? Math.min(1, Math.max(0, (at - start) / length)) : 0);
 
-  const rows = layers.map(({ layer, index }, position): FoldSectionRow => {
-    const flap = layer.flap !== null && layer.flap < numbers.length ? layer.flap : null;
-    const name = flap === null ? null : flapName(t, numbers[flap] ?? flap + 1);
-    const previous = layers[position - 1]?.layer.flap ?? null;
+  const rows = shown.map(({ row, index }, position): FoldSectionRow => {
+    const name = flapName(t, numbers[row.flap] ?? row.flap + 1);
+    const previous = shown[position - 1]?.row.flap;
     // In a woven stack, the rows are ordered by the stack itself.
-    const unordered = !section.woven && layer.unordered && position > 0;
-    const state = rowState(flap, seed);
-    const [from, to] = spans[position] ?? layer.span;
+    const unordered = !woven && position > 0 && unorderedAbove(section, index);
+    const state = rowState(row.flap, seed);
+    const [from, to] = spans[position] ?? extent(row);
     return {
-      key: `layer-${index}`,
+      key: `row-${index}`,
       layer: position + 1,
       label: rowLabel(t, position + 1, name, state, unordered),
-      flap,
-      tag: name !== null && (position === 0 || previous !== flap) ? name : null,
+      flap: row.flap,
+      tag: position === 0 || previous !== row.flap ? name : null,
       state,
-      needed: flap !== null && seed.needed.has(flap),
+      needed: seed.needed.has(row.flap),
       unordered,
       from: fraction(from),
       to: measured ? fraction(to) : 1,
     };
   });
 
-  const brackets: FoldSectionBracket[] = section.woven
+  const brackets: FoldSectionBracket[] = woven
     ? []
     : section.joins.flatMap((join) => {
-        const upper = section.layers[join.upper];
-        if (!upper || !section.layers[join.lower] || join.upper === join.lower) return [];
-        const middle = (upper.span[0] + upper.span[1]) / 2;
+        const upper = section.rows[join.upper];
+        if (!upper || !section.rows[join.lower] || join.upper === join.lower) return [];
+        const [from, to] = extent(upper);
         return [
           {
             upper: Math.min(join.upper, join.lower),
             lower: Math.max(join.upper, join.lower),
             at: fraction(join.at),
-            side: join.at >= middle ? ('end' as const) : ('start' as const),
+            side: join.at >= (from + to) / 2 ? ('end' as const) : ('start' as const),
           },
         ];
       });
 
   return {
-    label: section.woven
+    label: woven
       ? t('tools:fold.section.labelWoven', 'Layers at the fold line under the pointer, top to bottom')
       : t('tools:fold.section.label', 'Layers at the fold line, top to bottom'),
     multiple,
     rows,
     brackets,
-    woven: section.woven,
+    woven,
   };
 }
 
@@ -241,7 +249,7 @@ export function foldFlapChips(t: TFunction, section: FoldCrossSection, seed: Fol
     .sort((a, b) => (numbers[a] ?? 0) - (numbers[b] ?? 0))
     .map((flap) => {
       const number = numbers[flap] ?? flap + 1;
-      const count = section.layers.filter((layer) => layer.flap === flap).length;
+      const count = section.rows.filter((row) => row.flap === flap).length;
       const pressed = seed.picked.has(flap);
       const added = !pressed && seed.added.has(flap);
       return {
@@ -277,10 +285,9 @@ export function foldFlapChips(t: TFunction, section: FoldCrossSection, seed: Fol
  * side — display layers, never faces (D14 cross-section, 2).
  */
 export function foldLayersSummary(t: TFunction, picker: FoldSectionPickerModel): string {
-  const candidates = picker.rows.filter((row) => row.flap !== null);
-  const moving = candidates.filter((row) => row.state === 'picked' || row.state === 'added').length;
+  const moving = picker.rows.filter((row) => row.state === 'picked' || row.state === 'added').length;
   return t('tools:fold.window.layersMoving', {
-    count: candidates.length,
+    count: picker.rows.length,
     moving,
     defaultValue_one: '{{moving}} of {{count}} layer moving',
     defaultValue_other: '{{moving}} of {{count}} layers moving',
