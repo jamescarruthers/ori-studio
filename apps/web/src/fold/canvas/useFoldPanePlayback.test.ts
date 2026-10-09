@@ -23,12 +23,13 @@ describe('a phone’s transport', () => {
   it('turns to the folded pane before it plays, steps or scrubs, where the frames are drawn', () => {
     const playback = transport();
     const surface = revealingPlayback(playback, revealFoldedPane);
-    for (const press of [() => surface.toggle(), () => surface.step(1), () => surface.seek(0.5)]) {
+    for (const press of [() => surface.toggle('button'), () => surface.step(1), () => surface.seek(0.5)]) {
       showFoldPhonePane('crease-pattern');
       press();
       expect(foldPhonePane()).toBe('folded');
     }
-    expect(playback.toggle).toHaveBeenCalledTimes(1);
+    // The press is passed on, for the play's report.
+    expect(playback.toggle).toHaveBeenCalledExactlyOnceWith('button');
     expect(playback.step).toHaveBeenCalledWith(1);
     expect(playback.seek).toHaveBeenCalledWith(0.5);
   });
@@ -38,13 +39,13 @@ describe('a phone’s transport', () => {
     showFoldPhonePane('crease-pattern');
     expect(runFoldPlaybackShortcut('fold.playStep', revealingPlayback(playback, revealFoldedPane), null)).toBe(true);
     expect(foldPhonePane()).toBe('folded');
-    expect(playback.toggle).toHaveBeenCalledTimes(1);
+    expect(playback.toggle).toHaveBeenCalledExactlyOnceWith('space');
   });
 
   it('reveals first, then plays', () => {
     const order: string[] = [];
     const playback = { ...transport(), toggle: () => order.push('play') };
-    revealingPlayback(playback, () => order.push('reveal')).toggle();
+    revealingPlayback(playback, () => order.push('reveal')).toggle('button');
     expect(order).toEqual(['reveal', 'play']);
   });
 });

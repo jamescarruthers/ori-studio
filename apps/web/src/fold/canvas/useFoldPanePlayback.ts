@@ -31,9 +31,9 @@ export function revealingPlayback(
 ): FoldStepPlaybackSurface {
   return {
     ...playback,
-    toggle: () => {
+    toggle: (press) => {
       reveal();
-      playback.toggle();
+      playback.toggle(press);
     },
     step: (direction) => {
       reveal();
