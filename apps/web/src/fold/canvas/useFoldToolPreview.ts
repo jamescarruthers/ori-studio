@@ -66,8 +66,8 @@ const lineSideKey = (build: FoldStepBuild) =>
     : null;
 
 /** The axiom line a fold tool's picks locate, once every click is in. */
-function axiomLineOf(tools: FoldToolState): FoldAxiomLine | null {
-  return isFoldKind(tools.tool) ? axiomLineOfPicks(tools.lineMode, tools.picks) : null;
+function axiomLineOf({ tool, lineMode, picks }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): FoldAxiomLine | null {
+  return isFoldKind(tool) ? axiomLineOfPicks(lineMode, picks) : null;
 }
 
 /**
@@ -94,16 +94,21 @@ export function useFoldToolPreview(
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
 
-  // --- The axiom's roots, once per set of picks on a state.
-  const axiomLine = useMemo(() => axiomLineOf(tools), [tools]);
+  // --- The axiom's roots, once per set of picks on a state: a root stepped
+  // through, a flap hovered or a side swapped asks nothing. The picks change
+  // identity only with a pick or a restart.
+  const { tool, lineMode, picks } = tools;
+  const axiomLine = useMemo(() => axiomLineOf({ tool, lineMode, picks }), [tool, lineMode, picks]);
   const axiomKey = axiomLine && stateKey ? `${stateKey}|${canonicalJson(axiomLine)}` : null;
   const [roots, setRoots] = useState<{
     key: string;
     candidates: FoldAxiomCandidate[] | null;
     refused: FoldEngineRefused | null;
   } | null>(null);
+  // Each choice offered is counted once, by the line it was offered for.
+  const offered = useRef<string | null>(null);
   useEffect(() => {
-    if (!axiomLine || axiomKey === null) return undefined;
+    if (!axiomLine || axiomKey === null || roots?.key === axiomKey) return undefined;
     let current = true;
     void withCursor((engine, at) => engine.axiomCandidates(at, axiomLine)).then(
       (answer) => {
@@ -116,7 +121,10 @@ export function useFoldToolPreview(
             // No fold here: worded as the engine words a stored step's root that is gone.
             refused: outcome.candidates.length === 0 ? clientRefusal('no_root') : null,
           });
-          if (outcome.candidates.length > 1) trackFoldChoiceOffered('axiom_root', outcome.candidates.length);
+          if (outcome.candidates.length > 1 && offered.current !== axiomKey) {
+            offered.current = axiomKey;
+            trackFoldChoiceOffered('axiom_root', outcome.candidates.length);
+          }
         } else {
           setRoots({ key: axiomKey, candidates: null, refused: outcome });
         }
@@ -126,7 +134,7 @@ export function useFoldToolPreview(
     return () => {
       current = false;
     };
-  }, [withCursor, axiomLine, axiomKey]);
+  }, [withCursor, axiomLine, axiomKey, roots?.key]);
   const ownRoots = roots && roots.key === axiomKey ? roots : null;
   const candidates = ownRoots?.candidates ?? null;
   const candidate = candidates ? (candidates[tools.root] ?? candidates[0] ?? null) : null;

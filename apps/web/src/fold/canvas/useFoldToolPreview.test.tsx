@@ -124,6 +124,40 @@ function answer(status: 'working' | 'analysed', side: 'positive' | 'negative' = 
       : { status, op, parent: PARENT, analysis: analysisOf(side) };
 }
 
+const point = (x: number, y: number): FoldPick => ({
+  kind: 'point',
+  provenance: 'vertex',
+  sheet: [x, y],
+  mark: null,
+  scene: { x, y },
+});
+
+describe('the axiom’s roots', () => {
+  it('are asked once per set of picks, and their choice counted once', async () => {
+    let tools: FoldToolState = { ...FOLD_TOOL_INITIAL, lineMode: 'axiom-2', picks: [point(0, 0), point(1, 1)] };
+    await render(tools);
+    expect(engine.axiomCandidates).toHaveBeenCalledTimes(1);
+    expect(tracked.offered).toHaveBeenCalledTimes(1);
+    expect(tracked.offered).toHaveBeenCalledWith('axiom_root', 2);
+    expect(seen?.candidates).toHaveLength(2);
+
+    // Shift+→, a flap hovered and let go, Swap, the fold's kind: the same picks.
+    for (const next of [{ root: 1 }, { hoveredFlap: 0 }, { hoveredFlap: null }, { swapped: true }, { tool: 'mountain' as const }]) {
+      tools = { ...tools, ...next };
+      await render(tools);
+    }
+    expect(engine.axiomCandidates).toHaveBeenCalledTimes(1);
+    expect(tracked.offered).toHaveBeenCalledTimes(1);
+    expect(seen?.candidates).toHaveLength(2);
+
+    // Another pair of points is another line: asked, and offered, again.
+    tools = { ...tools, picks: [point(1, 0), point(0, 1)] };
+    await render(tools);
+    expect(engine.axiomCandidates).toHaveBeenCalledTimes(2);
+    expect(tracked.offered).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('the layers at the line', () => {
   it('stay on show while a new seed of the same line is analysed', async () => {
     await render(FREE_LINE);
