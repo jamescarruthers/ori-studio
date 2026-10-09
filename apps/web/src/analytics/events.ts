@@ -350,8 +350,11 @@ export type DiagramShowAsName = 'crease_pattern' | 'folded' | 'simulated';
  */
 export type DiagramShowAsVia = 'pane' | 'picker' | 'card' | 'duplicate';
 
-/** The workspace a diagram step's Open in… went to: its pattern in Edit, or its sheet in References. */
-export type DiagramSourceWorkspace = 'edit' | 'references';
+/**
+ * The workspace a diagram step's Open in… went to: its pattern in Edit, its
+ * sheet in References, or its step in Fold.
+ */
+export type DiagramSourceWorkspace = 'edit' | 'references' | 'fold';
 
 /** The list the References browser pulled cards from: a planned pattern's sequence, or the Find answer. */
 export type DiagramPulledMode = 'sequence' | 'find';
