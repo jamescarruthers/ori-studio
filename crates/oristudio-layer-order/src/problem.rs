@@ -345,14 +345,7 @@ impl ConstraintProblem {
         // A taco-tortilla depends on the face across its flat crease, which
         // its tuple does not name: where that face was touched, its named
         // face is made again as if it had been.
-        let mut reach = touched.clone();
-        for (c, x) in &self.hidden {
-            if let Constraint::TacoTortilla([_, _, h]) = *c
-                && touched.contains(x)
-            {
-                reach.insert(h);
-            }
-        }
+        let reach = reach(&self.hidden, &touched);
         let reach = IdSet::new(&reach);
         let untouched = |faces: &[FaceId]| !reach.any(faces);
         let mut found = Found::new(view, overlay.pairs());
@@ -508,6 +501,20 @@ impl ConstraintProblem {
         }
     }
 
+    /// The faces a check of this problem must judge after an operation that
+    /// touched `touched` (as [`ConstraintProblem::rebuild`] takes them): those
+    /// faces, and the named face of every taco-tortilla whose flat crease's
+    /// other face was touched.
+    ///
+    /// A taco-tortilla along a flat crease depends on both of the crease's
+    /// faces but names only one, so it can be new although no face it names
+    /// was touched: unfolding a crease along a folded crease's line makes one
+    /// over the faces on the far side. A [`crate::Scope::Faces`] check over
+    /// the touched faces alone would not judge it; over these it does.
+    pub fn scope_for(&self, touched: &BTreeSet<FaceId>) -> BTreeSet<FaceId> {
+        reach(&self.hidden, touched)
+    }
+
     /// Whether this is the problem of `view`'s faces, in its order (a check
     /// against another view would read the wrong cells).
     pub fn is_for(&self, view: &FoldedView) -> bool {
@@ -554,7 +561,20 @@ impl ConstraintProblem {
     }
 }
 
-/// Each edge segment's bounding box.
+/// `touched`, and the named face of each taco-tortilla in `hidden` whose
+/// unnamed face was touched.
+fn reach(hidden: &[(Constraint, FaceId)], touched: &BTreeSet<FaceId>) -> BTreeSet<FaceId> {
+    let mut reach = touched.clone();
+    for (c, x) in hidden {
+        if let Constraint::TacoTortilla([_, _, h]) = *c
+            && touched.contains(x)
+        {
+            reach.insert(h);
+        }
+    }
+    reach
+}
+
 /// What the edge tests need of each edge segment, computed once per build.
 struct Segment {
     bbox: [f64; 4],
@@ -816,5 +836,79 @@ mod tests {
         let rebuilt = problem.rebuild(&after, &BTreeSet::new());
         assert!(rebuilt.constraints().is_empty());
         assert_eq!(rebuilt, ConstraintProblem::build(&after));
+    }
+
+    /// Unfolding one of two folded creases along a line makes a
+    /// taco-tortilla over the other crease's faces and the unfolded crease's
+    /// face on their side, none of which the unfold touched: the scope must
+    /// reach it through the face across the flat crease.
+    #[test]
+    fn the_scope_of_an_unfold_reaches_the_taco_tortilla_it_makes() {
+        use crate::check::{Scope, Violation, check_problem};
+        use crate::view::{Edge, Face};
+        let square = |x: f64| vec![[x, 0.0], [x + 1.0, 0.0], [x + 1.0, 1.0], [x, 1.0]];
+        let face = |id, x, front_up| Face {
+            id: f(id),
+            polygon: square(x),
+            front_up,
+        };
+        let line = [[1.0, 0.0], [1.0, 1.0]];
+        let edge = |a, b, kind| Edge {
+            faces: [f(a), f(b)],
+            segment: line,
+            kind,
+        };
+        let folded = EdgeKind::Folded(None);
+        let before = FoldedView::new(
+            vec![
+                face(0, 0.0, true),
+                face(1, 0.0, false),
+                face(2, 0.0, true),
+                face(3, 0.0, false),
+            ],
+            vec![edge(0, 1, folded), edge(2, 3, folded)],
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let problem = ConstraintProblem::build(&before);
+        assert_eq!(
+            problem.constraints(),
+            &[Constraint::TacoTaco([f(0), f(1), f(2), f(3)])]
+        );
+
+        // 3 unfolds across the line; 0, 1 and 2 stay where they were.
+        let after = FoldedView::new(
+            vec![
+                face(0, 0.0, true),
+                face(1, 0.0, false),
+                face(2, 0.0, true),
+                face(3, 1.0, true),
+            ],
+            vec![edge(0, 1, folded), edge(2, 3, EdgeKind::Flat)],
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let touched = BTreeSet::from([f(3)]);
+        let rebuilt = problem.rebuild(&after, &touched);
+        assert_eq!(rebuilt, ConstraintProblem::build(&after));
+        let made = Constraint::TacoTortilla([f(0), f(1), f(2)]);
+        assert_eq!(rebuilt.constraints(), &[made]);
+        assert_eq!(rebuilt.scope_for(&touched), BTreeSet::from([f(2), f(3)]));
+
+        // 2 between the taco's faces: the touched faces alone miss it.
+        let mut order = LayerOrder::new();
+        for (upper, lower) in [(0, 2), (2, 1), (0, 1)] {
+            assert!(order.set_above(f(upper), f(lower)).is_ok());
+        }
+        let scoped = |scope: &BTreeSet<FaceId>| {
+            check_problem(&rebuilt, &after, &order, Scope::Faces(scope))
+                .unwrap_or_else(|e| panic!("{e}"))
+                .violations
+        };
+        assert!(scoped(&touched).is_empty());
+        assert_eq!(
+            scoped(&rebuilt.scope_for(&touched)),
+            [Violation::TacoTortilla {
+                faces: [f(0), f(1), f(2)]
+            }]
+        );
     }
 }

@@ -36,7 +36,8 @@ use crate::state::{Derived, State, StateParts};
 
 /// Run the gate. With a previous state and the faces an operation touched,
 /// the layer-order problem is rebuilt incrementally and its constraints are
-/// checked where they involve a touched face; pair completeness is always
+/// checked where they involve a touched face, or depend on one without
+/// naming it (`ConstraintProblem::scope_for`); pair completeness is always
 /// checked in full, so a pair an operation forgot to carry is never missed.
 pub(super) fn run(
     parts: &StateParts,
@@ -51,15 +52,19 @@ pub(super) fn run(
 
     let (problem, scope_faces) = match previous {
         Some((previous, touched)) => {
-            let mut scope: BTreeSet<FaceId> = touched.clone();
-            scope.extend(
+            let mut touched: BTreeSet<FaceId> = touched.clone();
+            touched.extend(
                 parts
                     .faces
                     .iter()
                     .map(|f| f.id)
                     .filter(|&id| previous.face_position(id).is_none()),
             );
-            (previous.derived.problem.rebuild(&view, &scope), Some(scope))
+            let problem = previous.derived.problem.rebuild(&view, &touched);
+            // Not only the touched faces: a constraint can be new over faces
+            // it does not name (an unfold beside a folded crease's line).
+            let scope = problem.scope_for(&touched);
+            (problem, Some(scope))
         }
         None => (ConstraintProblem::build(&view), None),
     };

@@ -151,6 +151,83 @@ fn campaign(seed: u64, sequences: u64, steps: usize, max_faces: usize) -> (usize
     (checked, largest)
 }
 
+/// A tuck that unfolds a crease along another folded crease's line: the
+/// taco-tortilla the two now make names no face the fold touched, only the
+/// flat crease's other face, which the tuple does not name. The gate's scoped
+/// check once missed it and landed a state whose full check fails (4 between
+/// 5 and 6 while its flat neighbour 3 crosses their closed hinge).
+#[test]
+fn a_tuck_that_makes_a_taco_tortilla_from_an_unfold_is_judged() {
+    use oristudio_fold::{Direction, FaceId, FoldRefusal, Placement, Seed, Side};
+    use oristudio_layer_order::Violation;
+
+    let x_eq = |c: f64| Line::new([1.0, 0.0], c).unwrap_or_else(|| unreachable!());
+    let flat = State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+    let book = flat
+        .fold(&PlainFold::new(
+            x_eq(0.5),
+            Side::Positive,
+            Direction::Valley,
+        ))
+        .unwrap_or_else(|e| panic!("{e}"))
+        .state;
+    let quarter = book
+        .fold(&PlainFold::new(
+            x_eq(0.25),
+            Side::Negative,
+            Direction::Valley,
+        ))
+        .unwrap_or_else(|e| panic!("{e}"))
+        .state;
+    let ids: Vec<u32> = [0.875, 0.625, 0.375, 0.125]
+        .map(|x| quarter.face_at([x, 0.5]).map_or(u32::MAX, |f| f.0))
+        .to_vec();
+    assert_eq!(ids, [3, 4, 6, 5], "the setup's faces moved");
+    assert_eq!(
+        quarter.stack_at([0.3, 0.5]),
+        Some([5, 3, 4, 6].map(FaceId).to_vec())
+    );
+
+    for placement in [
+        Placement::Over { at: [0.625, 0.5] },
+        Placement::Under { at: [0.625, 0.5] },
+    ] {
+        let tuck = PlainFold::new(x_eq(0.25), Side::Positive, Direction::Valley)
+            .with_seed(Seed::Flaps {
+                at: vec![[0.875, 0.5]],
+            })
+            .with_placement(placement.clone());
+        match quarter.fold(&tuck) {
+            Ok(landed) => {
+                let report = landed.state.check_full();
+                assert!(
+                    report.is_valid(),
+                    "{placement:?} landed an invalid state: {:?}",
+                    report.violations
+                );
+            }
+            Err(refused) => {
+                let FoldRefusal::LayerOrder { violations } = &refused.refusal else {
+                    panic!("{placement:?} refused as {:?}", refused.refusal);
+                };
+                assert!(
+                    violations.contains(&Violation::TacoTortilla {
+                        faces: [5, 6, 4].map(FaceId)
+                    }),
+                    "{placement:?}: {violations:?}"
+                );
+            }
+        }
+    }
+    // The fold without a placement moves 3 and 5 together and lands.
+    let plain =
+        PlainFold::new(x_eq(0.25), Side::Positive, Direction::Valley).with_seed(Seed::Flaps {
+            at: vec![[0.875, 0.5]],
+        });
+    let landed = quarter.fold(&plain).unwrap_or_else(|e| panic!("{e}"));
+    assert!(landed.state.check_full().is_valid());
+}
+
 #[test]
 fn incremental_problem_matches_a_fresh_build() {
     let (checked, largest) = campaign(5100, 10, 10, 48);
