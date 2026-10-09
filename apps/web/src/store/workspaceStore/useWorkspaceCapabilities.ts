@@ -12,9 +12,11 @@ import { designKind, designKindForContext } from '../../designKinds';
 import { activeDesignTab } from './designTabs';
 import {
   cpSolvablePatternCount,
+  foldStepAtCursor as selectFoldStepAtCursor,
   hasDeletableDiagramSelection as selectHasDeletableDiagramSelection,
   historyCountForContext,
 } from './capabilities';
+import { isShownFoldSequenceReadOnly } from './foldState';
 import { hasProjectDocument as selectHasProjectDocument } from './projectDocuments';
 import { useWorkspaceStore } from './store';
 
@@ -74,6 +76,8 @@ export function useWorkspaceCapabilities() {
   const diagramHistoryFutureCount = useWorkspaceStore(
     (state) => state.diagramHistory.future.length
   );
+  const foldStepAtCursor = useWorkspaceStore(selectFoldStepAtCursor);
+  const foldReadOnly = useWorkspaceStore(isShownFoldSequenceReadOnly);
   const foldHistoryPastCount = useWorkspaceStore((state) => state.foldHistory.past.length);
   const foldHistoryFutureCount = useWorkspaceStore((state) => state.foldHistory.future.length);
   // Subscribed to the tab itself, which is what carries every design kind's
@@ -134,6 +138,8 @@ export function useWorkspaceCapabilities() {
           diagramDeleteTarget,
           canCopyDiagramAnnotation,
           canPasteDiagramAnnotations,
+          foldStepAtCursor,
+          foldReadOnly,
           historyPastCount,
           historyFutureCount,
           clipboard,
@@ -168,6 +174,8 @@ export function useWorkspaceCapabilities() {
       diagramDeleteTarget,
       canCopyDiagramAnnotation,
       canPasteDiagramAnnotations,
+      foldStepAtCursor,
+      foldReadOnly,
       historyFutureCount,
       historyPastCount,
       selection,

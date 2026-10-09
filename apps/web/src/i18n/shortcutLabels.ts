@@ -178,6 +178,15 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return t('tools:diagram.nudgeNodeUpLarge', 'Nudge Node Up (Large)');
     case 'diagram.nudgeNodeDownLarge':
       return t('tools:diagram.nudgeNodeDownLarge', 'Nudge Node Down (Large)');
+    // The Fold workspace's steps and branches.
+    case 'fold.previousStep':
+      return t('tools:fold.keys.previousStep', 'Previous Step');
+    case 'fold.nextStep':
+      return t('tools:fold.keys.nextStep', 'Next Step');
+    case 'fold.previousBranch':
+      return t('tools:fold.keys.previousBranch', 'Previous Branch');
+    case 'fold.nextBranch':
+      return t('tools:fold.keys.nextBranch', 'Next Branch');
     // The Fold canvas's tools, in the words the rail names them by.
     case 'fold.toolValley':
       return foldToolLabel(t, 'valley');

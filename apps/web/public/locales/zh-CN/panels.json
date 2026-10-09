@@ -1433,6 +1433,26 @@
       "stepCreasesTitle": "用图解画笔把当前步骤产生的折痕画成该步骤的说明",
       "toolbar": "折叠视图"
     },
+    "grid": {
+      "broken": "这一步已无法折叠",
+      "brokenAbove": "之前的某一步已无法折叠",
+      "delete": "删除此步骤及之后的步骤",
+      "flat": "平折痕",
+      "folding": "正在折叠…",
+      "label": "步骤",
+      "locked": "由更新版本的 Ori Studio 创建",
+      "mountain": "山折",
+      "title": "逐步折痕图",
+      "valley": "谷折"
+    },
+    "header": {
+      "fold": "折叠",
+      "foldHint": "屏幕上的步骤：折叠后的样子和折痕图",
+      "moreExports": "更多导出方式",
+      "steps": "步骤",
+      "stepsHint": "路径上的每一步都显示为卡片",
+      "views": "视图"
+    },
     "paper": {
       "backUp": "背面朝上",
       "colors": "颜色",
@@ -1692,6 +1712,35 @@
         }
       }
     },
+    "sequence": {
+      "badgeBlocked": "受阻",
+      "badgeBroken": "已损坏",
+      "badgeChanged": "已变化",
+      "badgePreview": "预览",
+      "badgeSheet": "纸",
+      "branch": "第 {{n}} / {{total}} 个分支",
+      "branchesLabel": "这一步的分支",
+      "branchShort": "{{n}} / {{total}}",
+      "nextBranch": "下一个分支",
+      "nextStep": "下一步",
+      "noTools": "在画布上选取折叠工具后，即可选择类型。",
+      "placeholder": "折叠这张纸即可得到第 1 步。",
+      "previousBranch": "上一个分支",
+      "previousStep": "上一步",
+      "replayFailed": "未能折叠所有步骤。",
+      "replaying": "正在折叠步骤…{{done}} / {{total}}",
+      "retry": "重试",
+      "sheetPolygonBack_other": "从一张 {{count}} 条边的正多边形纸开始，背面朝上。",
+      "sheetPolygonFront_other": "从一张 {{count}} 条边的正多边形纸开始，正面朝上。",
+      "sheetRectangleBack": "从一张长方形纸开始，背面朝上。",
+      "sheetRectangleFront": "从一张长方形纸开始，正面朝上。",
+      "sheetSquareBack": "从一张正方形纸开始，背面朝上。",
+      "sheetSquareFront": "从一张正方形纸开始，正面朝上。",
+      "stepCount_other": "{{count}} 个步骤",
+      "stripLabel": "步骤",
+      "tagBranch": "新分支",
+      "tagNext": "下一步"
+    },
     "step": {
       "branchSheet": "你位于平整的纸：在这里折叠会开始新的分支。",
       "branchStep": "你位于第 {{at}} 步（共 {{total}} 步）：在这里折叠会开始新的分支。",
@@ -1712,6 +1761,7 @@
       "mountain": "山折",
       "operation": "操作",
       "pending": "待折",
+      "pendingRefused": "在工具窗口中解决问题后，即可看到它产生的折痕。",
       "sheet": "平整的纸",
       "sheetNote": "尚未折叠。折叠这张纸即可得到第 1 步。",
       "source": "来源",

@@ -24,6 +24,7 @@ import { hasAttachedSolveInput } from '../../cp-workspace/annotations/suppressio
 import type { EditingContext } from '../../workspaces/editingContext';
 import { stepById, turnById } from '../../diagram/document/diagramDocument';
 import { hasProjectDocument } from './projectDocuments';
+import { isShownFoldSequenceReadOnly } from './foldState';
 import type { WorkspaceState } from './types';
 
 /**
@@ -121,6 +122,12 @@ export function cpSolvablePatternCount(state: WorkspaceState): number {
   return count;
 }
 
+/** Whether the Fold reader is on a step of the shown sequence, not its flat sheet. */
+export function foldStepAtCursor(state: Pick<WorkspaceState, 'foldReader' | 'foldSequences'>): boolean {
+  const cursor = state.foldReader?.cursor ?? null;
+  return cursor !== null && state.foldSequences[0]?.document.steps.some((node) => node.id === cursor) === true;
+}
+
 export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabilityInput {
   const context = state.activeEditingContext;
   const activeKind = designKindForContext(context);
@@ -176,6 +183,8 @@ export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabi
     diagramDeleteTarget: diagramDeleteTarget(state),
     canCopyDiagramAnnotation: canCopyDiagramAnnotation(state),
     canPasteDiagramAnnotations: canPasteDiagramAnnotations(state),
+    foldStepAtCursor: foldStepAtCursor(state),
+    foldReadOnly: isShownFoldSequenceReadOnly(state),
     historyPastCount,
     historyFutureCount,
     clipboard: state.clipboard,

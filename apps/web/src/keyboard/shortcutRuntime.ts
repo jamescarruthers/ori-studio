@@ -29,9 +29,9 @@ type ViewportExecutor = (id: ViewportShortcutId) => boolean;
 /**
  * Which viewport currently owns keyboard shortcuts. This is the document modes
  * plus the Box Pleating packing pane, which is its own focusable viewport
- * surface distinct from the tree (design) pane, the Diagram workspace, whose
- * views share one surface with one owner at a time, and the Fold workspace's
- * canvas, whose two panes do too.
+ * surface distinct from the tree (design) pane, and the Diagram and Fold
+ * workspaces, whose views (and Fold's two canvas panes) share one surface each
+ * with one owner at a time.
  */
 export type ViewportSurface = DocumentMode | 'bp-editor' | 'diagram' | 'fold';
 

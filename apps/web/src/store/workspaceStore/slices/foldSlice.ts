@@ -129,6 +129,12 @@ export const createFoldSlice: WorkspaceSliceCreator<FoldSlice> = (set, get) => {
     setFoldPaperShape: (shape) =>
       commitShown('Change paper', (document) => foldEdits.setFoldPaperShape(document, shape)) !== null,
 
+    setFoldSequenceTitle: (title) =>
+      commitShown('Rename sequence', (document) => foldEdits.setFoldSequenceTitle(document, title)) !== null,
+
+    setFoldStartSide: (startSide) =>
+      commitShown('Change start side', (document) => foldEdits.setFoldStartSide(document, startSide)) !== null,
+
     moveFoldCursor: (stepId) => {
       const shown = shownFoldSequence(get());
       const reader = get().foldReader;

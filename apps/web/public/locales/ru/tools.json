@@ -348,6 +348,12 @@
       "previousRoot": "Предыдущее решение",
       "swapSide": "Поменять подвижную сторону"
     },
+    "keys": {
+      "nextBranch": "Следующая ветка",
+      "nextStep": "Следующий шаг",
+      "previousBranch": "Предыдущая ветка",
+      "previousStep": "Предыдущий шаг"
+    },
     "latch": {
       "freePoint": "Свободная точка"
     },

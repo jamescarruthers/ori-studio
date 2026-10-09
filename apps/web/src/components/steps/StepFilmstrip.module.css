@@ -126,6 +126,30 @@
   opacity: 0.5;
 }
 
+/* Folds, but not to the state it was saved at: a warning, not an error. */
+.card[data-state='changed'] {
+  border-color: color-mix(in srgb, var(--status-warning) 70%, var(--border-subtle));
+}
+
+.card[data-state='changed'] .badge {
+  color: var(--status-warning);
+}
+
+/* A newer build's step: carried, never folded, so its frame and picture recede. */
+.card[data-state='locked'] {
+  border-style: dashed;
+  border-color: var(--border-default);
+}
+
+.card[data-state='locked'] .badge {
+  color: var(--text-tertiary);
+}
+
+.card[data-state='locked'] .thumb,
+.card[data-state='pending'] .thumb {
+  opacity: 0.4;
+}
+
 /* The active card. Before the pointer and focus rules, which tie with it and
    win: hovering the active card lightens its border, and the keyboard's ring
    is the wider one. */

@@ -81,7 +81,7 @@ import type {
 } from './diagramCapture';
 import type { CapturedPicture } from '../../diagram/capture/captureFolded';
 import type { FoldReaderState } from '../../fold/document/foldReaderState';
-import type { FoldMarkEntry, FoldPaperShape } from '../../fold/document/foldSequenceDocument';
+import type { FoldMarkEntry, FoldPaperShape, FoldStartSide } from '../../fold/document/foldSequenceDocument';
 import type { FoldStepDraft } from '../../fold/document/foldSequenceEdits';
 import type { FoldHistory, FoldSequences } from './foldState';
 import type {
@@ -2361,6 +2361,14 @@ export interface FoldSliceActions {
    * step, creating the sequence when there is none. Whether it changed.
    */
   setFoldPaperShape: (shape: FoldPaperShape) => boolean;
+  /** Rename the shown sequence, as one undo step, creating it when there is none. Whether it changed. */
+  setFoldSequenceTitle: (title: string) => boolean;
+  /**
+   * Turn the sheet over before the first step, keeping the steps (they fold
+   * their mirror image now), as one undo step, creating the sequence when
+   * there is none. Whether it changed.
+   */
+  setFoldStartSide: (startSide: FoldStartSide) => boolean;
   /**
    * Put the reader on a step of the shown sequence — the flat sheet for null —
    * and the active path through it. View state. Whether it moved.

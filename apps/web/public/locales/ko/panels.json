@@ -1433,6 +1433,26 @@
       "stepCreasesTitle": "표시된 단계에서 생긴 접은 선을 그 단계의 지시로, 도해 펜으로 그리기",
       "toolbar": "접기 보기"
     },
+    "grid": {
+      "broken": "이 단계는 더 이상 접히지 않습니다",
+      "brokenAbove": "앞 단계가 더 이상 접히지 않습니다",
+      "delete": "이 단계와 이후 단계 삭제",
+      "flat": "평평함",
+      "folding": "접는 중…",
+      "label": "단계",
+      "locked": "최신 Ori Studio에서 만듦",
+      "mountain": "산",
+      "title": "단계별 전개도",
+      "valley": "골"
+    },
+    "header": {
+      "fold": "접기",
+      "foldHint": "화면의 단계를 접은 모습과 전개도로",
+      "moreExports": "다른 내보내기 방법",
+      "steps": "단계",
+      "stepsHint": "경로의 모든 단계를 카드로",
+      "views": "보기"
+    },
     "paper": {
       "backUp": "뒷면이 위로",
       "colors": "색상",
@@ -1692,6 +1712,35 @@
         }
       }
     },
+    "sequence": {
+      "badgeBlocked": "차단됨",
+      "badgeBroken": "깨짐",
+      "badgeChanged": "변경됨",
+      "badgePreview": "미리 보기",
+      "badgeSheet": "종이",
+      "branch": "분기 {{n}} / {{total}}",
+      "branchesLabel": "이 단계의 분기",
+      "branchShort": "{{n}} / {{total}}",
+      "nextBranch": "다음 분기",
+      "nextStep": "다음 단계",
+      "noTools": "캔버스에서 접기 도구를 선택하면 종류를 고를 수 있습니다.",
+      "placeholder": "종이를 접으면 1단계가 됩니다.",
+      "previousBranch": "이전 분기",
+      "previousStep": "이전 단계",
+      "replayFailed": "모든 단계를 접지 못했습니다.",
+      "replaying": "단계를 접는 중… {{total}}개 중 {{done}}개",
+      "retry": "다시 시도",
+      "sheetPolygonBack_other": "변이 {{count}}개인 정다각형을 뒷면이 위로 오게 놓고 시작합니다.",
+      "sheetPolygonFront_other": "변이 {{count}}개인 정다각형을 앞면이 위로 오게 놓고 시작합니다.",
+      "sheetRectangleBack": "직사각형을 뒷면이 위로 오게 놓고 시작합니다.",
+      "sheetRectangleFront": "직사각형을 앞면이 위로 오게 놓고 시작합니다.",
+      "sheetSquareBack": "정사각형을 뒷면이 위로 오게 놓고 시작합니다.",
+      "sheetSquareFront": "정사각형을 앞면이 위로 오게 놓고 시작합니다.",
+      "stepCount_other": "{{count}}단계",
+      "stripLabel": "단계",
+      "tagBranch": "새 분기",
+      "tagNext": "다음"
+    },
     "step": {
       "branchSheet": "평평한 종이에 있습니다. 여기서 접으면 새 분기가 시작됩니다.",
       "branchStep": "{{total}}단계 중 {{at}}단계에 있습니다. 여기서 접으면 새 분기가 시작됩니다.",
@@ -1712,6 +1761,7 @@
       "mountain": "산",
       "operation": "작업",
       "pending": "접을 예정",
+      "pendingRefused": "도구 창에서 문제를 해결하면 생기는 접는 선이 표시됩니다.",
       "sheet": "평평한 종이",
       "sheetNote": "아직 아무것도 접지 않았습니다. 종이를 접으면 1단계가 됩니다.",
       "source": "출처",

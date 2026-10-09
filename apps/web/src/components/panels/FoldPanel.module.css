@@ -1,7 +1,15 @@
 /*
- * The Fold workspace panel (FoldPanel.tsx): its body is the canvas, which
- * fills it — the panes pan and zoom, so nothing in it scrolls.
+ * The Fold workspace panel (FoldPanel.tsx): its body under the step strip is
+ * the canvas, which fills it — the panes pan and zoom, so nothing in it
+ * scrolls — and the Steps view's, which does.
  */
 .body {
   display: grid;
+  min-height: 0;
+}
+
+.steps {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
 }

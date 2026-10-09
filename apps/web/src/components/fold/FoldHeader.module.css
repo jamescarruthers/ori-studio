@@ -1,0 +1,64 @@
+/*
+ * What the Fold header (FoldHeader.tsx) adds to the shared toolbar frame: the
+ * Fold | Steps tabs and the count on the left, the sequence's verbs on the
+ * right. A row too narrow for both wraps, the verbs right-aligned under the
+ * tabs, rather than squeezing either.
+ */
+.header {
+  flex-wrap: wrap;
+  column-gap: var(--space-2);
+}
+
+/* The tabs, then the count. Stretched, so the tabs keep the bar's full height. */
+.lead {
+  display: flex;
+  flex: 0 1 auto;
+  align-self: stretch;
+  align-items: stretch;
+  min-width: 0;
+  column-gap: var(--space-2);
+}
+
+.views {
+  flex: 0 0 auto;
+}
+
+.count {
+  flex: 0 1 auto;
+  align-self: center;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The verbs: the rest of the row, at its right end. */
+.actions {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+/*
+ * On a phone the tabs share a row of their own, then the verbs, wrapping
+ * within theirs rather than off a 375 px edge: undo and redo, the three verbs,
+ * the pane switch and the drawer's pill are wider together than the screen.
+ */
+@media (max-width: 720px) {
+  .lead {
+    flex: 1 1 100%;
+    padding-block: var(--space-1);
+  }
+
+  .views {
+    flex: 1 1 auto;
+  }
+
+  .actions {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+    padding-block: var(--space-1);
+  }
+}

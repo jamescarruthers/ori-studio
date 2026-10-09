@@ -309,6 +309,12 @@
       "previousRoot": "前の解",
       "swapSide": "動く側を入れ替え"
     },
+    "keys": {
+      "nextBranch": "次の分岐",
+      "nextStep": "次のステップ",
+      "previousBranch": "前の分岐",
+      "previousStep": "前のステップ"
+    },
     "latch": {
       "freePoint": "自由な点"
     },

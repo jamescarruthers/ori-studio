@@ -178,9 +178,16 @@ export type DiagramPathShortcutId =
   | 'diagram.nudgeNodeDownLarge';
 /**
  * The Fold workspace's verbs ({@link FOLD_SHORTCUTS}), one block per surface
- * that binds them.
+ * that binds them, answered by the one executor the Fold panel registers
+ * (`fold/sequence/foldKeys.ts`), which hands each id to the surface that owns
+ * it.
  */
 export type FoldShortcutId =
+  // The steps and their branches (the sequence chrome).
+  | 'fold.previousStep'
+  | 'fold.nextStep'
+  | 'fold.previousBranch'
+  | 'fold.nextBranch'
   // The canvas's tools: the folds and the Divide line, the line modes, the
   // model verbs, the moving side, the axiom's roots and the commit.
   | 'fold.toolValley'
@@ -750,12 +757,21 @@ function foldShortcut(id: FoldShortcutId, label: string, defaultChord: KeyChord 
 }
 
 /**
- * Fold-workspace bindings, in the `fold` scope (plan D14): pushed only in
- * Fold's own context, so its letters never meet the crease-pattern tools'
- * bound to the same keys. Escape stays `viewport.cancel`, through the Fold
- * canvas's cancel ladder, as it is in the Diagram.
+ * Fold-workspace bindings, in the `fold` scope (plan D14's keyboard table):
+ * pushed only in Fold's own context, so its letters never meet the
+ * crease-pattern tools' bound to the same keys. The steps on ←/→ and `[`/`]`
+ * as the Diagram's, the active step's branches on ↑/↓ as References' ways,
+ * candidate roots on Shift+←/→, Space to play the step, Enter to commit.
+ * Escape stays `viewport.cancel`, through Fold's cancel ladder, as it is in
+ * the Diagram. The steps' and branches' keys decline while a focused control
+ * owns the arrows (`focusOwnsArrowKeys`), as the Diagram's do.
  */
 const FOLD_SHORTCUTS: ShortcutDefinition[] = [
+  // The steps and their branches (the sequence chrome).
+  foldShortcut('fold.previousStep', 'Previous Step', [{ key: 'arrowleft' }, { key: '[' }]),
+  foldShortcut('fold.nextStep', 'Next Step', [{ key: 'arrowright' }, { key: ']' }]),
+  foldShortcut('fold.previousBranch', 'Previous Branch', { key: 'arrowup' }),
+  foldShortcut('fold.nextBranch', 'Next Branch', { key: 'arrowdown' }),
   // The canvas's tools. The folds by their letters, the Divide line by D, as
   // the rail shows them. The axioms on the bare digits, as the rail numbers
   // them: in Fold they shadow the viewport's digit keys (pan, rotate, zoom),

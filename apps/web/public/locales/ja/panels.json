@@ -1433,6 +1433,26 @@
       "stepCreasesTitle": "表示中のステップで付いた折り筋を、その指示として折り図のペンで描く",
       "toolbar": "折りの表示"
     },
+    "grid": {
+      "broken": "このステップはもう折れません",
+      "brokenAbove": "前のステップがもう折れません",
+      "delete": "このステップと以降を削除",
+      "flat": "平ら",
+      "folding": "折っています…",
+      "label": "ステップ",
+      "locked": "新しい Ori Studio で作成",
+      "mountain": "山",
+      "title": "ステップごとの展開図",
+      "valley": "谷"
+    },
+    "header": {
+      "fold": "折り",
+      "foldHint": "表示中のステップを、折った形と展開図で",
+      "moreExports": "その他の書き出し方法",
+      "steps": "ステップ",
+      "stepsHint": "経路のすべてのステップをカードで",
+      "views": "表示"
+    },
     "paper": {
       "backUp": "裏を上に",
       "colors": "色",
@@ -1692,6 +1712,35 @@
         }
       }
     },
+    "sequence": {
+      "badgeBlocked": "ブロック",
+      "badgeBroken": "破損",
+      "badgeChanged": "変更",
+      "badgePreview": "プレビュー",
+      "badgeSheet": "紙",
+      "branch": "分岐 {{n}} / {{total}}",
+      "branchesLabel": "このステップの分岐",
+      "branchShort": "{{n}} / {{total}}",
+      "nextBranch": "次の分岐",
+      "nextStep": "次のステップ",
+      "noTools": "キャンバスで折りツールを選ぶと、種類を選べます。",
+      "placeholder": "紙を折るとステップ 1 になります。",
+      "previousBranch": "前の分岐",
+      "previousStep": "前のステップ",
+      "replayFailed": "すべてのステップを折ることはできませんでした。",
+      "replaying": "ステップを折っています… {{done}} / {{total}}",
+      "retry": "再試行",
+      "sheetPolygonBack_other": "{{count}} 辺の正多角形を、裏を上にして始めます。",
+      "sheetPolygonFront_other": "{{count}} 辺の正多角形を、表を上にして始めます。",
+      "sheetRectangleBack": "長方形を、裏を上にして始めます。",
+      "sheetRectangleFront": "長方形を、表を上にして始めます。",
+      "sheetSquareBack": "正方形を、裏を上にして始めます。",
+      "sheetSquareFront": "正方形を、表を上にして始めます。",
+      "stepCount_other": "{{count}} ステップ",
+      "stripLabel": "ステップ",
+      "tagBranch": "新しい分岐",
+      "tagNext": "次"
+    },
     "step": {
       "branchSheet": "平らな紙の位置にいます。ここで折ると新しい分岐が始まります。",
       "branchStep": "ステップ {{at}} / {{total}} にいます。ここで折ると新しい分岐が始まります。",
@@ -1712,6 +1761,7 @@
       "mountain": "山",
       "operation": "操作",
       "pending": "これから折る",
+      "pendingRefused": "ツールウィンドウで問題を解決すると、できる折り筋が表示されます。",
       "sheet": "平らな紙",
       "sheetNote": "まだ何も折っていません。紙を折るとステップ 1 になります。",
       "source": "元",

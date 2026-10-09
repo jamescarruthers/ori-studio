@@ -104,6 +104,15 @@
     "saveAs": "名前を付けて保存...",
     "settings": "設定"
   },
+  "fold": {
+    "delete-step": "ステップを削除",
+    "mountain": "山折り",
+    "precrease": "下折り",
+    "rotate-ccw": "反時計回りに回転",
+    "rotate-cw": "時計回りに回転",
+    "turn-over": "裏返す",
+    "valley": "谷折り"
+  },
   "help": {
     "about": "Ori Studio について",
     "checkForUpdates": "アップデートを確認…"
@@ -117,6 +126,7 @@
     "design": "デザイン",
     "edit": "編集",
     "file": "ファイル",
+    "fold": "折り",
     "help": "ヘルプ",
     "insert": "挿入",
     "view": "表示"

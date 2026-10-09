@@ -335,6 +335,12 @@
       "previousRoot": "Solution précédente",
       "swapSide": "Inverser le côté qui bouge"
     },
+    "keys": {
+      "nextBranch": "Branche suivante",
+      "nextStep": "Étape suivante",
+      "previousBranch": "Branche précédente",
+      "previousStep": "Étape précédente"
+    },
     "latch": {
       "freePoint": "Point libre"
     },

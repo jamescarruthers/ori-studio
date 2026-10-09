@@ -335,6 +335,12 @@
       "previousRoot": "Solución anterior",
       "swapSide": "Cambiar el lado que se mueve"
     },
+    "keys": {
+      "nextBranch": "Rama siguiente",
+      "nextStep": "Paso siguiente",
+      "previousBranch": "Rama anterior",
+      "previousStep": "Paso anterior"
+    },
     "latch": {
       "freePoint": "Punto libre"
     },

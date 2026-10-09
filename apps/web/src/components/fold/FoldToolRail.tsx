@@ -2,8 +2,11 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FoldKeyLabel } from '../../fold/tools/foldToolCatalog';
 import { foldRailTooltip, type FoldRailGroup } from '../../fold/tools/foldRailGroups';
+import { STORAGE_KEYS, storageKey } from '../../lib/storage';
 import { ToolRail, type ToolRailGroup } from '../ui/ToolRail';
 import { FoldToolGlyph } from './FoldToolGlyph';
+
+const RAIL_GROUPS_STORAGE_KEY = storageKey(STORAGE_KEYS.foldToolRailGroups);
 
 /**
  * The Fold tools down the left of the canvas (plan D14): the app's `ToolRail`,
@@ -47,6 +50,8 @@ export function FoldToolRail({
       idPrefix="fold-rail-group"
       groups={railGroups}
       header={header}
+      // A group opened or closed stays so: the Planned folds, closed to start with, among them.
+      storageKey={RAIL_GROUPS_STORAGE_KEY}
     />
   );
 }

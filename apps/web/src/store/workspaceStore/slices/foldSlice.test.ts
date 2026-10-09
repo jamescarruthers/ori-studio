@@ -175,6 +175,29 @@ describe('the Fold slice', () => {
     expect(shown().paper.shape).toEqual({ kind: 'square' });
   });
 
+  it('turns the sheet over before the first step as one undo step, keeping the steps and the reader', () => {
+    const { b } = foldTwo();
+    const reader = state().foldReader;
+
+    expect(state().setFoldStartSide('back')).toBe(true);
+    expect(shown().paper.startSide).toBe('back');
+    expect(stepIds()).toHaveLength(2);
+    expect(state().foldReader).toBe(reader);
+    expect(state().foldHistory.past.at(-1)?.label).toBe('Change start side');
+    expect(state().setFoldStartSide('back')).toBe(false);
+
+    state().undoFold();
+    expect(shown().paper.startSide).toBe('front');
+    expect(cursor()).toBe(b);
+  });
+
+  it('renames the sequence as one undo step, and the same name records nothing', () => {
+    expect(state().setFoldSequenceTitle('Crane')).toBe(true);
+    expect(shown().title).toBe('Crane');
+    expect(state().setFoldSequenceTitle('Crane')).toBe(false);
+    expect(state().foldHistory.past.map((entry) => entry.label)).toEqual(['Rename sequence']);
+  });
+
   it('creates the sequence with a shape chosen before the first step', () => {
     const rectangle = { kind: 'rectangle', aspect: [1, 0.5] } as const;
     expect(state().setFoldPaperShape(rectangle)).toBe(true);

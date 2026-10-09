@@ -322,6 +322,12 @@
       "previousRoot": "Vorherige Lösung",
       "swapSide": "Bewegte Seite tauschen"
     },
+    "keys": {
+      "nextBranch": "Nächster Zweig",
+      "nextStep": "Nächster Schritt",
+      "previousBranch": "Vorheriger Zweig",
+      "previousStep": "Vorheriger Schritt"
+    },
     "latch": {
       "freePoint": "Freier Punkt"
     },

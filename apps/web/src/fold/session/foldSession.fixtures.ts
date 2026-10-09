@@ -247,6 +247,16 @@ function workerOver(calls: FoldEngineCalls, version: number): FoldSessionWorker 
     release: async (states) => calls.release(states),
     clear: async () => calls.clear(),
     live: async () => calls.live(),
+    // The queries a surface asks of a landed state.
+    action: async (state, op, choices) => calls.action(state, op, choices),
+    depthChoices: async (state, op, at, choices) => calls.depthChoices(state, op, at, choices),
+    crossSection: async (state, line, side) => calls.crossSection(state, line, side),
+    axiomCandidates: async (state, line) => calls.axiomCandidates(state, line),
+    stepSummary: async (state) => calls.stepSummary(state),
+    stepAction: async (state) => calls.stepAction(state),
+    scene: async (state) => calls.scene(state),
+    landmarks: async (state, marks) => calls.landmarks(state, marks),
+    topVisibleAt: async (state, at) => calls.topVisibleAt(state, at),
   } satisfies Partial<FoldSessionWorker>;
   // Calls the bridge gains later are not needed here.
   return worker as FoldSessionWorker;

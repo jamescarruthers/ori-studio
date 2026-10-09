@@ -309,6 +309,12 @@
       "previousRoot": "이전 해",
       "swapSide": "움직이는 쪽 바꾸기"
     },
+    "keys": {
+      "nextBranch": "다음 분기",
+      "nextStep": "다음 단계",
+      "previousBranch": "이전 분기",
+      "previousStep": "이전 단계"
+    },
     "latch": {
       "freePoint": "자유 점"
     },

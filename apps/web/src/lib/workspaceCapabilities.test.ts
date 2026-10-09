@@ -37,6 +37,8 @@ function capabilities({
   clipboard = null,
   selection = treeSelection,
   cpDetectAvailable,
+  foldStepAtCursor,
+  foldReadOnly,
 }: {
   documentMode?: DocumentMode;
   activeEditingContext?: EditingContext;
@@ -69,6 +71,8 @@ function capabilities({
   clipboard?: unknown | null;
   selection?: Selection;
   cpDetectAvailable?: boolean;
+  foldStepAtCursor?: boolean;
+  foldReadOnly?: boolean;
 } = {}) {
   return getWorkspaceCapabilities({
     activeEditingContext,
@@ -102,6 +106,8 @@ function capabilities({
     clipboard,
     selection,
     cpDetectAvailable,
+    foldStepAtCursor,
+    foldReadOnly,
   });
 }
 
@@ -359,6 +365,41 @@ describe('workspace capabilities', () => {
     expect(live['view.fold']).toMatchObject({ visible: true, enabled: true, label: 'Fold' });
     expect(live['view.edit'].visible).toBe(true);
     expect(live['file.open'].visible).toBe(true);
+  });
+
+  it('offers the Fold sequence’s verbs only while folding, on a sequence this build may change', () => {
+    const verbs = [
+      'fold.valley',
+      'fold.mountain',
+      'fold.precrease',
+      'fold.turn-over',
+      'fold.rotate-ccw',
+      'fold.rotate-cw',
+      'fold.delete-step',
+    ] as const;
+    for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'diagram'] as const) {
+      const elsewhere = capabilities({ activeEditingContext, foldStepAtCursor: true });
+      for (const id of verbs) expect(elsewhere[id], `${activeEditingContext} ${id}`).toMatchObject({ visible: false, enabled: false });
+    }
+
+    const atSheet = capabilities({ activeEditingContext: 'fold' });
+    expect(atSheet['fold.turn-over']).toMatchObject({ visible: true, enabled: true, label: 'Turn Over' });
+    // The flat sheet has no step to delete.
+    expect(atSheet['fold.delete-step']).toMatchObject({
+      visible: true,
+      enabled: false,
+      reason: 'The flat sheet is where the steps start: there is no step to delete',
+    });
+    expect(capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true })['fold.delete-step'].enabled).toBe(true);
+
+    const newer = capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true, foldReadOnly: true });
+    for (const id of verbs) {
+      expect(newer[id], id).toMatchObject({
+        visible: true,
+        enabled: false,
+        reason: 'This sequence was made with a newer Ori Studio and opens read-only',
+      });
+    }
   });
 
   it('shows the Fold workspace from every context', () => {

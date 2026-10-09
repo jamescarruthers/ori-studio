@@ -309,6 +309,12 @@
       "previousRoot": "上一个解",
       "swapSide": "交换移动的一侧"
     },
+    "keys": {
+      "nextBranch": "下一个分支",
+      "nextStep": "下一步",
+      "previousBranch": "上一个分支",
+      "previousStep": "上一步"
+    },
     "latch": {
       "freePoint": "自由点"
     },

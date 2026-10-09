@@ -104,6 +104,15 @@
     "saveAs": "다른 이름으로 저장...",
     "settings": "설정"
   },
+  "fold": {
+    "delete-step": "단계 삭제",
+    "mountain": "산접기",
+    "precrease": "사전 접기",
+    "rotate-ccw": "시계 반대 방향으로 회전",
+    "rotate-cw": "시계 방향으로 회전",
+    "turn-over": "뒤집기",
+    "valley": "골접기"
+  },
   "help": {
     "about": "Ori Studio 정보",
     "checkForUpdates": "업데이트 확인…"
@@ -117,6 +126,7 @@
     "design": "디자인",
     "edit": "편집",
     "file": "파일",
+    "fold": "접기",
     "help": "도움말",
     "insert": "삽입",
     "view": "보기"

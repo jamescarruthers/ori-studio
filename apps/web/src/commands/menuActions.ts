@@ -41,6 +41,7 @@ import i18n from '../i18n';
 import { runUpdateCheck } from '../lib/updateController';
 import { announceUpdateCheck } from '../lib/updateFeedback';
 import { endOpenCanvasSessions } from '../cp-workspace/canvasObjects/canvasSessions';
+import { runFoldMenuVerb, type FoldMenuVerb } from '../fold/sequence/foldCommands';
 
 export const MENU_ACTION_IDS = [
   'app.about',
@@ -145,6 +146,14 @@ export const MENU_ACTION_IDS = [
   'cp.changeCircleColor',
   'cp.organizeCircles',
   'cp.setActiveCreaseAngle',
+  // The Fold sequence's verbs, by the action catalog's ids (`fold/foldActions`).
+  'fold.valley',
+  'fold.mountain',
+  'fold.precrease',
+  'fold.turn-over',
+  'fold.rotate-ccw',
+  'fold.rotate-cw',
+  'fold.delete-step',
   'insert.image',
   'insert.text',
   'help.about',
@@ -382,6 +391,21 @@ const VIEW_PANEL_ACTIONS: Partial<Record<MenuActionId, string>> = {
   'view.properties': 'cp-properties',
 };
 
+/**
+ * The Fold sequence's verbs, by the catalog command or fold kind each runs.
+ * Run as the catalog offers them when they run (`runFoldMenuVerb`), so a
+ * verb the header shows disabled is a no-op from the menu bar or a key too.
+ */
+const FOLD_SEQUENCE_ACTIONS: Partial<Record<MenuActionId, FoldMenuVerb>> = {
+  'fold.valley': { kind: 'fold-kind', id: 'valley' },
+  'fold.mountain': { kind: 'fold-kind', id: 'mountain' },
+  'fold.precrease': { kind: 'fold-kind', id: 'precrease' },
+  'fold.turn-over': { kind: 'command', id: 'turn-over' },
+  'fold.rotate-ccw': { kind: 'command', id: 'rotate-ccw' },
+  'fold.rotate-cw': { kind: 'command', id: 'rotate-cw' },
+  'fold.delete-step': { kind: 'command', id: 'delete-step' },
+};
+
 export function isMenuActionId(id: string): id is MenuActionId {
   return (MENU_ACTION_IDS as readonly string[]).includes(id);
 }
@@ -529,6 +553,11 @@ export function createMenuActionHandler(deps: MenuActionDependencies) {
     const cpSelectionTransform = CP_SELECTION_TRANSFORM_ACTIONS[id];
     if (cpSelectionTransform) {
       return deps.workspace.transformOristudioCpSelection(cpSelectionTransform);
+    }
+
+    const foldVerb = FOLD_SEQUENCE_ACTIONS[id];
+    if (foldVerb) {
+      return runFoldMenuVerb(i18n.t.bind(i18n), foldVerb);
     }
 
     const viewPanel = VIEW_PANEL_ACTIONS[id];

@@ -1,0 +1,74 @@
+/*
+ * The Fold Steps view (FoldStepsGrid.tsx): a heading with the count and the
+ * crease inks' key, over the shared Steps grid, which scrolls.
+ */
+.view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-4) var(--space-5) 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.count {
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+}
+
+/* The inks the cards draw in, named: at the row's end, wrapping under it when it must. */
+.legend {
+  display: flex;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+}
+
+.key::before {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--sheet-thumb-unassigned);
+  content: '';
+}
+
+.key[data-role='mountain']::before {
+  background: var(--sheet-thumb-mountain);
+}
+
+.key[data-role='valley']::before {
+  background: var(--sheet-thumb-valley);
+}
+
+/* The crease pattern inside the card's well, with room around it. */
+.picture {
+  padding: var(--space-3);
+  box-sizing: border-box;
+}
+
+@media (max-width: 720px) {
+  .heading {
+    padding: var(--space-3) var(--space-3) 0;
+  }
+}

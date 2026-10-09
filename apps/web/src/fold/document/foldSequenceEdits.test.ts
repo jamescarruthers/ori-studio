@@ -6,6 +6,8 @@ import {
   deleteFoldStep,
   setFoldMarks,
   setFoldPaperShape,
+  setFoldSequenceTitle,
+  setFoldStartSide,
   setFoldStepNote,
 } from './foldSequenceEdits';
 import { sequenceOf, sequentialIds, step, valleyAt } from './foldSequence.fixtures';
@@ -93,5 +95,42 @@ describe('setFoldPaperShape', () => {
   it('changes nothing for the same shape', () => {
     const original = document();
     expect(setFoldPaperShape(original, { kind: 'square' })).toBe(original);
+  });
+});
+
+describe('setFoldSequenceTitle', () => {
+  it('sets the title as text a file can hold, without surrounding space', () => {
+    expect(setFoldSequenceTitle(document(), '  Crane\u000b base ').title).toBe('Crane base');
+  });
+
+  it('changes nothing for the same title', () => {
+    const original = document();
+    expect(setFoldSequenceTitle(original, 'Test ')).toBe(original);
+  });
+});
+
+describe('setFoldStartSide', () => {
+  const expecting = () =>
+    sequenceOf([
+      step('a', null, valleyAt(0.5), { expect: 'fs1:0000000000000000', note: 'Kept.' }),
+      step('b', 'a', valleyAt(0.25)),
+      locked,
+    ]);
+
+  it('turns the sheet over and keeps the steps, letting go of where each landed', () => {
+    const original = expecting();
+    const turned = setFoldStartSide(original, 'back');
+    expect(turned.paper).toEqual({ shape: { kind: 'square' }, startSide: 'back' });
+    expect(ids(turned.steps)).toEqual(['a', 'b', 'l']);
+    // Each step now lands as the mirror of what it was committed at: no drift to report.
+    expect(turned.steps[0]).toEqual(step('a', null, valleyAt(0.5), { note: 'Kept.' }));
+    // A step with nothing to let go of, and one this build cannot read, are carried as they came.
+    expect(turned.steps[1]).toBe(original.steps[1]);
+    expect(turned.steps[2]).toBe(locked);
+  });
+
+  it('changes nothing for the side already up', () => {
+    const original = expecting();
+    expect(setFoldStartSide(original, 'front')).toBe(original);
   });
 });

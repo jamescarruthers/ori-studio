@@ -1,0 +1,189 @@
+/**
+ * The Fold sequence's verbs (`fold/foldActions`' catalog) as the app's
+ * commands: what the menu bar, the step cards' context menus, the header and
+ * the keys run, through `handleMenuAction` so the chokepoint counts each.
+ *
+ * - **Ids are the catalog's**, under `fold.`: a command's own id
+ *   (`fold.turn-over`, `fold.delete-step`, …) and each fold kind's
+ *   (`fold.valley`, …). The import, Send to Edit and export verbs are
+ *   dispatched by the same rule; their handlers live with Import CP and the
+ *   exports.
+ * - **Gating is the catalog's.** A command runs only while the catalog offers
+ *   it enabled, built from the session and the store as they are when it
+ *   runs, so the menu bar, a context menu and a key cannot disagree with the
+ *   header about what is possible.
+ * - **The fold kind belongs to the tools.** The kind armed lives with the tool
+ *   in hand; the canvas hands it over with {@link registerFoldKindControl},
+ *   and until it does the kind is not offered.
+ */
+import type { TFunction } from 'i18next';
+import { handleMenuAction } from '../../commands/menuActions';
+import { foldSession } from '../../store/workspaceStore/foldSession';
+import { useWorkspaceStore } from '../../store/workspaceStore/store';
+import type { TurnKind } from '../../lib/steps/turn';
+import type { FoldOp, FoldSequenceDocument } from '../document/foldSequenceDocument';
+import {
+  buildFoldActions,
+  type FoldAction,
+  type FoldActionContext,
+  type FoldCommand,
+  type FoldCommandId,
+  type FoldKind,
+  type FoldStateStatus,
+} from '../foldActions';
+import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionSnapshot } from '../session/foldSessionState';
+import { paneShapeOf } from './foldPaperShapes';
+import { cursorIndex, foldPathEntries, followerCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
+
+/**
+ * A catalog command, or one of the fold kinds: what `menuActions`' table maps
+ * this module's command ids to (`fold.turn-over` → `turn-over`). The table is
+ * there, beside every other, so this module — which dispatches through
+ * `handleMenuAction` — is never needed while that one initialises.
+ */
+export type FoldMenuVerb = { kind: 'command'; id: FoldCommandId } | { kind: 'fold-kind'; id: FoldKind };
+
+/** The command id a catalog command is dispatched under. */
+export function foldCommandActionId(id: FoldCommandId): string {
+  return `fold.${id}`;
+}
+
+/** The fold kind the tools have armed, and the way to arm another. */
+export interface FoldKindControl {
+  kind(): FoldKind;
+  arm(kind: FoldKind): void;
+}
+
+let kindControl: FoldKindControl | null = null;
+
+/** Hand the commands the tools' fold kind; returns the release, for the tools' unmount. */
+export function registerFoldKindControl(control: FoldKindControl): () => void {
+  kindControl = control;
+  return () => {
+    if (kindControl === control) kindControl = null;
+  };
+}
+
+/** A path entry's standing as the catalog gates on it. */
+export function actionStatus(status: FoldEntryStatus): FoldStateStatus {
+  switch (status) {
+    case 'ok':
+    case 'changed':
+      return 'ready';
+    case 'pending':
+      return 'replaying';
+    case 'broken':
+    case 'brokenAbove':
+      return 'broken';
+    case 'locked':
+      return 'locked';
+  }
+}
+
+/** What the catalog needs to know about the sequence, at the entry `at` (the cursor's, by default). */
+export function foldActionContext(
+  document: FoldSequenceDocument,
+  entries: readonly FoldPathEntry[],
+  at: number,
+  readOnly: boolean,
+  foldKind: FoldKind
+): FoldActionContext {
+  const here = entries[at];
+  const tip = entries[entries.length - 1];
+  return {
+    step: here?.id ? { id: here.id, followers: followerCount(document, here.id) } : null,
+    state: actionStatus(here?.status ?? 'pending'),
+    path: actionStatus(tip?.status ?? 'pending'),
+    atTip: at === entries.length - 1,
+    readOnly,
+    foldKind,
+    sheet: paneShapeOf(document.paper.shape).shape,
+    stepCount: document.steps.length,
+  };
+}
+
+/** A turn as the step that makes it. */
+export function turnOp(turn: TurnKind): FoldOp {
+  return turn.kind === 'turn-over' ? { kind: 'turn', axis: turn.axis } : { kind: 'rotate', rotate: turn.rotate };
+}
+
+/**
+ * The sequence on screen and its path, as the session holds them now: what a
+ * verb or a key acts on. The session follows the store as it changes, so this
+ * is never a change behind it.
+ */
+export function currentFoldPath(
+  snapshot: FoldSessionSnapshot = foldSession().store.getState()
+): { document: FoldSequenceDocument; entries: FoldPathEntry[]; cursor: number } {
+  const document = snapshot.sequence ?? FOLD_BLANK_SEQUENCE;
+  const entries = foldPathEntries(document, snapshot.activePath, snapshot.sheet, snapshot.nodes, FOLD_PENDING_NODE);
+  return { document, entries, cursor: cursorIndex(entries, snapshot.cursor) };
+}
+
+/**
+ * The catalog for the step on screen — or for `stepId`, a card's — as the
+ * session and the store hold them now, with every call bound.
+ */
+export function currentFoldActions(t: TFunction, stepId?: string | null): FoldAction[] {
+  const snapshot = foldSession().store.getState();
+  const { document, entries, cursor } = currentFoldPath(snapshot);
+  return foldActionsAt(t, document, entries, stepId === undefined ? cursor : cursorIndex(entries, stepId), snapshot.readOnly);
+}
+
+/** The catalog at the path entry `at`, with every call bound: what a surface holding the path renders. */
+export function foldActionsAt(
+  t: TFunction,
+  document: FoldSequenceDocument,
+  entries: readonly FoldPathEntry[],
+  at: number,
+  readOnly: boolean
+): FoldAction[] {
+  const session = foldSession();
+  const control = kindControl;
+  const context = foldActionContext(document, entries, at, readOnly, control?.kind() ?? 'valley');
+  // A turn at a step that is not the one on screen folds from it: put the reader there first.
+  const fromHere = () => {
+    const id = entries[at]?.id ?? null;
+    if (id !== session.store.getState().cursor) useWorkspaceStore.getState().moveFoldCursor(id);
+  };
+  return buildFoldActions(context, {
+    t,
+    setFoldKind: (kind) => control?.arm(kind),
+    turn: (turn) => {
+      fromHere();
+      void session.commitStep(turnOp(turn));
+    },
+    deleteStep: (id) => {
+      useWorkspaceStore.getState().deleteFoldStep(id);
+    },
+    importCp: () => void handleMenuAction(foldCommandActionId('import-cp')),
+    sendToEdit: () => void handleMenuAction(foldCommandActionId('send-to-edit')),
+    exportFold: () => void handleMenuAction(foldCommandActionId('export-fold')),
+    exportSteps: () => void handleMenuAction(foldCommandActionId('export-steps')),
+  }).map((action) =>
+    // No tools, no kind to arm: said, rather than offering rows that do nothing.
+    action.kind === 'choice' && !control
+      ? {
+          ...action,
+          disabled: true,
+          hint: t('panels:fold.sequence.noTools', 'Take a fold tool on the canvas to choose its kind.'),
+        }
+      : action
+  );
+}
+
+/** Run one of this module's verbs, as the catalog offers it now. Whether it ran. */
+export function runFoldMenuVerb(t: TFunction, verb: FoldMenuVerb): boolean {
+  const actions = currentFoldActions(t);
+  if (verb.kind === 'fold-kind') {
+    const choice = actions.find((action) => action.kind === 'choice');
+    const option = choice?.kind === 'choice' && !choice.disabled ? choice.options.find((each) => each.id === verb.id) : undefined;
+    if (!option) return false;
+    option.run();
+    return true;
+  }
+  const command = actions.find((action): action is FoldCommand => action.kind === 'command' && action.id === verb.id);
+  if (!command || command.disabled) return false;
+  command.run();
+  return true;
+}

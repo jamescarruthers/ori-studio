@@ -20,13 +20,46 @@ vi.mock('../../store/workspaceStore/useWorkspaceCapabilities', () => ({
  */
 vi.mock('../fold/canvas/FoldCanvas', () => ({ FoldCanvas: () => null }));
 
+/** The app's session is the worker-bound one; these tests hand the panel one over a fake engine. */
+const app = vi.hoisted(() => ({ session: null as import('../../fold/session/foldSession').FoldSession | null }));
+vi.mock('../../store/workspaceStore/foldSession', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../store/workspaceStore/foldSession')>()),
+  foldSession: () => {
+    if (!app.session) throw new Error('no session');
+    return app.session;
+  },
+}));
+
+import { valleyAt } from '../../fold/document/foldSequence.fixtures';
+import { setFoldView } from '../../fold/sequence/foldViewMode';
+import { clearFoldStateFrames } from '../../fold/sequence/useFoldStateFrames';
+import { squareScene } from '../../fold/sequence/foldScene.fixtures';
+import { createFoldSession } from '../../fold/session/foldSession';
+import { fakeFoldEngine, inProcessFoldRuntime, settle } from '../../fold/session/foldSession.fixtures';
 import { useLayoutStore } from '../../store/layoutStore';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import { foldSessionDocumentSource } from '../../store/workspaceStore/foldSession';
 import { TooltipProvider } from '../ui/Tooltip';
 import { FoldPanel } from './FoldPanel';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const initialLayoutState = useLayoutStore.getInitialState();
+
+/**
+ * jsdom lays nothing out, so the strip's virtualizer is handed widths through
+ * `offsetWidth`, as `StepFilmstrip.test.tsx` hands them: a 600px scroller, and
+ * 136px per card.
+ */
+const realOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+
+function widthFor(element: HTMLElement): number {
+  const role = element.getAttribute?.('role');
+  if (role === 'listitem') return 136;
+  if (role === 'list') return Number.parseFloat(element.style.width || '0');
+  if (element.firstElementChild?.getAttribute('role') === 'list') return 600;
+  return 0;
+}
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -42,7 +75,7 @@ function stubPointer(coarse: boolean) {
   );
 }
 
-function render() {
+async function render() {
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
@@ -53,19 +86,53 @@ function render() {
       </TooltipProvider>
     )
   );
+  await act(async () => settle());
 }
 
 const panel = () => container?.querySelector<HTMLElement>('section[aria-label="Fold workspace"]');
 const button = (label: string) =>
-  [...(container?.querySelectorAll('button') ?? [])].find((each) => each.getAttribute('aria-label') === label);
+  [...(container?.querySelectorAll('button') ?? [])].find(
+    (each) => each.getAttribute('aria-label') === label || each.textContent === label
+  );
+const tab = (name: string) =>
+  [...(container?.querySelectorAll('[role="tab"]') ?? [])].find((each) => each.textContent === name) as
+    | HTMLElement
+    | undefined;
+const stripCards = () => [...(container?.querySelectorAll('[role="list"] [role="listitem"] button') ?? [])];
+const gridCards = () => [...(container?.querySelectorAll('[role="listbox"] [role="option"]') ?? [])];
+
+/** Radix tabs switch on pointer down, not on click. */
+function press(element: Element | undefined) {
+  act(() => {
+    element?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    element?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    element?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+  });
+}
 
 beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+    configurable: true,
+    get(this: HTMLElement) {
+      return widthFor(this);
+    },
+  });
+  Element.prototype.scrollTo ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
   useLayoutStore.setState({ ...initialLayoutState, activeWorkspace: 'fold' }, true);
+  useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   menu.handleMenuAction.mockClear();
   capabilities.value = {
     'edit.undo': { enabled: true, visible: true, label: 'Undo', reason: 'Undo' },
     'edit.redo': { enabled: false, visible: true, label: 'Redo', reason: 'Redo' },
   };
+  const engine = () => ({ ...fakeFoldEngine(), scene: () => squareScene() });
+  app.session = createFoldSession({
+    document: foldSessionDocumentSource(useWorkspaceStore),
+    runtime: inProcessFoldRuntime(engine),
+  });
+  clearFoldStateFrames();
+  setFoldView('fold');
 });
 
 afterEach(() => {
@@ -74,13 +141,16 @@ afterEach(() => {
   root = null;
   container = null;
   vi.unstubAllGlobals();
+  if (realOffsetWidth) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', realOffsetWidth);
+  app.session?.dispose();
+  app.session = null;
   useLayoutStore.setState(initialLayoutState, true);
 });
 
-describe('the Fold panel shell', () => {
-  it('names the workspace and offers the drawer a slot in its header', () => {
+describe('the Fold panel', () => {
+  it('names the workspace and offers the drawer a slot in its header', async () => {
     stubPointer(false);
-    render();
+    await render();
 
     expect(panel()?.textContent).toContain('Fold');
     // The touch drawer seats its pill here rather than in the canvas pill lane,
@@ -92,9 +162,9 @@ describe('the Fold panel shell', () => {
     expect(button('Undo')).toBeUndefined();
   });
 
-  it('gives a coarse pointer undo and redo in the header, through the menu chokepoint', () => {
+  it('gives a coarse pointer undo and redo in the header, through the menu chokepoint', async () => {
     stubPointer(true);
-    render();
+    await render();
 
     expect(button('Undo')?.disabled).toBe(false);
     expect(button('Redo')?.disabled).toBe(true);
@@ -102,12 +172,64 @@ describe('the Fold panel shell', () => {
     expect(menu.handleMenuAction.mock.calls).toEqual([['edit.undo']]);
   });
 
-  it('gives the slot back when it unmounts', () => {
+  it('gives the slot back when it unmounts', async () => {
     stubPointer(true);
-    render();
+    await render();
     act(() => root?.unmount());
     root = null;
 
     expect(useLayoutStore.getState().viewDrawerSlot).toBeNull();
+  });
+
+  it('shows the strip over the canvas, the sheet first, and each step as it is committed', async () => {
+    stubPointer(false);
+    await render();
+    expect(panel()?.textContent).toContain('0 steps');
+    expect(stripCards().map((card) => card.textContent)).toEqual(['0Sheet']);
+    expect(panel()?.textContent).toContain('Start with a square, front side up.');
+
+    await act(async () => {
+      await app.session!.commitStep(valleyAt(0.5));
+      await settle();
+    });
+    expect(panel()?.textContent).toContain('1 step');
+    expect(stripCards().map((card) => card.getAttribute('aria-current'))).toEqual([null, 'step']);
+    expect(stripCards()[1]?.textContent).toContain('Valley');
+    expect(panel()?.textContent).toContain('Valley fold along the line drawn, through all layers.');
+
+    // A card is a step to go to.
+    act(() => stripCards()[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(useWorkspaceStore.getState().foldReader?.cursor).toBeNull();
+  });
+
+  it('switches its body to the Steps grid and back, a double-click going to the step', async () => {
+    stubPointer(false);
+    await render();
+    await act(async () => {
+      await app.session!.commitStep(valleyAt(0.5));
+      await settle();
+    });
+
+    press(tab('Steps'));
+    expect(stripCards()).toEqual([]);
+    expect(gridCards().map((card) => card.getAttribute('data-step-id'))).toEqual([
+      '',
+      useWorkspaceStore.getState().foldReader?.cursor,
+    ]);
+    expect(panel()?.textContent).toContain('Crease pattern by step');
+
+    act(() => gridCards()[0]?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+    expect(useWorkspaceStore.getState().foldReader?.cursor).toBeNull();
+    expect(gridCards()).toEqual([]);
+    expect(stripCards()).toHaveLength(2);
+  });
+
+  it('runs the sequence’s verbs from its header through the commands every surface dispatches', async () => {
+    stubPointer(false);
+    await render();
+    act(() => button('Import CP…')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(menu.handleMenuAction).toHaveBeenCalledWith('fold.import-cp');
+    // Nothing on the path to send or export yet but the sheet, which is ready.
+    expect(button('Send to Edit')?.disabled).toBe(false);
   });
 });

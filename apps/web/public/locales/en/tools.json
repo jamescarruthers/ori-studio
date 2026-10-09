@@ -322,6 +322,12 @@
       "previousRoot": "Previous root",
       "swapSide": "Swap moving side"
     },
+    "keys": {
+      "nextBranch": "Next Branch",
+      "nextStep": "Next Step",
+      "previousBranch": "Previous Branch",
+      "previousStep": "Previous Step"
+    },
     "latch": {
       "freePoint": "Free point"
     },
