@@ -52,6 +52,10 @@ treemaker-fold = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
+# The crate itself with `random-sequences`: every test and example draws from
+# `oristudio_fold::random`, the generator the oracles replay, rather than a
+# copy of it.
+oristudio-fold = { path = ".", features = ["random-sequences"] }
 serde_json.workspace = true
 # `tests/kernel_scene.rs`: the scene against the kernel's folded paper scene
 # of the same crease pattern, and read back as one.

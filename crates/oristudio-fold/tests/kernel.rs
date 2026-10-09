@@ -31,7 +31,7 @@ const TEXT_DRIFT: f64 = 1e-12;
 fn test_paths() -> Vec<(String, Vec<State>)> {
     let mut paths = classic_paths();
     paths.push(("dyadic".to_string(), dyadic_path()));
-    let mut rng = Rng(0x5eed);
+    let mut rng = Rng::new(0x5eed);
     for (s, sheet) in sheets().into_iter().enumerate() {
         for i in 0..4 {
             let path = random_path(&mut rng, sheet.clone(), 10);

@@ -6,6 +6,7 @@
 
 use std::path::PathBuf;
 
+pub use oristudio_fold::random::Rng;
 use oristudio_fold::{Direction, PlainFold, Sheet, SheetShape, Side, StartSide, State, VertexId};
 use oristudio_geometry::Line;
 use serde::Deserialize;
@@ -124,27 +125,6 @@ pub fn dyadic_path() -> Vec<State> {
     path
 }
 
-/// SplitMix64, so a path replays exactly.
-pub struct Rng(pub u64);
-
-impl Rng {
-    pub fn next(&mut self) -> f64 {
-        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
-        let mut z = self.0;
-        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
-    }
-
-    pub fn below(&mut self, n: usize) -> usize {
-        ((self.next() * n as f64) as usize).min(n.saturating_sub(1))
-    }
-
-    pub fn chance(&mut self, p: f64) -> bool {
-        self.next() < p
-    }
-}
-
 /// The sheets random paths start from: square, tall and wide rectangles, and
 /// regular polygons, wide (3, 5) and tall (6).
 pub fn sheets() -> Vec<Sheet> {
@@ -176,7 +156,7 @@ fn random_line(state: &State, rng: &mut Rng) -> Option<Line> {
         let angle = if rng.chance(0.6) {
             rng.below(16) as f64 * std::f64::consts::PI / 16.0
         } else {
-            rng.next() * std::f64::consts::PI
+            rng.next_f64() * std::f64::consts::PI
         };
         Line::from_point_direction(p, [angle.cos(), angle.sin()])
     }
@@ -199,7 +179,7 @@ pub fn random_path(rng: &mut Rng, sheet: Sheet, steps: usize) -> Vec<State> {
         let state = &path[path.len() - 1];
         let next = match rng.below(12) {
             0 => Some(state.turn_over()),
-            1 => Some(state.rotate(rng.next() * std::f64::consts::TAU)),
+            1 => Some(state.rotate(rng.next_f64() * std::f64::consts::TAU)),
             _ => random_line(state, rng).and_then(|line| {
                 let side = if rng.chance(0.5) {
                     Side::Positive

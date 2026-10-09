@@ -170,19 +170,9 @@ fn direction(letter: Letter) -> FoldDirection {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// SplitMix64, so the sample replays exactly.
-    struct Rng(u64);
-
-    impl Rng {
-        fn next(&mut self) -> f64 {
-            self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
-            let mut z = self.0;
-            z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-            z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-            ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
-        }
-    }
+    // The crate's tests always have `random-sequences`: the crate is its own
+    // dev-dependency with it.
+    use crate::random::Rng;
 
     fn sheets() -> Vec<Sheet> {
         let built = [
@@ -229,12 +219,15 @@ mod tests {
     /// and the inverse recovers the sheet point.
     #[test]
     fn converted_points_are_fixed_by_the_readers_rounding() {
-        let mut rng = Rng(7);
+        let mut rng = Rng::new(7);
         for sheet in sheets() {
             let frame = KernelFrame::of(&sheet);
             let [x0, y0, x1, y1] = convex::bounding_box(sheet.outline());
             for _ in 0..20_000 {
-                let p = [x0 + rng.next() * (x1 - x0), y0 + rng.next() * (y1 - y0)];
+                let p = [
+                    x0 + rng.next_f64() * (x1 - x0),
+                    y0 + rng.next_f64() * (y1 - y0),
+                ];
                 let m = frame.to_model(p);
                 assert_eq!(m.map(on_reader_grid), m, "{p:?}");
                 let back = frame.to_sheet(m);
@@ -250,10 +243,10 @@ mod tests {
     /// for.
     #[test]
     fn the_plain_frame_map_is_not_fixed() {
-        let mut rng = Rng(11);
+        let mut rng = Rng::new(11);
         let moved = (0..10_000)
             .filter(|_| {
-                let [_, y] = KernelFrame::PAPER.unit_to_model([rng.next(), rng.next()]);
+                let [_, y] = KernelFrame::PAPER.unit_to_model([rng.next_f64(), rng.next_f64()]);
                 on_reader_grid(y) != y
             })
             .count();

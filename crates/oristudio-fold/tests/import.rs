@@ -12,7 +12,7 @@ mod support;
 use oristudio_fold::{
     Broken, CompletionLimits, CompletionRefusal, CreaseKind, CreasePatternInput, Direction, FaceId,
     ImportKind, ImportRefusal, ImportSegment, ImportSpace, ImportTarget, ImportedPattern, Letter,
-    Sheet, SheetShape, StartSide, State, WitnessOrder, complete::BudgetLimit,
+    Sheet, SheetShape, StartSide, State, WitnessOrder, complete::BudgetLimit, random::Rng,
 };
 use support::*;
 
@@ -708,23 +708,6 @@ fn import_refusals_serialize_with_their_code() {
     }
 }
 
-/// SplitMix64, as `random.rs` seeds its campaign.
-struct Rng(u64);
-
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
-        let mut z = self.0;
-        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
-    }
-
-    fn below(&mut self, n: usize) -> usize {
-        ((self.next() * n as f64) as usize).min(n.saturating_sub(1))
-    }
-}
-
 /// A plain fold of all layers along a line through a vertex image at a
 /// sixteenth of a turn, or through two vertex images.
 fn random_fold(state: &State, rng: &mut Rng) -> Option<oristudio_fold::PlainFold> {
@@ -732,7 +715,7 @@ fn random_fold(state: &State, rng: &mut Rng) -> Option<oristudio_fold::PlainFold
         .filter_map(|v| state.vertex_image(oristudio_fold::VertexId(v as u32)))
         .collect();
     let p = images[rng.below(images.len())];
-    let line = if rng.next() < 0.5 {
+    let line = if rng.next_f64() < 0.5 {
         at_angle(p, 11.25 * rng.below(16) as f64)
     } else {
         let q = images[rng.below(images.len())];
@@ -741,12 +724,12 @@ fn random_fold(state: &State, rng: &mut Rng) -> Option<oristudio_fold::PlainFold
         }
         through(p, q)
     };
-    let side = if rng.next() < 0.5 {
+    let side = if rng.next_f64() < 0.5 {
         oristudio_fold::Side::Positive
     } else {
         oristudio_fold::Side::Negative
     };
-    let direction = if rng.next() < 0.5 {
+    let direction = if rng.next_f64() < 0.5 {
         Direction::Valley
     } else {
         Direction::Mountain
@@ -762,11 +745,11 @@ fn random_folded_states_round_trip_through_their_crease_patterns() {
     // that order among their choices whenever the search lists them all.
     // On 2026-10-08 that was 129 states of 2 to 52 faces, every one listed in
     // full, in under two seconds in a debug build.
-    let mut rng = Rng(0x5eed_1a90);
+    let mut rng = Rng::new(0x5eed_1a90);
     let (mut checked, mut listed) = (0, 0);
     for sequence in 0..24 {
         let sheet = if sequence % 3 == 2 {
-            Sheet::rectangle(1.0, 0.6 + 0.3 * rng.next()).unwrap_or_else(|e| panic!("{e}"))
+            Sheet::rectangle(1.0, 0.6 + 0.3 * rng.next_f64()).unwrap_or_else(|e| panic!("{e}"))
         } else {
             Sheet::square()
         };
@@ -775,7 +758,7 @@ fn random_folded_states_round_trip_through_their_crease_patterns() {
             let Some(op) = random_fold(&state, &mut rng) else {
                 continue;
             };
-            let landed = if rng.next() < 0.25 {
+            let landed = if rng.next_f64() < 0.25 {
                 state.precrease(&op)
             } else {
                 state.fold(&op)
@@ -784,7 +767,7 @@ fn random_folded_states_round_trip_through_their_crease_patterns() {
                 continue;
             };
             state = folded.state;
-            if rng.next() < 0.2 {
+            if rng.next_f64() < 0.2 {
                 state = state.turn_over();
             }
 

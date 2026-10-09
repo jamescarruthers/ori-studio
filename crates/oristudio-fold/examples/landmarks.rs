@@ -12,24 +12,9 @@
 
 use std::time::Instant;
 
+use oristudio_fold::random::Rng;
 use oristudio_fold::{Axiom, Direction, PlainFold, Sheet, Side, StartSide, State, VertexId};
 use oristudio_geometry::Line;
-
-struct Rng(u64);
-
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
-        let mut z = self.0;
-        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
-        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
-    }
-
-    fn below(&mut self, n: usize) -> usize {
-        ((self.next() * n as f64) as usize).min(n.saturating_sub(1))
-    }
-}
 
 #[derive(Default)]
 struct Bucket {
@@ -71,12 +56,12 @@ fn random_fold(state: &State, rng: &mut Rng) -> Option<PlainFold> {
         |b, p| (b.0.min(p[0]), b.1.min(p[1]), b.2.max(p[0]), b.3.max(p[1])),
     );
     let c = [
-        x0 + (0.3 + 0.4 * rng.next()) * (x1 - x0),
-        y0 + (0.3 + 0.4 * rng.next()) * (y1 - y0),
+        x0 + (0.3 + 0.4 * rng.next_f64()) * (x1 - x0),
+        y0 + (0.3 + 0.4 * rng.next_f64()) * (y1 - y0),
     ];
-    let a = rng.next() * std::f64::consts::PI;
+    let a = rng.next_f64() * std::f64::consts::PI;
     let line = Line::from_point_direction(c, [a.cos(), a.sin()])?;
-    let direction = if rng.next() < 0.5 {
+    let direction = if rng.next_f64() < 0.5 {
         Direction::Valley
     } else {
         Direction::Mountain
@@ -87,7 +72,7 @@ fn random_fold(state: &State, rng: &mut Rng) -> Option<PlainFold> {
 fn main() {
     let edges = [8usize, 32, 64, 128, 256, usize::MAX];
     let mut buckets: Vec<Bucket> = (0..edges.len()).map(|_| Bucket::default()).collect();
-    let mut rng = Rng(0x1a4d_0a2c);
+    let mut rng = Rng::new(0x1a4d_0a2c);
     for _ in 0..40 {
         let Ok(mut state) = State::flat(Sheet::square(), StartSide::Front) else {
             return;

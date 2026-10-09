@@ -126,8 +126,9 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   each recorded under `tests/fixtures/classics/` as its operations and the
   canonical outcome of every step, and replayed from the JSON alone.
   Regenerate with `ORISTUDIO_FOLD_BLESS=1` and review the diff.
-- `tests/random.rs`: seeded random sequences along lines through landmarks.
-  Every landed state passes the full gate from scratch and a freshly built
+- `tests/random.rs`: seeded random sequences along lines through landmarks,
+  drawn by the `random` module below. Every landed state passes the full gate
+  from scratch and a freshly built
   checker; every applied fold keeps each vertex's band between the line asked
   for and the line folded along, moves vertices rigidly and leaves creases off
   the line alone. About 760 folds per run (2 s in debug). A larger campaign
@@ -140,10 +141,12 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   On 2026-10-08 it applied 9,224 folds over four seeds (up to 178 faces) with
   no hard failure; the refusals were 1,902 "nothing stays", 1,029 "no moving
   side", 339 slivers, 288 near misses and 23 short creases.
-- `random` (feature `random-sequences`): the same draws as a library module,
-  for crates that check the engine from outside it. `crates/oracle-tests`'
-  `fold_oracle` checks its sequences against Oriedita and Flat-Folder. Its own
-  tests: `cargo test -p oristudio-fold --features random-sequences --lib random`.
+- `random` (feature `random-sequences`): the seeded sequences and their
+  SplitMix64 generator as a library module, so the oracles replay exactly the
+  draws the property tests make: `crates/oracle-tests`' `fold_oracle` checks
+  the campaign's sequences against Oriedita and Flat-Folder. The crate is its
+  own dev-dependency with the feature, so every test and example here draws
+  from it and `cargo test -p oristudio-fold` runs its tests too.
 - `tests/queries.rs`: the output and queries. The cross-section's display
   layers (a layer crossed by a precrease is one row; two precreased layers are
   two rows, one flap or two by where the spine is), unordered rows, the depth
