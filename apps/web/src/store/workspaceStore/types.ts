@@ -59,6 +59,7 @@ import type {
   DiagramStepDiagramPicture,
   LiftedCard,
   PulledMarks,
+  SentDiagramEntry,
   SentReferencesEntry,
   DiagramDocument,
   DiagramHanStyle,
@@ -1978,6 +1979,12 @@ export interface DiagramSliceState {
    */
   diagramReferencesBrowser: DiagramReferencesBrowserState | null;
   /**
+   * The Fold browser, while it is open in the Diagram's centre
+   * (fold-workspace plan D17): where the steps it pulls from the shown Fold
+   * sequence go. Never open beside the References browser.
+   */
+  diagramFoldBrowser: DiagramFoldBrowserState | null;
+  /**
    * An anchor being picked on the Annotate canvas (Revision 2, the Anchor
    * row's Pick): the step, and the enlarge area's id there or the step's own
    * frame (`ZOOM_FRAME_ID`). Read through `activeAnchorPick`, which takes it
@@ -2036,6 +2043,13 @@ export interface DiagramReferencesBrowserState {
    * (`diagramReferencesMarks`).
    */
   marks?: PaperExportMarks;
+}
+
+/** The Fold browser (fold-workspace plan D17): where what it adds goes, fixed as it opens, and which opening it is. */
+export interface DiagramFoldBrowserState {
+  anchor: DiagramPullAnchor;
+  /** As the References browser's: a pull pressed in one that has closed since adds nothing. */
+  opening: number;
 }
 
 export interface DiagramSliceActions {
@@ -2242,6 +2256,25 @@ export interface DiagramSliceActions {
   makeDiagramStepMarksEditable: (stepId: string, lifted: LiftedCard, options?: { loadId?: number }) => boolean;
   pullReferencesDiagramSteps: (
     sent: readonly SentReferencesEntry[],
+    anchor: DiagramPullAnchor,
+    options: { loadId: number; label: string; opening?: number }
+  ) => ({ stepIds: string[]; turnIds: string[] } & PulledMarks) | null;
+  /**
+   * Open the Fold browser (plan D17) to add steps from the shown Fold
+   * sequence where `anchor` says; the References browser and the pattern
+   * picker close. False on a read-only diagram.
+   */
+  openDiagramFoldBrowser: (anchor: DiagramPullAnchor) => boolean;
+  closeDiagramFoldBrowser: () => void;
+  /**
+   * Add steps captured from Fold steps — and the turns between them — where
+   * `anchor` says, as one undo step, selecting the last, as a References pull
+   * does (`pullReferencesSteps`); the Fold browser closes. `opening` names the
+   * browser opening it was pressed in, when it was: one closed since adds
+   * nothing. Null when nothing was added.
+   */
+  pullFoldDiagramSteps: (
+    sent: readonly SentDiagramEntry[],
     anchor: DiagramPullAnchor,
     options: { loadId: number; label: string; opening?: number }
   ) => ({ stepIds: string[]; turnIds: string[] } & PulledMarks) | null;

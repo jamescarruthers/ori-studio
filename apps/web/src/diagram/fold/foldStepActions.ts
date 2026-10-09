@@ -75,6 +75,27 @@ export async function showFoldStepAs(stepId: string, way: DiagramShowAs): Promis
   return outcome.status === 'captured';
 }
 
+/**
+ * A copy of a Fold step's step after it, shown the other way (D19): its
+ * crease pattern, then its folded form, in two presses. One undo step: the
+ * capture folds into the duplicate's, and a capture that does not land takes
+ * the copy with it. The copy's id, or null.
+ */
+export async function duplicateFoldStepAs(stepId: string, way: DiagramShowAs): Promise<string | null> {
+  const source = foldSourceOf(stepId);
+  if (!source || way === 'simulated') return null;
+  const copyId = useWorkspaceStore.getState().duplicateDiagramStep(stepId);
+  if (copyId === null || showAsOf(source.render) === way) return copyId;
+  const duplicated = useWorkspaceStore.getState().diagramHistory.past.at(-1);
+  const outcome = await captureAs(copyId, source, renderToShowAs(source, way), 'Duplicate step', duplicated);
+  if (outcome.status !== 'captured') {
+    const now = useWorkspaceStore.getState();
+    if (duplicated !== undefined && now.diagramHistory.past.at(-1) === duplicated) now.undoDiagram();
+    return null;
+  }
+  return copyId;
+}
+
 function showAsLabel(way: DiagramShowAs): string {
   return way === 'crease-pattern' ? 'Show as Crease Pattern' : 'Show as Folded';
 }

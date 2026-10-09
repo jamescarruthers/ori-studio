@@ -31,6 +31,7 @@ import {
   type FoldSendToEditVariant,
 } from './foldHandOffs';
 import { useFoldImportUiStore } from './foldImportUiStore';
+import { sendFoldStepsToDiagram, type FoldSendToDiagramScope } from '../../diagram/fold/foldBrowserActions';
 
 /** A Fold io verb, as the menu's table names it. */
 export type FoldIoCommand =
@@ -38,6 +39,7 @@ export type FoldIoCommand =
   | { readonly kind: 'import-sample'; readonly sample: FoldSampleId }
   | { readonly kind: 'start-from-edit-folded-figure' }
   | { readonly kind: 'send-to-edit'; readonly variant: FoldSendToEditVariant }
+  | { readonly kind: 'send-to-diagram'; readonly scope: FoldSendToDiagramScope }
   | { readonly kind: 'export-fold' }
   | { readonly kind: 'export-steps'; readonly scope: PaperExportScope };
 
@@ -101,6 +103,9 @@ export async function runFoldIoCommand(command: FoldIoCommand, fileService?: Fil
       return true;
     case 'send-to-edit':
       return sendFoldSequenceToEdit(foldHandOffDeps(fileService), command.variant);
+    case 'send-to-diagram':
+      // The Diagram's own pull, from Fold's side (plan D17).
+      return sendFoldStepsToDiagram(command.scope);
     case 'export-fold':
       return exportFoldSequence(foldHandOffDeps(fileService));
     case 'export-steps':

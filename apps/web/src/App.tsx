@@ -15,6 +15,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { PaperExportModal } from './components/paperExport/PaperExportModal';
 import { DiagramExportModal } from './components/diagram/DiagramExportModal';
 import { DiagramReferencesModal } from './components/diagram/DiagramReferencesBrowser';
+import { DiagramFoldModal } from './components/diagram/DiagramFoldBrowser';
 import { FoldImportModal } from './components/fold/import/FoldImportDialog';
 import { TooltipProvider } from './components/ui/Tooltip';
 import { handleMenuAction } from './commands/menuActions';
@@ -173,6 +174,10 @@ export default function App() {
           About — and that one has to come later to be on top. */}
       <OverlayErrorBoundary id="diagram-references">
         <DiagramReferencesModal />
+      </OverlayErrorBoundary>
+      {/* The Fold browser: the same frame, from the Diagram only, under every other modal too. */}
+      <OverlayErrorBoundary id="diagram-fold">
+        <DiagramFoldModal />
       </OverlayErrorBoundary>
       {/* Fold's Import CP, under every other modal for the same reason. */}
       <OverlayErrorBoundary id="fold-import">

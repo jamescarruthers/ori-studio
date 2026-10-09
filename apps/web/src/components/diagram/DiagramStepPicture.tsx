@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Compass,
   Download,
+  FoldVertical,
   ImageOff,
   Link2,
   PenTool,
@@ -24,6 +25,7 @@ import {
 import type { DiagramLinkStatus } from '../../diagram/capture/linkStatus';
 import type {
   DiagramCpSource,
+  DiagramFoldStepSource,
   DiagramReferencesSource,
   DiagramStep,
   KnownDiagramAsset,
@@ -49,6 +51,7 @@ const PATTERN_VERBS: readonly { id: DiagramStepActionId; icon: LucideIcon }[] = 
   // A step made before marks were lifted: its card's marks out of its picture (17e).
   { id: 'make-marks-editable', icon: Ungroup },
   { id: 'open-in-references', icon: Compass },
+  { id: 'open-in-fold', icon: FoldVertical },
 ];
 const FILE_VERBS: readonly { id: DiagramStepActionId; icon: LucideIcon }[] = [
   { id: 'upload-picture', icon: Upload },
@@ -60,6 +63,7 @@ const WAYS_IN: readonly { id: DiagramStepActionId; icon: LucideIcon }[] = [
   { id: 'upload-picture', icon: Upload },
   { id: 'link-pattern', icon: Link2 },
   { id: 'from-references', icon: Compass },
+  { id: 'from-fold', icon: FoldVertical },
 ];
 /** Or to make it a turn instead (D24): the turn-over in Edit's Flip glyph, as Pose shows it. */
 const TURN_INSTEAD: readonly { id: DiagramStepActionId; icon: LucideIcon }[] = [
@@ -111,7 +115,10 @@ export function DiagramStepPicture({
   annotating: boolean;
 }) {
   const { t } = useTranslation();
-  const source = step.source?.kind === 'cp' || step.source?.kind === 'references-step' ? step.source : null;
+  const source =
+    step.source?.kind === 'cp' || step.source?.kind === 'references-step' || step.source?.kind === 'fold-step'
+      ? step.source
+      : null;
   // A pick or Cancel closes the picker under the focus: back to the verb
   // that opened it.
   const section = useRef<HTMLDivElement | null>(null);
@@ -141,11 +148,13 @@ export function DiagramStepPicture({
       <FieldRow label={t('panels:diagram.picture.source', 'Source')} kind="text">
         {source?.kind === 'references-step'
           ? describeSent(source, step.picture, t)
-          : source
-            ? describeLinked(source, step.picture !== null, t)
-            : asset
-            ? describeAsset(asset, t)
-            : t('panels:diagram.picture.none', 'No picture yet')}
+          : source?.kind === 'fold-step'
+            ? describeFoldStep(source, t)
+            : source
+              ? describeLinked(source, step.picture !== null, t)
+              : asset
+                ? describeAsset(asset, t)
+                : t('panels:diagram.picture.none', 'No picture yet')}
       </FieldRow>
       {source?.kind === 'cp' && source.render.mode === 'folded-3d' && step.picture !== null && (
         <FieldRow label={t('panels:diagram.picture.view', 'View')} kind="text">
@@ -163,7 +172,9 @@ export function DiagramStepPicture({
                 ? t('panels:diagram.picture.capturing', 'Capturing…')
                 : source.kind === 'references-step'
                   ? sentSentence(link ?? 'unknown', patternOpen, t)
-                  : linkSentence(link ?? 'unknown', patternOpen, t)}
+                  : source.kind === 'fold-step'
+                    ? foldLinkSentence(link ?? 'unknown', t)
+                    : linkSentence(link ?? 'unknown', patternOpen, t)}
             </span>
           </span>
         </FieldRow>
@@ -257,6 +268,40 @@ function sentSentence(link: DiagramLinkStatus, patternOpen: boolean, t: TFunctio
       return patternOpen
         ? t('panels:diagram.picture.checking', 'Checking…')
         : t('panels:diagram.picture.unknown', 'Not checked: the crease pattern isn’t open');
+  }
+}
+
+/**
+ * What a step linked to a Fold step shows of it (plan D17): the state before
+ * the step, with what it does, or the state it leaves; as its crease pattern
+ * or folded, and from which side.
+ */
+function describeFoldStep(source: DiagramFoldStepSource, t: TFunction): string {
+  const { render } = source;
+  const shown =
+    render.mode === 'crease-pattern'
+      ? render.side === 'back'
+        ? t('panels:diagram.picture.linkedCreasePatternBack', 'Crease pattern, back color')
+        : t('panels:diagram.picture.linkedCreasePattern', 'Crease pattern')
+      : render.mode === 'folded-flat' && render.side === 'back'
+        ? t('panels:diagram.picture.linkedFoldedBack', 'Folded, from the back')
+        : t('panels:diagram.picture.linkedFolded', 'Folded');
+  return source.moment === 'after'
+    ? t('panels:diagram.fold.sourceAfter', 'A Fold step’s result · {{shown}}', { shown })
+    : t('panels:diagram.fold.sourceBefore', 'A Fold step · {{shown}}', { shown });
+}
+
+/** How a Fold step's link stands, in words: its step in the sequence, not a crease pattern. */
+function foldLinkSentence(link: DiagramLinkStatus, t: TFunction): string {
+  switch (link) {
+    case 'current':
+      return t('panels:diagram.picture.current', 'Up to date');
+    case 'stale':
+      return t('panels:diagram.fold.stale', 'Out of date: the Fold sequence changed');
+    case 'missing':
+      return t('panels:diagram.fold.missing', 'Step missing from Fold');
+    case 'unknown':
+      return t('panels:diagram.fold.unknown', 'Not checked yet: Fold is still folding its steps');
   }
 }
 

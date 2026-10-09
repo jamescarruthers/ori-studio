@@ -24,6 +24,7 @@ import {
   type DiagramStyle,
   type DiagramTurn,
 } from '../../diagram/document/diagramDocument';
+import { DIAGRAM_LINKS } from '../../diagram/capture/diagramLinks';
 import { linkedSourceOf, needsPose, type DiagramLinkStatus } from '../../diagram/capture/linkStatus';
 import { stepPictureSource, type StepPictureSource } from '../../diagram/pictures/paintDiagramStep';
 import { useStepPictureUrl } from '../../diagram/pictures/useStepPictureUrl';
@@ -150,7 +151,9 @@ export function DiagramStepCard({
             t('panels:diagram.card.stalePoseAgain', 'Out of date · Pose again')
           : t('panels:diagram.card.stale', 'Out of date')
       : link === 'missing'
-        ? t('panels:diagram.card.missing', 'Pattern missing')
+        ? linked?.kind === 'fold-step'
+          ? t('panels:diagram.fold.cardMissing', 'Step missing')
+          : t('panels:diagram.card.missing', 'Pattern missing')
         : restyled === 'light'
           ? t('panels:diagram.card.lightingChanged', 'Lighting changed')
           : restyled === 'style'
@@ -423,6 +426,13 @@ export function DiagramTurnCard({
  */
 function stepKindLabel(step: DiagramStep, picture: StepPictureSource | null, t: TFunction): string {
   if (step.source?.kind === 'references-step') return t('panels:diagram.card.badgeReferences', 'References');
+  if (step.source?.kind === 'fold-step') {
+    // Where it comes from, by its link's descriptor, and how it shows it.
+    const origin = DIAGRAM_LINKS['fold-step'].originLabel(t);
+    return step.source.render.mode === 'crease-pattern'
+      ? t('panels:diagram.fold.badgeCreasePattern', '{{origin}} · Crease pattern', { origin })
+      : t('panels:diagram.fold.badgeFolded', '{{origin}} · Folded', { origin });
+  }
   if (step.source?.kind === 'cp') {
     switch (step.source.render.mode) {
       case 'crease-pattern':

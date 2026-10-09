@@ -32,6 +32,7 @@ function deps(): FoldActionDeps {
     deleteStep: vi.fn(),
     importCp: vi.fn(),
     sendToEdit: vi.fn(),
+    sendToDiagram: vi.fn(),
     exportFold: vi.fn(),
     exportSteps: vi.fn(),
   };

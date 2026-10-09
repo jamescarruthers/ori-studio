@@ -21,6 +21,8 @@ import { foldSendToEditSource, type FoldActionDeps } from '../foldActions';
 export const FOLD_IO_COMMAND_MENU_IDS = {
   'import-cp': 'fold.import-cp',
   'send-to-edit': 'fold.send-to-edit',
+  'send-to-diagram': 'fold.send-to-diagram',
+  'send-path-to-diagram': 'fold.send-path-to-diagram',
   'export-fold': 'fold.export-fold',
   'export-steps': 'fold.export-steps',
 } as const satisfies Record<string, MenuActionId>;
@@ -29,10 +31,15 @@ const dispatch = (id: MenuActionId) => () => {
   void handleMenuAction(id);
 };
 
-/** `buildFoldActions`' io bindings: Import CP, Send to Edit and the two exports. */
-export const FOLD_IO_ACTION_DEPS: Pick<FoldActionDeps, 'importCp' | 'sendToEdit' | 'exportFold' | 'exportSteps'> = {
+/** `buildFoldActions`' io bindings: Import CP, Send to Edit, Send to Diagram and the two exports. */
+export const FOLD_IO_ACTION_DEPS: Pick<
+  FoldActionDeps,
+  'importCp' | 'sendToEdit' | 'sendToDiagram' | 'exportFold' | 'exportSteps'
+> = {
   importCp: dispatch(FOLD_IO_COMMAND_MENU_IDS['import-cp']),
   sendToEdit: dispatch(FOLD_IO_COMMAND_MENU_IDS['send-to-edit']),
+  sendToDiagram: (scope) =>
+    dispatch(FOLD_IO_COMMAND_MENU_IDS[scope === 'step' ? 'send-to-diagram' : 'send-path-to-diagram'])(),
   exportFold: dispatch(FOLD_IO_COMMAND_MENU_IDS['export-fold']),
   exportSteps: dispatch(FOLD_IO_COMMAND_MENU_IDS['export-steps']),
 };

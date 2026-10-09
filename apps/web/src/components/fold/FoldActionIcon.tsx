@@ -1,4 +1,4 @@
-import { Download, FlipHorizontal2, Images, RotateCcw, RotateCw, Send, Trash2, Upload } from 'lucide-react';
+import { BookImage, Download, FlipHorizontal2, Images, RotateCcw, RotateCw, Send, Trash2, Upload } from 'lucide-react';
 import type { FoldActionIcon as FoldActionIconName } from '../../fold/foldActions';
 import { FoldKindMark } from './FoldKindMark';
 
@@ -25,6 +25,8 @@ export function FoldActionIcon({ icon, size = 14 }: { icon: FoldActionIconName; 
       return <Upload size={size} aria-hidden="true" />;
     case 'send-to-edit':
       return <Send size={size} aria-hidden="true" />;
+    case 'send-to-diagram':
+      return <BookImage size={size} aria-hidden="true" />;
     case 'export-fold':
       return <Download size={size} aria-hidden="true" />;
     case 'export-steps':

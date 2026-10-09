@@ -1612,6 +1612,13 @@ export const ANALYTICS_EVENTS = {
    * menu's.
    */
   foldSequenceSentToEdit: 'fold sequence sent to edit',
+  /**
+   * Fold steps became Diagram steps (fold-workspace plan D17): sent from
+   * Fold — the step on screen, or the active path up to it — or pulled by the
+   * Diagram's Fold browser, one or many. Whether the Diagram is where a Fold
+   * sequence ends up, and from which side the link is made.
+   */
+  foldStepSentToDiagram: 'fold step sent to diagram',
   themeChanged: 'theme changed',
   localeChanged: 'locale changed',
   landingViewed: 'landing viewed',
