@@ -197,7 +197,6 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     // A stored step this build cannot fold as it is, an Import CP step among
     // them: nothing a folder asked for. The Import CP picker words its own
     // refusals; the import codes reach a notice only from a replay.
-    case 'unsupported_op':
     case 'unexpected_choice':
     case 'root_missing':
     case 'import_not_finite':

@@ -152,7 +152,6 @@ export const FOLD_LINE_REFUSAL_CODES = [
 
 /** The bridge's own, in `BridgeRefusal::code`'s order (`oristudio-fold-wasm/src/wire.rs`). */
 export const FOLD_BRIDGE_REFUSAL_CODES = [
-  'unsupported_op',
   'unexpected_choice',
   'root_missing',
   'crease_not_found',

@@ -35,7 +35,7 @@ describe('the refusal codes', () => {
   });
 
   it('list exactly the bridge’s, in BridgeRefusal::code’s order', () => {
-    const codes = codesBetween(crate('oristudio-fold-wasm/src/wire.rs'), 'impl BridgeRefusal', 'pub enum Unsupported');
+    const codes = codesBetween(crate('oristudio-fold-wasm/src/wire.rs'), 'impl BridgeRefusal', 'pub struct SheetMade');
     expect(codes.length).toBeGreaterThan(3);
     expect(FOLD_BRIDGE_REFUSAL_CODES).toEqual(codes);
   });

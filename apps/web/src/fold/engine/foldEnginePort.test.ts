@@ -43,7 +43,8 @@ function fakeSource() {
       op.kind === 'cp-jump'
         ? {
             status: 'refused' as const,
-            refusal: { code: 'unsupported_op' as const, feature: 'cp_jump' },
+            // A stored import whose pattern no longer reads.
+            refusal: { code: 'import_stored_unreadable' as const, field: 'cp_json' },
             fixes: [],
             faces: [],
             vertices: [],
@@ -119,7 +120,7 @@ describe('the Fold engine port', () => {
     const jump: FoldOp = { kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' };
     await expect(port.step({ generation: 0, id: 1 }, { op: jump })).resolves.toEqual({
       landed: false,
-      code: 'unsupported_op',
+      code: 'import_stored_unreadable',
     });
   });
 

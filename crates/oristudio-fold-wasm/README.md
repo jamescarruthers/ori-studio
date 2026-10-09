@@ -43,10 +43,10 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   fixes, faces, vertices }`, never a sentence. Codes are the engine's
   (`FoldRefusal`), an anchored line's (`LineRefusal`: `point_off_paper`,
   `free_line_too_short`, `no_root`, `no_side`, `side_on_line`,
-  `mover_stays`, …) and the bridge's own (`unsupported_op`,
-  `unexpected_choice`, `root_missing`, `crease_not_found`,
-  `crease_not_flat`, `crease_not_folded`, and Import CP's `import_*` for a
-  stored `cp-jump` that no longer lands); they never collide. A sliver
+  `mover_stays`, …) and the bridge's own (`unexpected_choice`,
+  `root_missing`, `crease_not_found`, `crease_not_flat`,
+  `crease_not_folded`, and Import CP's `import_*` for a stored `cp-jump`
+  that no longer lands); they never collide. A sliver
   remedy's `use_line` fix also carries `step`, the document's op and
   choices that fold along it. Only a caller's mistake — malformed input, a
   handle this engine does not hold — throws, as the `{ code, message }`
