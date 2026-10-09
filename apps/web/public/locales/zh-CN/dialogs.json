@@ -301,6 +301,129 @@
     "vertexUnassignedCrease": "某个顶点上的折线未指定折法，因此该顶点无法折叠。",
     "vertexUnsplitJunction": "折线相交于一个并非顶点的位置，因此该顶点无法折叠。"
   },
+  "foldExport": {
+    "title": "导出折叠序列"
+  },
+  "foldImport": {
+    "back": "返回",
+    "browse": "或点击浏览",
+    "creases_other": "{{count}} 条折痕",
+    "drop": "拖放 .cp、.fold、.ori 或 .orh 文件",
+    "editFigure": "编辑中的折叠模型",
+    "editFigureNote": "编辑折出的折痕图，以及它找到的层序",
+    "fix": {
+      "searchLonger": "继续搜索"
+    },
+    "fromEdit": "来自编辑",
+    "import": "导入",
+    "orders": {
+      "atLeast_other": "至少有 {{count}} 种层序符合这些折痕。请选择一种。",
+      "count_other": "有 {{count}} 种层序符合这些折痕。请选择一种。",
+      "label": "层序",
+      "more": "符合这一部分的层序比这里列出的更多；这些是搜索最先找到的。",
+      "order": "层序 {{number}}",
+      "part": "部分 {{number}}"
+    },
+    "pickTitle": "导入折痕图",
+    "placement": {
+      "afterSheet": "在平整的纸之后添加一步，其折叠状态由折痕计算得出。",
+      "afterStep": "在第 {{number}} 步之后添加一步，其折叠状态由折痕计算得出。",
+      "branch": "它会开始一个新分支。",
+      "empty": "以折痕图的纸开始序列，并沿其折痕折叠。当某个状态无法一步一步折出时使用。",
+      "why": "当下一个状态无法一步一步折出时使用。"
+    },
+    "refusal": {
+      "budget": {
+        "text": "找出各层如何叠放所用的时间超出了导入的时限。请继续搜索，或导入更简单的折痕图。",
+        "title": "搜索耗时过长"
+      },
+      "changed": {
+        "text": "导入折痕图期间步骤发生了变化。请重新导入。",
+        "title": "序列已更改"
+      },
+      "creases": {
+        "text": "有折痕超出纸外、与另一种类型的折痕重叠，或在无处相接的地方中断。每条折痕都必须从边缘或折痕延伸到边缘或折痕。",
+        "title": "无法遵循的折痕"
+      },
+      "failed": {
+        "text": "无法导入此折痕图。",
+        "title": "无法导入"
+      },
+      "figureIncomplete": {
+        "text": "编辑中的折叠模型没有说明每一层如何放置。请在编辑中重新折叠，然后从它开始。",
+        "title": "折叠模型不完整"
+      },
+      "foldedForm": {
+        "text": "此 FOLD 文件描述的是已经折好的纸。请改为导入平整的折痕图。",
+        "title": "是折叠形态，而不是折痕图"
+      },
+      "noFigure": {
+        "text": "请先在编辑中把折痕图折平，然后从它的折叠模型开始。",
+        "title": "编辑中没有折叠模型"
+      },
+      "nonConvex": {
+        "text": "折痕图的一个面在某个角向内凹。只能折叠凸面。",
+        "title": "有凹角的面"
+      },
+      "noOrder": {
+        "text": "按照折痕图的山折和谷折，各层无法在不相互穿透的情况下叠放。",
+        "title": "没有符合的层序"
+      },
+      "noState": {
+        "text": "屏幕上的步骤没有折叠状态，因此无法在其后添加任何内容。请转到可以折叠的步骤。",
+        "title": "此步骤无法折叠"
+      },
+      "notFlat": {
+        "text": "沿其山折和谷折折叠后，折痕图无法平放。",
+        "title": "无法折平"
+      },
+      "orderOpen": {
+        "text": "编辑中的折叠模型没有确定层序。请在编辑中折到唯一一个解，然后再从它开始。",
+        "title": "不止一种层序"
+      },
+      "outline": {
+        "text": "折痕图的边缘不是围绕纸的一个闭合轮廓，因此没有可折的纸。",
+        "title": "未找到纸"
+      },
+      "readOnly": {
+        "text": "由更新版本的 Ori Studio 创建：此序列以只读方式打开。",
+        "title": "只读序列"
+      },
+      "shapeMismatch": {
+        "text": "折痕图的纸与此序列的纸形状不同。请改为导入到空序列中。",
+        "textRatios": "此序列折叠的是 {{expected}} 的纸，而折痕图位于 {{found}} 的纸上。请改为导入到空序列中。",
+        "title": "不同的纸"
+      },
+      "shapeUnsupported": {
+        "text": "只能导入正方形或长方形纸上的折痕图。此折痕图的纸是其他形状。",
+        "title": "仅限正方形和长方形纸"
+      },
+      "unreadable": {
+        "text": "无法将此文件读取为 {{extension}} 折痕图。",
+        "title": "不是折痕图"
+      },
+      "unreadableFile": {
+        "text": "无法读取 {{name}}。",
+        "title": "无法读取文件"
+      },
+      "unsupportedFile": {
+        "text": "{{name}} 不是可导入的折痕图。请使用 .cp、.fold、.ori 或 .orh 文件。",
+        "title": "不是折痕图"
+      }
+    },
+    "sample": {
+      "pleatInEighths": "八等分褶",
+      "preliminaryBase": "正方基本形",
+      "waterbombBase": "水雷基本形"
+    },
+    "samples": "示例",
+    "title": "导入折痕图",
+    "working": {
+      "figure": "正在导入编辑中的折叠模型…",
+      "file": "正在导入 {{name}}…",
+      "sample": "正在导入示例…"
+    }
+  },
   "foldWarning": {
     "dontShowAgain": "不再显示",
     "message": "检测到平折性错误。是否继续折叠？",

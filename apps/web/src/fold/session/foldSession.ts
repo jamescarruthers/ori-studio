@@ -37,11 +37,11 @@ import type { FoldSequenceWorkerApi } from '../../workers/foldSequenceWorker';
 import type { FoldStateFingerprint } from '../document/foldDigest';
 import { foldReaderActivePath, type FoldReaderState } from '../document/foldReaderState';
 import { createFoldReplayer, type FoldReplayer, type FoldReplayProgress } from '../document/foldReplay';
-import type { FoldChoices, FoldOp } from '../document/foldSequenceDocument';
+import type { FoldChoices, FoldOp, FoldPaperShape } from '../document/foldSequenceDocument';
 import type { HeldFoldSequence } from '../document/foldSequenceFile';
 import type { FoldStepDraft } from '../document/foldSequenceEdits';
 import { foldStateLostError, type FoldEngineSource, type FoldEngineStateHandle } from '../engine/foldEnginePort';
-import type { FoldEngineOp, FoldEngineRefused } from '../engine/foldEngineWire';
+import type { FoldEngineOp, FoldEngineRefused, FoldStateSummary } from '../engine/foldEngineWire';
 import { createFoldSessionEngine, foldStepInputKey, type FoldSessionEngine } from './foldSessionEngine';
 import {
   deriveFoldSessionNodes,
@@ -161,6 +161,25 @@ export type FoldCommitOutcome =
   | { readonly status: 'stale' }
   | FoldUnavailable;
 
+/**
+ * A step the engine landed outside the session's own folds — an Import CP or
+ * Edit's folded figure (plan D16) — to commit as it landed.
+ */
+export interface FoldLandedStep {
+  /** The state it landed: a handle of the engine on now. */
+  readonly state: FoldEngineStateHandle;
+  /**
+   * The state it was landed after: the step on screen when it was asked for.
+   * Null for one that adopts a sheet, which lands from that sheet.
+   */
+  readonly parent: FoldEngineStateHandle | null;
+  readonly op: FoldOp;
+  readonly fingerprint: FoldStateFingerprint;
+  readonly summary: FoldStateSummary;
+  /** The sheet an empty sequence takes with it (`FoldStepDraft.adopt`). */
+  readonly adopt?: FoldPaperShape;
+}
+
 /** A query on a state: its answer, or word that the state is not held (a re-replay brings a new handle). */
 export type FoldStateQuery<T> = { readonly status: 'answered'; readonly value: T } | FoldUnavailable;
 
@@ -185,6 +204,14 @@ export interface FoldSession {
   preview(op: FoldEngineOp, choices?: FoldChoices): Promise<FoldPreviewOutcome>;
   /** Fold a step from the step on screen and append it to the shown sequence, the cursor moved onto it. */
   commitStep(op: FoldOp, choices?: FoldChoices): Promise<FoldCommitOutcome>;
+  /**
+   * Append a step the engine already landed after the step on screen, as it
+   * landed: nothing is folded twice. The state is handed to the replay that
+   * follows, or let go. `stale` when the step on screen is no longer the one
+   * it was landed after — or, for one that adopts a sheet, when the sequence
+   * has a step by now — and the state is let go.
+   */
+  commitLanded(landed: FoldLandedStep): Promise<FoldCommitOutcome>;
   /** Let go of the pending step and the analysis. */
   cancel(): void;
   /** Ask the engine about a landed state. */
@@ -753,6 +780,32 @@ export function createFoldSession({
     return { status: 'committed', stepId, fingerprint };
   };
 
+  /**
+   * A landed import: offered to the replay under the state it was landed
+   * after, as a preview is. One that adopts a sheet is offered under the
+   * sheet on screen: the same sheet takes it, a new one lands the step again
+   * and the offer is let go when that replay finishes.
+   */
+  const commitLandedFrom = (
+    { parent, parentId, loadId }: FoldingFrom,
+    landed: FoldLandedStep
+  ): FoldCommitOutcome => {
+    const empty = (store.getState().sequence?.steps.length ?? 0) === 0;
+    const fits = landed.adopt ? parentId === null && empty : sameFoldState(landed.parent, parent);
+    if (!engine || !fits || input.loadId !== loadId || landed.state.generation !== runtime.generation()) {
+      engine?.release(landed.state);
+      return { status: 'stale' };
+    }
+    const { op, fingerprint, summary, adopt } = landed;
+    const withdraw = engine.adopt(parent, { op }, { state: landed.state, fingerprint, details: { summary, report: null } }, runTicket);
+    const stepId = source.commit({ parent: parentId, op, expect: fingerprint, ...(adopt ? { adopt } : {}) }, loadId);
+    if (stepId === null) {
+      withdraw();
+      return { status: 'stale' };
+    }
+    return { status: 'committed', stepId, fingerprint };
+  };
+
   const withState = async <T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): Promise<FoldStateQuery<T>> => {
     if (holders === 0) return unavailable('not-live');
     if (state.generation !== runtime.generation()) return unavailable('no-state');
@@ -805,6 +858,22 @@ export function createFoldSession({
         const from = await foldableFrom();
         if ('status' in from) return from;
         return await commit(from, op, choices);
+      } finally {
+        committing = false;
+      }
+    },
+
+    async commitLanded(landed) {
+      if (committing) {
+        engine?.release(landed.state);
+        return unavailable('busy');
+      }
+      committing = true;
+      try {
+        const from = await foldableFrom();
+        if (!('status' in from)) return commitLandedFrom(from, landed);
+        engine?.release(landed.state);
+        return from;
       } finally {
         committing = false;
       }

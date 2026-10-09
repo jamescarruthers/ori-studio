@@ -55,6 +55,9 @@ function stateWith(tab: DesignTab): WorkspaceState {
     oristudioCpHistoryFuture: [],
     oristudioCpSelection: { lines: [], points: [], circles: [] },
     oristudioCpAnnotations: [],
+    // Whether Fold can start from one of Edit's folded figures.
+    oristudioCpFoldedFigures: [],
+    oristudioCpActiveFoldedFigureId: null,
     oristudioBpBusy: false,
     importedCreasePattern: null,
     foldArtifacts: null,

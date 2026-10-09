@@ -43,6 +43,28 @@ describe('appendFoldStep', () => {
       expect(appendFoldStep(document(), { parent, op: valleyAt(0.6) }), parent).toBeNull();
     }
   });
+
+  it('adopts a sheet with the first step of an empty sequence, in the same edit (plan D16)', () => {
+    const rectangle = rectangleShape(1, 0.5)!;
+    const empty = { ...sequenceOf([]), sheetMarks: [mark] };
+    const adopted = appendFoldStep(empty, { parent: null, op: valleyAt(0.25), adopt: rectangle }, sequentialIds())!;
+    expect(adopted.document.paper).toEqual({ shape: rectangle, startSide: 'front' });
+    // The shape changed, so the marks made on the old sheet go, as a change of shape takes them.
+    expect(adopted.document.sheetMarks).toBeUndefined();
+    // What the step stores is the op, never the sheet it adopted.
+    expect(adopted.document.steps).toEqual([{ id: 'fstep-1', parent: null, op: valleyAt(0.25) }]);
+
+    // The same shape is no change of shape: the marks stay.
+    const square = appendFoldStep(empty, { parent: null, op: valleyAt(0.25), adopt: { kind: 'square' } })!;
+    expect(square.document.paper).toBe(empty.paper);
+    expect(square.document.sheetMarks).toEqual([mark]);
+  });
+
+  it('refuses to adopt a sheet for a sequence that already has steps, or for a step after another', () => {
+    const adopt = rectangleShape(1, 0.5)!;
+    expect(appendFoldStep(document(), { parent: null, op: valleyAt(0.6), adopt })).toBeNull();
+    expect(appendFoldStep(document(), { parent: 'a', op: valleyAt(0.6), adopt })).toBeNull();
+  });
 });
 
 describe('deleteFoldStep', () => {

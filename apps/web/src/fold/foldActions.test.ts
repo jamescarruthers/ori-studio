@@ -207,9 +207,10 @@ describe('buildFoldActions', () => {
 });
 
 describe('foldSendToEditSource', () => {
-  it('gives the shared Send to Edit button Fold’s own tooltip and no variants', () => {
+  it('gives the shared Send to Edit button Fold’s own tooltip, and its precreases as aux lines behind the caret', () => {
     expect(foldSendToEditSource(t)).toEqual({
       title: 'Send the crease pattern of the steps shown to the Edit canvas',
+      variants: ['precreases-as-aux'],
     });
   });
 });

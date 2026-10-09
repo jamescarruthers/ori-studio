@@ -308,8 +308,9 @@ export function getMenuBarDef(
     },
     {
       // The Fold sequence's verbs, in the action catalog's order
-      // (`fold/foldActions`). Every item is visible only while folding, so
-      // `menuHasVisibleItems` drops the menu everywhere else.
+      // (`fold/foldActions`), then its imports and hand-offs. Every item is
+      // visible only while folding, so `menuHasVisibleItems` drops the menu
+      // everywhere else.
       label: t('menu:menubar.fold', 'Fold'),
       items: [
         { type: 'action', id: 'fold.valley', label: t('menu:fold.valley', 'Valley Fold'), shortcut: shortcut('fold.valley', resolution) },
@@ -321,6 +322,45 @@ export function getMenuBarDef(
         { type: 'action', id: 'fold.rotate-cw', label: t('menu:fold.rotate-cw', 'Rotate Clockwise'), shortcut: shortcut('fold.rotate-cw', resolution) },
         { type: 'separator' },
         { type: 'action', id: 'fold.delete-step', label: t('menu:fold.delete-step', 'Delete Step'), shortcut: shortcut('fold.delete-step', resolution) },
+        { type: 'separator' },
+        { type: 'action', id: 'fold.import-cp', label: t('menu:fold.importCp', 'Import CP...') },
+        {
+          type: 'submenu',
+          label: t('menu:fold.importSample', 'Import Sample'),
+          items: [
+            {
+              type: 'action',
+              id: 'fold.import-sample-preliminary-base',
+              label: t('menu:fold.samplePreliminaryBase', 'Square Base'),
+            },
+            {
+              type: 'action',
+              id: 'fold.import-sample-waterbomb-base',
+              label: t('menu:fold.sampleWaterbombBase', 'Waterbomb Base'),
+            },
+            {
+              type: 'action',
+              id: 'fold.import-sample-pleat-in-eighths',
+              label: t('menu:fold.samplePleatInEighths', 'Pleat in Eighths'),
+            },
+          ],
+        },
+        {
+          type: 'action',
+          id: 'fold.start-from-edit-folded-figure',
+          label: t('menu:fold.startFromEditFigure', 'Start from Edit’s Folded Figure'),
+        },
+        { type: 'separator' },
+        { type: 'action', id: 'fold.send-to-edit', label: t('menu:fold.sendToEdit', 'Send to Edit') },
+        {
+          type: 'action',
+          id: 'fold.send-to-edit-precreases-as-aux',
+          label: t('menu:fold.sendToEditPrecreasesAsAux', 'Send to Edit (Precreases as Auxiliary Lines)'),
+        },
+        { type: 'separator' },
+        { type: 'action', id: 'fold.export-fold', label: t('menu:fold.exportFold', 'Export FOLD...') },
+        { type: 'action', id: 'fold.export-step', label: t('menu:fold.exportStep', 'Export Step...') },
+        { type: 'action', id: 'fold.export-steps', label: t('menu:fold.exportSteps', 'Export Steps...') },
       ],
     },
     {

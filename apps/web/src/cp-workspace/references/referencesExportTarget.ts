@@ -74,6 +74,13 @@ export interface StepDiagramExportCapture extends StepDiagramExportPages {
    */
   surface: PaperExportTarget['surface'];
   /**
+   * The marks the steps can be exported without — the letters and the
+   * reference lines — which the dialog offers as switches. Absent offers both,
+   * as References' steps carry them; a surface whose steps have neither (a
+   * Fold sequence's crease pattern by step) offers none.
+   */
+  marks?: PaperExportTarget['marks'];
+  /**
    * A step's scene at a page, from the diagram the page carries — the marks
    * it leaves out already taken out (`referencesStepDiagramMarks`). Whatever
    * else it reads is the capture's, fixed while the dialog is open, so the
@@ -104,7 +111,7 @@ export function stepDiagramExportTarget(capture: StepDiagramExportCapture): Pape
     sizeMeasures: 'sheet',
     pins: null,
     buriesFaces: false,
-    marks: PAPER_EXPORT_MARKS,
+    marks: capture.marks ?? PAPER_EXPORT_MARKS,
     // Keyed by the size the scene is built at.
     sceneKey: ({ page, style, background, marks = DEFAULT_PAPER_EXPORT_MARKS, sheet }) =>
       [

@@ -92,6 +92,12 @@
     "empty": "Este modelo dobrado ainda não tem nada para exportar",
     "failed": "Não foi possível exportar este modelo dobrado"
   },
+  "foldIo": {
+    "noStep": "Ainda não há nenhum passo para exportar.",
+    "pathBroken": "Um passo desta sequência não dobra mais, então os passos não podem ser enviados nem exportados.",
+    "tooLarge": "Esta sequência é grande demais para ser exportada como um único arquivo FOLD.",
+    "unavailable": "O motor de dobras parou antes de terminar. Tente de novo."
+  },
   "global": {
     "error": "Erro do Ori Studio",
     "folding": "Dobrando…",

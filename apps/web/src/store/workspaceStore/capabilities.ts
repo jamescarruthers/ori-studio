@@ -24,7 +24,8 @@ import { hasAttachedSolveInput } from '../../cp-workspace/annotations/suppressio
 import type { EditingContext } from '../../workspaces/editingContext';
 import { stepById, turnById } from '../../diagram/document/diagramDocument';
 import { hasProjectDocument } from './projectDocuments';
-import { isShownFoldSequenceReadOnly } from './foldState';
+import { foldStartingFigure } from '../../fold/io/foldEditFigure';
+import { isShownFoldSequenceReadOnly, shownFoldSequence } from './foldState';
 import type { WorkspaceState } from './types';
 
 /**
@@ -189,6 +190,18 @@ export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabi
     historyFutureCount,
     clipboard: state.clipboard,
     selection: selectSelection(state),
+    foldSequence: foldSequenceCapabilityInput(state),
+    hasFoldStartingFigure: foldStartingFigure(state) !== null,
+  };
+}
+
+/** The Fold sequence on screen, as its imports and hand-offs are gated by it. */
+function foldSequenceCapabilityInput(state: WorkspaceState): WorkspaceCapabilityInput['foldSequence'] {
+  const shown = shownFoldSequence(state);
+  return {
+    stepCount: shown?.document.steps.length ?? 0,
+    polygon: shown?.document.paper.shape.kind === 'polygon',
+    readOnly: shown?.readOnlyRaw != null,
   };
 }
 

@@ -116,7 +116,17 @@ export type WorkspaceCapabilityId =
   | 'cp.setActiveCreaseAngle'
   | 'insert.image'
   | 'insert.text'
-  | FoldSequenceCapabilityId;
+  | FoldSequenceCapabilityId
+  | 'fold.import-cp'
+  | 'fold.import-sample-preliminary-base'
+  | 'fold.import-sample-waterbomb-base'
+  | 'fold.import-sample-pleat-in-eighths'
+  | 'fold.start-from-edit-folded-figure'
+  | 'fold.send-to-edit'
+  | 'fold.send-to-edit-precreases-as-aux'
+  | 'fold.export-fold'
+  | 'fold.export-step'
+  | 'fold.export-steps';
 
 /** The Fold sequence's verbs, by the action catalog's ids (`fold/foldActions`). */
 export type FoldSequenceCapabilityId =
@@ -224,6 +234,14 @@ export interface WorkspaceCapabilityInput {
    * flag and the layout of the window this runs in; tests pass it.
    */
   cpDetectAvailable?: boolean;
+  /**
+   * The Fold sequence on screen, for its imports and hand-offs: how many
+   * steps it has, whether it folds a polygon sheet, and whether it is a
+   * newer build's. Absent reads as an empty square that can change.
+   */
+  foldSequence?: { stepCount: number; polygon: boolean; readOnly: boolean };
+  /** Whether Edit has a flat, solved folded figure a Fold sequence can start from. */
+  hasFoldStartingFigure?: boolean;
 }
 
 /** Whether this build and surface offer CP detection at all: the flag is on and this is not a phone. */
@@ -1177,9 +1195,91 @@ export function getWorkspaceCapabilities(
         : t('common:capability.openEditableCpFirst', 'Open an editable crease pattern first')
     ),
     ...foldSequenceCapabilities(input, foldMode, t),
+    ...foldIoCapabilities(input, foldMode, t),
   };
 
   return maskCapabilitiesForContext(capabilities, input.activeEditingContext);
+}
+
+type FoldIoCapabilityId = Extract<WorkspaceCapabilityId, `fold.${string}`>;
+
+/**
+ * Fold's imports and hand-offs (plan D16, D10, D11): shown only while
+ * folding. An import adds a step, so a sequence a newer build wrote takes
+ * none, and a polygon sheet with steps takes none (V0 imports square and
+ * rectangle sheets; an empty sequence adopts the pattern's). What leaves the
+ * sequence needs a step to carry; whether every step of the path still folds
+ * is the session's to say when the verb runs.
+ */
+function foldIoCapabilities(
+  input: WorkspaceCapabilityInput,
+  foldMode: boolean,
+  t: TFunction
+): Record<FoldIoCapabilityId, WorkspaceCapability> {
+  const sequence = input.foldSequence ?? { stepCount: 0, polygon: false, readOnly: false };
+  const importBlock = sequence.readOnly
+    ? t('common:capability.foldReadOnly', 'This sequence was made with a newer Ori Studio and opens read-only')
+    : sequence.polygon && sequence.stepCount > 0
+      ? t('common:capability.foldImportPolygon', 'Import CP needs a square or rectangle sheet.')
+      : null;
+  // Its reason is what it does, or why it cannot.
+  const fold = (label: string, reason: string, blocked: string | null) =>
+    commandCapability(foldMode && blocked === null, foldMode, label, blocked ?? reason);
+  const importing = (label: string, reason: string) => fold(label, reason, importBlock);
+  const figureBlock =
+    importBlock ??
+    (input.hasFoldStartingFigure
+      ? null
+      : t('common:capability.foldNoStartingFigure', 'Fold the crease pattern flat in Edit first'));
+  const outBlock =
+    sequence.stepCount > 0 ? null : t('common:capability.foldNoSteps', 'Fold a step first');
+  const out = (label: string, reason: string) => fold(label, reason, outBlock);
+  return {
+    'fold.import-cp': importing(
+      t('common:capability.foldImportCp', 'Import CP...'),
+      t('common:capability.foldImportCpHint', 'Add a step that collapses the paper into a crease pattern')
+    ),
+    'fold.import-sample-preliminary-base': importing(
+      t('common:capability.foldSamplePreliminaryBase', 'Square Base'),
+      t('common:capability.foldImportSampleHint', 'Add a step that collapses the paper into a sample crease pattern')
+    ),
+    'fold.import-sample-waterbomb-base': importing(
+      t('common:capability.foldSampleWaterbombBase', 'Waterbomb Base'),
+      t('common:capability.foldImportSampleHint', 'Add a step that collapses the paper into a sample crease pattern')
+    ),
+    'fold.import-sample-pleat-in-eighths': importing(
+      t('common:capability.foldSamplePleatInEighths', 'Pleat in Eighths'),
+      t('common:capability.foldImportSampleHint', 'Add a step that collapses the paper into a sample crease pattern')
+    ),
+    'fold.start-from-edit-folded-figure': fold(
+      t('common:capability.foldStartFromEditFigure', 'Start from Edit’s Folded Figure'),
+      t('common:capability.foldStartFromEditFigureHint', 'Add a step that collapses the paper into Edit’s folded figure'),
+      figureBlock
+    ),
+    'fold.send-to-edit': out(
+      t('common:capability.foldSendToEdit', 'Send to Edit'),
+      t('common:capability.foldSendToEditHint', 'Send the crease pattern of the steps shown to the Edit canvas')
+    ),
+    'fold.send-to-edit-precreases-as-aux': out(
+      t('common:capability.foldSendToEditPrecreasesAsAux', 'Send to Edit (Precreases as Auxiliary Lines)'),
+      t(
+        'common:capability.foldSendToEditPrecreasesAsAuxHint',
+        'Send the crease pattern with its precreases as auxiliary lines'
+      )
+    ),
+    'fold.export-fold': out(
+      t('common:capability.foldExportFold', 'Export FOLD...'),
+      t('common:capability.foldExportFoldHint', 'Export the steps shown as one FOLD file, a frame per step')
+    ),
+    'fold.export-step': out(
+      t('common:capability.foldExportStep', 'Export Step...'),
+      t('common:capability.foldExportStepHint', 'Export the step on screen’s crease pattern as SVG or PNG')
+    ),
+    'fold.export-steps': out(
+      t('common:capability.foldExportSteps', 'Export Steps...'),
+      t('common:capability.foldExportStepsHint', 'Export each step’s crease pattern, as one ZIP')
+    ),
+  };
 }
 
 // The per-design-kind capability sets that used to live here —

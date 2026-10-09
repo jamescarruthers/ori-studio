@@ -258,8 +258,15 @@ function workerOver(calls: FoldEngineCalls, version: number): FoldSessionWorker 
     landmarks: async (state, marks) => calls.landmarks(state, marks),
     topVisibleAt: async (state, at) => calls.topVisibleAt(state, at),
   } satisfies Partial<FoldSessionWorker>;
-  // Calls the bridge gains later are not needed here.
-  return worker as FoldSessionWorker;
+  // Any other call the engine has — the queries, Import CP's and the
+  // exports', when a test hands in an engine that has them — passes through
+  // as the worker would expose it, asynchronously.
+  const passed: Record<string, unknown> = {};
+  for (const [name, call] of Object.entries(calls)) {
+    if (typeof call !== 'function' || name in worker) continue;
+    passed[name] = async (...args: unknown[]) => (call as (...given: unknown[]) => unknown)(...args);
+  }
+  return { ...passed, ...worker } as FoldSessionWorker;
 }
 
 export function inProcessFoldRuntime(makeEngine: () => FoldEngineCalls, version = 1): InProcessFoldRuntime {

@@ -92,6 +92,12 @@
     "empty": "Ce modèle plié n'a encore rien à exporter",
     "failed": "Impossible d'exporter ce modèle plié"
   },
+  "foldIo": {
+    "noStep": "Il n’y a encore aucune étape à exporter.",
+    "pathBroken": "Une étape de cette séquence ne se plie plus\u00a0: les étapes ne peuvent être ni envoyées ni exportées.",
+    "tooLarge": "Cette séquence est trop grande pour être exportée dans un seul fichier FOLD.",
+    "unavailable": "Le moteur de pliage s’est arrêté avant d’avoir fini. Réessayez."
+  },
   "global": {
     "error": "Erreur Ori Studio",
     "folding": "Pliage…",

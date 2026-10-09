@@ -47,6 +47,7 @@ import type { PaperPage, PaperSheetSize } from '../../lib/paper/paperPage';
 import type { PaperExportMarks } from '../../lib/paperExportSettings';
 import { PT_TO_CSS_PX, type PaperStyle } from '../../lib/paper/paperStyle';
 import type { PaperScene } from '../../lib/paper/paperScene';
+import type { PaperSurface } from '../../lib/paper/paperStyleResolve';
 import { mmToCssPx } from '../../lib/paper/paperSvg';
 import { canvasDiagramInk, canvasDiagramPens } from '../../lib/stepDiagram/diagramInk';
 import { diagramScenePaintStyle, diagramToPaperScene } from './diagramToPaperScene';
@@ -92,8 +93,23 @@ export interface ReferencesStepSceneOptions extends StepDiagramPageInput {
   showAux?: boolean | null;
 }
 
+/** What any surface's step is built from at its page: References' options, and the surface whose policy reads the style. */
+export interface StepDiagramPageSceneOptions extends ReferencesStepSceneOptions {
+  surface: Extract<PaperSurface, 'references' | 'fold'>;
+}
+
 /**
- * The step as a scene: the diagram through the big view's projector.
+ * The step as a scene: the diagram through the big view's projector, the
+ * `references` policy applied to its style ({@link stepDiagramPageScene}).
+ */
+export function referencesStepScene(diagram: StepDiagramModel, options: ReferencesStepSceneOptions): PaperScene {
+  return stepDiagramPageScene(diagram, { ...options, surface: 'references' });
+}
+
+/**
+ * A step diagram as a scene at its page, for a surface whose pages are step
+ * diagrams — References' steps, Fold's: the diagram through the big view's
+ * projector, the style read through the surface's policy.
  *
  * The projector is the big view's, rebuilt from the sheet size alone: model
  * space to scene px at the scale that puts the sheet's longer side at
@@ -106,9 +122,9 @@ export interface ReferencesStepSceneOptions extends StepDiagramPageInput {
  * ring are the size they are on screen on a page painted at the screen's
  * ratio — which, at {@link referencesStepSheetCssPx}, is every page.
  */
-export function referencesStepScene(
+export function stepDiagramPageScene(
   diagram: StepDiagramModel,
-  { style, mirrored, sheetCssPx, lineWidth, showAux = null, background }: ReferencesStepSceneOptions
+  { surface, style, mirrored, sheetCssPx, lineWidth, showAux = null, background }: StepDiagramPageSceneOptions
 ): PaperScene {
   const longer = Math.max(diagram.sheet.width, diagram.sheet.height, Number.EPSILON);
   const scale = sheetCssPx / longer;
@@ -120,7 +136,7 @@ export function referencesStepScene(
   );
   return diagramToPaperScene(diagram, {
     style,
-    surface: 'references',
+    surface,
     project,
     mirrored,
     showAux,

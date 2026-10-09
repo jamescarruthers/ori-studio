@@ -44,11 +44,21 @@ export interface FoldStepDraft {
   choices?: FoldChoices;
   /** The `fs1` of the state the preview landed. */
   expect?: string;
+  /**
+   * The sheet the sequence takes with its first step: an Import CP into an
+   * empty sequence adopts the crease pattern's square or rectangle (plan
+   * D16), and the step folds from that sheet. Only for a first step.
+   */
+  adopt?: FoldPaperShape;
 }
 
 /**
  * Commit a step under `draft.parent`: the document with it appended, and its
- * id. Null when the parent is not a step of the document, or is locked.
+ * id. Null when the parent is not a step of the document, or is locked, or
+ * when the draft adopts a sheet for a sequence that already has steps.
+ *
+ * A draft that adopts a sheet changes the shape as {@link setFoldPaperShape}
+ * does, in the same edit — one undo entry for the import.
  */
 export function appendFoldStep(
   document: FoldSequenceDocument,
@@ -56,6 +66,10 @@ export function appendFoldStep(
   newId: FoldIdFactory = randomFoldId
 ): { document: FoldSequenceDocument; id: string } | null {
   const { parent } = draft;
+  if (draft.adopt) {
+    if (parent !== null || document.steps.length > 0) return null;
+    document = setFoldPaperShape(document, draft.adopt);
+  }
   if (parent !== null) {
     const tree = foldStepTree(document.steps);
     if (!tree.byId.has(parent) || lockedIds(tree).has(parent)) return null;
