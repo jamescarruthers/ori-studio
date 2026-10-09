@@ -39,6 +39,8 @@ import { FoldActionLayer } from './FoldActionLayer';
 import { FoldAltLatchToggle } from './FoldAltLatchToggle';
 import { FoldPane } from './FoldPane';
 import { FoldViewportToolbar } from './FoldViewportToolbar';
+import { FOLD_CANVAS_DROP_POLICY, useFoldCanvasDrop } from '../../../fold/io/useFoldCanvasDrop';
+import { FileDropOverlay } from '../../FileDropOverlay';
 import styles from './FoldCanvas.module.css';
 
 /**
@@ -85,6 +87,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   );
   const theme = useThemeStore((state) => state.currentTheme);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  const drop = useFoldCanvasDrop();
   const inks = useFoldCanvasInks(viewport, theme.name);
   const [display, setDisplay] = useState<FoldPaneDisplay>(FOLD_PANE_DISPLAY_DEFAULT);
   const [zoomPercent, setZoomPercent] = useState(100);
@@ -211,7 +214,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       {!phone && (
         <FoldToolRail groups={groups} keyLabel={keyLabel} header={coarse ? <FoldAltLatchToggle fill /> : undefined} />
       )}
-      <div className={styles.viewport} ref={setViewport}>
+      {/* A crease pattern dropped on the panes is Import CP; anything else goes on to the workspace's target. */}
+      <div className={`${styles.viewport} file-drop-region`} ref={setViewport} {...drop.dropTargetProps}>
+        <FileDropOverlay visible={drop.isDragActive} policy={FOLD_CANVAS_DROP_POLICY} />
         <div className={styles.panes} data-split={showFolded && showCreases ? '' : undefined}>
           {showFolded && (
             <FoldPane
