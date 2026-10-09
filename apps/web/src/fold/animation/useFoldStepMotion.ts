@@ -30,12 +30,13 @@ export function useFoldStepMotion(stepId: string | null, pane: FoldStepPane | nu
   // The step's parent: the sheet for the first.
   const parent = useFoldNode(step?.parent ?? null);
   const report = landed?.report ?? null;
+  const compound = landed?.compound ?? null;
   // Nothing is asked without a step that has a motion: not of the sheet, nor of a locked step.
   const after = useFoldStateQuery(step ? (landed?.state ?? null) : null, FOLD_SCENE_QUERY);
   const before = useFoldStateQuery(step ? (parent?.state ?? null) : null, FOLD_SCENE_QUERY);
   const acted = useFoldStateQuery(step ? (landed?.state ?? null) : null, FOLD_STEP_ACTION_QUERY);
   return useMemo(() => {
     if (!step || !pane || !after || !before || !acted) return null;
-    return foldStepMotion({ op: step.op, before, after, action: acted.action, report }, pane);
-  }, [step, pane, after, before, acted, report]);
+    return foldStepMotion({ op: step.op, before, after, action: acted.action, report, compound }, pane);
+  }, [step, pane, after, before, acted, report, compound]);
 }

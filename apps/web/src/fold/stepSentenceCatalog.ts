@@ -886,3 +886,345 @@ function mountainPrecreaseSentence(t: TFunction, clause: SentenceClause, scope: 
       );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Compound folds (plan D4), one block per family.
+
+/**
+ * The sentence for a reverse fold along a line (plan Phase 9). Its layers are
+ * the tip's anchor, counted from the top as the viewer sees them whichever
+ * the kind. A reverse fold is never "in half": an axiom that would say so
+ * reads as its plain form.
+ */
+export function reverseFoldSentence(
+  t: TFunction,
+  kind: 'inside' | 'outside',
+  clause: SentenceClause,
+  scope: FoldLayerScope
+): string {
+  return kind === 'inside' ? insideReverseSentence(t, clause, scope) : outsideReverseSentence(t, clause, scope);
+}
+
+/** An inside reverse fold: "Inside reverse fold …". */
+function insideReverseSentence(t: TFunction, clause: SentenceClause, scope: FoldLayerScope): string {
+  const { a, b, c, d, self } = clause.names;
+  switch (clause.line) {
+    case 'free':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.free.all', 'Inside reverse fold along the line drawn, through all layers.'),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.free.depth', {
+            count,
+            defaultValue_one: 'Inside reverse fold along the line drawn, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold along the line drawn, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.free.flaps', {
+            count,
+            defaultValue_one: 'Inside reverse fold along the line drawn, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold along the line drawn, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'crease':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.crease.all', 'Inside reverse fold along the existing crease, through all layers.'),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.crease.depth', {
+            count,
+            defaultValue_one: 'Inside reverse fold along the existing crease, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold along the existing crease, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.crease.flaps', {
+            count,
+            defaultValue_one: 'Inside reverse fold along the existing crease, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold along the existing crease, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o1':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.o1.all', 'Inside reverse fold along the line joining {{a}} and {{b}}, through all layers.', { a, b }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o1.depth', {
+            a, b, count,
+            defaultValue_one: 'Inside reverse fold along the line joining {{a}} and {{b}}, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold along the line joining {{a}} and {{b}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o1.flaps', {
+            a, b, count,
+            defaultValue_one: 'Inside reverse fold along the line joining {{a}} and {{b}}, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold along the line joining {{a}} and {{b}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o2':
+    case 'o2Half':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.o2.all', 'Inside reverse fold, bringing {{a}} onto {{b}}, through all layers.', { a, b }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o2.depth', {
+            a, b, count,
+            defaultValue_one: 'Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o2.flaps', {
+            a, b, count,
+            defaultValue_one: 'Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o3':
+    case 'o3Half':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.o3.all', 'Inside reverse fold, bringing {{a}} onto {{b}}, through all layers.', { a, b }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o3.depth', {
+            a, b, count,
+            defaultValue_one: 'Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o3.flaps', {
+            a, b, count,
+            defaultValue_one: 'Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold, bringing {{a}} onto {{b}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o4':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.o4.all', 'Inside reverse fold {{b}} onto itself, pivoting on {{a}}, through all layers.', { a, b }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o4.depth', {
+            a, b, count,
+            defaultValue_one: 'Inside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o4.flaps', {
+            a, b, count,
+            defaultValue_one: 'Inside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o5':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.o5.all', 'Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, through all layers.', { a, b, c }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o5.depth', {
+            a, b, c, count,
+            defaultValue_one: 'Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o5.flaps', {
+            a, b, c, count,
+            defaultValue_one: 'Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o6':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.o6.all', 'Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, through all layers.', { a, b, c, d }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o6.depth', {
+            a, b, c, d, count,
+            defaultValue_one: 'Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o6.flaps', {
+            a, b, c, d, count,
+            defaultValue_one: 'Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o7':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.insideReverse.o7.all', 'Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, through all layers.', { self, a, b }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o7.depth', {
+            self, a, b, count,
+            defaultValue_one: 'Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the top layer.',
+            defaultValue_other: 'Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.insideReverse.o7.flaps', {
+            self, a, b, count,
+            defaultValue_one: 'Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the flap shown.',
+            defaultValue_other: 'Inside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+  }
+}
+
+/** An outside reverse fold: "Outside reverse fold …". */
+function outsideReverseSentence(t: TFunction, clause: SentenceClause, scope: FoldLayerScope): string {
+  const { a, b, c, d, self } = clause.names;
+  switch (clause.line) {
+    case 'free':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.free.all', 'Outside reverse fold along the line drawn, through all layers.'),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.free.depth', {
+            count,
+            defaultValue_one: 'Outside reverse fold along the line drawn, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold along the line drawn, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.free.flaps', {
+            count,
+            defaultValue_one: 'Outside reverse fold along the line drawn, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold along the line drawn, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'crease':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.crease.all', 'Outside reverse fold along the existing crease, through all layers.'),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.crease.depth', {
+            count,
+            defaultValue_one: 'Outside reverse fold along the existing crease, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold along the existing crease, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.crease.flaps', {
+            count,
+            defaultValue_one: 'Outside reverse fold along the existing crease, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold along the existing crease, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o1':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.o1.all', 'Outside reverse fold along the line joining {{a}} and {{b}}, through all layers.', { a, b }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o1.depth', {
+            a, b, count,
+            defaultValue_one: 'Outside reverse fold along the line joining {{a}} and {{b}}, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold along the line joining {{a}} and {{b}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o1.flaps', {
+            a, b, count,
+            defaultValue_one: 'Outside reverse fold along the line joining {{a}} and {{b}}, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold along the line joining {{a}} and {{b}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o2':
+    case 'o2Half':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.o2.all', 'Outside reverse fold, bringing {{a}} onto {{b}}, through all layers.', { a, b }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o2.depth', {
+            a, b, count,
+            defaultValue_one: 'Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o2.flaps', {
+            a, b, count,
+            defaultValue_one: 'Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o3':
+    case 'o3Half':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.o3.all', 'Outside reverse fold, bringing {{a}} onto {{b}}, through all layers.', { a, b }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o3.depth', {
+            a, b, count,
+            defaultValue_one: 'Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o3.flaps', {
+            a, b, count,
+            defaultValue_one: 'Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold, bringing {{a}} onto {{b}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o4':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.o4.all', 'Outside reverse fold {{b}} onto itself, pivoting on {{a}}, through all layers.', { a, b }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o4.depth', {
+            a, b, count,
+            defaultValue_one: 'Outside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o4.flaps', {
+            a, b, count,
+            defaultValue_one: 'Outside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold {{b}} onto itself, pivoting on {{a}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o5':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.o5.all', 'Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, through all layers.', { a, b, c }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o5.depth', {
+            a, b, c, count,
+            defaultValue_one: 'Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o5.flaps', {
+            a, b, c, count,
+            defaultValue_one: 'Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold, pivoting on {{a}}, bringing {{b}} onto {{c}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o6':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.o6.all', 'Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, through all layers.', { a, b, c, d }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o6.depth', {
+            a, b, c, d, count,
+            defaultValue_one: 'Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o6.flaps', {
+            a, b, c, d, count,
+            defaultValue_one: 'Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+    case 'o7':
+      return byScope(
+        scope,
+        () => t('panels:fold.sentence.outsideReverse.o7.all', 'Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, through all layers.', { self, a, b }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o7.depth', {
+            self, a, b, count,
+            defaultValue_one: 'Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the top layer.',
+            defaultValue_other: 'Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the top {{count}} layers.',
+          }),
+        (count) =>
+          t('panels:fold.sentence.outsideReverse.o7.flaps', {
+            self, a, b, count,
+            defaultValue_one: 'Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the flap shown.',
+            defaultValue_other: 'Outside reverse fold {{self}} onto itself so that {{a}} lands on {{b}}, reversing only the {{count}} flaps shown.',
+          })
+      );
+  }
+}

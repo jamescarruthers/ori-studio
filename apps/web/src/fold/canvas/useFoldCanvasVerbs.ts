@@ -62,7 +62,17 @@ export interface FoldCanvasVerbs {
 
 /** What a committed op is called in `fold step added`; null for Import CP, which the canvas never commits. */
 function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
-  return op.kind === 'cp-jump' ? null : op.kind;
+  switch (op.kind) {
+    case 'cp-jump':
+      return null;
+    // Compound folds, snake_case as the event's enums are.
+    case 'inside-reverse':
+      return 'inside_reverse';
+    case 'outside-reverse':
+      return 'outside_reverse';
+    default:
+      return op.kind;
+  }
 }
 
 function trackCommitted(op: FoldOp): void {

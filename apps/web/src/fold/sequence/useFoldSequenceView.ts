@@ -84,7 +84,7 @@ export function useFoldSequenceView(): FoldSequenceView {
           ? foldNodeSentenceStep(entry.node, {
               parent: frames[index - 1] ?? null,
               child: frames[index] ?? null,
-              report: entry.session.report,
+              report: entry.session.report ?? entry.session.compound ?? null,
             })
           : { op: 'unknown' }
       ),
@@ -95,10 +95,11 @@ export function useFoldSequenceView(): FoldSequenceView {
     if (pendingStep.status !== 'landed' && pendingStep.status !== 'refused') return null;
     const op = pendingStep.request.op;
     const report = pendingStep.status === 'landed' ? pendingStep.report : null;
+    const folded = pendingStep.status === 'landed' ? (pendingStep.report ?? pendingStep.compound ?? null) : null;
     return {
       status: pendingStep.status,
       op,
-      words: foldSentenceStepOf(op, { parent: frames[cursor] ?? null, child: pendingFrame, report }),
+      words: foldSentenceStepOf(op, { parent: frames[cursor] ?? null, child: pendingFrame, report: folded }),
       state: pendingStep.status === 'landed' ? pendingStep.state : null,
       frame: pendingFrame,
       report,

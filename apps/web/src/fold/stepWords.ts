@@ -58,6 +58,10 @@ export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
       return turnName(step.turn, t);
     case 'cp-jump':
       return t('panels:fold.words.cpJump', 'Import crease pattern');
+    case 'reverse':
+      return step.kind === 'inside'
+        ? t('panels:fold.words.insideReverse', 'Inside reverse fold')
+        : t('panels:fold.words.outsideReverse', 'Outside reverse fold');
     case 'unknown':
       return t('panels:fold.words.unknown', 'From a newer Ori Studio');
   }
@@ -79,6 +83,10 @@ export function operationBadge(t: TFunction, step: FoldSentenceStep): string {
       return turnCardWords(step.turn, t).title;
     case 'cp-jump':
       return t('panels:fold.words.badgeImported', 'Imported');
+    case 'reverse':
+      return step.kind === 'inside'
+        ? t('panels:fold.words.badgeInsideReverse', 'Inside reverse')
+        : t('panels:fold.words.badgeOutsideReverse', 'Outside reverse');
     case 'unknown':
       return t('panels:fold.words.badgeNewer', 'Newer');
   }
@@ -92,6 +100,7 @@ export function lineLabel(t: TFunction, step: FoldSentenceStep): string | null {
   switch (step.op) {
     case 'fold':
     case 'precrease':
+    case 'reverse':
       return lineWords(t, step.line);
     case 'unfold':
       return lineWords(t, { via: 'crease' });

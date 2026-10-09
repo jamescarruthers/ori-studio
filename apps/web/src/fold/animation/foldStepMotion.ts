@@ -45,17 +45,26 @@ import type { FoldProgramme } from '../../lib/foldMotion/foldTransport';
 import type { Point } from '../../lib/geometry';
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import type { FoldOp } from '../document/foldSequenceDocument';
-import type { FoldActionGeometry, FoldIsometry, FoldReport, FoldScene } from '../engine/foldEngineWire';
+import type {
+  FoldActionGeometry,
+  FoldCompoundReport,
+  FoldIsometry,
+  FoldReport,
+  FoldScene,
+} from '../engine/foldEngineWire';
 import {
   affineThrough,
   crossfadeFrame,
   crossfadeMotion,
   hingeMotion,
+  legsMotion,
   poseHinge,
+  poseLegs,
   poseTurn,
   turnMotion,
   type FoldCrossfadeMotion,
   type FoldHingeMotion,
+  type FoldLegsMotion,
   type FoldPosedFrame,
   type FoldTurnMotion,
 } from './foldStepPoses';
@@ -69,7 +78,10 @@ export type FoldStepPlayKind =
   | 'refold'
   | 'turn'
   | 'rotate'
-  | 'import';
+  | 'import'
+  // Compound folds, one block per family.
+  | 'inside_reverse'
+  | 'outside_reverse';
 
 /** What a step's motion is built from: all of it the session's (`fold/session`). */
 export interface FoldStepMotionInput {
@@ -83,6 +95,8 @@ export interface FoldStepMotionInput {
   action: FoldActionGeometry | null;
   /** What the step did; null for a turn, a rotation or an import. */
   report: FoldReport | null;
+  /** What a compound fold did, with the legs its animation plays; absent for any other step. */
+  compound?: FoldCompoundReport | null;
 }
 
 export interface FoldStepMotion {
@@ -91,7 +105,7 @@ export interface FoldStepMotion {
   readonly before: PaperScene;
   /** The landed scene, as the pane paints it: the last frame. */
   readonly after: PaperScene;
-  readonly motion: FoldHingeMotion | FoldTurnMotion | FoldCrossfadeMotion;
+  readonly motion: FoldHingeMotion | FoldTurnMotion | FoldCrossfadeMotion | FoldLegsMotion;
 }
 
 /** A step's programme, carrying its kind for the analytics event. */
@@ -151,11 +165,70 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
     }
     case 'cp-jump':
       return crossfade();
+    // Compound folds (plan D4), one block per family: the engine's legs.
+    case 'inside-reverse':
+    case 'outside-reverse': {
+      const legs = compoundLegs(input, before, after, to.place);
+      return legs ? { step, before, after, motion: legs } : crossfade();
+    }
   }
 }
 
 function playKind(op: FoldOp): FoldStepPlayKind {
-  return op.kind === 'cp-jump' ? 'import' : op.kind;
+  switch (op.kind) {
+    case 'cp-jump':
+      return 'import';
+    case 'inside-reverse':
+      return 'inside_reverse';
+    case 'outside-reverse':
+      return 'outside_reverse';
+    default:
+      return op.kind;
+  }
+}
+
+/**
+ * A compound step's legs (the engine's `StepMotion`), placed as the pane
+ * places the landed state: ℓ from the model frame through the step's view to
+ * the pane's px, the turning faces by their place in the landed scene, and
+ * each landed face's parent face — itself, or the face it was split from —
+ * by its place in the parent's.
+ */
+function compoundLegs(
+  input: FoldStepMotionInput,
+  before: PaperScene,
+  after: PaperScene,
+  place: FoldedFlatPaperSceneOptions
+): FoldLegsMotion | null {
+  const motion = input.compound?.motion;
+  const axis = motion?.legs[0]?.groups[0]?.axis;
+  if (!motion || !axis) return null;
+  const foot: Point = { x: axis.n[0] * axis.d, y: axis.n[1] * axis.d };
+  const ahead: Point = { x: foot.x - axis.n[1], y: foot.y + axis.n[0] };
+  const at = place.toScenePx(applyIsometry(input.after.view_transform, foot));
+  const next = place.toScenePx(applyIsometry(input.after.view_transform, ahead));
+  const along: ScenePoint = [next[0] - at[0], next[1] - at[1]];
+  if (Math.hypot(along[0], along[1]) === 0) return null;
+  const landedAt = new Map(input.after.lineage.map((face, index) => [face.id, index]));
+  const parentAt = new Map(input.before.lineage.map((face, index) => [face.id, index]));
+  const moving = new Set<number>();
+  for (const group of motion.legs[0]?.groups ?? []) {
+    for (const id of group.faces) {
+      const index = landedAt.get(id);
+      if (index !== undefined) moving.add(index);
+    }
+  }
+  if (moving.size === 0) return null;
+  const parentFace = (face: number): number | null => {
+    const lineage = input.after.lineage[face];
+    if (!lineage) return null;
+    return parentAt.get(lineage.id) ?? (lineage.parent === null ? null : (parentAt.get(lineage.parent) ?? null));
+  };
+  const legs = motion.legs.map((leg) => {
+    const ends = leg.groups.flatMap((group) => [Math.abs(group.from), Math.abs(group.to)]);
+    return { from: Math.min(...ends), to: Math.max(...ends), stacking: leg.stacking };
+  });
+  return legsMotion(before, after, moving, parentFace, { at, along }, legs);
 }
 
 function hingeOf(
@@ -279,6 +352,9 @@ function legsOf({ motion }: FoldStepMotion): FoldLeg[] {
       return [leg(motion.turn.kind === 'over' ? TURN_OVER_PACE : ROTATE_PACE)];
     case 'crossfade':
       return [leg(CROSSFADE_PACE)];
+    case 'legs':
+      // The engine's legs meet edge-on: one swing through both, landing and staying.
+      return [leg(FOLD_PACE)];
   }
 }
 
@@ -299,6 +375,8 @@ export function foldStepFrame(step: FoldStepMotion, moment: FoldStepMoment): Fol
       return { scene: poseTurn(motion, pose.angle) };
     case 'crossfade':
       return crossfadeFrame(motion, pose.angle / Math.PI);
+    case 'legs':
+      return { scene: poseLegs(motion, pose.angle) };
   }
 }
 

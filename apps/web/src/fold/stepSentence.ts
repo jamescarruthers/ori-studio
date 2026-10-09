@@ -40,6 +40,7 @@ import type { TurnKind } from '../lib/steps/turn';
 import { turnName } from '../lib/steps/turnWords';
 import {
   plainFoldSentence,
+  reverseFoldSentence,
   unfoldSentence,
   type PlainFoldSentenceOp,
   type SentenceClause,
@@ -105,6 +106,8 @@ export type FoldSentenceStep =
   | { op: 'turn'; turn: TurnKind }
   /** Import CP: the state jumps to an imported crease pattern's (plan D16). */
   | { op: 'cp-jump' }
+  /** A reverse fold along a line (plan Phase 9), its layers the tip's anchor, counted from the top. */
+  | { op: 'reverse'; kind: 'inside' | 'outside'; line: FoldSentenceLine; scope: FoldLayerScope }
   /** An operation a newer build wrote: locked, never described (plan D6). */
   | { op: 'unknown' };
 
@@ -230,6 +233,8 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
       return t('panels:fold.sentence.turn', '{{turn}}.', { turn: turnName(step.turn, t) });
     case 'cp-jump':
       return t('panels:fold.sentence.cpJump', 'Collapse into the imported crease pattern.');
+    case 'reverse':
+      return reverseFoldSentence(t, step.kind, lineClause(t, step.line), step.scope);
     case 'unknown':
       return t('panels:fold.sentence.unknown', 'A step made with a newer Ori Studio.');
   }
