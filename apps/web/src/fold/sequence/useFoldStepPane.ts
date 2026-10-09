@@ -4,21 +4,13 @@ import { handleMenuAction } from '../../commands/menuActions';
 import type { FoldBranchPosition, FoldPendingFold, FoldStepPaneStep, FoldStepStatus } from '../../components/fold/FoldStepPane';
 import type { NoticeAction } from '../../components/ui/Notice';
 import { isLockedStep } from '../document/foldSequenceDocument';
-import type { FoldStepSummarised } from '../engine/foldEngineWire';
 import { foldCommand } from '../foldActions';
-import type { FoldStateCall } from '../session/foldSession';
+import { FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import { useFoldStateQuery } from '../session/useFoldSession';
 import { foldActionsAt, foldCommandActionId } from './foldCommands';
 import { foldedStepCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
 import { foldCreaseDiff } from './foldStepDiff';
 import type { FoldSequenceView } from './useFoldSequenceView';
-
-/** The engine's summary of the step that landed a state: its counts, its diff and its layers (plan D14). */
-const askStepSummary: FoldStateCall<FoldStepSummarised> = async (engine, state) => {
-  const answer = await engine.stepSummary(state);
-  // A step whose parent is no longer held is refused; the pane shows what it knows without the summary.
-  return answer.status === 'ok' ? { summary: answer.summary } : { summary: null };
-};
 
 /** A path entry's standing as the Step pane says it: a step still folding stands as it should, rows to come. */
 function paneStatus(status: FoldEntryStatus): FoldStepStatus {
@@ -53,13 +45,14 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
   const { t } = useTranslation();
   const { document, entries, frames, words, cursor, pending, readOnly } = view;
   const entry = entries[cursor];
-  const summarised = useFoldStateQuery(entry?.id ? entry.session.state : null, askStepSummary);
-  const pendingSummary = useFoldStateQuery(pending?.state ?? null, askStepSummary);
+  const summarised = useFoldStateQuery(entry?.id ? entry.session.state : null, FOLD_STEP_SUMMARY_QUERY);
+  const pendingSummary = useFoldStateQuery(pending?.state ?? null, FOLD_STEP_SUMMARY_QUERY);
   const frame = frames[cursor] ?? null;
 
   return useMemo((): FoldStepPaneModel => {
     const node = entry?.node ?? null;
     const summary = summarised?.summary ?? null;
+    const imported = node !== null && !isLockedStep(node) && node.op.kind === 'cp-jump' ? node.op : null;
     const step: FoldStepPaneStep | null =
       entry && node
         ? {
@@ -67,9 +60,11 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
             number: entry.number,
             layers: summary?.layers ?? null,
             creases: summary?.counts ?? null,
-            diff: summary ? foldCreaseDiff(summary, frame?.creases ?? null) : null,
+            // An import replaces the crease pattern rather than changing it:
+            // its pattern is the counts, and there is no change to list.
+            diff: summary && !imported ? foldCreaseDiff(summary, frame?.creases ?? null) : null,
             status: paneStatus(entry.status),
-            ...(!isLockedStep(node) && node.op.kind === 'cp-jump' ? { origin: node.op.origin } : {}),
+            ...(imported ? { origin: imported.origin } : {}),
           }
         : null;
     const landedSummary = pendingSummary?.summary ?? null;

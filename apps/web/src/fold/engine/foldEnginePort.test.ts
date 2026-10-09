@@ -43,7 +43,8 @@ function fakeSource() {
       op.kind === 'cp-jump'
         ? {
             status: 'refused' as const,
-            refusal: { code: 'unsupported_op' as const, feature: 'cp_jump' },
+            // A stored import whose pattern no longer reads.
+            refusal: { code: 'import_stored_unreadable' as const, field: 'cp_json' },
             fixes: [],
             faces: [],
             vertices: [],
@@ -119,8 +120,28 @@ describe('the Fold engine port', () => {
     const jump: FoldOp = { kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' };
     await expect(port.step({ generation: 0, id: 1 }, { op: jump })).resolves.toEqual({
       landed: false,
-      code: 'unsupported_op',
+      code: 'import_stored_unreadable',
     });
+  });
+
+  it('takes a stored value the bridge cannot read as a refusal, and throws every other error on', async () => {
+    const { source } = fakeSource();
+    const port = createFoldEnginePort(source, 1);
+    const unreadable = { code: 'invalid_input', message: 'expected usize' };
+    vi.mocked(source.step).mockRejectedValueOnce(unreadable);
+    await expect(port.step({ generation: 0, id: 1 }, { op: BOOK })).resolves.toEqual({
+      landed: false,
+      code: 'invalid_input',
+    });
+    vi.mocked(source.sheet).mockRejectedValueOnce(unreadable);
+    await expect(port.sheet({ shape: { kind: 'square' }, startSide: 'front' })).resolves.toEqual({
+      landed: false,
+      code: 'invalid_input',
+    });
+
+    const crashed = { code: 'oristudio_fold_wasm_error', message: 'unreachable' };
+    vi.mocked(source.step).mockRejectedValueOnce(crashed);
+    await expect(port.step({ generation: 0, id: 1 }, { op: BOOK })).rejects.toEqual(crashed);
   });
 
   it('refuses a handle whose engine has gone, rather than fold another state of its number', async () => {

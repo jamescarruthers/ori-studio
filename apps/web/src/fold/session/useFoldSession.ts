@@ -48,6 +48,7 @@ export interface FoldSessionSurface {
   withState: FoldSession['withState'];
   withNode: FoldSession['withNode'];
   withCursor: FoldSession['withCursor'];
+  query: FoldSession['query'];
   retry: FoldSession['retry'];
 }
 
@@ -86,6 +87,7 @@ export function useFoldSession({ retain = true }: UseFoldSessionOptions = {}): F
       withState: session.withState,
       withNode: session.withNode,
       withCursor: session.withCursor,
+      query: session.query,
       retry: session.retry,
     }),
     [session, cursor, cursorId, readOnly, pending, analysis, error]
@@ -135,17 +137,20 @@ export function useFoldNodeQuery<T>(id: string | null, call: FoldStateCall<T>): 
  * The answer to a query on a landed state — a step's, or the one a tool is
  * folding — asked again whenever the state changes: null until it answers,
  * and for no state. As {@link useFoldNodeQuery}, the query should be a
- * module-level function or memoised.
+ * module-level function or memoised, and pure: the session asks it once per
+ * state for every surface (`FoldSession.query`), so an answer another
+ * surface already has is there on the first render.
  */
 export function useFoldStateQuery<T>(state: FoldEngineStateHandle | null, call: FoldStateCall<T>): T | null {
   const session = foldSession();
   const [answer, setAnswer] = useState<{ state: FoldEngineStateHandle; call: FoldStateCall<T>; value: T } | null>(
     null
   );
+  const held = state ? session.peek(state, call) : null;
   useEffect(() => {
-    if (!state) return undefined;
+    if (!state || session.peek(state, call)) return undefined;
     let current = true;
-    void session.withState(state, call).then(
+    void session.query(state, call).then(
       (result) => {
         if (current && result.status === 'answered') setAnswer({ state, call, value: result.value });
       },
@@ -157,6 +162,7 @@ export function useFoldStateQuery<T>(state: FoldEngineStateHandle | null, call: 
       current = false;
     };
   }, [session, state, call]);
+  if (held) return held.value;
   // An answer about another state, or to another query, is not this one's.
   return answer && answer.call === call && sameFoldState(answer.state, state) ? answer.value : null;
 }

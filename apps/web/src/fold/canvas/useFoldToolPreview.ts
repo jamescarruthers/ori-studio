@@ -11,10 +11,10 @@ import type {
   FoldEngineRefused,
   FoldScene,
   FoldStateSummary,
-  FoldStepSummary,
 } from '../engine/foldEngineWire';
 import { canonicalJson } from '../document/foldDigest';
 import { foldStepInputKey } from '../session/foldSessionEngine';
+import { FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
 import { isFoldKind } from '../tools/foldToolCatalog';
@@ -84,7 +84,7 @@ export function useFoldToolPreview(
   // The session's verbs keep their identity across renders; the surface
   // object does not (its snapshot fields change with every answer), so the
   // effects below depend on the verbs alone, or each answer would ask again.
-  const { analyse, preview, cancel, withCursor, withState } = session;
+  const { analyse, preview, cancel, withCursor, query } = session;
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
 
@@ -200,6 +200,8 @@ export function useFoldToolPreview(
   }, [withCursor, analysis, wantedSection, section?.key]);
 
   // --- The landed state's scene and its added creases, for the crease-pattern pane.
+  // Asked as every surface asks them (`FoldSession.query`), so a commit of
+  // this preview finds the committed step's scene and summary already in.
   const pending = session.pending;
   const pendingFor = step && pending.status !== 'idle' && foldStepInputKey(pending.request) === step.key ? pending : null;
   const landedState = pendingFor?.status === 'landed' ? pendingFor : null;
@@ -209,14 +211,10 @@ export function useFoldToolPreview(
     if (!landedState || landedKey === null) return undefined;
     let current = true;
     const { state: handle, summary } = landedState;
-    void Promise.all([
-      withState(handle, (engine, at) => engine.scene(at)),
-      withState(handle, (engine, at) => engine.stepSummary(at)),
-    ]).then(
+    void Promise.all([query(handle, FOLD_SCENE_QUERY), query(handle, FOLD_STEP_SUMMARY_QUERY)]).then(
       ([scene, stepSummary]) => {
         if (!current || scene.status !== 'answered') return;
-        const diff: FoldStepSummary | null =
-          stepSummary.status === 'answered' && stepSummary.value.status === 'ok' ? stepSummary.value.summary : null;
+        const diff = stepSummary.status === 'answered' ? stepSummary.value.summary : null;
         setLanded({
           key: landedKey,
           landed: { scene: scene.value, summary, added: new Set(diff ? [...diff.diff.added, ...diff.diff.reversed] : []) },
@@ -227,7 +225,7 @@ export function useFoldToolPreview(
     return () => {
       current = false;
     };
-  }, [withState, landedState, landedKey]);
+  }, [query, landedState, landedKey]);
 
   const refused =
     (build.status === 'refused' ? build.refused : null) ??

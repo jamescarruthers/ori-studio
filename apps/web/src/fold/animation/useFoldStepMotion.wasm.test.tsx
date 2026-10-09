@@ -91,12 +91,14 @@ function sessionOver(
     analysis: FOLD_IDLE,
     error: null,
   }));
+  // The hook's queries are pure: asked through `query`, with nothing held beforehand.
   const session = {
     store,
-    withState: async (state: { id: number }, call: (engine: FoldSessionWorker, state: number) => Promise<unknown>) => ({
+    query: async (state: { id: number }, call: (engine: FoldSessionWorker, state: number) => Promise<unknown>) => ({
       status: 'answered',
       value: await call(worker, state.id),
     }),
+    peek: () => null,
   } as unknown as FoldSession;
   return { session, store };
 }
@@ -172,8 +174,11 @@ describe.skipIf(!available)('useFoldStepMotion', () => {
   it('has none for the sheet, an unknown step, or without a placement', async () => {
     const over = await bookAndTurn();
     app.session = over.session;
+    const asked = vi.spyOn(over.session, 'query');
     await render(null);
     expect(latest()).toBeNull();
+    // The sheet has no motion, so nothing is asked of it.
+    expect(asked).not.toHaveBeenCalled();
     await render('missing');
     expect(latest()).toBeNull();
     await render('a', null);

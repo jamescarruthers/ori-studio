@@ -59,6 +59,13 @@ export interface FoldModelLine {
   d: number;
 }
 
+/**
+ * The shortest normal a stored model line may have: the geometry crate's
+ * `TOL`, below which the engine's `Line::new` names no line. The engine
+ * normalises any longer one.
+ */
+export const FOLD_MODEL_LINE_MIN_NORMAL = 1e-6;
+
 // ---------------------------------------------------------------------------
 // Paper
 
@@ -190,6 +197,9 @@ export type FoldSeed =
   | { scope: 'flaps'; at: readonly SheetPoint[] };
 
 export type FoldSeedScope = FoldSeed['scope'];
+
+/** The most layers a depth seed can name: the engine's `usize` in the browser's 32-bit wasm. */
+export const FOLD_SEED_MAX_LAYERS = 0xffff_ffff;
 
 /**
  * The fields every fold along a line shares. `moving` is a sheet point whose

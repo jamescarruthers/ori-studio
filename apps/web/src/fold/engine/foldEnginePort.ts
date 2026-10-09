@@ -50,6 +50,26 @@ export function foldStateLostError(handle: FoldEngineStateHandle): WasmErrorEnve
 }
 
 /**
+ * A stored value the bridge cannot take, as a refusal of the node that holds
+ * it. The port hands the document's paper and steps over unchanged, so an
+ * `invalid_input` from one is the file's — a value the reader accepted and
+ * the bridge does not — and the replay marks that node broken and goes on
+ * with its siblings, as for any refusal. Every other error is thrown on.
+ */
+async function refusingInvalidInput<T>(
+  answer: () => Promise<FoldEngineOutcome<T>>
+): Promise<FoldEngineOutcome<T>> {
+  try {
+    return await answer();
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'invalid_input') {
+      return { landed: false, code: 'invalid_input' };
+    }
+    throw error;
+  }
+}
+
+/**
  * The port over `source`. Releases are batched: every handle released in one
  * turn of the event loop goes to the engine in one call, which is what a
  * cache trim of a hundred states needs.
@@ -81,15 +101,15 @@ export function createFoldEnginePort(
   return {
     engineVersion,
 
-    async sheet(paper) {
+    sheet(paper) {
       const generation = source.generation();
-      return landing(await source.sheet(paper), generation);
+      return refusingInvalidInput(async () => landing(await source.sheet(paper), generation));
     },
 
     async step(parent, { op, choices }) {
       const generation = source.generation();
       if (parent.generation !== generation) throw foldStateLostError(parent);
-      return landing(await source.step(parent.id, op, choices), generation);
+      return refusingInvalidInput(async () => landing(await source.step(parent.id, op, choices), generation));
     },
 
     release(state) {

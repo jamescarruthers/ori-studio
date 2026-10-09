@@ -231,13 +231,16 @@ describe('superseded runs', () => {
     expect(mock.calls.filter((call) => call === 'sheet')).toHaveLength(1);
   });
 
-  it('never starts a run for a load older than one already run', async () => {
+  it('runs a load older than one already run: a failed open puts back the document it discarded', async () => {
     const { port, calls } = mockPort();
     const replayer = createFoldReplayer(port);
     await replayer.run({ loadId: 2, sequence: branching() });
     calls.length = 0;
-    expect(await replayer.run({ loadId: 1, sequence: sequenceOf([step('z', null, valleyAt(0.3))]) })).toBeNull();
-    expect(calls).toEqual([]);
+    const done = await replayer.run({ loadId: 1, sequence: sequenceOf([step('z', null, valleyAt(0.3))]) });
+    expect(done).toMatchObject({ loadId: 1, done: true });
+    expect(done?.steps.get('z')?.status).toBe('ok');
+    // The sheet came from the cache; only the new step was folded.
+    expect(calls).toEqual(['valley@0.3']);
   });
 
   it('stops a run on cancel', async () => {

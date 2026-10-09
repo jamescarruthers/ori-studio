@@ -11,13 +11,15 @@
 //! A held state remembers the step that landed it — its parent's handle and,
 //! for a fold, the fold — so the step's summary and its picture are asked of
 //! the child alone, computed when asked rather than on every step a replay
-//! lands, while the parent is still held.
+//! lands, while the parent is still held. An import keeps no parent: it
+//! replaces the state rather than changing it, so nothing about it is asked
+//! of the state before it.
 
 use std::collections::HashMap;
 
 use oristudio_fold::{
-    ActionKind, AnchoredRefused, CreaseKind, FoldAnalysis, Folded, Letter, Sheet, Side, State,
-    StepSummary,
+    ActionKind, AnchoredRefused, CreaseDiff, CreaseKind, FoldAnalysis, Folded, Letter, Sheet, Side,
+    State, StepSummary,
 };
 use oristudio_geometry::Line;
 
@@ -50,12 +52,15 @@ enum Held {
         parent: u32,
         kind: ActionKind,
     },
+    /// An imported crease pattern (a `cp-jump`, plan D16), landed after a
+    /// state it replaces.
+    Jump(State),
 }
 
 impl Held {
     fn state(&self) -> &State {
         match self {
-            Held::Sheet(state) | Held::View { state, .. } => state,
+            Held::Sheet(state) | Held::View { state, .. } | Held::Jump(state) => state,
             Held::Fold { folded, .. } => &folded.state,
         }
     }
@@ -222,6 +227,7 @@ impl Bridge {
                 state: landed,
                 parent: state,
             }),
+            Ok(Resolved::Jump(landed)) => Ok(Held::Jump(landed)),
             Err(refusal) => Err(refusal),
         };
         Ok(match landed {
@@ -229,7 +235,7 @@ impl Bridge {
                 let summary = summary(held.state());
                 let report = match &held {
                     Held::Fold { folded, .. } => Some(folded.report.clone()),
-                    Held::Sheet(_) | Held::View { .. } => None,
+                    Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => None,
                 };
                 Outcome::Ok(Applied {
                     state: self.hold(held),
@@ -247,8 +253,9 @@ impl Bridge {
 
     /// The summary of the step that landed `state` (plan D14): its
     /// front-relative counts, the crease-pattern diff from its parent and,
-    /// for a fold, "Layers". None for a flat sheet. The parent must still be
-    /// held.
+    /// for a fold, "Layers". None for a flat sheet. The parent of a fold, a
+    /// turn or a rotation must still be held; an import's summary is the
+    /// pattern it brings ([`imported`]), which needs none.
     pub fn step_summary(&self, state: u32) -> Result<Outcome<Summarised>, BridgeError> {
         let summary = match self.held(state)? {
             Held::Sheet(_) => Ok(None),
@@ -264,16 +271,18 @@ impl Bridge {
                 .summary(self.parent(state, *parent)?)
                 .map(Some)
                 .map_err(Refusal::from),
+            Held::Jump(child) => Ok(Some(imported(child))),
         };
         Ok(summary.map(|summary| Summarised { summary }).into())
     }
 
     /// The picture of the step that landed `state` (plan D12, per step), on
     /// its parent with the landed state's cover at the arrow's head. None for
-    /// a flat sheet, a turn or a rotation. The parent must still be held.
+    /// a flat sheet, a turn, a rotation or an import. A fold's parent must
+    /// still be held.
     pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
-            Held::Sheet(_) | Held::View { .. } => Ok(None),
+            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => Ok(None),
             Held::Fold {
                 folded,
                 parent,
@@ -382,9 +391,21 @@ fn analysis(
             .analyse_fold(&fold)
             .map(|analysis| (analysis, kind))
             .map_err(Refusal::from),
-        Ok(Resolved::View(_)) => return Err(moves_no_paper(op)),
+        Ok(Resolved::View(_) | Resolved::Jump(_)) => return Err(moves_no_paper(op)),
         Err(refusal) => Err(refusal),
     })
+}
+
+/// An import's summary (plan D14, D16): the crease pattern it brings, by
+/// letter. Its diff is empty and it has no layers: it replaces the state
+/// before it rather than changing it, so none of its creases is a change to
+/// that state's, and nothing folds along a line.
+fn imported(state: &State) -> StepSummary {
+    StepSummary {
+        counts: state.crease_counts(),
+        diff: CreaseDiff::default(),
+        layers: None,
+    }
 }
 
 fn moves_no_paper(op: &Op) -> BridgeError {

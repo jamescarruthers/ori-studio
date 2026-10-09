@@ -46,7 +46,8 @@
 //!   /** An axiom line's folds here: root number, line, who moves. */
 //!   axiom_candidates(state: number, line: AxiomLine): Outcome<{ candidates: AxiomCandidate[] }>;
 //!   /** The step that landed `state`, while its parent is held: its summary
-//!    *  (null for a sheet) and its picture (null for a sheet, turn or rotate). */
+//!    *  (null for a sheet) and its picture (null for a sheet, turn, rotate
+//!    *  or import). An import's summary is its pattern's, needing no parent. */
 //!   step_summary(state: number): Outcome<{ summary: StepSummary | null }>;
 //!   step_action(state: number): Outcome<{ action: FoldActionGeometry | null }>;
 //!   scene(state: number): FoldScene;

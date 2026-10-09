@@ -564,14 +564,14 @@ pub fn axiom_inputs(axiom: &Axiom) -> Vec<RefInput> {
 }
 
 /// What the bridge refuses before the engine sees the op: a crease that no
-/// longer resolves in the parent, a stored choice the op cannot use, or an op
-/// this build cannot fold. A replay marks the step broken, exactly as for an
-/// engine refusal; the codes never collide with the engine's.
+/// longer resolves in the parent, a stored choice the op cannot use, or a
+/// stored import that no longer lands. A replay marks the step broken,
+/// exactly as for an engine refusal; the codes never collide with the
+/// engine's. (An op this build cannot read never reaches the bridge: the
+/// document reader locks it.)
 #[derive(Debug, Clone, PartialEq, Serialize, Error)]
 #[serde(tag = "code", rename_all = "snake_case")]
 pub enum BridgeRefusal {
-    #[error("this build cannot fold {feature:?} yet")]
-    UnsupportedOp { feature: Unsupported },
     #[error("the op takes no {choice} choice")]
     UnexpectedChoice { choice: &'static str },
     #[error("a fold along an axiom needs the root it chose")]
@@ -593,7 +593,6 @@ impl BridgeRefusal {
     /// The stable snake_case code.
     pub fn code(&self) -> &'static str {
         match self {
-            BridgeRefusal::UnsupportedOp { .. } => "unsupported_op",
             BridgeRefusal::UnexpectedChoice { .. } => "unexpected_choice",
             BridgeRefusal::RootMissing => "root_missing",
             BridgeRefusal::CreaseNotFound { .. } => "crease_not_found",
@@ -602,14 +601,6 @@ impl BridgeRefusal {
             BridgeRefusal::Io(refusal) => refusal.code(),
         }
     }
-}
-
-/// What [`BridgeRefusal::UnsupportedOp`] names.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Unsupported {
-    /// Import CP (Phase 8).
-    CpJump,
 }
 
 /// A landed sheet.
@@ -670,7 +661,8 @@ pub struct DepthChosen {
 }
 
 /// A step's summary (plan D14): front-relative counts, the crease-pattern
-/// diff and "Layers"; none for the flat sheet.
+/// diff and "Layers"; none for the flat sheet. An import's diff is empty: it
+/// replaces the state before it rather than changing it.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Summarised {
     pub summary: Option<StepSummary>,

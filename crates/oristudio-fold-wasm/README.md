@@ -27,7 +27,9 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   it, so `step_summary(state)` (counts, the crease-pattern diff, "Layers")
   and `step_action(state)` (the step's picture with the landed cover) are
   asked of the child alone, while its parent is still held
-  (`parent_released` otherwise).
+  (`parent_released` otherwise). An import keeps no parent: it replaces the
+  state, so its summary is the pattern it brings (its counts, an empty diff,
+  no layers) and it has no picture.
 - **The document's shapes in** (`src/wire.rs`). A stored step crosses
   unchanged and resolves in its parent (`src/resolve.rs`) through
   `oristudio-fold`'s anchored folds: a free line through two sheet points'
@@ -41,10 +43,10 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   fixes, faces, vertices }`, never a sentence. Codes are the engine's
   (`FoldRefusal`), an anchored line's (`LineRefusal`: `point_off_paper`,
   `free_line_too_short`, `no_root`, `no_side`, `side_on_line`,
-  `mover_stays`, …) and the bridge's own (`unsupported_op`,
-  `unexpected_choice`, `root_missing`, `crease_not_found`,
-  `crease_not_flat`, `crease_not_folded`, and Import CP's `import_*` for a
-  stored `cp-jump` that no longer lands); they never collide. A sliver
+  `mover_stays`, …) and the bridge's own (`unexpected_choice`,
+  `root_missing`, `crease_not_found`, `crease_not_flat`,
+  `crease_not_folded`, and Import CP's `import_*` for a stored `cp-jump`
+  that no longer lands); they never collide. A sliver
   remedy's `use_line` fix also carries `step`, the document's op and
   choices that fold along it. Only a caller's mistake — malformed input, a
   handle this engine does not hold — throws, as the `{ code, message }`

@@ -15,9 +15,10 @@
  *   on screen is ready before the branches nobody is looking at; then the
  *   rest of the tree, breadth-first.
  * - **Latest wins.** A run stops at its next engine call once another run
- *   starts or the replayer is cancelled, and reports nothing more. A request
- *   for an older `loadId` than one already run is a replay of a document that
- *   has since been replaced, and never starts.
+ *   starts or the replayer is cancelled, and reports nothing more. Which run
+ *   is latest is the order they start in, never their `loadId`: a load id
+ *   names a document, and a failed open puts back one with an older id than
+ *   the discard it undid.
  * - **Status is derived, never stored** ({@link FoldStepStatus}).
  *
  * Pure orchestration: no React, no store, no wasm.
@@ -118,7 +119,7 @@ export interface FoldReplayProgress<S> {
 }
 
 export interface FoldReplayRequest {
-  /** The load of the document this replays: a replacement of the project raises it. */
+  /** The load of the document this replays, reported back with its progress so the caller can match the two. */
   loadId: number;
   sequence: FoldSequenceDocument;
   /** The reader's active children, which decide the path replayed first. */
@@ -130,8 +131,8 @@ export interface FoldReplayer<S> {
    * Replay a sequence. `onProgress` hears after each state the engine
    * computed, and once more when done, so a run served wholly from the cache
    * reports once. Resolves with the final progress, or null when the run was
-   * superseded, cancelled, or refused for a stale `loadId`. Rejects only when
-   * the port does, and only for a run still current.
+   * superseded or cancelled. Rejects only when the port does, and only for a
+   * run still current.
    */
   run(
     request: FoldReplayRequest,
@@ -165,7 +166,6 @@ export function createFoldReplayer<S>(port: FoldEnginePort<S>, options: FoldRepl
   /** Engine calls under way, by path, so a run that supersedes another waits on its call rather than repeating it. */
   const inFlight = new Map<FoldPathDigest, Promise<FoldEngineOutcome<S>>>();
   let generation = 0;
-  let newestLoadId = Number.NEGATIVE_INFINITY;
   let running = 0;
   /** Bumped by `clear`, so an answer to a call made before it is never cached after it. */
   let epoch = 0;
@@ -198,8 +198,6 @@ export function createFoldReplayer<S>(port: FoldEnginePort<S>, options: FoldRepl
     request: FoldReplayRequest,
     onProgress?: (progress: FoldReplayProgress<S>) => void
   ): Promise<FoldReplayProgress<S> | null> => {
-    if (request.loadId < newestLoadId) return null;
-    newestLoadId = request.loadId;
     const ticket = ++generation;
     const current = () => ticket === generation;
     const touched = new Set<FoldPathDigest>();

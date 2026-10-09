@@ -60,13 +60,23 @@ type FoldWorkerCalls = FoldEngineCalls & FoldEngineIoCalls;
 
 let ready: Promise<FoldWorkerCalls> | null = null;
 
-/** The module, and the one engine every call shares. */
+/**
+ * The module, and the one engine every call shares. A start that failed — a
+ * fetch of the `.wasm` that did not arrive, a compile that ran out of memory —
+ * is forgotten, so the next call starts it again: the session's retry asks
+ * this same worker, which nothing replaces while it is alive.
+ */
 function ensureReady(): Promise<FoldWorkerCalls> {
-  ready ??= init().then(() => {
+  if (ready) return ready;
+  const starting = init().then(() => {
     const engine = new FoldEngine();
     return { ...createFoldEngineCalls(engine), ...createFoldEngineIoCalls(engine) };
   });
-  return ready;
+  ready = starting;
+  starting.catch(() => {
+    if (ready === starting) ready = null;
+  });
+  return starting;
 }
 
 function normalizeError(error: unknown): WasmErrorEnvelope {

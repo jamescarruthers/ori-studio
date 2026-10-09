@@ -62,19 +62,21 @@ pub enum Resolved {
     },
     /// A fold along a line the tools gave in the parent's model frame.
     Plain { fold: PlainFold, kind: ActionKind },
-    /// A state landed whole: a turn or a rotation (the same model, seen
-    /// another way), or Import CP's jump to a new model.
+    /// A turn or a rotation: the same model, seen another way.
     View(State),
+    /// Import CP's jump to a new model (plan D16): the state replaces the
+    /// parent's rather than folding it.
+    Jump(State),
 }
 
 impl Resolved {
     /// The plain fold it names: the line, side and seed the engine folds
-    /// along. None for a view change.
+    /// along. None for a view change or a jump.
     pub fn plain(&self, parent: &State) -> Option<Result<PlainFold, LineRefusal>> {
         match self {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
-            Resolved::View(_) => None,
+            Resolved::View(_) | Resolved::Jump(_) => None,
         }
     }
 }
@@ -101,7 +103,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
         // Import CP: the stored pattern and order, landed whole after the
         // parent (plan D16).
         Op::CpJump(jump) => crate::io::land(parent, jump)
-            .map(Resolved::View)
+            .map(Resolved::Jump)
             .map_err(Rejection::from),
     }
 }

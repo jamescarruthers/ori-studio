@@ -37,6 +37,8 @@ const session = vi.hoisted(() => {
       Promise.resolve({ status: "unavailable", reason: "no-state" }),
     withCursor: () =>
       Promise.resolve({ status: "unavailable", reason: "no-state" }),
+    query: () =>
+      Promise.resolve({ status: "unavailable", reason: "no-state" }),
     retry: () => undefined,
   };
   const snapshot = {
@@ -57,6 +59,7 @@ vi.mock("../../../fold/session/useFoldSession", () => ({
   useFoldCursor: () => session.node,
   useFoldNode: () => null,
   useFoldNodeQuery: () => null,
+  useFoldStateQuery: () => null,
 }));
 
 import { foldTools } from "../../../fold/tools/foldToolState";
