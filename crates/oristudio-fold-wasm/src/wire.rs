@@ -85,8 +85,9 @@ pub enum Op {
     Rotate {
         rotate: Rotation,
     },
-    /// Import CP (plan D16): not in this build's engine yet.
-    CpJump {},
+    /// Import CP (plan D16): a stored crease pattern and its order, landed
+    /// as a new model (`io::jump`).
+    CpJump(crate::io::CpJump),
 }
 
 impl Op {
@@ -100,7 +101,7 @@ impl Op {
             Op::Refold(_) => "refold",
             Op::Turn { .. } => "turn",
             Op::Rotate { .. } => "rotate",
-            Op::CpJump {} => "cp-jump",
+            Op::CpJump(_) => "cp-jump",
         }
     }
 }
@@ -370,6 +371,11 @@ pub enum BridgeRefusal {
     MovingSideMissing,
     #[error("the sheet point {point:?} lands on the fold line, so it names no side")]
     MovingSideOnLine { point: Point },
+    /// A stored `cp-jump` that no longer lands, or an io call's refusal,
+    /// under its own `import_*` or `fold_export_*` code (`io::IoRefusal`).
+    #[serde(untagged)]
+    #[error(transparent)]
+    Io(crate::io::IoRefusal),
 }
 
 impl BridgeRefusal {
@@ -385,6 +391,7 @@ impl BridgeRefusal {
             BridgeRefusal::CreaseNotFolded { .. } => "crease_not_folded",
             BridgeRefusal::MovingSideMissing => "moving_side_missing",
             BridgeRefusal::MovingSideOnLine { .. } => "moving_side_on_line",
+            BridgeRefusal::Io(refusal) => refusal.code(),
         }
     }
 }

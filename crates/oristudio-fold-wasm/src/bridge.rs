@@ -16,7 +16,7 @@ use crate::canonical::canonical_keys;
 use crate::resolve::{Rejection, along_crease, along_line};
 use crate::wire::{
     Analysed, Applied, BridgeError, BridgeRefusal, Choices, CreaseCounts, Op, Outcome, Paper,
-    Refusal, SheetMade, Summary, Unsupported,
+    Refusal, SheetMade, Summary,
 };
 
 /// Every landed state the caller still holds.
@@ -160,7 +160,8 @@ impl Bridge {
 enum Resolved {
     /// A fold along a line, folded back again when `precrease`.
     Fold { fold: PlainFold, precrease: bool },
-    /// A turn or a rotation: the same model, seen another way.
+    /// A state landed whole: a turn or a rotation (the same model, seen
+    /// another way), or Import CP's jump to a new model.
     View(State),
 }
 
@@ -179,11 +180,11 @@ fn resolve(parent: &State, op: &Op) -> Result<Resolved, Rejection> {
         Op::Refold(c) => fold(along_crease(parent, c, false)?, false),
         Op::Turn { axis } => Ok(Resolved::View(parent.turn_over_about(*axis))),
         Op::Rotate { rotate } => Ok(Resolved::View(parent.rotate(rotate.angle()))),
-        // Import CP: its loaders and completion are Phase 8's.
-        Op::CpJump {} => Err(BridgeRefusal::UnsupportedOp {
-            feature: Unsupported::CpJump,
-        }
-        .into()),
+        // Import CP: the stored pattern and order, landed whole after the
+        // parent (plan D16).
+        Op::CpJump(jump) => crate::io::land(parent, jump)
+            .map(Resolved::View)
+            .map_err(Rejection::from),
     }
 }
 

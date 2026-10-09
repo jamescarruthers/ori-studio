@@ -443,9 +443,10 @@ fn anchors_that_do_not_resolve_are_the_bridges_refusals() {
             }),
             json!({ "code": "unsupported_op", "feature": "axiom_line" }),
         ),
+        // A stored import whose order no longer reads (`tests/io.rs` has the rest).
         (
             json!({ "kind": "cp-jump", "cpJson": "{}", "orderJson": "{}", "origin": "cp" }),
-            json!({ "code": "unsupported_op", "feature": "cp_jump" }),
+            json!({ "code": "import_stored_unreadable", "field": "order_json" }),
         ),
     ];
     for (step, expected) in cases {

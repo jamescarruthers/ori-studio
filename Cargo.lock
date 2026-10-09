@@ -3455,12 +3455,14 @@ name = "oristudio-fold-wasm"
 version = "0.5.2"
 dependencies = [
  "console_error_panic_hook",
+ "oristudio-cp",
  "oristudio-fold",
  "oristudio-geometry",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
  "thiserror 2.0.18",
+ "treemaker-fold",
  "wasm-bindgen",
  "wasm-bindgen-test",
 ]
