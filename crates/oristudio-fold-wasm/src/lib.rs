@@ -62,11 +62,17 @@
 //! Edit's folded figure, Send to Edit and the FOLD export are [`io`]'s, on
 //! `FoldEngine` beside these calls, and a stored `cp-jump` op is applied like
 //! any other step. `README.md` records the size that costs.
+//!
+//! The crimp and the tuck (plan Phase 11) are [`ops_crimp_tuck`]'s: their
+//! analyses and their folds, which land, ask for an opening or land every
+//! order to choose from, are calls of their own on `FoldEngine`, and a stored
+//! `crimp` or `tuck` is applied like any other step.
 
 pub mod bridge;
 pub mod canonical;
 pub mod io;
 pub mod joins;
+pub mod ops_crimp_tuck;
 pub mod resolve;
 pub mod wire;
 

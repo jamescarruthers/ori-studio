@@ -55,12 +55,19 @@ enum Held {
     /// An imported crease pattern (a `cp-jump`, plan D16), landed after a
     /// state it replaces.
     Jump(State),
+    /// A compound fold (a crimp, a tuck), with its step's summary, taken
+    /// when it landed, so its parent need not stay held: its picture is its
+    /// motion, in its report.
+    Compound { state: State, step: StepSummary },
 }
 
 impl Held {
     fn state(&self) -> &State {
         match self {
-            Held::Sheet(state) | Held::View { state, .. } | Held::Jump(state) => state,
+            Held::Sheet(state)
+            | Held::View { state, .. }
+            | Held::Jump(state)
+            | Held::Compound { state, .. } => state,
             Held::Fold { folded, .. } => &folded.state,
         }
     }
@@ -202,6 +209,20 @@ impl Bridge {
         choices: &Choices,
     ) -> Result<Outcome<Applied>, BridgeError> {
         let parent = self.state(state)?;
+        // A crimp or a tuck lands as its stored choices decide it.
+        if let Some(landed) = crate::ops_crimp_tuck::replay(parent, op, choices) {
+            return Ok(match landed? {
+                Ok((landed, step)) => {
+                    let summary = summary(&landed);
+                    Outcome::Ok(Applied {
+                        state: self.hold_compound_state(landed, step),
+                        report: None,
+                        summary,
+                    })
+                }
+                Err(refusal) => Outcome::Refused(refusal),
+            });
+        }
         let fold = |folded: Folded, kind| Held::Fold {
             folded: Box::new(folded),
             parent: state,
@@ -235,7 +256,9 @@ impl Bridge {
                 let summary = summary(held.state());
                 let report = match &held {
                     Held::Fold { folded, .. } => Some(folded.report.clone()),
-                    Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => None,
+                    Held::Sheet(_) | Held::View { .. } | Held::Jump(_) | Held::Compound { .. } => {
+                        None
+                    }
                 };
                 Outcome::Ok(Applied {
                     state: self.hold(held),
@@ -272,6 +295,7 @@ impl Bridge {
                 .map(Some)
                 .map_err(Refusal::from),
             Held::Jump(child) => Ok(Some(imported(child))),
+            Held::Compound { step, .. } => Ok(Some(step.clone())),
         };
         Ok(summary.map(|summary| Summarised { summary }).into())
     }
@@ -282,7 +306,7 @@ impl Bridge {
     /// still be held.
     pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
-            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => Ok(None),
+            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) | Held::Compound { .. } => Ok(None),
             Held::Fold {
                 folded,
                 parent,
@@ -360,6 +384,12 @@ impl Bridge {
     fn parent(&self, state: u32, parent: u32) -> Result<&State, BridgeError> {
         self.state(parent)
             .map_err(|_| BridgeError::ParentReleased { state, parent })
+    }
+
+    /// Hold a compound fold (`ops_crimp_tuck`) with its step's summary; its
+    /// handle.
+    pub(crate) fn hold_compound_state(&mut self, state: State, step: StepSummary) -> u32 {
+        self.hold(Held::Compound { state, step })
     }
 
     fn hold(&mut self, held: Held) -> u32 {
@@ -445,7 +475,7 @@ fn settle<T>(resolved: Result<T, Rejection>) -> Result<Result<T, Refusal>, Bridg
     }
 }
 
-fn summary(state: &State) -> Summary {
+pub(crate) fn summary(state: &State) -> Summary {
     let mut creases = CreaseCounts::default();
     for crease in state.creases() {
         match crease.kind {
