@@ -36,6 +36,7 @@ import type {
   SheetPoint,
 } from '../document/foldSequenceDocument';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
+import { FOLD_SINK_REFUSAL_CODES, type FoldSinkKind, type FoldSinkReport } from './foldEngineSinkWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
 export type FoldSide = 'positive' | 'negative';
@@ -143,6 +144,8 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'reverse_no_opening',
   'reverse_tip_not_free',
   'reverse_kind_infeasible',
+  // Sinks (plan Phase 11).
+  ...FOLD_SINK_REFUSAL_CODES,
   'internal',
 ] as const;
 
@@ -169,6 +172,10 @@ export const FOLD_BRIDGE_REFUSAL_CODES = [
   'crease_not_found',
   'crease_not_flat',
   'crease_not_folded',
+  // A compound fold's stored choices: one it needs and does not store, or
+  // one that no longer resolves.
+  'choice_missing',
+  'choice_broken',
 ] as const;
 
 /** Every refusal code: the stable ids the UI and analytics use (D18). They never collide. */
@@ -237,7 +244,9 @@ export type FoldFix =
    */
   | { readonly fix: 'use_line'; readonly line: FoldModelLine; readonly side: FoldSide; readonly step?: FoldStoredStep }
   /** The same reverse fold of the other kind is valid. */
-  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' };
+  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' }
+  /** The same point sinks the other way: closed where an open sink is refused, open where a closed one is. */
+  | { readonly fix: 'other_sink'; readonly kind: FoldSinkKind };
 
 export interface FoldEngineRefused {
   status: 'refused';
@@ -329,8 +338,10 @@ export interface FoldSheetLanded {
 
 export interface FoldStepLanded {
   state: number;
-  /** Null for a turn or a rotation. */
+  /** Null for a turn, a rotation, an import or a compound fold. */
   report: FoldReport | null;
+  /** What a sink or an unsink did, its motion's legs among it. */
+  sink?: FoldSinkReport;
   summary: FoldStateSummary;
 }
 

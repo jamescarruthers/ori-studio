@@ -25,6 +25,13 @@ import type { FoldStateFingerprint } from '../fold/document/foldDigest';
 import type { FoldChoices, FoldModelLine, FoldPaper, SheetPoint } from '../fold/document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../fold/engine/foldEngineCalls';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from '../fold/engine/foldEngineIoCalls';
+import { createFoldEngineSinkCalls, type FoldEngineSinkCalls } from '../fold/engine/foldEngineSinkCalls';
+import type {
+  FoldEngineSinkOp,
+  FoldSinkAnalysed,
+  FoldSinkOrders,
+  FoldSinkPicked,
+} from '../fold/engine/foldEngineSinkWire';
 import type {
   FoldExported,
   FoldImportFingerprinted,
@@ -55,8 +62,8 @@ import type {
   FoldTopVisible,
 } from '../fold/engine/foldEngineWire';
 
-/** The step calls and the io calls, over one engine. */
-type FoldWorkerCalls = FoldEngineCalls & FoldEngineIoCalls;
+/** The step calls, the io calls and the sink tool's queries, over one engine. */
+type FoldWorkerCalls = FoldEngineCalls & FoldEngineIoCalls & FoldEngineSinkCalls;
 
 let ready: Promise<FoldWorkerCalls> | null = null;
 
@@ -70,7 +77,11 @@ function ensureReady(): Promise<FoldWorkerCalls> {
   if (ready) return ready;
   const starting = init().then(() => {
     const engine = new FoldEngine();
-    return { ...createFoldEngineCalls(engine), ...createFoldEngineIoCalls(engine) };
+    return {
+      ...createFoldEngineCalls(engine),
+      ...createFoldEngineIoCalls(engine),
+      ...createFoldEngineSinkCalls(engine),
+    };
   });
   ready = starting;
   starting.catch(() => {
@@ -257,6 +268,37 @@ const api = {
   /** The FOLD file of a path of states. */
   async exportFold(states: readonly number[], title?: string): Promise<FoldEngineOutcome<FoldExported>> {
     return call((calls) => calls.exportFold(states, title));
+  },
+
+  // A sink tool's queries (`fold/engine/foldEngineSinkCalls.ts`); a sink
+  // itself lands through `step`.
+
+  /** The point a sink op names and how it sinks. */
+  async sinkAnalysis(
+    state: number,
+    op: FoldEngineSinkOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldSinkAnalysed>> {
+    return call((calls) => calls.sinkAnalysis(state, op, choices));
+  },
+
+  /** How many orders the sink leaves with these choices. */
+  async sinkOrders(
+    state: number,
+    op: FoldEngineSinkOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldSinkOrders>> {
+    return call((calls) => calls.sinkOrders(state, op, choices));
+  },
+
+  /** The completion a step stores for one listed order per component. */
+  async sinkPick(
+    state: number,
+    op: FoldEngineSinkOp,
+    choice: readonly number[],
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldSinkPicked>> {
+    return call((calls) => calls.sinkPick(state, op, choice, choices));
   },
 };
 
