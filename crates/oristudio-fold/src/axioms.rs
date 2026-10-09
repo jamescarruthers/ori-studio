@@ -21,10 +21,9 @@
 //!    `m2`; and an O6 whose points lie on opposite sides of the fold is
 //!    realized from either side (below). A root with a mover on the fold line
 //!    carries nothing and is dropped.
-//! 4. **The movers a step checks** are those on the side it moves
-//!    ([`State::movers_on`]): every one when the root implies the side, an
-//!    O6's point on the chosen side, and none of an O1, an O4 or a straddling
-//!    O3. Which layers a fold moves is known only once it is analysed: a seed
+//! 4. **The movers a step checks** are those on the side it moves: every one
+//!    when the root implies the side, an O6's point on the chosen side, and
+//!    none of an O1, an O4 or a straddling O3. Which layers a fold moves is known only once it is analysed: a seed
 //!    narrower than every layer can leave a mover's own layer in place, which
 //!    the anchored fold refuses ([`crate::anchored`]).
 //!
