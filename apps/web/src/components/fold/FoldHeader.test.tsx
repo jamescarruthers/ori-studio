@@ -149,12 +149,22 @@ describe('FoldHeader', () => {
     act(() => button('Send to Edit')?.click());
     expect(run).toHaveBeenCalledOnce();
     expect(host.querySelector('button[aria-label="More ways to send to Edit"]')).not.toBeNull();
-    // The catalog's gate still holds over the button's own.
+  });
+
+  it('shows the split button’s own gate and says why it is disabled, as the model words it', () => {
+    // The model is built over the catalog's Send to Edit (`useFoldSendToEditButton`), so its reason is the catalog's.
     render({
       context: { ...CONTEXT, path: 'broken' },
-      sendToEdit: { label: 'Send to Edit', title: '', disabled: false, menuLabel: 'More', run, actions: [] },
+      sendToEdit: {
+        label: 'Send to Edit',
+        title: 'A step on this path no longer folds.',
+        disabled: true,
+        menuLabel: 'More',
+        run: vi.fn(),
+        actions: [],
+      },
     });
-    expect(button('Send to Edit')?.disabled).toBe(true);
+    expect(button('Send to Edit')).toMatchObject({ disabled: true, title: 'A step on this path no longer folds.' });
   });
 
   it('seats the phone’s pane switch beside the drawer’s slot', () => {

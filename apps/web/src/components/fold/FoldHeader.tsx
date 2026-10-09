@@ -73,7 +73,11 @@ export function FoldHeader({
   stepCount: number;
   /** The catalog, for the step on screen. */
   actions: readonly FoldAction[];
-  /** Send to Edit as the shared split button model (`useFoldSendToEditButton`). */
+  /**
+   * Send to Edit as the shared split button model (`useFoldSendToEditButton`),
+   * built over the catalog's Send to Edit: its gate and its tooltip are the
+   * model's, so a reason it is disabled is said in the one place.
+   */
   sendToEdit?: SendToEditButtonModel;
   /** The phone's switch between the two canvases, mounted by the canvas. */
   paneToggle?: ReactNode;
@@ -124,7 +128,7 @@ export function FoldHeader({
               icon={<FoldActionIcon icon={sendToEdit.icon} />}
               label={sendToEditButton.label}
               title={sendToEditButton.title}
-              disabled={sendToEditButton.disabled || sendToEdit.disabled}
+              disabled={sendToEditButton.disabled}
               onClick={sendToEditButton.run}
               menuLabel={sendToEditButton.menuLabel}
               actions={sendToEditButton.actions}

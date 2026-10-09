@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { foldCommand } from '../../fold/foldActions';
 import { useFoldSendToEditButton } from '../../fold/io/foldIoActions';
 import { foldActionsAt } from '../../fold/sequence/foldCommands';
 import { useFoldKeyboard } from '../../fold/sequence/foldKeys';
@@ -44,7 +45,7 @@ export function FoldPanel() {
     () => foldActionsAt(t, document, entries, cursor, readOnly),
     [t, document, entries, cursor, readOnly]
   );
-  const sendToEdit = useFoldSendToEditButton();
+  const sendToEdit = useFoldSendToEditButton(foldCommand(actions, 'send-to-edit'));
 
   return (
     <section
