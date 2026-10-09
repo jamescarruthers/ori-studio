@@ -2,122 +2,95 @@
  * What crosses the Fold engine's bridge (`crates/oristudio-fold-wasm`), as
  * TypeScript sees it. Mirrors `src/wire.rs`; the Rust side is the truth.
  *
- * - **Inputs** are the Fold document's own shapes — its paper, ops and
- *   choices — so a replay hands a stored step over unchanged, and every sheet
- *   anchor is resolved in Rust, never here. The tools have three additions the
- *   document never writes: a line already in the parent's model frame
- *   (`via: 'model'`) with a `side` of it, a tuck's `placement`, and the
- *   `closure` policy.
+ * - **Inputs are the document's own types** (`fold/document`): its paper, ops
+ *   and choices cross unchanged, so a replay hands a stored step over as it is
+ *   and every sheet anchor is resolved in Rust, never here. The tools add
+ *   three things the document never writes ({@link FoldEngineOp}): a line
+ *   already in the parent's model frame (`via: 'model'`) with a `side` of it,
+ *   a tuck's `placement`, and the `closure` policy.
  * - **Outputs** are the engine's own serde types, snake_case like every
  *   bridge's, in an envelope tagged by `status`: `ok`, or `refused` with a
  *   stable `code`, the fixes the engine offers and the faces and vertices the
  *   refusal names. A refusal never carries a sentence; the UI words it from
  *   the code.
  * - **Handles.** A landed state stays in the worker under a numeric handle
- *   until it is released; nothing but the handle crosses back.
+ *   until it is released; nothing but the handle crosses back. The queries
+ *   (the scene, the cross-section, a step's summary and picture, landmarks)
+ *   are asked of a handle.
  *
  * Pure types and constants: no React, no store, no wasm.
  */
 
-import type { TurnOverAxis, TurnRotation } from '../../lib/steps/turn';
-
-/** A point in sheet coordinates: the unit sheet frame, y-up, longer side 1. */
-export type FoldSheetPoint = readonly [number, number];
-
-/** A line `n · p = d` with a unit normal, in a state's model frame: the engine's `Line`. */
-export interface FoldModelLine {
-  n: readonly [number, number];
-  d: number;
-}
-
-export type FoldDirection = 'valley' | 'mountain';
+import type { OristudioCpFoldedPaperEdgeKind, OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
+import type { Point } from '../../lib/geometry';
+import type { FoldStateFingerprint } from '../document/foldDigest';
+import type {
+  FoldDirection,
+  FoldLineInput,
+  FoldModelLine,
+  FoldOp,
+  FoldPlainOp,
+  FoldPrecreaseOp,
+  FoldSeed,
+  SheetPoint,
+} from '../document/foldSequenceDocument';
 
 /** A side of a line: `positive` is where `n · p > d`. */
 export type FoldSide = 'positive' | 'negative';
 
 export type FoldLetter = 'mountain' | 'valley';
 
+/** A point in the model frame, `[x, y]`. */
+export type FoldModelPoint = readonly [number, number];
+
 // ---------------------------------------------------------------------------
 // Inputs
 
-export type FoldEnginePaperShape =
-  | { kind: 'square' }
-  | { kind: 'rectangle'; aspect: readonly [number, number] }
-  | { kind: 'polygon'; points: readonly FoldSheetPoint[] };
-
-export interface FoldEnginePaper {
-  shape: FoldEnginePaperShape;
-  /** `front` when absent. */
-  startSide?: 'front' | 'back';
+/** A line the tools give in the parent's model frame, never stored. */
+export interface FoldModelLineInput {
+  via: 'model';
+  line: FoldModelLine;
 }
 
-/**
- * Where the fold line comes from:
- *
- * - `free`: through the images of two sheet points;
- * - `crease`: along the crease whose sheet segment holds the point;
- * - `model`: a line already in the parent's model frame (the tools');
- * - `axiom`: refused as `unsupported_op` until the engine's axioms land.
- */
-export type FoldEngineLine =
-  | { via: 'free'; through: readonly [FoldSheetPoint, FoldSheetPoint] }
-  | { via: 'crease'; at: FoldSheetPoint }
-  | { via: 'model'; line: FoldModelLine }
-  | { via: 'axiom'; axiom: number; inputs: readonly unknown[] };
+/** Where a fold line comes from: the document's line modes, or the tools' model line. */
+export type FoldEngineLine = FoldLineInput | FoldModelLineInput;
 
-export type FoldEngineSeed =
-  | { scope: 'all' }
-  /** The top `layers` layers at the point (the bottom ones for a mountain). */
-  | { scope: 'depth'; at: FoldSheetPoint; layers: number }
-  | { scope: 'flaps'; at: readonly FoldSheetPoint[] };
+/** The document's axiom line: what the candidate chooser asks about. */
+export type FoldAxiomLine = Extract<FoldLineInput, { via: 'axiom' }>;
 
 /** Where the moving block lands: the engine's `Placement`. */
 export type FoldEnginePlacement =
   | { placement: 'on_top' }
-  | { placement: 'over'; at: FoldSheetPoint }
-  | { placement: 'under'; at: FoldSheetPoint };
+  | { placement: 'over'; at: SheetPoint }
+  | { placement: 'under'; at: SheetPoint };
 
-/** Which side moves, and what goes with it. */
-export interface FoldEngineMotion {
-  /** A sheet point whose image lies on the moving side; optional when the seed names a point. */
-  moving?: FoldSheetPoint;
-  /** The tools' alternative to `moving`: a side of the line, against its normal as given. Never both. */
+/** What the tools may add to a step's motion. */
+export interface FoldToolMotion {
+  /** A side of a model line, against its normal as given; never with `moving`, never with another line. */
   side?: FoldSide;
-  seed: FoldEngineSeed;
   placement?: FoldEnginePlacement;
   /** `include` (the default) moves the flaps the closure adds; `refuse` refuses, offering them. */
   closure?: 'include' | 'refuse';
 }
 
-export type FoldEngineOp =
-  | ({ kind: 'valley' | 'mountain'; line: FoldEngineLine } & FoldEngineMotion)
-  | ({ kind: 'precrease'; direction: FoldDirection; line: FoldEngineLine } & FoldEngineMotion)
-  /**
-   * Along an existing crease, by a sheet point inside its sheet segment:
-   * unfold a folded one, refold a flat one.
-   */
-  | ({ kind: 'unfold' | 'refold'; crease: FoldSheetPoint; direction: FoldDirection } & FoldEngineMotion)
-  | { kind: 'turn'; axis: TurnOverAxis }
-  | { kind: 'rotate'; rotate: TurnRotation }
-  /** Import CP: refused as `unsupported_op` until Phase 8. */
-  | { kind: 'cp-jump'; cpJson: string; orderJson: string; origin: string };
+/** A document op with the tools' additions: a fold along a line may take a model line, and any fold the motion fields. */
+type WithTools<O> = O extends { line: FoldLineInput }
+  ? Omit<O, 'line'> & { line: FoldEngineLine } & FoldToolMotion
+  : O extends { seed: FoldSeed }
+    ? O & FoldToolMotion
+    : O;
 
 /**
- * A step's stored choices. No op this build folds takes one, so any choice
- * present refuses the step as `unexpected_choice`; an empty list is none.
+ * What the bridge folds: any document op as it is stored ({@link FoldOp}
+ * is assignable to it), or one the tools are previewing.
  */
-export interface FoldEngineChoices {
-  root?: unknown;
-  completion?: readonly unknown[];
-  pocket?: unknown;
-  opening?: readonly unknown[];
-}
+export type FoldEngineOp = WithTools<FoldOp>;
 
 // ---------------------------------------------------------------------------
-// Outputs
+// Refusals
 
-/** Every refusal code: the engine's (`FoldRefusal::code`), then the bridge's (`BridgeRefusal::code`). */
-export const FOLD_REFUSAL_CODES = [
+/** The engine's refusals, in `FoldRefusal::code`'s order (`oristudio-fold/src/refusal.rs`). */
+export const FOLD_ENGINE_REFUSAL_CODES = [
   'sheet_too_few_points',
   'sheet_not_finite',
   'sheet_not_convex',
@@ -154,40 +127,96 @@ export const FOLD_REFUSAL_CODES = [
   'sliver',
   'prediction_mismatch',
   'precrease_unfold_moved_more',
-  // The bridge's: an anchor that no longer resolves in the parent, or an op
-  // this build cannot fold.
+] as const;
+
+/**
+ * An anchored fold whose line or side does not resolve, in `LineRefusal::code`'s
+ * order (`oristudio-fold/src/anchored.rs`): a stored step's anchors no longer
+ * name paper in its parent, or an axiom gives no fold there.
+ */
+export const FOLD_LINE_REFUSAL_CODES = [
+  'point_off_paper',
+  'segment_too_short',
+  'segment_not_on_a_face',
+  'free_line_too_short',
+  'no_root',
+  'no_side',
+  'side_on_line',
+  'mover_stays',
+] as const;
+
+/** The bridge's own, in `BridgeRefusal::code`'s order (`oristudio-fold-wasm/src/wire.rs`). */
+export const FOLD_BRIDGE_REFUSAL_CODES = [
   'unsupported_op',
   'unexpected_choice',
-  'point_off_paper',
-  'degenerate_line',
+  'root_missing',
   'crease_not_found',
   'crease_not_flat',
   'crease_not_folded',
-  'moving_side_missing',
-  'moving_side_on_line',
+] as const;
+
+/** Every refusal code: the stable ids the UI and analytics use (D18). They never collide. */
+export const FOLD_REFUSAL_CODES = [
+  ...FOLD_ENGINE_REFUSAL_CODES,
+  ...FOLD_LINE_REFUSAL_CODES,
+  ...FOLD_BRIDGE_REFUSAL_CODES,
 ] as const;
 
 export type FoldRefusalCode = (typeof FOLD_REFUSAL_CODES)[number];
 
-/** A refusal: its code and the fields that code carries (see `FoldRefusal` in `oristudio-fold`). */
-export interface FoldRefusalBody {
-  code: FoldRefusalCode;
-  readonly [field: string]: unknown;
+/** Why a near miss is one (`NearMissCause`). */
+export type FoldNearMissCause = 'band' | 'snap_changes_side' | 'snap_ambiguous';
+
+/**
+ * A refusal, tagged by its code. The fields the tools read are typed; every
+ * code carries the rest of its Rust fields too.
+ */
+export type FoldRefusalBody =
+  | { readonly code: 'closure_adds_flaps'; readonly added: readonly number[] }
+  | {
+      readonly code: 'near_miss';
+      readonly vertex: number;
+      readonly distance: number;
+      readonly cause: FoldNearMissCause;
+    }
+  | { readonly code: 'sliver'; readonly vertex: number; readonly face: number; readonly penetration: number }
+  | {
+      readonly code: Exclude<FoldRefusalCode, 'closure_adds_flaps' | 'near_miss' | 'sliver'>;
+      readonly [field: string]: unknown;
+    };
+
+/**
+ * A flap: a connected part of the moving side, joined across creases with an
+ * end on the moving side (plan D3), named by an interior sheet point of one
+ * of its faces. The chips and the layer picker use this grouping, never one
+ * of their own.
+ */
+export interface FoldFlap {
+  /** Its faces, ascending. */
+  readonly faces: readonly number[];
+  readonly witness: SheetPoint;
 }
 
-/** A flap: a connected part of the moving side, named by an interior sheet point of one of its faces. */
-export interface FoldFlap {
-  faces: number[];
-  witness: [number, number];
+/** A step as the document stores it: a sliver remedy's fold along an axiom, its root the choice. */
+export interface FoldStoredStep {
+  readonly op: FoldPlainOp | FoldPrecreaseOp;
+  readonly choices: { readonly root: FoldModelLine };
 }
 
 /** A remedy offered with a refusal (plan D14). */
 export type FoldFix =
-  | { fix: 'include_flaps'; flaps: number[] }
-  | { fix: 'opposite_direction' }
-  | { fix: 'pick_flap'; flaps: FoldFlap[] }
-  /** Fold along this landmark line instead: send it back as `{ via: 'model', line }` with `side`. */
-  | { fix: 'use_line'; line: FoldModelLine; side: FoldSide };
+  /** Include these flaps (indices into the analysis' flaps), which the closure would move anyway. */
+  | { readonly fix: 'include_flaps'; readonly flaps: readonly number[] }
+  /** The same fold the other way is valid. */
+  | { readonly fix: 'opposite_direction' }
+  /** Everything would move: pick one of these flaps to fold. */
+  | { readonly fix: 'pick_flap'; readonly flaps: readonly FoldFlap[] }
+  /**
+   * Fold along this line instead, with the same moving side: preview it as
+   * `{ via: 'model', line }` with `side`. A sliver remedy also carries the
+   * `step` to commit; a near miss's landmark line has none.
+   */
+  | { readonly fix: 'use_line'; readonly line: FoldModelLine; readonly side: FoldSide; readonly step?: FoldStoredStep };
 
 export interface FoldEngineRefused {
   status: 'refused';
@@ -201,6 +230,9 @@ export interface FoldEngineRefused {
 
 /** An answer: `{ status: 'ok', …T }`, or a refusal. */
 export type FoldEngineOutcome<T> = ({ status: 'ok' } & T) | FoldEngineRefused;
+
+// ---------------------------------------------------------------------------
+// Steps
 
 /** The snap actually applied to the fold line (plan D5). */
 export interface FoldSnap {
@@ -246,6 +278,12 @@ export interface FoldReport extends FoldAnalysis {
   split: number;
 }
 
+/** How the viewer sees the model frame: turned over (seen from −z), and rotated, radians counter-clockwise. */
+export interface FoldView {
+  flipped: boolean;
+  rotation: number;
+}
+
 /** A state at a glance. */
 export interface FoldStateSummary {
   /** How many steps led here; the flat sheet is 0. */
@@ -255,16 +293,12 @@ export interface FoldStateSummary {
   pairs: number;
   /** Front-relative, as stored and exported. */
   creases: { border: number; mountain: number; valley: number; flat: number };
-  /** Turned over (seen from −z), and the display rotation in radians, counter-clockwise. */
-  view: { flipped: boolean; rotation: number };
+  view: FoldView;
   /** The largest disagreement between two images of one vertex. */
   residual: number;
   /** The sheet's outline, counter-clockwise, in sheet coordinates. */
   sheet: [number, number][];
 }
-
-/** A state's `fs1` fingerprint (plan D17). */
-export type FoldStateFingerprint = `fs1:${string}`;
 
 export interface FoldSheetLanded {
   state: number;
@@ -285,4 +319,263 @@ export interface FoldStepFingerprinted extends FoldStepLanded {
 
 export interface FoldAnalysed {
   analysis: FoldAnalysis;
+}
+
+// ---------------------------------------------------------------------------
+// Queries
+
+/** `x' = a x + b y + c`, `y' = d x + e y + f`, as `[a, b, c, d, e, f]`. */
+export type FoldIsometry = readonly [number, number, number, number, number, number];
+
+/** One crease-pattern edge in sheet coordinates, with Fold's edge id: what the crease-pattern pane hit-tests. */
+export interface FoldSceneCrease {
+  id: number;
+  vertices: [number, number];
+  from: Point;
+  to: Point;
+  kind: OristudioCpFoldedPaperEdgeKind;
+  /** Front-relative: a folded crease's letter, or the one an unfolded crease remembers; null for the border. */
+  letter: FoldLetter | null;
+  /** The step that made it; 0 for the sheet's border. */
+  made_at: number;
+}
+
+/** Where a face came from. */
+export interface FoldFaceLineage {
+  id: number;
+  /** The face it was split from; null for the sheet's face. */
+  parent: number | null;
+  /** The step that made it. */
+  born: number;
+}
+
+/**
+ * A state's scene (plan D12): the kernel's folded paper scene, schema 3, so
+ * the app's painters take it unchanged, plus the fields only Fold has.
+ * Everything but `sheet_points` and `creases` is in the scene frame (the
+ * view applied).
+ */
+export interface FoldScene extends OristudioCpFoldedPaperScene {
+  /** The version of Fold's own fields. */
+  fold_schema: number;
+  view: FoldView;
+  /** Model frame to scene: its inverse takes a pick back to the frame a stored line lives in. */
+  view_transform: FoldIsometry;
+  /** Per face, sheet to scene: exact, never fitted. */
+  face_transforms: FoldIsometry[];
+  /** In edge id order. */
+  creases: FoldSceneCrease[];
+  /** Per face. */
+  lineage: FoldFaceLineage[];
+}
+
+/** A stretch of the fold line where moving paper is creased or turned. */
+export interface FoldLineSpan {
+  from: Point;
+  to: Point;
+  /** A layer that stays covers it, as the viewer sees it: drawn as a line behind. */
+  hidden: boolean;
+}
+
+/** The arrow's ends. */
+export interface FoldGrip {
+  /** On the moving paper. */
+  at: Point;
+  /** Where the fold puts that paper. */
+  image: Point;
+  /** The layers over the grip's face at `at`, as the viewer sees them. */
+  hidden_at: number;
+  /** The layers over it at `image` once landed; null before it lands, or for a precrease. */
+  hidden_image: number | null;
+}
+
+/** A step's picture on the state it starts from (plan D12, per step), in that state's scene frame. */
+export interface FoldActionGeometry {
+  kind: 'fold' | 'precrease';
+  /** As the viewer sees it. */
+  direction: FoldDirection;
+  /** The fold line across the silhouette; null when it misses the paper. */
+  line: [Point, Point] | null;
+  spans: FoldLineSpan[];
+  /** The parent's faces that move. */
+  moving: number[];
+  grip: FoldGrip | null;
+  /** A compound fold's; absent for a plain fold. */
+  push?: { at: Point; toward: Point };
+  pleat?: { from: Point; to: Point; kinks: number };
+}
+
+export interface FoldActed {
+  action: FoldActionGeometry;
+}
+
+/** The picture of the step that landed a state; null for a sheet, a turn or a rotation. */
+export interface FoldStepActed {
+  action: FoldActionGeometry | null;
+}
+
+/** A stretch of the fold line with one stack (D14 cross-section, 1). Distances run from the section's `from`. */
+export interface FoldCrossSectionInterval {
+  start: number;
+  end: number;
+  /** Top first as the viewer sees them. */
+  faces: number[];
+  /** The rows of those faces, top first: indices into the section's rows. */
+  rows: number[];
+}
+
+/**
+ * A display layer (D14 cross-section, 2): faces joined across flat creases,
+ * which share one isometry. Rows, row counts and picker targets are display
+ * layers, never faces, so one physical layer crossed by a precrease is one
+ * row. Every row is on the moving side, in one flap.
+ */
+export interface FoldCrossSectionRow {
+  /** Ascending. */
+  faces: number[];
+  /** Where it meets the line, `[start, end]`, in order. */
+  spans: [number, number][];
+  /** Its flap: an index into the section's flaps. */
+  flap: number;
+}
+
+/**
+ * How the rows are ordered (D14 cross-section, 3): topologically, with the
+ * pairs `[i, j]` (`i < j`) no interval relates — they meet the line apart and
+ * are placed by span position only — or, when grouping made a cycle, woven:
+ * read the interval under the pointer instead.
+ */
+export type FoldRowOrder = { kind: 'layered'; unordered: [number, number][] } | { kind: 'woven' };
+
+/** Two rows a bend joins where it meets the line: the bracket the picker draws. */
+export interface FoldCrossSectionJoin {
+  /** Row indices, `upper < lower`. */
+  upper: number;
+  lower: number;
+  /** The distance along the section from its `from`. */
+  at: number;
+}
+
+/** The paper along a fold line on its moving side (plan D14), computed once per line and side (tier 2). */
+export interface FoldCrossSection {
+  /** The line as a fold along it would fold (snapped), in the model frame, and its moving side. */
+  line: FoldModelLine;
+  side: FoldSide;
+  /** Where it starts and ends in the scene frame, running with the moving side on its left as the viewer sees it. */
+  from: Point;
+  to: Point;
+  intervals: FoldCrossSectionInterval[];
+  /** Top to bottom as the viewer sees them (by span position for a woven section). */
+  rows: FoldCrossSectionRow[];
+  order: FoldRowOrder;
+  /** The moving side's flaps (D3); each row names one. */
+  flaps: FoldFlap[];
+  /** "Layers": the most rows one interval stacks (D14 cross-section, 5). */
+  layers: number;
+  /** Ascending by rows, then along the line. */
+  joins: FoldCrossSectionJoin[];
+}
+
+export interface FoldSectioned {
+  section: FoldCrossSection;
+}
+
+/** One stack a depth seed can pick at a point. */
+export interface FoldDepthChoice {
+  /** The fewest layers at the point that move this set: the depth to store. */
+  layers: number;
+  /** The most layers that move the same set. */
+  through: number;
+  /** The faces that move. */
+  moving: number[];
+  /** The flaps the depth picks, and those the closure adds. */
+  picked: number[];
+  added: number[];
+}
+
+export interface FoldDepthChosen {
+  choices: FoldDepthChoice[];
+}
+
+/** A step's summary (plan D14). */
+export interface FoldStepSummary {
+  /** The child's crease pattern, front-relative. */
+  counts: { mountain: number; valley: number; flat: number };
+  /** The child's edge ids that the step added, reversed, unfolded and refolded. */
+  diff: { added: number[]; reversed: number[]; unfolded: number[]; refolded: FoldRefold[] };
+  /** The display layers the fold went through; null for a turn or a rotation. */
+  layers: number | null;
+}
+
+/** The summary of the step that landed a state; null for the flat sheet. */
+export interface FoldStepSummarised {
+  summary: FoldStepSummary | null;
+}
+
+/** One fold an axiom yields on a state. */
+export interface FoldAxiomCandidate {
+  /** The construction's root number: an enumeration index, shown, never stored. */
+  root: number;
+  /** The fold line in the model frame: what a step stores as `choices.root`. */
+  line: FoldModelLine;
+  /** The side that moves, when the axiom carries something; null leaves it to the step. */
+  side: FoldSide | null;
+}
+
+export interface FoldAxiomCandidates {
+  candidates: FoldAxiomCandidate[];
+}
+
+/** A crease-pattern segment a landmark names by its sheet end points: the anchor a step stores. */
+export interface FoldSheetSegment {
+  a: SheetPoint;
+  b: SheetPoint;
+}
+
+/** One feature at a point landmark, with the sheet point that names it. */
+export type FoldPointSource = { sheet: SheetPoint; visible: boolean } & (
+  | { kind: 'vertex'; vertex: number }
+  /** On `segment` (whose layer the sheet point is on), crossing `other`: indices into the segments. */
+  | { kind: 'crossing'; segment: number; other: number }
+  /** A mark passed in, by its index. */
+  | { kind: 'mark'; mark: number }
+);
+
+export interface FoldPointLandmark {
+  at: FoldModelPoint;
+  /** Vertices first, then crossings, then marks. */
+  sources: FoldPointSource[];
+  visible: boolean;
+}
+
+export interface FoldLineLandmark {
+  line: FoldModelLine;
+  /** Indices into the segments. */
+  segments: number[];
+  visible: boolean;
+}
+
+export interface FoldSegmentLandmark {
+  edge: number;
+  kind: 'raw_edge' | 'bend' | 'crease';
+  sheet: FoldSheetSegment;
+  /** Its image in the model frame. */
+  at: [FoldModelPoint, FoldModelPoint];
+  /** An index into the lines. */
+  line: number;
+  /** The parts the viewer sees, as fractions from `at[0]` to `at[1]`. */
+  visible: [number, number][];
+}
+
+/** A state's landmarks, with provenance and visibility (plan Phase 3). */
+export interface FoldLandmarks {
+  points: FoldPointLandmark[];
+  lines: FoldLineLandmark[];
+  segments: FoldSegmentLandmark[];
+}
+
+/** The face the viewer sees at a model-frame point, and the sheet point there: where a mark made by a pick goes. */
+export interface FoldTopVisible {
+  face: number;
+  sheet: SheetPoint;
 }

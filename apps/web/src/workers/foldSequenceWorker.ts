@@ -20,18 +20,29 @@ import init, {
   fold_engine_version,
 } from '../generated/oristudio-fold-wasm/oristudio_fold_wasm';
 import type { WasmErrorEnvelope } from '../engine/types';
+import type { FoldStateFingerprint } from '../fold/document/foldDigest';
+import type { FoldChoices, FoldModelLine, FoldPaper, SheetPoint } from '../fold/document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../fold/engine/foldEngineCalls';
 import type {
+  FoldActed,
   FoldAnalysed,
-  FoldEngineChoices,
+  FoldAxiomCandidates,
+  FoldAxiomLine,
+  FoldDepthChosen,
   FoldEngineOp,
   FoldEngineOutcome,
-  FoldEnginePaper,
+  FoldLandmarks,
+  FoldModelPoint,
+  FoldScene,
+  FoldSectioned,
   FoldSheetLanded,
-  FoldStateFingerprint,
+  FoldSide,
   FoldStateSummary,
+  FoldStepActed,
   FoldStepFingerprinted,
   FoldStepLanded,
+  FoldStepSummarised,
+  FoldTopVisible,
 } from '../fold/engine/foldEngineWire';
 
 let ready: Promise<FoldEngineCalls> | null = null;
@@ -73,21 +84,12 @@ const api = {
   },
 
   /** The flat sheet a sequence starts from, with its fingerprint. */
-  async sheet(paper: FoldEnginePaper): Promise<FoldEngineOutcome<FoldSheetLanded>> {
+  async sheet(paper: FoldPaper): Promise<FoldEngineOutcome<FoldSheetLanded>> {
     return call((calls) => calls.sheet(paper));
   },
 
-  /** What a fold along a line would move, without folding (D14 tier 2). */
-  async analyse(state: number, op: FoldEngineOp): Promise<FoldEngineOutcome<FoldAnalysed>> {
-    return call((calls) => calls.analyse(state, op));
-  },
-
   /** One step for a preview (D14 tier 3): a new handle, no fingerprint. */
-  async apply(
-    state: number,
-    op: FoldEngineOp,
-    choices?: FoldEngineChoices
-  ): Promise<FoldEngineOutcome<FoldStepLanded>> {
+  async apply(state: number, op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineOutcome<FoldStepLanded>> {
     return call((calls) => calls.apply(state, op, choices));
   },
 
@@ -95,7 +97,7 @@ const api = {
   async step(
     state: number,
     op: FoldEngineOp,
-    choices?: FoldEngineChoices
+    choices?: FoldChoices
   ): Promise<FoldEngineOutcome<FoldStepFingerprinted>> {
     return call((calls) => calls.step(state, op, choices));
   },
@@ -121,6 +123,66 @@ const api = {
   /** How many states are held, for diagnostics and tests. */
   async live(): Promise<number> {
     return call((calls) => calls.live());
+  },
+
+  // Queries on a handle (plan D12, D14): the panes' and the tools'.
+
+  /** What a fold along a line would move, without folding (D14 tier 2). */
+  async analyse(state: number, op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineOutcome<FoldAnalysed>> {
+    return call((calls) => calls.analyse(state, op, choices));
+  },
+
+  /** That fold's picture on `state`, before it lands. */
+  async action(state: number, op: FoldEngineOp, choices?: FoldChoices): Promise<FoldEngineOutcome<FoldActed>> {
+    return call((calls) => calls.action(state, op, choices));
+  },
+
+  /** The moving sets a depth seed at the sheet point `at` can pick. */
+  async depthChoices(
+    state: number,
+    op: FoldEngineOp,
+    at: SheetPoint,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldDepthChosen>> {
+    return call((calls) => calls.depthChoices(state, op, at, choices));
+  },
+
+  /** The layers along a model line on one side of it, with their joins (D14 tier 2). */
+  async crossSection(
+    state: number,
+    line: FoldModelLine,
+    side: FoldSide
+  ): Promise<FoldEngineOutcome<FoldSectioned>> {
+    return call((calls) => calls.crossSection(state, line, side));
+  },
+
+  /** An axiom line's folds here, for the candidate chooser. */
+  async axiomCandidates(state: number, line: FoldAxiomLine): Promise<FoldEngineOutcome<FoldAxiomCandidates>> {
+    return call((calls) => calls.axiomCandidates(state, line));
+  },
+
+  /** The summary of the step that landed `state`, while its parent is held. */
+  async stepSummary(state: number): Promise<FoldEngineOutcome<FoldStepSummarised>> {
+    return call((calls) => calls.stepSummary(state));
+  },
+
+  /** The picture of the step that landed `state`, while its parent is held. */
+  async stepAction(state: number): Promise<FoldEngineOutcome<FoldStepActed>> {
+    return call((calls) => calls.stepAction(state));
+  },
+
+  async scene(state: number): Promise<FoldScene> {
+    return call((calls) => calls.scene(state));
+  },
+
+  /** Landmarks with provenance and visibility; Divide-line marks as sheet points. */
+  async landmarks(state: number, marks: readonly SheetPoint[]): Promise<FoldLandmarks> {
+    return call((calls) => calls.landmarks(state, marks));
+  },
+
+  /** The face seen at a model-frame point, and the sheet point there. */
+  async topVisibleAt(state: number, at: FoldModelPoint): Promise<FoldTopVisible | null> {
+    return call((calls) => calls.topVisibleAt(state, at));
   },
 };
 
