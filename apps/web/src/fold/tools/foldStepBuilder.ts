@@ -55,20 +55,31 @@ import {
   toPoint,
   transformLine,
 } from '../canvas/foldCanvasGeometry';
-import { pickRef, type FoldPick, type FoldPickIndex, type FoldPointPick, type FoldSegmentPick } from '../canvas/foldPicking';
+import {
+  pickRef,
+  topSheetPointAt,
+  type FoldPick,
+  type FoldPickIndex,
+  type FoldPointPick,
+  type FoldSegmentPick,
+} from '../canvas/foldPicking';
 import { lineModeAxiom, type FoldKind, type FoldLineModeId } from './foldToolCatalog';
 import { inSlotOrder, lineModeInput } from './foldToolRegistry';
 import type { FoldToolSeed } from './foldToolState';
 
-/** What the tools have picked, and every choice made since. */
-export interface FoldStepIntent {
-  kind: FoldKind;
+/** What the tools have picked to locate a line, and every choice of what moves made since. */
+export interface FoldLocateIntent {
   lineMode: FoldLineModeId;
   picks: readonly FoldPick[];
   /** The axiom root chosen; null until the engine has named the roots, or for another line mode. */
   candidate: FoldAxiomCandidate | null;
   swapped: boolean;
   seed: FoldToolSeed;
+}
+
+/** What the tools have picked for a plain fold, and every choice made since. */
+export interface FoldStepIntent extends FoldLocateIntent {
+  kind: FoldKind;
   precreaseDirection: FoldDirection;
 }
 
@@ -269,7 +280,7 @@ interface Located {
  * located and cannot be stored — a free line that misses the paper has no
  * sheet point to be stored by, and moves nothing or everything.
  */
-function locate(intent: FoldStepIntent, index: FoldPickIndex): Located | FoldEngineRefused | null {
+function locate(intent: FoldLocateIntent, index: FoldPickIndex): Located | FoldEngineRefused | null {
   const model = lineModeInput(intent.lineMode);
   if (intent.picks.length < model.steps.length) return null;
   if (lineModeAxiom(intent.lineMode) !== null) {
@@ -311,35 +322,98 @@ function locate(intent: FoldStepIntent, index: FoldPickIndex): Located | FoldEng
 }
 
 /**
- * The step the intent describes, from the state `index` was made for; or why
- * there is none yet. Pure, and cheap: the canvas asks it on every change of
- * the tools.
+ * How far beside an unfolded bend, in the scene frame, the seed of the flap
+ * hinged on it is taken: inside the face along the bend — under half the
+ * minimum feature, the thinnest a piece is let be — and well clear of the
+ * tolerance, so it is off the bend itself.
  */
-export function buildFoldStep(intent: FoldStepIntent, index: FoldPickIndex): FoldStepBuild {
+const BESIDE_BEND = 2e-4;
+
+/** What every fold along a located line stores, beside its kind: the line, the moving side and the seed. */
+export interface FoldAlongLocated {
+  line: FoldLineInput;
+  /** The axiom root's line: the step's choice. */
+  choices?: FoldChoices;
+  along: { moving?: SheetPoint; seed: FoldSeed };
+  sceneLine: FoldModelLine;
+  movingSign: 1 | -1;
+  /** A bend picked in the existing-crease mode with the fold to unfold it: its flap is the seed. */
+  unfolding: boolean;
+  acrossLayers?: true;
+}
+
+/**
+ * The line the picks locate, its moving side and what moves along with it,
+ * from the state `index` was made for; or why there is none yet. A plain
+ * fold and a compound one along a line both start here (`unfolds`: whether a
+ * bend picked in the existing-crease mode is unfolded, as a valley or
+ * mountain along it is, and its flap taken).
+ */
+export function locateAlongLine(
+  intent: FoldLocateIntent,
+  index: FoldPickIndex,
+  unfolds: boolean
+): FoldAlongLocated | { status: 'unlocated' } | { status: 'refused'; refused: FoldEngineRefused } {
   const located = locate(intent, index);
   if (!located) return { status: 'unlocated' };
   if ('status' in located) return { status: 'refused', refused: located };
   const { line, sceneLine, implied, choices, crease, acrossLayers } = located;
-  const unfolding = crease?.segment === 'bend' && intent.kind !== 'precrease';
+  const unfolding = crease?.segment === 'bend' && unfolds;
   const base = implied ?? defaultMovingSign(index, sceneLine, unfolding);
   const movingSign: 1 | -1 = intent.swapped ? (-base as 1 | -1) : base;
 
   // What moves. Unfolding takes the top flap on the moving side unless the
-  // folder said otherwise (plan D3): the stack there, one layer deep.
+  // folder said otherwise (plan D3): the stack just beside the bend there, one
+  // layer deep, whose top face is the flap hinged on the bend — never a cell
+  // chosen by area, which ties between equal flaps and rounds differently
+  // from one browser to the next.
   let seed = intent.seed;
   let moving: SheetPoint | undefined;
   if (seed.scope === 'all') {
     const needsPoint = implied === null || intent.swapped || unfolding;
     if (needsPoint) {
-      const point = movingPoint(index, sceneLine, movingSign);
+      const point = unfolding && crease ? besideBend(index, crease, sceneLine, movingSign) : movingPoint(index, sceneLine, movingSign);
       if (!point) return { status: 'refused', refused: clientRefusal('no_moving_side') };
       if (unfolding) seed = { scope: 'depth', at: point.sheet, scene: point.scene, choice: 1 };
       else moving = point.sheet;
     }
   }
-  const stored = seedOf(seed);
-  const along = { ...(moving ? { moving } : {}), seed: stored };
+  return {
+    line,
+    ...(choices ? { choices } : {}),
+    along: { ...(moving ? { moving } : {}), seed: seedOf(seed) },
+    sceneLine,
+    movingSign,
+    unfolding,
+    ...(acrossLayers ? { acrossLayers } : {}),
+  };
+}
 
+/** A point just beside a bend's middle on the moving side, and the sheet point of the face on top there. */
+export function besideBend(
+  index: FoldPickIndex,
+  bend: FoldSegmentPick,
+  sceneLine: FoldModelLine,
+  movingSign: 1 | -1
+): { sheet: SheetPoint; scene: Point } | null {
+  const [p, q] = bend.scene;
+  const scene: Point = {
+    x: (p.x + q.x) / 2 + movingSign * BESIDE_BEND * sceneLine.n[0],
+    y: (p.y + q.y) / 2 + movingSign * BESIDE_BEND * sceneLine.n[1],
+  };
+  const sheet = topSheetPointAt(index, scene);
+  return sheet ? { sheet, scene } : null;
+}
+
+/**
+ * The step the intent describes, from the state `index` was made for; or why
+ * there is none yet. Pure, and cheap: the canvas asks it on every change of
+ * the tools.
+ */
+export function buildFoldStep(intent: FoldStepIntent, index: FoldPickIndex): FoldStepBuild {
+  const located = locateAlongLine(intent, index, intent.kind !== 'precrease');
+  if ('status' in located) return located;
+  const { line, choices, along, sceneLine, movingSign, unfolding, acrossLayers } = located;
   let op: FoldOp;
   if (line.via === 'crease' && intent.kind !== 'precrease') {
     op = { kind: unfolding ? 'unfold' : 'refold', crease: line.at, direction: intent.kind, ...along };
@@ -355,7 +429,7 @@ export function buildFoldStep(intent: FoldStepIntent, index: FoldPickIndex): Fol
     sceneLine,
     movingSign,
     via: line.via,
-    scope: stored.scope,
+    scope: along.seed.scope,
     ...(acrossLayers ? { acrossLayers } : {}),
   };
 }
