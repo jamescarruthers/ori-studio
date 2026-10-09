@@ -120,6 +120,17 @@ describe('Fold’s hand-offs', () => {
     ]);
   });
 
+  it('names the files by the rule every export is named by, so a title is never read as a path', async () => {
+    const { deps, asked, saved } = setup();
+    deps.title = () => 'Crane 1/2: base';
+    await expect(exportFoldSequence(deps)).resolves.toBe(true);
+    await expect(sendFoldSequenceToEdit(deps, 'plain')).resolves.toBe(true);
+    expect(saved.map((options) => options.suggestedName)).toEqual(['Crane-1-2-base.fold']);
+    expect(vi.mocked(deps.sendToEdit).mock.calls[0]?.[0].filename).toBe('Crane-1-2-base.fold');
+    // The title inside the file is the sequence's, as it is written.
+    expect(asked.every((call) => call.endsWith(':Crane 1/2: base'))).toBe(true);
+  });
+
   it('says when a FOLD file would be too large', async () => {
     const { deps, saved } = setup(sequence(), 'c', 'fold_export_too_large');
     await expect(exportFoldSequence(deps)).resolves.toBe(false);
