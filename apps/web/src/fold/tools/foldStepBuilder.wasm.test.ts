@@ -207,6 +207,45 @@ describe.skipIf(!available)('the Fold step builder over the real bridge', () => 
     expect(freeLineThrough(index, { n: [1, 0], d: 1.5 })).toBeNull();
   });
 
+  it('answers a pointer move within the tier-1 budget on a many-layered state (D14: 4 ms)', async () => {
+    const calls = await engine();
+    let state = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
+    // Fold in half six times, alternating the axis: 64 layers, every face over
+    // the last — the deepest stack a pointer move reads through.
+    for (let k = 0; k < 6; k += 1) {
+      const scene = calls.scene(state);
+      const xs = scene.subfaces.flatMap((cell) => cell.polygon.map((point) => point.x));
+      const ys = scene.subfaces.flatMap((cell) => cell.polygon.map((point) => point.y));
+      const vertical = k % 2 === 0;
+      const middle = vertical ? (Math.min(...xs) + Math.max(...xs)) / 2 : (Math.min(...ys) + Math.max(...ys)) / 2;
+      state = landed(
+        calls.step(state, {
+          kind: 'valley',
+          line: { via: 'model', line: { n: vertical ? [1, 0] : [0, 1], d: middle } },
+          side: 'positive',
+          seed: { scope: 'all' },
+        })
+      ).state;
+    }
+    const index = indexOf(calls, state);
+    expect(Math.max(...index.subfaces.map((cell) => cell.stack.length))).toBe(64);
+    const box = index.subfaces.flatMap((cell) => cell.polygon);
+    const [x0, x1] = [Math.min(...box.map((q) => q.x)), Math.max(...box.map((q) => q.x))];
+    const [y0, y1] = [Math.min(...box.map((q) => q.y)), Math.max(...box.map((q) => q.y))];
+    // A pointer sweeping the form: every snap a step can ask for, the free point among them.
+    const moves = 3000;
+    const started = performance.now();
+    for (let k = 0; k < moves; k += 1) {
+      const at = { x: x0 + ((k * 0.618) % 1) * (x1 - x0), y: y0 + ((k * 0.382) % 1) * (y1 - y0) };
+      resolveFoldPick(index, 'folded', at, RADII, { snap: 'point', edges: true, free: false });
+      resolveFoldPick(index, 'folded', at, RADII, { snap: 'crease-required', edges: true, free: false });
+      resolveFoldPick(index, 'folded', at, RADII, { snap: 'point', edges: true, free: true });
+      resolveFoldPick(index, 'crease-pattern', at, RADII, { snap: 'crease-required', edges: false, free: false });
+    }
+    const perMove = (performance.now() - started) / moves;
+    expect(perMove).toBeLessThan(4);
+  });
+
   it('turns a swap into a moving point on the other side, which the engine folds', async () => {
     const calls = await engine();
     const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;

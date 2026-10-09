@@ -104,6 +104,13 @@ export function useFoldCanvasVerbs(
   useEffect(() => {
     live.current = { session, view, preview };
   });
+  // What was picked was picked on the step on screen: another step — an
+  // undo, a redo, a step chosen in the strip — starts the tool over. (A
+  // commit has already let go of it.)
+  const cursorId = session.cursorId;
+  useEffect(() => {
+    tools.clear();
+  }, [tools, cursorId]);
 
   return useMemo<FoldCanvasVerbs>(() => {
     const state = () => tools.store.getState();
@@ -166,7 +173,8 @@ export function useFoldCanvasVerbs(
       },
 
       pick: (hit) => {
-        if (!hit) return;
+        // Nothing can be folded or marked on a newer build's sequence, or from a step locked behind one.
+        if (!hit || live.current.session.readOnly || live.current.session.cursor.status === 'locked') return;
         const tool = state();
         if (isLocated(tool)) {
           if (hit.pane === 'folded' && isFoldKind(tool.tool)) pickDepth(hit.at);
