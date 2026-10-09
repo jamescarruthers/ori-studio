@@ -1,0 +1,468 @@
+/**
+ * The Fold session over a fake engine and a document in memory: replay
+ * follows the document and asks the engine only for what is new; a run for a
+ * replaced document reports nothing; states are released once nothing needs
+ * them; a lost engine takes every handle with it and the sequence is
+ * replayed; the step a tool folds is previewed latest-wins and committed
+ * without folding it twice.
+ */
+import { afterEach, describe, expect, it } from 'vitest';
+import type { WasmErrorEnvelope } from '../../engine/types';
+import { initialFoldReaderState, withFoldCursor, type FoldReaderState } from '../document/foldReaderState';
+import { sequenceOf, step, valleyAt } from '../document/foldSequence.fixtures';
+import { setFoldStepNote } from '../document/foldSequenceEdits';
+import type { FoldSequenceDocument } from '../document/foldSequenceDocument';
+import { createFoldSession, MAX_RESTARTS, type FoldSession } from './foldSession';
+import {
+  fakeFoldEngine,
+  foldOpLabel,
+  inProcessFoldRuntime,
+  memoryFoldDocument,
+  settle,
+  type FakeFoldEngine,
+  type FakeFoldEngineOptions,
+} from './foldSession.fixtures';
+import { selectFoldCursorNode, type FoldSessionSnapshot } from './foldSessionState';
+
+/** sheet → a → b, and a → c: the reader on c. */
+function branching(): FoldSequenceDocument {
+  return sequenceOf([step('a', null, valleyAt(0.5)), step('b', 'a', valleyAt(0.25)), step('c', 'a', valleyAt(0.75))]);
+}
+
+function readerOn(document: FoldSequenceDocument, cursor: string | null): FoldReaderState {
+  return withFoldCursor(initialFoldReaderState(document.id), document, cursor);
+}
+
+let sessions: FoldSession[] = [];
+
+afterEach(() => {
+  for (const session of sessions) session.dispose();
+  sessions = [];
+});
+
+function setup({
+  document = branching(),
+  cursor = 'c',
+  engine = {},
+  capacity,
+}: {
+  document?: FoldSequenceDocument | null;
+  cursor?: string | null;
+  engine?: FakeFoldEngineOptions;
+  capacity?: number;
+} = {}) {
+  const engines: FakeFoldEngine[] = [];
+  const runtime = inProcessFoldRuntime(() => {
+    const made = fakeFoldEngine(engine);
+    engines.push(made);
+    return made;
+  });
+  let next = 0;
+  const source = memoryFoldDocument(
+    { held: document && { document, readOnlyRaw: null }, reader: document && readerOn(document, cursor) },
+    (prefix) => `${prefix}-${(next += 1)}`
+  );
+  const reported: WasmErrorEnvelope[] = [];
+  const session = createFoldSession({
+    document: source,
+    runtime,
+    reportError: (error) => reported.push(error),
+    capacity,
+  });
+  sessions.push(session);
+  const snapshot = () => session.store.getState();
+  return {
+    session,
+    runtime,
+    source,
+    reported,
+    snapshot,
+    /** The engine answering now. */
+    engine: () => engines[engines.length - 1],
+    engines,
+    statuses: () => Object.fromEntries([...snapshot().nodes].map(([id, node]) => [id, node.status])),
+    cursor: () => selectFoldCursorNode(snapshot()),
+  };
+}
+
+describe('the Fold session: replay', () => {
+  it('replays nothing until a surface holds it, then the active path first, reporting progress', async () => {
+    const { session, engine, snapshot, statuses, cursor, runtime } = setup();
+    await settle();
+    expect(engine().log).toEqual([]);
+    expect(snapshot()).toMatchObject({ live: false, cursor: 'c', activePath: ['a', 'c'], readOnly: false });
+    expect(statuses()).toEqual({ a: 'pending', b: 'pending', c: 'pending' });
+
+    const seen: FoldSessionSnapshot['progress'][] = [];
+    session.store.subscribe((state) => seen.push(state.progress));
+    session.retain();
+    expect(runtime.holders()).toBe(1);
+    await settle();
+
+    expect(engine().log).toEqual(['sheet', 'step:valley@0.5', 'step:valley@0.75', 'step:valley@0.25']);
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok' });
+    // The active path settled before the branch nobody is looking at.
+    const activeDone = seen.findIndex((progress) => progress.activeSettled === 2);
+    expect(seen[activeDone]).toMatchObject({ activeTotal: 2, settled: 2, total: 3, done: false });
+    expect(snapshot().progress).toEqual({
+      replaying: false,
+      activeSettled: 2,
+      activeTotal: 2,
+      settled: 3,
+      total: 3,
+      done: true,
+    });
+    // The step on screen: its handle, fingerprint and what the engine said of it.
+    expect(cursor()).toMatchObject({ status: 'ok', state: { generation: 0 }, summary: { step: 2 } });
+    expect(cursor().report).not.toBeNull();
+    expect(cursor().fingerprint).toMatch(/^fs1:/);
+    expect(snapshot().sheet).toMatchObject({ status: 'ok', report: null, summary: { step: 0 } });
+  });
+
+  it('shows the flat square before the first edit, ready to fold', async () => {
+    const { session, snapshot, engine } = setup({ document: null });
+    session.retain();
+    await settle();
+    expect(snapshot()).toMatchObject({
+      sequence: null,
+      cursor: null,
+      activePath: [],
+      paper: { shape: { kind: 'square' } },
+    });
+    expect(snapshot().sheet.status).toBe('ok');
+    expect(engine().log).toEqual(['sheet']);
+  });
+
+  it('replays after every change, asking the engine only for what is new', async () => {
+    const { session, source, engine, statuses, snapshot } = setup();
+    session.retain();
+    await settle();
+    const log = engine().log;
+    const before = snapshot().nodes.get('b');
+    log.length = 0;
+
+    // A note: outside fh1, so nothing to fold, and nothing on screen changes.
+    const noted = setFoldStepNote(branching(), 'b', 'Fold the flap down.');
+    source.set({ held: { document: noted, readOnlyRaw: null } });
+    await settle();
+    expect(log).toEqual([]);
+    expect(snapshot().nodes.get('b')).toBe(before);
+
+    // A new step: only it is folded.
+    const added = { ...noted, steps: [...noted.steps, step('d', 'b', valleyAt(0.1))] };
+    source.set({ held: { document: added, readOnlyRaw: null } });
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok', d: 'pending' });
+    await settle();
+    expect(log).toEqual(['step:valley@0.1']);
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok', d: 'ok' });
+
+    // Deleting it and bringing it back (undo, redo) folds nothing.
+    source.set({ held: { document: noted, readOnlyRaw: null } });
+    await settle();
+    source.set({ held: { document: added, readOnlyRaw: null } });
+    await settle();
+    expect(log).toEqual(['step:valley@0.1']);
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok', d: 'ok' });
+  });
+
+  it('drops a run for a document since replaced, by its load id', async () => {
+    const { session, source, runtime, snapshot, statuses, engine } = setup();
+    session.retain();
+    await settle();
+    const published: FoldSessionSnapshot[] = [];
+    session.store.subscribe((state) => published.push(state));
+
+    // A step is folding for the first load when a second replaces it.
+    runtime.hold();
+    const document = branching();
+    const added = { ...document, steps: [...document.steps, step('d', 'c', valleyAt(0.1))] };
+    source.set({ held: { document: added, readOnlyRaw: null } });
+    await settle();
+    expect(snapshot().progress).toMatchObject({ replaying: true, settled: 3, total: 4 });
+    const other = sequenceOf([step('x', null, valleyAt(0.4))], undefined, 'fold-b');
+    source.set({ loadId: 2, held: { document: other, readOnlyRaw: null }, reader: readerOn(other, 'x') });
+    await runtime.open();
+
+    expect(snapshot()).toMatchObject({ loadId: 2, cursor: 'x' });
+    expect(statuses()).toEqual({ x: 'ok' });
+    // The first load's step was folded, late, and never shown.
+    expect(engine().log).toContain('step:valley@0.1');
+    expect(published.some((state) => state.nodes.get('d')?.status === 'ok')).toBe(false);
+  });
+
+  it('marks a step broken, with the refusal, and what folds from it', async () => {
+    const { session, statuses, snapshot } = setup({
+      engine: { refuse: (op) => (foldOpLabel(op) === 'valley@0.5' ? 'near_miss' : null) },
+    });
+    session.retain();
+    await settle();
+    expect(statuses()).toEqual({ a: 'broken', b: 'broken', c: 'broken' });
+    expect(snapshot().nodes.get('c')?.refusal).toEqual({ at: 'a', code: 'near_miss' });
+    expect(snapshot().progress.done).toBe(true);
+  });
+
+  it('reports a replay that fails for any other reason, and replays again on a retry', async () => {
+    let failing = true;
+    const { session, snapshot, reported, statuses } = setup({
+      engine: { fail: () => (failing ? { code: 'invalid_input', message: 'op must be an object' } : null) },
+    });
+    session.retain();
+    await settle();
+    expect(snapshot().error).toEqual({ code: 'invalid_input', message: 'op must be an object' });
+    expect(reported).toEqual([snapshot().error]);
+    expect(snapshot().progress.replaying).toBe(false);
+
+    failing = false;
+    session.retry();
+    await settle();
+    expect(snapshot().error).toBeNull();
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok' });
+  });
+});
+
+describe('the Fold session: handles', () => {
+  it('releases the states the cache no longer keeps, and every state once the last surface lets go', async () => {
+    const { session, source, engine, runtime } = setup({ capacity: 0 });
+    // Another holder keeps the engine up, so the session's releases reach it.
+    runtime.retain();
+    const release = session.retain();
+    await settle();
+    expect(engine().live()).toBe(4);
+
+    // Delete b: its state is no longer on screen, and the cache keeps nothing more.
+    const document = branching();
+    const without = { ...document, steps: document.steps.filter((node) => node.id !== 'b') };
+    source.set({ held: { document: without, readOnlyRaw: null } });
+    await settle();
+    expect(engine().live()).toBe(3);
+
+    release();
+    await settle();
+    expect(runtime.holders()).toBe(1);
+    expect(engine().live()).toBe(0);
+  });
+
+  it('forgets every handle when the engine is lost, and replays into the next one', async () => {
+    const { session, runtime, snapshot, statuses, cursor } = setup();
+    session.retain();
+    await settle();
+    const fingerprint = cursor().fingerprint;
+    await session.preview(valleyAt(0.9));
+    expect(snapshot().pending.status).toBe('landed');
+
+    runtime.lose('crashed');
+    // At once: no handle of the lost engine is left on screen.
+    expect(statuses()).toEqual({ a: 'pending', b: 'pending', c: 'pending' });
+    expect(snapshot().pending.status).toBe('idle');
+
+    await settle();
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok' });
+    expect(cursor()).toMatchObject({ state: { generation: 1 }, fingerprint });
+
+    // A stop to end work is a loss too; letting go of the last reference is not replayed.
+    runtime.lose('stopped');
+    await settle();
+    expect(cursor().state?.generation).toBe(2);
+  });
+
+  it('stops replaying into an engine that keeps crashing, until a retry or the next change', async () => {
+    const { session, runtime, snapshot, source, statuses, engine } = setup();
+    session.retain();
+    await settle();
+    for (let crash = 0; crash <= MAX_RESTARTS; crash += 1) runtime.lose('crashed');
+    await settle();
+    expect(snapshot().error).toMatchObject({ code: 'fold_sequence_client_lost' });
+    expect(engine().log).toEqual([]);
+    expect(statuses()).toEqual({ a: 'pending', b: 'pending', c: 'pending' });
+
+    // A change is worth one more try.
+    source.set({ held: { document: setFoldStepNote(branching(), 'a', 'Again.'), readOnlyRaw: null } });
+    await settle();
+    expect(snapshot().error).toBeNull();
+    expect(statuses()).toEqual({ a: 'ok', b: 'ok', c: 'ok' });
+  });
+
+  it('answers a query on any landed state, and a handle that outlived its engine is unavailable', async () => {
+    const { session, runtime, cursor, engine } = setup();
+    session.retain();
+    await settle();
+    const summary = await session.withCursor((worker, state) => worker.summary(state));
+    expect(summary).toEqual({ status: 'answered', value: cursor().summary });
+    await expect(session.withNode('missing', (worker, state) => worker.summary(state))).resolves.toEqual({
+      status: 'unavailable',
+      reason: 'no-state',
+    });
+
+    const old = cursor().state!;
+    runtime.lose('crashed');
+    await expect(session.withState(old, (worker, state) => worker.summary(state))).resolves.toMatchObject({
+      status: 'unavailable',
+    });
+    await settle();
+
+    // A state released behind the session's back is landed again.
+    const now = cursor().state!;
+    engine().release([now.id]);
+    await expect(session.withState(now, (worker, state) => worker.summary(state))).resolves.toMatchObject({
+      status: 'unavailable',
+    });
+    await settle();
+    expect(cursor().status).toBe('ok');
+    await expect(session.withCursor((worker, state) => worker.summary(state))).resolves.toMatchObject({
+      status: 'answered',
+    });
+  });
+});
+
+describe('the Fold session: the step a tool folds', () => {
+  it('previews from the step on screen, latest request wins, releasing what it supersedes', async () => {
+    const { session, snapshot, engine } = setup();
+    session.retain();
+    await settle();
+    const held = engine().live();
+
+    const first = session.preview(valleyAt(0.8));
+    const second = session.preview(valleyAt(0.9));
+    expect(snapshot().pending).toMatchObject({ status: 'working', request: { op: valleyAt(0.9) } });
+    await expect(first).resolves.toEqual({ status: 'superseded' });
+    const landed = await second;
+    expect(landed).toMatchObject({ status: 'landed', summary: { step: 3 } });
+    expect(snapshot().pending).toBe(landed);
+    await settle();
+    // The superseded preview's state is let go; the one on screen is held.
+    expect(engine().live()).toBe(held + 1);
+
+    session.cancel();
+    await settle();
+    expect(snapshot().pending.status).toBe('idle');
+    expect(engine().live()).toBe(held);
+  });
+
+  it('refuses with the engine’s fixes, and analyses without folding', async () => {
+    const { session, snapshot } = setup({
+      engine: { refuse: (op) => (op.kind === 'mountain' ? 'nothing_stays' : null) },
+    });
+    session.retain();
+    await settle();
+    const refused = await session.preview({ ...valleyAt(0.9), kind: 'mountain' });
+    expect(refused).toMatchObject({
+      status: 'refused',
+      refused: { refusal: { code: 'nothing_stays' }, fixes: [{ fix: 'opposite_direction' }] },
+    });
+    expect(snapshot().pending).toBe(refused);
+
+    const analysed = await session.analyse(valleyAt(0.9));
+    expect(analysed).toMatchObject({ status: 'analysed', analysis: { picked: [0] } });
+    expect(snapshot().analysis).toBe(analysed);
+  });
+
+  it('lets the pending step go when the cursor moves', async () => {
+    const { session, source, snapshot, engine } = setup();
+    session.retain();
+    await settle();
+    const held = engine().live();
+    await session.preview(valleyAt(0.9));
+    await session.analyse(valleyAt(0.9));
+    source.set({ reader: readerOn(branching(), 'b') });
+    expect(snapshot().pending.status).toBe('idle');
+    expect(snapshot().analysis.status).toBe('idle');
+    await settle();
+    expect(engine().live()).toBe(held);
+  });
+
+  it('commits the preview on screen without folding it again, expecting its fingerprint', async () => {
+    const { session, source, snapshot, engine, cursor, statuses } = setup();
+    session.retain();
+    await settle();
+    const preview = await session.preview(valleyAt(0.9));
+    if (preview.status !== 'landed') throw new Error(preview.status);
+    engine().log.length = 0;
+
+    const committed = await session.commitStep(valleyAt(0.9));
+    if (committed.status !== 'committed') throw new Error(committed.status);
+    expect(source.commits).toEqual([{ parent: 'c', op: valleyAt(0.9), expect: committed.fingerprint }]);
+    expect(snapshot().pending.status).toBe('idle');
+    await settle();
+
+    // Fingerprinted once, never folded again: the replay adopted the preview's state.
+    expect(engine().log).toEqual(['fingerprint']);
+    expect(snapshot().cursor).toBe(committed.stepId);
+    expect(cursor()).toMatchObject({ status: 'ok', state: preview.state, fingerprint: committed.fingerprint });
+    expect(cursor().summary).toBe(preview.summary);
+    expect(statuses()[committed.stepId]).toBe('ok');
+  });
+
+  it('folds a step it has no preview for, and committing where a step follows makes a branch', async () => {
+    const { session, source, snapshot, engine, cursor } = setup({ cursor: 'a' });
+    session.retain();
+    await settle();
+    engine().log.length = 0;
+    const committed = await session.commitStep(valleyAt(0.6));
+    if (committed.status !== 'committed') throw new Error(committed.status);
+    await settle();
+    expect(engine().log).toEqual(['apply:valley@0.6', 'fingerprint']);
+    expect(source.commits[0]).toMatchObject({ parent: 'a' });
+    // a now has three children; the active path runs through the new one.
+    expect(snapshot().activePath).toEqual(['a', committed.stepId]);
+    expect(cursor()).toMatchObject({ status: 'ok', fingerprint: committed.fingerprint });
+  });
+
+  it('commits nothing that is refused, read-only, stale or already under way', async () => {
+    const { session, source, snapshot, engine } = setup({
+      engine: { refuse: (op) => (op.kind === 'mountain' ? 'nothing_stays' : null) },
+    });
+    session.retain();
+    await settle();
+    await expect(session.commitStep({ ...valleyAt(0.9), kind: 'mountain' })).resolves.toMatchObject({
+      status: 'refused',
+      refused: { refusal: { code: 'nothing_stays' } },
+    });
+    expect(snapshot().pending.status).toBe('refused');
+
+    const twice = [session.commitStep(valleyAt(0.9)), session.commitStep(valleyAt(0.9))];
+    await expect(twice[1]).resolves.toEqual({ status: 'unavailable', reason: 'busy' });
+    await expect(twice[0]).resolves.toMatchObject({ status: 'committed' });
+    await settle();
+
+    // The document replaced while the step folded: nothing is committed, and its state is let go.
+    const held = engine().live();
+    const stale = session.commitStep(valleyAt(0.95));
+    source.set({ loadId: 2 });
+    await expect(stale).resolves.toEqual({ status: 'stale' });
+    await settle();
+    expect(engine().live()).toBe(held);
+    expect(source.commits).toHaveLength(1);
+
+    source.set({ held: { document: branching(), readOnlyRaw: { formatVersion: 2 } } });
+    await settle();
+    expect(snapshot().readOnly).toBe(true);
+    await expect(session.commitStep(valleyAt(0.9))).resolves.toEqual({ status: 'unavailable', reason: 'read-only' });
+  });
+
+  it('says a commit the crash took with it failed, and nothing for a deliberate stop', async () => {
+    const { session, runtime, reported } = setup();
+    session.retain();
+    await settle();
+    runtime.hold();
+    const crashed = session.commitStep(valleyAt(0.9));
+    runtime.lose('crashed');
+    await expect(crashed).resolves.toMatchObject({ status: 'failed', error: { code: 'fold_sequence_client_lost' } });
+    expect(reported.map((error) => error.code)).toEqual(['fold_sequence_client_lost']);
+    await runtime.open();
+
+    runtime.hold();
+    const stopped = session.commitStep(valleyAt(0.9));
+    runtime.lose('stopped');
+    await expect(stopped).resolves.toMatchObject({ status: 'failed' });
+    expect(reported).toHaveLength(1);
+    await runtime.open();
+  });
+
+  it('folds nothing while no surface holds it', async () => {
+    const { session, engine } = setup();
+    await expect(session.preview(valleyAt(0.9))).resolves.toEqual({ status: 'unavailable', reason: 'not-live' });
+    await expect(session.analyse(valleyAt(0.9))).resolves.toEqual({ status: 'unavailable', reason: 'not-live' });
+    await expect(session.commitStep(valleyAt(0.9))).resolves.toEqual({ status: 'unavailable', reason: 'not-live' });
+    expect(engine().log).toEqual([]);
+  });
+});

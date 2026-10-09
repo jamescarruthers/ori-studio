@@ -1,0 +1,374 @@
+/**
+ * What the Fold session's tests drive it with: a fake engine that lands
+ * labelled states, an in-process runtime that loses its engine the way the
+ * worker runtime does, and a document held in memory.
+ *
+ * The runtime takes any `FoldEngineCalls` — the fake here, or the real bridge
+ * in the wasm test — so both run the session over exactly the calls the
+ * worker exposes, minus comlink.
+ */
+
+import type { FoldSequenceClientLossReason } from '../../store/workspaceStore/foldSequenceRuntime';
+import { foldStateFingerprint } from '../document/foldDigest';
+import { initialFoldReaderState, withFoldCursor } from '../document/foldReaderState';
+import { createFoldSequence, SQUARE_PAPER, type FoldIdFactory } from '../document/foldSequenceDocument';
+import { appendFoldStep, type FoldStepDraft } from '../document/foldSequenceEdits';
+import type { FoldEngineCalls } from '../engine/foldEngineCalls';
+import type {
+  FoldAnalysis,
+  FoldEngineOp,
+  FoldEngineRefused,
+  FoldRefusalCode,
+  FoldReport,
+  FoldStateSummary,
+} from '../engine/foldEngineWire';
+import type {
+  FoldSessionChannel,
+  FoldSessionDocument,
+  FoldSessionDocumentSource,
+  FoldSessionRuntime,
+  FoldSessionWorker,
+} from './foldSession';
+
+/** Let every queued promise reaction run, and the timers they set. */
+export async function settle(rounds = 5): Promise<void> {
+  for (let round = 0; round < rounds; round += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+// ---------------------------------------------------------------------------
+// A fake engine
+
+/** `valley@0.25` for a valley along the free line at 0.25; the kind otherwise. */
+export function foldOpLabel(op: FoldEngineOp): string {
+  return (op.kind === 'valley' || op.kind === 'mountain') && op.line.via === 'free'
+    ? `${op.kind}@${op.line.through[0][1]}`
+    : op.kind;
+}
+
+export interface FakeFoldEngine extends FoldEngineCalls {
+  /** Every call, in order: `sheet`, `apply:<label>`, `step:<label>`, `analyse:<label>`, `fingerprint`, `summary`. */
+  readonly log: string[];
+  /** The labels of the steps that landed a state, the sheet's first. */
+  trail(state: number): readonly string[] | undefined;
+}
+
+export interface FakeFoldEngineOptions {
+  /** A refusal code for a step, or null to land it. */
+  refuse?: (op: FoldEngineOp) => FoldRefusalCode | null;
+  /** An error to throw for a step, as a broken bridge would. */
+  fail?: (op: FoldEngineOp) => { code: string; message: string } | null;
+}
+
+const REPORT: FoldReport = {
+  line: { n: [0, 1], d: 0.5 },
+  side: 'positive',
+  snap: { clusters: 0, angle: 0, max_shift: 0 },
+  direction: 'valley',
+  flaps: [],
+  picked: [],
+  added: [],
+  moving: [0],
+  moving_faces: [1],
+  created: [4],
+  unfolded: [],
+  refolded: [],
+  split: 1,
+};
+
+const ANALYSIS: FoldAnalysis = {
+  line: { n: [0, 1], d: 0.5 },
+  side: 'positive',
+  snap: { clusters: 0, angle: 0, max_shift: 0 },
+  direction: 'valley',
+  flaps: [{ faces: [0], witness: [0.5, 0.75] }],
+  picked: [0],
+  added: [],
+  moving: [0],
+};
+
+const fingerprintOf = (trail: readonly string[]) =>
+  foldStateFingerprint({ keys: trail.map((label, k) => `${k}:${label}`) });
+
+/** States that are the labels of the steps that landed them: a step's state is its path, as the engine's is. */
+export function fakeFoldEngine({ refuse, fail }: FakeFoldEngineOptions = {}): FakeFoldEngine {
+  const states = new Map<number, readonly string[]>();
+  const log: string[] = [];
+  let next = 0;
+
+  const held = (state: number) => {
+    const trail = states.get(state);
+    if (!trail) throw { code: 'unknown_state', message: `no state ${state}` };
+    return trail;
+  };
+  const summaryOf = (trail: readonly string[]): FoldStateSummary => ({
+    step: trail.length - 1,
+    faces: trail.length,
+    pairs: trail.length - 1,
+    creases: { border: 4, mountain: 0, valley: trail.length - 1, flat: 0 },
+    view: { flipped: trail.includes('turn'), rotation: 0 },
+    residual: 0,
+    sheet: [],
+  });
+  const land = (trail: readonly string[]) => {
+    next += 1;
+    states.set(next, trail);
+    return next;
+  };
+  const refused = (code: FoldRefusalCode): FoldEngineRefused => ({
+    status: 'refused',
+    refusal: { code },
+    fixes: [{ fix: 'opposite_direction' }],
+    faces: [0],
+    vertices: [],
+  });
+  const apply = (state: number, op: FoldEngineOp) => {
+    const parent = held(state);
+    const failure = fail?.(op);
+    if (failure) throw failure;
+    const code = refuse?.(op) ?? null;
+    if (code) return refused(code);
+    const trail = [...parent, foldOpLabel(op)];
+    const report = op.kind === 'turn' || op.kind === 'rotate' ? null : REPORT;
+    return { status: 'ok' as const, state: land(trail), report, summary: summaryOf(trail) };
+  };
+
+  return {
+    log,
+    trail: (state) => states.get(state),
+
+    sheet(paper) {
+      log.push('sheet');
+      const trail = [`sheet:${paper.shape.kind}:${paper.startSide ?? 'front'}`];
+      return { status: 'ok', state: land(trail), summary: summaryOf(trail), fingerprint: fingerprintOf(trail) };
+    },
+
+    analyse(state, op) {
+      log.push(`analyse:${foldOpLabel(op)}`);
+      held(state);
+      const code = refuse?.(op) ?? null;
+      return code ? refused(code) : { status: 'ok', analysis: ANALYSIS };
+    },
+
+    apply(state, op) {
+      log.push(`apply:${foldOpLabel(op)}`);
+      return apply(state, op);
+    },
+
+    step(state, op) {
+      log.push(`step:${foldOpLabel(op)}`);
+      const landed = apply(state, op);
+      return landed.status === 'ok' ? { ...landed, fingerprint: fingerprintOf(held(landed.state)) } : landed;
+    },
+
+    summary(state) {
+      log.push('summary');
+      return summaryOf(held(state));
+    },
+
+    fingerprint(state) {
+      log.push('fingerprint');
+      return fingerprintOf(held(state));
+    },
+
+    release(handles) {
+      let count = 0;
+      for (const state of handles) if (states.delete(state)) count += 1;
+      return count;
+    },
+
+    clear() {
+      states.clear();
+    },
+
+    live: () => states.size,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// An in-process runtime
+
+export interface InProcessFoldRuntime extends FoldSessionRuntime {
+  /** The engine answering now. */
+  engine(): FoldEngineCalls;
+  /**
+   * Lose the engine, as `foldSequenceRuntime`'s `dropWorker` does: the
+   * generation moves, the listeners hear why, the calls under way reject as
+   * `fold_sequence_client_lost`, and a fresh engine answers from then on.
+   */
+  lose(reason: FoldSequenceClientLossReason): void;
+  /** Hold every call until {@link InProcessFoldRuntime.open}. */
+  hold(): void;
+  /** Let the held calls go, and what follows settle. */
+  open(): Promise<void>;
+  /** References held. */
+  holders(): number;
+}
+
+/** The engine's calls as the worker exposes them, minus comlink. */
+function workerOver(calls: FoldEngineCalls, version: number): FoldSessionWorker {
+  const worker = {
+    engineVersion: async () => version,
+    sheet: async (paper) => calls.sheet(paper),
+    analyse: async (state, op) => calls.analyse(state, op),
+    apply: async (state, op, choices) => calls.apply(state, op, choices),
+    step: async (state, op, choices) => calls.step(state, op, choices),
+    summary: async (state) => calls.summary(state),
+    fingerprint: async (state) => calls.fingerprint(state),
+    release: async (states) => calls.release(states),
+    clear: async () => calls.clear(),
+    live: async () => calls.live(),
+  } satisfies Partial<FoldSessionWorker>;
+  // Calls the bridge gains later are not needed here.
+  return worker as FoldSessionWorker;
+}
+
+export function inProcessFoldRuntime(makeEngine: () => FoldEngineCalls, version = 1): InProcessFoldRuntime {
+  let generation = 0;
+  let engine = makeEngine();
+  let references = 0;
+  let holding = false;
+  let gates: (() => void)[] = [];
+  const listeners = new Set<(reason: FoldSequenceClientLossReason) => void>();
+  const underWay = new Set<(error: unknown) => void>();
+
+  const ask = <T>(call: (worker: FoldSessionWorker) => Promise<T>): Promise<T> => {
+    if (references === 0) return Promise.reject(new Error('retain the fold engine client before using it'));
+    const asked = { engine, generation };
+    return new Promise<T>((resolve, reject) => {
+      underWay.add(reject);
+      const run = () => {
+        // Lost while held: already rejected.
+        if (asked.generation !== generation) return;
+        call(workerOver(asked.engine, version))
+          .then(resolve, reject)
+          .finally(() => underWay.delete(reject));
+      };
+      if (holding) gates.push(run);
+      else run();
+    });
+  };
+
+  const lose = (reason: FoldSequenceClientLossReason) => {
+    generation += 1;
+    engine = makeEngine();
+    gates = [];
+    // The runtime's order: its listeners first, then the calls it took with it.
+    for (const listener of [...listeners]) listener(reason);
+    const lost = { code: 'fold_sequence_client_lost', message: `The fold engine was ${reason}.` };
+    for (const reject of [...underWay]) reject(lost);
+    underWay.clear();
+  };
+
+  const channel = (): FoldSessionChannel => {
+    let latest = 0;
+    return {
+      request: (call, discard) => {
+        const ticket = ++latest;
+        return ask(call).then(
+          (value) => {
+            if (ticket === latest) return { status: 'answered', value };
+            discard?.(value);
+            return { status: 'superseded' };
+          },
+          (error: unknown) => {
+            if (ticket === latest) throw error;
+            return { status: 'superseded' };
+          }
+        );
+      },
+      cancel: () => {
+        latest += 1;
+      },
+    };
+  };
+
+  return {
+    retain: () => {
+      references += 1;
+    },
+    release: () => {
+      references = Math.max(0, references - 1);
+      if (references === 0) lose('released');
+    },
+    generation: () => generation,
+    onLost: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    ask,
+    createChannel: channel,
+    source: {
+      generation: () => generation,
+      sheet: (paper) => ask((worker) => worker.sheet(paper)),
+      step: (state, op, choices) => ask((worker) => worker.step(state, op, choices)),
+      release: (states) => ask((worker) => worker.release([...states])),
+    },
+    engine: () => engine,
+    lose,
+    hold: () => {
+      holding = true;
+    },
+    open: async () => {
+      holding = false;
+      for (let round = 0; round < 20; round += 1) {
+        for (const run of gates.splice(0)) run();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    },
+    holders: () => references,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// A document in memory
+
+export interface MemoryFoldDocument extends FoldSessionDocumentSource {
+  /** Replace what `read` returns, and tell the subscribers. */
+  set(next: Partial<FoldSessionDocument>): void;
+  /** Every draft committed, in order. */
+  readonly commits: FoldStepDraft[];
+}
+
+/**
+ * The shown sequence, held as the slice holds it. A commit appends under its
+ * parent — creating the sequence for the first — and puts the cursor on the
+ * new step, as `commitFoldStep` does.
+ */
+export function memoryFoldDocument(
+  initial: Partial<FoldSessionDocument> = {},
+  newId: FoldIdFactory = (prefix) => `${prefix}-${Math.random().toString(36).slice(2)}`
+): MemoryFoldDocument {
+  let value: FoldSessionDocument = { loadId: 1, held: null, reader: null, ...initial };
+  const listeners = new Set<() => void>();
+  const commits: FoldStepDraft[] = [];
+  const set = (next: Partial<FoldSessionDocument>) => {
+    value = { ...value, ...next };
+    for (const listener of [...listeners]) listener();
+  };
+  return {
+    read: () => value,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    set,
+    commits,
+    commit: (draft, loadId) => {
+      if (loadId !== value.loadId || value.held?.readOnlyRaw) return null;
+      const document = value.held?.document ?? createFoldSequence(SQUARE_PAPER, '', newId);
+      const appended = appendFoldStep(document, draft, newId);
+      if (!appended) return null;
+      commits.push(draft);
+      const reader = value.reader?.sequenceId === document.id ? value.reader : initialFoldReaderState(document.id);
+      set({
+        held: { document: appended.document, readOnlyRaw: null },
+        reader: withFoldCursor(reader, appended.document, appended.id),
+      });
+      return appended.id;
+    },
+  };
+}
