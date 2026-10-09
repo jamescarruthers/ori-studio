@@ -200,11 +200,21 @@ function seedOf(seed: FoldToolSeed): FoldSeed {
 
 const isReference = (pick: FoldPick): pick is FoldPointPick | FoldSegmentPick => pick.kind !== 'free';
 
-/** The line the picks locate, where it lies in the scene, and the side it says moves, if it says one. */
-function locate(
-  intent: FoldStepIntent,
-  index: FoldPickIndex
-): { line: FoldLineInput; sceneLine: FoldModelLine; implied: 1 | -1 | null; choices?: FoldChoices; crease?: FoldSegmentPick } | null {
+interface Located {
+  line: FoldLineInput;
+  sceneLine: FoldModelLine;
+  implied: 1 | -1 | null;
+  choices?: FoldChoices;
+  crease?: FoldSegmentPick;
+}
+
+/**
+ * The line the picks locate, where it lies in the scene, and the side it says
+ * moves, if it says one; null until it is located, or a refusal when it is
+ * located and cannot be stored — a free line that misses the paper has no
+ * sheet point to be stored by, and moves nothing or everything.
+ */
+function locate(intent: FoldStepIntent, index: FoldPickIndex): Located | FoldEngineRefused | null {
   const model = lineModeInput(intent.lineMode);
   if (intent.picks.length < model.steps.length) return null;
   const axiom = lineModeAxiom(intent.lineMode);
@@ -227,7 +237,7 @@ function locate(
     const sceneLine = lineThrough(p.scene, q.scene);
     if (!sceneLine) return null;
     const through = freeLineThrough(index, sceneLine);
-    if (!through) return null;
+    if (!through) return clientRefusal('no_moving_side');
     return { line: { via: 'free', through }, sceneLine, implied: null };
   }
   const [crease] = intent.picks;
@@ -246,6 +256,7 @@ function locate(
 export function buildFoldStep(intent: FoldStepIntent, index: FoldPickIndex): FoldStepBuild {
   const located = locate(intent, index);
   if (!located) return { status: 'unlocated' };
+  if ('status' in located) return { status: 'refused', refused: located };
   const { line, sceneLine, implied, choices, crease } = located;
   const unfolding = crease?.segment === 'bend' && intent.kind !== 'precrease';
   const base = implied ?? defaultMovingSign(index, sceneLine, unfolding);

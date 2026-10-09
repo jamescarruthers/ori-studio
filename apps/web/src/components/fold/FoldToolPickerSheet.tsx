@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FoldRailGroup } from '../../fold/tools/foldRailGroups';
 import { ToolPickerGroup, ToolPickerList } from '../ui/tools/ToolPickerGroup';
@@ -18,11 +19,14 @@ export function FoldToolPickerSheet({
   pickerId,
   groups,
   close,
+  modes,
 }: {
   /** DOM id the trigger points `aria-controls` at, and this dialog wears. */
   pickerId: string;
   groups: readonly FoldRailGroup[];
   close: () => void;
+  /** The sheet's modes row: the free-point latch, as Edit's sheet holds its Shift latch. */
+  modes?: ReactNode;
 }) {
   const { t } = useTranslation();
   return (
@@ -31,6 +35,7 @@ export function FoldToolPickerSheet({
       title={t('tools:fold.picker.title', 'Fold tools')}
       closeLabel={t('tools:fold.picker.close', 'Close tool list')}
       close={close}
+      modes={modes}
     >
       {groups.map((group) => (
         <ToolPickerGroup key={group.id} title={group.label}>

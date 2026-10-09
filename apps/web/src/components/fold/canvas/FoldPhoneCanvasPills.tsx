@@ -14,11 +14,12 @@ import { FoldAltLatchToggle } from './FoldAltLatchToggle';
 
 /**
  * The Fold canvas's pills in Fold's header, on a phone (plan D14): the Tools
- * pill and the sheet it opens, in place of the rail a phone has no room for;
- * the free-point latch; and the `PaneToggle` that swaps the one pane on
- * screen between the folded form and the crease pattern. In the header, not
- * the canvas pill lane: the lane sits over the dock's top-right corner, which
- * on a phone is this header.
+ * pill and the sheet it opens, in place of the rail a phone has no room for —
+ * the free-point latch in the sheet's modes row, where Edit's sheet holds its
+ * Shift latch — and the `PaneToggle` that swaps the one pane on screen
+ * between the folded form and the crease pattern. In the header, not the
+ * canvas pill lane: the lane sits over the dock's top-right corner, which on
+ * a phone is this header.
  *
  * Renders nothing off the phone layout, where the rail and both panes are
  * on screen.
@@ -45,10 +46,18 @@ export function FoldPhoneCanvasPills() {
         onOpen={openPicker}
         triggerRef={triggerRef}
       />
-      <FoldAltLatchToggle />
       <PaneToggle options={panes} active={pane} onShow={showFoldPhonePane} />
       {/* A page-level dialog: nothing in the header should cap its stacking or its taps. */}
-      {open && createPortal(<FoldToolPickerSheet pickerId={pickerId} groups={groups} close={close} />, document.body)}
+      {open &&
+        createPortal(
+          <FoldToolPickerSheet
+            pickerId={pickerId}
+            groups={groups}
+            close={close}
+            modes={<FoldAltLatchToggle fill />}
+          />,
+          document.body
+        )}
     </>
   );
 }

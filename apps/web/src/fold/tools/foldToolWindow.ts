@@ -457,7 +457,9 @@ export function foldToolWindow(
       disabled: readOnly,
       swap: verbs.swapSide,
     },
-    layers: layersSection(t, preview, verbs, readOnly),
+    // A fold refused before its layers were found has none to show: the
+    // refusal says why, and "finding the layers" would never end.
+    layers: preview.section || !preview.refused ? layersSection(t, preview, verbs, readOnly) : null,
     refusal: preview.refused
       ? foldRefusalNotice(
           t,
