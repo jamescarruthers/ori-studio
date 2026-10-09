@@ -32,14 +32,14 @@ import type {
   FoldOpeningChoice,
   FoldTuckOp,
 } from '../document/foldSequenceDocument';
+import type { FoldOpening, FoldReverseAnalysis } from './foldEngineReverseWire';
 import type {
   FoldEngineLine,
-  FoldFlap,
-  FoldIsometry,
   FoldRefold,
   FoldSide,
   FoldSnap,
   FoldStateSummary,
+  FoldStepMotionLegs,
 } from './foldEngineWire';
 
 // ---------------------------------------------------------------------------
@@ -58,53 +58,12 @@ export type FoldEngineTuckOp = Omit<FoldTuckOp, 'line'> & { line: FoldEngineLine
 // ---------------------------------------------------------------------------
 // Analyses
 
-/** Why a flap of a tip has no opening (`NoOpening`). */
-export type FoldNoOpening = 'no_spine' | 'no_split' | 'no_body' | 'bodies_cross';
-
-/** One way a flap of the tip opens (`Opening`): two blocks, split along a spine. */
-export interface FoldOpening {
-  /** T1, the lower block: the parent's faces, in id order. */
-  lower: number[];
-  /** T2, the upper block. */
-  upper: number[];
-  /** The line the creases across the opening lie on, in the model frame. */
-  spine: FoldModelLine;
-  /** The creases across the opening: they turn M↔V. */
-  across: number[];
-  /** The faces each block is hinged to on ℓ, which stay. */
-  lower_body: number[];
-  upper_body: number[];
-  /** What a step stores to choose it. */
-  stored: FoldOpeningChoice;
-}
-
-/** A flap of the tip and the ways it opens (`TipFlap`). */
-export interface FoldTipFlap {
-  /** Its index among the moving side's flaps. */
-  index: number;
-  flap: FoldFlap;
-  /** Fewest lower faces first. */
-  openings: FoldOpening[];
-  /** The scan stopped short: more openings may exist. */
-  truncated: boolean;
-  /** Why there is none, when there is none. */
-  none?: FoldNoOpening;
-}
-
-/** A reverse fold's tip at its line (`ReverseAnalysis`): what a crimp's ℓ1 opens. */
-export interface FoldTipAnalysis {
-  /** The line after snapping, and the tip's side of it. */
-  line: FoldModelLine;
-  side: FoldSide;
-  snap: FoldSnap;
-  /** The parent's faces that move, in id order. */
-  tip: number[];
-  flaps: FoldTipFlap[];
-}
-
-/** What a crimp moves and how its flaps open, before it lands (`CrimpAnalysis`). */
+/**
+ * What a crimp moves and how its flaps open, before it lands (`CrimpAnalysis`):
+ * its tip at ℓ1 is a reverse fold's (`foldEngineReverseWire.ts`).
+ */
 export interface FoldCrimpAnalysis {
-  tip: FoldTipAnalysis;
+  tip: FoldReverseAnalysis;
   /** ℓ2 after snapping, and its side away from ℓ1. */
   second: FoldModelLine;
   second_side: FoldSide;
@@ -152,37 +111,12 @@ export interface FoldTuckAnalysed {
 // ---------------------------------------------------------------------------
 // Landings
 
-/** Paper turning about one hinge during one leg (`MotionGroup`). */
-export interface FoldMotionGroup {
-  /** The landed state's faces that turn together. */
-  faces: number[];
-  /** The hinge, in the parent's model frame. */
-  axis: FoldModelLine;
-  /** The side of `axis` the faces start on. */
-  side: FoldSide;
-  /** Radians: 0 where they lay in the parent, ±π where they land; positive lifts toward +z. */
-  from: number;
-  to: number;
-  /** Where ±π puts the faces from where they land, when not there: a crimp's tip about ℓ1. */
-  before?: FoldIsometry;
-}
-
-/** One leg of a compound step's motion: groups turning at once (`MotionLeg`). */
-export interface FoldMotionLeg {
-  name: 'spread' | 'close';
-  /** Whose layer order draws the turning paper against what stays. */
-  stacking: 'parent' | 'landed';
-  groups: FoldMotionGroup[];
-}
-
-/** A compound step's motion (plan D15): `visual` when only its ends are states. */
-export interface FoldCompoundMotion {
-  kind: 'rigid' | 'visual';
-  legs: FoldMotionLeg[];
-}
-
-/** What every compound fold did (`CompoundReport`). */
-export interface FoldCompoundReport {
+/**
+ * What every compound fold did (`CompoundReport`), which a crimp's and a
+ * tuck's reports extend. Its motion is a compound step's
+ * (`FoldStepMotionLegs`, `foldEngineWire.ts`).
+ */
+export interface FoldCompoundReportBase {
   /** The parent's faces that move. */
   moving: number[];
   /** Per block, the landed state's faces in it. */
@@ -196,7 +130,7 @@ export interface FoldCompoundReport {
 }
 
 /** What a crimp did (`CrimpReport`). */
-export interface FoldCrimpReport extends FoldCompoundReport {
+export interface FoldCrimpReport extends FoldCompoundReportBase {
   first: FoldModelLine;
   side: FoldSide;
   snap: FoldSnap;
@@ -207,11 +141,11 @@ export interface FoldCrimpReport extends FoldCompoundReport {
   openings: FoldOpening[];
   /** The flaps with no spine, moving whole: the parent's faces of each. */
   whole: number[][];
-  motion: FoldCompoundMotion;
+  motion: FoldStepMotionLegs;
 }
 
 /** What a tuck did (`TuckReport`). */
-export interface FoldTuckReport extends FoldCompoundReport {
+export interface FoldTuckReport extends FoldCompoundReportBase {
   line: FoldModelLine;
   side: FoldSide;
   snap: FoldSnap;
@@ -219,7 +153,7 @@ export interface FoldTuckReport extends FoldCompoundReport {
   placement: FoldTuckPlacement;
   /** T, which stays and keeps its id. */
   target: number;
-  motion: FoldCompoundMotion;
+  motion: FoldStepMotionLegs;
 }
 
 /** What a landed crimp or tuck stores beside its line's root: the document's choice keys. */
@@ -248,7 +182,7 @@ export type FoldCompound<R, L extends FoldCompoundLanded<R> = FoldCompoundLanded
   /** More than one order fits: each landed, up to sixteen; `orders` is the true count, `exact` whether it is. */
   | { outcome: 'choose_order'; orders: number; exact: boolean; candidates: L[] };
 
-/** A stored compound choice that no longer resolves (`Broken`), as `choice_broken` carries it. */
+/** A stored compound choice that no longer resolves (`Broken`), as `choice_broken` carries it beside its code. */
 export type FoldBrokenChoice =
   | { broken: 'witness'; witness: { cause: string; [field: string]: unknown } }
   | { broken: 'completion'; refusal: { code: string; [field: string]: unknown } }

@@ -387,6 +387,8 @@ export interface FoldMotionGroup {
   side: FoldSide;
   from: number;
   to: number;
+  /** Where ±π puts the faces from where they land, when not there: a crimp's tip about ℓ1. */
+  before?: FoldIsometry;
 }
 
 /**
