@@ -324,11 +324,19 @@ impl State {
         let Some(plan) = tip.choose(self, choices)? else {
             return Ok(Vec::new());
         };
+        // The kinds share their geometry: prepared once, the outside fold is
+        // the inside one with its placements turned.
+        let Ok(prepared) = tip.prepare(self, &plan, ReverseKind::Inside) else {
+            return Ok(Vec::new());
+        };
         let limits = CompletionLimits::default();
-        Ok([ReverseKind::Inside, ReverseKind::Outside]
-            .into_iter()
-            .filter(|&kind| tip.lands(self, &plan, kind, &limits))
-            .collect())
+        Ok([
+            (ReverseKind::Inside, prepared.lands(&limits)),
+            (ReverseKind::Outside, prepared.lands_flipped(&limits)),
+        ]
+        .into_iter()
+        .filter_map(|(kind, lands)| lands.then_some(kind))
+        .collect())
     }
 
     /// A reverse fold, with its stored choices (empty for a new step), under
@@ -372,7 +380,7 @@ impl State {
             Err(refusal) => {
                 let refusal = no_order(refusal);
                 return Err(CompoundRefused::Refused(
-                    self.diagnose(op, &tip, &plan, refusal, limits),
+                    self.diagnose(op, &tip, &plan, &prepared, refusal, limits),
                 ));
             }
         };
@@ -430,11 +438,16 @@ impl State {
     /// the tip's way when growing the tip over them lands (the tip is then
     /// not free) — keeping the openings chosen if it can, otherwise opening
     /// some other way, which the grown fold then asks for.
+    ///
+    /// The other kind is the fold `prepared` with its placements turned, so
+    /// it costs one completion, not a second scoring and gate; a grown plan
+    /// is tried once, however many ways of keeping the openings reach it.
     fn diagnose(
         &self,
         op: &ReverseFold,
         tip: &Tip,
         plan: &Plan,
+        prepared: &Prepared,
         refusal: FoldRefusal,
         limits: &CompletionLimits,
     ) -> Refused {
@@ -443,7 +456,7 @@ impl State {
         };
         let mut fixes = Vec::new();
         let other = op.kind.other();
-        if tip.lands(self, plan, other, limits) {
+        if prepared.lands_flipped(limits) {
             fixes.push(Fix::OtherKind { kind: other });
         }
         // The layers in the way: faces the conflict traces to with paper on
@@ -472,12 +485,20 @@ impl State {
             .copied()
             .filter(|f| tip.flaps.binary_search(f).is_err())
             .collect();
+        let mut tried: Vec<Plan> = Vec::new();
         if let Ok(bigger) = Tip::new(self, tip.classified.clone(), tip.side.clone(), grown)
             && [plan.stored.as_slice(), &[]].iter().any(|chosen| {
                 bigger
                     .plans(self, chosen, MAX_FIX_PLANS)
-                    .iter()
-                    .any(|plan| bigger.lands(self, plan, op.kind, limits))
+                    .into_iter()
+                    .any(|plan| {
+                        if tried.contains(&plan) {
+                            return false;
+                        }
+                        let lands = bigger.lands(self, &plan, op.kind, limits);
+                        tried.push(plan);
+                        lands
+                    })
             })
         {
             fixes.push(Fix::IncludeFlaps { flaps: added });
@@ -507,7 +528,7 @@ struct Tip {
 }
 
 /// How a tip's flaps move.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 struct Plan {
     /// Each opening flap's opening, in the tip's flap order.
     openings: Vec<RawOpening>,
@@ -784,13 +805,9 @@ impl Tip {
         kind: ReverseKind,
         limits: &CompletionLimits,
     ) -> bool {
-        let first = CompletionLimits {
-            per_component: 1,
-            ..*limits
-        };
         self.prepare(state, plan, kind)
             .ok()
-            .is_some_and(|prepared| prepared.complete(&[], &first).is_ok())
+            .is_some_and(|prepared| prepared.lands(limits))
     }
 
     /// The compound fold of a plan, through the pipeline's steps 2–7: each

@@ -61,10 +61,16 @@ use crate::witness::{Broken, WitnessOrder};
 /// How the pairs of two faces in different blocks are ordered (step 7).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Across {
-    /// As they were, in absolute terms: reverse folds, crimps and tucks
-    /// (research §5.2, `crossBlock: "keep"`). Seeds, since the blocks'
-    /// creases between them change.
+    /// As they were, in absolute terms: reverse folds and tucks (research
+    /// §5.2, `crossBlock: "keep"`). Seeds, since the blocks' creases between
+    /// them change.
     Keep,
+    /// As they were between blocks that move alike; left to the seeds and
+    /// the completion between blocks that move differently. A crimp's strip
+    /// and tip: as two reverse folds, the second places the tip only against
+    /// its own strip, and orders nothing else of the tip against the strip
+    /// afresh.
+    Alike,
 }
 
 /// A block placed against the pieces of some parent faces that stay: above
@@ -93,6 +99,14 @@ pub(crate) struct Macro {
     pub(crate) blocks: Vec<Isometry>,
     pub(crate) against: Vec<Against>,
     pub(crate) across: Across,
+}
+
+impl Macro {
+    /// Whether blocks `x` and `y` move by the same motion.
+    fn alike(&self, x: usize, y: usize) -> bool {
+        let (p, q) = (self.blocks[x].0, self.blocks[y].0);
+        p.iter().zip(&q).all(|(a, b)| (a - b).abs() <= 1e-12)
+    }
 }
 
 /// What a compound fold did, beside the state it landed.
@@ -140,6 +154,9 @@ pub enum CompoundRefused {
 pub(crate) struct Prepared {
     unordered: Unordered,
     fixed: Vec<FixedPair>,
+    /// Where `fixed`'s placements start: every pair from there on puts a
+    /// block against paper it lands on, the rest are carried or across.
+    placed: usize,
     /// Per landed face position, its block; none for a face that stays.
     block_of: Vec<Option<usize>>,
     blocks: usize,
@@ -157,10 +174,8 @@ pub(crate) struct Prepared {
 /// Steps 2–7 of `m` on `state`, as its next step.
 pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal> {
     let parts = state.parts();
-    let geometry = state.geometry();
     let classes = &m.line.classes;
     let nf = parts.faces.len();
-    let step = state.step() + 1;
     let has = |f: usize, class: i8| {
         parts.faces[f]
             .ring
@@ -184,7 +199,7 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
         classes,
         &m.line.distances,
         &split,
-        step,
+        state.step() + 1,
         state.next_ids(),
     )?;
     let block_of: Vec<Option<usize>> = scored
@@ -195,6 +210,45 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
             Piece::Whole | Piece::Positive => m.block_of[s.old],
         })
         .collect();
+    prepare_scored(
+        state,
+        m,
+        Scoring {
+            scored,
+            block_of,
+            split,
+        },
+    )
+}
+
+/// What a macro's score made of the parent: its own line's (`prepare`), or
+/// more than one line's, such as a crimp's two.
+pub(crate) struct Scoring {
+    /// The parts after every score, each face's `old` its parent face, the
+    /// chords last.
+    pub(crate) scored: score::Scored,
+    /// Per scored face position, its block; none for a face that stays.
+    pub(crate) block_of: Vec<Option<usize>>,
+    /// Per parent face position, whether a score split it.
+    pub(crate) split: Vec<bool>,
+}
+
+/// Steps 3–7 of `m` on `state` once it is scored. `m.line` is not read: the
+/// scoring is the macro's own.
+pub(crate) fn prepare_scored(
+    state: &State,
+    m: &Macro,
+    scoring: Scoring,
+) -> Result<Prepared, FoldRefusal> {
+    let Scoring {
+        scored,
+        block_of,
+        split,
+    } = scoring;
+    let parts = state.parts();
+    let geometry = state.geometry();
+    let nf = parts.faces.len();
+    let step = state.step() + 1;
     let predicted: Vec<Isometry> = scored
         .faces
         .iter()
@@ -326,23 +380,21 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
     // 6–7. Carry and seed.
     let problem = unordered.problem();
     let mut fixed = Vec::new();
-    let mut push = |upper: usize, lower: usize, kind: FixedKind| {
-        if problem.is_variable(ids[upper], ids[lower]) {
-            fixed.push(FixedPair {
+    let pair = |upper: usize, lower: usize, kind: FixedKind| {
+        problem
+            .is_variable(ids[upper], ids[lower])
+            .then_some(FixedPair {
                 upper: ids[upper],
                 lower: ids[lower],
                 kind,
-            });
-        }
+            })
     };
-    for (pair, lo_above) in state.order().pairs() {
+    for (old, lo_above) in state.order().pairs() {
         let Some(lo_above) = lo_above else {
             continue;
         };
-        let (Some(f), Some(g)) = (
-            state.face_position(pair.lo()),
-            state.face_position(pair.hi()),
-        ) else {
+        let (Some(f), Some(g)) = (state.face_position(old.lo()), state.face_position(old.hi()))
+        else {
             continue;
         };
         for &a in &child_of[f] {
@@ -354,19 +406,22 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
                     (Some(x), Some(y)) if x == y => {
                         (lo_above == m.blocks[x].front_up(), FixedKind::Carried)
                     }
-                    (Some(_), Some(_)) => match m.across {
+                    (Some(x), Some(y)) => match m.across {
                         Across::Keep => (lo_above, FixedKind::Seed),
+                        Across::Alike if m.alike(x, y) => (lo_above, FixedKind::Seed),
+                        Across::Alike => continue,
                     },
                     _ => continue,
                 };
-                if a_above {
-                    push(a, b, kind);
+                fixed.extend(if a_above {
+                    pair(a, b, kind)
                 } else {
-                    push(b, a, kind);
-                }
+                    pair(b, a, kind)
+                });
             }
         }
     }
+    let placed = fixed.len();
     for against in &m.against {
         let body: Vec<usize> = against
             .faces
@@ -376,11 +431,11 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
             .collect();
         for a in (0..ids.len()).filter(|&a| block_of[a] == Some(against.block)) {
             for &s in &body {
-                if against.above {
-                    push(a, s, FixedKind::Seed);
+                fixed.extend(if against.above {
+                    pair(a, s, FixedKind::Seed)
                 } else {
-                    push(s, a, FixedKind::Seed);
-                }
+                    pair(s, a, FixedKind::Seed)
+                });
             }
         }
     }
@@ -393,6 +448,7 @@ pub(crate) fn prepare(state: &State, m: &Macro) -> Result<Prepared, FoldRefusal>
     Ok(Prepared {
         unordered,
         fixed,
+        placed,
         block_of,
         blocks: m.blocks.len(),
         moving,
@@ -418,17 +474,13 @@ fn image_guard(
     position: &impl Fn(FaceId) -> Option<usize>,
 ) -> Result<(), FoldRefusal> {
     let geometry = unordered.geometry();
-    let same_motion = |x: usize, y: usize| {
-        let (p, q) = (m.blocks[x].0, m.blocks[y].0);
-        p.iter().zip(&q).all(|(a, b)| (a - b).abs() <= 1e-12)
-    };
     for pair in unordered.problem().variables() {
         let (Some(a), Some(b)) = (position(pair.lo()), position(pair.hi())) else {
             continue;
         };
         let changed = match (block_of[a], block_of[b]) {
             (None, None) => false,
-            (Some(x), Some(y)) => x != y && !same_motion(x, y),
+            (Some(x), Some(y)) => x != y && !m.alike(x, y),
             _ => true,
         };
         if !changed {
@@ -491,6 +543,54 @@ impl Prepared {
     /// stores.
     pub(crate) fn stored(&self, pairs: &[[FaceId; 2]]) -> Option<WitnessOrder> {
         self.unordered.witness_order(pairs)
+    }
+
+    /// The landed parts, checked up to their order: what a macro reads to
+    /// place its blocks by the landed geometry.
+    pub(crate) fn unordered(&self) -> &Unordered {
+        &self.unordered
+    }
+
+    /// Per landed face position, its block; none for a face that stays.
+    pub(crate) fn blocks_of(&self) -> &[Option<usize>] {
+        &self.block_of
+    }
+
+    /// Placements a macro decides from the landed geometry, beside the ones
+    /// its `against` gives — a crimp's tip against its own strip, a tuck's
+    /// block around its target: seeds in every completion and replay, turned
+    /// with the rest by [`Prepared::lands_flipped`]. A pair of faces that do
+    /// not overlap is left out.
+    pub(crate) fn place(&mut self, pairs: impl IntoIterator<Item = [FaceId; 2]>) {
+        let problem = self.unordered.problem();
+        let placed: Vec<FixedPair> = pairs
+            .into_iter()
+            .filter(|&[upper, lower]| problem.is_variable(upper, lower))
+            .map(|[upper, lower]| FixedPair {
+                upper,
+                lower,
+                kind: FixedKind::Seed,
+            })
+            .collect();
+        self.fixed.extend(placed);
+    }
+
+    /// Whether some order fits: a search that stops at the first order of
+    /// each component.
+    pub(crate) fn lands(&self, limits: &CompletionLimits) -> bool {
+        self.unordered.complete(&self.fixed, &first(limits)).is_ok()
+    }
+
+    /// [`Prepared::lands`] for the same fold with every placement the other
+    /// way round: the other kind of a reverse fold or a crimp, on the
+    /// geometry already landed rather than scored and gated again, since
+    /// neither its carry nor its pairs across blocks depend on the kind.
+    pub(crate) fn lands_flipped(&self, limits: &CompletionLimits) -> bool {
+        let mut fixed = self.fixed.clone();
+        for pair in &mut fixed[self.placed..] {
+            std::mem::swap(&mut pair.upper, &mut pair.lower);
+        }
+        self.unordered.complete(&fixed, &first(limits)).is_ok()
     }
 
     /// The landed state's faces in block `b`, in id order.
@@ -570,6 +670,15 @@ impl Pending {
                 message: "a chosen pair names a face with no witness".to_string(),
             })?;
         Ok((self.prepared.land(order)?, stored))
+    }
+}
+
+/// `limits` for a search that stops at the first order of each component:
+/// whether a fold lands, not how.
+pub(crate) fn first(limits: &CompletionLimits) -> CompletionLimits {
+    CompletionLimits {
+        per_component: 1,
+        ..*limits
     }
 }
 
