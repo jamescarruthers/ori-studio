@@ -86,12 +86,15 @@ export interface FoldHit {
   pick: FoldPick | null;
 }
 
-/** The same thing under the pointer as a frame ago: by identity, or for a free pick by position. */
+/**
+ * The same thing under the pointer as a frame ago: by identity, or for a free
+ * pick by position. Bare paper is the same hit wherever on it the pointer is:
+ * nothing drawn follows it there (a click reads the point afresh), so a move
+ * across it re-renders nothing, as a move along one crease does not.
+ */
 export function sameFoldHit(a: FoldHit, b: FoldHit): boolean {
   if (a.pane !== b.pane) return false;
-  if (a.pick === null || b.pick === null) {
-    return a.pick === b.pick && a.at.x === b.at.x && a.at.y === b.at.y;
-  }
+  if (a.pick === null || b.pick === null) return a.pick === b.pick;
   return samePick(a.pick, b.pick);
 }
 
