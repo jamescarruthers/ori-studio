@@ -57,8 +57,13 @@ state, the one constructor that validates it, and the plain fold.
   `F` for unfolded creases, `faceOrders` in FOLD's convention, an
   `oristudio:fold-step` marker and per-face sheet → folded matrices in
   Beloch's `beloch:faces_matrix` layout under `oristudio:faces_matrix`. The
-  size is held against the 3D writer's element cap (`interchange.rs`), summed
-  over the whole file.
+  step frames and their matrices are in the unit sheet frame, y up; the root
+  is in Oriedita's model space, y down (`KernelFrame`), with its faces
+  clockwise. The two are mirror images, so a viewer draws the root mirrored
+  against a flat step of the same paper; each frame reads right by itself,
+  and a reader that relates a frame to the root maps through `KernelFrame`.
+  The size is held against the 3D writer's element cap (`interchange.rs`),
+  summed over the whole file.
 - `Unordered` and `complete`: parts whose layer order is still to be decided
   (the gate's checks up to the order, a crease whose letter is unknown folded
   without one), and the engine's one "complete the rest" entry: an adapter

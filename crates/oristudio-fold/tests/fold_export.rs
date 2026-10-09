@@ -18,9 +18,10 @@ use oristudio_fold::fold_file::{
     step_frame_size,
 };
 use oristudio_fold::{
-    CreaseKind, FoldExportError, Letter, State, VertexId, export_fold_sequence,
-    export_fold_sequence_json, fold_cp_to_model,
+    CreaseKind, Direction, FoldExportError, KernelFrame, Letter, PlainFold, Sheet, Side, StartSide,
+    State, VertexId, export_fold_sequence, export_fold_sequence_json, fold_cp_to_model,
 };
+use oristudio_geometry::Line;
 use paths::*;
 use serde_json::{Value, json};
 use treemaker_fold::{Assignment, FoldDocument};
@@ -239,6 +240,59 @@ fn faces_matrices_map_the_sheet_onto_the_frame() {
                 assert_eq!(det > 0.0, winding(frame, f) > 0.0, "{name}");
             }
         }
+    }
+}
+
+/// The root and the step frames are mirror images (the module docs): a
+/// precrease of the corner leaves the paper flat, so the root's crease
+/// pattern and the last step frame picture the same paper. The kernel frame
+/// takes every frame vertex onto a root vertex and each frame edge onto a
+/// root edge, the root's faces wind clockwise, and the frame's
+/// counter-clockwise.
+#[test]
+fn the_root_and_a_flat_step_frame_are_mirror_images() {
+    let flat = State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+    let line = Line::from_points([0.5, 0.0], [0.0, 0.5]).unwrap_or_else(|| unreachable!());
+    let side = Side::of_point(&line, [0.1, 0.1]).unwrap_or_else(|| unreachable!());
+    let precreased = flat
+        .precrease(&PlainFold::new(line, side, Direction::Valley))
+        .unwrap_or_else(|e| panic!("{e}"))
+        .state;
+    let doc = export(&[flat, precreased.clone()]);
+    let frame = &doc.file_frames[1];
+    let kernel = KernelFrame::of(precreased.sheet());
+    let root_vertex = |p: Point| {
+        (0..doc.vertices_coords.len())
+            .find(|&v| {
+                let q = coords(&doc, v);
+                (p[0] - q[0]).abs() < 1e-9 && (p[1] - q[1]).abs() < 1e-9
+            })
+            .unwrap_or_else(|| panic!("{p:?} is no root vertex"))
+    };
+    let mapped: Vec<usize> = (0..frame.vertices_coords.len())
+        .map(|v| root_vertex(kernel.to_model(coords(frame, v))))
+        .collect();
+    assert_eq!(doc.vertices_coords.len(), frame.vertices_coords.len());
+    for [a, b] in frame.edges_vertices.iter().map(|e| [e[0], e[1]]) {
+        let (a, b) = (mapped[a], mapped[b]);
+        assert!(
+            doc.edges_vertices
+                .iter()
+                .any(|e| (e[0], e[1]) == (a, b) || (e[0], e[1]) == (b, a)),
+            "no root edge {a}–{b}"
+        );
+    }
+    // The y axis turns over between the two: sheet (0, 0) is the root's
+    // lower left corner at (−200, 200).
+    assert_eq!(kernel.to_model([0.0, 0.0]), [-200.0, 200.0]);
+    assert_eq!(kernel.to_model([1.0, 1.0]), [200.0, -200.0]);
+    assert_eq!(doc.faces_vertices.len(), frame.faces_vertices.len());
+    for f in 0..doc.faces_vertices.len() {
+        assert!(winding(&doc, f) < 0.0, "root face {f} winds clockwise");
+        assert!(
+            winding(frame, f) > 0.0,
+            "frame face {f} winds counter-clockwise"
+        );
     }
 }
 

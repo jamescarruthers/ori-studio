@@ -16,14 +16,36 @@
 //!   step is mirrored), `edges_assignment` has `F` for an unfolded crease,
 //!   `faceOrders` is FOLD's convention through `oristudio-layer-order`, and
 //!   each face's sheet → folded matrix is under [`FACES_MATRIX_KEY`] in
-//!   Beloch's `beloch:faces_matrix` layout, so one state importer reads
-//!   Beloch's goldens and these files alike. [`FOLD_STEP_MARKER`] marks the
-//!   frame as ours and records the step and the view.
+//!   Beloch's `beloch:faces_matrix` layout, so a reader that takes each frame
+//!   by itself reads Beloch's goldens and these files alike.
+//!   [`FOLD_STEP_MARKER`] marks the frame as ours and records the step and
+//!   the view.
 //!
-//! A step frame is in the engine's frames, not the root's: the matrices map
-//! sheet coordinates (the unit sheet frame, y up) into the folded frame its
-//! vertices are in. It does not inherit (`frame_inherit: false`): every state
-//! has its own topology, and the root's per-edge arrays are numbered by the
+//! # Two frames of reference, mirror images
+//!
+//! A step frame is in the engine's frames, not the root's. Its coordinates
+//! are the unit sheet frame, y up, with the view applied, and its matrices map
+//! sheet coordinates (the unit sheet frame, y up) into them. The root is in
+//! Oriedita's model space, y down, at the kernel's scale
+//! ([`KernelFrame`](crate::kernel::KernelFrame)), where the kernel's writer
+//! puts every pattern, so its faces wind clockwise there; a front-up face of
+//! a step frame winds counter-clockwise.
+//!
+//! So the root and the step frames are mirror images of each other: a viewer
+//! that draws the root's crease pattern beside a flat step of the same paper
+//! shows one mirrored against the other.
+//! [`KernelFrame::to_model`](crate::kernel::KernelFrame::to_model) takes a
+//! flat frame's coordinates onto the root's. A reader that takes each frame
+//! by itself — paper polygons from the frame's own coordinates and inverse
+//! matrices, as `crates/oracle-tests/tests/beloch_frames.rs` reads Beloch's
+//! files — reads every frame right; one that applies the matrices to the
+//! root's coordinates, or matches a frame's faces to the root's by position,
+//! must map through the kernel frame first. The `faceOrders` triples do not
+//! depend on the choice: mirroring a whole frame shows the same state from
+//! behind, which inverts every "above" and every orientation together.
+//!
+//! A step frame does not inherit (`frame_inherit: false`): every state has
+//! its own topology, and the root's per-edge arrays are numbered by the
 //! kernel's.
 //!
 //! The conventions are the 3D folded-form writer's (`interchange.rs`), whose
