@@ -101,7 +101,7 @@ function stepper(
   if (count <= 1 || !step) return null;
   return {
     label,
-    value: t('tools:fold.reverse.ofCount', '{{index}} of {{count}}', { index: Math.min(index, count - 1) + 1, count }),
+    value: t('tools:fold.reverse.ofCount', '{{index}} of {{total}}', { index: Math.min(index, count - 1) + 1, total: count }),
     previous: { label: t('tools:fold.reverse.previous', 'Previous'), disabled, run: () => step(-1) },
     next: { label: t('tools:fold.reverse.next', 'Next'), disabled, run: () => step(1) },
   };

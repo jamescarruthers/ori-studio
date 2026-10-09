@@ -1617,6 +1617,89 @@
     },
     "sentence": {
       "cpJump": "Repliez le papier selon le patron de plis importé.",
+      "insideReverse": {
+        "crease": {
+          "all": "Pliez toutes les couches en pli inversé intérieur le long du pli existant.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur le long du pli existant.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur le long du pli existant.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur le long du pli existant.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur le long du pli existant.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur le long du pli existant.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur le long du pli existant."
+        },
+        "free": {
+          "all": "Pliez toutes les couches en pli inversé intérieur le long de la ligne tracée.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur le long de la ligne tracée.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur le long de la ligne tracée.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur le long de la ligne tracée.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur le long de la ligne tracée.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur le long de la ligne tracée.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur le long de la ligne tracée."
+        },
+        "o1": {
+          "all": "Pliez toutes les couches en pli inversé intérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur le long de la ligne passant par {{a}} et {{b}}."
+        },
+        "o2": {
+          "all": "Pliez toutes les couches en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur, en amenant {{a}} sur {{b}}."
+        },
+        "o3": {
+          "all": "Pliez toutes les couches en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur, en amenant {{a}} sur {{b}}."
+        },
+        "o4": {
+          "all": "Pliez toutes les couches en pli inversé intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne."
+        },
+        "o5": {
+          "all": "Pliez toutes les couches en pli inversé intérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur par {{a}}, en amenant {{b}} sur {{c}}."
+        },
+        "o6": {
+          "all": "Pliez toutes les couches en pli inversé intérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}."
+        },
+        "o7": {
+          "all": "Pliez toutes les couches en pli inversé intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}."
+        }
+      },
       "mountain": {
         "crease": {
           "all": "Pliez toutes les couches en montagne le long du pli existant.",
@@ -1817,6 +1900,89 @@
           "flaps_one": "Pliez seulement le rabat indiqué en montagne de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis dépliez.",
           "flaps_many": "Pliez seulement les {{count}} rabats indiqués en montagne de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis dépliez.",
           "flaps_other": "Pliez seulement les {{count}} rabats indiqués en montagne de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis dépliez."
+        }
+      },
+      "outsideReverse": {
+        "crease": {
+          "all": "Pliez toutes les couches en pli inversé extérieur le long du pli existant.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur le long du pli existant.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur le long du pli existant.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur le long du pli existant.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur le long du pli existant.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur le long du pli existant.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur le long du pli existant."
+        },
+        "free": {
+          "all": "Pliez toutes les couches en pli inversé extérieur le long de la ligne tracée.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur le long de la ligne tracée.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur le long de la ligne tracée.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur le long de la ligne tracée.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur le long de la ligne tracée.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur le long de la ligne tracée.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur le long de la ligne tracée."
+        },
+        "o1": {
+          "all": "Pliez toutes les couches en pli inversé extérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur le long de la ligne passant par {{a}} et {{b}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur le long de la ligne passant par {{a}} et {{b}}."
+        },
+        "o2": {
+          "all": "Pliez toutes les couches en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur, en amenant {{a}} sur {{b}}."
+        },
+        "o3": {
+          "all": "Pliez toutes les couches en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur, en amenant {{a}} sur {{b}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur, en amenant {{a}} sur {{b}}."
+        },
+        "o4": {
+          "all": "Pliez toutes les couches en pli inversé extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne."
+        },
+        "o5": {
+          "all": "Pliez toutes les couches en pli inversé extérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur par {{a}}, en amenant {{b}} sur {{c}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur par {{a}}, en amenant {{b}} sur {{c}}."
+        },
+        "o6": {
+          "all": "Pliez toutes les couches en pli inversé extérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur, en amenant {{a}} sur {{b}} et {{c}} sur {{d}}."
+        },
+        "o7": {
+          "all": "Pliez toutes les couches en pli inversé extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "depth_one": "Pliez seulement la couche du dessus en pli inversé extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "depth_many": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "depth_other": "Pliez seulement les {{count}} couches du dessus en pli inversé extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "flaps_one": "Pliez seulement le rabat indiqué en pli inversé extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "flaps_many": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}.",
+          "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}."
         }
       },
       "turn": "{{turn}}.",
@@ -2072,23 +2238,30 @@
       "tagNext": "Suivante"
     },
     "step": {
+      "blocks": "Blocs",
+      "blocksHelp": "Piles de papier qui tournent d’un seul tenant : la partie basse et la partie haute de chaque ouverture, et chaque rabat qui bouge en entier.",
       "branchSheet": "Vous êtes sur la feuille à plat\u00a0: plier ici commence une nouvelle branche.",
       "branchStep": "Vous êtes à l’étape {{at}} sur {{total}}\u00a0: plier ici commence une nouvelle branche.",
       "broken": "Cette étape ne se plie plus\u00a0: ce dont elle est faite n’est plus sur le papier avant elle. Elle et les étapes suivantes ne peuvent qu’être supprimées.",
       "brokenAbove": "Une étape précédente ne se plie plus, donc celle-ci ne peut pas être affichée.",
       "changed": "Cette étape se plie autrement dans cette version d’Ori Studio que lors de son enregistrement.",
       "changes": "Modifications",
+      "chosen": "Choix parmi plusieurs",
       "creases": "Plis",
       "creasesBackUp": "Vus du recto du papier, qui est dessous au départ\u00a0: ils peuvent se lire à l’inverse des plis que vous voyez.",
       "creasesFront": "Vus du recto du papier.",
       "flat": "À plat",
       "flatHelp": "Pliés une fois puis dépliés\u00a0: ils sont maintenant à plat et gardent le sens dans lequel ils ont été pliés.",
       "imported": "Patron de plis importé\u00a0: cette étape remplace l’état plié par celui du patron.",
+      "layerOrder": "Ordre des couches",
       "layers": "Couches",
       "layersHelp": "La pile la plus épaisse le long de la ligne de pli. Les couches qui restent à plat de part et d’autre d’un prépliage comptent pour une.",
       "line": "Ligne",
       "locked": "Cette étape a été créée avec une version plus récente d’Ori Studio. Vous pouvez la supprimer ici, et elle est enregistrée exactement telle quelle.",
       "mountain": "Montagne",
+      "onlyOne": "La seule possible",
+      "opening": "Ouverture",
+      "openingHelp": "Là où le rabat s’écarte pour laisser passer la pointe : les couches qui restent dessous et celles du dessus.",
       "operation": "Opération",
       "pending": "Pli en cours",
       "pendingRefused": "Résolvez le problème dans la fenêtre de l’outil pour voir les plis qu’il crée.",
@@ -2112,13 +2285,16 @@
       "addsPrecreases_other": "Ajoute {{count}} prépliages",
       "axiomLine": "Axiome {{axiom}} · {{phrase}}",
       "badgeImported": "Importé",
+      "badgeInsideReverse": "Inversé intérieur",
       "badgeMountain": "Montagne",
       "badgeNewer": "Plus récente",
+      "badgeOutsideReverse": "Inversé extérieur",
       "badgePrecrease": "Prépliage",
       "badgeValley": "Vallée",
       "cpJump": "Importer un patron de plis",
       "existingCrease": "Pli existant",
       "freeLine": "Ligne libre",
+      "insideReverse": "Pli inversé intérieur",
       "mountainFold": "Pli montagne",
       "mountainPrecrease": "Pli montagne puis dépli",
       "noChange": "Ne modifie aucun pli",
@@ -2128,6 +2304,7 @@
       "originOrh": "Fichier ORH",
       "originOri": "Fichier ORI",
       "originSample": "Exemple",
+      "outsideReverse": "Pli inversé extérieur",
       "refolds_one": "Replie {{count}} prépliage",
       "refolds_many": "Replie {{count}} prépliages",
       "refolds_other": "Replie {{count}} prépliages",

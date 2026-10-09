@@ -1617,6 +1617,89 @@
     },
     "sentence": {
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
+      "insideReverse": {
+        "crease": {
+          "all": "Dobla todas las capas con un pliegue invertido interior por el pliegue existente.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior por el pliegue existente.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por el pliegue existente.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por el pliegue existente.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior por el pliegue existente.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por el pliegue existente.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por el pliegue existente."
+        },
+        "free": {
+          "all": "Dobla todas las capas con un pliegue invertido interior por la línea marcada.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior por la línea marcada.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por la línea marcada.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por la línea marcada.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior por la línea marcada.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por la línea marcada.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por la línea marcada."
+        },
+        "o1": {
+          "all": "Dobla todas las capas con un pliegue invertido interior por la línea que pasa por {{a}} y {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior por la línea que pasa por {{a}} y {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por la línea que pasa por {{a}} y {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por la línea que pasa por {{a}} y {{b}}."
+        },
+        "o2": {
+          "all": "Dobla todas las capas con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior, llevando {{a}} sobre {{b}}."
+        },
+        "o3": {
+          "all": "Dobla todas las capas con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior, llevando {{a}} sobre {{b}}."
+        },
+        "o4": {
+          "all": "Dobla todas las capas con un pliegue invertido interior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por {{a}}, de modo que {{b}} caiga sobre su propia línea."
+        },
+        "o5": {
+          "all": "Dobla todas las capas con un pliegue invertido interior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior por {{a}}, llevando {{b}} sobre {{c}}."
+        },
+        "o6": {
+          "all": "Dobla todas las capas con un pliegue invertido interior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}."
+        },
+        "o7": {
+          "all": "Dobla todas las capas con un pliegue invertido interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}."
+        }
+      },
       "mountain": {
         "crease": {
           "all": "Dobla todas las capas en monte por el pliegue existente.",
@@ -1817,6 +1900,89 @@
           "flaps_one": "Dobla solo la solapa indicada en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
           "flaps_many": "Dobla solo las {{count}} solapas indicadas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla.",
           "flaps_other": "Dobla solo las {{count}} solapas indicadas en monte de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y desdobla."
+        }
+      },
+      "outsideReverse": {
+        "crease": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior por el pliegue existente.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior por el pliegue existente.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por el pliegue existente.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por el pliegue existente.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior por el pliegue existente.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por el pliegue existente.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por el pliegue existente."
+        },
+        "free": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior por la línea marcada.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior por la línea marcada.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por la línea marcada.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por la línea marcada.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior por la línea marcada.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por la línea marcada.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por la línea marcada."
+        },
+        "o1": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior por la línea que pasa por {{a}} y {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior por la línea que pasa por {{a}} y {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por la línea que pasa por {{a}} y {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por la línea que pasa por {{a}} y {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por la línea que pasa por {{a}} y {{b}}."
+        },
+        "o2": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior, llevando {{a}} sobre {{b}}."
+        },
+        "o3": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior, llevando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior, llevando {{a}} sobre {{b}}."
+        },
+        "o4": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea."
+        },
+        "o5": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por {{a}}, llevando {{b}} sobre {{c}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior por {{a}}, llevando {{b}} sobre {{c}}."
+        },
+        "o6": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior, llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}."
+        },
+        "o7": {
+          "all": "Dobla todas las capas con un pliegue invertido exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_one": "Dobla solo la capa de arriba con un pliegue invertido exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_many": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "depth_other": "Dobla solo las {{count}} capas de arriba con un pliegue invertido exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_one": "Dobla solo la solapa indicada con un pliegue invertido exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_many": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}.",
+          "flaps_other": "Dobla solo las {{count}} solapas indicadas con un pliegue invertido exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}."
         }
       },
       "turn": "{{turn}}.",
@@ -2072,23 +2238,30 @@
       "tagNext": "Siguiente"
     },
     "step": {
+      "blocks": "Bloques",
+      "blocksHelp": "Pilas de papel que giran juntas: la parte de abajo y la de arriba de cada abertura, y cada solapa que se mueve entera.",
       "branchSheet": "Estás en la hoja plana: si doblas aquí, empieza una rama nueva.",
       "branchStep": "Estás en el paso {{at}} de {{total}}: si doblas aquí, empieza una rama nueva.",
       "broken": "Este paso ya no se puede doblar: aquello de lo que se hizo ya no está en el papel antes de él. Este paso y los siguientes solo se pueden eliminar.",
       "brokenAbove": "Un paso anterior ya no se puede doblar, así que este no se puede mostrar.",
       "changed": "Este paso se dobla de otra forma en esta versión de Ori Studio que cuando se guardó.",
       "changes": "Cambios",
+      "chosen": "Elección entre varias",
       "creases": "Pliegues",
       "creasesBackUp": "Vistos desde el anverso del papel, que empieza boca abajo: pueden leerse al revés que los pliegues que ves.",
       "creasesFront": "Vistos desde el anverso del papel.",
       "flat": "Planos",
       "flatHelp": "Doblados una vez y desdoblados: ahora están planos y recuerdan hacia dónde se doblaron.",
       "imported": "Patrón de pliegues importado: este paso sustituye el estado plegado por el del patrón.",
+      "layerOrder": "Orden de las capas",
       "layers": "Capas",
       "layersHelp": "La pila más gruesa a lo largo de la línea de pliegue. Las capas que quedan planas a ambos lados de un prepliegue cuentan como una.",
       "line": "Línea",
       "locked": "Este paso se creó con una versión más reciente de Ori Studio. Aquí puedes eliminarlo, y se guarda exactamente como estaba.",
       "mountain": "Monte",
+      "onlyOne": "La única posible",
+      "opening": "Abertura",
+      "openingHelp": "Dónde se separa la solapa para dejar pasar la punta: las capas que quedan debajo y las de encima.",
       "operation": "Operación",
       "pending": "Pliegue pendiente",
       "pendingRefused": "Resuelve el problema en la ventana de la herramienta para ver los pliegues que crea.",
@@ -2112,13 +2285,16 @@
       "addsPrecreases_other": "Añade {{count}} prepliegues",
       "axiomLine": "Axioma {{axiom}} · {{phrase}}",
       "badgeImported": "Importado",
+      "badgeInsideReverse": "Invertido interior",
       "badgeMountain": "Monte",
       "badgeNewer": "Más reciente",
+      "badgeOutsideReverse": "Invertido exterior",
       "badgePrecrease": "Prepliegue",
       "badgeValley": "Valle",
       "cpJump": "Importar patrón de pliegues",
       "existingCrease": "Pliegue existente",
       "freeLine": "Línea libre",
+      "insideReverse": "Pliegue invertido interior",
       "mountainFold": "Pliegue monte",
       "mountainPrecrease": "Pliegue monte y desdoblar",
       "noChange": "No cambia ningún pliegue",
@@ -2128,6 +2304,7 @@
       "originOrh": "Archivo ORH",
       "originOri": "Archivo ORI",
       "originSample": "Ejemplo",
+      "outsideReverse": "Pliegue invertido exterior",
       "refolds_one": "Vuelve a doblar {{count}} prepliegue",
       "refolds_many": "Vuelve a doblar {{count}} prepliegues",
       "refolds_other": "Vuelve a doblar {{count}} prepliegues",

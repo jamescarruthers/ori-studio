@@ -282,7 +282,9 @@
   "fold": {
     "categoryLabel": "Espace de pliage",
     "chooser": {
-      "note": "Cet axiome donne ici plus d’un pli. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
+      "note": "Cet axiome donne ici plus d’un pli. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
+      "openingNote": "Le rabat s’ouvre de plus d’une façon : les couches en surbrillance restent ensemble. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
+      "orderNote": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
     },
     "divide": {
       "clear_one": "Effacer la marque faite ici",
@@ -301,10 +303,14 @@
       "includeFlaps_one": "Inclure {{count}} rabat",
       "includeFlaps_many": "Inclure les {{count}} rabats",
       "includeFlaps_other": "Inclure les {{count}} rabats",
+      "insideInstead": "Plutôt un pli inversé intérieur",
       "mountainInstead": "Plutôt un pli montagne",
+      "outsideInstead": "Plutôt un pli inversé extérieur",
       "pickFlap": "Plier seulement le rabat {{number}}",
       "precreaseOtherWay": "Pré-plier dans l’autre sens",
+      "reverseFlap": "Inverser seulement le rabat {{number}}",
       "slideToEdge": "Faire glisser la ligne pour poser le point sur le bord",
+      "swapInstead": "Inverser le côté qui bouge",
       "turnToEdge": "Faire pivoter la ligne pour poser le point sur le bord",
       "useLine": "Utiliser la ligne de repère",
       "valleyInstead": "Plutôt un pli vallée"
@@ -371,6 +377,7 @@
       "divide": "Les bords, les bords pliés et les pré-plis comptent tous.",
       "free": "Sans magnétisme : la ligne passe exactement par les points où vous cliquez.",
       "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où, sans magnétisme.",
+      "queued": "Pliage dès que l’aperçu est prêt…",
       "snap": "Les points s’accrochent aux coins, aux repères, aux croisements de plis, aux milieux et aux bords."
     },
     "op": {
@@ -398,6 +405,18 @@
       "newer": "Cette séquence vient d’une version plus récente d’Ori Studio : elle s’ouvre en lecture seule."
     },
     "refusal": {
+      "choiceBroken": {
+        "text": "L’ouverture ou l’ordre des couches que cette étape a enregistré ne correspond plus au papier qui la précède : elle ne peut donc pas être pliée telle qu’elle est enregistrée.",
+        "title": "Un choix ne correspond plus"
+      },
+      "chooseOpening": {
+        "text": "Le rabat s’ouvre de plus d’une façon. Choisissez-en une pour plier.",
+        "title": "Choisissez comment il s’ouvre"
+      },
+      "chooseOrder": {
+        "text": "Le pli peut se poser avec ses couches empilées de plus d’une façon. Choisissez-en une pour plier.",
+        "title": "Choisissez comment les couches s’empilent"
+      },
       "closureAddsFlaps": {
         "textMany_one": "Plier ces couches déplace aussi {{count}} autre rabat.",
         "textMany_many": "Plier ces couches déplace aussi {{count}} autres rabats.",
@@ -413,9 +432,15 @@
         "text": "Aucune couche n’est choisie. Choisissez au moins un rabat à déplacer.",
         "title": "Rien à plier"
       },
+      "insideInfeasible": {
+        "title": "Il ne peut pas rentrer à l’intérieur"
+      },
       "invalid": {
         "text": "Il ne donnerait pas un modèle plat valide.",
         "title": "Ce pli est impossible"
+      },
+      "kindInfeasible": {
+        "text": "Aucun empilement des couches ne permet ici à la pointe de tourner de ce côté. L’autre type de pli inversé conviendra peut-être."
       },
       "moverStays": {
         "text": "La couche qui porte le point à déplacer ne fait pas partie des couches qui se plient. Incluez son rabat, ou pliez toutes les couches.",
@@ -445,6 +470,9 @@
         "text": "Un point ou un bord à partir duquel la ligne a été placée ne se trouve pas sur le papier tel qu’il est plié maintenant. Placez la ligne à nouveau.",
         "title": "Un repère n’est pas sur le papier"
       },
+      "outsideInfeasible": {
+        "title": "Il ne peut pas envelopper l’extérieur"
+      },
       "pickAgain": {
         "text": "Cet endroit n’est dans aucune couche du côté qui bouge. Choisissez à l’intérieur d’une couche, loin de ses plis.",
         "title": "Choisissez à nouveau"
@@ -457,9 +485,20 @@
         "text": "Le déplier déplacerait plus de couches que le plier.",
         "title": "Ce pré-pli ne peut pas se déplier"
       },
+      "reverseNoOpening": {
+        "bodiesCross": "Une fois le rabat séparé le long de ses plis, le papier auquel tient chaque moitié croiserait celui de l’autre.",
+        "noBody": "Une fois le rabat séparé le long de ses plis, une moitié ne tiendrait à rien qui reste en place sur la ligne.",
+        "noSpine": "Une seule couche n’a pas de bord plié le long duquel s’inverser. Inversez un rabat de couches reliées par un pli.",
+        "noSplit": "Ses couches ne peuvent pas être séparées le long d’un pli sans qu’une couche du dessous passe au-dessus d’une couche du dessus.",
+        "title": "Ce rabat ne peut pas s’ouvrir"
+      },
       "sliver": {
         "text": "Un point des couches qui bougent se poserait à un cheveu à l’intérieur du bord d’une autre couche.",
         "title": "Un point tombe juste à l’intérieur d’un bord"
+      },
+      "tipNotFree": {
+        "text": "D’autres couches se trouvent là où la pointe tournerait. Incluez leurs rabats dans le pli, ou faites l’inversion ailleurs.",
+        "title": "Des couches gênent"
       },
       "tooSmall": {
         "text": "Le pli laisserait un pli ou une bande de papier plus fine que le papier lui-même.",
@@ -477,6 +516,21 @@
         "text": "Dépliez le long d’un bord plié, et repliez le long d’un pli à plat.",
         "title": "Ce n’est pas le bon type de pli"
       }
+    },
+    "reverse": {
+      "bothFit": "Les deux types conviennent ici : choisissez de quel côté va la pointe.",
+      "doesNotFit": "Ne convient pas ici",
+      "inside": "Intérieur",
+      "kind": "Type",
+      "next": "Suivant",
+      "ofCount": "{{index}} sur {{total}}",
+      "onlyInside": "Seul le pli inversé intérieur convient ici.",
+      "onlyOutside": "Seul le pli inversé extérieur convient ici.",
+      "opening": "Ouverture",
+      "order": "Ordre des couches",
+      "outside": "Extérieur",
+      "previous": "Précédent",
+      "tipSide": "Côté de la pointe"
     },
     "scopeLabel": "pliage",
     "section": {
@@ -510,6 +564,7 @@
       "freeStart": "Cliquez là où commence la ligne de pli.",
       "landOnLine": "Cliquez sur le bord ou le pli sur lequel il doit arriver.",
       "perpendicularTo": "Cliquez sur le bord ou le pli auquel le pli est perpendiculaire.",
+      "pickFlapsToReverse": "Choisissez les rabats à inverser.",
       "pickLayers": "Choisissez les couches qui bougent.",
       "pointToMove": "Cliquez sur le point à déplacer."
     },

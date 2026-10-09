@@ -1564,6 +1564,71 @@
     },
     "sentence": {
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
+      "insideReverse": {
+        "crease": {
+          "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als inneren Gegenbruch.",
+          "depth_one": "Falte nur die oberste Lage entlang der vorhandenen Faltlinie als inneren Gegenbruch.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der vorhandenen Faltlinie als inneren Gegenbruch.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der vorhandenen Faltlinie als inneren Gegenbruch.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der vorhandenen Faltlinie als inneren Gegenbruch."
+        },
+        "free": {
+          "all": "Falte alle Lagen entlang der eingezeichneten Linie als inneren Gegenbruch.",
+          "depth_one": "Falte nur die oberste Lage entlang der eingezeichneten Linie als inneren Gegenbruch.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der eingezeichneten Linie als inneren Gegenbruch.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der eingezeichneten Linie als inneren Gegenbruch.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der eingezeichneten Linie als inneren Gegenbruch."
+        },
+        "o1": {
+          "all": "Falte alle Lagen entlang der Linie durch {{a}} und {{b}} als inneren Gegenbruch.",
+          "depth_one": "Falte nur die oberste Lage entlang der Linie durch {{a}} und {{b}} als inneren Gegenbruch.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der Linie durch {{a}} und {{b}} als inneren Gegenbruch.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der Linie durch {{a}} und {{b}} als inneren Gegenbruch.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der Linie durch {{a}} und {{b}} als inneren Gegenbruch."
+        },
+        "o2": {
+          "all": "Falte alle Lagen als inneren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als inneren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als inneren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als inneren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als inneren Gegenbruch und lege dabei {{a}} auf {{b}}."
+        },
+        "o3": {
+          "all": "Falte alle Lagen als inneren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als inneren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als inneren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als inneren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als inneren Gegenbruch und lege dabei {{a}} auf {{b}}."
+        },
+        "o4": {
+          "all": "Falte alle Lagen durch {{a}} als inneren Gegenbruch, sodass {{b}} auf sich selbst fällt.",
+          "depth_one": "Falte nur die oberste Lage durch {{a}} als inneren Gegenbruch, sodass {{b}} auf sich selbst fällt.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen durch {{a}} als inneren Gegenbruch, sodass {{b}} auf sich selbst fällt.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als inneren Gegenbruch, sodass {{b}} auf sich selbst fällt.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als inneren Gegenbruch, sodass {{b}} auf sich selbst fällt."
+        },
+        "o5": {
+          "all": "Falte alle Lagen durch {{a}} als inneren Gegenbruch und lege dabei {{b}} auf {{c}}.",
+          "depth_one": "Falte nur die oberste Lage durch {{a}} als inneren Gegenbruch und lege dabei {{b}} auf {{c}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen durch {{a}} als inneren Gegenbruch und lege dabei {{b}} auf {{c}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als inneren Gegenbruch und lege dabei {{b}} auf {{c}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als inneren Gegenbruch und lege dabei {{b}} auf {{c}}."
+        },
+        "o6": {
+          "all": "Falte alle Lagen als inneren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_one": "Falte nur die oberste Lage als inneren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als inneren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als inneren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als inneren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}."
+        },
+        "o7": {
+          "all": "Falte alle Lagen als inneren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_one": "Falte nur die oberste Lage als inneren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als inneren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_one": "Falte nur die gezeigte Klappe als inneren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als inneren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
+        }
+      },
       "mountain": {
         "crease": {
           "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als Bergfalte.",
@@ -1720,6 +1785,71 @@
           "depth_other": "Falte nur die untersten {{count}} Lagen als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
           "flaps_one": "Falte nur die gezeigte Klappe als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
           "flaps_other": "Falte nur die {{count}} gezeigten Klappen als Bergfalte vor, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
+        }
+      },
+      "outsideReverse": {
+        "crease": {
+          "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als äußeren Gegenbruch.",
+          "depth_one": "Falte nur die oberste Lage entlang der vorhandenen Faltlinie als äußeren Gegenbruch.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der vorhandenen Faltlinie als äußeren Gegenbruch.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der vorhandenen Faltlinie als äußeren Gegenbruch.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der vorhandenen Faltlinie als äußeren Gegenbruch."
+        },
+        "free": {
+          "all": "Falte alle Lagen entlang der eingezeichneten Linie als äußeren Gegenbruch.",
+          "depth_one": "Falte nur die oberste Lage entlang der eingezeichneten Linie als äußeren Gegenbruch.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der eingezeichneten Linie als äußeren Gegenbruch.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der eingezeichneten Linie als äußeren Gegenbruch.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der eingezeichneten Linie als äußeren Gegenbruch."
+        },
+        "o1": {
+          "all": "Falte alle Lagen entlang der Linie durch {{a}} und {{b}} als äußeren Gegenbruch.",
+          "depth_one": "Falte nur die oberste Lage entlang der Linie durch {{a}} und {{b}} als äußeren Gegenbruch.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen entlang der Linie durch {{a}} und {{b}} als äußeren Gegenbruch.",
+          "flaps_one": "Falte nur die gezeigte Klappe entlang der Linie durch {{a}} und {{b}} als äußeren Gegenbruch.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen entlang der Linie durch {{a}} und {{b}} als äußeren Gegenbruch."
+        },
+        "o2": {
+          "all": "Falte alle Lagen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}."
+        },
+        "o3": {
+          "all": "Falte alle Lagen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "depth_one": "Falte nur die oberste Lage als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}}."
+        },
+        "o4": {
+          "all": "Falte alle Lagen durch {{a}} als äußeren Gegenbruch, sodass {{b}} auf sich selbst fällt.",
+          "depth_one": "Falte nur die oberste Lage durch {{a}} als äußeren Gegenbruch, sodass {{b}} auf sich selbst fällt.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen durch {{a}} als äußeren Gegenbruch, sodass {{b}} auf sich selbst fällt.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als äußeren Gegenbruch, sodass {{b}} auf sich selbst fällt.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als äußeren Gegenbruch, sodass {{b}} auf sich selbst fällt."
+        },
+        "o5": {
+          "all": "Falte alle Lagen durch {{a}} als äußeren Gegenbruch und lege dabei {{b}} auf {{c}}.",
+          "depth_one": "Falte nur die oberste Lage durch {{a}} als äußeren Gegenbruch und lege dabei {{b}} auf {{c}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen durch {{a}} als äußeren Gegenbruch und lege dabei {{b}} auf {{c}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe durch {{a}} als äußeren Gegenbruch und lege dabei {{b}} auf {{c}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen durch {{a}} als äußeren Gegenbruch und lege dabei {{b}} auf {{c}}."
+        },
+        "o6": {
+          "all": "Falte alle Lagen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_one": "Falte nur die oberste Lage als äußeren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_one": "Falte nur die gezeigte Klappe als äußeren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als äußeren Gegenbruch und lege dabei {{a}} auf {{b}} und {{c}} auf {{d}}."
+        },
+        "o7": {
+          "all": "Falte alle Lagen als äußeren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_one": "Falte nur die oberste Lage als äußeren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "depth_other": "Falte nur die obersten {{count}} Lagen als äußeren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_one": "Falte nur die gezeigte Klappe als äußeren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet.",
+          "flaps_other": "Falte nur die {{count}} gezeigten Klappen als äußeren Gegenbruch, sodass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet."
         }
       },
       "turn": "{{turn}}.",
@@ -1925,23 +2055,30 @@
       "tagNext": "Nächster"
     },
     "step": {
+      "blocks": "Blöcke",
+      "blocksHelp": "Papierstapel, die sich als Ganzes drehen: der untere und der obere Teil jeder Öffnung und jede Klappe, die sich vollständig bewegt.",
       "branchSheet": "Du bist beim flachen Blatt: Wenn du hier faltest, beginnt ein neuer Zweig.",
       "branchStep": "Du bist bei Schritt {{at}} von {{total}}: Wenn du hier faltest, beginnt ein neuer Zweig.",
       "broken": "Dieser Schritt lässt sich nicht mehr falten: Das, woraus er gemacht wurde, liegt vor ihm nicht mehr auf dem Papier. Er und die folgenden Schritte können nur noch gelöscht werden.",
       "brokenAbove": "Ein früherer Schritt lässt sich nicht mehr falten, deshalb kann dieser nicht gezeigt werden.",
       "changed": "Dieser Schritt faltet sich in dieser Version von Ori Studio anders als beim Speichern.",
       "changes": "Änderungen",
+      "chosen": "Aus mehreren gewählt",
       "creases": "Faltlinien",
       "creasesBackUp": "Von der Vorderseite des Papiers aus gesehen, die anfangs unten liegt: Sie können umgekehrt zu den Falten wirken, die du siehst.",
       "creasesFront": "Von der Vorderseite des Papiers aus gesehen.",
       "flat": "Flach",
       "flatHelp": "Einmal gefaltet und wieder geöffnet: Sie liegen jetzt flach und merken sich, in welche Richtung sie gingen.",
       "imported": "Importiertes Faltmuster: Dieser Schritt ersetzt den gefalteten Zustand durch den des Musters.",
+      "layerOrder": "Lagenreihenfolge",
       "layers": "Lagen",
       "layersHelp": "Der tiefste Stapel entlang der Faltlinie. Lagen, die über eine Vorfalte hinweg flach liegen, zählen als eine.",
       "line": "Linie",
       "locked": "Dieser Schritt wurde mit einem neueren Ori Studio erstellt. Er kann hier gelöscht werden und wird genau so gespeichert, wie er war.",
       "mountain": "Berg",
+      "onlyOne": "Die einzig mögliche",
+      "opening": "Öffnung",
+      "openingHelp": "Wo sich die Klappe teilt, um die Spitze durchzulassen: die Lagen, die darunter bleiben, und die darüber.",
       "operation": "Vorgang",
       "pending": "Geplante Faltung",
       "pendingRefused": "Behebe das Problem im Werkzeugfenster, um die Faltlinien zu sehen, die dabei entstehen.",
@@ -1963,13 +2100,16 @@
       "addsPrecreases_other": "Fügt {{count}} Vorfalten hinzu",
       "axiomLine": "Axiom {{axiom}} · {{phrase}}",
       "badgeImported": "Importiert",
+      "badgeInsideReverse": "Gegenbruch innen",
       "badgeMountain": "Berg",
       "badgeNewer": "Neuer",
+      "badgeOutsideReverse": "Gegenbruch außen",
       "badgePrecrease": "Vorfalte",
       "badgeValley": "Tal",
       "cpJump": "Faltmuster importieren",
       "existingCrease": "Vorhandene Faltlinie",
       "freeLine": "Freie Linie",
+      "insideReverse": "Innerer Gegenbruch",
       "mountainFold": "Bergfalte",
       "mountainPrecrease": "Bergfalte vorfalten",
       "noChange": "Ändert keine Faltlinien",
@@ -1979,6 +2119,7 @@
       "originOrh": "ORH-Datei",
       "originOri": "ORI-Datei",
       "originSample": "Beispiel",
+      "outsideReverse": "Äußerer Gegenbruch",
       "refolds_one": "Faltet {{count}} Vorfalte wieder",
       "refolds_other": "Faltet {{count}} Vorfalten wieder",
       "reverses_one": "Faltet {{count}} Vorfalte andersherum wieder",

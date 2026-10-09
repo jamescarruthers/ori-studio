@@ -266,7 +266,9 @@
   "fold": {
     "categoryLabel": "折叠工作区",
     "chooser": {
-      "note": "此公理在这里给出不止一种折法。逐个查看，或按 Shift+← / Shift+→。"
+      "note": "此公理在这里给出不止一种折法。逐个查看，或按 Shift+← / Shift+→。",
+      "openingNote": "翼片不止一种张开方式：高亮的层保持在一起。逐个查看，或按 Shift+← / Shift+→。",
+      "orderNote": "这些层不止一种叠放方式。逐个查看，或按 Shift+← / Shift+→。"
     },
     "divide": {
       "clear_other": "清除在这里做的 {{count}} 个标记",
@@ -281,10 +283,14 @@
     "fix": {
       "includeFlap": "包含翼片 {{number}}",
       "includeFlaps_other": "包含这 {{count}} 个翼片",
+      "insideInstead": "改为内翻折",
       "mountainInstead": "改为山折",
+      "outsideInstead": "改为外翻折",
       "pickFlap": "只折翼片 {{number}}",
       "precreaseOtherWay": "向另一方向预折",
+      "reverseFlap": "只翻折翼片 {{number}}",
       "slideToEdge": "平移折线，让该点正好落在边上",
+      "swapInstead": "交换移动的一侧",
       "turnToEdge": "转动折线，让该点正好落在边上",
       "useLine": "使用参考线",
       "valleyInstead": "改为谷折"
@@ -345,6 +351,7 @@
       "divide": "边、折边和预折痕都可以。",
       "free": "不吸附：折线正好经过你单击的点。",
       "freePoint": "按住 {{modifier}} 可不吸附地把点放在任意位置。",
+      "queued": "预览就绪后立即折叠…",
       "snap": "点会吸附到角、标记、折痕交点、中点和边。"
     },
     "op": {
@@ -372,6 +379,18 @@
       "newer": "此序列来自更新版本的 Ori Studio，因此以只读方式打开。"
     },
     "refusal": {
+      "choiceBroken": {
+        "text": "此步骤保存的张开方式或层序已与之前的纸不再吻合，因此无法按保存的样子折叠。",
+        "title": "某个选择已不再吻合"
+      },
+      "chooseOpening": {
+        "text": "翼片不止一种张开方式。请选择一种来折叠。",
+        "title": "选择张开方式"
+      },
+      "chooseOrder": {
+        "text": "这次折叠的层不止一种叠放方式。请选择一种来折叠。",
+        "title": "选择各层如何叠放"
+      },
       "closureAddsFlaps": {
         "textMany_other": "折叠这些层还会带动另外 {{count}} 个翼片。",
         "textOne": "折叠这些层还会带动翼片 {{number}}。",
@@ -385,9 +404,15 @@
         "text": "没有选中任何层。请至少选择一个要移动的翼片。",
         "title": "没有可折的部分"
       },
+      "insideInfeasible": {
+        "title": "无法向内翻折"
+      },
       "invalid": {
         "text": "它无法得到有效的平面模型。",
         "title": "无法进行这次折叠"
+      },
+      "kindInfeasible": {
+        "text": "无论各层如何叠放，尖端都无法在这里朝这个方向翻转。另一种翻折也许可行。"
       },
       "moverStays": {
         "text": "带着要移动的点的那一层不在要折的层里。请把它的翼片加进来，或折叠所有层。",
@@ -417,6 +442,9 @@
         "text": "用来确定折线的某个点或边，已不在纸现在折好的样子上。请重新确定折线。",
         "title": "有参考不在纸上"
       },
+      "outsideInfeasible": {
+        "title": "无法从外侧包住"
+      },
       "pickAgain": {
         "text": "该位置不在移动一侧的某一层内。请在层内选择，避开它的折痕。",
         "title": "请重新选择"
@@ -429,9 +457,20 @@
         "text": "展开它会移动比折叠时更多的层。",
         "title": "无法展开此预折痕"
       },
+      "reverseNoOpening": {
+        "bodiesCross": "沿折痕分开后，两半各自所连的纸会相互交叉。",
+        "noBody": "沿折痕分开后，其中一半不会连在线上任何保持不动的纸上。",
+        "noSpine": "单独一层没有可供翻折的折边。请翻折由折痕相连的多层翼片。",
+        "noSplit": "这些层无法沿折痕分开，否则下层会跑到上层上面。",
+        "title": "这个翼片无法张开"
+      },
       "sliver": {
         "text": "移动层上的一个点会落在另一层边缘内侧极近的位置。",
         "title": "一个点落在边缘内侧"
+      },
+      "tipNotFree": {
+        "text": "尖端要翻转的地方有其他层。请把它们的翼片加入折叠，或在别处翻折。",
+        "title": "有层挡住了"
       },
       "tooSmall": {
         "text": "这次折叠会留下比纸本身还细的折痕或纸条。",
@@ -449,6 +488,21 @@
         "text": "展开要沿着折起的边，重新折叠要沿着平的折痕。",
         "title": "折痕类型不对"
       }
+    },
+    "reverse": {
+      "bothFit": "两种都可以：请选择尖端的朝向。",
+      "doesNotFit": "此处不适用",
+      "inside": "向内",
+      "kind": "类型",
+      "next": "下一个",
+      "ofCount": "{{index}} / {{total}}",
+      "onlyInside": "此处只适合内翻折。",
+      "onlyOutside": "此处只适合外翻折。",
+      "opening": "张开方式",
+      "order": "层序",
+      "outside": "向外",
+      "previous": "上一个",
+      "tipSide": "尖端一侧"
     },
     "scopeLabel": "折叠",
     "section": {
@@ -482,6 +536,7 @@
       "freeStart": "单击折线开始的位置。",
       "landOnLine": "单击它要落到的边或折痕。",
       "perpendicularTo": "单击折线要垂直于的边或折痕。",
+      "pickFlapsToReverse": "选择要翻折的翼片。",
       "pickLayers": "选择要移动的层。",
       "pointToMove": "单击要移动的点。"
     },

@@ -282,7 +282,9 @@
   "fold": {
     "categoryLabel": "Espaço de dobra",
     "chooser": {
-      "note": "Este axioma dá mais de uma dobra aqui. Percorra-as ou pressione Shift+← / Shift+→."
+      "note": "Este axioma dá mais de uma dobra aqui. Percorra-as ou pressione Shift+← / Shift+→.",
+      "openingNote": "A aba se abre de mais de um jeito: as camadas destacadas ficam juntas. Percorra-os ou pressione Shift+← / Shift+→.",
+      "orderNote": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os ou pressione Shift+← / Shift+→."
     },
     "divide": {
       "clear_one": "Apagar a marca feita aqui",
@@ -301,10 +303,14 @@
       "includeFlaps_one": "Incluir {{count}} aba",
       "includeFlaps_many": "Incluir as {{count}} abas",
       "includeFlaps_other": "Incluir as {{count}} abas",
+      "insideInstead": "Dobra invertida interna em vez disso",
       "mountainInstead": "Dobra montanha em vez disso",
+      "outsideInstead": "Dobra invertida externa em vez disso",
       "pickFlap": "Dobrar só a aba {{number}}",
       "precreaseOtherWay": "Pré-vincar no outro sentido",
+      "reverseFlap": "Inverter só a aba {{number}}",
       "slideToEdge": "Deslizar a linha até o ponto ficar na borda",
+      "swapInstead": "Trocar o lado que se move",
       "turnToEdge": "Girar a linha até o ponto ficar na borda",
       "useLine": "Usar a linha de referência",
       "valleyInstead": "Dobra vale em vez disso"
@@ -371,6 +377,7 @@
       "divide": "Contam as bordas, as bordas dobradas e os pré-vincos.",
       "free": "Sem ajuste: a linha passa exatamente pelos pontos em que você clica.",
       "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar, sem ajuste.",
+      "queued": "Dobrando assim que a prévia estiver pronta…",
       "snap": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos, pontos médios e bordas."
     },
     "op": {
@@ -398,6 +405,18 @@
       "newer": "Esta sequência é de uma versão mais nova do Ori Studio, então abre somente para leitura."
     },
     "refusal": {
+      "choiceBroken": {
+        "text": "A abertura ou a ordem das camadas que este passo guardou não se encaixa mais no papel anterior, então ele não pode ser dobrado como está guardado.",
+        "title": "Uma escolha não se encaixa mais"
+      },
+      "chooseOpening": {
+        "text": "A aba se abre de mais de um jeito. Escolha um para dobrar.",
+        "title": "Escolha como ela se abre"
+      },
+      "chooseOrder": {
+        "text": "A dobra pode ficar com as camadas empilhadas de mais de um jeito. Escolha um para dobrar.",
+        "title": "Escolha como as camadas se empilham"
+      },
       "closureAddsFlaps": {
         "textMany_one": "Dobrar estas camadas também move mais {{count}} aba.",
         "textMany_many": "Dobrar estas camadas também move mais {{count}} abas.",
@@ -413,9 +432,15 @@
         "text": "Nenhuma camada foi escolhida. Escolha pelo menos uma aba para mover.",
         "title": "Nada para dobrar"
       },
+      "insideInfeasible": {
+        "title": "Não dá para ir para dentro"
+      },
       "invalid": {
         "text": "Não resultaria em um modelo plano válido.",
         "title": "Esta dobra não pode ser feita"
+      },
+      "kindInfeasible": {
+        "text": "Nenhum jeito de empilhar as camadas deixa a ponta virar para este lado aqui. O outro tipo de dobra invertida talvez se encaixe."
       },
       "moverStays": {
         "text": "A camada que leva o ponto a mover não está entre as camadas que dobram. Inclua a aba dela ou dobre todas as camadas.",
@@ -445,6 +470,9 @@
         "text": "Um ponto ou uma borda usado para posicionar a linha não está sobre o papel como ele está dobrado agora. Posicione a linha de novo.",
         "title": "Uma referência não está sobre o papel"
       },
+      "outsideInfeasible": {
+        "title": "Não dá para envolver por fora"
+      },
       "pickAgain": {
         "text": "Esse lugar não está dentro de uma camada do lado que se move. Escolha dentro de uma camada, longe dos vincos.",
         "title": "Escolha de novo"
@@ -457,9 +485,20 @@
         "text": "Desdobrá-lo moveria mais camadas do que dobrá-lo moveu.",
         "title": "Este pré-vinco não pode ser desdobrado"
       },
+      "reverseNoOpening": {
+        "bodiesCross": "Se a aba for separada ao longo das dobras, o papel em que cada metade se apoia cruzaria o da outra.",
+        "noBody": "Se a aba for separada ao longo das dobras, uma metade não se apoiaria em nada que fique parado na linha.",
+        "noSpine": "Uma camada sozinha não tem borda dobrada ao longo da qual se inverter. Inverta uma aba de camadas unidas por uma dobra.",
+        "noSplit": "Suas camadas não podem ser separadas ao longo de uma dobra sem que uma camada de baixo acabe sobre uma de cima.",
+        "title": "Esta aba não pode se abrir"
+      },
       "sliver": {
         "text": "Um ponto das camadas que se movem cairia por um fio dentro da borda de outra camada.",
         "title": "Um ponto cai logo dentro de uma borda"
+      },
+      "tipNotFree": {
+        "text": "Há outras camadas onde a ponta viraria. Inclua as abas delas na dobra ou inverta em outro lugar.",
+        "title": "Há camadas no caminho"
       },
       "tooSmall": {
         "text": "A dobra deixaria um vinco ou uma tira de papel mais fina que o próprio papel.",
@@ -477,6 +516,21 @@
         "text": "Desdobre ao longo de uma borda dobrada e redobre ao longo de um vinco plano.",
         "title": "Não é esse tipo de vinco"
       }
+    },
+    "reverse": {
+      "bothFit": "Os dois tipos cabem aqui: escolha para onde vai a ponta.",
+      "doesNotFit": "Não cabe aqui",
+      "inside": "Interna",
+      "kind": "Tipo",
+      "next": "Próximo",
+      "ofCount": "{{index}} de {{total}}",
+      "onlyInside": "Aqui só cabe a dobra invertida interna.",
+      "onlyOutside": "Aqui só cabe a dobra invertida externa.",
+      "opening": "Abertura",
+      "order": "Ordem das camadas",
+      "outside": "Externa",
+      "previous": "Anterior",
+      "tipSide": "Lado da ponta"
     },
     "scopeLabel": "dobra",
     "section": {
@@ -510,6 +564,7 @@
       "freeStart": "Clique onde a linha de dobra começa.",
       "landOnLine": "Clique na borda ou vinco onde ele deve cair.",
       "perpendicularTo": "Clique na borda ou vinco ao qual a dobra é perpendicular.",
+      "pickFlapsToReverse": "Escolha quais abas se invertem.",
       "pickLayers": "Escolha quais camadas se movem.",
       "pointToMove": "Clique no ponto a mover."
     },

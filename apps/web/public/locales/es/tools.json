@@ -282,7 +282,9 @@
   "fold": {
     "categoryLabel": "Espacio de plegado",
     "chooser": {
-      "note": "Este axioma da más de un pliegue aquí. Recórrelos o pulsa Mayús+← / Mayús+→."
+      "note": "Este axioma da más de un pliegue aquí. Recórrelos o pulsa Mayús+← / Mayús+→.",
+      "openingNote": "La solapa se abre de más de una manera: las capas resaltadas quedan juntas. Recórrelas o pulsa Mayús+← / Mayús+→.",
+      "orderNote": "Las capas pueden quedar apiladas de más de una manera. Recórrelas o pulsa Mayús+← / Mayús+→."
     },
     "divide": {
       "clear_one": "Borrar la marca hecha aquí",
@@ -301,10 +303,14 @@
       "includeFlaps_one": "Incluir {{count}} solapa",
       "includeFlaps_many": "Incluir las {{count}} solapas",
       "includeFlaps_other": "Incluir las {{count}} solapas",
+      "insideInstead": "Mejor un pliegue invertido interior",
       "mountainInstead": "Mejor un pliegue de monte",
+      "outsideInstead": "Mejor un pliegue invertido exterior",
       "pickFlap": "Plegar solo la solapa {{number}}",
       "precreaseOtherWay": "Premarcar en el otro sentido",
+      "reverseFlap": "Invertir solo la solapa {{number}}",
       "slideToEdge": "Deslizar la línea hasta que el punto quede en el borde",
+      "swapInstead": "Cambiar el lado que se mueve",
       "turnToEdge": "Girar la línea hasta que el punto quede en el borde",
       "useLine": "Usar la línea de referencia",
       "valleyInstead": "Mejor un pliegue de valle"
@@ -371,6 +377,7 @@
       "divide": "Cuentan los bordes, los bordes plegados y los premarcados.",
       "free": "Sin ajuste: la línea pasa exactamente por los puntos donde haces clic.",
       "freePoint": "Mantén {{modifier}} para colocar un punto en cualquier lugar, sin ajuste.",
+      "queued": "Se plegará en cuanto la vista previa esté lista…",
       "snap": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues, puntos medios y bordes."
     },
     "op": {
@@ -398,6 +405,18 @@
       "newer": "Esta secuencia es de una versión más reciente de Ori Studio, así que se abre en modo de solo lectura."
     },
     "refusal": {
+      "choiceBroken": {
+        "text": "La abertura o el orden de capas que guardó este paso ya no encaja con el papel anterior, así que no se puede plegar tal como está guardado.",
+        "title": "Una elección ya no encaja"
+      },
+      "chooseOpening": {
+        "text": "La solapa se abre de más de una manera. Elige una para plegar.",
+        "title": "Elige cómo se abre"
+      },
+      "chooseOrder": {
+        "text": "El pliegue puede quedar con sus capas apiladas de más de una manera. Elige una para plegar.",
+        "title": "Elige cómo se apilan las capas"
+      },
       "closureAddsFlaps": {
         "textMany_one": "Plegar estas capas mueve también {{count}} solapa más.",
         "textMany_many": "Plegar estas capas mueve también {{count}} solapas más.",
@@ -413,9 +432,15 @@
         "text": "No hay ninguna capa elegida. Elige al menos una solapa para mover.",
         "title": "Nada que plegar"
       },
+      "insideInfeasible": {
+        "title": "No puede ir hacia dentro"
+      },
       "invalid": {
         "text": "No daría un modelo plano válido.",
         "title": "Este pliegue no se puede hacer"
+      },
+      "kindInfeasible": {
+        "text": "Ninguna forma de apilar las capas deja que la punta gire hacia este lado aquí. Puede que el otro tipo de pliegue invertido encaje."
       },
       "moverStays": {
         "text": "La capa que lleva el punto que hay que mover no está entre las capas que se pliegan. Incluye su solapa o pliega todas las capas.",
@@ -445,6 +470,9 @@
         "text": "Un punto o un borde a partir del cual se situó la línea no está sobre el papel tal como está plegado ahora. Vuelve a situar la línea.",
         "title": "Una referencia no está sobre el papel"
       },
+      "outsideInfeasible": {
+        "title": "No puede envolver por fuera"
+      },
       "pickAgain": {
         "text": "Ese lugar no está dentro de una capa del lado que se mueve. Elige dentro de una capa, lejos de sus pliegues.",
         "title": "Vuelve a elegir"
@@ -457,9 +485,20 @@
         "text": "Desplegarlo movería más capas que las que movió al plegarlo.",
         "title": "Este premarcado no se puede desplegar"
       },
+      "reverseNoOpening": {
+        "bodiesCross": "Si se separa por sus pliegues, el papel del que cuelga cada mitad cruzaría el de la otra.",
+        "noBody": "Si se separa por sus pliegues, una mitad no colgaría de nada que se quede quieto en la línea.",
+        "noSpine": "Una sola capa no tiene un borde plegado por el que invertirse. Invierte una solapa de capas unidas por un pliegue.",
+        "noSplit": "Sus capas no se pueden separar por un pliegue sin que una capa de abajo acabe sobre una de arriba.",
+        "title": "Esta solapa no se puede abrir"
+      },
       "sliver": {
         "text": "Un punto de las capas que se mueven quedaría a un pelo por dentro del borde de otra capa.",
         "title": "Un punto cae justo dentro de un borde"
+      },
+      "tipNotFree": {
+        "text": "Hay otras capas donde giraría la punta. Incluye sus solapas en el pliegue o invierte en otro sitio.",
+        "title": "Hay capas en medio"
       },
       "tooSmall": {
         "text": "El pliegue dejaría un pliegue o una tira de papel más fina que el propio papel.",
@@ -477,6 +516,21 @@
         "text": "Despliega a lo largo de un borde plegado y vuelve a plegar a lo largo de un pliegue plano.",
         "title": "No es ese tipo de pliegue"
       }
+    },
+    "reverse": {
+      "bothFit": "Aquí caben los dos tipos: elige hacia dónde va la punta.",
+      "doesNotFit": "No cabe aquí",
+      "inside": "Interior",
+      "kind": "Tipo",
+      "next": "Siguiente",
+      "ofCount": "{{index}} de {{total}}",
+      "onlyInside": "Aquí solo cabe el pliegue invertido interior.",
+      "onlyOutside": "Aquí solo cabe el pliegue invertido exterior.",
+      "opening": "Abertura",
+      "order": "Orden de las capas",
+      "outside": "Exterior",
+      "previous": "Anterior",
+      "tipSide": "Lado de la punta"
     },
     "scopeLabel": "plegado",
     "section": {
@@ -510,6 +564,7 @@
       "freeStart": "Haz clic donde empieza la línea de pliegue.",
       "landOnLine": "Haz clic en el borde o pliegue sobre el que debe caer.",
       "perpendicularTo": "Haz clic en el borde o pliegue al que el pliegue es perpendicular.",
+      "pickFlapsToReverse": "Elige qué solapas se invierten.",
       "pickLayers": "Elige qué capas se mueven.",
       "pointToMove": "Haz clic en el punto que se mueve."
     },

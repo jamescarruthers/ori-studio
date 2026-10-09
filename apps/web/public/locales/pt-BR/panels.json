@@ -1617,6 +1617,89 @@
     },
     "sentence": {
       "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
+      "insideReverse": {
+        "crease": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna pelo vinco existente.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna pelo vinco existente.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna pelo vinco existente.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna pelo vinco existente.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna pelo vinco existente.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna pelo vinco existente.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna pelo vinco existente."
+        },
+        "free": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna pela linha marcada.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna pela linha marcada.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna pela linha marcada.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna pela linha marcada.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna pela linha marcada.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna pela linha marcada.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna pela linha marcada."
+        },
+        "o1": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna pela linha que liga {{a}} e {{b}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna pela linha que liga {{a}} e {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna pela linha que liga {{a}} e {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna pela linha que liga {{a}} e {{b}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna pela linha que liga {{a}} e {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna pela linha que liga {{a}} e {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna pela linha que liga {{a}} e {{b}}."
+        },
+        "o2": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, levando {{a}} sobre {{b}}."
+        },
+        "o3": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, levando {{a}} sobre {{b}}."
+        },
+        "o4": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha."
+        },
+        "o5": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, com {{a}} como pivô, levando {{b}} sobre {{c}}."
+        },
+        "o6": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}."
+        },
+        "o7": {
+          "all": "Dobre todas as camadas com uma dobra invertida interna de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida interna de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida interna de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida interna de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida interna de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}."
+        }
+      },
       "mountain": {
         "crease": {
           "all": "Dobre todas as camadas em monte pelo vinco existente.",
@@ -1817,6 +1900,89 @@
           "flaps_one": "Dobre só a aba indicada em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
           "flaps_many": "Dobre só as {{count}} abas indicadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre.",
           "flaps_other": "Dobre só as {{count}} abas indicadas em monte de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e desdobre."
+        }
+      },
+      "outsideReverse": {
+        "crease": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa pelo vinco existente.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa pelo vinco existente.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa pelo vinco existente.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa pelo vinco existente.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa pelo vinco existente.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa pelo vinco existente.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa pelo vinco existente."
+        },
+        "free": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa pela linha marcada.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa pela linha marcada.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa pela linha marcada.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa pela linha marcada.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa pela linha marcada.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa pela linha marcada.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa pela linha marcada."
+        },
+        "o1": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa pela linha que liga {{a}} e {{b}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa pela linha que liga {{a}} e {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa pela linha que liga {{a}} e {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa pela linha que liga {{a}} e {{b}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa pela linha que liga {{a}} e {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa pela linha que liga {{a}} e {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa pela linha que liga {{a}} e {{b}}."
+        },
+        "o2": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, levando {{a}} sobre {{b}}."
+        },
+        "o3": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, levando {{a}} sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, levando {{a}} sobre {{b}}."
+        },
+        "o4": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha."
+        },
+        "o5": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, com {{a}} como pivô, levando {{b}} sobre {{c}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, com {{a}} como pivô, levando {{b}} sobre {{c}}."
+        },
+        "o6": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa, levando {{a}} sobre {{b}} e {{c}} sobre {{d}}."
+        },
+        "o7": {
+          "all": "Dobre todas as camadas com uma dobra invertida externa de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_one": "Dobre só a camada de cima com uma dobra invertida externa de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_many": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "depth_other": "Dobre só as {{count}} camadas de cima com uma dobra invertida externa de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_one": "Dobre só a aba indicada com uma dobra invertida externa de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_many": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}.",
+          "flaps_other": "Dobre só as {{count}} abas indicadas com uma dobra invertida externa de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}."
         }
       },
       "turn": "{{turn}}.",
@@ -2072,23 +2238,30 @@
       "tagNext": "Próximo"
     },
     "step": {
+      "blocks": "Blocos",
+      "blocksHelp": "Pilhas de papel que giram juntas: a parte de baixo e a de cima de cada abertura, e cada aba que se move inteira.",
       "branchSheet": "Você está na folha plana: dobrar aqui começa um novo ramo.",
       "branchStep": "Você está no passo {{at}} de {{total}}: dobrar aqui começa um novo ramo.",
       "broken": "Este passo não dobra mais: aquilo de que ele foi feito não está mais no papel antes dele. Ele e os passos seguintes só podem ser excluídos.",
       "brokenAbove": "Um passo anterior não dobra mais, por isso este não pode ser mostrado.",
       "changed": "Este passo dobra de outro jeito nesta versão do Ori Studio do que quando foi salvo.",
       "changes": "Alterações",
+      "chosen": "Escolha entre várias",
       "creases": "Vincos",
       "creasesBackUp": "Vistos pela frente do papel, que começa virada para baixo: podem aparecer ao contrário das dobras que você vê.",
       "creasesFront": "Vistos pela frente do papel.",
       "flat": "Planos",
       "flatHelp": "Dobrados uma vez e desdobrados: agora estão planos e lembram para que lado foram dobrados.",
       "imported": "Padrão de vincos importado: este passo substitui o estado dobrado pelo do padrão.",
+      "layerOrder": "Ordem das camadas",
       "layers": "Camadas",
       "layersHelp": "A pilha mais espessa ao longo da linha de dobra. Camadas que ficam planas dos dois lados de uma pré-dobra contam como uma.",
       "line": "Linha",
       "locked": "Este passo foi criado com uma versão mais recente do Ori Studio. Aqui você pode excluí-lo, e ele é salvo exatamente como veio.",
       "mountain": "Monte",
+      "onlyOne": "A única possível",
+      "opening": "Abertura",
+      "openingHelp": "Onde a aba se separa para deixar a ponta passar: as camadas que ficam embaixo e as de cima.",
       "operation": "Operação",
       "pending": "Dobra pendente",
       "pendingRefused": "Resolva o problema na janela da ferramenta para ver os vincos que ela cria.",
@@ -2112,13 +2285,16 @@
       "addsPrecreases_other": "Adiciona {{count}} pré-dobras",
       "axiomLine": "Axioma {{axiom}} · {{phrase}}",
       "badgeImported": "Importado",
+      "badgeInsideReverse": "Invertida interna",
       "badgeMountain": "Monte",
       "badgeNewer": "Mais recente",
+      "badgeOutsideReverse": "Invertida externa",
       "badgePrecrease": "Pré-dobra",
       "badgeValley": "Vale",
       "cpJump": "Importar padrão de vincos",
       "existingCrease": "Vinco existente",
       "freeLine": "Linha livre",
+      "insideReverse": "Dobra invertida interna",
       "mountainFold": "Dobra monte",
       "mountainPrecrease": "Dobra monte e desdobra",
       "noChange": "Não altera nenhum vinco",
@@ -2128,6 +2304,7 @@
       "originOrh": "Arquivo ORH",
       "originOri": "Arquivo ORI",
       "originSample": "Exemplo",
+      "outsideReverse": "Dobra invertida externa",
       "refolds_one": "Redobra {{count}} pré-dobra",
       "refolds_many": "Redobra {{count}} pré-dobras",
       "refolds_other": "Redobra {{count}} pré-dobras",
