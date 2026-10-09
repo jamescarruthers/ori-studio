@@ -104,6 +104,19 @@
     "saveAs": "Salvar como...",
     "settings": "Configurações"
   },
+  "fold": {
+    "exportFold": "Exportar FOLD...",
+    "exportStep": "Exportar passo...",
+    "exportSteps": "Exportar passos...",
+    "importCp": "Importar CP...",
+    "importSample": "Importar exemplo",
+    "samplePleatInEighths": "Pregas em oitavos",
+    "samplePreliminaryBase": "Base quadrada",
+    "sampleWaterbombBase": "Base da bomba d’água",
+    "sendToEdit": "Enviar para Edição",
+    "sendToEditPrecreasesAsAux": "Enviar para Edição (pré-dobras como linhas auxiliares)",
+    "startFromEditFigure": "Começar pelo modelo dobrado da Edição"
+  },
   "help": {
     "about": "Sobre o Ori Studio",
     "checkForUpdates": "Verificar atualizações…"
@@ -117,7 +130,8 @@
     "design": "Design",
     "edit": "Editar",
     "file": "Arquivo",
-    "help": "Ajuda",
+    "fold": "Dobrar",
+    "help":"Ajuda",
     "insert": "Inserir",
     "view": "Exibir"
   },

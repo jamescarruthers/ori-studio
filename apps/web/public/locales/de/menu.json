@@ -104,6 +104,19 @@
     "saveAs": "Speichern unter...",
     "settings": "Einstellungen"
   },
+  "fold": {
+    "exportFold": "FOLD exportieren...",
+    "exportStep": "Schritt exportieren...",
+    "exportSteps": "Schritte exportieren...",
+    "importCp": "CP importieren...",
+    "importSample": "Beispiel importieren",
+    "samplePleatInEighths": "Plissee in Achteln",
+    "samplePreliminaryBase": "Quadratische Grundform",
+    "sampleWaterbombBase": "Wasserbomben-Grundform",
+    "sendToEdit": "An Bearbeiten senden",
+    "sendToEditPrecreasesAsAux": "An Bearbeiten senden (Vorfalten als Hilfslinien)",
+    "startFromEditFigure": "Vom gefalteten Modell in Bearbeiten ausgehen"
+  },
   "help": {
     "about": "Über Ori Studio",
     "checkForUpdates": "Nach Updates suchen…"
@@ -117,7 +130,8 @@
     "design": "Design",
     "edit": "Bearbeiten",
     "file": "Datei",
-    "help": "Hilfe",
+    "fold": "Falten",
+    "help":"Hilfe",
     "insert": "Einfügen",
     "view": "Ansicht"
   },

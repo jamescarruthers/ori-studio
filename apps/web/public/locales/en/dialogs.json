@@ -309,6 +309,132 @@
     "vertexUnassignedCrease": "A crease at one vertex has no fold assigned, so the vertex cannot be folded.",
     "vertexUnsplitJunction": "Creases meet at a point that is not a vertex, so the vertex cannot be folded."
   },
+  "foldExport": {
+    "title": "Export Fold Sequence"
+  },
+  "foldImport": {
+    "back": "Back",
+    "browse": "or click to browse",
+    "creases_one": "{{count}} crease",
+    "creases_other": "{{count}} creases",
+    "drop": "Drop a .cp, .fold, .ori or .orh file",
+    "editFigure": "Edit’s folded figure",
+    "editFigureNote": "The crease pattern Edit folded, with the layer order it found",
+    "fix": {
+      "searchLonger": "Search longer"
+    },
+    "fromEdit": "From Edit",
+    "import": "Import",
+    "orders": {
+      "atLeast_one": "At least {{count}} layer order fits these creases. Choose one.",
+      "atLeast_other": "At least {{count}} layer orders fit these creases. Choose one.",
+      "count_one": "{{count}} layer order fits these creases.",
+      "count_other": "{{count}} layer orders fit these creases. Choose one.",
+      "label": "Layer order",
+      "more": "More orders fit this part than are listed here; these are the first the search found.",
+      "order": "Order {{number}}",
+      "part": "Part {{number}}"
+    },
+    "pickTitle": "Import Crease Pattern",
+    "placement": {
+      "afterSheet": "Adds a step after the flat sheet, its folded state computed from the creases.",
+      "afterStep": "Adds a step after step {{number}}, its folded state computed from the creases.",
+      "branch": "It starts a new branch.",
+      "empty": "Starts the sequence on the crease pattern’s sheet, folded along its creases. Use it when a state can’t be reached one fold at a time.",
+      "why": "Use it when the next state can’t be reached one fold at a time."
+    },
+    "refusal": {
+      "budget": {
+        "text": "Finding how the layers stack took longer than an import is given. Search longer, or import a simpler pattern.",
+        "title": "The search ran long"
+      },
+      "changed": {
+        "text": "The steps changed while the pattern was being imported. Import it again.",
+        "title": "The sequence changed"
+      },
+      "creases": {
+        "text": "A crease leaves the paper, lies on another of a different kind, or stops where nothing meets it. Every crease must run from an edge or a crease to an edge or a crease.",
+        "title": "Creases Fold cannot follow"
+      },
+      "failed": {
+        "text": "This crease pattern could not be imported.",
+        "title": "Could not import"
+      },
+      "figureIncomplete": {
+        "text": "Edit’s folded figure does not say how every layer lies. Fold it again in Edit, then start from it.",
+        "title": "The folded figure is incomplete"
+      },
+      "foldedForm": {
+        "text": "This FOLD file describes paper already folded. Import the flat crease pattern instead.",
+        "title": "A folded form, not a crease pattern"
+      },
+      "noFigure": {
+        "text": "Fold the crease pattern flat in Edit first, then start from its folded figure.",
+        "title": "No folded figure in Edit"
+      },
+      "nonConvex": {
+        "text": "One of the pattern’s faces bends inward at a corner. Fold folds faces that are convex.",
+        "title": "A face with a reflex corner"
+      },
+      "noOrder": {
+        "text": "The layers cannot be stacked without passing through each other, given the pattern’s mountains and valleys.",
+        "title": "No layer order fits"
+      },
+      "noState": {
+        "text": "The step on screen has no folded state, so nothing can be added after it. Go to a step that folds.",
+        "title": "This step does not fold"
+      },
+      "notFlat": {
+        "text": "Folded along its mountains and valleys, the pattern does not lie flat.",
+        "title": "Does not fold flat"
+      },
+      "orderOpen": {
+        "text": "Edit’s folded figure leaves the layer order open. Fold it to one solution in Edit, then start from it again.",
+        "title": "More than one layer order"
+      },
+      "outline": {
+        "text": "The pattern’s border is not one closed outline around the paper, so there is no sheet to fold.",
+        "title": "No sheet found"
+      },
+      "readOnly": {
+        "text": "Made with a newer Ori Studio: this sequence opens read-only.",
+        "title": "Read-only sequence"
+      },
+      "shapeMismatch": {
+        "text": "The pattern’s sheet is not the shape of this sequence’s. Import it into an empty sequence instead.",
+        "textRatios": "This sequence folds a {{expected}} sheet, and the pattern is on a {{found}} sheet. Import it into an empty sequence instead.",
+        "title": "A different sheet"
+      },
+      "shapeUnsupported": {
+        "text": "Fold imports crease patterns on a square or rectangle sheet. This one’s sheet is another shape.",
+        "title": "Square and rectangle sheets only"
+      },
+      "unreadable": {
+        "text": "The file could not be read as a {{extension}} crease pattern.",
+        "title": "Not a crease pattern"
+      },
+      "unreadableFile": {
+        "text": "{{name}} could not be read.",
+        "title": "Could not read the file"
+      },
+      "unsupportedFile": {
+        "text": "{{name}} is not a crease pattern Fold can import. Use a .cp, .fold, .ori or .orh file.",
+        "title": "Not a crease pattern"
+      }
+    },
+    "sample": {
+      "pleatInEighths": "Pleat in eighths",
+      "preliminaryBase": "Square base",
+      "waterbombBase": "Waterbomb base"
+    },
+    "samples": "Samples",
+    "title": "Import crease pattern",
+    "working": {
+      "figure": "Importing Edit’s folded figure…",
+      "file": "Importing {{name}}…",
+      "sample": "Importing the sample…"
+    }
+  },
   "foldWarning": {
     "dontShowAgain": "Don't show this again",
     "message": "Detected errors in flat foldability. Continue to fold?",

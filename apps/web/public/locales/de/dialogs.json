@@ -309,6 +309,132 @@
     "vertexUnassignedCrease": "Eine Falte an einem Knotenpunkt hat keine Faltung zugewiesen, daher lässt sich dieser Knotenpunkt nicht falten.",
     "vertexUnsplitJunction": "Falten treffen sich an einem Punkt, der kein Knotenpunkt ist, daher lässt sich dieser Knotenpunkt nicht falten."
   },
+  "foldExport": {
+    "title": "Faltfolge exportieren"
+  },
+  "foldImport": {
+    "back": "Zurück",
+    "browse": "oder zum Durchsuchen klicken",
+    "creases_one": "{{count}} Falte",
+    "creases_other": "{{count}} Falten",
+    "drop": "Eine .cp-, .fold-, .ori- oder .orh-Datei hier ablegen",
+    "editFigure": "Gefaltetes Modell aus Bearbeiten",
+    "editFigureNote": "Das Faltmuster, das Bearbeiten gefaltet hat, mit der gefundenen Lagenfolge",
+    "fix": {
+      "searchLonger": "Länger suchen"
+    },
+    "fromEdit": "Aus Bearbeiten",
+    "import": "Importieren",
+    "orders": {
+      "atLeast_one": "Mindestens {{count}} Lagenfolge passt zu diesen Falten. Wähle eine.",
+      "atLeast_other": "Mindestens {{count}} Lagenfolgen passen zu diesen Falten. Wähle eine.",
+      "count_one": "{{count}} Lagenfolge passt zu diesen Falten.",
+      "count_other": "{{count}} Lagenfolgen passen zu diesen Falten. Wähle eine.",
+      "label": "Lagenfolge",
+      "more": "Zu diesem Teil passen mehr Folgen, als hier aufgeführt sind; das sind die ersten, die die Suche gefunden hat.",
+      "order": "Folge {{number}}",
+      "part": "Teil {{number}}"
+    },
+    "pickTitle": "Faltmuster importieren",
+    "placement": {
+      "afterSheet": "Fügt nach dem flachen Blatt einen Schritt hinzu; sein gefalteter Zustand wird aus den Falten berechnet.",
+      "afterStep": "Fügt nach Schritt {{number}} einen Schritt hinzu; sein gefalteter Zustand wird aus den Falten berechnet.",
+      "branch": "Er beginnt einen neuen Zweig.",
+      "empty": "Beginnt die Folge auf dem Blatt des Faltmusters, entlang seiner Falten gefaltet. Nutze es, wenn sich ein Zustand nicht Faltung für Faltung erreichen lässt.",
+      "why": "Nutze es, wenn sich der nächste Zustand nicht Faltung für Faltung erreichen lässt."
+    },
+    "refusal": {
+      "budget": {
+        "text": "Herauszufinden, wie die Lagen übereinanderliegen, dauerte länger, als ein Import Zeit hat. Suche länger oder importiere ein einfacheres Muster.",
+        "title": "Die Suche dauerte zu lange"
+      },
+      "changed": {
+        "text": "Die Schritte haben sich während des Imports geändert. Importiere das Muster erneut.",
+        "title": "Die Folge hat sich geändert"
+      },
+      "creases": {
+        "text": "Eine Falte verlässt das Papier, liegt auf einer Falte anderer Art oder endet dort, wo nichts auf sie trifft. Jede Falte muss von einer Kante oder Falte zu einer Kante oder Falte verlaufen.",
+        "title": "Falten, die sich so nicht falten lassen"
+      },
+      "failed": {
+        "text": "Dieses Faltmuster konnte nicht importiert werden.",
+        "title": "Import nicht möglich"
+      },
+      "figureIncomplete": {
+        "text": "Das gefaltete Modell aus Bearbeiten sagt nicht, wie jede Lage liegt. Falte es in Bearbeiten erneut und gehe dann davon aus.",
+        "title": "Das gefaltete Modell ist unvollständig"
+      },
+      "foldedForm": {
+        "text": "Diese FOLD-Datei beschreibt bereits gefaltetes Papier. Importiere stattdessen das flache Faltmuster.",
+        "title": "Eine gefaltete Form, kein Faltmuster"
+      },
+      "noFigure": {
+        "text": "Falte das Faltmuster zuerst in Bearbeiten flach und gehe dann von seinem gefalteten Modell aus.",
+        "title": "Kein gefaltetes Modell in Bearbeiten"
+      },
+      "nonConvex": {
+        "text": "Eine Fläche des Musters knickt an einer Ecke nach innen ein. Gefaltet werden nur konvexe Flächen.",
+        "title": "Eine Fläche mit einspringender Ecke"
+      },
+      "noOrder": {
+        "text": "Bei den Berg- und Talfalten des Musters lassen sich die Lagen nicht stapeln, ohne einander zu durchdringen.",
+        "title": "Keine Lagenfolge passt"
+      },
+      "noState": {
+        "text": "Der angezeigte Schritt hat keinen gefalteten Zustand, daher lässt sich nichts danach hinzufügen. Gehe zu einem Schritt, der sich falten lässt.",
+        "title": "Dieser Schritt lässt sich nicht falten"
+      },
+      "notFlat": {
+        "text": "Entlang seiner Berg- und Talfalten gefaltet, liegt das Muster nicht flach.",
+        "title": "Lässt sich nicht flach falten"
+      },
+      "orderOpen": {
+        "text": "Das gefaltete Modell aus Bearbeiten lässt die Lagenfolge offen. Falte es in Bearbeiten zu einer Lösung und gehe dann erneut davon aus.",
+        "title": "Mehr als eine Lagenfolge"
+      },
+      "outline": {
+        "text": "Der Rand des Musters ist kein geschlossener Umriss um das Papier, also gibt es kein Blatt zum Falten.",
+        "title": "Kein Blatt gefunden"
+      },
+      "readOnly": {
+        "text": "Mit einem neueren Ori Studio erstellt: Diese Folge wird schreibgeschützt geöffnet.",
+        "title": "Schreibgeschützte Folge"
+      },
+      "shapeMismatch": {
+        "text": "Das Blatt des Musters hat nicht die Form des Blatts dieser Folge. Importiere es stattdessen in eine leere Folge.",
+        "textRatios": "Diese Folge faltet ein Blatt im Verhältnis {{expected}}, das Muster liegt auf einem Blatt im Verhältnis {{found}}. Importiere es stattdessen in eine leere Folge.",
+        "title": "Ein anderes Blatt"
+      },
+      "shapeUnsupported": {
+        "text": "Importiert werden Faltmuster auf einem quadratischen oder rechteckigen Blatt. Das Blatt dieses Musters hat eine andere Form.",
+        "title": "Nur quadratische und rechteckige Blätter"
+      },
+      "unreadable": {
+        "text": "Die Datei konnte nicht als {{extension}}-Faltmuster gelesen werden.",
+        "title": "Kein Faltmuster"
+      },
+      "unreadableFile": {
+        "text": "{{name}} konnte nicht gelesen werden.",
+        "title": "Datei konnte nicht gelesen werden"
+      },
+      "unsupportedFile": {
+        "text": "{{name}} ist kein Faltmuster, das sich importieren lässt. Verwende eine .cp-, .fold-, .ori- oder .orh-Datei.",
+        "title": "Kein Faltmuster"
+      }
+    },
+    "sample": {
+      "pleatInEighths": "Plissee in Achteln",
+      "preliminaryBase": "Quadratische Grundform",
+      "waterbombBase": "Wasserbomben-Grundform"
+    },
+    "samples": "Beispiele",
+    "title": "Faltmuster importieren",
+    "working": {
+      "figure": "Gefaltetes Modell aus Bearbeiten wird importiert…",
+      "file": "{{name}} wird importiert…",
+      "sample": "Beispiel wird importiert…"
+    }
+  },
   "foldWarning": {
     "dontShowAgain": "Nicht mehr anzeigen",
     "message": "Fehler bei der Flachfaltbarkeit erkannt. Trotzdem falten?",

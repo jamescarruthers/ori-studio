@@ -72,6 +72,12 @@
     "empty": "此折叠模型暂无可导出的内容",
     "failed": "无法导出此折叠模型"
   },
+  "foldIo": {
+    "noStep": "还没有可导出的步骤。",
+    "pathBroken": "此序列中有步骤已无法折叠，因此无法发送或导出这些步骤。",
+    "tooLarge": "此序列太大，无法导出为单个 FOLD 文件。",
+    "unavailable": "折叠引擎在完成前停止了。请重试。"
+  },
   "global": {
     "error": "Ori Studio 错误",
     "folding": "正在折叠…",

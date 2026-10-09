@@ -104,6 +104,19 @@
     "saveAs": "另存为...",
     "settings": "设置"
   },
+  "fold": {
+    "exportFold": "导出 FOLD...",
+    "exportStep": "导出此步骤...",
+    "exportSteps": "导出步骤...",
+    "importCp": "导入 CP...",
+    "importSample": "导入示例",
+    "samplePleatInEighths": "八等分褶",
+    "samplePreliminaryBase": "正方基本形",
+    "sampleWaterbombBase": "水雷基本形",
+    "sendToEdit": "发送到编辑",
+    "sendToEditPrecreasesAsAux": "发送到编辑（预折作为辅助线）",
+    "startFromEditFigure": "从编辑中的折叠模型开始"
+  },
   "help": {
     "about": "关于 Ori Studio",
     "checkForUpdates": "检查更新…"
@@ -117,7 +130,8 @@
     "design": "设计",
     "edit": "编辑",
     "file": "文件",
-    "help": "帮助",
+    "fold": "折叠",
+    "help":"帮助",
     "insert": "插入",
     "view": "视图"
   },

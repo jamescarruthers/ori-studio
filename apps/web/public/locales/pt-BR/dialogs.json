@@ -317,6 +317,135 @@
     "vertexUnassignedCrease": "Um vinco de um vértice não tem dobra atribuída, então esse vértice não pode ser dobrado.",
     "vertexUnsplitJunction": "Os vincos se encontram num ponto que não é um vértice, então esse vértice não pode ser dobrado."
   },
+  "foldExport": {
+    "title": "Exportar sequência de dobras"
+  },
+  "foldImport": {
+    "back": "Voltar",
+    "browse": "ou clique para procurar",
+    "creases_one": "{{count}} vinco",
+    "creases_many": "{{count}} vincos",
+    "creases_other": "{{count}} vincos",
+    "drop": "Solte um arquivo .cp, .fold, .ori ou .orh",
+    "editFigure": "Modelo dobrado da Edição",
+    "editFigureNote": "O padrão de vincos que a Edição dobrou, com a ordem de camadas que encontrou",
+    "fix": {
+      "searchLonger": "Procurar por mais tempo"
+    },
+    "fromEdit": "Da Edição",
+    "import": "Importar",
+    "orders": {
+      "atLeast_one": "Pelo menos {{count}} ordem de camadas serve para estes vincos. Escolha uma.",
+      "atLeast_many": "Pelo menos {{count}} ordens de camadas servem para estes vincos. Escolha uma.",
+      "atLeast_other": "Pelo menos {{count}} ordens de camadas servem para estes vincos. Escolha uma.",
+      "count_one": "{{count}} ordem de camadas serve para estes vincos.",
+      "count_many": "{{count}} ordens de camadas servem para estes vincos. Escolha uma.",
+      "count_other": "{{count}} ordens de camadas servem para estes vincos. Escolha uma.",
+      "label": "Ordem de camadas",
+      "more": "Mais ordens servem para esta parte do que as listadas aqui; estas são as primeiras que a busca encontrou.",
+      "order": "Ordem {{number}}",
+      "part": "Parte {{number}}"
+    },
+    "pickTitle": "Importar padrão de vincos",
+    "placement": {
+      "afterSheet": "Adiciona um passo depois da folha plana, com o estado dobrado calculado a partir dos vincos.",
+      "afterStep": "Adiciona um passo depois do passo {{number}}, com o estado dobrado calculado a partir dos vincos.",
+      "branch": "Ele começa um novo ramo.",
+      "empty": "Começa a sequência na folha do padrão de vincos, dobrada pelos seus vincos. Use quando um estado não puder ser alcançado uma dobra de cada vez.",
+      "why": "Use quando o próximo estado não puder ser alcançado uma dobra de cada vez."
+    },
+    "refusal": {
+      "budget": {
+        "text": "Descobrir como as camadas se empilham levou mais tempo do que uma importação tem. Procure por mais tempo ou importe um padrão mais simples.",
+        "title": "A busca demorou demais"
+      },
+      "changed": {
+        "text": "Os passos mudaram enquanto o padrão era importado. Importe-o de novo.",
+        "title": "A sequência mudou"
+      },
+      "creases": {
+        "text": "Um vinco sai do papel, fica sobre outro de tipo diferente ou termina onde nada o encontra. Cada vinco deve ir de uma borda ou um vinco a uma borda ou um vinco.",
+        "title": "Vincos que não dá para seguir"
+      },
+      "failed": {
+        "text": "Não foi possível importar este padrão de vincos.",
+        "title": "Não foi possível importar"
+      },
+      "figureIncomplete": {
+        "text": "O modelo dobrado da Edição não diz como fica cada camada. Dobre-o de novo na Edição e depois comece a partir dele.",
+        "title": "O modelo dobrado está incompleto"
+      },
+      "foldedForm": {
+        "text": "Este arquivo FOLD descreve papel já dobrado. Importe o padrão de vincos plano em vez dele.",
+        "title": "Uma forma dobrada, não um padrão de vincos"
+      },
+      "noFigure": {
+        "text": "Dobre primeiro o padrão na Edição até ficar plano e depois comece a partir do modelo dobrado.",
+        "title": "Nenhum modelo dobrado na Edição"
+      },
+      "nonConvex": {
+        "text": "Uma das faces do padrão se dobra para dentro em um canto. Só se dobram faces convexas.",
+        "title": "Uma face com um canto reentrante"
+      },
+      "noOrder": {
+        "text": "Com as dobras montanha e vale do padrão, as camadas não podem ser empilhadas sem se atravessarem.",
+        "title": "Nenhuma ordem de camadas serve"
+      },
+      "noState": {
+        "text": "O passo na tela não tem estado dobrado, então nada pode ser adicionado depois dele. Vá para um passo que dobre.",
+        "title": "Este passo não dobra"
+      },
+      "notFlat": {
+        "text": "Dobrado pelas suas montanhas e vales, o padrão não fica plano.",
+        "title": "Não dobra plano"
+      },
+      "orderOpen": {
+        "text": "O modelo dobrado da Edição deixa a ordem de camadas em aberto. Dobre-o até uma única solução na Edição e comece a partir dele de novo.",
+        "title": "Mais de uma ordem de camadas"
+      },
+      "outline": {
+        "text": "A borda do padrão não é um contorno fechado em volta do papel, então não há folha para dobrar.",
+        "title": "Nenhuma folha encontrada"
+      },
+      "readOnly": {
+        "text": "Criada com uma versão mais recente do Ori Studio: esta sequência abre somente para leitura.",
+        "title": "Sequência somente para leitura"
+      },
+      "shapeMismatch": {
+        "text": "A folha do padrão não tem o formato da folha desta sequência. Importe-o em uma sequência vazia.",
+        "textRatios": "Esta sequência dobra uma folha de {{expected}}, e o padrão está em uma folha de {{found}}. Importe-o em uma sequência vazia.",
+        "title": "Uma folha diferente"
+      },
+      "shapeUnsupported": {
+        "text": "São importados padrões de vincos em folhas quadradas ou retangulares. A folha deste tem outro formato.",
+        "title": "Somente folhas quadradas e retangulares"
+      },
+      "unreadable": {
+        "text": "Não foi possível ler o arquivo como um padrão de vincos {{extension}}.",
+        "title": "Não é um padrão de vincos"
+      },
+      "unreadableFile": {
+        "text": "Não foi possível ler {{name}}.",
+        "title": "Não foi possível ler o arquivo"
+      },
+      "unsupportedFile": {
+        "text": "{{name}} não é um padrão de vincos que possa ser importado. Use um arquivo .cp, .fold, .ori ou .orh.",
+        "title": "Não é um padrão de vincos"
+      }
+    },
+    "sample": {
+      "pleatInEighths": "Pregas em oitavos",
+      "preliminaryBase": "Base quadrada",
+      "waterbombBase": "Base da bomba d’água"
+    },
+    "samples": "Exemplos",
+    "title": "Importar padrão de vincos",
+    "working": {
+      "figure": "Importando o modelo dobrado da Edição…",
+      "file": "Importando {{name}}…",
+      "sample": "Importando o exemplo…"
+    }
+  },
   "foldWarning": {
     "dontShowAgain": "Não mostrar novamente",
     "message": "Foram detectados erros de dobradura plana. Continuar a dobrar?",

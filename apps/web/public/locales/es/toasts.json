@@ -92,6 +92,12 @@
     "empty": "Esta figura plegada aún no tiene nada que exportar",
     "failed": "No se pudo exportar esta figura plegada"
   },
+  "foldIo": {
+    "noStep": "Todavía no hay ningún paso que exportar.",
+    "pathBroken": "Un paso de esta secuencia ya no se puede plegar, así que los pasos no se pueden enviar ni exportar.",
+    "tooLarge": "Esta secuencia es demasiado grande para exportarla como un solo archivo FOLD.",
+    "unavailable": "El motor de plegado se detuvo antes de terminar. Inténtalo de nuevo."
+  },
   "global": {
     "error": "Error de Ori Studio",
     "folding": "Plegando…",

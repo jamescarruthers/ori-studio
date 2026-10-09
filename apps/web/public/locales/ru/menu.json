@@ -104,6 +104,19 @@
     "saveAs": "Сохранить как...",
     "settings": "Настройки"
   },
+  "fold": {
+    "exportFold": "Экспорт FOLD...",
+    "exportStep": "Экспорт шага...",
+    "exportSteps": "Экспорт шагов...",
+    "importCp": "Импорт CP...",
+    "importSample": "Импорт примера",
+    "samplePleatInEighths": "Плиссе на восьмые",
+    "samplePreliminaryBase": "Базовая форма «квадрат»",
+    "sampleWaterbombBase": "Базовая форма «водяная бомбочка»",
+    "sendToEdit": "Отправить в Правку",
+    "sendToEditPrecreasesAsAux": "Отправить в Правку (предварительные складки как вспомогательные линии)",
+    "startFromEditFigure": "Начать со сложенной модели из Правки"
+  },
   "help": {
     "about": "О программе Ori Studio",
     "checkForUpdates": "Проверить обновления…"
@@ -117,7 +130,8 @@
     "design": "Дизайн",
     "edit": "Правка",
     "file": "Файл",
-    "help": "Справка",
+    "fold": "Складка",
+    "help":"Справка",
     "insert": "Вставка",
     "view": "Вид"
   },

@@ -82,6 +82,12 @@
     "empty": "This folded model has nothing to export yet",
     "failed": "Could not export this folded model"
   },
+  "foldIo": {
+    "noStep": "There is no step to export yet.",
+    "pathBroken": "A step of this sequence no longer folds, so the steps cannot be sent or exported.",
+    "tooLarge": "This sequence is too large to export as one FOLD file.",
+    "unavailable": "The fold engine stopped before it finished. Try again."
+  },
   "global": {
     "error": "Ori Studio error",
     "folding": "Folding…",

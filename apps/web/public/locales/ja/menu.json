@@ -104,6 +104,19 @@
     "saveAs": "名前を付けて保存...",
     "settings": "設定"
   },
+  "fold": {
+    "exportFold": "FOLD をエクスポート...",
+    "exportStep": "このステップをエクスポート...",
+    "exportSteps": "ステップをエクスポート...",
+    "importCp": "CP をインポート...",
+    "importSample": "サンプルをインポート",
+    "samplePleatInEighths": "8 等分のプリーツ",
+    "samplePreliminaryBase": "正方基本形",
+    "sampleWaterbombBase": "風船の基本形",
+    "sendToEdit": "編集に送る",
+    "sendToEditPrecreasesAsAux": "編集に送る（下折りを補助線として）",
+    "startFromEditFigure": "編集の折り図から始める"
+  },
   "help": {
     "about": "Ori Studio について",
     "checkForUpdates": "アップデートを確認…"
@@ -117,7 +130,8 @@
     "design": "デザイン",
     "edit": "編集",
     "file": "ファイル",
-    "help": "ヘルプ",
+    "fold": "折り",
+    "help":"ヘルプ",
     "insert": "挿入",
     "view": "表示"
   },
