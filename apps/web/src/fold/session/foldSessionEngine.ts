@@ -50,8 +50,9 @@ export interface FoldSessionEngine {
    * Let the next replay of `step` from `parent` take `landed` rather than ask
    * the engine. `ticket` is the newest replay started when the step was
    * committed: a replay started after it adopts the state, or it is released
-   * when one finishes without ({@link releaseUnadopted}). Returns a withdrawal
-   * that releases it at once, for a commit that did not happen.
+   * when one finishes without ({@link releaseUnadopted}). Its details are
+   * known from now on. Returns a withdrawal that releases it at once, for a
+   * commit that did not happen.
    */
   adopt(parent: FoldEngineStateHandle, step: FoldEngineStepInput, landed: FoldAdoptedState, ticket: number): () => void;
   /** Release the states offered before replay `ticket` started that it did not take. */
@@ -137,6 +138,8 @@ export function createFoldSessionEngine(source: FoldEngineSource, engineVersion:
       const key = adoptionKey(parent, step);
       const replaced = adoptions.get(key);
       adoptions.set(key, { landed, ticket });
+      // Known now, for a step shown at this state before the replay adopts it.
+      details.set(handleKey(landed.state), landed.details);
       if (replaced && replaced.landed.state !== landed.state) release(replaced.landed.state);
       return () => {
         if (adoptions.get(key)?.landed !== landed) return;

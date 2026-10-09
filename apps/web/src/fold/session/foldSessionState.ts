@@ -26,6 +26,7 @@ import {
   type FoldPaper,
   type FoldSequenceDocument,
 } from '../document/foldSequenceDocument';
+import { foldStepTree, pathTo } from '../document/foldStepTree';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type {
   FoldAnalysis,
@@ -298,6 +299,67 @@ export function deriveFoldSessionNodes(
     nodes.set(id, node);
   }
   return { sheet, nodes: unchanged && previous ? previous.nodes : nodes };
+}
+
+/**
+ * A step just committed with the state it landed — a preview's, or an
+ * import's — shown at that state at once rather than pending until the
+ * replay the commit causes reaches it. That replay adopts the same state
+ * (`FoldSessionEngine.adopt`), so it says the same thing when it does.
+ */
+export interface FoldLandedAhead {
+  readonly loadId: number;
+  readonly sequenceId: string;
+  readonly id: string;
+  readonly replay: FoldNodeReplay<FoldEngineStateHandle>;
+}
+
+/** The committed step `id` of `document` at the state it landed; null when the document has no such step. */
+export function foldLandedAhead(
+  document: FoldSequenceDocument,
+  loadId: number,
+  id: string,
+  state: FoldEngineStateHandle,
+  fingerprint: FoldStateFingerprint
+): FoldLandedAhead | null {
+  const path = pathTo(foldStepTree(document.steps), id);
+  if (!path) return null;
+  return {
+    loadId,
+    sequenceId: document.id,
+    id,
+    // Committed at this fingerprint: its `expect`, so `ok`.
+    replay: { status: 'ok', path: foldPathDigest(document.paper, path), state, fingerprint, refusal: null },
+  };
+}
+
+/** Whether `progress` has settled the step `ahead` names: then it speaks for that step itself. */
+export function settlesLandedAhead(
+  progress: FoldReplayProgress<FoldEngineStateHandle>,
+  ahead: FoldLandedAhead
+): boolean {
+  if (progress.loadId !== ahead.loadId || progress.sequenceId !== ahead.sequenceId) return false;
+  const step = progress.steps.get(ahead.id);
+  return step !== undefined && step.status !== 'pending';
+}
+
+/**
+ * `progress` with a step committed ahead of the replay in it, while the
+ * replay has not settled that step and the document is the one it was
+ * committed to. The sheet is the progress's: with none, nothing can be shown
+ * ahead of it.
+ */
+export function withLandedAhead(
+  progress: FoldReplayProgress<FoldEngineStateHandle> | null,
+  ahead: FoldLandedAhead | null,
+  document: FoldSequenceDocument
+): FoldReplayProgress<FoldEngineStateHandle> | null {
+  if (!progress || !ahead || ahead.loadId !== progress.loadId || ahead.sequenceId !== document.id) return progress;
+  if (settlesLandedAhead(progress, ahead)) return progress;
+  // The first commit gives the blank sequence an id: none of the progress's steps are its.
+  const steps = new Map(progress.sequenceId === document.id ? progress.steps : []);
+  steps.set(ahead.id, ahead.replay);
+  return { ...progress, sequenceId: document.id, steps };
 }
 
 /** How far the replay has come, from the nodes as derived. */

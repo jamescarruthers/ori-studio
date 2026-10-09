@@ -43,17 +43,22 @@ import type { HeldFoldSequence } from '../document/foldSequenceFile';
 import type { FoldStepDraft } from '../document/foldSequenceEdits';
 import { foldStateLostError, type FoldEngineSource, type FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldEngineOp, FoldEngineRefused, FoldStateSummary } from '../engine/foldEngineWire';
+import { createFoldSessionAnswers } from './foldSessionAnswers';
 import { createFoldSessionEngine, foldStepInputKey, type FoldSessionEngine } from './foldSessionEngine';
 import {
   deriveFoldSessionNodes,
   FOLD_BLANK_SEQUENCE,
   FOLD_IDLE,
+  foldLandedAhead,
   foldSessionProgress,
   sameFoldState,
   sameIds,
   sameProgress,
   selectFoldCursorNode,
   selectFoldNode,
+  settlesLandedAhead,
+  withLandedAhead,
+  type FoldLandedAhead,
   type FoldPendingAnalysis,
   type FoldPendingStep,
   type FoldSessionSnapshot,
@@ -217,6 +222,15 @@ export interface FoldSession {
   cancel(): void;
   /** Ask the engine about a landed state. */
   withState<T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): Promise<FoldStateQuery<T>>;
+  /**
+   * A pure query on a landed state — one whose answer the state alone
+   * decides: a scene, landmarks, a step's summary or picture. Asked of the
+   * engine once however many surfaces ask it, and the answer kept for the
+   * next ({@link FoldSession.peek}). `call` must be module-level or memoised.
+   */
+  query<T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): Promise<FoldStateQuery<T>>;
+  /** The answer {@link FoldSession.query} already has for `call` on `state`, if any. */
+  peek<T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): { value: T } | null;
   /** Ask the engine about a step's state — the sheet's for null. */
   withNode<T>(id: string | null, call: FoldStateCall<T>): Promise<FoldStateQuery<T>>;
   /** Ask the engine about the state on screen. */
@@ -271,6 +285,13 @@ type FoldAnalysisAnswer = Extract<FoldPendingAnalysis, { status: 'analysed' | 'r
 /** How many analyses the session keeps. */
 const ANALYSES_KEPT = 64;
 
+/**
+ * How many answers of each pure query the session keeps (`query`): the
+ * states a reader steps among, with the one a tool previews. A scene is the
+ * largest, a few hundred kilobytes for a busy model.
+ */
+const ANSWERS_KEPT = 48;
+
 /** The step on screen, as a step folds from it. */
 interface FoldingFrom {
   parent: FoldEngineStateHandle;
@@ -315,7 +336,17 @@ export function createFoldSession({
    * so the newest are kept until the states go.
    */
   const analyses = new Map<string, FoldAnalysisAnswer>();
+  /** The pure queries' answers (`query`), shared by every surface that asks. */
+  const answers = createFoldSessionAnswers<FoldStateCall<unknown>>(ANSWERS_KEPT);
   let committing = false;
+  /** A landed preview a commit took: still on screen until the commit lands it, and never released by a drop. */
+  let taken: FoldEngineStateHandle | null = null;
+  /** The step a commit just appended, shown at the state it landed until the replay settles it. */
+  let ahead: FoldLandedAhead | null = null;
+  /** The newest replay when it was committed: any run started after it has settled the step, or seen it go. */
+  let aheadTicket = Number.POSITIVE_INFINITY;
+  /** A commit is changing the document: publish once it is done, not on each of its changes. */
+  let quiet = false;
   const previewChannel = runtime.createChannel();
   const analysisChannel = runtime.createChannel();
 
@@ -328,7 +359,7 @@ export function createFoldSession({
     const activePath = previous ? sameIds(previous.activePath, path) : path;
     const { sheet, nodes } = deriveFoldSessionNodes(
       document,
-      progress?.loadId === loadId ? progress : null,
+      withLandedAhead(progress?.loadId === loadId ? progress : null, ahead, document),
       (state) => engine?.details(state),
       previous
     );
@@ -352,11 +383,14 @@ export function createFoldSession({
 
   const store = createStore<FoldSessionSnapshot>(() => snapshotOf(null));
 
-  /** Let go of the pending step: its answer, if still coming, lands nothing; a landed state is released. */
+  /**
+   * Let go of the pending step: its answer, if still coming, lands nothing; a
+   * landed state is released, unless a commit has taken it.
+   */
   const dropPending = () => {
     pendingTicket += 1;
     previewChannel.cancel();
-    if (pending.status === 'landed') engine?.release(pending.state);
+    if (pending.status === 'landed' && !sameFoldState(pending.state, taken)) engine?.release(pending.state);
     pending = FOLD_IDLE;
     pendingAnswer = null;
   };
@@ -377,6 +411,7 @@ export function createFoldSession({
    * is replaced or the state is lost, they go.
    */
   const render = () => {
+    if (quiet) return;
     const previous = store.getState();
     let next = snapshotOf(previous);
     const here = selectFoldCursorNode(next).state;
@@ -400,6 +435,8 @@ export function createFoldSession({
     dropPending();
     dropAnalysis();
     analyses.clear();
+    answers.clear();
+    ahead = null;
     runTicket += 1;
     replaying = false;
     progress = null;
@@ -436,6 +473,8 @@ export function createFoldSession({
           replaying = false;
           if (finished) {
             progress = finished;
+            // A run started after the commit settled the step, or the step is gone.
+            if (ticket > aheadTicket || (ahead && settlesLandedAhead(finished, ahead))) ahead = null;
             restarts = 0;
             engine?.releaseUnadopted(ticket);
           }
@@ -730,12 +769,10 @@ export function createFoldSession({
     const shown = pendingNow();
     let landed: { state: FoldEngineStateHandle; details: FoldStateDetails } | null = null;
     if (shown.status === 'landed' && isThis(shown)) {
-      // Taken, not released: the commit hands it to the replay.
+      // Taken, not released: the commit hands it to the replay. It stays on
+      // screen meanwhile, so nothing goes back to the step it folds from.
       landed = { state: shown.state, details: { summary: shown.summary, report: shown.report } };
-      pendingTicket += 1;
-      pending = FOLD_IDLE;
-      pendingAnswer = null;
-      render();
+      taken = shown.state;
     } else if (shown.status === 'refused' && isThis(shown)) {
       return { status: 'refused', refused: shown.refused };
     }
@@ -759,7 +796,7 @@ export function createFoldSession({
       const { state } = landed;
       fingerprint = await runtime.ask((worker) => guarded(state, () => worker.fingerprint(state.id)));
     } catch (failure) {
-      if (landed) engine?.release(landed.state);
+      if (landed) letGo(landed.state);
       const envelope = envelopeOf(failure);
       // A deliberate stop or teardown is no news; a crash under a commit is.
       if (!isEngineLoss(failure) || lastLoss === 'crashed') reportError?.(envelope);
@@ -768,16 +805,69 @@ export function createFoldSession({
 
     // The engine or the document may have moved on while it folded.
     if (!engine || input.loadId !== loadId || landed.state.generation !== runtime.generation()) {
-      engine?.release(landed.state);
+      letGo(landed.state);
       return { status: 'stale' };
     }
     const withdraw = engine.adopt(parent, request, { ...landed, fingerprint }, runTicket);
     const draft: FoldStepDraft = { parent: parentId, op, ...(choices ? { choices } : {}), expect: fingerprint };
-    const stepId = source.commit(draft, loadId);
+    return committed(() => source.commit(draft, loadId), landed.state, fingerprint, withdraw);
+  };
+
+  /**
+   * Let go of a state a commit landed or took, and of the preview still
+   * showing it: the commit did not happen.
+   */
+  const letGo = (state: FoldEngineStateHandle) => {
+    if (sameFoldState(taken, state)) taken = null;
+    if (pending.status === 'landed' && sameFoldState(pending.state, state)) {
+      dropPending();
+      render();
+    } else {
+      engine?.release(state);
+    }
+  };
+
+  /**
+   * The end of a commit: the step `commitDraft` appends through the document,
+   * published with the cursor on it at the state it landed, in one go — the
+   * replay the commit causes adopts that state, and says the same when it
+   * gets there. With no step appended (null), the state is let go.
+   */
+  const committed = (
+    commitDraft: () => string | null,
+    state: FoldEngineStateHandle,
+    fingerprint: FoldStateFingerprint,
+    withdraw: () => void
+  ): FoldCommitOutcome => {
+    // The document's own changes publish nothing until the step is known.
+    quiet = true;
+    let stepId: string | null;
+    try {
+      stepId = commitDraft();
+    } finally {
+      quiet = false;
+    }
     if (stepId === null) {
+      // The adoption held it: the withdrawal releases it, so only the preview goes.
+      if (sameFoldState(taken, state)) taken = null;
+      if (pending.status === 'landed' && sameFoldState(pending.state, state)) {
+        pendingTicket += 1;
+        pending = FOLD_IDLE;
+        pendingAnswer = null;
+      }
       withdraw();
+      render();
       return { status: 'stale' };
     }
+    const document = input.held?.document;
+    const landedAhead = document && foldLandedAhead(document, input.loadId, stepId, state, fingerprint);
+    if (landedAhead) {
+      ahead = landedAhead;
+      aheadTicket = runTicket;
+    }
+    // The cursor moved: the preview goes with this publish, its state now the step's.
+    render();
+    taken = null;
     return { status: 'committed', stepId, fingerprint };
   };
 
@@ -802,12 +892,10 @@ export function createFoldSession({
     }
     const { op, fingerprint, summary, adopt } = landed;
     const withdraw = engine.adopt(parent, { op }, { state: landed.state, fingerprint, details: { summary, report: null } }, runTicket);
-    const stepId = source.commit({ parent: parentId, op, expect: fingerprint, ...(adopt ? { adopt } : {}) }, loadId);
-    if (stepId === null) {
-      withdraw();
-      return { status: 'stale' };
-    }
-    return { status: 'committed', stepId, fingerprint };
+    const draft: FoldStepDraft = { parent: parentId, op, expect: fingerprint, ...(adopt ? { adopt } : {}) };
+    // An import that brings a new sheet is shown once the replay lands it again: no
+    // progress for the old sheet holds anything of the new paper's.
+    return committed(() => source.commit(draft, loadId), landed.state, fingerprint, withdraw);
   };
 
   const withState = async <T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): Promise<FoldStateQuery<T>> => {
@@ -829,6 +917,17 @@ export function createFoldSession({
     const state = selectFoldNode(store.getState(), id)?.state;
     return state ? withState(state, call) : Promise.resolve(unavailable('no-state'));
   };
+
+  const query = <T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): Promise<FoldStateQuery<T>> => {
+    if (holders === 0) return Promise.resolve(unavailable('not-live'));
+    if (state.generation !== runtime.generation()) return Promise.resolve(unavailable('no-state'));
+    return answers.get<T, FoldStateQuery<T>>(state, call as FoldStateCall<unknown>, () => withState(state, call));
+  };
+
+  const peek = <T>(state: FoldEngineStateHandle, call: FoldStateCall<T>): { value: T } | null =>
+    holders > 0 && state.generation === runtime.generation()
+      ? answers.peek<T>(state, call as FoldStateCall<unknown>)
+      : null;
 
   return {
     store,
@@ -892,6 +991,8 @@ export function createFoldSession({
     withState,
     withNode,
     withCursor: (call) => withNode(store.getState().cursor, call),
+    query,
+    peek,
 
     retry() {
       halted = false;

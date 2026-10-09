@@ -12,7 +12,8 @@ import { initialFoldReaderState, withFoldCursor, type FoldReaderState } from '..
 import { sequenceOf, step, valleyAt } from '../document/foldSequence.fixtures';
 import { setFoldStartSide, setFoldStepNote } from '../document/foldSequenceEdits';
 import type { FoldSequenceDocument } from '../document/foldSequenceDocument';
-import { createFoldSession, MAX_RESTARTS, type FoldSession } from './foldSession';
+import type { FoldStateSummary } from '../engine/foldEngineWire';
+import { createFoldSession, MAX_RESTARTS, type FoldSession, type FoldStateCall } from './foldSession';
 import {
   fakeFoldEngine,
   foldOpLabel,
@@ -453,6 +454,61 @@ describe('the Fold session: the step a tool folds', () => {
     expect(cursor()).toMatchObject({ status: 'ok', state: preview.state, fingerprint: committed.fingerprint });
     expect(cursor().summary).toBe(preview.summary);
     expect(statuses()[committed.stepId]).toBe('ok');
+  });
+
+  it('keeps the preview on screen while it commits, then shows the step at its state at once', async () => {
+    const { session, runtime, snapshot, cursor } = setup();
+    session.retain();
+    await settle();
+    const preview = await session.preview(valleyAt(0.9));
+    if (preview.status !== 'landed') throw new Error(preview.status);
+
+    // The fingerprint is on its way: what the folder saw stays up.
+    runtime.hold();
+    const committing = session.commitStep(valleyAt(0.9));
+    await settle();
+    expect(snapshot()).toMatchObject({ cursor: 'c', pending: { status: 'landed', state: preview.state } });
+
+    // Committed: the step is on screen at the preview's state in the same publish
+    // that moves the cursor, before the replay the commit causes has run.
+    const published: FoldSessionSnapshot[] = [];
+    session.store.subscribe((state) => published.push(state));
+    await runtime.open();
+    const committed = await committing;
+    if (committed.status !== 'committed') throw new Error(committed.status);
+    const moved = published.filter((state) => state.cursor === committed.stepId);
+    expect(moved.length).toBeGreaterThan(0);
+    for (const state of moved) {
+      expect(selectFoldCursorNode(state)).toMatchObject({ status: 'ok', state: preview.state, summary: preview.summary });
+    }
+    expect(cursor()).toMatchObject({ status: 'ok', state: preview.state, fingerprint: committed.fingerprint });
+  });
+
+  it('answers a pure query once per state for every asker, and the committed step with its preview’s answers', async () => {
+    const { session, engine, cursor } = setup();
+    session.retain();
+    await settle();
+    const summaryOf: FoldStateCall<FoldStateSummary> = (worker, state) => worker.summary(state);
+    const preview = await session.preview(valleyAt(0.9));
+    if (preview.status !== 'landed') throw new Error(preview.status);
+    engine().log.length = 0;
+
+    const [first, second] = await Promise.all([
+      session.query(preview.state, summaryOf),
+      session.query(preview.state, summaryOf),
+    ]);
+    expect(first).toEqual(second);
+    expect(session.peek(preview.state, summaryOf)).toEqual({ value: preview.summary });
+
+    const committed = await session.commitStep(valleyAt(0.9));
+    if (committed.status !== 'committed') throw new Error(committed.status);
+    await settle();
+    await expect(session.query(cursor().state!, summaryOf)).resolves.toEqual({
+      status: 'answered',
+      value: preview.summary,
+    });
+    // One summary for three asks; the commit asked only the fingerprint.
+    expect(engine().log).toEqual(['summary', 'fingerprint']);
   });
 
   it('folds a step it has no preview for, and committing where a step follows makes a branch', async () => {
