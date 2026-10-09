@@ -998,6 +998,30 @@
       "title": "Ein Diagramm beginnen",
       "upload": "Bilder hochladen…"
     },
+    "fold": {
+      "badgeCreasePattern": "{{origin}} · Faltmuster",
+      "badgeFolded": "{{origin}} · Gefaltet",
+      "card": "Schritt {{number}}",
+      "cardMissing": "Schritt fehlt",
+      "currentHint": "Zeigt seinen Schritt bereits so, wie er ist",
+      "empty": "Falte einen Schritt in Falten, dann erscheinen die Schritte der Folge hier.",
+      "finishedSentence": "Das Modell, wie die Schritte es hinterlassen.",
+      "fromFold": "Aus Falten…",
+      "missing": "Schritt fehlt in Falten",
+      "missingHint": "Sein Schritt ist aus Falten verschwunden oder lässt sich nicht mehr falten",
+      "noStepsHint": "Falte einen Schritt in Falten, um ihn von dort zu übernehmen",
+      "notLanded": "Falten hat diesen Schritt noch nicht gefaltet, daher lässt er sich noch nicht hinzufügen.",
+      "openFold": "Falten öffnen",
+      "openInFold": "In Falten öffnen",
+      "sourceAfter": "Ergebnis eines Falten-Schritts · {{shown}}",
+      "sourceBefore": "Ein Falten-Schritt · {{shown}}",
+      "stale": "Veraltet: die Falten-Folge hat sich geändert",
+      "steps": "Schritte",
+      "titleEnd": "Aus Falten hinzufügen",
+      "turnCard": "Drehen",
+      "unknown": "Noch nicht geprüft: Falten faltet seine Schritte noch",
+      "withTurn": "Mit der Drehung davor"
+    },
     "grid": {
       "addStep": "Schritt hinzufügen",
       "insertHere": "Hier einen Schritt hinzufügen",
@@ -1033,6 +1057,11 @@
     "layers": {
       "empty": "Öffnen Sie einen Schritt in Annotieren, um seine Ebenen zu sehen.",
       "list": "Ebenen"
+    },
+    "link": {
+      "originEdit": "Bearbeiten",
+      "originFold": "Falten",
+      "originReferences": "Referenzen"
     },
     "pagePane": {
       "columns": "Spalten",
@@ -1921,6 +1950,11 @@
       "source": "Quelle",
       "title": "Schritt {{number}}",
       "valley": "Tal"
+    },
+    "toDiagram": {
+      "sendPath": "Schritte an Diagramm senden",
+      "sendStep": "Schritt an Diagramm senden",
+      "sheetHint": "Beim flachen Blatt beginnen die Schritte: Falte einen Schritt, um ihn zu senden."
     },
     "words": {
       "adds_one": "Fügt {{count}} Faltlinie hinzu ({{mountain}} M, {{valley}} V)",

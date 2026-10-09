@@ -35,6 +35,18 @@
       "unknown": "Das Faltmuster ist noch nicht bereit. Versuche es gleich noch einmal."
     },
     "dropReadOnly": "Dieses Diagramm wurde mit einem neueren Ori Studio erstellt und ist schreibgeschützt geöffnet, daher lassen sich keine Bilder hinzufügen.",
+    "fold": {
+      "locked": "Dieser Schritt wurde mit einem neueren Ori Studio erstellt.",
+      "missing": "Dieser Schritt ist nicht mehr in der Falten-Folge oder lässt sich nicht mehr falten.",
+      "notShown": "Falten zeigt eine andere Folge, daher lässt sich dieser Schritt jetzt nicht erfassen.",
+      "openDiagram": "Diagramm öffnen",
+      "sent_one": "Ein Schritt zum Diagramm hinzugefügt",
+      "sent_other": "{{count}} Schritte zum Diagramm hinzugefügt",
+      "sequenceGone": "Diese Falten-Folge ist nicht mehr in diesem Projekt.",
+      "someFailed_one": "Ein Schritt ließ sich nicht aus Falten erfassen und wurde ausgelassen.",
+      "someFailed_other": "{{count}} Schritte ließen sich nicht aus Falten erfassen und wurden ausgelassen.",
+      "stepGone": "Dieser Schritt ist nicht mehr in der Falten-Folge."
+    },
     "references": {
       "addedSteps": "Als Schritte {{first}}–{{last}} hinzugefügt",
       "addedTurnOvers_one": "Umdrehen hinzugefügt",

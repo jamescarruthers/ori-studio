@@ -965,6 +965,30 @@
       "title": "도해 시작하기",
       "upload": "그림 업로드…"
     },
+    "fold": {
+      "badgeCreasePattern": "{{origin}} · 전개도",
+      "badgeFolded": "{{origin}} · 접힌 모양",
+      "card": "{{number}}단계",
+      "cardMissing": "단계 없음",
+      "currentHint": "이미 단계의 현재 모습을 보여 줍니다",
+      "empty": "접기에서 단계를 접으면 시퀀스의 단계가 여기에 나타납니다.",
+      "finishedSentence": "단계를 마친 뒤의 모형.",
+      "fromFold": "접기에서…",
+      "missing": "접기에 단계 없음",
+      "missingHint": "단계가 접기에서 사라졌거나 더 이상 접히지 않습니다",
+      "noStepsHint": "접기에서 단계를 접으면 여기로 가져올 수 있습니다",
+      "notLanded": "접기가 아직 이 단계를 접지 않아서 아직 추가할 수 없습니다.",
+      "openFold": "접기 열기",
+      "openInFold": "접기에서 열기",
+      "sourceAfter": "접기 단계의 결과 · {{shown}}",
+      "sourceBefore": "접기 단계 · {{shown}}",
+      "stale": "오래됨: 접기 시퀀스가 바뀌었습니다",
+      "steps": "단계",
+      "titleEnd": "접기에서 추가",
+      "turnCard": "방향 바꾸기",
+      "unknown": "아직 확인 안 됨: 접기가 아직 단계를 접고 있습니다",
+      "withTurn": "앞의 방향 바꾸기 포함"
+    },
     "grid": {
       "addStep": "단계 추가",
       "insertHere": "여기에 단계 추가",
@@ -997,6 +1021,11 @@
     "layers": {
       "empty": "단계를 주석에서 열면 레이어가 표시됩니다.",
       "list": "레이어"
+    },
+    "link": {
+      "originEdit": "편집",
+      "originFold": "접기",
+      "originReferences": "참조"
     },
     "pagePane": {
       "columns": "열",
@@ -1776,6 +1805,11 @@
       "source": "출처",
       "title": "{{number}}단계",
       "valley": "골"
+    },
+    "toDiagram": {
+      "sendPath": "여기까지의 단계를 도해로 보내기",
+      "sendStep": "이 단계를 도해로 보내기",
+      "sheetHint": "평평한 종이에서 단계가 시작됩니다. 보내려면 단계를 하나 접으세요."
     },
     "words": {
       "adds_other": "접은 선 {{count}}개 추가 (M {{mountain}}, V {{valley}})",

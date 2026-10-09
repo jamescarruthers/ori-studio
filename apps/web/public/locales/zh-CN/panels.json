@@ -965,6 +965,30 @@
       "title": "开始制作图解",
       "upload": "上传图片…"
     },
+    "fold": {
+      "badgeCreasePattern": "{{origin}} · 折痕图",
+      "badgeFolded": "{{origin}} · 折叠形态",
+      "card": "第 {{number}} 步",
+      "cardMissing": "步骤缺失",
+      "currentHint": "已显示其步骤的当前状态",
+      "empty": "在折叠中折一步，序列的步骤就会显示在这里。",
+      "finishedSentence": "完成这些步骤后的模型。",
+      "fromFold": "来自折叠…",
+      "missing": "折叠中缺少该步骤",
+      "missingHint": "其步骤已不在折叠中，或已无法折叠",
+      "noStepsHint": "在折叠中折一步，即可从那里取用",
+      "notLanded": "折叠尚未折出此步骤，因此暂时无法添加。",
+      "openFold": "打开折叠",
+      "openInFold": "在折叠中打开",
+      "sourceAfter": "折叠步骤的结果 · {{shown}}",
+      "sourceBefore": "折叠步骤 · {{shown}}",
+      "stale": "已过期：折叠序列已更改",
+      "steps": "步骤",
+      "titleEnd": "从折叠添加",
+      "turnCard": "转向",
+      "unknown": "尚未检查：折叠仍在折叠其步骤",
+      "withTurn": "连同前面的转向"
+    },
     "grid": {
       "addStep": "添加步骤",
       "insertHere": "在此添加步骤",
@@ -997,6 +1021,11 @@
     "layers": {
       "empty": "在“标注”中打开一个步骤即可查看其图层。",
       "list": "图层"
+    },
+    "link": {
+      "originEdit": "编辑",
+      "originFold": "折叠",
+      "originReferences": "参考"
     },
     "pagePane": {
       "columns": "列",
@@ -1776,6 +1805,11 @@
       "source": "来源",
       "title": "第 {{number}} 步",
       "valley": "谷折"
+    },
+    "toDiagram": {
+      "sendPath": "将至此的步骤发送到图解",
+      "sendStep": "将此步骤发送到图解",
+      "sheetHint": "步骤从平整的纸开始：先折一步再发送。"
     },
     "words": {
       "adds_other": "新增 {{count}} 条折痕（M {{mountain}}，V {{valley}}）",

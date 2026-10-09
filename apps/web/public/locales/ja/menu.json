@@ -118,6 +118,8 @@
     "samplePleatInEighths": "8 等分のプリーツ",
     "samplePreliminaryBase": "正方基本形",
     "sampleWaterbombBase": "風船の基本形",
+    "sendPathToDiagram": "ここまでのステップを折り図に送る",
+    "sendToDiagram": "このステップを折り図に送る",
     "sendToEdit": "編集に送る",
     "sendToEditPrecreasesAsAux": "編集に送る（下折りを補助線として）",
     "startFromEditFigure": "編集の折り図から始める",

@@ -36,6 +36,20 @@
       "unknown": "El patrón de pliegues aún no está listo. Inténtalo de nuevo en un momento."
     },
     "dropReadOnly": "Este diagrama se creó con una versión más reciente de Ori Studio y se abre en solo lectura, así que no se le pueden añadir imágenes.",
+    "fold": {
+      "locked": "Ese paso se creó con una versión más reciente de Ori Studio.",
+      "missing": "Ese paso ya no está en la secuencia de Plegar o ya no se puede plegar.",
+      "notShown": "Plegar muestra otra secuencia, así que este paso no se puede capturar ahora.",
+      "openDiagram": "Abrir Diagrama",
+      "sent_one": "Se añadió un paso al Diagrama",
+      "sent_many": "Se añadieron {{count}} pasos al Diagrama",
+      "sent_other": "Se añadieron {{count}} pasos al Diagrama",
+      "sequenceGone": "Esa secuencia de Plegar ya no está en este proyecto.",
+      "someFailed_one": "No se pudo capturar un paso desde Plegar, así que se omitió.",
+      "someFailed_many": "No se pudieron capturar {{count}} pasos desde Plegar, así que se omitieron.",
+      "someFailed_other": "No se pudieron capturar {{count}} pasos desde Plegar, así que se omitieron.",
+      "stepGone": "Ese paso ya no está en la secuencia de Plegar."
+    },
     "references": {
       "addedSteps": "Añadidos como pasos {{first}}–{{last}}",
       "addedTurnOvers_one": "Vuelta añadida",

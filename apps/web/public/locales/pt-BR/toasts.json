@@ -36,6 +36,20 @@
       "unknown": "O padrão de vincos ainda não está pronto. Tente de novo em instantes."
     },
     "dropReadOnly": "Este diagrama foi criado com uma versão mais recente do Ori Studio e abre somente para leitura, então não é possível adicionar imagens.",
+    "fold": {
+      "locked": "Esse passo foi criado com uma versão mais recente do Ori Studio.",
+      "missing": "Esse passo não está mais na sequência de Dobrar, ou não dobra mais.",
+      "notShown": "Dobrar mostra outra sequência, então este passo não pode ser capturado agora.",
+      "openDiagram": "Abrir Diagrama",
+      "sent_one": "Um passo adicionado ao Diagrama",
+      "sent_many": "{{count}} passos adicionados ao Diagrama",
+      "sent_other": "{{count}} passos adicionados ao Diagrama",
+      "sequenceGone": "Essa sequência de Dobrar não está mais neste projeto.",
+      "someFailed_one": "Um passo não pôde ser capturado de Dobrar e foi deixado de fora.",
+      "someFailed_many": "{{count}} passos não puderam ser capturados de Dobrar e foram deixados de fora.",
+      "someFailed_other": "{{count}} passos não puderam ser capturados de Dobrar e foram deixados de fora.",
+      "stepGone": "Esse passo não está mais na sequência de Dobrar."
+    },
     "references": {
       "addedSteps": "Adicionados como passos {{first}}–{{last}}",
       "addedTurnOvers_one": "Virada adicionada",

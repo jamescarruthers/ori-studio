@@ -1031,6 +1031,30 @@
       "title": "Commencer un diagramme",
       "upload": "Importer des images…"
     },
+    "fold": {
+      "badgeCreasePattern": "{{origin}} · Patron de plis",
+      "badgeFolded": "{{origin}} · Plié",
+      "card": "Étape {{number}}",
+      "cardMissing": "Étape introuvable",
+      "currentHint": "Montre déjà son étape telle qu’elle est",
+      "empty": "Pliez une étape dans Plier, et les étapes de la séquence apparaîtront ici.",
+      "finishedSentence": "Le modèle tel que les étapes le laissent.",
+      "fromFold": "Depuis Plier…",
+      "missing": "Étape introuvable dans Plier",
+      "missingHint": "Son étape a disparu de Plier ou ne se plie plus",
+      "noStepsHint": "Pliez une étape dans Plier pour la reprendre ici",
+      "notLanded": "Plier n’a pas encore plié cette étape, elle ne peut donc pas encore être ajoutée.",
+      "openFold": "Ouvrir Plier",
+      "openInFold": "Ouvrir dans Plier",
+      "sourceAfter": "Résultat d’une étape de Plier · {{shown}}",
+      "sourceBefore": "Une étape de Plier · {{shown}}",
+      "stale": "Pas à jour : la séquence de Plier a changé",
+      "steps": "Étapes",
+      "titleEnd": "Ajouter depuis Plier",
+      "turnCard": "Tour",
+      "unknown": "Pas encore vérifié : Plier plie encore ses étapes",
+      "withTurn": "Avec le tour qui précède"
+    },
     "grid": {
       "addStep": "Ajouter une étape",
       "insertHere": "Ajouter une étape ici",
@@ -1069,6 +1093,11 @@
     "layers": {
       "empty": "Ouvrez une étape dans Annoter pour voir ses calques.",
       "list": "Calques"
+    },
+    "link": {
+      "originEdit": "Édition",
+      "originFold": "Plier",
+      "originReferences": "Références"
     },
     "pagePane": {
       "columns": "Colonnes",
@@ -2068,6 +2097,11 @@
       "source": "Source",
       "title": "Étape {{number}}",
       "valley": "Vallée"
+    },
+    "toDiagram": {
+      "sendPath": "Envoyer les étapes vers Diagramme",
+      "sendStep": "Envoyer l’étape vers Diagramme",
+      "sheetHint": "La feuille à plat est le point de départ des étapes : pliez une étape pour l’envoyer."
     },
     "words": {
       "adds_one": "Ajoute {{count}} pli ({{mountain}} M, {{valley}} V)",
