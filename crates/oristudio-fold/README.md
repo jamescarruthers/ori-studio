@@ -2,7 +2,8 @@
 
 The Fold workspace's engine: fold a sheet the way a person does. A flat folded
 state, the one constructor that validates it, the plain fold, and the one
-pipeline compound folds land through, with the inside reverse fold on it.
+pipeline compound folds land through, with the reverse folds, the crimp and
+the tuck on it.
 
 - `state`: the crease pattern with stable ids (`B | M | V | F`, an F crease
   remembering its last letter, every crease the step that made it; letters
@@ -71,7 +72,10 @@ pipeline compound folds land through, with the inside reverse fold on it.
   from `oristudio-layer-order`'s constraint problem and cells to
   `treemaker-flatfold`'s `complete_layer_order`, with fixed pairs *carried* or
   *seed*, per-component choices, a true ‹ n of m › with truncation reported,
-  and a node or deadline budget. `complete_around` searches only the cells
+  and a node or deadline budget; the deadline also meters the propagation
+  of the seeds, which on a deep stack is most of a completion, and is for
+  interactive callers only, since where it stops depends on the clock.
+  `complete_around` searches only the cells
   the faces an operation moved cover, every pair outside them carried, and
   gives the whole problem's answer. Import CP and the compound folds use it.
 - `import`: Import CP (plan D16, D10's inverse) from plain segments, no kernel.
@@ -119,11 +123,51 @@ Compound folds (plan D4, D15, Phase 9):
   or the flaps that open. Stored choices: each ambiguous flap's upper block
   and the order, by witnesses; a stored opening that names none breaks the
   step.
+- `compound::crimp`: the crimp (plan Phase 11): two reverse folds of one
+  kind, along ℓ1 nearer the body and ℓ2 nearer the tip, folded as one
+  operation and verified only at its end. The strip between the lines moves
+  by ρ1, the reflection across ℓ1, and the tip beyond ℓ2 by ρ1∘ρ2; nothing
+  lands between, since the first reverse alone is not flat in 4.5% (inside)
+  and 5.6% (outside) of the spike's valid crimps. A mixed pair is a reverse
+  and a counter-reverse, not a crimp: in 574 of the spike's 585 valid mixed
+  states the first reverse lands alone, so it is left to two reverse folds.
+  The tip and its openings are the reverse fold's at ℓ1, and ℓ2 must not
+  meet ℓ1 over the paper that moves. ℓ1 scores the tip, a second score pass
+  scores ℓ2 across what it moves, and the carry, seeds, completion, letters
+  and gate run once on the result. Seeds: each strip block against its body
+  on ℓ1 and each tip block against its strip on ℓ2, as a reverse fold of the
+  kind puts them; the rest of the tip against the strip is the completion's
+  (`Across::Alike`). `crimp_kinds` says which kinds land; the refusals
+  (`crimp_lines_meet`, `crimp_misses_tip`, `crimp_no_opening`,
+  `crimp_kind_infeasible` offering the other kind, `crimp_tip_not_free`)
+  name faces. Stored choices are the reverse fold's.
+- `compound::tuck`: the tuck (research §4.4, §5.2): a plain fold slid
+  immediately under a named layer T (a valley, as the viewer sees it) or
+  over it (a mountain). What moves is Beloch's bounded closure (ADR 0052):
+  the seed, grown across every crease with an end on the moving side, and
+  every moving-side layer the block would otherwise pass through on its way
+  to T; T never moves. "Immediately under T" is read strictly (the spike's
+  H1): the block lies under T, and a layer that meets T lies beyond it where
+  it is under every face of T it meets (the block over it) and on T's side
+  otherwise (the block under it). `State::analyse_tuck` lists every layer
+  the block lands on with whether it takes the tuck, within an optional
+  deadline (`feasible: None` past it); a refusal (`tuck_infeasible`) offers
+  up to three targets that do (`Fix::TuckTarget`). The plain fold's own
+  `Placement::Over` and `Under` are unchanged: a closed-form placement the
+  gate accepts or refuses.
+- **A pleat is two plain folds**, not an operation of its own: a valley and
+  a mountain along parallel lines, each of which lands a flat state by
+  itself (unlike a crimp's first reverse), so a tool makes a pleat as two
+  steps and the engine has no pleat op to keep in step with them.
 - `compound::motion`: a compound step's `StepMotion` (plan D15): legs of
   groups turning about a hinge with exact endpoints. A reverse fold is
   *visual* (it has no rigid path short of unfolding the vertex flat): its
   blocks turn opposite ways about ℓ, stacked as the parent until edge-on and
-  as the landed state after.
+  as the landed state after. A tuck is its block turning about ℓ. A crimp is
+  four legs: the strip and the tip spread and close about ℓ1 as a reverse
+  fold's blocks do, then the tip spreads and closes again about where ℓ2
+  went, its first two legs ending where the strip carried it
+  (`MotionGroup::before`).
 
 The axioms on flat and folded forms (plan Phase 3):
 
@@ -195,7 +239,11 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   draws the property tests make: `crates/oracle-tests`' `fold_oracle` checks
   the campaign's sequences against Oriedita and Flat-Folder. The crate is its
   own dev-dependency with the feature, so every test and example here draws
-  from it and `cargo test -p oristudio-fold` runs its tests too.
+  from it and `cargo test -p oristudio-fold` runs its tests too. It also
+  draws the compound ops as the spike's campaigns do: `reverse_fold`,
+  `crimp_fold` (both lines across one spine, square to it or each at
+  20°–160°) and `tuck_fold` (a landed plain fold, and as T a layer on the
+  side that stays which its block lies on).
 - `tests/queries.rs`: the output and queries. The cross-section's display
   layers (a layer crossed by a precrease is one row; two precreased layers are
   two rows, one flap or two by where the spine is), unordered rows, the depth
@@ -263,6 +311,42 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   order of every choice passes the gate), 3,261 had no order and 57 were
   slivers or short creases. The letter rules held on 32,788 creases; 2,696
   landed states were compared against the plain fold of their tip.
+- `tests/reverse_outside.rs`: the outside reverse on its own. Beloch's kite
+  point reversed outside and inside, each matched against his frames; one of
+  two stacked flaps reversed outside, leaving the other unwrapped (the
+  spike's case 2c, where Beloch's literal rule, T1 at the bottom and T2 on
+  top, wraps the layers that are not the flap's); and the seeded campaign
+  folded outside. The spike's size, ignored by default, on
+  2026-10-09: 3,019 of the 3,071 ops with an order landed with one (98.3%,
+  against the spike's 99.3%).
+- `tests/crimp.rs`: the spike's case 3 on the triangle, ℓ2 at 36.87° (only
+  inside lands), 53.13° (only outside) and parallel (both), the kind that
+  does not fit offering the other; the parallel crimps stacked as the spike
+  found them, body, strip and tip; a crimp that lands where its first
+  reverse alone does not; a four-layer flap that opens two ways, the same
+  opening at both lines and stored; each refusal naming its faces; a crimp
+  the completion leaves open storing its pick, every pick replaying and a
+  witness off the paper breaking the step; and the seeded campaign, every
+  landed crimp through `tests/compound`'s checks. At the spike's size
+  (ignored by default), on 2026-10-09: 1,472 of 1,496 feasible inside
+  crimps unique (98.4%; the spike 99.0%) and 1,415 of 1,443 outside ones
+  (98.1%; 98.9%).
+- `tests/tuck.rs`: the bottom corner tucked under the top layer and the top
+  corner over the bottom one; a band tucked into a pocket and one too deep
+  for it refused naming T; a loose layer between the flap and T carried
+  along (ADR 0052, the spike's case 4d, which its hinges-only closure left
+  inside the taco); a target that would move refused; a tuck with two
+  orders storing its pick; and the seeded campaign, valley tucks under and
+  mountain tucks over, every landed tuck through the full gate, its listing
+  of targets agreeing with folding each. At the spike's size (ignored by
+  default), on 2026-10-09: the tuck was feasible against 624 of 1,819
+  layers (34.3%; the spike 40%), and unique in 615 of those (98.6%; 99.1%).
+- `tests/compound_digest.rs`, ignored by default: a hash of every report
+  of the reverse, crimp and tuck campaigns, landed states to the bit, as
+  `campaign_digest` is for plain folds: a change meant to leave answers
+  alone must print what the build before it does. The completion's rework
+  below left the reverse campaign's unchanged; the crimp's and the tuck's
+  were taken after it.
 - `tests/crane.rs`: the traditional crane by Ida's route (`tests/ida`, as
   Beloch writes it in `crane.bel`): the triangle, two inside reverses to the
   preliminary base, four to the side corners and two petal folds to the bird
@@ -276,7 +360,11 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   frame replayed through Import CP, and a frame matched against a state;
   shared by `tests/beloch_replay.rs`, the examples and `crates/oracle-tests`'
   `fold_compound_oracle`, which verifies the reverse campaign's states and
-  the crane with seeded Oriedita and Flat-Folder.
+  the crane with seeded Oriedita and Flat-Folder. `fold_crimp_tuck_oracle`
+  does the same for outside reverses, crimps and tucks: on 2026-10-09 seeded
+  Oriedita verified all 218, 292 and 146 states (none unrepresentable) and
+  refused 208, 290 and 128 flipped pairs, and Flat-Folder's `verify` passed
+  all 120 states it was given and refused 119 flips.
 
 `cargo test -p oristudio-fold --features kernel` adds:
 
@@ -400,35 +488,87 @@ stacks at 13 ms p95.
 `cargo run -p oristudio-fold --release --example reverse`: the reverse fold,
 whole (tip, openings, score, gate, carry, seeds, completion, letters,
 `State::make`), with its first opening per flap. 2026-10-09, native release
-build. On the crane by Ida's route (`tests/ida`, the median of 15 runs):
+build, load average 8–23, after the completion's rework below (the times
+before it in brackets). On the crane by Ida's route (`tests/ida`, the median
+of 15 runs):
 
 | Step | Faces | Time |
 |---|---|---|
-| b onto c, d onto c (preliminary base) | 2 → 4, 4 → 6 | 0.71, 0.73 ms |
-| the four side corners | 6 → 14 | 0.76–0.86 ms |
-| neck | 36 → 44 | 3.8 ms |
-| tail | 44 → 52 | 4.1 ms |
-| head | 52 → 60 | 2.5 ms |
+| b onto c, d onto c (preliminary base) | 2 → 4, 4 → 6 | 0.038, 0.052 ms (0.71, 0.73) |
+| the four side corners | 6 → 14 | 0.085–0.14 ms (0.76–0.86) |
+| neck | 36 → 44 | 1.9 ms (3.8) |
+| tail | 44 → 52 | 2.3 ms (4.1) |
+| head | 52 → 60 | 1.5 ms (2.5) |
 
-About 0.65 ms of every completion is Flat-Folder's implication tables, which
-`treemaker-flatfold`'s entry point builds on each call. On the engine's
-random sequences (`random::Sequence` to 256 faces, reverse folds drawn as the
-spike's campaign draws them):
+On the engine's random sequences (`random::Sequence` to 256 faces, reverse
+folds drawn as the spike's campaign draws them):
 
 | Faces | Ops | Tip faces | Landed mean / p95 (n) | Refused mean / p95 (n) |
 |---|---|---|---|---|
-| 1–8 | 721 | 3.5 | 0.83 / 1.2 ms (382) | 1.9 / 4.0 ms (335) |
-| 9–32 | 626 | 11.7 | 3.1 / 12.0 ms (219) | 6.3 / 19.1 ms (396) |
-| 33–64 | 335 | 24.0 | 10.9 / 40.1 ms (70) | 16.6 / 58.4 ms (260) |
-| 65–128 | 305 | 41.5 | 34.6 / 98.1 ms (21) | 47.0 / 160 ms (283) |
-| 129–256 | 105 | 65.0 | 44.6 / 66.1 ms (2) | 199 / 1,246 ms (103) |
+| 1–8 | 721 | 3.5 | 0.13 / 0.34 ms (382) [0.83 / 1.2] | 0.23 / 0.72 ms (335) [1.9 / 4.0] |
+| 9–32 | 626 | 11.7 | 1.4 / 5.4 ms (219) [3.1 / 12.0] | 2.5 / 8.3 ms (396) [6.3 / 19.1] |
+| 33–64 | 335 | 24.0 | 5.3 / 18.4 ms (70) [10.9 / 40.1] | 8.4 / 29.6 ms (260) [16.6 / 58.4] |
+| 65–128 | 305 | 41.5 | 17.6 / 41.5 ms (21) [34.6 / 98.1] | 23.1 / 89.0 ms (283) [47.0 / 160] |
+| 129–256 | 105 | 65.0 | 30.9 / 39.9 ms (2) [44.6 / 66.1] | 79.5 / 481 ms (103) [199 / 1,246] |
 
 The reverse spike's JS (research §5.2) took 2.9 ms for the op, 11 ms for
 Flat-Folder's arrangement and 10 ms for completion at 33–64 faces, and 15.6,
 78 and 518 ms at 129–256. Most of the time is the completion's propagation
-of the seeds through deep stacks; a refusal costs about three completions,
-since it tries the other kind and a grown tip for its fixes. The example
-also times `perf`'s all-layer stacks, where tips are half the model.
+of the seeds through deep stacks; a refusal costs a few completions, since
+it tries the other kind and a grown tip for its fixes. The example also
+times `perf`'s all-layer stacks, where tips are half the model.
+
+The completion's rework, and what it changed:
+
+- **Flat-Folder's implication tables are built once.** `treemaker-flatfold`
+  built them on every `complete_layer_order` call, about 0.65 ms each: most
+  of a small fold's time. They are now one table per constraint kind,
+  indexed by the base-3 code of the assignments rather than hashed, built
+  once per process (`ImplicationMaps::shared`).
+- **The propagation's inner loop** built a string key per inference and a
+  vector key per pair lookup, and found each transitivity candidate by
+  scanning those already met. A pair variable is now found by its faces
+  (`PairIndex`), and a candidate is marked per face, in the order upstream
+  meets them.
+- **A refusal's diagnosis reuses the fold it diagnoses**: the other kind is
+  the same scored and gated fold with its placements turned, so it costs one
+  completion, and a grown tip's plan is tried once, however many ways of
+  keeping the openings reach it.
+- **The deadline meters the propagation**, which on a deep stack is most of
+  a completion, so an interactive caller's deadline holds; without one
+  nothing is metered and nothing changes.
+
+None of it changes an answer: `tests/compound_digest.rs`' reverse campaign
+prints the same digest before and after, `fold_compound_oracle` still
+verifies every state, and `treemaker-flatfold`'s parity and verify tests
+pass unchanged.
+
+`cargo run -p oristudio-fold --release --example crimp_tuck`: on the same
+random sequences, each state takes a crimp drawn as the spike's crimp
+campaign draws them (inside, each flap at its first opening) and a tuck
+drawn as its tuck campaign does; the crimp's analysis, each op whole when it
+lands and when it is refused (its fixes tried), and the tuck's target
+listing without a deadline. 2026-10-09, load average 8–20, after the
+completion's rework:
+
+| Faces | Crimp analyse | Crimp landed mean / p95 (n) | Crimp refused mean / p95 (n) | Tuck landed mean / p95 (n) | Tuck refused mean / p95 (n) | Tuck targets mean / p95 (layers) |
+|---|---|---|---|---|---|---|
+| 1–8 | 0.020 ms | 0.31 / 0.94 ms (99) | 0.31 / 0.98 ms (64) | 0.10 / 0.30 ms (99) | 0.16 / 0.45 ms (120) | 0.15 / 0.52 ms (1.7) |
+| 9–32 | 0.049 ms | 2.1 / 5.5 ms (41) | 2.6 / 10.6 ms (47) | 0.89 / 2.3 ms (78) | 3.0 / 9.7 ms (289) | 4.6 / 19.7 ms (5.1) |
+| 33–64 | 0.14 ms | 59.3 / 227 ms (4) | 13.5 / 41.7 ms (30) | 5.3 / 16.9 ms (35) | 19.6 / 62.0 ms (204) | 55 / 226 ms (10.5) |
+| 65–128 | 0.48 ms | 123 ms (1) | 4.0 / 9.4 ms (10) | 17.1 / 156 ms (16) | 70.0 / 201 ms (245) | 401 / 1,564 ms (20.8) |
+| 129–256 | 0.82 ms | 31.3 / 34.1 ms (2) | 45.4 / 195 ms (5) | 30.8 / 62.5 ms (4) | 198 / 712 ms (101) | 1,728 / 5,425 ms (29.3) |
+
+The example also times `perf`'s deep stacks, where few crimps land and tucks
+are refused more (at 129–256 faces 250 / 857 ms refused, the listing
+1,679 / 5,158 ms). A refused tuck costs most, since it tries up to eight
+other targets for its fixes; past 64 faces few draws land at all, so read
+the landed columns' small counts as indications. The target listing is a
+completion per layer the block lands on, about 60 ms each at 129–256 faces,
+so the bridge gives it 150 ms (`TUCK_TARGETS_BUDGET_MS`) and leaves the
+targets past it undecided (`feasible: None`) for the fold itself to decide;
+the deadline now stops the propagation as well as the search, which is what
+lets it hold.
 
 `cargo run -p oristudio-fold --release --example landmarks`: every landmark of
 a state and the candidates of an O2 and an O6 over them, on states made the
