@@ -35,8 +35,12 @@ export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
 /** How a Fold step's line was located: an axiom, an existing crease, or a free line. */
 export type FoldStepVia = 'axiom' | 'crease' | 'free';
 
-/** Which choice the Fold engine offered: an axiom's roots, or the stacks a depth pick can take. */
-export type FoldChoiceKind = 'axiom_root' | 'depth';
+/**
+ * Which choice the Fold engine offered: an axiom's roots, the stacks a depth
+ * pick can take, or the layer orders one part of an imported crease pattern
+ * folds to (Import CP's chooser).
+ */
+export type FoldChoiceKind = 'axiom_root' | 'depth' | 'import_order';
 
 /**
  * Which control added a diagram step. `grid` is the Diagram workspace's own:

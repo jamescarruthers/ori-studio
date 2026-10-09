@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
+import { trackFoldChoiceOffered } from '../../analytics/trackFold';
 import { trackFoldCpImported } from '../../analytics/trackFoldIo';
 import { reportError } from '../../monitoring';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -19,6 +20,7 @@ export function createAppFoldImportFlow(): FoldImportFlow {
     editFoldedFigure: () =>
       foldStartingFigureScene(useWorkspaceStore.getState(), (handle) => getOristudioCpFoldedFigurePaperScene(handle)),
     onImported: trackFoldCpImported,
+    onChoiceOffered: (orders) => trackFoldChoiceOffered('import_order', orders),
   });
 }
 

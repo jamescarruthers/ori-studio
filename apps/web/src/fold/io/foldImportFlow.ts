@@ -87,6 +87,8 @@ export interface FoldImportFlowOptions {
   editFoldedFigure: () => Promise<OristudioCpFoldedPaperScene | null>;
   /** A step was imported: the analytics event, by the step's closed origin. */
   onImported?: (origin: FoldCpOrigin) => void;
+  /** The chooser asks about a part with `orders` layer orders: once per such part, as the import opens. */
+  onChoiceOffered?: (orders: number) => void;
 }
 
 export interface FoldImportFlow {
@@ -160,7 +162,12 @@ interface Held {
 
 const IDLE: FoldImportFlowState = { phase: 'idle' };
 
-export function createFoldImportFlow({ session, editFoldedFigure, onImported }: FoldImportFlowOptions): FoldImportFlow {
+export function createFoldImportFlow({
+  session,
+  editFoldedFigure,
+  onImported,
+  onChoiceOffered,
+}: FoldImportFlowOptions): FoldImportFlow {
   const store = createStore<FoldImportFlowState>(() => IDLE);
   const releaseHold = session.retain();
   let disposed = false;
@@ -364,6 +371,7 @@ export function createFoldImportFlow({ session, editFoldedFigure, onImported }: 
         await pickAndCommit(request, import_, choice, mine);
         return;
       }
+      for (const component of opened.components) if (component.orders > 1) onChoiceOffered?.(component.orders);
       store.setState({ phase: 'choosing', request, opened, choice, previews: new Map(), committing: false }, true);
       void runPreviews();
     } catch (error) {

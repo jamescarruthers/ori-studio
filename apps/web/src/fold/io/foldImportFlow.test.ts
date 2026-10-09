@@ -140,9 +140,10 @@ function setup(
   const session = createFoldSession({ document: source, runtime });
   sessions.push(session);
   const imported = vi.fn();
-  const flow = createFoldImportFlow({ session, editFoldedFigure, onImported: imported });
+  const offered = vi.fn();
+  const flow = createFoldImportFlow({ session, editFoldedFigure, onImported: imported, onChoiceOffered: offered });
   flows.push(flow);
-  return { session, source, runtime, flow, imported, io: () => engines[engines.length - 1]! };
+  return { session, source, runtime, flow, imported, offered, io: () => engines[engines.length - 1]! };
 }
 
 const SAMPLE: FoldImportRequest = { kind: 'sample', sample: 'waterbomb-base' };
@@ -161,9 +162,11 @@ describe('Import CP’s flow', () => {
   });
 
   it('commits a pattern with one order at once, after the step on screen, as it landed', async () => {
-    const { flow, source, io, imported, session } = setup(sequenceOf([step('a', null)]), 'a');
+    const { flow, source, io, imported, offered, session } = setup(sequenceOf([step('a', null)]), 'a');
     await flow.open(SAMPLE);
     await settle();
+    // Nothing to choose, so no choice offered.
+    expect(offered).not.toHaveBeenCalled();
 
     expect(flow.store.getState()).toMatchObject({ phase: 'done', origin: 'sample', stepId: 'fstep-1' });
     expect(source.commits).toEqual([
@@ -189,12 +192,14 @@ describe('Import CP’s flow', () => {
   });
 
   it('waits for a choice among several orders, pictures each, and commits the one chosen', async () => {
-    const { flow, source, io } = setup(sequenceOf([step('a', null)]), 'a', { orders: [3, 1, 2] });
+    const { flow, source, io, offered } = setup(sequenceOf([step('a', null)]), 'a', { orders: [3, 1, 2] });
     await flow.open(FILE);
     await settle(10);
 
     const choosing = flow.store.getState();
     expect(choosing).toMatchObject({ phase: 'choosing', choice: [0, 0, 0], committing: false });
+    // The analytics' choice offered, once for each part the chooser asks about.
+    expect(offered.mock.calls).toEqual([[3], [2]]);
     if (choosing.phase !== 'choosing') throw new Error('not choosing');
     // The chosen one first, then each component's orders with the others as
     // chosen; a component with one order has nothing to choose.
