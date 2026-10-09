@@ -196,7 +196,8 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       };
     // A stored step this build cannot fold as it is, an Import CP step among
     // them: nothing a folder asked for. The Import CP picker words its own
-    // refusals; the import codes reach a notice only from a replay.
+    // refusals; the import codes reach a notice only from a replay. So does a
+    // stored vertex fold whose choice no longer decides it (the last two).
     case 'unexpected_choice':
     case 'root_missing':
     case 'import_not_finite':
@@ -224,6 +225,8 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'import_order_broken':
     case 'import_figure_incomplete':
     case 'fold_export_too_large':
+    case 'choice_needed':
+    case 'choice_broken':
       return {
         title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
         text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),
@@ -232,7 +235,8 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     // a folder asked for by name, so nothing to say beyond that it cannot be.
     // With them, a compound fold's (plan D4, from `no_order` on): no tool
     // folds one yet, so until the reverse fold's tool says them in its own
-    // words they read as a fold that cannot be made.
+    // words they read as a fold that cannot be made. The vertex folds' codes
+    // (from `squash_no_flap` on) likewise, until their tools say them.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -265,6 +269,17 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'reverse_no_opening':
     case 'reverse_tip_not_free':
     case 'reverse_kind_infeasible':
+    case 'squash_no_flap':
+    case 'squash_flap_not_free':
+    case 'squash_flap_covered':
+    case 'squash_target_outside':
+    case 'petal_not_precreased':
+    case 'petal_no_flap':
+    case 'fan_center':
+    case 'fan_ray_blocked':
+    case 'fan_not_flat':
+    case 'fan_ridge_not_ray':
+    case 'fan_stayer_detached':
     case 'internal':
       return {
         title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
@@ -340,6 +355,9 @@ function fixActions(
       return [{ id: `line-${position}`, label: lineFixLabel(t, fix), run: () => verbs.useLine(fix), disabled }];
     case 'other_kind':
       // A reverse fold's, which no tool folds yet: nothing to bind it to.
+      return [];
+    case 'use_emergent':
+      // A rabbit ear's or a swivel's, likewise.
       return [];
   }
 }

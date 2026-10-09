@@ -69,7 +69,12 @@ export type FoldStepPlayKind =
   | 'refold'
   | 'turn'
   | 'rotate'
-  | 'import';
+  | 'import'
+  // The vertex folds.
+  | 'squash'
+  | 'petal'
+  | 'rabbit_ear'
+  | 'swivel';
 
 /** What a step's motion is built from: all of it the session's (`fold/session`). */
 export interface FoldStepMotionInput {
@@ -151,11 +156,26 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
     }
     case 'cp-jump':
       return crossfade();
+    // A vertex fold's motion is the engine's staged legs
+    // (`FoldVertexReport.motion`), which no pose plays yet: until one does,
+    // it crossfades rather than inventing a hinge.
+    case 'squash':
+    case 'petal':
+    case 'rabbit-ear':
+    case 'swivel':
+      return crossfade();
   }
 }
 
 function playKind(op: FoldOp): FoldStepPlayKind {
-  return op.kind === 'cp-jump' ? 'import' : op.kind;
+  switch (op.kind) {
+    case 'cp-jump':
+      return 'import';
+    case 'rabbit-ear':
+      return 'rabbit_ear';
+    default:
+      return op.kind;
+  }
 }
 
 function hingeOf(

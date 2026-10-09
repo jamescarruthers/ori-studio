@@ -36,6 +36,7 @@ import type {
   SheetPoint,
 } from '../document/foldSequenceDocument';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
+import { FOLD_VERTEX_REFUSAL_CODES, type FoldVertexReport } from './foldEngineSquashWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
 export type FoldSide = 'positive' | 'negative';
@@ -143,6 +144,18 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'reverse_no_opening',
   'reverse_tip_not_free',
   'reverse_kind_infeasible',
+  // The vertex folds (plan Phase 11).
+  'squash_no_flap',
+  'squash_flap_not_free',
+  'squash_flap_covered',
+  'squash_target_outside',
+  'petal_not_precreased',
+  'petal_no_flap',
+  'fan_center',
+  'fan_ray_blocked',
+  'fan_not_flat',
+  'fan_ridge_not_ray',
+  'fan_stayer_detached',
   'internal',
 ] as const;
 
@@ -179,6 +192,9 @@ export const FOLD_REFUSAL_CODES = [
   // A stored cp-jump that no longer lands, or an io call's refusal, under
   // Import CP's own codes (`BridgeRefusal::Io`).
   ...FOLD_IMPORT_REFUSAL_CODES,
+  // A stored vertex fold whose choice no longer decides it
+  // (`BridgeRefusal::Vertex`).
+  ...FOLD_VERTEX_REFUSAL_CODES,
 ] as const;
 
 export type FoldRefusalCode = (typeof FOLD_REFUSAL_CODES)[number];
@@ -237,7 +253,9 @@ export type FoldFix =
    */
   | { readonly fix: 'use_line'; readonly line: FoldModelLine; readonly side: FoldSide; readonly step?: FoldStoredStep }
   /** The same reverse fold of the other kind is valid. */
-  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' };
+  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' }
+  /** The same rabbit ear or swivel with this emergent ray, a direction in the parent's model frame, lands. */
+  | { readonly fix: 'use_emergent'; readonly direction: FoldModelPoint };
 
 export interface FoldEngineRefused {
   status: 'refused';
@@ -329,9 +347,11 @@ export interface FoldSheetLanded {
 
 export interface FoldStepLanded {
   state: number;
-  /** Null for a turn or a rotation. */
+  /** Null for a turn, a rotation, an import or a vertex fold. */
   report: FoldReport | null;
   summary: FoldStateSummary;
+  /** What a vertex fold did, with its motion (`foldEngineSquashWire.ts`); absent for every other step. */
+  vertex?: FoldVertexReport;
 }
 
 export interface FoldStepFingerprinted extends FoldStepLanded {

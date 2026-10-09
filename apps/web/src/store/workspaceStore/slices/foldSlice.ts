@@ -25,6 +25,10 @@ const STEP_LABELS: Record<FoldOpKind, string> = {
   turn: 'Turn over',
   rotate: 'Rotate',
   'cp-jump': 'Import crease pattern',
+  squash: 'Squash fold',
+  petal: 'Petal fold',
+  'rabbit-ear': 'Rabbit ear',
+  swivel: 'Swivel fold',
 };
 
 /**

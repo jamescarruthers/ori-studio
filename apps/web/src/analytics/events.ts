@@ -26,8 +26,24 @@ export type DiagramStepAddedSource =
   | 'svg'
   | 'raster';
 
-/** A Fold step's op, as `fold step added` names it (the document's `FoldOpKind`, without Import CP's). */
-export type FoldStepAddedOpKind = 'valley' | 'mountain' | 'precrease' | 'unfold' | 'refold' | 'turn' | 'rotate';
+/**
+ * A Fold step's op, as `fold step added` names it (the document's
+ * `FoldOpKind`, without Import CP's, snake_case: the rabbit ear is
+ * `rabbit_ear`).
+ */
+export type FoldStepAddedOpKind =
+  | 'valley'
+  | 'mountain'
+  | 'precrease'
+  | 'unfold'
+  | 'refold'
+  | 'turn'
+  | 'rotate'
+  // The vertex folds.
+  | 'squash'
+  | 'petal'
+  | 'rabbit_ear'
+  | 'swivel';
 
 /** How much of the moving side a Fold step took: every layer, flaps picked, or a depth at a point. */
 export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';

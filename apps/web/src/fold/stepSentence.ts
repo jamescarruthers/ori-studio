@@ -38,6 +38,8 @@ import {
 } from '../lib/foldSentences';
 import type { TurnKind } from '../lib/steps/turn';
 import { turnName } from '../lib/steps/turnWords';
+import type { FoldVertexOpKind } from './document/foldSequenceDocument';
+import { vertexSentence } from './stepSentenceVertex';
 import {
   plainFoldSentence,
   unfoldSentence,
@@ -105,6 +107,8 @@ export type FoldSentenceStep =
   | { op: 'turn'; turn: TurnKind }
   /** Import CP: the state jumps to an imported crease pattern's (plan D16). */
   | { op: 'cp-jump' }
+  /** A vertex fold (plan Phase 11): its creases are its own, so it names no line (`stepSentenceVertex`). */
+  | { op: 'vertex'; fold: FoldVertexOpKind; direction: FoldDirection }
   /** An operation a newer build wrote: locked, never described (plan D6). */
   | { op: 'unknown' };
 
@@ -230,6 +234,8 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
       return t('panels:fold.sentence.turn', '{{turn}}.', { turn: turnName(step.turn, t) });
     case 'cp-jump':
       return t('panels:fold.sentence.cpJump', 'Collapse into the imported crease pattern.');
+    case 'vertex':
+      return vertexSentence(t, step.fold);
     case 'unknown':
       return t('panels:fold.sentence.unknown', 'A step made with a newer Ori Studio.');
   }
