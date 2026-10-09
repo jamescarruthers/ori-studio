@@ -8,14 +8,15 @@ import { ViewportToolbar, type ViewportToolbarGroupSpec } from '../../panels/Vie
  * The floating bar along the bottom of the Fold canvas (plan D14, the
  * design's): the shared zoom cluster and Fit, for both panes at once, the
  * panes' two display switches — the step's own creases drawn as its
- * instruction, and the precreases — and a slot for Send to Edit, which the
- * panel supplies.
+ * instruction, and the precreases — the step's transport (`playback`), and a
+ * slot for Send to Edit, which the panel supplies.
  */
 export function FoldViewportToolbar({
   zoomPercent,
   camera,
   display,
   onDisplay,
+  playback,
   sendToEdit,
 }: {
   zoomPercent: number;
@@ -27,6 +28,8 @@ export function FoldViewportToolbar({
   };
   display: FoldPaneDisplay;
   onDisplay: (display: FoldPaneDisplay) => void;
+  /** The step's transport controls (`FoldPlaybackControls`). */
+  playback?: ReactNode;
   sendToEdit?: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -59,6 +62,7 @@ export function FoldViewportToolbar({
         },
       ],
     },
+    { id: 'playback', items: [playback ? { kind: 'node', id: 'fold-playback', node: playback } : null] },
     { id: 'send', items: [sendToEdit ? { kind: 'node', id: 'send-to-edit', node: sendToEdit } : null] },
   ];
   return (

@@ -41,6 +41,8 @@ import { FoldPane } from './FoldPane';
 import { FoldViewportToolbar } from './FoldViewportToolbar';
 import { FOLD_CANVAS_DROP_POLICY, useFoldCanvasDrop } from '../../../fold/io/useFoldCanvasDrop';
 import { FileDropOverlay } from '../../FileDropOverlay';
+import { useFoldPanePlayback } from '../../../fold/canvas/useFoldPanePlayback';
+import { FoldPlaybackControls } from '../FoldPlaybackControls';
 import styles from './FoldCanvas.module.css';
 
 /**
@@ -48,7 +50,10 @@ import styles from './FoldCanvas.module.css';
  * left and its crease pattern on the right, each a `FoldPane` on
  * `useCpSurface` painted through the shared paper painter in the user's
  * paper style; the tool rail down the left; the tool window over the
- * viewport's corner; the viewport toolbar along the bottom. On a phone, one
+ * viewport's corner; the viewport toolbar along the bottom, with the step's
+ * transport (Play draws the step from its parent on the folded pane,
+ * `useFoldPanePlayback`). A crease pattern dropped on the panes is Import CP
+ * (`useFoldCanvasDrop`). On a phone, one
  * pane at a time, the rail's tools in the header's sheet
  * (`FoldPhoneCanvasPills`).
  *
@@ -81,10 +86,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const snapRadius = useSettingsStore((state) => state.cpSnapRadius);
   const overrides = useShortcutStore((state) => state.overrides);
   const defaultsSource = useShortcutStore((state) => state.defaultsSource);
-  const keyLabel = useCallback<FoldKeyLabel>(
-    (id) => shortcutLabelForAction(id, { overrides, defaultsSource }),
-    [overrides, defaultsSource]
-  );
+  const shortcuts = useMemo(() => ({ overrides, defaultsSource }), [overrides, defaultsSource]);
+  const keyLabel = useCallback<FoldKeyLabel>((id) => shortcutLabelForAction(id, shortcuts), [shortcuts]);
   const theme = useThemeStore((state) => state.currentTheme);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const drop = useFoldCanvasDrop();
@@ -116,6 +119,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
   const sheetKey = summary ? summary.sheet.map(([x, y]) => `${x},${y}`).join(';') : 'none';
   const framingKey = `${sequenceId}:${sheetKey}`;
+
+  // --- The step on screen played from its parent, on the folded pane, with its transport on the bar.
+  const playback = useFoldPanePlayback(session.cursorId, paint.folded.offset);
 
   // --- The tool's feedback on each pane.
   const freeFrom = toolState.lineMode === 'free' && toolState.picks[0]?.kind === 'free' && toolState.picks.length === 1 ? toolState.picks[0].scene : null;
@@ -231,6 +237,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               overlay={foldedOverlay}
               onZoomPercentChange={setZoomPercent}
               status={foldedStatus}
+              posedScene={playback.frames}
               layers={(camera) => (
                 <>
                   {inks && (
@@ -276,6 +283,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           camera={camera}
           display={display}
           onDisplay={setDisplay}
+          playback={<FoldPlaybackControls playback={playback} shortcuts={shortcuts} />}
           sendToEdit={sendToEdit}
         />
       </div>

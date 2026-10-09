@@ -55,6 +55,7 @@ vi.mock("../../../fold/session/useFoldSession", () => ({
   useFoldSessionState: (selector: (snapshot: unknown) => unknown) =>
     selector(session.snapshot),
   useFoldCursor: () => session.node,
+  useFoldNode: () => null,
   useFoldNodeQuery: () => null,
 }));
 
@@ -125,6 +126,16 @@ describe("the Fold canvas", () => {
       [...canvas.querySelectorAll("button")].some(
         (button) => button.textContent === "Send to Edit",
       ),
+    ).toBe(true);
+  });
+
+  it("puts the step’s transport on the bar, waiting while the sheet has no step to play", () => {
+    const canvas = mount();
+    const transport = byRole(canvas, "group", "Step playback");
+    expect(transport).toBeTruthy();
+    expect(
+      transport?.querySelector<HTMLButtonElement>('button[aria-label="Play step"]')
+        ?.disabled,
     ).toBe(true);
   });
 

@@ -1,4 +1,13 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { CpRendererUnavailable } from '../../../cp-workspace/CpRendererUnavailable';
 import type { CpOverlayView } from '../../../cp-workspace/CreasePatternWebglCanvas';
 import { cpCanvasCursor } from '../../../cp-workspace/cpCanvasCursor';
@@ -16,8 +25,11 @@ import type { WheelGesturePreference } from '../../../lib/wheelGesture';
 import { FOLD_UNITS_PER_CP_UNIT, foldUnitToUser } from '../../../fold/canvas/foldCanvasGeometry';
 import type { FoldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { sameFoldHit, type FoldHit, type FoldHitRadii, type FoldPaneId } from '../../../fold/canvas/foldPicking';
+import type { FoldPosedSceneSource } from '../../../fold/animation/foldStepPlayback';
 import type { Point } from '../../../lib/geometry';
 import styles from './FoldCanvas.module.css';
+
+const NOT_POSED: FoldPosedSceneSource = { current: () => null, subscribe: () => () => {} };
 
 const EMPTY_FOLDED: FoldedGeometry = {
   fills: { position: new Float32Array(0), color: new Float32Array(0), count: 0 },
@@ -64,6 +76,13 @@ export interface FoldPaneProps {
   status: ReactNode;
   /** Layers drawn over the canvas through its camera: the fold's arrow, the root chooser. */
   layers?: (view: CpOverlayView) => ReactNode;
+  /**
+   * A step playing (`useFoldStepPlayback`'s frames): while it has a frame, the
+   * pane paints that in place of `scene`, uploaded as each is pushed with no
+   * render of its own, and puts down the tool's feedback, the tint, the
+   * layers and the hover, which belong to the state at rest.
+   */
+  posedScene?: FoldPosedSceneSource;
   ariaLabel: string;
 }
 
@@ -99,9 +118,16 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     onActivate,
     status,
     layers,
+    posedScene = NOT_POSED,
     ariaLabel,
   } = props;
   const [view, setView] = useState<CpOverlayView | null>(null);
+  // Re-rendered only as a play starts and ends: the frames between go straight to the renderer.
+  const posing = useSyncExternalStore(posedScene.subscribe, () => posedScene.current() !== null);
+  const posingRef = useRef(posing);
+  useEffect(() => {
+    posingRef.current = posing;
+  }, [posing]);
   const dx = offset?.x ?? 0;
   const dy = offset?.y ?? 0;
   const modelToSvg = useMemo(
@@ -117,8 +143,11 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
       wheelGesture,
       snapRadius,
       // The surface measures radii in Edit's units; the same share of a Fold sheet.
+      // Nothing is picked off a frame in motion: the state at rest is what a tool locates on.
       hitTest: (point, radii) =>
-        hitTest(point, { point: radii.point * FOLD_UNITS_PER_CP_UNIT, line: radii.line * FOLD_UNITS_PER_CP_UNIT }),
+        posingRef.current
+          ? null
+          : hitTest(point, { point: radii.point * FOLD_UNITS_PER_CP_UNIT, line: radii.line * FOLD_UNITS_PER_CP_UNIT }),
       sameHit: sameFoldHit,
       onPick,
       strokeWidths: ({ ratio, widthBoost }) => ({
@@ -134,33 +163,40 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
 
   useImperativeHandle(ref, () => controls, [controls]);
 
-  // The paper: the scene through the painter, in the user's style.
+  // The paper: the scene through the painter, in the user's style — or, while
+  // a step plays, each frame it pushes, with the frame's own face fills.
   const geometry = useMemo(() => (scene ? paperSceneToFoldedGeometry(scene, style, ink) : EMPTY_FOLDED), [scene, style, ink]);
+  const policy = ink.policy;
   useEffect(() => {
     const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setFolded(geometry);
-    render();
-  }, [geometry, rendererGeneration, rendererRef, render]);
+    if (!renderer) return undefined;
+    const paint = () => {
+      const frame = posedScene.current();
+      renderer.setFolded(frame ? paperSceneToFoldedGeometry(frame.scene, style, { policy, faces: frame.faces }) : geometry);
+      render();
+    };
+    paint();
+    return posedScene.subscribe(paint);
+  }, [geometry, posedScene, style, policy, rendererGeneration, rendererRef, render]);
 
   // The moving set over the paper: the overlay fill channel draws above the
   // folded channel, in the pane's frame.
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
-    renderer.setDiagnosticFills(tint);
+    renderer.setDiagnosticFills(posing ? null : tint);
     render();
-  }, [tint, rendererGeneration, rendererRef, render]);
+  }, [tint, posing, rendererGeneration, rendererRef, render]);
 
   // The tool's feedback, which follows the pointer.
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
-    const { points, strokes } = overlay(hovered);
+    const { points, strokes } = posing ? { points: null, strokes: null } : overlay(hovered);
     renderer.setOverlayPoints(points);
     renderer.setPreview(strokes);
     render();
-  }, [overlay, hovered, inkKey, rendererGeneration, rendererRef, render]);
+  }, [overlay, hovered, posing, inkKey, rendererGeneration, rendererRef, render]);
 
   const cursor = cpCanvasCursor({
     panToolActive: false,
@@ -189,7 +225,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
         data-testid={`fold-${pane}-canvas`}
         style={cursor ? { cursor } : undefined}
       />
-      {view && layers?.(view)}
+      {view && !posing && layers?.(view)}
       {status}
       {rendererStatus && <CpRendererUnavailable status={rendererStatus} />}
     </div>

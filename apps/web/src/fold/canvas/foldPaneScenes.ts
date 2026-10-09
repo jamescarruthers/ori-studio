@@ -23,7 +23,7 @@
  */
 import type { Point } from '../../lib/geometry';
 import type { PaperItem, PaperLineItem, PaperLineRole, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
-import { foldedFlatPaperScene } from '../../cp-workspace/folded/foldedFlatScene';
+import { foldedFlatPaperScene, type FoldedFlatPaperSceneOptions } from '../../cp-workspace/folded/foldedFlatScene';
 import type { FoldDirection } from '../document/foldSequenceDocument';
 import type { FoldLetter, FoldScene, FoldSceneCrease } from '../engine/foldEngineWire';
 import { applyIsometry, FOLD_USER_PER_UNIT, foldUnitToScenePx, toPoint } from './foldCanvasGeometry';
@@ -78,14 +78,23 @@ export function foldedDisplayOffset(scene: FoldScene, sheet: readonly (readonly 
 const shifted = (offset: Point) => (point: Point): ScenePoint =>
   foldUnitToScenePx({ x: point.x + offset.x, y: point.y + offset.y });
 
-/** The folded form of a state, as the folded pane paints it, shifted by the pane's display offset. */
-export function foldedPaneScene(scene: FoldScene, display: FoldPaneDisplay, offset: Point = ORIGIN): PaperScene {
-  const painted = foldedFlatPaperScene(scene, {
+/**
+ * Where the folded pane places a state's folded form: `foldedFlatPaperScene`'s
+ * options at the pane's display offset. A step's motion is built with the same
+ * placement, so its first and last frames are the pane's own pictures.
+ */
+export function foldedPanePlacement(offset: Point = ORIGIN): FoldedFlatPaperSceneOptions {
+  return {
     // The canvas shows what the window shows; a buried face is never seen.
     markHidden: true,
     toScenePx: shifted(offset),
     scale: FOLD_USER_PER_UNIT,
-  });
+  };
+}
+
+/** The folded form of a state, as the folded pane paints it, shifted by the pane's display offset. */
+export function foldedPaneScene(scene: FoldScene, display: FoldPaneDisplay, offset: Point = ORIGIN): PaperScene {
+  const painted = foldedFlatPaperScene(scene, foldedPanePlacement(offset));
   return display.precreases ? painted : withoutFlatCreases(painted);
 }
 
