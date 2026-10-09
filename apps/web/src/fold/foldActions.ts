@@ -171,6 +171,18 @@ export function foldKindLabel(t: TFunction, kind: FoldKind): string {
   }
 }
 
+/**
+ * What Delete says it takes, given how many steps fold from the step: the step
+ * alone, or the step and its subtree, branches and all. Every surface that
+ * offers the verb says it in these words — the menus through the catalog, a
+ * card's corner through this.
+ */
+export function foldDeleteStepLabel(t: TFunction, followers: number): string {
+  return followers > 0
+    ? t('panels:fold.actions.deleteStepAndFollowing', 'Delete this step and what follows')
+    : t('panels:fold.actions.deleteStep', 'Delete this step');
+}
+
 /** Why nothing can be added after the step, or null when something can. */
 function addStepBlock(t: TFunction, context: FoldActionContext): string | null {
   if (context.readOnly) {
@@ -299,10 +311,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
       kind: 'command',
       id: 'delete-step',
       // Says what it takes with it: the subtree goes too, branches and all.
-      label:
-        step && step.followers > 0
-          ? t('panels:fold.actions.deleteStepAndFollowing', 'Delete this step and what follows')
-          : t('panels:fold.actions.deleteStep', 'Delete this step'),
+      label: foldDeleteStepLabel(t, step?.followers ?? 0),
       icon: 'delete',
       disabled: step === null || context.readOnly,
       hint:

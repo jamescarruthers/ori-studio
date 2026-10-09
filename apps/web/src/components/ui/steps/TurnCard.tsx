@@ -32,8 +32,17 @@ export const TurnCard = forwardRef<
     onSelect: (id: string) => void;
     /** Delete the turn, from its card's corner; absent where the sequence cannot change. */
     onDelete?: (id: string) => void;
+    /**
+     * What the corner's Delete says it takes. A Diagram turn is an entry of its
+     * own and goes alone ("Delete Turn", the default); a surface whose turns
+     * are steps the later steps fold from says what goes with it.
+     */
+    deleteLabel?: string;
   }
->(function TurnCard({ turn, between, glyph, selected, tabStop, dropTarget = false, onSelect, onDelete }, ref) {
+>(function TurnCard(
+  { turn, between, glyph, selected, tabStop, dropTarget = false, onSelect, onDelete, deleteLabel },
+  ref
+) {
   const { t } = useTranslation();
   const locked = turn.unknown !== undefined;
   const { title, how } = turnCardWords(turn, t);
@@ -52,7 +61,10 @@ export const TurnCard = forwardRef<
       paper={!locked}
       verbs={
         onDelete && (
-          <StepCardDeleteVerb label={t('panels:diagram.turns.delete', 'Delete Turn')} onDelete={() => onDelete(turn.id)} />
+          <StepCardDeleteVerb
+            label={deleteLabel ?? t('panels:diagram.turns.delete', 'Delete Turn')}
+            onDelete={() => onDelete(turn.id)}
+          />
         )
       }
       instruction={

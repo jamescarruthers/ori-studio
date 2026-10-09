@@ -1538,7 +1538,6 @@
     "grid": {
       "broken": "Este passo não dobra mais",
       "brokenAbove": "Um passo anterior não dobra mais",
-      "delete": "Excluir este passo e os seguintes",
       "flat": "Planos",
       "folding": "Dobrando…",
       "label": "Passos",

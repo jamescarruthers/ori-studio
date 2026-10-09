@@ -1538,7 +1538,6 @@
     "grid": {
       "broken": "Este paso ya no se puede plegar",
       "brokenAbove": "Un paso anterior ya no se puede plegar",
-      "delete": "Eliminar este paso y los siguientes",
       "flat": "Planos",
       "folding": "Plegando…",
       "label": "Pasos",

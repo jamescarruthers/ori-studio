@@ -1538,7 +1538,6 @@
     "grid": {
       "broken": "Cette étape ne se plie plus",
       "brokenAbove": "Une étape précédente ne se plie plus",
-      "delete": "Supprimer cette étape et les suivantes",
       "flat": "À plat",
       "folding": "Pliage…",
       "label": "Étapes",

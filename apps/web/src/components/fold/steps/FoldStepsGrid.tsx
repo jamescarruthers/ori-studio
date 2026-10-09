@@ -14,7 +14,8 @@ import {
   type FoldGridStep,
   type FoldGridTurn,
 } from '../../../fold/sequence/foldGridEntries';
-import { foldedStepCount, type FoldPathEntry } from '../../../fold/sequence/foldSequencePath';
+import { foldedStepCount, followerCount, type FoldPathEntry } from '../../../fold/sequence/foldSequencePath';
+import { foldDeleteStepLabel } from '../../../fold/foldActions';
 import { sheetBadge, sheetSentence, statusBadge, stepCountLabel } from '../../../fold/sequence/foldSequenceWords';
 import { setFoldView } from '../../../fold/sequence/foldViewMode';
 import { useFoldStepMenu } from '../../../fold/sequence/useFoldStepMenu';
@@ -64,11 +65,21 @@ function turnGlyph(turn: TurnKind): string | null {
  */
 export function FoldStepsGrid({ view }: { view: FoldSequenceView }) {
   const { t } = useTranslation();
-  const { entries, frames, words, cursor, readOnly, paper } = view;
+  const { document, entries, frames, words, cursor, readOnly, paper } = view;
   const gridEntries = useMemo(() => foldGridEntries(entries), [entries]);
   const glyphs = useMemo(
     () => new Map(gridEntries.filter(isFoldGridTurn).map((entry) => [entry.id, turnGlyph(entry.turn)])),
     [gridEntries]
+  );
+  // A turn is a step like any other: deleting one takes what folds from it, and the card says so.
+  const deleteLabels = useMemo(
+    () =>
+      new Map(
+        entries.flatMap((entry) =>
+          entry.id === null ? [] : [[entry.key, foldDeleteStepLabel(t, followerCount(document, entry.id))] as const]
+        )
+      ),
+    [t, document, entries]
   );
   const menu = useFoldStepMenu(stepKeyAt);
 
@@ -105,6 +116,7 @@ export function FoldStepsGrid({ view }: { view: FoldSequenceView }) {
               tabStop={card.tabStop}
               onSelect={select}
               onDelete={readOnly ? undefined : remove}
+              deleteLabel={deleteLabels.get(slot.entry.id)}
             />
           ) : (
             <FoldStepCard
@@ -114,6 +126,7 @@ export function FoldStepsGrid({ view }: { view: FoldSequenceView }) {
               picture={frames[slot.entry.index]?.pattern ?? null}
               card={card}
               readOnly={readOnly}
+              deleteLabel={deleteLabels.get(slot.entry.id) ?? null}
             />
           )
         }
@@ -138,6 +151,7 @@ function FoldStepCard({
   picture,
   card,
   readOnly,
+  deleteLabel,
 }: {
   entry: FoldPathEntry;
   words: FoldSentenceStep;
@@ -146,6 +160,8 @@ function FoldStepCard({
   picture: SheetThumbnail | null;
   card: StepsGridCardProps;
   readOnly: boolean;
+  /** What its Delete says it takes (`foldDeleteStepLabel`); null for the sheet, which has none. */
+  deleteLabel: string | null;
 }) {
   const { t } = useTranslation();
   const status = statusBadge(t, entry.status);
@@ -165,8 +181,8 @@ function FoldStepCard({
       }
       paper={false}
       verbs={
-        entry.id !== null && !readOnly ? (
-          <StepCardDeleteVerb label={t('panels:fold.grid.delete', 'Delete this step and what follows')} onDelete={() => remove(entry.key)} />
+        deleteLabel !== null && !readOnly ? (
+          <StepCardDeleteVerb label={deleteLabel} onDelete={() => remove(entry.key)} />
         ) : undefined
       }
       instruction={sheet ?? foldStepSentence(t, words)}

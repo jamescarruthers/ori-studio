@@ -1486,7 +1486,6 @@
     "grid": {
       "broken": "Dieser Schritt lässt sich nicht mehr falten",
       "brokenAbove": "Ein Schritt davor lässt sich nicht mehr falten",
-      "delete": "Diesen Schritt und alle folgenden löschen",
       "flat": "Flach",
       "folding": "Wird gefaltet…",
       "label": "Schritte",
