@@ -912,12 +912,17 @@ harness.
 Closed enums and buckets only. Commands dispatched through `MENU_ACTION_IDS` are
 already tracked at the chokepoint.
 
+`docs/analytics.md` is the source of truth for each event's properties and
+values; this table is the plan's summary of it.
+
 | Event | Properties |
 |---|---|
 | `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth, via: axiom\|crease\|free}` |
 | `fold refused` | `{code}` |
 | `fold choice offered` | `{kind, count_bucket}` |
-| `fold sequence sent to edit` | — |
+| `fold step played` | `{trigger: user\|auto, step_kind}` |
+| `fold view switched` | `{view: fold\|steps}` |
+| `fold sequence sent to edit` | `{variant: plain\|precreases-as-aux}` |
 | `fold cp imported` | `{origin}` (D16's enum) |
 | `fold step sent to diagram` | Later |
 
@@ -981,7 +986,7 @@ Evidence links point to §n of the research doc, or to `research/2026-10-08-fold
 | Undo | **Reuse** `snapshotHistory` as it is | `r3-reuse-steps-documents` §1.5 |
 | Shared step model | **Do not share**; share the vocabulary (`Construction` and witness input order, `extent`, the turn type) | `r3-reuse-steps-documents` C4/C8/C12 |
 | Turn type | **Lift** `DiagramTurnKind` to a neutral module | `r3-reuse-steps-documents` C12 |
-| Touch undo pills | **Reuse** `CanvasHistoryPills` | review (`useCanvasHistoryPills.ts:16`) |
+| Touch undo | **Reuse** `TouchHistoryButtons` in Fold's header (D14); `HISTORY_PILL_WORKSPACES` stays `['edit']` | review (`useCanvasHistoryPills.ts:18`, `FoldHeader.tsx`) |
 
 ### Owner decisions
 
@@ -1034,7 +1039,9 @@ None is pending.
 - `tests/fixtures/precrease/` baselines (committed hashes);
 - `tests/fixtures/flat-folder/r271-s03.fold`;
 - `tests/fixtures/beloch/`;
-- `tests/fixtures/fold-sequences/` (goldens and samples);
+- `tests/fixtures/fold-samples/` (Import CP's samples, with their provenance);
+- `crates/oristudio-fold/tests/fixtures/classics/` (the classic sequences'
+  goldens) and `scenes/`;
 - `PORTING.md`: a new Flat-Folder section covering the heuristic-ε arrangement
   (its numbering dependence and the r271-s03 / r069-s07 cases) and the entry
   point's contract (done);
@@ -1083,7 +1090,8 @@ None is pending.
 - `workspaces/*`, `routing/*`, `store/layoutStore.ts`
 - `components/panels/PanelComponents.tsx`, `WorkspaceShell.tsx`,
   `WorkspaceViewDrawer.tsx`
-- `hooks/useCanvasHistoryPills.ts`
+- `hooks/useCanvasHistoryPills.ts` (comment only: Fold's touch undo is in its
+  header)
 - `App.css` (the header rule, edited in place)
 - `commands/menuActions.ts`, `menus/menuDefinition.ts`
 - `lib/workspaceCapabilities.ts`
