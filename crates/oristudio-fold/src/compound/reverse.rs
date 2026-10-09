@@ -324,11 +324,19 @@ impl State {
         let Some(plan) = tip.choose(self, choices)? else {
             return Ok(Vec::new());
         };
+        // The kinds share their geometry: prepared once, the outside fold is
+        // the inside one with its placements turned.
+        let Ok(prepared) = tip.prepare(self, &plan, ReverseKind::Inside) else {
+            return Ok(Vec::new());
+        };
         let limits = CompletionLimits::default();
-        Ok([ReverseKind::Inside, ReverseKind::Outside]
-            .into_iter()
-            .filter(|&kind| tip.lands(self, &plan, kind, &limits))
-            .collect())
+        Ok([
+            (ReverseKind::Inside, prepared.lands(&limits)),
+            (ReverseKind::Outside, prepared.lands_flipped(&limits)),
+        ]
+        .into_iter()
+        .filter_map(|(kind, lands)| lands.then_some(kind))
+        .collect())
     }
 
     /// A reverse fold, with its stored choices (empty for a new step), under
@@ -372,7 +380,7 @@ impl State {
             Err(refusal) => {
                 let refusal = no_order(refusal);
                 return Err(CompoundRefused::Refused(
-                    self.diagnose(op, &tip, &plan, refusal, limits),
+                    self.diagnose(op, &tip, &plan, &prepared, refusal, limits),
                 ));
             }
         };
@@ -405,8 +413,8 @@ impl State {
 
     /// The tip of `op`: its line classified, the moving side's flaps, and the
     /// flaps the anchor grows over. Everything moving is refused, offering
-    /// the flaps to pick.
-    fn tip(&self, op: &ReverseFold) -> Result<Tip, Refused> {
+    /// the flaps to pick. A crimp's first line has the same tip.
+    pub(super) fn tip(&self, op: &ReverseFold) -> Result<Tip, Refused> {
         let classified =
             line::classify(&self.geometry().vertex_images, Axis::new(&op.line, op.side))?;
         let side = moving_side(self, &classified)?;
@@ -430,11 +438,16 @@ impl State {
     /// the tip's way when growing the tip over them lands (the tip is then
     /// not free) — keeping the openings chosen if it can, otherwise opening
     /// some other way, which the grown fold then asks for.
+    ///
+    /// The other kind is the fold `prepared` with its placements turned, so
+    /// it costs one completion, not a second scoring and gate; a grown plan
+    /// is tried once, however many ways of keeping the openings reach it.
     fn diagnose(
         &self,
         op: &ReverseFold,
         tip: &Tip,
         plan: &Plan,
+        prepared: &Prepared,
         refusal: FoldRefusal,
         limits: &CompletionLimits,
     ) -> Refused {
@@ -443,7 +456,7 @@ impl State {
         };
         let mut fixes = Vec::new();
         let other = op.kind.other();
-        if tip.lands(self, plan, other, limits) {
+        if prepared.lands_flipped(limits) {
             fixes.push(Fix::OtherKind { kind: other });
         }
         // The layers in the way: faces the conflict traces to with paper on
@@ -472,12 +485,20 @@ impl State {
             .copied()
             .filter(|f| tip.flaps.binary_search(f).is_err())
             .collect();
+        let mut tried: Vec<Plan> = Vec::new();
         if let Ok(bigger) = Tip::new(self, tip.classified.clone(), tip.side.clone(), grown)
             && [plan.stored.as_slice(), &[]].iter().any(|chosen| {
                 bigger
                     .plans(self, chosen, MAX_FIX_PLANS)
-                    .iter()
-                    .any(|plan| bigger.lands(self, plan, op.kind, limits))
+                    .into_iter()
+                    .any(|plan| {
+                        if tried.contains(&plan) {
+                            return false;
+                        }
+                        let lands = bigger.lands(self, &plan, op.kind, limits);
+                        tried.push(plan);
+                        lands
+                    })
             })
         {
             fixes.push(Fix::IncludeFlaps { flaps: added });
@@ -492,29 +513,29 @@ impl State {
     }
 }
 
-/// A reverse fold's tip on a state.
+/// A reverse fold's tip on a state (and a crimp's, at its first line).
 #[derive(Debug, Clone)]
-struct Tip {
-    classified: Classified,
-    side: MovingSide,
+pub(super) struct Tip {
+    pub(super) classified: Classified,
+    pub(super) side: MovingSide,
     /// The moving side's flaps the tip grows over, ascending.
-    flaps: Vec<usize>,
+    pub(super) flaps: Vec<usize>,
     /// Per face position.
-    in_tip: Vec<bool>,
+    pub(super) in_tip: Vec<bool>,
     has_stationary: Vec<bool>,
     /// Per flap of the tip (in `flaps` order), its openings.
     openings: Vec<FlapOpenings>,
 }
 
 /// How a tip's flaps move.
-#[derive(Debug, Clone)]
-struct Plan {
+#[derive(Debug, Clone, PartialEq)]
+pub(super) struct Plan {
     /// Each opening flap's opening, in the tip's flap order.
-    openings: Vec<RawOpening>,
+    pub(super) openings: Vec<RawOpening>,
     /// The flaps with no spine to open along, moving whole beside them.
-    whole: Vec<Vec<usize>>,
+    pub(super) whole: Vec<Vec<usize>>,
     /// The openings chosen among several, as a step stores them.
-    stored: Vec<StoredOpening>,
+    pub(super) stored: Vec<StoredOpening>,
 }
 
 /// A flap's openings, by face positions.
@@ -527,17 +548,17 @@ struct FlapOpenings {
 
 /// An opening by face and crease positions.
 #[derive(Debug, Clone, PartialEq)]
-struct RawOpening {
-    lower: Vec<usize>,
-    upper: Vec<usize>,
+pub(super) struct RawOpening {
+    pub(super) lower: Vec<usize>,
+    pub(super) upper: Vec<usize>,
     spine: Line,
     across: Vec<usize>,
-    lower_body: Vec<usize>,
-    upper_body: Vec<usize>,
+    pub(super) lower_body: Vec<usize>,
+    pub(super) upper_body: Vec<usize>,
 }
 
 impl RawOpening {
-    fn public(&self, state: &State) -> Opening {
+    pub(super) fn public(&self, state: &State) -> Opening {
         let ids = |faces: &[usize]| faces.iter().map(|&f| state.faces()[f].id).collect();
         let mut across: Vec<EdgeId> = self.across.iter().map(|&k| state.creases()[k].id).collect();
         across.sort_unstable();
@@ -613,15 +634,15 @@ impl Tip {
         Ok(tip)
     }
 
-    fn line(&self) -> Line {
+    pub(super) fn line(&self) -> Line {
         self.classified.axis.line_and_side().0
     }
 
-    fn side(&self) -> Side {
+    pub(super) fn side(&self) -> Side {
         self.classified.axis.line_and_side().1
     }
 
-    fn analysis(&self, state: &State) -> ReverseAnalysis {
+    pub(super) fn analysis(&self, state: &State) -> ReverseAnalysis {
         ReverseAnalysis {
             line: self.line(),
             side: self.side(),
@@ -650,7 +671,7 @@ impl Tip {
     /// a flap opens several ways and no stored opening names one; refused
     /// when no flap opens, or one with a spine cannot; broken when a stored
     /// opening names no opening.
-    fn choose(
+    pub(super) fn choose(
         &self,
         state: &State,
         choices: &ReverseChoices,
@@ -784,13 +805,9 @@ impl Tip {
         kind: ReverseKind,
         limits: &CompletionLimits,
     ) -> bool {
-        let first = CompletionLimits {
-            per_component: 1,
-            ..*limits
-        };
         self.prepare(state, plan, kind)
             .ok()
-            .is_some_and(|prepared| prepared.complete(&[], &first).is_ok())
+            .is_some_and(|prepared| prepared.lands(limits))
     }
 
     /// The compound fold of a plan, through the pipeline's steps 2–7: each

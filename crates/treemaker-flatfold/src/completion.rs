@@ -14,8 +14,8 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::constraints::{
-    self, ConstraintBuckets, ImplicationMaps, InitialPropagation, Key, NodeMeter, SearchTables,
-    SeedConflict, TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA, TransitivityCounts,
+    self, ConstraintBuckets, ImplicationMaps, InitialPropagation, Key, NodeMeter, PairIndex,
+    SearchTables, SeedConflict, TACO_TACO, TACO_TORTILLA, TORTILLA_TORTILLA, TransitivityCounts,
     TransitivitySource,
 };
 use crate::{Analysis, FlatFoldError, SolutionLimit, math};
@@ -141,14 +141,17 @@ pub struct Deadline {
     pub at_ms: f64,
 }
 
-/// Limits on the search. Propagating the seeds and splitting the rest into
-/// components are polynomial and always run to the end; the search over each
-/// component is what can blow up, and is what the budget meters.
+/// Limits on the search. The search over each component is what can blow up,
+/// and what the node count meters; propagating the seeds is polynomial, but
+/// through a deep stack it is most of a completion, so the deadline meters it
+/// too. Splitting the rest into components always runs to the end.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SearchBudget {
     /// Search nodes (a guess and its propagation) allowed across every
     /// component. `None` is unbounded.
     pub max_nodes: Option<u64>,
+    /// Read before each search node, and every few variables the seeds'
+    /// propagation visits.
     pub deadline: Option<Deadline>,
 }
 
@@ -300,24 +303,35 @@ pub fn complete_layer_order(
         assignments: fixed,
         seeds,
     } = fixed_orders(problem)?;
-    let implications = ImplicationMaps::build();
-    let tables = input.tables(problem, &implications);
+    let tables = input.tables(problem, ImplicationMaps::shared());
     let mut counts = TransitivityCounts::default();
-    let assignments =
-        match constraints::propagate_initial_assignments(&tables, fixed, seeds, &mut counts)? {
-            InitialPropagation::Assigned(assignments) => assignments,
-            InitialPropagation::Conflict(conflict) => {
-                return Ok(Completion::Conflict(public_conflict(conflict)));
-            }
-        };
+    let mut meter = BudgetMeter {
+        budget: options.budget,
+        nodes: 0,
+        ticks: 0,
+    };
+    let assignments = match constraints::propagate_initial_assignments(
+        &tables,
+        fixed,
+        seeds,
+        &mut counts,
+        &mut meter,
+    )? {
+        Ok(InitialPropagation::Assigned(assignments)) => assignments,
+        Ok(InitialPropagation::Conflict(conflict)) => {
+            return Ok(Completion::Conflict(public_conflict(conflict)));
+        }
+        Err(stop) => {
+            return Err(CompletionError::BudgetExceeded {
+                limit: stop,
+                nodes: meter.nodes,
+            });
+        }
+    };
     let groups = constraints::variable_groups(&tables, &assignments, &mut counts);
     // One solution past the limit tells a truncated component from one that
     // has exactly `limit` solutions.
     let search_limit = limit.map_or(usize::MAX, |limit| limit.saturating_add(1));
-    let mut meter = BudgetMeter {
-        budget: options.budget,
-        nodes: 0,
-    };
     let mut components = Vec::with_capacity(groups.len().saturating_sub(1));
     for (component, group) in groups.iter().skip(1).enumerate() {
         let mut scratch = assignments.clone();
@@ -425,7 +439,7 @@ pub fn flat_folder_completion_problem(analysis: &Analysis) -> crate::Result<Comp
 /// A validated problem's tables in the solver's encoding.
 struct SearchInput {
     variables: Vec<Key>,
-    variable_index: BTreeMap<Key, usize>,
+    pairs: PairIndex,
     constraints: Vec<ConstraintBuckets>,
     connected_components: Vec<BTreeMap<usize, usize>>,
 }
@@ -532,7 +546,7 @@ impl SearchInput {
             constraints::build_connected_components(face_count, &constraints);
         Ok(Self {
             variables,
-            variable_index,
+            pairs: PairIndex::of_pairs(problem.variables.iter().copied()),
             constraints,
             connected_components,
         })
@@ -545,7 +559,7 @@ impl SearchInput {
     ) -> SearchTables<'a> {
         SearchTables {
             variables: &self.variables,
-            variable_index: &self.variable_index,
+            pairs: &self.pairs,
             constraints: &self.constraints,
             transitivity: TransitivitySource {
                 faces_cells: &problem.faces_cells,
@@ -627,10 +641,26 @@ fn encode_bucket<const N: usize>(
         .collect()
 }
 
-/// Search nodes against a [`SearchBudget`].
+/// Search nodes against a [`SearchBudget`], and the propagation before the
+/// search against its deadline.
 struct BudgetMeter {
     budget: SearchBudget,
     nodes: u64,
+    /// Variables the initial propagation has visited.
+    ticks: u64,
+}
+
+impl BudgetMeter {
+    /// How many propagated variables share one reading of the clock: a
+    /// variable costs microseconds, a reading in a browser a call into
+    /// JavaScript.
+    const TICKS_PER_READING: u64 = 32;
+
+    fn past_deadline(&self) -> bool {
+        self.budget
+            .deadline
+            .is_some_and(|deadline| (deadline.now_ms)() >= deadline.at_ms)
+    }
 }
 
 impl NodeMeter for BudgetMeter {
@@ -644,12 +674,18 @@ impl NodeMeter for BudgetMeter {
         {
             return Err(BudgetLimit::Nodes);
         }
-        if let Some(deadline) = self.budget.deadline
-            && (deadline.now_ms)() >= deadline.at_ms
-        {
+        if self.past_deadline() {
             return Err(BudgetLimit::Deadline);
         }
         self.nodes += 1;
+        Ok(())
+    }
+
+    fn tick(&mut self) -> std::result::Result<(), BudgetLimit> {
+        self.ticks += 1;
+        if self.ticks.is_multiple_of(Self::TICKS_PER_READING) && self.past_deadline() {
+            return Err(BudgetLimit::Deadline);
+        }
         Ok(())
     }
 }
@@ -999,6 +1035,40 @@ mod tests {
         assert_eq!(
             solved(complete_layer_order(&decided, &options).unwrap()).forced,
             vec![Some(PairOrder::SecondAbove)]
+        );
+    }
+
+    #[test]
+    fn the_deadline_also_stops_the_propagation() {
+        fn late() -> f64 {
+            10.0
+        }
+        // Ten faces in one cell, seeded in a chain: propagating the nine
+        // seeds and the 36 pairs transitivity implies decides everything,
+        // so the search has nothing to do.
+        let mut chain = one_cell(10);
+        for a in 0..9 {
+            fix(&mut chain, a, a + 1, PairOrder::FirstAbove, FixedKind::Seed);
+        }
+        let all = solved(complete_layer_order(&chain, &UNLIMITED).unwrap());
+        assert!(all.components.is_empty());
+        assert_eq!(all.nodes, 0);
+        let past = CompletionOptions {
+            budget: SearchBudget {
+                max_nodes: None,
+                deadline: Some(Deadline {
+                    now_ms: late,
+                    at_ms: 5.0,
+                }),
+            },
+            ..UNLIMITED
+        };
+        assert_eq!(
+            complete_layer_order(&chain, &past),
+            Err(CompletionError::BudgetExceeded {
+                limit: BudgetLimit::Deadline,
+                nodes: 0,
+            })
         );
     }
 

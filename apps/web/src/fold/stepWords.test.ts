@@ -37,6 +37,10 @@ describe('operationLabel and operationBadge', () => {
       { op: 'turn', turn: { kind: 'turn-over', axis: 'vertical' } },
       { op: 'turn', turn: { kind: 'rotate', rotate: { amount: 'quarter', direction: 'ccw' } } },
       { op: 'cp-jump' },
+      { op: 'crimp', crimp: 'inside' },
+      { op: 'crimp', crimp: 'outside' },
+      { op: 'tuck', direction: 'valley' },
+      { op: 'tuck', direction: 'mountain' },
       { op: 'unknown' },
     ];
     expect(steps.map((step) => operationLabel(t, step))).toEqual([
@@ -48,6 +52,10 @@ describe('operationLabel and operationBadge', () => {
       'Turn over, side to side',
       'Rotate 1/4 turn counterclockwise',
       'Import crease pattern',
+      'Inside crimp',
+      'Outside crimp',
+      'Valley fold and tuck',
+      'Mountain fold and tuck',
       'From a newer Ori Studio',
     ]);
     expect(steps.map((step) => operationBadge(t, step))).toEqual([
@@ -59,6 +67,10 @@ describe('operationLabel and operationBadge', () => {
       'Turn over',
       'Rotate',
       'Imported',
+      'Crimp',
+      'Crimp',
+      'Tuck',
+      'Tuck',
       'Newer',
     ]);
   });

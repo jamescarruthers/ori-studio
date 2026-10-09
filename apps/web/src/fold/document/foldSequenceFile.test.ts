@@ -108,6 +108,20 @@ describe('the step tree', () => {
       { kind: 'turn', axis: 'diagonal' },
       { kind: 'rotate', rotate: { amount: 'third', direction: 'cw' } },
       { kind: 'cp-jump', cpJson: '{}', orderJson: '[]', origin: 'my-file.cp' },
+      // A crimp's second line has no root to replay with, and its kind is one of two.
+      { ...valleyOp, kind: 'crimp', second: valleyOp.line, crimp: 'sideways' },
+      { ...valleyOp, kind: 'crimp', crimp: 'inside' },
+      {
+        ...valleyOp,
+        kind: 'crimp',
+        second: { via: 'axiom', axiom: 1, inputs: [{ kind: 'point', at: [0, 0] }, { kind: 'point', at: [1, 1] }] },
+        crimp: 'inside',
+      },
+      { ...valleyOp, kind: 'crimp', second: valleyOp.line, crimp: 'inside', direction: 'valley' },
+      { ...valleyOp, kind: 'tuck', direction: 'valley' },
+      { ...valleyOp, kind: 'tuck', direction: 'sideways', target: [0.5, 0.5] },
+      { ...valleyOp, kind: 'tuck', direction: 'valley', target: [0.5, Number.NaN] },
+      { ...valleyOp, kind: 'tuck', direction: 'valley', target: [0.5, 0.5], placement: 'under' },
       'valley',
       null,
     ];
@@ -134,10 +148,14 @@ describe('the step tree', () => {
       { choices: { root: { n: [1e-200, 0], d: 1 } } },
       { choices: { root: { n: [5e-7, 5e-7], d: 0 } } },
       // A completion is FOLD triples over its witnesses: a sign of 1 or -1, whole indices.
+      // (A triple naming a witness that is not there, or a face against
+      // itself, reads: it is the engine's to call broken on replay.)
       { choices: { completion: [{ above: [0, 0], below: [1, 1] }] } },
       { choices: { completion: { faces: [[0, 0]], orders: [[0, 1, 0]] } } },
       { choices: { completion: { faces: [[0, 0]], orders: [[0.5, 1, 1]] } } },
       { choices: { completion: { faces: [[0, 0]], orders: [[0, 1, 1]], pinned: true } } },
+      { choices: { completion: { faces: [[0, 0], [1, 1]], orders: [[0, 1]] } } },
+      { choices: { completion: { faces: [], orders: [], pairs: [] } } },
       { choices: { pocket: [[0, 0]] } },
       { choices: { rootIndex: 2 } },
       { choices: 'first' },

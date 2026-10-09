@@ -40,7 +40,10 @@ export type FoldStepAddedOpKind =
   | 'rotate'
   // The reverse fold.
   | 'inside_reverse'
-  | 'outside_reverse';
+  | 'outside_reverse'
+  // The crimp and the tuck.
+  | 'crimp'
+  | 'tuck';
 
 /** How much of the moving side a Fold step took: every layer, flaps picked, or a depth at a point. */
 export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
@@ -1138,7 +1141,8 @@ export const ANALYTICS_EVENTS = {
    * its parent's picture to its landing. `trigger` is `user` (the Play button,
    * Space) or `auto` (arriving at a step under auto-play); `step_kind` is the
    * step's kind — `valley`, `mountain`, `precrease`, `unfold`, `refold`,
-   * `turn`, `rotate` or `import` (Import CP, a crossfade); and on a `user`
+   * `turn`, `rotate`, `import` (Import CP, a crossfade), `crimp` or `tuck`;
+   * and on a `user`
    * play, `via` is how — `space`, `button`, or `replay` for a step already
    * played through, by either. A pause, a scrub or a Step is not counted;
    * carrying on after a pause is. Nothing about the step itself.
@@ -1523,7 +1527,7 @@ export const ANALYTICS_EVENTS = {
   /**
    * The Fold workspace's canvas tools (plan D18). `fold step added` is a step
    * committed from the canvas — a fold, a precrease, an unfold or refold, a
-   * turn — with how much it took (`layer_scope`) and how its line was located
+   * turn, a crimp or a tuck — with how much it took (`layer_scope`) and how its line was located
    * (`via`); never the axiom (per-step axiom codes would add up to the axiom
    * histogram this document forbids). `fold refused` is a refusal shown to the
    * folder, by the engine's stable `code`, once per fold asked for; `fold

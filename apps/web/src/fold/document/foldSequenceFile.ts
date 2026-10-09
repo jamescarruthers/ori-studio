@@ -51,6 +51,7 @@ import { xmlText } from '../../lib/xmlEscape';
 import {
   AXIOM_SLOTS,
   FOLD_CP_ORIGINS,
+  FOLD_CRIMP_KINDS,
   FOLD_DIRECTIONS,
   FOLD_MARK_MAX_PARTS,
   FOLD_MODEL_LINE_MIN_NORMAL,
@@ -314,6 +315,8 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   // Compound folds (plan D4), one block per family.
   ['inside-reverse', ALONG_LINE_KEYS],
   ['outside-reverse', ALONG_LINE_KEYS],
+  ['crimp', new Set([...ALONG_LINE_KEYS, 'second', 'crimp'])],
+  ['tuck', new Set([...ALONG_LINE_KEYS, 'direction', 'target'])],
 ]);
 
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
@@ -370,6 +373,19 @@ function readOp(value: unknown): FoldOp | null {
     case 'outside-reverse': {
       const along = readAlongLine(value);
       return along && { kind, ...along };
+    }
+    case 'crimp': {
+      const along = readAlongLine(value);
+      const second = readLine(value.second);
+      const crimp = FOLD_CRIMP_KINDS.find((known) => known === value.crimp);
+      // ℓ2 has no root of its own to replay: an axiom there does not read.
+      return along && second && second.via !== 'axiom' && crimp ? { kind, second, crimp, ...along } : null;
+    }
+    case 'tuck': {
+      const along = readAlongLine(value);
+      const direction = readDirection(value.direction);
+      const target = readPoint(value.target);
+      return along && direction && target && { kind, direction, target, ...along };
     }
     default:
       return null;
@@ -725,6 +741,22 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
     case 'inside-reverse':
     case 'outside-reverse':
       return { kind: op.kind, line: writeLine(op.line), ...writeMotion(op) };
+    case 'crimp':
+      return {
+        kind: op.kind,
+        line: writeLine(op.line),
+        second: writeLine(op.second),
+        crimp: op.crimp,
+        ...writeMotion(op),
+      };
+    case 'tuck':
+      return {
+        kind: op.kind,
+        line: writeLine(op.line),
+        direction: op.direction,
+        ...writeMotion(op),
+        target: writePoint(op.target),
+      };
   }
 }
 

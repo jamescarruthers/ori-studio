@@ -525,6 +525,8 @@ fn anchors_that_do_not_resolve_are_refusals() {
 fn a_choice_the_op_cannot_use_breaks_it() {
     let mut bridge = Bridge::new();
     let sheet = square(&mut bridge);
+    // A compound fold's completion: its pairs as FOLD triples over
+    // witnesses, as Import CP's `orderJson` stores an order.
     let refused = refuse_with(
         &mut bridge,
         sheet,
@@ -563,6 +565,12 @@ fn a_choice_the_op_cannot_use_breaks_it() {
         sheet,
         book_step(),
         json!({ "completion": { "faces": [], "orders": [] } }),
+    );
+    land_with(
+        &mut bridge,
+        sheet,
+        book_step(),
+        json!({ "completion": { "faces": [], "orders": [] }, "opening": [] }),
     );
 }
 

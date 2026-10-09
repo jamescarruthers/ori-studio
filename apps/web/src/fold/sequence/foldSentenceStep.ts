@@ -95,6 +95,10 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
         line: sentenceLine(op.line, null, context),
         scope: scopeOf(op.seed),
       };
+    case 'crimp':
+      return { op: 'crimp', crimp: op.crimp };
+    case 'tuck':
+      return { op: 'tuck', direction: op.direction };
   }
 }
 

@@ -18,7 +18,9 @@
  *   scenes' view transforms;
  * - Import CP crossfades, and so does any step whose rigid motion cannot be
  *   built from what it has (no line, nothing moving, a degenerate placement):
- *   a step always has a motion, and a wrong one is never invented.
+ *   a step always has a motion, and a wrong one is never invented. A crimp
+ *   and a tuck crossfade too, for now: their legs come with their reports
+ *   (`foldEngineCrimpTuckWire.ts`), which no player draws yet.
  *
  * The transport plays a step as one programme (`lib/foldMotion/foldTransport`):
  * a fold is one leg resting landed, a precrease folds, holds and comes back, a
@@ -81,7 +83,9 @@ export type FoldStepPlayKind =
   | 'import'
   // Compound folds, one block per family.
   | 'inside_reverse'
-  | 'outside_reverse';
+  | 'outside_reverse'
+  | 'crimp'
+  | 'tuck';
 
 /** What a step's motion is built from: all of it the session's (`fold/session`). */
 export interface FoldStepMotionInput {
@@ -171,6 +175,11 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
       const legs = compoundLegs(input, before, after, to.place);
       return legs ? { step, before, after, motion: legs } : crossfade();
     }
+    // A crimp's and a tuck's legs come with their own calls' reports, which
+    // `apply` does not carry: they crossfade until a player poses them.
+    case 'crimp':
+    case 'tuck':
+      return crossfade();
   }
 }
 

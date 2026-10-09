@@ -99,6 +99,9 @@ pub enum Op {
     /// line, pushed inside its flaps or wrapped round them (`ops_reverse`).
     InsideReverse(crate::ops_reverse::AlongReverse),
     OutsideReverse(crate::ops_reverse::AlongReverse),
+    /// A crimp and a tuck (plan Phase 11), folded by `ops_crimp_tuck`.
+    Crimp(crate::ops_crimp_tuck::CrimpOp),
+    Tuck(crate::ops_crimp_tuck::TuckOp),
 }
 
 impl Op {
@@ -115,6 +118,8 @@ impl Op {
             Op::CpJump(_) => "cp-jump",
             Op::InsideReverse(_) => "inside-reverse",
             Op::OutsideReverse(_) => "outside-reverse",
+            Op::Crimp(_) => "crimp",
+            Op::Tuck(_) => "tuck",
         }
     }
 
@@ -135,7 +140,10 @@ impl Op {
     /// Whether it ends at a completion with openings to choose: the compound
     /// folds, which store an `opening` and a `completion` (plan D6).
     pub fn is_compound(&self) -> bool {
-        matches!(self, Op::InsideReverse(_) | Op::OutsideReverse(_))
+        matches!(
+            self,
+            Op::InsideReverse(_) | Op::OutsideReverse(_) | Op::Crimp(_) | Op::Tuck(_)
+        )
     }
 }
 
@@ -292,9 +300,10 @@ impl Rotation {
 /// `FoldChoices`, as the engine reads them: an axiom's `root`; a compound
 /// fold's `opening`s (each flap's upper block by witnesses) and its
 /// `completion` (the free pairs chosen, FOLD `faceOrders` over witnesses,
-/// the engine's [`WitnessOrder`]). A sink's `pocket` is read only for
-/// whether it is there: no op this build folds takes one, and a stored
-/// choice the op cannot use breaks its step rather than being dropped.
+/// as `orderJson` stores Import CP's order: the engine's [`WitnessOrder`]).
+/// A sink's `pocket` is read only for whether it is there: no op this build
+/// folds takes one, and a stored choice the op cannot use breaks its step
+/// rather than being dropped.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 pub struct Choices {
     /// The line the axiom's chosen root gave, in the parent's model frame.
@@ -489,8 +498,11 @@ pub enum Fix {
         #[serde(skip_serializing_if = "Option::is_none")]
         step: Option<StoredStep>,
     },
-    /// The same reverse fold of the other kind is valid.
+    /// The same reverse fold, or crimp, of the other kind is valid.
     OtherKind { kind: ReverseKind },
+    /// The same tuck against this layer instead is valid: send its sheet
+    /// point back as the tuck's `target`.
+    TuckTarget { face: FaceId, at: Point },
 }
 
 impl From<EngineFix> for Fix {
@@ -505,6 +517,7 @@ impl From<EngineFix> for Fix {
                 step: None,
             },
             EngineFix::OtherKind { kind } => Fix::OtherKind { kind },
+            EngineFix::TuckTarget { face, at } => Fix::TuckTarget { face, at },
         }
     }
 }
@@ -615,8 +628,9 @@ pub enum BridgeRefusal {
     CreaseNotFlat { point: Point },
     #[error("the crease through {point:?} is not folded, so it cannot be unfolded")]
     CreaseNotFolded { point: Point },
-    /// A compound fold whose stored choices leave more than one result: the
-    /// choice it still needs (`crate::compound`).
+    /// A compound fold whose stored choices leave more than one result: a
+    /// flap opens several ways (`opening`) or more than one order fits
+    /// (`completion`), and nothing stored names which (`crate::compound`).
     #[error("the step needs its {choice:?} chosen")]
     ChoiceNeeded {
         choice: crate::compound::NeededChoice,

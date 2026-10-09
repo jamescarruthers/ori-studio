@@ -12,6 +12,7 @@ use thiserror::Error;
 
 use crate::complete::BudgetLimit;
 use crate::compound::reverse::{NoOpening, ReverseKind};
+use crate::compound::tuck::TuckSide;
 use crate::pattern::{EdgeId, FaceId, VertexId};
 
 type Point = [f64; 2];
@@ -176,6 +177,46 @@ pub enum FoldRefusal {
         kind: ReverseKind,
         faces: Vec<FaceId>,
     },
+
+    // --- Tucks and crimps (plan Phase 11) -------------------------------
+    /// No order puts the block immediately under (or over) its target: T,
+    /// which stays, and the faces the conflict traces to in the landed
+    /// state.
+    #[error("the fold cannot be tucked {placement:?} face {target}; faces {faces:?} conflict")]
+    TuckInfeasible {
+        target: FaceId,
+        placement: TuckSide,
+        faces: Vec<FaceId>,
+    },
+    /// A crimp's second line meets its first over the paper it moves, or
+    /// within the minimum feature of it: the tip's faces there, in the
+    /// parent.
+    #[error("the crimp's lines meet over faces {faces:?}")]
+    CrimpLinesMeet { faces: Vec<FaceId> },
+    /// A crimp's second line crosses none of the paper beyond its first: it
+    /// would be a reverse fold.
+    #[error("the crimp's second line misses the tip")]
+    CrimpMissesTip,
+    /// A flap that opens at the first line does not open at the second: one
+    /// of its blocks reaches past the second line without the other, or
+    /// with nothing there to hinge to. Its faces, in the parent.
+    #[error("flap {faces:?} does not open at the crimp's second line")]
+    CrimpNoOpening { faces: Vec<FaceId> },
+    /// No order fits a crimp of this kind: the faces the conflict traces to,
+    /// in the landed state.
+    #[error("no {kind:?} crimp fits; faces {faces:?} conflict")]
+    CrimpKindInfeasible {
+        kind: ReverseKind,
+        faces: Vec<FaceId>,
+    },
+    /// The crimped paper cannot swing: layers that are not part of it lie in
+    /// its way. `blocking` are those layers' faces in the parent; `faces`
+    /// every face the conflict traces to in the landed state.
+    #[error("the crimp is not free: faces {blocking:?} are in its way")]
+    CrimpTipNotFree {
+        blocking: Vec<FaceId>,
+        faces: Vec<FaceId>,
+    },
     /// A defect, never the input's fault.
     #[error("internal error: {message}")]
     Internal { message: String },
@@ -231,6 +272,12 @@ impl FoldRefusal {
             FoldRefusal::ReverseNoOpening { .. } => "reverse_no_opening",
             FoldRefusal::ReverseTipNotFree { .. } => "reverse_tip_not_free",
             FoldRefusal::ReverseKindInfeasible { .. } => "reverse_kind_infeasible",
+            FoldRefusal::TuckInfeasible { .. } => "tuck_infeasible",
+            FoldRefusal::CrimpLinesMeet { .. } => "crimp_lines_meet",
+            FoldRefusal::CrimpMissesTip => "crimp_misses_tip",
+            FoldRefusal::CrimpNoOpening { .. } => "crimp_no_opening",
+            FoldRefusal::CrimpKindInfeasible { .. } => "crimp_kind_infeasible",
+            FoldRefusal::CrimpTipNotFree { .. } => "crimp_tip_not_free",
             FoldRefusal::Internal { .. } => "internal",
         }
     }
@@ -255,8 +302,15 @@ impl FoldRefusal {
             FoldRefusal::FoldedImage { faces, .. }
             | FoldRefusal::NoOrder { faces }
             | FoldRefusal::ReverseNoOpening { faces, .. }
-            | FoldRefusal::ReverseKindInfeasible { faces, .. } => faces.clone(),
-            FoldRefusal::ReverseTipNotFree { blocking, .. } => blocking.clone(),
+            | FoldRefusal::ReverseKindInfeasible { faces, .. }
+            | FoldRefusal::CrimpLinesMeet { faces }
+            | FoldRefusal::CrimpNoOpening { faces }
+            | FoldRefusal::CrimpKindInfeasible { faces, .. } => faces.clone(),
+            FoldRefusal::ReverseTipNotFree { blocking, .. }
+            | FoldRefusal::CrimpTipNotFree { blocking, .. } => blocking.clone(),
+            FoldRefusal::TuckInfeasible { target, faces, .. } => {
+                faces.iter().copied().chain([*target]).collect()
+            }
             FoldRefusal::LayerOrder { violations } => {
                 violations.iter().flat_map(Violation::faces).collect()
             }
@@ -338,8 +392,12 @@ pub enum Fix {
     PickFlap { flaps: Vec<Flap> },
     /// Fold along this landmark line instead, with the same moving side.
     UseLine { line: Line, side: Side },
-    /// The same reverse fold of the other kind is valid (plan D14).
+    /// The same reverse fold, or crimp, of the other kind is valid (plan
+    /// D14).
     OtherKind { kind: ReverseKind },
+    /// The same tuck against this layer instead is valid: its face, and the
+    /// sheet point that names it.
+    TuckTarget { face: FaceId, at: Point },
 }
 
 /// A refused operation and what could be done instead.

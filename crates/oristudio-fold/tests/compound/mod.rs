@@ -7,9 +7,11 @@
 
 use std::collections::BTreeMap;
 
+use oristudio_fold::random::{self, Rng};
 use oristudio_fold::{
-    ClosurePolicy, CreaseKind, Direction, EdgeId, FaceId, Letter, PlainFold, ReverseChoices,
-    ReverseFold, ReverseFolded, ReverseKind, ReverseOutcome, Seed, State,
+    ClosurePolicy, CreaseKind, CrimpFold, Direction, EdgeId, FaceId, Letter, PlainFold,
+    ReverseAnalysis, ReverseChoices, ReverseFold, ReverseFolded, ReverseKind, ReverseOutcome, Seed,
+    State, StepMotion, TuckFold,
 };
 
 use crate::support::{Point, assert_valid};
@@ -194,14 +196,19 @@ pub fn assert_plain_fold_geometry(
 /// The motion's legs start at the parent and end at the landed state, to
 /// the bit for the landed end.
 pub fn assert_motion_endpoints(parent: &State, folded: &ReverseFolded) {
-    let motion = &folded.report.motion;
+    assert_motion(parent, &folded.state, &folded.report.motion);
+}
+
+/// A compound step's motion starts at `parent` and ends at `landed`: each
+/// group's faces where the parent had them at its first leg's start, and
+/// where they land at its last leg's end.
+pub fn assert_motion(parent: &State, landed: &State, motion: &StepMotion) {
     let (Some(first), Some(last)) = (motion.legs.first(), motion.legs.last()) else {
         panic!("no legs");
     };
     for (start, end) in first.groups.iter().zip(&last.groups) {
         assert_eq!(start.faces, end.faces);
         for &face in &end.faces {
-            let landed = &folded.state;
             let t = landed.isometry(face).unwrap_or_default();
             let lineage = landed
                 .face(face)
@@ -245,4 +252,114 @@ pub fn landed(state: &State, op: &ReverseFold, choices: &ReverseChoices) -> Reve
         Ok(ReverseOutcome::ChooseOrder(c)) => panic!("{op:?}: choose an order of {:?}", c.count()),
         Err(e) => panic!("{op:?}: {e} {e:?}"),
     }
+}
+
+/// Draw `i` of seed `seed` of the reverse spike's campaign
+/// (`campaign-reverse.mjs`): a random state of one to four plain folds of at
+/// most 60 faces, then up to six draws of a reverse fold until one has a tip
+/// whose every flap opens. Inside; a test asks for the other kind itself.
+pub fn reverse_case(seed: u64, i: u64) -> Option<(State, ReverseFold)> {
+    let mut rng = Rng::new(seed * 7777 + i);
+    let state = random::folded(&mut rng).ok()?;
+    if state.faces().len() > 60 {
+        return None;
+    }
+    for _ in 0..6 {
+        let Some(op) = random::reverse_fold(&state, &mut rng, 0.2) else {
+            continue;
+        };
+        let Ok(analysis) = state.analyse_reverse(&op) else {
+            continue;
+        };
+        if analysis.flaps.iter().all(|f| !f.openings.is_empty()) {
+            return Some((state, op));
+        }
+    }
+    None
+}
+
+/// Draw `i` of seed `seed` of the spike's crimp campaign
+/// (`campaign-crimp.mjs`): a random state of one to four plain folds of at
+/// most 60 faces, then up to eight draws of a crimp (parallel lines a fifth
+/// of the time) until one has a tip whose every flap opens at ℓ1. Inside.
+pub fn crimp_case(seed: u64, i: u64) -> Option<(State, CrimpFold)> {
+    let mut rng = Rng::new(seed * 4243 + i);
+    let state = random::folded(&mut rng).ok()?;
+    if state.faces().len() > 60 {
+        return None;
+    }
+    for _ in 0..8 {
+        let Some(op) = random::crimp_fold(&state, &mut rng, 0.2) else {
+            continue;
+        };
+        let Ok(analysis) = state.analyse_crimp(&op) else {
+            continue;
+        };
+        if analysis.tip.flaps.iter().all(|f| !f.openings.is_empty()) {
+            return Some((state, op));
+        }
+    }
+    None
+}
+
+/// Each flap's first opening at a crimp's first line, as the spike's
+/// campaign takes it.
+pub fn crimp_openings(state: &State, op: &CrimpFold) -> Option<ReverseChoices> {
+    let analysis = state.analyse_crimp(op).ok()?;
+    Some(ReverseChoices {
+        openings: analysis
+            .tip
+            .flaps
+            .iter()
+            .filter(|f| f.openings.len() > 1)
+            .map(|f| f.openings[0].stored.clone())
+            .collect(),
+        order: None,
+    })
+}
+
+/// Draw `i` of seed `seed` of the spike's tuck campaign
+/// (`campaign-tuck.mjs`): a random state of two to four plain folds of at
+/// most 60 faces, then a drawn tuck (`random::tuck_fold`).
+pub fn tuck_case(seed: u64, i: u64) -> Option<(State, TuckFold)> {
+    let mut rng = Rng::new(seed * 9001 + i);
+    let state = random::folded_between(&mut rng, 2, 4).ok()?;
+    if state.faces().len() > 60 {
+        return None;
+    }
+    let op = random::tuck_fold(&state, &mut rng)?;
+    Some((state, op))
+}
+
+/// Every choice of one order per component, given each component's count.
+pub fn picks(sizes: &[usize]) -> Vec<Vec<usize>> {
+    let mut picks = vec![Vec::new()];
+    for &n in sizes {
+        picks = picks
+            .into_iter()
+            .flat_map(|p: Vec<usize>| {
+                (0..n).map(move |k| {
+                    let mut q = p.clone();
+                    q.push(k);
+                    q
+                })
+            })
+            .collect();
+    }
+    picks
+}
+
+/// The choices that open the campaign's first flap its `k`-th way: none
+/// when it opens only one way.
+pub fn first_flap_opened(analysis: &ReverseAnalysis, k: usize) -> Option<ReverseChoices> {
+    let first = analysis.flaps.first()?;
+    let opening = first.openings.get(k)?;
+    Some(ReverseChoices {
+        openings: if first.openings.len() > 1 {
+            vec![opening.stored.clone()]
+        } else {
+            Vec::new()
+        },
+        order: None,
+    })
 }

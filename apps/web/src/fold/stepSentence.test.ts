@@ -173,6 +173,17 @@ describe('foldStepSentence', () => {
     expect(foldStepSentence(t, { op: 'cp-jump' })).toBe('Collapse into the imported crease pattern.');
     expect(foldStepSentence(t, { op: 'unknown' })).toBe('A step made with a newer Ori Studio.');
   });
+
+  it('says a crimp by its kind, and a tuck by where the flap goes', () => {
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'inside' })).toBe('Inside crimp along the two lines.');
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'outside' })).toBe('Outside crimp along the two lines.');
+    expect(foldStepSentence(t, { op: 'tuck', direction: 'valley' })).toBe(
+      'Valley fold and tuck the flap in, under the chosen layer.'
+    );
+    expect(foldStepSentence(t, { op: 'tuck', direction: 'mountain' })).toBe(
+      'Mountain fold and tuck the flap in at the back, over the chosen layer.'
+    );
+  });
 });
 
 describe('sentenceInputLetters', () => {

@@ -67,12 +67,18 @@
 //! a step's summary and picture — through one seam ([`compound`]), each
 //! family in a module of its own with its own query on `FoldEngine`
 //! ([`ops_reverse`]: `reverse`).
+//!
+//! The crimp and the tuck (plan Phase 11) are [`ops_crimp_tuck`]'s: their
+//! analyses and their folds, which land, ask for an opening or land every
+//! order to choose from, are calls of their own on `FoldEngine`, and a stored
+//! `crimp` or `tuck` is applied like any other step.
 
 pub mod bridge;
 pub mod canonical;
 pub mod compound;
 pub mod io;
 pub mod joins;
+pub mod ops_crimp_tuck;
 pub mod resolve;
 pub mod wire;
 // Compound folds, one module per family (`compound`).

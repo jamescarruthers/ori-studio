@@ -287,7 +287,9 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
     // With them, the compound pipeline's own: no order at all, a search that
-    // ran out, a pick that names nothing, a defect.
+    // ran out, a pick that names nothing, a defect. And a tuck's and a
+    // crimp's: no tool folds one yet, so until their tools say them in their
+    // own words they read as a fold that cannot be made.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -317,6 +319,12 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'no_order':
     case 'budget_exceeded':
     case 'no_such_choice':
+    case 'tuck_infeasible':
+    case 'crimp_lines_meet':
+    case 'crimp_misses_tip':
+    case 'crimp_no_opening':
+    case 'crimp_kind_infeasible':
+    case 'crimp_tip_not_free':
     case 'internal':
       return {
         title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
@@ -437,6 +445,9 @@ function fixActions(
         },
       ];
     }
+    case 'tuck_target':
+      // A tuck's, which no tool folds yet: nothing to bind it to.
+      return [];
   }
 }
 

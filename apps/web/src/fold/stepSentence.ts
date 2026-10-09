@@ -108,6 +108,10 @@ export type FoldSentenceStep =
   | { op: 'cp-jump' }
   /** A reverse fold along a line (plan Phase 9), its layers the tip's anchor, counted from the top. */
   | { op: 'reverse'; kind: 'inside' | 'outside'; line: FoldSentenceLine; scope: FoldLayerScope }
+  /** Two reverse folds of one kind as one step (plan Phase 11). */
+  | { op: 'crimp'; crimp: 'inside' | 'outside' }
+  /** A fold slid under the chosen layer (a valley) or over it (a mountain), as the viewer sees it. */
+  | { op: 'tuck'; direction: FoldDirection }
   /** An operation a newer build wrote: locked, never described (plan D6). */
   | { op: 'unknown' };
 
@@ -235,6 +239,14 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
       return t('panels:fold.sentence.cpJump', 'Collapse into the imported crease pattern.');
     case 'reverse':
       return reverseFoldSentence(t, step.kind, lineClause(t, step.line), step.scope);
+    case 'crimp':
+      return step.crimp === 'inside'
+        ? t('panels:fold.sentence.crimpInside', 'Inside crimp along the two lines.')
+        : t('panels:fold.sentence.crimpOutside', 'Outside crimp along the two lines.');
+    case 'tuck':
+      return step.direction === 'valley'
+        ? t('panels:fold.sentence.tuckValley', 'Valley fold and tuck the flap in, under the chosen layer.')
+        : t('panels:fold.sentence.tuckMountain', 'Mountain fold and tuck the flap in at the back, over the chosen layer.');
     case 'unknown':
       return t('panels:fold.sentence.unknown', 'A step made with a newer Ori Studio.');
   }

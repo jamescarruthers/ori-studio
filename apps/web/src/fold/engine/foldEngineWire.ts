@@ -144,6 +144,13 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'reverse_no_opening',
   'reverse_tip_not_free',
   'reverse_kind_infeasible',
+  // The tuck and the crimp (plan Phase 11).
+  'tuck_infeasible',
+  'crimp_lines_meet',
+  'crimp_misses_tip',
+  'crimp_no_opening',
+  'crimp_kind_infeasible',
+  'crimp_tip_not_free',
   'internal',
 ] as const;
 
@@ -170,7 +177,8 @@ export const FOLD_BRIDGE_REFUSAL_CODES = [
   'crease_not_found',
   'crease_not_flat',
   'crease_not_folded',
-  // A compound fold's choices (`oristudio-fold-wasm/src/compound.rs`).
+  // A compound fold's choices (`oristudio-fold-wasm/src/compound.rs`): a
+  // stored step whose stored choices do not decide it, or no longer resolve.
   'choice_needed',
   'choice_broken',
 ] as const;
@@ -259,7 +267,9 @@ export type FoldFix =
    */
   | { readonly fix: 'use_line'; readonly line: FoldModelLine; readonly side: FoldSide; readonly step?: FoldStoredStep }
   /** The same reverse fold of the other kind is valid. */
-  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' };
+  | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' }
+  /** The same tuck against this layer is valid: send `at` back as the tuck's `target`. */
+  | { readonly fix: 'tuck_target'; readonly face: number; readonly at: SheetPoint };
 
 export interface FoldEngineRefused {
   status: 'refused';
@@ -353,7 +363,10 @@ export interface FoldStepLanded {
   state: number;
   /** A plain fold's; null for a turn, a rotation, an import or a compound fold. */
   report: FoldReport | null;
-  /** A compound fold's, by its op; absent for any other step. */
+  /**
+   * A compound fold's, by its op; absent for any other step, and for a crimp
+   * or a tuck, whose reports their own calls give.
+   */
   compound?: FoldCompoundReport;
   summary: FoldStateSummary;
 }

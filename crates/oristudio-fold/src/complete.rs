@@ -78,9 +78,11 @@ pub struct Deadline {
     pub at_ms: f64,
 }
 
-/// What a completion may spend. Propagating the fixed orders and splitting
-/// the rest into components always run to the end; the search over each
-/// component is what can blow up, and what the budget meters.
+/// What a completion may spend. The search over each component is what can
+/// blow up, and what the node count meters; propagating the fixed orders is
+/// polynomial, but through a deep stack it is most of a completion, so the
+/// deadline meters it too. Splitting the rest into components always runs to
+/// the end.
 #[derive(Debug, Clone, Copy)]
 pub struct CompletionLimits {
     /// Orders listed per component, at least one. A component with more
@@ -89,6 +91,11 @@ pub struct CompletionLimits {
     /// Search nodes (a guess and its propagation) across every component;
     /// `None` is unbounded.
     pub max_nodes: Option<u64>,
+    /// Read before each search node and every few variables the
+    /// propagation visits. A completion that reaches it is
+    /// [`CompletionRefusal::BudgetExceeded`], whatever it had found: an
+    /// interactive caller's bound, never a replay's, since a slower machine
+    /// would break a stored step.
     pub deadline: Option<Deadline>,
 }
 

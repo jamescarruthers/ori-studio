@@ -117,11 +117,19 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
         Op::OutsideReverse(r) => {
             crate::ops_reverse::resolve(parent, r, ReverseKind::Outside, choices)
         }
+        // A crimp or a tuck lands through `apply` (`ops_crimp_tuck::replay`)
+        // and has calls of its own for its analysis and its choices.
+        Op::Crimp(_) | Op::Tuck(_) => Err(BridgeError::InvalidInput(format!(
+            "a {} is analysed through its own calls",
+            op.kind()
+        ))
+        .into()),
     }
 }
 
 /// A valley, mountain or precrease op — and a compound fold's line, side
-/// and anchor, which resolve as a fold's do.
+/// and anchor (a reverse fold's, a crimp's or a tuck's), which resolve as a
+/// fold's do.
 pub(crate) fn along_line(
     parent: &State,
     op: &AlongLine,
@@ -326,7 +334,7 @@ fn slot_error(number: u8, k: usize, wanted: &str, got: Option<&RefInput>) -> Bri
 
 /// The crease whose sheet segment holds `at`, as that segment, and what it
 /// is.
-fn crease(state: &State, at: Point) -> Result<(SheetSegment, CreaseKind), Rejection> {
+pub(crate) fn crease(state: &State, at: Point) -> Result<(SheetSegment, CreaseKind), Rejection> {
     finite_point("crease point", at)?;
     let crease = state
         .crease_at(at)

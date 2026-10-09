@@ -1617,6 +1617,8 @@
     },
     "sentence": {
       "cpJump": "Repliez le papier selon le patron de plis importé.",
+      "crimpInside": "Faites un crimp intérieur le long des deux lignes.",
+      "crimpOutside": "Faites un crimp extérieur le long des deux lignes.",
       "insideReverse": {
         "crease": {
           "all": "Pliez toutes les couches en pli inversé intérieur le long du pli existant.",
@@ -1985,6 +1987,8 @@
           "flaps_other": "Pliez seulement les {{count}} rabats indiqués en pli inversé extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}."
         }
       },
+      "tuckMountain": "Pliez en montagne et rentrez le rabat par l’arrière, sur la couche choisie.",
+      "tuckValley": "Pliez en vallée et rentrez le rabat sous la couche choisie.",
       "turn": "{{turn}}.",
       "unfold": {
         "all": "Dépliez toutes les couches le long du pli existant.",
@@ -2284,14 +2288,18 @@
       "addsPrecreases_many": "Ajoute {{count}} prépliages",
       "addsPrecreases_other": "Ajoute {{count}} prépliages",
       "axiomLine": "Axiome {{axiom}} · {{phrase}}",
+      "badgeCrimp": "Crimp",
       "badgeImported": "Importé",
       "badgeInsideReverse": "Inversé intérieur",
       "badgeMountain": "Montagne",
       "badgeNewer": "Plus récente",
       "badgeOutsideReverse": "Inversé extérieur",
       "badgePrecrease": "Prépliage",
+      "badgeTuck": "Rentré",
       "badgeValley": "Vallée",
       "cpJump": "Importer un patron de plis",
+      "crimpInside": "Crimp intérieur",
+      "crimpOutside": "Crimp extérieur",
       "existingCrease": "Pli existant",
       "freeLine": "Ligne libre",
       "insideReverse": "Pli inversé intérieur",
@@ -2311,6 +2319,8 @@
       "reverses_one": "Replie {{count}} prépliage dans l’autre sens",
       "reverses_many": "Replie {{count}} prépliages dans l’autre sens",
       "reverses_other": "Replie {{count}} prépliages dans l’autre sens",
+      "tuckMountain": "Pli montagne et rentrer",
+      "tuckValley": "Pli vallée et rentrer",
       "unfold": "Déplier",
       "unfolds_one": "Déplie {{count}} pli",
       "unfolds_many": "Déplie {{count}} plis",
