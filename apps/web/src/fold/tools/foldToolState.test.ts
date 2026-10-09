@@ -74,7 +74,7 @@ describe('the Fold tools’ state', () => {
 
   it('folds the other side on a swap under a flap seed', () => {
     const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
-    const free = (x: number, y: number): FoldPick => ({ kind: 'free', scene: { x, y } });
+    const free = (x: number, y: number): FoldPick => ({ kind: 'free', pane: 'folded', scene: { x, y }, sheet: [x, y] });
     const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, lineMode: 'free' });
     tools.pick(free(0, 0.5));
     tools.pick(free(1, 0.5));

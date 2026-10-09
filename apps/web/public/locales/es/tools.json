@@ -365,10 +365,11 @@
       "valley": "V"
     },
     "note": {
+      "acrossLayers": "Estos puntos están en capas que el plegado ha separado, así que la línea pasa por ellos donde quedan en la forma plegada. El patrón de pliegues muestra los pliegues que crea.",
       "clear": "Esc borra los puntos elegidos.",
       "crease": "Plegar por un premarcado lo vuelve a plegar; por un borde plegado, despliega la solapa.",
       "divide": "Cuentan los bordes, los bordes plegados y los premarcados.",
-      "free": "Sin ajuste: la línea va exactamente donde haces clic.",
+      "free": "Sin ajuste: la línea pasa exactamente por los puntos donde haces clic.",
       "freePoint": "Mantén {{modifier}} para colocar un punto en cualquier lugar, sin ajuste.",
       "snap": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues, puntos medios y bordes."
     },

@@ -352,10 +352,11 @@
       "valley": "V"
     },
     "note": {
+      "acrossLayers": "These points lie on layers that are folded apart, so the line runs through them where they lie in the folded form. The crease pattern shows the creases it makes.",
       "clear": "Esc clears the picks.",
       "crease": "Folding along a precrease refolds it; along a folded edge, it unfolds the flap.",
       "divide": "Edges, folded edges and precreases all count.",
-      "free": "No snapping: the line goes exactly where you click.",
+      "free": "No snapping: the line runs exactly through the points you click.",
       "freePoint": "Hold {{modifier}} to put a point down anywhere, without snapping.",
       "snap": "Points snap to corners, marks, crease crossings, midpoints and edges."
     },

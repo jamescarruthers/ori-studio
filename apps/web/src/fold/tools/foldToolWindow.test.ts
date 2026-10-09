@@ -110,7 +110,16 @@ describe('foldToolWindow while the line is located', () => {
       'Points snap to corners, marks, crease crossings, midpoints and edges.',
     ]);
     const free = foldToolWindow(t, view({ lineMode: 'free' }), verbs(), finger);
-    expect(free?.instructions.notes).toEqual(['No snapping: the line goes exactly where you click.']);
+    expect(free?.instructions.notes).toEqual(['No snapping: the line runs exactly through the points you click.']);
+  });
+
+  it('says when a line drawn on the crease pattern runs through its points as they lie folded', () => {
+    const across = foldToolWindow(t, view({ lineMode: 'free', picks: 2, preview: preview({ acrossLayers: true }) }), verbs(), mouse);
+    expect(across?.instructions.notes).toEqual([
+      'These points lie on layers that are folded apart, so the line runs through them where they lie in the folded form. The crease pattern shows the creases it makes.',
+    ]);
+    const drawn = foldToolWindow(t, view({ lineMode: 'free', picks: 2, preview: preview() }), verbs(), mouse);
+    expect(drawn?.instructions.notes).toEqual([]);
   });
 
   it('keeps the step in hand inside the list once every reference is picked', () => {

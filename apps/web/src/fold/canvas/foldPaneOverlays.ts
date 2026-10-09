@@ -15,7 +15,14 @@ import type { Point } from '../../lib/geometry';
 import type { FillGeometry, PointGeometry, Rgba, StrokeGeometry } from '../../cp-workspace/renderer/types';
 import type { FoldMark, FoldModelLine } from '../document/foldSequenceDocument';
 import { markPoints } from '../document/foldSequenceDocument';
-import { sheetToScene, type FoldHit, type FoldPaneId, type FoldPick, type FoldPickIndex } from './foldPicking';
+import {
+  sheetToScene,
+  type FoldFreePick,
+  type FoldHit,
+  type FoldPaneId,
+  type FoldPick,
+  type FoldPickIndex,
+} from './foldPicking';
 import type { FoldScene } from '../engine/foldEngineWire';
 import { clipConvex, toPoint } from './foldCanvasGeometry';
 
@@ -95,8 +102,8 @@ function pickOnPane(pick: FoldPick, pane: FoldPaneId): Point | readonly [Point, 
     case 'segment':
       return pane === 'folded' ? pick.scene : [toPoint(pick.sheet[0]), toPoint(pick.sheet[1])];
     case 'free':
-      // A free line's end is a point of the folded form; the crease pattern has no place for it.
-      return pane === 'folded' ? pick.scene : null;
+      // A free line's end: where it lies folded, and on the sheet under it (none off the paper).
+      return pane === 'folded' ? pick.scene : pick.sheet ? toPoint(pick.sheet) : null;
   }
 }
 
@@ -159,8 +166,8 @@ export interface FoldPaneOverlayInput {
   scene: FoldScene | null;
   picks: readonly FoldPick[];
   hovered: FoldHit | null;
-  /** While a free line is being drawn: its first end, which the live line runs from to the pointer. */
-  freeFrom: Point | null;
+  /** While a free line is being drawn: its first end, which the live line runs from to where a click would end it. */
+  freeFrom: FoldFreePick | null;
   marks: readonly FoldMark[];
   inks: FoldOverlayInks;
 }
@@ -201,9 +208,12 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
 
   const hovered = input.hovered;
   if (hovered?.pick) draw(hovered.pick, true);
-  // The line a free fold is being drawn along, from its first end to the pointer.
-  if (input.freeFrom && hovered?.pane === pane && pane === 'folded') {
-    strokes.push({ a: input.freeFrom, b: hovered.at, color: withAlpha(inks.accent, HOVER_LINE_ALPHA), widthMul: 1 });
+  // The line a free fold is being drawn along, on the pane under the
+  // pointer: from its first end to where a click would put the other.
+  const from = input.freeFrom ? pickOnPane(input.freeFrom, pane) : null;
+  const to = hovered?.pane === pane && hovered.pick?.kind === 'free' ? pickOnPane(hovered.pick, pane) : null;
+  if (from && to && 'x' in from && 'x' in to) {
+    strokes.push({ a: from, b: to, color: withAlpha(inks.accent, HOVER_LINE_ALPHA), widthMul: 1 });
   }
   return { points: packDots(dots), strokes: packStrokes(strokes) };
 }

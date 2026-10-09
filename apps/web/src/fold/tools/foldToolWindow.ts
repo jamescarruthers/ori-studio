@@ -72,6 +72,8 @@ export interface FoldPreview {
   refused: FoldRefused | null;
   /** Tier 3 is in flight: nothing to commit yet. */
   landing: boolean;
+  /** A free line drawn on the crease pattern across layers the folded form puts apart (`FoldBuiltStep.acrossLayers`). */
+  acrossLayers?: boolean;
 }
 
 export interface FoldToolWindowView extends FoldToolsView {
@@ -277,7 +279,7 @@ function settingsMeta(t: TFunction, count: number): string {
 function lineModeNotes(t: TFunction, mode: FoldLineModeId, host: FoldToolHost): string[] {
   const clear = t('tools:fold.note.clear', 'Esc clears the picks.');
   if (mode === 'free') {
-    const free = t('tools:fold.note.free', 'No snapping: the line goes exactly where you click.');
+    const free = t('tools:fold.note.free', 'No snapping: the line runs exactly through the points you click.');
     return host.coarse ? [free] : [free, clear];
   }
   if (mode === 'crease') {
@@ -314,7 +316,12 @@ function locateInstructions(
   };
 }
 
-function previewInstructions(t: TFunction, kind: FoldKind, host: FoldToolHost): FoldToolInstructions {
+function previewInstructions(
+  t: TFunction,
+  kind: FoldKind,
+  host: FoldToolHost,
+  preview: FoldPreview
+): FoldToolInstructions {
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items: [
@@ -326,7 +333,14 @@ function previewInstructions(t: TFunction, kind: FoldKind, host: FoldToolHost): 
     // Picking layers is optional: every layer on the moving side folds unless
     // narrowed, so the window leads with the pick and never marks it done.
     current: 0,
-    notes: [],
+    notes: preview.acrossLayers
+      ? [
+          t(
+            'tools:fold.note.acrossLayers',
+            'These points lie on layers that are folded apart, so the line runs through them where they lie in the folded form. The crease pattern shows the creases it makes.'
+          ),
+        ]
+      : [],
   };
 }
 
@@ -441,7 +455,7 @@ export function foldToolWindow(
     phase: 'preview',
     title,
     meta: settingsMeta(t, 3),
-    instructions: previewInstructions(t, kind, host),
+    instructions: previewInstructions(t, kind, host, preview),
     lineMode: null,
     kind: {
       label: t('tools:fold.window.kind', 'Fold'),

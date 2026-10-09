@@ -365,10 +365,11 @@
       "valley": "V"
     },
     "note": {
+      "acrossLayers": "Estes pontos ficam em camadas que a dobragem separou, então a linha passa por eles onde estão na forma dobrada. O padrão de vincos mostra os vincos que ela cria.",
       "clear": "Esc limpa os pontos escolhidos.",
       "crease": "Dobrar ao longo de um pré-vinco o redobra; ao longo de uma borda dobrada, desdobra a aba.",
       "divide": "Contam as bordas, as bordas dobradas e os pré-vincos.",
-      "free": "Sem ajuste: a linha fica exatamente onde você clica.",
+      "free": "Sem ajuste: a linha passa exatamente pelos pontos em que você clica.",
       "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar, sem ajuste.",
       "snap": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos, pontos médios e bordas."
     },

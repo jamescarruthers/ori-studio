@@ -130,7 +130,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   });
 
   // --- The tool's feedback on each pane.
-  const freeFrom = toolState.lineMode === 'free' && toolState.picks[0]?.kind === 'free' && toolState.picks.length === 1 ? toolState.picks[0].scene : null;
+  const firstPick = toolState.picks[0];
+  const freeFrom = toolState.lineMode === 'free' && firstPick?.kind === 'free' && toolState.picks.length === 1 ? firstPick : null;
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks

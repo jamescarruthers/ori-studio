@@ -60,6 +60,7 @@ export function foldWindowPreview(tools: FoldToolState, preview: FoldToolPreview
     added,
     refused: preview.refused,
     landing: preview.landing,
+    acrossLayers: preview.build.status === 'built' && preview.build.acrossLayers === true && !tools.override,
   };
 }
 

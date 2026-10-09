@@ -352,10 +352,11 @@
       "valley": "V"
     },
     "note": {
+      "acrossLayers": "Diese Punkte liegen auf Lagen, die durch das Falten auseinanderliegen, daher verläuft die Linie durch sie dort, wo sie in der gefalteten Form liegen. Das Faltmuster zeigt die Faltlinien, die dabei entstehen.",
       "clear": "Esc verwirft die gewählten Punkte.",
       "crease": "Entlang einer Vorfaltung wird sie wieder gefaltet; entlang einer gefalteten Kante wird die Lasche aufgeklappt.",
       "divide": "Kanten, gefaltete Kanten und Vorfaltungen zählen alle.",
-      "free": "Kein Einrasten: Die Linie liegt genau dort, wo du klickst.",
+      "free": "Kein Einrasten: Die Linie verläuft genau durch die Punkte, die du anklickst.",
       "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt ohne Einrasten frei zu setzen.",
       "snap": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien, Mittelpunkten und Kanten ein."
     },

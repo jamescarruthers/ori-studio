@@ -111,7 +111,7 @@ const render = async (tools: FoldToolState) => {
   for (let k = 0; k < 3; k += 1) await act(async () => {});
 };
 
-const free = (x: number, y: number): FoldPick => ({ kind: 'free', scene: { x, y } });
+const free = (x: number, y: number): FoldPick => ({ kind: 'free', pane: 'folded', scene: { x, y }, sheet: [x, y] });
 const FREE_LINE: FoldToolState = { ...FOLD_TOOL_INITIAL, lineMode: 'free', picks: [free(0, 0.5), free(1, 0.5)] };
 
 /** The analysis slot answering the step the hook last asked about. */

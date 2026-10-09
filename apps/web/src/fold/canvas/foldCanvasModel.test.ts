@@ -8,7 +8,7 @@ import { foldMovingTint } from './foldPaneOverlays';
 import { foldPickIndex } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 
-const free = (x: number, y: number): FoldPick => ({ kind: 'free', scene: { x, y } });
+const free = (x: number, y: number): FoldPick => ({ kind: 'free', pane: 'folded', scene: { x, y }, sheet: null });
 
 const flaps = [
   { faces: [2], witness: [0.75, 0.5] as [number, number] },

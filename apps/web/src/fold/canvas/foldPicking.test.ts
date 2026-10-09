@@ -93,7 +93,11 @@ describe('Fold picking', () => {
     expect(sameFoldHit(at(0.4, 0.4), at(0.41, 0.4))).toBe(true);
     expect(sameFoldHit(at(0.4, 0.4), at(0.99, 0.01))).toBe(false);
     expect(sameFoldHit(at(0.4, 0.4), { ...at(0.4, 0.4), pane: 'crease-pattern' })).toBe(false);
-    const free = (x: number) => ({ pane: 'folded' as const, at: { x, y: 0.5 }, pick: { kind: 'free' as const, scene: { x, y: 0.5 } } });
+    const free = (x: number) => ({
+      pane: 'folded' as const,
+      at: { x, y: 0.5 },
+      pick: { kind: 'free' as const, pane: 'folded' as const, scene: { x, y: 0.5 }, sheet: [x, 0.5] as [number, number] },
+    });
     expect(sameFoldHit(free(0.3), free(0.3))).toBe(true);
     expect(sameFoldHit(free(0.3), free(0.31))).toBe(false);
   });

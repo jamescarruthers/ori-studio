@@ -69,10 +69,19 @@ export interface FoldSegmentPick {
   scene: readonly [Point, Point];
 }
 
-/** A point clicked as it is: a free line's end, in the folded pane's scene frame. */
+/** A point clicked as it is: a free line's end. */
 export interface FoldFreePick {
   kind: 'free';
+  /** The pane it was clicked on. */
+  pane: FoldPaneId;
+  /** Where it is in the folded pane's scene frame: the line runs through it there. */
   scene: Point;
+  /**
+   * The sheet point under it: where it was clicked on the crease-pattern
+   * pane, the top face's point on the folded pane; null off the paper, where
+   * a free line's end may lie.
+   */
+  sheet: SheetPoint | null;
 }
 
 export type FoldPick = FoldPointPick | FoldSegmentPick | FoldFreePick;
@@ -103,7 +112,14 @@ export function samePick(a: FoldPick, b: FoldPick): boolean {
   if (a.kind === 'point') {
     return b.kind === 'point' && a.sheet[0] === b.sheet[0] && a.sheet[1] === b.sheet[1] && a.provenance === b.provenance;
   }
-  return b.kind === 'free' && a.scene.x === b.scene.x && a.scene.y === b.scene.y;
+  return (
+    b.kind === 'free' &&
+    a.pane === b.pane &&
+    a.scene.x === b.scene.x &&
+    a.scene.y === b.scene.y &&
+    a.sheet?.[0] === b.sheet?.[0] &&
+    a.sheet?.[1] === b.sheet?.[1]
+  );
 }
 
 /** A pick as an axiom input (plan D6): a sheet point, a mark's resolved point, or an edge by its ends. */
@@ -390,8 +406,10 @@ export function resolveFoldPick(
   const targets = onFolded ? index.folded : index.creasePattern;
   switch (snap) {
     case 'free': {
-      const scene = onFolded ? at : sheetToScene(index.scene, toPair(at));
-      return scene ? { kind: 'free', scene } : null;
+      if (onFolded) return { kind: 'free', pane, scene: at, sheet: topSheetPointAt(index, at) };
+      const sheet = toPair(at);
+      const scene = sheetToScene(index.scene, sheet);
+      return scene ? { kind: 'free', pane, scene, sheet } : null;
     }
     case 'point':
     case 'crease':
