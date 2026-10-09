@@ -73,6 +73,11 @@ describe('the Fold canvas model', () => {
     expect(picked?.seed).toEqual([1]);
   });
 
+  it('hands the window the woven stack the pointer is over, the first while it has been over none', () => {
+    expect(foldWindowPreview(located, preview())?.interval).toBeNull();
+    expect(foldWindowPreview(located, preview(), 1)?.interval).toBe(1);
+  });
+
   it('tints the faces a refusal names, by their index in the scene, not their id', () => {
     const refused: FoldEngineRefused = {
       status: 'refused',

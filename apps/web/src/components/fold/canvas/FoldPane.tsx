@@ -67,6 +67,8 @@ export interface FoldPaneProps {
   onPick: (hit: FoldHit | null) => void;
   /** The tool's feedback over the paper, from what is under the pointer. */
   overlay: (hovered: FoldHit | null) => FoldPaneOverlay;
+  /** Told what is under the pointer whenever that changes (by `sameFoldHit`, so never per move along one thing). */
+  onHover?: (hovered: FoldHit | null) => void;
   /** Theme colours are DOM-resolved; they are read again when this changes. */
   inkKey: string;
   onZoomPercentChange?: (percent: number) => void;
@@ -113,6 +115,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     hitTest,
     onPick,
     overlay,
+    onHover,
     inkKey,
     onZoomPercentChange,
     onActivate,
@@ -197,6 +200,10 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     renderer.setPreview(strokes);
     render();
   }, [overlay, hovered, posing, inkKey, rendererGeneration, rendererRef, render]);
+
+  useEffect(() => {
+    onHover?.(hovered);
+  }, [onHover, hovered]);
 
   const cursor = cpCanvasCursor({
     panToolActive: false,

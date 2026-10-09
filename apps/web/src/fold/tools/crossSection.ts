@@ -89,6 +89,23 @@ export function isWoven(section: FoldCrossSection): boolean {
 }
 
 /**
+ * Which interval of a woven section is under a point of the folded pane (D14
+ * cross-section, 3): the point taken square onto the line, measured from the
+ * section's start as its intervals are. Null for a section that is not
+ * woven, where every interval is shown at once, and off both ends.
+ */
+export function wovenIntervalAt(section: FoldCrossSection | null, at: { x: number; y: number }): number | null {
+  if (!section || !isWoven(section)) return null;
+  const dx = section.to.x - section.from.x;
+  const dy = section.to.y - section.from.y;
+  const length = Math.hypot(dx, dy);
+  if (!(length > 0)) return null;
+  const along = ((at.x - section.from.x) * dx + (at.y - section.from.y) * dy) / length;
+  const index = section.intervals.findIndex((interval) => along >= interval.start && along <= interval.end);
+  return index >= 0 ? index : null;
+}
+
+/**
  * Each flap's number on screen (1-based), indexed by the engine's flap index:
  * top to bottom by the flap's first row at the line, as a folder reads the
  * stack. The engine orders its flaps by face id, which means nothing to a

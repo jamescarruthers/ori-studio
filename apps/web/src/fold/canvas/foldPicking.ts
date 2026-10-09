@@ -93,17 +93,23 @@ export interface FoldHit {
   at: Point;
   /** Null for bare paper, or nothing a click would take. */
   pick: FoldPick | null;
+  /**
+   * On the folded pane while a woven section is shown: the interval of it
+   * under the pointer, whose stack the layer picker shows (`wovenIntervalAt`).
+   */
+  interval?: number;
 }
 
 /**
  * The same thing under the pointer as a frame ago: by identity, or for a free
- * pick by position. Bare paper is the same hit wherever on it the pointer is:
- * nothing drawn follows it there (a click reads the point afresh), so a move
- * across it re-renders nothing, as a move along one crease does not.
+ * pick by position. Bare paper is the same hit wherever on it the pointer is,
+ * over the same interval of a woven section: nothing drawn follows it there
+ * (a click reads the point afresh), so a move across it re-renders nothing, as
+ * a move along one crease does not.
  */
 export function sameFoldHit(a: FoldHit, b: FoldHit): boolean {
   if (a.pane !== b.pane) return false;
-  if (a.pick === null || b.pick === null) return a.pick === b.pick;
+  if (a.pick === null || b.pick === null) return a.pick === b.pick && a.interval === b.interval;
   return samePick(a.pick, b.pick);
 }
 

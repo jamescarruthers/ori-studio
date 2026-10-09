@@ -29,6 +29,7 @@ import { useFoldCanvasShortcuts } from '../../../fold/canvas/useFoldCanvasShortc
 import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
+import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
 import { ViewportStatusReadout } from '../../ui/ViewportStatusReadout';
@@ -153,6 +154,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   // --- The tool window, and the root chooser over the folded pane.
   const sequence = useWorkspaceStore((state) => shownFoldSequence(state)?.document ?? null);
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
+  const woven = useFoldWovenInterval(preview.section);
   const windowModel = foldToolWindow(
     t,
     {
@@ -160,7 +162,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       lineMode: toolState.lineMode,
       readOnly,
       picks: toolState.picks.length,
-      preview: foldWindowPreview(toolState, preview),
+      preview: foldWindowPreview(toolState, preview, woven.interval),
       divide: { settings: toolState.divide, marks: marksHere },
     },
     { ...verbs, setDivide: tools.setDivide },
@@ -242,6 +244,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               contentBounds={paint.folded.contentBounds}
               hitTest={(at, radii) => verbs.hitTest('folded', at, radii)}
               overlay={foldedOverlay}
+              onHover={woven.onHover}
               onZoomPercentChange={setZoomPercent}
               status={foldedStatus}
               posedScene={playback.frames}

@@ -27,10 +27,15 @@ function sectionIndex(section: readonly FoldFlap[], flap: FoldFlap): number {
 /**
  * The window's preview of a located fold (`foldToolWindow`'s `FoldPreview`):
  * the section, what the seed asks for and what the closure adds, as indices
- * into the section's flaps, and why it does not land. Null while the line is
- * still being located.
+ * into the section's flaps, and why it does not land; for a woven section,
+ * the interval whose stack is shown (`useFoldWovenInterval`). Null while the
+ * line is still being located.
  */
-export function foldWindowPreview(tools: FoldToolState, preview: FoldToolPreview): FoldPreview | null {
+export function foldWindowPreview(
+  tools: FoldToolState,
+  preview: FoldToolPreview,
+  interval: number | null = null
+): FoldPreview | null {
   if (!isLocated(tools)) return null;
   const section = preview.section;
   const flaps = section?.flaps ?? [];
@@ -55,7 +60,7 @@ export function foldWindowPreview(tools: FoldToolState, preview: FoldToolPreview
   });
   return {
     section,
-    interval: null,
+    interval,
     seed,
     added,
     refused: preview.refused,

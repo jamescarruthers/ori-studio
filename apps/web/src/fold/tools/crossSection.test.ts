@@ -7,6 +7,7 @@ import {
   foldLayersSummary,
   foldSectionPicker,
   isWoven,
+  wovenIntervalAt,
   type FoldSeedView,
 } from './crossSection';
 
@@ -159,6 +160,26 @@ describe('foldSectionPicker', () => {
     ]);
     const second = foldSectionPicker(t, woven, seed([0, 1]), { interval: 1 });
     expect(second.rows.map((r) => r.flap)).toEqual([1, 0]);
+  });
+
+  it('finds the interval of a woven section under a point of the folded pane, square onto the line', () => {
+    const woven: FoldCrossSection = {
+      ...twice,
+      from: { x: 1, y: 0.5 },
+      to: { x: 0, y: 0.5 },
+      order: { kind: 'woven' },
+      intervals: [
+        { start: 0, end: 0.4, faces: [3, 1], rows: [0, 2] },
+        { start: 0.4, end: 1, faces: [1, 3], rows: [2, 0] },
+      ],
+    };
+    // Measured from the section's start, which here is the right end.
+    expect(wovenIntervalAt(woven, { x: 0.9, y: 0.5 })).toBe(0);
+    expect(wovenIntervalAt(woven, { x: 0.3, y: 0.1 })).toBe(1);
+    expect(wovenIntervalAt(woven, { x: 1.4, y: 0.5 })).toBeNull();
+    // A layered section shows every interval at once: there is none to pick.
+    expect(wovenIntervalAt(twice, { x: 0.5, y: 0.5 })).toBeNull();
+    expect(wovenIntervalAt(null, { x: 0.5, y: 0.5 })).toBeNull();
   });
 
   it('marks the rows of a flap a refusal says is in the way', () => {
