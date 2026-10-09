@@ -80,6 +80,22 @@ describe('FoldStepsGrid', () => {
     expect(menu.handleMenuAction).toHaveBeenCalledWith('fold.delete-step');
   });
 
+  it('draws a turn in the theme’s ink on the well the crease patterns are on, not on a page’s white', () => {
+    act(() => root.render(<FoldStepsGrid view={viewOf(DOCUMENT, ['a', 't', 'b', 'c'])} />));
+    const turn = host.querySelector('[data-step-id="t"]');
+    // The step cards' well: no paper under it.
+    expect(turn?.querySelector('[data-picture]')).toBeNull();
+    expect(turn?.querySelector('img')).toBeNull();
+    const glyph = turn?.querySelector('svg[data-turn-glyph]');
+    expect(glyph).not.toBeNull();
+    // Every mark in one ink, the glyph's own colour: the theme's.
+    const inks = [...(glyph?.querySelectorAll('path') ?? [])].flatMap((path) =>
+      ['stroke', 'fill'].map((name) => path.getAttribute(name)).filter((ink) => ink !== null && ink !== 'none')
+    );
+    expect(inks.length).toBeGreaterThan(0);
+    expect(new Set(inks)).toEqual(new Set(['currentColor']));
+  });
+
   it('offers no Delete on a sequence a newer build wrote', () => {
     act(() => root.render(<FoldStepsGrid view={viewOf(DOCUMENT, ['a', 't', 'b', 'c'], true)} />));
     expect(deleteLabels().every(([, label]) => label === null)).toBe(true);

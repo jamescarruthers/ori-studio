@@ -4,13 +4,15 @@ import { Lock } from 'lucide-react';
 import type { TurnBetween, TurnKind } from '../../../lib/steps/turn';
 import { turnCardWords, turnLabel, turnPlace } from '../../../lib/steps/turnWords';
 import { StepCard, StepCardBadge, StepCardDeleteVerb, StepCardPlaceholder } from './StepCard';
+import { TurnGlyph } from './TurnGlyph';
 import styles from './TurnCard.module.css';
 
 /**
  * A turn between two steps, in a Steps grid (D24): a card the size of a
  * step's, in its place in the order — its name where a step has its number,
- * a "No number" badge, the glyph a page prints for it, and how it turns and
- * where it prints. The cards around it keep their numbers. An option of the
+ * a "No number" badge, its glyph — as a page prints it, or in the theme's ink
+ * where nothing is printed — and how it turns and where it prints. The cards
+ * around it keep their numbers. An option of the
  * grid's listbox as a step's card is, named by what it is and where; it opens
  * no detail. Its Delete is a pointer's shortcut, as a step's is.
  *
@@ -23,8 +25,14 @@ export const TurnCard = forwardRef<
     turn: TurnKind & { id: string; unknown?: unknown };
     /** The numbers of the steps either side; null at an end. */
     between: TurnBetween;
-    /** The glyph as an image's source, drawn as the surface's pages draw it; null when there is none to draw. */
-    glyph: string | null;
+    /**
+     * The glyph as an image's source, drawn as the surface's pages print it,
+     * and shown on the paper they print on; null when there is none to draw.
+     * Left out by a surface that prints no pages: the card draws the turn in
+     * the theme's ink, on the well a step's crease pattern is shown on
+     * (`TurnGlyph`).
+     */
+    glyph?: string | null;
     selected: boolean;
     tabStop: boolean;
     /** Something dragged over the grid would land here: after the turn. */
@@ -45,6 +53,7 @@ export const TurnCard = forwardRef<
 ) {
   const { t } = useTranslation();
   const locked = turn.unknown !== undefined;
+  const printed = glyph !== undefined;
   const { title, how } = turnCardWords(turn, t);
   const where = turnPlace(between, t);
   return (
@@ -58,7 +67,7 @@ export const TurnCard = forwardRef<
       attributes={{ 'data-turn-kind': locked ? 'locked' : turn.kind }}
       title={title}
       kind={<StepCardBadge>{t('panels:diagram.card.badgeNoNumber', 'No number')}</StepCardBadge>}
-      paper={!locked}
+      paper={printed && !locked}
       verbs={
         onDelete && (
           <StepCardDeleteVerb
@@ -77,6 +86,8 @@ export const TurnCard = forwardRef<
     >
       {glyph ? (
         <img className={styles.turnGlyph} src={glyph} alt="" draggable={false} />
+      ) : !printed && !locked ? (
+        <TurnGlyph turn={turn} className={styles.turnGlyph} />
       ) : (
         <StepCardPlaceholder>
           <Lock size={18} aria-hidden="true" />

@@ -3,8 +3,6 @@ import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Lock } from 'lucide-react';
 import type { SheetThumbnail } from '../../../cp-workspace/sheets/sheetThumbnail';
-import { DEFAULT_DIAGRAM_STYLE } from '../../../diagram/document/diagramDocument';
-import { turnGlyphSvg } from '../../../diagram/annotate/turnGlyph';
 import { handleMenuAction } from '../../../commands/menuActions';
 import { FOLD_SHEET_KEY } from '../../../fold/document/foldStepTree';
 import { foldCommandActionId } from '../../../fold/sequence/foldCommands';
@@ -22,7 +20,6 @@ import { useFoldStepMenu } from '../../../fold/sequence/useFoldStepMenu';
 import type { FoldSequenceView } from '../../../fold/sequence/useFoldSequenceView';
 import { foldStepSentence, type FoldSentenceStep } from '../../../fold/stepSentence';
 import { operationBadge } from '../../../fold/stepWords';
-import type { TurnKind } from '../../../lib/steps/turn';
 import { useWorkspaceStore } from '../../../store/workspaceStore/store';
 import { DiagramSheetThumbnail } from '../../diagram/DiagramSheetThumbnail';
 import { ContextMenu } from '../../ui/ContextMenu';
@@ -50,16 +47,11 @@ const remove = (key: string) => {
 
 const stepKeyAt = (target: Element) => target.closest<HTMLElement>('[data-step-id]')?.dataset.stepId ?? null;
 
-/** A turn's glyph as its card shows it, drawn as a Diagram page prints it. */
-function turnGlyph(turn: TurnKind): string | null {
-  const svg = turnGlyphSvg(turn, DEFAULT_DIAGRAM_STYLE);
-  return svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null;
-}
-
 /**
  * The Steps view (plan D14, shot-steps): the sheet and every step of the path
  * as cards — its crease pattern, number, sentence and standing — on the shared
- * Steps grid. A turn is a card of its own, numbered none. Selecting a card
+ * Steps grid. A turn is a card of its own, numbered none, its glyph in the
+ * theme's ink on the well the crease patterns are on. Selecting a card
  * puts the reader there; a double-click goes back to the fold at that step; a
  * right-click offers the step's verbs.
  */
@@ -67,10 +59,6 @@ export function FoldStepsGrid({ view }: { view: FoldSequenceView }) {
   const { t } = useTranslation();
   const { document, entries, frames, words, cursor, readOnly, paper } = view;
   const gridEntries = useMemo(() => foldGridEntries(entries), [entries]);
-  const glyphs = useMemo(
-    () => new Map(gridEntries.filter(isFoldGridTurn).map((entry) => [entry.id, turnGlyph(entry.turn)])),
-    [gridEntries]
-  );
   // A turn is a step like any other: deleting one takes what folds from it, and the card says so.
   const deleteLabels = useMemo(
     () =>
@@ -111,7 +99,6 @@ export function FoldStepsGrid({ view }: { view: FoldSequenceView }) {
             <TurnCard
               turn={{ ...slot.entry.turn, id: slot.entry.id }}
               between={slot.entry.between}
-              glyph={glyphs.get(slot.entry.id) ?? null}
               selected={card.selected}
               tabStop={card.tabStop}
               onSelect={select}
