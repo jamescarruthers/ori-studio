@@ -227,8 +227,6 @@ export interface WorkspaceCapabilityInput {
   canPasteDiagramAnnotations: boolean;
   /** The Fold reader is on a step, not the flat sheet: Delete Step has one. Absent reads as no. */
   foldStepAtCursor?: boolean;
-  /** The shown fold sequence is a newer build's, shown and never changed (plan D7). Absent reads as no. */
-  foldReadOnly?: boolean;
   historyPastCount: number;
   historyFutureCount: number;
   clipboard: unknown | null;
@@ -239,11 +237,12 @@ export interface WorkspaceCapabilityInput {
    */
   cpDetectAvailable?: boolean;
   /**
-   * The Fold sequence on screen, for its imports and hand-offs: how many
-   * steps it has, whether it folds a polygon sheet, whether it is a newer
-   * build's, and whether a numbered step is at the reader or before it on
-   * its path — the page Export Step opens on; a turn before the first step
-   * has none. Absent reads as an empty square that can change.
+   * The Fold sequence on screen, for its verbs, imports and hand-offs: how
+   * many steps it has, whether it folds a polygon sheet, whether it is a
+   * newer build's — shown and never changed (plan D7) — and whether a
+   * numbered step is at the reader or before it on its path — the page
+   * Export Step opens on; a turn before the first step has none. Absent reads
+   * as an empty square that can change.
    */
   foldSequence?: { stepCount: number; polygon: boolean; readOnly: boolean; pageAtCursor: boolean };
   /** Whether Edit has a flat, solved folded figure a Fold sequence can start from. */
@@ -1456,7 +1455,7 @@ function foldSequenceCapabilities(
   foldMode: boolean,
   t: TFunction
 ): Record<FoldSequenceCapabilityId, WorkspaceCapability> {
-  const canChange = foldMode && input.foldReadOnly !== true;
+  const canChange = foldMode && input.foldSequence?.readOnly !== true;
   const blocked = foldMode
     ? t('common:capability.foldReadOnly', 'This sequence was made with a newer Ori Studio and opens read-only')
     : t('common:capability.openFoldFirst', 'Open the Fold workspace first');

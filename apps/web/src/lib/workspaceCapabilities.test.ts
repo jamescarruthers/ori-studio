@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AppStatus, DocumentMode, Selection } from './sampleProject';
 import type { EditingContext } from '../workspaces/editingContext';
-import { getNextDocumentAction, getWorkspaceCapabilities } from './workspaceCapabilities';
+import { getNextDocumentAction, getWorkspaceCapabilities, type WorkspaceCapabilityInput } from './workspaceCapabilities';
 
 const treeSelection: Selection = { kind: 'tree' };
 
@@ -38,7 +38,7 @@ function capabilities({
   selection = treeSelection,
   cpDetectAvailable,
   foldStepAtCursor,
-  foldReadOnly,
+  foldSequence,
 }: {
   documentMode?: DocumentMode;
   activeEditingContext?: EditingContext;
@@ -72,7 +72,7 @@ function capabilities({
   selection?: Selection;
   cpDetectAvailable?: boolean;
   foldStepAtCursor?: boolean;
-  foldReadOnly?: boolean;
+  foldSequence?: WorkspaceCapabilityInput['foldSequence'];
 } = {}) {
   return getWorkspaceCapabilities({
     activeEditingContext,
@@ -107,7 +107,7 @@ function capabilities({
     selection,
     cpDetectAvailable,
     foldStepAtCursor,
-    foldReadOnly,
+    foldSequence,
   });
 }
 
@@ -392,7 +392,11 @@ describe('workspace capabilities', () => {
     });
     expect(capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true })['fold.delete-step'].enabled).toBe(true);
 
-    const newer = capabilities({ activeEditingContext: 'fold', foldStepAtCursor: true, foldReadOnly: true });
+    const newer = capabilities({
+      activeEditingContext: 'fold',
+      foldStepAtCursor: true,
+      foldSequence: { stepCount: 1, polygon: false, readOnly: true, pageAtCursor: true },
+    });
     for (const id of verbs) {
       expect(newer[id], id).toMatchObject({
         visible: true,

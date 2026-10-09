@@ -208,7 +208,6 @@ export function workspaceCapabilityInput(state: WorkspaceState): WorkspaceCapabi
     canCopyDiagramAnnotation: canCopyDiagramAnnotation(state),
     canPasteDiagramAnnotations: canPasteDiagramAnnotations(state),
     foldStepAtCursor: foldStepAtCursor(state),
-    foldReadOnly: isShownFoldSequenceReadOnly(state),
     historyPastCount,
     historyFutureCount,
     clipboard: state.clipboard,

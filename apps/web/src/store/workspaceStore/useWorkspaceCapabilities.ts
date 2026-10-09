@@ -147,7 +147,6 @@ export function useWorkspaceCapabilities() {
           canCopyDiagramAnnotation,
           canPasteDiagramAnnotations,
           foldStepAtCursor,
-          foldReadOnly,
           historyPastCount,
           historyFutureCount,
           clipboard,
