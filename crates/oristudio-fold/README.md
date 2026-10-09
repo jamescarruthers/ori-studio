@@ -1,7 +1,8 @@
 # oristudio-fold
 
 The Fold workspace's engine: fold a sheet the way a person does. A flat folded
-state, the one constructor that validates it, and the plain fold.
+state, the one constructor that validates it, the plain fold, and the one
+pipeline compound folds land through, with the inside reverse fold on it.
 
 - `state`: the crease pattern with stable ids (`B | M | V | F`, an F crease
   remembering its last letter, every crease the step that made it; letters
@@ -70,7 +71,9 @@ state, the one constructor that validates it, and the plain fold.
   from `oristudio-layer-order`'s constraint problem and cells to
   `treemaker-flatfold`'s `complete_layer_order`, with fixed pairs *carried* or
   *seed*, per-component choices, a true ‹ n of m › with truncation reported,
-  and a node or deadline budget. Import CP uses it now; compound folds will.
+  and a node or deadline budget. `complete_around` searches only the cells
+  the faces an operation moved cover, every pair outside them carried, and
+  gives the whole problem's answer. Import CP and the compound folds use it.
 - `import`: Import CP (plan D16, D10's inverse) from plain segments, no kernel.
   The sheet from the border (`outline::detect_border_loops`, one loop, square
   or rectangle), matched against the sequence's sheet (a quarter turn when
@@ -86,6 +89,41 @@ state, the one constructor that validates it, and the plain fold.
   the root's orientation; Import CP's `orderJson` and a compound fold's pick.
   Replay resolves the witnesses and completes: exactly one order, or the node
   is broken.
+
+Compound folds (plan D4, D15, Phase 9):
+
+- `compound`: the one pipeline every compound fold lands through. A macro (a
+  score line; the faces that move, partitioned into blocks, each with its
+  motion; placements of a block against named faces; the rule for pairs
+  across blocks) is scored through the plain fold's split (`fold::score`);
+  the hinge diff follows from the motions (a crease folds where its faces'
+  orientations differ); the isometries are derived from the stayer and
+  checked against the prediction; the image–image guard refuses slivers
+  between faces whose relative motion changed; only pairs that both stay or
+  share a block are carried (kept under a rotation, reversed under a
+  reflection, never because two isometries agree); the placements and the
+  cross-block pairs are seeds; the rest is completed around the moved faces;
+  the letters come from the order and `State::make` validates, reusing the
+  problem the completion was built on. No order is a refusal naming faces,
+  more than one a choice whose pick is stored as witness-keyed pairs.
+- `compound::reverse`: the inside and outside reverse fold (research §5.2).
+  The tip is the moving side's flaps that hold the anchor; each flap opens on
+  its own at a split into a lower and an upper block along one spine of
+  folded creases, each block hinged on ℓ to a body that stays, the lower
+  body below the upper; a flap with no spine moves whole beside one that
+  opens. Openings are scanned per spine as the down-sets of the pieces left
+  (`MAX_OPENINGS` per flap, truncation reported). Inside puts T1 over its
+  body and T2 under its own, outside the reverse; pairs across blocks keep
+  their absolute order. `reverse_kinds` says which kinds land; a refusal
+  offers the other kind, the flaps in the tip's way (`reverse_tip_not_free`)
+  or the flaps that open. Stored choices: each ambiguous flap's upper block
+  and the order, by witnesses; a stored opening that names none breaks the
+  step.
+- `compound::motion`: a compound step's `StepMotion` (plan D15): legs of
+  groups turning about a hinge with exact endpoints. A reverse fold is
+  *visual* (it has no rigid path short of unfolding the vertex flat): its
+  blocks turn opposite ways about ℓ, stacked as the parent until edge-on and
+  as the landed state after.
 
 The axioms on flat and folded forms (plan Phase 3):
 
@@ -199,6 +237,46 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   and splitting a segment anchor) and after a fold that takes one root's
   landing away; the existing-crease mode unfolding and refolding; a mover
   left behind; and the sliver remedy for an O4, a free line and an O2 (none).
+- `tests/reverse.rs`: the reverse spike's named cases (`r2-spike-reverse-
+  crimp-tuck`): the triangle's corner reversing inside only, outside only or
+  both (1a–1d), the refused kind offering the other; the preliminary base by
+  two inside reverses, matched against Beloch's frames (1e); a four-layer
+  strip opening two ways, both kinds on each (2a); two stacked flaps each
+  reversed into its own pocket, stacked as the spike found (2b); one of them
+  alone (2c). Then the refusals with their fixes, stored choices that
+  resolve, break or change, stored openings that break, the spike's seeded
+  campaign, and `complete_around` against `complete`. Every landed state
+  passes `tests/compound`: the full gate, the letter rules (spine creases
+  across an opening turn, every other tip crease keeps, a new crease at the
+  spine takes the body's letter inside and the other outside), the geometry
+  and crease pattern of a plain fold of the whole tip, and a motion whose
+  endpoints are the parent and the landed state. The campaign at the spike's
+  size is ignored by default:
+
+  ```sh
+  cargo test -p oristudio-fold --release --test reverse -- --ignored --nocapture
+  ```
+
+  On 2026-10-09: 4,454 ops, 6,206 openings folded inside; 2,831 landed with
+  one order and 57 left a choice of 2–6 (98.0% unique where any order
+  fits, against the spike's 99.4% on Flat-Folder's own constraints; every
+  order of every choice passes the gate), 3,261 had no order and 57 were
+  slivers or short creases. The letter rules held on 32,788 creases; 2,696
+  landed states were compared against the plain fold of their tip.
+- `tests/crane.rs`: the traditional crane by Ida's route (`tests/ida`, as
+  Beloch writes it in `crane.bel`): the triangle, two inside reverses to the
+  preliminary base, four to the side corners and two petal folds to the bird
+  base, four plain folds narrowing the legs, and the neck, tail and head
+  reversed. Every step of the bird base matches `bird-base-petal.fold`'s
+  frame and the crane `crane.fold` (60 faces): the same faces, isometries
+  and order. The neck, tail and head also land the same crane on the bird
+  base imported from Beloch's crease pattern through Import CP.
+- `tests/beloch`: Beloch's fixtures read for comparison (a frame's faces and
+  matrices, its own crease pattern, its `faceOrders` by witnesses), a final
+  frame replayed through Import CP, and a frame matched against a state;
+  shared by `tests/beloch_replay.rs`, the examples and `crates/oracle-tests`'
+  `fold_compound_oracle`, which verifies the reverse campaign's states and
+  the crane with seeded Oriedita and Flat-Folder.
 
 `cargo test -p oristudio-fold --features kernel` adds:
 
@@ -318,6 +396,39 @@ they analyse the fold once per layer at the point; per state (tier 2) its
 scene takes 0.28 ms and its landmarks 1.1 ms; and a landed fold (tier 3,
 ≤ 50 ms at 256 faces in wasm) at most 1.9 ms, with the random 129–256-face
 stacks at 13 ms p95.
+
+`cargo run -p oristudio-fold --release --example reverse`: the reverse fold,
+whole (tip, openings, score, gate, carry, seeds, completion, letters,
+`State::make`), with its first opening per flap. 2026-10-09, native release
+build. On the crane by Ida's route (`tests/ida`, the median of 15 runs):
+
+| Step | Faces | Time |
+|---|---|---|
+| b onto c, d onto c (preliminary base) | 2 → 4, 4 → 6 | 0.71, 0.73 ms |
+| the four side corners | 6 → 14 | 0.76–0.86 ms |
+| neck | 36 → 44 | 3.8 ms |
+| tail | 44 → 52 | 4.1 ms |
+| head | 52 → 60 | 2.5 ms |
+
+About 0.65 ms of every completion is Flat-Folder's implication tables, which
+`treemaker-flatfold`'s entry point builds on each call. On the engine's
+random sequences (`random::Sequence` to 256 faces, reverse folds drawn as the
+spike's campaign draws them):
+
+| Faces | Ops | Tip faces | Landed mean / p95 (n) | Refused mean / p95 (n) |
+|---|---|---|---|---|
+| 1–8 | 721 | 3.5 | 0.83 / 1.2 ms (382) | 1.9 / 4.0 ms (335) |
+| 9–32 | 626 | 11.7 | 3.1 / 12.0 ms (219) | 6.3 / 19.1 ms (396) |
+| 33–64 | 335 | 24.0 | 10.9 / 40.1 ms (70) | 16.6 / 58.4 ms (260) |
+| 65–128 | 305 | 41.5 | 34.6 / 98.1 ms (21) | 47.0 / 160 ms (283) |
+| 129–256 | 105 | 65.0 | 44.6 / 66.1 ms (2) | 199 / 1,246 ms (103) |
+
+The reverse spike's JS (research §5.2) took 2.9 ms for the op, 11 ms for
+Flat-Folder's arrangement and 10 ms for completion at 33–64 faces, and 15.6,
+78 and 518 ms at 129–256. Most of the time is the completion's propagation
+of the seeds through deep stacks; a refusal costs about three completions,
+since it tries the other kind and a grown tip for its fixes. The example
+also times `perf`'s all-layer stacks, where tips are half the model.
 
 `cargo run -p oristudio-fold --release --example landmarks`: every landmark of
 a state and the candidates of an O2 and an O6 over them, on states made the

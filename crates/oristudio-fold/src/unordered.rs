@@ -20,18 +20,21 @@
 //! crease whose letter is unknown enters the folded view without one.
 
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use oristudio_geometry::convex;
 use oristudio_layer_order::{
     ConstraintProblem, EdgeKind, FoldedView, LayerOrder, Letter, derived_letter,
 };
 
-use crate::complete::{CompletionLimits, CompletionRefusal, Completions, FixedKind, FixedPair};
+use crate::complete::{
+    self, CompletionLimits, CompletionRefusal, Completions, FixedKind, FixedPair,
+};
 use crate::isometry::Isometry;
 use crate::numerics::TOL;
 use crate::pattern::{CreaseKind, EdgeId, FaceId};
 use crate::refusal::FoldRefusal;
-use crate::state::{BeforeOrder, Geometry, State, StateParts, before_order};
+use crate::state::{BeforeOrder, Geometry, State, StateParts, before_order, touched_scope};
 use crate::witness::{Broken, WitnessOrder};
 
 type Point = [f64; 2];
@@ -45,9 +48,22 @@ pub struct Unordered {
     unknown: BTreeSet<EdgeId>,
     geometry: Geometry,
     view: FoldedView,
-    problem: ConstraintProblem,
+    /// The gate reuses it ([`State::make_after_with`]).
+    problem: Arc<ConstraintProblem>,
     /// Per folded-view edge, its crease's position.
     edge_creases: Vec<usize>,
+    after: Option<After>,
+}
+
+/// What an operation that lands these parts started from.
+#[derive(Debug, Clone)]
+struct After {
+    previous: State,
+    /// The faces it touched: moved, split or new.
+    touched: BTreeSet<FaceId>,
+    /// The faces it moved: where an order can still change, so where a
+    /// completion searches ([`complete::complete_around`]).
+    focus: BTreeSet<FaceId>,
 }
 
 impl Unordered {
@@ -56,8 +72,39 @@ impl Unordered {
     /// letters are placeholders. Ids that are not folded creases have no
     /// letter to decide and are ignored.
     pub fn new(
+        parts: StateParts,
+        unknown: impl IntoIterator<Item = EdgeId>,
+    ) -> Result<Unordered, FoldRefusal> {
+        Unordered::build(parts, unknown, None)
+    }
+
+    /// [`Unordered::new`] for parts an operation built from `previous`,
+    /// touching the faces in `touched` and moving those in `focus` (a
+    /// compound fold, plan D4): the problem is rebuilt incrementally, a
+    /// completion searches around `focus`, and the gate checks what a
+    /// touched face is in.
+    pub(crate) fn after(
+        parts: StateParts,
+        unknown: impl IntoIterator<Item = EdgeId>,
+        previous: &State,
+        touched: BTreeSet<FaceId>,
+        focus: BTreeSet<FaceId>,
+    ) -> Result<Unordered, FoldRefusal> {
+        Unordered::build(
+            parts,
+            unknown,
+            Some(After {
+                previous: previous.clone(),
+                touched,
+                focus,
+            }),
+        )
+    }
+
+    fn build(
         mut parts: StateParts,
         unknown: impl IntoIterator<Item = EdgeId>,
+        after: Option<After>,
     ) -> Result<Unordered, FoldRefusal> {
         parts.faces.sort_by_key(|f| f.id);
         parts.creases.sort_by_key(|c| c.id);
@@ -77,15 +124,28 @@ impl Unordered {
             edge_creases,
             ..
         } = before_order(&parts, &unknown)?;
-        let problem = ConstraintProblem::build(&view);
+        let problem = match &after {
+            Some(after) => {
+                let scope = touched_scope(&parts, &after.previous, &after.touched);
+                after.previous.problem().rebuild(&view, &scope)
+            }
+            None => ConstraintProblem::build(&view),
+        };
         Ok(Unordered {
             parts,
             unknown,
             geometry,
             view,
-            problem,
+            problem: Arc::new(problem),
             edge_creases,
+            after,
         })
+    }
+
+    /// Every face's isometry, by position: what an operation checks its
+    /// prediction against.
+    pub(crate) fn geometry(&self) -> &Geometry {
+        &self.geometry
     }
 
     /// The parts, faces and creases in id order, with no order.
@@ -171,17 +231,24 @@ impl Unordered {
             .collect()
     }
 
-    /// Every order `fixed` and the constraints allow.
+    /// Every order `fixed` and the constraints allow. After an operation, the
+    /// search runs around the faces it moved.
     pub fn complete(
         &self,
         fixed: &[FixedPair],
         limits: &CompletionLimits,
     ) -> Result<Completions, CompletionRefusal> {
-        crate::complete::complete(&self.view, &self.problem, fixed, limits)
+        match &self.after {
+            Some(after) => {
+                complete::complete_around(&self.view, &self.problem, fixed, &after.focus, limits)
+            }
+            None => complete::complete(&self.view, &self.problem, fixed, limits),
+        }
     }
 
     /// The state with this order: each unknown letter derived from it, then
-    /// [`State::make`], which checks everything again.
+    /// [`State::make`], which checks everything again (after an operation,
+    /// incrementally, where it touched).
     pub fn state(&self, order: LayerOrder) -> Result<State, FoldRefusal> {
         let mut parts = self.parts.clone();
         for (e, &k) in self.edge_creases.iter().enumerate() {
@@ -192,7 +259,15 @@ impl Unordered {
             }
         }
         parts.order = order;
-        State::make(parts)
+        match &self.after {
+            Some(after) => State::make_after_with(
+                parts,
+                &after.previous,
+                &after.touched,
+                Arc::clone(&self.problem),
+            ),
+            None => State::make_with_problem(parts, Arc::clone(&self.problem)),
+        }
     }
 
     /// Replay a stored choice (plan D6): resolve its witnesses to faces, fix

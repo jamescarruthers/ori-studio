@@ -328,6 +328,7 @@ impl<'s> Closure<'s> {
 /// The moving side of a classified line before any seed: its pieces, rule
 /// (i) and the flaps. [`analyse`] closes it from a seed; the cross-section
 /// (plan D14) reads it as it is, so the two report the same flaps.
+#[derive(Debug, Clone)]
 pub(crate) struct MovingSide {
     /// Per face position, its image clipped to the moving side; none for a
     /// face with no vertex there.
@@ -447,7 +448,7 @@ fn witness(state: &State, f: usize, pieces: &[Option<Vec<Point>>], axis: &Axis) 
 }
 
 /// The seed's face positions, each with a moving piece.
-fn resolve_seed(
+pub(crate) fn resolve_seed(
     state: &State,
     pieces: &[Option<Vec<Point>>],
     direction: Direction,

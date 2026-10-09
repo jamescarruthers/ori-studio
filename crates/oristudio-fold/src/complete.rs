@@ -32,7 +32,7 @@
 //! [`CompletionLimits::per_component`] orders; more is reported as
 //! truncation, never hidden.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use oristudio_layer_order::{
     Ambiguity, Constraint, ConstraintProblem, FacePair, FoldedView, LayerOrder,
@@ -339,6 +339,38 @@ pub fn complete(
     fixed: &[FixedPair],
     limits: &CompletionLimits,
 ) -> Result<Completions, CompletionRefusal> {
+    complete_in(view, problem, fixed, None, limits)
+}
+
+/// [`complete`], searching only where an order can still change: around the
+/// `focus` faces, such as the faces a compound fold moved (plan D4: local
+/// completion, only the cells the moved faces cover).
+///
+/// The search sees the cells that cover a focus face, the faces in them and
+/// every face of a constraint on a focus face's pair, with the pairs among
+/// those faces and their constraints. That loses nothing when every pair it
+/// leaves out is fixed as [`FixedKind::Carried`], which an operation's carry
+/// gives it: such a pair is never propagated, so its constraints and its
+/// cells' transitivity are never read. A pair with no fixed order adds its
+/// faces to the focus, so it is never left out. The result is the whole
+/// problem's: its forced pairs, components and ‹ n of m ›.
+pub fn complete_around(
+    view: &FoldedView,
+    problem: &ConstraintProblem,
+    fixed: &[FixedPair],
+    focus: &BTreeSet<FaceId>,
+    limits: &CompletionLimits,
+) -> Result<Completions, CompletionRefusal> {
+    complete_in(view, problem, fixed, Some(focus), limits)
+}
+
+fn complete_in(
+    view: &FoldedView,
+    problem: &ConstraintProblem,
+    fixed: &[FixedPair],
+    focus: Option<&BTreeSet<FaceId>>,
+    limits: &CompletionLimits,
+) -> Result<Completions, CompletionRefusal> {
     if !problem.is_for(view) {
         return Err(invalid("the problem was built from another view"));
     }
@@ -350,28 +382,44 @@ pub fn complete(
     if limits.per_component == 0 {
         return Err(invalid("a component must list at least one order"));
     }
-    let faces = FaceIndex::new(view);
+    let assignments = fixed_assignments(problem, fixed)?;
+    let region = match focus {
+        Some(focus) => Region::around(view, problem, &assignments, focus),
+        None => Region::whole(view, problem),
+    };
+    let faces = FaceIndex {
+        ids: region.faces.clone(),
+    };
+    let local_variable = region.local_variables(problem);
     let search = CompletionProblem {
-        variables: problem
-            .variables()
+        variables: region
+            .variables
             .iter()
-            .map(|pair| faces.pair(*pair))
+            .map(|&v| faces.pair(problem.variables()[v]))
             .collect::<Result<_, _>>()?,
-        constraints: (0..problem.variables().len())
-            .map(|v| buckets(problem, v, &faces))
-            .collect::<Result<_, _>>()?,
-        faces_cells: faces
-            .ids
+        constraints: region
+            .variables
             .iter()
-            .map(|&id| problem.overlay().faces_cells(id).to_vec())
+            .map(|&v| buckets(problem, v, &faces, &region))
+            .collect::<Result<_, _>>()?,
+        faces_cells: region.faces_cells(problem),
+        cells_faces: region
+            .cells
+            .iter()
+            .map(|&c| {
+                problem.overlay().cells()[c]
+                    .faces
+                    .iter()
+                    .map(|&f| faces.of(f))
+                    .collect()
+            })
+            .collect::<Result<_, _>>()?,
+        fixed: assignments
+            .iter()
+            .filter_map(|a| {
+                local_variable[a.variable].map(|variable| FixedAssignment { variable, ..*a })
+            })
             .collect(),
-        cells_faces: problem
-            .overlay()
-            .cells()
-            .iter()
-            .map(|cell| cell.faces.iter().map(|&f| faces.of(f)).collect())
-            .collect::<Result<_, _>>()?,
-        fixed: fixed_assignments(problem, fixed)?,
     };
     let options = CompletionOptions {
         solution_limit: SolutionLimit::Count(limits.per_component),
@@ -417,6 +465,13 @@ pub fn complete(
     };
     let variables = problem.variables().to_vec();
     let lo_above = |order: PairOrder| order == PairOrder::FirstAbove;
+    let global = |v: usize| {
+        region
+            .variables
+            .get(v)
+            .and_then(|&g| variables.get(g).copied())
+            .ok_or_else(|| invalid("the search named a variable out of range"))
+    };
     let components = solution
         .components
         .iter()
@@ -424,9 +479,8 @@ pub fn complete(
             let pairs = component
                 .variables
                 .iter()
-                .map(|&v| variables.get(v).copied())
-                .collect::<Option<Vec<_>>>()
-                .ok_or_else(|| invalid("the search named a variable out of range"))?;
+                .map(|&v| global(v))
+                .collect::<Result<Vec<_>, _>>()?;
             Ok(ComponentChoices {
                 pairs,
                 orders: component
@@ -438,26 +492,176 @@ pub fn complete(
             })
         })
         .collect::<Result<Vec<_>, CompletionRefusal>>()?;
+    // A pair outside the region keeps the order it was fixed to.
+    let mut forced: Vec<Option<bool>> = vec![None; variables.len()];
+    for a in &assignments {
+        forced[a.variable] = Some(a.order == PairOrder::FirstAbove);
+    }
+    for (&g, order) in region.variables.iter().zip(&solution.forced) {
+        forced[g] = order.map(lo_above);
+    }
     Ok(Completions {
-        forced: solution.forced.iter().map(|o| o.map(lo_above)).collect(),
+        forced,
         variables,
         components,
         nodes: solution.nodes,
     })
 }
 
-/// The view's faces by ascending id: the search's face numbers.
+/// The part of a problem a search runs over: faces by ascending id (the
+/// search's face numbers), variables ascending, cells.
+struct Region {
+    faces: Vec<FaceId>,
+    /// Indices into the problem's variables, ascending: so each lists its
+    /// faces in increasing search numbers, as the search requires.
+    variables: Vec<usize>,
+    /// Indices into the overlay's cells, ascending.
+    cells: Vec<usize>,
+    /// The region is the whole problem.
+    whole: bool,
+}
+
+impl Region {
+    /// Everything.
+    fn whole(view: &FoldedView, problem: &ConstraintProblem) -> Region {
+        let mut faces: Vec<FaceId> = view.faces().iter().map(|f| f.id).collect();
+        faces.sort_unstable();
+        Region {
+            faces,
+            variables: (0..problem.variables().len()).collect(),
+            cells: (0..problem.overlay().cells().len()).collect(),
+            whole: true,
+        }
+    }
+
+    /// Around `focus` and the faces of every pair `assignments` leave open
+    /// (see [`complete_around`]).
+    fn around(
+        view: &FoldedView,
+        problem: &ConstraintProblem,
+        assignments: &[FixedAssignment],
+        focus: &BTreeSet<FaceId>,
+    ) -> Region {
+        let variables = problem.variables();
+        let mut fixed = vec![false; variables.len()];
+        for a in assignments {
+            fixed[a.variable] = true;
+        }
+        let position = |f: FaceId| view.index_of(f);
+        let mut in_focus = vec![false; view.faces().len()];
+        for p in focus.iter().filter_map(|&f| position(f)) {
+            in_focus[p] = true;
+        }
+        for (v, pair) in variables.iter().enumerate() {
+            if !fixed[v] {
+                for p in pair.faces().into_iter().filter_map(position) {
+                    in_focus[p] = true;
+                }
+            }
+        }
+        let mut inside = in_focus.clone();
+        let overlay = problem.overlay();
+        let mut cells: Vec<usize> = view
+            .faces()
+            .iter()
+            .zip(&in_focus)
+            .filter(|(_, f)| **f)
+            .flat_map(|(face, _)| overlay.faces_cells(face.id).iter().copied())
+            .collect();
+        cells.sort_unstable();
+        cells.dedup();
+        for &c in &cells {
+            for p in overlay.cells()[c].faces.iter().filter_map(|&f| position(f)) {
+                inside[p] = true;
+            }
+        }
+        for (v, pair) in variables.iter().enumerate() {
+            let touches_focus = pair
+                .faces()
+                .into_iter()
+                .filter_map(position)
+                .any(|p| in_focus[p]);
+            let Some(buckets) = touches_focus.then(|| problem.buckets(v)).flatten() else {
+                continue;
+            };
+            for &k in buckets
+                .taco_taco
+                .iter()
+                .chain(&buckets.taco_tortilla)
+                .chain(&buckets.tortilla_tortilla)
+            {
+                let Some(constraint) = problem.constraints().get(k) else {
+                    continue;
+                };
+                for p in constraint.faces().iter().filter_map(|&f| position(f)) {
+                    inside[p] = true;
+                }
+            }
+        }
+        let mut faces: Vec<FaceId> = view
+            .faces()
+            .iter()
+            .zip(&inside)
+            .filter(|(_, i)| **i)
+            .map(|(face, _)| face.id)
+            .collect();
+        faces.sort_unstable();
+        if faces.len() == view.faces().len() {
+            return Region::whole(view, problem);
+        }
+        let variables = (0..variables.len())
+            .filter(|&v| {
+                variables[v]
+                    .faces()
+                    .into_iter()
+                    .all(|f| position(f).is_some_and(|p| inside[p]))
+            })
+            .collect();
+        Region {
+            faces,
+            variables,
+            cells,
+            whole: false,
+        }
+    }
+
+    /// Per problem variable, its index in the region.
+    fn local_variables(&self, problem: &ConstraintProblem) -> Vec<Option<usize>> {
+        let mut out = vec![None; problem.variables().len()];
+        for (local, &v) in self.variables.iter().enumerate() {
+            out[v] = Some(local);
+        }
+        out
+    }
+
+    /// Per region face, its cells in the region, by region cell number.
+    fn faces_cells(&self, problem: &ConstraintProblem) -> Vec<Vec<usize>> {
+        self.faces
+            .iter()
+            .map(|&id| {
+                problem
+                    .overlay()
+                    .faces_cells(id)
+                    .iter()
+                    .filter_map(|c| self.cells.binary_search(c).ok())
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// Whether every face of a constraint is in the region, so every pair it
+    /// reads is one of the region's variables.
+    fn holds(&self, faces: &[FaceId]) -> bool {
+        self.whole || faces.iter().all(|f| self.faces.binary_search(f).is_ok())
+    }
+}
+
+/// The search's face numbers: a region's faces by ascending id.
 struct FaceIndex {
     ids: Vec<FaceId>,
 }
 
 impl FaceIndex {
-    fn new(view: &FoldedView) -> FaceIndex {
-        let mut ids: Vec<FaceId> = view.faces().iter().map(|f| f.id).collect();
-        ids.sort_unstable();
-        FaceIndex { ids }
-    }
-
     fn of(&self, id: FaceId) -> Result<usize, CompletionRefusal> {
         self.ids
             .binary_search(&id)
@@ -495,30 +699,33 @@ fn buckets(
     problem: &ConstraintProblem,
     v: usize,
     faces: &FaceIndex,
+    region: &Region,
 ) -> Result<VariableConstraints, CompletionRefusal> {
     let buckets = problem
         .buckets(v)
         .ok_or_else(|| invalid("a variable has no buckets"))?;
-    let constraint = |k: usize| {
-        problem
+    // The constraint, or none when one of its faces is outside the region.
+    let constraint = |k: usize| -> Result<Option<Constraint>, CompletionRefusal> {
+        let c = problem
             .constraints()
             .get(k)
             .copied()
-            .ok_or_else(|| invalid("a bucket names a constraint out of range"))
+            .ok_or_else(|| invalid("a bucket names a constraint out of range"))?;
+        Ok(region.holds(c.faces()).then_some(c))
     };
     let mut out = VariableConstraints::default();
     for &k in &buckets.taco_taco {
-        if let Constraint::TacoTaco(f) = constraint(k)? {
+        if let Some(Constraint::TacoTaco(f)) = constraint(k)? {
             out.taco_taco.push(faces.tuple(&f)?);
         }
     }
     for &k in &buckets.taco_tortilla {
-        if let Constraint::TacoTortilla(f) = constraint(k)? {
+        if let Some(Constraint::TacoTortilla(f)) = constraint(k)? {
             out.taco_tortilla.push(faces.tuple(&f)?);
         }
     }
     for &k in &buckets.tortilla_tortilla {
-        if let Constraint::TortillaTortilla(f) = constraint(k)? {
+        if let Some(Constraint::TortillaTortilla(f)) = constraint(k)? {
             out.tortilla_tortilla.push(faces.tuple(&f)?);
         }
     }

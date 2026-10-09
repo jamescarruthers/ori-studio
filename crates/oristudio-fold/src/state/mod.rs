@@ -28,7 +28,7 @@ use crate::sheet::Sheet;
 use crate::view::{StartSide, View};
 
 pub(crate) use derive::{Geometry, Topology, ring_position};
-pub(crate) use gate::{BeforeOrder, before_order};
+pub(crate) use gate::{BeforeOrder, before_order, touched_scope};
 
 type Point = [f64; 2];
 
@@ -58,7 +58,8 @@ pub(crate) struct Derived {
     pub(crate) topology: Topology,
     pub(crate) geometry: Geometry,
     pub(crate) view: FoldedView,
-    pub(crate) problem: ConstraintProblem,
+    /// Shared with the [`crate::Unordered`] that built it, when one did.
+    pub(crate) problem: Arc<ConstraintProblem>,
 }
 
 /// A validated flat folded state. Immutable: every operation returns a new
@@ -73,7 +74,7 @@ impl State {
     /// The only constructor: derive the isometries and check everything
     /// (see the module docs). Faces and creases are put in id order first.
     pub fn make(parts: StateParts) -> Result<State, FoldRefusal> {
-        State::make_with(parts, None)
+        State::make_with(parts, None, None)
     }
 
     /// [`State::make`] for a state an operation built from `previous`,
@@ -85,16 +86,39 @@ impl State {
         previous: &State,
         touched: &BTreeSet<FaceId>,
     ) -> Result<State, FoldRefusal> {
-        State::make_with(parts, Some((previous, touched)))
+        State::make_with(parts, Some((previous, touched)), None)
+    }
+
+    /// [`State::make`] with the problem already built for these parts' faces
+    /// and images, as [`crate::Unordered`] builds it before the order is
+    /// known: the problem does not read letters, so it is the one the gate
+    /// would build, and is not built twice.
+    pub(crate) fn make_with_problem(
+        parts: StateParts,
+        problem: Arc<ConstraintProblem>,
+    ) -> Result<State, FoldRefusal> {
+        State::make_with(parts, None, Some(problem))
+    }
+
+    /// [`State::make_after`] with the problem already rebuilt, as
+    /// [`State::make_with_problem`].
+    pub(crate) fn make_after_with(
+        parts: StateParts,
+        previous: &State,
+        touched: &BTreeSet<FaceId>,
+        problem: Arc<ConstraintProblem>,
+    ) -> Result<State, FoldRefusal> {
+        State::make_with(parts, Some((previous, touched)), Some(problem))
     }
 
     fn make_with(
         mut parts: StateParts,
         previous: Option<(&State, &BTreeSet<FaceId>)>,
+        problem: Option<Arc<ConstraintProblem>>,
     ) -> Result<State, FoldRefusal> {
         parts.faces.sort_by_key(|f| f.id);
         parts.creases.sort_by_key(|c| c.id);
-        let derived = gate::run(&parts, previous)?;
+        let derived = gate::run(&parts, previous, problem)?;
         Ok(State {
             parts,
             derived: Arc::new(derived),
