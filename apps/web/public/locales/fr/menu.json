@@ -104,6 +104,15 @@
     "saveAs": "Enregistrer sous...",
     "settings": "Paramètres"
   },
+  "fold": {
+    "delete-step": "Supprimer l’étape",
+    "mountain": "Pli montagne",
+    "precrease": "Prépliage",
+    "rotate-ccw": "Tourner dans le sens antihoraire",
+    "rotate-cw": "Tourner dans le sens horaire",
+    "turn-over": "Retourner",
+    "valley": "Pli vallée"
+  },
   "help": {
     "about": "À propos d'Ori Studio",
     "checkForUpdates": "Rechercher des mises à jour…"
@@ -117,6 +126,7 @@
     "design": "Conception",
     "edit": "Édition",
     "file": "Fichier",
+    "fold": "Plier",
     "help": "Aide",
     "insert": "Insertion",
     "view": "Affichage"

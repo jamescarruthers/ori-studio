@@ -289,6 +289,14 @@
       "planned": "计划中",
       "reference": "参考点"
     },
+    "keys": {
+      "categoryLabel": "折叠工作区",
+      "nextBranch": "下一个分支",
+      "nextStep": "下一步",
+      "previousBranch": "上一个分支",
+      "previousStep": "上一步",
+      "scopeLabel": "折叠"
+    },
     "line": {
       "axiom": "公理 {{number}}：{{phrase}}",
       "axiom1Help": "过两点的线。",

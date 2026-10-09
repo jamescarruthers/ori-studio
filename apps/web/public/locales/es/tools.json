@@ -313,6 +313,14 @@
       "planned": "Previstos",
       "reference": "Puntos de referencia"
     },
+    "keys": {
+      "categoryLabel": "Espacio de trabajo de plegado",
+      "nextBranch": "Rama siguiente",
+      "nextStep": "Paso siguiente",
+      "previousBranch": "Rama anterior",
+      "previousStep": "Paso anterior",
+      "scopeLabel": "plegado"
+    },
     "line": {
       "axiom": "Axioma {{number}}: {{phrase}}",
       "axiom1Help": "La línea que pasa por dos puntos.",

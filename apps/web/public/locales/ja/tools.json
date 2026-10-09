@@ -289,6 +289,14 @@
       "planned": "予定",
       "reference": "基準点"
     },
+    "keys": {
+      "categoryLabel": "折りワークスペース",
+      "nextBranch": "次の分岐",
+      "nextStep": "次のステップ",
+      "previousBranch": "前の分岐",
+      "previousStep": "前のステップ",
+      "scopeLabel": "折り"
+    },
     "line": {
       "axiom": "公理 {{number}}：{{phrase}}",
       "axiom1Help": "2 点を通る線。",

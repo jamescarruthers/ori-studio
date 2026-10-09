@@ -325,6 +325,14 @@
       "planned": "В планах",
       "reference": "Опорные точки"
     },
+    "keys": {
+      "categoryLabel": "Рабочее пространство складывания",
+      "nextBranch": "Следующая ветка",
+      "nextStep": "Следующий шаг",
+      "previousBranch": "Предыдущая ветка",
+      "previousStep": "Предыдущий шаг",
+      "scopeLabel": "складывание"
+    },
     "line": {
       "axiom": "Аксиома {{number}}: {{phrase}}",
       "axiom1Help": "Линия через две точки.",

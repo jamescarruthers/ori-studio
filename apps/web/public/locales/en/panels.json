@@ -1468,6 +1468,26 @@
       "sheetHint": "The flat sheet is where the steps start: there is no step to delete.",
       "startsBranch": "Starts a new branch"
     },
+    "grid": {
+      "broken": "This step no longer folds",
+      "brokenAbove": "A step before this one no longer folds",
+      "delete": "Delete this step and what follows",
+      "flat": "Flat",
+      "folding": "Folding…",
+      "label": "Steps",
+      "locked": "Made with a newer Ori Studio",
+      "mountain": "Mountain",
+      "title": "Crease pattern by step",
+      "valley": "Valley"
+    },
+    "header": {
+      "fold": "Fold",
+      "foldHint": "The step on screen, folded and as a crease pattern",
+      "moreExports": "More ways to export",
+      "steps": "Steps",
+      "stepsHint": "Every step of the path as a card",
+      "views": "View"
+    },
     "paper": {
       "backUp": "Back up",
       "colors": "Colors",
@@ -1819,6 +1839,38 @@
         }
       }
     },
+    "sequence": {
+      "badgeBlocked": "Blocked",
+      "badgeBroken": "Broken",
+      "badgeChanged": "Changed",
+      "badgePreview": "Preview",
+      "badgeSheet": "Sheet",
+      "branch": "Branch {{n}} of {{total}}",
+      "branchesLabel": "Branches at this step",
+      "branchShort": "{{n}} / {{total}}",
+      "nextBranch": "Next branch",
+      "nextStep": "Next step",
+      "noTools": "Take a fold tool on the canvas to choose its kind.",
+      "placeholder": "Fold the sheet to make step 1.",
+      "previousBranch": "Previous branch",
+      "previousStep": "Previous step",
+      "replayFailed": "The steps could not all be folded.",
+      "replaying": "Folding the steps… {{done}} of {{total}}",
+      "retry": "Try again",
+      "sheetPolygonBack_one": "Start with a regular polygon of {{count}} side, back side up.",
+      "sheetPolygonBack_other": "Start with a regular polygon of {{count}} sides, back side up.",
+      "sheetPolygonFront_one": "Start with a regular polygon of {{count}} side, front side up.",
+      "sheetPolygonFront_other": "Start with a regular polygon of {{count}} sides, front side up.",
+      "sheetRectangleBack": "Start with a rectangle, back side up.",
+      "sheetRectangleFront": "Start with a rectangle, front side up.",
+      "sheetSquareBack": "Start with a square, back side up.",
+      "sheetSquareFront": "Start with a square, front side up.",
+      "stepCount_one": "{{count}} step",
+      "stepCount_other": "{{count}} steps",
+      "stripLabel": "Steps",
+      "tagBranch": "New branch",
+      "tagNext": "Next"
+    },
     "step": {
       "branchSheet": "You are at the flat sheet: folding here starts a new branch.",
       "branchStep": "You are at step {{at}} of {{total}}: folding here starts a new branch.",
@@ -1839,6 +1891,7 @@
       "mountain": "Mountain",
       "operation": "Operation",
       "pending": "Pending fold",
+      "pendingRefused": "Resolve the issue in the tool window to see the creases it makes.",
       "sheet": "Flat sheet",
       "sheetNote": "Nothing is folded yet. Fold the sheet to make step 1.",
       "source": "Source",

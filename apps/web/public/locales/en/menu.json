@@ -104,6 +104,15 @@
     "saveAs": "Save As...",
     "settings": "Settings"
   },
+  "fold": {
+    "delete-step": "Delete Step",
+    "mountain": "Mountain Fold",
+    "precrease": "Precrease",
+    "rotate-ccw": "Rotate Counterclockwise",
+    "rotate-cw": "Rotate Clockwise",
+    "turn-over": "Turn Over",
+    "valley": "Valley Fold"
+  },
   "help": {
     "about": "About Ori Studio",
     "checkForUpdates": "Check for Updates…"
@@ -117,6 +126,7 @@
     "design": "Design",
     "edit": "Edit",
     "file": "File",
+    "fold": "Fold",
     "help": "Help",
     "insert": "Insert",
     "view": "View"

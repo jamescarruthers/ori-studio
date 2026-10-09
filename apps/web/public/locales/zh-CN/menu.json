@@ -104,6 +104,15 @@
     "saveAs": "另存为...",
     "settings": "设置"
   },
+  "fold": {
+    "delete-step": "删除步骤",
+    "mountain": "山折",
+    "precrease": "预折",
+    "rotate-ccw": "逆时针旋转",
+    "rotate-cw": "顺时针旋转",
+    "turn-over": "翻面",
+    "valley": "谷折"
+  },
   "help": {
     "about": "关于 Ori Studio",
     "checkForUpdates": "检查更新…"
@@ -117,6 +126,7 @@
     "design": "设计",
     "edit": "编辑",
     "file": "文件",
+    "fold": "折叠",
     "help": "帮助",
     "insert": "插入",
     "view": "视图"

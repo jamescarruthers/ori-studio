@@ -301,6 +301,14 @@
       "planned": "Planned",
       "reference": "Reference points"
     },
+    "keys": {
+      "categoryLabel": "Fold workspace",
+      "nextBranch": "Next Branch",
+      "nextStep": "Next Step",
+      "previousBranch": "Previous Branch",
+      "previousStep": "Previous Step",
+      "scopeLabel": "fold"
+    },
     "line": {
       "axiom": "Axiom {{number}}: {{phrase}}",
       "axiom1Help": "The line through two points.",

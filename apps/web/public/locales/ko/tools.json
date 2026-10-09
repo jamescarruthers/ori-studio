@@ -289,6 +289,14 @@
       "planned": "예정",
       "reference": "기준점"
     },
+    "keys": {
+      "categoryLabel": "접기 작업 공간",
+      "nextBranch": "다음 분기",
+      "nextStep": "다음 단계",
+      "previousBranch": "이전 분기",
+      "previousStep": "이전 단계",
+      "scopeLabel": "접기"
+    },
     "line": {
       "axiom": "공리 {{number}}: {{phrase}}",
       "axiom1Help": "두 점을 지나는 선입니다.",

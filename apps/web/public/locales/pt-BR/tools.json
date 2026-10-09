@@ -313,6 +313,14 @@
       "planned": "Planejados",
       "reference": "Pontos de referência"
     },
+    "keys": {
+      "categoryLabel": "Workspace de Dobra",
+      "nextBranch": "Próximo ramo",
+      "nextStep": "Próximo passo",
+      "previousBranch": "Ramo anterior",
+      "previousStep": "Passo anterior",
+      "scopeLabel": "dobra"
+    },
     "line": {
       "axiom": "Axioma {{number}}: {{phrase}}",
       "axiom1Help": "A linha que passa por dois pontos.",

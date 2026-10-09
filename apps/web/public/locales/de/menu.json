@@ -104,6 +104,15 @@
     "saveAs": "Speichern unter...",
     "settings": "Einstellungen"
   },
+  "fold": {
+    "delete-step": "Schritt löschen",
+    "mountain": "Bergfalte",
+    "precrease": "Vorfalte",
+    "rotate-ccw": "Gegen den Uhrzeigersinn drehen",
+    "rotate-cw": "Im Uhrzeigersinn drehen",
+    "turn-over": "Umdrehen",
+    "valley": "Talfalte"
+  },
   "help": {
     "about": "Über Ori Studio",
     "checkForUpdates": "Nach Updates suchen…"
@@ -117,6 +126,7 @@
     "design": "Design",
     "edit": "Bearbeiten",
     "file": "Datei",
+    "fold": "Falten",
     "help": "Hilfe",
     "insert": "Einfügen",
     "view": "Ansicht"

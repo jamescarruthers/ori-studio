@@ -1468,6 +1468,26 @@
       "sheetHint": "Beim flachen Blatt beginnen die Schritte: Hier gibt es keinen Schritt zu löschen.",
       "startsBranch": "Beginnt einen neuen Zweig"
     },
+    "grid": {
+      "broken": "Dieser Schritt lässt sich nicht mehr falten",
+      "brokenAbove": "Ein Schritt davor lässt sich nicht mehr falten",
+      "delete": "Diesen Schritt und alle folgenden löschen",
+      "flat": "Flach",
+      "folding": "Wird gefaltet…",
+      "label": "Schritte",
+      "locked": "Mit einem neueren Ori Studio erstellt",
+      "mountain": "Berg",
+      "title": "Faltmuster je Schritt",
+      "valley": "Tal"
+    },
+    "header": {
+      "fold": "Falten",
+      "foldHint": "Der angezeigte Schritt, gefaltet und als Faltmuster",
+      "moreExports": "Weitere Exportmöglichkeiten",
+      "steps": "Schritte",
+      "stepsHint": "Jeder Schritt des Pfads als Karte",
+      "views": "Ansicht"
+    },
     "paper": {
       "backUp": "Rückseite oben",
       "colors": "Farben",
@@ -1819,6 +1839,38 @@
         }
       }
     },
+    "sequence": {
+      "badgeBlocked": "Blockiert",
+      "badgeBroken": "Defekt",
+      "badgeChanged": "Geändert",
+      "badgePreview": "Vorschau",
+      "badgeSheet": "Blatt",
+      "branch": "Zweig {{n}} von {{total}}",
+      "branchesLabel": "Zweige bei diesem Schritt",
+      "branchShort": "{{n}} / {{total}}",
+      "nextBranch": "Nächster Zweig",
+      "nextStep": "Nächster Schritt",
+      "noTools": "Nimm ein Faltwerkzeug auf der Arbeitsfläche, um seine Art zu wählen.",
+      "placeholder": "Falte das Blatt, um Schritt 1 zu erstellen.",
+      "previousBranch": "Vorheriger Zweig",
+      "previousStep": "Vorheriger Schritt",
+      "replayFailed": "Nicht alle Schritte ließen sich falten.",
+      "replaying": "Schritte werden gefaltet … {{done}} von {{total}}",
+      "retry": "Erneut versuchen",
+      "sheetPolygonBack_one": "Beginne mit einem regelmäßigen Vieleck mit {{count}} Seite, Rückseite oben.",
+      "sheetPolygonBack_other": "Beginne mit einem regelmäßigen Vieleck mit {{count}} Seiten, Rückseite oben.",
+      "sheetPolygonFront_one": "Beginne mit einem regelmäßigen Vieleck mit {{count}} Seite, Vorderseite oben.",
+      "sheetPolygonFront_other": "Beginne mit einem regelmäßigen Vieleck mit {{count}} Seiten, Vorderseite oben.",
+      "sheetRectangleBack": "Beginne mit einem Rechteck, Rückseite oben.",
+      "sheetRectangleFront": "Beginne mit einem Rechteck, Vorderseite oben.",
+      "sheetSquareBack": "Beginne mit einem Quadrat, Rückseite oben.",
+      "sheetSquareFront": "Beginne mit einem Quadrat, Vorderseite oben.",
+      "stepCount_one": "{{count}} Schritt",
+      "stepCount_other": "{{count}} Schritte",
+      "stripLabel": "Schritte",
+      "tagBranch": "Neuer Zweig",
+      "tagNext": "Nächster"
+    },
     "step": {
       "branchSheet": "Du bist beim flachen Blatt: Wenn du hier faltest, beginnt ein neuer Zweig.",
       "branchStep": "Du bist bei Schritt {{at}} von {{total}}: Wenn du hier faltest, beginnt ein neuer Zweig.",
@@ -1839,6 +1891,7 @@
       "mountain": "Berg",
       "operation": "Vorgang",
       "pending": "Geplante Faltung",
+      "pendingRefused": "Behebe das Problem im Werkzeugfenster, um die Faltlinien zu sehen, die dabei entstehen.",
       "sheet": "Flaches Blatt",
       "sheetNote": "Noch ist nichts gefaltet. Falte das Blatt, um Schritt 1 zu erstellen.",
       "source": "Quelle",

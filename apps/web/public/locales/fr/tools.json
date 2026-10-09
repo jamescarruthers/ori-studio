@@ -313,6 +313,14 @@
       "planned": "Prévus",
       "reference": "Points de repère"
     },
+    "keys": {
+      "categoryLabel": "Espace de travail Plier",
+      "nextBranch": "Branche suivante",
+      "nextStep": "Étape suivante",
+      "previousBranch": "Branche précédente",
+      "previousStep": "Étape précédente",
+      "scopeLabel": "pliage"
+    },
     "line": {
       "axiom": "Axiome {{number}} : {{phrase}}",
       "axiom1Help": "La ligne qui passe par deux points.",

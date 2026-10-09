@@ -104,6 +104,15 @@
     "saveAs": "Salvar como...",
     "settings": "Configurações"
   },
+  "fold": {
+    "delete-step": "Excluir passo",
+    "mountain": "Dobra monte",
+    "precrease": "Pré-dobra",
+    "rotate-ccw": "Girar no sentido anti-horário",
+    "rotate-cw": "Girar no sentido horário",
+    "turn-over": "Virar",
+    "valley": "Dobra vale"
+  },
   "help": {
     "about": "Sobre o Ori Studio",
     "checkForUpdates": "Verificar atualizações…"
@@ -117,6 +126,7 @@
     "design": "Design",
     "edit": "Editar",
     "file": "Arquivo",
+    "fold": "Dobrar",
     "help": "Ajuda",
     "insert": "Inserir",
     "view": "Exibir"

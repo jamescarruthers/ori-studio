@@ -301,6 +301,14 @@
       "planned": "Geplant",
       "reference": "Bezugspunkte"
     },
+    "keys": {
+      "categoryLabel": "Falten-Arbeitsbereich",
+      "nextBranch": "Nächster Zweig",
+      "nextStep": "Nächster Schritt",
+      "previousBranch": "Vorheriger Zweig",
+      "previousStep": "Vorheriger Schritt",
+      "scopeLabel": "Falten"
+    },
     "line": {
       "axiom": "Axiom {{number}}: {{phrase}}",
       "axiom1Help": "Die Linie durch zwei Punkte.",
