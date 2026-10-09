@@ -6,12 +6,14 @@
  * - **Committing is append-only.** A step is added under its parent, never
  *   inserted; committing at a node that already has children makes a branch.
  *   No middle step is edited in place.
- * - **The only in-place edits are annotations** — a step's note, and the
- *   marks made on a step or on the sheet. Neither can break a step: inputs
- *   hold resolved points, and both are outside `fh1` and `fs1`.
+ * - **The only in-place edits of a step are annotations** — its note, and
+ *   the marks made on it or on the sheet. Neither can break a step: inputs
+ *   hold resolved points, and both are outside `fh1` and `fs1`. The
+ *   sequence's title is outside both too.
  * - **Delete takes a step and everything that follows it**, locked or not.
  * - **Changing the shape empties the sequence**: it replaces the shape and
- *   the steps as one edit, never appending a hidden sequence.
+ *   the steps as one edit, never appending a hidden sequence. Changing the
+ *   side that starts up keeps the steps, and mirrors what they fold.
  *
  * Nothing locked is edited: a step this build cannot read, and everything
  * that folds from one, can only be deleted.
@@ -30,6 +32,7 @@ import {
   type FoldOp,
   type FoldPaperShape,
   type FoldSequenceDocument,
+  type FoldStartSide,
   type FoldStep,
 } from './foldSequenceDocument';
 import { foldStepTree, lockedIds, subtreeIds } from './foldStepTree';
@@ -117,6 +120,31 @@ export function setFoldPaperShape(document: FoldSequenceDocument, shape: FoldPap
   if (foldPaperKey(paper) === foldPaperKey(document.paper)) return document;
   const { sheetMarks: _marks, ...rest } = document;
   return { ...rest, paper, steps: [] };
+}
+
+/** Set the sequence's title; surrounding space is dropped, and the same title changes nothing. */
+export function setFoldSequenceTitle(document: FoldSequenceDocument, title: string): FoldSequenceDocument {
+  const text = xmlText(title).trim();
+  return text === document.title ? document : { ...document, title: text };
+}
+
+/**
+ * Change which side of the sheet faces the viewer before the first step,
+ * keeping the steps. A step's direction is a valley or a mountain as the
+ * viewer sees it (plan D6), so every step still folds — the mirror image of
+ * what it folded — but no step lands where it landed when it was committed.
+ * So each step's `expect` goes with the change: a mismatch would say the
+ * engine changed (*changed*, plan D6), when it was the author who did. The
+ * same side changes nothing.
+ */
+export function setFoldStartSide(document: FoldSequenceDocument, startSide: FoldStartSide): FoldSequenceDocument {
+  if (document.paper.startSide === startSide) return document;
+  const steps = document.steps.map((node) => {
+    if (isLockedStep(node) || node.expect === undefined) return node;
+    const { expect: _landed, ...rest } = node;
+    return rest;
+  });
+  return { ...document, paper: { ...document.paper, startSide }, steps };
 }
 
 /**
