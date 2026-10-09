@@ -89,6 +89,30 @@ describe('FoldStepPane', () => {
     expect(host.querySelector('[data-field-help]')?.getAttribute('aria-label')).toContain('deepest stack');
   });
 
+  it('says a reverse fold by its kind, its opening, its layer order and its blocks', () => {
+    render({
+      step: {
+        words: { op: 'reverse', kind: 'inside', line: { via: 'free' }, scope: { kind: 'flaps', flaps: 1 } },
+        number: 3,
+        layers: 2,
+        creases: { mountain: 2, valley: 4, flat: 0 },
+        diff: { added: { mountain: 1, valley: 1, flat: 0 }, refolded: 0, reversed: 2, unfolded: 0 },
+        status: 'ok',
+        compound: { blocks: 2, opening: 'chosen', orderChosen: false },
+      },
+      startSide: 'front',
+    });
+    expect(host.querySelector('header')?.textContent).toBe('Step 3Inside reverse');
+    expect(host.textContent).toContain('Inside reverse fold along the line drawn, reversing only the flap shown.');
+    expect(rows()).toMatchObject({
+      Operation: 'Inside reverse fold',
+      Line: 'Free line',
+      Opening: 'Chosen among several',
+      Blocks: '2',
+    });
+    expect(rows()).not.toHaveProperty('Layer order');
+  });
+
   it('labels the crease counts as the front’s, and says so plainly when the back starts up', () => {
     render({ step: VALLEY_STEP, startSide: 'front' });
     expect(section('Creases')?.textContent).toContain('As seen from the front of the paper.');

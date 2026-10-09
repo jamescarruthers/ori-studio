@@ -48,6 +48,21 @@ export interface FoldStepPaneStep {
   status: FoldStepStatus;
   /** For Import CP: where the pattern came from. */
   origin?: FoldCpOrigin;
+  /** For a compound fold: what it chose and how its paper moved (`foldCompoundPaneRows`). */
+  compound?: FoldCompoundPaneRows;
+}
+
+/**
+ * A compound fold's rows in the Step pane: how many stacks of paper turned
+ * as one (its blocks), and whether its opening and its layer order were
+ * chosen among several or were the only ones.
+ */
+export interface FoldCompoundPaneRows {
+  blocks: number;
+  /** Null for a fold with no opening (a flap moving whole). */
+  opening: 'chosen' | 'only' | null;
+  /** Whether the layer order was chosen among several. */
+  orderChosen: boolean;
 }
 
 /** The fold being made and not yet committed, as the preview landed it. */
@@ -174,6 +189,7 @@ export function FoldStepPane({
             {cpOriginLabel(t, step.origin)}
           </FieldRow>
         )}
+        {step.compound && <CompoundRows rows={step.compound} />}
         {step.diff && (
           <FieldRow label={t('panels:fold.step.changes', 'Changes')} kind="static">
             <ChangeLines lines={creaseDiffLines(t, step.diff)} />
@@ -255,6 +271,43 @@ function StatusNotices({
       {imported}
       {branchNotice}
     </div>
+  );
+}
+
+/** A compound fold's opening, layer order and blocks, as rows. */
+function CompoundRows({ rows }: { rows: FoldCompoundPaneRows }) {
+  const { t } = useTranslation();
+  const chosen = t('panels:fold.step.chosen', 'Chosen among several');
+  return (
+    <>
+      {rows.opening && (
+        <FieldRow
+          label={t('panels:fold.step.opening', 'Opening')}
+          kind="static"
+          help={t(
+            'panels:fold.step.openingHelp',
+            'Where the flap parts to let the tip through: the layers that stay below it and the ones above.'
+          )}
+        >
+          {rows.opening === 'chosen' ? chosen : t('panels:fold.step.onlyOne', 'The only one')}
+        </FieldRow>
+      )}
+      {rows.orderChosen && (
+        <FieldRow label={t('panels:fold.step.layerOrder', 'Layer order')} kind="static">
+          {chosen}
+        </FieldRow>
+      )}
+      <FieldRow
+        label={t('panels:fold.step.blocks', 'Blocks')}
+        kind="static"
+        help={t(
+          'panels:fold.step.blocksHelp',
+          'Stacks of paper that turn as one: each opening’s lower and upper part, and each flap that moves whole.'
+        )}
+      >
+        {rows.blocks}
+      </FieldRow>
+    </>
   );
 }
 
