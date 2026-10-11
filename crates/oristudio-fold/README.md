@@ -124,8 +124,12 @@ Compound folds (plan D4, D15, Phases 9 and 11):
   their absolute order. `reverse_kinds` says which kinds land; a refusal
   offers the other kind, the flaps in the tip's way (`reverse_tip_not_free`)
   or the flaps that open. Stored choices: each ambiguous flap's upper block
-  and the order, by witnesses; a stored opening that names none breaks the
-  step.
+  and the order, by witnesses. A stored opening names the block its
+  witnesses lie in, every flat-joined part of it holding one (so a face
+  split by a precrease since still names it), read on the upper blocks and
+  then on the lower ones: started the other side up (the Paper pane's Front
+  up / Back up), the stack is reversed and the same split has them below. One
+  that names none breaks the step.
 - `compound::crimp`: the crimp (plan Phase 11): two reverse folds of one
   kind, along ℓ1 nearer the body and ℓ2 nearer the tip, folded as one
   operation and verified only at its end. The strip between the lines moves
@@ -154,8 +158,10 @@ Compound folds (plan D4, D15, Phases 9 and 11):
   it is under every face of T it meets (the block over it) and on T's side
   otherwise (the block under it). `State::analyse_tuck` lists every layer
   the block lands on with whether it takes the tuck, within an optional
-  deadline (`feasible: None` past it); a refusal (`tuck_infeasible`) offers
-  up to three targets that do (`Fix::TuckTarget`). The plain fold's own
+  deadline read before each target, the targets that move least decided
+  first (`feasible: None` past it); a refusal (`tuck_infeasible`, naming no
+  conflict for a target the block lands nowhere on) offers up to three
+  targets that do (`Fix::TuckTarget`). The plain fold's own
   `Placement::Over` and `Under` are unchanged: a closed-form placement the
   gate accepts or refuses.
 - **A pleat is two plain folds**, not an operation of its own: a valley and
@@ -167,7 +173,12 @@ Compound folds (plan D4, D15, Phases 9 and 11):
   across the creases between it and the paper that stays); the direction
   seed puts every block above what stays (valley) or below it; pairs across
   blocks are left to the completion. One report, outcome and stored choice
-  for all four (`VertexReport`, `VertexOutcome`, `VertexChoices`).
+  for all four (`VertexReport`, `VertexOutcome`, `VertexChoices`). Each is
+  pictured as a plain fold along the crease that tells it best, a crease
+  from a vertex drawn from it: a squash's lower crease with its arrow onto
+  the target and a push onto the spine, a petal fold's H, a fan's crease the
+  far wedge turns across last (`squash_action`, `petal_action`,
+  `rabbit_ear_action`, `swivel_action`).
   - `compound::squash`: a two-layer flap by a point on its upper layer, the
     spine's target (default the hinge line) and the direction. Its layers
     crease on lines of their own (h + (1 ± μ)D/2: one shared line closes only
@@ -197,8 +208,8 @@ Compound folds (plan D4, D15, Phases 9 and 11):
   `compound::Anchor`); the closed sink is an inside reverse of the whole
   point into a pocket (a split along outline creases whose gap one display
   layer bounds; the twisted splits are left out), stored by a face on each
-  side of a seam; the unsink reflects the sunk tip back and leaves its whole
-  order to the completion (`Across::Free`).
+  side of a seam, either way up; the unsink reflects the sunk tip back and
+  leaves its whole order to the completion (`Across::Free`).
 - `compound::motion`: a compound step's `StepMotion` (plan D15): legs of
   groups turning about a hinge with exact endpoints. A reverse fold is
   *visual* (it has no rigid path short of unfolding the vertex flat): its
@@ -640,9 +651,17 @@ other targets for its fixes; past 64 faces few draws land at all, so read
 the landed columns' small counts as indications. The target listing is a
 completion per layer the block lands on, about 60 ms each at 129–256 faces,
 so the bridge gives it 150 ms (`TUCK_TARGETS_BUDGET_MS`) and leaves the
-targets past it undecided (`feasible: None`) for the fold itself to decide;
-the deadline now stops the propagation as well as the search, which is what
-lets it hold.
+targets past it undecided (`feasible: None`) for the fold itself to decide.
+The deadline stops the propagation as well as the search, but the search
+reads the clock only every few dozen nodes, after its problem is built, and
+the listing ran a preparation per moving set and a completion per target
+regardless: on the square folded in half seven times (128 layers in its
+corner), its bottom corner tucked, the 150 ms listing took 1.6–1.8 s, as
+long with the deadline already past. The listing now reads the deadline
+before each preparation and each completion, the targets that move least
+first, and a completion asked for after its deadline does not run: 152 ms
+(valley, four targets found) and 158 ms (mountain) natively, 163 and 160 ms
+through the bridge in wasm.
 
 `cargo run -p oristudio-fold --release --example landmarks`: every landmark of
 a state and the candidates of an O2 and an O6 over them, on states made the
