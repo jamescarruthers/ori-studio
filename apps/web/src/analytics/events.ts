@@ -49,7 +49,11 @@ export type FoldStepAddedOpKind =
   | 'squash'
   | 'petal'
   | 'rabbit_ear'
-  | 'swivel';
+  | 'swivel'
+  // The sinks.
+  | 'open_sink'
+  | 'closed_sink'
+  | 'unsink';
 
 /** How much of the moving side a Fold step took: every layer, flaps picked, or a depth at a point. */
 export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
@@ -67,9 +71,10 @@ export type FoldStepPlayVia = 'space' | 'button' | 'replay';
  * Which choice the Fold engine offered: an axiom's roots, the stacks a depth
  * pick can take, the layer orders one part of an imported crease pattern
  * folds to (Import CP's chooser), or a compound fold's: the ways a flap opens
- * (`opening`) and the orders its completion leaves (`order`).
+ * (`opening`), the orders its completion leaves (`order`), and the pockets a
+ * closed sink's point can go into (`pocket`).
  */
-export type FoldChoiceKind = 'axiom_root' | 'depth' | 'import_order' | 'opening' | 'order';
+export type FoldChoiceKind = 'axiom_root' | 'depth' | 'import_order' | 'opening' | 'order' | 'pocket';
 
 /** What a change of a Fold step's layer spread did (`fold spread changed`): the Diagram's spread verbs, by name. */
 export type FoldSpreadAction =

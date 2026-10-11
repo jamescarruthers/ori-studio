@@ -47,6 +47,34 @@ describe('a compound fold’s Step pane rows', () => {
     expect(foldCompoundPaneRows(undefined)).toBeUndefined();
   });
 
+  it('counts a sink’s blocks, and says whether a closed sink’s pocket and its order were chosen', () => {
+    const sink = (extra: Partial<FoldCompoundReportOf<'sink'>> = {}): FoldCompoundReportOf<'sink'> => ({
+      family: 'sink',
+      step: 'open',
+      line: { n: [0, 1], d: 0.5 },
+      side: 'positive',
+      snap: { clusters: 0, angle: 0, max_shift: 0 },
+      ring: [8, 9],
+      moving: [1, 2],
+      blocks: [[3], [4], [5], [6]],
+      created: [8, 9],
+      unfolded: [],
+      refolded: [],
+      reversed: [],
+      split: 2,
+      motion: { kind: 'visual', legs: [] },
+      stored: {},
+      ...extra,
+    });
+    expect(foldCompoundPaneRows(sink())).toEqual({ blocks: 4, opening: null, pocket: null, orderChosen: false });
+    const pocket = { above: [0.1, 0.2] as [number, number], below: [0.1, 0.3] as [number, number] };
+    expect(foldCompoundPaneRows(sink({ step: 'closed', blocks: [[3], [4]] }))).toMatchObject({ blocks: 2, pocket: 'only' });
+    expect(
+      foldCompoundPaneRows(sink({ step: 'closed', stored: { pocket, order: { faces: [], orders: [[0, 1, 1]] } } }))
+    ).toMatchObject({ pocket: 'chosen', orderChosen: true });
+    expect(foldCompoundPaneRows(sink({ step: 'unsink' }))).toMatchObject({ pocket: null });
+  });
+
   it('has none yet for the other families, whose rows come with their tools', () => {
     const vertex: FoldCompoundReportOf<'vertex'> = {
       family: 'vertex',
