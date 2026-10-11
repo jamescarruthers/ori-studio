@@ -196,6 +196,15 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return foldToolLabel(t, 'precrease');
     case 'fold.toolInsideReverse':
       return foldToolLabel(t, 'inside-reverse');
+    // The vertex folds.
+    case 'fold.toolSquash':
+      return foldToolLabel(t, 'squash');
+    case 'fold.toolPetal':
+      return foldToolLabel(t, 'petal');
+    case 'fold.toolRabbitEar':
+      return foldToolLabel(t, 'rabbit-ear');
+    case 'fold.toolSwivel':
+      return foldToolLabel(t, 'swivel');
     case 'fold.toolDivideLine':
       return foldToolLabel(t, 'divide-line');
     case 'fold.turnOver':

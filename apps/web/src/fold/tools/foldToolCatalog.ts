@@ -18,6 +18,7 @@ import type { FoldShortcutId as RegistryFoldShortcutId } from '../../keyboard/sh
 import { axiomPhrase, type FoldAxiom } from '../../lib/foldSentences';
 import type { TurnKind } from '../../lib/steps/turn';
 import { turnCardWords } from '../../lib/steps/turnWords';
+import type { FoldVertexOpKind } from '../document/foldSequenceDocument';
 
 /** A plain fold's kind, as the tool window's V / M / P control offers it. */
 export type FoldKind = 'valley' | 'mountain' | 'precrease';
@@ -25,11 +26,25 @@ export type FoldKind = 'valley' | 'mountain' | 'precrease';
 export const FOLD_KINDS: readonly FoldKind[] = ['valley', 'mountain', 'precrease'];
 
 /**
+ * A vertex fold's tool (plan Phase 11): paper turned about a vertex rather
+ * than folded along a located line, each named as the op it commits
+ * (`tools/vertex`).
+ */
+export type FoldVertexToolId = FoldVertexOpKind;
+
+export const FOLD_VERTEX_TOOLS: readonly FoldVertexToolId[] = ['squash', 'petal', 'rabbit-ear', 'swivel'];
+
+export function isVertexTool(id: FoldToolId): id is FoldVertexToolId {
+  return (FOLD_VERTEX_TOOLS as readonly string[]).includes(id);
+}
+
+/**
  * A tool taken in hand. Inside reverse is the design's fourth fold; it folds
  * outside too, as its kind control's other value (plan Phase 9, research
- * §5.2: the kind is usually forced by the geometry).
+ * §5.2: the kind is usually forced by the geometry). The vertex folds pick
+ * their flap, line or triangle themselves.
  */
-export type FoldToolId = FoldKind | 'inside-reverse' | 'divide-line';
+export type FoldToolId = FoldKind | 'inside-reverse' | FoldVertexToolId | 'divide-line';
 
 export function isFoldKind(id: FoldToolId): id is FoldKind {
   return id === 'valley' || id === 'mountain' || id === 'precrease';
@@ -40,6 +55,15 @@ export type FoldLineToolId = FoldKind | 'inside-reverse';
 
 export function isLineTool(id: FoldToolId): id is FoldLineToolId {
   return isFoldKind(id) || id === 'inside-reverse';
+}
+
+/**
+ * A tool whose first clicks locate a line through the line modes: every fold
+ * along a line, and the petal fold, whose line H is located the same way
+ * (`tools/vertex/vertexInputs`) though nothing folds along it alone.
+ */
+export function locatesLine(id: FoldToolId): id is FoldLineToolId | 'petal' {
+  return isLineTool(id) || id === 'petal';
 }
 
 /** A reverse fold's kind, as the reverse tool's kind control names it. */
@@ -118,10 +142,6 @@ export const FOLD_MODEL_TURNS: Readonly<Record<FoldModelVerbId, TurnKind>> = {
 export type FoldPlannedOpId =
   | 'crimp'
   | 'tuck'
-  | 'squash'
-  | 'petal'
-  | 'rabbit-ear'
-  | 'swivel'
   | 'open-sink'
   | 'closed-sink'
   | 'unsink';
@@ -129,10 +149,6 @@ export type FoldPlannedOpId =
 export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = [
   'crimp',
   'tuck',
-  'squash',
-  'petal',
-  'rabbit-ear',
-  'swivel',
   'open-sink',
   'closed-sink',
   'unsink',
@@ -157,6 +173,11 @@ export const FOLD_TOOL_SHORTCUTS: Readonly<Record<FoldToolId, FoldShortcutId>> =
   mountain: 'fold.toolMountain',
   precrease: 'fold.toolPrecrease',
   'inside-reverse': 'fold.toolInsideReverse',
+  // The vertex folds.
+  squash: 'fold.toolSquash',
+  petal: 'fold.toolPetal',
+  'rabbit-ear': 'fold.toolRabbitEar',
+  swivel: 'fold.toolSwivel',
   'divide-line': 'fold.toolDivideLine',
 };
 
@@ -199,6 +220,15 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.precrease', 'Precrease');
     case 'inside-reverse':
       return t('tools:fold.tool.insideReverse', 'Inside reverse fold');
+    // The vertex folds, by the names the rail gave them while they were planned.
+    case 'squash':
+      return t('tools:fold.op.squash', 'Squash fold');
+    case 'petal':
+      return t('tools:fold.op.petal', 'Petal fold');
+    case 'rabbit-ear':
+      return t('tools:fold.op.rabbitEar', 'Rabbit ear');
+    case 'swivel':
+      return t('tools:fold.op.swivel', 'Swivel fold');
     case 'divide-line':
       return t('tools:fold.tool.divideLine', 'Divide line');
   }
@@ -215,6 +245,15 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.precreaseHelp', 'Fold and unfold, leaving a crease to use later.');
     case 'inside-reverse':
       return t('tools:fold.tool.insideReverseHelp', 'Push a flap inside itself, reversing its spine.');
+    // The vertex folds.
+    case 'squash':
+      return t('tools:fold.vertex.help.squash', 'Open a two-layer flap and press it flat, its spine onto its hinge.');
+    case 'petal':
+      return t('tools:fold.vertex.help.petal', 'Lift a flap’s lower point along a precreased line while its sides fold in.');
+    case 'rabbit-ear':
+      return t('tools:fold.vertex.help.rabbitEar', 'Fold a triangle’s corners in along their bisectors, so a point stands up.');
+    case 'swivel':
+      return t('tools:fold.vertex.help.swivel', 'Fold paper about a point inside it, along rays you pick and one that lets it lie flat.');
     case 'divide-line':
       return t('tools:fold.tool.divideLineHelp', 'Mark points that divide an edge or a crease into equal parts.');
   }
@@ -349,14 +388,6 @@ export function foldPlannedOpLabel(t: TFunction, id: FoldPlannedOpId): string {
       return t('tools:fold.op.crimp', 'Crimp');
     case 'tuck':
       return t('tools:fold.op.tuck', 'Tuck');
-    case 'squash':
-      return t('tools:fold.op.squash', 'Squash fold');
-    case 'petal':
-      return t('tools:fold.op.petal', 'Petal fold');
-    case 'rabbit-ear':
-      return t('tools:fold.op.rabbitEar', 'Rabbit ear');
-    case 'swivel':
-      return t('tools:fold.op.swivel', 'Swivel fold');
     case 'open-sink':
       return t('tools:fold.op.openSink', 'Open sink');
     case 'closed-sink':

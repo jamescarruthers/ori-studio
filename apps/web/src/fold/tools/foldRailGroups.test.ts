@@ -32,21 +32,11 @@ describe('foldRailGroups', () => {
       ['planned', 'Planned'],
     ]);
     expect(groups.map((group) => group.items.map((each) => each.id))).toEqual([
-      ['valley', 'mountain', 'precrease', 'inside-reverse'],
+      ['valley', 'mountain', 'precrease', 'inside-reverse', 'squash', 'petal', 'rabbit-ear', 'swivel'],
       ['divide-line'],
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
       ['turn-over', 'rotate'],
-      [
-        'crimp',
-        'tuck',
-        'squash',
-        'petal',
-        'rabbit-ear',
-        'swivel',
-        'open-sink',
-        'closed-sink',
-        'unsink',
-      ],
+      ['crimp', 'tuck', 'open-sink', 'closed-sink', 'unsink'],
     ]);
     // A roadmap, out of the way until asked for; everything else open.
     expect(groups.filter((group) => group.collapsedByDefault).map((group) => group.id)).toEqual(['planned']);
@@ -62,7 +52,8 @@ describe('foldRailGroups', () => {
     expect(item(groups, 'valley').shortcut).toBe('fold.toolValley');
     expect(item(groups, 'axiom-7').shortcut).toBe('fold.lineAxiom7');
     expect(item(groups, 'rotate').shortcut).toBe('fold.rotate');
-    expect(item(groups, 'squash').shortcut).toBeNull();
+    expect(item(groups, 'squash').shortcut).toBe('fold.toolSquash');
+    expect(item(groups, 'crimp').shortcut).toBeNull();
   });
 
   it('takes the reverse fold as a tool, its line mode marked, and shows the later folds as planned', () => {
@@ -74,7 +65,7 @@ describe('foldRailGroups', () => {
     reverse.select();
     expect(calls.selectTool).toHaveBeenCalledWith('inside-reverse');
     calls.selectTool.mockClear();
-    for (const id of ['crimp', 'squash', 'unsink']) {
+    for (const id of ['crimp', 'unsink']) {
       const planned = item(groups, id);
       expect(planned.kind).toBe('planned');
       expect(planned.available).toBe(false);
@@ -135,6 +126,29 @@ describe('foldRailGroups', () => {
     expect(foldRailTooltip(item(groups, 'axiom-1'), undefined)).toBe(
       'Axiom 1: through two points - The line through two points.'
     );
-    expect(foldRailTooltip(item(groups, 'petal'), undefined)).toBe('Petal fold - Planned: not in Ori Studio yet.');
+    expect(foldRailTooltip(item(groups, 'crimp'), undefined)).toBe('Crimp - Planned: not in Ori Studio yet.');
+  });
+
+  it('takes the vertex folds as tools, the petal fold locating its line through the line modes', () => {
+    const calls = verbs();
+    let groups = foldRailGroups(t, view({ tool: 'squash', lineMode: 'crease' }), calls);
+    for (const id of ['squash', 'petal', 'rabbit-ear', 'swivel']) {
+      expect(item(groups, id)).toMatchObject({ kind: 'tool', available: true, reason: null });
+    }
+    expect(foldRailTooltip(item(groups, 'petal'), undefined)).toBe(
+      'Petal fold - Lift a flap’s lower point along a precreased line while its sides fold in.'
+    );
+    // A squash locates no line: no line mode is what the canvas is doing.
+    expect(groups.flatMap((group) => group.items).filter((each) => each.active).map((each) => each.id)).toEqual([
+      'squash',
+    ]);
+    item(groups, 'rabbit-ear').select();
+    expect(calls.selectTool).toHaveBeenCalledWith('rabbit-ear');
+    // A petal fold's H is located through the line mode chosen.
+    groups = foldRailGroups(t, view({ tool: 'petal', lineMode: 'crease' }), calls);
+    expect(groups.flatMap((group) => group.items).filter((each) => each.active).map((each) => each.id)).toEqual([
+      'petal',
+      'crease',
+    ]);
   });
 });

@@ -110,6 +110,13 @@ function refusalBody(code: FoldRefusalCode): FoldRefusalBody {
       return { code, kind: 'inside', faces: [0] };
     case 'reverse_tip_not_free':
       return { code, blocking: [0], faces: [0] };
+    // The vertex folds'.
+    case 'squash_no_flap':
+      return { code, faces: [0], cause: 'single_layer' };
+    case 'petal_not_precreased':
+      return { code, faces: [0], missing: 'line' };
+    case 'petal_no_flap':
+      return { code, faces: [0], cause: 'no_ends' };
     default:
       return { code };
   }

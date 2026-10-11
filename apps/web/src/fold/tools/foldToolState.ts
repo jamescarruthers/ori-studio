@@ -24,13 +24,15 @@ import {
   FOLD_MARK_MAX_PARTS,
   type FoldChoices,
   type FoldDirection,
+  type FoldModelDirection,
   type FoldOp,
   type SheetPoint,
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
-import { isLineTool, type FoldLineModeId, type FoldLineToolId, type FoldToolId } from './foldToolCatalog';
+import { isLineTool, locatesLine, type FoldLineModeId, type FoldLineToolId, type FoldToolId } from './foldToolCatalog';
 import { locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
+import { PETAL_LINE_MODES } from './vertex/vertexInputs';
 
 /**
  * What a fold takes along with the moving side (D6's seed, before it names
@@ -73,11 +75,29 @@ export interface FoldCompoundToolChoices {
   reverseKind: FoldReverseKind | null;
   /** The way the flaps open, by index into the ways the engine lists. */
   opening: number;
-  /** The layer order, by index into the orders the engine lists for the kind. */
+  /** The layer order, by index into the orders the engine lists for the kind (a vertex fold's, for its op). */
   order: number;
+  // The vertex folds (`tools/vertex`): each a choice of what the engine
+  // lists, by index, or of where the folder points, as a direction.
+  /** Where a squash's spine lands: a direction from its vertex in the parent's model frame; null for the hinge line. */
+  squashTarget: FoldModelDirection | null;
+  /** A rabbit ear's or a swivel's fourth ray, by index into the candidates; null for the first that lands. */
+  emergent: number | null;
+  /** A rabbit ear's ridge, by index into the two the engine lists; null for the first that lands. */
+  ridge: number | null;
+  /** How many layers at a fan's center its creases cut, from the side the direction names; null for every one. */
+  fanLayers: number | null;
 }
 
-export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = { reverseKind: null, opening: 0, order: 0 };
+export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
+  reverseKind: null,
+  opening: 0,
+  order: 0,
+  squashTarget: null,
+  emergent: null,
+  ridge: null,
+  fanLayers: null,
+};
 
 export interface FoldToolState {
   tool: FoldToolId;
@@ -91,6 +111,8 @@ export interface FoldToolState {
   seed: FoldToolSeed;
   /** The way a precrease folds before it unfolds. */
   precreaseDirection: FoldDirection;
+  /** The way a vertex fold folds, as the viewer sees it: kept from fold to fold, as a precrease's is. */
+  vertexDirection: FoldDirection;
   override: FoldToolOverride | null;
   divide: FoldDivideSettings;
   /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
@@ -107,6 +129,7 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   swapped: false,
   seed: { scope: 'all' },
   precreaseDirection: 'valley',
+  vertexDirection: 'valley',
   override: null,
   divide: FOLD_DIVIDE_DEFAULT,
   hoveredFlap: null,
@@ -192,6 +215,19 @@ export interface FoldTools {
   stepOpening(delta: number, count: number): void;
   /** Step through the layer orders listed, of `count`. */
   stepOrder(delta: number, count: number): void;
+  // The vertex folds (`tools/vertex`): each choice made anew lists the
+  // choices after it anew — the fourth ray its ridges, the ridge its orders.
+  setVertexDirection(direction: FoldDirection): void;
+  /** Where a squash's spine lands; null for the hinge line. */
+  setSquashTarget(target: FoldModelDirection | null): void;
+  /** Take a fan's emergent candidate by index; null for the first that lands. */
+  setEmergent(emergent: number | null): void;
+  /** Step through a fan's emergent candidates, of `count`, from the one `from` taken now. */
+  stepEmergent(delta: number, count: number, from: number): void;
+  /** Take a rabbit ear's ridge by index into the two listed; null for the first that lands. */
+  setRidge(ridge: number | null): void;
+  /** How many layers at the fan's center are cut; null for every one. */
+  setFanLayers(layers: number | null): void;
 }
 
 const sameFlap = (a: FoldFlap, b: FoldFlap) =>
@@ -246,16 +282,20 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         // M, P and the reverse fold keeps it, as the window's V / M / P control
         // promises. Anything else locates anew.
         const keeps = isLineTool(tool) && isLineTool(state.tool);
-        return keeps
-          ? { ...state, tool, override: null, compound: anotherTip(state.compound) }
-          : { ...restart(state), tool };
+        if (keeps) return { ...state, tool, override: null, compound: anotherTip(state.compound) };
+        // A petal fold's line H is a precrease, clicked or run through its
+        // two ends: an axiom that moves a point onto another makes no sense
+        // of it, so the tool starts on the existing crease.
+        const lineMode = tool === 'petal' && !PETAL_LINE_MODES.has(state.lineMode) ? 'crease' : state.lineMode;
+        return { ...restart(state), tool, lineMode };
       });
     },
 
     selectLineMode(lineMode) {
       set((state) => {
-        // A line mode belongs to the folds: choosing one from the Divide line takes a fold in hand.
-        const tool: FoldLineToolId = isLineTool(state.tool) ? state.tool : 'valley';
+        // A line mode belongs to the folds, and to the petal fold's line H:
+        // choosing one from any other tool takes a fold in hand.
+        const tool: FoldLineToolId | 'petal' = locatesLine(state.tool) ? state.tool : 'valley';
         if (state.lineMode === lineMode && state.tool === tool) return state;
         return { ...restart(state), tool, lineMode };
       });
@@ -276,7 +316,9 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
     },
 
     swapSide() {
-      if (!isLocated(store.getState())) return false;
+      // A vertex fold has no moving side to swap: the key falls through.
+      const now = store.getState();
+      if (!isLocated(now) || !isLineTool(now.tool)) return false;
       // The flaps picked, or the stack a depth pick went down, are the old
       // side's: the new side folds whole until something of it is picked.
       set((state) => ({
@@ -357,6 +399,47 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         ...state,
         compound: { ...state.compound, order: (((state.compound.order + delta) % count) + count) % count },
       }));
+    },
+
+    // A vertex fold's choices: each is another fold, whose later choices are listed anew.
+    setVertexDirection(vertexDirection) {
+      set((state) =>
+        state.vertexDirection === vertexDirection
+          ? state
+          : { ...state, vertexDirection, compound: { ...state.compound, ridge: null, order: 0 } }
+      );
+    },
+
+    setSquashTarget(squashTarget) {
+      set((state) => ({ ...state, compound: { ...state.compound, squashTarget, order: 0 } }));
+    },
+
+    setEmergent(emergent) {
+      set((state) =>
+        state.compound.emergent === emergent
+          ? state
+          : { ...state, compound: { ...state.compound, emergent, ridge: null, order: 0 } }
+      );
+    },
+
+    stepEmergent(delta, count, from) {
+      if (count <= 1) return;
+      const emergent = (((from + delta) % count) + count) % count;
+      set((state) => ({ ...state, compound: { ...state.compound, emergent, ridge: null, order: 0 } }));
+    },
+
+    setRidge(ridge) {
+      set((state) =>
+        state.compound.ridge === ridge ? state : { ...state, compound: { ...state.compound, ridge, order: 0 } }
+      );
+    },
+
+    setFanLayers(fanLayers) {
+      set((state) =>
+        state.compound.fanLayers === fanLayers
+          ? state
+          : { ...state, compound: { ...state.compound, fanLayers, ridge: null, order: 0 } }
+      );
     },
   };
 }

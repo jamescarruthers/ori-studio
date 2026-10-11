@@ -12,6 +12,14 @@ import type { NoticeAction } from '../../components/ui/Notice';
 import type { FoldNoOpening, FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
 import type { FoldKind } from './foldToolCatalog';
+import {
+  vertexContextOf,
+  vertexExtraActions,
+  vertexFixActions,
+  vertexRefusalWords,
+  type FoldVertexFixVerbs,
+  type FoldVertexRefusalContext,
+} from './vertex/vertexRefusal';
 
 /** What a notice reads of a refusal: the bridge's, with or without its envelope. */
 export type FoldRefused = Pick<FoldEngineRefused, 'refusal' | 'fixes'>;
@@ -19,8 +27,8 @@ export type FoldRefused = Pick<FoldEngineRefused, 'refusal' | 'fixes'>;
 /** A fold along another line: a near miss's landmark line, or a sliver remedy with its storable step. */
 export type FoldUseLineFix = Extract<FoldFix, { fix: 'use_line' }>;
 
-/** The calls a fix makes; the store binds them. */
-export interface FoldFixVerbs {
+/** The calls a fix makes; the store binds them. A vertex fold's are its own (`vertex/vertexRefusal`). */
+export interface FoldFixVerbs extends FoldVertexFixVerbs {
   /** Add these flaps (engine indices) to the seed. */
   includeFlaps: (flaps: readonly number[]) => void;
   /** The same fold, the other way. */
@@ -46,12 +54,14 @@ export interface FoldRefusalNoticeModel {
 
 /** What the notice is read against: the fold asked for, and how its flaps are numbered on screen. */
 export interface FoldRefusalContext {
-  /** A plain fold's kind, or the reverse fold's (`reverse`'s kind, which its fixes are worded for). */
-  kind: FoldKind | 'reverse';
+  /** A plain fold's kind, the reverse fold's, or a vertex fold's (`vertex`, its tool in `vertex`). */
+  kind: FoldKind | 'reverse' | 'vertex';
   /** A flap's number on screen, by its engine index (`flapNumbers`). */
   flapNumber: (flap: number) => number;
   /** Nothing can change: the fixes are shown, but none can be taken. */
   readOnly: boolean;
+  /** A vertex fold's: its tool, and what its own fixes name (`vertex/vertexRefusal`). */
+  vertex?: FoldVertexRefusalContext;
 }
 
 function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext): { title: string; text: string } {
@@ -273,13 +283,30 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
           'Other layers lie where the tip would turn. Include their flaps in the fold, or reverse it somewhere else.'
         ),
       };
+    // The vertex folds' (`vertex/vertexRefusal`), in their tool's words.
+    case 'squash_no_flap':
+    case 'squash_flap_not_free':
+    case 'squash_flap_covered':
+    case 'squash_target_outside':
+    case 'petal_not_precreased':
+    case 'petal_no_flap':
+    case 'fan_center':
+    case 'fan_ray_blocked':
+    case 'fan_not_flat':
+    case 'fan_ridge_not_ray':
+    case 'fan_stayer_detached':
+      return (
+        vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? {
+          title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
+          text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
+        }
+      );
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
     // With them, the compound pipeline's own: no order at all, a search that
-    // ran out, a pick that names nothing, a defect. And a tuck's, a crimp's,
-    // the vertex folds' (from `squash_no_flap` on) and the sinks': no tool
-    // folds one yet, so until their tools say them in their own words they
-    // read as a fold that cannot be made.
+    // ran out, a pick that names nothing, a defect. And a tuck's, a crimp's
+    // and the sinks': no tool folds one yet, so until their tools say them
+    // in their own words they read as a fold that cannot be made.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -315,17 +342,6 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'crimp_no_opening':
     case 'crimp_kind_infeasible':
     case 'crimp_tip_not_free':
-    case 'squash_no_flap':
-    case 'squash_flap_not_free':
-    case 'squash_flap_covered':
-    case 'squash_target_outside':
-    case 'petal_not_precreased':
-    case 'petal_no_flap':
-    case 'fan_center':
-    case 'fan_ray_blocked':
-    case 'fan_not_flat':
-    case 'fan_ridge_not_ray':
-    case 'fan_stayer_detached':
     case 'sink_several_points':
     case 'sink_point_open':
     case 'sink_outline_mixed':
@@ -399,7 +415,7 @@ function noOpening(t: TFunction, cause: FoldNoOpening): string {
   }
 }
 
-function otherWayLabel(t: TFunction, kind: FoldKind | 'reverse'): string {
+function otherWayLabel(t: TFunction, kind: FoldRefusalContext['kind']): string {
   switch (kind) {
     case 'valley':
       return t('tools:fold.fix.mountainInstead', 'Mountain fold instead');
@@ -410,6 +426,9 @@ function otherWayLabel(t: TFunction, kind: FoldKind | 'reverse'): string {
     // The engine never offers a reverse fold the other way round; it offers the other kind.
     case 'reverse':
       return t('tools:fold.fix.swapInstead', 'Swap the moving side');
+    // A vertex fold's is its own button (`vertexFixActions`), whose words these are.
+    case 'vertex':
+      return t('tools:fold.vertex.fix.otherWay', 'Fold it the other way');
   }
 }
 
@@ -434,6 +453,9 @@ function fixActions(
   verbs: FoldFixVerbs
 ): NoticeAction[] {
   const disabled = context.readOnly;
+  // A vertex fold's fixes are its own buttons, the other direction among them.
+  const vertex = context.vertex ? vertexFixActions(t, fix, position, disabled, context.vertex, verbs) : null;
+  if (vertex) return vertex;
   switch (fix.fix) {
     case 'include_flaps': {
       const [only] = fix.flaps;
@@ -489,7 +511,7 @@ function fixActions(
       // A tuck's, which no tool folds yet: nothing to bind it to.
       return [];
     case 'use_emergent':
-      // A rabbit ear's or a swivel's, likewise.
+      // A rabbit ear's or a swivel's: its tool's button (`vertexFixActions`), above.
       return [];
     case 'other_sink':
       // A sink's, likewise.
@@ -507,7 +529,11 @@ export function foldRefusalNotice(
   return {
     code: refused.refusal.code,
     ...words(t, refused, context),
-    actions: refused.fixes.flatMap((fix, position) => fixActions(t, fix, position, context, verbs)),
+    actions: [
+      ...refused.fixes.flatMap((fix, position) => fixActions(t, fix, position, context, verbs)),
+      // What a vertex fold's tools can do where the engine offers no fix.
+      ...(context.vertex ? vertexExtraActions(t, refused.refusal, context.readOnly, context.vertex, verbs) : []),
+    ],
   };
 }
 

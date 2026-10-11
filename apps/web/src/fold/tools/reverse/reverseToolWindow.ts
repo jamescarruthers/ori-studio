@@ -90,18 +90,26 @@ export interface FoldReverseControls {
   order: FoldChoiceStepper | null;
 }
 
-function stepper(
+/**
+ * A listed choice the folder steps through, "2 of 3" unless `value` words it
+ * otherwise; null with one or none to choose from. Every compound tool's
+ * steppers are this one (the vertex folds' too).
+ */
+export function choiceStepper(
   t: TFunction,
   label: string,
   index: number,
   count: number,
   step: ((delta: number) => void) | undefined,
-  disabled: boolean
+  disabled: boolean,
+  value?: string
 ): FoldChoiceStepper | null {
   if (count <= 1 || !step) return null;
   return {
     label,
-    value: t('tools:fold.reverse.ofCount', '{{index}} of {{total}}', { index: Math.min(index, count - 1) + 1, total: count }),
+    value:
+      value ??
+      t('tools:fold.reverse.ofCount', '{{index}} of {{total}}', { index: Math.min(index, count - 1) + 1, total: count }),
     previous: { label: t('tools:fold.reverse.previous', 'Previous'), disabled, run: () => step(-1) },
     next: { label: t('tools:fold.reverse.next', 'Next'), disabled, run: () => step(1) },
   };
@@ -143,8 +151,8 @@ function reverseControls(
       note: kindNote(t, reverse),
       set: (kind) => verbs.setReverseKind?.(kind),
     },
-    opening: stepper(t, t('tools:fold.reverse.opening', 'Opening'), reverse.way, reverse.ways, verbs.stepOpening, readOnly),
-    order: stepper(t, t('tools:fold.reverse.order', 'Layer order'), reverse.order, reverse.orders, verbs.stepOrder, readOnly),
+    opening: choiceStepper(t, t('tools:fold.reverse.opening', 'Opening'), reverse.way, reverse.ways, verbs.stepOpening, readOnly),
+    order: choiceStepper(t, t('tools:fold.reverse.order', 'Layer order'), reverse.order, reverse.orders, verbs.stepOrder, readOnly),
   };
 }
 

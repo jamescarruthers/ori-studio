@@ -56,7 +56,9 @@ describe('FoldToolRail', () => {
       ['Model', 'true'],
       ['Planned', 'false'],
     ]);
-    expect(rail.querySelector('[aria-label="Squash fold"]')).toBeNull();
+    expect(rail.querySelector('[aria-label="Crimp"]')).toBeNull();
+    // The vertex folds are tools, open with the other folds.
+    expect(byRole(rail, 'button', 'Squash fold').getAttribute('aria-disabled')).not.toBe('true');
   });
 
   it('takes a tool, a line mode and a model verb from their buttons, and refuses a planned one', () => {
@@ -111,7 +113,7 @@ describe('FoldToolPickerSheet', () => {
     const calls = verbs();
     const close = vi.fn();
     const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={foldRailGroups(t, view, calls)} close={close} />);
-    const row = byRole(sheet, 'button', 'Rabbit ear Planned: not in Ori Studio yet.');
+    const row = byRole(sheet, 'button', 'Tuck Planned: not in Ori Studio yet.');
     expect(row.getAttribute('aria-disabled')).toBe('true');
     act(() => row.click());
     expect(close).not.toHaveBeenCalled();

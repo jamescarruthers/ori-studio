@@ -3,7 +3,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FoldOp } from '../document/foldSequenceDocument';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { createFoldTools, FOLD_TOOL_INITIAL, type FoldTools } from '../tools/foldToolState';
+import {
+  createFoldTools,
+  FOLD_COMPOUND_CHOICES_INITIAL,
+  FOLD_TOOL_INITIAL,
+  type FoldTools,
+} from '../tools/foldToolState';
 import { buildReverseStep } from '../tools/reverse/reverseStep';
 import { flatSquareLandmarks, flatSquareScene } from './foldCanvas.fixtures';
 import { foldPickIndex } from './foldPicking';
@@ -32,6 +37,7 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
     refused: null,
     landing: false,
     reverse: null,
+    vertex: null,
     ...extra,
   };
 }
@@ -231,7 +237,7 @@ describe('a near miss’s fix', () => {
 
 describe('the canvas’s chooser', () => {
   it('shows the deepest choice with more than one answer: the order, the opening, then the root', () => {
-    const tools = { ...FOLD_TOOL_INITIAL, root: 1, compound: { reverseKind: null, opening: 5, order: 1 } };
+    const tools = { ...FOLD_TOOL_INITIAL, root: 1, compound: { ...FOLD_COMPOUND_CHOICES_INITIAL, opening: 5, order: 1 } };
     const reverse = { asked: null, kind: 'inside' as const, kinds: [], ways: [], way: null, orders: [], order: null };
     const roots = [
       { root: 0, line: { n: [1, 0] as const, d: 0.5 }, side: null },
