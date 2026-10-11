@@ -5199,7 +5199,13 @@
     "panels:fold.sentence.unsink": "4cc0752c6176",
     "panels:fold.words.closedSink": "952f50fe472c",
     "panels:fold.words.openSink": "b4dbec1be926",
-    "panels:fold.words.unsink": "392440499927"
+    "panels:fold.words.unsink": "392440499927",
+    "panels:fold.canvas.spreadLayers": "6ffcf6936130",
+    "panels:fold.canvas.spreadLayersTitle": "5231cc9c804d",
+    "panels:fold.step.spread": "b11fb1f593a8",
+    "panels:fold.step.spreadDefault": "1cd050ff061f",
+    "panels:fold.step.spreadEarlier": "f496a93e59cd",
+    "panels:fold.step.spreadOwn": "cbdffaaea625"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -10401,7 +10407,13 @@
     "panels:fold.sentence.unsink": "4cc0752c6176",
     "panels:fold.words.closedSink": "952f50fe472c",
     "panels:fold.words.openSink": "b4dbec1be926",
-    "panels:fold.words.unsink": "392440499927"
+    "panels:fold.words.unsink": "392440499927",
+    "panels:fold.canvas.spreadLayers": "6ffcf6936130",
+    "panels:fold.canvas.spreadLayersTitle": "5231cc9c804d",
+    "panels:fold.step.spread": "b11fb1f593a8",
+    "panels:fold.step.spreadDefault": "1cd050ff061f",
+    "panels:fold.step.spreadEarlier": "f496a93e59cd",
+    "panels:fold.step.spreadOwn": "cbdffaaea625"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15605,7 +15617,13 @@
     "panels:fold.sentence.unsink": "4cc0752c6176",
     "panels:fold.words.closedSink": "952f50fe472c",
     "panels:fold.words.openSink": "b4dbec1be926",
-    "panels:fold.words.unsink": "392440499927"
+    "panels:fold.words.unsink": "392440499927",
+    "panels:fold.canvas.spreadLayers": "6ffcf6936130",
+    "panels:fold.canvas.spreadLayersTitle": "5231cc9c804d",
+    "panels:fold.step.spread": "b11fb1f593a8",
+    "panels:fold.step.spreadDefault": "1cd050ff061f",
+    "panels:fold.step.spreadEarlier": "f496a93e59cd",
+    "panels:fold.step.spreadOwn": "cbdffaaea625"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -20563,7 +20581,13 @@
     "panels:fold.sentence.unsink": "4cc0752c6176",
     "panels:fold.words.closedSink": "952f50fe472c",
     "panels:fold.words.openSink": "b4dbec1be926",
-    "panels:fold.words.unsink": "392440499927"
+    "panels:fold.words.unsink": "392440499927",
+    "panels:fold.canvas.spreadLayers": "6ffcf6936130",
+    "panels:fold.canvas.spreadLayersTitle": "5231cc9c804d",
+    "panels:fold.step.spread": "b11fb1f593a8",
+    "panels:fold.step.spreadDefault": "1cd050ff061f",
+    "panels:fold.step.spreadEarlier": "f496a93e59cd",
+    "panels:fold.step.spreadOwn": "cbdffaaea625"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -25521,7 +25545,13 @@
     "panels:fold.sentence.unsink": "4cc0752c6176",
     "panels:fold.words.closedSink": "952f50fe472c",
     "panels:fold.words.openSink": "b4dbec1be926",
-    "panels:fold.words.unsink": "392440499927"
+    "panels:fold.words.unsink": "392440499927",
+    "panels:fold.canvas.spreadLayers": "6ffcf6936130",
+    "panels:fold.canvas.spreadLayersTitle": "5231cc9c804d",
+    "panels:fold.step.spread": "b11fb1f593a8",
+    "panels:fold.step.spreadDefault": "1cd050ff061f",
+    "panels:fold.step.spreadEarlier": "f496a93e59cd",
+    "panels:fold.step.spreadOwn": "cbdffaaea625"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -30723,7 +30753,13 @@
     "panels:fold.sentence.unsink": "4cc0752c6176",
     "panels:fold.words.closedSink": "952f50fe472c",
     "panels:fold.words.openSink": "b4dbec1be926",
-    "panels:fold.words.unsink": "392440499927"
+    "panels:fold.words.unsink": "392440499927",
+    "panels:fold.canvas.spreadLayers": "6ffcf6936130",
+    "panels:fold.canvas.spreadLayersTitle": "5231cc9c804d",
+    "panels:fold.step.spread": "b11fb1f593a8",
+    "panels:fold.step.spreadDefault": "1cd050ff061f",
+    "panels:fold.step.spreadEarlier": "f496a93e59cd",
+    "panels:fold.step.spreadOwn": "cbdffaaea625"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -35925,7 +35961,13 @@
     "panels:fold.sentence.unsink": "4cc0752c6176",
     "panels:fold.words.closedSink": "952f50fe472c",
     "panels:fold.words.openSink": "b4dbec1be926",
-    "panels:fold.words.unsink": "392440499927"
+    "panels:fold.words.unsink": "392440499927",
+    "panels:fold.canvas.spreadLayers": "6ffcf6936130",
+    "panels:fold.canvas.spreadLayersTitle": "5231cc9c804d",
+    "panels:fold.step.spread": "b11fb1f593a8",
+    "panels:fold.step.spreadDefault": "1cd050ff061f",
+    "panels:fold.step.spreadEarlier": "f496a93e59cd",
+    "panels:fold.step.spreadOwn": "cbdffaaea625"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -40883,6 +40925,12 @@
     "panels:fold.sentence.unsink": "4cc0752c6176",
     "panels:fold.words.closedSink": "952f50fe472c",
     "panels:fold.words.openSink": "b4dbec1be926",
-    "panels:fold.words.unsink": "392440499927"
+    "panels:fold.words.unsink": "392440499927",
+    "panels:fold.canvas.spreadLayers": "6ffcf6936130",
+    "panels:fold.canvas.spreadLayersTitle": "5231cc9c804d",
+    "panels:fold.step.spread": "b11fb1f593a8",
+    "panels:fold.step.spreadDefault": "1cd050ff061f",
+    "panels:fold.step.spreadEarlier": "f496a93e59cd",
+    "panels:fold.step.spreadOwn": "cbdffaaea625"
   }
 }
