@@ -434,6 +434,22 @@ function readOp(value: unknown): FoldOp | null {
   }
 }
 
+/**
+ * A step's op and choices as the file reads them back once written, or null
+ * when they would not read and the step would come back locked. Only what
+ * the document's types hold is written: none of the tools' additions to an
+ * op (`FoldEngineOp` — a line in the parent's model frame, a side of one, a
+ * tuck's placement, the closure policy).
+ */
+export function readBackFoldStep(
+  op: FoldOp,
+  choices: FoldChoices = {}
+): { op: FoldOp; choices: FoldChoices } | null {
+  const read = readOp(writeFoldOp(op));
+  const chosen = readChoices(writeFoldChoices(choices) ?? {});
+  return read && chosen && { op: read, choices: chosen };
+}
+
 // The vertex folds' ops: sheet points, and the directions their choices
 // among rays stored. An optional direction absent is none; present, it must
 // read.

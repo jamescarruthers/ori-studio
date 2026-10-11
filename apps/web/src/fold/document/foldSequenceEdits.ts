@@ -5,7 +5,8 @@
  *
  * - **Committing is append-only.** A step is added under its parent, never
  *   inserted; committing at a node that already has children makes a branch.
- *   No middle step is edited in place.
+ *   No middle step is edited in place. A step is appended only as the file
+ *   keeps it, so none comes back locked when the project is opened again.
  * - **The only in-place edits of a step are annotations** — its note, the
  *   marks made on it or on the sheet, and how its picture spreads its layers.
  *   None can break a step: inputs hold resolved points, and all are outside
@@ -23,7 +24,7 @@
 
 import { sameSpread } from '../../cp-workspace/folded/layerSpreadSettings';
 import { xmlText } from '../../lib/xmlEscape';
-import { foldPaperKey } from './foldDigest';
+import { canonicalJson, foldPaperKey } from './foldDigest';
 import {
   isKnownSpread,
   isLockedStep,
@@ -38,6 +39,7 @@ import {
   type FoldStartSide,
   type FoldStep,
 } from './foldSequenceDocument';
+import { readBackFoldStep } from './foldSequenceFile';
 import { foldInheritedSpread, sameAsInherited } from './foldStepSpread';
 import { foldStepTree, lockedIds, subtreeIds } from './foldStepTree';
 
@@ -57,9 +59,23 @@ export interface FoldStepDraft {
 }
 
 /**
+ * Whether the file keeps a draft's step as it folds: its op written and read
+ * back is the same op — nothing the file leaves out, which would change the
+ * fold — and its choices read back at all. A step the file did not keep
+ * would fold one way now and, once the project is opened again, come back
+ * locked or folding another way.
+ */
+function keptAsFolded({ op, choices }: FoldStepDraft): boolean {
+  const back = readBackFoldStep(op, choices);
+  return back !== null && canonicalJson(back.op) === canonicalJson(op);
+}
+
+/**
  * Commit a step under `draft.parent`: the document with it appended, and its
  * id. Null when the parent is not a step of the document, or is locked, or
- * when the draft adopts a sheet for a sequence that already has steps.
+ * when the draft adopts a sheet for a sequence that already has steps — or
+ * when the file would not keep the step as it folds (a tool's line in the
+ * parent's model frame, which only the bridge reads).
  *
  * A draft that adopts a sheet changes the shape as {@link setFoldPaperShape}
  * does, in the same edit — one undo entry for the import.
@@ -70,6 +86,7 @@ export function appendFoldStep(
   newId: FoldIdFactory = randomFoldId
 ): { document: FoldSequenceDocument; id: string } | null {
   const { parent } = draft;
+  if (!keptAsFolded(draft)) return null;
   if (draft.adopt) {
     if (parent !== null || document.steps.length > 0) return null;
     document = setFoldPaperShape(document, draft.adopt);
