@@ -135,6 +135,16 @@ export const createFoldSlice: WorkspaceSliceCreator<FoldSlice> = (set, get) => {
       return true;
     },
 
+    setFoldStepSpread: (stepId, spread, { session, loadId } = {}) => {
+      if (outlived(loadId)) return false;
+      // A drag of one of its sliders is one sitting: one undo step, however many values it passed.
+      const { extend, remember } = documentHistory.session(`spread:${stepId}`, session);
+      const next = commitShown('Change spread', (document) => foldEdits.setFoldStepSpread(document, stepId, spread), extend);
+      if (!next) return false;
+      remember();
+      return true;
+    },
+
     setFoldMarks: (stepId, marks) =>
       commitShown('Change marks', (document) => foldEdits.setFoldMarks(document, stepId, marks)) !== null,
 

@@ -83,7 +83,12 @@ import type {
 import type { DiagramFoldCaptureOutcome, DiagramFoldCaptureRequest } from './diagramFoldCapture';
 import type { CapturedPicture } from '../../diagram/capture/captureFolded';
 import type { FoldReaderState } from '../../fold/document/foldReaderState';
-import type { FoldMarkEntry, FoldPaperShape, FoldStartSide } from '../../fold/document/foldSequenceDocument';
+import type {
+  FoldMarkEntry,
+  FoldPaperShape,
+  FoldSpreadSetting,
+  FoldStartSide,
+} from '../../fold/document/foldSequenceDocument';
 import type { FoldStepDraft } from '../../fold/document/foldSequenceEdits';
 import type { FoldHistory, FoldSequences } from './foldState';
 import type {
@@ -2395,6 +2400,17 @@ export interface FoldSliceActions {
    * that outlived its sequences. Whether it changed.
    */
   setFoldStepNote: (stepId: string, note: string, options?: { session?: number; loadId?: number }) => boolean;
+  /**
+   * Set a step's own layer spread — a spread, or `'off'` — or, for null, let
+   * it take an earlier step's (`setFoldStepSpread` in `foldSequenceEdits`).
+   * Edits in one `session` at one step — a drag of a slider — are one undo
+   * step; `loadId` drops one that outlived its sequences. Whether it changed.
+   */
+  setFoldStepSpread: (
+    stepId: string,
+    spread: FoldSpreadSetting | null,
+    options?: { session?: number; loadId?: number }
+  ) => boolean;
   /** Replace the marks made on a step, or on the flat sheet for null, as one undo step. Whether it changed. */
   setFoldMarks: (stepId: string | null, marks: readonly FoldMarkEntry[]) => boolean;
   /**

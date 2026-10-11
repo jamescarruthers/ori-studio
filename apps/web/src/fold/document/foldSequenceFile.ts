@@ -26,8 +26,9 @@
  *   wrote it ({@link newerPaperField}).
  *
  * Marks are annotations, read by the file's plain rules: a malformed mark is
- * dropped, a newer build's carried. A malformed `expect` or note is dropped;
- * neither changes what a step folds.
+ * dropped, a newer build's carried. So is a step's layer spread, which is
+ * display data: never a reason to lock the step. A malformed `expect` or note
+ * is dropped; none of these changes what a step folds.
  *
  * Every string a user typed passes through `xmlText` on the way in, so what
  * is stored can always be written into an SVG page.
@@ -35,6 +36,7 @@
  * React-free and store-free.
  */
 
+import { readLayerSpread, writeLayerSpread } from '../../cp-workspace/folded/layerSpreadSettings';
 import {
   NEWER,
   finiteNumber,
@@ -62,6 +64,7 @@ import {
   FOLD_START_SIDES,
   SQUARE_PAPER,
   isKnownMark,
+  isKnownSpread,
   isLockedStep,
   randomFoldId,
   rectangleShape,
@@ -86,6 +89,7 @@ import {
   type FoldSequenceDocument,
   type FoldStep,
   type FoldStepNode,
+  type FoldStepSpreadEntry,
   type FoldVertexOp,
   type FoldVertexOpKind,
   type SheetPoint,
@@ -241,7 +245,7 @@ export function newerPaperField(value: Record<string, unknown>): string | null {
 // ---------------------------------------------------------------------------
 // Reading the steps
 
-const STEP_KEYS = new Set(['id', 'parent', 'op', 'choices', 'expect', 'note', 'marks']);
+const STEP_KEYS = new Set(['id', 'parent', 'op', 'choices', 'expect', 'note', 'marks', 'spread']);
 
 function readSteps(value: unknown): FoldStepNode[] {
   return withinTree(readEntries<FoldStepNode>(value, readStep, lockStep));
@@ -262,6 +266,7 @@ function readStep(id: string, entry: Record<string, unknown>): FoldStep | typeof
   const choices = entry.choices === undefined ? {} : readChoices(entry.choices);
   if (!choices) return NEWER;
   const marks = readMarks(entry.marks);
+  const spread = readStepSpread(entry.spread);
   return {
     id,
     parent,
@@ -270,7 +275,22 @@ function readStep(id: string, entry: Record<string, unknown>): FoldStep | typeof
     ...(typeof entry.expect === 'string' ? { expect: entry.expect } : {}),
     ...(typeof entry.note === 'string' ? { note: xmlText(entry.note) } : {}),
     ...(marks.length > 0 ? { marks } : {}),
+    ...(spread !== undefined ? { spread } : {}),
   };
+}
+
+/**
+ * A step's own layer spread: `'off'`, or a spread as every flat picture's is
+ * read (`readLayerSpread`). A word or a spread this build has no name for is
+ * a newer build's, carried; a value of the wrong type, or a spread with no
+ * step at all, is dropped — the step then takes an earlier step's.
+ */
+function readStepSpread(value: unknown): FoldStepSpreadEntry | undefined {
+  if (value === 'off') return 'off';
+  if (typeof value === 'string') return { unknown: value };
+  const spread = readLayerSpread(value);
+  if (spread === NEWER) return { unknown: value };
+  return spread ?? undefined;
 }
 
 /** A node `readStep` carried: only ever one whose parent read. */
@@ -793,7 +813,14 @@ function writeStep(node: FoldStepNode): Record<string, unknown> {
     ...(node.expect !== undefined ? { expect: node.expect } : {}),
     ...(node.note !== undefined ? { note: node.note } : {}),
     ...(node.marks && node.marks.length > 0 ? { marks: node.marks.map(writeMark) } : {}),
+    ...(node.spread !== undefined ? { spread: writeStepSpread(node.spread) } : {}),
   };
+}
+
+/** A step's own spread as written: `'off'`, its fields in a fixed order, or a newer build's as it came. */
+function writeStepSpread(spread: FoldStepSpreadEntry): unknown {
+  if (spread === 'off') return spread;
+  return isKnownSpread(spread) ? writeLayerSpread(spread) : spread.unknown;
 }
 
 /** An op as written — every field named, in a fixed order — and as `fh1` spells it. */

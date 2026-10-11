@@ -84,6 +84,7 @@ export function writtenSequence(): Record<string, unknown> {
             divide: { mode: 'ratio', ratio: { a: 1, b: 0, c: 0, d: 0, e: 1, f: 2 } },
           },
         ],
+        spread: { kind: 'affine', amount: 0.05, keep: 'bottom', skew: 0.5, axisDeg: 30 },
       },
       {
         id: 'fstep-2',
@@ -120,6 +121,7 @@ export function writtenSequence(): Record<string, unknown> {
           ],
           opening: [{ upper: [[0.3, 0.3]] }],
         },
+        spread: 'off',
       },
       {
         id: 'fstep-3',

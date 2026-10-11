@@ -6,10 +6,10 @@
  * - **Committing is append-only.** A step is added under its parent, never
  *   inserted; committing at a node that already has children makes a branch.
  *   No middle step is edited in place.
- * - **The only in-place edits of a step are annotations** — its note, and
- *   the marks made on it or on the sheet. Neither can break a step: inputs
- *   hold resolved points, and both are outside `fh1` and `fs1`. The
- *   sequence's title is outside both too.
+ * - **The only in-place edits of a step are annotations** — its note, the
+ *   marks made on it or on the sheet, and how its picture spreads its layers.
+ *   None can break a step: inputs hold resolved points, and all are outside
+ *   `fh1` and `fs1`. The sequence's title is outside both too.
  * - **Delete takes a step and everything that follows it**, locked or not.
  * - **Changing the shape empties the sequence**: it replaces the shape and
  *   the steps as one edit, never appending a hidden sequence. Changing the
@@ -21,9 +21,11 @@
  * Pure: no React, no store.
  */
 
+import { sameSpread } from '../../cp-workspace/folded/layerSpreadSettings';
 import { xmlText } from '../../lib/xmlEscape';
 import { foldPaperKey } from './foldDigest';
 import {
+  isKnownSpread,
   isLockedStep,
   randomFoldId,
   type FoldChoices,
@@ -32,9 +34,11 @@ import {
   type FoldOp,
   type FoldPaperShape,
   type FoldSequenceDocument,
+  type FoldSpreadSetting,
   type FoldStartSide,
   type FoldStep,
 } from './foldSequenceDocument';
+import { foldInheritedSpread, sameAsInherited } from './foldStepSpread';
 import { foldStepTree, lockedIds, subtreeIds } from './foldStepTree';
 
 /** A step to commit: everything but its id, which the commit makes. */
@@ -99,6 +103,34 @@ export function setFoldStepNote(document: FoldSequenceDocument, id: string, note
     const { note: _previous, ...rest } = step;
     return text.length > 0 ? { ...rest, note: text } : rest;
   });
+}
+
+/**
+ * Set a step's own layer spread — a spread, or `'off'` — or, for null, let it
+ * take an earlier step's again (`foldStepSpread`). A setting the steps before
+ * would give it anyway is no setting of its own, and is not kept: a change
+ * earlier on still reaches it, and turning a spread off and on again leaves
+ * the document as it was. A locked step keeps its own.
+ */
+export function setFoldStepSpread(
+  document: FoldSequenceDocument,
+  id: string,
+  spread: FoldSpreadSetting | null
+): FoldSequenceDocument {
+  const own = spread === null || sameAsInherited(spread, foldInheritedSpread(document, id)) ? undefined : spread;
+  return editStep(document, id, (step) => {
+    if (sameEntry(step.spread, own)) return step;
+    const { spread: _previous, ...rest } = step;
+    return own === undefined ? rest : { ...rest, spread: own };
+  });
+}
+
+/** Whether a step's spread entry is `setting` already: both none, both off, or one spread. A carried one is never. */
+function sameEntry(entry: FoldStep['spread'], setting: FoldSpreadSetting | undefined): boolean {
+  if (entry === undefined || setting === undefined) return entry === setting;
+  if (!isKnownSpread(entry)) return false;
+  if (entry === 'off' || setting === 'off') return entry === setting;
+  return sameSpread(entry, setting);
 }
 
 /**
