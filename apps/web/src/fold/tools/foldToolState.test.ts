@@ -112,6 +112,21 @@ describe('the Fold tools’ state', () => {
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
   });
 
+  it('never leaves a seed of no flaps: unpicking the only one picked is every layer again', () => {
+    const tools = createFoldTools();
+    tools.toggleFlap(flapA, [flapA, flapB]);
+    expect(tools.store.getState().seed).toEqual({ scope: 'flaps', flaps: [flapB] });
+    // The last chip pressed, unpressed: the engine would refuse a seed of none
+    // (`no_side`) and the window would have no chips left to pick one again.
+    tools.toggleFlap(flapB, [flapA, flapB]);
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+    // A section of one flap: its chip cannot be unpressed into nothing either.
+    tools.toggleFlap(flapA, [flapA]);
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+    tools.setSeed({ scope: 'flaps', flaps: [] });
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+  });
+
   it('steps through the roots round, and keeps the Divide line’s parts within the Diagram’s', () => {
     const tools = createFoldTools();
     tools.stepRoot(-1, 3);
