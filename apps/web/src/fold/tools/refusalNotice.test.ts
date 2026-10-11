@@ -176,6 +176,65 @@ describe('foldRefusalNotice', () => {
     expect(calls.useLine).toHaveBeenCalledWith(remedy(7));
   });
 
+  it('says every crimp and tuck refusal in its own words, none as a fold that cannot be made', () => {
+    const generic = foldRefusalNotice(t, { refusal: { code: 'internal' }, fixes: [] }, context(), verbs()).title;
+    const titles: Record<string, string> = {
+      crimp_lines_meet: 'The lines meet',
+      crimp_misses_tip: 'The second line misses the flap',
+      crimp_no_opening: 'This flap cannot open at the second line',
+      crimp_kind_infeasible: 'It cannot crimp round the outside',
+      crimp_tip_not_free: 'Layers are in the way',
+      tuck_infeasible: 'It cannot be tucked over that layer',
+      tuck_target_moves: 'The layer to tuck under would move',
+    };
+    for (const [code, title] of Object.entries(titles)) {
+      const refusal = { code, faces: [1], kind: 'outside', target: 3, placement: 'over', blocking: [2] } as unknown as FoldRefusalBody;
+      const notice = foldRefusalNotice(t, { refusal, fixes: [] }, context({ kind: code.startsWith('crimp') ? 'crimp' : 'tuck' }), verbs());
+      expect(notice.title, code).toBe(title);
+      expect(notice.title, code).not.toBe(generic);
+    }
+    const tipNotFree = foldRefusalNotice(
+      t,
+      { refusal: { code: 'crimp_tip_not_free', blocking: [2], faces: [2] } as unknown as FoldRefusalBody, fixes: [] },
+      context({ kind: 'crimp' }),
+      verbs()
+    );
+    expect(tipNotFree.text).toBe(
+      'Other layers lie where the crimped paper would turn. Include their flaps in the crimp, or crimp it somewhere else.'
+    );
+  });
+
+  it('binds a tuck’s other layer, and its narrowed flaps, in a tuck’s words', () => {
+    const calls = { ...verbs(), tuckTarget: vi.fn() };
+    const flap = { faces: [1], witness: [0.2, 0.2] as [number, number] };
+    const notice = foldRefusalNotice(
+      t,
+      {
+        refusal: { code: 'tuck_infeasible', target: 3, placement: 'under', faces: [3] },
+        fixes: [
+          { fix: 'tuck_target', face: 5, at: [0.5, 0.5] },
+          { fix: 'pick_flap', flaps: [flap] },
+        ],
+      },
+      context({ kind: 'tuck', tuck: { under: true, targetNumber: (face) => (face === 5 ? 3 : null) } }),
+      calls
+    );
+    expect(notice.actions.map((action) => action.label)).toEqual(['Tuck under listed layer 3 instead', 'Tuck flap 2 only']);
+    notice.actions[0]?.run();
+    expect(calls.tuckTarget).toHaveBeenCalledWith(5);
+    notice.actions[1]?.run();
+    expect(calls.pickFlap).toHaveBeenCalledWith(flap);
+    // Without a verb to bind, a surface offers no other layer.
+    const unbound = foldRefusalNotice(
+      t,
+      { refusal: { code: 'tuck_infeasible', target: 3, placement: 'under', faces: [3] }, fixes: [{ fix: 'tuck_target', face: 5, at: [0.5, 0.5] }] },
+      context({ kind: 'tuck' }),
+      verbs()
+    );
+    expect(unbound.actions).toEqual([]);
+    expect(unbound.text).toBe('No way of stacking the layers puts the flap right against that layer. Another layer here takes it.');
+  });
+
   it('keeps every fix in the engine’s order, and holds them on a read-only sequence', () => {
     const notice = foldRefusalNotice(
       t,

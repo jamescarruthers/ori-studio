@@ -165,6 +165,52 @@ describe('FoldToolWindow', () => {
     expect(calls.otherKind).toHaveBeenCalledWith('outside');
   });
 
+  it('locates a crimp’s two lines, its second line’s mode beside its first’s', () => {
+    const calls = { ...verbs(), setSecondLineMode: vi.fn() } satisfies FoldToolWindowVerbs;
+    render({ tool: 'crimp', lineMode: 'free', secondLineMode: 'free', picks: 2 }, calls);
+    const window = fold()!;
+    expect(byRole(window, 'button', /^Crimp 2 settings/).getAttribute('aria-expanded')).toBe('true');
+    expect(byRole(window, 'combobox', 'First line')).toBeTruthy();
+    expect(byRole(window, 'combobox', 'Second line')).toBeTruthy();
+    // The step in hand: the second line's first click.
+    expect(window.querySelector('[aria-current="step"]')?.textContent).toBe('Click where the second line starts.');
+  });
+
+  it('previews a crimp under its kind’s name, with the kind that fits', () => {
+    const calls = { ...verbs(), setReverseKind: vi.fn() } satisfies FoldToolWindowVerbs;
+    const crimp = { kind: 'inside' as const, kinds: ['inside' as const], known: true, ways: 0, way: 0, orders: 0, order: 0 };
+    render({ tool: 'crimp', lineMode: 'free', picks: 4, preview: preview(), crimp }, calls);
+    const window = fold()!;
+    expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Inside crimp')).toBeTruthy();
+    expect(byRole(byRole(window, 'group', 'Kind'), 'button', 'Outside').getAttribute('aria-disabled')).toBe('true');
+    expect(window.textContent).toContain('Only the inside crimp fits here.');
+    expect(queryByRole(window, 'combobox', 'Second line')).toBeNull();
+  });
+
+  it('previews a tuck with the layers it can go against, stepped through, and its direction', () => {
+    const calls = { ...verbs(), setTuckDirection: vi.fn(), stepTuckTarget: vi.fn() } satisfies FoldToolWindowVerbs;
+    const tuck = {
+      direction: 'valley' as const,
+      known: true,
+      placement: 'under' as const,
+      targets: 3,
+      target: 1,
+      faces: [2, 5, 6],
+      orders: 0,
+      order: 0,
+    };
+    render({ tool: 'tuck', lineMode: 'free', picks: 2, preview: preview({ seed: [1] }), tuck }, calls);
+    const window = fold()!;
+    const section = window.querySelector<HTMLElement>('[data-fold-tuck]')!;
+    expect(section.textContent).toContain('3 layers here take the tuck under them: the folded paper lights each.');
+    expect(section.textContent).toContain('2 of 3');
+    act(() => byRole(section, 'button', 'Tuck under: Next').click());
+    expect(calls.stepTuckTarget).toHaveBeenCalledWith(1);
+    act(() => byRole(byRole(window, 'group', 'Fold'), 'button', 'Mountain fold and tuck').click());
+    expect(calls.setTuckDirection).toHaveBeenCalledWith('mountain');
+    expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Valley fold and tuck')).toBeTruthy();
+  });
+
   it('says a commit asked for before the preview landed is waiting for it, and nothing once none is', () => {
     render({ preview: preview({ landing: true, queued: true }) });
     expect(fold()!.textContent).toContain('Folding as soon as the preview is ready…');

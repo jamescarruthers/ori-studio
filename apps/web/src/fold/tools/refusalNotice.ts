@@ -32,8 +32,10 @@ export interface FoldFixVerbs {
    * line, and commit its `step` when it has one.
    */
   useLine: (fix: FoldUseLineFix) => void;
-  /** The same reverse fold of the other kind. */
+  /** The same reverse fold, or crimp, of the other kind. */
   otherKind?: (kind: FoldReverseKind) => void;
+  /** The same tuck against this layer, by its face: one the engine listed as taking it. */
+  tuckTarget?: (face: number) => void;
 }
 
 export interface FoldRefusalNoticeModel {
@@ -46,12 +48,17 @@ export interface FoldRefusalNoticeModel {
 
 /** What the notice is read against: the fold asked for, and how its flaps are numbered on screen. */
 export interface FoldRefusalContext {
-  /** A plain fold's kind, or the reverse fold's (`reverse`'s kind, which its fixes are worded for). */
-  kind: FoldKind | 'reverse';
+  /** A plain fold's kind, or the compound fold's family its fixes are worded for. */
+  kind: FoldKind | 'reverse' | 'crimp' | 'tuck';
   /** A flap's number on screen, by its engine index (`flapNumbers`). */
   flapNumber: (flap: number) => number;
   /** Nothing can change: the fixes are shown, but none can be taken. */
   readOnly: boolean;
+  /**
+   * A tuck's: whether it goes under its target, and a listed layer's number
+   * as its stepper counts it, by its face (null for one not listed).
+   */
+  tuck?: { under: boolean; targetNumber: (face: number) => number | null };
 }
 
 function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext): { title: string; text: string } {
@@ -273,13 +280,97 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
           'Other layers lie where the tip would turn. Include their flaps in the fold, or reverse it somewhere else.'
         ),
       };
+    // The crimp's (its tip at ℓ1 is a reverse fold's, whose refusals above
+    // it shares).
+    case 'crimp_lines_meet':
+      return {
+        title: t('tools:fold.refusal.crimpLinesMeet.title', 'The lines meet'),
+        text: t(
+          'tools:fold.refusal.crimpLinesMeet.text',
+          'The two lines cross, or come too close, over the paper the crimp moves. Draw the second line clear of the first across the flap.'
+        ),
+      };
+    case 'crimp_misses_tip':
+      return {
+        title: t('tools:fold.refusal.crimpMissesTip.title', 'The second line misses the flap'),
+        text: t(
+          'tools:fold.refusal.crimpMissesTip.text',
+          'The second line crosses none of the paper beyond the first, so nothing would turn back. Draw it across the flap, beyond the first line.'
+        ),
+      };
+    case 'crimp_no_opening':
+      return {
+        title: t('tools:fold.refusal.crimpNoOpening.title', 'This flap cannot open at the second line'),
+        text: t(
+          'tools:fold.refusal.crimpNoOpening.text',
+          'Its layers part at the first line, but at the second one of them has ended, or has nothing to turn on. Move the second line, or crimp other flaps.'
+        ),
+      };
+    case 'crimp_kind_infeasible':
+      return {
+        title:
+          refusal.kind === 'inside'
+            ? t('tools:fold.refusal.crimpInsideInfeasible.title', 'It cannot crimp inside')
+            : t('tools:fold.refusal.crimpOutsideInfeasible.title', 'It cannot crimp round the outside'),
+        // The other kind is pointed to only when the engine says it lands.
+        text: refused.fixes.some((fix) => fix.fix === 'other_kind')
+          ? t(
+              'tools:fold.refusal.crimpKindInfeasible.text',
+              'No way of stacking the layers lets the tip turn this way on both lines. The other kind of crimp may fit.'
+            )
+          : t(
+              'tools:fold.refusal.crimpKindInfeasible.neither',
+              'Neither kind of crimp fits here: no way of stacking the layers lets the tip turn on both lines. Move a line, or crimp other flaps.'
+            ),
+      };
+    case 'crimp_tip_not_free':
+      return {
+        title: t('tools:fold.refusal.tipNotFree.title', 'Layers are in the way'),
+        text: t(
+          'tools:fold.refusal.crimpTipNotFree.text',
+          'Other layers lie where the crimped paper would turn. Include their flaps in the crimp, or crimp it somewhere else.'
+        ),
+      };
+    // The tuck's. With no layer named, the tools found none that takes it
+    // (`tuckWithoutTarget`); with one, the engine found no order against it.
+    case 'tuck_infeasible':
+      if (refusal.target === null) {
+        return {
+          title: t('tools:fold.refusal.tuckNoTarget.title', 'No layer takes the tuck here'),
+          text:
+            refusal.placement === 'under'
+              ? t(
+                  'tools:fold.refusal.tuckNoTarget.under',
+                  'No layer that stays can take the flap under it here. Fold it the other way, swap the moving side, or locate another line.'
+                )
+              : t(
+                  'tools:fold.refusal.tuckNoTarget.over',
+                  'No layer that stays can take the flap over it here. Fold it the other way, swap the moving side, or locate another line.'
+                ),
+        };
+      }
+      return {
+        title:
+          refusal.placement === 'under'
+            ? t('tools:fold.refusal.tuckInfeasible.titleUnder', 'It cannot be tucked under that layer')
+            : t('tools:fold.refusal.tuckInfeasible.titleOver', 'It cannot be tucked over that layer'),
+        text: refused.fixes.some((fix) => fix.fix === 'tuck_target')
+          ? t(
+              'tools:fold.refusal.tuckInfeasible.text',
+              'No way of stacking the layers puts the flap right against that layer. Another layer here takes it.'
+            )
+          : t(
+              'tools:fold.refusal.tuckInfeasible.none',
+              'No way of stacking the layers puts the flap right against that layer. Tuck fewer flaps, or locate another line.'
+            ),
+      };
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
     // With them, the compound pipeline's own: no order at all, a search that
-    // ran out, a pick that names nothing, a defect. And a tuck's, a crimp's,
-    // the vertex folds' (from `squash_no_flap` on) and the sinks': no tool
-    // folds one yet, so until their tools say them in their own words they
-    // read as a fold that cannot be made.
+    // ran out, a pick that names nothing, a defect. And the vertex folds'
+    // (from `squash_no_flap` on) and the sinks': no tool folds one yet, so
+    // until their tools say them in their own words they read as a fold that
+    // cannot be made.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -309,12 +400,6 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'no_order':
     case 'budget_exceeded':
     case 'no_such_choice':
-    case 'tuck_infeasible':
-    case 'crimp_lines_meet':
-    case 'crimp_misses_tip':
-    case 'crimp_no_opening':
-    case 'crimp_kind_infeasible':
-    case 'crimp_tip_not_free':
     case 'squash_no_flap':
     case 'squash_flap_not_free':
     case 'squash_flap_covered':
@@ -399,7 +484,7 @@ function noOpening(t: TFunction, cause: FoldNoOpening): string {
   }
 }
 
-function otherWayLabel(t: TFunction, kind: FoldKind | 'reverse'): string {
+function otherWayLabel(t: TFunction, kind: FoldRefusalContext['kind']): string {
   switch (kind) {
     case 'valley':
       return t('tools:fold.fix.mountainInstead', 'Mountain fold instead');
@@ -407,10 +492,54 @@ function otherWayLabel(t: TFunction, kind: FoldKind | 'reverse'): string {
       return t('tools:fold.fix.valleyInstead', 'Valley fold instead');
     case 'precrease':
       return t('tools:fold.fix.precreaseOtherWay', 'Precrease the other way');
-    // The engine never offers a reverse fold the other way round; it offers the other kind.
+    // The engine never offers a reverse fold or a crimp the other way round;
+    // it offers the other kind.
     case 'reverse':
+    case 'crimp':
       return t('tools:fold.fix.swapInstead', 'Swap the moving side');
+    case 'tuck':
+      return t('tools:fold.fix.tuckOtherWay', 'Tuck the other way');
   }
+}
+
+/** A pick-a-flap fix's button, in the words of the fold it narrows. */
+function pickFlapLabel(t: TFunction, kind: FoldRefusalContext['kind'], number: number): string {
+  switch (kind) {
+    case 'reverse':
+      return t('tools:fold.fix.reverseFlap', 'Reverse flap {{number}} only', { number });
+    case 'crimp':
+      return t('tools:fold.fix.crimpFlap', 'Crimp flap {{number}} only', { number });
+    case 'tuck':
+      return t('tools:fold.fix.tuckFlap', 'Tuck flap {{number}} only', { number });
+    default:
+      return t('tools:fold.fix.pickFlap', 'Fold flap {{number}} only', { number });
+  }
+}
+
+/** The other kind's button: a reverse fold's, or a crimp's. */
+function otherKindLabel(t: TFunction, kind: FoldRefusalContext['kind'], other: FoldReverseKind): string {
+  if (kind === 'crimp') {
+    return other === 'inside'
+      ? t('tools:fold.fix.insideCrimpInstead', 'Inside crimp instead')
+      : t('tools:fold.fix.outsideCrimpInstead', 'Outside crimp instead');
+  }
+  return other === 'inside'
+    ? t('tools:fold.fix.insideInstead', 'Inside reverse fold instead')
+    : t('tools:fold.fix.outsideInstead', 'Outside reverse fold instead');
+}
+
+/** A tuck's other-target button: the layer by its number in the list the stepper steps through. */
+function tuckTargetLabel(t: TFunction, context: FoldRefusalContext, face: number): string {
+  const under = context.tuck?.under ?? true;
+  const number = context.tuck?.targetNumber(face) ?? null;
+  if (number === null) {
+    return under
+      ? t('tools:fold.fix.tuckUnderAnother', 'Tuck under the layer that fits instead')
+      : t('tools:fold.fix.tuckOverAnother', 'Tuck over the layer that fits instead');
+  }
+  return under
+    ? t('tools:fold.fix.tuckUnder', 'Tuck under listed layer {{number}} instead', { number })
+    : t('tools:fold.fix.tuckOver', 'Tuck over listed layer {{number}} instead', { number });
 }
 
 /**
@@ -461,10 +590,7 @@ function fixActions(
       // section's flaps are in, so their numbers are the chips' numbers.
       return fix.flaps.map((flap, index) => ({
         id: `pick-${position}-${index}`,
-        label:
-          context.kind === 'reverse'
-            ? t('tools:fold.fix.reverseFlap', 'Reverse flap {{number}} only', { number: context.flapNumber(index) })
-            : t('tools:fold.fix.pickFlap', 'Fold flap {{number}} only', { number: context.flapNumber(index) }),
+        label: pickFlapLabel(t, context.kind, context.flapNumber(index)),
         run: () => verbs.pickFlap(flap),
         disabled,
       }));
@@ -476,18 +602,24 @@ function fixActions(
       return [
         {
           id: `kind-${position}`,
-          label:
-            fix.kind === 'inside'
-              ? t('tools:fold.fix.insideInstead', 'Inside reverse fold instead')
-              : t('tools:fold.fix.outsideInstead', 'Outside reverse fold instead'),
+          label: otherKindLabel(t, context.kind, fix.kind),
           run: () => otherKind(fix.kind),
           disabled,
         },
       ];
     }
-    case 'tuck_target':
-      // A tuck's, which no tool folds yet: nothing to bind it to.
-      return [];
+    case 'tuck_target': {
+      const { tuckTarget } = verbs;
+      if (!tuckTarget) return [];
+      return [
+        {
+          id: `target-${position}`,
+          label: tuckTargetLabel(t, context, fix.face),
+          run: () => tuckTarget(fix.face),
+          disabled,
+        },
+      ];
+    }
     case 'use_emergent':
       // A rabbit ear's or a swivel's, likewise.
       return [];

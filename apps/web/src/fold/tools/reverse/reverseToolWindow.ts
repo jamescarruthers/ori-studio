@@ -90,7 +90,12 @@ export interface FoldReverseControls {
   order: FoldChoiceStepper | null;
 }
 
-function stepper(
+/**
+ * A listed choice's stepper — "Opening 2 of 3" — or null when there is no
+ * choice to make: one answer, or nothing to step with. Every compound tool's
+ * listed choices step this way (the crimp's and the tuck's too).
+ */
+export function stepper(
   t: TFunction,
   label: string,
   index: number,
