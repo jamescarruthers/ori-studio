@@ -1567,8 +1567,44 @@
     "sentence": {
       "closedSink": "Versenke die Spitze geschlossen: Drücke sie hinein, ihre Lagen bleiben zusammen.",
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
-      "crimpInside": "Falte einen inneren Crimp entlang der beiden Linien.",
-      "crimpOutside": "Falte einen äußeren Crimp entlang der beiden Linien.",
+      "insideCrimp": {
+        "crease": {
+          "crease": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "free": {
+          "crease": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o1": {
+          "crease": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o2": {
+          "crease": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o3": {
+          "crease": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o4": {
+          "crease": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o5": {
+          "crease": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o6": {
+          "crease": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o7": {
+          "crease": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        }
+      },
       "insideReverse": {
         "crease": {
           "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als inneren Gegenbruch.",
@@ -1793,6 +1829,44 @@
         }
       },
       "openSink": "Versenke die Spitze offen: Drücke sie hinein und stülpe dabei jede Lage um.",
+      "outsideCrimp": {
+        "crease": {
+          "crease": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "free": {
+          "crease": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o1": {
+          "crease": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o2": {
+          "crease": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o3": {
+          "crease": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o4": {
+          "crease": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o5": {
+          "crease": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o6": {
+          "crease": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        },
+        "o7": {
+          "crease": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
+          "free": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        }
+      },
       "outsideReverse": {
         "crease": {
           "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als äußeren Gegenbruch.",
@@ -2080,6 +2154,7 @@
       "creases": "Faltlinien",
       "creasesBackUp": "Von der Vorderseite des Papiers aus gesehen, die anfangs unten liegt: Sie können umgekehrt zu den Falten wirken, die du siehst.",
       "creasesFront": "Von der Vorderseite des Papiers aus gesehen.",
+      "firstLine": "Erste Linie",
       "flat": "Flach",
       "flatHelp": "Einmal gefaltet und wieder geöffnet: Sie liegen jetzt flach und merken sich, in welche Richtung sie gingen.",
       "imported": "Importiertes Faltmuster: Dieser Schritt ersetzt den gefalteten Zustand durch den des Musters.",
@@ -2095,6 +2170,7 @@
       "operation": "Vorgang",
       "pending": "Geplante Faltung",
       "pendingRefused": "Behebe das Problem im Werkzeugfenster, um die Faltlinien zu sehen, die dabei entstehen.",
+      "secondLine": "Zweite Linie",
       "sheet": "Flaches Blatt",
       "sheetNote": "Noch ist nichts gefaltet. Falte das Blatt, um Schritt 1 zu erstellen.",
       "source": "Quelle",

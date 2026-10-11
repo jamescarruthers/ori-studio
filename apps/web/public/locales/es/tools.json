@@ -284,7 +284,15 @@
     "chooser": {
       "note": "Este axioma da más de un pliegue aquí. Recórrelos o pulsa Mayús+← / Mayús+→.",
       "openingNote": "La solapa se abre de más de una manera: las capas resaltadas quedan juntas. Recórrelas o pulsa Mayús+← / Mayús+→.",
-      "orderNote": "Las capas pueden quedar apiladas de más de una manera. Recórrelas o pulsa Mayús+← / Mayús+→."
+      "orderNote": "Las capas pueden quedar apiladas de más de una manera. Recórrelas o pulsa Mayús+← / Mayús+→.",
+      "targetNote": "Más de una capa admite el remetido: la más brillante es la elegida. Recórrelas o pulsa Mayús+← / Mayús+→."
+    },
+    "crimp": {
+      "bothFit": "Aquí caben los dos tipos de crimp: elige hacia dónde va la punta.",
+      "firstLine": "Primera línea",
+      "onlyInside": "Aquí solo cabe el crimp interior.",
+      "onlyOutside": "Aquí solo cabe el crimp exterior.",
+      "secondLine": "Segunda línea"
     },
     "divide": {
       "clear_one": "Borrar la marca hecha aquí",
@@ -299,18 +307,27 @@
       "right": "Hasta el final"
     },
     "fix": {
+      "crimpFlap": "Hacer crimp solo en la solapa {{number}}",
       "includeFlap": "Incluir la solapa {{number}}",
       "includeFlaps_one": "Incluir {{count}} solapa",
       "includeFlaps_many": "Incluir las {{count}} solapas",
       "includeFlaps_other": "Incluir las {{count}} solapas",
+      "insideCrimpInstead": "Mejor un crimp interior",
       "insideInstead": "Mejor un pliegue invertido interior",
       "mountainInstead": "Mejor un pliegue de monte",
+      "outsideCrimpInstead": "Mejor un crimp exterior",
       "outsideInstead": "Mejor un pliegue invertido exterior",
       "pickFlap": "Plegar solo la solapa {{number}}",
       "precreaseOtherWay": "Premarcar en el otro sentido",
       "reverseFlap": "Invertir solo la solapa {{number}}",
       "slideToEdge": "Deslizar la línea hasta que el punto quede en el borde",
       "swapInstead": "Cambiar el lado que se mueve",
+      "tuckFlap": "Remeter solo la solapa {{number}}",
+      "tuckOtherWay": "Remeter en el otro sentido",
+      "tuckOver": "Mejor remeter sobre la capa {{number}} de la lista",
+      "tuckOverAnother": "Mejor remeter sobre la capa que encaja",
+      "tuckUnder": "Mejor remeter bajo la capa {{number}} de la lista",
+      "tuckUnderAnother": "Mejor remeter bajo la capa que encaja",
       "turnToEdge": "Girar la línea hasta que el punto quede en el borde",
       "useLine": "Usar la línea de referencia",
       "valleyInstead": "Mejor un pliegue de valle"
@@ -386,6 +403,7 @@
       "openSink": "Hundido abierto",
       "outsideReverse": "Pliegue invertido exterior",
       "petal": "Pliegue pétalo",
+      "pleat": "Plisado",
       "rabbitEar": "Oreja de conejo",
       "squash": "Pliegue aplastado",
       "swivel": "Pliegue pivotante",
@@ -397,6 +415,7 @@
       "title": "Herramientas de plegado",
       "trigger": "Herramientas"
     },
+    "plannedPleat": "No es una herramienta propia: pliega un plisado como dos pliegues simples, uno en valle y luego uno en monte a su lado.",
     "plannedReason": "Previsto: aún no está en Ori Studio.",
     "playStep": "Reproducir paso",
     "railLabel": "Herramientas de plegado",
@@ -427,6 +446,31 @@
       "collision": {
         "text": "Las capas que se mueven atravesarían capas que están en su camino.",
         "title": "Colisión"
+      },
+      "crimpInsideInfeasible": {
+        "title": "No puede hacer crimp hacia dentro"
+      },
+      "crimpKindInfeasible": {
+        "neither": "Aquí no cabe ningún tipo de crimp: ninguna forma de apilar las capas deja girar la punta en las dos líneas. Mueve una línea o haz crimp en otras solapas.",
+        "text": "Ninguna forma de apilar las capas deja que la punta gire hacia este lado en las dos líneas. Puede que el otro tipo de crimp encaje."
+      },
+      "crimpLinesMeet": {
+        "text": "Las dos líneas se cruzan, o se acercan demasiado, sobre el papel que mueve el crimp. Traza la segunda línea separada de la primera a lo largo de la solapa.",
+        "title": "Las líneas se tocan"
+      },
+      "crimpMissesTip": {
+        "text": "La segunda línea no cruza nada del papel más allá de la primera, así que nada volvería atrás. Trázala a través de la solapa, más allá de la primera línea.",
+        "title": "La segunda línea no toca la solapa"
+      },
+      "crimpNoOpening": {
+        "text": "Sus capas se separan en la primera línea, pero en la segunda una de ellas ya ha terminado o no tiene sobre qué girar. Mueve la segunda línea o haz crimp en otras solapas.",
+        "title": "Esta solapa no se puede abrir en la segunda línea"
+      },
+      "crimpOutsideInfeasible": {
+        "title": "No puede hacer crimp por fuera"
+      },
+      "crimpTipNotFree": {
+        "text": "Hay otras capas donde giraría el papel del crimp. Incluye sus solapas en el crimp o hazlo en otro sitio."
       },
       "emptySeed": {
         "text": "No hay ninguna capa elegida. Elige al menos una solapa para mover.",
@@ -505,6 +549,17 @@
         "text": "El pliegue dejaría un pliegue o una tira de papel más fina que el propio papel.",
         "title": "Demasiado pequeño para plegar"
       },
+      "tuckInfeasible": {
+        "none": "Ninguna forma de apilar las capas deja la solapa justo contra esa capa. Remete menos solapas o sitúa otra línea.",
+        "text": "Ninguna forma de apilar las capas deja la solapa justo contra esa capa. Otra capa de aquí la admite.",
+        "titleOver": "No se puede remeter sobre esa capa",
+        "titleUnder": "No se puede remeter bajo esa capa"
+      },
+      "tuckNoTarget": {
+        "over": "Ninguna capa que se queda quieta admite aquí la solapa por encima. Pliega en el otro sentido, cambia el lado que se mueve o sitúa otra línea.",
+        "title": "Aquí ninguna capa admite el remetido",
+        "under": "Ninguna capa que se queda quieta admite aquí la solapa por debajo. Pliega en el otro sentido, cambia el lado que se mueve o sitúa otra línea."
+      },
       "tuckTarget": {
         "text": "Elige una capa que se quede quieta para remeter la solapa contra ella.",
         "title": "La capa donde remeter se movería"
@@ -565,11 +620,17 @@
       "freeStart": "Haz clic donde empieza la línea de pliegue.",
       "landOnLine": "Haz clic en el borde o pliegue sobre el que debe caer.",
       "perpendicularTo": "Haz clic en el borde o pliegue al que el pliegue es perpendicular.",
+      "pickFlapsToCrimp": "Elige en qué solapas hacer crimp.",
       "pickFlapsToReverse": "Elige qué solapas se invierten.",
+      "pickFlapsToTuck": "Elige qué solapas se remeten.",
       "pickLayers": "Elige qué capas se mueven.",
-      "pointToMove": "Haz clic en el punto que se mueve."
+      "pickTuckTarget": "Elige la capa contra la que remeter.",
+      "pointToMove": "Haz clic en el punto que se mueve.",
+      "secondCrease": "Haz clic en el pliegue o borde plegado por el que va la segunda línea.",
+      "secondFreeStart": "Haz clic donde empieza la segunda línea."
     },
     "tool": {
+      "crimpHelp": "Invertir una solapa por dos líneas a la vez: hacia dentro y luego de vuelta hacia fuera.",
       "divideLine": "Dividir línea",
       "divideLineHelp": "Marcar puntos que dividen un borde o un pliegue en partes iguales.",
       "insideReverse": "Pliegue invertido interior",
@@ -578,8 +639,20 @@
       "mountainHelp": "Plegar el lado que se mueve alejándolo de ti, para que quede debajo.",
       "precrease": "Premarcar",
       "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
+      "tuckHelp": "Plegar una solapa y deslizarla bajo, o sobre, una capa que se queda quieta.",
       "valley": "Pliegue de valle",
       "valleyHelp": "Plegar el lado que se mueve hacia ti, para que quede encima."
+    },
+    "tuck": {
+      "noTargets": "Aquí ninguna capa admite el remetido.",
+      "over": "Remeter encima",
+      "targetsOver_one": "Aquí una capa admite el remetido sobre ella.",
+      "targetsOver_many": "Aquí {{count}} capas admiten el remetido sobre ellas: el papel plegado resalta cada una.",
+      "targetsOver_other": "Aquí {{count}} capas admiten el remetido sobre ellas: el papel plegado resalta cada una.",
+      "targetsUnder_one": "Aquí una capa admite el remetido bajo ella.",
+      "targetsUnder_many": "Aquí {{count}} capas admiten el remetido bajo ellas: el papel plegado resalta cada una.",
+      "targetsUnder_other": "Aquí {{count}} capas admiten el remetido bajo ellas: el papel plegado resalta cada una.",
+      "under": "Remeter debajo"
     },
     "verb": {
       "rotateHelp": "Girar el modelo un cuarto de vuelta en el sentido de las agujas del reloj, como un paso propio.",

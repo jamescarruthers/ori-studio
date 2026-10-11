@@ -276,7 +276,15 @@
     "chooser": {
       "note": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
       "openingNote": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
-      "orderNote": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
+      "orderNote": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
+      "targetNote": "Mehr als eine Lage nimmt die Lasche auf: Die hellste ist die gewählte. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
+    },
+    "crimp": {
+      "bothFit": "Hier passen beide Arten von Crimp: Wähle, wohin die Spitze geht.",
+      "firstLine": "Erste Linie",
+      "onlyInside": "Hier passt nur der innere Crimp.",
+      "onlyOutside": "Hier passt nur der äußere Crimp.",
+      "secondLine": "Zweite Linie"
     },
     "divide": {
       "clear_one": "Die hier gesetzte Markierung entfernen",
@@ -290,17 +298,26 @@
       "right": "Bis zum Ende"
     },
     "fix": {
+      "crimpFlap": "Nur Lasche {{number}} crimpen",
       "includeFlap": "Lasche {{number}} einbeziehen",
       "includeFlaps_one": "Die {{count}} Lasche einbeziehen",
       "includeFlaps_other": "Die {{count}} Laschen einbeziehen",
+      "insideCrimpInstead": "Stattdessen innerer Crimp",
       "insideInstead": "Stattdessen innerer Gegenbruch",
       "mountainInstead": "Stattdessen Bergfalte",
+      "outsideCrimpInstead": "Stattdessen äußerer Crimp",
       "outsideInstead": "Stattdessen äußerer Gegenbruch",
       "pickFlap": "Nur Lasche {{number}} falten",
       "precreaseOtherWay": "Andersherum vorfalten",
       "reverseFlap": "Nur Lasche {{number}} als Gegenbruch falten",
       "slideToEdge": "Die Linie verschieben, bis der Punkt auf der Kante liegt",
       "swapInstead": "Die bewegte Seite tauschen",
+      "tuckFlap": "Nur Lasche {{number}} einstecken",
+      "tuckOtherWay": "Andersherum einstecken",
+      "tuckOver": "Stattdessen über die gelistete Lage {{number}} stecken",
+      "tuckOverAnother": "Stattdessen über die passende Lage stecken",
+      "tuckUnder": "Stattdessen unter die gelistete Lage {{number}} stecken",
+      "tuckUnderAnother": "Stattdessen unter die passende Lage stecken",
       "turnToEdge": "Die Linie drehen, bis der Punkt auf der Kante liegt",
       "useLine": "Die Bezugslinie verwenden",
       "valleyInstead": "Stattdessen Talfalte"
@@ -373,6 +390,7 @@
       "openSink": "Offenes Versenken",
       "outsideReverse": "Äußerer Gegenbruch",
       "petal": "Blütenblattfalte",
+      "pleat": "Stufenfalte",
       "rabbitEar": "Hasenohr",
       "squash": "Quetschfalte",
       "swivel": "Schwenkfalte",
@@ -384,6 +402,7 @@
       "title": "Falt-Werkzeuge",
       "trigger": "Werkzeuge"
     },
+    "plannedPleat": "Kein eigenes Werkzeug: Falte eine Stufenfalte als zwei einfache Faltungen, eine Talfalte und daneben eine Bergfalte.",
     "plannedReason": "Geplant: noch nicht in Ori Studio.",
     "playStep": "Schritt abspielen",
     "railLabel": "Falt-Werkzeuge",
@@ -413,6 +432,31 @@
       "collision": {
         "text": "Die bewegten Lagen würden durch Lagen hindurchgehen, die ihnen im Weg sind.",
         "title": "Kollision"
+      },
+      "crimpInsideInfeasible": {
+        "title": "Ein innerer Crimp geht nicht"
+      },
+      "crimpKindInfeasible": {
+        "neither": "Hier passt keine Art von Crimp: Bei keiner Stapelung der Lagen kann die Spitze an beiden Linien umschlagen. Verschiebe eine Linie oder crimpe andere Laschen.",
+        "text": "Bei keiner Stapelung der Lagen kann die Spitze an beiden Linien in diese Richtung umschlagen. Die andere Art von Crimp passt vielleicht."
+      },
+      "crimpLinesMeet": {
+        "text": "Die beiden Linien kreuzen sich über dem Papier, das der Crimp bewegt, oder kommen sich dort zu nahe. Zeichne die zweite Linie über die Lasche, ohne die erste zu berühren.",
+        "title": "Die Linien treffen sich"
+      },
+      "crimpMissesTip": {
+        "text": "Die zweite Linie kreuzt kein Papier jenseits der ersten, also würde nichts zurückschlagen. Zeichne sie über die Lasche, jenseits der ersten Linie.",
+        "title": "Die zweite Linie verfehlt die Lasche"
+      },
+      "crimpNoOpening": {
+        "text": "Ihre Lagen teilen sich an der ersten Linie, doch an der zweiten ist eine von ihnen schon zu Ende oder hat nichts, um das sie umschlagen kann. Verschiebe die zweite Linie oder crimpe andere Laschen.",
+        "title": "Diese Lasche lässt sich an der zweiten Linie nicht öffnen"
+      },
+      "crimpOutsideInfeasible": {
+        "title": "Ein äußerer Crimp geht nicht"
+      },
+      "crimpTipNotFree": {
+        "text": "Wo das gecrimpte Papier umschlagen würde, liegen andere Lagen. Nimm ihre Laschen in den Crimp auf oder crimpe an einer anderen Stelle."
       },
       "emptySeed": {
         "text": "Keine Lage ist gewählt. Wähle mindestens eine Lasche, die sich bewegen soll.",
@@ -491,6 +535,17 @@
         "text": "Die Faltung hinterließe eine Faltlinie oder einen Papierstreifen, der dünner ist als das Papier selbst.",
         "title": "Zu klein zum Falten"
       },
+      "tuckInfeasible": {
+        "none": "Bei keiner Stapelung der Lagen liegt die Lasche direkt an dieser Lage. Stecke weniger Laschen ein oder bestimme eine andere Linie.",
+        "text": "Bei keiner Stapelung der Lagen liegt die Lasche direkt an dieser Lage. Eine andere Lage hier nimmt sie auf.",
+        "titleOver": "Über diese Lage lässt sie sich nicht stecken",
+        "titleUnder": "Unter diese Lage lässt sie sich nicht stecken"
+      },
+      "tuckNoTarget": {
+        "over": "Keine liegen bleibende Lage kann die Lasche hier über sich aufnehmen. Falte andersherum, tausche die bewegte Seite oder bestimme eine andere Linie.",
+        "title": "Keine Lage nimmt die Lasche hier auf",
+        "under": "Keine liegen bleibende Lage kann die Lasche hier unter sich aufnehmen. Falte andersherum, tausche die bewegte Seite oder bestimme eine andere Linie."
+      },
       "tuckTarget": {
         "text": "Wähle eine Lage, die liegen bleibt, an der die Lasche eingesteckt werden soll.",
         "title": "Die Lage zum Einstecken würde sich bewegen"
@@ -551,11 +606,17 @@
       "freeStart": "Klicke dorthin, wo die Faltlinie beginnt.",
       "landOnLine": "Klicke auf die Kante oder Faltlinie, auf der er landen soll.",
       "perpendicularTo": "Klicke auf die Kante oder Faltlinie, zu der die Faltung senkrecht steht.",
+      "pickFlapsToCrimp": "Wähle die Laschen für den Crimp.",
       "pickFlapsToReverse": "Wähle die Laschen für den Gegenbruch.",
+      "pickFlapsToTuck": "Wähle die Laschen zum Einstecken.",
       "pickLayers": "Wähle, welche Lagen sich bewegen.",
-      "pointToMove": "Klicke auf den Punkt, der bewegt werden soll."
+      "pickTuckTarget": "Wähle die Lage, an der eingesteckt wird.",
+      "pointToMove": "Klicke auf den Punkt, der bewegt werden soll.",
+      "secondCrease": "Klicke auf die Faltlinie oder gefaltete Kante, entlang der die zweite Linie verläuft.",
+      "secondFreeStart": "Klicke dorthin, wo die zweite Linie beginnt."
     },
     "tool": {
+      "crimpHelp": "Eine Lasche entlang zweier Linien zugleich umkehren: hinein und wieder heraus.",
       "divideLine": "Linie teilen",
       "divideLineHelp": "Punkte markieren, die eine Kante oder Faltlinie in gleiche Teile teilen.",
       "insideReverse": "Innerer Gegenbruch",
@@ -564,8 +625,18 @@
       "mountainHelp": "Die bewegte Seite von dir weg falten, sodass sie unten landet.",
       "precrease": "Vorfalten",
       "precreaseHelp": "Falten und wieder öffnen: eine Faltlinie für später.",
+      "tuckHelp": "Eine Lasche falten und unter oder über eine liegen bleibende Lage stecken.",
       "valley": "Talfalte",
       "valleyHelp": "Die bewegte Seite zu dir hin falten, sodass sie oben landet."
+    },
+    "tuck": {
+      "noTargets": "Keine Lage hier nimmt die Lasche auf.",
+      "over": "Darüber stecken",
+      "targetsOver_one": "Eine Lage hier nimmt die Lasche über sich auf.",
+      "targetsOver_other": "{{count}} Lagen hier nehmen die Lasche über sich auf: Das gefaltete Papier hebt jede hervor.",
+      "targetsUnder_one": "Eine Lage hier nimmt die Lasche unter sich auf.",
+      "targetsUnder_other": "{{count}} Lagen hier nehmen die Lasche unter sich auf: Das gefaltete Papier hebt jede hervor.",
+      "under": "Darunter stecken"
     },
     "verb": {
       "rotateHelp": "Das Modell eine Vierteldrehung im Uhrzeigersinn drehen, als eigener Schritt.",

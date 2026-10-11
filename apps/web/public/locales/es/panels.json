@@ -1620,8 +1620,44 @@
     "sentence": {
       "closedSink": "Hunde la punta en hundido cerrado: empújala hacia dentro con sus capas juntas.",
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
-      "crimpInside": "Haz un crimp interior a lo largo de las dos líneas.",
-      "crimpOutside": "Haz un crimp exterior a lo largo de las dos líneas.",
+      "insideCrimp": {
+        "crease": {
+          "crease": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "free": {
+          "crease": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o1": {
+          "crease": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o2": {
+          "crease": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o3": {
+          "crease": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o4": {
+          "crease": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o5": {
+          "crease": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o6": {
+          "crease": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o7": {
+          "crease": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        }
+      },
       "insideReverse": {
         "crease": {
           "all": "Dobla todas las capas con un pliegue invertido interior por el pliegue existente.",
@@ -1908,6 +1944,44 @@
         }
       },
       "openSink": "Hunde la punta en hundido abierto: empújala hacia dentro dando la vuelta a cada capa.",
+      "outsideCrimp": {
+        "crease": {
+          "crease": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "free": {
+          "crease": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o1": {
+          "crease": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o2": {
+          "crease": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o3": {
+          "crease": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o4": {
+          "crease": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o5": {
+          "crease": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o6": {
+          "crease": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá."
+        },
+        "o7": {
+          "crease": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
+          "free": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        }
+      },
       "outsideReverse": {
         "crease": {
           "all": "Dobla todas las capas con un pliegue invertido exterior por el pliegue existente.",
@@ -2263,6 +2337,7 @@
       "creases": "Pliegues",
       "creasesBackUp": "Vistos desde el anverso del papel, que empieza boca abajo: pueden leerse al revés que los pliegues que ves.",
       "creasesFront": "Vistos desde el anverso del papel.",
+      "firstLine": "Primera línea",
       "flat": "Planos",
       "flatHelp": "Doblados una vez y desdoblados: ahora están planos y recuerdan hacia dónde se doblaron.",
       "imported": "Patrón de pliegues importado: este paso sustituye el estado plegado por el del patrón.",
@@ -2278,6 +2353,7 @@
       "operation": "Operación",
       "pending": "Pliegue pendiente",
       "pendingRefused": "Resuelve el problema en la ventana de la herramienta para ver los pliegues que crea.",
+      "secondLine": "Segunda línea",
       "sheet": "Hoja plana",
       "sheetNote": "Todavía no hay nada doblado. Dobla la hoja para crear el paso 1.",
       "source": "Origen",
