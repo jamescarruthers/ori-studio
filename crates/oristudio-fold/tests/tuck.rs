@@ -294,6 +294,72 @@ fn a_target_that_would_move_is_refused() {
     assert_eq!(refusal(&book, &off).refusal.code(), "witness_not_in_face");
 }
 
+/// A target the block lands nowhere on takes no tuck: no placement names it,
+/// so a completion would land the plain fold and call it a tuck under T. It
+/// is refused as a target no order fits, naming no conflict, and the listing
+/// never offers it. The corner of a square folded up along x + y = 0.3, and
+/// the far corner folded down along x + y = 1.7: that block lands on the
+/// sheet's middle, never on the small corner flap.
+#[test]
+fn a_target_the_block_never_reaches_is_refused() {
+    let corner = fold(&square(), &all(corner(), [0.02, 0.02], Direction::Valley)).state;
+    let flap = face(&corner, [0.05, 0.05]);
+    for direction in [Direction::Valley, Direction::Mountain] {
+        let op = tuck(
+            through([1.0, 0.7], [0.7, 1.0]),
+            [0.98, 0.98],
+            direction,
+            Seed::Flaps {
+                at: vec![[0.95, 0.95]],
+            },
+            [0.05, 0.05],
+        );
+        let analysis = corner
+            .analyse_tuck(&op, &CompletionLimits::default())
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(
+            analysis.targets.iter().all(|t| t.face != flap),
+            "{direction:?}: {:?}",
+            analysis.targets
+        );
+        let refused = refusal(&corner, &op);
+        assert_eq!(
+            refused.refusal,
+            FoldRefusal::TuckInfeasible {
+                target: flap,
+                placement: match direction {
+                    Direction::Valley => TuckSide::Under,
+                    Direction::Mountain => TuckSide::Over,
+                },
+                faces: Vec::new(),
+            },
+            "{direction:?}"
+        );
+        // Each fix is a listed target that lands.
+        for fix in &refused.fixes {
+            let Fix::TuckTarget { face, at } = fix else {
+                panic!("{direction:?}: {fix:?}");
+            };
+            assert!(analysis.targets.iter().any(|t| t.face == *face));
+            let other = TuckFold {
+                target: *at,
+                ..op.clone()
+            };
+            assert!(corner.tuck_fold(&other, &none()).is_ok(), "{direction:?}");
+        }
+        // What moves and its picture are refused alike.
+        assert_eq!(
+            corner
+                .analyse_tuck_fold(&op)
+                .map(|_| ())
+                .map_err(|r| r.refusal.code()),
+            Err("tuck_infeasible"),
+            "{direction:?}"
+        );
+        assert!(corner.tuck_action(&op).is_err(), "{direction:?}");
+    }
+}
+
 /// Plan D6: a tuck the completion leaves open stores the pairs it chose,
 /// keyed by witnesses. The first such tuck of the campaign: each pick lands
 /// a different state, each replays from what it stores, and a witness off
