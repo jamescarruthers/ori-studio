@@ -18,13 +18,15 @@ export type AnalyticsProperties = Record<string, AnalyticsPropertyValue>;
 
 /**
  * Where a diagram step's picture came from when it was added (D18 of the
- * Diagram plan). `empty` is a step added with nothing in it yet.
+ * Diagram plan). `empty` is a step added with nothing in it yet; `fold` a
+ * Fold step's state (the Fold plan's D17).
  */
 export type DiagramStepAddedSource =
   | 'empty'
   | 'references'
   | 'svg'
-  | 'raster';
+  | 'raster'
+  | 'fold';
 
 /**
  * A Fold step's op, as `fold step added` names it (the document's `FoldOpKind`, without Import CP's,
@@ -105,22 +107,26 @@ export type FoldSpreadVia = 'step_pane' | 'canvas_bar';
 
 /**
  * Which control added a diagram step. `grid` is the Diagram workspace's own:
- * the header's Add step, the empty state, and Insert before / after.
+ * the header's Add step, the empty state, and Insert before / after. `fold`
+ * is a pull from Fold: the Diagram's From Fold… browser or Fold's Send to
+ * Diagram, which `fold step sent to diagram` tells apart.
  */
 export type DiagramStepAddedVia =
   | 'grid'
   | 'references'
   | 'drop'
-  | 'batch';
+  | 'batch'
+  | 'fold';
 
 /** What a turn between steps is (D22). */
 export type DiagramTurnAddedKind = 'turn_over' | 'rotate';
 
 /**
  * Where a turn between steps was made: Add step ▾ in the header, a step's
- * menu (Insert … After), or pulled from References with its turn-over card.
+ * menu (Insert … After), pulled from References with its turn-over card, or
+ * a Fold sequence's turn pulled from Fold.
  */
-export type DiagramTurnAddedVia = 'add_menu' | 'card_menu' | 'references' | 'empty_step';
+export type DiagramTurnAddedVia = 'add_menu' | 'card_menu' | 'references' | 'empty_step' | 'fold';
 
 /** An uploaded picture's file type, by its reported type and extension: never its name. */
 export type DiagramPictureFormat = 'svg' | 'png' | 'jpeg' | 'webp' | 'other';

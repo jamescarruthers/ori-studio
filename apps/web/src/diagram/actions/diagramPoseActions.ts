@@ -87,9 +87,10 @@ export interface DiagramFoldStepPoseState {
 /**
  * The verbs that pose a step linked to a Fold step: a quarter turn either
  * way, Turn Over for a flat fold — the model from its other side, every fold
- * named from there — and Reset Pose, upright and from the front. Each is a
- * capture from the step's state (`poseDiagramFoldStep`), so nothing here
- * folds. A crease pattern's paper side is the Step pane's Front | Back.
+ * named from there — and Reset Pose, upright, a flat fold from the front. Each
+ * is a capture from the step's state (`poseDiagramFoldStep`), so nothing here
+ * folds. A crease pattern's paper side is the Step pane's Front | Back, which
+ * Reset leaves as it is.
  */
 export function buildDiagramFoldStepPoseActions(
   state: DiagramFoldStepPoseState,

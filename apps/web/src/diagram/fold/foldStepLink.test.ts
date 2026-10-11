@@ -6,7 +6,7 @@ import { setFoldStartSide } from '../../fold/document/foldSequenceEdits';
 import type { FoldSequenceDocument, FoldStepNode } from '../../fold/document/foldSequenceDocument';
 import { foldStepSource } from '../document/diagramSteps.fixtures';
 import type { DiagramFoldStepSource } from '../document/diagramDocument';
-import { foldStepLinkStatus, type FoldLinkReplay, type FoldReplayedNode } from './foldStepLink';
+import { foldLinkNeedsReplay, foldStepLinkStatus, type FoldLinkReplay, type FoldReplayedNode } from './foldStepLink';
 
 const SEQUENCE = sequenceOf([
   step('fstep-1', null, valleyAt(0.5)),
@@ -101,5 +101,36 @@ describe('a Fold step link’s status (D17)', () => {
     const document = sequenceOf([locked, step('fstep-2', 'fstep-1', valleyAt(0.25))]);
     const replay = replayOf(document, { 'fstep-1': { status: 'locked', fingerprint: null }, 'fstep-2': { status: 'locked', fingerprint: null } });
     expect(foldStepLinkStatus(linkTo(document), context(document, replay))).toBe('unknown');
+  });
+});
+
+describe('whether a Fold step link needs the session’s replay (D17)', () => {
+  const OTHER = sequenceOf(SEQUENCE.steps, undefined, 'fold-other');
+  const LOCKED = sequenceOf([
+    { id: 'fstep-1', parent: null, unknown: { id: 'fstep-1', parent: null, op: { kind: 'swivel' } } },
+    step('fstep-2', 'fstep-1', valleyAt(0.25)),
+  ]);
+
+  it('needs it for a step of the sequence Fold shows, the only one the session replays', () => {
+    expect(foldLinkNeedsReplay(linkTo(SEQUENCE), [{ document: SEQUENCE }, { document: OTHER }])).toBe(true);
+  });
+
+  it.each([
+    ['its sequence is gone', linkTo(SEQUENCE, { sequence: 'fold-gone' }), [SEQUENCE]],
+    ['its step is gone', linkTo(SEQUENCE, { step: 'fstep-gone' }), [SEQUENCE]],
+    ['its step is a newer build’s', linkTo(LOCKED), [LOCKED]],
+    ['its sequence is not the one Fold shows', linkTo(OTHER), [SEQUENCE, OTHER]],
+    ['there is no sequence at all', linkTo(SEQUENCE), []],
+  ])('does not when %s: the link reads the same whatever the session replays', (_label, link, documents) => {
+    const sequences = documents.map((document) => ({ document }));
+    expect(foldLinkNeedsReplay(link, sequences)).toBe(false);
+    const shown = documents[0];
+    const replays: (FoldLinkReplay | null)[] = [null];
+    if (shown) {
+      replays.push(replayOf(shown));
+      replays.push(replayOf(shown, Object.fromEntries(shown.steps.map((node) => [node.id, { status: 'broken', fingerprint: null }]))));
+    }
+    const told = new Set(replays.map((replay) => foldStepLinkStatus(link, { sequences, replay })));
+    expect([...told]).toHaveLength(1);
   });
 });

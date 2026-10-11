@@ -5,6 +5,8 @@ import {
   insertSteps,
   posedRenderOf,
   renderToShowAs,
+  setFoldStepPicture,
+  stepById,
   withRememberedPoses,
   type DiagramCpRender,
   type DiagramFoldStepSource,
@@ -91,10 +93,26 @@ describe('a Fold step in the file (D17)', () => {
       'engine',
       'thumbnail',
       'render',
-      'remembered',
       'sentence',
+      'remembered',
     ]);
     expect(stored).toEqual(source);
+  });
+
+  it('reads a step shown another way back as it was captured, so the same capture again is no edit', () => {
+    // Folded, with Fold's sentence; then shown as a crease pattern, which remembers the flat fold.
+    const pattern = { source: foldStepSource({ render: { mode: 'crease-pattern', rotationDeg: 0 } }), marks: [] };
+    const captured = { ...pattern, picture: scenePicture('scene-pattern') };
+    const shown = setFoldStepPicture(insertSteps(createDiagram({ title: 'Crane' }), [foldStepStep('s1')], 0), 's1', captured)
+      .document;
+    expect((stepById(shown, 's1')?.source as DiagramFoldStepSource).remembered).toBeDefined();
+
+    const written = JSON.stringify(throughJson(writeDiagram(shown)));
+    const loaded = readDiagram(JSON.parse(written))!.document;
+    expect(Object.keys(stepById(loaded, 's1')!.source!)).toEqual(Object.keys(stepById(shown, 's1')!.source!));
+    expect(JSON.stringify(throughJson(writeDiagram(loaded)))).toBe(written);
+    // Refresh after the load, with nothing changed upstream: no undo step, nothing to save.
+    expect(setFoldStepPicture(loaded, 's1', captured).document).toBe(loaded);
   });
 
   it.each([

@@ -30,10 +30,14 @@ describe('a Fold step’s pose (D17)', () => {
     expect(posedFoldRender({ ...PATTERN, side: 'back' }, 'turn-over')).toEqual(PATTERN);
   });
 
-  it('resets upright and from the front, keeping a flat fold’s spread', () => {
+  it('resets a flat fold upright and from the front, keeping its spread', () => {
     const spread = { kind: 'depth' as const, amount: 0.05, toward: 'down' as const };
     expect(posedFoldRender({ ...FLAT, side: 'back', rotationDeg: 180, spread }, 'reset')).toEqual({ ...FLAT, spread });
-    expect(posedFoldRender({ ...PATTERN, side: 'back' }, 'reset')).toEqual({ mode: 'crease-pattern', rotationDeg: 0 });
+  });
+
+  it('resets a crease pattern upright, on the side its paper is on, as a linked pattern’s Reset does', () => {
+    expect(posedFoldRender({ ...PATTERN, side: 'back' }, 'reset')).toEqual({ mode: 'crease-pattern', rotationDeg: 0, side: 'back' });
+    expect(posedFoldRender(PATTERN, 'reset')).toEqual({ mode: 'crease-pattern', rotationDeg: 0 });
   });
 });
 
@@ -95,5 +99,23 @@ describe('a Fold step’s pose verbs (D17)', () => {
     }
     // Reset has nothing to do from the start.
     expect(build().actions.find((action) => action.id === 'reset')).toMatchObject({ disabled: true });
+  });
+
+  it('offers Reset exactly when it would change the picture', () => {
+    const renders: DiagramCpRender[] = [
+      FLAT,
+      { ...FLAT, rotationDeg: 90 },
+      { ...FLAT, side: 'back' },
+      PATTERN,
+      { ...PATTERN, rotationDeg: 0 },
+      { ...PATTERN, side: 'back' },
+      { ...PATTERN, rotationDeg: 0, side: 'back' },
+    ];
+    for (const render of renders) {
+      const reset = build({ render }).actions.find((action) => action.id === 'reset');
+      expect(reset?.disabled, JSON.stringify(render)).toBe(
+        JSON.stringify(posedFoldRender(render, 'reset')) === JSON.stringify(render)
+      );
+    }
   });
 });
