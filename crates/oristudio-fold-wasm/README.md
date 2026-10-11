@@ -76,13 +76,34 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   opening, or, per kind, up to eight orders, each the `completion` that
   picks it — of both kinds at once; a crimp's tip and the kinds that land;
   a tuck's targets; a vertex op's flap, petal or fan; a sink's point and
-  pockets. The reverse folds, the crimp and the tuck fold along a line, so
-  they also answer `analyse`, `action` and `depth_choices` — a crimp of its
+  pockets (an unsink has no point to analyse: asking it is the caller's
+  mistake, and its tool asks `sunk_points` instead). The families that fold
+  along one line — the reverse folds, the crimp, the tuck and the sinks
+  (open, closed and the unsink) — also answer `analyse`, `action` and
+  `depth_choices`, and have a step picture (`step_action`): a crimp of its
   tip at ℓ1, its picture ℓ1 with a pleat arrow across both lines; a tuck of
-  its block against its target, as a plain fold's — and have a step
-  picture; asking those of another family is the caller's mistake. A crimp
-  or a tuck keeps its step's summary as it lands, so it answers that after
-  its parent is released; its picture is drawn on its parent.
+  its block against its target, as a plain fold's; a sink of its point's
+  faces, seen as a mountain with the push onto its crown, and an unsink
+  seen as a valley, pulled. The vertex folds (squash, petal fold, rabbit
+  ear, swivel) fold along no one line: asking them `analyse`, `action` or
+  `depth_choices` is the caller's mistake, and their `step_action` is
+  `null`, since their pictures are still to come. A crimp or a tuck keeps
+  its step's summary as it lands, so it answers that after its parent is
+  released; its picture is drawn on its parent.
+- **Each family's own calls**, besides `apply` and `compound_analysis`:
+  - the reverse folds have none: a tool chooses an opening or an order from
+    `compound_analysis` and commits the step through `apply`;
+  - `crimp(state, op, choices)` and `tuck(state, op, choices)` fold it and
+    answer landed, an opening to choose (a crimp), or every order already
+    landed under its own handle with what its step stores;
+  - `vertex_fold(state, op, choices)` answers landed, or a choice of orders
+    held under a `pending` handle of its own; `vertex_pick(pending,
+    choice)` lands one listed order per component, and
+    `release_vertex_choices(pending)` lets held choices go;
+  - `sink_orders` and `sink_pick` count and pick a sink's orders (below),
+    and `sunk_points(state, op, choices)` lists the sunk points an unsink's
+    line and side can pull back out, for an unsink tool whose folder has
+    named none.
 - **`fs1` keys** (`src/canonical.rs`): one per fact of the state, none naming
   a face, vertex or crease by its number; the digest over them is
   TypeScript's `keyDigest`.
@@ -120,7 +141,8 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   (`src/compound.rs`). `compound_analysis` previews the point (its outline,
   outside letter, apex, the square line, why an open sink is refused, the
   pockets with what a step stores), `sink_orders` counts what a completion
-  leaves, and `sink_pick` gives the completion a step stores.
+  leaves, `sink_pick` gives the completion a step stores, and `sunk_points`
+  names the points an unsink can pull out.
 
 ## The `kernel` feature
 
@@ -315,10 +337,12 @@ slower than the table's.
   sinks natively on the samples as Import CP lands them — open and closed
   sinks and the unsink back by `apply`, the pocket asked for, stored and
   replayed, the tilted line's fixes, the choices a sink takes, the queries.
-- `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs` and
-  `tests/io_node.rs`, the same calls across the wasm boundary (plain objects
-  in and out, refusals as values, thrown envelopes, the kernel's scene object
-  as input). CI runs no wasm-pack tests, so this is a local gate.
+- `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs`,
+  `tests/io_node.rs` and `tests/crimp_tuck_node.rs`, the same calls across
+  the wasm boundary (plain objects in and out, refusals as values, thrown
+  envelopes, the kernel's scene object as input; the crimp's and the tuck's
+  ops, analyses and landings, and the tuck's target listing timed by the
+  page's clock). CI runs no wasm-pack tests, so this is a local gate.
 - `apps/web/src/fold/engine/foldSequence.wasm.test.ts` drives the built
   bridge from TypeScript, every call included, and an axiom step through the
   document's replayer; `foldEngineIo.wasm.test.ts` drives the io calls and
