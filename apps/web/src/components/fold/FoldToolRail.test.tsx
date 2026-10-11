@@ -5,6 +5,7 @@ import i18n from '../../i18n';
 import {
   FOLD_LINE_MODES,
   FOLD_PLANNED_OPS,
+  FOLD_SINK_TOOLS,
   type FoldRailItemId,
   type FoldShortcutId,
 } from '../../fold/tools/foldToolCatalog';
@@ -51,6 +52,7 @@ describe('FoldToolRail', () => {
     const toggles = [...rail.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')];
     expect(toggles.map((toggle) => [toggle.textContent, toggle.getAttribute('aria-expanded')])).toEqual([
       ['Fold', 'true'],
+      ['Sinks', 'true'],
       ['Reference points', 'true'],
       ['Locate line', 'true'],
       ['Model', 'true'],
@@ -128,6 +130,7 @@ describe('FoldToolGlyph', () => {
       'divide-line',
       'turn-over',
       'rotate',
+      ...FOLD_SINK_TOOLS,
       ...FOLD_LINE_MODES,
       ...FOLD_PLANNED_OPS,
     ];

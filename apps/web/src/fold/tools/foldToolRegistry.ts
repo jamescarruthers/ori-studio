@@ -110,6 +110,9 @@ export function toolInput(tool: FoldToolId, mode: FoldLineModeId): FoldInputMode
     case 'mountain':
     case 'precrease':
     case 'inside-reverse':
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
       return lineModeInput(mode);
     case 'divide-line':
       return DIVIDE_LINE;

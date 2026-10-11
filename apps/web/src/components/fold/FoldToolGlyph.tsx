@@ -14,7 +14,12 @@ import {
   Shrink,
   type LucideIcon,
 } from 'lucide-react';
-import type { FoldLineModeId, FoldPlannedOpId, FoldRailItemId } from '../../fold/tools/foldToolCatalog';
+import type {
+  FoldLineModeId,
+  FoldPlannedOpId,
+  FoldRailItemId,
+  FoldSinkToolId,
+} from '../../fold/tools/foldToolCatalog';
 import { FoldKindMark } from './FoldKindMark';
 
 const SIZE = 20;
@@ -138,6 +143,10 @@ const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
   petal: Flower2,
   'rabbit-ear': Rabbit,
   swivel: IterationCw,
+};
+
+/** The sinks: the point pushed down to the line, into a pocket, or pulled back up. */
+const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
   'open-sink': ArrowDownToLine,
   'closed-sink': ArrowDownToDot,
   unsink: ArrowUpFromLine,
@@ -146,7 +155,7 @@ const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
 /**
  * Every Fold rail item's icon: a fold's letter in its crease's ink; a line
  * mode's picture of what it locates; the app's own icons for the Divide line,
- * the model verbs and the folds still to come.
+ * the sinks, the model verbs and the folds still to come.
  */
 export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
   switch (id) {
@@ -171,6 +180,12 @@ export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
     case 'free':
     case 'crease':
       return lineModeGlyph(id);
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink': {
+      const Icon = SINK_ICONS[id];
+      return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+    }
     default: {
       const Icon = PLANNED_ICONS[id];
       return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;

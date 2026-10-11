@@ -27,19 +27,39 @@ export const FOLD_KINDS: readonly FoldKind[] = ['valley', 'mountain', 'precrease
 /**
  * A tool taken in hand. Inside reverse is the design's fourth fold; it folds
  * outside too, as its kind control's other value (plan Phase 9, research
- * §5.2: the kind is usually forced by the geometry).
+ * §5.2: the kind is usually forced by the geometry). The sinks are a family
+ * of their own.
  */
-export type FoldToolId = FoldKind | 'inside-reverse' | 'divide-line';
+export type FoldToolId = FoldKind | 'inside-reverse' | 'divide-line' | FoldSinkToolId;
 
 export function isFoldKind(id: FoldToolId): id is FoldKind {
   return id === 'valley' || id === 'mountain' || id === 'precrease';
 }
 
 /** A tool that folds along a located line: the plain folds, and the compound folds along one. */
-export type FoldLineToolId = FoldKind | 'inside-reverse';
+export type FoldLineToolId = FoldKind | 'inside-reverse' | FoldSinkToolId;
 
 export function isLineTool(id: FoldToolId): id is FoldLineToolId {
-  return isFoldKind(id) || id === 'inside-reverse';
+  return isFoldKind(id) || id === 'inside-reverse' || isSinkTool(id);
+}
+
+/**
+ * The sinks (plan Phase 11, research §5.4), each a tool along a located line:
+ * a closed point's tip pushed in, open or closed, or a sunk one pulled back
+ * out. The open and the closed sink are one sink's two kinds, the window's
+ * control switching between them as the reverse fold's kind does.
+ */
+export type FoldSinkToolId = 'open-sink' | 'closed-sink' | 'unsink';
+
+export const FOLD_SINK_TOOLS: readonly FoldSinkToolId[] = ['open-sink', 'closed-sink', 'unsink'];
+
+export function isSinkTool(id: FoldToolId): id is FoldSinkToolId {
+  return id === 'open-sink' || id === 'closed-sink' || id === 'unsink';
+}
+
+/** A sink's kind, as the sink tool's kind control names it in full: its tool's name. */
+export function foldSinkKindLabel(t: TFunction, kind: 'open' | 'closed'): string {
+  return foldToolLabel(t, kind === 'open' ? 'open-sink' : 'closed-sink');
 }
 
 /** A reverse fold's kind, as the reverse tool's kind control names it. */
@@ -115,28 +135,9 @@ export const FOLD_MODEL_TURNS: Readonly<Record<FoldModelVerbId, TurnKind>> = {
  * say they are coming. The outside reverse fold is the reverse tool's other
  * kind, not a tool of its own.
  */
-export type FoldPlannedOpId =
-  | 'crimp'
-  | 'tuck'
-  | 'squash'
-  | 'petal'
-  | 'rabbit-ear'
-  | 'swivel'
-  | 'open-sink'
-  | 'closed-sink'
-  | 'unsink';
+export type FoldPlannedOpId = 'crimp' | 'tuck' | 'squash' | 'petal' | 'rabbit-ear' | 'swivel';
 
-export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = [
-  'crimp',
-  'tuck',
-  'squash',
-  'petal',
-  'rabbit-ear',
-  'swivel',
-  'open-sink',
-  'closed-sink',
-  'unsink',
-];
+export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = ['crimp', 'tuck', 'squash', 'petal', 'rabbit-ear', 'swivel'];
 
 /** Anything the rail shows: what its glyph is chosen by. */
 export type FoldRailItemId = FoldToolId | FoldLineModeId | FoldModelVerbId | FoldPlannedOpId;
@@ -158,6 +159,10 @@ export const FOLD_TOOL_SHORTCUTS: Readonly<Record<FoldToolId, FoldShortcutId>> =
   precrease: 'fold.toolPrecrease',
   'inside-reverse': 'fold.toolInsideReverse',
   'divide-line': 'fold.toolDivideLine',
+  // The sinks.
+  'open-sink': 'fold.toolOpenSink',
+  'closed-sink': 'fold.toolClosedSink',
+  unsink: 'fold.toolUnsink',
 };
 
 export const FOLD_LINE_MODE_SHORTCUTS: Readonly<Record<FoldLineModeId, FoldShortcutId>> = {
@@ -201,6 +206,13 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.insideReverse', 'Inside reverse fold');
     case 'divide-line':
       return t('tools:fold.tool.divideLine', 'Divide line');
+    // The sinks, by the names the rail gave them while they were planned.
+    case 'open-sink':
+      return t('tools:fold.op.openSink', 'Open sink');
+    case 'closed-sink':
+      return t('tools:fold.op.closedSink', 'Closed sink');
+    case 'unsink':
+      return t('tools:fold.op.unsink', 'Unsink');
   }
 }
 
@@ -217,6 +229,12 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.insideReverseHelp', 'Push a flap inside itself, reversing its spine.');
     case 'divide-line':
       return t('tools:fold.tool.divideLineHelp', 'Mark points that divide an edge or a crease into equal parts.');
+    case 'open-sink':
+      return t('tools:fold.tool.openSinkHelp', 'Push a closed point’s tip in, turning every layer of it inside out.');
+    case 'closed-sink':
+      return t('tools:fold.tool.closedSinkHelp', 'Push a closed point’s tip into a pocket, its layers kept together.');
+    case 'unsink':
+      return t('tools:fold.tool.unsinkHelp', 'Pull a sunk point’s tip back out.');
   }
 }
 
@@ -357,12 +375,6 @@ export function foldPlannedOpLabel(t: TFunction, id: FoldPlannedOpId): string {
       return t('tools:fold.op.rabbitEar', 'Rabbit ear');
     case 'swivel':
       return t('tools:fold.op.swivel', 'Swivel fold');
-    case 'open-sink':
-      return t('tools:fold.op.openSink', 'Open sink');
-    case 'closed-sink':
-      return t('tools:fold.op.closedSink', 'Closed sink');
-    case 'unsink':
-      return t('tools:fold.op.unsink', 'Unsink');
   }
 }
 

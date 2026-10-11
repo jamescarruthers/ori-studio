@@ -22,10 +22,11 @@ const item = (groups: ReturnType<typeof foldRailGroups>, id: string) => {
 };
 
 describe('foldRailGroups', () => {
-  it('lists the folds, Reference points, Locate line, the model verbs and the planned folds, in that order', () => {
+  it('lists the folds, the sinks, Reference points, Locate line, the model verbs and the planned folds, in that order', () => {
     const groups = foldRailGroups(t, view(), verbs());
     expect(groups.map((group) => [group.id, group.label])).toEqual([
       ['fold', 'Fold'],
+      ['sink', 'Sinks'],
       ['reference', 'Reference points'],
       ['locate', 'Locate line'],
       ['model', 'Model'],
@@ -33,20 +34,11 @@ describe('foldRailGroups', () => {
     ]);
     expect(groups.map((group) => group.items.map((each) => each.id))).toEqual([
       ['valley', 'mountain', 'precrease', 'inside-reverse'],
+      ['open-sink', 'closed-sink', 'unsink'],
       ['divide-line'],
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
       ['turn-over', 'rotate'],
-      [
-        'crimp',
-        'tuck',
-        'squash',
-        'petal',
-        'rabbit-ear',
-        'swivel',
-        'open-sink',
-        'closed-sink',
-        'unsink',
-      ],
+      ['crimp', 'tuck', 'squash', 'petal', 'rabbit-ear', 'swivel'],
     ]);
     // A roadmap, out of the way until asked for; everything else open.
     expect(groups.filter((group) => group.collapsedByDefault).map((group) => group.id)).toEqual(['planned']);
@@ -74,7 +66,7 @@ describe('foldRailGroups', () => {
     reverse.select();
     expect(calls.selectTool).toHaveBeenCalledWith('inside-reverse');
     calls.selectTool.mockClear();
-    for (const id of ['crimp', 'squash', 'unsink']) {
+    for (const id of ['crimp', 'squash', 'swivel']) {
       const planned = item(groups, id);
       expect(planned.kind).toBe('planned');
       expect(planned.available).toBe(false);
@@ -84,6 +76,28 @@ describe('foldRailGroups', () => {
     // The rail and the sheet refuse the press (`available: false`), and a planned item binds nothing besides.
     expect(calls.selectTool).not.toHaveBeenCalled();
     expect(calls.turn).not.toHaveBeenCalled();
+  });
+
+  it('takes each sink as a tool along a located line, keyless until the user gives it one', () => {
+    const calls = verbs();
+    const groups = foldRailGroups(t, view({ tool: 'closed-sink', lineMode: 'axiom-4' }), calls);
+    for (const [id, label, shortcut] of [
+      ['open-sink', 'Open sink', 'fold.toolOpenSink'],
+      ['closed-sink', 'Closed sink', 'fold.toolClosedSink'],
+      ['unsink', 'Unsink', 'fold.toolUnsink'],
+    ] as const) {
+      const sink = item(groups, id);
+      expect(sink).toMatchObject({ kind: 'tool', available: true, reason: null, label, shortcut });
+      sink.select();
+      expect(calls.selectTool).toHaveBeenLastCalledWith(id);
+    }
+    expect(item(groups, 'closed-sink').active).toBe(true);
+    // A sink locates its line as every fold does: the line mode is marked under it.
+    expect(item(groups, 'axiom-4').active).toBe(true);
+    expect(item(groups, 'open-sink').description).toBe('Push a closed point’s tip in, turning every layer of it inside out.');
+    // Locked, they are refused as every tool is.
+    const locked = foldRailGroups(t, view({ readOnly: 'locked' }), verbs());
+    expect(item(locked, 'unsink').available).toBe(false);
   });
 
   it('marks the tool in hand and the line mode chosen, but no line mode under the Divide line', () => {
