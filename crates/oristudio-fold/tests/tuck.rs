@@ -360,6 +360,80 @@ fn a_target_the_block_never_reaches_is_refused() {
     }
 }
 
+/// The square folded in half `folds` times, alternately across and down, each
+/// time a valley: a stack of 2^folds layers in its corner.
+fn stack(folds: usize) -> State {
+    let lines = [
+        (y_eq(0.5), [0.5, 0.75]),
+        (x_eq(0.5), [0.75, 0.25]),
+        (y_eq(0.25), [0.25, 0.4]),
+        (x_eq(0.25), [0.4, 0.1]),
+        (y_eq(0.125), [0.1, 0.2]),
+        (x_eq(0.125), [0.2, 0.05]),
+    ];
+    lines
+        .iter()
+        .take(folds)
+        .fold(square(), |state, &(line, toward)| {
+            fold(&state, &all(line, toward, Direction::Valley)).state
+        })
+}
+
+/// A tuck's listing reads its deadline before each target: one asked after
+/// it decides none of them, where every target would otherwise be a
+/// completion (seconds on a deep stack). The stack's bottom layer, its corner
+/// folded up: every layer above is a target.
+#[test]
+fn the_targets_left_when_the_deadline_passes_are_undecided() {
+    fn epoch() -> f64 {
+        0.0
+    }
+    let state = stack(5);
+    let line = through([0.0, 0.03], [0.03, 0.0]);
+    let at = state.stack_at([0.01, 0.01]).unwrap_or_default();
+    let bottom = *at.last().unwrap_or_else(|| panic!("no stack"));
+    let seed = state
+        .isometry(bottom)
+        .unwrap_or_default()
+        .inverse()
+        .apply([0.01, 0.01]);
+    for direction in [Direction::Valley, Direction::Mountain] {
+        let op = tuck(
+            line,
+            [0.005, 0.005],
+            direction,
+            Seed::Flaps { at: vec![seed] },
+            [0.5, 0.5],
+        );
+        let decided = state
+            .analyse_tuck(&op, &CompletionLimits::default())
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(decided.targets.len() >= 8, "{direction:?}: {decided:?}");
+        assert!(decided.targets.iter().all(|t| t.feasible.is_some()));
+        let late = CompletionLimits {
+            deadline: Some(oristudio_fold::complete::Deadline {
+                now_ms: epoch,
+                at_ms: 0.0,
+            }),
+            ..CompletionLimits::default()
+        };
+        let undecided = state
+            .analyse_tuck(&op, &late)
+            .unwrap_or_else(|e| panic!("{e}"));
+        // The same layers, none of them decided.
+        let faces = |a: &oristudio_fold::TuckAnalysis| -> Vec<(FaceId, Point)> {
+            a.targets.iter().map(|t| (t.face, t.at)).collect()
+        };
+        assert_eq!(faces(&undecided), faces(&decided), "{direction:?}");
+        assert!(
+            undecided.targets.iter().all(|t| t.feasible.is_none()),
+            "{direction:?}: {:?}",
+            undecided.targets
+        );
+        assert_eq!(undecided.moving, decided.moving);
+    }
+}
+
 /// Plan D6: a tuck the completion leaves open stores the pairs it chose,
 /// keyed by witnesses. The first such tuck of the campaign: each pick lands
 /// a different state, each replays from what it stores, and a witness off

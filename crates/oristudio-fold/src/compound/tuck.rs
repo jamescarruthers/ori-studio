@@ -429,6 +429,11 @@ impl State {
     /// What a tuck would move and every layer its block lands on, each with
     /// whether the block can lie immediately under (over) it, without
     /// folding. `op.target` is not read.
+    ///
+    /// Each target costs a completion, and each moving set a preparation, so
+    /// `limits.deadline` is read before every one: the targets that move
+    /// least are decided first, and those left when it passes are listed
+    /// undecided.
     pub fn analyse_tuck(
         &self,
         op: &TuckFold,
@@ -436,11 +441,13 @@ impl State {
     ) -> Result<TuckAnalysis, Refused> {
         let tuck = self.tuck(op)?;
         let open = tuck.closure(self, None)?;
+        let faces = self.faces();
         // A target with no paper on the moving side is not met by the
         // closure, so its moving set is the open one; a target that crosses
         // ℓ keeps the layers above it (below it) out, so it is grown its own.
-        let mut groups: Vec<(Vec<bool>, Vec<usize>)> = vec![(open.clone(), Vec::new())];
-        for f in 0..self.faces().len() {
+        let mut sets: Vec<Vec<bool>> = vec![open.clone()];
+        let mut listed: Vec<(usize, usize)> = Vec::new();
+        for f in 0..faces.len() {
             let moving = if tuck.side.pieces[f].is_some() {
                 match tuck.closure(self, Some(f)) {
                     Ok(moving) => moving,
@@ -452,31 +459,46 @@ impl State {
             if !tuck.lands_on(self, &moving, f) {
                 continue;
             }
-            match groups.iter_mut().find(|(set, _)| *set == moving) {
-                Some((_, targets)) => targets.push(f),
-                None => groups.push((moving, vec![f])),
-            }
+            let set = match sets.iter().position(|set| *set == moving) {
+                Some(set) => set,
+                None => {
+                    sets.push(moving);
+                    sets.len() - 1
+                }
+            };
+            listed.push((f, set));
         }
         let under = tuck.under();
+        // The closure brings every layer between the seed and T along, so a
+        // target nearer the seed moves less: cheaper to decide, and likelier
+        // to take the tuck. Each moving set's targets are decided together.
+        let sizes: Vec<usize> = sets
+            .iter()
+            .map(|set| set.iter().filter(|&&m| m).count())
+            .collect();
+        listed.sort_by_key(|&(f, set)| (sizes[set], set, f));
+        // One geometry per moving set, prepared when its first target is
+        // decided and placed against each; none when it does not prepare.
+        let mut prepared: Vec<Option<Option<Prepared>>> = (0..sets.len()).map(|_| None).collect();
         let mut targets = Vec::new();
-        for (moving, faces) in groups.iter().filter(|(_, faces)| !faces.is_empty()) {
-            // One geometry per moving set, placed against each target.
-            let prepared = tuck.prepare(self, moving).ok();
-            for &f in faces {
-                let id = self.faces()[f].id;
-                let feasible = match &prepared {
+        for (f, set) in listed {
+            let id = faces[f].id;
+            let feasible = if limits.out_of_time() {
+                None
+            } else {
+                match prepared[set].get_or_insert_with(|| tuck.prepare(self, &sets[set]).ok()) {
                     Some(prepared) => {
                         prepared.lands_placed(placements(self, prepared, id, under), limits)
                     }
                     None => Some(false),
-                };
-                if let Some(at) = self.face_witness(id) {
-                    targets.push(TuckTarget {
-                        face: id,
-                        at,
-                        feasible,
-                    });
                 }
+            };
+            if let Some(at) = self.face_witness(id) {
+                targets.push(TuckTarget {
+                    face: id,
+                    at,
+                    feasible,
+                });
             }
         }
         targets.sort_by_key(|t| t.face);
