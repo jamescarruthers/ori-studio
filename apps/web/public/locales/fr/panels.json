@@ -2362,7 +2362,10 @@
       "spreadEarlier": "Tel qu’une étape précédente le règle. Une modification ici s’applique à partir de cette étape.",
       "spreadOwn": "Réglé à cette étape. Les étapes suivantes le reprennent aussi.",
       "title": "Étape {{number}}",
-      "valley": "Vallée"
+      "valley": "Vallée",
+      "vertex": {
+        "blocksHelp": "Morceaux de papier qui tournent d’un seul tenant : chacun tourne autour des mêmes plis, dans le même ordre, jusqu’à l’endroit où il se pose."
+      }
     },
     "toDiagram": {
       "sendPath": "Envoyer les étapes vers Diagramme",

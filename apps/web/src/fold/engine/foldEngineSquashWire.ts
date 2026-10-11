@@ -11,9 +11,13 @@
  *   folds' `choice_needed` and `choice_broken` when its stored choice no
  *   longer decides the order.
  * - **The tools** ask the compound question (`compoundAnalysis`,
- *   `family: 'vertex'`) and fold through `vertexFold`: one order lands; more
- *   are held under a `pending` handle until a pick lands one, whose
- *   `compound.stored` is the `FoldChoices.completion` the step stores.
+ *   `family: 'vertex'`), as the reverse fold's tools do: what the op names,
+ *   the orders it leaves (each the `FoldChoices.completion` that picks it),
+ *   and a rabbit ear's two ridge options; then preview and commit the step
+ *   with its choices through `step`. The family's own calls besides
+ *   (`vertexFold`): one order lands; more are held under a `pending` handle
+ *   until a pick lands one, whose `compound.stored` is the
+ *   `FoldChoices.completion` the step stores.
  * - **The motion** (plan D15) is visual, in stages: each moving block turns
  *   about one of its creases per stage, or rests (`FoldStepMotionLegs`, every
  *   compound step's, read through `stepMotionLegsOf`).
@@ -115,6 +119,55 @@ export type FoldVertexAnalysis =
   | ({ kind: 'rabbit-ear' } & FoldFanAnalysis)
   | ({ kind: 'swivel' } & FoldFanAnalysis);
 
+/** The orders a vertex fold leaves to choose from (`VertexOrders`), as a reverse fold's question lists its own. */
+export interface FoldVertexOrders {
+  /** The true ‹ n of m ›. */
+  count: FoldChoiceCount;
+  /** The first eight, each the `completion` that picks it. */
+  orders: FoldCompletionChoice[];
+  /** More are listed than `orders` holds. */
+  more: boolean;
+}
+
+/** One of a rabbit ear's two ridge options: a ray of its far wedge (`VertexRidge`). */
+export interface FoldVertexRidge {
+  /** The ray, a direction from the incenter in the parent's model frame: what the step stores as `ridge`. */
+  direction: FoldModelPoint;
+  /** Which corner's ray it is, in the op's corner order; null for the emergent ray. */
+  given: number | null;
+  /** Whether the ear lands with it. */
+  lands: boolean;
+  /** The orders it leaves, when more than one. */
+  orders: FoldVertexOrders | null;
+}
+
+/**
+ * The compound question's answer for a vertex op (`VertexAnalysed`): what it
+ * names, and what a tool chooses among — the orders it leaves, its stored
+ * completion aside, and a rabbit ear's ridges when it was asked without one.
+ */
 export interface FoldVertexAnalysed {
   analysis: FoldVertexAnalysis;
+  /**
+   * A rabbit ear's or a swivel's: per emergent candidate, whether the fold
+   * lands with it, its other inputs as asked (a rabbit ear's without its
+   * ridge). Empty for the other folds.
+   */
+  emergents: boolean[];
+  /** Null when it lands with one order, or is refused (the preview says why). */
+  orders: FoldVertexOrders | null;
+  /** Empty unless a rabbit ear was asked without its ridge and got as far as its completion. */
+  ridges: FoldVertexRidge[];
 }
+
+// ---------------------------------------------------------------------------
+// Refusals the tools read the fields of (`FoldRefusal`'s vertex block)
+
+/** Why there is no flap to squash at a point (`NoFlap`). */
+export type FoldNoFlap = 'single_layer' | 'no_spine' | 'no_hinge' | 'upper_not_hinged';
+
+/** Which crease of a petal fold is not precreased (`PetalCrease`). */
+export type FoldPetalCrease = 'line' | 'kite';
+
+/** Why a petal fold has no flap (`NoPetal`). */
+export type FoldNoPetal = 'no_ends' | 'no_corner';

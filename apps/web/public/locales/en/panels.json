@@ -2179,7 +2179,10 @@
       "spreadEarlier": "As an earlier step sets it. A change here applies from this step on.",
       "spreadOwn": "Set on this step. The steps after it take it too.",
       "title": "Step {{number}}",
-      "valley": "Valley"
+      "valley": "Valley",
+      "vertex": {
+        "blocksHelp": "Pieces of paper that turn as one: each turns about the same creases, in the same order, to where it lands."
+      }
     },
     "toDiagram": {
       "sendPath": "Send Steps to Diagram",

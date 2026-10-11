@@ -114,6 +114,13 @@ function refusalBody(code: FoldRefusalCode): FoldRefusalBody {
       return { code, kind: 'inside', faces: [0] };
     case 'tuck_infeasible':
       return { code, target: 0, placement: 'under', faces: [0] };
+    // The vertex folds'.
+    case 'squash_no_flap':
+      return { code, faces: [0], cause: 'single_layer' };
+    case 'petal_not_precreased':
+      return { code, faces: [0], missing: 'line' };
+    case 'petal_no_flap':
+      return { code, faces: [0], cause: 'no_ends' };
     default:
       return { code };
   }

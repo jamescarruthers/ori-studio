@@ -211,6 +211,75 @@ describe('FoldToolWindow', () => {
     expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Valley fold and tuck')).toBeTruthy();
   });
 
+  it('draws a vertex fold’s direction, its precondition and its choices, each acting', () => {
+    const calls = {
+      ...verbs(),
+      stepOrder: vi.fn(),
+      setVertexDirection: vi.fn(),
+      stepEmergent: vi.fn(),
+      setRidge: vi.fn(),
+      stepFanLayers: vi.fn(),
+      resetSquashTarget: vi.fn(),
+    } satisfies FoldToolWindowVerbs;
+    const vertex = {
+      tool: 'rabbit-ear' as const,
+      direction: 'valley' as const,
+      described: true,
+      known: true,
+      target: 'hinge' as const,
+      emergents: [true, true, false],
+      emergent: 0,
+      ridges: [
+        { given: 1, lands: true },
+        { given: null, lands: true },
+      ],
+      ridge: 1,
+      layers: 2,
+      fanLayers: null,
+      orders: 0,
+      order: 0,
+    };
+    render({ tool: 'rabbit-ear', lineMode: 'crease', picks: 4, preview: preview({ section: null }), vertex }, calls);
+    let window = fold()!;
+    expect(byRole(window, 'button', /^Rabbit ear \d settings/).getAttribute('aria-expanded')).toBe('true');
+    // The direction, and the precondition said beneath it.
+    const direction = byRole(window, 'group', 'Direction');
+    expect(byRole(direction, 'button', 'Valley').getAttribute('aria-pressed')).toBe('true');
+    act(() => byRole(direction, 'button', 'Mountain').click());
+    expect(calls.setVertexDirection).toHaveBeenCalledWith('mountain');
+    expect(window.querySelector('[data-fold-vertex-note]')?.textContent).toMatch(/incenter/);
+    // No moving side, no layer picker: a vertex fold has neither.
+    expect(window.textContent).not.toContain('Moving side');
+    // The fourth crease and the layers, steppers; the ridge, a choice of two.
+    expect(window.textContent).toContain('1 of 3');
+    expect(window.textContent).toContain('All 2');
+    act(() => byRole(window, 'button', 'Fourth crease: Next').click());
+    expect(calls.stepEmergent).toHaveBeenCalledWith(1);
+    act(() => byRole(window, 'button', 'Layers: Previous').click());
+    expect(calls.stepFanLayers).toHaveBeenCalledWith(-1);
+    const ridge = byRole(window, 'group', 'Ridge');
+    expect(byRole(ridge, 'button', 'Fourth').getAttribute('aria-pressed')).toBe('true');
+    act(() => byRole(ridge, 'button', 'Corner 2').click());
+    expect(calls.setRidge).toHaveBeenCalledWith(0);
+
+    // A squash aimed off its hinge: the way back to it.
+    render(
+      {
+        tool: 'squash',
+        lineMode: 'crease',
+        picks: 1,
+        preview: preview({ section: null }),
+        vertex: { ...vertex, tool: 'squash', target: 'point', emergents: [], ridges: [], layers: 0 },
+      },
+      calls
+    );
+    window = fold()!;
+    expect(window.textContent).toContain('The point clicked');
+    act(() => byRole(window, 'button', 'Back to the hinge').click());
+    expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
+    expect(queryByRole(window, 'group', 'Ridge')).toBeNull();
+  });
+
   it('says a commit asked for before the preview landed is waiting for it, and nothing once none is', () => {
     render({ preview: preview({ landing: true, queued: true }) });
     expect(fold()!.textContent).toContain('Folding as soon as the preview is ready…');

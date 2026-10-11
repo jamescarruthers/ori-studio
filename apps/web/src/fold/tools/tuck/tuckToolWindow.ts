@@ -37,7 +37,7 @@ import {
   type FoldToolWindowView,
 } from '../foldToolWindow';
 import { foldRefusalNotice } from '../refusalNotice';
-import { stepper, type FoldChoiceStepper } from '../reverse/reverseToolWindow';
+import { choiceStepper, type FoldChoiceStepper } from '../reverse/reverseToolWindow';
 
 const TUCK_DIRECTIONS: readonly FoldDirection[] = ['valley', 'mountain'];
 
@@ -91,8 +91,8 @@ function targetsNote(t: TFunction, tuck: FoldTuckWindowView): string | null {
 function tuckControls(t: TFunction, tuck: FoldTuckWindowView, verbs: FoldToolWindowVerbs, readOnly: boolean): FoldTuckControls {
   const targetLabel = under(tuck) ? t('tools:fold.tuck.under', 'Tuck under') : t('tools:fold.tuck.over', 'Tuck over');
   return {
-    target: stepper(t, targetLabel, tuck.target, tuck.targets, verbs.stepTuckTarget, readOnly),
-    order: stepper(t, t('tools:fold.reverse.order', 'Layer order'), tuck.order, tuck.orders, verbs.stepOrder, readOnly),
+    target: choiceStepper(t, targetLabel, tuck.target, tuck.targets, verbs.stepTuckTarget, readOnly),
+    order: choiceStepper(t, t('tools:fold.reverse.order', 'Layer order'), tuck.order, tuck.orders, verbs.stepOrder, readOnly),
     note: targetsNote(t, tuck),
   };
 }

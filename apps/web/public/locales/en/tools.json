@@ -643,6 +643,148 @@
       "rotateHelp": "Rotate the model a quarter turn clockwise, as a step of its own.",
       "turnOverHelp": "Turn the model over, side to side, as a step of its own."
     },
+    "vertex": {
+      "chooser": {
+        "emergentNote": "More than one fourth crease lets these creases lie flat. Step through them, or press Shift+← / Shift+→.",
+        "ridgeNote": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press Shift+← / Shift+→."
+      },
+      "direction": "Direction",
+      "doesNotFit": "Does not fit here",
+      "emergent": "Fourth crease",
+      "emergentDoesNotFit": "This fourth crease does not fit here: step to another.",
+      "fix": {
+        "emergent": "Use the fourth crease that fits",
+        "emergentNumber": "Use fourth crease {{number}}",
+        "otherWay": "Fold it the other way",
+        "precreaseKite": "Precrease the kite",
+        "precreaseLine": "Precrease this line first",
+        "resetTarget": "Put the spine onto the hinge",
+        "usePrecrease": "Use the precrease"
+      },
+      "help": {
+        "petal": "Lift a flap’s lower point along a precreased line while its sides fold in.",
+        "rabbitEar": "Fold a triangle’s corners in along their bisectors, so a point stands up.",
+        "squash": "Open a two-layer flap and press it flat, its spine onto its hinge.",
+        "swivel": "Fold paper about a point inside it, along rays you pick and one that lets it lie flat."
+      },
+      "layers": "Layers",
+      "layersAll_one": "All {{count}}",
+      "layersAll_other": "All {{count}}",
+      "layersBottom_one": "Bottom {{count}} of {{total}}",
+      "layersBottom_other": "Bottom {{count}} of {{total}}",
+      "layersTop_one": "Top {{count}} of {{total}}",
+      "layersTop_other": "Top {{count}} of {{total}}",
+      "mountain": "Mountain",
+      "mountainTitle": "Mountain: the paper turns away from you",
+      "noEmergentFits": "No fourth crease fits these layers here.",
+      "note": {
+        "petal": "A petal fold refolds creases already there: precrease the kite creases from the flap’s lower point and the line H across their ends first.",
+        "rabbitEar": "The creases meet at the triangle’s incenter: one to each corner, and a fourth that lets them lie flat.",
+        "squash": "A flap squashes when its two layers are free, held only along its hinge, and uncovered, with nothing over it on the side it opens toward.",
+        "swivel": "The point the creases meet at must lie inside the paper, off every crease: hold {{modifier}} to put it anywhere.",
+        "swivelTouch": "The point the creases meet at must lie inside the paper, off every crease."
+      },
+      "refusal": {
+        "blocked": {
+          "text": "A crease runs into paper that cannot fold with it, or paper holds two parts of the fold together. Cut more layers, or try another fourth crease.",
+          "title": "Paper is in the way"
+        },
+        "center": {
+          "textEar": "The triangle’s creases meet at its incenter, which lies on a crease or off the layers. Pick corners that put it inside the layers, away from their creases.",
+          "textSwivel": "The point the creases meet at lies on a crease or off the layers. Put it inside the layers, away from their creases.",
+          "title": "The creases cannot meet there"
+        },
+        "covered": {
+          "text": "Other layers lie over the flap, or inside it, on the side it opens toward. Fold them out of the way first, or squash it the other way.",
+          "title": "The flap is covered"
+        },
+        "kite": {
+          "text": "A petal fold refolds creases already there. Fold each side edge of the flap’s top layer onto its centre line and unfold, then petal fold.",
+          "title": "Precrease the kite first"
+        },
+        "line": {
+          "text": "A petal fold lifts the flap along a precrease through every layer below it. Precrease this line through all the layers, then petal fold.",
+          "title": "Precrease the line first"
+        },
+        "lineNear": {
+          "text": "A petal fold lifts the flap along a precrease. This line runs just beside one: use it, or precrease this line first.",
+          "title": "The line misses the precrease"
+        },
+        "noFlap": {
+          "noHinge": "The flap folds over no hinge at either end of its spine, so there is nothing to press it flat against.",
+          "noSpine": "The two layers here are not joined by a fold, so the flap has no spine to open along.",
+          "singleLayer": "Only one layer lies here. Click a flap of two layers joined along a folded edge.",
+          "title": "No flap to squash here",
+          "upperNotHinged": "The flap’s top layer is held by its spine alone: pressed flat, its hinge side would lie loose."
+        },
+        "noPetal": {
+          "noCorner": "The kite creases do not meet below the line, so there is no point to lift.",
+          "noEnds": "The line does not cross the flap’s two folded edges. Pick a precrease that runs from one edge of the flap to the other.",
+          "title": "No flap to lift here"
+        },
+        "notFlat": {
+          "text": "No fourth crease lets these creases lie flat: two of them coincide, or the gaps between them are too wide. Pick other points.",
+          "title": "It cannot fold flat"
+        },
+        "notFree": {
+          "text": "The flap is joined to other paper away from its hinge. Only a flap held along its hinge alone opens flat: unfold what holds it first.",
+          "title": "The flap is held elsewhere"
+        },
+        "petalCovered": {
+          "text": "Other layers lie over the flap on the side it lifts toward. Fold them out of the way first, or lift it the other way.",
+          "title": "The flap is covered"
+        },
+        "ridge": {
+          "text": "The ridge is one of the two creases across from the paper that stays. Pick the other ridge, or other paper to stay put.",
+          "title": "That ridge does not fit"
+        },
+        "stayer": {
+          "text": "The paper picked to stay put is joined to no part of the fold. Pick paper the creases cut, or paper joined to it.",
+          "title": "Which paper stays?"
+        },
+        "targetOutside": {
+          "text": "The spine lands between where it lies and the hinge. Click a point inside the flap, or put it back onto the hinge.",
+          "title": "The spine cannot land there"
+        }
+      },
+      "reset": "Back to the hinge",
+      "ridge": "Ridge",
+      "ridgeCorner": "Corner {{number}}",
+      "ridgeCornerTitle": "The crease to corner {{number}} rises as the ridge",
+      "ridgeFourth": "Fourth",
+      "ridgeFourthTitle": "The fourth crease rises as the ridge",
+      "steps": {
+        "earChoose": "Choose the fourth crease, the layers and the ridge.",
+        "earFirstCorner": "Click the triangle’s first corner.",
+        "earSecondCorner": "Click its second corner.",
+        "earThirdCorner": "Click its third corner.",
+        "finish": "Choose the options, then press Enter.",
+        "finishTouch": "Choose the options, then tap {{action}}.",
+        "petalCrease": "Click the precreased line H the flap lifts along.",
+        "petalDirection": "Choose which way the flap lifts.",
+        "petalFirstEnd": "Click one end of the line H the flap lifts along.",
+        "petalFlap": "Click the flap below that line.",
+        "petalSecondEnd": "Click its other end.",
+        "pickAgain": "Press Esc, then pick again.",
+        "pickAgainTouch": "Tap Cancel, then pick again.",
+        "squashFlap": "Click the flap to squash.",
+        "squashTarget": "Click where the spine should land, or keep it on the hinge line.",
+        "squashTargetTouch": "Tap where the spine should land, or keep it on the hinge line.",
+        "stayer": "Click the paper that stays put.",
+        "swivelChoose": "Choose the fourth crease and the layers.",
+        "swivelFirstRay": "Click a point the first crease runs toward.",
+        "swivelSecondRay": "Click a point the second crease runs toward.",
+        "swivelThirdRay": "Click a point the third crease runs toward.",
+        "swivelVertex": "Click the point the creases meet at."
+      },
+      "target": "Spine lands on",
+      "targetHelp": "Click the folded paper to land the spine off the hinge.",
+      "targetHelpTouch": "Tap the folded paper to land the spine off the hinge.",
+      "targetHinge": "The hinge line",
+      "targetPoint": "The point clicked",
+      "valley": "Valley",
+      "valleyTitle": "Valley: the paper turns toward you"
+    },
     "window": {
       "cancel": "Cancel",
       "finding": "Finding the layers at the line…",

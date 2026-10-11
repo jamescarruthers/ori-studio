@@ -46,19 +46,30 @@ const HOVER_LINE_ALPHA = 0.5;
 /** A located line awaiting its fold's picture: over the paper, narrower than a picked crease. */
 const LOCATED_WIDTH_MUL = 1.6;
 
-interface Dot {
+/** A dot on the overlay, in the pane's frame: its radius in CSS px. */
+export interface FoldOverlayDot {
   at: Point;
   radius: number;
   fill: Rgba;
   stroke: Rgba;
 }
 
-interface Stroke {
+/** A stroke on the overlay, in the pane's frame: its width a multiple of the frame's stroke width. */
+export interface FoldOverlayStroke {
   a: Point;
   b: Point;
   color: Rgba;
   widthMul: number;
 }
+
+/** What a tool draws over a pane beside its picks: a vertex fold's creases and rays (`vertex/vertexOverlay`). */
+export interface FoldOverlayMarks {
+  dots: readonly FoldOverlayDot[];
+  strokes: readonly FoldOverlayStroke[];
+}
+
+type Dot = FoldOverlayDot;
+type Stroke = FoldOverlayStroke;
 
 function packDots(dots: readonly Dot[]): PointGeometry | null {
   if (dots.length === 0) return null;
@@ -236,13 +247,15 @@ export interface FoldPaneOverlayInput {
   located?: readonly (readonly [Point, Point])[];
   marks: readonly FoldMark[];
   inks: FoldOverlayInks;
+  /** The tool's own marks for this pane, under its picks: a vertex fold's creases and rays. */
+  tool?: FoldOverlayMarks | null;
 }
 
 /** The overlay for one pane. */
 export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
   const { pane, inks } = input;
-  const dots: Dot[] = [];
-  const strokes: Stroke[] = [];
+  const dots: Dot[] = [...(input.tool?.dots ?? [])];
+  const strokes: Stroke[] = [...(input.tool?.strokes ?? [])];
 
   // The marks, under the picks: each point a mark makes, where the pane shows it.
   for (const mark of input.marks) {

@@ -68,9 +68,19 @@ export type FoldStepPlayVia = 'space' | 'button' | 'replay';
  * pick can take, the layer orders one part of an imported crease pattern
  * folds to (Import CP's chooser), or a compound fold's: the ways a flap opens
  * (`opening`), the orders its completion leaves (`order`), and the layers a
- * tuck can go against (`tuck_target`).
+ * tuck can go against (`tuck_target`); a rabbit ear's or a swivel's fourth
+ * crease (`emergent`) and a rabbit ear's ridge (`ridge`).
  */
-export type FoldChoiceKind = 'axiom_root' | 'depth' | 'import_order' | 'opening' | 'order' | 'tuck_target';
+export type FoldChoiceKind =
+  | 'axiom_root'
+  | 'depth'
+  | 'import_order'
+  | 'opening'
+  | 'order'
+  | 'tuck_target'
+  // The vertex folds.
+  | 'emergent'
+  | 'ridge';
 
 /** What a change of a Fold step's layer spread did (`fold spread changed`): the Diagram's spread verbs, by name. */
 export type FoldSpreadAction =

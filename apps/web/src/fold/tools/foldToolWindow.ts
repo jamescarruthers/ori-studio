@@ -42,6 +42,7 @@ import {
   foldToolLabel,
   isFoldKind,
   isFoldLineMode,
+  isVertexTool,
   lineModeLabel,
   lineModeSteps,
   type FoldKind,
@@ -60,6 +61,12 @@ import {
   type FoldReverseWindowView,
 } from './reverse/reverseToolWindow';
 import { tuckToolWindow, type FoldTuckControls, type FoldTuckWindowView } from './tuck/tuckToolWindow';
+import {
+  vertexToolWindow,
+  type FoldVertexControls,
+  type FoldVertexWindowVerbs,
+  type FoldVertexWindowView,
+} from './vertex/vertexToolWindow';
 import {
   foldRefusalNotice,
   neededFlaps,
@@ -107,6 +114,8 @@ export interface FoldToolWindowView extends FoldToolsView {
   crimp?: FoldReverseWindowView;
   /** The tuck tool's direction, and its targets and orders while it previews. */
   tuck?: FoldTuckWindowView;
+  /** A vertex tool's direction and choices (`tools/vertex/vertexToolWindow`). */
+  vertex?: FoldVertexWindowView;
 }
 
 /** What the window can promise on this device. */
@@ -118,7 +127,10 @@ export interface FoldToolHost {
 }
 
 /** The window's calls; the store binds them. */
-export interface FoldToolWindowVerbs extends Pick<FoldRailVerbs, 'selectTool' | 'selectLineMode'>, FoldFixVerbs {
+export interface FoldToolWindowVerbs
+  extends Pick<FoldRailVerbs, 'selectTool' | 'selectLineMode'>,
+    FoldFixVerbs,
+    FoldVertexWindowVerbs {
   swapSide: () => void;
   /** Pick or unpick a flap (an index into the section's flaps). */
   toggleFlap: (flap: number) => void;
@@ -240,6 +252,8 @@ export interface FoldToolWindowModel {
   secondLine?: FoldSecondLineSelect | null;
   /** A tuck's target and order (`tools/tuck/tuckToolWindow`); absent for every other tool. */
   tuck?: FoldTuckControls | null;
+  /** A vertex fold's direction and choices (`tools/vertex/vertexToolWindow`); absent for every other tool. */
+  vertex?: FoldVertexControls;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
 }
 
@@ -494,6 +508,7 @@ export function foldToolWindow(
   if (view.tool === 'inside-reverse') return reverseToolWindow(t, view, verbs, host);
   if (view.tool === 'crimp') return crimpToolWindow(t, view, verbs, host);
   if (view.tool === 'tuck') return tuckToolWindow(t, view, verbs, host);
+  if (isVertexTool(view.tool)) return view.vertex ? vertexToolWindow(t, view, view.vertex, verbs, host) : null;
   if (!isFoldKind(view.tool)) return null;
   const kind = view.tool;
   const title = foldToolLabel(t, kind);

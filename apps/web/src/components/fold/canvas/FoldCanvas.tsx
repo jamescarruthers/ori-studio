@@ -26,9 +26,11 @@ import {
   foldPromptWords,
   foldReverseWindowView,
   foldTuckWindowView,
+  foldVertexWindowView,
   foldWindowPreview,
   sceneLayers,
 } from '../../../fold/canvas/foldCanvasModel';
+import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
 import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
@@ -160,13 +162,15 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     },
   });
 
-  // --- The tool's feedback on each pane: a crimp's first line while its second is located.
+  // --- The tool's feedback on each pane: a crimp's first line while its
+  // second is located; a vertex fold's creases on the folded one.
   const freeFrom = foldFreeLineStart(toolState);
   const crimpLines = preview.crimp?.lines ?? null;
   const located = useMemo(
     () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines),
     [toolState.tool, preview.action, crimpLines]
   );
+  const vertexMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks
@@ -179,9 +183,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             located,
             marks: view.marks,
             inks: inks.overlay,
+            tool: pane === 'folded' ? vertexMarks : null,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, toolState.picks, freeFrom, located]
+    [inks, view.scene, view.marks, toolState.picks, freeFrom, located, vertexMarks]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
@@ -196,6 +201,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const reverseView = foldReverseWindowView(toolState, preview);
   const crimpView = foldCrimpWindowView(toolState, preview);
   const tuckView = foldTuckWindowView(toolState, preview);
+  const vertexView = foldVertexWindowView(toolState, preview);
   const windowModel = foldToolWindow(
     t,
     {
@@ -209,6 +215,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       secondLineMode: toolState.secondLineMode,
       ...(crimpView ? { crimp: crimpView } : {}),
       ...(tuckView ? { tuck: tuckView } : {}),
+      ...(vertexView ? { vertex: vertexView } : {}),
     },
     { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind, tuckTarget: verbs.tuckTarget },
     { coarse, alt: altModifierLabel() }

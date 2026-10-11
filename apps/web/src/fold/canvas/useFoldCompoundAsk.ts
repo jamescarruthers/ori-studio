@@ -6,6 +6,7 @@ import type { FoldEngineCrimpOp, FoldEngineTuckOp } from '../engine/foldEngineCr
 import {
   compoundFamilyOf,
   isFoldCompoundOp,
+  type FoldCompoundAnalysis,
   type FoldCompoundAnalysisOf,
   type FoldCompoundFamily,
 } from '../engine/foldEngineCompoundWire';
@@ -41,13 +42,22 @@ export interface FoldCompoundStepAnswer {
   layers?: FoldCompoundAsk | null;
 }
 
+/** Whether an answer is the family's a tool asked of: a compound op's answer is always its own family's. */
+function ofFamily<F extends FoldCompoundFamily>(
+  answer: FoldCompoundAnalysis,
+  family: F
+): answer is FoldCompoundAnalysisOf<F> {
+  return answer.family === family;
+}
+
 /**
  * The tools' one question about a compound fold (the compound question,
  * `compoundAnalysis`, D14 tier 2), once per ask on a state: a reverse fold's
- * tip and the kinds that land, a crimp's tip and kinds, a tuck's targets. An
- * equal ask never asks again, so neither a choice the answer does not depend
- * on nor a re-render asks twice. Null until the answer for this ask is in;
- * `surface` names the tool in a failure's report.
+ * tip and the kinds that land, a crimp's tip and kinds, a tuck's targets, a
+ * vertex fold's rays. An equal ask never asks again, so neither a choice the
+ * answer does not depend on nor a re-render asks twice. Null until the answer
+ * for this ask is in; an answer of another family is dropped, as a stale one
+ * is; `surface` names the tool in a failure's report.
  */
 export function useFoldCompoundAsk<F extends FoldCompoundFamily>(
   session: FoldSessionSurface,
@@ -69,11 +79,7 @@ export function useFoldCompoundAsk<F extends FoldCompoundFamily>(
         if (!current || reply.status !== 'answered') return;
         const value = reply.value;
         if (value.status !== 'ok') setAnswer({ key, asked: null, refused: value });
-        // An op's answer is always its own family's: checked here, though a
-        // generic `F` does not narrow by it.
-        else if (value.family === family) {
-          setAnswer({ key, asked: value as unknown as FoldCompoundAnalysisOf<F>, refused: null });
-        }
+        else if (ofFamily(value, family)) setAnswer({ key, asked: value, refused: null });
       },
       (error: unknown) => reportError(error, { surface })
     );

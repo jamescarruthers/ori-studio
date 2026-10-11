@@ -38,6 +38,7 @@ import type {
 import type { FoldCompoundReport } from './foldEngineCompoundWire';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
 import type { FoldNoOpening, FoldReverseKind } from './foldEngineReverseWire';
+import type { FoldNoFlap, FoldNoPetal, FoldPetalCrease } from './foldEngineSquashWire';
 import { FOLD_SINK_REFUSAL_CODES, type FoldSinkKind } from './foldEngineSinkWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
@@ -258,7 +259,11 @@ export type FoldCompoundRefusalBody =
       readonly target: number | null;
       readonly placement: 'under' | 'over';
       readonly faces: readonly number[];
-    };
+    }
+  // The vertex folds (`foldEngineSquashWire.ts`).
+  | { readonly code: 'squash_no_flap'; readonly faces: readonly number[]; readonly cause: FoldNoFlap }
+  | { readonly code: 'petal_not_precreased'; readonly faces: readonly number[]; readonly missing: FoldPetalCrease }
+  | { readonly code: 'petal_no_flap'; readonly faces: readonly number[]; readonly cause: FoldNoPetal };
 
 /**
  * A flap: a connected part of the moving side, joined across creases with an

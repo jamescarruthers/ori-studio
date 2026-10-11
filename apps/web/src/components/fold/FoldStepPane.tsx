@@ -66,6 +66,8 @@ export interface FoldCompoundPaneRows {
   opening: 'chosen' | 'only' | null;
   /** Whether the layer order was chosen among several. */
   orderChosen: boolean;
+  /** Whose blocks they are, for their help: a vertex fold's are its motion classes; absent for a reverse fold's openings. */
+  blocksOf?: 'vertex';
 }
 
 /** The fold being made and not yet committed, as the preview landed it. */
@@ -338,10 +340,17 @@ function CompoundRows({ rows }: { rows: FoldCompoundPaneRows }) {
       <FieldRow
         label={t('panels:fold.step.blocks', 'Blocks')}
         kind="static"
-        help={t(
-          'panels:fold.step.blocksHelp',
-          'Stacks of paper that turn as one: each opening’s lower and upper part, and each flap that moves whole.'
-        )}
+        help={
+          rows.blocksOf === 'vertex'
+            ? t(
+                'panels:fold.step.vertex.blocksHelp',
+                'Pieces of paper that turn as one: each turns about the same creases, in the same order, to where it lands.'
+              )
+            : t(
+                'panels:fold.step.blocksHelp',
+                'Stacks of paper that turn as one: each opening’s lower and upper part, and each flap that moves whole.'
+              )
+        }
       >
         {rows.blocks}
       </FieldRow>

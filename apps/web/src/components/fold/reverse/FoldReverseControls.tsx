@@ -35,7 +35,7 @@ export function FoldReverseKindControl({ controls }: { controls: FoldReverseCont
   );
 }
 
-/** One listed choice the folder steps through, as a row: every compound tool's (a tuck's target too). */
+/** A listed choice the folder steps through (`choiceStepper`), as a row: every compound tool's (a tuck's target, the vertex folds' too). */
 export function FoldChoiceStepperRow({ stepper }: { stepper: FoldChoiceStepper }) {
   return (
     <FieldRow label={stepper.label} kind="static" divider={false}>

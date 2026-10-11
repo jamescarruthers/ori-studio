@@ -3,7 +3,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FoldOp } from '../document/foldSequenceDocument';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { createFoldTools, FOLD_TOOL_INITIAL, type FoldTools } from '../tools/foldToolState';
+import {
+  createFoldTools,
+  FOLD_COMPOUND_CHOICES_INITIAL,
+  FOLD_TOOL_INITIAL,
+  type FoldTools,
+} from '../tools/foldToolState';
 import { buildReverseStep } from '../tools/reverse/reverseStep';
 import { flatSquareLandmarks, flatSquareScene } from './foldCanvas.fixtures';
 import { foldPickIndex } from './foldPicking';
@@ -16,6 +21,8 @@ import {
 } from './useFoldCanvasVerbs';
 import type { FoldStateView } from './useFoldStateView';
 import type { FoldToolPreview } from './useFoldToolPreview';
+import type { FoldVertexAnalysed, FoldVertexRidge } from '../engine/foldEngineSquashWire';
+import type { FoldVertexPreview } from './vertex/useFoldVertexStep';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -40,6 +47,7 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
     reverse: null,
     crimp: null,
     tuck: null,
+    vertex: null,
     ...extra,
   };
 }
@@ -267,7 +275,7 @@ describe('a near miss’s fix', () => {
 
 describe('the canvas’s chooser', () => {
   it('shows the deepest choice with more than one answer: the order, the opening, then the root', () => {
-    const tools = { ...FOLD_TOOL_INITIAL, root: 1, compound: { reverseKind: null, opening: 5, order: 1, tuckTarget: null } };
+    const tools = { ...FOLD_TOOL_INITIAL, root: 1, compound: { ...FOLD_COMPOUND_CHOICES_INITIAL, opening: 5, order: 1 } };
     const reverse = { asked: null, kind: 'inside' as const, kinds: [], ways: [], way: null, orders: [], order: null };
     const roots = [
       { root: 0, line: { n: [1, 0] as const, d: 0.5 }, side: null },
@@ -291,7 +299,7 @@ describe('the canvas’s chooser', () => {
   });
 
   it('steps a crimp’s opening and order as a reverse fold’s, and a tuck’s layer before its order', () => {
-    const tools = { ...FOLD_TOOL_INITIAL, compound: { reverseKind: null, opening: 1, order: 0, tuckTarget: 7 } };
+    const tools = { ...FOLD_TOOL_INITIAL, compound: { ...FOLD_COMPOUND_CHOICES_INITIAL, opening: 1, order: 0, tuckTarget: 7 } };
     const way = { openings: [], stored: [] };
     const lines = { first: null, second: null };
     const crimp = { asked: null, kind: 'inside' as const, kinds: [], ways: [way, way], way, orders: [], order: null, lines };
@@ -317,5 +325,125 @@ describe('the canvas’s chooser', () => {
     });
     // One layer offered is no choice.
     expect(foldCanvasChoice(preview({ tuck: { ...tuck, targets: [target(7)] } }), tools)).toBeNull();
+  });
+});
+
+describe('a vertex fold’s choices on the canvas', () => {
+  const fan: FoldVertexAnalysed = {
+    analysis: {
+      kind: 'rabbit-ear',
+      center: [0.3, 0.3],
+      given: [
+        [-1, -1],
+        [1, 0],
+        [0, 1],
+      ],
+      candidates: [
+        [1, 1],
+        [-1, 0],
+        [0, -1],
+      ],
+      emergent: 0,
+      layers: [1, 2],
+    },
+    emergents: [true, true, false],
+    orders: null,
+    ridges: [],
+  };
+  const ridges: FoldVertexRidge[] = [
+    { direction: [1, 0], given: 1, lands: true, orders: null },
+    { direction: [-1, 0], given: null, lands: true, orders: null },
+  ];
+  const vertex = (extra: Partial<FoldVertexPreview> = {}): FoldVertexPreview => ({
+    base: fan,
+    answer: fan,
+    emergent: 1,
+    ridges: [],
+    ridge: null,
+    orders: [],
+    order: null,
+    layers: 2,
+    nearPrecrease: null,
+    ...extra,
+  });
+
+  it('steps the order, then a rabbit ear’s ridge, then a fan’s fourth ray: the deepest with more than one', () => {
+    const tools = FOLD_TOOL_INITIAL;
+    expect(foldCanvasChoice(preview({ vertex: vertex() }), tools)).toEqual({ kind: 'emergent', index: 1, count: 3 });
+    expect(foldCanvasChoice(preview({ vertex: vertex({ ridges, ridge: 1 }) }), tools)).toEqual({
+      kind: 'ridge',
+      index: 1,
+      count: 2,
+    });
+    const order = { faces: [], orders: [] };
+    const other = { faces: [], orders: [] };
+    expect(
+      foldCanvasChoice(preview({ vertex: vertex({ ridges, ridge: 1, orders: [order, other], order: other }) }), tools)
+    ).toEqual({ kind: 'order', index: 1, count: 2 });
+  });
+
+  it('binds the chooser, the fixes and a click on the folded paper to the vertex tools', () => {
+    const surface = session(vi.fn());
+    const tools = createFoldTools();
+    const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
+    const squash: FoldVertexAnalysed = {
+      analysis: {
+        kind: 'squash',
+        vertex: [0.5, 0.5],
+        hinge: { n: [0.7071, -0.7071], d: 0 },
+        spine: { n: [0.7071, 0.7071], d: 0.7071 },
+        hinge_direction: [-0.7071, -0.7071],
+        spine_direction: [-0.7071, 0.7071],
+        upper: [1],
+        lower: [2],
+        upper_crease: { n: [0, 1], d: 0.5 },
+        lower_crease: { n: [0, 1], d: 0.5 },
+        wedge: -Math.PI / 2,
+        share: 0,
+      },
+      emergents: [],
+      orders: null,
+      ridges: [],
+    };
+    const render = (shown: FoldToolPreview) =>
+      act(() =>
+        root.render(<Harness session={surface} tools={tools} preview={shown} view={{ index } as unknown as FoldStateView} />)
+      );
+    // A squash located: a click on the folded paper aims its spine from its vertex.
+    render(preview({ vertex: vertex({ base: squash, answer: squash, emergent: null, layers: 0 }) }));
+    act(() => tools.selectTool('squash'));
+    act(() => void tools.pick({ kind: 'free', pane: 'folded', scene: { x: 0.2, y: 0.4 }, sheet: [0.2, 0.4] }));
+    act(() => bound!.verbs.pick({ pane: 'folded', at: { x: 0.5, y: 1 }, pick: null }));
+    expect(tools.store.getState().compound.squashTarget).toEqual([0, 1]);
+    act(() => bound!.verbs.resetSquashTarget());
+    expect(tools.store.getState().compound.squashTarget).toBeNull();
+    // The other way: the direction turned, for a vertex fold as for a plain one.
+    act(() => bound!.verbs.foldOtherWay());
+    expect(tools.store.getState().vertexDirection).toBe('mountain');
+    act(() => bound!.verbs.vertexOtherWay());
+    expect(tools.store.getState().vertexDirection).toBe('valley');
+
+    // A fan: its fourth ray stepped and taken by a fix's direction, its ridge and layers.
+    render(preview({ vertex: vertex({ ridges, ridge: 0 }) }));
+    act(() => bound!.verbs.stepEmergent(1));
+    expect(tools.store.getState().compound.emergent).toBe(2);
+    act(() => bound!.verbs.takeEmergent([0.9, 1.1]));
+    expect(tools.store.getState().compound.emergent).toBe(0);
+    act(() => void bound!.verbs.stepChoice(1));
+    expect(tools.store.getState().compound.ridge).toBe(1);
+    act(() => bound!.verbs.stepFanLayers(-1));
+    expect(tools.store.getState().compound.fanLayers).toBe(1);
+    act(() => bound!.verbs.stepFanLayers(-1));
+    expect(tools.store.getState().compound.fanLayers).toBeNull();
+
+    // A petal fold's H refused: the Precrease tool, on the same line, or on the edge-to-edge axiom.
+    act(() => tools.selectTool('petal'));
+    act(() => tools.selectLineMode('free'));
+    for (const x of [0.2, 0.8]) act(() => void tools.pick({ kind: 'free', pane: 'folded', scene: { x, y: 0.5 }, sheet: [x, 0.5] }));
+    act(() => bound!.verbs.precreaseLine());
+    expect(tools.store.getState()).toMatchObject({ tool: 'precrease', lineMode: 'free' });
+    expect(tools.store.getState().picks).toHaveLength(2);
+    act(() => bound!.verbs.precreaseKite());
+    expect(tools.store.getState()).toMatchObject({ tool: 'precrease', lineMode: 'axiom-3', picks: [] });
   });
 });

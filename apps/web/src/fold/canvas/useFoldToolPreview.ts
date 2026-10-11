@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { trackFoldChoiceOffered, trackFoldRefused } from '../../analytics';
 import { reportError } from '../../monitoring';
-import type { FoldChoices, FoldOp } from '../document/foldSequenceDocument';
+import { isVertexOp, type FoldChoices, type FoldOp } from '../document/foldSequenceDocument';
 import type {
   FoldActionGeometry,
   FoldAnalysis,
@@ -17,12 +17,14 @@ import { foldStepInputKey } from '../session/foldSessionEngine';
 import { FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
-import { isFoldKind, isLineTool } from '../tools/foldToolCatalog';
+import { isFoldKind, isVertexTool, locatesLine } from '../tools/foldToolCatalog';
+import { lineModeInput } from '../tools/foldToolRegistry';
 import type { FoldToolState } from '../tools/foldToolState';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
 import { tuckRefusedWithFlaps, useFoldTuckStep, type FoldTuckPreview } from './useFoldTuckStep';
+import { useFoldVertexStep, type FoldVertexPreview } from './vertex/useFoldVertexStep';
 import type { FoldStateView } from './useFoldStateView';
 
 /** The step a fold tool previews and commits: the document's op and choices, keyed as the session keys them. */
@@ -65,6 +67,8 @@ export interface FoldToolPreview {
   crimp: FoldCrimpPreview | null;
   /** The tuck tool's: the layers listed to tuck against, and the target and order taken. */
   tuck: FoldTuckPreview | null;
+  /** A vertex tool's: its flap, line or fan as the engine described it, and the choices taken. */
+  vertex: FoldVertexPreview | null;
 }
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
@@ -75,10 +79,16 @@ const lineSideKey = (build: FoldStepBuild) =>
     ? `${build.sceneLine.n[0]},${build.sceneLine.n[1]},${build.sceneLine.d}:${build.movingSign}`
     : null;
 
-/** The axiom line a fold tool's picks locate, once every click is in. */
+/**
+ * The axiom line a tool's picks locate, once every click of it is in: a
+ * fold's line, or a petal fold's H, its first clicks.
+ */
 function axiomLineOf({ tool, lineMode, picks }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): FoldAxiomLine | null {
-  return isLineTool(tool) ? axiomLineOfPicks(lineMode, picks) : null;
+  return locatesLine(tool) ? axiomLineOfPicks(lineMode, picks.slice(0, lineModeInput(lineMode).steps.length)) : null;
 }
+
+/** No step built: a vertex fold builds none of a fold along a line's. */
+const UNLOCATED: FoldStepBuild = { status: 'unlocated' };
 
 /**
  * The fold the tools describe, through the session's pipeline (plan D14):
@@ -158,6 +168,9 @@ export function useFoldToolPreview(
   const tuckStep = useFoldTuckStep(session, index, tools, candidate, tools.tool === 'tuck');
   const compoundStep: FoldCompoundStepAnswer | null =
     tools.tool === 'inside-reverse' ? reverseStep : tools.tool === 'crimp' ? crimpStep : tools.tool === 'tuck' ? tuckStep : null;
+  // A vertex fold's, once the engine has described its flap, line or fan.
+  const vertexing = isVertexTool(tools.tool);
+  const vertexStep = useFoldVertexStep(session, index, tools, candidate, vertexing);
   const plainBuild = useMemo<FoldStepBuild>(() => {
     if (!index || !isFoldKind(tools.tool)) return { status: 'unlocated' };
     return buildFoldStep(
@@ -174,15 +187,18 @@ export function useFoldToolPreview(
     );
   }, [index, tools, candidate]);
   const compounding = compoundStep !== null;
-  const build = compoundStep ? compoundStep.build : plainBuild;
+  const build = compoundStep ? compoundStep.build : vertexing ? UNLOCATED : plainBuild;
+  const vertexBuilt = vertexStep.step;
   const step = useMemo<FoldToolStep | null>(() => {
     // A plain fold's override is the whole step; a compound fold's is its
-    // line, which its build already folds along.
-    const override = compounding ? null : tools.override;
-    const chosen = override ?? (build.status === 'built' ? { op: build.op, choices: build.choices } : null);
+    // line, which its build already folds along. A vertex fold's step is
+    // its own, built from the engine's answers.
+    const override = compounding || vertexing ? null : tools.override;
+    const built = build.status === 'built' ? { op: build.op, choices: build.choices } : null;
+    const chosen = override ?? (vertexing ? vertexBuilt : built);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [compounding, tools.override, build]);
+  }, [compounding, vertexing, tools.override, build, vertexBuilt]);
 
   // --- Tier 2 and 3, asked whenever the step changes; let go when there is none.
   const asked = useRef<string | null>(null);
@@ -194,8 +210,11 @@ export function useFoldToolPreview(
       return undefined;
     }
     asked.current = step.key;
-    void analyse(step.op, step.choices);
     void preview(step.op, step.choices);
+    // A vertex fold folds along no one line: there is no plain fold's
+    // analysis or picture to ask of it (its tool draws its own creases).
+    if (isVertexOp(step.op)) return undefined;
+    void analyse(step.op, step.choices);
     let current = true;
     void withCursor((engine, at) => engine.action(at, step.op, step.choices)).then(
       (answer) => {
@@ -299,6 +318,7 @@ export function useFoldToolPreview(
     (build.status === 'refused' ? build.refused : null) ??
     ownRoots?.refused ??
     compoundRefused ??
+    vertexStep.refused ??
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
 
@@ -325,5 +345,6 @@ export function useFoldToolPreview(
     reverse: reverseStep.reverse,
     crimp: crimpStep.crimp,
     tuck: tuckStep.tuck,
+    vertex: vertexStep.vertex,
   };
 }

@@ -24,9 +24,17 @@ export function foldCompoundPaneRows(report: FoldCompoundReport | undefined | nu
     // A tuck opens nothing: its block turns whole.
     case 'tuck':
       return { blocks: report.blocks.length, opening: null, orderChosen: report.stored.order !== undefined };
+    // A vertex fold's blocks are the paper that turns about the same
+    // creases; it has no opening, and its order is stored when chosen.
+    case 'vertex':
+      return {
+        blocks: report.blocks.length,
+        opening: null,
+        orderChosen: report.stored.completion !== undefined,
+        blocksOf: 'vertex',
+      };
     // The other families' rows come with their tools: until then the pane
     // shows them as it shows a plain fold.
-    case 'vertex':
     case 'sink':
       return undefined;
   }

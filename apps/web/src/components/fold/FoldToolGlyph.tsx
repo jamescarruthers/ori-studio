@@ -15,7 +15,12 @@ import {
   Shrink,
   type LucideIcon,
 } from 'lucide-react';
-import type { FoldLineModeId, FoldPlannedOpId, FoldRailItemId } from '../../fold/tools/foldToolCatalog';
+import type {
+  FoldLineModeId,
+  FoldPlannedOpId,
+  FoldRailItemId,
+  FoldVertexToolId,
+} from '../../fold/tools/foldToolCatalog';
 import { FoldKindMark } from './FoldKindMark';
 
 const SIZE = 20;
@@ -133,10 +138,6 @@ function lineModeGlyph(mode: FoldLineModeId): ReactElement {
 }
 
 const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
-  squash: Shrink,
-  petal: Flower2,
-  'rabbit-ear': Rabbit,
-  swivel: IterationCw,
   'open-sink': ArrowDownToLine,
   'closed-sink': ArrowDownToDot,
   unsink: ArrowUpFromLine,
@@ -144,10 +145,19 @@ const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
   pleat: Activity,
 };
 
+/** The vertex folds keep the icons the rail showed them by while they were planned. */
+const VERTEX_ICONS: Readonly<Record<FoldVertexToolId, LucideIcon>> = {
+  squash: Shrink,
+  petal: Flower2,
+  'rabbit-ear': Rabbit,
+  swivel: IterationCw,
+};
+
 /**
  * Every Fold rail item's icon: a fold's letter in its crease's ink; a line
  * mode's picture of what it locates; the app's own icons for the crimp and
- * the tuck, the Divide line, the model verbs and the folds still to come.
+ * the tuck, the Divide line, the model verbs, the vertex folds and the folds
+ * still to come.
  */
 export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
   switch (id) {
@@ -176,6 +186,13 @@ export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
     case 'free':
     case 'crease':
       return lineModeGlyph(id);
+    case 'squash':
+    case 'petal':
+    case 'rabbit-ear':
+    case 'swivel': {
+      const Icon = VERTEX_ICONS[id];
+      return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+    }
     default: {
       const Icon = PLANNED_ICONS[id];
       return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;

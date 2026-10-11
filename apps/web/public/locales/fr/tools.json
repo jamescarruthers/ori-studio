@@ -659,6 +659,151 @@
       "rotateHelp": "Tourner le modèle d’un quart de tour dans le sens horaire, en une étape à part.",
       "turnOverHelp": "Retourner le modèle de gauche à droite, en une étape à part."
     },
+    "vertex": {
+      "chooser": {
+        "emergentNote": "Plus d’un quatrième pli permet à ces plis de se poser à plat. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
+        "ridgeNote": "L’un ou l’autre des plis en face du papier qui reste peut se dresser en arête de l’oreille. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
+      },
+      "direction": "Sens",
+      "doesNotFit": "Ne convient pas ici",
+      "emergent": "Quatrième pli",
+      "emergentDoesNotFit": "Ce quatrième pli ne convient pas ici : passez à un autre.",
+      "fix": {
+        "emergent": "Prendre le quatrième pli qui convient",
+        "emergentNumber": "Prendre le quatrième pli {{number}}",
+        "otherWay": "Plier dans l’autre sens",
+        "precreaseKite": "Pré-plier le cerf-volant",
+        "precreaseLine": "Pré-plier d’abord cette ligne",
+        "resetTarget": "Poser le dos sur la charnière",
+        "usePrecrease": "Prendre le pré-pli"
+      },
+      "help": {
+        "petal": "Soulever la pointe inférieure d’un rabat le long d’une ligne pré-pliée pendant que ses côtés se replient.",
+        "rabbitEar": "Replier les coins d’un triangle le long de leurs bissectrices, pour qu’une pointe se dresse.",
+        "squash": "Ouvrir un rabat de deux couches et l’aplatir, son dos sur sa charnière.",
+        "swivel": "Plier le papier autour d’un point intérieur, le long de rayons choisis et d’un dernier qui le laisse à plat."
+      },
+      "layers": "Couches",
+      "layersAll_one": "Les {{count}}",
+      "layersAll_many": "Les {{count}}",
+      "layersAll_other": "Les {{count}}",
+      "layersBottom_one": "{{count}} du dessous sur {{total}}",
+      "layersBottom_many": "{{count}} du dessous sur {{total}}",
+      "layersBottom_other": "{{count}} du dessous sur {{total}}",
+      "layersTop_one": "{{count}} du dessus sur {{total}}",
+      "layersTop_many": "{{count}} du dessus sur {{total}}",
+      "layersTop_other": "{{count}} du dessus sur {{total}}",
+      "mountain": "Montagne",
+      "mountainTitle": "Montagne : le papier tourne en s’éloignant de vous",
+      "noEmergentFits": "Aucun quatrième pli ne convient à ces couches ici.",
+      "note": {
+        "petal": "Un pli pétale replie des plis déjà présents : pré-pliez d’abord les plis du cerf-volant depuis la pointe inférieure du rabat, et la ligne H entre leurs extrémités.",
+        "rabbitEar": "Les plis se rejoignent au centre du cercle inscrit du triangle : un vers chaque coin, et un quatrième qui les laisse à plat.",
+        "squash": "Un rabat s’écrase quand ses deux couches sont libres, tenues seulement le long de leur charnière, et découvertes, sans rien au-dessus du côté où il s’ouvre.",
+        "swivel": "Le point où les plis se rejoignent doit se trouver dans le papier, hors de tout pli : maintenez {{modifier}} pour le placer n’importe où.",
+        "swivelTouch": "Le point où les plis se rejoignent doit se trouver dans le papier, hors de tout pli."
+      },
+      "refusal": {
+        "blocked": {
+          "text": "Un pli entre dans du papier qui ne peut pas plier avec lui, ou du papier relie deux parties du pliage. Coupez plus de couches, ou essayez un autre quatrième pli.",
+          "title": "Du papier gêne"
+        },
+        "center": {
+          "textEar": "Les plis du triangle se rejoignent au centre de son cercle inscrit, qui tombe sur un pli ou hors des couches. Choisissez des coins qui le placent dans les couches, loin de leurs plis.",
+          "textSwivel": "Le point où les plis se rejoignent tombe sur un pli ou hors des couches. Placez-le dans les couches, loin de leurs plis.",
+          "title": "Les plis ne peuvent pas se rejoindre là"
+        },
+        "covered": {
+          "text": "D’autres couches recouvrent le rabat, ou se trouvent dedans, du côté où il s’ouvre. Écartez-les d’abord, ou écrasez-le dans l’autre sens.",
+          "title": "Le rabat est recouvert"
+        },
+        "kite": {
+          "text": "Un pli pétale replie des plis déjà présents. Pliez chaque bord latéral de la couche du dessus du rabat sur sa ligne médiane et dépliez, puis faites le pli pétale.",
+          "title": "Pré-pliez d’abord le cerf-volant"
+        },
+        "line": {
+          "text": "Un pli pétale soulève le rabat le long d’un pré-pli traversant toutes les couches en dessous. Pré-pliez cette ligne à travers toutes les couches, puis faites le pli pétale.",
+          "title": "Pré-pliez d’abord la ligne"
+        },
+        "lineNear": {
+          "text": "Un pli pétale soulève le rabat le long d’un pré-pli. Cette ligne passe juste à côté de l’un d’eux : prenez-le, ou pré-pliez d’abord cette ligne.",
+          "title": "La ligne manque le pré-pli"
+        },
+        "noFlap": {
+          "noHinge": "Le rabat ne se plie sur aucune charnière à l’une ou l’autre extrémité de son dos : rien contre quoi l’aplatir.",
+          "noSpine": "Les deux couches ici ne sont reliées par aucun pli : le rabat n’a pas de dos le long duquel s’ouvrir.",
+          "singleLayer": "Une seule couche ici. Cliquez sur un rabat de deux couches reliées par un bord plié.",
+          "title": "Aucun rabat à écraser ici",
+          "upperNotHinged": "La couche du dessus du rabat ne tient que par son dos : aplatie, son côté charnière resterait libre."
+        },
+        "noPetal": {
+          "noCorner": "Les plis du cerf-volant ne se rejoignent pas sous la ligne : aucune pointe à soulever.",
+          "noEnds": "La ligne ne croise pas les deux bords pliés du rabat. Choisissez un pré-pli qui va d’un bord du rabat à l’autre.",
+          "title": "Aucun rabat à soulever ici"
+        },
+        "notFlat": {
+          "text": "Aucun quatrième pli ne laisse ces plis à plat : deux d’entre eux coïncident, ou les écarts entre eux sont trop grands. Choisissez d’autres points.",
+          "title": "Impossible de plier à plat"
+        },
+        "notFree": {
+          "text": "Le rabat est relié à d’autre papier hors de sa charnière. Seul un rabat tenu par sa seule charnière s’ouvre à plat : dépliez d’abord ce qui le retient.",
+          "title": "Le rabat est retenu ailleurs"
+        },
+        "petalCovered": {
+          "text": "D’autres couches recouvrent le rabat du côté où il se soulève. Écartez-les d’abord, ou soulevez-le dans l’autre sens.",
+          "title": "Le rabat est recouvert"
+        },
+        "ridge": {
+          "text": "L’arête est l’un des deux plis en face du papier qui reste. Choisissez l’autre arête, ou un autre papier qui reste en place.",
+          "title": "Cette arête ne convient pas"
+        },
+        "stayer": {
+          "text": "Le papier choisi pour rester en place n’est relié à aucune partie du pliage. Choisissez du papier que les plis traversent, ou du papier qui y est relié.",
+          "title": "Quel papier reste en place ?"
+        },
+        "targetOutside": {
+          "text": "Le dos se pose entre l’endroit où il se trouve et la charnière. Cliquez sur un point dans le rabat, ou remettez-le sur la charnière.",
+          "title": "Le dos ne peut pas se poser là"
+        }
+      },
+      "reset": "Revenir à la charnière",
+      "ridge": "Arête",
+      "ridgeCorner": "Coin {{number}}",
+      "ridgeCornerTitle": "Le pli vers le coin {{number}} se dresse en arête",
+      "ridgeFourth": "Quatrième",
+      "ridgeFourthTitle": "Le quatrième pli se dresse en arête",
+      "steps": {
+        "earChoose": "Choisissez le quatrième pli, les couches et l’arête.",
+        "earFirstCorner": "Cliquez sur le premier coin du triangle.",
+        "earSecondCorner": "Cliquez sur son deuxième coin.",
+        "earThirdCorner": "Cliquez sur son troisième coin.",
+        "finish": "Choisissez les options, puis appuyez sur Entrée.",
+        "finishTouch": "Choisissez les options, puis touchez {{action}}.",
+        "petalCrease": "Cliquez sur la ligne pré-pliée H le long de laquelle le rabat se soulève.",
+        "petalDirection": "Choisissez dans quel sens le rabat se soulève.",
+        "petalFirstEnd": "Cliquez sur une extrémité de la ligne H le long de laquelle le rabat se soulève.",
+        "petalFlap": "Cliquez sur le rabat sous cette ligne.",
+        "petalSecondEnd": "Cliquez sur son autre extrémité.",
+        "pickAgain": "Appuyez sur Échap, puis choisissez à nouveau.",
+        "pickAgainTouch": "Touchez Annuler, puis choisissez à nouveau.",
+        "squashFlap": "Cliquez sur le rabat à écraser.",
+        "squashTarget": "Cliquez là où le dos doit se poser, ou laissez-le sur la ligne de charnière.",
+        "squashTargetTouch": "Touchez là où le dos doit se poser, ou laissez-le sur la ligne de charnière.",
+        "stayer": "Cliquez sur le papier qui reste en place.",
+        "swivelChoose": "Choisissez le quatrième pli et les couches.",
+        "swivelFirstRay": "Cliquez sur un point vers lequel va le premier pli.",
+        "swivelSecondRay": "Cliquez sur un point vers lequel va le deuxième pli.",
+        "swivelThirdRay": "Cliquez sur un point vers lequel va le troisième pli.",
+        "swivelVertex": "Cliquez sur le point où les plis se rejoignent."
+      },
+      "target": "Le dos se pose sur",
+      "targetHelp": "Cliquez sur le papier plié pour poser le dos hors de la charnière.",
+      "targetHelpTouch": "Touchez le papier plié pour poser le dos hors de la charnière.",
+      "targetHinge": "La ligne de charnière",
+      "targetPoint": "Le point cliqué",
+      "valley": "Vallée",
+      "valleyTitle": "Vallée : le papier tourne vers vous"
+    },
     "window": {
       "cancel": "Annuler",
       "finding": "Recherche des couches sur la ligne…",

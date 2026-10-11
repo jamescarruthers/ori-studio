@@ -2362,7 +2362,10 @@
       "spreadEarlier": "Como um passo anterior a define. Uma alteração aqui vale a partir deste passo.",
       "spreadOwn": "Definida neste passo. Os passos seguintes também a seguem.",
       "title": "Passo {{number}}",
-      "valley": "Vale"
+      "valley": "Vale",
+      "vertex": {
+        "blocksHelp": "Pedaços de papel que giram juntos: cada um gira em torno dos mesmos vincos, na mesma ordem, até onde pousa."
+      }
     },
     "toDiagram": {
       "sendPath": "Enviar passos para o Diagrama",

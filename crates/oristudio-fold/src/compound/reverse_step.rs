@@ -126,32 +126,9 @@ impl ReverseFolded {
 impl ReverseChoice {
     /// The first `cap` orders to choose from, each as one listed order per
     /// component ([`ReverseChoice::pick`]'s argument), and whether there are
-    /// more.
+    /// more ([`Completions::picks`](crate::complete::Completions::picks)).
     pub fn choices(&self, cap: usize) -> (Vec<Vec<usize>>, bool) {
-        let sizes: Vec<usize> = self
-            .completions()
-            .components()
-            .iter()
-            .map(|c| c.orders.len())
-            .collect();
-        let mut out: Vec<Vec<usize>> = vec![Vec::new()];
-        let mut more = false;
-        for &size in &sizes {
-            let mut next = Vec::with_capacity(out.len().saturating_mul(size).min(cap));
-            'grow: for choice in &out {
-                for k in 0..size {
-                    if next.len() >= cap {
-                        more = true;
-                        break 'grow;
-                    }
-                    let mut grown = choice.clone();
-                    grown.push(k);
-                    next.push(grown);
-                }
-            }
-            out = next;
-        }
-        (out, more)
+        self.completions().picks(cap)
     }
 }
 

@@ -196,6 +196,11 @@ export type FoldShortcutId =
   | 'fold.toolInsideReverse'
   | 'fold.toolCrimp'
   | 'fold.toolTuck'
+  // The vertex folds.
+  | 'fold.toolSquash'
+  | 'fold.toolPetal'
+  | 'fold.toolRabbitEar'
+  | 'fold.toolSwivel'
   | 'fold.toolDivideLine'
   | 'fold.turnOver'
   | 'fold.rotate'
@@ -792,6 +797,12 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   // to take a letter from another tool. A user binds one in Settings.
   foldShortcut('fold.toolCrimp', 'Crimp', null),
   foldShortcut('fold.toolTuck', 'Tuck', null),
+  // The vertex folds take no key by default, as the reverse fold takes none:
+  // the letters a folder would look for are the plain folds' and Swap's.
+  foldShortcut('fold.toolSquash', 'Squash Fold', null),
+  foldShortcut('fold.toolPetal', 'Petal Fold', null),
+  foldShortcut('fold.toolRabbitEar', 'Rabbit Ear', null),
+  foldShortcut('fold.toolSwivel', 'Swivel Fold', null),
   foldShortcut('fold.toolDivideLine', 'Divide Line', { key: 'd' }),
   foldShortcut('fold.turnOver', 'Turn Over', { key: 't' }),
   foldShortcut('fold.rotate', 'Rotate a Quarter Turn', { key: 'r' }),

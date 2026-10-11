@@ -104,6 +104,13 @@ impl VertexChoice {
         self.pending.completions.count()
     }
 
+    /// The first `cap` orders to choose from, each as one listed order per
+    /// component ([`VertexChoice::pick`]'s argument), and whether there are
+    /// more: what a tool's chooser steps through.
+    pub fn choices(&self, cap: usize) -> (Vec<Vec<usize>>, bool) {
+        self.pending.completions.picks(cap)
+    }
+
     /// Land the order `choice` names (one listed order per component); the
     /// report's `stored` holds what the step stores for it: the pairs it
     /// decided beyond the forced ones, by witnesses.

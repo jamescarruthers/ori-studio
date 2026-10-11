@@ -28,6 +28,7 @@ import type { ToolEngine } from '../../cp-workspace/tools/types';
 import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
 import { AXIOM_SLOTS } from '../document/foldSequenceDocument';
 import { lineModeAxiom, type FoldLineModeId, type FoldSecondLineModeId, type FoldToolId } from './foldToolCatalog';
+import { vertexToolInput } from './vertex/vertexInputs';
 
 /** How one click snaps: Edit's vocabulary, and the raw point a free line takes. */
 export type FoldStepSnap = CpStepSnap | 'free';
@@ -122,8 +123,10 @@ export function crimpInput(mode: FoldLineModeId, second: FoldSecondLineModeId): 
 }
 
 /**
- * The clicks the tool in hand collects: a fold's, its line mode's — a
- * crimp's, its two lines' — and the Divide line's, its segment.
+ * The clicks the tool in hand collects: a fold along a line, its line mode's
+ * — a crimp's, its two lines' —; a vertex fold, its own
+ * (`tools/vertex/vertexInputs`), a petal fold's beginning with its line
+ * mode's; the Divide line's, its segment.
  */
 export function toolInput(tool: FoldToolId, mode: FoldLineModeId, second: FoldSecondLineModeId = 'free'): FoldInputModel {
   switch (tool) {
@@ -135,6 +138,11 @@ export function toolInput(tool: FoldToolId, mode: FoldLineModeId, second: FoldSe
       return lineModeInput(mode);
     case 'crimp':
       return crimpInput(mode, second);
+    case 'squash':
+    case 'petal':
+    case 'rabbit-ear':
+    case 'swivel':
+      return vertexToolInput(tool, lineModeInput(mode));
     case 'divide-line':
       return DIVIDE_LINE;
   }

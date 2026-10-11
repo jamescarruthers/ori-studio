@@ -48,7 +48,7 @@ import {
   type FoldToolWindowView,
 } from '../foldToolWindow';
 import { foldRefusalNotice } from '../refusalNotice';
-import { stepper, type FoldReverseControls, type FoldReverseWindowView } from '../reverse/reverseToolWindow';
+import { choiceStepper, type FoldReverseControls, type FoldReverseWindowView } from '../reverse/reverseToolWindow';
 
 const isSecondLineMode = (id: string): id is FoldSecondLineModeId =>
   (FOLD_SECOND_LINE_MODES as readonly string[]).includes(id);
@@ -88,8 +88,8 @@ function crimpControls(
       note: kindNote(t, crimp),
       set: (kind) => verbs.setReverseKind?.(kind),
     },
-    opening: stepper(t, t('tools:fold.reverse.opening', 'Opening'), crimp.way, crimp.ways, verbs.stepOpening, readOnly),
-    order: stepper(t, t('tools:fold.reverse.order', 'Layer order'), crimp.order, crimp.orders, verbs.stepOrder, readOnly),
+    opening: choiceStepper(t, t('tools:fold.reverse.opening', 'Opening'), crimp.way, crimp.ways, verbs.stepOpening, readOnly),
+    order: choiceStepper(t, t('tools:fold.reverse.order', 'Layer order'), crimp.order, crimp.orders, verbs.stepOrder, readOnly),
   };
 }
 

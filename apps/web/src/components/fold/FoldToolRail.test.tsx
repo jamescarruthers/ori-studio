@@ -56,7 +56,10 @@ describe('FoldToolRail', () => {
       ['Model', 'true'],
       ['Planned', 'false'],
     ]);
-    expect(rail.querySelector('[aria-label="Squash fold"]')).toBeNull();
+    expect(rail.querySelector('[aria-label="Pleat"]')).toBeNull();
+    // The crimp, the tuck and the vertex folds are tools, open with the other folds.
+    expect(byRole(rail, 'button', 'Crimp').getAttribute('aria-disabled')).not.toBe('true');
+    expect(byRole(rail, 'button', 'Squash fold').getAttribute('aria-disabled')).not.toBe('true');
   });
 
   it('takes a tool, a line mode and a model verb from their buttons, and refuses a planned one', () => {
@@ -70,7 +73,7 @@ describe('FoldToolRail', () => {
     act(() => byRole(rail, 'button', 'Turn over').click());
     // The planned folds are collapsed until asked for.
     act(() => byRole(rail, 'button', 'Planned').click());
-    const planned = byRole(rail, 'button', 'Squash fold');
+    const planned = byRole(rail, 'button', 'Open sink');
     act(() => planned.click());
     // A pleat is two plain folds: listed to say so, and taken by nothing.
     const pleat = byRole(rail, 'button', 'Pleat');
@@ -117,7 +120,7 @@ describe('FoldToolPickerSheet', () => {
     const calls = verbs();
     const close = vi.fn();
     const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={foldRailGroups(t, view, calls)} close={close} />);
-    const row = byRole(sheet, 'button', 'Rabbit ear Planned: not in Ori Studio yet.');
+    const row = byRole(sheet, 'button', 'Open sink Planned: not in Ori Studio yet.');
     expect(row.getAttribute('aria-disabled')).toBe('true');
     act(() => row.click());
     expect(close).not.toHaveBeenCalled();
