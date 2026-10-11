@@ -19,7 +19,7 @@ import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
 import { isFoldKind, isSinkTool, isVertexTool, locatesLine } from '../tools/foldToolCatalog';
 import { lineModeInput } from '../tools/foldToolRegistry';
-import type { FoldToolState } from '../tools/foldToolState';
+import { foldToolInputKey, type FoldToolState } from '../tools/foldToolState';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
@@ -335,15 +335,21 @@ export function useFoldToolPreview(
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
 
-  // Each refusal shown is counted once, by the step it refused.
+  // Each refusal shown is counted once, by what the tools asked for — a
+  // vertex fold or a tuck refused before any step is built has no step to
+  // key it by — and counted again once it has gone and is shown anew: the
+  // same click after Escape is another refusal seen.
   const counted = useRef<string | null>(null);
   useEffect(() => {
-    if (!refused) return;
-    const key = `${step?.key ?? axiomKey ?? ''}:${refused.refusal.code}`;
+    if (!refused) {
+      counted.current = null;
+      return;
+    }
+    const key = `${stateKey ?? ''}|${foldToolInputKey(tools)}:${refused.refusal.code}`;
     if (counted.current === key) return;
     counted.current = key;
     trackFoldRefused(refused.refusal.code);
-  }, [refused, step?.key, axiomKey]);
+  }, [refused, stateKey, tools]);
 
   return {
     candidates,

@@ -237,6 +237,44 @@ export function vertexRefusalWords(
 }
 
 /**
+ * A vertex fold no order of its layers lands, in its tool's words: the
+ * engine checked its preconditions and found no way to stack what it folds.
+ * Pointed the other way only when the engine says that way lands (its
+ * `opposite_direction` fix).
+ */
+export function vertexNoOrderWords(
+  t: TFunction,
+  context: FoldVertexRefusalContext,
+  otherWay: boolean
+): { title: string; text: string } {
+  return {
+    title: noOrderTitle(t, context.tool),
+    text: otherWay
+      ? t(
+          'tools:fold.vertex.refusal.noOrder.otherWay',
+          'No way of stacking the layers lets it fold flat this way here. Folded the other way, it fits.'
+        )
+      : t(
+          'tools:fold.vertex.refusal.noOrder.none',
+          'No way of stacking the layers lets it fold flat here. Pick other points, or fold the layers in its way first.'
+        ),
+  };
+}
+
+function noOrderTitle(t: TFunction, tool: FoldVertexRefusalContext['tool']): string {
+  switch (tool) {
+    case 'squash':
+      return t('tools:fold.vertex.refusal.noOrder.squash', 'It cannot be squashed flat here');
+    case 'petal':
+      return t('tools:fold.vertex.refusal.noOrder.petal', 'It cannot be petal-folded here');
+    case 'rabbit-ear':
+      return t('tools:fold.vertex.refusal.noOrder.rabbitEar', 'The ear cannot fold flat here');
+    case 'swivel':
+      return t('tools:fold.vertex.refusal.noOrder.swivel', 'It cannot swivel flat here');
+  }
+}
+
+/**
  * A vertex fold's own fix as a button: the other direction, a fan's other
  * fourth ray. Null for any other fix, which the shared notice words; an
  * empty list when there is no verb to bind it to.

@@ -21,8 +21,6 @@
  */
 import type { TFunction } from 'i18next';
 import type { FoldDirection } from '../../document/foldSequenceDocument';
-import type { FoldTuckPlacement } from '../../engine/foldEngineCrimpTuckWire';
-import { flapNumbers } from '../crossSection';
 import { foldToolLabel, foldTuckLabel } from '../foldToolCatalog';
 import {
   layersSection,
@@ -36,18 +34,17 @@ import {
   type FoldToolWindowVerbs,
   type FoldToolWindowView,
 } from '../foldToolWindow';
-import { foldRefusalNotice } from '../refusalNotice';
+import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 import { choiceStepper, type FoldChoiceStepper } from '../reverse/reverseToolWindow';
 
 const TUCK_DIRECTIONS: readonly FoldDirection[] = ['valley', 'mountain'];
 
 /** What the tuck tool's window is drawn from, beside every tool's view. */
 export interface FoldTuckWindowView {
+  /** As the viewer sees it: a valley tuck goes under its target, a mountain tuck over it. */
   direction: FoldDirection;
   /** The engine has listed the layers: what takes the tuck is known. */
   known: boolean;
-  /** Under its target, or over it, in the model frame; null while unknown. */
-  placement: FoldTuckPlacement | null;
   /** How many layers are listed to tuck against, and the one taken. */
   targets: number;
   target: number;
@@ -67,9 +64,13 @@ export interface FoldTuckControls {
   note: string | null;
 }
 
-/** Under or over, as the stepper names the layer: the placement once known, else the direction's. */
+/**
+ * Under or over, as the viewer sees it: the direction's. Never the engine's
+ * placement, which is in the model frame — over, for a valley tuck on a
+ * view turned over.
+ */
 function under(tuck: FoldTuckWindowView): boolean {
-  return tuck.placement ? tuck.placement === 'under' : tuck.direction === 'valley';
+  return tuck.direction === 'valley';
 }
 
 function targetsNote(t: TFunction, tuck: FoldTuckWindowView): string | null {
@@ -140,7 +141,6 @@ export function tuckToolWindow(
     };
   }
   const title = foldTuckLabel(t, tuck.direction);
-  const numbers = flapNumbers(preview.section, preview.section?.flaps.length ?? 0);
   const controls = tuckControls(t, tuck, verbs, readOnly);
   const settings = 3 + (controls.target ? 1 : 0) + (controls.order ? 1 : 0);
   return {
@@ -175,7 +175,7 @@ export function tuckToolWindow(
           {
             kind: 'tuck',
             readOnly,
-            flapNumber: (flap) => numbers[flap] ?? flap + 1,
+            ...sectionFlapNames(preview.section),
             tuck: {
               under: under(tuck),
               targetNumber: (face) => {

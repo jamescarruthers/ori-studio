@@ -194,6 +194,7 @@ describe.skipIf(!available)('the tuck over the real bridge', () => {
         kind: 'tuck',
         readOnly: false,
         flapNumber: (flap) => flap + 1,
+        flapOf: null,
         tuck: { under: intent.under, targetNumber: (face) => (offered.includes(face) ? offered.indexOf(face) + 1 : null) },
       },
       { includeFlaps: vi.fn(), foldOtherWay: vi.fn(), pickFlap: vi.fn(), useLine: vi.fn(), tuckTarget }

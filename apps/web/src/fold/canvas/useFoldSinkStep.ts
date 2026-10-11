@@ -19,7 +19,7 @@ import { isSinkTool, type FoldSinkToolId } from '../tools/foldToolCatalog';
 import type { FoldStepBuild } from '../tools/foldStepBuilder';
 import type { FoldToolState } from '../tools/foldToolState';
 import { chosenAt } from '../tools/reverse/reverseStep';
-import { buildSinkStep, sinkOrderPicks, type FoldSinkIntent } from '../tools/sink/sinkStep';
+import { buildSinkStep, pocketsAsSeen, sinkOrderPicks, type FoldSinkIntent } from '../tools/sink/sinkStep';
 import type { FoldPickIndex } from './foldPicking';
 
 /** What the sink tools know of the sink they are previewing, beside the step. */
@@ -185,9 +185,14 @@ export function useFoldSinkStep(
   );
   const sunk = useSinkAnswer(session, stateKey, sunkAsk, askSunk, 'fold:sunk-points');
 
+  // Front to back as the viewer sees them: the chooser starts on the front pocket.
+  const flipped = index?.scene.view.flipped ?? false;
   const pockets = useMemo(
-    () => (tool === 'closed-sink' && point?.value && point.value.analysis.pockets.length > 1 ? point.value.analysis.pockets : []),
-    [tool, point]
+    () =>
+      tool === 'closed-sink' && point?.value && point.value.analysis.pockets.length > 1
+        ? pocketsAsSeen(point.value.analysis.pockets, flipped)
+        : [],
+    [tool, point, flipped]
   );
   const pocket = chosenAt(pockets, compound.pocket);
   const sunkPoint = sunk?.value?.points[0] ?? null;

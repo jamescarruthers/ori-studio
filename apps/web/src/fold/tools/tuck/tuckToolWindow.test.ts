@@ -70,7 +70,6 @@ const preview = (extra: Partial<FoldPreview> = {}): FoldPreview => ({
 const tuck = (extra: Partial<FoldTuckWindowView> = {}): FoldTuckWindowView => ({
   direction: 'valley',
   known: true,
-  placement: 'under',
   targets: 2,
   target: 0,
   faces: [1, 4],
@@ -110,7 +109,7 @@ describe('the tuck tool’s window', () => {
     // One layer over which a mountain tuck goes, two orders it leaves.
     const over = foldToolWindow(
       t,
-      view({ picks: 2, preview: preview(), tuck: tuck({ direction: 'mountain', placement: 'over', targets: 1, faces: [1], orders: 2 }) }),
+      view({ picks: 2, preview: preview(), tuck: tuck({ direction: 'mountain', targets: 1, faces: [1], orders: 2 }) }),
       calls,
       mouse
     );

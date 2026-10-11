@@ -19,6 +19,7 @@ import { foldToolKindControl, registerFoldCanvasVerbs } from '../../../fold/canv
 import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
 import {
   chooserBounds,
+  chooserKeys,
   foldChoiceNote,
   foldCrimpWindowView,
   foldFreeLineStart,
@@ -232,7 +233,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           bounds,
           index: choice.index,
           count: choice.count,
-          note: foldChoiceNote(t, choice.kind),
+          note: foldChoiceNote(t, choice.kind, chooserKeys(keyLabel, coarse)),
           onStep: (delta) => verbs.stepChoice(delta),
           onApply: () => verbs.commit(),
           onCancel: () => verbs.cancel(),
@@ -315,7 +316,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
                       ground={inks.ground}
                     />
                   )}
-                  <ToolOptionLayer option={chooser} view={camera} />
+                  {/* A phone's pane is narrow and the tool window covers its bottom: the chooser stays in view. */}
+                  <ToolOptionLayer
+                    option={chooser}
+                    view={camera}
+                    keepInView={phone ? { coveredBottom: inset?.bottom ?? 0 } : undefined}
+                  />
                 </>
               )}
               ariaLabel={t(

@@ -9,6 +9,7 @@ import type { FoldToolState } from '../../tools/foldToolState';
 import {
   fanCenterScene,
   fanLayerCount,
+  landingRidges,
   petalLine,
   vertexAskedOp,
   vertexChosenOp,
@@ -135,7 +136,8 @@ export function useFoldVertexStep(
       : 0;
   const firstKey = first?.key ?? null;
   const answerKey = again ? (second?.key ?? null) : firstKey;
-  const ridgeCount = built?.ridges.length ?? 0;
+  // A ridge the ear does not land with is no choice offered: the chooser never steps to it.
+  const ridgeCount = landingRidges(built?.ridges ?? []).length;
   const orderCount = built?.orders.length ?? 0;
   const orderKey = answerKey === null ? null : `${answerKey}:${built?.ridge ?? ''}`;
   useEffect(() => {

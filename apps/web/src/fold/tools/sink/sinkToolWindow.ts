@@ -28,7 +28,6 @@
 import type { TFunction } from 'i18next';
 import { formatOrieditaRatioNumber } from '../../../lib/oristudioCpToolSettings';
 import type { FoldSinkKind, FoldSinkRefusalCode } from '../../engine/foldEngineSinkWire';
-import { flapNumbers } from '../crossSection';
 import { foldSinkKindLabel, foldToolLabel, type FoldSinkToolId } from '../foldToolCatalog';
 import {
   layersSection,
@@ -42,7 +41,7 @@ import {
   type FoldToolWindowVerbs,
   type FoldToolWindowView,
 } from '../foldToolWindow';
-import { foldRefusalNotice, sinkRefusalTitle } from '../refusalNotice';
+import { foldRefusalNotice, sectionFlapNames, sinkRefusalTitle } from '../refusalNotice';
 import { choiceStepper, type FoldChoiceStepper, type FoldKindChoice } from '../reverse/reverseToolWindow';
 import type { FoldPocketName } from './sinkStep';
 
@@ -246,7 +245,6 @@ export function sinkToolWindow(
       footer: null,
     };
   }
-  const numbers = flapNumbers(preview.section, preview.section?.flaps.length ?? 0);
   const controls = sinkControls(t, sink, verbs, readOnly);
   const settings = 2 + (controls.kind ? 1 : 0) + (controls.pocket ? 1 : 0) + (controls.order ? 1 : 0);
   return {
@@ -271,7 +269,7 @@ export function sinkToolWindow(
       ? foldRefusalNotice(
           t,
           preview.refused,
-          { kind: 'sink', readOnly, flapNumber: (flap) => numbers[flap] ?? flap + 1 },
+          { kind: 'sink', readOnly, ...sectionFlapNames(preview.section), sink: { tool } },
           verbs
         )
       : null,

@@ -39,7 +39,7 @@ import {
   type FoldToolWindowVerbs,
   type FoldToolWindowView,
 } from '../foldToolWindow';
-import { foldRefusalNotice } from '../refusalNotice';
+import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 import { choiceStepper, type FoldChoiceStepper } from '../reverse/reverseToolWindow';
 import { vertexToolSteps } from './vertexInputs';
 
@@ -417,7 +417,8 @@ export function vertexToolWindow(
           {
             kind: 'vertex',
             readOnly,
-            flapNumber: (flap) => flap + 1,
+            // A vertex fold shows no section: no chips number its flaps.
+            ...sectionFlapNames(null),
             vertex: {
               tool,
               ...(vertex.emergentNumber ? { emergentNumber: vertex.emergentNumber } : {}),

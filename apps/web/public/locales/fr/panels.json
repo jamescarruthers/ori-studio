@@ -1618,44 +1618,378 @@
       "stepForward": "Avancer un peu"
     },
     "sentence": {
+      "behind": {
+        "petal": "Faites un pli pétale avec le rabat, vers l’arrière.",
+        "rabbitEar": "Faites une oreille de lapin avec le triangle, vers l’arrière.",
+        "squash": "Faites un pli écrasé avec le rabat, vers l’arrière.",
+        "swivel": "Faites pivoter le papier vers l’arrière autour du point par un pli pivot."
+      },
       "closedSink": "Enfoncez la pointe en enfoncement fermé : poussez-la vers l’intérieur, ses couches restant ensemble.",
       "cpJump": "Repliez le papier selon le patron de plis importé.",
-      "insideCrimp": {
-        "crease": {
-          "crease": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà."
+      "crimp": {
+        "inside": {
+          "crease": {
+            "crease": {
+              "all": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          }
         },
-        "free": {
-          "crease": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o1": {
-          "crease": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o2": {
-          "crease": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o3": {
-          "crease": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o4": {
-          "crease": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o5": {
-          "crease": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o6": {
-          "crease": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o7": {
-          "crease": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        "outside": {
+          "crease": {
+            "crease": {
+              "all": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà, seulement sur les {{count}} rabats indiqués."
+            },
+            "free": {
+              "all": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, sur toutes les couches.",
+              "depth_one": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur la couche du dessus.",
+              "depth_many": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "depth_other": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} couches du dessus.",
+              "flaps_one": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur le rabat indiqué.",
+              "flaps_many": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués.",
+              "flaps_other": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà, seulement sur les {{count}} rabats indiqués."
+            }
+          }
         }
       },
       "insideReverse": {
@@ -1944,44 +2278,6 @@
         }
       },
       "openSink": "Enfoncez la pointe en enfoncement ouvert : poussez-la vers l’intérieur en retournant chaque couche.",
-      "outsideCrimp": {
-        "crease": {
-          "crease": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "free": {
-          "crease": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o1": {
-          "crease": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o2": {
-          "crease": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o3": {
-          "crease": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o4": {
-          "crease": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o5": {
-          "crease": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o6": {
-          "crease": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        },
-        "o7": {
-          "crease": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà.",
-          "free": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
-        }
-      },
       "outsideReverse": {
         "crease": {
           "all": "Pliez toutes les couches en pli inversé extérieur le long du pli existant.",
@@ -2395,6 +2691,12 @@
       "badgeSwivel": "Pivot",
       "badgeTuck": "Rentré",
       "badgeValley": "Vallée",
+      "behind": {
+        "petal": "Pli pétale vers l’arrière",
+        "rabbitEar": "Oreille de lapin vers l’arrière",
+        "squash": "Pli écrasé vers l’arrière",
+        "swivel": "Pli pivot vers l’arrière"
+      },
       "closedSink": "Enfoncement fermé",
       "cpJump": "Importer un patron de plis",
       "crimpInside": "Crimp intérieur",

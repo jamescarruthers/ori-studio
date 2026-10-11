@@ -1565,44 +1565,306 @@
       "stepForward": "Ein Stück weiter"
     },
     "sentence": {
+      "behind": {
+        "petal": "Falte die Klappe nach hinten als Blütenblattfalte.",
+        "rabbitEar": "Falte das Dreieck nach hinten als Hasenohr.",
+        "squash": "Falte die Klappe nach hinten als Quetschfalte.",
+        "swivel": "Drehe das Papier nach hinten mit einer Drehfalte um den Punkt."
+      },
       "closedSink": "Versenke die Spitze geschlossen: Drücke sie hinein, ihre Lagen bleiben zusammen.",
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
-      "insideCrimp": {
-        "crease": {
-          "crease": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+      "crimp": {
+        "inside": {
+          "crease": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          }
         },
-        "free": {
-          "crease": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o1": {
-          "crease": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o2": {
-          "crease": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o3": {
-          "crease": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o4": {
-          "crease": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o5": {
-          "crease": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o6": {
-          "crease": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o7": {
-          "crease": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen inneren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
+        "outside": {
+          "crease": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter, nur in den {{count}} gezeigten Klappen."
+            },
+            "free": {
+              "all": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, durch alle Lagen.",
+              "depth_one": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der obersten Lage.",
+              "depth_other": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den obersten {{count}} Lagen.",
+              "flaps_one": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in der gezeigten Klappe.",
+              "flaps_other": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter, nur in den {{count}} gezeigten Klappen."
+            }
+          }
         }
       },
       "insideReverse": {
@@ -1829,44 +2091,6 @@
         }
       },
       "openSink": "Versenke die Spitze offen: Drücke sie hinein und stülpe dabei jede Lage um.",
-      "outsideCrimp": {
-        "crease": {
-          "crease": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst entlang der vorhandenen Faltlinie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "free": {
-          "crease": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst entlang der eingezeichneten Linie, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o1": {
-          "crease": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst entlang der Linie durch {{a}} und {{b}}, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o2": {
-          "crease": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o3": {
-          "crease": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o4": {
-          "crease": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf sich selbst fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o5": {
-          "crease": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst durch {{a}}, sodass {{b}} auf {{c}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o6": {
-          "crease": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst so, dass {{a}} auf {{b}} und {{c}} auf {{d}} fällt, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        },
-        "o7": {
-          "crease": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer vorhandenen Faltlinie dahinter.",
-          "free": "Falte einen äußeren Crimp, zuerst so, dass {{self}} auf sich selbst fällt und {{a}} auf {{b}} landet, dann zurück entlang einer zweiten eingezeichneten Linie dahinter."
-        }
-      },
       "outsideReverse": {
         "crease": {
           "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als äußeren Gegenbruch.",
@@ -2210,6 +2434,12 @@
       "badgeSwivel": "Drehen",
       "badgeTuck": "Einstecken",
       "badgeValley": "Tal",
+      "behind": {
+        "petal": "Blütenblattfalte nach hinten",
+        "rabbitEar": "Hasenohr nach hinten",
+        "squash": "Quetschfalte nach hinten",
+        "swivel": "Drehfalte nach hinten"
+      },
       "closedSink": "Geschlossenes Versenken",
       "cpJump": "Faltmuster importieren",
       "crimpInside": "Innerer Crimp",

@@ -8,7 +8,10 @@ vi.mock('../../analytics', () => ({
   trackFoldRefused: tracked.refused,
 }));
 
+import i18n from '../../i18n';
 import type { FoldAnalysis, FoldCrossSection, FoldFlap } from '../engine/foldEngineWire';
+import { foldToolWindow } from '../tools/foldToolWindow';
+import { foldTuckWindowView } from './foldCanvasModel';
 import type { FoldPendingAnalysis } from '../session/foldSessionState';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../tools/foldToolState';
@@ -254,19 +257,22 @@ describe('the crimp and the tuck', () => {
 
   const ORDER = (k: number) => ({ faces: [[0.1 * k, 0.1] as [number, number]], orders: [[0, 1, 1] as [number, number, 1]] });
   const target = (face: number, feasible: boolean | null) => ({ face, at: [face / 10, 0.2] as [number, number], feasible });
-  const tuckListing = (targets: ReturnType<typeof target>[]) => async (): Promise<unknown> => ({
-    status: 'ok',
-    family: 'tuck',
-    analysis: {
-      line: { n: [0, 1], d: 0.5 },
-      side: 'positive',
-      snap: { clusters: 0, angle: 0, max_shift: 0 },
-      direction: 'valley',
-      placement: 'under',
-      moving: [0],
-      targets,
-    },
-  });
+  /** A tuck's listing; `turnedOver`, as the engine answers a valley tuck on a view turned over: in the model frame. */
+  const tuckListing =
+    (targets: ReturnType<typeof target>[], turnedOver = false) =>
+    async (): Promise<unknown> => ({
+      status: 'ok',
+      family: 'tuck',
+      analysis: {
+        line: { n: [0, 1], d: 0.5 },
+        side: 'positive',
+        snap: { clusters: 0, angle: 0, max_shift: 0 },
+        direction: turnedOver ? 'mountain' : 'valley',
+        placement: turnedOver ? 'over' : 'under',
+        moving: [0],
+        targets,
+      },
+    });
   const TUCK: FoldToolState = { ...FREE_LINE, tool: 'tuck' };
 
   it('builds a crimp once its tip, its kinds and its orders are in, the first order taken and the choice counted', async () => {
@@ -347,6 +353,47 @@ describe('the crimp and the tuck', () => {
     expect(seen?.refused?.refusal.code).toBe('tuck_infeasible');
     // Its layers in, the plain fold's two flaps are offered one at a time, as the engine offers them when nothing stays.
     expect(seen?.refused?.fixes).toEqual([{ fix: 'pick_flap', flaps: FLAPS }]);
+  });
+
+  it('words a valley tuck on a view turned over as going under, though the engine places it over in its frame', async () => {
+    const window = () =>
+      foldToolWindow(
+        i18n.t.bind(i18n),
+        {
+          tool: 'tuck',
+          lineMode: 'free',
+          readOnly: null,
+          picks: 2,
+          preview: { section: null, interval: null, seed: 'all', added: [], refused: seen?.refused ?? null, landing: false },
+          tuck: foldTuckWindowView(TUCK, seen!),
+        },
+        {
+          selectTool: vi.fn(),
+          selectLineMode: vi.fn(),
+          includeFlaps: vi.fn(),
+          foldOtherWay: vi.fn(),
+          pickFlap: vi.fn(),
+          useLine: vi.fn(),
+          swapSide: vi.fn(),
+          toggleFlap: vi.fn(),
+          cancel: vi.fn(),
+          commit: vi.fn(),
+          stepTuckTarget: vi.fn(),
+        },
+        { coarse: false, alt: 'Alt' }
+      );
+    engine.compoundAnalysis.mockImplementation(tuckListing([target(3, true), target(4, true)], true));
+    await render(TUCK);
+    expect(window()?.tuck?.target?.label).toBe('Tuck under');
+    expect(window()?.tuck?.note).toBe('2 layers here take the tuck under them: the folded paper lights each.');
+
+    // None takes it: refused here, under as the viewer sees it.
+    engine.compoundAnalysis.mockImplementation(tuckListing([target(3, false)], true));
+    await render({ ...TUCK, picks: [free(0, 0.4), free(1, 0.4)] });
+    expect(seen?.refused?.refusal.code).toBe('tuck_infeasible');
+    expect(window()?.refusal?.text).toBe(
+      'No layer that stays can take the flap under it here. Fold it the other way, swap the moving side, or locate another line.'
+    );
   });
 });
 
@@ -429,5 +476,19 @@ describe('a vertex fold’s step', () => {
     expect(seen?.step).toBeNull();
     expect(seen?.refused).toMatchObject({ refusal: { code: 'point_off_paper' } });
     expect(tracked.refused).toHaveBeenCalledWith('point_off_paper');
+  });
+
+  it('counts a refusal with no step each time it is shown anew, and once while it stays', async () => {
+    const squash: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'squash', picks: [free(1.5, 0.5)] };
+    await render(squash);
+    await render({ ...squash, hoveredFlap: 1 });
+    expect(tracked.refused).toHaveBeenCalledTimes(1);
+    // Escape lets it go; the same click shows it again, and another click off the paper is another refusal.
+    await render({ ...squash, picks: [] });
+    await render(squash);
+    expect(tracked.refused).toHaveBeenCalledTimes(2);
+    await render({ ...squash, picks: [free(1.6, 0.5)] });
+    expect(tracked.refused).toHaveBeenCalledTimes(3);
+    expect(tracked.refused.mock.calls.every(([code]) => code === 'point_off_paper')).toBe(true);
   });
 });

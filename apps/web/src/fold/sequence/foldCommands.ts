@@ -51,9 +51,9 @@ export function foldCommandActionId(id: FoldCommandId): string {
   return `fold.${id}`;
 }
 
-/** The fold kind the tools have armed, and the way to arm another. */
+/** The fold kind the tools have armed — none while another tool is in hand — and the way to arm another. */
 export interface FoldKindControl {
-  kind(): FoldKind;
+  kind(): FoldKind | null;
   arm(kind: FoldKind): void;
 }
 
@@ -89,7 +89,7 @@ export function foldActionContext(
   entries: readonly FoldPathEntry[],
   at: number,
   readOnly: boolean,
-  foldKind: FoldKind
+  foldKind: FoldKind | null
 ): FoldActionContext {
   const here = entries[at];
   const tip = entries[entries.length - 1];
@@ -143,7 +143,7 @@ export function foldActionsAt(
 ): FoldAction[] {
   const session = foldSession();
   const control = kindControl;
-  const context = foldActionContext(document, entries, at, readOnly, control?.kind() ?? 'valley');
+  const context = foldActionContext(document, entries, at, readOnly, control ? control.kind() : null);
   // A turn at a step that is not the one on screen folds from it: put the reader there first.
   const fromHere = () => {
     const id = entries[at]?.id ?? null;

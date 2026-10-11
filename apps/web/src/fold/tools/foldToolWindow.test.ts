@@ -274,6 +274,22 @@ describe('foldToolWindow for the other tools', () => {
     expect(previewing?.footer?.commit.label).toBe('Outside reverse fold');
   });
 
+  it('names the flaps a refused tip can open by their chips, when the engine lists only those', () => {
+    const reverse = { kind: 'inside' as const, kinds: ['inside' as const], known: true, ways: 0, way: 0, orders: 0, order: 0 };
+    const bottom = section.flaps[1]!;
+    const refused = {
+      refusal: { code: 'reverse_no_opening' as const, faces: [2], cause: 'no_spine' as const },
+      fixes: [{ fix: 'pick_flap' as const, flaps: [bottom] }],
+    };
+    const bound = verbs();
+    const model = foldToolWindow(t, view({ tool: 'inside-reverse', preview: preview({ refused }), reverse }), bound, mouse);
+    // The chips read Flap 1 for the top flap, Flap 2 for the bottom one: the one the fix lists.
+    expect(model?.layers?.chips.map((chip) => chip.name)).toEqual(['Flap 1', 'Flap 2']);
+    expect(model?.refusal?.actions.map((action) => action.label)).toEqual(['Reverse flap 2 only']);
+    model?.refusal?.actions[0]?.run();
+    expect(bound.pickFlap).toHaveBeenCalledWith(bottom);
+  });
+
   it('offers the Divide line’s count, its exact ratio, and clearing the marks made here', () => {
     const setDivide = vi.fn();
     const clearMarks = vi.fn();

@@ -106,14 +106,31 @@ export function sinkOrderPicks(orders: FoldSinkOrders | null): number[][] {
 export type FoldPocketName = 'front' | 'back' | null;
 
 /**
+ * How many faces lie between a pocket and the viewer, who sees the model's
+ * top unless the view is turned over (`flipped`).
+ */
+function facesInFront(pocket: FoldPocket, flipped: boolean): number {
+  return flipped ? pocket.lower.length : pocket.upper.length;
+}
+
+/**
  * Each pocket's name: of two, the one with fewer faces between it and the
- * viewer is the front pocket and the other the back — the viewer sees the
- * model's top unless the view is turned over (`flipped`). Of any other
- * number, or two the viewer sees no nearer, they are numbered (null).
+ * viewer is the front pocket and the other the back. Of any other number,
+ * or two the viewer sees no nearer, they are numbered (null).
  */
 export function pocketNames(pockets: readonly FoldPocket[], flipped: boolean): FoldPocketName[] {
-  const inFront = (pocket: FoldPocket) => (flipped ? pocket.lower.length : pocket.upper.length);
+  const inFront = (pocket: FoldPocket) => facesInFront(pocket, flipped);
   const [a, b] = pockets;
   if (pockets.length !== 2 || !a || !b || inFront(a) === inFront(b)) return pockets.map(() => null);
   return inFront(a) < inFront(b) ? ['front', 'back'] : ['back', 'front'];
+}
+
+/**
+ * The pockets in the order the chooser steps through them: front to back as
+ * the viewer sees them, so a closed sink starts on the front pocket; the
+ * engine's order where the viewer sees two no nearer. What a step stores is
+ * the pocket's own sheet points, never its place here.
+ */
+export function pocketsAsSeen(pockets: readonly FoldPocket[], flipped: boolean): FoldPocket[] {
+  return [...pockets].sort((a, b) => facesInFront(a, flipped) - facesInFront(b, flipped));
 }

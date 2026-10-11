@@ -282,11 +282,24 @@
   "fold": {
     "categoryLabel": "Espaço de dobra",
     "chooser": {
-      "note": "Este axioma dá mais de uma dobra aqui. Percorra-as ou pressione Shift+← / Shift+→.",
-      "openingNote": "A aba se abre de mais de um jeito: as camadas destacadas ficam juntas. Percorra-os ou pressione Shift+← / Shift+→.",
-      "orderNote": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os ou pressione Shift+← / Shift+→.",
-      "pocketNote": "A ponta pode ser afundada em mais de um bolso entre suas camadas. Percorra-os ou pressione Shift+← / Shift+→.",
-      "targetNote": "Mais de uma camada recebe o encaixe: a mais clara é a escolhida. Percorra-as ou pressione Shift+← / Shift+→."
+      "noKeys": {
+        "emergent": "Mais de um quarto vinco deixa estes vincos planos. Percorra-os.",
+        "opening": "A aba se abre de mais de um jeito: as camadas destacadas ficam juntas. Percorra-os.",
+        "order": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os.",
+        "pocket": "A ponta pode ser afundada em mais de um bolso entre suas camadas. Percorra-os.",
+        "ridge": "Qualquer um dos dois vincos de frente para o papel que fica pode subir como a crista da orelha. Percorra-os.",
+        "root": "Este axioma dá mais de uma dobra aqui. Percorra-as.",
+        "target": "Mais de uma camada recebe o encaixe: a mais clara é a escolhida. Percorra-as."
+      },
+      "withKeys": {
+        "emergent": "Mais de um quarto vinco deixa estes vincos planos. Percorra-os ou pressione {{keys}}.",
+        "opening": "A aba se abre de mais de um jeito: as camadas destacadas ficam juntas. Percorra-os ou pressione {{keys}}.",
+        "order": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os ou pressione {{keys}}.",
+        "pocket": "A ponta pode ser afundada em mais de um bolso entre suas camadas. Percorra-os ou pressione {{keys}}.",
+        "ridge": "Qualquer um dos dois vincos de frente para o papel que fica pode subir como a crista da orelha. Percorra-os ou pressione {{keys}}.",
+        "root": "Este axioma dá mais de uma dobra aqui. Percorra-as ou pressione {{keys}}.",
+        "target": "Mais de uma camada recebe o encaixe: a mais clara é a escolhida. Percorra-as ou pressione {{keys}}."
+      }
     },
     "crimp": {
       "bothFit": "Os dois tipos de crimp cabem aqui: escolha para onde vai a ponta.",
@@ -310,6 +323,7 @@
     "fix": {
       "closedSinkInstead": "Afundamento fechado em vez disso",
       "crimpFlap": "Fazer crimp só na aba {{number}}",
+      "crimpThisFlap": "Fazer crimp só nesta aba",
       "includeFlap": "Incluir a aba {{number}}",
       "includeFlaps_one": "Incluir {{count}} aba",
       "includeFlaps_many": "Incluir as {{count}} abas",
@@ -321,15 +335,19 @@
       "outsideCrimpInstead": "Crimp externo em vez disso",
       "outsideInstead": "Dobra invertida externa em vez disso",
       "pickFlap": "Dobrar só a aba {{number}}",
+      "pickThisFlap": "Dobrar só esta aba",
       "precreaseOtherWay": "Pré-vincar no outro sentido",
       "reverseFlap": "Inverter só a aba {{number}}",
+      "reverseThisFlap": "Inverter só esta aba",
       "sinkFlap": "Afundar só a aba {{number}}",
+      "sinkThisFlap": "Afundar só esta aba",
       "slideToEdge": "Deslizar a linha até o ponto ficar na borda",
       "swapInstead": "Trocar o lado que se move",
       "tuckFlap": "Encaixar só a aba {{number}}",
       "tuckOtherWay": "Encaixar no outro sentido",
       "tuckOver": "Encaixar sobre a camada {{number}} da lista em vez disso",
       "tuckOverAnother": "Encaixar sobre a camada que cabe em vez disso",
+      "tuckThisFlap": "Encaixar só esta aba",
       "tuckUnder": "Encaixar sob a camada {{number}} da lista em vez disso",
       "tuckUnderAnother": "Encaixar sob a camada que cabe em vez disso",
       "turnToEdge": "Girar a linha até o ponto ficar na borda",
@@ -436,6 +454,10 @@
       "newer": "Esta sequência é de uma versão mais nova do Ori Studio, então abre somente para leitura."
     },
     "refusal": {
+      "budget": {
+        "text": "Descobrir como as camadas se empilham demorou demais aqui, então não se sabe se esta dobra se encaixa. Dobre menos camadas ou dobre em outro lugar.",
+        "title": "A busca ficou sem tempo"
+      },
       "choiceBroken": {
         "text": "A abertura ou a ordem das camadas que este passo guardou não se encaixa mais no papel anterior, então ele não pode ser dobrado como está guardado.",
         "title": "Uma escolha não se encaixa mais"
@@ -561,6 +583,13 @@
       "sinkNoAxis": {
         "text": "O contorno dela não segue dois lados retos, então não há linha central à qual a linha de um afundamento aberto possa ser perpendicular.",
         "title": "A ponta não tem linha central"
+      },
+      "sinkNoOrder": {
+        "none": "Nenhum jeito de empilhar as camadas deixa afundar a ponta assim aqui. Mova a linha ou escolha outra ponta.",
+        "otherSink": "Nenhum jeito de empilhar as camadas deixa afundar a ponta assim aqui. O outro tipo de afundamento se encaixa.",
+        "title": "A ponta não pode ser afundada assim aqui",
+        "unsink": "Nenhum jeito de empilhar as camadas deixa a ponta afundada voltar para fora aqui.",
+        "unsinkTitle": "A ponta não pode voltar para fora aqui"
       },
       "sinkNoPocket": {
         "text": "Nenhum espaço entre suas camadas dá a volta inteira no contorno para a extremidade entrar, então ela não pode ser afundada fechada.",
@@ -728,10 +757,6 @@
       "turnOverHelp": "Virar o modelo de um lado para o outro, como um passo próprio."
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "Mais de um quarto vinco deixa estes vincos planos. Percorra-os ou pressione Shift+← / Shift+→.",
-        "ridgeNote": "Qualquer um dos dois vincos de frente para o papel que fica pode subir como a crista da orelha. Percorra-os ou pressione Shift+← / Shift+→."
-      },
       "direction": "Sentido",
       "doesNotFit": "Não cabe aqui",
       "emergent": "Quarto vinco",
@@ -803,6 +828,14 @@
           "singleLayer": "Aqui há só uma camada. Clique numa aba de duas camadas unidas por uma borda dobrada.",
           "title": "Não há aba para achatar aqui",
           "upperNotHinged": "A camada de cima da aba está presa só pela lombada: achatada, o lado da dobradiça ficaria solto."
+        },
+        "noOrder": {
+          "none": "Nenhum jeito de empilhar as camadas deixa dobrar plano aqui. Escolha outros pontos ou afaste primeiro as camadas que estão no caminho.",
+          "otherWay": "Nenhum jeito de empilhar as camadas deixa dobrar plano neste sentido aqui. Dobrado no outro sentido, se encaixa.",
+          "petal": "Não dá para fazer a dobra pétala aqui",
+          "rabbitEar": "A orelha não fica plana aqui",
+          "squash": "Não dá para esmagar plano aqui",
+          "swivel": "A dobra giratória não fica plana aqui"
         },
         "noPetal": {
           "noCorner": "Os vincos da pipa não se encontram abaixo da linha, então não há ponta para levantar.",

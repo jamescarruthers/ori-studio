@@ -174,12 +174,21 @@ describe('foldStepSentence', () => {
     expect(foldStepSentence(t, { op: 'unknown' })).toBe('A step made with a newer Ori Studio.');
   });
 
-  it('says a crimp by its kind and both its lines, and a tuck by where the flap goes', () => {
-    expect(foldStepSentence(t, { op: 'crimp', crimp: 'inside', line: { via: 'free' }, second: 'free' })).toBe(
-      'Inside crimp along the line drawn, then back along a second line drawn beyond it.'
+  it('says a crimp by its kind, both its lines and its layers, and a tuck by where the flap goes', () => {
+    const all = { kind: 'all' } as const;
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'inside', line: { via: 'free' }, second: 'free', scope: all })).toBe(
+      'Inside crimp along the line drawn, then back along a second line drawn beyond it, through all layers.'
     );
-    expect(foldStepSentence(t, { op: 'crimp', crimp: 'outside', line: { via: 'crease' }, second: 'crease' })).toBe(
-      'Outside crimp along the existing crease, then back along an existing crease beyond it.'
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'outside', line: { via: 'crease' }, second: 'crease', scope: all })).toBe(
+      'Outside crimp along the existing crease, then back along an existing crease beyond it, through all layers.'
+    );
+    // Its layers the tip's anchor, as a reverse fold's: from the top, or the flaps shown.
+    const crimp = { op: 'crimp', crimp: 'inside', line: { via: 'free' }, second: 'free' } as const;
+    expect(foldStepSentence(t, { ...crimp, scope: { kind: 'depth', layers: 2 } })).toBe(
+      'Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top 2 layers.'
+    );
+    expect(foldStepSentence(t, { ...crimp, scope: { kind: 'flaps', flaps: 1 } })).toBe(
+      'Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the flap shown.'
     );
     // Its first line named as a reverse fold's is, the sheet's own by description; never "in half".
     const halfDiagonal: FoldSentenceLine = {
@@ -189,12 +198,12 @@ describe('foldStepSentence', () => {
       moving: [1],
       inHalf: true,
     };
-    expect(foldStepSentence(t, { op: 'crimp', crimp: 'inside', line: halfDiagonal, second: 'free' })).toBe(
-      'Inside crimp, bringing the top-right corner onto the bottom-left corner, then back along a second line drawn beyond it.'
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'inside', line: halfDiagonal, second: 'free', scope: all })).toBe(
+      'Inside crimp, bringing the top-right corner onto the bottom-left corner, then back along a second line drawn beyond it, through all layers.'
     );
     const through: FoldSentenceLine = { via: 'axiom', axiom: 1, inputs: [POINT, POINT] };
-    expect(foldStepSentence(t, { op: 'crimp', crimp: 'outside', line: through, second: 'crease' })).toBe(
-      'Outside crimp along the line joining point P and point Q, then back along an existing crease beyond it.'
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'outside', line: through, second: 'crease', scope: all })).toBe(
+      'Outside crimp along the line joining point P and point Q, then back along an existing crease beyond it, through all layers.'
     );
     expect(foldStepSentence(t, { op: 'tuck', direction: 'valley', line: { via: 'free' } })).toBe(
       'Valley fold and tuck the flap in, under the chosen layer.'

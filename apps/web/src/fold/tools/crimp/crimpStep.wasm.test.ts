@@ -189,9 +189,9 @@ describe.skipIf(!available)('the crimp over the real bridge', () => {
     // The step's picture is the preview's.
     expect(landed(calls.stepAction(folded.state)).action).toEqual(pictured);
     expect(landed(calls.stepSummary(folded.state)).summary?.diff.added.length).toBe(4);
-    // Its sentence names both lines.
+    // Its sentence names both lines, and the layers it takes.
     expect(foldStepSentence(t, foldSentenceStepOf(crimp.op, { parent: null, child: null, report: null }))).toBe(
-      'Inside crimp along the line drawn, then back along a second line drawn beyond it.'
+      'Inside crimp along the line drawn, then back along a second line drawn beyond it, through all layers.'
     );
 
     // The outside crimp lands too, as the other kind the control offers.
@@ -245,7 +245,7 @@ describe.skipIf(!available)('the crimp over the real bridge', () => {
     const notice = foldRefusalNotice(
       t,
       refused,
-      { kind: 'crimp', readOnly: false, flapNumber: (flap) => flap + 1 },
+      { kind: 'crimp', readOnly: false, flapNumber: (flap) => flap + 1, flapOf: null },
       { includeFlaps: vi.fn(), foldOtherWay: vi.fn(), pickFlap: vi.fn(), useLine: vi.fn(), otherKind }
     );
     expect(notice.title).toBe('It cannot crimp round the outside');
@@ -281,7 +281,7 @@ describe.skipIf(!available)('the crimp over the real bridge', () => {
     const notice = foldRefusalNotice(
       t,
       asked,
-      { kind: 'crimp', readOnly: false, flapNumber: (flap) => flap + 1 },
+      { kind: 'crimp', readOnly: false, flapNumber: (flap) => flap + 1, flapOf: null },
       { includeFlaps: vi.fn(), foldOtherWay: vi.fn(), pickFlap: vi.fn(), useLine: vi.fn() }
     );
     expect(notice.title).toBe('The lines meet');

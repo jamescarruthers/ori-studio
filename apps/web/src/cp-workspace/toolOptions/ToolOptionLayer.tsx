@@ -37,7 +37,7 @@ import type { CpOverlayView } from '../CreasePatternWebglCanvas';
 import { Button } from '../../components/ui/Button';
 import { IconButton } from '../../components/ui/IconButton';
 import type { CpToolOptionWindow } from './toolOptionWindow';
-import { toolOptionFrame, toolOptionHeaderOffset, type Size } from './toolOptionPlacement';
+import { toolOptionFrame, toolOptionHeaderOffset, toolOptionInView, type Size } from './toolOptionPlacement';
 import { Toolbar } from '../../components/ui/Toolbar';
 
 export interface ToolOptionLayerProps {
@@ -48,13 +48,31 @@ export interface ToolOptionLayerProps {
    * drawn a frame, and the layer renders nothing until then.
    */
   view: CpOverlayView | null;
+  /**
+   * Keep the header and the note on screen (`toolOptionInView`): for a
+   * surface too narrow to let them hang off it, such as a phone's pane, with
+   * how many px of its bottom something covers (its tool window). Absent, the
+   * header stays pinned to its frame and pans off with it.
+   */
+  keepInView?: { coveredBottom: number };
 }
 
-export function ToolOptionLayer({ option, view }: ToolOptionLayerProps) {
+/** The size of a measured element; `current` back when it has not changed, so state does not churn. */
+function measured(element: HTMLElement | null, current: Size | null): Size | null {
+  if (!element) return null;
+  const box = element.getBoundingClientRect();
+  return current && current.width === box.width && current.height === box.height
+    ? current
+    : { width: box.width, height: box.height };
+}
+
+export function ToolOptionLayer({ option, view, keepInView }: ToolOptionLayerProps) {
   const { t } = useTranslation(['tools', 'common']);
   const [layerRef, setLayerRef] = useState<HTMLDivElement | null>(null);
   const chromeRef = useRef<HTMLDivElement | null>(null);
+  const noteRef = useRef<HTMLParagraphElement | null>(null);
   const [chromeSize, setChromeSize] = useState<Size | null>(null);
+  const [noteSize, setNoteSize] = useState<Size | null>(null);
   const [viewport, setViewport] = useState<Size | null>(null);
 
   // Measured rather than assumed: the translated strings and the optional note
@@ -63,17 +81,8 @@ export function ToolOptionLayer({ option, view }: ToolOptionLayerProps) {
   // paints and the controls are never seen at the uncorrected one.
   const chromeKey = option ? `${option.note ?? ''}:${option.count}:${option.title ?? ''}` : null;
   useLayoutEffect(() => {
-    const element = chromeRef.current;
-    if (!element) {
-      setChromeSize(null);
-      return;
-    }
-    const box = element.getBoundingClientRect();
-    setChromeSize((current) =>
-      current && current.width === box.width && current.height === box.height
-        ? current
-        : { width: box.width, height: box.height }
-    );
+    setChromeSize((current) => measured(chromeRef.current, current));
+    setNoteSize((current) => measured(noteRef.current, current));
   }, [chromeKey]);
 
   // The area the controls have to stay inside. Observed rather than read during
@@ -102,8 +111,15 @@ export function ToolOptionLayer({ option, view }: ToolOptionLayerProps) {
   // belong to.
   const actionsOnly = !stepper && !option.title;
   const frame = toolOptionFrame(view, option.bounds);
-  const headerTop =
-    chromeSize && viewport ? toolOptionHeaderOffset(frame, chromeSize.height, viewport) : null;
+  const inView =
+    keepInView && chromeSize && viewport
+      ? toolOptionInView(frame, chromeSize, option.note ? noteSize : null, viewport, keepInView.coveredBottom)
+      : null;
+  const headerTop = inView
+    ? inView.headerTop
+    : chromeSize && viewport
+      ? toolOptionHeaderOffset(frame, chromeSize.height, viewport)
+      : null;
 
   return (
     <div
@@ -165,6 +181,8 @@ export function ToolOptionLayer({ option, view }: ToolOptionLayerProps) {
             // only part that varies. `-height` sits it on top of the frame,
             // `0` just inside when there is no room above.
             top: `${headerTop ?? 0}px`,
+            // Kept in view, it slides along the viewport's edge instead of leaving it.
+            ...(inView ? { right: `${-inView.headerShift}px` } : {}),
             pointerEvents: 'auto',
             // Hidden for the single frame before the measurement lands, so it
             // is never seen at the unplaced offset.
@@ -213,7 +231,22 @@ export function ToolOptionLayer({ option, view }: ToolOptionLayerProps) {
             </Button>
           </div>
         </Toolbar>
-        {option.note ? <p className="cp-tool-option__note">{option.note}</p> : null}
+        {option.note ? (
+          <p
+            ref={noteRef}
+            className="cp-tool-option__note"
+            style={
+              keepInView
+                ? inView
+                  ? { top: `${inView.noteTop}px`, right: `${-inView.noteShift}px`, marginTop: 0 }
+                  : // Not placed until it is measured, as the header is not.
+                    { visibility: 'hidden' }
+                : undefined
+            }
+          >
+            {option.note}
+          </p>
+        ) : null}
       </div>
     </div>
   );

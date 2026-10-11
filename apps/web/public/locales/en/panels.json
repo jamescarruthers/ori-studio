@@ -1565,44 +1565,306 @@
       "stepForward": "Step forward"
     },
     "sentence": {
+      "behind": {
+        "petal": "Petal-fold the flap behind.",
+        "rabbitEar": "Rabbit-ear the triangle behind.",
+        "squash": "Squash-fold the flap behind.",
+        "swivel": "Swivel-fold the paper behind, about the point."
+      },
       "closedSink": "Closed-sink the point: push its tip in, its layers kept together.",
       "cpJump": "Collapse into the imported crease pattern.",
-      "insideCrimp": {
-        "crease": {
-          "crease": "Inside crimp along the existing crease, then back along an existing crease beyond it.",
-          "free": "Inside crimp along the existing crease, then back along a second line drawn beyond it."
+      "crimp": {
+        "inside": {
+          "crease": {
+            "crease": {
+              "all": "Inside crimp along the existing crease, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp along the existing crease, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp along the existing crease, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp along the existing crease, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp along the existing crease, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp along the existing crease, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Inside crimp along the line drawn, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp along the line drawn, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp along the line drawn, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp along the line drawn, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp along the line drawn, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp along the line drawn, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          }
         },
-        "free": {
-          "crease": "Inside crimp along the line drawn, then back along an existing crease beyond it.",
-          "free": "Inside crimp along the line drawn, then back along a second line drawn beyond it."
-        },
-        "o1": {
-          "crease": "Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it.",
-          "free": "Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it."
-        },
-        "o2": {
-          "crease": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.",
-          "free": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it."
-        },
-        "o3": {
-          "crease": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.",
-          "free": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it."
-        },
-        "o4": {
-          "crease": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it.",
-          "free": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it."
-        },
-        "o5": {
-          "crease": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it.",
-          "free": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it."
-        },
-        "o6": {
-          "crease": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it.",
-          "free": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it."
-        },
-        "o7": {
-          "crease": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it.",
-          "free": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it."
+        "outside": {
+          "crease": {
+            "crease": {
+              "all": "Outside crimp along the existing crease, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp along the existing crease, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp along the existing crease, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp along the existing crease, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp along the existing crease, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp along the existing crease, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Outside crimp along the line drawn, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp along the line drawn, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp along the line drawn, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp along the line drawn, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp along the line drawn, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp along the line drawn, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, through all layers.",
+              "depth_one": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown."
+            },
+            "free": {
+              "all": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, through all layers.",
+              "depth_one": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the top layer.",
+              "depth_other": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.",
+              "flaps_one": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.",
+              "flaps_other": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown."
+            }
+          }
         }
       },
       "insideReverse": {
@@ -1829,44 +2091,6 @@
         }
       },
       "openSink": "Open-sink the point: push its tip in, turning every layer inside out.",
-      "outsideCrimp": {
-        "crease": {
-          "crease": "Outside crimp along the existing crease, then back along an existing crease beyond it.",
-          "free": "Outside crimp along the existing crease, then back along a second line drawn beyond it."
-        },
-        "free": {
-          "crease": "Outside crimp along the line drawn, then back along an existing crease beyond it.",
-          "free": "Outside crimp along the line drawn, then back along a second line drawn beyond it."
-        },
-        "o1": {
-          "crease": "Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it.",
-          "free": "Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it."
-        },
-        "o2": {
-          "crease": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.",
-          "free": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it."
-        },
-        "o3": {
-          "crease": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.",
-          "free": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it."
-        },
-        "o4": {
-          "crease": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it.",
-          "free": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it."
-        },
-        "o5": {
-          "crease": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it.",
-          "free": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it."
-        },
-        "o6": {
-          "crease": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it.",
-          "free": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it."
-        },
-        "o7": {
-          "crease": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it.",
-          "free": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it."
-        }
-      },
       "outsideReverse": {
         "crease": {
           "all": "Outside reverse fold along the existing crease, through all layers.",
@@ -2210,6 +2434,12 @@
       "badgeSwivel": "Swivel",
       "badgeTuck": "Tuck",
       "badgeValley": "Valley",
+      "behind": {
+        "petal": "Petal fold behind",
+        "rabbitEar": "Rabbit ear behind",
+        "squash": "Squash fold behind",
+        "swivel": "Swivel fold behind"
+      },
       "closedSink": "Closed sink",
       "cpJump": "Import crease pattern",
       "crimpInside": "Inside crimp",

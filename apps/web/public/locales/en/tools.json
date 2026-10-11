@@ -274,11 +274,24 @@
   "fold": {
     "categoryLabel": "Fold workspace",
     "chooser": {
-      "note": "This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.",
-      "openingNote": "The flap opens more than one way: the lit layers stay together. Step through them, or press Shift+← / Shift+→.",
-      "orderNote": "The layers can land stacked more than one way. Step through them, or press Shift+← / Shift+→.",
-      "pocketNote": "The point can sink into more than one pocket between its layers. Step through them, or press Shift+← / Shift+→.",
-      "targetNote": "More than one layer takes the tuck: the brightest is the one taken. Step through them, or press Shift+← / Shift+→."
+      "noKeys": {
+        "emergent": "More than one fourth crease lets these creases lie flat. Step through them.",
+        "opening": "The flap opens more than one way: the lit layers stay together. Step through them.",
+        "order": "The layers can land stacked more than one way. Step through them.",
+        "pocket": "The point can sink into more than one pocket between its layers. Step through them.",
+        "ridge": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them.",
+        "root": "This axiom has more than one fold here. Step through them.",
+        "target": "More than one layer takes the tuck: the brightest is the one taken. Step through them."
+      },
+      "withKeys": {
+        "emergent": "More than one fourth crease lets these creases lie flat. Step through them, or press {{keys}}.",
+        "opening": "The flap opens more than one way: the lit layers stay together. Step through them, or press {{keys}}.",
+        "order": "The layers can land stacked more than one way. Step through them, or press {{keys}}.",
+        "pocket": "The point can sink into more than one pocket between its layers. Step through them, or press {{keys}}.",
+        "ridge": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press {{keys}}.",
+        "root": "This axiom has more than one fold here. Step through them, or press {{keys}}.",
+        "target": "More than one layer takes the tuck: the brightest is the one taken. Step through them, or press {{keys}}."
+      }
     },
     "crimp": {
       "bothFit": "Both kinds of crimp fit here: choose which way the tip goes.",
@@ -301,6 +314,7 @@
     "fix": {
       "closedSinkInstead": "Closed sink instead",
       "crimpFlap": "Crimp flap {{number}} only",
+      "crimpThisFlap": "Crimp this flap only",
       "includeFlap": "Include flap {{number}}",
       "includeFlaps_one": "Include the {{count}} flap",
       "includeFlaps_other": "Include the {{count}} flaps",
@@ -311,15 +325,19 @@
       "outsideCrimpInstead": "Outside crimp instead",
       "outsideInstead": "Outside reverse fold instead",
       "pickFlap": "Fold flap {{number}} only",
+      "pickThisFlap": "Fold this flap only",
       "precreaseOtherWay": "Precrease the other way",
       "reverseFlap": "Reverse flap {{number}} only",
+      "reverseThisFlap": "Reverse this flap only",
       "sinkFlap": "Sink flap {{number}} only",
+      "sinkThisFlap": "Sink this flap only",
       "slideToEdge": "Slide the line to land the point on the edge",
       "swapInstead": "Swap the moving side",
       "tuckFlap": "Tuck flap {{number}} only",
       "tuckOtherWay": "Tuck the other way",
       "tuckOver": "Tuck over listed layer {{number}} instead",
       "tuckOverAnother": "Tuck over the layer that fits instead",
+      "tuckThisFlap": "Tuck this flap only",
       "tuckUnder": "Tuck under listed layer {{number}} instead",
       "tuckUnderAnother": "Tuck under the layer that fits instead",
       "turnToEdge": "Turn the line to land the point on the edge",
@@ -422,6 +440,10 @@
       "newer": "This sequence is from a newer Ori Studio, so it opens read-only."
     },
     "refusal": {
+      "budget": {
+        "text": "Working out how the layers stack took too long here, so it is not known whether this fold fits. Fold fewer layers, or fold it elsewhere.",
+        "title": "The search ran out of time"
+      },
       "choiceBroken": {
         "text": "The opening or the layer order this step stored no longer fits the paper before it, so it cannot be folded as it is stored.",
         "title": "A choice no longer fits"
@@ -546,6 +568,13 @@
       "sinkNoAxis": {
         "text": "Its outside does not run along two straight sides, so there is no centre line for an open sink’s line to be square to.",
         "title": "The point has no centre line"
+      },
+      "sinkNoOrder": {
+        "none": "No way of stacking the layers lets the point sink this way here. Move the line, or pick another point.",
+        "otherSink": "No way of stacking the layers lets the point sink this way here. The other kind of sink fits.",
+        "title": "The point cannot sink this way here",
+        "unsink": "No way of stacking the layers lets the sunk point come back out here.",
+        "unsinkTitle": "The point cannot come back out here"
       },
       "sinkNoPocket": {
         "text": "No gap between its layers runs the whole way round its outside for the tip to go into, so it cannot closed-sink.",
@@ -710,10 +739,6 @@
       "turnOverHelp": "Turn the model over, side to side, as a step of its own."
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "More than one fourth crease lets these creases lie flat. Step through them, or press Shift+← / Shift+→.",
-        "ridgeNote": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press Shift+← / Shift+→."
-      },
       "direction": "Direction",
       "doesNotFit": "Does not fit here",
       "emergent": "Fourth crease",
@@ -782,6 +807,14 @@
           "singleLayer": "Only one layer lies here. Click a flap of two layers joined along a folded edge.",
           "title": "No flap to squash here",
           "upperNotHinged": "The flap’s top layer is held by its spine alone: pressed flat, its hinge side would lie loose."
+        },
+        "noOrder": {
+          "none": "No way of stacking the layers lets it fold flat here. Pick other points, or fold the layers in its way first.",
+          "otherWay": "No way of stacking the layers lets it fold flat this way here. Folded the other way, it fits.",
+          "petal": "It cannot be petal-folded here",
+          "rabbitEar": "The ear cannot fold flat here",
+          "squash": "It cannot be squashed flat here",
+          "swivel": "It cannot swivel flat here"
         },
         "noPetal": {
           "noCorner": "The kite creases do not meet below the line, so there is no point to lift.",

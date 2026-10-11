@@ -192,7 +192,6 @@ describe('FoldToolWindow', () => {
     const tuck = {
       direction: 'valley' as const,
       known: true,
-      placement: 'under' as const,
       targets: 3,
       target: 1,
       faces: [2, 5, 6],

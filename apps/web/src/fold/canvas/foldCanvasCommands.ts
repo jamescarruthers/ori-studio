@@ -5,14 +5,15 @@ import type { FoldCanvasVerbs } from './useFoldCanvasVerbs';
 
 /**
  * The fold kind the menus and the step cards arm (`registerFoldKindControl`),
- * as the tools hold it: the fold in hand, or Valley while the Divide line is.
- * Arming a kind takes that fold in hand, as V, M and P do.
+ * as the tools hold it: the plain fold in hand, or none while another tool
+ * is — a compound or vertex fold, a sink, the Divide line — so no kind reads
+ * as chosen. Arming a kind takes that fold in hand, as V, M and P do.
  */
 export function foldToolKindControl(tools: FoldTools): FoldKindControl {
   return {
     kind: () => {
       const tool = tools.store.getState().tool;
-      return isFoldKind(tool) ? tool : 'valley';
+      return isFoldKind(tool) ? tool : null;
     },
     arm: (kind) => tools.selectTool(kind),
   };

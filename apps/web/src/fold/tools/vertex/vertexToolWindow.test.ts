@@ -208,6 +208,7 @@ describe('a vertex fold’s refusals', () => {
   const vertexContext = (tool: FoldVertexWindowView['tool'], extra = {}) => ({
     kind: 'vertex' as const,
     flapNumber: (flap: number) => flap + 1,
+    flapOf: null,
     readOnly: false,
     vertex: { tool, ...extra },
   });

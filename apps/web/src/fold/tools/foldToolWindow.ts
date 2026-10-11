@@ -28,7 +28,6 @@ import {
 import { FOLD_MARK_MAX_PARTS } from '../document/foldSequenceDocument';
 import type { FoldCrossSection } from '../engine/foldEngineWire';
 import {
-  flapNumbers,
   foldFlapChips,
   foldLayersSummary,
   foldSectionPicker,
@@ -72,6 +71,7 @@ import {
 import {
   foldRefusalNotice,
   neededFlaps,
+  sectionFlapNames,
   type FoldFixVerbs,
   type FoldRefused,
   type FoldRefusalNoticeModel,
@@ -539,7 +539,6 @@ export function foldToolWindow(
     };
   }
 
-  const numbers = flapNumbers(preview.section, preview.section?.flaps.length ?? 0);
   return {
     phase: 'preview',
     title,
@@ -567,7 +566,7 @@ export function foldToolWindow(
       ? foldRefusalNotice(
           t,
           preview.refused,
-          { kind, readOnly, flapNumber: (flap) => numbers[flap] ?? flap + 1 },
+          { kind, readOnly, ...sectionFlapNames(preview.section) },
           verbs
         )
       : null,

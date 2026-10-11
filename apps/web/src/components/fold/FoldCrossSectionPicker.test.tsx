@@ -240,7 +240,7 @@ describe('FoldRefusalNotice', () => {
         refusal: { code: 'layer_order' },
         fixes: [{ fix: 'include_flaps', flaps: [0] }, { fix: 'opposite_direction' }],
       },
-      { kind: 'valley', flapNumber: (flap) => flap + 1, readOnly: false },
+      { kind: 'valley', flapNumber: (flap) => flap + 1, flapOf: null, readOnly: false },
       { includeFlaps, foldOtherWay, pickFlap: vi.fn(), useLine: vi.fn() }
     );
     const view = mount(<FoldRefusalNotice notice={notice} />);

@@ -25,7 +25,7 @@ import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldSinkKind } from '../engine/foldEngineSinkWire';
 import type { FoldFlap, FoldModelPoint } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { wovenIntervalAt } from '../tools/crossSection';
+import { sameFlap, wovenIntervalAt } from '../tools/crossSection';
 import {
   isLineTool,
   isVertexTool,
@@ -37,8 +37,8 @@ import { lineModeInput, nextStep } from '../tools/foldToolRegistry';
 import { steppedTuckTarget } from '../tools/tuck/tuckStep';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
-import { foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
-import { nearestDirection, squashTargetToward } from '../tools/vertex/vertexStep';
+import { flapSeed, foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
+import { landingRidges, nearestDirection, squashTargetToward, steppedRidge } from '../tools/vertex/vertexStep';
 import { isFoldAltLatched } from './foldAltLatch';
 import { toPair, transformLine } from './foldCanvasGeometry';
 import { resolveFoldPick, topSheetPointAt, type FoldHit, type FoldHitRadii, type FoldPaneId } from './foldPicking';
@@ -209,7 +209,11 @@ function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
   if (!vertex) return null;
   const { orders, order, ridges, ridge, emergent, base } = vertex;
   if (orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
-  if (ridges.length > 1 && ridge !== null) return { kind: 'ridge', index: ridge, count: ridges.length };
+  // The ridges the ear lands with: one that does not is no choice to step to.
+  const landing = landingRidges(ridges);
+  if (landing.length > 1 && ridge !== null) {
+    return { kind: 'ridge', index: Math.max(0, landing.indexOf(ridge)), count: landing.length };
+  }
   const analysis = base?.analysis;
   const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates.length : 0;
   return candidates > 1 && emergent !== null ? { kind: 'emergent', index: emergent, count: candidates } : null;
@@ -461,14 +465,19 @@ export function useFoldCanvasVerbs(
         const analysis = live.current.preview.analysis;
         const section = live.current.preview.section;
         if (!analysis) return;
+        // The fix's flaps join what the seed picked, never replace it: the
+        // flaps picked, or — for a stack picked by depth, which a reverse
+        // fold's tip grows into whole flaps — the flaps the analysis says it named.
         const seed = state().seed;
-        const picked = seed.scope === 'flaps' ? [...seed.flaps] : [];
+        const picked: FoldFlap[] =
+          seed.scope === 'flaps'
+            ? [...seed.flaps]
+            : analysis.picked.flatMap((index) => analysis.flaps[index] ?? []);
         for (const flap of flaps) {
           const named = analysis.flaps[flap];
-          if (named) picked.push(named);
+          if (named && !picked.some((each) => sameFlap(each, named))) picked.push(named);
         }
-        const all = section?.flaps ?? analysis.flaps;
-        tools.setSeed(picked.length >= all.length ? { scope: 'all' } : { scope: 'flaps', flaps: picked });
+        tools.setSeed(flapSeed(picked, section?.flaps ?? analysis.flaps));
       },
 
       foldOtherWay: () => {
@@ -623,9 +632,12 @@ export function useFoldCanvasVerbs(
           case 'root':
             tools.stepRoot(delta, choice.count);
             break;
-          case 'ridge':
-            tools.setRidge((((choice.index + delta) % choice.count) + choice.count) % choice.count);
+          case 'ridge': {
+            const vertex = live.current.preview.vertex;
+            const next = steppedRidge(vertex?.ridges ?? [], vertex?.ridge ?? null, delta);
+            if (next !== null) tools.setRidge(next);
             break;
+          }
           case 'emergent':
             tools.stepEmergent(delta, choice.count, choice.index);
             break;

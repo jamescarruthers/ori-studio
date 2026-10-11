@@ -190,26 +190,49 @@ describe('the crimp’s sentences', () => {
   const PLAIN: Partial<Record<SentenceLine, SentenceLine>> = { o2Half: 'o2', o3Half: 'o3' };
   const SECONDS = { free: 'a second line drawn', crease: 'an existing crease' } as const;
 
-  it('holds every kind × first line × second line to one key and one pattern, naming both lines', () => {
+  it('holds every kind × first line × second line × layer scope to one key and one pattern, naming both lines', () => {
     const keys = new Set<string>();
     for (const kind of ['inside', 'outside'] as const) {
       for (const line of LINE_KEYS) {
         for (const second of ['free', 'crease'] as const) {
           const keyed = PLAIN[line] ?? line;
           const { clause, names } = LINES[keyed];
+          const base = `${KINDS[kind]}${clause}, then back along ${SECONDS[second]} beyond it`;
+          const key = `panels:fold.sentence.crimp.${kind}.${keyed}.${second}`;
+          const expectedNames = Object.fromEntries(names.map((name) => [name, NAMES[name]]));
           const { t, last } = recorder();
-          crimpSentence(t, kind, { line, names: NAMES }, second);
+          const sentence = (scope: FoldLayerScope) => crimpSentence(t, kind, { line, names: NAMES }, second, scope);
+
+          sentence({ kind: 'all' });
           expect(last(), `${kind}.${line}.${second}`).toEqual({
-            key: `panels:fold.sentence.${kind}Crimp.${keyed}.${second}`,
-            defaults: { default: `${KINDS[kind]}${clause}, then back along ${SECONDS[second]} beyond it.` },
-            values: Object.fromEntries(names.map((name) => [name, NAMES[name]])),
+            key: `${key}.all`,
+            defaults: { default: `${base}, through all layers.` },
+            values: expectedNames,
           });
-          keys.add(`${kind}.${keyed}.${second}`);
+          sentence({ kind: 'depth', layers: 2 });
+          expect(last(), `${kind}.${line}.${second}`).toEqual({
+            key: `${key}.depth`,
+            defaults: {
+              one: `${base}, crimping only the top layer.`,
+              other: `${base}, crimping only the top {{count}} layers.`,
+            },
+            values: { ...expectedNames, count: 2 },
+          });
+          sentence({ kind: 'flaps', flaps: 1 });
+          expect(last(), `${kind}.${line}.${second}`).toEqual({
+            key: `${key}.flaps`,
+            defaults: {
+              one: `${base}, crimping only the flap shown.`,
+              other: `${base}, crimping only the {{count}} flaps shown.`,
+            },
+            values: { ...expectedNames, count: 1 },
+          });
+          for (const scope of ['all', 'depth', 'flaps']) keys.add(`${kind}.${keyed}.${second}.${scope}`);
         }
       }
     }
-    // Two kinds, nine first lines (no "in half"), two second lines.
-    expect(keys.size).toBe(2 * 9 * 2);
+    // Two kinds, nine first lines (no "in half"), two second lines, three scopes.
+    expect(keys.size).toBe(2 * 9 * 2 * 3);
   });
 });
 

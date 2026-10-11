@@ -330,6 +330,23 @@ export function ridgeToFold(chosen: number | null, ridges: readonly FoldVertexRi
 }
 
 /**
+ * The ridges a rabbit ear lands with, by index into those listed: what the
+ * canvas's chooser steps through and counts — a ridge that does not land is
+ * a choice the window shows disabled, never one a key steps onto.
+ */
+export function landingRidges(ridges: readonly FoldVertexRidge[]): number[] {
+  return ridges.flatMap((ridge, k) => (ridge.lands ? [k] : []));
+}
+
+/** The ridge `delta` places from `ridge` along those that land, wrapping round; null while fewer than two land. */
+export function steppedRidge(ridges: readonly FoldVertexRidge[], ridge: number | null, delta: number): number | null {
+  const landing = landingRidges(ridges);
+  if (landing.length < 2) return null;
+  const at = Math.max(0, landing.indexOf(ridge ?? -1));
+  return landing[(((at + delta) % landing.length) + landing.length) % landing.length]!;
+}
+
+/**
  * The asked op with the fan's fourth ray `emergent` taken (an index into the
  * analysis' candidates); the op unchanged for a squash or a petal fold, or
  * when the candidate is not listed.

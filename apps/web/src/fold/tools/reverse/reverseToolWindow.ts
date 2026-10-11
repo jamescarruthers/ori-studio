@@ -23,7 +23,6 @@
  */
 import type { TFunction } from 'i18next';
 import { FOLD_REVERSE_KINDS, type FoldReverseKind } from '../../engine/foldEngineReverseWire';
-import { flapNumbers } from '../crossSection';
 import { foldReverseKindLabel, foldToolLabel } from '../foldToolCatalog';
 import {
   layersSection,
@@ -37,7 +36,7 @@ import {
   type FoldToolWindowVerbs,
   type FoldToolWindowView,
 } from '../foldToolWindow';
-import { foldRefusalNotice } from '../refusalNotice';
+import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 
 /** What the reverse tool's window is drawn from, beside every tool's view. */
 export interface FoldReverseWindowView {
@@ -203,7 +202,6 @@ export function reverseToolWindow(
     };
   }
   const title = foldReverseKindLabel(t, reverse.kind);
-  const numbers = flapNumbers(preview.section, preview.section?.flaps.length ?? 0);
   const compound = reverseControls(t, reverse, verbs, readOnly);
   const settings = 3 + (compound.opening ? 1 : 0) + (compound.order ? 1 : 0);
   return {
@@ -225,7 +223,7 @@ export function reverseToolWindow(
       ? foldRefusalNotice(
           t,
           preview.refused,
-          { kind: 'reverse', readOnly, flapNumber: (flap) => numbers[flap] ?? flap + 1 },
+          { kind: 'reverse', readOnly, ...sectionFlapNames(preview.section) },
           verbs
         )
       : null,

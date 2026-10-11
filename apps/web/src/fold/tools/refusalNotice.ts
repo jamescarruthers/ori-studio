@@ -12,12 +12,14 @@ import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
 import type { FoldNoOpening, FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldSinkKind, FoldSinkRefusalCode } from '../engine/foldEngineSinkWire';
-import type { FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
-import type { FoldKind } from './foldToolCatalog';
+import type { FoldCrossSection, FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
+import { flapNumbers, sameFlap } from './crossSection';
+import type { FoldKind, FoldSinkToolId } from './foldToolCatalog';
 import {
   vertexContextOf,
   vertexExtraActions,
   vertexFixActions,
+  vertexNoOrderWords,
   vertexRefusalWords,
   type FoldVertexFixVerbs,
   type FoldVertexRefusalContext,
@@ -66,8 +68,14 @@ export interface FoldRefusalContext {
    * `sink` (the open and closed sink and the unsink).
    */
   kind: FoldKind | 'reverse' | 'crimp' | 'tuck' | 'vertex' | 'sink';
-  /** A flap's number on screen, by its engine index (`flapNumbers`). */
+  /** A flap's number on screen, by its index into the section's flaps (`flapNumbers`). */
   flapNumber: (flap: number) => number;
+  /**
+   * Where a flap a fix names is among the section's flaps, by its faces; null
+   * when it is not there. Null itself while no section is shown: no chips
+   * number the flaps then, so a fix's flaps are numbered as it lists them.
+   */
+  flapOf: ((flap: FoldFlap) => number | null) | null;
   /** Nothing can change: the fixes are shown, but none can be taken. */
   readOnly: boolean;
   /**
@@ -77,6 +85,27 @@ export interface FoldRefusalContext {
   tuck?: { under: boolean; targetNumber: (face: number) => number | null };
   /** A vertex fold's: its tool, and what its own fixes name (`vertex/vertexRefusal`). */
   vertex?: FoldVertexRefusalContext;
+  /** A sink's: its tool, a sink or the unsink, which its words name. */
+  sink?: { tool: FoldSinkToolId };
+}
+
+/**
+ * How a window's notice numbers the flaps of the section it shows: as the
+ * chips and the picker number them, so "Flap 2" in a fix is the chip that
+ * reads Flap 2 — whichever flaps the engine listed, in whatever order.
+ */
+export function sectionFlapNames(section: FoldCrossSection | null): Pick<FoldRefusalContext, 'flapNumber' | 'flapOf'> {
+  const flaps = section?.flaps ?? [];
+  const numbers = flapNumbers(section, flaps.length);
+  return {
+    flapNumber: (flap) => numbers[flap] ?? flap + 1,
+    flapOf: section
+      ? (flap) => {
+          const at = flaps.findIndex((each) => sameFlap(each, flap));
+          return at >= 0 ? at : null;
+        }
+      : null,
+  };
 }
 
 function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext): { title: string; text: string } {
@@ -354,12 +383,15 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       };
     // The tuck's. With no layer named, the tools found none that takes it
     // (`tuckWithoutTarget`); with one, the engine found no order against it.
-    case 'tuck_infeasible':
+    // Under or over as the viewer sees it, the tuck window's: the refusal's
+    // `placement` is the model frame's, the other way round on a view turned over.
+    case 'tuck_infeasible': {
+      const under = context.tuck ? context.tuck.under : refusal.placement === 'under';
       if (refusal.target === null) {
         return {
           title: t('tools:fold.refusal.tuckNoTarget.title', 'No layer takes the tuck here'),
           text:
-            refusal.placement === 'under'
+            under
               ? t(
                   'tools:fold.refusal.tuckNoTarget.under',
                   'No layer that stays can take the flap under it here. Fold it the other way, swap the moving side, or locate another line.'
@@ -371,10 +403,9 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
         };
       }
       return {
-        title:
-          refusal.placement === 'under'
-            ? t('tools:fold.refusal.tuckInfeasible.titleUnder', 'It cannot be tucked under that layer')
-            : t('tools:fold.refusal.tuckInfeasible.titleOver', 'It cannot be tucked over that layer'),
+        title: under
+          ? t('tools:fold.refusal.tuckInfeasible.titleUnder', 'It cannot be tucked under that layer')
+          : t('tools:fold.refusal.tuckInfeasible.titleOver', 'It cannot be tucked over that layer'),
         text: refused.fixes.some((fix) => fix.fix === 'tuck_target')
           ? t(
               'tools:fold.refusal.tuckInfeasible.text',
@@ -385,6 +416,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
               'No way of stacking the layers puts the flap right against that layer. Tuck fewer flaps, or locate another line.'
             ),
       };
+    }
     // The vertex folds' (`vertex/vertexRefusal`), in their tool's words.
     case 'squash_no_flap':
     case 'squash_flap_not_free':
@@ -397,12 +429,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'fan_not_flat':
     case 'fan_ridge_not_ray':
     case 'fan_stayer_detached':
-      return (
-        vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? {
-          title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
-          text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
-        }
-      );
+      return vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? invalidWords(t);
     // The sinks'.
     case 'sink_several_points':
     case 'sink_point_open':
@@ -412,10 +439,29 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'sink_no_pocket':
     case 'unsink_not_sunk':
       return sinkWords(t, refused, refusal.code);
+    // The compound pipeline's own: no order of the layers lands. A sink and a
+    // vertex fold reach it with their preconditions met — the reverse fold,
+    // the crimp and the tuck word theirs as their own codes — so it is said
+    // in their words, pointing to the other sink or the other direction when
+    // the engine says that one lands.
+    case 'no_order':
+      if (context.vertex) {
+        return vertexNoOrderWords(t, context.vertex, refused.fixes.some((fix) => fix.fix === 'opposite_direction'));
+      }
+      if (context.kind === 'sink') return sinkNoOrderWords(t, refused, context.sink?.tool ?? null);
+      return invalidWords(t);
+    // A search that ran out: whether the fold fits is not known.
+    case 'budget_exceeded':
+      return {
+        title: t('tools:fold.refusal.budget.title', 'The search ran out of time'),
+        text: t(
+          'tools:fold.refusal.budget.text',
+          'Working out how the layers stack took too long here, so it is not known whether this fold fits. Fold fewer layers, or fold it elsewhere.'
+        ),
+      };
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
-    // With them, the compound pipeline's own: no order at all, a search that
-    // ran out, a pick that names nothing, a defect.
+    // With them, a pick that names nothing and a defect.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -442,15 +488,47 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'hinge_orientation':
     case 'folded_image':
     case 'prediction_mismatch':
-    case 'no_order':
-    case 'budget_exceeded':
     case 'no_such_choice':
     case 'internal':
-      return {
-        title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
-        text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
-      };
+      return invalidWords(t);
   }
+}
+
+/** A fold that cannot be made, with nothing more to say of why. */
+function invalidWords(t: TFunction): { title: string; text: string } {
+  return {
+    title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
+    text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
+  };
+}
+
+/**
+ * A sink whose layers no order lands, its preconditions met: the point the
+ * open or closed sink pushes in, or the unsink pulls out. The other kind of
+ * sink is pointed to only when the engine says it lands.
+ */
+function sinkNoOrderWords(t: TFunction, refused: FoldRefused, tool: FoldSinkToolId | null): { title: string; text: string } {
+  if (tool === 'unsink') {
+    return {
+      title: t('tools:fold.refusal.sinkNoOrder.unsinkTitle', 'The point cannot come back out here'),
+      text: t(
+        'tools:fold.refusal.sinkNoOrder.unsink',
+        'No way of stacking the layers lets the sunk point come back out here.'
+      ),
+    };
+  }
+  return {
+    title: t('tools:fold.refusal.sinkNoOrder.title', 'The point cannot sink this way here'),
+    text: refused.fixes.some((fix) => fix.fix === 'other_sink')
+      ? t(
+          'tools:fold.refusal.sinkNoOrder.otherSink',
+          'No way of stacking the layers lets the point sink this way here. The other kind of sink fits.'
+        )
+      : t(
+          'tools:fold.refusal.sinkNoOrder.none',
+          'No way of stacking the layers lets the point sink this way here. Move the line, or pick another point.'
+        ),
+  };
 }
 
 /** A choice a stored compound step still needs, as its chooser prompts for it. */
@@ -631,8 +709,12 @@ function otherWayLabel(t: TFunction, kind: FoldRefusalContext['kind']): string {
   }
 }
 
-/** A pick-a-flap fix's button, in the words of the fold it narrows. */
-function pickFlapLabel(t: TFunction, kind: FoldRefusalContext['kind'], number: number): string {
+/**
+ * A pick-a-flap fix's button, in the words of the fold it narrows: the flap
+ * by its number on screen, or — one the section does not show — as this flap.
+ */
+function pickFlapLabel(t: TFunction, kind: FoldRefusalContext['kind'], number: number | null): string {
+  if (number === null) return pickThisFlapLabel(t, kind);
   switch (kind) {
     case 'reverse':
       return t('tools:fold.fix.reverseFlap', 'Reverse flap {{number}} only', { number });
@@ -644,6 +726,22 @@ function pickFlapLabel(t: TFunction, kind: FoldRefusalContext['kind'], number: n
       return t('tools:fold.fix.sinkFlap', 'Sink flap {{number}} only', { number });
     default:
       return t('tools:fold.fix.pickFlap', 'Fold flap {{number}} only', { number });
+  }
+}
+
+/** A pick-a-flap fix's button for a flap no chip numbers. */
+function pickThisFlapLabel(t: TFunction, kind: FoldRefusalContext['kind']): string {
+  switch (kind) {
+    case 'reverse':
+      return t('tools:fold.fix.reverseThisFlap', 'Reverse this flap only');
+    case 'crimp':
+      return t('tools:fold.fix.crimpThisFlap', 'Crimp this flap only');
+    case 'tuck':
+      return t('tools:fold.fix.tuckThisFlap', 'Tuck this flap only');
+    case 'sink':
+      return t('tools:fold.fix.sinkThisFlap', 'Sink this flap only');
+    default:
+      return t('tools:fold.fix.pickThisFlap', 'Fold this flap only');
   }
 }
 
@@ -722,14 +820,19 @@ function fixActions(
     case 'opposite_direction':
       return [{ id: `other-way-${position}`, label: otherWayLabel(t, context.kind), run: verbs.foldOtherWay, disabled }];
     case 'pick_flap':
-      // The engine lists these flaps in its own flap order, the order the
-      // section's flaps are in, so their numbers are the chips' numbers.
-      return fix.flaps.map((flap, index) => ({
-        id: `pick-${position}-${index}`,
-        label: pickFlapLabel(t, context.kind, context.flapNumber(index)),
-        run: () => verbs.pickFlap(flap),
-        disabled,
-      }));
+      // The engine may list only some of the section's flaps — those that
+      // open, those a seed names — so each is numbered by where it is among
+      // the section's: the chip that reads the same number. With no section
+      // shown there are no chips, and the flaps are numbered as listed.
+      return fix.flaps.map((flap, index) => {
+        const at = context.flapOf ? context.flapOf(flap) : index;
+        return {
+          id: `pick-${position}-${index}`,
+          label: pickFlapLabel(t, context.kind, at === null ? null : context.flapNumber(at)),
+          run: () => verbs.pickFlap(flap),
+          disabled,
+        };
+      });
     case 'use_line':
       return [
         { id: `line-${position}`, label: lineFixLabel(t, fix, context.kind), run: () => verbs.useLine(fix), disabled },

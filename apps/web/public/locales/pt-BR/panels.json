@@ -1618,44 +1618,378 @@
       "stepForward": "Avançar um pouco"
     },
     "sentence": {
+      "behind": {
+        "petal": "Faça uma dobra pétala com a aba, por trás.",
+        "rabbitEar": "Faça uma orelha de coelho com o triângulo, por trás.",
+        "squash": "Faça uma dobra esmagada com a aba, por trás.",
+        "swivel": "Gire o papel por trás em torno do ponto com uma dobra giratória."
+      },
       "closedSink": "Afunde a ponta em afundamento fechado: empurre-a para dentro com as camadas juntas.",
       "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
-      "insideCrimp": {
-        "crease": {
-          "crease": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante."
+      "crimp": {
+        "inside": {
+          "crease": {
+            "crease": {
+              "all": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          }
         },
-        "free": {
-          "crease": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o1": {
-          "crease": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o2": {
-          "crease": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o3": {
-          "crease": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o4": {
-          "crease": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o5": {
-          "crease": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o6": {
-          "crease": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o7": {
-          "crease": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        "outside": {
+          "crease": {
+            "crease": {
+              "all": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante, só nas {{count}} abas indicadas."
+            },
+            "free": {
+              "all": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, em todas as camadas.",
+              "depth_one": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na camada de cima.",
+              "depth_many": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "depth_other": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} camadas de cima.",
+              "flaps_one": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só na aba indicada.",
+              "flaps_many": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas.",
+              "flaps_other": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante, só nas {{count}} abas indicadas."
+            }
+          }
         }
       },
       "insideReverse": {
@@ -1944,44 +2278,6 @@
         }
       },
       "openSink": "Afunde a ponta em afundamento aberto: empurre-a para dentro, virando cada camada do avesso.",
-      "outsideCrimp": {
-        "crease": {
-          "crease": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "free": {
-          "crease": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o1": {
-          "crease": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o2": {
-          "crease": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o3": {
-          "crease": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o4": {
-          "crease": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o5": {
-          "crease": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o6": {
-          "crease": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante."
-        },
-        "o7": {
-          "crease": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante.",
-          "free": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
-        }
-      },
       "outsideReverse": {
         "crease": {
           "all": "Dobre todas as camadas com uma dobra invertida externa pelo vinco existente.",
@@ -2395,6 +2691,12 @@
       "badgeSwivel": "Giro",
       "badgeTuck": "Encaixe",
       "badgeValley": "Vale",
+      "behind": {
+        "petal": "Dobra pétala por trás",
+        "rabbitEar": "Orelha de coelho por trás",
+        "squash": "Dobra esmagada por trás",
+        "swivel": "Dobra giratória por trás"
+      },
       "closedSink": "Afundamento fechado",
       "cpJump": "Importar padrão de vincos",
       "crimpInside": "Crimp interno",

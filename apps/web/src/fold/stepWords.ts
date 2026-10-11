@@ -72,7 +72,7 @@ export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
         ? t('panels:fold.words.tuckValley', 'Valley fold and tuck')
         : t('panels:fold.words.tuckMountain', 'Mountain fold and tuck');
     case 'vertex':
-      return vertexLabel(t, step.fold);
+      return vertexLabel(t, step.fold, step.direction);
     case 'sink':
       return sinkLabel(t, step.kind);
     case 'unknown':

@@ -266,11 +266,24 @@
   "fold": {
     "categoryLabel": "折叠工作区",
     "chooser": {
-      "note": "此公理在这里给出不止一种折法。逐个查看，或按 Shift+← / Shift+→。",
-      "openingNote": "翼片不止一种张开方式：高亮的层保持在一起。逐个查看，或按 Shift+← / Shift+→。",
-      "orderNote": "这些层不止一种叠放方式。逐个查看，或按 Shift+← / Shift+→。",
-      "pocketNote": "这个角可以沉入层间不止一个夹层。逐个查看，或按 Shift+← / Shift+→。",
-      "targetNote": "不止一个层可以接受塞入：最亮的那层就是选中的。逐个查看，或按 Shift+← / Shift+→。"
+      "noKeys": {
+        "emergent": "不止一条第四折痕能让这些折痕放平。逐个查看。",
+        "opening": "翼片不止一种张开方式：高亮的层保持在一起。逐个查看。",
+        "order": "这些层不止一种叠放方式。逐个查看。",
+        "pocket": "这个角可以沉入层间不止一个夹层。逐个查看。",
+        "ridge": "与不动纸面相对的两条折痕都可以立起作为耳朵的脊线。逐个查看。",
+        "root": "此公理在这里给出不止一种折法。逐个查看。",
+        "target": "不止一个层可以接受塞入：最亮的那层就是选中的。逐个查看。"
+      },
+      "withKeys": {
+        "emergent": "不止一条第四折痕能让这些折痕放平。逐个查看，或按 {{keys}}。",
+        "opening": "翼片不止一种张开方式：高亮的层保持在一起。逐个查看，或按 {{keys}}。",
+        "order": "这些层不止一种叠放方式。逐个查看，或按 {{keys}}。",
+        "pocket": "这个角可以沉入层间不止一个夹层。逐个查看，或按 {{keys}}。",
+        "ridge": "与不动纸面相对的两条折痕都可以立起作为耳朵的脊线。逐个查看，或按 {{keys}}。",
+        "root": "此公理在这里给出不止一种折法。逐个查看，或按 {{keys}}。",
+        "target": "不止一个层可以接受塞入：最亮的那层就是选中的。逐个查看，或按 {{keys}}。"
+      }
     },
     "crimp": {
       "bothFit": "两种压褶都可以：请选择尖端的朝向。",
@@ -292,6 +305,7 @@
     "fix": {
       "closedSinkInstead": "改为闭合沉折",
       "crimpFlap": "只压褶翼片 {{number}}",
+      "crimpThisFlap": "只压褶这个翼片",
       "includeFlap": "包含翼片 {{number}}",
       "includeFlaps_other": "包含这 {{count}} 个翼片",
       "insideCrimpInstead": "改为内翻阶梯折",
@@ -301,15 +315,19 @@
       "outsideCrimpInstead": "改为外翻阶梯折",
       "outsideInstead": "改为外翻折",
       "pickFlap": "只折翼片 {{number}}",
+      "pickThisFlap": "只折这个翼片",
       "precreaseOtherWay": "向另一方向预折",
       "reverseFlap": "只翻折翼片 {{number}}",
+      "reverseThisFlap": "只翻折这个翼片",
       "sinkFlap": "只沉折翼片 {{number}}",
+      "sinkThisFlap": "只沉折这个翼片",
       "slideToEdge": "平移折线，让该点正好落在边上",
       "swapInstead": "交换移动的一侧",
       "tuckFlap": "只塞入翼片 {{number}}",
       "tuckOtherWay": "朝另一方向塞入",
       "tuckOver": "改为塞到列出的第 {{number}} 层上面",
       "tuckOverAnother": "改为塞到合适的层上面",
+      "tuckThisFlap": "只塞入这个翼片",
       "tuckUnder": "改为塞到列出的第 {{number}} 层下面",
       "tuckUnderAnother": "改为塞到合适的层下面",
       "turnToEdge": "转动折线，让该点正好落在边上",
@@ -408,6 +426,10 @@
       "newer": "此序列来自更新版本的 Ori Studio，因此以只读方式打开。"
     },
     "refusal": {
+      "budget": {
+        "text": "在这里求解各层如何叠放耗时过长，因此无法确定这次折叠是否可行。请折更少的层，或换个位置折。",
+        "title": "搜索超时"
+      },
       "choiceBroken": {
         "text": "此步骤保存的张开方式或层序已与之前的纸不再吻合，因此无法按保存的样子折叠。",
         "title": "某个选择已不再吻合"
@@ -531,6 +553,13 @@
       "sinkNoAxis": {
         "text": "它的外缘不是沿两条直边延伸，因此没有可供开放沉折的线与之垂直的中线。",
         "title": "角没有中线"
+      },
+      "sinkNoOrder": {
+        "none": "无论各层如何叠放，这里都无法这样沉入这个角。请移动折线，或选择另一个角。",
+        "otherSink": "无论各层如何叠放，这里都无法这样沉入这个角。另一种沉折可行。",
+        "title": "这里无法这样沉入这个角",
+        "unsink": "无论各层如何叠放，这里都无法把沉入的角拉回来。",
+        "unsinkTitle": "这里无法把角拉出来"
       },
       "sinkNoPocket": {
         "text": "层间没有绕外缘一整圈、能让尖端进入的空隙，因此无法闭合沉折。",
@@ -692,10 +721,6 @@
       "turnOverHelp": "将模型左右翻面，作为单独的一步。"
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "不止一条第四折痕能让这些折痕放平。逐个查看，或按 Shift+← / Shift+→。",
-        "ridgeNote": "与不动纸面相对的两条折痕都可以立起作为耳朵的脊线。逐个查看，或按 Shift+← / Shift+→。"
-      },
       "direction": "方向",
       "doesNotFit": "此处不适用",
       "emergent": "第四折痕",
@@ -761,6 +786,14 @@
           "singleLayer": "这里只有一层。请单击一个由折边相连的两层翼片。",
           "title": "这里没有可压平的翼片",
           "upperNotHinged": "翼片最上层只靠脊相连：压平后，它的铰链一侧会松开。"
+        },
+        "noOrder": {
+          "none": "无论各层如何叠放，这里都无法折平。请选择其他点，或先把挡路的层折开。",
+          "otherWay": "无论各层如何叠放，这里都无法朝这个方向折平。反向折则可行。",
+          "petal": "这里无法做花瓣折",
+          "rabbitEar": "这里无法把兔耳折平",
+          "squash": "这里无法压平",
+          "swivel": "这里无法把旋转折放平"
         },
         "noPetal": {
           "noCorner": "风筝形折痕没有在这条线下方相交，因此没有可抬起的尖。",

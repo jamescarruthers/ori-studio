@@ -1618,44 +1618,378 @@
       "stepForward": "Avanzar un poco"
     },
     "sentence": {
+      "behind": {
+        "petal": "Haz un pliegue de pétalo con la solapa por detrás.",
+        "rabbitEar": "Haz una oreja de conejo con el triángulo por detrás.",
+        "squash": "Haz un pliegue aplastado con la solapa por detrás.",
+        "swivel": "Haz girar el papel por detrás alrededor del punto con un pliegue giratorio."
+      },
       "closedSink": "Hunde la punta en hundido cerrado: empújala hacia dentro con sus capas juntas.",
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
-      "insideCrimp": {
-        "crease": {
-          "crease": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá."
+      "crimp": {
+        "inside": {
+          "crease": {
+            "crease": {
+              "all": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          }
         },
-        "free": {
-          "crease": "Haz un crimp interior por la línea marcada, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o1": {
-          "crease": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o2": {
-          "crease": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o3": {
-          "crease": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o4": {
-          "crease": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o5": {
-          "crease": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o6": {
-          "crease": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o7": {
-          "crease": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp interior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
+        "outside": {
+          "crease": {
+            "crease": {
+              "all": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "free": {
+            "crease": {
+              "all": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o1": {
+            "crease": {
+              "all": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o2": {
+            "crease": {
+              "all": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o3": {
+            "crease": {
+              "all": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o4": {
+            "crease": {
+              "all": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o5": {
+            "crease": {
+              "all": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o6": {
+            "crease": {
+              "all": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          },
+          "o7": {
+            "crease": {
+              "all": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá, solo en las {{count}} solapas indicadas."
+            },
+            "free": {
+              "all": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, en todas las capas.",
+              "depth_one": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la capa de arriba.",
+              "depth_many": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "depth_other": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} capas de arriba.",
+              "flaps_one": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en la solapa indicada.",
+              "flaps_many": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas.",
+              "flaps_other": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá, solo en las {{count}} solapas indicadas."
+            }
+          }
         }
       },
       "insideReverse": {
@@ -1944,44 +2278,6 @@
         }
       },
       "openSink": "Hunde la punta en hundido abierto: empújala hacia dentro dando la vuelta a cada capa.",
-      "outsideCrimp": {
-        "crease": {
-          "crease": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior por el pliegue existente, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "free": {
-          "crease": "Haz un crimp exterior por la línea marcada, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior por la línea marcada, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o1": {
-          "crease": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior por la línea que pasa por {{a}} y {{b}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o2": {
-          "crease": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o3": {
-          "crease": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior llevando {{a}} sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o4": {
-          "crease": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior por {{a}}, de modo que {{b}} caiga sobre su propia línea, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o5": {
-          "crease": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior por {{a}}, llevando {{b}} sobre {{c}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o6": {
-          "crease": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior llevando {{a}} sobre {{b}} y {{c}} sobre {{d}}, y luego de vuelta por una segunda línea marcada más allá."
-        },
-        "o7": {
-          "crease": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por un pliegue existente más allá.",
-          "free": "Haz un crimp exterior de modo que {{self}} caiga sobre su propia línea y {{a}} caiga sobre {{b}}, y luego de vuelta por una segunda línea marcada más allá."
-        }
-      },
       "outsideReverse": {
         "crease": {
           "all": "Dobla todas las capas con un pliegue invertido exterior por el pliegue existente.",
@@ -2395,6 +2691,12 @@
       "badgeSwivel": "Giro",
       "badgeTuck": "Remeter",
       "badgeValley": "Valle",
+      "behind": {
+        "petal": "Pliegue de pétalo por detrás",
+        "rabbitEar": "Oreja de conejo por detrás",
+        "squash": "Pliegue aplastado por detrás",
+        "swivel": "Pliegue giratorio por detrás"
+      },
       "closedSink": "Hundido cerrado",
       "cpJump": "Importar patrón de pliegues",
       "crimpInside": "Crimp interior",

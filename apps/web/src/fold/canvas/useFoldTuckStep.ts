@@ -15,9 +15,12 @@ import { useFoldCompoundAsk, useFoldCompoundOrders, type FoldCompoundAsk } from 
 export interface FoldTuckPreview {
   /** What the engine listed for the line, side and seed; null until it is in. */
   asked: FoldTuckAnalysis | null;
+  /**
+   * As the viewer sees it: a valley tuck goes under its target, a mountain
+   * one over it. What the window says (the engine's `placement` is the
+   * model frame's, the other way round on a view turned over).
+   */
   direction: FoldDirection;
-  /** Valley tucks go under their target, mountain ones over it, in the model frame. */
-  placement: FoldTuckPlacement | null;
   /** The layers offered to tuck against (`tuckTargetsOf`), and the one taken. */
   targets: readonly FoldTuckTarget[];
   target: FoldTuckTarget | null;
@@ -182,7 +185,7 @@ export function useFoldTuckStep(
   if (!enabled) return { build: { status: 'unlocated' }, tuck: null, refused: null, layers: null };
   return {
     build,
-    tuck: { asked, direction, placement, targets, target, orders, order },
+    tuck: { asked, direction, targets, target, orders, order },
     refused: refusedListing ?? untargeted,
     layers,
   };
