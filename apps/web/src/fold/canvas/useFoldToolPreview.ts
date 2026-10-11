@@ -17,9 +17,10 @@ import { foldStepInputKey } from '../session/foldSessionEngine';
 import { FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
-import { isFoldKind, isLineTool } from '../tools/foldToolCatalog';
+import { isFoldKind, isLineTool, isSinkTool } from '../tools/foldToolCatalog';
 import type { FoldToolState } from '../tools/foldToolState';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
+import { useFoldSinkStep, type FoldSinkPreview } from './useFoldSinkStep';
 import type { FoldStateView } from './useFoldStateView';
 
 /** The step a fold tool previews and commits: the document's op and choices, keyed as the session keys them. */
@@ -58,6 +59,8 @@ export interface FoldToolPreview {
   landing: boolean;
   /** The reverse tool's: the tip as the engine described it, and the kind, opening and order taken. */
   reverse: FoldReversePreview | null;
+  /** The sink tools': the point or sunk points as the engine described them, and the pocket and order taken. */
+  sink: FoldSinkPreview | null;
 }
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
@@ -144,8 +147,10 @@ export function useFoldToolPreview(
 
   // --- The step, built from the picks and every choice made since: a
   // plain fold's at once, a reverse fold's once the engine has described
-  // its tip (`useFoldReverseStep`).
+  // its tip (`useFoldReverseStep`), a sink's once it has described its point
+  // (`useFoldSinkStep`).
   const reverseStep = useFoldReverseStep(session, index, tools, candidate, tools.tool === 'inside-reverse');
+  const sinkStep = useFoldSinkStep(session, index, tools, candidate, isSinkTool(tools.tool));
   const plainBuild = useMemo<FoldStepBuild>(() => {
     if (!index || !isFoldKind(tools.tool)) return { status: 'unlocated' };
     return buildFoldStep(
@@ -162,15 +167,17 @@ export function useFoldToolPreview(
     );
   }, [index, tools, candidate]);
   const reversing = tools.tool === 'inside-reverse';
-  const build = reversing ? reverseStep.build : plainBuild;
+  const sinking = isSinkTool(tools.tool);
+  const build = reversing ? reverseStep.build : sinking ? sinkStep.build : plainBuild;
+  // A plain fold's override is the whole step; a compound fold's is its
+  // line, which its build already folds along.
+  const ownsOverride = reversing || sinking;
   const step = useMemo<FoldToolStep | null>(() => {
-    // A plain fold's override is the whole step; a reverse fold's is its
-    // line, which its build already folds along.
-    const override = reversing ? null : tools.override;
+    const override = ownsOverride ? null : tools.override;
     const chosen = override ?? (build.status === 'built' ? { op: build.op, choices: build.choices } : null);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [reversing, tools.override, build]);
+  }, [ownsOverride, tools.override, build]);
 
   // --- Tier 2 and 3, asked whenever the step changes; let go when there is none.
   const asked = useRef<string | null>(null);
@@ -271,6 +278,7 @@ export function useFoldToolPreview(
     (build.status === 'refused' ? build.refused : null) ??
     ownRoots?.refused ??
     reverseStep.refused ??
+    sinkStep.refused ??
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
 
@@ -295,5 +303,6 @@ export function useFoldToolPreview(
     refused,
     landing: step !== null && (pendingFor === null || pendingFor.status === 'working'),
     reverse: reverseStep.reverse,
+    sink: sinkStep.sink,
   };
 }

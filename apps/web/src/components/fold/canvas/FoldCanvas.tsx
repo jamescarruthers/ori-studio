@@ -22,6 +22,7 @@ import {
   foldChoiceNote,
   foldPromptWords,
   foldReverseWindowView,
+  foldSinkWindowView,
   foldWindowPreview,
   sceneLayers,
 } from '../../../fold/canvas/foldCanvasModel';
@@ -185,6 +186,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
   const woven = useFoldWovenInterval(preview.section);
   const reverseView = foldReverseWindowView(toolState, preview);
+  const sinkView = foldSinkWindowView(toolState, preview, view.scene?.view.flipped ?? false);
   const windowModel = foldToolWindow(
     t,
     {
@@ -195,6 +197,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       preview: foldWindowPreview(toolState, preview, woven.interval, queued),
       divide: { settings: toolState.divide, marks: marksHere },
       ...(reverseView ? { reverse: reverseView } : {}),
+      ...(sinkView ? { sink: sinkView } : {}),
     },
     { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind },
     { coarse, alt: altModifierLabel() }

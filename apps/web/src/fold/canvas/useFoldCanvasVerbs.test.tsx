@@ -32,6 +32,7 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
     refused: null,
     landing: false,
     reverse: null,
+    sink: null,
     ...extra,
   };
 }
@@ -231,7 +232,7 @@ describe('a near miss’s fix', () => {
 
 describe('the canvas’s chooser', () => {
   it('shows the deepest choice with more than one answer: the order, the opening, then the root', () => {
-    const tools = { ...FOLD_TOOL_INITIAL, root: 1, compound: { reverseKind: null, opening: 5, order: 1 } };
+    const tools = { ...FOLD_TOOL_INITIAL, root: 1, compound: { reverseKind: null, opening: 5, order: 1, pocket: 0 } };
     const reverse = { asked: null, kind: 'inside' as const, kinds: [], ways: [], way: null, orders: [], order: null };
     const roots = [
       { root: 0, line: { n: [1, 0] as const, d: 0.5 }, side: null },
@@ -252,5 +253,13 @@ describe('the canvas’s chooser', () => {
       index: 1,
       count: 2,
     });
+  });
+
+  it('shows a closed sink’s pockets, then its orders, over the root', () => {
+    const tools = { ...FOLD_TOOL_INITIAL, compound: { reverseKind: null, opening: 0, order: 4, pocket: 1 } };
+    const pocket = { upper: [], lower: [], seams: [], stored: { above: [0, 0] as [number, number], below: [0, 0] as [number, number] } };
+    const sink = { tool: 'closed-sink' as const, point: null, pockets: [pocket, pocket], pocket: 1, sunk: null, orders: 0, order: 0 };
+    expect(foldCanvasChoice(preview({ sink }), tools)).toEqual({ kind: 'pocket', index: 1, count: 2 });
+    expect(foldCanvasChoice(preview({ sink: { ...sink, orders: 3 } }), tools)).toEqual({ kind: 'order', index: 2, count: 3 });
   });
 });

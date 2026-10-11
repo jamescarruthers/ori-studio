@@ -18,6 +18,7 @@ import { FoldFlapChips } from './FoldFlapChips';
 import { FoldKindMark } from './FoldKindMark';
 import { FoldRefusalNotice } from './FoldRefusalNotice';
 import { FoldReverseChoices, FoldReverseKindControl } from './reverse/FoldReverseControls';
+import { FoldSinkChoices, FoldSinkLine } from './sink/FoldSinkControls';
 import styles from './FoldToolWindow.module.css';
 
 /**
@@ -59,7 +60,7 @@ export function FoldToolWindow({
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
   };
-  const { instructions, lineMode, kind, movingSide, layers, refusal, divide, compound, footer } = model;
+  const { instructions, lineMode, kind, movingSide, layers, refusal, divide, compound, sink, footer } = model;
 
   return (
     <ToolHintWindow
@@ -172,6 +173,11 @@ export function FoldToolWindow({
           <FoldReverseKindControl controls={compound} />
         </div>
       )}
+      {sink && (sink.kind || sink.square || sink.depth) && (
+        <div className={styles.section} data-fold-sink-kind="">
+          <FoldSinkLine controls={sink} />
+        </div>
+      )}
       {movingSide && (
         <div className={styles.section}>
           <FieldRow label={movingSide.label} kind="static" divider={false} disabled={movingSide.disabled}>
@@ -218,6 +224,11 @@ export function FoldToolWindow({
       {compound && (compound.opening || compound.order) && (
         <div className={styles.section} data-fold-choices="">
           <FoldReverseChoices controls={compound} />
+        </div>
+      )}
+      {sink && (sink.pocket || sink.order) && (
+        <div className={styles.section} data-fold-choices="">
+          <FoldSinkChoices controls={sink} />
         </div>
       )}
       {refusal && (

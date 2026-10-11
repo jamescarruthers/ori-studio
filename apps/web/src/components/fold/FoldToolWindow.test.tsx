@@ -165,6 +165,70 @@ describe('FoldToolWindow', () => {
     expect(calls.otherKind).toHaveBeenCalledWith('outside');
   });
 
+  it('draws a sink’s kind, its line’s rule and depth, its pocket, and a refusal whose fixes act', () => {
+    const calls = {
+      ...verbs(),
+      otherSink: vi.fn(),
+      stepPocket: vi.fn(),
+      stepOrder: vi.fn(),
+    } satisfies FoldToolWindowVerbs;
+    const sink = {
+      tool: 'open-sink' as const,
+      known: true,
+      openRefusal: 'sink_line_tilted' as const,
+      pocketsFound: 2,
+      pockets: 0,
+      pocket: 0,
+      pocketName: null,
+      orders: 0,
+      order: 0,
+      depth: 0.3,
+      sunk: 0,
+    };
+    const square = { fix: 'use_line' as const, line: { n: [0, 1] as [number, number], d: 0.4 }, side: 'positive' as const };
+    render(
+      {
+        tool: 'open-sink',
+        preview: preview({
+          refused: {
+            refusal: { code: 'sink_line_tilted', offset: 0.02, faces: [1] },
+            fixes: [square, { fix: 'other_sink', kind: 'closed' }],
+          },
+        }),
+        sink,
+      },
+      calls
+    );
+    let window = fold()!;
+    const kinds = byRole(window, 'group', 'Sink');
+    expect(byRole(kinds, 'button', 'Open').getAttribute('aria-pressed')).toBe('true');
+    expect(byRole(kinds, 'button', 'Open').getAttribute('aria-disabled')).toBe('true');
+    act(() => byRole(kinds, 'button', 'Closed').click());
+    expect(calls.selectTool).toHaveBeenCalledWith('closed-sink');
+    expect(window.querySelector('[data-fold-sink-square]')?.textContent).toContain('exactly square');
+    expect(window.querySelector('[data-fold-sink-depth]')?.textContent).toBe('0.3 from the tip');
+    const alert = byRole(window, 'alert', /^The line is not square to the point/);
+    act(() => byRole(alert, 'button', 'Use the square line').click());
+    expect(calls.useLine).toHaveBeenCalledWith(square);
+    act(() => byRole(alert, 'button', 'Closed sink instead').click());
+    expect(calls.otherSink).toHaveBeenCalledWith('closed');
+
+    // A closed sink's front and back pockets, stepped through.
+    render(
+      {
+        tool: 'closed-sink',
+        preview: preview(),
+        sink: { ...sink, tool: 'closed-sink', openRefusal: null, pockets: 2, pocketName: 'front' },
+      },
+      calls
+    );
+    window = fold()!;
+    expect(window.querySelector('[data-fold-sink-square]')).toBeNull();
+    expect(window.querySelector('[data-fold-choice="Pocket"]')?.textContent).toContain('Front');
+    act(() => byRole(window, 'button', 'Pocket: Next').click());
+    expect(calls.stepPocket).toHaveBeenCalledWith(1);
+  });
+
   it('says a commit asked for before the preview landed is waiting for it, and nothing once none is', () => {
     render({ preview: preview({ landing: true, queued: true }) });
     expect(fold()!.textContent).toContain('Folding as soon as the preview is ready…');

@@ -16,8 +16,10 @@ import {
   type FoldPrecreaseOp,
   type FoldReverseOp,
   type FoldSequenceDocument,
+  type FoldSinkOp,
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
+import type { FoldSinkKind } from '../engine/foldEngineSinkWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { wovenIntervalAt } from '../tools/crossSection';
@@ -37,14 +39,20 @@ export function freePointHeld(): boolean {
   return readHeldModifiers().alt || isFoldAltLatched();
 }
 
-/** A fold along a located line, whose line a near miss's landmark line can take the place of. */
-function isAlongLine(op: FoldOp | undefined): op is FoldPlainOp | FoldPrecreaseOp | FoldReverseOp {
+/**
+ * A fold along a located line, whose line a near miss's landmark line — or a
+ * tilted open sink's square line — can take the place of.
+ */
+function isAlongLine(op: FoldOp | undefined): op is FoldPlainOp | FoldPrecreaseOp | FoldReverseOp | FoldSinkOp {
   return (
     op?.kind === 'valley' ||
     op?.kind === 'mountain' ||
     op?.kind === 'precrease' ||
     op?.kind === 'inside-reverse' ||
-    op?.kind === 'outside-reverse'
+    op?.kind === 'outside-reverse' ||
+    op?.kind === 'open-sink' ||
+    op?.kind === 'closed-sink' ||
+    op?.kind === 'unsink'
   );
 }
 
@@ -88,6 +96,9 @@ export interface FoldCanvasVerbs {
   /** Step through the ways the tip opens, and the layer orders listed. */
   stepOpening: (delta: number) => void;
   stepOrder: (delta: number) => void;
+  /** The sinks: the other kind of sink (its tool taken in hand, the line kept), and a closed sink's pockets. */
+  otherSink: (kind: FoldSinkKind) => void;
+  stepPocket: (delta: number) => void;
 }
 
 /** The verbs, and whether a commit waits for the preview to land. */
@@ -118,36 +129,32 @@ export function queuedCommit(
 }
 
 /** Which of the previewed fold's choices the canvas's chooser shows, and of how many: the one a folder makes last. */
-export type FoldCanvasChoice = { kind: 'order' | 'opening' | 'root'; index: number; count: number };
+export type FoldCanvasChoice = { kind: 'order' | 'opening' | 'pocket' | 'root'; index: number; count: number };
 
 /**
  * The chooser on the canvas: the deepest choice with more than one answer —
- * the layer order, then the way the tip opens, then the axiom's root — since
- * each earlier choice resets the ones after it. Null when none has more than
- * one.
+ * the layer order, then the way the tip opens or the pocket a point sinks
+ * into, then the axiom's root — since each earlier choice resets the ones
+ * after it. Null when none has more than one.
  */
 export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState): FoldCanvasChoice | null {
-  const reverse = preview.reverse;
-  if (reverse && reverse.orders.length > 1) {
-    return { kind: 'order', index: Math.min(tools.compound.order, reverse.orders.length - 1), count: reverse.orders.length };
-  }
+  const { reverse, sink } = preview;
+  const orders = reverse?.orders.length ?? sink?.orders ?? 0;
+  if (orders > 1) return { kind: 'order', index: Math.min(tools.compound.order, orders - 1), count: orders };
   if (reverse && reverse.ways.length > 1) {
     return { kind: 'opening', index: Math.min(tools.compound.opening, reverse.ways.length - 1), count: reverse.ways.length };
+  }
+  if (sink && sink.pockets.length > 1) {
+    return { kind: 'pocket', index: Math.min(tools.compound.pocket, sink.pockets.length - 1), count: sink.pockets.length };
   }
   const roots = preview.candidates?.length ?? 0;
   return roots > 1 ? { kind: 'root', index: Math.min(tools.root, roots - 1), count: roots } : null;
 }
 
-/**
- * What a committed op is called in `fold step added`; null for Import CP and
- * the sinks, which the canvas does not commit (no sink tool is on the rail yet).
- */
+/** What a committed op is called in `fold step added`; null for Import CP, which the canvas does not commit. */
 function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
   switch (op.kind) {
     case 'cp-jump':
-    case 'open-sink':
-    case 'closed-sink':
-    case 'unsink':
       return null;
     // Compound folds, snake_case as the event's enums are.
     case 'inside-reverse':
@@ -156,6 +163,10 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
       return 'outside_reverse';
     case 'rabbit-ear':
       return 'rabbit_ear';
+    case 'open-sink':
+      return 'open_sink';
+    case 'closed-sink':
+      return 'closed_sink';
     default:
       return op.kind;
   }
@@ -357,7 +368,14 @@ export function useFoldCanvasVerbs(
 
       stepOpening: (delta) => tools.stepOpening(delta, live.current.preview.reverse?.ways.length ?? 0),
 
-      stepOrder: (delta) => tools.stepOrder(delta, live.current.preview.reverse?.orders.length ?? 0),
+      stepOrder: (delta) => {
+        const { reverse, sink } = live.current.preview;
+        tools.stepOrder(delta, reverse?.orders.length ?? sink?.orders ?? 0);
+      },
+
+      otherSink: (kind) => tools.selectTool(kind === 'open' ? 'open-sink' : 'closed-sink'),
+
+      stepPocket: (delta) => tools.stepPocket(delta, live.current.preview.sink?.pockets.length ?? 0),
 
       pickFlap: (flap) => tools.setSeed({ scope: 'flaps', flaps: [flap] }),
 
@@ -370,7 +388,9 @@ export function useFoldCanvasVerbs(
         // A near miss's landmark line: a model line, stored as the free line
         // through it, the same side moving. A reverse fold's too: its tool
         // takes the line from the override and keeps choosing its kind,
-        // opening and order along it (`useFoldReverseStep`).
+        // opening and order along it (`useFoldReverseStep`); and a tilted
+        // open sink's square line, its pocket and order chosen along it
+        // (`useFoldSinkStep`).
         const op = previewed.step?.op;
         const index = shown.index;
         if (!index) return;
@@ -404,6 +424,9 @@ export function useFoldCanvasVerbs(
             break;
           case 'opening':
             tools.stepOpening(delta, choice.count);
+            break;
+          case 'pocket':
+            tools.stepPocket(delta, choice.count);
             break;
           case 'root':
             tools.stepRoot(delta, choice.count);

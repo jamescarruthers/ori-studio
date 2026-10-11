@@ -3,7 +3,7 @@ import type { FoldAnalysis, FoldCrossSection, FoldEngineRefused } from '../engin
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../tools/foldToolState';
 import type { FoldPick } from './foldPicking';
 import { bookScene } from './foldCanvas.fixtures';
-import { foldWindowPreview, refusedFaceInks, sceneLayers } from './foldCanvasModel';
+import { foldSinkWindowView, foldWindowPreview, refusedFaceInks, sceneLayers } from './foldCanvasModel';
 import { foldMovingTint } from './foldPaneOverlays';
 import { foldPickIndex } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
@@ -106,5 +106,52 @@ describe('the Fold canvas model', () => {
   it('counts a state’s layers as its deepest stack', () => {
     expect(sceneLayers(bookScene())).toBe(2);
     expect(sceneLayers(null)).toBe(1);
+  });
+
+  it('reads a sink tool’s window from its point: what fits, the pocket named as seen, the depth', () => {
+    const pockets = [
+      { upper: [1], lower: [2, 3], seams: [7], stored: { above: [0.1, 0.1] as [number, number], below: [0.1, 0.2] as [number, number] } },
+      { upper: [1, 2], lower: [3], seams: [8], stored: { above: [0.2, 0.1] as [number, number], below: [0.2, 0.2] as [number, number] } },
+    ];
+    const point = {
+      analysis: {
+        line: { n: [0, 1] as [number, number], d: 0.5 },
+        side: 'positive' as const,
+        snap: { clusters: 0, angle: 0, max_shift: 0 },
+        point: { faces: [1, 2, 3], witness: [0.5, 0.7] as [number, number] },
+        outline: [7, 8],
+        exterior: 'mountain' as const,
+        apex: [0.5, 0.8] as [number, number],
+        square: null,
+        pockets,
+        truncated: false,
+      },
+      open: {
+        refusal: { code: 'sink_line_tilted' as const, offset: 0.01, faces: [1] },
+        fixes: [],
+        faces: [1],
+        vertices: [],
+      },
+    };
+    const sink = { tool: 'closed-sink' as const, point, pockets, pocket: 1, sunk: null, orders: 0, order: 0 };
+    const tools: FoldToolState = { ...located, tool: 'closed-sink' };
+    expect(foldSinkWindowView(tools, preview({ sink }), false)).toEqual({
+      tool: 'closed-sink',
+      known: true,
+      openRefusal: 'sink_line_tilted',
+      pocketsFound: 2,
+      pockets: 2,
+      pocket: 1,
+      pocketName: 'back',
+      orders: 0,
+      order: 0,
+      depth: expect.closeTo(0.3, 12),
+      sunk: 0,
+    });
+    // Turned over, the second pocket is the front one.
+    expect(foldSinkWindowView(tools, preview({ sink }), true)?.pocketName).toBe('front');
+    // Not while the line is being located, nor for another tool.
+    expect(foldSinkWindowView({ ...tools, picks: [] }, preview({ sink }), false)).toBeUndefined();
+    expect(foldSinkWindowView(located, preview({ sink }), false)).toBeUndefined();
   });
 });

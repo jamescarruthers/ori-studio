@@ -24,6 +24,8 @@ function verbs(roots = 1): FoldCanvasVerbs {
     setReverseKind: vi.fn(),
     stepOpening: vi.fn(),
     stepOrder: vi.fn(),
+    otherSink: vi.fn(),
+    stepPocket: vi.fn(),
     commit: vi.fn(() => true),
     cancel: vi.fn(() => true),
     clearMarks: vi.fn(),
