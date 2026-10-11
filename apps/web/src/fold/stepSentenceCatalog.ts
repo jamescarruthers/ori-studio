@@ -1234,109 +1234,653 @@ export type CrimpSecondLine = 'free' | 'crease';
 
 /**
  * The sentence for a crimp (plan Phase 11): its first line as a reverse
- * fold's sentence names it, then its second, beyond it. Keys are
- * `panels:fold.sentence.<kind>Crimp.<first line>.<second line>`. A crimp is
- * never "in half", as a reverse fold is not: an axiom that would say so
- * reads as its plain form. It names no layers: the tip is its first line's,
- * as the picture shows.
+ * fold's sentence names it, then its second, beyond it, then the layers it
+ * takes, as a reverse fold's does — its tip is its first line's, counted
+ * from the top as the viewer sees them whichever the kind. Keys are
+ * `panels:fold.sentence.crimp.<kind>.<first line>.<second line>.<scope>`. A
+ * crimp is never "in half", as a reverse fold is not: an axiom that would say
+ * so reads as its plain form.
  */
 export function crimpSentence(
   t: TFunction,
   kind: 'inside' | 'outside',
   clause: SentenceClause,
-  second: CrimpSecondLine
+  second: CrimpSecondLine,
+  scope: FoldLayerScope
 ): string {
-  return kind === 'inside' ? insideCrimpSentence(t, clause, second) : outsideCrimpSentence(t, clause, second);
+  return kind === 'inside'
+    ? insideCrimpSentence(t, clause, second, scope)
+    : outsideCrimpSentence(t, clause, second, scope);
 }
 
-/** An inside crimp: "Inside crimp …, then back along … beyond it." */
-function insideCrimpSentence(t: TFunction, clause: SentenceClause, second: CrimpSecondLine): string {
+/** An inside crimp: "Inside crimp …, then back along … beyond it, through all layers." */
+function insideCrimpSentence(t: TFunction, clause: SentenceClause, second: CrimpSecondLine, scope: FoldLayerScope): string {
   const { a, b, c, d, self } = clause.names;
   const drawn = second === 'free';
   switch (clause.line) {
     case 'free':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.free.free', 'Inside crimp along the line drawn, then back along a second line drawn beyond it.')
-        : t('panels:fold.sentence.insideCrimp.free.crease', 'Inside crimp along the line drawn, then back along an existing crease beyond it.');
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.free.free.all', 'Inside crimp along the line drawn, then back along a second line drawn beyond it, through all layers.'),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.free.free.depth', {
+                count,
+                defaultValue_one: 'Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.free.free.flaps', {
+                count,
+                defaultValue_one: 'Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.free.crease.all', 'Inside crimp along the line drawn, then back along an existing crease beyond it, through all layers.'),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.free.crease.depth', {
+                count,
+                defaultValue_one: 'Inside crimp along the line drawn, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp along the line drawn, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.free.crease.flaps', {
+                count,
+                defaultValue_one: 'Inside crimp along the line drawn, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp along the line drawn, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'crease':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.crease.free', 'Inside crimp along the existing crease, then back along a second line drawn beyond it.')
-        : t('panels:fold.sentence.insideCrimp.crease.crease', 'Inside crimp along the existing crease, then back along an existing crease beyond it.');
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.crease.free.all', 'Inside crimp along the existing crease, then back along a second line drawn beyond it, through all layers.'),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.crease.free.depth', {
+                count,
+                defaultValue_one: 'Inside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.crease.free.flaps', {
+                count,
+                defaultValue_one: 'Inside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.crease.crease.all', 'Inside crimp along the existing crease, then back along an existing crease beyond it, through all layers.'),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.crease.crease.depth', {
+                count,
+                defaultValue_one: 'Inside crimp along the existing crease, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp along the existing crease, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.crease.crease.flaps', {
+                count,
+                defaultValue_one: 'Inside crimp along the existing crease, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp along the existing crease, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o1':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.o1.free', 'Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it.', { a, b })
-        : t('panels:fold.sentence.insideCrimp.o1.crease', 'Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it.', { a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o1.free.all', 'Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o1.free.depth', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o1.free.flaps', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o1.crease.all', 'Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o1.crease.depth', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o1.crease.flaps', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o2':
     case 'o2Half':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.o2.free', 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it.', { a, b })
-        : t('panels:fold.sentence.insideCrimp.o2.crease', 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.', { a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o2.free.all', 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o2.free.depth', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o2.free.flaps', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o2.crease.all', 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o2.crease.depth', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o2.crease.flaps', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o3':
     case 'o3Half':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.o3.free', 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it.', { a, b })
-        : t('panels:fold.sentence.insideCrimp.o3.crease', 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.', { a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o3.free.all', 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o3.free.depth', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o3.free.flaps', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o3.crease.all', 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o3.crease.depth', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o3.crease.flaps', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o4':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.o4.free', 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it.', { a, b })
-        : t('panels:fold.sentence.insideCrimp.o4.crease', 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it.', { a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o4.free.all', 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o4.free.depth', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o4.free.flaps', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o4.crease.all', 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o4.crease.depth', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o4.crease.flaps', {
+                a, b, count,
+                defaultValue_one: 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o5':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.o5.free', 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it.', { a, b, c })
-        : t('panels:fold.sentence.insideCrimp.o5.crease', 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it.', { a, b, c });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o5.free.all', 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, through all layers.', { a, b, c }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o5.free.depth', {
+                a, b, c, count,
+                defaultValue_one: 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o5.free.flaps', {
+                a, b, c, count,
+                defaultValue_one: 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o5.crease.all', 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, through all layers.', { a, b, c }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o5.crease.depth', {
+                a, b, c, count,
+                defaultValue_one: 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o5.crease.flaps', {
+                a, b, c, count,
+                defaultValue_one: 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o6':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.o6.free', 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it.', { a, b, c, d })
-        : t('panels:fold.sentence.insideCrimp.o6.crease', 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it.', { a, b, c, d });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o6.free.all', 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, through all layers.', { a, b, c, d }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o6.free.depth', {
+                a, b, c, d, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o6.free.flaps', {
+                a, b, c, d, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o6.crease.all', 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, through all layers.', { a, b, c, d }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o6.crease.depth', {
+                a, b, c, d, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o6.crease.flaps', {
+                a, b, c, d, count,
+                defaultValue_one: 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o7':
       return drawn
-        ? t('panels:fold.sentence.insideCrimp.o7.free', 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it.', { self, a, b })
-        : t('panels:fold.sentence.insideCrimp.o7.crease', 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it.', { self, a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o7.free.all', 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, through all layers.', { self, a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o7.free.depth', {
+                self, a, b, count,
+                defaultValue_one: 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o7.free.flaps', {
+                self, a, b, count,
+                defaultValue_one: 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.inside.o7.crease.all', 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, through all layers.', { self, a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o7.crease.depth', {
+                self, a, b, count,
+                defaultValue_one: 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.inside.o7.crease.flaps', {
+                self, a, b, count,
+                defaultValue_one: 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
   }
 }
 
-/** An outside crimp: "Outside crimp …, then back along … beyond it." */
-function outsideCrimpSentence(t: TFunction, clause: SentenceClause, second: CrimpSecondLine): string {
+/** An outside crimp: "Outside crimp …, then back along … beyond it, through all layers." */
+function outsideCrimpSentence(t: TFunction, clause: SentenceClause, second: CrimpSecondLine, scope: FoldLayerScope): string {
   const { a, b, c, d, self } = clause.names;
   const drawn = second === 'free';
   switch (clause.line) {
     case 'free':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.free.free', 'Outside crimp along the line drawn, then back along a second line drawn beyond it.')
-        : t('panels:fold.sentence.outsideCrimp.free.crease', 'Outside crimp along the line drawn, then back along an existing crease beyond it.');
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.free.free.all', 'Outside crimp along the line drawn, then back along a second line drawn beyond it, through all layers.'),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.free.free.depth', {
+                count,
+                defaultValue_one: 'Outside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.free.free.flaps', {
+                count,
+                defaultValue_one: 'Outside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp along the line drawn, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.free.crease.all', 'Outside crimp along the line drawn, then back along an existing crease beyond it, through all layers.'),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.free.crease.depth', {
+                count,
+                defaultValue_one: 'Outside crimp along the line drawn, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp along the line drawn, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.free.crease.flaps', {
+                count,
+                defaultValue_one: 'Outside crimp along the line drawn, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp along the line drawn, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'crease':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.crease.free', 'Outside crimp along the existing crease, then back along a second line drawn beyond it.')
-        : t('panels:fold.sentence.outsideCrimp.crease.crease', 'Outside crimp along the existing crease, then back along an existing crease beyond it.');
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.crease.free.all', 'Outside crimp along the existing crease, then back along a second line drawn beyond it, through all layers.'),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.crease.free.depth', {
+                count,
+                defaultValue_one: 'Outside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.crease.free.flaps', {
+                count,
+                defaultValue_one: 'Outside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp along the existing crease, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.crease.crease.all', 'Outside crimp along the existing crease, then back along an existing crease beyond it, through all layers.'),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.crease.crease.depth', {
+                count,
+                defaultValue_one: 'Outside crimp along the existing crease, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp along the existing crease, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.crease.crease.flaps', {
+                count,
+                defaultValue_one: 'Outside crimp along the existing crease, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp along the existing crease, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o1':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.o1.free', 'Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it.', { a, b })
-        : t('panels:fold.sentence.outsideCrimp.o1.crease', 'Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it.', { a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o1.free.all', 'Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o1.free.depth', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o1.free.flaps', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o1.crease.all', 'Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o1.crease.depth', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o1.crease.flaps', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o2':
     case 'o2Half':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.o2.free', 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it.', { a, b })
-        : t('panels:fold.sentence.outsideCrimp.o2.crease', 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.', { a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o2.free.all', 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o2.free.depth', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o2.free.flaps', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o2.crease.all', 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o2.crease.depth', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o2.crease.flaps', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o3':
     case 'o3Half':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.o3.free', 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it.', { a, b })
-        : t('panels:fold.sentence.outsideCrimp.o3.crease', 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.', { a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o3.free.all', 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o3.free.depth', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o3.free.flaps', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o3.crease.all', 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o3.crease.depth', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o3.crease.flaps', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o4':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.o4.free', 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it.', { a, b })
-        : t('panels:fold.sentence.outsideCrimp.o4.crease', 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it.', { a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o4.free.all', 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o4.free.depth', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o4.free.flaps', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o4.crease.all', 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, through all layers.', { a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o4.crease.depth', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o4.crease.flaps', {
+                a, b, count,
+                defaultValue_one: 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o5':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.o5.free', 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it.', { a, b, c })
-        : t('panels:fold.sentence.outsideCrimp.o5.crease', 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it.', { a, b, c });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o5.free.all', 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, through all layers.', { a, b, c }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o5.free.depth', {
+                a, b, c, count,
+                defaultValue_one: 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o5.free.flaps', {
+                a, b, c, count,
+                defaultValue_one: 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o5.crease.all', 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, through all layers.', { a, b, c }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o5.crease.depth', {
+                a, b, c, count,
+                defaultValue_one: 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o5.crease.flaps', {
+                a, b, c, count,
+                defaultValue_one: 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o6':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.o6.free', 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it.', { a, b, c, d })
-        : t('panels:fold.sentence.outsideCrimp.o6.crease', 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it.', { a, b, c, d });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o6.free.all', 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, through all layers.', { a, b, c, d }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o6.free.depth', {
+                a, b, c, d, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o6.free.flaps', {
+                a, b, c, d, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o6.crease.all', 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, through all layers.', { a, b, c, d }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o6.crease.depth', {
+                a, b, c, d, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o6.crease.flaps', {
+                a, b, c, d, count,
+                defaultValue_one: 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
     case 'o7':
       return drawn
-        ? t('panels:fold.sentence.outsideCrimp.o7.free', 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it.', { self, a, b })
-        : t('panels:fold.sentence.outsideCrimp.o7.crease', 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it.', { self, a, b });
+        ? byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o7.free.all', 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, through all layers.', { self, a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o7.free.depth', {
+                self, a, b, count,
+                defaultValue_one: 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o7.free.flaps', {
+                self, a, b, count,
+                defaultValue_one: 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it, crimping only the {{count}} flaps shown.',
+              })
+          )
+        : byScope(
+            scope,
+            () => t('panels:fold.sentence.crimp.outside.o7.crease.all', 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, through all layers.', { self, a, b }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o7.crease.depth', {
+                self, a, b, count,
+                defaultValue_one: 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the top layer.',
+                defaultValue_other: 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the top {{count}} layers.',
+              }),
+            (count) =>
+              t('panels:fold.sentence.crimp.outside.o7.crease.flaps', {
+                self, a, b, count,
+                defaultValue_one: 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the flap shown.',
+                defaultValue_other: 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it, crimping only the {{count}} flaps shown.',
+              })
+          );
   }
 }

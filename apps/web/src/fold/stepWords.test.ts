@@ -38,8 +38,8 @@ describe('operationLabel and operationBadge', () => {
       { op: 'turn', turn: { kind: 'turn-over', axis: 'vertical' } },
       { op: 'turn', turn: { kind: 'rotate', rotate: { amount: 'quarter', direction: 'ccw' } } },
       { op: 'cp-jump' },
-      { op: 'crimp', crimp: 'inside', line: { via: 'free' }, second: 'free' },
-      { op: 'crimp', crimp: 'outside', line: { via: 'free' }, second: 'crease' },
+      { op: 'crimp', crimp: 'inside', line: { via: 'free' }, second: 'free', scope: ALL },
+      { op: 'crimp', crimp: 'outside', line: { via: 'free' }, second: 'crease', scope: ALL },
       { op: 'tuck', direction: 'valley', line: { via: 'free' } },
       { op: 'tuck', direction: 'mountain', line: { via: 'free' } },
       { op: 'unknown' },
@@ -98,7 +98,13 @@ describe('lineLabel', () => {
   });
 
   it('names both a crimp’s lines, its second only by secondLineLabel', () => {
-    const crimp: FoldSentenceStep = { op: 'crimp', crimp: 'inside', line: { via: 'axiom', axiom: 1, inputs: [] }, second: 'crease' };
+    const crimp: FoldSentenceStep = {
+      op: 'crimp',
+      crimp: 'inside',
+      line: { via: 'axiom', axiom: 1, inputs: [] },
+      second: 'crease',
+      scope: { kind: 'all' },
+    };
     expect(lineLabel(t, crimp)).toBe('Axiom 1 · through two points');
     expect(secondLineLabel(t, crimp)).toBe('Existing crease');
     expect(secondLineLabel(t, { ...crimp, second: 'free' })).toBe('Free line');

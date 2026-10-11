@@ -103,6 +103,8 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
         line: sentenceLine(op.line, null, context),
         // A step stores one root, its first line's: the second is drawn, or a crease.
         second: op.second.via === 'crease' ? 'crease' : 'free',
+        // Its tip is its first line's, anchored as a reverse fold's is.
+        scope: scopeOf(op.seed),
       };
     case 'tuck':
       // Never "in half" either: what moves is the flap, tucked away.

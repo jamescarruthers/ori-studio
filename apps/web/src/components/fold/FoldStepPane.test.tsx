@@ -121,6 +121,7 @@ describe('FoldStepPane', () => {
           crimp: 'outside',
           line: { via: 'axiom', axiom: 1, inputs: [{ kind: 'point' }, { kind: 'point' }] },
           second: 'crease',
+          scope: { kind: 'all' },
         },
         number: 4,
         layers: 2,
@@ -133,7 +134,7 @@ describe('FoldStepPane', () => {
     });
     expect(host.querySelector('header')?.textContent).toBe('Step 4Crimp');
     expect(host.textContent).toContain(
-      'Outside crimp along the line joining point P and point Q, then back along an existing crease beyond it.'
+      'Outside crimp along the line joining point P and point Q, then back along an existing crease beyond it, through all layers.'
     );
     expect(rows()).toMatchObject({
       Operation: 'Outside crimp',

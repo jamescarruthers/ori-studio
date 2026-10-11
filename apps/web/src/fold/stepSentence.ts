@@ -117,9 +117,10 @@ export type FoldSentenceStep =
   | { op: 'reverse'; kind: 'inside' | 'outside'; line: FoldSentenceLine; scope: FoldLayerScope }
   /**
    * Two reverse folds of one kind as one step (plan Phase 11): its first line
-   * as a reverse fold's is found, and its second, drawn or an existing crease.
+   * as a reverse fold's is found, and its second, drawn or an existing crease;
+   * its layers the tip's anchor, as a reverse fold's are.
    */
-  | { op: 'crimp'; crimp: 'inside' | 'outside'; line: FoldSentenceLine; second: CrimpSecondLine }
+  | { op: 'crimp'; crimp: 'inside' | 'outside'; line: FoldSentenceLine; second: CrimpSecondLine; scope: FoldLayerScope }
   /**
    * A fold slid under the chosen layer (a valley) or over it (a mountain), as
    * the viewer sees it, along its line (which its Step pane row names).
@@ -257,7 +258,7 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
     case 'reverse':
       return reverseFoldSentence(t, step.kind, lineClause(t, step.line), step.scope);
     case 'crimp':
-      return crimpSentence(t, step.crimp, lineClause(t, step.line), step.second);
+      return crimpSentence(t, step.crimp, lineClause(t, step.line), step.second, step.scope);
     case 'tuck':
       return step.direction === 'valley'
         ? t('panels:fold.sentence.tuckValley', 'Valley fold and tuck the flap in, under the chosen layer.')
