@@ -139,3 +139,66 @@ describe('the Fold tools’ state', () => {
     expect(clampDivideParts(Number.NaN)).toBe(2);
   });
 });
+
+describe('the vertex folds’ tool state', () => {
+  const free = (x: number, y: number): FoldPick => ({ kind: 'free', pane: 'folded', scene: { x, y }, sheet: [x, y] });
+
+  it('takes each tool’s own clicks, and swaps no moving side', () => {
+    const tools = createFoldTools();
+    tools.selectTool('squash');
+    expect(tools.pick(free(0.2, 0.2))).toBe(true);
+    expect(isLocated(tools.store.getState())).toBe(true);
+    expect(tools.pick(free(0.3, 0.3))).toBe(false);
+    expect(tools.swapSide()).toBe(false);
+    tools.selectTool('swivel');
+    expect(tools.store.getState().picks).toEqual([]);
+    for (let k = 0; k < 4; k += 1) tools.pick(point(0.1 * k, 0.5));
+    expect(isLocated(tools.store.getState())).toBe(false);
+    tools.pick(free(0.5, 0.9));
+    expect(isLocated(tools.store.getState())).toBe(true);
+  });
+
+  it('starts a petal fold on the existing crease, keeps a line mode H is meant for, and keeps the petal through a line mode', () => {
+    const tools = createFoldTools();
+    expect(tools.store.getState().lineMode).toBe('axiom-2');
+    tools.selectTool('petal');
+    expect(tools.store.getState().lineMode).toBe('crease');
+    tools.selectLineMode('axiom-1');
+    expect(tools.store.getState()).toMatchObject({ tool: 'petal', lineMode: 'axiom-1' });
+    tools.selectTool('squash');
+    tools.selectTool('petal');
+    expect(tools.store.getState().lineMode).toBe('axiom-1');
+    // H's two ends, then the flap.
+    tools.pick(point(0.2, 0.5));
+    tools.pick(point(0.8, 0.5));
+    expect(isLocated(tools.store.getState())).toBe(false);
+    tools.pick(free(0.5, 0.2));
+    expect(isLocated(tools.store.getState())).toBe(true);
+  });
+
+  it('lists the choices after one made anew, and keeps the direction from fold to fold', () => {
+    const tools = createFoldTools();
+    tools.selectTool('rabbit-ear');
+    tools.setEmergent(2);
+    tools.setRidge(1);
+    tools.stepOrder(1, 3);
+    expect(tools.store.getState().compound).toMatchObject({ emergent: 2, ridge: 1, order: 1 });
+    // Another fourth ray: its ridges and orders are listed anew.
+    tools.stepEmergent(1, 3, 2);
+    expect(tools.store.getState().compound).toMatchObject({ emergent: 0, ridge: null, order: 0 });
+    tools.setRidge(1);
+    tools.setFanLayers(2);
+    expect(tools.store.getState().compound).toMatchObject({ fanLayers: 2, ridge: null, order: 0 });
+    tools.setVertexDirection('mountain');
+    tools.setSquashTarget([0, 1]);
+    expect(tools.store.getState().compound.squashTarget).toEqual([0, 1]);
+    // Let go of the clicks: the choices go, the direction stays.
+    tools.pick(point(0, 0));
+    tools.clear();
+    expect(tools.store.getState()).toMatchObject({
+      vertexDirection: 'mountain',
+      compound: { squashTarget: null, emergent: null, ridge: null, fanLayers: null, order: 0 },
+    });
+    expect(FOLD_TOOL_INITIAL.vertexDirection).toBe('valley');
+  });
+});

@@ -1,0 +1,301 @@
+import { describe, expect, it, vi } from 'vitest';
+import i18n from '../../../i18n';
+import type { FoldEngineRefused, FoldRefusalBody } from '../../engine/foldEngineWire';
+import { foldToolWindow, type FoldPreview, type FoldToolHost, type FoldToolWindowVerbs, type FoldToolWindowView } from '../foldToolWindow';
+import { foldRefusalNotice } from '../refusalNotice';
+import { FOLD_VERTEX_REFUSAL_CODES } from './vertexRefusal';
+import { hasVertexChoices, type FoldVertexWindowView } from './vertexToolWindow';
+
+const t = i18n.t.bind(i18n);
+
+function verbs() {
+  return {
+    selectTool: vi.fn(),
+    selectLineMode: vi.fn(),
+    includeFlaps: vi.fn(),
+    foldOtherWay: vi.fn(),
+    pickFlap: vi.fn(),
+    useLine: vi.fn(),
+    swapSide: vi.fn(),
+    toggleFlap: vi.fn(),
+    cancel: vi.fn(),
+    commit: vi.fn(),
+    stepOrder: vi.fn(),
+    setVertexDirection: vi.fn(),
+    vertexOtherWay: vi.fn(),
+    stepEmergent: vi.fn(),
+    takeEmergent: vi.fn(),
+    setRidge: vi.fn(),
+    stepFanLayers: vi.fn(),
+    resetSquashTarget: vi.fn(),
+    useNearPrecrease: vi.fn(),
+    precreaseLine: vi.fn(),
+    precreaseKite: vi.fn(),
+  } satisfies FoldToolWindowVerbs;
+}
+
+const mouse: FoldToolHost = { coarse: false, alt: 'Option' };
+const finger: FoldToolHost = { coarse: true, alt: 'Alt' };
+
+const vertex = (extra: Partial<FoldVertexWindowView> = {}): FoldVertexWindowView => ({
+  tool: 'squash',
+  direction: 'valley',
+  described: true,
+  known: true,
+  target: 'hinge',
+  emergents: [],
+  emergent: 0,
+  ridges: [],
+  ridge: 0,
+  layers: 0,
+  fanLayers: null,
+  orders: 0,
+  order: 0,
+  ...extra,
+});
+
+const preview = (extra: Partial<FoldPreview> = {}): FoldPreview => ({
+  section: null,
+  interval: null,
+  seed: 'all',
+  added: [],
+  refused: null,
+  landing: false,
+  ...extra,
+});
+
+const view = (shown: FoldVertexWindowView, extra: Partial<FoldToolWindowView> = {}): FoldToolWindowView => ({
+  tool: shown.tool,
+  lineMode: 'crease',
+  readOnly: null,
+  picks: 0,
+  preview: null,
+  vertex: shown,
+  ...extra,
+});
+
+const refused = (refusal: FoldRefusalBody, fixes: FoldEngineRefused['fixes'] = []): FoldEngineRefused => ({
+  status: 'refused',
+  refusal,
+  fixes,
+  faces: [],
+  vertices: [],
+});
+
+describe('a vertex fold’s window while its clicks are made', () => {
+  it('numbers each tool’s clicks and says its precondition up front', () => {
+    const squash = foldToolWindow(t, view(vertex()), verbs(), mouse);
+    expect(squash).toMatchObject({ phase: 'locate', title: 'Squash fold', lineMode: null, movingSide: null });
+    expect(squash?.instructions.items).toEqual(['Click the flap to squash.', 'Choose the options, then press Enter.']);
+    expect(squash?.vertex?.note).toMatch(/free, held only along its hinge, and uncovered/);
+    // Nothing to choose yet beside the direction.
+    expect(squash?.vertex && hasVertexChoices(squash.vertex)).toBe(false);
+
+    const ear = foldToolWindow(t, view(vertex({ tool: 'rabbit-ear' }), { picks: 3 }), verbs(), mouse);
+    expect(ear?.instructions.items).toHaveLength(5);
+    expect(ear?.instructions.current).toBe(3);
+    expect(ear?.instructions.items[3]).toBe('Click the paper that stays put.');
+    expect(ear?.instructions.notes[0]).toMatch(/snap to corners/);
+
+    const swivel = foldToolWindow(t, view(vertex({ tool: 'swivel' })), verbs(), finger);
+    expect(swivel?.instructions.items[5]).toBe('Choose the options, then tap Swivel fold.');
+    expect(swivel?.vertex?.note).toBe('The point the creases meet at must lie inside the paper, off every crease.');
+  });
+
+  it('locates a petal fold’s line H through the line modes, in its own words for H', () => {
+    const crease = foldToolWindow(t, view(vertex({ tool: 'petal' })), verbs(), mouse);
+    expect(crease?.lineMode?.value).toBe('crease');
+    expect(crease?.instructions.items.slice(0, 2)).toEqual([
+      'Click the precreased line H the flap lifts along.',
+      'Click the flap below that line.',
+    ]);
+    const ends = foldToolWindow(t, view(vertex({ tool: 'petal' }), { lineMode: 'axiom-1' }), verbs(), mouse);
+    expect(ends?.instructions.items.slice(0, 3)).toEqual([
+      'Click one end of the line H the flap lifts along.',
+      'Click its other end.',
+      'Click the flap below that line.',
+    ]);
+    expect(ends?.vertex?.note).toMatch(/precrease the kite creases/);
+  });
+});
+
+describe('a vertex fold’s window while it previews', () => {
+  it('offers a squash’s spine target, and the hinge back once it is aimed off it', () => {
+    const calls = verbs();
+    const onHinge = foldToolWindow(t, view(vertex(), { preview: preview() }), calls, mouse);
+    expect(onHinge).toMatchObject({ phase: 'preview', meta: '2 settings' });
+    expect(onHinge?.vertex?.target).toMatchObject({ label: 'Spine lands on', value: 'The hinge line', reset: null });
+    const aimed = foldToolWindow(t, view(vertex({ target: 'point' }), { preview: preview() }), calls, mouse);
+    expect(aimed?.vertex?.target?.value).toBe('The point clicked');
+    aimed?.vertex?.target?.reset?.run();
+    expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
+    aimed?.vertex?.direction.set('mountain');
+    expect(calls.setVertexDirection).toHaveBeenCalledWith('mountain');
+    expect(aimed?.footer?.commit).toMatchObject({ label: 'Squash fold', disabled: false });
+  });
+
+  it('steps a fan’s fourth crease and layers, says which do not fit, and offers a rabbit ear’s ridge', () => {
+    const calls = verbs();
+    const ear = vertex({
+      tool: 'rabbit-ear',
+      emergents: [true, false, true],
+      emergent: 1,
+      layers: 4,
+      fanLayers: 2,
+      ridges: [
+        { given: 0, lands: true },
+        { given: null, lands: false },
+      ],
+      ridge: 0,
+    });
+    const model = foldToolWindow(t, view(ear, { preview: preview() }), calls, mouse);
+    const controls = model?.vertex;
+    expect(controls?.emergent?.value).toBe('2 of 3');
+    expect(controls?.emergentNote).toBe('This fourth crease does not fit here: step to another.');
+    expect(controls?.layers?.value).toBe('Top 2 of 4');
+    expect(controls?.ridge?.options).toEqual([
+      { value: 0, label: 'Corner 1', tooltip: 'The crease to corner 1 rises as the ridge', disabled: false },
+      {
+        value: 1,
+        label: 'Fourth',
+        tooltip: 'The fourth crease rises as the ridge - Does not fit here',
+        disabled: true,
+      },
+    ]);
+    expect(model?.meta).toBe('4 settings');
+    controls?.emergent?.next.run();
+    controls?.layers?.previous.run();
+    controls?.ridge?.set(1);
+    expect(calls.stepEmergent).toHaveBeenCalledWith(1);
+    expect(calls.stepFanLayers).toHaveBeenCalledWith(-1);
+    expect(calls.setRidge).toHaveBeenCalledWith(1);
+    // From the bottom, for a mountain; every layer, said so.
+    const mountain = foldToolWindow(t, view({ ...ear, direction: 'mountain' }, { preview: preview() }), calls, mouse);
+    expect(mountain?.vertex?.layers?.value).toBe('Bottom 2 of 4');
+    const all = foldToolWindow(t, view({ ...ear, fanLayers: null }, { preview: preview() }), calls, mouse);
+    expect(all?.vertex?.layers?.value).toBe('All 4');
+  });
+
+  it('steps the layer order when the fold leaves several', () => {
+    const calls = verbs();
+    const model = foldToolWindow(t, view(vertex({ orders: 3, order: 1 }), { preview: preview() }), calls, mouse);
+    expect(model?.vertex?.order?.value).toBe('2 of 3');
+    model?.vertex?.order?.next.run();
+    expect(calls.stepOrder).toHaveBeenCalledWith(1);
+  });
+
+  it('holds the commit until the step is built, and offers nothing about a flap the engine refused', () => {
+    const waiting = foldToolWindow(t, view(vertex({ known: false }), { preview: preview() }), verbs(), mouse);
+    expect(waiting?.footer?.commit.disabled).toBe(true);
+    const noFlap = refused({ code: 'squash_no_flap', faces: [0], cause: 'single_layer' });
+    const model = foldToolWindow(
+      t,
+      view(vertex({ described: false, known: false }), { preview: preview({ refused: noFlap }) }),
+      verbs(),
+      mouse
+    );
+    expect(model?.vertex?.target).toBeNull();
+    expect(model?.instructions.items).toEqual(['Press Esc, then pick again.']);
+    expect(model?.refusal).toMatchObject({
+      title: 'No flap to squash here',
+      text: 'Only one layer lies here. Click a flap of two layers joined along a folded edge.',
+    });
+    expect(model?.footer?.commit.disabled).toBe(true);
+  });
+});
+
+describe('a vertex fold’s refusals', () => {
+  const vertexContext = (tool: FoldVertexWindowView['tool'], extra = {}) => ({
+    kind: 'vertex' as const,
+    flapNumber: (flap: number) => flap + 1,
+    readOnly: false,
+    vertex: { tool, ...extra },
+  });
+
+  it('words every code of the family in the tool’s words, never as a fold that cannot be made', () => {
+    const bodies: Record<(typeof FOLD_VERTEX_REFUSAL_CODES)[number], FoldRefusalBody> = {
+      squash_no_flap: { code: 'squash_no_flap', faces: [0], cause: 'no_hinge' },
+      squash_flap_not_free: { code: 'squash_flap_not_free', faces: [1] },
+      squash_flap_covered: { code: 'squash_flap_covered', faces: [1] },
+      squash_target_outside: { code: 'squash_target_outside' },
+      petal_not_precreased: { code: 'petal_not_precreased', faces: [1], missing: 'kite' },
+      petal_no_flap: { code: 'petal_no_flap', faces: [1], cause: 'no_corner' },
+      fan_center: { code: 'fan_center', faces: [1] },
+      fan_ray_blocked: { code: 'fan_ray_blocked', faces: [1] },
+      fan_not_flat: { code: 'fan_not_flat' },
+      fan_ridge_not_ray: { code: 'fan_ridge_not_ray' },
+      fan_stayer_detached: { code: 'fan_stayer_detached', point: [0.5, 0.5] },
+    };
+    const titles = new Set<string>();
+    for (const code of FOLD_VERTEX_REFUSAL_CODES) {
+      const notice = foldRefusalNotice(t, refused(bodies[code]), vertexContext('squash'), verbs());
+      expect(notice.title, code).not.toBe('This fold cannot be made');
+      expect(notice.text, code).not.toBe('It would not land on a valid flat model.');
+      titles.add(notice.title);
+      // Read away from its tool, it is still worded, by the fold its code names.
+      const bare = foldRefusalNotice(t, refused(bodies[code]), { ...vertexContext('squash'), vertex: undefined }, verbs());
+      expect(bare.title, code).toBe(notice.title);
+    }
+    expect(titles.size).toBeGreaterThan(9);
+    // Each cause says its own reason.
+    for (const cause of ['single_layer', 'no_spine', 'no_hinge', 'upper_not_hinged'] as const) {
+      const notice = foldRefusalNotice(t, refused({ code: 'squash_no_flap', faces: [0], cause }), vertexContext('squash'), verbs());
+      expect(notice.text, cause).not.toBe('');
+    }
+    // A covered petal lifts; a covered squash opens.
+    const petal = foldRefusalNotice(t, refused(bodies.squash_flap_covered), vertexContext('petal'), verbs());
+    expect(petal.text).toMatch(/lift it the other way/);
+    const ear = foldRefusalNotice(t, refused(bodies.fan_center), vertexContext('rabbit-ear'), verbs());
+    expect(ear.text).toMatch(/incenter/);
+  });
+
+  it('makes every fix a button that acts: the other direction, a fourth crease that fits', () => {
+    const calls = verbs();
+    const notice = foldRefusalNotice(
+      t,
+      refused({ code: 'fan_ray_blocked', faces: [1] }, [
+        { fix: 'opposite_direction' },
+        { fix: 'use_emergent', direction: [0, 1] },
+      ]),
+      vertexContext('swivel', { emergentNumber: () => 3 }),
+      calls
+    );
+    expect(notice.actions.map((action) => action.label)).toEqual(['Fold it the other way', 'Use fourth crease 3']);
+    notice.actions.forEach((action) => action.run());
+    expect(calls.vertexOtherWay).toHaveBeenCalledTimes(1);
+    expect(calls.foldOtherWay).not.toHaveBeenCalled();
+    expect(calls.takeEmergent).toHaveBeenCalledWith([0, 1]);
+  });
+
+  it('gives the refusals the engine offers no fix for the tools’ own buttons', () => {
+    const calls = verbs();
+    const target = foldRefusalNotice(t, refused({ code: 'squash_target_outside' }), vertexContext('squash'), calls);
+    expect(target.actions.map((action) => action.label)).toEqual(['Put the spine onto the hinge']);
+    target.actions[0]?.run();
+    expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
+
+    const line = { code: 'petal_not_precreased' as const, faces: [], missing: 'line' as const };
+    const far = foldRefusalNotice(t, refused(line), vertexContext('petal'), calls);
+    expect(far.title).toBe('Precrease the line first');
+    expect(far.actions.map((action) => action.label)).toEqual(['Precrease this line first']);
+    const near = foldRefusalNotice(t, refused(line), vertexContext('petal', { nearPrecrease: true }), calls);
+    expect(near.title).toBe('The line misses the precrease');
+    expect(near.actions.map((action) => action.label)).toEqual(['Use the precrease', 'Precrease this line first']);
+    near.actions.forEach((action) => action.run());
+    expect(calls.useNearPrecrease).toHaveBeenCalledTimes(1);
+    expect(calls.precreaseLine).toHaveBeenCalledTimes(1);
+
+    const kite = foldRefusalNotice(
+      t,
+      refused({ code: 'petal_not_precreased', faces: [1], missing: 'kite' }),
+      vertexContext('petal'),
+      calls
+    );
+    expect(kite.actions.map((action) => action.label)).toEqual(['Precrease the kite']);
+    kite.actions[0]?.run();
+    expect(calls.precreaseKite).toHaveBeenCalledTimes(1);
+    // Read-only: shown, none taken.
+    const locked = foldRefusalNotice(t, refused(line), { ...vertexContext('petal'), readOnly: true }, calls);
+    expect(locked.actions.every((action) => action.disabled)).toBe(true);
+  });
+});

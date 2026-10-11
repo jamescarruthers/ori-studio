@@ -240,3 +240,70 @@ describe('the layers at the line', () => {
     expect(seen?.section).toBeNull();
   });
 });
+
+describe('a vertex fold’s step', () => {
+  const CANDIDATES: [number, number][] = [
+    [1, 0],
+    [-0.8824, -0.4706],
+    [0.8824, -0.4706],
+  ];
+  /** The compound question of a swivel: three candidates, the first not landing, no orders. */
+  const swivelAnswer = (op: { emergent: [number, number] }) => ({
+    status: 'ok',
+    family: 'vertex',
+    analysis: {
+      kind: 'swivel',
+      center: [0.5, 0.3],
+      given: [
+        [0.86, 0.51],
+        [-0.86, 0.51],
+        [0, -1],
+      ],
+      candidates: CANDIDATES,
+      // The engine names the candidate nearest the ray asked for.
+      emergent: CANDIDATES.findIndex(([x, y]) => x === op.emergent[0] && y === op.emergent[1]) === 1 ? 1 : 0,
+      layers: [0],
+    },
+    emergents: [false, true, true],
+    orders: null,
+    ridges: [],
+  });
+  const SWIVEL: FoldToolState = {
+    ...FOLD_TOOL_INITIAL,
+    tool: 'swivel',
+    picks: [point(0.5, 0.3), point(1, 0.6), point(0, 0.6), point(0.5, 0), free(0.3, 0.9)],
+  };
+
+  const reverseTip = engine.compoundAnalysis.getMockImplementation();
+  afterEach(() => {
+    if (reverseTip) engine.compoundAnalysis.mockImplementation(reverseTip);
+  });
+
+  it('asks the compound question, again for the fourth ray that lands, and previews the step without a plain fold’s questions', async () => {
+    engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { emergent: [number, number] }) =>
+      swivelAnswer(op)) as never);
+    await render(SWIVEL);
+    for (let k = 0; k < 3; k += 1) await render(SWIVEL);
+    // The placeholder ray first, then the first candidate that lands.
+    expect(engine.compoundAnalysis).toHaveBeenCalledTimes(2);
+    const asked = engine.compoundAnalysis.mock.calls.map((call) => (call as unknown as [unknown, { emergent: unknown }])[1].emergent);
+    expect(asked).toEqual([[1, 0], CANDIDATES[1]]);
+    expect(seen?.step?.op).toMatchObject({ kind: 'swivel', emergent: CANDIDATES[1], seed: { scope: 'all' } });
+    expect(seen?.vertex).toMatchObject({ emergent: 1, layers: 1, ridges: [], orders: [] });
+    // Previewed through the session; a vertex fold has no line to analyse or picture.
+    expect(verbs.preview).toHaveBeenCalledWith(seen?.step?.op, undefined);
+    expect(analyse).not.toHaveBeenCalled();
+    expect(engine.action).not.toHaveBeenCalled();
+    expect(tracked.offered).toHaveBeenCalledWith('emergent', 3);
+    expect(seen?.refused).toBeNull();
+  });
+
+  it('says why before the engine is asked: a click that names no paper', async () => {
+    const off: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'squash', picks: [free(1.5, 0.5)] };
+    await render(off);
+    expect(engine.compoundAnalysis).not.toHaveBeenCalled();
+    expect(seen?.step).toBeNull();
+    expect(seen?.refused).toMatchObject({ refusal: { code: 'point_off_paper' } });
+    expect(tracked.refused).toHaveBeenCalledWith('point_off_paper');
+  });
+});

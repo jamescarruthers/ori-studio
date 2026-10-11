@@ -3,7 +3,7 @@ import type { FoldAnalysis, FoldCrossSection, FoldEngineRefused } from '../engin
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../tools/foldToolState';
 import type { FoldPick } from './foldPicking';
 import { bookScene } from './foldCanvas.fixtures';
-import { foldWindowPreview, refusedFaceInks, sceneLayers } from './foldCanvasModel';
+import { foldVertexWindowView, foldWindowPreview, refusedFaceInks, sceneLayers } from './foldCanvasModel';
 import { foldMovingTint } from './foldPaneOverlays';
 import { foldPickIndex } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
@@ -106,5 +106,66 @@ describe('the Fold canvas model', () => {
   it('counts a state’s layers as its deepest stack', () => {
     expect(sceneLayers(bookScene())).toBe(2);
     expect(sceneLayers(null)).toBe(1);
+  });
+
+  it('reads a vertex tool’s window view off its preview, and gives none to any other tool', () => {
+    expect(foldVertexWindowView(located, preview())).toBeUndefined();
+    const tools: FoldToolState = {
+      ...FOLD_TOOL_INITIAL,
+      tool: 'rabbit-ear',
+      vertexDirection: 'mountain',
+      compound: { ...FOLD_TOOL_INITIAL.compound, squashTarget: null, fanLayers: 1 },
+    };
+    // Before the engine has described anything: only the direction.
+    const waiting = foldVertexWindowView(tools, preview({ vertex: null }));
+    expect(waiting).toMatchObject({ tool: 'rabbit-ear', direction: 'mountain', described: false, known: false, emergents: [] });
+    const order = { faces: [], orders: [] };
+    const second = { faces: [], orders: [] };
+    const shown = foldVertexWindowView(
+      tools,
+      preview({
+        step: { op: { kind: 'turn', axis: 'vertical' }, key: 'k' },
+        vertex: {
+          base: {
+            analysis: {
+              kind: 'rabbit-ear',
+              center: [0.3, 0.3],
+              given: [],
+              candidates: [
+                [1, 0],
+                [0, 1],
+              ],
+              emergent: 0,
+              layers: [1, 2],
+            },
+            emergents: [false],
+            orders: null,
+            ridges: [],
+          },
+          answer: null,
+          emergent: 1,
+          ridges: [{ direction: [1, 0], given: 2, lands: true, orders: null }],
+          ridge: 0,
+          orders: [order, second],
+          order: second,
+          layers: 3,
+          nearPrecrease: null,
+        },
+      })
+    );
+    expect(shown).toMatchObject({
+      described: true,
+      known: true,
+      target: 'hinge',
+      // A candidate the answer says nothing of fits, as far as is known.
+      emergents: [false, true],
+      emergent: 1,
+      ridges: [{ given: 2, lands: true }],
+      layers: 3,
+      fanLayers: 1,
+      orders: 2,
+      order: 1,
+    });
+    expect(shown?.emergentNumber?.([0.1, 0.9])).toBe(2);
   });
 });
