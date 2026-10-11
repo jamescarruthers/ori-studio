@@ -200,6 +200,45 @@ describe('ToolOptionLayer, from a second tool', () => {
     expect(header()).toBeNull();
   });
 
+  it('keeps its header and note in view only for a surface that asks, pinned to the frame otherwise', () => {
+    // A header and a note wider than the frame, which sits near the layer's left edge.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 300,
+      bottom: 40,
+      width: 300,
+      height: 40,
+      toJSON: () => ({}),
+    } as DOMRect);
+    const note = () => [...host.querySelectorAll('p')].find((element) => element.textContent === OPENINGS[0].note)!;
+    try {
+      render(PANE_VIEW);
+      // Pinned to the frame's right edge, as on Edit's canvas: the stylesheet places both.
+      expect(header()!.style.right).toBe('');
+      expect(note().style.right).toBe('');
+
+      const option: CpToolOptionWindow = {
+        bounds: boundsOfPoints(OPENINGS[0].points)!,
+        index: 0,
+        count: OPENINGS.length,
+        note: OPENINGS[0].note,
+        onStep: vi.fn(),
+        onApply: vi.fn(),
+        onCancel: vi.fn(),
+      };
+      act(() => root.render(<ToolOptionLayer option={option} view={PANE_VIEW} keepInView={{ coveredBottom: 300 }} />));
+      // The frame's right edge is at 196 px: 300 px wide, both would start at -104; kept in view, at 8.
+      expect(header()!.style.right).toBe('-112px');
+      expect(note().style.right).toBe('-112px');
+      expect(note().style.visibility).toBe('');
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
   it('cancels without committing anything', () => {
     const onCommit = vi.fn();
     render(PANE_VIEW, onCommit);

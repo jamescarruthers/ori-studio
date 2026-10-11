@@ -316,7 +316,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
                       ground={inks.ground}
                     />
                   )}
-                  <ToolOptionLayer option={chooser} view={camera} />
+                  {/* A phone's pane is narrow and the tool window covers its bottom: the chooser stays in view. */}
+                  <ToolOptionLayer
+                    option={chooser}
+                    view={camera}
+                    keepInView={phone ? { coveredBottom: inset?.bottom ?? 0 } : undefined}
+                  />
                 </>
               )}
               ariaLabel={t(
