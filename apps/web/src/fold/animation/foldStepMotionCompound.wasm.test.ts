@@ -33,7 +33,6 @@ import {
   foldStepProgramme,
   type FoldStepMotion,
 } from './foldStepMotion';
-import { foldStepMotionLegsOf } from './foldStepMotionLegs';
 import { poseLegs, type FoldLegsMotion } from './foldStepPoses';
 
 /**
@@ -276,13 +275,6 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
       vertex: createFoldEngineVertexCalls(fold),
       io: createFoldEngineIoCalls(fold),
     };
-  });
-
-  it('reads a step’s legs off its node, and has none for any other step', () => {
-    const legs: FoldStepMotionLegs = { kind: 'visual', legs: [] };
-    expect(foldStepMotionLegsOf({ compound: { motion: legs } as never })).toBe(legs);
-    expect(foldStepMotionLegsOf({})).toBeNull();
-    expect(foldStepMotionLegsOf(null)).toBeNull();
   });
 
   it('plays the crane’s inside reverse folds on Beloch’s bird base', () => {

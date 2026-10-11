@@ -17,8 +17,8 @@
  * - a turn or a rotation turns the picture as the view turns, read off the two
  *   scenes' view transforms;
  * - every compound fold — reverse, crimp, tuck, the vertex folds, the sinks —
- *   plays the engine's legs (`StepMotion`, read through
- *   `foldStepMotionLegsOf`): groups of paper turning about their own
+ *   plays the engine's legs (`StepMotion`, read off its report through
+ *   `stepMotionLegsOf`): groups of paper turning about their own
  *   hinges, leg after leg;
  * - Import CP crossfades, and so does any step whose motion cannot be built
  *   from what it has (no line, nothing moving, no legs, a degenerate
@@ -111,7 +111,7 @@ export interface FoldStepMotionInput {
   action: FoldActionGeometry | null;
   /** What the step did; null for a turn, a rotation or an import. */
   report: FoldReport | null;
-  /** A compound fold's legs (`foldStepMotionLegsOf`); absent for any other step, and for one whose legs are not in yet. */
+  /** A compound fold's legs (`stepMotionLegsOf`); absent for any other step, and for one whose legs are not in yet. */
   legs?: FoldStepMotionLegs | null;
 }
 

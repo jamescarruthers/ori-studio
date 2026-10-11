@@ -3,8 +3,8 @@ import type { FoldStep } from '../document/foldSequenceDocument';
 import type { FoldSessionSnapshot } from '../session/foldSessionState';
 import { FOLD_SCENE_QUERY, FOLD_STEP_ACTION_QUERY } from '../session/foldStateQueries';
 import { useFoldNode, useFoldSessionState, useFoldStateQuery } from '../session/useFoldSession';
+import { stepMotionLegsOf } from '../engine/foldEngineCompoundWire';
 import { foldStepMotion, type FoldStepMotion, type FoldStepPane } from './foldStepMotion';
-import { foldStepMotionLegsOf } from './foldStepMotionLegs';
 
 /**
  * A step's motion, from the session: its op from the shown sequence, what it
@@ -31,7 +31,8 @@ export function useFoldStepMotion(stepId: string | null, pane: FoldStepPane | nu
   // The step's parent: the sheet for the first.
   const parent = useFoldNode(step?.parent ?? null);
   const report = landed?.report ?? null;
-  const legs = foldStepMotionLegsOf(landed);
+  // Every compound family's report, as the session keeps it on the node, carries its legs.
+  const legs = stepMotionLegsOf(landed?.compound);
   // Nothing is asked without a step that has a motion: not of the sheet, nor of a locked step.
   const after = useFoldStateQuery(step ? (landed?.state ?? null) : null, FOLD_SCENE_QUERY);
   const before = useFoldStateQuery(step ? (parent?.state ?? null) : null, FOLD_SCENE_QUERY);
