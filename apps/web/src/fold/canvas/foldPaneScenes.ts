@@ -7,8 +7,9 @@
  *
  * - **The folded pane** is the engine's scene through `foldedFlatPaperScene`,
  *   the route Edit's flat figure takes: whole faces in painter's order, folds
- *   in the edge pen, flat creases in the aux pen. A located fold adds its line
- *   in the diagram-crease pen of its direction, over the paper.
+ *   in the edge pen, flat creases in the aux pen, the layers spread apart as
+ *   the step says (`foldStepSpread`). A located fold adds its line in the
+ *   diagram-crease pen of its direction, over the paper.
  * - **The crease-pattern pane** is the sheet, front up, with every crease in
  *   the pen of what it is: the border in the edge pen, a folded crease in its
  *   (front-relative) fold pen, a flat crease in the aux pen. The creases the
@@ -24,6 +25,7 @@
 import type { Point } from '../../lib/geometry';
 import type { PaperItem, PaperLineItem, PaperLineRole, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { foldedFlatPaperScene, type FoldedFlatPaperSceneOptions } from '../../cp-workspace/folded/foldedFlatScene';
+import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import type { FoldStepPane } from '../animation/foldStepMotion';
 import type { FoldDirection } from '../document/foldSequenceDocument';
 import type { FoldLetter, FoldScene, FoldSceneCrease } from '../engine/foldEngineWire';
@@ -80,22 +82,53 @@ const shifted = (offset: Point) => (point: Point): ScenePoint =>
   foldUnitToScenePx({ x: point.x + offset.x, y: point.y + offset.y });
 
 /**
- * Where the folded pane places a state's folded form: `foldedFlatPaperScene`'s
- * options at the pane's display offset. A step's motion is built with the same
- * placement, so its first and last frames are the pane's own pictures.
+ * A spread as the folded pane applies it to an engine scene, so that it draws
+ * what the Diagram draws of the same state with the same spread. The Diagram
+ * spreads a Fold state in pattern units, y down (`foldScenePattern`); the
+ * engine's frame is y up, its mirror image, so an affine spread's axis — an
+ * angle from the sheet's +x toward its +y — names the same line at −θ here.
+ * A depth spread's direction is on the screen, after the pane places the
+ * scene, and is the same in both; so is every amount, a share of the model.
  */
-export function foldedPanePlacement(offset: Point = ORIGIN): FoldedFlatPaperSceneOptions {
+export function foldFrameSpread(spread: LayerSpreadOptions | null): LayerSpreadOptions | null {
+  if (!spread || spread.kind === 'depth') return spread;
+  return { ...spread, axisDeg: (180 - spread.axisDeg) % 180 };
+}
+
+/**
+ * Where the folded pane places a state's folded form: `foldedFlatPaperScene`'s
+ * options at the pane's display offset, its layers spread by `spread` — the
+ * step's (`foldStepSpread`), none for null. A step's motion is built with the
+ * same placement, so its first and last frames are the pane's own pictures; a
+ * motion that eases a spread in passes it part of the way on
+ * (`weightedSpread`).
+ */
+export function foldedPanePlacement(
+  offset: Point = ORIGIN,
+  spread: LayerSpreadOptions | null = null
+): FoldedFlatPaperSceneOptions {
+  const spreadHere = foldFrameSpread(spread);
   return {
-    // The canvas shows what the window shows; a buried face is never seen.
-    markHidden: true,
+    // The canvas shows what the window shows; a buried face is never seen —
+    // unless the layers are spread, and one peeks out from under another.
+    markHidden: spreadHere === null,
     toScenePx: shifted(offset),
     scale: FOLD_USER_PER_UNIT,
+    ...(spreadHere ? { spread: spreadHere } : {}),
   };
 }
 
-/** The folded form of a state, as the folded pane paints it, shifted by the pane's display offset. */
-export function foldedPaneScene(scene: FoldScene, display: FoldPaneDisplay, offset: Point = ORIGIN): PaperScene {
-  const painted = foldedFlatPaperScene(scene, foldedPanePlacement(offset));
+/**
+ * The folded form of a state, as the folded pane paints it, shifted by the
+ * pane's display offset, its layers spread by `spread` (none for null).
+ */
+export function foldedPaneScene(
+  scene: FoldScene,
+  display: FoldPaneDisplay,
+  offset: Point = ORIGIN,
+  spread: LayerSpreadOptions | null = null
+): PaperScene {
+  const painted = foldedFlatPaperScene(scene, foldedPanePlacement(offset, spread));
   return display.precreases ? painted : withoutFlatCreases(painted);
 }
 
@@ -106,6 +139,11 @@ export function foldedPaneScene(scene: FoldScene, display: FoldPaneDisplay, offs
  * and itself with this, so its first frame is the pane's picture of the
  * parent and its last the pane's of the step — a turn starts where the
  * parent lies, and with Precreases off no frame between draws one.
+ *
+ * The pictures are unspread: a spread is a picture of a state at rest, and a
+ * motion's frames lie between two. A motion that eases the step's spread in
+ * as it lands (or the parent's out as it starts) places those frames with
+ * `foldedPanePlacement(offset, weightedSpread(spread, weight))`.
  */
 export function foldedPanePictures(
   sheet: readonly (readonly [number, number])[],

@@ -12,7 +12,9 @@ import {
   type FoldCreaseCounts,
   type FoldCreaseDiff,
 } from '../../fold/stepWords';
+import type { FoldStepSpreadControls } from '../../fold/sequence/foldStepSpreadControls';
 import { turnCardWords } from '../../lib/steps/turnWords';
+import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { Badge } from '../ui/Badge';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { FieldRow } from '../ui/fieldRows';
@@ -85,8 +87,9 @@ export interface FoldBranchPosition {
 
 /**
  * The Step pane: the step at the cursor in words and numbers — its sentence,
- * operation, line, layers and what it did to the crease pattern — then the
- * fold in progress, if there is one.
+ * operation, line, layers and what it did to the crease pattern — how its
+ * folded picture spreads its layers, then the fold in progress, if there is
+ * one.
  *
  * Presentation only: every value arrives in props, from the engine's
  * per-step summary and the sequence's derived state. The words are
@@ -103,6 +106,7 @@ export function FoldStepPane({
   startSide,
   branch = null,
   fixes = [],
+  spread = null,
 }: {
   /** The step at the cursor; null is the flat sheet. */
   step: FoldStepPaneStep | null;
@@ -112,6 +116,8 @@ export function FoldStepPane({
   branch?: FoldBranchPosition | null;
   /** What a broken step's notice offers — its delete, from the action catalog. */
   fixes?: readonly NoticeAction[];
+  /** How the step's folded picture spreads its layers (`useFoldStepSpread`); null for none to offer. */
+  spread?: FoldStepSpreadControls | null;
 }) {
   const { t } = useTranslation();
 
@@ -197,9 +203,30 @@ export function FoldStepPane({
         )}
       </div>
 
+      {spread && <SpreadSection spread={spread} />}
       {step.creases && <CreaseCounts creases={step.creases} startSide={startSide} />}
       {pendingSection}
     </div>
+  );
+}
+
+/**
+ * How the step's folded picture spreads its layers (Wave 5): the rows the
+ * Diagram's Pose section lays a spread out with, and where the spread comes
+ * from — a change here is the step's own, and the steps after it take it.
+ */
+function SpreadSection({ spread }: { spread: FoldStepSpreadControls }) {
+  const { t } = useTranslation();
+  const origin =
+    spread.origin === 'own'
+      ? t('panels:fold.step.spreadOwn', 'Set on this step. The steps after it take it too.')
+      : spread.origin === 'earlier'
+        ? t('panels:fold.step.spreadEarlier', 'As an earlier step sets it. A change here applies from this step on.')
+        : t('panels:fold.step.spreadDefault', 'The default spread. A change here applies from this step on.');
+  return (
+    <CollapsibleSection title={t('panels:fold.step.spread', 'Spread')} description={origin}>
+      <LayerSpreadRows toggle={spread.toggle} spread={spread.spread} />
+    </CollapsibleSection>
   );
 }
 

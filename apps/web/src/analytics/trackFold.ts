@@ -1,6 +1,15 @@
+import type { LayerSpreadOptions } from '../cp-workspace/folded/foldedLayerSpread';
 import { ANALYTICS_EVENTS, bucketCount, FOLD_CHOICE_COUNT_BUCKETS } from './events';
-import type { FoldChoiceKind, FoldStepAddedOpKind, FoldStepLayerScope, FoldStepVia } from './events';
+import type {
+  FoldChoiceKind,
+  FoldSpreadAction,
+  FoldSpreadVia,
+  FoldStepAddedOpKind,
+  FoldStepLayerScope,
+  FoldStepVia,
+} from './events';
 import { track } from './runtime';
+import { spreadProperties, spreadTracking } from './trackDiagram';
 
 /**
  * A step committed from the Fold canvas (plan D18). Hand-placed: a commit is
@@ -21,6 +30,23 @@ export function trackFoldStepAdded(
 /** A refusal shown to the folder, by the engine's stable code: never a face, a vertex or a line. */
 export function trackFoldRefused(code: string): void {
   track(ANALYTICS_EVENTS.foldRefused, { code });
+}
+
+/**
+ * A Fold step's layer spread changed, from where, and — when it leaves the
+ * layers spread — how, as the Diagram counts a spread (`spreadProperties`):
+ * enums and buckets, never a value.
+ */
+export function trackFoldSpreadChanged(
+  action: FoldSpreadAction,
+  via: FoldSpreadVia,
+  spread: LayerSpreadOptions | null
+): void {
+  track(ANALYTICS_EVENTS.foldSpreadChanged, {
+    action,
+    via,
+    ...(spread ? spreadProperties(spreadTracking(spread)) : {}),
+  });
 }
 
 /** The engine offered more than one answer to choose between: which kind, and how many, bucketed. */

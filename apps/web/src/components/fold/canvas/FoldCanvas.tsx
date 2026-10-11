@@ -50,6 +50,7 @@ import { FoldPane } from './FoldPane';
 import { FoldPhoneBarControls } from './FoldPhoneBarControls';
 import { FoldViewportToolbar } from './FoldViewportToolbar';
 import { useFoldPanePlayback } from '../../../fold/canvas/useFoldPanePlayback';
+import { useFoldStepSpread, useFoldStepSpreadShown } from '../../../fold/sequence/useFoldStepSpread';
 import { FoldPlaybackControls } from '../FoldPlaybackControls';
 import styles from './FoldCanvas.module.css';
 
@@ -120,8 +121,11 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   useFoldCanvasShortcuts(camera);
 
   // --- What each pane paints, and frames: the camera fits on a new sequence or sheet, never on a fold.
+  // The folded form's layers spread as the step on screen says, its switch on the bar.
   const summary = view.summary;
-  const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks);
+  const spreadShown = useFoldStepSpreadShown(view.cursorId);
+  const spread = useFoldStepSpread(view.cursorId, 'canvas_bar');
+  const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, spreadShown);
   const landed = preview.landed;
   const cpSummary = paint.creasePattern.summary;
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
@@ -305,6 +309,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           camera={camera}
           display={display}
           onDisplay={setDisplay}
+          spread={spread?.toggle ?? null}
           playback={<FoldPlaybackControls playback={playback} shortcuts={shortcuts} compact={phone} />}
           phoneControls={phone ? <FoldPhoneBarControls /> : undefined}
           sendToEdit={sendToEdit}

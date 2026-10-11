@@ -120,6 +120,48 @@ describe('FoldStepPane', () => {
     expect(section('Creases')?.textContent).toContain('which starts face down');
   });
 
+  it('lays the step’s spread out with the Diagram’s rows, and says where it comes from', () => {
+    const toggle = vi.fn();
+    const choose = vi.fn();
+    const choice = <T extends string>(value: T, label: string, pressed: boolean) => ({
+      value,
+      label,
+      pressed,
+      disabled: false,
+      waiting: false,
+      run: pressed ? () => {} : choose,
+    });
+    render({
+      step: VALLEY_STEP,
+      startSide: 'front',
+      spread: {
+        origin: 'earlier',
+        toggle: { pressed: true, disabled: false, run: toggle },
+        spread: {
+          spread: { kind: 'depth', amount: 0.05, toward: 'down' },
+          disabled: false,
+          kinds: [choice('affine', 'Affine', false), choice('depth', 'Depth', true)],
+          directions: [choice('down', 'Deeper layers down', true), choice('up', 'Deeper layers up', false)],
+          keeps: [],
+          preview: vi.fn(),
+          commit: vi.fn(),
+          start: () => true,
+        },
+      },
+    });
+    const spread = section('Spread');
+    expect(spread?.textContent).toContain('As an earlier step sets it.');
+    expect(spread?.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('true');
+    expect(spread?.querySelector('input[type="range"]')?.getAttribute('aria-label')).toBe('Spread amount');
+    act(() => (spread?.querySelector('[role="switch"]') as HTMLElement).click());
+    expect(toggle).toHaveBeenCalledOnce();
+    act(() => (spread?.querySelector('button[aria-label="Deeper layers up"]') as HTMLElement).click());
+    expect(choose).toHaveBeenCalledOnce();
+    // The flat sheet has none to offer.
+    render({ step: null, startSide: 'front', spread: null });
+    expect(section('Spread')).toBeUndefined();
+  });
+
   it('gives each kind of change its own line', () => {
     render({
       step: { ...VALLEY_STEP, diff: { added: { mountain: 0, valley: 0, flat: 2 }, refolded: 1, reversed: 0, unfolded: 1 } },
