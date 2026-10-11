@@ -462,4 +462,18 @@ describe('a vertex fold’s step', () => {
     expect(seen?.refused).toMatchObject({ refusal: { code: 'point_off_paper' } });
     expect(tracked.refused).toHaveBeenCalledWith('point_off_paper');
   });
+
+  it('counts a refusal with no step each time it is shown anew, and once while it stays', async () => {
+    const squash: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'squash', picks: [free(1.5, 0.5)] };
+    await render(squash);
+    await render({ ...squash, hoveredFlap: 1 });
+    expect(tracked.refused).toHaveBeenCalledTimes(1);
+    // Escape lets it go; the same click shows it again, and another click off the paper is another refusal.
+    await render({ ...squash, picks: [] });
+    await render(squash);
+    expect(tracked.refused).toHaveBeenCalledTimes(2);
+    await render({ ...squash, picks: [free(1.6, 0.5)] });
+    expect(tracked.refused).toHaveBeenCalledTimes(3);
+    expect(tracked.refused.mock.calls.every(([code]) => code === 'point_off_paper')).toBe(true);
+  });
 });
