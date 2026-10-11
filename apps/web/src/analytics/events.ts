@@ -67,9 +67,18 @@ export type FoldStepPlayVia = 'space' | 'button' | 'replay';
  * Which choice the Fold engine offered: an axiom's roots, the stacks a depth
  * pick can take, the layer orders one part of an imported crease pattern
  * folds to (Import CP's chooser), or a compound fold's: the ways a flap opens
- * (`opening`) and the orders its completion leaves (`order`).
+ * (`opening`) and the orders its completion leaves (`order`); a rabbit ear's
+ * or a swivel's fourth crease (`emergent`) and a rabbit ear's ridge (`ridge`).
  */
-export type FoldChoiceKind = 'axiom_root' | 'depth' | 'import_order' | 'opening' | 'order';
+export type FoldChoiceKind =
+  | 'axiom_root'
+  | 'depth'
+  | 'import_order'
+  | 'opening'
+  | 'order'
+  // The vertex folds.
+  | 'emergent'
+  | 'ridge';
 
 /** What a change of a Fold step's layer spread did (`fold spread changed`): the Diagram's spread verbs, by name. */
 export type FoldSpreadAction =

@@ -47,7 +47,7 @@ describe('a compound fold’s Step pane rows', () => {
     expect(foldCompoundPaneRows(undefined)).toBeUndefined();
   });
 
-  it('has none yet for the other families, whose rows come with their tools', () => {
+  it('counts a vertex fold’s blocks, its motion classes, and says whether its order was chosen', () => {
     const vertex: FoldCompoundReportOf<'vertex'> = {
       family: 'vertex',
       kind: 'squash',
@@ -55,7 +55,7 @@ describe('a compound fold’s Step pane rows', () => {
       creases: [{ n: [1, 0], d: 0.5 }],
       direction: 'valley',
       moving: [1],
-      blocks: [[2]],
+      blocks: [[2], [5, 6]],
       created: [3, 4],
       unfolded: [],
       refolded: [],
@@ -64,6 +64,8 @@ describe('a compound fold’s Step pane rows', () => {
       motion: { kind: 'visual', legs: [] },
       stored: {},
     };
-    expect(foldCompoundPaneRows(vertex)).toBeUndefined();
+    expect(foldCompoundPaneRows(vertex)).toEqual({ blocks: 2, opening: null, orderChosen: false, blocksOf: 'vertex' });
+    const chosen = { ...vertex, stored: { completion: { faces: [], orders: [[0, 1, 1] as [number, number, number]] } } };
+    expect(foldCompoundPaneRows(chosen)).toMatchObject({ orderChosen: true });
   });
 });
