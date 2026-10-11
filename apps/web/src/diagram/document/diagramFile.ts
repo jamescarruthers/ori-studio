@@ -473,8 +473,8 @@ const FOLD_SOURCE_KEYS: ReadonlySet<string> = new Set([
   'engine',
   'thumbnail',
   'render',
-  'remembered',
   'sentence',
+  'remembered',
 ]);
 /** The render modes a Fold step is shown in (`DIAGRAM_FOLD_SHOW_AS`): any other is a newer build's. */
 const FOLD_RENDER_MODES: ReadonlySet<string> = new Set(['crease-pattern', 'folded-flat']);
@@ -846,8 +846,9 @@ function readFoldStepSource(value: Record<string, unknown>): DiagramFoldStepSour
     engine,
     thumbnail,
     render,
-    ...(kept && Object.keys(kept).length > 0 ? { remembered: kept } : {}),
     ...(typeof value.sentence === 'string' ? { sentence: xmlText(value.sentence) } : {}),
+    // Last, where `withRememberedPoses` puts it: a load reads a step back key for key as a capture left it.
+    ...(kept && Object.keys(kept).length > 0 ? { remembered: kept } : {}),
   };
 }
 
