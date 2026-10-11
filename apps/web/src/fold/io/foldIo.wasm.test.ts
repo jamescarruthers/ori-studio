@@ -18,7 +18,7 @@ import { selectFoldCursorNode } from '../session/foldSessionState';
 import { foldImportFileSource } from './foldImportFiles';
 import { createFoldImportFlow, type FoldImportFlow, type FoldImportFlowState } from './foldImportFlow';
 import { exportFoldSequence, openFoldStepsExport, sendFoldSequenceToEdit, type FoldHandOffDeps } from './foldHandOffs';
-import { foldStateThumbnailUrl } from './foldStateThumbnail';
+import { foldStatePictureUrl } from '../canvas/foldStatePicture';
 
 /**
  * Import CP and the hand-offs over the real bridge, in-process: the flow and
@@ -172,7 +172,7 @@ describe.skipIf(!available)('Import CP and the hand-offs over the built bridge',
     expect(pictures.length).toBeGreaterThan(1);
     for (const preview of pictures) {
       expect(preview.status).toBe('ready');
-      if (preview.status === 'ready') expect(foldStateThumbnailUrl(preview.scene, DEFAULT_PAPER_STYLE)).toMatch(/^data:image\/svg\+xml/);
+      if (preview.status === 'ready') expect(foldStatePictureUrl(preview.scene, DEFAULT_PAPER_STYLE)).toMatch(/^data:image\/svg\+xml/);
     }
     const last = state.opened.components.findIndex((component) => component.orders > 1);
     flow.choose(last, state.opened.components[last]!.orders - 1);

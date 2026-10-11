@@ -3,11 +3,19 @@
  * layer, its bar where it meets the line, brackets where a fold joins two rows,
  * its flap's name at the side. The rows have no gap between them, so the
  * brackets' drawing can count in rows (`viewBox` height = the row count).
+ *
+ * Every line here is solid. On paper a dashed line is a valley fold and a
+ * dotted one a hidden edge, so a state drawn broken reads as a crease that is
+ * not there: a row is told by its ink — the accent, softer, or grey.
  */
 .section {
   --row-height: 18px;
   --row-pad: 8px;
   --tag-width: 52px;
+  /* Moving without being picked: the moving ink, a step softer. */
+  --moved-along: color-mix(in srgb, var(--accent-primary) 55%, var(--bg-primary));
+  /* Left behind: grey, and quieter than any row that moves. */
+  --left-behind: color-mix(in srgb, var(--text-muted) 60%, transparent);
   display: grid;
   gap: 2px;
   padding: 6px 0;
@@ -66,9 +74,9 @@
   height: 100%;
 }
 
-/* Not under the row above but beside it: a dotted rule where a stacked row has none. */
+/* Not under the row above but beside it: a hairline where a stacked row has none. */
 .row[data-unordered] .track {
-  border-top: 1px dotted var(--border-default);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .bar {
@@ -77,7 +85,7 @@
   height: 3px;
   min-width: 3px;
   border-radius: 999px;
-  background: var(--border-strong);
+  background: var(--left-behind);
   transform: translateY(-50%);
 }
 
@@ -86,14 +94,14 @@
   background: var(--accent-primary);
 }
 
-/* Not picked, but moving anyway with what is: the moving ink, broken. */
+/* Not picked, but moving anyway with what is. */
 .row[data-state='added'] .bar {
-  background: repeating-linear-gradient(90deg, var(--accent-primary) 0 6px, transparent 6px 9px);
+  background: var(--moved-along);
 }
 
-/* Left behind: broken and quiet. */
+/* Left behind: greyed out. */
 .row[data-state='excluded'] .bar {
-  background: repeating-linear-gradient(90deg, var(--text-muted) 0 4px, transparent 4px 7px);
+  background: var(--left-behind);
 }
 
 /* In the way of the fold asked for: the refusal's hue. */
@@ -124,14 +132,20 @@
   height: 100%;
   overflow: visible;
   fill: none;
-  stroke: var(--border-strong);
+  /* In its rows' ink: `--border-strong` is a theme's active border, the
+     accent's own blue in the default themes, which drew a bracket left
+     behind as though it moved. */
+  stroke: var(--left-behind);
   stroke-width: 1.5;
   pointer-events: none;
 }
 
-.brackets path[data-state='picked'],
-.brackets path[data-state='added'] {
+.brackets path[data-state='picked'] {
   stroke: var(--accent-primary);
+}
+
+.brackets path[data-state='added'] {
+  stroke: var(--moved-along);
 }
 
 /* A finger needs rows it can land on; the chips under the picker are the full-size path. */

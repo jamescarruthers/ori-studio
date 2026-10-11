@@ -6,6 +6,7 @@ import { foldPathMoves } from './foldSequencePath';
 import { branchReadout, branchesLabel, moveLabel, replayNote, stripLabel } from './foldSequenceWords';
 import { foldStripCards, type FoldStripCard } from './foldStripCards';
 import { moveFoldReader } from './foldKeys';
+import { foldCardPictureSource } from './useFoldCardPictures';
 import type { FoldSequenceView } from './useFoldSequenceView';
 
 /** Everything the strip takes but its pictures: the cards, which is active, the moves and their words. */
@@ -44,23 +45,30 @@ const nextBranch = () => void moveFoldReader('nextBranch');
  */
 export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
   const { t } = useTranslation();
-  const { paper, entries, frames, words, cursor, pending, progress, failed } = view;
+  const { paper, entries, words, cursor, pending, progress, failed } = view;
+  // Each card pictures its landed state, kept by its fingerprint across replays.
+  const pictures = useMemo(
+    () => entries.map((entry) => foldCardPictureSource(entry.session.state, entry.session.fingerprint)),
+    [entries]
+  );
+  const pendingState = pending?.state ?? null;
+  const pendingPicture = useMemo(() => foldCardPictureSource(pendingState), [pendingState]);
   const { cards, active } = useMemo(
     () =>
       foldStripCards(t, {
         paper,
         entries,
         words,
-        pictures: frames.map((frame) => frame?.form ?? null),
+        pictures,
         cursor,
         pending: pending && {
           refused: pending.status === 'refused',
           words: pending.words,
-          picture: pending.frame?.form ?? null,
+          picture: pendingPicture,
           branch: pending.branch,
         },
       }),
-    [t, paper, entries, words, frames, cursor, pending]
+    [t, paper, entries, words, pictures, cursor, pending, pendingPicture]
   );
   const moves = foldPathMoves(entries, cursor);
 

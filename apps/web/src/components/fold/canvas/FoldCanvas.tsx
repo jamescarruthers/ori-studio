@@ -26,7 +26,7 @@ import {
   sceneLayers,
 } from '../../../fold/canvas/foldCanvasModel';
 import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
-import { FOLD_PANE_DISPLAY_DEFAULT, type FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
+import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
 import { revealFoldedPane, useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
 import { useFoldCanvasInks } from '../../../fold/canvas/useFoldCanvasInks';
@@ -37,6 +37,7 @@ import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFold
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
 import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
+import { useFoldWindowInset } from '../../../fold/canvas/useFoldWindowInset';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
@@ -100,8 +101,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const keyLabel = useCallback<FoldKeyLabel>((id) => shortcutLabelForAction(id, shortcuts), [shortcuts]);
   const theme = useThemeStore((state) => state.currentTheme);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  const [toolWindowFrame, setToolWindowFrame] = useState<HTMLElement | null>(null);
+  // A phone's tool window spans the pane: the paper is fitted above it.
+  const inset = useFoldWindowInset(viewport, toolWindowFrame, phone);
   const inks = useFoldCanvasInks(viewport, theme.name);
-  const [display, setDisplay] = useState<FoldPaneDisplay>(FOLD_PANE_DISPLAY_DEFAULT);
+  // Shared with the step strip, whose cards are the folded pane's pictures.
+  const display = useFoldPaneDisplay();
   const [zoomPercent, setZoomPercent] = useState(100);
 
   // --- The camera verbs of both panes: the toolbar and the zoom keys drive them together.
@@ -231,6 +236,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const paneProps = {
     style,
     framingKey,
+    inset,
     wheelGesture,
     snapRadius,
     inkKey: theme.name,
@@ -308,14 +314,14 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           zoomPercent={zoomPercent}
           camera={camera}
           display={display}
-          onDisplay={setDisplay}
+          onDisplay={setFoldPaneDisplay}
           spread={spread?.toggle ?? null}
           playback={<FoldPlaybackControls playback={playback} shortcuts={shortcuts} compact={phone} />}
           phoneControls={phone ? <FoldPhoneBarControls /> : undefined}
           sendToEdit={sendToEdit}
         />
       </div>
-      <FoldToolWindow container={viewport} model={windowModel} keyLabel={keyLabel} />
+      <FoldToolWindow container={viewport} model={windowModel} keyLabel={keyLabel} onFrame={setToolWindowFrame} />
     </div>
   );
 }

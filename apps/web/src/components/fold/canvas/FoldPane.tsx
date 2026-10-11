@@ -17,7 +17,7 @@ import {
 } from '../../../cp-workspace/adapters/cpFoldedToScene';
 import type { UserBounds } from '../../../cp-workspace/renderer/camera';
 import type { FillGeometry, FoldedGeometry } from '../../../cp-workspace/renderer/types';
-import { useCpSurface, type CpSurfaceControls } from '../../../cp-workspace/surface/useCpSurface';
+import { useCpSurface, type CpSurfaceControls, type CpSurfaceInset } from '../../../cp-workspace/surface/useCpSurface';
 import type { PaperScene } from '../../../lib/paper/paperScene';
 import type { PaperStyle } from '../../../lib/paper/paperStyle';
 import { ptToDevicePx } from '../../../lib/paper/paperStyle';
@@ -59,6 +59,8 @@ export interface FoldPaneProps {
   contentBounds: UserBounds | null;
   /** The camera refits when this changes: a new sequence or a new sheet, never a fold. */
   framingKey: string;
+  /** The pane's edges the tool window covers, CSS px: the fit keeps the paper out from under it (a phone's). */
+  inset?: CpSurfaceInset | null;
   wheelGesture: WheelGesturePreference;
   /** The user's snap radius, in Edit's model units. */
   snapRadius: number;
@@ -110,6 +112,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     offset,
     contentBounds,
     framingKey,
+    inset = null,
     wheelGesture,
     snapRadius,
     hitTest,
@@ -143,6 +146,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
       modelToSvg,
       contentBounds,
       framingKey,
+      inset,
       wheelGesture,
       snapRadius,
       // The surface measures radii in Edit's units; the same share of a Fold sheet.

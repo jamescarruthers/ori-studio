@@ -173,8 +173,13 @@ export interface FoldTools {
   swapSide(): boolean;
   /** Step through the axiom's roots, of `count`. */
   stepRoot(delta: number, count: number): void;
+  /** Fold with this seed; a seed of no flaps is every layer (`flapSeed`). */
   setSeed(seed: FoldToolSeed): void;
-  /** Pick or unpick a flap; `all` is the section's every flap, so picking the last unpicked one is `all` again. */
+  /**
+   * Pick or unpick a flap; `all` is the section's every flap, so picking the
+   * last unpicked one is `all` again — and so is unpicking the only one
+   * picked, which would otherwise leave a seed that moves nothing (`flapSeed`).
+   */
   toggleFlap(flap: FoldFlap, all: readonly FoldFlap[]): void;
   setPrecreaseDirection(direction: FoldDirection): void;
   setOverride(override: FoldToolOverride | null): void;
@@ -191,6 +196,19 @@ export interface FoldTools {
 
 const sameFlap = (a: FoldFlap, b: FoldFlap) =>
   a.faces.length === b.faces.length && a.faces.every((face, k) => face === b.faces[k]);
+
+/**
+ * The seed that picks `flaps` of `all`: every layer when they are every flap
+ * at the line, or none of them. A seed of no flaps names nothing on the
+ * moving side, so the engine refuses it (`no_side`) and the window, with no
+ * section to show, has no chips left to pick one again: the last chip
+ * unpressed would strand the fold. Every layer is where a fold starts.
+ */
+export function flapSeed(flaps: readonly FoldFlap[], all: readonly FoldFlap[] = []): FoldToolSeed {
+  if (flaps.length === 0) return { scope: 'all' };
+  const everything = all.length > 0 && all.every((each) => flaps.some((other) => sameFlap(each, other)));
+  return everything ? { scope: 'all' } : { scope: 'flaps', flaps };
+}
 
 /** The parts a Divide-line count may take: two up to the Diagram's divisions' limit. */
 export function clampDivideParts(parts: number): number {
@@ -282,7 +300,8 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       }));
     },
 
-    setSeed(seed) {
+    setSeed(asked) {
+      const seed = asked.scope === 'flaps' ? flapSeed(asked.flaps) : asked;
       set((state) => ({ ...state, seed, override: null, compound: anotherTip(state.compound) }));
     },
 
@@ -291,9 +310,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         const picked = state.seed.scope === 'flaps' ? state.seed.flaps : state.seed.scope === 'all' ? all : [];
         const has = picked.some((each) => sameFlap(each, flap));
         const next = has ? picked.filter((each) => !sameFlap(each, flap)) : [...picked, flap];
-        const everything = all.length > 0 && all.every((each) => next.some((other) => sameFlap(each, other)));
-        const seed: FoldToolSeed = everything ? { scope: 'all' } : { scope: 'flaps', flaps: next };
-        return { ...state, seed, override: null, compound: anotherTip(state.compound) };
+        return { ...state, seed: flapSeed(next, all), override: null, compound: anotherTip(state.compound) };
       });
     },
 

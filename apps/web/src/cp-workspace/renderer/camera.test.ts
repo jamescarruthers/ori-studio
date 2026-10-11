@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   cameraZoomForPercent,
   fitUserCamera,
+  fitUserCameraWithin,
   frameUserCameraOnBounds,
   modelViewFromCamera,
   normalizeCameraRotation,
@@ -94,6 +95,33 @@ describe('UserCamera', () => {
     const tl = projectModelPoint(view, 0, 0);
     expect(tl.y).toBeGreaterThanOrEqual(0);
     expect(tl.y).toBeLessThanOrEqual(vp.height);
+  });
+
+  it('fits within an inset: sized to the part that shows and centred on it', () => {
+    // A window over the bottom 300 px of the 600: the content fits the 800 × 300 above it.
+    const bounds = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    const cam = fitUserCameraWithin(bounds, vp, { top: 0, right: 0, bottom: 300, left: 0 }, 1);
+    expect(cam.zoom).toBeCloseTo(3);
+    const view = userCameraToView(cam, vp);
+    expect(projectModelPoint(view, 50, 50).x).toBeCloseTo(400);
+    expect(projectModelPoint(view, 50, 50).y).toBeCloseTo(150);
+    expect(projectModelPoint(view, 0, 0).y).toBeCloseTo(0);
+    expect(projectModelPoint(view, 100, 100).y).toBeCloseTo(300);
+    // No inset is the plain fit.
+    expect(fitUserCameraWithin(bounds, vp, { top: 0, right: 0, bottom: 0, left: 0 }, 1)).toEqual(fitUserCamera(bounds, vp, 1));
+  });
+
+  it('keeps a quarter of each axis however much an inset covers, through a turned view too', () => {
+    const bounds = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    // Asked to fit above a window taller than the viewport: it fits the top 150 px.
+    const covered = fitUserCameraWithin(bounds, vp, { top: 0, right: 0, bottom: 900, left: 0 }, 1);
+    expect(covered.zoom).toBeCloseTo(1.5);
+    expect(projectModelPoint(userCameraToView(covered, vp), 50, 50).y).toBeCloseTo(75);
+    // A quarter turn: the content's middle still lands at the shown part's middle.
+    const turned = fitUserCameraWithin(bounds, vp, { top: 0, right: 200, bottom: 0, left: 0 }, 1, Math.PI / 2);
+    const middle = projectModelPoint(userCameraToView(turned, vp), 50, 50);
+    expect(middle.x).toBeCloseTo(300);
+    expect(middle.y).toBeCloseTo(300);
   });
 
   it('composes model->device via modelToSvg', () => {

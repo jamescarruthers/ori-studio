@@ -3,9 +3,9 @@
  * of the active path, and the step a tool is folding — each a picture of its
  * state, a number or a badge, its sentence, and its branches.
  *
- * - **Pictures** are the folded form each step lands at
- *   (`FoldStateFrame.form`); a step with no state yet, or none at all, has
- *   none.
+ * - **Pictures** are the state each step lands at, painted as the folded
+ *   pane paints it (`useFoldCardPicture`); a step with no state yet, or none
+ *   at all, has none.
  * - **Standing** is a card state and a word: broken, changed, locked, or
  *   still folding; the step being folded is a preview, a blocked one when the
  *   engine refused it, and a new branch when it folds from a step that is not
@@ -18,18 +18,19 @@
  */
 import type { TFunction } from 'i18next';
 import type { StepFilmstripCard, StepFilmstripCardState } from '../../components/steps/StepFilmstrip';
-import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import type { FoldPaper } from '../document/foldSequenceDocument';
 import { foldStepSentence, type FoldSentenceStep } from '../stepSentence';
 import { operationBadge } from '../stepWords';
 import type { FoldEntryStatus, FoldPathEntry } from './foldSequencePath';
 import { pendingBadge, pendingTag, sheetBadge, sheetSentence, statusBadge } from './foldSequenceWords';
+import type { FoldCardPictureSource } from './useFoldCardPictures';
 
 /** A card, and what it is a card of. */
 export interface FoldStripCard extends StepFilmstripCard {
   /** The path entry it shows, by index; null for the step being folded. */
   entry: number | null;
-  picture: SheetThumbnail | null;
+  /** The state its picture is of; null for none. */
+  picture: FoldCardPictureSource | null;
 }
 
 /** The step a tool is folding, as the strip draws it. */
@@ -37,7 +38,7 @@ export interface FoldStripPending {
   /** The engine refused it: there is nothing to commit. */
   refused: boolean;
   words: FoldSentenceStep;
-  picture: SheetThumbnail | null;
+  picture: FoldCardPictureSource | null;
   /** It folds from a step that is not the active path's tip: committing it starts a branch. */
   branch: boolean;
 }
@@ -48,7 +49,7 @@ export interface FoldStripInput {
   /** Each entry's words, by index; the sheet's is unused. */
   words: readonly FoldSentenceStep[];
   /** Each entry's picture, by index. */
-  pictures: readonly (SheetThumbnail | null)[];
+  pictures: readonly (FoldCardPictureSource | null)[];
   /** The step on screen, by entry index. */
   cursor: number;
   pending: FoldStripPending | null;

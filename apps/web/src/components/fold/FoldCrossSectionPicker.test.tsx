@@ -168,6 +168,36 @@ describe('FoldCrossSectionPicker', () => {
     expect(brackets).toHaveLength(2);
     expect([...brackets].map((path) => path.getAttribute('data-state'))).toEqual(['picked', 'picked']);
   });
+
+  it('marks each row and bracket moved along or left behind, still named and selectable', () => {
+    const onToggle = vi.fn();
+    const view = mount(
+      <FoldCrossSectionPicker model={foldSectionPicker(t, section, seed([1], [0]))} onToggle={onToggle} />
+    );
+    const list = byRole(view, 'listbox', 'Layers at the fold line, top to bottom');
+    expect(allByRole(list, 'option').map((option) => option.getAttribute('data-state'))).toEqual([
+      'added',
+      'added',
+      'picked',
+      'picked',
+      'picked',
+    ]);
+    const brackets = view.querySelectorAll('svg[aria-hidden="true"] path');
+    expect([...brackets].map((path) => path.getAttribute('data-state'))).toEqual(['added', 'picked']);
+
+    act(() => root?.render(<FoldCrossSectionPicker model={foldSectionPicker(t, section, seed([1]))} onToggle={onToggle} />));
+    const behind = byRole(list, 'option', 'Layer 1, Flap 1');
+    // Greyed out, not gone: a row left behind keeps its name, its state and its click.
+    expect(behind.getAttribute('data-state')).toBe('excluded');
+    expect(behind.getAttribute('aria-selected')).toBe('false');
+    expect(behind.hasAttribute('aria-disabled')).toBe(false);
+    act(() => behind.click());
+    expect(onToggle).toHaveBeenCalledWith(0);
+    expect([...view.querySelectorAll('svg[aria-hidden="true"] path')].map((path) => path.getAttribute('data-state'))).toEqual([
+      'excluded',
+      'picked',
+    ]);
+  });
 });
 
 describe('FoldFlapChips', () => {

@@ -3,25 +3,28 @@ import { useTranslation } from 'react-i18next';
 import type { FoldStripCard } from '../../../fold/sequence/foldStripCards';
 import { stepPlaceholder } from '../../../fold/sequence/foldSequenceWords';
 import { useFoldStepMenu } from '../../../fold/sequence/useFoldStepMenu';
+import { useFoldCardPicture, type FoldCardPictureSource } from '../../../fold/sequence/useFoldCardPictures';
 import { useFoldStepStrip } from '../../../fold/sequence/useFoldStepStrip';
 import type { FoldSequenceView } from '../../../fold/sequence/useFoldSequenceView';
 import { useIsPhoneLayout } from '../../../platform/phoneLayout';
-import { PatternThumbnail } from '../../ui/PatternThumbnail';
 import { StepFilmstrip } from '../../steps/StepFilmstrip';
 import { ContextMenu } from '../../ui/ContextMenu';
 import styles from './FoldStepStrip.module.css';
 
 /**
- * A card's picture: the folded form its step lands at, drawn small as the
- * pattern pickers draw one. Module-level, so the strip sees one function for
- * the life of the app and redraws no picture for being re-rendered.
+ * A card's picture: the state its step lands at, as the folded pane paints
+ * it — the paper in the user's style, front and back — drawn small. Blank
+ * while it is painted, and for a step with no state to draw.
  */
+function StepPicture({ source }: { source: FoldCardPictureSource | null }) {
+  const picture = useFoldCardPicture(source);
+  if (picture) return <img src={picture} alt="" className={styles.picture} draggable={false} data-fold-picture="paper" />;
+  return <span className={styles.blank} data-fold-picture={picture === undefined ? 'painting' : 'none'} />;
+}
+
+/** Module-level, so the strip sees one function for the life of the app and redraws no picture for being re-rendered. */
 function renderStepPicture(card: FoldStripCard) {
-  return card.picture ? (
-    <PatternThumbnail thumbnail={card.picture} className={styles.picture} />
-  ) : (
-    <span className={styles.blank} data-fold-picture="none" />
-  );
+  return <StepPicture source={card.picture} />;
 }
 
 /**

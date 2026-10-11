@@ -7,7 +7,7 @@ import {
   withFoldOrder,
   type FoldOrderPreview,
 } from '../../../fold/io/foldImportFlow';
-import { foldStateThumbnailUrl } from '../../../fold/io/foldStateThumbnail';
+import { foldStatePictureUrl } from '../../../fold/canvas/foldStatePicture';
 import type { PaperStyle } from '../../../lib/paper/paperStyle';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { OptionCards } from '../../ui/OptionCard';
@@ -16,7 +16,7 @@ import styles from './FoldImportOrders.module.css';
 /** One order's card picture: the state it lands, in the style the app shows paper in. */
 function OrderPicture({ preview, style }: { preview: FoldOrderPreview | undefined; style: PaperStyle }) {
   const url = useMemo(
-    () => (preview?.status === 'ready' ? foldStateThumbnailUrl(preview.scene, style) : null),
+    () => (preview?.status === 'ready' ? foldStatePictureUrl(preview.scene, style) : null),
     [preview, style]
   );
   return (

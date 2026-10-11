@@ -10,13 +10,16 @@ import { cpSizingScales } from '../cpSizingScales';
 import {
   cameraZoomForPercent,
   fitUserCamera,
+  fitUserCameraWithin,
   frameUserCameraOnBounds,
   modelViewFromCamera,
   unprojectDevicePoint,
+  userCamerasEqual,
   userCameraToView,
   zoomUserCameraAt,
   type UserBounds,
   type UserCamera,
+  type ViewportInset,
 } from '../renderer/camera';
 import type { CpRenderer } from '../renderer/CpRenderer';
 import { readCssVarColor } from '../renderer/cssColor';
@@ -46,9 +49,10 @@ import { bindCpSurfaceInput, cpCanvasViewport } from './cpSurfaceInput';
  * Owns the glue every such surface would otherwise copy from the Edit canvas:
  * the renderer's lifecycle (the support probe, a context lost at start or
  * mid-session, the camera kept across the rebuild), the drawing buffer's size,
- * the camera's first fit and its refit on `framingKey`, pan / pinch / wheel, a
- * click told from a drag, the hover probe, and de-duplicated view and zoom
- * reports. It registers none of the Edit canvas's singletons and publishes into
+ * the camera's first fit and its refit on `framingKey` (within the `inset` a
+ * window over the canvas covers, for a caller that has one), pan / pinch /
+ * wheel, a click told from a drag, the hover probe, and de-duplicated view and
+ * zoom reports. It registers none of the Edit canvas's singletons and publishes into
  * no store.
  *
  * What it does not own is what the surface draws. The caller uploads its own
@@ -93,6 +97,15 @@ export interface UseCpSurfaceOptions<Hit> {
   contentBounds: UserBounds | null;
   /** The camera refits when this changes (a new document), never on an edit. */
   framingKey: string;
+  /**
+   * How far in from each edge of the canvas something drawn over it covers
+   * it, CSS px: a tool window across the bottom of a phone's pane. A fit
+   * keeps the content in the rest (`fitUserCameraWithin`), and while the
+   * camera is still where the last fit left it, a new inset fits it again —
+   * the paper moves up as the window opens. A camera the user has moved
+   * stays where it was put. Absent or null, the whole canvas.
+   */
+  inset?: CpSurfaceInset | null;
   wheelGesture: WheelGesturePreference;
   /** The user's snap radius, model units; sets the hit radii at the live zoom. */
   snapRadius: number;
@@ -118,6 +131,9 @@ export interface UseCpSurfaceOptions<Hit> {
   /** The `surface` a renderer that fails to start is reported under. */
   errorSurface: string;
 }
+
+/** How far in from each edge of the canvas something over it covers it, CSS px. */
+export type CpSurfaceInset = ViewportInset;
 
 /** The camera verbs a viewport toolbar or a shortcut drives. Stable for the surface's life. */
 export interface CpSurfaceControls {
@@ -180,12 +196,14 @@ function sameView(a: CpOverlayView, b: CpOverlayView): boolean {
 }
 
 export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<Hit> {
-  const { modelToSvg, framingKey } = options;
+  const { modelToSvg, framingKey, inset } = options;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<CpRenderer | null>(null);
   const cameraRef = useRef<UserCamera | null>(null);
   const preservedCameraRef = useRef<UserCamera | null>(null);
   const fitRequestedRef = useRef(true);
+  /** The camera the last fit made, copied: the live one is moved in place, so a match means nobody has. */
+  const lastFitRef = useRef<UserCamera | null>(null);
   const renderNowRef = useRef<() => void>(() => undefined);
   const [rendererStatus, setRendererStatus] = useState<CpRendererStatus | null>(null);
   const [rendererGeneration, setRendererGeneration] = useState(0);
@@ -269,10 +287,20 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
         return cameraRef.current;
       }
       if (cameraRef.current && !fitRequestedRef.current) return cameraRef.current;
-      const bounds = liveRef.current.contentBounds;
+      const { contentBounds: bounds, inset } = liveRef.current;
       if (!bounds) return cameraRef.current;
       fitRequestedRef.current = false;
-      cameraRef.current = fitUserCamera(bounds, viewport);
+      // The inset is CSS px; the viewport, device px.
+      const fitted = inset
+        ? fitUserCameraWithin(bounds, viewport, {
+            top: inset.top * viewport.dpr,
+            right: inset.right * viewport.dpr,
+            bottom: inset.bottom * viewport.dpr,
+            left: inset.left * viewport.dpr,
+          })
+        : fitUserCamera(bounds, viewport);
+      cameraRef.current = fitted;
+      lastFitRef.current = { ...fitted };
       return cameraRef.current;
     };
 
@@ -404,6 +432,16 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
     fitRequestedRef.current = true;
     renderNowRef.current();
   }, [framingKey]);
+
+  // A new inset fits again only a camera still at the last fit: the paper
+  // follows a window opening over it until the user takes the camera.
+  const insetKey = inset ? `${inset.top} ${inset.right} ${inset.bottom} ${inset.left}` : '';
+  useEffect(() => {
+    const camera = cameraRef.current;
+    const fit = lastFitRef.current;
+    if (camera && fit && userCamerasEqual(camera, fit)) fitRequestedRef.current = true;
+    renderNowRef.current();
+  }, [insetKey]);
 
   // A new map, not a new camera: the content moves in place (a reflection,
   // say) rather than refitting.
