@@ -1239,8 +1239,11 @@ None is pending.
   - [x] coarse calls; refusals as codes;
   - [x] `wasm-pack test --node`;
   - [x] size measured with and without `kernel` (the crate README, "Size");
-  - [ ] **within its budget.** The build without `kernel` is over it; raising
-    the budget or trimming is the owner's call (the crate README, "Budget").
+  - [ ] **within its budget.** The shipped bridge, 1,064,672 B gzipped
+    (1,040 KiB) with every Phase 11 family, is 240 KiB over the 800 KiB the
+    two budgets allow, all of it on the side without `kernel`; raising the
+    budget or trimming is the owner's call (the crate README, "Budget" and
+    what the bridge is made of).
 - [ ] `build:oristudio-fold-wasm` in `apps/web/package.json` (done); `npm run
   build:web` in a fresh worktree; `npm run typecheck:web` (done).
 - [x] `foldSequenceWorker` and the runtime:

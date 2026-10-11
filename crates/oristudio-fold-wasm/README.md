@@ -175,13 +175,14 @@ serializers in the bridge.
 
 The last row is the bridge that ships, built by `npm run build:web` at the
 merge of the crimp and tuck, the vertex folds and the sinks (the same bytes
-as `dist/`'s hashed copy). Since the vertex row it adds **535,414 B raw
+as `dist/`'s hashed copy; a `wasm-pack build` of `af859d5cb` on 2026-10-11
+reproduced it byte for byte). Since the vertex row it adds **535,414 B raw
 (+523 KiB), 201,765 B gzipped (+197 KiB)**: every compound family's motion
 legs (Wave 5's compound motion), the crimp's and the tuck's analysis, orders
 and fixes, the sinks' points, pockets and unsink, the sink and crimp/tuck
 pictures (`step_action`), and their serializers. It is **over the two
-budgets' 800 KiB sum by 240 KiB gzipped**; the open question below covers
-it.
+budgets' 800 KiB sum by 245,472 B (240 KiB) gzipped**; the open question
+below covers it.
 
 The fourth row was the bridge that shipped when the budget was set. Rebuilt at `44005c2d9`, with the
 Fold workspace's UI merged, it is the same 1,879,638 B raw, and 752,480 B
@@ -193,7 +194,7 @@ branches before it, the second in another worktree.
 The io branch measured `kernel`'s cost before the queries, against the
 Wave 2 bridge built in the same worktree (638,301 B raw, 236,078 B
 gzipped): **+956,528 B raw (+934 KiB), +419,777 B gzipped (+410 KiB)**.
-After both merged, the last row is +971,905 B raw (+949 KiB) and
+After both merged, the fourth row is +971,905 B raw (+949 KiB) and
 **+416,001 B gzipped (+406 KiB)** over the row without `kernel` with the
 queries; that row was built in another worktree the same day, so read the
 difference as approximate.
@@ -213,9 +214,42 @@ bridge crate's own code is about 75 KB of it before `wasm-opt`. Neither
 lever tried moved it: results through `serde_json` and `JSON.parse`
 (941,911 B, larger) and `wasm-opt -Oz` (904,380 B).
 
-For scale: the precrease bridge is 861 KiB raw (338 KiB gzipped) and the CP
-kernel's bridge 3.1 MiB (1.4 MiB gzipped). The PWA warms every `.wasm` it
-emits, so this is paid by every installed visitor on their first load.
+For scale, built with the shipped fold bridge (2026-10-11): the precrease
+bridge is 925,078 B raw (903 KiB) and 359,733 B gzipped (351 KiB), the CP
+kernel's bridge 3,312,093 B (3.2 MiB) and 1,481,773 B gzipped (1.4 MiB). The
+PWA warms every `.wasm` it emits, so this is paid by every installed visitor
+on their first load.
+
+**What the shipped bridge is made of** (2026-10-11). `twiggy` over the same
+build with its name section kept (wasm-bindgen 0.2.121, then `wasm-opt -O
+-g`, both from wasm-pack's cache): its items, names left out, sum to
+2,697,799 B, within 249 B of the shipped module. Each item is counted once,
+by the crate of the type it belongs to, so a derived `Serialize` for an
+engine type is the engine's and a std routine monomorphised for it is std's.
+An item includes whatever was inlined into it, so a module's share is
+approximate. The sizes are raw; the module as a whole gzips to 39.5%.
+
+| Owner | Raw | Share |
+|---|---|---|
+| The engine, `oristudio_fold` | 700,857 B | 26.0% |
+| — its compound pipeline (`compound::*`, every family) | 340,967 B | 12.6% |
+| std's generic code (`core`, `alloc`, hashbrown, the allocator) | 652,539 B | 24.2% |
+| — 228 monomorphised `sort`/`sort_unstable` routines | 313,396 B | 11.6% |
+| — B-tree maps and sets | 97,489 B | 3.6% |
+| The bridge, `oristudio_fold_wasm`: its own code, and its exported calls with what was inlined into them | 495,987 B | 18.4% |
+| serde, `serde_json`, `serde_wasm_bindgen` | 317,953 B | 11.8% |
+| Data segments (strings, tables) | 233,431 B | 8.7% |
+| `oristudio_layer_order` | 69,603 B | 2.6% |
+| The kernel's own crates: `oristudio_cp`, `treemaker_fold`, `encoding_rs` | 151,958 B | 5.6% |
+| `oristudio_geometry` (15,054 B), `treemaker_flatfold` (11,103 B), wasm-bindgen's glue and the rest | 75,471 B | 2.8% |
+
+The compound pipeline's largest families: the sinks 80 KB, the reverse folds
+56 KB, the rabbit ear's and swivel's fans 46 KB, the crimp 43 KB, the squash
+32 KB, the tuck 23 KB, the petal fold 18 KB, the shared pieces 18 KB. Every
+item that names serde — the serde crates, and the `Serialize` and
+`Deserialize` impls in ours — is 484,081 B (17.9%). `wasm-opt -Oz` over the
+shipped module takes 108,453 B off the raw size (2,589,097 B) and adds
+1,069 B gzipped (1,065,741 B), so it does not help the line that matters.
 
 **Budget.**
 
@@ -229,18 +263,24 @@ emits, so this is paid by every installed visitor on their first load.
   Edit, export and Import CP go through the existing CP worker as FOLD text.
   It adds about 406 KiB, within it.
 
-Together the two allow 800 KiB gzipped. The bridge that shipped when they
-were set was 735 KiB, inside their sum only because `kernel` used less than
-its allowance; the engine's own share was over its line. With the vertex
-folds it was 843 KiB, and with every Phase 11 family it is 1,040 KiB, over
-the sum by 240 KiB; the budget has not been raised.
+Together the two allow 800 KiB (819,200 B) gzipped. The bridge that shipped
+when they were set was 735 KiB, inside their sum only because `kernel` used
+less than its allowance; the engine's own share was over its line. With the
+vertex folds it was 843 KiB, and with every Phase 11 family it is 1,064,672 B
+(1,040 KiB), over the sum by 245,472 B (240 KiB). **The budget has not been
+raised, and nothing here changes it.**
 
-**Open, for the owner: the budget without `kernel`.** Raise it (the engine
-side is now about 634 KiB gzipped, taking `kernel`'s 406 KiB as fixed,
-against its 288 KiB line) or trim the engine side — the compound pipeline
-(16 KiB), the vertex folds (92 KiB) and the rest of Phase 11 (197 KiB) are
-what moved it since the line was set. The two levers tried (above) did not
-move it.
+**Open, for the owner: the budget without `kernel`.** Raise it, or trim the
+engine side to fit; until that is decided the shipped bridge is over its
+budget. Taking `kernel`'s 406 KiB as fixed, the engine side is now about
+634 KiB gzipped against its 288 KiB line. What moved it since the line was
+set: the compound pipeline (16 KiB), the vertex folds (92 KiB) and the rest
+of Phase 11 (197 KiB), gzipped. Of the levers, the two tried on the build
+without `kernel` with the queries (results through `serde_json`, `wasm-opt
+-Oz`) did not move it, and `-Oz` still does not on the shipped one (above).
+Not yet measured as levers, and the largest items the breakdown above names:
+std's 228 sort routines (313 KB raw), the serde code (484 KB raw), and the
+compound pipeline itself (341 KB raw).
 
 **Decision (2026-10-08): `kernel` stays in the bridge.** Measured before the
 queries it added 410 KiB gzipped, within the 512 KiB allowance, so D1's
