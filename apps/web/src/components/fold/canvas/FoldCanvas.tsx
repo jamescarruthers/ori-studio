@@ -30,7 +30,7 @@ import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/fol
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
 import { revealFoldedPane, useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
 import { useFoldCanvasInks } from '../../../fold/canvas/useFoldCanvasInks';
-import { useFoldCanvasPaint } from '../../../fold/canvas/useFoldCanvasPaint';
+import { restingSpread, useFoldCanvasPaint } from '../../../fold/canvas/useFoldCanvasPaint';
 import { foldCanvasChoice, marksMadeAt, useFoldCanvasVerbs } from '../../../fold/canvas/useFoldCanvasVerbs';
 import { useFoldCanvasShortcuts } from '../../../fold/canvas/useFoldCanvasShortcuts';
 import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
@@ -51,7 +51,11 @@ import { FoldPane } from './FoldPane';
 import { FoldPhoneBarControls } from './FoldPhoneBarControls';
 import { FoldViewportToolbar } from './FoldViewportToolbar';
 import { useFoldPanePlayback } from '../../../fold/canvas/useFoldPanePlayback';
-import { useFoldStepSpread, useFoldStepSpreadShown } from '../../../fold/sequence/useFoldStepSpread';
+import {
+  useFoldStepPlaySpreads,
+  useFoldStepSpread,
+  useFoldStepSpreadShown,
+} from '../../../fold/sequence/useFoldStepSpread';
 import { FoldPlaybackControls } from '../FoldPlaybackControls';
 import styles from './FoldCanvas.module.css';
 
@@ -138,12 +142,18 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const framingKey = `${sequenceId}:${sheetKey}`;
 
   // --- The step on screen played from its parent, on the folded pane, with its transport on the bar.
-  // A phone shows one pane: a play turns it to the folded form, where the frames are drawn.
+  // A phone shows one pane: a play turns it to the folded form, where the frames are drawn. The
+  // play eases between the spreads the pane shows the parent and the step at rest.
+  const playSpreads = useFoldStepPlaySpreads(session.cursorId);
   const playback = useFoldPanePlayback({
     stepId: session.cursorId,
     sheet: summary?.sheet ?? null,
     display,
     reveal: phone ? revealFoldedPane : undefined,
+    spreads: playSpreads && {
+      before: restingSpread(playSpreads.before, preview),
+      after: restingSpread(playSpreads.after, preview),
+    },
   });
 
   // --- The tool's feedback on each pane.

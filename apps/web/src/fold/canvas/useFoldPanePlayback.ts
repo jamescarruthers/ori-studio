@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
+import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { runFoldPlaybackShortcut } from '../animation/foldPlaybackShortcuts';
-import { useFoldStepMotion } from '../animation/useFoldStepMotion';
+import { useFoldStepMotion, useFoldStepScenes } from '../animation/useFoldStepMotion';
 import { useFoldStepPlayback, type FoldStepPlaybackSurface } from '../animation/useFoldStepPlayback';
 import { registerFoldKeyHandler } from '../sequence/foldKeys';
 import { FOLD_PANE_DISPLAY_DEFAULT, foldedPanePictures, type FoldPaneDisplay } from './foldPaneScenes';
+import { foldSpreadEnd, NO_SPREAD_ENDS, spreadPaneFrames } from './foldPaneSpreadFrames';
 
 export interface FoldPanePlaybackInput {
   /** The step on screen; null for the sheet, which has nothing to play. */
@@ -12,6 +14,13 @@ export interface FoldPanePlaybackInput {
   sheet: readonly (readonly [number, number])[] | null;
   /** The pane's switches, which every frame follows as the pane's own picture does. */
   display: FoldPaneDisplay;
+  /**
+   * The spreads the pane shows the parent and the step at rest (null for
+   * none): a play starts on the one and lands on the other, each eased by
+   * the frames' weight (`spreadPaneFrames`). None at all draws every frame
+   * unspread.
+   */
+  spreads?: { before: LayerSpreadOptions | null; after: LayerSpreadOptions | null } | null;
   /**
    * Bring the folded pane on screen, where it is not: called before the
    * transport plays, steps or scrubs, since the frames are drawn there alone.
@@ -54,10 +63,21 @@ export function revealingPlayback(
  * Space, through the Fold panel's one executor for the `fold` scope
  * (`registerFoldKeyHandler`).
  *
+ * The frames are the paper's own geometry; the pane draws them with the
+ * spreads it shows the two states at rest, weighted as each frame says
+ * (`spreadPaneFrames`), so a spread folds away as the step starts and opens
+ * again as it lands.
+ *
  * The surface it returns is what the pane paints from (`frames`) and what
  * the bottom bar's transport and Space press.
  */
-export function useFoldPanePlayback({ stepId, sheet, display, reveal }: FoldPanePlaybackInput): FoldStepPlaybackSurface {
+export function useFoldPanePlayback({
+  stepId,
+  sheet,
+  display,
+  reveal,
+  spreads = null,
+}: FoldPanePlaybackInput): FoldStepPlaybackSurface {
   // One way of picturing while the sheet and the switches hold, or every render would build the motion again.
   const sheetKey = sheet ? sheet.map(([x, y]) => `${x},${y}`).join(';') : null;
   // The folded pane draws its paper by the precreases switch alone.
@@ -70,8 +90,25 @@ export function useFoldPanePlayback({ stepId, sheet, display, reveal }: FoldPane
   );
   const motion = useFoldStepMotion(stepId, pane);
   const playback = useFoldStepPlayback({ motion });
+  // Each end's picture with its spread part of the way on, as the pane places that state.
+  const { before, after } = useFoldStepScenes(stepId);
+  const spreadBefore = spreads?.before ?? null;
+  const spreadAfter = spreads?.after ?? null;
+  const ends = useMemo(() => {
+    if (!sheet || !before || !after) return NO_SPREAD_ENDS;
+    const shown = { ...FOLD_PANE_DISPLAY_DEFAULT, precreases };
+    return {
+      before: foldSpreadEnd(before, sheet, shown, spreadBefore),
+      after: foldSpreadEnd(after, sheet, shown, spreadAfter),
+    };
+    // The sheet is read through its key, as the pictures are.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetKey, precreases, before, after, spreadBefore, spreadAfter]);
+  const { frames, position } = playback;
+  const spreadFrames = useMemo(() => spreadPaneFrames(frames, position, ends), [frames, position, ends]);
+  const spread = useMemo(() => ({ ...playback, frames: spreadFrames }), [playback, spreadFrames]);
   // `reveal` should keep its identity (a module function), or the surface is new each render.
-  const surface = useMemo(() => (reveal ? revealingPlayback(playback, reveal) : playback), [playback, reveal]);
+  const surface = useMemo(() => (reveal ? revealingPlayback(spread, reveal) : spread), [spread, reveal]);
   const latest = useRef(surface);
   useEffect(() => {
     latest.current = surface;
