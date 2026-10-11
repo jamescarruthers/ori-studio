@@ -1515,10 +1515,10 @@
     },
     "sentence": {
       "behind": {
-        "petal": "",
-        "rabbitEar": "",
-        "squash": "",
-        "swivel": ""
+        "petal": "플랩을 뒤쪽으로 꽃잎 접기로 접습니다.",
+        "rabbitEar": "삼각형을 뒤쪽으로 토끼 귀 접기로 접습니다.",
+        "squash": "플랩을 뒤쪽으로 눌러 접습니다.",
+        "swivel": "점을 중심으로 종이를 뒤쪽으로 회전 접기로 접습니다."
       },
       "closedSink": "끝을 닫힌 가라앉혀 접기로 접습니다. 층을 겹친 채로 끝을 밀어 넣습니다.",
       "cpJump": "가져온 전개도대로 접습니다.",
@@ -2180,10 +2180,10 @@
       "badgeTuck": "끼워 넣기",
       "badgeValley": "골접기",
       "behind": {
-        "petal": "",
-        "rabbitEar": "",
-        "squash": "",
-        "swivel": ""
+        "petal": "뒤쪽으로 꽃잎 접기",
+        "rabbitEar": "뒤쪽으로 토끼 귀 접기",
+        "squash": "뒤쪽으로 눌러 접기",
+        "swivel": "뒤쪽으로 회전 접기"
       },
       "closedSink": "닫힌 가라앉혀 접기",
       "cpJump": "전개도 가져오기",

@@ -283,22 +283,22 @@
     "categoryLabel": "Espace de pliage",
     "chooser": {
       "noKeys": {
-        "emergent": "",
-        "opening": "",
-        "order": "",
-        "pocket": "",
-        "ridge": "",
-        "root": "",
-        "target": ""
+        "emergent": "Plus d’un quatrième pli permet à ces plis de se poser à plat. Parcourez-les.",
+        "opening": "Le rabat s’ouvre de plus d’une façon : les couches en surbrillance restent ensemble. Parcourez-les.",
+        "order": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les.",
+        "pocket": "La pointe peut s’enfoncer dans plus d’une poche entre ses couches. Parcourez-les.",
+        "ridge": "L’un ou l’autre des plis en face du papier qui reste peut se dresser en arête de l’oreille. Parcourez-les.",
+        "root": "Cet axiome donne ici plus d’un pli. Parcourez-les.",
+        "target": "Plus d’une couche peut recevoir le rabat : la plus claire est celle retenue. Parcourez-les."
       },
       "withKeys": {
-        "emergent": "",
-        "opening": "",
-        "order": "",
-        "pocket": "",
-        "ridge": "",
-        "root": "",
-        "target": ""
+        "emergent": "Plus d’un quatrième pli permet à ces plis de se poser à plat. Parcourez-les, ou appuyez sur {{keys}}.",
+        "opening": "Le rabat s’ouvre de plus d’une façon : les couches en surbrillance restent ensemble. Parcourez-les, ou appuyez sur {{keys}}.",
+        "order": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les, ou appuyez sur {{keys}}.",
+        "pocket": "La pointe peut s’enfoncer dans plus d’une poche entre ses couches. Parcourez-les, ou appuyez sur {{keys}}.",
+        "ridge": "L’un ou l’autre des plis en face du papier qui reste peut se dresser en arête de l’oreille. Parcourez-les, ou appuyez sur {{keys}}.",
+        "root": "Cet axiome donne ici plus d’un pli. Parcourez-les, ou appuyez sur {{keys}}.",
+        "target": "Plus d’une couche peut recevoir le rabat : la plus claire est celle retenue. Parcourez-les, ou appuyez sur {{keys}}."
       }
     },
     "crimp": {
@@ -323,7 +323,7 @@
     "fix": {
       "closedSinkInstead": "Plutôt un enfoncement fermé",
       "crimpFlap": "Faire le crimp seulement sur le rabat {{number}}",
-      "crimpThisFlap": "",
+      "crimpThisFlap": "Faire le crimp seulement sur ce rabat",
       "includeFlap": "Inclure le rabat {{number}}",
       "includeFlaps_one": "Inclure {{count}} rabat",
       "includeFlaps_many": "Inclure les {{count}} rabats",
@@ -335,19 +335,19 @@
       "outsideCrimpInstead": "Plutôt un crimp extérieur",
       "outsideInstead": "Plutôt un pli inversé extérieur",
       "pickFlap": "Plier seulement le rabat {{number}}",
-      "pickThisFlap": "",
+      "pickThisFlap": "Plier seulement ce rabat",
       "precreaseOtherWay": "Pré-plier dans l’autre sens",
       "reverseFlap": "Inverser seulement le rabat {{number}}",
-      "reverseThisFlap": "",
+      "reverseThisFlap": "Inverser seulement ce rabat",
       "sinkFlap": "Enfoncer seulement le rabat {{number}}",
-      "sinkThisFlap": "",
+      "sinkThisFlap": "Enfoncer seulement ce rabat",
       "slideToEdge": "Faire glisser la ligne pour poser le point sur le bord",
       "swapInstead": "Inverser le côté qui bouge",
       "tuckFlap": "Rentrer seulement le rabat {{number}}",
       "tuckOtherWay": "Rentrer dans l’autre sens",
       "tuckOver": "Plutôt rentrer par-dessus la couche {{number}} de la liste",
       "tuckOverAnother": "Plutôt rentrer par-dessus la couche qui convient",
-      "tuckThisFlap": "",
+      "tuckThisFlap": "Rentrer seulement ce rabat",
       "tuckUnder": "Plutôt rentrer sous la couche {{number}} de la liste",
       "tuckUnderAnother": "Plutôt rentrer sous la couche qui convient",
       "turnToEdge": "Faire pivoter la ligne pour poser le point sur le bord",
@@ -455,8 +455,8 @@
     },
     "refusal": {
       "budget": {
-        "text": "",
-        "title": ""
+        "text": "Déterminer comment les couches s’empilent a pris trop de temps ici : on ne sait donc pas si ce pli convient. Pliez moins de couches, ou pliez ailleurs.",
+        "title": "La recherche a manqué de temps"
       },
       "choiceBroken": {
         "text": "L’ouverture ou l’ordre des couches que cette étape a enregistré ne correspond plus au papier qui la précède : elle ne peut donc pas être pliée telle qu’elle est enregistrée.",
@@ -585,11 +585,11 @@
         "title": "La pointe n’a pas de ligne médiane"
       },
       "sinkNoOrder": {
-        "none": "",
-        "otherSink": "",
-        "title": "",
-        "unsink": "",
-        "unsinkTitle": ""
+        "none": "Aucun empilement des couches ne permet ici à la pointe de s’enfoncer ainsi. Déplacez la ligne, ou choisissez une autre pointe.",
+        "otherSink": "Aucun empilement des couches ne permet ici à la pointe de s’enfoncer ainsi. L’autre type d’enfoncement convient.",
+        "title": "La pointe ne peut pas s’enfoncer ainsi ici",
+        "unsink": "Aucun empilement des couches ne permet ici à la pointe enfoncée de ressortir.",
+        "unsinkTitle": "La pointe ne peut pas ressortir ici"
       },
       "sinkNoPocket": {
         "text": "Aucun espace entre ses couches ne fait tout le tour de son contour pour que l’extrémité y entre : elle ne peut pas s’enfoncer fermée.",
@@ -830,12 +830,12 @@
           "upperNotHinged": "La couche du dessus du rabat ne tient que par son dos : aplatie, son côté charnière resterait libre."
         },
         "noOrder": {
-          "none": "",
-          "otherWay": "",
-          "petal": "",
-          "rabbitEar": "",
-          "squash": "",
-          "swivel": ""
+          "none": "Aucun empilement des couches ne le laisse se plier à plat ici. Choisissez d’autres points, ou repliez d’abord les couches qui gênent.",
+          "otherWay": "Aucun empilement des couches ne le laisse se plier à plat dans ce sens ici. Plié dans l’autre sens, il convient.",
+          "petal": "Impossible de faire le pli pétale ici",
+          "rabbitEar": "L’oreille ne peut pas se plier à plat ici",
+          "squash": "Impossible de l’écraser à plat ici",
+          "swivel": "Le pli pivot ne peut pas se poser à plat ici"
         },
         "noPetal": {
           "noCorner": "Les plis du cerf-volant ne se rejoignent pas sous la ligne : aucune pointe à soulever.",

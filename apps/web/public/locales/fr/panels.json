@@ -1619,10 +1619,10 @@
     },
     "sentence": {
       "behind": {
-        "petal": "",
-        "rabbitEar": "",
-        "squash": "",
-        "swivel": ""
+        "petal": "Faites un pli pétale avec le rabat, vers l’arrière.",
+        "rabbitEar": "Faites une oreille de lapin avec le triangle, vers l’arrière.",
+        "squash": "Faites un pli écrasé avec le rabat, vers l’arrière.",
+        "swivel": "Faites pivoter le papier vers l’arrière autour du point par un pli pivot."
       },
       "closedSink": "Enfoncez la pointe en enfoncement fermé : poussez-la vers l’intérieur, ses couches restant ensemble.",
       "cpJump": "Repliez le papier selon le patron de plis importé.",
@@ -2692,10 +2692,10 @@
       "badgeTuck": "Rentré",
       "badgeValley": "Vallée",
       "behind": {
-        "petal": "",
-        "rabbitEar": "",
-        "squash": "",
-        "swivel": ""
+        "petal": "Pli pétale vers l’arrière",
+        "rabbitEar": "Oreille de lapin vers l’arrière",
+        "squash": "Pli écrasé vers l’arrière",
+        "swivel": "Pli pivot vers l’arrière"
       },
       "closedSink": "Enfoncement fermé",
       "cpJump": "Importer un patron de plis",

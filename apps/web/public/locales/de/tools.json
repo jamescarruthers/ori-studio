@@ -275,22 +275,22 @@
     "categoryLabel": "Falt-Arbeitsbereich",
     "chooser": {
       "noKeys": {
-        "emergent": "",
-        "opening": "",
-        "order": "",
-        "pocket": "",
-        "ridge": "",
-        "root": "",
-        "target": ""
+        "emergent": "Mehr als eine vierte Faltlinie lässt diese Faltlinien flach liegen. Blättere durch sie.",
+        "opening": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie.",
+        "order": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie.",
+        "pocket": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Blättere durch sie.",
+        "ridge": "Jede der beiden Faltlinien gegenüber dem liegenbleibenden Papier kann zum Grat des Ohrs werden. Blättere durch sie.",
+        "root": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie.",
+        "target": "Mehr als eine Lage nimmt die Lasche auf: Die hellste ist die gewählte. Blättere durch sie."
       },
       "withKeys": {
-        "emergent": "",
-        "opening": "",
-        "order": "",
-        "pocket": "",
-        "ridge": "",
-        "root": "",
-        "target": ""
+        "emergent": "Mehr als eine vierte Faltlinie lässt diese Faltlinien flach liegen. Blättere durch sie oder drücke {{keys}}.",
+        "opening": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie oder drücke {{keys}}.",
+        "order": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke {{keys}}.",
+        "pocket": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Blättere durch sie oder drücke {{keys}}.",
+        "ridge": "Jede der beiden Faltlinien gegenüber dem liegenbleibenden Papier kann zum Grat des Ohrs werden. Blättere durch sie oder drücke {{keys}}.",
+        "root": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke {{keys}}.",
+        "target": "Mehr als eine Lage nimmt die Lasche auf: Die hellste ist die gewählte. Blättere durch sie oder drücke {{keys}}."
       }
     },
     "crimp": {
@@ -314,7 +314,7 @@
     "fix": {
       "closedSinkInstead": "Stattdessen geschlossen versenken",
       "crimpFlap": "Nur Lasche {{number}} crimpen",
-      "crimpThisFlap": "",
+      "crimpThisFlap": "Nur diese Lasche crimpen",
       "includeFlap": "Lasche {{number}} einbeziehen",
       "includeFlaps_one": "Die {{count}} Lasche einbeziehen",
       "includeFlaps_other": "Die {{count}} Laschen einbeziehen",
@@ -325,19 +325,19 @@
       "outsideCrimpInstead": "Stattdessen äußerer Crimp",
       "outsideInstead": "Stattdessen äußerer Gegenbruch",
       "pickFlap": "Nur Lasche {{number}} falten",
-      "pickThisFlap": "",
+      "pickThisFlap": "Nur diese Lasche falten",
       "precreaseOtherWay": "Andersherum vorfalten",
       "reverseFlap": "Nur Lasche {{number}} als Gegenbruch falten",
-      "reverseThisFlap": "",
+      "reverseThisFlap": "Nur diese Lasche als Gegenbruch falten",
       "sinkFlap": "Nur Lasche {{number}} versenken",
-      "sinkThisFlap": "",
+      "sinkThisFlap": "Nur diese Lasche versenken",
       "slideToEdge": "Die Linie verschieben, bis der Punkt auf der Kante liegt",
       "swapInstead": "Die bewegte Seite tauschen",
       "tuckFlap": "Nur Lasche {{number}} einstecken",
       "tuckOtherWay": "Andersherum einstecken",
       "tuckOver": "Stattdessen über die gelistete Lage {{number}} stecken",
       "tuckOverAnother": "Stattdessen über die passende Lage stecken",
-      "tuckThisFlap": "",
+      "tuckThisFlap": "Nur diese Lasche einstecken",
       "tuckUnder": "Stattdessen unter die gelistete Lage {{number}} stecken",
       "tuckUnderAnother": "Stattdessen unter die passende Lage stecken",
       "turnToEdge": "Die Linie drehen, bis der Punkt auf der Kante liegt",
@@ -441,8 +441,8 @@
     },
     "refusal": {
       "budget": {
-        "text": "",
-        "title": ""
+        "text": "Herauszufinden, wie sich die Lagen stapeln, hat hier zu lange gedauert, daher ist unbekannt, ob diese Faltung passt. Falte weniger Lagen oder falte an anderer Stelle.",
+        "title": "Die Suche hat zu lange gedauert"
       },
       "choiceBroken": {
         "text": "Die Öffnung oder die Lagenreihenfolge, die dieser Schritt gespeichert hat, passt nicht mehr zum Papier davor. So, wie er gespeichert ist, lässt er sich deshalb nicht falten.",
@@ -570,11 +570,11 @@
         "title": "Die Spitze hat keine Mittellinie"
       },
       "sinkNoOrder": {
-        "none": "",
-        "otherSink": "",
-        "title": "",
-        "unsink": "",
-        "unsinkTitle": ""
+        "none": "Bei keiner Stapelung der Lagen lässt sich die Spitze hier so versenken. Verschiebe die Linie oder wähle eine andere Spitze.",
+        "otherSink": "Bei keiner Stapelung der Lagen lässt sich die Spitze hier so versenken. Die andere Art des Versenkens passt.",
+        "title": "Die Spitze lässt sich hier nicht so versenken",
+        "unsink": "Bei keiner Stapelung der Lagen kommt die versenkte Spitze hier wieder heraus.",
+        "unsinkTitle": "Die Spitze lässt sich hier nicht herausziehen"
       },
       "sinkNoPocket": {
         "text": "Keine Lücke zwischen ihren Lagen läuft ganz um ihre Außenseite herum, in die das Ende gehen könnte, also lässt sie sich nicht geschlossen versenken.",
@@ -809,12 +809,12 @@
           "upperNotHinged": "Die oberste Lage der Lasche hängt nur an ihrem Rücken: flach gedrückt, läge ihre Scharnierseite lose."
         },
         "noOrder": {
-          "none": "",
-          "otherWay": "",
-          "petal": "",
-          "rabbitEar": "",
-          "squash": "",
-          "swivel": ""
+          "none": "Bei keiner Stapelung der Lagen lässt sie sich hier flach falten. Wähle andere Punkte oder falte zuerst die Lagen weg, die im Weg liegen.",
+          "otherWay": "Bei keiner Stapelung der Lagen lässt sie sich hier so flach falten. Andersherum gefaltet passt sie.",
+          "petal": "Hier ist keine Blütenblattfalte möglich",
+          "rabbitEar": "Das Ohr lässt sich hier nicht flach falten",
+          "squash": "Sie lässt sich hier nicht flach quetschen",
+          "swivel": "Die Drehfalte lässt sich hier nicht flach legen"
         },
         "noPetal": {
           "noCorner": "Die Drachenlinien treffen sich nicht unterhalb der Linie, also gibt es keine Spitze zum Anheben.",

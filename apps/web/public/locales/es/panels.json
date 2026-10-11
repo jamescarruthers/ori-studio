@@ -1619,10 +1619,10 @@
     },
     "sentence": {
       "behind": {
-        "petal": "",
-        "rabbitEar": "",
-        "squash": "",
-        "swivel": ""
+        "petal": "Haz un pliegue de pétalo con la solapa por detrás.",
+        "rabbitEar": "Haz una oreja de conejo con el triángulo por detrás.",
+        "squash": "Haz un pliegue aplastado con la solapa por detrás.",
+        "swivel": "Haz girar el papel por detrás alrededor del punto con un pliegue giratorio."
       },
       "closedSink": "Hunde la punta en hundido cerrado: empújala hacia dentro con sus capas juntas.",
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
@@ -2692,10 +2692,10 @@
       "badgeTuck": "Remeter",
       "badgeValley": "Valle",
       "behind": {
-        "petal": "",
-        "rabbitEar": "",
-        "squash": "",
-        "swivel": ""
+        "petal": "Pliegue de pétalo por detrás",
+        "rabbitEar": "Oreja de conejo por detrás",
+        "squash": "Pliegue aplastado por detrás",
+        "swivel": "Pliegue giratorio por detrás"
       },
       "closedSink": "Hundido cerrado",
       "cpJump": "Importar patrón de pliegues",

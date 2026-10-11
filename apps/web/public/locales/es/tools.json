@@ -283,22 +283,22 @@
     "categoryLabel": "Espacio de plegado",
     "chooser": {
       "noKeys": {
-        "emergent": "",
-        "opening": "",
-        "order": "",
-        "pocket": "",
-        "ridge": "",
-        "root": "",
-        "target": ""
+        "emergent": "Más de un cuarto pliegue deja estos pliegues planos. Recórrelos.",
+        "opening": "La solapa se abre de más de una manera: las capas resaltadas quedan juntas. Recórrelas.",
+        "order": "Las capas pueden quedar apiladas de más de una manera. Recórrelas.",
+        "pocket": "La punta puede hundirse en más de un bolsillo entre sus capas. Recórrelos.",
+        "ridge": "Cualquiera de los dos pliegues frente al papel que se queda puede alzarse como cresta de la oreja. Recórrelos.",
+        "root": "Este axioma da más de un pliegue aquí. Recórrelos.",
+        "target": "Más de una capa admite el remetido: la más brillante es la elegida. Recórrelas."
       },
       "withKeys": {
-        "emergent": "",
-        "opening": "",
-        "order": "",
-        "pocket": "",
-        "ridge": "",
-        "root": "",
-        "target": ""
+        "emergent": "Más de un cuarto pliegue deja estos pliegues planos. Recórrelos o pulsa {{keys}}.",
+        "opening": "La solapa se abre de más de una manera: las capas resaltadas quedan juntas. Recórrelas o pulsa {{keys}}.",
+        "order": "Las capas pueden quedar apiladas de más de una manera. Recórrelas o pulsa {{keys}}.",
+        "pocket": "La punta puede hundirse en más de un bolsillo entre sus capas. Recórrelos o pulsa {{keys}}.",
+        "ridge": "Cualquiera de los dos pliegues frente al papel que se queda puede alzarse como cresta de la oreja. Recórrelos o pulsa {{keys}}.",
+        "root": "Este axioma da más de un pliegue aquí. Recórrelos o pulsa {{keys}}.",
+        "target": "Más de una capa admite el remetido: la más brillante es la elegida. Recórrelas o pulsa {{keys}}."
       }
     },
     "crimp": {
@@ -323,7 +323,7 @@
     "fix": {
       "closedSinkInstead": "Mejor un hundido cerrado",
       "crimpFlap": "Hacer crimp solo en la solapa {{number}}",
-      "crimpThisFlap": "",
+      "crimpThisFlap": "Hacer crimp solo en esta solapa",
       "includeFlap": "Incluir la solapa {{number}}",
       "includeFlaps_one": "Incluir {{count}} solapa",
       "includeFlaps_many": "Incluir las {{count}} solapas",
@@ -335,19 +335,19 @@
       "outsideCrimpInstead": "Mejor un crimp exterior",
       "outsideInstead": "Mejor un pliegue invertido exterior",
       "pickFlap": "Plegar solo la solapa {{number}}",
-      "pickThisFlap": "",
+      "pickThisFlap": "Plegar solo esta solapa",
       "precreaseOtherWay": "Premarcar en el otro sentido",
       "reverseFlap": "Invertir solo la solapa {{number}}",
-      "reverseThisFlap": "",
+      "reverseThisFlap": "Invertir solo esta solapa",
       "sinkFlap": "Hundir solo la solapa {{number}}",
-      "sinkThisFlap": "",
+      "sinkThisFlap": "Hundir solo esta solapa",
       "slideToEdge": "Deslizar la línea hasta que el punto quede en el borde",
       "swapInstead": "Cambiar el lado que se mueve",
       "tuckFlap": "Remeter solo la solapa {{number}}",
       "tuckOtherWay": "Remeter en el otro sentido",
       "tuckOver": "Mejor remeter sobre la capa {{number}} de la lista",
       "tuckOverAnother": "Mejor remeter sobre la capa que encaja",
-      "tuckThisFlap": "",
+      "tuckThisFlap": "Remeter solo esta solapa",
       "tuckUnder": "Mejor remeter bajo la capa {{number}} de la lista",
       "tuckUnderAnother": "Mejor remeter bajo la capa que encaja",
       "turnToEdge": "Girar la línea hasta que el punto quede en el borde",
@@ -455,8 +455,8 @@
     },
     "refusal": {
       "budget": {
-        "text": "",
-        "title": ""
+        "text": "Averiguar cómo se apilan las capas tardó demasiado aquí, así que no se sabe si este pliegue encaja. Pliega menos capas o pliega en otro sitio.",
+        "title": "La búsqueda se quedó sin tiempo"
       },
       "choiceBroken": {
         "text": "La abertura o el orden de capas que guardó este paso ya no encaja con el papel anterior, así que no se puede plegar tal como está guardado.",
@@ -585,11 +585,11 @@
         "title": "La punta no tiene línea central"
       },
       "sinkNoOrder": {
-        "none": "",
-        "otherSink": "",
-        "title": "",
-        "unsink": "",
-        "unsinkTitle": ""
+        "none": "Ninguna forma de apilar las capas deja hundir la punta así aquí. Mueve la línea o elige otra punta.",
+        "otherSink": "Ninguna forma de apilar las capas deja hundir la punta así aquí. El otro tipo de hundido encaja.",
+        "title": "La punta no se puede hundir así aquí",
+        "unsink": "Ninguna forma de apilar las capas deja que la punta hundida vuelva a salir aquí.",
+        "unsinkTitle": "La punta no puede volver a salir aquí"
       },
       "sinkNoPocket": {
         "text": "Ningún hueco entre sus capas recorre todo su contorno para que entre el extremo, así que no se puede hundir cerrada.",
@@ -830,12 +830,12 @@
           "upperNotHinged": "La capa superior de la solapa solo está sujeta por su lomo: aplastada, su lado de la bisagra quedaría suelto."
         },
         "noOrder": {
-          "none": "",
-          "otherWay": "",
-          "petal": "",
-          "rabbitEar": "",
-          "squash": "",
-          "swivel": ""
+          "none": "Ninguna forma de apilar las capas lo deja plano aquí. Elige otros puntos o aparta primero las capas que estorban.",
+          "otherWay": "Ninguna forma de apilar las capas lo deja plano en este sentido aquí. Plegado en el otro sentido, encaja.",
+          "petal": "No se puede hacer el pliegue de pétalo aquí",
+          "rabbitEar": "La oreja no puede quedar plana aquí",
+          "squash": "No se puede aplastar plano aquí",
+          "swivel": "El pliegue giratorio no puede quedar plano aquí"
         },
         "noPetal": {
           "noCorner": "Los pliegues de la cometa no se juntan bajo la línea, así que no hay punta que levantar.",

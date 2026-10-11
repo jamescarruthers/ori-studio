@@ -1515,10 +1515,10 @@
     },
     "sentence": {
       "behind": {
-        "petal": "",
-        "rabbitEar": "",
-        "squash": "",
-        "swivel": ""
+        "petal": "将翼片向后做花瓣折。",
+        "rabbitEar": "将三角形向后做兔耳折。",
+        "squash": "将翼片向后压折展平。",
+        "swivel": "绕该点将纸向后做旋转折。"
       },
       "closedSink": "将尖角闭合沉折：把尖端压入，各层保持在一起。",
       "cpJump": "按导入的折痕图折叠。",
@@ -2180,10 +2180,10 @@
       "badgeTuck": "塞入",
       "badgeValley": "谷折",
       "behind": {
-        "petal": "",
-        "rabbitEar": "",
-        "squash": "",
-        "swivel": ""
+        "petal": "向后花瓣折",
+        "rabbitEar": "向后兔耳折",
+        "squash": "向后压折",
+        "swivel": "向后旋转折"
       },
       "closedSink": "闭合沉折",
       "cpJump": "导入折痕图",
