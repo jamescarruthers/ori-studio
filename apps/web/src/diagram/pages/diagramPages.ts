@@ -38,8 +38,9 @@ import { uploadTextRuns, type UploadTextRun } from '../upload/uploadText';
 import { layoutPicture, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
 import { annotationTextRuns } from '../annotate/annotationPrimitives';
 import { hasDrawnAnnotations } from '../annotate/paintAnnotations';
-import { viewOfStep, viewGeometry, viewFrame } from '../zoom/stepView';
+import { viewOfStep } from '../zoom/stepView';
 import { convexHull } from './ribbonPacking';
+import { pictureFootprints } from './pictureFootprint';
 import { zoomAreas } from '../zoom/zoomCapture';
 import { enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomIndex, type ZoomIndex } from '../zoom/zoomIndex';
@@ -97,12 +98,16 @@ export function diagramLayoutSteps(
       continue;
     }
     const zoom = layoutZoom(entry, document, index);
+    const measure = measureOf(entry.id);
+    const picture = pictureOf(entry, measure);
+    const footprints = pictureFootprints(entry, document, picture, measure);
     steps.push({
       id: entry.id,
       text: entry.text,
       breakBefore: entry.breakBefore,
-      picture: pictureOf(entry, measureOf(entry.id)),
-      footprint: packingFootprint(entry, document),
+      picture,
+      footprints,
+      footprint: footprints && convexHull(footprints.flat()),
       turnsBefore: turns,
       turnsAfter: [],
       // Enlarged, with no window yet: in no run of enlarged steps, and parting none.
@@ -115,17 +120,6 @@ export function diagramLayoutSteps(
   const last = steps.at(-1);
   if (last && turns.length > 0) steps[steps.length - 1] = { ...last, turnsAfter: turns };
   return steps;
-}
-
-/** Only known vector paper without marks gets a tighter outline; unknown ink keeps its measured rectangle. */
-function packingFootprint(step: DiagramStep, document: DiagramDocument): LayoutStep['footprint'] {
-  if (step.zoom || step.annotations.length || step.picture?.kind !== 'scene') return undefined;
-  const view = viewOfStep(step), frame = viewFrame(view, document.assets);
-  if (!frame) return undefined;
-  const geometry = viewGeometry(view, document.assets, document.style);
-  if (geometry.kind === 'none') return undefined;
-  const hull = convexHull(geometry.points.map(({ at }) => ({ x: at[0] / frame.width, y: at[1] / frame.height })));
-  return hull.length >= 3 ? hull : undefined;
 }
 
 /** An outline's longer side: a circle's diameter, a rounded rectangle's longer side. */

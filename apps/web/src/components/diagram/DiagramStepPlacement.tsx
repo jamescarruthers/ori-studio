@@ -44,7 +44,7 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
                   onReset={step.place?.scale ? () => place.reset('scale') : undefined}
                 />
                 {place.autoSize !== null && (
-                  <p className={styles.note}>
+                  <p className={`${styles.note} ${styles.inset}`}>
                     {t('panels:diagram.placement.autoSize', 'Auto: {{mm}} mm', { mm: place.autoSize.toFixed(1) })}
                   </p>
                 )}
@@ -106,13 +106,15 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
             )}
           </>
         )}
-        <Button
-          size="sm"
-          disabled={place.readOnly || (!step.place && !step.placeNewer)}
-          onClick={() => place.reset('all')}
-        >
-          {t('panels:diagram.placement.resetLayout', 'Reset Layout')}
-        </Button>
+        <div className={styles.inset}>
+          <Button
+            size="sm"
+            disabled={place.readOnly || (!step.place && !step.placeNewer)}
+            onClick={() => place.reset('all')}
+          >
+            {t('panels:diagram.placement.resetLayout', 'Reset Layout')}
+          </Button>
+        </div>
         {!!place.cell?.clashes?.length && (
           <Notice tone="warning">
             {place.cell.clashes.map((clash, index) => (

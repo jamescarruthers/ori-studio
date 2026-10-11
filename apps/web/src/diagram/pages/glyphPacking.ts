@@ -1,6 +1,7 @@
 import type { Lane, LanePoint } from './flowLane';
 import { curvePoint, curveStart } from './flowLane';
-import { partBox, type PageBox } from './pagePlacement';
+import { partPolygons, type PageBox } from './pagePlacement';
+import { rectangle, separate } from './ribbonPacking';
 import type { LayoutCell } from './diagramPageLayout';
 
 /** Find clear room on the actual ribbon; hand placements may leave no clear point. */
@@ -16,8 +17,10 @@ export function glyphSpot(input: {
 }): LanePoint {
   const { preferred, before, after, paper } = input;
   const boxes = [
-    ...input.occupied,
-    ...input.cells.flatMap((cell) => (['number', 'picture', 'text'] as const).map((part) => partBox(cell, part))),
+    ...input.occupied.map((b) => rectangle(b.x, b.y, b.w, b.h)),
+    ...input.cells.flatMap((cell) =>
+      (['number', 'picture', 'text'] as const).flatMap((part) => partPolygons(cell, part)),
+    ),
   ];
   const candidates = input.lane && before && after ? [] : [preferred];
   if (input.lane && before && after) {
@@ -28,25 +31,39 @@ export function glyphSpot(input: {
     const a = centre(before),
       b = centre(after);
     const lane = input.lane;
-    let between = false;
+    const knots = [lane.from, ...lane.curves.map((curve) => curve.to)];
+    const nearest = (point: LanePoint) =>
+      knots.reduce(
+        (best, knot, i) =>
+          Math.hypot(knot.x - point.x, knot.y - point.y) <
+          Math.hypot(knots[best]!.x - point.x, knots[best]!.y - point.y)
+            ? i
+            : best,
+        0,
+      );
+    const start = nearest(a),
+      end = nearest(b);
     lane.curves.forEach((curve, index) => {
-      const from = curveStart(lane, index);
-      if (Math.hypot(from.x - a.x, from.y - a.y) < 0.01) between = true;
-      if (between) for (let n = 1; n < 40; n++) candidates.push(curvePoint(from, curve, n / 40));
-      if (Math.hypot(curve.to.x - b.x, curve.to.y - b.y) < 0.01) between = false;
+      if (index >= start && index < end)
+        for (let n = 1; n < 40; n++) candidates.push(curvePoint(curveStart(lane, index), curve, n / 40));
     });
   }
   const score = (point: LanePoint) => {
     const size = input.sizeAt(point),
       x = point.x - size.w / 2,
       y = point.y - size.h / 2;
-    let overlap =
-      Math.max(0, -x) + Math.max(0, -y) + Math.max(0, x + size.w - paper.w) + Math.max(0, y + size.h - paper.h);
-    for (const box of boxes) {
-      if (!box.w || !box.h) continue;
-      const w = Math.min(x + size.w + 1, box.x + box.w) - Math.max(x - 1, box.x);
-      const h = Math.min(y + size.h + 1, box.y + box.h) - Math.max(y - 1, box.y);
-      if (w > 0 && h > 0) overlap += w * h;
+    if (
+      point.x < Math.max(7, size.w / 2) ||
+      point.x > paper.w - Math.max(7, size.w / 2) ||
+      y < 0 ||
+      y + size.h > paper.h
+    )
+      return Infinity;
+    let overlap = 0;
+    const glyph = rectangle(x - 1, y - 1, size.w + 2, size.h + 2);
+    for (const polygon of boxes) {
+      const push = separate(glyph, { x: 0, y: 0 }, polygon, { x: 0, y: 0 }, 0);
+      if (push) overlap += Math.hypot(push.x, push.y);
     }
     return overlap * 10000 + Math.hypot(point.x - preferred.x, point.y - preferred.y);
   };
@@ -62,9 +79,9 @@ export function glyphSpot(input: {
   // A leading/trailing symbol has no connecting segment. Move along its edge
   // until a tall stack clears the number/caption while staying on the paper.
   if (!before || !after)
-    for (let offset = 2; offset <= 40; offset += 2)
+    for (let offset = 2; offset <= paper.h; offset += 2)
       for (const sign of [-1, 1]) {
-        const point = { x: preferred.x, y: preferred.y + sign * offset },
+        const point = { x: Math.max(7, Math.min(paper.w - 7, preferred.x)), y: preferred.y + sign * offset },
           value = score(point);
         if (value < bestScore) {
           best = point;

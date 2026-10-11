@@ -19,16 +19,10 @@
  *   at its outer edge, never into the spine, where it would seem to go on on
  *   the facing page.
  *
- * **The curve.** The lane passes through every picture's centre heading along
- * its row, and turns between rows in a half ellipse out past the row's end
- * (`FLOW_BEND`, or further for a wide band: {@link bendReach}), through an
- * apex heading straight down or up. It is a cubic
- * Hermite spline through those knots: each knot has one handle, shared by the
- * curves either side, so the lane is tangent-continuous (C1) everywhere and
- * has no corner. The earlier lane was a Catmull–Rom spline through the same
- * points, whose tangent at a row's last picture aimed from the picture before
- * at the bend: the lane rose over that picture and fell back — the kinks Zach
- * saw between steps 11 and 12 of the X-ray Heart.
+ * **The curve.** Packed pages use `ribbonPath`: it fairs interior stops
+ * within the band, follows sloping passes, and retains wide turn radii.
+ * Page-edge knots stay fixed so facing pages meet at the same height.
+ * The legacy grid-derived fallback keeps its quarter-ellipse connectors.
  *
  * Pure.
  */
@@ -138,6 +132,8 @@ export interface LaneStop extends LanePoint {
   row: number;
   rightToLeft: boolean;
   placed?: boolean;
+  /** Page-edge joins stay level with their facing page. */
+  fixed?: boolean;
 }
 
 /** A point the lane passes through, the way it is heading there (a unit vector), and whether it is past the paper's edge. */
@@ -347,28 +343,31 @@ export function laneCrosses(lane: Lane): boolean {
   return false;
 }
 
-/** The same connector used by the packer's exposed-gap measurement, through final centres. */
+/** The same bounded fairing used by the packer, extended to the page edges. */
 function packedLane(input: Parameters<typeof flowLane>[0]): NonNullable<ReturnType<typeof flowLane>> {
   const { stops, plan, pageWidth: width, offPage } = input;
-  const knots = [...stops];
-  const first = stops[0]!, last = stops.at(-1)!;
+  // Edge extensions do not get a vote in fairing the first/last picture.
+  // These anchors match the packer's connection geometry before bleed exists.
+  const knots = stops.map((stop, i) => ({ ...stop, fixed: stop.fixed || i === 0 || i === stops.length - 1 }));
+  const first = knots[0]!, last = knots.at(-1)!;
   const outerLeft = plan.side === 'left';
   if (plan.entry === 'spine' || plan.entry === 'turn' && first.rightToLeft !== outerLeft) {
     const x = plan.entry === 'spine' ? 0 : outerLeft ? 0 : width;
     const y = input.spineIn ?? first.y;
     const direction = first.rightToLeft ? -1 : 1;
-    knots.unshift({ x, y, row: first.row, rightToLeft: first.rightToLeft });
-    knots.unshift({ x: x - direction * offPage, y, row: first.row, rightToLeft: first.rightToLeft });
+    knots.unshift({ x, y, row: first.row, rightToLeft: first.rightToLeft, fixed: true });
+    knots.unshift({ x: x - direction * offPage, y, row: first.row, rightToLeft: first.rightToLeft, fixed: true });
   }
   if (plan.exit === 'spine' || plan.exit === 'turn' && last.rightToLeft === outerLeft) {
     const x = plan.exit === 'spine' ? width : outerLeft ? 0 : width;
     const y = input.spineOut ?? last.y;
-    knots.push({ x, y, row: last.row, rightToLeft: last.rightToLeft });
-    knots.push({ x: x + (last.rightToLeft ? -offPage : offPage), y, row: last.row, rightToLeft: last.rightToLeft });
+    knots.push({ x, y, row: last.row, rightToLeft: last.rightToLeft, fixed: true });
+    knots.push({ x: x + (last.rightToLeft ? -offPage : offPage), y, row: last.row, rightToLeft: last.rightToLeft, fixed: true });
   }
   const path = ribbonPath(knots, input.halfWidth);
   const lane = path.lane;
-  const bends = new Map([...path.bends].map(([index, curve]) => [stops.indexOf(knots[index]!), curve]));
+  const prefix = knots.indexOf(first);
+  const bends = new Map([...path.bends].map(([index, curve]) => [index - prefix, curve]));
   const warnings = new Set<number>();
   stops.forEach((s, i) => {
     const before = stops[i - 1];

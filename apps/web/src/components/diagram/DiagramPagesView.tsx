@@ -61,8 +61,6 @@ export function DiagramPagesView({
   pathColor,
   fitKey,
   onSelect,
-  onOpen,
-  onOpenArea,
   onPageClick,
 }: {
   pages: PreparedDiagramPages | null;
@@ -74,9 +72,6 @@ export function DiagramPagesView({
   /** What counts as a new set of pages to frame: a new diagram, or new paper. */
   fitKey: string;
   onSelect: (stepId: string) => void;
-  onOpen: (stepId: string) => void;
-  /** An enlarge arrow's double press: open the step its area is on, the area selected. */
-  onOpenArea: (stepId: string, areaId: string) => void;
   onPageClick: () => void;
 }) {
   const { t } = useTranslation();
@@ -294,7 +289,6 @@ export function DiagramPagesView({
                             onClick={(event) => onCellClick(event, cell.stepId)}
                             onDoubleClick={(event) => {
                               event.stopPropagation();
-                              if (!pressWasPan()) onOpen(cell.stepId);
                             }}
                           />
                         </div>
@@ -320,11 +314,10 @@ export function DiagramPagesView({
                           onClick={(event) => onCellClick(event, arrow.beforeStepId)}
                           onDoubleClick={(event) => {
                             event.stopPropagation();
-                            if (!pressWasPan()) onOpenArea(arrow.areaStepId, arrow.areaId);
                           }}
                         />
                       ))}
-                    {isNear(index) && <DiagramPagesPlacement page={page} index={index} placement={placement} onOpen={onOpen} />}
+                    {isNear(index) && <DiagramPagesPlacement page={page} index={index} placement={placement} />}
                   </div>
                   <div
                     className={styles.caption}

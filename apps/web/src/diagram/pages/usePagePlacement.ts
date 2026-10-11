@@ -30,6 +30,8 @@ interface Draft {
     mmPerPx: number;
     target: HTMLElement;
     size: false | 'left' | 'middle' | 'right';
+    /** A click drills into an already selected frame; a drag still moves it whole. */
+    drill?: PagePart;
   };
   snap?: { auto?: boolean; number?: number };
 }
@@ -213,14 +215,17 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     if (!element || !pages) return;
     const rect = element.getBoundingClientRect(),
       mmPerPx = pages.layout.paper.widthMm / rect.width;
-    if (chosen === 'frame' && (event.metaKey || event.ctrlKey)) {
+    let drill: PagePart | undefined;
+    if (chosen === 'frame') {
       const x = (event.clientX - rect.left) * mmPerPx,
         y = (event.clientY - rect.top) * mmPerPx;
-      chosen =
+      const hit =
         (['number', 'picture', 'text'] as const).find((part) => {
           const box = partBox(cell, part);
           return x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
         }) ?? 'frame';
+      if (event.metaKey || event.ctrlKey) chosen = hit;
+      else if (selected === cell.stepId && part === 'frame' && hit !== 'frame') drill = hit;
     }
     const current = make(page, cell, chosen, 'drag');
     if (!current) return;
@@ -228,7 +233,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     event.stopPropagation();
     const state = useWorkspaceStore.getState();
     state.selectDiagramStep(cell.stepId);
-    if (chosen !== 'frame') state.selectDiagramPagesPart(chosen);
+    state.selectDiagramPagesPart(chosen);
     event.currentTarget.setPointerCapture(event.pointerId);
     current.pointer = {
       id: event.pointerId,
@@ -237,6 +242,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
       mmPerPx: current.base.layout.paper.widthMm / element.getBoundingClientRect().width,
       target: event.currentTarget,
       size,
+      drill,
     };
     update(current);
   };
@@ -330,8 +336,15 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     update({ ...current, dx: x, dy: y });
   };
   const end = (event: ReactPointerEvent<HTMLElement>) => {
-    if (live.current?.pointer?.id !== event.pointerId) return;
+    const current = live.current;
+    if (current?.pointer?.id !== event.pointerId) return;
     event.stopPropagation();
+    if (current.pointer.drill && !current.dx && !current.dy && current.factor === 1) {
+      const part = current.pointer.drill;
+      update(null);
+      useWorkspaceStore.getState().selectDiagramPagesPart(part);
+      return;
+    }
     commit();
   };
   const preview =

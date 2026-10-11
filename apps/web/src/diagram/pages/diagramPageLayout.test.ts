@@ -783,7 +783,7 @@ describe('layoutDiagramPages', () => {
       const knots = [page.band!.from, ...page.band!.curves.map(c => c.to)];
       for (const cell of page.cells) {
         expect(cell.rightToLeft).toBe(cell.flowRow! % 2 === 1);
-        expect(knots.some(p => Math.hypot(p.x - cell.drawMm.x - cell.drawMm.w / 2, p.y - cell.drawMm.y - cell.drawMm.h / 2) < 1e-8)).toBe(true);
+        expect(knots.some(p => Math.hypot(p.x - cell.drawMm.x - cell.drawMm.w / 2, p.y - cell.drawMm.y - cell.drawMm.h / 2) <= result.bandWidthMm / 4 + 1e-8)).toBe(true);
       }
     }
   });
@@ -926,8 +926,8 @@ describe('turns between steps on the page (D22)', () => {
       expect(Math.abs(turn.at.y - (textBottom(above) + numberTop(below)) / 2), id).toBeLessThan(1);
     }
     // The first bend is at the right, the second at the left.
-    expect(byId.get('turn-down-right')!.at.x).toBeGreaterThan(page.cells[2]!.pictureMm.x + page.cells[2]!.pictureMm.size);
-    expect(byId.get('turn-down-left')!.at.x).toBeLessThan(page.cells[5]!.pictureMm.x);
+    expect(byId.get('turn-down-right')!.at.x).toBeGreaterThan(page.cells[2]!.drawMm.x + page.cells[2]!.drawMm.w / 2);
+    expect(byId.get('turn-down-left')!.at.x).toBeLessThan(page.cells[5]!.drawMm.x + page.cells[5]!.drawMm.w / 2);
     // Each goes the way of the row it leads into.
     expect(byId.get('turn-down-right')!.rightToLeft).toBe(true);
     expect(byId.get('turn-down-left')!.rightToLeft).toBe(false);

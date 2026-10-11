@@ -56,6 +56,7 @@ function diagram(): DiagramDocument {
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
+  useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -77,11 +78,11 @@ afterEach(() => {
 
 function render(
   pages: PreparedDiagramPages,
-  handlers: Partial<Record<'onSelect' | 'onOpen' | 'onOpenArea' | 'onPageClick', () => void>> = {},
+  handlers: Partial<Record<'onSelect' | 'onPageClick', () => void>> = {},
   pathColor = pages.layout.bandInk,
   document = diagram()
 ) {
-  const props = { onSelect: vi.fn(), onOpen: vi.fn(), onOpenArea: vi.fn(), onPageClick: vi.fn(), ...handlers };
+  const props = { onSelect: vi.fn(), onPageClick: vi.fn(), ...handlers };
   act(() =>
     root.render(
       <TooltipProvider>
@@ -213,7 +214,7 @@ describe('DiagramPagesView', () => {
     expect(svg).not.toContain('doesn’t fit');
   });
 
-  it('puts a target over an enlarge arrow where the page prints it: a press selects the enlarged step, a double press opens the area (Revision 2)', () => {
+  it('puts a target over an enlarge arrow where the page prints it: a press selects the enlarged step, a double press stays on the page', () => {
     const area: KnownDiagramAnnotation = { id: 'area-1', kind: 'zoom', from: [0.5, 0.4], to: [0.5, 0.4], radius: 0.2 };
     const document = insertSteps(
       createDiagram({ title: 'Crane' }),
@@ -239,12 +240,11 @@ describe('DiagramPagesView', () => {
     act(() => {
       target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     });
-    expect(props.onOpenArea).toHaveBeenCalledWith('step-area', 'area-1');
-    expect(props.onOpen).not.toHaveBeenCalled();
+    expect(useWorkspaceStore.getState().diagramDetail).toBeNull();
     expect(props.onPageClick).not.toHaveBeenCalled();
   });
 
-  it('selects a step on a press, opens it on a double press, and asks about the page elsewhere', () => {
+  it('selects a step on a press, stays on the page on a double press, and asks about the page elsewhere', () => {
     const props = render(preparedPages(diagram(), FONTS, subsetter));
     act(() => cells()[1]!.click());
     expect(props.onSelect).toHaveBeenCalledWith('step-empty');
@@ -252,7 +252,7 @@ describe('DiagramPagesView', () => {
     act(() => {
       cells()[2]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     });
-    expect(props.onOpen).toHaveBeenCalledWith('step-long');
+    expect(useWorkspaceStore.getState().diagramDetail).toBeNull();
     act(() => host.querySelector<HTMLElement>('[data-page="0"]')!.click());
     expect(props.onPageClick).toHaveBeenCalledOnce();
   });

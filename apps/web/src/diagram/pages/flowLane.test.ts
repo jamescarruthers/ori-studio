@@ -181,18 +181,16 @@ describe('flowPagePlan', () => {
 });
 
 describe('the flow lane', () => {
-  it('is tangent-continuous at every join of its curves: one handle either side, no corner', () => {
-    for (const setup of SETUPS) {
-      for (const firstPageSide of ['left', 'right'] as const) {
-        const result = flow(steps(23), { ...setup, firstPageSide });
-        for (const [index, page] of result.pages.entries()) {
-          const label = `${JSON.stringify(setup)} ${firstPageSide} page ${index + 1}`;
-          for (const { at, into, out } of joins(page.band!)) {
-            // G1: the same tangent direction. Unequal handles allow each bend its own radius.
-            const lengthIn = Math.hypot(into.x, into.y), lengthOut = Math.hypot(out.x, out.y);
-            expect((into.x * out.x + into.y * out.y) / lengthIn / lengthOut, `${label} at ${at.x},${at.y}`).toBeCloseTo(1, 9);
-            expect(Math.hypot(out.x, out.y), `${label} at ${at.x},${at.y}`).toBeGreaterThan(0.01);
-          }
+  it.each(SETUPS)('is tangent-continuous at every join, with setup %j', (setup) => {
+    for (const firstPageSide of ['left', 'right'] as const) {
+      const result = flow(steps(23), { ...setup, firstPageSide });
+      for (const [index, page] of result.pages.entries()) {
+        const label = `${JSON.stringify(setup)} ${firstPageSide} page ${index + 1}`;
+        for (const { at, into, out } of joins(page.band!)) {
+          // G1: the same tangent direction. Unequal handles allow each bend its own radius.
+          const lengthIn = Math.hypot(into.x, into.y), lengthOut = Math.hypot(out.x, out.y);
+          expect((into.x * out.x + into.y * out.y) / lengthIn / lengthOut, `${label} at ${at.x},${at.y}`).toBeCloseTo(1, 9);
+          expect(Math.hypot(out.x, out.y), `${label} at ${at.x},${at.y}`).toBeGreaterThan(0.01);
         }
       }
     }
@@ -206,10 +204,11 @@ describe('the flow lane', () => {
         const lane = page.band!;
         lane.curves.forEach((curve, index) => {
           const from = curveStart(lane, index);
-          const a = centres.findIndex((centre) => Math.hypot(centre.x - from.x, centre.y - from.y) < 1e-9);
-          const b = centres.findIndex((centre) => Math.hypot(centre.x - curve.to.x, centre.y - curve.to.y) < 1e-9);
+          const at = (point: LanePoint) => centres.findIndex((centre) =>
+            Math.abs(centre.x - point.x) < 1e-9 && Math.abs(centre.y - point.y) <= result.bandWidthMm / 4 + 1e-9);
+          const a = at(from), b = at(curve.to);
           // Only a run from one picture to the next on its row.
-          if (a < 0 || b !== a + 1 || page.cells[a]!.cellMm.y - page.cells[b]!.cellMm.y > page.cells[a]!.cellMm.h / 2) return;
+          if (a < 0 || b !== a + 1 || page.cells[a]!.flowRow !== page.cells[b]!.flowRow) return;
           const [low, high] = [Math.min(from.y, curve.to.y), Math.max(from.y, curve.to.y)];
           for (const point of sample({ from, curves: [curve] })[0]!) {
             expect(point.y, `${JSON.stringify(setup)} ${a + 1}→${b + 1}`).toBeGreaterThanOrEqual(low - 1e-9);
@@ -220,14 +219,14 @@ describe('the flow lane', () => {
     }
   });
 
-  it('runs through every picture’s centre, in reading order, behind the steps', () => {
+  it('keeps the band over every picture centre, in reading order', () => {
     const result = flow(steps(16));
     for (const page of result.pages) {
       const lane = page.band!;
       const knots = [lane.from, ...lane.curves.map((curve) => curve.to)];
       let after = -1;
       for (const centre of page.cells.map(centreOf)) {
-        const at = knots.findIndex((knot, index) => index > after && Math.hypot(knot.x - centre.x, knot.y - centre.y) < 1e-9);
+        const at = knots.findIndex((knot, index) => index > after && Math.hypot(knot.x - centre.x, knot.y - centre.y) <= result.bandWidthMm / 4 + 1e-9);
         expect(at).toBeGreaterThan(after);
         after = at;
       }
@@ -327,7 +326,7 @@ describe('a printed spread', () => {
     expect(page.cells).toHaveLength(4);
     const last = centreOf(page.cells.at(-1)!);
     const knots = [lane.from, ...lane.curves.map(c => c.to)];
-    const beyond = knots.slice(knots.findIndex(k => Math.hypot(k.x - last.x, k.y - last.y) < 1e-8) + 1);
+    const beyond = knots.slice(knots.findIndex(k => Math.hypot(k.x - last.x, k.y - last.y) <= result.bandWidthMm / 4 + 1e-8) + 1);
     expect(beyond).toHaveLength(2);
     expect(beyond.map(p => p.x)).toEqual([result.paper.widthMm, result.paper.widthMm + 10]);
   });
@@ -339,7 +338,7 @@ describe('a printed spread', () => {
     const lane = short.pages[0]!.band!;
     const knots = [lane.from, ...lane.curves.map((curve) => curve.to)];
     const seventh = centreOf(short.pages[0]!.cells[6]!);
-    const beyond = knots.slice(knots.findIndex((knot) => knot.x === seventh.x && knot.y === seventh.y) + 1);
+    const beyond = knots.slice(knots.findIndex((knot) => Math.hypot(knot.x - seventh.x, knot.y - seventh.y) <= short.bandWidthMm / 4 + 1e-8) + 1);
     // Only the spine and bleed follow the last picture; no unused cells.
     expect(beyond.slice(0, 2).every((knot) => knot.x > seventh.x)).toBe(true);
     expect(heightAt(lane, short.paper.widthMm)).toBeCloseTo(heightAt(short.pages[1]!.band!, 0)!, 6);

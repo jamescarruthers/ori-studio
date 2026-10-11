@@ -8,6 +8,7 @@ import type { FontSubsetter } from '../fonts/fontSubset';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { preparedPages, type PreparedDiagramPages } from './diagramPages';
 import { usePagePlacement } from './usePagePlacement';
+import { partBox } from './pagePlacement';
 import { runPlacementKey, cancelPlacementGesture } from './placementGestures';
 
 let subsetter: FontSubsetter;
@@ -150,4 +151,38 @@ it('disables placement and declines nudges on a phone-sized touch surface', () =
   expect(binding.enabled).toBe(false);
   expect(runPlacementKey('diagram.nudgePlacementRight')).toBe(false);
   expect(state().diagramHistory.past).toHaveLength(0);
+});
+
+it('selects the frame first, drills into its picture on the next click, and still drags the whole frame', () => {
+  const page = document.createElement('div');
+  page.dataset.page = '0';
+  host.append(page);
+  page.getBoundingClientRect = () => ({ left: 0, top: 0, width: pages.layout.paper.widthMm }) as DOMRect;
+  const target = document.createElement('div');
+  page.append(target);
+  target.setPointerCapture = vi.fn();
+  const cell = pages.layout.pages[0]!.cells[0]!, box = partBox(cell, 'picture');
+  const event = (dx = 0) => ({
+    button: 0, pointerType: 'mouse', pointerId: 1,
+    clientX: box.x + box.w / 2 + dx, clientY: box.y + box.h / 2,
+    currentTarget: target, altKey: true, preventDefault() {}, stopPropagation() {},
+  }) as unknown as Parameters<typeof binding.start>[0];
+  act(() => state().selectDiagramStep('s1'));
+  act(() => binding.start(event(), 0, cell, 'frame'));
+  act(() => binding.end(event()));
+  expect(binding.selected).toBe('s0');
+  expect(binding.part).toBe('frame');
+  act(() => binding.start(event(), 0, cell, 'frame'));
+  expect(binding.part).toBe('frame');
+  act(() => binding.end(event()));
+  expect(binding.part).toBe('picture');
+  expect(state().diagramHistory.past).toHaveLength(0);
+  act(() => state().selectDiagramPagesPart('frame'));
+  act(() => binding.start(event(), 0, cell, 'frame'));
+  act(() => binding.move(event(8)));
+  act(() => binding.end(event(8)));
+  expect(binding.part).toBe('frame');
+  expect(stepById(state().diagram!, 's0')?.place?.frame).toEqual([8, 0]);
+  expect(stepById(state().diagram!, 's0')?.place?.picture).toBeUndefined();
+  expect(state().diagramHistory.past).toHaveLength(1);
 });

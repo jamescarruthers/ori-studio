@@ -29,6 +29,9 @@ export interface RibbonPackingInput {
   clearance?: number;
   gapRatio?: number;
   halfWidth?: number;
+  /** Room for symbols only on the connections that carry them. */
+  gapClearances?: readonly number[];
+  gapBoxes?: readonly ({ w: number; h: number } | null)[];
 }
 
 export function rectangle(x: number, y: number, w: number, h: number): Polygon {
@@ -75,12 +78,13 @@ export function ribbonGaps(
   samples = 40,
   halfWidth = 10,
 ): number[] {
-  return ribbonPath(stops, halfWidth).segments.map((curves, i) => {
+  const path = ribbonPath(stops, halfWidth);
+  return path.segments.map((curves, i) => {
     const a = stops[i]!,
       b = stops[i + 1]!;
     let length = 0,
-      previous: LanePoint = a,
-      from: LanePoint = a;
+      previous: LanePoint = i === 0 ? path.lane.from : path.segments[i - 1]!.at(-1)!.to,
+      from: LanePoint = previous;
     for (const curve of curves) {
       for (let j = 1; j <= samples; j++) {
         const p = pointOnRibbon(from, curve, j / samples);
@@ -96,7 +100,7 @@ export function ribbonGaps(
 }
 
 /** Separating-axis displacement: polygons need at least `clearance` on one separating axis. */
-function separate(a: Polygon, at: LanePoint, b: Polygon, bt: LanePoint, clearance: number): LanePoint | null {
+export function separate(a: Polygon, at: LanePoint, b: Polygon, bt: LanePoint, clearance: number): LanePoint | null {
   let depth = Infinity,
     axis: LanePoint = { x: 0, y: 0 };
   for (const poly of [a, b])
@@ -220,6 +224,16 @@ function candidate(input: RibbonPackingInput, size: number, rows: number, varian
   const cap = input.gapRatio ?? RIBBON_GAP_RATIO;
   const shapes = Array.from({ length: count }, (_, i) => input.shape(i, size));
   if (shapes.some((s) => s.bounds.w > area.w || s.bounds.h > area.h)) return null;
+  const areaOf = (polygon: Polygon) =>
+    Math.abs(
+      polygon.reduce((sum, p, i) => {
+        const q = polygon[(i + 1) % polygon.length]!;
+        return sum + p.x * q.y - q.x * p.y;
+      }, 0),
+    ) / 2;
+  // Even the largest individual occupied piece of every step must fit.
+  // Marks can overlap their paper, so summing all polygons would overcount.
+  if (shapes.reduce((sum, shape) => sum + Math.max(...shape.polygons.map(areaOf)), 0) > area.w * area.h) return null;
   const counts = balancedCounts(count, rows, variant);
   const stops: LaneStop[] = [];
   counts.forEach((columns, row) => {
@@ -234,7 +248,9 @@ function candidate(input: RibbonPackingInput, size: number, rows: number, varian
         bottom = area.y + area.h - b.y - b.h;
       // Stagger in both axes: tall pictures can nest into the previous pass's corners.
       const stagger =
-        variant >= 2 ? (across % 2 ? 1 : -1) * size * [0, 0, 0.18, 0.4, 0.65, 0.9][variant]! * (input.up ? -1 : 1) : 0;
+        variant >= 2 && (variant % 2 === 0 || (row > 0 && row < rows - 1))
+          ? (across % 2 ? 1 : -1) * size * [0, 0, 0.4, -0.4, 0.9, -0.9][variant]! * (input.up ? -1 : 1)
+          : 0;
       stops.push({
         x: area.x - b.x + spread * (area.w - b.w),
         y: top + down * (bottom - top) + stagger,
@@ -253,7 +269,7 @@ function candidate(input: RibbonPackingInput, size: number, rows: number, varian
         b = stops[i]!,
         d = Math.hypot(b.x - a.x, b.y - a.y);
       if (d < 0.01) continue;
-      const error = (gaps[i - 1]! - target) * 0.22;
+      const error = (gaps[i - 1]! - Math.max(target, input.gapClearances?.[i - 1] ?? 0)) * 0.22;
       a.x += ((b.x - a.x) / d) * error;
       a.y += ((b.y - a.y) / d) * error;
       b.x -= ((b.x - a.x) / d) * error;
@@ -288,8 +304,49 @@ function candidate(input: RibbonPackingInput, size: number, rows: number, varian
     if (a.row === b.row ? (b.x - a.x) * (a.rightToLeft ? -1 : 1) <= 1 : (b.y - a.y) * (input.up ? -1 : 1) <= 1)
       return null;
   }
+  // A pass can slope or stagger, but an interior picture must not introduce
+  // another deep U-turn. Keep its departure from its neighbors' connecting
+  // line within one and a half pictures' longer side.
+  for (let i = 1; i + 1 < stops.length; i++) {
+    const a = stops[i - 1]!,
+      at = stops[i]!,
+      b = stops[i + 1]!;
+    if (a.row !== at.row || b.row !== at.row || Math.abs(b.x - a.x) < 1) continue;
+    const y = a.y + ((b.y - a.y) * (at.x - a.x)) / (b.x - a.x);
+    const size = Math.max(
+      ...[i - 1, i, i + 1].map((j) => {
+        const polygon = shapes[j]!.picture,
+          xs = polygon.map((p) => p.x),
+          ys = polygon.map((p) => p.y);
+        return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+      }),
+    );
+    if (Math.abs(at.y - y) > size * 1.5 + 0.1) return null;
+  }
   if (laneCrosses(ribbonPath(stops, input.halfWidth).lane)) return null;
+  const path = ribbonPath(stops, input.halfWidth);
+  // Arc length alone cannot guarantee room for a tall symbol stack. Require
+  // a clear rectangle on the connection that actually carries each stack.
+  for (const [i, box] of (input.gapBoxes ?? []).entries()) {
+    if (!box) continue;
+    let from = i === 0 ? path.lane.from : path.segments[i - 1]!.at(-1)!.to;
+    let clear = false;
+    for (const curve of path.segments[i] ?? []) {
+      for (let n = 1; n < 40 && !clear; n++) {
+        const at = pointOnRibbon(from, curve, n / 40);
+        const width = input.area.x * 2 + input.area.w;
+        if (at.x < Math.max(7, box.w / 2 + 1) || at.x > width - Math.max(7, box.w / 2 + 1)) continue;
+        const symbol = rectangle(-box.w / 2, -box.h / 2, box.w, box.h);
+        clear = shapes.every((shape, j) =>
+          shape.polygons.every((polygon) => !separate(symbol, at, polygon, stops[j]!, 1.1)),
+        );
+      }
+      from = curve.to;
+    }
+    if (!clear) return null;
+  }
   const gaps = ribbonGaps(stops, shapes, 40, input.halfWidth);
+  if (gaps.some((gap, i) => gap + 0.1 < (input.gapClearances?.[i] ?? 0))) return null;
   if (gaps.length && Math.max(...gaps) > cap * Math.max(0.01, Math.min(...gaps)) + 0.1) return null;
   return { size, rows, stops, shapes, gaps: ribbonGaps(stops, shapes, 40, input.halfWidth) };
 }
@@ -305,6 +362,8 @@ export function packRibbon(input: RibbonPackingInput): PackedRibbon | null {
     input.clearance,
     input.gapRatio,
     input.halfWidth,
+    input.gapClearances,
+    input.gapBoxes,
     Array.from({ length: input.count }, (_, i) => [input.shape(i, 40), input.shape(i, 60)]),
   ]);
   if (packingCache.has(key)) return packingCache.get(key)!;
@@ -313,7 +372,7 @@ export function packRibbon(input: RibbonPackingInput): PackedRibbon | null {
   const mostRows = Math.min(9, Math.max(1, Math.ceil(input.count / 2)));
   for (let rows = 1; rows <= mostRows; rows++) {
     if (input.oddRows && rows % 2 === 0) continue;
-    for (const variant of [0, 1, 2, 3, 5]) {
+    for (const variant of rows === 1 ? [0] : input.count % rows === 0 ? [0, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5]) {
       let low = 0,
         high = Math.min(input.area.w, input.area.h);
       for (let iteration = 0; iteration < 9; iteration++) {
@@ -323,6 +382,27 @@ export function packRibbon(input: RibbonPackingInput): PackedRibbon | null {
           low = size;
           if (!best || size > best.size + 0.05) best = packed;
         } else high = size;
+      }
+      // Caption wrapping and the gap cap make feasibility non-monotone. A
+      // failed small candidate must not rule out a larger packing island.
+      const floor = best?.size ?? 0;
+      const ceiling = Math.min(input.area.w, input.area.h, Math.max(floor * 1.5, Math.min(input.area.w, input.area.h) / 3));
+      const stride = (ceiling - floor) / 6;
+      for (let size = ceiling; size > (best?.size ?? 0) + 0.1; size -= stride) {
+        const packed = candidate(input, size, rows, variant);
+        if (!packed) continue;
+        best = packed;
+        let low = size,
+          high = Math.min(ceiling, size + stride);
+        for (let refine = 0; refine < 7; refine++) {
+          const middle = (low + high) / 2,
+            next = candidate(input, middle, rows, variant);
+          if (next) {
+            low = middle;
+            best = next;
+          } else high = middle;
+        }
+        break;
       }
     }
   }

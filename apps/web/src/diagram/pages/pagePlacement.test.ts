@@ -6,6 +6,8 @@ import {
   type DiagramDocument,
   type DiagramStepPlace,
 } from '../document/diagramDocument';
+import { face, sceneOf } from '../../lib/paper/paperScene.fixtures';
+import { storedSceneJson } from '../document/diagramFile';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { FIXTURE_FONTS, fixtureSubsetter } from '../fonts/diagramFonts.fixtures';
 import type { FontSubsetter } from '../fonts/fontSubset';
@@ -90,7 +92,7 @@ describe('printed manual placement', () => {
   });
 });
 
-it('moves the ribbon through final centres and keeps both sides of the spine level', () => {
+it('keeps the ribbon over moved pictures and keeps both sides of the spine level', () => {
   const doc = setPageSetup(
     insertSteps(
       createDiagram(),
@@ -105,7 +107,7 @@ it('moves the ribbon through final centres and keeps both sides of the spine lev
   const left = moved.pages[0]!,
     right = moved.pages[1]!;
   const centre = { x: cell.drawMm.x + cell.drawMm.w / 2 - 9, y: cell.drawMm.y + cell.drawMm.h / 2 - 7 };
-  expect(left.band!.curves.some((c) => Math.hypot(c.to.x - centre.x, c.to.y - centre.y) < 1e-8)).toBe(true);
+  expect(left.band!.curves.some((c) => Math.hypot(c.to.x - centre.x, c.to.y - centre.y) <= base.bandWidthMm / 4 + 1e-8)).toBe(true);
   expect(left.flow!.spineOut).toBe(right.flow!.spineIn);
   expect(left.band!.curves.at(-1)!.to.y).toBe(right.band!.from.y);
   // Repeatable adversarial moves: every introduced crossing is reported.
@@ -120,4 +122,32 @@ it('returns to the identical printed page when a pin and offsets are cleared', (
   const doc = document({ scale: { mmPerUnit: 80 }, frame: [3, 4], text: [4, -2] });
   const cleared = { ...doc, steps: doc.steps.map((step) => ({ ...step, place: undefined })) };
   expect(prepare(cleared).compose(0).svg).toBe(prepare(document()).compose(0).svg);
+});
+
+it('does not call an empty corner of marked diamond paper an overlap, but detects ink collisions', () => {
+  const sceneJson = storedSceneJson(sceneOf([face([[[50, 0], [100, 50], [50, 100], [0, 50]]])]))!;
+  const step = { ...cpStep('diamond'), picture: { kind: 'scene' as const, sceneJson, paperScale: 100, styleKey: null, key: 'diamond' },
+    annotations: [{ id: 'push', kind: 'push-arrow' as const, from: [.95, .5] as [number, number], to: [.8, .5] as [number, number] }] };
+  const doc = setPageSetup(insertSteps(createDiagram(), [step], 0), { layout: 'grid', columns: 1, rows: 1 });
+  const base = prepare(doc).layout, cell = base.pages[0]!.cells[0]!;
+  expect(cell.inkPolygons).toHaveLength(2);
+  const picture = partBox(cell, 'picture'), number = partBox(cell, 'number');
+  const empty = previewPlacement(base, step.id, 'number', picture.x + 2 - number.x, picture.y + 2 - number.y);
+  expect(empty.pages[0]!.cells[0]!.clashes?.some(c => c.kind === 'parts') ?? false).toBe(false);
+  const onPaper = previewPlacement(base, step.id, 'number', picture.x + picture.w / 2 - number.x, picture.y + picture.h / 2 - number.y);
+  expect(onPaper.pages[0]!.cells[0]!.clashes).toContainEqual({ kind: 'parts' });
+  const moved = previewPlacement(base, step.id, 'picture', 5, 3).pages[0]!.cells[0]!;
+  expect(moved.inkPolygons![0]![0]!.x).toBeCloseTo(cell.inkPolygons![0]![0]!.x + 5);
+  expect(moved.inkPolygons![0]![0]!.y).toBeCloseTo(cell.inkPolygons![0]![0]!.y + 3);
+  const resized = previewPlacement(base, step.id, 'picture', 0, 0, 1.5).pages[0]!.cells[0]!;
+  const xs = (polygons: NonNullable<typeof cell.inkPolygons>) => polygons.flat().map(p => p.x);
+  expect(Math.max(...xs(resized.inkPolygons!)) - Math.min(...xs(resized.inkPolygons!))).toBeCloseTo((Math.max(...xs(cell.inkPolygons!)) - Math.min(...xs(cell.inkPolygons!))) * 1.5);
+});
+
+it('clears an old path warning when a moved step returns to a clear route', () => {
+  const doc = setPageSetup(insertSteps(createDiagram(), Array.from({ length: 9 }, (_, i) => cpStep(`s${i}`)), 0), { layout: 'flow', stepsPerPage: 9 });
+  const base = prepare(doc).layout;
+  base.pages[0]!.cells[1]!.clashes = [{ kind: 'path' }];
+  const next = previewPlacement(base, 's1', 'frame', 0, 0);
+  expect(next.pages[0]!.cells[1]!.clashes?.some(c => c.kind === 'path') ?? false).toBe(false);
 });

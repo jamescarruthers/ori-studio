@@ -1,3 +1,4 @@
+import { rectangle, separate, type Polygon } from './ribbonPacking';
 import type { DiagramStepPlace } from '../document/diagramDocument';
 import type { DiagramPagesLayout, LayoutCell, LayoutPage, LayoutStep, TextSetter } from './diagramPageLayout';
 
@@ -33,6 +34,7 @@ export function translateCell(cell: LayoutCell, part: PagePart, dx: number, dy: 
     pictureMm: frame || part === 'picture' ? move(cell.pictureMm) : cell.pictureMm,
     drawMm: frame || part === 'picture' ? move(cell.drawMm) : cell.drawMm,
     inkMm: cell.inkMm && (frame || part === 'picture') ? move(cell.inkMm) : cell.inkMm,
+    inkPolygons: frame || part === 'picture' ? cell.inkPolygons?.map((p) => p.map(move)) : cell.inkPolygons,
     numberAt: frame || part === 'number' ? move(cell.numberAt) : cell.numberAt,
     numberMm: cell.numberMm && (frame || part === 'number') ? move(cell.numberMm) : cell.numberMm,
     text:
@@ -85,17 +87,15 @@ export function partBox(cell: LayoutCell, part: PagePart): PageBox {
   }
 }
 
-function intersects(a: PageBox, b: PageBox): boolean {
-  return (
-    a.w > 0 &&
-    a.h > 0 &&
-    b.w > 0 &&
-    b.h > 0 &&
-    a.x < b.x + b.w - 0.01 &&
-    a.x + a.w > b.x + 0.01 &&
-    a.y < b.y + b.h - 0.01 &&
-    a.y + a.h > b.y + 0.01
-  );
+/** Hit boxes remain rectangular; collision checks use the occupied ink inside them. */
+export function partPolygons(cell: LayoutCell, part: PagePart): readonly Polygon[] {
+  if (part === 'picture' && cell.inkPolygons?.length) return cell.inkPolygons;
+  const box = partBox(cell, part);
+  return box.w > 0 && box.h > 0 ? [rectangle(box.x, box.y, box.w, box.h)] : [];
+}
+
+function intersects(a: readonly Polygon[], b: readonly Polygon[]): boolean {
+  return a.some((ap) => b.some((bp) => separate(ap, { x: 0, y: 0 }, bp, { x: 0, y: 0 }, -0.01)));
 }
 
 /** Manual placement is honored. Warnings are derived, never stored in the document. */
@@ -104,6 +104,7 @@ export function placementClashes(layout: DiagramPagesLayout): void {
   for (const page of layout.pages)
     for (const cell of page.cells) {
       if (!cell.placed) continue;
+      const parts = (['number', 'picture', 'text'] as const).map((part) => partPolygons(cell, part));
       const boxes = ['number', 'picture', 'text']
         .map((part) => partBox(cell, part as PagePart))
         .filter((b) => b.w > 0 && b.h > 0);
@@ -112,14 +113,14 @@ export function placementClashes(layout: DiagramPagesLayout): void {
         boxes.some((b) => b.x < inset || b.y < inset || b.x + b.w > w - inset || b.y + b.h > h - inset);
       if (outside(0)) clashes.push({ kind: 'paper' });
       else if (outside(m)) clashes.push({ kind: 'margin' });
-      if (boxes.some((box, i) => boxes.slice(i + 1).some((other) => intersects(box, other))))
+      if (parts.some((shape, i) => parts.slice(i + 1).some((other) => intersects(shape, other))))
         clashes.push({ kind: 'parts' });
       const steps = page.cells
         .filter(
           (other) =>
             other !== cell &&
             ['number', 'picture', 'text'].some((part) =>
-              boxes.some((b) => intersects(b, partBox(other, part as PagePart))),
+              parts.some((p) => intersects(p, partPolygons(other, part as PagePart))),
             ),
         )
         .map((other) => other.number);
@@ -137,7 +138,8 @@ export function placementClashes(layout: DiagramPagesLayout): void {
           w: 10,
           h: 4,
         });
-      if (glyphs.some((g) => boxes.some((b) => intersects(b, g)))) clashes.push({ kind: 'glyph' });
+      if (glyphs.some((g) => parts.some((p) => intersects(p, [rectangle(g.x, g.y, g.w, g.h)]))))
+        clashes.push({ kind: 'glyph' });
       cell.clashes = clashes.length ? clashes : undefined;
     }
 }

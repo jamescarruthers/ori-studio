@@ -1351,3 +1351,14 @@ describe('paintAnnotations', () => {
     expect(painted.markup).not.toContain('Inter');
   });
 });
+
+it('can measure just a mark, without occupying the blank picture frame around it', () => {
+  const drawing = annotationDrawing([a('small', 'valley-line')], FRAME, 100, DEFAULT_DIAGRAM_STYLE);
+  const full = annotationReach(drawing), ink = annotationReach(drawing, { includeFrame: false });
+  expect(full.width).toBeGreaterThanOrEqual(100);
+  expect(ink.x).toBeGreaterThan(0);
+  expect(ink.width).toBeLessThan(50);
+  expect(ink.height).toBeLessThanOrEqual(5);
+  expect(annotationReach(annotationDrawing([], FRAME, 100, DEFAULT_DIAGRAM_STYLE), { includeFrame: false }))
+    .toEqual({ x: 0, y: 0, width: 0, height: 0 });
+});

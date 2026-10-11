@@ -45,7 +45,8 @@ function printed(document: DiagramDocument) {
   };
 }
 
-describe('pages with nothing placed', () => {
+// Each fixture lays out and composes every page twice, including cold packing.
+describe('pages with nothing placed', { timeout: 30_000 }, () => {
   it.each(pageLayoutFixtures().map(({ name, document }) => [name, document] as const))(
     'are the same, byte for byte, with no placement and one of zero offsets: %s',
     (_name, document) => {
@@ -71,7 +72,7 @@ describe('pages with nothing placed', () => {
 /** A text's digest: its sha256's first 16 hex digits. */
 const digest = (text: string) => createHash('sha256').update(text).digest('hex').slice(0, 16);
 
-describe('pages as they printed before placement came', () => {
+describe('pages as they printed before placement came', { timeout: 30_000 }, () => {
   it('are held to their digests: the page, the Pages view’s page and its arrows, page by page', () => {
     // Taken from the layout at 6f7792459 (Phase 1 changes no page). A change here
     // is a change to what every diagram prints: say why when updating them.
@@ -84,6 +85,8 @@ describe('pages as they printed before placement came', () => {
     // changed by its band alone; the Pages view's page and its arrows did not.
     // October 10: balanced packing replaces fixed flow rows; explicit enlarged
     // Size is honored past its old room. Grid fixtures without Size remain unchanged.
+    // October 11: occupied shape packing, local symbol clearances and fairer
+    // ribbon connectors change flow output; grid rendering remains unchanged.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -96,18 +99,18 @@ describe('pages as they printed before placement came', () => {
       {
         "a newer build’s steps and turns · page 1": "f803ef9681c5a607 f803ef9681c5a607 4f53cda18c2baa0c",
         "a newer build’s steps and turns · page 2": "85e09522e6de28d1 85e09522e6de28d1 4f53cda18c2baa0c",
-        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "4633d85b2846d328 af5d80b1f4bfa2c4 38230ba7ef98046e",
-        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "e514e05fe15c024d ec8578ca7a5eba3a 4f53cda18c2baa0c",
-        "flow from the right, across spreads, rows read upward · page 1": "c33a13c32d48a12f 838513c1e7d9b2fc 4f53cda18c2baa0c",
-        "flow from the right, across spreads, rows read upward · page 2": "ff14836c9b067ce2 3c93ab409c165720 4f53cda18c2baa0c",
-        "flow from the right, across spreads, rows read upward · page 3": "7dc43f31b0e27566 25f1d5eead9cd7e8 4f53cda18c2baa0c",
-        "flow landscape, an odd row count · page 1": "8a22bcd7250e0283 d6c49700a718876e 4f53cda18c2baa0c",
-        "flow landscape, an odd row count · page 2": "673dcc91ac1f43ff b06c04f39dffda06 4f53cda18c2baa0c",
-        "flow, a page break and turns at a row’s end · page 1": "21a98eebb20a5a9d 84d7969e8086ba06 4f53cda18c2baa0c",
-        "flow, a page break and turns at a row’s end · page 2": "723736f8d4030a08 2b200e9f7de1e546 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "6903c78b1b27aec6 90d75618d305c07d 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "efdb9ff897e8d19e 4359ed9b33f74e33 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "ef85321fd097fb72 380fbfe2900b5729 4f53cda18c2baa0c",
+        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "35909de4ed44110b 0e552f7458ddeef9 1595f0f854bfa19b",
+        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "45e29f68e20cada3 fadb4fc79180b178 4f53cda18c2baa0c",
+        "flow from the right, across spreads, rows read upward · page 1": "0a6a59f991868c6b 1ddf4d5960b699d1 4f53cda18c2baa0c",
+        "flow from the right, across spreads, rows read upward · page 2": "46b1126a4b7edd44 a93de6b277748878 4f53cda18c2baa0c",
+        "flow from the right, across spreads, rows read upward · page 3": "577fb31aae415452 44bec70db18f0b36 4f53cda18c2baa0c",
+        "flow landscape, an odd row count · page 1": "2f5e57d7ac9e9bf4 11569fc9da6adc10 4f53cda18c2baa0c",
+        "flow landscape, an odd row count · page 2": "346c2f4369c49cc5 c9faf2d8bdb998d5 4f53cda18c2baa0c",
+        "flow, a page break and turns at a row’s end · page 1": "dbf29b8afcf2beb8 3b7ff301954492a2 4f53cda18c2baa0c",
+        "flow, a page break and turns at a row’s end · page 2": "1967807a0cf047e9 414f6b367b3611be 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "9277cb53605deb3d 42d31e67781b6125 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "b0e383caf249e230 2d603a069054e919 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "72f74f9feb6f47c8 d104d6fb93ec5c0d 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 1": "762034dc73a12f50 762034dc73a12f50 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 2": "8254deff8fc82487 8254deff8fc82487 4f53cda18c2baa0c",
         "grid, two pages · page 1": "55238bffde0a38d1 55238bffde0a38d1 4f53cda18c2baa0c",

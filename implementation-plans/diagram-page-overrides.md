@@ -7,7 +7,7 @@
 - Choose balanced back-and-forth bends and distribute every page's actual steps across the available paper. No reserved empty grid slots or long unused ribbon tail.
 - Maximize picture size subject to minimum clearance and bounded visible gap variation. Initial constants: 6 mm minimum clearance and longest exposed ribbon gap at most 1.5 times shortest. Measure gaps along the curve between picture edges, including bends, not just between centers.
 - Explore horizontal and vertical staggering and bend counts. The packing search is deterministic and bounded; it does not claim a global optimum. Reserve numbers, captions, annotations and turn glyphs as occupied space.
-- The ribbon passes through the final picture centers. Manual placement wins over automatic clearance/rhythm constraints; report collisions and reading-order problems instead of moving another step.
+- The ribbon follows the final picture regions; bounded fairing may move it off exact centers to keep the curve flowing (October 11). Manual placement wins over automatic clearance/rhythm constraints; report collisions and reading-order problems instead of moving another step.
 - Grid output remains unchanged without overrides. Flow output deliberately changes to this agreed packing, so the previous flow golden is historical, not a requirement to preserve the old 3·3·1 layout.
 - Keep pagination and placement identity independent of content-sensitive packing. Moving content never silently discards a manual placement; reorders and setup changes retain the established clearing rules.
 - Line type is a persistent left-rail control, like Edit, with its existing shortcuts. Circle mode, text style and star fill remain creation parameters in the tool hint; selected-object properties stay in Layers.
@@ -25,6 +25,21 @@ Conventions:
 - *(inferred)* marks a claim read from code but never run.
 
 ## Goal
+
+### October 11 crane review
+
+- [x] Reproduce the real crane at nine steps per page and improve packing of mixed folded sizes, captions and turn symbols.
+- [x] Smooth the ribbon through the picture regions; exact centre interpolation is secondary to a flowing curve, including after manual moves.
+- [x] First click selects the whole step frame; a second click selects an inner part. Double-clicking a page step never opens its editor.
+- [x] Give placement controls the same sidebar inset as neighbouring controls.
+- [x] Derive collision warnings from occupied geometry rather than empty rectangular corners, and distinguish path warnings from overlaps.
+- [x] Validate the crane visually, add reduced synthetic regression cases, run the affected checks, and update PR #443 and the preview.
+
+The crane reproduction exposed document-wide turn padding and a non-monotone search being treated as binary-searchable. Flow now reserves symbol rectangles only on their own connections, searches both stagger phases, and samples larger candidate sizes before refinement. A bounded interior excursion keeps balanced bends from becoming a deep extra zigzag. The search remains a deterministic heuristic, not a proof of global optimality.
+
+Scene paper hulls and individual annotation extents provide occupied polygons for packing and warnings. Hit targets remain rectangular. The ribbon fairs stops by at most a quarter of its full band width, uses shared slopes at joins, and retains quarter-ellipse handles whenever tilting would pinch a thick band. Page-edge joins remain fixed.
+
+Browser QA used the external crane file without modifying it or committing it: first click selected Frame, the next selected Picture, dragging Frame moved all parts once, and the moved step 8 had no false overlap warning. New regression cases cover empty corners versus actual ink, shape transforms, stale path warnings, and click-versus-drag selection.
 
 Zach, 2026-10-07:
 
@@ -1538,3 +1553,17 @@ spine matrix now reports each page setup as a separate case instead of putting
 the whole matrix inside one 120-second test. Three full-page integration tests
 get 30 seconds instead of the default five (CI measured 6–8 seconds). No cases,
 assertions or product behavior were removed or changed by this follow-up.
+
+
+**October 11 validation.** Node 22 lint, typecheck and i18n checks pass. The
+packing, shared-ribbon, golden and sheet-export subset passes all 30 tests; grid
+digests are unchanged. Multi-page export fixtures now have a scoped 30-second
+budget, and the tangent-continuity matrix reports each paper setup separately,
+retaining every assertion. The full web suite passes 12,791 tests, with 15 existing
+skips (923 files passed, two skipped). Final CI status is recorded on PR #443.
+
+The final browser proof is `artifacts/crane-review/placement-proof.png` (ignored):
+the external crane at nine steps per page, step 8 moved as a whole, padded sidebar
+controls, no spurious overlap warning, and the page still open after repeated
+clicks. A local review harness mounts the production page and placement
+components; the persistent app preview remains `http://localhost:5311/diagram`.

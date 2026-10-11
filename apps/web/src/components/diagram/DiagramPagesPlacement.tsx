@@ -28,12 +28,10 @@ export function DiagramPagesPlacement({
   page,
   index,
   placement,
-  onOpen,
 }: {
   page: LayoutPage;
   index: number;
   placement: Placement;
-  onOpen: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const { draft, selected, part } = placement;
@@ -70,7 +68,11 @@ export function DiagramPagesPlacement({
             style={position(partBox(c, 'frame'))}
             data-placement-clash={c.stepId}
           >
-            <span>{t('panels:diagram.placement.overlaps', 'Overlaps')}</span>
+            <span>{c.clashes?.some((clash) => ['step', 'parts', 'glyph'].includes(clash.kind))
+              ? t('panels:diagram.placement.overlaps', 'Overlaps')
+              : c.clashes?.some((clash) => clash.kind === 'paper' || clash.kind === 'margin')
+                ? t('panels:diagram.placement.outsideMargin', 'Outside margin')
+                : t('panels:diagram.placement.pathWarning', 'Path doubles back')}</span>
           </div>
         ))}
       {editable && cell && (
@@ -95,7 +97,6 @@ export function DiagramPagesPlacement({
                 }}
                 onDoubleClick={(event) => {
                   event.stopPropagation();
-                  onOpen(cell.stepId);
                 }}
               />
             ))}

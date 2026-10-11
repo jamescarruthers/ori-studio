@@ -290,8 +290,10 @@ export interface LayoutStep {
    * before ribbon and symbol placement.
    */
   place?: DiagramStepPlace;
-  /** Convex occupied paper, normalized to its frame. Absent for pictures whose ink cannot be bounded more closely. */
+  /** Convex picture outline, normalized to its measured ink box, for clipping exposed ribbon gaps. */
   footprint?: readonly { x: number; y: number }[];
+  /** Separate occupied paper/mark outlines in the same ink-box coordinates; empty corners remain free. */
+  footprints?: readonly (readonly { x: number; y: number }[])[];
 }
 
 /**
@@ -380,6 +382,7 @@ export interface LayoutCell {
   homeParts?: { number: PageBox; picture: PageBox; text: PageBox };
   numberMm?: PageBox;
   inkMm?: PageBox;
+  inkPolygons?: readonly (readonly { x: number; y: number }[])[];
   rightToLeft?: boolean;
   placed?: {
     offsets: DiagramStepPlace;
@@ -1139,8 +1142,13 @@ export function layoutDiagramPages(
         const right = Math.max(extent.width / 2, width / 2);
         const shape: PackingShape = {
           picture: picturePolygon,
-          polygons: [picturePolygon, rectangle(-extent.width / 2 - numberWidth - 2, -extent.height / 2, numberWidth, STEP_NUMBER_SIZE_MM),
-            ...(text.lines.length ? [rectangle(-width / 2, extent.height / 2 + 2, width, textHeight - 2)] : [])],
+          polygons: [
+            ...(entry.step.footprints?.map((polygon) => polygon.map((p) => ({
+              x: (p.x - 0.5) * extent.width, y: (p.y - 0.5) * extent.height,
+            }))) ?? [picturePolygon]),
+            rectangle(-extent.width / 2 - numberWidth - 2, -extent.height / 2, numberWidth, STEP_NUMBER_SIZE_MM),
+            ...(text.lines.length ? [rectangle(-width / 2, extent.height / 2 + 2, width, textHeight - 2)] : []),
+          ],
           bounds: { x: left, y: -extent.height / 2, w: right - left, h: extent.height + textHeight },
         };
         const value = { scale, extent, width, text, shape };
@@ -1151,10 +1159,15 @@ export function layoutDiagramPages(
         // Equal line counts at the cache's probe sizes do not imply equal wrapping between them.
         contentKey: JSON.stringify(entries.map((entry) => entry.step.text)),
         count: entries.length,
-        area: { x: m + (turning ? TURN_GUTTER_MM + 2 : 3), y: m + headH + 2, w: W - 2 * m - (turning ? 2 * (TURN_GUTTER_MM + 2) : 6), h: H - 2 * m - headH - (setup.pageNumbers.enabled ? FOOTER_MM : 0) - 4 },
+        area: { x: m + 3, y: m + headH + 2, w: W - 2 * m - 6, h: H - 2 * m - headH - (setup.pageNumbers.enabled ? FOOTER_MM : 0) - 4 },
         shape: (i, size) => metrics(entries[i]!, size).shape,
         oddRows: plan.exit === 'spine', up: plan.up,
-        clearance: turning ? TURN_GUTTER_MM + 2 : undefined, halfWidth: bandWidthMm / 2,
+        gapBoxes: entries.slice(1).map(({ step }) => {
+          const glyphs = glyphsBefore(step);
+          return glyphs.length ? { w: Math.max(...glyphs.map((g) => g.kind === 'enlarge' ? g.arrowFrom.tallest : glyphMm(g).w)), h: stackHeight(glyphs, true) } : null;
+        }),
+        gapClearances: entries.slice(1).map(({ step }) => glyphsBefore(step).length ? Math.max(TURN_GUTTER_MM, stackHeight(glyphsBefore(step), true)) + 2 : 0),
+        halfWidth: bandWidthMm / 2,
       });
       if (!packed) return;
       plans[pageIndex] = { ...flowPagePlan(pageIndex, pagesOfSteps.length, setup.firstPageSide, packed.rows), firstRightToLeft: false };
@@ -1277,6 +1290,10 @@ export function layoutDiagramPages(
         cell.text = { x: packed.cx - packed.width / 2, firstBaseline: draw.y + draw.h + TEXT_GAP_MM,
           widthMm: packed.width, lines: text.lines };
         if (cell.placed) cell.placed.auto.drawMm = { x: packed.cx - autoExtent.width / 2, y: packed.cy - autoExtent.height / 2, w: autoExtent.width, h: autoExtent.height };
+      }
+      if (step.footprints && cell.inkMm) {
+        const ink = cell.inkMm;
+        cell.inkPolygons = step.footprints.map((polygon) => polygon.map((p) => ({ x: ink.x + p.x * ink.w, y: ink.y + p.y * ink.h })));
       }
       return placeCell(cell, step, flow && rowRightToLeft(plans[pageIndex]!, cell.flowRow ?? Math.floor(k / columns)), setter);
     })

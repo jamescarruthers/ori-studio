@@ -53,6 +53,7 @@ export function previewPlacement(
     const lane = flowLane(flow);
     page.flow = flow;
     if (page.band) page.band = lane?.lane ?? null;
+    for (const cell of page.cells) cell.clashes = cell.clashes?.filter((clash) => clash.kind !== 'path');
     for (const n of lane?.warnings ?? []) if (page.cells[n]) page.cells[n]!.clashes = [{ kind: 'path' }];
   });
   placementClashes(layout);
@@ -75,6 +76,7 @@ export function scaleCell(cell: LayoutCell, factor: number): LayoutCell {
     ...next,
     drawMm: scaleBox(cell.drawMm),
     inkMm: cell.inkMm ? scaleBox(cell.inkMm) : undefined,
+    inkPolygons: cell.inkPolygons?.map((polygon) => polygon.map((p) => ({ x: cx + (p.x - cx) * factor, y: cy + (p.y - cy) * factor }))),
     pictureMm: {
       x: cx + (cell.pictureMm.x - cx) * factor,
       y: cy + (cell.pictureMm.y - cy) * factor,
