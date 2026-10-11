@@ -1390,22 +1390,54 @@ unless marked.
 
 ### Phase 9 — Inside reverse fold (V0.5)
 
-- [ ] The tip; per-flap openings; kind feasibility (pre-select when only one is
-  valid).
-- [ ] Declared blocks, cross-block seeds, completion; the §5.2 letter rules as
-  tests.
-- [ ] Choices stored as free-variable assignments; the replay tests (resolves,
-  broken, changed).
-- [ ] The candidate chooser; a visual `StepMotion`.
-- [ ] Fixtures: the preliminary base (two reverses), stacked flaps, and a real
-  crane-neck sequence.
+- [x] The tip; per-flap openings; kind feasibility (pre-select when only one is
+  valid). (`analyse_reverse`, `reverse_kinds` and the openings capped at
+  `MAX_OPENINGS` per flap in `compound/reverse.rs`, merged at 1c4aba03f; the
+  reverse tool takes the one kind that lands and disables the other as *Does
+  not fit here*, checked in Chromium on desktop and phone.)
+- [x] Declared blocks, cross-block seeds, completion; the §5.2 letter rules as
+  tests. (The compound pipeline, `compound/mod.rs`: blocks, the macro's
+  placements and `Across` seeds, completion around the faces that moved;
+  `tests/compound`'s `assert_letter_rules` runs on every landed reverse
+  through `check`; `fold_compound_oracle`, 7d50d68db, verifies the seeded
+  campaign's states.)
+- [x] Choices stored as free-variable assignments; the replay tests (resolves,
+  broken, changed). (Witness-keyed `ReverseChoices`; `tests/reverse.rs`'
+  `stored_choices_replay_or_break` and `stored_openings_replay_or_break`.)
+- [x] The candidate chooser; a visual `StepMotion`. (The reverse tool's opening
+  and order choosers, in its window, `FoldReverseControls`, and on the canvas
+  with Shift+arrows, merged at a02447bba; since cff8012fa a reverse plays the
+  engine's legs, `foldStepMotionCompound.wasm.test.ts`. Both checked in
+  Chromium: the crane's neck stepped to its opening, landed and played.)
+- [x] Fixtures: the preliminary base (two reverses), stacked flaps, and a real
+  crane-neck sequence. (`tests/reverse.rs`'
+  `two_inside_reverses_make_the_preliminary_base`, Beloch's frames 2 and 3
+  of `bird-base-petal.fold`, and `stacked_flaps_reverse_each_into_its_own_pocket`;
+  `tests/crane.rs`' `the_crane_neck_reverses_on_an_imported_bird_base` over
+  `tests/fixtures/fold-crane`; the preliminary base, and the crane's neck on
+  the imported bird base, folded through the reverse tool in Chromium.)
 
 ### Phase 10 — Diagram link (can run in parallel)
 
-- [ ] `posedRenderOf`, the link descriptor, the `fold-step` source with a
-  `SheetThumbnail`, and the D17 status rules.
-- [ ] Generalised pull browser; turns as `DiagramTurn`; auto-marks with the
-  `imported` tag.
+- [x] `posedRenderOf`, the link descriptor, the `fold-step` source with a
+  `SheetThumbnail`, and the D17 status rules. (Merged at 36fc28554:
+  `DiagramFoldStepSource` in `diagramDocument.ts` is the link — the step's
+  ids, its `fh1` path and `fs1` state, a `thumbnail: SheetThumbnail` — posed
+  through `posedRenderOf` in `useDiagramActions` and `useCreasePatternSide`;
+  the Fold browser's cards carry their `picture: SheetThumbnail`
+  (`foldPull.ts`); the status rules are `diagram/fold/foldStepLink.ts`, read
+  through `capture/linkStatus.ts` and `useLinkStatus`. Checked in Chromium,
+  dark and light: a sent step `current`, `stale` after the sheet's start
+  side flipped, `current` again after Refresh Picture, and Open in Fold
+  landing on it.)
+- [x] Generalised pull browser; turns as `DiagramTurn`; auto-marks with the
+  `imported` tag. (`DiagramFoldBrowser` is References' pull browser frame
+  over a `FoldBrowserProvider`; `foldPull.ts` sends a turn or a rotation as a
+  `DiagramTurnKind`, a turn between steps (`foldPull.test.ts`);
+  `diagramFoldLink.wasm.test.ts` asserts every mark `imported: 'untouched'`.
+  The From Fold… browser and Send Steps to Diagram checked in Chromium on a
+  kite base, which has no turn: no browser check of a pulled turn is
+  recorded.)
 
 ### Phase 11 — Remaining compound folds
 
