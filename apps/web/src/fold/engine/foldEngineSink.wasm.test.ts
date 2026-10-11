@@ -153,10 +153,15 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
     expect(sunk.summary.creases.mountain).toBeGreaterThan(base.summary.creases.mountain);
     const summary = landed(calls.stepSummary(sunk.state));
     expect(summary.summary?.diff.added).toHaveLength(8);
-    expect(landed(calls.stepAction(sunk.state)).action).toBeNull();
+    // Pictured as its preview was: pushed in at the tip, seen as a mountain.
+    const pictured = landed(calls.stepAction(sunk.state)).action;
+    expect(pictured?.direction).toBe('mountain');
+    expect(pictured?.push).toEqual(landed(calls.action(base.state, sinkOp('open-sink', 0.3))).action.push);
 
     const back = landed(calls.step(sunk.state, unsinkOp(0.3)));
     expect(sinkOf(back.compound).step).toBe('unsink');
+    expect(landed(calls.stepAction(back.state)).action).toMatchObject({ direction: 'valley' });
+    expect(landed(calls.stepAction(back.state)).action?.push).toBeUndefined();
     expect(sinkOf(back.compound).unfolded).toHaveLength(8);
     expect(back.summary.creases.flat).toBe(base.summary.creases.flat * 2 + 8);
   });
@@ -241,8 +246,50 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
     expect(thrown(() => question.compoundAnalysis(sunk, unsinkOp(0.3)))).toMatchObject({ code: 'invalid_input' });
     expect(thrown(() => sinks.sinkPick(base.state, op, [-1]))).toMatchObject({ code: 'invalid_input' });
     expect(thrown(() => sinks.sinkOrders(0, op))).toMatchObject({ code: 'invalid_input' });
-    // A sink is no plain fold to analyse.
-    expect(thrown(() => calls.analyse(base.state, op))).toMatchObject({ code: 'invalid_input' });
+    // The sunk points are an unsink's.
+    expect(thrown(() => sinks.sunkPoints(base.state, op))).toMatchObject({ code: 'invalid_input' });
+  });
+
+  it('answers a sink tool’s preview as a fold along its line: what moves, its picture and push, the depth picker', async () => {
+    const engine = await makeEngine();
+    const { calls } = engine;
+    const base = importSample(engine, 'preliminary-base');
+    for (const kind of ['open-sink', 'closed-sink'] as const) {
+      const op: FoldSinkOp = { ...sinkOp(kind, 0.3), seed: { scope: 'all' }, moving: tip(0.3) };
+      const { analysis } = landed(calls.analyse(base.state, op));
+      expect(analysis.flaps).toHaveLength(1);
+      expect(analysis.picked).toEqual([0]);
+      expect(analysis.moving).toEqual(analysis.flaps[0]?.faces);
+      const { action } = landed(calls.action(base.state, op));
+      expect(action.direction).toBe('mountain');
+      expect(action.line).not.toBeNull();
+      expect(action.push).toBeDefined();
+      expect(landed(calls.depthChoices(base.state, op, tip(0.3))).choices.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('names the one sunk point an unsink along the ring can pull out, and pictures it pulled', async () => {
+    const engine = await makeEngine();
+    const { calls, sinks } = engine;
+    const base = importSample(engine, 'preliminary-base');
+    const sunk = landed(calls.step(base.state, sinkOp('open-sink', 0.3))).state;
+    // The tool's unsink before anything is named: every layer on the side of the ring the paper lies on.
+    const unnamed: FoldSinkOp = { ...unsinkOp(0.3), seed: { scope: 'all' }, moving: tip(0.3) };
+    const { points } = landed(sinks.sunkPoints(sunk, unnamed));
+    expect(points).toHaveLength(1);
+    const named: FoldSinkOp = { ...unsinkOp(0.3), seed: { scope: 'flaps', at: points.map((point) => point.witness) } };
+    const { analysis } = landed(calls.analyse(sunk, named));
+    expect(analysis.moving).toEqual(points[0]?.faces);
+    expect(analysis.picked).toHaveLength(1);
+    const { action } = landed(calls.action(sunk, named));
+    expect(action.direction).toBe('valley');
+    expect(action.push).toBeUndefined();
+    expect(sinkOf(landed(calls.step(sunk, named)).compound).step).toBe('unsink');
+    // Every layer on that side is the sunk tip and the paper round it: nothing would stay.
+    expect(refused(calls.analyse(sunk, unnamed)).refusal.code).toBe('nothing_stays');
+    // On the base nothing is sunk.
+    const onBase: FoldSinkOp = { ...unnamed, line: { via: 'free', through: ring(0.3) } };
+    expect(landed(sinks.sunkPoints(base.state, onBase)).points).toEqual([]);
   });
 
   it('replays a sequence with a sink through the document’s replayer, to the fingerprints the steps landed', async () => {

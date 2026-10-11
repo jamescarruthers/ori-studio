@@ -1,6 +1,7 @@
 /**
- * A sink tool's own queries — how many orders a sink leaves, and what a pick
- * stores — over the same wasm `FoldEngine` as `foldEngineCalls.ts`: what
+ * A sink tool's own queries — how many orders a sink leaves, what a pick
+ * stores, and the sunk points an unsink can pull back out — over the same
+ * wasm `FoldEngine` as `foldEngineCalls.ts`: what
  * `workers/foldSequenceWorker.ts` exposes beside the step calls, kept apart
  * from the worker so the wasm test drives exactly these calls in-process. A
  * sink itself lands through `apply`, as every step does, and what its point
@@ -18,16 +19,29 @@
 
 import type { FoldChoices } from '../document/foldSequenceDocument';
 import { invalidInput, requireHandle, requireObject } from './foldEngineCalls';
-import { isFoldSinkOp, type FoldEngineSinkOp, type FoldSinkOrders, type FoldSinkPicked } from './foldEngineSinkWire';
+import {
+  isFoldSinkOp,
+  type FoldEngineSinkOp,
+  type FoldSinkOrders,
+  type FoldSinkPicked,
+  type FoldSunkPoints,
+} from './foldEngineSinkWire';
 import type { FoldEngineOutcome } from './foldEngineWire';
 
 /** The wasm class's sink surface, as the generated `FoldEngine` has it. */
 export interface FoldWasmSinkEngine {
   sink_orders(state: number, op: unknown, choices: unknown): unknown;
   sink_pick(state: number, op: unknown, choices: unknown, choice: Uint32Array): unknown;
+  sunk_points(state: number, op: unknown, choices: unknown): unknown;
 }
 
 export interface FoldEngineSinkCalls {
+  /**
+   * The sunk points an unsink op's line can pull back out on its side, each
+   * a flap of that side; the op's seed is not read. Any other op is the
+   * caller's mistake.
+   */
+  sunkPoints(state: number, op: FoldEngineSinkOp, choices?: FoldChoices): FoldEngineOutcome<FoldSunkPoints>;
   /** How many orders the sink leaves with these choices: one when it is decided. */
   sinkOrders(state: number, op: FoldEngineSinkOp, choices?: FoldChoices): FoldEngineOutcome<FoldSinkOrders>;
   /** The completion a step stores for one listed order per component; null when the sink is decided. */
@@ -67,6 +81,16 @@ function requireChoice(choice: readonly number[]): Uint32Array {
 
 export function createFoldEngineSinkCalls(engine: FoldWasmSinkEngine): FoldEngineSinkCalls {
   return {
+    sunkPoints(state, op, choices) {
+      const checked = requireSinkOp(op);
+      if (checked.kind !== 'unsink') throw invalidInput(`op must be an unsink op, got ${checked.kind}`);
+      return engine.sunk_points(
+        requireHandle('state', state),
+        checked,
+        requireChoices(choices)
+      ) as FoldEngineOutcome<FoldSunkPoints>;
+    },
+
     sinkOrders(state, op, choices) {
       return engine.sink_orders(
         requireHandle('state', state),

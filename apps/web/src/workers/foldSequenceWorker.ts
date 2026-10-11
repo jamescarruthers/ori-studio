@@ -34,7 +34,12 @@ import {
 import type { FoldEngineCrimpOp, FoldEngineTuckOp } from '../fold/engine/foldEngineCrimpTuckWire';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from '../fold/engine/foldEngineIoCalls';
 import { createFoldEngineSinkCalls, type FoldEngineSinkCalls } from '../fold/engine/foldEngineSinkCalls';
-import type { FoldEngineSinkOp, FoldSinkOrders, FoldSinkPicked } from '../fold/engine/foldEngineSinkWire';
+import type {
+  FoldEngineSinkOp,
+  FoldSinkOrders,
+  FoldSinkPicked,
+  FoldSunkPoints,
+} from '../fold/engine/foldEngineSinkWire';
 import { createFoldEngineVertexCalls, type FoldEngineVertexCalls } from '../fold/engine/foldEngineSquashCalls';
 import type { FoldVertexFingerprinted, FoldVertexTried } from '../fold/engine/foldEngineSquashWire';
 import type { FoldVertexOp } from '../fold/document/foldSequenceDocument';
@@ -350,6 +355,15 @@ const api = {
     choices?: FoldChoices
   ): Promise<FoldEngineOutcome<FoldSinkPicked>> {
     return call((calls) => calls.sinkPick(state, op, choice, choices));
+  },
+
+  /** The sunk points an unsink op's line can pull back out, on its side. */
+  async sunkPoints(
+    state: number,
+    op: FoldEngineSinkOp,
+    choices?: FoldChoices
+  ): Promise<FoldEngineOutcome<FoldSunkPoints>> {
+    return call((calls) => calls.sunkPoints(state, op, choices));
   },
 };
 
