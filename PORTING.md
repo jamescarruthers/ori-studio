@@ -971,10 +971,18 @@ Its contract:
   upstream, it does not expand orders implied in the level that conflicted.
   `Completion::UnsatisfiedComponent` names the faces upstream's `compute.js`
   reports.
-- **Budget**: `SearchBudget` meters search nodes (a guess and its propagation)
-  and an optional deadline read through a caller-supplied clock, since wasm32
-  has no `Instant`. Either one returns `CompletionError::BudgetExceeded`. Seed
-  propagation and grouping are polynomial and run to the end.
+- **Budget**: `SearchBudget.max_nodes` counts search nodes (a guess and its
+  propagation). Its optional deadline is read through a caller-supplied clock,
+  since wasm32 has no `Instant`: before each search node, and every 32
+  variables the seeds' propagation visits (`BudgetMeter::TICKS_PER_READING`),
+  because on a deep stack that propagation is most of a completion. Either
+  limit returns `CompletionError::BudgetExceeded`, so a deadline that has
+  already passed can return `BudgetExceeded { limit: Deadline, nodes: 0 }`
+  before any search (`the_deadline_also_stops_the_propagation`). A seed
+  conflict the propagation reaches within its first 32 variables is still
+  reported as `Completion::Conflict`. Grouping into components always runs to
+  the end. The `solve_flat_fold` pipeline passes `Unmetered`, which never
+  stops.
 - A malformed problem is refused (`CompletionError::InvalidProblem`) before the
   search can index out of range.
 
@@ -1001,6 +1009,30 @@ and error messages) was identical before and after on 2,889 FOLD files, the
 `flat_folder_completion_problem` with `complete_layer_order` reproduces it on
 the same files. On `bad_twist.fold` the conflict names what the JS oracle
 names: transitivity `[2, 3, 1]`, error faces `[0, 1, 2, 3]`.
+
+Fold's compound folds then reworked the propagation for speed, each change
+again behaviour-preserving for `solve_flat_fold`:
+
+- `ImplicationMaps` (upstream's `CON.implied`) is one table per constraint
+  family, indexed by the base-3 code of the assignment of its pairs, where
+  upstream keys it by the assignment's string. It is built once per process
+  (`ImplicationMaps::shared`, a `OnceLock`) instead of on every call, which
+  cost about 0.65 ms each.
+- The propagation and the search look a pair's variable up by its faces in a
+  `PairIndex` (per smaller face, its larger faces in sorted order) instead of
+  building a key into the `variable_index` `BTreeMap`. Constraint generation
+  still builds that map.
+- `propagate_initial_assignments` ticks a `NodeMeter` once per variable it
+  visits; `complete_layer_order`'s meter reads the deadline on every 32nd tick
+  (the Budget item above), and the pipeline's `Unmetered` ignores them.
+- `transitivity_constraints` marks each face it has met as a candidate rather
+  than scanning the candidates met so far, and keeps them in the order upstream
+  meets them.
+
+The evidence is the one `crates/oristudio-fold/README.md` gives under "The
+completion's rework": `tests/compound_digest.rs` prints the same reverse
+campaign digest before and after, `fold_compound_oracle` still verifies every
+state, and this crate's parity and verify tests pass unchanged.
 
 That caller-built constraints avoid both arrangement failures above is still
 **[derived]**: neither goes through Flat-Folder's arrangement. The `verify`
