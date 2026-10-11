@@ -5,7 +5,10 @@ import type { FoldAnalysis, FoldCrossSection, FoldEngineRefused } from '../engin
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../tools/foldToolState';
 import type { FoldPick } from './foldPicking';
 import { bookScene } from './foldCanvas.fixtures';
+import { shortcutLabelForAction } from '../../keyboard/shortcuts';
 import {
+  chooserKeys,
+  foldChoiceNote,
   foldCrimpWindowView,
   foldFreeLineStart,
   foldLocatedLines,
@@ -305,5 +308,31 @@ describe('the Fold canvas model', () => {
     // Not while the line is being located, nor for another tool.
     expect(foldSinkWindowView({ ...tools, picks: [] }, preview({ sink }), false)).toBeUndefined();
     expect(foldSinkWindowView(located, preview({ sink }), false)).toBeUndefined();
+  });
+});
+
+describe('the canvas chooser’s note', () => {
+  const kinds = ['pocket', 'target', 'ridge', 'emergent', 'root', 'opening', 'order'] as const;
+
+  it('offers the keys the user’s shortcuts step it with', () => {
+    const keys = chooserKeys((id) => shortcutLabelForAction(id), false);
+    expect(keys).toBe('Shift+← / Shift+→');
+    expect(foldChoiceNote(t, 'root', keys)).toBe('This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.');
+    // Rebound, the note names the new key.
+    const rebound = { overrides: { 'fold.nextCandidate': [{ key: 'n' }] } };
+    const named = chooserKeys((id) => shortcutLabelForAction(id, rebound), false);
+    expect(named).toBe('Shift+← / N');
+    for (const kind of kinds) expect(foldChoiceNote(t, kind, named), kind).toMatch(/or press Shift\+← \/ N\.$/);
+  });
+
+  it('offers no keys on a finger, or while one of them is unbound: its arrows alone', () => {
+    expect(chooserKeys((id) => shortcutLabelForAction(id), true)).toBeNull();
+    const unbound = { overrides: { 'fold.previousCandidate': [] } };
+    expect(chooserKeys((id) => shortcutLabelForAction(id, unbound), false)).toBeNull();
+    for (const kind of kinds) {
+      const note = foldChoiceNote(t, kind, null);
+      expect(note, kind).toMatch(/Step through them\.$/);
+      expect(note, kind).not.toContain('Shift');
+    }
   });
 });

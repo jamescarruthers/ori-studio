@@ -266,11 +266,24 @@
   "fold": {
     "categoryLabel": "折りワークスペース",
     "chooser": {
-      "note": "この公理はここで複数の折りを与えます。順に切り替えるか、Shift+← / Shift+→ を押します。",
-      "openingNote": "フラップの開き方が複数あります。ハイライトされた層はまとまったままです。順に切り替えるか、Shift+← / Shift+→ を押します。",
-      "orderNote": "層の重なり方が複数あります。順に切り替えるか、Shift+← / Shift+→ を押します。",
-      "pocketNote": "角は層の間の複数のポケットに沈められます。順に切り替えるか、Shift+← / Shift+→ を押します。",
-      "targetNote": "差し込みを受けられる層が複数あります。いちばん明るい層が選ばれています。順に切り替えるか、Shift+← / Shift+→ を押します。"
+      "noKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      },
+      "withKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      }
     },
     "crimp": {
       "bothFit": "ここでは両方の種類のクリンプが使えます。先端の向きを選んでください。",
@@ -708,10 +721,6 @@
       "turnOverHelp": "モデルを左右に裏返します（独立したステップ）。"
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "これらの折り線を平らにする 4 本目の折り線が複数あります。順に切り替えるか、Shift+← / Shift+→ を押します。",
-        "ridgeNote": "残る紙の向かい側にある 2 本の折り線のどちらも、耳の稜線として立てられます。順に切り替えるか、Shift+← / Shift+→ を押します。"
-      },
       "direction": "向き",
       "doesNotFit": "ここでは合いません",
       "emergent": "4 本目の折り線",

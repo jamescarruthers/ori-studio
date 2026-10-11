@@ -266,11 +266,24 @@
   "fold": {
     "categoryLabel": "折叠工作区",
     "chooser": {
-      "note": "此公理在这里给出不止一种折法。逐个查看，或按 Shift+← / Shift+→。",
-      "openingNote": "翼片不止一种张开方式：高亮的层保持在一起。逐个查看，或按 Shift+← / Shift+→。",
-      "orderNote": "这些层不止一种叠放方式。逐个查看，或按 Shift+← / Shift+→。",
-      "pocketNote": "这个角可以沉入层间不止一个夹层。逐个查看，或按 Shift+← / Shift+→。",
-      "targetNote": "不止一个层可以接受塞入：最亮的那层就是选中的。逐个查看，或按 Shift+← / Shift+→。"
+      "noKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      },
+      "withKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      }
     },
     "crimp": {
       "bothFit": "两种压褶都可以：请选择尖端的朝向。",
@@ -708,10 +721,6 @@
       "turnOverHelp": "将模型左右翻面，作为单独的一步。"
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "不止一条第四折痕能让这些折痕放平。逐个查看，或按 Shift+← / Shift+→。",
-        "ridgeNote": "与不动纸面相对的两条折痕都可以立起作为耳朵的脊线。逐个查看，或按 Shift+← / Shift+→。"
-      },
       "direction": "方向",
       "doesNotFit": "此处不适用",
       "emergent": "第四折痕",

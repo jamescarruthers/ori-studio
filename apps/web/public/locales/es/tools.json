@@ -282,11 +282,24 @@
   "fold": {
     "categoryLabel": "Espacio de plegado",
     "chooser": {
-      "note": "Este axioma da más de un pliegue aquí. Recórrelos o pulsa Mayús+← / Mayús+→.",
-      "openingNote": "La solapa se abre de más de una manera: las capas resaltadas quedan juntas. Recórrelas o pulsa Mayús+← / Mayús+→.",
-      "orderNote": "Las capas pueden quedar apiladas de más de una manera. Recórrelas o pulsa Mayús+← / Mayús+→.",
-      "pocketNote": "La punta puede hundirse en más de un bolsillo entre sus capas. Recórrelos o pulsa Mayús+← / Mayús+→.",
-      "targetNote": "Más de una capa admite el remetido: la más brillante es la elegida. Recórrelas o pulsa Mayús+← / Mayús+→."
+      "noKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      },
+      "withKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      }
     },
     "crimp": {
       "bothFit": "Aquí caben los dos tipos de crimp: elige hacia dónde va la punta.",
@@ -744,10 +757,6 @@
       "turnOverHelp": "Dar la vuelta al modelo, de lado a lado, como un paso propio."
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "Más de un cuarto pliegue deja estos pliegues planos. Recórrelos o pulsa Mayús+← / Mayús+→.",
-        "ridgeNote": "Cualquiera de los dos pliegues frente al papel que se queda puede alzarse como cresta de la oreja. Recórrelos o pulsa Mayús+← / Mayús+→."
-      },
       "direction": "Sentido",
       "doesNotFit": "No cabe aquí",
       "emergent": "Cuarto pliegue",

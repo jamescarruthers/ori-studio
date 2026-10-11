@@ -282,11 +282,24 @@
   "fold": {
     "categoryLabel": "Espace de pliage",
     "chooser": {
-      "note": "Cet axiome donne ici plus d’un pli. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
-      "openingNote": "Le rabat s’ouvre de plus d’une façon : les couches en surbrillance restent ensemble. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
-      "orderNote": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
-      "pocketNote": "La pointe peut s’enfoncer dans plus d’une poche entre ses couches. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
-      "targetNote": "Plus d’une couche peut recevoir le rabat : la plus claire est celle retenue. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
+      "noKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      },
+      "withKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      }
     },
     "crimp": {
       "bothFit": "Les deux types de crimp conviennent ici : choisissez de quel côté va la pointe.",
@@ -744,10 +757,6 @@
       "turnOverHelp": "Retourner le modèle de gauche à droite, en une étape à part."
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "Plus d’un quatrième pli permet à ces plis de se poser à plat. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
-        "ridgeNote": "L’un ou l’autre des plis en face du papier qui reste peut se dresser en arête de l’oreille. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
-      },
       "direction": "Sens",
       "doesNotFit": "Ne convient pas ici",
       "emergent": "Quatrième pli",

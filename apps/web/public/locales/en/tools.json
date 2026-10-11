@@ -274,11 +274,24 @@
   "fold": {
     "categoryLabel": "Fold workspace",
     "chooser": {
-      "note": "This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.",
-      "openingNote": "The flap opens more than one way: the lit layers stay together. Step through them, or press Shift+← / Shift+→.",
-      "orderNote": "The layers can land stacked more than one way. Step through them, or press Shift+← / Shift+→.",
-      "pocketNote": "The point can sink into more than one pocket between its layers. Step through them, or press Shift+← / Shift+→.",
-      "targetNote": "More than one layer takes the tuck: the brightest is the one taken. Step through them, or press Shift+← / Shift+→."
+      "noKeys": {
+        "emergent": "More than one fourth crease lets these creases lie flat. Step through them.",
+        "opening": "The flap opens more than one way: the lit layers stay together. Step through them.",
+        "order": "The layers can land stacked more than one way. Step through them.",
+        "pocket": "The point can sink into more than one pocket between its layers. Step through them.",
+        "ridge": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them.",
+        "root": "This axiom has more than one fold here. Step through them.",
+        "target": "More than one layer takes the tuck: the brightest is the one taken. Step through them."
+      },
+      "withKeys": {
+        "emergent": "More than one fourth crease lets these creases lie flat. Step through them, or press {{keys}}.",
+        "opening": "The flap opens more than one way: the lit layers stay together. Step through them, or press {{keys}}.",
+        "order": "The layers can land stacked more than one way. Step through them, or press {{keys}}.",
+        "pocket": "The point can sink into more than one pocket between its layers. Step through them, or press {{keys}}.",
+        "ridge": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press {{keys}}.",
+        "root": "This axiom has more than one fold here. Step through them, or press {{keys}}.",
+        "target": "More than one layer takes the tuck: the brightest is the one taken. Step through them, or press {{keys}}."
+      }
     },
     "crimp": {
       "bothFit": "Both kinds of crimp fit here: choose which way the tip goes.",
@@ -726,10 +739,6 @@
       "turnOverHelp": "Turn the model over, side to side, as a step of its own."
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "More than one fourth crease lets these creases lie flat. Step through them, or press Shift+← / Shift+→.",
-        "ridgeNote": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press Shift+← / Shift+→."
-      },
       "direction": "Direction",
       "doesNotFit": "Does not fit here",
       "emergent": "Fourth crease",

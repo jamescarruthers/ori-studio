@@ -266,11 +266,24 @@
   "fold": {
     "categoryLabel": "접기 작업 공간",
     "chooser": {
-      "note": "이 공리는 여기서 접기가 둘 이상 나옵니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요.",
-      "openingNote": "플랩이 벌어지는 방식이 둘 이상입니다. 강조된 겹은 함께 붙어 있습니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요.",
-      "orderNote": "겹이 쌓이는 방식이 둘 이상입니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요.",
-      "pocketNote": "꼭지는 겹 사이의 주머니 둘 이상으로 가라앉힐 수 있습니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요.",
-      "targetNote": "끼워 넣기를 받을 수 있는 겹이 둘 이상입니다. 가장 밝은 겹이 선택된 것입니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요."
+      "noKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      },
+      "withKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      }
     },
     "crimp": {
       "bothFit": "여기서는 두 종류의 크림프가 모두 맞습니다. 끝이 갈 방향을 고르세요.",
@@ -708,10 +721,6 @@
       "turnOverHelp": "모델을 좌우로 뒤집습니다. 별도의 단계로 추가됩니다."
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "이 접는 선들을 평평하게 하는 네 번째 접는 선이 둘 이상입니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요.",
-        "ridgeNote": "그대로 있는 종이의 맞은편에 있는 두 접는 선 중 어느 것이든 귀의 능선으로 세울 수 있습니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요."
-      },
       "direction": "방향",
       "doesNotFit": "여기서는 맞지 않음",
       "emergent": "네 번째 접는 선",

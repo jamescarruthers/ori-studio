@@ -282,11 +282,24 @@
   "fold": {
     "categoryLabel": "Espaço de dobra",
     "chooser": {
-      "note": "Este axioma dá mais de uma dobra aqui. Percorra-as ou pressione Shift+← / Shift+→.",
-      "openingNote": "A aba se abre de mais de um jeito: as camadas destacadas ficam juntas. Percorra-os ou pressione Shift+← / Shift+→.",
-      "orderNote": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os ou pressione Shift+← / Shift+→.",
-      "pocketNote": "A ponta pode ser afundada em mais de um bolso entre suas camadas. Percorra-os ou pressione Shift+← / Shift+→.",
-      "targetNote": "Mais de uma camada recebe o encaixe: a mais clara é a escolhida. Percorra-as ou pressione Shift+← / Shift+→."
+      "noKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      },
+      "withKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      }
     },
     "crimp": {
       "bothFit": "Os dois tipos de crimp cabem aqui: escolha para onde vai a ponta.",
@@ -744,10 +757,6 @@
       "turnOverHelp": "Virar o modelo de um lado para o outro, como um passo próprio."
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "Mais de um quarto vinco deixa estes vincos planos. Percorra-os ou pressione Shift+← / Shift+→.",
-        "ridgeNote": "Qualquer um dos dois vincos de frente para o papel que fica pode subir como a crista da orelha. Percorra-os ou pressione Shift+← / Shift+→."
-      },
       "direction": "Sentido",
       "doesNotFit": "Não cabe aqui",
       "emergent": "Quarto vinco",

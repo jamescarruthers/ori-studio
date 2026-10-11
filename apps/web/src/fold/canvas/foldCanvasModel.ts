@@ -28,6 +28,7 @@ import {
   lineModeLabel,
   lineModeSteps,
   secondLineSteps,
+  type FoldKeyLabel,
 } from '../tools/foldToolCatalog';
 import { vertexToolSteps } from '../tools/vertex/vertexInputs';
 import { nearestDirection } from '../tools/vertex/vertexStep';
@@ -315,42 +316,104 @@ export function foldPromptWords(t: TFunction, tools: FoldToolState): string | nu
   return step ? `${lineModeLabel(t, tools.lineMode)} · ${step}` : null;
 }
 
-/** What the canvas's chooser says of the choice it steps through. */
-export function foldChoiceNote(t: TFunction, kind: FoldCanvasChoice['kind']): string {
+/**
+ * The keys that step the canvas's chooser, as the user's shortcuts name them
+ * (`fold.previousCandidate`, `fold.nextCandidate`): what its note offers
+ * beside its arrows. None on a finger, which has no keys to press, or while
+ * either is unbound.
+ */
+export function chooserKeys(keyLabel: FoldKeyLabel, coarse: boolean): string | null {
+  if (coarse) return null;
+  const previous = keyLabel('fold.previousCandidate');
+  const next = keyLabel('fold.nextCandidate');
+  return previous && next ? `${previous} / ${next}` : null;
+}
+
+/**
+ * What the canvas's chooser says of the choice it steps through: with the
+ * keys that step it (`chooserKeys`), or — none to offer — its arrows alone.
+ * Whole sentences each, never a clause joined on.
+ */
+export function foldChoiceNote(t: TFunction, kind: FoldCanvasChoice['kind'], keys: string | null): string {
+  return keys === null ? choiceNoteNoKeys(t, kind) : choiceNoteWithKeys(t, kind, keys);
+}
+
+function choiceNoteWithKeys(t: TFunction, kind: FoldCanvasChoice['kind'], keys: string): string {
   switch (kind) {
     case 'pocket':
       return t(
-        'tools:fold.chooser.pocketNote',
-        'The point can sink into more than one pocket between its layers. Step through them, or press Shift+← / Shift+→.'
+        'tools:fold.chooser.withKeys.pocket',
+        'The point can sink into more than one pocket between its layers. Step through them, or press {{keys}}.',
+        { keys }
       );
     case 'target':
       return t(
-        'tools:fold.chooser.targetNote',
-        'More than one layer takes the tuck: the brightest is the one taken. Step through them, or press Shift+← / Shift+→.'
+        'tools:fold.chooser.withKeys.target',
+        'More than one layer takes the tuck: the brightest is the one taken. Step through them, or press {{keys}}.',
+        { keys }
       );
     // The vertex folds'.
     case 'ridge':
       return t(
-        'tools:fold.vertex.chooser.ridgeNote',
-        'Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press Shift+← / Shift+→.'
+        'tools:fold.chooser.withKeys.ridge',
+        'Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press {{keys}}.',
+        { keys }
       );
     case 'emergent':
       return t(
-        'tools:fold.vertex.chooser.emergentNote',
-        'More than one fourth crease lets these creases lie flat. Step through them, or press Shift+← / Shift+→.'
+        'tools:fold.chooser.withKeys.emergent',
+        'More than one fourth crease lets these creases lie flat. Step through them, or press {{keys}}.',
+        { keys }
       );
     case 'root':
-      return t('tools:fold.chooser.note', 'This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.');
+      return t(
+        'tools:fold.chooser.withKeys.root',
+        'This axiom has more than one fold here. Step through them, or press {{keys}}.',
+        { keys }
+      );
     case 'opening':
       return t(
-        'tools:fold.chooser.openingNote',
-        'The flap opens more than one way: the lit layers stay together. Step through them, or press Shift+← / Shift+→.'
+        'tools:fold.chooser.withKeys.opening',
+        'The flap opens more than one way: the lit layers stay together. Step through them, or press {{keys}}.',
+        { keys }
       );
     case 'order':
       return t(
-        'tools:fold.chooser.orderNote',
-        'The layers can land stacked more than one way. Step through them, or press Shift+← / Shift+→.'
+        'tools:fold.chooser.withKeys.order',
+        'The layers can land stacked more than one way. Step through them, or press {{keys}}.',
+        { keys }
       );
+  }
+}
+
+function choiceNoteNoKeys(t: TFunction, kind: FoldCanvasChoice['kind']): string {
+  switch (kind) {
+    case 'pocket':
+      return t(
+        'tools:fold.chooser.noKeys.pocket',
+        'The point can sink into more than one pocket between its layers. Step through them.'
+      );
+    case 'target':
+      return t(
+        'tools:fold.chooser.noKeys.target',
+        'More than one layer takes the tuck: the brightest is the one taken. Step through them.'
+      );
+    case 'ridge':
+      return t(
+        'tools:fold.chooser.noKeys.ridge',
+        'Either crease across from the paper that stays can rise as the ear’s ridge. Step through them.'
+      );
+    case 'emergent':
+      return t('tools:fold.chooser.noKeys.emergent', 'More than one fourth crease lets these creases lie flat. Step through them.');
+    case 'root':
+      return t('tools:fold.chooser.noKeys.root', 'This axiom has more than one fold here. Step through them.');
+    case 'opening':
+      return t(
+        'tools:fold.chooser.noKeys.opening',
+        'The flap opens more than one way: the lit layers stay together. Step through them.'
+      );
+    case 'order':
+      return t('tools:fold.chooser.noKeys.order', 'The layers can land stacked more than one way. Step through them.');
   }
 }
 

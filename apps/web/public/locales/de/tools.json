@@ -274,11 +274,24 @@
   "fold": {
     "categoryLabel": "Falt-Arbeitsbereich",
     "chooser": {
-      "note": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
-      "openingNote": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
-      "orderNote": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
-      "pocketNote": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
-      "targetNote": "Mehr als eine Lage nimmt die Lasche auf: Die hellste ist die gewählte. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
+      "noKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      },
+      "withKeys": {
+        "emergent": "",
+        "opening": "",
+        "order": "",
+        "pocket": "",
+        "ridge": "",
+        "root": "",
+        "target": ""
+      }
     },
     "crimp": {
       "bothFit": "Hier passen beide Arten von Crimp: Wähle, wohin die Spitze geht.",
@@ -726,10 +739,6 @@
       "turnOverHelp": "Das Modell seitlich umdrehen, als eigener Schritt."
     },
     "vertex": {
-      "chooser": {
-        "emergentNote": "Mehr als eine vierte Faltlinie lässt diese Faltlinien flach liegen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
-        "ridgeNote": "Jede der beiden Faltlinien gegenüber dem liegenbleibenden Papier kann zum Grat des Ohrs werden. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
-      },
       "direction": "Richtung",
       "doesNotFit": "Passt hier nicht",
       "emergent": "Vierte Faltlinie",

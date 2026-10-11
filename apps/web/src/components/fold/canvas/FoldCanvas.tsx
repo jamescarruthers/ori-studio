@@ -19,6 +19,7 @@ import { foldToolKindControl, registerFoldCanvasVerbs } from '../../../fold/canv
 import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
 import {
   chooserBounds,
+  chooserKeys,
   foldChoiceNote,
   foldCrimpWindowView,
   foldFreeLineStart,
@@ -232,7 +233,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           bounds,
           index: choice.index,
           count: choice.count,
-          note: foldChoiceNote(t, choice.kind),
+          note: foldChoiceNote(t, choice.kind, chooserKeys(keyLabel, coarse)),
           onStep: (delta) => verbs.stepChoice(delta),
           onApply: () => verbs.commit(),
           onCancel: () => verbs.cancel(),
