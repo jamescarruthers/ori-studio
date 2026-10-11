@@ -121,7 +121,7 @@ pub use compound::reverse::{
 };
 pub use compound::sink::{
     Pocket, SinkChoice, SinkChoices, SinkFold, SinkFolded, SinkKind, SinkOutcome, SinkPoint,
-    SinkReport, SinkStep, StoredPocket, Unsink,
+    SinkReport, SinkStep, StoredPocket, SunkPoints, SunkTip, Unsink,
 };
 pub use compound::squash::{NoFlap, Squash, SquashAnalysis};
 pub use compound::swivel::Swivel;
