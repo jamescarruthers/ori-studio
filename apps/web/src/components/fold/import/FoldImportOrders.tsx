@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useInheritedPaperStyle } from '../../../cp-workspace/paper/objectPaperStyle';
+import type { LayerSpreadOptions } from '../../../cp-workspace/folded/foldedLayerSpread';
 import type { FoldImportOpened } from '../../../fold/engine/foldEngineIoWire';
 import {
   FOLD_ORDER_PREVIEW_LIMIT,
@@ -7,17 +9,32 @@ import {
   withFoldOrder,
   type FoldOrderPreview,
 } from '../../../fold/io/foldImportFlow';
+import { useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
+import type { FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import { foldStatePictureUrl } from '../../../fold/canvas/foldStatePicture';
+import { useFoldSessionState } from '../../../fold/session/useFoldSession';
+import { useFoldStepSpreadShown } from '../../../fold/sequence/useFoldStepSpread';
 import type { PaperStyle } from '../../../lib/paper/paperStyle';
-import { useSettingsStore } from '../../../store/settingsStore';
 import { OptionCards } from '../../ui/OptionCard';
 import styles from './FoldImportOrders.module.css';
 
-/** One order's card picture: the state it lands, in the style the app shows paper in. */
-function OrderPicture({ preview, style }: { preview: FoldOrderPreview | undefined; style: PaperStyle }) {
+/** How every order's card is drawn: the look the step strip's cards have, and the spread the step will take. */
+interface OrderLook {
+  style: PaperStyle;
+  display: FoldPaneDisplay;
+  spread: LayerSpreadOptions | null;
+}
+
+/**
+ * One order's card picture: the state it lands, as the step strip will show
+ * it once it is imported — the strip's style and the pane's switches, its
+ * layers spread as the step will spread them, so two orders that differ
+ * only in what lies under what are told apart.
+ */
+function OrderPicture({ preview, look }: { preview: FoldOrderPreview | undefined; look: OrderLook }) {
   const url = useMemo(
-    () => (preview?.status === 'ready' ? foldStatePictureUrl(preview.scene, style) : null),
-    [preview, style]
+    () => (preview?.status === 'ready' ? foldStatePictureUrl(preview.scene, look.style, look.display, look.spread) : null),
+    [preview, look]
   );
   return (
     <span className={styles.picture} data-status={preview?.status ?? 'working'}>
@@ -47,7 +64,12 @@ export function FoldImportOrders({
   onChoose: (component: number, order: number) => void;
 }) {
   const { t } = useTranslation();
-  const style = useSettingsStore((state) => state.paperStyle.display);
+  const style = useInheritedPaperStyle();
+  const display = useFoldPaneDisplay();
+  // The import lands after the step on screen, and takes the spread it shows.
+  const cursor = useFoldSessionState((snapshot) => snapshot.cursor);
+  const spread = useFoldStepSpreadShown(cursor);
+  const look = useMemo<OrderLook>(() => ({ style, display, spread }), [style, display, spread]);
   const parts = opened.components
     .map((component, index) => ({ ...component, index }))
     .filter((component) => component.orders > 1);
@@ -89,7 +111,7 @@ export function FoldImportOrders({
                 icon: (
                   <OrderPicture
                     preview={previews.get(foldOrderChoiceKey(withFoldOrder(choice, part.index, order)))}
-                    style={style}
+                    look={look}
                   />
                 ),
               }))}
