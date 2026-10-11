@@ -9,6 +9,7 @@
  * Store-bound, React-free.
  */
 import { toast } from 'sonner';
+import { trackDiagramStepAdded, trackDiagramTurnAdded } from '../../analytics';
 import { trackFoldStepSentToDiagram, type FoldSentToDiagramVia } from '../../analytics/trackFoldIo';
 import { foldStepTree, pathTo } from '../../fold/document/foldStepTree';
 import { isLockedStep, turnKindOf, type FoldStepNode } from '../../fold/document/foldSequenceDocument';
@@ -17,7 +18,7 @@ import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { shownFoldSequence } from '../../store/workspaceStore/foldState';
-import { anchorTakesCard, stepIndex, type DiagramPullAnchor } from '../document/diagramDocument';
+import { anchorTakesCard, isTurn, stepIndex, type DiagramPullAnchor } from '../document/diagramDocument';
 import { pullFoldTargets, type FoldPullTarget } from './foldPull';
 
 /** From Fold… for the diagram, by the insertion rule: an empty selected step takes the first step, the rest after it. */
@@ -74,7 +75,26 @@ export async function pullFromFold(
   if (!pulled) return 0;
   const added = pulled.stepIds.length + pulled.turnIds.length;
   trackFoldStepSentToDiagram(via, added > 1 ? 'many' : 'one');
+  trackPulledEntries(pulled, anchor);
   return added;
+}
+
+/**
+ * Count each step and turn a pull made in the Diagram's own funnels, as a
+ * References pull does: a step it filled was there already, and is not added.
+ */
+function trackPulledEntries(
+  pulled: { stepIds: readonly string[]; turnIds: readonly string[] },
+  anchor: DiagramPullAnchor
+): void {
+  for (const stepId of pulled.stepIds) {
+    if (anchor.kind === 'end' || stepId !== anchor.stepId) trackDiagramStepAdded('fold', 'fold');
+  }
+  const entries = useWorkspaceStore.getState().diagram?.steps ?? [];
+  for (const turnId of pulled.turnIds) {
+    const turn = entries.find((entry) => entry.id === turnId);
+    if (turn && isTurn(turn)) trackDiagramTurnAdded(turn.kind, 'fold');
+  }
 }
 
 /** What Send to Diagram sends from Fold: the step on screen, or the active path from the first step to it. */

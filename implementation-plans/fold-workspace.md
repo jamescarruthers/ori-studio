@@ -927,7 +927,7 @@ values; this table is the plan's summary of it.
 | `fold view switched` | `{view: fold\|steps}` |
 | `fold sequence sent to edit` | `{variant: plain\|precreases-as-aux}` |
 | `fold cp imported` | `{origin}` (D16's enum) |
-| `fold step sent to diagram` | Later |
+| `fold step sent to diagram` | `{via: fold\|diagram_browser, scope: one\|many}`; each new step and turn also counts `diagram step added` / `diagram turn added` with `via: fold` |
 
 - **Per-step axiom codes are left out.** They would add up to the axiom histogram
   `docs/analytics.md` forbids. Adding them needs the owner's explicit exception.
