@@ -38,6 +38,7 @@ import {
   type FoldSecondLineModeId,
   type FoldToolId,
 } from './foldToolCatalog';
+import { sameFlap } from './crossSection';
 import { lineModeInput, locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
 import { PETAL_LINE_MODES } from './vertex/vertexInputs';
 
@@ -277,9 +278,6 @@ export interface FoldTools {
   /** Step through a closed sink's pockets, of `count`: each stacks anew. */
   stepPocket(delta: number, count: number): void;
 }
-
-const sameFlap = (a: FoldFlap, b: FoldFlap) =>
-  a.faces.length === b.faces.length && a.faces.every((face, k) => face === b.faces[k]);
 
 /**
  * The seed that picks `flaps` of `all`: every layer when they are every flap

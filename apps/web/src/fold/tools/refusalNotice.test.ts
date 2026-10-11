@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { FOLD_SINK_REFUSAL_CODES } from '../engine/foldEngineSinkWire';
-import { FOLD_REFUSAL_CODES, type FoldRefusalBody } from '../engine/foldEngineWire';
+import { FOLD_REFUSAL_CODES, type FoldCrossSection, type FoldRefusalBody } from '../engine/foldEngineWire';
 import {
   foldRefusalNotice,
   neededFlaps,
+  sectionFlapNames,
   sinkRefusalTitle,
   type FoldFixVerbs,
   type FoldRefused,
@@ -18,10 +19,14 @@ function verbs() {
   return { includeFlaps: vi.fn(), foldOtherWay: vi.fn(), pickFlap: vi.fn(), useLine: vi.fn() } satisfies FoldFixVerbs;
 }
 
-/** On screen, the engine's flap 0 is the second flap from the top, and its flap 1 the first. */
+/**
+ * On screen, the engine's flap 0 is the second flap from the top, and its
+ * flap 1 the first. No section is shown, so a fix's flaps go by where it lists them.
+ */
 const context = (extra: Partial<FoldRefusalContext> = {}): FoldRefusalContext => ({
   kind: 'valley',
   flapNumber: (flap) => [2, 1, 3][flap] ?? flap + 1,
+  flapOf: null,
   readOnly: false,
   ...extra,
 });
@@ -150,6 +155,54 @@ describe('foldRefusalNotice', () => {
     expect(notice.actions.map((action) => action.label)).toEqual(['Fold flap 2 only', 'Fold flap 1 only']);
     notice.actions[1]?.run();
     expect(calls.pickFlap).toHaveBeenCalledWith(flaps[1]);
+  });
+
+  it('numbers a fix’s flaps as the chips do when the engine lists only some of the section’s, in its own order', () => {
+    const flap = (face: number) => ({ faces: [face, face + 1], witness: [0.1 * face, 0.5] as [number, number] });
+    const flaps = [flap(0), flap(2), flap(4), flap(6)];
+    // Top to bottom the rows are engine flaps 2, 0, 3, 1: the chips read Flap 2 for flap 0, Flap 4 for flap 1, …
+    const section = {
+      flaps,
+      rows: [2, 0, 3, 1].map((index) => ({ flap: index })),
+    } as unknown as FoldCrossSection;
+    const names = sectionFlapNames(section);
+    expect([0, 1, 2, 3].map(names.flapNumber)).toEqual([2, 4, 1, 3]);
+
+    // A reverse fold's tip that cannot open lists the flaps that open: engine flaps 0 and 2.
+    const reverse = { ...verbs(), otherKind: vi.fn() };
+    const notice = foldRefusalNotice(
+      t,
+      {
+        refusal: { code: 'reverse_no_opening', faces: [0], cause: 'no_split' },
+        fixes: [{ fix: 'pick_flap', flaps: [flaps[0]!, flaps[2]!] }],
+      },
+      { kind: 'reverse', readOnly: false, ...names },
+      reverse
+    );
+    expect(notice.actions.map((action) => action.label)).toEqual(['Reverse flap 2 only', 'Reverse flap 1 only']);
+    notice.actions[1]?.run();
+    expect(reverse.pickFlap).toHaveBeenCalledWith(flaps[2]);
+
+    // A sink seeded on several points lists those: engine flaps 1 and 3, the chips' Flap 4 and Flap 3.
+    const sink = foldRefusalNotice(
+      t,
+      {
+        refusal: { code: 'sink_several_points', flaps: 2, faces: [0] },
+        fixes: [{ fix: 'pick_flap', flaps: [flaps[1]!, flaps[3]!] }],
+      },
+      { kind: 'sink', readOnly: false, ...names },
+      verbs()
+    );
+    expect(sink.actions.map((action) => action.label)).toEqual(['Sink flap 4 only', 'Sink flap 3 only']);
+
+    // A flap the section does not show has no chip to share a number with.
+    const elsewhere = foldRefusalNotice(
+      t,
+      { refusal: { code: 'nothing_stays' }, fixes: [{ fix: 'pick_flap', flaps: [flap(9)] }] },
+      { kind: 'tuck', readOnly: false, ...names },
+      verbs()
+    );
+    expect(elsewhere.actions.map((action) => action.label)).toEqual(['Tuck this flap only']);
   });
 
   it('points a reverse fold that cannot go one way to the other kind only when the engine says that one lands', () => {

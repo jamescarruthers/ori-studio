@@ -12,7 +12,8 @@ import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
 import type { FoldNoOpening, FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldSinkKind, FoldSinkRefusalCode } from '../engine/foldEngineSinkWire';
-import type { FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
+import type { FoldCrossSection, FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
+import { flapNumbers, sameFlap } from './crossSection';
 import type { FoldKind } from './foldToolCatalog';
 import {
   vertexContextOf,
@@ -66,8 +67,14 @@ export interface FoldRefusalContext {
    * `sink` (the open and closed sink and the unsink).
    */
   kind: FoldKind | 'reverse' | 'crimp' | 'tuck' | 'vertex' | 'sink';
-  /** A flap's number on screen, by its engine index (`flapNumbers`). */
+  /** A flap's number on screen, by its index into the section's flaps (`flapNumbers`). */
   flapNumber: (flap: number) => number;
+  /**
+   * Where a flap a fix names is among the section's flaps, by its faces; null
+   * when it is not there. Null itself while no section is shown: no chips
+   * number the flaps then, so a fix's flaps are numbered as it lists them.
+   */
+  flapOf: ((flap: FoldFlap) => number | null) | null;
   /** Nothing can change: the fixes are shown, but none can be taken. */
   readOnly: boolean;
   /**
@@ -77,6 +84,25 @@ export interface FoldRefusalContext {
   tuck?: { under: boolean; targetNumber: (face: number) => number | null };
   /** A vertex fold's: its tool, and what its own fixes name (`vertex/vertexRefusal`). */
   vertex?: FoldVertexRefusalContext;
+}
+
+/**
+ * How a window's notice numbers the flaps of the section it shows: as the
+ * chips and the picker number them, so "Flap 2" in a fix is the chip that
+ * reads Flap 2 — whichever flaps the engine listed, in whatever order.
+ */
+export function sectionFlapNames(section: FoldCrossSection | null): Pick<FoldRefusalContext, 'flapNumber' | 'flapOf'> {
+  const flaps = section?.flaps ?? [];
+  const numbers = flapNumbers(section, flaps.length);
+  return {
+    flapNumber: (flap) => numbers[flap] ?? flap + 1,
+    flapOf: section
+      ? (flap) => {
+          const at = flaps.findIndex((each) => sameFlap(each, flap));
+          return at >= 0 ? at : null;
+        }
+      : null,
+  };
 }
 
 function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext): { title: string; text: string } {
@@ -631,8 +657,12 @@ function otherWayLabel(t: TFunction, kind: FoldRefusalContext['kind']): string {
   }
 }
 
-/** A pick-a-flap fix's button, in the words of the fold it narrows. */
-function pickFlapLabel(t: TFunction, kind: FoldRefusalContext['kind'], number: number): string {
+/**
+ * A pick-a-flap fix's button, in the words of the fold it narrows: the flap
+ * by its number on screen, or — one the section does not show — as this flap.
+ */
+function pickFlapLabel(t: TFunction, kind: FoldRefusalContext['kind'], number: number | null): string {
+  if (number === null) return pickThisFlapLabel(t, kind);
   switch (kind) {
     case 'reverse':
       return t('tools:fold.fix.reverseFlap', 'Reverse flap {{number}} only', { number });
@@ -644,6 +674,22 @@ function pickFlapLabel(t: TFunction, kind: FoldRefusalContext['kind'], number: n
       return t('tools:fold.fix.sinkFlap', 'Sink flap {{number}} only', { number });
     default:
       return t('tools:fold.fix.pickFlap', 'Fold flap {{number}} only', { number });
+  }
+}
+
+/** A pick-a-flap fix's button for a flap no chip numbers. */
+function pickThisFlapLabel(t: TFunction, kind: FoldRefusalContext['kind']): string {
+  switch (kind) {
+    case 'reverse':
+      return t('tools:fold.fix.reverseThisFlap', 'Reverse this flap only');
+    case 'crimp':
+      return t('tools:fold.fix.crimpThisFlap', 'Crimp this flap only');
+    case 'tuck':
+      return t('tools:fold.fix.tuckThisFlap', 'Tuck this flap only');
+    case 'sink':
+      return t('tools:fold.fix.sinkThisFlap', 'Sink this flap only');
+    default:
+      return t('tools:fold.fix.pickThisFlap', 'Fold this flap only');
   }
 }
 
@@ -722,14 +768,19 @@ function fixActions(
     case 'opposite_direction':
       return [{ id: `other-way-${position}`, label: otherWayLabel(t, context.kind), run: verbs.foldOtherWay, disabled }];
     case 'pick_flap':
-      // The engine lists these flaps in its own flap order, the order the
-      // section's flaps are in, so their numbers are the chips' numbers.
-      return fix.flaps.map((flap, index) => ({
-        id: `pick-${position}-${index}`,
-        label: pickFlapLabel(t, context.kind, context.flapNumber(index)),
-        run: () => verbs.pickFlap(flap),
-        disabled,
-      }));
+      // The engine may list only some of the section's flaps — those that
+      // open, those a seed names — so each is numbered by where it is among
+      // the section's: the chip that reads the same number. With no section
+      // shown there are no chips, and the flaps are numbered as listed.
+      return fix.flaps.map((flap, index) => {
+        const at = context.flapOf ? context.flapOf(flap) : index;
+        return {
+          id: `pick-${position}-${index}`,
+          label: pickFlapLabel(t, context.kind, at === null ? null : context.flapNumber(at)),
+          run: () => verbs.pickFlap(flap),
+          disabled,
+        };
+      });
     case 'use_line':
       return [
         { id: `line-${position}`, label: lineFixLabel(t, fix, context.kind), run: () => verbs.useLine(fix), disabled },

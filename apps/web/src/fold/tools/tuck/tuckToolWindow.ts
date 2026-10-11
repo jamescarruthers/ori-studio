@@ -22,7 +22,6 @@
 import type { TFunction } from 'i18next';
 import type { FoldDirection } from '../../document/foldSequenceDocument';
 import type { FoldTuckPlacement } from '../../engine/foldEngineCrimpTuckWire';
-import { flapNumbers } from '../crossSection';
 import { foldToolLabel, foldTuckLabel } from '../foldToolCatalog';
 import {
   layersSection,
@@ -36,7 +35,7 @@ import {
   type FoldToolWindowVerbs,
   type FoldToolWindowView,
 } from '../foldToolWindow';
-import { foldRefusalNotice } from '../refusalNotice';
+import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 import { choiceStepper, type FoldChoiceStepper } from '../reverse/reverseToolWindow';
 
 const TUCK_DIRECTIONS: readonly FoldDirection[] = ['valley', 'mountain'];
@@ -140,7 +139,6 @@ export function tuckToolWindow(
     };
   }
   const title = foldTuckLabel(t, tuck.direction);
-  const numbers = flapNumbers(preview.section, preview.section?.flaps.length ?? 0);
   const controls = tuckControls(t, tuck, verbs, readOnly);
   const settings = 3 + (controls.target ? 1 : 0) + (controls.order ? 1 : 0);
   return {
@@ -175,7 +173,7 @@ export function tuckToolWindow(
           {
             kind: 'tuck',
             readOnly,
-            flapNumber: (flap) => numbers[flap] ?? flap + 1,
+            ...sectionFlapNames(preview.section),
             tuck: {
               under: under(tuck),
               targetNumber: (face) => {

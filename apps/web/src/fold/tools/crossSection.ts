@@ -14,7 +14,7 @@
  * React-free and store-free.
  */
 import type { TFunction } from 'i18next';
-import type { FoldCrossSection, FoldCrossSectionRow } from '../engine/foldEngineWire';
+import type { FoldCrossSection, FoldCrossSectionRow, FoldFlap } from '../engine/foldEngineWire';
 
 /** What moves by request, and what the engine says moves besides. */
 export interface FoldSeedView {
@@ -124,6 +124,11 @@ export function flapNumbers(section: FoldCrossSection | null, flapCount: number)
     numbers[flap] = position + 1;
   });
   return numbers;
+}
+
+/** The same flap, by its faces: the engine names a flap by them wherever it lists one. */
+export function sameFlap(a: FoldFlap, b: FoldFlap): boolean {
+  return a.faces.length === b.faces.length && a.faces.every((face, k) => face === b.faces[k]);
 }
 
 /** A flap's name, by its number on screen. */

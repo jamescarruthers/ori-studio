@@ -23,7 +23,6 @@
  */
 import type { TFunction } from 'i18next';
 import { FOLD_CRIMP_KINDS } from '../../document/foldSequenceDocument';
-import { flapNumbers } from '../crossSection';
 import {
   FOLD_SECOND_LINE_MODES,
   foldCrimpKindLabel,
@@ -47,7 +46,7 @@ import {
   type FoldToolWindowVerbs,
   type FoldToolWindowView,
 } from '../foldToolWindow';
-import { foldRefusalNotice } from '../refusalNotice';
+import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 import { choiceStepper, type FoldReverseControls, type FoldReverseWindowView } from '../reverse/reverseToolWindow';
 
 const isSecondLineMode = (id: string): id is FoldSecondLineModeId =>
@@ -171,7 +170,6 @@ export function crimpToolWindow(
     };
   }
   const title = foldCrimpKindLabel(t, crimp.kind);
-  const numbers = flapNumbers(preview.section, preview.section?.flaps.length ?? 0);
   const compound = crimpControls(t, crimp, verbs, readOnly);
   const settings = 3 + (compound.opening ? 1 : 0) + (compound.order ? 1 : 0);
   return {
@@ -193,7 +191,7 @@ export function crimpToolWindow(
       ? foldRefusalNotice(
           t,
           preview.refused,
-          { kind: 'crimp', readOnly, flapNumber: (flap) => numbers[flap] ?? flap + 1 },
+          { kind: 'crimp', readOnly, ...sectionFlapNames(preview.section) },
           verbs
         )
       : null,

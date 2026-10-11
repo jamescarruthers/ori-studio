@@ -245,7 +245,7 @@ describe.skipIf(!available)('the crimp over the real bridge', () => {
     const notice = foldRefusalNotice(
       t,
       refused,
-      { kind: 'crimp', readOnly: false, flapNumber: (flap) => flap + 1 },
+      { kind: 'crimp', readOnly: false, flapNumber: (flap) => flap + 1, flapOf: null },
       { includeFlaps: vi.fn(), foldOtherWay: vi.fn(), pickFlap: vi.fn(), useLine: vi.fn(), otherKind }
     );
     expect(notice.title).toBe('It cannot crimp round the outside');
@@ -281,7 +281,7 @@ describe.skipIf(!available)('the crimp over the real bridge', () => {
     const notice = foldRefusalNotice(
       t,
       asked,
-      { kind: 'crimp', readOnly: false, flapNumber: (flap) => flap + 1 },
+      { kind: 'crimp', readOnly: false, flapNumber: (flap) => flap + 1, flapOf: null },
       { includeFlaps: vi.fn(), foldOtherWay: vi.fn(), pickFlap: vi.fn(), useLine: vi.fn() }
     );
     expect(notice.title).toBe('The lines meet');

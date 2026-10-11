@@ -12,6 +12,7 @@ import type { CpToolOptionBounds } from '../../cp-workspace/toolOptions/toolOpti
 import type { Point } from '../../lib/geometry';
 import type { FoldFlap, FoldScene } from '../engine/foldEngineWire';
 import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
+import { sameFlap } from '../tools/crossSection';
 import { lineModeInput } from '../tools/foldToolRegistry';
 import type { FoldPreview } from '../tools/foldToolWindow';
 import type { FoldReverseWindowView } from '../tools/reverse/reverseToolWindow';
@@ -36,12 +37,9 @@ import type { FoldFreePick } from './foldPicking';
 import type { FoldCanvasChoice } from './useFoldCanvasVerbs';
 import type { FoldToolPreview } from './useFoldToolPreview';
 
-const sameFaces = (a: FoldFlap, b: FoldFlap) =>
-  a.faces.length === b.faces.length && a.faces.every((face, k) => face === b.faces[k]);
-
 /** Where a flap the engine named elsewhere is among the section's flaps; -1 when it is not there. */
 function sectionIndex(section: readonly FoldFlap[], flap: FoldFlap): number {
-  return section.findIndex((each) => sameFaces(each, flap));
+  return section.findIndex((each) => sameFlap(each, flap));
 }
 
 /**
