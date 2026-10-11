@@ -37,6 +37,7 @@ use crate::refusal::{Fix, Flap, FoldRefusal, Refused, Side};
 use crate::state::State;
 use crate::view::Direction;
 
+pub(crate) use action::Within;
 pub use action::{ActionKind, FoldActionGeometry, FoldLineSpan, Grip, Pleat, Push};
 pub use apply::Refold;
 pub use line::Snap;

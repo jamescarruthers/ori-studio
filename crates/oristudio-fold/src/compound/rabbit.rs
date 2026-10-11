@@ -16,7 +16,7 @@ use crate::complete::CompletionLimits;
 use crate::compound::CompoundRefused;
 use crate::compound::fan::{FanAnalysis, FanInput};
 use crate::compound::vertex::{VertexChoices, VertexFoldKind, VertexOutcome, unit};
-use crate::fold::Seed;
+use crate::fold::{FoldActionGeometry, Seed};
 use crate::refusal::{FoldRefusal, Refused};
 use crate::state::State;
 use crate::view::Direction;
@@ -84,6 +84,17 @@ impl State {
     /// folding.
     pub fn analyse_rabbit_ear(&self, op: &RabbitEar) -> Result<FanAnalysis, Refused> {
         op.input()?.analyse(self)
+    }
+
+    /// The picture of the rabbit ear `op` on this state, with `landed`'s
+    /// cover at the arrow's head when it is given: a fan fold's (see
+    /// [`super::vertex`]).
+    pub fn rabbit_ear_action(
+        &self,
+        op: &RabbitEar,
+        landed: Option<&State>,
+    ) -> Result<FoldActionGeometry, Refused> {
+        op.input()?.action(self, landed)
     }
 
     /// A rabbit ear, with its stored choices (empty for a new step), under

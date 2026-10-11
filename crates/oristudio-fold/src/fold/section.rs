@@ -165,6 +165,22 @@ impl Along {
         ]
     }
 
+    /// The parameter of a model-frame point's foot on ℓ.
+    pub(crate) fn param(&self, p: Point) -> f64 {
+        (p[0] - self.origin[0]) * self.direction[0] + (p[1] - self.origin[1]) * self.direction[1]
+    }
+
+    /// The parameters along ℓ of the ray from the model point `from` toward
+    /// the unit direction `toward`: `[lo, hi]`, one end unbounded.
+    pub(crate) fn ray(&self, from: Point, toward: Point) -> [f64; 2] {
+        let t = self.param(from);
+        if toward[0] * self.direction[0] + toward[1] * self.direction[1] >= 0.0 {
+            [t, f64::INFINITY]
+        } else {
+            [f64::NEG_INFINITY, t]
+        }
+    }
+
     /// The parameter interval of ℓ within `margin` of a convex
     /// counter-clockwise polygon (see [`clip_line`]).
     pub(crate) fn clip(&self, polygon: &[Point], margin: f64) -> Option<[f64; 2]> {

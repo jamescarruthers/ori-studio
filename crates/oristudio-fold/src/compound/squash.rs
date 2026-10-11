@@ -44,9 +44,11 @@ use crate::compound::vertex::{
     piece_centroid, rotate, stack_toward, toward, unit,
 };
 use crate::fold::line::Axis;
-use crate::numerics::TOL;
+use crate::fold::{ActionKind, FoldActionGeometry, FoldAnalysis, Push, Snap, Within};
+use crate::numerics::{MIN_FEATURE, TOL};
 use crate::pattern::{CreaseKind, FaceId};
 use crate::refusal::{FoldRefusal, Refused, Side};
+use crate::scene::ScenePoint;
 use crate::state::State;
 use crate::view::Direction;
 
@@ -108,6 +110,8 @@ struct Flap {
     upper: Vec<usize>,
     lower: Vec<usize>,
     vertex: Point,
+    /// The spine's far end from the vertex.
+    spine_end: Point,
     /// The hinge's direction from the vertex.
     hinge: Point,
     wedge: f64,
@@ -450,11 +454,60 @@ impl State {
             upper,
             lower,
             vertex,
+            spine_end: images[other],
             hinge: hinge_dir,
             wedge,
             share,
             lines: [hinge_line, spine_line, lower_crease, upper_crease],
         })
+    }
+
+    /// The picture of the squash `op` on this state, with `landed`'s cover
+    /// at the arrow's head when it is given (see [`super::vertex`]): the
+    /// lower layer's crease from the vertex across the flap, the arrow from
+    /// the flap's spine side to where its crease lays it, and the push onto
+    /// the spine from beyond it, toward where it lands. Refused as
+    /// [`State::analyse_squash`] is.
+    pub fn squash_action(
+        &self,
+        op: &Squash,
+        landed: Option<&State>,
+    ) -> Result<FoldActionGeometry, Refused> {
+        let direction = self.view().model_direction(op.direction);
+        let flap = self.squash_flap(op, direction)?;
+        let crease = flap.lower_crease();
+        let into = rotate(flap.hinge, (1.0 + flap.share) * flap.wedge / 2.0);
+        let spine = rotate(flap.hinge, flap.wedge);
+        let on_spine = [flap.vertex[0] + spine[0], flap.vertex[1] + spine[1]];
+        let side = Side::of_point(&crease, on_spine).ok_or(FoldRefusal::SquashTargetOutside)?;
+        let mut moving: Vec<FaceId> = flap
+            .upper
+            .iter()
+            .chain(&flap.lower)
+            .map(|&f| self.faces()[f].id)
+            .collect();
+        moving.sort_unstable();
+        let analysis = FoldAnalysis {
+            line: crease,
+            side,
+            snap: Snap::NONE,
+            direction,
+            flaps: Vec::new(),
+            picked: Vec::new(),
+            added: Vec::new(),
+            moving,
+        };
+        let mut action = self.fold_action_within(
+            &analysis,
+            ActionKind::Fold,
+            landed,
+            Within {
+                ray: Some((flap.vertex, into)),
+                reach: None,
+            },
+        )?;
+        action.push = push(self, &flap);
+        Ok(action)
     }
 
     /// Where the lower layer `q` folds over a hinge at its vertex `v`, an end
@@ -499,4 +552,39 @@ impl State {
         }
         None
     }
+}
+
+/// Where along the spine its push lands, and how long the push's shaft is,
+/// as shares of the spine's length.
+const PUSH_AT: f64 = 0.5;
+const PUSH_LENGTH: f64 = 0.4;
+
+/// The push onto a squash's spine, in the scene frame: from beyond it,
+/// square to it, toward the flap it closes over, where its target is; none
+/// for a spine shorter than the minimum feature.
+fn push(state: &State, flap: &Flap) -> Option<Push> {
+    let spine = rotate(flap.hinge, flap.wedge);
+    let length = (flap.spine_end[0] - flap.vertex[0]).hypot(flap.spine_end[1] - flap.vertex[1]);
+    if length < MIN_FEATURE {
+        return None;
+    }
+    // Square to the spine, away from the flap's inside (the wedge's middle).
+    let inside = rotate(flap.hinge, flap.wedge / 2.0);
+    let mut out = [-spine[1], spine[0]];
+    if out[0] * inside[0] + out[1] * inside[1] > 0.0 {
+        out = [-out[0], -out[1]];
+    }
+    let toward = [
+        flap.vertex[0] + PUSH_AT * length * spine[0],
+        flap.vertex[1] + PUSH_AT * length * spine[1],
+    ];
+    let at = [
+        toward[0] + PUSH_LENGTH * length * out[0],
+        toward[1] + PUSH_LENGTH * length * out[1],
+    ];
+    let to_scene = state.view().transform();
+    Some(Push {
+        at: ScenePoint::from(to_scene.apply(at)),
+        toward: ScenePoint::from(to_scene.apply(toward)),
+    })
 }
