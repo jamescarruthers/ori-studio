@@ -23,8 +23,9 @@ export interface FoldPlaybackControlsProps {
 /**
  * The step's transport on the folded pane, as the Diagram's Pose has one for a
  * simulated step: Play — Pause while it moves, Replay once it has played —
- * Step, an eighth of the step on, and the step to scrub. A cluster with no
- * chrome of its own, for the pane's bottom bar to hold as one of its nodes.
+ * Step, an eighth of the step on or to the end of the stage under way (a
+ * compound fold's), and the step to scrub. A cluster with no chrome of its
+ * own, for the pane's bottom bar to hold as one of its nodes.
  *
  * Every press goes to the playback, which Space reaches too
  * (`runFoldPlaybackShortcut`), so the button and the key are one verb.

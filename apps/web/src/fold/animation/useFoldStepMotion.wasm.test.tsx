@@ -7,6 +7,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { sequenceOf, step } from '../document/foldSequence.fixtures';
 import type { FoldOp, FoldStepNode } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
+import { createFoldEngineCrimpTuckCalls } from '../engine/foldEngineCrimpTuckCalls';
 import type { FoldEngineOutcome, FoldReport } from '../engine/foldEngineWire';
 import type { FoldSession, FoldSessionWorker } from '../session/foldSession';
 import {
@@ -15,7 +16,7 @@ import {
   type FoldSessionNode,
   type FoldSessionSnapshot,
 } from '../session/foldSessionState';
-import { foldStepPaneAt, type FoldStepMotion, type FoldStepPane } from './foldStepMotion';
+import { foldStepPaneAt, foldStepProgramme, type FoldStepMotion, type FoldStepPane } from './foldStepMotion';
 import { useFoldStepMotion } from './useFoldStepMotion';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -168,6 +169,56 @@ describe.skipIf(!available)('useFoldStepMotion', () => {
     await render('b');
     expect(latest()?.step).toBe('turn');
     expect(latest()?.motion.kind).toBe('turn');
+  });
+
+  it('plays a compound step’s legs from what its node carries, and crossfades one whose legs are not in', async () => {
+    const wasm = await import('../../generated/oristudio-fold-wasm/oristudio_fold_wasm');
+    wasm.initSync({ module: readFileSync(WASM) });
+    const engine = new wasm.FoldEngine();
+    const calls = createFoldEngineCalls(engine);
+    const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
+    const DIAGONAL: FoldOp = {
+      kind: 'valley',
+      line: { via: 'free', through: [[1, 0], [0, 1]] },
+      moving: [0.9, 0.9],
+      seed: { scope: 'all' },
+    };
+    const tri = landed(calls.step(sheet, DIAGONAL));
+    const angle = (36.87 * Math.PI) / 180;
+    const CRIMP: FoldOp = {
+      kind: 'crimp',
+      line: { via: 'free', through: [[0.4, 0.6], [0.6, 0.8]] },
+      second: {
+        via: 'free',
+        through: [
+          [0.62, 0.38],
+          [0.62 + 0.3 * Math.cos(angle), 0.38 + 0.3 * Math.sin(angle)],
+        ],
+      },
+      crimp: 'inside',
+      moving: [0.97, 0.06],
+      seed: { scope: 'all' },
+    };
+    const folded = landed(createFoldEngineCrimpTuckCalls(engine).crimp(tri.state, CRIMP));
+    if (folded.outcome !== 'landed') throw new Error(folded.outcome);
+    const steps = [step('a', null, DIAGONAL), step('b', 'a', CRIMP)];
+    const bare = new Map([
+      ['a', node(tri.state, tri.report)],
+      ['b', node(folded.state, null)],
+    ]);
+    // The session holds no report for it: no legs, so a crossfade, never an invented hinge.
+    app.session = sessionOver(calls, steps, sheet, bare).session;
+    await render('b');
+    expect(latest()?.motion.kind).toBe('crossfade');
+    // Its legs on its node, where the accessor reads them: two swings.
+    const carried = new Map(bare);
+    carried.set('b', { ...node(folded.state, null), compound: { motion: folded.report.motion } as never });
+    app.session = sessionOver(calls, steps, sheet, carried).session;
+    await render('b');
+    const motion = latest();
+    expect(motion?.step).toBe('crimp');
+    expect(motion?.motion.kind).toBe('legs');
+    expect(foldStepProgramme(motion!).legs).toHaveLength(2);
   });
 
   it('has none for the sheet, an unknown step, or without a pane', async () => {

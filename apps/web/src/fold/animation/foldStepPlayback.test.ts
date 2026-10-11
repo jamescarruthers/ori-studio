@@ -3,9 +3,16 @@ import { FOLD_DURATION_MS, TWIN_HOLD_MS } from '../../lib/foldMotion/foldPlaybac
 import { AUTO_PLAY_SETTLE_MS } from '../../lib/foldMotion/foldTransport';
 import { FakeFoldClock } from '../../lib/foldMotion/foldTransport.fixtures';
 import type { PaperFaceItem, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
-import { CROSSFADE_PACE, type FoldStepMotion } from './foldStepMotion';
-import { FoldStepPlayback, type FoldStepPlaybackOptions } from './foldStepPlayback';
-import { crossfadeMotion, hingeMotion, type FoldPosedFrame } from './foldStepPoses';
+import type { FoldMotionLeg } from '../engine/foldEngineWire';
+import { CROSSFADE_PACE, foldStepProgramme, type FoldStepMotion } from './foldStepMotion';
+import {
+  FOLD_SPREAD_EASE_MS,
+  FoldStepPlayback,
+  foldStepSpreadWeight,
+  foldStepStops,
+  type FoldStepPlaybackOptions,
+} from './foldStepPlayback';
+import { crossfadeMotion, hingeMotion, legsMotion, type FoldPosedFrame } from './foldStepPoses';
 
 const square = (x0: number, x1: number): ScenePoint[] => [
   [x0, 0],
@@ -47,6 +54,36 @@ function fade(): FoldStepMotion {
   const before = scene(faceItem(0, 'front', square(0, 100)));
   const after = scene(faceItem(0, 'back', square(0, 100)));
   return { step: 'import', before, after, motion: crossfadeMotion(before, after) };
+}
+
+/**
+ * A compound step in two stages, as the engine gives one: face 1 turns over
+ * x = 50 in the first swing, face 2 over the same line in the second.
+ */
+function twoStages(): FoldStepMotion {
+  const before = scene(
+    faceItem(0, 'front', square(0, 50)),
+    faceItem(1, 'front', square(50, 100)),
+    faceItem(2, 'front', square(50, 100))
+  );
+  const after = scene(
+    faceItem(0, 'front', square(0, 50)),
+    faceItem(1, 'back', square(0, 50)),
+    faceItem(2, 'back', square(0, 50))
+  );
+  const half = (faces: number[], stacking: 'parent' | 'landed'): FoldMotionLeg[] =>
+    (['spread', 'close'] as const).map((name, k) => ({
+      name,
+      stacking: k === 0 ? 'parent' : stacking,
+      groups: [{ faces, axis: { n: [1, 0], d: 50 }, side: 'positive', from: (k * Math.PI) / 2, to: ((k + 1) * Math.PI) / 2 }],
+    }));
+  const motion = legsMotion(before, after, [...half([1], 'parent'), ...half([2], 'landed')], {
+    toScene: [1, 0, 0, 1, 0, 0],
+    faceAt: (id) => id,
+    parentFace: (face) => face,
+  });
+  if (!motion) throw new Error('no legs');
+  return { step: 'squash', before, after, motion };
 }
 
 let clock: FakeFoldClock;
@@ -229,6 +266,77 @@ describe('FoldStepPlayback', () => {
     p.toggle();
     p.seek(0.5);
     expect(p.frames.current()).toBeNull();
+  });
+
+  it('plays a compound step’s stages in turn on one timeline, never back to the parent between them', () => {
+    const p = playback();
+    const motion = twoStages();
+    p.setMotion(motion);
+    expect(foldStepProgramme(motion).legs.map((leg) => leg.flap)).toEqual([0, 1]);
+    pushed = [];
+    p.toggle();
+    playOut(p);
+    const frames = pushed.filter((frame): frame is FoldPosedFrame => frame !== null);
+    // The parent's picture once, at the start; the second stage starts where the first left off.
+    expect(frames.filter((frame) => frame.scene === motion.before)).toHaveLength(1);
+    expect(frames[0]?.scene).toBe(motion.before);
+    const boundary = frames.findIndex((frame) => cornerX(frame, 2) !== 100 && cornerX(frame, 1) === 0);
+    expect(boundary).toBeGreaterThan(0);
+    // Face 2 waits where it lay while face 1 turns.
+    expect(cornerX(frames[Math.floor(boundary / 2)] ?? null, 2)).toBeCloseTo(100, 9);
+    expect(p.status().complete).toBe(true);
+    expect(onPlay).toHaveBeenCalledTimes(1);
+    expect(onPlay.mock.lastCall?.[1]).toMatchObject({ kind: 'squash' });
+  });
+
+  it('steps through a compound step’s stages, each landing a stop', () => {
+    const p = playback();
+    p.setMotion(twoStages());
+    p.seek(0.45);
+    p.step(1);
+    // The first stage's end, which is also an eighth.
+    expect(p.position.current()).toBeCloseTo(0.5, 9);
+    // Three stages' ends fall between the eighths.
+    const swing = foldStepProgramme(twoStages()).legs[0]!;
+    const three = foldStepStops({ kind: 'squash', arrival: 'auto-play', legs: [swing, swing, swing] });
+    expect(three).toContain(1 / 3);
+    expect(three).toContain(2 / 3);
+    expect(three[0]).toBe(0);
+    expect(three[three.length - 1]).toBe(1);
+    // A precrease stops folded over, and where its hold ends.
+    const precrease = foldStepStops(foldStepProgramme(book('in-place')));
+    const total = 2 * FOLD_DURATION_MS + TWIN_HOLD_MS;
+    expect(precrease).toContain(FOLD_DURATION_MS / total);
+    expect(precrease).toContain((FOLD_DURATION_MS + TWIN_HOLD_MS) / total);
+  });
+
+  it('folds the layer spread away as a step starts and opens it again as it lands', () => {
+    const programme = foldStepProgramme(book());
+    const share = (ms: number) => ms / FOLD_DURATION_MS;
+    expect(foldStepSpreadWeight(programme, 0, false)).toBe(1);
+    expect(foldStepSpreadWeight(programme, share(FOLD_SPREAD_EASE_MS / 2), false)).toBeCloseTo(0.5, 9);
+    expect(foldStepSpreadWeight(programme, share(FOLD_SPREAD_EASE_MS), false)).toBe(0);
+    expect(foldStepSpreadWeight(programme, 0.5, false)).toBe(0);
+    expect(foldStepSpreadWeight(programme, 1 - share(FOLD_SPREAD_EASE_MS / 2), false)).toBeCloseTo(0.5, 9);
+    expect(foldStepSpreadWeight(programme, 1, false)).toBe(1);
+    // Motion unwelcome: nothing eases, and a frame scrubbed to is unspread.
+    expect(foldStepSpreadWeight(programme, 0, true)).toBe(0);
+    expect(foldStepSpreadWeight(programme, 0.95, true)).toBe(0);
+
+    // Every frame a play pushes carries its weight: all of it first, none mid-swing, nearly all last.
+    const p = playback();
+    p.setMotion(book());
+    pushed = [];
+    p.toggle();
+    playOut(p);
+    const weights = pushed.flatMap((frame) => (frame ? [frame.spreadWeight] : []));
+    expect(weights[0]).toBe(1);
+    expect(weights[Math.floor(weights.length / 2)]).toBe(0);
+    expect(weights[weights.length - 1]).toBeGreaterThan(0.5);
+    // Scrubbed with motion unwelcome: unspread.
+    reduced = true;
+    p.seek(0.3);
+    expect(p.frames.current()?.spreadWeight).toBe(0);
   });
 
   it('plays a step on arrival under auto-play, after it settles, but not the first', () => {

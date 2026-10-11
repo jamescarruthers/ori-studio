@@ -16,19 +16,21 @@
  *   the moving faces being the landed state's that the report names;
  * - a turn or a rotation turns the picture as the view turns, read off the two
  *   scenes' view transforms;
- * - Import CP crossfades, and so does any step whose rigid motion cannot be
- *   built from what it has (no line, nothing moving, a degenerate placement):
- *   a step always has a motion, and a wrong one is never invented.
- * - A compound fold plays the engine's legs, which every family's report
- *   carries (`stepMotionLegsOf`): a reverse fold's, about its one line. The
- *   other families' legs turn about more than one hinge or in stages, which
- *   no pose plays yet, so they crossfade until one does.
+ * - every compound fold — reverse, crimp, tuck, the vertex folds, the sinks —
+ *   plays the engine's legs (`StepMotion`, read through
+ *   `foldStepMotionLegsOf`): groups of paper turning about their own
+ *   hinges, leg after leg;
+ * - Import CP crossfades, and so does any step whose motion cannot be built
+ *   from what it has (no line, nothing moving, no legs, a degenerate
+ *   placement): a step always has a motion, and a wrong one is never
+ *   invented.
  *
  * The transport plays a step as one programme (`lib/foldMotion/foldTransport`):
  * a fold is one leg resting landed, a precrease folds, holds and comes back, a
- * turn rolls, and a crossfade fades. {@link foldStepFrame} maps a moment of it
- * to a frame: the parent's scene before anything has moved, the landed scene
- * once it has all played, and a pose between.
+ * turn rolls, a crossfade fades, and a compound fold swings once per stage of
+ * its legs, each swing a spread and a close through π. {@link foldStepFrame}
+ * maps a moment of it to a frame: the parent's scene before anything has
+ * moved, the landed scene once it has all played, and a pose between.
  *
  * Pure: no React, no store, no engine.
  */
@@ -49,8 +51,13 @@ import type { FoldProgramme } from '../../lib/foldMotion/foldTransport';
 import type { Point } from '../../lib/geometry';
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import type { FoldOp } from '../document/foldSequenceDocument';
-import { stepMotionLegsOf, type FoldCompoundReport } from '../engine/foldEngineCompoundWire';
-import type { FoldActionGeometry, FoldIsometry, FoldReport, FoldScene } from '../engine/foldEngineWire';
+import type {
+  FoldActionGeometry,
+  FoldIsometry,
+  FoldReport,
+  FoldScene,
+  FoldStepMotionLegs,
+} from '../engine/foldEngineWire';
 import {
   affineThrough,
   crossfadeFrame,
@@ -66,6 +73,7 @@ import {
   type FoldLegsMotion,
   type FoldPosedFrame,
   type FoldTurnMotion,
+  type SceneAffine,
 } from './foldStepPoses';
 
 /** What kind of step moves, in the analytics event's spelling (D18: a closed enum). */
@@ -103,8 +111,8 @@ export interface FoldStepMotionInput {
   action: FoldActionGeometry | null;
   /** What the step did; null for a turn, a rotation or an import. */
   report: FoldReport | null;
-  /** What a compound fold of any family did, with the legs its animation plays; absent for any other step. */
-  compound?: FoldCompoundReport | null;
+  /** A compound fold's legs (`foldStepMotionLegsOf`); absent for any other step, and for one whose legs are not in yet. */
+  legs?: FoldStepMotionLegs | null;
 }
 
 export interface FoldStepMotion {
@@ -173,32 +181,26 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
     }
     case 'cp-jump':
       return crossfade();
-    // Compound folds (plan D4), one block per family: the engine's legs.
+    // Compound folds (plan D4), every family on the engine's legs: a
+    // reverse fold's blocks about ℓ, a crimp's strip and tip about ℓ1 and
+    // its tip again about ℓ2, a tuck's block, a vertex fold's blocks in
+    // stages about their creases, a sink's about its ring. Without legs (a
+    // step whose report is not in) it crossfades rather than inventing a
+    // hinge.
     case 'inside-reverse':
-    case 'outside-reverse': {
-      const legs = compoundLegs(input, before, after, to.place);
-      return legs ? { step, before, after, motion: legs } : crossfade();
-    }
-    // A crimp's legs turn its tip about ℓ1 and then about where ℓ2 went, and
-    // a tuck's turn its block about ℓ against its target: the session carries
-    // their legs (`stepMotionLegsOf`), which no player poses for them yet, so
-    // they crossfade.
+    case 'outside-reverse':
     case 'crimp':
     case 'tuck':
-      return crossfade();
-    // A vertex fold's motion is the engine's staged legs, which no pose
-    // plays yet: until one does, it crossfades rather than inventing a hinge.
     case 'squash':
     case 'petal':
     case 'rabbit-ear':
     case 'swivel':
-      return crossfade();
-    // A sink's motion is legs about its ring; until the pane poses them it
-    // crossfades.
     case 'open-sink':
     case 'closed-sink':
-    case 'unsink':
-      return crossfade();
+    case 'unsink': {
+      const legs = compoundLegs(input, before, after, to.place);
+      return legs ? { step, before, after, motion: legs } : crossfade();
+    }
   }
 }
 
@@ -223,10 +225,11 @@ function playKind(op: FoldOp): FoldStepPlayKind {
 
 /**
  * A compound step's legs (the engine's `StepMotion`), placed as the pane
- * places the landed state: ℓ from the model frame through the step's view to
- * the pane's px, the turning faces by their place in the landed scene, and
- * each landed face's parent face — itself, or the face it was split from —
- * by its place in the parent's.
+ * places the landed state: every hinge from the model frame through the
+ * step's view to the pane's px (a compound fold keeps the view, so the
+ * parent's frame is the step's), the turning faces by their place in the
+ * landed scene, and each landed face's parent face — itself, or the face it
+ * was split from — by its place in the parent's.
  */
 function compoundLegs(
   input: FoldStepMotionInput,
@@ -234,35 +237,30 @@ function compoundLegs(
   after: PaperScene,
   place: FoldedFlatPaperSceneOptions
 ): FoldLegsMotion | null {
-  const motion = stepMotionLegsOf(input.compound);
-  const axis = motion?.legs[0]?.groups[0]?.axis;
-  if (!motion || !axis) return null;
-  const foot: Point = { x: axis.n[0] * axis.d, y: axis.n[1] * axis.d };
-  const ahead: Point = { x: foot.x - axis.n[1], y: foot.y + axis.n[0] };
-  const at = place.toScenePx(applyIsometry(input.after.view_transform, foot));
-  const next = place.toScenePx(applyIsometry(input.after.view_transform, ahead));
-  const along: ScenePoint = [next[0] - at[0], next[1] - at[1]];
-  if (Math.hypot(along[0], along[1]) === 0) return null;
+  const legs = input.legs?.legs;
+  if (!legs || legs.length === 0) return null;
+  const toScene = modelToScene(input.after.view_transform, place);
+  if (!toScene) return null;
   const landedAt = new Map(input.after.lineage.map((face, index) => [face.id, index]));
   const parentAt = new Map(input.before.lineage.map((face, index) => [face.id, index]));
-  const moving = new Set<number>();
-  for (const group of motion.legs[0]?.groups ?? []) {
-    for (const id of group.faces) {
-      const index = landedAt.get(id);
-      if (index !== undefined) moving.add(index);
-    }
-  }
-  if (moving.size === 0) return null;
   const parentFace = (face: number): number | null => {
     const lineage = input.after.lineage[face];
     if (!lineage) return null;
     return parentAt.get(lineage.id) ?? (lineage.parent === null ? null : (parentAt.get(lineage.parent) ?? null));
   };
-  const legs = motion.legs.map((leg) => {
-    const ends = leg.groups.flatMap((group) => [Math.abs(group.from), Math.abs(group.to)]);
-    return { from: Math.min(...ends), to: Math.max(...ends), stacking: leg.stacking };
-  });
-  return legsMotion(before, after, moving, parentFace, { at, along }, legs);
+  return legsMotion(before, after, legs, { toScene, faceAt: (id) => landedAt.get(id), parentFace });
+}
+
+/** The model frame to the pane's px — the view, then the placement — read off three points; null when it flattens. */
+function modelToScene(view: FoldIsometry, place: FoldedFlatPaperSceneOptions): SceneAffine | null {
+  const corners: [Point, Point, Point] = [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+  ];
+  const from = corners.map((p): ScenePoint => [p.x, p.y]) as [ScenePoint, ScenePoint, ScenePoint];
+  const to = corners.map((p) => place.toScenePx(applyIsometry(view, p))) as [ScenePoint, ScenePoint, ScenePoint];
+  return affineThrough(from, to);
 }
 
 function hingeOf(
@@ -387,8 +385,10 @@ function legsOf({ motion }: FoldStepMotion): FoldLeg[] {
     case 'crossfade':
       return [leg(CROSSFADE_PACE)];
     case 'legs':
-      // The engine's legs meet edge-on: one swing through both, landing and staying.
-      return [leg(FOLD_PACE)];
+      // One swing per stage, each a fold's pace, played in turn: its spread
+      // and close meet edge-on and pass through it at speed, and the press
+      // at a swing's end is the pause before the next stage turns.
+      return motion.swings.map((_, swing) => ({ ...leg(FOLD_PACE), flap: swing }));
   }
 }
 
@@ -399,8 +399,11 @@ function legsOf({ motion }: FoldStepMotion): FoldLeg[] {
  */
 export function foldStepFrame(step: FoldStepMotion, moment: FoldStepMoment): FoldPosedFrame {
   if (moment.progress >= 1) return { scene: step.after };
-  const pose = moment.pose;
-  if (moment.progress <= 0 || !pose) return { scene: step.before };
+  if (moment.progress <= 0) return { scene: step.before };
+  // A programme of several legs starts each from its rest, where the
+  // transport has no pose; the time played says where the paper is.
+  const pose = moment.pose ?? runPose(seekFoldRun(runAtRest(foldStepProgramme(step).legs), moment.progress));
+  if (!pose) return { scene: step.before };
   const { motion } = step;
   switch (motion.kind) {
     case 'hinge':
@@ -410,8 +413,20 @@ export function foldStepFrame(step: FoldStepMotion, moment: FoldStepMoment): Fol
     case 'crossfade':
       return crossfadeFrame(motion, pose.angle / Math.PI);
     case 'legs':
-      return { scene: poseLegs(motion, pose.angle) };
+      return { scene: poseSwing(motion, pose.flap, pose.angle) };
   }
+}
+
+/**
+ * A compound step's swing `swing` at `angle`, 0 to π: a spread's share up to
+ * edge-on and its close's after it, or a lone leg's share of the whole.
+ */
+export function poseSwing(motion: FoldLegsMotion, swing: number, angle: number): PaperScene {
+  const legs = motion.swings[Math.max(0, Math.min(motion.swings.length - 1, swing))] ?? [0];
+  const [first = 0, second] = legs;
+  if (second === undefined) return poseLegs(motion, first, angle / Math.PI);
+  const half = Math.PI / 2;
+  return angle < half ? poseLegs(motion, first, angle / half) : poseLegs(motion, second, (angle - half) / half);
 }
 
 /** The frame `progress` of the way through the step's programme, by its time: for a scrubber, or a test. */

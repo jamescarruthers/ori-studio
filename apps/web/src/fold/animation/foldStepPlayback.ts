@@ -19,17 +19,23 @@
  * ({@link FoldStepPlayback.position}). Only the transport's transitions are
  * published as status.
  *
+ * A step's frames are its paper's own geometry, never spread; each carries
+ * how much of the step's layer spread the pane draws it with
+ * ({@link foldStepSpreadWeight}), so the spread the pane shows a step at
+ * rest folds away as the step starts and opens again as it lands.
+ *
  * The clock and the motion preference are injectable, as the transport's are.
  */
 
 import type { FoldStepPlayVia } from '../../analytics/events';
 import {
   FoldTransport,
+  prefersReducedMotion,
   type FoldPlayTrigger,
   type FoldPoseSink,
   type FoldTransportClock,
 } from '../../lib/foldMotion/foldTransport';
-import type { FoldPose } from '../../lib/foldMotion/foldPlayback';
+import { easeInOut, type FoldPose } from '../../lib/foldMotion/foldPlayback';
 import type { FoldPosedFrame } from './foldStepPoses';
 import { foldStepFrame, foldStepProgramme, type FoldStepMotion, type FoldStepProgramme } from './foldStepMotion';
 
@@ -72,13 +78,78 @@ export interface FoldStepPlaybackOptions {
   clock?: FoldTransportClock;
 }
 
-/** One press of Step moves the scrubber this far: an eighth of the step, and to the next eighth from between two. */
+/**
+ * One press of Step moves the scrubber this far: an eighth of the step, and
+ * to the next eighth from between two — or less, to the end of a leg that
+ * comes first (`foldStepStops`).
+ */
 export const FOLD_PLAYBACK_STEP = 1 / 8;
+
+/**
+ * How long the step's layer spread takes to fold away as it starts to play,
+ * and to open again as it lands: about a frame or eight, under the fold's
+ * slow first and last stretches, where the paper has barely moved.
+ */
+export const FOLD_SPREAD_EASE_MS = 120;
 
 const UNAVAILABLE: FoldStepPlaybackStatus = { available: false, playing: false, complete: false };
 
-/** Below this the scrubber is at an eighth already, for Step. */
+/** Below this the scrubber is at a stop already, for Step. */
 const ON_A_STEP = 1e-6;
+
+/** The programme's time, as the transport plays it: every leg, and the holds between them. */
+function programmeMs(programme: FoldStepProgramme): number {
+  const { legs } = programme;
+  return legs.reduce(
+    (sum, leg, k) => sum + Math.max(0, leg.durationMs) + (k + 1 < legs.length ? Math.max(0, leg.holdMs) : 0),
+    0
+  );
+}
+
+/**
+ * How much of the step's layer spread a frame `progress` of the way through
+ * its programme is drawn with (`FoldPosedFrame.spreadWeight`): all of it at
+ * the start, folding away over the first {@link FOLD_SPREAD_EASE_MS}, none
+ * while the paper moves, and opening again over the last, so the frame
+ * after the last is the pane's own spread picture without a jump. A step
+ * too short for both shares its time between them.
+ *
+ * With motion unwelcome, nothing eases: Play lands the step at once, and a
+ * frame scrubbed to is drawn unspread.
+ */
+export function foldStepSpreadWeight(programme: FoldStepProgramme, progress: number, reducedMotion: boolean): number {
+  if (reducedMotion) return 0;
+  const total = programmeMs(programme);
+  const ease = Math.min(FOLD_SPREAD_EASE_MS, total / 2);
+  if (!(ease > 0)) return 0;
+  const at = Math.max(0, Math.min(1, progress)) * total;
+  if (at < ease) return 1 - easeInOut(at / ease);
+  if (at > total - ease) return easeInOut((at - (total - ease)) / ease);
+  return 0;
+}
+
+/**
+ * Where Step stops in a programme, ascending from 0 to 1: every eighth, and
+ * the end of every leg and hold — a compound fold's stages, a precrease
+ * folded — so a reader stepping through lands on each.
+ */
+export function foldStepStops(programme: FoldStepProgramme): number[] {
+  const stops = Array.from({ length: 9 }, (_, k) => k * FOLD_PLAYBACK_STEP);
+  const total = programmeMs(programme);
+  if (total > 0) {
+    let at = 0;
+    programme.legs.forEach((leg, k) => {
+      at += Math.max(0, leg.durationMs);
+      stops.push(at / total);
+      if (k + 1 < programme.legs.length && leg.holdMs > 0) {
+        at += leg.holdMs;
+        stops.push(at / total);
+      }
+    });
+  }
+  stops.sort((a, b) => a - b);
+  return stops.filter((stop, k) => stop <= 1 && (k === 0 || stop - stops[k - 1]! > ON_A_STEP));
+}
 
 export class FoldStepPlayback {
   private motion: FoldStepMotion | null = null;
@@ -91,8 +162,10 @@ export class FoldStepPlayback {
   private readonly statusListeners = new Set<() => void>();
   private readonly frameListeners = new Set<() => void>();
   private readonly transport: FoldTransport<FoldStepProgramme>;
+  private readonly reducedMotion: () => boolean;
 
   constructor(options: FoldStepPlaybackOptions = {}) {
+    this.reducedMotion = options.reducedMotion ?? prefersReducedMotion;
     const sink: FoldPoseSink = { setFoldPose: (pose) => this.pushed(pose) };
     this.transport = new FoldTransport<FoldStepProgramme>({
       sink: () => sink,
@@ -197,11 +270,17 @@ export class FoldStepPlayback {
     this.changed();
   }
 
-  /** Step: the scrubber moved to the next eighth of the step, or back to the one before. */
+  /** Step: the scrubber moved to the next stop of the step (`foldStepStops`), or back to the one before. */
   step(direction: 1 | -1): void {
-    const at = this.transport.progress() / FOLD_PLAYBACK_STEP;
-    const eighth = direction > 0 ? Math.floor(at + ON_A_STEP) + 1 : Math.ceil(at - ON_A_STEP) - 1;
-    this.seek(Math.max(0, Math.min(1, eighth * FOLD_PLAYBACK_STEP)));
+    const motion = this.motion;
+    if (!motion) return;
+    const stops = foldStepStops(foldStepProgramme(motion));
+    const at = this.transport.progress();
+    const next =
+      direction > 0
+        ? (stops.find((stop) => stop > at + ON_A_STEP) ?? 1)
+        : ([...stops].reverse().find((stop) => stop < at - ON_A_STEP) ?? 0);
+    this.seek(next);
   }
 
   dispose(): void {
@@ -216,7 +295,13 @@ export class FoldStepPlayback {
     const progress = this.transport.progress();
     // Played through, the landed step is the pane's own scene: it draws it
     // again, overlays and all, rather than a copy of it.
-    this.frame = motion && this.engaged && progress < 1 ? foldStepFrame(motion, { progress, pose }) : null;
+    this.frame =
+      motion && this.engaged && progress < 1
+        ? {
+            ...foldStepFrame(motion, { progress, pose }),
+            spreadWeight: foldStepSpreadWeight(foldStepProgramme(motion), progress, this.reducedMotion()),
+          }
+        : null;
     for (const listener of this.frameListeners) listener();
   }
 

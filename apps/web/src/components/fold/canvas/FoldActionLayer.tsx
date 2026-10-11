@@ -53,6 +53,8 @@ export function foldActionMarks(ink: number): DiagramMarks {
  * paper (`withFoldLine`); the renderer has no curve or arrowhead, so the
  * arrow is this one SVG over it, as References' marks are.
  *
+ * A compound fold adds the arrows its picture carries: a push, a pleat.
+ *
  * With it, the letters the step's sentence names its references by
  * (`useFoldStepLetters`), as References' cards letter theirs: a point ringed
  * and lettered, a line lettered on itself, each letter placed clear of the
@@ -82,7 +84,8 @@ export function FoldActionLayer({
   const model = useMemo(() => {
     const grip = action?.grip ?? null;
     const push = action?.push ?? null;
-    if (!grip && !push && letters.length === 0) return null;
+    const pleat = action?.pleat ?? null;
+    if (!grip && !push && !pleat && letters.length === 0) return null;
     const hull = convexHull(outline);
     const centre: SheetPoint | null = hull.length
       ? [hull.reduce((sum, p) => sum + p.x, 0) / hull.length, hull.reduce((sum, p) => sum + p.y, 0) / hull.length]
@@ -97,8 +100,19 @@ export function FoldActionLayer({
         action.kind === 'precrease' ? { kind: 'fold-arrow', out } : { kind: 'one-way-arrow', out, fold: action.direction }
       );
     }
-    // A reverse fold's push: the hollow arrow at the spine, pushing it in.
+    // A compound fold's push — a reverse fold's, the hollow arrow at the
+    // spine, pushing it in — and its pleat, the lightning bolt across a
+    // crimp's or a pleat's lines: whichever its engine fills.
     if (push) primitives.push({ kind: 'push-arrow', from: [push.at.x, push.at.y], to: [push.toward.x, push.toward.y] });
+    if (pleat) {
+      primitives.push({
+        kind: 'pleat-arrow',
+        from: [pleat.from.x, pleat.from.y],
+        to: [pleat.to.x, pleat.to.y],
+        kinks: pleat.kinks,
+        mirrored: false,
+      });
+    }
     for (const { kind, at, letter } of letters) {
       if (kind === 'point') primitives.push({ kind: 'point', at: [at.x, at.y], style: 'highlight' });
       primitives.push({ kind: 'label', at: [at.x, at.y], text: letter, style: 'highlight' });

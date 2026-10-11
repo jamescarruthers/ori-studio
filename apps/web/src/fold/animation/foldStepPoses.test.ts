@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { PAPER_TILT_SHADE } from '../../lib/foldMotion/foldHinge';
 import type { PaperFaceItem, PaperItem, PaperLineItem, PaperScene, ScenePoint } from '../../lib/paper/paperScene';
+import type { FoldModelLine } from '../document/foldSequenceDocument';
+import type { FoldIsometry, FoldMotionLeg } from '../engine/foldEngineWire';
 import {
   affineThrough,
   applyAffine,
@@ -267,53 +269,242 @@ describe('a crossfade', () => {
 });
 
 describe('a compound step’s legs', () => {
-  /**
-   * An inside reverse of a two-layer flap, drawn top-down: before it, the
-   * still layer 2 and the flap's lower layer 0 under its upper layer 1, the
-   * tip right of ℓ; landed, the tip's pieces (faces 3 and 4, of 0 and 1)
-   * mirrored left, turned between the layers: the upper piece now under the
-   * lower. Faces 0 and 1 keep their pieces that stay.
-   */
-  const before = () => sceneOf([face(2, 'front', LEFT), face(0, 'front', RIGHT), face(1, 'back', RIGHT)]);
-  const landed = () =>
-    sceneOf([face(2, 'front', LEFT), face(4, 'front', LEFT), face(3, 'back', LEFT), face(0, 'front', LEFT), face(1, 'back', LEFT)]);
-  const parents = new Map([
-    [3, 0],
-    [4, 1],
-    [0, 0],
-    [1, 1],
-    [2, 2],
-  ]);
-  const legs = () =>
-    legsMotion(before(), landed(), new Set([3, 4]), (face) => parents.get(face) ?? null, L, [
-      { from: 0, to: Math.PI / 2, stacking: 'parent' },
-      { from: Math.PI / 2, to: Math.PI, stacking: 'landed' },
-    ]);
+  /** ℓ: x = 50, as the engine's line `n · p = d`; the tests' model frame is the scene's px. */
+  const X50 = { n: [1, 0] as const, d: 50 };
+  /** Every landed face named by its own place, and its parent's. */
+  const PLACE = (parents: ReadonlyMap<number, number>) => ({
+    toScene: [1, 0, 0, 1, 0, 0] as SceneAffine,
+    faceAt: (id: number) => (parents.has(id) ? id : undefined),
+    parentFace: (face: number) => parents.get(face) ?? null,
+  });
+  /** A half turn about `axis` in two legs, a spread stacked as the parent and a close as the landed state, up or down. */
+  const halfTurn = (axis: FoldModelLine, groups: [number[], 1 | -1][], then?: FoldIsometry): FoldMotionLeg[] =>
+    (['spread', 'close'] as const).map((name, k) => ({
+      name,
+      stacking: k === 0 ? 'parent' : 'landed',
+      groups: groups.map(([faces, sign]) => ({
+        faces,
+        axis,
+        side: 'positive',
+        from: (sign * k * Math.PI) / 2,
+        to: (sign * (k + 1) * Math.PI) / 2,
+        ...(then ? { then } : {}),
+      })),
+    }));
   const ring = (scene: PaperScene, id: number) =>
-    (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).rings[0]!;
+    (scene.items.find((item) => item.kind === 'face' && item.face === id && item.group === undefined) as PaperFaceItem)
+      .rings[0]!;
+  const side = (scene: PaperScene, id: number) =>
+    (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).side;
 
-  it('turns every group from where the parent had it to where it lands, the paper that stays still', () => {
-    const start = poseLegs(legs(), 0);
-    RIGHT.forEach((p, k) => close(ring(start, 3)[k === 0 ? 1 : k === 1 ? 0 : k === 2 ? 3 : 2]!, p));
-    const end = poseLegs(legs(), Math.PI);
-    LEFT.forEach((p, k) => close(ring(end, 4)[k]!, p));
-    expect(ring(poseLegs(legs(), 1.1), 2)).toEqual(LEFT);
-    for (const p of ring(poseLegs(legs(), Math.PI / 2), 3)) expect(p[0]).toBeCloseTo(50, 9);
+  describe('of a reverse fold', () => {
+    /**
+     * An inside reverse of a two-layer flap, drawn top-down: before it, the
+     * still layer 2 and the flap's lower layer 0 under its upper layer 1, the
+     * tip right of ℓ; landed, the tip's pieces (faces 3 and 4, of 0 and 1)
+     * mirrored left, turned between the layers: the upper piece now under the
+     * lower. Faces 0 and 1 keep their pieces that stay.
+     */
+    const before = () => sceneOf([face(2, 'front', LEFT), face(0, 'front', RIGHT), face(1, 'back', RIGHT)]);
+    const landed = () =>
+      sceneOf([
+        face(2, 'front', LEFT),
+        face(4, 'front', LEFT),
+        face(3, 'back', LEFT),
+        face(0, 'front', LEFT),
+        face(1, 'back', LEFT),
+      ]);
+    const parents = new Map([
+      [3, 0],
+      [4, 1],
+      [0, 0],
+      [1, 1],
+      [2, 2],
+    ]);
+    // The lower block turns down, the upper one up.
+    const legs = () =>
+      legsMotion(before(), landed(), halfTurn(X50, [[[3], -1], [[4], 1]]), PLACE(parents))!;
+
+    it('pairs the spread and the close into one swing', () => {
+      expect(legs().swings).toEqual([[0, 1]]);
+      expect([...legs().startFlipped].sort()).toEqual([3, 4]);
+    });
+
+    it('turns every group from where the parent had it to where it lands, the paper that stays still', () => {
+      const start = poseLegs(legs(), 0, 0);
+      RIGHT.forEach((p, k) => close(ring(start, 3)[k === 0 ? 1 : k === 1 ? 0 : k === 2 ? 3 : 2]!, p));
+      const end = poseLegs(legs(), 1, 1);
+      LEFT.forEach((p, k) => close(ring(end, 4)[k]!, p));
+      expect(ring(poseLegs(legs(), 0, 0.7), 2)).toEqual(LEFT);
+      for (const p of ring(poseLegs(legs(), 0, 1), 3)) expect(p[0]).toBeCloseTo(50, 9);
+      // The legs meet edge-on.
+      ring(poseLegs(legs(), 0, 1), 4).forEach((p, k) => close(ring(poseLegs(legs(), 1, 0), 4)[k]!, p));
+    });
+
+    it('stacks the spread as the parent did and the close as the landed state does', () => {
+      // The spread: each piece ranked as the face it is a piece of lay — the
+      // lower layer's under the upper's, both pieces of each together.
+      expect(facesIn(poseLegs(legs(), 0, 0.25))).toEqual([2, 3, 0, 4, 1]);
+      // The close: the landed order, so the last frame is the landed scene.
+      expect(facesIn(poseLegs(legs(), 1, 0.13))).toEqual([2, 4, 3, 0, 1]);
+      // Showing the side they showed until edge-on, shaded by the tilt.
+      expect(side(poseLegs(legs(), 0, 0.25), 3)).toBe('front');
+      expect(side(poseLegs(legs(), 1, 0.87), 3)).toBe('back');
+      const shade = (scene: PaperScene, id: number) =>
+        (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).shade;
+      expect(shade(poseLegs(legs(), 0, 1), 3)).toBeCloseTo(1 - PAPER_TILT_SHADE[3], 9);
+      expect(shade(poseLegs(legs(), 0, 1), 2)).toBe(1);
+    });
+
+    it('lands on the landed scene exactly', () => {
+      expect(poseLegs(legs(), 1, 1).items).toEqual(landed().items);
+    });
+
+    it('has no motion for legs that name nothing in the scene, or a placement that flattens', () => {
+      expect(legsMotion(before(), landed(), halfTurn(X50, [[[9], 1]]), PLACE(parents))).toBeNull();
+      expect(
+        legsMotion(before(), landed(), halfTurn(X50, [[[3], 1]]), { ...PLACE(parents), toScene: [1, 0, 2, 0, 0, 0] })
+      ).toBeNull();
+    });
   });
 
-  it('stacks the spread as the parent did and the close as the landed state does', () => {
-    // The spread: each piece ranked as the face it is a piece of lay — the
-    // lower layer's under the upper's, both pieces of each together.
-    expect(facesIn(poseLegs(legs(), 0.4))).toEqual([2, 3, 0, 4, 1]);
-    // The close: the landed order, so the last frame is the landed scene.
-    expect(facesIn(poseLegs(legs(), Math.PI / 2 + 0.2))).toEqual([2, 4, 3, 0, 1]);
-    // Showing the side they showed until edge-on.
-    const side = (scene: PaperScene, id: number) =>
-      (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).side;
-    expect(side(poseLegs(legs(), 0.4), 3)).toBe('front');
-    expect(side(poseLegs(legs(), Math.PI - 0.2), 3)).toBe('back');
+  describe('of a crimp', () => {
+    /**
+     * A crimp across a strip, every coordinate scene px: ℓ1 at x = 50, ℓ2 at
+     * x = 80. The strip (face 1, x 50–80) turns over ℓ1; the tip's two layers
+     * (2 under 3, x 80–100) turn over ℓ1 with it, to x 0–20, and back over
+     * where ℓ2 went (x = 20), to x 20–40: a slide, the tip's stack read the
+     * same at both ends and reversed between its two turns.
+     */
+    const before = () =>
+      sceneOf([
+        face(0, 'front', square(0, 50)),
+        face(1, 'front', square(50, 80)),
+        face(2, 'front', square(80, 100)),
+        face(3, 'back', square(80, 100)),
+      ]);
+    const landed = () =>
+      sceneOf([
+        face(0, 'front', square(0, 50)),
+        face(1, 'back', square(20, 50)),
+        face(2, 'front', square(20, 40)),
+        face(3, 'back', square(20, 40)),
+      ]);
+    const parents = new Map([0, 1, 2, 3].map((id) => [id, id]));
+    const X20 = { n: [1, 0] as const, d: 20 };
+    /** The reflection across x = 20: what the tip still does after its turn about ℓ1. */
+    const ACROSS_20: FoldIsometry = [-1, 0, 40, 0, 1, 0];
+    const crimp = () =>
+      legsMotion(
+        before(),
+        landed(),
+        [
+          ...halfTurn(X50, [[[1], 1]]).map((leg, k) => ({
+            ...leg,
+            groups: [...leg.groups, ...halfTurn(X50, [[[2, 3], 1]], ACROSS_20)[k]!.groups],
+          })),
+          ...halfTurn(X20, [[[2, 3], 1]]).map((leg) => ({ ...leg, stacking: 'landed' as const })),
+        ],
+        PLACE(parents)
+      )!;
+    const xs = (scene: PaperScene, id: number) => ring(scene, id).map((p) => p[0]);
+
+    it('plays two swings: the strip and the tip about ℓ1, then the tip about where ℓ2 went', () => {
+      const motion = crimp();
+      expect(motion.swings).toEqual([
+        [0, 1],
+        [2, 3],
+      ]);
+      expect(xs(poseLegs(motion, 0, 0), 2)).toEqual([80, 100, 100, 80].map((x) => expect.closeTo(x, 9)));
+      expect(xs(poseLegs(motion, 1, 1), 2)).toEqual([20, 0, 0, 20].map((x) => expect.closeTo(x, 9)));
+      expect(xs(poseLegs(motion, 3, 1), 2)).toEqual([20, 40, 40, 20]);
+      // The strip, done after the first swing, rests where it landed.
+      expect(ring(poseLegs(motion, 2, 0.5), 1)).toEqual(square(20, 50));
+    });
+
+    it('starts every leg where the one before it ended', () => {
+      const motion = crimp();
+      for (let k = 0; k + 1 < motion.legs.length; k += 1) {
+        const end = poseLegs(motion, k, 1);
+        const next = poseLegs(motion, k + 1, 0);
+        for (const id of [0, 1, 2, 3]) {
+          ring(end, id).forEach((p, j) => close(ring(next, id)[j]!, p));
+          expect(side(next, id), `face ${id} at leg ${k + 1}`).toBe(side(end, id));
+        }
+        expect(facesIn(next), `leg ${k + 1}`).toEqual(facesIn(end));
+      }
+    });
+
+    it('reads the tip’s stack reversed while it lies turned over once', () => {
+      const motion = crimp();
+      expect(facesIn(poseLegs(motion, 0, 0.5))).toEqual([0, 1, 2, 3]);
+      expect(facesIn(poseLegs(motion, 1, 0.5))).toEqual([0, 1, 3, 2]);
+      expect(facesIn(poseLegs(motion, 2, 0.5))).toEqual([0, 1, 3, 2]);
+      expect(facesIn(poseLegs(motion, 3, 0.5))).toEqual([0, 1, 2, 3]);
+      // Showing its other side between the turns, its own at both ends.
+      expect(side(poseLegs(motion, 0, 0.2), 3)).toBe('back');
+      expect(side(poseLegs(motion, 2, 0.2), 3)).toBe('front');
+      expect(side(poseLegs(motion, 3, 0.8), 3)).toBe('back');
+    });
+
+    it('bounds every leg’s frames, and lands on the landed scene', () => {
+      const motion = crimp();
+      expect(motion.bounds).toEqual({ minX: 0, minY: 0, maxX: 100, maxY: 100 });
+      expect(poseLegs(motion, 3, 1).items).toEqual(landed().items);
+    });
+  });
+
+  it('rests a face through the legs before its first turn where that turn starts it', () => {
+    // Face 1 turns over x = 50 in the first swing, face 2 over x = 50 in the second.
+    const before = sceneOf([
+      face(0, 'front', square(0, 50)),
+      face(1, 'front', square(50, 100)),
+      face(2, 'front', square(50, 100)),
+    ]);
+    const landed = sceneOf([
+      face(0, 'front', square(0, 50)),
+      face(1, 'back', square(0, 50)),
+      face(2, 'back', square(0, 50)),
+    ]);
+    const first = halfTurn(X50, [[[1], 1]]);
+    const second = halfTurn(X50, [[[2], 1]]);
+    const motion = legsMotion(
+      before,
+      landed,
+      [...first, ...second].map((leg, k) => ({ ...leg, stacking: k === 3 ? 'landed' : 'parent' })),
+      PLACE(new Map([0, 1, 2].map((id) => [id, id])))
+    )!;
+    // Mirrored back across ℓ, where the parent had it, on the side it showed there.
+    expect(ring(poseLegs(motion, 1, 0.5), 2)).toEqual(square(0, 50).map(([x, y]) => [expect.closeTo(100 - x, 9), y]));
+    expect(side(poseLegs(motion, 1, 0.5), 2)).toBe('front');
+    expect(ring(poseLegs(motion, 2, 0.5), 1)).toEqual(square(0, 50).map((p) => [expect.closeTo(p[0], 9), p[1]]));
+  });
+
+  it('keeps a woven run’s patches while their faces lie where they land, and drops them while they move', () => {
+    const before = sceneOf([face(0, 'front', square(0, 50)), face(1, 'front', square(50, 100))]);
+    const landed = sceneOf([
+      face(0, 'front', square(0, 50)),
+      face(1, 'back', square(0, 50)),
+      { ...face(0, 'front', [[0, 0], [20, 0], [20, 20]]), group: 'patches-1' },
+      { ...face(1, 'back', [[30, 0], [40, 0], [40, 20]]), group: 'patches-2' },
+    ]);
+    const motion = legsMotion(before, landed, halfTurn(X50, [[[1], 1]]), PLACE(new Map([[0, 0], [1, 1]])))!;
+    const groups = (scene: PaperScene) =>
+      scene.items.flatMap((item) => (item.kind === 'face' && item.group ? [item.group] : []));
+    expect(groups(poseLegs(motion, 0, 0.5))).toEqual([]);
+    expect(groups(poseLegs(motion, 1, 0.5))).toEqual(['patches-1']);
+    expect(groups(poseLegs(motion, 1, 1))).toEqual(['patches-1', 'patches-2']);
   });
 });
+
+function square(x0: number, x1: number): ScenePoint[] {
+  return [
+    [x0, 0],
+    [x1, 0],
+    [x1, 100],
+    [x0, 100],
+  ];
+}
 
 describe('affineThrough', () => {
   it('finds the map that takes three points to three others', () => {
