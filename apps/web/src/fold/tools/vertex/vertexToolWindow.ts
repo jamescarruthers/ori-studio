@@ -185,10 +185,12 @@ function locateInstructions(
 }
 
 /** What is left to choose once every click is in. */
-function chooseStep(t: TFunction, tool: FoldVertexToolId): string {
+function chooseStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string {
   switch (tool) {
     case 'squash':
-      return t('tools:fold.vertex.steps.squashTarget', 'Click where the spine should land, or keep it on the hinge line.');
+      return host.coarse
+        ? t('tools:fold.vertex.steps.squashTargetTouch', 'Tap where the spine should land, or keep it on the hinge line.')
+        : t('tools:fold.vertex.steps.squashTarget', 'Click where the spine should land, or keep it on the hinge line.');
     case 'petal':
       return t('tools:fold.vertex.steps.petalDirection', 'Choose which way the flap lifts.');
     case 'rabbit-ear':
@@ -221,7 +223,7 @@ function previewInstructions(
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items: [
-      chooseStep(t, tool),
+      chooseStep(t, tool, host),
       host.coarse
         ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action: foldToolLabel(t, tool) })
         : t('tools:fold.steps.commit', 'Press Enter to fold.'),

@@ -680,6 +680,7 @@
         "pickAgainTouch": "취소를 탭한 뒤 다시 고르세요.",
         "squashFlap": "눌러 접을 플랩을 클릭하세요.",
         "squashTarget": "등이 놓일 곳을 클릭하거나 경첩 선에 그대로 두세요.",
+        "squashTargetTouch": "등이 놓일 곳을 탭하거나 경첩 선에 그대로 두세요.",
         "stayer": "그대로 있는 종이를 클릭하세요.",
         "swivelChoose": "네 번째 접는 선과 겹을 고르세요.",
         "swivelFirstRay": "첫 번째 접는 선이 향하는 점을 클릭하세요.",
