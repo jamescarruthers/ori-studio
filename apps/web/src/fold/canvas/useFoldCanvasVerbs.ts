@@ -38,7 +38,7 @@ import { steppedTuckTarget } from '../tools/tuck/tuckStep';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
 import { flapSeed, foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
-import { nearestDirection, squashTargetToward } from '../tools/vertex/vertexStep';
+import { landingRidges, nearestDirection, squashTargetToward, steppedRidge } from '../tools/vertex/vertexStep';
 import { isFoldAltLatched } from './foldAltLatch';
 import { toPair, transformLine } from './foldCanvasGeometry';
 import { resolveFoldPick, topSheetPointAt, type FoldHit, type FoldHitRadii, type FoldPaneId } from './foldPicking';
@@ -209,7 +209,11 @@ function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
   if (!vertex) return null;
   const { orders, order, ridges, ridge, emergent, base } = vertex;
   if (orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
-  if (ridges.length > 1 && ridge !== null) return { kind: 'ridge', index: ridge, count: ridges.length };
+  // The ridges the ear lands with: one that does not is no choice to step to.
+  const landing = landingRidges(ridges);
+  if (landing.length > 1 && ridge !== null) {
+    return { kind: 'ridge', index: Math.max(0, landing.indexOf(ridge)), count: landing.length };
+  }
   const analysis = base?.analysis;
   const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates.length : 0;
   return candidates > 1 && emergent !== null ? { kind: 'emergent', index: emergent, count: candidates } : null;
@@ -628,9 +632,12 @@ export function useFoldCanvasVerbs(
           case 'root':
             tools.stepRoot(delta, choice.count);
             break;
-          case 'ridge':
-            tools.setRidge((((choice.index + delta) % choice.count) + choice.count) % choice.count);
+          case 'ridge': {
+            const vertex = live.current.preview.vertex;
+            const next = steppedRidge(vertex?.ridges ?? [], vertex?.ridge ?? null, delta);
+            if (next !== null) tools.setRidge(next);
             break;
+          }
           case 'emergent':
             tools.stepEmergent(delta, choice.count, choice.index);
             break;

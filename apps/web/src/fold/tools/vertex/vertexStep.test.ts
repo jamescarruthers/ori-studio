@@ -10,6 +10,7 @@ import {
   fanLayerCount,
   fanSeed,
   incenter,
+  landingRidges,
   layerSheetPointAt,
   nearestDirection,
   nearPrecrease,
@@ -18,6 +19,7 @@ import {
   precreaseAlong,
   ridgeToFold,
   squashTargetToward,
+  steppedRidge,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
@@ -246,6 +248,16 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       flap: [0, 0],
       direction: 'valley',
     });
+  });
+
+  it('steps only through the ridges the ear lands with', () => {
+    expect(landingRidges([ridge(true, 0), ridge(false, null)])).toEqual([0]);
+    expect(landingRidges([ridge(true, 0), ridge(true, null)])).toEqual([0, 1]);
+    // One that does not land is no choice: nothing to step to.
+    expect(steppedRidge([ridge(true, 0), ridge(false, null)], 0, 1)).toBeNull();
+    expect(steppedRidge([ridge(true, 0), ridge(true, null)], 0, 1)).toBe(1);
+    expect(steppedRidge([ridge(true, 0), ridge(true, null)], 1, 1)).toBe(0);
+    expect(steppedRidge([ridge(true, 0), ridge(true, null)], null, -1)).toBe(1);
   });
 
   it('asks again once the fold is another than the one first asked', () => {

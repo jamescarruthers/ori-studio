@@ -417,6 +417,19 @@ describe('a vertex fold’s choices on the canvas', () => {
     ).toEqual({ kind: 'order', index: 1, count: 2 });
   });
 
+  it('offers a rabbit ear’s ridge only when both land, and never steps onto one that does not', () => {
+    const tools = createFoldTools();
+    const oneLands: FoldVertexRidge[] = [ridges[0]!, { ...ridges[1]!, lands: false }];
+    // One ridge lands: no ridge to choose, so the chooser shows the fourth ray.
+    const shown = preview({ vertex: vertex({ ridges: oneLands, ridge: 0 }) });
+    expect(foldCanvasChoice(shown, tools.store.getState())).toEqual({ kind: 'emergent', index: 1, count: 3 });
+    act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={shown} />));
+    act(() => tools.selectTool('rabbit-ear'));
+    act(() => void bound!.verbs.stepChoice(1));
+    expect(tools.store.getState().compound.ridge).toBeNull();
+    expect(tools.store.getState().compound.emergent).toBe(2);
+  });
+
   it('binds the chooser, the fixes and a click on the folded paper to the vertex tools', () => {
     const surface = session(vi.fn());
     const tools = createFoldTools();
