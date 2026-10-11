@@ -10,7 +10,7 @@ import { useReferencesStepWays } from '../../diagram/references/useReferencesSte
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useStepZoom } from '../../diagram/zoom/useStepZoom';
 import type { ZoomAction } from '../../diagram/zoom/zoomActions';
-import { DiagramSpreadRows } from './DiagramSpreadRows';
+import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { DiagramWayRow } from './DiagramWayChooser';
 import { IconButton } from '../ui/IconButton';
 import { FieldRow, NumberRow, SegmentedRow, ToggleRow } from '../ui/fieldRows';
@@ -167,7 +167,7 @@ export function DiagramStepPose({
       )}
       {render.mode === 'folded-flat' && (
         // Its layers spread apart (Phase 13): on or off, by depth or affine (13g), and how.
-        <DiagramSpreadRows toggle={linked.find((action) => action.id === 'spread-layers')} spread={linkedPose.spread} />
+        <LayerSpreadRows toggle={linked.find((action) => action.id === 'spread-layers')} spread={linkedPose.spread} />
       )}
     </>
   );

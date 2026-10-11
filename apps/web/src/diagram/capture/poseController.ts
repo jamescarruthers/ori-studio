@@ -1,15 +1,16 @@
 import {
+  spreadTracking,
   trackDiagramPicturePosed,
   type DiagramPoseAction as TrackedPoseAction,
-  type DiagramSpreadDirection,
-  type DiagramSpreadTracking,
 } from '../../analytics';
 import {
   ensureCpSegmentationArtifacts,
   peekCpSegmentationArtifacts,
 } from '../../cp-workspace/cpSegmentationArtifacts';
 import type { FoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
-import type { LayerSpreadOptions, SpreadDirection, SpreadKind } from '../../cp-workspace/folded/foldedLayerSpread';
+import type { LayerSpreadOptions, SpreadKind } from '../../cp-workspace/folded/foldedLayerSpread';
+import type { SpreadSlider } from '../../cp-workspace/folded/layerSpreadControls';
+import { withSpreadField } from '../../cp-workspace/folded/layerSpreadSettings';
 import {
   foldedFigureHandleEpoch,
   releaseFoldedFigureHandle,
@@ -55,7 +56,7 @@ import { creasesThumbnail } from './captureThumbnail';
 import { abandonOnEngineLoss } from './engineLoss';
 import { linkStatus } from './linkStatus';
 import { lightingChanged } from '../pictures/lighting';
-import { poseLinkedStep, withSpreadField, type FlatSolutions, type LinkedPoseRequest } from './linkedPose';
+import { poseLinkedStep, type FlatSolutions, type LinkedPoseRequest } from './linkedPose';
 import { captureKind, sayCaptureOutcome } from './stepCaptureActions';
 
 /** How long the 3D view must rest before its camera is captured: one orbit, one undo step. */
@@ -123,18 +124,8 @@ function renderSide(render: DiagramCpRender): 'front' | 'back' | undefined {
   return render.mode === 'simulated' ? undefined : render.side;
 }
 
-function spreadTracking(spread: LayerSpreadOptions): DiagramSpreadTracking {
-  return spread.kind === 'depth'
-    ? { kind: 'depth', direction: trackedDirection(spread.toward), amount: spread.amount }
-    : { kind: 'affine', amount: spread.amount, keep: spread.keep, skew: spread.skew, axisDeg: spread.axisDeg };
-}
-
-function trackedDirection(toward: SpreadDirection): DiagramSpreadDirection {
-  return toward.replace('-', '_') as DiagramSpreadDirection;
-}
-
-/** The sliders a spread is dragged by: its amount, and an affine one's skew and axis. */
-export type SpreadSlider = 'amount' | 'skew' | 'axis';
+/** The sliders a spread is dragged by: its amount, and an affine one's skew and axis (`layerSpreadControls.ts`). */
+export type { SpreadSlider };
 
 /**
  * A slider at a value: what a drag shows before it is committed. An amount

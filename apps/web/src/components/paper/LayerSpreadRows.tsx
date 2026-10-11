@@ -12,12 +12,15 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SpreadDirection } from '../../cp-workspace/folded/foldedLayerSpread';
-import type { DiagramLinkedPoseAction, DiagramSpreadChoice } from '../../diagram/actions/diagramLinkedPoseActions';
-import type { DiagramLinkedSpread } from '../../diagram/capture/useDiagramLinkedPose';
-import { SPREAD_AMOUNT_RANGE, SPREAD_AXIS_RANGE } from '../../diagram/document/diagramDocument';
+import type {
+  LayerSpreadChoice,
+  LayerSpreadDrag,
+  LayerSpreadToggle,
+} from '../../cp-workspace/folded/layerSpreadControls';
+import { SPREAD_AMOUNT_RANGE, SPREAD_AXIS_RANGE } from '../../cp-workspace/folded/layerSpreadSettings';
 import { IconButton } from '../ui/IconButton';
 import { FieldRow, SegmentedRow, SliderRow, ToggleRow } from '../ui/fieldRows';
-import styles from './DiagramSpreadRows.module.css';
+import styles from './LayerSpreadRows.module.css';
 
 const ARROWS: Record<SpreadDirection, LucideIcon> = {
   'up-left': ArrowUpLeft,
@@ -34,23 +37,27 @@ const ARROWS: Record<SpreadDirection, LucideIcon> = {
 const AMOUNT_STEP_PERCENT = 0.5;
 
 /**
- * A flat fold's layers spread apart (Phase 13), in the Step pane's Pose
- * section: Spread Layers on or off, and while on, how — by depth or affine
- * (13g). By depth: how far the deepest layer steps, a slider whose drag
- * previews the picture and commits once, and which way, eight buttons round a
- * centre. Affine: how far points move back toward the sheet, which layer
- * holds still, and the skew and its axis, sliders as the amount is. The verbs
- * are the open step's pose controller's (`useDiagramLinkedPose`); this only
- * lays them out.
+ * A flat picture's layers spread apart (Phase 13), as rows: Spread Layers on
+ * or off, and while on, how — by depth or affine (13g). By depth: how far the
+ * deepest layer steps, a slider whose drag previews the picture and commits
+ * once, and which way, eight buttons round a centre. Affine: how far points
+ * move back toward the sheet, which layer holds still, and the skew and its
+ * axis, sliders as the amount is.
+ *
+ * Every surface that spreads a picture lays its spread out with these — a
+ * Diagram step's Pose section, whose verbs are the open step's pose
+ * controller's (`useDiagramLinkedPose`), and Fold's Step pane, whose edit the
+ * step (`useFoldStepSpread`) — so it reads and works the same in both. This
+ * only lays the verbs out (`layerSpreadControls.ts`).
  */
-export function DiagramSpreadRows({
+export function LayerSpreadRows({
   toggle,
   spread,
 }: {
-  /** Spread Layers, the pose verb; absent where the picture has no layers to offer it for. */
-  toggle: DiagramLinkedPoseAction | undefined;
+  /** Spread Layers; absent where the picture has no layers to offer it for. */
+  toggle: LayerSpreadToggle | undefined;
   /** The spread while it is on; null while off. */
-  spread: DiagramLinkedSpread | null;
+  spread: LayerSpreadDrag | null;
 }) {
   const { t, i18n } = useTranslation();
   if (!toggle) return null;
@@ -192,6 +199,6 @@ export function DiagramSpreadRows({
 }
 
 /** The choice a segmented row picked: run, which refuses while a capture runs. */
-function choose<T extends string>(choices: readonly DiagramSpreadChoice<T>[], value: string): void {
+function choose<T extends string>(choices: readonly LayerSpreadChoice<T>[], value: string): void {
   choices.find((choice) => choice.value === value)?.run();
 }

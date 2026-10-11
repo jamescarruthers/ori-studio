@@ -147,6 +147,7 @@ export {
   trackDiagramStepOpened,
   trackDiagramPageSetupChanged,
   trackDiagramViewSwitched,
+  spreadTracking,
 } from './trackDiagram';
 export { trackDiagramEnlargementChanged, trackDiagramStepEnlarged } from './trackDiagramZoom';
 export { trackDesktopDownload } from './trackDesktopDownload';
