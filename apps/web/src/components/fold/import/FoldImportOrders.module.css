@@ -29,9 +29,14 @@
   text-transform: uppercase;
 }
 
-/* The card's picture: square, the folded state fitted inside it, while it is drawn a quiet ground. */
+/*
+ * The card's picture: square, the folded state fitted inside it, while it is
+ * drawn a quiet ground. Its one cell is the square, so the image's max sizes
+ * are a share of the square rather than of a row grown to the image.
+ */
 .picture {
   display: grid;
+  grid-template: 100% / 100%;
   place-items: center;
   width: 84px;
   height: 84px;
