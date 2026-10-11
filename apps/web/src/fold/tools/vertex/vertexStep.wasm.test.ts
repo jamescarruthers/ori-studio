@@ -220,6 +220,19 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
     expect(front.built.step.choices).toBeUndefined();
     const one = land(engined, tri, front.built.step);
 
+    // Pictured as the tool previews it and as the step keeps it: its crease
+    // from the vertex, its arrow, and the push onto its spine.
+    const previewed = landed(calls.action(tri, front.built.step.op, front.built.step.choices)).action;
+    expect(previewed).toMatchObject({ kind: 'fold', direction: 'valley' });
+    expect(previewed.line).not.toBeNull();
+    expect(previewed.spans.length).toBeGreaterThan(0);
+    expect(previewed.grip).not.toBeNull();
+    expect(previewed.push).toBeDefined();
+    expect(previewed.pleat).toBeUndefined();
+    const kept = landed(calls.stepAction(one.state)).action;
+    expect(kept?.line).toEqual(previewed.line);
+    expect(kept?.push).toEqual(previewed.push);
+
     // Aimed off its hinge, inside its wedge: asked again, and it lands; outside, refused.
     const analysis = front.first.analysis;
     if (analysis.kind !== 'squash') throw new Error('not a squash');

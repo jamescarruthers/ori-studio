@@ -225,9 +225,9 @@ export function useFoldToolPreview(
     asked.current = step.key;
     void preview(step.op, step.choices);
     // A vertex fold folds along no one line: there is no plain fold's
-    // analysis or picture to ask of it (its tool draws its own creases).
-    if (isVertexOp(step.op)) return undefined;
-    void analyse(step.op, step.choices);
+    // analysis to ask of it (its tool draws its own creases). Its picture —
+    // along the one crease that tells it best — it has, like every fold.
+    if (!isVertexOp(step.op)) void analyse(step.op, step.choices);
     let current = true;
     void withCursor((engine, at) => engine.action(at, step.op, step.choices)).then(
       (answer) => {
