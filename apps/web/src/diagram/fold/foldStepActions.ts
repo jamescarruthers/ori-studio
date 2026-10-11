@@ -131,14 +131,15 @@ export type FoldStepPoseVerb = 'rotate-left' | 'rotate-right' | 'turn-over' | 'r
 /**
  * A render posed by `verb`: a quarter turn either way; a flat fold turned
  * over — its front at the opposite turn, mirrored (Turn Over, 12d) — or a
- * crease pattern's paper on its other side's colour; and reset, upright and
- * from the front.
+ * crease pattern's paper on its other side's colour; and reset upright, a
+ * flat fold from the front. A crease pattern keeps the colour of the side its
+ * paper is on, as a linked pattern's does: that is the Step pane's Front | Back.
  */
 export function posedFoldRender(render: DiagramCpRender, verb: FoldStepPoseVerb): DiagramCpRender {
   const quarter = (degrees: number) => (((degrees + (verb === 'rotate-left' ? -90 : 90)) % 360) + 360) % 360;
   switch (render.mode) {
     case 'crease-pattern':
-      if (verb === 'reset') return { mode: 'crease-pattern', rotationDeg: 0 };
+      if (verb === 'reset') return { ...render, rotationDeg: 0 };
       if (verb === 'turn-over') return withCreasePatternSide(render, creasePatternSide(render) === 'back' ? 'front' : 'back');
       return { ...render, rotationDeg: quarter(render.rotationDeg) };
     case 'folded-flat':
