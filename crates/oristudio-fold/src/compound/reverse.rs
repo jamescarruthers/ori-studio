@@ -723,13 +723,7 @@ impl Tip {
                     }))?;
                 faces.insert(face);
             }
-            let found = self.openings.iter().enumerate().find_map(|(k, o)| {
-                o.openings
-                    .iter()
-                    .position(|r| r.upper.iter().copied().collect::<BTreeSet<_>>() == faces)
-                    .map(|j| (k, j))
-            });
-            match found {
+            match self.named(state, &faces) {
                 Some((k, j)) if !named[k] => {
                     named[k] = true;
                     picked[k] = Some(j);
@@ -760,6 +754,66 @@ impl Tip {
             }
         }
         Ok(Some(plan))
+    }
+
+    /// The opening, as (flap, opening), whose split the faces at a stored
+    /// opening's witnesses name; none when no one opening's does.
+    ///
+    /// - **By the block.** The witnesses name the faces of one block, one
+    ///   face each. A face may have been split since — by a precrease made
+    ///   in an earlier step, which only engine drift or an imported document
+    ///   puts there — and its pieces lie side by side, joined by flat
+    ///   creases, which no split between blocks crosses (every crease across
+    ///   one is folded). So the faces name a block when they lie in it and
+    ///   every flat-joined part of it holds one: a containment no nested
+    ///   opening satisfies, whose larger block has a layer with no witness.
+    /// - **Either way up.** The faces were the upper block where the step
+    ///   chose it. Started the other side up (the Paper pane's Front up /
+    ///   Back up replays every step on the sheet turned over, each step's
+    ///   direction the viewer's), the model-frame stack is reversed and the
+    ///   same split has them as its lower block. An opening is its split,
+    ///   so the lower blocks are read when no upper one is named.
+    fn named(&self, state: &State, faces: &BTreeSet<usize>) -> Option<(usize, usize)> {
+        let creases = state.creases();
+        let topology = state.topology();
+        let names = |block: &[usize]| {
+            if !faces.iter().all(|f| block.contains(f)) {
+                return false;
+            }
+            let mut joined = UnionFind::new(block.len());
+            for (a, &f) in block.iter().enumerate() {
+                for &k in &topology.face_creases[f] {
+                    let flat = matches!(creases[k].kind, CreaseKind::Flat(_));
+                    let across = topology.across(k, f);
+                    if let Some(b) = across.and_then(|g| block.iter().position(|&h| h == g))
+                        && flat
+                    {
+                        joined.join(a, b);
+                    }
+                }
+            }
+            let held: BTreeSet<usize> = block
+                .iter()
+                .enumerate()
+                .filter(|(_, f)| faces.contains(f))
+                .map(|(a, _)| joined.root(a))
+                .collect();
+            (0..block.len()).all(|a| held.contains(&joined.root(a)))
+        };
+        let find = |block: fn(&RawOpening) -> &[usize]| {
+            let mut found = self.openings.iter().enumerate().flat_map(|(k, o)| {
+                o.openings
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, r)| names(block(r)))
+                    .map(move |(j, _)| (k, j))
+            });
+            match (found.next(), found.next()) {
+                (Some(named), None) => Some(named),
+                _ => None,
+            }
+        };
+        find(|r| &r.upper).or_else(|| find(|r| &r.lower))
     }
 
     /// Up to `cap` plans keeping the openings `chosen`: every way to open

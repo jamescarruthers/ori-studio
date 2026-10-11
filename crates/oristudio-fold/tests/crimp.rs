@@ -372,6 +372,42 @@ fn a_four_layer_flap_crimps_through_the_opening_chosen() {
     assert!(landings >= 2, "{landings}");
 }
 
+/// A crimp's stored opening names its split either way up, as a reverse
+/// fold's does: the strip folded from a sheet started back up (the Paper
+/// pane's Back up) crimps through it to the mirror image.
+#[test]
+fn a_stored_opening_crimps_the_sheet_started_the_other_side_up() {
+    let strip = strip();
+    let turned = {
+        let sheet = State::flat(Sheet::square(), StartSide::Back).unwrap_or_else(|e| panic!("{e}"));
+        let book = fold(&sheet, &all(x_eq(0.5), [0.9, 0.5], Direction::Valley)).state;
+        fold(&book, &all(x_eq(0.25), [0.4, 0.5], Direction::Valley)).state
+    };
+    assert!(mirrored(&strip, &turned));
+    let op = crimp(y_eq(0.5), y_eq(0.3), [0.1, 0.2], INSIDE);
+    let analysis = strip.analyse_crimp(&op).unwrap_or_else(|e| panic!("{e}"));
+    let mut landings = 0;
+    for opening in &analysis.tip.flaps[0].openings {
+        let choices = ReverseChoices {
+            openings: vec![opening.stored.clone()],
+            order: None,
+        };
+        for kind in strip.crimp_kinds(&op, &choices).unwrap_or_default() {
+            let op = CrimpFold { kind, ..op.clone() };
+            let (Ok(CrimpOutcome::Landed(there)), Ok(CrimpOutcome::Landed(mirror))) = (
+                strip.crimp_fold(&op, &choices),
+                turned.crimp_fold(&op, &choices),
+            ) else {
+                continue;
+            };
+            check(&turned, &op, &mirror);
+            assert!(mirrored(&there.state, &mirror.state), "{kind:?}");
+            landings += 1;
+        }
+    }
+    assert!(landings >= 2, "{landings}");
+}
+
 #[test]
 fn crimp_refusals_name_their_faces() {
     let tri = triangle();
