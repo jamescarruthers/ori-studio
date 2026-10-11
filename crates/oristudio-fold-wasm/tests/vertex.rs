@@ -391,11 +391,32 @@ fn vertex_refusals_are_codes_with_fixes() {
         "stayer": [0.6, 0.35],
         "direction": "valley"
     });
-    let refused = apply(&mut bridge, tri, ear, json!({}));
+    let refused = apply(&mut bridge, tri, ear.clone(), json!({}));
     assert_eq!(refused["refusal"]["code"], "fan_ray_blocked", "{refused}");
     let fixes = refused["fixes"].as_array().cloned().unwrap_or_default();
     assert_eq!(fixes.len(), 2);
     assert!(fixes.iter().all(|f| f["fix"] == "use_emergent"));
+    // The question says the same of every candidate: the two the fixes
+    // offer land, the one asked for does not, and it lists no orders.
+    let asked = analysis(&bridge, tri, ear);
+    let candidates = asked["analysis"]["candidates"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let emergents = asked["emergents"].as_array().cloned().unwrap_or_default();
+    assert_eq!(emergents.len(), candidates.len());
+    let landing: Vec<&Value> = candidates
+        .iter()
+        .zip(&emergents)
+        .filter(|(_, lands)| **lands == true)
+        .map(|(candidate, _)| candidate)
+        .collect();
+    let offered: Vec<&Value> = fixes.iter().map(|f| &f["direction"]).collect();
+    assert_eq!(landing, offered);
+    let asked_for = asked["analysis"]["emergent"].as_u64().unwrap_or(9) as usize;
+    assert_eq!(emergents[asked_for], false);
+    assert!(asked["orders"].is_null());
+    assert_eq!(asked["ridges"], json!([]));
     // A pending choice that was never held is the caller's mistake.
     let mut pending = Pending::new();
     assert!(pending.pick(&mut bridge, 7, &[0]).is_err());

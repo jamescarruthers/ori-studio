@@ -318,14 +318,49 @@ fn ridges(parent: &State, ear: &RabbitEar, analysis: &VertexAnalysis) -> Vec<Ver
     .collect()
 }
 
+/// Per emergent candidate of a rabbit ear or a swivel, whether the fold
+/// lands with it, its other inputs as asked (as a reverse fold's question
+/// says which kinds land): what a tool takes first, and marks the others by.
+/// A rabbit ear is asked without its ridge, which only decides between
+/// orders. Empty for the other folds.
+fn emergents(parent: &State, op: &EngineOp, analysis: &VertexAnalysis) -> Vec<bool> {
+    let none = VertexChoices::default();
+    match (op, analysis) {
+        (EngineOp::RabbitEar(ear), VertexAnalysis::RabbitEar(fan)) => fan
+            .candidates
+            .iter()
+            .map(|&emergent| {
+                let each = RabbitEar {
+                    emergent,
+                    ridge: None,
+                    ..ear.clone()
+                };
+                parent.rabbit_ear(&each, &none).is_ok()
+            })
+            .collect(),
+        (EngineOp::Swivel(swivel), VertexAnalysis::Swivel(fan)) => fan
+            .candidates
+            .iter()
+            .map(|&emergent| {
+                let each = Swivel {
+                    emergent,
+                    ..swivel.clone()
+                };
+                parent.swivel(&each, &none).is_ok()
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
 impl CompoundOp for VertexFold {
     /// The flap, petal or fan it names, before it folds, and what a tool
-    /// chooses among (as a reverse fold's question lists its orders): the
-    /// orders it leaves, whichever completion is stored, so a chooser can
-    /// move between them; and, for a rabbit ear asked without its ridge,
-    /// the two rays that can be its ridge. Those are asked only of a fold
-    /// that gets as far as its completion: a refusal is the preview's to
-    /// say.
+    /// chooses among (as a reverse fold's question lists its kinds and
+    /// orders): which of a fan's emergent candidates land; the orders it
+    /// leaves, whichever completion is stored, so a chooser can move between
+    /// them; and, for a rabbit ear asked without its ridge, the two rays
+    /// that can be its ridge. The ridges are asked only of a fold that gets
+    /// as far as its completion: a refusal is the preview's to say.
     fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
         let analysis = match analyse(parent, &self.op) {
             Ok(analysis) => analysis,
@@ -343,6 +378,7 @@ impl CompoundOp for VertexFold {
             _ => Vec::new(),
         };
         Ok(Ok(CompoundAsked::Vertex(Box::new(VertexAnalysed {
+            emergents: emergents(parent, &self.op, &analysis),
             analysis,
             orders: listed(outcome),
             ridges,
@@ -392,6 +428,10 @@ pub enum VertexAnalysis {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct VertexAnalysed {
     pub analysis: VertexAnalysis,
+    /// A rabbit ear's or a swivel's: per emergent candidate (the analysis'
+    /// `candidates`), whether the fold lands with it, a rabbit ear's without
+    /// its ridge. Empty for the other folds.
+    pub emergents: Vec<bool>,
     /// The orders the op leaves as asked, its stored completion aside, when
     /// it leaves more than one; null when it lands with one, or is refused.
     /// A rabbit ear asked without its ridge leaves the two its ridge
