@@ -1412,13 +1412,22 @@ unless marked.
 Each item needs: preconditions checked up front; choices surfaced; a visual
 motion; oracle-verified fixtures.
 
-- [ ] Outside reverse.
-- [ ] Crimp: the same kind on both lines, one op.
-- [ ] Tuck: bounded closure, "immediately under T", feasible targets listed.
-- [ ] Squash (per-layer axes; free and uncovered), petal, rabbit ear (ridge),
-  swivel.
-- [ ] Open sink (closed point, single exterior letter, exact symmetric line as a
-  landmark), closed sink (pocket), unsink.
+- [x] Outside reverse. (The reverse tool's other kind; `fold_crimp_tuck_oracle`
+  verifies its outside reverses.)
+- [x] Crimp: the same kind on both lines, one op. (Tool merged 2026-10-11;
+  `fold_crimp_tuck_oracle`; previewed, landed, played and saved/reloaded in
+  Chromium, and folded in WebKit's production bundle.)
+- [x] Tuck: bounded closure, "immediately under T", feasible targets listed.
+  (Tool merged 2026-10-11; `fold_crimp_tuck_oracle`; its target stepper,
+  `pick_flap` fix, play and save/reload checked in Chromium.)
+- [x] Squash (per-layer axes; free and uncovered), petal, rabbit ear (ridge),
+  swivel. (Tools merged 2026-10-11; `fold_vertex_oracle`; the preliminary base
+  by two squashes and the bird base by two petal folds through the tools, each
+  played and the 13 steps saved and reloaded identically; a rabbit ear.)
+- [x] Open sink (closed point, single exterior letter, exact symmetric line as a
+  landmark), closed sink (pocket), unsink. (Tools merged 2026-10-11;
+  `fold_sink_oracle`; open and closed sinks and an unsink on the Square base
+  sample, saved and reloaded.)
 - [ ] Optional: a free "collapse" assistant.
 
 ### Later
