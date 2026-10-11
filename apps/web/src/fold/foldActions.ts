@@ -120,7 +120,8 @@ export interface FoldActionContext {
   atTip: boolean;
   /** Written by a newer build: the sequence opens read-only (plan D7). */
   readOnly: boolean;
-  foldKind: FoldKind;
+  /** The plain fold the tools hold, checked in the kind's choice; null while another tool is in hand, or none. */
+  foldKind: FoldKind | null;
   /** The sheet, and how many steps the sequence has, for Import CP (plan D16). */
   sheet: FoldPaperShapeKind;
   stepCount: number;

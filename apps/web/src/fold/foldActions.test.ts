@@ -97,6 +97,9 @@ describe('buildFoldActions', () => {
     ]);
     kinds.options[2]?.run();
     expect(bound.setFoldKind).toHaveBeenCalledWith('precrease');
+    // Another tool in hand — a squash, a sink — arms no plain fold: none reads as chosen.
+    const none = choice(buildFoldActions(at({ foldKind: null }), bound));
+    expect(none.options.map((option) => option.checked)).toEqual([false, false, false]);
   });
 
   it('names the turns as their cards do, and adds each as a turn step', () => {
