@@ -210,9 +210,9 @@ describe.skipIf(!available)('useFoldStepMotion', () => {
     app.session = sessionOver(calls, steps, sheet, bare).session;
     await render('b');
     expect(latest()?.motion.kind).toBe('crossfade');
-    // Its legs on its node, where the accessor reads them: two swings.
+    // Its report on its node, as the session keeps it, where the accessor reads its legs: two swings.
     const carried = new Map(bare);
-    carried.set('b', { ...node(folded.state, null), compound: { motion: folded.report.motion } as never });
+    carried.set('b', { ...node(folded.state, null), compound: folded.compound });
     app.session = sessionOver(calls, steps, sheet, carried).session;
     await render('b');
     const motion = latest();

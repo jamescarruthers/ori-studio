@@ -18,10 +18,11 @@ import {
   type SheetPoint,
 } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
+import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
+import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import { createFoldEngineCrimpTuckCalls, type FoldEngineCrimpTuckCalls } from '../engine/foldEngineCrimpTuckCalls';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from '../engine/foldEngineIoCalls';
 import { FOLD_SAMPLES, foldSampleSource } from '../engine/foldEngineIoSamples';
-import { createFoldEngineSinkCalls, type FoldEngineSinkCalls } from '../engine/foldEngineSinkCalls';
 import { pocketChoice } from '../engine/foldEngineSinkWire';
 import { createFoldEngineVertexCalls, type FoldEngineVertexCalls } from '../engine/foldEngineSquashCalls';
 import type { FoldEngineOp, FoldEngineOutcome, FoldScene, FoldStepMotionLegs } from '../engine/foldEngineWire';
@@ -61,14 +62,20 @@ const PANE = foldStepPaneAt(PLACE);
 interface Engine {
   calls: FoldEngineCalls;
   compound: FoldEngineCrimpTuckCalls;
+  question: FoldEngineCompoundCalls;
   vertex: FoldEngineVertexCalls;
-  sinks: FoldEngineSinkCalls;
   io: FoldEngineIoCalls;
 }
 
 function landed<T>(outcome: FoldEngineOutcome<T>): T {
   if (outcome.status !== 'ok') throw new Error(`refused: ${JSON.stringify(outcome.refusal)}`);
   return outcome;
+}
+
+/** A landing's compound report, which must be `family`'s. */
+function reportOf(report: FoldCompoundReport | undefined, family: FoldCompoundReport['family']): FoldCompoundReport {
+  if (report?.family !== family) throw new Error(`no ${family} report: ${JSON.stringify(report)}`);
+  return report;
 }
 
 /** A landed compound step: its op, its parent and landed states, and its legs. */
@@ -265,8 +272,8 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
     engine = {
       calls: createFoldEngineCalls(fold),
       compound: createFoldEngineCrimpTuckCalls(fold),
+      question: createFoldEngineCompoundCalls(fold),
       vertex: createFoldEngineVertexCalls(fold),
-      sinks: createFoldEngineSinkCalls(fold),
       io: createFoldEngineIoCalls(fold),
     };
   });
@@ -323,8 +330,8 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
     };
     const folded = landed(engine.compound.crimp(tri, op));
     if (folded.outcome !== 'landed') throw new Error(folded.outcome);
-    expect(folded.report.motion.legs).toHaveLength(4);
-    expectPlays(engine, { op, parent: tri, state: folded.state, legs: folded.report.motion }, 2);
+    expect(folded.compound.motion.legs).toHaveLength(4);
+    expectPlays(engine, { op, parent: tri, state: folded.state, legs: folded.compound.motion }, 2);
   });
 
   it('plays a tuck of the book’s corner under the layer beside it', () => {
@@ -339,7 +346,7 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
     };
     const folded = landed(engine.compound.tuck(book, op));
     if (folded.outcome !== 'landed') throw new Error(folded.outcome);
-    expectPlays(engine, { op, parent: book, state: folded.state, legs: folded.report.motion }, 1);
+    expectPlays(engine, { op, parent: book, state: folded.state, legs: folded.compound.motion }, 1);
   });
 
   it('plays a squash in its two stages: the flap opened across its spine, then pressed flat', () => {
@@ -349,8 +356,8 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
     if (!top) throw new Error('nothing on top');
     const op: FoldSquashOp = { kind: 'squash', flap: top.sheet, direction: 'valley' };
     const stepped = landed(engine.calls.step(small, op));
-    if (!stepped.vertex) throw new Error('no vertex report');
-    const legs = expectPlays(engine, { op, parent: small, state: stepped.state, legs: stepped.vertex.motion }, 2);
+    const vertex = reportOf(stepped.compound, 'vertex');
+    const legs = expectPlays(engine, { op, parent: small, state: stepped.state, legs: vertex.motion }, 2);
     expect(legs.legs.map((leg) => leg.stacking)).toEqual(['parent', 'parent', 'parent', 'landed']);
   });
 
@@ -371,8 +378,8 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
     const tried = landed(engine.vertex.vertexFold(tri, op));
     if (tried.result !== 'choose') throw new Error('no choice');
     const picked = landed(engine.vertex.vertexPick(tried.pending, [1]));
-    const stages = new Set(picked.vertex.motion.legs.map((_, k) => Math.floor(k / 2))).size;
-    expectPlays(engine, { op, parent: tri, state: picked.state, legs: picked.vertex.motion }, stages);
+    const stages = new Set(picked.compound.motion.legs.map((_, k) => Math.floor(k / 2))).size;
+    expectPlays(engine, { op, parent: tri, state: picked.state, legs: picked.compound.motion }, stages);
     engine.vertex.releaseVertexChoices([tried.pending]);
   });
 
@@ -397,8 +404,8 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
       const base = sample(engine, 'preliminary-base');
       const op = sinkOp('open-sink', 0.3);
       const sunk = landed(engine.calls.step(base, op));
-      if (!sunk.sink) throw new Error('no sink report');
-      expectPlays(engine, { op, parent: base, state: sunk.state, legs: sunk.sink.motion }, 1);
+      const sink = reportOf(sunk.compound, 'sink');
+      expectPlays(engine, { op, parent: base, state: sunk.state, legs: sink.motion }, 1);
       const [a, b] = ring(0.3);
       const unsink: FoldSinkOp = {
         kind: 'unsink',
@@ -406,18 +413,18 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
         seed: { scope: 'flaps', at: [tip(0.3)] },
       };
       const back = landed(engine.calls.step(sunk.state, unsink));
-      if (!back.sink) throw new Error('no unsink report');
-      expectPlays(engine, { op: unsink, parent: sunk.state, state: back.state, legs: back.sink.motion }, 1);
+      const unsunk = reportOf(back.compound, 'sink');
+      expectPlays(engine, { op: unsink, parent: sunk.state, state: back.state, legs: unsunk.motion }, 1);
     });
 
     it('plays a closed sink into each pocket', () => {
       const base = sample(engine, 'preliminary-base');
       const op = sinkOp('closed-sink', 0.3);
-      const { analysis } = landed(engine.sinks.sinkAnalysis(base, op));
-      for (const pocket of analysis.pockets) {
+      const answer = landed(engine.question.compoundAnalysis(base, op));
+      if (answer.family !== 'sink') throw new Error(`answered for ${answer.family}`);
+      for (const pocket of answer.analysis.pockets) {
         const sunk = landed(engine.calls.step(base, op, { pocket: pocketChoice(pocket.stored) }));
-        if (!sunk.sink) throw new Error('no sink report');
-        const legs = sunk.sink.motion;
+        const legs = reportOf(sunk.compound, 'sink').motion;
         expectPlays(engine, { op, parent: base, state: sunk.state, legs }, legs.legs.length / 2);
       }
     });
