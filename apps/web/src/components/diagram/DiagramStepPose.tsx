@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { DiagramPoseAction } from '../../diagram/actions/diagramPoseActions';
 import type { DiagramLinkedPoseAction } from '../../diagram/actions/diagramLinkedPoseActions';
 import { useOpenLinkedPose } from '../../diagram/capture/openLinkedPose';
+import { useDiagramFoldStepPose } from '../../diagram/fold/useDiagramFoldStepPose';
 import { isLockedStep, type DiagramStep } from '../../diagram/document/diagramDocument';
 import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
@@ -37,6 +38,8 @@ interface SideChoice {
  *   by depth or affine and how. Its verbs are the open step's own pose controller's
  *   (`useOpenLinkedPose`): one capture session per step, whichever surface
  *   asks. How it is shown is Show as, at the top of the pane (D19).
+ * - **A Fold step:** the same, but its layer order, which is the sequence's
+ *   (`useDiagramFoldStepPose`; plan D17).
  * - **Every step:** Enlarged (Revision 2), last, as Spread Layers is a row:
  *   on a phone the toolbar leaves both to this section, the drawer.
  *
@@ -56,6 +59,8 @@ export function DiagramStepPose({
   // A References step's ways to fold its card (D23).
   const ways = useReferencesStepWays(step);
   const { enlarged } = useStepZoom(isLockedStep(step) ? null : step);
+  // A Fold step's angle and spread (plan D17).
+  const foldPose = useDiagramFoldStepPose(isLockedStep(step) ? null : step);
   if (isLockedStep(step)) return null;
   const section = (body: ReactNode) => (
     <CollapsibleSection title={t('panels:diagram.stepPane.pose', 'Pose')}>
@@ -111,17 +116,20 @@ export function DiagramStepPose({
   }
 
   if (source?.kind === 'fold-step' && step.picture) {
-    // A Fold step's pose is a capture from its state (plan D17): its turn, and a flat fold's side.
+    // A Fold step's pose is a capture from its state (plan D17): its turn, a
+    // flat fold's side, and its layers spread (Phase 13). Its layer order is
+    // the sequence's, never a choice.
     const { render } = source;
     return section(
       <>
-        {(render.mode === 'crease-pattern' || render.mode === 'folded-flat') && (
-          <FieldRow label={t('panels:diagram.pose.rotation', 'Rotation')} kind="text">
-            {t('panels:diagram.pose.degrees', '{{degrees}}° clockwise', { degrees: render.rotationDeg })}
-          </FieldRow>
+        {(render.mode === 'crease-pattern' || render.mode === 'folded-flat') && foldPose && (
+          <RotationRow turn={render.rotationDeg} disabled={foldPose.turnHeld} onCommit={foldPose.rotateTo} />
         )}
         {render.mode === 'folded-flat' &&
           sideRow({ side: render.side, turnOver: actions.find((action) => action.id === 'turn-over') })}
+        {render.mode === 'folded-flat' && foldPose && (
+          <LayerSpreadRows toggle={foldPose.spreadToggle} spread={foldPose.spread} />
+        )}
       </>
     );
   }
@@ -138,21 +146,8 @@ export function DiagramStepPose({
   return section(
     <>
       {turn !== null && (
-        <NumberRow
-          // A new field for each turn the step lands on: a draft never outlives it.
-          key={turn}
-          label={t('panels:diagram.pose.rotation', 'Rotation')}
-          value={turn}
-          min={0}
-          max={359.9}
-          step={15}
-          suffix="°"
-          // Held as the turn verbs are: on a diagram that cannot change, or while a capture runs.
-          disabled={turnHeld || waiting}
-          // Any angle, to a tenth of a degree (Zach, 2026-10-05): a 22.5° design stands at 157.5°.
-          normalize={(degrees) => ((Math.round(degrees * 10) / 10) % 360 + 360) % 360}
-          onCommit={linkedPose.rotateTo}
-        />
+        // Held as the turn verbs are: on a diagram that cannot change, or while a capture runs.
+        <RotationRow turn={turn} disabled={turnHeld || waiting} onCommit={linkedPose.rotateTo} />
       )}
       {side !== null && sideRow({ side, turnOver })}
       {render.mode === 'folded-flat' && (
@@ -170,6 +165,38 @@ export function DiagramStepPose({
         <LayerSpreadRows toggle={linked.find((action) => action.id === 'spread-layers')} spread={linkedPose.spread} />
       )}
     </>
+  );
+}
+
+/**
+ * A crease pattern's or a flat fold's turn as a field (D5's angle field), a
+ * linked pattern's and a Fold step's alike: any angle, to a tenth of a
+ * degree (Zach, 2026-10-05) — a 22.5° design stands at 157.5°.
+ */
+function RotationRow({
+  turn,
+  disabled,
+  onCommit,
+}: {
+  turn: number;
+  disabled: boolean;
+  onCommit: (degrees: number) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <NumberRow
+      // A new field for each turn the step lands on: a draft never outlives it.
+      key={turn}
+      label={t('panels:diagram.pose.rotation', 'Rotation')}
+      value={turn}
+      min={0}
+      max={359.9}
+      step={15}
+      suffix="°"
+      disabled={disabled}
+      normalize={(degrees) => ((Math.round(degrees * 10) / 10) % 360 + 360) % 360}
+      onCommit={onCommit}
+    />
   );
 }
 
