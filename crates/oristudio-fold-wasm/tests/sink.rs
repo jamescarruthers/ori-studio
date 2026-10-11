@@ -16,7 +16,7 @@ use oristudio_fold::{State, WitnessOrder};
 use oristudio_fold_wasm::bridge::Bridge;
 use oristudio_fold_wasm::canonical::canonical_keys;
 use oristudio_fold_wasm::io::{CpFile, CpFormat, Imports, Limits, Target};
-use oristudio_fold_wasm::ops_sinks::{sink_orders, sink_pick};
+use oristudio_fold_wasm::ops_sinks::{sink_orders, sink_pick, sunk_points};
 use oristudio_fold_wasm::wire::{BridgeError, Choices, Op, Outcome};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -215,11 +215,20 @@ fn a_sample_open_sinks_and_unsinks_through_apply() {
                 .as_u64()
                 .is_some_and(|l| l >= 4)
         );
+        // Pictured as its preview was: pushed in at the tip, seen a mountain.
         let action = ok(bridge.step_action(sunk).unwrap_or_else(|e| panic!("{e}")));
-        assert_eq!(action["action"], Value::Null);
+        assert_eq!(action["action"]["direction"], "mountain", "{}", base.name);
+        assert!(action["action"]["push"].is_object(), "{}", base.name);
+        let preview = ok(bridge
+            .action(start, &op(base.sink("open-sink", f)), &Choices::default())
+            .unwrap_or_else(|e| panic!("{e}")));
+        assert_eq!(action["action"]["push"], preview["action"]["push"]);
 
         let (back, applied) = landed(&mut bridge, sunk, &base.unsink(f), json!({}));
         assert_eq!(applied["compound"]["step"], "unsink");
+        let pulled = ok(bridge.step_action(back).unwrap_or_else(|e| panic!("{e}")));
+        assert_eq!(pulled["action"]["direction"], "valley");
+        assert_eq!(pulled["action"].get("push"), None);
         assert_eq!(
             applied["compound"]["unfolded"].as_array().map(Vec::len),
             Some(8)
@@ -395,8 +404,126 @@ fn a_sink_takes_its_own_choices() {
     assert_eq!(picked, json!({ "completion": null }));
 }
 
+/// A sink folds along one line, so a tool previews it with the plain fold's
+/// queries: what moves (the moving side's flaps, the point's picked, its
+/// faces moving), its picture (the push onto the tip) and the depth picker's
+/// stacks. An unsink's analysis is its sunk tip, which the sunk points name
+/// when the folder has named none.
+#[test]
+fn a_sink_answers_the_plain_fold_queries() {
+    let (mut bridge, start) = sample(PRELIMINARY.name);
+    let f = 0.3;
+    for kind in ["open-sink", "closed-sink"] {
+        let sink = op(json!({
+            "kind": kind,
+            "line": { "via": "free", "through": PRELIMINARY.ring(f) },
+            "seed": { "scope": "all" },
+            "moving": PRELIMINARY.tip(f),
+        }));
+        let analysed = ok(bridge
+            .analyse(start, &sink, &Choices::default())
+            .unwrap_or_else(|e| panic!("{kind}: {e}")));
+        let analysis = &analysed["analysis"];
+        assert_eq!(
+            analysis["flaps"].as_array().map(Vec::len),
+            Some(1),
+            "{kind}"
+        );
+        assert_eq!(analysis["picked"], json!([0]), "{kind}");
+        assert_eq!(analysis["moving"], analysis["flaps"][0]["faces"], "{kind}");
+        let acted = ok(bridge
+            .action(start, &sink, &Choices::default())
+            .unwrap_or_else(|e| panic!("{kind}: {e}")));
+        assert_eq!(acted["action"]["direction"], "mountain", "{kind}");
+        assert!(acted["action"]["line"].is_array(), "{kind}");
+        assert!(acted["action"]["push"].is_object(), "{kind}");
+        let depths = ok(bridge
+            .depth_choices(start, &sink, &Choices::default(), PRELIMINARY.tip(f))
+            .unwrap_or_else(|e| panic!("{kind}: {e}")));
+        assert!(
+            depths["choices"].as_array().is_some_and(|c| !c.is_empty()),
+            "{kind}"
+        );
+    }
+
+    let (sunk, _) = landed(
+        &mut bridge,
+        start,
+        &PRELIMINARY.sink("open-sink", f),
+        json!({}),
+    );
+    let [a, b] = PRELIMINARY.ring(f);
+    let unnamed = op(json!({
+        "kind": "unsink",
+        "line": { "via": "crease", "at": at(a, b, 0.5) },
+        "seed": { "scope": "all" },
+        "moving": PRELIMINARY.tip(f),
+    }));
+    let found =
+        ok(sunk_points(&bridge, sunk, &unnamed, &Choices::default())
+            .unwrap_or_else(|e| panic!("{e}")));
+    let points = found["points"].as_array().cloned().unwrap_or_default();
+    assert_eq!(points.len(), 1, "{points:?}");
+    let named = op(named_json(&points[0]["witness"], a, b));
+    let analysed = ok(bridge
+        .analyse(sunk, &named, &Choices::default())
+        .unwrap_or_else(|e| panic!("{e}")));
+    assert_eq!(analysed["analysis"]["moving"], points[0]["faces"]);
+    let picked = analysed["analysis"]["picked"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(picked.len(), 1, "{analysed}");
+    let pulled = ok(bridge
+        .action(sunk, &named, &Choices::default())
+        .unwrap_or_else(|e| panic!("{e}")));
+    assert_eq!(pulled["action"]["direction"], "valley");
+    assert_eq!(pulled["action"].get("push"), None);
+    landed(
+        &mut bridge,
+        sunk,
+        &named_json(&points[0]["witness"], a, b),
+        json!({}),
+    );
+    // Every layer on the side is all the paper, the sunk tip and the paper
+    // round it: nothing would stay.
+    let whole = ok_refused(bridge.analyse(sunk, &unnamed, &Choices::default()));
+    assert_eq!(whole["refusal"]["code"], "nothing_stays");
+    // On the base, no sunk point; and the sunk points are an unsink's.
+    let base_unsink = op(json!({
+        "kind": "unsink",
+        "line": { "via": "free", "through": PRELIMINARY.ring(f) },
+        "seed": { "scope": "all" },
+        "moving": PRELIMINARY.tip(f),
+    }));
+    let none = ok(
+        sunk_points(&bridge, start, &base_unsink, &Choices::default())
+            .unwrap_or_else(|e| panic!("{e}")),
+    );
+    assert_eq!(none["points"], json!([]));
+    assert!(matches!(
+        sunk_points(
+            &bridge,
+            start,
+            &op(PRELIMINARY.sink("open-sink", f)),
+            &Choices::default()
+        ),
+        Err(BridgeError::InvalidInput(_))
+    ));
+}
+
+/// The unsink along the ring crease between the base's two spokes, naming
+/// the sunk tip by `witness`.
+fn named_json(witness: &Value, a: Point, b: Point) -> Value {
+    json!({
+        "kind": "unsink",
+        "line": { "via": "crease", "at": at(a, b, 0.5) },
+        "seed": { "scope": "flaps", "at": [witness] },
+    })
+}
+
 /// The sink queries are a sink op's: a plain op's, or an unsink's analysis,
-/// is the caller's mistake; and a sink is not analysed as a plain fold.
+/// is the caller's mistake.
 #[test]
 fn the_sink_queries_take_sink_ops() {
     let (mut bridge, start) = sample(PRELIMINARY.name);
@@ -423,13 +550,4 @@ fn the_sink_queries_take_sink_ops() {
     // On the base no crease is there to unsink along.
     let missing = ok_refused(sink_orders(&bridge, start, &unsink, &Choices::default()));
     assert_eq!(missing["refusal"]["code"], "crease_not_found");
-    let sink = op(PRELIMINARY.sink("open-sink", 0.3));
-    assert!(matches!(
-        bridge.analyse(start, &sink, &Choices::default()),
-        Err(BridgeError::InvalidInput(_))
-    ));
-    assert!(matches!(
-        bridge.action(start, &sink, &Choices::default()),
-        Err(BridgeError::InvalidInput(_))
-    ));
 }

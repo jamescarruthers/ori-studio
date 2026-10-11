@@ -33,7 +33,7 @@
 //! - **Asking.** What a tool asks before a step lands is its family's own
 //!   question ([`CompoundOp::ask`]), one call for every family, answered as
 //!   [`CompoundAsked`]. A family that folds along one line — the reverse
-//!   folds — also answers the plain fold's queries: what moves, its picture,
+//!   folds, the sinks — also answers the plain fold's queries: what moves, its picture,
 //!   the plain fold its line and anchor name for the depth picker. The others
 //!   answer none of them, and asking is the caller's mistake.
 //! - **Holding.** A landed one is held under its parent's handle; its step's

@@ -322,8 +322,8 @@ impl Bridge {
     /// The picture of the step that landed `state` (plan D12, per step), on
     /// its parent with the landed state's cover at the arrow's head. None for
     /// a flat sheet, a turn, a rotation or an import, and for now every
-    /// compound family but the reverse folds, whose pictures are still to
-    /// come. A pictured step's parent must still be held.
+    /// compound family but the reverse folds and the sinks, whose pictures
+    /// are still to come. A pictured step's parent must still be held.
     pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
             Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => Ok(None),
