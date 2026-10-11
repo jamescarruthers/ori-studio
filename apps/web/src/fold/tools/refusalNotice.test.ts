@@ -220,6 +220,59 @@ describe('foldRefusalNotice', () => {
     expect(neither.actions).toEqual([]);
   });
 
+  it('says a sink or a vertex fold no order lands in its own words, pointing to the fix the engine offers', () => {
+    const generic = foldRefusalNotice(t, { refusal: { code: 'internal' }, fixes: [] }, context(), verbs());
+    const noOrder = { code: 'no_order', faces: [1, 2] } as FoldRefusalBody;
+
+    // A closed sink the open one fits instead.
+    const calls = { ...verbs(), otherSink: vi.fn() };
+    const closed = foldRefusalNotice(
+      t,
+      { refusal: noOrder, fixes: [{ fix: 'other_sink', kind: 'open' }] },
+      context({ kind: 'sink', sink: { tool: 'closed-sink' } }),
+      calls
+    );
+    expect(closed.title).toBe('The point cannot sink this way here');
+    expect(closed.text).toBe('No way of stacking the layers lets the point sink this way here. The other kind of sink fits.');
+    expect(closed.actions.map((action) => action.label)).toEqual(['Open sink instead']);
+    const neither = foldRefusalNotice(t, { refusal: noOrder, fixes: [] }, context({ kind: 'sink', sink: { tool: 'open-sink' } }), calls);
+    expect(neither.text).toBe('No way of stacking the layers lets the point sink this way here. Move the line, or pick another point.');
+    const unsink = foldRefusalNotice(t, { refusal: noOrder, fixes: [] }, context({ kind: 'sink', sink: { tool: 'unsink' } }), calls);
+    expect(unsink.title).toBe('The point cannot come back out here');
+
+    // A squash the other direction fits.
+    const squash = foldRefusalNotice(
+      t,
+      { refusal: noOrder, fixes: [{ fix: 'opposite_direction' }] },
+      context({ kind: 'vertex', vertex: { tool: 'squash' } }),
+      { ...verbs(), vertexOtherWay: vi.fn() }
+    );
+    expect(squash.title).toBe('It cannot be squashed flat here');
+    expect(squash.text).toBe('No way of stacking the layers lets it fold flat this way here. Folded the other way, it fits.');
+    expect(squash.actions.map((action) => action.label)).toEqual(['Fold it the other way']);
+    const ear = foldRefusalNotice(t, { refusal: noOrder, fixes: [] }, context({ kind: 'vertex', vertex: { tool: 'rabbit-ear' } }), verbs());
+    expect(ear.title).toBe('The ear cannot fold flat here');
+    expect(ear.text).toBe('No way of stacking the layers lets it fold flat here. Pick other points, or fold the layers in its way first.');
+
+    for (const notice of [closed, neither, unsink, squash, ear]) {
+      expect(notice.title).not.toBe(generic.title);
+      expect(notice.text).not.toBe(generic.text);
+    }
+  });
+
+  it('says a search that ran out of time is not a fold that would not land, whatever the fold', () => {
+    for (const kind of ['reverse', 'crimp', 'tuck', 'sink', 'vertex'] as const) {
+      const notice = foldRefusalNotice(
+        t,
+        { refusal: { code: 'budget_exceeded' } as FoldRefusalBody, fixes: [] },
+        context({ kind, ...(kind === 'vertex' ? { vertex: { tool: 'swivel' as const } } : {}) }),
+        verbs()
+      );
+      expect(notice.title, kind).toBe('The search ran out of time');
+      expect(notice.text, kind).toContain('it is not known whether this fold fits');
+    }
+  });
+
   it('offers the landmark line for a near miss', () => {
     const calls = verbs();
     const fix: FoldUseLineFix = { fix: 'use_line', line, side: 'positive' };

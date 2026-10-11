@@ -413,6 +413,10 @@
       "newer": "此序列来自更新版本的 Ori Studio，因此以只读方式打开。"
     },
     "refusal": {
+      "budget": {
+        "text": "",
+        "title": ""
+      },
       "choiceBroken": {
         "text": "此步骤保存的张开方式或层序已与之前的纸不再吻合，因此无法按保存的样子折叠。",
         "title": "某个选择已不再吻合"
@@ -536,6 +540,13 @@
       "sinkNoAxis": {
         "text": "它的外缘不是沿两条直边延伸，因此没有可供开放沉折的线与之垂直的中线。",
         "title": "角没有中线"
+      },
+      "sinkNoOrder": {
+        "none": "",
+        "otherSink": "",
+        "title": "",
+        "unsink": "",
+        "unsinkTitle": ""
       },
       "sinkNoPocket": {
         "text": "层间没有绕外缘一整圈、能让尖端进入的空隙，因此无法闭合沉折。",
@@ -766,6 +777,14 @@
           "singleLayer": "这里只有一层。请单击一个由折边相连的两层翼片。",
           "title": "这里没有可压平的翼片",
           "upperNotHinged": "翼片最上层只靠脊相连：压平后，它的铰链一侧会松开。"
+        },
+        "noOrder": {
+          "none": "",
+          "otherWay": "",
+          "petal": "",
+          "rabbitEar": "",
+          "squash": "",
+          "swivel": ""
         },
         "noPetal": {
           "noCorner": "风筝形折痕没有在这条线下方相交，因此没有可抬起的尖。",

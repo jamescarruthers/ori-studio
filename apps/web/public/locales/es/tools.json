@@ -441,6 +441,10 @@
       "newer": "Esta secuencia es de una versión más reciente de Ori Studio, así que se abre en modo de solo lectura."
     },
     "refusal": {
+      "budget": {
+        "text": "",
+        "title": ""
+      },
       "choiceBroken": {
         "text": "La abertura o el orden de capas que guardó este paso ya no encaja con el papel anterior, así que no se puede plegar tal como está guardado.",
         "title": "Una elección ya no encaja"
@@ -566,6 +570,13 @@
       "sinkNoAxis": {
         "text": "Su contorno no recorre dos lados rectos, así que no hay línea central a la que la línea de un hundido abierto pueda ser perpendicular.",
         "title": "La punta no tiene línea central"
+      },
+      "sinkNoOrder": {
+        "none": "",
+        "otherSink": "",
+        "title": "",
+        "unsink": "",
+        "unsinkTitle": ""
       },
       "sinkNoPocket": {
         "text": "Ningún hueco entre sus capas recorre todo su contorno para que entre el extremo, así que no se puede hundir cerrada.",
@@ -808,6 +819,14 @@
           "singleLayer": "Aquí solo hay una capa. Haz clic en una solapa de dos capas unidas por un borde plegado.",
           "title": "No hay solapa que aplastar aquí",
           "upperNotHinged": "La capa superior de la solapa solo está sujeta por su lomo: aplastada, su lado de la bisagra quedaría suelto."
+        },
+        "noOrder": {
+          "none": "",
+          "otherWay": "",
+          "petal": "",
+          "rabbitEar": "",
+          "squash": "",
+          "swivel": ""
         },
         "noPetal": {
           "noCorner": "Los pliegues de la cometa no se juntan bajo la línea, así que no hay punta que levantar.",

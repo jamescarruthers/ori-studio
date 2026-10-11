@@ -427,6 +427,10 @@
       "newer": "Diese Sequenz stammt aus einer neueren Version von Ori Studio und wird daher schreibgeschützt geöffnet."
     },
     "refusal": {
+      "budget": {
+        "text": "",
+        "title": ""
+      },
       "choiceBroken": {
         "text": "Die Öffnung oder die Lagenreihenfolge, die dieser Schritt gespeichert hat, passt nicht mehr zum Papier davor. So, wie er gespeichert ist, lässt er sich deshalb nicht falten.",
         "title": "Eine Wahl passt nicht mehr"
@@ -551,6 +555,13 @@
       "sinkNoAxis": {
         "text": "Ihre Außenseite verläuft nicht entlang zweier gerader Seiten, also gibt es keine Mittellinie, zu der die Linie beim offenen Versenken rechtwinklig sein könnte.",
         "title": "Die Spitze hat keine Mittellinie"
+      },
+      "sinkNoOrder": {
+        "none": "",
+        "otherSink": "",
+        "title": "",
+        "unsink": "",
+        "unsinkTitle": ""
       },
       "sinkNoPocket": {
         "text": "Keine Lücke zwischen ihren Lagen läuft ganz um ihre Außenseite herum, in die das Ende gehen könnte, also lässt sie sich nicht geschlossen versenken.",
@@ -787,6 +798,14 @@
           "singleLayer": "Hier liegt nur eine Lage. Klicke auf eine Lasche aus zwei Lagen, die an einer gefalteten Kante verbunden sind.",
           "title": "Hier ist keine Lasche zum Quetschen",
           "upperNotHinged": "Die oberste Lage der Lasche hängt nur an ihrem Rücken: flach gedrückt, läge ihre Scharnierseite lose."
+        },
+        "noOrder": {
+          "none": "",
+          "otherWay": "",
+          "petal": "",
+          "rabbitEar": "",
+          "squash": "",
+          "swivel": ""
         },
         "noPetal": {
           "noCorner": "Die Drachenlinien treffen sich nicht unterhalb der Linie, also gibt es keine Spitze zum Anheben.",

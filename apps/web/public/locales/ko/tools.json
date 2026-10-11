@@ -413,6 +413,10 @@
       "newer": "이 시퀀스는 더 새로운 버전의 Ori Studio에서 만들어져 읽기 전용으로 열립니다."
     },
     "refusal": {
+      "budget": {
+        "text": "",
+        "title": ""
+      },
       "choiceBroken": {
         "text": "이 단계에 저장된 벌리는 방식이나 겹 순서가 앞의 종이와 더 이상 맞지 않아, 저장된 그대로 접을 수 없습니다.",
         "title": "선택이 더 이상 맞지 않습니다"
@@ -536,6 +540,13 @@
       "sinkNoAxis": {
         "text": "바깥쪽이 곧은 두 변을 따르지 않아서, 열린 가라앉혀 접기의 선이 직각을 이룰 중심선이 없습니다.",
         "title": "꼭지에 중심선이 없습니다"
+      },
+      "sinkNoOrder": {
+        "none": "",
+        "otherSink": "",
+        "title": "",
+        "unsink": "",
+        "unsinkTitle": ""
       },
       "sinkNoPocket": {
         "text": "끝이 들어갈 만큼 바깥쪽을 한 바퀴 두르는 겹 사이의 틈이 없어서 닫아서 가라앉힐 수 없습니다.",
@@ -766,6 +777,14 @@
           "singleLayer": "여기에는 한 겹만 있습니다. 접힌 변으로 이어진 두 겹 플랩을 클릭하세요.",
           "title": "여기에는 눌러 접을 플랩이 없음",
           "upperNotHinged": "플랩의 맨 위 겹이 등에만 붙어 있습니다. 눌러 접으면 경첩 쪽이 떠 버립니다."
+        },
+        "noOrder": {
+          "none": "",
+          "otherWay": "",
+          "petal": "",
+          "rabbitEar": "",
+          "squash": "",
+          "swivel": ""
         },
         "noPetal": {
           "noCorner": "연 모양 접는 선이 선 아래에서 만나지 않아 들어 올릴 끝이 없습니다.",

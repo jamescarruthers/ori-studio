@@ -269,7 +269,7 @@ export function sinkToolWindow(
       ? foldRefusalNotice(
           t,
           preview.refused,
-          { kind: 'sink', readOnly, ...sectionFlapNames(preview.section) },
+          { kind: 'sink', readOnly, ...sectionFlapNames(preview.section), sink: { tool } },
           verbs
         )
       : null,

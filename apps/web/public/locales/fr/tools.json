@@ -441,6 +441,10 @@
       "newer": "Cette séquence vient d’une version plus récente d’Ori Studio : elle s’ouvre en lecture seule."
     },
     "refusal": {
+      "budget": {
+        "text": "",
+        "title": ""
+      },
       "choiceBroken": {
         "text": "L’ouverture ou l’ordre des couches que cette étape a enregistré ne correspond plus au papier qui la précède : elle ne peut donc pas être pliée telle qu’elle est enregistrée.",
         "title": "Un choix ne correspond plus"
@@ -566,6 +570,13 @@
       "sinkNoAxis": {
         "text": "Son contour ne suit pas deux côtés droits : il n’y a pas de ligne médiane à laquelle la ligne d’un enfoncement ouvert puisse être perpendiculaire.",
         "title": "La pointe n’a pas de ligne médiane"
+      },
+      "sinkNoOrder": {
+        "none": "",
+        "otherSink": "",
+        "title": "",
+        "unsink": "",
+        "unsinkTitle": ""
       },
       "sinkNoPocket": {
         "text": "Aucun espace entre ses couches ne fait tout le tour de son contour pour que l’extrémité y entre : elle ne peut pas s’enfoncer fermée.",
@@ -808,6 +819,14 @@
           "singleLayer": "Une seule couche ici. Cliquez sur un rabat de deux couches reliées par un bord plié.",
           "title": "Aucun rabat à écraser ici",
           "upperNotHinged": "La couche du dessus du rabat ne tient que par son dos : aplatie, son côté charnière resterait libre."
+        },
+        "noOrder": {
+          "none": "",
+          "otherWay": "",
+          "petal": "",
+          "rabbitEar": "",
+          "squash": "",
+          "swivel": ""
         },
         "noPetal": {
           "noCorner": "Les plis du cerf-volant ne se rejoignent pas sous la ligne : aucune pointe à soulever.",

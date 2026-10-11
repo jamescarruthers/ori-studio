@@ -441,6 +441,10 @@
       "newer": "Esta sequência é de uma versão mais nova do Ori Studio, então abre somente para leitura."
     },
     "refusal": {
+      "budget": {
+        "text": "",
+        "title": ""
+      },
       "choiceBroken": {
         "text": "A abertura ou a ordem das camadas que este passo guardou não se encaixa mais no papel anterior, então ele não pode ser dobrado como está guardado.",
         "title": "Uma escolha não se encaixa mais"
@@ -566,6 +570,13 @@
       "sinkNoAxis": {
         "text": "O contorno dela não segue dois lados retos, então não há linha central à qual a linha de um afundamento aberto possa ser perpendicular.",
         "title": "A ponta não tem linha central"
+      },
+      "sinkNoOrder": {
+        "none": "",
+        "otherSink": "",
+        "title": "",
+        "unsink": "",
+        "unsinkTitle": ""
       },
       "sinkNoPocket": {
         "text": "Nenhum espaço entre suas camadas dá a volta inteira no contorno para a extremidade entrar, então ela não pode ser afundada fechada.",
@@ -808,6 +819,14 @@
           "singleLayer": "Aqui há só uma camada. Clique numa aba de duas camadas unidas por uma borda dobrada.",
           "title": "Não há aba para achatar aqui",
           "upperNotHinged": "A camada de cima da aba está presa só pela lombada: achatada, o lado da dobradiça ficaria solto."
+        },
+        "noOrder": {
+          "none": "",
+          "otherWay": "",
+          "petal": "",
+          "rabbitEar": "",
+          "squash": "",
+          "swivel": ""
         },
         "noPetal": {
           "noCorner": "Os vincos da pipa não se encontram abaixo da linha, então não há ponta para levantar.",

@@ -14,11 +14,12 @@ import type { FoldNoOpening, FoldReverseKind } from '../engine/foldEngineReverse
 import type { FoldSinkKind, FoldSinkRefusalCode } from '../engine/foldEngineSinkWire';
 import type { FoldCrossSection, FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
 import { flapNumbers, sameFlap } from './crossSection';
-import type { FoldKind } from './foldToolCatalog';
+import type { FoldKind, FoldSinkToolId } from './foldToolCatalog';
 import {
   vertexContextOf,
   vertexExtraActions,
   vertexFixActions,
+  vertexNoOrderWords,
   vertexRefusalWords,
   type FoldVertexFixVerbs,
   type FoldVertexRefusalContext,
@@ -84,6 +85,8 @@ export interface FoldRefusalContext {
   tuck?: { under: boolean; targetNumber: (face: number) => number | null };
   /** A vertex fold's: its tool, and what its own fixes name (`vertex/vertexRefusal`). */
   vertex?: FoldVertexRefusalContext;
+  /** A sink's: its tool, a sink or the unsink, which its words name. */
+  sink?: { tool: FoldSinkToolId };
 }
 
 /**
@@ -426,12 +429,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'fan_not_flat':
     case 'fan_ridge_not_ray':
     case 'fan_stayer_detached':
-      return (
-        vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? {
-          title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
-          text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
-        }
-      );
+      return vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? invalidWords(t);
     // The sinks'.
     case 'sink_several_points':
     case 'sink_point_open':
@@ -441,10 +439,29 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'sink_no_pocket':
     case 'unsink_not_sunk':
       return sinkWords(t, refused, refusal.code);
+    // The compound pipeline's own: no order of the layers lands. A sink and a
+    // vertex fold reach it with their preconditions met — the reverse fold,
+    // the crimp and the tuck word theirs as their own codes — so it is said
+    // in their words, pointing to the other sink or the other direction when
+    // the engine says that one lands.
+    case 'no_order':
+      if (context.vertex) {
+        return vertexNoOrderWords(t, context.vertex, refused.fixes.some((fix) => fix.fix === 'opposite_direction'));
+      }
+      if (context.kind === 'sink') return sinkNoOrderWords(t, refused, context.sink?.tool ?? null);
+      return invalidWords(t);
+    // A search that ran out: whether the fold fits is not known.
+    case 'budget_exceeded':
+      return {
+        title: t('tools:fold.refusal.budget.title', 'The search ran out of time'),
+        text: t(
+          'tools:fold.refusal.budget.text',
+          'Working out how the layers stack took too long here, so it is not known whether this fold fits. Fold fewer layers, or fold it elsewhere.'
+        ),
+      };
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
-    // With them, the compound pipeline's own: no order at all, a search that
-    // ran out, a pick that names nothing, a defect.
+    // With them, a pick that names nothing and a defect.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -471,15 +488,47 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'hinge_orientation':
     case 'folded_image':
     case 'prediction_mismatch':
-    case 'no_order':
-    case 'budget_exceeded':
     case 'no_such_choice':
     case 'internal':
-      return {
-        title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
-        text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
-      };
+      return invalidWords(t);
   }
+}
+
+/** A fold that cannot be made, with nothing more to say of why. */
+function invalidWords(t: TFunction): { title: string; text: string } {
+  return {
+    title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
+    text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
+  };
+}
+
+/**
+ * A sink whose layers no order lands, its preconditions met: the point the
+ * open or closed sink pushes in, or the unsink pulls out. The other kind of
+ * sink is pointed to only when the engine says it lands.
+ */
+function sinkNoOrderWords(t: TFunction, refused: FoldRefused, tool: FoldSinkToolId | null): { title: string; text: string } {
+  if (tool === 'unsink') {
+    return {
+      title: t('tools:fold.refusal.sinkNoOrder.unsinkTitle', 'The point cannot come back out here'),
+      text: t(
+        'tools:fold.refusal.sinkNoOrder.unsink',
+        'No way of stacking the layers lets the sunk point come back out here.'
+      ),
+    };
+  }
+  return {
+    title: t('tools:fold.refusal.sinkNoOrder.title', 'The point cannot sink this way here'),
+    text: refused.fixes.some((fix) => fix.fix === 'other_sink')
+      ? t(
+          'tools:fold.refusal.sinkNoOrder.otherSink',
+          'No way of stacking the layers lets the point sink this way here. The other kind of sink fits.'
+        )
+      : t(
+          'tools:fold.refusal.sinkNoOrder.none',
+          'No way of stacking the layers lets the point sink this way here. Move the line, or pick another point.'
+        ),
+  };
 }
 
 /** A choice a stored compound step still needs, as its chooser prompts for it. */
