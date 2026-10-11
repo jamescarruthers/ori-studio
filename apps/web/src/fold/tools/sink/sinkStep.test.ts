@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FoldPocket } from '../../engine/foldEngineSinkWire';
-import { MAX_SINK_ORDERS, pocketNames, sinkOrderPicks } from './sinkStep';
+import { MAX_SINK_ORDERS, pocketNames, pocketsAsSeen, sinkOrderPicks } from './sinkStep';
 
 const pocket = (upper: number[], lower: number[]): FoldPocket => ({
   upper,
@@ -49,6 +49,17 @@ describe('pocketNames', () => {
     expect(pocketNames([back, front], false)).toEqual(['back', 'front']);
     // Turned over, the viewer sees the model's underside first.
     expect(pocketNames([back, front], true)).toEqual(['front', 'back']);
+  });
+
+  it('orders the pockets front to back as the viewer sees them, keeping the engine’s order for a tie', () => {
+    const front = pocket([4], [5, 6, 7]);
+    const back = pocket([4, 5, 6], [7]);
+    expect(pocketsAsSeen([back, front], false)).toEqual([front, back]);
+    expect(pocketNames(pocketsAsSeen([back, front], false), false)).toEqual(['front', 'back']);
+    // Turned over, the model's underside is in front.
+    expect(pocketsAsSeen([front, back], true)).toEqual([back, front]);
+    const tied = [pocket([1], [2, 3]), pocket([2], [1, 3])];
+    expect(pocketsAsSeen(tied, false)).toEqual(tied);
   });
 
   it('numbers any other count, and two the viewer sees no nearer', () => {

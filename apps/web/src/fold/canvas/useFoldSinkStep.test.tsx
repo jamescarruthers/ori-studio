@@ -13,6 +13,7 @@ import type { FoldFlap } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../tools/foldToolState';
 import { flatSquareLandmarks, flatSquareScene } from './foldCanvas.fixtures';
+import { foldSinkWindowView } from './foldCanvasModel';
 import { foldPickIndex, type FoldPick } from './foldPicking';
 import type { FoldStateView } from './useFoldStateView';
 import { useFoldToolPreview, type FoldToolPreview } from './useFoldToolPreview';
@@ -152,6 +153,21 @@ describe('a sink’s point', () => {
     expect(seen?.sink?.pockets).toEqual([]);
     expect(seen?.step?.op.kind).toBe('open-sink');
     expect(seen?.step?.choices).toBeUndefined();
+  });
+
+  it('starts a closed sink on the front pocket as the viewer sees it, whichever the engine lists first', async () => {
+    const back: FoldPocket = { upper: [0, 1, 2], lower: [3], seams: [3], stored: { above: [0.4, 0.7], below: [0.4, 0.8] } };
+    const front: FoldPocket = { upper: [0], lower: [1, 2, 3], seams: [4], stored: { above: [0.6, 0.7], below: [0.6, 0.8] } };
+    const listed = await engine.compoundAnalysis();
+    engine.compoundAnalysis.mockImplementationOnce(async () => ({
+      ...listed,
+      analysis: { ...listed.analysis, pockets: [back, front] },
+    }));
+    const tools = along('closed-sink');
+    await render(tools);
+    expect(seen?.sink).toMatchObject({ pockets: [front, back], pocket: 0 });
+    expect(foldSinkWindowView(tools, seen!, false)?.pocketName).toBe('front');
+    expect(seen?.step?.choices).toEqual({ pocket: [front.stored.above, front.stored.below] });
   });
 
   it('lands in the order the chooser steps to, each pick asked what it stores', async () => {
