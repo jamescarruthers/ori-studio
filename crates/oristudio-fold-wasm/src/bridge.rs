@@ -124,8 +124,9 @@ impl Bridge {
     ) -> Result<Outcome<Acted>, BridgeError> {
         let parent = self.state(state)?;
         let action = match settle(resolve(parent, op, choices))? {
-            // A compound fold pictures itself: a reverse fold's push. A
-            // family that folds along no one line has no such picture.
+            // A compound fold pictures itself: a reverse fold's push, a
+            // crimp's pleat. A family that folds along no one line has no
+            // such picture.
             Ok(Resolved::Compound(compound)) => {
                 compound.action(parent).ok_or_else(|| asks_its_own(op))?
             }
@@ -321,9 +322,9 @@ impl Bridge {
 
     /// The picture of the step that landed `state` (plan D12, per step), on
     /// its parent with the landed state's cover at the arrow's head. None for
-    /// a flat sheet, a turn, a rotation or an import, and for now every
-    /// compound family but the reverse folds, whose pictures are still to
-    /// come. A pictured step's parent must still be held.
+    /// a flat sheet, a turn, a rotation or an import, and for now the vertex
+    /// folds and the sinks, whose pictures are still to come. A pictured
+    /// step's parent must still be held.
     pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
             Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => Ok(None),
