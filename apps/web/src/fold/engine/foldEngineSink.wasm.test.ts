@@ -5,6 +5,14 @@ import { createFoldReplayer } from '../document/foldReplay';
 import { sequenceOf, step } from '../document/foldSequence.fixtures';
 import type { FoldChoices, FoldSinkOp, SheetPoint } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from './foldEngineCalls';
+import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from './foldEngineCompoundCalls';
+import {
+  compoundStoredChoices,
+  type FoldCompoundAnalysis,
+  type FoldCompoundAnalysisOf,
+  type FoldCompoundReport,
+  type FoldCompoundReportOf,
+} from './foldEngineCompoundWire';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from './foldEngineIoCalls';
 import { FOLD_SAMPLES, foldSampleSource, type FoldSampleId } from './foldEngineIoSamples';
 import type { FoldImportFingerprinted } from './foldEngineIoWire';
@@ -18,9 +26,11 @@ import { FOLD_REFUSAL_CODES, type FoldEngineOutcome, type FoldEngineRefused } fr
  * crate's tests prove the behaviour natively (`crates/oristudio-fold`'s
  * `tests/sink.rs`, the bridge's `tests/sink.rs`); this covers TypeScript's
  * side of the boundary — the document's sink ops landing through `step` on a
- * sample as Import CP lands it, the sink tool's queries, what a step stores
- * coming back in the engine's shapes and going into the document's, and a
- * sequence with a sink replayed by the document's replayer.
+ * sample as Import CP lands it, their reports as the step's `compound`
+ * (`family: 'sink'`), the compound question and the sink tool's queries,
+ * what a step stores coming back in the engine's shapes and going into the
+ * document's, and a sequence with a sink replayed by the document's
+ * replayer.
  *
  * Skipped when the bridge has not been built.
  */
@@ -32,6 +42,7 @@ interface Engine {
   calls: FoldEngineCalls;
   io: FoldEngineIoCalls;
   sinks: FoldEngineSinkCalls;
+  question: FoldEngineCompoundCalls;
   version: number;
 }
 
@@ -43,6 +54,7 @@ async function makeEngine(): Promise<Engine> {
     calls: createFoldEngineCalls(fold),
     io: createFoldEngineIoCalls(fold),
     sinks: createFoldEngineSinkCalls(fold),
+    question: createFoldEngineCompoundCalls(fold),
     version: wasm.fold_engine_version(),
   };
 }
@@ -50,6 +62,19 @@ async function makeEngine(): Promise<Engine> {
 function landed<T>(outcome: FoldEngineOutcome<T>): T {
   if (outcome.status !== 'ok') throw new Error(`refused: ${JSON.stringify(outcome.refusal)}`);
   return outcome;
+}
+
+/** A step's compound report, which must be a sink's. */
+function sinkOf(report: FoldCompoundReport | undefined): FoldCompoundReportOf<'sink'> {
+  if (report?.family !== 'sink') throw new Error(`no sink report: ${JSON.stringify(report)}`);
+  return report;
+}
+
+/** The compound question's answer, which must be a sink's. */
+function sinkAsked(outcome: FoldEngineOutcome<FoldCompoundAnalysis>): FoldCompoundAnalysisOf<'sink'> {
+  const answer = landed(outcome);
+  if (answer.family !== 'sink') throw new Error(`answered for ${answer.family}`);
+  return answer;
 }
 
 function refused<T>(outcome: FoldEngineOutcome<T>): FoldEngineRefused {
@@ -112,16 +137,18 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
     const base = importSample(engine, 'preliminary-base');
     const sunk = landed(calls.step(base.state, sinkOp('open-sink', 0.3)));
     expect(sunk.report).toBeNull();
-    expect(sunk.sink?.step).toBe('open');
-    expect(sunk.sink?.ring).toHaveLength(8);
-    expect(sunk.sink?.motion.kind).toBe('visual');
-    expect(sunk.sink?.motion.legs.map((leg) => [leg.name, leg.stacking])).toEqual([
+    const sink = sinkOf(sunk.compound);
+    expect(sink.step).toBe('open');
+    expect(sink.ring).toHaveLength(8);
+    expect(sink.motion.kind).toBe('visual');
+    expect(sink.motion.legs.map((leg) => [leg.name, leg.stacking])).toEqual([
       ['spread', 'parent'],
       ['close', 'landed'],
     ]);
-    const close = sunk.sink?.motion.legs[1]?.groups ?? [];
+    const close = sink.motion.legs[1]?.groups ?? [];
     expect(close.every((group) => Math.abs(Math.abs(group.to) - Math.PI) < 1e-12)).toBe(true);
-    expect(sinkStoredChoices(sunk.sink!.stored)).toEqual({});
+    expect(sinkStoredChoices(sink.stored)).toEqual({});
+    expect(compoundStoredChoices(sink)).toEqual({});
     expect(sunk.summary.faces).toBe(16);
     expect(sunk.summary.creases.mountain).toBeGreaterThan(base.summary.creases.mountain);
     const summary = landed(calls.stepSummary(sunk.state));
@@ -129,20 +156,20 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
     expect(landed(calls.stepAction(sunk.state)).action).toBeNull();
 
     const back = landed(calls.step(sunk.state, unsinkOp(0.3)));
-    expect(back.sink?.step).toBe('unsink');
-    expect(back.sink?.unfolded).toHaveLength(8);
+    expect(sinkOf(back.compound).step).toBe('unsink');
+    expect(sinkOf(back.compound).unfolded).toHaveLength(8);
     expect(back.summary.creases.flat).toBe(base.summary.creases.flat * 2 + 8);
   });
 
   it('asks a closed sink for its pocket, and lands each one the analysis offers as the document stores it', async () => {
     const engine = await makeEngine();
-    const { calls, sinks } = engine;
+    const { calls, question } = engine;
     const base = importSample(engine, 'preliminary-base');
     const op = sinkOp('closed-sink', 0.3);
     const missing = refused(calls.step(base.state, op));
     expect(missing.refusal).toEqual({ code: 'choice_needed', choice: 'pocket' });
 
-    const { analysis, open } = landed(sinks.sinkAnalysis(base.state, op));
+    const { analysis, open } = sinkAsked(question.compoundAnalysis(base.state, op));
     expect(open).toBeNull();
     expect(analysis.exterior).toBe('mountain');
     expect(analysis.outline).toHaveLength(4);
@@ -150,9 +177,11 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
     const fingerprints = analysis.pockets.map((pocket) => {
       const choices: FoldChoices = { pocket: pocketChoice(pocket.stored) };
       const sunk = landed(calls.step(base.state, op, choices));
-      expect(sunk.sink?.pocket?.seams).toEqual(pocket.seams);
+      const sink = sinkOf(sunk.compound);
+      expect(sink.pocket?.seams).toEqual(pocket.seams);
       // What the step stores comes back as the choices it was given.
-      expect(sinkStoredChoices(sunk.sink!.stored)).toEqual(choices);
+      expect(sinkStoredChoices(sink.stored)).toEqual(choices);
+      expect(compoundStoredChoices(sink)).toEqual(choices);
       return sunk.fingerprint;
     });
     expect(new Set(fingerprints).size).toBe(2);
@@ -166,7 +195,7 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
 
   it('refuses a tilted open sink with the square line and the closed sink, every code a known one', async () => {
     const engine = await makeEngine();
-    const { calls, sinks } = engine;
+    const { calls, question } = engine;
     const base = importSample(engine, 'preliminary-base');
     // Through the ring's point on the axis and a point off the ring on the side.
     const tilted: FoldSinkOp = {
@@ -189,14 +218,14 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
         seed: { scope: 'all' },
       })
     );
-    const analysed = landed(sinks.sinkAnalysis(base.state, tilted));
+    const analysed = sinkAsked(question.compoundAnalysis(base.state, tilted));
     expect(analysed.open?.refusal.code).toBe('sink_line_tilted');
     expect(analysed.analysis.square).toEqual(square.line);
   });
 
   it('counts one order for a decided sink, and refuses the caller’s mistakes', async () => {
     const engine = await makeEngine();
-    const { calls, sinks } = engine;
+    const { calls, sinks, question } = engine;
     const base = importSample(engine, 'preliminary-base');
     const op = sinkOp('open-sink', 0.3);
     expect(landed(sinks.sinkOrders(base.state, op))).toMatchObject({
@@ -205,7 +234,11 @@ describe.skipIf(!available)('sinks through the built bridge', () => {
     });
     expect(landed(sinks.sinkPick(base.state, op, [])).completion).toBeNull();
     const valley = { ...op, kind: 'valley' } as unknown as FoldSinkOp;
-    expect(thrown(() => sinks.sinkAnalysis(base.state, valley))).toMatchObject({ code: 'invalid_input' });
+    expect(thrown(() => question.compoundAnalysis(base.state, valley))).toMatchObject({ code: 'invalid_input' });
+    expect(thrown(() => sinks.sinkOrders(base.state, valley))).toMatchObject({ code: 'invalid_input' });
+    // An unsink has no point to analyse: the bridge's own mistake to throw.
+    const sunk = landed(calls.step(base.state, op)).state;
+    expect(thrown(() => question.compoundAnalysis(sunk, unsinkOp(0.3)))).toMatchObject({ code: 'invalid_input' });
     expect(thrown(() => sinks.sinkPick(base.state, op, [-1]))).toMatchObject({ code: 'invalid_input' });
     expect(thrown(() => sinks.sinkOrders(0, op))).toMatchObject({ code: 'invalid_input' });
     // A sink is no plain fold to analyse.

@@ -1,15 +1,16 @@
 //! The reverse fold on the bridge (plan Phase 9, research §5.2): the
-//! document's `inside-reverse` and `outside-reverse` ops, resolved and landed
-//! through the compound seam ([`crate::compound`]), and the tools' one query
-//! for it.
+//! document's `inside-reverse` and `outside-reverse` ops, resolved, landed
+//! and asked about through the compound seam ([`crate::compound`]).
 //!
 //! ```ts
 //! // `apps/web/src/fold/engine/foldEngineReverseWire.ts` holds these shapes in full.
 //! class FoldEngine {
-//!   /** What a reverse fold from `state` moves, which kinds land, and the
-//!    *  choice it still needs: an opening, or one of the orders listed per
-//!    *  kind. The op's kind is not read: the answer is both kinds'. */
-//!   reverse(state: number, op: FoldReverseOp, choices?: FoldChoices): Outcome<ReverseAsked>;
+//!   /** For a reverse op, `{ family: 'reverse', …ReverseAsked }`: what it
+//!    *  moves, which kinds land, and the choice it still needs — an opening,
+//!    *  or one of the orders listed per kind. The op's kind is not read: the
+//!    *  answer is both kinds'. */
+//!   compound_analysis(state: number, op: FoldReverseOp, choices?: FoldChoices):
+//!     Outcome<FoldCompoundAnalysis>;
 //! }
 //! ```
 //!
@@ -26,12 +27,14 @@
 //!   stored one that no longer resolves `choice_broken`, and the engine's
 //!   refusals come with their fixes — the other kind, the flaps in the tip's
 //!   way, the flaps that open.
-//! - **Asking** ([`Bridge::reverse`]): the tip and each flap's openings, the
-//!   kinds that land with the openings named — a tool pre-selects the only
-//!   one, and offers the other only when it lands too — and what is still to
-//!   choose: an opening, or, per kind, the orders the completion leaves,
-//!   each listed as the `completion` that picks it, the first [`MAX_ORDERS`]
-//!   of them. Of both kinds, so the answer does not wait on the kind.
+//! - **Asking** (`compound_analysis`, [`CompoundOp::ask`]): the tip and each
+//!   flap's openings, the kinds that land with the openings named — a tool
+//!   pre-selects the only one, and offers the other only when it lands too —
+//!   and what is still to choose: an opening, or, per kind, the orders the
+//!   completion leaves, each listed as the `completion` that picks it, the
+//!   first [`MAX_ORDERS`] of them. Of both kinds, so the answer does not wait
+//!   on the kind. A reverse fold folds along one line, so it also answers the
+//!   plain fold's queries: what moves, its picture, its depth choices.
 
 use oristudio_fold::{
     ChoiceCount, ClosurePolicy, Direction, FoldActionGeometry, FoldAnalysis, Placement, PlainFold,
@@ -39,18 +42,12 @@ use oristudio_fold::{
     State, StepSummary, WitnessOrder,
 };
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
 
-use crate::bridge::Bridge;
 use crate::compound::{
-    CompoundLanded, CompoundOp, CompoundStepReport, NeededChoice, choice_needed, compound_refusal,
+    CompoundAsked, CompoundLanded, CompoundOp, CompoundStepReport, Parent, compound_refusal, landed,
 };
-use crate::resolve::{Rejection, Resolved, along_line};
-use crate::wire::{
-    AlongLine, BridgeError, BridgeRefusal, Choices, LineInput, Motion, Op, Outcome, Point, Refusal,
-    SeedInput,
-};
-use crate::{FoldEngine, bridge_error, parse, parse_choices, to_js_value};
+use crate::resolve::{Rejection, along_line};
+use crate::wire::{AlongLine, BridgeError, Choices, LineInput, Motion, Point, Refusal, SeedInput};
 
 /// The most orders a choice lists: the ~1% of reverse folds that leave
 /// several leave two or three (research §5.2).
@@ -78,7 +75,8 @@ pub struct ReverseStep {
     pub choices: ReverseChoices,
 }
 
-/// The op resolved in `parent`: its line, side and anchor as a fold's.
+/// The op resolved in `parent`: its line, side and anchor as a fold's. Its
+/// choices are checked before (`resolve::check_choices`).
 pub fn resolve_reverse(
     parent: &State,
     along: &AlongReverse,
@@ -123,24 +121,20 @@ pub fn resolve_reverse(
     })
 }
 
-/// `resolve`'s arm: the op as the compound seam holds it.
-pub fn resolve(
-    parent: &State,
-    along: &AlongReverse,
-    kind: ReverseKind,
-    choices: &Choices,
-) -> Result<Resolved, Rejection> {
-    resolve_reverse(parent, along, kind, choices).map(|step| Resolved::Compound(Box::new(step)))
-}
+impl ReverseStep {
+    /// The plain fold its line, side and anchor name.
+    fn plain_fold(&self) -> PlainFold {
+        PlainFold::new(self.op.line, self.op.side, Direction::Valley)
+            .with_seed(self.op.anchor.clone())
+    }
 
-impl CompoundOp for ReverseStep {
     /// The moving side's flaps (the plain fold's, which a refusal's
     /// `include_flaps` indexes), the tip's among them picked, the tip's faces
     /// moving.
-    fn analysis(&self, parent: &State) -> Result<FoldAnalysis, Refusal> {
+    fn fold_analysis(&self, parent: &State) -> Result<FoldAnalysis, Refusal> {
         let reverse = parent.analyse_reverse(&self.op).map_err(Refusal::from)?;
         let direction = parent.view().model_direction(self.op.kind.seen_direction());
-        let (flaps, picked) = match parent.analyse_fold(&self.plain()) {
+        let (flaps, picked) = match parent.analyse_fold(&self.plain_fold()) {
             Ok(plain) => (plain.flaps, reverse.flaps.iter().map(|f| f.index).collect()),
             Err(_) => (
                 reverse.flaps.iter().map(|f| f.flap.clone()).collect(),
@@ -158,25 +152,32 @@ impl CompoundOp for ReverseStep {
             moving: reverse.tip,
         })
     }
+}
 
-    fn action(&self, parent: &State) -> Result<FoldActionGeometry, Refusal> {
-        parent
-            .reverse_action(&self.op, &self.choices)
-            .map_err(compound_refusal)
+impl CompoundOp for ReverseStep {
+    fn analysis(&self, parent: &State) -> Option<Result<FoldAnalysis, Refusal>> {
+        Some(self.fold_analysis(parent))
     }
 
-    fn plain(&self) -> PlainFold {
-        PlainFold::new(self.op.line, self.op.side, Direction::Valley)
-            .with_seed(self.op.anchor.clone())
+    fn action(&self, parent: &State) -> Option<Result<FoldActionGeometry, Refusal>> {
+        Some(
+            parent
+                .reverse_action(&self.op, &self.choices)
+                .map_err(compound_refusal),
+        )
+    }
+
+    fn plain(&self) -> Option<PlainFold> {
+        Some(self.plain_fold())
+    }
+
+    fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
+        Ok(ask(parent, self).map(|asked| CompoundAsked::Reverse(Box::new(asked))))
     }
 
     fn apply(&self, parent: &State) -> Result<Box<dyn CompoundLanded>, Refusal> {
-        match parent.reverse_fold(&self.op, &self.choices) {
-            Ok(ReverseOutcome::Landed(folded)) => Ok(Box::new(Landed(folded))),
-            Ok(ReverseOutcome::ChooseOpening(_)) => Err(choice_needed(NeededChoice::Opening)),
-            Ok(ReverseOutcome::ChooseOrder(_)) => Err(choice_needed(NeededChoice::Completion)),
-            Err(refused) => Err(compound_refusal(refused)),
-        }
+        let folded = landed(parent.reverse_fold(&self.op, &self.choices))?;
+        Ok(Box::new(Landed(folded)))
     }
 }
 
@@ -193,12 +194,15 @@ impl CompoundLanded for Landed {
         CompoundStepReport::Reverse(Box::new(self.0.report.clone()))
     }
 
-    fn summary(&self, parent: &State) -> Result<StepSummary, Refusal> {
-        self.0.summary(parent).map_err(Refusal::from)
+    fn summary(&self, parent: Parent<'_>) -> Result<Result<StepSummary, Refusal>, BridgeError> {
+        Ok(self.0.summary(parent?).map_err(Refusal::from))
     }
 
-    fn action(&self, parent: &State) -> Result<FoldActionGeometry, Refusal> {
-        self.0.action(parent).map_err(Refusal::from)
+    fn action(
+        &self,
+        parent: Parent<'_>,
+    ) -> Result<Option<Result<FoldActionGeometry, Refusal>>, BridgeError> {
+        Ok(Some(self.0.action(parent?).map_err(Refusal::from)))
     }
 }
 
@@ -231,44 +235,6 @@ pub struct ReverseOrders {
     pub orders: Vec<WitnessOrder>,
     /// More are listed than `orders` holds.
     pub more: bool,
-}
-
-impl Bridge {
-    /// What a reverse fold from `state` moves, which kinds land and what it
-    /// still has to choose (see the module docs). `op` must be a reverse
-    /// fold.
-    pub fn reverse(
-        &self,
-        state: u32,
-        op: &Op,
-        choices: &Choices,
-    ) -> Result<Outcome<ReverseAsked>, BridgeError> {
-        let parent = self.state(state)?;
-        let (along, kind) = match op {
-            Op::InsideReverse(along) => (along, ReverseKind::Inside),
-            Op::OutsideReverse(along) => (along, ReverseKind::Outside),
-            other => {
-                return Err(BridgeError::InvalidInput(format!(
-                    "`reverse` asks of a reverse fold, not a {} step",
-                    other.kind()
-                )));
-            }
-        };
-        // The bridge's own check first, as `apply` makes it.
-        if let Some(choice) =
-            choices.unexpected(op.is_axiom(), op.takes_completion(), op.takes_opening())
-        {
-            return Ok(Outcome::Refused(
-                BridgeRefusal::UnexpectedChoice { choice }.into(),
-            ));
-        }
-        let step = match resolve_reverse(parent, along, kind, choices) {
-            Ok(step) => step,
-            Err(Rejection::Input(error)) => return Err(error),
-            Err(Rejection::Refused(refusal)) => return Ok(Outcome::Refused(refusal)),
-        };
-        Ok(ask(parent, &step).into())
-    }
 }
 
 /// The answer for `step`'s line, side, anchor and openings, of both kinds.
@@ -321,20 +287,4 @@ fn ask(parent: &State, step: &ReverseStep) -> Result<ReverseAsked, Refusal> {
         opening,
         orders,
     })
-}
-
-#[wasm_bindgen]
-impl FoldEngine {
-    /// What a reverse fold from `state` moves, which kinds land, and the
-    /// choice it still needs; `choices` may be `undefined` or `null`.
-    pub fn reverse(&self, state: u32, op: JsValue, choices: JsValue) -> Result<JsValue, JsValue> {
-        let op: Op = parse("op", op)?;
-        let choices = parse_choices(choices)?;
-        to_js_value(
-            &self
-                .inner
-                .reverse(state, &op, &choices)
-                .map_err(bridge_error)?,
-        )
-    }
 }

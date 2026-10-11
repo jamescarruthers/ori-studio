@@ -54,6 +54,7 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
     const node = entry?.node ?? null;
     const summary = summarised?.summary ?? null;
     const imported = node !== null && !isLockedStep(node) && node.op.kind === 'cp-jump' ? node.op : null;
+    const compound = entry ? foldCompoundPaneRows(entry.session.compound) : undefined;
     const step: FoldStepPaneStep | null =
       entry && node
         ? {
@@ -66,7 +67,7 @@ export function useFoldStepPane(view: FoldSequenceView): FoldStepPaneModel {
             diff: summary && !imported ? foldCreaseDiff(summary, frame?.creases ?? null) : null,
             status: paneStatus(entry.status),
             ...(imported ? { origin: imported.origin } : {}),
-            ...(entry.session.compound ? { compound: foldCompoundPaneRows(entry.session.compound) } : {}),
+            ...(compound ? { compound } : {}),
           }
         : null;
     const landedSummary = pendingSummary?.summary ?? null;

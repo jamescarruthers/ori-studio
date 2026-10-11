@@ -6,23 +6,24 @@
  *
  * - **Inputs** are the document's `crimp` and `tuck` ops, with the tools'
  *   additions: a line already in the parent's model frame and a `side` of it.
- * - **Analyses** come before a fold lands: a crimp's tip at ℓ1 with how each
- *   of its flaps opens, and the kinds that land; a tuck's moving faces and
- *   every layer its block lands on, each with whether it takes the tuck.
- * - **A fold** lands, asks for an opening, or lists the orders that fit,
- *   each already landed under its own handle with what its step stores
- *   (`stored`, the document's `FoldChoices` keys). Every landed state stays
- *   held until it is released, as a step's does.
+ * - **Analyses** come before a fold lands, from the compound question
+ *   (`compoundAnalysis`, `family: 'crimp'` or `'tuck'`): a crimp's tip at ℓ1
+ *   with how each of its flaps opens, and the kinds that land; a tuck's
+ *   moving faces and every layer its block lands on, each with whether it
+ *   takes the tuck.
+ * - **A fold** (`crimp`, `tuck`) lands, asks for an opening, or lists the
+ *   orders that fit, each already landed under its own handle — a step as
+ *   `step` lands one, its report the step's `compound` — with what its step
+ *   stores (`stored`, the document's `FoldChoices` keys). Every landed state
+ *   stays held until it is released, as a step's does.
  *
- * A stored crimp or tuck replays through `apply`, like every step: it lands
- * only when its stored choices decide it (its `report` is then null — the
- * report is this file's calls'), and is refused `choice_needed` or
- * `choice_broken` otherwise.
+ * A stored crimp or tuck replays through `step`, like every step: it lands
+ * only when its stored choices decide it, with the same `compound` report,
+ * and is refused `choice_needed` or `choice_broken` otherwise.
  *
  * Pure types: no React, no store, no wasm.
  */
 
-import type { FoldStateFingerprint } from '../document/foldDigest';
 import type {
   FoldCompletionChoice,
   FoldCrimpKind,
@@ -32,15 +33,9 @@ import type {
   FoldOpeningChoice,
   FoldTuckOp,
 } from '../document/foldSequenceDocument';
-import type { FoldOpening, FoldReverseAnalysis } from './foldEngineReverseWire';
-import type {
-  FoldEngineLine,
-  FoldRefold,
-  FoldSide,
-  FoldSnap,
-  FoldStateSummary,
-  FoldStepMotionLegs,
-} from './foldEngineWire';
+import type { FoldCompoundFingerprinted, FoldCompoundLanded, FoldCompoundReportBase } from './foldEngineCompoundWire';
+import type { FoldOpening, FoldReverseAnalysis, FoldReverseStored } from './foldEngineReverseWire';
+import type { FoldEngineLine, FoldSide, FoldSnap } from './foldEngineWire';
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -111,25 +106,7 @@ export interface FoldTuckAnalysed {
 // ---------------------------------------------------------------------------
 // Landings
 
-/**
- * What every compound fold did (`CompoundReport`), which a crimp's and a
- * tuck's reports extend. Its motion is a compound step's
- * (`FoldStepMotionLegs`, `foldEngineWire.ts`).
- */
-export interface FoldCompoundReportBase {
-  /** The parent's faces that move. */
-  moving: number[];
-  /** Per block, the landed state's faces in it. */
-  blocks: number[][];
-  created: number[];
-  unfolded: number[];
-  refolded: FoldRefold[];
-  /** Folded creases whose letter turned. */
-  reversed: number[];
-  split: number;
-}
-
-/** What a crimp did (`CrimpReport`). */
+/** What a crimp did (`CrimpReport`), as a compound step reports it under `family: 'crimp'`. */
 export interface FoldCrimpReport extends FoldCompoundReportBase {
   first: FoldModelLine;
   side: FoldSide;
@@ -141,10 +118,11 @@ export interface FoldCrimpReport extends FoldCompoundReportBase {
   openings: FoldOpening[];
   /** The flaps with no spine, moving whole: the parent's faces of each. */
   whole: number[][];
-  motion: FoldStepMotionLegs;
+  /** What the step stores, in the engine's shapes: a reverse fold's. */
+  stored: FoldReverseStored;
 }
 
-/** What a tuck did (`TuckReport`). */
+/** What a tuck did (`TuckReport`), as a compound step reports it under `family: 'tuck'`. */
 export interface FoldTuckReport extends FoldCompoundReportBase {
   line: FoldModelLine;
   side: FoldSide;
@@ -153,7 +131,8 @@ export interface FoldTuckReport extends FoldCompoundReportBase {
   placement: FoldTuckPlacement;
   /** T, which stays and keeps its id. */
   target: number;
-  motion: FoldStepMotionLegs;
+  /** What the step stores, in the engine's shapes: the order chosen among several. */
+  stored: { order?: FoldCompletionChoice };
 }
 
 /** What a landed crimp or tuck stores beside its line's root: the document's choice keys. */
@@ -162,20 +141,17 @@ export interface FoldCompoundStored {
   completion?: FoldCompletionChoice;
 }
 
-/** A landed crimp or tuck, held under `state`. */
-export interface FoldCompoundLanded<R> {
-  state: number;
-  report: R;
-  summary: FoldStateSummary;
+/** A crimp or tuck its own call landed: a step as `step` lands one, with what it stores. */
+export type FoldCrimpTuckLanded<F extends 'crimp' | 'tuck' = 'crimp' | 'tuck'> = FoldCompoundLanded<F> & {
   stored: FoldCompoundStored;
-}
+};
 
-export interface FoldCompoundFingerprinted<R> extends FoldCompoundLanded<R> {
-  fingerprint: FoldStateFingerprint;
-}
+export type FoldCrimpTuckFingerprinted<F extends 'crimp' | 'tuck' = 'crimp' | 'tuck'> = FoldCompoundFingerprinted<F> & {
+  stored: FoldCompoundStored;
+};
 
-/** Where a crimp or tuck got to. */
-export type FoldCompound<R, L extends FoldCompoundLanded<R> = FoldCompoundLanded<R>> =
+/** Where a crimp's or tuck's own call got to (`CompoundTried`). */
+export type FoldCrimpTuckTried<L extends FoldCrimpTuckLanded = FoldCrimpTuckLanded> =
   | ({ outcome: 'landed' } & L)
   /** A flap opens several ways: store one of each such flap's openings and fold again. Crimps only. */
   | { outcome: 'choose_opening'; analysis: FoldCrimpAnalysis }

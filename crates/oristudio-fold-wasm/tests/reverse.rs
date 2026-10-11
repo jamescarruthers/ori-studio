@@ -1,7 +1,8 @@
 //! The reverse fold through the bridge, in the JSON the web app sends (plan
 //! Phase 9): the document's `inside-reverse` and `outside-reverse` ops land
-//! the preliminary base from the triangle; the `reverse` query says which
-//! kinds land and what is still to choose; a step lacking a choice it needs
+//! the preliminary base from the triangle; the compound question
+//! (`compound_analysis`) says which kinds land and what is still to choose;
+//! a step lacking a choice it needs
 //! is `choice_needed`, one whose stored choice no longer resolves is
 //! `choice_broken`, and a kind that does not land offers the other; an
 //! opening and an order chosen through the query land and replay; and a
@@ -66,12 +67,17 @@ fn refuse(bridge: &mut Bridge, state: u32, step: Value, chosen: Value) -> Value 
     result
 }
 
+/// The compound question of a reverse fold: its family's answer.
 fn ask(bridge: &Bridge, state: u32, step: Value, chosen: Value) -> Value {
-    json_of(
+    let asked = json_of(
         &bridge
-            .reverse(state, &op(step.clone()), &choices(chosen))
+            .compound_analysis(state, &op(step.clone()), &choices(chosen))
             .unwrap_or_else(|e| panic!("{step}: {e}")),
-    )
+    );
+    if asked["status"] == "ok" {
+        assert_eq!(asked["family"], "reverse", "{asked}");
+    }
+    asked
 }
 
 fn ok<T: Serialize>(outcome: Result<Outcome<T>, BridgeError>) -> Value {
@@ -138,7 +144,7 @@ fn two_inside_reverses_of_the_triangle_land_the_preliminary_base() {
     let (first, landed) = land(&mut bridge, tri, corner_b("inside-reverse"), json!({}));
     assert_eq!(landed["report"], Value::Null);
     let report = &landed["compound"];
-    assert_eq!(report["op"], "reverse");
+    assert_eq!(report["family"], "reverse");
     assert_eq!(report["kind"], "inside");
     assert_eq!(report["openings"].as_array().map(Vec::len), Some(1));
     // Its motion: a spread and a close, the blocks turning opposite ways.
@@ -220,7 +226,7 @@ fn the_query_says_which_kinds_land_and_the_other_kind_is_the_fix() {
     assert_eq!(wrapped["compound"]["kind"], "outside");
 
     // A plain fold is not asked about here.
-    let plain = bridge.reverse(
+    let plain = bridge.compound_analysis(
         tri,
         &op(json!({
             "kind": "valley",

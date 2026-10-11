@@ -1,11 +1,13 @@
 //! The crimp and the tuck through the bridge, as the web app sends them
 //! (plan Phase 11): the document's `crimp` and `tuck` ops resolve their
-//! anchors in the parent; their analyses list the kinds that land and the
-//! layers a tuck takes; a fold lands, asks for an opening, or lands every
-//! order to choose from with what its step stores; a stored step replays
-//! through `apply` to the same state, and is refused `choice_needed` or
-//! `choice_broken` when its stored choices do not decide it or no longer
-//! resolve.
+//! anchors in the parent; their analyses (the compound question,
+//! `compound_analysis`) list the kinds that land and the layers a tuck
+//! takes; a fold lands, asks for an opening, or lands every order to choose
+//! from with what its step stores, each held as `apply` holds a step; a
+//! stored step replays through `apply` to the same state, with the same
+//! report, and is refused `choice_needed` or `choice_broken` when its stored
+//! choices do not decide it or no longer resolve; and a landed one keeps its
+//! step's summary after its parent is released.
 
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -81,6 +83,13 @@ fn landed_state(bridge: &mut Bridge, state: u32, step: &Value, chosen: Value) ->
     }
 }
 
+/// The compound question of a crimp or a tuck: its family's answer.
+fn question(bridge: &Bridge, state: u32, step: &Value, chosen: Value, family: &str) -> Value {
+    let asked = ok(bridge.compound_analysis(state, &op(step), &choices(chosen)));
+    assert_eq!(asked["family"], family, "{asked}");
+    asked
+}
+
 /// The square valley-folded along bd: the triangle b c d.
 fn triangle(bridge: &mut Bridge) -> u32 {
     let sheet = square(bridge);
@@ -119,7 +128,7 @@ fn a_crimp_lands_replays_and_refuses_the_kind_that_does_not_fit() {
     let mut bridge = Bridge::new();
     let tri = triangle(&mut bridge);
     let inside = perp_crimp("inside");
-    let analysed = ok(bridge.analyse_crimp(tri, &crimp_op(&inside), &choices(json!({}))));
+    let analysed = question(&bridge, tri, &inside, json!({}), "crimp");
     assert_eq!(analysed["kinds"], json!(["inside"]));
     assert_eq!(
         analysed["analysis"]["tip"]["tip"].as_array().map(Vec::len),
@@ -129,13 +138,23 @@ fn a_crimp_lands_replays_and_refuses_the_kind_that_does_not_fit() {
     assert_eq!(folded["outcome"], "landed");
     assert_eq!(folded["summary"]["faces"], 6);
     assert_eq!(folded["stored"], json!({}));
+    // Held as `apply` holds a step: no plain report, the crimp's as `compound`.
+    assert_eq!(folded["report"], Value::Null);
+    assert_eq!(folded["compound"]["family"], "crimp");
     assert_eq!(
-        folded["report"]["motion"]["legs"].as_array().map(Vec::len),
+        folded["compound"]["motion"]["legs"]
+            .as_array()
+            .map(Vec::len),
         Some(4)
     );
-    assert_eq!(folded["report"]["kind"], "inside");
-    // The step replays through `apply` to the same state, with its summary.
-    let replayed = landed_state(&mut bridge, tri, &inside, json!({}));
+    assert_eq!(folded["compound"]["kind"], "inside");
+    // The step replays through `apply` to the same state and report, with
+    // its summary.
+    let (replayed, applied) = match apply(&mut bridge, tri, &inside, json!({})) {
+        Outcome::Ok(applied) => (applied.state, json_of(&applied)),
+        Outcome::Refused(r) => panic!("refused: {}", json_of(&r)),
+    };
+    assert_eq!(applied["compound"], folded["compound"]);
     let (a, b) = (
         bridge.canonical_keys(replayed).unwrap_or_default(),
         bridge
@@ -168,6 +187,21 @@ fn a_crimp_lands_replays_and_refuses_the_kind_that_does_not_fit() {
         root["refusal"],
         json!({ "code": "unexpected_choice", "choice": "root" })
     );
+    // A crimp folds along two lines: a plain fold's questions are not its.
+    assert!(matches!(
+        bridge.analyse(tri, &op(&inside), &Choices::default()),
+        Err(BridgeError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        bridge.depth_choices(tri, &op(&inside), &Choices::default(), [0.9, 0.1]),
+        Err(BridgeError::InvalidInput(_))
+    ));
+    // A crimp kept its step's summary as it landed: with its parent let go
+    // it still has it (a fold's would be `parent_released`), and its picture
+    // is none.
+    assert!(bridge.release(tri));
+    assert_eq!(ok(bridge.step_summary(replayed)), step);
+    assert_eq!(ok(bridge.step_action(replayed))["action"], Value::Null);
 }
 
 /// Book fold, book fold again: the strip [0, ¼] × [0, 1] in four layers,
@@ -210,7 +244,7 @@ fn a_crimp_asks_for_its_opening_and_stores_it() {
         .unwrap_or_default();
     assert_eq!(openings.len(), 2);
     assert_eq!(
-        ok(bridge.analyse_crimp(strip, &crimp_op(&step), &choices(json!({}))))["kinds"],
+        question(&bridge, strip, &step, json!({}), "crimp")["kinds"],
         Value::Null
     );
     // Replayed without the opening, the step needs it.
@@ -223,9 +257,7 @@ fn a_crimp_asks_for_its_opening_and_stores_it() {
         json!({ "code": "choice_needed", "choice": "opening" })
     );
     let chosen = json!({ "opening": [openings[0]["stored"]] });
-    let kinds =
-        ok(bridge.analyse_crimp(strip, &crimp_op(&step), &choices(chosen.clone())))["kinds"]
-            .clone();
+    let kinds = question(&bridge, strip, &step, chosen.clone(), "crimp")["kinds"].clone();
     assert!(kinds.as_array().is_some_and(|k| !k.is_empty()), "{kinds}");
     let folded = ok(bridge.crimp(strip, &crimp_op(&step), &choices(chosen.clone())));
     let stored = match folded["outcome"].as_str() {
@@ -261,7 +293,7 @@ fn a_tuck_lists_its_targets_lands_and_replays() {
         "seed": { "scope": "flaps", "at": [[0.05, 0.05]] },
         "target": [0.75, 0.5],
     });
-    let analysed = ok(bridge.analyse_tuck(book, &tuck_op(&step), &choices(json!({}))));
+    let analysed = question(&bridge, book, &step, json!({}), "tuck");
     assert_eq!(analysed["analysis"]["placement"], "under");
     let targets = analysed["analysis"]["targets"]
         .as_array()
@@ -275,12 +307,18 @@ fn a_tuck_lists_its_targets_lands_and_replays() {
     );
     let folded = ok(bridge.tuck(book, &tuck_op(&step), &choices(json!({}))));
     assert_eq!(folded["outcome"], "landed");
-    assert_eq!(folded["report"]["placement"], "under");
+    assert_eq!(folded["compound"]["family"], "tuck");
+    assert_eq!(folded["compound"]["placement"], "under");
     assert_eq!(
-        folded["report"]["motion"]["legs"].as_array().map(Vec::len),
+        folded["compound"]["motion"]["legs"]
+            .as_array()
+            .map(Vec::len),
         Some(2)
     );
-    landed_state(&mut bridge, book, &step, json!({}));
+    match apply(&mut bridge, book, &step, json!({})) {
+        Outcome::Ok(applied) => assert_eq!(json_of(&applied)["compound"], folded["compound"]),
+        Outcome::Refused(r) => panic!("refused: {}", json_of(&r)),
+    }
     // The layer the seed names is no target.
     let mut into_seed = step.clone();
     into_seed["target"] = json!([0.25, 0.5]);

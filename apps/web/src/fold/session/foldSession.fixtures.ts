@@ -14,6 +14,7 @@ import { initialFoldReaderState, withFoldCursor } from '../document/foldReaderSt
 import { createFoldSequence, SQUARE_PAPER, type FoldIdFactory } from '../document/foldSequenceDocument';
 import { appendFoldStep, type FoldStepDraft } from '../document/foldSequenceEdits';
 import type { FoldEngineCalls } from '../engine/foldEngineCalls';
+import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import type {
   FoldAnalysis,
   FoldEngineOp,
@@ -58,6 +59,8 @@ export interface FakeFoldEngineOptions {
   refuse?: (op: FoldEngineOp) => FoldRefusalCode | null;
   /** An error to throw for a step, as a broken bridge would. */
   fail?: (op: FoldEngineOp) => { code: string; message: string } | null;
+  /** A compound fold's report for a step, landed in place of a plain fold's, as the bridge lands one; null for none. */
+  compound?: (op: FoldEngineOp) => FoldCompoundReport | null;
 }
 
 const REPORT: FoldReport = {
@@ -121,7 +124,7 @@ const fingerprintOf = (trail: readonly string[]) =>
   foldStateFingerprint({ keys: trail.map((label, k) => `${k}:${label}`) });
 
 /** States that are the labels of the steps that landed them: a step's state is its path, as the engine's is. */
-export function fakeFoldEngine({ refuse, fail }: FakeFoldEngineOptions = {}): FakeFoldEngine {
+export function fakeFoldEngine({ refuse, fail, compound }: FakeFoldEngineOptions = {}): FakeFoldEngine {
   const states = new Map<number, readonly string[]>();
   const log: string[] = [];
   let next = 0;
@@ -159,8 +162,15 @@ export function fakeFoldEngine({ refuse, fail }: FakeFoldEngineOptions = {}): Fa
     const code = refuse?.(op) ?? null;
     if (code) return refused(code);
     const trail = [...parent, foldOpLabel(op)];
-    const report = op.kind === 'turn' || op.kind === 'rotate' ? null : REPORT;
-    return { status: 'ok' as const, state: land(trail), report, summary: summaryOf(trail) };
+    const folded = compound?.(op) ?? null;
+    const report = op.kind === 'turn' || op.kind === 'rotate' || folded ? null : REPORT;
+    return {
+      status: 'ok' as const,
+      state: land(trail),
+      report,
+      ...(folded ? { compound: folded } : {}),
+      summary: summaryOf(trail),
+    };
   };
 
   return {

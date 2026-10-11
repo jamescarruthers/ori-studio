@@ -4,7 +4,9 @@
 //! `apply` along the document's lines (free, existing crease, the tools'
 //! model line); the closed sink's pocket asked for, stored and replayed; the
 //! tilted line refused with the square line and the closed sink as fixes;
-//! the choices a sink takes and the ones it does not; and the queries.
+//! the choices a sink takes and the ones it does not; every landing
+//! reported as the step's `compound`, family `sink`; and the queries — the
+//! compound question, and a sink tool's own.
 
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -14,7 +16,7 @@ use oristudio_fold::{State, WitnessOrder};
 use oristudio_fold_wasm::bridge::Bridge;
 use oristudio_fold_wasm::canonical::canonical_keys;
 use oristudio_fold_wasm::io::{CpFile, CpFormat, Imports, Limits, Target};
-use oristudio_fold_wasm::ops_sinks::{sink_analysis, sink_orders, sink_pick};
+use oristudio_fold_wasm::ops_sinks::{sink_orders, sink_pick};
 use oristudio_fold_wasm::wire::{BridgeError, Choices, Op, Outcome};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -157,6 +159,23 @@ fn ok(outcome: Outcome<impl Serialize>) -> Value {
     }
 }
 
+/// The compound question of a sink: its family's answer.
+fn sink_analysis(
+    bridge: &Bridge,
+    state: u32,
+    op: &Op,
+    choices: &Choices,
+) -> Result<Outcome<Value>, BridgeError> {
+    Ok(match bridge.compound_analysis(state, op, choices)? {
+        Outcome::Ok(asked) => {
+            let asked = json_of(&asked);
+            assert_eq!(asked["family"], "sink", "{asked}");
+            Outcome::Ok(asked)
+        }
+        Outcome::Refused(refusal) => Outcome::Refused(refusal),
+    })
+}
+
 /// A query that must be refused, as JSON.
 fn ok_refused<T: Serialize>(outcome: Result<Outcome<T>, BridgeError>) -> Value {
     match outcome {
@@ -178,7 +197,8 @@ fn a_sample_open_sinks_and_unsinks_through_apply() {
         let f = 0.3;
         let (sunk, applied) = landed(&mut bridge, start, &base.sink("open-sink", f), json!({}));
         assert_eq!(applied["report"], Value::Null, "{}", base.name);
-        let report = &applied["sink"];
+        let report = &applied["compound"];
+        assert_eq!(report["family"], "sink", "{}", base.name);
         assert_eq!(report["step"], "open", "{}", base.name);
         assert_eq!(report["ring"].as_array().map(Vec::len), Some(8));
         assert_eq!(report["motion"]["kind"], "visual");
@@ -199,9 +219,9 @@ fn a_sample_open_sinks_and_unsinks_through_apply() {
         assert_eq!(action["action"], Value::Null);
 
         let (back, applied) = landed(&mut bridge, sunk, &base.unsink(f), json!({}));
-        assert_eq!(applied["sink"]["step"], "unsink");
+        assert_eq!(applied["compound"]["step"], "unsink");
         assert_eq!(
-            applied["sink"]["unfolded"].as_array().map(Vec::len),
+            applied["compound"]["unfolded"].as_array().map(Vec::len),
             Some(8)
         );
         let unsunk = state(&bridge, back);
@@ -258,8 +278,8 @@ fn a_closed_sink_asks_for_its_pocket_and_replays_it() {
         let stored = &pocket["stored"];
         let chosen = json!({ "pocket": [stored["above"], stored["below"]] });
         let (first, applied) = landed(&mut bridge, start, &step, chosen.clone());
-        assert_eq!(applied["sink"]["step"], "closed");
-        assert_eq!(applied["sink"]["stored"]["pocket"], *stored);
+        assert_eq!(applied["compound"]["step"], "closed");
+        assert_eq!(applied["compound"]["stored"]["pocket"], *stored);
         let (again, _) = landed(&mut bridge, start, &step, chosen);
         let first_keys = canonical_keys(state(&bridge, first));
         assert_eq!(first_keys, canonical_keys(state(&bridge, again)));
@@ -348,7 +368,7 @@ fn a_sink_takes_its_own_choices() {
         canonical_keys(state(&bridge, sunk)),
         canonical_keys(state(&bridge, again))
     );
-    assert_eq!(applied["sink"]["stored"]["order"], json_of(&order));
+    assert_eq!(applied["compound"]["stored"]["order"], json_of(&order));
     for (chosen, choice) in [
         (json!({ "pocket": [[0.1, 0.1], [0.2, 0.2]] }), "pocket"),
         (json!({ "root": { "n": [1.0, 0.0], "d": 0.5 } }), "root"),

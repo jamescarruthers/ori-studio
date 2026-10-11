@@ -45,10 +45,6 @@ describe('the sink wire', () => {
 describe('the sink calls', () => {
   const engine: FoldWasmSinkEngine & { asked: unknown[][] } = {
     asked: [],
-    sink_analysis(...args) {
-      this.asked.push(['analysis', ...args]);
-      return { status: 'ok' };
-    },
     sink_orders(...args) {
       this.asked.push(['orders', ...args]);
       return { status: 'ok' };
@@ -61,21 +57,21 @@ describe('the sink calls', () => {
   const calls = createFoldEngineSinkCalls(engine);
 
   it('hands a checked sink op over unchanged, a pick as indices', () => {
-    calls.sinkAnalysis(3, SINK);
+    calls.sinkOrders(3, SINK);
     calls.sinkPick(3, SINK, [0, 2], { pocket: [[0.1, 0.1], [0.2, 0.2]] });
-    expect(engine.asked[0]).toEqual(['analysis', 3, SINK, undefined]);
+    expect(engine.asked[0]).toEqual(['orders', 3, SINK, undefined]);
     expect(engine.asked[1]?.[4]).toEqual(Uint32Array.from([0, 2]));
   });
 
   it('throws the caller’s mistakes before the engine sees them', () => {
     const valley = { ...SINK, kind: 'valley' } as unknown as FoldEngineSinkOp;
     for (const call of [
-      () => calls.sinkAnalysis(0, SINK),
+      () => calls.sinkOrders(0, SINK),
       () => calls.sinkOrders(1.5, SINK),
       () => calls.sinkOrders(1, valley),
       () => calls.sinkPick(1, SINK, [-1]),
       () => calls.sinkPick(1, SINK, [0.5]),
-      () => calls.sinkAnalysis(1, SINK, 'first' as never),
+      () => calls.sinkOrders(1, SINK, 'first' as never),
     ]) {
       expect(call).toThrow(expect.objectContaining({ code: 'invalid_input' }));
     }

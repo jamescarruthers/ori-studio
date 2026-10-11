@@ -7,16 +7,23 @@
  * Pure: no React, no store, no engine.
  */
 import type { FoldCompoundPaneRows } from '../../components/fold/FoldStepPane';
-import type { FoldCompoundReport } from '../engine/foldEngineWire';
+import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 
 export function foldCompoundPaneRows(report: FoldCompoundReport | undefined | null): FoldCompoundPaneRows | undefined {
   if (!report) return undefined;
-  switch (report.op) {
+  switch (report.family) {
     case 'reverse':
       return {
         blocks: report.blocks.length,
         opening: report.openings.length === 0 ? null : (report.stored.openings?.length ?? 0) > 0 ? 'chosen' : 'only',
         orderChosen: report.stored.order !== undefined,
       };
+    // The other families' rows come with their tools: until then the pane
+    // shows them as it shows a plain fold.
+    case 'crimp':
+    case 'tuck':
+    case 'vertex':
+    case 'sink':
+      return undefined;
   }
 }

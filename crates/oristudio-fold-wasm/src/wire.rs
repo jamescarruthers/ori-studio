@@ -138,9 +138,9 @@ impl Op {
         }
     }
 
-    /// Whether it ends at a completion, whose choice it stores as
-    /// `completion`: every compound fold (plan D6).
-    pub fn takes_completion(&self) -> bool {
+    /// Whether it is a compound fold (`crate::compound`): one that ends at a
+    /// completion, whose choice it stores as `completion` (plan D6).
+    pub fn is_compound(&self) -> bool {
         matches!(
             self,
             Op::InsideReverse(_)
@@ -157,28 +157,51 @@ impl Op {
         )
     }
 
-    /// Whether it opens flaps, whose choice it stores as `opening`: the
-    /// reverse folds and the crimp.
-    pub fn takes_opening(&self) -> bool {
-        matches!(
-            self,
-            Op::InsideReverse(_) | Op::OutsideReverse(_) | Op::Crimp(_)
-        )
-    }
-
-    /// Whether its fold line is an axiom's, the one line that takes a stored
-    /// root.
-    pub fn is_axiom(&self) -> bool {
+    /// The choices it may store beside its own fields: an axiom line's root,
+    /// a compound fold's completion, the openings of a reverse fold's or a
+    /// crimp's flaps, a closed sink's pocket.
+    pub fn takes(&self) -> Takes {
+        let compound = |line: Option<&LineInput>| Takes {
+            root: line.is_some_and(LineInput::is_axiom),
+            completion: true,
+            ..Takes::default()
+        };
         match self {
-            Op::Valley(a) | Op::Mountain(a) | Op::Precrease(a) => {
-                matches!(a.line, LineInput::Axiom { .. })
+            Op::Valley(a) | Op::Mountain(a) | Op::Precrease(a) => Takes {
+                root: a.line.is_axiom(),
+                ..Takes::default()
+            },
+            Op::Unfold(_) | Op::Refold(_) | Op::Turn { .. } | Op::Rotate { .. } | Op::CpJump(_) => {
+                Takes::default()
             }
-            Op::InsideReverse(r) | Op::OutsideReverse(r) => {
-                matches!(r.line, LineInput::Axiom { .. })
-            }
-            _ => false,
+            Op::InsideReverse(r) | Op::OutsideReverse(r) => Takes {
+                opening: true,
+                ..compound(Some(&r.line))
+            },
+            Op::Crimp(crimp) => crimp.takes(),
+            Op::Tuck(tuck) => tuck.takes(),
+            Op::Squash(_) | Op::Petal(_) | Op::RabbitEar(_) | Op::Swivel(_) => compound(None),
+            Op::OpenSink(sink) | Op::Unsink(sink) => compound(Some(&sink.line)),
+            Op::ClosedSink(sink) => Takes {
+                pocket: true,
+                ..compound(Some(&sink.line))
+            },
         }
     }
+}
+
+/// The choices an op may store beside its own fields (plan D6), by their
+/// document keys: what [`Choices::unexpected`] lets through.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Takes {
+    /// The root an axiom gave: an op whose (first) line is an axiom's.
+    pub root: bool,
+    /// The pairs a completion left free: every compound fold.
+    pub completion: bool,
+    /// The way each flap opens: the reverse folds and the crimp.
+    pub opening: bool,
+    /// The pocket a point sinks into: the closed sink.
+    pub pocket: bool,
 }
 
 /// A fold along a line: the document's `FoldAlongLine`, plus the tools'
@@ -236,6 +259,13 @@ pub enum LineInput {
     Axiom { axiom: u8, inputs: Vec<RefInput> },
     /// A line `n · p = d` in the parent's model frame: the tools'.
     Model { line: Line },
+}
+
+impl LineInput {
+    /// Whether it is an axiom's, the one line that takes a stored root.
+    pub fn is_axiom(&self) -> bool {
+        matches!(self, LineInput::Axiom { .. })
+    }
 }
 
 /// An axiom input (`FoldRef`): a sheet point, a mark's resolved sheet point,
@@ -354,25 +384,19 @@ pub struct Choices {
 }
 
 impl Choices {
-    /// The first choice present that an op takes none of, by its document
-    /// key: `root` unless the op folds along an axiom, `completion` unless
-    /// it ends at one (`Op::takes_completion`), `opening` unless it opens
-    /// flaps (`Op::takes_opening`), and `pocket` always: a sink checks its
-    /// own (`ops_sinks`). An empty list is no choice, as the document reads
-    /// it, and so is a completion that orders nothing.
-    pub fn unexpected(
-        &self,
-        takes_root: bool,
-        takes_completion: bool,
-        takes_opening: bool,
-    ) -> Option<&'static str> {
-        if self.root.is_some() && !takes_root {
+    /// The first choice present that an op takes none of ([`Op::takes`]),
+    /// by its document key, in the order `root`, `completion`, `pocket`,
+    /// `opening`. Every op is checked by this one rule before anything
+    /// resolves (`resolve::check_choices`). An empty list is no choice, as
+    /// the document reads it, and so is a completion that orders nothing.
+    pub fn unexpected(&self, takes: Takes) -> Option<&'static str> {
+        if self.root.is_some() && !takes.root {
             Some("root")
-        } else if !takes_completion && self.completion().is_some() {
+        } else if !takes.completion && self.completion().is_some() {
             Some("completion")
-        } else if self.pocket.is_some() {
+        } else if self.pocket.is_some() && !takes.pocket {
             Some("pocket")
-        } else if !takes_opening && !self.openings().is_empty() {
+        } else if !takes.opening && !self.openings().is_empty() {
             Some("opening")
         } else {
             None
@@ -730,24 +754,18 @@ pub struct Analysed {
     pub analysis: oristudio_fold::FoldAnalysis,
 }
 
-/// A landed step.
+/// A landed step: by `apply`, or by a compound family's own call, held alike.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Applied {
     pub state: u32,
     /// What a plain fold did; none for a turn, a rotation, an import or a
     /// compound fold.
     pub report: Option<oristudio_fold::FoldReport>,
-    /// What a compound fold did, by its op; absent for any other step.
+    /// What a compound fold did, tagged by its family, its motion's legs
+    /// among it (`crate::compound`); absent for any other step.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compound: Option<crate::compound::CompoundStepReport>,
-    /// What a sink or an unsink did, its motion's legs among it.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sink: Option<oristudio_fold::SinkReport>,
     pub summary: Summary,
-    /// What a vertex fold did, with its motion (plan D15); absent for every
-    /// other step.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vertex: Option<Box<oristudio_fold::VertexReport>>,
 }
 
 /// A fold's picture on the state it starts from (plan D12, per step).
@@ -852,5 +870,91 @@ impl BridgeError {
             BridgeError::UnknownState(_) => "unknown_state",
             BridgeError::ParentReleased { .. } => "parent_released",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::{Value, json};
+
+    use super::*;
+
+    fn op(value: Value) -> Op {
+        serde_json::from_value(value.clone()).unwrap_or_else(|e| panic!("op {value}: {e}"))
+    }
+
+    fn choices(value: Value) -> Choices {
+        serde_json::from_value(value.clone()).unwrap_or_else(|e| panic!("choices {value}: {e}"))
+    }
+
+    #[test]
+    fn every_op_takes_its_own_choices_by_one_rule() {
+        let free = json!({ "via": "free", "through": [[0.1, 0.5], [0.9, 0.5]] });
+        let axiom = json!({
+            "via": "axiom", "axiom": 1,
+            "inputs": [{ "kind": "point", "at": [0.1, 0.1] }, { "kind": "point", "at": [0.9, 0.9] }]
+        });
+        let seed = json!({ "scope": "all" });
+        let along =
+            |kind: &str, line: &Value| op(json!({ "kind": kind, "line": line, "seed": seed }));
+        let crimp = |line: &Value| {
+            op(
+                json!({ "kind": "crimp", "line": line, "second": free, "crimp": "inside", "seed": seed }),
+            )
+        };
+        let tuck = |line: &Value| {
+            op(json!({
+                "kind": "tuck", "line": line, "direction": "valley", "seed": seed, "target": [0.2, 0.2]
+            }))
+        };
+        let squash = op(json!({ "kind": "squash", "flap": [0.2, 0.2], "direction": "valley" }));
+        let takes = |root, completion, opening, pocket| Takes {
+            root,
+            completion,
+            opening,
+            pocket,
+        };
+        for (op, want) in [
+            (along("valley", &free), takes(false, false, false, false)),
+            (along("valley", &axiom), takes(true, false, false, false)),
+            (
+                along("inside-reverse", &axiom),
+                takes(true, true, true, false),
+            ),
+            (crimp(&axiom), takes(true, true, true, false)),
+            (crimp(&free), takes(false, true, true, false)),
+            (tuck(&axiom), takes(true, true, false, false)),
+            (squash, takes(false, true, false, false)),
+            (along("open-sink", &free), takes(false, true, false, false)),
+            (along("closed-sink", &axiom), takes(true, true, false, true)),
+            (along("unsink", &free), takes(false, true, false, false)),
+        ] {
+            assert_eq!(op.takes(), want, "{}", op.kind());
+            assert_eq!(op.is_compound(), want.completion, "{}", op.kind());
+        }
+        // Several unexpected: the first by the rule's order.
+        let every = choices(json!({
+            "root": { "n": [1.0, 0.0], "d": 0.5 },
+            "completion": { "faces": [[0.1, 0.1], [0.2, 0.2]], "orders": [[0, 1, 1]] },
+            "pocket": [[0.1, 0.1], [0.2, 0.2]],
+            "opening": [{ "upper": [[0.1, 0.1]] }]
+        }));
+        assert_eq!(every.unexpected(Takes::default()), Some("root"));
+        assert_eq!(
+            every.unexpected(takes(true, false, true, true)),
+            Some("completion")
+        );
+        assert_eq!(
+            every.unexpected(takes(true, true, true, false)),
+            Some("pocket")
+        );
+        assert_eq!(
+            every.unexpected(takes(true, true, false, true)),
+            Some("opening")
+        );
+        assert_eq!(every.unexpected(takes(true, true, true, true)), None);
+        // An empty list, or a completion that orders nothing, is no choice.
+        let empty = choices(json!({ "opening": [], "completion": { "faces": [], "orders": [] } }));
+        assert_eq!(empty.unexpected(Takes::default()), None);
     }
 }

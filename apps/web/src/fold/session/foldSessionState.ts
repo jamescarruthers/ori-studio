@@ -27,14 +27,15 @@ import {
   type FoldSequenceDocument,
 } from '../document/foldSequenceDocument';
 import { foldStepTree, pathTo } from '../document/foldStepTree';
+import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type {
   FoldAnalysis,
-  FoldCompoundReport,
   FoldEngineOp,
   FoldEngineRefused,
   FoldReport,
   FoldStateSummary,
+  FoldStepLanded,
 } from '../engine/foldEngineWire';
 
 /**
@@ -49,8 +50,22 @@ export interface FoldStateDetails {
   readonly summary: FoldStateSummary;
   /** What a plain fold did; null for the sheet, a turn, a rotation, an import and a compound fold. */
   readonly report: FoldReport | null;
-  /** What a compound fold did, by its op; absent for any other step. */
+  /** What a compound fold of any family did, tagged by its family; absent for any other step. */
   readonly compound?: FoldCompoundReport;
+}
+
+/**
+ * What the engine said of a state it landed, from its answer: the one way a
+ * landed step's summary and reports reach the session — a replay's step, a
+ * preview, a commit, or a step a compound family's own call landed — so a
+ * compound fold of any family keeps its report wherever it landed.
+ */
+export function foldStateDetailsOf(answer: Pick<FoldStepLanded, 'summary' | 'report' | 'compound'>): FoldStateDetails {
+  return {
+    summary: answer.summary,
+    report: answer.report,
+    ...(answer.compound ? { compound: answer.compound } : {}),
+  };
 }
 
 /** A node of the shown sequence, or its sheet, as the surfaces read it. */
@@ -65,7 +80,7 @@ export interface FoldSessionNode {
   readonly summary: FoldStateSummary | null;
   /** What the step did, once landed; null for the sheet, a turn and a rotation. */
   readonly report: FoldReport | null;
-  /** What a compound fold did, once landed; absent for any other step. */
+  /** What a compound fold of any family did, once landed; absent for any other step. */
   readonly compound?: FoldCompoundReport;
   /** Set when broken: the node that refused (null for the sheet) and the engine's code. */
   readonly refusal: FoldReplayRefusal | null;

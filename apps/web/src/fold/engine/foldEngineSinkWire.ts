@@ -7,15 +7,16 @@
  * A sink is the document's op (`FoldSinkOp`: `open-sink`, `closed-sink`,
  * `unsink`), which the bridge lands through `apply` like any step, so a
  * commit lands exactly as a replay will. A sink tool asks first what the
- * point is and how it sinks (`sinkAnalysis`), and — when more than one order
- * fits — how many (`sinkOrders`) and what a pick stores (`sinkPick`). What a
- * step stores comes back in the engine's shapes and goes into the document's
- * through {@link sinkStoredChoices}.
+ * point is and how it sinks (the compound question, `compoundAnalysis`,
+ * `family: 'sink'`), and — when more than one order fits — how many
+ * (`sinkOrders`) and what a pick stores (`sinkPick`). What a step stores
+ * comes back in the engine's shapes and goes into the document's through
+ * {@link sinkStoredChoices}.
  *
- * A landed sink's report carries its motion (plan D15): legs, each turning
- * groups of faces about a hinge, with exact endpoints — the engine's
- * `StepMotion`, every compound fold's (`FoldStepMotionLegs`,
- * `foldEngineWire.ts`).
+ * A landed sink reports as the step's `compound` (`family: 'sink'`,
+ * `foldEngineCompoundWire.ts`), its motion among it (plan D15): legs, each
+ * turning groups of faces about a hinge, with exact endpoints — the engine's
+ * `StepMotion`, every compound fold's (`FoldStepMotionLegs`).
  *
  * Pure types, constants and one conversion: no React, no store, no wasm.
  */
@@ -26,16 +27,15 @@ import type {
   FoldModelLine,
   SheetPoint,
 } from '../document/foldSequenceDocument';
+import type { FoldCompoundReportBase } from './foldEngineCompoundWire';
 import type {
   FoldEngineOp,
   FoldEngineRefused,
   FoldFlap,
   FoldLetter,
   FoldModelPoint,
-  FoldRefold,
   FoldSide,
   FoldSnap,
-  FoldStepMotionLegs,
 } from './foldEngineWire';
 
 /** Which way a point sinks. */
@@ -85,7 +85,7 @@ export interface FoldPocket {
   stored: FoldStoredPocket;
 }
 
-/** A point and the ways it sinks, before anything lands (`sinkAnalysis`). */
+/** A point and the ways it sinks, before anything lands (the compound question's). */
 export interface FoldSinkPoint {
   /** ℓ after snapping, in the parent's model frame, and the side the point's tip is on. */
   line: FoldModelLine;
@@ -124,8 +124,8 @@ export interface FoldSinkStored {
   order?: FoldCompletionChoice;
 }
 
-/** What a sink or an unsink did (`FoldStepLanded.sink`). */
-export interface FoldSinkReport {
+/** What a sink or an unsink did (`SinkReport`), as a compound step reports it under `family: 'sink'`. */
+export interface FoldSinkReport extends FoldCompoundReportBase {
   step: FoldSinkStep;
   /** ℓ after snapping, and the side the moving paper started on. */
   line: FoldModelLine;
@@ -135,21 +135,6 @@ export interface FoldSinkReport {
   pocket?: FoldPocket;
   /** The landed state's creases between the moved paper and the paper that stays: folded by a sink, flat after an unsink. */
   ring: number[];
-  /** The parent's faces that move. */
-  moving: number[];
-  /** Per block, the landed state's faces in it. */
-  blocks: number[][];
-  /** The creases the step made. */
-  created: number[];
-  /** Folded creases that lie flat now. */
-  unfolded: number[];
-  /** Flat creases that fold again. */
-  refolded: FoldRefold[];
-  /** Folded creases whose letter turned. */
-  reversed: number[];
-  /** How many faces were split. */
-  split: number;
-  motion: FoldStepMotionLegs;
   /** What the step stores: the pocket chosen among several, the order chosen among several. */
   stored: FoldSinkStored;
 }

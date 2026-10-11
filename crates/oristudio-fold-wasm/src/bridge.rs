@@ -13,18 +13,19 @@
 //! the child alone, computed when asked rather than on every step a replay
 //! lands, while the parent is still held. An import keeps no parent: it
 //! replaces the state rather than changing it, so nothing about it is asked
-//! of the state before it.
+//! of the state before it. A compound fold, of any family, is held one way
+//! (`crate::compound`), whether `apply` landed it or its family's own call.
 
 use std::collections::HashMap;
 
 use oristudio_fold::{
     ActionKind, AnchoredRefused, CreaseDiff, CreaseKind, FoldAnalysis, Folded, Letter, Sheet, Side,
-    SinkFolded, State, StepSummary, VertexFolded,
+    State, StepSummary,
 };
 use oristudio_geometry::Line;
 
 use crate::canonical::canonical_keys;
-use crate::compound::CompoundLanded;
+use crate::compound::{CompoundLanded, asks_its_own};
 use crate::joins::section_joins;
 use crate::resolve::{Rejection, Resolved, axiom_of, finite_point, model_line, resolve};
 use crate::wire::{
@@ -56,25 +57,11 @@ enum Held {
     /// An imported crease pattern (a `cp-jump`, plan D16), landed after a
     /// state it replaces.
     Jump(State),
-    /// A compound fold of `parent` (`crate::compound`).
+    /// A compound fold of `parent`, any family's (`crate::compound`): its
+    /// step's summary and picture are its own to give, against `parent`
+    /// when it needs it.
     Compound {
         landed: Box<dyn CompoundLanded>,
-        parent: u32,
-    },
-    /// A compound fold that keeps no parent (a crimp, a tuck,
-    /// `ops_crimp_tuck`), with its step's summary, taken when it landed, so
-    /// its parent need not stay held: its picture is its motion, in its
-    /// report.
-    Summarised { state: State, step: StepSummary },
-    /// A vertex fold of `parent` (`ops_squash_family`): its summary is the
-    /// diff from its parent; it folds along no one line to picture.
-    Vertex {
-        folded: Box<VertexFolded>,
-        parent: u32,
-    },
-    /// A sink or an unsink of `parent` (`ops_sinks`), with its report.
-    Sink {
-        folded: Box<SinkFolded>,
         parent: u32,
     },
 }
@@ -82,14 +69,9 @@ enum Held {
 impl Held {
     fn state(&self) -> &State {
         match self {
-            Held::Sheet(state)
-            | Held::View { state, .. }
-            | Held::Jump(state)
-            | Held::Summarised { state, .. } => state,
+            Held::Sheet(state) | Held::View { state, .. } | Held::Jump(state) => state,
             Held::Fold { folded, .. } => &folded.state,
             Held::Compound { landed, .. } => landed.state(),
-            Held::Vertex { folded, .. } => &folded.state,
-            Held::Sink { folded, .. } => &folded.state,
         }
     }
 }
@@ -142,8 +124,11 @@ impl Bridge {
     ) -> Result<Outcome<Acted>, BridgeError> {
         let parent = self.state(state)?;
         let action = match settle(resolve(parent, op, choices))? {
-            // A compound fold pictures itself: a reverse fold's push.
-            Ok(Resolved::Compound(compound)) => compound.action(parent),
+            // A compound fold pictures itself: a reverse fold's push. A
+            // family that folds along no one line has no such picture.
+            Ok(Resolved::Compound(compound)) => {
+                compound.action(parent).ok_or_else(|| asks_its_own(op))?
+            }
             resolved => analysis_of(parent, op, resolved)?.and_then(|(analysis, kind)| {
                 parent
                     .fold_action(&analysis, kind, None)
@@ -166,7 +151,7 @@ impl Bridge {
         let parent = self.state(state)?;
         finite_point("at", at)?;
         let plain = match settle(resolve(parent, op, choices))? {
-            Ok(resolved) => resolved.plain(parent).ok_or_else(|| moves_no_paper(op))?,
+            Ok(resolved) => resolved.plain(parent).ok_or_else(|| no_plain_fold(op))?,
             Err(refusal) => return Ok(Outcome::Refused(refusal)),
         };
         Ok(plain
@@ -232,24 +217,6 @@ impl Bridge {
         choices: &Choices,
     ) -> Result<Outcome<Applied>, BridgeError> {
         let parent = self.state(state)?;
-        // A crimp or a tuck lands as its stored choices decide it.
-        if let Some(landed) = crate::ops_crimp_tuck::replay(parent, op, choices) {
-            return Ok(match landed? {
-                Ok((landed, step)) => {
-                    let summary = summary(&landed);
-                    Outcome::Ok(Applied {
-                        state: self.hold_compound_state(landed, step),
-                        report: None,
-                        // A crimp's or tuck's report is its own calls'.
-                        compound: None,
-                        sink: None,
-                        summary,
-                        vertex: None,
-                    })
-                }
-                Err(refusal) => Outcome::Refused(refusal),
-            });
-        }
         let fold = |folded: Folded, kind| Held::Fold {
             folded: Box::new(folded),
             parent: state,
@@ -276,69 +243,46 @@ impl Bridge {
                 parent: state,
             }),
             Ok(Resolved::Jump(landed)) => Ok(Held::Jump(landed)),
+            // Every compound family lands through the seam.
             Ok(Resolved::Compound(compound)) => {
                 compound.apply(parent).map(|landed| Held::Compound {
                     landed,
                     parent: state,
                 })
             }
-            Ok(Resolved::Vertex(fold)) => {
-                crate::ops_squash_family::land(parent, &fold).map(|folded| Held::Vertex {
-                    folded: Box::new(folded),
-                    parent: state,
-                })
-            }
-            Ok(Resolved::Sink(sink)) => {
-                crate::ops_sinks::land(parent, &sink).map(|folded| Held::Sink {
-                    folded: Box::new(folded),
-                    parent: state,
-                })
-            }
             Err(refusal) => Err(refusal),
         };
         Ok(match landed {
-            Ok(held) => {
-                let summary = summary(held.state());
-                let (report, compound, vertex, sink) = match &held {
-                    Held::Fold { folded, .. } => (Some(folded.report.clone()), None, None, None),
-                    Held::Compound { landed, .. } => (None, Some(landed.report()), None, None),
-                    Held::Vertex { folded, .. } => {
-                        (None, None, Some(Box::new(folded.report.clone())), None)
-                    }
-                    Held::Sink { folded, .. } => (None, None, None, Some(folded.report.clone())),
-                    Held::Sheet(_)
-                    | Held::View { .. }
-                    | Held::Jump(_)
-                    | Held::Summarised { .. } => (None, None, None, None),
-                };
-                Outcome::Ok(Applied {
-                    state: self.hold(held),
-                    report,
-                    compound,
-                    sink,
-                    summary,
-                    vertex,
-                })
-            }
+            Ok(held) => Outcome::Ok(self.hold_step(held)),
             Err(refusal) => Outcome::Refused(refusal),
         })
     }
 
-    /// Hold a vertex fold of the held state `parent`, as `apply` would have
-    /// landed it: its handle and its step as `apply` returns it.
-    pub(crate) fn hold_vertex(&mut self, folded: VertexFolded, parent: u32) -> Applied {
-        let summary = summary(&folded.state);
-        let vertex = Some(Box::new(folded.report.clone()));
+    /// Hold a compound fold of the held state `parent` that its family's own
+    /// call landed — a crimp's or a tuck's order, a vertex fold's pick — as
+    /// `apply` would have: its handle and its step as `apply` returns it.
+    pub(crate) fn hold_compound(
+        &mut self,
+        landed: Box<dyn CompoundLanded>,
+        parent: u32,
+    ) -> Applied {
+        self.hold_step(Held::Compound { landed, parent })
+    }
+
+    /// Hold a landed step: its handle, what it did and its state at a
+    /// glance, as `apply` returns them.
+    fn hold_step(&mut self, held: Held) -> Applied {
+        let summary = summary(held.state());
+        let (report, compound) = match &held {
+            Held::Fold { folded, .. } => (Some(folded.report.clone()), None),
+            Held::Compound { landed, .. } => (None, Some(landed.report())),
+            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => (None, None),
+        };
         Applied {
-            state: self.hold(Held::Vertex {
-                folded: Box::new(folded),
-                parent,
-            }),
-            report: None,
-            compound: None,
-            sink: None,
+            state: self.hold(held),
+            report,
+            compound,
             summary,
-            vertex,
         }
     }
 
@@ -349,7 +293,8 @@ impl Bridge {
     /// The summary of the step that landed `state` (plan D14): its
     /// front-relative counts, the crease-pattern diff from its parent and,
     /// for a fold, "Layers". None for a flat sheet. The parent of a fold, a
-    /// turn or a rotation must still be held; an import's summary is the
+    /// turn or a rotation must still be held, and of a compound fold that
+    /// did not keep its summary as it landed; an import's summary is the
     /// pattern it brings ([`imported`]), which needs none.
     pub fn step_summary(&self, state: u32) -> Result<Outcome<Summarised>, BridgeError> {
         let summary = match self.held(state)? {
@@ -362,40 +307,26 @@ impl Bridge {
                 child,
                 None,
             ))),
-            Held::Vertex { folded, parent } => Ok(Some(StepSummary::new(
-                self.parent(state, *parent)?,
-                &folded.state,
-                None,
-            ))),
             Held::Fold { folded, parent, .. } => folded
                 .summary(self.parent(state, *parent)?)
                 .map(Some)
                 .map_err(Refusal::from),
             Held::Compound { landed, parent } => {
-                landed.summary(self.parent(state, *parent)?).map(Some)
+                landed.summary(self.parent(state, *parent))?.map(Some)
             }
-            Held::Sink { folded, parent } => folded
-                .summary(self.parent(state, *parent)?)
-                .map(Some)
-                .map_err(Refusal::from),
             Held::Jump(child) => Ok(Some(imported(child))),
-            Held::Summarised { step, .. } => Ok(Some(step.clone())),
         };
         Ok(summary.map(|summary| Summarised { summary }).into())
     }
 
     /// The picture of the step that landed `state` (plan D12, per step), on
     /// its parent with the landed state's cover at the arrow's head. None for
-    /// a flat sheet, a turn, a rotation or an import, and for now a sink,
-    /// whose push arrow is still to come. A fold's parent must still be held.
+    /// a flat sheet, a turn, a rotation or an import, and for now every
+    /// compound family but the reverse folds, whose pictures are still to
+    /// come. A pictured step's parent must still be held.
     pub fn step_action(&self, state: u32) -> Result<Outcome<StepActed>, BridgeError> {
         let action = match self.held(state)? {
-            Held::Sheet(_)
-            | Held::View { .. }
-            | Held::Jump(_)
-            | Held::Summarised { .. }
-            | Held::Vertex { .. }
-            | Held::Sink { .. } => Ok(None),
+            Held::Sheet(_) | Held::View { .. } | Held::Jump(_) => Ok(None),
             Held::Fold {
                 folded,
                 parent,
@@ -405,7 +336,7 @@ impl Bridge {
                 .map(Some)
                 .map_err(Refusal::from),
             Held::Compound { landed, parent } => {
-                landed.action(self.parent(state, *parent)?).map(Some)
+                landed.action(self.parent(state, *parent))?.transpose()
             }
         };
         Ok(action.map(|action| StepActed { action }).into())
@@ -478,12 +409,6 @@ impl Bridge {
             .map_err(|_| BridgeError::ParentReleased { state, parent })
     }
 
-    /// Hold a compound fold (`ops_crimp_tuck`) with its step's summary; its
-    /// handle.
-    pub(crate) fn hold_compound_state(&mut self, state: State, step: StepSummary) -> u32 {
-        self.hold(Held::Summarised { state, step })
-    }
-
     fn hold(&mut self, held: Held) -> u32 {
         // Wrapping (which no session reaches) skips 0 and every handle still
         // held, so a live handle never names a second state.
@@ -522,19 +447,13 @@ fn analysis_of(
             .analyse_fold(&fold)
             .map(|analysis| (analysis, kind))
             .map_err(Refusal::from),
+        // A compound fold along one line reads as a plain fold's; any other
+        // family's question is its own (`compound_analysis`).
         Ok(Resolved::Compound(compound)) => compound
             .analysis(parent)
+            .ok_or_else(|| asks_its_own(op))?
             .map(|analysis| (analysis, ActionKind::Fold)),
-        Ok(Resolved::View(_) | Resolved::Jump(_)) => return Err(moves_no_paper(op)),
-        // A vertex fold folds along no one line: its own analysis is the
-        // tools' (`ops_squash_family`).
-        Ok(Resolved::Vertex(_)) => return Err(no_line(op)),
-        Ok(Resolved::Sink(_)) => {
-            return Err(BridgeError::InvalidInput(format!(
-                "a {} step is a sink: ask sink_analysis",
-                op.kind()
-            )));
-        }
+        Ok(Resolved::View(_) | Resolved::Jump(_)) => return Err(no_plain_fold(op)),
         Err(refusal) => Err(refusal),
     })
 }
@@ -551,18 +470,17 @@ fn imported(state: &State) -> StepSummary {
     }
 }
 
-fn moves_no_paper(op: &Op) -> BridgeError {
-    BridgeError::InvalidInput(format!(
-        "a {} step moves no paper: there is nothing to analyse",
-        op.kind()
-    ))
-}
-
-fn no_line(op: &Op) -> BridgeError {
-    BridgeError::InvalidInput(format!(
-        "a {} step folds along no one line: ask `vertex_analysis`",
-        op.kind()
-    ))
+/// The caller asked a plain fold's question of a step that is none: one that
+/// moves no paper, or a compound fold whose question is its own.
+fn no_plain_fold(op: &Op) -> BridgeError {
+    if op.is_compound() {
+        asks_its_own(op)
+    } else {
+        BridgeError::InvalidInput(format!(
+            "a {} step moves no paper: there is nothing to analyse",
+            op.kind()
+        ))
+    }
 }
 
 /// A refused anchored fold on the wire: each sliver remedy's `use_line` fix
@@ -587,7 +505,7 @@ fn anchored_refusal(refused: AnchoredRefused, kind: ActionKind) -> Refusal {
 }
 
 /// A resolved op, a refusal, or (thrown) the caller's mistake.
-fn settle<T>(resolved: Result<T, Rejection>) -> Result<Result<T, Refusal>, BridgeError> {
+pub(crate) fn settle<T>(resolved: Result<T, Rejection>) -> Result<Result<T, Refusal>, BridgeError> {
     match resolved {
         Ok(value) => Ok(Ok(value)),
         Err(Rejection::Refused(refusal)) => Ok(Err(refusal)),

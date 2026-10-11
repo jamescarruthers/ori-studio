@@ -11,6 +11,13 @@ import {
   type FoldTuckOp,
 } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from './foldEngineCalls';
+import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from './foldEngineCompoundCalls';
+import {
+  compoundStoredChoices,
+  type FoldCompoundAnalysis,
+  type FoldCompoundAnalysisOf,
+  type FoldCompoundFamily,
+} from './foldEngineCompoundWire';
 import { createFoldEngineCrimpTuckCalls, type FoldEngineCrimpTuckCalls } from './foldEngineCrimpTuckCalls';
 import { FOLD_REFUSAL_CODES, type FoldEngineOutcome, type FoldEngineRefused } from './foldEngineWire';
 
@@ -20,9 +27,11 @@ import { FOLD_REFUSAL_CODES, type FoldEngineOutcome, type FoldEngineRefused } fr
  *
  * The crates' tests prove the behaviour natively; what they do not cover is
  * TypeScript's side of the boundary — the document's ops crossing as they are
- * stored, a landing's `stored` choices written to the project file and read
- * back by the document's reader, then replayed through the ordinary `step`
- * call to the same fingerprint, and every refusal code one this build knows.
+ * stored, the compound question tagged by family, a landing reported as the
+ * step's `compound` alike whichever call landed it, its `stored` choices
+ * written to the project file and read back by the document's reader, then
+ * replayed through the ordinary `step` call to the same fingerprint, and
+ * every refusal code one this build knows.
  *
  * Skipped when the bridge has not been built (a fresh worktree before
  * `build:wasm`); CI builds it before the web tests run.
@@ -34,18 +43,33 @@ const available = existsSync(FOLD_WASM);
 interface Engine {
   calls: FoldEngineCalls;
   compound: FoldEngineCrimpTuckCalls;
+  question: FoldEngineCompoundCalls;
 }
 
 async function makeEngine(): Promise<Engine> {
   const wasm = await import('../../generated/oristudio-fold-wasm/oristudio_fold_wasm');
   wasm.initSync({ module: readFileSync(FOLD_WASM) });
   const fold = new wasm.FoldEngine();
-  return { calls: createFoldEngineCalls(fold), compound: createFoldEngineCrimpTuckCalls(fold) };
+  return {
+    calls: createFoldEngineCalls(fold),
+    compound: createFoldEngineCrimpTuckCalls(fold),
+    question: createFoldEngineCompoundCalls(fold),
+  };
 }
 
 function landed<T>(outcome: FoldEngineOutcome<T>): T {
   if (outcome.status !== 'ok') throw new Error(`refused: ${JSON.stringify(outcome.refusal)}`);
   return outcome;
+}
+
+/** The compound question's answer, which must be `family`'s. */
+function asked<F extends FoldCompoundFamily>(
+  outcome: FoldEngineOutcome<FoldCompoundAnalysis>,
+  family: F
+): FoldCompoundAnalysisOf<F> {
+  const answer = landed(outcome);
+  if (answer.family !== family) throw new Error(`asked of ${family}, answered for ${answer.family}`);
+  return answer as FoldCompoundAnalysisOf<F>;
 }
 
 function refused<T>(outcome: FoldEngineOutcome<T>): FoldEngineRefused {
@@ -170,25 +194,30 @@ describe.skipIf(!available)('the crimp and the tuck over the real bridge', () =>
   });
 
   it('lands a crimp, replays the stored step to the same fingerprint, and refuses the kind that does not fit', () => {
-    const { calls, compound } = engine;
+    const { calls, compound, question } = engine;
     const tri = triangle(calls);
     const op = perpCrimp('inside');
-    const analysed = landed(compound.analyseCrimp(tri, op));
+    const analysed = asked(question.compoundAnalysis(tri, op), 'crimp');
     expect(analysed.kinds).toEqual(['inside']);
     expect(analysed.analysis.tip.tip).toHaveLength(2);
     const folded = landed(compound.crimp(tri, op));
     if (folded.outcome !== 'landed') throw new Error(folded.outcome);
     expect(folded.summary.faces).toBe(6);
     expect(folded.stored).toEqual({});
-    expect(folded.report.kind).toBe('inside');
-    expect(folded.report.motion.legs).toHaveLength(4);
+    // A step as `step` lands one: no plain report, the crimp's as `compound`.
+    expect(folded.report).toBeNull();
+    expect(folded.compound.family).toBe('crimp');
+    expect(folded.compound.kind).toBe('inside');
+    expect(folded.compound.motion.legs).toHaveLength(4);
+    expect(compoundStoredChoices(folded.compound)).toEqual(folded.stored);
     expect(folded.fingerprint).toMatch(/^fs1:[0-9a-f]{16}$/);
-    // Stored and read back, the step replays through `step` to the same state.
+    // Stored and read back, the step replays through `step` to the same state and report.
     const stored = throughTheFile(op);
     expect(stored.op).toEqual(op);
     const replayed = landed(calls.step(tri, stored.op, stored.choices));
     expect(replayed.fingerprint).toBe(folded.fingerprint);
     expect(replayed.report).toBeNull();
+    expect(replayed.compound).toEqual(folded.compound);
     // The other kind does not fit, and offers this one.
     const other = refused(compound.crimp(tri, perpCrimp('outside')));
     expect(other.refusal.code).toBe('crimp_kind_infeasible');
@@ -199,13 +228,13 @@ describe.skipIf(!available)('the crimp and the tuck over the real bridge', () =>
   });
 
   it('asks for a crimp’s opening, and stores what was chosen so the step replays', () => {
-    const { calls, compound } = engine;
+    const { calls, compound, question } = engine;
     const at = strip(calls);
-    const asked = landed(compound.crimp(at, STRIP_CRIMP));
-    if (asked.outcome !== 'choose_opening') throw new Error(asked.outcome);
-    const openings = asked.analysis.tip.flaps[0]?.openings ?? [];
+    const tried = landed(compound.crimp(at, STRIP_CRIMP));
+    if (tried.outcome !== 'choose_opening') throw new Error(tried.outcome);
+    const openings = tried.analysis.tip.flaps[0]?.openings ?? [];
     expect(openings).toHaveLength(2);
-    expect(landed(compound.analyseCrimp(at, STRIP_CRIMP)).kinds).toBeNull();
+    expect(asked(question.compoundAnalysis(at, STRIP_CRIMP), 'crimp').kinds).toBeNull();
     // Stored without its opening, the step needs it.
     expect(refused(calls.step(at, STRIP_CRIMP)).refusal).toEqual({ code: 'choice_needed', choice: 'opening' });
     const chosen: FoldChoices = { opening: [openings[0].stored] };
@@ -219,17 +248,20 @@ describe.skipIf(!available)('the crimp and the tuck over the real bridge', () =>
   });
 
   it('lists a tuck’s targets, lands it, and replays it', () => {
-    const { calls, compound } = engine;
+    const { calls, compound, question } = engine;
     const at = book(calls);
-    const { analysis } = landed(compound.analyseTuck(at, BOOK_TUCK));
+    const { analysis } = asked(question.compoundAnalysis(at, BOOK_TUCK), 'tuck');
     expect(analysis.placement).toBe('under');
     expect(analysis.targets.some((target) => target.feasible === true)).toBe(true);
     const folded = landed(compound.tuck(at, BOOK_TUCK));
     if (folded.outcome !== 'landed') throw new Error(folded.outcome);
-    expect(folded.report.placement).toBe('under');
+    expect(folded.compound.family).toBe('tuck');
+    expect(folded.compound.placement).toBe('under');
     const stored = throughTheFile(BOOK_TUCK, folded.stored.completion ? folded.stored : undefined);
     expect(stored.op).toEqual(BOOK_TUCK);
-    expect(landed(calls.step(at, stored.op, stored.choices)).fingerprint).toBe(folded.fingerprint);
+    const replayed = landed(calls.step(at, stored.op, stored.choices));
+    expect(replayed.fingerprint).toBe(folded.fingerprint);
+    expect(replayed.compound).toEqual(folded.compound);
     // A target in the paper that moves cannot take the tuck.
     const intoTheFlap = refused(compound.tuck(at, { ...BOOK_TUCK, target: [0.05, 0.05] }));
     expect(FOLD_REFUSAL_CODES).toContain(intoTheFlap.refusal.code);
@@ -241,12 +273,16 @@ describe.skipIf(!available)('the crimp and the tuck over the real bridge', () =>
   });
 
   it('throws a caller’s mistake, and refuses a stored choice that no longer resolves', () => {
-    const { calls, compound } = engine;
+    const { calls, compound, question } = engine;
     const at = book(calls);
     expect(thrown(() => compound.tuck(0, BOOK_TUCK))).toMatchObject({ code: 'invalid_input' });
     expect(
       thrown(() => compound.crimp(at, { ...STRIP_CRIMP, second: { via: 'axiom', axiom: 1, inputs: [] } }))
     ).toMatchObject({ code: 'invalid_input' });
+    // The compound question is a compound fold's, and a plain fold's questions are not a tuck's.
+    const valley = { kind: 'valley', line: BOOK_TUCK.line, seed: BOOK_TUCK.seed } as unknown as FoldTuckOp;
+    expect(thrown(() => question.compoundAnalysis(at, valley))).toMatchObject({ code: 'invalid_input' });
+    expect(thrown(() => calls.analyse(at, BOOK_TUCK))).toMatchObject({ code: 'invalid_input' });
     // An order whose witnesses name no face of this state breaks the step.
     const broken = refused(
       calls.step(at, BOOK_TUCK, {

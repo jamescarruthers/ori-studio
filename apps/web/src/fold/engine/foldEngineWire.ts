@@ -35,10 +35,10 @@ import type {
   FoldSeed,
   SheetPoint,
 } from '../document/foldSequenceDocument';
+import type { FoldCompoundReport } from './foldEngineCompoundWire';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
-import type { FoldNoOpening, FoldReverseKind, FoldReverseReport } from './foldEngineReverseWire';
-import { FOLD_SINK_REFUSAL_CODES, type FoldSinkKind, type FoldSinkReport } from './foldEngineSinkWire';
-import type { FoldVertexReport } from './foldEngineSquashWire';
+import type { FoldNoOpening, FoldReverseKind } from './foldEngineReverseWire';
+import { FOLD_SINK_REFUSAL_CODES, type FoldSinkKind } from './foldEngineSinkWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
 export type FoldSide = 'positive' | 'negative';
@@ -384,19 +384,12 @@ export interface FoldStepLanded {
   /** A plain fold's; null for a turn, a rotation, an import or a compound fold. */
   report: FoldReport | null;
   /**
-   * A compound fold's, by its op; absent for any other step, and for a crimp
-   * or a tuck, whose reports their own calls give.
+   * A compound fold's, of any family, tagged by its `family`, its motion's
+   * legs among it (`foldEngineCompoundWire.ts`); absent for any other step.
    */
   compound?: FoldCompoundReport;
-  /** What a sink or an unsink did, its motion's legs among it (`foldEngineSinkWire.ts`). */
-  sink?: FoldSinkReport;
   summary: FoldStateSummary;
-  /** What a vertex fold did, with its motion (`foldEngineSquashWire.ts`); absent for every other step. */
-  vertex?: FoldVertexReport;
 }
-
-/** What a landed compound fold did, tagged by its op (`compound.rs`'s `CompoundStepReport`), one per family. */
-export type FoldCompoundReport = FoldReverseReport;
 
 /**
  * Paper turning about one hinge during one leg of a compound step's motion
@@ -429,7 +422,12 @@ export interface FoldMotionLeg {
   groups: FoldMotionGroup[];
 }
 
-/** A compound step's motion: `visual` when only its ends are states, the frames between a picture. */
+/**
+ * A compound step's motion, every family's one type (the engine's
+ * `StepMotion`), read off any compound report by `stepMotionLegsOf`
+ * (`foldEngineCompoundWire.ts`): `visual` when only its ends are states, the
+ * frames between a picture.
+ */
 export interface FoldStepMotionLegs {
   kind: 'rigid' | 'visual';
   legs: FoldMotionLeg[];

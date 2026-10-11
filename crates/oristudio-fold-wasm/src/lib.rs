@@ -19,10 +19,12 @@
 //!   free(): void;
 //!   /** The flat sheet: `{ status: 'ok', state, summary }` or a refusal. */
 //!   sheet(paper: FoldPaper): Outcome<{ state: number; summary: Summary }>;
-//!   /** One step: a new handle, the fold's report (null for a turn or rotate)
-//!    *  and a summary. `choices` may be undefined. The parent stays held. */
-//!   apply(state: number, op: FoldOp, choices?: FoldChoices):
-//!     Outcome<{ state: number; report: FoldReport | null; summary: Summary }>;
+//!   /** One step: a new handle, a plain fold's report (null for any other
+//!    *  step), a compound fold's report tagged by its family, and a summary.
+//!    *  `choices` may be undefined. The parent stays held. */
+//!   apply(state: number, op: FoldOp, choices?: FoldChoices): Outcome<{
+//!     state: number; report: FoldReport | null; compound?: CompoundStepReport; summary: Summary;
+//!   }>;
 //!   summary(state: number): Summary;
 //!   /** The keys of the state's `fs1` fingerprint, in no order. */
 //!   canonical_keys(state: number): string[];
@@ -63,33 +65,28 @@
 //! `FoldEngine` beside these calls, and a stored `cp-jump` op is applied like
 //! any other step. `README.md` records the size that costs.
 //!
-//! Compound folds (plan D4) are steps like any other — `apply`, the queries,
-//! a step's summary and picture — through one seam ([`compound`]), each
-//! family in a module of its own with its own query on `FoldEngine`
-//! ([`ops_reverse`]: `reverse`).
-//!
-//! The crimp and the tuck (plan Phase 11) are [`ops_crimp_tuck`]'s: their
-//! analyses and their folds, which land, ask for an opening or land every
-//! order to choose from, are calls of their own on `FoldEngine`, and a stored
-//! `crimp` or `tuck` is applied like any other step.
-//!
-//! The sinks (plan Phase 11): `open-sink`, `closed-sink` and `unsink` ops
-//! land through `apply`, and a sink tool's queries are [`ops_sinks`]'s.
+//! Compound folds (plan D4) are steps like any other — `apply`, a step's
+//! summary and picture — through one seam ([`compound`]): one held state,
+//! one report on `apply`'s answer (`compound`, tagged by family), one
+//! choice/refusal path, and one question before a step lands
+//! (`compound_analysis`), whatever the family. Each family is a module of its
+//! own: the reverse folds ([`ops_reverse`]); the crimp and the tuck
+//! ([`ops_crimp_tuck`]), whose folds, which land, ask for an opening or land
+//! every order to choose from, are calls of their own; the vertex folds
+//! ([`ops_squash_family`]), whose pending choices `FoldEngine` holds; and
+//! the sinks ([`ops_sinks`]), whose orders a sink tool counts and picks.
 
 pub mod bridge;
 pub mod canonical;
 pub mod compound;
 pub mod io;
 pub mod joins;
-pub mod ops_crimp_tuck;
-pub mod ops_sinks;
 pub mod resolve;
 pub mod wire;
 // Compound folds, one module per family (`compound`).
+pub mod ops_crimp_tuck;
 pub mod ops_reverse;
-
-// The compound folds, one module per family. The vertex folds (squash,
-// petal, rabbit ear, swivel) hold their pending choices on `FoldEngine`.
+pub mod ops_sinks;
 pub mod ops_squash_family;
 
 use std::sync::Once;

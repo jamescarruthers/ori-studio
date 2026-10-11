@@ -5,12 +5,13 @@
 //! ```ts
 //! // `apps/web/src/fold/engine/foldEngineSinkWire.ts` holds these shapes.
 //! class FoldEngine {
-//!   /** The point a sink names and how it sinks: its outline, its outside's
-//!    *  letter, its apex and the square line (the open sink's landmark), why
-//!    *  an open sink is refused, and its pockets, each with what a step
-//!    *  stores to choose it. Not asked of an unsink. */
-//!   sink_analysis(state: number, op: FoldSinkOp, choices?: FoldChoices):
-//!     Outcome<{ analysis: SinkPoint; open: Refusal | null }>;
+//!   /** For a sink op, `{ family: 'sink', analysis, open }`: the point it
+//!    *  names and how it sinks — its outline, its outside's letter, its apex
+//!    *  and the square line (the open sink's landmark), why an open sink is
+//!    *  refused, and its pockets, each with what a step stores to choose
+//!    *  it. Not asked of an unsink. */
+//!   compound_analysis(state: number, op: FoldSinkOp, choices?: FoldChoices):
+//!     Outcome<FoldCompoundAnalysis>;
 //!   /** How many orders the sink leaves with these choices: one when it is
 //!    *  decided, and nothing to choose. */
 //!   sink_orders(state: number, op: FoldSinkOp, choices?: FoldChoices):
@@ -31,23 +32,27 @@
 //! faces either side of the pocket, and FOLD `faceOrders` triples over
 //! witnesses. A sink that needs a choice the step does not store is refused
 //! `choice_needed` (its `pocket` or its `completion`); one whose stored
-//! choice no longer resolves, `choice_broken` — the compound folds' own
-//! (`crate::compound`). Either marks a replayed step broken.
+//! choice no longer resolves, `choice_broken` — the compound folds' own, on
+//! the seam's one path (`crate::compound`). Either marks a replayed step
+//! broken. A landed one reports as the step's `compound`,
+//! `{ family: 'sink', step, … }`, its motion's legs among it.
 
 use oristudio_fold::{
     ActionKind, ChoiceCount, CompoundRefused, Direction, Side, SinkChoices, SinkFold, SinkFolded,
-    SinkKind, SinkOutcome, SinkPoint, State, StoredPocket, Unsink, WitnessOrder,
+    SinkKind, SinkOutcome, SinkPoint, State, StepSummary, StoredPocket, Unsink, WitnessOrder,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::bridge::Bridge;
-use crate::compound::{NeededChoice, choice_needed, compound_refusal};
+use crate::bridge::{Bridge, settle};
+use crate::compound::{
+    CompoundAsked, CompoundLanded, CompoundOp, CompoundStepReport, NeededChoice, Parent,
+    choice_needed, compound_refusal, landed,
+};
 use crate::io::ComponentCount;
-use crate::resolve::{Rejection, Resolved, along_line, finite_point, resolve as resolve_op};
+use crate::resolve::{Rejection, along_line, check_choices, finite_point};
 use crate::wire::{
-    AlongLine, BridgeError, BridgeRefusal, Choices, LineInput, Motion, Op, Outcome, Point, Refusal,
-    SeedInput,
+    AlongLine, BridgeError, Choices, LineInput, Motion, Op, Outcome, Point, Refusal, SeedInput,
 };
 use crate::{FoldEngine, bridge_error, parse, parse_choices, to_js_value};
 
@@ -81,7 +86,7 @@ impl SinkResolved {
     }
 }
 
-/// What a sink tool previews (`sink_analysis`).
+/// What a sink tool previews (`compound_analysis`).
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SinkAnalysed {
     pub analysis: SinkPoint,
@@ -104,8 +109,9 @@ pub struct SinkPicked {
 }
 
 /// A sink op and its choices, resolved in `parent`: the line as a fold's,
-/// the choices a sink takes (a closed sink's pocket, any sink's completion,
-/// an axiom line's root), every other one refused as unexpected.
+/// and the choices a sink takes — a closed sink's pocket, any sink's
+/// completion, an axiom line's root — which are checked before
+/// (`resolve::check_choices`, by `wire::Op::takes`).
 pub fn resolve(
     parent: &State,
     op: &Op,
@@ -113,18 +119,6 @@ pub fn resolve(
     choices: &Choices,
 ) -> Result<SinkResolved, Rejection> {
     let closed = matches!(op, Op::ClosedSink(_));
-    let unexpected = if choices.root.is_some() && !matches!(sink.line, LineInput::Axiom { .. }) {
-        Some("root")
-    } else if choices.pocket.is_some() && !closed {
-        Some("pocket")
-    } else if choices.opening.as_ref().is_some_and(|o| !o.is_empty()) {
-        Some("opening")
-    } else {
-        None
-    };
-    if let Some(choice) = unexpected {
-        return Err(BridgeRefusal::UnexpectedChoice { choice }.into());
-    }
     let along = AlongLine {
         line: sink.line.clone(),
         direction: None,
@@ -194,41 +188,51 @@ pub fn resolve(
     })
 }
 
-/// Land a resolved sink: refused when it needs a choice the step does not
-/// store, or a stored one no longer resolves.
-pub fn land(parent: &State, sink: &SinkResolved) -> Result<SinkFolded, Refusal> {
-    match sink.outcome(parent) {
-        Ok(SinkOutcome::Landed(folded)) => Ok(*folded),
-        Ok(SinkOutcome::ChoosePocket(_)) => Err(choice_needed(NeededChoice::Pocket)),
-        Ok(SinkOutcome::ChooseOrder(_)) => Err(choice_needed(NeededChoice::Completion)),
-        Err(refused) => Err(compound_refusal(refused)),
+impl CompoundOp for SinkResolved {
+    /// What a sink tool previews: the point and how it sinks. An unsink has
+    /// no point to analyse, and is the caller's mistake.
+    fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
+        let SinkResolved::Sink { op, .. } = self else {
+            return Err(BridgeError::InvalidInput(
+                "an unsink has no point to analyse: it unsinks the tip its seed names".to_string(),
+            ));
+        };
+        Ok(parent
+            .analyse_sink(op)
+            .map(|analysis| {
+                CompoundAsked::Sink(Box::new(SinkAnalysed {
+                    open: analysis.open.clone().map(Refusal::from),
+                    analysis,
+                }))
+            })
+            .map_err(Refusal::from))
+    }
+
+    /// Land it: refused when it needs a choice the step does not store, or
+    /// a stored one no longer resolves.
+    fn apply(&self, parent: &State) -> Result<Box<dyn CompoundLanded>, Refusal> {
+        Ok(Box::new(Landed(landed(self.outcome(parent))?)))
     }
 }
 
-/// What a sink tool previews: the point and how it sinks. An unsink has no
-/// point to analyse, and is the caller's mistake.
-pub fn sink_analysis(
-    bridge: &Bridge,
-    state: u32,
-    op: &Op,
-    choices: &Choices,
-) -> Result<Outcome<SinkAnalysed>, BridgeError> {
-    let (parent, sink) = match sink_of(bridge, state, op, choices)? {
-        Ok(found) => found,
-        Err(refusal) => return Ok(Outcome::Refused(refusal)),
-    };
-    let SinkResolved::Sink { op, .. } = &sink else {
-        return Err(BridgeError::InvalidInput(
-            "an unsink has no point to analyse: it unsinks the tip its seed names".to_string(),
-        ));
-    };
-    Ok(match parent.analyse_sink(op) {
-        Ok(analysis) => Outcome::Ok(SinkAnalysed {
-            open: analysis.open.clone().map(Refusal::from),
-            analysis,
-        }),
-        Err(refused) => Outcome::Refused(refused.into()),
-    })
+/// A landed sink or unsink, held by the bridge: its summary counts the
+/// layers along ℓ on the side the paper moved from; its push arrow is still
+/// to come.
+#[derive(Debug)]
+struct Landed(Box<SinkFolded>);
+
+impl CompoundLanded for Landed {
+    fn state(&self) -> &State {
+        &self.0.state
+    }
+
+    fn report(&self) -> CompoundStepReport {
+        CompoundStepReport::Sink(Box::new(self.0.report.clone()))
+    }
+
+    fn summary(&self, parent: Parent<'_>) -> Result<Result<StepSummary, Refusal>, BridgeError> {
+        Ok(self.0.summary(parent?).map_err(Refusal::from))
+    }
 }
 
 /// How many orders a sink leaves with these choices: one when it is
@@ -294,8 +298,9 @@ pub fn sink_pick(
     })
 }
 
-/// The held state and the sink op resolved in it; a refusal when it does
-/// not resolve. Any other op is the caller's mistake.
+/// The held state and the sink op resolved in it, its choices checked as
+/// `apply` checks them; a refusal when it does not resolve. Any other op is
+/// the caller's mistake.
 fn sink_of<'b>(
     bridge: &'b Bridge,
     state: u32,
@@ -303,31 +308,19 @@ fn sink_of<'b>(
     choices: &Choices,
 ) -> Result<Result<(&'b State, SinkResolved), Refusal>, BridgeError> {
     let parent = bridge.state(state)?;
-    match resolve_op(parent, op, choices) {
-        Ok(Resolved::Sink(sink)) => Ok(Ok((parent, *sink))),
-        Ok(_) => Err(BridgeError::InvalidInput(format!(
+    let (Op::OpenSink(sink) | Op::ClosedSink(sink) | Op::Unsink(sink)) = op else {
+        return Err(BridgeError::InvalidInput(format!(
             "a {} step is no sink: give an open-sink, closed-sink or unsink op",
             op.kind()
-        ))),
-        Err(Rejection::Refused(refusal)) => Ok(Err(refusal)),
-        Err(Rejection::Input(error)) => Err(error),
-    }
+        )));
+    };
+    let resolved =
+        check_choices(op.takes(), choices).and_then(|()| resolve(parent, op, sink, choices));
+    Ok(settle(resolved)?.map(|sink| (parent, sink)))
 }
 
 #[wasm_bindgen]
 impl FoldEngine {
-    /// The point a sink op names and how it sinks, without folding.
-    pub fn sink_analysis(
-        &self,
-        state: u32,
-        op: JsValue,
-        choices: JsValue,
-    ) -> Result<JsValue, JsValue> {
-        let op: Op = parse("op", op)?;
-        let choices = parse_choices(choices)?;
-        to_js_value(&sink_analysis(&self.inner, state, &op, &choices).map_err(bridge_error)?)
-    }
-
     /// How many orders a sink leaves with these choices.
     pub fn sink_orders(
         &self,
