@@ -2095,6 +2095,8 @@
       "operation": "Vorgang",
       "pending": "Geplante Faltung",
       "pendingRefused": "Behebe das Problem im Werkzeugfenster, um die Faltlinien zu sehen, die dabei entstehen.",
+      "pocket": "Tasche",
+      "pocketHelp": "Die Lücke zwischen den Lagen der Spitze, in die ihr Ende versenkt wurde: Die Lagen darüber und die darunter bleiben zusammen.",
       "sheet": "Flaches Blatt",
       "sheetNote": "Noch ist nichts gefaltet. Falte das Blatt, um Schritt 1 zu erstellen.",
       "source": "Quelle",

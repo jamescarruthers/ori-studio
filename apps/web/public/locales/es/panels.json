@@ -2278,6 +2278,8 @@
       "operation": "Operación",
       "pending": "Pliegue pendiente",
       "pendingRefused": "Resuelve el problema en la ventana de la herramienta para ver los pliegues que crea.",
+      "pocket": "Bolsillo",
+      "pocketHelp": "El hueco entre las capas de la punta en el que se hundió su extremo: las capas de encima y las de debajo se mantienen juntas.",
       "sheet": "Hoja plana",
       "sheetNote": "Todavía no hay nada doblado. Dobla la hoja para crear el paso 1.",
       "source": "Origen",

@@ -276,7 +276,8 @@
     "chooser": {
       "note": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
       "openingNote": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
-      "orderNote": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
+      "orderNote": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke Umschalt+← / Umschalt+→.",
+      "pocketNote": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Blättere durch sie oder drücke Umschalt+← / Umschalt+→."
     },
     "divide": {
       "clear_one": "Die hier gesetzte Markierung entfernen",
@@ -290,19 +291,23 @@
       "right": "Bis zum Ende"
     },
     "fix": {
+      "closedSinkInstead": "Stattdessen geschlossen versenken",
       "includeFlap": "Lasche {{number}} einbeziehen",
       "includeFlaps_one": "Die {{count}} Lasche einbeziehen",
       "includeFlaps_other": "Die {{count}} Laschen einbeziehen",
       "insideInstead": "Stattdessen innerer Gegenbruch",
       "mountainInstead": "Stattdessen Bergfalte",
+      "openSinkInstead": "Stattdessen offen versenken",
       "outsideInstead": "Stattdessen äußerer Gegenbruch",
       "pickFlap": "Nur Lasche {{number}} falten",
       "precreaseOtherWay": "Andersherum vorfalten",
       "reverseFlap": "Nur Lasche {{number}} als Gegenbruch falten",
+      "sinkFlap": "Nur Lasche {{number}} versenken",
       "slideToEdge": "Die Linie verschieben, bis der Punkt auf der Kante liegt",
       "swapInstead": "Die bewegte Seite tauschen",
       "turnToEdge": "Die Linie drehen, bis der Punkt auf der Kante liegt",
       "useLine": "Die Bezugslinie verwenden",
+      "useSquareLine": "Die rechtwinklige Linie verwenden",
       "valleyInstead": "Stattdessen Talfalte"
     },
     "flap": {
@@ -320,7 +325,8 @@
       "locate": "Linie bestimmen",
       "model": "Modell",
       "planned": "Geplant",
-      "reference": "Bezugspunkte"
+      "reference": "Bezugspunkte",
+      "sink": "Versenken"
     },
     "key": {
       "commit": "Faltung ausführen",
@@ -360,12 +366,17 @@
     "note": {
       "acrossLayers": "Diese Punkte liegen auf Lagen, die durch das Falten auseinanderliegen, daher verläuft die Linie durch sie dort, wo sie in der gefalteten Form liegen. Das Faltmuster zeigt die Faltlinien, die dabei entstehen.",
       "clear": "Esc verwirft die gewählten Punkte.",
+      "closedSinkLine": "Die Linie quer über die Spitze legt fest, wie tief sie versenkt wird.",
       "crease": "Entlang einer Vorfaltung wird sie wieder gefaltet; entlang einer gefalteten Kante wird die Lasche aufgeklappt.",
       "divide": "Kanten, gefaltete Kanten und Vorfaltungen zählen alle.",
       "free": "Kein Einrasten: Die Linie verläuft genau durch die Punkte, die du anklickst.",
       "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt ohne Einrasten frei zu setzen.",
+      "openSinkLine": "Die Linie quer über die Spitze legt fest, wie tief sie versenkt wird, und muss genau rechtwinklig zu ihrer Mittellinie liegen. Axiom 4, durch einen Punkt und senkrecht zur Mittelfalte, ergibt eine solche Linie.",
       "queued": "Wird gefaltet, sobald die Vorschau bereit ist…",
-      "snap": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien, Mittelpunkten und Kanten ein."
+      "severalSunk_one": "Hier liegt {{count}} versenkte Spitze: Die erste wird genommen.",
+      "severalSunk_other": "Hier liegen {{count}} versenkte Spitzen: Die erste wird genommen.",
+      "snap": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien, Mittelpunkten und Kanten ein.",
+      "unsinkLine": "Lege die Linie auf den Ring, den das Versenken hinterlassen hat: „Vorhandene Faltlinie“ nimmt eine seiner Faltlinien entlang der Oberkante der versenkten Spitze."
     },
     "op": {
       "closedSink": "Geschlossenes Versenken",
@@ -403,6 +414,10 @@
       "chooseOrder": {
         "text": "Die Lagen der Faltung können auf mehr als eine Weise gestapelt landen. Wähle eine aus, um zu falten.",
         "title": "Wähle, wie die Lagen liegen"
+      },
+      "choosePocket": {
+        "text": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Wähle eine aus, um zu falten.",
+        "title": "Wähle eine Tasche"
       },
       "closureAddsFlaps": {
         "textMany_one": "Das Falten dieser Lagen bewegt auch {{count}} weitere Lasche.",
@@ -479,6 +494,31 @@
         "noSplit": "Ihre Lagen lassen sich nicht entlang einer Falte teilen, ohne dass eine untere Lage über eine obere gerät.",
         "title": "Diese Lasche lässt sich nicht öffnen"
       },
+      "sinkLineTilted": {
+        "text": "Offenes Versenken braucht eine Linie genau rechtwinklig zur Mittellinie der Spitze: Schon leicht gekippt lässt sich die Spitze nicht offen versenken. Die rechtwinklige Linie in derselben Tiefe geht.",
+        "title": "Die Linie steht nicht rechtwinklig zur Spitze"
+      },
+      "sinkNoAxis": {
+        "text": "Ihre Außenseite verläuft nicht entlang zweier gerader Seiten, also gibt es keine Mittellinie, zu der die Linie beim offenen Versenken rechtwinklig sein könnte.",
+        "title": "Die Spitze hat keine Mittellinie"
+      },
+      "sinkNoPocket": {
+        "text": "Keine Lücke zwischen ihren Lagen läuft ganz um ihre Außenseite herum, in die das Ende gehen könnte, also lässt sie sich nicht geschlossen versenken.",
+        "title": "Die Spitze hat keine Tasche"
+      },
+      "sinkOutlineMixed": {
+        "text": "Die Außenkanten der Spitze sind teils Berg-, teils Talfalten: Sie hat keine einheitliche Außenseite, die sich nach innen stülpen ließe, also lässt sie sich nicht offen versenken.",
+        "title": "Ihre Außenseite ist nicht eine Faltung"
+      },
+      "sinkPointOpen": {
+        "text": "Offene Kanten reichen bis an ihr Ende: Ihre Lagen sind freie Ecken, keine geschlossene Spitze, also sagt nichts, wie sie versenkt würden. Versenke eine Spitze, deren Lagen am Ende verbunden sind.",
+        "title": "Die Spitze ist offen"
+      },
+      "sinkSeveralPoints": {
+        "text_one": "Auf der Seite des Endes liegt {{count}} Spitze, und Versenken nimmt nur eine. Wähle die Spitze, die versenkt wird.",
+        "text_other": "Auf der Seite des Endes liegen {{count}} Spitzen, und Versenken nimmt nur eine. Wähle die Spitze, die versenkt wird.",
+        "title": "Wähle eine Spitze"
+      },
       "sliver": {
         "text": "Ein Punkt der bewegten Lagen käme um Haaresbreite innerhalb der Kante einer anderen Lage zu liegen.",
         "title": "Ein Punkt landet knapp innerhalb einer Kante"
@@ -494,6 +534,10 @@
       "tuckTarget": {
         "text": "Wähle eine Lage, die liegen bleibt, an der die Lasche eingesteckt werden soll.",
         "title": "Die Lage zum Einstecken würde sich bewegen"
+      },
+      "unsinkNotSunk": {
+        "text": "Entlang dieser Linie liegt nichts Versenktes im Papier. Lege die Linie auf den Ring, den ein Versenken hinterlassen hat, und wähle die versenkte Spitze darin.",
+        "title": "Hier ist keine Spitze versenkt"
       },
       "unsupported": {
         "text": "Diese Version von Ori Studio kann ihn so, wie er gespeichert ist, nicht falten.",
@@ -529,6 +573,23 @@
       "rowBeside": "Lage {{layer}}, {{flap}}, neben Lage {{above}}",
       "top": "Oben"
     },
+    "sink": {
+      "bothFit": "Hier passen beide: Offenes Versenken stülpt jede Lage um, geschlossenes hält sie zusammen.",
+      "closed": "Geschlossen",
+      "depth": "Tiefe",
+      "depthHelp": "Wie weit die Linie vom Ende der Spitze entlang ihrer Mittellinie liegt, wobei die Papierseite 1 ist. Lege die Linie weiter unten an, um die Spitze tiefer zu versenken.",
+      "depthValue": "{{depth}} vom Ende",
+      "kind": "Versenken",
+      "neither": "Hier passt keine Art des Versenkens zu dieser Spitze.",
+      "onlyClosed": "Hier passt nur geschlossenes Versenken.",
+      "onlyOpen": "Hier passt nur offenes Versenken.",
+      "open": "Offen",
+      "pocket": "Tasche",
+      "pocketBack": "Hinten",
+      "pocketFront": "Vorne",
+      "squareNote": "Offenes Versenken braucht eine Linie genau rechtwinklig zur Mittellinie der Spitze: Schon leicht gekippt lässt sich die Spitze nicht offen versenken. Geschlossenes Versenken verträgt eine gekippte Linie.",
+      "sunkSide": "Seite der versenkten Spitze"
+    },
     "steps": {
       "axiom1First": "Klicke auf den ersten Punkt, durch den die Faltung verläuft.",
       "axiom1Second": "Klicke auf den zweiten Punkt.",
@@ -553,17 +614,22 @@
       "perpendicularTo": "Klicke auf die Kante oder Faltlinie, zu der die Faltung senkrecht steht.",
       "pickFlapsToReverse": "Wähle die Laschen für den Gegenbruch.",
       "pickLayers": "Wähle, welche Lagen sich bewegen.",
+      "pickPoint": "Wähle die Spitze, die versenkt wird: Versenken nimmt nur eine.",
+      "pickSunkPoint": "Die versenkte Spitze wird für dich gefunden: Wähle in den Lagen eine andere, um diese herauszuziehen.",
       "pointToMove": "Klicke auf den Punkt, der bewegt werden soll."
     },
     "tool": {
+      "closedSinkHelp": "Das Ende einer geschlossenen Spitze in eine Tasche drücken, ihre Lagen bleiben zusammen.",
       "divideLine": "Linie teilen",
       "divideLineHelp": "Punkte markieren, die eine Kante oder Faltlinie in gleiche Teile teilen.",
       "insideReverse": "Innerer Gegenbruch",
       "insideReverseHelp": "Eine Lasche in sich selbst hineindrücken und ihren Rücken umkehren.",
       "mountain": "Bergfalte",
       "mountainHelp": "Die bewegte Seite von dir weg falten, sodass sie unten landet.",
+      "openSinkHelp": "Das Ende einer geschlossenen Spitze hineindrücken und dabei jede ihrer Lagen umstülpen.",
       "precrease": "Vorfalten",
       "precreaseHelp": "Falten und wieder öffnen: eine Faltlinie für später.",
+      "unsinkHelp": "Das Ende einer versenkten Spitze wieder herausziehen.",
       "valley": "Talfalte",
       "valleyHelp": "Die bewegte Seite zu dir hin falten, sodass sie oben landet."
     },

@@ -268,7 +268,8 @@
     "chooser": {
       "note": "此公理在这里给出不止一种折法。逐个查看，或按 Shift+← / Shift+→。",
       "openingNote": "翼片不止一种张开方式：高亮的层保持在一起。逐个查看，或按 Shift+← / Shift+→。",
-      "orderNote": "这些层不止一种叠放方式。逐个查看，或按 Shift+← / Shift+→。"
+      "orderNote": "这些层不止一种叠放方式。逐个查看，或按 Shift+← / Shift+→。",
+      "pocketNote": "这个角可以沉入层间不止一个夹层。逐个查看，或按 Shift+← / Shift+→。"
     },
     "divide": {
       "clear_other": "清除在这里做的 {{count}} 个标记",
@@ -281,18 +282,22 @@
       "right": "到终点"
     },
     "fix": {
+      "closedSinkInstead": "改为闭合沉折",
       "includeFlap": "包含翼片 {{number}}",
       "includeFlaps_other": "包含这 {{count}} 个翼片",
       "insideInstead": "改为内翻折",
       "mountainInstead": "改为山折",
+      "openSinkInstead": "改为开放沉折",
       "outsideInstead": "改为外翻折",
       "pickFlap": "只折翼片 {{number}}",
       "precreaseOtherWay": "向另一方向预折",
       "reverseFlap": "只翻折翼片 {{number}}",
+      "sinkFlap": "只沉折翼片 {{number}}",
       "slideToEdge": "平移折线，让该点正好落在边上",
       "swapInstead": "交换移动的一侧",
       "turnToEdge": "转动折线，让该点正好落在边上",
       "useLine": "使用参考线",
+      "useSquareLine": "使用垂直线",
       "valleyInstead": "改为谷折"
     },
     "flap": {
@@ -307,7 +312,8 @@
       "locate": "确定折线",
       "model": "模型",
       "planned": "计划中",
-      "reference": "参考点"
+      "reference": "参考点",
+      "sink": "沉折"
     },
     "key": {
       "commit": "完成折叠",
@@ -347,12 +353,16 @@
     "note": {
       "acrossLayers": "这些点位于被折叠分开的层上，因此折线经过它们在折叠形态中的位置。折痕图显示这次折叠产生的折痕。",
       "clear": "按 Esc 清除已选的点。",
+      "closedSinkLine": "横跨角的线决定沉折的深度。",
       "crease": "沿预折痕折叠会把它重新折起；沿折边折叠会展开翼片。",
       "divide": "边、折边和预折痕都可以。",
       "free": "不吸附：折线正好经过你单击的点。",
       "freePoint": "按住 {{modifier}} 可不吸附地把点放在任意位置。",
+      "openSinkLine": "横跨角的线决定沉折的深度，并且必须与角的中线严格垂直。公理 4（过一点且垂直于中间折痕）就能给出这样的线。",
       "queued": "预览就绪后立即折叠…",
-      "snap": "点会吸附到角、标记、折痕交点、中点和边。"
+      "severalSunk_other": "这里有 {{count}} 个已沉入的角：使用第一个。",
+      "snap": "点会吸附到角、标记、折痕交点、中点和边。",
+      "unsinkLine": "定位沉折留下的环：「已有折痕」会选取环上沿已沉入角顶边的一条折痕。"
     },
     "op": {
       "closedSink": "闭合沉折",
@@ -390,6 +400,10 @@
       "chooseOrder": {
         "text": "这次折叠的层不止一种叠放方式。请选择一种来折叠。",
         "title": "选择各层如何叠放"
+      },
+      "choosePocket": {
+        "text": "这个角可以沉入层间不止一个夹层。请选择一个来折叠。",
+        "title": "选择夹层"
       },
       "closureAddsFlaps": {
         "textMany_other": "折叠这些层还会带动另外 {{count}} 个翼片。",
@@ -465,6 +479,30 @@
         "noSplit": "这些层无法沿折痕分开，否则下层会跑到上层上面。",
         "title": "这个翼片无法张开"
       },
+      "sinkLineTilted": {
+        "text": "开放沉折需要线与角的中线严格垂直：哪怕稍有倾斜，这个角都无法开放沉折。同一深度的垂直线则可以。",
+        "title": "线与角不垂直"
+      },
+      "sinkNoAxis": {
+        "text": "它的外缘不是沿两条直边延伸，因此没有可供开放沉折的线与之垂直的中线。",
+        "title": "角没有中线"
+      },
+      "sinkNoPocket": {
+        "text": "层间没有绕外缘一整圈、能让尖端进入的空隙，因此无法闭合沉折。",
+        "title": "角没有夹层"
+      },
+      "sinkOutlineMixed": {
+        "text": "角的外缘既有山折也有谷折：没有一个统一的外侧可以向内翻，因此无法开放沉折。",
+        "title": "外侧不是同一种折"
+      },
+      "sinkPointOpen": {
+        "text": "纸边一直延伸到尖端：这些层是散开的角，而不是闭合的角，因此无法确定它们会怎样沉入。请沉折各层在尖端相连的角。",
+        "title": "角是开放的"
+      },
+      "sinkSeveralPoints": {
+        "text_other": "尖端一侧有 {{count}} 个角，而沉折只取一个。请选择要沉折的角。",
+        "title": "选择一个角"
+      },
       "sliver": {
         "text": "移动层上的一个点会落在另一层边缘内侧极近的位置。",
         "title": "一个点落在边缘内侧"
@@ -480,6 +518,10 @@
       "tuckTarget": {
         "text": "请选择一个留在原处的层，把翼片塞到它那里。",
         "title": "要塞入的层会移动"
+      },
+      "unsinkNotSunk": {
+        "text": "沿这条线，纸的内部没有沉入的部分。请定位沉折留下的环，并选择其中沉入的角。",
+        "title": "这里没有沉入的角"
       },
       "unsupported": {
         "text": "此版本的 Ori Studio 无法按保存的样子折出这一步。",
@@ -515,6 +557,23 @@
       "rowBeside": "第 {{layer}} 层，{{flap}}，在第 {{above}} 层旁边",
       "top": "顶部"
     },
+    "sink": {
+      "bothFit": "两种沉折都可以：开放沉折把每一层翻转，闭合沉折让各层保持在一起。",
+      "closed": "闭合",
+      "depth": "深度",
+      "depthHelp": "沿角的中线，线到尖端的距离（以纸的边长为 1）。把线放得更低，角就沉得更深。",
+      "depthValue": "距尖端 {{depth}}",
+      "kind": "沉折",
+      "neither": "此处这个角两种沉折都不适用。",
+      "onlyClosed": "此处只适合闭合沉折。",
+      "onlyOpen": "此处只适合开放沉折。",
+      "open": "开放",
+      "pocket": "夹层",
+      "pocketBack": "后",
+      "pocketFront": "前",
+      "squareNote": "开放沉折需要线与角的中线严格垂直：哪怕稍有倾斜，这个角都无法开放沉折。闭合沉折可以使用倾斜的线。",
+      "sunkSide": "沉入的一侧"
+    },
     "steps": {
       "axiom1First": "单击折线经过的第一个点。",
       "axiom1Second": "单击第二个点。",
@@ -539,17 +598,22 @@
       "perpendicularTo": "单击折线要垂直于的边或折痕。",
       "pickFlapsToReverse": "选择要翻折的翼片。",
       "pickLayers": "选择要移动的层。",
+      "pickPoint": "选择要沉折的角：一次沉折只取一个。",
+      "pickSunkPoint": "已沉入的角会自动找到：在层中选择另一个，即可把它拉出。",
       "pointToMove": "单击要移动的点。"
     },
     "tool": {
+      "closedSinkHelp": "把闭合角的尖端推入夹层，各层保持在一起。",
       "divideLine": "等分线",
       "divideLineHelp": "标出把边或折痕等分的点。",
       "insideReverse": "内翻折",
       "insideReverseHelp": "把翼片推入其自身内部，翻转它的脊线。",
       "mountain": "山折",
       "mountainHelp": "把移动的一侧向远离你的方向折，使它落在下面。",
+      "openSinkHelp": "把闭合角的尖端推进去，并把它的每一层翻转。",
       "precrease": "预折",
       "precreaseHelp": "折起再展开，留下一条之后用的折痕。",
+      "unsinkHelp": "把沉入的角的尖端拉回来。",
       "valley": "谷折",
       "valleyHelp": "把移动的一侧朝你折，使它落在上面。"
     },

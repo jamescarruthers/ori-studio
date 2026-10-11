@@ -284,7 +284,8 @@
     "chooser": {
       "note": "Este axioma dá mais de uma dobra aqui. Percorra-as ou pressione Shift+← / Shift+→.",
       "openingNote": "A aba se abre de mais de um jeito: as camadas destacadas ficam juntas. Percorra-os ou pressione Shift+← / Shift+→.",
-      "orderNote": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os ou pressione Shift+← / Shift+→."
+      "orderNote": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os ou pressione Shift+← / Shift+→.",
+      "pocketNote": "A ponta pode ser afundada em mais de um bolso entre suas camadas. Percorra-os ou pressione Shift+← / Shift+→."
     },
     "divide": {
       "clear_one": "Apagar a marca feita aqui",
@@ -299,20 +300,24 @@
       "right": "Até o fim"
     },
     "fix": {
+      "closedSinkInstead": "Afundamento fechado em vez disso",
       "includeFlap": "Incluir a aba {{number}}",
       "includeFlaps_one": "Incluir {{count}} aba",
       "includeFlaps_many": "Incluir as {{count}} abas",
       "includeFlaps_other": "Incluir as {{count}} abas",
       "insideInstead": "Dobra invertida interna em vez disso",
       "mountainInstead": "Dobra montanha em vez disso",
+      "openSinkInstead": "Afundamento aberto em vez disso",
       "outsideInstead": "Dobra invertida externa em vez disso",
       "pickFlap": "Dobrar só a aba {{number}}",
       "precreaseOtherWay": "Pré-vincar no outro sentido",
       "reverseFlap": "Inverter só a aba {{number}}",
+      "sinkFlap": "Afundar só a aba {{number}}",
       "slideToEdge": "Deslizar a linha até o ponto ficar na borda",
       "swapInstead": "Trocar o lado que se move",
       "turnToEdge": "Girar a linha até o ponto ficar na borda",
       "useLine": "Usar a linha de referência",
+      "useSquareLine": "Usar a linha perpendicular",
       "valleyInstead": "Dobra vale em vez disso"
     },
     "flap": {
@@ -333,7 +338,8 @@
       "locate": "Localizar a linha",
       "model": "Modelo",
       "planned": "Planejados",
-      "reference": "Pontos de referência"
+      "reference": "Pontos de referência",
+      "sink": "Afundamentos"
     },
     "key": {
       "commit": "Fazer a dobra",
@@ -373,12 +379,18 @@
     "note": {
       "acrossLayers": "Estes pontos ficam em camadas que a dobragem separou, então a linha passa por eles onde estão na forma dobrada. O padrão de vincos mostra os vincos que ela cria.",
       "clear": "Esc limpa os pontos escolhidos.",
+      "closedSinkLine": "A linha que cruza a ponta define o quanto ela afunda.",
       "crease": "Dobrar ao longo de um pré-vinco o redobra; ao longo de uma borda dobrada, desdobra a aba.",
       "divide": "Contam as bordas, as bordas dobradas e os pré-vincos.",
       "free": "Sem ajuste: a linha passa exatamente pelos pontos em que você clica.",
       "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar, sem ajuste.",
+      "openSinkLine": "A linha que cruza a ponta define o quanto ela afunda, e precisa ser exatamente perpendicular à sua linha central. O axioma 4, por um ponto e perpendicular ao vinco central, dá uma que é.",
       "queued": "Dobrando assim que a prévia estiver pronta…",
-      "snap": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos, pontos médios e bordas."
+      "severalSunk_one": "Há {{count}} ponta afundada aqui: a primeira é usada.",
+      "severalSunk_many": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
+      "severalSunk_other": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
+      "snap": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos, pontos médios e bordas.",
+      "unsinkLine": "Localize o anel que o afundamento deixou: Vinco existente pega um vinco dele ao longo do topo da ponta afundada."
     },
     "op": {
       "closedSink": "Afundamento fechado",
@@ -416,6 +428,10 @@
       "chooseOrder": {
         "text": "A dobra pode ficar com as camadas empilhadas de mais de um jeito. Escolha um para dobrar.",
         "title": "Escolha como as camadas se empilham"
+      },
+      "choosePocket": {
+        "text": "A ponta pode ser afundada em mais de um bolso entre suas camadas. Escolha um para dobrar.",
+        "title": "Escolha um bolso"
       },
       "closureAddsFlaps": {
         "textMany_one": "Dobrar estas camadas também move mais {{count}} aba.",
@@ -493,6 +509,32 @@
         "noSplit": "Suas camadas não podem ser separadas ao longo de uma dobra sem que uma camada de baixo acabe sobre uma de cima.",
         "title": "Esta aba não pode se abrir"
       },
+      "sinkLineTilted": {
+        "text": "Um afundamento aberto precisa da linha exatamente perpendicular à linha central da ponta: inclinada só um pouco, a ponta não pode ser afundada aberta. A linha perpendicular na mesma profundidade pode.",
+        "title": "A linha não é perpendicular à ponta"
+      },
+      "sinkNoAxis": {
+        "text": "O contorno dela não segue dois lados retos, então não há linha central à qual a linha de um afundamento aberto possa ser perpendicular.",
+        "title": "A ponta não tem linha central"
+      },
+      "sinkNoPocket": {
+        "text": "Nenhum espaço entre suas camadas dá a volta inteira no contorno para a extremidade entrar, então ela não pode ser afundada fechada.",
+        "title": "A ponta não tem bolso"
+      },
+      "sinkOutlineMixed": {
+        "text": "As bordas externas da ponta são dobras montanha e vale ao mesmo tempo: não há um único exterior para virar do avesso, então ela não pode ser afundada aberta.",
+        "title": "O exterior dela não é uma única dobra"
+      },
+      "sinkPointOpen": {
+        "text": "Bordas soltas chegam à extremidade: as camadas são cantos livres, não uma ponta fechada, então nada diz como afundariam. Afunde uma ponta cujas camadas se unem na extremidade.",
+        "title": "A ponta está aberta"
+      },
+      "sinkSeveralPoints": {
+        "text_one": "Há {{count}} ponta do lado da extremidade, e um afundamento usa só uma. Escolha a ponta a afundar.",
+        "text_many": "Há {{count}} pontas do lado da extremidade, e um afundamento usa só uma. Escolha a ponta a afundar.",
+        "text_other": "Há {{count}} pontas do lado da extremidade, e um afundamento usa só uma. Escolha a ponta a afundar.",
+        "title": "Escolha uma ponta"
+      },
       "sliver": {
         "text": "Um ponto das camadas que se movem cairia por um fio dentro da borda de outra camada.",
         "title": "Um ponto cai logo dentro de uma borda"
@@ -508,6 +550,10 @@
       "tuckTarget": {
         "text": "Escolha uma camada que fique parada para encaixar a aba nela.",
         "title": "A camada onde encaixar se moveria"
+      },
+      "unsinkNotSunk": {
+        "text": "Nada afundado fica dentro do papel ao longo desta linha. Localize o anel que um afundamento deixou e escolha a ponta afundada dentro dele.",
+        "title": "Nenhuma ponta afundada aqui"
       },
       "unsupported": {
         "text": "Esta versão do Ori Studio não consegue dobrá-lo como está salvo.",
@@ -543,6 +589,23 @@
       "rowBeside": "Camada {{layer}}, {{flap}}, ao lado da camada {{above}}",
       "top": "Topo"
     },
+    "sink": {
+      "bothFit": "Os dois afundamentos cabem aqui: o aberto vira cada camada do avesso, o fechado as mantém juntas.",
+      "closed": "Fechado",
+      "depth": "Profundidade",
+      "depthHelp": "A distância da linha até a extremidade da ponta ao longo da linha central, sendo 1 o lado do papel. Coloque a linha mais abaixo para afundar mais a ponta.",
+      "depthValue": "{{depth}} da extremidade",
+      "kind": "Afundamento",
+      "neither": "Nenhum afundamento cabe nesta ponta aqui.",
+      "onlyClosed": "Aqui só cabe o afundamento fechado.",
+      "onlyOpen": "Aqui só cabe o afundamento aberto.",
+      "open": "Aberto",
+      "pocket": "Bolso",
+      "pocketBack": "Atrás",
+      "pocketFront": "Na frente",
+      "squareNote": "Um afundamento aberto precisa da linha exatamente perpendicular à linha central da ponta: inclinada só um pouco, a ponta não pode ser afundada aberta. Um afundamento fechado aceita uma linha inclinada.",
+      "sunkSide": "Lado afundado"
+    },
     "steps": {
       "axiom1First": "Clique no primeiro ponto por onde a dobra passa.",
       "axiom1Second": "Clique no segundo ponto.",
@@ -567,17 +630,22 @@
       "perpendicularTo": "Clique na borda ou vinco ao qual a dobra é perpendicular.",
       "pickFlapsToReverse": "Escolha quais abas se invertem.",
       "pickLayers": "Escolha quais camadas se movem.",
+      "pickPoint": "Escolha qual ponta afunda: um afundamento usa só uma.",
+      "pickSunkPoint": "A ponta afundada é encontrada para você: escolha outra nas camadas para puxar essa.",
       "pointToMove": "Clique no ponto a mover."
     },
     "tool": {
+      "closedSinkHelp": "Empurrar a extremidade de uma ponta fechada para dentro de um bolso, mantendo as camadas juntas.",
       "divideLine": "Dividir linha",
       "divideLineHelp": "Marcar pontos que dividem uma borda ou um vinco em partes iguais.",
       "insideReverse": "Dobra invertida interna",
       "insideReverseHelp": "Empurrar uma aba para dentro de si mesma, invertendo sua lombada.",
       "mountain": "Dobra montanha",
       "mountainHelp": "Dobrar o lado que se move para longe de você, para que fique por baixo.",
+      "openSinkHelp": "Empurrar para dentro a extremidade de uma ponta fechada, virando cada camada do avesso.",
       "precrease": "Pré-vincar",
       "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
+      "unsinkHelp": "Puxar de volta a extremidade de uma ponta afundada.",
       "valley": "Dobra vale",
       "valleyHelp": "Dobrar o lado que se move na sua direção, para que fique por cima."
     },
