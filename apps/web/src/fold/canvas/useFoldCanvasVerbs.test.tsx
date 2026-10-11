@@ -230,6 +230,34 @@ describe('the Fold canvas’s commit', () => {
   });
 });
 
+describe('an include fix', () => {
+  const flap = (face: number) => ({ faces: [face], witness: [0.1 * face, 0.5] as [number, number] });
+  const FLAPS = [flap(0), flap(1), flap(2)];
+  /** A reverse fold's tip, refused as not free: its analysis names the flaps the seed picked. */
+  const analysed = (picked: number[]): Partial<FoldToolPreview> => ({
+    analysis: { flaps: FLAPS, picked, added: [] } as unknown as FoldToolPreview['analysis'],
+    section: { flaps: FLAPS } as unknown as FoldToolPreview['section'],
+  });
+
+  it('adds the flaps in the way to a stack picked by depth, keeping the flaps that stack grew into', () => {
+    const tools = createFoldTools();
+    act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={preview(analysed([0]))} />));
+    act(() => tools.setSeed({ scope: 'depth', at: [0.1, 0.5], scene: { x: 0.1, y: 0.5 }, choice: 2 }));
+    act(() => bound!.verbs.includeFlaps([2]));
+    expect(tools.store.getState().seed).toEqual({ scope: 'flaps', flaps: [FLAPS[0], FLAPS[2]] });
+  });
+
+  it('adds them to the flaps picked once each, and to every flap is every layer', () => {
+    const tools = createFoldTools();
+    act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={preview(analysed([0]))} />));
+    act(() => tools.setSeed({ scope: 'flaps', flaps: [FLAPS[0]!] }));
+    act(() => bound!.verbs.includeFlaps([0, 1]));
+    expect(tools.store.getState().seed).toEqual({ scope: 'flaps', flaps: [FLAPS[0], FLAPS[1]] });
+    act(() => bound!.verbs.includeFlaps([2]));
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+  });
+});
+
 describe('a near miss’s fix', () => {
   it('puts the landmark line in place of a reverse fold’s line, as of a plain fold’s', () => {
     const surface = session(vi.fn());

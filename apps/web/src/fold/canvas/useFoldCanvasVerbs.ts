@@ -25,7 +25,7 @@ import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldSinkKind } from '../engine/foldEngineSinkWire';
 import type { FoldFlap, FoldModelPoint } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { wovenIntervalAt } from '../tools/crossSection';
+import { sameFlap, wovenIntervalAt } from '../tools/crossSection';
 import {
   isLineTool,
   isVertexTool,
@@ -37,7 +37,7 @@ import { lineModeInput, nextStep } from '../tools/foldToolRegistry';
 import { steppedTuckTarget } from '../tools/tuck/tuckStep';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
-import { foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
+import { flapSeed, foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
 import { nearestDirection, squashTargetToward } from '../tools/vertex/vertexStep';
 import { isFoldAltLatched } from './foldAltLatch';
 import { toPair, transformLine } from './foldCanvasGeometry';
@@ -461,14 +461,19 @@ export function useFoldCanvasVerbs(
         const analysis = live.current.preview.analysis;
         const section = live.current.preview.section;
         if (!analysis) return;
+        // The fix's flaps join what the seed picked, never replace it: the
+        // flaps picked, or — for a stack picked by depth, which a reverse
+        // fold's tip grows into whole flaps — the flaps the analysis says it named.
         const seed = state().seed;
-        const picked = seed.scope === 'flaps' ? [...seed.flaps] : [];
+        const picked: FoldFlap[] =
+          seed.scope === 'flaps'
+            ? [...seed.flaps]
+            : analysis.picked.flatMap((index) => analysis.flaps[index] ?? []);
         for (const flap of flaps) {
           const named = analysis.flaps[flap];
-          if (named) picked.push(named);
+          if (named && !picked.some((each) => sameFlap(each, named))) picked.push(named);
         }
-        const all = section?.flaps ?? analysis.flaps;
-        tools.setSeed(picked.length >= all.length ? { scope: 'all' } : { scope: 'flaps', flaps: picked });
+        tools.setSeed(flapSeed(picked, section?.flaps ?? analysis.flaps));
       },
 
       foldOtherWay: () => {
