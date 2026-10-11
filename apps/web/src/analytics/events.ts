@@ -71,6 +71,20 @@ export type FoldStepPlayVia = 'space' | 'button' | 'replay';
  */
 export type FoldChoiceKind = 'axiom_root' | 'depth' | 'import_order' | 'opening' | 'order';
 
+/** What a change of a Fold step's layer spread did (`fold spread changed`): the Diagram's spread verbs, by name. */
+export type FoldSpreadAction =
+  | 'spread_on'
+  | 'spread_off'
+  | 'spread_kind'
+  | 'spread_amount'
+  | 'spread_direction'
+  | 'spread_keep'
+  | 'spread_skew'
+  | 'spread_axis';
+
+/** Where a Fold step's spread was changed: the Step pane's Spread section, or the canvas bar's toggle. */
+export type FoldSpreadVia = 'step_pane' | 'canvas_bar';
+
 /**
  * Which control added a diagram step. `grid` is the Diagram workspace's own:
  * the header's Add step, the empty state, and Insert before / after.
@@ -1546,6 +1560,15 @@ export const ANALYTICS_EVENTS = {
   foldStepAdded: 'fold step added',
   foldRefused: 'fold refused',
   foldChoiceOffered: 'fold choice offered',
+  /**
+   * A Fold step's layer spread changed (Wave 5): turned on or off, its kind,
+   * or one of its values — from the Step pane's Spread section or the
+   * canvas bar's toggle (`via`). A change that leaves the layers spread also
+   * says how, in the Diagram's spread properties (kind, the amount bucketed,
+   * the direction or the layer held still, skew and axis bucketed); never a
+   * value itself. A slider's drag is one event, at its end.
+   */
+  foldSpreadChanged: 'fold spread changed',
   /**
    * One file of an upload into the Diagram, and what became of it: whether
    * people's own drawings survive the sanitizer, and how big they are.

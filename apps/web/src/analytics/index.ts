@@ -63,6 +63,8 @@ export type {
   FoldSimulationSource,
   FoldVerdict,
   FoldChoiceKind,
+  FoldSpreadAction,
+  FoldSpreadVia,
   FoldStepAddedOpKind,
   FoldStepLayerScope,
   FoldStepVia,
@@ -147,10 +149,11 @@ export {
   trackDiagramStepOpened,
   trackDiagramPageSetupChanged,
   trackDiagramViewSwitched,
+  spreadTracking,
 } from './trackDiagram';
 export { trackDiagramEnlargementChanged, trackDiagramStepEnlarged } from './trackDiagramZoom';
 export { trackDesktopDownload } from './trackDesktopDownload';
-export { trackFoldChoiceOffered, trackFoldRefused, trackFoldStepAdded } from './trackFold';
+export { trackFoldChoiceOffered, trackFoldRefused, trackFoldSpreadChanged, trackFoldStepAdded } from './trackFold';
 export { trackCreasePatternExported } from './trackCreasePatternExport';
 export {
   trackPaperExportDismissed,

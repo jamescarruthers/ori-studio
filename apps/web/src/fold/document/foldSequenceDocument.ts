@@ -21,13 +21,14 @@
  *   the parent node's model frame; a direction is valley or mountain as seen
  *   in the parent's view, which is part of the parent's state.
  *
- * Marks, notes and `expect` ride along beside the op and never change what a
- * step folds. Status — ok, changed, broken, locked — is derived on replay
- * (`foldReplay`), never stored.
+ * Marks, notes, a step's layer spread and `expect` ride along beside the op
+ * and never change what a step folds. Status — ok, changed, broken, locked —
+ * is derived on replay (`foldReplay`), never stored.
  *
  * Pure: no React, no store, no engine.
  */
 
+import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { randomId, type IdFactory } from '../../lib/documentFile';
 import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
 import {
@@ -555,6 +556,30 @@ export function markPoints(mark: FoldMark): SheetPoint[] {
 }
 
 // ---------------------------------------------------------------------------
+// Spread
+
+/**
+ * A step's own layer spread (`foldedLayerSpread.ts`): how its folded picture
+ * spreads its layers apart, or `'off'` for not at all. Display data, as a
+ * note is: it never changes what the step folds, and is outside `fh1` and
+ * `fs1`. A step with none takes the nearest earlier step's on its path, else
+ * the default (`foldStepSpread`), so the default spread is on.
+ */
+export type FoldSpreadSetting = LayerSpreadOptions | 'off';
+
+/** A newer build's spread: carried verbatim and written back unchanged, never shown — the step takes an earlier one's. */
+export interface FoldCarriedSpread {
+  unknown: unknown;
+}
+
+export type FoldStepSpreadEntry = FoldSpreadSetting | FoldCarriedSpread;
+
+/** Whether a step's spread entry is one this build reads, rather than a newer build's carried. */
+export function isKnownSpread(entry: FoldStepSpreadEntry): entry is FoldSpreadSetting {
+  return entry === 'off' || !('unknown' in entry);
+}
+
+// ---------------------------------------------------------------------------
 // Steps and the sequence
 
 /**
@@ -572,6 +597,8 @@ export interface FoldStep {
   /** The author's words. The sentence itself is generated. */
   note?: string;
   marks?: readonly FoldMarkEntry[];
+  /** Its own layer spread; absent, it takes an earlier step's ({@link FoldSpreadSetting}). */
+  spread?: FoldStepSpreadEntry;
   unknown?: undefined;
 }
 

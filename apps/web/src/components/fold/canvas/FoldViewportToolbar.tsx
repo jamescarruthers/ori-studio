@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Layers, PenLine } from 'lucide-react';
+import { Layers, Layers2, PenLine } from 'lucide-react';
+import type { LayerSpreadToggle } from '../../../cp-workspace/folded/layerSpreadControls';
 import type { FoldPaneDisplay } from '../../../fold/canvas/foldPaneScenes';
 import { ViewportToolbar, type ViewportToolbarGroupSpec } from '../../panels/ViewportToolbar';
 
@@ -8,8 +9,10 @@ import { ViewportToolbar, type ViewportToolbarGroupSpec } from '../../panels/Vie
  * The floating bar along the bottom of the Fold canvas (plan D14, the
  * design's): the shared zoom cluster and Fit, for both panes at once, the
  * panes' two display switches — the step's own creases drawn as its
- * instruction, and the precreases — the step's transport (`playback`), and a
- * slot for Send to Edit, which the panel supplies.
+ * instruction, and the precreases — beside them the step's Spread Layers
+ * (`spread`, the Step pane's switch: a setting of the step, not of the view),
+ * the step's transport (`playback`), and a slot for Send to Edit, which the
+ * panel supplies.
  *
  * A phone's bar leads with the canvas's own controls (`phoneControls`: the
  * tools and the pane switch), then the transport; the display switches and
@@ -20,6 +23,7 @@ export function FoldViewportToolbar({
   camera,
   display,
   onDisplay,
+  spread = null,
   playback,
   phoneControls,
   sendToEdit,
@@ -33,6 +37,8 @@ export function FoldViewportToolbar({
   };
   display: FoldPaneDisplay;
   onDisplay: (display: FoldPaneDisplay) => void;
+  /** The step on screen's Spread Layers (`useFoldStepSpread`); null at the flat sheet, which has none. */
+  spread?: LayerSpreadToggle | null;
   /** The step's transport controls (`FoldPlaybackControls`). */
   playback?: ReactNode;
   /** A phone's: the tools and the pane switch (`FoldPhoneBarControls`), at the head of the bar. */
@@ -70,6 +76,25 @@ export function FoldViewportToolbar({
           pinned: true,
           onPhone: 'collapse',
           onSelect: () => onDisplay({ ...display, precreases: !display.precreases }),
+        },
+        {
+          kind: 'action',
+          id: 'spread-layers',
+          label: t('panels:fold.canvas.spreadLayers', 'Spread layers'),
+          title:
+            spread?.disabled && spread.hint
+              ? spread.hint
+              : t(
+                  'panels:fold.canvas.spreadLayersTitle',
+                  'Spread the folded layers apart, as a diagram draws them, on this step and the ones after it'
+                ),
+          icon: <Layers2 size={14} />,
+          checked: spread?.pressed ?? false,
+          // The flat sheet has no step to set it on, and no layers to spread.
+          disabled: !spread || spread.disabled,
+          pinned: true,
+          onPhone: 'collapse',
+          onSelect: () => spread?.run(),
         },
       ],
     },

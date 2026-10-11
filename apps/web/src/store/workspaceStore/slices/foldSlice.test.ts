@@ -148,6 +148,27 @@ describe('the Fold slice', () => {
     expect(state().foldHistory.past).toHaveLength(past + 3);
   });
 
+  it('makes a drag of a step’s spread one undo step, and a toggle another', () => {
+    const { a, b } = foldTwo();
+    const past = state().foldHistory.past.length;
+    const amount = (value: number) => ({ kind: 'depth' as const, amount: value, toward: 'down' as const });
+
+    // A drag: every value it passes is one entry, landing on the last.
+    for (const value of [0.03, 0.05, 0.08]) state().setFoldStepSpread(b, amount(value), { session: 3 });
+    expect(state().foldHistory.past).toHaveLength(past + 1);
+    expect(shown().steps[1]).toMatchObject({ spread: amount(0.08) });
+    // Off on the step before is an entry of its own, and reaches it no more than its own setting lets it.
+    expect(state().setFoldStepSpread(a, 'off')).toBe(true);
+    expect(state().foldHistory.past).toHaveLength(past + 2);
+    expect(state().setFoldStepSpread(a, 'off')).toBe(false);
+
+    state().undoFold();
+    expect(shown().steps[0]).not.toHaveProperty('spread');
+    state().undoFold();
+    expect(shown().steps[1]).not.toHaveProperty('spread');
+    expect(state().foldHistory.past).toHaveLength(past);
+  });
+
   it('marks a step or the sheet as one undo step each, and clears them', () => {
     const { a } = foldTwo();
     const mark: FoldMark = { id: 'fmark-1', from: [0, 0], to: [1, 0], divide: { mode: 'count', parts: 3 } };

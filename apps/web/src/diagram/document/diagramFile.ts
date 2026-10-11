@@ -31,14 +31,7 @@
  */
 
 import { readFoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
-import {
-  SPREAD_DIRECTIONS,
-  SPREAD_KEEPS,
-  SPREAD_KINDS,
-  type SpreadDirection,
-  type SpreadKeep,
-  type SpreadKind,
-} from '../../cp-workspace/folded/foldedLayerSpread';
+import { readLayerSpread } from '../../cp-workspace/folded/layerSpreadSettings';
 import type { DiagramWhiteArrowWidth } from '../../lib/stepDiagram/diagramInk';
 import type { WhiteArrowTail } from '../../lib/stepDiagram/stepDiagramGeometry';
 import { readRegionReference } from '../../cp-workspace/regions/regionReference';
@@ -99,9 +92,6 @@ import {
   DIAGRAM_PAGE_SIDES,
   DIAGRAM_SHOW_AS,
   PAPER_SIZES,
-  SPREAD_AMOUNT_RANGE,
-  SPREAD_AXIS_RANGE,
-  SPREAD_SKEW_RANGE,
   isTurn,
   showAsOf,
   isKnownAsset,
@@ -133,7 +123,6 @@ import {
   type DiagramPicture,
   type DiagramHanStyle,
   type DiagramIdFactory,
-  type DiagramLayerSpread,
   type DiagramPageSetup,
   type DiagramRasterAsset,
   type DiagramShowAs,
@@ -1018,51 +1007,12 @@ function readCpRender(value: unknown): DiagramCpRender | null {
   }
 }
 
-/** A spread's fields, by its kind: any other makes the step a newer build's. */
-const SPREAD_FIELDS: Readonly<Record<SpreadKind, ReadonlySet<string>>> = {
-  depth: new Set(['kind', 'amount', 'toward']),
-  affine: new Set(['kind', 'amount', 'keep', 'skew', 'axisDeg']),
-};
-
 /**
- * A flat fold's spread (Phase 13): undefined when it has none. One with no
- * `kind` is a depth spread, as every spread was before there were two (13g).
- * A kind, a field, a direction, a layer held still or a value past what this
- * build reads is a newer build's; one of the wrong type, or no step at all,
- * is damage.
+ * A flat fold's spread (Phase 13), by the reading every flat picture's spread
+ * shares (`readLayerSpread`): undefined when it has none, a newer build's
+ * making the step one, damage dropping it.
  */
-function readSpread(value: unknown): DiagramLayerSpread | undefined | typeof NEWER | null {
-  if (value === undefined) return undefined;
-  if (!isRecord(value)) return null;
-  const kind = value.kind === undefined ? 'depth' : value.kind;
-  if (typeof kind !== 'string') return null;
-  if (!(SPREAD_KINDS as readonly string[]).includes(kind)) return NEWER;
-  const known = kind as SpreadKind;
-  // A field it has no name for is news before a missing one is damage, as for an annotation.
-  if (hasNewerKey(value, SPREAD_FIELDS[known])) return NEWER;
-  const amount = finiteNumber(value.amount);
-  if (amount === null || amount <= 0) return null;
-  const past = amount > SPREAD_AMOUNT_RANGE[known].max;
-  if (known === 'depth') {
-    if (typeof value.toward !== 'string') return null;
-    if (past || !(SPREAD_DIRECTIONS as readonly string[]).includes(value.toward)) return NEWER;
-    return { kind: 'depth', amount, toward: value.toward as SpreadDirection };
-  }
-  const skew = finiteNumber(value.skew);
-  const axisDeg = finiteNumber(value.axisDeg);
-  if (typeof value.keep !== 'string' || skew === null || axisDeg === null) return null;
-  if (
-    past ||
-    !(SPREAD_KEEPS as readonly string[]).includes(value.keep) ||
-    skew < SPREAD_SKEW_RANGE.min ||
-    skew > SPREAD_SKEW_RANGE.max ||
-    axisDeg < SPREAD_AXIS_RANGE.min ||
-    axisDeg > SPREAD_AXIS_RANGE.max
-  ) {
-    return NEWER;
-  }
-  return { kind: 'affine', amount, keep: value.keep as SpreadKeep, skew, axisDeg };
-}
+const readSpread = readLayerSpread;
 
 /** An angle in [0, 360), so one rotation is written one way. */
 function normalizeDegrees(degrees: number): number {

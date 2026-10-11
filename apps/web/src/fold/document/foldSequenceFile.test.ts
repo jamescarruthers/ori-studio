@@ -262,7 +262,7 @@ describe('versions and newer builds', () => {
   });
 });
 
-describe('marks, notes and expect', () => {
+describe('marks, notes, spreads and expect', () => {
   it('drops a malformed mark, carries a newer build’s, and writes the carried one back unchanged', () => {
     const kept = { id: 'm-ok', from: [0, 0], to: [1, 0], divide: { mode: 'count', parts: 2 } };
     const newerMode = { id: 'm-mode', from: [0, 0], to: [1, 0], divide: { mode: 'golden' } };
@@ -291,6 +291,30 @@ describe('marks, notes and expect', () => {
     expect(document.steps[0]).not.toHaveProperty('expect');
     expect(document.steps[0]).not.toHaveProperty('note');
     expect((document.steps[1] as FoldStep).note).toBe('ab');
+  });
+
+  it('reads a step’s spread or off, carries a newer build’s, drops a damaged one, and never locks the step', () => {
+    const affine = { kind: 'affine', amount: 0.03, keep: 'top', skew: 1, axisDeg: 81 };
+    const newerKind = { kind: 'curve', amount: 0.1 };
+    const newerKey = { ...affine, bend: 2 };
+    const { document } = readSteps([
+      raw('a', null, { spread: affine }),
+      raw('b', 'a', { spread: 'off' }),
+      raw('c', 'b', { spread: newerKind }),
+      raw('d', 'c', { spread: newerKey }),
+      raw('e', 'd', { spread: 'auto' }),
+      raw('f', 'e', { spread: { ...affine, amount: -1 } }),
+      raw('g', 'f', { spread: 3 }),
+    ]);
+    expect(document.steps.every((node) => !isLockedStep(node))).toBe(true);
+    const spreads = document.steps.map((node) => (node as FoldStep).spread);
+    expect(spreads).toEqual([affine, 'off', { unknown: newerKind }, { unknown: newerKey }, { unknown: 'auto' }, undefined, undefined]);
+    const written = writeFoldSequence({ document, readOnlyRaw: null }).steps as Record<string, unknown>[];
+    expect(written.map((node) => node.spread)).toEqual([affine, 'off', newerKind, newerKey, 'auto', undefined, undefined]);
+    expect(written[2]!.spread).toBe(newerKind);
+    // Written only when set, after every other field.
+    expect(Object.keys(written[0]!).at(-1)).toBe('spread');
+    expect(written[5]).not.toHaveProperty('spread');
   });
 
   it('reads empty choices as none', () => {

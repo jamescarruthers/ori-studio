@@ -10,7 +10,7 @@ import {
 } from './foldDigest';
 import { rectangleShape, type FoldLockedStep, type FoldPaper, type FoldStep } from './foldSequenceDocument';
 import { readFoldSequence, writeFoldOp, writeFoldSequence } from './foldSequenceFile';
-import { setFoldMarks, setFoldStepNote } from './foldSequenceEdits';
+import { setFoldMarks, setFoldStepNote, setFoldStepSpread } from './foldSequenceEdits';
 import { sequenceOf, step, valleyAt, writtenSequence } from './foldSequence.fixtures';
 
 const axiomValley = (d: number): FoldStep =>
@@ -65,7 +65,7 @@ describe('fh1', () => {
     expect(foldNodeDigest(document, 'x')).not.toBe(foldNodeDigest(document, 'y'));
   });
 
-  it('is unchanged by a note, marks or an expect', () => {
+  it('is unchanged by a note, marks, a spread or an expect', () => {
     const document = sequenceOf([step('a', null), step('b', 'a', valleyAt(0.25))]);
     const before = foldNodeDigest(document, 'b');
     const noted = setFoldStepNote(document, 'a', 'Fold in half.');
@@ -75,12 +75,18 @@ describe('fh1', () => {
     const sheetMarked = setFoldMarks(marked, null, [
       { id: 'fmark-2', from: [0, 0], to: [0, 1], divide: { mode: 'count', parts: 2 } },
     ]);
+    const spread = setFoldStepSpread(
+      setFoldStepSpread(sheetMarked, 'a', { kind: 'depth', amount: 0.05, toward: 'up' }),
+      'b',
+      'off'
+    );
     const expected = {
-      ...sheetMarked,
-      steps: sheetMarked.steps.map((node) => ({ ...node, expect: 'fs1:0000000000000000' })),
+      ...spread,
+      steps: spread.steps.map((node) => ({ ...node, expect: 'fs1:0000000000000000' })),
     };
     expect(noted).not.toBe(document);
-    for (const edited of [noted, marked, sheetMarked, expected]) expect(foldNodeDigest(edited, 'b')).toBe(before);
+    expect(spread).not.toBe(sheetMarked);
+    for (const edited of [noted, marked, sheetMarked, spread, expected]) expect(foldNodeDigest(edited, 'b')).toBe(before);
   });
 
   it('survives a write and a read', () => {

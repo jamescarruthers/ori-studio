@@ -15,7 +15,9 @@
  */
 
 import type { TFunction } from 'i18next';
-import { foldStepReady } from '../../fold/io/foldSessionWaits';
+import type { FoldStepNode } from '../../fold/document/foldSequenceDocument';
+import type { FoldScene } from '../../fold/engine/foldEngineWire';
+import { foldStepReady, type FoldStepReady } from '../../fold/io/foldSessionWaits';
 import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import type { FoldSession } from '../../fold/session/foldSession';
@@ -31,7 +33,7 @@ import {
   type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { storedFoldStepSource } from '../document/diagramFile';
-import { foldStepPicture } from './foldStepPicture';
+import { foldStepPicture, type FoldStepPictureInput } from './foldStepPicture';
 
 /** Which Fold step a picture is captured from, at which moment, in which pose. */
 export interface FoldStepCaptureRequest {
@@ -72,6 +74,72 @@ function sentenceOf(
   return moment === 'before' ? xmlText(foldStepSentence(t, words)) : undefined;
 }
 
+/**
+ * What a Fold step's picture is made from, as the session's replay has it:
+ * the states either side of the step, what the step does, and the step
+ * itself — everything `foldStepPicture` draws from, so a pose drawn again
+ * from it needs no engine (a spread's slider, dragged). Asked of the session
+ * the caller holds.
+ */
+export interface FoldStepCaptureInput {
+  picture: FoldStepPictureInput;
+  ready: FoldStepReady;
+  /** The state the step folds from. */
+  parent: FoldScene;
+  node: FoldStepNode;
+  engineVersion: number;
+}
+
+/** Read what a Fold step's picture is made from, or why it cannot be. */
+export async function readFoldStepCapture(
+  session: FoldSession,
+  request: Pick<FoldStepCaptureRequest, 'sequence' | 'step' | 'moment'>
+): Promise<{ status: 'ready'; input: FoldStepCaptureInput } | Exclude<FoldStepCaptureResult, { status: 'captured' }>> {
+  const ready = await foldStepReady(session, request.sequence, request.step);
+  if (ready.status !== 'ready') {
+    switch (ready.reason) {
+      case 'missing':
+      case 'broken':
+        return { status: 'missing' };
+      case 'not-shown':
+        return { status: 'unknown', why: 'not-shown' };
+      case 'locked':
+        return { status: 'unknown', why: 'locked' };
+      case 'not-live':
+        return { status: 'unknown', why: 'unavailable' };
+    }
+  }
+  const own = await session.withState(ready.state, async (engine, id) => {
+    const [scene, summary, acted, engineVersion] = await Promise.all([
+      engine.scene(id),
+      engine.summary(id),
+      engine.stepAction(id),
+      engine.engineVersion(),
+    ]);
+    return { scene, summary, action: acted.status === 'ok' ? acted.action : null, engineVersion };
+  });
+  const parent = await session.withState(ready.parentState, (engine, id) => engine.scene(id));
+  if (own.status !== 'answered' || parent.status !== 'answered') return { status: 'unknown', why: 'unavailable' };
+  const { scene, summary, action, engineVersion } = own.value;
+  const node = session.store.getState().sequence?.steps.find((step) => step.id === request.step);
+  if (!node) return { status: 'missing' };
+  return {
+    status: 'ready',
+    input: {
+      picture: {
+        shown: request.moment === 'after' ? scene : parent.value,
+        own: { scene, step: summary.step, sheet: summary.sheet },
+        moment: request.moment,
+        action: request.moment === 'before' ? action : null,
+      },
+      ready,
+      parent: parent.value,
+      node,
+      engineVersion,
+    },
+  };
+}
+
 /** Capture a Diagram step's picture from a Fold step, start to finish. */
 export async function captureFoldStep(
   session: FoldSession,
@@ -80,51 +148,16 @@ export async function captureFoldStep(
 ): Promise<FoldStepCaptureResult> {
   const release = session.retain();
   try {
-    const ready = await foldStepReady(session, request.sequence, request.step);
-    if (ready.status !== 'ready') {
-      switch (ready.reason) {
-        case 'missing':
-        case 'broken':
-          return { status: 'missing' };
-        case 'not-shown':
-          return { status: 'unknown', why: 'not-shown' };
-        case 'locked':
-          return { status: 'unknown', why: 'locked' };
-        case 'not-live':
-          return { status: 'unknown', why: 'unavailable' };
-      }
-    }
-    const own = await session.withState(ready.state, async (engine, id) => {
-      const [scene, summary, acted, engineVersion] = await Promise.all([
-        engine.scene(id),
-        engine.summary(id),
-        engine.stepAction(id),
-        engine.engineVersion(),
-      ]);
-      return { scene, summary, action: acted.status === 'ok' ? acted.action : null, engineVersion };
-    });
-    const parent = await session.withState(ready.parentState, (engine, id) => engine.scene(id));
-    if (own.status !== 'answered' || parent.status !== 'answered') return { status: 'unknown', why: 'unavailable' };
-    const { scene, summary, action, engineVersion } = own.value;
-    const shown = request.moment === 'after' ? scene : parent.value;
-    const node = session.store.getState().sequence?.steps.find((step) => step.id === request.step);
-    if (!node) return { status: 'missing' };
-    const picture = foldStepPicture(
-      {
-        shown,
-        own: { scene, step: summary.step, sheet: summary.sheet },
-        moment: request.moment,
-        action: request.moment === 'before' ? action : null,
-      },
-      request.render,
-      newId
-    );
+    const read = await readFoldStepCapture(session, request);
+    if (read.status !== 'ready') return read;
+    const { picture: input, ready, parent, node, engineVersion } = read.input;
+    const picture = foldStepPicture(input, request.render, newId);
     const sentence = sentenceOf(
       t,
       request.moment,
       foldNodeSentenceStep(node, {
-        parent: foldStateFrame(parent.value),
-        child: foldStateFrame(scene),
+        parent: foldStateFrame(parent),
+        child: foldStateFrame(input.own.scene),
         report: ready.report,
       })
     );

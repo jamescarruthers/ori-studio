@@ -3,8 +3,9 @@
  *
  * - **`fh1`, a path's identity**: the canonical paper and, for each node from
  *   the sheet to this one, its op and choices — everything that decides the
- *   state, and nothing else. Marks, notes, `expect` and anything carried are
- *   left out, so annotating a step never changes it. It is the in-memory
+ *   state, and nothing else. Marks, notes, a step's layer spread, `expect`
+ *   and anything carried are left out, so annotating a step, or spreading
+ *   its picture, never changes it. It is the in-memory
  *   replay cache's key (the engine version sits beside it there, as a field
  *   of its own) and guards a Diagram link against an id that now names a
  *   different path.

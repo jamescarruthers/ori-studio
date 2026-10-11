@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { FoldedSceneInk } from '../../cp-workspace/adapters/cpFoldedToScene';
+import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import type { UserBounds } from '../../cp-workspace/renderer/camera';
 import type { FillGeometry } from '../../cp-workspace/renderer/types';
 import type { Point } from '../../lib/geometry';
@@ -41,6 +42,18 @@ export interface FoldCanvasPaint {
 }
 
 const CREASE_INK: FoldedSceneInk = { policy: PAPER_STYLE_POLICIES.fold };
+
+/**
+ * The spread the folded pane draws: the step's at rest, none once the tools
+ * locate a fold — its line, what moves and the layers it is picked through
+ * are drawn on the paper unspread.
+ */
+export function restingSpread(
+  spread: LayerSpreadOptions | null,
+  preview: Pick<FoldToolPreview, 'action' | 'analysis'>
+): LayerSpreadOptions | null {
+  return preview.action !== null || preview.analysis !== null ? null : spread;
+}
 const NO_OFFSET: Point = { x: 0, y: 0 };
 
 function union(a: Bounds | null, b: Bounds | null): Bounds | null {
@@ -60,25 +73,34 @@ function union(a: Bounds | null, b: Bounds | null): Bounds | null {
  * there is one, the creases it adds drawn as its instruction. The painter is
  * the shared one (`paperSceneToFoldedGeometry`, which the pane calls), with
  * the `fold` policy.
+ *
+ * The folded form's layers are spread by `spread`, the step's
+ * (`foldStepSpread`), while the pane is at rest. Once the tools locate a fold
+ * the paper lies flat: its line, the moving set lit over it and the layers it
+ * is picked through are the engine's, unspread, and must lie on the paper
+ * they describe. The top layer never moves under either kind of spread, so a
+ * point picked on it before then is where it looks.
  */
 export function useFoldCanvasPaint(
   view: FoldStateView,
   preview: FoldToolPreview,
   display: FoldPaneDisplay,
   hoveredFlap: number | null,
-  inks: FoldCanvasInks | null
+  inks: FoldCanvasInks | null,
+  spread: LayerSpreadOptions | null = null
 ): FoldCanvasPaint {
   const { scene, summary, index } = view;
   const sheet = summary?.sheet;
   const offset = useMemo(() => (scene && sheet ? foldedDisplayOffset(scene, sheet) : NO_OFFSET), [scene, sheet]);
   const sheetBounds = useMemo(() => (sheet ? boundsOf(sheet.map(([x, y]) => ({ x, y }))) : null), [sheet]);
+  const shownSpread = restingSpread(spread, preview);
 
   const foldedScene = useMemo(() => {
     if (!scene) return null;
-    const base = foldedPaneScene(scene, display, offset);
+    const base = foldedPaneScene(scene, display, offset, shownSpread);
     const action = preview.action;
     return action ? withFoldLine(base, action.line, action.direction, offset) : base;
-  }, [scene, display, offset, preview.action]);
+  }, [scene, display, offset, shownSpread, preview.action]);
   const foldedInk = useMemo<FoldedSceneInk>(
     () => ({
       policy: PAPER_STYLE_POLICIES.fold,
