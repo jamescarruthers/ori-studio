@@ -22,9 +22,11 @@ import {
   foldChoiceNote,
   foldPromptWords,
   foldReverseWindowView,
+  foldVertexWindowView,
   foldWindowPreview,
   sceneLayers,
 } from '../../../fold/canvas/foldCanvasModel';
+import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
 import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
@@ -156,9 +158,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     },
   });
 
-  // --- The tool's feedback on each pane.
+  // --- The tool's feedback on each pane: a vertex fold draws its creases on the folded one.
   const firstPick = toolState.picks[0];
   const freeFrom = toolState.lineMode === 'free' && firstPick?.kind === 'free' && toolState.picks.length === 1 ? firstPick : null;
+  const vertexMarks = useFoldVertexMarks(view.index, preview.vertex, inks?.overlay ?? null);
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks
@@ -170,9 +173,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             freeFrom,
             marks: view.marks,
             inks: inks.overlay,
+            tool: pane === 'folded' ? vertexMarks : null,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, toolState.picks, freeFrom]
+    [inks, view.scene, view.marks, toolState.picks, freeFrom, vertexMarks]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
@@ -185,6 +189,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
   const woven = useFoldWovenInterval(preview.section);
   const reverseView = foldReverseWindowView(toolState, preview);
+  const vertexView = foldVertexWindowView(toolState, preview);
   const windowModel = foldToolWindow(
     t,
     {
@@ -195,6 +200,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       preview: foldWindowPreview(toolState, preview, woven.interval, queued),
       divide: { settings: toolState.divide, marks: marksHere },
       ...(reverseView ? { reverse: reverseView } : {}),
+      ...(vertexView ? { vertex: vertexView } : {}),
     },
     { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind },
     { coarse, alt: altModifierLabel() }

@@ -13,8 +13,12 @@ import type { FoldFlap, FoldScene } from '../engine/foldEngineWire';
 import type { FoldPreview } from '../tools/foldToolWindow';
 import type { FoldReverseWindowView } from '../tools/reverse/reverseToolWindow';
 import { isLocated, type FoldToolState } from '../tools/foldToolState';
-import { lineModeLabel, lineModeSteps } from '../tools/foldToolCatalog';
+import { foldToolLabel, isVertexTool, lineModeLabel, lineModeSteps } from '../tools/foldToolCatalog';
+import { vertexToolSteps } from '../tools/vertex/vertexInputs';
+import { nearestDirection } from '../tools/vertex/vertexStep';
+import type { FoldVertexWindowView } from '../tools/vertex/vertexToolWindow';
 import { boundsOf } from './foldCanvasGeometry';
+import type { FoldCanvasChoice } from './useFoldCanvasVerbs';
 import type { FoldToolPreview } from './useFoldToolPreview';
 
 const sameFaces = (a: FoldFlap, b: FoldFlap) =>
@@ -94,6 +98,42 @@ export function foldReverseWindowView(tools: FoldToolState, preview: FoldToolPre
   };
 }
 
+/**
+ * A vertex tool's window view (`vertexToolWindow`): the direction, and what
+ * the engine listed with the choices taken — a squash's spine target, a fan's
+ * fourth rays and layers, a rabbit ear's ridges, the orders. Absent for every
+ * other tool. Before every click is in, only the direction is known.
+ */
+export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPreview): FoldVertexWindowView | undefined {
+  const { tool } = tools;
+  if (!isVertexTool(tool)) return undefined;
+  const vertex = preview.vertex;
+  const analysis = vertex?.base?.analysis;
+  const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates : [];
+  const emergents = vertex?.base?.emergents ?? [];
+  const { orders = [], order = null, ridges = [] } = vertex ?? {};
+  return {
+    tool,
+    direction: tools.vertexDirection,
+    known: preview.step !== null,
+    target: tools.compound.squashTarget ? 'point' : 'hinge',
+    // A candidate the answer has no word on fits, as far as is known.
+    emergents: candidates.map((_, k) => emergents[k] ?? true),
+    emergent: vertex?.emergent ?? 0,
+    ridges: ridges.map((ridge) => ({ given: ridge.given, lands: ridge.lands })),
+    ridge: vertex?.ridge ?? 0,
+    layers: vertex?.layers ?? 0,
+    fanLayers: tools.compound.fanLayers,
+    orders: orders.length > 1 ? orders.length : 0,
+    order: order ? Math.max(0, orders.indexOf(order)) : 0,
+    emergentNumber: (direction) => {
+      const k = nearestDirection(candidates, direction);
+      return k === null ? null : k + 1;
+    },
+    ...(vertex?.nearPrecrease ? { nearPrecrease: true } : {}),
+  };
+}
+
 /** How strongly the faces a refusal names are tinted over their paper. */
 const REFUSED_TINT = 0.32;
 
@@ -142,13 +182,29 @@ export function foldPromptWords(t: TFunction, tools: FoldToolState): string | nu
     return tools.picks.length === 0 ? t('tools:fold.steps.divide', 'Click an edge or crease to divide it.') : null;
   }
   if (isLocated(tools)) return null;
+  if (isVertexTool(tools.tool)) {
+    // A vertex fold's own clicks, named by the fold they make.
+    const step = vertexToolSteps(t, tools.tool, tools.lineMode)[tools.picks.length];
+    return step ? `${foldToolLabel(t, tools.tool)} · ${step}` : null;
+  }
   const step = lineModeSteps(t, tools.lineMode)[tools.picks.length];
   return step ? `${lineModeLabel(t, tools.lineMode)} · ${step}` : null;
 }
 
 /** What the canvas's chooser says of the choice it steps through. */
-export function foldChoiceNote(t: TFunction, kind: 'order' | 'opening' | 'root'): string {
+export function foldChoiceNote(t: TFunction, kind: FoldCanvasChoice['kind']): string {
   switch (kind) {
+    // The vertex folds'.
+    case 'ridge':
+      return t(
+        'tools:fold.vertex.chooser.ridgeNote',
+        'Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press Shift+← / Shift+→.'
+      );
+    case 'emergent':
+      return t(
+        'tools:fold.vertex.chooser.emergentNote',
+        'More than one fourth crease lets these creases lie flat. Step through them, or press Shift+← / Shift+→.'
+      );
     case 'root':
       return t('tools:fold.chooser.note', 'This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.');
     case 'opening':

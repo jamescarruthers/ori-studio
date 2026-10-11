@@ -9,6 +9,7 @@ import {
   isLockedStep,
   isVertexOp,
   randomFoldId,
+  type FoldDirection,
   type FoldMark,
   type FoldMarkEntry,
   type FoldOp,
@@ -18,16 +19,17 @@ import {
   type FoldSequenceDocument,
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
-import type { FoldFlap } from '../engine/foldEngineWire';
+import type { FoldFlap, FoldModelPoint } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { wovenIntervalAt } from '../tools/crossSection';
-import { isLineTool, type FoldLineModeId, type FoldToolId } from '../tools/foldToolCatalog';
-import { nextStep } from '../tools/foldToolRegistry';
+import { isLineTool, isVertexTool, type FoldLineModeId, type FoldToolId } from '../tools/foldToolCatalog';
+import { lineModeInput, nextStep } from '../tools/foldToolRegistry';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
 import { foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
+import { nearestDirection, squashTargetToward } from '../tools/vertex/vertexStep';
 import { isFoldAltLatched } from './foldAltLatch';
-import { transformLine } from './foldCanvasGeometry';
+import { toPair, transformLine } from './foldCanvasGeometry';
 import { resolveFoldPick, topSheetPointAt, type FoldHit, type FoldHitRadii, type FoldPaneId } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 import type { FoldStateView } from './useFoldStateView';
@@ -88,6 +90,24 @@ export interface FoldCanvasVerbs {
   /** Step through the ways the tip opens, and the layer orders listed. */
   stepOpening: (delta: number) => void;
   stepOrder: (delta: number) => void;
+  // The vertex folds (`tools/vertex`), and what their refusals' buttons do.
+  setVertexDirection: (direction: FoldDirection) => void;
+  /** The same vertex fold, the other direction. */
+  vertexOtherWay: () => void;
+  /** Step through a fan's fourth-ray candidates; take one by its direction (a fix's). */
+  stepEmergent: (delta: number) => void;
+  takeEmergent: (direction: FoldModelPoint) => void;
+  /** A rabbit ear's ridge, by index into the two listed. */
+  setRidge: (ridge: number) => void;
+  /** Step through how many layers at a fan's center are cut. */
+  stepFanLayers: (delta: number) => void;
+  /** Put a squash's spine back onto its hinge line. */
+  resetSquashTarget: () => void;
+  /** A petal fold's H along the precrease beside the line its clicks located. */
+  useNearPrecrease: () => void;
+  /** Precrease a petal fold's H, or its kite, first: the Precrease tool on that line, or on the edge-to-edge axiom. */
+  precreaseLine: () => void;
+  precreaseKite: () => void;
 }
 
 /** The verbs, and whether a commit waits for the preview to land. */
@@ -118,15 +138,41 @@ export function queuedCommit(
 }
 
 /** Which of the previewed fold's choices the canvas's chooser shows, and of how many: the one a folder makes last. */
-export type FoldCanvasChoice = { kind: 'order' | 'opening' | 'root'; index: number; count: number };
+export type FoldCanvasChoice = {
+  kind: 'order' | 'opening' | 'root' | FoldVertexCanvasChoiceKind;
+  index: number;
+  count: number;
+};
+
+/** A vertex fold's choices the chooser steps through, beside its order: a rabbit ear's ridge, a fan's fourth ray. */
+export type FoldVertexCanvasChoiceKind = 'ridge' | 'emergent';
+
+/**
+ * A vertex fold's deepest choice with more than one answer — its layer
+ * order, then a rabbit ear's ridge, then a fan's fourth ray — since each
+ * earlier choice lists the ones after it anew. Null when none has more than
+ * one, or for any other tool.
+ */
+function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
+  const vertex = preview.vertex;
+  if (!vertex) return null;
+  const { orders, order, ridges, ridge, emergent, base } = vertex;
+  if (orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
+  if (ridges.length > 1 && ridge !== null) return { kind: 'ridge', index: ridge, count: ridges.length };
+  const analysis = base?.analysis;
+  const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates.length : 0;
+  return candidates > 1 && emergent !== null ? { kind: 'emergent', index: emergent, count: candidates } : null;
+}
 
 /**
  * The chooser on the canvas: the deepest choice with more than one answer —
- * the layer order, then the way the tip opens, then the axiom's root — since
- * each earlier choice resets the ones after it. Null when none has more than
- * one.
+ * the layer order, then the way the tip opens (a vertex fold's ridge and
+ * fourth ray), then the axiom's root — since each earlier choice resets the
+ * ones after it. Null when none has more than one.
  */
 export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState): FoldCanvasChoice | null {
+  const vertex = vertexCanvasChoice(preview);
+  if (vertex) return vertex;
   const reverse = preview.reverse;
   if (reverse && reverse.orders.length > 1) {
     return { kind: 'order', index: Math.min(tools.compound.order, reverse.orders.length - 1), count: reverse.orders.length };
@@ -263,6 +309,28 @@ export function useFoldCanvasVerbs(
       );
     };
 
+    /** A click on the folded paper while a squash is previewed: its spine lands toward the point, from its vertex. */
+    const aimSquash = (at: { x: number; y: number }) => {
+      const { view: shown, preview: previewed } = live.current;
+      const analysis = previewed.vertex?.base?.analysis;
+      if (!shown.index || analysis?.kind !== 'squash') return;
+      const target = squashTargetToward(analysis.vertex, toPair(shown.index.toModel(at)));
+      if (target) tools.setSquashTarget(target);
+    };
+
+    /** A vertex fold the other way round, as its direction control turns it. */
+    const vertexOtherWay = () => {
+      const now = state();
+      tools.setVertexDirection(now.vertexDirection === 'valley' ? 'mountain' : 'valley');
+    };
+
+    /** A petal fold's line clicks, and the flap clicked after them. */
+    const petalPicks = () => {
+      const now = state();
+      const clicks = lineModeInput(now.lineMode).steps.length;
+      return { line: now.picks.slice(0, clicks), flap: now.picks[clicks] };
+    };
+
     return {
       selectTool: tools.selectTool,
       selectLineMode: tools.selectLineMode,
@@ -296,6 +364,8 @@ export function useFoldCanvasVerbs(
         const tool = state();
         if (isLocated(tool)) {
           if (hit.pane === 'folded' && isLineTool(tool.tool)) pickDepth(hit.at);
+          // A squash's spine lands toward the point clicked on the folded paper.
+          else if (hit.pane === 'folded' && tool.tool === 'squash') aimSquash(hit.at);
           return;
         }
         if (!hit.pick) return;
@@ -351,13 +421,70 @@ export function useFoldCanvasVerbs(
         if (tool.tool === 'valley') tools.selectTool('mountain');
         else if (tool.tool === 'mountain') tools.selectTool('valley');
         else if (tool.tool === 'precrease') tools.setPrecreaseDirection(tool.precreaseDirection === 'valley' ? 'mountain' : 'valley');
+        else if (isVertexTool(tool.tool)) vertexOtherWay();
       },
 
       setReverseKind: (kind) => tools.setReverseKind(kind),
 
       stepOpening: (delta) => tools.stepOpening(delta, live.current.preview.reverse?.ways.length ?? 0),
 
-      stepOrder: (delta) => tools.stepOrder(delta, live.current.preview.reverse?.orders.length ?? 0),
+      // The layer orders a reverse fold or a vertex fold lists, whichever is previewed.
+      stepOrder: (delta) =>
+        tools.stepOrder(delta, live.current.preview.reverse?.orders.length ?? live.current.preview.vertex?.orders.length ?? 0),
+
+      // The vertex folds' choices, and what their refusals' buttons do.
+      setVertexDirection: (direction) => tools.setVertexDirection(direction),
+
+      vertexOtherWay,
+
+      stepEmergent: (delta) => {
+        const vertex = live.current.preview.vertex;
+        const analysis = vertex?.base?.analysis;
+        const count = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates.length : 0;
+        tools.stepEmergent(delta, count, vertex?.emergent ?? 0);
+      },
+
+      takeEmergent: (direction) => {
+        const analysis = live.current.preview.vertex?.base?.analysis;
+        if (analysis?.kind !== 'rabbit-ear' && analysis?.kind !== 'swivel') return;
+        const k = nearestDirection(analysis.candidates, direction);
+        if (k !== null) tools.setEmergent(k);
+      },
+
+      setRidge: (ridge) => tools.setRidge(ridge),
+
+      stepFanLayers: (delta) => {
+        const layers = live.current.preview.vertex?.layers ?? 0;
+        if (layers <= 1) return;
+        const now = state().compound.fanLayers ?? layers;
+        const next = ((((now - 1 + delta) % layers) + layers) % layers) + 1;
+        tools.setFanLayers(next >= layers ? null : next);
+      },
+
+      resetSquashTarget: () => tools.setSquashTarget(null),
+
+      useNearPrecrease: () => {
+        const near = live.current.preview.vertex?.nearPrecrease;
+        const { flap } = petalPicks();
+        if (!near) return;
+        // H as the precrease it is, the flap as it was clicked.
+        tools.selectLineMode('crease');
+        tools.pick(near);
+        if (flap) tools.pick(flap);
+      },
+
+      precreaseLine: () => {
+        const { line } = petalPicks();
+        // The Precrease tool on H as located, through every layer.
+        tools.selectTool('precrease');
+        for (const pick of line) tools.pick(pick);
+      },
+
+      precreaseKite: () => {
+        // A kite crease folds a side edge onto the centre line: the edge-to-edge axiom.
+        tools.selectTool('precrease');
+        tools.selectLineMode('axiom-3');
+      },
 
       pickFlap: (flap) => tools.setSeed({ scope: 'flaps', flaps: [flap] }),
 
@@ -407,6 +534,12 @@ export function useFoldCanvasVerbs(
             break;
           case 'root':
             tools.stepRoot(delta, choice.count);
+            break;
+          case 'ridge':
+            tools.setRidge((((choice.index + delta) % choice.count) + choice.count) % choice.count);
+            break;
+          case 'emergent':
+            tools.stepEmergent(delta, choice.count, choice.index);
             break;
         }
         return true;

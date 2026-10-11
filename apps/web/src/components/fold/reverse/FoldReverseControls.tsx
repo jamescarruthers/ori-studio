@@ -35,7 +35,8 @@ export function FoldReverseKindControl({ controls }: { controls: FoldReverseCont
   );
 }
 
-function Stepper({ stepper }: { stepper: FoldChoiceStepper }) {
+/** A listed choice the folder steps through (`choiceStepper`): every compound tool's, the vertex folds' too. */
+export function FoldChoiceStepperRow({ stepper }: { stepper: FoldChoiceStepper }) {
   return (
     <FieldRow label={stepper.label} kind="static" divider={false}>
       <span className={styles.stepper} data-fold-choice={stepper.label}>
@@ -72,8 +73,8 @@ export function FoldReverseChoices({ controls }: { controls: FoldReverseControls
   if (!controls.opening && !controls.order) return null;
   return (
     <>
-      {controls.opening && <Stepper stepper={controls.opening} />}
-      {controls.order && <Stepper stepper={controls.order} />}
+      {controls.opening && <FoldChoiceStepperRow stepper={controls.opening} />}
+      {controls.order && <FoldChoiceStepperRow stepper={controls.order} />}
     </>
   );
 }

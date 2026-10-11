@@ -18,6 +18,8 @@ import { FoldFlapChips } from './FoldFlapChips';
 import { FoldKindMark } from './FoldKindMark';
 import { FoldRefusalNotice } from './FoldRefusalNotice';
 import { FoldReverseChoices, FoldReverseKindControl } from './reverse/FoldReverseControls';
+import { hasVertexChoices } from '../../fold/tools/vertex/vertexToolWindow';
+import { FoldVertexChoices, FoldVertexDirection } from './vertex/FoldVertexControls';
 import styles from './FoldToolWindow.module.css';
 
 /**
@@ -59,7 +61,7 @@ export function FoldToolWindow({
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
   };
-  const { instructions, lineMode, kind, movingSide, layers, refusal, divide, compound, footer } = model;
+  const { instructions, lineMode, kind, movingSide, layers, refusal, divide, compound, vertex, footer } = model;
 
   return (
     <ToolHintWindow
@@ -170,6 +172,16 @@ export function FoldToolWindow({
       {compound && (
         <div className={styles.section} data-fold-reverse-kind="">
           <FoldReverseKindControl controls={compound} />
+        </div>
+      )}
+      {vertex && (
+        <div className={styles.section} data-fold-vertex="">
+          <FoldVertexDirection controls={vertex} />
+        </div>
+      )}
+      {vertex && hasVertexChoices(vertex) && (
+        <div className={styles.section} data-fold-choices="">
+          <FoldVertexChoices controls={vertex} />
         </div>
       )}
       {movingSide && (
