@@ -26,7 +26,7 @@ import {
   type FoldEngineStateHandle,
 } from '../engine/foldEnginePort';
 import type { FoldEngineOp } from '../engine/foldEngineWire';
-import type { FoldStateDetails } from './foldSessionState';
+import { foldStateDetailsOf, type FoldStateDetails } from './foldSessionState';
 
 /** A step as replay asks for it, or a tool previews it. */
 export interface FoldEngineStepInput {
@@ -83,29 +83,27 @@ export function createFoldSessionEngine(source: FoldEngineSource, engineVersion:
   const details = new Map<string, FoldStateDetails>();
   const adoptions = new Map<string, { landed: FoldAdoptedState; ticket: number }>();
 
-  // The bridge's answers carry the summary and report; keep them before the
-  // port reduces each to its handle. The generation is read where the port
-  // reads it, before the call, so both name the same engine.
+  // The bridge's answers carry the summary and reports — a compound fold's of
+  // any family; keep them before the port reduces each to its handle. The
+  // generation is read where the port reads it, before the call, so both
+  // name the same engine.
   const keeping: FoldEngineSource = {
     generation: () => source.generation(),
     async sheet(paper) {
       const generation = source.generation();
       const answer = await source.sheet(paper);
       if (answer.status === 'ok') {
-        details.set(handleKey({ generation, id: answer.state }), { summary: answer.summary, report: null });
+        details.set(
+          handleKey({ generation, id: answer.state }),
+          foldStateDetailsOf({ summary: answer.summary, report: null })
+        );
       }
       return answer;
     },
     async step(state, op, choices) {
       const generation = source.generation();
       const answer = await source.step(state, op, choices);
-      if (answer.status === 'ok') {
-        details.set(handleKey({ generation, id: answer.state }), {
-          summary: answer.summary,
-          report: answer.report,
-          ...(answer.compound ? { compound: answer.compound } : {}),
-        });
-      }
+      if (answer.status === 'ok') details.set(handleKey({ generation, id: answer.state }), foldStateDetailsOf(answer));
       return answer;
     },
     release: (states) => source.release(states),

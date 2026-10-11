@@ -9,6 +9,13 @@ import {
   type SheetPoint,
 } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from './foldEngineCalls';
+import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from './foldEngineCompoundCalls';
+import {
+  compoundStoredChoices,
+  type FoldCompoundAnalysisOf,
+  type FoldCompoundReport,
+  type FoldCompoundReportOf,
+} from './foldEngineCompoundWire';
 import { createFoldEngineVertexCalls, type FoldEngineVertexCalls } from './foldEngineSquashCalls';
 import { FOLD_REFUSAL_CODES, type FoldEngineOutcome, type FoldEngineRefused } from './foldEngineWire';
 
@@ -18,8 +25,9 @@ import { FOLD_REFUSAL_CODES, type FoldEngineOutcome, type FoldEngineRefused } fr
  *
  * The crates' tests prove the folds natively; what they do not cover is
  * TypeScript's side of the boundary — a document op crossing as it is
- * stored, a stored one replaying through the ordinary `step` call with its
- * `vertex` report, and a choice held, picked and stored as the document's
+ * stored, the compound question tagged `vertex`, a stored one replaying
+ * through the ordinary `step` call with its report as the step's
+ * `compound`, and a choice held, picked and stored as the document's
  * `completion`, which `step` then replays to the state picked.
  *
  * Skipped when the bridge has not been built (a fresh worktree before
@@ -31,18 +39,29 @@ const available = existsSync(FOLD_WASM);
 interface Engine {
   calls: FoldEngineCalls;
   vertex: FoldEngineVertexCalls;
+  question: FoldEngineCompoundCalls;
 }
 
 async function makeEngine(): Promise<Engine> {
   const wasm = await import('../../generated/oristudio-fold-wasm/oristudio_fold_wasm');
   wasm.initSync({ module: readFileSync(FOLD_WASM) });
   const fold = new wasm.FoldEngine();
-  return { calls: createFoldEngineCalls(fold), vertex: createFoldEngineVertexCalls(fold) };
+  return {
+    calls: createFoldEngineCalls(fold),
+    vertex: createFoldEngineVertexCalls(fold),
+    question: createFoldEngineCompoundCalls(fold),
+  };
 }
 
 function landed<T>(outcome: FoldEngineOutcome<T>): T {
   if (outcome.status !== 'ok') throw new Error(`refused: ${JSON.stringify(outcome.refusal)}`);
   return outcome;
+}
+
+/** A step's compound report, which must be a vertex fold's. */
+function vertexOf(report: FoldCompoundReport | undefined): FoldCompoundReportOf<'vertex'> {
+  if (report?.family !== 'vertex') throw new Error(`no vertex report: ${JSON.stringify(report)}`);
+  return report;
 }
 
 function refused<T>(outcome: FoldEngineOutcome<T>): FoldEngineRefused {
@@ -71,6 +90,13 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
     engine = await makeEngine();
   });
 
+  /** The compound question of a vertex op: its analysis. */
+  function analysed(state: number, op: FoldSquashOp | FoldRabbitEarOp): FoldCompoundAnalysisOf<'vertex'>['analysis'] {
+    const answer = landed(engine.question.compoundAnalysis(state, op));
+    if (answer.family !== 'vertex') throw new Error(`answered for ${answer.family}`);
+    return answer.analysis;
+  }
+
   /** The square folded on a diagonal: a two-layer triangle. */
   function triangle(): number {
     const sheet = landed(engine.calls.sheet(SQUARE_PAPER)).state;
@@ -84,24 +110,29 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
     if (!top) throw new Error('nothing on top');
     const op: FoldSquashOp = { kind: 'squash', flap: top.sheet, direction: 'valley' };
 
-    const analysed = landed(engine.vertex.vertexAnalysis(small, op)).analysis;
-    expect(analysed.kind).toBe('squash');
-    if (analysed.kind === 'squash') expect(analysed.share).toBe(0);
+    const squash = analysed(small, op);
+    expect(squash.kind).toBe('squash');
+    if (squash.kind === 'squash') expect(squash.share).toBe(0);
 
     const stepped = landed(engine.calls.step(small, op));
     expect(stepped.report).toBeNull();
-    expect(stepped.vertex?.kind).toBe('squash');
-    expect(stepped.vertex?.created).toHaveLength(2);
-    expect(stepped.vertex?.motion.kind).toBe('visual');
+    const vertex = vertexOf(stepped.compound);
+    expect(vertex.kind).toBe('squash');
+    expect(vertex.created).toHaveLength(2);
+    expect(vertex.motion.kind).toBe('visual');
     // Two stages, a spread and a close leg each, every leg placing every
     // moving face.
-    expect(stepped.vertex?.motion.legs.map((leg) => leg.stacking)).toEqual(['parent', 'parent', 'parent', 'landed']);
-    expect(stepped.vertex?.stored).toEqual({});
+    expect(vertex.motion.legs.map((leg) => leg.stacking)).toEqual(['parent', 'parent', 'parent', 'landed']);
+    expect(vertex.stored).toEqual({});
+    expect(compoundStoredChoices(vertex)).toEqual({});
 
-    // The tools' call lands the same state.
+    // The tools' call lands the same state, with the same report.
     const tried = landed(engine.vertex.vertexFold(small, op));
     expect(tried.result).toBe('landed');
-    if (tried.result === 'landed') expect(tried.fingerprint).toEqual(stepped.fingerprint);
+    if (tried.result === 'landed') {
+      expect(tried.fingerprint).toEqual(stepped.fingerprint);
+      expect(tried.compound).toEqual(stepped.compound);
+    }
   });
 
   it('holds a rabbit ear’s choice, picks one, and replays the stored completion to it', () => {
@@ -118,9 +149,9 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
       stayer: [0.6, 0.35],
       direction: 'valley',
     };
-    const analysed = landed(engine.vertex.vertexAnalysis(tri, ear)).analysis;
-    expect(analysed.kind).toBe('rabbit-ear');
-    if (analysed.kind === 'rabbit-ear') expect(analysed.candidates).toHaveLength(3);
+    const fan = analysed(tri, ear);
+    expect(fan.kind).toBe('rabbit-ear');
+    if (fan.kind === 'rabbit-ear') expect(fan.candidates).toHaveLength(3);
 
     const tried = landed(engine.vertex.vertexFold(tri, ear));
     if (tried.result !== 'choose') throw new Error('no choice');
@@ -128,10 +159,14 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
     expect(tried.components).toEqual([2]);
 
     const picked = landed(engine.vertex.vertexPick(tried.pending, [1]));
-    const completion = picked.vertex.stored.completion;
+    expect(picked.compound.family).toBe('vertex');
+    const completion = picked.compound.stored.completion;
     expect(completion?.orders.length).toBeGreaterThan(0);
+    // What the step stores, read as every compound family's is.
+    expect(compoundStoredChoices(picked.compound)).toEqual({ completion });
     const replayed = landed(engine.calls.step(tri, ear, { completion }));
     expect(replayed.fingerprint).toEqual(picked.fingerprint);
+    expect(replayed.compound).toEqual(picked.compound);
     // The other pick is another state.
     const other = landed(engine.vertex.vertexPick(tried.pending, [0]));
     expect(other.fingerprint).not.toEqual(picked.fingerprint);

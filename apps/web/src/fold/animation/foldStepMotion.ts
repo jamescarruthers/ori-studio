@@ -18,9 +18,11 @@
  *   scenes' view transforms;
  * - Import CP crossfades, and so does any step whose rigid motion cannot be
  *   built from what it has (no line, nothing moving, a degenerate placement):
- *   a step always has a motion, and a wrong one is never invented. A crimp
- *   and a tuck crossfade too, for now: their legs come with their reports
- *   (`foldEngineCrimpTuckWire.ts`), which no player draws yet.
+ *   a step always has a motion, and a wrong one is never invented.
+ * - A compound fold plays the engine's legs, which every family's report
+ *   carries (`stepMotionLegsOf`): a reverse fold's, about its one line. The
+ *   other families' legs turn about more than one hinge or in stages, which
+ *   no pose plays yet, so they crossfade until one does.
  *
  * The transport plays a step as one programme (`lib/foldMotion/foldTransport`):
  * a fold is one leg resting landed, a precrease folds, holds and comes back, a
@@ -47,13 +49,8 @@ import type { FoldProgramme } from '../../lib/foldMotion/foldTransport';
 import type { Point } from '../../lib/geometry';
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import type { FoldOp } from '../document/foldSequenceDocument';
-import type {
-  FoldActionGeometry,
-  FoldCompoundReport,
-  FoldIsometry,
-  FoldReport,
-  FoldScene,
-} from '../engine/foldEngineWire';
+import { stepMotionLegsOf, type FoldCompoundReport } from '../engine/foldEngineCompoundWire';
+import type { FoldActionGeometry, FoldIsometry, FoldReport, FoldScene } from '../engine/foldEngineWire';
 import {
   affineThrough,
   crossfadeFrame,
@@ -106,7 +103,7 @@ export interface FoldStepMotionInput {
   action: FoldActionGeometry | null;
   /** What the step did; null for a turn, a rotation or an import. */
   report: FoldReport | null;
-  /** What a compound fold did, with the legs its animation plays; absent for any other step. */
+  /** What a compound fold of any family did, with the legs its animation plays; absent for any other step. */
   compound?: FoldCompoundReport | null;
 }
 
@@ -182,21 +179,22 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
       const legs = compoundLegs(input, before, after, to.place);
       return legs ? { step, before, after, motion: legs } : crossfade();
     }
-    // A crimp's and a tuck's legs come with their own calls' reports, which
-    // `apply` does not carry: they crossfade until a player poses them.
+    // A crimp's legs turn its tip about ℓ1 and then about where ℓ2 went, and
+    // a tuck's turn its block about ℓ against its target: the session carries
+    // their legs (`stepMotionLegsOf`), which no player poses for them yet, so
+    // they crossfade.
     case 'crimp':
     case 'tuck':
       return crossfade();
-    // A vertex fold's motion is the engine's staged legs
-    // (`FoldVertexReport.motion`), which no pose plays yet: until one does,
-    // it crossfades rather than inventing a hinge.
+    // A vertex fold's motion is the engine's staged legs, which no pose
+    // plays yet: until one does, it crossfades rather than inventing a hinge.
     case 'squash':
     case 'petal':
     case 'rabbit-ear':
     case 'swivel':
       return crossfade();
-    // A sink's motion is legs about its ring (the engine's `StepMotion`,
-    // in its report); until the pane poses compound legs it crossfades.
+    // A sink's motion is legs about its ring; until the pane poses them it
+    // crossfades.
     case 'open-sink':
     case 'closed-sink':
     case 'unsink':
@@ -236,7 +234,7 @@ function compoundLegs(
   after: PaperScene,
   place: FoldedFlatPaperSceneOptions
 ): FoldLegsMotion | null {
-  const motion = input.compound?.motion;
+  const motion = stepMotionLegsOf(input.compound);
   const axis = motion?.legs[0]?.groups[0]?.axis;
   if (!motion || !axis) return null;
   const foot: Point = { x: axis.n[0] * axis.d, y: axis.n[1] * axis.d };

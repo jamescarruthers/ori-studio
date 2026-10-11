@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FoldReverseReport } from '../engine/foldEngineReverseWire';
+import type { FoldCompoundReportOf } from '../engine/foldEngineCompoundWire';
 import { foldCompoundPaneRows } from './foldCompoundRows';
 
 const opening = {
@@ -12,8 +12,8 @@ const opening = {
   stored: { upper: [[0.9, 0.1] as [number, number]] },
 };
 
-const report = (extra: Partial<FoldReverseReport> = {}): FoldReverseReport => ({
-  op: 'reverse',
+const report = (extra: Partial<FoldCompoundReportOf<'reverse'>> = {}): FoldCompoundReportOf<'reverse'> => ({
+  family: 'reverse',
   line: { n: [0, 1], d: 0.5 },
   side: 'negative',
   snap: { clusters: 0, angle: 0, max_shift: 0 },
@@ -45,5 +45,25 @@ describe('a compound fold’s Step pane rows', () => {
       orderChosen: false,
     });
     expect(foldCompoundPaneRows(undefined)).toBeUndefined();
+  });
+
+  it('has none yet for the other families, whose rows come with their tools', () => {
+    const vertex: FoldCompoundReportOf<'vertex'> = {
+      family: 'vertex',
+      kind: 'squash',
+      vertices: [[0.5, 0.5]],
+      creases: [{ n: [1, 0], d: 0.5 }],
+      direction: 'valley',
+      moving: [1],
+      blocks: [[2]],
+      created: [3, 4],
+      unfolded: [],
+      refolded: [],
+      reversed: [],
+      split: 1,
+      motion: { kind: 'visual', legs: [] },
+      stored: {},
+    };
+    expect(foldCompoundPaneRows(vertex)).toBeUndefined();
   });
 });

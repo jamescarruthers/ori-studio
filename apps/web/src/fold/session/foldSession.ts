@@ -41,6 +41,7 @@ import { createFoldReplayer, type FoldReplayer, type FoldReplayProgress } from '
 import type { FoldChoices, FoldOp, FoldPaperShape } from '../document/foldSequenceDocument';
 import type { HeldFoldSequence } from '../document/foldSequenceFile';
 import type { FoldStepDraft } from '../document/foldSequenceEdits';
+import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 import { foldStateLostError, type FoldEngineSource, type FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldEngineOp, FoldEngineRefused, FoldStateSummary } from '../engine/foldEngineWire';
 import { createFoldSessionAnswers } from './foldSessionAnswers';
@@ -51,6 +52,7 @@ import {
   FOLD_IDLE,
   foldLandedAhead,
   foldSessionProgress,
+  foldStateDetailsOf,
   sameFoldState,
   sameIds,
   sameProgress,
@@ -169,7 +171,9 @@ export type FoldCommitOutcome =
 
 /**
  * A step the engine landed outside the session's own folds — an Import CP or
- * Edit's folded figure (plan D16) — to commit as it landed.
+ * Edit's folded figure (plan D16), or a compound fold its family's own call
+ * landed (a crimp's or a tuck's order, a vertex fold's pick) — to commit as
+ * it landed.
  */
 export interface FoldLandedStep {
   /** The state it landed: a handle of the engine on now. */
@@ -180,8 +184,12 @@ export interface FoldLandedStep {
    */
   readonly parent: FoldEngineStateHandle | null;
   readonly op: FoldOp;
+  /** What the step stores, when it landed one of several ways: the order picked, the openings chosen. */
+  readonly choices?: FoldChoices;
   readonly fingerprint: FoldStateFingerprint;
   readonly summary: FoldStateSummary;
+  /** What a compound fold did, of any family, kept as a replayed step's is. */
+  readonly compound?: FoldCompoundReport;
   /** The sheet an empty sequence takes with it (`FoldStepDraft.adopt`). */
   readonly adopt?: FoldPaperShape;
 }
@@ -670,9 +678,7 @@ export function createFoldSession({
                   request,
                   parent,
                   state: { generation: parent.generation, id: value.state },
-                  summary: value.summary,
-                  report: value.report,
-                  ...(value.compound ? { compound: value.compound } : {}),
+                  ...foldStateDetailsOf(value),
                 }
               : { status: 'refused', request, parent, refused: value };
           pending = settled;
@@ -772,10 +778,7 @@ export function createFoldSession({
     if (shown.status === 'landed' && isThis(shown)) {
       // Taken, not released: the commit hands it to the replay. It stays on
       // screen meanwhile, so nothing goes back to the step it folds from.
-      landed = {
-        state: shown.state,
-        details: { summary: shown.summary, report: shown.report, ...(shown.compound ? { compound: shown.compound } : {}) },
-      };
+      landed = { state: shown.state, details: foldStateDetailsOf(shown) };
       taken = shown.state;
     } else if (shown.status === 'refused' && isThis(shown)) {
       return { status: 'refused', refused: shown.refused };
@@ -794,11 +797,7 @@ export function createFoldSession({
         }
         landed = {
           state: { generation: parent.generation, id: answer.state },
-          details: {
-            summary: answer.summary,
-            report: answer.report,
-            ...(answer.compound ? { compound: answer.compound } : {}),
-          },
+          details: foldStateDetailsOf(answer),
         };
       }
       const { state } = landed;
@@ -880,13 +879,14 @@ export function createFoldSession({
   };
 
   /**
-   * A landed import: offered to the replay under the state it was landed
-   * after, as a preview is. One that adopts a sheet is offered under the
-   * sheet on screen: the same sheet takes it, a new one lands the step again
-   * and the offer is let go when that replay finishes. The sheet it was
-   * landed after is the engine's own, already let go; an import keeps no
-   * parent (nothing about it is asked of one), so the state stands for the
-   * step as well as one landed after the sheet on screen.
+   * A landed step: offered to the replay under the state it was landed
+   * after, as a preview is, with the choices it stores and what it did. An
+   * import that adopts a sheet is offered under the sheet on screen: the
+   * same sheet takes it, a new one lands the step again and the offer is let
+   * go when that replay finishes. The sheet it was landed after is the
+   * engine's own, already let go; an import keeps no parent (nothing about
+   * it is asked of one), so the state stands for the step as well as one
+   * landed after the sheet on screen.
    */
   const commitLandedFrom = (
     { parent, parentId, loadId }: FoldingFrom,
@@ -898,9 +898,16 @@ export function createFoldSession({
       engine?.release(landed.state);
       return { status: 'stale' };
     }
-    const { op, fingerprint, summary, adopt } = landed;
-    const withdraw = engine.adopt(parent, { op }, { state: landed.state, fingerprint, details: { summary, report: null } }, runTicket);
-    const draft: FoldStepDraft = { parent: parentId, op, expect: fingerprint, ...(adopt ? { adopt } : {}) };
+    const { op, choices, fingerprint, summary, compound, adopt } = landed;
+    const details = foldStateDetailsOf({ summary, report: null, compound });
+    const withdraw = engine.adopt(parent, requestOf(op, choices), { state: landed.state, fingerprint, details }, runTicket);
+    const draft: FoldStepDraft = {
+      parent: parentId,
+      op,
+      ...(choices ? { choices } : {}),
+      expect: fingerprint,
+      ...(adopt ? { adopt } : {}),
+    };
     // An import that brings a new sheet is shown once the replay lands it again: no
     // progress for the old sheet holds anything of the new paper's.
     return committed(() => source.commit(draft, loadId), landed.state, fingerprint, withdraw);

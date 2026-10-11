@@ -8,9 +8,10 @@ import { sequenceOf, step } from '../../document/foldSequence.fixtures';
 import type { FoldChoices, FoldOp, FoldReverseKind, FoldStep } from '../../document/foldSequenceDocument';
 import { readFoldSequence, writeFoldSequence } from '../../document/foldSequenceFile';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../../engine/foldEngineCalls';
+import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../../engine/foldEngineCompoundCalls';
+import type { FoldCompoundAnalysisOf } from '../../engine/foldEngineCompoundWire';
 import { createFoldEngineIoCalls, type FoldEngineIoCalls } from '../../engine/foldEngineIoCalls';
 import { createFoldEnginePort, type FoldEngineSource } from '../../engine/foldEnginePort';
-import { createFoldEngineReverseCalls, type FoldEngineReverseCalls } from '../../engine/foldEngineReverseCalls';
 import type { FoldEngineOp, FoldEngineOutcome } from '../../engine/foldEngineWire';
 import { buildFoldStep } from '../foldStepBuilder';
 import { lineModeInput, nextStep } from '../foldToolRegistry';
@@ -18,8 +19,8 @@ import { buildReverseStep, chosenAt, reverseKindToFold, reverseOpenWays, reverse
 
 /**
  * The reverse fold over the real bridge, in-process, as the tools fold it:
- * the line clicked on the folded pane, the tip described by the `reverse`
- * query, the kind that lands taken and the step built from them — the step a
+ * the line clicked on the folded pane, the tip described by the compound
+ * question, the kind that lands taken and the step built from them — the step a
  * preview lands and a commit stores — and that step replayed through the
  * document. And the crane's neck, tail and head on a bird base Import CP
  * lands from Beloch's crease pattern (`tests/fixtures/fold-crane`, which the
@@ -36,7 +37,7 @@ const available = existsSync(WASM);
 interface Engine {
   calls: FoldEngineCalls;
   io: FoldEngineIoCalls;
-  reverse: FoldEngineReverseCalls;
+  compound: FoldEngineCompoundCalls;
   version: number;
 }
 
@@ -47,7 +48,7 @@ async function engine(): Promise<Engine> {
   return {
     calls: createFoldEngineCalls(fold),
     io: createFoldEngineIoCalls(fold),
-    reverse: createFoldEngineReverseCalls(fold),
+    compound: createFoldEngineCompoundCalls(fold),
     version: wasm.fold_engine_version(),
   };
 }
@@ -80,7 +81,7 @@ function freeLine(index: FoldPickIndex, from: Point, to: Point): FoldPick[] {
  * order listed. The step it builds and the kinds that land.
  */
 function reverseAlong(
-  { calls, reverse }: Engine,
+  { calls, compound }: Engine,
   state: number,
   from: Point,
   to: Point,
@@ -90,9 +91,16 @@ function reverseAlong(
   const intent = { lineMode: 'free' as const, picks: freeLine(index, from, to), candidate: null, swapped, seed: { scope: 'all' as const } };
   const tip = buildReverseStep({ ...intent, kind: 'inside', openings: [], completion: null }, index);
   if (tip.status !== 'built') throw new Error(`no tip: ${JSON.stringify(tip)}`);
-  let asked = landed(reverse.reverse(state, tip.op as FoldEngineOp & { kind: 'inside-reverse' }, tip.choices));
+  const op = tip.op as FoldEngineOp & { kind: 'inside-reverse' };
+  // The compound question, which a reverse op's family answers.
+  const ask = (choices: FoldChoices | undefined): FoldCompoundAnalysisOf<'reverse'> => {
+    const answer = landed(compound.compoundAnalysis(state, op, choices));
+    if (answer.family !== 'reverse') throw new Error(`answered for ${answer.family}`);
+    return answer;
+  };
+  let asked = ask(tip.choices);
   const way = chosenAt(reverseOpenWays(asked.analysis), 0);
-  if (way) asked = landed(reverse.reverse(state, tip.op as FoldEngineOp & { kind: 'inside-reverse' }, { opening: way.stored }));
+  if (way) asked = ask({ opening: way.stored });
   const kind = reverseKindToFold(chosen, asked.kinds);
   const built = buildReverseStep(
     { ...intent, kind, openings: way?.stored ?? [], completion: chosenAt(reverseOrdersOf(asked, kind), 0) },
@@ -141,7 +149,7 @@ describe.skipIf(!available)('the reverse fold over the real bridge', () => {
     expect(first.kinds).toEqual(['inside']);
     expect(first.op).toMatchObject({ kind: 'inside-reverse', line: { via: 'free' }, seed: { scope: 'all' } });
     const one = landed(calls.step(tri.state, first.op, first.choices));
-    expect(one.compound).toMatchObject({ op: 'reverse', kind: 'inside' });
+    expect(one.compound).toMatchObject({ family: 'reverse', kind: 'inside' });
     expect(one.summary.faces).toBe(4);
 
     // The corner d left of x = ½.
@@ -187,7 +195,7 @@ describe.skipIf(!available)('the reverse fold over the real bridge', () => {
     expect(across.kinds).toEqual(['outside']);
     expect(across.op.kind).toBe('outside-reverse');
     const wrapped = landed(calls.step(tri.state, across.op, across.choices));
-    expect(wrapped.compound).toMatchObject({ op: 'reverse', kind: 'outside' });
+    expect(wrapped.compound).toMatchObject({ family: 'reverse', kind: 'outside' });
     // An outside reverse wraps round: no push, a valley as the viewer sees it.
     const acted = landed(calls.stepAction(wrapped.state)).action;
     expect(acted?.push).toBeUndefined();
@@ -227,7 +235,7 @@ describe.skipIf(!available)('the reverse fold over the real bridge', () => {
       if (folded.status !== 'ok') throw new Error(`${name}: ${JSON.stringify(folded.refusal)}`);
       expect(folded.summary.faces, name).toBe(faces);
       if (op.kind === 'inside-reverse') {
-        expect(folded.compound, name).toMatchObject({ op: 'reverse', kind: 'inside' });
+        expect(folded.compound, name).toMatchObject({ family: 'reverse', kind: 'inside' });
         expect(landed(calls.stepAction(folded.state)).action?.push, name).toBeDefined();
       }
       state = folded.state;

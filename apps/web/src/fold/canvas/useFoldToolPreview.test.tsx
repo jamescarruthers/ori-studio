@@ -62,8 +62,8 @@ const engine = {
   })),
   crossSection: vi.fn(async () => ({ status: 'ok', section: SECTION })),
   action: vi.fn(async () => ({ status: 'refused' })),
-  // A tip whose flaps cannot open.
-  reverse: vi.fn(async () => ({
+  // The compound question, of a tip whose flaps cannot open.
+  compoundAnalysis: vi.fn(async () => ({
     status: 'refused',
     refusal: { code: 'reverse_no_opening', faces: [0], cause: 'no_spine' },
     fixes: [],
@@ -193,7 +193,7 @@ describe('the layers at the line', () => {
   it('stay on show for a reverse fold’s tip the engine refused, so its flaps can be narrowed there', async () => {
     const reverse: FoldToolState = { ...FREE_LINE, tool: 'inside-reverse' };
     await render(reverse);
-    expect(engine.reverse).toHaveBeenCalledTimes(1);
+    expect(engine.compoundAnalysis).toHaveBeenCalledTimes(1);
     expect(seen?.refused?.refusal.code).toBe('reverse_no_opening');
     // Refused, the tip is still a step: analysed like any other, its layers shown.
     expect(analyse).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'inside-reverse' }), undefined);
@@ -219,7 +219,11 @@ describe('the layers at the line', () => {
     };
     await render(reverse);
     // Asked about along the fix's line, not the axiom's.
-    expect(engine.reverse).toHaveBeenLastCalledWith(PARENT, expect.objectContaining({ line: fixed.line }), undefined);
+    expect(engine.compoundAnalysis).toHaveBeenLastCalledWith(
+      PARENT,
+      expect.objectContaining({ line: fixed.line }),
+      undefined
+    );
     // Folded along it, with no root: a free line has none.
     expect(seen?.step?.op).toMatchObject({ kind: 'inside-reverse', line: fixed.line });
     expect(seen?.step?.choices?.root).toBeUndefined();

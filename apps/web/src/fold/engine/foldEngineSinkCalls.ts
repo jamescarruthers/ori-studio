@@ -1,9 +1,11 @@
 /**
- * A sink tool's queries, over the same wasm `FoldEngine` as
- * `foldEngineCalls.ts`: what `workers/foldSequenceWorker.ts` exposes beside
- * the step calls, kept apart from the worker so the wasm test drives exactly
- * these calls in-process. A sink itself lands through `apply`, as every step
- * does (`foldEngineSinkWire.ts`).
+ * A sink tool's own queries — how many orders a sink leaves, and what a pick
+ * stores — over the same wasm `FoldEngine` as `foldEngineCalls.ts`: what
+ * `workers/foldSequenceWorker.ts` exposes beside the step calls, kept apart
+ * from the worker so the wasm test drives exactly these calls in-process. A
+ * sink itself lands through `apply`, as every step does, and what its point
+ * is before it lands is the compound question's
+ * (`foldEngineCompoundCalls.ts`, `foldEngineSinkWire.ts`).
  *
  * Every argument is checked here, at the boundary, as `foldEngineCalls.ts`
  * checks its own: handles are whole numbers, the op is a sink's, a choice is
@@ -16,29 +18,16 @@
 
 import type { FoldChoices } from '../document/foldSequenceDocument';
 import { invalidInput, requireHandle, requireObject } from './foldEngineCalls';
-import {
-  isFoldSinkOp,
-  type FoldEngineSinkOp,
-  type FoldSinkAnalysed,
-  type FoldSinkOrders,
-  type FoldSinkPicked,
-} from './foldEngineSinkWire';
+import { isFoldSinkOp, type FoldEngineSinkOp, type FoldSinkOrders, type FoldSinkPicked } from './foldEngineSinkWire';
 import type { FoldEngineOutcome } from './foldEngineWire';
 
 /** The wasm class's sink surface, as the generated `FoldEngine` has it. */
 export interface FoldWasmSinkEngine {
-  sink_analysis(state: number, op: unknown, choices: unknown): unknown;
   sink_orders(state: number, op: unknown, choices: unknown): unknown;
   sink_pick(state: number, op: unknown, choices: unknown, choice: Uint32Array): unknown;
 }
 
 export interface FoldEngineSinkCalls {
-  /** The point a sink op names and how it sinks: its outline, outside, apex, square line, open-sink refusal and pockets. */
-  sinkAnalysis(
-    state: number,
-    op: FoldEngineSinkOp,
-    choices?: FoldChoices
-  ): FoldEngineOutcome<FoldSinkAnalysed>;
   /** How many orders the sink leaves with these choices: one when it is decided. */
   sinkOrders(state: number, op: FoldEngineSinkOp, choices?: FoldChoices): FoldEngineOutcome<FoldSinkOrders>;
   /** The completion a step stores for one listed order per component; null when the sink is decided. */
@@ -78,14 +67,6 @@ function requireChoice(choice: readonly number[]): Uint32Array {
 
 export function createFoldEngineSinkCalls(engine: FoldWasmSinkEngine): FoldEngineSinkCalls {
   return {
-    sinkAnalysis(state, op, choices) {
-      return engine.sink_analysis(
-        requireHandle('state', state),
-        requireSinkOp(op),
-        requireChoices(choices)
-      ) as FoldEngineOutcome<FoldSinkAnalysed>;
-    },
-
     sinkOrders(state, op, choices) {
       return engine.sink_orders(
         requireHandle('state', state),

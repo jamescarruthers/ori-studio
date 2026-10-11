@@ -6,33 +6,30 @@
  *
  * - **Ops** are the document's (`FoldSquashOp`, `FoldPetalOp`,
  *   `FoldRabbitEarOp`, `FoldSwivelOp`), and a stored one replays through the
- *   ordinary `step` call: it lands with its `vertex` report, or is refused —
- *   the engine's codes, or the compound folds' `choice_needed` and
- *   `choice_broken` when its stored choice no longer decides the order.
- * - **The tools** fold through `vertexFold`: one order lands; more are held
- *   under a `pending` handle until a pick lands one, whose
- *   `vertex.stored` is the `FoldChoices.completion` the step stores.
+ *   ordinary `step` call: it lands with its `compound` report
+ *   (`family: 'vertex'`), or is refused — the engine's codes, or the compound
+ *   folds' `choice_needed` and `choice_broken` when its stored choice no
+ *   longer decides the order.
+ * - **The tools** ask the compound question (`compoundAnalysis`,
+ *   `family: 'vertex'`) and fold through `vertexFold`: one order lands; more
+ *   are held under a `pending` handle until a pick lands one, whose
+ *   `compound.stored` is the `FoldChoices.completion` the step stores.
  * - **The motion** (plan D15) is visual, in stages: each moving block turns
- *   about one of its creases per stage, or rests ({@link FoldStepMotionLegs},
- *   every compound step's).
+ *   about one of its creases per stage, or rests (`FoldStepMotionLegs`, every
+ *   compound step's, read through `stepMotionLegsOf`).
  *
  * Pure types and constants: no React, no store, no wasm.
  */
 
 import type { FoldCompletionChoice, FoldDirection, FoldModelLine } from '../document/foldSequenceDocument';
-import type {
-  FoldModelPoint,
-  FoldRefold,
-  FoldStepFingerprinted,
-  FoldStepLanded,
-  FoldStepMotionLegs,
-} from './foldEngineWire';
+import type { FoldCompoundFingerprinted, FoldCompoundLanded, FoldCompoundReportBase } from './foldEngineCompoundWire';
+import type { FoldModelPoint } from './foldEngineWire';
 
 /** Which vertex fold a report is (`VertexFoldKind`). */
 export type FoldVertexFoldKind = 'squash' | 'petal' | 'rabbit_ear' | 'swivel';
 
-/** What a vertex fold did (`VertexReport`, with the compound report flattened in). */
-export interface FoldVertexReport {
+/** What a vertex fold did (`VertexReport`), as a compound step reports it under `family: 'vertex'`. */
+export interface FoldVertexReport extends FoldCompoundReportBase {
   kind: FoldVertexFoldKind;
   /** Where its creases meet, in the parent's model frame. */
   vertices: FoldModelPoint[];
@@ -40,29 +37,14 @@ export interface FoldVertexReport {
   creases: FoldModelLine[];
   /** In the model frame. */
   direction: FoldDirection;
-  /** The parent's faces that move. */
-  moving: number[];
-  /** Per block, the landed state's faces in it. */
-  blocks: number[][];
-  created: number[];
-  unfolded: number[];
-  refolded: FoldRefold[];
-  /** Folded creases whose letter turned. */
-  reversed: number[];
-  split: number;
-  motion: FoldStepMotionLegs;
   /** What the step stores: the order chosen among several, when there were several. */
   stored: { completion?: FoldCompletionChoice };
 }
 
 /** A landed vertex fold, as `step` and the tools' calls return it. */
-export interface FoldVertexLanded extends FoldStepLanded {
-  vertex: FoldVertexReport;
-}
+export type FoldVertexLanded = FoldCompoundLanded<'vertex'>;
 
-export interface FoldVertexFingerprinted extends FoldStepFingerprinted {
-  vertex: FoldVertexReport;
-}
+export type FoldVertexFingerprinted = FoldCompoundFingerprinted<'vertex'>;
 
 /** How many complete orders a completion offers (`ChoiceCount`). */
 export interface FoldChoiceCount {

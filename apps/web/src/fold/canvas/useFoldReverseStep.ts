@@ -44,10 +44,11 @@ export interface FoldReverseStepAnswer {
 type Answer = { key: string; asked: FoldReverseAsked | null; refused: FoldEngineRefused | null };
 
 /**
- * The tools' one question about a reverse fold (`reverse`, D14 tier 2), once
- * per tip on a state: the line, side and anchor, and the openings chosen.
- * Both kinds answer at once, and a stored completion is never asked about,
- * so neither a kind chosen nor an order stepped through asks again.
+ * The tools' one question about a reverse fold (the compound question,
+ * `compoundAnalysis`, D14 tier 2), once per tip on a state: the line, side
+ * and anchor, and the openings chosen. Both kinds answer at once, and a
+ * stored completion is never asked about, so neither a kind chosen nor an
+ * order stepped through asks again.
  */
 function useReverseAsk(
   session: FoldSessionSurface,
@@ -62,11 +63,13 @@ function useReverseAsk(
     let current = true;
     const { op, choices } = ask;
     if (op.kind !== 'inside-reverse' && op.kind !== 'outside-reverse') return undefined;
-    void withCursor((engine, at) => engine.reverse(at, op, choices)).then(
+    void withCursor((engine, at) => engine.compoundAnalysis(at, op, choices)).then(
       (reply) => {
         if (!current || reply.status !== 'answered') return;
         const value = reply.value;
-        setAnswer(value.status === 'ok' ? { key, asked: value, refused: null } : { key, asked: null, refused: value });
+        if (value.status !== 'ok') setAnswer({ key, asked: null, refused: value });
+        // A reverse op's answer is always the reverse family's.
+        else if (value.family === 'reverse') setAnswer({ key, asked: value, refused: null });
       },
       (error: unknown) => reportError(error, { surface: 'fold:reverse' })
     );

@@ -5,13 +5,14 @@
  *
  * - **The op** is the document's `inside-reverse` or `outside-reverse`
  *   (`FoldReverseOp`), or one the tools are previewing along a model line.
- * - **The query** (`reverse`) answers what the tip is and how each of its
- *   flaps opens, which kinds land with the openings named, and the choice
- *   the step still needs: an opening, or one of the orders listed, each the
- *   `completion` that picks it.
- * - **A landed one** reports as `compound` beside a plain fold's report:
- *   its kind, its openings, its blocks, the spine creases it reversed, the
- *   motion the animation plays and what it stores.
+ * - **The question** (`compoundAnalysis`, `family: 'reverse'`) answers what
+ *   the tip is and how each of its flaps opens, which kinds land with the
+ *   openings named, and the choice the step still needs: an opening, or one
+ *   of the orders listed, each the `completion` that picks it.
+ * - **A landed one** reports as `compound` beside a plain fold's report
+ *   (`family: 'reverse'`, `foldEngineCompoundWire.ts`): its kind, its
+ *   openings, its blocks, the spine creases it reversed, the motion the
+ *   animation plays and what it stores.
  *
  * Pure types: no React, no store, no wasm.
  */
@@ -23,15 +24,8 @@ import type {
   FoldReverseKind,
   FoldReverseOp,
 } from '../document/foldSequenceDocument';
-import type {
-  FoldEngineLine,
-  FoldFlap,
-  FoldRefold,
-  FoldSide,
-  FoldSnap,
-  FoldStepMotionLegs,
-  FoldToolMotion,
-} from './foldEngineWire';
+import type { FoldCompoundReportBase } from './foldEngineCompoundWire';
+import type { FoldEngineLine, FoldFlap, FoldSide, FoldSnap, FoldToolMotion } from './foldEngineWire';
 
 /** Which way the tip goes: into the flap, between its layers, or round its outside (the document's). */
 export type { FoldReverseKind };
@@ -99,10 +93,10 @@ export interface FoldReverseOrders {
 }
 
 /**
- * The `reverse` query's answer, of both kinds whichever the op names: what
- * the tip is, which kinds land, and what is still to choose. A stored
- * completion is not asked about, so the orders stay listed while one is
- * chosen.
+ * The compound question's answer for a reverse fold, of both kinds whichever
+ * the op names: what the tip is, which kinds land, and what is still to
+ * choose. A stored completion is not asked about, so the orders stay listed
+ * while one is chosen.
  */
 export interface FoldReverseAsked {
   analysis: FoldReverseAnalysis;
@@ -114,9 +108,12 @@ export interface FoldReverseAsked {
   orders: FoldReverseOrders[];
 }
 
-/** What a landed reverse fold did (`ReverseReport`), as a compound step reports it. */
-export interface FoldReverseReport {
-  op: 'reverse';
+/**
+ * What a landed reverse fold did (`ReverseReport`), as a compound step reports
+ * it under `family: 'reverse'`. Its `reversed` are the spine creases that
+ * turned M↔V.
+ */
+export interface FoldReverseReport extends FoldCompoundReportBase {
   line: FoldModelLine;
   side: FoldSide;
   snap: FoldSnap;
@@ -125,18 +122,12 @@ export interface FoldReverseReport {
   openings: FoldOpening[];
   /** The tip's flaps that moved whole, with no spine to open along: the parent's faces of each. */
   whole: number[][];
-  /** The parent's faces that moved. */
-  moving: number[];
-  /** Per block, the landed state's faces in it. */
-  blocks: number[][];
-  created: number[];
-  unfolded: number[];
-  refolded: FoldRefold[];
-  /** The spine creases that turned M↔V. */
-  reversed: number[];
-  split: number;
-  /** What the animation plays (plan D15). */
-  motion: FoldStepMotionLegs;
   /** What the step stores: the openings chosen among several, the order chosen among several. */
-  stored: { openings?: FoldOpeningChoice[]; order?: FoldCompletionChoice };
+  stored: FoldReverseStored;
+}
+
+/** What a reverse fold or a crimp stores, in the engine's shapes (`ReverseChoices`). */
+export interface FoldReverseStored {
+  openings?: FoldOpeningChoice[];
+  order?: FoldCompletionChoice;
 }
