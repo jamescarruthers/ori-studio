@@ -24,7 +24,7 @@
 
 use std::collections::BTreeSet;
 
-use oristudio_geometry::Line;
+use oristudio_geometry::{Line, convex};
 use serde::{Deserialize, Serialize};
 
 use crate::complete::CompletionLimits;
@@ -33,9 +33,10 @@ use crate::compound::pieces::Scoring;
 use crate::compound::vertex::{
     Compiled, VertexChoices, VertexFoldKind, VertexOutcome, drop_empty, stack_toward, toward,
 };
+use crate::fold::{ActionKind, FoldActionGeometry, FoldAnalysis, Snap, Within};
 use crate::numerics::TOL;
 use crate::pattern::{CreaseKind, FaceId};
-use crate::refusal::{FoldRefusal, Refused};
+use crate::refusal::{FoldRefusal, Refused, Side};
 use crate::state::State;
 use crate::view::Direction;
 
@@ -140,6 +141,50 @@ impl State {
         compiled.land(self, choices, limits, || {
             self.compile_petal(op, direction.opposite()).ok()
         })
+    }
+
+    /// The picture of the petal fold `op` on this state, with `landed`'s
+    /// cover at the arrow's head when it is given (see [`super::vertex`]): H
+    /// where the flap's top layer meets it, and the arrow lifting the petal
+    /// across it, from inside the kite. Refused as [`State::analyse_petal`]
+    /// is.
+    pub fn petal_action(
+        &self,
+        op: &PetalFold,
+        landed: Option<&State>,
+    ) -> Result<FoldActionGeometry, Refused> {
+        let direction = self.view().model_direction(op.direction);
+        let petal = self.petal_flap(op, direction)?;
+        let side = Side::of_point(&petal.line, petal.inside)
+            .ok_or(FoldRefusal::SeedNotOnMovingSide { point: op.petal })?;
+        let mut moving: Vec<FaceId> = petal.top.iter().map(|&f| self.faces()[f].id).collect();
+        moving.sort_unstable();
+        let analysis = FoldAnalysis {
+            line: petal.line,
+            side,
+            snap: Snap::NONE,
+            direction,
+            flaps: Vec::new(),
+            picked: Vec::new(),
+            added: Vec::new(),
+            moving,
+        };
+        // The petal turns across H alone; the sides outside the kite fold
+        // in first, so the grip stays inside it.
+        let kite = [convex::normalize(&[
+            petal.ends[0],
+            petal.ends[1],
+            petal.corner,
+        ])];
+        self.fold_action_within(
+            &analysis,
+            ActionKind::Fold,
+            landed,
+            Within {
+                ray: None,
+                reach: Some(&kite),
+            },
+        )
     }
 
     fn compile_petal(&self, op: &PetalFold, direction: Direction) -> Result<Compiled, Refused> {

@@ -102,6 +102,16 @@ pub struct Snap {
     pub max_shift: f64,
 }
 
+impl Snap {
+    /// No snap: a line the engine made itself, such as a vertex fold's
+    /// crease, which no click located.
+    pub const NONE: Snap = Snap {
+        clusters: 0,
+        angle: 0.0,
+        max_shift: 0.0,
+    };
+}
+
 /// The snapped line and every vertex's class against it.
 #[derive(Debug, Clone)]
 pub(crate) struct Classified {

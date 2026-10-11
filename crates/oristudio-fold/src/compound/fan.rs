@@ -37,10 +37,10 @@ use crate::compound::vertex::{
     Compiled, VertexChoices, VertexFoldKind, VertexOutcome, angle_between, cross, drop_empty,
     stack_toward, unit,
 };
-use crate::fold::Seed;
+use crate::fold::{ActionKind, FoldActionGeometry, FoldAnalysis, Seed, Snap, Within};
 use crate::numerics::{Band, MIN_FEATURE, TOL};
 use crate::pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
-use crate::refusal::{Fix, FoldRefusal, NearMissCause, Refused};
+use crate::refusal::{Fix, FoldRefusal, NearMissCause, Refused, Side};
 use crate::state::State;
 use crate::view::Direction;
 
@@ -718,6 +718,18 @@ impl FanInput {
         k: usize,
         direction: Direction,
     ) -> Result<Compiled, Refused> {
+        self.compile_fan(state, candidates, k, direction)
+            .map(|(_, compiled)| compiled)
+    }
+
+    /// [`FanInput::compile`], with its fan.
+    fn compile_fan(
+        &self,
+        state: &State,
+        candidates: &[Point],
+        k: usize,
+        direction: Direction,
+    ) -> Result<(Fan, Compiled), Refused> {
         let mut rays = self.given.to_vec();
         rays.push(candidates[k]);
         let fan = Fan::new(self.center, &rays).ok_or(FoldRefusal::FanNotFlat)?;
@@ -728,15 +740,114 @@ impl FanInput {
             Some(r) => Some(nearest(&fan.rays, r).ok_or(FoldRefusal::FanRidgeNotRay)?),
             None => None,
         };
-        FanFold {
+        let compiled = FanFold {
             kind: self.kind,
             layers: fan_layers(state, self.center, &self.layers, direction)?,
-            fan,
+            fan: fan.clone(),
             stayer: self.stayer,
             direction,
             ridge,
         }
-        .compile(state)
+        .compile(state)?;
+        Ok((fan, compiled))
+    }
+
+    /// The fold's picture on `state`, with `landed`'s cover at the arrow's
+    /// head when it is given (see [`super::vertex`]): the crease the far
+    /// wedge turns across last, as a ray from the center over the layers it
+    /// cuts, and the arrow from the neighbour wedge that turns across it —
+    /// carrying the far wedge — to where it lands. Refused as the fold is
+    /// before it lands.
+    pub(crate) fn action(
+        &self,
+        state: &State,
+        landed: Option<&State>,
+    ) -> Result<FoldActionGeometry, Refused> {
+        let direction = state.view().model_direction(self.direction);
+        let candidates = kawasaki(&self.given);
+        let k = nearest(&candidates, self.emergent).ok_or(FoldRefusal::FanNotFlat)?;
+        let (fan, compiled) = self.compile_fan(state, &candidates, k, direction)?;
+        let no_picture = || -> Refused {
+            FoldRefusal::Internal {
+                message: "a fan fold turns no wedge to picture".to_string(),
+            }
+            .into()
+        };
+        let turns = &compiled.turns;
+        // The far wedge, which turns most, and the crease it turns across
+        // last: the one between the paper that stays and its neighbour.
+        let far = (0..turns.len())
+            .max_by_key(|&b| turns[b].len())
+            .ok_or_else(no_picture)?;
+        let &(_, line) = turns[far].last().ok_or_else(no_picture)?;
+        let across = |b: usize| turns[b].last().is_some_and(|(_, l)| l.approx_eq(&line));
+        let carried: Vec<usize> = (0..turns.len()).filter(|&b| across(b)).collect();
+        let neighbour: Vec<usize> = carried
+            .iter()
+            .copied()
+            .filter(|&b| turns[b].len() == 1)
+            .collect();
+        let toward = fan
+            .rays
+            .iter()
+            .copied()
+            .find(|r| line.distance_to_point([fan.center[0] + r[0], fan.center[1] + r[1]]) <= TOL)
+            .ok_or_else(no_picture)?;
+        let scoring = &compiled.scoring;
+        let geometry = state.geometry();
+        let pieces_of = |blocks: &[usize]| -> Vec<usize> {
+            (0..scoring.faces.len())
+                .filter(|&a| compiled.block_of[a].is_some_and(|b| blocks.contains(&b)))
+                .collect()
+        };
+        // The neighbour's paper, where the grip goes: it turns across the
+        // crease alone, where the far wedge on it turns twice.
+        let reach: Vec<Vec<Point>> = pieces_of(if neighbour.is_empty() {
+            &carried
+        } else {
+            &neighbour
+        })
+        .into_iter()
+        .map(|a| {
+            let isometry = geometry.isometries[scoring.old[a]];
+            let image: Vec<Point> = scoring
+                .polygon(a)
+                .iter()
+                .map(|&p| isometry.apply(p))
+                .collect();
+            convex::normalize(&image)
+        })
+        .collect();
+        let side = reach
+            .iter()
+            .filter_map(|image| convex::centroid(image))
+            .find_map(|c| Side::of_point(&line, c))
+            .ok_or_else(no_picture)?;
+        let mut moving: Vec<FaceId> = pieces_of(&carried)
+            .into_iter()
+            .map(|a| state.faces()[scoring.old[a]].id)
+            .collect();
+        moving.sort_unstable();
+        moving.dedup();
+        let analysis = FoldAnalysis {
+            line,
+            side,
+            snap: Snap::NONE,
+            direction,
+            flaps: Vec::new(),
+            picked: Vec::new(),
+            added: Vec::new(),
+            moving,
+        };
+        state.fold_action_within(
+            &analysis,
+            ActionKind::Fold,
+            landed,
+            Within {
+                ray: Some((fan.center, toward)),
+                reach: Some(&reach),
+            },
+        )
     }
 
     /// Land the fold. A refusal of the emergent ray asked for offers each

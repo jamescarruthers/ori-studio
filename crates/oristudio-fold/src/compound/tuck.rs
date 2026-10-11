@@ -429,6 +429,11 @@ impl State {
     /// What a tuck would move and every layer its block lands on, each with
     /// whether the block can lie immediately under (over) it, without
     /// folding. `op.target` is not read.
+    ///
+    /// Each target costs a completion, and each moving set a preparation, so
+    /// `limits.deadline` is read before every one: the targets that move
+    /// least are decided first, and those left when it passes are listed
+    /// undecided.
     pub fn analyse_tuck(
         &self,
         op: &TuckFold,
@@ -436,11 +441,13 @@ impl State {
     ) -> Result<TuckAnalysis, Refused> {
         let tuck = self.tuck(op)?;
         let open = tuck.closure(self, None)?;
+        let faces = self.faces();
         // A target with no paper on the moving side is not met by the
         // closure, so its moving set is the open one; a target that crosses
         // ℓ keeps the layers above it (below it) out, so it is grown its own.
-        let mut groups: Vec<(Vec<bool>, Vec<usize>)> = vec![(open.clone(), Vec::new())];
-        for f in 0..self.faces().len() {
+        let mut sets: Vec<Vec<bool>> = vec![open.clone()];
+        let mut listed: Vec<(usize, usize)> = Vec::new();
+        for f in 0..faces.len() {
             let moving = if tuck.side.pieces[f].is_some() {
                 match tuck.closure(self, Some(f)) {
                     Ok(moving) => moving,
@@ -452,31 +459,46 @@ impl State {
             if !tuck.lands_on(self, &moving, f) {
                 continue;
             }
-            match groups.iter_mut().find(|(set, _)| *set == moving) {
-                Some((_, targets)) => targets.push(f),
-                None => groups.push((moving, vec![f])),
-            }
+            let set = match sets.iter().position(|set| *set == moving) {
+                Some(set) => set,
+                None => {
+                    sets.push(moving);
+                    sets.len() - 1
+                }
+            };
+            listed.push((f, set));
         }
         let under = tuck.under();
+        // The closure brings every layer between the seed and T along, so a
+        // target nearer the seed moves less: cheaper to decide, and likelier
+        // to take the tuck. Each moving set's targets are decided together.
+        let sizes: Vec<usize> = sets
+            .iter()
+            .map(|set| set.iter().filter(|&&m| m).count())
+            .collect();
+        listed.sort_by_key(|&(f, set)| (sizes[set], set, f));
+        // One geometry per moving set, prepared when its first target is
+        // decided and placed against each; none when it does not prepare.
+        let mut prepared: Vec<Option<Option<Prepared>>> = (0..sets.len()).map(|_| None).collect();
         let mut targets = Vec::new();
-        for (moving, faces) in groups.iter().filter(|(_, faces)| !faces.is_empty()) {
-            // One geometry per moving set, placed against each target.
-            let prepared = tuck.prepare(self, moving).ok();
-            for &f in faces {
-                let id = self.faces()[f].id;
-                let feasible = match &prepared {
+        for (f, set) in listed {
+            let id = faces[f].id;
+            let feasible = if limits.out_of_time() {
+                None
+            } else {
+                match prepared[set].get_or_insert_with(|| tuck.prepare(self, &sets[set]).ok()) {
                     Some(prepared) => {
                         prepared.lands_placed(placements(self, prepared, id, under), limits)
                     }
                     None => Some(false),
-                };
-                if let Some(at) = self.face_witness(id) {
-                    targets.push(TuckTarget {
-                        face: id,
-                        at,
-                        feasible,
-                    });
                 }
+            };
+            if let Some(at) = self.face_witness(id) {
+                targets.push(TuckTarget {
+                    face: id,
+                    at,
+                    feasible,
+                });
             }
         }
         targets.sort_by_key(|t| t.face);
@@ -505,8 +527,9 @@ impl State {
     }
 
     /// [`State::tuck_fold`] under `limits`. A tuck no order fits is refused
-    /// naming T and the faces the conflict traces to, with the targets near
-    /// it that take the tuck; a stored choice that no longer resolves is
+    /// naming T and the faces the conflict traces to, and one whose block
+    /// lands nowhere on T naming none, each with the targets near it that
+    /// take the tuck; a stored choice that no longer resolves is
     /// [`CompoundRefused::Broken`].
     pub fn tuck_fold_within(
         &self,
@@ -523,6 +546,9 @@ impl State {
             .map_err(|r| refused(r.into()))?;
         let target_id = self.faces()[target].id;
         let moving = tuck.closure(self, Some(target)).map_err(refused)?;
+        if !tuck.lands_on(self, &moving, target) {
+            return Err(refused(self.tuck_missed(&tuck, &moving, target, limits)));
+        }
         let under = tuck.under();
         let mut prepared = tuck.prepare(self, &moving).map_err(|r| refused(r.into()))?;
         let unplaced = prepared.clone();
@@ -623,6 +649,51 @@ impl State {
         let FoldRefusal::NoOrder { faces } = refusal else {
             return refusal.into();
         };
+        Refused {
+            refusal: FoldRefusal::TuckInfeasible {
+                target: self.faces()[target].id,
+                placement: tuck.placement(),
+                faces,
+            },
+            fixes: self.tuck_fixes(tuck, moving, unplaced, target, limits),
+        }
+    }
+
+    /// A tuck against the face at `target` that its block lands nowhere on:
+    /// no placement names T, so a completion would land the plain fold and
+    /// call it a tuck. Refused as a tuck no order fits, naming no conflict,
+    /// with the targets near T that the same moving set takes.
+    fn tuck_missed(
+        &self,
+        tuck: &Tuck,
+        moving: &[bool],
+        target: usize,
+        limits: &CompletionLimits,
+    ) -> Refused {
+        let fixes = match tuck.prepare(self, moving) {
+            Ok(unplaced) => self.tuck_fixes(tuck, moving, &unplaced, target, limits),
+            Err(_) => Vec::new(),
+        };
+        Refused {
+            refusal: FoldRefusal::TuckInfeasible {
+                target: self.faces()[target].id,
+                placement: tuck.placement(),
+                faces: Vec::new(),
+            },
+            fixes,
+        }
+    }
+
+    /// The targets near the face at `target` that the same moving set
+    /// takes, as a refusal offers them: the layers that meet T first.
+    fn tuck_fixes(
+        &self,
+        tuck: &Tuck,
+        moving: &[bool],
+        unplaced: &Prepared,
+        target: usize,
+        limits: &CompletionLimits,
+    ) -> Vec<Fix> {
         let target_id = self.faces()[target].id;
         let under = tuck.under();
         let mut near: Vec<usize> = (0..self.faces().len())
@@ -635,8 +706,7 @@ impl State {
             })
             .collect();
         near.sort_by_key(|&f| (self.above(self.faces()[f].id, target_id).is_none(), f));
-        let fixes = near
-            .into_iter()
+        near.into_iter()
             .take(MAX_FIX_TARGETS_TRIED)
             .filter(|&f| {
                 let id = self.faces()[f].id;
@@ -650,15 +720,7 @@ impl State {
                     at: self.face_witness(face)?,
                 })
             })
-            .collect();
-        Refused {
-            refusal: FoldRefusal::TuckInfeasible {
-                target: target_id,
-                placement: tuck.placement(),
-                faces,
-            },
-            fixes,
-        }
+            .collect()
     }
 }
 
@@ -688,7 +750,9 @@ impl TuckFold {
 impl State {
     /// What the tuck `op` moves against its target, as a plain fold's
     /// analysis reads (see above). Refused as the tuck is before it lands: a
-    /// target off the paper, a target that would move, nothing staying.
+    /// target off the paper, a target that would move, a target the block
+    /// lands nowhere on (without the fixes the tuck offers, which cost a
+    /// completion each), nothing staying.
     pub fn analyse_tuck_fold(&self, op: &TuckFold) -> Result<FoldAnalysis, Refused> {
         let tuck = self.tuck(op)?;
         let target = self
@@ -696,6 +760,14 @@ impl State {
             .and_then(|id| self.face_position(id))
             .ok_or(FoldRefusal::WitnessNotInFace { point: op.target })?;
         let moving = tuck.closure(self, Some(target))?;
+        if !tuck.lands_on(self, &moving, target) {
+            return Err(FoldRefusal::TuckInfeasible {
+                target: self.faces()[target].id,
+                placement: tuck.placement(),
+                faces: Vec::new(),
+            }
+            .into());
+        }
         let moving: Vec<FaceId> = (0..moving.len())
             .filter(|&f| moving[f])
             .map(|f| self.faces()[f].id)

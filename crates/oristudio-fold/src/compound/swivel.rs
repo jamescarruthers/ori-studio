@@ -11,7 +11,7 @@ use crate::complete::CompletionLimits;
 use crate::compound::CompoundRefused;
 use crate::compound::fan::{FanAnalysis, FanInput};
 use crate::compound::vertex::{VertexChoices, VertexFoldKind, VertexOutcome, unit};
-use crate::fold::Seed;
+use crate::fold::{FoldActionGeometry, Seed};
 use crate::refusal::{FoldRefusal, Refused};
 use crate::state::State;
 use crate::view::Direction;
@@ -61,6 +61,17 @@ impl State {
     /// A swivel's rays, emergent candidates and layers, without folding.
     pub fn analyse_swivel(&self, op: &Swivel) -> Result<FanAnalysis, Refused> {
         op.input()?.analyse(self)
+    }
+
+    /// The picture of the swivel `op` on this state, with `landed`'s cover
+    /// at the arrow's head when it is given: a fan fold's (see
+    /// [`super::vertex`]).
+    pub fn swivel_action(
+        &self,
+        op: &Swivel,
+        landed: Option<&State>,
+    ) -> Result<FoldActionGeometry, Refused> {
+        op.input()?.action(self, landed)
     }
 
     /// A swivel, with its stored choices (empty for a new step), under the

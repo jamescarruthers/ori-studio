@@ -76,11 +76,15 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   opening, or, per kind, up to eight orders, each the `completion` that
   picks it — of both kinds at once; a crimp's tip and the kinds that land;
   a tuck's targets; a vertex op's flap, petal or fan; a sink's point and
-  pockets. The reverse folds, the crimp and the tuck fold along a line, so
-  they also answer `analyse`, `action` and `depth_choices` — a crimp of its
-  tip at ℓ1, its picture ℓ1 with a pleat arrow across both lines; a tuck of
-  its block against its target, as a plain fold's — and have a step
-  picture; asking those of another family is the caller's mistake. A crimp
+  pockets. The reverse folds, the crimp, the tuck and the sinks fold along a
+  line, so they also answer `analyse`, `action` and `depth_choices` — a
+  crimp of its tip at ℓ1, its picture ℓ1 with a pleat arrow across both
+  lines; a tuck of its block against its target, as a plain fold's — and
+  have a step picture. A vertex op answers `action` and has a step picture
+  too, drawn along the one crease that tells it best (a squash's lower
+  crease with the push onto its spine, a petal fold's H, a fan's crease from
+  its center); asking it `analyse` or `depth_choices` is the caller's
+  mistake. A crimp
   or a tuck keeps its step's summary as it lands, so it answers that after
   its parent is released; its picture is drawn on its parent.
 - **`fs1` keys** (`src/canonical.rs`): one per fact of the state, none naming
@@ -145,13 +149,14 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | The same at `d0990bbde`, with the compound pipeline and the reverse folds (2026-10-09) | 1,916,660 B (1,872 KiB) | 768,949 B (751 KiB) |
 | With the vertex folds: squash, petal fold, rabbit ear, swivel (2026-10-09) | 2,162,136 B (2,111 KiB) | 862,907 B (843 KiB) |
 | Every Phase 11 family: with the compound motions' legs, the crimp and tuck, and the sinks (2026-10-11) | 2,697,550 B (2,634 KiB) | 1,064,672 B (1,040 KiB) |
+| With the vertex folds' pictures and the tuck listing's deadline (2026-10-11) | 2,711,257 B (2,648 KiB) | 1,072,623 B (1,047 KiB) |
 
 The vertex folds add **245,476 B raw (+240 KiB), 93,958 B gzipped
 (+92 KiB)**: the staged motions, the fan scoring and the general pieces
 pipeline in the engine, and the four ops, the held-choice store and their
 serializers in the bridge.
 
-The last row is the bridge that ships, built by `npm run build:web` at the
+The Phase 11 row is the bridge that shipped, built by `npm run build:web` at the
 merge of the crimp and tuck, the vertex folds and the sinks (the same bytes
 as `dist/`'s hashed copy). Since the vertex row it adds **535,414 B raw
 (+523 KiB), 201,765 B gzipped (+197 KiB)**: every compound family's motion
@@ -160,6 +165,11 @@ and fixes, the sinks' points, pockets and unsink, the sink and crimp/tuck
 pictures (`step_action`), and their serializers. It is **over the two
 budgets' 800 KiB sum by 240 KiB gzipped**; the open question below covers
 it.
+
+The last row adds each vertex fold's picture (`action`, `step_action`: a
+squash's crease, arrow and push, a petal fold's H, a fan's crease from its
+center) and the tuck listing's reads of its deadline: **13,707 B raw
+(+13 KiB), 7,951 B gzipped (+8 KiB)**.
 
 The fourth row was the bridge that shipped when the budget was set. Rebuilt at `44005c2d9`, with the
 Fold workspace's UI merged, it is the same 1,879,638 B raw, and 752,480 B

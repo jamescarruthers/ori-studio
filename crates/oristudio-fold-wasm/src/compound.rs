@@ -32,11 +32,11 @@
 //!   [`Broken`] cause.
 //! - **Asking.** What a tool asks before a step lands is its family's own
 //!   question ([`CompoundOp::ask`]), one call for every family, answered as
-//!   [`CompoundAsked`]. A family that folds along one line — the reverse
-//!   folds, a crimp along its first line, a tuck, the sinks — also answers
-//!   the plain fold's queries: what moves, its picture, the plain fold its
-//!   line and anchor name for the depth picker. The others answer none of
-//!   them, and asking is the caller's mistake.
+//!   [`CompoundAsked`]. Every family answers for its picture. A family that
+//!   folds along one line — the reverse folds, a crimp along its first line,
+//!   a tuck, the sinks — also answers the plain fold's other queries: what
+//!   moves, the plain fold its line and anchor name for the depth picker.
+//!   The vertex folds answer neither, and asking is the caller's mistake.
 //! - **Holding.** A landed one is held under its parent's handle; its step's
 //!   summary and picture are asked of it, against its parent only when it
 //!   needs one ([`Parent`]): a crimp or a tuck keeps the summary it took as it
@@ -70,7 +70,8 @@ pub trait CompoundOp: Debug {
     fn analysis(&self, _parent: &State) -> Option<Result<FoldAnalysis, Refusal>> {
         None
     }
-    /// Its picture on the parent, before it lands; none, as `analysis`.
+    /// Its picture on the parent, before it lands; none for a family with
+    /// none to draw.
     fn action(&self, _parent: &State) -> Option<Result<FoldActionGeometry, Refusal>> {
         None
     }
@@ -100,8 +101,7 @@ pub trait CompoundLanded: Debug {
     /// Its summary: against the parent it folded, or the one it kept.
     fn summary(&self, parent: Parent<'_>) -> Result<Result<StepSummary, Refusal>, BridgeError>;
     /// Its picture on the parent it folded, with the landed state's cover;
-    /// none for a family whose picture is still to come (its motion is in
-    /// its report).
+    /// none for a family with none to draw (its motion is in its report).
     fn action(
         &self,
         _parent: Parent<'_>,

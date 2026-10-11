@@ -128,6 +128,41 @@ pub fn close(a: Point, b: Point) -> bool {
     (a[0] - b[0]).abs() < 1e-12 && (a[1] - b[1]).abs() < 1e-12
 }
 
+/// Whether `b` is `a` turned over in the model frame — the same steps folded
+/// from a sheet started the other side up: the same faces (matched by their
+/// witnesses) and creases, every letter and every pair of faces the other
+/// way round.
+pub fn mirrored(a: &State, b: &State) -> bool {
+    let opposite = |letter: Letter| match letter {
+        Letter::Mountain => Letter::Valley,
+        Letter::Valley => Letter::Mountain,
+    };
+    let swap = |kind: CreaseKind| match kind {
+        CreaseKind::Folded(letter) => CreaseKind::Folded(opposite(letter)),
+        CreaseKind::Flat(letter) => CreaseKind::Flat(opposite(letter)),
+        CreaseKind::Border => CreaseKind::Border,
+    };
+    let face = |p: Option<Point>| p.and_then(|p| b.face_at(p));
+    a.faces().len() == b.faces().len()
+        && a.creases().len() == b.creases().len()
+        && a.creases().iter().all(|c| {
+            let [p, q] = c.vertices.map(|v| a.vertices()[v.0 as usize]);
+            let mid = [(p[0] + q[0]) / 2.0, (p[1] + q[1]) / 2.0];
+            b.crease_at(mid).map(|d| d.kind) == Some(swap(c.kind))
+        })
+        && a.faces().iter().all(|f| {
+            let Some(g) = face(a.face_witness(f.id)) else {
+                return false;
+            };
+            a.faces().iter().all(|h| {
+                let Some(k) = face(a.face_witness(h.id)) else {
+                    return false;
+                };
+                a.above(f.id, h.id) == b.above(g, k).map(|above| !above)
+            })
+        })
+}
+
 /// The FOLD `faceOrders` sign rule: f lies on the side g's front normal
 /// points to.
 pub fn on_front_side(state: &State, f: FaceId, g: FaceId) -> bool {

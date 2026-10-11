@@ -1564,7 +1564,12 @@ fn lineage(parent: &State, landed: &StateParts) -> Vec<Option<usize>> {
 }
 
 /// A stored pocket's index among `pockets`: the one pocket with the face at
-/// `above` above it and the face at `below` below it.
+/// `above` above it and the face at `below` below it; or, when none has,
+/// the one with them the other way round. A pocket is the gap between its
+/// faces, whichever way up: started the other side up (the Paper pane's
+/// Front up / Back up replays every step on the sheet turned over, each
+/// step's direction the viewer's), the model-frame stack is reversed and
+/// the faces the step stored above the gap lie below it.
 fn pocket_of(state: &State, pockets: &[RawPocket], stored: &StoredPocket) -> Result<usize, Broken> {
     let face = |witness: usize, point: Point| {
         point
@@ -1578,12 +1583,20 @@ fn pocket_of(state: &State, pockets: &[RawPocket], stored: &StoredPocket) -> Res
             })
     };
     let (u, l) = (face(0, stored.above)?, face(1, stored.below)?);
-    let mut found = pockets
-        .iter()
-        .enumerate()
-        .filter(|(_, p)| p.upper.binary_search(&u).is_ok() && p.lower.binary_search(&l).is_ok());
-    match (found.next(), found.next()) {
-        (Some((k, _)), None) => Ok(k),
+    let between = |above: usize, below: usize| -> Vec<usize> {
+        (0..pockets.len())
+            .filter(|&k| {
+                pockets[k].upper.binary_search(&above).is_ok()
+                    && pockets[k].lower.binary_search(&below).is_ok()
+            })
+            .collect()
+    };
+    let found = match between(u, l) {
+        found if found.is_empty() => between(l, u),
+        found => found,
+    };
+    match found[..] {
+        [k] => Ok(k),
         _ => Err(Broken::Pocket),
     }
 }

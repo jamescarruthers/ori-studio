@@ -110,6 +110,20 @@ pub struct Pleat {
     pub kinks: u8,
 }
 
+/// Where a compound fold's picture looks along ℓ, beside what a plain fold's
+/// does: a vertex fold's crease is a ray from its vertex, not a whole line,
+/// and the paper turning across it may lie beside paper that turns some other
+/// way, which its grip must not land on.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct Within<'a> {
+    /// Only the ray of ℓ from this model point toward this unit direction:
+    /// its line, its spans and its grip.
+    pub(crate) ray: Option<(Point, Point)>,
+    /// The model-frame polygons the grip reaches across from ℓ, in place of
+    /// the moving faces' pieces: the paper that turns across ℓ alone.
+    pub(crate) reach: Option<&'a [Vec<Point>]>,
+}
+
 impl State {
     /// The geometry of a fold of this state that `analysis` describes
     /// ([`State::analyse_fold`], or an applied fold's report), with the
@@ -120,6 +134,17 @@ impl State {
         kind: ActionKind,
         landed: Option<&State>,
     ) -> Result<FoldActionGeometry, Refused> {
+        self.fold_action_within(analysis, kind, landed, Within::default())
+    }
+
+    /// [`State::fold_action`] looking only where `within` says.
+    pub(crate) fn fold_action_within(
+        &self,
+        analysis: &FoldAnalysis,
+        kind: ActionKind,
+        landed: Option<&State>,
+        within: Within<'_>,
+    ) -> Result<FoldActionGeometry, Refused> {
         let along = Along::new(self, &analysis.line, analysis.side)?;
         let to_scene = self.view().transform();
         let scene = |p: Point| ScenePoint::from(to_scene.apply(p));
@@ -129,11 +154,22 @@ impl State {
             .filter_map(|&id| self.face_position(id))
             .collect();
         let geometry = self.geometry();
+        // The stretch of ℓ looked along: all of it, or the ray.
+        let [from, to] = within
+            .ray
+            .map_or([f64::NEG_INFINITY, f64::INFINITY], |(at, toward)| {
+                along.ray(at, toward)
+            });
+        let keep = |[lo, hi]: [f64; 2]| {
+            let (lo, hi) = (lo.max(from), hi.min(to));
+            (hi - lo > TOL).then_some([lo, hi])
+        };
 
         let silhouette = geometry
             .images
             .iter()
             .filter_map(|image| along.clip(image, TOL))
+            .filter_map(keep)
             .fold(None, |extent: Option<[f64; 2]>, [lo, hi]| {
                 Some(extent.map_or([lo, hi], |[a, b]| [a.min(lo), b.max(hi)]))
             });
@@ -145,13 +181,16 @@ impl State {
             if !run.faces.iter().any(|(f, _)| moving.contains(f)) {
                 continue;
             }
+            let Some(t) = keep(run.t) else {
+                continue;
+            };
             let top = if flipped {
                 run.faces.last()
             } else {
                 run.faces.first()
             };
             let hidden = !top.is_some_and(|(f, _)| moving.contains(f));
-            stretches.push((run.t, hidden));
+            stretches.push((t, hidden));
         }
         let mut spans: Vec<([f64; 2], bool)> = Vec::new();
         for &(t, hidden) in &stretches {
@@ -161,7 +200,7 @@ impl State {
             }
         }
 
-        let grip = grip(self, &along, &moving, &stretches, landed).map(|g| Grip {
+        let grip = grip(self, &along, &moving, &stretches, landed, within.reach).map(|g| Grip {
             at: scene(g.at),
             image: scene(g.image),
             hidden_at: g.hidden_at,
@@ -209,6 +248,7 @@ fn grip(
     moving: &BTreeSet<usize>,
     stretches: &[([f64; 2], bool)],
     landed: Option<&State>,
+    reach: Option<&[Vec<Point>]>,
 ) -> Option<ModelGrip> {
     let longest = |hidden: bool| {
         stretches
@@ -221,10 +261,17 @@ fn grip(
     let normal = along.normal;
 
     // How far the moving paper reaches from ℓ along the normal, without a
-    // gap wider than the tolerance.
-    let mut reaches: Vec<[f64; 2]> = moving
-        .iter()
-        .filter_map(|&f| along.moving.pieces[f].as_deref())
+    // gap wider than the tolerance: the moving faces' pieces, or the paper
+    // the picture says turns across ℓ.
+    let pieces: Vec<&[Point]> = match reach {
+        Some(polygons) => polygons.iter().map(Vec::as_slice).collect(),
+        None => moving
+            .iter()
+            .filter_map(|&f| along.moving.pieces[f].as_deref())
+            .collect(),
+    };
+    let mut reaches: Vec<[f64; 2]> = pieces
+        .into_iter()
         .filter_map(|piece| clip_line(piece, foot, normal, TOL))
         .collect();
     reaches.sort_by(|a, b| a[0].total_cmp(&b[0]));

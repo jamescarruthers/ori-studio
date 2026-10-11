@@ -384,13 +384,27 @@ describe('a vertex fold’s step', () => {
   };
 
   const reverseTip = engine.compoundAnalysis.getMockImplementation();
+  const unpictured = engine.action.getMockImplementation();
   afterEach(() => {
     if (reverseTip) engine.compoundAnalysis.mockImplementation(reverseTip);
+    if (unpictured) engine.action.mockImplementation(unpictured);
   });
 
-  it('asks the compound question, again for the fourth ray that lands, and previews the step without a plain fold’s questions', async () => {
+  it('asks the compound question, again for the fourth ray that lands, and previews the step with its picture but no line to analyse', async () => {
     engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { emergent: [number, number] }) =>
       swivelAnswer(op)) as never);
+    const PICTURE = {
+      kind: 'fold',
+      direction: 'valley',
+      line: [
+        { x: 0.5, y: 0.3 },
+        { x: 0.5, y: 1 },
+      ],
+      spans: [],
+      moving: [0],
+      grip: null,
+    };
+    engine.action.mockImplementation((async () => ({ status: 'ok', action: PICTURE })) as never);
     await render(SWIVEL);
     for (let k = 0; k < 3; k += 1) await render(SWIVEL);
     // The placeholder ray first, then the first candidate that lands.
@@ -399,10 +413,11 @@ describe('a vertex fold’s step', () => {
     expect(asked).toEqual([[1, 0], CANDIDATES[1]]);
     expect(seen?.step?.op).toMatchObject({ kind: 'swivel', emergent: CANDIDATES[1], seed: { scope: 'all' } });
     expect(seen?.vertex).toMatchObject({ emergent: 1, layers: 1, ridges: [], orders: [] });
-    // Previewed through the session; a vertex fold has no line to analyse or picture.
+    // Previewed through the session and pictured; a vertex fold has no line to analyse.
     expect(verbs.preview).toHaveBeenCalledWith(seen?.step?.op, undefined);
     expect(analyse).not.toHaveBeenCalled();
-    expect(engine.action).not.toHaveBeenCalled();
+    expect(engine.action).toHaveBeenLastCalledWith(PARENT, seen?.step?.op, undefined);
+    expect(seen?.action).toEqual(PICTURE);
     expect(tracked.offered).toHaveBeenCalledWith('emergent', 3);
     expect(seen?.refused).toBeNull();
   });

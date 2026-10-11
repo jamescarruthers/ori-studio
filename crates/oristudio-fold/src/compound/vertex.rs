@@ -21,6 +21,24 @@
 //! - **The motion** (plan D15) turns each block about its creases in
 //!   stages, one half turn per crease (`StepMotion::staged`): visual, with
 //!   the parent and the landed state as its exact ends.
+//! - **The picture** (plan D12, per step) is a plain fold's along the one
+//!   crease that tells the fold best ([`State::fold_action`]: the crease
+//!   where the moving paper meets it, the arrow from that paper to where a
+//!   turn across it lays it), in the direction the fold is made, with the
+//!   landed state's cover at the arrow's head once it has landed. A crease
+//!   that runs from a vertex is drawn from it, not as a whole line, and the
+//!   arrow starts on paper that turns across that crease alone:
+//!   - a **squash**: the lower layer's crease from the vertex across the
+//!     flap, the arrow from the spine side to where its crease lays it (onto
+//!     the target), and a push onto the spine from beyond it, toward its
+//!     target ([`State::squash_action`]);
+//!   - a **petal fold**: H where the top layer meets it, and the arrow
+//!     lifting the petal across it from inside the kite
+//!     ([`State::petal_action`]);
+//!   - a **rabbit ear** or a **swivel**: the crease the far wedge turns
+//!     across last, between the paper that stays and its neighbour, and the
+//!     arrow from that neighbour across it, the far wedge on it
+//!     ([`State::rabbit_ear_action`], [`State::swivel_action`]).
 
 use oristudio_geometry::Line;
 use serde::{Deserialize, Serialize};

@@ -676,6 +676,98 @@ fn stored_openings_replay_or_break() {
     );
 }
 
+/// The strip of [`strip`] folded from a sheet started `start` up: the same
+/// steps, each the viewer's valley.
+fn strip_from(start: StartSide) -> State {
+    let sheet = State::flat(Sheet::square(), start).unwrap_or_else(|e| panic!("{e}"));
+    let book = fold(&sheet, &all(x_eq(0.5), [0.9, 0.5], Direction::Valley)).state;
+    fold(&book, &all(x_eq(0.25), [0.4, 0.5], Direction::Valley)).state
+}
+
+/// The Paper pane's Front up / Back up keeps every step and replays it on
+/// the sheet started the other side up. Each step's direction is the
+/// viewer's, so the model-frame stack comes out reversed and each opening's
+/// blocks swap: a stored opening names its split by whichever block it
+/// named, and lands the mirror image of the fold it was chosen for.
+#[test]
+fn a_stored_opening_survives_starting_the_sheet_the_other_side_up() {
+    let (front, back) = (strip_from(StartSide::Front), strip_from(StartSide::Back));
+    assert!(mirrored(&front, &back));
+    let op = reverse(y_eq(0.5), [0.1, 0.2], Seed::All, INSIDE);
+    let analysis = front.analyse_reverse(&op).unwrap_or_else(|e| panic!("{e}"));
+    let openings = &analysis.flaps[0].openings;
+    assert_eq!(openings.len(), 2);
+    for opening in openings {
+        let choices = ReverseChoices {
+            openings: vec![opening.stored.clone()],
+            order: None,
+        };
+        for kind in [INSIDE, OUTSIDE] {
+            let op = ReverseFold { kind, ..op.clone() };
+            let there = landed(&front, &op, &choices);
+            let turned = landed(&back, &op, &choices);
+            check(&back, &op, &turned);
+            assert!(
+                mirrored(&there.state, &turned.state),
+                "{kind:?}: {:?}",
+                opening.upper
+            );
+            // Its blocks are the other way round, and what it stores now
+            // names the same split on the sheet it landed from.
+            assert_eq!(turned.report.openings[0].lower, opening.upper);
+            assert_eq!(turned.report.openings[0].upper, opening.lower);
+            let again = landed(&back, &op, &turned.report.stored);
+            assert_eq!(again.state.parts(), turned.state.parts());
+            // And the stored split turned over twice is the one chosen.
+            assert_eq!(
+                landed(&front, &op, &turned.report.stored).state.parts(),
+                there.state.parts()
+            );
+        }
+    }
+}
+
+/// A stored opening names its upper block by one witness per face. A parent
+/// whose faces were split since — the same strip folded from a sheet
+/// precreased across it — still names it: each witness lies in one piece of
+/// its face, and the pieces of a face are joined across the precrease, which
+/// no split between blocks crosses.
+#[test]
+fn a_stored_opening_names_its_block_across_faces_split_since() {
+    let strip = strip_from(StartSide::Front);
+    let creased = {
+        let sheet = precrease(&square(), &all(y_eq(0.25), [0.5, 0.1], Direction::Valley)).state;
+        let book = fold(&sheet, &all(x_eq(0.5), [0.9, 0.5], Direction::Valley)).state;
+        fold(&book, &all(x_eq(0.25), [0.4, 0.5], Direction::Valley)).state
+    };
+    assert_eq!(creased.faces().len(), 2 * strip.faces().len());
+    let op = reverse(y_eq(0.5), [0.1, 0.2], Seed::All, INSIDE);
+    let analysis = strip.analyse_reverse(&op).unwrap_or_else(|e| panic!("{e}"));
+    for opening in &analysis.flaps[0].openings {
+        let choices = ReverseChoices {
+            openings: vec![opening.stored.clone()],
+            order: None,
+        };
+        let folded = landed(&creased, &op, &choices);
+        check(&creased, &op, &folded);
+        // Every face of each block is a piece of a face of the block chosen.
+        let [chosen] = folded.report.openings.as_slice() else {
+            panic!("{:?}", folded.report.openings);
+        };
+        for (pieces, faces) in [
+            (&chosen.upper, &opening.upper),
+            (&chosen.lower, &opening.lower),
+        ] {
+            assert_eq!(pieces.len(), 2 * faces.len());
+            for &piece in pieces {
+                let at = creased.face_witness(piece).unwrap_or_default();
+                let face = strip.face_at(at).unwrap_or_else(|| panic!("{at:?}"));
+                assert!(faces.contains(&face), "{piece} is a piece of {face}");
+            }
+        }
+    }
+}
+
 // --- The campaign --------------------------------------------------------------
 
 /// Draw `i` of seed `seed` of the spike's campaign

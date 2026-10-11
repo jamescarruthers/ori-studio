@@ -78,6 +78,13 @@ pub struct Deadline {
     pub at_ms: f64,
 }
 
+impl Deadline {
+    /// Whether the clock has reached it.
+    pub fn passed(&self) -> bool {
+        (self.now_ms)() >= self.at_ms
+    }
+}
+
 /// What a completion may spend. The search over each component is what can
 /// blow up, and what the node count meters; propagating the fixed orders is
 /// polynomial, but through a deep stack it is most of a completion, so the
@@ -100,6 +107,12 @@ pub struct CompletionLimits {
 }
 
 impl CompletionLimits {
+    /// Whether the deadline, when there is one, has passed: what a caller
+    /// that runs several completions reads between them.
+    pub fn out_of_time(&self) -> bool {
+        self.deadline.is_some_and(|d| d.passed())
+    }
+
     /// Orders listed per component unless the caller asks for fewer. For
     /// scale: the preliminary base without its letters has 18 orders in all.
     pub const DEFAULT_PER_COMPONENT: usize = 1000;
@@ -414,6 +427,15 @@ fn complete_in(
     }
     if limits.per_component == 0 {
         return Err(invalid("a component must list at least one order"));
+    }
+    // The search reads the clock only every few dozen nodes, after the
+    // region and the problem are built: a completion asked for after its
+    // deadline would run whole before it noticed.
+    if limits.out_of_time() {
+        return Err(CompletionRefusal::BudgetExceeded {
+            limit: BudgetLimit::Deadline,
+            nodes: 0,
+        });
     }
     let assignments = fixed_assignments(problem, fixed)?;
     let region = match focus {
@@ -933,6 +955,42 @@ mod tests {
             }
             other => panic!("expected a conflict, got {other:?}"),
         }
+    }
+
+    /// A completion asked for after its deadline does not run: the search
+    /// reads the clock only every few dozen nodes, so a small one would
+    /// otherwise finish whole, and a large one build its problem first.
+    #[test]
+    fn a_completion_after_its_deadline_does_not_run() {
+        fn epoch() -> f64 {
+            0.0
+        }
+        let view = zigzag(2, None);
+        let problem = ConstraintProblem::build(&view);
+        let late = CompletionLimits {
+            deadline: Some(Deadline {
+                now_ms: epoch,
+                at_ms: 0.0,
+            }),
+            ..CompletionLimits::default()
+        };
+        assert!(late.out_of_time());
+        assert_eq!(
+            complete(&view, &problem, &[], &late).map(|_| ()),
+            Err(CompletionRefusal::BudgetExceeded {
+                limit: BudgetLimit::Deadline,
+                nodes: 0
+            })
+        );
+        let early = CompletionLimits {
+            deadline: Some(Deadline {
+                now_ms: epoch,
+                at_ms: 1.0,
+            }),
+            ..CompletionLimits::default()
+        };
+        assert!(!early.out_of_time());
+        assert!(complete(&view, &problem, &[], &early).is_ok());
     }
 
     #[test]
