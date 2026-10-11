@@ -3,10 +3,12 @@ import { ANALYTICS_EVENTS, track } from '../../analytics';
 import type { FoldStepMotion } from './foldStepMotion';
 import {
   FoldStepPlayback,
+  NO_SPREAD_ENDS,
   type FoldPlaybackPosition,
   type FoldPlayPress,
   type FoldPosedSceneSource,
   type FoldStepPlaybackStatus,
+  type FoldStepSpreadEnds,
 } from './foldStepPlayback';
 
 export interface FoldStepPlaybackInput {
@@ -14,6 +16,8 @@ export interface FoldStepPlaybackInput {
   motion: FoldStepMotion | null;
   /** Play a step on arriving at it. Off unless the caller has a setting that says so. */
   autoPlay?: boolean;
+  /** Which ends the pane draws spread, where the paper rests while the spread eases. None by default. */
+  spreadEnds?: FoldStepSpreadEnds;
 }
 
 /** What the folded pane, the transport controls and the `fold` scope read and press. */
@@ -38,7 +42,11 @@ export interface FoldStepPlaybackSurface extends FoldStepPlaybackStatus {
  * transition re-renders what shows the status. The frames and the position
  * are sources for the pane and the scrubber to subscribe to themselves.
  */
-export function useFoldStepPlayback({ motion, autoPlay = false }: FoldStepPlaybackInput): FoldStepPlaybackSurface {
+export function useFoldStepPlayback({
+  motion,
+  autoPlay = false,
+  spreadEnds = NO_SPREAD_ENDS,
+}: FoldStepPlaybackInput): FoldStepPlaybackSurface {
   const [playback] = useState(
     () =>
       new FoldStepPlayback({
@@ -52,6 +60,11 @@ export function useFoldStepPlayback({ motion, autoPlay = false }: FoldStepPlayba
   useEffect(() => {
     playback.setAutoPlay(autoPlay);
   }, [playback, autoPlay]);
+  const { before, after } = spreadEnds;
+  // Before the motion: a new step's first frame is timed by its ends.
+  useEffect(() => {
+    playback.setSpreadEnds({ before, after });
+  }, [playback, before, after]);
   useEffect(() => {
     playback.setMotion(motion);
   }, [playback, motion]);

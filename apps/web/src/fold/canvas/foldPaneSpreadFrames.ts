@@ -12,10 +12,11 @@
  * A frame with weight is drawn as its state's picture with the spread that
  * share of the way on (`weightedSpread`, at the pane's own placement): the
  * spread is a picture of a state, and the weight is only above nought over
- * the first and last `FOLD_SPREAD_EASE_MS` of a play, while the paper has
- * barely left the state or is pressing into it. A fold has turned under two
- * degrees by then, which the pane cannot draw apart; a rotation has turned a
- * few, which it holds until the spread has folded away.
+ * the first and last `FOLD_SPREAD_EASE_MS` of a play — where, for an end the
+ * pane draws spread, the playback rests the paper at that state
+ * (`FoldStepPlayback.setSpreadEnds`), so the picture is exactly the frame it
+ * stands in for: a rotation is never held still and let go, a crossfade
+ * never drops its fade.
  *
  * Pure: no React, no store, no engine.
  */

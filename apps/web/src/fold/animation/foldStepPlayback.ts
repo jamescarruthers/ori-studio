@@ -22,7 +22,12 @@
  * A step's frames are its paper's own geometry, never spread; each carries
  * how much of the step's layer spread the pane draws it with
  * ({@link foldStepSpreadWeight}), so the spread the pane shows a step at
- * rest folds away as the step starts and opens again as it lands.
+ * rest folds away as the step starts and opens again as it lands. The pane
+ * draws a frame with weight as its state's picture, spread that much — so
+ * where it says an end is drawn spread ({@link FoldStepPlayback.setSpreadEnds}),
+ * the paper rests while the spread folds away and has landed before it
+ * opens: the motion plays between the two, and no posed frame is replaced
+ * by a picture of the paper at rest.
  *
  * The clock and the motion preference are injectable, as the transport's are.
  */
@@ -106,13 +111,25 @@ function programmeMs(programme: FoldStepProgramme): number {
   );
 }
 
+/** Which ends of a play the folded pane draws spread: the parent's picture it starts on, the step's it lands on. */
+export interface FoldStepSpreadEnds {
+  readonly before: boolean;
+  readonly after: boolean;
+}
+
+export const NO_SPREAD_ENDS: FoldStepSpreadEnds = { before: false, after: false };
+
+/** How long the spread folds away for, and opens for: a step too short shares its time with them. */
+function spreadEaseMs(total: number): number {
+  return Math.min(FOLD_SPREAD_EASE_MS, total / 4);
+}
+
 /**
  * How much of the step's layer spread a frame `progress` of the way through
  * its programme is drawn with (`FoldPosedFrame.spreadWeight`): all of it at
  * the start, folding away over the first {@link FOLD_SPREAD_EASE_MS}, none
  * while the paper moves, and opening again over the last, so the frame
- * after the last is the pane's own spread picture without a jump. A step
- * too short for both shares its time between them.
+ * after the last is the pane's own spread picture without a jump.
  *
  * With motion unwelcome, nothing eases: Play lands the step at once, and a
  * frame scrubbed to is drawn unspread.
@@ -120,7 +137,7 @@ function programmeMs(programme: FoldStepProgramme): number {
 export function foldStepSpreadWeight(programme: FoldStepProgramme, progress: number, reducedMotion: boolean): number {
   if (reducedMotion) return 0;
   const total = programmeMs(programme);
-  const ease = Math.min(FOLD_SPREAD_EASE_MS, total / 2);
+  const ease = spreadEaseMs(total);
   if (!(ease > 0)) return 0;
   const at = Math.max(0, Math.min(1, progress)) * total;
   if (at < ease) return 1 - easeInOut(at / ease);
@@ -129,21 +146,63 @@ export function foldStepSpreadWeight(programme: FoldStepProgramme, progress: num
 }
 
 /**
+ * The time the paper rests at each end of a play while the pane eases the
+ * spread of an end it draws spread, in ms, and the programme's whole time.
+ */
+function restsOf(
+  programme: FoldStepProgramme,
+  ends: FoldStepSpreadEnds,
+  reducedMotion: boolean
+): { total: number; lead: number; tail: number } {
+  const total = programmeMs(programme);
+  if (reducedMotion || !(total > 0)) return { total, lead: 0, tail: 0 };
+  const ease = spreadEaseMs(total);
+  return { total, lead: ends.before ? ease : 0, tail: ends.after ? ease : 0 };
+}
+
+/**
+ * Where the paper is `progress` of the way through a play, as a share of the
+ * step's motion: at rest over the first {@link FOLD_SPREAD_EASE_MS} when the
+ * pane starts on a spread picture, landed over the last when it lands on
+ * one, and the motion played through the time between — so the frames with
+ * spread weight are pictures of the paper at rest, and every posed frame
+ * follows on from the one before. Unchanged where neither end is spread.
+ */
+export function foldStepMotionProgress(
+  programme: FoldStepProgramme,
+  progress: number,
+  ends: FoldStepSpreadEnds,
+  reducedMotion: boolean
+): number {
+  const { total, lead, tail } = restsOf(programme, ends, reducedMotion);
+  if (lead === 0 && tail === 0) return progress;
+  const at = Math.max(0, Math.min(1, progress)) * total;
+  return Math.max(0, Math.min(1, (at - lead) / (total - lead - tail)));
+}
+
+/**
  * Where Step stops in a programme, ascending from 0 to 1: every eighth, and
  * the end of every leg and hold — a compound fold's stages, a precrease
- * folded — so a reader stepping through lands on each.
+ * folded — so a reader stepping through lands on each, where the paper is
+ * at it ({@link foldStepMotionProgress}).
  */
-export function foldStepStops(programme: FoldStepProgramme): number[] {
+export function foldStepStops(
+  programme: FoldStepProgramme,
+  ends: FoldStepSpreadEnds = NO_SPREAD_ENDS,
+  reducedMotion = false
+): number[] {
   const stops = Array.from({ length: 9 }, (_, k) => k * FOLD_PLAYBACK_STEP);
-  const total = programmeMs(programme);
+  const { total, lead, tail } = restsOf(programme, ends, reducedMotion);
   if (total > 0) {
+    // A share of the motion, where the play has it.
+    const played = (motion: number) => (lead + motion * (total - lead - tail)) / total;
     let at = 0;
     programme.legs.forEach((leg, k) => {
       at += Math.max(0, leg.durationMs);
-      stops.push(at / total);
+      stops.push(played(at / total));
       if (k + 1 < programme.legs.length && leg.holdMs > 0) {
         at += leg.holdMs;
-        stops.push(at / total);
+        stops.push(played(at / total));
       }
     });
   }
@@ -154,6 +213,9 @@ export function foldStepStops(programme: FoldStepProgramme): number[] {
 export class FoldStepPlayback {
   private motion: FoldStepMotion | null = null;
   private frame: FoldPosedFrame | null = null;
+  /** The pose the transport last pushed, to draw the frame again by. */
+  private pose: FoldPose | null = null;
+  private spreadEnds: FoldStepSpreadEnds = NO_SPREAD_ENDS;
   /** The reader has asked for the step since it came on screen: frames replace the pane's own scene. */
   private engaged = false;
   private snapshot: FoldStepPlaybackStatus = UNAVAILABLE;
@@ -233,6 +295,17 @@ export class FoldStepPlayback {
   }
 
   /**
+   * Which ends the pane draws spread: the paper rests at those ends while
+   * the spread eases ({@link foldStepMotionProgress}). A frame on show is
+   * drawn again by them.
+   */
+  setSpreadEnds(ends: FoldStepSpreadEnds): void {
+    if (ends.before === this.spreadEnds.before && ends.after === this.spreadEnds.after) return;
+    this.spreadEnds = { before: ends.before, after: ends.after };
+    if (this.frame) this.pushed(this.pose);
+  }
+
+  /**
    * The step on screen's motion, or none. The same one again changes
    * nothing; another hands the pane its own scene back, whatever was playing.
    */
@@ -274,7 +347,7 @@ export class FoldStepPlayback {
   step(direction: 1 | -1): void {
     const motion = this.motion;
     if (!motion) return;
-    const stops = foldStepStops(foldStepProgramme(motion));
+    const stops = foldStepStops(foldStepProgramme(motion), this.spreadEnds, this.reducedMotion());
     const at = this.transport.progress();
     const next =
       direction > 0
@@ -291,18 +364,24 @@ export class FoldStepPlayback {
 
   /** A pose the transport pushed: the frame it makes, or the pane's own scene. */
   private pushed(pose: FoldPose | null): void {
+    this.pose = pose;
     const motion = this.motion;
     const progress = this.transport.progress();
     // Played through, the landed step is the pane's own scene: it draws it
     // again, overlays and all, rather than a copy of it.
-    this.frame =
-      motion && this.engaged && progress < 1
-        ? {
-            ...foldStepFrame(motion, { progress, pose }),
-            spreadWeight: foldStepSpreadWeight(foldStepProgramme(motion), progress, this.reducedMotion()),
-          }
-        : null;
+    this.frame = motion && this.engaged && progress < 1 ? this.frameAt(motion, progress, pose) : null;
     for (const listener of this.frameListeners) listener();
+  }
+
+  /** The frame `progress` of the way through the play, the paper resting while an end's spread eases. */
+  private frameAt(motion: FoldStepMotion, progress: number, pose: FoldPose | null): FoldPosedFrame {
+    const programme = foldStepProgramme(motion);
+    const reduced = this.reducedMotion();
+    const at = foldStepMotionProgress(programme, progress, this.spreadEnds, reduced);
+    // The transport's pose is for its own time: the paper's, where it rests, is read off the programme.
+    const frame =
+      at === progress ? foldStepFrame(motion, { progress, pose }) : foldStepFrame(motion, { progress: at, pose: null });
+    return { ...frame, spreadWeight: foldStepSpreadWeight(programme, progress, reduced) };
   }
 
   /** Tell the subscribers a verb ran, when it changed the status: a seek to the end completes a step the transport never says it did. */
