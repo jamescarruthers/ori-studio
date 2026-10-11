@@ -27,7 +27,7 @@
 
 import { foldNodeDigest } from '../../fold/document/foldDigest';
 import type { FoldStepStatus } from '../../fold/document/foldReplay';
-import type { FoldSequenceDocument } from '../../fold/document/foldSequenceDocument';
+import type { FoldSequenceDocument, FoldStepNode } from '../../fold/document/foldSequenceDocument';
 import { foldStepTree, lockedIds } from '../../fold/document/foldStepTree';
 import type { DiagramLinkStatus } from '../capture/linkStatus';
 import type { DiagramFoldStepSource } from '../document/diagramDocument';
@@ -80,14 +80,39 @@ export function shownFoldNode(
   return parent === null ? replay.sheet : (replay.nodes.get(parent) ?? null);
 }
 
-/** How a Fold step's link stands; see the module's comment for each word. */
-export function foldStepLinkStatus(source: DiagramFoldStepSource, context: FoldLinkContext): DiagramLinkStatus {
-  const document = linkedFoldSequence(source, context.sequences);
+/**
+ * The step a link names and its sequence, when this build can fold to it;
+ * otherwise the status no replay can change — gone (`missing`), or a newer
+ * build's (`unknown`).
+ */
+function linkedFoldNode(
+  source: DiagramFoldStepSource,
+  sequences: FoldLinkContext['sequences']
+): { document: FoldSequenceDocument; node: FoldStepNode } | 'missing' | 'unknown' {
+  const document = linkedFoldSequence(source, sequences);
   if (!document) return 'missing';
   const tree = foldStepTree(document.steps);
   const node = tree.byId.get(source.step);
   if (!node) return 'missing';
-  if (lockedIds(tree).has(node.id)) return 'unknown';
+  return lockedIds(tree).has(node.id) ? 'unknown' : { document, node };
+}
+
+/**
+ * Whether the Fold session's replay can tell this link: its step folds in
+ * this build and is in the sequence Fold shows — the first (D7), the only one
+ * the session replays. Every other link is told without the replay, so a
+ * diagram holding only those has no reason to start the engine.
+ */
+export function foldLinkNeedsReplay(source: DiagramFoldStepSource, sequences: FoldLinkContext['sequences']): boolean {
+  const linked = linkedFoldNode(source, sequences);
+  return typeof linked !== 'string' && linked.document.id === sequences[0]?.document.id;
+}
+
+/** How a Fold step's link stands; see the module's comment for each word. */
+export function foldStepLinkStatus(source: DiagramFoldStepSource, context: FoldLinkContext): DiagramLinkStatus {
+  const linked = linkedFoldNode(source, context.sequences);
+  if (typeof linked === 'string') return linked;
+  const { document, node } = linked;
   const { replay } = context;
   if (!replay || replay.sequenceId !== document.id) return 'unknown';
   const replayed = replay.nodes.get(node.id);
