@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { FoldPaper, FoldSequenceDocument } from '../document/foldSequenceDocument';
-import { compoundFoldLineOf } from '../engine/foldEngineCompoundWire';
+import { foldedLineOf } from '../engine/foldEngineCompoundWire';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldEngineOp, FoldReport } from '../engine/foldEngineWire';
 import { useFoldSessionState } from '../session/useFoldSession';
@@ -85,7 +85,7 @@ export function useFoldSequenceView(): FoldSequenceView {
           ? foldNodeSentenceStep(entry.node, {
               parent: frames[index - 1] ?? null,
               child: frames[index] ?? null,
-              report: entry.session.report ?? compoundFoldLineOf(entry.session.compound),
+              report: foldedLineOf(entry.session),
             })
           : { op: 'unknown' }
       ),
@@ -96,7 +96,7 @@ export function useFoldSequenceView(): FoldSequenceView {
     if (pendingStep.status !== 'landed' && pendingStep.status !== 'refused') return null;
     const op = pendingStep.request.op;
     const report = pendingStep.status === 'landed' ? pendingStep.report : null;
-    const folded = pendingStep.status === 'landed' ? (pendingStep.report ?? compoundFoldLineOf(pendingStep.compound)) : null;
+    const folded = pendingStep.status === 'landed' ? foldedLineOf(pendingStep) : null;
     return {
       status: pendingStep.status,
       op,

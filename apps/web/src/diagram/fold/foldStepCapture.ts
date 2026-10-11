@@ -158,7 +158,7 @@ export async function captureFoldStep(
       foldNodeSentenceStep(node, {
         parent: foldStateFrame(parent),
         child: foldStateFrame(input.own.scene),
-        report: ready.report,
+        report: ready.folded,
       })
     );
     const source = storedFoldStepSource({
