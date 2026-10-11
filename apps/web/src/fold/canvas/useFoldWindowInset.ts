@@ -28,6 +28,17 @@ export function coveredFromBottom(pane: FoldInsetRect, cover: FoldInsetRect): nu
  * the viewport changes size; null off a phone, where the window sits over the
  * corner of the crease pattern and the paper keeps the whole pane.
  *
+ * The window's frame is never given to a `ResizeObserver`. Its height is set
+ * by `useAnimatedHeight` from inside that hook's own observer callback, and a
+ * second observer on the frame then has a notification the browser cannot
+ * deliver in that pass: it fires "ResizeObserver loop completed with
+ * undelivered notifications" at the window, which the app shows as a
+ * background error. So the frame is followed through what changes it — its
+ * own attributes (the height and `data-resizing` that hook sets) and its
+ * content — measured on the next frame, and every frame while its height
+ * moves. Only the viewport, which nothing resizes from an observer, is
+ * observed.
+ *
  * Whole px, so a sub-pixel reflow is not a new inset to fit to.
  */
 export function useFoldWindowInset(
@@ -44,15 +55,27 @@ export function useFoldWindowInset(
     }
     const measure = () => setBottom(Math.round(coveredFromBottom(viewport.getBoundingClientRect(), frame.getBoundingClientRect())));
     measure();
-    // jsdom has no ResizeObserver; the inset is then measured once.
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    observer?.observe(viewport);
-    // The window's height moves as it opens and closes; its top is what the paper keeps above.
-    observer?.observe(frame);
-    window.addEventListener('resize', measure);
+    // On the next frame, and on each one after while the window's height animates.
+    let pending = 0;
+    const follow = () => {
+      if (pending) return;
+      const step = () => {
+        measure();
+        pending = 'resizing' in frame.dataset ? requestAnimationFrame(step) : 0;
+      };
+      pending = requestAnimationFrame(step);
+    };
+    // jsdom has neither observer for layout; the inset is then measured once.
+    const changes = typeof MutationObserver === 'undefined' ? null : new MutationObserver(follow);
+    changes?.observe(frame, { attributes: true, childList: true, subtree: true, characterData: true });
+    const resizes = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(follow);
+    resizes?.observe(viewport);
+    window.addEventListener('resize', follow);
     return () => {
-      observer?.disconnect();
-      window.removeEventListener('resize', measure);
+      changes?.disconnect();
+      resizes?.disconnect();
+      cancelAnimationFrame(pending);
+      window.removeEventListener('resize', follow);
     };
   }, [viewport, frame, enabled]);
 
