@@ -314,6 +314,32 @@ impl Completions {
         Some(order)
     }
 
+    /// The first `cap` complete choices — one listed order per component,
+    /// the first component stepping slowest, each a `choice` as
+    /// [`Completions::order`] takes it — and whether there are more: what a
+    /// chooser lists of a compound fold's orders.
+    pub fn picks(&self, cap: usize) -> (Vec<Vec<usize>>, bool) {
+        let mut out: Vec<Vec<usize>> = vec![Vec::new()];
+        let mut more = false;
+        for component in &self.components {
+            let size = component.orders.len();
+            let mut next = Vec::with_capacity(out.len().saturating_mul(size).min(cap));
+            'grow: for choice in &out {
+                for k in 0..size {
+                    if next.len() >= cap {
+                        more = true;
+                        break 'grow;
+                    }
+                    let mut grown = choice.clone();
+                    grown.push(k);
+                    next.push(grown);
+                }
+            }
+            out = next;
+        }
+        (out, more)
+    }
+
     /// The choice that gives `order` on every open pair; `None` when no
     /// listed order of some component agrees with it.
     pub fn choice_of(&self, order: &LayerOrder) -> Option<Vec<usize>> {

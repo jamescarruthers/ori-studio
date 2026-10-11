@@ -221,6 +221,114 @@ fn a_rabbit_ears_choice_is_held_picked_stored_and_replayed() {
     assert_eq!(broken["refusal"]["broken"], "witness");
 }
 
+/// What a tool chooses among comes with the compound question, as a reverse
+/// fold's does: the orders a vertex fold leaves, each the `completion` that
+/// picks it, and a rabbit ear's two ridge options — the far wedge's rays,
+/// each landing with one order — so the ear the tools preview is decided by
+/// its ridge, not by a bare order.
+#[test]
+fn the_question_lists_a_rabbit_ears_orders_and_ridges() {
+    let mut bridge = Bridge::new();
+    let sheet = square(&mut bridge);
+    let tri = land(
+        &mut bridge,
+        sheet,
+        valley([[1.0, 0.0], [0.0, 1.0]], [1.0, 1.0]),
+    );
+    let ear = json!({
+        "kind": "rabbit-ear",
+        "corners": [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+        "emergent": [-1.0, 0.0],
+        "seed": { "scope": "all" },
+        "stayer": [0.6, 0.35],
+        "direction": "valley"
+    });
+    let asked = analysis(&bridge, tri, ear.clone());
+    // Without its ridge: the two orders the ridge decides.
+    assert_eq!(
+        asked["orders"]["count"],
+        json!({ "orders": 2, "exact": true })
+    );
+    let orders = asked["orders"]["orders"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(orders.len(), 2);
+    assert_eq!(asked["orders"]["more"], false);
+    // Each listed order is a completion the step replays to.
+    let mut by_order = Vec::new();
+    for completion in &orders {
+        let landed = apply(
+            &mut bridge,
+            tri,
+            ear.clone(),
+            json!({ "completion": completion }),
+        );
+        assert_eq!(landed["status"], "ok", "{landed}");
+        by_order.push(landed["state"].as_u64().unwrap_or_default() as u32);
+    }
+    // The two ridge options: rays of the far wedge, each landing alone.
+    let ridges = asked["ridges"].as_array().cloned().unwrap_or_default();
+    assert_eq!(ridges.len(), 2, "{asked}");
+    let parts = |bridge: &Bridge, h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
+    let mut by_ridge = Vec::new();
+    for ridge in &ridges {
+        assert_eq!(ridge["lands"], true, "{ridge}");
+        assert!(ridge["orders"].is_null(), "{ridge}");
+        let mut ridged = ear.clone();
+        ridged["ridge"] = ridge["direction"].clone();
+        let landed = apply(&mut bridge, tri, ridged.clone(), json!({}));
+        assert_eq!(landed["status"], "ok", "{landed}");
+        by_ridge.push(parts(
+            &bridge,
+            landed["state"].as_u64().unwrap_or_default() as u32,
+        ));
+        // Asked with its ridge, it has no order and no ridge left to choose.
+        let decided = analysis(&bridge, tri, ridged);
+        assert!(decided["orders"].is_null(), "{decided}");
+        assert_eq!(decided["ridges"], json!([]));
+    }
+    // The ridges are the two orders, one each.
+    assert_ne!(by_ridge[0], by_ridge[1]);
+    let picked: Vec<_> = by_order.iter().map(|&h| parts(&bridge, h)).collect();
+    assert!(by_ridge.iter().all(|state| picked.contains(state)));
+    // A ridge names its ray: a corner's, or the emergent one's.
+    assert!(
+        ridges
+            .iter()
+            .all(|r| r["given"].is_null() || r["given"].as_u64().is_some_and(|k| k < 3))
+    );
+
+    // A squash with one order has none to list, and no ridges.
+    let small = small_triangle(&mut bridge);
+    let flap = seen_top(
+        bridge.state(small).unwrap_or_else(|e| panic!("{e}")),
+        [0.1, 0.5],
+    );
+    let squash = analysis(
+        &bridge,
+        small,
+        json!({ "kind": "squash", "flap": flap, "direction": "valley" }),
+    );
+    assert!(squash["orders"].is_null());
+    assert_eq!(squash["ridges"], json!([]));
+    // A flap the analysis refuses — seen from below, the layers over it
+    // cover it — is refused by the question, with the engine's code.
+    let covered = json_of(
+        &bridge
+            .compound_analysis(
+                small,
+                &op(json!({ "kind": "squash", "flap": flap, "direction": "mountain" })),
+                &Choices::default(),
+            )
+            .unwrap_or_else(|e| panic!("{e}")),
+    );
+    assert_eq!(
+        covered["refusal"]["code"], "squash_flap_covered",
+        "{covered}"
+    );
+}
+
 #[test]
 fn vertex_refusals_are_codes_with_fixes() {
     let mut bridge = Bridge::new();
