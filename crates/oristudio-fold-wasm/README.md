@@ -76,17 +76,36 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   opening, or, per kind, up to eight orders, each the `completion` that
   picks it — of both kinds at once; a crimp's tip and the kinds that land;
   a tuck's targets; a vertex op's flap, petal or fan; a sink's point and
-  pockets. The reverse folds, the crimp, the tuck and the sinks fold along a
-  line, so they also answer `analyse`, `action` and `depth_choices` — a
-  crimp of its tip at ℓ1, its picture ℓ1 with a pleat arrow across both
-  lines; a tuck of its block against its target, as a plain fold's — and
-  have a step picture. A vertex op answers `action` and has a step picture
-  too, drawn along the one crease that tells it best (a squash's lower
-  crease with the push onto its spine, a petal fold's H, a fan's crease from
-  its center); asking it `analyse` or `depth_choices` is the caller's
-  mistake. A crimp
-  or a tuck keeps its step's summary as it lands, so it answers that after
-  its parent is released; its picture is drawn on its parent.
+  pockets (an unsink has no point to analyse: asking it is the caller's
+  mistake, and its tool asks `sunk_points` instead). The families that fold
+  along one line — the reverse folds, the crimp, the tuck and the sinks
+  (open, closed and the unsink) — also answer `analyse`, `action` and
+  `depth_choices`, and have a step picture (`step_action`): a crimp of its
+  tip at ℓ1, its picture ℓ1 with a pleat arrow across both lines; a tuck of
+  its block against its target, as a plain fold's; a sink of its point's
+  faces, seen as a mountain with the push onto its crown, and an unsink
+  seen as a valley, pulled. The vertex folds (squash, petal fold, rabbit
+  ear, swivel) fold along no one line, but each answers `action` and has a
+  step picture too, drawn along the one crease that tells it best (a
+  squash's lower crease with the push onto its spine, a petal fold's H, a
+  fan's crease from its center); asking them `analyse` or `depth_choices`
+  is the caller's mistake. A crimp or a tuck keeps its step's summary as it
+  lands, so it answers that after its parent is released; its picture is
+  drawn on its parent.
+- **Each family's own calls**, besides `apply` and `compound_analysis`:
+  - the reverse folds have none: a tool chooses an opening or an order from
+    `compound_analysis` and commits the step through `apply`;
+  - `crimp(state, op, choices)` and `tuck(state, op, choices)` fold it and
+    answer landed, an opening to choose (a crimp), or every order already
+    landed under its own handle with what its step stores;
+  - `vertex_fold(state, op, choices)` answers landed, or a choice of orders
+    held under a `pending` handle of its own; `vertex_pick(pending,
+    choice)` lands one listed order per component, and
+    `release_vertex_choices(pending)` lets held choices go;
+  - `sink_orders` and `sink_pick` count and pick a sink's orders (below),
+    and `sunk_points(state, op, choices)` lists the sunk points an unsink's
+    line and side can pull back out, for an unsink tool whose folder has
+    named none.
 - **`fs1` keys** (`src/canonical.rs`): one per fact of the state, none naming
   a face, vertex or crease by its number; the digest over them is
   TypeScript's `keyDigest`.
@@ -124,7 +143,8 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   (`src/compound.rs`). `compound_analysis` previews the point (its outline,
   outside letter, apex, the square line, why an open sink is refused, the
   pockets with what a step stores), `sink_orders` counts what a completion
-  leaves, and `sink_pick` gives the completion a step stores.
+  leaves, `sink_pick` gives the completion a step stores, and `sunk_points`
+  names the points an unsink can pull out.
 
 ## The `kernel` feature
 
@@ -158,13 +178,14 @@ serializers in the bridge.
 
 The Phase 11 row is the bridge that shipped, built by `npm run build:web` at the
 merge of the crimp and tuck, the vertex folds and the sinks (the same bytes
-as `dist/`'s hashed copy). Since the vertex row it adds **535,414 B raw
+as `dist/`'s hashed copy; a `wasm-pack build` of `af859d5cb` on 2026-10-11
+reproduced it byte for byte). Since the vertex row it adds **535,414 B raw
 (+523 KiB), 201,765 B gzipped (+197 KiB)**: every compound family's motion
 legs (Wave 5's compound motion), the crimp's and the tuck's analysis, orders
 and fixes, the sinks' points, pockets and unsink, the sink and crimp/tuck
 pictures (`step_action`), and their serializers. It is **over the two
-budgets' 800 KiB sum by 240 KiB gzipped**; the open question below covers
-it.
+budgets' 800 KiB sum by 245,472 B (240 KiB) gzipped**; the open question
+below covers it.
 
 The last row adds each vertex fold's picture (`action`, `step_action`: a
 squash's crease, arrow and push, a petal fold's H, a fan's crease from its
@@ -181,7 +202,7 @@ branches before it, the second in another worktree.
 The io branch measured `kernel`'s cost before the queries, against the
 Wave 2 bridge built in the same worktree (638,301 B raw, 236,078 B
 gzipped): **+956,528 B raw (+934 KiB), +419,777 B gzipped (+410 KiB)**.
-After both merged, the last row is +971,905 B raw (+949 KiB) and
+After both merged, the fourth row is +971,905 B raw (+949 KiB) and
 **+416,001 B gzipped (+406 KiB)** over the row without `kernel` with the
 queries; that row was built in another worktree the same day, so read the
 difference as approximate.
@@ -201,9 +222,44 @@ bridge crate's own code is about 75 KB of it before `wasm-opt`. Neither
 lever tried moved it: results through `serde_json` and `JSON.parse`
 (941,911 B, larger) and `wasm-opt -Oz` (904,380 B).
 
-For scale: the precrease bridge is 861 KiB raw (338 KiB gzipped) and the CP
-kernel's bridge 3.1 MiB (1.4 MiB gzipped). The PWA warms every `.wasm` it
-emits, so this is paid by every installed visitor on their first load.
+For scale, built with the shipped fold bridge (2026-10-11): the precrease
+bridge is 925,078 B raw (903 KiB) and 359,733 B gzipped (351 KiB), the CP
+kernel's bridge 3,312,093 B (3.2 MiB) and 1,481,773 B gzipped (1.4 MiB). The
+PWA warms the other kernels for every installed visitor, but not this one:
+the Fold worker and its `.wasm` are in `UNWARMED_PATTERNS`
+(`apps/web/vite.config.ts`), so a visitor who never opens Fold downloads none
+of it, and the first Fold session caches it like any other asset.
+
+**What the shipped bridge is made of** (2026-10-11). `twiggy` over the same
+build with its name section kept (wasm-bindgen 0.2.121, then `wasm-opt -O
+-g`, both from wasm-pack's cache): its items, names left out, sum to
+2,697,799 B, within 249 B of the shipped module. Each item is counted once,
+by the crate of the type it belongs to, so a derived `Serialize` for an
+engine type is the engine's and a std routine monomorphised for it is std's.
+An item includes whatever was inlined into it, so a module's share is
+approximate. The sizes are raw; the module as a whole gzips to 39.5%.
+
+| Owner | Raw | Share |
+|---|---|---|
+| The engine, `oristudio_fold` | 700,857 B | 26.0% |
+| — its compound pipeline (`compound::*`, every family) | 340,967 B | 12.6% |
+| std's generic code (`core`, `alloc`, hashbrown, the allocator) | 652,539 B | 24.2% |
+| — 228 monomorphised `sort`/`sort_unstable` routines | 313,396 B | 11.6% |
+| — B-tree maps and sets | 97,489 B | 3.6% |
+| The bridge, `oristudio_fold_wasm`: its own code, and its exported calls with what was inlined into them | 495,987 B | 18.4% |
+| serde, `serde_json`, `serde_wasm_bindgen` | 317,953 B | 11.8% |
+| Data segments (strings, tables) | 233,431 B | 8.7% |
+| `oristudio_layer_order` | 69,603 B | 2.6% |
+| The kernel's own crates: `oristudio_cp`, `treemaker_fold`, `encoding_rs` | 151,958 B | 5.6% |
+| `oristudio_geometry` (15,054 B), `treemaker_flatfold` (11,103 B), wasm-bindgen's glue and the rest | 75,471 B | 2.8% |
+
+The compound pipeline's largest families: the sinks 80 KB, the reverse folds
+56 KB, the rabbit ear's and swivel's fans 46 KB, the crimp 43 KB, the squash
+32 KB, the tuck 23 KB, the petal fold 18 KB, the shared pieces 18 KB. Every
+item that names serde — the serde crates, and the `Serialize` and
+`Deserialize` impls in ours — is 484,081 B (17.9%). `wasm-opt -Oz` over the
+shipped module takes 108,453 B off the raw size (2,589,097 B) and adds
+1,069 B gzipped (1,065,741 B), so it does not help the line that matters.
 
 **Budget.**
 
@@ -217,18 +273,25 @@ emits, so this is paid by every installed visitor on their first load.
   Edit, export and Import CP go through the existing CP worker as FOLD text.
   It adds about 406 KiB, within it.
 
-Together the two allow 800 KiB gzipped. The bridge that shipped when they
-were set was 735 KiB, inside their sum only because `kernel` used less than
-its allowance; the engine's own share was over its line. With the vertex
-folds it was 843 KiB, and with every Phase 11 family it is 1,040 KiB, over
-the sum by 240 KiB; the budget has not been raised.
+Together the two allow 800 KiB (819,200 B) gzipped. The bridge that shipped
+when they were set was 735 KiB, inside their sum only because `kernel` used
+less than its allowance; the engine's own share was over its line. With the
+vertex folds it was 843 KiB, and with every Phase 11 family it is 1,064,672 B
+(1,040 KiB), over the sum by 245,472 B (240 KiB); with the vertex folds'
+pictures (the last row) it is 1,072,623 B (1,047 KiB), over by 253,423 B
+(247 KiB). **The budget has not been raised, and nothing here changes it.**
 
-**Open, for the owner: the budget without `kernel`.** Raise it (the engine
-side is now about 634 KiB gzipped, taking `kernel`'s 406 KiB as fixed,
-against its 288 KiB line) or trim the engine side — the compound pipeline
-(16 KiB), the vertex folds (92 KiB) and the rest of Phase 11 (197 KiB) are
-what moved it since the line was set. The two levers tried (above) did not
-move it.
+**Open, for the owner: the budget without `kernel`.** Raise it, or trim the
+engine side to fit; until that is decided the shipped bridge is over its
+budget. Taking `kernel`'s 406 KiB as fixed, the engine side is now about
+634 KiB gzipped against its 288 KiB line. What moved it since the line was
+set: the compound pipeline (16 KiB), the vertex folds (92 KiB) and the rest
+of Phase 11 (197 KiB), gzipped. Of the levers, the two tried on the build
+without `kernel` with the queries (results through `serde_json`, `wasm-opt
+-Oz`) did not move it, and `-Oz` still does not on the shipped one (above).
+Not yet measured as levers, and the largest items the breakdown above names:
+std's 228 sort routines (313 KB raw), the serde code (484 KB raw), and the
+compound pipeline itself (341 KB raw).
 
 **Decision (2026-10-08): `kernel` stays in the bridge.** Measured before the
 queries it added 410 KiB gzipped, within the 512 KiB allowance, so D1's
@@ -325,10 +388,12 @@ slower than the table's.
   sinks natively on the samples as Import CP lands them — open and closed
   sinks and the unsink back by `apply`, the pocket asked for, stored and
   replayed, the tilted line's fixes, the choices a sink takes, the queries.
-- `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs` and
-  `tests/io_node.rs`, the same calls across the wasm boundary (plain objects
-  in and out, refusals as values, thrown envelopes, the kernel's scene object
-  as input). CI runs no wasm-pack tests, so this is a local gate.
+- `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs`,
+  `tests/io_node.rs` and `tests/crimp_tuck_node.rs`, the same calls across
+  the wasm boundary (plain objects in and out, refusals as values, thrown
+  envelopes, the kernel's scene object as input; the crimp's and the tuck's
+  ops, analyses and landings, and the tuck's target listing timed by the
+  page's clock). CI runs no wasm-pack tests, so this is a local gate.
 - `apps/web/src/fold/engine/foldSequence.wasm.test.ts` drives the built
   bridge from TypeScript, every call included, and an axiom step through the
   document's replayer; `foldEngineIo.wasm.test.ts` drives the io calls and

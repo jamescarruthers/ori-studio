@@ -920,14 +920,19 @@ values; this table is the plan's summary of it.
 
 | Event | Properties |
 |---|---|
-| `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth, via: axiom\|crease\|free}` |
+| `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth, via: axiom\|crease\|free}`; a turn, a rotation or a vertex fold (`squash` to `swivel`) carries `op_kind` alone |
 | `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
 | `fold refused` | `{code}` |
+| `fold spread changed` | `{action: spread_on\|spread_off\|spread_kind\|spread_amount\|spread_direction\|spread_keep\|spread_skew\|spread_axis, via: step_pane\|canvas_bar}`, plus the Diagram's bucketed spread properties when the layers stay spread |
 | `fold choice offered` | `{kind, count_bucket}` |
 | `fold view switched` | `{view: fold\|steps}` |
 | `fold sequence sent to edit` | `{variant: plain\|precreases-as-aux}` |
 | `fold cp imported` | `{origin}` (D16's enum) |
 | `fold step sent to diagram` | `{via: fold\|diagram_browser, scope: one\|many}`; each new step and turn also counts `diagram step added` / `diagram turn added` with `via: fold` |
+
+`op_kind` and `step_kind` name the plain kinds and every compound fold's
+(`inside_reverse` … `unsink`); `step_kind` adds `import` for an Import CP
+step.
 
 - **Per-step axiom codes are left out.** They would add up to the axiom histogram
   `docs/analytics.md` forbids. Adding them needs the owner's explicit exception.
@@ -1234,8 +1239,11 @@ None is pending.
   - [x] coarse calls; refusals as codes;
   - [x] `wasm-pack test --node`;
   - [x] size measured with and without `kernel` (the crate README, "Size");
-  - [ ] **within its budget.** The build without `kernel` is over it; raising
-    the budget or trimming is the owner's call (the crate README, "Budget").
+  - [ ] **within its budget.** The shipped bridge, 1,064,672 B gzipped
+    (1,040 KiB) with every Phase 11 family, is 240 KiB over the 800 KiB the
+    two budgets allow, all of it on the side without `kernel`; raising the
+    budget or trimming is the owner's call (the crate README, "Budget" and
+    what the bridge is made of).
 - [ ] `build:oristudio-fold-wasm` in `apps/web/package.json` (done); `npm run
   build:web` in a fresh worktree; `npm run typecheck:web` (done).
 - [x] `foldSequenceWorker` and the runtime:
@@ -1390,22 +1398,54 @@ unless marked.
 
 ### Phase 9 — Inside reverse fold (V0.5)
 
-- [ ] The tip; per-flap openings; kind feasibility (pre-select when only one is
-  valid).
-- [ ] Declared blocks, cross-block seeds, completion; the §5.2 letter rules as
-  tests.
-- [ ] Choices stored as free-variable assignments; the replay tests (resolves,
-  broken, changed).
-- [ ] The candidate chooser; a visual `StepMotion`.
-- [ ] Fixtures: the preliminary base (two reverses), stacked flaps, and a real
-  crane-neck sequence.
+- [x] The tip; per-flap openings; kind feasibility (pre-select when only one is
+  valid). (`analyse_reverse`, `reverse_kinds` and the openings capped at
+  `MAX_OPENINGS` per flap in `compound/reverse.rs`, merged at 1c4aba03f; the
+  reverse tool takes the one kind that lands and disables the other as *Does
+  not fit here*, checked in Chromium on desktop and phone.)
+- [x] Declared blocks, cross-block seeds, completion; the §5.2 letter rules as
+  tests. (The compound pipeline, `compound/mod.rs`: blocks, the macro's
+  placements and `Across` seeds, completion around the faces that moved;
+  `tests/compound`'s `assert_letter_rules` runs on every landed reverse
+  through `check`; `fold_compound_oracle`, 7d50d68db, verifies the seeded
+  campaign's states.)
+- [x] Choices stored as free-variable assignments; the replay tests (resolves,
+  broken, changed). (Witness-keyed `ReverseChoices`; `tests/reverse.rs`'
+  `stored_choices_replay_or_break` and `stored_openings_replay_or_break`.)
+- [x] The candidate chooser; a visual `StepMotion`. (The reverse tool's opening
+  and order choosers, in its window, `FoldReverseControls`, and on the canvas
+  with Shift+arrows, merged at a02447bba; since cff8012fa a reverse plays the
+  engine's legs, `foldStepMotionCompound.wasm.test.ts`. Both checked in
+  Chromium: the crane's neck stepped to its opening, landed and played.)
+- [x] Fixtures: the preliminary base (two reverses), stacked flaps, and a real
+  crane-neck sequence. (`tests/reverse.rs`'
+  `two_inside_reverses_make_the_preliminary_base`, Beloch's frames 2 and 3
+  of `bird-base-petal.fold`, and `stacked_flaps_reverse_each_into_its_own_pocket`;
+  `tests/crane.rs`' `the_crane_neck_reverses_on_an_imported_bird_base` over
+  `tests/fixtures/fold-crane`; the preliminary base, and the crane's neck on
+  the imported bird base, folded through the reverse tool in Chromium.)
 
 ### Phase 10 — Diagram link (can run in parallel)
 
-- [ ] `posedRenderOf`, the link descriptor, the `fold-step` source with a
-  `SheetThumbnail`, and the D17 status rules.
-- [ ] Generalised pull browser; turns as `DiagramTurn`; auto-marks with the
-  `imported` tag.
+- [x] `posedRenderOf`, the link descriptor, the `fold-step` source with a
+  `SheetThumbnail`, and the D17 status rules. (Merged at 36fc28554:
+  `DiagramFoldStepSource` in `diagramDocument.ts` is the link — the step's
+  ids, its `fh1` path and `fs1` state, a `thumbnail: SheetThumbnail` — posed
+  through `posedRenderOf` in `useDiagramActions` and `useCreasePatternSide`;
+  the Fold browser's cards carry their `picture: SheetThumbnail`
+  (`foldPull.ts`); the status rules are `diagram/fold/foldStepLink.ts`, read
+  through `capture/linkStatus.ts` and `useLinkStatus`. Checked in Chromium,
+  dark and light: a sent step `current`, `stale` after the sheet's start
+  side flipped, `current` again after Refresh Picture, and Open in Fold
+  landing on it.)
+- [x] Generalised pull browser; turns as `DiagramTurn`; auto-marks with the
+  `imported` tag. (`DiagramFoldBrowser` is References' pull browser frame
+  over a `FoldBrowserProvider`; `foldPull.ts` sends a turn or a rotation as a
+  `DiagramTurnKind`, a turn between steps (`foldPull.test.ts`);
+  `diagramFoldLink.wasm.test.ts` asserts every mark `imported: 'untouched'`.
+  The From Fold… browser and Send Steps to Diagram checked in Chromium on a
+  kite base, which has no turn: no browser check of a pulled turn is
+  recorded.)
 
 ### Phase 11 — Remaining compound folds
 
