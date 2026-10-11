@@ -18,7 +18,14 @@
 //! completion that leaves a choice the step does not store
 //! (`choice_needed`) — and the replay marks it broken. A landed one reports
 //! as the step's `compound`, `{ family: 'vertex', kind, … }`; its summary is
-//! the diff from its parent, and it folds along no one line to picture.
+//! the diff from its parent.
+//!
+//! **The picture** (`FoldEngine::action` before it lands, `step_action` once
+//! it has) is the engine's along the one crease that tells the fold best
+//! (`compound::vertex`): a squash's lower crease with its arrow and the push
+//! onto its spine, a petal fold's H, a fan's crease from its center. A
+//! vertex fold folds along no one line, so it answers none of a plain fold's
+//! other queries (what moves, its depth choices).
 //!
 //! **The tools** ask the compound question, as the reverse fold's do: what
 //! the op names (its flap, line or fan), the orders it leaves, each the
@@ -51,9 +58,9 @@
 use std::collections::HashMap;
 
 use oristudio_fold::{
-    ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldRefusal, PetalAnalysis, PetalFold,
-    RabbitEar, Refused, Squash, SquashAnalysis, State, StepSummary, Swivel, VertexChoice,
-    VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
+    ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, FoldRefusal,
+    PetalAnalysis, PetalFold, RabbitEar, Refused, Squash, SquashAnalysis, State, StepSummary,
+    Swivel, VertexChoice, VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -238,6 +245,21 @@ fn seed(seed: &SeedInput) -> Result<oristudio_fold::Seed, BridgeError> {
     Ok(seed.seed())
 }
 
+/// The picture of `op` on `parent`, with `landed`'s cover at the arrow's
+/// head once it has landed (the engine's `compound::vertex`).
+fn picture(
+    parent: &State,
+    op: &EngineOp,
+    landed: Option<&State>,
+) -> Result<FoldActionGeometry, Refused> {
+    match op {
+        EngineOp::Squash(op) => parent.squash_action(op, landed),
+        EngineOp::Petal(op) => parent.petal_action(op, landed),
+        EngineOp::RabbitEar(op) => parent.rabbit_ear_action(op, landed),
+        EngineOp::Swivel(op) => parent.swivel_action(op, landed),
+    }
+}
+
 /// The fold, as the engine lands it.
 fn fold(parent: &State, fold: &VertexFold) -> Result<VertexOutcome, CompoundRefused> {
     let choices = &fold.choices;
@@ -354,6 +376,12 @@ fn emergents(parent: &State, op: &EngineOp, analysis: &VertexAnalysis) -> Vec<bo
 }
 
 impl CompoundOp for VertexFold {
+    /// Its picture along the crease that tells it best: no plain fold's
+    /// analysis or depth pick, since it folds along no one line.
+    fn action(&self, parent: &State) -> Option<Result<FoldActionGeometry, Refusal>> {
+        Some(picture(parent, &self.op, None).map_err(Refusal::from))
+    }
+
     /// The flap, petal or fan it names, before it folds, and what a tool
     /// chooses among (as a reverse fold's question lists its kinds and
     /// orders): which of a fan's emergent candidates land; the orders it
@@ -388,26 +416,42 @@ impl CompoundOp for VertexFold {
     /// The one state its op and stored choice name (replay), or a refusal
     /// through the seam's one path.
     fn apply(&self, parent: &State) -> Result<Box<dyn CompoundLanded>, Refusal> {
-        Ok(Box::new(Landed(landed(fold(parent, self))?)))
+        Ok(Box::new(Landed {
+            folded: landed(fold(parent, self))?,
+            op: self.op.clone(),
+        }))
     }
 }
 
-/// A landed vertex fold, held by the bridge: its summary is the diff from
-/// its parent; it folds along no one line to picture.
+/// A landed vertex fold, held by the bridge with the op that landed it: its
+/// summary is the diff from its parent, its picture drawn on its parent from
+/// the op, with its own cover at the arrow's head.
 #[derive(Debug)]
-struct Landed(Box<VertexFolded>);
+struct Landed {
+    folded: Box<VertexFolded>,
+    op: EngineOp,
+}
 
 impl CompoundLanded for Landed {
     fn state(&self) -> &State {
-        &self.0.state
+        &self.folded.state
     }
 
     fn report(&self) -> CompoundStepReport {
-        CompoundStepReport::Vertex(Box::new(self.0.report.clone()))
+        CompoundStepReport::Vertex(Box::new(self.folded.report.clone()))
     }
 
     fn summary(&self, parent: Parent<'_>) -> Result<Result<StepSummary, Refusal>, BridgeError> {
-        Ok(Ok(StepSummary::new(parent?, &self.0.state, None)))
+        Ok(Ok(StepSummary::new(parent?, &self.folded.state, None)))
+    }
+
+    fn action(
+        &self,
+        parent: Parent<'_>,
+    ) -> Result<Option<Result<FoldActionGeometry, Refusal>>, BridgeError> {
+        Ok(Some(
+            picture(parent?, &self.op, Some(&self.folded.state)).map_err(Refusal::from),
+        ))
     }
 }
 
@@ -493,11 +537,12 @@ pub struct Choose {
 // ---------------------------------------------------------------------------
 // Pending choices
 
-/// Every choice of orders the caller still holds. Handles start at 1 and are
-/// never reused while this store lives.
+/// Every choice of orders the caller still holds, each with its parent's
+/// handle and the op it folds (which a landed pick is pictured by). Handles
+/// start at 1 and are never reused while this store lives.
 #[derive(Debug, Default)]
 pub struct Pending {
-    held: HashMap<u32, (u32, VertexChoice)>,
+    held: HashMap<u32, (u32, VertexChoice, EngineOp)>,
     last: u32,
 }
 
@@ -528,9 +573,15 @@ impl Pending {
             Err(refusal) => return Ok(Outcome::Refused(refusal)),
         };
         Ok(match fold(parent, &resolved) {
-            Ok(VertexOutcome::Landed(folded)) => Outcome::Ok(VertexTried::Landed(Box::new(
-                bridge.hold_compound(Box::new(Landed(folded)), state),
-            ))),
+            Ok(VertexOutcome::Landed(folded)) => {
+                let landed = Landed {
+                    folded,
+                    op: resolved.op,
+                };
+                Outcome::Ok(VertexTried::Landed(Box::new(
+                    bridge.hold_compound(Box::new(landed), state),
+                )))
+            }
             Ok(VertexOutcome::ChooseOrder(choice)) => {
                 let count = choice.count();
                 let components = choice
@@ -540,7 +591,7 @@ impl Pending {
                     .map(|c| c.orders.len())
                     .collect();
                 Outcome::Ok(VertexTried::Choose(Choose {
-                    pending: self.hold(state, *choice),
+                    pending: self.hold(state, *choice, resolved.op),
                     count,
                     components,
                 }))
@@ -556,13 +607,17 @@ impl Pending {
         pending: u32,
         choice: &[usize],
     ) -> Result<Outcome<Applied>, BridgeError> {
-        let (parent, held) = self
+        let (parent, held, op) = self
             .held
             .get(&pending)
             .ok_or_else(|| BridgeError::InvalidInput(format!("no pending choice {pending}")))?;
         Ok(match held.pick(choice) {
             Ok(folded) => {
-                Outcome::Ok(bridge.hold_compound(Box::new(Landed(Box::new(folded))), *parent))
+                let landed = Landed {
+                    folded: Box::new(folded),
+                    op: op.clone(),
+                };
+                Outcome::Ok(bridge.hold_compound(Box::new(landed), *parent))
             }
             Err(refusal) => Outcome::Refused(refusal.into()),
         })
@@ -573,14 +628,14 @@ impl Pending {
         self.held.remove(&pending).is_some()
     }
 
-    fn hold(&mut self, parent: u32, choice: VertexChoice) -> u32 {
+    fn hold(&mut self, parent: u32, choice: VertexChoice, op: EngineOp) -> u32 {
         loop {
             self.last = self.last.wrapping_add(1);
             if self.last != 0 && !self.held.contains_key(&self.last) {
                 break;
             }
         }
-        self.held.insert(self.last, (parent, choice));
+        self.held.insert(self.last, (parent, choice, op));
         self.last
     }
 }

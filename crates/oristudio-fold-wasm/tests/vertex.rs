@@ -125,13 +125,36 @@ fn a_squash_lands_and_replays_with_its_report_and_motion() {
     // Unique: nothing to store.
     assert!(vertex["stored"].as_object().is_some_and(|o| o.is_empty()));
     let child = applied["state"].as_u64().unwrap_or_default() as u32;
-    // The step's summary is its diff from the parent; it has no fold line.
+    // The step's summary is its diff from the parent.
     let summary = ok(bridge.step_summary(child));
     assert_eq!(
         summary["summary"]["diff"]["added"].as_array().map(Vec::len),
         Some(2)
     );
-    assert!(ok(bridge.step_action(child))["action"].is_null());
+    // Its picture: the lower crease with its arrow and the push onto the
+    // spine, the one the tool previewed, the landed cover at the head.
+    let pictured = ok(bridge.step_action(child))["action"].clone();
+    let previewed =
+        ok(bridge.action(tri, &op(squash.clone()), &Choices::default()))["action"].clone();
+    assert_eq!(pictured["kind"], "fold", "{pictured}");
+    assert_eq!(pictured["direction"], "valley");
+    assert!(
+        pictured["line"].is_array() && pictured["push"].is_object(),
+        "{pictured}"
+    );
+    assert!(
+        pictured["grip"].is_object() && pictured["pleat"].is_null(),
+        "{pictured}"
+    );
+    assert!(previewed["grip"]["hidden_image"].is_null(), "{previewed}");
+    for key in ["line", "spans", "moving", "push"] {
+        assert_eq!(pictured[key], previewed[key], "{key}");
+    }
+    // Every other plain fold's question is still the caller's mistake.
+    assert!(matches!(
+        bridge.analyse(tri, &op(squash.clone()), &Choices::default()),
+        Err(BridgeError::InvalidInput(_))
+    ));
     // The tools' call lands the same state, held and reported alike.
     let mut pending = Pending::new();
     let tried = ok(pending.try_fold(&mut bridge, tri, &op(squash), &Choices::default()));
@@ -140,14 +163,18 @@ fn a_squash_lands_and_replays_with_its_report_and_motion() {
     let again = tried["state"].as_u64().unwrap_or_default() as u32;
     let parts = |h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
     assert_eq!(parts(again), parts(child));
-    // Its summary is the diff from its parent, which must still be held;
-    // its picture, none, needs no parent.
+    assert_eq!(ok(bridge.step_action(again))["action"], pictured);
+    // Its summary and its picture are drawn on its parent, which must still
+    // be held.
     assert!(bridge.release(tri));
     assert!(matches!(
         bridge.step_summary(child),
         Err(BridgeError::ParentReleased { .. })
     ));
-    assert!(ok(bridge.step_action(child))["action"].is_null());
+    assert!(matches!(
+        bridge.step_action(child),
+        Err(BridgeError::ParentReleased { .. })
+    ));
 }
 
 /// The two-layer triangle's rabbit ear with its 180° ray leaves two orders
@@ -191,6 +218,14 @@ fn a_rabbit_ears_choice_is_held_picked_stored_and_replayed() {
     // The document's completion: FOLD triples over witnesses.
     assert!(stored["completion"]["orders"][0].is_array(), "{stored}");
     let picked_state = picked["state"].as_u64().unwrap_or_default() as u32;
+    // A pick is pictured as the fold it lands: a fan's crease from its
+    // center, and its arrow.
+    let pictured = ok(bridge.step_action(picked_state))["action"].clone();
+    assert!(
+        pictured["line"].is_array() && pictured["grip"].is_object(),
+        "{pictured}"
+    );
+    assert!(pictured["push"].is_null(), "{pictured}");
     // A pick that names no order.
     let none = json_of(
         &pending

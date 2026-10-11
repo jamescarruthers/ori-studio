@@ -76,11 +76,15 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   opening, or, per kind, up to eight orders, each the `completion` that
   picks it — of both kinds at once; a crimp's tip and the kinds that land;
   a tuck's targets; a vertex op's flap, petal or fan; a sink's point and
-  pockets. The reverse folds, the crimp and the tuck fold along a line, so
-  they also answer `analyse`, `action` and `depth_choices` — a crimp of its
-  tip at ℓ1, its picture ℓ1 with a pleat arrow across both lines; a tuck of
-  its block against its target, as a plain fold's — and have a step
-  picture; asking those of another family is the caller's mistake. A crimp
+  pockets. The reverse folds, the crimp, the tuck and the sinks fold along a
+  line, so they also answer `analyse`, `action` and `depth_choices` — a
+  crimp of its tip at ℓ1, its picture ℓ1 with a pleat arrow across both
+  lines; a tuck of its block against its target, as a plain fold's — and
+  have a step picture. A vertex op answers `action` and has a step picture
+  too, drawn along the one crease that tells it best (a squash's lower
+  crease with the push onto its spine, a petal fold's H, a fan's crease from
+  its center); asking it `analyse` or `depth_choices` is the caller's
+  mistake. A crimp
   or a tuck keeps its step's summary as it lands, so it answers that after
   its parent is released; its picture is drawn on its parent.
 - **`fs1` keys** (`src/canonical.rs`): one per fact of the state, none naming
