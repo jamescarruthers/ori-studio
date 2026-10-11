@@ -141,6 +141,11 @@ function anotherTip(compound: FoldCompoundToolChoices): FoldCompoundToolChoices 
     : { ...compound, opening: 0, order: 0, pocket: 0 };
 }
 
+/** A sink with a kind, open or closed: the tools the sink window's kind control switches between. */
+function isSinkKindTool(tool: FoldToolId): boolean {
+  return tool === 'open-sink' || tool === 'closed-sink';
+}
+
 /** The clicks the state's tool and line mode collect. */
 export function foldToolInput(state: Pick<FoldToolState, 'tool' | 'lineMode'>): FoldInputModel | null {
   return toolInput(state.tool, state.lineMode);
@@ -255,10 +260,13 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         if (state.tool === tool) return state;
         // Every fold along a line folds the same line: switching between V,
         // M, P and the reverse fold keeps it, as the window's V / M / P control
-        // promises. Anything else locates anew.
+        // promises. Anything else locates anew. The open and the closed sink
+        // are one sink's two kinds, as the reverse fold's are: a fix's line
+        // taken for one (the square line) is the other's too.
         const keeps = isLineTool(tool) && isLineTool(state.tool);
+        const sinkKinds = isSinkKindTool(tool) && isSinkKindTool(state.tool);
         return keeps
-          ? { ...state, tool, override: null, compound: anotherTip(state.compound) }
+          ? { ...state, tool, override: sinkKinds ? state.override : null, compound: anotherTip(state.compound) }
           : { ...restart(state), tool };
       });
     },
