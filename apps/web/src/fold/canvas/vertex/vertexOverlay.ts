@@ -8,7 +8,7 @@
  *
  * - **Squash**: its vertex, each layer's crease, the spine as it lies
  *   (faint), and where it lands (bold): the hinge line until a point is
- *   clicked.
+ *   clicked; where it was aimed, faint, when that cannot land.
  * - **Petal fold**: H between its ends, and the kite creases down to the
  *   open corner.
  * - **Rabbit ear, swivel**: the center, the three given rays, the fourth
@@ -50,6 +50,12 @@ export interface FoldVertexOverlayInput {
   emergents: readonly boolean[];
   /** A rabbit ear's ridge, as a model-frame direction from its center; null with none known. */
   ridge: FoldModelPoint | null;
+  /**
+   * Where a squash's spine was aimed, as a model-frame direction from its
+   * vertex, when that fold was refused and the analysis drawn is the hinge
+   * line's: drawn faint, so the folder sees where they aimed. Null otherwise.
+   */
+  aimed?: FoldModelPoint | null;
 }
 
 function rotate([x, y]: FoldModelPoint, angle: number): FoldModelPoint {
@@ -137,6 +143,7 @@ export function vertexOverlayMarks(
       along(rotate(hinge, ((1 + share) * wedge) / 2), accent, CREASE_WIDTH);
       along(rotate(hinge, ((1 - share) * wedge) / 2), accent, CREASE_WIDTH);
       along(rotate(hinge, share * wedge), accent, CHOSEN_WIDTH);
+      if (input.aimed) along(input.aimed, withAlpha(accent, FAINT), CHOSEN_WIDTH);
       dot(vertex);
       break;
     }

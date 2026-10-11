@@ -65,7 +65,7 @@ describe('a compound fold’s Step pane rows', () => {
       stored: {},
     };
     expect(foldCompoundPaneRows(vertex)).toEqual({ blocks: 2, opening: null, orderChosen: false, blocksOf: 'vertex' });
-    const chosen = { ...vertex, stored: { completion: { faces: [], orders: [[0, 1, 1] as [number, number, number]] } } };
+    const chosen: FoldCompoundReportOf<'vertex'> = { ...vertex, stored: { completion: { faces: [], orders: [[0, 1, 1]] } } };
     expect(foldCompoundPaneRows(chosen)).toMatchObject({ orderChosen: true });
   });
 });

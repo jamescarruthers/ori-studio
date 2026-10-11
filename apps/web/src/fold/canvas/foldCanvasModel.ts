@@ -115,6 +115,7 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   return {
     tool,
     direction: tools.vertexDirection,
+    described: vertex?.base != null,
     known: preview.step !== null,
     target: tools.compound.squashTarget ? 'point' : 'hinge',
     // A candidate the answer has no word on fits, as far as is known.

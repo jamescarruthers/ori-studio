@@ -54,7 +54,9 @@ export interface FoldVertexRidgeView {
 export interface FoldVertexWindowView {
   tool: FoldVertexToolId;
   direction: FoldDirection;
-  /** The engine has described the flap, line or fan, and the step is built. */
+  /** The engine has described the flap, line or fan the clicks name: there is something to choose about. */
+  described: boolean;
+  /** The step is built from that description and the choices made: there is something to commit. */
   known: boolean;
   /** A squash's spine lands on its hinge line, or toward a point clicked. */
   target: 'hinge' | 'point';
@@ -198,10 +200,24 @@ function chooseStep(t: TFunction, tool: FoldVertexToolId): string {
 
 function previewInstructions(
   t: TFunction,
-  tool: FoldVertexToolId,
+  vertex: FoldVertexWindowView,
   host: FoldToolHost,
   view: FoldToolWindowView
 ): FoldToolInstructions {
+  const { tool } = vertex;
+  if (!vertex.described && view.preview?.refused) {
+    // Refused before anything was described: nothing to choose, only to pick again.
+    return {
+      heading: t('tools:fold.window.instructions', 'Instructions'),
+      items: [
+        host.coarse
+          ? t('tools:fold.vertex.steps.pickAgainTouch', 'Tap Cancel, then pick again.')
+          : t('tools:fold.vertex.steps.pickAgain', 'Press Esc, then pick again.'),
+      ],
+      current: 0,
+      notes: [],
+    };
+  }
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items: [
@@ -221,7 +237,8 @@ function ridgeWords(t: TFunction, ridge: FoldVertexRidgeView): { label: string; 
   const words =
     ridge.given === null
       ? {
-          label: t('tools:fold.vertex.ridgeFourth', 'Fourth crease'),
+          // Short enough to sit beside a corner's in the window's row: the tooltip says it whole.
+          label: t('tools:fold.vertex.ridgeFourth', 'Fourth'),
           tooltip: t('tools:fold.vertex.ridgeFourthTitle', 'The fourth crease rises as the ridge'),
         }
       : {
@@ -256,16 +273,21 @@ function layersValue(t: TFunction, vertex: FoldVertexWindowView): string {
     : t('tools:fold.vertex.layersBottom', 'Bottom {{count}} of {{total}}', { count: fanLayers, total: layers });
 }
 
-/** A vertex fold's controls (see the module docs); `located` once every click is in. */
+/**
+ * A vertex fold's controls (see the module docs). `located` once every click
+ * is in: its choices are offered once the engine has described what the
+ * clicks name, never about a flap it refused.
+ */
 export function vertexControls(
   t: TFunction,
   vertex: FoldVertexWindowView,
   verbs: FoldToolWindowVerbs,
   readOnly: boolean,
   host: FoldToolHost,
-  located: boolean
+  clicked: boolean
 ): FoldVertexControls {
   const { tool } = vertex;
+  const located = clicked && vertex.described;
   const fan = tool === 'rabbit-ear' || tool === 'swivel';
   const { setVertexDirection, resetSquashTarget, setRidge } = verbs;
   const [first, second] = vertex.ridges;
@@ -381,7 +403,7 @@ export function vertexToolWindow(
     phase: 'preview',
     title,
     meta: settingsMeta(t, settings.filter(Boolean).length),
-    instructions: previewInstructions(t, tool, host, view),
+    instructions: previewInstructions(t, vertex, host, view),
     lineMode: null,
     kind: null,
     movingSide: null,

@@ -161,7 +161,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   // --- The tool's feedback on each pane: a vertex fold draws its creases on the folded one.
   const firstPick = toolState.picks[0];
   const freeFrom = toolState.lineMode === 'free' && firstPick?.kind === 'free' && toolState.picks.length === 1 ? firstPick : null;
-  const vertexMarks = useFoldVertexMarks(view.index, preview.vertex, inks?.overlay ?? null);
+  const vertexMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks
