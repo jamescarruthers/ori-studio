@@ -585,6 +585,150 @@
       "rotateHelp": "Girar el modelo un cuarto de vuelta en el sentido de las agujas del reloj, como un paso propio.",
       "turnOverHelp": "Dar la vuelta al modelo, de lado a lado, como un paso propio."
     },
+    "vertex": {
+      "chooser": {
+        "emergentNote": "Más de un cuarto pliegue deja estos pliegues planos. Recórrelos o pulsa Mayús+← / Mayús+→.",
+        "ridgeNote": "Cualquiera de los dos pliegues frente al papel que se queda puede alzarse como cresta de la oreja. Recórrelos o pulsa Mayús+← / Mayús+→."
+      },
+      "direction": "Sentido",
+      "doesNotFit": "No cabe aquí",
+      "emergent": "Cuarto pliegue",
+      "emergentDoesNotFit": "Este cuarto pliegue no cabe aquí: pasa a otro.",
+      "fix": {
+        "emergent": "Usar el cuarto pliegue que cabe",
+        "emergentNumber": "Usar el cuarto pliegue {{number}}",
+        "otherWay": "Plegar en el otro sentido",
+        "precreaseKite": "Premarcar la cometa",
+        "precreaseLine": "Premarcar antes esta línea",
+        "resetTarget": "Llevar el lomo a la bisagra",
+        "usePrecrease": "Usar el premarcado"
+      },
+      "help": {
+        "petal": "Levantar la punta inferior de una solapa a lo largo de una línea premarcada mientras sus lados se pliegan hacia dentro.",
+        "rabbitEar": "Plegar las esquinas de un triángulo a lo largo de sus bisectrices, para que se levante una punta.",
+        "squash": "Abrir una solapa de dos capas y aplastarla, con su lomo sobre su bisagra.",
+        "swivel": "Plegar el papel alrededor de un punto interior, a lo largo de rayos que eliges y uno que lo deja plano."
+      },
+      "layers": "Capas",
+      "layersAll_one": "Las {{count}}",
+      "layersAll_many": "Las {{count}}",
+      "layersAll_other": "Las {{count}}",
+      "layersBottom_one": "{{count}} de abajo de {{total}}",
+      "layersBottom_many": "{{count}} de abajo de {{total}}",
+      "layersBottom_other": "{{count}} de abajo de {{total}}",
+      "layersTop_one": "{{count}} de arriba de {{total}}",
+      "layersTop_many": "{{count}} de arriba de {{total}}",
+      "layersTop_other": "{{count}} de arriba de {{total}}",
+      "mountain": "Monte",
+      "mountainTitle": "Monte: el papel gira alejándose de ti",
+      "noEmergentFits": "Ningún cuarto pliegue cabe aquí con estas capas.",
+      "note": {
+        "petal": "Un pliegue pétalo vuelve a plegar pliegues que ya existen: premarca antes los pliegues de la cometa desde la punta inferior de la solapa y la línea H entre sus extremos.",
+        "rabbitEar": "Los pliegues se juntan en el incentro del triángulo: uno hacia cada esquina y un cuarto que los deja planos.",
+        "squash": "Una solapa se aplasta cuando sus dos capas están libres, sujetas solo por su bisagra, y descubiertas, sin nada encima del lado hacia el que se abre.",
+        "swivel": "El punto donde se juntan los pliegues debe estar dentro del papel, fuera de todo pliegue: mantén {{modifier}} para colocarlo en cualquier lugar.",
+        "swivelTouch": "El punto donde se juntan los pliegues debe estar dentro del papel, fuera de todo pliegue."
+      },
+      "refusal": {
+        "blocked": {
+          "text": "Un pliegue entra en papel que no puede plegarse con él, o hay papel que une dos partes del pliegue. Corta más capas o prueba otro cuarto pliegue.",
+          "title": "Hay papel en medio"
+        },
+        "center": {
+          "textEar": "Los pliegues del triángulo se juntan en su incentro, que cae sobre un pliegue o fuera de las capas. Elige esquinas que lo dejen dentro de las capas, lejos de sus pliegues.",
+          "textSwivel": "El punto donde se juntan los pliegues cae sobre un pliegue o fuera de las capas. Ponlo dentro de las capas, lejos de sus pliegues.",
+          "title": "Los pliegues no pueden juntarse ahí"
+        },
+        "covered": {
+          "text": "Otras capas cubren la solapa, o están dentro de ella, del lado hacia el que se abre. Apártalas antes o aplástala en el otro sentido.",
+          "title": "La solapa está cubierta"
+        },
+        "kite": {
+          "text": "Un pliegue pétalo vuelve a plegar pliegues que ya existen. Lleva cada borde lateral de la capa superior de la solapa a su línea central y desdobla; luego haz el pliegue pétalo.",
+          "title": "Premarca antes la cometa"
+        },
+        "line": {
+          "text": "Un pliegue pétalo levanta la solapa a lo largo de un premarcado que atraviesa todas las capas de debajo. Premarca esta línea a través de todas las capas; luego haz el pliegue pétalo.",
+          "title": "Premarca antes la línea"
+        },
+        "lineNear": {
+          "text": "Un pliegue pétalo levanta la solapa a lo largo de un premarcado. Esta línea pasa justo al lado de uno: úsalo, o premarca antes esta línea.",
+          "title": "La línea no coincide con el premarcado"
+        },
+        "noFlap": {
+          "noHinge": "La solapa no se pliega sobre ninguna bisagra en ningún extremo de su lomo, así que no hay contra qué aplastarla.",
+          "noSpine": "Las dos capas de aquí no están unidas por un pliegue, así que la solapa no tiene lomo por el que abrirse.",
+          "singleLayer": "Aquí solo hay una capa. Haz clic en una solapa de dos capas unidas por un borde plegado.",
+          "title": "No hay solapa que aplastar aquí",
+          "upperNotHinged": "La capa superior de la solapa solo está sujeta por su lomo: aplastada, su lado de la bisagra quedaría suelto."
+        },
+        "noPetal": {
+          "noCorner": "Los pliegues de la cometa no se juntan bajo la línea, así que no hay punta que levantar.",
+          "noEnds": "La línea no cruza los dos bordes plegados de la solapa. Elige un premarcado que vaya de un borde de la solapa al otro.",
+          "title": "No hay solapa que levantar aquí"
+        },
+        "notFlat": {
+          "text": "Ningún cuarto pliegue deja estos pliegues planos: dos de ellos coinciden o los huecos entre ellos son demasiado anchos. Elige otros puntos.",
+          "title": "No puede quedar plano"
+        },
+        "notFree": {
+          "text": "La solapa está unida a otro papel lejos de su bisagra. Solo una solapa sujeta únicamente por su bisagra se abre plana: desdobla antes lo que la sujeta.",
+          "title": "La solapa está sujeta en otro sitio"
+        },
+        "petalCovered": {
+          "text": "Otras capas cubren la solapa del lado hacia el que se levanta. Apártalas antes o levántala en el otro sentido.",
+          "title": "La solapa está cubierta"
+        },
+        "ridge": {
+          "text": "La cresta es uno de los dos pliegues frente al papel que se queda. Elige la otra cresta u otro papel que se quede quieto.",
+          "title": "Esa cresta no cabe"
+        },
+        "stayer": {
+          "text": "El papel elegido para quedarse quieto no está unido a ninguna parte del pliegue. Elige papel que corten los pliegues, o papel unido a él.",
+          "title": "¿Qué papel se queda?"
+        },
+        "targetOutside": {
+          "text": "El lomo cae entre donde está y la bisagra. Haz clic en un punto dentro de la solapa o devuélvelo a la bisagra.",
+          "title": "El lomo no puede caer ahí"
+        }
+      },
+      "reset": "Volver a la bisagra",
+      "ridge": "Cresta",
+      "ridgeCorner": "Esquina {{number}}",
+      "ridgeCornerTitle": "El pliegue hacia la esquina {{number}} se alza como cresta",
+      "ridgeFourth": "Cuarto",
+      "ridgeFourthTitle": "El cuarto pliegue se alza como cresta",
+      "steps": {
+        "earChoose": "Elige el cuarto pliegue, las capas y la cresta.",
+        "earFirstCorner": "Haz clic en la primera esquina del triángulo.",
+        "earSecondCorner": "Haz clic en su segunda esquina.",
+        "earThirdCorner": "Haz clic en su tercera esquina.",
+        "finish": "Elige las opciones y pulsa Intro.",
+        "finishTouch": "Elige las opciones y toca {{action}}.",
+        "petalCrease": "Haz clic en la línea premarcada H por la que se levanta la solapa.",
+        "petalDirection": "Elige hacia qué lado se levanta la solapa.",
+        "petalFirstEnd": "Haz clic en un extremo de la línea H por la que se levanta la solapa.",
+        "petalFlap": "Haz clic en la solapa bajo esa línea.",
+        "petalSecondEnd": "Haz clic en su otro extremo.",
+        "pickAgain": "Pulsa Esc y vuelve a elegir.",
+        "pickAgainTouch": "Toca Cancelar y vuelve a elegir.",
+        "squashFlap": "Haz clic en la solapa que quieres aplastar.",
+        "squashTarget": "Haz clic donde debe caer el lomo, o déjalo en la línea de la bisagra.",
+        "stayer": "Haz clic en el papel que se queda quieto.",
+        "swivelChoose": "Elige el cuarto pliegue y las capas.",
+        "swivelFirstRay": "Haz clic en un punto hacia el que va el primer pliegue.",
+        "swivelSecondRay": "Haz clic en un punto hacia el que va el segundo pliegue.",
+        "swivelThirdRay": "Haz clic en un punto hacia el que va el tercer pliegue.",
+        "swivelVertex": "Haz clic en el punto donde se juntan los pliegues."
+      },
+      "target": "El lomo cae en",
+      "targetHelp": "Haz clic en el papel plegado para que el lomo caiga fuera de la bisagra.",
+      "targetHelpTouch": "Toca el papel plegado para que el lomo caiga fuera de la bisagra.",
+      "targetHinge": "La línea de la bisagra",
+      "targetPoint": "El punto pulsado",
+      "valley": "Valle",
+      "valleyTitle": "Valle: el papel gira hacia ti"
+    },
     "window": {
       "cancel": "Cancelar",
       "finding": "Buscando las capas en la línea…",

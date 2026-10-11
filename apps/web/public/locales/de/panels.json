@@ -2103,7 +2103,10 @@
       "spreadEarlier": "Wie ein früherer Schritt sie festlegt. Eine Änderung hier gilt ab diesem Schritt.",
       "spreadOwn": "In diesem Schritt festgelegt. Die folgenden Schritte übernehmen sie auch.",
       "title": "Schritt {{number}}",
-      "valley": "Tal"
+      "valley": "Tal",
+      "vertex": {
+        "blocksHelp": "Papierstücke, die sich als Ganzes drehen: jedes dreht sich um dieselben Faltlinien, in derselben Reihenfolge, dorthin, wo es landet."
+      }
     },
     "toDiagram": {
       "sendPath": "Schritte an Diagramm senden",

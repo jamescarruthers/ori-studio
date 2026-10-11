@@ -557,6 +557,144 @@
       "rotateHelp": "将模型顺时针旋转四分之一圈，作为单独的一步。",
       "turnOverHelp": "将模型左右翻面，作为单独的一步。"
     },
+    "vertex": {
+      "chooser": {
+        "emergentNote": "不止一条第四折痕能让这些折痕放平。逐个查看，或按 Shift+← / Shift+→。",
+        "ridgeNote": "与不动纸面相对的两条折痕都可以立起作为耳朵的脊线。逐个查看，或按 Shift+← / Shift+→。"
+      },
+      "direction": "方向",
+      "doesNotFit": "此处不适用",
+      "emergent": "第四折痕",
+      "emergentDoesNotFit": "这条第四折痕在此处不适用：请换一条。",
+      "fix": {
+        "emergent": "使用适用的第四折痕",
+        "emergentNumber": "使用第四折痕 {{number}}",
+        "otherWay": "反向折",
+        "precreaseKite": "预折风筝形",
+        "precreaseLine": "先预折这条线",
+        "resetTarget": "把脊放回铰链上",
+        "usePrecrease": "使用该预折痕"
+      },
+      "help": {
+        "petal": "沿一条预折的线抬起翼片的下尖，同时把它的两侧向内折。",
+        "rabbitEar": "沿角平分线把三角形的各角向内折，使一个尖立起来。",
+        "squash": "打开一个两层的翼片并压平，让它的脊落在铰链上。",
+        "swivel": "绕纸内一点，沿你选的射线和一条让它放平的射线折叠。"
+      },
+      "layers": "层",
+      "layersAll_other": "全部 {{count}} 层",
+      "layersBottom_other": "底部 {{count}} / {{total}}",
+      "layersTop_other": "顶部 {{count}} / {{total}}",
+      "mountain": "山",
+      "mountainTitle": "山：纸朝远离你的方向转",
+      "noEmergentFits": "此处没有适合这些层的第四折痕。",
+      "note": {
+        "petal": "花瓣折会重新折叠已有的折痕：请先从翼片下尖预折风筝形折痕，并预折连接其端点的线 H。",
+        "rabbitEar": "折痕交于三角形的内心：每个角一条，另有一条让它们放平的第四折痕。",
+        "squash": "翼片的两层自由、只由铰链连着，且在它张开的一侧没有遮挡时，才能压平。",
+        "swivel": "折痕的交点必须在纸内，且不在任何折痕上：按住 {{modifier}} 可放在任意位置。",
+        "swivelTouch": "折痕的交点必须在纸内，且不在任何折痕上。"
+      },
+      "refusal": {
+        "blocked": {
+          "text": "有折痕伸入无法随它折叠的纸，或有纸把折叠的两部分连在一起。请切穿更多层，或试试另一条第四折痕。",
+          "title": "有纸挡住"
+        },
+        "center": {
+          "textEar": "三角形的折痕交于内心，而内心落在折痕上或层外。请选择能让内心落在层内、远离折痕的角。",
+          "textSwivel": "折痕的交点落在折痕上或层外。请把它放在层内、远离折痕的位置。",
+          "title": "折痕无法在那里交汇"
+        },
+        "covered": {
+          "text": "在翼片张开的一侧，有其他层盖在翼片上或夹在其中。请先把它们移开，或反向压平。",
+          "title": "翼片被遮住"
+        },
+        "kite": {
+          "text": "花瓣折会重新折叠已有的折痕。把翼片最上层的每条侧边折到其中线再展开，然后做花瓣折。",
+          "title": "请先预折风筝形"
+        },
+        "line": {
+          "text": "花瓣折沿一条穿过下方所有层的预折痕抬起翼片。请把这条线穿过所有层预折，然后做花瓣折。",
+          "title": "请先预折这条线"
+        },
+        "lineNear": {
+          "text": "花瓣折沿预折痕抬起翼片。这条线紧挨着一条预折痕：使用它，或先预折这条线。",
+          "title": "这条线偏离了预折痕"
+        },
+        "noFlap": {
+          "noHinge": "翼片的脊两端都没有翻过铰链，因此没有可以压向的地方。",
+          "noSpine": "这里的两层没有由折叠相连，因此翼片没有可以沿之打开的脊。",
+          "singleLayer": "这里只有一层。请单击一个由折边相连的两层翼片。",
+          "title": "这里没有可压平的翼片",
+          "upperNotHinged": "翼片最上层只靠脊相连：压平后，它的铰链一侧会松开。"
+        },
+        "noPetal": {
+          "noCorner": "风筝形折痕没有在这条线下方相交，因此没有可抬起的尖。",
+          "noEnds": "这条线没有穿过翼片的两条折边。请选择一条从翼片一边通到另一边的预折痕。",
+          "title": "这里没有可抬起的翼片"
+        },
+        "notFlat": {
+          "text": "没有第四折痕能让这些折痕放平：其中两条重合，或它们之间的间隙太宽。请选择其他点。",
+          "title": "无法折平"
+        },
+        "notFree": {
+          "text": "翼片在铰链以外的地方与其他纸相连。只有仅靠铰链相连的翼片才能平着打开：请先展开固定它的部分。",
+          "title": "翼片被别处固定"
+        },
+        "petalCovered": {
+          "text": "在翼片抬起的一侧，有其他层盖在翼片上。请先把它们移开，或反向抬起。",
+          "title": "翼片被遮住"
+        },
+        "ridge": {
+          "text": "脊线是与不动纸面相对的两条折痕之一。请选择另一条脊线，或另选不动的纸。",
+          "title": "该脊线不适用"
+        },
+        "stayer": {
+          "text": "选作不动的纸与折叠的任何部分都不相连。请选择折痕穿过的纸，或与之相连的纸。",
+          "title": "哪部分纸不动？"
+        },
+        "targetOutside": {
+          "text": "脊会落在它当前位置与铰链之间。请单击翼片内的一点，或把它放回铰链。",
+          "title": "脊不能落在那里"
+        }
+      },
+      "reset": "放回铰链",
+      "ridge": "脊线",
+      "ridgeCorner": "角 {{number}}",
+      "ridgeCornerTitle": "通向角 {{number}} 的折痕立起作为脊线",
+      "ridgeFourth": "第四条",
+      "ridgeFourthTitle": "第四折痕立起作为脊线",
+      "steps": {
+        "earChoose": "选择第四折痕、层和脊线。",
+        "earFirstCorner": "单击三角形的第一个角。",
+        "earSecondCorner": "单击它的第二个角。",
+        "earThirdCorner": "单击它的第三个角。",
+        "finish": "选择选项，然后按 Enter。",
+        "finishTouch": "选择选项，然后轻点“{{action}}”。",
+        "petalCrease": "单击翼片沿之抬起的预折线 H。",
+        "petalDirection": "选择翼片抬起的方向。",
+        "petalFirstEnd": "单击翼片沿之抬起的线 H 的一端。",
+        "petalFlap": "单击这条线下方的翼片。",
+        "petalSecondEnd": "单击它的另一端。",
+        "pickAgain": "按 Esc，然后重新选择。",
+        "pickAgainTouch": "轻点“取消”，然后重新选择。",
+        "squashFlap": "单击要压平的翼片。",
+        "squashTarget": "单击脊应落下的位置，或让它留在铰链线上。",
+        "stayer": "单击不动的纸。",
+        "swivelChoose": "选择第四折痕和层。",
+        "swivelFirstRay": "单击第一条折痕指向的点。",
+        "swivelSecondRay": "单击第二条折痕指向的点。",
+        "swivelThirdRay": "单击第三条折痕指向的点。",
+        "swivelVertex": "单击折痕交汇的点。"
+      },
+      "target": "脊落在",
+      "targetHelp": "单击折好的纸，让脊落在铰链之外。",
+      "targetHelpTouch": "轻点折好的纸，让脊落在铰链之外。",
+      "targetHinge": "铰链线",
+      "targetPoint": "单击的点",
+      "valley": "谷",
+      "valleyTitle": "谷：纸朝你的方向转"
+    },
     "window": {
       "cancel": "取消",
       "finding": "正在查找折线处的层…",

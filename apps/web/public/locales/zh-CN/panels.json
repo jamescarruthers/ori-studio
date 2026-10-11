@@ -1922,7 +1922,10 @@
       "spreadEarlier": "沿用前面某一步的设置。在此更改将从本步起生效。",
       "spreadOwn": "在本步设置，之后的步骤也会沿用。",
       "title": "第 {{number}} 步",
-      "valley": "谷折"
+      "valley": "谷折",
+      "vertex": {
+        "blocksHelp": "作为整体一起转动的纸块：每块都绕同样的折痕、按同样的顺序转到它落下的位置。"
+      }
     },
     "toDiagram": {
       "sendPath": "将至此的步骤发送到图解",

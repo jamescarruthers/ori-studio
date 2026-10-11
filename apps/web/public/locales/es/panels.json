@@ -2286,7 +2286,10 @@
       "spreadEarlier": "Como la fija un paso anterior. Un cambio aquí se aplica desde este paso en adelante.",
       "spreadOwn": "Fijada en este paso. Los pasos siguientes también la toman.",
       "title": "Paso {{number}}",
-      "valley": "Valle"
+      "valley": "Valle",
+      "vertex": {
+        "blocksHelp": "Trozos de papel que giran juntos: cada uno gira sobre los mismos pliegues, en el mismo orden, hasta donde queda."
+      }
     },
     "toDiagram": {
       "sendPath": "Enviar pasos al Diagrama",
