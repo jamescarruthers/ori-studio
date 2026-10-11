@@ -380,12 +380,15 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       };
     // The tuck's. With no layer named, the tools found none that takes it
     // (`tuckWithoutTarget`); with one, the engine found no order against it.
-    case 'tuck_infeasible':
+    // Under or over as the viewer sees it, the tuck window's: the refusal's
+    // `placement` is the model frame's, the other way round on a view turned over.
+    case 'tuck_infeasible': {
+      const under = context.tuck ? context.tuck.under : refusal.placement === 'under';
       if (refusal.target === null) {
         return {
           title: t('tools:fold.refusal.tuckNoTarget.title', 'No layer takes the tuck here'),
           text:
-            refusal.placement === 'under'
+            under
               ? t(
                   'tools:fold.refusal.tuckNoTarget.under',
                   'No layer that stays can take the flap under it here. Fold it the other way, swap the moving side, or locate another line.'
@@ -397,10 +400,9 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
         };
       }
       return {
-        title:
-          refusal.placement === 'under'
-            ? t('tools:fold.refusal.tuckInfeasible.titleUnder', 'It cannot be tucked under that layer')
-            : t('tools:fold.refusal.tuckInfeasible.titleOver', 'It cannot be tucked over that layer'),
+        title: under
+          ? t('tools:fold.refusal.tuckInfeasible.titleUnder', 'It cannot be tucked under that layer')
+          : t('tools:fold.refusal.tuckInfeasible.titleOver', 'It cannot be tucked over that layer'),
         text: refused.fixes.some((fix) => fix.fix === 'tuck_target')
           ? t(
               'tools:fold.refusal.tuckInfeasible.text',
@@ -411,6 +413,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
               'No way of stacking the layers puts the flap right against that layer. Tuck fewer flaps, or locate another line.'
             ),
       };
+    }
     // The vertex folds' (`vertex/vertexRefusal`), in their tool's words.
     case 'squash_no_flap':
     case 'squash_flap_not_free':

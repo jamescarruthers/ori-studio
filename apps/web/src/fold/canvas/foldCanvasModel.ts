@@ -146,7 +146,6 @@ export function foldTuckWindowView(tools: FoldToolState, preview: FoldToolPrevie
   return {
     direction: tuck.direction,
     known: tuck.asked !== null,
-    placement: tuck.placement,
     targets: faces.length,
     target: Math.max(0, faces.indexOf(tuck.target?.face ?? -1)),
     faces,

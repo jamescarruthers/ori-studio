@@ -182,7 +182,6 @@ describe('the Fold canvas model', () => {
     const tuck = {
       asked: null,
       direction: 'mountain' as const,
-      placement: 'over' as const,
       targets: [target(3), target(7)],
       target: target(7),
       orders: [],
@@ -191,7 +190,6 @@ describe('the Fold canvas model', () => {
     expect(foldTuckWindowView({ ...located, tool: 'tuck' }, preview({ tuck }))).toEqual({
       direction: 'mountain',
       known: false,
-      placement: 'over',
       targets: 2,
       target: 1,
       faces: [3, 7],

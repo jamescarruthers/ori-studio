@@ -140,7 +140,6 @@ describe('the Fold canvas’s commit', () => {
     const tuck = {
       asked: null,
       direction: 'valley' as const,
-      placement: 'under' as const,
       targets: [target(3), target(7)],
       target: target(3),
       orders: [],
@@ -311,7 +310,6 @@ describe('the canvas’s chooser', () => {
     const tuck = {
       asked: null,
       direction: 'valley' as const,
-      placement: 'under' as const,
       targets: [target(3), target(7), target(9)],
       target: target(7),
       orders: [],
