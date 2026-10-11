@@ -4,6 +4,7 @@ import type { FoldSessionSnapshot } from '../session/foldSessionState';
 import { FOLD_SCENE_QUERY, FOLD_STEP_ACTION_QUERY } from '../session/foldStateQueries';
 import { useFoldNode, useFoldSessionState, useFoldStateQuery } from '../session/useFoldSession';
 import { foldStepMotion, type FoldStepMotion, type FoldStepPane } from './foldStepMotion';
+import { foldStepMotionLegsOf } from './foldStepMotionLegs';
 
 /**
  * A step's motion, from the session: its op from the shown sequence, what it
@@ -30,13 +31,13 @@ export function useFoldStepMotion(stepId: string | null, pane: FoldStepPane | nu
   // The step's parent: the sheet for the first.
   const parent = useFoldNode(step?.parent ?? null);
   const report = landed?.report ?? null;
-  const compound = landed?.compound ?? null;
+  const legs = foldStepMotionLegsOf(landed);
   // Nothing is asked without a step that has a motion: not of the sheet, nor of a locked step.
   const after = useFoldStateQuery(step ? (landed?.state ?? null) : null, FOLD_SCENE_QUERY);
   const before = useFoldStateQuery(step ? (parent?.state ?? null) : null, FOLD_SCENE_QUERY);
   const acted = useFoldStateQuery(step ? (landed?.state ?? null) : null, FOLD_STEP_ACTION_QUERY);
   return useMemo(() => {
     if (!step || !pane || !after || !before || !acted) return null;
-    return foldStepMotion({ op: step.op, before, after, action: acted.action, report, compound }, pane);
-  }, [step, pane, after, before, acted, report, compound]);
+    return foldStepMotion({ op: step.op, before, after, action: acted.action, report, legs }, pane);
+  }, [step, pane, after, before, acted, report, legs]);
 }

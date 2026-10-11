@@ -33,11 +33,16 @@
  *   round, nothing about the paper changes but where it is.
  * - **Legs** — a compound step with no rigid motion between its ends (a
  *   reverse fold: its branches meet only where ℓ crosses the spine,
- *   research §9), played from the engine's `StepMotion`: each group turns
- *   on the rigid hinge about ℓ from where the parent had it, the leg up to
- *   edge-on drawn in the parent's stacking and the leg after it in the
- *   landed state's, so the last frame is the landed scene and the stacking
- *   changes only where the turning paper has no width.
+ *   research §9), played from the engine's `StepMotion`, whatever the family
+ *   (reverse, crimp, tuck, the vertex folds, the sinks): legs in turn, each
+ *   turning groups of paper rigidly about their own hinges — each its own
+ *   line, some paper twice (a crimp's tip, a squash's flap) — or resting
+ *   where their turns leave them. A leg is drawn in the stacking the engine
+ *   names, the parent's or the landed state's, and a group the reader now
+ *   sees from its other side than that stacking does has its stack read
+ *   reversed; past edge-on a face shows its other side and is shaded by its
+ *   tilt, as a hinge's are. The first frame is the parent's picture and the
+ *   last the landed scene, and every leg starts where the one before ended.
  * - **A crossfade** — Import CP, which replaces the state with no motion
  *   between the two (D16), and the fallback for a step whose rigid motion
  *   cannot be built. The before scene fades out under the after scene's fade
@@ -51,6 +56,7 @@
 
 import type { FoldedFaceInk } from '../../cp-workspace/adapters/cpFoldedToScene';
 import { rigidHinge, seenFromOtherFace, shownFace, tiltLighting } from '../../lib/foldMotion/foldHinge';
+import type { FoldIsometry, FoldMotionGroup, FoldMotionLeg } from '../engine/foldEngineWire';
 import type {
   PaperFaceItem,
   PaperItem,
@@ -66,6 +72,15 @@ export interface FoldPosedFrame {
   scene: PaperScene;
   /** Per-face fills for this frame: a crossfade's alphas. Absent, the faces are inked as the scene says. */
   faces?: ReadonlyMap<number, FoldedFaceInk>;
+  /**
+   * How much of the step's layer spread the folded pane draws this frame
+   * with, 0 to 1: the pane multiplies the step's spread amount by it. The
+   * frame itself is never spread — a pose is the paper's own geometry — so
+   * the playback eases this to 0 as a step starts and back to 1 as it lands
+   * (`foldStepSpreadWeight`), and the pane's own spread picture follows
+   * without a jump. Absent, the frame is drawn unspread.
+   */
+  spreadWeight?: number;
 }
 
 /** A line in scene px: a point on it and its unit direction. */
@@ -132,37 +147,80 @@ export interface FoldCrossfadeMotion {
 }
 
 /**
- * One leg of a compound step's visual motion (the engine's `StepMotion`,
- * plan D15), in scene px: the swing it covers, how it is stacked, and the
- * landed scene's faces that turn about ℓ.
+ * A hinge one group of a compound step turns about during a leg (the
+ * engine's `MotionGroup`), as posing reads it, the arithmetic in the model
+ * frame where the engine's is: the axis `n · p = d`; `start`, from a landed
+ * point in scene px to where the turn starts it there — back through what
+ * the paper still does after the turn (`then`), and across the axis; and
+ * `toScene` back to the scene's px. At swing θ a point sits at its start
+ * pulled toward the axis and past it, `cos θ` of the way across
+ * (`MotionGroup::place`, seen from above): where the turn starts it at 0,
+ * where it leaves it at ±π. Up or down only says which way it lifts, which
+ * a picture from above cannot see; the stacking says what covers what.
  */
-export interface FoldPosedLeg {
-  /** The swing it covers, 0 where the paper lay to π where it lands. */
+export interface FoldPosedHinge {
+  /** The axis' unit normal and offset, in the model frame. */
+  readonly n: ScenePoint;
+  readonly d: number;
+  readonly start: SceneAffine;
+  readonly toScene: SceneAffine;
+  /** −1 when what the paper still does after this turn turns it over: it then shows its landed side on the near half. */
+  readonly kept: 1 | -1;
+  /** Nothing is left to do after this turn: at ±π the paper lies where it lands. */
+  readonly lands: boolean;
+  /** Which faces turn as one stack — about one line, one way — for a stack read from its other side. */
+  readonly unit: string;
+}
+
+/** A face's turn during one leg: about its hinge from one swing to another, or resting there (`from === to`). */
+export interface FoldFaceTurn {
+  readonly hinge: FoldPosedHinge;
   readonly from: number;
   readonly to: number;
-  /** Stacked as the parent stacks it, or as the landed state does. */
-  readonly stacking: 'parent' | 'landed';
+}
+
+/** One leg of a compound step's motion, as posing reads it. */
+export interface FoldPosedLeg {
+  readonly name: FoldMotionLeg['name'];
+  /** Drawn in the parent's stacking — each face where the face it is (a piece of) lay — or the landed scene's. */
+  readonly stacking: FoldMotionLeg['stacking'];
+  /** Every face the step moves, by `PaperFaceItem.face`: its turn in this leg, or where it rests through it. */
+  readonly faces: ReadonlyMap<number, FoldFaceTurn>;
 }
 
 /**
- * A compound step whose groups turn about ℓ without a rigid motion between
- * (a reverse fold: research §9), as legs: posed from the landed scene, every
- * turning face starts mirrored back across ℓ, where the parent had it, and
- * lands where it lies. Up to edge-on the paper is drawn in the parent's
- * stacking — each landed face ranked as the parent face it is (a piece of)
- * lay — and past it in the landed scene's, so the last frame is the landed
- * state and the order changes only where the turning paper has no width.
+ * A compound step's legs (the engine's `StepMotion`, plan D15), posed from
+ * the landed scene, whose faces each lie wholly in one group. A face no
+ * group of a leg names rests where its last turn left it, or, before its
+ * first, where it starts — so a frame of any leg places every face, and
+ * every leg starts where the one before it ended.
  */
 export interface FoldLegsMotion {
   readonly kind: 'legs';
   readonly after: PaperScene;
-  readonly line: ScenePxLine;
   readonly legs: readonly FoldPosedLeg[];
-  /** The landed scene's faces that turn, by `PaperFaceItem.face`. */
-  readonly moving: ReadonlySet<number>;
+  /**
+   * The legs one swing of the transport plays, in order: a spread and the
+   * close after it — the paper lifting to edge-on and coming down, one
+   * swing through π — or a leg on its own.
+   */
+  readonly swings: readonly (readonly number[])[];
   /** Per landed face, the parent's stacking rank of the face it is (a piece of): bottom first. */
   readonly parentRank: ReadonlyMap<number, number>;
+  /** The moving faces the parent shows the other side of than the landed scene does. */
+  readonly startFlipped: ReadonlySet<number>;
+  /** Every frame's: both ends' and every leg's ends, which bound every pose between. */
   readonly bounds: SceneBounds;
+}
+
+/** Where a compound step's legs are placed in the scene, and how its faces are named there. */
+export interface FoldLegsPlacement {
+  /** The model frame to scene px: the landed state's view, then the pane's placement. */
+  readonly toScene: SceneAffine;
+  /** A landed face id's place in the landed scene (`PaperFaceItem.face`). */
+  readonly faceAt: (id: number) => number | undefined;
+  /** A landed face's parent face — itself, or the face it was split from — by the before scene's `PaperFaceItem.face`. */
+  readonly parentFace: (face: number) => number | null;
 }
 
 /** Where a crossfade's lines change over from the scene fading out to the one fading in. */
@@ -234,18 +292,134 @@ export function turnMotion(
 }
 
 /**
- * A compound step's legs: `moving` names the landed scene's turning faces,
- * `parentFace` each landed face's parent face (by the before scene's
- * `PaperFaceItem.face`), `line` is ℓ in the scene's px.
+ * A compound step's legs, from the engine's (`FoldStepMotionLegs.legs`):
+ * every group's hinge placed in the scene, every face the step moves given a
+ * turn or a rest in every leg. Null when nothing it names is in the landed
+ * scene, or the placement cannot be undone: the step then has no motion to
+ * pose, and is never given an invented one.
  */
 export function legsMotion(
   before: PaperScene,
   after: PaperScene,
-  moving: ReadonlySet<number>,
-  parentFace: (face: number) => number | null,
-  line: ScenePxLine,
-  legs: readonly FoldPosedLeg[]
-): FoldLegsMotion {
+  legs: readonly FoldMotionLeg[],
+  placement: FoldLegsPlacement
+): FoldLegsMotion | null {
+  const fromScene = invertAffine(placement.toScene);
+  if (!fromScene) return null;
+  const turning = legs.map((leg) => {
+    const faces = new Map<number, FoldFaceTurn>();
+    for (const group of leg.groups) {
+      const hinge = posedHinge(group, placement.toScene, fromScene);
+      if (!hinge) return null;
+      const turn: FoldFaceTurn = { hinge, from: group.from, to: group.to };
+      for (const id of group.faces) {
+        const face = placement.faceAt(id);
+        if (face !== undefined) faces.set(face, turn);
+      }
+    }
+    return faces;
+  });
+  if (turning.some((faces) => faces === null)) return null;
+  const named = turning as Map<number, FoldFaceTurn>[];
+  const moving = new Set(named.flatMap((faces) => [...faces.keys()]));
+  if (moving.size === 0) return null;
+  const posed: FoldPosedLeg[] = legs.map((leg, k) => {
+    const faces = new Map(named[k]);
+    for (const face of moving) {
+      if (!faces.has(face)) faces.set(face, restingTurn(named, k, face)!);
+    }
+    return { name: leg.name, stacking: leg.stacking, faces };
+  });
+  // Where each face starts: its first leg's turn at its first angle.
+  const startFlipped = new Set<number>();
+  for (const [face, turn] of posed[0]!.faces) {
+    if (flippedAt(turn.hinge, turn.from)) startFlipped.add(face);
+  }
+  const motion: FoldLegsMotion = {
+    kind: 'legs',
+    after,
+    legs: posed,
+    swings: swingsOf(posed),
+    parentRank: parentRanks(before, after, placement.parentFace),
+    startFlipped,
+    bounds: unionBounds(before.bounds, after.bounds),
+  };
+  // A face's footprint moves along a straight line within a leg, so the
+  // legs' ends bound every pose between them.
+  let bounds = motion.bounds;
+  for (let k = 0; k < posed.length; k += 1) {
+    bounds = unionBounds(bounds, itemBounds(poseLegs(motion, k, 0).items));
+    bounds = unionBounds(bounds, itemBounds(poseLegs(motion, k, 1).items));
+  }
+  return { ...motion, bounds };
+}
+
+/**
+ * A group's hinge in the scene (see {@link FoldPosedHinge}); null for an
+ * axis with no direction or a `then` that cannot be undone.
+ */
+function posedHinge(group: FoldMotionGroup, toScene: SceneAffine, fromScene: SceneAffine): FoldPosedHinge | null {
+  const [nx, ny] = group.axis.n;
+  const length = Math.hypot(nx, ny);
+  if (!(length > 0) || !Number.isFinite(group.axis.d)) return null;
+  const n: ScenePoint = [nx / length, ny / length];
+  const d = group.axis.d / length;
+  const then = group.then ? isometryAffine(group.then) : IDENTITY_AFFINE;
+  const back = invertAffine(then);
+  if (!back) return null;
+  // The way the group turns; a resting one, which way it rests.
+  const sense = Math.sign(group.to - group.from) || Math.sign(group.from);
+  // One line, either way its normal points.
+  const canonical = n[0] < 0 || (n[0] === 0 && n[1] < 0) ? -1 : 1;
+  const key = [n[0] * canonical, n[1] * canonical, d * canonical].map((v) => v.toFixed(6)).join(',');
+  return {
+    n,
+    d,
+    start: composeAffine(swingAffine(n, d, 2), composeAffine(back, fromScene)),
+    toScene,
+    kept: determinant(then) < 0 ? -1 : 1,
+    lands: group.then === undefined,
+    unit: `${key}:${sense}`,
+  };
+}
+
+/**
+ * Where a face that leg `k` names no group for rests through it: where its
+ * last turn before left it, or, with none before, where its first turn after
+ * starts it.
+ */
+function restingTurn(legs: readonly ReadonlyMap<number, FoldFaceTurn>[], k: number, face: number): FoldFaceTurn | null {
+  for (let j = k - 1; j >= 0; j -= 1) {
+    const turn = legs[j]!.get(face);
+    if (turn) return { hinge: turn.hinge, from: turn.to, to: turn.to };
+  }
+  for (let j = k + 1; j < legs.length; j += 1) {
+    const turn = legs[j]!.get(face);
+    if (turn) return { hinge: turn.hinge, from: turn.from, to: turn.from };
+  }
+  return null;
+}
+
+/** The legs a swing plays: a spread and the close after it, or a leg alone. */
+function swingsOf(legs: readonly FoldPosedLeg[]): number[][] {
+  const swings: number[][] = [];
+  for (let k = 0; k < legs.length; k += 1) {
+    if (legs[k]!.name === 'spread' && legs[k + 1]?.name === 'close') {
+      swings.push([k, k + 1]);
+      k += 1;
+    } else {
+      swings.push([k]);
+    }
+  }
+  return swings;
+}
+
+/** Per landed face, the stacking rank in the before scene of the face it is (a piece of). */
+function parentRanks(
+  before: PaperScene,
+  after: PaperScene,
+  parentFace: (face: number) => number | null
+): Map<number, number> {
   const rankOf = new Map<number, number>();
   before.items.forEach((item, rank) => {
     if (item.kind === 'face' && !rankOf.has(item.face)) rankOf.set(item.face, rank);
@@ -257,15 +431,7 @@ export function legsMotion(
     const rank = parent === null ? undefined : rankOf.get(parent);
     if (rank !== undefined) parentRank.set(item.face, rank);
   }
-  return {
-    kind: 'legs',
-    after,
-    line: { at: line.at, along: unit(line.along) },
-    legs,
-    moving,
-    parentRank,
-    bounds: unionBounds(before.bounds, after.bounds),
-  };
+  return parentRank;
 }
 
 export function crossfadeMotion(before: PaperScene, after: PaperScene): FoldCrossfadeMotion {
@@ -331,46 +497,97 @@ export function poseHinge(motion: FoldHingeMotion, angle: number): PaperScene {
 }
 
 /**
- * The compound step at swing `angle`: 0 where the paper starts, π where it
- * lands. Every turning face swings on the rigid hinge from where the parent
- * had it, showing the side it showed there until edge-on; the leg the angle
- * is in says whose stacking the frame is drawn in.
+ * Leg `index` of a compound step, `share` of the way through it: every face
+ * the leg turns swung on the rigid hinge from its turn's first angle toward
+ * its last, every other moving face where it rests, the paper that stays
+ * where it lies.
+ *
+ * Drawn in the stacking the leg names. The parent's ranks each run where
+ * the face it is (a piece of) lay, markup on top; a grouped run fixes up the
+ * landed order only, so it goes — and in the landed stacking too while any
+ * face it draws is away from where it lands. In either, a stack the reader
+ * sees from its other side than the stacking does — past edge-on, or turned
+ * an odd number of times since — reads reversed: each unit of faces turning
+ * together keeps its places in the order and takes them in reverse.
  */
-export function poseLegs(motion: FoldLegsMotion, angle: number): PaperScene {
-  const leg = motion.legs.find((each) => angle >= each.from && angle <= each.to) ?? motion.legs[motion.legs.length - 1];
-  const { at, along } = motion.line;
-  const across: ScenePoint = [-along[1], along[0]];
-  const hinge = rigidHinge(angle);
-  const tilt = Math.cos(angle);
-  const landedSide = shownFace(tilt) < 0;
-  const point = (p: ScenePoint): ScenePoint => {
-    const dx = p[0] - at[0];
-    const dy = p[1] - at[1];
-    const s = dx * along[0] + dy * along[1];
-    const u = dx * across[0] + dy * across[1];
-    const { v } = hinge.place(s, -u);
-    return [at[0] + s * along[0] + v * across[0], at[1] + s * along[1] + v * across[1]];
+export function poseLegs(motion: FoldLegsMotion, index: number, share: number): PaperScene {
+  const leg = motion.legs[Math.max(0, Math.min(motion.legs.length - 1, index))];
+  if (!leg) return motion.after;
+  const t = Math.max(0, Math.min(1, share));
+  // One pose per turn: a group's faces share it.
+  const poses = new Map<FoldFaceTurn, FacePose>();
+  const poseOf = (face: number | null | undefined): FacePose | null => {
+    const turn = face === null || face === undefined ? undefined : leg.faces.get(face);
+    if (!turn) return null;
+    let pose = poses.get(turn);
+    if (!pose) {
+      pose = facePose(turn.hinge, turn.from + t * (turn.to - turn.from));
+      poses.set(turn, pose);
+    }
+    return pose;
   };
-  const how: ItemPose = { point, flip: !landedSide, lighting: tiltLighting(tilt) };
+  const away = (item: PaperItem) => item.kind !== 'markup' && poseOf(item.face)?.moved === true;
   const blocks = paperBlocks(motion.after.items);
-  // The parent's stacking: each run where the face it is (a piece of) lay,
-  // markup on top; a grouped run fixes up the landed order only, so it goes.
   const rank = (block: PaperBlock) =>
     block.face === null ? Number.POSITIVE_INFINITY : (motion.parentRank.get(block.face) ?? Number.POSITIVE_INFINITY);
   const ordered =
-    leg?.stacking === 'parent'
+    leg.stacking === 'parent'
       ? blocks
-          .map((block, index) => ({ block, index }))
+          .map((block, at) => ({ block, at }))
           .filter(({ block }) => !block.grouped)
-          .sort((a, b) => rank(a.block) - rank(b.block) || a.index - b.index)
+          .sort((a, b) => rank(a.block) - rank(b.block) || a.at - b.at)
           .map(({ block }) => block)
-      : blocks;
-  const items = ordered.flatMap((block) =>
-    block.face !== null && motion.moving.has(block.face)
-      ? block.items.map((item) => posedItem(item, how))
-      : block.items.map(unhidden)
-  );
+      : blocks.filter((block) => !block.grouped || !block.items.some(away));
+  // A stack seen from its other side than the stacking's: its runs' places, taken in reverse.
+  const reversed = (face: number, pose: FacePose) =>
+    leg.stacking === 'parent' ? pose.flipped !== motion.startFlipped.has(face) : pose.flipped;
+  const units = new Map<string, number[]>();
+  ordered.forEach((block, at) => {
+    const pose = block.grouped ? null : poseOf(block.face);
+    if (block.face === null || !pose || !reversed(block.face, pose)) return;
+    const places = units.get(pose.hinge.unit) ?? [];
+    places.push(at);
+    units.set(pose.hinge.unit, places);
+  });
+  const drawn = [...ordered];
+  for (const places of units.values()) {
+    places.forEach((at, k) => {
+      drawn[at] = ordered[places[places.length - 1 - k]!]!;
+    });
+  }
+  const items = drawn.flatMap((block) => {
+    const pose = poseOf(block.face);
+    return pose?.moved ? block.items.map((item) => posedItem(item, pose.how)) : block.items.map(unhidden);
+  });
   return { bounds: motion.bounds, sheet: motion.after.sheet, items };
+}
+
+/** How one turn places its faces at a swing: the item pose, and what the stacking needs to know of it. */
+interface FacePose {
+  readonly how: ItemPose;
+  readonly hinge: FoldPosedHinge;
+  /** Showing the other side than the landed scene does. */
+  readonly flipped: boolean;
+  /** Anywhere but where it lands: posed rather than drawn as the landed scene has it. */
+  readonly moved: boolean;
+}
+
+/** Whether paper turned to `angle` about `hinge` shows the other side than it lands showing: edge-on counts as turned. */
+function flippedAt(hinge: FoldPosedHinge, angle: number): boolean {
+  // The footprint's orientation against the landed one's is −cos θ · det(then).
+  return shownFace(Math.cos(angle) * hinge.kept) > 0;
+}
+
+function facePose(hinge: FoldPosedHinge, angle: number): FacePose {
+  const tilt = Math.cos(angle);
+  const map = composeAffine(hinge.toScene, composeAffine(swingAffine(hinge.n, hinge.d, 1 - tilt), hinge.start));
+  const flipped = flippedAt(hinge, angle);
+  return {
+    how: { point: (p) => applyAffine(map, p), flip: flipped, lighting: tiltLighting(tilt) },
+    hinge,
+    flipped,
+    moved: !(hinge.lands && Math.abs(Math.abs(angle) - Math.PI) < 1e-12),
+  };
 }
 
 /** The turn step at `angle`: 0 the before scene, π the after scene. */
@@ -524,6 +741,63 @@ export function affineThrough(
   const b = (uu[1] * v[1] - vv[1] * u[1]) / det;
   const d = (vv[1] * u[0] - uu[1] * v[0]) / det;
   return [a, b, c, d, q0[0] - (a * p0[0] + c * p0[1]), q0[1] - (b * p0[0] + d * p0[1])];
+}
+
+const IDENTITY_AFFINE: SceneAffine = [1, 0, 0, 1, 0, 0];
+
+/** `outer ∘ inner`: `inner` first. */
+export function composeAffine(outer: SceneAffine, inner: SceneAffine): SceneAffine {
+  const [a, b, c, d, e, f] = outer;
+  const [p, q, r, s, t, u] = inner;
+  return [a * p + c * q, b * p + d * q, a * r + c * s, b * r + d * s, a * t + c * u + e, b * t + d * u + f];
+}
+
+/** The map undone, or null when it flattens the plane. */
+export function invertAffine([a, b, c, d, e, f]: SceneAffine): SceneAffine | null {
+  const det = a * d - b * c;
+  if (!(Math.abs(det) > 1e-12)) return null;
+  const ia = d / det;
+  const ib = -b / det;
+  const ic = -c / det;
+  const id = a / det;
+  return [ia, ib, ic, id, -(ia * e + ic * f), -(ib * e + id * f)];
+}
+
+function determinant([a, b, c, d]: SceneAffine): number {
+  return a * d - b * c;
+}
+
+/** The engine's isometry (`x' = a x + b y + c`) in this module's order. */
+export function isometryAffine([a, b, c, d, e, f]: FoldIsometry): SceneAffine {
+  return [a, d, b, e, c, f];
+}
+
+/**
+ * `p − k (n · p − d) n`: a point pulled `k` times its distance across the
+ * line `n · p = d` (unit `n`) — 0 leaves it, 2 reflects it, and `1 − cos θ`
+ * is where paper swung by θ about the line is seen from above.
+ */
+function swingAffine([nx, ny]: ScenePoint, d: number, k: number): SceneAffine {
+  return [1 - k * nx * nx, -k * nx * ny, -k * nx * ny, 1 - k * ny * ny, k * d * nx, k * d * ny];
+}
+
+/** The bounds of the faces and lines among `items`. */
+function itemBounds(items: readonly PaperItem[]): SceneBounds {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  const add = ([x, y]: ScenePoint) => {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  };
+  for (const item of items) {
+    if (item.kind === 'face') item.rings.forEach((ring) => ring.forEach(add));
+    else if (item.kind === 'line') [item.a, item.b].forEach(add);
+  }
+  return minX <= maxX ? { minX, minY, maxX, maxY } : { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 }
 
 /** A rotation's angle, a half turn taken the way `halfTurn` says (the matrix cannot). */
