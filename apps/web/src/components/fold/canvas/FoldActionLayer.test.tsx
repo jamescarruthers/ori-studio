@@ -93,4 +93,30 @@ describe('FoldActionLayer', () => {
     );
     expect(withPush - host.querySelectorAll('path').length).toBeGreaterThanOrEqual(2);
   });
+
+  it('draws a compound fold’s pleat: a bolt in the arrow’s pen with its head, alone or beside the arrow', () => {
+    const action: FoldActionGeometry = {
+      kind: 'fold',
+      direction: 'valley',
+      line: null,
+      spans: [],
+      moving: [1],
+      grip: null,
+      pleat: { from: { x: 0.2, y: 0.5 }, to: { x: 0.8, y: 0.5 }, kinks: 1 },
+    };
+    const render = (shown: FoldActionGeometry) =>
+      act(() =>
+        root.render(
+          <FoldActionLayer action={shown} view={VIEW as never} style={DEFAULT_PAPER_STYLE} outline={SQUARE} ground="#ffffff" />
+        )
+      );
+    render(action);
+    // Nothing else to draw, and still drawn: its shaft and its head.
+    expect(host.querySelector('[data-fold-action]')).not.toBeNull();
+    const shafts = [...host.querySelectorAll('path')].filter((path) => path.getAttribute('stroke-linejoin') === 'miter');
+    expect(shafts.length).toBeGreaterThan(0);
+    const { pleat: _pleat, ...without } = action;
+    render(without);
+    expect(host.querySelector('[data-fold-action]')).toBeNull();
+  });
 });
