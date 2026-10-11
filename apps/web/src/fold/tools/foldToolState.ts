@@ -75,9 +75,16 @@ export interface FoldCompoundToolChoices {
   opening: number;
   /** The layer order, by index into the orders the engine lists for the kind. */
   order: number;
+  /** A closed sink's pocket, by index into the pockets the engine lists for the point (`tools/sink`). */
+  pocket: number;
 }
 
-export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = { reverseKind: null, opening: 0, order: 0 };
+export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
+  reverseKind: null,
+  opening: 0,
+  order: 0,
+  pocket: 0,
+};
 
 export interface FoldToolState {
   tool: FoldToolId;
@@ -127,9 +134,11 @@ function located(state: FoldToolState): FoldToolState {
   };
 }
 
-/** A new tip — another side, another seed, another root — opens and stacks anew: the kind stays chosen. */
+/** A new tip — another side, another seed, another root — opens, sinks and stacks anew: the kind stays chosen. */
 function anotherTip(compound: FoldCompoundToolChoices): FoldCompoundToolChoices {
-  return compound.opening === 0 && compound.order === 0 ? compound : { ...compound, opening: 0, order: 0 };
+  return compound.opening === 0 && compound.order === 0 && compound.pocket === 0
+    ? compound
+    : { ...compound, opening: 0, order: 0, pocket: 0 };
 }
 
 /** The clicks the state's tool and line mode collect. */
@@ -192,6 +201,8 @@ export interface FoldTools {
   stepOpening(delta: number, count: number): void;
   /** Step through the layer orders listed, of `count`. */
   stepOrder(delta: number, count: number): void;
+  /** Step through a closed sink's pockets, of `count`: each stacks anew. */
+  stepPocket(delta: number, count: number): void;
 }
 
 const sameFlap = (a: FoldFlap, b: FoldFlap) =>
@@ -356,6 +367,14 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => ({
         ...state,
         compound: { ...state.compound, order: (((state.compound.order + delta) % count) + count) % count },
+      }));
+    },
+
+    stepPocket(delta, count) {
+      if (count <= 1) return;
+      set((state) => ({
+        ...state,
+        compound: { ...state.compound, pocket: (((state.compound.pocket + delta) % count) + count) % count, order: 0 },
       }));
     },
   };

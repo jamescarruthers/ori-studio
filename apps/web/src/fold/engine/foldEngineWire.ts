@@ -248,7 +248,9 @@ export type FoldCompoundRefusalBody =
   // The reverse fold (`foldEngineReverseWire.ts`).
   | { readonly code: 'reverse_no_opening'; readonly faces: readonly number[]; readonly cause: FoldNoOpening }
   | { readonly code: 'reverse_kind_infeasible'; readonly kind: FoldReverseKind; readonly faces: readonly number[] }
-  | { readonly code: 'reverse_tip_not_free'; readonly blocking: readonly number[]; readonly faces: readonly number[] };
+  | { readonly code: 'reverse_tip_not_free'; readonly blocking: readonly number[]; readonly faces: readonly number[] }
+  // The sinks (`foldEngineSinkWire.ts`).
+  | { readonly code: 'sink_several_points'; readonly flaps: number; readonly faces: readonly number[] };
 
 /**
  * A flap: a connected part of the moving side, joined across creases with an

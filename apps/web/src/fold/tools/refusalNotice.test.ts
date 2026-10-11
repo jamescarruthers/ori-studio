@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
+import { FOLD_SINK_REFUSAL_CODES } from '../engine/foldEngineSinkWire';
 import { FOLD_REFUSAL_CODES, type FoldRefusalBody } from '../engine/foldEngineWire';
 import {
   foldRefusalNotice,
   neededFlaps,
+  sinkRefusalTitle,
   type FoldFixVerbs,
   type FoldRefused,
   type FoldRefusalContext,
@@ -43,6 +45,55 @@ describe('foldRefusalNotice', () => {
       expect(notice.title, code).not.toBe('');
       expect(notice.text, code).not.toBe('');
     }
+  });
+
+  it('words every sink refusal in its own words, and a pocket still to choose as its chooser asks', () => {
+    const generic = foldRefusalNotice(t, { refusal: { code: 'internal' }, fixes: [] }, context(), verbs());
+    const titles = new Set<string>();
+    for (const code of FOLD_SINK_REFUSAL_CODES) {
+      const refusal = { code, flaps: 3, faces: [0] } as FoldRefusalBody;
+      const notice = foldRefusalNotice(t, { refusal, fixes: [] }, context({ kind: 'sink' }), verbs());
+      expect(notice.title, code).not.toBe(generic.title);
+      expect(notice.text, code).not.toBe(generic.text);
+      expect(notice.title, code).toBe(sinkRefusalTitle(t, code));
+      titles.add(notice.title);
+    }
+    expect(titles.size).toBe(FOLD_SINK_REFUSAL_CODES.length);
+    const several = foldRefusalNotice(
+      t,
+      { refusal: { code: 'sink_several_points', flaps: 3, faces: [0] }, fixes: [] },
+      context({ kind: 'sink' }),
+      verbs()
+    );
+    expect(several.text).toBe('3 points lie on the tip side, and a sink takes one. Pick the point to sink.');
+    const pocket = foldRefusalNotice(t, { refusal: { code: 'choice_needed', choice: 'pocket' }, fixes: [] }, context(), verbs());
+    expect(pocket.title).toBe('Choose a pocket');
+  });
+
+  it('gives every sink fix a button: the square line, the other sink, a point to sink alone', () => {
+    const calls = { ...verbs(), otherSink: vi.fn() } satisfies FoldFixVerbs;
+    const square: FoldUseLineFix = { fix: 'use_line', line, side: 'positive' };
+    const flap = { faces: [4], witness: [0.2, 0.2] as [number, number] };
+    const refused: FoldRefused = {
+      refusal: { code: 'sink_line_tilted', offset: 0.01, faces: [0] },
+      fixes: [square, { fix: 'other_sink', kind: 'closed' }, { fix: 'other_sink', kind: 'open' }, { fix: 'pick_flap', flaps: [flap] }],
+    };
+    const notice = foldRefusalNotice(t, refused, context({ kind: 'sink' }), calls);
+    expect(notice.actions.map((action) => action.label)).toEqual([
+      'Use the square line',
+      'Closed sink instead',
+      'Open sink instead',
+      'Sink flap 2 only',
+    ]);
+    notice.actions.forEach((action) => action.run());
+    expect(calls.useLine).toHaveBeenCalledWith(square);
+    expect(calls.otherSink.mock.calls).toEqual([['closed'], ['open']]);
+    expect(calls.pickFlap).toHaveBeenCalledWith(flap);
+    // Without the verb, no button that would do nothing.
+    expect(foldRefusalNotice(t, refused, context({ kind: 'sink' }), verbs()).actions.map((action) => action.label)).toEqual([
+      'Use the square line',
+      'Sink flap 2 only',
+    ]);
   });
 
   it('offers to include the flaps the closure would move, by their numbers on screen', () => {

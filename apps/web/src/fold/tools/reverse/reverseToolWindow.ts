@@ -64,8 +64,9 @@ export interface FoldChoiceStepper {
   next: { label: string; disabled: boolean; run: () => void };
 }
 
-export interface FoldReverseKindOption {
-  value: FoldReverseKind;
+/** One kind a compound fold's kind control offers: a reverse fold's Inside, a sink's Open. */
+export interface FoldKindChoiceOption<K extends string> {
+  value: K;
   /** Its name in the control: "Inside". */
   short: string;
   /** Its whole name, for its tooltip: "Inside reverse fold". */
@@ -75,22 +76,28 @@ export interface FoldReverseKindOption {
   reason: string | null;
 }
 
+/** A compound fold's kind control: its kinds, the one that does not fit disabled, and what fits said in a line. */
+export interface FoldKindChoice<K extends string> {
+  label: string;
+  value: K;
+  options: readonly FoldKindChoiceOption<K>[];
+  disabled: boolean;
+  /** What the kinds that land say, in a line: only one fits, or both. */
+  note: string | null;
+  set: (kind: K) => void;
+}
+
+export type FoldReverseKindOption = FoldKindChoiceOption<FoldReverseKind>;
+
 /** The reverse fold's own controls in the window. */
 export interface FoldReverseControls {
-  kind: {
-    label: string;
-    value: FoldReverseKind;
-    options: readonly FoldReverseKindOption[];
-    disabled: boolean;
-    /** What the kinds that land say, in a line: only one fits, or both. */
-    note: string | null;
-    set: (kind: FoldReverseKind) => void;
-  };
+  kind: FoldKindChoice<FoldReverseKind>;
   opening: FoldChoiceStepper | null;
   order: FoldChoiceStepper | null;
 }
 
-function stepper(
+/** A stepper through `count` listed choices, at `index`; null for one or none, or with nothing to step them. */
+export function stepper(
   t: TFunction,
   label: string,
   index: number,

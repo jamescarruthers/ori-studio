@@ -69,6 +69,13 @@ export const FOLD_SINK_REFUSAL_CODES = [
   'unsink_not_sunk',
 ] as const;
 
+export type FoldSinkRefusalCode = (typeof FOLD_SINK_REFUSAL_CODES)[number];
+
+/** Whether a refusal code is a sink's own. */
+export function isSinkRefusalCode(code: string): code is FoldSinkRefusalCode {
+  return (FOLD_SINK_REFUSAL_CODES as readonly string[]).includes(code);
+}
+
 // ---------------------------------------------------------------------------
 // The point
 

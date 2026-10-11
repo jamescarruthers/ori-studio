@@ -378,19 +378,23 @@ export interface FoldAlongLocated {
  * from the state `index` was made for; or why there is none yet. A plain
  * fold and a compound one along a line both start here (`unfolds`: whether a
  * bend picked in the existing-crease mode is unfolded, as a valley or
- * mountain along it is, and its flap taken).
+ * mountain along it is, and its flap taken). `moves` is which side moves
+ * when nothing says: the one with less paper, as a folder takes the smaller
+ * part over — or, for an unsink, the one with more, where the sunk point lies
+ * inside the paper round it.
  */
 export function locateAlongLine(
   intent: FoldLocateIntent,
   index: FoldPickIndex,
-  unfolds: boolean
+  unfolds: boolean,
+  moves: 'less' | 'more' = 'less'
 ): FoldAlongLocated | { status: 'unlocated' } | { status: 'refused'; refused: FoldEngineRefused } {
   const located = locate(intent, index);
   if (!located) return { status: 'unlocated' };
   if ('status' in located) return { status: 'refused', refused: located };
   const { line, sceneLine, implied, choices, crease, acrossLayers } = located;
   const unfolding = crease?.segment === 'bend' && unfolds;
-  const base = implied ?? defaultMovingSign(index, sceneLine, unfolding);
+  const base = implied ?? defaultMovingSign(index, sceneLine, unfolding || moves === 'more');
   const movingSign: 1 | -1 = intent.swapped ? (-base as 1 | -1) : base;
 
   // What moves. Unfolding takes the top flap on the moving side unless the

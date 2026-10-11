@@ -53,6 +53,10 @@ describe('the sink calls', () => {
       this.asked.push(['pick', ...args]);
       return { status: 'ok' };
     },
+    sunk_points(...args) {
+      this.asked.push(['sunk', ...args]);
+      return { status: 'ok' };
+    },
   };
   const calls = createFoldEngineSinkCalls(engine);
 
@@ -61,6 +65,13 @@ describe('the sink calls', () => {
     calls.sinkPick(3, SINK, [0, 2], { pocket: [[0.1, 0.1], [0.2, 0.2]] });
     expect(engine.asked[0]).toEqual(['orders', 3, SINK, undefined]);
     expect(engine.asked[1]?.[4]).toEqual(Uint32Array.from([0, 2]));
+    const unsink: FoldEngineSinkOp = { ...SINK, kind: 'unsink' };
+    calls.sunkPoints(4, unsink);
+    expect(engine.asked[2]).toEqual(['sunk', 4, unsink, undefined]);
+  });
+
+  it('asks for sunk points of an unsink only', () => {
+    expect(() => calls.sunkPoints(1, SINK)).toThrow(expect.objectContaining({ code: 'invalid_input' }));
   });
 
   it('throws the caller’s mistakes before the engine sees them', () => {

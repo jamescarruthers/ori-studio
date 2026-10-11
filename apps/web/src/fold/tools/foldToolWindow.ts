@@ -42,6 +42,7 @@ import {
   foldToolLabel,
   isFoldKind,
   isFoldLineMode,
+  isSinkTool,
   lineModeLabel,
   lineModeSteps,
   type FoldKind,
@@ -56,6 +57,7 @@ import {
   type FoldReverseControls,
   type FoldReverseWindowView,
 } from './reverse/reverseToolWindow';
+import { sinkToolWindow, type FoldSinkControls, type FoldSinkWindowView } from './sink/sinkToolWindow';
 import {
   foldRefusalNotice,
   neededFlaps,
@@ -96,6 +98,8 @@ export interface FoldToolWindowView extends FoldToolsView {
   divide?: { settings: FoldDivideSettings; marks: number };
   /** The reverse tool's kind and choices, while it previews (`tools/reverse/reverseToolWindow`). */
   reverse?: FoldReverseWindowView;
+  /** A sink tool's point and choices, while it previews (`tools/sink/sinkToolWindow`). */
+  sink?: FoldSinkWindowView;
 }
 
 /** What the window can promise on this device. */
@@ -124,6 +128,8 @@ export interface FoldToolWindowVerbs extends Pick<FoldRailVerbs, 'selectTool' | 
   /** Step through the ways the tip opens, or the layer orders listed. */
   stepOpening?: (delta: number) => void;
   stepOrder?: (delta: number) => void;
+  /** Step through a closed sink's pockets (`tools/sink/sinkToolWindow`). */
+  stepPocket?: (delta: number) => void;
 }
 
 /** The Divide line's controls: count or exact ratio (Edit's ratio expression), and clearing what is made. */
@@ -217,6 +223,8 @@ export interface FoldToolWindowModel {
   divide: FoldDivideControls | null;
   /** A compound fold's kind and choices (`tools/reverse/reverseToolWindow`); absent for every other tool. */
   compound?: FoldReverseControls;
+  /** A sink's kind, line, depth and choices (`tools/sink/sinkToolWindow`); absent for every other tool. */
+  sink?: FoldSinkControls;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
 }
 
@@ -460,6 +468,7 @@ export function foldToolWindow(
     };
   }
   if (view.tool === 'inside-reverse') return reverseToolWindow(t, view, verbs, host);
+  if (isSinkTool(view.tool)) return sinkToolWindow(t, view, verbs, host);
   if (!isFoldKind(view.tool)) return null;
   const kind = view.tool;
   const title = foldToolLabel(t, kind);
