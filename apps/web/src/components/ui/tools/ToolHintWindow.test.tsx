@@ -221,4 +221,24 @@ describe('ToolHintWindow', () => {
     expect(reset?.closest('button[aria-expanded]')).toBeNull();
     expect(windowEl()?.contains(reset ?? null)).toBe(true);
   });
+
+  it('hands its frame to a workspace that keeps out from under it, and takes it back as it goes', () => {
+    const frames: (HTMLElement | null)[] = [];
+    const onFrame = (frame: HTMLElement | null) => frames.push(frame);
+    const show = (el: HTMLElement | null) =>
+      act(() =>
+        root.render(
+          <ToolHintWindow container={el} collapseKey={STORAGE_KEYS.cpToolHintCollapsed} title="Valley fold" meta="1 setting" ariaLabel="Tool options" onFrame={onFrame}>
+            <p />
+          </ToolHintWindow>
+        )
+      );
+    show(container);
+    expect(frames).toEqual([windowEl()]);
+    // A re-render is not a new frame.
+    show(container);
+    expect(frames).toHaveLength(1);
+    show(null);
+    expect(frames).toEqual([expect.any(HTMLElement), null]);
+  });
 });

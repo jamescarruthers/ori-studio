@@ -136,6 +136,59 @@ export function fitUserCamera(
   };
 }
 
+/**
+ * How far in from each edge of a viewport something drawn over the canvas
+ * covers it, in the viewport's own px: a floating window along its bottom,
+ * say. Fitting within the inset keeps the content in the part that shows.
+ */
+export interface ViewportInset {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/**
+ * The least of each axis an inset leaves for the fit. An inset that would
+ * leave less is scaled back to leave this much: content fitted into a sliver
+ * is no more use than content under the window.
+ */
+const MIN_VISIBLE_SHARE = 0.25;
+
+/** Two opposite insets along an axis of `length`, scaled back so they leave {@link MIN_VISIBLE_SHARE} of it. */
+function insetPair(start: number, end: number, length: number): [number, number] {
+  const a = Math.max(0, start);
+  const b = Math.max(0, end);
+  const room = length * (1 - MIN_VISIBLE_SHARE);
+  const total = a + b;
+  if (total <= room) return [a, b];
+  const scale = total > 0 ? room / total : 0;
+  return [a * scale, b * scale];
+}
+
+/**
+ * {@link fitUserCamera} into the part of the viewport an inset leaves: the
+ * content fitted to that part's size and centred on its middle rather than
+ * the viewport's. The camera itself still centres on the viewport, so its
+ * centre is shifted by half the difference of the opposite insets, through
+ * the view's rotation.
+ */
+export function fitUserCameraWithin(
+  bounds: UserBounds,
+  viewport: Viewport,
+  inset: ViewportInset,
+  padding = 0.7,
+  rotation = 0
+): UserCamera {
+  const [left, right] = insetPair(inset.left, inset.right, viewport.width);
+  const [top, bottom] = insetPair(inset.top, inset.bottom, viewport.height);
+  const shown: Viewport = { ...viewport, width: viewport.width - left - right, height: viewport.height - top - bottom };
+  const fitted = fitUserCamera(bounds, shown, padding, rotation);
+  // The content's middle belongs at the shown part's middle, which is this far off the viewport's.
+  const shift = deviceDeltaToUser(fitted, (left - right) / 2, (top - bottom) / 2);
+  return { ...fitted, centerX: fitted.centerX - shift.x, centerY: fitted.centerY - shift.y };
+}
+
 /** How tightly {@link frameUserCameraOnBounds} packs its target into the viewport. */
 const FRAME_PADDING = 0.5;
 /**

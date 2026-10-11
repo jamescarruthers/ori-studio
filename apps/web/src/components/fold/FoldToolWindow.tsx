@@ -42,12 +42,15 @@ export function FoldToolWindow({
   container,
   model,
   keyLabel,
+  onFrame,
 }: {
   /** The viewport cell the window anchors to. */
   container: HTMLElement | null;
   model: FoldToolWindowModel | null;
   /** The label of a Fold key; without it the buttons name none. */
   keyLabel?: FoldKeyLabel;
+  /** The window's frame, as it mounts and goes: what a phone's pane fits its paper above (`useFoldWindowInset`). */
+  onFrame?: (frame: HTMLElement | null) => void;
 }) {
   const { t } = useTranslation();
   const phone = useIsPhoneLayout();
@@ -73,6 +76,7 @@ export function FoldToolWindow({
       // Open, it keeps to a third of a phone's height, so the fold it
       // previews stays in view above it.
       height={phone ? 'capped' : 'default'}
+      onFrame={onFrame}
     >
       <div className={styles.section}>
         <ToolHintInstructions

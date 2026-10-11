@@ -37,6 +37,7 @@ import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFold
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
 import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
+import { useFoldWindowInset } from '../../../fold/canvas/useFoldWindowInset';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
@@ -99,6 +100,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const keyLabel = useCallback<FoldKeyLabel>((id) => shortcutLabelForAction(id, shortcuts), [shortcuts]);
   const theme = useThemeStore((state) => state.currentTheme);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  const [toolWindowFrame, setToolWindowFrame] = useState<HTMLElement | null>(null);
+  // A phone's tool window spans the pane: the paper is fitted above it.
+  const inset = useFoldWindowInset(viewport, toolWindowFrame, phone);
   const inks = useFoldCanvasInks(viewport, theme.name);
   const [display, setDisplay] = useState<FoldPaneDisplay>(FOLD_PANE_DISPLAY_DEFAULT);
   const [zoomPercent, setZoomPercent] = useState(100);
@@ -227,6 +231,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const paneProps = {
     style,
     framingKey,
+    inset,
     wheelGesture,
     snapRadius,
     inkKey: theme.name,
@@ -310,7 +315,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
           sendToEdit={sendToEdit}
         />
       </div>
-      <FoldToolWindow container={viewport} model={windowModel} keyLabel={keyLabel} />
+      <FoldToolWindow container={viewport} model={windowModel} keyLabel={keyLabel} onFrame={setToolWindowFrame} />
     </div>
   );
 }

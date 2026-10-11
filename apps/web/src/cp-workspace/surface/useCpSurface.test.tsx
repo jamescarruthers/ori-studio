@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Point } from '../../lib/geometry';
 import { COARSE_POINTER_QUERY } from '../../platform/pointerSurface';
+import type { CpOverlayView } from '../CreasePatternWebglCanvas';
 import type { UserBounds } from '../renderer/camera';
 import type { ReglRendererOptions } from '../renderer/reglRenderer';
 import {
@@ -165,6 +166,39 @@ describe('useCpSurface camera', () => {
     expect(onViewChange).toHaveBeenCalledTimes(1);
     act(() => surface().controls.zoomOut());
     expect(onViewChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('fits above an inset, follows it while the camera is the fit’s, and leaves a camera the user moved', () => {
+    const onViewChange = vi.fn<(view: CpOverlayView) => void>();
+    // A square sheet, so the height the inset takes is what the fit is limited by.
+    const contentBounds: UserBounds = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    // Where the content's middle (50, 50) lands on the 400 × 400 canvas, CSS px.
+    const middle = () => {
+      const view = onViewChange.mock.calls.at(-1)?.[0];
+      if (!view) throw new Error('no view');
+      return { x: view.origin[0] + 50 * view.ex[0], y: view.origin[1] + 50 * view.ey[1] };
+    };
+    const covered = { top: 0, right: 0, bottom: 200, left: 0 };
+    mount({ onViewChange, contentBounds, inset: covered });
+    // Fitted to the top 400 × 200 and centred on it, not on the canvas.
+    expect(middle().x).toBeCloseTo(200);
+    expect(middle().y).toBeCloseTo(100);
+    expect(surface().cssPerUserUnit()).toBeCloseTo((200 / 100) * 0.7);
+
+    // The window closes: the fit follows, to the whole canvas.
+    mount({ onViewChange, contentBounds, inset: null });
+    expect(middle().y).toBeCloseTo(200);
+    expect(surface().cssPerUserUnit()).toBeCloseTo((400 / 100) * 0.7);
+
+    // Once the user has zoomed, a window opening moves nothing.
+    act(() => surface().controls.zoomIn());
+    const zoomed = surface().cssPerUserUnit();
+    mount({ onViewChange, contentBounds, inset: covered });
+    expect(surface().cssPerUserUnit()).toBe(zoomed);
+    expect(middle().y).toBeCloseTo(200);
+    // Fit asks again, within the inset.
+    act(() => surface().controls.fit());
+    expect(middle().y).toBeCloseTo(100);
   });
 
   it('sets a zoom percentage about the centre', () => {

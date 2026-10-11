@@ -31,7 +31,7 @@
  * group does in Edit's window, and has to read as the same kind of thing.
  */
 import { createPortal } from 'react-dom';
-import { useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useToolHintAnchor } from './useToolHintAnchor';
 import { useToolHintCollapsed } from './useToolHintCollapsed';
 import styles from './ToolHintWindow.module.css';
@@ -49,6 +49,7 @@ export function ToolHintWindow({
   startsCollapsed = false,
   needsAttention = false,
   height = 'default',
+  onFrame,
   children,
 }: {
   /**
@@ -97,6 +98,13 @@ export function ToolHintWindow({
    * window is open (a phone's Fold canvas).
    */
   height?: 'default' | 'capped';
+  /**
+   * Handed the window's frame as it mounts, and null as it goes: for a
+   * workspace that keeps what it draws out from under the window — Fold's
+   * phone pane fits its paper above it. Stable, or the frame is handed over
+   * again on every render.
+   */
+  onFrame?: (frame: HTMLElement | null) => void;
   children: ReactNode;
 }) {
   const [preferCollapsed, setPreferCollapsed] = useToolHintCollapsed(collapseKey, startsCollapsed);
@@ -119,6 +127,13 @@ export function ToolHintWindow({
   const { attachFrame, attachContent, attachScroller, closing } = useAnimatedHeight({
     collapsed,
   });
+  const frameRef = useCallback(
+    (frame: HTMLElement | null) => {
+      attachFrame(frame);
+      onFrame?.(frame);
+    },
+    [attachFrame, onFrame]
+  );
 
   // No rect yet, or a viewport that is laid out but not displayed. Rendering
   // unpositioned would park the window in the corner of the screen for a frame.
@@ -128,7 +143,7 @@ export function ToolHintWindow({
 
   return createPortal(
     <FloatingPanel
-      ref={attachFrame}
+      ref={frameRef}
       className={styles.window}
       // Pinned by its bottom edge, so it grows and shrinks at the top.
       pin="bottom"
