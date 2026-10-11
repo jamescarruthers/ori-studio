@@ -75,6 +75,7 @@ vi.mock("../../../fold/canvas/useFoldPanePlayback", async (importOriginal) => {
   };
 });
 
+import { foldPaneDisplay, resetFoldPaneDisplay } from "../../../fold/canvas/foldPaneDisplay";
 import { foldPhonePane, showFoldPhonePane } from "../../../fold/canvas/foldPhonePane";
 import { foldTools } from "../../../fold/tools/foldToolState";
 import { PHONE_MEDIA_QUERY } from "../../../platform/phoneLayout";
@@ -122,6 +123,8 @@ afterEach(() => {
   host?.remove();
   host = null;
   vi.unstubAllGlobals();
+  // The switches are the view's, shared with the step strip: put them back.
+  resetFoldPaneDisplay();
 });
 
 describe("the Fold canvas", () => {
@@ -140,6 +143,8 @@ describe("the Fold canvas", () => {
     act(() => toggle("Precreases")?.click());
     expect(toggle("Precreases")?.hasAttribute("data-active")).toBe(false);
     expect(toggle("Step creases")?.hasAttribute("data-active")).toBe(true);
+    // The switches are shared: the step strip's cards read the same ones.
+    expect(foldPaneDisplay()).toEqual({ stepCreases: true, precreases: false });
     expect(
       [...canvas.querySelectorAll("button")].some(
         (button) => button.textContent === "Send to Edit",
