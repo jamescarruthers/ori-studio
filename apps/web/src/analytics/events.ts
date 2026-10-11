@@ -1182,7 +1182,8 @@ export const ANALYTICS_EVENTS = {
    * `turn`, `rotate`, `import` (Import CP, a crossfade), or a compound
    * fold's — `inside_reverse`, `outside_reverse`, `crimp`, `tuck`, `squash`,
    * `petal`, `rabbit_ear`, `swivel`, `open_sink`, `closed_sink`, `unsink`
-   * (all but the reverse folds a crossfade for now); and on a `user`
+   * (each plays the engine's motion legs; one whose legs are not in yet
+   * crossfades, as `import` does); and on a `user`
    * play, `via` is how — `space`, `button`, or `replay` for a step already
    * played through, by either. A pause, a scrub or a Step is not counted;
    * carrying on after a pause is. Nothing about the step itself.
