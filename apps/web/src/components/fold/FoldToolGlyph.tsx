@@ -19,6 +19,7 @@ import type {
   FoldLineModeId,
   FoldPlannedOpId,
   FoldRailItemId,
+  FoldSinkToolId,
   FoldVertexToolId,
 } from '../../fold/tools/foldToolCatalog';
 import { FoldKindMark } from './FoldKindMark';
@@ -138,9 +139,6 @@ function lineModeGlyph(mode: FoldLineModeId): ReactElement {
 }
 
 const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
-  'open-sink': ArrowDownToLine,
-  'closed-sink': ArrowDownToDot,
-  unsink: ArrowUpFromLine,
   // A pleat's zig-zag: two plain folds, never a tool of its own.
   pleat: Activity,
 };
@@ -153,11 +151,18 @@ const VERTEX_ICONS: Readonly<Record<FoldVertexToolId, LucideIcon>> = {
   swivel: IterationCw,
 };
 
+/** The sinks: the point pushed down to the line, into a pocket, or pulled back up. */
+const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
+  'open-sink': ArrowDownToLine,
+  'closed-sink': ArrowDownToDot,
+  unsink: ArrowUpFromLine,
+};
+
 /**
  * Every Fold rail item's icon: a fold's letter in its crease's ink; a line
  * mode's picture of what it locates; the app's own icons for the crimp and
- * the tuck, the Divide line, the model verbs, the vertex folds and the folds
- * still to come.
+ * the tuck, the Divide line, the model verbs, the vertex folds, the sinks and
+ * the folds still to come.
  */
 export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
   switch (id) {
@@ -191,6 +196,12 @@ export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
     case 'rabbit-ear':
     case 'swivel': {
       const Icon = VERTEX_ICONS[id];
+      return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+    }
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink': {
+      const Icon = SINK_ICONS[id];
       return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     }
     default: {

@@ -17,12 +17,13 @@ import { foldStepInputKey } from '../session/foldSessionEngine';
 import { FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
-import { isFoldKind, isVertexTool, locatesLine } from '../tools/foldToolCatalog';
+import { isFoldKind, isSinkTool, isVertexTool, locatesLine } from '../tools/foldToolCatalog';
 import { lineModeInput } from '../tools/foldToolRegistry';
 import type { FoldToolState } from '../tools/foldToolState';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
+import { useFoldSinkStep, type FoldSinkPreview } from './useFoldSinkStep';
 import { tuckRefusedWithFlaps, useFoldTuckStep, type FoldTuckPreview } from './useFoldTuckStep';
 import { useFoldVertexStep, type FoldVertexPreview } from './vertex/useFoldVertexStep';
 import type { FoldStateView } from './useFoldStateView';
@@ -69,6 +70,8 @@ export interface FoldToolPreview {
   tuck: FoldTuckPreview | null;
   /** A vertex tool's: its flap, line or fan as the engine described it, and the choices taken. */
   vertex: FoldVertexPreview | null;
+  /** The sink tools': the point or sunk points as the engine described them, and the pocket and order taken. */
+  sink: FoldSinkPreview | null;
 }
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
@@ -162,12 +165,22 @@ export function useFoldToolPreview(
   // --- The step, built from the picks and every choice made since: a
   // plain fold's at once, a compound fold's once the engine has described
   // it — a reverse fold's tip (`useFoldReverseStep`), a crimp's
-  // (`useFoldCrimpStep`), a tuck's targets (`useFoldTuckStep`).
+  // (`useFoldCrimpStep`), a tuck's targets (`useFoldTuckStep`), a sink's
+  // point (`useFoldSinkStep`).
   const reverseStep = useFoldReverseStep(session, index, tools, candidate, tools.tool === 'inside-reverse');
   const crimpStep = useFoldCrimpStep(session, index, tools, candidate, tools.tool === 'crimp');
   const tuckStep = useFoldTuckStep(session, index, tools, candidate, tools.tool === 'tuck');
+  const sinkStep = useFoldSinkStep(session, index, tools, candidate, isSinkTool(tools.tool));
   const compoundStep: FoldCompoundStepAnswer | null =
-    tools.tool === 'inside-reverse' ? reverseStep : tools.tool === 'crimp' ? crimpStep : tools.tool === 'tuck' ? tuckStep : null;
+    tools.tool === 'inside-reverse'
+      ? reverseStep
+      : tools.tool === 'crimp'
+        ? crimpStep
+        : tools.tool === 'tuck'
+          ? tuckStep
+          : isSinkTool(tools.tool)
+            ? sinkStep
+            : null;
   // A vertex fold's, once the engine has described its flap, line or fan.
   const vertexing = isVertexTool(tools.tool);
   const vertexStep = useFoldVertexStep(session, index, tools, candidate, vertexing);
@@ -346,5 +359,6 @@ export function useFoldToolPreview(
     crimp: crimpStep.crimp,
     tuck: tuckStep.tuck,
     vertex: vertexStep.vertex,
+    sink: sinkStep.sink,
   };
 }

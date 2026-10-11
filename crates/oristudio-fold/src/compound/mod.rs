@@ -48,6 +48,7 @@ pub mod motion;
 pub mod reverse;
 pub mod reverse_step;
 pub mod sink;
+pub mod sink_step;
 pub mod tuck;
 
 // The vertex folds (research §5.3): blocks are motion classes, seeded by a

@@ -17,6 +17,7 @@ import {
   FOLD_MODEL_TURNS,
   FOLD_MODEL_VERB_SHORTCUTS,
   FOLD_PLANNED_OPS,
+  FOLD_SINK_TOOLS,
   FOLD_TOOL_SHORTCUTS,
   FOLD_VERTEX_TOOLS,
   foldModelVerbDescription,
@@ -54,7 +55,7 @@ export interface FoldRailVerbs {
   turn: (turn: TurnKind) => void;
 }
 
-export type FoldRailGroupId = 'fold' | 'reference' | 'locate' | 'model' | 'planned';
+export type FoldRailGroupId = 'fold' | 'sink' | 'reference' | 'locate' | 'model' | 'planned';
 
 /** Taken in hand; a way of locating the line; done at once; or not built yet. */
 export type FoldRailItemKind = 'tool' | 'line-mode' | 'verb' | 'planned';
@@ -99,6 +100,8 @@ function groupLabel(t: TFunction, id: FoldRailGroupId): string {
   switch (id) {
     case 'fold':
       return t('tools:fold.group.fold', 'Fold');
+    case 'sink':
+      return t('tools:fold.group.sink', 'Sinks');
     case 'reference':
       return t('tools:fold.group.reference', 'Reference points');
     case 'locate':
@@ -111,8 +114,8 @@ function groupLabel(t: TFunction, id: FoldRailGroupId): string {
 }
 
 /**
- * The rail's groups, in order: the folds; Reference points; Locate line; the
- * model verbs; and the planned folds, collapsed. Every surface that shows the
+ * The rail's groups, in order: the folds; the sinks; Reference points; Locate
+ * line; the model verbs; and the planned folds, collapsed. Every surface that shows the
  * Fold tools reads this list.
  */
 export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRailVerbs): FoldRailGroup[] {
@@ -165,6 +168,7 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
 
   const groups: [FoldRailGroupId, readonly FoldRailItem[]][] = [
     ['fold', FOLD_GROUP_TOOLS.map(tool)],
+    ['sink', FOLD_SINK_TOOLS.map(tool)],
     ['reference', [tool('divide-line')]],
     ['locate', FOLD_LINE_MODES.map(lineMode)],
     ['model', [verb('turn-over'), verb('rotate')]],

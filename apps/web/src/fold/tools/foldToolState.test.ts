@@ -127,6 +127,28 @@ describe('the Fold tools’ state', () => {
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
   });
 
+  it('keeps a sink’s line and its fix’s between the open and the closed sink, its pocket stepped anew', () => {
+    const tools = createFoldTools();
+    tools.selectTool('open-sink');
+    tools.pick(point(1, 0));
+    tools.pick(point(0, 1));
+    const square = {
+      op: { kind: 'open-sink' as const, line: { via: 'free' as const, through: [[0, 0.4], [1, 0.4]] as [[number, number], [number, number]] }, seed: { scope: 'all' as const } },
+    };
+    tools.setOverride(square);
+    tools.selectTool('closed-sink');
+    expect(tools.store.getState()).toMatchObject({ tool: 'closed-sink', picks: [point(1, 0), point(0, 1)], override: square });
+    tools.stepPocket(1, 2);
+    expect(tools.store.getState().compound).toMatchObject({ pocket: 1, order: 0 });
+    tools.stepPocket(1, 2);
+    expect(tools.store.getState().compound.pocket).toBe(0);
+    tools.stepPocket(1, 1);
+    expect(tools.store.getState().compound.pocket).toBe(0);
+    // The unsink keeps the line, but not a sink's fix.
+    tools.selectTool('unsink');
+    expect(tools.store.getState()).toMatchObject({ tool: 'unsink', picks: [point(1, 0), point(0, 1)], override: null });
+  });
+
   it('steps through the roots round, and keeps the Divide line’s parts within the Diagram’s', () => {
     const tools = createFoldTools();
     tools.stepRoot(-1, 3);

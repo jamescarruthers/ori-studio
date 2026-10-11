@@ -64,6 +64,8 @@ export interface FoldCompoundPaneRows {
   blocks: number;
   /** Null for a fold with no opening (a flap moving whole). */
   opening: 'chosen' | 'only' | null;
+  /** A closed sink's pocket; absent or null for every other fold. */
+  pocket?: 'chosen' | 'only' | null;
   /** Whether the layer order was chosen among several. */
   orderChosen: boolean;
   /** Whose blocks they are, for their help: a vertex fold's are its motion classes; absent for a reverse fold's openings. */
@@ -330,6 +332,18 @@ function CompoundRows({ rows }: { rows: FoldCompoundPaneRows }) {
           )}
         >
           {rows.opening === 'chosen' ? chosen : t('panels:fold.step.onlyOne', 'The only one')}
+        </FieldRow>
+      )}
+      {rows.pocket && (
+        <FieldRow
+          label={t('panels:fold.step.pocket', 'Pocket')}
+          kind="static"
+          help={t(
+            'panels:fold.step.pocketHelp',
+            'The gap between the point’s layers its tip was sunk into: the layers above it and the ones below stay together.'
+          )}
+        >
+          {rows.pocket === 'chosen' ? chosen : t('panels:fold.step.onlyOne', 'The only one')}
         </FieldRow>
       )}
       {rows.orderChosen && (

@@ -44,9 +44,16 @@ export function isVertexTool(id: FoldToolId): id is FoldVertexToolId {
  * §5.2: the kind is usually forced by the geometry). The crimp and the tuck
  * (plan Phase 11) are compound folds along a located line too: a crimp along
  * a second line after it, a tuck against a layer the engine lists. The vertex
- * folds pick their flap, line or triangle themselves.
+ * folds pick their flap, line or triangle themselves. The sinks are a family
+ * of their own, each along a located line.
  */
-export type FoldToolId = FoldKind | 'inside-reverse' | FoldCompoundLineToolId | FoldVertexToolId | 'divide-line';
+export type FoldToolId =
+  | FoldKind
+  | 'inside-reverse'
+  | FoldCompoundLineToolId
+  | FoldVertexToolId
+  | 'divide-line'
+  | FoldSinkToolId;
 
 /** The compound folds along a located line that are tools of their own, beside inside reverse. */
 export type FoldCompoundLineToolId = 'crimp' | 'tuck';
@@ -56,10 +63,29 @@ export function isFoldKind(id: FoldToolId): id is FoldKind {
 }
 
 /** A tool that folds along a located line: the plain folds, and the compound folds along one. */
-export type FoldLineToolId = FoldKind | 'inside-reverse' | FoldCompoundLineToolId;
+export type FoldLineToolId = FoldKind | 'inside-reverse' | FoldCompoundLineToolId | FoldSinkToolId;
 
 export function isLineTool(id: FoldToolId): id is FoldLineToolId {
-  return isFoldKind(id) || id === 'inside-reverse' || id === 'crimp' || id === 'tuck';
+  return isFoldKind(id) || id === 'inside-reverse' || id === 'crimp' || id === 'tuck' || isSinkTool(id);
+}
+
+/**
+ * The sinks (plan Phase 11, research §5.4), each a tool along a located line:
+ * a closed point's tip pushed in, open or closed, or a sunk one pulled back
+ * out. The open and the closed sink are one sink's two kinds, the window's
+ * control switching between them as the reverse fold's kind does.
+ */
+export type FoldSinkToolId = 'open-sink' | 'closed-sink' | 'unsink';
+
+export const FOLD_SINK_TOOLS: readonly FoldSinkToolId[] = ['open-sink', 'closed-sink', 'unsink'];
+
+export function isSinkTool(id: FoldToolId): id is FoldSinkToolId {
+  return id === 'open-sink' || id === 'closed-sink' || id === 'unsink';
+}
+
+/** A sink's kind, as the sink tool's kind control names it in full: its tool's name. */
+export function foldSinkKindLabel(t: TFunction, kind: 'open' | 'closed'): string {
+  return foldToolLabel(t, kind === 'open' ? 'open-sink' : 'closed-sink');
 }
 
 /**
@@ -163,23 +189,14 @@ export const FOLD_MODEL_TURNS: Readonly<Record<FoldModelVerbId, TurnKind>> = {
 };
 
 /**
- * The compound folds later phases add (plan Phase 11), listed so the rail can
- * say they are coming. The outside reverse fold is the reverse tool's other
- * kind, not a tool of its own. A pleat is listed with them only to say it is
- * no tool at all: it is two plain folds (`foldPlannedOpReason`).
+ * What the rail's Planned group lists. Every compound fold of plan Phase 11
+ * is a tool now (the outside reverse fold is the reverse tool's other kind,
+ * not a tool of its own); a pleat stays listed only to say it is no tool at
+ * all: it is two plain folds (`foldPlannedOpReason`).
  */
-export type FoldPlannedOpId =
-  | 'open-sink'
-  | 'closed-sink'
-  | 'unsink'
-  | 'pleat';
+export type FoldPlannedOpId = 'pleat';
 
-export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = [
-  'open-sink',
-  'closed-sink',
-  'unsink',
-  'pleat',
-];
+export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = ['pleat'];
 
 /** Anything the rail shows: what its glyph is chosen by. */
 export type FoldRailItemId = FoldToolId | FoldLineModeId | FoldModelVerbId | FoldPlannedOpId;
@@ -208,6 +225,10 @@ export const FOLD_TOOL_SHORTCUTS: Readonly<Record<FoldToolId, FoldShortcutId>> =
   'rabbit-ear': 'fold.toolRabbitEar',
   swivel: 'fold.toolSwivel',
   'divide-line': 'fold.toolDivideLine',
+  // The sinks.
+  'open-sink': 'fold.toolOpenSink',
+  'closed-sink': 'fold.toolClosedSink',
+  unsink: 'fold.toolUnsink',
 };
 
 export const FOLD_LINE_MODE_SHORTCUTS: Readonly<Record<FoldLineModeId, FoldShortcutId>> = {
@@ -264,6 +285,13 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.op.swivel', 'Swivel fold');
     case 'divide-line':
       return t('tools:fold.tool.divideLine', 'Divide line');
+    // The sinks, by the names the rail gave them while they were planned.
+    case 'open-sink':
+      return t('tools:fold.op.openSink', 'Open sink');
+    case 'closed-sink':
+      return t('tools:fold.op.closedSink', 'Closed sink');
+    case 'unsink':
+      return t('tools:fold.op.unsink', 'Unsink');
   }
 }
 
@@ -293,6 +321,12 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.vertex.help.swivel', 'Fold paper about a point inside it, along rays you pick and one that lets it lie flat.');
     case 'divide-line':
       return t('tools:fold.tool.divideLineHelp', 'Mark points that divide an edge or a crease into equal parts.');
+    case 'open-sink':
+      return t('tools:fold.tool.openSinkHelp', 'Push a closed point’s tip in, turning every layer of it inside out.');
+    case 'closed-sink':
+      return t('tools:fold.tool.closedSinkHelp', 'Push a closed point’s tip into a pocket, its layers kept together.');
+    case 'unsink':
+      return t('tools:fold.tool.unsinkHelp', 'Pull a sunk point’s tip back out.');
   }
 }
 
@@ -439,12 +473,6 @@ export function foldModelVerbDescription(t: TFunction, id: FoldModelVerbId): str
 
 export function foldPlannedOpLabel(t: TFunction, id: FoldPlannedOpId): string {
   switch (id) {
-    case 'open-sink':
-      return t('tools:fold.op.openSink', 'Open sink');
-    case 'closed-sink':
-      return t('tools:fold.op.closedSink', 'Closed sink');
-    case 'unsink':
-      return t('tools:fold.op.unsink', 'Unsink');
     case 'pleat':
       return t('tools:fold.op.pleat', 'Pleat');
   }

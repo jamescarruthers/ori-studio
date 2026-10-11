@@ -189,6 +189,31 @@ pub struct SinkPoint {
     pub truncated: bool,
 }
 
+/// The sunk tip an unsink would pull back out, before anything lands: what
+/// an unsink tool previews.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SunkTip {
+    /// ℓ after snapping, and the side the sunk tip lies on now.
+    pub line: Line,
+    pub side: Side,
+    pub snap: Snap,
+    /// Its faces, ascending.
+    pub faces: Vec<FaceId>,
+}
+
+/// The sunk points on one side of a line that an unsink along it can pull
+/// back out: what an unsink tool offers before the folder names one.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SunkPoints {
+    /// ℓ after snapping, and the side the sunk points lie on.
+    pub line: Line,
+    pub side: Side,
+    pub snap: Snap,
+    /// Each one a flap of the side, in the side's flap order: a sheet point
+    /// of it is what an unsink's anchor names it by.
+    pub points: Vec<Flap>,
+}
+
 /// Which step a sink report is of.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -423,6 +448,65 @@ impl State {
         let mut context = Context::new(&tip, SinkStep::Unsink, None, None);
         context.turns = Some(turns.into_iter().map(|t| t.unwrap_or(false)).collect());
         finish(prepared, context, choices.order.as_ref(), limits, || false)
+    }
+
+    /// The sunk tip an unsink would pull back out, without folding. Refused
+    /// as the unsink is: its anchor names paper that crosses ℓ, or paper not
+    /// joined to the rest by a folded crease on it.
+    pub fn analyse_unsink(&self, op: &Unsink) -> Result<SunkTip, Refused> {
+        let tip = self.unsink_tip(op)?;
+        let (line, side) = tip.classified.axis.line_and_side();
+        Ok(SunkTip {
+            line,
+            side,
+            snap: tip.classified.snap,
+            faces: tip.face_ids(self),
+        })
+    }
+
+    /// Every sunk point on `side` of `line` an unsink along it can pull back
+    /// out: each flap of the side whose paper lies wholly on it, joined to the
+    /// rest by a folded crease on ℓ — what [`State::unsink`] takes an anchor
+    /// of — and hidden there, no layer of it the top or the bottom one along
+    /// ℓ. Once a sink has put all the paper on one side of ℓ, the paper round
+    /// the point passes the first test too, and an unsink of it turns the
+    /// model inside out about the ring: it is no sunk point, and the second
+    /// leaves it out. Empty when there is none; refused only when no paper
+    /// lies on the side.
+    pub fn sunk_points(&self, line: &Line, side: Side) -> Result<SunkPoints, Refused> {
+        let classified = line::classify(&self.geometry().vertex_images, Axis::new(line, side))?;
+        let moving = moving_side(self, &classified)?;
+        let (line, side) = classified.axis.line_and_side();
+        let section = self.cross_section(&line, side)?;
+        let outside = |flap: &Flap| {
+            section.intervals.iter().any(|interval| {
+                [interval.faces.first(), interval.faces.last()]
+                    .into_iter()
+                    .flatten()
+                    .any(|face| flap.faces.binary_search(face).is_ok())
+            })
+        };
+        let points = moving
+            .flaps
+            .iter()
+            .filter(|flap| {
+                let op = Unsink {
+                    line,
+                    side,
+                    anchor: Seed::Flaps {
+                        at: vec![flap.witness],
+                    },
+                };
+                !outside(flap) && self.unsink_tip(&op).is_ok()
+            })
+            .cloned()
+            .collect();
+        Ok(SunkPoints {
+            line,
+            side,
+            snap: classified.snap,
+            points,
+        })
     }
 
     /// The point of a sink: ℓ classified, the moving side, and the one flap

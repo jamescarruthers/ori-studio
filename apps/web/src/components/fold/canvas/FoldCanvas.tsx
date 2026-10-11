@@ -25,6 +25,7 @@ import {
   foldLocatedLines,
   foldPromptWords,
   foldReverseWindowView,
+  foldSinkWindowView,
   foldTuckWindowView,
   foldVertexWindowView,
   foldWindowPreview,
@@ -202,6 +203,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const crimpView = foldCrimpWindowView(toolState, preview);
   const tuckView = foldTuckWindowView(toolState, preview);
   const vertexView = foldVertexWindowView(toolState, preview);
+  const sinkView = foldSinkWindowView(toolState, preview, view.scene?.view.flipped ?? false);
   const windowModel = foldToolWindow(
     t,
     {
@@ -216,6 +218,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       ...(crimpView ? { crimp: crimpView } : {}),
       ...(tuckView ? { tuck: tuckView } : {}),
       ...(vertexView ? { vertex: vertexView } : {}),
+      ...(sinkView ? { sink: sinkView } : {}),
     },
     { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind, tuckTarget: verbs.tuckTarget },
     { coarse, alt: altModifierLabel() }

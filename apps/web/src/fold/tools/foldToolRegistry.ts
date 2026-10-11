@@ -135,6 +135,9 @@ export function toolInput(tool: FoldToolId, mode: FoldLineModeId, second: FoldSe
     case 'precrease':
     case 'inside-reverse':
     case 'tuck':
+    case 'open-sink':
+    case 'closed-sink':
+    case 'unsink':
       return lineModeInput(mode);
     case 'crimp':
       return crimpInput(mode, second);

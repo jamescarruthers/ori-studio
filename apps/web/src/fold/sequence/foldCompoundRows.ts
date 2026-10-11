@@ -1,8 +1,9 @@
 /**
  * A compound fold's rows in the Step pane (`FoldStepPane`'s
  * `FoldCompoundPaneRows`), from what the engine reported of it: its blocks,
- * and whether its opening and its layer order were stored as choices among
- * several (plan D6) or were the only ones it had.
+ * and whether its opening — a closed sink's pocket — and its layer order
+ * were stored as choices among several (plan D6) or were the only ones it
+ * had.
  *
  * Pure: no React, no store, no engine.
  */
@@ -33,9 +34,15 @@ export function foldCompoundPaneRows(report: FoldCompoundReport | undefined | nu
         orderChosen: report.stored.completion !== undefined,
         blocksOf: 'vertex',
       };
-    // The other families' rows come with their tools: until then the pane
-    // shows them as it shows a plain fold.
+    // A sink: its blocks — an open sink's one per layer, a closed sink's
+    // two — the pocket a closed sink went into, chosen among several or the
+    // only one, and its order.
     case 'sink':
-      return undefined;
+      return {
+        blocks: report.blocks.length,
+        opening: null,
+        pocket: report.step !== 'closed' ? null : report.stored.pocket ? 'chosen' : 'only',
+        orderChosen: report.stored.order !== undefined && report.stored.order.orders.length > 0,
+      };
   }
 }

@@ -2,7 +2,8 @@
  * A refused fold, as the tool window says it (plan D14, Refusals and fixes):
  * what went wrong in a sentence a folder reads, and the engine's fixes as
  * buttons — include flap N, fold the other way, pick a flap, use the landmark
- * line, land a point exactly on an edge. The engine decides which fixes exist;
+ * line, land a point exactly on an edge, the other reverse fold or sink. The
+ * engine decides which fixes exist;
  * this only names them and binds each to its verb.
  *
  * React-free and store-free.
@@ -10,6 +11,7 @@
 import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../components/ui/Notice';
 import type { FoldNoOpening, FoldReverseKind } from '../engine/foldEngineReverseWire';
+import type { FoldSinkKind, FoldSinkRefusalCode } from '../engine/foldEngineSinkWire';
 import type { FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
 import type { FoldKind } from './foldToolCatalog';
 import {
@@ -44,6 +46,8 @@ export interface FoldFixVerbs extends FoldVertexFixVerbs {
   otherKind?: (kind: FoldReverseKind) => void;
   /** The same tuck against this layer, by its face: one the engine listed as taking it. */
   tuckTarget?: (face: number) => void;
+  /** The same point sunk the other way: closed for open, open for closed. */
+  otherSink?: (kind: FoldSinkKind) => void;
 }
 
 export interface FoldRefusalNoticeModel {
@@ -58,9 +62,10 @@ export interface FoldRefusalNoticeModel {
 export interface FoldRefusalContext {
   /**
    * A plain fold's kind, or the compound fold's family its fixes are worded
-   * for; a vertex fold's is `vertex`, its tool in `vertex`.
+   * for; a vertex fold's is `vertex`, its tool in `vertex`; a sink's is
+   * `sink` (the open and closed sink and the unsink).
    */
-  kind: FoldKind | 'reverse' | 'crimp' | 'tuck' | 'vertex';
+  kind: FoldKind | 'reverse' | 'crimp' | 'tuck' | 'vertex' | 'sink';
   /** A flap's number on screen, by its engine index (`flapNumbers`). */
   flapNumber: (flap: number) => number;
   /** Nothing can change: the fixes are shown, but none can be taken. */
@@ -398,12 +403,19 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
           text: t('tools:fold.refusal.invalid.text', 'It would not land on a valid flat model.'),
         }
       );
+    // The sinks'.
+    case 'sink_several_points':
+    case 'sink_point_open':
+    case 'sink_outline_mixed':
+    case 'sink_no_axis':
+    case 'sink_line_tilted':
+    case 'sink_no_pocket':
+    case 'unsink_not_sunk':
+      return sinkWords(t, refused, refusal.code);
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
     // With them, the compound pipeline's own: no order at all, a search that
-    // ran out, a pick that names nothing, a defect. And the sinks': no tool
-    // folds one yet, so until their tools say them in their own words they
-    // read as a fold that cannot be made.
+    // ran out, a pick that names nothing, a defect.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -433,13 +445,6 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'no_order':
     case 'budget_exceeded':
     case 'no_such_choice':
-    case 'sink_several_points':
-    case 'sink_point_open':
-    case 'sink_outline_mixed':
-    case 'sink_no_axis':
-    case 'sink_line_tilted':
-    case 'sink_no_pocket':
-    case 'unsink_not_sunk':
     case 'internal':
       return {
         title: t('tools:fold.refusal.invalid.title', 'This fold cannot be made'),
@@ -448,12 +453,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
   }
 }
 
-/**
- * A choice a stored compound step still needs, as its chooser prompts for it.
- * A closed sink's pocket has no chooser yet (no sink tool is on the rail), so
- * a stored sink without one reads as a step this build cannot fold as it is
- * stored.
- */
+/** A choice a stored compound step still needs, as its chooser prompts for it. */
 function choiceNeededWords(
   t: TFunction,
   choice: 'opening' | 'pocket' | 'completion'
@@ -474,8 +474,102 @@ function choiceNeededWords(
       };
     case 'pocket':
       return {
-        title: t('tools:fold.refusal.unsupported.title', 'This step cannot be folded'),
-        text: t('tools:fold.refusal.unsupported.text', 'This version of Ori Studio cannot fold it as it is stored.'),
+        title: t('tools:fold.refusal.choosePocket.title', 'Choose a pocket'),
+        text: t(
+          'tools:fold.refusal.choosePocket.text',
+          'The point can sink into more than one pocket between its layers. Pick one to fold.'
+        ),
+      };
+  }
+}
+
+/**
+ * A sink's refusal's title, by its code alone: what the sink's kind control
+ * says of a kind that does not fit (`tools/sink/sinkToolWindow`), and the
+ * notice's title.
+ */
+export function sinkRefusalTitle(t: TFunction, code: FoldSinkRefusalCode): string {
+  switch (code) {
+    case 'sink_several_points':
+      return t('tools:fold.refusal.sinkSeveralPoints.title', 'Pick one point');
+    case 'sink_point_open':
+      return t('tools:fold.refusal.sinkPointOpen.title', 'The point is open');
+    case 'sink_outline_mixed':
+      return t('tools:fold.refusal.sinkOutlineMixed.title', 'Its outside is not one fold');
+    case 'sink_no_axis':
+      return t('tools:fold.refusal.sinkNoAxis.title', 'The point has no centre line');
+    case 'sink_line_tilted':
+      return t('tools:fold.refusal.sinkLineTilted.title', 'The line is not square to the point');
+    case 'sink_no_pocket':
+      return t('tools:fold.refusal.sinkNoPocket.title', 'The point has no pocket');
+    case 'unsink_not_sunk':
+      return t('tools:fold.refusal.unsinkNotSunk.title', 'No sunk point here');
+  }
+}
+
+/** A sink's refusal (`foldEngineSinkWire.ts`'s codes), in a folder's words; a precondition each but the last. */
+function sinkWords(t: TFunction, refused: FoldRefused, code: FoldSinkRefusalCode): { title: string; text: string } {
+  const { refusal } = refused;
+  const title = sinkRefusalTitle(t, code);
+  switch (code) {
+    case 'sink_several_points': {
+      const flaps = refusal.code === 'sink_several_points' ? refusal.flaps : 0;
+      return {
+        title,
+        text: t('tools:fold.refusal.sinkSeveralPoints.text', {
+          count: flaps,
+          defaultValue_one: '{{count}} point lies on the tip side, and a sink takes one. Pick the point to sink.',
+          defaultValue_other: '{{count}} points lie on the tip side, and a sink takes one. Pick the point to sink.',
+        }),
+      };
+    }
+    case 'sink_point_open':
+      return {
+        title,
+        text: t(
+          'tools:fold.refusal.sinkPointOpen.text',
+          'Raw edges reach its tip: its layers are free corners, not a closed point, so nothing says how they would sink. Sink a point whose layers are joined at the tip.'
+        ),
+      };
+    case 'sink_outline_mixed':
+      return {
+        title,
+        text: t(
+          'tools:fold.refusal.sinkOutlineMixed.text',
+          'The point’s outside edges are mountain folds and valley folds both: it has no one outside to turn inside out, so it cannot open-sink.'
+        ),
+      };
+    case 'sink_no_axis':
+      return {
+        title,
+        text: t(
+          'tools:fold.refusal.sinkNoAxis.text',
+          'Its outside does not run along two straight sides, so there is no centre line for an open sink’s line to be square to.'
+        ),
+      };
+    case 'sink_line_tilted':
+      return {
+        title,
+        text: t(
+          'tools:fold.refusal.sinkLineTilted.text',
+          'An open sink needs the line exactly square to the point’s centre line: tilted even a little, the point cannot open-sink. The square line at the same depth can.'
+        ),
+      };
+    case 'sink_no_pocket':
+      return {
+        title,
+        text: t(
+          'tools:fold.refusal.sinkNoPocket.text',
+          'No gap between its layers runs the whole way round its outside for the tip to go into, so it cannot closed-sink.'
+        ),
+      };
+    case 'unsink_not_sunk':
+      return {
+        title,
+        text: t(
+          'tools:fold.refusal.unsinkNotSunk.text',
+          'Nothing sunk lies inside the paper along this line. Locate the ring a sink left, and pick the sunk point inside it.'
+        ),
       };
   }
 }
@@ -523,10 +617,11 @@ function otherWayLabel(t: TFunction, kind: FoldRefusalContext['kind']): string {
       return t('tools:fold.fix.valleyInstead', 'Valley fold instead');
     case 'precrease':
       return t('tools:fold.fix.precreaseOtherWay', 'Precrease the other way');
-    // The engine never offers a reverse fold or a crimp the other way round;
-    // it offers the other kind.
+    // The engine never offers a reverse fold, a crimp or a sink the other way
+    // round; it offers the other kind.
     case 'reverse':
     case 'crimp':
+    case 'sink':
       return t('tools:fold.fix.swapInstead', 'Swap the moving side');
     case 'tuck':
       return t('tools:fold.fix.tuckOtherWay', 'Tuck the other way');
@@ -545,6 +640,8 @@ function pickFlapLabel(t: TFunction, kind: FoldRefusalContext['kind'], number: n
       return t('tools:fold.fix.crimpFlap', 'Crimp flap {{number}} only', { number });
     case 'tuck':
       return t('tools:fold.fix.tuckFlap', 'Tuck flap {{number}} only', { number });
+    case 'sink':
+      return t('tools:fold.fix.sinkFlap', 'Sink flap {{number}} only', { number });
     default:
       return t('tools:fold.fix.pickFlap', 'Fold flap {{number}} only', { number });
   }
@@ -579,9 +676,11 @@ function tuckTargetLabel(t: TFunction, context: FoldRefusalContext, face: number
 /**
  * A line fix's button: a near miss's landmark line, or a sliver remedy that
  * turns the line about a point it keeps (O5) or slides it along the line it
- * stays square to (O7) until the point lands exactly on the edge.
+ * stays square to (O7) until the point lands exactly on the edge. A sink's
+ * is the line square to its point's centre line, at the same depth.
  */
-function lineFixLabel(t: TFunction, fix: FoldUseLineFix): string {
+function lineFixLabel(t: TFunction, fix: FoldUseLineFix, kind: FoldRefusalContext['kind']): string {
+  if (kind === 'sink' && !fix.step) return t('tools:fold.fix.useSquareLine', 'Use the square line');
   const line = fix.step?.op.line;
   if (line?.via !== 'axiom') return t('tools:fold.fix.useLine', 'Use the landmark line');
   return line.axiom === 7
@@ -632,7 +731,9 @@ function fixActions(
         disabled,
       }));
     case 'use_line':
-      return [{ id: `line-${position}`, label: lineFixLabel(t, fix), run: () => verbs.useLine(fix), disabled }];
+      return [
+        { id: `line-${position}`, label: lineFixLabel(t, fix, context.kind), run: () => verbs.useLine(fix), disabled },
+      ];
     case 'other_kind': {
       const { otherKind } = verbs;
       if (!otherKind) return [];
@@ -660,9 +761,21 @@ function fixActions(
     case 'use_emergent':
       // A rabbit ear's or a swivel's: its tool's button (`vertexFixActions`), above.
       return [];
-    case 'other_sink':
-      // A sink's, likewise.
-      return [];
+    case 'other_sink': {
+      const { otherSink } = verbs;
+      if (!otherSink) return [];
+      return [
+        {
+          id: `sink-${position}`,
+          label:
+            fix.kind === 'closed'
+              ? t('tools:fold.fix.closedSinkInstead', 'Closed sink instead')
+              : t('tools:fold.fix.openSinkInstead', 'Open sink instead'),
+          run: () => otherSink(fix.kind),
+          disabled,
+        },
+      ];
+    }
   }
 }
 

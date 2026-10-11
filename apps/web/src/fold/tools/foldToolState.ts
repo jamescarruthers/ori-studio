@@ -105,6 +105,8 @@ export interface FoldCompoundToolChoices {
   ridge: number | null;
   /** How many layers at a fan's center its creases cut, from the side the direction names; null for every one. */
   fanLayers: number | null;
+  /** A closed sink's pocket, by index into the pockets the engine lists for the point (`tools/sink`). */
+  pocket: number;
 }
 
 export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
@@ -116,6 +118,7 @@ export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
   emergent: null,
   ridge: null,
   fanLayers: null,
+  pocket: 0,
 };
 
 export interface FoldToolState {
@@ -177,9 +180,16 @@ function located(state: FoldToolState): FoldToolState {
   };
 }
 
-/** A new tip — another side, another seed, another root — opens and stacks anew: the kind stays chosen. */
+/** A new tip — another side, another seed, another root — opens, sinks and stacks anew: the kind stays chosen. */
 function anotherTip(compound: FoldCompoundToolChoices): FoldCompoundToolChoices {
-  return compound.opening === 0 && compound.order === 0 ? compound : { ...compound, opening: 0, order: 0 };
+  return compound.opening === 0 && compound.order === 0 && compound.pocket === 0
+    ? compound
+    : { ...compound, opening: 0, order: 0, pocket: 0 };
+}
+
+/** A sink with a kind, open or closed: the tools the sink window's kind control switches between. */
+function isSinkKindTool(tool: FoldToolId): boolean {
+  return tool === 'open-sink' || tool === 'closed-sink';
 }
 
 /** The clicks the state's tool and line mode collect (a crimp's, its second line's too). */
@@ -264,6 +274,8 @@ export interface FoldTools {
   setRidge(ridge: number | null): void;
   /** How many layers at the fan's center are cut; null for every one. */
   setFanLayers(layers: number | null): void;
+  /** Step through a closed sink's pockets, of `count`: each stacks anew. */
+  stepPocket(delta: number, count: number): void;
 }
 
 const sameFlap = (a: FoldFlap, b: FoldFlap) =>
@@ -318,15 +330,18 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         // M, P and the compound folds along one keeps it, as the window's
         // V / M / P control promises — a crimp's first line, and the picks
         // past it are its second line's, which another tool does not take.
-        // Anything else locates anew.
+        // Anything else locates anew. The open and the closed sink are one
+        // sink's two kinds, as the reverse fold's are: a fix's line taken for
+        // one (the square line) is the other's too.
         const keeps = isLineTool(tool) && isLineTool(state.tool);
         if (keeps) {
           const clicks = toolInput(tool, state.lineMode, state.secondLineMode).steps.length;
+          const sinkKinds = isSinkKindTool(tool) && isSinkKindTool(state.tool);
           return {
             ...state,
             tool,
             picks: state.picks.length > clicks ? state.picks.slice(0, clicks) : state.picks,
-            override: null,
+            override: sinkKinds ? state.override : null,
             compound: anotherTip(state.compound),
           };
         }
@@ -515,6 +530,14 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
           ? state
           : { ...state, compound: { ...state.compound, fanLayers, ridge: null, order: 0 } }
       );
+    },
+
+    stepPocket(delta, count) {
+      if (count <= 1) return;
+      set((state) => ({
+        ...state,
+        compound: { ...state.compound, pocket: (((state.compound.pocket + delta) % count) + count) % count, order: 0 },
+      }));
     },
   };
 }

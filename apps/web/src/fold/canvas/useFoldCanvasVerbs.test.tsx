@@ -48,6 +48,7 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
     crimp: null,
     tuck: null,
     vertex: null,
+    sink: null,
     ...extra,
   };
 }
@@ -325,6 +326,14 @@ describe('the canvas’s chooser', () => {
     });
     // One layer offered is no choice.
     expect(foldCanvasChoice(preview({ tuck: { ...tuck, targets: [target(7)] } }), tools)).toBeNull();
+  });
+
+  it('shows a closed sink’s pockets, then its orders, over the root', () => {
+    const tools = { ...FOLD_TOOL_INITIAL, compound: { ...FOLD_COMPOUND_CHOICES_INITIAL, opening: 0, order: 4, pocket: 1 } };
+    const pocket = { upper: [], lower: [], seams: [], stored: { above: [0, 0] as [number, number], below: [0, 0] as [number, number] } };
+    const sink = { tool: 'closed-sink' as const, point: null, pockets: [pocket, pocket], pocket: 1, sunk: null, orders: 0, order: 0 };
+    expect(foldCanvasChoice(preview({ sink }), tools)).toEqual({ kind: 'pocket', index: 1, count: 2 });
+    expect(foldCanvasChoice(preview({ sink: { ...sink, orders: 3 } }), tools)).toEqual({ kind: 'order', index: 2, count: 3 });
   });
 });
 

@@ -211,6 +211,12 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return foldToolLabel(t, 'swivel');
     case 'fold.toolDivideLine':
       return foldToolLabel(t, 'divide-line');
+    case 'fold.toolOpenSink':
+      return foldToolLabel(t, 'open-sink');
+    case 'fold.toolClosedSink':
+      return foldToolLabel(t, 'closed-sink');
+    case 'fold.toolUnsink':
+      return foldToolLabel(t, 'unsink');
     case 'fold.turnOver':
       return foldModelVerbLabel(t, 'turn-over');
     case 'fold.rotate':

@@ -285,6 +285,7 @@
       "note": "Este axioma da más de un pliegue aquí. Recórrelos o pulsa Mayús+← / Mayús+→.",
       "openingNote": "La solapa se abre de más de una manera: las capas resaltadas quedan juntas. Recórrelas o pulsa Mayús+← / Mayús+→.",
       "orderNote": "Las capas pueden quedar apiladas de más de una manera. Recórrelas o pulsa Mayús+← / Mayús+→.",
+      "pocketNote": "La punta puede hundirse en más de un bolsillo entre sus capas. Recórrelos o pulsa Mayús+← / Mayús+→.",
       "targetNote": "Más de una capa admite el remetido: la más brillante es la elegida. Recórrelas o pulsa Mayús+← / Mayús+→."
     },
     "crimp": {
@@ -307,6 +308,7 @@
       "right": "Hasta el final"
     },
     "fix": {
+      "closedSinkInstead": "Mejor un hundido cerrado",
       "crimpFlap": "Hacer crimp solo en la solapa {{number}}",
       "includeFlap": "Incluir la solapa {{number}}",
       "includeFlaps_one": "Incluir {{count}} solapa",
@@ -315,11 +317,13 @@
       "insideCrimpInstead": "Mejor un crimp interior",
       "insideInstead": "Mejor un pliegue invertido interior",
       "mountainInstead": "Mejor un pliegue de monte",
+      "openSinkInstead": "Mejor un hundido abierto",
       "outsideCrimpInstead": "Mejor un crimp exterior",
       "outsideInstead": "Mejor un pliegue invertido exterior",
       "pickFlap": "Plegar solo la solapa {{number}}",
       "precreaseOtherWay": "Premarcar en el otro sentido",
       "reverseFlap": "Invertir solo la solapa {{number}}",
+      "sinkFlap": "Hundir solo la solapa {{number}}",
       "slideToEdge": "Deslizar la línea hasta que el punto quede en el borde",
       "swapInstead": "Cambiar el lado que se mueve",
       "tuckFlap": "Remeter solo la solapa {{number}}",
@@ -330,6 +334,7 @@
       "tuckUnderAnother": "Mejor remeter bajo la capa que encaja",
       "turnToEdge": "Girar la línea hasta que el punto quede en el borde",
       "useLine": "Usar la línea de referencia",
+      "useSquareLine": "Usar la línea perpendicular",
       "valleyInstead": "Mejor un pliegue de valle"
     },
     "flap": {
@@ -350,7 +355,8 @@
       "locate": "Situar la línea",
       "model": "Modelo",
       "planned": "Previstos",
-      "reference": "Puntos de referencia"
+      "reference": "Puntos de referencia",
+      "sink": "Hundidos"
     },
     "key": {
       "commit": "Hacer el pliegue",
@@ -390,12 +396,18 @@
     "note": {
       "acrossLayers": "Estos puntos están en capas que el plegado ha separado, así que la línea pasa por ellos donde quedan en la forma plegada. El patrón de pliegues muestra los pliegues que crea.",
       "clear": "Esc borra los puntos elegidos.",
+      "closedSinkLine": "La línea que cruza la punta fija cuánto se hunde.",
       "crease": "Plegar por un premarcado lo vuelve a plegar; por un borde plegado, despliega la solapa.",
       "divide": "Cuentan los bordes, los bordes plegados y los premarcados.",
       "free": "Sin ajuste: la línea pasa exactamente por los puntos donde haces clic.",
       "freePoint": "Mantén {{modifier}} para colocar un punto en cualquier lugar, sin ajuste.",
+      "openSinkLine": "La línea que cruza la punta fija cuánto se hunde, y debe ser exactamente perpendicular a su línea central. El axioma 4, por un punto y perpendicular al pliegue central, da una que lo es.",
       "queued": "Se plegará en cuanto la vista previa esté lista…",
-      "snap": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues, puntos medios y bordes."
+      "severalSunk_one": "Aquí hay {{count}} punta hundida: se toma la primera.",
+      "severalSunk_many": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
+      "severalSunk_other": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
+      "snap": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues, puntos medios y bordes.",
+      "unsinkLine": "Sitúa el anillo que dejó el hundido: Pliegue existente toma uno de sus pliegues a lo largo de la parte superior de la punta hundida."
     },
     "op": {
       "closedSink": "Hundido cerrado",
@@ -435,6 +447,10 @@
       "chooseOrder": {
         "text": "El pliegue puede quedar con sus capas apiladas de más de una manera. Elige una para plegar.",
         "title": "Elige cómo se apilan las capas"
+      },
+      "choosePocket": {
+        "text": "La punta puede hundirse en más de un bolsillo entre sus capas. Elige uno para plegar.",
+        "title": "Elige un bolsillo"
       },
       "closureAddsFlaps": {
         "textMany_one": "Plegar estas capas mueve también {{count}} solapa más.",
@@ -538,6 +554,32 @@
         "noSplit": "Sus capas no se pueden separar por un pliegue sin que una capa de abajo acabe sobre una de arriba.",
         "title": "Esta solapa no se puede abrir"
       },
+      "sinkLineTilted": {
+        "text": "Un hundido abierto necesita la línea exactamente perpendicular a la línea central de la punta: con la más mínima inclinación, la punta no se puede hundir abierta. La línea perpendicular a la misma profundidad sí puede.",
+        "title": "La línea no es perpendicular a la punta"
+      },
+      "sinkNoAxis": {
+        "text": "Su contorno no recorre dos lados rectos, así que no hay línea central a la que la línea de un hundido abierto pueda ser perpendicular.",
+        "title": "La punta no tiene línea central"
+      },
+      "sinkNoPocket": {
+        "text": "Ningún hueco entre sus capas recorre todo su contorno para que entre el extremo, así que no se puede hundir cerrada.",
+        "title": "La punta no tiene bolsillo"
+      },
+      "sinkOutlineMixed": {
+        "text": "Los bordes exteriores de la punta son pliegues de montaña y de valle a la vez: no tiene un único exterior al que dar la vuelta, así que no se puede hundir abierta.",
+        "title": "Su exterior no es un solo pliegue"
+      },
+      "sinkPointOpen": {
+        "text": "Hay bordes sueltos que llegan a su extremo: sus capas son esquinas libres, no una punta cerrada, así que nada dice cómo se hundirían. Hunde una punta cuyas capas estén unidas en el extremo.",
+        "title": "La punta está abierta"
+      },
+      "sinkSeveralPoints": {
+        "text_one": "Hay {{count}} punta en el lado del extremo, y un hundido toma solo una. Elige la punta que se hunde.",
+        "text_many": "Hay {{count}} puntas en el lado del extremo, y un hundido toma solo una. Elige la punta que se hunde.",
+        "text_other": "Hay {{count}} puntas en el lado del extremo, y un hundido toma solo una. Elige la punta que se hunde.",
+        "title": "Elige una punta"
+      },
       "sliver": {
         "text": "Un punto de las capas que se mueven quedaría a un pelo por dentro del borde de otra capa.",
         "title": "Un punto cae justo dentro de un borde"
@@ -564,6 +606,10 @@
       "tuckTarget": {
         "text": "Elige una capa que se quede quieta para remeter la solapa contra ella.",
         "title": "La capa donde remeter se movería"
+      },
+      "unsinkNotSunk": {
+        "text": "A lo largo de esta línea no hay nada hundido dentro del papel. Sitúa el anillo que dejó un hundido y elige la punta hundida dentro de él.",
+        "title": "Aquí no hay ninguna punta hundida"
       },
       "unsupported": {
         "text": "Esta versión de Ori Studio no puede plegarlo tal como está guardado.",
@@ -599,6 +645,23 @@
       "rowBeside": "Capa {{layer}}, {{flap}}, junto a la capa {{above}}",
       "top": "Arriba"
     },
+    "sink": {
+      "bothFit": "Aquí caben los dos hundidos: uno abierto da la vuelta a cada capa; uno cerrado las mantiene juntas.",
+      "closed": "Cerrado",
+      "depth": "Profundidad",
+      "depthHelp": "A qué distancia está la línea del extremo de la punta a lo largo de su línea central, tomando el lado del papel como 1. Sitúa la línea más abajo para hundir más la punta.",
+      "depthValue": "{{depth}} desde el extremo",
+      "kind": "Hundido",
+      "neither": "Ningún hundido cabe en esta punta aquí.",
+      "onlyClosed": "Aquí solo cabe el hundido cerrado.",
+      "onlyOpen": "Aquí solo cabe el hundido abierto.",
+      "open": "Abierto",
+      "pocket": "Bolsillo",
+      "pocketBack": "Detrás",
+      "pocketFront": "Delante",
+      "squareNote": "Un hundido abierto necesita la línea exactamente perpendicular a la línea central de la punta: con la más mínima inclinación, la punta no se puede hundir abierta. Un hundido cerrado admite una línea inclinada.",
+      "sunkSide": "Lado hundido"
+    },
     "steps": {
       "axiom1First": "Haz clic en el primer punto por el que pasa el pliegue.",
       "axiom1Second": "Haz clic en el segundo punto.",
@@ -625,12 +688,15 @@
       "pickFlapsToReverse": "Elige qué solapas se invierten.",
       "pickFlapsToTuck": "Elige qué solapas se remeten.",
       "pickLayers": "Elige qué capas se mueven.",
+      "pickPoint": "Elige qué punta se hunde: un hundido toma solo una.",
+      "pickSunkPoint": "La punta hundida se encuentra por ti: elige otra en las capas para sacar esa.",
       "pickTuckTarget": "Elige la capa contra la que remeter.",
       "pointToMove": "Haz clic en el punto que se mueve.",
       "secondCrease": "Haz clic en el pliegue o borde plegado por el que va la segunda línea.",
       "secondFreeStart": "Haz clic donde empieza la segunda línea."
     },
     "tool": {
+      "closedSinkHelp": "Empujar el extremo de una punta cerrada dentro de un bolsillo, con sus capas juntas.",
       "crimpHelp": "Invertir una solapa por dos líneas a la vez: hacia dentro y luego de vuelta hacia fuera.",
       "divideLine": "Dividir línea",
       "divideLineHelp": "Marcar puntos que dividen un borde o un pliegue en partes iguales.",
@@ -638,9 +704,11 @@
       "insideReverseHelp": "Empujar una solapa hacia dentro de sí misma, invirtiendo su lomo.",
       "mountain": "Pliegue de monte",
       "mountainHelp": "Plegar el lado que se mueve alejándolo de ti, para que quede debajo.",
+      "openSinkHelp": "Empujar hacia dentro el extremo de una punta cerrada, dando la vuelta a cada una de sus capas.",
       "precrease": "Premarcar",
       "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
       "tuckHelp": "Plegar una solapa y deslizarla bajo, o sobre, una capa que se queda quieta.",
+      "unsinkHelp": "Sacar de nuevo el extremo de una punta hundida.",
       "valley": "Pliegue de valle",
       "valleyHelp": "Plegar el lado que se mueve hacia ti, para que quede encima."
     },

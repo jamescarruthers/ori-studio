@@ -5,6 +5,7 @@ import i18n from '../../i18n';
 import {
   FOLD_LINE_MODES,
   FOLD_PLANNED_OPS,
+  FOLD_SINK_TOOLS,
   type FoldRailItemId,
   type FoldShortcutId,
 } from '../../fold/tools/foldToolCatalog';
@@ -51,15 +52,17 @@ describe('FoldToolRail', () => {
     const toggles = [...rail.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')];
     expect(toggles.map((toggle) => [toggle.textContent, toggle.getAttribute('aria-expanded')])).toEqual([
       ['Fold', 'true'],
+      ['Sinks', 'true'],
       ['Reference points', 'true'],
       ['Locate line', 'true'],
       ['Model', 'true'],
       ['Planned', 'false'],
     ]);
     expect(rail.querySelector('[aria-label="Pleat"]')).toBeNull();
-    // The crimp, the tuck and the vertex folds are tools, open with the other folds.
+    // The crimp, the tuck, the vertex folds and the sinks are tools, open with the other folds.
     expect(byRole(rail, 'button', 'Crimp').getAttribute('aria-disabled')).not.toBe('true');
     expect(byRole(rail, 'button', 'Squash fold').getAttribute('aria-disabled')).not.toBe('true');
+    expect(byRole(rail, 'button', 'Unsink').getAttribute('aria-disabled')).not.toBe('true');
   });
 
   it('takes a tool, a line mode and a model verb from their buttons, and refuses a planned one', () => {
@@ -69,20 +72,18 @@ describe('FoldToolRail', () => {
     act(() => byRole(rail, 'button', 'Inside reverse fold').click());
     act(() => byRole(rail, 'button', 'Crimp').click());
     act(() => byRole(rail, 'button', 'Tuck').click());
+    act(() => byRole(rail, 'button', 'Open sink').click());
     act(() => byRole(rail, 'button', 'Axiom 6: two points onto two lines').click());
     act(() => byRole(rail, 'button', 'Turn over').click());
     // The planned folds are collapsed until asked for.
     act(() => byRole(rail, 'button', 'Planned').click());
-    const planned = byRole(rail, 'button', 'Open sink');
-    act(() => planned.click());
     // A pleat is two plain folds: listed to say so, and taken by nothing.
     const pleat = byRole(rail, 'button', 'Pleat');
     act(() => pleat.click());
     expect(pleat.getAttribute('aria-disabled')).toBe('true');
-    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['inside-reverse'], ['crimp'], ['tuck']]);
+    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['inside-reverse'], ['crimp'], ['tuck'], ['open-sink']]);
     expect(calls.selectLineMode.mock.calls).toEqual([['axiom-6']]);
     expect(calls.turn).toHaveBeenCalledWith({ kind: 'turn-over', axis: 'vertical' });
-    expect(planned.getAttribute('aria-disabled')).toBe('true');
     // Shown as the tool and the line mode in hand.
     expect(byRole(rail, 'button', 'Valley fold').hasAttribute('data-active')).toBe(true);
     expect(byRole(rail, 'button', 'Axiom 2: point onto point').hasAttribute('data-active')).toBe(true);
@@ -120,7 +121,11 @@ describe('FoldToolPickerSheet', () => {
     const calls = verbs();
     const close = vi.fn();
     const sheet = mount(<FoldToolPickerSheet pickerId="fold-tools" groups={foldRailGroups(t, view, calls)} close={close} />);
-    const row = byRole(sheet, 'button', 'Open sink Planned: not in Ori Studio yet.');
+    const row = byRole(
+      sheet,
+      'button',
+      'Pleat Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.'
+    );
     expect(row.getAttribute('aria-disabled')).toBe('true');
     act(() => row.click());
     expect(close).not.toHaveBeenCalled();
@@ -137,6 +142,7 @@ describe('FoldToolGlyph', () => {
       'divide-line',
       'turn-over',
       'rotate',
+      ...FOLD_SINK_TOOLS,
       ...FOLD_LINE_MODES,
       ...FOLD_PLANNED_OPS,
     ];

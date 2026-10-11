@@ -22,10 +22,11 @@ const item = (groups: ReturnType<typeof foldRailGroups>, id: string) => {
 };
 
 describe('foldRailGroups', () => {
-  it('lists the folds, Reference points, Locate line, the model verbs and the planned folds, in that order', () => {
+  it('lists the folds, the sinks, Reference points, Locate line, the model verbs and the planned folds, in that order', () => {
     const groups = foldRailGroups(t, view(), verbs());
     expect(groups.map((group) => [group.id, group.label])).toEqual([
       ['fold', 'Fold'],
+      ['sink', 'Sinks'],
       ['reference', 'Reference points'],
       ['locate', 'Locate line'],
       ['model', 'Model'],
@@ -33,10 +34,11 @@ describe('foldRailGroups', () => {
     ]);
     expect(groups.map((group) => group.items.map((each) => each.id))).toEqual([
       ['valley', 'mountain', 'precrease', 'inside-reverse', 'crimp', 'tuck', 'squash', 'petal', 'rabbit-ear', 'swivel'],
+      ['open-sink', 'closed-sink', 'unsink'],
       ['divide-line'],
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
       ['turn-over', 'rotate'],
-      ['open-sink', 'closed-sink', 'unsink', 'pleat'],
+      ['pleat'],
     ]);
     // A roadmap, out of the way until asked for; everything else open.
     expect(groups.filter((group) => group.collapsedByDefault).map((group) => group.id)).toEqual(['planned']);
@@ -57,7 +59,7 @@ describe('foldRailGroups', () => {
     expect(item(groups, 'pleat').shortcut).toBeNull();
   });
 
-  it('takes the reverse fold as a tool, its line mode marked, and shows the later folds as planned', () => {
+  it('takes the reverse fold as a tool, its line mode marked, and lists only the pleat as planned', () => {
     const calls = verbs();
     const groups = foldRailGroups(t, view({ tool: 'inside-reverse', lineMode: 'free' }), calls);
     const reverse = item(groups, 'inside-reverse');
@@ -66,13 +68,8 @@ describe('foldRailGroups', () => {
     reverse.select();
     expect(calls.selectTool).toHaveBeenCalledWith('inside-reverse');
     calls.selectTool.mockClear();
-    for (const id of ['open-sink', 'unsink']) {
-      const planned = item(groups, id);
-      expect(planned.kind).toBe('planned');
-      expect(planned.available).toBe(false);
-      expect(planned.reason).toBe('Planned: not in Ori Studio yet.');
-      planned.select();
-    }
+    // Every compound fold is a tool now: none is planned.
+    for (const id of ['crimp', 'squash', 'swivel', 'unsink']) expect(item(groups, id).kind).toBe('tool');
     // A pleat is listed only to say it needs no tool of its own.
     const pleat = item(groups, 'pleat');
     expect(pleat).toMatchObject({ kind: 'planned', available: false, label: 'Pleat' });
@@ -104,6 +101,28 @@ describe('foldRailGroups', () => {
     });
     item(groups, 'tuck').select();
     expect(calls.selectTool).toHaveBeenCalledWith('tuck');
+  });
+
+  it('takes each sink as a tool along a located line, keyless until the user gives it one', () => {
+    const calls = verbs();
+    const groups = foldRailGroups(t, view({ tool: 'closed-sink', lineMode: 'axiom-4' }), calls);
+    for (const [id, label, shortcut] of [
+      ['open-sink', 'Open sink', 'fold.toolOpenSink'],
+      ['closed-sink', 'Closed sink', 'fold.toolClosedSink'],
+      ['unsink', 'Unsink', 'fold.toolUnsink'],
+    ] as const) {
+      const sink = item(groups, id);
+      expect(sink).toMatchObject({ kind: 'tool', available: true, reason: null, label, shortcut });
+      sink.select();
+      expect(calls.selectTool).toHaveBeenLastCalledWith(id);
+    }
+    expect(item(groups, 'closed-sink').active).toBe(true);
+    // A sink locates its line as every fold does: the line mode is marked under it.
+    expect(item(groups, 'axiom-4').active).toBe(true);
+    expect(item(groups, 'open-sink').description).toBe('Push a closed point’s tip in, turning every layer of it inside out.');
+    // Locked, they are refused as every tool is.
+    const locked = foldRailGroups(t, view({ readOnly: 'locked' }), verbs());
+    expect(item(locked, 'unsink').available).toBe(false);
   });
 
   it('marks the tool in hand and the line mode chosen, but no line mode under the Divide line', () => {
@@ -146,8 +165,11 @@ describe('foldRailGroups', () => {
     expect(item(groups, 'crimp').available).toBe(false);
     expect(item(groups, 'tuck').available).toBe(false);
     expect(item(groups, 'squash').available).toBe(false);
+    expect(item(groups, 'unsink').available).toBe(false);
     // What is planned stays planned, whatever the sequence.
-    expect(item(groups, 'unsink').reason).toBe('Planned: not in Ori Studio yet.');
+    expect(item(groups, 'pleat').reason).toBe(
+      'Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.'
+    );
   });
 
   it('builds a tooltip from the name, the key and what it does, or why it cannot', () => {
@@ -158,7 +180,9 @@ describe('foldRailGroups', () => {
     expect(foldRailTooltip(item(groups, 'axiom-1'), undefined)).toBe(
       'Axiom 1: through two points - The line through two points.'
     );
-    expect(foldRailTooltip(item(groups, 'unsink'), undefined)).toBe('Unsink - Planned: not in Ori Studio yet.');
+    expect(foldRailTooltip(item(groups, 'pleat'), undefined)).toBe(
+      'Pleat - Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.'
+    );
   });
 
   it('takes the vertex folds as tools, the petal fold locating its line through the line modes', () => {

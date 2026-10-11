@@ -1,0 +1,21 @@
+/*
+ * A sink's controls in the Fold tool window (FoldSinkControls.tsx): the open
+ * sink's rule for its line and the depth readout. The kind control and the
+ * steppers are the reverse fold's rows (FoldReverseControls), and the
+ * window's sections and rows are its own (FoldToolWindow, FieldRow).
+ */
+
+/* The open sink's rule, under the kind: the window's note voice. */
+.note {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+/* "0.212 from the tip", on the row's right. */
+.depth {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}

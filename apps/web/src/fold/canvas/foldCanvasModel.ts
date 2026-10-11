@@ -15,9 +15,19 @@ import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
 import { lineModeInput } from '../tools/foldToolRegistry';
 import type { FoldPreview } from '../tools/foldToolWindow';
 import type { FoldReverseWindowView } from '../tools/reverse/reverseToolWindow';
+import { pocketNames } from '../tools/sink/sinkStep';
+import type { FoldSinkWindowView } from '../tools/sink/sinkToolWindow';
+import { isSinkRefusalCode } from '../engine/foldEngineSinkWire';
 import type { FoldTuckWindowView } from '../tools/tuck/tuckToolWindow';
 import { isLocated, type FoldToolState } from '../tools/foldToolState';
-import { foldToolLabel, isVertexTool, lineModeLabel, lineModeSteps, secondLineSteps } from '../tools/foldToolCatalog';
+import {
+  foldToolLabel,
+  isSinkTool,
+  isVertexTool,
+  lineModeLabel,
+  lineModeSteps,
+  secondLineSteps,
+} from '../tools/foldToolCatalog';
 import { vertexToolSteps } from '../tools/vertex/vertexInputs';
 import { nearestDirection } from '../tools/vertex/vertexStep';
 import type { FoldVertexWindowView } from '../tools/vertex/vertexToolWindow';
@@ -184,6 +194,40 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   };
 }
 
+/**
+ * A sink tool's window view (`sinkToolWindow`): what fits of the point, its
+ * pockets and the orders it leaves, each with the one taken, its depth, and
+ * an unsink's sunk points. `flipped` is the view's: whether the viewer sees
+ * the model's underside, which names the pockets front and back. Absent for
+ * every other tool, and while nothing is located.
+ */
+export function foldSinkWindowView(
+  tools: FoldToolState,
+  preview: FoldToolPreview,
+  flipped: boolean
+): FoldSinkWindowView | undefined {
+  const sink = preview.sink;
+  if (!isSinkTool(tools.tool) || !sink || !isLocated(tools)) return undefined;
+  const point = sink.point?.analysis ?? null;
+  const open = sink.point?.open?.refusal.code ?? null;
+  const names = pocketNames(sink.pockets, flipped);
+  return {
+    tool: sink.tool,
+    known: sink.tool === 'unsink' ? sink.sunk !== null : point !== null,
+    openRefusal: open !== null && isSinkRefusalCode(open) ? open : null,
+    pocketsFound: point?.pockets.length ?? 0,
+    pockets: sink.pockets.length,
+    pocket: sink.pocket,
+    pocketName: names[sink.pocket] ?? null,
+    orders: sink.orders,
+    order: sink.order,
+    depth: point?.apex
+      ? Math.abs(point.line.n[0] * point.apex[0] + point.line.n[1] * point.apex[1] - point.line.d)
+      : null,
+    sunk: sink.sunk?.points.length ?? 0,
+  };
+}
+
 /** How strongly the faces a refusal names are tinted over their paper. */
 const REFUSED_TINT = 0.32;
 
@@ -277,6 +321,11 @@ export function foldPromptWords(t: TFunction, tools: FoldToolState): string | nu
 /** What the canvas's chooser says of the choice it steps through. */
 export function foldChoiceNote(t: TFunction, kind: FoldCanvasChoice['kind']): string {
   switch (kind) {
+    case 'pocket':
+      return t(
+        'tools:fold.chooser.pocketNote',
+        'The point can sink into more than one pocket between its layers. Step through them, or press Shift+← / Shift+→.'
+      );
     case 'target':
       return t(
         'tools:fold.chooser.targetNote',

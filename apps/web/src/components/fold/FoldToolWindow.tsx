@@ -18,6 +18,7 @@ import { FoldFlapChips } from './FoldFlapChips';
 import { FoldKindMark } from './FoldKindMark';
 import { FoldRefusalNotice } from './FoldRefusalNotice';
 import { FoldChoiceStepperRow, FoldReverseChoices, FoldReverseKindControl } from './reverse/FoldReverseControls';
+import { FoldSinkChoices, FoldSinkLine } from './sink/FoldSinkControls';
 import { hasVertexChoices } from '../../fold/tools/vertex/vertexToolWindow';
 import { FoldVertexChoices, FoldVertexDirection } from './vertex/FoldVertexControls';
 import styles from './FoldToolWindow.module.css';
@@ -61,7 +62,7 @@ export function FoldToolWindow({
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
   };
-  const { instructions, lineMode, secondLine, kind, movingSide, layers, refusal, divide, compound, tuck, vertex, footer } =
+  const { instructions, lineMode, secondLine, kind, movingSide, layers, refusal, divide, compound, tuck, vertex, sink, footer } =
     model;
 
   return (
@@ -196,6 +197,11 @@ export function FoldToolWindow({
           <FoldVertexChoices controls={vertex} />
         </div>
       )}
+      {sink && (sink.kind || sink.square || sink.depth) && (
+        <div className={styles.section} data-fold-sink-kind="">
+          <FoldSinkLine controls={sink} />
+        </div>
+      )}
       {movingSide && (
         <div className={styles.section}>
           <FieldRow label={movingSide.label} kind="static" divider={false} disabled={movingSide.disabled}>
@@ -250,6 +256,11 @@ export function FoldToolWindow({
           {tuck.note && <p className={styles.note}>{tuck.note}</p>}
           {tuck.target && <FoldChoiceStepperRow stepper={tuck.target} />}
           {tuck.order && <FoldChoiceStepperRow stepper={tuck.order} />}
+        </div>
+      )}
+      {sink && (sink.pocket || sink.order) && (
+        <div className={styles.section} data-fold-choices="">
+          <FoldSinkChoices controls={sink} />
         </div>
       )}
       {refusal && (

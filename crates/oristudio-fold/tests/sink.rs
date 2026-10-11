@@ -748,3 +748,128 @@ fn a_sunk_point_open_sinks_again() {
     check(sunk, &second);
     assert_eq!(second.state.faces().len(), 32);
 }
+
+// --- 6. What the tools ask ---------------------------------------------------
+
+/// What an unsink tool finds before the folder names anything: on the side
+/// a sink left its tip, the one sunk point there — the faces the sink moved,
+/// which an anchor of its witness unsinks; on the base, none on either side,
+/// the point still reaching across the line.
+#[test]
+fn an_unsink_finds_the_one_sunk_point() {
+    let base = preliminary();
+    let f = 0.3;
+    let open = sink_op(&base, PRELIMINARY_FOOT, f, 0.0, OPEN);
+    let mut sunk = vec![landed(base.sink(&open, &none()), "open")];
+    sunk.extend(closed_sinks(&base, &open));
+    for folded in sunk {
+        let what = format!("{:?}", folded.report.step);
+        let (line, side) = (folded.report.line, folded.report.side.opposite());
+        let found = folded
+            .state
+            .sunk_points(&line, side)
+            .unwrap_or_else(|e| panic!("{what}: {e}"));
+        let [point] = found.points.as_slice() else {
+            panic!("{what}: {:?}", found.points);
+        };
+        let mut moved: Vec<FaceId> = folded.report.fold.blocks.concat();
+        moved.sort_unstable();
+        assert_eq!(point.faces, moved, "{what}");
+        let op = Unsink {
+            line,
+            side,
+            anchor: Seed::Flaps {
+                at: vec![point.witness],
+            },
+        };
+        let tip = folded
+            .state
+            .analyse_unsink(&op)
+            .unwrap_or_else(|e| panic!("{what}: {e}"));
+        assert_eq!(tip.faces, moved, "{what}");
+        assert_eq!((tip.line, tip.side), (found.line, found.side), "{what}");
+        let back = landed(folded.state.unsink(&op, &none()), &what);
+        check(&folded.state, &back);
+    }
+    let (line, side) = sink_line(&base, PRELIMINARY_FOOT, f, 0.0);
+    for side in [side, side.opposite()] {
+        let found = base
+            .sunk_points(&line, side)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(found.points.is_empty(), "{side:?}: {:?}", found.points);
+    }
+}
+
+/// A sink's picture, before it lands and once it has: the plain fold's of
+/// the whole point, seen as a mountain, with the push onto the tip from
+/// beyond it along ℓ's normal. An unsink's is seen as a valley, and is
+/// pulled, with no push.
+#[test]
+fn a_sink_is_pictured_pushed_in_at_its_tip() {
+    let base = preliminary();
+    let f = 0.3;
+    let to_scene = base.view().transform();
+    let tip = image_at(&base, CENTRE);
+    let model = |p: oristudio_fold::ScenePoint| to_scene.inverse().apply([p.x, p.y]);
+    for kind in [OPEN, CLOSED] {
+        let op = sink_op(&base, PRELIMINARY_FOOT, f, 0.0, kind);
+        let point = analysis(&base, &op);
+        let before = base
+            .sink_action(&op)
+            .unwrap_or_else(|e| panic!("{kind:?}: {e}"));
+        assert_eq!(before.direction, Direction::Mountain, "{kind:?}");
+        assert!(before.line.is_some(), "{kind:?}");
+        assert_eq!(before.moving, point.point.faces, "{kind:?}");
+        let Some(push) = before.push else {
+            panic!("{kind:?}: no push");
+        };
+        let (from, toward) = (model(push.at), model(push.toward));
+        assert!(close_to(toward, tip, 1e-9), "{kind:?}: {toward:?}");
+        let height = |p: Point| match op.side {
+            oristudio_fold::Side::Positive => op.line.signed_distance(p),
+            oristudio_fold::Side::Negative => -op.line.signed_distance(p),
+        };
+        assert!(
+            height(from) > height(toward) + 1e-3,
+            "{kind:?}: from beyond the tip"
+        );
+        let shaft = [from[0] - toward[0], from[1] - toward[1]];
+        let across = shaft[0] * op.line.n[1] - shaft[1] * op.line.n[0];
+        assert!(across.abs() < 1e-9, "{kind:?}: along ℓ's normal");
+        let folded = match kind {
+            OPEN => vec![landed(base.sink(&op, &none()), "open")],
+            CLOSED => closed_sinks(&base, &op),
+        };
+        for folded in folded {
+            let after = folded
+                .action(&base)
+                .unwrap_or_else(|e| panic!("{kind:?}: {e}"));
+            assert_eq!(after.direction, Direction::Mountain);
+            assert_eq!(
+                after.push, before.push,
+                "{kind:?}: the push the preview showed"
+            );
+            assert_eq!(after.moving, before.moving);
+
+            let unsink = Unsink {
+                line: folded.report.line,
+                side: folded.report.side.opposite(),
+                anchor: Seed::Flaps {
+                    at: vec![in_triangle(1, f / 2.0)],
+                },
+            };
+            let pulled = folded
+                .state
+                .unsink_action(&unsink)
+                .unwrap_or_else(|e| panic!("{kind:?}: {e}"));
+            assert_eq!(pulled.direction, Direction::Valley);
+            assert_eq!(pulled.push, None);
+            let back = landed(folded.state.unsink(&unsink, &none()), "unsink");
+            let landed_picture = back
+                .action(&folded.state)
+                .unwrap_or_else(|e| panic!("{kind:?}: {e}"));
+            assert_eq!(landed_picture.push, None);
+            assert_eq!(landed_picture.moving, pulled.moving);
+        }
+    }
+}

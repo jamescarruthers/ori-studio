@@ -42,6 +42,7 @@ import {
   foldToolLabel,
   isFoldKind,
   isFoldLineMode,
+  isSinkTool,
   isVertexTool,
   lineModeLabel,
   lineModeSteps,
@@ -60,6 +61,7 @@ import {
   type FoldReverseControls,
   type FoldReverseWindowView,
 } from './reverse/reverseToolWindow';
+import { sinkToolWindow, type FoldSinkControls, type FoldSinkWindowView } from './sink/sinkToolWindow';
 import { tuckToolWindow, type FoldTuckControls, type FoldTuckWindowView } from './tuck/tuckToolWindow';
 import {
   vertexToolWindow,
@@ -116,6 +118,8 @@ export interface FoldToolWindowView extends FoldToolsView {
   tuck?: FoldTuckWindowView;
   /** A vertex tool's direction and choices (`tools/vertex/vertexToolWindow`). */
   vertex?: FoldVertexWindowView;
+  /** A sink tool's point and choices, while it previews (`tools/sink/sinkToolWindow`). */
+  sink?: FoldSinkWindowView;
 }
 
 /** What the window can promise on this device. */
@@ -152,6 +156,8 @@ export interface FoldToolWindowVerbs
   setTuckDirection?: (direction: FoldDirection) => void;
   /** Step through the layers listed to tuck against. */
   stepTuckTarget?: (delta: number) => void;
+  /** Step through a closed sink's pockets (`tools/sink/sinkToolWindow`). */
+  stepPocket?: (delta: number) => void;
 }
 
 /** The Divide line's controls: count or exact ratio (Edit's ratio expression), and clearing what is made. */
@@ -254,6 +260,8 @@ export interface FoldToolWindowModel {
   tuck?: FoldTuckControls | null;
   /** A vertex fold's direction and choices (`tools/vertex/vertexToolWindow`); absent for every other tool. */
   vertex?: FoldVertexControls;
+  /** A sink's kind, line, depth and choices (`tools/sink/sinkToolWindow`); absent for every other tool. */
+  sink?: FoldSinkControls;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
 }
 
@@ -509,6 +517,7 @@ export function foldToolWindow(
   if (view.tool === 'crimp') return crimpToolWindow(t, view, verbs, host);
   if (view.tool === 'tuck') return tuckToolWindow(t, view, verbs, host);
   if (isVertexTool(view.tool)) return view.vertex ? vertexToolWindow(t, view, view.vertex, verbs, host) : null;
+  if (isSinkTool(view.tool)) return sinkToolWindow(t, view, verbs, host);
   if (!isFoldKind(view.tool)) return null;
   const kind = view.tool;
   const title = foldToolLabel(t, kind);

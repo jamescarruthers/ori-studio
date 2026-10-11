@@ -2170,6 +2170,8 @@
       "operation": "Operation",
       "pending": "Pending fold",
       "pendingRefused": "Resolve the issue in the tool window to see the creases it makes.",
+      "pocket": "Pocket",
+      "pocketHelp": "The gap between the point’s layers its tip was sunk into: the layers above it and the ones below stay together.",
       "secondLine": "Second line",
       "sheet": "Flat sheet",
       "sheetNote": "Nothing is folded yet. Fold the sheet to make step 1.",

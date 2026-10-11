@@ -2353,6 +2353,8 @@
       "operation": "Opération",
       "pending": "Pli en cours",
       "pendingRefused": "Résolvez le problème dans la fenêtre de l’outil pour voir les plis qu’il crée.",
+      "pocket": "Poche",
+      "pocketHelp": "L’espace entre les couches de la pointe dans lequel son extrémité a été enfoncée : les couches au-dessus et celles en dessous restent ensemble.",
       "secondLine": "Seconde ligne",
       "sheet": "Feuille à plat",
       "sheetNote": "Rien n’est encore plié. Pliez la feuille pour créer l’étape 1.",

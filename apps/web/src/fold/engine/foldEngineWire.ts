@@ -263,7 +263,9 @@ export type FoldCompoundRefusalBody =
   // The vertex folds (`foldEngineSquashWire.ts`).
   | { readonly code: 'squash_no_flap'; readonly faces: readonly number[]; readonly cause: FoldNoFlap }
   | { readonly code: 'petal_not_precreased'; readonly faces: readonly number[]; readonly missing: FoldPetalCrease }
-  | { readonly code: 'petal_no_flap'; readonly faces: readonly number[]; readonly cause: FoldNoPetal };
+  | { readonly code: 'petal_no_flap'; readonly faces: readonly number[]; readonly cause: FoldNoPetal }
+  // The sinks (`foldEngineSinkWire.ts`).
+  | { readonly code: 'sink_several_points'; readonly flaps: number; readonly faces: readonly number[] };
 
 /**
  * A flap: a connected part of the moving side, joined across creases with an

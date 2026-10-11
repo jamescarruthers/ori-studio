@@ -18,9 +18,11 @@ import {
   type FoldPrecreaseOp,
   type FoldReverseOp,
   type FoldSequenceDocument,
+  type FoldSinkOp,
   type FoldTuckOp,
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
+import type { FoldSinkKind } from '../engine/foldEngineSinkWire';
 import type { FoldFlap, FoldModelPoint } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { wovenIntervalAt } from '../tools/crossSection';
@@ -49,12 +51,13 @@ export function freePointHeld(): boolean {
 }
 
 /**
- * A fold along a located line, whose line a near miss's landmark line can
- * take the place of: a crimp's first line among them.
+ * A fold along a located line, whose line a near miss's landmark line — or a
+ * tilted open sink's square line — can take the place of: a crimp's first
+ * line among them.
  */
 function isAlongLine(
   op: FoldOp | undefined
-): op is FoldPlainOp | FoldPrecreaseOp | FoldReverseOp | FoldCrimpOp | FoldTuckOp {
+): op is FoldPlainOp | FoldPrecreaseOp | FoldReverseOp | FoldCrimpOp | FoldTuckOp | FoldSinkOp {
   return (
     op?.kind === 'valley' ||
     op?.kind === 'mountain' ||
@@ -62,7 +65,10 @@ function isAlongLine(
     op?.kind === 'inside-reverse' ||
     op?.kind === 'outside-reverse' ||
     op?.kind === 'crimp' ||
-    op?.kind === 'tuck'
+    op?.kind === 'tuck' ||
+    op?.kind === 'open-sink' ||
+    op?.kind === 'closed-sink' ||
+    op?.kind === 'unsink'
   );
 }
 
@@ -132,6 +138,9 @@ export interface FoldCanvasVerbs {
   /** Precrease a petal fold's H, or its kite, first: the Precrease tool on that line, or on the edge-to-edge axiom. */
   precreaseLine: () => void;
   precreaseKite: () => void;
+  /** The sinks: the other kind of sink (its tool taken in hand, the line kept), and a closed sink's pockets. */
+  otherSink: (kind: FoldSinkKind) => void;
+  stepPocket: (delta: number) => void;
 }
 
 /** The verbs, and whether a commit waits for the preview to land. */
@@ -163,7 +172,7 @@ export function queuedCommit(
 
 /** Which of the previewed fold's choices the canvas's chooser shows, and of how many: the one a folder makes last. */
 export type FoldCanvasChoice = {
-  kind: 'order' | 'opening' | 'target' | 'root' | FoldVertexCanvasChoiceKind;
+  kind: 'order' | 'opening' | 'target' | 'pocket' | 'root' | FoldVertexCanvasChoiceKind;
   index: number;
   count: number;
 };
@@ -173,10 +182,10 @@ export type FoldVertexCanvasChoiceKind = 'ridge' | 'emergent';
 
 /**
  * What the compound fold in hand lists to choose from: the ways a reverse
- * fold's or a crimp's tip opens, the orders any of them leaves, and the
- * layers a tuck can go against. None for a plain fold.
+ * fold's or a crimp's tip opens, the orders any of them leaves — a sink's
+ * too — and the layers a tuck can go against. None for a plain fold.
  */
-export function compoundListed(preview: Pick<FoldToolPreview, 'reverse' | 'crimp' | 'tuck'>): {
+export function compoundListed(preview: Pick<FoldToolPreview, 'reverse' | 'crimp' | 'tuck' | 'sink'>): {
   ways: number;
   orders: number;
   targets: number;
@@ -184,7 +193,7 @@ export function compoundListed(preview: Pick<FoldToolPreview, 'reverse' | 'crimp
   const opens = preview.reverse ?? preview.crimp;
   return {
     ways: opens?.ways.length ?? 0,
-    orders: (opens ?? preview.tuck)?.orders.length ?? 0,
+    orders: (opens ?? preview.tuck)?.orders.length ?? preview.sink?.orders ?? 0,
     targets: preview.tuck?.targets.length ?? 0,
   };
 }
@@ -208,10 +217,10 @@ function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
 
 /**
  * The chooser on the canvas: the deepest choice with more than one answer —
- * the layer order, then the way the tip opens or the layer a tuck goes
- * against (a vertex fold's ridge and fourth ray), then the axiom's root —
- * since each earlier choice resets the ones after it. Null when none has
- * more than one.
+ * the layer order, then the way the tip opens, the layer a tuck goes
+ * against or the pocket a point sinks into (a vertex fold's ridge and fourth
+ * ray), then the axiom's root — since each earlier choice resets the ones
+ * after it. Null when none has more than one.
  */
 export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState): FoldCanvasChoice | null {
   const vertex = vertexCanvasChoice(preview);
@@ -224,20 +233,18 @@ export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState)
     const at = tuck.targets.findIndex((target) => target.face === tuck.target?.face);
     return { kind: 'target', index: Math.max(0, at), count: targets };
   }
+  const sink = preview.sink;
+  if (sink && sink.pockets.length > 1) {
+    return { kind: 'pocket', index: Math.min(tools.compound.pocket, sink.pockets.length - 1), count: sink.pockets.length };
+  }
   const roots = preview.candidates?.length ?? 0;
   return roots > 1 ? { kind: 'root', index: Math.min(tools.root, roots - 1), count: roots } : null;
 }
 
-/**
- * What a committed op is called in `fold step added`; null for Import CP and
- * the sinks, which the canvas does not commit (no sink tool is on the rail yet).
- */
+/** What a committed op is called in `fold step added`; null for Import CP, which the canvas does not commit. */
 function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
   switch (op.kind) {
     case 'cp-jump':
-    case 'open-sink':
-    case 'closed-sink':
-    case 'unsink':
       return null;
     // Compound folds, snake_case as the event's enums are.
     case 'inside-reverse':
@@ -246,6 +253,10 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
       return 'outside_reverse';
     case 'rabbit-ear':
       return 'rabbit_ear';
+    case 'open-sink':
+      return 'open_sink';
+    case 'closed-sink':
+      return 'closed_sink';
     default:
       return op.kind;
   }
@@ -474,7 +485,7 @@ export function useFoldCanvasVerbs(
       stepOpening: (delta) => tools.stepOpening(delta, compoundListed(live.current.preview).ways),
 
       // The layer orders the compound fold previewed lists: a reverse fold's,
-      // a crimp's, a tuck's or a vertex fold's.
+      // a crimp's, a tuck's, a sink's or a vertex fold's.
       stepOrder: (delta) =>
         tools.stepOrder(
           delta,
@@ -547,6 +558,11 @@ export function useFoldCanvasVerbs(
         tools.selectLineMode('axiom-3');
       },
 
+      // The sinks'.
+      otherSink: (kind) => tools.selectTool(kind === 'open' ? 'open-sink' : 'closed-sink'),
+
+      stepPocket: (delta) => tools.stepPocket(delta, live.current.preview.sink?.pockets.length ?? 0),
+
       pickFlap: (flap) => tools.setSeed({ scope: 'flaps', flaps: [flap] }),
 
       useLine: (fix) => {
@@ -559,7 +575,9 @@ export function useFoldCanvasVerbs(
         // through it, the same side moving. A compound fold's too: its tool
         // takes the line from the override — a crimp's first line — and
         // keeps choosing the rest along it (`useFoldReverseStep`,
-        // `useFoldCrimpStep`, `useFoldTuckStep`).
+        // `useFoldCrimpStep`, `useFoldTuckStep`); and a tilted open sink's
+        // square line, its pocket and order chosen along it
+        // (`useFoldSinkStep`).
         const op = previewed.step?.op;
         const index = shown.index;
         if (!index) return;
@@ -599,6 +617,9 @@ export function useFoldCanvasVerbs(
             if (tuck) tools.setTuckTarget(steppedTuckTarget(tuck.targets, tuck.target?.face ?? null, delta));
             break;
           }
+          case 'pocket':
+            tools.stepPocket(delta, choice.count);
+            break;
           case 'root':
             tools.stepRoot(delta, choice.count);
             break;

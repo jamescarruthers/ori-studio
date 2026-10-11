@@ -78,6 +78,8 @@ function verbs(): FoldCanvasVerbs {
     useNearPrecrease: vi.fn(),
     precreaseLine: vi.fn(),
     precreaseKite: vi.fn(),
+    otherSink: vi.fn(),
+    stepPocket: vi.fn(),
     commit: vi.fn(() => true),
     cancel: vi.fn(() => true),
     clearMarks: vi.fn(),

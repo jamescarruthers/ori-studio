@@ -121,6 +121,9 @@ function refusalBody(code: FoldRefusalCode): FoldRefusalBody {
       return { code, faces: [0], missing: 'line' };
     case 'petal_no_flap':
       return { code, faces: [0], cause: 'no_ends' };
+    // The sinks'.
+    case 'sink_several_points':
+      return { code, flaps: 2, faces: [0, 1] };
     default:
       return { code };
   }

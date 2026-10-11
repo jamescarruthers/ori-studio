@@ -9,9 +9,13 @@
  * commit lands exactly as a replay will. A sink tool asks first what the
  * point is and how it sinks (the compound question, `compoundAnalysis`,
  * `family: 'sink'`), and — when more than one order fits — how many
- * (`sinkOrders`) and what a pick stores (`sinkPick`). What a step stores
- * comes back in the engine's shapes and goes into the document's through
- * {@link sinkStoredChoices}.
+ * (`sinkOrders`) and what a pick stores (`sinkPick`). An unsink tool asks
+ * which sunk points its line can pull back out (`sunkPoints`). What a step
+ * stores comes back in the engine's shapes and goes into the document's
+ * through {@link sinkStoredChoices}. A sink folds along one line, so it also
+ * answers the plain fold's queries a tool previews with — `analyse`,
+ * `action` (with the push onto the point's crown), `depthChoices` — as the
+ * reverse folds do.
  *
  * A landed sink reports as the step's `compound` (`family: 'sink'`,
  * `foldEngineCompoundWire.ts`), its motion among it (plan D15): legs, each
@@ -64,6 +68,13 @@ export const FOLD_SINK_REFUSAL_CODES = [
   'sink_no_pocket',
   'unsink_not_sunk',
 ] as const;
+
+export type FoldSinkRefusalCode = (typeof FOLD_SINK_REFUSAL_CODES)[number];
+
+/** Whether a refusal code is a sink's own. */
+export function isSinkRefusalCode(code: string): code is FoldSinkRefusalCode {
+  return (FOLD_SINK_REFUSAL_CODES as readonly string[]).includes(code);
+}
 
 // ---------------------------------------------------------------------------
 // The point
@@ -149,6 +160,20 @@ export interface FoldSinkOrders {
 /** What a step stores for a pick (`sinkPick`); null when the sink is decided. */
 export interface FoldSinkPicked {
   completion: FoldCompletionChoice | null;
+}
+
+/**
+ * The sunk points an unsink along a line can pull back out, on its side
+ * (`sunkPoints`): what an unsink tool names when the folder has named none.
+ * The paper round a sunk point, all on one side of its ring too, is none.
+ */
+export interface FoldSunkPoints {
+  /** ℓ after snapping, in the parent's model frame, and the side the sunk points lie on. */
+  line: FoldModelLine;
+  side: FoldSide;
+  snap: FoldSnap;
+  /** Each one a flap of that side: its witness is what an unsink's seed names it by. */
+  points: FoldFlap[];
 }
 
 /** A stored pocket as the document's choice holds it: the point above, then the point below. */

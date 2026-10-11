@@ -202,6 +202,10 @@ export type FoldShortcutId =
   | 'fold.toolRabbitEar'
   | 'fold.toolSwivel'
   | 'fold.toolDivideLine'
+  // The sinks.
+  | 'fold.toolOpenSink'
+  | 'fold.toolClosedSink'
+  | 'fold.toolUnsink'
   | 'fold.turnOver'
   | 'fold.rotate'
   | 'fold.lineAxiom1'
@@ -804,6 +808,10 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.toolRabbitEar', 'Rabbit Ear', null),
   foldShortcut('fold.toolSwivel', 'Swivel Fold', null),
   foldShortcut('fold.toolDivideLine', 'Divide Line', { key: 'd' }),
+  // The sinks take no key until the user gives them one, as the reverse fold.
+  foldShortcut('fold.toolOpenSink', 'Open Sink', null),
+  foldShortcut('fold.toolClosedSink', 'Closed Sink', null),
+  foldShortcut('fold.toolUnsink', 'Unsink', null),
   foldShortcut('fold.turnOver', 'Turn Over', { key: 't' }),
   foldShortcut('fold.rotate', 'Rotate a Quarter Turn', { key: 'r' }),
   foldShortcut('fold.lineAxiom1', 'Axiom 1', { key: '1' }),

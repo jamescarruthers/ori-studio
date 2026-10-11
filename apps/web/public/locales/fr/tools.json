@@ -285,6 +285,7 @@
       "note": "Cet axiome donne ici plus d’un pli. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
       "openingNote": "Le rabat s’ouvre de plus d’une façon : les couches en surbrillance restent ensemble. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
       "orderNote": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
+      "pocketNote": "La pointe peut s’enfoncer dans plus d’une poche entre ses couches. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
       "targetNote": "Plus d’une couche peut recevoir le rabat : la plus claire est celle retenue. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
     },
     "crimp": {
@@ -307,6 +308,7 @@
       "right": "Jusqu’à la fin"
     },
     "fix": {
+      "closedSinkInstead": "Plutôt un enfoncement fermé",
       "crimpFlap": "Faire le crimp seulement sur le rabat {{number}}",
       "includeFlap": "Inclure le rabat {{number}}",
       "includeFlaps_one": "Inclure {{count}} rabat",
@@ -315,11 +317,13 @@
       "insideCrimpInstead": "Plutôt un crimp intérieur",
       "insideInstead": "Plutôt un pli inversé intérieur",
       "mountainInstead": "Plutôt un pli montagne",
+      "openSinkInstead": "Plutôt un enfoncement ouvert",
       "outsideCrimpInstead": "Plutôt un crimp extérieur",
       "outsideInstead": "Plutôt un pli inversé extérieur",
       "pickFlap": "Plier seulement le rabat {{number}}",
       "precreaseOtherWay": "Pré-plier dans l’autre sens",
       "reverseFlap": "Inverser seulement le rabat {{number}}",
+      "sinkFlap": "Enfoncer seulement le rabat {{number}}",
       "slideToEdge": "Faire glisser la ligne pour poser le point sur le bord",
       "swapInstead": "Inverser le côté qui bouge",
       "tuckFlap": "Rentrer seulement le rabat {{number}}",
@@ -330,6 +334,7 @@
       "tuckUnderAnother": "Plutôt rentrer sous la couche qui convient",
       "turnToEdge": "Faire pivoter la ligne pour poser le point sur le bord",
       "useLine": "Utiliser la ligne de repère",
+      "useSquareLine": "Utiliser la ligne perpendiculaire",
       "valleyInstead": "Plutôt un pli vallée"
     },
     "flap": {
@@ -350,7 +355,8 @@
       "locate": "Placer la ligne",
       "model": "Modèle",
       "planned": "Prévus",
-      "reference": "Points de repère"
+      "reference": "Points de repère",
+      "sink": "Enfoncements"
     },
     "key": {
       "commit": "Faire le pli",
@@ -390,12 +396,18 @@
     "note": {
       "acrossLayers": "Ces points sont sur des couches que le pliage a écartées : la ligne passe par eux là où ils se trouvent dans la forme pliée. Le patron de plis montre les plis qu’elle crée.",
       "clear": "Échap efface les points choisis.",
+      "closedSinkLine": "La ligne en travers de la pointe fixe la profondeur de l’enfoncement.",
       "crease": "Plier le long d’un pré-pli le replie ; le long d’un bord plié, cela déplie le rabat.",
       "divide": "Les bords, les bords pliés et les pré-plis comptent tous.",
       "free": "Sans magnétisme : la ligne passe exactement par les points où vous cliquez.",
       "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où, sans magnétisme.",
+      "openSinkLine": "La ligne en travers de la pointe fixe la profondeur de l’enfoncement, et doit être exactement perpendiculaire à sa ligne médiane. L’axiome 4, par un point et perpendiculaire au pli central, en donne une qui l’est.",
       "queued": "Pliage dès que l’aperçu est prêt…",
-      "snap": "Les points s’accrochent aux coins, aux repères, aux croisements de plis, aux milieux et aux bords."
+      "severalSunk_one": "{{count}} pointe enfoncée se trouve ici : la première est prise.",
+      "severalSunk_many": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
+      "severalSunk_other": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
+      "snap": "Les points s’accrochent aux coins, aux repères, aux croisements de plis, aux milieux et aux bords.",
+      "unsinkLine": "Repérez l’anneau laissé par l’enfoncement : Pli existant prend l’un de ses plis le long du haut de la pointe enfoncée."
     },
     "op": {
       "closedSink": "Enfoncement fermé",
@@ -435,6 +447,10 @@
       "chooseOrder": {
         "text": "Le pli peut se poser avec ses couches empilées de plus d’une façon. Choisissez-en une pour plier.",
         "title": "Choisissez comment les couches s’empilent"
+      },
+      "choosePocket": {
+        "text": "La pointe peut s’enfoncer dans plus d’une poche entre ses couches. Choisissez-en une pour plier.",
+        "title": "Choisissez une poche"
       },
       "closureAddsFlaps": {
         "textMany_one": "Plier ces couches déplace aussi {{count}} autre rabat.",
@@ -538,6 +554,32 @@
         "noSplit": "Ses couches ne peuvent pas être séparées le long d’un pli sans qu’une couche du dessous passe au-dessus d’une couche du dessus.",
         "title": "Ce rabat ne peut pas s’ouvrir"
       },
+      "sinkLineTilted": {
+        "text": "Un enfoncement ouvert demande une ligne exactement perpendiculaire à la ligne médiane de la pointe : inclinée si peu que ce soit, la pointe ne peut pas s’enfoncer ouverte. La ligne perpendiculaire à la même profondeur le peut.",
+        "title": "La ligne n’est pas perpendiculaire à la pointe"
+      },
+      "sinkNoAxis": {
+        "text": "Son contour ne suit pas deux côtés droits : il n’y a pas de ligne médiane à laquelle la ligne d’un enfoncement ouvert puisse être perpendiculaire.",
+        "title": "La pointe n’a pas de ligne médiane"
+      },
+      "sinkNoPocket": {
+        "text": "Aucun espace entre ses couches ne fait tout le tour de son contour pour que l’extrémité y entre : elle ne peut pas s’enfoncer fermée.",
+        "title": "La pointe n’a pas de poche"
+      },
+      "sinkOutlineMixed": {
+        "text": "Les bords extérieurs de la pointe sont à la fois des plis montagne et des plis vallée : elle n’a pas un extérieur unique à retourner, elle ne peut donc pas s’enfoncer ouverte.",
+        "title": "Son extérieur n’est pas un seul pli"
+      },
+      "sinkPointOpen": {
+        "text": "Des bords libres atteignent son extrémité : ses couches sont des coins libres, pas une pointe fermée, donc rien ne dit comment elles s’enfonceraient. Enfoncez une pointe dont les couches sont jointes à l’extrémité.",
+        "title": "La pointe est ouverte"
+      },
+      "sinkSeveralPoints": {
+        "text_one": "{{count}} pointe se trouve du côté de l’extrémité, et un enfoncement n’en prend qu’une. Choisissez la pointe à enfoncer.",
+        "text_many": "{{count}} pointes se trouvent du côté de l’extrémité, et un enfoncement n’en prend qu’une. Choisissez la pointe à enfoncer.",
+        "text_other": "{{count}} pointes se trouvent du côté de l’extrémité, et un enfoncement n’en prend qu’une. Choisissez la pointe à enfoncer.",
+        "title": "Choisissez une pointe"
+      },
       "sliver": {
         "text": "Un point des couches qui bougent se poserait à un cheveu à l’intérieur du bord d’une autre couche.",
         "title": "Un point tombe juste à l’intérieur d’un bord"
@@ -564,6 +606,10 @@
       "tuckTarget": {
         "text": "Choisissez une couche qui reste en place contre laquelle rentrer le rabat.",
         "title": "La couche où rentrer bougerait"
+      },
+      "unsinkNotSunk": {
+        "text": "Rien d’enfoncé ne se trouve dans le papier le long de cette ligne. Repérez l’anneau laissé par un enfoncement, et choisissez la pointe enfoncée à l’intérieur.",
+        "title": "Aucune pointe enfoncée ici"
       },
       "unsupported": {
         "text": "Cette version d’Ori Studio ne peut pas la plier telle qu’elle est enregistrée.",
@@ -599,6 +645,23 @@
       "rowBeside": "Couche {{layer}}, {{flap}}, à côté de la couche {{above}}",
       "top": "Haut"
     },
+    "sink": {
+      "bothFit": "Les deux enfoncements conviennent ici : l’ouvert retourne chaque couche, le fermé les garde ensemble.",
+      "closed": "Fermé",
+      "depth": "Profondeur",
+      "depthHelp": "La distance de la ligne à l’extrémité de la pointe le long de sa ligne médiane, le côté du papier valant 1. Placez la ligne plus bas pour enfoncer la pointe plus profondément.",
+      "depthValue": "{{depth}} depuis l’extrémité",
+      "kind": "Enfoncement",
+      "neither": "Aucun enfoncement ne convient à cette pointe ici.",
+      "onlyClosed": "Seul l’enfoncement fermé convient ici.",
+      "onlyOpen": "Seul l’enfoncement ouvert convient ici.",
+      "open": "Ouvert",
+      "pocket": "Poche",
+      "pocketBack": "Arrière",
+      "pocketFront": "Avant",
+      "squareNote": "Un enfoncement ouvert demande une ligne exactement perpendiculaire à la ligne médiane de la pointe : inclinée si peu que ce soit, la pointe ne peut pas s’enfoncer ouverte. Un enfoncement fermé accepte une ligne inclinée.",
+      "sunkSide": "Côté enfoncé"
+    },
     "steps": {
       "axiom1First": "Cliquez sur le premier point par lequel passe le pli.",
       "axiom1Second": "Cliquez sur le second point.",
@@ -625,12 +688,15 @@
       "pickFlapsToReverse": "Choisissez les rabats à inverser.",
       "pickFlapsToTuck": "Choisissez les rabats à rentrer.",
       "pickLayers": "Choisissez les couches qui bougent.",
+      "pickPoint": "Choisissez la pointe à enfoncer : un enfoncement n’en prend qu’une.",
+      "pickSunkPoint": "La pointe enfoncée est trouvée pour vous : choisissez-en une autre dans les couches pour sortir celle-là.",
       "pickTuckTarget": "Choisissez la couche contre laquelle rentrer.",
       "pointToMove": "Cliquez sur le point à déplacer.",
       "secondCrease": "Cliquez sur le pli ou le bord plié que suit la seconde ligne.",
       "secondFreeStart": "Cliquez là où commence la seconde ligne."
     },
     "tool": {
+      "closedSinkHelp": "Enfoncer l’extrémité d’une pointe fermée dans une poche, ses couches restant ensemble.",
       "crimpHelp": "Inverser un rabat le long de deux lignes à la fois : vers l’intérieur, puis de nouveau vers l’extérieur.",
       "divideLine": "Diviser une ligne",
       "divideLineHelp": "Marquer des points qui divisent un bord ou un pli en parties égales.",
@@ -638,9 +704,11 @@
       "insideReverseHelp": "Rentrer un rabat à l’intérieur de lui-même, en inversant son dos.",
       "mountain": "Pli montagne",
       "mountainHelp": "Plier le côté qui bouge en l’éloignant de vous, pour qu’il passe dessous.",
+      "openSinkHelp": "Enfoncer l’extrémité d’une pointe fermée en retournant chacune de ses couches.",
       "precrease": "Pré-plier",
       "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
       "tuckHelp": "Plier un rabat et le glisser sous, ou sur, une couche qui reste en place.",
+      "unsinkHelp": "Ressortir l’extrémité d’une pointe enfoncée.",
       "valley": "Pli vallée",
       "valleyHelp": "Plier le côté qui bouge vers vous, pour qu’il passe dessus."
     },

@@ -49,7 +49,11 @@ export type FoldStepAddedOpKind =
   | 'squash'
   | 'petal'
   | 'rabbit_ear'
-  | 'swivel';
+  | 'swivel'
+  // The sinks.
+  | 'open_sink'
+  | 'closed_sink'
+  | 'unsink';
 
 /** How much of the moving side a Fold step took: every layer, flaps picked, or a depth at a point. */
 export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
@@ -69,7 +73,8 @@ export type FoldStepPlayVia = 'space' | 'button' | 'replay';
  * folds to (Import CP's chooser), or a compound fold's: the ways a flap opens
  * (`opening`), the orders its completion leaves (`order`), and the layers a
  * tuck can go against (`tuck_target`); a rabbit ear's or a swivel's fourth
- * crease (`emergent`) and a rabbit ear's ridge (`ridge`).
+ * crease (`emergent`) and a rabbit ear's ridge (`ridge`); the pockets a
+ * closed sink's point can go into (`pocket`).
  */
 export type FoldChoiceKind =
   | 'axiom_root'
@@ -80,7 +85,9 @@ export type FoldChoiceKind =
   | 'tuck_target'
   // The vertex folds.
   | 'emergent'
-  | 'ridge';
+  | 'ridge'
+  // The sinks.
+  | 'pocket';
 
 /** What a change of a Fold step's layer spread did (`fold spread changed`): the Diagram's spread verbs, by name. */
 export type FoldSpreadAction =
