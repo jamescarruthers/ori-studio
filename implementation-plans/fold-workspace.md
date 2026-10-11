@@ -920,14 +920,19 @@ values; this table is the plan's summary of it.
 
 | Event | Properties |
 |---|---|
-| `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth, via: axiom\|crease\|free}` |
+| `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth, via: axiom\|crease\|free}`; a turn, a rotation or a vertex fold (`squash` to `swivel`) carries `op_kind` alone |
 | `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
 | `fold refused` | `{code}` |
+| `fold spread changed` | `{action: spread_on\|spread_off\|spread_kind\|spread_amount\|spread_direction\|spread_keep\|spread_skew\|spread_axis, via: step_pane\|canvas_bar}`, plus the Diagram's bucketed spread properties when the layers stay spread |
 | `fold choice offered` | `{kind, count_bucket}` |
 | `fold view switched` | `{view: fold\|steps}` |
 | `fold sequence sent to edit` | `{variant: plain\|precreases-as-aux}` |
 | `fold cp imported` | `{origin}` (D16's enum) |
-| `fold step sent to diagram` | Later |
+| `fold step sent to diagram` | `{via: fold\|diagram_browser, scope: one\|many}` |
+
+`op_kind` and `step_kind` name the plain kinds and every compound fold's
+(`inside_reverse` … `unsink`); `step_kind` adds `import` for an Import CP
+step.
 
 - **Per-step axiom codes are left out.** They would add up to the axiom histogram
   `docs/analytics.md` forbids. Adding them needs the owner's explicit exception.
