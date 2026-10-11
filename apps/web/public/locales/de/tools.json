@@ -449,6 +449,7 @@
         "title": "Die zweite Linie verfehlt die Lasche"
       },
       "crimpNoOpening": {
+        "noSpine": "Eine einzelne Lage hat keine gefaltete Kante, an der sie sich crimpen ließe. Crimpe eine Lasche aus Lagen, die durch eine Falte verbunden sind.",
         "text": "Ihre Lagen teilen sich an der ersten Linie, doch an der zweiten ist eine von ihnen schon zu Ende oder hat nichts, um das sie umschlagen kann. Verschiebe die zweite Linie oder crimpe andere Laschen.",
         "title": "Diese Lasche lässt sich an der zweiten Linie nicht öffnen"
       },

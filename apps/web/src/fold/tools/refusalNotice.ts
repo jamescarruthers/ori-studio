@@ -254,7 +254,10 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       };
     // The reverse fold's.
     case 'reverse_no_opening':
-      return { title: t('tools:fold.refusal.reverseNoOpening.title', 'This flap cannot open'), text: noOpening(t, refusal.cause) };
+      return {
+        title: t('tools:fold.refusal.reverseNoOpening.title', 'This flap cannot open'),
+        text: noOpening(t, refusal.cause, context.kind),
+      };
     case 'reverse_kind_infeasible':
       return {
         title:
@@ -458,14 +461,23 @@ function choiceNeededWords(
   }
 }
 
-/** Why a flap of a reverse fold's tip has no opening (`NoOpening`), in a folder's words. */
-function noOpening(t: TFunction, cause: FoldNoOpening): string {
+/**
+ * Why a flap of a reverse fold's tip has no opening (`NoOpening`), in a
+ * folder's words. A crimp's tip opens as a reverse fold's does at its first
+ * line, so it is refused for the same reasons, named as a crimp.
+ */
+function noOpening(t: TFunction, cause: FoldNoOpening, kind: FoldRefusalContext['kind']): string {
   switch (cause) {
     case 'no_spine':
-      return t(
-        'tools:fold.refusal.reverseNoOpening.noSpine',
-        'A single layer has no folded edge to reverse along. Reverse a flap of layers joined by a fold.'
-      );
+      return kind === 'crimp'
+        ? t(
+            'tools:fold.refusal.crimpNoOpening.noSpine',
+            'A single layer has no folded edge to crimp along. Crimp a flap of layers joined by a fold.'
+          )
+        : t(
+            'tools:fold.refusal.reverseNoOpening.noSpine',
+            'A single layer has no folded edge to reverse along. Reverse a flap of layers joined by a fold.'
+          );
     case 'no_split':
       return t(
         'tools:fold.refusal.reverseNoOpening.noSplit',

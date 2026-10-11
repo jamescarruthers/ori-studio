@@ -5290,7 +5290,8 @@
     "tools:fold.tuck.targetsOver_other": "707cf63727e8",
     "tools:fold.tuck.targetsUnder_one": "fa20e11e40e1",
     "tools:fold.tuck.targetsUnder_other": "30a56f4be9e5",
-    "tools:fold.tuck.under": "445e8a9c9a57"
+    "tools:fold.tuck.under": "445e8a9c9a57",
+    "tools:fold.refusal.crimpNoOpening.noSpine": "eb7494feb730"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -10583,7 +10584,8 @@
     "tools:fold.tuck.targetsOver_other": "707cf63727e8",
     "tools:fold.tuck.targetsUnder_one": "fa20e11e40e1",
     "tools:fold.tuck.targetsUnder_other": "30a56f4be9e5",
-    "tools:fold.tuck.under": "445e8a9c9a57"
+    "tools:fold.tuck.under": "445e8a9c9a57",
+    "tools:fold.refusal.crimpNoOpening.noSpine": "eb7494feb730"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -15878,7 +15880,8 @@
     "tools:fold.tuck.targetsOver_other": "707cf63727e8",
     "tools:fold.tuck.targetsUnder_one": "fa20e11e40e1",
     "tools:fold.tuck.targetsUnder_other": "30a56f4be9e5",
-    "tools:fold.tuck.under": "445e8a9c9a57"
+    "tools:fold.tuck.under": "445e8a9c9a57",
+    "tools:fold.refusal.crimpNoOpening.noSpine": "eb7494feb730"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -20925,7 +20928,8 @@
     "tools:fold.tuck.over": "2eb17f8953b2",
     "tools:fold.tuck.targetsOver_other": "707cf63727e8",
     "tools:fold.tuck.targetsUnder_other": "30a56f4be9e5",
-    "tools:fold.tuck.under": "445e8a9c9a57"
+    "tools:fold.tuck.under": "445e8a9c9a57",
+    "tools:fold.refusal.crimpNoOpening.noSpine": "eb7494feb730"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -25972,7 +25976,8 @@
     "tools:fold.tuck.over": "2eb17f8953b2",
     "tools:fold.tuck.targetsOver_other": "707cf63727e8",
     "tools:fold.tuck.targetsUnder_other": "30a56f4be9e5",
-    "tools:fold.tuck.under": "445e8a9c9a57"
+    "tools:fold.tuck.under": "445e8a9c9a57",
+    "tools:fold.refusal.crimpNoOpening.noSpine": "eb7494feb730"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -31265,7 +31270,8 @@
     "tools:fold.tuck.targetsOver_other": "707cf63727e8",
     "tools:fold.tuck.targetsUnder_one": "fa20e11e40e1",
     "tools:fold.tuck.targetsUnder_other": "30a56f4be9e5",
-    "tools:fold.tuck.under": "445e8a9c9a57"
+    "tools:fold.tuck.under": "445e8a9c9a57",
+    "tools:fold.refusal.crimpNoOpening.noSpine": "eb7494feb730"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -36558,7 +36564,8 @@
     "tools:fold.tuck.targetsOver_other": "707cf63727e8",
     "tools:fold.tuck.targetsUnder_one": "fa20e11e40e1",
     "tools:fold.tuck.targetsUnder_other": "30a56f4be9e5",
-    "tools:fold.tuck.under": "445e8a9c9a57"
+    "tools:fold.tuck.under": "445e8a9c9a57",
+    "tools:fold.refusal.crimpNoOpening.noSpine": "eb7494feb730"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -41605,6 +41612,7 @@
     "tools:fold.tuck.over": "2eb17f8953b2",
     "tools:fold.tuck.targetsOver_other": "707cf63727e8",
     "tools:fold.tuck.targetsUnder_other": "30a56f4be9e5",
-    "tools:fold.tuck.under": "445e8a9c9a57"
+    "tools:fold.tuck.under": "445e8a9c9a57",
+    "tools:fold.refusal.crimpNoOpening.noSpine": "eb7494feb730"
   }
 }

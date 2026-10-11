@@ -463,6 +463,7 @@
         "title": "La segunda línea no toca la solapa"
       },
       "crimpNoOpening": {
+        "noSpine": "Una sola capa no tiene un borde plegado por el que hacer el crimp. Haz el crimp en una solapa de capas unidas por un pliegue.",
         "text": "Sus capas se separan en la primera línea, pero en la segunda una de ellas ya ha terminado o no tiene sobre qué girar. Mueve la segunda línea o haz crimp en otras solapas.",
         "title": "Esta solapa no se puede abrir en la segunda línea"
       },

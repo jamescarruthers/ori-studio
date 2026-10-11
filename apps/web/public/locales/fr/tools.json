@@ -463,6 +463,7 @@
         "title": "La seconde ligne manque le rabat"
       },
       "crimpNoOpening": {
+        "noSpine": "Une seule couche n’a pas de bord plié le long duquel faire le crimp. Faites le crimp sur un rabat de couches reliées par un pli.",
         "text": "Ses couches s’écartent à la première ligne, mais à la seconde l’une d’elles s’est arrêtée, ou n’a rien sur quoi tourner. Déplacez la seconde ligne, ou faites le crimp sur d’autres rabats.",
         "title": "Ce rabat ne peut pas s’ouvrir à la seconde ligne"
       },

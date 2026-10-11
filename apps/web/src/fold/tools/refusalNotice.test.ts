@@ -202,6 +202,14 @@ describe('foldRefusalNotice', () => {
     expect(tipNotFree.text).toBe(
       'Other layers lie where the crimped paper would turn. Include their flaps in the crimp, or crimp it somewhere else.'
     );
+    // A single-layer tip, refused as a reverse fold's is, named as a crimp.
+    const singleLayer = { refusal: { code: 'reverse_no_opening', cause: 'no_spine' } as FoldRefusalBody, fixes: [] };
+    expect(foldRefusalNotice(t, singleLayer, context({ kind: 'crimp' }), verbs()).text).toBe(
+      'A single layer has no folded edge to crimp along. Crimp a flap of layers joined by a fold.'
+    );
+    expect(foldRefusalNotice(t, singleLayer, context({ kind: 'reverse' }), verbs()).text).toBe(
+      'A single layer has no folded edge to reverse along. Reverse a flap of layers joined by a fold.'
+    );
   });
 
   it('binds a tuck’s other layer, and its narrowed flaps, in a tuck’s words', () => {

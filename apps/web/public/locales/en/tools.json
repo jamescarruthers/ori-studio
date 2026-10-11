@@ -449,6 +449,7 @@
         "title": "The second line misses the flap"
       },
       "crimpNoOpening": {
+        "noSpine": "A single layer has no folded edge to crimp along. Crimp a flap of layers joined by a fold.",
         "text": "Its layers part at the first line, but at the second one of them has ended, or has nothing to turn on. Move the second line, or crimp other flaps.",
         "title": "This flap cannot open at the second line"
       },

@@ -463,6 +463,7 @@
         "title": "A segunda linha não pega a aba"
       },
       "crimpNoOpening": {
+        "noSpine": "Uma camada sozinha não tem borda dobrada ao longo da qual fazer o crimp. Faça o crimp em uma aba de camadas unidas por uma dobra.",
         "text": "Suas camadas se separam na primeira linha, mas na segunda uma delas já terminou ou não tem onde virar. Mova a segunda linha ou faça crimp em outras abas.",
         "title": "Esta aba não abre na segunda linha"
       },
