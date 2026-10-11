@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -104,6 +106,14 @@ describe('the Fold browser (D17)', () => {
       { kind: 'turn', turn: { kind: 'turn-over', axis: 'vertical' } },
       { kind: 'step', step: 'fstep-3', moment: 'before' },
     ]);
+  });
+
+  it('marks the turn it offers in a solid line: on paper a dash is a valley fold', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/components/diagram/DiagramReferencesCard.module.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const rules = [...css.matchAll(/([^{}]*\[data-offered\][^{}]*)\{([^}]*)\}/g)];
+    expect(rules.length).toBeGreaterThan(0);
+    for (const [, selector, body] of rules) expect(body, selector.trim()).not.toMatch(/dash|dott/);
   });
 
   it('chooses every step it can with Select all, a range with Shift', async () => {
