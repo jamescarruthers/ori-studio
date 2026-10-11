@@ -6,6 +6,7 @@ import {
   compoundFamilyOf,
   compoundFoldLineOf,
   compoundStoredChoices,
+  foldedLineOf,
   isFoldCompoundOp,
   stepMotionLegsOf,
   type FoldCompoundFamily,
@@ -15,7 +16,7 @@ import {
 } from './foldEngineCompoundWire';
 import type { FoldReverseStored } from './foldEngineReverseWire';
 import type { FoldSinkStored } from './foldEngineSinkWire';
-import type { FoldStepMotionLegs } from './foldEngineWire';
+import type { FoldReport, FoldStepMotionLegs } from './foldEngineWire';
 
 const LINE = { n: [0, 1] as [number, number], d: 0.5 };
 const SECOND = { n: [0, 1] as [number, number], d: 0.25 };
@@ -129,6 +130,31 @@ describe('the compound folds’ one wire', () => {
     expect(compoundFoldLineOf(REPORTS.sink())).toEqual({ line: LINE, side: 'positive' });
     expect(compoundFoldLineOf(REPORTS.vertex())).toBeNull();
     expect(compoundFoldLineOf(undefined)).toBeNull();
+  });
+
+  it('reads any landed step’s line one way: a plain fold’s report, else its compound fold’s', () => {
+    const plain: FoldReport = {
+      line: SECOND,
+      side: 'positive',
+      snap: SNAP,
+      direction: 'valley',
+      flaps: [],
+      picked: [],
+      added: [],
+      moving: [0],
+      moving_faces: [1],
+      created: [4],
+      unfolded: [],
+      refolded: [],
+      split: 1,
+    };
+    expect(foldedLineOf({ report: plain })).toBe(plain);
+    // A compound step holds no plain report: its line is its compound report's, a crimp's first.
+    expect(foldedLineOf({ report: null, compound: REPORTS.reverse() })).toEqual({ line: LINE, side: 'negative' });
+    expect(foldedLineOf({ report: null, compound: REPORTS.crimp() })).toEqual({ line: LINE, side: 'positive' });
+    // A vertex fold, a turn and the sheet fold along no one line.
+    expect(foldedLineOf({ report: null, compound: REPORTS.vertex() })).toBeNull();
+    expect(foldedLineOf({ report: null })).toBeNull();
   });
 
   it('reads what any family stores as the document’s choices, and nothing for what had one way', () => {

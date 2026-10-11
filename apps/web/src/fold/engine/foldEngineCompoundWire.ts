@@ -160,6 +160,21 @@ export function compoundFoldLineOf(
 }
 
 /**
+ * The line any landed step folded along and the side that moved, in the
+ * parent's model frame: a plain fold's report, or else a compound fold's
+ * ({@link compoundFoldLineOf}), which a compound step holds in place of one.
+ * Null for a turn, a rotation, an import and a vertex fold. Every reader of a
+ * landed step's line — Fold's strip, the Diagram's capture — reads it here,
+ * so a step is worded alike wherever it appears.
+ */
+export function foldedLineOf(landed: {
+  readonly report: FoldReport | null;
+  readonly compound?: FoldCompoundReport;
+}): Pick<FoldReport, 'line' | 'side'> | null {
+  return landed.report ?? compoundFoldLineOf(landed.compound);
+}
+
+/**
  * What a landed compound step stores, as the document's choices: the
  * openings chosen among several, the order chosen among several, a closed
  * sink's pocket. Nothing for what had one way only. The engine spells each

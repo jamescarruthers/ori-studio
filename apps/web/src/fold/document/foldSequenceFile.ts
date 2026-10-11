@@ -434,6 +434,22 @@ function readOp(value: unknown): FoldOp | null {
   }
 }
 
+/**
+ * A step's op and choices as the file reads them back once written, or null
+ * when they would not read and the step would come back locked. Only what
+ * the document's types hold is written: none of the tools' additions to an
+ * op (`FoldEngineOp` — a line in the parent's model frame, a side of one, a
+ * tuck's placement, the closure policy).
+ */
+export function readBackFoldStep(
+  op: FoldOp,
+  choices: FoldChoices = {}
+): { op: FoldOp; choices: FoldChoices } | null {
+  const read = readOp(writeFoldOp(op));
+  const chosen = readChoices(writeFoldChoices(choices) ?? {});
+  return read && chosen && { op: read, choices: chosen };
+}
+
 // The vertex folds' ops: sheet points, and the directions their choices
 // among rays stored. An optional direction absent is none; present, it must
 // read.
@@ -504,15 +520,24 @@ function readAlongLine(
   value: Record<string, unknown>
 ): { line: FoldLineInput; moving?: SheetPoint; seed: FoldSeed } | null {
   const line = readLine(value.line);
-  const motion = readMotion(value);
+  const motion = line && readMotion(value, line);
   return line && motion && { line, ...motion };
 }
 
-/** The moving side and the seed. The side is required when the seed is `all`, which does not imply one. */
-function readMotion(value: Record<string, unknown>): { moving?: SheetPoint; seed: FoldSeed } | null {
+/**
+ * The moving side and the seed. The side is stored only when nothing else
+ * says it (the bridge's `Motion`): a depth or flaps seed says it, and so does
+ * an axiom that carries a point — whether this one does is the engine's to
+ * say on replay. A seed of `all` along any other line, or along a crease
+ * (`line` null), needs it.
+ */
+function readMotion(
+  value: Record<string, unknown>,
+  line: FoldLineInput | null = null
+): { moving?: SheetPoint; seed: FoldSeed } | null {
   const seed = readSeed(value.seed);
   if (!seed) return null;
-  if (value.moving === undefined) return seed.scope === 'all' ? null : { seed };
+  if (value.moving === undefined) return seed.scope === 'all' && line?.via !== 'axiom' ? null : { seed };
   const moving = readPoint(value.moving);
   return moving && { moving, seed };
 }

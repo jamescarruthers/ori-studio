@@ -14,6 +14,7 @@
 
 import type { FoldPathDigest, FoldStateFingerprint } from '../document/foldDigest';
 import type { FoldOp, FoldPaper } from '../document/foldSequenceDocument';
+import { foldedLineOf } from '../engine/foldEngineCompoundWire';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldReport } from '../engine/foldEngineWire';
 import type { FoldSession } from '../session/foldSession';
@@ -102,8 +103,12 @@ export interface FoldStepReady {
   /** Its path's identity. */
   readonly path: FoldPathDigest;
   readonly op: FoldOp;
-  /** What the fold did; null for a turn, a rotation or an import. */
-  readonly report: FoldReport | null;
+  /**
+   * The line it folded along and the side that moved, a plain fold's or a
+   * compound fold's, as Fold's strip reads them (`foldedLineOf`); null for a
+   * turn, a rotation, an import and a vertex fold.
+   */
+  readonly folded: Pick<FoldReport, 'line' | 'side'> | null;
 }
 
 /**
@@ -154,7 +159,7 @@ export function foldStepReady(
       parent: held.parent,
       path: node.path,
       op: held.op,
-      report: node.report,
+      folded: foldedLineOf(node),
     };
   });
 }

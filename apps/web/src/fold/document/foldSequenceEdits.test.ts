@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { rectangleShape, type FoldLockedStep, type FoldMark, type FoldStep } from './foldSequenceDocument';
+import {
+  FOLD_OP_KINDS,
+  isLockedStep,
+  rectangleShape,
+  type FoldLockedStep,
+  type FoldMark,
+  type FoldOp,
+  type FoldStep,
+} from './foldSequenceDocument';
+import { readFoldSequence } from './foldSequenceFile';
 import {
   appendFoldStep,
   deleteFoldStep,
@@ -10,7 +19,7 @@ import {
   setFoldStartSide,
   setFoldStepNote,
 } from './foldSequenceEdits';
-import { sequenceOf, sequentialIds, step, valleyAt } from './foldSequence.fixtures';
+import { sequenceOf, sequentialIds, step, valleyAt, writtenSequence } from './foldSequence.fixtures';
 
 const locked: FoldLockedStep = { id: 'l', parent: 'a', unknown: { id: 'l', parent: 'a', op: { kind: 'sink' } } };
 const document = () => sequenceOf([step('a', null), step('b', 'a', valleyAt(0.25)), locked, step('m', 'l')]);
@@ -64,6 +73,42 @@ describe('appendFoldStep', () => {
     const adopt = rectangleShape(1, 0.5)!;
     expect(appendFoldStep(document(), { parent: null, op: valleyAt(0.6), adopt })).toBeNull();
     expect(appendFoldStep(document(), { parent: 'a', op: valleyAt(0.6), adopt })).toBeNull();
+  });
+
+  it('appends every op and choice the file keeps, of every kind', () => {
+    const steps = readFoldSequence(writtenSequence())!.document.steps.filter((node): node is FoldStep => !isLockedStep(node));
+    expect(new Set(steps.map((node) => node.op.kind))).toEqual(new Set(FOLD_OP_KINDS));
+    for (const node of steps) {
+      const draft = { parent: null, op: node.op, ...(node.choices ? { choices: node.choices } : {}) };
+      expect(appendFoldStep(sequenceOf([]), draft)?.document.steps[0], node.id).toMatchObject(draft);
+    }
+  });
+
+  it('refuses a step the file would not keep as it folds: it would come back locked, or folding otherwise', () => {
+    const model = { via: 'model', line: { n: [0, 1], d: 0.5 } };
+    const reverse = { kind: 'inside-reverse', line: valleyAt(0.5).line, moving: [0.5, 0.9], seed: { scope: 'all' } };
+    const tuck = {
+      kind: 'tuck',
+      line: valleyAt(0.5).line,
+      direction: 'valley',
+      seed: { scope: 'flaps', at: [[0.5, 0.9]] },
+      target: [0.5, 0.25],
+    };
+    const ops = [
+      // The tools' line in the parent's model frame, which the document never writes, and its side.
+      { kind: 'valley', line: model, side: 'positive', seed: { scope: 'all' } },
+      { ...reverse, line: model },
+      { kind: 'crimp', line: valleyAt(0.5).line, second: model, crimp: 'inside', moving: [0.5, 0.9], seed: { scope: 'all' } },
+      // The tools' other additions, which change how the step folds.
+      { ...valleyAt(0.5), closure: 'refuse' },
+      { ...tuck, placement: { placement: 'on_top' } },
+    ];
+    for (const op of ops) {
+      expect(appendFoldStep(document(), { parent: 'a', op: op as unknown as FoldOp }), JSON.stringify(op)).toBeNull();
+    }
+    // Choices the file would not read: a root whose normal is no direction.
+    const choices = { root: { n: [0, 0] as [number, number], d: 0.5 } };
+    expect(appendFoldStep(document(), { parent: 'a', op: valleyAt(0.6), choices })).toBeNull();
   });
 });
 

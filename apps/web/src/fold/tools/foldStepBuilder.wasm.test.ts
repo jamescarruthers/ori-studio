@@ -5,7 +5,9 @@ import type { Point } from '../../lib/geometry';
 import { foldPickIndex, resolveFoldPick, type FoldPaneId, type FoldPick, type FoldPickIndex } from '../canvas/foldPicking';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import type { FoldAxiomLine, FoldEngineOutcome } from '../engine/foldEngineWire';
-import type { FoldChoices, FoldOp } from '../document/foldSequenceDocument';
+import { sequenceOf, step } from '../document/foldSequence.fixtures';
+import { isLockedStep, type FoldChoices, type FoldOp } from '../document/foldSequenceDocument';
+import { readFoldSequence, writeFoldSequence } from '../document/foldSequenceFile';
 import {
   axiomLineOfPicks,
   besideBend,
@@ -133,6 +135,17 @@ describe.skipIf(!available)('the Fold step builder over the real bridge', () => 
     const summary = calls.summary(kite.state);
     expect(summary.faces).toBe(4);
     expect(summary.creases).toMatchObject({ valley: 2, flat: 1 });
+
+    // Saved and opened again, the kite is the steps the tools made: none
+    // locked, and the axiom folds still store no moving point.
+    const made = [diagonal, first, kite].map((folded, k) =>
+      step(`fstep-${k + 1}`, k === 0 ? null : `fstep-${k}`, folded.op, folded.choices ? { choices: folded.choices } : {})
+    );
+    const saved = JSON.stringify(writeFoldSequence({ document: sequenceOf(made), readOnlyRaw: null }));
+    const reopened = readFoldSequence(JSON.parse(saved))?.document.steps ?? [];
+    expect(reopened.map(isLockedStep)).toEqual([false, false, false]);
+    // As saved: JSON has no -0, so a root's d = -0 comes back 0.
+    expect(JSON.parse(JSON.stringify(reopened))).toEqual(JSON.parse(JSON.stringify(made)));
 
     // Unfold the first flap by its bend: the seed is the face hinged on that
     // bend, just beside its middle — not a cell picked by area, where the

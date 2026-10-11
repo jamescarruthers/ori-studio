@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { initialFoldReaderState } from '../../../fold/document/foldReaderState';
 import { valleyAt, writtenSequence } from '../../../fold/document/foldSequence.fixtures';
-import { regularPolygonShape, type FoldMark } from '../../../fold/document/foldSequenceDocument';
-import { readFoldSequences } from '../../../fold/document/foldSequenceFile';
+import {
+  isLockedStep,
+  regularPolygonShape,
+  type FoldMark,
+  type FoldOp,
+} from '../../../fold/document/foldSequenceDocument';
+import { readFoldSequences, writeFoldSequences } from '../../../fold/document/foldSequenceFile';
 import type { FoldStepDraft } from '../../../fold/document/foldSequenceEdits';
 import { selectWorkspaceCapabilities } from '../capabilities';
 import { useWorkspaceStore } from '../store';
@@ -247,6 +252,22 @@ describe('the Fold slice', () => {
     expect(state().setFoldStepNote(stepIds()[0], 'Late', { loadId })).toBe(false);
     expect(stepIds()).toHaveLength(2);
     expect(state().commitFoldStep(valley(null, 0.9), { loadId: state().foldLoadId })).not.toBeNull();
+  });
+
+  it('commits only a step the project file keeps: one along a tool’s model-frame line is refused, recording nothing', () => {
+    // The tools' own form, which the document never writes: saved, the step would come back locked.
+    const op = { kind: 'valley', line: { via: 'model', line: { n: [0, 1], d: 0.5 } }, side: 'positive', seed: { scope: 'all' } };
+    expect(state().commitFoldStep({ parent: null, op: op as unknown as FoldOp })).toBeNull();
+    expect(state().foldSequences).toEqual([]);
+    expect(state().dirty).toBe(false);
+
+    // What the store does commit comes back from the file as it was, never locked.
+    const { a, b } = foldTwo();
+    const reread = readFoldSequences(writeFoldSequences(state().foldSequences));
+    expect(reread[0]!.document.steps.map((node) => [node.id, isLockedStep(node)])).toEqual([
+      [a, false],
+      [b, false],
+    ]);
   });
 
   it('installs sequences read from a file over an empty history, the reader held to the one shown', () => {
