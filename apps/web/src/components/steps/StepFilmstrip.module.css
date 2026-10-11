@@ -89,18 +89,20 @@
  * rule so the selection still reads on the card the reader is on — which a
  * preview usually is.
  *
- * A preview and a new branch are dashed, like a step that makes no crease:
- * neither is part of the sequence yet. A blocked step's picture fades, since
- * it shows a fold that will not happen.
+ * A preview and a new branch are not part of the sequence yet: their card is
+ * tinted in their hue, frame and ground. Solid, never dashed — these states
+ * are Fold's, whose cards are paper, and a dashed line round paper is a
+ * valley fold. A blocked step's picture fades, since it shows a fold that
+ * will not happen.
  */
 .card[data-state='preview'] {
-  border-style: dashed;
   border-color: color-mix(in srgb, var(--accent-primary) 60%, var(--border-subtle));
+  background: color-mix(in srgb, var(--accent-primary) 9%, var(--bg-canvas, #0c0f12));
 }
 
 .card[data-state='new-branch'] {
-  border-style: dashed;
   border-color: var(--status-warning);
+  background: color-mix(in srgb, var(--status-warning) 9%, var(--bg-canvas, #0c0f12));
 }
 
 .card[data-state='blocked'] {
@@ -142,7 +144,6 @@
 
 /* A newer build's step: carried, never folded, so its frame and picture recede. */
 .card[data-state='locked'] {
-  border-style: dashed;
   border-color: var(--border-default);
 }
 
