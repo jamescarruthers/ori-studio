@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StepFilmstripWays } from '../../components/steps/StepFilmstrip';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
+import { foldStepSpread } from '../document/foldStepSpread';
 import { foldPathMoves } from './foldSequencePath';
 import { branchReadout, branchesLabel, moveLabel, replayNote, stripLabel } from './foldSequenceWords';
 import { foldStripCards, type FoldStripCard } from './foldStripCards';
@@ -45,14 +46,23 @@ const nextBranch = () => void moveFoldReader('nextBranch');
  */
 export function useFoldStepStrip(view: FoldSequenceView): FoldStepStripModel {
   const { t } = useTranslation();
-  const { paper, entries, words, cursor, pending, progress, failed } = view;
-  // Each card pictures its landed state, kept by its fingerprint across replays.
+  const { document, paper, entries, words, cursor, pending, progress, failed } = view;
+  // Each card pictures its landed state, kept by its fingerprint across replays, with
+  // the layer spread the folded pane shows it with.
   const pictures = useMemo(
-    () => entries.map((entry) => foldCardPictureSource(entry.session.state, entry.session.fingerprint)),
-    [entries]
+    () =>
+      entries.map((entry) =>
+        foldCardPictureSource(entry.session.state, entry.session.fingerprint, foldStepSpread(document, entry.id))
+      ),
+    [entries, document]
   );
+  // The step a tool is folding lands under the step on screen, whose spread it takes.
   const pendingState = pending?.state ?? null;
-  const pendingPicture = useMemo(() => foldCardPictureSource(pendingState), [pendingState]);
+  const pendingSpread = foldStepSpread(document, entries[cursor]?.id ?? null);
+  const pendingPicture = useMemo(
+    () => foldCardPictureSource(pendingState, null, pendingSpread),
+    [pendingState, pendingSpread]
+  );
   const { cards, active } = useMemo(
     () =>
       foldStripCards(t, {

@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
+import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import { useInheritedPaperStyle } from '../../cp-workspace/paper/objectPaperStyle';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import { reportError } from '../../monitoring';
 import { foldSession } from '../../store/workspaceStore/foldSession';
 import { useFoldPaneDisplay } from '../canvas/foldPaneDisplay';
 import type { FoldPaneDisplay } from '../canvas/foldPaneScenes';
-import { foldStatePictureKey, foldStatePictureUrl } from '../canvas/foldStatePicture';
+import { foldSpreadPictureKey, foldStatePictureKey, foldStatePictureUrl } from '../canvas/foldStatePicture';
 import type { FoldEngineStateHandle } from '../engine/foldEnginePort';
 import type { FoldScene } from '../engine/foldEngineWire';
 import type { FoldSession } from '../session/foldSession';
@@ -23,8 +24,8 @@ import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
  *   a new worker hands out new handles for the same states, and two branches
  *   that land the same state share a picture. A state with no fingerprint
  *   yet — the step a tool is folding — is kept by its handle. Beside the
- *   state, the key is the look (`foldStatePictureKey`): the style and the
- *   display switches.
+ *   state, the key is the card's layer spread (`foldSpreadPictureKey`) and
+ *   the look (`foldStatePictureKey`): the style and the display switches.
  * - **Asked only for the cards in view.** The strip is windowed; a card
  *   asks for its picture as it mounts. The scene is the one every Fold
  *   surface asks for (`FOLD_SCENE_QUERY`), so a state the canvas or the
@@ -44,15 +45,18 @@ export interface FoldCardPictureSource {
   readonly state: FoldEngineStateHandle;
   /** What names the state whatever its handle: its fingerprint, else its handle. */
   readonly key: string;
+  /** The layer spread the card shows the state with, as the folded pane would (`foldStepSpread`); null for none. */
+  readonly spread: LayerSpreadOptions | null;
 }
 
-/** A state's picture source: by its fingerprint when it has one. Null for no state. */
+/** A state's picture source: by its fingerprint when it has one, spread by `spread`. Null for no state. */
 export function foldCardPictureSource(
   state: FoldEngineStateHandle | null,
-  fingerprint: string | null = null
+  fingerprint: string | null = null,
+  spread: LayerSpreadOptions | null = null
 ): FoldCardPictureSource | null {
   if (!state) return null;
-  return { state, key: fingerprint ?? `handle:${state.generation}:${state.id}` };
+  return { state, key: fingerprint ?? `handle:${state.generation}:${state.id}`, spread };
 }
 
 const MAX_PICTURES = 96;
@@ -68,6 +72,7 @@ interface PaintJob {
   scene: FoldScene;
   style: PaperStyle;
   display: FoldPaneDisplay;
+  spread: LayerSpreadOptions | null;
 }
 
 /** Asked and not yet painted: a scene on its way, or a job in the queue. */
@@ -77,7 +82,8 @@ const queue: PaintJob[] = [];
 let currentLook = '';
 let scheduled = false;
 
-const pictureKey = (source: FoldCardPictureSource, look: string) => `${source.key}|${look}`;
+const pictureKey = (source: FoldCardPictureSource, look: string) =>
+  `${source.key}|${foldSpreadPictureKey(source.spread)}|${look}`;
 
 /**
  * Keep what a slice painted, newest last, and let the oldest go past the
@@ -112,7 +118,7 @@ function drain(): void {
     asked.delete(job.key);
     if (job.look !== currentLook) continue;
     try {
-      painted.push({ key: job.key, url: foldStatePictureUrl(job.scene, job.style, job.display) });
+      painted.push({ key: job.key, url: foldStatePictureUrl(job.scene, job.style, job.display, job.spread) });
     } catch (error) {
       // Not the user's to act on: the card keeps its blank, and asks again when it next mounts.
       reportError(error, { surface: 'fold:card-picture' });
@@ -146,14 +152,15 @@ export function requestFoldCardPicture(
   const key = pictureKey(source, look);
   if (pictures.getState().byKey.has(key) || asked.has(key)) return;
   asked.add(key);
+  const { spread } = source;
   const held = session.peek(source.state, FOLD_SCENE_QUERY);
   if (held) {
-    enqueue({ key, look, scene: held.value, style, display });
+    enqueue({ key, look, scene: held.value, style, display, spread });
     return;
   }
   session.query(source.state, FOLD_SCENE_QUERY).then(
     (answer) => {
-      if (answer.status === 'answered') enqueue({ key, look, scene: answer.value, style, display });
+      if (answer.status === 'answered') enqueue({ key, look, scene: answer.value, style, display, spread });
       // A state that went with its engine is asked again under its next handle.
       else asked.delete(key);
     },

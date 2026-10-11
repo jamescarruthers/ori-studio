@@ -4,7 +4,7 @@ import { DEFAULT_PAPER_STYLE, type PaperStyle } from '../../lib/paper/paperStyle
 import type { FoldScene } from '../engine/foldEngineWire';
 import { bookScene, flatSquareScene } from './foldCanvas.fixtures';
 import { FOLD_PANE_DISPLAY_DEFAULT } from './foldPaneScenes';
-import { foldStatePictureKey, foldStatePictureUrl } from './foldStatePicture';
+import { foldSpreadPictureKey, foldStatePictureKey, foldStatePictureUrl } from './foldStatePicture';
 
 /** The SVG a data URL carries. */
 const svgOf = (url: string | null): string => {
@@ -63,6 +63,21 @@ describe('a folded state’s card picture', () => {
     const off = svgOf(foldStatePictureUrl(precreasedSquareScene(), STYLE, { ...FOLD_PANE_DISPLAY_DEFAULT, precreases: false }));
     expect(off).not.toContain('#9c27b0');
     expect(off).toContain('fill="#f2d64b"');
+  });
+
+  it('spreads the layers as the step’s picture does: the buried half peeks out, front up', () => {
+    const spread = { kind: 'depth' as const, amount: 0.1, toward: 'down' as const };
+    const svg = svgOf(foldStatePictureUrl(bookScene(), STYLE, FOLD_PANE_DISPLAY_DEFAULT, spread));
+    expect(svg).toContain('fill="#3b6fb6"');
+    expect(svg).toContain('fill="#f2d64b"');
+    // None at all is the pane's unspread picture.
+    expect(foldStatePictureUrl(bookScene(), STYLE, FOLD_PANE_DISPLAY_DEFAULT, null)).toBe(
+      foldStatePictureUrl(bookScene(), STYLE)
+    );
+    // A spread is keyed by what it says.
+    expect(foldSpreadPictureKey(spread)).toBe(foldSpreadPictureKey({ ...spread }));
+    expect(foldSpreadPictureKey({ ...spread, amount: 0.2 })).not.toBe(foldSpreadPictureKey(spread));
+    expect(foldSpreadPictureKey(null)).not.toBe(foldSpreadPictureKey(spread));
   });
 
   it('is keyed by what it reads: the style and the Precreases switch, not the step-creases one', () => {

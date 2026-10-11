@@ -94,6 +94,28 @@ describe('the step strip’s card pictures', () => {
     expect(foldCardPictureSource(null)).toBeNull();
   });
 
+  it('pictures one state once per spread, and cards of different spreads side by side', async () => {
+    const { session, query } = fakeSession(new Map([[2, bookScene()]]), new Set([2]));
+    const spread = { kind: 'depth' as const, amount: 0.1, toward: 'down' as const };
+    const flat = foldCardPictureSource(handle(2), 'fs1:book');
+    const spreadOut = foldCardPictureSource(handle(2), 'fs1:book', spread);
+    const again = foldCardPictureSource(handle(2), 'fs1:book', { ...spread });
+    if (!flat || !spreadOut || !again) throw new Error('no source');
+    expect(spreadOut.spread).toBe(spread);
+    // Both asked in one look: neither is a look no longer shown.
+    requestFoldCardPicture(session, flat, DEFAULT_PAPER_STYLE, DISPLAY);
+    requestFoldCardPicture(session, spreadOut, DEFAULT_PAPER_STYLE, DISPLAY);
+    await settle();
+    const unspread = heldFoldCardPicture(flat, DEFAULT_PAPER_STYLE, DISPLAY);
+    const spreadPicture = heldFoldCardPicture(spreadOut, DEFAULT_PAPER_STYLE, DISPLAY);
+    expect(unspread).toMatch(/^data:image\/svg\+xml/);
+    expect(spreadPicture).toMatch(/^data:image\/svg\+xml/);
+    expect(spreadPicture).not.toBe(unspread);
+    // The same spread from another step is the same picture.
+    expect(heldFoldCardPicture(again, DEFAULT_PAPER_STYLE, DISPLAY)).toBe(spreadPicture);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it('paints only the look on show, and asks again for a state that went with its engine', async () => {
     const { session, query } = fakeSession(new Map([[1, flatSquareScene()]]), new Set([1]));
     const source = foldCardPictureSource(handle(1), 'fs1:look');

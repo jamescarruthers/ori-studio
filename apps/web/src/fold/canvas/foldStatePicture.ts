@@ -3,8 +3,8 @@
  * Import CP's layer orders' (D16), each the state it stands for.
  *
  * The folded pane's own picture, made small: the pane's scene
- * (`foldedPaneScene`, so the toolbar's Precreases switch reaches the cards —
- * and a step's layer spread will, through the same call) painted by the
+ * (`foldedPaneScene`, so the toolbar's Precreases switch reaches the cards,
+ * and so does a step's layer spread, `foldStepSpread`) painted by the
  * shared painter in the user's paper style, read through the pane's policy
  * (`fold`): the paper in its two colours, front and back, every fold an edge,
  * a precrease in the aux pen. The page is transparent, fitted to the figure,
@@ -13,6 +13,7 @@
  * Pure: no React, no store.
  */
 
+import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import type { PaperStyle } from '../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES, surfacePaperStyle } from '../../lib/paper/paperStyleResolve';
 import { paperSceneToSvg } from '../../lib/paper/paperSvg';
@@ -40,24 +41,30 @@ function paneStyle(style: PaperStyle): { style: PaperStyle; key: string } {
 }
 
 /**
- * What a state's picture depends on besides the state: the style as the pane
- * reads it, and the display switches the pane's scene reads. Two pictures of
- * one state under the same key are the same picture, so a cache keys by the
- * state and this. Whatever {@link foldStatePictureUrl} comes to read — a
- * step's spread — goes in here with it.
+ * The look every picture shares: the style as the pane reads it, and the
+ * display switches the pane's scene reads. Two pictures of one state, with
+ * one spread ({@link foldSpreadPictureKey}), under the same look are the same
+ * picture, so a cache keys by the state, the spread and this; a change of
+ * look repaints every card, a change of spread only the cards it reaches.
  */
 export function foldStatePictureKey(style: PaperStyle, display: FoldPaneDisplay = FOLD_PANE_DISPLAY_DEFAULT): string {
   return `${display.precreases ? 'precreases' : 'bare'}|${paneStyle(style).key}`;
 }
 
-/** The state as an SVG data URL, or null when it has nothing to draw. */
+/** What a picture's layer spread adds to its key: none, or the spread itself. */
+export function foldSpreadPictureKey(spread: LayerSpreadOptions | null): string {
+  return spread ? JSON.stringify(spread) : 'flat';
+}
+
+/** The state as an SVG data URL, its layers spread by `spread` (none for null), or null when it has nothing to draw. */
 export function foldStatePictureUrl(
   scene: FoldScene,
   style: PaperStyle,
-  display: FoldPaneDisplay = FOLD_PANE_DISPLAY_DEFAULT
+  display: FoldPaneDisplay = FOLD_PANE_DISPLAY_DEFAULT,
+  spread: LayerSpreadOptions | null = null
 ): string | null {
   // The pane's scene: where the pane is shown makes no difference to a picture fitted to its figure.
-  const paper = foldedPaneScene(scene, display);
+  const paper = foldedPaneScene(scene, display, undefined, spread);
   if (paper.items.length === 0) return null;
   const { svg } = paperSceneToSvg(paper, paneStyle(style).style, CARD_PAGE, 'figure');
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
