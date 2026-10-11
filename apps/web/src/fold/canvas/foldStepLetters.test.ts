@@ -39,6 +39,15 @@ describe('the letters on the folded pane', () => {
     for (const { letter } of letters) expect(sentence).toContain(`point ${letter}`);
   });
 
+  it('sit where the pane draws their points: a spread pane’s, through `place`', () => {
+    const op = pointOnto([point(0.5, 0), point(0.5, 1)]);
+    const moved = foldStepLetters(op, parent, sheet, ([x, y]) => ({ x: x + 0.03, y: y - 0.01 }));
+    expect(moved.map(({ at }) => round(at))).toEqual([
+      [0.53, -0.01],
+      [0.53, 0.99],
+    ]);
+  });
+
   it('leave the sheet’s own corners to the sentence, which names them by description', () => {
     const op = pointOnto([point(1, 0), point(0, 1)]);
     expect(foldStepLetters(op, parent, sheet)).toEqual([]);

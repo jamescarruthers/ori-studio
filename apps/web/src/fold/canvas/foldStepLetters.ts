@@ -11,7 +11,7 @@
  * Pure: no React, no store, no engine.
  */
 import type { Point } from '../../lib/geometry';
-import type { FoldOp } from '../document/foldSequenceDocument';
+import type { FoldOp, SheetPoint } from '../document/foldSequenceDocument';
 import type { FoldScene } from '../engine/foldEngineWire';
 import { anchorOf, referenceOf } from '../sequence/foldSentenceStep';
 import type { FoldStateFrame } from '../sequence/foldStateFrame';
@@ -35,8 +35,16 @@ export interface FoldLetteredReference {
  * frame the step's sentence names its references in, the state it folds
  * from; null while it is not in, when every reference goes by its letter, as
  * the sentence then names them. None for any other step.
+ *
+ * `place` puts a reference's sheet point where the pane draws it: on the
+ * shown scene by default, or where a spread pane draws it.
  */
-export function foldStepLetters(op: FoldOp, parent: FoldStateFrame | null, shown: FoldScene): FoldLetteredReference[] {
+export function foldStepLetters(
+  op: FoldOp,
+  parent: FoldStateFrame | null,
+  shown: FoldScene,
+  place: (sheet: SheetPoint) => Point | null = (sheet) => sheetToScene(shown, sheet)
+): FoldLetteredReference[] {
   if (!('line' in op) || op.line.via !== 'axiom') return [];
   const { inputs } = op.line;
   const references = inputs.map((input) => referenceOf(input, parent));
@@ -45,7 +53,7 @@ export function foldStepLetters(op: FoldOp, parent: FoldStateFrame | null, shown
     const reference = references[index];
     const letter = letters[index];
     if (!letter || (reference?.kind !== 'point' && reference?.kind !== 'line')) return [];
-    const at = sheetToScene(shown, anchorOf(input));
+    const at = place(anchorOf(input));
     return at ? [{ letter, kind: reference.kind, at }] : [];
   });
 }

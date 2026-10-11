@@ -41,7 +41,14 @@ import { foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldTo
 import { nearestDirection, squashTargetToward } from '../tools/vertex/vertexStep';
 import { isFoldAltLatched } from './foldAltLatch';
 import { toPair, transformLine } from './foldCanvasGeometry';
-import { resolveFoldPick, topSheetPointAt, type FoldHit, type FoldHitRadii, type FoldPaneId } from './foldPicking';
+import {
+  resolveFoldPick,
+  topSheetPointAt,
+  type FoldHit,
+  type FoldHitRadii,
+  type FoldPaneId,
+  type FoldPickIndex,
+} from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 import type { FoldStateView } from './useFoldStateView';
 
@@ -292,17 +299,22 @@ export function marksMadeAt(sequence: FoldSequenceDocument | null, id: string | 
  * The verbs the Fold canvas offers, bound to the session, the tools and the
  * fold previewed. Stable for the canvas's life: each reads what it needs
  * when it runs, so a key press, a button and a click are one path.
+ *
+ * `picking` is the index the panes are hit-tested through: the view's own,
+ * or the spread folded pane's (`useFoldPaneSpread`), which finds the paper
+ * where it is drawn. The view's by default.
  */
 export function useFoldCanvasVerbs(
   session: FoldSessionSurface,
   tools: FoldTools,
   view: FoldStateView,
-  preview: FoldToolPreview
+  preview: FoldToolPreview,
+  picking?: FoldPickIndex | null
 ): FoldCanvasVerbBinding {
-  const live = useRef({ session, view, preview });
+  const live = useRef({ session, view, preview, picking });
   // Before any handler can run: effects land ahead of the next event.
   useEffect(() => {
-    live.current = { session, view, preview };
+    live.current = { session, view, preview, picking };
   });
   // What was picked was picked on the step on screen: another step — an
   // undo, a redo, a step chosen in the strip — starts the tool over. (A
@@ -397,7 +409,8 @@ export function useFoldCanvasVerbs(
       },
 
       hitTest: (pane, at, radii) => {
-        const index = live.current.view.index;
+        const { view: shown, picking: drawn } = live.current;
+        const index = drawn === undefined ? shown.index : drawn;
         if (!index) return null;
         const tool = state();
         const model = foldToolInput(tool);

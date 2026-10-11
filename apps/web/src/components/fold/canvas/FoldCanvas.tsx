@@ -41,6 +41,7 @@ import { restingSpread, useFoldCanvasPaint } from '../../../fold/canvas/useFoldC
 import { foldCanvasChoice, marksMadeAt, useFoldCanvasVerbs } from '../../../fold/canvas/useFoldCanvasVerbs';
 import { useFoldCanvasShortcuts } from '../../../fold/canvas/useFoldCanvasShortcuts';
 import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
+import { useFoldPaneSpread } from '../../../fold/canvas/useFoldPaneSpread';
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
 import { useFoldStepLetters } from '../../../fold/canvas/useFoldStepLetters';
@@ -93,7 +94,14 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const tools = foldTools();
   const toolState = useFoldTools((state) => state);
   const preview = useFoldToolPreview(session, view, toolState);
-  const { verbs, queued } = useFoldCanvasVerbs(session, tools, view, preview);
+  // The folded form's layers spread as the step on screen says, its switch on
+  // the bar — at rest: flat once a tool picks, or locates a fold. Spread, the
+  // paper is picked, hovered and lettered where it is drawn.
+  const picking = toolState.picks.length > 0;
+  const stepSpread = useFoldStepSpreadShown(view.cursorId);
+  const shownSpread = restingSpread(stepSpread, preview, picking);
+  const paneSpread = useFoldPaneSpread(view, shownSpread);
+  const { verbs, queued } = useFoldCanvasVerbs(session, tools, view, preview, paneSpread.index);
   useEffect(() => registerFoldCanvasVerbs(verbs), [verbs]);
   // The menus' and the step cards' Valley / Mountain / Precrease arm the tools' fold.
   useEffect(() => registerFoldKindControl(foldToolKindControl(tools)), [tools]);
@@ -137,11 +145,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   useFoldCanvasShortcuts(camera);
 
   // --- What each pane paints, and frames: the camera fits on a new sequence or sheet, never on a fold.
-  // The folded form's layers spread as the step on screen says, its switch on the bar.
   const summary = view.summary;
-  const spreadShown = useFoldStepSpreadShown(view.cursorId);
   const spread = useFoldStepSpread(view.cursorId, 'canvas_bar');
-  const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, spreadShown);
+  const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread);
   const landed = preview.landed;
   const cpSummary = paint.creasePattern.summary;
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
@@ -158,8 +164,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     display,
     reveal: phone ? revealFoldedPane : undefined,
     spreads: playSpreads && {
-      before: restingSpread(playSpreads.before, preview),
-      after: restingSpread(playSpreads.after, preview),
+      before: restingSpread(playSpreads.before, preview, picking),
+      after: restingSpread(playSpreads.after, preview, picking),
     },
   });
 
@@ -185,15 +191,16 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             marks: view.marks,
             inks: inks.overlay,
             tool: pane === 'folded' ? vertexMarks : null,
+            spread: paneSpread.map,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, toolState.picks, freeFrom, located, vertexMarks]
+    [inks, view.scene, view.marks, toolState.picks, freeFrom, located, vertexMarks, paneSpread.map]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
 
   // --- The letters the step's sentence names its references by, on the folded pane.
-  const letters = useFoldStepLetters(session, view, preview, toolState.picks.length > 0);
+  const letters = useFoldStepLetters(session, view, preview, picking, paneSpread.map);
 
   // --- The tool window, and the root chooser over the folded pane.
   const sequence = useWorkspaceStore((state) => shownFoldSequence(state)?.document ?? null);

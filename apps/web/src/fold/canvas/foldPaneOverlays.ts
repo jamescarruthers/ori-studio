@@ -13,8 +13,9 @@
  */
 import type { Point } from '../../lib/geometry';
 import type { FillGeometry, PointGeometry, Rgba, StrokeGeometry } from '../../cp-workspace/renderer/types';
-import type { FoldMark, FoldModelLine } from '../document/foldSequenceDocument';
+import type { FoldMark, FoldModelLine, SheetPoint } from '../document/foldSequenceDocument';
 import { markPoints } from '../document/foldSequenceDocument';
+import type { FoldPaneSpreadMap } from './foldPaneSpreadMap';
 import {
   sheetToScene,
   type FoldFreePick,
@@ -107,16 +108,28 @@ function packStrokes(strokes: readonly Stroke[]): StrokeGeometry | null {
 
 const withAlpha = ([r, g, b, a]: Rgba, alpha: number): Rgba => [r, g, b, a * alpha];
 
-/** Where a pick is drawn on a pane: the scene frame on the folded pane, the sheet on the other. */
-function pickOnPane(pick: FoldPick, pane: FoldPaneId): Point | readonly [Point, Point] | null {
+/**
+ * Where a pick is drawn on a pane: the scene frame on the folded pane — where
+ * the spread draws its sheet point, while the pane is spread — the sheet on
+ * the other.
+ */
+function pickOnPane(
+  pick: FoldPick,
+  pane: FoldPaneId,
+  spread: FoldPaneSpreadMap | null = null
+): Point | readonly [Point, Point] | null {
+  const folded = pane === 'folded';
   switch (pick.kind) {
     case 'point':
-      return pane === 'folded' ? pick.scene : toPoint(pick.sheet);
+      if (!folded) return toPoint(pick.sheet);
+      return spread ? (spread.sheet(pick.sheet) ?? pick.scene) : pick.scene;
     case 'segment':
-      return pane === 'folded' ? pick.scene : [toPoint(pick.sheet[0]), toPoint(pick.sheet[1])];
+      if (!folded) return [toPoint(pick.sheet[0]), toPoint(pick.sheet[1])];
+      return spread ? spread.segment(pick.sheet, pick.scene) : pick.scene;
     case 'free':
       // A free line's end: where it lies folded, and on the sheet under it (none off the paper).
-      return pane === 'folded' ? pick.scene : pick.sheet ? toPoint(pick.sheet) : null;
+      if (!folded) return pick.sheet ? toPoint(pick.sheet) : null;
+      return spread && pick.sheet ? (spread.sheet(pick.sheet) ?? pick.scene) : pick.scene;
   }
 }
 
@@ -249,24 +262,37 @@ export interface FoldPaneOverlayInput {
   inks: FoldOverlayInks;
   /** The tool's own marks for this pane, under its picks: a vertex fold's creases and rays. */
   tool?: FoldOverlayMarks | null;
+  /**
+   * How the folded pane draws the paper while its layers are spread
+   * (`foldPaneSpreadMap`): the marks, the picks and the hover are drawn where
+   * the spread puts their sheet points. Null, or on the other pane, they are
+   * drawn where they lie.
+   */
+  spread?: FoldPaneSpreadMap | null;
 }
 
 /** The overlay for one pane. */
 export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
   const { pane, inks } = input;
+  const spread = pane === 'folded' ? (input.spread ?? null) : null;
   const dots: Dot[] = [...(input.tool?.dots ?? [])];
   const strokes: Stroke[] = [...(input.tool?.strokes ?? [])];
 
   // The marks, under the picks: each point a mark makes, where the pane shows it.
+  const markAt = (point: SheetPoint): Point | null => {
+    if (pane !== 'folded') return toPoint(point);
+    if (spread) return spread.sheet(point);
+    return input.scene ? sheetToScene(input.scene, point) : null;
+  };
   for (const mark of input.marks) {
     for (const point of markPoints(mark)) {
-      const at = pane === 'folded' ? (input.scene ? sheetToScene(input.scene, point) : null) : toPoint(point);
+      const at = markAt(point);
       if (at) dots.push({ at, radius: MARK_RADIUS, fill: inks.mark, stroke: inks.outline });
     }
   }
 
   const draw = (pick: FoldPick, hover: boolean) => {
-    const at = pickOnPane(pick, pane);
+    const at = pickOnPane(pick, pane, spread);
     if (!at) return;
     if ('x' in at) {
       dots.push(
@@ -293,8 +319,8 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
   if (hovered?.pick) draw(hovered.pick, true);
   // The line a free fold is being drawn along, on the pane under the
   // pointer: from its first end to where a click would put the other.
-  const from = input.freeFrom ? pickOnPane(input.freeFrom, pane) : null;
-  const to = hovered?.pane === pane && hovered.pick?.kind === 'free' ? pickOnPane(hovered.pick, pane) : null;
+  const from = input.freeFrom ? pickOnPane(input.freeFrom, pane, spread) : null;
+  const to = hovered?.pane === pane && hovered.pick?.kind === 'free' ? pickOnPane(hovered.pick, pane, spread) : null;
   if (from && to && 'x' in from && 'x' in to) {
     strokes.push({ a: from, b: to, color: withAlpha(inks.accent, HOVER_LINE_ALPHA), widthMul: 1 });
   }
