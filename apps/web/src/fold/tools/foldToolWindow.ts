@@ -46,9 +46,12 @@ import {
   lineModeSteps,
   type FoldKind,
   type FoldLineModeId,
+  type FoldSecondLineModeId,
   type FoldShortcutId,
 } from './foldToolCatalog';
+import type { FoldDirection } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
+import { crimpToolWindow } from './crimp/crimpToolWindow';
 import type { FoldRailVerbs, FoldToolsView } from './foldRailGroups';
 import type { FoldDivideSettings } from './foldToolState';
 import {
@@ -56,6 +59,7 @@ import {
   type FoldReverseControls,
   type FoldReverseWindowView,
 } from './reverse/reverseToolWindow';
+import { tuckToolWindow, type FoldTuckControls, type FoldTuckWindowView } from './tuck/tuckToolWindow';
 import {
   foldRefusalNotice,
   neededFlaps,
@@ -96,6 +100,13 @@ export interface FoldToolWindowView extends FoldToolsView {
   divide?: { settings: FoldDivideSettings; marks: number };
   /** The reverse tool's kind and choices, while it previews (`tools/reverse/reverseToolWindow`). */
   reverse?: FoldReverseWindowView;
+  // The crimp's and the tuck's (`tools/crimp/crimpToolWindow`, `tools/tuck/tuckToolWindow`).
+  /** How a crimp's second line is located; absent for every other tool. */
+  secondLineMode?: FoldSecondLineModeId;
+  /** The crimp tool's kind and choices, while it previews: a reverse fold's, on both lines. */
+  crimp?: FoldReverseWindowView;
+  /** The tuck tool's direction, and its targets and orders while it previews. */
+  tuck?: FoldTuckWindowView;
 }
 
 /** What the window can promise on this device. */
@@ -124,6 +135,11 @@ export interface FoldToolWindowVerbs extends Pick<FoldRailVerbs, 'selectTool' | 
   /** Step through the ways the tip opens, or the layer orders listed. */
   stepOpening?: (delta: number) => void;
   stepOrder?: (delta: number) => void;
+  // The crimp's and the tuck's.
+  setSecondLineMode?: (mode: FoldSecondLineModeId) => void;
+  setTuckDirection?: (direction: FoldDirection) => void;
+  /** Step through the layers listed to tuck against. */
+  stepTuckTarget?: (delta: number) => void;
 }
 
 /** The Divide line's controls: count or exact ratio (Edit's ratio expression), and clearing what is made. */
@@ -215,9 +231,25 @@ export interface FoldToolWindowModel {
   refusal: FoldRefusalNoticeModel | null;
   /** The Divide line's settings; null for every other tool, or where the surface offers none. */
   divide: FoldDivideControls | null;
-  /** A compound fold's kind and choices (`tools/reverse/reverseToolWindow`); absent for every other tool. */
+  /**
+   * A compound fold's kind and choices (`tools/reverse/reverseToolWindow`): a
+   * reverse fold's, or a crimp's; absent for every other tool.
+   */
   compound?: FoldReverseControls;
+  /** How a crimp's second line is located, while its lines are; absent for every other tool. */
+  secondLine?: FoldSecondLineSelect | null;
+  /** A tuck's target and order (`tools/tuck/tuckToolWindow`); absent for every other tool. */
+  tuck?: FoldTuckControls | null;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
+}
+
+/** A crimp's second line mode: a free line or an existing crease. */
+export interface FoldSecondLineSelect {
+  label: string;
+  value: FoldSecondLineModeId;
+  options: readonly { id: FoldSecondLineModeId; label: string }[];
+  disabled: boolean;
+  set: (id: string) => void;
 }
 
 function divideControls(
@@ -293,7 +325,7 @@ export function settingsMeta(t: TFunction, count: number): string {
 }
 
 /** What snaps under each line mode, and on a pointer with keys, the keys that change it. */
-function lineModeNotes(t: TFunction, mode: FoldLineModeId, host: FoldToolHost): string[] {
+export function lineModeNotes(t: TFunction, mode: FoldLineModeId, host: FoldToolHost): string[] {
   const clear = t('tools:fold.note.clear', 'Esc clears the picks.');
   if (mode === 'free') {
     const free = t('tools:fold.note.free', 'No snapping: the line runs exactly through the points you click.');
@@ -460,6 +492,8 @@ export function foldToolWindow(
     };
   }
   if (view.tool === 'inside-reverse') return reverseToolWindow(t, view, verbs, host);
+  if (view.tool === 'crimp') return crimpToolWindow(t, view, verbs, host);
+  if (view.tool === 'tuck') return tuckToolWindow(t, view, verbs, host);
   if (!isFoldKind(view.tool)) return null;
   const kind = view.tool;
   const title = foldToolLabel(t, kind);

@@ -1620,8 +1620,44 @@
     "sentence": {
       "closedSink": "Afunde a ponta em afundamento fechado: empurre-a para dentro com as camadas juntas.",
       "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
-      "crimpInside": "Faça um crimp interno ao longo das duas linhas.",
-      "crimpOutside": "Faça um crimp externo ao longo das duas linhas.",
+      "insideCrimp": {
+        "crease": {
+          "crease": "Faça um crimp interno pelo vinco existente, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "free": {
+          "crease": "Faça um crimp interno pela linha marcada, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno pela linha marcada, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o1": {
+          "crease": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o2": {
+          "crease": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o3": {
+          "crease": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o4": {
+          "crease": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o5": {
+          "crease": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o6": {
+          "crease": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o7": {
+          "crease": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp interno de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        }
+      },
       "insideReverse": {
         "crease": {
           "all": "Dobre todas as camadas com uma dobra invertida interna pelo vinco existente.",
@@ -1908,6 +1944,44 @@
         }
       },
       "openSink": "Afunde a ponta em afundamento aberto: empurre-a para dentro, virando cada camada do avesso.",
+      "outsideCrimp": {
+        "crease": {
+          "crease": "Faça um crimp externo pelo vinco existente, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo pelo vinco existente, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "free": {
+          "crease": "Faça um crimp externo pela linha marcada, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo pela linha marcada, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o1": {
+          "crease": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo pela linha que liga {{a}} e {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o2": {
+          "crease": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o3": {
+          "crease": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo levando {{a}} sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o4": {
+          "crease": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo com {{a}} como pivô, de modo que {{b}} caia sobre sua própria linha, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o5": {
+          "crease": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo com {{a}} como pivô, levando {{b}} sobre {{c}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o6": {
+          "crease": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo levando {{a}} sobre {{b}} e {{c}} sobre {{d}}, e depois volte por uma segunda linha marcada mais adiante."
+        },
+        "o7": {
+          "crease": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por um vinco existente mais adiante.",
+          "free": "Faça um crimp externo de modo que {{self}} caia sobre sua própria linha e {{a}} caia sobre {{b}}, e depois volte por uma segunda linha marcada mais adiante."
+        }
+      },
       "outsideReverse": {
         "crease": {
           "all": "Dobre todas as camadas com uma dobra invertida externa pelo vinco existente.",
@@ -2263,6 +2337,7 @@
       "creases": "Vincos",
       "creasesBackUp": "Vistos pela frente do papel, que começa virada para baixo: podem aparecer ao contrário das dobras que você vê.",
       "creasesFront": "Vistos pela frente do papel.",
+      "firstLine": "Primeira linha",
       "flat": "Planos",
       "flatHelp": "Dobrados uma vez e desdobrados: agora estão planos e lembram para que lado foram dobrados.",
       "imported": "Padrão de vincos importado: este passo substitui o estado dobrado pelo do padrão.",
@@ -2278,6 +2353,7 @@
       "operation": "Operação",
       "pending": "Dobra pendente",
       "pendingRefused": "Resolva o problema na janela da ferramenta para ver os vincos que ela cria.",
+      "secondLine": "Segunda linha",
       "sheet": "Folha plana",
       "sheetNote": "Nada foi dobrado ainda. Dobre a folha para criar o passo 1.",
       "source": "Origem",

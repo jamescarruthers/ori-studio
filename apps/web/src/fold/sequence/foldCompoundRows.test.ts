@@ -47,6 +47,42 @@ describe('a compound fold’s Step pane rows', () => {
     expect(foldCompoundPaneRows(undefined)).toBeUndefined();
   });
 
+  it('reads a crimp’s opening and blocks as a reverse fold’s, and a tuck’s block turning whole', () => {
+    const { line, side, snap, ...rest } = report();
+    const crimp: FoldCompoundReportOf<'crimp'> = {
+      ...rest,
+      family: 'crimp',
+      first: line,
+      side,
+      snap,
+      second: { n: [0, 1], d: 0.3 },
+      second_side: 'negative',
+      second_snap: snap,
+      blocks: [[6], [7], [8], [9]],
+      stored: { openings: [opening.stored] },
+    };
+    expect(foldCompoundPaneRows(crimp)).toEqual({ blocks: 4, opening: 'chosen', orderChosen: false });
+    const tuck: FoldCompoundReportOf<'tuck'> = {
+      family: 'tuck',
+      line,
+      side,
+      snap,
+      direction: 'valley',
+      placement: 'under',
+      target: 3,
+      moving: [1],
+      blocks: [[6]],
+      created: [8],
+      unfolded: [],
+      refolded: [],
+      reversed: [],
+      split: 1,
+      motion: { kind: 'visual', legs: [] },
+      stored: { order: { faces: [], orders: [[0, 1, 1]] } },
+    };
+    expect(foldCompoundPaneRows(tuck)).toEqual({ blocks: 1, opening: null, orderChosen: true });
+  });
+
   it('has none yet for the other families, whose rows come with their tools', () => {
     const vertex: FoldCompoundReportOf<'vertex'> = {
       family: 'vertex',

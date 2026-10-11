@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { trackFoldChoiceOffered } from '../../analytics';
-import { reportError } from '../../monitoring';
-import { canonicalJson } from '../document/foldDigest';
 import type { FoldChoices, FoldCompletionChoice, FoldReverseKind } from '../document/foldSequenceDocument';
 import type { FoldReverseAsked } from '../engine/foldEngineReverseWire';
-import type { FoldAxiomCandidate, FoldEngineOp, FoldEngineRefused } from '../engine/foldEngineWire';
+import type { FoldAxiomCandidate, FoldEngineRefused } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import type { FoldStepBuild } from '../tools/foldStepBuilder';
 import type { FoldToolState } from '../tools/foldToolState';
@@ -17,6 +15,7 @@ import {
   type FoldReverseOpenWay,
 } from '../tools/reverse/reverseStep';
 import type { FoldPickIndex } from './foldPicking';
+import { useFoldCompoundAsk, type FoldCompoundAsk } from './useFoldCompoundAsk';
 
 /** What the reverse tool knows of the fold it is previewing, beside the step. */
 export interface FoldReversePreview {
@@ -41,45 +40,14 @@ export interface FoldReverseStepAnswer {
   refused: FoldEngineRefused | null;
 }
 
-type Answer = { key: string; asked: FoldReverseAsked | null; refused: FoldEngineRefused | null };
-
 /**
- * The tools' one question about a reverse fold (the compound question,
- * `compoundAnalysis`, D14 tier 2), once per tip on a state: the line, side
- * and anchor, and the openings chosen. Both kinds answer at once, and a
- * stored completion is never asked about, so neither a kind chosen nor an
- * order stepped through asks again.
+ * The tools' one question about a reverse fold (`useFoldCompoundAsk`), once
+ * per tip on a state: the line, side and anchor, and the openings chosen.
+ * Both kinds answer at once, and a stored completion is never asked about,
+ * so neither a kind chosen nor an order stepped through asks again.
  */
-function useReverseAsk(
-  session: FoldSessionSurface,
-  stateKey: string | null,
-  ask: { op: FoldEngineOp; choices?: FoldChoices } | null
-): Answer | null {
-  const { withCursor } = session;
-  const key = ask && stateKey ? `${stateKey}|${canonicalJson(ask)}` : null;
-  const [answer, setAnswer] = useState<Answer | null>(null);
-  useEffect(() => {
-    if (!ask || key === null || answer?.key === key) return undefined;
-    let current = true;
-    const { op, choices } = ask;
-    if (op.kind !== 'inside-reverse' && op.kind !== 'outside-reverse') return undefined;
-    void withCursor((engine, at) => engine.compoundAnalysis(at, op, choices)).then(
-      (reply) => {
-        if (!current || reply.status !== 'answered') return;
-        const value = reply.value;
-        if (value.status !== 'ok') setAnswer({ key, asked: null, refused: value });
-        // A reverse op's answer is always the reverse family's.
-        else if (value.family === 'reverse') setAnswer({ key, asked: value, refused: null });
-      },
-      (error: unknown) => reportError(error, { surface: 'fold:reverse' })
-    );
-    return () => {
-      current = false;
-    };
-    // The ask is read through its key: an equal ask must not ask again.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [withCursor, key, answer?.key]);
-  return answer && answer.key === key ? answer : null;
+function useReverseAsk(session: FoldSessionSurface, stateKey: string | null, ask: FoldCompoundAsk | null) {
+  return useFoldCompoundAsk(session, stateKey, ask, 'reverse', 'fold:reverse');
 }
 
 /**

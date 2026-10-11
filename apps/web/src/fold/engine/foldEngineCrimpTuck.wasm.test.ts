@@ -279,10 +279,12 @@ describe.skipIf(!available)('the crimp and the tuck over the real bridge', () =>
     expect(
       thrown(() => compound.crimp(at, { ...STRIP_CRIMP, second: { via: 'axiom', axiom: 1, inputs: [] } }))
     ).toMatchObject({ code: 'invalid_input' });
-    // The compound question is a compound fold's, and a plain fold's questions are not a tuck's.
+    // The compound question is a compound fold's; a tuck answers a plain fold's
+    // questions too, of its block against its target: the bounded closure moves.
     const valley = { kind: 'valley', line: BOOK_TUCK.line, seed: BOOK_TUCK.seed } as unknown as FoldTuckOp;
     expect(thrown(() => question.compoundAnalysis(at, valley))).toMatchObject({ code: 'invalid_input' });
-    expect(thrown(() => calls.analyse(at, BOOK_TUCK))).toMatchObject({ code: 'invalid_input' });
+    // The bottom layer's corner alone (spike case 4a), where the plain fold would take the top's too.
+    expect(landed(calls.analyse(at, BOOK_TUCK)).analysis.moving).toHaveLength(1);
     // An order whose witnesses name no face of this state breaks the step.
     const broken = refused(
       calls.step(at, BOOK_TUCK, {

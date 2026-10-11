@@ -1567,8 +1567,44 @@
     "sentence": {
       "closedSink": "Closed-sink the point: push its tip in, its layers kept together.",
       "cpJump": "Collapse into the imported crease pattern.",
-      "crimpInside": "Inside crimp along the two lines.",
-      "crimpOutside": "Outside crimp along the two lines.",
+      "insideCrimp": {
+        "crease": {
+          "crease": "Inside crimp along the existing crease, then back along an existing crease beyond it.",
+          "free": "Inside crimp along the existing crease, then back along a second line drawn beyond it."
+        },
+        "free": {
+          "crease": "Inside crimp along the line drawn, then back along an existing crease beyond it.",
+          "free": "Inside crimp along the line drawn, then back along a second line drawn beyond it."
+        },
+        "o1": {
+          "crease": "Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it.",
+          "free": "Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it."
+        },
+        "o2": {
+          "crease": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.",
+          "free": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it."
+        },
+        "o3": {
+          "crease": "Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.",
+          "free": "Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it."
+        },
+        "o4": {
+          "crease": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it.",
+          "free": "Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it."
+        },
+        "o5": {
+          "crease": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it.",
+          "free": "Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it."
+        },
+        "o6": {
+          "crease": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it.",
+          "free": "Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it."
+        },
+        "o7": {
+          "crease": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it.",
+          "free": "Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it."
+        }
+      },
       "insideReverse": {
         "crease": {
           "all": "Inside reverse fold along the existing crease, through all layers.",
@@ -1793,6 +1829,44 @@
         }
       },
       "openSink": "Open-sink the point: push its tip in, turning every layer inside out.",
+      "outsideCrimp": {
+        "crease": {
+          "crease": "Outside crimp along the existing crease, then back along an existing crease beyond it.",
+          "free": "Outside crimp along the existing crease, then back along a second line drawn beyond it."
+        },
+        "free": {
+          "crease": "Outside crimp along the line drawn, then back along an existing crease beyond it.",
+          "free": "Outside crimp along the line drawn, then back along a second line drawn beyond it."
+        },
+        "o1": {
+          "crease": "Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it.",
+          "free": "Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it."
+        },
+        "o2": {
+          "crease": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.",
+          "free": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it."
+        },
+        "o3": {
+          "crease": "Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.",
+          "free": "Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it."
+        },
+        "o4": {
+          "crease": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it.",
+          "free": "Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it."
+        },
+        "o5": {
+          "crease": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it.",
+          "free": "Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it."
+        },
+        "o6": {
+          "crease": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it.",
+          "free": "Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it."
+        },
+        "o7": {
+          "crease": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it.",
+          "free": "Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it."
+        }
+      },
       "outsideReverse": {
         "crease": {
           "all": "Outside reverse fold along the existing crease, through all layers.",
@@ -2080,6 +2154,7 @@
       "creases": "Creases",
       "creasesBackUp": "As seen from the front of the paper, which starts face down: they can read the other way to the folds you see.",
       "creasesFront": "As seen from the front of the paper.",
+      "firstLine": "First line",
       "flat": "Flat",
       "flatHelp": "Folded once and unfolded: these lie flat now, and remember which way they went.",
       "imported": "Imported crease pattern: this step replaces the folded state with the pattern’s own.",
@@ -2095,6 +2170,7 @@
       "operation": "Operation",
       "pending": "Pending fold",
       "pendingRefused": "Resolve the issue in the tool window to see the creases it makes.",
+      "secondLine": "Second line",
       "sheet": "Flat sheet",
       "sheetNote": "Nothing is folded yet. Fold the sheet to make step 1.",
       "source": "Source",

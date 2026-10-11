@@ -43,6 +43,8 @@ const HOVER_FILL_ALPHA = 0.28;
 /** A picked or hovered line, as a multiple of the frame's stroke width: over the crease, wider than it. */
 const LINE_WIDTH_MUL = 2.6;
 const HOVER_LINE_ALPHA = 0.5;
+/** A located line awaiting its fold's picture: over the paper, narrower than a picked crease. */
+const LOCATED_WIDTH_MUL = 1.6;
 
 interface Dot {
   at: Point;
@@ -161,6 +163,64 @@ export function foldMovingTint(
   return { position: new Float32Array(triangles), color: new Float32Array(colors), count: triangles.length / 2 };
 }
 
+/** How strongly a layer listed to tuck against is lit, and the one taken over that. */
+const TARGET_TINT = 0.16;
+const TARGET_TAKEN_TINT = 0.42;
+
+/**
+ * The layers a tuck may go against, lit in the theme's accent over the
+ * folded pane: every cell whose stack holds one, whole — a target stays, so
+ * no line cuts it — each listed one faintly and the one taken brighter. The
+ * fill is an overlay, so a layer under others shows where it lies. Null when
+ * none is listed.
+ */
+export function foldTargetsTint(
+  index: FoldPickIndex,
+  targets: { listed: readonly number[]; taken: number | null },
+  accent: Rgba
+): FillGeometry | null {
+  if (targets.listed.length === 0) return null;
+  const at = new Map(index.scene.lineage.map((face, k) => [face.id, k]));
+  const positions = (ids: readonly number[]) =>
+    new Set(ids.flatMap((id) => {
+      const k = at.get(id);
+      return k === undefined ? [] : [k];
+    }));
+  const listed = positions(targets.listed);
+  const taken = positions(targets.taken === null ? [] : [targets.taken]);
+  const triangles: number[] = [];
+  const colors: number[] = [];
+  const add = (lit: ReadonlySet<number>, alpha: number) => {
+    const color = [accent[0], accent[1], accent[2], accent[3] * alpha];
+    for (const cell of index.subfaces) {
+      if (!cell.stack.some((face) => lit.has(face))) continue;
+      const ring = cell.polygon;
+      for (let k = 1; k + 1 < ring.length; k += 1) {
+        for (const corner of [ring[0]!, ring[k]!, ring[k + 1]!]) {
+          triangles.push(corner.x, corner.y);
+          colors.push(...color);
+        }
+      }
+    }
+  };
+  add(listed, TARGET_TINT);
+  if (taken.size > 0) add(taken, TARGET_TAKEN_TINT);
+  if (triangles.length === 0) return null;
+  return { position: new Float32Array(triangles), color: new Float32Array(colors), count: triangles.length / 2 };
+}
+
+/** Two fills drawn as one, the second over the first; either may be none. */
+export function joinFills(first: FillGeometry | null, second: FillGeometry | null): FillGeometry | null {
+  if (!first || !second) return first ?? second;
+  const position = new Float32Array(first.position.length + second.position.length);
+  position.set(first.position);
+  position.set(second.position, first.position.length);
+  const color = new Float32Array(first.color.length + second.color.length);
+  color.set(first.color);
+  color.set(second.color, first.color.length);
+  return { position, color, count: first.count + second.count };
+}
+
 export interface FoldPaneOverlayInput {
   pane: FoldPaneId;
   scene: FoldScene | null;
@@ -168,6 +228,12 @@ export interface FoldPaneOverlayInput {
   hovered: FoldHit | null;
   /** While a free line is being drawn: its first end, which the live line runs from to where a click would end it. */
   freeFrom: FoldFreePick | null;
+  /**
+   * Lines the tools have located that no fold's picture draws yet — a
+   * crimp's first line while its second is being located — across the
+   * paper in the scene frame. Drawn on the folded pane only.
+   */
+  located?: readonly (readonly [Point, Point])[];
   marks: readonly FoldMark[];
   inks: FoldOverlayInks;
 }
@@ -204,6 +270,10 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
       });
     }
   };
+  // A located line, under the picks that located it.
+  if (pane === 'folded') {
+    for (const [a, b] of input.located ?? []) strokes.push({ a, b, color: inks.accent, widthMul: LOCATED_WIDTH_MUL });
+  }
   for (const pick of input.picks) draw(pick, false);
 
   const hovered = input.hovered;

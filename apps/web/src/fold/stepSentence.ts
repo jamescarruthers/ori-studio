@@ -41,9 +41,11 @@ import { turnName } from '../lib/steps/turnWords';
 import type { FoldVertexOpKind } from './document/foldSequenceDocument';
 import { vertexSentence } from './stepSentenceVertex';
 import {
+  crimpSentence,
   plainFoldSentence,
   reverseFoldSentence,
   unfoldSentence,
+  type CrimpSecondLine,
   type PlainFoldSentenceOp,
   type SentenceClause,
   type SentenceLine,
@@ -113,10 +115,16 @@ export type FoldSentenceStep =
   | { op: 'cp-jump' }
   /** A reverse fold along a line (plan Phase 9), its layers the tip's anchor, counted from the top. */
   | { op: 'reverse'; kind: 'inside' | 'outside'; line: FoldSentenceLine; scope: FoldLayerScope }
-  /** Two reverse folds of one kind as one step (plan Phase 11). */
-  | { op: 'crimp'; crimp: 'inside' | 'outside' }
-  /** A fold slid under the chosen layer (a valley) or over it (a mountain), as the viewer sees it. */
-  | { op: 'tuck'; direction: FoldDirection }
+  /**
+   * Two reverse folds of one kind as one step (plan Phase 11): its first line
+   * as a reverse fold's is found, and its second, drawn or an existing crease.
+   */
+  | { op: 'crimp'; crimp: 'inside' | 'outside'; line: FoldSentenceLine; second: CrimpSecondLine }
+  /**
+   * A fold slid under the chosen layer (a valley) or over it (a mountain), as
+   * the viewer sees it, along its line (which its Step pane row names).
+   */
+  | { op: 'tuck'; direction: FoldDirection; line: FoldSentenceLine }
   /** A vertex fold (plan Phase 11): its creases are its own, so it names no line (`stepSentenceVertex`). */
   | { op: 'vertex'; fold: FoldVertexOpKind; direction: FoldDirection }
   /** A sink of the point a seed names, or the unsink of a sunk one (plan Phase 11). */
@@ -249,9 +257,7 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
     case 'reverse':
       return reverseFoldSentence(t, step.kind, lineClause(t, step.line), step.scope);
     case 'crimp':
-      return step.crimp === 'inside'
-        ? t('panels:fold.sentence.crimpInside', 'Inside crimp along the two lines.')
-        : t('panels:fold.sentence.crimpOutside', 'Outside crimp along the two lines.');
+      return crimpSentence(t, step.crimp, lineClause(t, step.line), step.second);
     case 'tuck':
       return step.direction === 'valley'
         ? t('panels:fold.sentence.tuckValley', 'Valley fold and tuck the flap in, under the chosen layer.')

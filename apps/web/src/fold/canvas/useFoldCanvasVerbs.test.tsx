@@ -7,7 +7,13 @@ import { createFoldTools, FOLD_TOOL_INITIAL, type FoldTools } from '../tools/fol
 import { buildReverseStep } from '../tools/reverse/reverseStep';
 import { flatSquareLandmarks, flatSquareScene } from './foldCanvas.fixtures';
 import { foldPickIndex } from './foldPicking';
-import { foldCanvasChoice, queuedCommit, useFoldCanvasVerbs, type FoldCanvasVerbBinding } from './useFoldCanvasVerbs';
+import {
+  compoundListed,
+  foldCanvasChoice,
+  queuedCommit,
+  useFoldCanvasVerbs,
+  type FoldCanvasVerbBinding,
+} from './useFoldCanvasVerbs';
 import type { FoldStateView } from './useFoldStateView';
 import type { FoldToolPreview } from './useFoldToolPreview';
 
@@ -32,6 +38,8 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
     refused: null,
     landing: false,
     reverse: null,
+    crimp: null,
+    tuck: null,
     ...extra,
   };
 }
@@ -114,6 +122,34 @@ describe('the Fold canvas’s commit', () => {
     act(() => tools.selectTool('mountain'));
     render(preview({ landing: false, step: { op: BOOK, key: 'another' } }));
     expect(commitStep).not.toHaveBeenCalled();
+  });
+
+  it('steps a tuck’s listed layers, takes a fix’s layer, and folds it the other way', () => {
+    const surface = session(vi.fn());
+    const tools = createFoldTools();
+    const target = (face: number) => ({ face, at: [0.1, 0.1] as [number, number], feasible: true });
+    const tuck = {
+      asked: null,
+      direction: 'valley' as const,
+      placement: 'under' as const,
+      targets: [target(3), target(7)],
+      target: target(3),
+      orders: [],
+      order: null,
+    };
+    act(() => root.render(<Harness session={surface} tools={tools} preview={preview({ tuck })} />));
+    act(() => tools.selectTool('tuck'));
+    act(() => bound!.verbs.stepTuckTarget(1));
+    expect(tools.store.getState().compound.tuckTarget).toBe(7);
+    // The canvas's chooser and Shift+arrows step the same list.
+    act(() => void bound!.verbs.stepChoice(1));
+    expect(tools.store.getState().compound.tuckTarget).toBe(7);
+    act(() => bound!.verbs.tuckTarget(3));
+    expect(tools.store.getState().compound.tuckTarget).toBe(3);
+    act(() => bound!.verbs.foldOtherWay());
+    expect(tools.store.getState().tuckDirection).toBe('mountain');
+    act(() => bound!.verbs.setSecondLineMode('crease'));
+    expect(tools.store.getState().secondLineMode).toBe('crease');
   });
 
   it('decides a queued commit from the tools’ input it was asked for', () => {
@@ -231,7 +267,7 @@ describe('a near miss’s fix', () => {
 
 describe('the canvas’s chooser', () => {
   it('shows the deepest choice with more than one answer: the order, the opening, then the root', () => {
-    const tools = { ...FOLD_TOOL_INITIAL, root: 1, compound: { reverseKind: null, opening: 5, order: 1 } };
+    const tools = { ...FOLD_TOOL_INITIAL, root: 1, compound: { reverseKind: null, opening: 5, order: 1, tuckTarget: null } };
     const reverse = { asked: null, kind: 'inside' as const, kinds: [], ways: [], way: null, orders: [], order: null };
     const roots = [
       { root: 0, line: { n: [1, 0] as const, d: 0.5 }, side: null },
@@ -252,5 +288,34 @@ describe('the canvas’s chooser', () => {
       index: 1,
       count: 2,
     });
+  });
+
+  it('steps a crimp’s opening and order as a reverse fold’s, and a tuck’s layer before its order', () => {
+    const tools = { ...FOLD_TOOL_INITIAL, compound: { reverseKind: null, opening: 1, order: 0, tuckTarget: 7 } };
+    const way = { openings: [], stored: [] };
+    const lines = { first: null, second: null };
+    const crimp = { asked: null, kind: 'inside' as const, kinds: [], ways: [way, way], way, orders: [], order: null, lines };
+    expect(foldCanvasChoice(preview({ crimp }), tools)).toEqual({ kind: 'opening', index: 1, count: 2 });
+    expect(compoundListed(preview({ crimp }))).toEqual({ ways: 2, orders: 0, targets: 0 });
+
+    const target = (face: number) => ({ face, at: [0.1, 0.1] as [number, number], feasible: true });
+    const tuck = {
+      asked: null,
+      direction: 'valley' as const,
+      placement: 'under' as const,
+      targets: [target(3), target(7), target(9)],
+      target: target(7),
+      orders: [],
+      order: null,
+    };
+    expect(foldCanvasChoice(preview({ tuck }), tools)).toEqual({ kind: 'target', index: 1, count: 3 });
+    const order = { faces: [], orders: [] };
+    expect(foldCanvasChoice(preview({ tuck: { ...tuck, orders: [order, order] } }), tools)).toEqual({
+      kind: 'order',
+      index: 0,
+      count: 2,
+    });
+    // One layer offered is no choice.
+    expect(foldCanvasChoice(preview({ tuck: { ...tuck, targets: [target(7)] } }), tools)).toBeNull();
   });
 });

@@ -194,6 +194,8 @@ export type FoldShortcutId =
   | 'fold.toolMountain'
   | 'fold.toolPrecrease'
   | 'fold.toolInsideReverse'
+  | 'fold.toolCrimp'
+  | 'fold.toolTuck'
   | 'fold.toolDivideLine'
   | 'fold.turnOver'
   | 'fold.rotate'
@@ -785,6 +787,11 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.toolMountain', 'Mountain Fold', { key: 'm' }),
   foldShortcut('fold.toolPrecrease', 'Precrease', { key: 'p' }),
   foldShortcut('fold.toolInsideReverse', 'Inside Reverse Fold', null),
+  // The crimp and the tuck, unbound as inside reverse is: C is the existing
+  // crease's line mode and T the turn over, and neither is used often enough
+  // to take a letter from another tool. A user binds one in Settings.
+  foldShortcut('fold.toolCrimp', 'Crimp', null),
+  foldShortcut('fold.toolTuck', 'Tuck', null),
   foldShortcut('fold.toolDivideLine', 'Divide Line', { key: 'd' }),
   foldShortcut('fold.turnOver', 'Turn Over', { key: 't' }),
   foldShortcut('fold.rotate', 'Rotate a Quarter Turn', { key: 'r' }),

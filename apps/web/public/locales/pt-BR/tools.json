@@ -284,7 +284,15 @@
     "chooser": {
       "note": "Este axioma dá mais de uma dobra aqui. Percorra-as ou pressione Shift+← / Shift+→.",
       "openingNote": "A aba se abre de mais de um jeito: as camadas destacadas ficam juntas. Percorra-os ou pressione Shift+← / Shift+→.",
-      "orderNote": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os ou pressione Shift+← / Shift+→."
+      "orderNote": "As camadas podem ficar empilhadas de mais de um jeito. Percorra-os ou pressione Shift+← / Shift+→.",
+      "targetNote": "Mais de uma camada recebe o encaixe: a mais clara é a escolhida. Percorra-as ou pressione Shift+← / Shift+→."
+    },
+    "crimp": {
+      "bothFit": "Os dois tipos de crimp cabem aqui: escolha para onde vai a ponta.",
+      "firstLine": "Primeira linha",
+      "onlyInside": "Aqui só cabe o crimp interno.",
+      "onlyOutside": "Aqui só cabe o crimp externo.",
+      "secondLine": "Segunda linha"
     },
     "divide": {
       "clear_one": "Apagar a marca feita aqui",
@@ -299,18 +307,27 @@
       "right": "Até o fim"
     },
     "fix": {
+      "crimpFlap": "Fazer crimp só na aba {{number}}",
       "includeFlap": "Incluir a aba {{number}}",
       "includeFlaps_one": "Incluir {{count}} aba",
       "includeFlaps_many": "Incluir as {{count}} abas",
       "includeFlaps_other": "Incluir as {{count}} abas",
+      "insideCrimpInstead": "Crimp interno em vez disso",
       "insideInstead": "Dobra invertida interna em vez disso",
       "mountainInstead": "Dobra montanha em vez disso",
+      "outsideCrimpInstead": "Crimp externo em vez disso",
       "outsideInstead": "Dobra invertida externa em vez disso",
       "pickFlap": "Dobrar só a aba {{number}}",
       "precreaseOtherWay": "Pré-vincar no outro sentido",
       "reverseFlap": "Inverter só a aba {{number}}",
       "slideToEdge": "Deslizar a linha até o ponto ficar na borda",
       "swapInstead": "Trocar o lado que se move",
+      "tuckFlap": "Encaixar só a aba {{number}}",
+      "tuckOtherWay": "Encaixar no outro sentido",
+      "tuckOver": "Encaixar sobre a camada {{number}} da lista em vez disso",
+      "tuckOverAnother": "Encaixar sobre a camada que cabe em vez disso",
+      "tuckUnder": "Encaixar sob a camada {{number}} da lista em vez disso",
+      "tuckUnderAnother": "Encaixar sob a camada que cabe em vez disso",
       "turnToEdge": "Girar a linha até o ponto ficar na borda",
       "useLine": "Usar a linha de referência",
       "valleyInstead": "Dobra vale em vez disso"
@@ -386,6 +403,7 @@
       "openSink": "Afundamento aberto",
       "outsideReverse": "Dobra invertida externa",
       "petal": "Dobra pétala",
+      "pleat": "Prega",
       "rabbitEar": "Orelha de coelho",
       "squash": "Dobra esmagada",
       "swivel": "Dobra pivotante",
@@ -397,6 +415,7 @@
       "title": "Ferramentas de dobra",
       "trigger": "Ferramentas"
     },
+    "plannedPleat": "Não é uma ferramenta própria: faça uma prega como duas dobras simples, uma vale e depois uma monte ao lado.",
     "plannedReason": "Planejado: ainda não está no Ori Studio.",
     "playStep": "Reproduzir passo",
     "railLabel": "Ferramentas de dobra",
@@ -427,6 +446,32 @@
       "collision": {
         "text": "As camadas que se movem atravessariam camadas no caminho.",
         "title": "Colisão"
+      },
+      "crimpInsideInfeasible": {
+        "title": "Não dá para fazer crimp para dentro"
+      },
+      "crimpKindInfeasible": {
+        "neither": "Nenhum tipo de crimp cabe aqui: nenhum jeito de empilhar as camadas deixa a ponta virar nas duas linhas. Mova uma linha ou faça crimp em outras abas.",
+        "text": "Nenhum jeito de empilhar as camadas deixa a ponta virar para este lado nas duas linhas. O outro tipo de crimp talvez se encaixe."
+      },
+      "crimpLinesMeet": {
+        "text": "As duas linhas se cruzam, ou chegam perto demais, sobre o papel que o crimp move. Trace a segunda linha afastada da primeira ao longo de toda a aba.",
+        "title": "As linhas se encontram"
+      },
+      "crimpMissesTip": {
+        "text": "A segunda linha não cruza nada do papel além da primeira, então nada voltaria. Trace-a atravessando a aba, além da primeira linha.",
+        "title": "A segunda linha não pega a aba"
+      },
+      "crimpNoOpening": {
+        "noSpine": "Uma camada sozinha não tem borda dobrada ao longo da qual fazer o crimp. Faça o crimp em uma aba de camadas unidas por uma dobra.",
+        "text": "Suas camadas se separam na primeira linha, mas na segunda uma delas já terminou ou não tem onde virar. Mova a segunda linha ou faça crimp em outras abas.",
+        "title": "Esta aba não abre na segunda linha"
+      },
+      "crimpOutsideInfeasible": {
+        "title": "Não dá para fazer crimp por fora"
+      },
+      "crimpTipNotFree": {
+        "text": "Há outras camadas onde o papel do crimp viraria. Inclua as abas delas no crimp ou faça-o em outro lugar."
       },
       "emptySeed": {
         "text": "Nenhuma camada foi escolhida. Escolha pelo menos uma aba para mover.",
@@ -505,6 +550,17 @@
         "text": "A dobra deixaria um vinco ou uma tira de papel mais fina que o próprio papel.",
         "title": "Pequeno demais para dobrar"
       },
+      "tuckInfeasible": {
+        "none": "Nenhum jeito de empilhar as camadas deixa a aba bem junto dessa camada. Encaixe menos abas ou posicione outra linha.",
+        "text": "Nenhum jeito de empilhar as camadas deixa a aba bem junto dessa camada. Outra camada aqui a recebe.",
+        "titleOver": "Não dá para encaixar sobre essa camada",
+        "titleUnder": "Não dá para encaixar sob essa camada"
+      },
+      "tuckNoTarget": {
+        "over": "Nenhuma camada que fica parada recebe a aba por cima aqui. Dobre no outro sentido, troque o lado que se move ou posicione outra linha.",
+        "title": "Nenhuma camada recebe o encaixe aqui",
+        "under": "Nenhuma camada que fica parada recebe a aba por baixo aqui. Dobre no outro sentido, troque o lado que se move ou posicione outra linha."
+      },
       "tuckTarget": {
         "text": "Escolha uma camada que fique parada para encaixar a aba nela.",
         "title": "A camada onde encaixar se moveria"
@@ -565,11 +621,17 @@
       "freeStart": "Clique onde a linha de dobra começa.",
       "landOnLine": "Clique na borda ou vinco onde ele deve cair.",
       "perpendicularTo": "Clique na borda ou vinco ao qual a dobra é perpendicular.",
+      "pickFlapsToCrimp": "Escolha em quais abas fazer crimp.",
       "pickFlapsToReverse": "Escolha quais abas se invertem.",
+      "pickFlapsToTuck": "Escolha quais abas se encaixam.",
       "pickLayers": "Escolha quais camadas se movem.",
-      "pointToMove": "Clique no ponto a mover."
+      "pickTuckTarget": "Escolha a camada onde encaixar.",
+      "pointToMove": "Clique no ponto a mover.",
+      "secondCrease": "Clique no vinco ou borda dobrada que a segunda linha segue.",
+      "secondFreeStart": "Clique onde a segunda linha começa."
     },
     "tool": {
+      "crimpHelp": "Inverter uma aba ao longo de duas linhas de uma vez: para dentro e depois de volta para fora.",
       "divideLine": "Dividir linha",
       "divideLineHelp": "Marcar pontos que dividem uma borda ou um vinco em partes iguais.",
       "insideReverse": "Dobra invertida interna",
@@ -578,8 +640,20 @@
       "mountainHelp": "Dobrar o lado que se move para longe de você, para que fique por baixo.",
       "precrease": "Pré-vincar",
       "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
+      "tuckHelp": "Dobrar uma aba e deslizá-la por baixo, ou por cima, de uma camada que fica parada.",
       "valley": "Dobra vale",
       "valleyHelp": "Dobrar o lado que se move na sua direção, para que fique por cima."
+    },
+    "tuck": {
+      "noTargets": "Nenhuma camada aqui recebe o encaixe.",
+      "over": "Encaixar por cima",
+      "targetsOver_one": "Uma camada aqui recebe o encaixe por cima dela.",
+      "targetsOver_many": "{{count}} camadas aqui recebem o encaixe por cima delas: o papel dobrado destaca cada uma.",
+      "targetsOver_other": "{{count}} camadas aqui recebem o encaixe por cima delas: o papel dobrado destaca cada uma.",
+      "targetsUnder_one": "Uma camada aqui recebe o encaixe por baixo dela.",
+      "targetsUnder_many": "{{count}} camadas aqui recebem o encaixe por baixo delas: o papel dobrado destaca cada uma.",
+      "targetsUnder_other": "{{count}} camadas aqui recebem o encaixe por baixo delas: o papel dobrado destaca cada uma.",
+      "under": "Encaixar por baixo"
     },
     "verb": {
       "rotateHelp": "Girar o modelo um quarto de volta no sentido horário, como um passo próprio.",

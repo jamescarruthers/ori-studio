@@ -449,6 +449,70 @@ fn the_seeded_campaign_lands_valid_tucks_under_and_over() {
     assert!(tally.listed_agree >= 20, "{tally:?}");
 }
 
+/// What the tools ask of a tuck before it lands (plan D12, D14), on spike
+/// case 4a: what moves against T as a plain fold's analysis reads it — the
+/// bounded closure, the bottom layer's corner alone, where the plain fold
+/// would take the top layer's too — and a plain fold's picture of the block,
+/// whose arrow the landed step's picture ends under T.
+#[test]
+fn a_tuck_reads_and_is_pictured_as_a_plain_fold_of_its_block() {
+    let book = book();
+    let op = tuck(
+        corner(),
+        [0.02, 0.02],
+        Direction::Valley,
+        Seed::Flaps {
+            at: vec![[0.05, 0.05]],
+        },
+        [0.75, 0.5],
+    );
+    let analysis = book
+        .analyse_tuck_fold(&op)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(analysis.moving, vec![face(&book, [0.25, 0.5])]);
+    let plain = book
+        .analyse_fold(&op.plain())
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(plain.moving.len(), 2);
+    assert_eq!(
+        (analysis.flaps.clone(), analysis.picked.clone()),
+        (plain.flaps, plain.picked)
+    );
+    // Nothing beyond the seed's flap moves, so none is added.
+    assert!(analysis.added.is_empty());
+    assert_eq!(analysis.direction, Direction::Valley);
+
+    let action = book.tuck_action(&op).unwrap_or_else(|e| panic!("{e}"));
+    assert!(action.line.is_some());
+    assert!(action.pleat.is_none() && action.push.is_none());
+    let Some(grip) = action.grip else {
+        panic!("no grip");
+    };
+    assert_eq!(grip.hidden_image, None);
+
+    let folded = landed(&book, &op);
+    let pictured = folded.action(&book).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(pictured.line, action.line);
+    let Some(landed_grip) = pictured.grip else {
+        panic!("no grip");
+    };
+    assert_eq!(landed_grip.at, grip.at);
+    // Under T, the top layer: one layer over the corner where it lands.
+    assert_eq!(landed_grip.hidden_image, Some(1));
+
+    // A target that would move is refused, as the tuck is.
+    let into_seed = TuckFold {
+        target: [0.25, 0.5],
+        ..op.clone()
+    };
+    assert_eq!(
+        book.analyse_tuck_fold(&into_seed)
+            .map(|_| ())
+            .map_err(|refused| refused.refusal.code()),
+        Err("tuck_target_moves")
+    );
+}
+
 /// The spike's campaign at its size: seeds 1–2, 1,500 states each. The spike
 /// found "immediately under T" feasible for 40% of the layers a plain fold
 /// lands on (793 of 1,970) and unique in 99.1% of those (786).

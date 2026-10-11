@@ -28,16 +28,22 @@
 //! the document's anchors: a tuck's line may be an axiom with its stored
 //! root; a crimp's first line may, and its second is named by two sheet
 //! points or a crease, since a step stores one root. A landed one keeps its
-//! step's summary as it lands, so its parent need not stay held; its picture
-//! is its motion, in its report.
+//! step's summary as it lands, so its parent need not stay held for that.
+//!
+//! Each also answers the plain fold's queries, as a reverse fold does: a
+//! crimp of its tip at ℓ1 — what moves, the plain fold along ℓ1 for the depth
+//! picker, its picture (ℓ1 and the pleat arrow across both lines) — and a
+//! tuck of its block against its target, a plain fold's in all three. A
+//! landed one's picture is drawn on its parent from its report
+//! (`step_action`).
 
 use oristudio_fold::complete::Deadline;
 use oristudio_fold::numerics::MIN_FEATURE;
 use oristudio_fold::{
     ActionKind, ChoiceCount, CompletionLimits, Completions, CrimpAnalysis, CrimpFold, CrimpFolded,
-    CrimpOutcome, Direction, LineRefusal, PlainFold, ReverseChoices, ReverseKind, Side, State,
-    StepSummary, StoredOpening, TuckAnalysis, TuckChoices, TuckFold, TuckFolded, TuckOutcome,
-    WitnessOrder,
+    CrimpOutcome, Direction, FoldActionGeometry, FoldAnalysis, LineRefusal, PlainFold,
+    ReverseChoices, ReverseKind, Side, State, StepSummary, StoredOpening, TuckAnalysis,
+    TuckChoices, TuckFold, TuckFolded, TuckOutcome, WitnessOrder,
 };
 use oristudio_geometry::Line;
 use serde::{Deserialize, Serialize};
@@ -377,6 +383,21 @@ pub fn resolve_tuck(parent: &State, op: &TuckOp, choices: &Choices) -> Result<Tu
 }
 
 impl CompoundOp for CrimpStep {
+    /// Its tip at ℓ1, as a plain fold's analysis reads.
+    fn analysis(&self, parent: &State) -> Option<Result<FoldAnalysis, Refusal>> {
+        Some(parent.analyse_crimp_fold(&self.fold).map_err(Refusal::from))
+    }
+
+    /// ℓ1 with the tip's spans, and the pleat arrow across both lines.
+    fn action(&self, parent: &State) -> Option<Result<FoldActionGeometry, Refusal>> {
+        Some(parent.crimp_action(&self.fold).map_err(Refusal::from))
+    }
+
+    /// The plain fold along ℓ1 its side and anchor name.
+    fn plain(&self) -> Option<PlainFold> {
+        Some(self.fold.plain())
+    }
+
     /// Its analysis, and the kinds that land once every flap that opens
     /// several ways has its opening chosen.
     fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
@@ -405,6 +426,21 @@ impl CompoundOp for CrimpStep {
 }
 
 impl CompoundOp for TuckStep {
+    /// What it moves against its target, as a plain fold's analysis reads.
+    fn analysis(&self, parent: &State) -> Option<Result<FoldAnalysis, Refusal>> {
+        Some(parent.analyse_tuck_fold(&self.fold).map_err(Refusal::from))
+    }
+
+    /// A plain fold's picture of its block.
+    fn action(&self, parent: &State) -> Option<Result<FoldActionGeometry, Refusal>> {
+        Some(parent.tuck_action(&self.fold).map_err(Refusal::from))
+    }
+
+    /// The plain fold its line, side, direction and seed name.
+    fn plain(&self) -> Option<PlainFold> {
+        Some(self.fold.plain())
+    }
+
     /// Every layer its block lands on, with whether it takes the tuck,
     /// decided within [`TUCK_TARGETS_BUDGET_MS`].
     fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
@@ -428,8 +464,8 @@ impl CompoundOp for TuckStep {
 }
 
 /// A landed crimp or tuck, held by the bridge with its step's summary, taken
-/// when it landed, so its parent need not stay held: its picture is its
-/// motion, in its report.
+/// when it landed, so its parent need not stay held for that. Its picture is
+/// drawn on its parent from its report, so that one does.
 #[derive(Debug)]
 struct Kept {
     state: State,
@@ -470,6 +506,21 @@ impl CompoundLanded for Kept {
 
     fn summary(&self, _parent: Parent<'_>) -> Result<Result<StepSummary, Refusal>, BridgeError> {
         Ok(Ok(self.step.clone()))
+    }
+
+    /// A crimp's ℓ1 and pleat arrow, or a tuck's line and arrow with the
+    /// landed state's cover at its head, on the parent it folded.
+    fn action(
+        &self,
+        parent: Parent<'_>,
+    ) -> Result<Option<Result<FoldActionGeometry, Refusal>>, BridgeError> {
+        let action = match &self.report {
+            CompoundStepReport::Crimp(report) => report.action(parent?),
+            CompoundStepReport::Tuck(report) => report.action(parent?, Some(&self.state)),
+            // Kept holds only crimps and tucks.
+            _ => return Ok(None),
+        };
+        Ok(Some(action.map_err(Refusal::from)))
     }
 }
 

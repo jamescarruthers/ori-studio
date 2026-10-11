@@ -44,7 +44,9 @@ use crate::compound::{
 };
 use crate::fold::closure::{MovingSide, moving_side, resolve_seed};
 use crate::fold::line::{self, Axis, Classified};
-use crate::fold::{ResolvedSeed, Seed, Snap};
+use crate::fold::{
+    ActionKind, FoldActionGeometry, FoldAnalysis, PlainFold, ResolvedSeed, Seed, Snap,
+};
 use crate::index::BoxIndex;
 use crate::numerics::TOL;
 use crate::pattern::FaceId;
@@ -657,5 +659,112 @@ impl State {
             },
             fixes,
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// What the tools and the panes ask of a tuck beside landing it (plan D12,
+// D14): what it moves against its target, the plain fold the depth picker
+// previews the stacks of, and its picture. A tuck's geometry is a plain
+// fold's of its block (one reflection across ℓ), so each reads as a plain
+// fold's:
+//
+// - **What moves** is the bounded closure against T, the moving side's
+//   flaps those of the plain fold along ℓ (which the chips number and a
+//   refusal's fixes index), the ones the seed named picked and every other
+//   flap the closure reaches added.
+// - **The picture** is a plain fold's of the block: ℓ across the silhouette,
+//   the spans where the block meets it, and the arrow from the block to where
+//   it lands, under (or over) T.
+
+impl TuckFold {
+    /// The plain fold its line, side, direction and seed name: what the depth
+    /// picker previews the stacks of, and whose flaps the layer picker shows.
+    pub fn plain(&self) -> PlainFold {
+        PlainFold::new(self.line, self.side, self.direction).with_seed(self.seed.clone())
+    }
+}
+
+impl State {
+    /// What the tuck `op` moves against its target, as a plain fold's
+    /// analysis reads (see above). Refused as the tuck is before it lands: a
+    /// target off the paper, a target that would move, nothing staying.
+    pub fn analyse_tuck_fold(&self, op: &TuckFold) -> Result<FoldAnalysis, Refused> {
+        let tuck = self.tuck(op)?;
+        let target = self
+            .face_at(op.target)
+            .and_then(|id| self.face_position(id))
+            .ok_or(FoldRefusal::WitnessNotInFace { point: op.target })?;
+        let moving = tuck.closure(self, Some(target))?;
+        let moving: Vec<FaceId> = (0..moving.len())
+            .filter(|&f| moving[f])
+            .map(|f| self.faces()[f].id)
+            .collect();
+        let (flaps, picked) = match self.analyse_fold(&op.plain()) {
+            Ok(plain) => (plain.flaps, plain.picked),
+            // The plain fold refused (its own closure would take T, say):
+            // the moving side's flaps, every one of them named.
+            Err(_) => {
+                let flaps = tuck.side.flaps.clone();
+                let picked = (0..flaps.len()).collect();
+                (flaps, picked)
+            }
+        };
+        let added = (0..flaps.len())
+            .filter(|k| !picked.contains(k))
+            .filter(|&k| {
+                flaps[k]
+                    .faces
+                    .iter()
+                    .any(|f| moving.binary_search(f).is_ok())
+            })
+            .collect();
+        Ok(FoldAnalysis {
+            line: tuck.line(),
+            side: tuck.side(),
+            snap: tuck.classified.snap,
+            direction: tuck.direction,
+            flaps,
+            picked,
+            added,
+            moving,
+        })
+    }
+
+    /// The picture of the tuck `op` on this state, before it lands (see
+    /// above): no cover at the arrow's head yet.
+    pub fn tuck_action(&self, op: &TuckFold) -> Result<FoldActionGeometry, Refused> {
+        let analysis = self.analyse_tuck_fold(op)?;
+        self.fold_action(&analysis, ActionKind::Fold, None)
+    }
+}
+
+impl TuckReport {
+    /// The landed tuck's picture on `parent`, the state it folded, with
+    /// `landed`'s cover at the arrow's head when it is given.
+    pub fn action(
+        &self,
+        parent: &State,
+        landed: Option<&State>,
+    ) -> Result<FoldActionGeometry, Refused> {
+        let analysis = FoldAnalysis {
+            line: self.line,
+            side: self.side,
+            snap: self.snap,
+            direction: self.direction,
+            flaps: Vec::new(),
+            picked: Vec::new(),
+            added: Vec::new(),
+            moving: self.fold.moving.clone(),
+        };
+        parent.fold_action(&analysis, ActionKind::Fold, landed)
+    }
+}
+
+impl TuckFolded {
+    /// Its picture on `parent`, the state it folded, with the landed state's
+    /// cover at the arrow's head.
+    pub fn action(&self, parent: &State) -> Result<FoldActionGeometry, Refused> {
+        self.report.action(parent, Some(&self.state))
     }
 }

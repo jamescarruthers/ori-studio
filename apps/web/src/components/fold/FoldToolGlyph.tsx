@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from 'react';
 import {
+  Activity,
   ArrowDownToDot,
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -132,8 +133,6 @@ function lineModeGlyph(mode: FoldLineModeId): ReactElement {
 }
 
 const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
-  crimp: ChevronsDownUp,
-  tuck: BetweenHorizontalStart,
   squash: Shrink,
   petal: Flower2,
   'rabbit-ear': Rabbit,
@@ -141,12 +140,14 @@ const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
   'open-sink': ArrowDownToLine,
   'closed-sink': ArrowDownToDot,
   unsink: ArrowUpFromLine,
+  // A pleat's zig-zag: two plain folds, never a tool of its own.
+  pleat: Activity,
 };
 
 /**
  * Every Fold rail item's icon: a fold's letter in its crease's ink; a line
- * mode's picture of what it locates; the app's own icons for the Divide line,
- * the model verbs and the folds still to come.
+ * mode's picture of what it locates; the app's own icons for the crimp and
+ * the tuck, the Divide line, the model verbs and the folds still to come.
  */
 export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
   switch (id) {
@@ -155,6 +156,10 @@ export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
     case 'precrease':
     case 'inside-reverse':
       return <FoldKindMark kind={id} />;
+    case 'crimp':
+      return <ChevronsDownUp size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+    case 'tuck':
+      return <BetweenHorizontalStart size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'divide-line':
       return <Divide size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'turn-over':

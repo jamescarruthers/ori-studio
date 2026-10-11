@@ -174,13 +174,32 @@ describe('foldStepSentence', () => {
     expect(foldStepSentence(t, { op: 'unknown' })).toBe('A step made with a newer Ori Studio.');
   });
 
-  it('says a crimp by its kind, and a tuck by where the flap goes', () => {
-    expect(foldStepSentence(t, { op: 'crimp', crimp: 'inside' })).toBe('Inside crimp along the two lines.');
-    expect(foldStepSentence(t, { op: 'crimp', crimp: 'outside' })).toBe('Outside crimp along the two lines.');
-    expect(foldStepSentence(t, { op: 'tuck', direction: 'valley' })).toBe(
+  it('says a crimp by its kind and both its lines, and a tuck by where the flap goes', () => {
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'inside', line: { via: 'free' }, second: 'free' })).toBe(
+      'Inside crimp along the line drawn, then back along a second line drawn beyond it.'
+    );
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'outside', line: { via: 'crease' }, second: 'crease' })).toBe(
+      'Outside crimp along the existing crease, then back along an existing crease beyond it.'
+    );
+    // Its first line named as a reverse fold's is, the sheet's own by description; never "in half".
+    const halfDiagonal: FoldSentenceLine = {
+      via: 'axiom',
+      axiom: 2,
+      inputs: [corner('sw'), corner('ne')],
+      moving: [1],
+      inHalf: true,
+    };
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'inside', line: halfDiagonal, second: 'free' })).toBe(
+      'Inside crimp, bringing the top-right corner onto the bottom-left corner, then back along a second line drawn beyond it.'
+    );
+    const through: FoldSentenceLine = { via: 'axiom', axiom: 1, inputs: [POINT, POINT] };
+    expect(foldStepSentence(t, { op: 'crimp', crimp: 'outside', line: through, second: 'crease' })).toBe(
+      'Outside crimp along the line joining point P and point Q, then back along an existing crease beyond it.'
+    );
+    expect(foldStepSentence(t, { op: 'tuck', direction: 'valley', line: { via: 'free' } })).toBe(
       'Valley fold and tuck the flap in, under the chosen layer.'
     );
-    expect(foldStepSentence(t, { op: 'tuck', direction: 'mountain' })).toBe(
+    expect(foldStepSentence(t, { op: 'tuck', direction: 'mountain', line: { via: 'crease' } })).toBe(
       'Mountain fold and tuck the flap in at the back, over the chosen layer.'
     );
   });

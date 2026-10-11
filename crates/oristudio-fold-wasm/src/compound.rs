@@ -33,13 +33,14 @@
 //! - **Asking.** What a tool asks before a step lands is its family's own
 //!   question ([`CompoundOp::ask`]), one call for every family, answered as
 //!   [`CompoundAsked`]. A family that folds along one line — the reverse
-//!   folds — also answers the plain fold's queries: what moves, its picture,
-//!   the plain fold its line and anchor name for the depth picker. The others
-//!   answer none of them, and asking is the caller's mistake.
+//!   folds, a crimp along its first line, a tuck — also answers the plain
+//!   fold's queries: what moves, its picture, the plain fold its line and
+//!   anchor name for the depth picker. The others answer none of them, and
+//!   asking is the caller's mistake.
 //! - **Holding.** A landed one is held under its parent's handle; its step's
 //!   summary and picture are asked of it, against its parent only when it
 //!   needs one ([`Parent`]): a crimp or a tuck keeps the summary it took as it
-//!   landed, so it answers after its parent is released.
+//!   landed, so it answers that after its parent is released.
 //! - **Reporting.** What it did crosses beside a plain fold's report as
 //!   [`CompoundStepReport`], tagged by its family, whether `apply` landed it
 //!   or its family's own call did; every family's carries its motion's legs.

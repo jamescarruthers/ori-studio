@@ -268,7 +268,15 @@
     "chooser": {
       "note": "이 공리는 여기서 접기가 둘 이상 나옵니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요.",
       "openingNote": "플랩이 벌어지는 방식이 둘 이상입니다. 강조된 겹은 함께 붙어 있습니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요.",
-      "orderNote": "겹이 쌓이는 방식이 둘 이상입니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요."
+      "orderNote": "겹이 쌓이는 방식이 둘 이상입니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요.",
+      "targetNote": "끼워 넣기를 받을 수 있는 겹이 둘 이상입니다. 가장 밝은 겹이 선택된 것입니다. 하나씩 넘겨 보거나 Shift+← / Shift+→ 키를 누르세요."
+    },
+    "crimp": {
+      "bothFit": "여기서는 두 종류의 크림프가 모두 맞습니다. 끝이 갈 방향을 고르세요.",
+      "firstLine": "첫 번째 선",
+      "onlyInside": "여기서는 안으로 계단 뒤집어 접기만 맞습니다.",
+      "onlyOutside": "여기서는 바깥으로 계단 뒤집어 접기만 맞습니다.",
+      "secondLine": "두 번째 선"
     },
     "divide": {
       "clear_other": "여기서 만든 표시 {{count}}개 지우기",
@@ -281,16 +289,25 @@
       "right": "끝까지"
     },
     "fix": {
+      "crimpFlap": "플랩 {{number}}만 크림프하기",
       "includeFlap": "플랩 {{number}} 포함",
       "includeFlaps_other": "플랩 {{count}}개 포함",
+      "insideCrimpInstead": "대신 안으로 계단 뒤집어 접기",
       "insideInstead": "대신 안으로 뒤집어 접기",
       "mountainInstead": "대신 산접기",
+      "outsideCrimpInstead": "대신 바깥으로 계단 뒤집어 접기",
       "outsideInstead": "대신 바깥 뒤집어 접기",
       "pickFlap": "플랩 {{number}}만 접기",
       "precreaseOtherWay": "반대 방향으로 미리 접기",
       "reverseFlap": "플랩 {{number}}만 뒤집어 접기",
       "slideToEdge": "선을 밀어 점을 변에 정확히 놓기",
       "swapInstead": "움직이는 쪽 바꾸기",
+      "tuckFlap": "플랩 {{number}}만 끼워 넣기",
+      "tuckOtherWay": "반대 방향으로 끼워 넣기",
+      "tuckOver": "대신 목록의 겹 {{number}} 위로 끼워 넣기",
+      "tuckOverAnother": "대신 맞는 겹 위로 끼워 넣기",
+      "tuckUnder": "대신 목록의 겹 {{number}} 아래로 끼워 넣기",
+      "tuckUnderAnother": "대신 맞는 겹 아래로 끼워 넣기",
       "turnToEdge": "선을 돌려 점을 변에 정확히 놓기",
       "useLine": "기준선 사용",
       "valleyInstead": "대신 골접기"
@@ -360,6 +377,7 @@
       "openSink": "열린 가라앉혀 접기",
       "outsideReverse": "바깥 뒤집어 접기",
       "petal": "꽃잎 접기",
+      "pleat": "계단 접기",
       "rabbitEar": "토끼 귀 접기",
       "squash": "눌러 접기",
       "swivel": "회전 접기",
@@ -371,6 +389,7 @@
       "title": "접기 도구",
       "trigger": "도구"
     },
+    "plannedPleat": "별도의 도구가 아닙니다. 계단 접기는 골접기와 그 옆의 산접기, 두 번의 접기로 접으세요.",
     "plannedReason": "예정: 아직 Ori Studio에 없습니다.",
     "playStep": "단계 재생",
     "railLabel": "접기 도구",
@@ -399,6 +418,32 @@
       "collision": {
         "text": "움직이는 겹이 길을 막는 겹을 뚫고 지나가게 됩니다.",
         "title": "충돌"
+      },
+      "crimpInsideInfeasible": {
+        "title": "안으로 크림프할 수 없습니다"
+      },
+      "crimpKindInfeasible": {
+        "neither": "여기서는 어느 종류의 크림프도 맞지 않습니다. 어떻게 겹을 쌓아도 두 선 모두에서 끝을 돌릴 수 없습니다. 선을 옮기거나 다른 플랩을 크림프하세요.",
+        "text": "어떻게 겹을 쌓아도 두 선 모두에서 끝을 이쪽으로 돌릴 수 없습니다. 다른 종류의 크림프는 맞을 수도 있습니다."
+      },
+      "crimpLinesMeet": {
+        "text": "크림프가 움직이는 종이 위에서 두 선이 교차하거나 너무 가까워집니다. 두 번째 선을 플랩을 가로지르는 동안 첫 번째 선과 떨어지게 그으세요.",
+        "title": "선이 맞닿습니다"
+      },
+      "crimpMissesTip": {
+        "text": "두 번째 선이 첫 번째 선 너머의 종이를 전혀 지나지 않아 되접히는 것이 없습니다. 첫 번째 선 너머에서 플랩을 가로지르도록 그으세요.",
+        "title": "두 번째 선이 플랩을 지나지 않습니다"
+      },
+      "crimpNoOpening": {
+        "noSpine": "겹 하나에는 크림프의 기준이 되는 접힌 가장자리가 없습니다. 접힌 선으로 이어진 겹들의 플랩을 크림프하세요.",
+        "text": "겹이 첫 번째 선에서는 벌어지지만, 두 번째 선에서는 그중 한 겹이 끝났거나 돌아갈 받침이 없습니다. 두 번째 선을 옮기거나 다른 플랩을 크림프하세요.",
+        "title": "이 플랩은 두 번째 선에서 벌어지지 않습니다"
+      },
+      "crimpOutsideInfeasible": {
+        "title": "바깥으로 크림프할 수 없습니다"
+      },
+      "crimpTipNotFree": {
+        "text": "크림프로 돌아갈 종이 자리에 다른 겹이 있습니다. 그 플랩들을 크림프에 포함하거나 다른 곳에서 접으세요."
       },
       "emptySeed": {
         "text": "고른 겹이 없습니다. 움직일 플랩을 하나 이상 고르세요.",
@@ -477,6 +522,17 @@
         "text": "종이 자체보다 얇은 접는 선이나 종이 띠가 남습니다.",
         "title": "너무 작아서 접을 수 없습니다"
       },
+      "tuckInfeasible": {
+        "none": "어떻게 겹을 쌓아도 플랩이 그 겹에 바로 붙지 않습니다. 끼워 넣을 플랩을 줄이거나 다른 선을 정하세요.",
+        "text": "어떻게 겹을 쌓아도 플랩이 그 겹에 바로 붙지 않습니다. 여기서는 다른 겹이 받을 수 있습니다.",
+        "titleOver": "그 겹 위로는 끼워 넣을 수 없습니다",
+        "titleUnder": "그 겹 아래로는 끼워 넣을 수 없습니다"
+      },
+      "tuckNoTarget": {
+        "over": "여기서는 제자리에 남는 어떤 겹도 플랩을 위로 받을 수 없습니다. 반대 방향으로 접거나, 움직이는 쪽을 바꾸거나, 다른 선을 정하세요.",
+        "title": "여기서는 끼워 넣을 겹이 없습니다",
+        "under": "여기서는 제자리에 남는 어떤 겹도 플랩을 아래로 받을 수 없습니다. 반대 방향으로 접거나, 움직이는 쪽을 바꾸거나, 다른 선을 정하세요."
+      },
       "tuckTarget": {
         "text": "제자리에 남는 겹을 골라 그곳에 플랩을 끼워 넣으세요.",
         "title": "끼워 넣을 겹이 움직입니다"
@@ -537,11 +593,17 @@
       "freeStart": "접는 선이 시작하는 곳을 클릭하세요.",
       "landOnLine": "점이 놓일 변이나 접는 선을 클릭하세요.",
       "perpendicularTo": "접는 선이 수직을 이룰 변이나 접는 선을 클릭하세요.",
+      "pickFlapsToCrimp": "크림프할 플랩을 고르세요.",
       "pickFlapsToReverse": "뒤집어 접을 플랩을 고르세요.",
+      "pickFlapsToTuck": "끼워 넣을 플랩을 고르세요.",
       "pickLayers": "움직일 겹을 고르세요.",
-      "pointToMove": "움직일 점을 클릭하세요."
+      "pickTuckTarget": "끼워 넣을 겹을 고르세요.",
+      "pointToMove": "움직일 점을 클릭하세요.",
+      "secondCrease": "두 번째 선이 따라가는 접는 선이나 접힌 변을 클릭하세요.",
+      "secondFreeStart": "두 번째 선이 시작하는 곳을 클릭하세요."
     },
     "tool": {
+      "crimpHelp": "두 선을 따라 한 번에 플랩을 뒤집습니다. 안으로 넣었다가 다시 밖으로 꺼냅니다.",
       "divideLine": "선 나누기",
       "divideLineHelp": "변이나 접는 선을 같은 길이로 나누는 점을 표시합니다.",
       "insideReverse": "안으로 뒤집어 접기",
@@ -550,8 +612,16 @@
       "mountainHelp": "움직이는 쪽을 바깥쪽으로 접어 아래에 놓습니다.",
       "precrease": "미리 접기",
       "precreaseHelp": "접었다 펼쳐 나중에 쓸 접는 선을 남깁니다.",
+      "tuckHelp": "플랩을 접어 제자리에 남는 겹의 아래나 위로 밀어 넣습니다.",
       "valley": "골접기",
       "valleyHelp": "움직이는 쪽을 안쪽으로 접어 위에 놓습니다."
+    },
+    "tuck": {
+      "noTargets": "여기서는 끼워 넣을 겹이 없습니다.",
+      "over": "위로 끼워 넣기",
+      "targetsOver_other": "여기서 위로 끼워 넣을 수 있는 겹은 {{count}}개입니다. 접힌 종이에 각각 밝게 표시됩니다.",
+      "targetsUnder_other": "여기서 아래로 끼워 넣을 수 있는 겹은 {{count}}개입니다. 접힌 종이에 각각 밝게 표시됩니다.",
+      "under": "아래로 끼워 넣기"
     },
     "verb": {
       "rotateHelp": "모델을 시계 방향으로 1/4바퀴 돌립니다. 별도의 단계로 추가됩니다.",

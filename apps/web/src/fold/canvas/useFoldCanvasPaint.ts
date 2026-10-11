@@ -9,7 +9,7 @@ import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import type { FoldStateSummary } from '../engine/foldEngineWire';
 import { boundsOf, boundsToUser, transformLine, type Bounds } from './foldCanvasGeometry';
 import { refusedFaceInks } from './foldCanvasModel';
-import { foldMovingTint } from './foldPaneOverlays';
+import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
 import {
   creasePatternPaneScene,
   foldedDisplayOffset,
@@ -68,8 +68,9 @@ function union(a: Bounds | null, b: Bounds | null): Bounds | null {
 
 /**
  * What each pane of the Fold canvas paints (plan D11): the folded form of the
- * state on screen, with a located fold's line and its moving set lit over the
- * paper; and the crease pattern — of the previewed fold's landed state while
+ * state on screen, with a located fold's line — a crimp's two — and its moving
+ * set lit over the paper, a tuck's listed targets lit too; and the crease
+ * pattern — of the previewed fold's landed state while
  * there is one, the creases it adds drawn as its instruction. The painter is
  * the shared one (`paperSceneToFoldedGeometry`, which the pane calls), with
  * the `fold` policy.
@@ -95,12 +96,18 @@ export function useFoldCanvasPaint(
   const sheetBounds = useMemo(() => (sheet ? boundsOf(sheet.map(([x, y]) => ({ x, y }))) : null), [sheet]);
   const shownSpread = restingSpread(spread, preview);
 
+  // A crimp's second line, beside its picture's first: the other letter on
+  // the near layer, as a pleat's two creases are.
+  const secondLine = preview.action ? (preview.crimp?.lines.second ?? null) : null;
   const foldedScene = useMemo(() => {
     if (!scene) return null;
     const base = foldedPaneScene(scene, display, offset, shownSpread);
     const action = preview.action;
-    return action ? withFoldLine(base, action.line, action.direction, offset) : base;
-  }, [scene, display, offset, shownSpread, preview.action]);
+    if (!action) return base;
+    const along = withFoldLine(base, action.line, action.direction, offset);
+    if (!secondLine) return along;
+    return withFoldLine(along, secondLine, action.direction === 'valley' ? 'mountain' : 'valley', offset);
+  }, [scene, display, offset, shownSpread, preview.action, secondLine]);
   const foldedInk = useMemo<FoldedSceneInk>(
     () => ({
       policy: PAPER_STYLE_POLICIES.fold,
@@ -109,11 +116,23 @@ export function useFoldCanvasPaint(
     [scene, preview, inks]
   );
   const { analysis, refused, section } = preview;
-  // While the reverse fold's opening is being chosen, the way it opens is
-  // lit instead: its blocks over the paper, the upper block lit again.
-  const opening = preview.reverse && preview.reverse.ways.length > 1 ? preview.reverse.way : null;
+  // While the reverse fold's opening is being chosen — or a crimp's at its
+  // first line — the way it opens is lit instead: its blocks over the paper,
+  // the upper block lit again.
+  const opens = preview.reverse ?? preview.crimp;
+  const opening = opens && opens.ways.length > 1 ? opens.way : null;
+  // A tuck's targets: every layer listed to tuck against, the one taken brightest.
+  const tuck = preview.tuck;
   const tint = useMemo(() => {
-    if (!index || !inks || !analysis || refused) return null;
+    if (!index || !inks) return null;
+    const targets = tuck
+      ? foldTargetsTint(
+          index,
+          { listed: tuck.targets.map((target) => target.face), taken: tuck.target?.face ?? null },
+          inks.accent
+        )
+      : null;
+    if (!analysis || refused) return targets;
     const lit = opening
       ? {
           faces: opening.openings.flatMap((each) => [...each.lower, ...each.upper]),
@@ -123,7 +142,7 @@ export function useFoldCanvasPaint(
           faces: analysis.moving,
           hovered: hoveredFlap === null ? [] : (section?.flaps[hoveredFlap]?.faces ?? []),
         };
-    return foldMovingTint(
+    const moving = foldMovingTint(
       index,
       {
         line: transformLine(index.scene.view_transform, analysis.line),
@@ -132,7 +151,8 @@ export function useFoldCanvasPaint(
       },
       inks.accent
     );
-  }, [index, inks, analysis, refused, section, hoveredFlap, opening]);
+    return joinFills(targets, moving);
+  }, [index, inks, analysis, refused, section, hoveredFlap, opening, tuck]);
   const foldedBounds = useMemo(() => {
     const form = scene
       ? boundsOf(scene.subfaces.flatMap((cell) => cell.polygon.map((p) => ({ x: p.x + offset.x, y: p.y + offset.y }))))

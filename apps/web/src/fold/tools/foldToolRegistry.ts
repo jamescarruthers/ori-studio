@@ -27,7 +27,7 @@ import { createStepSequenceTool, type SequenceState } from '../../cp-workspace/t
 import type { ToolEngine } from '../../cp-workspace/tools/types';
 import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
 import { AXIOM_SLOTS } from '../document/foldSequenceDocument';
-import { lineModeAxiom, type FoldLineModeId, type FoldToolId } from './foldToolCatalog';
+import { lineModeAxiom, type FoldLineModeId, type FoldSecondLineModeId, type FoldToolId } from './foldToolCatalog';
 
 /** How one click snaps: Edit's vocabulary, and the raw point a free line takes. */
 export type FoldStepSnap = CpStepSnap | 'free';
@@ -103,14 +103,38 @@ export function lineModeInput(mode: FoldLineModeId): FoldInputModel {
   return mode === 'free' ? FREE_LINE : EXISTING_CREASE;
 }
 
-/** The clicks the tool in hand collects: a fold's, its line mode's; the Divide line's, its segment. */
-export function toolInput(tool: FoldToolId, mode: FoldLineModeId): FoldInputModel {
+/**
+ * A crimp's clicks: its first line's, in its line mode, then its second
+ * line's — a free line's two ends, or one click on a crease. The second
+ * line's clicks fill no axiom slot. One model per pair, made once, as each
+ * axiom's is: a model's identity is what a counter is kept for.
+ */
+const CRIMP_MODELS = new Map<string, FoldInputModel>();
+
+export function crimpInput(mode: FoldLineModeId, second: FoldSecondLineModeId): FoldInputModel {
+  const key = `${mode}|${second}`;
+  let model = CRIMP_MODELS.get(key);
+  if (!model) {
+    model = { steps: [...lineModeInput(mode).steps, ...lineModeInput(second).steps] };
+    CRIMP_MODELS.set(key, model);
+  }
+  return model;
+}
+
+/**
+ * The clicks the tool in hand collects: a fold's, its line mode's — a
+ * crimp's, its two lines' — and the Divide line's, its segment.
+ */
+export function toolInput(tool: FoldToolId, mode: FoldLineModeId, second: FoldSecondLineModeId = 'free'): FoldInputModel {
   switch (tool) {
     case 'valley':
     case 'mountain':
     case 'precrease':
     case 'inside-reverse':
+    case 'tuck':
       return lineModeInput(mode);
+    case 'crimp':
+      return crimpInput(mode, second);
     case 'divide-line':
       return DIVIDE_LINE;
   }

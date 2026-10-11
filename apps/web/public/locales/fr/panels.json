@@ -1620,8 +1620,44 @@
     "sentence": {
       "closedSink": "Enfoncez la pointe en enfoncement fermé : poussez-la vers l’intérieur, ses couches restant ensemble.",
       "cpJump": "Repliez le papier selon le patron de plis importé.",
-      "crimpInside": "Faites un crimp intérieur le long des deux lignes.",
-      "crimpOutside": "Faites un crimp extérieur le long des deux lignes.",
+      "insideCrimp": {
+        "crease": {
+          "crease": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "free": {
+          "crease": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o1": {
+          "crease": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o2": {
+          "crease": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o3": {
+          "crease": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o4": {
+          "crease": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o5": {
+          "crease": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o6": {
+          "crease": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o7": {
+          "crease": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp intérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        }
+      },
       "insideReverse": {
         "crease": {
           "all": "Pliez toutes les couches en pli inversé intérieur le long du pli existant.",
@@ -1908,6 +1944,44 @@
         }
       },
       "openSink": "Enfoncez la pointe en enfoncement ouvert : poussez-la vers l’intérieur en retournant chaque couche.",
+      "outsideCrimp": {
+        "crease": {
+          "crease": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur le long du pli existant, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "free": {
+          "crease": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur le long de la ligne tracée, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o1": {
+          "crease": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur le long de la ligne passant par {{a}} et {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o2": {
+          "crease": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o3": {
+          "crease": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur en amenant {{a}} sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o4": {
+          "crease": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur par {{a}}, de sorte que {{b}} retombe sur sa propre ligne, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o5": {
+          "crease": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur par {{a}}, en amenant {{b}} sur {{c}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o6": {
+          "crease": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur en amenant {{a}} sur {{b}} et {{c}} sur {{d}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        },
+        "o7": {
+          "crease": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’un pli existant au-delà.",
+          "free": "Faites un crimp extérieur de sorte que {{self}} retombe sur sa propre ligne et que {{a}} tombe sur {{b}}, puis revenez le long d’une seconde ligne tracée au-delà."
+        }
+      },
       "outsideReverse": {
         "crease": {
           "all": "Pliez toutes les couches en pli inversé extérieur le long du pli existant.",
@@ -2263,6 +2337,7 @@
       "creases": "Plis",
       "creasesBackUp": "Vus du recto du papier, qui est dessous au départ\u00a0: ils peuvent se lire à l’inverse des plis que vous voyez.",
       "creasesFront": "Vus du recto du papier.",
+      "firstLine": "Première ligne",
       "flat": "À plat",
       "flatHelp": "Pliés une fois puis dépliés\u00a0: ils sont maintenant à plat et gardent le sens dans lequel ils ont été pliés.",
       "imported": "Patron de plis importé\u00a0: cette étape remplace l’état plié par celui du patron.",
@@ -2278,6 +2353,7 @@
       "operation": "Opération",
       "pending": "Pli en cours",
       "pendingRefused": "Résolvez le problème dans la fenêtre de l’outil pour voir les plis qu’il crée.",
+      "secondLine": "Seconde ligne",
       "sheet": "Feuille à plat",
       "sheetNote": "Rien n’est encore plié. Pliez la feuille pour créer l’étape 1.",
       "source": "Source",

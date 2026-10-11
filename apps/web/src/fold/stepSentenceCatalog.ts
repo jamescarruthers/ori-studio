@@ -1228,3 +1228,115 @@ function outsideReverseSentence(t: TFunction, clause: SentenceClause, scope: Fol
       );
   }
 }
+
+/** How a crimp's second line was found: drawn, or an existing crease — never an axiom (a step stores one root). */
+export type CrimpSecondLine = 'free' | 'crease';
+
+/**
+ * The sentence for a crimp (plan Phase 11): its first line as a reverse
+ * fold's sentence names it, then its second, beyond it. Keys are
+ * `panels:fold.sentence.<kind>Crimp.<first line>.<second line>`. A crimp is
+ * never "in half", as a reverse fold is not: an axiom that would say so
+ * reads as its plain form. It names no layers: the tip is its first line's,
+ * as the picture shows.
+ */
+export function crimpSentence(
+  t: TFunction,
+  kind: 'inside' | 'outside',
+  clause: SentenceClause,
+  second: CrimpSecondLine
+): string {
+  return kind === 'inside' ? insideCrimpSentence(t, clause, second) : outsideCrimpSentence(t, clause, second);
+}
+
+/** An inside crimp: "Inside crimp …, then back along … beyond it." */
+function insideCrimpSentence(t: TFunction, clause: SentenceClause, second: CrimpSecondLine): string {
+  const { a, b, c, d, self } = clause.names;
+  const drawn = second === 'free';
+  switch (clause.line) {
+    case 'free':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.free.free', 'Inside crimp along the line drawn, then back along a second line drawn beyond it.')
+        : t('panels:fold.sentence.insideCrimp.free.crease', 'Inside crimp along the line drawn, then back along an existing crease beyond it.');
+    case 'crease':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.crease.free', 'Inside crimp along the existing crease, then back along a second line drawn beyond it.')
+        : t('panels:fold.sentence.insideCrimp.crease.crease', 'Inside crimp along the existing crease, then back along an existing crease beyond it.');
+    case 'o1':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.o1.free', 'Inside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it.', { a, b })
+        : t('panels:fold.sentence.insideCrimp.o1.crease', 'Inside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it.', { a, b });
+    case 'o2':
+    case 'o2Half':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.o2.free', 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it.', { a, b })
+        : t('panels:fold.sentence.insideCrimp.o2.crease', 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.', { a, b });
+    case 'o3':
+    case 'o3Half':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.o3.free', 'Inside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it.', { a, b })
+        : t('panels:fold.sentence.insideCrimp.o3.crease', 'Inside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.', { a, b });
+    case 'o4':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.o4.free', 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it.', { a, b })
+        : t('panels:fold.sentence.insideCrimp.o4.crease', 'Inside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it.', { a, b });
+    case 'o5':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.o5.free', 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it.', { a, b, c })
+        : t('panels:fold.sentence.insideCrimp.o5.crease', 'Inside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it.', { a, b, c });
+    case 'o6':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.o6.free', 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it.', { a, b, c, d })
+        : t('panels:fold.sentence.insideCrimp.o6.crease', 'Inside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it.', { a, b, c, d });
+    case 'o7':
+      return drawn
+        ? t('panels:fold.sentence.insideCrimp.o7.free', 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it.', { self, a, b })
+        : t('panels:fold.sentence.insideCrimp.o7.crease', 'Inside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it.', { self, a, b });
+  }
+}
+
+/** An outside crimp: "Outside crimp …, then back along … beyond it." */
+function outsideCrimpSentence(t: TFunction, clause: SentenceClause, second: CrimpSecondLine): string {
+  const { a, b, c, d, self } = clause.names;
+  const drawn = second === 'free';
+  switch (clause.line) {
+    case 'free':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.free.free', 'Outside crimp along the line drawn, then back along a second line drawn beyond it.')
+        : t('panels:fold.sentence.outsideCrimp.free.crease', 'Outside crimp along the line drawn, then back along an existing crease beyond it.');
+    case 'crease':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.crease.free', 'Outside crimp along the existing crease, then back along a second line drawn beyond it.')
+        : t('panels:fold.sentence.outsideCrimp.crease.crease', 'Outside crimp along the existing crease, then back along an existing crease beyond it.');
+    case 'o1':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.o1.free', 'Outside crimp along the line joining {{a}} and {{b}}, then back along a second line drawn beyond it.', { a, b })
+        : t('panels:fold.sentence.outsideCrimp.o1.crease', 'Outside crimp along the line joining {{a}} and {{b}}, then back along an existing crease beyond it.', { a, b });
+    case 'o2':
+    case 'o2Half':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.o2.free', 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it.', { a, b })
+        : t('panels:fold.sentence.outsideCrimp.o2.crease', 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.', { a, b });
+    case 'o3':
+    case 'o3Half':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.o3.free', 'Outside crimp, bringing {{a}} onto {{b}}, then back along a second line drawn beyond it.', { a, b })
+        : t('panels:fold.sentence.outsideCrimp.o3.crease', 'Outside crimp, bringing {{a}} onto {{b}}, then back along an existing crease beyond it.', { a, b });
+    case 'o4':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.o4.free', 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along a second line drawn beyond it.', { a, b })
+        : t('panels:fold.sentence.outsideCrimp.o4.crease', 'Outside crimp {{b}} onto itself, pivoting on {{a}}, then back along an existing crease beyond it.', { a, b });
+    case 'o5':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.o5.free', 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along a second line drawn beyond it.', { a, b, c })
+        : t('panels:fold.sentence.outsideCrimp.o5.crease', 'Outside crimp, pivoting on {{a}}, bringing {{b}} onto {{c}}, then back along an existing crease beyond it.', { a, b, c });
+    case 'o6':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.o6.free', 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along a second line drawn beyond it.', { a, b, c, d })
+        : t('panels:fold.sentence.outsideCrimp.o6.crease', 'Outside crimp, bringing {{a}} onto {{b}} and {{c}} onto {{d}}, then back along an existing crease beyond it.', { a, b, c, d });
+    case 'o7':
+      return drawn
+        ? t('panels:fold.sentence.outsideCrimp.o7.free', 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along a second line drawn beyond it.', { self, a, b })
+        : t('panels:fold.sentence.outsideCrimp.o7.crease', 'Outside crimp {{self}} onto itself so that {{a}} lands on {{b}}, then back along an existing crease beyond it.', { self, a, b });
+  }
+}

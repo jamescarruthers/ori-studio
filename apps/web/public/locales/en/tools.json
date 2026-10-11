@@ -276,7 +276,15 @@
     "chooser": {
       "note": "This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.",
       "openingNote": "The flap opens more than one way: the lit layers stay together. Step through them, or press Shift+← / Shift+→.",
-      "orderNote": "The layers can land stacked more than one way. Step through them, or press Shift+← / Shift+→."
+      "orderNote": "The layers can land stacked more than one way. Step through them, or press Shift+← / Shift+→.",
+      "targetNote": "More than one layer takes the tuck: the brightest is the one taken. Step through them, or press Shift+← / Shift+→."
+    },
+    "crimp": {
+      "bothFit": "Both kinds of crimp fit here: choose which way the tip goes.",
+      "firstLine": "First line",
+      "onlyInside": "Only the inside crimp fits here.",
+      "onlyOutside": "Only the outside crimp fits here.",
+      "secondLine": "Second line"
     },
     "divide": {
       "clear_one": "Clear the mark made here",
@@ -290,17 +298,26 @@
       "right": "To the end"
     },
     "fix": {
+      "crimpFlap": "Crimp flap {{number}} only",
       "includeFlap": "Include flap {{number}}",
       "includeFlaps_one": "Include the {{count}} flap",
       "includeFlaps_other": "Include the {{count}} flaps",
+      "insideCrimpInstead": "Inside crimp instead",
       "insideInstead": "Inside reverse fold instead",
       "mountainInstead": "Mountain fold instead",
+      "outsideCrimpInstead": "Outside crimp instead",
       "outsideInstead": "Outside reverse fold instead",
       "pickFlap": "Fold flap {{number}} only",
       "precreaseOtherWay": "Precrease the other way",
       "reverseFlap": "Reverse flap {{number}} only",
       "slideToEdge": "Slide the line to land the point on the edge",
       "swapInstead": "Swap the moving side",
+      "tuckFlap": "Tuck flap {{number}} only",
+      "tuckOtherWay": "Tuck the other way",
+      "tuckOver": "Tuck over listed layer {{number}} instead",
+      "tuckOverAnother": "Tuck over the layer that fits instead",
+      "tuckUnder": "Tuck under listed layer {{number}} instead",
+      "tuckUnderAnother": "Tuck under the layer that fits instead",
       "turnToEdge": "Turn the line to land the point on the edge",
       "useLine": "Use the landmark line",
       "valleyInstead": "Valley fold instead"
@@ -373,6 +390,7 @@
       "openSink": "Open sink",
       "outsideReverse": "Outside reverse fold",
       "petal": "Petal fold",
+      "pleat": "Pleat",
       "rabbitEar": "Rabbit ear",
       "squash": "Squash fold",
       "swivel": "Swivel fold",
@@ -384,6 +402,7 @@
       "title": "Fold tools",
       "trigger": "Tools"
     },
+    "plannedPleat": "Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.",
     "plannedReason": "Planned: not in Ori Studio yet.",
     "playStep": "Play Step",
     "railLabel": "Fold tools",
@@ -413,6 +432,32 @@
       "collision": {
         "text": "The moving layers would pass through layers in their way.",
         "title": "Collision"
+      },
+      "crimpInsideInfeasible": {
+        "title": "It cannot crimp inside"
+      },
+      "crimpKindInfeasible": {
+        "neither": "Neither kind of crimp fits here: no way of stacking the layers lets the tip turn on both lines. Move a line, or crimp other flaps.",
+        "text": "No way of stacking the layers lets the tip turn this way on both lines. The other kind of crimp may fit."
+      },
+      "crimpLinesMeet": {
+        "text": "The two lines cross, or come too close, over the paper the crimp moves. Draw the second line clear of the first across the flap.",
+        "title": "The lines meet"
+      },
+      "crimpMissesTip": {
+        "text": "The second line crosses none of the paper beyond the first, so nothing would turn back. Draw it across the flap, beyond the first line.",
+        "title": "The second line misses the flap"
+      },
+      "crimpNoOpening": {
+        "noSpine": "A single layer has no folded edge to crimp along. Crimp a flap of layers joined by a fold.",
+        "text": "Its layers part at the first line, but at the second one of them has ended, or has nothing to turn on. Move the second line, or crimp other flaps.",
+        "title": "This flap cannot open at the second line"
+      },
+      "crimpOutsideInfeasible": {
+        "title": "It cannot crimp round the outside"
+      },
+      "crimpTipNotFree": {
+        "text": "Other layers lie where the crimped paper would turn. Include their flaps in the crimp, or crimp it somewhere else."
       },
       "emptySeed": {
         "text": "No layer is picked. Pick at least one flap to move.",
@@ -491,6 +536,17 @@
         "text": "The fold would leave a crease or a strip of paper thinner than the paper itself.",
         "title": "Too small to fold"
       },
+      "tuckInfeasible": {
+        "none": "No way of stacking the layers puts the flap right against that layer. Tuck fewer flaps, or locate another line.",
+        "text": "No way of stacking the layers puts the flap right against that layer. Another layer here takes it.",
+        "titleOver": "It cannot be tucked over that layer",
+        "titleUnder": "It cannot be tucked under that layer"
+      },
+      "tuckNoTarget": {
+        "over": "No layer that stays can take the flap over it here. Fold it the other way, swap the moving side, or locate another line.",
+        "title": "No layer takes the tuck here",
+        "under": "No layer that stays can take the flap under it here. Fold it the other way, swap the moving side, or locate another line."
+      },
       "tuckTarget": {
         "text": "Pick a layer that stays put to tuck the flap against.",
         "title": "The layer to tuck under would move"
@@ -551,11 +607,17 @@
       "freeStart": "Click where the fold line starts.",
       "landOnLine": "Click the edge or crease it should land on.",
       "perpendicularTo": "Click the edge or crease the fold is perpendicular to.",
+      "pickFlapsToCrimp": "Pick which flaps crimp.",
       "pickFlapsToReverse": "Pick which flaps reverse.",
+      "pickFlapsToTuck": "Pick which flaps tuck.",
       "pickLayers": "Pick which layers move.",
-      "pointToMove": "Click the point to move."
+      "pickTuckTarget": "Pick the layer to tuck against.",
+      "pointToMove": "Click the point to move.",
+      "secondCrease": "Click the crease or folded edge the second line runs along.",
+      "secondFreeStart": "Click where the second line starts."
     },
     "tool": {
+      "crimpHelp": "Reverse a flap along two lines at once: in, then back out.",
       "divideLine": "Divide line",
       "divideLineHelp": "Mark points that divide an edge or a crease into equal parts.",
       "insideReverse": "Inside reverse fold",
@@ -564,8 +626,18 @@
       "mountainHelp": "Fold the moving side away from you, so it lands underneath.",
       "precrease": "Precrease",
       "precreaseHelp": "Fold and unfold, leaving a crease to use later.",
+      "tuckHelp": "Fold a flap and slide it under, or over, a layer that stays.",
       "valley": "Valley fold",
       "valleyHelp": "Fold the moving side toward you, so it lands on top."
+    },
+    "tuck": {
+      "noTargets": "No layer here takes the tuck.",
+      "over": "Tuck over",
+      "targetsOver_one": "One layer here takes the tuck over it.",
+      "targetsOver_other": "{{count}} layers here take the tuck over them: the folded paper lights each.",
+      "targetsUnder_one": "One layer here takes the tuck under it.",
+      "targetsUnder_other": "{{count}} layers here take the tuck under them: the folded paper lights each.",
+      "under": "Tuck under"
     },
     "verb": {
       "rotateHelp": "Rotate the model a quarter turn clockwise, as a step of its own.",

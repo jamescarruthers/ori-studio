@@ -17,7 +17,7 @@ import { FoldCrossSectionPicker } from './FoldCrossSectionPicker';
 import { FoldFlapChips } from './FoldFlapChips';
 import { FoldKindMark } from './FoldKindMark';
 import { FoldRefusalNotice } from './FoldRefusalNotice';
-import { FoldReverseChoices, FoldReverseKindControl } from './reverse/FoldReverseControls';
+import { FoldChoiceStepperRow, FoldReverseChoices, FoldReverseKindControl } from './reverse/FoldReverseControls';
 import styles from './FoldToolWindow.module.css';
 
 /**
@@ -59,7 +59,7 @@ export function FoldToolWindow({
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
   };
-  const { instructions, lineMode, kind, movingSide, layers, refusal, divide, compound, footer } = model;
+  const { instructions, lineMode, secondLine, kind, movingSide, layers, refusal, divide, compound, tuck, footer } = model;
 
   return (
     <ToolHintWindow
@@ -144,6 +144,17 @@ export function FoldToolWindow({
             divider={false}
             onChange={lineMode.set}
           />
+          {/* A crimp's second line, located after the first: a select as the first's is, the names too long for a segment. */}
+          {secondLine && (
+            <SelectRow
+              label={secondLine.label}
+              value={secondLine.value}
+              options={secondLine.options}
+              disabled={secondLine.disabled}
+              divider={false}
+              onChange={secondLine.set}
+            />
+          )}
         </div>
       )}
       {kind && (
@@ -218,6 +229,14 @@ export function FoldToolWindow({
       {compound && (compound.opening || compound.order) && (
         <div className={styles.section} data-fold-choices="">
           <FoldReverseChoices controls={compound} />
+        </div>
+      )}
+      {/* A tuck's layers to tuck against, which the folded paper lights, and its order. */}
+      {tuck && (tuck.note || tuck.target || tuck.order) && (
+        <div className={styles.section} data-fold-tuck="">
+          {tuck.note && <p className={styles.note}>{tuck.note}</p>}
+          {tuck.target && <FoldChoiceStepperRow stepper={tuck.target} />}
+          {tuck.order && <FoldChoiceStepperRow stepper={tuck.order} />}
         </div>
       )}
       {refusal && (

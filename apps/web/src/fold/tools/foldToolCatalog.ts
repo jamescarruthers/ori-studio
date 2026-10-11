@@ -27,26 +27,54 @@ export const FOLD_KINDS: readonly FoldKind[] = ['valley', 'mountain', 'precrease
 /**
  * A tool taken in hand. Inside reverse is the design's fourth fold; it folds
  * outside too, as its kind control's other value (plan Phase 9, research
- * §5.2: the kind is usually forced by the geometry).
+ * §5.2: the kind is usually forced by the geometry). The crimp and the tuck
+ * (plan Phase 11) are compound folds along a located line too: a crimp along
+ * a second line after it, a tuck against a layer the engine lists.
  */
-export type FoldToolId = FoldKind | 'inside-reverse' | 'divide-line';
+export type FoldToolId = FoldKind | 'inside-reverse' | FoldCompoundLineToolId | 'divide-line';
+
+/** The compound folds along a located line that are tools of their own, beside inside reverse. */
+export type FoldCompoundLineToolId = 'crimp' | 'tuck';
 
 export function isFoldKind(id: FoldToolId): id is FoldKind {
   return id === 'valley' || id === 'mountain' || id === 'precrease';
 }
 
 /** A tool that folds along a located line: the plain folds, and the compound folds along one. */
-export type FoldLineToolId = FoldKind | 'inside-reverse';
+export type FoldLineToolId = FoldKind | 'inside-reverse' | FoldCompoundLineToolId;
 
 export function isLineTool(id: FoldToolId): id is FoldLineToolId {
-  return isFoldKind(id) || id === 'inside-reverse';
+  return isFoldKind(id) || id === 'inside-reverse' || id === 'crimp' || id === 'tuck';
 }
+
+/**
+ * How a crimp's second line is located (plan Phase 11): drawn freely, or an
+ * existing crease. Never an axiom — a step stores one root, its first
+ * line's — so the document names it by two sheet points or a crease.
+ */
+export type FoldSecondLineModeId = 'free' | 'crease';
+
+export const FOLD_SECOND_LINE_MODES: readonly FoldSecondLineModeId[] = ['free', 'crease'];
 
 /** A reverse fold's kind, as the reverse tool's kind control names it. */
 export function foldReverseKindLabel(t: TFunction, kind: 'inside' | 'outside'): string {
   return kind === 'inside'
     ? t('tools:fold.tool.insideReverse', 'Inside reverse fold')
     : t('tools:fold.op.outsideReverse', 'Outside reverse fold');
+}
+
+/** A crimp's kind, as its kind control and its commit name it: the Step pane's words for it. */
+export function foldCrimpKindLabel(t: TFunction, kind: 'inside' | 'outside'): string {
+  return kind === 'inside'
+    ? t('panels:fold.words.crimpInside', 'Inside crimp')
+    : t('panels:fold.words.crimpOutside', 'Outside crimp');
+}
+
+/** A tuck by its direction as the viewer sees it, as its window and its commit name it: the Step pane's words. */
+export function foldTuckLabel(t: TFunction, direction: 'valley' | 'mountain'): string {
+  return direction === 'valley'
+    ? t('panels:fold.words.tuckValley', 'Valley fold and tuck')
+    : t('panels:fold.words.tuckMountain', 'Mountain fold and tuck');
 }
 
 /** How a fold's line is located: an axiom, a line drawn freely, or a crease already there (D3 "existing crease"). */
@@ -113,22 +141,20 @@ export const FOLD_MODEL_TURNS: Readonly<Record<FoldModelVerbId, TurnKind>> = {
 /**
  * The compound folds later phases add (plan Phase 11), listed so the rail can
  * say they are coming. The outside reverse fold is the reverse tool's other
- * kind, not a tool of its own.
+ * kind, not a tool of its own. A pleat is listed with them only to say it is
+ * no tool at all: it is two plain folds (`foldPlannedOpReason`).
  */
 export type FoldPlannedOpId =
-  | 'crimp'
-  | 'tuck'
   | 'squash'
   | 'petal'
   | 'rabbit-ear'
   | 'swivel'
   | 'open-sink'
   | 'closed-sink'
-  | 'unsink';
+  | 'unsink'
+  | 'pleat';
 
 export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = [
-  'crimp',
-  'tuck',
   'squash',
   'petal',
   'rabbit-ear',
@@ -136,6 +162,7 @@ export const FOLD_PLANNED_OPS: readonly FoldPlannedOpId[] = [
   'open-sink',
   'closed-sink',
   'unsink',
+  'pleat',
 ];
 
 /** Anything the rail shows: what its glyph is chosen by. */
@@ -157,6 +184,8 @@ export const FOLD_TOOL_SHORTCUTS: Readonly<Record<FoldToolId, FoldShortcutId>> =
   mountain: 'fold.toolMountain',
   precrease: 'fold.toolPrecrease',
   'inside-reverse': 'fold.toolInsideReverse',
+  crimp: 'fold.toolCrimp',
+  tuck: 'fold.toolTuck',
   'divide-line': 'fold.toolDivideLine',
 };
 
@@ -199,6 +228,10 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.precrease', 'Precrease');
     case 'inside-reverse':
       return t('tools:fold.tool.insideReverse', 'Inside reverse fold');
+    case 'crimp':
+      return t('tools:fold.op.crimp', 'Crimp');
+    case 'tuck':
+      return t('tools:fold.op.tuck', 'Tuck');
     case 'divide-line':
       return t('tools:fold.tool.divideLine', 'Divide line');
   }
@@ -215,6 +248,10 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.precreaseHelp', 'Fold and unfold, leaving a crease to use later.');
     case 'inside-reverse':
       return t('tools:fold.tool.insideReverseHelp', 'Push a flap inside itself, reversing its spine.');
+    case 'crimp':
+      return t('tools:fold.tool.crimpHelp', 'Reverse a flap along two lines at once: in, then back out.');
+    case 'tuck':
+      return t('tools:fold.tool.tuckHelp', 'Fold a flap and slide it under, or over, a layer that stays.');
     case 'divide-line':
       return t('tools:fold.tool.divideLineHelp', 'Mark points that divide an edge or a crease into equal parts.');
   }
@@ -329,6 +366,24 @@ export function lineModeSteps(t: TFunction, mode: FoldLineModeId): string[] {
   }
 }
 
+/** A crimp's second line mode, as its control names it. */
+export function secondLineModeLabel(t: TFunction, mode: FoldSecondLineModeId): string {
+  return lineModeLabel(t, mode);
+}
+
+/** The clicks that locate a crimp's second line, after its first line's: one step each. */
+export function secondLineSteps(t: TFunction, mode: FoldSecondLineModeId): string[] {
+  switch (mode) {
+    case 'free':
+      return [
+        t('tools:fold.steps.secondFreeStart', 'Click where the second line starts.'),
+        t('tools:fold.steps.freeEnd', 'Click where it ends.'),
+      ];
+    case 'crease':
+      return [t('tools:fold.steps.secondCrease', 'Click the crease or folded edge the second line runs along.')];
+  }
+}
+
 export function foldModelVerbLabel(t: TFunction, id: FoldModelVerbId): string {
   // The turn's own words, so a Fold step and the Diagram it is linked to name it alike.
   return turnCardWords(FOLD_MODEL_TURNS[id], t).title;
@@ -345,10 +400,6 @@ export function foldModelVerbDescription(t: TFunction, id: FoldModelVerbId): str
 
 export function foldPlannedOpLabel(t: TFunction, id: FoldPlannedOpId): string {
   switch (id) {
-    case 'crimp':
-      return t('tools:fold.op.crimp', 'Crimp');
-    case 'tuck':
-      return t('tools:fold.op.tuck', 'Tuck');
     case 'squash':
       return t('tools:fold.op.squash', 'Squash fold');
     case 'petal':
@@ -363,10 +414,25 @@ export function foldPlannedOpLabel(t: TFunction, id: FoldPlannedOpId): string {
       return t('tools:fold.op.closedSink', 'Closed sink');
     case 'unsink':
       return t('tools:fold.op.unsink', 'Unsink');
+    case 'pleat':
+      return t('tools:fold.op.pleat', 'Pleat');
   }
 }
 
 /** Why a planned fold is on the rail and cannot be taken. */
 export function foldPlannedReason(t: TFunction): string {
   return t('tools:fold.plannedReason', 'Planned: not in Ori Studio yet.');
+}
+
+/**
+ * Why this planned item cannot be taken: a fold still to come, or — for a
+ * pleat — that it needs no tool, being two plain folds (research §5.2).
+ */
+export function foldPlannedOpReason(t: TFunction, id: FoldPlannedOpId): string {
+  return id === 'pleat'
+    ? t(
+        'tools:fold.plannedPleat',
+        'Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.'
+      )
+    : foldPlannedReason(t);
 }

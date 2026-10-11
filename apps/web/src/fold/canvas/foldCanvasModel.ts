@@ -9,12 +9,17 @@ import type { TFunction } from 'i18next';
 import type { FoldedFaceInk } from '../../cp-workspace/adapters/cpFoldedToScene';
 import type { Rgba } from '../../cp-workspace/renderer/types';
 import type { CpToolOptionBounds } from '../../cp-workspace/toolOptions/toolOptionWindow';
+import type { Point } from '../../lib/geometry';
 import type { FoldFlap, FoldScene } from '../engine/foldEngineWire';
+import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
+import { lineModeInput } from '../tools/foldToolRegistry';
 import type { FoldPreview } from '../tools/foldToolWindow';
 import type { FoldReverseWindowView } from '../tools/reverse/reverseToolWindow';
+import type { FoldTuckWindowView } from '../tools/tuck/tuckToolWindow';
 import { isLocated, type FoldToolState } from '../tools/foldToolState';
-import { lineModeLabel, lineModeSteps } from '../tools/foldToolCatalog';
+import { lineModeLabel, lineModeSteps, secondLineSteps } from '../tools/foldToolCatalog';
 import { boundsOf } from './foldCanvasGeometry';
+import type { FoldFreePick } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 
 const sameFaces = (a: FoldFlap, b: FoldFlap) =>
@@ -94,6 +99,50 @@ export function foldReverseWindowView(tools: FoldToolState, preview: FoldToolPre
   };
 }
 
+/**
+ * The crimp tool's window view (`crimpToolWindow`), as the reverse tool's:
+ * the kind folded on both lines and the kinds that land, the ways the tip
+ * opens at ℓ1 and the orders it leaves, each with the one taken. Absent for
+ * every other tool, and while its lines are still being located.
+ */
+export function foldCrimpWindowView(tools: FoldToolState, preview: FoldToolPreview): FoldReverseWindowView | undefined {
+  const crimp = preview.crimp;
+  if (tools.tool !== 'crimp' || !crimp || !isLocated(tools)) return undefined;
+  const ways = crimp.ways.length;
+  const orders = crimp.orders.length;
+  return {
+    kind: crimp.kind,
+    kinds: crimp.kinds,
+    known: crimp.asked !== null,
+    ways,
+    way: ways > 0 ? Math.min(tools.compound.opening, ways - 1) : 0,
+    orders,
+    order: orders > 0 ? Math.min(tools.compound.order, orders - 1) : 0,
+  };
+}
+
+/**
+ * The tuck tool's window view (`tuckToolWindow`): its direction, the layers
+ * listed to tuck against with the one taken, and the orders it leaves.
+ * Absent for every other tool, and while its line is still being located.
+ */
+export function foldTuckWindowView(tools: FoldToolState, preview: FoldToolPreview): FoldTuckWindowView | undefined {
+  const tuck = preview.tuck;
+  if (tools.tool !== 'tuck' || !tuck || !isLocated(tools)) return undefined;
+  const orders = tuck.orders.length;
+  const faces = tuck.targets.map((target) => target.face);
+  return {
+    direction: tuck.direction,
+    known: tuck.asked !== null,
+    placement: tuck.placement,
+    targets: faces.length,
+    target: Math.max(0, faces.indexOf(tuck.target?.face ?? -1)),
+    faces,
+    orders,
+    order: orders > 0 ? Math.min(tools.compound.order, orders - 1) : 0,
+  };
+}
+
 /** How strongly the faces a refusal names are tinted over their paper. */
 const REFUSED_TINT = 0.32;
 
@@ -136,19 +185,57 @@ export function sceneLayers(scene: FoldScene | null): number {
   return scene.subfaces.reduce((most, cell) => Math.max(most, cell.faces_top_to_bottom.length), 1);
 }
 
+/**
+ * While a free line is being drawn, its first end, which the live line runs
+ * from to where a click would end it: a free fold line's, or a crimp's
+ * second line drawn free after its first. Null otherwise.
+ */
+export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | null {
+  const first = lineModeInput(tools.lineMode).steps.length;
+  const [mode, from] =
+    tools.tool === 'crimp' && tools.picks.length > first ? [tools.secondLineMode, first] : [tools.lineMode, 0];
+  const pick = mode === 'free' && tools.picks.length === from + 1 ? tools.picks[from] : undefined;
+  return pick?.kind === 'free' ? pick : null;
+}
+
+/**
+ * The lines the tools have located that no fold's picture draws yet: a
+ * crimp's first line while its second is being located. The picture, once
+ * in, draws both (`useFoldCanvasPaint`).
+ */
+export function foldLocatedLines(
+  tool: FoldToolState['tool'],
+  pictured: boolean,
+  lines: FoldCrimpLines | null
+): readonly (readonly [Point, Point])[] {
+  if (tool !== 'crimp' || pictured || !lines) return [];
+  return [lines.first, lines.second].filter((line): line is [Point, Point] => line !== null);
+}
+
 /** The words after the folded pane's chip: the line mode and the click in hand, while one is. */
 export function foldPromptWords(t: TFunction, tools: FoldToolState): string | null {
   if (tools.tool === 'divide-line') {
     return tools.picks.length === 0 ? t('tools:fold.steps.divide', 'Click an edge or crease to divide it.') : null;
   }
   if (isLocated(tools)) return null;
-  const step = lineModeSteps(t, tools.lineMode)[tools.picks.length];
+  const steps = lineModeSteps(t, tools.lineMode);
+  // A crimp's second line, once its first is in.
+  if (tools.tool === 'crimp' && tools.picks.length >= steps.length) {
+    const second = secondLineSteps(t, tools.secondLineMode)[tools.picks.length - steps.length];
+    return second ? `${t('tools:fold.crimp.secondLine', 'Second line')} · ${second}` : null;
+  }
+  const step = steps[tools.picks.length];
   return step ? `${lineModeLabel(t, tools.lineMode)} · ${step}` : null;
 }
 
 /** What the canvas's chooser says of the choice it steps through. */
-export function foldChoiceNote(t: TFunction, kind: 'order' | 'opening' | 'root'): string {
+export function foldChoiceNote(t: TFunction, kind: 'order' | 'opening' | 'target' | 'root'): string {
   switch (kind) {
+    case 'target':
+      return t(
+        'tools:fold.chooser.targetNote',
+        'More than one layer takes the tuck: the brightest is the one taken. Step through them, or press Shift+← / Shift+→.'
+      );
     case 'root':
       return t('tools:fold.chooser.note', 'This axiom has more than one fold here. Step through them, or press Shift+← / Shift+→.');
     case 'opening':

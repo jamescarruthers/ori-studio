@@ -49,12 +49,14 @@ use crate::compound::{
 };
 use crate::fold::line::{self, Axis, Classified};
 use crate::fold::score::{self, Scored, ScoredFace};
-use crate::fold::{Seed, Snap};
+use crate::fold::{ActionKind, FoldActionGeometry, FoldAnalysis, PlainFold, Pleat, Seed, Snap};
 use crate::isometry::Isometry;
-use crate::numerics::MIN_FEATURE;
+use crate::numerics::{MIN_FEATURE, TOL};
 use crate::pattern::{CreaseKind, EdgeId, FaceId, VertexId};
 use crate::refusal::{Fix, FoldRefusal, Refused, Side};
+use crate::scene::ScenePoint;
 use crate::state::{State, StateParts, Topology};
+use crate::view::Direction;
 use crate::witness::WitnessOrder;
 
 type Point = [f64; 2];
@@ -886,4 +888,191 @@ fn strip_bodies(
         .into_iter()
         .map(|b| b.into_iter().collect())
         .collect()
+}
+
+// ---------------------------------------------------------------------------
+// What the tools and the panes ask of a crimp beside landing it (plan D12,
+// D14): what its tip moves, the plain fold the depth picker previews the
+// stacks of, and its picture.
+//
+// - **What moves** is the tip at ℓ1, the reverse fold's of the kind
+//   ([`State::analyse_reverse`]), read as a plain fold's analysis: ℓ1 and the
+//   tip's side, the moving side's flaps (the plain fold's along ℓ1, which the
+//   chips number and a refusal's `include_flaps` indexes), the tip's flaps
+//   among them picked, the tip's faces moving. Refused as the crimp is
+//   before it lands: lines that meet over the tip, ℓ2 missing it.
+// - **The picture** is the tip's at ℓ1, as a reverse fold of the kind draws
+//   it ([`State::fold_action`] of the whole tip, in the direction the near
+//   layer turns there): ℓ1 across the silhouette with the spans where the tip
+//   meets it. No grip: a plain fold's arrow takes its grip across ℓ1, where
+//   a crimp puts no paper, since the tip lands by ρ1∘ρ2. A crimp is drawn as
+//   a pleat is instead ([`Pleat`]): an arrow across both lines, from beyond
+//   ℓ2 to short of ℓ1, through the middles of the lines' stretches over the
+//   tip, with one kink for the two creases each layer takes. ℓ2 is the
+//   analysis' and the report's (`second`), drawn beside ℓ1 by whatever draws
+//   the picture.
+
+/// How far past each line the pleat arrow reaches, as a share of the way
+/// between the lines' middles over the tip.
+const PLEAT_OVERHANG: f64 = 0.5;
+
+impl CrimpFold {
+    /// The plain fold along ℓ1 its side and anchor name, as the reverse fold
+    /// at ℓ1 names it: what the depth picker previews the stacks of, and
+    /// whose flaps the layer picker shows.
+    pub fn plain(&self) -> PlainFold {
+        PlainFold::new(self.first, self.side, Direction::Valley).with_seed(self.anchor.clone())
+    }
+}
+
+impl State {
+    /// What the crimp `op` moves before it lands, as a plain fold's analysis
+    /// reads (see above).
+    pub fn analyse_crimp_fold(&self, op: &CrimpFold) -> Result<FoldAnalysis, Refused> {
+        let tip = self.analyse_crimp(op)?.tip;
+        let direction = self.view().model_direction(op.kind.seen_direction());
+        let (flaps, picked) = match self.analyse_fold(&op.plain()) {
+            Ok(plain) => (plain.flaps, tip.flaps.iter().map(|f| f.index).collect()),
+            Err(_) => (
+                tip.flaps.iter().map(|f| f.flap.clone()).collect(),
+                (0..tip.flaps.len()).collect(),
+            ),
+        };
+        Ok(FoldAnalysis {
+            line: tip.line,
+            side: tip.side,
+            snap: tip.snap,
+            direction,
+            flaps,
+            picked,
+            added: Vec::new(),
+            moving: tip.tip,
+        })
+    }
+
+    /// The picture of the crimp `op` on this state, before it lands (see
+    /// above). Refused as [`State::analyse_crimp`] is.
+    pub fn crimp_action(&self, op: &CrimpFold) -> Result<FoldActionGeometry, Refused> {
+        let analysis = self.analyse_crimp(op)?;
+        let tip = &analysis.tip;
+        crimp_picture(
+            self,
+            &Picture {
+                first: tip.line,
+                side: tip.side,
+                snap: tip.snap,
+                kind: op.kind,
+                tip: &tip.tip,
+                second: analysis.second,
+            },
+        )
+    }
+}
+
+impl CrimpReport {
+    /// The landed crimp's picture on `parent`, the state it folded (see
+    /// above). It has no grip, so nothing of the landed state is drawn.
+    pub fn action(&self, parent: &State) -> Result<FoldActionGeometry, Refused> {
+        crimp_picture(
+            parent,
+            &Picture {
+                first: self.first,
+                side: self.side,
+                snap: self.snap,
+                kind: self.kind,
+                tip: &self.fold.moving,
+                second: self.second,
+            },
+        )
+    }
+}
+
+impl CrimpFolded {
+    /// Its picture on `parent`, the state it folded.
+    pub fn action(&self, parent: &State) -> Result<FoldActionGeometry, Refused> {
+        self.report.action(parent)
+    }
+}
+
+/// What a crimp's picture is drawn from, before it lands or after.
+struct Picture<'a> {
+    first: Line,
+    side: Side,
+    snap: Snap,
+    kind: ReverseKind,
+    /// The parent's faces that move: the tip at ℓ1, the strip with it.
+    tip: &'a [FaceId],
+    second: Line,
+}
+
+fn crimp_picture(state: &State, picture: &Picture<'_>) -> Result<FoldActionGeometry, Refused> {
+    let analysis = FoldAnalysis {
+        line: picture.first,
+        side: picture.side,
+        snap: picture.snap,
+        direction: state.view().model_direction(picture.kind.seen_direction()),
+        flaps: Vec::new(),
+        picked: Vec::new(),
+        added: Vec::new(),
+        moving: picture.tip.to_vec(),
+    };
+    let mut action = state.fold_action(&analysis, ActionKind::Fold, None)?;
+    action.grip = None;
+    action.pleat = pleat(state, &picture.first, &picture.second, picture.tip);
+    Ok(action)
+}
+
+/// The pleat arrow across a crimp's lines, in the scene frame (see above);
+/// none when either line misses the tip, or the two cross it within the
+/// minimum feature of each other.
+fn pleat(state: &State, first: &Line, second: &Line, tip: &[FaceId]) -> Option<Pleat> {
+    let middle = |line: &Line| -> Option<Point> {
+        let [lo, hi] = tip
+            .iter()
+            .filter_map(|&id| state.face_image(id))
+            .filter_map(|image| chord(line, image))
+            .reduce(|[a, b], [lo, hi]| [a.min(lo), b.max(hi)])?;
+        Some(line.point_at((lo + hi) / 2.0))
+    };
+    let (near, far) = (middle(first)?, middle(second)?);
+    let across = [far[0] - near[0], far[1] - near[1]];
+    if across[0].hypot(across[1]) < MIN_FEATURE {
+        return None;
+    }
+    let from = [
+        far[0] + PLEAT_OVERHANG * across[0],
+        far[1] + PLEAT_OVERHANG * across[1],
+    ];
+    let to = [
+        near[0] - PLEAT_OVERHANG * across[0],
+        near[1] - PLEAT_OVERHANG * across[1],
+    ];
+    let to_scene = state.view().transform();
+    Some(Pleat {
+        from: ScenePoint::from(to_scene.apply(from)),
+        to: ScenePoint::from(to_scene.apply(to)),
+        kinks: 1,
+    })
+}
+
+/// The stretch of `line` over a convex polygon, as parameters along it
+/// ([`Line::parameter`]); none when it misses, or only touches.
+fn chord(line: &Line, polygon: &[Point]) -> Option<[f64; 2]> {
+    let mut span: Option<[f64; 2]> = None;
+    let mut take = |p: Point| {
+        let t = line.parameter(p);
+        span = Some(span.map_or([t, t], |[a, b]| [a.min(t), b.max(t)]));
+    };
+    let n = polygon.len();
+    for i in 0..n {
+        let (p, q) = (polygon[i], polygon[(i + 1) % n]);
+        let (dp, dq) = (line.signed_distance(p), line.signed_distance(q));
+        if dp.abs() <= TOL {
+            take(p);
+        } else if (dp > TOL && dq < -TOL) || (dp < -TOL && dq > TOL) {
+            let s = dp / (dp - dq);
+            take([p[0] + s * (q[0] - p[0]), p[1] + s * (q[1] - p[1])]);
+        }
+    }
+    span.filter(|[a, b]| b - a > TOL)
 }

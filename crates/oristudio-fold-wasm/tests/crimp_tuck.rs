@@ -167,7 +167,13 @@ fn a_crimp_lands_replays_and_refuses_the_kind_that_does_not_fit() {
         step["summary"]["diff"]["added"].as_array().map(Vec::len),
         Some(4)
     );
-    assert_eq!(ok(bridge.step_action(replayed))["action"], Value::Null);
+    // Its picture: ℓ1 across the paper, no grip — the tip lands by ρ1∘ρ2,
+    // not across ℓ1 — and a pleat arrow across both lines.
+    let pictured = ok(bridge.step_action(replayed));
+    assert!(pictured["action"]["line"].is_array(), "{pictured}");
+    assert_eq!(pictured["action"]["grip"], Value::Null);
+    assert_eq!(pictured["action"]["pleat"]["kinks"], 1);
+    assert_eq!(pictured["action"]["direction"], "mountain");
     // The other kind does not fit, and offers this one.
     let outside = perp_crimp("outside");
     let refusal = refused(bridge.crimp(tri, &crimp_op(&outside), &choices(json!({}))));
@@ -187,21 +193,34 @@ fn a_crimp_lands_replays_and_refuses_the_kind_that_does_not_fit() {
         root["refusal"],
         json!({ "code": "unexpected_choice", "choice": "root" })
     );
-    // A crimp folds along two lines: a plain fold's questions are not its.
-    assert!(matches!(
-        bridge.analyse(tri, &op(&inside), &Choices::default()),
-        Err(BridgeError::InvalidInput(_))
-    ));
-    assert!(matches!(
-        bridge.depth_choices(tri, &op(&inside), &Choices::default(), [0.9, 0.1]),
-        Err(BridgeError::InvalidInput(_))
-    ));
+    // A plain fold's questions, of its tip at ℓ1: what moves is the tip, the
+    // depth picker previews the stacks along ℓ1, and the picture before it
+    // lands is the step's own.
+    let moving = ok(bridge.analyse(tri, &op(&inside), &Choices::default()));
+    assert_eq!(
+        moving["analysis"]["moving"],
+        analysed["analysis"]["tip"]["tip"]
+    );
+    assert_eq!(
+        moving["analysis"]["picked"].as_array().map(Vec::len),
+        Some(1)
+    );
+    let depths = ok(bridge.depth_choices(tri, &op(&inside), &Choices::default(), [0.95, 0.15]));
+    assert!(
+        depths["choices"].as_array().is_some_and(|c| !c.is_empty()),
+        "{depths}"
+    );
+    let previewed = ok(bridge.action(tri, &op(&inside), &Choices::default()));
+    assert_eq!(previewed["action"], pictured["action"]);
     // A crimp kept its step's summary as it landed: with its parent let go
-    // it still has it (a fold's would be `parent_released`), and its picture
-    // is none.
+    // it still has it (a fold's would be `parent_released`); its picture is
+    // drawn on its parent, so that is gone with it.
     assert!(bridge.release(tri));
     assert_eq!(ok(bridge.step_summary(replayed)), step);
-    assert_eq!(ok(bridge.step_action(replayed))["action"], Value::Null);
+    assert!(matches!(
+        bridge.step_action(replayed),
+        Err(BridgeError::ParentReleased { .. })
+    ));
 }
 
 /// Book fold, book fold again: the strip [0, ¼] × [0, 1] in four layers,
@@ -315,10 +334,45 @@ fn a_tuck_lists_its_targets_lands_and_replays() {
             .map(Vec::len),
         Some(2)
     );
-    match apply(&mut bridge, book, &step, json!({})) {
-        Outcome::Ok(applied) => assert_eq!(json_of(&applied)["compound"], folded["compound"]),
+    let replayed = match apply(&mut bridge, book, &step, json!({})) {
+        Outcome::Ok(applied) => {
+            assert_eq!(json_of(&applied)["compound"], folded["compound"]);
+            applied.state
+        }
         Outcome::Refused(r) => panic!("refused: {}", json_of(&r)),
-    }
+    };
+    // A plain fold's questions, of its block against its target: the
+    // bottom layer's corner alone moves (the plain fold's closure would take
+    // the top layer's too), the moving side's flaps are the plain fold's,
+    // and its picture is a plain fold's, with an arrow.
+    let moving = ok(bridge.analyse(book, &op(&step), &Choices::default()));
+    assert_eq!(moving["analysis"]["moving"], folded["compound"]["moving"]);
+    assert_eq!(
+        moving["analysis"]["moving"].as_array().map(Vec::len),
+        Some(1)
+    );
+    assert_eq!(
+        moving["analysis"]["picked"].as_array().map(Vec::len),
+        Some(1)
+    );
+    let depths = ok(bridge.depth_choices(book, &op(&step), &Choices::default(), [0.05, 0.05]));
+    assert!(
+        depths["choices"].as_array().is_some_and(|c| !c.is_empty()),
+        "{depths}"
+    );
+    let previewed = ok(bridge.action(book, &op(&step), &Choices::default()));
+    assert!(previewed["action"]["grip"].is_object(), "{previewed}");
+    assert_eq!(previewed["action"]["direction"], "valley");
+    assert_eq!(previewed["action"]["pleat"], Value::Null);
+    // The step's picture is the preview's, with the landed cover at the
+    // arrow's head: under the top layer.
+    let pictured = ok(bridge.step_action(replayed));
+    assert_eq!(pictured["action"]["line"], previewed["action"]["line"]);
+    assert_eq!(
+        pictured["action"]["grip"]["at"],
+        previewed["action"]["grip"]["at"]
+    );
+    assert_eq!(pictured["action"]["grip"]["hidden_image"], 1);
     // The layer the seed names is no target.
     let mut into_seed = step.clone();
     into_seed["target"] = json!([0.25, 0.5]);

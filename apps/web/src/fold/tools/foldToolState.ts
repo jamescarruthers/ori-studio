@@ -29,8 +29,14 @@ import {
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
-import { isLineTool, type FoldLineModeId, type FoldLineToolId, type FoldToolId } from './foldToolCatalog';
-import { locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
+import {
+  isLineTool,
+  type FoldLineModeId,
+  type FoldLineToolId,
+  type FoldSecondLineModeId,
+  type FoldToolId,
+} from './foldToolCatalog';
+import { lineModeInput, locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
 
 /**
  * What a fold takes along with the moving side (D6's seed, before it names
@@ -69,15 +75,31 @@ export const FOLD_DIVIDE_DEFAULT: FoldDivideSettings = {
  * step stores is the result each names (plan D6), never the index.
  */
 export interface FoldCompoundToolChoices {
-  /** The kind the folder chose; null while the tool takes the one that lands (inside when both do). */
+  /**
+   * The kind the folder chose — a reverse fold's, or a crimp's, two reverse
+   * folds of one kind — null while the tool takes the one that lands
+   * (inside when both do).
+   */
   reverseKind: FoldReverseKind | null;
   /** The way the flaps open, by index into the ways the engine lists. */
   opening: number;
   /** The layer order, by index into the orders the engine lists for the kind. */
   order: number;
+  /**
+   * The tuck's layer to tuck against (`tools/tuck`), by the face the engine
+   * names it by; null takes the first listed. A face rather than an index,
+   * so a fix naming one picks it, and a new seed that keeps it listed keeps
+   * it chosen.
+   */
+  tuckTarget: number | null;
 }
 
-export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = { reverseKind: null, opening: 0, order: 0 };
+export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
+  reverseKind: null,
+  opening: 0,
+  order: 0,
+  tuckTarget: null,
+};
 
 export interface FoldToolState {
   tool: FoldToolId;
@@ -91,6 +113,12 @@ export interface FoldToolState {
   seed: FoldToolSeed;
   /** The way a precrease folds before it unfolds. */
   precreaseDirection: FoldDirection;
+  // The crimp's and the tuck's settings, which stay chosen as the line mode
+  // does: from one fold to the next.
+  /** How a crimp's second line is located, after its first. */
+  secondLineMode: FoldSecondLineModeId;
+  /** A tuck's direction as the viewer sees it: a valley goes under its target, a mountain over it. */
+  tuckDirection: FoldDirection;
   override: FoldToolOverride | null;
   divide: FoldDivideSettings;
   /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
@@ -107,6 +135,8 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   swapped: false,
   seed: { scope: 'all' },
   precreaseDirection: 'valley',
+  secondLineMode: 'free',
+  tuckDirection: 'valley',
   override: null,
   divide: FOLD_DIVIDE_DEFAULT,
   hoveredFlap: null,
@@ -132,9 +162,11 @@ function anotherTip(compound: FoldCompoundToolChoices): FoldCompoundToolChoices 
   return compound.opening === 0 && compound.order === 0 ? compound : { ...compound, opening: 0, order: 0 };
 }
 
-/** The clicks the state's tool and line mode collect. */
-export function foldToolInput(state: Pick<FoldToolState, 'tool' | 'lineMode'>): FoldInputModel | null {
-  return toolInput(state.tool, state.lineMode);
+/** The clicks the state's tool and line mode collect (a crimp's, its second line's too). */
+export function foldToolInput(
+  state: Pick<FoldToolState, 'tool' | 'lineMode'> & Partial<Pick<FoldToolState, 'secondLineMode'>>
+): FoldInputModel | null {
+  return toolInput(state.tool, state.lineMode, state.secondLineMode);
 }
 
 /**
@@ -192,6 +224,13 @@ export interface FoldTools {
   stepOpening(delta: number, count: number): void;
   /** Step through the layer orders listed, of `count`. */
   stepOrder(delta: number, count: number): void;
+  // The crimp's and the tuck's.
+  /** How a crimp's second line is located: its clicks start again, its first line's stay. */
+  setSecondLineMode(mode: FoldSecondLineModeId): void;
+  /** A tuck's direction, which lists other layers to tuck against. */
+  setTuckDirection(direction: FoldDirection): void;
+  /** The layer a tuck goes against, by its face; null takes the first listed. */
+  setTuckTarget(face: number | null): void;
 }
 
 const sameFlap = (a: FoldFlap, b: FoldFlap) =>
@@ -243,12 +282,20 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => {
         if (state.tool === tool) return state;
         // Every fold along a line folds the same line: switching between V,
-        // M, P and the reverse fold keeps it, as the window's V / M / P control
-        // promises. Anything else locates anew.
+        // M, P and the compound folds along one keeps it, as the window's
+        // V / M / P control promises — a crimp's first line, and the picks
+        // past it are its second line's, which another tool does not take.
+        // Anything else locates anew.
         const keeps = isLineTool(tool) && isLineTool(state.tool);
-        return keeps
-          ? { ...state, tool, override: null, compound: anotherTip(state.compound) }
-          : { ...restart(state), tool };
+        if (!keeps) return { ...restart(state), tool };
+        const clicks = toolInput(tool, state.lineMode, state.secondLineMode).steps.length;
+        return {
+          ...state,
+          tool,
+          picks: state.picks.length > clicks ? state.picks.slice(0, clicks) : state.picks,
+          override: null,
+          compound: anotherTip(state.compound),
+        };
       });
     },
 
@@ -357,6 +404,34 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         ...state,
         compound: { ...state.compound, order: (((state.compound.order + delta) % count) + count) % count },
       }));
+    },
+
+    setSecondLineMode(secondLineMode) {
+      set((state) => {
+        if (state.secondLineMode === secondLineMode) return state;
+        // The first line's clicks stay: only the second line is located anew.
+        const first = lineModeInput(state.lineMode).steps.length;
+        const picks = state.tool === 'crimp' ? state.picks.slice(0, first) : state.picks;
+        return { ...state, secondLineMode, picks, override: null, compound: anotherTip(state.compound) };
+      });
+    },
+
+    setTuckDirection(tuckDirection) {
+      // Another direction lists other layers, and orders them anew.
+      set((state) =>
+        state.tuckDirection === tuckDirection
+          ? state
+          : { ...state, tuckDirection, override: null, compound: { ...anotherTip(state.compound), tuckTarget: null } }
+      );
+    },
+
+    setTuckTarget(tuckTarget) {
+      // Another target is another tuck: the orders are its own.
+      set((state) =>
+        state.compound.tuckTarget === tuckTarget
+          ? state
+          : { ...state, compound: { ...state.compound, tuckTarget, order: 0 } }
+      );
     },
   };
 }

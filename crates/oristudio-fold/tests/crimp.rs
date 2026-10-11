@@ -572,3 +572,59 @@ fn a_crimp_with_two_orders_stores_its_choice() {
         Err(CompoundRefused::Broken(_))
     ));
 }
+
+/// What the tools ask of a crimp before it lands (plan D12, D14): its tip at
+/// ℓ1 as a plain fold's analysis reads it, the moving side's flaps the plain
+/// fold's along ℓ1; and its picture — ℓ1 with the tip's spans, no grip, the
+/// pleat arrow from beyond ℓ2 to short of ℓ1 — which the landed step's
+/// picture is too.
+#[test]
+fn a_crimp_is_pictured_by_its_first_line_and_a_pleat_arrow() {
+    let tri = triangle();
+    let first =
+        Line::from_point_direction([0.4, 0.6], [1.0, 1.0]).unwrap_or_else(|| unreachable!());
+    let op = crimp(first, at_angle([0.62, 0.38], 36.87), [0.97, 0.06], INSIDE);
+    let crimped = tri.analyse_crimp(&op).unwrap_or_else(|e| panic!("{e}"));
+    let analysis = tri
+        .analyse_crimp_fold(&op)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(analysis.moving, crimped.tip.tip);
+    assert_eq!(analysis.line, crimped.tip.line);
+    assert_eq!(
+        analysis.flaps,
+        tri.analyse_fold(&op.plain())
+            .unwrap_or_else(|e| panic!("{e}"))
+            .flaps
+    );
+    let picked: Vec<usize> = crimped.tip.flaps.iter().map(|f| f.index).collect();
+    assert_eq!(analysis.picked, picked);
+    // The near layer turns as the inside reverse at ℓ1 turns it: a mountain.
+    assert_eq!(analysis.direction, Direction::Mountain);
+
+    let action = tri.crimp_action(&op).unwrap_or_else(|e| panic!("{e}"));
+    assert!(action.line.is_some());
+    assert!(!action.spans.is_empty());
+    assert!(action.grip.is_none());
+    assert_eq!(action.direction, Direction::Mountain);
+    let Some(pleat) = action.pleat else {
+        panic!("no pleat arrow");
+    };
+    assert_eq!(pleat.kinks, 1);
+    // The triangle is seen as it lies, so the scene frame is the model's:
+    // the arrow's tail beyond ℓ2, its head short of ℓ1, on the body's side.
+    let (from, to) = ([pleat.from.x, pleat.from.y], [pleat.to.x, pleat.to.y]);
+    assert_eq!(
+        oristudio_fold::Side::of_point(&crimped.second, from),
+        Some(crimped.second_side)
+    );
+    assert_eq!(
+        oristudio_fold::Side::of_point(&first, to),
+        Some(op.side.opposite())
+    );
+
+    let folded = landed(&tri, &op, &none());
+    assert_eq!(
+        folded.action(&tri).unwrap_or_else(|e| panic!("{e}")),
+        action
+    );
+}

@@ -284,7 +284,15 @@
     "chooser": {
       "note": "Cet axiome donne ici plus d’un pli. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
       "openingNote": "Le rabat s’ouvre de plus d’une façon : les couches en surbrillance restent ensemble. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
-      "orderNote": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
+      "orderNote": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les, ou appuyez sur Maj+← / Maj+→.",
+      "targetNote": "Plus d’une couche peut recevoir le rabat : la plus claire est celle retenue. Parcourez-les, ou appuyez sur Maj+← / Maj+→."
+    },
+    "crimp": {
+      "bothFit": "Les deux types de crimp conviennent ici : choisissez de quel côté va la pointe.",
+      "firstLine": "Première ligne",
+      "onlyInside": "Seul le crimp intérieur convient ici.",
+      "onlyOutside": "Seul le crimp extérieur convient ici.",
+      "secondLine": "Seconde ligne"
     },
     "divide": {
       "clear_one": "Effacer la marque faite ici",
@@ -299,18 +307,27 @@
       "right": "Jusqu’à la fin"
     },
     "fix": {
+      "crimpFlap": "Faire le crimp seulement sur le rabat {{number}}",
       "includeFlap": "Inclure le rabat {{number}}",
       "includeFlaps_one": "Inclure {{count}} rabat",
       "includeFlaps_many": "Inclure les {{count}} rabats",
       "includeFlaps_other": "Inclure les {{count}} rabats",
+      "insideCrimpInstead": "Plutôt un crimp intérieur",
       "insideInstead": "Plutôt un pli inversé intérieur",
       "mountainInstead": "Plutôt un pli montagne",
+      "outsideCrimpInstead": "Plutôt un crimp extérieur",
       "outsideInstead": "Plutôt un pli inversé extérieur",
       "pickFlap": "Plier seulement le rabat {{number}}",
       "precreaseOtherWay": "Pré-plier dans l’autre sens",
       "reverseFlap": "Inverser seulement le rabat {{number}}",
       "slideToEdge": "Faire glisser la ligne pour poser le point sur le bord",
       "swapInstead": "Inverser le côté qui bouge",
+      "tuckFlap": "Rentrer seulement le rabat {{number}}",
+      "tuckOtherWay": "Rentrer dans l’autre sens",
+      "tuckOver": "Plutôt rentrer par-dessus la couche {{number}} de la liste",
+      "tuckOverAnother": "Plutôt rentrer par-dessus la couche qui convient",
+      "tuckUnder": "Plutôt rentrer sous la couche {{number}} de la liste",
+      "tuckUnderAnother": "Plutôt rentrer sous la couche qui convient",
       "turnToEdge": "Faire pivoter la ligne pour poser le point sur le bord",
       "useLine": "Utiliser la ligne de repère",
       "valleyInstead": "Plutôt un pli vallée"
@@ -386,6 +403,7 @@
       "openSink": "Enfoncement ouvert",
       "outsideReverse": "Pli inversé extérieur",
       "petal": "Pli pétale",
+      "pleat": "Pli en escalier",
       "rabbitEar": "Oreille de lapin",
       "squash": "Pli écrasé",
       "swivel": "Pli pivoté",
@@ -397,6 +415,7 @@
       "title": "Outils de pliage",
       "trigger": "Outils"
     },
+    "plannedPleat": "Pas un outil à part : pliez un pli en escalier en deux plis simples, une vallée puis une montagne à côté.",
     "plannedReason": "Prévu : pas encore dans Ori Studio.",
     "playStep": "Lire l’étape",
     "railLabel": "Outils de pliage",
@@ -427,6 +446,32 @@
       "collision": {
         "text": "Les couches qui bougent traverseraient des couches sur leur passage.",
         "title": "Collision"
+      },
+      "crimpInsideInfeasible": {
+        "title": "Il ne peut pas faire de crimp à l’intérieur"
+      },
+      "crimpKindInfeasible": {
+        "neither": "Aucun type de crimp ne convient ici : aucun empilement des couches ne permet à la pointe de tourner sur les deux lignes. Déplacez une ligne, ou faites le crimp sur d’autres rabats.",
+        "text": "Aucun empilement des couches ne permet à la pointe de tourner de ce côté sur les deux lignes. L’autre type de crimp conviendra peut-être."
+      },
+      "crimpLinesMeet": {
+        "text": "Les deux lignes se croisent, ou se rapprochent trop, sur le papier que déplace le crimp. Tracez la seconde ligne à l’écart de la première sur toute la largeur du rabat.",
+        "title": "Les lignes se touchent"
+      },
+      "crimpMissesTip": {
+        "text": "La seconde ligne ne traverse aucun papier au-delà de la première, donc rien ne reviendrait en arrière. Tracez-la en travers du rabat, au-delà de la première ligne.",
+        "title": "La seconde ligne manque le rabat"
+      },
+      "crimpNoOpening": {
+        "noSpine": "Une seule couche n’a pas de bord plié le long duquel faire le crimp. Faites le crimp sur un rabat de couches reliées par un pli.",
+        "text": "Ses couches s’écartent à la première ligne, mais à la seconde l’une d’elles s’est arrêtée, ou n’a rien sur quoi tourner. Déplacez la seconde ligne, ou faites le crimp sur d’autres rabats.",
+        "title": "Ce rabat ne peut pas s’ouvrir à la seconde ligne"
+      },
+      "crimpOutsideInfeasible": {
+        "title": "Il ne peut pas faire de crimp par l’extérieur"
+      },
+      "crimpTipNotFree": {
+        "text": "D’autres couches se trouvent là où tournerait le papier du crimp. Incluez leurs rabats dans le crimp, ou faites-le ailleurs."
       },
       "emptySeed": {
         "text": "Aucune couche n’est choisie. Choisissez au moins un rabat à déplacer.",
@@ -505,6 +550,17 @@
         "text": "Le pli laisserait un pli ou une bande de papier plus fine que le papier lui-même.",
         "title": "Trop petit pour être plié"
       },
+      "tuckInfeasible": {
+        "none": "Aucun empilement des couches ne place le rabat juste contre cette couche. Rentrez moins de rabats, ou placez une autre ligne.",
+        "text": "Aucun empilement des couches ne place le rabat juste contre cette couche. Une autre couche ici le reçoit.",
+        "titleOver": "Il ne peut pas être rentré par-dessus cette couche",
+        "titleUnder": "Il ne peut pas être rentré sous cette couche"
+      },
+      "tuckNoTarget": {
+        "over": "Aucune couche qui reste en place ne peut recevoir le rabat par-dessus ici. Pliez dans l’autre sens, inversez le côté qui bouge, ou placez une autre ligne.",
+        "title": "Aucune couche ne reçoit le rabat ici",
+        "under": "Aucune couche qui reste en place ne peut recevoir le rabat dessous ici. Pliez dans l’autre sens, inversez le côté qui bouge, ou placez une autre ligne."
+      },
       "tuckTarget": {
         "text": "Choisissez une couche qui reste en place contre laquelle rentrer le rabat.",
         "title": "La couche où rentrer bougerait"
@@ -565,11 +621,17 @@
       "freeStart": "Cliquez là où commence la ligne de pli.",
       "landOnLine": "Cliquez sur le bord ou le pli sur lequel il doit arriver.",
       "perpendicularTo": "Cliquez sur le bord ou le pli auquel le pli est perpendiculaire.",
+      "pickFlapsToCrimp": "Choisissez les rabats du crimp.",
       "pickFlapsToReverse": "Choisissez les rabats à inverser.",
+      "pickFlapsToTuck": "Choisissez les rabats à rentrer.",
       "pickLayers": "Choisissez les couches qui bougent.",
-      "pointToMove": "Cliquez sur le point à déplacer."
+      "pickTuckTarget": "Choisissez la couche contre laquelle rentrer.",
+      "pointToMove": "Cliquez sur le point à déplacer.",
+      "secondCrease": "Cliquez sur le pli ou le bord plié que suit la seconde ligne.",
+      "secondFreeStart": "Cliquez là où commence la seconde ligne."
     },
     "tool": {
+      "crimpHelp": "Inverser un rabat le long de deux lignes à la fois : vers l’intérieur, puis de nouveau vers l’extérieur.",
       "divideLine": "Diviser une ligne",
       "divideLineHelp": "Marquer des points qui divisent un bord ou un pli en parties égales.",
       "insideReverse": "Pli inversé intérieur",
@@ -578,8 +640,20 @@
       "mountainHelp": "Plier le côté qui bouge en l’éloignant de vous, pour qu’il passe dessous.",
       "precrease": "Pré-plier",
       "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
+      "tuckHelp": "Plier un rabat et le glisser sous, ou sur, une couche qui reste en place.",
       "valley": "Pli vallée",
       "valleyHelp": "Plier le côté qui bouge vers vous, pour qu’il passe dessus."
+    },
+    "tuck": {
+      "noTargets": "Aucune couche ici ne reçoit le rabat.",
+      "over": "Rentrer par-dessus",
+      "targetsOver_one": "Une couche ici reçoit le rabat par-dessus elle.",
+      "targetsOver_many": "{{count}} couches ici reçoivent le rabat par-dessus elles : le papier plié éclaire chacune.",
+      "targetsOver_other": "{{count}} couches ici reçoivent le rabat par-dessus elles : le papier plié éclaire chacune.",
+      "targetsUnder_one": "Une couche ici reçoit le rabat sous elle.",
+      "targetsUnder_many": "{{count}} couches ici reçoivent le rabat sous elles : le papier plié éclaire chacune.",
+      "targetsUnder_other": "{{count}} couches ici reçoivent le rabat sous elles : le papier plié éclaire chacune.",
+      "under": "Rentrer dessous"
     },
     "verb": {
       "rotateHelp": "Tourner le modèle d’un quart de tour dans le sens horaire, en une étape à part.",

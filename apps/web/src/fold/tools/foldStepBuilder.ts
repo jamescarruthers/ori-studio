@@ -63,7 +63,7 @@ import {
   type FoldPointPick,
   type FoldSegmentPick,
 } from '../canvas/foldPicking';
-import { lineModeAxiom, type FoldKind, type FoldLineModeId } from './foldToolCatalog';
+import { lineModeAxiom, type FoldKind, type FoldLineModeId, type FoldSecondLineModeId } from './foldToolCatalog';
 import { inSlotOrder, lineModeInput } from './foldToolRegistry';
 import type { FoldToolSeed } from './foldToolState';
 
@@ -111,9 +111,10 @@ export type FoldStepBuild =
 
 /**
  * A refusal the tools can tell without the engine, under the engine's own
- * code: no paper on the side that would move, or an axiom with no root here.
+ * code: no paper on the side that would move, an axiom with no root here,
+ * or a crimp's second line drawn off the paper, which misses its tip.
  */
-export function clientRefusal(code: 'no_moving_side' | 'no_root'): FoldEngineRefused {
+export function clientRefusal(code: 'no_moving_side' | 'no_root' | 'crimp_misses_tip'): FoldEngineRefused {
   return { status: 'refused', refusal: { code }, fixes: [], faces: [], vertices: [] };
 }
 
@@ -206,6 +207,23 @@ function paperEnds(index: FoldPickIndex, line: FoldModelLine): [{ at: Point; top
 }
 
 /**
+ * The stretch of the scene line `line` across the paper, first paper to
+ * last, in the scene frame: where a located line is drawn over the folded
+ * pane. Null when the line misses the paper.
+ */
+export function lineAcrossPaper(index: FoldPickIndex, line: FoldModelLine): [Point, Point] | null {
+  let from = Infinity;
+  let to = -Infinity;
+  for (const subface of index.subfaces) {
+    const chord = chordOfConvex(subface.polygon, line);
+    if (!chord) continue;
+    from = Math.min(from, chord[0]);
+    to = Math.max(to, chord[1]);
+  }
+  return to > from ? [pointOnLine(line, from), pointOnLine(line, to)] : null;
+}
+
+/**
  * A free line through the scene line `line`: two sheet points on it, as far
  * apart along it as the paper reaches, each just inside the stretch of a
  * subface it crosses. Null when the line misses the paper.
@@ -291,7 +309,9 @@ const isReference = (pick: FoldPick): pick is FoldPointPick | FoldSegmentPick =>
 export function axiomLineOfPicks(lineMode: FoldLineModeId, picks: readonly FoldPick[]): FoldAxiomLine | null {
   const axiom = lineModeAxiom(lineMode);
   if (axiom === null) return null;
-  const slots = inSlotOrder(lineModeInput(lineMode), picks);
+  // The line mode's own clicks: a crimp's second line's come after them.
+  const model = lineModeInput(lineMode);
+  const slots = inSlotOrder(model, picks.slice(0, model.steps.length));
   if (!slots || !slots.every(isReference)) return null;
   return { via: 'axiom', axiom, inputs: slots.map(pickRef) };
 }
@@ -350,6 +370,25 @@ function locate(intent: FoldLocateIntent, index: FoldPickIndex): Located | FoldE
   if (!sceneLine) return null;
   const at: SheetPoint = [(crease.sheet[0][0] + crease.sheet[1][0]) / 2, (crease.sheet[0][1] + crease.sheet[1][1]) / 2];
   return { line: { via: 'crease', at }, sceneLine, implied: null, crease };
+}
+
+/**
+ * A crimp's second line, from the picks past its first line's (`picks`, the
+ * second line mode's clicks): a free line through two sheet points, or an
+ * existing crease by a sheet point on it, with where it lies in the scene.
+ * It has no side of its own — the crimp's is its first line's — and no
+ * axiom, since a step stores one root. Unlocated until its clicks are in;
+ * refused when a free line misses the paper, so the tip too.
+ */
+export function locateSecondLine(
+  mode: FoldSecondLineModeId,
+  picks: readonly FoldPick[],
+  index: FoldPickIndex
+): { line: FoldLineInput; sceneLine: FoldModelLine } | { status: 'unlocated' } | { status: 'refused'; refused: FoldEngineRefused } {
+  const located = locate({ lineMode: mode, picks, candidate: null, swapped: false, seed: { scope: 'all' } }, index);
+  if (!located) return { status: 'unlocated' };
+  if ('status' in located) return { status: 'refused', refused: clientRefusal('crimp_misses_tip') };
+  return { line: located.line, sceneLine: located.sceneLine };
 }
 
 /**

@@ -268,7 +268,15 @@
     "chooser": {
       "note": "此公理在这里给出不止一种折法。逐个查看，或按 Shift+← / Shift+→。",
       "openingNote": "翼片不止一种张开方式：高亮的层保持在一起。逐个查看，或按 Shift+← / Shift+→。",
-      "orderNote": "这些层不止一种叠放方式。逐个查看，或按 Shift+← / Shift+→。"
+      "orderNote": "这些层不止一种叠放方式。逐个查看，或按 Shift+← / Shift+→。",
+      "targetNote": "不止一个层可以接受塞入：最亮的那层就是选中的。逐个查看，或按 Shift+← / Shift+→。"
+    },
+    "crimp": {
+      "bothFit": "两种压褶都可以：请选择尖端的朝向。",
+      "firstLine": "第一条折线",
+      "onlyInside": "此处只适合内翻阶梯折。",
+      "onlyOutside": "此处只适合外翻阶梯折。",
+      "secondLine": "第二条折线"
     },
     "divide": {
       "clear_other": "清除在这里做的 {{count}} 个标记",
@@ -281,16 +289,25 @@
       "right": "到终点"
     },
     "fix": {
+      "crimpFlap": "只压褶翼片 {{number}}",
       "includeFlap": "包含翼片 {{number}}",
       "includeFlaps_other": "包含这 {{count}} 个翼片",
+      "insideCrimpInstead": "改为内翻阶梯折",
       "insideInstead": "改为内翻折",
       "mountainInstead": "改为山折",
+      "outsideCrimpInstead": "改为外翻阶梯折",
       "outsideInstead": "改为外翻折",
       "pickFlap": "只折翼片 {{number}}",
       "precreaseOtherWay": "向另一方向预折",
       "reverseFlap": "只翻折翼片 {{number}}",
       "slideToEdge": "平移折线，让该点正好落在边上",
       "swapInstead": "交换移动的一侧",
+      "tuckFlap": "只塞入翼片 {{number}}",
+      "tuckOtherWay": "朝另一方向塞入",
+      "tuckOver": "改为塞到列出的第 {{number}} 层上面",
+      "tuckOverAnother": "改为塞到合适的层上面",
+      "tuckUnder": "改为塞到列出的第 {{number}} 层下面",
+      "tuckUnderAnother": "改为塞到合适的层下面",
       "turnToEdge": "转动折线，让该点正好落在边上",
       "useLine": "使用参考线",
       "valleyInstead": "改为谷折"
@@ -360,6 +377,7 @@
       "openSink": "开放沉折",
       "outsideReverse": "外翻折",
       "petal": "花瓣折",
+      "pleat": "阶梯折",
       "rabbitEar": "兔耳折",
       "squash": "压平折",
       "swivel": "旋转折",
@@ -371,6 +389,7 @@
       "title": "折叠工具",
       "trigger": "工具"
     },
+    "plannedPleat": "没有单独的工具：阶梯折可以用两次普通折叠完成，先谷折，再在旁边山折。",
     "plannedReason": "计划中：Ori Studio 尚未提供。",
     "playStep": "播放步骤",
     "railLabel": "折叠工具",
@@ -399,6 +418,32 @@
       "collision": {
         "text": "移动的层会穿过挡在路上的层。",
         "title": "碰撞"
+      },
+      "crimpInsideInfeasible": {
+        "title": "无法向内压褶"
+      },
+      "crimpKindInfeasible": {
+        "neither": "这里两种压褶都不适用：无论各层如何叠放，尖端都无法在两条折线上都翻转。请移动一条折线，或压褶其他翼片。",
+        "text": "无论各层如何叠放，尖端都无法在两条折线上都朝这个方向翻转。另一种压褶也许可行。"
+      },
+      "crimpLinesMeet": {
+        "text": "在压褶移动的纸上，两条折线相交或靠得太近。请让第二条折线在横跨翼片时与第一条保持距离。",
+        "title": "两条折线相碰"
+      },
+      "crimpMissesTip": {
+        "text": "第二条折线没有穿过第一条之外的任何纸，所以没有东西会折回。请在第一条折线之外，横跨翼片画出它。",
+        "title": "第二条折线没有穿过翼片"
+      },
+      "crimpNoOpening": {
+        "noSpine": "单独一层没有可供压褶的折边。请压褶由折痕相连的多层翼片。",
+        "text": "各层在第一条折线处分开，但在第二条折线处其中一层已经结束，或没有可以翻转的依托。请移动第二条折线，或压褶其他翼片。",
+        "title": "此翼片无法在第二条折线处张开"
+      },
+      "crimpOutsideInfeasible": {
+        "title": "无法从外侧压褶"
+      },
+      "crimpTipNotFree": {
+        "text": "压褶的纸要翻转的地方有其他层。请把它们的翼片加入压褶，或在别处压褶。"
       },
       "emptySeed": {
         "text": "没有选中任何层。请至少选择一个要移动的翼片。",
@@ -477,6 +522,17 @@
         "text": "这次折叠会留下比纸本身还细的折痕或纸条。",
         "title": "太小，无法折叠"
       },
+      "tuckInfeasible": {
+        "none": "无论各层如何叠放，都无法让翼片紧贴那一层。请少塞入一些翼片，或确定另一条折线。",
+        "text": "无论各层如何叠放，都无法让翼片紧贴那一层。此处另有一层可以接受它。",
+        "titleOver": "无法塞到那一层上面",
+        "titleUnder": "无法塞到那一层下面"
+      },
+      "tuckNoTarget": {
+        "over": "这里没有留在原处的层能让翼片塞到它上面。请朝另一方向折、交换移动的一侧，或确定另一条折线。",
+        "title": "这里没有可以塞入的层",
+        "under": "这里没有留在原处的层能让翼片塞到它下面。请朝另一方向折、交换移动的一侧，或确定另一条折线。"
+      },
       "tuckTarget": {
         "text": "请选择一个留在原处的层，把翼片塞到它那里。",
         "title": "要塞入的层会移动"
@@ -537,11 +593,17 @@
       "freeStart": "单击折线开始的位置。",
       "landOnLine": "单击它要落到的边或折痕。",
       "perpendicularTo": "单击折线要垂直于的边或折痕。",
+      "pickFlapsToCrimp": "选择要压褶的翼片。",
       "pickFlapsToReverse": "选择要翻折的翼片。",
+      "pickFlapsToTuck": "选择要塞入的翼片。",
       "pickLayers": "选择要移动的层。",
-      "pointToMove": "单击要移动的点。"
+      "pickTuckTarget": "选择要塞入的那一层。",
+      "pointToMove": "单击要移动的点。",
+      "secondCrease": "单击第二条折线所沿的折痕或折边。",
+      "secondFreeStart": "单击第二条折线开始的位置。"
     },
     "tool": {
+      "crimpHelp": "沿两条折线同时翻折翼片：先向内，再向外折回。",
       "divideLine": "等分线",
       "divideLineHelp": "标出把边或折痕等分的点。",
       "insideReverse": "内翻折",
@@ -550,8 +612,16 @@
       "mountainHelp": "把移动的一侧向远离你的方向折，使它落在下面。",
       "precrease": "预折",
       "precreaseHelp": "折起再展开，留下一条之后用的折痕。",
+      "tuckHelp": "折叠翼片，并把它滑到留在原处的层下面或上面。",
       "valley": "谷折",
       "valleyHelp": "把移动的一侧朝你折，使它落在上面。"
+    },
+    "tuck": {
+      "noTargets": "这里没有可以塞入的层。",
+      "over": "塞到上面",
+      "targetsOver_other": "这里有 {{count}} 层可以让翼片塞到上面：折好的纸会逐一点亮它们。",
+      "targetsUnder_other": "这里有 {{count}} 层可以让翼片塞到下面：折好的纸会逐一点亮它们。",
+      "under": "塞到下面"
     },
     "verb": {
       "rotateHelp": "将模型顺时针旋转四分之一圈，作为单独的一步。",

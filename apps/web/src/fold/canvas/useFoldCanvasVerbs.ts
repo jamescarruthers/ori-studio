@@ -9,6 +9,8 @@ import {
   isLockedStep,
   isVertexOp,
   randomFoldId,
+  type FoldCrimpOp,
+  type FoldDirection,
   type FoldMark,
   type FoldMarkEntry,
   type FoldOp,
@@ -16,13 +18,15 @@ import {
   type FoldPrecreaseOp,
   type FoldReverseOp,
   type FoldSequenceDocument,
+  type FoldTuckOp,
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldFlap } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { wovenIntervalAt } from '../tools/crossSection';
-import { isLineTool, type FoldLineModeId, type FoldToolId } from '../tools/foldToolCatalog';
+import { isLineTool, type FoldLineModeId, type FoldSecondLineModeId, type FoldToolId } from '../tools/foldToolCatalog';
 import { nextStep } from '../tools/foldToolRegistry';
+import { steppedTuckTarget } from '../tools/tuck/tuckStep';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
 import { foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
@@ -37,14 +41,21 @@ export function freePointHeld(): boolean {
   return readHeldModifiers().alt || isFoldAltLatched();
 }
 
-/** A fold along a located line, whose line a near miss's landmark line can take the place of. */
-function isAlongLine(op: FoldOp | undefined): op is FoldPlainOp | FoldPrecreaseOp | FoldReverseOp {
+/**
+ * A fold along a located line, whose line a near miss's landmark line can
+ * take the place of: a crimp's first line among them.
+ */
+function isAlongLine(
+  op: FoldOp | undefined
+): op is FoldPlainOp | FoldPrecreaseOp | FoldReverseOp | FoldCrimpOp | FoldTuckOp {
   return (
     op?.kind === 'valley' ||
     op?.kind === 'mountain' ||
     op?.kind === 'precrease' ||
     op?.kind === 'inside-reverse' ||
-    op?.kind === 'outside-reverse'
+    op?.kind === 'outside-reverse' ||
+    op?.kind === 'crimp' ||
+    op?.kind === 'tuck'
   );
 }
 
@@ -83,11 +94,19 @@ export interface FoldCanvasVerbs {
   /** Clear the Divide-line marks made on the step on screen. */
   clearMarks: () => void;
   // A compound fold's choices, one block per family.
-  /** The reverse fold's kind. */
+  /** The reverse fold's kind, and a crimp's. */
   setReverseKind: (kind: FoldReverseKind) => void;
   /** Step through the ways the tip opens, and the layer orders listed. */
   stepOpening: (delta: number) => void;
   stepOrder: (delta: number) => void;
+  /** How a crimp's second line is located. */
+  setSecondLineMode: (mode: FoldSecondLineModeId) => void;
+  /** A tuck's direction. */
+  setTuckDirection: (direction: FoldDirection) => void;
+  /** Step through the layers listed to tuck against. */
+  stepTuckTarget: (delta: number) => void;
+  /** Tuck against this listed layer instead: a refusal's `tuck_target` fix. */
+  tuckTarget: (face: number) => void;
 }
 
 /** The verbs, and whether a commit waits for the preview to land. */
@@ -118,21 +137,40 @@ export function queuedCommit(
 }
 
 /** Which of the previewed fold's choices the canvas's chooser shows, and of how many: the one a folder makes last. */
-export type FoldCanvasChoice = { kind: 'order' | 'opening' | 'root'; index: number; count: number };
+export type FoldCanvasChoice = { kind: 'order' | 'opening' | 'target' | 'root'; index: number; count: number };
+
+/**
+ * What the compound fold in hand lists to choose from: the ways a reverse
+ * fold's or a crimp's tip opens, the orders any of them leaves, and the
+ * layers a tuck can go against. None for a plain fold.
+ */
+export function compoundListed(preview: Pick<FoldToolPreview, 'reverse' | 'crimp' | 'tuck'>): {
+  ways: number;
+  orders: number;
+  targets: number;
+} {
+  const opens = preview.reverse ?? preview.crimp;
+  return {
+    ways: opens?.ways.length ?? 0,
+    orders: (opens ?? preview.tuck)?.orders.length ?? 0,
+    targets: preview.tuck?.targets.length ?? 0,
+  };
+}
 
 /**
  * The chooser on the canvas: the deepest choice with more than one answer —
- * the layer order, then the way the tip opens, then the axiom's root — since
- * each earlier choice resets the ones after it. Null when none has more than
- * one.
+ * the layer order, then the way the tip opens or the layer a tuck goes
+ * against, then the axiom's root — since each earlier choice resets the ones
+ * after it. Null when none has more than one.
  */
 export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState): FoldCanvasChoice | null {
-  const reverse = preview.reverse;
-  if (reverse && reverse.orders.length > 1) {
-    return { kind: 'order', index: Math.min(tools.compound.order, reverse.orders.length - 1), count: reverse.orders.length };
-  }
-  if (reverse && reverse.ways.length > 1) {
-    return { kind: 'opening', index: Math.min(tools.compound.opening, reverse.ways.length - 1), count: reverse.ways.length };
+  const { ways, orders, targets } = compoundListed(preview);
+  if (orders > 1) return { kind: 'order', index: Math.min(tools.compound.order, orders - 1), count: orders };
+  if (ways > 1) return { kind: 'opening', index: Math.min(tools.compound.opening, ways - 1), count: ways };
+  const tuck = preview.tuck;
+  if (tuck && targets > 1) {
+    const at = tuck.targets.findIndex((target) => target.face === tuck.target?.face);
+    return { kind: 'target', index: Math.max(0, at), count: targets };
   }
   const roots = preview.candidates?.length ?? 0;
   return roots > 1 ? { kind: 'root', index: Math.min(tools.root, roots - 1), count: roots } : null;
@@ -351,13 +389,26 @@ export function useFoldCanvasVerbs(
         if (tool.tool === 'valley') tools.selectTool('mountain');
         else if (tool.tool === 'mountain') tools.selectTool('valley');
         else if (tool.tool === 'precrease') tools.setPrecreaseDirection(tool.precreaseDirection === 'valley' ? 'mountain' : 'valley');
+        else if (tool.tool === 'tuck') tools.setTuckDirection(tool.tuckDirection === 'valley' ? 'mountain' : 'valley');
       },
 
       setReverseKind: (kind) => tools.setReverseKind(kind),
 
-      stepOpening: (delta) => tools.stepOpening(delta, live.current.preview.reverse?.ways.length ?? 0),
+      stepOpening: (delta) => tools.stepOpening(delta, compoundListed(live.current.preview).ways),
 
-      stepOrder: (delta) => tools.stepOrder(delta, live.current.preview.reverse?.orders.length ?? 0),
+      stepOrder: (delta) => tools.stepOrder(delta, compoundListed(live.current.preview).orders),
+
+      setSecondLineMode: (mode) => tools.setSecondLineMode(mode),
+
+      setTuckDirection: (direction) => tools.setTuckDirection(direction),
+
+      stepTuckTarget: (delta) => {
+        const tuck = live.current.preview.tuck;
+        if (!tuck || tuck.targets.length <= 1) return;
+        tools.setTuckTarget(steppedTuckTarget(tuck.targets, tuck.target?.face ?? null, delta));
+      },
+
+      tuckTarget: (face) => tools.setTuckTarget(face),
 
       pickFlap: (flap) => tools.setSeed({ scope: 'flaps', flaps: [flap] }),
 
@@ -368,9 +419,10 @@ export function useFoldCanvasVerbs(
           return;
         }
         // A near miss's landmark line: a model line, stored as the free line
-        // through it, the same side moving. A reverse fold's too: its tool
-        // takes the line from the override and keeps choosing its kind,
-        // opening and order along it (`useFoldReverseStep`).
+        // through it, the same side moving. A compound fold's too: its tool
+        // takes the line from the override — a crimp's first line — and
+        // keeps choosing the rest along it (`useFoldReverseStep`,
+        // `useFoldCrimpStep`, `useFoldTuckStep`).
         const op = previewed.step?.op;
         const index = shown.index;
         if (!index) return;
@@ -405,6 +457,11 @@ export function useFoldCanvasVerbs(
           case 'opening':
             tools.stepOpening(delta, choice.count);
             break;
+          case 'target': {
+            const tuck = live.current.preview.tuck;
+            if (tuck) tools.setTuckTarget(steppedTuckTarget(tuck.targets, tuck.target?.face ?? null, delta));
+            break;
+          }
           case 'root':
             tools.stepRoot(delta, choice.count);
             break;

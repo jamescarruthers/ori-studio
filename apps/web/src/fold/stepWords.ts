@@ -127,7 +127,8 @@ export function operationBadge(t: TFunction, step: FoldSentenceStep): string {
 
 /**
  * How a step's line was found: "Axiom 2 · point onto point", "Free line",
- * "Existing crease". Null for a step that has no line.
+ * "Existing crease" — a crimp's first line, its second `secondLineLabel`'s.
+ * Null for a step that has no line.
  */
 export function lineLabel(t: TFunction, step: FoldSentenceStep): string | null {
   switch (step.op) {
@@ -135,12 +136,19 @@ export function lineLabel(t: TFunction, step: FoldSentenceStep): string | null {
     case 'precrease':
     case 'reverse':
     case 'sink':
+    case 'tuck':
+    case 'crimp':
       return lineWords(t, step.line);
     case 'unfold':
       return lineWords(t, { via: 'crease' });
     default:
       return null;
   }
+}
+
+/** How a crimp's second line was found: "Free line", "Existing crease". Null for any other step. */
+export function secondLineLabel(t: TFunction, step: FoldSentenceStep): string | null {
+  return step.op === 'crimp' ? lineWords(t, { via: step.second }) : null;
 }
 
 function lineWords(t: TFunction, line: FoldSentenceLine): string {
