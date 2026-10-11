@@ -139,6 +139,22 @@ describe.skipIf(!available)('the Fold session over the real bridge', () => {
     expect(cursor().state?.generation).toBe(1);
   });
 
+  it('keeps every node, and so the motion built from it, through an edit of how a step is shown', async () => {
+    for (const op of KITE_STEPS) await session.commitStep(op);
+    await settle();
+    const nodes = snapshot().nodes;
+    const [first, second] = [...nodes.keys()];
+    expect(state().setFoldStepNote(first!, 'Precrease the diagonal.')).toBe(true);
+    await settle();
+    expect(state().setFoldStepSpread(second!, 'off')).toBe(true);
+    await settle();
+    // The replay each edit asks for lands the same paths at the same states:
+    // the session hands out the very nodes, reports and compounds it had.
+    expect(snapshot().sequence?.steps[0]?.note).toBe('Precrease the diagonal.');
+    expect(snapshot().nodes).toBe(nodes);
+    for (const [id, node] of nodes) expect(snapshot().nodes.get(id), id).toBe(node);
+  });
+
   it('marks drift as changed and a step that no longer resolves as broken, with the engine’s code', async () => {
     const steps: FoldSequenceDocument['steps'] = [
       { id: 'fstep-a', parent: null, op: KITE_STEPS[0]!, expect: 'fs1:0000000000000000' },

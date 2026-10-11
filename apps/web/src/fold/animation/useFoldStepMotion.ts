@@ -53,15 +53,20 @@ export function useFoldStepScenes(stepId: string | null): FoldStepScenes {
  * paper), so the motion's first and last frames are the pane's pictures of
  * the parent and of the step: keep it one function while the pane pictures
  * states the same way, or every render builds the motion again.
+ *
+ * Built from the step's op, never its node: a note, a mark or a spread
+ * replaces the node and keeps the op, and changes nothing a frame draws — a
+ * new motion would hand the pane its own scene back mid-play.
  */
 export function useFoldStepMotion(stepId: string | null, pane: FoldStepPane | null): FoldStepMotion | null {
   const { step, landed, before, after } = useFoldStepScenes(stepId);
+  const op = step?.op ?? null;
   const report = landed?.report ?? null;
   // Every compound family's report, as the session keeps it on the node, carries its legs.
   const legs = stepMotionLegsOf(landed?.compound);
   const acted = useFoldStateQuery(step ? (landed?.state ?? null) : null, FOLD_STEP_ACTION_QUERY);
   return useMemo(() => {
-    if (!step || !pane || !after || !before || !acted) return null;
-    return foldStepMotion({ op: step.op, before, after, action: acted.action, report, legs }, pane);
-  }, [step, pane, after, before, acted, report, legs]);
+    if (!op || !pane || !after || !before || !acted) return null;
+    return foldStepMotion({ op, before, after, action: acted.action, report, legs }, pane);
+  }, [op, pane, after, before, acted, report, legs]);
 }
