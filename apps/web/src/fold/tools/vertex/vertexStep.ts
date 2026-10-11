@@ -39,6 +39,8 @@
  */
 import type { Point } from '../../../lib/geometry';
 import type {
+  FoldChoices,
+  FoldCompletionChoice,
   FoldDirection,
   FoldModelDirection,
   FoldModelLine,
@@ -354,6 +356,68 @@ export function withRidge(op: FoldVertexOp, ridge: FoldVertexRidge | null): Fold
 export function ordersOf(answer: FoldVertexAnalysed | null, ridge: FoldVertexRidge | null): FoldVertexOrders | null {
   if (!answer) return null;
   return ridge ? ridge.orders : answer.orders;
+}
+
+/** The folder's choices of what the engine lists, by index, and where a squash's spine was aimed. */
+export interface FoldVertexTaken {
+  squashTarget: FoldModelDirection | null;
+  /** A fan's fourth ray; null for the first that lands. */
+  emergent: number | null;
+  /** A rabbit ear's ridge; null for the first that lands. */
+  ridge: number | null;
+  /** The layer order, of those listed. */
+  order: number;
+}
+
+/** The op as it will be folded, before its ridge: the base op with the folder's spine target and fourth ray. */
+export interface FoldVertexChosen {
+  op: FoldVertexOp;
+  /** The fourth ray taken, by index; null for no fan. */
+  emergent: number | null;
+  /**
+   * Whether it is another fold than the one first asked — a spine aimed off
+   * the hinge, another fourth ray — whose orders and ridges must be asked of
+   * it; otherwise the first answer stands for it.
+   */
+  again: boolean;
+}
+
+/** The base op with the folder's choices made (see {@link FoldVertexChosen}). */
+export function vertexChosenOp(base: FoldVertexOp, first: FoldVertexAnalysed, taken: FoldVertexTaken): FoldVertexChosen {
+  const emergent = emergentToFold(taken.emergent, first);
+  const named =
+    first.analysis.kind === 'rabbit-ear' || first.analysis.kind === 'swivel' ? first.analysis.emergent : null;
+  return {
+    op: withTarget(withEmergent(base, first, emergent), taken.squashTarget),
+    emergent,
+    again: (base.kind === 'squash' && taken.squashTarget !== null) || (emergent !== null && emergent !== named),
+  };
+}
+
+/** The step a vertex tool previews and commits, and the choices it was built from. */
+export interface FoldVertexBuilt {
+  /** The op folded, a rabbit ear's with its ridge; and the completion that picks its order, when it leaves several. */
+  step: { op: FoldVertexOp; choices?: FoldChoices };
+  ridges: readonly FoldVertexRidge[];
+  ridge: number | null;
+  orders: readonly FoldCompletionChoice[];
+  order: FoldCompletionChoice | null;
+}
+
+/**
+ * The step from the op as it will be folded and the engine's answer for it:
+ * a rabbit ear's ridge, of the two listed, and the order it leaves, of those
+ * listed — stored as the completion that picks it (plan D6), whenever the
+ * engine lists one (a fold that leaves a choice cannot land without it).
+ */
+export function vertexStepFrom(chosen: FoldVertexOp, answer: FoldVertexAnalysed, taken: FoldVertexTaken): FoldVertexBuilt {
+  const ridges = answer.ridges;
+  const ridge = ridgeToFold(taken.ridge, ridges);
+  const ridgeTaken = ridge === null ? null : (ridges[ridge] ?? null);
+  const orders = ordersOf(answer, ridgeTaken)?.orders ?? [];
+  const order = orders[Math.min(Math.max(0, taken.order), orders.length - 1)] ?? null;
+  const op = withRidge(chosen, ridgeTaken);
+  return { step: { op, ...(order ? { choices: { completion: order } } : {}) }, ridges, ridge, orders, order };
 }
 
 /**

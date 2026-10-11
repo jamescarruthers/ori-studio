@@ -6,19 +6,15 @@ import type { FoldAxiomCandidate, FoldEngineRefused } from '../../engine/foldEng
 import type { FoldSessionSurface } from '../../session/useFoldSession';
 import { isVertexTool } from '../../tools/foldToolCatalog';
 import type { FoldToolState } from '../../tools/foldToolState';
-import { chosenAt } from '../../tools/reverse/reverseStep';
 import {
-  emergentToFold,
   fanCenterScene,
   fanLayerCount,
-  ordersOf,
   petalLine,
-  ridgeToFold,
   vertexAskedOp,
-  withEmergent,
-  withRidge,
-  withTarget,
+  vertexChosenOp,
+  vertexStepFrom,
   type FoldVertexIntent,
+  type FoldVertexTaken,
 } from '../../tools/vertex/vertexStep';
 import type { FoldPickIndex, FoldSegmentPick } from '../foldPicking';
 import { useFoldCompoundAsk } from '../useFoldCompoundAsk';
@@ -57,13 +53,14 @@ const NONE: FoldVertexStepAnswer = { step: null, vertex: null, refused: null };
  * A vertex tool's step (plan Phase 11), the reverse tool's `useFoldReverseStep`
  * for the squash, petal fold, rabbit ear and swivel: the clicks asked about
  * (the compound question, `useFoldCompoundAsk`) as a flap, a line or a fan;
- * then, once the folder's choices change the fold — a squash's spine aimed
- * off its hinge, a fan's fourth ray other than the one asked — asked again
- * as it will be folded, for the orders it leaves and a rabbit ear's ridges.
- * The step is built from those answers with the choices taken
- * (`tools/vertex/vertexStep`); while an answer is on its way there is no
- * step, so nothing is previewed against a fold the engine has not described.
- * The preview and the commit go through the session as every step's do.
+ * then, once the folder's choices make it another fold — a squash's spine
+ * aimed off its hinge, a fan's fourth ray other than the one asked — asked
+ * again as it will be folded, for the orders it leaves and a rabbit ear's
+ * ridges. The step is built from those answers with the choices taken
+ * (`tools/vertex/vertexStep`, `vertexChosenOp` and `vertexStepFrom`); while an
+ * answer is on its way there is no step, so nothing is previewed against a
+ * fold the engine has not described. The preview and the commit go through
+ * the session as every step's do.
  */
 export function useFoldVertexStep(
   session: FoldSessionSurface,
@@ -75,7 +72,7 @@ export function useFoldVertexStep(
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
   const { tool, lineMode, picks, vertexDirection, compound } = tools;
-  const { squashTarget, fanLayers } = compound;
+  const { squashTarget, fanLayers, emergent: chosenEmergent, ridge: chosenRidge, order: chosenOrder } = compound;
 
   const intent = useMemo<FoldVertexIntent | null>(
     () =>
@@ -83,6 +80,10 @@ export function useFoldVertexStep(
         ? { tool, lineMode, picks, candidate, direction: vertexDirection, fanLayers }
         : null,
     [enabled, tool, lineMode, picks, candidate, vertexDirection, fanLayers]
+  );
+  const taken = useMemo<FoldVertexTaken>(
+    () => ({ squashTarget, emergent: chosenEmergent, ridge: chosenRidge, order: chosenOrder }),
+    [squashTarget, chosenEmergent, chosenRidge, chosenOrder]
   );
 
   // --- The geometry, asked once per base op on a state.
@@ -93,31 +94,26 @@ export function useFoldVertexStep(
   const firstAnswer = first?.asked ?? null;
 
   // --- The op as it will be folded, asked again when a choice makes it another fold.
-  const emergent = firstAnswer ? emergentToFold(compound.emergent, firstAnswer) : null;
-  const named =
-    firstAnswer?.analysis.kind === 'rabbit-ear' || firstAnswer?.analysis.kind === 'swivel'
-      ? firstAnswer.analysis.emergent
-      : null;
   const chosen = useMemo(
-    () => (base && firstAnswer ? withTarget(withEmergent(base, firstAnswer, emergent), squashTarget) : null),
-    [base, firstAnswer, emergent, squashTarget]
+    () => (base && firstAnswer ? vertexChosenOp(base, firstAnswer, taken) : null),
+    [base, firstAnswer, taken]
   );
-  const again = chosen !== null && (squashTarget !== null || (emergent !== null && emergent !== named));
-  const second = useFoldCompoundAsk(session, stateKey, again && chosen ? { op: chosen } : null, 'vertex', 'fold:vertex');
+  const again = chosen?.again ?? false;
+  const second = useFoldCompoundAsk(
+    session,
+    stateKey,
+    again && chosen ? { op: chosen.op } : null,
+    'vertex',
+    'fold:vertex'
+  );
   const answer = again ? (second?.asked ?? null) : firstAnswer;
   const answerRefused = again ? (second?.refused ?? null) : null;
 
-  // --- The ridge and the order taken, of what that answer lists.
-  const ridges = answer?.ridges ?? [];
-  const ridge = ridgeToFold(compound.ridge, ridges);
-  const ridgeTaken = ridge === null ? null : (ridges[ridge] ?? null);
-  const orders = ordersOf(answer, ridgeTaken)?.orders ?? [];
-  const order = orders.length > 1 ? chosenAt(orders, compound.order) : (orders[0] ?? null);
-  const step = useMemo<FoldVertexStepAnswer['step']>(() => {
-    if (!chosen || !answer) return null;
-    const op = withRidge(chosen, ridgeTaken);
-    return { op, ...(order ? { choices: { completion: order } } : {}) };
-  }, [chosen, answer, ridgeTaken, order]);
+  // --- The step: the ridge and the order taken, of what that answer lists.
+  const built = useMemo(
+    () => (chosen && answer ? vertexStepFrom(chosen.op, answer, taken) : null),
+    [chosen, answer, taken]
+  );
 
   // --- What the window and the canvas read beside the step.
   const petal = useMemo(
@@ -139,34 +135,36 @@ export function useFoldVertexStep(
       : 0;
   const firstKey = first?.key ?? null;
   const answerKey = again ? (second?.key ?? null) : firstKey;
-  const orderKey = answerKey === null ? null : `${answerKey}:${ridge ?? ''}`;
+  const ridgeCount = built?.ridges.length ?? 0;
+  const orderCount = built?.orders.length ?? 0;
+  const orderKey = answerKey === null ? null : `${answerKey}:${built?.ridge ?? ''}`;
   useEffect(() => {
     if (firstKey !== null && candidates > 1 && offered.current.emergent !== firstKey) {
       offered.current.emergent = firstKey;
       trackFoldChoiceOffered('emergent', candidates);
     }
-    if (answerKey !== null && ridges.length > 1 && offered.current.ridge !== answerKey) {
+    if (answerKey !== null && ridgeCount > 1 && offered.current.ridge !== answerKey) {
       offered.current.ridge = answerKey;
-      trackFoldChoiceOffered('ridge', ridges.length);
+      trackFoldChoiceOffered('ridge', ridgeCount);
     }
-    if (orderKey !== null && orders.length > 1 && offered.current.order !== orderKey) {
+    if (orderKey !== null && orderCount > 1 && offered.current.order !== orderKey) {
       offered.current.order = orderKey;
-      trackFoldChoiceOffered('order', orders.length);
+      trackFoldChoiceOffered('order', orderCount);
     }
-  }, [firstKey, candidates, answerKey, ridges.length, orderKey, orders.length]);
+  }, [firstKey, candidates, answerKey, ridgeCount, orderKey, orderCount]);
 
   if (!intent) return NONE;
   const refused = told ?? first?.refused ?? answerRefused;
   return {
-    step: refused ? null : step,
+    step: refused || !built ? null : built.step,
     vertex: {
       base: firstAnswer,
       answer,
-      emergent,
-      ridges,
-      ridge,
-      orders,
-      order,
+      emergent: chosen?.emergent ?? null,
+      ridges: built?.ridges ?? [],
+      ridge: built?.ridge ?? null,
+      orders: built?.orders ?? [],
+      order: built?.order ?? null,
       layers,
       nearPrecrease: petal?.kind === 'missing' ? petal.near : null,
     },
