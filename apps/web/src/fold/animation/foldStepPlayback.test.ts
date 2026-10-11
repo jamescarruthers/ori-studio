@@ -339,6 +339,54 @@ describe('FoldStepPlayback', () => {
     expect(p.frames.current()?.spreadWeight).toBe(0);
   });
 
+  it('rests the paper at an end drawn spread while its spread eases, so no posed frame is replaced', () => {
+    const motion = fade();
+    /** How far the crossfade is in a frame: the after scene's alpha, the ends by their scenes. */
+    const share = (frame: FoldPosedFrame) =>
+      frame.scene === motion.before ? 0 : frame.scene === motion.after ? 1 : (frame.faces?.get(1)?.alpha ?? Number.NaN);
+    const play = (ends: { before: boolean; after: boolean } | null) => {
+      const p = playback();
+      if (ends) p.setSpreadEnds(ends);
+      p.setMotion(motion);
+      pushed = [];
+      p.toggle();
+      for (let i = 0; i < 400 && p.status().playing; i += 1) clock.frame(8);
+      return pushed.flatMap((frame) => (frame ? [frame] : []));
+    };
+
+    const frames = play({ before: true, after: true });
+    // Every frame the pane draws as a state's spread picture is exactly that state: the paper at rest.
+    const weighted = frames.filter((frame) => (frame.spreadWeight ?? 0) > 0);
+    expect(weighted.length).toBeGreaterThan(20);
+    for (const frame of weighted) expect([0, 1]).toContain(share(frame));
+    // And the motion picks up where the spread left off, and lands before it opens: no jump either side.
+    const moving = frames.filter((frame) => frame.spreadWeight === 0);
+    expect(share(moving[0]!)).toBeLessThan(0.01);
+    expect(share(moving[moving.length - 1]!)).toBeGreaterThan(0.99);
+
+    // With no end drawn spread nothing rests: the fade fills the play, as it always has.
+    const unspread = play(null);
+    const early = unspread.find((frame) => (frame.spreadWeight ?? 0) > 0 && share(frame) > 0.05);
+    expect(early).toBeDefined();
+  });
+
+  it('stops Step at a stage’s end where the paper is at it, the paper resting while a spread eases', () => {
+    const p = playback();
+    const motion = twoStages();
+    p.setSpreadEnds({ before: true, after: false });
+    p.setMotion(motion);
+    const total = 2 * FOLD_DURATION_MS;
+    // The first stage ends half way through the motion, which starts once the parent's spread has folded away.
+    const stageEnd = (FOLD_SPREAD_EASE_MS + (total - FOLD_SPREAD_EASE_MS) / 2) / total;
+    expect(foldStepStops(foldStepProgramme(motion), { before: true, after: false })).toContain(stageEnd);
+    p.seek(0.51);
+    p.step(1);
+    expect(p.position.current()).toBeCloseTo(stageEnd, 9);
+    // Face 1 has landed, face 2 has not moved.
+    expect(cornerX(p.frames.current(), 1)).toBeCloseTo(0, 6);
+    expect(cornerX(p.frames.current(), 2)).toBeCloseTo(100, 6);
+  });
+
   it('plays a step on arrival under auto-play, after it settles, but not the first', () => {
     const p = playback();
     p.setAutoPlay(true);

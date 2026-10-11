@@ -16,6 +16,12 @@
  * - **The crease-pattern pane** picks in sheet coordinates: the crease
  *   pattern's vertices and marks, and its creases by Fold's edge ids, in a
  *   `LineHitIndex` over the scene's `creases[]`.
+ * - **A spread folded pane** (`FoldPaneSpreadMap`) is picked where it is
+ *   drawn: each target indexed where the spread puts it — a point once per
+ *   sheet point the viewer sees there, since points that lie together on
+ *   the folded paper part when it is spread — and a free point read off the
+ *   face drawn on top. A pick still carries where it lies unspread, which is
+ *   what a step stores and what the paper lies flat on once picking starts.
  *
  * A pick carries what a step stores — sheet points, an edge's sheet ends —
  * and where to draw it on both panes. Not `nearestCpSnapTarget` (Edit's
@@ -38,6 +44,7 @@ import {
   type Bounds,
 } from './foldCanvasGeometry';
 import type { FoldStepSnap } from '../tools/foldToolRegistry';
+import type { FoldPaneSpreadMap } from './foldPaneSpreadMap';
 
 /** Which pane a pick was made on. */
 export type FoldPaneId = 'folded' | 'crease-pattern';
@@ -153,7 +160,10 @@ interface PointCandidate {
   provenance: FoldPointProvenance;
   sheet: SheetPoint;
   mark: string | null;
+  /** Where a click finds it: in the pane's frame, as the pane draws it. */
   at: Point;
+  /** Where it lies in the scene frame, unspread, when the folded pane draws it elsewhere. */
+  scene?: Point;
 }
 
 /** One pane's targets, indexed. */
@@ -174,6 +184,8 @@ export interface FoldPickIndex {
   subfaces: IndexedSubface[];
   folded: PaneIndex;
   creasePattern: PaneIndex;
+  /** How the folded pane draws the paper when its layers are spread; null when it draws the scene as it is. */
+  spread: FoldPaneSpreadMap | null;
 }
 
 const POINT_PRIORITY: Readonly<Record<FoldPointSource['kind'], FoldPointProvenance>> = {
@@ -186,10 +198,8 @@ function pointIndex(points: readonly PointCandidate[]): LineHitIndex {
   return new LineHitIndex(points.map((point, k): IndexedSegment => ({ id: k + 1, a: point.at, b: point.at })));
 }
 
-/** The visible stretches of a segment landmark, in the scene frame. */
-function visiblePortions(segment: FoldSegmentLandmark, toScene: (model: Point) => Point): [Point, Point][] {
-  const a = toScene(toPoint(segment.at[0]));
-  const b = toScene(toPoint(segment.at[1]));
+/** The visible stretches of a segment landmark, along it from `a` (its `at[0]`) to `b`. */
+function visiblePortions(segment: FoldSegmentLandmark, a: Point, b: Point): [Point, Point][] {
   const at = (t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
   return segment.visible.flatMap(([from, to]) => (to - from > 1e-9 ? [[at(from), at(to)] as [Point, Point]] : []));
 }
@@ -238,14 +248,51 @@ function stackAt(subfaces: readonly IndexedSubface[], p: Point, epsilon = 0): re
   return [];
 }
 
+/** Two drawn points the pane cannot tell apart: one target, the first named. */
+const SAME_DRAWN = 1e-9;
+
+/**
+ * The folded pane's point targets for one landmark: where the viewer sees it,
+ * named by the first sheet point the viewer sees there (vertices first, then
+ * crossings, then marks: the engine's order). Spread, each sheet point the
+ * viewer sees there is a target of its own where the spread draws it — a
+ * corner of one layer and a crease of another, together on the folded paper,
+ * are apart on the spread picture.
+ */
+function landmarkTargets(
+  landmark: NonNullable<FoldLandmarks['points']>[number],
+  at: Point,
+  marks: readonly FoldMarkPoint[],
+  spread: FoldPaneSpreadMap | null
+): PointCandidate[] {
+  const candidate = (source: FoldPointSource): PointCandidate => ({
+    provenance: POINT_PRIORITY[source.kind],
+    sheet: source.sheet,
+    mark: source.kind === 'mark' ? (marks[source.mark]?.mark ?? null) : null,
+    at,
+  });
+  const first = landmark.sources.find((each) => each.visible) ?? landmark.sources[0];
+  if (!first) return [];
+  if (!spread) return [candidate(first)];
+  const targets: PointCandidate[] = [];
+  for (const source of [first, ...landmark.sources.filter((each) => each.visible && each !== first)]) {
+    const drawn = spread.sheet(source.sheet) ?? at;
+    if (targets.some((target) => Math.hypot(target.at.x - drawn.x, target.at.y - drawn.y) <= SAME_DRAWN)) continue;
+    targets.push({ ...candidate(source), at: drawn, scene: at });
+  }
+  return targets;
+}
+
 /**
  * Index a state's targets, once per scene and landmarks: what every pointer
- * move over either pane reads.
+ * move over either pane reads. With `spread`, the folded pane's targets are
+ * indexed where the spread draws them (see the module notes).
  */
 export function foldPickIndex(
   scene: FoldScene,
   landmarks: FoldLandmarks | null,
-  marks: readonly FoldMarkPoint[]
+  marks: readonly FoldMarkPoint[],
+  spread: FoldPaneSpreadMap | null = null
 ): FoldPickIndex {
   const view = scene.view_transform;
   const back = invertIsometry(view);
@@ -261,41 +308,29 @@ export function foldPickIndex(
   const foldedPoints: PointCandidate[] = [];
   for (const landmark of landmarks?.points ?? []) {
     if (!landmark.visible) continue;
-    // Vertices first, then crossings, then marks (the engine's order); the
-    // first the viewer sees names the point.
-    const source = landmark.sources.find((each) => each.visible) ?? landmark.sources[0];
-    if (!source) continue;
-    foldedPoints.push({
-      provenance: POINT_PRIORITY[source.kind],
-      sheet: source.sheet,
-      mark: source.kind === 'mark' ? (marks[source.mark]?.mark ?? null) : null,
-      at: toScene(toPoint(landmark.at)),
-    });
+    foldedPoints.push(...landmarkTargets(landmark, toScene(toPoint(landmark.at)), marks, spread));
   }
   const foldedSegments: FoldSegmentPick[] = [];
   const foldedPortions: [Point, Point][][] = [];
   for (const segment of landmarks?.segments ?? []) {
-    const portions = visiblePortions(segment, toScene);
-    if (portions.length === 0) continue;
     const a = toScene(toPoint(segment.at[0]));
     const b = toScene(toPoint(segment.at[1]));
-    foldedSegments.push({
-      kind: 'segment',
-      edge: segment.edge,
-      segment: segment.kind,
-      sheet: [segment.sheet.a, segment.sheet.b],
-      scene: [a, b],
-    });
+    const sheet: [SheetPoint, SheetPoint] = [segment.sheet.a, segment.sheet.b];
+    // Found where the pane draws it: the segment where the spread puts its ends.
+    const [p, q] = spread ? spread.segment(sheet, [a, b]) : [a, b];
+    const portions = visiblePortions(segment, p, q);
+    if (portions.length === 0) continue;
+    foldedSegments.push({ kind: 'segment', edge: segment.edge, segment: segment.kind, sheet, scene: [a, b] });
     foldedPortions.push(portions);
     // An edge's middle, where the viewer sees it: a landmark the engine's
     // points do not list, named by the sheet point half way along.
-    const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     if (segment.visible.some(([from, to]) => from <= 0.5 && to >= 0.5)) {
+      const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       foldedPoints.push({
         provenance: 'midpoint',
         sheet: [(segment.sheet.a[0] + segment.sheet.b[0]) / 2, (segment.sheet.a[1] + segment.sheet.b[1]) / 2],
         mark: null,
-        at: middle,
+        ...(spread ? { at: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }, scene: middle } : { at: middle }),
       });
     }
   }
@@ -356,6 +391,7 @@ export function foldPickIndex(
       portionOf: cp.portionOf,
       segmentHits: cp.hits,
     },
+    spread,
   };
 }
 
@@ -392,8 +428,20 @@ function pointPick(index: FoldPickIndex, onFolded: boolean, candidate: PointCand
     provenance: candidate.provenance,
     sheet: candidate.sheet,
     mark: candidate.mark,
-    scene: onFolded ? candidate.at : sheetToScene(index.scene, candidate.sheet),
+    scene: onFolded ? (candidate.scene ?? candidate.at) : sheetToScene(index.scene, candidate.sheet),
   };
+}
+
+/**
+ * The paper under a point of the folded pane as the pane draws it: where it
+ * lies in the scene frame, and the sheet point it is — the face on top
+ * there, read back through the spread when the pane draws one. Null off the
+ * paper.
+ */
+function paperUnder(index: FoldPickIndex, at: Point): { scene: Point; sheet: SheetPoint } | null {
+  if (index.spread) return index.spread.under(at);
+  const sheet = topSheetPointAt(index, at);
+  return sheet ? { scene: at, sheet } : null;
 }
 
 /**
@@ -412,7 +460,11 @@ export function resolveFoldPick(
   const targets = onFolded ? index.folded : index.creasePattern;
   switch (snap) {
     case 'free': {
-      if (onFolded) return { kind: 'free', pane, scene: at, sheet: topSheetPointAt(index, at) };
+      if (onFolded) {
+        // Off the paper a free line's end lies where it is clicked: no spread reaches there.
+        const under = paperUnder(index, at);
+        return { kind: 'free', pane, scene: under?.scene ?? at, sheet: under?.sheet ?? null };
+      }
       const sheet = toPair(at);
       const scene = sheetToScene(index.scene, sheet);
       return scene ? { kind: 'free', pane, scene, sheet } : null;
@@ -422,10 +474,12 @@ export function resolveFoldPick(
     case 'candidate': {
       if (free) {
         // Alt (or its latch): the point under the pointer, on the paper.
-        const sheet = onFolded ? topSheetPointAt(index, at) : insideSheet(index, at);
-        return sheet
-          ? { kind: 'point', provenance: 'free', sheet, mark: null, scene: onFolded ? at : sheetToScene(index.scene, sheet) }
-          : null;
+        if (onFolded) {
+          const under = paperUnder(index, at);
+          return under ? { kind: 'point', provenance: 'free', sheet: under.sheet, mark: null, scene: under.scene } : null;
+        }
+        const sheet = insideSheet(index, at);
+        return sheet ? { kind: 'point', provenance: 'free', sheet, mark: null, scene: sheetToScene(index.scene, sheet) } : null;
       }
       const hit = targets.pointHits.query(at.x, at.y, radii.point);
       const candidate = hit > 0 ? targets.points[hit - 1] : undefined;

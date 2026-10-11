@@ -44,15 +44,18 @@ export interface FoldCanvasPaint {
 const CREASE_INK: FoldedSceneInk = { policy: PAPER_STYLE_POLICIES.fold };
 
 /**
- * The spread the folded pane draws: the step's at rest, none once the tools
- * locate a fold — its line, what moves and the layers it is picked through
- * are drawn on the paper unspread.
+ * The spread the folded pane draws: the step's at rest, none once a tool has
+ * a pick in hand (`picking`) or has located a fold. A reference is picked on
+ * the spread paper where the pane draws it (`useFoldPaneSpread`); from then
+ * on the paper lies flat, so the picks, the lines they locate, what moves and
+ * the layers a fold is picked through are drawn where they lie.
  */
 export function restingSpread(
   spread: LayerSpreadOptions | null,
-  preview: Pick<FoldToolPreview, 'action' | 'analysis'>
+  preview: Pick<FoldToolPreview, 'action' | 'analysis'>,
+  picking = false
 ): LayerSpreadOptions | null {
-  return preview.action !== null || preview.analysis !== null ? null : spread;
+  return picking || preview.action !== null || preview.analysis !== null ? null : spread;
 }
 const NO_OFFSET: Point = { x: 0, y: 0 };
 
@@ -75,12 +78,14 @@ function union(a: Bounds | null, b: Bounds | null): Bounds | null {
  * the shared one (`paperSceneToFoldedGeometry`, which the pane calls), with
  * the `fold` policy.
  *
- * The folded form's layers are spread by `spread`, the step's
- * (`foldStepSpread`), while the pane is at rest. Once the tools locate a fold
- * the paper lies flat: its line, the moving set lit over it and the layers it
- * is picked through are the engine's, unspread, and must lie on the paper
- * they describe. The top layer never moves under either kind of spread, so a
- * point picked on it before then is where it looks.
+ * The folded form's layers are spread by `spread`: the step's
+ * (`foldStepSpread`) while the pane is at rest, none once a tool picks or
+ * locates a fold (`restingSpread`) — the line, the moving set lit over it and
+ * the layers it is picked through are the engine's, unspread, and must lie on
+ * the paper they describe. Under either kind of spread most faces move, a
+ * face on top of its stack among them, so what is picked and hovered on the
+ * spread paper is found and drawn where the spread puts it
+ * (`useFoldPaneSpread`), not here.
  */
 export function useFoldCanvasPaint(
   view: FoldStateView,
@@ -94,20 +99,19 @@ export function useFoldCanvasPaint(
   const sheet = summary?.sheet;
   const offset = useMemo(() => (scene && sheet ? foldedDisplayOffset(scene, sheet) : NO_OFFSET), [scene, sheet]);
   const sheetBounds = useMemo(() => (sheet ? boundsOf(sheet.map(([x, y]) => ({ x, y }))) : null), [sheet]);
-  const shownSpread = restingSpread(spread, preview);
 
   // A crimp's second line, beside its picture's first: the other letter on
   // the near layer, as a pleat's two creases are.
   const secondLine = preview.action ? (preview.crimp?.lines.second ?? null) : null;
   const foldedScene = useMemo(() => {
     if (!scene) return null;
-    const base = foldedPaneScene(scene, display, offset, shownSpread);
+    const base = foldedPaneScene(scene, display, offset, spread);
     const action = preview.action;
     if (!action) return base;
     const along = withFoldLine(base, action.line, action.direction, offset);
     if (!secondLine) return along;
     return withFoldLine(along, secondLine, action.direction === 'valley' ? 'mountain' : 'valley', offset);
-  }, [scene, display, offset, shownSpread, preview.action, secondLine]);
+  }, [scene, display, offset, spread, preview.action, secondLine]);
   const foldedInk = useMemo<FoldedSceneInk>(
     () => ({
       policy: PAPER_STYLE_POLICIES.fold,

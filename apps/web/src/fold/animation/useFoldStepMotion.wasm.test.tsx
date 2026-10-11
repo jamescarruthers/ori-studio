@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { sequenceOf, step } from '../document/foldSequence.fixtures';
 import type { FoldOp, FoldStepNode } from '../document/foldSequenceDocument';
+import { setFoldMarks, setFoldStepNote, setFoldStepSpread } from '../document/foldSequenceEdits';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEngineCrimpTuckCalls } from '../engine/foldEngineCrimpTuckCalls';
 import type { FoldEngineOutcome, FoldReport } from '../engine/foldEngineWire';
@@ -18,6 +19,7 @@ import {
 } from '../session/foldSessionState';
 import { foldStepPaneAt, foldStepProgramme, type FoldStepMotion, type FoldStepPane } from './foldStepMotion';
 import { useFoldStepMotion } from './useFoldStepMotion';
+import { useFoldStepPlayback, type FoldStepPlaybackSurface } from './useFoldStepPlayback';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -161,6 +163,48 @@ describe.skipIf(!available)('useFoldStepMotion', () => {
     // The same answers keep the same motion: one per step, not per render.
     await render('a');
     expect(latest()).toBe(motion);
+  });
+
+  it('keeps the motion, and a paused frame, through an edit that changes only how the step is shown', async () => {
+    const over = await bookAndTurn();
+    app.session = over.session;
+    let playback: FoldStepPlaybackSurface | null = null;
+    function Played({ id }: { id: string }) {
+      const motion = useFoldStepMotion(id, PANE);
+      const surface = useFoldStepPlayback({ motion });
+      useEffect(() => {
+        seen.push(motion);
+        playback = surface;
+      });
+      return null;
+    }
+    await act(async () => {
+      root.render(<Played id="a" />);
+    });
+    for (let i = 0; i < 4; i += 1) await act(async () => {});
+    const motion = latest();
+    expect(motion?.motion.kind).toBe('hinge');
+    await act(async () => playback!.seek(0.5));
+    expect(playback!.frames.current()).not.toBeNull();
+
+    // The note, the spread and the marks each replace the step's node and keep its op.
+    const edits = [
+      (document: ReturnType<typeof sequenceOf>) => setFoldStepNote(document, 'a', 'Fold in half.'),
+      (document: ReturnType<typeof sequenceOf>) => setFoldStepSpread(document, 'a', 'off'),
+      (document: ReturnType<typeof sequenceOf>) =>
+        setFoldMarks(document, 'a', [{ id: 'fmark-1', from: [0, 0], to: [1, 0], divide: { mode: 'count', parts: 2 } }]),
+    ];
+    for (const edit of edits) {
+      const before = over.store.getState().sequence!;
+      const after = edit(before);
+      expect(after.steps[0]).not.toBe(before.steps[0]);
+      await act(async () => over.store.setState({ sequence: after }));
+      for (let i = 0; i < 4; i += 1) await act(async () => {});
+      expect(latest()).toBe(motion);
+      // Still paused half way, the frame on the pane.
+      expect(playback!.position.current()).toBeCloseTo(0.5, 6);
+      expect(playback!.frames.current()).not.toBeNull();
+    }
   });
 
   it('turns a turn step as the view turns, its parent the step before', async () => {

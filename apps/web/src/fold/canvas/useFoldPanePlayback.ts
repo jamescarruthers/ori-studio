@@ -66,7 +66,9 @@ export function revealingPlayback(
  * The frames are the paper's own geometry; the pane draws them with the
  * spreads it shows the two states at rest, weighted as each frame says
  * (`spreadPaneFrames`), so a spread folds away as the step starts and opens
- * again as it lands.
+ * again as it lands — the paper resting at that end meanwhile
+ * (`FoldStepPlayback.setSpreadEnds`), so the motion is never held still or
+ * cut short by a picture of the state.
  *
  * The surface it returns is what the pane paints from (`frames`) and what
  * the bottom bar's transport and Space press.
@@ -89,11 +91,16 @@ export function useFoldPanePlayback({
     [sheetKey, precreases]
   );
   const motion = useFoldStepMotion(stepId, pane);
-  const playback = useFoldStepPlayback({ motion });
-  // Each end's picture with its spread part of the way on, as the pane places that state.
-  const { before, after } = useFoldStepScenes(stepId);
   const spreadBefore = spreads?.before ?? null;
   const spreadAfter = spreads?.after ?? null;
+  // The paper rests at an end drawn spread while its spread eases, and moves between.
+  const spreadEnds = useMemo(
+    () => ({ before: spreadBefore !== null, after: spreadAfter !== null }),
+    [spreadBefore, spreadAfter]
+  );
+  const playback = useFoldStepPlayback({ motion, spreadEnds });
+  // Each end's picture with its spread part of the way on, as the pane places that state.
+  const { before, after } = useFoldStepScenes(stepId);
   const ends = useMemo(() => {
     if (!sheet || !before || !after) return NO_SPREAD_ENDS;
     const shown = { ...FOLD_PANE_DISPLAY_DEFAULT, precreases };

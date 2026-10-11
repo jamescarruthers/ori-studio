@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
@@ -32,8 +32,16 @@ import { FOLD_SCENE_QUERY } from '../session/foldStateQueries';
  *   frames already asked for is painted from the answer in hand.
  * - **Painted a slice at a time**, {@link SLICE_MS} per task, so a strip of
  *   dense states — or every card at once after the style changed — never
- *   holds the main thread; a job for a look no longer shown is dropped
- *   unpainted.
+ *   holds the main thread; a job for a look no longer shown, or one no card
+ *   on screen wants any more, is dropped unpainted.
+ * - **A spread on the move is not painted tick by tick.** A card whose
+ *   spread changes keeps its last picture of the state in this look on show
+ *   and asks for the new one once the spread has held still for
+ *   {@link SPREAD_SETTLE_MS} — a slider dragged over every card that
+ *   inherits the spread paints each of them once, never goes blank under
+ *   the reader, and never pushes the other cards' pictures out of the cache.
+ *   A new spread's picture replaces the old ones of the state that no card
+ *   wants any more.
  * - **Capped**: at most {@link MAX_PICTURES}, and {@link MAX_PICTURE_CHARS}
  *   of SVG between them, the oldest let go first; a card scrolled back to
  *   paints again.
@@ -62,6 +70,8 @@ export function foldCardPictureSource(
 const MAX_PICTURES = 96;
 const MAX_PICTURE_CHARS = 8_000_000;
 const SLICE_MS = 8;
+/** How long a card's spread holds still before its new picture is asked for: a slider's ticks come faster. */
+export const SPREAD_SETTLE_MS = 160;
 
 /** Painted pictures by key: a data URL, or null for a state with nothing to draw. */
 const pictures = createStore<{ byKey: ReadonlyMap<string, string | null> }>(() => ({ byKey: new Map() }));
@@ -81,28 +91,68 @@ const queue: PaintJob[] = [];
 /** The look the latest ask was for: a job for any other is for a look no longer shown. */
 let currentLook = '';
 let scheduled = false;
-
-const pictureKey = (source: FoldCardPictureSource, look: string) =>
-  `${source.key}|${foldSpreadPictureKey(source.spread)}|${look}`;
+/** How many mounted cards want each key (`useFoldCardPicture`). */
+const wanted = new Map<string, number>();
+/** The keys a card has wanted: one no card wants any more is not painted, and gives way to a newer spread. */
+const carded = new Set<string>();
 
 /**
- * Keep what a slice painted, newest last, and let the oldest go past the
- * caps — never what this slice painted, which a card on screen is waiting
- * for: letting it go would only have the card ask for it again.
+ * A picture's key: the state, the look, then the spread — so the pictures of
+ * one state in one look, whatever their spread, share {@link stateLookOf}.
+ */
+const pictureKey = (source: FoldCardPictureSource, look: string) =>
+  `${source.key}|${look}#${foldSpreadPictureKey(source.spread)}`;
+
+/** The state and the look a picture's key names, without its spread. */
+const stateLookOf = (key: string) => key.slice(0, key.lastIndexOf('#'));
+
+/** A card asked for once and since let go by every card that wanted it. */
+const unwanted = (key: string) => carded.has(key) && !wanted.has(key);
+
+function want(key: string): void {
+  carded.add(key);
+  wanted.set(key, (wanted.get(key) ?? 0) + 1);
+}
+
+function release(key: string): void {
+  const count = (wanted.get(key) ?? 0) - 1;
+  if (count > 0) wanted.set(key, count);
+  else wanted.delete(key);
+}
+
+/** Forget a key that is neither painted nor wanted. */
+function forget(key: string): void {
+  if (!wanted.has(key)) carded.delete(key);
+}
+
+/**
+ * Keep what a slice painted, newest last; let go of the pictures of the same
+ * states in the same look at other spreads that no card wants; then of the
+ * oldest past the caps — never what this slice painted, which a card on
+ * screen is waiting for: letting it go would only have the card ask for it
+ * again.
  */
 function keep(painted: readonly { key: string; url: string | null }[]): void {
   const next = new Map(pictures.getState().byKey);
+  const fresh = new Set(painted.map(({ key }) => key));
+  const replaced = new Set(painted.map(({ key }) => stateLookOf(key)));
+  for (const key of next.keys()) {
+    if (!fresh.has(key) && replaced.has(stateLookOf(key)) && unwanted(key)) {
+      next.delete(key);
+      forget(key);
+    }
+  }
   for (const { key, url } of painted) {
     next.delete(key);
     next.set(key, url);
   }
-  const fresh = new Set(painted.map(({ key }) => key));
   let chars = 0;
   for (const url of next.values()) chars += url?.length ?? 0;
   for (const [oldest, url] of next) {
     if (next.size <= MAX_PICTURES && chars <= MAX_PICTURE_CHARS) break;
     if (fresh.has(oldest)) continue;
     next.delete(oldest);
+    forget(oldest);
     chars -= url?.length ?? 0;
   }
   pictures.setState({ byKey: next });
@@ -116,7 +166,10 @@ function drain(): void {
     const job = queue.shift();
     if (!job) break;
     asked.delete(job.key);
-    if (job.look !== currentLook) continue;
+    if (job.look !== currentLook || unwanted(job.key)) {
+      forget(job.key);
+      continue;
+    }
     try {
       painted.push({ key: job.key, url: foldStatePictureUrl(job.scene, job.style, job.display, job.spread) });
     } catch (error) {
@@ -160,12 +213,18 @@ export function requestFoldCardPicture(
   }
   session.query(source.state, FOLD_SCENE_QUERY).then(
     (answer) => {
-      if (answer.status === 'answered') enqueue({ key, look, scene: answer.value, style, display, spread });
-      // A state that went with its engine is asked again under its next handle.
-      else asked.delete(key);
+      // A state that went with its engine is asked again under its next handle;
+      // one no card wants any more, when a card wants it again.
+      if (answer.status === 'answered' && !unwanted(key)) {
+        enqueue({ key, look, scene: answer.value, style, display, spread });
+        return;
+      }
+      asked.delete(key);
+      forget(key);
     },
     (error: unknown) => {
       asked.delete(key);
+      forget(key);
       reportError(error, { surface: 'fold:card-picture' });
     }
   );
@@ -185,7 +244,15 @@ export function clearFoldCardPictures(): void {
   asked.clear();
   queue.length = 0;
   currentLook = '';
+  wanted.clear();
+  carded.clear();
   pictures.setState({ byKey: new Map() });
+}
+
+/** The picture a card shows, kept by the state and the look it is of. */
+interface ShownPicture {
+  stateLook: string;
+  url: string | null;
 }
 
 /**
@@ -193,15 +260,39 @@ export function clearFoldCardPictures(): void {
  * display switches: a data URL; null for a state with nothing to draw, or no
  * state; undefined while it is being painted. Asks for it as the card mounts,
  * and again when the style or the switches change.
+ *
+ * A new spread of the state on the card is no new picture to wait blank for:
+ * the card keeps its last one of that state in this look, and asks for the
+ * new one once the spread has held still ({@link SPREAD_SETTLE_MS}).
  */
 export function useFoldCardPicture(source: FoldCardPictureSource | null): string | null | undefined {
   const session = foldSession();
   const style = useInheritedPaperStyle();
   const display = useFoldPaneDisplay();
   const key = source ? pictureKey(source, foldStatePictureKey(style, display)) : null;
+  const stateLook = key === null ? null : stateLookOf(key);
   const picture = useStore(pictures, (snapshot) => (key === null ? null : snapshot.byKey.get(key)));
+  const [shown, setShown] = useState<ShownPicture | null>(null);
+  // Adjusted during render, so the frame that brings the new picture shows it.
+  if (stateLook !== null && picture !== undefined && (shown?.stateLook !== stateLook || shown.url !== picture)) {
+    setShown({ stateLook, url: picture });
+  }
+  const last = shown !== null && shown.stateLook === stateLook ? shown : null;
   useEffect(() => {
-    if (source && picture === undefined) requestFoldCardPicture(session, source, style, display);
-  }, [session, source, style, display, picture]);
-  return picture;
+    if (key === null) return undefined;
+    want(key);
+    return () => release(key);
+  }, [key]);
+  const respread = last !== null;
+  useEffect(() => {
+    if (!source || picture !== undefined) return undefined;
+    const ask = () => requestFoldCardPicture(session, source, style, display);
+    if (!respread) {
+      ask();
+      return undefined;
+    }
+    const settled = setTimeout(ask, SPREAD_SETTLE_MS);
+    return () => clearTimeout(settled);
+  }, [session, source, style, display, picture, respread]);
+  return picture !== undefined ? picture : last ? last.url : undefined;
 }

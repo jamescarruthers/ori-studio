@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { Rgba } from '../../cp-workspace/renderer/types';
 import { bookScene } from './foldCanvas.fixtures';
+import type { Point } from '../../lib/geometry';
 import { foldPaneOverlay, type FoldOverlayInks } from './foldPaneOverlays';
-import { foldPickIndex, resolveFoldPick, type FoldFreePick, type FoldPaneId } from './foldPicking';
+import type { FoldPaneSpreadMap } from './foldPaneSpreadMap';
+import {
+  foldPickIndex,
+  resolveFoldPick,
+  sheetToScene,
+  type FoldFreePick,
+  type FoldPaneId,
+  type FoldPick,
+} from './foldPicking';
 
 const RADII = { point: 0.03, line: 0.03 };
 const FREE = { snap: 'free', edges: false, free: false } as const;
@@ -73,6 +82,38 @@ describe('a free line drawn on the crease-pattern pane', () => {
     expect(Array.from(folded!.b).map(round)).toEqual([0.5, 0.6]);
     // In the scene frame, which the crease-pattern pane does not draw in.
     expect(drawn('crease-pattern')).toBeNull();
+  });
+
+  it('draws the hover, the picks and the marks where a spread pane draws their sheet points', () => {
+    // A spread that moves every sheet point a tenth to the right of where the book puts it.
+    const shift = { x: 0.1, y: 0 };
+    const placed = (at: Point | null) => at && { x: at.x + shift.x, y: at.y + shift.y };
+    const spread: FoldPaneSpreadMap = {
+      onFace: (_face, point) => placed(point)!,
+      sheet: (sheet) => placed(sheetToScene(scene, sheet)),
+      segment: (ends, at) => [placed(sheetToScene(scene, ends[0]) ?? at[0])!, placed(sheetToScene(scene, ends[1]) ?? at[1])!],
+      under: () => null,
+    };
+    const corner: FoldPick = { kind: 'point', provenance: 'vertex', sheet: [1, 1], mark: null, scene: { x: 0, y: 1 } };
+    const mark = { id: 'fmark-1', from: [0.5, 0] as const, to: [0.5, 1] as const, divide: { mode: 'count' as const, parts: 2 } };
+    const drawn = (pane: FoldPaneId, with_: FoldPaneSpreadMap | null) =>
+      dots(
+        foldPaneOverlay({
+          pane,
+          scene,
+          picks: [],
+          hovered: { pane, at: { x: 0, y: 0 }, pick: corner },
+          freeFrom: null,
+          marks: [mark],
+          inks: INKS,
+          spread: with_,
+        })
+      );
+    // The mark's middle and the hovered corner: moved with the paper on the folded pane.
+    expect(drawn('folded', spread)).toEqual([[0.6, 0.5], [0.1, 1]]);
+    expect(drawn('folded', null)).toEqual([[0.5, 0.5], [0, 1]]);
+    // The crease-pattern pane is never spread.
+    expect(drawn('crease-pattern', spread)).toEqual([[0.5, 0.5], [1, 1]]);
   });
 
   it('keeps a folded-pane free end on the sheet too, and none off the paper', () => {
