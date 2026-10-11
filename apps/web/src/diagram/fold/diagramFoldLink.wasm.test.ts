@@ -37,7 +37,7 @@ const { useWorkspaceStore } = await import('../../store/workspaceStore/store');
 const { foldSessionDocumentSource } = await import('../../store/workspaceStore/foldSession');
 const { useLayoutStore } = await import('../../store/layoutStore');
 const { pullFromFold } = await import('./foldBrowserActions');
-const { openDiagramStepInFold, refreshDiagramFoldStep } = await import('./foldStepActions');
+const { openDiagramStepInFold, refreshDiagramFoldStep, spreadDiagramFoldStep } = await import('./foldStepActions');
 const { foldLinkContextNow } = await import('./useFoldLinkContext');
 const { foldStepLinkStatus } = await import('./foldStepLink');
 
@@ -126,6 +126,44 @@ describe.skipIf(!available)('a Fold step in the Diagram, over the real bridge (D
     expect(statusOf(onlyStep())).toBe('current');
     // Its marks came again with the new state, still Fold's.
     expect(onlyStep().annotations.every((mark) => !mark.unknown && mark.imported === 'untouched')).toBe(true);
+  });
+
+  it('takes each state’s spread from Fold, and spreads a Fold step in the Diagram without leaving its link', async () => {
+    const [, second, third] = state().foldSequences[0]!.document.steps;
+    const depth = { kind: 'depth' as const, amount: 0.06, toward: 'down-right' as const };
+    expect(state().setFoldStepSpread(second!.id, depth)).toBe(true);
+    expect(state().setFoldStepSpread(third!.id, 'off')).toBe(true);
+    await settle();
+    const targets = [
+      { kind: 'step' as const, step: third!.id, moment: 'before' as const },
+      { kind: 'step' as const, step: third!.id, moment: 'after' as const },
+    ];
+    expect(await pullFromFold(targets, { kind: 'end' }, { via: 'fold' })).toBe(2);
+    const [before, after] = state().diagram!.steps.filter(isStep);
+    // The state before step 3 is step 2's picture, spread as step 2 is; the one after it, off as step 3 is.
+    expect((before!.source as DiagramFoldStepSource).render).toEqual({
+      mode: 'folded-flat',
+      side: 'front',
+      rotationDeg: 0,
+      foldCase: 1,
+      spread: depth,
+    });
+    expect((after!.source as DiagramFoldStepSource).render).not.toHaveProperty('spread');
+    const marks = before!.annotations.length;
+    expect(marks).toBeGreaterThan(0);
+
+    // Posed in the Diagram: another kind, then off — each a capture, the link still current.
+    expect(await spreadDiagramFoldStep(before!.id, { verb: 'spread-kind', kind: 'affine' })).toBe(true);
+    let posed = state().diagram!.steps.filter(isStep)[0]!;
+    expect((posed.source as DiagramFoldStepSource).render).toMatchObject({ spread: { kind: 'affine' } });
+    expect(statusOf(posed)).toBe('current');
+    expect(posed.annotations).toHaveLength(marks);
+    expect(await spreadDiagramFoldStep(before!.id, { verb: 'spread-layers' })).toBe(true);
+    posed = state().diagram!.steps.filter(isStep)[0]!;
+    expect((posed.source as DiagramFoldStepSource).render).not.toHaveProperty('spread');
+    expect(statusOf(posed)).toBe('current');
+    // Its marks went with the paper, and are still Fold's.
+    expect(posed.annotations.every((mark) => !mark.unknown && mark.imported === 'untouched')).toBe(true);
   });
 
   it('goes back to its step in Fold, and is missing once the step is deleted there', async () => {

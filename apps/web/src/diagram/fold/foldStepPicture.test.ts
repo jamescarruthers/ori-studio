@@ -1,12 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
+import { FOLD_USER_PER_UNIT } from '../../fold/canvas/foldCanvasGeometry';
+import { FOLD_PANE_DISPLAY_DEFAULT, foldedPaneScene } from '../../fold/canvas/foldPaneScenes';
 import type { FoldActionGeometry } from '../../fold/engine/foldEngineWire';
 import { diagonalHalfScene, squareScene } from '../../fold/sequence/foldScene.fixtures';
 import type { PaperLineItem, PaperScene } from '../../lib/paper/paperScene';
-import type { DiagramCpRender, DiagramIdFactory, DiagramScenePicture } from '../document/diagramDocument';
+import { withCarriedAnnotations } from '../annotate/annotationCarry';
+import type {
+  DiagramCpRender,
+  DiagramIdFactory,
+  DiagramScenePicture,
+  DiagramStep,
+  KnownDiagramAnnotation,
+} from '../document/diagramDocument';
 import { readPaperFaces } from '../document/paperFacesFile';
 import { storedScene } from '../pictures/pictureFrame';
-import type { CapturedPicture } from '../capture/captureFolded';
+import { flatScenePicture, type CapturedPicture } from '../capture/captureFolded';
+import { CAPTURE_PX_PER_UNIT } from '../capture/captureGeometry';
 import { foldScenePattern, foldStepPicture, PATTERN_PER_SHEET_UNIT, type FoldStepPictureInput } from './foldStepPicture';
 
 const SQUARE = [
@@ -111,6 +121,55 @@ describe('a Fold step’s picture (D11, D17)', () => {
   it('draws a precrease’s arrow coming back', () => {
     const precrease = foldStepPicture(input('before', { ...VALLEY, kind: 'precrease' }), FLAT).marks;
     expect(precrease.map((mark) => mark.kind)).toEqual(['valley-line', 'fold-unfold-arrow']);
+  });
+
+  it('spreads the state’s layers, and carries the fold’s marks onto them as a spread pose would', () => {
+    const layered: FoldStepPictureInput = { ...input('before'), shown: diagonalHalfScene() };
+    const spread = { kind: 'depth' as const, amount: 0.2, toward: 'down' as const };
+    const flat = foldStepPicture(layered, FLAT, sequentialIds());
+    const spreadOut = foldStepPicture(layered, { ...FLAT, spread }, sequentialIds());
+    expect(sceneOf(spreadOut.captured).scene).not.toEqual(sceneOf(flat.captured).scene);
+    // The same marks, Fold's, each carried with the paper it lies on — as a
+    // step pulled unspread and spread in the Diagram afterwards has them.
+    expect(spreadOut.marks.map((mark) => [mark.kind, mark.imported])).toEqual(flat.marks.map((mark) => [mark.kind, mark.imported]));
+    const step = (render: DiagramCpRender, picture: DiagramScenePicture, annotations: KnownDiagramAnnotation[]): DiagramStep => ({
+      id: 'step-a',
+      revision: 0,
+      source: { kind: 'fold-step', sequence: 'fold-a', step: 'fstep-a', moment: 'before', path: 'fh1:a', state: 'fs1:a', engine: 1, thumbnail: flat.thumbnail, render },
+      picture,
+      annotations,
+      annotatedPictureKey: picture.key,
+      text: '',
+      breakBefore: false,
+    });
+    const posed = withCarriedAnnotations(
+      step(FLAT, sceneOf(flat.captured).picture, flat.marks),
+      step({ ...FLAT, spread }, sceneOf(spreadOut.captured).picture, flat.marks),
+      {}
+    );
+    expect(spreadOut.marks).toEqual(posed.annotations);
+    expect(spreadOut.marks).not.toEqual(flat.marks);
+  });
+
+  it('draws a state as Fold’s folded pane does with the same spread: one picture, at another scale', () => {
+    const spread = { kind: 'affine' as const, amount: 0.2, keep: 'top' as const, skew: 1, axisDeg: 30 };
+    const diagram = sceneOf(flatScenePicture(foldScenePattern(diagonalHalfScene(), 'front'), 0, spread)).scene;
+    const fold = foldedPaneScene(diagonalHalfScene(), FOLD_PANE_DISPLAY_DEFAULT, undefined, spread);
+    const facesOf = (scene: PaperScene, unit: number) =>
+      scene.items.flatMap((item) =>
+        item.kind === 'face' ? [item.rings[0]!.map(([x, y]) => [x / unit, y / unit] as const)] : []
+      );
+    const [ours, theirs] = [facesOf(diagram, PATTERN_PER_SHEET_UNIT * CAPTURE_PX_PER_UNIT), facesOf(fold, FOLD_USER_PER_UNIT)];
+    expect(ours).toHaveLength(theirs.length);
+    ours.forEach((ring, face) =>
+      ring.forEach(([x, y], corner) => {
+        expect(x).toBeCloseTo(theirs[face]![corner]![0], 3);
+        expect(y).toBeCloseTo(theirs[face]![corner]![1], 3);
+      })
+    );
+    // And it is spread: the layer under the top one has moved off where it lies flat.
+    const unspread = facesOf(foldedPaneScene(diagonalHalfScene(), FOLD_PANE_DISPLAY_DEFAULT), FOLD_USER_PER_UNIT);
+    expect(theirs).not.toEqual(unspread);
   });
 
   it('keeps the step’s crease pattern as its thumbnail', () => {

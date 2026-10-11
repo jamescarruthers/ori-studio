@@ -7,7 +7,8 @@ import { foldNodeSentenceStep } from '../../fold/sequence/foldSentenceStep';
 import { foldPathEntries } from '../../fold/sequence/foldSequencePath';
 import { FOLD_PENDING_NODE, type FoldSessionNode } from '../../fold/session/foldSessionState';
 import { foldSendTargets } from './foldBrowserActions';
-import { foldBrowserCards } from './foldPull';
+import { DEFAULT_LAYER_SPREAD } from '../../cp-workspace/folded/layerSpreadSettings';
+import { FOLD_PULL_RENDER, foldBrowserCards, foldPullRender } from './foldPull';
 
 const t = ((_key: string, fallback: string | Record<string, unknown>, options?: Record<string, unknown>) => {
   const text = typeof fallback === 'string' ? fallback : String(fallback.defaultValue ?? _key);
@@ -82,6 +83,30 @@ describe('the Fold browser’s cards (D17)', () => {
     const entries = foldPathEntries(turnOnly, ['fstep-2'], landed(0), new Map([['fstep-2', landed(2)]]), FOLD_PENDING_NODE);
     const cards = foldBrowserCards(t, { entries, frames: entries.map(() => null), words: entries.map(() => ({ op: 'unknown' as const })) });
     expect(cards.map((card) => card.kind)).toEqual(['turn-over']);
+  });
+});
+
+describe('a pulled step’s spread', () => {
+  const depth = { kind: 'depth' as const, amount: 0.06, toward: 'down-right' as const };
+  const spread = sequenceOf([
+    step('fstep-1', null, valleyAt(0.5)),
+    step('fstep-3', 'fstep-1', valleyAt(0.25), { spread: depth }),
+    step('fstep-4', 'fstep-3', valleyAt(0.75), { spread: 'off' }),
+  ]);
+
+  it('is the spread Fold shows the state with: the parent’s before a step, the step’s own after it', () => {
+    expect(foldPullRender(spread, 'fold-a', { step: 'fstep-4', moment: 'before' })).toEqual({ ...FOLD_PULL_RENDER, spread: depth });
+    expect(foldPullRender(spread, 'fold-a', { step: 'fstep-4', moment: 'after' })).toEqual(FOLD_PULL_RENDER);
+    // The first step folds from the sheet, which takes the default.
+    expect(foldPullRender(spread, 'fold-a', { step: 'fstep-1', moment: 'before' })).toEqual({
+      ...FOLD_PULL_RENDER,
+      spread: DEFAULT_LAYER_SPREAD,
+    });
+  });
+
+  it('is none for a sequence that is not the one asked for', () => {
+    expect(foldPullRender(spread, 'fold-b', { step: 'fstep-4', moment: 'before' })).toEqual(FOLD_PULL_RENDER);
+    expect(foldPullRender(null, 'fold-a', { step: 'fstep-4', moment: 'before' })).toEqual(FOLD_PULL_RENDER);
   });
 });
 

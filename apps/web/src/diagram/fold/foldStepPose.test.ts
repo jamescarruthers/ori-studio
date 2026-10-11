@@ -2,7 +2,8 @@ import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { buildDiagramFoldStepPoseActions } from '../actions/diagramPoseActions';
 import type { DiagramCpRender } from '../document/diagramDocument';
-import { posedFoldRender } from './foldStepActions';
+import { DEFAULT_LAYER_SPREAD } from '../../cp-workspace/folded/layerSpreadSettings';
+import { posedFoldRender, rotatedFoldRender, spreadFoldRender } from './foldStepActions';
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 
@@ -33,6 +34,37 @@ describe('a Fold step’s pose (D17)', () => {
     const spread = { kind: 'depth' as const, amount: 0.05, toward: 'down' as const };
     expect(posedFoldRender({ ...FLAT, side: 'back', rotationDeg: 180, spread }, 'reset')).toEqual({ ...FLAT, spread });
     expect(posedFoldRender({ ...PATTERN, side: 'back' }, 'reset')).toEqual({ mode: 'crease-pattern', rotationDeg: 0 });
+  });
+});
+
+describe('a Fold step’s spread and angle (Phase 13 on a Fold step)', () => {
+  const depth = { kind: 'depth' as const, amount: 0.05, toward: 'down' as const };
+  const affine = { kind: 'affine' as const, amount: 0.04, keep: 'top' as const, skew: 1, axisDeg: 81 };
+  const starts = { any: depth, depth, affine };
+
+  it('turns Spread Layers on from the diagram’s start, and off', () => {
+    expect(spreadFoldRender(FLAT, { verb: 'spread-layers' }, starts)).toEqual({ ...FLAT, spread: depth });
+    expect(spreadFoldRender({ ...FLAT, spread: affine }, { verb: 'spread-layers' }, starts)).toEqual(FLAT);
+    expect(spreadFoldRender(FLAT, { verb: 'spread-layers' })).toEqual({ ...FLAT, spread: DEFAULT_LAYER_SPREAD });
+  });
+
+  it('starts another kind from its own start, and sets a value of the spread it has', () => {
+    expect(spreadFoldRender({ ...FLAT, spread: depth }, { verb: 'spread-kind', kind: 'affine' }, starts)).toEqual({
+      ...FLAT,
+      spread: affine,
+    });
+    expect(spreadFoldRender({ ...FLAT, spread: affine }, { verb: 'spread-axis', axisDeg: 190 }, starts)).toEqual({
+      ...FLAT,
+      spread: { ...affine, axisDeg: 10 },
+    });
+    // Nothing to set on a fold with none, nor on a crease pattern.
+    expect(spreadFoldRender(FLAT, { verb: 'spread-amount', amount: 0.1 }, starts)).toEqual(FLAT);
+    expect(spreadFoldRender(PATTERN, { verb: 'spread-layers' }, starts)).toBe(PATTERN);
+  });
+
+  it('turns a crease pattern or a flat fold to an angle, kept in [0, 360)', () => {
+    expect(rotatedFoldRender({ ...FLAT, spread: depth }, -45)).toEqual({ ...FLAT, spread: depth, rotationDeg: 315 });
+    expect(rotatedFoldRender(PATTERN, 382.5)).toEqual({ mode: 'crease-pattern', rotationDeg: 22.5 });
   });
 });
 

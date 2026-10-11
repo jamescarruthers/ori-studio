@@ -108,9 +108,10 @@ const SPREAD_VERBS: ReadonlySet<LinkedPoseRequest['verb']> = new Set([
  * layers spread, how: its kind, the amount bucketed, and a depth spread's
  * direction or an affine one's layer held still, skew and axis (bucketed). A
  * turn-over says the side it left showing, and a crease pattern's paper side
- * the side whose colour it chose.
+ * the side whose colour it chose. A Fold step's pose is counted the same way
+ * (`foldStepActions.ts`), by the render it was captured in.
  */
-function trackPose(verb: LinkedPoseRequest['verb'], render: DiagramCpRender): void {
+export function trackPose(verb: LinkedPoseRequest['verb'], render: DiagramCpRender): void {
   const spread = render.mode === 'folded-flat' ? render.spread : undefined;
   const action = verb === 'spread-layers' && !spread ? 'spread_off' : TRACKED[verb];
   const how = SPREAD_VERBS.has(verb) && spread ? spreadTracking(spread) : undefined;

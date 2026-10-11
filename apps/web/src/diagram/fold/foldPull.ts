@@ -19,7 +19,8 @@
 
 import type { TFunction } from 'i18next';
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
-import { isLockedStep, turnKindOf } from '../../fold/document/foldSequenceDocument';
+import { isLockedStep, turnKindOf, type FoldSequenceDocument } from '../../fold/document/foldSequenceDocument';
+import { foldStateSpread } from '../../fold/document/foldStepSpread';
 import type { FoldSequenceView } from '../../fold/sequence/useFoldSequenceView';
 import type { FoldSession } from '../../fold/session/foldSession';
 import { foldStepSentence } from '../../fold/stepSentence';
@@ -52,7 +53,27 @@ export interface FoldBrowserCard extends PullCard<FoldPullTarget> {
 }
 
 /** How a pulled Fold step is shown: folded, as Fold shows it, from the front at no turn. */
-export const FOLD_PULL_RENDER: DiagramCpRender = { mode: 'folded-flat', side: 'front', rotationDeg: 0, foldCase: 1 };
+export const FOLD_PULL_RENDER: Extract<DiagramCpRender, { mode: 'folded-flat' }> = {
+  mode: 'folded-flat',
+  side: 'front',
+  rotationDeg: 0,
+  foldCase: 1,
+};
+
+/**
+ * How a pulled Fold step is shown, its layers spread as Fold spreads the
+ * state it shows (`foldStateSpread`): the state before the step is its
+ * parent's picture, the state after it the step's own. None when Fold shows
+ * it unspread, or the sequence is not the one given.
+ */
+export function foldPullRender(
+  document: FoldSequenceDocument | null,
+  sequence: string,
+  target: Pick<Extract<FoldPullTarget, { kind: 'step' }>, 'step' | 'moment'>
+): DiagramCpRender {
+  const spread = document?.id === sequence ? foldStateSpread(document, target.step, target.moment) : null;
+  return spread ? { ...FOLD_PULL_RENDER, spread } : FOLD_PULL_RENDER;
+}
 
 /** Whether a path entry's state has landed, so a capture can be drawn from it. */
 function landed(entry: FoldSequenceView['entries'][number]): boolean {
@@ -118,8 +139,9 @@ export interface FoldPulled {
 
 /**
  * What pulling `targets` adds, in order: each step captured from the
- * session's replay in {@link FOLD_PULL_RENDER} — its marks lifted, its words
- * Fold's — and each turn as a turn. A step whose capture fails is left out
+ * session's replay folded, as Fold shows it, spread as Fold spreads it
+ * ({@link foldPullRender}) — its marks lifted, its words Fold's — and each
+ * turn as a turn. A step whose capture fails is left out
  * and counted; so is one too detailed to keep as a drawing, which a pull
  * has no bitmap for.
  */
@@ -139,9 +161,10 @@ export async function pullFoldTargets(
         sent.push(target.turn);
         continue;
       }
+      const render = foldPullRender(session.store.getState().sequence, sequence, target);
       const result = await captureFoldStep(
         session,
-        { sequence, step: target.step, moment: target.moment, render: FOLD_PULL_RENDER },
+        { sequence, step: target.step, moment: target.moment, render },
         { t, newId }
       );
       if (result.status !== 'captured' || result.captured.kind !== 'picture' || result.captured.picture.kind !== 'scene') {

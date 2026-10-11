@@ -1,24 +1,39 @@
 /**
  * The verbs of a Diagram step linked to a Fold step (plan D17), bound to the
- * store: Refresh, Show as, its pose, its crease pattern's paper side, and the
- * way back to its step in Fold. Each capture goes through the store's
- * `captureDiagramFoldStep`, one undo step, and says what the user needs told.
+ * store: Refresh, Show as, its pose — turned, turned over, to an angle, its
+ * layers spread (Phase 13) — its crease pattern's paper side, and the way
+ * back to its step in Fold. Each capture goes through the store's
+ * `captureDiagramFoldStep`, one undo step, and says what the user needs told;
+ * a pose that changed the picture is counted as a linked pattern's is
+ * (`trackPose`). A pose is not an upstream edit: the link's status is
+ * unchanged by one.
  *
  * Store-bound, React-free.
  */
 import { toast } from 'sonner';
 import { trackDiagramSourceOpened } from '../../analytics';
+import type { LayerSpreadOptions, SpreadKind } from '../../cp-workspace/folded/foldedLayerSpread';
+import {
+  DEFAULT_SPREAD_STARTS,
+  withSpreadField,
+  type LayerSpreadEdit,
+  type LayerSpreadStarts,
+} from '../../cp-workspace/folded/layerSpreadSettings';
+import { foldStateSpread } from '../../fold/document/foldStepSpread';
 import { foldStepTree } from '../../fold/document/foldStepTree';
 import i18n from '../../i18n';
 import { humanizeError } from '../../lib/toastMessages';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramFoldCaptureOutcome } from '../../store/workspaceStore/diagramFoldCapture';
+import type { LinkedPoseRequest } from '../capture/linkedPose';
+import { trackPose } from '../capture/poseController';
 import {
   creasePatternSide,
   isLockedStep,
   renderToShowAs,
   showAsOf,
+  spreadStartsFor,
   stepById,
   withCreasePatternSide,
   type DiagramCpRender,
@@ -65,13 +80,23 @@ export function refreshDiagramFoldStep(
   return source ? captureAs(stepId, source, source.render, label, joinEntry) : null;
 }
 
+/**
+ * The spread Fold shows the state a step's picture is of, as it is now
+ * (`foldStateSpread`); undefined when Fold shows it unspread, or the
+ * sequence is gone.
+ */
+function foldSpreadOf(source: DiagramFoldStepSource): LayerSpreadOptions | undefined {
+  const document = linkedFoldSequence({ sequence: source.sequence }, useWorkspaceStore.getState().foldSequences);
+  return (document && foldStateSpread(document, source.step, source.moment)) ?? undefined;
+}
+
 /** Show a Fold step's step another way (D19): its crease pattern, or folded, in the pose that way last had. */
 export async function showFoldStepAs(stepId: string, way: DiagramShowAs): Promise<boolean> {
   const source = foldSourceOf(stepId);
   if (!source || way === 'simulated') return false;
   if (showAsOf(source.render) === way) return true;
-  // A Fold step's fold starts as Fold shows it: no spread, its layer order the sequence's.
-  const outcome = await captureAs(stepId, source, renderToShowAs(source, way), showAsLabel(way));
+  // A Fold step's fold starts as Fold shows it: spread as Fold spreads it, its layer order the sequence's.
+  const outcome = await captureAs(stepId, source, renderToShowAs(source, way, foldSpreadOf(source)), showAsLabel(way));
   return outcome.status === 'captured';
 }
 
@@ -87,7 +112,7 @@ export async function duplicateFoldStepAs(stepId: string, way: DiagramShowAs): P
   const copyId = useWorkspaceStore.getState().duplicateDiagramStep(stepId);
   if (copyId === null || showAsOf(source.render) === way) return copyId;
   const duplicated = useWorkspaceStore.getState().diagramHistory.past.at(-1);
-  const outcome = await captureAs(copyId, source, renderToShowAs(source, way), 'Duplicate step', duplicated);
+  const outcome = await captureAs(copyId, source, renderToShowAs(source, way, foldSpreadOf(source)), 'Duplicate step', duplicated);
   if (outcome.status !== 'captured') {
     const now = useWorkspaceStore.getState();
     if (duplicated !== undefined && now.diagramHistory.past.at(-1) === duplicated) now.undoDiagram();
@@ -130,14 +155,74 @@ export function posedFoldRender(render: DiagramCpRender, verb: FoldStepPoseVerb)
   }
 }
 
+/** A crease pattern or a flat fold turned to an angle, in degrees clockwise (D5's angle field); any other as it is. */
+export function rotatedFoldRender(render: DiagramCpRender, degrees: number): DiagramCpRender {
+  if (render.mode !== 'crease-pattern' && render.mode !== 'folded-flat') return render;
+  return { ...render, rotationDeg: ((degrees % 360) + 360) % 360 };
+}
+
+/**
+ * A flat fold's spread changed (Phase 13, on a Fold step): Spread Layers on
+ * or off, a kind, or one of its values. On — and a kind — start from the
+ * diagram's own rule (`spreadStartsFor`): the nearest earlier step's spread,
+ * else the default, as a linked pattern's do. A value is a no-op on a fold
+ * with none, or of the other kind; a crease pattern has no layers to spread.
+ */
+export type FoldStepSpreadRequest = { verb: 'spread-layers' } | { verb: 'spread-kind'; kind: SpreadKind } | LayerSpreadEdit;
+
+export function spreadFoldRender(
+  render: DiagramCpRender,
+  request: FoldStepSpreadRequest,
+  starts: LayerSpreadStarts = DEFAULT_SPREAD_STARTS
+): DiagramCpRender {
+  if (render.mode !== 'folded-flat') return render;
+  const { spread, ...unspread } = render;
+  switch (request.verb) {
+    case 'spread-layers':
+      return spread ? unspread : { ...unspread, spread: starts.any };
+    case 'spread-kind':
+      return !spread || spread.kind === request.kind ? render : { ...render, spread: starts[request.kind] };
+    default:
+      return spread ? { ...render, spread: withSpreadField(spread, request) } : render;
+  }
+}
+
+/**
+ * Capture a Fold step again in `render`, as one undo step labelled as a pose,
+ * and count it as `verb` when it changed the picture. Whether it now shows
+ * that pose.
+ */
+async function poseAs(
+  stepId: string,
+  source: DiagramFoldStepSource,
+  render: DiagramCpRender,
+  verb: LinkedPoseRequest['verb']
+): Promise<boolean> {
+  if (JSON.stringify(render) === JSON.stringify(source.render)) return true;
+  const outcome = await captureAs(stepId, source, render, 'Adjust pose');
+  if (outcome.status === 'captured' && outcome.changed) trackPose(verb, outcome.render);
+  return outcome.status === 'captured';
+}
+
 /** Pose a Fold step's picture by `verb`, as one undo step. Whether it now shows that pose. */
 export async function poseDiagramFoldStep(stepId: string, verb: FoldStepPoseVerb): Promise<boolean> {
   const source = foldSourceOf(stepId);
+  return source ? poseAs(stepId, source, posedFoldRender(source.render, verb), verb) : false;
+}
+
+/** Turn a Fold step's crease pattern or flat fold to an angle, in degrees clockwise, as one undo step. */
+export async function rotateDiagramFoldStepTo(stepId: string, degrees: number): Promise<boolean> {
+  const source = foldSourceOf(stepId);
+  return source ? poseAs(stepId, source, rotatedFoldRender(source.render, degrees), 'rotate-to') : false;
+}
+
+/** Spread a Fold step's flat fold, or change its spread (`spreadFoldRender`), as one undo step. */
+export async function spreadDiagramFoldStep(stepId: string, request: FoldStepSpreadRequest): Promise<boolean> {
+  const source = foldSourceOf(stepId);
   if (!source) return false;
-  const render = posedFoldRender(source.render, verb);
-  if (JSON.stringify(render) === JSON.stringify(source.render)) return true;
-  const outcome = await captureAs(stepId, source, render, 'Adjust pose');
-  return outcome.status === 'captured';
+  const { diagram } = useWorkspaceStore.getState();
+  const starts = diagram ? spreadStartsFor(diagram, stepId) : DEFAULT_SPREAD_STARTS;
+  return poseAs(stepId, source, spreadFoldRender(source.render, request, starts), request.verb);
 }
 
 /** A Fold step shown as its crease pattern, drawn on the colour of `side`: its paper, nothing else. */
@@ -145,8 +230,7 @@ export async function showFoldStepPaperSide(stepId: string, side: 'front' | 'bac
   const source = foldSourceOf(stepId);
   if (!source || source.render.mode !== 'crease-pattern') return false;
   if (creasePatternSide(source.render) === side) return true;
-  const outcome = await captureAs(stepId, source, withCreasePatternSide(source.render, side), 'Adjust pose');
-  return outcome.status === 'captured';
+  return poseAs(stepId, source, withCreasePatternSide(source.render, side), 'paper-side');
 }
 
 /**

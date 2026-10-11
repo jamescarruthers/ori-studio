@@ -35,17 +35,21 @@ import { ORIEDITA_PAPER_SIZE } from '../../lib/creasePatternViewport';
 import { turnClockwise, type Point } from '../../lib/geometry';
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import { storedSheetThumbnail, type SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
+import { withCarriedAnnotations } from '../annotate/annotationCarry';
 import { createAnnotation, MAX_BEHIND_LAYERS, type PictureFrame, type PicturePoint } from '../annotate/annotationModel';
 import { flatScenePicture, storeScene, type CapturedPicture } from '../capture/captureFolded';
 import { CAPTURE_PX_PER_UNIT } from '../capture/captureGeometry';
 import {
   creasePatternSide,
+  isKnownAnnotation,
   randomDiagramId,
   type DiagramAnnotationKind,
   type DiagramCpRender,
   type DiagramFoldMoment,
   type DiagramIdFactory,
   type DiagramPleatKinks,
+  type DiagramScenePicture,
+  type DiagramStep,
   type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { storedAnnotations } from '../document/diagramFile';
@@ -221,6 +225,13 @@ export function foldStepMarks(
  * A Fold step's picture in `render`'s pose, its marks, and its thumbnail.
  * `render` is a crease pattern or a flat fold; the marks are a flat fold's,
  * before the step, when it folds.
+ *
+ * A spread picture's marks are placed on the picture as it lies flat — the
+ * engine says where the fold's line and arrow are on the paper unspread — and
+ * carried onto the spread one as a pose that spreads a step carries every
+ * mark (`withCarriedAnnotations`): each point with the face it lies on. So a
+ * step pulled with its spread, and one spread in the Diagram after it was
+ * pulled, show their marks in one place.
  */
 export function foldStepPicture(
   input: FoldStepPictureInput,
@@ -232,7 +243,46 @@ export function foldStepPicture(
     return { captured: creasePatternPicture(input, render), marks: [], thumbnail };
   }
   if (render.mode !== 'folded-flat') throw new Error(`A Fold step is not shown ${render.mode}`);
-  const captured = flatScenePicture(foldScenePattern(input.shown, render.side), render.rotationDeg, render.spread);
-  const marks = input.moment === 'before' && input.action ? foldStepMarks(input.action, captured, render, newId) : [];
-  return { captured, marks, thumbnail };
+  const pattern = foldScenePattern(input.shown, render.side);
+  const captured = flatScenePicture(pattern, render.rotationDeg, render.spread);
+  if (input.moment !== 'before' || !input.action) return { captured, marks: [], thumbnail };
+  if (!render.spread) return { captured, marks: foldStepMarks(input.action, captured, render, newId), thumbnail };
+  const { spread: _spread, ...flatRender } = render;
+  const flat = flatScenePicture(pattern, render.rotationDeg);
+  const marks = foldStepMarks(input.action, flat, flatRender, newId);
+  return { captured, marks: marksCarriedOntoSpread(marks, { flat, flatRender }, { captured, render }, thumbnail), thumbnail };
+}
+
+/**
+ * `marks`, placed on the unspread picture, carried onto the spread one with
+ * the faces they lie on: the carry a diagram step's own spread verb makes,
+ * run on the two pictures as one step would hold them. Left where they were
+ * when either picture is not a stored scene (one too detailed to keep as a
+ * drawing), which no carry can read.
+ */
+function marksCarriedOntoSpread(
+  marks: KnownDiagramAnnotation[],
+  from: { flat: CapturedPicture; flatRender: Extract<DiagramCpRender, { mode: 'folded-flat' }> },
+  to: { captured: CapturedPicture; render: Extract<DiagramCpRender, { mode: 'folded-flat' }> },
+  thumbnail: SheetThumbnail
+): KnownDiagramAnnotation[] {
+  if (marks.length === 0) return marks;
+  const scene = (captured: CapturedPicture) =>
+    captured.kind === 'picture' && captured.picture.kind === 'scene' ? captured.picture : null;
+  const [flat, spread] = [scene(from.flat), scene(to.captured)];
+  if (!flat || !spread) return marks;
+  // One step, before and after its spread: the carry asks only that the
+  // pictures are of one link, so the link's own ids do not matter here.
+  const step = (render: DiagramCpRender, picture: DiagramScenePicture): DiagramStep => ({
+    id: 'step-carry',
+    revision: 0,
+    source: { kind: 'fold-step', sequence: '', step: '', moment: 'before', path: '', state: '', engine: 0, thumbnail, render },
+    picture,
+    annotations: marks,
+    annotatedPictureKey: picture.key,
+    text: '',
+    breakBefore: false,
+  });
+  const carried = withCarriedAnnotations(step(from.flatRender, flat), step(to.render, spread), {});
+  return carried.annotations.filter(isKnownAnnotation);
 }
