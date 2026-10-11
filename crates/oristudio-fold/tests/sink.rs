@@ -17,7 +17,7 @@ use oristudio_fold::{
 };
 use oristudio_geometry::Line;
 use sinks::*;
-use support::{M, assert_valid, face, kind_at, precrease, side};
+use support::{M, assert_valid, face, kind_at, mirrored, precrease, side};
 
 const OPEN: SinkKind = SinkKind::Open;
 const CLOSED: SinkKind = SinkKind::Closed;
@@ -366,6 +366,39 @@ fn a_stored_pocket_replays_or_breaks() {
         }),
         Broken::Pocket
     );
+}
+
+/// The Paper pane's Front up / Back up replays every step on the sheet
+/// started the other side up: each step's direction is the viewer's, so the
+/// model-frame stack comes out reversed and the faces above and below each
+/// pocket swap. A stored pocket names its gap either way round, and sinks
+/// into the mirror image of the pocket chosen.
+#[test]
+fn a_stored_pocket_survives_starting_the_sheet_the_other_side_up() {
+    let (base, turned) = (preliminary(), sample_turned_over("preliminary-base"));
+    assert!(mirrored(&base, &turned));
+    let op = sink_op(&base, PRELIMINARY_FOOT, 0.3, 0.0, CLOSED);
+    let point = analysis(&base, &op);
+    assert_eq!(point.pockets.len(), 2);
+    for pocket in &point.pockets {
+        let choices = SinkChoices {
+            pocket: Some(pocket.stored.clone()),
+            order: None,
+        };
+        let there = landed(base.sink(&op, &choices), "front up");
+        let mirror = landed(turned.sink(&op, &choices), "back up");
+        check(&turned, &mirror);
+        assert!(mirrored(&there.state, &mirror.state), "{pocket:?}");
+        let Some(sunk) = &mirror.report.pocket else {
+            panic!("no pocket");
+        };
+        assert_eq!((&sunk.upper, &sunk.lower), (&pocket.lower, &pocket.upper));
+        // What it stores now names the same gap on either sheet.
+        let again = landed(turned.sink(&op, &mirror.report.stored), "replayed");
+        assert_eq!(again.state.parts(), mirror.state.parts());
+        let back = landed(base.sink(&op, &mirror.report.stored), "turned back");
+        assert_eq!(back.state.parts(), there.state.parts());
+    }
 }
 
 /// A stored order (plan D6) replays as fixed pairs beside the sink's seeds:

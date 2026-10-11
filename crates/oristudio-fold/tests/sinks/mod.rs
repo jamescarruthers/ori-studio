@@ -30,6 +30,18 @@ pub const WATERBOMB_FOOT: Point = [0.0, 0.5];
 /// file's own coordinates, as the sheet's: the samples are drawn y-down, so
 /// this is the bridge's import mirrored, which folds the same.
 pub fn sample(name: &str) -> State {
+    import_sample(name, false)
+}
+
+/// [`sample`] as the same steps fold it from a sheet started back up (the
+/// Paper pane's Back up): each step's valley is the viewer's, so every
+/// letter is the other one in the model frame and the stack is reversed,
+/// seen turned over.
+pub fn sample_turned_over(name: &str) -> State {
+    import_sample(name, true)
+}
+
+fn import_sample(name: &str, turned: bool) -> State {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/fixtures/fold-samples")
         .join(format!("{name}.fold"));
@@ -55,14 +67,15 @@ pub fn sample(name: &str) -> State {
         .enumerate()
         .map(|(e, edge)| {
             let end = |i: usize| coords[edge[i].as_u64().unwrap_or(0) as usize];
+            let (mountain, valley) = if turned { ("V", "M") } else { ("M", "V") };
             let kind = match fold["edges_assignment"][e].as_str() {
                 Some("B") => ImportKind::Border,
-                Some("M") => ImportKind::Mountain,
-                Some("V") => ImportKind::Valley,
+                Some(m) if m == mountain => ImportKind::Mountain,
+                Some(v) if v == valley => ImportKind::Valley,
                 _ => ImportKind::Unassigned {
-                    hint: match hints[e].as_u64() {
-                        Some(1) => Some(Letter::Mountain),
-                        Some(2) => Some(Letter::Valley),
+                    hint: match (hints[e].as_u64(), turned) {
+                        (Some(1), false) | (Some(2), true) => Some(Letter::Mountain),
+                        (Some(2), false) | (Some(1), true) => Some(Letter::Valley),
                         _ => None,
                     },
                 },
@@ -80,7 +93,11 @@ pub fn sample(name: &str) -> State {
             segments,
         },
         ImportTarget::Empty {
-            start: StartSide::Front,
+            start: if turned {
+                StartSide::Back
+            } else {
+                StartSide::Front
+            },
         },
     )
     .unwrap_or_else(|e| panic!("{name}: {e}"));
