@@ -1565,6 +1565,12 @@
       "stepForward": "Ein Stück weiter"
     },
     "sentence": {
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Versenke die Spitze geschlossen: Drücke sie hinein, ihre Lagen bleiben zusammen.",
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
       "insideCrimp": {
@@ -2210,6 +2216,12 @@
       "badgeSwivel": "Drehen",
       "badgeTuck": "Einstecken",
       "badgeValley": "Tal",
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Geschlossenes Versenken",
       "cpJump": "Faltmuster importieren",
       "crimpInside": "Innerer Crimp",

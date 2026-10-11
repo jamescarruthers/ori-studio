@@ -1514,6 +1514,12 @@
       "stepForward": "조금 앞으로"
     },
     "sentence": {
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "끝을 닫힌 가라앉혀 접기로 접습니다. 층을 겹친 채로 끝을 밀어 넣습니다.",
       "cpJump": "가져온 전개도대로 접습니다.",
       "insideCrimp": {
@@ -2027,6 +2033,12 @@
       "badgeSwivel": "회전",
       "badgeTuck": "끼워 넣기",
       "badgeValley": "골접기",
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "닫힌 가라앉혀 접기",
       "cpJump": "전개도 가져오기",
       "crimpInside": "안으로 계단 뒤집어 접기",

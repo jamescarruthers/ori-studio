@@ -1514,6 +1514,12 @@
       "stepForward": "少し進める"
     },
     "sentence": {
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "角を閉じた沈め折りにします。層を重ねたまま先端を押し込みます。",
       "cpJump": "インポートした展開図のとおりに折りたたみます。",
       "insideCrimp": {
@@ -2027,6 +2033,12 @@
       "badgeSwivel": "スイベル",
       "badgeTuck": "差し込み",
       "badgeValley": "谷折り",
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "閉じた沈め折り",
       "cpJump": "展開図をインポート",
       "crimpInside": "段中割り折り",

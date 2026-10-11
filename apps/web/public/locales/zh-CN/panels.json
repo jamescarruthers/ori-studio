@@ -1514,6 +1514,12 @@
       "stepForward": "向前一点"
     },
     "sentence": {
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "将尖角闭合沉折：把尖端压入，各层保持在一起。",
       "cpJump": "按导入的折痕图折叠。",
       "insideCrimp": {
@@ -2027,6 +2033,12 @@
       "badgeSwivel": "旋转",
       "badgeTuck": "塞入",
       "badgeValley": "谷折",
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "闭合沉折",
       "cpJump": "导入折痕图",
       "crimpInside": "内翻阶梯折",

@@ -1618,6 +1618,12 @@
       "stepForward": "Avanzar un poco"
     },
     "sentence": {
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Hunde la punta en hundido cerrado: empújala hacia dentro con sus capas juntas.",
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
       "insideCrimp": {
@@ -2395,6 +2401,12 @@
       "badgeSwivel": "Giro",
       "badgeTuck": "Remeter",
       "badgeValley": "Valle",
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Hundido cerrado",
       "cpJump": "Importar patrón de pliegues",
       "crimpInside": "Crimp interior",

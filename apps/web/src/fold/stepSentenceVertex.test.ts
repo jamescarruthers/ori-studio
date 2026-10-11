@@ -21,6 +21,19 @@ describe('a vertex fold’s words', () => {
     ]);
   });
 
+  it('say a mountain vertex fold folds the paper behind, in a sentence and a name of its own', () => {
+    const words = FOLD_VERTEX_OP_KINDS.map((fold) => {
+      const step = { op: 'vertex', fold, direction: 'mountain' } as const;
+      return [foldStepSentence(t, step), operationLabel(t, step), operationBadge(t, step)];
+    });
+    expect(words).toEqual([
+      ['Squash-fold the flap behind.', 'Squash fold behind', 'Squash'],
+      ['Petal-fold the flap behind.', 'Petal fold behind', 'Petal'],
+      ['Rabbit-ear the triangle behind.', 'Rabbit ear behind', 'Rabbit ear'],
+      ['Swivel-fold the paper behind, about the point.', 'Swivel fold behind', 'Swivel'],
+    ]);
+  });
+
   it('come from the stored op, its direction kept', () => {
     const context = { paper: { kind: 'square' }, marks: [] } as unknown as Parameters<typeof foldSentenceStepOf>[1];
     expect(foldSentenceStepOf({ kind: 'squash', flap: [0.2, 0.1], direction: 'mountain' }, context)).toEqual({

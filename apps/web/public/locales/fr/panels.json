@@ -1618,6 +1618,12 @@
       "stepForward": "Avancer un peu"
     },
     "sentence": {
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Enfoncez la pointe en enfoncement fermé : poussez-la vers l’intérieur, ses couches restant ensemble.",
       "cpJump": "Repliez le papier selon le patron de plis importé.",
       "insideCrimp": {
@@ -2395,6 +2401,12 @@
       "badgeSwivel": "Pivot",
       "badgeTuck": "Rentré",
       "badgeValley": "Vallée",
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Enfoncement fermé",
       "cpJump": "Importer un patron de plis",
       "crimpInside": "Crimp intérieur",

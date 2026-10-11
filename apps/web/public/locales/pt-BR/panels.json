@@ -1618,6 +1618,12 @@
       "stepForward": "Avançar um pouco"
     },
     "sentence": {
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Afunde a ponta em afundamento fechado: empurre-a para dentro com as camadas juntas.",
       "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
       "insideCrimp": {
@@ -2395,6 +2401,12 @@
       "badgeSwivel": "Giro",
       "badgeTuck": "Encaixe",
       "badgeValley": "Vale",
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Afundamento fechado",
       "cpJump": "Importar padrão de vincos",
       "crimpInside": "Crimp interno",

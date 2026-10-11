@@ -1671,6 +1671,12 @@
       "stepForward": "Чуть дальше"
     },
     "sentence": {
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Утопите кончик закрыто: вдавите его внутрь, не разделяя слоёв.",
       "cpJump": "Сложите лист по импортированному паттерну складок.",
       "insideCrimp": {
@@ -2580,6 +2586,12 @@
       "badgeSwivel": "Поворот",
       "badgeTuck": "Заправка",
       "badgeValley": "Долина",
+      "behind": {
+        "petal": "",
+        "rabbitEar": "",
+        "squash": "",
+        "swivel": ""
+      },
       "closedSink": "Закрытое утапливание",
       "cpJump": "Импорт паттерна складок",
       "crimpInside": "Внутренняя складка-молния",

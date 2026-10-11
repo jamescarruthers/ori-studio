@@ -263,7 +263,7 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
         ? t('panels:fold.sentence.tuckValley', 'Valley fold and tuck the flap in, under the chosen layer.')
         : t('panels:fold.sentence.tuckMountain', 'Mountain fold and tuck the flap in at the back, over the chosen layer.');
     case 'vertex':
-      return vertexSentence(t, step.fold);
+      return vertexSentence(t, step.fold, step.direction);
     case 'sink':
       return sinkSentence(t, step.kind);
     case 'unknown':
