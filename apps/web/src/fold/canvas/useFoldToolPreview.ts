@@ -19,7 +19,10 @@ import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
 import { isFoldKind, isLineTool } from '../tools/foldToolCatalog';
 import type { FoldToolState } from '../tools/foldToolState';
+import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
+import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
+import { useFoldTuckStep, type FoldTuckPreview } from './useFoldTuckStep';
 import type { FoldStateView } from './useFoldStateView';
 
 /** The step a fold tool previews and commits: the document's op and choices, keyed as the session keys them. */
@@ -58,6 +61,10 @@ export interface FoldToolPreview {
   landing: boolean;
   /** The reverse tool's: the tip as the engine described it, and the kind, opening and order taken. */
   reverse: FoldReversePreview | null;
+  /** The crimp tool's: its tip at ℓ1 and both lines, and the kind, opening and order taken. */
+  crimp: FoldCrimpPreview | null;
+  /** The tuck tool's: the layers listed to tuck against, and the target and order taken. */
+  tuck: FoldTuckPreview | null;
 }
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
@@ -143,9 +150,14 @@ export function useFoldToolPreview(
   const candidate = candidates ? (candidates[tools.root] ?? candidates[0] ?? null) : null;
 
   // --- The step, built from the picks and every choice made since: a
-  // plain fold's at once, a reverse fold's once the engine has described
-  // its tip (`useFoldReverseStep`).
+  // plain fold's at once, a compound fold's once the engine has described
+  // it — a reverse fold's tip (`useFoldReverseStep`), a crimp's
+  // (`useFoldCrimpStep`), a tuck's targets (`useFoldTuckStep`).
   const reverseStep = useFoldReverseStep(session, index, tools, candidate, tools.tool === 'inside-reverse');
+  const crimpStep = useFoldCrimpStep(session, index, tools, candidate, tools.tool === 'crimp');
+  const tuckStep = useFoldTuckStep(session, index, tools, candidate, tools.tool === 'tuck');
+  const compoundStep: FoldCompoundStepAnswer | null =
+    tools.tool === 'inside-reverse' ? reverseStep : tools.tool === 'crimp' ? crimpStep : tools.tool === 'tuck' ? tuckStep : null;
   const plainBuild = useMemo<FoldStepBuild>(() => {
     if (!index || !isFoldKind(tools.tool)) return { status: 'unlocated' };
     return buildFoldStep(
@@ -161,16 +173,16 @@ export function useFoldToolPreview(
       index
     );
   }, [index, tools, candidate]);
-  const reversing = tools.tool === 'inside-reverse';
-  const build = reversing ? reverseStep.build : plainBuild;
+  const compounding = compoundStep !== null;
+  const build = compoundStep ? compoundStep.build : plainBuild;
   const step = useMemo<FoldToolStep | null>(() => {
-    // A plain fold's override is the whole step; a reverse fold's is its
+    // A plain fold's override is the whole step; a compound fold's is its
     // line, which its build already folds along.
-    const override = reversing ? null : tools.override;
+    const override = compounding ? null : tools.override;
     const chosen = override ?? (build.status === 'built' ? { op: build.op, choices: build.choices } : null);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [reversing, tools.override, build]);
+  }, [compounding, tools.override, build]);
 
   // --- Tier 2 and 3, asked whenever the step changes; let go when there is none.
   const asked = useRef<string | null>(null);
@@ -199,9 +211,23 @@ export function useFoldToolPreview(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analyse, preview, cancel, withCursor, step?.key, stateKey]);
 
+  // --- With no step, a compound tool's refused fold may still show its
+  // layers (`FoldCompoundStepAnswer.layers`): asked what it moves, after the
+  // effect above has let the last step go, and never previewed.
+  const layersAsk = step ? null : (compoundStep?.layers ?? null);
+  const layersKey = layersAsk ? foldStepInputKey(layersAsk) : null;
+  useEffect(() => {
+    if (layersAsk) void analyse(layersAsk.op, layersAsk.choices);
+    // The ask is read through its key: an equal ask must not ask again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analyse, layersKey, stateKey]);
+  const analysedKey = step?.key ?? layersKey;
+
   const analysisSlot = session.analysis;
   const analysisFor =
-    step && analysisSlot.status !== 'idle' && foldStepInputKey({ op: analysisSlot.op, choices: analysisSlot.choices }) === step.key
+    analysedKey !== null &&
+    analysisSlot.status !== 'idle' &&
+    foldStepInputKey({ op: analysisSlot.op, choices: analysisSlot.choices }) === analysedKey
       ? analysisSlot
       : null;
   const analysis = analysisFor?.status === 'analysed' ? analysisFor.analysis : null;
@@ -231,7 +257,7 @@ export function useFoldToolPreview(
   // A new seed of the same line and side is the same section: it stays on
   // show while that seed is analysed, so the picker the folder is pressing
   // (and the focus in it) is not taken away and put back under them.
-  const analysing = step !== null && (analysisFor === null || analysisFor.status === 'working');
+  const analysing = analysedKey !== null && (analysisFor === null || analysisFor.status === 'working');
   const shownSection =
     section &&
     (section.key === wantedSection ||
@@ -270,7 +296,7 @@ export function useFoldToolPreview(
   const refused =
     (build.status === 'refused' ? build.refused : null) ??
     ownRoots?.refused ??
-    reverseStep.refused ??
+    compoundStep?.refused ??
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
 
@@ -295,5 +321,7 @@ export function useFoldToolPreview(
     refused,
     landing: step !== null && (pendingFor === null || pendingFor.status === 'working'),
     reverse: reverseStep.reverse,
+    crimp: crimpStep.crimp,
+    tuck: tuckStep.tuck,
   };
 }

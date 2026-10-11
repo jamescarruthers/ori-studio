@@ -62,6 +62,19 @@ describe('a free line drawn on the crease-pattern pane', () => {
     expect(overlay('folded', first, pointer).strokes).toBeNull();
   });
 
+  it('draws a located line awaiting its picture on the folded pane only, under the picks', () => {
+    const first = click('folded', 0.1, 0.5);
+    const located = [[{ x: 0, y: 0.6 }, { x: 0.5, y: 0.6 }]] as const;
+    const drawn = (pane: FoldPaneId) =>
+      foldPaneOverlay({ pane, scene, picks: [first], hovered: null, freeFrom: null, located, marks: [], inks: INKS }).strokes;
+    const folded = drawn('folded');
+    expect(folded?.count).toBe(1);
+    expect(Array.from(folded!.a).map(round)).toEqual([0, 0.6]);
+    expect(Array.from(folded!.b).map(round)).toEqual([0.5, 0.6]);
+    // In the scene frame, which the crease-pattern pane does not draw in.
+    expect(drawn('crease-pattern')).toBeNull();
+  });
+
   it('keeps a folded-pane free end on the sheet too, and none off the paper', () => {
     const onPaper = click('folded', 0.25, 0.5);
     expect(onPaper.sheet?.[0]).toBeCloseTo(0.75, 12);

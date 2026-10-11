@@ -110,6 +110,10 @@ function refusalBody(code: FoldRefusalCode): FoldRefusalBody {
       return { code, kind: 'inside', faces: [0] };
     case 'reverse_tip_not_free':
       return { code, blocking: [0], faces: [0] };
+    case 'crimp_kind_infeasible':
+      return { code, kind: 'inside', faces: [0] };
+    case 'tuck_infeasible':
+      return { code, target: 0, placement: 'under', faces: [0] };
     default:
       return { code };
   }

@@ -52,6 +52,13 @@ const analysisOf = (side: 'positive' | 'negative'): FoldAnalysis =>
     moving: [0, 1],
   }) as unknown as FoldAnalysis;
 
+/** The compound question, of a tip whose flaps cannot open: what the reverse fold's tests ask. */
+const tipCannotOpen = async (): Promise<unknown> => ({
+  status: 'refused',
+  refusal: { code: 'reverse_no_opening', faces: [0], cause: 'no_spine' },
+  fixes: [],
+});
+
 const engine = {
   axiomCandidates: vi.fn(async () => ({
     status: 'ok',
@@ -62,12 +69,11 @@ const engine = {
   })),
   crossSection: vi.fn(async () => ({ status: 'ok', section: SECTION })),
   action: vi.fn(async () => ({ status: 'refused' })),
-  // The compound question, of a tip whose flaps cannot open.
-  compoundAnalysis: vi.fn(async () => ({
-    status: 'refused',
-    refusal: { code: 'reverse_no_opening', faces: [0], cause: 'no_spine' },
-    fixes: [],
-  })),
+  compoundAnalysis: vi.fn(tipCannotOpen),
+  // A crimp's and a tuck's own calls, which list the orders they leave.
+  crimp: vi.fn(async (): Promise<unknown> => ({ status: 'ok', outcome: 'landed', state: 40, stored: {} })),
+  tuck: vi.fn(async (): Promise<unknown> => ({ status: 'ok', outcome: 'landed', state: 41, stored: {} })),
+  release: vi.fn(async () => 1),
 };
 
 let analysis: FoldPendingAnalysis = { status: 'idle' };
@@ -238,5 +244,104 @@ describe('the layers at the line', () => {
     const swapped: FoldToolState = { ...FREE_LINE, swapped: true };
     await render(swapped);
     expect(seen?.section).toBeNull();
+  });
+});
+
+describe('the crimp and the tuck', () => {
+  afterEach(() => {
+    engine.compoundAnalysis.mockImplementation(tipCannotOpen);
+  });
+
+  const ORDER = (k: number) => ({ faces: [[0.1 * k, 0.1] as [number, number]], orders: [[0, 1, 1] as [number, number, 1]] });
+  const target = (face: number, feasible: boolean | null) => ({ face, at: [face / 10, 0.2] as [number, number], feasible });
+  const tuckListing = (targets: ReturnType<typeof target>[]) => async (): Promise<unknown> => ({
+    status: 'ok',
+    family: 'tuck',
+    analysis: {
+      line: { n: [0, 1], d: 0.5 },
+      side: 'positive',
+      snap: { clusters: 0, angle: 0, max_shift: 0 },
+      direction: 'valley',
+      placement: 'under',
+      moving: [0],
+      targets,
+    },
+  });
+  const TUCK: FoldToolState = { ...FREE_LINE, tool: 'tuck' };
+
+  it('builds a crimp once its tip, its kinds and its orders are in, the first order taken and the choice counted', async () => {
+    engine.compoundAnalysis.mockImplementation(async () => ({
+      status: 'ok',
+      family: 'crimp',
+      analysis: {
+        tip: { line: { n: [0, 1], d: 0.5 }, side: 'positive', snap: {}, tip: [0, 1], flaps: [{ index: 0, flap: FLAPS[0], openings: [], truncated: false }] },
+        second: { n: [0, 1], d: 0.8 },
+        second_side: 'positive',
+        second_snap: {},
+        beyond: [0, 1],
+      },
+      kinds: ['inside', 'outside'],
+    }));
+    engine.crimp.mockImplementationOnce(async () => ({
+      status: 'ok',
+      outcome: 'choose_order',
+      orders: 2,
+      exact: true,
+      candidates: [
+        { state: 50, stored: { completion: ORDER(1) } },
+        { state: 51, stored: { completion: ORDER(2) } },
+      ],
+    }));
+    const crimp: FoldToolState = { ...FREE_LINE, tool: 'crimp', picks: [...FREE_LINE.picks, free(0, 0.8), free(1, 0.8)] };
+    await render(crimp);
+    // Its orders asked of its own call with the kind taken, every state that call landed let go.
+    expect(engine.crimp).toHaveBeenCalledWith(PARENT, expect.objectContaining({ kind: 'crimp', crimp: 'inside' }), undefined);
+    expect(engine.release).toHaveBeenCalledWith([50, 51]);
+    expect(seen?.crimp).toMatchObject({ kind: 'inside', kinds: ['inside', 'outside'], orders: [ORDER(1), ORDER(2)] });
+    expect(seen?.step?.op).toMatchObject({ kind: 'crimp', crimp: 'inside', second: { via: 'free' } });
+    expect(seen?.step?.choices).toEqual({ completion: ORDER(1) });
+    expect(tracked.offered).toHaveBeenCalledWith('order', 2);
+    // Both lines across the paper, for the folded pane.
+    expect(seen?.crimp?.lines.second).not.toBeNull();
+
+    // The outside kind chosen: its orders asked again, and the step folds it.
+    const outside = { ...crimp, compound: { ...crimp.compound, reverseKind: 'outside' as const } };
+    await render(outside);
+    expect(engine.crimp).toHaveBeenLastCalledWith(PARENT, expect.objectContaining({ crimp: 'outside' }), undefined);
+    expect(seen?.step?.op).toMatchObject({ crimp: 'outside' });
+    expect(seen?.step?.choices).toBeUndefined();
+  });
+
+  it('builds a tuck against the first layer listed as taking it, and steps to another by its face', async () => {
+    engine.compoundAnalysis.mockImplementation(tuckListing([target(2, false), target(3, true), target(4, null)]));
+    await render(TUCK);
+    expect(engine.compoundAnalysis).toHaveBeenCalledWith(PARENT, expect.objectContaining({ kind: 'tuck' }), undefined);
+    // Only the layers that take it, never the one that does not.
+    expect(seen?.tuck?.targets.map((each) => each.face)).toEqual([3, 4]);
+    expect(tracked.offered).toHaveBeenCalledWith('tuck_target', 2);
+    expect(engine.tuck).toHaveBeenCalledWith(PARENT, expect.objectContaining({ target: [0.3, 0.2] }), undefined);
+    expect(engine.release).toHaveBeenCalledWith([41]);
+    expect(seen?.step?.op).toMatchObject({ kind: 'tuck', direction: 'valley', target: [0.3, 0.2] });
+    expect(seen?.refused).toBeNull();
+
+    await render({ ...TUCK, compound: { ...TUCK.compound, tuckTarget: 4 } });
+    expect(seen?.tuck?.target?.face).toBe(4);
+    expect(seen?.step?.op).toMatchObject({ target: [0.4, 0.2] });
+  });
+
+  it('refuses a tuck no layer takes, with no step, its layers asked of the plain fold along its line', async () => {
+    engine.compoundAnalysis.mockImplementation(tuckListing([target(2, false)]));
+    await render(TUCK);
+    expect(seen?.step).toBeNull();
+    expect(seen?.refused?.refusal).toEqual({ code: 'tuck_infeasible', target: null, placement: 'under', faces: [] });
+    expect(engine.tuck).not.toHaveBeenCalled();
+    expect(verbs.preview).not.toHaveBeenCalled();
+    // The picker's layers: the plain valley fold along the same line, side and seed, asked for its analysis alone.
+    expect(analyse).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'valley', line: expect.anything() }), undefined);
+    answer('analysed');
+    await render(TUCK);
+    expect(seen?.section).toBe(SECTION);
+    expect(seen?.analysis).not.toBeNull();
+    expect(seen?.refused?.refusal.code).toBe('tuck_infeasible');
   });
 });

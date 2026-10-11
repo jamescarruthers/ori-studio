@@ -20,8 +20,12 @@ import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
 import {
   chooserBounds,
   foldChoiceNote,
+  foldCrimpWindowView,
+  foldFreeLineStart,
+  foldLocatedLines,
   foldPromptWords,
   foldReverseWindowView,
+  foldTuckWindowView,
   foldWindowPreview,
   sceneLayers,
 } from '../../../fold/canvas/foldCanvasModel';
@@ -156,9 +160,13 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     },
   });
 
-  // --- The tool's feedback on each pane.
-  const firstPick = toolState.picks[0];
-  const freeFrom = toolState.lineMode === 'free' && firstPick?.kind === 'free' && toolState.picks.length === 1 ? firstPick : null;
+  // --- The tool's feedback on each pane: a crimp's first line while its second is located.
+  const freeFrom = foldFreeLineStart(toolState);
+  const crimpLines = preview.crimp?.lines ?? null;
+  const located = useMemo(
+    () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines),
+    [toolState.tool, preview.action, crimpLines]
+  );
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks
@@ -168,11 +176,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             picks: toolState.picks,
             hovered: hovered?.pane === pane ? hovered : null,
             freeFrom,
+            located,
             marks: view.marks,
             inks: inks.overlay,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, toolState.picks, freeFrom]
+    [inks, view.scene, view.marks, toolState.picks, freeFrom, located]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
@@ -185,6 +194,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
   const woven = useFoldWovenInterval(preview.section);
   const reverseView = foldReverseWindowView(toolState, preview);
+  const crimpView = foldCrimpWindowView(toolState, preview);
+  const tuckView = foldTuckWindowView(toolState, preview);
   const windowModel = foldToolWindow(
     t,
     {
@@ -195,8 +206,11 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       preview: foldWindowPreview(toolState, preview, woven.interval, queued),
       divide: { settings: toolState.divide, marks: marksHere },
       ...(reverseView ? { reverse: reverseView } : {}),
+      secondLineMode: toolState.secondLineMode,
+      ...(crimpView ? { crimp: crimpView } : {}),
+      ...(tuckView ? { tuck: tuckView } : {}),
     },
-    { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind },
+    { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind, tuckTarget: verbs.tuckTarget },
     { coarse, alt: altModifierLabel() }
   );
   // The chooser over the folded pane: the deepest choice with more than one answer.

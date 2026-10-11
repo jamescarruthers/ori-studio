@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest';
+import i18n from '../../i18n';
+import type { Point } from '../../lib/geometry';
 import type { FoldAnalysis, FoldCrossSection, FoldEngineRefused } from '../engine/foldEngineWire';
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../tools/foldToolState';
 import type { FoldPick } from './foldPicking';
 import { bookScene } from './foldCanvas.fixtures';
-import { foldWindowPreview, refusedFaceInks, sceneLayers } from './foldCanvasModel';
-import { foldMovingTint } from './foldPaneOverlays';
+import {
+  foldCrimpWindowView,
+  foldFreeLineStart,
+  foldLocatedLines,
+  foldPromptWords,
+  foldTuckWindowView,
+  foldWindowPreview,
+  refusedFaceInks,
+  sceneLayers,
+} from './foldCanvasModel';
+import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
+
+const t = i18n.t.bind(i18n);
 import { foldPickIndex } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 
@@ -106,5 +119,83 @@ describe('the Fold canvas model', () => {
   it('counts a state’s layers as its deepest stack', () => {
     expect(sceneLayers(bookScene())).toBe(2);
     expect(sceneLayers(null)).toBe(1);
+  });
+
+  it('lights a tuck’s listed layers whole over the paper, the one taken brighter, drawn with the moving set', () => {
+    const index = foldPickIndex(bookScene(), null, []);
+    const accent: [number, number, number, number] = [0, 0, 1, 1];
+    const listed = foldTargetsTint(index, { listed: [1], taken: null }, accent);
+    if (!listed) throw new Error('no tint');
+    // The book's one cell, whole: two triangles, never cut by a line.
+    expect(listed.count).toBe(6);
+    const taken = foldTargetsTint(index, { listed: [1], taken: 1 }, accent);
+    expect(taken?.count).toBe(12);
+    expect(taken?.color[3]).toBeLessThan(taken?.color[4 * 6 + 3] ?? 0);
+    expect(foldTargetsTint(index, { listed: [], taken: null }, accent)).toBeNull();
+    const moving = foldMovingTint(index, { line: analysis.line, sign: 1, faces: [2], hovered: [] }, accent);
+    expect(joinFills(listed, moving)?.count).toBe(12);
+    expect(joinFills(null, moving)).toBe(moving);
+    expect(joinFills(listed, null)).toBe(listed);
+  });
+
+  it('draws a crimp’s first line while its second is being located, and starts its second free line’s live line', () => {
+    const crimping: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'crimp', lineMode: 'axiom-1' };
+    const point = (x: number, y: number): FoldPick => ({ kind: 'point', provenance: 'vertex', sheet: [x, y], mark: null, scene: { x, y } });
+    // The first line's two clicks in, and the second free line's first.
+    const state = { ...crimping, picks: [point(0, 0), point(1, 1), free(0.2, 0.4)] };
+    expect(foldFreeLineStart(state)).toEqual(free(0.2, 0.4));
+    expect(foldFreeLineStart({ ...state, picks: state.picks.slice(0, 2) })).toBeNull();
+    expect(foldFreeLineStart({ ...state, secondLineMode: 'crease' })).toBeNull();
+    // A plain fold's free line, as before.
+    expect(foldFreeLineStart({ ...FOLD_TOOL_INITIAL, lineMode: 'free', picks: [free(0.1, 0.1)] })).toEqual(free(0.1, 0.1));
+
+    const lines = { first: [{ x: 0, y: 0 }, { x: 1, y: 1 }] as [Point, Point], second: null };
+    expect(foldLocatedLines('crimp', false, lines)).toEqual([lines.first]);
+    // Once the fold's picture is in, it draws both lines itself.
+    expect(foldLocatedLines('crimp', true, lines)).toEqual([]);
+    expect(foldLocatedLines('valley', false, lines)).toEqual([]);
+    expect(foldPromptWords(t, state)).toBe('Second line · Click where it ends.');
+    expect(foldPromptWords(t, { ...state, picks: state.picks.slice(0, 1) })).toBe(
+      'Axiom 1: through two points · Click the second point.'
+    );
+  });
+
+  it('hands the crimp’s and the tuck’s windows what they choose among, only for their own tool once located', () => {
+    const lines = { first: null, second: null };
+    const way = { openings: [], stored: [] };
+    const crimp = { asked: null, kind: 'outside' as const, kinds: ['outside' as const], ways: [way, way], way, orders: [], order: null, lines };
+    const crimping: FoldToolState = { ...located, tool: 'crimp', picks: [...located.picks, free(0, 0.7), free(1, 0.7)] };
+    expect(foldCrimpWindowView(crimping, preview({ crimp }))).toEqual({
+      kind: 'outside',
+      kinds: ['outside'],
+      known: false,
+      ways: 2,
+      way: 0,
+      orders: 0,
+      order: 0,
+    });
+    // Its second line still to locate: nothing to choose yet.
+    expect(foldCrimpWindowView({ ...crimping, picks: located.picks }, preview({ crimp }))).toBeUndefined();
+    const target = (face: number) => ({ face, at: [0.1, 0.1] as [number, number], feasible: true });
+    const tuck = {
+      asked: null,
+      direction: 'mountain' as const,
+      placement: 'over' as const,
+      targets: [target(3), target(7)],
+      target: target(7),
+      orders: [],
+      order: null,
+    };
+    expect(foldTuckWindowView({ ...located, tool: 'tuck' }, preview({ tuck }))).toEqual({
+      direction: 'mountain',
+      known: false,
+      placement: 'over',
+      targets: 2,
+      target: 1,
+      faces: [3, 7],
+      orders: 0,
+      order: 0,
+    });
+    expect(foldTuckWindowView(located, preview({ tuck }))).toBeUndefined();
   });
 });
