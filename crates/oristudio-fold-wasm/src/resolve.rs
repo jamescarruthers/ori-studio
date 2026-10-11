@@ -12,7 +12,7 @@
 //!
 //! What the bridge checks itself is what the engine has no word for: the
 //! crease a point names and whether it is flat or folded, and which choices
-//! an op takes.
+//! an op takes ([`check_choices`], one rule for every op).
 
 use oristudio_fold::{
     ActionKind, AnchoredFold, Axiom, CreaseKind, Direction, FoldLine, LineRefusal, PlainFold,
@@ -23,7 +23,7 @@ use oristudio_geometry::Line;
 use crate::compound::CompoundOp;
 use crate::wire::{
     AlongCrease, AlongLine, BridgeError, BridgeRefusal, Choices, LineInput, Motion, Op, Point,
-    RefInput, Refusal, SeedInput,
+    RefInput, Refusal, SeedInput, Takes,
 };
 
 /// Why an op did not reach the engine.
@@ -68,40 +68,37 @@ pub enum Resolved {
     /// Import CP's jump to a new model (plan D16): the state replaces the
     /// parent's rather than folding it.
     Jump(State),
-    /// A compound fold (`crate::compound`).
+    /// A compound fold, any family's (`crate::compound`).
     Compound(Box<dyn CompoundOp>),
-    /// A vertex fold, its anchors resolved, with its stored choice
-    /// (`ops_squash_family`).
-    Vertex(crate::ops_squash_family::VertexFold),
-    /// A sink or an unsink, with its stored choices (`ops_sinks`).
-    Sink(Box<crate::ops_sinks::SinkResolved>),
 }
 
 impl Resolved {
     /// The plain fold it names: the line, side and seed the engine folds
-    /// along — a compound fold's line, side and anchor. None for a view
-    /// change, a jump or a vertex fold, which folds along no one line.
+    /// along — a reverse fold's line, side and anchor. None for a view
+    /// change, a jump, or a compound fold that folds along no one line.
     pub fn plain(&self, parent: &State) -> Option<Result<PlainFold, LineRefusal>> {
         match self {
             Resolved::Anchored { fold, .. } => Some(parent.resolve_anchored(fold).map(|r| r.fold)),
             Resolved::Plain { fold, .. } => Some(Ok(fold.clone())),
-            Resolved::Compound(op) => Some(Ok(op.plain())),
-            Resolved::View(_) | Resolved::Jump(_) | Resolved::Vertex(_) | Resolved::Sink(_) => None,
+            Resolved::Compound(op) => op.plain().map(Ok),
+            Resolved::View(_) | Resolved::Jump(_) => None,
         }
+    }
+}
+
+/// Refuse a choice an op takes none of ([`Choices::unexpected`]): checked
+/// before anything resolves, for every op, by [`resolve`] and by the
+/// compound families' own calls alike.
+pub(crate) fn check_choices(takes: Takes, choices: &Choices) -> Result<(), Rejection> {
+    match choices.unexpected(takes) {
+        Some(choice) => Err(BridgeRefusal::UnexpectedChoice { choice }.into()),
+        None => Ok(()),
     }
 }
 
 /// The op and its choices, resolved in `parent`.
 pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, Rejection> {
-    // A sink checks its own (`ops_sinks::resolve`): a closed sink takes a
-    // pocket, and an axiom line's root wherever it comes from.
-    let sink = matches!(op, Op::OpenSink(_) | Op::ClosedSink(_) | Op::Unsink(_));
-    if !sink
-        && let Some(choice) =
-            choices.unexpected(op.is_axiom(), op.takes_completion(), op.takes_opening())
-    {
-        return Err(BridgeRefusal::UnexpectedChoice { choice }.into());
-    }
+    check_choices(op.takes(), choices)?;
     let root = choices.root.as_ref();
     match op {
         Op::Valley(a) => along_line(parent, a, Direction::Valley, ActionKind::Fold, root),
@@ -122,29 +119,34 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
             .map(Resolved::Jump)
             .map_err(Rejection::from),
         // Compound folds (`crate::compound`), one arm per family.
-        Op::InsideReverse(r) => {
-            crate::ops_reverse::resolve(parent, r, ReverseKind::Inside, choices)
-        }
-        Op::OutsideReverse(r) => {
-            crate::ops_reverse::resolve(parent, r, ReverseKind::Outside, choices)
-        }
-        // A crimp or a tuck lands through `apply` (`ops_crimp_tuck::replay`)
-        // and has calls of its own for its analysis and its choices.
-        Op::Crimp(_) | Op::Tuck(_) => Err(BridgeError::InvalidInput(format!(
-            "a {} is analysed through its own calls",
-            op.kind()
-        ))
-        .into()),
+        Op::InsideReverse(r) => compound(crate::ops_reverse::resolve_reverse(
+            parent,
+            r,
+            ReverseKind::Inside,
+            choices,
+        )),
+        Op::OutsideReverse(r) => compound(crate::ops_reverse::resolve_reverse(
+            parent,
+            r,
+            ReverseKind::Outside,
+            choices,
+        )),
+        Op::Crimp(crimp) => compound(crate::ops_crimp_tuck::resolve_crimp(parent, crimp, choices)),
+        Op::Tuck(tuck) => compound(crate::ops_crimp_tuck::resolve_tuck(parent, tuck, choices)),
         // The vertex folds: their sheet anchors in the parent.
         Op::Squash(_) | Op::Petal(_) | Op::RabbitEar(_) | Op::Swivel(_) => {
-            crate::ops_squash_family::resolve(parent, op, choices).map(Resolved::Vertex)
+            compound(crate::ops_squash_family::resolve(parent, op, choices))
         }
         // Sinks (plan Phase 11): the engine's, along the line as a fold's.
         Op::OpenSink(sink) | Op::ClosedSink(sink) | Op::Unsink(sink) => {
-            crate::ops_sinks::resolve(parent, op, sink, choices)
-                .map(|resolved| Resolved::Sink(Box::new(resolved)))
+            compound(crate::ops_sinks::resolve(parent, op, sink, choices))
         }
     }
+}
+
+/// A family's resolved op, as the compound seam holds it.
+fn compound<C: CompoundOp + 'static>(step: Result<C, Rejection>) -> Result<Resolved, Rejection> {
+    step.map(|step| Resolved::Compound(Box::new(step)))
 }
 
 /// A valley, mountain or precrease op — and a compound fold's line, side

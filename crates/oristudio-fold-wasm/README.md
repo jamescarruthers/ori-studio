@@ -51,24 +51,36 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   choices that fold along it. Only a caller's mistake — malformed input, a
   handle this engine does not hold — throws, as the `{ code, message }`
   envelope every bridge uses.
-- **Compound folds** (plan D4, `src/compound.rs`) are steps like any other —
-  `apply`, `analyse`, `action`, `depth_choices`, a step's summary and
-  picture — through one seam: a family's op resolves to a `CompoundOp`, and
-  what it lands is held as a `CompoundLanded`, so each family is a module of
-  its own (`src/ops_<family>.rs`) with an arm in `wire.rs` and
-  `resolve.rs`. A landed one reports beside a plain fold's `report` as
-  `compound`, tagged by its `op`. Their choices are the engine's own
-  (plan D6): `opening`, per flap, its upper block by witnesses, and
-  `completion`, the free pairs as FOLD `faceOrders` over witnesses. A step
-  whose stored choices leave several results is refused as `choice_needed`
-  (naming `opening` or `completion`), and one whose stored choice no longer
-  resolves as `choice_broken` with the engine's cause; a replay marks
-  either broken. The reverse fold (`src/ops_reverse.rs`: `inside-reverse`,
-  `outside-reverse`) adds `reverse(state, op, choices)`, the tools' one
-  query: the tip and each flap's openings, the kinds that land, and the
-  choice still needed — an opening, or, per kind, up to eight orders, each
-  the `completion` that picks it — of both kinds at once, so the answer
-  does not wait on the kind.
+- **Compound folds** (plan D4, `src/compound.rs`) — the reverse folds, the
+  crimp and the tuck, the vertex folds and the sinks — are steps like any
+  other — `apply`, a step's summary and picture — through one seam: a
+  family's op resolves to a `CompoundOp`, and what it lands is held as a
+  `CompoundLanded` (one held state, whether `apply` landed it or the
+  family's own call), so each family is a module of its own
+  (`src/ops_<family>.rs`) with an arm in `wire.rs` and `resolve.rs`. A
+  landed one reports beside a plain fold's `report` as `compound`, tagged
+  by its `family` (`reverse`, `crimp`, `tuck`, `vertex`, `sink`), its
+  motion's legs in every family's. Their choices are the engine's own
+  (plan D6): `opening`, per flap, its upper block by witnesses;
+  `completion`, the free pairs as FOLD `faceOrders` over witnesses; a closed
+  sink's `pocket`. Which choices an op takes is one rule for every op
+  (`Op::takes`, `Choices::unexpected`), checked before anything resolves.
+  Every family's outcome takes one path to the wire (`compound::landed`): a
+  step whose stored choices leave several results is refused as
+  `choice_needed` (naming `opening`, `pocket` or `completion`), and one whose
+  stored choice no longer resolves as `choice_broken` with the engine's
+  cause; a replay marks either broken. `compound_analysis(state, op,
+  choices)` is the tools' one question before a step lands, answered with
+  the family's own answer tagged by `family`: a reverse fold's tip and each
+  flap's openings, the kinds that land and the choice still needed — an
+  opening, or, per kind, up to eight orders, each the `completion` that
+  picks it — of both kinds at once; a crimp's tip and the kinds that land;
+  a tuck's targets; a vertex op's flap, petal or fan; a sink's point and
+  pockets. The reverse folds fold along one line, so they also answer
+  `analyse`, `action` and `depth_choices`; asking those of another family
+  is the caller's mistake. A crimp or a tuck keeps its step's summary as it
+  lands, so it answers after its parent is released; only a reverse fold
+  has a step picture yet.
 - **`fs1` keys** (`src/canonical.rs`): one per fact of the state, none naming
   a face, vertex or crease by its number; the digest over them is
   TypeScript's `keyDigest`.
@@ -99,13 +111,14 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   sheet point either side of a closed sink's pocket) and
   `choices.completion` (the engine's `WitnessOrder`, as `orderJson` holds a
   whole order) stored as results. `apply`'s answer carries the engine's
-  `sink` report, its motion's legs among it. A sink that needs a choice the
-  step does not store is refused `choice_needed` (`pocket` or `completion`);
-  a stored one that no longer resolves, `choice_broken` — the compound
-  folds' own codes (`src/compound.rs`). `sink_analysis` previews the point (its
-  outline, outside letter, apex, the square line, why an open sink is
-  refused, the pockets with what a step stores), `sink_orders` counts what a
-  completion leaves, and `sink_pick` gives the completion a step stores.
+  sink report as `compound` (`family: 'sink'`), its motion's legs among it.
+  A sink that needs a choice the step does not store is refused
+  `choice_needed` (`pocket` or `completion`); a stored one that no longer
+  resolves, `choice_broken` — the compound folds' own codes
+  (`src/compound.rs`). `compound_analysis` previews the point (its outline,
+  outside letter, apex, the square line, why an open sink is refused, the
+  pockets with what a step stores), `sink_orders` counts what a completion
+  leaves, and `sink_pick` gives the completion a step stores.
 
 ## The `kernel` feature
 
@@ -267,10 +280,13 @@ slower than the table's.
   fixtures record, along model lines and again along O1 axioms with their
   roots. `tests/reverse.rs`: the reverse fold through the same JSON — the
   preliminary base from the triangle by two inside reverses, the kinds the
-  query says land and the other kind offered as the fix, an opening and an
-  order (the engine's campaign case s1-287, its plain folds as model-line
-  steps) chosen through the query, stored and replayed, `choice_needed` and
-  `choice_broken`.
+  compound question says land and the other kind offered as the fix, an
+  opening and an order (the engine's campaign case s1-287, its plain folds
+  as model-line steps) chosen through the question, stored and replayed,
+  `choice_needed` and `choice_broken`. `tests/crimp_tuck.rs` and
+  `tests/vertex.rs`: the crimp, the tuck and the vertex folds the same way,
+  each family's own call landing the state and report `apply` replays, a
+  crimp's kept summary after its parent is released, a vertex fold's not.
 - `cargo test -p oristudio-fold-wasm --test io`: `tests/io.rs`, the io
   calls natively — Send to Edit, then Import CP, giving the same state
   (`fs1` keys equal) over the classics and 364 seeded random states, with

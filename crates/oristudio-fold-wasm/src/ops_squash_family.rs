@@ -12,10 +12,13 @@
 //! nearest (an axiom's root is replayed the same way). A step's
 //! `choices.completion` is the engine's `VertexChoices` as it is.
 //!
-//! **Replay** (`FoldEngine::apply`, [`land`]): a stored step lands, or is
-//! refused — the engine's refusal, a stored choice that no longer resolves
-//! (`choice_broken`), or a completion that leaves a choice the step does not
-//! store (`choice_needed`) — and the replay marks it broken.
+//! **Replay** (`FoldEngine::apply`, through the compound seam,
+//! [`crate::compound`]): a stored step lands, or is refused — the engine's
+//! refusal, a stored choice that no longer resolves (`choice_broken`), or a
+//! completion that leaves a choice the step does not store
+//! (`choice_needed`) — and the replay marks it broken. A landed one reports
+//! as the step's `compound`, `{ family: 'vertex', kind, … }`; its summary is
+//! the diff from its parent, and it folds along no one line to picture.
 //!
 //! **The tools** ([`Pending`] and the calls below): a fold that leaves a
 //! choice is held under its own handle, like an opened import, and each pick
@@ -24,12 +27,14 @@
 //! ```ts
 //! // `apps/web/src/fold/engine/foldEngineSquashWire.ts` holds these shapes.
 //! class FoldEngine {
-//!   /** The flap, line or fan a vertex op names, before it folds. */
-//!   vertex_analysis(state: number, op: FoldVertexOp): Outcome<{ analysis: VertexAnalysis }>;
+//!   /** For a vertex op, `{ family: 'vertex', analysis }`: the flap, line or
+//!    *  fan it names, before it folds. */
+//!   compound_analysis(state: number, op: FoldVertexOp, choices?: FoldChoices):
+//!     Outcome<FoldCompoundAnalysis>;
 //!   /** Fold it: landed (a held state, as `apply` returns it) or a choice
 //!    *  of orders held under `pending`. `choices` may be undefined. */
 //!   vertex_fold(state: number, op: FoldVertexOp, choices?: FoldChoices): Outcome<VertexTried>;
-//!   /** Land one listed order per component; its `vertex.stored` is what
+//!   /** Land one listed order per component; its `compound.stored` is what
 //!    *  the step stores. */
 //!   vertex_pick(pending: number, choice: Uint32Array): Outcome<Applied>;
 //!   /** Let pending choices go; how many were held. */
@@ -41,15 +46,17 @@ use std::collections::HashMap;
 
 use oristudio_fold::{
     ChoiceCount, CompoundRefused, Direction, FanAnalysis, PetalAnalysis, PetalFold, RabbitEar,
-    Squash, SquashAnalysis, State, Swivel, VertexChoice, VertexChoices, VertexFolded,
+    Squash, SquashAnalysis, State, StepSummary, Swivel, VertexChoice, VertexChoices, VertexFolded,
     VertexOutcome,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::bridge::Bridge;
-use crate::compound::{NeededChoice, choice_needed, compound_refusal};
-use crate::resolve::{Rejection, finite_point};
+use crate::bridge::{Bridge, settle};
+use crate::compound::{
+    CompoundAsked, CompoundLanded, CompoundOp, CompoundStepReport, Parent, compound_refusal, landed,
+};
+use crate::resolve::{Rejection, check_choices, finite_point};
 use crate::wire::{
     Applied, BridgeError, BridgeRefusal, Choices, Op, Outcome, Point, Refusal, SeedInput,
 };
@@ -122,8 +129,8 @@ pub enum EngineOp {
     Swivel(Swivel),
 }
 
-/// Resolve a vertex op's anchors in `parent`. Only the vertex ops reach
-/// here (`resolve::resolve`).
+/// Resolve a vertex op's anchors in `parent`; any other op is the caller's
+/// mistake. Its choices are checked before (`resolve::check_choices`).
 pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold, Rejection> {
     let image = |name: &str, p: Point| -> Result<Point, Rejection> {
         finite_point(name, p)?;
@@ -235,14 +242,43 @@ fn fold(parent: &State, fold: &VertexFold) -> Result<VertexOutcome, CompoundRefu
     }
 }
 
-/// Land a stored step (replay): the one state its op and choice name, or a
-/// refusal — the compound folds' `choice_needed` and `choice_broken` among
-/// them (`crate::compound`).
-pub fn land(parent: &State, vertex: &VertexFold) -> Result<VertexFolded, Refusal> {
-    match fold(parent, vertex) {
-        Ok(VertexOutcome::Landed(folded)) => Ok(*folded),
-        Ok(VertexOutcome::ChooseOrder(_)) => Err(choice_needed(NeededChoice::Completion)),
-        Err(refused) => Err(compound_refusal(refused)),
+impl CompoundOp for VertexFold {
+    /// The flap, petal or fan it names, before it folds.
+    fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
+        let analysis = match &self.op {
+            EngineOp::Squash(op) => parent.analyse_squash(op).map(VertexAnalysis::Squash),
+            EngineOp::Petal(op) => parent.analyse_petal(op).map(VertexAnalysis::Petal),
+            EngineOp::RabbitEar(op) => parent.analyse_rabbit_ear(op).map(VertexAnalysis::RabbitEar),
+            EngineOp::Swivel(op) => parent.analyse_swivel(op).map(VertexAnalysis::Swivel),
+        };
+        Ok(analysis
+            .map(|analysis| CompoundAsked::Vertex(Box::new(VertexAnalysed { analysis })))
+            .map_err(Refusal::from))
+    }
+
+    /// The one state its op and stored choice name (replay), or a refusal
+    /// through the seam's one path.
+    fn apply(&self, parent: &State) -> Result<Box<dyn CompoundLanded>, Refusal> {
+        Ok(Box::new(Landed(landed(fold(parent, self))?)))
+    }
+}
+
+/// A landed vertex fold, held by the bridge: its summary is the diff from
+/// its parent; it folds along no one line to picture.
+#[derive(Debug)]
+struct Landed(Box<VertexFolded>);
+
+impl CompoundLanded for Landed {
+    fn state(&self) -> &State {
+        &self.0.state
+    }
+
+    fn report(&self) -> CompoundStepReport {
+        CompoundStepReport::Vertex(Box::new(self.0.report.clone()))
+    }
+
+    fn summary(&self, parent: Parent<'_>) -> Result<Result<StepSummary, Refusal>, BridgeError> {
+        Ok(Ok(StepSummary::new(parent?, &self.0.state, None)))
     }
 }
 
@@ -259,8 +295,9 @@ pub enum VertexAnalysis {
     Swivel(FanAnalysis),
 }
 
+/// What `compound_analysis` answers for a vertex op.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Analysed {
+pub struct VertexAnalysed {
     pub analysis: VertexAnalysis,
 }
 
@@ -313,20 +350,17 @@ impl Pending {
         choices: &Choices,
     ) -> Result<Outcome<VertexTried>, BridgeError> {
         let parent = bridge.state(state)?;
-        let resolved = match crate::resolve::resolve(parent, op, choices) {
-            Ok(crate::resolve::Resolved::Vertex(resolved)) => resolved,
-            Ok(_) => {
-                return Err(BridgeError::InvalidInput(format!(
-                    "a {} step is no vertex fold",
-                    op.kind()
-                )));
-            }
-            Err(Rejection::Input(error)) => return Err(error),
-            Err(Rejection::Refused(refusal)) => return Ok(Outcome::Refused(refusal)),
+        // The choices first, as `apply` checks them; then the anchors, which
+        // only a vertex op has.
+        let resolved =
+            check_choices(op.takes(), choices).and_then(|()| resolve(parent, op, choices));
+        let resolved = match settle(resolved)? {
+            Ok(resolved) => resolved,
+            Err(refusal) => return Ok(Outcome::Refused(refusal)),
         };
         Ok(match fold(parent, &resolved) {
             Ok(VertexOutcome::Landed(folded)) => Outcome::Ok(VertexTried::Landed(Box::new(
-                bridge.hold_vertex(*folded, state),
+                bridge.hold_compound(Box::new(Landed(folded)), state),
             ))),
             Ok(VertexOutcome::ChooseOrder(choice)) => {
                 let count = choice.count();
@@ -358,7 +392,9 @@ impl Pending {
             .get(&pending)
             .ok_or_else(|| BridgeError::InvalidInput(format!("no pending choice {pending}")))?;
         Ok(match held.pick(choice) {
-            Ok(folded) => Outcome::Ok(bridge.hold_vertex(folded, *parent)),
+            Ok(folded) => {
+                Outcome::Ok(bridge.hold_compound(Box::new(Landed(Box::new(folded))), *parent))
+            }
             Err(refusal) => Outcome::Refused(refusal.into()),
         })
     }
@@ -380,37 +416,11 @@ impl Pending {
     }
 }
 
-/// A vertex op's analysis on the held state `state`.
-pub fn analysis(bridge: &Bridge, state: u32, op: &Op) -> Result<Outcome<Analysed>, BridgeError> {
-    let parent = bridge.state(state)?;
-    let resolved = match resolve(parent, op, &Choices::default()) {
-        Ok(resolved) => resolved,
-        Err(Rejection::Input(error)) => return Err(error),
-        Err(Rejection::Refused(refusal)) => return Ok(Outcome::Refused(refusal)),
-    };
-    let analysis = match &resolved.op {
-        EngineOp::Squash(op) => parent.analyse_squash(op).map(VertexAnalysis::Squash),
-        EngineOp::Petal(op) => parent.analyse_petal(op).map(VertexAnalysis::Petal),
-        EngineOp::RabbitEar(op) => parent.analyse_rabbit_ear(op).map(VertexAnalysis::RabbitEar),
-        EngineOp::Swivel(op) => parent.analyse_swivel(op).map(VertexAnalysis::Swivel),
-    };
-    Ok(analysis
-        .map(|analysis| Analysed { analysis })
-        .map_err(Refusal::from)
-        .into())
-}
-
 // ---------------------------------------------------------------------------
 // On `FoldEngine`
 
 #[wasm_bindgen]
 impl FoldEngine {
-    /// The flap, line or fan a vertex op names, before it folds.
-    pub fn vertex_analysis(&self, state: u32, op: JsValue) -> Result<JsValue, JsValue> {
-        let op: Op = parse("op", op)?;
-        to_js_value(&analysis(&self.inner, state, &op).map_err(bridge_error)?)
-    }
-
     /// Fold a vertex op on `state`: landed, or a choice held under its own
     /// handle. `choices` may be `undefined` or `null`.
     pub fn vertex_fold(

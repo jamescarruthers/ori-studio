@@ -4,13 +4,14 @@
 //! parent; a stored step replays, or is refused by code (`choice_needed`,
 //! `choice_broken` and the engine's own); a choice of orders is held, picked
 //! and stored as the document's `completion`, which replays to the state it
-//! was picked as; and the analysis names what a tool previews.
+//! was picked as; every landing reports as the step's `compound`, family
+//! `vertex`; and the compound question names what a tool previews.
 
 #![cfg(not(target_arch = "wasm32"))]
 
 use oristudio_fold::State;
 use oristudio_fold_wasm::bridge::Bridge;
-use oristudio_fold_wasm::ops_squash_family::{Pending, analysis};
+use oristudio_fold_wasm::ops_squash_family::Pending;
 use oristudio_fold_wasm::wire::{BridgeError, Choices, Op, Outcome, Paper};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -51,6 +52,13 @@ fn apply(bridge: &mut Bridge, state: u32, step: Value, chosen: Value) -> Value {
             .apply(state, &op(step.clone()), &choices(chosen))
             .unwrap_or_else(|e| panic!("{step}: {e}")),
     )
+}
+
+/// The compound question of a vertex op: its family's answer.
+fn analysis(bridge: &Bridge, state: u32, step: Value) -> Value {
+    let asked = ok(bridge.compound_analysis(state, &op(step), &Choices::default()));
+    assert_eq!(asked["family"], "vertex", "{asked}");
+    asked
 }
 
 fn land(bridge: &mut Bridge, state: u32, step: Value) -> u32 {
@@ -101,14 +109,15 @@ fn a_squash_lands_and_replays_with_its_report_and_motion() {
     );
     let squash = json!({ "kind": "squash", "flap": flap, "direction": "valley" });
 
-    let analysed = ok(analysis(&bridge, tri, &op(squash.clone())));
+    let analysed = analysis(&bridge, tri, squash.clone());
     assert_eq!(analysed["analysis"]["kind"], "squash");
     assert_eq!(analysed["analysis"]["share"], 0.0);
 
     let applied = apply(&mut bridge, tri, squash.clone(), json!({}));
     assert_eq!(applied["status"], "ok", "{applied}");
     assert!(applied["report"].is_null());
-    let vertex = &applied["vertex"];
+    let vertex = &applied["compound"];
+    assert_eq!(vertex["family"], "vertex");
     assert_eq!(vertex["kind"], "squash");
     assert_eq!(vertex["created"].as_array().map(Vec::len), Some(2));
     assert_eq!(vertex["motion"]["kind"], "visual");
@@ -123,13 +132,22 @@ fn a_squash_lands_and_replays_with_its_report_and_motion() {
         Some(2)
     );
     assert!(ok(bridge.step_action(child))["action"].is_null());
-    // The tools' call lands the same state.
+    // The tools' call lands the same state, held and reported alike.
     let mut pending = Pending::new();
     let tried = ok(pending.try_fold(&mut bridge, tri, &op(squash), &Choices::default()));
     assert_eq!(tried["result"], "landed");
+    assert_eq!(tried["compound"], applied["compound"]);
     let again = tried["state"].as_u64().unwrap_or_default() as u32;
     let parts = |h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
     assert_eq!(parts(again), parts(child));
+    // Its summary is the diff from its parent, which must still be held;
+    // its picture, none, needs no parent.
+    assert!(bridge.release(tri));
+    assert!(matches!(
+        bridge.step_summary(child),
+        Err(BridgeError::ParentReleased { .. })
+    ));
+    assert!(ok(bridge.step_action(child))["action"].is_null());
 }
 
 /// The two-layer triangle's rabbit ear with its 180° ray leaves two orders
@@ -155,7 +173,7 @@ fn a_rabbit_ears_choice_is_held_picked_stored_and_replayed() {
             "direction": "valley"
         })
     };
-    let analysed = ok(analysis(&bridge, tri, &op(ear(json!([1.0, 0.0])))));
+    let analysed = analysis(&bridge, tri, ear(json!([1.0, 0.0])));
     assert_eq!(analysed["analysis"]["kind"], "rabbit-ear");
     let candidates = analysed["analysis"]["candidates"].clone();
     assert_eq!(candidates.as_array().map(Vec::len), Some(3));
@@ -168,7 +186,8 @@ fn a_rabbit_ears_choice_is_held_picked_stored_and_replayed() {
     assert_eq!(tried["components"], json!([2]));
     let handle = tried["pending"].as_u64().unwrap_or_default() as u32;
     let picked = ok(pending.pick(&mut bridge, handle, &[1]));
-    let stored = picked["vertex"]["stored"].clone();
+    assert_eq!(picked["compound"]["family"], "vertex");
+    let stored = picked["compound"]["stored"].clone();
     // The document's completion: FOLD triples over witnesses.
     assert!(stored["completion"]["orders"][0].is_array(), "{stored}");
     let picked_state = picked["state"].as_u64().unwrap_or_default() as u32;
@@ -244,7 +263,7 @@ fn vertex_refusals_are_codes_with_fixes() {
         swivel([0.5, 0.3], [0.0, 1.0]),
         json!({}),
     );
-    assert_eq!(landed["vertex"]["kind"], "swivel", "{landed}");
+    assert_eq!(landed["compound"]["kind"], "swivel", "{landed}");
     // The top layer's ear toward the folded edge runs into the layer
     // below: refused, offering the rays that land.
     let tri = land(

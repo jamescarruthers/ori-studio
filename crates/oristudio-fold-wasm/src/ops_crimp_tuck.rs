@@ -1,24 +1,23 @@
 //! The crimp and the tuck across the bridge (plan Phase 11): the document's
-//! `crimp` and `tuck` ops resolved in their parent, their analyses, and their
-//! landings, beside the calls in [`crate::bridge`].
+//! `crimp` and `tuck` ops resolved in their parent and landed through the
+//! compound seam ([`crate::compound`]), and their tools' calls.
 //!
 //! ```ts
 //! // `apps/web/src/fold/engine/foldEngineCrimpTuckWire.ts` holds these shapes in full.
 //! class FoldEngine {
-//!   /** A crimp's tip at ℓ1 with its flaps' openings, what lies beyond ℓ2,
-//!    *  and the kinds that land: null while a flap opening several ways is
-//!    *  still to choose. */
-//!   analyse_crimp(state: number, op: CrimpOp, choices?: FoldChoices):
-//!     Outcome<{ analysis: CrimpAnalysis; kinds: ('inside' | 'outside')[] | null }>;
-//!   /** What a tuck moves and every layer its block lands on, each with
-//!    *  whether it takes the tuck: the targets a tool offers. */
-//!   analyse_tuck(state: number, op: TuckOp, choices?: FoldChoices):
-//!     Outcome<{ analysis: TuckAnalysis }>;
+//!   /** For a crimp, `{ family: 'crimp', analysis, kinds }`: its tip at ℓ1
+//!    *  with its flaps' openings, what lies beyond ℓ2, and the kinds that
+//!    *  land (null while a flap opening several ways is still to choose).
+//!    *  For a tuck, `{ family: 'tuck', analysis }`: what it moves and every
+//!    *  layer its block lands on, each with whether it takes the tuck. */
+//!   compound_analysis(state: number, op: CrimpOp | TuckOp, choices?: FoldChoices):
+//!     Outcome<FoldCompoundAnalysis>;
 //!   /** Fold it: landed; an opening to choose; or the orders to choose
-//!    *  from, each already landed under its own handle with what its step
+//!    *  from, each already landed under its own handle — held as `apply`
+//!    *  holds a step, its report the step's `compound` — with what its step
 //!    *  stores. Every landed state stays held until released. */
-//!   crimp(state: number, op: CrimpOp, choices?: FoldChoices): Outcome<Compound<CrimpReport>>;
-//!   tuck(state: number, op: TuckOp, choices?: FoldChoices): Outcome<Compound<TuckReport>>;
+//!   crimp(state: number, op: CrimpOp, choices?: FoldChoices): Outcome<CompoundTried>;
+//!   tuck(state: number, op: TuckOp, choices?: FoldChoices): Outcome<CompoundTried>;
 //! }
 //! ```
 //!
@@ -28,26 +27,30 @@
 //! resolve, so the replay marks the step broken (plan D6). The ops' lines are
 //! the document's anchors: a tuck's line may be an axiom with its stored
 //! root; a crimp's first line may, and its second is named by two sheet
-//! points or a crease, since a step stores one root.
+//! points or a crease, since a step stores one root. A landed one keeps its
+//! step's summary as it lands, so its parent need not stay held; its picture
+//! is its motion, in its report.
 
 use oristudio_fold::complete::Deadline;
 use oristudio_fold::numerics::MIN_FEATURE;
 use oristudio_fold::{
-    ActionKind, CompletionLimits, CompoundRefused, CrimpAnalysis, CrimpFold, CrimpOutcome,
-    CrimpReport, Direction, LineRefusal, PlainFold, ReverseChoices, ReverseKind, Side, State,
-    StepSummary, StoredOpening, TuckAnalysis, TuckChoices, TuckFold, TuckOutcome, TuckReport,
+    ActionKind, ChoiceCount, CompletionLimits, Completions, CrimpAnalysis, CrimpFold, CrimpFolded,
+    CrimpOutcome, Direction, LineRefusal, PlainFold, ReverseChoices, ReverseKind, Side, State,
+    StepSummary, StoredOpening, TuckAnalysis, TuckChoices, TuckFold, TuckFolded, TuckOutcome,
     WitnessOrder,
 };
 use oristudio_geometry::Line;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::bridge::Bridge;
-use crate::compound::{NeededChoice, choice_needed, compound_refusal};
-use crate::resolve::{self, Rejection, finite_point, model_line};
+use crate::bridge::{Bridge, settle};
+use crate::compound::{
+    CompoundAsked, CompoundLanded, CompoundOp, CompoundStepReport, Parent, compound_refusal, landed,
+};
+use crate::resolve::{self, Rejection, check_choices, finite_point, model_line};
 use crate::wire::{
-    AlongLine, BridgeError, BridgeRefusal, Choices, LineInput, Motion, Op, Outcome, Point, Refusal,
-    SeedInput, Summary,
+    AlongLine, Applied, BridgeError, Choices, LineInput, Motion, Outcome, Point, Refusal,
+    SeedInput, Takes,
 };
 use crate::{FoldEngine, bridge_error, parse, parse_choices, to_js_value};
 
@@ -109,6 +112,19 @@ pub struct CrimpOp {
     pub seed: SeedInput,
 }
 
+impl CrimpOp {
+    /// Its choices (`wire::Op::takes`): its flaps' openings and its
+    /// completion, and a root of ℓ1's when that is an axiom.
+    pub fn takes(&self) -> Takes {
+        Takes {
+            root: self.line.is_axiom(),
+            completion: true,
+            opening: true,
+            pocket: false,
+        }
+    }
+}
+
 /// A tuck (`FoldTuckOp`): valley under its target, mountain over it.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct TuckOp {
@@ -123,6 +139,19 @@ pub struct TuckOp {
     pub target: Point,
 }
 
+impl TuckOp {
+    /// Its choices (`wire::Op::takes`): its completion, and a root when its
+    /// line is an axiom's. A tuck opens no flap.
+    pub fn takes(&self) -> Takes {
+        Takes {
+            root: self.line.is_axiom(),
+            completion: true,
+            opening: false,
+            pocket: false,
+        }
+    }
+}
+
 /// What a crimp or tuck stores (`FoldChoices`' keys): the openings chosen
 /// among several, and the order chosen among several.
 #[derive(Debug, Clone, PartialEq, Default, Serialize)]
@@ -133,21 +162,21 @@ pub struct StoredChoices {
     pub completion: Option<WitnessOrder>,
 }
 
-/// A landed crimp or tuck, held under `state`.
+/// A crimp or tuck its own call landed, held as `apply` holds a step (its
+/// report the step's `compound`), with what its step stores beside a root
+/// of its line's.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct CompoundLanded<R> {
-    pub state: u32,
-    pub report: R,
-    pub summary: Summary,
-    /// What the step stores, beside a root of its line's.
+pub struct Candidate {
+    #[serde(flatten)]
+    pub step: Applied,
     pub stored: StoredChoices,
 }
 
-/// Where a crimp or tuck got to.
+/// Where a crimp's or tuck's own call got to.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
-pub enum Compound<R> {
-    Landed(CompoundLanded<R>),
+pub enum CompoundTried {
+    Landed(Box<Candidate>),
     /// A flap opens several ways: store one of each such flap's openings
     /// (`choices.opening`) and fold again.
     ChooseOpening {
@@ -158,7 +187,7 @@ pub enum Compound<R> {
         /// The true ‹ n of m ›, and whether it is exact.
         orders: u64,
         exact: bool,
-        candidates: Vec<CompoundLanded<R>>,
+        candidates: Vec<Candidate>,
     },
 }
 
@@ -191,6 +220,7 @@ fn crimp_choices(choices: &Choices) -> ReverseChoices {
     }
 }
 
+/// What a crimp's step stores, by the document's keys.
 fn stored(choices: &ReverseChoices) -> StoredChoices {
     StoredChoices {
         opening: choices.openings.clone(),
@@ -198,22 +228,11 @@ fn stored(choices: &ReverseChoices) -> StoredChoices {
     }
 }
 
-/// The choices an op takes none of: an axiom's root is the line's, so it
-/// goes only with an axiom line; a tuck has no opening; a pocket is a
-/// sink's.
-fn check_choices(choices: &Choices, axiom: bool, opening: bool) -> Result<(), Rejection> {
-    let unexpected = if choices.root.is_some() && !axiom {
-        Some("root")
-    } else if choices.pocket.is_some() {
-        Some("pocket")
-    } else if !opening && choices.opening.as_ref().is_some_and(|o| !o.is_empty()) {
-        Some("opening")
-    } else {
-        None
-    };
-    match unexpected {
-        Some(choice) => Err(BridgeRefusal::UnexpectedChoice { choice }.into()),
-        None => Ok(()),
+/// What a tuck's step stores, by the document's keys.
+fn tuck_stored(choices: &TuckChoices) -> StoredChoices {
+    StoredChoices {
+        opening: Vec::new(),
+        completion: choices.order.clone(),
     }
 }
 
@@ -289,9 +308,27 @@ fn second_line(parent: &State, line: &LineInput) -> Result<Line, Rejection> {
     }
 }
 
-fn crimp_fold(parent: &State, op: &CrimpOp, choices: &Choices) -> Result<CrimpFold, Rejection> {
-    let axiom = matches!(op.line, LineInput::Axiom { .. });
-    check_choices(choices, axiom, true)?;
+/// A crimp resolved in its parent, with its stored choices.
+#[derive(Debug, Clone)]
+pub struct CrimpStep {
+    pub fold: CrimpFold,
+    pub choices: ReverseChoices,
+}
+
+/// A tuck resolved in its parent, with its stored choice.
+#[derive(Debug, Clone)]
+pub struct TuckStep {
+    pub fold: TuckFold,
+    pub choices: TuckChoices,
+}
+
+/// A crimp op resolved in `parent`. Its choices are checked before
+/// (`resolve::check_choices`).
+pub fn resolve_crimp(
+    parent: &State,
+    op: &CrimpOp,
+    choices: &Choices,
+) -> Result<CrimpStep, Rejection> {
     let first = plain(
         parent,
         &op.line,
@@ -301,18 +338,20 @@ fn crimp_fold(parent: &State, op: &CrimpOp, choices: &Choices) -> Result<CrimpFo
         &op.seed,
         choices.root.as_ref(),
     )?;
-    Ok(CrimpFold {
-        first: first.line,
-        second: second_line(parent, &op.second)?,
-        side: first.side,
-        anchor: first.seed,
-        kind: op.crimp,
+    Ok(CrimpStep {
+        fold: CrimpFold {
+            first: first.line,
+            second: second_line(parent, &op.second)?,
+            side: first.side,
+            anchor: first.seed,
+            kind: op.crimp,
+        },
+        choices: crimp_choices(choices),
     })
 }
 
-fn tuck_fold(parent: &State, op: &TuckOp, choices: &Choices) -> Result<TuckFold, Rejection> {
-    let axiom = matches!(op.line, LineInput::Axiom { .. });
-    check_choices(choices, axiom, false)?;
+/// A tuck op resolved in `parent`. Its choices are checked before.
+pub fn resolve_tuck(parent: &State, op: &TuckOp, choices: &Choices) -> Result<TuckStep, Rejection> {
     finite_point("target", op.target)?;
     let fold = plain(
         parent,
@@ -323,73 +362,52 @@ fn tuck_fold(parent: &State, op: &TuckOp, choices: &Choices) -> Result<TuckFold,
         &op.seed,
         choices.root.as_ref(),
     )?;
-    Ok(TuckFold {
-        line: fold.line,
-        side: fold.side,
-        direction: op.direction,
-        seed: fold.seed,
-        target: op.target,
+    Ok(TuckStep {
+        fold: TuckFold {
+            line: fold.line,
+            side: fold.side,
+            direction: op.direction,
+            seed: fold.seed,
+            target: op.target,
+        },
+        choices: TuckChoices {
+            order: order(choices),
+        },
     })
 }
 
-/// A compound fold's refusal on the wire: the engine's, or a stored choice
-/// that no longer resolves (the seam's, `crate::compound`).
-fn refused(refusal: CompoundRefused) -> Refusal {
-    compound_refusal(refusal)
-}
+impl CompoundOp for CrimpStep {
+    /// Its analysis, and the kinds that land once every flap that opens
+    /// several ways has its opening chosen.
+    fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
+        let analysed = || -> Result<CrimpAnalysed, Refusal> {
+            let analysis = parent.analyse_crimp(&self.fold).map_err(Refusal::from)?;
+            let open = analysis.tip.flaps.iter().any(|f| f.openings.len() > 1)
+                && self.choices.openings.is_empty();
+            let kinds = if open {
+                None
+            } else {
+                Some(
+                    parent
+                        .crimp_kinds(&self.fold, &self.choices)
+                        .map_err(compound_refusal)?,
+                )
+            };
+            Ok(CrimpAnalysed { analysis, kinds })
+        };
+        Ok(analysed().map(|analysed| CompoundAsked::Crimp(Box::new(analysed))))
+    }
 
-/// A resolved op, a refusal, or (thrown) the caller's mistake.
-fn settle<T>(resolved: Result<T, Rejection>) -> Result<Result<T, Refusal>, BridgeError> {
-    match resolved {
-        Ok(value) => Ok(Ok(value)),
-        Err(Rejection::Refused(refusal)) => Ok(Err(refusal)),
-        Err(Rejection::Input(error)) => Err(error),
+    fn apply(&self, parent: &State) -> Result<Box<dyn CompoundLanded>, Refusal> {
+        let folded = landed(parent.crimp_fold(&self.fold, &self.choices))?;
+        Ok(Box::new(Kept::crimp(parent, &self.fold, *folded)))
     }
 }
 
-impl Bridge {
-    /// A crimp's analysis, and the kinds that land.
-    pub fn analyse_crimp(
-        &self,
-        state: u32,
-        op: &CrimpOp,
-        choices: &Choices,
-    ) -> Result<Outcome<CrimpAnalysed>, BridgeError> {
-        let parent = self.state(state)?;
-        let fold = match settle(crimp_fold(parent, op, choices))? {
-            Ok(fold) => fold,
-            Err(refusal) => return Ok(Outcome::Refused(refusal)),
-        };
-        let analysis = match parent.analyse_crimp(&fold) {
-            Ok(analysis) => analysis,
-            Err(refused) => return Ok(Outcome::Refused(refused.into())),
-        };
-        let open = analysis.tip.flaps.iter().any(|f| f.openings.len() > 1)
-            && choices.opening.as_ref().is_none_or(Vec::is_empty);
-        let kinds = if open {
-            None
-        } else {
-            match parent.crimp_kinds(&fold, &crimp_choices(choices)) {
-                Ok(kinds) => Some(kinds),
-                Err(refusal) => return Ok(Outcome::Refused(refused(refusal))),
-            }
-        };
-        Ok(Outcome::Ok(CrimpAnalysed { analysis, kinds }))
-    }
-
-    /// A tuck's analysis: every layer its block lands on, with whether it
-    /// takes the tuck.
-    pub fn analyse_tuck(
-        &self,
-        state: u32,
-        op: &TuckOp,
-        choices: &Choices,
-    ) -> Result<Outcome<TuckAnalysed>, BridgeError> {
-        let parent = self.state(state)?;
-        let fold = match settle(tuck_fold(parent, op, choices))? {
-            Ok(fold) => fold,
-            Err(refusal) => return Ok(Outcome::Refused(refusal)),
-        };
+impl CompoundOp for TuckStep {
+    /// Every layer its block lands on, with whether it takes the tuck,
+    /// decided within [`TUCK_TARGETS_BUDGET_MS`].
+    fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
         let limits = CompletionLimits {
             deadline: Some(Deadline {
                 now_ms: clock::now_ms,
@@ -398,70 +416,110 @@ impl Bridge {
             ..CompletionLimits::default()
         };
         Ok(parent
-            .analyse_tuck(&fold, &limits)
-            .map(|analysis| TuckAnalysed { analysis })
-            .map_err(Refusal::from)
-            .into())
+            .analyse_tuck(&self.fold, &limits)
+            .map(|analysis| CompoundAsked::Tuck(Box::new(TuckAnalysed { analysis })))
+            .map_err(Refusal::from))
     }
 
+    fn apply(&self, parent: &State) -> Result<Box<dyn CompoundLanded>, Refusal> {
+        let folded = landed(parent.tuck_fold(&self.fold, &self.choices))?;
+        Ok(Box::new(Kept::tuck(parent, &self.fold, *folded)))
+    }
+}
+
+/// A landed crimp or tuck, held by the bridge with its step's summary, taken
+/// when it landed, so its parent need not stay held: its picture is its
+/// motion, in its report.
+#[derive(Debug)]
+struct Kept {
+    state: State,
+    report: CompoundStepReport,
+    step: StepSummary,
+}
+
+impl Kept {
+    fn crimp(parent: &State, fold: &CrimpFold, folded: CrimpFolded) -> Kept {
+        let layers = layers(parent, &fold.first, fold.side);
+        let step = StepSummary::new(parent, &folded.state, layers);
+        Kept {
+            state: folded.state,
+            report: CompoundStepReport::Crimp(Box::new(folded.report)),
+            step,
+        }
+    }
+
+    fn tuck(parent: &State, fold: &TuckFold, folded: TuckFolded) -> Kept {
+        let layers = layers(parent, &fold.line, fold.side);
+        let step = StepSummary::new(parent, &folded.state, layers);
+        Kept {
+            state: folded.state,
+            report: CompoundStepReport::Tuck(Box::new(folded.report)),
+            step,
+        }
+    }
+}
+
+impl CompoundLanded for Kept {
+    fn state(&self) -> &State {
+        &self.state
+    }
+
+    fn report(&self) -> CompoundStepReport {
+        self.report.clone()
+    }
+
+    fn summary(&self, _parent: Parent<'_>) -> Result<Result<StepSummary, Refusal>, BridgeError> {
+        Ok(Ok(self.step.clone()))
+    }
+}
+
+/// A crimp or tuck its own call landed, not held yet, with what its step
+/// stores.
+type Landing = (Box<Kept>, StoredChoices);
+
+/// What a crimp's or tuck's own call came to, before its states are held.
+enum Tried {
+    Landed(Landing),
+    ChooseOpening(Box<CrimpAnalysis>),
+    ChooseOrder {
+        count: ChoiceCount,
+        candidates: Vec<Landing>,
+    },
+}
+
+impl Bridge {
     /// Fold a crimp: landed, an opening to choose, or every order landed.
     pub fn crimp(
         &mut self,
         state: u32,
         op: &CrimpOp,
         choices: &Choices,
-    ) -> Result<Outcome<Compound<CrimpReport>>, BridgeError> {
-        let parent = self.state(state)?.clone();
-        let fold = match settle(crimp_fold(&parent, op, choices))? {
-            Ok(fold) => fold,
+    ) -> Result<Outcome<CompoundTried>, BridgeError> {
+        let parent = self.state(state)?;
+        let resolved =
+            check_choices(op.takes(), choices).and_then(|()| resolve_crimp(parent, op, choices));
+        let step = match settle(resolved)? {
+            Ok(step) => step,
             Err(refusal) => return Ok(Outcome::Refused(refusal)),
         };
-        let layers = layers(&parent, &fold.first, fold.side);
-        Ok(match parent.crimp_fold(&fold, &crimp_choices(choices)) {
-            Ok(CrimpOutcome::Landed(folded)) => {
-                let stored = stored(&folded.report.stored);
-                Outcome::Ok(Compound::Landed(self.hold_compound(
-                    &parent,
-                    folded.state,
-                    folded.report,
-                    stored,
-                    layers,
-                )))
-            }
-            Ok(CrimpOutcome::ChooseOpening(analysis)) => {
-                Outcome::Ok(Compound::ChooseOpening { analysis })
-            }
-            Ok(CrimpOutcome::ChooseOrder(choice)) => {
-                let count = choice.count();
-                let mut candidates = Vec::new();
-                for pick in picks(
-                    &choice
-                        .completions()
-                        .components()
-                        .iter()
-                        .map(|c| c.orders.len())
-                        .collect::<Vec<_>>(),
-                ) {
-                    let Ok(folded) = choice.pick(&pick) else {
-                        continue;
-                    };
-                    let stored = stored(&folded.report.stored);
-                    candidates.push(self.hold_compound(
-                        &parent,
-                        folded.state,
-                        folded.report,
-                        stored,
-                        layers,
-                    ));
-                }
-                Outcome::Ok(Compound::ChooseOrder {
-                    orders: count.orders,
-                    exact: count.exact,
-                    candidates,
-                })
-            }
-            Err(refusal) => Outcome::Refused(refused(refusal)),
-        })
+        let kept = |folded: CrimpFolded| -> Landing {
+            let stored = stored(&folded.report.stored);
+            (Box::new(Kept::crimp(parent, &step.fold, folded)), stored)
+        };
+        let tried = match parent.crimp_fold(&step.fold, &step.choices) {
+            Ok(CrimpOutcome::Landed(folded)) => Tried::Landed(kept(*folded)),
+            Ok(CrimpOutcome::ChooseOpening(analysis)) => Tried::ChooseOpening(analysis),
+            Ok(CrimpOutcome::ChooseOrder(choice)) => Tried::ChooseOrder {
+                count: choice.count(),
+                candidates: picks(&sizes(choice.completions()))
+                    .iter()
+                    .filter_map(|pick| choice.pick(pick).ok())
+                    .map(kept)
+                    .collect(),
+            },
+            Err(refused) => return Ok(Outcome::Refused(compound_refusal(refused))),
+        };
+        Ok(Outcome::Ok(self.hold_tried(state, tried)))
     }
 
     /// Fold a tuck: landed, or every order landed.
@@ -470,126 +528,50 @@ impl Bridge {
         state: u32,
         op: &TuckOp,
         choices: &Choices,
-    ) -> Result<Outcome<Compound<TuckReport>>, BridgeError> {
-        let parent = self.state(state)?.clone();
-        let fold = match settle(tuck_fold(&parent, op, choices))? {
-            Ok(fold) => fold,
+    ) -> Result<Outcome<CompoundTried>, BridgeError> {
+        let parent = self.state(state)?;
+        let resolved =
+            check_choices(op.takes(), choices).and_then(|()| resolve_tuck(parent, op, choices));
+        let step = match settle(resolved)? {
+            Ok(step) => step,
             Err(refusal) => return Ok(Outcome::Refused(refusal)),
         };
-        let layers = layers(&parent, &fold.line, fold.side);
-        let tuck_choices = TuckChoices {
-            order: order(choices),
+        let kept = |folded: TuckFolded| -> Landing {
+            let stored = tuck_stored(&folded.report.stored);
+            (Box::new(Kept::tuck(parent, &step.fold, folded)), stored)
         };
-        let stored_of = |stored: &TuckChoices| StoredChoices {
-            opening: Vec::new(),
-            completion: stored.order.clone(),
+        let tried = match parent.tuck_fold(&step.fold, &step.choices) {
+            Ok(TuckOutcome::Landed(folded)) => Tried::Landed(kept(*folded)),
+            Ok(TuckOutcome::ChooseOrder(choice)) => Tried::ChooseOrder {
+                count: choice.count(),
+                candidates: picks(&sizes(choice.completions()))
+                    .iter()
+                    .filter_map(|pick| choice.pick(pick).ok())
+                    .map(kept)
+                    .collect(),
+            },
+            Err(refused) => return Ok(Outcome::Refused(compound_refusal(refused))),
         };
-        Ok(match parent.tuck_fold(&fold, &tuck_choices) {
-            Ok(TuckOutcome::Landed(folded)) => {
-                let stored = stored_of(&folded.report.stored);
-                Outcome::Ok(Compound::Landed(self.hold_compound(
-                    &parent,
-                    folded.state,
-                    folded.report,
-                    stored,
-                    layers,
-                )))
-            }
-            Ok(TuckOutcome::ChooseOrder(choice)) => {
-                let count = choice.count();
-                let mut candidates = Vec::new();
-                for pick in picks(
-                    &choice
-                        .completions()
-                        .components()
-                        .iter()
-                        .map(|c| c.orders.len())
-                        .collect::<Vec<_>>(),
-                ) {
-                    let Ok(folded) = choice.pick(&pick) else {
-                        continue;
-                    };
-                    let stored = stored_of(&folded.report.stored);
-                    candidates.push(self.hold_compound(
-                        &parent,
-                        folded.state,
-                        folded.report,
-                        stored,
-                        layers,
-                    ));
-                }
-                Outcome::Ok(Compound::ChooseOrder {
-                    orders: count.orders,
-                    exact: count.exact,
-                    candidates,
-                })
-            }
-            Err(refusal) => Outcome::Refused(refused(refusal)),
-        })
+        Ok(Outcome::Ok(self.hold_tried(state, tried)))
     }
 
-    fn hold_compound<R>(
-        &mut self,
-        parent: &State,
-        state: State,
-        report: R,
-        stored: StoredChoices,
-        layers: Option<usize>,
-    ) -> CompoundLanded<R> {
-        let summary = crate::bridge::summary(&state);
-        let step = StepSummary::new(parent, &state, layers);
-        CompoundLanded {
-            state: self.hold_compound_state(state, step),
-            report,
-            summary,
+    /// Hold every state a crimp's or tuck's call landed, in order, as `apply`
+    /// holds a step of `parent`.
+    fn hold_tried(&mut self, parent: u32, tried: Tried) -> CompoundTried {
+        let mut hold = |(kept, stored): Landing| Candidate {
+            step: self.hold_compound(kept, parent),
             stored,
+        };
+        match tried {
+            Tried::Landed(landing) => CompoundTried::Landed(Box::new(hold(landing))),
+            Tried::ChooseOpening(analysis) => CompoundTried::ChooseOpening { analysis },
+            Tried::ChooseOrder { count, candidates } => CompoundTried::ChooseOrder {
+                orders: count.orders,
+                exact: count.exact,
+                candidates: candidates.into_iter().map(&mut hold).collect(),
+            },
         }
     }
-}
-
-/// A replayed compound step: the state it lands and its step's summary, or
-/// a refusal; thrown, the caller's mistake.
-pub(crate) type Replayed = Result<Result<(State, StepSummary), Refusal>, BridgeError>;
-
-/// A stored crimp or tuck replayed in `parent` (`Bridge::apply`): the state
-/// it lands, with its step's summary, when its stored choices decide it.
-/// None for any other op.
-pub(crate) fn replay(parent: &State, op: &Op, choices: &Choices) -> Option<Replayed> {
-    let landed = match op {
-        Op::Crimp(op) => settle(crimp_fold(parent, op, choices)).map(|fold| {
-            fold.and_then(|fold| {
-                let layers = layers(parent, &fold.first, fold.side);
-                match parent.crimp_fold(&fold, &crimp_choices(choices)) {
-                    Ok(CrimpOutcome::Landed(folded)) => Ok((folded.state, layers)),
-                    Ok(CrimpOutcome::ChooseOpening(_)) => Err(choice_needed(NeededChoice::Opening)),
-                    Ok(CrimpOutcome::ChooseOrder(_)) => {
-                        Err(choice_needed(NeededChoice::Completion))
-                    }
-                    Err(refusal) => Err(refused(refusal)),
-                }
-            })
-        }),
-        Op::Tuck(op) => settle(tuck_fold(parent, op, choices)).map(|fold| {
-            fold.and_then(|fold| {
-                let layers = layers(parent, &fold.line, fold.side);
-                let stored = TuckChoices {
-                    order: order(choices),
-                };
-                match parent.tuck_fold(&fold, &stored) {
-                    Ok(TuckOutcome::Landed(folded)) => Ok((folded.state, layers)),
-                    Ok(TuckOutcome::ChooseOrder(_)) => Err(choice_needed(NeededChoice::Completion)),
-                    Err(refusal) => Err(refused(refusal)),
-                }
-            })
-        }),
-        _ => return None,
-    };
-    Some(landed.map(|landed| {
-        landed.map(|(state, layers)| {
-            let step = StepSummary::new(parent, &state, layers);
-            (state, step)
-        })
-    }))
 }
 
 /// "Layers" for a compound step (plan D14): the display layers along its
@@ -599,6 +581,15 @@ fn layers(parent: &State, line: &Line, side: Side) -> Option<usize> {
         .cross_section(line, side)
         .ok()
         .map(|section| section.layers)
+}
+
+/// How many orders each independent component of a choice lists.
+fn sizes(completions: &Completions) -> Vec<usize> {
+    completions
+        .components()
+        .iter()
+        .map(|c| c.orders.len())
+        .collect()
 }
 
 /// Every choice of one order per component, at most [`MAX_CANDIDATES`].
@@ -622,40 +613,6 @@ fn picks(sizes: &[usize]) -> Vec<Vec<usize>> {
 
 #[wasm_bindgen]
 impl FoldEngine {
-    /// A crimp's analysis, and the kinds that land.
-    pub fn analyse_crimp(
-        &self,
-        state: u32,
-        op: JsValue,
-        choices: JsValue,
-    ) -> Result<JsValue, JsValue> {
-        let op: CrimpOp = parse("op", op)?;
-        let choices = parse_choices(choices)?;
-        to_js_value(
-            &self
-                .inner
-                .analyse_crimp(state, &op, &choices)
-                .map_err(bridge_error)?,
-        )
-    }
-
-    /// A tuck's analysis: the layers its block can be tucked against.
-    pub fn analyse_tuck(
-        &self,
-        state: u32,
-        op: JsValue,
-        choices: JsValue,
-    ) -> Result<JsValue, JsValue> {
-        let op: TuckOp = parse("op", op)?;
-        let choices = parse_choices(choices)?;
-        to_js_value(
-            &self
-                .inner
-                .analyse_tuck(state, &op, &choices)
-                .map_err(bridge_error)?,
-        )
-    }
-
     /// Fold a crimp; `choices` may be `undefined` or `null`.
     pub fn crimp(&mut self, state: u32, op: JsValue, choices: JsValue) -> Result<JsValue, JsValue> {
         let op: CrimpOp = parse("op", op)?;
