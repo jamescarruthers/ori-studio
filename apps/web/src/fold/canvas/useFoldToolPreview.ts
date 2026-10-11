@@ -22,7 +22,7 @@ import type { FoldToolState } from '../tools/foldToolState';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
-import { useFoldTuckStep, type FoldTuckPreview } from './useFoldTuckStep';
+import { tuckRefusedWithFlaps, useFoldTuckStep, type FoldTuckPreview } from './useFoldTuckStep';
 import type { FoldStateView } from './useFoldStateView';
 
 /** The step a fold tool previews and commits: the document's op and choices, keyed as the session keys them. */
@@ -293,10 +293,12 @@ export function useFoldToolPreview(
     };
   }, [query, landedState, landedKey]);
 
+  // A tuck no layer takes is offered its flaps once its layers are analysed.
+  const compoundRefused = tools.tool === 'tuck' ? tuckRefusedWithFlaps(tuckStep.refused, analysis) : compoundStep?.refused;
   const refused =
     (build.status === 'refused' ? build.refused : null) ??
     ownRoots?.refused ??
-    compoundStep?.refused ??
+    compoundRefused ??
     (analysisFor?.status === 'refused' ? analysisFor.refused : null) ??
     (pendingFor?.status === 'refused' ? pendingFor.refused : null);
 

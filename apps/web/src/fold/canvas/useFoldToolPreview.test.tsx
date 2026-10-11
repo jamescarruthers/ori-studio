@@ -334,6 +334,8 @@ describe('the crimp and the tuck', () => {
     await render(TUCK);
     expect(seen?.step).toBeNull();
     expect(seen?.refused?.refusal).toEqual({ code: 'tuck_infeasible', target: null, placement: 'under', faces: [] });
+    // No flap is offered before the layers are in.
+    expect(seen?.refused?.fixes).toEqual([]);
     expect(engine.tuck).not.toHaveBeenCalled();
     expect(verbs.preview).not.toHaveBeenCalled();
     // The picker's layers: the plain valley fold along the same line, side and seed, asked for its analysis alone.
@@ -343,5 +345,7 @@ describe('the crimp and the tuck', () => {
     expect(seen?.section).toBe(SECTION);
     expect(seen?.analysis).not.toBeNull();
     expect(seen?.refused?.refusal.code).toBe('tuck_infeasible');
+    // Its layers in, the plain fold's two flaps are offered one at a time, as the engine offers them when nothing stays.
+    expect(seen?.refused?.fixes).toEqual([{ fix: 'pick_flap', flaps: FLAPS }]);
   });
 });

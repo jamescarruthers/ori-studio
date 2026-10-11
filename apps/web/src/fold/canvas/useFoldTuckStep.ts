@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { trackFoldChoiceOffered } from '../../analytics';
 import type { FoldCompletionChoice, FoldDirection, FoldTuckOp } from '../document/foldSequenceDocument';
 import type { FoldTuckAnalysis, FoldTuckPlacement, FoldTuckTarget } from '../engine/foldEngineCrimpTuckWire';
-import type { FoldAxiomCandidate, FoldEngineRefused } from '../engine/foldEngineWire';
+import type { FoldAnalysis, FoldAxiomCandidate, FoldEngineRefused } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import type { FoldStepBuild } from '../tools/foldStepBuilder';
 import type { FoldToolState } from '../tools/foldToolState';
@@ -53,6 +53,24 @@ export function tuckWithoutTarget(placement: FoldTuckPlacement): FoldEngineRefus
     faces: [],
     vertices: [],
   };
+}
+
+/**
+ * A tuck no layer takes (`tuckWithoutTarget`), offered its flaps one at a
+ * time when the plain fold along its line moves several, as the engine
+ * offers them when nothing would stay (`nothing_stays`): narrowed to one
+ * flap, a layer the others carried may stay and take it. `analysis` is that
+ * plain fold's — the picker's layers (`FoldTuckStepAnswer.layers`) — so no
+ * flap is offered until it is in. Any other refusal is the engine's, fixes
+ * and all.
+ */
+export function tuckRefusedWithFlaps(
+  refused: FoldEngineRefused | null,
+  analysis: FoldAnalysis | null
+): FoldEngineRefused | null {
+  if (refused?.refusal.code !== 'tuck_infeasible' || refused.refusal.target !== null) return refused;
+  if (!analysis || analysis.flaps.length < 2) return refused;
+  return { ...refused, fixes: [{ fix: 'pick_flap', flaps: analysis.flaps }] };
 }
 
 /**
