@@ -32,21 +32,11 @@ describe('foldRailGroups', () => {
       ['planned', 'Planned'],
     ]);
     expect(groups.map((group) => group.items.map((each) => each.id))).toEqual([
-      ['valley', 'mountain', 'precrease', 'inside-reverse'],
+      ['valley', 'mountain', 'precrease', 'inside-reverse', 'crimp', 'tuck'],
       ['divide-line'],
       ['axiom-1', 'axiom-2', 'axiom-3', 'axiom-4', 'axiom-5', 'axiom-6', 'axiom-7', 'free', 'crease'],
       ['turn-over', 'rotate'],
-      [
-        'crimp',
-        'tuck',
-        'squash',
-        'petal',
-        'rabbit-ear',
-        'swivel',
-        'open-sink',
-        'closed-sink',
-        'unsink',
-      ],
+      ['squash', 'petal', 'rabbit-ear', 'swivel', 'open-sink', 'closed-sink', 'unsink', 'pleat'],
     ]);
     // A roadmap, out of the way until asked for; everything else open.
     expect(groups.filter((group) => group.collapsedByDefault).map((group) => group.id)).toEqual(['planned']);
@@ -74,16 +64,44 @@ describe('foldRailGroups', () => {
     reverse.select();
     expect(calls.selectTool).toHaveBeenCalledWith('inside-reverse');
     calls.selectTool.mockClear();
-    for (const id of ['crimp', 'squash', 'unsink']) {
+    for (const id of ['squash', 'unsink']) {
       const planned = item(groups, id);
       expect(planned.kind).toBe('planned');
       expect(planned.available).toBe(false);
       expect(planned.reason).toBe('Planned: not in Ori Studio yet.');
       planned.select();
     }
+    // A pleat is listed only to say it needs no tool of its own.
+    const pleat = item(groups, 'pleat');
+    expect(pleat).toMatchObject({ kind: 'planned', available: false, label: 'Pleat' });
+    expect(pleat.reason).toBe('Not a tool of its own: fold a pleat as two plain folds, a valley and then a mountain beside it.');
+    expect(pleat.description).toBe(pleat.reason);
+    pleat.select();
     // The rail and the sheet refuse the press (`available: false`), and a planned item binds nothing besides.
     expect(calls.selectTool).not.toHaveBeenCalled();
     expect(calls.turn).not.toHaveBeenCalled();
+  });
+
+  it('takes the crimp and the tuck as tools of the Fold group, unbound until a key is given', () => {
+    const calls = verbs();
+    const groups = foldRailGroups(t, view({ tool: 'crimp' }), calls);
+    expect(item(groups, 'crimp')).toMatchObject({
+      kind: 'tool',
+      label: 'Crimp',
+      description: 'Reverse a flap along two lines at once: in, then back out.',
+      shortcut: 'fold.toolCrimp',
+      available: true,
+      active: true,
+    });
+    expect(item(groups, 'tuck')).toMatchObject({
+      kind: 'tool',
+      label: 'Tuck',
+      description: 'Fold a flap and slide it under, or over, a layer that stays.',
+      shortcut: 'fold.toolTuck',
+      active: false,
+    });
+    item(groups, 'tuck').select();
+    expect(calls.selectTool).toHaveBeenCalledWith('tuck');
   });
 
   it('marks the tool in hand and the line mode chosen, but no line mode under the Divide line', () => {
@@ -123,8 +141,10 @@ describe('foldRailGroups', () => {
       expect(item(groups, id).reason).toBe('This sequence is from a newer Ori Studio, so it opens read-only.');
     }
     expect(item(groups, 'inside-reverse').available).toBe(false);
+    expect(item(groups, 'crimp').available).toBe(false);
+    expect(item(groups, 'tuck').available).toBe(false);
     // What is planned stays planned, whatever the sequence.
-    expect(item(groups, 'crimp').reason).toBe('Planned: not in Ori Studio yet.');
+    expect(item(groups, 'squash').reason).toBe('Planned: not in Ori Studio yet.');
   });
 
   it('builds a tooltip from the name, the key and what it does, or why it cannot', () => {

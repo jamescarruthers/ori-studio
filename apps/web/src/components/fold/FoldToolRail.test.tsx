@@ -64,13 +64,19 @@ describe('FoldToolRail', () => {
     const rail = mount(<FoldToolRail groups={foldRailGroups(t, view, calls)} />);
     act(() => byRole(rail, 'button', 'Mountain fold').click());
     act(() => byRole(rail, 'button', 'Inside reverse fold').click());
+    act(() => byRole(rail, 'button', 'Crimp').click());
+    act(() => byRole(rail, 'button', 'Tuck').click());
     act(() => byRole(rail, 'button', 'Axiom 6: two points onto two lines').click());
     act(() => byRole(rail, 'button', 'Turn over').click());
     // The planned folds are collapsed until asked for.
     act(() => byRole(rail, 'button', 'Planned').click());
-    const planned = byRole(rail, 'button', 'Crimp');
+    const planned = byRole(rail, 'button', 'Squash fold');
     act(() => planned.click());
-    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['inside-reverse']]);
+    // A pleat is two plain folds: listed to say so, and taken by nothing.
+    const pleat = byRole(rail, 'button', 'Pleat');
+    act(() => pleat.click());
+    expect(pleat.getAttribute('aria-disabled')).toBe('true');
+    expect(calls.selectTool.mock.calls).toEqual([['mountain'], ['inside-reverse'], ['crimp'], ['tuck']]);
     expect(calls.selectLineMode.mock.calls).toEqual([['axiom-6']]);
     expect(calls.turn).toHaveBeenCalledWith({ kind: 'turn-over', axis: 'vertical' });
     expect(planned.getAttribute('aria-disabled')).toBe('true');

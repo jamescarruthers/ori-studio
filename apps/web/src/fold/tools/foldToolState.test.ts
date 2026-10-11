@@ -138,4 +138,49 @@ describe('the Fold tools’ state', () => {
     expect(clampDivideParts(1)).toBe(2);
     expect(clampDivideParts(Number.NaN)).toBe(2);
   });
+
+  it('locates a crimp’s two lines one after the other, keeping the first through a change of the second’s mode', () => {
+    const tools = createFoldTools();
+    tools.selectLineMode('axiom-1');
+    tools.selectTool('crimp');
+    tools.pick(point(1, 0));
+    tools.pick(point(0, 1));
+    // The first line is in; the second, a free line by default, is not.
+    expect(isLocated(tools.store.getState())).toBe(false);
+    tools.pick(point(0.2, 0.2));
+    tools.setSecondLineMode('crease');
+    // The second line is located anew in its mode: one click, the first line's kept.
+    expect(tools.store.getState()).toMatchObject({ secondLineMode: 'crease' });
+    expect(tools.store.getState().picks).toHaveLength(2);
+    tools.pick(point(0.5, 0.5));
+    expect(isLocated(tools.store.getState())).toBe(true);
+    expect(tools.pick(point(0.6, 0.6))).toBe(false);
+    // Another tool along a line keeps the first line, never the second's clicks.
+    tools.selectTool('valley');
+    expect(tools.store.getState().picks).toHaveLength(2);
+    expect(isLocated(tools.store.getState())).toBe(true);
+    // The second line's mode stays chosen, as the line mode does.
+    tools.clear();
+    expect(tools.store.getState().secondLineMode).toBe('crease');
+  });
+
+  it('keeps a tuck’s direction from fold to fold, and takes its target anew for another direction', () => {
+    const tools = createFoldTools();
+    tools.selectTool('tuck');
+    tools.setTuckDirection('mountain');
+    tools.setTuckTarget(7);
+    tools.stepOrder(1, 2);
+    // Another target is another tuck: its orders are its own.
+    tools.setTuckTarget(5);
+    expect(tools.store.getState().compound).toMatchObject({ tuckTarget: 5, order: 0 });
+    tools.stepOrder(1, 2);
+    tools.setTuckDirection('valley');
+    expect(tools.store.getState()).toMatchObject({ tuckDirection: 'valley', compound: { tuckTarget: null, order: 0 } });
+    tools.setTuckDirection('mountain');
+    tools.pick(point(0.1, 0.1));
+    tools.setTuckTarget(3);
+    tools.clear();
+    // A clear lets the target go; the direction stays chosen, as a precrease's does.
+    expect(tools.store.getState()).toMatchObject({ tuckDirection: 'mountain', compound: { tuckTarget: null } });
+  });
 });

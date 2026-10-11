@@ -21,6 +21,7 @@ import {
   foldModelVerbDescription,
   foldModelVerbLabel,
   foldPlannedOpLabel,
+  foldPlannedOpReason,
   foldPlannedReason,
   foldReadOnlyReason,
   foldToolDescription,
@@ -79,7 +80,7 @@ export interface FoldRailGroup {
   items: readonly FoldRailItem[];
 }
 
-const FOLD_GROUP_TOOLS: readonly FoldToolId[] = ['valley', 'mountain', 'precrease', 'inside-reverse'];
+const FOLD_GROUP_TOOLS: readonly FoldToolId[] = ['valley', 'mountain', 'precrease', 'inside-reverse', 'crimp', 'tuck'];
 
 /** Tools not built yet: shown so the rail says what is coming, never taken. Every fold tool is built now. */
 const PLANNED_TOOLS: ReadonlySet<FoldToolId> = new Set();
@@ -158,17 +159,21 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
     ['model', [verb('turn-over'), verb('rotate')]],
     [
       'planned',
-      FOLD_PLANNED_OPS.map((id) => ({
-        id,
-        kind: 'planned' as const,
-        label: foldPlannedOpLabel(t, id),
-        description: planned,
-        reason: planned,
-        shortcut: null,
-        active: false,
-        available: false,
-        select: () => {},
-      })),
+      FOLD_PLANNED_OPS.map((id) => {
+        // A pleat says it is two plain folds; the rest that they are coming.
+        const reason = foldPlannedOpReason(t, id);
+        return {
+          id,
+          kind: 'planned' as const,
+          label: foldPlannedOpLabel(t, id),
+          description: reason,
+          reason,
+          shortcut: null,
+          active: false,
+          available: false,
+          select: () => {},
+        };
+      }),
     ],
   ];
   return groups.map(([id, items]) => ({

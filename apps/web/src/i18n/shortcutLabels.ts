@@ -196,6 +196,10 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return foldToolLabel(t, 'precrease');
     case 'fold.toolInsideReverse':
       return foldToolLabel(t, 'inside-reverse');
+    case 'fold.toolCrimp':
+      return foldToolLabel(t, 'crimp');
+    case 'fold.toolTuck':
+      return foldToolLabel(t, 'tuck');
     case 'fold.toolDivideLine':
       return foldToolLabel(t, 'divide-line');
     case 'fold.turnOver':
