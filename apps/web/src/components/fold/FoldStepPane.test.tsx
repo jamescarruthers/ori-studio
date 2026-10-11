@@ -113,6 +113,57 @@ describe('FoldStepPane', () => {
     expect(rows()).not.toHaveProperty('Layer order');
   });
 
+  it('names both a crimp’s lines, in its sentence and its rows', () => {
+    render({
+      step: {
+        words: {
+          op: 'crimp',
+          crimp: 'outside',
+          line: { via: 'axiom', axiom: 1, inputs: [{ kind: 'point' }, { kind: 'point' }] },
+          second: 'crease',
+        },
+        number: 4,
+        layers: 2,
+        creases: { mountain: 3, valley: 4, flat: 0 },
+        diff: { added: { mountain: 2, valley: 2, flat: 0 }, refolded: 0, reversed: 1, unfolded: 0 },
+        status: 'ok',
+        compound: { blocks: 4, opening: 'only', orderChosen: true },
+      },
+      startSide: 'front',
+    });
+    expect(host.querySelector('header')?.textContent).toBe('Step 4Crimp');
+    expect(host.textContent).toContain(
+      'Outside crimp along the line joining point P and point Q, then back along an existing crease beyond it.'
+    );
+    expect(rows()).toMatchObject({
+      Operation: 'Outside crimp',
+      'First line': 'Axiom 1 · through two points',
+      'Second line': 'Existing crease',
+      Opening: 'The only one',
+      'Layer order': 'Chosen among several',
+      Blocks: '4',
+    });
+    expect(rows()).not.toHaveProperty('Line');
+  });
+
+  it('names a tuck’s line, and its block', () => {
+    render({
+      step: {
+        words: { op: 'tuck', direction: 'mountain', line: { via: 'free' } },
+        number: 3,
+        layers: 2,
+        creases: { mountain: 1, valley: 1, flat: 0 },
+        diff: { added: { mountain: 1, valley: 0, flat: 0 }, refolded: 0, reversed: 0, unfolded: 0 },
+        status: 'ok',
+        compound: { blocks: 1, opening: null, orderChosen: false },
+      },
+      startSide: 'front',
+    });
+    expect(rows()).toMatchObject({ Operation: 'Mountain fold and tuck', Line: 'Free line', Blocks: '1' });
+    expect(rows()).not.toHaveProperty('Opening');
+    expect(rows()).not.toHaveProperty('Second line');
+  });
+
   it('labels the crease counts as the front’s, and says so plainly when the back starts up', () => {
     render({ step: VALLEY_STEP, startSide: 'front' });
     expect(section('Creases')?.textContent).toContain('As seen from the front of the paper.');

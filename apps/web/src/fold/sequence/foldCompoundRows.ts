@@ -12,16 +12,20 @@ import type { FoldCompoundReport } from '../engine/foldEngineCompoundWire';
 export function foldCompoundPaneRows(report: FoldCompoundReport | undefined | null): FoldCompoundPaneRows | undefined {
   if (!report) return undefined;
   switch (report.family) {
+    // A crimp opens its flaps at ℓ1 as a reverse fold does, and its blocks
+    // are its strip's and its tip's.
     case 'reverse':
+    case 'crimp':
       return {
         blocks: report.blocks.length,
         opening: report.openings.length === 0 ? null : (report.stored.openings?.length ?? 0) > 0 ? 'chosen' : 'only',
         orderChosen: report.stored.order !== undefined,
       };
+    // A tuck opens nothing: its block turns whole.
+    case 'tuck':
+      return { blocks: report.blocks.length, opening: null, orderChosen: report.stored.order !== undefined };
     // The other families' rows come with their tools: until then the pane
     // shows them as it shows a plain fold.
-    case 'crimp':
-    case 'tuck':
     case 'vertex':
     case 'sink':
       return undefined;

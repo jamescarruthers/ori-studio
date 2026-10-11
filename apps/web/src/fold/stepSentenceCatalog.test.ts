@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TFunction } from 'i18next';
 import type { FoldLayerScope } from './stepSentence';
 import {
+  crimpSentence,
   plainFoldSentence,
   reverseFoldSentence,
   unfoldSentence,
@@ -180,6 +181,35 @@ describe('the reverse fold’s sentences', () => {
     }
     // Two kinds, nine lines (no "in half"), three scopes.
     expect(keys.size).toBe(2 * 9 * 3);
+  });
+});
+
+describe('the crimp’s sentences', () => {
+  const KINDS = { inside: 'Inside crimp', outside: 'Outside crimp' } as const;
+  /** A crimp is never "in half", as a reverse fold is not: those lines read as their plain forms. */
+  const PLAIN: Partial<Record<SentenceLine, SentenceLine>> = { o2Half: 'o2', o3Half: 'o3' };
+  const SECONDS = { free: 'a second line drawn', crease: 'an existing crease' } as const;
+
+  it('holds every kind × first line × second line to one key and one pattern, naming both lines', () => {
+    const keys = new Set<string>();
+    for (const kind of ['inside', 'outside'] as const) {
+      for (const line of LINE_KEYS) {
+        for (const second of ['free', 'crease'] as const) {
+          const keyed = PLAIN[line] ?? line;
+          const { clause, names } = LINES[keyed];
+          const { t, last } = recorder();
+          crimpSentence(t, kind, { line, names: NAMES }, second);
+          expect(last(), `${kind}.${line}.${second}`).toEqual({
+            key: `panels:fold.sentence.${kind}Crimp.${keyed}.${second}`,
+            defaults: { default: `${KINDS[kind]}${clause}, then back along ${SECONDS[second]} beyond it.` },
+            values: Object.fromEntries(names.map((name) => [name, NAMES[name]])),
+          });
+          keys.add(`${kind}.${keyed}.${second}`);
+        }
+      }
+    }
+    // Two kinds, nine first lines (no "in half"), two second lines.
+    expect(keys.size).toBe(2 * 9 * 2);
   });
 });
 

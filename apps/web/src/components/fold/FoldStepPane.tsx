@@ -8,6 +8,7 @@ import {
   lineLabel,
   operationBadge,
   operationLabel,
+  secondLineLabel,
   type FoldCpOrigin,
   type FoldCreaseCounts,
   type FoldCreaseDiff,
@@ -150,6 +151,8 @@ export function FoldStepPane({
 
   const { words } = step;
   const line = lineLabel(t, words);
+  // A crimp names both its lines: the first, nearer the body, and the second beyond it.
+  const secondLine = secondLineLabel(t, words);
   const title =
     step.number !== null
       ? t('panels:fold.step.title', 'Step {{number}}', { number: step.number })
@@ -174,8 +177,16 @@ export function FoldStepPane({
           {operationLabel(t, words)}
         </FieldRow>
         {line !== null && (
-          <FieldRow label={t('panels:fold.step.line', 'Line')} kind="static">
+          <FieldRow
+            label={secondLine !== null ? t('panels:fold.step.firstLine', 'First line') : t('panels:fold.step.line', 'Line')}
+            kind="static"
+          >
             {line}
+          </FieldRow>
+        )}
+        {secondLine !== null && (
+          <FieldRow label={t('panels:fold.step.secondLine', 'Second line')} kind="static">
+            {secondLine}
           </FieldRow>
         )}
         {step.layers !== null && (

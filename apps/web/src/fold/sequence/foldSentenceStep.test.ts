@@ -105,12 +105,19 @@ describe('a stored step as its sentence reads it', () => {
     ).toEqual({ op: 'precrease', direction: 'valley', line: { via: 'free' }, scope: { kind: 'all' } });
     expect(foldSentenceStepOf({ kind: 'cp-jump', cpJson: '{}', orderJson: '{}', origin: 'cp' }, none)).toEqual({ op: 'cp-jump' });
     const line = { via: 'free', through: [[0, 0.5], [1, 0.5]] } as const;
+    // A crimp names both its lines: its second by how it was found, a crease or drawn.
     expect(
       foldSentenceStepOf({ kind: 'crimp', line, second: line, crimp: 'outside', seed: { scope: 'all' } }, none)
-    ).toEqual({ op: 'crimp', crimp: 'outside' });
+    ).toEqual({ op: 'crimp', crimp: 'outside', line: { via: 'free' }, second: 'free' });
+    expect(
+      foldSentenceStepOf(
+        { kind: 'crimp', line, second: { via: 'crease', at: [0.5, 0.3] }, crimp: 'inside', seed: { scope: 'all' } },
+        none
+      )
+    ).toEqual({ op: 'crimp', crimp: 'inside', line: { via: 'free' }, second: 'crease' });
     expect(
       foldSentenceStepOf({ kind: 'tuck', line, direction: 'mountain', seed: { scope: 'all' }, target: [0.5, 0.5] }, none)
-    ).toEqual({ op: 'tuck', direction: 'mountain' });
+    ).toEqual({ op: 'tuck', direction: 'mountain', line: { via: 'free' } });
     const locked: FoldLockedStep = { id: 'l', parent: null, unknown: { op: { kind: 'sink' } } };
     expect(foldNodeSentenceStep(locked, none)).toEqual({ op: 'unknown' });
   });

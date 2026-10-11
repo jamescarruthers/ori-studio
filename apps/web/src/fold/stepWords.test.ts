@@ -7,6 +7,7 @@ import {
   lineLabel,
   operationBadge,
   operationLabel,
+  secondLineLabel,
   type FoldCreaseDiff,
 } from './stepWords';
 
@@ -37,10 +38,10 @@ describe('operationLabel and operationBadge', () => {
       { op: 'turn', turn: { kind: 'turn-over', axis: 'vertical' } },
       { op: 'turn', turn: { kind: 'rotate', rotate: { amount: 'quarter', direction: 'ccw' } } },
       { op: 'cp-jump' },
-      { op: 'crimp', crimp: 'inside' },
-      { op: 'crimp', crimp: 'outside' },
-      { op: 'tuck', direction: 'valley' },
-      { op: 'tuck', direction: 'mountain' },
+      { op: 'crimp', crimp: 'inside', line: { via: 'free' }, second: 'free' },
+      { op: 'crimp', crimp: 'outside', line: { via: 'free' }, second: 'crease' },
+      { op: 'tuck', direction: 'valley', line: { via: 'free' } },
+      { op: 'tuck', direction: 'mountain', line: { via: 'free' } },
       { op: 'unknown' },
     ];
     expect(steps.map((step) => operationLabel(t, step))).toEqual([
@@ -92,6 +93,16 @@ describe('lineLabel', () => {
     // A sink's line is found as a fold's; an unsink's is the ring's crease.
     expect(lineLabel(t, { op: 'sink', kind: 'open', line: { via: 'free' } })).toBe('Free line');
     expect(lineLabel(t, { op: 'sink', kind: 'unsink', line: { via: 'crease' } })).toBe('Existing crease');
+    // A tuck's line is found as a fold's.
+    expect(lineLabel(t, { op: 'tuck', direction: 'valley', line: { via: 'free' } })).toBe('Free line');
+  });
+
+  it('names both a crimp’s lines, its second only by secondLineLabel', () => {
+    const crimp: FoldSentenceStep = { op: 'crimp', crimp: 'inside', line: { via: 'axiom', axiom: 1, inputs: [] }, second: 'crease' };
+    expect(lineLabel(t, crimp)).toBe('Axiom 1 · through two points');
+    expect(secondLineLabel(t, crimp)).toBe('Existing crease');
+    expect(secondLineLabel(t, { ...crimp, second: 'free' })).toBe('Free line');
+    expect(secondLineLabel(t, fold('valley'))).toBeNull();
   });
 });
 

@@ -96,9 +96,17 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
         scope: scopeOf(op.seed),
       };
     case 'crimp':
-      return { op: 'crimp', crimp: op.crimp };
+      return {
+        op: 'crimp',
+        crimp: op.crimp,
+        // Never "in half", as a reverse fold is not: its tip turns at ℓ1.
+        line: sentenceLine(op.line, null, context),
+        // A step stores one root, its first line's: the second is drawn, or a crease.
+        second: op.second.via === 'crease' ? 'crease' : 'free',
+      };
     case 'tuck':
-      return { op: 'tuck', direction: op.direction };
+      // Never "in half" either: what moves is the flap, tucked away.
+      return { op: 'tuck', direction: op.direction, line: sentenceLine(op.line, null, context) };
     case 'squash':
     case 'petal':
     case 'rabbit-ear':
