@@ -425,6 +425,28 @@ As built (the second review's UI fixes, 2026-10-11):
   - [x] Part ghosts after the frame (F9), arrows as printed (F14), shared
     type sizes (F16).
   - [x] Docstring, dead code, helpers, tokens and module classes (N3, N4).
+- [x] The second review's fixes, homes and page goldens unchanged; checked in
+  the browser on the crane (:5320).
+  - [x] Steps added after a counted last page start a page of their own (L1,
+    part 1).
+  - [x] A count held to what the page can hold; the row shows what every page
+    is laid out for and offers only that (R2-U2, L1 parts 2–3 as far as the
+    frozen layout allows); a break never emptied (L4); a counted next page
+    kept within 30 (L3).
+  - [x] Pages in front of a counted page keep their counts; Use default
+    there says why instead (L2).
+  - [x] "This page" is the page last acted on (R2-U1).
+  - [x] A press during a relayout is held, not dropped (R2-U3).
+  - [x] A newer build's steps per page carried (F-NEWER-SPP); page counts in
+    the v1 fixture (F-V1FIX); the design record says the cells replaced
+    packing (F-DOCS).
+  - [ ] Zach's call, open: what a count means on the diagram's last page. A
+    counted page is laid out for the steps it holds, so on the last page
+    every count from its steps up gives the same page, and one press below
+    the default on an automatic last page gives its few steps the whole page.
+    Laying a counted last page out for max(count, steps held) would make the
+    number mean what it says; it changes no golden home, but it is a layout
+    change, so it waits for his answer.
 
 ### Phase 4: gate and land
 - [ ] Lint, typecheck, i18n check, full web suite (Node 22), build and prerender.
