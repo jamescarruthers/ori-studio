@@ -111,6 +111,13 @@ describe('page counts kept by every edit that moves steps', () => {
     expect(pages()).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7']);
   });
 
+  it('“Add step” after the diagram’s last step, on a last page of its own count: a page of its own, the last page as it was', () => {
+    install(10, { 0: 4, 4: 4, 8: 2 });
+    state().selectDiagramStep('s9');
+    const added = [state().addDiagramStep()!, state().addDiagramStep()!, state().addDiagramStep()!];
+    expect(pages()).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8:2 s9', added.join(' ')]);
+  });
+
   it('a delete, a move and a duplicate, each in its own undo step', () => {
     install(12, { 0: 3, 3: 4 });
     expect(state().deleteDiagramSteps(['s3'])).toBe(true);

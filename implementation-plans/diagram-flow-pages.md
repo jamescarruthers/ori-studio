@@ -92,7 +92,9 @@ Behaviour (each with a unit test):
 
 1. Inserting n steps after step X: they join X's page; a page with its own
    count gains n (clamped to 30). Inserting before the first step joins
-   page 1.
+   page 1. Steps added after the diagram's last step gain its page nothing
+   (review L1): no later page needs holding still, so they fill the last
+   page to its count and then start an automatic page.
 2. Deleting steps: a page with its own count loses its deleted members. If
    its first step goes, its count moves to its next remaining step. A page
    that loses every step disappears.

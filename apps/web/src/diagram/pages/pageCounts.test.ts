@@ -108,6 +108,33 @@ describe('retainPageCounts', () => {
       expect(pages(kept(two, (d) => insertSteps(d, [fresh('x')], after(d, 's3'))))).toEqual(['s0:5 s1 s2 s3 x', 's4:4 s5 s6 s7']);
     });
 
+    it('after the diagram’s last step: its counted page gains nothing, and once full they start a page of their own', () => {
+      // `s0:4 s1 s2 s3 | s4:4 s5 s6 s7 | s8:2 s9`: a last page of its own 2.
+      const last = diagram(10, { 0: 4, 4: 4, 8: 2 });
+      expect(pages(kept(last, (d) => insertSteps(d, [fresh('x')], after(d, 's9'))))).toEqual([
+        's0:4 s1 s2 s3',
+        's4:4 s5 s6 s7',
+        's8:2 s9',
+        'x',
+      ]);
+      // A step moved to the end, too: it leaves its page and starts one after the last.
+      expect(pages(kept(last, (d) => moveAfter(d, 's5', 's9')))).toEqual(['s0:4 s1 s2 s3', 's4:3 s6 s7', 's8:2 s9', 's5']);
+      // A last page that holds fewer than its count fills to it first.
+      const room = diagram(10, { 0: 4, 4: 4, 8: 3 });
+      expect(pages(kept(room, (d) => insertSteps(d, [fresh('x'), fresh('y')], after(d, 's9'))))).toEqual([
+        's0:4 s1 s2 s3',
+        's4:4 s5 s6 s7',
+        's8:3 s9 x',
+        'y',
+      ]);
+      // Inside the last page, it gains them as any page with its own count does.
+      expect(pages(kept(last, (d) => insertSteps(d, [fresh('x')], after(d, 's8'))))).toEqual([
+        's0:4 s1 s2 s3',
+        's4:4 s5 s6 s7',
+        's8:3 x s9',
+      ]);
+    });
+
     it('before the first step: on page 1, which it starts now, the count with it', () => {
       const next = kept(BASE, (d) => insertSteps(d, [fresh('x')], 0));
       expect(pages(next)).toEqual(['x:4 s0 s1 s2', 's3:4 s4 s5 s6', 's7 s8 s9 s10', 's11']);

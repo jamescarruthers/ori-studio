@@ -12,7 +12,10 @@
  *
  * 1. Steps inserted after a step join its page; a page with its own count
  *    gains as many (to 30 at most). Steps inserted before the first step join
- *    page 1.
+ *    page 1. Steps added after the diagram's last step gain its page nothing:
+ *    no later page needs holding still, so they fill that page to its count
+ *    and then start a page of their own, as they would after a full page
+ *    without one.
  * 2. A page with its own count loses its deleted steps. Its first step gone,
  *    its count moves to its next step that remains; a page that loses every
  *    step is gone.
@@ -78,6 +81,12 @@ export function retainPageCounts(before: DiagramDocument, after: DiagramDocument
     if (ids) ids.push(step.id);
     else members.set(page, [step.id]);
   }
+  // The steps added or moved after the last that stayed: after the diagram's last step, where they hold no page still.
+  let lastStay = -1;
+  now.forEach((step, index) => {
+    if (stays.has(step.id)) lastStay = index;
+  });
+  const appended = new Set(lastStay < 0 ? [] : now.slice(lastStay + 1).map((step) => step.id));
 
   // Each page with its own count, on the step that starts it now: plus what joined it, less what left.
   const counts = new Map<string, number>();
@@ -86,7 +95,7 @@ export function retainPageCounts(before: DiagramDocument, after: DiagramDocument
     if (split.own === null || !ids || ids.length === 0) return;
     const had = new Set(split.steps.map((at) => was[at]!.id));
     const has = new Set(ids);
-    const joined = ids.filter((id) => !had.has(id)).length;
+    const joined = ids.filter((id) => !had.has(id) && !appended.has(id)).length;
     const left = [...had].filter((id) => !has.has(id)).length;
     counts.set(ids[0]!, clampCount(split.own + joined - left));
   });
