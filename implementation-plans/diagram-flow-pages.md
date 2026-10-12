@@ -271,6 +271,51 @@ As built (Phase 3, part 1):
   (`startsPage`), and says the frames it moves return to automatic
   placement (U5).
 
+As built (Phase 3, part 2):
+
+- A press on a step focuses its option (`focusStep` in `usePagePlacement`),
+  so Enter opens it; the press is kept from the browser only on a part's
+  target or a grip, which lie outside the option. Delete and Backspace go to
+  `edit.delete` and its confirm again: the no-op `placementDelete` claim is
+  gone. The click model stays (Decision 7).
+- A keyboard nudge in its 220 ms pause is committed, never dropped, before
+  anything else happens to the diagram: the slice calls
+  `flushPlacementNudge` (`placementGestures.ts`, store-free as
+  `pendingEdits.ts`) at the top of `commit`, `sessionFor` and undo/redo; the
+  save path's `flushPendingEdits` reaches it; a selection, part, view or
+  detail change flushes it once that change has landed; so do any other
+  Diagram key and the view unmounting. Escape and the Undo key still drop
+  it. A sitting's nudges of one part are one undo entry (the store's
+  `session`, ended by a selection or part change); a nudge that comes while
+  its own last nudge is still laying out carries on from it (`committed` on
+  the draft) instead of being eaten or sent to the steps.
+- Lost pointer capture ends a gesture; a drag whose element went is let go
+  by the next key; a key no draft can take (another edit's relayout) goes
+  on to the steps; a committed preview goes when the layout fails, and none
+  is held while it is failing. The dragged part is selected once, at the
+  slop.
+- Settings › Shortcuts names the placement keys and the "place on page"
+  scope in all nine catalogues; the drag readout is a catalogue template
+  with the language's decimals (U3).
+- Clashes are said in four groups — overlap, off the paper, past the margin,
+  the path (`ClashGroup`, `clashLabels.ts`) — in the export notice, one
+  sentence a group, and in the tag on the page; "overlaps step 4" for one
+  step (U6).
+- A placement that leaves the part at home is counted as a reset, by how
+  (`drag_home`, `keys` — new — or `pane`), decided from the store's
+  normalised result; the three placement events have doc comments, and
+  their rows are in the Tracked events table (U7).
+- The Step pane keeps the step's last cell while a newer layout is under
+  way; an unknown size is an empty field (`NumberField` takes `null`) (U8).
+- Part home ghosts are taken after the frame's offset, the frame's ghost is
+  the parts' box at home (F9); a placed step is checked against the enlarge
+  arrows as the page prints them, lifted (F14); the type sizes live in
+  `stepType.ts`, read by the layout and the hit boxes (F16). Homes and page
+  goldens unchanged.
+- Tidied: the Pages docstring, `openEnlargeArea` and the `enlarge_arrow` way
+  into a step deleted, `pageImageUrl`, `placementState`, tokens and module
+  classes in the placement styles (N3, N4).
+
 ## Affected Areas
 
 - `apps/web/src/diagram/document/diagramDocument.ts`, `diagramFile.ts`,
@@ -321,10 +366,23 @@ As built (Phase 3, part 1):
 - [x] Page pane per-page count, on the current page; checked in the browser
   on the crane (page 2 set to 6: pages 9 · 6 · 9 · 4, page 1 keeping 9 as its
   own; Use default: 9 · 9 · 9 · 1).
-- [ ] The review fixes listed above.
+- [x] The review fixes listed above.
   - [x] Reset This Page acts on the page in view (U4).
   - [x] The page-break offer only where a break helps, saying it sends the
     frame home (U5).
+  - [x] Click focus and Delete with its confirm (M1, M2), checked in the
+    browser on the crane.
+  - [x] Nudges flushed, not dropped, and one undo entry a sitting (U1, N5).
+  - [x] Lost capture, keys not swallowed in a relayout, a failed layout's
+    preview let go, the part selected once (U2, N1); checked in the browser.
+  - [x] Shortcut labels and scope, and the drag readout, in all nine
+    catalogues (U3).
+  - [x] Clash wording by group in the export notice and on the page (U6).
+  - [x] Analytics `via` and reset-or-placed, doc comments and rows (U7).
+  - [x] The Step pane through a relayout; an empty unknown size (U8).
+  - [x] Part ghosts after the frame (F9), arrows as printed (F14), shared
+    type sizes (F16).
+  - [x] Docstring, dead code, helpers, tokens and module classes (N3, N4).
 
 ### Phase 4: gate and land
 - [ ] Lint, typecheck, i18n check, full web suite (Node 22), build and prerender.
