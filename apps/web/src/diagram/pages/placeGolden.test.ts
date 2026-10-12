@@ -111,6 +111,10 @@ describe('pages as they printed before placement came', () => {
     // prototype's look: bands in reading order, steps in bends, the lane
     // meeting the spine and ending at the last box. No digest changed in
     // Phases 4 or 5.
+    // Review fixes (`diagram-flow-packing.md`, "Review fixes"): a flow page keeps
+    // the enlarge arrow's gutter before every enlarged step after another,
+    // printing or not, so the enlarged steps' page 1 packs with a gutter before
+    // its Size step and its step waiting for a picture.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -123,7 +127,7 @@ describe('pages as they printed before placement came', () => {
       {
         "a newer build’s steps and turns · page 1": "f803ef9681c5a607 f803ef9681c5a607 4f53cda18c2baa0c",
         "a newer build’s steps and turns · page 2": "85e09522e6de28d1 85e09522e6de28d1 4f53cda18c2baa0c",
-        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "9fbdc8fcc0852684 1865e5637e1a2d02 25e067deeff36341",
+        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "e4c84b1a6a208664 beed3f60aeba0731 e9a8112a1fb80c3c",
         "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "7567279ba8e45613 c52f3443c9cecbdb 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 1": "3adc839b90b06e69 d18cb08c628e142e 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 2": "f5faf59273415481 695bf878af508a8f 4f53cda18c2baa0c",
@@ -167,6 +171,8 @@ describe('homes as the layout computes them', () => {
     // are unchanged. No diagram with a placement had launched. Held from here:
     // `heldPages.test.ts` shows no caption or picture edit moves a home, on any
     // fixture, once its pages are packed and adopted.
+    // Review fixes: the enlarged steps' page 1 keeps an arrow's gutter before
+    // each enlarged step after another (a fresh pack; nothing held moved).
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         preparedPages(document, FIXTURE_FONTS, subsetter).layout.pages.map((page, index) => [
@@ -188,7 +194,7 @@ describe('homes as the layout computes them', () => {
       {
         "a newer build’s steps and turns · page 1": "7c3808646e04671c",
         "a newer build’s steps and turns · page 2": "340f944242881549",
-        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "d5c9653e2ece22ce",
+        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "471f2ab8e380ca83",
         "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "f08f2a468e25e577",
         "flow from the right, across spreads, rows read upward · page 1": "4f0bca842b52a7ef",
         "flow from the right, across spreads, rows read upward · page 2": "08df522a3b034889",

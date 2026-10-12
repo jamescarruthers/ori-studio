@@ -8,13 +8,17 @@
  *
  * It covers exactly what the packing is cut from: the page's steps in order,
  * the turns before each (on the diagram's last page, those after its last
- * step too) and the enlarge arrow before any that has one — each keeps a
- * gutter — its index, side, whether it hands over at its spine, whether it
- * is the last page, its capacity, the page setup's geometry (size,
- * orientation, margin, the title tab shown, page numbers shown), the five
- * packing settings, and {@link PACKING_VERSION}. Never a picture, a caption, a
- * mark, a hand placement, the band's width or colour, or the style: an edit of
- * those keeps every page as it is packed.
+ * step too) and which of them are enlarged steps after another step, whose
+ * enlarge arrow may print before them — each keeps a gutter
+ * ({@link keepsGlyphGutter}) — its index, side, whether it hands over at its
+ * spine, whether it is the last page, its capacity, the page setup's geometry
+ * (size, orientation, margin, the title tab shown, page numbers shown), the
+ * five packing settings, and {@link PACKING_VERSION}. Never a picture, a
+ * caption, a mark, a hand placement, the band's width or colour, or the
+ * style: an edit of those keeps every page as it is packed. Whether an
+ * enlarge arrow prints is one of those — it needs the enlarged step's picture
+ * and an area on the step before — so it never counts: its gutter is kept
+ * either way, and an arrow that comes or goes is drawn in it.
  *
  * Pure and cheap: one short digest per page. Free of the document model's
  * values, as the pagination is, so the layout and the export's geometry read
@@ -34,15 +38,34 @@ export const PACKING_VERSION = 'pack-1';
 
 /**
  * What a page's signature reads of a step: what paginates it, how many turns
- * come before it — and, on the diagram's last step, after it — and whether an
- * enlarge arrow prints before it, which keeps a turn's gutter in the packing.
- * The layout's steps (`LayoutStep`) are these as they are.
+ * come before it — and, on the diagram's last step, after it — and whether it
+ * is enlarged, which only the Enlarge verbs change. The layout's steps
+ * (`LayoutStep`) are these as they are.
  */
 export interface SignedStep extends PaginatedStep {
   readonly turnsBefore: { readonly length: number };
   readonly turnsAfter: { readonly length: number };
-  /** Present with an area on a step an enlarge arrow prints before. */
-  readonly zoom?: { readonly arrowFrom: unknown };
+  /** Present on an enlarged step: in the layout's steps, one that shows its window. */
+  readonly zoom?: unknown;
+  /** The layout's enlarged step with no window to show yet. */
+  readonly zoomPending?: true;
+}
+
+/**
+ * Whether a flow page keeps a turn's gutter before the `index`th step: a turn
+ * stands before it, or it is an enlarged step after another step, where an
+ * enlarge arrow prints whenever that step shows an area and this one its
+ * picture (`zoomIndex`). The gutter is kept whether or not the arrow prints
+ * now, so a mark or a picture edit that brings it or takes it away finds the
+ * room already there and re-packs nothing.
+ */
+export function keepsGlyphGutter(step: SignedStep, index: number): boolean {
+  return step.turnsBefore.length > 0 || arrowMayPrintBefore(step, index);
+}
+
+/** An enlarged step after another step: an enlarge arrow may print before it. */
+function arrowMayPrintBefore(step: SignedStep, index: number): boolean {
+  return index > 0 && (step.zoom !== undefined || step.zoomPending === true);
 }
 
 /** What every page's signature is read from: the steps, their pages, the page setup and the title. */
@@ -87,7 +110,7 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
     setup.flowSteadiness,
     page.steps.map((index) => {
       const step = steps[index]!;
-      return [step.id, step.turnsBefore.length, step.zoom?.arrowFrom ? 1 : 0];
+      return [step.id, step.turnsBefore.length, arrowMayPrintBefore(step, index) ? 1 : 0];
     }),
     last && lastIndex !== undefined ? steps[lastIndex]!.turnsAfter.length : 0,
   ];

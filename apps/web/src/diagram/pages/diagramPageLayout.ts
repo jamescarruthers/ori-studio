@@ -52,7 +52,9 @@
  * the Fit each runs: as large as its room allows, at most six times the area
  * it enlarges as that prints, or at its Size times that ({@link zoomScales}).
  * The enlarge arrow before one, when the step before it shows an area, takes
- * a turn's places and gutter, after any turns standing there.
+ * a turn's places and gutter, after any turns standing there; a flow page
+ * keeps that gutter before every enlarged step after another, whether the
+ * arrow prints or not, so a mark or a picture never re-packs a page.
  *
  * Measurement is injected ({@link TextSetter}): the composer sets text from
  * the font's own advances, tests with an estimate.
@@ -100,7 +102,7 @@ import {
   type PackStep,
 } from './flowPacking';
 import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableArea, type PlannedPage } from './pagePlan';
-import { holdsArrangement, pageSignatures, titleShown } from './pageSignature';
+import { holdsArrangement, keepsGlyphGutter, pageSignatures, titleShown } from './pageSignature';
 import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';
 import { placeCell, placementClashes, type PageBox, type PlacementClash } from './pagePlacement';
@@ -1525,7 +1527,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
    * pictures as a grid's does. Its turns are in its signature.
    */
   const areaOf = (entries: readonly T[]): PackRect => {
-    const turning = entries.some(({ step }) => glyphsBefore(step).length > 0 || step.turnsAfter.length > 0);
+    const turning = entries.some(({ step, index }) => keepsGlyphGutter(step, index) || step.turnsAfter.length > 0);
     const lacks = turning ? Math.max(0, EDGE_TURN_ROOM_MM - input.margin) : 0;
     return { ...area, x: area.x + lacks, w: area.w - 2 * lacks };
   };
@@ -1579,7 +1581,8 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
  * (`LayoutStep.pictureAt`) — the part they take at their pt size apart — or,
  * with no picture or none it could be drawn at, its square
  * picture box; its number's width; its caption; and whether a turn or an
- * enlarge arrow stands before it, which keeps their gutter. Its reference
+ * enlarge arrow may stand before it, which keeps their gutter — an arrow's
+ * whether or not it prints now (`keepsGlyphGutter`). Its reference
  * scale is noted in `references`, in its own measure.
  */
 function packStep(
@@ -1593,7 +1596,7 @@ function packStep(
     id: step.id,
     numberWidth: setter.line(String(index + 1), STEP_NUMBER_SIZE_MM, 700).widthMm,
     text: step.text,
-    turnsBefore: glyphsBefore(step).length > 0,
+    turnsBefore: keepsGlyphGutter(step, index),
   };
   const at = reference ? (reference.mmPerUnit ?? reference.frameMm) : null;
   // Measured there: its marks reach as far as they do at that scale.

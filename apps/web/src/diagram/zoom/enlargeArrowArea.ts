@@ -3,9 +3,11 @@
  * (Revision 2): read from the order as it is (`zoomIndex`), and only before a
  * step that shows its window — none before one seeded with no picture yet.
  *
- * What the layout sizes the arrow by (`diagramPages.ts`), and what a flow
- * page's signature counts (`stepPlaces.ts`): a packed page keeps a gutter for
- * the arrow, as for a turn, so one that comes or goes re-packs its page.
+ * What the layout sizes and places the arrow by (`diagramPages.ts`). Not what
+ * a flow page's signature counts: whether an arrow prints turns on a mark and
+ * a picture, which never re-pack a page, so a packed page keeps the arrow's
+ * gutter before every enlarged step after another (`keepsGlyphGutter` in
+ * `pages/pageSignature.ts`), and an arrow that comes or goes is drawn in it.
  *
  * Pure.
  */

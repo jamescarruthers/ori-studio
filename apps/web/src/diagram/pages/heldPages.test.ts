@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { face, sceneOf } from '../../lib/paper/paperScene.fixtures';
 import {
   createTurn,
+  editStepAnnotations,
   insertSteps,
   isLockedStep,
+  removeStepPicture,
   removeSteps,
   setLinkedPicture,
   setPageSetup,
@@ -16,6 +18,7 @@ import {
   type DiagramDocument,
   type DiagramRasterAsset,
   type DiagramScenePicture,
+  type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { readDiagram, storedSceneJson, writeDiagram } from '../document/diagramFile';
 import { cpSource } from '../document/diagramSteps.fixtures';
@@ -141,6 +144,48 @@ describe('a held page', () => {
       expect(edits).toBeGreaterThanOrEqual(3 * sampled(document).length);
     }
   );
+});
+
+describe('an enlarged run on a held page', () => {
+  /** The flow fixture with an enlarged run: an area on `step-area`, `step-zoom-1` and `step-zoom-2` enlarged after it. */
+  const fixture = () => pageLayoutFixtures().find(({ name }) => name.startsWith('enlarged steps'))!.document;
+
+  it('re-packs nothing for the arrow that a picture or a mark brings or takes away', () => {
+    const document = adopted(fixture());
+    expect(document.page.layout).toBe('flow');
+    const before = cellsOf(document);
+    let area: readonly KnownDiagramAnnotation[] = [];
+    const withoutArea = editStepAnnotations(document, 'step-area', (annotations) => {
+      area = annotations;
+      return [];
+    });
+    const edits: [string, DiagramDocument, DiagramDocument][] = [
+      ['the enlarged step’s picture removed', document, removeStepPicture(document, 'step-zoom-1')],
+      ['the area deleted', document, withoutArea],
+      ['the area put back', withoutArea, editStepAnnotations(withoutArea, 'step-area', () => [...area])],
+    ];
+    expect(layOut(document).pages[0]!.zoomArrows.length).toBe(1);
+    // A step as drawn, less its read-out: an enlarged step is measured against its run's area, which these edits change.
+    const drawn = ({ zoom: _readout, ...cell }: LayoutCell) => cell;
+    for (const [name, from, edited] of edits) {
+      expect(edited, name).not.toBe(from);
+      const landed = committed(from, edited);
+      // The page keeps its arrangement, and nothing is packed again.
+      expect(landed.pageArrangements, name).toBe(document.pageArrangements);
+      const layout = layOut(landed);
+      expect(layout.packed, name).toBeUndefined();
+      for (const page of layout.pages) {
+        for (const cell of page.cells) {
+          // Every step keeps its home; any but the edited one draws as it did.
+          expect(home(cell), `${name}: ${cell.stepId}`).toEqual(home(before.get(cell.stepId)!));
+          if (cell.stepId !== 'step-zoom-1' && cell.stepId !== 'step-area')
+            expect(drawn(cell), `${name}: ${cell.stepId}`).toEqual(drawn(before.get(cell.stepId)!));
+        }
+      }
+    }
+    // With the area gone no arrow prints; its gutter is kept for it.
+    expect(layOut(committed(document, withoutArea)).pages[0]!.zoomArrows).toEqual([]);
+  });
 });
 
 describe('a structural edit', () => {

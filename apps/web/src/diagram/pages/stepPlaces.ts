@@ -10,7 +10,8 @@
  * A **flow** page is packed for its structure and then held
  * (`implementation-plans/diagram-flow-packing.md`, Decisions 1 and 6), so a
  * step on one keeps its cell while its page keeps its signature
- * (`pageSignature.ts`: its steps in order, the turns and enlarge arrows before them, its
+ * (`pageSignature.ts`: its steps in order, the turns before them and which are
+ * enlarged steps after another, its
  * index, side, spine and capacity, whether it is the last, the paper, its
  * margin, the title tab and page numbers shown, and the packing settings) and
  * the arrangement stored for it is the same. A page whose signature changes
@@ -42,8 +43,6 @@ import {
   type DiagramStep,
 } from '../document/diagramDocument';
 import { samePageArrangement } from '../document/pageArrangements';
-import { enlargeArrowArea } from '../zoom/enlargeArrowArea';
-import { zoomIndex } from '../zoom/zoomIndex';
 import { paginate, type PlannedPage } from './pagePlan';
 import { pageSignatures, type SignedStep } from './pageSignature';
 
@@ -84,27 +83,25 @@ export function pageShape(page: PlannedPage, layout: DiagramPageLayout): string 
  * A diagram's steps as the pagination and a page's signature read them: every
  * step in order, a newer build's included, each with the turns before it — as
  * the layout lists them (`diagramLayoutSteps`), so a newer build's turn, which
- * it does not draw, is none here either — and the enlarge arrow before it,
- * and the last with the turns after it.
+ * it does not draw, is none here either — and whether it is enlarged, and the
+ * last with the turns after it.
  */
 export function signedSteps(document: DiagramDocument): SignedStep[] {
   const steps: SignedStep[] = [];
-  const index = zoomIndex(document);
   let turns = 0;
   for (const entry of document.steps) {
     if (isTurn(entry)) {
       if (!isLockedTurn(entry)) turns += 1;
       continue;
     }
-    const { id, breakBefore, pageSteps } = entry;
-    const arrow = entry.zoom ? enlargeArrowArea(entry, document, index) : null;
+    const { id, breakBefore, pageSteps, zoom } = entry;
     steps.push({
       id,
       breakBefore,
       pageSteps,
       turnsBefore: { length: turns },
       turnsAfter: { length: 0 },
-      ...(arrow ? { zoom: { arrowFrom: arrow.from } } : {}),
+      ...(zoom ? { zoom } : {}),
     });
     turns = 0;
   }

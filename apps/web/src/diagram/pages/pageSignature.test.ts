@@ -5,6 +5,7 @@ import {
   editStepAnnotations,
   insertSteps,
   moveStep,
+  removeStepPicture,
   setDiagramStyle,
   setDiagramTitle,
   setHanStyle,
@@ -88,15 +89,25 @@ describe('pageSignature', () => {
       expect(changed(before, locked)).toEqual([]);
     });
 
-    it('an enlarge arrow before a step, which keeps a turn’s gutter: an area on the step before an enlarged one', () => {
+    it('an enlarged step after another, whose arrow keeps a turn’s gutter — but not whether the arrow prints', () => {
       const before = diagram();
       const area = { id: 'area-1', kind: 'zoom' as const, from: [0.5, 0.5] as [number, number], to: [0.5, 0.5] as [number, number], radius: 0.2 };
       const zoom = { from: 'area-1', shape: 'circle' as const, frame: { centre: [0.5, 0.5] as [number, number], radius: 0.2 } };
-      const enlarged = { ...before, steps: before.steps.map((entry) => (entry.id === 's7' ? { ...entry, zoom } : entry)) };
-      // Enlarged with no area on the step before: no arrow, the same pages — its picture is no structure.
-      expect(changed(before, enlarged)).toEqual([]);
-      // The area on the step before it: an arrow prints before s7, on page two.
-      expect(changed(enlarged, editStepAnnotations(enlarged, 's6', () => [area]))).toEqual([1]);
+      const enlarge = (document: DiagramDocument, id: string) => ({
+        ...document,
+        steps: document.steps.map((entry) => (entry.id === id ? { ...entry, zoom } : entry)),
+      });
+      // Enlarged, on page two: its gutter is kept, though no area on the step before prints an arrow yet.
+      const enlarged = enlarge(before, 's7');
+      expect(changed(before, enlarged)).toEqual([1]);
+      // The arrow brought by an area on the step before, taken away by its mark deleted or the step's picture
+      // removed: marks and pictures, never structure.
+      const arrowed = editStepAnnotations(enlarged, 's6', () => [area]);
+      expect(changed(enlarged, arrowed)).toEqual([]);
+      expect(changed(arrowed, editStepAnnotations(arrowed, 's6', () => []))).toEqual([]);
+      expect(changed(arrowed, removeStepPicture(arrowed, 's7'))).toEqual([]);
+      // The diagram's first step: no step before it, so no arrow ever prints before it.
+      expect(changed(before, enlarge(before, 's0'))).toEqual([]);
     });
 
     it('its capacity, but not whether that is its own count or the default', () => {
