@@ -174,6 +174,36 @@ and remove everything packing added.
 - Hand placement on top, as #443 does (`placeCell`), frame X along the row's
   reading direction (now independent of content).
 
+As built (Phase 2, `diagramPageLayout.ts`, `flowLane.ts`):
+
+- Every page is cut from its plan (`PageCut`): grid pages too, whose plan
+  gives every row its columns, so grid output is #436's to the pixel
+  (checked in the browser against :5291 with Sizes of 2 and 6). A full row's
+  cells stand side by side exactly as before; only a shorter row uses the
+  even shares. `pageCellMm` is gone; `DiagramPagesLayout.cellMm` is the
+  first page's cell, and `pageGrid` stays for the tests that describe
+  `flowShape`.
+- The band's end on the diagram's last page is at the last step's cell
+  edge: the lane runs on half a cell less half the band, so its round cap
+  ends there. That run has no say in the handle at the last step (as a
+  stub off the page has none), and its curve's handle there is held to its
+  length, so it never pinches the bend before it or runs past its end.
+- A bend into a shorter row: its apex stands past the longer row's end,
+  and its half into the shorter row runs in for the difference with a
+  handle longer by as much (`knotHandles`), so both halves are as round at
+  the apex. One curve a half cannot keep that half clear of a band nearly
+  as wide as the rows are apart (40 mm on A5 at 7 a page, 60 mm on A4 at
+  10), which no single cubic can; the bend-radius test says so and checks
+  such a half only for bands up to half as wide as the rows are apart.
+  Inserting a knot at the bend's foot would hold any width, but it is the
+  straight run this plan rules out.
+- Footprints: `LayoutStep.footprints` is a thunk, cached per step and
+  measure for a whole `layoutDiagram` call (`footprintCache`); cells no
+  longer carry `inkPolygons`. `partPolygons` lays a step's footprints on its
+  ink box as drawn, `placementClashes` asks only for a placed step's and for
+  another step's whose box one of its parts meets, and the Pages view's
+  previews check against the same through `PreparedDiagramPages.footprints`.
+
 ### Removals and moves
 
 - Delete `ribbonPacking.ts` and its test, `glyphPacking.ts` if nothing else
@@ -246,12 +276,16 @@ and remove everything packing added.
 - [x] `retainPageCounts` in `commit`; `setDiagramPageSteps`; tests for every rule.
 
 ### Phase 2: the layout
-- [ ] Geometry helpers moved; packing, its cache and tests deleted.
-- [ ] Balanced rows, odd rows on spine pages, #436's step-down and lane.
-- [ ] Explicit flow cell rows; packed mode switches gone.
-- [ ] Fit each per cell; explicit Size held to its room; caption gap.
-- [ ] Lazy, cached footprints.
+- [x] Geometry helpers moved; packing, its cache and tests deleted.
+- [x] Balanced rows, odd rows on spine pages, #436's step-down and lane.
+- [x] Explicit flow cell rows; packed mode switches gone.
+- [x] Fit each per cell; explicit Size held to its room; caption gap.
+- [x] Lazy, cached footprints.
 - [ ] Timeouts reverted, assertions restored, new tests and goldens.
+  (Done: page goldens re-recorded, layout tests for the plan's rows, spread,
+  step-down, odd rows, own counts, caption gap, band end and homes, and a
+  footprint laziness test. Left: #443's timeouts and loosened assertions,
+  the homes golden, the 50-step time budget, grid goldens at Size 2 and 6.)
 
 ### Phase 3: UI and review fixes
 - [ ] Page pane per-page count.

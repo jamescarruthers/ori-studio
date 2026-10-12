@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_DIAGRAM_STYLE, DEFAULT_PAGE_SETUP, STEPS_PER_PAGE_RANGE, type DiagramPageSetup } from '../document/diagramDocument';
 import {
+  CAPTION_GAP_MM,
   FIT_RUN_BREAK,
   FIT_SAME,
   FIT_ZOOM,
@@ -12,6 +13,7 @@ import {
   overrunFit,
   pageGrid,
   PICTURE_HEIGHT_SHARE,
+  PICTURE_TOP_MM,
   pictureFloor,
   pictureOverrun,
   runLevels,
@@ -233,6 +235,117 @@ describe('a flow page’s shape, from its steps per page (Phase 1b)', () => {
       if (a.flowRow === b.flowRow) expect((b.drawMm.x - a.drawMm.x) * (a.rightToLeft ? -1 : 1)).toBeGreaterThan(0);
     }
     expect(page.cells[0]!.rightToLeft).toBe(false);
+  });
+});
+
+describe('flow pages cut from their plan (`diagram-flow-pages.md`, Phase 2)', () => {
+  const flowLayout = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}) => layout(list, { layout: 'flow', ...setup });
+  const rowsOf = (page: LayoutPage) => page.cells.map((cell) => cell.flowRow);
+  const centreX = (cell: LayoutCell) => cell.cellMm.x + cell.cellMm.w / 2;
+  /** Where the `n`th of `count` even shares of the paper inside its margins has its middle. */
+  const share = (result: ReturnType<typeof layout>, n: number, count: number) => {
+    const { widthMm: W, marginMm: m } = result.paper;
+    return expect.closeTo(m + ((n + 0.5) / count) * (W - 2 * m), 9);
+  };
+
+  it('shares a page’s steps over its rows, the extra ones first, a shorter row spread across the page', () => {
+    const result = flowLayout(steps(16), { stepsPerPage: 7 });
+    const [one, two, three] = result.pages;
+    expect(result.pages.map((page) => page.cells.length)).toEqual([7, 7, 2]);
+    // 7 are 3 · 2 · 2; the automatic last page is laid out for 7 too, its two steps filling the first row.
+    expect(rowsOf(one!)).toEqual([0, 0, 0, 1, 1, 2, 2]);
+    expect(rowsOf(two!)).toEqual([0, 0, 0, 1, 1, 2, 2]);
+    expect(rowsOf(three!)).toEqual([0, 0]);
+    // Step 1 at the top left.
+    expect(one!.cells[0]!.cellMm.x).toBeCloseTo(result.paper.marginMm, 9);
+    expect(one!.cells[0]!.cellMm.y).toBe(Math.min(...one!.cells.map((cell) => cell.cellMm.y)));
+    // A row of three side by side; one of two at a quarter and three quarters, the second reading back.
+    expect(one!.cells.slice(0, 3).map(centreX)).toEqual([0, 1, 2].map((n) => share(result, n, 3)));
+    expect(one!.cells.slice(3, 5).map(centreX)).toEqual([1, 0].map((n) => share(result, n, 2)));
+    expect(one!.cells.slice(5, 7).map(centreX)).toEqual([0, 1].map((n) => share(result, n, 2)));
+    // Every step's room is the longest row's.
+    const { widthMm: W, marginMm: m } = result.paper;
+    for (const cell of result.pages.flatMap((page) => page.cells)) expect(cell.cellMm.w).toBeCloseTo((W - 2 * m) / 3, 9);
+    expect(three!.cells.map(centreX)).toEqual([0, 1].map((n) => share(result, n, 3)));
+  });
+
+  it('stands every other step of a row a little lower, as the row reads, each picture hanging from the top of its box', () => {
+    const page = flowLayout(steps(9)).pages[0]!;
+    const tops = page.cells.map((cell) => cell.cellMm.y);
+    const step = 0.06 * page.cells[0]!.cellMm.h;
+    expect(tops.slice(0, 3)).toEqual([tops[0], tops[0]! + step, tops[0]].map((top) => expect.closeTo(top!, 9)));
+    // The second row reads from the right: its first step, at the right, stands up.
+    expect(tops[4]! - tops[3]!).toBeCloseTo(step, 9);
+    expect(centreX(page.cells[3]!)).toBeGreaterThan(centreX(page.cells[4]!));
+    for (const cell of page.cells) expect(cell.pictureMm.y).toBeCloseTo(cell.cellMm.y + PICTURE_TOP_MM, 9);
+  });
+
+  it('gives a left page that hands over at its spine an odd number of rows, read from the top left to the spine', () => {
+    // 12 a page on A4 upright print largest as 3 × 4: the right page takes that, the left one 5 rows.
+    const result = flowLayout(steps(30), { stepsPerPage: 12 });
+    const [one, two] = result.pages;
+    expect(one!.side).toBe('left');
+    expect(rowsOf(one!)).toEqual([0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4]);
+    expect(rowsOf(two!)).toEqual([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]);
+    expect(one!.cells[0]!.rightToLeft).toBe(false);
+    const [before, last] = one!.cells.slice(-2);
+    expect(last!.rightToLeft).toBe(false);
+    expect(centreX(last!)).toBeGreaterThan(centreX(before!));
+    // The first page on the right hands over across a page turn: it takes the largest, and its facing page 5 rows.
+    const right = flowLayout(steps(30), { stepsPerPage: 12, firstPageSide: 'right' });
+    expect(new Set(rowsOf(right.pages[0]!)).size).toBe(4);
+    expect(new Set(rowsOf(right.pages[1]!)).size).toBe(5);
+  });
+
+  it('lays a page with its own count out for its own steps, and the automatic last page for the default', () => {
+    // Step 10 starts a page of four: 9, 4, and the 4 left over on a page of nine's cells.
+    const result = flowLayout(steps(17, (index) => (index === 9 ? { pageSteps: 4 } : {})));
+    const [, two, three] = result.pages;
+    expect(result.pages.map((page) => page.cells.length)).toEqual([9, 4, 4]);
+    const { widthMm: W, marginMm: m } = result.paper;
+    expect(rowsOf(two!)).toEqual([0, 0, 1, 1]);
+    expect(two!.cells[0]!.cellMm.w).toBeCloseTo((W - 2 * m) / 2, 9);
+    expect(rowsOf(three!)).toEqual([0, 0, 0, 1]);
+    expect(three!.cells[0]!.cellMm.w).toBeCloseTo((W - 2 * m) / 3, 9);
+  });
+
+  it('keeps an instruction CAPTION_GAP_MM over the step numbers of the row below', () => {
+    const page = flowLayout(steps(9, () => ({ text: `${LONG} ${LONG} ${LONG}` }))).pages[0]!;
+    // The instruction's descenders: 1.5 mm under its last baseline.
+    const foot = (cell: LayoutCell) => cell.text.firstBaseline + (cell.text.lines.length - 1) * STEP_TEXT_LEADING_MM + 1.5;
+    const numberTop = (cell: LayoutCell) => cell.numberAt.y - 0.75 * STEP_NUMBER_SIZE_MM;
+    let checked = 0;
+    for (const cell of page.cells) {
+      for (const below of page.cells.filter((other) => other.flowRow === cell.flowRow! + 1)) {
+        expect(foot(cell) + CAPTION_GAP_MM).toBeLessThanOrEqual(numberTop(below) + 1e-9);
+        checked += 1;
+      }
+    }
+    expect(checked).toBe(18);
+  });
+
+  it('ends the band just past the diagram’s last step, at its cell’s edge, the way its row reads', () => {
+    for (const [count, rightToLeft] of [[11, false], [13, true]] as const) {
+      const result = flowLayout(steps(count));
+      const page = result.pages.at(-1)!;
+      const last = page.cells.at(-1)!;
+      expect(last.rightToLeft).toBe(rightToLeft);
+      const end = page.band!.curves.at(-1)!.to;
+      const half = result.bandWidthMm / 2;
+      expect(end.y).toBeCloseTo(last.drawMm.y + last.drawMm.h / 2, 9);
+      if (rightToLeft) expect(end.x - half).toBeCloseTo(last.cellMm.x, 9);
+      else expect(end.x + half).toBeCloseTo(last.cellMm.x + last.cellMm.w, 9);
+      // A page the lane leaves runs it off the paper.
+      expect(result.pages[0]!.band!.curves.at(-1)!.to.x).toBeCloseTo(result.paper.widthMm + 10, 9);
+    }
+  });
+
+  it('moves no step’s home when an instruction changes', () => {
+    const homes = (list: LayoutStep[]) =>
+      flowLayout(list, { stepsPerPage: 7 }).pages.flatMap((page) => page.cells.map((cell) => [cell.cellMm, cell.numberAt, cell.text.x]));
+    expect(homes(steps(16, (index) => (index === 4 ? { text: `${LONG} ${LONG}` } : index === 9 ? { text: '' } : {})))).toEqual(
+      homes(steps(16))
+    );
   });
 });
 
