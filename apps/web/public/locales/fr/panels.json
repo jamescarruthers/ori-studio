@@ -1549,7 +1549,7 @@
       "startsBranch": "Commence une nouvelle branche"
     },
     "canvas": {
-      "adds": "En tirets : les plis que ce pliage ajoute",
+      "adds": "En gras : les plis que ce pliage ajoute",
       "creasePattern": "Patron de plis",
       "creasePatternLabel": "Le patron de plis jusqu’ici, recto en haut. Cliquez sur ses points et ses plis pour situer un pliage.",
       "folded": "Plié",
@@ -1563,7 +1563,7 @@
       "spreadLayersTitle": "Écarte les couches pliées, comme un diagramme les dessine, à cette étape et aux suivantes",
       "step": "Étape {{number}}",
       "stepCreases": "Plis de l’étape",
-      "stepCreasesTitle": "Dessiner les plis faits par l’étape affichée comme son instruction, avec les stylos du diagramme",
+      "stepCreasesTitle": "Dessiner en gras les plis faits par l’étape affichée, comme son instruction",
       "toolbar": "Vue de pliage"
     },
     "grid": {

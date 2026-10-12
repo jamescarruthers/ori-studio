@@ -37,6 +37,7 @@ import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
 import { revealFoldedPane, useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
 import { useFoldCanvasInks } from '../../../fold/canvas/useFoldCanvasInks';
 import { restingSpread, useFoldCanvasPaint } from '../../../fold/canvas/useFoldCanvasPaint';
+import { useFoldCreasePatternStrokes } from '../../../fold/canvas/useFoldCreasePatternStrokes';
 import { foldCanvasChoice, marksMadeAt, useFoldCanvasVerbs } from '../../../fold/canvas/useFoldCanvasVerbs';
 import { useFoldCanvasShortcuts } from '../../../fold/canvas/useFoldCanvasShortcuts';
 import { useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
@@ -66,9 +67,10 @@ import styles from './FoldCanvas.module.css';
 
 /**
  * The Fold workspace's canvas (plan D11, D13, D14): the folded form on the
- * left and its crease pattern on the right, each a `FoldPane` on
- * `useCpSurface` painted through the shared paper painter in the user's
- * paper style; the tool window over the viewport's corner; the viewport
+ * left, painted through the shared paper painter in the user's paper style,
+ * and its crease pattern on the right, drawn as Edit's canvas draws one
+ * (`useFoldCreasePatternStrokes`) — each a `FoldPane` on `useCpSurface`;
+ * the tool window over the viewport's corner; the viewport
  * toolbar along the bottom, with the step's transport (Play draws the step
  * from its parent on the folded pane, `useFoldPanePlayback`). The tool rail
  * is the panel's, down its whole side (`FoldWorkspaceRail`). A crease pattern
@@ -142,6 +144,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const summary = view.summary;
   const spread = useFoldStepSpread(view.cursorId, 'canvas_bar');
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread);
+  // The crease pattern as Edit's canvas draws one, not as paper.
+  const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, viewport, theme.name);
   const landed = preview.landed;
   const cpSummary = paint.creasePattern.summary;
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
@@ -262,7 +266,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       <span className={styles.count}>
         <FoldKindMark kind="valley" /> {counts?.valley ?? 0}
       </span>
-      {landed && <span>{t('panels:fold.canvas.adds', 'Dashed: creases this fold adds')}</span>}
+      {landed && <span>{t('panels:fold.canvas.adds', 'Bold: creases this fold adds')}</span>}
     </ViewportStatusReadout>
   );
 
@@ -328,8 +332,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             <FoldPane
               ref={creases}
               pane="crease-pattern"
-              scene={paint.creasePattern.scene}
-              ink={paint.creasePattern.ink}
+              scene={null}
+              creases={cpStrokes}
               contentBounds={paint.creasePattern.contentBounds}
               hitTest={(at, radii) => verbs.hitTest('crease-pattern', at, radii)}
               overlay={creaseOverlay}

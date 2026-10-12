@@ -1,21 +1,21 @@
 /**
- * What the Fold canvas's two panes paint, as paper scenes (plan D11): the
- * folded form from the engine's scene, and the crease pattern from its
- * creases. Both go to the renderer through the one shared painter
- * (`paperSceneToFoldedGeometry` with the `fold` policy), so a pen in the
- * user's paper style means on these canvases what it means in every export.
+ * The folded form and the crease pattern of a Fold state as paper scenes
+ * (plan D11), for the shared painter (`paperSceneToFoldedGeometry` with the
+ * `fold` policy), so a pen in the user's paper style means on the canvas what
+ * it means in every export — and which creases a crease pattern shows.
  *
  * - **The folded pane** is the engine's scene through `foldedFlatPaperScene`,
  *   the route Edit's flat figure takes: whole faces in painter's order, folds
  *   in the edge pen, flat creases in the aux pen, the layers spread apart as
  *   the step says (`foldStepSpread`). A located fold adds its line in the
  *   diagram-crease pen of its direction, over the paper.
- * - **The crease-pattern pane** is the sheet, front up, with every crease in
- *   the pen of what it is: the border in the edge pen, a folded crease in its
- *   (front-relative) fold pen, a flat crease in the aux pen. The creases the
- *   step on show made — or, while a fold is previewed, the creases it would
- *   add — are drawn as its instruction, in the diagram-crease pens (dashed in
- *   the default style: "creases this fold adds").
+ * - **A crease pattern** shows every crease as what it is (`foldPaneCrease`):
+ *   the border, a folded crease by its (front-relative) letter, a flat crease.
+ *   The creases the step on show made — or, while a fold is previewed, the
+ *   creases it would add — are its instruction. The canvas's crease-pattern
+ *   pane draws them in Edit's inks (`creasePatternPaneLines`); a Diagram
+ *   step keeps them as paper, the instruction in the diagram-crease pens
+ *   (`creasePatternPaperScene`).
  *
  * Coordinates: a scene's points are in user space, through
  * `foldUnitToScenePx`, so the folded channel draws them as they are.
@@ -33,7 +33,7 @@ import { applyIsometry, FOLD_USER_PER_UNIT, foldUnitToScenePx, toPoint } from '.
 
 /** The pane toggles on the viewport toolbar (the design's "Step creases | Precreases"). */
 export interface FoldPaneDisplay {
-  /** Draw the creases the step on show made as its instruction, in the diagram-crease pens. */
+  /** Draw the creases the step on show made as its instruction: bold on the pane, the diagram-crease pens on paper. */
   stepCreases: boolean;
   /** Draw flat creases: precreases, and creases a flap was unfolded along. */
   precreases: boolean;
@@ -202,30 +202,66 @@ export function withFoldLine(
   return { ...scene, items: [...scene.items, item] };
 }
 
-/** What a crease is drawn as on the crease-pattern pane, or null when the pane leaves it out. */
-export function creaseRole(
-  crease: FoldSceneCrease,
-  { display, step, instruction }: { display: FoldPaneDisplay; step: number; instruction: ReadonlySet<number> | null }
-): PaperLineRole | null {
-  if (crease.kind === 'border') return 'edge';
-  const flat = crease.kind === 'flat';
-  // The step's own creases are its instruction: the fold pen of what they
-  // are now would say the same line twice in one ink.
-  const instructs = instruction ? instruction.has(crease.id) : display.stepCreases && crease.made_at === step && step > 0;
-  if (instructs && crease.letter) return diagramRole(crease.letter);
-  if (flat) return display.precreases ? 'aux' : null;
-  if (crease.letter === 'mountain') return 'mountain';
-  if (crease.letter === 'valley') return 'valley';
-  // A folded crease always has a letter; one without is drawn as context.
-  return display.precreases ? 'aux' : null;
-}
-
-export interface CreasePatternPaneOptions {
+/** Which creases a state's crease pattern shows, and which of them are the instruction. */
+export interface FoldPaneCreaseOptions {
   display: FoldPaneDisplay;
-  /** The sheet's outline, counter-clockwise, in sheet coordinates (`FoldStateSummary.sheet`). */
-  sheet: readonly (readonly [number, number])[];
   /** Which step the state is: the creases it made are its own (`made_at`). */
   step: number;
+  /**
+   * The creases a previewed fold would add, by the landed state's edge ids:
+   * the instruction in place of the step's own. Null when nothing is previewed.
+   */
+  instruction: ReadonlySet<number> | null;
+}
+
+/**
+ * What a crease is in a state's crease pattern, before any pen or ink: the
+ * paper's edge; the instruction — the step's own creases (Step creases on),
+ * or a previewed fold's — by the way it folds; a fold, by its letter from the
+ * front; or a flat crease, with the letter it remembers. Null when the
+ * pattern leaves it out (Precreases off). The one rule both pictures of a
+ * crease pattern read: the pane's, in Edit's inks
+ * (`creasePatternPaneLines`), and the paper's (`creasePatternPaperScene`).
+ */
+export type FoldPaneCrease =
+  | { as: 'edge' }
+  | { as: 'instruction'; letter: FoldLetter }
+  | { as: 'fold'; letter: FoldLetter }
+  | { as: 'flat'; letter: FoldLetter | null };
+
+export function foldPaneCrease(
+  crease: FoldSceneCrease,
+  { display, step, instruction }: FoldPaneCreaseOptions
+): FoldPaneCrease | null {
+  if (crease.kind === 'border') return { as: 'edge' };
+  // The step's own creases are its instruction: the ink of what they are now
+  // would say the same line twice.
+  const instructs = instruction ? instruction.has(crease.id) : display.stepCreases && crease.made_at === step && step > 0;
+  if (instructs && crease.letter) return { as: 'instruction', letter: crease.letter };
+  // A folded crease always has a letter; one without is drawn as context, as a flat one is.
+  if (crease.kind === 'flat' || !crease.letter) return display.precreases ? { as: 'flat', letter: crease.letter } : null;
+  return { as: 'fold', letter: crease.letter };
+}
+
+/** What a crease is drawn as in the paper picture of a crease pattern, or null when it is left out. */
+export function creaseRole(crease: FoldSceneCrease, options: FoldPaneCreaseOptions): PaperLineRole | null {
+  const shown = foldPaneCrease(crease, options);
+  if (!shown) return null;
+  switch (shown.as) {
+    case 'edge':
+      return 'edge';
+    case 'instruction':
+      return diagramRole(shown.letter);
+    case 'flat':
+      return 'aux';
+    case 'fold':
+      return shown.letter;
+  }
+}
+
+export interface CreasePatternPaperOptions extends Omit<FoldPaneCreaseOptions, 'instruction'> {
+  /** The sheet's outline, counter-clockwise, in sheet coordinates (`FoldStateSummary.sheet`). */
+  sheet: readonly (readonly [number, number])[];
   /**
    * The creases a previewed fold would add (its step summary's `diff.added`,
    * by the landed state's edge ids): drawn as the instruction in place of the
@@ -234,7 +270,7 @@ export interface CreasePatternPaneOptions {
   instruction?: ReadonlySet<number> | null;
   /**
    * Where the sheet goes: a map from sheet coordinates to scene px, and how
-   * many scene px the sheet's longer side is. The pane's own by default
+   * many scene px the sheet's longer side is. User space by default
    * (`foldUnitToScenePx`); a Diagram step places it at the capture scale.
    */
   place?: { toScenePx: (point: Point) => ScenePoint; sheetPx: number };
@@ -243,13 +279,16 @@ export interface CreasePatternPaneOptions {
 }
 
 /**
- * The crease pattern of a state, as the crease-pattern pane paints it: the
- * sheet front up, filled with the front's paper — or, asked, the back's,
- * nothing else changed — and its creases in their pens, the border over them
- * so a crease that ends on the edge never breaks the outline
- * (`diagramToPaperScene`'s order).
+ * The crease pattern of a state as paper, in the user's style — what a
+ * Diagram step keeps of a Fold step (`foldStepPicture`): the sheet front up,
+ * filled with the front's paper — or, asked, the back's, nothing else
+ * changed — and its creases in their pens, the instruction in the
+ * diagram-crease pens, the border over them so a crease that ends on the
+ * edge never breaks the outline (`diagramToPaperScene`'s order). The canvas's
+ * crease-pattern pane shows the same creases in Edit's inks instead
+ * (`creasePatternPaneLines`).
  */
-export function creasePatternPaneScene(scene: FoldScene, options: CreasePatternPaneOptions): PaperScene {
+export function creasePatternPaperScene(scene: FoldScene, options: CreasePatternPaperOptions): PaperScene {
   const { display, step } = options;
   const instruction = options.instruction ?? null;
   const toScenePx = options.place?.toScenePx ?? foldUnitToScenePx;

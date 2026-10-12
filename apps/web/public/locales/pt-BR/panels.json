@@ -1549,7 +1549,7 @@
       "startsBranch": "Começa um novo ramo"
     },
     "canvas": {
-      "adds": "Tracejados: vincos que esta dobra acrescenta",
+      "adds": "Em negrito: vincos que esta dobra acrescenta",
       "creasePattern": "Padrão de vincos",
       "creasePatternLabel": "O padrão de vincos até agora, com a frente para cima. Clique em seus pontos e vincos para posicionar uma dobra.",
       "folded": "Dobrado",
@@ -1563,7 +1563,7 @@
       "spreadLayersTitle": "Separa as camadas dobradas, como um diagrama as desenha, neste passo e nos seguintes",
       "step": "Passo {{number}}",
       "stepCreases": "Vincos do passo",
-      "stepCreasesTitle": "Desenhar os vincos feitos pelo passo mostrado como sua instrução, com as canetas do diagrama",
+      "stepCreasesTitle": "Desenhar em negrito os vincos feitos pelo passo mostrado, como sua instrução",
       "toolbar": "Visualização da dobra"
     },
     "grid": {
