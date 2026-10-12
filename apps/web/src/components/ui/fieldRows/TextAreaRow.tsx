@@ -21,17 +21,6 @@ interface PendingEdit {
 }
 
 /**
- * What names the field: a label drawn above it (`labelHidden` keeps it for
- * assistive technology only), or an element already on screen that says
- * what it is — a section's title (`CollapsibleSection`'s `titleId`) — which
- * it is labelled by, drawing no label of its own. A hidden label beside a
- * title of the same words is read twice.
- */
-type TextAreaRowName =
-  | { label: string; labelHidden?: boolean; labelledBy?: never }
-  | { labelledBy: string; label?: never; labelHidden?: never };
-
-/**
  * A multi-line text field in a row, its label above it.
  *
  * Commits on blur, after `idleMs` without typing, before any undo or redo
@@ -48,7 +37,6 @@ type TextAreaRowName =
 export function TextAreaRow({
   label,
   labelHidden = false,
-  labelledBy,
   value,
   placeholder,
   disabled = false,
@@ -57,11 +45,15 @@ export function TextAreaRow({
   maxLength,
   idleMs = 600,
   singleLine = false,
-  divider = true,
-  fitContent = false,
   fieldRef,
   onCommit,
-}: TextAreaRowName & {
+}: {
+  label: string;
+  /**
+   * Keep the label for assistive technology only, for a field whose section
+   * title already says what it is.
+   */
+  labelHidden?: boolean;
   value: string;
   placeholder?: string;
   disabled?: boolean;
@@ -76,18 +68,6 @@ export function TextAreaRow({
    * as Escape does, and a line break pasted in is a space.
    */
   singleLine?: boolean;
-  /**
-   * A rule under the row, as `FieldRow`'s: off for the last row of a section
-   * that draws its own, where two would stack.
-   */
-  divider?: boolean;
-  /**
-   * The field grows with its text, from its least height up to a cap, and
-   * scrolls past that: for prose read as often as written, which a few rows
-   * would cut off. A browser that cannot size a field to its text keeps
-   * `rows`.
-   */
-  fitContent?: boolean;
   /** The field itself, for a caller that puts the focus in it. */
   fieldRef?: Ref<HTMLTextAreaElement>;
   onCommit: (value: string, session: number) => void;
@@ -130,22 +110,13 @@ export function TextAreaRow({
   };
 
   return (
-    <div
-      className={styles.row}
-      data-disabled={disabled || undefined}
-      data-divider={divider ? undefined : 'none'}
-      data-fit={fitContent || undefined}
-      title={title}
-    >
-      {labelledBy === undefined && (
-        <label className={labelHidden ? styles.labelHidden : styles.label} htmlFor={fieldId}>
-          {label}
-        </label>
-      )}
+    <div className={styles.row} data-disabled={disabled || undefined} title={title}>
+      <label className={labelHidden ? styles.labelHidden : styles.label} htmlFor={fieldId}>
+        {label}
+      </label>
       <textarea
         ref={fieldRef}
         id={fieldId}
-        aria-labelledby={labelledBy}
         className={styles.field}
         value={draft ?? value}
         placeholder={placeholder}
