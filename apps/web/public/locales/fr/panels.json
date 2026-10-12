@@ -1250,6 +1250,7 @@
       "auto": "Auto",
       "autoSize": "Auto : {{mm}} mm",
       "breakBefore": "Commencer l’étape {{number}} sur une nouvelle page",
+      "breakBeforeNote": "Une nouvelle page rend cette étape, dans son ensemble, au placement automatique, comme toute étape qu’elle déplace.",
       "count_one": "Étapes placées à la main : {{count}}",
       "count_many": "Étapes placées à la main : {{count}}",
       "count_other": "Étapes placées à la main : {{count}}",

@@ -1172,6 +1172,7 @@
       "auto": "自动",
       "autoSize": "自动：{{mm}} mm",
       "breakBefore": "从新一页开始步骤 {{number}}",
+      "breakBeforeNote": "从新一页开始后，此步骤的整体位置以及因此移动的步骤的位置都会恢复为自动排版。",
       "count_other": "手动排版：{{count}} 个步骤",
       "dragSize": "{{mm}} mm · 自动 {{auto}} mm",
       "frame": "整体",

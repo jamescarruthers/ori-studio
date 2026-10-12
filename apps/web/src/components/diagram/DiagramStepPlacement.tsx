@@ -3,7 +3,6 @@ import type { DiagramStep } from '../../diagram/document/diagramDocument';
 import type { PagePart, PlacementClash } from '../../diagram/pages/pagePlacement';
 import { useStepPlacement } from '../../diagram/pages/useStepPlacement';
 import { useZoomControls } from '../../diagram/zoom/useZoomControls';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 import { Button } from '../ui/Button';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { NumberRow } from '../ui/fieldRows';
@@ -122,16 +121,20 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
                 <ClashWords clash={clash} />
               </p>
             ))}
-            {!step.breakBefore && (
-              <Button
-                size="sm"
-                disabled={place.readOnly}
-                onClick={() => useWorkspaceStore.getState().setDiagramStepBreakBefore(step.id, true)}
-              >
-                {t('panels:diagram.placement.breakBefore', 'Start step {{number}} on a new page', {
-                  number: place.cell.number,
-                })}
-              </Button>
+            {place.offerNewPage && (
+              <div className={styles.offer}>
+                <p className={styles.note}>
+                  {t(
+                    'panels:diagram.placement.breakBeforeNote',
+                    'A new page returns this step’s frame to automatic placement, and the frame of any step it moves.'
+                  )}
+                </p>
+                <Button size="sm" disabled={place.readOnly} onClick={place.startOnNewPage}>
+                  {t('panels:diagram.placement.breakBefore', 'Start step {{number}} on a new page', {
+                    number: place.cell.number,
+                  })}
+                </Button>
+              </div>
             )}
           </Notice>
         )}

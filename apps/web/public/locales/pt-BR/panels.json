@@ -1250,6 +1250,7 @@
       "auto": "Auto",
       "autoSize": "Auto: {{mm}} mm",
       "breakBefore": "Iniciar o passo {{number}} em uma nova página",
+      "breakBeforeNote": "Uma nova página devolve este passo, em conjunto, ao posicionamento automático, assim como qualquer passo que ela mova.",
       "count_one": "Passos posicionados à mão: {{count}}",
       "count_many": "Passos posicionados à mão: {{count}}",
       "count_other": "Passos posicionados à mão: {{count}}",

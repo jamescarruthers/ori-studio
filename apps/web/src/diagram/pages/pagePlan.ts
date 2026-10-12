@@ -190,6 +190,15 @@ export function splitPages(steps: readonly PaginatedStep[], setup: DiagramPageSe
 }
 
 /**
+ * Whether the step at `index` starts a page under `setup`: the first step, one
+ * with a break or (in the flow) its own count, or the first after a full page.
+ * A break there would leave every page as it is.
+ */
+export function startsPage(steps: readonly PaginatedStep[], setup: DiagramPageSetup, index: number): boolean {
+  return splitPages(steps, setup).some((page) => page.steps[0] === index);
+}
+
+/**
  * A diagram's pages under its page setup: which steps each holds, whether it
  * has its own count, how many it may hold and is laid out for, and how its
  * rows are cut. An empty diagram is one empty page.

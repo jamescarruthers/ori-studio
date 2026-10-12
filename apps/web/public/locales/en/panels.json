@@ -1211,6 +1211,7 @@
       "auto": "Auto",
       "autoSize": "Auto: {{mm}} mm",
       "breakBefore": "Start step {{number}} on a new page",
+      "breakBeforeNote": "A new page returns this step’s frame to automatic placement, and the frame of any step it moves.",
       "count_one": "Steps placed by hand: {{count}}",
       "count_other": "Steps placed by hand: {{count}}",
       "dragSize": "{{mm}} mm · auto {{auto}} mm",
