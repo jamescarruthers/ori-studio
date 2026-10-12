@@ -185,6 +185,16 @@ export function bindCpSurfaceInput<Hit>(
 
   const onPointerLeave = () => cancelHover();
 
+  // A tap's pick is taken from its pointer events, and the click the browser
+  // sends after the touch ends is aimed at whatever is under the finger by
+  // then: a tool window or a chooser the pick has just opened there. The
+  // surface wants no click from a touch, so the touch's end is cancelled,
+  // which is what stops that click (pointer events cannot). A pan or a pinch
+  // makes no click either way.
+  const onTouchEnd = (e: TouchEvent) => {
+    if (e.cancelable) e.preventDefault();
+  };
+
   const onWheel = (e: WheelEvent) => {
     const cam = host.camera();
     if (!cam) return;
@@ -215,6 +225,7 @@ export function bindCpSurfaceInput<Hit>(
   canvas.addEventListener('pointercancel', onPointerCancel);
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('wheel', onWheel, { passive: false });
+  canvas.addEventListener('touchend', onTouchEnd, { passive: false });
 
   return () => {
     canvas.removeEventListener('pointerdown', onPointerDown);
@@ -223,6 +234,7 @@ export function bindCpSurfaceInput<Hit>(
     canvas.removeEventListener('pointercancel', onPointerCancel);
     canvas.removeEventListener('pointerleave', onPointerLeave);
     canvas.removeEventListener('wheel', onWheel);
+    canvas.removeEventListener('touchend', onTouchEnd);
     cancelHover();
   };
 }
