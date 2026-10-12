@@ -5,8 +5,9 @@
 //! same way:
 //!
 //! - **Its macro** scores the paper its creases cross (per layer for a
-//!   squash, a fan of rays for a rabbit ear or a swivel, nothing for a petal
-//!   fold, whose creases are precreased) and puts every piece in a block by
+//!   squash, a fan of rays for a rabbit ear or a swivel, for a petal fold
+//!   nothing over precreases or else the creases it is missing, H in the top
+//!   layer alone) and puts every piece in a block by
 //!   its *motion class*: the product of the reflections across the creases
 //!   between it and the paper that stays. The hinge diff follows from those
 //!   motions, so no macro lists the hinges it changes (research §5.1: a fan

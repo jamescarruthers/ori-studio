@@ -9,7 +9,10 @@
 //! - **The spike's named cases** (`cases.mjs`), built by the engine's own
 //!   `tests/vertex/cases.rs`: the preliminary base by the diagonal route (and
 //!   in mirror image) and the waterbomb base by the midline route, each
-//!   squash; the bird base's two petal folds, both ways; every rabbit ear's
+//!   squash; the bird base's two petal folds, both ways, over precreases and
+//!   with H named by its two ends and creased by the folds (the kites too,
+//!   or precreased), and each petal fold with H through two points along
+//!   the flap that lands; every rabbit ear's
 //!   every emergent ray that lands, valley and mountain (one ear each, its
 //!   fourth crease the ridge); every swivel ray that lands.
 //!
@@ -78,9 +81,32 @@ fn named() -> Vec<Landed> {
         ("waterbomb", cases::waterbomb()),
         ("bird base", cases::bird_base(false)),
         ("bird base mirrored", cases::bird_base(true)),
+        // H through its two ends, never precreased: creased by the folds.
+        (
+            "bird base by H's ends",
+            cases::bird_base_points(false, false),
+        ),
+        (
+            "bird base by H's ends mirrored",
+            cases::bird_base_points(true, false),
+        ),
+        (
+            "bird base by H's ends, kites first",
+            cases::bird_base_points(false, true),
+        ),
     ] {
         for (k, (_, folded)) in route.steps.into_iter().enumerate() {
             push(format!("{name} step {k}"), folded.state);
+        }
+    }
+    // H through two points anywhere along the flap: each that lands.
+    let (base, petals) = cases::petal_sweep();
+    for (s, op) in petals {
+        for (k, folded) in cases::every(base.petal_fold(&op, &VertexChoices::default()))
+            .into_iter()
+            .enumerate()
+        {
+            push(format!("petal by H's ends at {s:.3} c{k}"), folded.state);
         }
     }
     for case in cases::ear_cases()

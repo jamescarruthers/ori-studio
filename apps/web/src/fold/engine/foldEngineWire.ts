@@ -38,7 +38,7 @@ import type {
 import type { FoldCompoundReport } from './foldEngineCompoundWire';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
 import type { FoldNoOpening, FoldReverseKind } from './foldEngineReverseWire';
-import type { FoldNoFlap, FoldNoPetal, FoldPetalCrease } from './foldEngineSquashWire';
+import type { FoldNoFlap, FoldNoPetal, FoldNoPetalDetail, FoldPetalCrease } from './foldEngineSquashWire';
 import { FOLD_SINK_REFUSAL_CODES, type FoldSinkKind } from './foldEngineSinkWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
@@ -283,7 +283,13 @@ export type FoldCompoundRefusalBody =
   // The vertex folds (`foldEngineSquashWire.ts`).
   | { readonly code: 'squash_no_flap'; readonly faces: readonly number[]; readonly cause: FoldNoFlap }
   | { readonly code: 'petal_not_precreased'; readonly faces: readonly number[]; readonly missing: FoldPetalCrease }
-  | { readonly code: 'petal_no_flap'; readonly faces: readonly number[]; readonly cause: FoldNoPetal }
+  | {
+      readonly code: 'petal_no_flap';
+      readonly faces: readonly number[];
+      readonly cause: FoldNoPetal;
+      /** What the cause names more precisely, where it does: absent otherwise. */
+      readonly detail?: FoldNoPetalDetail;
+    }
   // The sinks (`foldEngineSinkWire.ts`).
   | { readonly code: 'sink_several_points'; readonly flaps: number; readonly faces: readonly number[] };
 

@@ -384,15 +384,59 @@ export interface FoldSquashOp {
 }
 
 /**
- * A petal fold over its precreases: H by a sheet point inside its
- * precrease's sheet segment, the petal by a sheet point on the flap's top
- * layer below H.
+ * A petal fold: the petal by a sheet point on the flap's top layer below H,
+ * and H — the line the petal lifts about — named one of two ways, exactly
+ * one of them (a step with both, or neither, does not read):
+ *
+ * - **`crease`** ({@link FoldPetalCreaseOp}): a sheet point inside H's
+ *   precrease's sheet segment. H and the kite creases are creases already,
+ *   wherever the fold folds them.
+ * - **`ends`** ({@link FoldPetalEndsOp}): two sheet points, H's ends on the
+ *   flap's folded edges (where the kite creases meet them), on no crease
+ *   necessarily. The fold creases H itself, through the top layer alone —
+ *   the paper it lifts — and each kite crease not there yet through the top
+ *   two layers, and leaves every other layer uncreased.
+ *
+ * The `crease` form is the one every step stored before `ends` existed, and
+ * reads and writes as it always did; a build before `ends` locks a step that
+ * uses it (an op key it does not know) rather than folding it.
+ * {@link petalHinge} reads either form as one shape, {@link petalOp} writes it.
  */
-export interface FoldPetalOp {
+export type FoldPetalOp = FoldPetalCreaseOp | FoldPetalEndsOp;
+
+interface FoldPetalFields {
   kind: 'petal';
-  crease: SheetPoint;
   petal: SheetPoint;
   direction: FoldDirection;
+}
+
+/** A petal fold over its precreases: H by a sheet point inside its precrease's sheet segment. */
+export interface FoldPetalCreaseOp extends FoldPetalFields {
+  crease: SheetPoint;
+}
+
+/** A petal fold that creases its own H: H through its two ends, as sheet points. */
+export interface FoldPetalEndsOp extends FoldPetalFields {
+  ends: readonly [SheetPoint, SheetPoint];
+}
+
+/** A petal fold's H as one shape: an existing crease at a sheet point, or the line through two sheet points. */
+export type FoldPetalHinge =
+  | { kind: 'crease'; at: SheetPoint }
+  | { kind: 'points'; from: SheetPoint; to: SheetPoint };
+
+export type FoldPetalHingeKind = FoldPetalHinge['kind'];
+
+/** H as the op names it. */
+export function petalHinge(op: FoldPetalOp): FoldPetalHinge {
+  return 'ends' in op ? { kind: 'points', from: op.ends[0], to: op.ends[1] } : { kind: 'crease', at: op.crease };
+}
+
+/** The petal op that names H as `hinge` does. */
+export function petalOp(hinge: FoldPetalHinge, petal: SheetPoint, direction: FoldDirection): FoldPetalOp {
+  return hinge.kind === 'crease'
+    ? { kind: 'petal', crease: hinge.at, petal, direction }
+    : { kind: 'petal', ends: [hinge.from, hinge.to], petal, direction };
 }
 
 /**
