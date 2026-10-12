@@ -67,6 +67,18 @@ export type FoldStepVia = 'axiom' | 'crease' | 'free';
 export type FoldStepExtent = 'whole' | 'segment' | 'pinch';
 
 /**
+ * How a Fold vertex fold named what it takes (`fold step added`, since
+ * 2026-10-12): a petal fold's hinge — a crease already there, or its two
+ * ends, which the fold creases (`hinge`) — and a swivel's form, by its edge
+ * or by its rays (`swivel_form`), the edge form's target a crease or edge,
+ * or the line through two points (`target`).
+ */
+export type FoldStepVertexForm =
+  | { hinge: 'crease' | 'points' }
+  | { swivelForm: 'edge'; target: 'crease' | 'free' }
+  | { swivelForm: 'rays' };
+
+/**
  * How the reader set a Fold step moving: Space, the Play button, or either on
  * a step already played through (Replay).
  */
@@ -77,9 +89,10 @@ export type FoldStepPlayVia = 'space' | 'button' | 'replay';
  * pick can take, the layer orders one part of an imported crease pattern
  * folds to (Import CP's chooser), or a compound fold's: the ways a flap opens
  * (`opening`), the orders its completion leaves (`order`), and the layers a
- * tuck can go against (`tuck_target`); a rabbit ear's or a swivel's fourth
- * crease (`emergent`); the pockets a closed sink's point can go into
- * (`pocket`). A rabbit ear's ridge (`ridge`) was offered until its fourth
+ * tuck can go against (`tuck_target`); a rabbit ear's fourth crease
+ * (`emergent`), and a swivel's ridge — the crease of its four that folds
+ * the other way (`ridge`); the pockets a closed sink's point can go into
+ * (`pocket`). A rabbit ear's ridge was offered as `ridge` until its fourth
  * crease became its ridge.
  */
 export type FoldChoiceKind =
@@ -91,6 +104,7 @@ export type FoldChoiceKind =
   | 'tuck_target'
   // The vertex folds.
   | 'emergent'
+  | 'ridge'
   // The sinks.
   | 'pocket';
 

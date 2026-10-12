@@ -7,6 +7,7 @@ import type {
   FoldStepAddedOpKind,
   FoldStepExtent,
   FoldStepLayerScope,
+  FoldStepVertexForm,
   FoldStepVia,
 } from './events';
 import { track } from './runtime';
@@ -17,12 +18,16 @@ import { spreadProperties, spreadTracking } from './trackDiagram';
  * the session's verb, reached from the tool window, Enter and the chooser,
  * none of which dispatches a `MENU_ACTION_ID`. A turn or a rotation takes no
  * layers and locates no line, so it carries `op_kind` alone; a precrease
- * says how much of its line it creased (`extent`).
+ * says how much of its line it creased (`extent`). A vertex fold locates no
+ * line either: a petal fold says how its hinge was named (`hinge`), a swivel
+ * its form and, by its edge, its target (`swivel_form`, `target`).
  */
 export function trackFoldStepAdded(
   opKind: FoldStepAddedOpKind,
-  located?: { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent }
+  located?: { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent } | null,
+  vertex?: FoldStepVertexForm
 ): void {
+  const form = vertex ? vertexFormProperties(vertex) : {};
   track(
     ANALYTICS_EVENTS.foldStepAdded,
     located
@@ -32,8 +37,14 @@ export function trackFoldStepAdded(
           via: located.via,
           ...(located.extent ? { extent: located.extent } : {}),
         }
-      : { op_kind: opKind }
+      : { op_kind: opKind, ...form }
   );
+}
+
+/** A vertex fold's form as `fold step added`'s properties: enums only. */
+function vertexFormProperties(form: FoldStepVertexForm): Record<string, string> {
+  if ('hinge' in form) return { hinge: form.hinge };
+  return form.swivelForm === 'edge' ? { swivel_form: 'edge', target: form.target } : { swivel_form: 'rays' };
 }
 
 /** A refusal shown to the folder, by the engine's stable code: never a face, a vertex or a line. */
