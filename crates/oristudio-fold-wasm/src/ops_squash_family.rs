@@ -7,10 +7,12 @@
 //! a sheet point, resolved here in the parent (plan D6): the flap and the
 //! petal on their layers, a point on H's precrease, the triangle's corners,
 //! the swivel's vertex and the points its rays run toward, the stayer. What
-//! the step chose is a result: the spine's target, the emergent ray and the
-//! ridge are directions in the parent's model frame, and replay takes the
-//! nearest (an axiom's root is replayed the same way). A step's
-//! `choices.completion` is the engine's `VertexChoices` as it is.
+//! the step chose is a result: the spine's target and the emergent ray are
+//! directions in the parent's model frame, and replay takes the nearest (an
+//! axiom's root is replayed the same way). A step's `choices.completion` is
+//! the engine's `VertexChoices` as it is. A rabbit ear's fourth crease rises
+//! as its ridge, so it has none to choose: an older step's `ridge` is an
+//! unknown field, ignored.
 //!
 //! **Replay** (`FoldEngine::apply`, through the compound seam,
 //! [`crate::compound`]): a stored step lands, or is refused — the engine's
@@ -28,10 +30,10 @@
 //! other queries (what moves, its depth choices).
 //!
 //! **The tools** ask the compound question, as the reverse fold's do: what
-//! the op names (its flap, line or fan), the orders it leaves, each the
-//! `completion` that picks it, and a rabbit ear's two ridge options, each
-//! with its own orders. A tool then previews and commits the step with its
-//! choices through `step`, like any other. The calls below are the family's
+//! the op names (its flap, line or fan), which of a fan's fourth rays land,
+//! and the orders it leaves, each the `completion` that picks it. A tool
+//! then previews and commits the step with its choices through `step`, like
+//! any other. The calls below are the family's
 //! own besides ([`Pending`]): a fold that leaves a choice is held under its
 //! own handle, like an opened import, and each pick lands one order as a
 //! held state with the choices the step stores.
@@ -39,7 +41,7 @@
 //! ```ts
 //! // `apps/web/src/fold/engine/foldEngineSquashWire.ts` holds these shapes.
 //! class FoldEngine {
-//!   /** For a vertex op, `{ family: 'vertex', analysis, orders, ridges }`:
+//!   /** For a vertex op, `{ family: 'vertex', analysis, emergents, orders }`:
 //!    *  the flap, line or fan it names, before it folds, and the choices it
 //!    *  leaves. */
 //!   compound_analysis(state: number, op: FoldVertexOp, choices?: FoldChoices):
@@ -58,9 +60,9 @@
 use std::collections::HashMap;
 
 use oristudio_fold::{
-    ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, FoldRefusal,
-    PetalAnalysis, PetalFold, RabbitEar, Refused, Squash, SquashAnalysis, State, StepSummary,
-    Swivel, VertexChoice, VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
+    ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, PetalAnalysis,
+    PetalFold, RabbitEar, Refused, Squash, SquashAnalysis, State, StepSummary, Swivel,
+    VertexChoice, VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -100,8 +102,9 @@ pub struct PetalOp {
 }
 
 /// `FoldRabbitEarOp`: the triangle's corners as sheet points, the emergent
-/// ray and the ridge as model-frame directions from the incenter, the
-/// layers at the incenter (`seed`), a sheet point that stays, the direction.
+/// ray as a model-frame direction from the incenter, the layers at the
+/// incenter (`seed`), a sheet point that stays, the direction. An older
+/// step's `ridge` is not read.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct RabbitEarOp {
     pub corners: [Point; 3],
@@ -109,8 +112,6 @@ pub struct RabbitEarOp {
     pub seed: SeedInput,
     pub stayer: Point,
     pub direction: Direction,
-    #[serde(default)]
-    pub ridge: Option<Point>,
 }
 
 /// `FoldSwivelOp`: the vertex and the points its three given rays run
@@ -197,7 +198,6 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
                 layers: seed(&op.seed)?,
                 stayer: op.stayer,
                 direction: op.direction,
-                ridge: op.ridge.map(|r| direction("ridge", r)).transpose()?,
             })
         }
         Op::Swivel(op) => {
@@ -299,52 +299,10 @@ fn listed(outcome: Result<VertexOutcome, CompoundRefused>) -> Option<VertexOrder
     })
 }
 
-/// A rabbit ear's ridge options (research §5.3): of its four rays — the
-/// three to the corners and the emergent one the analysis names — the two
-/// the engine takes as a ridge, the far wedge's, each with whether it lands
-/// and the orders it leaves. Asked of the engine ray by ray, so the far
-/// wedge is the engine's own (the paper joined to the stayer decides it),
-/// never worked out a second way.
-fn ridges(parent: &State, ear: &RabbitEar, analysis: &VertexAnalysis) -> Vec<VertexRidge> {
-    let VertexAnalysis::RabbitEar(fan) = analysis else {
-        return Vec::new();
-    };
-    let Some(&emergent) = fan.emergent.and_then(|k| fan.candidates.get(k)) else {
-        return Vec::new();
-    };
-    let rays = fan
-        .given
-        .iter()
-        .enumerate()
-        .map(|(k, &ray)| (Some(k), ray))
-        .chain([(None, emergent)]);
-    rays.filter_map(|(given, direction)| {
-        let ridged = RabbitEar {
-            ridge: Some(direction),
-            ..ear.clone()
-        };
-        match parent.rabbit_ear(&ridged, &VertexChoices::default()) {
-            Err(CompoundRefused::Refused(refused))
-                if matches!(refused.refusal, FoldRefusal::FanRidgeNotRay) =>
-            {
-                None
-            }
-            outcome => Some(VertexRidge {
-                direction,
-                given,
-                lands: outcome.is_ok(),
-                orders: listed(outcome),
-            }),
-        }
-    })
-    .collect()
-}
-
 /// Per emergent candidate of a rabbit ear or a swivel, whether the fold
 /// lands with it, its other inputs as asked (as a reverse fold's question
 /// says which kinds land): what a tool takes first, and marks the others by.
-/// A rabbit ear is asked without its ridge, which only decides between
-/// orders. Empty for the other folds.
+/// Empty for the other folds.
 fn emergents(parent: &State, op: &EngineOp, analysis: &VertexAnalysis) -> Vec<bool> {
     let none = VertexChoices::default();
     match (op, analysis) {
@@ -354,7 +312,6 @@ fn emergents(parent: &State, op: &EngineOp, analysis: &VertexAnalysis) -> Vec<bo
             .map(|&emergent| {
                 let each = RabbitEar {
                     emergent,
-                    ridge: None,
                     ..ear.clone()
                 };
                 parent.rabbit_ear(&each, &none).is_ok()
@@ -384,11 +341,9 @@ impl CompoundOp for VertexFold {
 
     /// The flap, petal or fan it names, before it folds, and what a tool
     /// chooses among (as a reverse fold's question lists its kinds and
-    /// orders): which of a fan's emergent candidates land; the orders it
+    /// orders): which of a fan's emergent candidates land, and the orders it
     /// leaves, whichever completion is stored, so a chooser can move between
-    /// them; and, for a rabbit ear asked without its ridge, the two rays
-    /// that can be its ridge. The ridges are asked only of a fold that gets
-    /// as far as its completion: a refusal is the preview's to say.
+    /// them.
     fn ask(&self, parent: &State) -> Result<Result<CompoundAsked, Refusal>, BridgeError> {
         let analysis = match analyse(parent, &self.op) {
             Ok(analysis) => analysis,
@@ -398,18 +353,10 @@ impl CompoundOp for VertexFold {
             op: self.op.clone(),
             choices: VertexChoices::default(),
         };
-        let outcome = fold(parent, &unstored);
-        let ridges = match (&self.op, &outcome) {
-            (EngineOp::RabbitEar(ear), Ok(_)) if ear.ridge.is_none() => {
-                ridges(parent, ear, &analysis)
-            }
-            _ => Vec::new(),
-        };
         Ok(Ok(CompoundAsked::Vertex(Box::new(VertexAnalysed {
             emergents: emergents(parent, &self.op, &analysis),
             analysis,
-            orders: listed(outcome),
-            ridges,
+            orders: listed(fold(parent, &unstored)),
         }))))
     }
 
@@ -473,17 +420,12 @@ pub enum VertexAnalysis {
 pub struct VertexAnalysed {
     pub analysis: VertexAnalysis,
     /// A rabbit ear's or a swivel's: per emergent candidate (the analysis'
-    /// `candidates`), whether the fold lands with it, a rabbit ear's without
-    /// its ridge. Empty for the other folds.
+    /// `candidates`), whether the fold lands with it. Empty for the other
+    /// folds.
     pub emergents: Vec<bool>,
     /// The orders the op leaves as asked, its stored completion aside, when
     /// it leaves more than one; null when it lands with one, or is refused.
-    /// A rabbit ear asked without its ridge leaves the two its ridge
-    /// decides: its `ridges` list each one's own.
     pub orders: Option<VertexOrders>,
-    /// A rabbit ear asked without its ridge, that gets as far as its
-    /// completion: the two rays that can be its ridge. Empty otherwise.
-    pub ridges: Vec<VertexRidge>,
 }
 
 /// The orders a vertex fold leaves (as a reverse fold's question lists
@@ -496,22 +438,6 @@ pub struct VertexOrders {
     pub orders: Vec<WitnessOrder>,
     /// More are listed than `orders` holds.
     pub more: bool,
-}
-
-/// One of a rabbit ear's two ridge options: a ray of its far wedge.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct VertexRidge {
-    /// The ray, a direction from the incenter in the parent's model frame:
-    /// what the step stores as its `ridge`.
-    pub direction: Point,
-    /// Which corner's ray it is, in the op's corner order; null for the
-    /// emergent ray.
-    pub given: Option<usize>,
-    /// Whether the ear lands with it.
-    pub lands: bool,
-    /// The orders it leaves when more than one: what the step stores as its
-    /// `completion` beside the ridge.
-    pub orders: Option<VertexOrders>,
 }
 
 /// What `vertex_fold` came to.

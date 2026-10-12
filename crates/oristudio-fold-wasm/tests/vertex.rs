@@ -9,7 +9,8 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use oristudio_fold::State;
+use oristudio_fold::random::{self, Rng};
+use oristudio_fold::{PlainFold, Seed, Sheet, StartSide, State};
 use oristudio_fold_wasm::bridge::Bridge;
 use oristudio_fold_wasm::ops_squash_family::Pending;
 use oristudio_fold_wasm::wire::{BridgeError, Choices, Op, Outcome, Paper};
@@ -80,8 +81,14 @@ fn valley(through: [Point; 2], toward: Point) -> Value {
 
 /// The sheet point the viewer sees on top at the model point `p`.
 fn seen_top(state: &State, p: Point) -> Point {
+    seen(state, p, true)
+}
+
+/// The sheet point of the layer at the model point `p`, the one the viewer
+/// sees on top or the one at the bottom.
+fn seen(state: &State, p: Point, top: bool) -> Point {
     let mut stack = state.stack_at(p).unwrap_or_default();
-    if state.view().flipped {
+    if state.view().flipped == top {
         stack.reverse();
     }
     state
@@ -97,6 +104,69 @@ fn small_triangle(bridge: &mut Bridge) -> u32 {
     let half = land(bridge, sheet, valley([[1.0, 0.0], [0.0, 1.0]], [1.0, 1.0]));
     // (1, 1) lies on (0, 0) now: the line through (0, 0) and the centre.
     land(bridge, half, valley([[0.0, 0.0], [0.5, 0.5]], [0.9, 0.1]))
+}
+
+/// The square valley-folded along b d: the two-layer triangle a b d.
+fn two_layer_triangle(bridge: &mut Bridge) -> u32 {
+    let sheet = square(bridge);
+    land(bridge, sheet, valley([[1.0, 0.0], [0.0, 1.0]], [1.0, 1.0]))
+}
+
+/// The states `random::folded_between` draws, built through the bridge
+/// with the same draws: each drawn plain fold landed by the engine is sent
+/// as a valley or mountain along its model line (as `crimp_tuck.rs` builds
+/// them; each test file here is a crate of its own).
+fn drawn(bridge: &mut Bridge, rng: &mut Rng, least: usize, most: usize) -> (State, u32) {
+    assert!(!rng.chance(0.2), "a rectangle; this test draws squares");
+    let mut state =
+        State::flat(Sheet::square(), StartSide::Front).unwrap_or_else(|e| panic!("{e}"));
+    let mut handle = square(bridge);
+    let want = least + rng.below(most - least + 1);
+    let mut landed = 0;
+    for _ in 0..10 {
+        if landed >= want {
+            break;
+        }
+        let Some(fold) = random::plain_fold(&state, rng) else {
+            continue;
+        };
+        if let Ok(folded) = state.fold(&fold) {
+            state = folded.state;
+            handle = land(bridge, handle, plain_step(&fold));
+            landed += 1;
+        }
+    }
+    (state, handle)
+}
+
+fn plain_step(fold: &PlainFold) -> Value {
+    json!({
+        "kind": match fold.direction {
+            oristudio_fold::Direction::Valley => "valley",
+            oristudio_fold::Direction::Mountain => "mountain",
+        },
+        "line": { "via": "model", "line": json_of(&fold.line) },
+        "side": json_of(&fold.side),
+        "seed": match &fold.seed {
+            Seed::All => json!({ "scope": "all" }),
+            Seed::Depth { at, layers } => json!({ "scope": "depth", "at": at, "layers": layers }),
+            Seed::Flaps { at } => json!({ "scope": "flaps", "at": at }),
+        },
+    })
+}
+
+/// The two-layer triangle's rabbit ear through both layers, its fourth
+/// crease toward `emergent`, the paper inside it across from its right
+/// angle staying.
+fn ear(emergent: Value) -> Value {
+    json!({
+        "kind": "rabbit-ear",
+        "corners": [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+        "emergent": emergent,
+        "seed": { "scope": "all" },
+        "stayer": [0.6, 0.35],
+        "direction": "valley"
+    })
 }
 
 #[test]
@@ -177,73 +247,163 @@ fn a_squash_lands_and_replays_with_its_report_and_motion() {
     ));
 }
 
-/// The two-layer triangle's rabbit ear with its 180° ray leaves two orders
-/// (the vertex spike's case 3a): held, picked, stored as `completion`, and
-/// replayed to the state picked; without it the step needs a choice, with a
-/// witness off the paper it is broken.
+/// The two-layer triangle's rabbit ear with its 180° ray (the vertex
+/// spike's case 3a) lands one ear — its fourth crease the ridge, so the
+/// question lists no orders — and a step stored before kept a `ridge`, and
+/// sometimes an order: neither is read, and the step lands the same ear.
 #[test]
-fn a_rabbit_ears_choice_is_held_picked_stored_and_replayed() {
+fn a_rabbit_ear_lands_one_ear_whatever_an_older_step_stored() {
     let mut bridge = Bridge::new();
-    let sheet = square(&mut bridge);
-    let tri = land(
-        &mut bridge,
-        sheet,
-        valley([[1.0, 0.0], [0.0, 1.0]], [1.0, 1.0]),
+    let tri = two_layer_triangle(&mut bridge);
+    let asked = analysis(&bridge, tri, ear(json!([1.0, 0.0])));
+    assert_eq!(asked["analysis"]["kind"], "rabbit-ear");
+    assert_eq!(
+        asked["analysis"]["candidates"].as_array().map(Vec::len),
+        Some(3)
     );
-    let ear = |emergent: Value| {
-        json!({
-            "kind": "rabbit-ear",
-            "corners": [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
-            "emergent": emergent,
-            "seed": { "scope": "all" },
-            "stayer": [0.6, 0.35],
-            "direction": "valley"
-        })
-    };
-    let analysed = analysis(&bridge, tri, ear(json!([1.0, 0.0])));
-    assert_eq!(analysed["analysis"]["kind"], "rabbit-ear");
-    let candidates = analysed["analysis"]["candidates"].clone();
-    assert_eq!(candidates.as_array().map(Vec::len), Some(3));
+    // Candidates at 180°, 270° and 45°: the 45° ray splits the paper that
+    // stays; the other two land.
+    assert_eq!(asked["emergents"], json!([true, true, false]), "{asked}");
+    assert!(asked.get("ridges").is_none(), "{asked}");
     let step = ear(json!([-1.0, 0.0]));
+    let asked = analysis(&bridge, tri, step.clone());
+    assert!(asked["orders"].is_null(), "{asked}");
 
     let mut pending = Pending::new();
     let tried = ok(pending.try_fold(&mut bridge, tri, &op(step.clone()), &Choices::default()));
-    assert_eq!(tried["result"], "choose", "{tried}");
-    assert_eq!(tried["count"]["orders"], 2);
-    assert_eq!(tried["components"], json!([2]));
-    let handle = tried["pending"].as_u64().unwrap_or_default() as u32;
-    let picked = ok(pending.pick(&mut bridge, handle, &[1]));
-    assert_eq!(picked["compound"]["family"], "vertex");
-    let stored = picked["compound"]["stored"].clone();
-    // The document's completion: FOLD triples over witnesses.
-    assert!(stored["completion"]["orders"][0].is_array(), "{stored}");
-    let picked_state = picked["state"].as_u64().unwrap_or_default() as u32;
-    // A pick is pictured as the fold it lands: a fan's crease from its
-    // center, and its arrow.
-    let pictured = ok(bridge.step_action(picked_state))["action"].clone();
+    assert_eq!(tried["result"], "landed", "{tried}");
+    assert!(
+        tried["compound"]["stored"]
+            .as_object()
+            .is_some_and(|o| o.is_empty())
+    );
+    let landed = tried["state"].as_u64().unwrap_or_default() as u32;
+    // Pictured as a fan's crease from its center, with its arrow.
+    let pictured = ok(bridge.step_action(landed))["action"].clone();
     assert!(
         pictured["line"].is_array() && pictured["grip"].is_object(),
         "{pictured}"
     );
     assert!(pictured["push"].is_null(), "{pictured}");
+    let parts = |bridge: &Bridge, h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
+    let ear_parts = parts(&bridge, landed);
+
+    // An older step: its ridge on a corner's crease, which the folder could
+    // pick before.
+    let mut older = step.clone();
+    older["ridge"] = json!([0.6, -0.3]);
+    let replayed = land(&mut bridge, tri, older.clone());
+    assert_eq!(parts(&bridge, replayed), ear_parts);
+    // And an order over two faces that overlap, stored either way round.
+    let state = bridge
+        .state(landed)
+        .unwrap_or_else(|e| panic!("{e}"))
+        .clone();
+    let (pair, _) = state
+        .order()
+        .pairs()
+        .next()
+        .unwrap_or_else(|| panic!("no pairs"));
+    let witness = |f| {
+        let ring = &state.face(f).unwrap_or_else(|| unreachable!()).ring;
+        let n = ring.len() as f64;
+        ring.iter().fold([0.0, 0.0], |c, v| {
+            let p = state.vertices()[v.0 as usize];
+            [c[0] + p[0] / n, c[1] + p[1] / n]
+        })
+    };
+    let [f, g] = pair.faces();
+    for s in [1, -1] {
+        let stored = json!({
+            "completion": { "faces": [witness(f), witness(g)], "orders": [[0, 1, s]] }
+        });
+        let replayed = apply(&mut bridge, tri, older.clone(), stored);
+        assert_eq!(replayed["status"], "ok", "{replayed}");
+        let handle = replayed["state"].as_u64().unwrap_or_default() as u32;
+        assert_eq!(parts(&bridge, handle), ear_parts);
+    }
+}
+
+/// A swivel through every layer of a four-layer stack (seed 6717's drawn
+/// state; the vertex campaign's rare fan fold whose fourth crease rising
+/// still leaves its layers' order open) leaves six orders: held, picked,
+/// stored as `completion`, and replayed to the state picked; the question
+/// lists them; without one the step needs a choice, with a witness off the
+/// paper it is broken.
+#[test]
+fn a_swivels_choice_is_held_picked_stored_and_replayed() {
+    let mut bridge = Bridge::new();
+    let mut rng = Rng::new(6717);
+    let (state, stack) = drawn(&mut bridge, &mut rng, 2, 6);
+    let vertex = [0.4436590394786357, 0.7632986397979732];
+    let toward = [
+        [0.4753910246047879, 0.7240438743894912],
+        [0.40464276139972694, 0.7953234041560532],
+        [0.4843887832532005, 0.7931137946588755],
+    ];
+    let step = json!({
+        "kind": "swivel",
+        "vertex": seen_top(&state, vertex),
+        "toward": toward.map(|p| seen_top(&state, p)),
+        "emergent": [0.6707501901150905, 0.7416833437934075],
+        "seed": { "scope": "all" },
+        "stayer": seen(&state, [0.45737502364320937, 0.7697157086191782], false),
+        "direction": "mountain"
+    });
+
+    let mut pending = Pending::new();
+    let tried = ok(pending.try_fold(&mut bridge, stack, &op(step.clone()), &Choices::default()));
+    assert_eq!(tried["result"], "choose", "{tried}");
+    assert_eq!(tried["count"]["orders"], 6);
+    assert_eq!(tried["components"], json!([6]));
+    let handle = tried["pending"].as_u64().unwrap_or_default() as u32;
+    let picked = ok(pending.pick(&mut bridge, handle, &[1]));
+    assert_eq!(picked["compound"]["family"], "vertex");
+    assert_eq!(picked["compound"]["kind"], "swivel");
+    let stored = picked["compound"]["stored"].clone();
+    // The document's completion: FOLD triples over witnesses.
+    assert!(stored["completion"]["orders"][0].is_array(), "{stored}");
+    let picked_state = picked["state"].as_u64().unwrap_or_default() as u32;
     // A pick that names no order.
     let none = json_of(
         &pending
-            .pick(&mut bridge, handle, &[2])
+            .pick(&mut bridge, handle, &[6])
             .unwrap_or_else(|e| panic!("{e}")),
     );
     assert_eq!(none["refusal"]["code"], "no_such_choice");
     assert!(pending.release(handle));
     assert!(!pending.release(handle));
 
+    // The question lists the orders, each the completion it replays to.
+    let asked = analysis(&bridge, stack, step.clone());
+    assert_eq!(
+        asked["orders"]["count"],
+        json!({ "orders": 6, "exact": true })
+    );
+    let orders = asked["orders"]["orders"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(!orders.is_empty() && orders.len() <= 6);
+    let parts = |bridge: &Bridge, h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
+    let mut by_order = Vec::new();
+    for completion in &orders {
+        let landed = land_with(
+            &mut bridge,
+            stack,
+            &step,
+            json!({ "completion": completion }),
+        );
+        by_order.push(parts(&bridge, landed));
+    }
+    by_order.dedup();
+    assert_eq!(by_order.len(), orders.len());
+
     // Replay with the stored choice: the state picked.
-    let replayed = apply(&mut bridge, tri, step.clone(), stored.clone());
-    assert_eq!(replayed["status"], "ok", "{replayed}");
-    let replayed_state = replayed["state"].as_u64().unwrap_or_default() as u32;
-    let parts = |h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
-    assert_eq!(parts(replayed_state), parts(picked_state));
+    let replayed = land_with(&mut bridge, stack, &step, stored.clone());
+    assert_eq!(parts(&bridge, replayed), parts(&bridge, picked_state));
     // Without it: a choice the step does not store.
-    let needed = apply(&mut bridge, tri, step.clone(), json!({}));
+    let needed = apply(&mut bridge, stack, step.clone(), json!({}));
     assert_eq!(
         needed["refusal"],
         json!({ "code": "choice_needed", "choice": "completion" })
@@ -251,90 +411,22 @@ fn a_rabbit_ears_choice_is_held_picked_stored_and_replayed() {
     // A witness off the paper: broken.
     let mut off = stored.clone();
     off["completion"]["faces"][0] = json!([3.0, 3.0]);
-    let broken = apply(&mut bridge, tri, step, off);
+    let broken = apply(&mut bridge, stack, step, off);
     assert_eq!(broken["refusal"]["code"], "choice_broken");
     assert_eq!(broken["refusal"]["broken"], "witness");
 }
 
-/// What a tool chooses among comes with the compound question, as a reverse
-/// fold's does: the orders a vertex fold leaves, each the `completion` that
-/// picks it, and a rabbit ear's two ridge options — the far wedge's rays,
-/// each landing with one order — so the ear the tools preview is decided by
-/// its ridge, not by a bare order.
-#[test]
-fn the_question_lists_a_rabbit_ears_orders_and_ridges() {
-    let mut bridge = Bridge::new();
-    let sheet = square(&mut bridge);
-    let tri = land(
-        &mut bridge,
-        sheet,
-        valley([[1.0, 0.0], [0.0, 1.0]], [1.0, 1.0]),
-    );
-    let ear = json!({
-        "kind": "rabbit-ear",
-        "corners": [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
-        "emergent": [-1.0, 0.0],
-        "seed": { "scope": "all" },
-        "stayer": [0.6, 0.35],
-        "direction": "valley"
-    });
-    let asked = analysis(&bridge, tri, ear.clone());
-    // Without its ridge: the two orders the ridge decides.
-    assert_eq!(
-        asked["orders"]["count"],
-        json!({ "orders": 2, "exact": true })
-    );
-    let orders = asked["orders"]["orders"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
-    assert_eq!(orders.len(), 2);
-    assert_eq!(asked["orders"]["more"], false);
-    // Each listed order is a completion the step replays to.
-    let mut by_order = Vec::new();
-    for completion in &orders {
-        let landed = apply(
-            &mut bridge,
-            tri,
-            ear.clone(),
-            json!({ "completion": completion }),
-        );
-        assert_eq!(landed["status"], "ok", "{landed}");
-        by_order.push(landed["state"].as_u64().unwrap_or_default() as u32);
-    }
-    // The two ridge options: rays of the far wedge, each landing alone.
-    let ridges = asked["ridges"].as_array().cloned().unwrap_or_default();
-    assert_eq!(ridges.len(), 2, "{asked}");
-    let parts = |bridge: &Bridge, h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
-    let mut by_ridge = Vec::new();
-    for ridge in &ridges {
-        assert_eq!(ridge["lands"], true, "{ridge}");
-        assert!(ridge["orders"].is_null(), "{ridge}");
-        let mut ridged = ear.clone();
-        ridged["ridge"] = ridge["direction"].clone();
-        let landed = apply(&mut bridge, tri, ridged.clone(), json!({}));
-        assert_eq!(landed["status"], "ok", "{landed}");
-        by_ridge.push(parts(
-            &bridge,
-            landed["state"].as_u64().unwrap_or_default() as u32,
-        ));
-        // Asked with its ridge, it has no order and no ridge left to choose.
-        let decided = analysis(&bridge, tri, ridged);
-        assert!(decided["orders"].is_null(), "{decided}");
-        assert_eq!(decided["ridges"], json!([]));
-    }
-    // The ridges are the two orders, one each.
-    assert_ne!(by_ridge[0], by_ridge[1]);
-    let picked: Vec<_> = by_order.iter().map(|&h| parts(&bridge, h)).collect();
-    assert!(by_ridge.iter().all(|state| picked.contains(state)));
-    // A ridge names its ray: a corner's, or the emergent one's.
-    assert!(
-        ridges
-            .iter()
-            .all(|r| r["given"].is_null() || r["given"].as_u64().is_some_and(|k| k < 3))
-    );
+fn land_with(bridge: &mut Bridge, state: u32, step: &Value, chosen: Value) -> u32 {
+    let applied = apply(bridge, state, step.clone(), chosen);
+    assert_eq!(applied["status"], "ok", "{applied}");
+    applied["state"].as_u64().unwrap_or_default() as u32
+}
 
-    // A squash with one order has none to list, and no ridges.
+/// A squash with one order has none to list; a flap the analysis refuses
+/// is refused by the question, with the engine's code.
+#[test]
+fn the_question_of_a_squash() {
+    let mut bridge = Bridge::new();
     let small = small_triangle(&mut bridge);
     let flap = seen_top(
         bridge.state(small).unwrap_or_else(|e| panic!("{e}")),
@@ -346,9 +438,8 @@ fn the_question_lists_a_rabbit_ears_orders_and_ridges() {
         json!({ "kind": "squash", "flap": flap, "direction": "valley" }),
     );
     assert!(squash["orders"].is_null());
-    assert_eq!(squash["ridges"], json!([]));
-    // A flap the analysis refuses — seen from below, the layers over it
-    // cover it — is refused by the question, with the engine's code.
+    assert_eq!(squash["emergents"], json!([]));
+    // Seen from below, the layers over the flap cover it.
     let covered = json_of(
         &bridge
             .compound_analysis(
@@ -399,21 +490,30 @@ fn vertex_refusals_are_codes_with_fixes() {
         json!({}),
     );
     assert_eq!(refused["refusal"]["code"], "point_off_paper");
-    // A swivel lands as one state.
-    let landed = apply(
+    // Its fourth crease straight up splits the paper that stays: refused,
+    // offering the two that land, each as one state.
+    let refused = apply(
         &mut bridge,
         sheet,
         swivel([0.5, 0.3], [0.0, 1.0]),
         json!({}),
     );
-    assert_eq!(landed["compound"]["kind"], "swivel", "{landed}");
+    assert_eq!(
+        refused["refusal"]["code"], "fan_fourth_beside_stayer",
+        "{refused}"
+    );
+    let fixes = refused["fixes"].as_array().cloned().unwrap_or_default();
+    assert_eq!(fixes.len(), 2);
+    for fix in &fixes {
+        assert_eq!(fix["fix"], "use_emergent");
+        let direction: Point =
+            serde_json::from_value(fix["direction"].clone()).unwrap_or_else(|e| panic!("{e}"));
+        let landed = apply(&mut bridge, sheet, swivel([0.5, 0.3], direction), json!({}));
+        assert_eq!(landed["compound"]["kind"], "swivel", "{landed}");
+    }
     // The top layer's ear toward the folded edge runs into the layer
     // below: refused, offering the rays that land.
-    let tri = land(
-        &mut bridge,
-        sheet,
-        valley([[1.0, 0.0], [0.0, 1.0]], [1.0, 1.0]),
-    );
+    let tri = two_layer_triangle(&mut bridge);
     let top = seen_top(
         bridge.state(tri).unwrap_or_else(|e| panic!("{e}")),
         [0.3, 0.3],
@@ -451,7 +551,6 @@ fn vertex_refusals_are_codes_with_fixes() {
     let asked_for = asked["analysis"]["emergent"].as_u64().unwrap_or(9) as usize;
     assert_eq!(emergents[asked_for], false);
     assert!(asked["orders"].is_null());
-    assert_eq!(asked["ridges"], json!([]));
     // A pending choice that was never held is the caller's mistake.
     let mut pending = Pending::new();
     assert!(pending.pick(&mut bridge, 7, &[0]).is_err());
