@@ -1138,6 +1138,8 @@ fn a_swivel_on_a_folded_edge_lands_through_the_bridge() {
     assert_eq!(a["ridges"], json!([]));
     assert_eq!(asked["emergents"], json!([]));
     assert!(asked["orders"].is_null(), "{asked}");
+    // Its one choice besides the order: valley lands, mountain does not.
+    assert_eq!(asked["directions"], json!([true, false]));
     let letters: Vec<&Value> = a["creases"]
         .as_array()
         .map(|c| c.iter().map(|c| &c["letter"]).collect())

@@ -27,8 +27,9 @@
 //! ridge, to store as `ridge`. The edge form on a folded edge names `fold`,
 //! a sheet point on that folded crease, in place of `pivot` and `seed` and
 //! with no ridge (engine `compound::swivel_on_edge`): its answer adds the
-//! folded edge (`fold`) and lists no ridges. An older build reads `fold` as
-//! a key it does not know and locks the step.
+//! folded edge (`fold`), lists no ridges, and says which directions land
+//! (`directions`, valley then mountain), its one choice besides the order.
+//! An older build reads `fold` as a key it does not know and locks the step.
 //!
 //! **Replay** (`FoldEngine::apply`, through the compound seam,
 //! [`crate::compound`]): a stored step lands, or is refused — the engine's
@@ -548,6 +549,31 @@ fn emergents(parent: &State, op: &EngineOp, analysis: &VertexAnalysis) -> Vec<bo
     }
 }
 
+/// A swivel on a folded edge's directions, valley then mountain as the
+/// viewer sees them, each whether the fold lands that way: its only choice
+/// besides the order, so a tool offers only the ways that land. Empty for
+/// every other fold.
+fn directions(parent: &State, op: &EngineOp) -> Vec<bool> {
+    let EngineOp::SwivelByEdge(swivel) = op else {
+        return Vec::new();
+    };
+    if swivel.fold.is_none() {
+        return Vec::new();
+    }
+    [Direction::Valley, Direction::Mountain]
+        .into_iter()
+        .map(|direction| {
+            let each = SwivelByEdge {
+                direction,
+                ..swivel.clone()
+            };
+            parent
+                .swivel_by_edge(&each, &VertexChoices::default())
+                .is_ok()
+        })
+        .collect()
+}
+
 impl CompoundOp for VertexFold {
     /// Its picture along the crease that tells it best: no plain fold's
     /// analysis or depth pick, since it folds along no one line.
@@ -571,6 +597,7 @@ impl CompoundOp for VertexFold {
         };
         Ok(Ok(CompoundAsked::Vertex(Box::new(VertexAnalysed {
             emergents: emergents(parent, &self.op, &analysis),
+            directions: directions(parent, &self.op),
             analysis,
             orders: listed(fold(parent, &unstored)),
         }))))
@@ -643,6 +670,11 @@ pub struct VertexAnalysed {
     /// edge's, per ridge (the analysis' `ridges`). Empty for the other
     /// folds.
     pub emergents: Vec<bool>,
+    /// A swivel on a folded edge's: valley, then mountain, as the viewer
+    /// sees them, each whether the fold lands that way. Empty for the other
+    /// folds.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub directions: Vec<bool>,
     /// The orders the op leaves as asked, its stored completion aside, when
     /// it leaves more than one; null when it lands with one, or is refused.
     pub orders: Option<VertexOrders>,
