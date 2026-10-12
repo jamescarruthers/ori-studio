@@ -11,22 +11,29 @@
  *   bottom row up, the bottom row left to right from the spine;
  * - a left page with its facing page after it ends its last row at the spine:
  *   its rows run so the bottom row reads left to right — from the top left
- *   with an odd number of rows, from the top right with an even one — and
- *   where its steps end early (a page break), the lane runs on through the
- *   empty cells to the spine;
+ *   with an odd number of rows, from the top right with an even one. The page
+ *   plan gives such a page an odd number (`pagePlan.ts`), so its first row
+ *   starts at the top left, and lays it out for its own steps, so its last
+ *   row is full and ends at the spine;
  * - across a page turn there is nothing to line up with: the next page starts
  *   at its top left as before, and the lane runs off a page, or comes in, only
  *   at its outer edge, never into the spine, where it would seem to go on on
- *   the facing page.
+ *   the facing page;
+ * - on the diagram's last page it ends just past its last step.
  *
- * **The curve.** Packed pages use `ribbonPath`: it fairs interior stops
- * within the band, follows sloping passes, and retains wide turn radii.
- * Page-edge knots stay fixed so facing pages meet at the same height.
- * The legacy grid-derived fallback keeps its quarter-ellipse connectors.
+ * **The curve.** The lane passes through every picture's centre heading along
+ * its row, and turns between rows in a half ellipse out past the outer of the
+ * two rows' ends (`FLOW_BEND`, or further for a wide band: {@link bendReach}),
+ * through an apex heading straight down or up. It is a cubic Hermite spline
+ * through those knots: each knot has one handle, shared by the curves either
+ * side, so the lane is tangent-continuous (C1) everywhere and has no corner.
+ * The earlier lane was a Catmull–Rom spline through the same points, whose
+ * tangent at a row's last picture aimed from the picture before at the bend:
+ * the lane rose over that picture and fell back — the kinks Zach saw between
+ * steps 11 and 12 of the X-ray Heart.
  *
  * Pure.
  */
-import { ribbonPath } from './ribbonPath';
 import type { DiagramPageSide } from '../document/diagramDocument';
 
 /** How far out past a row's last picture's centre the lane turns to the next row, as a share of the cell's width. */
@@ -126,20 +133,26 @@ export function rowRightToLeft(plan: Pick<FlowPagePlan, 'firstRightToLeft'>, row
   return plan.firstRightToLeft !== (row % 2 === 1);
 }
 
-/** A place the lane passes through, in reading order: a picture's centre, or an empty cell's on a page that runs on to its spine. */
+/** A place the lane passes through, in reading order: a picture's centre. */
 export interface LaneStop extends LanePoint {
   /** The stop's row in reading order. */
   row: number;
   rightToLeft: boolean;
+  /** Its step is placed by hand: the lane follows it there, and says where that turns it back or crosses it. */
   placed?: boolean;
-  /** Page-edge joins stay level with their facing page. */
-  fixed?: boolean;
 }
 
-/** A point the lane passes through, the way it is heading there (a unit vector), and whether it is past the paper's edge. */
+/**
+ * A point the lane passes through, the way it is heading there (a unit
+ * vector), and whether it is past the paper's edge. A bend's apex says how far
+ * out it stands past the outer of the two rows' ends (`reach`); the lane's
+ * end past the diagram's last step says so (`tail`).
+ */
 interface Knot extends LanePoint {
   heading: LanePoint;
   off: boolean;
+  reach?: number;
+  tail?: true;
 }
 
 /**
@@ -148,11 +161,13 @@ interface Knot extends LanePoint {
  * `spineIn` and `spineOut` are its height at the spine, coming in and going
  * out, shared with the facing page; `offPage` how far past the paper's edge
  * it runs; `halfWidth` how far the band is drawn either side of it, which
- * its bends keep clear of ({@link bendReach}).
+ * its bends keep clear of ({@link bendReach}); `tail` how far on past its
+ * last stop, along its row, it runs on a page it leaves nowhere — the
+ * diagram's last. And the stops of steps placed by hand where the lane turns
+ * back, runs level across a row break, or crosses itself (`warnings`).
  */
 export function flowLane(input: {
   stops: readonly LaneStop[];
-  packed?: boolean;
   plan: FlowPagePlan;
   pageWidth: number;
   cellW: number;
@@ -160,12 +175,12 @@ export function flowLane(input: {
   offPage: number;
   spineIn: number | null;
   spineOut: number | null;
+  tail?: number;
 }): { lane: Lane; bends: Map<number, number>; warnings: number[] } | null {
   const { stops, plan, pageWidth: W, cellW, halfWidth, offPage } = input;
   const first = stops[0];
   const last = stops.at(-1);
   if (!first || !last) return null;
-  if (input.packed) return packedLane(input);
   const knots: Knot[] = [];
   const along = (rightToLeft: boolean): LanePoint => ({ x: rightToLeft ? -1 : 1, y: 0 });
   const outerLeft = plan.side === 'left';
@@ -215,13 +230,19 @@ export function flowLane(input: {
   } else if (plan.exit === 'turn' && last.rightToLeft === outerLeft) {
     // Off the outer edge, where the page turns; never into the spine.
     knots.push({ x: outerLeft ? -offPage : W + offPage, y: last.y, heading: along(last.rightToLeft), off: true });
+  } else if (plan.exit === 'none' && input.tail !== undefined && input.tail > 0) {
+    // The diagram's end: on a little past the last step, the way its row reads.
+    const heading = along(last.rightToLeft);
+    knots.push({ x: last.x + heading.x * input.tail, y: last.y, heading, off: false, tail: true });
   }
 
   const handles = knotHandles(knots);
   const curves: LaneCurve[] = [];
   for (let n = 0; n + 1 < knots.length; n += 1) {
     const [a, b] = [knots[n]!, knots[n + 1]!];
-    const [ha, hb] = [handles[n]!, handles[n + 1]!];
+    // The end runs straight on from the last step, and never on past its own end.
+    const ha = b.tail ? Math.min(handles[n]!, Math.abs(b.x - a.x)) : handles[n]!;
+    const hb = handles[n + 1]!;
     curves.push({
       c1: { x: a.x + a.heading.x * ha, y: a.y + a.heading.y * ha },
       c2: { x: b.x - b.heading.x * hb, y: b.y - b.heading.y * hb },
@@ -234,20 +255,23 @@ export function flowLane(input: {
 }
 
 /**
- * Where the lane turns from one row to the next: out past the row's end by
- * {@link bendReach}, halfway between the two pictures' heights, heading
- * straight down or up.
+ * Where the lane turns from one row to the next: out past the outer of the
+ * two rows' ends by {@link bendReach}, halfway between the two pictures'
+ * heights, heading straight down or up. A row is never longer than the one
+ * before it (`pagePlan.ts`), so the outer end is the row it leaves but where
+ * a hand moved a step.
  */
 function bendApex(before: LaneStop, next: LaneStop, cellW: number, halfWidth: number): Knot {
   const moved = before.placed || next.placed;
   const halfPitch = Math.abs(next.y - before.y) / 2;
   const reach = bendReach(cellW, moved ? Math.max(halfWidth, halfPitch) : halfPitch, halfWidth);
-  const edge = moved ? (before.rightToLeft ? Math.min(before.x, next.x) : Math.max(before.x, next.x)) : before.x;
+  const edge = before.rightToLeft ? Math.min(before.x, next.x) : Math.max(before.x, next.x);
   return {
     x: edge + (before.rightToLeft ? -1 : 1) * reach,
     y: (before.y + next.y) / 2,
     heading: { x: 0, y: next.y >= before.y ? 1 : -1 },
     off: false,
+    reach,
   };
 }
 
@@ -263,7 +287,14 @@ function bendApex(before: LaneStop, next: LaneStop, cellW: number, halfWidth: nu
  * as `FLOW_BEND`, a third is never the shorter. A run past the paper's edge
  * takes no say at its end on the paper, so a short stub off the page never
  * pinches the curve where it is seen; there it is straight, and stays off the
- * paper.
+ * paper. So too the lane's end past the diagram's last step, which it never
+ * runs past ({@link flowLane}).
+ *
+ * A row shorter than the one before it ends further in, its last step short
+ * of the outer end the apex stands past: that half of the bend runs in from
+ * its step for the difference, its handle there longer by as much, then turns
+ * as the other half does — so both halves are as round at the apex, and the
+ * band clears both ({@link bendReach}).
  */
 function knotHandles(knots: readonly Knot[]): number[] {
   const handles = knots.map(() => Infinity);
@@ -279,11 +310,14 @@ function knotHandles(knots: readonly Knot[]): number[] {
     const bend = turning(n);
     /** The share of a run the `at`th knot's handle may take: half when the curve on its other side is a bend, else a third. */
     const share = (at: number) => (turning(at - 1) || turning(at) ? 1 / 2 : 1 / 3);
+    // How far the apex of a bend stands out past the outer row's end: all of the way across, but for a shorter row.
+    const reach = Math.min(dx, a.reach ?? b.reach ?? dx);
     // Round a bend: each end's handle a quarter ellipse's, across its radius that way.
-    const handle = (end: Knot, at: number) => (bend ? QUARTER * (end.heading.y !== 0 ? dy : dx) : dx * share(at));
+    const handle = (end: Knot, at: number) =>
+      bend ? (end.heading.y !== 0 ? QUARTER * dy : QUARTER * reach + (dx - reach)) : dx * share(at);
     alone[n] = Math.min(alone[n]!, handle(a, n));
     alone[n + 1] = Math.min(alone[n + 1]!, handle(b, n + 1));
-    if (!(b.off && !a.off)) handles[n] = Math.min(handles[n]!, handle(a, n));
+    if (!(b.off && !a.off) && !b.tail) handles[n] = Math.min(handles[n]!, handle(a, n));
     if (!(a.off && !b.off)) handles[n + 1] = Math.min(handles[n + 1]!, handle(b, n + 1));
   }
   // A picture with only stubs either side — alone on its page — takes theirs: they are straight.
@@ -341,42 +375,4 @@ export function laneCrosses(lane: Lane): boolean {
     if (cross(a, b, c) * cross(a, b, d) < -1e-10 && cross(c, d, a) * cross(c, d, b) < -1e-10) return true;
   }
   return false;
-}
-
-/** The same bounded fairing used by the packer, extended to the page edges. */
-function packedLane(input: Parameters<typeof flowLane>[0]): NonNullable<ReturnType<typeof flowLane>> {
-  const { stops, plan, pageWidth: width, offPage } = input;
-  // Edge extensions do not get a vote in fairing the first/last picture.
-  // These anchors match the packer's connection geometry before bleed exists.
-  const knots = stops.map((stop, i) => ({ ...stop, fixed: stop.fixed || i === 0 || i === stops.length - 1 }));
-  const first = knots[0]!, last = knots.at(-1)!;
-  const outerLeft = plan.side === 'left';
-  if (plan.entry === 'spine' || plan.entry === 'turn' && first.rightToLeft !== outerLeft) {
-    const x = plan.entry === 'spine' ? 0 : outerLeft ? 0 : width;
-    const y = input.spineIn ?? first.y;
-    const direction = first.rightToLeft ? -1 : 1;
-    knots.unshift({ x, y, row: first.row, rightToLeft: first.rightToLeft, fixed: true });
-    knots.unshift({ x: x - direction * offPage, y, row: first.row, rightToLeft: first.rightToLeft, fixed: true });
-  }
-  if (plan.exit === 'spine' || plan.exit === 'turn' && last.rightToLeft === outerLeft) {
-    const x = plan.exit === 'spine' ? width : outerLeft ? 0 : width;
-    const y = input.spineOut ?? last.y;
-    knots.push({ x, y, row: last.row, rightToLeft: last.rightToLeft, fixed: true });
-    knots.push({ x: x + (last.rightToLeft ? -offPage : offPage), y, row: last.row, rightToLeft: last.rightToLeft, fixed: true });
-  }
-  const path = ribbonPath(knots, input.halfWidth);
-  const lane = path.lane;
-  const prefix = knots.indexOf(first);
-  const bends = new Map([...path.bends].map(([index, curve]) => [index - prefix, curve]));
-  const warnings = new Set<number>();
-  stops.forEach((s, i) => {
-    const before = stops[i - 1];
-    if (!before || (!before.placed && !s.placed)) return;
-    if (s.row === before.row ? (s.x - before.x) * (s.rightToLeft ? -1 : 1) <= 0 : Math.abs(s.y - before.y) < input.halfWidth * 2) {
-      if (before.placed) warnings.add(i - 1);
-      if (s.placed) warnings.add(i);
-    }
-  });
-  if (stops.some((s) => s.placed) && laneCrosses(lane)) stops.forEach((s, i) => { if (s.placed) warnings.add(i); });
-  return { lane, bends, warnings: [...warnings] };
 }

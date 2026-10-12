@@ -56,16 +56,18 @@ export function placedZoomArrows(
     });
     const [a, b] = [mm(areaPicture), mm(nextPicture)];
     // Both pictures' overlap, below both numbers: the one at the gutter's side is either step's, by which way the row reads.
-    const numbers = Math.max(...[page.cells[areaIndex]!, page.cells[nextIndex]!].map((cell) => cell.flowRow !== undefined || cell.placed ? partBox(cell, 'number').y + partBox(cell, 'number').h : cell.cellMm.y + PICTURE_TOP_MM));
+    const pair = [page.cells[areaIndex]!, page.cells[nextIndex]!];
+    const numbers = Math.max(...pair.map((cell) => (cell.placed ? partBox(cell, 'number').y + partBox(cell, 'number').h : cell.cellMm.y + PICTURE_TOP_MM)));
     const top = Math.max(a.top, b.top, numbers);
     const bottom = Math.min(a.bottom, b.bottom);
     const half = arrow.box.h / 2;
-    if (bottom < top + arrow.box.h && (page.cells[areaIndex]!.placed || page.cells[nextIndex]!.placed || page.cells[areaIndex]!.flowRow !== undefined)) return arrow;
+    // A step placed by hand may leave no overlap to hold it: it stays where the layout put it.
+    if (bottom < top + arrow.box.h && pair.some((cell) => cell.placed)) return arrow;
     // Clear of the numbers first, where the overlap is too short to hold it.
     const y = Math.max(top + half, Math.min(centre, bottom - half));
     if (!Number.isFinite(y)) return arrow;
     const proposed = { ...arrow, at: { x: arrow.at.x, y } };
-    if (page.cells.some(c => c.placed || c.flowRow !== undefined)) {
+    if (page.cells.some((cell) => cell.placed)) {
       const g = { x: arrow.at.x - arrow.box.w / 2, y: y - half, ...arrow.box };
       const overlap = page.cells.some(cell => (['number', 'picture', 'text'] as const).some(part => {
         const b = partBox(cell, part);

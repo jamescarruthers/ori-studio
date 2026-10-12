@@ -254,7 +254,14 @@ describe('the band’s width and colour (Zach, 2026-10-06: "an option for how wi
         if (result.bandWidthMm > result.cellMm.w) continue;
         const half = result.bandWidthMm / 2;
         for (const [index, page] of result.pages.entries()) {
-          for (const { from, curve, drop } of bendHalves(page.band!)) {
+          const halves = bendHalves(page.band!);
+          for (const [at, { from, curve, drop }] of halves.entries()) {
+            // A row shorter than the one before ends further in: its half of the bend runs in further than the
+            // other half out. One curve a half then holds a band only up to half as wide as the rows are apart;
+            // past that, as wide as they are apart, no single curve turns that way clear of it.
+            const other = halves[at % 2 === 0 ? at + 1 : at - 1]!;
+            const across = (each: typeof other) => Math.abs(each.curve.to.x - each.from.x);
+            if (Math.abs(across(halves[at]!) - across(other)) > 1e-6 && half > drop / 2) continue;
             // A band wider than its rows are apart covers its bend's inside: then the bend is round, as tight as they are apart.
             const needs = Math.min(half, drop);
             const tightest = Math.min(...Array.from({ length: 201 }, (_, n) => radiusAt(from, curve, n / 200)));
@@ -331,8 +338,8 @@ describe('a printed spread', () => {
     expect(beyond.map(p => p.x)).toEqual([result.paper.widthMm, result.paper.widthMm + 10]);
   });
 
-  it('packs the same occupied steps the same way, whether a page limit or explicit break ends the page', () => {
-    // 7 steps on A4 are 3 · 3 · 1: the lane goes on from the seventh through the two empty cells.
+  it('lays a page out the same, whether its steps per page or a page break ends it', () => {
+    // 7 steps on A4 are 3 · 2 · 2, the left page's last row ending at the spine.
     const short = flow(steps(14), { stepsPerPage: 7 });
     expect(short.pages.map((page) => page.cells.length)).toEqual([7, 7]);
     const lane = short.pages[0]!.band!;
@@ -342,9 +349,13 @@ describe('a printed spread', () => {
     // Only the spine and bleed follow the last picture; no unused cells.
     expect(beyond.slice(0, 2).every((knot) => knot.x > seventh.x)).toBe(true);
     expect(heightAt(lane, short.paper.widthMm)).toBeCloseTo(heightAt(short.pages[1]!.band!, 0)!, 6);
-    // The same pages, band and all, as 9 steps a page with a page break after the seventh.
+    // The same first page, band and all, as 9 steps a page with a page break after the seventh: a page is
+    // laid out for the steps it holds. Only an automatic last page is laid out for its steps per page, so
+    // the seven after the break keep a page of nine's cells.
     const broken = flow(steps(14, (index) => ({ breakBefore: index === 7 })), { stepsPerPage: 9 });
-    expect(short.pages).toEqual(broken.pages);
+    expect(short.pages[0]).toEqual(broken.pages[0]);
+    expect(short.pages[1]!.cells.map((cell) => cell.flowRow)).toEqual([0, 0, 0, 1, 1, 2, 2]);
+    expect(broken.pages[1]!.cells.map((cell) => cell.flowRow)).toEqual([0, 0, 0, 1, 1, 1, 2]);
   });
 
   it('starts a right page with fewer steps than rows at the spine’s row, and goes on up from there', () => {

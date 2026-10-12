@@ -608,8 +608,7 @@ describe('layoutDiagramPages', () => {
                 // The picture box and the room it is drawn in are inside the cell, under the number, over the text.
                 expect(cell.pictureMm.x).toBeGreaterThanOrEqual(cell.cellMm.x - 1e-9);
                 expect(cell.pictureMm.x + cell.pictureMm.size).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w + 1e-9);
-                if (cell.flowRow === undefined) expect(cell.pictureMm.y).toBeGreaterThan(cell.numberAt.y);
-                else expect(cell.numberMm!.x + cell.numberMm!.w).toBeLessThanOrEqual(cell.drawMm.x);
+                expect(cell.pictureMm.y).toBeGreaterThan(cell.numberAt.y);
                 expect(cell.drawMm.x).toBeGreaterThanOrEqual(cell.cellMm.x - 1e-9);
                 expect(cell.drawMm.x + cell.drawMm.w).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w + 1e-9);
                 expect(cell.drawMm.h).toBeGreaterThanOrEqual(cell.pictureMm.size - 1e-9);
@@ -1159,7 +1158,7 @@ describe('enlarged steps on the page (Revision 2)', () => {
     expect(cells.get('step-4')!.mmPerUnit).toBe(cells.get('step-0')!.mmPerUnit);
   });
 
-  it('honors a typed Size past its room, and a new arrow starts a run of its own', () => {
+  it('prints at a typed Size times the area, held to its room, and a new arrow starts a run of its own', () => {
     const list = steps(4, (index) =>
       index === 1 ? enlarged({ arrowFrom: from('step-0'), scale: 2 }) : index === 2 ? enlarged({ scale: 2 }) : index === 3 ? enlarged({ scale: 6 }) : {}
     );
@@ -1169,10 +1168,9 @@ describe('enlarged steps on the page (Revision 2)', () => {
     expect(cells[1]!.zoom).toEqual({ asked: 2, printed: expect.closeTo(2, 9), reduced: false });
     // The same Size after it: the same run, the same size.
     expect(cells[2]!.frameMm).toBeCloseTo(2 * areaMm, 9);
-    // An explicit Size is honored, with clashes reported instead of silently shrinking it.
+    // Six times the run's area is more than its room holds: as large as it does, and reduced.
     expect(cells[3]!.zoom!.asked).toBe(6);
-    expect(cells[3]!.zoom!.reduced).toBe(false);
-    expect(cells[3]!.zoom!.printed).toBe(6);
+    expect(cells[3]!.zoom!.reduced).toBe(true);
     expect(cells[3]!.frameMm).toBeCloseTo(cells[3]!.drawMm.w, 6);
   });
 
