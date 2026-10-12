@@ -92,8 +92,7 @@ describe('diagramSheetLayout', () => {
   });
 });
 
-// Multi-page exports include cold automatic packing and font composition.
-describe('diagramSheetSvg', { timeout: 30_000 }, () => {
+describe('diagramSheetSvg', () => {
   it('writes the sheet in mm, a viewport for each page in its place, and the title', () => {
     const document = diagram(20);
     const prepared = preparedPages(document, FIXTURE_FONTS, subsetter);

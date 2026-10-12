@@ -258,7 +258,7 @@ describe('composeDiagramPage', () => {
       expect(widths[2]! / widths[0]!, setupName(setup)).toBeCloseTo(1, 3);
       // The far push is never drawn larger; on a square cell it fits only well under the others' scale.
       expect(widths[3]!, setupName(setup)).toBeLessThanOrEqual(widths[0]! * 1.001);
-      // Occupied-shape flow packing can make room for the far push at the same paper scale.
+      if (Object.keys(setup).length === 0) expect(widths[3]!).toBeLessThan(widths[0]! * 0.8);
     }
   });
 
@@ -269,10 +269,10 @@ describe('composeDiagramPage', () => {
     expect(read.readOnly).toBe(false);
     const pages = preparedPages(read.document, FONTS, subsetter);
     expect(pages.layout).toEqual(preparedPages(made, FONTS, subsetter).layout);
-    // The legacy setting no longer overrides the current automatic layout.
+    // One scale drew every step at the far push's scale; Fit each draws only that step smaller.
     const widths = paperWidths(pages.compose(0).svg);
     expect(widths[2]! / widths[0]!).toBeCloseTo(1, 3);
-    expect(widths[3]!).toBeLessThanOrEqual(widths[0]! * 1.001);
+    expect(widths[3]!).toBeLessThan(widths[0]! * 0.8);
   });
 
   it('keeps every picture and its marks inside the room the layout drew for it, at any scale and page', () => {
@@ -366,7 +366,7 @@ describe('composeDiagramPage', () => {
     expect(framed).toBeGreaterThanOrEqual(2 * SETUPS.length);
     // And every enlarged step its window, by what it prints.
     expect(enlarged).toBe(2 * SETUPS.length);
-  }, 30_000);
+  });
 
   /** How far laying the pages out again, each step measured at the scale it is drawn at, moves a step's scale. */
   const unsettled = (document: DiagramDocument, layout: ReturnType<typeof layoutDiagram>) => {
@@ -489,7 +489,7 @@ describe('composeDiagramPage', () => {
         }
       }
     }
-  }, 30_000);
+  });
 
   it('draws a picture at the largest scale it holds its room at, though no scale is its own fit (third review)', () => {
     // A turn-over larger than its paper, off its middle: its reach is flat until the paper outgrows it, then grows,

@@ -45,8 +45,7 @@ function printed(document: DiagramDocument) {
   };
 }
 
-// Each fixture lays out and composes every page twice, including cold packing.
-describe('pages with nothing placed', { timeout: 30_000 }, () => {
+describe('pages with nothing placed', () => {
   it.each(pageLayoutFixtures().map(({ name, document }) => [name, document] as const))(
     'are the same, byte for byte, with no placement and one of zero offsets: %s',
     (_name, document) => {
@@ -72,7 +71,7 @@ describe('pages with nothing placed', { timeout: 30_000 }, () => {
 /** A text's digest: its sha256's first 16 hex digits. */
 const digest = (text: string) => createHash('sha256').update(text).digest('hex').slice(0, 16);
 
-describe('pages as they printed before placement came', { timeout: 30_000 }, () => {
+describe('pages as they printed before placement came', () => {
   it('are held to their digests: the page, the Pages view’s page and its arrows, page by page', () => {
     // Taken from the layout at 6f7792459 (Phase 1 changes no page). A change here
     // is a change to what every diagram prints: say why when updating them.
