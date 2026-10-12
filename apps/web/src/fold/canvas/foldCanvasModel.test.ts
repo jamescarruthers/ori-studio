@@ -235,12 +235,9 @@ describe('the Fold canvas model', () => {
             },
             emergents: [false],
             orders: null,
-            ridges: [],
           },
           answer: null,
           emergent: 1,
-          ridges: [{ direction: [1, 0], given: 2, lands: true, orders: null }],
-          ridge: 0,
           orders: [order, second],
           order: second,
           layers: 3,
@@ -255,7 +252,6 @@ describe('the Fold canvas model', () => {
       // A candidate the answer says nothing of fits, as far as is known.
       emergents: [false, true],
       emergent: 1,
-      ridges: [{ given: 2, lands: true }],
       layers: 3,
       fanLayers: 1,
       orders: 2,
@@ -342,7 +338,7 @@ describe('where the canvas chooser frames', () => {
 });
 
 describe('the canvas chooser’s note', () => {
-  const kinds = ['pocket', 'target', 'ridge', 'emergent', 'root', 'opening', 'order'] as const;
+  const kinds = ['pocket', 'target', 'emergent', 'root', 'opening', 'order'] as const;
 
   it('offers the keys the user’s shortcuts step it with', () => {
     const keys = chooserKeys((id) => shortcutLabelForAction(id), false);

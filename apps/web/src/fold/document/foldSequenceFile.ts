@@ -475,6 +475,7 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
       const emergent = readModelDirection(value.emergent);
       const seed = readSeed(value.seed);
       const stayer = readPoint(value.stayer);
+      // An older step's ridge: kept as it came, read by nothing (`FoldRabbitEarOp.ridge`).
       const ridge = optional('ridge');
       return corners && emergent && seed && stayer && ridge !== null
         ? { kind, corners, emergent, seed, stayer, direction, ...(ridge ? { ridge } : {}) }

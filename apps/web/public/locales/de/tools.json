@@ -279,7 +279,6 @@
         "opening": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie.",
         "order": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie.",
         "pocket": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Blättere durch sie.",
-        "ridge": "Jede der beiden Faltlinien gegenüber dem liegenbleibenden Papier kann zum Grat des Ohrs werden. Blättere durch sie.",
         "root": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie.",
         "target": "Mehr als eine Lage nimmt die Lasche auf: Die hellste ist die gewählte. Blättere durch sie."
       },
@@ -288,7 +287,6 @@
         "opening": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie oder drücke {{keys}}.",
         "order": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke {{keys}}.",
         "pocket": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Blättere durch sie oder drücke {{keys}}.",
-        "ridge": "Jede der beiden Faltlinien gegenüber dem liegenbleibenden Papier kann zum Grat des Ohrs werden. Blättere durch sie oder drücke {{keys}}.",
         "root": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke {{keys}}.",
         "target": "Mehr als eine Lage nimmt die Lasche auf: Die hellste ist die gewählte. Blättere durch sie oder drücke {{keys}}."
       }
@@ -740,7 +738,6 @@
     },
     "vertex": {
       "direction": "Richtung",
-      "doesNotFit": "Passt hier nicht",
       "emergent": "Vierte Faltlinie",
       "emergentDoesNotFit": "Diese vierte Faltlinie passt hier nicht: blättere zu einer anderen.",
       "fix": {
@@ -770,7 +767,7 @@
       "noEmergentFits": "Keine vierte Faltlinie passt hier zu diesen Lagen.",
       "note": {
         "petal": "Eine Blütenblattfalte faltet vorhandene Faltlinien erneut: falte zuerst die Drachenlinien von der unteren Spitze der Lasche und die Linie H über ihre Enden vor.",
-        "rabbitEar": "Die Faltlinien treffen sich im Inkreismittelpunkt des Dreiecks: eine zu jeder Ecke und eine vierte, die sie flach liegen lässt.",
+        "rabbitEar": "Die Faltlinien treffen sich im Inkreismittelpunkt des Dreiecks: eine zu jeder Ecke, in die gewählte Richtung gefaltet, und eine vierte, an der sich das Ohr aufrichtet, andersherum gefaltet.",
         "squash": "Eine Lasche lässt sich quetschen, wenn ihre beiden Lagen frei sind, nur an ihrem Scharnier gehalten, und unbedeckt, ohne etwas darüber auf der Seite, zu der sie sich öffnet.",
         "swivel": "Der Punkt, in dem sich die Faltlinien treffen, muss im Papier liegen, auf keiner Faltlinie: halte {{modifier}} gedrückt, um ihn beliebig zu setzen.",
         "swivelTouch": "Der Punkt, in dem sich die Faltlinien treffen, muss im Papier liegen, auf keiner Faltlinie."
@@ -788,6 +785,14 @@
         "covered": {
           "text": "Andere Lagen liegen über der Lasche oder in ihr, auf der Seite, zu der sie sich öffnet. Falte sie zuerst aus dem Weg oder quetsche sie andersherum.",
           "title": "Die Lasche ist bedeckt"
+        },
+        "fourthBesideStayer": {
+          "text": "Die Lasche richtet sich entlang der vierten Faltlinie auf, daher liegt diese gegenüber dem Papier, das liegen bleibt. Wähle eine andere vierte Faltlinie oder anderes Papier, das liegen bleibt.",
+          "title": "Die vierte Faltlinie liegt neben dem liegenbleibenden Papier"
+        },
+        "fourthCannotRise": {
+          "text": "Die vierte Faltlinie wird andersherum gefaltet als die anderen drei, und die Winkel zwischen diesen Faltlinien lassen das nicht zu. Wähle eine andere vierte Faltlinie oder andere Punkte.",
+          "title": "Die vierte Faltlinie kann sich hier nicht aufrichten"
         },
         "kite": {
           "text": "Eine Blütenblattfalte faltet vorhandene Faltlinien erneut. Falte jede Seitenkante der obersten Lage der Lasche auf ihre Mittellinie und wieder auf, dann falte das Blütenblatt.",
@@ -833,10 +838,6 @@
           "text": "Andere Lagen liegen über der Lasche auf der Seite, zu der sie sich hebt. Falte sie zuerst aus dem Weg oder hebe sie andersherum an.",
           "title": "Die Lasche ist bedeckt"
         },
-        "ridge": {
-          "text": "Der Grat ist eine der beiden Faltlinien gegenüber dem liegenbleibenden Papier. Wähle den anderen Grat oder anderes Papier, das liegen bleibt.",
-          "title": "Dieser Grat passt nicht"
-        },
         "stayer": {
           "text": "Das Papier, das liegen bleiben soll, hängt an keinem Teil der Faltung. Wähle Papier, das die Faltlinien schneiden, oder Papier, das daran hängt.",
           "title": "Welches Papier bleibt liegen?"
@@ -847,16 +848,11 @@
         }
       },
       "reset": "Zurück auf das Scharnier",
-      "ridge": "Grat",
-      "ridgeCorner": "Ecke {{number}}",
-      "ridgeCornerTitle": "Die Faltlinie zu Ecke {{number}} wird zum Grat",
-      "ridgeFourth": "Vierte",
-      "ridgeFourthTitle": "Die vierte Faltlinie wird zum Grat",
       "steps": {
-        "earChoose": "Wähle die vierte Faltlinie, die Lagen und den Grat.",
         "earFirstCorner": "Klicke auf die erste Ecke des Dreiecks.",
         "earSecondCorner": "Klicke auf seine zweite Ecke.",
         "earThirdCorner": "Klicke auf seine dritte Ecke.",
+        "fanChoose": "Wähle die vierte Faltlinie und die Lagen.",
         "finish": "Wähle die Optionen, dann drücke die Eingabetaste.",
         "finishTouch": "Wähle die Optionen, dann tippe auf {{action}}.",
         "petalCrease": "Klicke auf die vorgefaltete Linie H, entlang der sich die Lasche hebt.",
@@ -870,7 +866,6 @@
         "squashTarget": "Klicke, wo der Rücken landen soll, oder lass ihn auf der Scharnierlinie.",
         "squashTargetTouch": "Tippe, wo der Rücken landen soll, oder lass ihn auf der Scharnierlinie.",
         "stayer": "Klicke auf das Papier, das liegen bleibt.",
-        "swivelChoose": "Wähle die vierte Faltlinie und die Lagen.",
         "swivelFirstRay": "Klicke auf einen Punkt, zu dem die erste Faltlinie läuft.",
         "swivelSecondRay": "Klicke auf einen Punkt, zu dem die zweite Faltlinie läuft.",
         "swivelThirdRay": "Klicke auf einen Punkt, zu dem die dritte Faltlinie läuft.",

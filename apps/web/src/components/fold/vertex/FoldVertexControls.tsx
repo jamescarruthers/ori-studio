@@ -40,12 +40,11 @@ export function FoldVertexDirection({ controls }: { controls: FoldVertexControls
 
 /**
  * A vertex fold's choices: a squash's spine target, a fan's fourth crease
- * and layers, a rabbit ear's ridge (one that does not fit disabled, with why
- * in its tooltip), and the layer order — each only when there is a choice to
+ * and layers, and the layer order — each only when there is a choice to
  * make.
  */
 export function FoldVertexChoices({ controls }: { controls: FoldVertexControls }) {
-  const { target, emergent, emergentNote, layers, ridge, order } = controls;
+  const { target, emergent, emergentNote, layers, order } = controls;
   return (
     <>
       {target && (
@@ -79,23 +78,6 @@ export function FoldVertexChoices({ controls }: { controls: FoldVertexControls }
         </p>
       )}
       {layers && <FoldChoiceStepperRow stepper={layers} />}
-      {ridge && (
-        <FieldRow label={ridge.label} kind="segmented" divider={false} disabled={ridge.disabled}>
-          <SegmentedControl<string>
-            size="sm"
-            aria-label={ridge.label}
-            value={String(ridge.value)}
-            disabled={ridge.disabled}
-            options={ridge.options.map((option) => ({
-              value: String(option.value),
-              label: option.label,
-              tooltip: option.tooltip,
-              disabled: option.disabled,
-            }))}
-            onChange={(value) => ridge.set(Number(value))}
-          />
-        </FieldRow>
-      )}
       {order && <FoldChoiceStepperRow stepper={order} />}
     </>
   );

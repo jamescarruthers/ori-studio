@@ -30,8 +30,10 @@ import {
  * replay land it. From the square: two squashes to the preliminary base, two
  * petal folds to the bird base (the vertex spike's route, research §5.3, in
  * the engine's frame: `crates/oristudio-fold/tests/vertex/cases.rs`); a
- * rabbit ear on the two-layer triangle, its ridge either way; a swivel on the
- * flat square, its fourth ray stepped.
+ * rabbit ear on the two-layer triangle and on the flat square with its
+ * diagonal precreased, each one ear whose three corner creases share a letter
+ * and whose fourth has the other; a swivel on the flat square, its fourth ray
+ * stepped.
  *
  * Skipped when the bridge has not been built (a fresh worktree before
  * `build:wasm`); CI builds it before the web tests run.
@@ -72,7 +74,7 @@ const landmark = (at: Point, sheet: [number, number]): FoldPick => ({
   scene: at,
 });
 
-const NONE: FoldVertexTaken = { squashTarget: null, emergent: null, ridge: null, order: 0 };
+const NONE: FoldVertexTaken = { squashTarget: null, emergent: null, order: 0 };
 
 const intent = (extra: Partial<FoldVertexIntent>): FoldVertexIntent => ({
   tool: 'squash',
@@ -296,7 +298,49 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
     expect(bird.summary.faces).toBe(24);
   });
 
-  it('rabbit-ears the two-layer triangle, its ridge either way, each landing alone', async () => {
+  /**
+   * The creases a step made, grouped by the sheet vertex they meet at: per
+   * group, the letter each has and whether it runs to one of `corners`.
+   */
+  function earCreases(
+    { calls }: Engine,
+    state: number,
+    corners: readonly (readonly [number, number])[]
+  ): { letter: string | null; toCorner: boolean }[][] {
+    const scene = calls.scene(state);
+    const made = Math.max(...scene.creases.map((crease) => crease.made_at));
+    const fresh = scene.creases.filter((crease) => crease.made_at === made);
+    const key = (q: Point) => `${q.x.toFixed(6)},${q.y.toFixed(6)}`;
+    const ends = new Map<string, number>();
+    for (const crease of fresh) for (const end of [crease.from, crease.to]) ends.set(key(end), (ends.get(key(end)) ?? 0) + 1);
+    const corner = (q: Point) => corners.some(([x, y]) => Math.hypot(q.x - x, q.y - y) < 1e-6);
+    // Each layer's four creases meet at its image of the incenter.
+    return [...ends.entries()]
+      .filter(([, count]) => count === 4)
+      .map(([center]) =>
+        fresh
+          .filter((crease) => key(crease.from) === center || key(crease.to) === center)
+          .map((crease) => ({
+            letter: crease.letter,
+            toCorner: corner(key(crease.from) === center ? crease.to : crease.from),
+          }))
+      );
+  }
+
+  /** The rabbit ear's rule in each layer: the three creases to its corners share a letter, the fourth has the other. */
+  function expectEarLetters(groups: { letter: string | null; toCorner: boolean }[][], layers: number) {
+    expect(groups).toHaveLength(layers);
+    for (const group of groups) {
+      const corners = group.filter((crease) => crease.toCorner);
+      const fourth = group.filter((crease) => !crease.toCorner);
+      expect(corners).toHaveLength(3);
+      expect(fourth).toHaveLength(1);
+      expect(new Set(corners.map((crease) => crease.letter)).size).toBe(1);
+      expect(fourth[0]!.letter).not.toBe(corners[0]!.letter);
+    }
+  }
+
+  it('rabbit-ears the two-layer triangle: one ear, its fourth crease the ridge, no ridge to choose', async () => {
     const engined = await engine();
     const { calls } = engined;
     const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
@@ -310,18 +354,58 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
     const ear = vertexFold(engined, tri, intent({ tool: 'rabbit-ear', picks }));
     if (ear.first.analysis.kind !== 'rabbit-ear') throw new Error('not a rabbit ear');
     expect(ear.first.analysis.candidates).toHaveLength(3);
-    expect(ear.first.emergents).toHaveLength(3);
-    // The fourth ray taken is one that lands; its two ridges are listed, and the ridge decides the order.
+    // The 45° ray splits the paper that stays: it does not fit; the other two do.
+    expect(ear.first.emergents.filter(Boolean)).toHaveLength(2);
+    // The fourth ray taken is one that lands, and lands alone: nothing to store, no ridge.
     expect(ear.first.emergents[ear.answer.analysis.kind === 'rabbit-ear' ? (ear.answer.analysis.emergent ?? 0) : 0]).toBe(true);
-    expect(ear.built.ridges).toHaveLength(2);
-    expect(ear.built.ridge).toBe(0);
+    expect(ear.built.orders).toEqual([]);
     expect(ear.built.step.choices).toBeUndefined();
-    const states = [0, 1].map((ridge) => {
-      const built = vertexStepFrom(ear.built.step.op, ear.answer, { ...NONE, ridge });
-      expect(built.step.op).toHaveProperty('ridge');
-      return land(engined, tri, built.step).fingerprint;
-    });
-    expect(states[0]).not.toBe(states[1]);
+    expect(ear.built.step.op).not.toHaveProperty('ridge');
+    const folded = land(engined, tri, ear.built.step);
+    // Both layers: the bottom one's corners as cut, the top one's mirrored across the fold.
+    expectEarLetters(
+      earCreases(engined, folded.state, [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [1, 1],
+      ]),
+      2
+    );
+  });
+
+  it('rabbit-ears the triangle of a square precreased on its diagonal: corner creases valley, the fourth mountain', async () => {
+    const engined = await engine();
+    const { calls } = engined;
+    const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
+    const precreased = landed(
+      calls.step(sheet, {
+        kind: 'precrease',
+        direction: 'valley',
+        line: { via: 'free', through: [[0, 0], [1, 1]] },
+        moving: [0, 1],
+        seed: { scope: 'all' },
+      })
+    ).state;
+    const picks = [
+      landmark(p(0, 0), [0, 0]),
+      landmark(p(1, 0), [1, 0]),
+      landmark(p(1, 1), [1, 1]),
+      free(p(0.25, 0.75)),
+    ];
+    const corners = [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+    ] as const;
+    for (const direction of ['valley', 'mountain'] as const) {
+      const ear = vertexFold(engined, precreased, intent({ tool: 'rabbit-ear', picks, direction }));
+      expect(ear.built.step.choices).toBeUndefined();
+      const groups = earCreases(engined, land(engined, precreased, ear.built.step).state, corners);
+      expectEarLetters(groups, 1);
+      const [group] = groups;
+      expect(group!.find((crease) => crease.toCorner)?.letter).toBe(direction);
+    }
   });
 
   it('swivels the flat square about a free vertex, stepping its fourth ray among those that land', async () => {

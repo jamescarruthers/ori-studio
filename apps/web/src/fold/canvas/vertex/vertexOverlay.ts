@@ -11,9 +11,9 @@
  *   clicked; where it was aimed, faint, when that cannot land.
  * - **Petal fold**: H between its ends, and the kite creases down to the
  *   open corner.
- * - **Rabbit ear, swivel**: the center, the three given rays, the fourth
- *   crease taken (bold) among the other candidates (faint; one that does not
- *   fit fainter still), and a rabbit ear's ridge haloed.
+ * - **Rabbit ear, swivel**: the center, the three given rays, and the fourth
+ *   crease taken (bold) — the ridge the flap rises along — among the other
+ *   candidates (faint; one that does not fit fainter still).
  *
  * Each ray runs from its vertex to where it leaves the paper. Pure: the
  * colours are handed in, resolved by the pane.
@@ -28,14 +28,12 @@ import type { FoldPickIndex } from '../foldPicking';
 
 /** CSS px: a vertex's dot. */
 const VERTEX_RADIUS = 4;
-/** Stroke widths, as multiples of the frame's: a crease, the choice taken, a ridge's halo. */
+/** Stroke widths, as multiples of the frame's: a crease, the choice taken. */
 const CREASE_WIDTH = 1.6;
 const CHOSEN_WIDTH = 2.6;
-const HALO_WIDTH = 5.5;
-/** How faint what is not taken is drawn: the spine as it lies, a candidate not taken, one that does not fit, a halo. */
+/** How faint what is not taken is drawn: the spine as it lies, a candidate not taken, one that does not fit. */
 const FAINT = 0.4;
 const UNFIT = 0.18;
-const HALO = 0.3;
 /** How far a ray runs, in model units, when it starts on the paper's edge and the paper gives it no length. */
 const EDGE_RAY = 0.2;
 
@@ -48,8 +46,6 @@ export interface FoldVertexOverlayInput {
   emergent: number | null;
   /** Per candidate, whether it fits; empty when unknown. */
   emergents: readonly boolean[];
-  /** A rabbit ear's ridge, as a model-frame direction from its center; null with none known. */
-  ridge: FoldModelPoint | null;
   /**
    * Where a squash's spine was aimed, as a model-frame direction from its
    * vertex, when that fold was refused and the analysis drawn is the hinge
@@ -106,7 +102,6 @@ function fanStrokes(
 ): FoldOverlayStroke[] {
   const strokes: FoldOverlayStroke[] = [];
   const stroke = ([a, b]: [Point, Point], color: Rgba, widthMul: number) => strokes.push({ a, b, color, widthMul });
-  if (input.ridge) stroke(ray(index, analysis.center, input.ridge), withAlpha(accent, HALO), HALO_WIDTH);
   for (const given of analysis.given) stroke(ray(index, analysis.center, given), accent, CREASE_WIDTH);
   analysis.candidates.forEach((candidate, k) => {
     const taken = k === input.emergent;

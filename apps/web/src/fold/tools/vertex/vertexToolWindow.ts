@@ -16,9 +16,9 @@
  *   the folded pane, drawn there either way, with a way back to the hinge;
  * - a fan's **fourth crease**, among the candidates the engine lists (three
  *   at most), the ones that do not fit said so, and the **layers** it cuts,
- *   from the direction's side;
- * - a rabbit ear's **ridge**: which of the two creases across from the paper
- *   that stays rises as the ear's ridge, one that does not fit disabled;
+ *   from the direction's side. A rabbit ear's fourth crease is its ridge,
+ *   folding the other way from the three to the corners, so there is no
+ *   ridge to choose;
  * - the **layer order**, when the fold leaves more than one;
  * - a refusal in the folder's words with every fix a button, and Cancel and
  *   the fold.
@@ -43,13 +43,6 @@ import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 import { choiceStepper, type FoldChoiceStepper } from '../reverse/reverseToolWindow';
 import { vertexToolSteps } from './vertexInputs';
 
-/** One of a rabbit ear's two ridge options, as the window names it. */
-export interface FoldVertexRidgeView {
-  /** The corner whose ray it is, by click (0-based); null for the fourth crease. */
-  given: number | null;
-  lands: boolean;
-}
-
 /** What a vertex tool's window is drawn from, beside every tool's view. */
 export interface FoldVertexWindowView {
   tool: FoldVertexToolId;
@@ -63,9 +56,6 @@ export interface FoldVertexWindowView {
   /** A fan's: per emergent candidate, whether it fits; and the one taken. */
   emergents: readonly boolean[];
   emergent: number;
-  /** A rabbit ear's two ridge options (empty until known), and the one taken. */
-  ridges: readonly FoldVertexRidgeView[];
-  ridge: number;
   /** The layers at a fan's center, and how many it cuts (null for every one). */
   layers: number;
   fanLayers: number | null;
@@ -82,7 +72,6 @@ export interface FoldVertexWindowView {
 export interface FoldVertexWindowVerbs {
   setVertexDirection?: (direction: FoldDirection) => void;
   stepEmergent?: (delta: number) => void;
-  setRidge?: (ridge: number) => void;
   stepFanLayers?: (delta: number) => void;
 }
 
@@ -110,14 +99,6 @@ export interface FoldVertexControls {
   emergentNote: string | null;
   /** The layers a fan cuts, when more than one lies at its center. */
   layers: FoldChoiceStepper | null;
-  /** A rabbit ear's ridge, once its two options are known. */
-  ridge: {
-    label: string;
-    value: number;
-    options: readonly { value: number; label: string; tooltip: string; disabled: boolean }[];
-    disabled: boolean;
-    set: (ridge: number) => void;
-  } | null;
   order: FoldChoiceStepper | null;
   /** What the fold needs of the paper, said under the controls. */
   note: string;
@@ -125,7 +106,7 @@ export interface FoldVertexControls {
 
 /** Whether a vertex fold has any choice to show beside its direction. */
 export function hasVertexChoices(controls: FoldVertexControls): boolean {
-  return Boolean(controls.target || controls.emergent || controls.layers || controls.ridge || controls.order);
+  return Boolean(controls.target || controls.emergent || controls.layers || controls.order);
 }
 
 /** What the fold needs of the paper (research §5.3: its preconditions are what stop it). */
@@ -144,7 +125,7 @@ function preconditionNote(t: TFunction, tool: FoldVertexToolId, host: FoldToolHo
     case 'rabbit-ear':
       return t(
         'tools:fold.vertex.note.rabbitEar',
-        'The creases meet at the triangle’s incenter: one to each corner, and a fourth that lets them lie flat.'
+        'The creases meet at the triangle’s incenter: one to each corner, folded the way you choose, and a fourth the ear rises along, folded the other way.'
       );
     case 'swivel':
       return host.coarse
@@ -194,9 +175,8 @@ function chooseStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
     case 'petal':
       return t('tools:fold.vertex.steps.petalDirection', 'Choose which way the flap lifts.');
     case 'rabbit-ear':
-      return t('tools:fold.vertex.steps.earChoose', 'Choose the fourth crease, the layers and the ridge.');
     case 'swivel':
-      return t('tools:fold.vertex.steps.swivelChoose', 'Choose the fourth crease and the layers.');
+      return t('tools:fold.vertex.steps.fanChoose', 'Choose the fourth crease and the layers.');
   }
 }
 
@@ -232,26 +212,6 @@ function previewInstructions(
     current: 0,
     notes: view.preview ? queuedNote(t, view.preview) : [],
   };
-}
-
-/** A ridge option in a word or two, and in full for its tooltip. */
-function ridgeWords(t: TFunction, ridge: FoldVertexRidgeView): { label: string; tooltip: string } {
-  const words =
-    ridge.given === null
-      ? {
-          // Short enough to sit beside a corner's in the window's row: the tooltip says it whole.
-          label: t('tools:fold.vertex.ridgeFourth', 'Fourth'),
-          tooltip: t('tools:fold.vertex.ridgeFourthTitle', 'The fourth crease rises as the ridge'),
-        }
-      : {
-          label: t('tools:fold.vertex.ridgeCorner', 'Corner {{number}}', { number: ridge.given + 1 }),
-          tooltip: t('tools:fold.vertex.ridgeCornerTitle', 'The crease to corner {{number}} rises as the ridge', {
-            number: ridge.given + 1,
-          }),
-        };
-  return ridge.lands
-    ? words
-    : { ...words, tooltip: `${words.tooltip} - ${t('tools:fold.vertex.doesNotFit', 'Does not fit here')}` };
 }
 
 /** What the fourth crease's stepper says beneath it: that the one taken does not fit. */
@@ -291,8 +251,7 @@ export function vertexControls(
   const { tool } = vertex;
   const located = clicked && vertex.described;
   const fan = tool === 'rabbit-ear' || tool === 'swivel';
-  const { setVertexDirection, resetSquashTarget, setRidge } = verbs;
-  const [first, second] = vertex.ridges;
+  const { setVertexDirection, resetSquashTarget } = verbs;
   return {
     direction: {
       label: t('tools:fold.vertex.direction', 'Direction'),
@@ -353,16 +312,6 @@ export function vertexControls(
             layersValue(t, vertex)
           )
         : null,
-    ridge:
-      tool === 'rabbit-ear' && located && first && second && setRidge
-        ? {
-            label: t('tools:fold.vertex.ridge', 'Ridge'),
-            value: vertex.ridge,
-            options: [first, second].map((ridge, value) => ({ value, ...ridgeWords(t, ridge), disabled: !ridge.lands })),
-            disabled: readOnly,
-            set: setRidge,
-          }
-        : null,
     order: located
       ? choiceStepper(t, t('tools:fold.reverse.order', 'Layer order'), vertex.order, vertex.orders, verbs.stepOrder, readOnly)
       : null,
@@ -400,7 +349,7 @@ export function vertexToolWindow(
     };
   }
   const controls = vertexControls(t, vertex, verbs, readOnly, host, true);
-  const settings = [controls.direction, controls.target, controls.emergent, controls.layers, controls.ridge, controls.order];
+  const settings = [controls.direction, controls.target, controls.emergent, controls.layers, controls.order];
   return {
     phase: 'preview',
     title,

@@ -353,7 +353,7 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
     expect(legs.legs.map((leg) => leg.stacking)).toEqual(['parent', 'parent', 'parent', 'landed']);
   });
 
-  it('plays a rabbit ear of the triangle, with the order picked', () => {
+  it('plays a rabbit ear of the triangle, its one ear', () => {
     const tri = triangle(engine);
     const op: FoldRabbitEarOp = {
       kind: 'rabbit-ear',
@@ -367,12 +367,11 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
       stayer: [0.6, 0.35],
       direction: 'valley',
     };
-    const tried = landed(engine.vertex.vertexFold(tri, op));
-    if (tried.result !== 'choose') throw new Error('no choice');
-    const picked = landed(engine.vertex.vertexPick(tried.pending, [1]));
-    const stages = new Set(picked.compound.motion.legs.map((_, k) => Math.floor(k / 2))).size;
-    expectPlays(engine, { op, parent: tri, state: picked.state, legs: picked.compound.motion }, stages);
-    engine.vertex.releaseVertexChoices([tried.pending]);
+    // Its fourth crease is its ridge: one ear, landed through `step` as a stored one replays.
+    const stepped = landed(engine.calls.step(tri, op));
+    const vertex = reportOf(stepped.compound, 'vertex');
+    const stages = new Set(vertex.motion.legs.map((_, k) => Math.floor(k / 2))).size;
+    expectPlays(engine, { op, parent: tri, state: stepped.state, legs: vertex.motion }, stages);
   });
 
   describe('the sinks of the preliminary base’s point', () => {

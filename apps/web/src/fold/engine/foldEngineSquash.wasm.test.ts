@@ -6,6 +6,7 @@ import {
   type FoldPlainOp,
   type FoldRabbitEarOp,
   type FoldSquashOp,
+  type FoldSwivelOp,
   type SheetPoint,
 } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from './foldEngineCalls';
@@ -17,7 +18,12 @@ import {
   type FoldCompoundReportOf,
 } from './foldEngineCompoundWire';
 import { createFoldEngineVertexCalls, type FoldEngineVertexCalls } from './foldEngineSquashCalls';
-import { FOLD_REFUSAL_CODES, type FoldEngineOutcome, type FoldEngineRefused } from './foldEngineWire';
+import {
+  FOLD_REFUSAL_CODES,
+  type FoldEngineOp,
+  type FoldEngineOutcome,
+  type FoldEngineRefused,
+} from './foldEngineWire';
 
 /**
  * The vertex folds over the real bridge, in-process: exactly what
@@ -135,7 +141,7 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
     }
   });
 
-  it('holds a rabbit ear’s choice, picks one, and replays the stored completion to it', () => {
+  it('lands a rabbit ear as one ear, whatever an older step stored of its ridge or its order', () => {
     const tri = triangle();
     const ear: FoldRabbitEarOp = {
       kind: 'rabbit-ear',
@@ -153,10 +159,89 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
     expect(fan.kind).toBe('rabbit-ear');
     if (fan.kind === 'rabbit-ear') expect(fan.candidates).toHaveLength(3);
 
+    // Its fourth crease is its ridge: one ear, nothing to store.
     const tried = landed(engine.vertex.vertexFold(tri, ear));
+    if (tried.result !== 'landed') throw new Error('a choice');
+    expect(tried.compound.stored).toEqual({});
+    const stepped = landed(engine.calls.step(tri, ear));
+    expect(stepped.fingerprint).toEqual(tried.fingerprint);
+    // An older step's ridge on a corner's crease, and an order it stored: the same ear.
+    const older = { ...ear, ridge: [0.6, -0.3] as const };
+    expect(landed(engine.calls.step(tri, older)).fingerprint).toEqual(tried.fingerprint);
+    for (const s of [1, -1] as const) {
+      const completion = {
+        faces: [
+          [0.2, 0.1],
+          [0.1, 0.2],
+        ] as const,
+        orders: [[0, 1, s] as const],
+      };
+      expect(landed(engine.calls.step(tri, older, { completion })).fingerprint).toEqual(tried.fingerprint);
+    }
+  });
+
+  /**
+   * Seed 6717's drawn four-layer stack (`crates/oristudio-fold-wasm/tests/vertex.rs`),
+   * fold by fold along its model lines, and its swivel through every layer:
+   * the rare fan fold whose fourth crease rising still leaves six orders.
+   */
+  function drawnStack(): { state: number; swivel: FoldSwivelOp } {
+    const ops: FoldEngineOp[] = [
+      {
+        kind: 'mountain',
+        line: { via: 'model', line: { n: [0.7071067811865475, 0.7071067811865475], d: 0.7071067811865475 } },
+        side: 'positive',
+        seed: { scope: 'depth', at: [0.43337668012163094, 0.5851284708994908], layers: 1 },
+      },
+      {
+        kind: 'mountain',
+        line: { via: 'model', line: { n: [0.16781781659920522, 0.9858180260229955], d: 0.45135725104893515 } },
+        side: 'negative',
+        seed: { scope: 'depth', at: [0.5245699051724596, 0.35004875043914585], layers: 1 },
+      },
+      {
+        kind: 'valley',
+        line: { via: 'model', line: { n: [0.8089593525382522, -0.5878645812947841], d: -0.49423096652837356 } },
+        side: 'negative',
+        seed: { scope: 'all' },
+      },
+      {
+        kind: 'mountain',
+        line: { via: 'model', line: { n: [0.943674360863751, -0.3308756573826353], d: -0.1514915767545033 } },
+        side: 'positive',
+        seed: { scope: 'all' },
+      },
+      {
+        kind: 'valley',
+        line: { via: 'model', line: { n: [1, -5.799447436887377e-16], d: -4.87572581044147e-16 } },
+        side: 'negative',
+        seed: { scope: 'depth', at: [0.41780637514775365, 0.1659964283328923], layers: 1 },
+      },
+    ];
+    let state = landed(engine.calls.sheet(SQUARE_PAPER)).state;
+    for (const op of ops) state = landed(engine.calls.step(state, op)).state;
+    const swivel: FoldSwivelOp = {
+      kind: 'swivel',
+      vertex: [0.5372621917973273, 0.4193633050052127],
+      toward: [
+        [0.5375324963819914, 0.36888774237582933],
+        [0.526787569333818, 0.46874080769184356],
+        [0.698256467658807, 0.4319642531214779],
+      ],
+      emergent: [0.6707501901150905, 0.7416833437934075],
+      seed: { scope: 'all' },
+      stayer: [0.5348016974441572, 0.3148855107608072],
+      direction: 'mountain',
+    };
+    return { state, swivel };
+  }
+
+  it('holds a swivel’s choice, picks one, and replays the stored completion to it', () => {
+    const { state, swivel } = drawnStack();
+    const tried = landed(engine.vertex.vertexFold(state, swivel));
     if (tried.result !== 'choose') throw new Error('no choice');
-    expect(tried.count).toEqual({ orders: 2, exact: true });
-    expect(tried.components).toEqual([2]);
+    expect(tried.count).toEqual({ orders: 6, exact: true });
+    expect(tried.components).toEqual([6]);
 
     const picked = landed(engine.vertex.vertexPick(tried.pending, [1]));
     expect(picked.compound.family).toBe('vertex');
@@ -164,7 +249,7 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
     expect(completion?.orders.length).toBeGreaterThan(0);
     // What the step stores, read as every compound family's is.
     expect(compoundStoredChoices(picked.compound)).toEqual({ completion });
-    const replayed = landed(engine.calls.step(tri, ear, { completion }));
+    const replayed = landed(engine.calls.step(state, swivel, { completion }));
     expect(replayed.fingerprint).toEqual(picked.fingerprint);
     expect(replayed.compound).toEqual(picked.compound);
     // The other pick is another state.
@@ -173,7 +258,7 @@ describe.skipIf(!available)('the vertex folds over the bridge', () => {
     expect(engine.vertex.releaseVertexChoices([tried.pending])).toBe(1);
 
     // A stored step with no choice leaves one it does not store.
-    const needed = refused(engine.calls.step(tri, ear));
+    const needed = refused(engine.calls.step(state, swivel));
     expect(needed.refusal).toEqual({ code: 'choice_needed', choice: 'completion' });
     expect(FOLD_REFUSAL_CODES).toContain(needed.refusal.code);
   });

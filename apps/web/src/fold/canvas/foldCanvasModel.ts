@@ -159,8 +159,8 @@ export function foldTuckWindowView(tools: FoldToolState, preview: FoldToolPrevie
 /**
  * A vertex tool's window view (`vertexToolWindow`): the direction, and what
  * the engine listed with the choices taken — a squash's spine target, a fan's
- * fourth rays and layers, a rabbit ear's ridges, the orders. Absent for every
- * other tool. Before every click is in, only the direction is known.
+ * fourth rays and layers, the orders. Absent for every other tool. Before
+ * every click is in, only the direction is known.
  */
 export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPreview): FoldVertexWindowView | undefined {
   const { tool } = tools;
@@ -169,7 +169,7 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   const analysis = vertex?.base?.analysis;
   const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates : [];
   const emergents = vertex?.base?.emergents ?? [];
-  const { orders = [], order = null, ridges = [] } = vertex ?? {};
+  const { orders = [], order = null } = vertex ?? {};
   return {
     tool,
     direction: tools.vertexDirection,
@@ -179,8 +179,6 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
     // A candidate the answer has no word on fits, as far as is known.
     emergents: candidates.map((_, k) => emergents[k] ?? true),
     emergent: vertex?.emergent ?? 0,
-    ridges: ridges.map((ridge) => ({ given: ridge.given, lands: ridge.lands })),
-    ridge: vertex?.ridge ?? 0,
     layers: vertex?.layers ?? 0,
     fanLayers: tools.compound.fanLayers,
     orders: orders.length > 1 ? orders.length : 0,
@@ -354,12 +352,6 @@ function choiceNoteWithKeys(t: TFunction, kind: FoldCanvasChoice['kind'], keys: 
         { keys }
       );
     // The vertex folds'.
-    case 'ridge':
-      return t(
-        'tools:fold.chooser.withKeys.ridge',
-        'Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press {{keys}}.',
-        { keys }
-      );
     case 'emergent':
       return t(
         'tools:fold.chooser.withKeys.emergent',
@@ -398,11 +390,6 @@ function choiceNoteNoKeys(t: TFunction, kind: FoldCanvasChoice['kind']): string 
       return t(
         'tools:fold.chooser.noKeys.target',
         'More than one layer takes the tuck: the brightest is the one taken. Step through them.'
-      );
-    case 'ridge':
-      return t(
-        'tools:fold.chooser.noKeys.ridge',
-        'Either crease across from the paper that stays can rise as the ear’s ridge. Step through them.'
       );
     case 'emergent':
       return t('tools:fold.chooser.noKeys.emergent', 'More than one fourth crease lets these creases lie flat. Step through them.');

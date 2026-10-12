@@ -287,7 +287,6 @@
         "opening": "La solapa se abre de más de una manera: las capas resaltadas quedan juntas. Recórrelas.",
         "order": "Las capas pueden quedar apiladas de más de una manera. Recórrelas.",
         "pocket": "La punta puede hundirse en más de un bolsillo entre sus capas. Recórrelos.",
-        "ridge": "Cualquiera de los dos pliegues frente al papel que se queda puede alzarse como cresta de la oreja. Recórrelos.",
         "root": "Este axioma da más de un pliegue aquí. Recórrelos.",
         "target": "Más de una capa admite el remetido: la más brillante es la elegida. Recórrelas."
       },
@@ -296,7 +295,6 @@
         "opening": "La solapa se abre de más de una manera: las capas resaltadas quedan juntas. Recórrelas o pulsa {{keys}}.",
         "order": "Las capas pueden quedar apiladas de más de una manera. Recórrelas o pulsa {{keys}}.",
         "pocket": "La punta puede hundirse en más de un bolsillo entre sus capas. Recórrelos o pulsa {{keys}}.",
-        "ridge": "Cualquiera de los dos pliegues frente al papel que se queda puede alzarse como cresta de la oreja. Recórrelos o pulsa {{keys}}.",
         "root": "Este axioma da más de un pliegue aquí. Recórrelos o pulsa {{keys}}.",
         "target": "Más de una capa admite el remetido: la más brillante es la elegida. Recórrelas o pulsa {{keys}}."
       }
@@ -758,7 +756,6 @@
     },
     "vertex": {
       "direction": "Sentido",
-      "doesNotFit": "No cabe aquí",
       "emergent": "Cuarto pliegue",
       "emergentDoesNotFit": "Este cuarto pliegue no cabe aquí: pasa a otro.",
       "fix": {
@@ -791,7 +788,7 @@
       "noEmergentFits": "Ningún cuarto pliegue cabe aquí con estas capas.",
       "note": {
         "petal": "Un pliegue pétalo vuelve a plegar pliegues que ya existen: premarca antes los pliegues de la cometa desde la punta inferior de la solapa y la línea H entre sus extremos.",
-        "rabbitEar": "Los pliegues se juntan en el incentro del triángulo: uno hacia cada esquina y un cuarto que los deja planos.",
+        "rabbitEar": "Los pliegues se juntan en el incentro del triángulo: uno hacia cada esquina, plegado en el sentido que elijas, y un cuarto por el que se alza la oreja, plegado en el sentido contrario.",
         "squash": "Una solapa se aplasta cuando sus dos capas están libres, sujetas solo por su bisagra, y descubiertas, sin nada encima del lado hacia el que se abre.",
         "swivel": "El punto donde se juntan los pliegues debe estar dentro del papel, fuera de todo pliegue: mantén {{modifier}} para colocarlo en cualquier lugar.",
         "swivelTouch": "El punto donde se juntan los pliegues debe estar dentro del papel, fuera de todo pliegue."
@@ -809,6 +806,14 @@
         "covered": {
           "text": "Otras capas cubren la solapa, o están dentro de ella, del lado hacia el que se abre. Apártalas antes o aplástala en el otro sentido.",
           "title": "La solapa está cubierta"
+        },
+        "fourthBesideStayer": {
+          "text": "La solapa se alza a lo largo del cuarto pliegue, así que este queda frente al papel que se queda quieto. Elige otro cuarto pliegue u otro papel que se quede quieto.",
+          "title": "El cuarto pliegue está junto al papel que se queda"
+        },
+        "fourthCannotRise": {
+          "text": "El cuarto pliegue se pliega en sentido contrario a los otros tres, y los ángulos entre estos pliegues no lo permiten. Elige otro cuarto pliegue u otros puntos.",
+          "title": "El cuarto pliegue no puede alzarse aquí"
         },
         "kite": {
           "text": "Un pliegue pétalo vuelve a plegar pliegues que ya existen. Lleva cada borde lateral de la capa superior de la solapa a su línea central y desdobla; luego haz el pliegue pétalo.",
@@ -854,10 +859,6 @@
           "text": "Otras capas cubren la solapa del lado hacia el que se levanta. Apártalas antes o levántala en el otro sentido.",
           "title": "La solapa está cubierta"
         },
-        "ridge": {
-          "text": "La cresta es uno de los dos pliegues frente al papel que se queda. Elige la otra cresta u otro papel que se quede quieto.",
-          "title": "Esa cresta no cabe"
-        },
         "stayer": {
           "text": "El papel elegido para quedarse quieto no está unido a ninguna parte del pliegue. Elige papel que corten los pliegues, o papel unido a él.",
           "title": "¿Qué papel se queda?"
@@ -868,16 +869,11 @@
         }
       },
       "reset": "Volver a la bisagra",
-      "ridge": "Cresta",
-      "ridgeCorner": "Esquina {{number}}",
-      "ridgeCornerTitle": "El pliegue hacia la esquina {{number}} se alza como cresta",
-      "ridgeFourth": "Cuarto",
-      "ridgeFourthTitle": "El cuarto pliegue se alza como cresta",
       "steps": {
-        "earChoose": "Elige el cuarto pliegue, las capas y la cresta.",
         "earFirstCorner": "Haz clic en la primera esquina del triángulo.",
         "earSecondCorner": "Haz clic en su segunda esquina.",
         "earThirdCorner": "Haz clic en su tercera esquina.",
+        "fanChoose": "Elige el cuarto pliegue y las capas.",
         "finish": "Elige las opciones y pulsa Intro.",
         "finishTouch": "Elige las opciones y toca {{action}}.",
         "petalCrease": "Haz clic en la línea premarcada H por la que se levanta la solapa.",
@@ -891,7 +887,6 @@
         "squashTarget": "Haz clic donde debe caer el lomo, o déjalo en la línea de la bisagra.",
         "squashTargetTouch": "Toca donde debe caer el lomo, o déjalo en la línea de la bisagra.",
         "stayer": "Haz clic en el papel que se queda quieto.",
-        "swivelChoose": "Elige el cuarto pliegue y las capas.",
         "swivelFirstRay": "Haz clic en un punto hacia el que va el primer pliegue.",
         "swivelSecondRay": "Haz clic en un punto hacia el que va el segundo pliegue.",
         "swivelThirdRay": "Haz clic en un punto hacia el que va el tercer pliegue.",

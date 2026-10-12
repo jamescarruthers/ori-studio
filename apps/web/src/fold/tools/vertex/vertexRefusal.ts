@@ -35,7 +35,8 @@ export const FOLD_VERTEX_REFUSAL_CODES = [
   'fan_center',
   'fan_ray_blocked',
   'fan_not_flat',
-  'fan_ridge_not_ray',
+  'fan_fourth_beside_stayer',
+  'fan_fourth_cannot_rise',
   'fan_stayer_detached',
 ] as const;
 
@@ -215,12 +216,20 @@ export function vertexRefusalWords(
           'No fourth crease lets these creases lie flat: two of them coincide, or the gaps between them are too wide. Pick other points.'
         ),
       };
-    case 'fan_ridge_not_ray':
+    case 'fan_fourth_beside_stayer':
       return {
-        title: t('tools:fold.vertex.refusal.ridge.title', 'That ridge does not fit'),
+        title: t('tools:fold.vertex.refusal.fourthBesideStayer.title', 'The fourth crease is beside the paper that stays'),
         text: t(
-          'tools:fold.vertex.refusal.ridge.text',
-          'The ridge is one of the two creases across from the paper that stays. Pick the other ridge, or other paper to stay put.'
+          'tools:fold.vertex.refusal.fourthBesideStayer.text',
+          'The flap rises along the fourth crease, so it lies across from the paper that stays put. Pick another fourth crease, or other paper to stay put.'
+        ),
+      };
+    case 'fan_fourth_cannot_rise':
+      return {
+        title: t('tools:fold.vertex.refusal.fourthCannotRise.title', 'The fourth crease cannot rise here'),
+        text: t(
+          'tools:fold.vertex.refusal.fourthCannotRise.text',
+          'The fourth crease folds the other way from the other three, and the angles between these creases do not let it. Pick another fourth crease, or other points.'
         ),
       };
     case 'fan_stayer_detached':

@@ -216,7 +216,6 @@ describe('FoldToolWindow', () => {
       stepOrder: vi.fn(),
       setVertexDirection: vi.fn(),
       stepEmergent: vi.fn(),
-      setRidge: vi.fn(),
       stepFanLayers: vi.fn(),
       resetSquashTarget: vi.fn(),
     } satisfies FoldToolWindowVerbs;
@@ -228,11 +227,6 @@ describe('FoldToolWindow', () => {
       target: 'hinge' as const,
       emergents: [true, true, false],
       emergent: 0,
-      ridges: [
-        { given: 1, lands: true },
-        { given: null, lands: true },
-      ],
-      ridge: 1,
       layers: 2,
       fanLayers: null,
       orders: 0,
@@ -249,17 +243,16 @@ describe('FoldToolWindow', () => {
     expect(window.querySelector('[data-fold-vertex-note]')?.textContent).toMatch(/incenter/);
     // No moving side, no layer picker: a vertex fold has neither.
     expect(window.textContent).not.toContain('Moving side');
-    // The fourth crease and the layers, steppers; the ridge, a choice of two.
+    // The fourth crease and the layers, steppers; no ridge to choose: the
+    // fourth crease is the ear's ridge.
     expect(window.textContent).toContain('1 of 3');
     expect(window.textContent).toContain('All 2');
     act(() => byRole(window, 'button', 'Fourth crease: Next').click());
     expect(calls.stepEmergent).toHaveBeenCalledWith(1);
     act(() => byRole(window, 'button', 'Layers: Previous').click());
     expect(calls.stepFanLayers).toHaveBeenCalledWith(-1);
-    const ridge = byRole(window, 'group', 'Ridge');
-    expect(byRole(ridge, 'button', 'Fourth').getAttribute('aria-pressed')).toBe('true');
-    act(() => byRole(ridge, 'button', 'Corner 2').click());
-    expect(calls.setRidge).toHaveBeenCalledWith(0);
+    expect(queryByRole(window, 'group', 'Ridge')).toBeNull();
+    expect(window.textContent).not.toContain('Ridge');
 
     // A squash aimed off its hinge: the way back to it.
     render(
@@ -268,7 +261,7 @@ describe('FoldToolWindow', () => {
         lineMode: 'crease',
         picks: 1,
         preview: preview({ section: null }),
-        vertex: { ...vertex, tool: 'squash', target: 'point', emergents: [], ridges: [], layers: 0 },
+        vertex: { ...vertex, tool: 'squash', target: 'point', emergents: [], layers: 0 },
       },
       calls
     );
@@ -276,7 +269,6 @@ describe('FoldToolWindow', () => {
     expect(window.textContent).toContain('The point clicked');
     act(() => byRole(window, 'button', 'Back to the hinge').click());
     expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
-    expect(queryByRole(window, 'group', 'Ridge')).toBeNull();
   });
 
   it('draws a sink’s kind, its line’s rule and depth, its pocket, and a refusal whose fixes act', () => {

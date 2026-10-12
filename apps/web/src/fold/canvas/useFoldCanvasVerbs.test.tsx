@@ -21,7 +21,7 @@ import {
 } from './useFoldCanvasVerbs';
 import type { FoldStateView } from './useFoldStateView';
 import type { FoldToolPreview } from './useFoldToolPreview';
-import type { FoldVertexAnalysed, FoldVertexRidge } from '../engine/foldEngineSquashWire';
+import type { FoldVertexAnalysed } from '../engine/foldEngineSquashWire';
 import type { FoldVertexPreview } from './vertex/useFoldVertexStep';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -383,18 +383,11 @@ describe('a vertex fold’s choices on the canvas', () => {
     },
     emergents: [true, true, false],
     orders: null,
-    ridges: [],
   };
-  const ridges: FoldVertexRidge[] = [
-    { direction: [1, 0], given: 1, lands: true, orders: null },
-    { direction: [-1, 0], given: null, lands: true, orders: null },
-  ];
   const vertex = (extra: Partial<FoldVertexPreview> = {}): FoldVertexPreview => ({
     base: fan,
     answer: fan,
     emergent: 1,
-    ridges: [],
-    ridge: null,
     orders: [],
     order: null,
     layers: 2,
@@ -402,32 +395,26 @@ describe('a vertex fold’s choices on the canvas', () => {
     ...extra,
   });
 
-  it('steps the order, then a rabbit ear’s ridge, then a fan’s fourth ray: the deepest with more than one', () => {
+  it('steps the order, then a fan’s fourth ray: the deepest with more than one', () => {
     const tools = FOLD_TOOL_INITIAL;
     expect(foldCanvasChoice(preview({ vertex: vertex() }), tools)).toEqual({ kind: 'emergent', index: 1, count: 3 });
-    expect(foldCanvasChoice(preview({ vertex: vertex({ ridges, ridge: 1 }) }), tools)).toEqual({
-      kind: 'ridge',
+    const order = { faces: [], orders: [] };
+    const other = { faces: [], orders: [] };
+    expect(foldCanvasChoice(preview({ vertex: vertex({ orders: [order, other], order: other }) }), tools)).toEqual({
+      kind: 'order',
       index: 1,
       count: 2,
     });
-    const order = { faces: [], orders: [] };
-    const other = { faces: [], orders: [] };
-    expect(
-      foldCanvasChoice(preview({ vertex: vertex({ ridges, ridge: 1, orders: [order, other], order: other }) }), tools)
-    ).toEqual({ kind: 'order', index: 1, count: 2 });
   });
 
-  it('offers a rabbit ear’s ridge only when both land, and never steps onto one that does not', () => {
+  it('steps a rabbit ear’s fourth ray, its only choice: the fourth crease is its ridge', () => {
     const tools = createFoldTools();
-    const oneLands: FoldVertexRidge[] = [ridges[0]!, { ...ridges[1]!, lands: false }];
-    // One ridge lands: no ridge to choose, so the chooser shows the fourth ray.
-    const shown = preview({ vertex: vertex({ ridges: oneLands, ridge: 0 }) });
-    expect(foldCanvasChoice(shown, tools.store.getState())).toEqual({ kind: 'emergent', index: 1, count: 3 });
+    const shown = preview({ vertex: vertex() });
     act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={shown} />));
     act(() => tools.selectTool('rabbit-ear'));
     act(() => void bound!.verbs.stepChoice(1));
-    expect(tools.store.getState().compound.ridge).toBeNull();
     expect(tools.store.getState().compound.emergent).toBe(2);
+    expect(Object.keys(tools.store.getState().compound)).not.toContain('ridge');
   });
 
   it('binds the chooser, the fixes and a click on the folded paper to the vertex tools', () => {
@@ -451,7 +438,6 @@ describe('a vertex fold’s choices on the canvas', () => {
       },
       emergents: [],
       orders: null,
-      ridges: [],
     };
     const render = (shown: FoldToolPreview) =>
       act(() =>
@@ -471,14 +457,12 @@ describe('a vertex fold’s choices on the canvas', () => {
     act(() => bound!.verbs.vertexOtherWay());
     expect(tools.store.getState().vertexDirection).toBe('valley');
 
-    // A fan: its fourth ray stepped and taken by a fix's direction, its ridge and layers.
-    render(preview({ vertex: vertex({ ridges, ridge: 0 }) }));
+    // A fan: its fourth ray stepped and taken by a fix's direction, its layers.
+    render(preview({ vertex: vertex() }));
     act(() => bound!.verbs.stepEmergent(1));
     expect(tools.store.getState().compound.emergent).toBe(2);
     act(() => bound!.verbs.takeEmergent([0.9, 1.1]));
     expect(tools.store.getState().compound.emergent).toBe(0);
-    act(() => void bound!.verbs.stepChoice(1));
-    expect(tools.store.getState().compound.ridge).toBe(1);
     act(() => bound!.verbs.stepFanLayers(-1));
     expect(tools.store.getState().compound.fanLayers).toBe(1);
     act(() => bound!.verbs.stepFanLayers(-1));

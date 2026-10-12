@@ -422,7 +422,6 @@ describe('a vertex fold’s step', () => {
     },
     emergents: [false, true, true],
     orders: null,
-    ridges: [],
   });
   const SWIVEL: FoldToolState = {
     ...FOLD_TOOL_INITIAL,
@@ -459,7 +458,7 @@ describe('a vertex fold’s step', () => {
     const asked = engine.compoundAnalysis.mock.calls.map((call) => (call as unknown as [unknown, { emergent: unknown }])[1].emergent);
     expect(asked).toEqual([[1, 0], CANDIDATES[1]]);
     expect(seen?.step?.op).toMatchObject({ kind: 'swivel', emergent: CANDIDATES[1], seed: { scope: 'all' } });
-    expect(seen?.vertex).toMatchObject({ emergent: 1, layers: 1, ridges: [], orders: [] });
+    expect(seen?.vertex).toMatchObject({ emergent: 1, layers: 1, orders: [] });
     // Previewed through the session and pictured; a vertex fold has no line to analyse.
     expect(verbs.preview).toHaveBeenCalledWith(seen?.step?.op, undefined);
     expect(analyse).not.toHaveBeenCalled();

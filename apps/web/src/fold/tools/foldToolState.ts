@@ -102,8 +102,6 @@ export interface FoldCompoundToolChoices {
   squashTarget: FoldModelDirection | null;
   /** A rabbit ear's or a swivel's fourth ray, by index into the candidates; null for the first that lands. */
   emergent: number | null;
-  /** A rabbit ear's ridge, by index into the two the engine lists; null for the first that lands. */
-  ridge: number | null;
   /** How many layers at a fan's center its creases cut, from the side the direction names; null for every one. */
   fanLayers: number | null;
   /** A closed sink's pocket, by index into the pockets the engine lists for the point (`tools/sink`). */
@@ -117,7 +115,6 @@ export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
   tuckTarget: null,
   squashTarget: null,
   emergent: null,
-  ridge: null,
   fanLayers: null,
   pocket: 0,
 };
@@ -263,7 +260,7 @@ export interface FoldTools {
   /** The layer a tuck goes against, by its face; null takes the first listed. */
   setTuckTarget(face: number | null): void;
   // The vertex folds (`tools/vertex`): each choice made anew lists the
-  // choices after it anew — the fourth ray its ridges, the ridge its orders.
+  // choices after it anew — the fourth ray its orders.
   setVertexDirection(direction: FoldDirection): void;
   /** Where a squash's spine lands; null for the hinge line. */
   setSquashTarget(target: FoldModelDirection | null): void;
@@ -271,8 +268,6 @@ export interface FoldTools {
   setEmergent(emergent: number | null): void;
   /** Step through a fan's emergent candidates, of `count`, from the one `from` taken now. */
   stepEmergent(delta: number, count: number, from: number): void;
-  /** Take a rabbit ear's ridge by index into the two listed; null for the first that lands. */
-  setRidge(ridge: number | null): void;
   /** How many layers at the fan's center are cut; null for every one. */
   setFanLayers(layers: number | null): void;
   /** Step through a closed sink's pockets, of `count`: each stacks anew. */
@@ -494,7 +489,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) =>
         state.vertexDirection === vertexDirection
           ? state
-          : { ...state, vertexDirection, compound: { ...state.compound, ridge: null, order: 0 } }
+          : { ...state, vertexDirection, compound: { ...state.compound, order: 0 } }
       );
     },
 
@@ -506,27 +501,21 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) =>
         state.compound.emergent === emergent
           ? state
-          : { ...state, compound: { ...state.compound, emergent, ridge: null, order: 0 } }
+          : { ...state, compound: { ...state.compound, emergent, order: 0 } }
       );
     },
 
     stepEmergent(delta, count, from) {
       if (count <= 1) return;
       const emergent = (((from + delta) % count) + count) % count;
-      set((state) => ({ ...state, compound: { ...state.compound, emergent, ridge: null, order: 0 } }));
-    },
-
-    setRidge(ridge) {
-      set((state) =>
-        state.compound.ridge === ridge ? state : { ...state, compound: { ...state.compound, ridge, order: 0 } }
-      );
+      set((state) => ({ ...state, compound: { ...state.compound, emergent, order: 0 } }));
     },
 
     setFanLayers(fanLayers) {
       set((state) =>
         state.compound.fanLayers === fanLayers
           ? state
-          : { ...state, compound: { ...state.compound, fanLayers, ridge: null, order: 0 } }
+          : { ...state, compound: { ...state.compound, fanLayers, order: 0 } }
       );
     },
 
