@@ -159,6 +159,54 @@ Phase 1 (model and file, 2026-10-12):
   `repackDiagramPage(pageIndex)` and `repackDiagramPages()` (undoable;
   `settlePlaces` sends the page's frames home with the reflow notice).
 
+Phase 2 (the packer, 2026-10-12; not wired into the layout yet):
+
+- `pages/flowPacking.ts`: `packFlowPage(input, setter)`. A page is its steps
+  (`PackStep`: id, picture size at the reference scale with its marks, the
+  part of that its marks take at their pt size, number width, caption, turns
+  before it), its layout count, the area (`packingArea(paper, headMm,
+  footMm)`: the prototype's 3 mm under the header and 2 mm over the footer,
+  each only when shown), `up`, `handsOver`, the five settings and `kPrev`.
+  Side, last page and capacity act only through those, so they are not
+  inputs. Out: `k`, the plan (`bands`, `bends`), each real step's box,
+  picture, number baseline, caption (origin, measure, lines), band, bend and
+  reading direction, the bands' tops and heights, `fits`, and a summary
+  (score, unevenness, cap, stand-ins, plans scaled and passed over). The
+  prototype's constants are named exports; `stepPartsInBox` and
+  `captionWidthFor` are there for Phase 3 to draw a held step in its box.
+- Faithful: the tests keep the prototype's own code as the reference and hold
+  the port to it on the crane (`flowPacking.fixtures.ts`, from
+  `raw-steps.json`) at 4, 7, 9, 10 and 13 a page under nine settings each:
+  the same plan and `k`, every box within 1e-9 mm (bit-identical in
+  practice).
+- Decided where the prototype never went: a fixed even count on a spine page
+  packs at the odd count either side with the larger `k`, the lower on a tie;
+  a fixed count past the page's steps is held to them; Prefer three bands
+  weighs only in Auto; the steadiness cap never falls under the least scale,
+  0.25; a picture's marks keep their size as `k` changes (the prototype
+  scaled its cropped picture whole, which a step with no marks given still
+  does); and a page no plan fits at 0.25 shares its steps evenly over the
+  candidate band count that overflows least there, no bend steps, and says
+  `fits: false` for Phase 3 to report.
+- Kept from the prototype, worth knowing in Phase 3: spare height is shared
+  `spare / B` between and half that above and below, so tight bands can sit
+  closer than the 6 mm the fit reserves (3 mm for two bands, 4 mm for three);
+  one band sits at the area's top; a bend step's height is not counted in
+  any band's.
+- Speed, without changing an answer: captions are set once per step and
+  measure (a whole mm, 28–50); a split whose band is too wide at any scale is
+  cut off with every split giving that band more steps; a plan whose score
+  bound (a scale ceiling from its widths, then from its band heights at the
+  ceiling, brought down three times) cannot beat the best is never scaled.
+  The crane's 13-step page packs in about 1.5 ms with a warm setter and 7 ms
+  with a fresh font setter (its first faces); 30 a page on A4, which fits
+  nothing, in 2 ms; fixed five bands at 13 a page in about 8 ms. The budget
+  test holds a 13-step page with a fresh setter to 32 ms, 3× its median as
+  the whole suite runs (10.6 ms).
+- Checked against the prototype's own renders of the crane at its defaults
+  (`shot-13.png`): 4·4·5 at 0.84, 5·4·4 at 0.79, 3·3·3·3 with a step in
+  bend 1 at 0.83, page for page as packed here (0.8383, 0.7944, 0.8285).
+
 ## Affected Areas
 
 - `apps/web/src/diagram/pages/`: a new pure `flowPacking.ts` (+ tests);
@@ -184,7 +232,7 @@ Phase 1 (model and file, 2026-10-12):
 - [x] `pageSignature(document, page)` and the rule in `settlePlaces`.
 
 ### Phase 2: packing
-- [ ] `flowPacking.ts`: the port, pure and deterministic, with unit tests (plans, odd bands, bend steps, nesting, steadiness cap, short last page, fixed band counts) and a time budget (a 13-step page packs within 50 ms under vitest).
+- [x] `flowPacking.ts`: the port, pure and deterministic, with unit tests (plans, odd bands, bend steps, nesting, steadiness cap, short last page, fixed band counts) and a time budget (a 13-step page packs within 50 ms under vitest).
 
 ### Phase 3: layout
 - [ ] Flow geometry from stored arrangements; packing for pages without a valid one; new arrangements returned to the caller; held steps drawn at their stored scale in their box; overflow reported.
