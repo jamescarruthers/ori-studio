@@ -11,10 +11,9 @@
  *   bottom row up, the bottom row left to right from the spine;
  * - a left page with its facing page after it ends its last row at the spine:
  *   its rows run so the bottom row reads left to right — from the top left
- *   with an odd number of rows, from the top right with an even one. The page
- *   plan gives such a page an odd number (`pagePlan.ts`), so its first row
- *   starts at the top left, and lays it out for its own steps, so its last
- *   row is full and ends at the spine;
+ *   with an odd number of rows, from the top right with an even one. The
+ *   packing gives such a page an odd number of bands (`flowPacking.ts`), so
+ *   its first band starts at the top left and its last ends at the spine;
  * - across a page turn there is nothing to line up with: the next page starts
  *   at its top left as before, and the lane runs off a page, or comes in, only
  *   at its outer edge, never into the spine, where it would seem to go on on
@@ -22,11 +21,14 @@
  * - on the diagram's last page it ends just past its last step.
  *
  * **The curve.** The lane passes through every picture's centre heading along
- * its row, and turns between rows in a half ellipse out past the outer of the
- * two rows' ends (`FLOW_BEND`, or further for a wide band: {@link bendReach}),
- * through an apex heading straight down or up. It is a cubic Hermite spline
+ * its row (a packed page's band: `flowPacking.ts`), and turns between rows in
+ * a half ellipse out at the page's edge, through an apex heading straight
+ * down or up — or, where a step stands in the bend, through that step's
+ * picture heading so, with no apex beside it. It is a cubic Hermite spline
  * through those knots: each knot has one handle, shared by the curves either
- * side, so the lane is tangent-continuous (C1) everywhere and has no corner.
+ * side, so the lane is tangent-continuous (C1) and has no corner — but for a
+ * step in a bend, through which it keeps its way and each side's turn takes
+ * its own handle.
  * The earlier lane was a Catmull–Rom spline through the same points, whose
  * tangent at a row's last picture aimed from the picture before at the bend:
  * the lane rose over that picture and fell back — the kinks Zach saw between
@@ -35,9 +37,6 @@
  * Pure.
  */
 import type { DiagramPageSide } from '../document/diagramDocument';
-
-/** How far out past a row's last picture's centre the lane turns to the next row, as a share of the cell's width. */
-export const FLOW_BEND = 0.46;
 
 /**
  * A quarter ellipse's handle, as a share of its radius: the cubic closest to
@@ -55,8 +54,9 @@ const CUBIC_END = (1.5 * QUARTER * QUARTER) / (1 - QUARTER);
 /**
  * How far out past a row's last picture's centre the lane's apex is, turning
  * to a row `halfPitch` × 2 below or above it, for a band `halfWidth` either
- * side of the lane: `FLOW_BEND` of the cell, moved only as far as keeps the
- * bend no tighter than the band is half wide, so its inner edge never folds.
+ * side of the lane: `wanted` — out to the page's edge — moved only as far as
+ * keeps the bend no tighter than the band is half wide, so its inner edge
+ * never folds.
  *
  * The bend is a quarter ellipse each way, across `reach` and down
  * `halfPitch`: tightest where it leaves the row, `reach²/halfPitch`, or at
@@ -64,11 +64,10 @@ const CUBIC_END = (1.5 * QUARTER * QUARTER) / (1 - QUARTER);
  * `reach` stays between `√(halfWidth·halfPitch/CUBIC_END)` and
  * `CUBIC_END·halfPitch²/halfWidth`. A band wider than the rows are apart
  * covers the bend's inside, its two runs overlapping: it is taken as wide as
- * they are apart, a round bend. Every bend a band as wide as an A4 page of
- * 3 × 3 steps draws by itself already keeps clear: there it is unmoved.
+ * they are apart, a round bend.
  */
-export function bendReach(cellW: number, halfPitch: number, halfWidth: number): number {
-  const reach = FLOW_BEND * cellW;
+export function bendReach(wanted: number, halfPitch: number, halfWidth: number): number {
+  const reach = Math.max(0, wanted);
   const half = Math.min(halfWidth, halfPitch);
   if (!(half > 0) || !(halfPitch > 0)) return reach;
   const least = Math.sqrt((half * halfPitch) / CUBIC_END);
@@ -135,9 +134,11 @@ export function rowRightToLeft(plan: Pick<FlowPagePlan, 'firstRightToLeft'>, row
 
 /** A place the lane passes through, in reading order: a picture's centre. */
 export interface LaneStop extends LanePoint {
-  /** The stop's row in reading order. */
+  /** The stop's row in reading order: for a step in a bend, the row before the bend. */
   row: number;
   rightToLeft: boolean;
+  /** Its step stands in the bend after its row: the lane turns through it, heading straight down or up, and needs no apex there. */
+  bend?: boolean;
   /** Its step is placed by hand: the lane follows it there, and says where that turns it back or crosses it. */
   placed?: boolean;
 }
@@ -153,16 +154,21 @@ interface Knot extends LanePoint {
   off: boolean;
   reach?: number;
   tail?: true;
+  /** The picture of a step in a bend: the lane turns through it. */
+  inBend?: true;
 }
 
 /**
- * The lane through a page's stops, and for each stop after a row break the
- * index of the curve that runs into the bend before it (the next runs out).
- * `spineIn` and `spineOut` are its height at the spine, coming in and going
- * out, shared with the facing page; `offPage` how far past the paper's edge
- * it runs; `halfWidth` how far the band is drawn either side of it, which
- * its bends keep clear of ({@link bendReach}); `tail` how far on past its
- * last stop, along its row, it runs on a page it leaves nowhere — the
+ * The lane through a page's stops; for each stop after a row break with no
+ * step in its bend, the index of the curve that runs into the bend before it
+ * (the next runs out); and for every stop, the index of the curve that runs
+ * into it (−1 for one the lane starts at). `apexInset` is how far in from the
+ * paper's edge the apex of a bend with no step in it stands; `spineIn` and
+ * `spineOut` are its height at the spine, coming in and going out, shared
+ * with the facing page; `offPage` how far past the paper's edge it runs;
+ * `halfWidth` how far the band is drawn either side of it, which its bends
+ * keep clear of ({@link bendReach}); `tail` how far on past its last stop,
+ * the way it heads there, it runs on a page it leaves nowhere — the
  * diagram's last. And the stops of steps placed by hand where the lane turns
  * back, runs level across a row break, or crosses itself (`warnings`).
  */
@@ -170,20 +176,24 @@ export function flowLane(input: {
   stops: readonly LaneStop[];
   plan: FlowPagePlan;
   pageWidth: number;
-  cellW: number;
+  apexInset: number;
   halfWidth: number;
   offPage: number;
   spineIn: number | null;
   spineOut: number | null;
   tail?: number;
-}): { lane: Lane; bends: Map<number, number>; warnings: number[] } | null {
-  const { stops, plan, pageWidth: W, cellW, halfWidth, offPage } = input;
+}): { lane: Lane; bends: Map<number, number>; into: number[]; warnings: number[] } | null {
+  const { stops, plan, pageWidth: W, apexInset, halfWidth, offPage } = input;
   const first = stops[0];
   const last = stops.at(-1);
   if (!first || !last) return null;
   const knots: Knot[] = [];
   const along = (rightToLeft: boolean): LanePoint => ({ x: rightToLeft ? -1 : 1, y: 0 });
+  // A step in a bend heads on to the next row: down the page, or up a page read from the foot.
+  const turnDown: LanePoint = { x: 0, y: plan.up ? -1 : 1 };
   const outerLeft = plan.side === 'left';
+  /** Where the apex of a bend stands, at the end a row reading that way runs to: in from the paper's edge. */
+  const outerEdge = (rightToLeft: boolean) => (rightToLeft ? apexInset : W - apexInset);
 
   if (plan.entry === 'spine' && input.spineIn !== null) {
     // In over the spine, at the facing page's height: the paper's edge is a knot, so it is met exactly there.
@@ -198,26 +208,43 @@ export function flowLane(input: {
     knots.push({ x: outerLeft ? -offPage : W + offPage, y: first.y, heading: along(first.rightToLeft), off: true });
   }
 
+  /**
+   * The radius the lane turns at between a step in a bend and its neighbour in a band: the nearer way between
+   * them, across or down — or none, where a hand moved either.
+   */
+  const turnRadius = (step: LaneStop, band: LaneStop): number | null => {
+    if (step.placed || band.placed) return null;
+    const radius = Math.min(Math.abs(band.x - step.x), Math.abs(band.y - step.y));
+    return radius > 0 ? radius : null;
+  };
+
   // For each stop after a row break, the curve into the bend before it: the one from the knot before its apex.
   const bendAt = new Map<number, number>();
+  const into: number[] = [];
   const warnings = new Set<number>();
   stops.forEach((stop, n) => {
     const before = stops[n - 1];
-    if (before && before.row !== stop.row) {
+    // A step in the bend is the bend: the lane turns through it, with no apex either side.
+    const bendStep = Boolean(stop.bend || before?.bend);
+    if (before && before.row !== stop.row && !bendStep) {
       bendAt.set(n, knots.length - 1);
-      knots.push(bendApex(before, stop, cellW, halfWidth));
+      knots.push(bendApex(before, stop, outerEdge(before.rightToLeft), halfWidth));
     }
+    // Into a step in a bend from its band, or out of one into the next.
+    const turning = !before || Boolean(stop.bend) === Boolean(before.bend) ? null : stop.bend ? turnRadius(stop, before) : turnRadius(before, stop);
+    if (turning !== null) knots.push(...bendStepFeet(knots.at(-1)!, { x: stop.x, y: stop.y }, turning, Boolean(stop.bend)));
     const next = stops[n + 1];
     const moved = stop.placed || before?.placed || next?.placed;
-    const reversed = before?.row === stop.row && (stop.x - before.x) * (stop.rightToLeft ? -1 : 1) <= 0;
-    const level = before && before.row !== stop.row && Math.abs(stop.y - before.y) < 2 * halfWidth;
-    let heading = along(stop.rightToLeft);
+    const reversed = !bendStep && before?.row === stop.row && (stop.x - before.x) * (stop.rightToLeft ? -1 : 1) <= 0;
+    const level = before && before.row !== stop.row && !bendStep && Math.abs(stop.y - before.y) < 2 * halfWidth;
+    let heading = stop.bend ? turnDown : along(stop.rightToLeft);
     if (moved && (reversed || level)) {
       for (const index of [n - 1, n, n + 1]) if (stops[index]?.placed) warnings.add(index);
       const a = before ?? stop, b = next ?? stop, length = Math.hypot(b.x - a.x, b.y - a.y);
       if (length > 0) heading = { x: (b.x - a.x) / length, y: (b.y - a.y) / length };
     }
-    knots.push({ x: stop.x, y: stop.y, heading, off: false });
+    into.push(knots.length - 1);
+    knots.push({ x: stop.x, y: stop.y, heading, off: false, ...(stop.bend ? { inBend: true as const } : {}) });
   });
 
   if (plan.exit === 'spine' && input.spineOut !== null) {
@@ -231,9 +258,9 @@ export function flowLane(input: {
     // Off the outer edge, where the page turns; never into the spine.
     knots.push({ x: outerLeft ? -offPage : W + offPage, y: last.y, heading: along(last.rightToLeft), off: true });
   } else if (plan.exit === 'none' && input.tail !== undefined && input.tail > 0) {
-    // The diagram's end: on a little past the last step, the way its row reads.
-    const heading = along(last.rightToLeft);
-    knots.push({ x: last.x + heading.x * input.tail, y: last.y, heading, off: false, tail: true });
+    // The diagram's end: on a little past the last step, the way its row reads — or down, from a step in a bend.
+    const heading = last.bend ? turnDown : along(last.rightToLeft);
+    knots.push({ x: last.x + heading.x * input.tail, y: last.y + heading.y * input.tail, heading, off: false, tail: true });
   }
 
   const handles = knotHandles(knots);
@@ -241,8 +268,8 @@ export function flowLane(input: {
   for (let n = 0; n + 1 < knots.length; n += 1) {
     const [a, b] = [knots[n]!, knots[n + 1]!];
     // The end runs straight on from the last step, and never on past its own end.
-    const ha = b.tail ? Math.min(handles[n]!, Math.abs(b.x - a.x)) : handles[n]!;
-    const hb = handles[n + 1]!;
+    const ha = b.tail ? Math.min(handles[n]!.out, Math.hypot(b.x - a.x, b.y - a.y)) : handles[n]!.out;
+    const hb = handles[n + 1]!.into;
     curves.push({
       c1: { x: a.x + a.heading.x * ha, y: a.y + a.heading.y * ha },
       c2: { x: b.x - b.heading.x * hb, y: b.y - b.heading.y * hb },
@@ -251,21 +278,21 @@ export function flowLane(input: {
   }
   const lane = { from: { x: knots[0]!.x, y: knots[0]!.y }, curves };
   if (stops.some((stop) => stop.placed) && laneCrosses(lane)) stops.forEach((stop, i) => { if (stop.placed) warnings.add(i); });
-  return { lane, bends: bendAt, warnings: [...warnings] };
+  return { lane, bends: bendAt, into, warnings: [...warnings] };
 }
 
 /**
- * Where the lane turns from one row to the next: out past the outer of the
- * two rows' ends by {@link bendReach}, halfway between the two pictures'
- * heights, heading straight down or up. A row is never longer than the one
- * before it (`pagePlan.ts`), so the outer end is the row it leaves but where
- * a hand moved a step.
+ * Where the lane turns from one row to the next with no step in the bend:
+ * out at the page's edge (`apexX`), past the outer of the two rows' ends by
+ * as much as {@link bendReach} lets, halfway between the two pictures'
+ * heights, heading straight down or up.
  */
-function bendApex(before: LaneStop, next: LaneStop, cellW: number, halfWidth: number): Knot {
+function bendApex(before: LaneStop, next: LaneStop, apexX: number, halfWidth: number): Knot {
   const moved = before.placed || next.placed;
   const halfPitch = Math.abs(next.y - before.y) / 2;
-  const reach = bendReach(cellW, moved ? Math.max(halfWidth, halfPitch) : halfPitch, halfWidth);
   const edge = before.rightToLeft ? Math.min(before.x, next.x) : Math.max(before.x, next.x);
+  const wanted = before.rightToLeft ? edge - apexX : apexX - edge;
+  const reach = bendReach(wanted, moved ? Math.max(halfWidth, halfPitch) : halfPitch, halfWidth);
   return {
     x: edge + (before.rightToLeft ? -1 : 1) * reach,
     y: (before.y + next.y) / 2,
@@ -276,6 +303,32 @@ function bendApex(before: LaneStop, next: LaneStop, cellW: number, halfWidth: nu
 }
 
 /**
+ * The knots between a step in a bend and its neighbour in a band — `from`
+ * the band's step into the bend's (`intoStep`), or from the bend's step out to
+ * the band's — where the lane turns through a quarter circle of `radius` round
+ * the corner at which the band's level meets the bend step's upright, and
+ * runs on straight, along the band and up or down to the step, for whatever
+ * each way is longer than that: a knot where each straight run meets the
+ * circle. None for a way too little longer to run straight on: the turn takes
+ * all of it.
+ */
+function bendStepFeet(from: LanePoint, to: LanePoint, radius: number, intoStep: boolean): Knot[] {
+  const [band, step] = intoStep ? [from, to] : [to, from];
+  // Along the band toward the corner, and from the corner toward the step.
+  const across = Math.sign(step.x - band.x);
+  const down = Math.sign(step.y - band.y);
+  const way = intoStep ? 1 : -1;
+  const level: Knot = { x: step.x - across * radius, y: band.y, heading: { x: across * way, y: 0 }, off: false };
+  const upright: Knot = { x: step.x, y: band.y + down * radius, heading: { x: 0, y: down * way }, off: false };
+  const runs = (length: number) => length - radius >= QUARTER * radius;
+  const feet = [
+    ...(runs(Math.abs(step.x - band.x)) ? [level] : []),
+    ...(runs(Math.abs(step.y - band.y)) ? [upright] : []),
+  ];
+  return intoStep ? feet : feet.reverse();
+}
+
+/**
  * Each knot's handle length, shared by the curves either side of it (C1): the
  * shorter of what each would take alone — a third of the way along a run
  * between two pictures or to an edge, and a quarter ellipse's handle round a
@@ -283,22 +336,31 @@ function bendApex(before: LaneStop, next: LaneStop, cellW: number, halfWidth: nu
  * to half its run instead: a wide band's bend reaches further out
  * ({@link bendReach}), its quarter ellipse's handle with it, and a third would
  * pinch the bend where it leaves the row. The run's other end takes no more
- * than half either, so the run never doubles back; beside a bend as far out
- * as `FLOW_BEND`, a third is never the shorter. A run past the paper's edge
- * takes no say at its end on the paper, so a short stub off the page never
- * pinches the curve where it is seen; there it is straight, and stays off the
- * paper. So too the lane's end past the diagram's last step, which it never
- * runs past ({@link flowLane}).
+ * than half either, so the run never doubles back. A run past the paper's
+ * edge takes no say at its end on the paper, so a short stub off the page
+ * never pinches the curve where it is seen; there it is straight, and stays
+ * off the paper. So too the lane's end past the diagram's last step, which it
+ * never runs past ({@link flowLane}).
  *
- * A row shorter than the one before it ends further in, its last step short
- * of the outer end the apex stands past: that half of the bend runs in from
- * its step for the difference, its handle there longer by as much, then turns
- * as the other half does — so both halves are as round at the apex, and the
- * band clears both ({@link bendReach}).
+ * A row that ends further in than the other, its last step short of the
+ * outer end the apex stands past: that half of the bend runs in from its step
+ * for the difference, its handle there longer by as much, then turns as the
+ * other half does — so both halves are as round at the apex, and the band
+ * clears both ({@link bendReach}).
+ *
+ * A step in a bend is turned through as a quarter circle from its band's
+ * last step, run on straight for what one way is longer
+ * ({@link bendStepFeet}), and another on to the next band's first. The two
+ * turns are as wide as each is near, so the lane keeps its way through the
+ * step — no corner — but each takes the handle its own turn wants there: one
+ * shared would pinch the wider turn to the narrower's.
  */
-function knotHandles(knots: readonly Knot[]): number[] {
+function knotHandles(knots: readonly Knot[]): { into: number; out: number }[] {
   const handles = knots.map(() => Infinity);
   const alone = knots.map(() => Infinity);
+  // Each step in a bend's own handle into it and out of it.
+  const into = knots.map(() => Number.NaN);
+  const out = knots.map(() => Number.NaN);
   const turning = (n: number) => {
     const [a, b] = [knots[n], knots[n + 1]];
     return a !== undefined && b !== undefined && (a.heading.y !== 0 || b.heading.y !== 0);
@@ -312,16 +374,36 @@ function knotHandles(knots: readonly Knot[]): number[] {
     const share = (at: number) => (turning(at - 1) || turning(at) ? 1 / 2 : 1 / 3);
     // How far the apex of a bend stands out past the outer row's end: all of the way across, but for a shorter row.
     const reach = Math.min(dx, a.reach ?? b.reach ?? dx);
+    // Into or out of a step in a bend: a quarter circle as wide as the nearer way allows, run on straight the
+    // farther way, so a step far along a row or far down from it turns no tighter than the two are near.
+    const round = a.inBend || b.inBend ? Math.min(dx, dy) : null;
+    // A straight run — both ends heading one way, along the line between them — stays straight whatever its
+    // handles, up to its length: it asks no shorter handle of the curve on either side.
+    const straight =
+      a.heading.x === b.heading.x &&
+      a.heading.y === b.heading.y &&
+      Math.abs((b.x - a.x) * a.heading.y - (b.y - a.y) * a.heading.x) < 1e-9 &&
+      (b.x - a.x) * a.heading.x + (b.y - a.y) * a.heading.y > 0;
     // Round a bend: each end's handle a quarter ellipse's, across its radius that way.
-    const handle = (end: Knot, at: number) =>
-      bend ? (end.heading.y !== 0 ? QUARTER * dy : QUARTER * reach + (dx - reach)) : dx * share(at);
+    const handle = (end: Knot, at: number) => {
+      if (straight) return Math.hypot(dx, dy);
+      if (!bend) return dx * share(at);
+      if (round !== null) return QUARTER * round + (end.heading.y !== 0 ? dy : dx) - round;
+      return end.heading.y !== 0 ? QUARTER * dy : QUARTER * reach + (dx - reach);
+    };
     alone[n] = Math.min(alone[n]!, handle(a, n));
     alone[n + 1] = Math.min(alone[n + 1]!, handle(b, n + 1));
     if (!(b.off && !a.off) && !b.tail) handles[n] = Math.min(handles[n]!, handle(a, n));
     if (!(a.off && !b.off)) handles[n + 1] = Math.min(handles[n + 1]!, handle(b, n + 1));
+    if (a.inBend) out[n] = handle(a, n);
+    if (b.inBend) into[n + 1] = handle(b, n + 1);
   }
   // A picture with only stubs either side — alone on its page — takes theirs: they are straight.
-  return handles.map((handle, n) => (Number.isFinite(handle) ? handle : Number.isFinite(alone[n]!) ? alone[n]! : 0));
+  const shared = handles.map((handle, n) => (Number.isFinite(handle) ? handle : Number.isFinite(alone[n]!) ? alone[n]! : 0));
+  return shared.map((handle, n) => ({
+    into: Number.isFinite(into[n]!) ? into[n]! : handle,
+    out: Number.isFinite(out[n]!) ? out[n]! : handle,
+  }));
 }
 
 /** A point of a cubic Bézier at `t`. */

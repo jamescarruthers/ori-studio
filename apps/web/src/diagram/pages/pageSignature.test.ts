@@ -88,6 +88,17 @@ describe('pageSignature', () => {
       expect(changed(before, locked)).toEqual([]);
     });
 
+    it('an enlarge arrow before a step, which keeps a turn’s gutter: an area on the step before an enlarged one', () => {
+      const before = diagram();
+      const area = { id: 'area-1', kind: 'zoom' as const, from: [0.5, 0.5] as [number, number], to: [0.5, 0.5] as [number, number], radius: 0.2 };
+      const zoom = { from: 'area-1', shape: 'circle' as const, frame: { centre: [0.5, 0.5] as [number, number], radius: 0.2 } };
+      const enlarged = { ...before, steps: before.steps.map((entry) => (entry.id === 's7' ? { ...entry, zoom } : entry)) };
+      // Enlarged with no area on the step before: no arrow, the same pages — its picture is no structure.
+      expect(changed(before, enlarged)).toEqual([]);
+      // The area on the step before it: an arrow prints before s7, on page two.
+      expect(changed(enlarged, editStepAnnotations(enlarged, 's6', () => [area]))).toEqual([1]);
+    });
+
     it('its capacity, but not whether that is its own count or the default', () => {
       const before = diagram();
       // Page two holds five by its own count: the same page.

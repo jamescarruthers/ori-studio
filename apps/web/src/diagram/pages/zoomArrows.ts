@@ -20,7 +20,7 @@ import {
   type DiagramStep,
   type DiagramStyle,
 } from '../document/diagramDocument';
-import { PICTURE_TOP_MM, type DiagramPagesLayout, type LayoutPage, type LayoutZoomArrow } from './diagramPageLayout';
+import type { DiagramPagesLayout, LayoutPage, LayoutZoomArrow } from './diagramPageLayout';
 import { asksForPage } from './pagePlan';
 import { partBox } from './pagePlacement';
 import { cellPicture, type CellPicture, type PictureText } from './pagePictures';
@@ -55,9 +55,10 @@ export function placedZoomArrows(
       bottom: (picture.boundsPt.y + picture.boundsPt.height) / PT_PER_MM,
     });
     const [a, b] = [mm(areaPicture), mm(nextPicture)];
-    // Both pictures' overlap, below both numbers: the one at the gutter's side is either step's, by which way the row reads.
+    // Both pictures' overlap, below both numbers — the top of a picture box, which stands under its number — the
+    // one at the gutter's side either step's, by which way the row reads.
     const pair = [page.cells[areaIndex]!, page.cells[nextIndex]!];
-    const numbers = Math.max(...pair.map((cell) => (cell.placed ? partBox(cell, 'number').y + partBox(cell, 'number').h : cell.cellMm.y + PICTURE_TOP_MM)));
+    const numbers = Math.max(...pair.map((cell) => (cell.placed ? partBox(cell, 'number').y + partBox(cell, 'number').h : cell.pictureMm.y)));
     const top = Math.max(a.top, b.top, numbers);
     const bottom = Math.min(a.bottom, b.bottom);
     const half = arrow.box.h / 2;

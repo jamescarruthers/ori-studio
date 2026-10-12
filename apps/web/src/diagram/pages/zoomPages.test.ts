@@ -17,13 +17,13 @@ import {
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { FIXTURE_FONTS, fixtureSubsetter } from '../fonts/diagramFonts.fixtures';
 import type { FontSubsetter } from '../fonts/fontSubset';
-import { PICTURE_TOP_MM, pictureFit } from './diagramPageLayout';
+import { pictureFit } from './diagramPageLayout';
 import { diagramLayoutSteps, enlargeArrowCount, layoutDiagram, preparedPages } from './diagramPages';
 import { estimateTextSetter } from './estimateTextSetter';
 import { pageLayoutFixtures } from './pageLayouts.fixtures';
 import { cellPicture, layoutPicture, type CellPicture } from './pagePictures';
 import { placedZoomArrows } from './zoomArrows';
-import { enlargeArrowMm, paintEnlargeArrow, tallestEnlargeArrowMm } from '../zoom/enlargeArrow';
+import { enlargeArrowMm, paintEnlargeArrow } from '../zoom/enlargeArrow';
 
 /**
  * Enlarged steps on the pages (Revision 2, 16f), from the document: the
@@ -78,7 +78,7 @@ describe('the enlarge arrow, read from the order (Revision 2)', () => {
       0
     );
     const box = enlargeArrowMm(document.style);
-    const sizes = { box, aimedBox: expect.any(Function), tallest: tallestEnlargeArrowMm(document.style) };
+    const sizes = { box, aimedBox: expect.any(Function) };
     const zoom = new Map(diagramLayoutSteps(document).map((step) => [step.id, step.zoom]));
     expect(zoom.get('step-1')?.arrowFrom).toEqual({ stepId: 'step-0', areaId: 'area-b', share: expect.closeTo(0.4, 12), ...sizes });
     expect(zoom.get('step-3')?.arrowFrom).toEqual({ stepId: 'step-2', areaId: 'area-c', share: expect.closeTo(0.3, 12), ...sizes });
@@ -277,7 +277,8 @@ describe('the enlarge arrow on a page', () => {
     const tops = page.cells.map(
       (cell, index) => cellPicture(steps.get(cell.stepId)!, document.assets, document.style, cell, `c${index}-`, text)!.boundsPt.y / PT_PER_MM
     );
-    const numbers = Math.max(page.cells[0]!.cellMm.y, page.cells[1]!.cellMm.y) + PICTURE_TOP_MM;
+    // Below both numbers: the tops of the two picture boxes, which stand under them.
+    const numbers = Math.max(page.cells[0]!.pictureMm.y, page.cells[1]!.pictureMm.y);
     expect(lifted!.at.y - lifted!.box.h / 2).toBeCloseTo(Math.max(numbers, ...tops), 6);
     // Pictures reaching up to the numbers: the box's top below them.
     const drawn = (top: number, bottom: number): CellPicture => ({
@@ -292,8 +293,8 @@ describe('the enlarge arrow on a page', () => {
     // And an area at the foot of its picture: no lower than the pictures' overlap.
     const low = new Map(steps);
     low.set('step-area', { ...steps.get('step-area')!, annotations: [circleArea('area-1', [0.5, 1], 0.02)] });
-    const [placed] = placedZoomArrows(page, low, (index) => (index === 0 ? drawn(40, 80) : drawn(45, 70)));
-    expect(placed!.at.y + placed!.box.h / 2).toBeCloseTo(70, 6);
+    const [placed] = placedZoomArrows(page, low, (index) => (index === 0 ? drawn(numbers - 5, numbers + 35) : drawn(numbers, numbers + 25)));
+    expect(placed!.at.y + placed!.box.h / 2).toBeCloseTo(numbers + 25, 6);
   });
 
   it('is not lifted beside a turn, and leads on mirrored in a row read right to left', () => {

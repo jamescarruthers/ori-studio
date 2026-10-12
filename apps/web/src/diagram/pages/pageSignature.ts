@@ -6,9 +6,10 @@
  * does not; a frame placed by hand goes home when its page's signature
  * changes (`stepPlaces.ts`).
  *
- * It covers exactly what the packing is cut from: the page's steps in order
- * and the turns before each (on the diagram's last page, those after its last
- * step too), its index, side, whether it hands over at its spine, whether it
+ * It covers exactly what the packing is cut from: the page's steps in order,
+ * the turns before each (on the diagram's last page, those after its last
+ * step too) and the enlarge arrow before any that has one — each keeps a
+ * gutter — its index, side, whether it hands over at its spine, whether it
  * is the last page, its capacity, the page setup's geometry (size,
  * orientation, margin, the title tab shown, page numbers shown), the five
  * packing settings, and {@link PACKING_VERSION}. Never a picture, a caption, a
@@ -32,13 +33,16 @@ import type { PaginatedStep, PlannedPage } from './pagePlan';
 export const PACKING_VERSION = 'pack-1';
 
 /**
- * What a page's signature reads of a step: what paginates it, and how many
- * turns come before it — and, on the diagram's last step, after it. The
- * layout's steps (`LayoutStep`) are these as they are.
+ * What a page's signature reads of a step: what paginates it, how many turns
+ * come before it — and, on the diagram's last step, after it — and whether an
+ * enlarge arrow prints before it, which keeps a turn's gutter in the packing.
+ * The layout's steps (`LayoutStep`) are these as they are.
  */
 export interface SignedStep extends PaginatedStep {
   readonly turnsBefore: { readonly length: number };
   readonly turnsAfter: { readonly length: number };
+  /** Present with an area on a step an enlarge arrow prints before. */
+  readonly zoom?: { readonly arrowFrom: unknown };
 }
 
 /** What every page's signature is read from: the steps, their pages, the page setup and the title. */
@@ -81,7 +85,10 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
     setup.flowBendSteps,
     setup.flowNesting,
     setup.flowSteadiness,
-    page.steps.map((index) => [steps[index]!.id, steps[index]!.turnsBefore.length]),
+    page.steps.map((index) => {
+      const step = steps[index]!;
+      return [step.id, step.turnsBefore.length, step.zoom?.arrowFrom ? 1 : 0];
+    }),
     last && lastIndex !== undefined ? steps[lastIndex]!.turnsAfter.length : 0,
   ];
   return `${PACKING_VERSION}:${digest(JSON.stringify(structure))}`;

@@ -339,14 +339,15 @@ describe('an enlarged step’s file (Revision 2)', () => {
     // Large files draw the area larger than the page does: six times that is not what the page prints.
     const small = enlargedAfterArea(0.02, undefined, { ...SAME, widthMm: 160, heightMm: 200 });
     expect(small.fileAreaMm).toBeGreaterThan(1.5 * small.pageAreaMm);
-    expect(small.printed).toBeCloseTo(6, 6);
+    // The page keeps each printed scale to six figures (`diagram-flow-packing.md`).
+    expect(small.printed).toBeCloseTo(6, 4);
     expect(small.frameMm).toBeCloseTo(small.pageFrameMm, 2);
     expect(small.frameMm / small.pageAreaMm).toBeCloseTo(small.printed, 2);
     expect(Math.min(6 * small.fileAreaMm, small.fit) - small.frameMm).toBeGreaterThan(5);
-    // A larger area: Fill fills the page's room, and the file draws it that size too, short of its own box.
+    // A larger area: Fill fills the page's room, and the file draws it that size too, as far as its own box
+    // holds it (a flow page packed large can print it larger than the file's box holds).
     const large = enlargedAfterArea(0.13);
-    expect(large.frameMm).toBeCloseTo(large.pageFrameMm, 2);
-    expect(large.frameMm).toBeLessThan(large.fit);
+    expect(large.frameMm).toBeCloseTo(Math.min(large.pageFrameMm, large.fit), 2);
     // Files are steps: no arrow between them.
     const arrow = paintEnlargeArrow({ x: 0, y: 0 }, 1, DEFAULT_DIAGRAM_STYLE)!.markup.match(/<path d="M ([-\d.]+ [-\d.]+)/)![1]!;
     expect(large.files.compose(1).svg).not.toContain(arrow);
@@ -354,7 +355,7 @@ describe('an enlarged step’s file (Revision 2)', () => {
 
   it('prints its Size as its page does, and no larger than its file’s box holds', () => {
     const twice = enlargedAfterArea(0.05, 2);
-    expect(twice.printed).toBeCloseTo(2, 6);
+    expect(twice.printed).toBeCloseTo(2, 4);
     expect(twice.frameMm).toBeCloseTo(twice.pageFrameMm, 2);
     expect(twice.frameMm / twice.pageAreaMm).toBeCloseTo(2, 2);
     // A small file: its box holds less than the page prints, and draws as large as it holds.

@@ -11,14 +11,22 @@ import {
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { largestHeld, layoutDiagram, leastOverrunHeld, MEASURE_SETTLED, OVERRUN_SAME_MM, type RoomMeasure } from './diagramPages';
 import { estimateTextSetter } from './estimateTextSetter';
+import { packFlowPage } from './flowPacking';
 import { pageLayoutFixtures } from './pageLayouts.fixtures';
+import { adoptPageArrangements } from './pageArrangements';
 import { layoutPicture } from './pagePictures';
-import { paginate, printableArea } from './pagePlan';
+import { paginate } from './pagePlan';
 
 // Every measure counted, each as it was.
 vi.mock('./pagePictures', async (original) => {
   const actual = await original<typeof import('./pagePictures')>();
   return { ...actual, layoutPicture: vi.fn(actual.layoutPicture) };
+});
+
+// And every page packed.
+vi.mock('./flowPacking', async (original) => {
+  const actual = await original<typeof import('./flowPacking')>();
+  return { ...actual, packFlowPage: vi.fn(actual.packFlowPage) };
 });
 
 /** A picture's fit as measured at a scale, and every scale it was measured at. */
@@ -138,7 +146,8 @@ describe('layoutDiagram', () => {
       ...cpStep('step-x'),
       annotations: [{ id: 'a', kind: 'valley-line', from: [0.2, 0.5], to: [0.8, 0.5] }],
     };
-    const document = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), [step], 0);
+    // A grid's cell: a flow step's box is packed round its picture and its marks, which never hang out of it.
+    const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), [step], 0), { layout: 'grid' });
     const line = (grows: number, beyond: number) => ({ grows, beyond });
     /** A unit-square paper picture, its marks `beyond` mm past each side across, shrinking as the paper grows. */
     const square = (beyond: number) => ({
@@ -183,9 +192,32 @@ describe('layoutDiagram', () => {
     expect(new Set(measures).size).toBe(measures.length);
   });
 
+  it('packs each flow page once, however often it measures, and lays out the same with that packing adopted', () => {
+    // Pictures whose marks reach past them, so the pages are measured again at the scales they print at.
+    const steps: DiagramStep[] = Array.from({ length: 12 }, (_, index) => ({
+      ...cpStep(`step-${index}`),
+      annotations: [{ id: 'a', kind: 'valley-arrow', from: [0.2, 0.004 + 0.05 * (index % 4)], to: [0.8, 0.004], bend: 0.05 }],
+      text: index % 3 === 0 ? 'Fold the corner up to the top edge, crease firmly, and unfold.' : 'Fold in half.',
+    }));
+    const document = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), steps, 0);
+    vi.mocked(packFlowPage).mockClear();
+    const first = layoutDiagram(document, estimateTextSetter);
+    expect(first.pages).toHaveLength(2);
+    expect(vi.mocked(packFlowPage)).toHaveBeenCalledTimes(2);
+    expect(Object.keys(first.packed!)).toEqual(['step-0', 'step-9']);
+    expect(first.pages.map((page) => page.packing!.packed)).toEqual([true, true]);
+    // Adopted, as the store does: every page held, nothing packed, and the pages as they were.
+    vi.mocked(packFlowPage).mockClear();
+    const held = layoutDiagram(adoptPageArrangements(document, first.packed!), estimateTextSetter);
+    expect(vi.mocked(packFlowPage)).not.toHaveBeenCalled();
+    expect(held.packed).toBeUndefined();
+    expect(held.pages.map((page) => page.packing!.packed)).toEqual([false, false]);
+    expect(held.pages.map((page) => [page.cells, page.band, page.turns])).toEqual(first.pages.map((page) => [page.cells, page.band, page.turns]));
+  });
+
   const fixture = (name: string) => pageLayoutFixtures().find((each) => each.name === name)!.document;
 
-  it('paginates a document by the counts its steps keep, and cuts each page as its plan says (`diagram-flow-pages.md`)', () => {
+  it('paginates a document by the counts its steps keep, and packs each page for what it is laid out for (`diagram-flow-pages.md`)', () => {
     // Step 4 starts a page of four and step 11 one of five; the rest fill 9 a page.
     const document = fixture('flow, pages with their own counts');
     const layout = layoutDiagram(document, estimateTextSetter);
@@ -196,20 +228,15 @@ describe('layoutDiagram', () => {
     );
     expect(layout.pages.map((page) => page.cells.length)).toEqual([3, 4, 3, 5, 5]);
     expect(plan.map((page) => page.ownCount)).toEqual([false, true, false, true, false]);
-    const { w } = printableArea(document.page);
     layout.pages.forEach((page, index) => {
-      const planned = plan[index]!;
-      // Its rows, each holding as many as the plan shares out — the automatic last page's in order, from the first.
-      const filled = planned.rowCounts.map((_, row) =>
-        Math.max(0, Math.min(planned.rowCounts[row]!, page.cells.length - planned.rowCounts.slice(0, row).reduce((a, b) => a + b, 0)))
-      );
-      const held = planned.rowCounts.map((_, row) => page.cells.filter((cell) => cell.flowRow === row).length);
-      expect(held, `page ${index + 1}`).toEqual(filled);
-      // Every step's room the page's longest row's.
-      for (const cell of page.cells) expect(cell.cellMm.w, `page ${index + 1}`).toBeCloseTo(w / planned.columns, 9);
+      // Packed afresh, in bands in reading order, every box on the page.
+      expect(page.packing, `page ${index + 1}`).toMatchObject({ packed: true, fits: true });
+      const bands = page.cells.map((cell) => cell.band!);
+      expect(bands, `page ${index + 1}`).toEqual([...bands].sort((a, b) => a - b));
     });
-    // The last page, automatic, is laid out for 9: two rows of its three filled.
-    expect(plan.at(-1)!.rowCounts).toEqual([3, 3, 3]);
+    expect(Object.keys(layout.packed!)).toEqual(layout.pages.map((page) => page.cells[0]!.stepId));
+    // The last page, automatic, is laid out for 9.
+    expect(plan.at(-1)!.layoutCount).toBe(9);
     // A grid keeps the counts and does not read them: three pages of 3 × 3, the counts still on their steps.
     const grid = setPageSetup(document, { layout: 'grid', columns: 3, rows: 3 });
     expect(layoutDiagram(grid, estimateTextSetter).pages.map((page) => page.cells.length)).toEqual([9, 9, 2]);
@@ -228,7 +255,10 @@ describe('layoutDiagram', () => {
       );
     let edits = 0;
     let rescaled = 0;
-    for (const { name, document } of pageLayoutFixtures()) {
+    for (const fixture of pageLayoutFixtures()) {
+      const { name } = fixture;
+      // A flow page packed once, and its arrangement adopted, as the store does: then held (`diagram-flow-packing.md`).
+      const document = adoptPageArrangements(fixture.document, layoutDiagram(fixture.document, estimateTextSetter).packed ?? {});
       const steps = stepsOf(document).filter((step) => !isLockedStep(step));
       if (steps.length === 0) continue;
       const before = homes(document);

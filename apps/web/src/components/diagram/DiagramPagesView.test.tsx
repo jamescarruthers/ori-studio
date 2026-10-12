@@ -57,6 +57,14 @@ function diagram(): DiagramDocument {
   );
 }
 
+/**
+ * The diagram on a grid, whose cells cut an instruction too long for them —
+ * a flow page's box holds its caption whole (`diagram-flow-packing.md`).
+ */
+function onGrid(document: DiagramDocument): DiagramDocument {
+  return { ...document, page: { ...document.page, layout: 'grid' } };
+}
+
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
@@ -158,7 +166,7 @@ describe('DiagramPagesView', () => {
   });
 
   it('lays the steps over the page as one listbox, the selected one marked and the tab stop', () => {
-    render(preparedPages(diagram(), FONTS, subsetter));
+    render(preparedPages(onGrid(diagram()), FONTS, subsetter));
     expect(host.querySelector('[role="listbox"]')?.hasAttribute('data-diagram-steps')).toBe(true);
     expect(
       cells().map((cell) => [cell.getAttribute('aria-label'), cell.getAttribute('aria-selected'), cell.tabIndex])
@@ -176,11 +184,12 @@ describe('DiagramPagesView', () => {
       4
     );
     render(preparedPages(turned, FONTS, subsetter));
+    // A flow page's box holds a long caption whole: nothing is cut.
     expect(cells().map((cell) => cell.getAttribute('aria-label'))).toEqual([
       'Step 1',
       'Turn over, side to side, between steps 1 and 2',
       'Step 2',
-      'Step 3, text doesn’t fit',
+      'Step 3',
       'Rotate 1/4 turn clockwise, after step 3',
     ]);
     const target = host.querySelector<HTMLElement>('[data-step-id="turn-a"]')!;
@@ -209,7 +218,7 @@ describe('DiagramPagesView', () => {
   });
 
   it('marks an empty step’s picture box and a cut instruction over the page, never in it', () => {
-    const pages = preparedPages(diagram(), FONTS, subsetter);
+    const pages = preparedPages(onGrid(diagram()), FONTS, subsetter);
     render(pages);
     expect(host.textContent).toContain('No picture yet');
     expect(host.textContent).toContain('Text doesn’t fit');
@@ -217,6 +226,10 @@ describe('DiagramPagesView', () => {
     const svg = pages.compose(0).svg;
     expect(svg).not.toContain('No picture yet');
     expect(svg).not.toContain('doesn’t fit');
+    // On a flow page the empty step's box is marked the same, and the long caption, whole, is not cut.
+    render(preparedPages(diagram(), FONTS, subsetter));
+    expect(host.textContent).toContain('No picture yet');
+    expect(host.textContent).not.toContain('Text doesn’t fit');
   });
 
   it('puts a target over an enlarge arrow where the page prints it: a press selects the enlarged step, a double press stays on the page', () => {

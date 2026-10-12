@@ -14,6 +14,7 @@ import { cpStep, referencesStep } from '../document/diagramSteps.fixtures';
 import { FIXTURE_FONTS } from '../fonts/diagramFonts.fixtures';
 import { layoutDiagram } from './diagramPages';
 import { fontTextSetter } from './fontTextSetter';
+import { adoptPageArrangements } from './pageArrangements';
 
 /**
  * The layout's time budget (`implementation-plans/diagram-flow-pages.md`,
@@ -53,14 +54,26 @@ function fiftySteps(page: Partial<DiagramPageSetup> = {}): DiagramDocument {
  * The slowest a layout may take here: about 3× the median measured locally
  * as the whole web suite runs around it (29–37 ms on an M-series Mac, Node
  * 22, 11 October 2026; 18–24 ms alone), for a CI runner as loaded and slower.
- * A search like #443's fails it by forty times.
+ * A search like #443's fails it by forty times. What every edit of a caption
+ * or a picture costs: a flow diagram's pages held as they were packed
+ * (`diagram-flow-packing.md`; 10–11 ms alone, 12 October 2026).
  */
 const BUDGET_MS = 100;
 
+/**
+ * The slowest a layout that packs every flow page afresh may take: an edit
+ * that re-cuts the pages, or a file saved before packing, opened. Its six
+ * pages packed, each picture measured at its reference scale too: 41–49 ms
+ * alone, about 130 ms as the whole suite runs (12 October 2026).
+ */
+const PACKING_BUDGET_MS = 300;
+
+const setterFor = (document: DiagramDocument) =>
+  fontTextSetter((key, weight) => FIXTURE_FONTS.font(key, weight)?.metrics ?? null, document.hanStyle);
+
 /** The median time, in ms, of laying out a fresh copy of the diagram, after two layouts to warm the code. */
 function medianLayoutMs(make: () => DiagramDocument): number {
-  const layOut = (document: DiagramDocument) =>
-    layoutDiagram(document, fontTextSetter((key, weight) => FIXTURE_FONTS.font(key, weight)?.metrics ?? null, document.hanStyle));
+  const layOut = (document: DiagramDocument) => layoutDiagram(document, setterFor(document));
   layOut(make());
   layOut(make());
   const times = Array.from({ length: 7 }, () => {
@@ -76,8 +89,12 @@ function medianLayoutMs(make: () => DiagramDocument): number {
 describe('the layout’s time budget', () => {
   it('lays out a 50-step diagram with annotations and turns in milliseconds, in the flow and on a grid', () => {
     for (const page of [{ layout: 'flow' }, { layout: 'flow', stepsPerPage: 7 }, { layout: 'grid', columns: 3, rows: 4 }] as const) {
-      const median = medianLayoutMs(() => fiftySteps(page));
-      expect(median, JSON.stringify(page)).toBeLessThan(BUDGET_MS);
+      // A flow diagram's pages as they are held once packed and adopted, as the store does.
+      const fresh = fiftySteps(page);
+      const held = adoptPageArrangements(fresh, layoutDiagram(fresh, setterFor(fresh)).packed ?? {});
+      expect(medianLayoutMs(() => ({ ...held, steps: held.steps.map((entry) => ({ ...entry })) })), JSON.stringify(page)).toBeLessThan(BUDGET_MS);
+      // And packed afresh.
+      expect(medianLayoutMs(() => fiftySteps(page)), `${JSON.stringify(page)} packed`).toBeLessThan(PACKING_BUDGET_MS);
     }
   });
 });

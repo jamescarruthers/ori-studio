@@ -219,8 +219,10 @@ describe('composeDiagramPage', () => {
     });
   /**
    * Rooms of many shapes: a new diagram's flow page; squat and narrow ones a
-   * grid's own columns and rows cut; and the smallest a flow page's steps per
-   * page derive, whose shape `flowShape` chooses, not its own.
+   * grid's own columns and rows cut; and flow pages packed small, from many
+   * steps on a small sheet, and of an uneven count. (Thirty a page on A5 on
+   * its side is more than its boxes, each at least its caption's least
+   * measure across, can hold at any scale.)
    */
   const SETUPS: Partial<DiagramPageSetup>[] = [
     {},
@@ -229,7 +231,7 @@ describe('composeDiagramPage', () => {
     { layout: 'grid', size: 'a5', orientation: 'landscape', columns: 3, rows: 6 },
     { layout: 'grid', size: 'letter', columns: 2, rows: 6 },
     { layout: 'grid', columns: 5, rows: 6 },
-    { stepsPerPage: 30, size: 'a5', orientation: 'landscape' },
+    { stepsPerPage: 20, size: 'a5', orientation: 'landscape' },
     { stepsPerPage: 7 },
   ];
   const setupName = (setup: Partial<DiagramPageSetup>) => JSON.stringify(setup);
