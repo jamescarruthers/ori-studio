@@ -223,7 +223,7 @@ and remove everything packing added.
 
 ### Phase 1: model, pagination, edit rules
 - [x] `pageSteps` in the model and file, with tests.
-- [ ] Shared pagination function; `cellSlots` and the layout read it.
+- [x] Shared pagination function; `cellSlots` and the layout read it.
 - [ ] `retainPageCounts` in `commit`; `setDiagramPageSteps`; tests for every rule.
 
 ### Phase 2: the layout

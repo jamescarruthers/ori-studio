@@ -232,8 +232,6 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     ['the columns change', 'grid', { columns: 4 }],
     ['the rows change', 'grid', { rows: 2 }],
     ['the steps per page change', 'flow', { stepsPerPage: 12 }],
-    // 9 steps are 3 × 3 on A4 portrait, and 5 × 2 on its side.
-    ['the orientation changes a flow page’s shape', 'flow', { orientation: 'landscape' }],
     ['the grid becomes the flow', 'grid', { layout: 'flow' }],
     ['the flow becomes the grid', 'flow', { layout: 'grid' }],
   ] as const)('sends every frame home when %s: every cell changed shape', (_label, layout, patch) => {
@@ -241,11 +239,20 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     expect(settle(before, setPageSetup(before, patch))).toEqual(ids(0, 15));
   });
 
-  it('sends a flow page’s frames home when its steps per page change, though the shape they make does not', () => {
-    // 7 and 8 steps are both 3 × 3 on A4 portrait; the eighth cell takes a step that was on page two.
+  it('sends home the frames of a flow page whose rows the orientation changes, and only those', () => {
+    // 9 steps print in 3 rows on A4 upright, and in 2 on its side — but a left page handing over at its
+    // spine keeps an odd number, 3 either way, so only the last page's cells change.
+    const before = placed(16, { layout: 'flow' }, []);
+    const turned = setPageSetup(before, { orientation: 'landscape' });
+    expect([cellSlots(before).shapes, cellSlots(turned).shapes]).toEqual([['9/3', '9/3'], ['9/3', '9/2']]);
+    expect(settle(before, turned)).toEqual(ids(9, 15));
+  });
+
+  it('sends a flow page’s frames home when its steps per page change, though the rows they make do not', () => {
+    // 7 and 8 steps are both 3 rows on A4 portrait; the eighth cell takes a step that was on page two.
     const before = placed(16, { layout: 'flow', stepsPerPage: 7 }, []);
-    expect(cellSlots(before)).toMatchObject({ columns: 3, rows: 3, perPage: 7 });
-    expect(cellSlots(setPageSetup(before, { stepsPerPage: 8 }))).toMatchObject({ columns: 3, rows: 3, perPage: 8 });
+    expect(cellSlots(before).shapes).toEqual(['7/3', '7/3', '7/3']);
+    expect(cellSlots(setPageSetup(before, { stepsPerPage: 8 })).shapes).toEqual(['8/3', '8/3']);
     expect(settle(before, setPageSetup(before, { stepsPerPage: 8 }))).toEqual(ids(0, 15));
   });
 
@@ -253,7 +260,7 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     // 9 steps are 3 × 3 on A4 and on Letter, upright, and at a margin of 25 mm.
     const before = placed(16, { layout: 'flow' });
     for (const patch of [{ size: 'letter' }, { marginMm: 25 }] as const) {
-      expect(cellSlots(setPageSetup(before, patch))).toMatchObject({ columns: 3, rows: 3 });
+      expect(cellSlots(setPageSetup(before, patch)).shapes).toEqual(cellSlots(before).shapes);
       expect(settle(before, setPageSetup(before, patch))).toEqual([]);
     }
     // 6 steps are 2 × 3 upright, 3 × 2 on its side, on A4 and on Letter alike.
@@ -266,16 +273,31 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     expect(settle(before, setPageSetup(before, { columns: 4, rows: 2 }))).toEqual([]);
   });
 
-  it('keeps every frame through the first page’s side, and a page added after its own that turns its rows', () => {
-    const before = placed(16, { layout: 'flow' });
+  it('keeps every frame through the first page’s side where every page keeps its rows', () => {
+    // 9 steps print in 3 rows, an odd number, whether a page hands over at its spine or not.
+    const before = placed(16, { layout: 'flow' }, []);
     expect(settle(before, setPageSetup(before, { firstPageSide: 'right' }))).toEqual([]);
-    // Two rows: appending a page makes the last page's exit the spine, and turns every row of it.
-    const one = placed(4, { layout: 'flow', stepsPerPage: 4 }, []);
-    expect(flowPagePlan(0, 1, 'left', 2)).not.toEqual(flowPagePlan(0, 2, 'left', 2));
+    // Page two, cut to 4 steps by the break at s13, prints in 2 rows on the right; on the left, handing over
+    // at its spine, in 3: its cells change.
+    const broken = placed(16, { layout: 'flow' });
+    expect(settle(broken, setPageSetup(broken, { firstPageSide: 'right' }))).toEqual(ids(9, 12));
+    // Three rows: appending a page makes the last page's exit the spine, and turns every row of it, in the same cells.
+    const one = placed(9, { layout: 'flow' }, []);
+    expect(flowPagePlan(0, 1, 'left', 3)).not.toEqual(flowPagePlan(0, 2, 'left', 3));
     expect(settle(one, insertSteps(one, [createStep(() => 'next')], one.steps.length))).toEqual([]);
-    // A page removed after its own.
+  });
+
+  it('sends a left page’s frames home when a page added or removed after it changes its rows to hand over at its spine', () => {
+    // 4 steps print in 2 rows on A4 upright; a left page that hands over at its spine takes an odd number, 3
+    // (diagram-flow-pages.md, Decision 4), so its cells change. The page added after holds no step that was placed.
+    const one = placed(4, { layout: 'flow', stepsPerPage: 4 }, []);
+    expect(cellSlots(one).shapes).toEqual(['4/2']);
+    const added = insertSteps(one, [createStep(() => 'next')], one.steps.length);
+    expect(cellSlots(added).shapes).toEqual(['4/3', '4/2']);
+    expect(settle(one, added)).toEqual(ids(0, 3));
+    // A page removed after its own: the last page takes whichever rows print largest again.
     const two = placed(5, { layout: 'flow', stepsPerPage: 4 }, []);
-    expect(settle(two, removeSteps(two, ['s4']))).toEqual([]);
+    expect(settle(two, removeSteps(two, ['s4']))).toEqual(ids(0, 3));
   });
 
   it.each([

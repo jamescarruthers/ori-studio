@@ -16,10 +16,12 @@ import { PT_PER_MM } from '../../lib/paper/paperSvg';
 import {
   isKnownAnnotation,
   type DiagramAsset,
+  type DiagramPageLayout,
   type DiagramStep,
   type DiagramStyle,
 } from '../document/diagramDocument';
 import { PICTURE_TOP_MM, type DiagramPagesLayout, type LayoutPage, type LayoutZoomArrow } from './diagramPageLayout';
+import { asksForPage } from './pagePlan';
 import { partBox } from './pagePlacement';
 import { cellPicture, type CellPicture, type PictureText } from './pagePictures';
 
@@ -110,13 +112,19 @@ export interface ZoomSplit {
  * (Z3, "No keep-together rule"), where Start a New Page Here on the area's
  * step would bring the two together: the arrow then stands at the enlarged
  * step's leading edge, and the Pages view and the export say so. `steps`
- * are the steps laid out, for which start a new page by their own Start a
- * New Page Here. Left out: an enlarged step that starts its page so — the
- * break asked for — and one whose area's step starts its page already, where
- * no break brings them together.
+ * are the steps laid out, for which start a new page because they ask to —
+ * their own Start a New Page Here, or in the flow a page's own count
+ * (`asksForPage`) — under the page setup's `pageLayout`. Left out: an
+ * enlarged step that starts its page so — the break asked for — and one
+ * whose area's step starts its page already, where no break brings them
+ * together.
  */
-export function zoomSplits(layout: DiagramPagesLayout, steps: readonly { id: string; breakBefore: boolean }[]): ZoomSplit[] {
-  const breaks = new Set(steps.filter((step) => step.breakBefore).map((step) => step.id));
+export function zoomSplits(
+  layout: DiagramPagesLayout,
+  steps: readonly (Pick<DiagramStep, 'breakBefore' | 'pageSteps'> & { id: string })[],
+  pageLayout: DiagramPageLayout
+): ZoomSplit[] {
+  const breaks = new Set(steps.filter((step) => asksForPage(step, pageLayout)).map((step) => step.id));
   const numbers = new Map(layout.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell.number] as const)));
   /** The step each page starts with. */
   const firsts = new Set(layout.pages.map((page) => page.cells[0]?.stepId));

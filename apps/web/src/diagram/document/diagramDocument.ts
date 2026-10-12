@@ -35,6 +35,7 @@ import { followAreaRecords, recordAreaBeforeEdit } from '../zoom/areaRecord';
 import { marksIntoUnits, startsWhole } from '../zoom/zoomFrames';
 import { stepReach } from '../zoom/zoomModel';
 import { authorMarksChanged, authorMarksOf, editedCardMarksGone, isCardMark, releaseCardMarks, withEditTags } from './cardMarks';
+import { PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE } from './pageRanges';
 
 /** The version of this document's own shape, inside the project file. */
 export const DIAGRAM_FORMAT_VERSION = 1;
@@ -1243,10 +1244,8 @@ export const randomDiagramId: DiagramIdFactory = (prefix) => `${prefix}-${crypto
 export const PAGE_MARGIN_MM_RANGE = { min: 0, max: 30 } as const;
 export const PAGE_COLUMNS_RANGE = { min: 2, max: 5 } as const;
 export const PAGE_ROWS_RANGE = { min: 1, max: 6 } as const;
-/** A flow page's steps per page: up to the 5 × 6 a flow page could hold before it took a count, so every one keeps its count. */
-export const STEPS_PER_PAGE_RANGE = { min: 2, max: 30 } as const;
-/** A page's own count of steps ({@link DiagramStep.pageSteps}): one step on a page of its own, up to the most a page holds by default. */
-export const PAGE_STEPS_RANGE = { min: 1, max: STEPS_PER_PAGE_RANGE.max } as const;
+// How many steps a page holds, by default and by its own count: a module of their own, for the pagination.
+export { PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE };
 export const FIRST_PAGE_NUMBER_RANGE = { min: 1, max: 9999 } as const;
 /** The flow band's width, mm: from a thin line to three times the default. */
 export const PATH_WIDTH_MM_RANGE = { min: 4, max: 60 } as const;

@@ -105,6 +105,7 @@ export function diagramLayoutSteps(
       id: entry.id,
       text: entry.text,
       breakBefore: entry.breakBefore,
+      ...(entry.pageSteps !== undefined ? { pageSteps: entry.pageSteps } : {}),
       picture,
       footprints,
       footprint: footprints && convexHull(footprints.flat()),

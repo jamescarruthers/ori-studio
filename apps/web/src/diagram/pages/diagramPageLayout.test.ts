@@ -3,7 +3,6 @@ import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_DIAGRAM_STYLE, DEFAULT_PAGE_SETUP, STEPS_PER_PAGE_RANGE, type DiagramPageSetup } from '../document/diagramDocument';
 import {
-  cellsPerPage,
   FIT_RUN_BREAK,
   FIT_SAME,
   FIT_ZOOM,
@@ -36,6 +35,7 @@ import { curvePoint, curveStart, type Lane } from './flowLane';
 import { estimateTextSetter } from './estimateTextSetter';
 import { fontTextSetter } from './fontTextSetter';
 import { partBox } from './pagePlacement';
+import { pageCapacity } from './pagePlan';
 import { printPaper } from './printPaper';
 
 // These matrices exercise the packing search across papers, orientations and step counts.
@@ -207,7 +207,7 @@ describe('a flow page’s shape, from its steps per page (Phase 1b)', () => {
     expect(DEFAULT_PAGE_SETUP.stepsPerPage).toBe(9);
     expect(pageGrid({ ...DEFAULT_PAGE_SETUP, layout: 'flow' })).toEqual({ columns: 3, rows: 3 });
     const seven: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, layout: 'flow', stepsPerPage: 7 };
-    expect([pageGrid(seven), cellsPerPage(seven)]).toEqual([{ columns: 3, rows: 3 }, 7]);
+    expect([pageGrid(seven), pageCapacity(seven)]).toEqual([{ columns: 3, rows: 3 }, 7]);
     // A flow page's columns and rows are the grid's: it does not read them.
     expect(pageGrid({ ...seven, columns: 5, rows: 1 })).toEqual(pageGrid(seven));
     // Nor the title or the page numbers, which take room from its cells but never re-cut them.
@@ -218,7 +218,7 @@ describe('a flow page’s shape, from its steps per page (Phase 1b)', () => {
     expect(pageGrid({ ...seven, marginMm: 30 })).toEqual({ columns: 2, rows: 4 });
     // A grid's are its own, and it holds every cell, whatever its steps per page say.
     const grid: DiagramPageSetup = { ...seven, layout: 'grid', columns: 4, rows: 2 };
-    expect([pageGrid(grid), cellsPerPage(grid)]).toEqual([{ columns: 4, rows: 2 }, 8]);
+    expect([pageGrid(grid), pageCapacity(grid)]).toEqual([{ columns: 4, rows: 2 }, 8]);
   });
 
   it('balances passes in reading order and starts the next page at its steps-per-page limit', () => {
@@ -1322,9 +1322,9 @@ describe('enlarged steps on the page (Revision 2)', () => {
       const [arrow] = result.pages[1]!.zoomArrows;
       expect(arrow).toMatchObject({ beforeStepId: 'step-9', areaStepId: 'step-8', liftable: false });
       expect(arrow!.at.x).toBeCloseTo(first.pictureMm.x - (first.cellMm.w - first.pictureMm.size) / 2, 6);
-      expect(zoomSplits(result, arrowed(10, 8))).toEqual([{ step: 10, area: 9 }]);
+      expect(zoomSplits(result, arrowed(10, 8), 'grid')).toEqual([{ step: 10, area: 9 }]);
       // On one page, none.
-      expect(zoomSplits(layout(arrowed(4, 1)), arrowed(4, 1))).toEqual([]);
+      expect(zoomSplits(layout(arrowed(4, 1)), arrowed(4, 1), 'grid')).toEqual([]);
     });
 
     it('says only the splits Start a New Page Here on the area’s step would mend', () => {
@@ -1333,15 +1333,32 @@ describe('enlarged steps on the page (Revision 2)', () => {
       const asked = arrowed(5, 2, (index) => (index === 3 ? { breakBefore: true } : {}));
       const askedLayout = layout(asked, grid);
       expect(askedLayout.pages[1]!.zoomArrows).toHaveLength(1);
-      expect(zoomSplits(askedLayout, asked)).toEqual([]);
+      expect(zoomSplits(askedLayout, asked, 'grid')).toEqual([]);
       // The area's step starts its page already, one step to a page: no break brings them together.
       const single = arrowed(3, 1);
       const singleLayout = layout(single, { columns: 1, rows: 1 });
       expect(singleLayout.pages[2]!.zoomArrows).toHaveLength(1);
-      expect(zoomSplits(singleLayout, single)).toEqual([]);
+      expect(zoomSplits(singleLayout, single, 'grid')).toEqual([]);
       // Nine to a page, the area on its last cell: a break before it mends it, so it is said.
       const full = arrowed(10, 8);
-      expect(zoomSplits(layout(full, grid), full)).toEqual([{ step: 10, area: 9 }]);
+      expect(zoomSplits(layout(full, grid), full, 'grid')).toEqual([{ step: 10, area: 9 }]);
+    });
+
+    it('says no split where the enlarged step starts a flow page of its own count: that page was asked for', () => {
+      // Step 4 starts a page of three by its count, the area on step 3 before it.
+      const counted = arrowed(6, 2, (index) => (index === 3 ? { pageSteps: 3 } : {}));
+      const flow = { layout: 'flow', stepsPerPage: 9 } as const;
+      const countedLayout = layout(counted, flow);
+      expect(countedLayout.pages.map((page) => page.cells.length)).toEqual([3, 3]);
+      expect(countedLayout.pages[1]!.zoomArrows).toHaveLength(1);
+      expect(zoomSplits(countedLayout, counted, 'flow')).toEqual([]);
+      // Three to a page by default instead, the same pages: the split is said.
+      const plain = arrowed(6, 2);
+      expect(zoomSplits(layout(plain, { ...flow, stepsPerPage: 3 }), plain, 'flow')).toEqual([{ step: 4, area: 3 }]);
+      // A grid ignores the count: one page, nothing split, and the count asks for nothing there.
+      const grid = { columns: 3, rows: 3 } as const;
+      expect(layout(counted, grid).pages).toHaveLength(1);
+      expect(zoomSplits(layout(counted, grid), counted, 'grid')).toEqual([]);
     });
 
     it('stands after the turns before its step, each clear of the next, and then is not lifted', () => {

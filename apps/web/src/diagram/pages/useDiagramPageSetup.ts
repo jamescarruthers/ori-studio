@@ -10,8 +10,8 @@ import {
   type DiagramStep,
   stepsOf,
 } from '../document/diagramDocument';
-import { cellsPerPage, splitIntoPages } from './diagramPageLayout';
 import type { DiagramStyleChoice } from './diagramStyleChoices';
+import { pageCapacity, paginate } from './pagePlan';
 
 const NO_STEPS: readonly DiagramStep[] = [];
 
@@ -33,8 +33,9 @@ export function useDiagramPageSetup() {
   );
   const readOnly = useWorkspaceStore((state) => state.diagramReadOnly);
   const steps = useWorkspaceStore((state) => (state.diagram ? stepsOf(state.diagram) : NO_STEPS));
-  const perPage = cellsPerPage(page);
-  const pageCount = useMemo(() => splitIntoPages(steps, perPage).length, [steps, perPage]);
+  // A page without a count of its own holds this many: the grid's readout.
+  const perPage = pageCapacity(page);
+  const pageCount = useMemo(() => paginate(steps, page).length, [steps, page]);
 
   const setPage = useCallback((patch: Partial<DiagramPageSetup>, setting: DiagramPageSetting) => {
     if (useWorkspaceStore.getState().setDiagramPage(patch)) trackDiagramPageSetupChanged(setting);

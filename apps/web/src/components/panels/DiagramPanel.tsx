@@ -11,8 +11,8 @@ import {
   type DiagramEntry,
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
-import { cellsPerPage, splitIntoPages } from '../../diagram/pages/diagramPageLayout';
 import type { PreparedDiagramPages } from '../../diagram/pages/diagramPages';
+import { paginate } from '../../diagram/pages/pagePlan';
 import { useDiagramPages } from '../../diagram/pages/useDiagramPages';
 import { fillStepFromReferences, openReferencesBrowser } from '../../diagram/references/referencesBrowserActions';
 import { DIAGRAM_PAGE_PANE_ID, revealDiagramPane, useDiagramPaneReveal } from '../../diagram/useDiagramPaneReveal';
@@ -145,10 +145,7 @@ export function DiagramPanel() {
   // whose text the pages cut.
   const pages = useDiagramPages(steps.length > 0 ? diagram : null);
   const page = diagram?.page ?? DEFAULT_PAGE_SETUP;
-  const pageCount = useMemo(
-    () => splitIntoPages(steps, cellsPerPage(page)).length,
-    [steps, page]
-  );
+  const pageCount = useMemo(() => paginate(steps, page).length, [steps, page]);
   const textCut = useMemo(() => cutStepIds(pages.pages), [pages.pages]);
   // And the size each step prints at, for the Layers pane's warnings (Revision 2).
   usePublishPrintedFrames(pages.pages, pages.of);

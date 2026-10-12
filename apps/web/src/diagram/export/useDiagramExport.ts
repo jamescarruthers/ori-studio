@@ -273,7 +273,10 @@ export function useDiagramExport(
   const missing = pages?.missing ?? files?.missing ?? [];
   // Counted by the layout's own rule, so the notice says what the pages print.
   const enlargeArrows = useMemo(() => enlargeArrowCount(document), [document]);
-  const splits = useMemo(() => (pages ? zoomSplits(pages.layout, stepsOf(document)) : []), [pages, document]);
+  const splits = useMemo(
+    () => (pages ? zoomSplits(pages.layout, stepsOf(document), document.page.layout) : []),
+    [pages, document]
+  );
 
   const png = !printed && draft.format === 'png';
   const limit = isAppleMobilePlatform() ? APPLE_MOBILE_PNG_CANVAS_LIMIT : DESKTOP_PNG_CANVAS_LIMIT;

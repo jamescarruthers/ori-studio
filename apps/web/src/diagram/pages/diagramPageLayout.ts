@@ -65,6 +65,7 @@ import {
 } from './flowLane';
 import { glyphSpot } from './glyphPacking';
 import { packRibbon, rectangle, type PackingShape } from './ribbonPacking';
+import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableArea } from './pagePlan';
 import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';
 import { placeCell, placementClashes, type PageBox, type PlacementClash } from './pagePlacement';
@@ -80,8 +81,8 @@ const STEP_NUMBER_INSET_MM = 1.5;
 const STEP_NUMBER_TOP_MM = STEP_NUMBER_BASELINE_MM - 0.75 * STEP_NUMBER_SIZE_MM;
 /** The picture box's top below the cell's top: under the number. */
 export const PICTURE_TOP_MM = 8;
-/** The most of a cell's height its picture box takes: the rest is its number and its text. */
-export const PICTURE_HEIGHT_SHARE = 0.64;
+// The picture box's share of a cell and the turn gutter choose a flow page's rows, so they live with its plan.
+export { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape } from './pagePlan';
 /** The instruction's first baseline below the picture box. */
 const TEXT_GAP_MM = 5;
 /** Room kept under the last baseline, for descenders. */
@@ -132,12 +133,6 @@ export const FIT_ZOOM = 1.3;
  * always given room.
  */
 export const MARKS_FLOOR = 0.5;
-/**
- * The gutter a diagram with turns keeps between its pictures (D22): the
- * turn-over glyph, the wider of the two at its printed size, and room either
- * side of it.
- */
-export const TURN_GUTTER_MM = 14;
 /**
  * A turn's glyph as it prints (`composeDiagramPage`, at the pictures' line
  * width), its ink measured with room for the stroke: the turn-over's long and
@@ -233,6 +228,8 @@ export interface LayoutStep {
   id: string;
   text: string;
   breakBefore: boolean;
+  /** The page it starts holds this many steps (`DiagramStep.pageSteps`): in the flow only ({@link paginate}). */
+  pageSteps?: number;
   /**
    * The picture with what its marks reach past it — annotations, a
    * References step's letters — for its scale, in two parts: where
@@ -485,39 +482,11 @@ export interface DiagramPagesLayout {
 }
 
 /**
- * The columns and rows a flow page of `steps` steps is cut into, on a
- * printable `area` (mm): the column count that prints the largest pictures —
- * the picture box as {@link layoutDiagramPages} sizes it, the lesser of a
- * cell's width less the turn gutter and its height's picture share, a tie
- * going to fewer columns — and as many rows as the steps then fill, the last
- * one short where they do not fill it (7 steps on A4 are 3 · 3 · 1).
- *
- * Always the gutter a diagram with turns keeps, so a turn added or removed
- * never re-cuts a page. A landscape page takes wider rows than a portrait one.
- * Pure.
- */
-export function flowShape(steps: number, area: { w: number; h: number }): { columns: number; rows: number } {
-  const count = Math.max(1, Math.floor(steps));
-  let best = { columns: 1, rows: count };
-  let bestBox = -Infinity;
-  for (let columns = 1; columns <= count; columns += 1) {
-    const rows = Math.ceil(count / columns);
-    const box = Math.min(area.w / columns - TURN_GUTTER_MM, (area.h / rows) * PICTURE_HEIGHT_SHARE);
-    // Only a clearly larger picture takes more columns: a tie, to rounding, keeps the fewer.
-    if (box > bestBox + 1e-9) {
-      best = { columns, rows };
-      bestBox = box;
-    }
-  }
-  return best;
-}
-
-/**
- * The columns and rows a page's cells are cut into under a setup: what the
- * layout cuts its pages by, and what every count of a page's cells reads —
- * the page count, and which cell a step is in (`stepPlaces.ts`). A grid's are
- * its own; a flow page's are {@link flowShape}'s for its steps per page, on
- * the paper inside its margins.
+ * The columns and rows the cell geometry below cuts every page into under a
+ * setup: a grid's own; a flow page's {@link flowShape}'s for its default
+ * steps per page, on the paper inside its margins. Geometry only — which
+ * steps go on which page, and each flow page's own rows, are `pagePlan.ts`'s
+ * ({@link paginate}).
  *
  * Read from the setup alone, never the title, and never less the header and
  * the footer: typing a title or turning page numbers on never re-cuts a page
@@ -525,19 +494,7 @@ export function flowShape(steps: number, area: { w: number; h: number }): { colu
  */
 export function pageGrid(setup: DiagramPageSetup): { columns: number; rows: number } {
   if (setup.layout !== 'flow') return { columns: setup.columns, rows: setup.rows };
-  const { widthMm: W, heightMm: H, marginMm: m } = printPaper(setup);
-  return flowShape(setup.stepsPerPage, { w: W - 2 * m, h: H - 2 * m });
-}
-
-/**
- * How many steps a page holds under a setup: a grid's every cell
- * ({@link pageGrid}); a flow page its steps per page, which a short last row
- * makes fewer than its cells.
- */
-export function cellsPerPage(setup: DiagramPageSetup): number {
-  if (setup.layout === 'flow') return setup.stepsPerPage;
-  const { columns, rows } = pageGrid(setup);
-  return columns * rows;
+  return flowShape(setup.stepsPerPage, printableArea(setup));
 }
 
 /** The size of a page's cells under a setup: the page inside its margins, less the header and footer, cut into columns and rows. */
@@ -985,21 +942,7 @@ export function pictureExtent(picture: NonNullable<LayoutStep['picture']>, scale
   };
 }
 
-/**
- * Which steps go on which page, as indices: in order, a new page when one is
- * full or a step starts one. An empty diagram is one empty page.
- */
-export function splitIntoPages(steps: readonly Pick<LayoutStep, 'breakBefore'>[], perPage: number): number[][] {
-  const pages: number[][] = [];
-  steps.forEach((step, index) => {
-    const current = pages.at(-1);
-    if (!current || current.length >= perPage || (step.breakBefore && current.length > 0)) pages.push([index]);
-    else current.push(index);
-  });
-  return pages.length === 0 ? [[]] : pages;
-}
-
-/** The pages of a diagram's steps, under its page setup. */
+/** The pages of a diagram's steps, under its page setup: which steps go on which page, `pagePlan.ts`'s ({@link paginate}). */
 export function layoutDiagramPages(
   steps: readonly LayoutStep[],
   setup: DiagramPageSetup,
@@ -1025,10 +968,9 @@ export function layoutDiagramPages(
   const fullBox = Math.max(12, Math.min(roomW, cellH * PICTURE_HEIGHT_SHARE));
   const textWidth = cellW * 0.8;
   const { columns, rows } = pageGrid(setup);
-  const perPage = cellsPerPage(setup);
 
-  const pagesOfSteps = splitIntoPages(steps, perPage).map((page) =>
-    page.map((index) => ({ step: steps[index]!, index }))
+  const pagesOfSteps = paginate(steps, setup).map((page) =>
+    page.steps.map((index) => ({ step: steps[index]!, index }))
   );
   // Which way each page's rows run: in a grid, down and left to right; in a
   // flow, so that the lane carries on across each spread.
