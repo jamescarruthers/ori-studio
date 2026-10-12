@@ -219,6 +219,28 @@ describe('a tool’s preview on the folded pane, every crease in the diagram-cre
     expect(added({ action: { line: across, direction: 'valley' }, second: null, vertex: [] })).toEqual([]);
   });
 
+  it('draws a fan’s given creases pending, in their pen, until the engine’s own take their place', () => {
+    const pending: FoldPaneCreaseLine[] = [
+      { line: [{ x: 0.5, y: 0.5 }, { x: 1, y: 0.5 }], letter: 'mountain' },
+      { line: [{ x: 0.5, y: 0.5 }, { x: 0.5, y: 1 }], letter: 'mountain' },
+      { line: [{ x: 0.5, y: 0.5 }, { x: 0, y: 0.5 }], letter: 'mountain' },
+    ];
+    const pens = ['diagram-mountain', 'diagram-mountain', 'diagram-mountain'];
+    // From the clicks on, before the tool asks the engine, and while its answer is on the way.
+    expect(added({ action: null, second: null, vertex: null, pending })).toEqual(pens);
+    expect(added({ action: null, second: null, vertex: [], pending })).toEqual(pens);
+    // Run as given, from the center: a crease stops where the paper does.
+    const [first] = lines(withPreviewCreases(base(), { action: null, second: null, vertex: [], pending }).items).slice(-3);
+    expect(first?.a).toEqual([0.5 * FOLD_USER_PER_UNIT, -0.5 * FOLD_USER_PER_UNIT]);
+    expect(first?.b).toEqual([FOLD_USER_PER_UNIT, -0.5 * FOLD_USER_PER_UNIT]);
+    // Described: the engine's creases, the fourth among them, and the pending ones no longer.
+    const vertex: FoldPaneCreaseLine[] = [...pending, { line: [{ x: 0.5, y: 0.5 }, { x: 0.5, y: 0 }], letter: 'valley' }];
+    expect(added({ action: { line: across, direction: 'mountain' }, second: null, vertex, pending })).toEqual([
+      ...pens,
+      'diagram-valley',
+    ]);
+  });
+
   it('leaves the paper as it is while nothing is located', () => {
     expect(added({ action: null, ...none })).toEqual([]);
     expect(withFoldCreases(base(), [])).toEqual(base());

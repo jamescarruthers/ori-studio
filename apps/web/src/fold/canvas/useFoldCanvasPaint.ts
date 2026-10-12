@@ -12,13 +12,7 @@ import { boundsOf, boundsToUser, transformLine, type Bounds } from './foldCanvas
 import { refusedFaceInks } from './foldCanvasModel';
 import { creasePatternPaneLines, type FoldCreasePatternLines } from './foldCreasePatternLines';
 import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
-import {
-  foldedDisplayOffset,
-  foldedPaneScene,
-  withCreaseLines,
-  withPreviewCreases,
-  type FoldPaneDisplay,
-} from './foldPaneScenes';
+import { foldedDisplayOffset, foldedPaneScene, withPreviewCreases, type FoldPaneDisplay } from './foldPaneScenes';
 import { fanGivenOnFolded } from '../tools/vertex/fanGeometry';
 import type { FoldFanMarks } from './vertex/useFoldFanMarks';
 import type { FoldCanvasInks } from './useFoldCanvasInks';
@@ -129,17 +123,20 @@ export function useFoldCanvasPaint(
 
   // A crimp's second line, beside its picture's first: the other letter on
   // the near layer, as a pleat's two creases are. A fan's given creases,
-  // pending from the moment their clicks are in, in the pen of their letter.
+  // pending from the moment their clicks are in, the direction's way as the
+  // viewer sees them, until the engine's own take their place.
   const secondLine = preview.action ? (preview.crimp?.lines.second ?? null) : null;
   const fanCreases = fan?.creases;
-  const fanDirection = fan?.direction ?? 'valley';
+  const pending = useMemo(
+    () => (fan ? fanGivenOnFolded(fan.creases).map((line) => ({ line, letter: fan.direction })) : null),
+    [fan]
+  );
   const vertexCreases = useFoldVertexCreases(index, preview.vertex);
   const foldedScene = useMemo(() => {
     if (!scene) return null;
-    const plain = foldedPaneScene(scene, display, offset, spread);
-    const base = fanCreases ? withCreaseLines(plain, fanGivenOnFolded(fanCreases), fanDirection, offset) : plain;
-    return withPreviewCreases(base, { action: preview.action, second: secondLine, vertex: vertexCreases }, offset);
-  }, [scene, display, offset, spread, preview.action, secondLine, vertexCreases, fanCreases, fanDirection]);
+    const base = foldedPaneScene(scene, display, offset, spread);
+    return withPreviewCreases(base, { action: preview.action, second: secondLine, vertex: vertexCreases, pending }, offset);
+  }, [scene, display, offset, spread, preview.action, secondLine, vertexCreases, pending]);
   const foldedInk = useMemo<FoldedSceneInk>(
     () => ({
       policy: PAPER_STYLE_POLICIES.fold,

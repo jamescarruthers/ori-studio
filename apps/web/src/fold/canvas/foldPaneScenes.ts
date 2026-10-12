@@ -249,6 +249,12 @@ export interface FoldPanePreviewCreases {
   second: readonly [Point, Point] | null;
   /** A vertex fold's own creases, each by its letter (`vertexCreaseLines`); null for every other tool. */
   vertex: readonly FoldPaneCreaseLine[] | null;
+  /**
+   * A fan's given creases, pending from the moment their clicks are in, each
+   * by its letter as the viewer sees it (`fanGivenCreases`): drawn until the
+   * engine has described the fold, whose own creases then take their place.
+   */
+  pending?: readonly FoldPaneCreaseLine[] | null;
 }
 
 /**
@@ -258,35 +264,20 @@ export interface FoldPanePreviewCreases {
  * a tuck's — by its direction, a crimp's second line the other way, and a
  * vertex fold's creases each by its own. A vertex fold's creases are its
  * picture: its action's line is one of them, run across the whole paper in
- * one letter, so it is not drawn as well.
+ * one letter, so it is not drawn as well. Until the engine has described a
+ * fan, its given creases are drawn pending in their place, each from end to
+ * end (a crease, unlike a fold line, stops where the paper does).
  */
 export function withPreviewCreases(
   scene: PaperScene,
-  { action, second, vertex }: FoldPanePreviewCreases,
+  { action, second, vertex, pending = null }: FoldPanePreviewCreases,
   offset: Point = ORIGIN
 ): PaperScene {
-  if (vertex) return withFoldCreases(scene, vertex, offset);
-  if (!action) return scene;
-  const along = withFoldLine(scene, action.line, action.direction, offset);
+  if (vertex && vertex.length > 0) return withFoldCreases(scene, vertex, offset);
+  const waiting = withFoldCreases(scene, pending ?? [], offset);
+  if (vertex || !action) return waiting;
+  const along = withFoldLine(waiting, action.line, action.direction, offset);
   return second ? withFoldLine(along, second, action.direction === 'valley' ? 'mountain' : 'valley', offset) : along;
-}
-
-/**
- * A scene with creases a fold will make drawn over it before it is folded —
- * a fan's given creases, as soon as their clicks are in — each in the
- * diagram-crease pen of the way it folds as the viewer sees it, from end to
- * end (a crease, unlike a fold line, stops where the paper does). In the
- * scene frame, shown at `offset`.
- */
-export function withCreaseLines(
-  scene: PaperScene,
-  lines: readonly (readonly [Point, Point])[],
-  direction: FoldDirection,
-  offset: Point = ORIGIN
-): PaperScene {
-  if (lines.length === 0) return scene;
-  const role = diagramRole(direction);
-  return { ...scene, items: [...scene.items, ...lines.map(([a, b]) => lineItem(role, a, b, undefined, offset))] };
 }
 
 /** Which creases a state's crease pattern shows, and which of them are the instruction. */

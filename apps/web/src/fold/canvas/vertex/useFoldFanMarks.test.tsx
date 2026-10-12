@@ -1,6 +1,7 @@
 import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { FoldVertexAnalysis } from '../../engine/foldEngineSquashWire';
 import type { FoldStateSummary } from '../../engine/foldEngineWire';
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../../tools/foldToolState';
 import { flatSquareScene } from '../foldCanvas.fixtures';
@@ -11,6 +12,7 @@ import { useFoldCanvasPaint, type FoldCanvasPaint } from '../useFoldCanvasPaint'
 import type { FoldStateView } from '../useFoldStateView';
 import type { FoldToolPreview } from '../useFoldToolPreview';
 import { useFoldFanMarks, type FoldFanMarks } from './useFoldFanMarks';
+import type { FoldVertexPreview } from './useFoldVertexStep';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -113,6 +115,41 @@ describe('a rabbit ear’s marks from its clicks', () => {
     expect(seen?.paint.creasePattern.lines?.instruction).toEqual([]);
     // The folded pane keeps them: the paper is drawn with them until the fold is committed.
     expect(diagramLines(seen!.paint)).toHaveLength(3);
+  });
+
+  it('hands the folded pane from the pending creases to the engine’s, the fourth taken among them, once it describes the fan', () => {
+    const r = 1 - Math.SQRT1_2;
+    const center: [number, number] = [1 - r, 1 - r];
+    const toward = ([x, y]: [number, number]): [number, number] => {
+      const length = Math.hypot(x - center[0], y - center[1]);
+      return [(x - center[0]) / length, (y - center[1]) / length];
+    };
+    const analysis: FoldVertexAnalysis = {
+      kind: 'rabbit-ear',
+      center,
+      given: [toward([0, 1]), toward([1, 1]), toward([1, 0])],
+      candidates: [[-Math.SQRT1_2, -Math.SQRT1_2]],
+      emergent: 0,
+      layers: [0],
+    };
+    const vertex = {
+      base: { analysis, emergents: [true], orders: null },
+      answer: null,
+      emergent: 0,
+      fourths: [0],
+      elsewhere: null,
+      direction: 'valley',
+      orders: [],
+      order: null,
+      layers: 1,
+      nearPrecrease: null,
+    } satisfies FoldVertexPreview;
+    // The paper that stays picked; the engine's answer on its way: the pending three.
+    render(ear([...CORNERS, free(0.3, 0.3)]), { ...NO_PREVIEW, vertex: { ...vertex, base: null, emergent: null, fourths: [] } });
+    expect(diagramLines(seen!.paint)).toEqual(['diagram-valley', 'diagram-valley', 'diagram-valley']);
+    // Described: its three given creases the direction's way and the fourth taken the other — each once.
+    render(ear([...CORNERS, free(0.3, 0.3)]), { ...NO_PREVIEW, vertex });
+    expect(diagramLines(seen!.paint)).toEqual(['diagram-valley', 'diagram-valley', 'diagram-valley', 'diagram-mountain']);
   });
 
   it('lights the region under the pointer while the paper that stays is picked, and the one picked after', () => {
