@@ -14,8 +14,9 @@
  *   lines to the segment landmarks' visible parts. A landmark nothing shows
  *   is not there to click.
  * - **The crease-pattern pane** picks in sheet coordinates: the crease
- *   pattern's vertices and marks, and its creases by Fold's edge ids, in a
- *   `LineHitIndex` over the scene's `creases[]`.
+ *   pattern's vertices and marks, the crease marks' ends and crossings, and
+ *   its creases by Fold's edge ids, in a `LineHitIndex` over the scene's
+ *   `creases[]`.
  * - **A spread folded pane** (`FoldPaneSpreadMap`) is picked where it is
  *   drawn: each target indexed where the spread puts it — a point once per
  *   sheet point the viewer sees there, since points that lie together on
@@ -49,8 +50,19 @@ import type { FoldPaneSpreadMap } from './foldPaneSpreadMap';
 /** Which pane a pick was made on. */
 export type FoldPaneId = 'folded' | 'crease-pattern';
 
-/** Where a point lands: a landmark's kind, an edge's middle, or a free point (Alt). */
-export type FoldPointProvenance = 'vertex' | 'crossing' | 'mark' | 'midpoint' | 'free';
+/**
+ * Where a point lands: a landmark's kind — a crease mark's end, or where one
+ * crosses a crease or another mark, among them — an edge's middle, or a free
+ * point (Alt).
+ */
+export type FoldPointProvenance =
+  | 'vertex'
+  | 'crossing'
+  | 'mark'
+  | 'crease-mark-end'
+  | 'crease-mark-crossing'
+  | 'midpoint'
+  | 'free';
 
 /** A point reference: what an axiom input stores, and where it is drawn. */
 export interface FoldPointPick {
@@ -171,9 +183,25 @@ interface PaneIndex {
   points: PointCandidate[];
   pointHits: LineHitIndex;
   segments: FoldSegmentPick[];
+  /** Per segment, the stretches of it the pane shows (where a click finds it): what a line crossing it meets. */
+  portions: readonly (readonly [Point, Point][])[];
   /** By indexed id − 1: the segment each indexed portion belongs to. */
   portionOf: number[];
   segmentHits: LineHitIndex;
+  /**
+   * The crease marks, each part of one on a face (the folded pane's, as the
+   * viewer sees it) with the stretches the pane shows: not a line a fold can
+   * be located along, but what a partial precrease's points snap to where
+   * its line crosses one.
+   */
+  creaseMarks: readonly FoldCreaseMarkPart[];
+}
+
+/** A crease mark's part on one face: its sheet ends, its ends in the pane's frame, and what the pane shows of it. */
+export interface FoldCreaseMarkPart {
+  sheet: readonly [SheetPoint, SheetPoint];
+  at: readonly [Point, Point];
+  portions: readonly [Point, Point][];
 }
 
 export interface FoldPickIndex {
@@ -192,18 +220,16 @@ const POINT_PRIORITY: Readonly<Record<FoldPointSource['kind'], FoldPointProvenan
   vertex: 'vertex',
   crossing: 'crossing',
   mark: 'mark',
-  // A crease mark's end is where a crease stops, as at a vertex; where one
-  // crosses a crease or another mark is a crossing.
-  crease_mark_end: 'vertex',
-  crease_mark_crossing: 'crossing',
+  crease_mark_end: 'crease-mark-end',
+  crease_mark_crossing: 'crease-mark-crossing',
 };
 
 function pointIndex(points: readonly PointCandidate[]): LineHitIndex {
   return new LineHitIndex(points.map((point, k): IndexedSegment => ({ id: k + 1, a: point.at, b: point.at })));
 }
 
-/** The visible stretches of a segment landmark, along it from `a` (its `at[0]`) to `b`. */
-function visiblePortions(segment: FoldSegmentLandmark, a: Point, b: Point): [Point, Point][] {
+/** The visible stretches of a segment landmark — or a crease mark's part — along it from `a` (its `at[0]`) to `b`. */
+function visiblePortions(segment: Pick<FoldSegmentLandmark, 'visible'>, a: Point, b: Point): [Point, Point][] {
   const at = (t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
   return segment.visible.flatMap(([from, to]) => (to - from > 1e-9 ? [[at(from), at(to)] as [Point, Point]] : []));
 }
@@ -339,6 +365,15 @@ export function foldPickIndex(
     }
   }
   const folded = segmentIndex(foldedPortions);
+  const foldedMarks: FoldCreaseMarkPart[] = [];
+  for (const part of landmarks?.crease_marks ?? []) {
+    const a = toScene(toPoint(part.at[0]));
+    const b = toScene(toPoint(part.at[1]));
+    const sheet: [SheetPoint, SheetPoint] = [part.sheet.a, part.sheet.b];
+    const [p, q] = spread ? spread.segment(sheet, [a, b]) : [a, b];
+    const portions = visiblePortions(part, p, q);
+    if (portions.length > 0) foldedMarks.push({ sheet, at: [p, q], portions });
+  }
 
   // --- The crease-pattern pane: the sheet, every crease and vertex on it.
   const cpPoints: PointCandidate[] = [];
@@ -374,6 +409,26 @@ export function foldPickIndex(
   for (const mark of marks) {
     cpPoints.push({ provenance: 'mark', sheet: mark.at, mark: mark.mark, at: toPoint(mark.at) });
   }
+  // The crease marks: each one whole on the sheet, its ends and where it
+  // crosses a crease or another mark points to snap to, hidden or not — the
+  // crease pattern shows every layer.
+  const cpMarks: FoldCreaseMarkPart[] = (scene.crease_marks ?? []).map((mark) => {
+    const at: [Point, Point] = [
+      { x: mark.from.x, y: mark.from.y },
+      { x: mark.to.x, y: mark.to.y },
+    ];
+    return { sheet: [toPair(mark.from), toPair(mark.to)], at, portions: [at] };
+  });
+  const seenMarkPoint = new Set<string>();
+  for (const landmark of landmarks?.points ?? []) {
+    for (const source of landmark.sources) {
+      if (source.kind !== 'crease_mark_end' && source.kind !== 'crease_mark_crossing') continue;
+      const key = `${source.sheet[0]},${source.sheet[1]}`;
+      if (seenMarkPoint.has(key)) continue;
+      seenMarkPoint.add(key);
+      cpPoints.push({ provenance: POINT_PRIORITY[source.kind], sheet: source.sheet, mark: null, at: toPoint(source.sheet) });
+    }
+  }
   const cp = segmentIndex(cpPortions);
 
   return {
@@ -385,15 +440,19 @@ export function foldPickIndex(
       points: foldedPoints,
       pointHits: pointIndex(foldedPoints),
       segments: foldedSegments,
+      portions: foldedPortions,
       portionOf: folded.portionOf,
       segmentHits: folded.hits,
+      creaseMarks: foldedMarks,
     },
     creasePattern: {
       points: cpPoints,
       pointHits: pointIndex(cpPoints),
       segments: cpSegments,
+      portions: cpPortions,
       portionOf: cp.portionOf,
       segmentHits: cp.hits,
+      creaseMarks: cpMarks,
     },
     spread,
   };
