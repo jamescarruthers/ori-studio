@@ -4,11 +4,18 @@
 //! emergent fourth, one of at most three Kawasaki candidates, through the
 //! chosen layers.
 //!
-//! The direction alone leaves two orders, which differ in which of the far
-//! wedge's two rays is the ear's *ridge* (research §5.3, 2 states with the
-//! direction seed): the ridge is an input, and without it the two are a
-//! choice like any other completion's. With it every spike case was unique
-//! (22 of 22 with the anchor layer's letters).
+//! The three bisectors take the direction's letter and the fourth crease the
+//! other: a valley ear's are valley, valley, valley and mountain (Lang;
+//! Beloch's `flatten-rabbit-ear-*`). The direction alone leaves two orders,
+//! which differ in which of the far wedge's two rays rises as the ear's
+//! *ridge* (research §5.3, 2 states with the direction seed); only the
+//! fourth's rising is a rabbit ear, so the fourth is seeded as the ridge
+//! ([`super::fan`]), and a fourth crease beside the paper that stays is
+//! refused. With it every spike case is unique.
+//!
+//! A step stored before kept a `ridge` naming one of the two: it is no
+//! longer read (an unknown field, ignored), and the ear lands as the rule
+//! has it (see [`FanInput::land`](super::fan) on a stored order).
 
 use serde::{Deserialize, Serialize};
 
@@ -35,13 +42,9 @@ pub struct RabbitEar {
     pub layers: Seed,
     /// A sheet point on paper that stays.
     pub stayer: Point,
-    /// As the viewer sees it.
+    /// As the viewer sees it: the bisectors' letter, the fourth crease
+    /// taking the other.
     pub direction: Direction,
-    /// The ridge: a direction from the incenter naming one of the far
-    /// wedge's two rays (the nearest ray is taken). None leaves it to a
-    /// choice.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ridge: Option<Point>,
 }
 
 /// The incenter of a triangle: its corners weighted by the opposite sides.
@@ -74,7 +77,6 @@ impl RabbitEar {
             layers: self.layers.clone(),
             stayer: self.stayer,
             direction: self.direction,
-            ridge: self.ridge,
         })
     }
 }

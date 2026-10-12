@@ -1,8 +1,12 @@
 //! The rabbit ear and the swivel through the compound pipeline (plan Phase
 //! 11; research §5.3), on the vertex spike's case 3 (`cases.mjs`): each
-//! emergent ray's ‹ n of m › with the direction seed, the ridge making a
-//! rabbit ear unique, the rays that do not close refused with the ones that
-//! do, stored choices replayed, and the fan's own refusals.
+//! emergent ray lands one ear whose three bisectors fold the direction's way
+//! and whose fourth crease folds the other (Lang; Beloch's
+//! `flatten-rabbit-ear-*`, "`--ear` is mountain"), in every layer it cuts,
+//! valley and mountain; a fourth crease beside the paper that stays, a ray
+//! that does not close and a fourth crease that cannot rise are refused
+//! with the rays that land; an older step's ridge and order are moot; and
+//! the fan's own refusals.
 
 mod beloch;
 mod support;
@@ -11,11 +15,11 @@ mod vertex;
 use std::collections::BTreeMap;
 
 use oristudio_fold::{
-    Broken, BrokenWitness, CompoundRefused, Direction, Fix, FoldRefusal, Letter, RabbitEar, Seed,
-    State, Swivel, VertexChoices, VertexOutcome, WitnessOrder,
+    CompoundRefused, Direction, Fix, FoldRefusal, RabbitEar, Seed, State, Swivel, VertexChoices,
+    VertexOutcome, WitnessOrder,
 };
 use vertex::cases::{self, EarCase, candidates_of, every, landed};
-use vertex::check;
+use vertex::{assert_ear_letters, check};
 
 /// What a vertex fold came to: one state, a choice of n, or a refusal's
 /// code.
@@ -35,24 +39,45 @@ fn came(outcome: &Result<VertexOutcome, CompoundRefused>) -> Came {
     }
 }
 
-/// Each case's outcome per emergent candidate, by its direction in whole
-/// degrees; every state it lands checked.
-fn per_candidate(case: &EarCase) -> BTreeMap<i32, Came> {
-    candidates_of(&case.state, &case.op)
+/// An ear's op with its emergent ray the candidate nearest `deg` degrees.
+fn at_degree(state: &State, op: &RabbitEar, deg: i32) -> RabbitEar {
+    let emergent = candidates_of(state, op)
         .into_iter()
-        .map(|(deg, direction)| {
+        .find(|(d, _)| *d == deg)
+        .map(|c| c.1)
+        .unwrap_or_else(|| panic!("no {deg}° candidate"));
+    RabbitEar {
+        emergent,
+        ..op.clone()
+    }
+}
+
+/// Each case's outcome per emergent candidate, by its direction in whole
+/// degrees; every state it lands checked, its letters with it. The second
+/// value counts the states landed.
+fn per_candidate(name: &str, state: &State, op: &RabbitEar) -> (BTreeMap<i32, Came>, usize) {
+    let mut landed = 0;
+    let outcomes = candidates_of(state, op)
+        .into_iter()
+        .map(|(deg, emergent)| {
             let op = RabbitEar {
-                emergent: direction,
-                ..case.op.clone()
+                emergent,
+                ..op.clone()
             };
-            let outcome = case.state.rabbit_ear(&op, &VertexChoices::default());
+            let outcome = state.rabbit_ear(&op, &VertexChoices::default());
             let result = came(&outcome);
+            let fan = state
+                .analyse_rabbit_ear(&op)
+                .unwrap_or_else(|e| panic!("{name}: {e}"));
             for folded in every(outcome) {
-                check(&case.state, &folded);
+                check(state, &folded);
+                assert_ear_letters(state, &folded, &fan, &format!("{name} at {deg}°"));
+                landed += 1;
             }
             (deg, result)
         })
-        .collect()
+        .collect();
+    (outcomes, landed)
 }
 
 fn case(name: &str) -> EarCase {
@@ -62,50 +87,72 @@ fn case(name: &str) -> EarCase {
         .unwrap_or_else(|| panic!("no case {name}"))
 }
 
-/// Research §5.3's table: with the direction seed a rabbit ear leaves two
-/// orders (or one, for the two-layer triangle's 45° ray), and an emergent
-/// ray into a hinge to paper that stays does not close.
+/// Research §5.3's cases with the fourth crease as the ridge: every ray
+/// that closes lands one ear (the direction alone left two), the
+/// two-layer triangle's 45° ray, beside the paper that stays, is refused,
+/// and a ray into a hinge to paper that stays does not close. Every ear
+/// landed folds its bisectors the direction's way and its fourth crease
+/// the other, in every layer.
 #[test]
-fn each_emergent_ray_lands_as_the_spike_found() {
-    use Came::{Choice, One, Refused};
-    let want: [(&str, Vec<(i32, Came)>); 5] = [
-        (
-            "3a both layers",
-            vec![(45, One), (180, Choice(2)), (270, Choice(2))],
-        ),
+fn each_emergent_ray_lands_one_ear_with_the_rule_s_letters() {
+    use Came::{One, Refused};
+    let beside = Refused("fan_fourth_beside_stayer");
+    let blocked = || Refused("fan_ray_blocked");
+    let want: Vec<(&str, Vec<(i32, Came)>)> = vec![
+        ("3a both layers", vec![(45, beside), (180, One), (270, One)]),
         (
             "3b top layer",
-            vec![
-                (45, Refused("fan_ray_blocked")),
-                (180, Choice(2)),
-                (270, Choice(2)),
-            ],
+            vec![(45, blocked()), (180, One), (270, One)],
         ),
         (
             "3c flat square",
-            vec![
-                (0, Choice(2)),
-                (135, Refused("fan_ray_blocked")),
-                (270, Choice(2)),
-            ],
+            vec![(0, One), (135, blocked()), (270, One)],
         ),
-        ("3d fish ear 1", vec![(180, Choice(2))]),
+        (
+            "3d fish ear 1",
+            vec![(45, blocked()), (180, One), (270, One)],
+        ),
         (
             "3e kite flap",
+            vec![(45, One), (135, One), (292, blocked())],
+        ),
+        (
+            "3a both layers, mountain",
             vec![
-                (45, Choice(2)),
-                (135, Choice(2)),
-                // 292.5°, the spike's "293".
-                (292, Refused("fan_ray_blocked")),
+                (45, Refused("fan_fourth_beside_stayer")),
+                (180, One),
+                (270, One),
             ],
         ),
+        (
+            "3b bottom layer, mountain",
+            vec![(45, blocked()), (180, One), (270, One)],
+        ),
+        (
+            "3c flat square, mountain",
+            vec![(0, One), (135, blocked()), (270, One)],
+        ),
+        (
+            "3d fish ear 1, mountain",
+            vec![(45, blocked()), (180, One), (270, One)],
+        ),
     ];
+    let cases: BTreeMap<&str, EarCase> = cases::ear_cases()
+        .into_iter()
+        .chain(cases::mountain_ear_cases())
+        .map(|c| (c.name, c))
+        .collect();
+    let mut landed = 0;
     for (name, want) in want {
-        let got = per_candidate(&case(name));
+        let case = &cases[name];
+        let (got, count) = per_candidate(name, &case.state, &case.op);
+        landed += count;
+        assert_eq!(got.len(), want.len(), "{name}: {got:?}");
         for (deg, came) in want {
             assert_eq!(got.get(&deg), Some(&came), "{name} at {deg}°: {got:?}");
         }
     }
+    assert_eq!(landed, 18);
 }
 
 /// A ray that does not close is refused naming the paper it runs into, with
@@ -113,18 +160,7 @@ fn each_emergent_ray_lands_as_the_spike_found() {
 #[test]
 fn a_blocked_ray_offers_the_rays_that_land() {
     let case = case("3b top layer");
-    let candidates = candidates_of(&case.state, &case.op);
-    let degree = |d: i32| {
-        candidates
-            .iter()
-            .find(|(deg, _)| *deg == d)
-            .map(|c| c.1)
-            .unwrap_or_else(|| panic!("no {d}° candidate"))
-    };
-    let op = RabbitEar {
-        emergent: degree(45),
-        ..case.op.clone()
-    };
+    let op = at_degree(&case.state, &case.op, 45);
     let Err(CompoundRefused::Refused(refused)) =
         case.state.rabbit_ear(&op, &VertexChoices::default())
     else {
@@ -135,178 +171,130 @@ fn a_blocked_ray_offers_the_rays_that_land() {
     };
     // The bottom layer, which the top one's ray runs into.
     assert_eq!(faces.len(), 1);
-    let offered: Vec<i32> = refused
-        .fixes
+    assert_eq!(offered(&refused.fixes), vec![180, 270]);
+}
+
+/// The fixes' emergent rays, in whole degrees.
+fn offered(fixes: &[Fix]) -> Vec<i32> {
+    fixes
         .iter()
         .map(|fix| match fix {
-            Fix::UseEmergent { direction } => direction[1]
-                .atan2(direction[0])
-                .to_degrees()
-                .rem_euclid(360.0)
-                .round() as i32,
+            Fix::UseEmergent { direction } => {
+                (direction[1].atan2(direction[0]).to_degrees().round() as i32).rem_euclid(360)
+            }
             other => panic!("{other:?}"),
         })
-        .collect();
-    assert_eq!(offered, vec![180, 270]);
+        .collect()
 }
 
-/// The ridge, one of the far wedge's two rays, makes the ear unique: the
-/// two ridges are the two orders the direction leaves, and the ridge's
-/// crease in the first layer has the letter none of the other three has.
+/// The fourth crease rises as the ear's ridge, so it lies across from the
+/// paper that stays: one beside it would fold the direction's way, and a
+/// corner's crease the other, which is no rabbit ear (the owner's report:
+/// corner creases V, V, M and the fourth V). Refused, offering the rays
+/// that land, and its picture refused alike.
 #[test]
-fn the_ridge_makes_the_ear_unique() {
-    for (name, deg) in [("3a both layers", 180), ("3c flat square", 270)] {
-        let case = case(name);
-        let candidates = candidates_of(&case.state, &case.op);
-        let emergent = candidates
-            .iter()
-            .find(|(d, _)| *d == deg)
-            .map(|c| c.1)
-            .unwrap_or_default();
-        let op = RabbitEar {
-            emergent,
-            ..case.op.clone()
-        };
-        let free = every(case.state.rabbit_ear(&op, &VertexChoices::default()));
-        assert_eq!(free.len(), 2, "{name}");
-        let analysis = case
-            .state
-            .analyse_rabbit_ear(&op)
-            .unwrap_or_else(|e| panic!("{e}"));
-        let first = analysis.layers[0];
-        let mut landed_with = Vec::new();
-        for ray in analysis.given.iter().copied().chain([emergent]) {
-            let op = RabbitEar {
-                ridge: Some(ray),
-                ..op.clone()
-            };
-            match case.state.rabbit_ear(&op, &VertexChoices::default()) {
-                Ok(VertexOutcome::Landed(folded)) => {
-                    check(&case.state, &folded);
-                    // The first layer's four new creases: three one letter,
-                    // the ridge's the other.
-                    let state = &folded.state;
-                    let letters: Vec<Letter> = folded
-                        .report
-                        .fold
-                        .created
-                        .iter()
-                        .filter_map(|&e| state.crease(e))
-                        .filter(|c| {
-                            state.faces().iter().any(|f| {
-                                f.parent == Some(first)
-                                    && f.ring.contains(&c.vertices[0])
-                                    && f.ring.contains(&c.vertices[1])
-                            })
-                        })
-                        .filter_map(|c| c.kind.letter())
-                        .collect();
-                    assert_eq!(letters.len(), 4, "{name}");
-                    let mountains = letters.iter().filter(|&&l| l == Letter::Mountain).count();
-                    assert!(mountains == 1 || mountains == 3, "{name}: {letters:?}");
-                    landed_with.push(folded.state);
-                }
-                Err(CompoundRefused::Refused(r)) => {
-                    assert_eq!(r.refusal, FoldRefusal::FanRidgeNotRay, "{name}");
-                }
-                other => panic!("{name}: {:?}", other.map(|_| ())),
-            }
-        }
-        // Two of the four rays are the far wedge's.
-        assert_eq!(landed_with.len(), 2, "{name}");
-        assert_ne!(landed_with[0].order(), landed_with[1].order(), "{name}");
-    }
-}
-
-/// Plan D6: a choice is stored as the pairs it decided, each face by a
-/// witness, in the document's shape (FOLD `faceOrders` triples over
-/// witnesses, `FoldCompletionChoice`), and replays to the state it was
-/// chosen as; a witness off the paper, or a pair that conflicts, breaks the
-/// step.
-#[test]
-fn a_stored_choice_replays_or_breaks() {
-    let case = case("3a both layers");
-    let emergent = candidates_of(&case.state, &case.op)
-        .into_iter()
-        .find(|(d, _)| *d == 180)
-        .map(|c| c.1)
-        .unwrap_or_default();
-    let op = RabbitEar {
-        emergent,
-        ..case.op.clone()
-    };
-    let Ok(VertexOutcome::ChooseOrder(choice)) =
-        case.state.rabbit_ear(&op, &VertexChoices::default())
+fn a_fourth_crease_beside_the_paper_that_stays_is_refused() {
+    // The two-layer triangle held inside it, across from its right angle:
+    // the 45° ray splits the paper that stays.
+    let tri = case("3a both layers");
+    let op = at_degree(&tri.state, &tri.op, 45);
+    let Err(CompoundRefused::Refused(refused)) =
+        tri.state.rabbit_ear(&op, &VertexChoices::default())
     else {
-        panic!("no choice");
+        panic!("the 45° ray landed");
     };
-    for k in 0..2 {
-        let picked = choice.pick(&[k]).unwrap_or_else(|e| panic!("{e}"));
-        let stored = picked.report.stored.clone();
-        assert!(stored.completion.is_some());
-        let replayed = landed(case.state.rabbit_ear(&op, &stored));
-        assert_eq!(replayed.state.parts(), picked.state.parts());
-        // Through JSON, as the document stores it (`FoldCompletionChoice`).
-        let json = serde_json::to_value(&stored).unwrap_or_default();
-        assert!(json["completion"]["orders"][0].is_array(), "{json}");
-        let back: VertexChoices = serde_json::from_value(json).unwrap_or_else(|e| panic!("{e}"));
-        assert_eq!(
-            landed(case.state.rabbit_ear(&op, &back)).state.parts(),
-            picked.state.parts()
-        );
+    assert_eq!(refused.refusal, FoldRefusal::FanFourthBesideStayer);
+    assert_eq!(offered(&refused.fixes), vec![180, 270]);
+    assert!(matches!(
+        tri.state.rabbit_ear_action(&op, None),
+        Err(r) if r.refusal == FoldRefusal::FanFourthBesideStayer
+    ));
+    // The flat square held inside the triangle, beside the 270° ray: the
+    // 0° ray lands, its letters the rule's.
+    let flat = case("3c flat square");
+    let inside = RabbitEar {
+        stayer: [0.6, 0.1],
+        ..flat.op.clone()
+    };
+    let down = at_degree(&flat.state, &inside, 270);
+    let Err(CompoundRefused::Refused(refused)) =
+        flat.state.rabbit_ear(&down, &VertexChoices::default())
+    else {
+        panic!("the 270° ray beside the stayer landed");
+    };
+    assert_eq!(refused.refusal, FoldRefusal::FanFourthBesideStayer);
+    assert_eq!(offered(&refused.fixes), vec![0]);
+    let across = at_degree(&flat.state, &inside, 0);
+    let folded = landed(flat.state.rabbit_ear(&across, &VertexChoices::default()));
+    check(&flat.state, &folded);
+    let fan = flat
+        .state
+        .analyse_rabbit_ear(&across)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_ear_letters(&flat.state, &folded, &fan, "flat square held inside");
+}
+
+/// A step stored before the fourth crease was seeded as the ridge kept a
+/// `ridge` naming one of the far wedge's rays, and sometimes the order it
+/// chose: the ridge is no longer read (an unknown field), and an ear that
+/// lands alone lands whatever order was stored — either way round, or with
+/// a witness off the paper.
+#[test]
+fn an_older_step_s_ridge_and_order_are_moot() {
+    let case = case("3c flat square");
+    let op = at_degree(&case.state, &case.op, 270);
+    let ear = landed(case.state.rabbit_ear(&op, &VertexChoices::default()));
+    assert_eq!(ear.report.stored, VertexChoices::default());
+    // The owner's step: the ridge on the crease to corner 2, (1, 0).
+    let mut json = serde_json::to_value(&op).unwrap_or_default();
+    let toward = [1.0 - ear.report.vertices[0][0], -ear.report.vertices[0][1]];
+    json["ridge"] = serde_json::json!(toward);
+    let read: RabbitEar = serde_json::from_value(json).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(read, op);
+    // An order stored over two faces that overlap, each way round.
+    let state = &ear.state;
+    let witness = |f| {
+        let ring = &state.face(f).unwrap_or_else(|| unreachable!()).ring;
+        let n = ring.len() as f64;
+        ring.iter().fold([0.0, 0.0], |c, v| {
+            let p = state.vertices()[v.0 as usize];
+            [c[0] + p[0] / n, c[1] + p[1] / n]
+        })
+    };
+    let (pair, _) = state
+        .order()
+        .pairs()
+        .next()
+        .unwrap_or_else(|| panic!("no pairs"));
+    let [f, g] = pair.faces();
+    for s in [1, -1] {
+        for faces in [vec![witness(f), witness(g)], vec![[3.0, 3.0], witness(g)]] {
+            let stored = VertexChoices {
+                completion: Some(WitnessOrder {
+                    faces,
+                    orders: vec![(0, 1, s)],
+                }),
+            };
+            let replayed = landed(case.state.rabbit_ear(&op, &stored));
+            assert_eq!(replayed.state.parts(), ear.state.parts());
+            assert_eq!(replayed.report.stored, VertexChoices::default());
+        }
     }
-    let stored: WitnessOrder = choice
-        .pick(&[0])
-        .ok()
-        .and_then(|f| f.report.stored.completion)
-        .unwrap_or_else(|| unreachable!());
-    // A witness off the paper.
-    let mut off = stored.clone();
-    off.faces[0] = [3.0, 3.0];
-    assert!(matches!(
-        case.state.rabbit_ear(
-            &op,
-            &VertexChoices {
-                completion: Some(off)
-            }
-        ),
-        Err(CompoundRefused::Broken(Broken::Witness {
-            witness: BrokenWitness::NoFace { witness: 0, .. }
-        }))
-    ));
-    // A pair stored both ways round conflicts.
-    let (f, g, s) = stored.orders[0];
-    let mut flipped = stored.clone();
-    flipped.orders.push((f, g, -s));
-    let both = VertexChoices {
-        completion: Some(flipped),
-    };
-    assert!(matches!(
-        case.state.rabbit_ear(&op, &both),
-        Err(CompoundRefused::Broken(Broken::Completion { .. }))
-    ));
 }
 
 /// Spike case 3d: the fish base's second ear, on the state the first one
-/// landed (each with its ridge, so each lands), perpendicular to its edge.
+/// landed, perpendicular to its edge: each one ear, the rule's.
 #[test]
 fn the_fish_base_takes_two_ears() {
     let case = case("3d fish ear 1");
-    let candidate = |state: &State, op: &RabbitEar, deg: i32| {
-        candidates_of(state, op)
-            .into_iter()
-            .find(|(d, _)| *d == deg)
-            .map(|c| c.1)
-            .unwrap_or_else(|| panic!("no {deg}° candidate"))
-    };
-    let op = RabbitEar {
-        emergent: candidate(&case.state, &case.op, 180),
-        ..case.op.clone()
-    };
-    let first = every(case.state.rabbit_ear(&op, &VertexChoices::default()));
-    assert_eq!(first.len(), 2);
-    let ear = &first[0];
-    check(&case.state, ear);
+    let op = at_degree(&case.state, &case.op, 180);
+    let ear = landed(case.state.rabbit_ear(&op, &VertexChoices::default()));
+    check(&case.state, &ear);
+    let fan = case
+        .state
+        .analyse_rabbit_ear(&op)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_ear_letters(&case.state, &ear, &fan, "fish ear 1");
     let state = &ear.state;
     let second = RabbitEar {
         corners: [[1.0, 1.0], [0.0, 1.0], [1.0, 0.0]],
@@ -316,42 +304,96 @@ fn the_fish_base_takes_two_ears() {
         },
         stayer: cases::seen_bottom(state, [0.45, 0.45]),
         direction: Direction::Valley,
-        ridge: None,
     };
-    let second = RabbitEar {
-        emergent: candidate(state, &second, 90),
-        ..second
-    };
+    let second = at_degree(state, &second, 90);
     let outcome = state.rabbit_ear(&second, &VertexChoices::default());
-    assert_eq!(came(&outcome), Came::Choice(2));
-    for folded in every(outcome) {
-        check(state, &folded);
-    }
+    assert_eq!(came(&outcome), Came::One);
+    let fan = state
+        .analyse_rabbit_ear(&second)
+        .unwrap_or_else(|e| panic!("{e}"));
+    let folded = landed(outcome);
+    check(state, &folded);
+    assert_ear_letters(state, &folded, &fan, "fish ear 2");
 }
 
-/// Spike case 3f: a free four-ray vertex on the flat square, each of its
-/// three emergent rays unique with the direction seed.
+/// Spike case 3f, Beloch's `swivel-rabbit` (a rabbit ear on free hinges,
+/// its emergent "ear" crease a mountain): the two rays across from the
+/// paper that stays each land one swivel with the rule's letters, valley
+/// and mountain; the one beside it — which the direction seed alone landed
+/// with a given crease the odd one out — is refused, offering them.
 #[test]
-fn every_swivel_ray_lands_one_way() {
+fn every_swivel_ray_across_from_the_stayer_lands_one_way() {
     let (square, op) = cases::swivel_case();
-    let analysis = square.analyse_swivel(&op).unwrap_or_else(|e| panic!("{e}"));
-    let mut degrees = Vec::new();
-    for &c in &analysis.candidates {
-        degrees.push(c[1].atan2(c[0]).to_degrees().rem_euclid(360.0).round() as i32);
+    for direction in [Direction::Valley, Direction::Mountain] {
         let op = Swivel {
-            emergent: c,
+            direction,
             ..op.clone()
         };
-        let folded = landed(square.swivel(&op, &VertexChoices::default()));
-        check(&square, &folded);
-        assert_eq!(folded.state.faces().len(), 4);
+        let analysis = square.analyse_swivel(&op).unwrap_or_else(|e| panic!("{e}"));
+        let mut degrees = Vec::new();
+        for &c in &analysis.candidates {
+            let deg = c[1].atan2(c[0]).to_degrees().rem_euclid(360.0).round() as i32;
+            let op = Swivel {
+                emergent: c,
+                ..op.clone()
+            };
+            match square.swivel(&op, &VertexChoices::default()) {
+                Err(CompoundRefused::Refused(refused)) => {
+                    assert_eq!(deg, 90, "{direction:?}");
+                    assert_eq!(refused.refusal, FoldRefusal::FanFourthBesideStayer);
+                    assert_eq!(offered(&refused.fixes), vec![208, 332]);
+                }
+                outcome => {
+                    let folded = landed(outcome);
+                    check(&square, &folded);
+                    assert_eq!(folded.state.faces().len(), 4);
+                    let fan = square.analyse_swivel(&op).unwrap_or_else(|e| panic!("{e}"));
+                    assert_ear_letters(&square, &folded, &fan, &format!("swivel {deg}°"));
+                    degrees.push(deg);
+                }
+            }
+        }
+        degrees.sort_unstable();
+        assert_eq!(degrees, vec![208, 332], "{direction:?}");
     }
-    degrees.sort_unstable();
-    assert_eq!(degrees, vec![90, 208, 332]);
 }
 
-/// A fan whose center lies on a crease, or a ridge that is no ray of the
-/// far wedge, is refused.
+/// A free vertex whose rays run toward 0°, 270° and 300°: its one fourth
+/// ray, at 150°, leaves the 30° between 270° and 300° the narrowest angle,
+/// between two given creases, so they must fold opposite each other and the
+/// fourth cannot be the odd one out (the direction seed alone landed it
+/// with the 270° crease odd). Refused.
+#[test]
+fn a_fourth_crease_that_cannot_rise_is_refused() {
+    let o = [0.5, 0.5];
+    let at = |deg: f64, r: f64| {
+        let (s, c) = deg.to_radians().sin_cos();
+        [o[0] + r * c, o[1] + r * s]
+    };
+    let op = Swivel {
+        vertex: o,
+        toward: [at(0.0, 0.4), at(270.0, 0.4), at(300.0, 0.4)],
+        emergent: [1.0, 0.0],
+        layers: Seed::All,
+        stayer: at(330.0, 0.3),
+        direction: Direction::Valley,
+    };
+    let square = cases::square();
+    let analysis = square.analyse_swivel(&op).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(analysis.candidates.len(), 1);
+    let op = Swivel {
+        emergent: analysis.candidates[0],
+        ..op
+    };
+    let Err(CompoundRefused::Refused(refused)) = square.swivel(&op, &VertexChoices::default())
+    else {
+        panic!("a fourth crease that cannot rise landed");
+    };
+    assert_eq!(refused.refusal, FoldRefusal::FanFourthCannotRise);
+    assert!(refused.fixes.is_empty());
+}
+
+/// A fan whose center lies on a crease is refused.
 #[test]
 fn the_fans_own_refusals() {
     // The incenter of a b d lies on the precreased diagonal a c.
@@ -368,33 +410,10 @@ fn the_fans_own_refusals() {
         layers: Seed::All,
         stayer: [0.9, 0.95],
         direction: Direction::Valley,
-        ridge: None,
     };
     let Err(CompoundRefused::Refused(refused)) = square.rabbit_ear(&op, &VertexChoices::default())
     else {
         panic!("a fan centred on a crease landed");
     };
     assert_eq!(refused.refusal.code(), "fan_center");
-    // A ray next to the stayer's wedge is no ridge.
-    let case = case("3c flat square");
-    let analysis = case
-        .state
-        .analyse_rabbit_ear(&case.op)
-        .unwrap_or_else(|e| panic!("{e}"));
-    let refusals = analysis
-        .given
-        .iter()
-        .filter(|&&ray| {
-            let op = RabbitEar {
-                emergent: analysis.candidates[1],
-                ridge: Some(ray),
-                ..case.op.clone()
-            };
-            matches!(
-                case.state.rabbit_ear(&op, &VertexChoices::default()),
-                Err(CompoundRefused::Refused(r)) if r.refusal == FoldRefusal::FanRidgeNotRay
-            )
-        })
-        .count();
-    assert!(refusals >= 1);
 }

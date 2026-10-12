@@ -4,6 +4,14 @@
 //! emergent fourth, folded as the rabbit ear's are. Free: the vertex lies in
 //! no crease, so the layers are cut there afresh. With the direction seed
 //! the spike found each of its cases unique (research §5.3).
+//!
+//! A rabbit ear on free hinges (Beloch's `swivel-rabbit`, whose emergent
+//! "ear" crease is a mountain), so its letters follow the ear's rule: the
+//! three given creases take the direction's letter and the fourth the other.
+//! The direction seed alone landed a fourth crease beside the paper that
+//! stays with the direction's letter and a given one with the other (the
+//! spike's 90° ray); that is refused now, as the ear's is, and so is a
+//! fourth crease the angles will not let fold opposite the other three.
 
 use serde::{Deserialize, Serialize};
 
@@ -52,7 +60,6 @@ impl Swivel {
             layers: self.layers.clone(),
             stayer: self.stayer,
             direction: self.direction,
-            ridge: None,
         })
     }
 }

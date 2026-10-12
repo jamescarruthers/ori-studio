@@ -23,6 +23,17 @@
 //!   checks it. Paper joined to two wedges at once cannot fold: refused,
 //!   naming it (research §5.3: an emergent ray into a hinge to paper that
 //!   stays left a residual of 0.586).
+//! - **Letters.** A rabbit ear's three bisectors take the direction's letter
+//!   and its fourth crease the other (Lang; Beloch's `flatten-rabbit-ear-*`,
+//!   "`--ear` is mountain" for a valley ear), and a swivel, a rabbit ear on
+//!   free hinges (Beloch's `swivel-rabbit`), the same. The direction seed
+//!   gives the two creases beside the anchor its letter in every layer, so
+//!   the fourth must be one of the far wedge's two rays — the *ridge* the
+//!   ear's flap rises along — and is seeded as it ([`FanFold::compile`]);
+//!   the direction alone leaves either far ray to rise (research §5.3), and
+//!   only the fourth's rising is a rabbit ear. A fourth crease beside the
+//!   paper that stays, or one the angles between the rays will not let rise
+//!   alone ([`folds_with_letters`]), is refused.
 
 use std::collections::{BTreeMap, HashMap};
 use std::f64::consts::{PI, TAU};
@@ -91,13 +102,56 @@ impl Fan {
             .unwrap_or(0)
     }
 
-    /// The largest angle between neighbouring rays.
-    pub(crate) fn widest(&self) -> f64 {
+    /// The angle of each wedge, from ray `w` to ray `w + 1`.
+    pub(crate) fn sectors(&self) -> Vec<f64> {
         let n = self.rays.len();
         (0..n)
             .map(|i| sector(angle_of(self.rays[i]), angle_of(self.rays[(i + 1) % n])))
-            .fold(0.0, f64::max)
+            .collect()
     }
+
+    /// The largest angle between neighbouring rays.
+    pub(crate) fn widest(&self) -> f64 {
+        self.sectors().into_iter().fold(0.0, f64::max)
+    }
+}
+
+/// Whether a flat vertex folds with `letters` (one per crease, `true` for
+/// one letter and `false` for the other): crease `i` runs between sector
+/// `i − 1` and sector `i`, as a [`Fan`]'s rays bound its wedges. Hull's crimp
+/// reduction: a sector no wider than either neighbour whose two creases
+/// differ crimps away, its neighbours merging, until two creases of one
+/// letter are left; a vertex folds with the letters exactly when some
+/// sequence of crimps gets there (the big-little-big lemma is why a sector
+/// narrower than both neighbours between two creases alike never folds).
+pub(crate) fn folds_with_letters(sectors: &[f64], letters: &[bool]) -> bool {
+    let n = sectors.len();
+    if n != letters.len() || n < 2 {
+        return false;
+    }
+    if n == 2 {
+        return letters[0] == letters[1] && (sectors[0] - sectors[1]).abs() <= 1e-9;
+    }
+    (0..n).any(|i| {
+        let (before, after) = ((i + n - 1) % n, (i + 1) % n);
+        let narrowest = sectors[i] <= sectors[before] + 1e-9 && sectors[i] <= sectors[after] + 1e-9;
+        if !narrowest || letters[i] == letters[after] {
+            return false;
+        }
+        // Crimp creases i and i + 1 away: sectors i − 1, i and i + 1 become
+        // one, between creases i − 1 and i + 2.
+        let merged = sectors[before] - sectors[i] + sectors[after];
+        let mut rest_sectors = Vec::with_capacity(n - 2);
+        let mut rest_letters = Vec::with_capacity(n - 2);
+        // Creases i + 2 round to i − 1, each with the sector after it: the
+        // last's is the merged one.
+        for k in 2..n {
+            let c = (i + k) % n;
+            rest_letters.push(letters[c]);
+            rest_sectors.push(if k == n - 1 { merged } else { sectors[c] });
+        }
+        folds_with_letters(&rest_sectors, &rest_letters)
+    })
 }
 
 /// The direction's angle in [0, 2π).
@@ -429,21 +483,23 @@ pub(crate) struct FanFold {
     pub(crate) stayer: Point,
     /// In the model frame.
     pub(crate) direction: Direction,
-    /// The ridge, by ray index (see [`FanFold::compile`]).
-    pub(crate) ridge: Option<usize>,
+    /// The fourth ray, the emergent one, by ray index: the ear's ridge (see
+    /// [`FanFold::compile`]).
+    pub(crate) fourth: usize,
 }
 
 impl FanFold {
     /// The fold compiled: the layers cut, every piece in the block of its
     /// wedge, the anchor's staying, and each wedge's turns.
     ///
-    /// A ridge (four rays only) seeds the far wedge's two creases in the
-    /// first layer, which the direction alone leaves open (research §5.3:
-    /// two orders, differing in which of the two is the ear's ridge): the
-    /// far wedge lies over its neighbour across the ridge, toward the side
-    /// the direction names, and under its other neighbour. The ridge's
-    /// crease is then the one of the four whose letter differs from the
-    /// other three's in that layer.
+    /// The fourth ray rises as the ear's ridge (the module docs): it must be
+    /// one of the far wedge's two rays, refused otherwise, and seeds them in
+    /// every layer, which the direction alone leaves open (research §5.3:
+    /// two orders, differing in which of the two rises): the far wedge lies
+    /// over its neighbour across the fourth ray, toward the side the
+    /// direction names, and under its other neighbour. The fourth's crease
+    /// is then the one of each layer's four whose letter differs from the
+    /// other three's, which take the direction's.
     pub(crate) fn compile(&self, state: &State) -> Result<Compiled, Refused> {
         let fan = &self.fan;
         let n = fan.rays.len();
@@ -552,28 +608,34 @@ impl FanFold {
             }
         }
 
-        // The ridge's seeds, in the first layer.
-        let mut extra = Vec::new();
-        if let Some(ridge) = self.ridge {
-            let far = (anchor + 2) % n;
-            if n != 4 || (ridge != far && ridge != (far + 1) % n) {
-                return Err(FoldRefusal::FanRidgeNotRay.into());
-            }
-            let first = self.layers.first().copied();
-            let piece = |w: usize| {
-                (0..count).find(|&a| Some(scoring.old[a]) == first && wedge_of[a] == Some(w))
-            };
-            let (over, under) = if ridge == far {
-                ((far + n - 1) % n, (far + 1) % n)
-            } else {
-                ((far + 1) % n, (far + n - 1) % n)
-            };
+        // The fourth ray is the ridge: one of the far wedge's two rays, and
+        // the odd letter out of the four.
+        let far = (anchor + 2) % n;
+        if n != 4 || (self.fourth != far && self.fourth != (far + 1) % n) {
+            return Err(FoldRefusal::FanFourthBesideStayer.into());
+        }
+        let odd: Vec<bool> = (0..n).map(|i| i == self.fourth).collect();
+        if !folds_with_letters(&fan.sectors(), &odd) {
+            return Err(FoldRefusal::FanFourthCannotRise.into());
+        }
+        let (over, under) = if self.fourth == far {
+            ((far + n - 1) % n, (far + 1) % n)
+        } else {
+            ((far + 1) % n, (far + n - 1) % n)
+        };
+        let up = self.direction == Direction::Valley;
+        let mut extra = Vec::with_capacity(2 * self.layers.len());
+        for &layer in &self.layers {
+            let piece =
+                |w: usize| (0..count).find(|&a| scoring.old[a] == layer && wedge_of[a] == Some(w));
             let (Some(f), Some(o), Some(u)) = (piece(far), piece(over), piece(under)) else {
-                return Err(FoldRefusal::FanRidgeNotRay.into());
+                return Err(FoldRefusal::Internal {
+                    message: "a cut layer has no piece in a wedge".to_string(),
+                }
+                .into());
             };
-            let up = self.direction == Direction::Valley;
-            // The far wedge over its neighbour across the ridge, under the
-            // other, toward the side the direction names.
+            // The far wedge over its neighbour across the fourth ray, under
+            // the other, toward the side the direction names.
             for (x, y) in [(f, o), (u, f)] {
                 extra.push(if up { [x, y] } else { [y, x] });
             }
@@ -675,7 +737,6 @@ pub(crate) struct FanInput {
     pub(crate) stayer: Point,
     /// As the viewer sees it.
     pub(crate) direction: Direction,
-    pub(crate) ridge: Option<Point>,
 }
 
 /// A fan fold's rays and layers, before it lands: what a tool previews and
@@ -736,17 +797,14 @@ impl FanInput {
         if fan.widest() >= PI - 1e-9 {
             return Err(FoldRefusal::FanNotFlat.into());
         }
-        let ridge = match self.ridge {
-            Some(r) => Some(nearest(&fan.rays, r).ok_or(FoldRefusal::FanRidgeNotRay)?),
-            None => None,
-        };
+        let fourth = nearest(&fan.rays, candidates[k]).ok_or(FoldRefusal::FanNotFlat)?;
         let compiled = FanFold {
             kind: self.kind,
             layers: fan_layers(state, self.center, &self.layers, direction)?,
             fan: fan.clone(),
             stayer: self.stayer,
             direction,
-            ridge,
+            fourth,
         }
         .compile(state)?;
         Ok((fan, compiled))
@@ -853,6 +911,13 @@ impl FanInput {
     /// Land the fold. A refusal of the emergent ray asked for offers each
     /// other candidate that lands, and the other direction when it lands
     /// and no order fits this one.
+    ///
+    /// A stored order is replayed only when the fold leaves several: one it
+    /// lands alone is the ear whatever a step stored. A rabbit ear stored
+    /// before its fourth crease was seeded as the ridge kept a `ridge`, or
+    /// an order, choosing between the two the direction left; the ridge is
+    /// no longer read, and an order that chose a corner's crease to rise
+    /// would conflict with the seed, so the ear the rule leaves is landed.
     pub(crate) fn land(
         &self,
         state: &State,
@@ -863,22 +928,29 @@ impl FanInput {
         let candidates = kawasaki(&self.given);
         let k = nearest(&candidates, self.emergent)
             .ok_or(CompoundRefused::Refused(FoldRefusal::FanNotFlat.into()))?;
+        let other = || {
+            self.compile(state, &candidates, k, direction.opposite())
+                .ok()
+        };
         let landed = self
             .compile(state, &candidates, k, direction)
             .map_err(CompoundRefused::Refused)
             .and_then(|compiled| {
-                compiled.land(state, choices, limits, || {
-                    self.compile(state, &candidates, k, direction.opposite())
-                        .ok()
-                })
+                if choices.completion.is_none() {
+                    return compiled.land(state, choices, limits, other);
+                }
+                match compiled.land(state, &VertexChoices::default(), limits, other) {
+                    Ok(VertexOutcome::ChooseOrder(_)) => {
+                        compiled.land(state, choices, limits, || None)
+                    }
+                    outcome => outcome,
+                }
             });
         match landed {
             Err(CompoundRefused::Refused(mut refused))
                 if !matches!(
                     refused.refusal,
-                    FoldRefusal::WitnessNotInFace { .. }
-                        | FoldRefusal::FanRidgeNotRay
-                        | FoldRefusal::EmptySeed
+                    FoldRefusal::WitnessNotInFace { .. } | FoldRefusal::EmptySeed
                 ) =>
             {
                 for j in (0..candidates.len()).filter(|&j| j != k) {
@@ -938,6 +1010,38 @@ mod tests {
         // turn, and only it holds a candidate.
         let narrow = [[1.0, 0.0], [0.9, 0.3], [0.8, 0.5]].map(|r| unit(r).unwrap_or_default());
         assert_eq!(kawasaki(&narrow).len(), 1);
+    }
+
+    #[test]
+    fn the_odd_crease_out_bounds_a_narrowest_angle() {
+        let deg = |s: [f64; 4]| s.map(f64::to_radians);
+        let odd = |k: usize| -> Vec<bool> { (0..4).map(|i| i == k).collect() };
+        // The flat square's incenter ear (rays to c, a, the fourth, b):
+        // 45° is the narrowest, between the fourth (crease 2) and b
+        // (crease 3), so either can be the odd one, never a or c.
+        let ear = deg([135.0, 67.5, 45.0, 112.5]);
+        assert!(folds_with_letters(&ear, &odd(2)));
+        assert!(folds_with_letters(&ear, &odd(3)));
+        assert!(!folds_with_letters(&ear, &odd(0)));
+        assert!(!folds_with_letters(&ear, &odd(1)));
+        // Two narrowest angles side by side (the swivel spike's 90° ray):
+        // the odd one is any of the three creases bounding them.
+        let run = deg([59.0, 59.0, 121.0, 121.0]);
+        for k in 0..3 {
+            assert!(folds_with_letters(&run, &odd(k)), "{k}");
+        }
+        assert!(!folds_with_letters(&run, &odd(3)));
+        // Four right angles fold with any one crease odd, and never with
+        // two of each letter (Maekawa).
+        let square = deg([90.0, 90.0, 90.0, 90.0]);
+        for k in 0..4 {
+            assert!(folds_with_letters(&square, &odd(k)));
+        }
+        assert!(!folds_with_letters(&square, &[true, true, false, false]));
+        // The rays toward 0°, 270° and 300° with their fourth at 150°.
+        let swivel = deg([150.0, 120.0, 30.0, 60.0]);
+        assert!(!folds_with_letters(&swivel, &odd(1)));
+        assert!(folds_with_letters(&swivel, &odd(2)));
     }
 
     #[test]

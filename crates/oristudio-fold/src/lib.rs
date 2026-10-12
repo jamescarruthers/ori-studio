@@ -35,9 +35,9 @@
 //!   reverse fold with per-flap openings, kind feasibility, refusals with
 //!   fixes and stored choices; the vertex folds (research §5.3) —
 //!   [`State::squash`] with per-layer creases, [`State::petal_fold`] over
-//!   precreases, [`State::rabbit_ear`] with its ridge and [`State::swivel`]
-//!   — each a direction-seeded completion with its preconditions refused up
-//!   front; [`State::sink`] and [`State::unsink`], the open and closed sink
+//!   precreases, [`State::rabbit_ear`] and [`State::swivel`] with their
+//!   fourth crease rising as the ridge, the odd letter out — each a
+//!   direction-seeded completion with its preconditions refused up front; [`State::sink`] and [`State::unsink`], the open and closed sink
 //!   of a closed point and the unsink back; and the [`StepMotion`] a
 //!   compound step's animation draws (plan D15).
 //! - [`import`]: Import CP — a crease pattern's sheet, faces and isometries,
