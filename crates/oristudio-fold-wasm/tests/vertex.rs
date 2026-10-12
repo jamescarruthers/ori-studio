@@ -555,3 +555,276 @@ fn vertex_refusals_are_codes_with_fixes() {
     let mut pending = Pending::new();
     assert!(pending.pick(&mut bridge, 7, &[0]).is_err());
 }
+
+// ---------------------------------------------------------------------------
+// The petal fold, its H named by a precrease or by its two ends
+
+/// The vertex spike's petal landmarks on the preliminary base, in the model
+/// frame: H's ends a tan(π/8)/2 along the closed edges from the side
+/// corners, the closed point, the open corner and the petal.
+const T22: f64 = 0.207_106_781_186_547_5;
+const ENDS: [Point; 2] = [[T22, 0.5], [0.5, T22]];
+const CLOSED_POINT: Point = [0.5, 0.5];
+const OPEN_CORNER: Point = [0.0, 0.0];
+const PETAL: Point = [0.26, 0.2];
+
+/// The sheet point under the model point `p` on the layer the viewer sees
+/// on top at `near`: for a point on a crease, where no layer is on top.
+fn sheet_on_top_near(state: &State, p: Point, near: Point) -> Point {
+    let mut stack = state.stack_at(near).unwrap_or_default();
+    if state.view().flipped {
+        stack.reverse();
+    }
+    state
+        .isometry(stack[0])
+        .unwrap_or_default()
+        .inverse()
+        .apply(p)
+}
+
+/// The vertex spike's case 1b through the bridge: the diagonal route
+/// squashed, turned over and squashed again.
+fn preliminary(bridge: &mut Bridge) -> u32 {
+    let squash = |bridge: &Bridge, state: u32, p: Point| {
+        let flap = seen_top(bridge.state(state).unwrap_or_else(|e| panic!("{e}")), p);
+        json!({ "kind": "squash", "flap": flap, "direction": "valley" })
+    };
+    let tri = small_triangle(bridge);
+    let step = squash(bridge, tri, [0.1, 0.5]);
+    let one = land(bridge, tri, step);
+    let turned = land(bridge, one, json!({ "kind": "turn", "axis": "vertical" }));
+    let step = squash(bridge, turned, [0.1, 0.7]);
+    land(bridge, turned, step)
+}
+
+/// A valley precrease along a model line, `toward`'s side moving.
+fn precrease(bridge: &mut Bridge, state: u32, line: [Point; 2], toward: Point, seed: Seed) -> u32 {
+    let [p, q] = line;
+    let line = oristudio_geometry::Line::from_points(p, q).unwrap_or_else(|| unreachable!());
+    let side = oristudio_fold::Side::of_point(&line, toward).unwrap_or_else(|| unreachable!());
+    let fold = PlainFold::new(line, side, oristudio_fold::Direction::Valley).with_seed(seed);
+    let mut step = plain_step(&fold);
+    step["kind"] = json!("precrease");
+    step["direction"] = json!("valley");
+    land(bridge, state, step)
+}
+
+/// The kite creases on the front flap, each through its top layer (and the
+/// one hinged to it), as the engine's vertex cases precrease them.
+fn kites(bridge: &mut Bridge, state: u32) -> u32 {
+    let sides = [[0.0, 0.5], [0.5, 0.0]];
+    let near = [[0.03, 0.44], [0.44, 0.03]];
+    let mut s = state;
+    for k in 0..2 {
+        let at = seen_top(bridge.state(s).unwrap_or_else(|e| panic!("{e}")), near[k]);
+        s = precrease(
+            bridge,
+            s,
+            [OPEN_CORNER, ENDS[k]],
+            sides[k],
+            Seed::Depth { at, layers: 1 },
+        );
+    }
+    s
+}
+
+/// The petal fold of the front flap with H through its two ends, as the
+/// document stores it.
+fn petal_by_ends(state: &State) -> Value {
+    let ends = [
+        sheet_on_top_near(state, ENDS[0], [0.2, 0.45]),
+        sheet_on_top_near(state, ENDS[1], [0.45, 0.2]),
+    ];
+    json!({
+        "kind": "petal",
+        "ends": ends,
+        "petal": seen_top(state, PETAL),
+        "direction": "valley"
+    })
+}
+
+/// H named by its two ends on the preliminary base, nothing precreased: the
+/// question names the ends, the corner and what the fold creases; the fold
+/// lands what the engine lands with the ends' images — H in the top layer
+/// and the four kite creases scored, the closed edges below H unfolded —
+/// and replays, through `apply` and the tools' call alike, to that state;
+/// its picture is H's. Over precreases, the same ends fold exactly what the
+/// precrease's own form folds.
+#[test]
+fn a_petal_fold_by_its_ends_creases_h_and_lands_as_the_engine_does() {
+    let mut bridge = Bridge::new();
+    let base = preliminary(&mut bridge);
+    let state = bridge.state(base).unwrap_or_else(|e| panic!("{e}")).clone();
+    let step = petal_by_ends(&state);
+
+    let asked = analysis(&bridge, base, step.clone());
+    let petal = &asked["analysis"];
+    assert_eq!(petal["kind"], "petal", "{asked}");
+    assert_eq!(petal["scores_line"], true);
+    assert_eq!(petal["scores_kites"], json!([true, true]));
+    let near = |v: &Value, p: Point| {
+        let q: Point = serde_json::from_value(v.clone()).unwrap_or_else(|e| panic!("{e}"));
+        (q[0] - p[0]).hypot(q[1] - p[1]) < 1e-9
+    };
+    assert!(near(&petal["corner"], OPEN_CORNER), "{petal}");
+    assert!(
+        ENDS.iter()
+            .all(|&e| (0..2).any(|k| near(&petal["ends"][k], e))),
+        "{petal}"
+    );
+    assert!(asked["orders"].is_null());
+
+    let applied = apply(&mut bridge, base, step.clone(), json!({}));
+    assert_eq!(applied["status"], "ok", "{applied}");
+    let vertex = &applied["compound"];
+    assert_eq!(vertex["family"], "vertex");
+    assert_eq!(vertex["kind"], "petal");
+    assert_eq!(vertex["created"].as_array().map(Vec::len), Some(6));
+    assert_eq!(vertex["unfolded"].as_array().map(Vec::len), Some(2));
+    assert!(vertex["stored"].as_object().is_some_and(|o| o.is_empty()));
+    let child = applied["state"].as_u64().unwrap_or_default() as u32;
+    let parts = |bridge: &Bridge, h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
+    // The engine's own fold of the ends' images.
+    let engine = state
+        .petal_fold(
+            &oristudio_fold::PetalFold {
+                hinge: oristudio_fold::PetalHinge::Points {
+                    from: ENDS[0],
+                    to: ENDS[1],
+                },
+                petal: seen_top(&state, PETAL),
+                direction: oristudio_fold::Direction::Valley,
+            },
+            &oristudio_fold::VertexChoices::default(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+    let oristudio_fold::VertexOutcome::Landed(engine) = engine else {
+        panic!("a choice of orders");
+    };
+    let landed = parts(&bridge, child).unwrap_or_else(|| unreachable!());
+    // The same faces, creases and order; the vertices to the last bits the
+    // ends' sheet points round through.
+    let want = engine.state.parts();
+    assert_eq!(landed.faces, want.faces);
+    assert_eq!(landed.creases, want.creases);
+    assert_eq!(landed.order, want.order);
+    assert_eq!(landed.vertices.len(), want.vertices.len());
+    for (p, q) in landed.vertices.iter().zip(&want.vertices) {
+        assert!((p[0] - q[0]).hypot(p[1] - q[1]) < 1e-12, "{p:?} {q:?}");
+    }
+
+    // Replayed, and through the tools' call: the same state.
+    let again = land(&mut bridge, base, step.clone());
+    assert_eq!(parts(&bridge, again), parts(&bridge, child));
+    let mut pending = Pending::new();
+    let tried = ok(pending.try_fold(&mut bridge, base, &op(step.clone()), &Choices::default()));
+    assert_eq!(tried["result"], "landed");
+    assert_eq!(tried["compound"], applied["compound"]);
+    // Its picture: H, the one the tool previewed.
+    let pictured = ok(bridge.step_action(child))["action"].clone();
+    let previewed = ok(bridge.action(base, &op(step), &Choices::default()))["action"].clone();
+    assert!(
+        pictured["line"].is_array() && pictured["grip"].is_object(),
+        "{pictured}"
+    );
+    for key in ["line", "spans", "moving"] {
+        assert_eq!(pictured[key], previewed[key], "{key}");
+    }
+
+    // Over precreases (the kites through the top two layers, H through
+    // every layer), H named by its ends folds what H named by the crease
+    // folds, and the question says it creases nothing.
+    let kited = kites(&mut bridge, base);
+    let ready = precrease(&mut bridge, kited, ENDS, CLOSED_POINT, Seed::All);
+    let ready_state = bridge
+        .state(ready)
+        .unwrap_or_else(|e| panic!("{e}"))
+        .clone();
+    let on_h = [
+        ENDS[0][0] + 0.25 * (ENDS[1][0] - ENDS[0][0]),
+        ENDS[0][1] + 0.25 * (ENDS[1][1] - ENDS[0][1]),
+    ];
+    let by_crease = json!({
+        "kind": "petal",
+        "crease": sheet_on_top_near(&ready_state, on_h, [on_h[0] - 0.01, on_h[1] - 0.02]),
+        "petal": seen_top(&ready_state, PETAL),
+        "direction": "valley"
+    });
+    let by_ends = petal_by_ends(&ready_state);
+    for step in [&by_crease, &by_ends] {
+        let asked = analysis(&bridge, ready, step.clone());
+        assert_eq!(asked["analysis"]["scores_line"], false, "{asked}");
+        assert_eq!(asked["analysis"]["scores_kites"], json!([false, false]));
+    }
+    let crease_landed = land(&mut bridge, ready, by_crease);
+    let ends_landed = land(&mut bridge, ready, by_ends);
+    assert_eq!(parts(&bridge, crease_landed), parts(&bridge, ends_landed));
+}
+
+/// H by its ends: an end off the paper or two ends together are refused as
+/// a free line's points are; ends that miss the flap, or sit too near its
+/// closed point, by the engine's codes; `crease` and `ends` together, or
+/// neither, is the caller's mistake.
+#[test]
+fn a_petal_fold_by_its_ends_is_refused_by_code() {
+    let mut bridge = Bridge::new();
+    let base = preliminary(&mut bridge);
+    let state = bridge.state(base).unwrap_or_else(|e| panic!("{e}")).clone();
+    let petal = seen_top(&state, PETAL);
+    let with_ends = |ends: [Point; 2]| json!({ "kind": "petal", "ends": ends, "petal": petal, "direction": "valley" });
+    let code = |bridge: &mut Bridge, step: Value| {
+        apply(bridge, base, step, json!({}))["refusal"]["code"].clone()
+    };
+    let a = sheet_on_top_near(&state, ENDS[0], [0.2, 0.45]);
+    assert_eq!(
+        code(&mut bridge, with_ends([a, [3.0, 3.0]])),
+        "point_off_paper"
+    );
+    assert_eq!(code(&mut bridge, with_ends([a, a])), "free_line_too_short");
+    // Across the open corner, from raw edge to raw edge: H meets neither
+    // closed edge. (Every line through two points of this paper meets the
+    // flap, which covers it all: the engine's own tests miss it.)
+    let corner = [
+        sheet_on_top_near(&state, [0.0, 0.02], [0.004, 0.012]),
+        sheet_on_top_near(&state, [0.02, 0.0], [0.012, 0.004]),
+    ];
+    let refused = apply(
+        &mut bridge,
+        base,
+        json!({
+            "kind": "petal",
+            "ends": corner,
+            "petal": seen_top(&state, [0.009, 0.005]),
+            "direction": "valley"
+        }),
+        json!({}),
+    );
+    assert_eq!(refused["refusal"]["code"], "petal_no_flap", "{refused}");
+    assert_eq!(refused["refusal"]["cause"], "no_ends", "{refused}");
+    // Too near the closed point: the flap reaches past the kites' corner.
+    let high = [
+        sheet_on_top_near(&state, [0.4, 0.5], [0.4, 0.45]),
+        sheet_on_top_near(&state, [0.5, 0.4], [0.45, 0.4]),
+    ];
+    let refused = apply(&mut bridge, base, with_ends(high), json!({}));
+    assert_eq!(refused["refusal"]["code"], "petal_no_flap", "{refused}");
+    assert_eq!(refused["refusal"]["cause"], "no_corner");
+    assert_eq!(refused["refusal"]["detail"]["kind"], "past_corner");
+    assert!(
+        refused["refusal"]["detail"]["corner"].is_array(),
+        "{refused}"
+    );
+    // Both names of H, or neither: thrown.
+    for step in [
+        json!({ "kind": "petal", "crease": a, "ends": [a, a], "petal": petal, "direction": "valley" }),
+        json!({ "kind": "petal", "petal": petal, "direction": "valley" }),
+    ] {
+        assert!(
+            matches!(
+                bridge.apply(base, &op(step), &Choices::default()),
+                Err(BridgeError::InvalidInput(_))
+            ),
+            "both or neither"
+        );
+    }
+}

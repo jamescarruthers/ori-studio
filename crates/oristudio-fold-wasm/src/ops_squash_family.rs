@@ -5,8 +5,10 @@
 //! `FoldPetalOp`, `FoldRabbitEarOp`, `FoldSwivelOp` in
 //! `apps/web/src/fold/document/foldSequenceDocument.ts`). What names paper is
 //! a sheet point, resolved here in the parent (plan D6): the flap and the
-//! petal on their layers, a point on H's precrease, the triangle's corners,
-//! the swivel's vertex and the points its rays run toward, the stayer. What
+//! petal on their layers, a point on H's precrease or H's two ends, the
+//! triangle's corners, the swivel's vertex and the points its rays run
+//! toward, the stayer. A petal fold's H named by its ends need not be
+//! creased: the engine creases it (`PetalHinge::Points`). What
 //! the step chose is a result: the spine's target and the emergent ray are
 //! directions in the parent's model frame, and replay takes the nearest (an
 //! axiom's root is replayed the same way). A step's `choices.completion` is
@@ -59,10 +61,11 @@
 
 use std::collections::HashMap;
 
+use oristudio_fold::numerics::MIN_FEATURE;
 use oristudio_fold::{
-    ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, PetalAnalysis,
-    PetalFold, PetalHinge, RabbitEar, Refused, Squash, SquashAnalysis, State, StepSummary, Swivel,
-    VertexChoice, VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
+    ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, LineRefusal,
+    PetalAnalysis, PetalFold, PetalHinge, RabbitEar, Refused, Squash, SquashAnalysis, State,
+    StepSummary, Swivel, VertexChoice, VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -92,11 +95,17 @@ pub struct SquashOp {
     pub direction: Direction,
 }
 
-/// `FoldPetalOp`: H by a sheet point inside its precrease's sheet segment,
-/// the petal by a sheet point on the flap's top layer below H, the direction.
+/// `FoldPetalOp`: H by a sheet point inside its precrease's sheet segment
+/// (`crease`, H and the kite creases precreased), or by two sheet points,
+/// its ends, that need not be on any crease (`ends`, the fold creasing what
+/// is missing) — one of the two; the petal by a sheet point on the flap's top
+/// layer below H; the direction.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct PetalOp {
-    pub crease: Point,
+    #[serde(default)]
+    pub crease: Option<Point>,
+    #[serde(default)]
+    pub ends: Option<[Point; 2]>,
     pub petal: Point,
     pub direction: Direction,
 }
@@ -150,7 +159,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
     let image = |name: &str, p: Point| -> Result<Point, Rejection> {
         finite_point(name, p)?;
         parent.resolve_point(p).ok_or(Rejection::Refused(
-            oristudio_fold::LineRefusal::PointOffPaper { point: p }.into(),
+            LineRefusal::PointOffPaper { point: p }.into(),
         ))
     };
     let direction = |name: &str, d: Point| -> Result<Point, BridgeError> {
@@ -173,14 +182,35 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
             })
         }
         Op::Petal(op) => {
-            finite_point("crease", op.crease)?;
             finite_point("petal", op.petal)?;
-            let line = parent
-                .crease_at(op.crease)
-                .and_then(|c| parent.crease_line(c.id))
-                .ok_or(BridgeRefusal::CreaseNotFound { point: op.crease })?;
+            let hinge = match (op.crease, op.ends) {
+                (Some(crease), None) => {
+                    finite_point("crease", crease)?;
+                    let line = parent
+                        .crease_at(crease)
+                        .and_then(|c| parent.crease_line(c.id))
+                        .ok_or(BridgeRefusal::CreaseNotFound { point: crease })?;
+                    PetalHinge::Crease { line }
+                }
+                (None, Some([a, b])) => {
+                    // As a free line's two points resolve (the crimp's
+                    // second line's rule).
+                    let (from, to) = (image("ends", a)?, image("ends", b)?);
+                    let distance = (to[0] - from[0]).hypot(to[1] - from[1]);
+                    if distance < MIN_FEATURE {
+                        return Err(LineRefusal::FreeLineTooShort { a, b, distance }.into());
+                    }
+                    PetalHinge::Points { from, to }
+                }
+                _ => {
+                    return Err(BridgeError::InvalidInput(
+                        "a petal fold names H by `crease` or by `ends`, one of the two".to_string(),
+                    )
+                    .into());
+                }
+            };
             EngineOp::Petal(PetalFold {
-                hinge: PetalHinge::Crease { line },
+                hinge,
                 petal: op.petal,
                 direction: op.direction,
             })
