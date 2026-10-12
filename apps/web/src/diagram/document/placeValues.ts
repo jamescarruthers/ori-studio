@@ -56,8 +56,20 @@ export function placeScale(value: unknown): DiagramPlaceScale | null {
 }
 
 /**
- * A placement as it is kept ({@link placeOffset}, {@link placeScale}), every
- * field in the order it is written; undefined when nothing is left of it.
+ * A caption's pinned width as it is kept: a finite length to a tenth of a mm,
+ * above zero once kept so. Null for anything else. How wide it may print is
+ * the layout's to hold.
+ */
+export function placeTextWidth(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const mm = toTenth(value);
+  return mm > 0 ? mm : null;
+}
+
+/**
+ * A placement as it is kept ({@link placeOffset}, {@link placeScale},
+ * {@link placeTextWidth}), every field in the order it is written; undefined
+ * when nothing is left of it.
  */
 export function normalizeStepPlace(place: DiagramStepPlace | undefined): DiagramStepPlace | undefined {
   if (!place) return undefined;
@@ -68,6 +80,8 @@ export function normalizeStepPlace(place: DiagramStepPlace | undefined): Diagram
   }
   const scale = place.scale === undefined ? null : placeScale(place.scale);
   if (scale) kept.scale = scale;
+  const textWidth = place.textWidth === undefined ? null : placeTextWidth(place.textWidth);
+  if (textWidth !== null) kept.textWidth = textWidth;
   return Object.keys(kept).length > 0 ? kept : undefined;
 }
 
@@ -88,6 +102,8 @@ export function patchedStepPlace(
   }
   if (patch.scale === null) delete next.scale;
   else if (patch.scale !== undefined && placeScale(patch.scale) !== null) next.scale = patch.scale;
+  if (patch.textWidth === null) delete next.textWidth;
+  else if (patch.textWidth !== undefined && placeTextWidth(patch.textWidth) !== null) next.textWidth = patch.textWidth;
   return normalizeStepPlace(next);
 }
 
@@ -96,10 +112,15 @@ export function samePlace(a: DiagramStepPlace | undefined, b: DiagramStepPlace |
   return a === b || JSON.stringify(normalizeStepPlace(a)) === JSON.stringify(normalizeStepPlace(b));
 }
 
-/** A placement with the fields `part` names taken out: undefined when nothing is left. */
+/**
+ * A placement with the fields `part` names taken out: undefined when nothing
+ * is left. The text's reset takes its pinned width with its offset; every
+ * offset (`position`) leaves the pins, the scale and the width.
+ */
 export function resetPlace(place: DiagramStepPlace | undefined, part: Exclude<DiagramPlaceReset, 'all'>): DiagramStepPlace | undefined {
   if (!place) return undefined;
-  const parts: readonly (keyof DiagramStepPlace)[] = part === 'position' ? PLACE_OFFSETS : [part];
+  const parts: readonly (keyof DiagramStepPlace)[] =
+    part === 'position' ? PLACE_OFFSETS : part === 'text' ? ['text', 'textWidth'] : [part];
   const next: DiagramStepPlace = { ...place };
   for (const each of parts) delete next[each];
   return normalizeStepPlace(next);

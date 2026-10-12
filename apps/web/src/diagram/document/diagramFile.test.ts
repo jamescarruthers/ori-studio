@@ -1986,6 +1986,30 @@ describe('a step placed by hand in the file (page overrides)', () => {
     expect(throughJson(writeDiagram({ ...document, steps } as typeof document)).steps[1].place).toEqual({ picture: [2.4, 0] });
   });
 
+  it('round-trips a caption’s pinned width, alone or with the rest, byte for byte', () => {
+    for (const value of [{ textWidth: 62.5 }, { text: [-3, 0], textWidth: 40 }, { ...PLACED, textWidth: 28.1 }]) {
+      const { written, read, step } = withPlace(value);
+      expect(step.placeNewer).toBeUndefined();
+      expect(step.place).toEqual(value);
+      expect(JSON.stringify(throughJson(writeDiagram(read.document)))).toBe(JSON.stringify(written));
+    }
+    // Kept to a tenth of a mm, as an offset is.
+    expect(withPlace({ textWidth: 37.25 }).step.place).toEqual({ textWidth: 37.3 });
+  });
+
+  it.each([
+    ['of no width', 0],
+    ['under a twentieth of a mm', 0.04],
+    ['below zero', -12],
+    ['that is no number', '40mm'],
+    ['that is null', null],
+  ] as const)('drops a caption width %s alone, and keeps the rest of the placement', (_label, textWidth) => {
+    const { step } = withPlace({ ...PLACED, textWidth });
+    expect(step.place).toEqual(PLACED);
+    expect(step.placeNewer).toBeUndefined();
+    expect(withPlace({ textWidth }).step.place).toBeUndefined();
+  });
+
   it.each([
     ['an offset that is not two numbers', { ...PLACED, frame: [1, 2, 3] }, 'frame'],
     ['an offset that is not finite', { ...PLACED, text: [Number.MAX_VALUE * 10, 1] }, 'text'],

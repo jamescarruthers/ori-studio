@@ -166,7 +166,7 @@ import {
 } from './diagramDocument';
 import { readPageArrangements, writePageArrangements } from './pageArrangements';
 import { validateStepDiagramModel } from './stepDiagramModelFile';
-import { normalizeStepPlace, PLACE_OFFSETS, placeOffset, placeScale } from './stepPlace';
+import { normalizeStepPlace, PLACE_OFFSETS, placeOffset, placeScale, placeTextWidth } from './stepPlace';
 
 /** A diagram read from a file. */
 export interface ReadDiagram {
@@ -2231,7 +2231,7 @@ function writeStepZoom(zoom: DiagramStepZoom): Record<string, unknown> {
 }
 
 /** The fields a step's placement is written with, and its pin's; any other is a newer build's. */
-const PLACE_KEYS: ReadonlySet<string> = new Set([...PLACE_OFFSETS, 'scale']);
+const PLACE_KEYS: ReadonlySet<string> = new Set([...PLACE_OFFSETS, 'scale', 'textWidth']);
 const PLACE_SCALE_KEYS: ReadonlySet<string> = new Set(['mmPerUnit', 'frameMm']);
 
 /**
@@ -2256,6 +2256,8 @@ function readStepPlace(value: unknown): Pick<DiagramStep, 'place' | 'placeNewer'
   }
   const scale = placeScale(value.scale);
   if (scale) place.scale = scale;
+  const textWidth = placeTextWidth(value.textWidth);
+  if (textWidth !== null) place.textWidth = textWidth;
   return Object.keys(place).length > 0 ? { place } : {};
 }
 

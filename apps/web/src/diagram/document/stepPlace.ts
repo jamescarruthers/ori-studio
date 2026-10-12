@@ -24,7 +24,7 @@ import {
 } from './diagramDocument';
 
 // Keep the editing API stable while the layout consumes only the value layer.
-export { PLACE_OFFSETS, PLACE_OFFSET_STEP_MM, placeOffset, placeScale, normalizeStepPlace, patchedStepPlace, samePlace, resetPlace, type DiagramStepPlacePatch } from './placeValues';
+export { PLACE_OFFSETS, PLACE_OFFSET_STEP_MM, placeOffset, placeScale, placeTextWidth, normalizeStepPlace, patchedStepPlace, samePlace, resetPlace, type DiagramStepPlacePatch } from './placeValues';
 import { patchedStepPlace, samePlace, resetPlace, type DiagramStepPlacePatch } from './placeValues';
 
 /** Whether a step is placed by hand: by this build, or by a newer one this build carries. */

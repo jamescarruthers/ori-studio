@@ -859,6 +859,14 @@ export interface DiagramStepPlace {
    * comes back. Finite and above zero.
    */
   scale?: DiagramPlaceScale;
+  /**
+   * The caption's measure, pinned: the width its lines are set at, mm, to a
+   * tenth (`implementation-plans/diagram-caption-resize.md`). Its height is
+   * always its text's. Not structure: a flow page holding its arrangement
+   * keeps it, and a re-pack sizes the step's box for it. Finite and above
+   * zero; how wide it may print is the layout's to hold.
+   */
+  textWidth?: number;
 }
 
 /** A pinned scale ({@link DiagramStepPlace.scale}): the `PictureMeasure` the layout passes around. */
@@ -868,11 +876,12 @@ export type DiagramPlaceScale = { mmPerUnit: number } | { frameMm: number };
 export type DiagramPlaceOffset = 'frame' | 'number' | 'picture' | 'text';
 
 /**
- * What a reset of a step's placement clears: one offset, the pinned scale,
- * every offset (`position`), or the lot (`all`), which drops a newer build's
- * record too.
+ * What a reset of a step's placement clears: one offset — the text's with
+ * the caption's pinned width — the pinned scale, the pinned caption width
+ * alone (`textWidth`), every offset (`position`), or the lot (`all`), which
+ * drops a newer build's record too.
  */
-export type DiagramPlaceReset = DiagramPlaceOffset | 'scale' | 'position' | 'all';
+export type DiagramPlaceReset = DiagramPlaceOffset | 'scale' | 'textWidth' | 'position' | 'all';
 
 /**
  * How many ticks an equality mark draws: across each half of an angle mark,

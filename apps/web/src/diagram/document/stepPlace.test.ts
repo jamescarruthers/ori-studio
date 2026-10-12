@@ -18,6 +18,7 @@ import {
   placementBlocker,
   placeOffset,
   placeScale,
+  placeTextWidth,
   resetStepPlace,
   resetStepPlaces,
   setStepPlace,
@@ -81,6 +82,22 @@ describe('a placement as it is kept', () => {
     expect(patchedStepPlace(place, { text: [0.02, 0] })).toEqual({ number: [1, 0], scale: { frameMm: 40 } });
     expect(patchedStepPlace({ text: [1, 0] }, { text: null })).toBeUndefined();
     expect(patchedStepPlace(undefined, { picture: [0, 1.26] })).toEqual({ picture: [0, 1.3] });
+  });
+
+  it('keeps a caption’s pinned width to a tenth of a mm, above zero, last of the fields', () => {
+    expect(placeTextWidth(62.54)).toBe(62.5);
+    expect(placeTextWidth(0.1 + 0.2)).toBe(0.3);
+    for (const value of [0, 0.04, -5, Infinity, Number.NaN, '40', null, [40]]) expect(placeTextWidth(value)).toBeNull();
+    const shuffled = { textWidth: 41.06, scale: { frameMm: 40 }, text: [2, 0] } as DiagramStepPlace;
+    expect(JSON.stringify(normalizeStepPlace(shuffled))).toBe('{"text":[2,0],"scale":{"frameMm":40},"textWidth":41.1}');
+    expect(normalizeStepPlace({ textWidth: 0.02 })).toBeUndefined();
+    // Set, cleared with null, and a value that is no width at all is no change.
+    expect(patchedStepPlace({ text: [1, 0] }, { textWidth: 55 })).toEqual({ text: [1, 0], textWidth: 55 });
+    expect(patchedStepPlace({ textWidth: 55 }, { textWidth: null })).toBeUndefined();
+    expect(patchedStepPlace({ textWidth: 55 }, { textWidth: 0 })).toEqual({ textWidth: 55 });
+    expect(patchedStepPlace({ textWidth: 55 }, { textWidth: Number.NaN, text: [-4, 0] })).toEqual({ text: [-4, 0], textWidth: 55 });
+    // Only its width placed, a step is placed by hand.
+    expect(isPlacedStep({ ...cpStep('step-1'), place: { textWidth: 40 } })).toBe(true);
   });
 
   it('takes a value that is not one as no change: only null clears a field', () => {
@@ -153,6 +170,19 @@ describe('resetting a placement', () => {
     // Nothing to reset is no edit.
     expect(resetStepPlace(document, 'step-2', 'all')).toBe(document);
     expect(resetStepPlace(resetStepPlace(document, 'step-1', 'text'), 'step-1', 'text')).toEqual(resetStepPlace(document, 'step-1', 'text'));
+  });
+
+  it('clears the caption’s width alone, with the text’s offset, never with every offset, and with the lot', () => {
+    const document = diagram({ ...cpStep('step-1'), place: { ...PLACED, textWidth: 60 } });
+    expect(placeOf(resetStepPlace(document, 'step-1', 'textWidth'), 'step-1')).toEqual(PLACED);
+    const { text: _text, ...noText } = PLACED;
+    expect(placeOf(resetStepPlace(document, 'step-1', 'text'), 'step-1')).toEqual(noText);
+    expect(placeOf(resetStepPlace(document, 'step-1', 'position'), 'step-1')).toEqual({ scale: PLACED.scale, textWidth: 60 });
+    expect('place' in stepById(resetStepPlace(document, 'step-1', 'all'), 'step-1')!).toBe(false);
+    // A step placed only by its caption's width: Reset Text takes it back to none.
+    const widthOnly = diagram({ ...cpStep('step-1'), place: { textWidth: 60 } });
+    expect('place' in stepById(resetStepPlace(widthOnly, 'step-1', 'text'), 'step-1')!).toBe(false);
+    expect(resetStepPlace(widthOnly, 'step-1', 'position')).toBe(widthOnly);
   });
 
   it('drops a newer build’s placement only when the whole of it is reset', () => {
