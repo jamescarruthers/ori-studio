@@ -128,13 +128,14 @@ afterEach(() => {
 });
 
 describe("the Fold canvas", () => {
-  it("mounts both panes, the rail and the toolbar with its display switches and the Send to Edit slot", () => {
+  it("mounts both panes and the toolbar with its display switches and the Send to Edit slot", () => {
     const canvas = mount();
     expect(canvas.querySelector('[data-fold-pane="folded"]')).not.toBeNull();
     expect(
       canvas.querySelector('[data-fold-pane="crease-pattern"]'),
     ).not.toBeNull();
-    expect(byRole(canvas, "complementary", "Fold tools")).toBeTruthy();
+    // The rail is the panel's, down its whole side (`FoldWorkspaceRail`).
+    expect(canvas.querySelector('aside[aria-label="Fold tools"]')).toBeNull();
     // Both display switches start on; each is a toggle of its own.
     const toggle = (label: string) =>
       canvas.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
@@ -230,20 +231,5 @@ describe("the Fold canvas", () => {
     playbackInputs.length = 0;
     mount();
     expect(playbackInputs.at(-1)?.reveal).toBeUndefined();
-  });
-
-  // The tool window waits for a laid-out viewport, which jsdom never has; its
-  // model is foldToolWindow's tests' subject.
-  it("marks the tool in hand on the rail, and a rail click picks the tool for the canvas", () => {
-    const canvas = mount();
-    const railButton = (label: string) =>
-      canvas.querySelector<HTMLButtonElement>(
-        `aside button[aria-label^="${label}"]`,
-      );
-    expect(railButton("Valley fold")?.hasAttribute("data-active")).toBe(true);
-    act(() => railButton("Divide line")?.click());
-    expect(foldTools().store.getState().tool).toBe("divide-line");
-    expect(railButton("Divide line")?.hasAttribute("data-active")).toBe(true);
-    expect(railButton("Valley fold")?.hasAttribute("data-active")).toBe(false);
   });
 });

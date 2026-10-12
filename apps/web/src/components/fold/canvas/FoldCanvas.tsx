@@ -5,16 +5,14 @@ import { ToolOptionLayer } from '../../../cp-workspace/toolOptions/ToolOptionLay
 import type { CpToolOptionWindow } from '../../../cp-workspace/toolOptions/toolOptionWindow';
 import { altModifierLabel } from '../../../lib/platform';
 import { useInheritedPaperStyle } from '../../../cp-workspace/paper/objectPaperStyle';
-import { shortcutLabelForAction } from '../../../keyboard/shortcuts';
 import { useIsCoarsePointerSurface } from '../../../platform/pointerSurface';
 import { useIsPhoneLayout } from '../../../platform/phoneLayout';
 import { useSettingsStore } from '../../../store/settingsStore';
-import { useShortcutStore } from '../../../store/shortcutStore';
 import { useThemeStore } from '../../../store/themeStore';
 import { useFoldSession } from '../../../fold/session/useFoldSession';
 import { foldTools, useFoldTools } from '../../../fold/tools/foldToolState';
-import type { FoldKeyLabel } from '../../../fold/tools/foldToolCatalog';
 import { foldToolWindow } from '../../../fold/tools/foldToolWindow';
+import { useFoldShortcutLabels } from '../../../fold/tools/useFoldShortcutLabels';
 import { foldToolKindControl, registerFoldCanvasVerbs } from '../../../fold/canvas/foldCanvasCommands';
 import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
 import {
@@ -41,7 +39,7 @@ import { useFoldCanvasInks } from '../../../fold/canvas/useFoldCanvasInks';
 import { restingSpread, useFoldCanvasPaint } from '../../../fold/canvas/useFoldCanvasPaint';
 import { foldCanvasChoice, marksMadeAt, useFoldCanvasVerbs } from '../../../fold/canvas/useFoldCanvasVerbs';
 import { useFoldCanvasShortcuts } from '../../../fold/canvas/useFoldCanvasShortcuts';
-import { useFoldRailGroups, useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
+import { useFoldReadOnly } from '../../../fold/canvas/useFoldRailGroups';
 import { useFoldPaneSpread } from '../../../fold/canvas/useFoldPaneSpread';
 import { useFoldStateView } from '../../../fold/canvas/useFoldStateView';
 import { useFoldToolPreview } from '../../../fold/canvas/useFoldToolPreview';
@@ -52,10 +50,8 @@ import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
 import { ViewportStatusReadout } from '../../ui/ViewportStatusReadout';
 import { FoldKindMark } from '../FoldKindMark';
-import { FoldToolRail } from '../FoldToolRail';
 import { FoldToolWindow } from '../FoldToolWindow';
 import { FoldActionLayer } from './FoldActionLayer';
-import { FoldAltLatchToggle } from './FoldAltLatchToggle';
 import { FoldPane } from './FoldPane';
 import { FoldPhoneBarControls } from './FoldPhoneBarControls';
 import { FoldViewportToolbar } from './FoldViewportToolbar';
@@ -72,14 +68,15 @@ import styles from './FoldCanvas.module.css';
  * The Fold workspace's canvas (plan D11, D13, D14): the folded form on the
  * left and its crease pattern on the right, each a `FoldPane` on
  * `useCpSurface` painted through the shared paper painter in the user's
- * paper style; the tool rail down the left; the tool window over the
- * viewport's corner; the viewport toolbar along the bottom, with the step's
- * transport (Play draws the step from its parent on the folded pane,
- * `useFoldPanePlayback`). A crease pattern dropped on it is the panel's to
- * import (`useFoldDrop`, in `FoldPanel`). On a phone, one pane at a time,
- * and the rail's tools in a sheet opened from the bar, beside the pane switch
- * (`FoldPhoneBarControls`); the tool window starts as its title bar, so the
- * paper stays in view while points are picked (`FoldToolWindow`).
+ * paper style; the tool window over the viewport's corner; the viewport
+ * toolbar along the bottom, with the step's transport (Play draws the step
+ * from its parent on the folded pane, `useFoldPanePlayback`). The tool rail
+ * is the panel's, down its whole side (`FoldWorkspaceRail`). A crease pattern
+ * dropped on it is the panel's to import (`useFoldDrop`, in `FoldPanel`). On
+ * a phone, one pane at a time, and the rail's tools in a sheet opened from
+ * the bar, beside the pane switch (`FoldPhoneBarControls`); the tool window
+ * starts as its title bar, so the paper stays in view while points are
+ * picked (`FoldToolWindow`).
  *
  * A composition site: what the tools do is `fold/tools` (the state, the
  * registry, the step builder) and `fold/canvas` (picking, the pipeline to the
@@ -110,15 +107,11 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const phone = useIsPhoneLayout();
   const coarse = useIsCoarsePointerSurface();
   const phonePane = useFoldPhonePane();
-  const groups = useFoldRailGroups();
   const readOnly = useFoldReadOnly();
   const style = useInheritedPaperStyle();
   const wheelGesture = useSettingsStore((state) => state.cpWheelGesture);
   const snapRadius = useSettingsStore((state) => state.cpSnapRadius);
-  const overrides = useShortcutStore((state) => state.overrides);
-  const defaultsSource = useShortcutStore((state) => state.defaultsSource);
-  const shortcuts = useMemo(() => ({ overrides, defaultsSource }), [overrides, defaultsSource]);
-  const keyLabel = useCallback<FoldKeyLabel>((id) => shortcutLabelForAction(id, shortcuts), [shortcuts]);
+  const { shortcuts, keyLabel } = useFoldShortcutLabels();
   const theme = useThemeStore((state) => state.currentTheme);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [toolWindowFrame, setToolWindowFrame] = useState<HTMLElement | null>(null);
@@ -286,14 +279,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   };
 
   return (
-    <div
-      className={styles.root}
-      data-fold-canvas=""
-      data-rail={phone ? undefined : ''}
-    >
-      {!phone && (
-        <FoldToolRail groups={groups} keyLabel={keyLabel} header={coarse ? <FoldAltLatchToggle fill /> : undefined} />
-      )}
+    <div className={styles.root} data-fold-canvas="">
       <div className={styles.viewport} ref={setViewport}>
         <div className={styles.panes} data-split={showFolded && showCreases ? '' : undefined}>
           {showFolded && (

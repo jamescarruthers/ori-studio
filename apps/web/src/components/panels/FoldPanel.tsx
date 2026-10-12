@@ -9,18 +9,23 @@ import { foldedStepCount } from '../../fold/sequence/foldSequencePath';
 import { setFoldView, useFoldView } from '../../fold/sequence/foldViewMode';
 import { useFoldSequenceView } from '../../fold/sequence/useFoldSequenceView';
 import { useFoldSession } from '../../fold/session/useFoldSession';
+import { useIsPhoneLayout } from '../../platform/phoneLayout';
 import { useLayoutStore } from '../../store/layoutStore';
 import { FileDropOverlay } from '../FileDropOverlay';
 import { FoldCanvas } from '../fold/canvas/FoldCanvas';
 import { FoldHeader } from '../fold/FoldHeader';
+import { FoldWorkspaceRail } from '../fold/FoldWorkspaceRail';
 import { FoldStepStrip } from '../fold/steps/FoldStepStrip';
 import { FoldStepsGrid } from '../fold/steps/FoldStepsGrid';
 import styles from './FoldPanel.module.css';
 
 /**
- * The Fold workspace's dock panel: the composition site for its header, the
- * step strip over the split canvas, and the Steps grid
- * (`implementation-plans/fold-workspace.md`, D14).
+ * The Fold workspace's dock panel: the composition site for the tool rail
+ * down its whole left side, and beside it the header, the step strip over the
+ * split canvas, and the Steps grid (`implementation-plans/fold-workspace.md`,
+ * D14). The rail stays when the view is the Steps grid, so the header's tabs
+ * do not move as they switch; a phone has none, its tools a sheet on the
+ * canvas's bar.
  *
  * It holds the Fold session while mounted (`useFoldSession`), so the worker
  * runs and the sequence is replayed while the workspace is open, and the keys
@@ -51,6 +56,7 @@ export function FoldPanel() {
   );
   const sendToEdit = useFoldSendToEditButton(foldCommand(actions, 'send-to-edit'));
   const drop = useFoldDrop();
+  const phone = useIsPhoneLayout();
 
   return (
     <section
@@ -61,26 +67,31 @@ export function FoldPanel() {
     >
       {/* A crease pattern dropped anywhere on Fold is Import CP; anything else goes on to the app's target. */}
       <FileDropOverlay visible={drop.isDragActive} policy={FOLD_DROP_POLICY} />
-      <FoldHeader
-        view={view}
-        onViewChange={setFoldView}
-        stepCount={foldedStepCount(sequence.entries)}
-        actions={actions}
-        sendToEdit={sendToEdit}
-        drawerSlot={setViewDrawerSlot}
-      />
-      {view === 'steps' ? (
-        <div className={`panel-body ${styles.steps}`}>
-          <FoldStepsGrid view={sequence} />
+      <div className={styles.frame} data-rail={phone ? undefined : ''}>
+        {!phone && <FoldWorkspaceRail />}
+        <div className={styles.column}>
+          <FoldHeader
+            view={view}
+            onViewChange={setFoldView}
+            stepCount={foldedStepCount(sequence.entries)}
+            actions={actions}
+            sendToEdit={sendToEdit}
+            drawerSlot={setViewDrawerSlot}
+          />
+          {view === 'steps' ? (
+            <div className={`panel-body ${styles.steps}`}>
+              <FoldStepsGrid view={sequence} />
+            </div>
+          ) : (
+            <>
+              <FoldStepStrip view={sequence} />
+              <div className={`panel-body ${styles.body}`}>
+                <FoldCanvas />
+              </div>
+            </>
+          )}
         </div>
-      ) : (
-        <>
-          <FoldStepStrip view={sequence} />
-          <div className={`panel-body ${styles.body}`}>
-            <FoldCanvas />
-          </div>
-        </>
-      )}
+      </div>
     </section>
   );
 }
