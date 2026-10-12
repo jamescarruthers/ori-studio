@@ -140,7 +140,9 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   );
   useFoldCanvasShortcuts(camera);
 
-  // --- What each pane paints, and frames: the camera fits on a new sequence or sheet, never on a fold.
+  // --- What each pane paints, and frames: the camera fits on a new sequence or sheet, and the folded
+  // pane fits again when the step on screen changes to a form that has left it — never a camera the
+  // user has moved.
   const summary = view.summary;
   const spread = useFoldStepSpread(view.cursorId, 'canvas_bar');
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread);
@@ -295,6 +297,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               tint={paint.folded.tint}
               offset={paint.folded.offset}
               contentBounds={paint.folded.contentBounds}
+              keepInViewKey={paint.folded.keepInView}
               hitTest={(at, radii) => verbs.hitTest('folded', at, radii)}
               overlay={foldedOverlay}
               onHover={woven.onHover}

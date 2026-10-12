@@ -201,6 +201,48 @@ describe('useCpSurface camera', () => {
     expect(middle().y).toBeCloseTo(100);
   });
 
+  it('keeps content that changes in kind in view: a camera at its fit refits once the new content leaves it', () => {
+    const zoom = () => surface().cssPerUserUnit();
+    const square: UserBounds = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    mount({ contentBounds: square, keepInViewKey: 'step-1' });
+    const fitted = zoom();
+    // Fitted to 0…100 with the fit's padding: user x −21.4…121.4 shows.
+    expect(fitted).toBeCloseTo((400 / 100) * 0.7);
+
+    // Other content, still in what shows: nothing moves.
+    mount({ contentBounds: { minX: -10, minY: 0, maxX: 110, maxY: 100 }, keepInViewKey: 'step-2' });
+    expect(zoom()).toBe(fitted);
+
+    // Content that runs off the left edge: the camera fits it.
+    const wide: UserBounds = { minX: -150, minY: 0, maxX: 100, maxY: 100 };
+    mount({ contentBounds: wide, keepInViewKey: 'step-3' });
+    expect(zoom()).toBeCloseTo((400 / 250) * 0.7);
+
+    // The same content's bounds changing — not a change in kind — moves nothing.
+    const refitted = zoom();
+    mount({ contentBounds: { minX: -400, minY: 0, maxX: 100, maxY: 100 }, keepInViewKey: 'step-3' });
+    expect(zoom()).toBe(refitted);
+
+    // Once the user has zoomed, content leaving the view leaves the camera theirs.
+    act(() => surface().controls.zoomIn());
+    const theirs = zoom();
+    mount({ contentBounds: { minX: 0, minY: -300, maxX: 100, maxY: 100 }, keepInViewKey: 'step-4' });
+    expect(zoom()).toBe(theirs);
+
+    // Fit hands the camera back: the next content that leaves the view is fitted again.
+    act(() => surface().controls.fit());
+    mount({ contentBounds: { minX: 0, minY: 0, maxX: 600, maxY: 100 }, keepInViewKey: 'step-5' });
+    expect(zoom()).toBeCloseTo((400 / 600) * 0.7);
+  });
+
+  it('keeps nothing in view without a key, as before', () => {
+    const square: UserBounds = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    mount({ contentBounds: square });
+    const fitted = surface().cssPerUserUnit();
+    mount({ contentBounds: { minX: -150, minY: 0, maxX: 100, maxY: 100 } });
+    expect(surface().cssPerUserUnit()).toBe(fitted);
+  });
+
   it('sets a zoom percentage about the centre', () => {
     const onZoomPercentChange = vi.fn<(percent: number) => void>();
     mount({ onZoomPercentChange });

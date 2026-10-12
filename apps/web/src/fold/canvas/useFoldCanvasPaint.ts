@@ -6,6 +6,7 @@ import type { FillGeometry } from '../../cp-workspace/renderer/types';
 import type { Point } from '../../lib/geometry';
 import type { PaperScene } from '../../lib/paper/paperScene';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
+import { FOLD_SHEET_KEY } from '../document/foldStepTree';
 import type { FoldStateSummary } from '../engine/foldEngineWire';
 import { boundsOf, boundsToUser, transformLine, type Bounds } from './foldCanvasGeometry';
 import { refusedFaceInks } from './foldCanvasModel';
@@ -23,6 +24,13 @@ export interface FoldCanvasPaint {
     ink: FoldedSceneInk;
     /** In user space: the sheet and the folded form. */
     contentBounds: UserBounds | null;
+    /**
+     * The step whose form `contentBounds` frames — the sheet's key for the
+     * sheet — once the step on screen's own picture is in; null while the
+     * last one shown stands in. The pane keeps the form in view when it
+     * changes (`FoldPane`'s `keepInViewKey`).
+     */
+    keepInView: string | null;
     offset: Point;
     /** The moving set, lit over the paper on the pane's overlay fill channel. */
     tint: FillGeometry | null;
@@ -52,6 +60,17 @@ export function restingSpread(
   return picking || preview.action !== null || preview.analysis !== null ? null : spread;
 }
 const NO_OFFSET: Point = { x: 0, y: 0 };
+
+/**
+ * Which step's form the folded pane shows — the sheet's key for the sheet —
+ * once it is the step on screen's own: the pick index is built from that
+ * scene alone, so the scene shown is the index's. Null while the last
+ * picture shown stands in for one still on its way.
+ */
+export function foldedFormKey(view: Pick<FoldStateView, 'cursorId' | 'scene' | 'index'>): string | null {
+  const { index, scene } = view;
+  return index !== null && scene !== null && index.scene === scene ? (view.cursorId ?? FOLD_SHEET_KEY) : null;
+}
 
 function union(a: Bounds | null, b: Bounds | null): Bounds | null {
   if (!a || !b) return a ?? b;
@@ -172,8 +191,10 @@ export function useFoldCanvasPaint(
   );
   const cpBounds = useMemo(() => (sheetBounds ? boundsToUser(sheetBounds) : null), [sheetBounds]);
 
+  const keepInView = foldedFormKey(view);
+
   return {
-    folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, offset, tint },
+    folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, keepInView, offset, tint },
     creasePattern: { lines: cpLines, contentBounds: cpBounds, summary: cpSummary },
   };
 }
