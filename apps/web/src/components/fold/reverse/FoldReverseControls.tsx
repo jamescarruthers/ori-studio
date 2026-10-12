@@ -38,9 +38,9 @@ export function FoldKindChoiceRow<K extends string>({ kind }: { kind: FoldKindCh
   );
 }
 
-/** The reverse fold's kind in the Fold tool window (`reverseToolWindow`). */
-export function FoldReverseKindControl({ controls }: { controls: FoldReverseControls }) {
-  return <FoldKindChoiceRow<FoldReverseKind> kind={controls.kind} />;
+/** The reverse fold's kind in the Fold tool window (`reverseToolWindow`), while both kinds fit. */
+export function FoldReverseKindControl({ kind }: { kind: FoldKindChoice<FoldReverseKind> }) {
+  return <FoldKindChoiceRow<FoldReverseKind> kind={kind} />;
 }
 
 /**

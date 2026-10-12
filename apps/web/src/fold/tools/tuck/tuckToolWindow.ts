@@ -98,12 +98,19 @@ function tuckControls(t: TFunction, tuck: FoldTuckWindowView, verbs: FoldToolWin
   };
 }
 
-function previewInstructions(t: TFunction, action: string, host: FoldToolHost, view: FoldToolWindowView): FoldToolInstructions {
+function previewInstructions(
+  t: TFunction,
+  action: string,
+  host: FoldToolHost,
+  view: FoldToolWindowView,
+  tuck: FoldTuckWindowView
+): FoldToolInstructions {
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items: [
       t('tools:fold.steps.pickFlapsToTuck', 'Pick which flaps tuck.'),
-      t('tools:fold.steps.pickTuckTarget', 'Pick the layer to tuck against.'),
+      // A layer to pick only when more than one takes the tuck.
+      ...(tuck.targets > 1 ? [t('tools:fold.steps.pickTuckTarget', 'Pick the layer to tuck against.')] : []),
       host.coarse
         ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action })
         : t('tools:fold.steps.commit', 'Press Enter to fold.'),
@@ -126,11 +133,15 @@ export function tuckToolWindow(
   const { preview, tuck } = view;
   if (!preview || !tuck) {
     const title = foldToolLabel(t, 'tuck');
+    // Once the line is in: the flaps that tuck and the layer they go against.
+    const then = host.coarse
+      ? t('tools:fold.steps.tuckFinishTouch', 'Pick the flaps and the layer to tuck against, then tap {{action}}.', { action: title })
+      : t('tools:fold.steps.tuckFinish', 'Pick the flaps and the layer to tuck against, then press Enter.');
     return {
       phase: 'locate',
       title,
       meta: settingsMeta(t, 1),
-      instructions: locateInstructions(t, view, title, host),
+      instructions: locateInstructions(t, view, title, host, then),
       lineMode: lineModeSelect(t, view, verbs),
       kind: null,
       movingSide: null,
@@ -147,7 +158,7 @@ export function tuckToolWindow(
     phase: 'preview',
     title,
     meta: settingsMeta(t, settings),
-    instructions: previewInstructions(t, title, host, view),
+    instructions: previewInstructions(t, title, host, view, tuck),
     lineMode: null,
     // The plain fold's V / M control, each a tuck in the words the Step pane uses.
     kind: {

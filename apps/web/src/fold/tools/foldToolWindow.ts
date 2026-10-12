@@ -407,16 +407,24 @@ export function lineModeNotes(t: TFunction, mode: FoldLineModeId, host: FoldTool
   ];
 }
 
-/** How to locate the line, step by step, then pick and commit: `action` is the tool's name, the commit button's. */
+/**
+ * How to locate the line, step by step, then pick and commit: `action` is
+ * the tool's name, the commit button's. `then` is what the tool picks once
+ * the line is in, said as its last step — a plain fold's fold and layers by
+ * default.
+ */
 export function locateInstructions(
   t: TFunction,
   view: FoldToolWindowView,
   action: string,
-  host: FoldToolHost
+  host: FoldToolHost,
+  then?: string
 ): FoldToolInstructions {
-  const finish = host.coarse
-    ? t('tools:fold.steps.finishTouch', 'Pick the fold and the layers, then tap {{action}}.', { action })
-    : t('tools:fold.steps.finish', 'Pick the fold and the layers, then press Enter.');
+  const finish =
+    then ??
+    (host.coarse
+      ? t('tools:fold.steps.finishTouch', 'Pick the fold and the layers, then tap {{action}}.', { action })
+      : t('tools:fold.steps.finish', 'Pick the fold and the layers, then press Enter.'));
   // A precrease of part of its line: its points along the line, once it is located.
   const extent = view.tool === 'precrease' ? view.extent : undefined;
   const items = [...lineModeSteps(t, view.lineMode), ...extentLocateSteps(t, extent), finish];
@@ -552,7 +560,8 @@ export function foldToolWindow(
           t('tools:fold.steps.divideUse', 'Use the new points as references for any fold.'),
         ],
         current: 0,
-        notes: [t('tools:fold.note.divide', 'Edges, folded edges and precreases all count.')],
+        // What can be divided is the step's to say: no note says it again.
+        notes: [],
       },
       lineMode: null,
       kind: null,

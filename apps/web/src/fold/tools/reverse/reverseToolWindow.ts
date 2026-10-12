@@ -5,10 +5,11 @@
  * It locates the line as every fold does — the steps for the line mode and
  * the line-mode select — and then, previewing:
  *
- * - **the kind**, Inside or Outside, as a segmented control: the one that
- *   lands is taken, and the other is offered only when it lands too
+ * - **the kind**, Inside or Outside: the one that lands is taken, and the
+ *   title names it; a segmented control appears only when both land
  *   (research §5.2: on a two-layer flap and a generic line exactly one
- *   does); one that does not is shown, disabled, with why;
+ *   does) — a control with no choice in it is not shown (owner feedback,
+ *   2026-10-12);
  * - **the tip side**, Swap, and **the flaps** to reverse, through the layer
  *   picker and the chips, as a fold's layers;
  * - **the opening**, when a flap opens more than one way, and **the layer
@@ -90,9 +91,19 @@ export type FoldReverseKindOption = FoldKindChoiceOption<FoldReverseKind>;
 
 /** The reverse fold's own controls in the window. */
 export interface FoldReverseControls {
-  kind: FoldKindChoice<FoldReverseKind>;
+  /**
+   * Inside or Outside, only once the engine has said both fit: one that does
+   * not fit is no choice, and the window's title names the kind folded
+   * (owner feedback, 2026-10-12: a control with no choice in it is not shown).
+   */
+  kind: FoldKindChoice<FoldReverseKind> | null;
   opening: FoldChoiceStepper | null;
   order: FoldChoiceStepper | null;
+}
+
+/** Whether a reverse fold's or a crimp's kind is the folder's to choose: both kinds fit, as the engine says. */
+export function bothKindsFit(view: Pick<FoldReverseWindowView, 'known' | 'kinds'>): boolean {
+  return view.known && view.kinds.length === 2;
 }
 
 /**
@@ -121,42 +132,32 @@ export function choiceStepper(
   };
 }
 
-function kindNote(t: TFunction, reverse: FoldReverseWindowView): string | null {
-  if (!reverse.known || (reverse.ways > 1 && reverse.kinds.length === 0)) return null;
-  if (reverse.kinds.length === 2) {
-    return t('tools:fold.reverse.bothFit', 'Both kinds fit here: choose which way the tip goes.');
-  }
-  const [only] = reverse.kinds;
-  if (only === 'inside') return t('tools:fold.reverse.onlyInside', 'Only the inside reverse fold fits here.');
-  if (only === 'outside') return t('tools:fold.reverse.onlyOutside', 'Only the outside reverse fold fits here.');
-  return null;
-}
-
 function reverseControls(
   t: TFunction,
   reverse: FoldReverseWindowView,
   verbs: FoldToolWindowVerbs,
   readOnly: boolean
 ): FoldReverseControls {
-  const lands = (kind: FoldReverseKind) => !reverse.known || reverse.kinds.length === 0 || reverse.kinds.includes(kind);
   return {
-    kind: {
-      label: t('tools:fold.reverse.kind', 'Kind'),
-      value: reverse.kind,
-      options: FOLD_REVERSE_KINDS.map((value) => ({
-        value,
-        short:
-          value === 'inside'
-            ? t('tools:fold.reverse.inside', 'Inside')
-            : t('tools:fold.reverse.outside', 'Outside'),
-        label: foldReverseKindLabel(t, value),
-        disabled: !lands(value),
-        reason: lands(value) ? null : t('tools:fold.reverse.doesNotFit', 'Does not fit here'),
-      })),
-      disabled: readOnly,
-      note: kindNote(t, reverse),
-      set: (kind) => verbs.setReverseKind?.(kind),
-    },
+    kind: bothKindsFit(reverse)
+      ? {
+          label: t('tools:fold.reverse.kind', 'Kind'),
+          value: reverse.kind,
+          options: FOLD_REVERSE_KINDS.map((value) => ({
+            value,
+            short:
+              value === 'inside'
+                ? t('tools:fold.reverse.inside', 'Inside')
+                : t('tools:fold.reverse.outside', 'Outside'),
+            label: foldReverseKindLabel(t, value),
+            disabled: false,
+            reason: null,
+          })),
+          disabled: readOnly,
+          note: t('tools:fold.reverse.bothFit', 'Both kinds fit here: choose which way the tip goes.'),
+          set: (kind) => verbs.setReverseKind?.(kind),
+        }
+      : null,
     opening: choiceStepper(t, t('tools:fold.reverse.opening', 'Opening'), reverse.way, reverse.ways, verbs.stepOpening, readOnly),
     order: choiceStepper(t, t('tools:fold.reverse.order', 'Layer order'), reverse.order, reverse.orders, verbs.stepOrder, readOnly),
   };
@@ -187,11 +188,15 @@ export function reverseToolWindow(
   const { preview, reverse } = view;
   if (!preview || !reverse) {
     const title = foldToolLabel(t, 'inside-reverse');
+    // Once the line is in: the flaps that reverse, as the preview's steps pick them.
+    const then = host.coarse
+      ? t('tools:fold.steps.reverseFinishTouch', 'Pick which flaps reverse, then tap {{action}}.', { action: title })
+      : t('tools:fold.steps.reverseFinish', 'Pick which flaps reverse, then press Enter.');
     return {
       phase: 'locate',
       title,
       meta: settingsMeta(t, 1),
-      instructions: locateInstructions(t, view, title, host),
+      instructions: locateInstructions(t, view, title, host, then),
       lineMode: lineModeSelect(t, view, verbs),
       kind: null,
       movingSide: null,
@@ -203,7 +208,7 @@ export function reverseToolWindow(
   }
   const title = foldReverseKindLabel(t, reverse.kind);
   const compound = reverseControls(t, reverse, verbs, readOnly);
-  const settings = 3 + (compound.opening ? 1 : 0) + (compound.order ? 1 : 0);
+  const settings = 2 + (compound.kind ? 1 : 0) + (compound.opening ? 1 : 0) + (compound.order ? 1 : 0);
   return {
     phase: 'preview',
     title,

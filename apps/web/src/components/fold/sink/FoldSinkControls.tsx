@@ -6,21 +6,16 @@ import styles from './FoldSinkControls.module.css';
 
 /**
  * A sink's kind and its line in the Fold tool window (`sinkToolWindow`):
- * Open and Closed, the one that does not fit disabled with why in its
- * tooltip; for an open sink, its rule that the line be exactly square; and
- * the depth the line sinks the point to.
+ * Open and Closed while there is a choice, the one that does not fit
+ * disabled with why in its tooltip; and the depth the line sinks the point
+ * to.
  */
 export function FoldSinkLine({ controls }: { controls: FoldSinkControls }) {
-  const { kind, square, depth } = controls;
-  if (!kind && !square && !depth) return null;
+  const { kind, depth } = controls;
+  if (!kind && !depth) return null;
   return (
     <>
       {kind && <FoldKindChoiceRow<FoldSinkKind> kind={kind} />}
-      {square && (
-        <p className={styles.note} data-fold-sink-square="">
-          {square}
-        </p>
-      )}
       {depth && (
         <FieldRow label={depth.label} kind="static" help={depth.help} divider={false}>
           <span className={styles.depth} data-fold-sink-depth="">

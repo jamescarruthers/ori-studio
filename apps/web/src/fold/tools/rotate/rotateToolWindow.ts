@@ -143,7 +143,7 @@ export function rotateToolWindow(
     instructions: {
       heading: t('tools:fold.window.instructions', 'Instructions'),
       items: [
-        t('tools:fold.steps.rotateAmount', 'Choose how far to turn the model: a part of a turn, or an exact angle.'),
+        t('tools:fold.steps.rotateHowFar', 'Choose how far to turn the model.'),
         t('tools:fold.steps.rotateDirection', 'Choose which way it turns.'),
         host.coarse
           ? t('tools:fold.steps.rotateCommitTouch', 'Tap {{action}} to add the turn.', { action: title })
