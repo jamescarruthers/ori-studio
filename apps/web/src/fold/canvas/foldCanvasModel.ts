@@ -25,7 +25,7 @@ import { isLocated, type FoldToolState } from '../tools/foldToolState';
 import type { FoldExtentMode } from '../tools/precrease/precreaseExtent';
 import { isLineTool, isSinkTool, isVertexTool, type FoldKeyLabel } from '../tools/foldToolCatalog';
 import { SWIVEL_TARGET_FROM } from '../tools/vertex/vertexInputs';
-import { nearestDirection } from '../tools/vertex/vertexStep';
+import { nearestDirection, swivelFoldPick } from '../tools/vertex/vertexStep';
 import type { FoldVertexWindowView } from '../tools/vertex/vertexToolWindow';
 import { boundsOf } from './foldCanvasGeometry';
 import type { FoldOverlayAlong } from './foldPaneOverlays';
@@ -198,9 +198,16 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   // What the petal fold creases itself, as the engine describes the flap folded.
   const petal = vertex?.answer?.analysis ?? analysis;
   const lineBy = tool === 'petal' ? tools.petalHinge : tool === 'swivel' ? tools.swivelTarget : null;
+  // A swivel whose pivot was clicked on a folded edge: no ridge, and only
+  // the directions that land.
+  const onFold = swivelFoldPick(tools) !== null;
+  const directions = vertex?.base?.directions;
   return {
     tool,
-    direction: tools.vertexDirection,
+    // The way it folds: the folder's, or the other when only that lands.
+    direction: vertex?.direction ?? tools.vertexDirection,
+    ...(onFold ? { onFold } : {}),
+    ...(directions && directions.length === 2 ? { directions } : {}),
     described: vertex?.base != null,
     known: preview.step !== null,
     target: tools.compound.squashTarget ? 'point' : 'hinge',

@@ -8,6 +8,7 @@ import { shownFoldSequence } from '../../store/workspaceStore/foldState';
 import {
   isLockedStep,
   isSwivelEdgeOp,
+  isSwivelOnFoldOp,
   isVertexOp,
   randomFoldId,
   type FoldCrimpOp,
@@ -59,6 +60,7 @@ import {
   petalRegionKey,
   picksFanStayer,
   picksPetalRegion,
+  picksSwivelPivot,
   squashTargetToward,
   steppedFourth,
   swivelEdgePick,
@@ -69,6 +71,7 @@ import { isFoldAltLatched } from './foldAltLatch';
 import { resolveAlongPick } from './foldAlongLine';
 import { toPair, transformLine } from './foldCanvasGeometry';
 import {
+  resolveFoldEdgePoint,
   resolveFoldPick,
   topSheetPointAt,
   type FoldHit,
@@ -314,7 +317,8 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
 function vertexFormOf(op: FoldOp): FoldStepVertexForm | undefined {
   if (op.kind === 'petal') return { hinge: 'ends' in op ? 'points' : 'crease' };
   if (op.kind !== 'swivel') return undefined;
-  return isSwivelEdgeOp(op) ? { swivelForm: 'edge', target: op.target.via } : { swivelForm: 'rays' };
+  if (!isSwivelEdgeOp(op)) return { swivelForm: 'rays' };
+  return { swivelForm: isSwivelOnFoldOp(op) ? 'fold' : 'edge', target: op.target.via };
 }
 
 function trackCommitted(op: FoldOp): void {
@@ -555,13 +559,19 @@ export function useFoldCanvasVerbs(
         // A swivel's target is never parallel to its edge: no turn lays one on the other.
         const edge = swivelEdgePick(tool);
         const target = edge && tool.picks.length === SWIVEL_TARGET_FROM && step.snap === 'crease-required';
+        const free = freePointHeld();
         const pick = resolveFoldPick(index, pane, at, radii, {
           snap: step.snap,
           edges: step.edges,
-          free: freePointHeld(),
+          free,
           ...(step.kinds ? { kinds: step.kinds } : {}),
           ...(target ? { accept: (segment: FoldSegmentPick) => !parallelSegments(segment.scene, edge.scene) } : {}),
         });
+        // A swivel's pivot may sit on a folded edge, where its creases meet:
+        // the edge lights with the point under the pointer.
+        if (picksSwivelPivot(tool.tool, tool.picks.length) && !free) {
+          return { pane, at, pick: resolveFoldEdgePoint(index, pane, at, radii, pick) };
+        }
         return { pane, at, pick };
       },
 

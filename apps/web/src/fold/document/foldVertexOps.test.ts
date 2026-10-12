@@ -19,7 +19,10 @@ import {
   type FoldRabbitEarOp,
   type FoldSquashOp,
   type FoldStep,
+  isSwivelOnFoldOp,
   type FoldSwivelEdgeOp,
+  type FoldSwivelFreeOp,
+  type FoldSwivelOnFoldOp,
   type FoldSwivelOp,
 } from './foldSequenceDocument';
 import { readBackFoldStep, readFoldSequence, writeFoldOp, writeFoldSequence } from './foldSequenceFile';
@@ -257,7 +260,7 @@ describe('the swivel’s edge form', () => {
     stayer: [0.3, 0.9],
     direction: 'valley',
   };
-  const edge: FoldSwivelEdgeOp = {
+  const edge: FoldSwivelFreeOp = {
     kind: 'swivel',
     via: 'edge',
     pivot: [0.8, 0.33],
@@ -355,6 +358,106 @@ describe('the swivel’s edge form', () => {
       key({ ...edge, edge: [0.4, 0] }),
       key({ ...edge, target: { via: 'crease', at: [0.4, 0.4] } }),
       key({ ...edge, direction: 'mountain' }),
+    ];
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+/**
+ * The swivel on a folded edge (`fold`, engine `compound::swivel_on_edge`):
+ * the edge form with the folded edge its creases meet on in place of its
+ * pivot, and no seed or ridge. Read and written exactly; a `fold` beside a
+ * pivot, a seed or a ridge does not read and locks the node; an older build,
+ * whose edge form always had a pivot, locks it rather than fold it; old
+ * steps are spelled as before; and `fh1` tells every field apart.
+ */
+describe('the swivel on a folded edge', () => {
+  const free: FoldSwivelFreeOp = {
+    kind: 'swivel',
+    via: 'edge',
+    pivot: [0.8, 0.33],
+    edge: [0.5, 0],
+    target: { via: 'crease', at: [0.5, 0.5] },
+    seed: { scope: 'all' },
+    direction: 'valley',
+  };
+  const onFold: FoldSwivelOnFoldOp = {
+    kind: 'swivel',
+    via: 'edge',
+    fold: [0.75, 0.6035533905932737],
+    edge: [1, 0.8535533905932737],
+    target: { via: 'crease', at: [0.75, 0.5] },
+    direction: 'valley',
+  };
+
+  it('is a swivel by its edge, and the one with a fold', () => {
+    expect(isVertexOp(onFold)).toBe(true);
+    expect(isSwivelEdgeOp(onFold)).toBe(true);
+    expect(isSwivelOnFoldOp(onFold)).toBe(true);
+    expect(isSwivelOnFoldOp(free)).toBe(false);
+    expect(isSwivelOnFoldOp(squash)).toBe(false);
+  });
+
+  it('reads and writes back exactly, its fold where the free form has its pivot', () => {
+    const ops = [
+      onFold,
+      {
+        ...onFold,
+        target: {
+          via: 'free',
+          through: [
+            [0.5, 0.5],
+            [1, 1],
+          ],
+        },
+        direction: 'mountain',
+      },
+      free,
+    ];
+    const held = readOps(ops);
+    expect(held.document.steps.map(isLockedStep)).toEqual(ops.map(() => false));
+    const written = writeFoldSequence(held).steps as { op: unknown }[];
+    expect(written.map((node) => node.op)).toEqual(ops);
+    expect(Object.keys(writeFoldOp(onFold))).toEqual(['kind', 'via', 'fold', 'edge', 'target', 'direction']);
+    expect(readBackFoldStep(onFold)?.op).toEqual(onFold);
+  });
+
+  it('locks a node whose fold does not read, or stands beside a pivot, a seed or a ridge', () => {
+    const malformed = [
+      { ...onFold, fold: [0.75] },
+      { ...onFold, fold: null },
+      { ...onFold, pivot: [0.8, 0.33] },
+      { ...onFold, seed: { scope: 'all' } },
+      { ...onFold, ridge: [0, -1] },
+      { ...onFold, via: 'fold' },
+      { ...onFold, target: { via: 'model', line: { n: [1, 0], d: 0 } } },
+    ];
+    for (const op of malformed) {
+      const held = readOps([op]);
+      expect(isLockedStep(held.document.steps[0]), JSON.stringify(op)).toBe(true);
+      expect((writeFoldSequence(held).steps as { op: unknown }[])[0]?.op).toBe(op);
+    }
+  });
+
+  it('locks in an older build: `fold` is a key its edge form never had', () => {
+    const older = new Set(['kind', 'via', 'pivot', 'edge', 'target', 'seed', 'direction', 'ridge']);
+    expect(hasNewerKey(writeFoldOp(onFold), older)).toBe(true);
+    expect(hasNewerKey(writeFoldOp(free), older)).toBe(false);
+  });
+
+  it('spells the free form as it always was, and gives fh1 every field of the fold form', () => {
+    expect(JSON.stringify(writeFoldOp(free))).toBe(
+      '{"kind":"swivel","via":"edge","pivot":[0.8,0.33],"edge":[0.5,0],' +
+        '"target":{"via":"crease","at":[0.5,0.5]},"seed":{"scope":"all"},"direction":"valley"}'
+    );
+    const key = (op: FoldSwivelEdgeOp) => foldStepKey(step('x', null, op));
+    const keys = [
+      key(free),
+      key(onFold),
+      key({ ...onFold, fold: [0.75, 0.6] }),
+      key({ ...onFold, edge: [1, 0.9] }),
+      key({ ...onFold, target: { via: 'crease', at: [0.7, 0.5] } }),
+      key({ ...onFold, direction: 'mountain' }),
     ];
     expect(new Set(keys).size).toBe(keys.length);
   });

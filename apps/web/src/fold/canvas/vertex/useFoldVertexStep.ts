@@ -224,7 +224,8 @@ export function useFoldVertexStep(
       emergent: chosen?.emergent ?? null,
       fourths,
       elsewhere: stuck ? elsewhere : null,
-      direction: intent.direction,
+      // The folder's, or the other when only that one lands.
+      direction: chosen?.direction ?? intent.direction,
       orders: built?.orders ?? [],
       order: built?.order ?? null,
       layers,

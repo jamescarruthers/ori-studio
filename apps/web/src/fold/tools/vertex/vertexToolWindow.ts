@@ -96,6 +96,17 @@ export interface FoldVertexWindowView {
   lineBy?: FoldLineBy;
   /** A swivel's ridge taken, by name; null before the engine has described it. */
   ridge?: FoldSwivelRidge | null;
+  /**
+   * A swivel whose pivot was clicked on a folded edge: its creases meet on
+   * that edge (`FoldSwivelOnFoldOp`), and it has no ridge to choose.
+   */
+  onFold?: boolean;
+  /**
+   * Valley, then mountain: whether the fold lands that way, once the engine
+   * has said (a swivel on a folded edge's). A way that does not is not
+   * offered. Absent when unknown.
+   */
+  directions?: readonly boolean[];
   /** What a petal fold creases itself, once the engine has described its flap. */
   petalScores?: FoldPetalScores | null;
 }
@@ -114,7 +125,8 @@ export interface FoldVertexControls {
   direction: {
     label: string;
     value: FoldDirection;
-    options: readonly { value: FoldDirection; label: string; tooltip: string }[];
+    /** An option `disabled` does not land that way: offered, but not taken, its tooltip saying why. */
+    options: readonly { value: FoldDirection; label: string; tooltip: string; disabled?: boolean }[];
     disabled: boolean;
     set: (direction: FoldDirection) => void;
   };
@@ -293,11 +305,26 @@ function locateNotes(t: TFunction, view: FoldToolWindowView, vertex: FoldVertexW
           : t('tools:fold.vertex.note.freePoint', 'Hold {{modifier}} to put a point anywhere.', { modifier: host.alt }),
       ]
     : [];
-  return [...snap, ...clear];
+  // A swivel's pivot may sit on a folded edge, where the creases then meet.
+  const fold =
+    tool === 'swivel' && view.picks === 0
+      ? [
+          host.coarse
+            ? t(
+                'tools:fold.vertex.note.swivelFoldTouch',
+                'Tap a folded edge for the creases to meet on it, the classic swivel: it lights up when picked.'
+              )
+            : t(
+                'tools:fold.vertex.note.swivelFold',
+                'Point at a folded edge for the creases to meet on it, the classic swivel: it lights up under the pointer.'
+              ),
+        ]
+      : [];
+  return [...snap, ...fold, ...clear];
 }
 
-/** The last step while the clicks are made: what comes after them. */
-function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string {
+/** The last step while the clicks are made: what comes after them (a swivel on a folded edge has no ridge to pick). */
+function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost, onFold: boolean): string {
   const action = foldToolLabel(t, tool);
   switch (tool) {
     case 'petal':
@@ -305,6 +332,11 @@ function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
         ? t('tools:fold.vertex.steps.petalFinishTouch', 'Choose Valley or Mountain, then tap {{action}}.', { action })
         : t('tools:fold.vertex.steps.petalFinish', 'Choose Valley or Mountain, then press Enter.');
     case 'swivel':
+      if (onFold) {
+        return host.coarse
+          ? t('tools:fold.vertex.steps.petalFinishTouch', 'Choose Valley or Mountain, then tap {{action}}.', { action })
+          : t('tools:fold.vertex.steps.petalFinish', 'Choose Valley or Mountain, then press Enter.');
+      }
       return host.coarse
         ? t('tools:fold.vertex.steps.swivelFinishRidgeTouch', 'Pick the ridge and the direction, then tap {{action}}.', { action })
         : t('tools:fold.vertex.steps.swivelFinishRidge', 'Pick the ridge and the direction, then press Enter.');
@@ -324,7 +356,7 @@ function locateInstructions(
 ): FoldToolInstructions {
   const { tool } = vertex;
   const lines = { petalHinge: vertex.lineBy ?? 'crease', swivelTarget: vertex.lineBy ?? 'crease' };
-  const items = [...vertexToolSteps(t, tool, lines, host), finishStep(t, tool, host)];
+  const items = [...vertexToolSteps(t, tool, lines, host), finishStep(t, tool, host, vertex.onFold === true)];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     intro: vertexIntro(t, tool),
@@ -335,7 +367,13 @@ function locateInstructions(
 }
 
 /** What is left to choose once every click is in. */
-function chooseStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string {
+function chooseStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost, onFold: boolean): string {
+  if (tool === 'swivel' && onFold) {
+    return t(
+      'tools:fold.vertex.steps.swivelOnFoldChoose',
+      'Choose Valley or Mountain: only a way that folds flat is offered.'
+    );
+  }
   switch (tool) {
     case 'squash':
       return host.coarse
@@ -409,7 +447,7 @@ function previewInstructions(
   }
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    items: [chooseStep(t, tool, host), commitStep(t, tool, host)],
+    items: [chooseStep(t, tool, host, vertex.onFold === true), commitStep(t, tool, host)],
     // The choices are optional, so the window leads with them and never marks them done.
     current: 0,
     notes: view.preview ? queuedNote(t, view.preview) : [],
@@ -537,6 +575,14 @@ function lineByControl(
 /** What the fold will do, said under the direction while it is previewed: a petal fold's creases, a swivel's vertex. */
 function previewNote(t: TFunction, vertex: FoldVertexWindowView): string | null {
   if (vertex.tool === 'petal') return vertex.petalScores ? petalScoresNote(t, vertex.petalScores) : null;
+  if (vertex.tool === 'swivel' && vertex.onFold) {
+    return vertex.described
+      ? t(
+          'tools:fold.vertex.note.swivelOnFold',
+          'The creases meet at the dot, where the line halfway between the edge and the line it lands on crosses the folded edge. The edge’s layer folds along that line, laying the edge where the bold line shows; the other layer at the folded edge folds along a second crease too. The lit paper moves, the brightest swivelling.'
+        )
+      : null;
+  }
   if (vertex.tool === 'swivel') {
     return vertex.described
       ? t(
@@ -563,8 +609,12 @@ export function vertexControls(
 ): FoldVertexControls {
   const { tool } = vertex;
   const located = clicked && vertex.described;
-  const fan = tool === 'rabbit-ear' || tool === 'swivel';
+  // A swivel on a folded edge has no ridge to choose.
+  const fan = tool === 'rabbit-ear' || (tool === 'swivel' && !vertex.onFold);
   const { setVertexDirection, resetSquashTarget } = verbs;
+  // A way the engine says does not land is offered, but not taken.
+  const lands = (k: number) => !located || vertex.directions?.[k] !== false;
+  const cannot = t('tools:fold.vertex.directionCannot', 'This way it cannot fold flat here.');
   return {
     direction: {
       label: t('tools:fold.vertex.direction', 'Direction'),
@@ -573,12 +623,14 @@ export function vertexControls(
         {
           value: 'valley',
           label: t('tools:fold.vertex.valley', 'Valley'),
-          tooltip: t('tools:fold.vertex.valleyTitle', 'Valley: the paper turns toward you'),
+          tooltip: lands(0) ? t('tools:fold.vertex.valleyTitle', 'Valley: the paper turns toward you') : cannot,
+          ...(lands(0) ? {} : { disabled: true }),
         },
         {
           value: 'mountain',
           label: t('tools:fold.vertex.mountain', 'Mountain'),
-          tooltip: t('tools:fold.vertex.mountainTitle', 'Mountain: the paper turns away from you'),
+          tooltip: lands(1) ? t('tools:fold.vertex.mountainTitle', 'Mountain: the paper turns away from you') : cannot,
+          ...(lands(1) ? {} : { disabled: true }),
         },
       ],
       disabled: readOnly || !setVertexDirection,
@@ -668,8 +720,8 @@ export function vertexToolWindow(
             tool,
             ...(vertex.emergentNumber ? { emergentNumber: vertex.emergentNumber } : {}),
             ...(tool === 'petal' && vertex.lineBy ? { hinge: vertex.lineBy } : {}),
-            // The tool makes a swivel by its edge.
-            ...(tool === 'swivel' ? { swivel: 'edge' as const } : {}),
+            // The tool makes a swivel by its edge, at a pivot or on a folded edge.
+            ...(tool === 'swivel' ? { swivel: vertex.onFold ? ('fold' as const) : ('edge' as const) } : {}),
           },
         },
         verbs

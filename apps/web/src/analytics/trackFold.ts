@@ -28,7 +28,8 @@ type FoldStepAddedDetails =
  * turned (`amount`: its preset, or `other` for an exact angle — never the
  * angle); a precrease says how much of its line it creased (`extent`). A
  * vertex fold locates no line either: a petal fold says how its hinge was
- * named (`hinge`), a swivel its form and, by its edge, its target
+ * named (`hinge`), a swivel its form — by its edge at a free vertex, by its
+ * edge on a folded edge, or by its rays — and, by its edge, its target
  * (`swivel_form`, `target`).
  */
 export function trackFoldStepAdded(opKind: FoldStepAddedOpKind, details?: FoldStepAddedDetails): void {
@@ -49,7 +50,7 @@ function detailProperties(details: FoldStepAddedDetails | undefined): Record<str
 /** A vertex fold's form as `fold step added`'s properties: enums only. */
 function vertexFormProperties(form: FoldStepVertexForm): Record<string, string> {
   if ('hinge' in form) return { hinge: form.hinge };
-  return form.swivelForm === 'edge' ? { swivel_form: 'edge', target: form.target } : { swivel_form: 'rays' };
+  return form.swivelForm === 'rays' ? { swivel_form: 'rays' } : { swivel_form: form.swivelForm, target: form.target };
 }
 
 /** A refusal shown to the folder, by the engine's stable code: never a face, a vertex or a line. */

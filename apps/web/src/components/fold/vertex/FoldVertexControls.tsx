@@ -27,6 +27,8 @@ export function FoldVertexDirection({ controls }: { controls: FoldVertexControls
             value: option.value,
             label: option.label,
             tooltip: option.tooltip,
+            // A way that does not land: offered, its tooltip saying why, never taken.
+            ...(option.disabled ? { disabled: true } : {}),
           }))}
           onChange={direction.set}
         />

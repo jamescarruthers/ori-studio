@@ -4,6 +4,7 @@ import {
   foldPickIndex,
   foldStackAt,
   pickRef,
+  resolveFoldEdgePoint,
   resolveFoldPick,
   sameFoldHit,
   sheetToScene,
@@ -61,6 +62,32 @@ describe('Fold picking', () => {
     const edge = { x: 0.99, y: 0.5 };
     expect(resolveFoldPick(index, 'crease-pattern', edge, RADII, line)).toMatchObject({ segment: 'raw_edge' });
     expect(resolveFoldPick(index, 'crease-pattern', edge, RADII, { ...line, edges: false })).toBeNull();
+  });
+
+  it('takes a swivel’s pivot on a folded edge: a landmark on it, or the point of it under the pointer', () => {
+    const index = foldPickIndex(bookScene(), null, []);
+    // The fold at sheet x = ½, away from any landmark: the point of it under the pointer, the fold riding along.
+    const along = resolveFoldEdgePoint(index, 'crease-pattern', { x: 0.51, y: 0.3 }, RADII, null);
+    expect(along).toMatchObject({ kind: 'point', provenance: 'fold', fold: { edge: 6, segment: 'bend' } });
+    if (along?.kind !== 'point') throw new Error('no point');
+    expect(along.sheet[0]).toBeCloseTo(0.5, 12);
+    expect(along.sheet[1]).toBeCloseTo(0.3, 12);
+    expect(along.scene?.x).toBeCloseTo(0.5, 12);
+    // Near its end, kept inside it: the engine takes a point strictly between its ends.
+    const end = resolveFoldEdgePoint(index, 'crease-pattern', { x: 0.5, y: 0.0001 }, RADII, null);
+    if (end?.kind !== 'point') throw new Error('no point');
+    expect(end.sheet[1]).toBeGreaterThan(0.001);
+    // Its middle, a landmark on it: taken as it is, the fold riding along.
+    const middle = resolveFoldPick(index, 'crease-pattern', { x: 0.5, y: 0.51 }, RADII, point);
+    expect(resolveFoldEdgePoint(index, 'crease-pattern', { x: 0.5, y: 0.51 }, RADII, middle)).toMatchObject({
+      provenance: 'midpoint',
+      sheet: [0.5, 0.5],
+      fold: { edge: 6 },
+    });
+    // A corner, on no fold between its ends: as it is. Far from any fold: nothing.
+    const corner = resolveFoldPick(index, 'crease-pattern', { x: 0.99, y: 0.99 }, RADII, point);
+    expect(resolveFoldEdgePoint(index, 'crease-pattern', { x: 0.99, y: 0.99 }, RADII, corner)).toBe(corner);
+    expect(resolveFoldEdgePoint(index, 'crease-pattern', { x: 0.8, y: 0.4 }, RADII, null)).toBeNull();
   });
 
   it('maps a sheet point to the scene through a face that holds it', () => {

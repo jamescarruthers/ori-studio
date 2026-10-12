@@ -194,10 +194,10 @@ describe('a swivel by its edge on the folded pane', () => {
       ],
     ],
     creases: [
-      { ray: 'meet', direction: [-0.92, -0.38], to: [0, 0], letter: 'valley', ridge: false },
-      { ray: 'foot', direction: [0, -1], to: [0.8, 0], letter: 'mountain', ridge: true },
-      { ray: 'end', direction: [0.52, -0.85], to: [1, 0], letter: 'valley', ridge: false },
-      { ray: 'hinge', direction: [0.3, 0.95], to: [0.92, 0.68], letter: 'valley', ridge: false },
+      { ray: 'meet', direction: [-0.92, -0.38], from: [0.8, 0.33], to: [0, 0], letter: 'valley', ridge: false },
+      { ray: 'foot', direction: [0, -1], from: [0.8, 0.33], to: [0.8, 0], letter: 'mountain', ridge: true },
+      { ray: 'end', direction: [0.52, -0.85], from: [0.8, 0.33], to: [1, 0], letter: 'valley', ridge: false },
+      { ray: 'hinge', direction: [0.3, 0.95], from: [0.8, 0.33], to: [0.92, 0.68], letter: 'valley', ridge: false },
     ],
     ridges: [
       [0, -1],
@@ -236,5 +236,52 @@ describe('a swivel by its edge on the folded pane', () => {
     const alpha = (k: number) => tint!.color[k * 4 + 3]!;
     expect(alpha(3)).toBeGreaterThan(alpha(0));
     expect(swivelRegionsTint(index, { regions: [] }, accent)).toBeNull();
+  });
+
+  /**
+   * On a folded edge (`compound/swivel_on_edge.rs`): three creases, the
+   * swivel crease of the layer underneath drawn only past the one on top
+   * (none where it is hidden all along), and the wedge that swivels — the
+   * one that carries the edge — lit brightest.
+   */
+  const onFold: FoldVertexAnalysis = {
+    ...swivel,
+    vertex: [0.2, 0.5],
+    creases: [
+      { ray: 'meet', direction: [0, -1], from: [0.2, 0.3], to: [0.2, 0], letter: 'valley', ridge: false },
+      { ray: 'meet', direction: [0, -1], from: [0.2, 0.5], to: [0.2, 0.3], letter: 'mountain', ridge: true },
+      { ray: 'hinge', direction: [1, 0], from: [0.2, 0.5], to: [1, 0.5], letter: 'valley', ridge: false },
+    ],
+    ridges: [],
+    regions: [
+      { wedge: 'turn', polygon: [[0.2, 0.5], [0.2, 0.3], [0.4, 0.4]] },
+      { wedge: 'near', polygon: [[0, 0], [0.2, 0], [0.2, 0.5]] },
+    ],
+    fold: {
+      edge: [
+        [0, 0],
+        [0.2, 1],
+      ],
+      opens: [
+        [0.2, 0.5],
+        [0, 0],
+      ],
+      faces: [1, 2],
+    },
+  };
+
+  it('on a folded edge draws the layer underneath only past the one on top, and lights the wedge that swivels brightest', () => {
+    const creases = vertexCreaseLines(index, { analysis: onFold, emergent: 0 }, 'valley');
+    expect(creases.map((crease) => crease.letter)).toEqual(['valley', 'mountain', 'valley']);
+    close(creases[0]!.line[0], { x: 0.2, y: 0.3 });
+    close(creases[1]!.line[0], { x: 0.2, y: 0.5 });
+    const hidden: FoldVertexAnalysis = {
+      ...onFold,
+      creases: [{ ray: 'meet', direction: [0, -1], from: [0.2, 0], to: [0.2, 0], letter: 'valley', ridge: false }],
+    };
+    expect(vertexCreaseLines(index, { analysis: hidden, emergent: 0 }, 'valley')).toEqual([]);
+    const tint = swivelRegionsTint(index, onFold, accent);
+    const alpha = (k: number) => tint!.color[k * 4 + 3]!;
+    expect(alpha(3)).toBeGreaterThan(alpha(0));
   });
 });

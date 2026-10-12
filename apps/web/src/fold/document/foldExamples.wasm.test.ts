@@ -143,7 +143,7 @@ describe.skipIf(!available)('the Fold example projects', () => {
     ]);
     const edgeOps = swivels.map((step) => (isSwivelEdgeOp(step.op) ? step.op : null));
     expect(edgeOps.every((op) => op?.target.via === 'crease')).toBe(true);
-    expect(edgeOps.map((op) => (op?.ridge ? 'end' : 'foot'))).toEqual(['foot', 'end']);
+    expect(edgeOps.map((op) => (op && 'ridge' in op && op.ridge ? 'end' : 'foot'))).toEqual(['foot', 'end']);
 
     // The book fold, then two branches from it: the inside crimp and the outside.
     const [book, inside, outside] = steps(opened('crimp.osf'));

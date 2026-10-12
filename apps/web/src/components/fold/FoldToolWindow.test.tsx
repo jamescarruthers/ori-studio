@@ -283,7 +283,7 @@ describe('FoldToolWindow', () => {
     const withLineBy = { ...calls, setVertexLineBy };
     for (const [tool, intro, first, heading, other] of [
       ['petal', 'Lifts a flap’s lower point up along a hinge', 'Select the hinge crease.', 'Hinge', 'Two endpoints'],
-      ['swivel', 'Swivels an edge onto a line', 'Click the pivot.', 'Lands on', 'Two points'],
+      ['swivel', 'Swivels an edge onto a line', 'Click the pivot, or a folded edge for the creases to meet on.', 'Lands on', 'Two points'],
     ] as const) {
       render(
         { tool, lineMode: 'crease', picks: 0, vertex: { ...vertex, tool, lineBy: 'crease', described: false, known: false } },

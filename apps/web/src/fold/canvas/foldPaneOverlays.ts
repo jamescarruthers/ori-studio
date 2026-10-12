@@ -367,6 +367,9 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
   }
 
   const draw = (pick: FoldPick, hover: boolean) => {
+    // A point on a folded edge, where a swivel's creases meet: the edge it
+    // names lit with it, under its dot.
+    if (pick.kind === 'point' && pick.fold) draw(pick.fold, hover);
     const at = pickOnPane(pick, pane, spread);
     if (!at) return;
     if ('x' in at) {

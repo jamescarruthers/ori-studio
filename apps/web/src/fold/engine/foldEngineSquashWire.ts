@@ -133,10 +133,21 @@ export interface FoldFanAnalysis {
   layers: number[];
 }
 
-/** Which of a swivel by its edge's four creases (`SwivelRay`): toward where the edge meets the target, square to the edge, toward its far end, and Kawasaki's. */
+/**
+ * Which of a swivel by its edge's four creases (`SwivelRay`): toward where
+ * the edge meets the target, square to the edge, toward its far end, and
+ * Kawasaki's. On a folded edge: `meet` the swivel crease (one in each of the
+ * two layers), `hinge` the other layer's second crease.
+ */
 export type FoldSwivelRay = 'meet' | 'foot' | 'end' | 'hinge';
 
-/** A wedge a swivel by its edge moves (`SwivelWedge`): across meet, turned about the vertex, across the hinge. The wedge from hinge to meet stays. */
+/**
+ * A wedge a swivel by its edge moves (`SwivelWedge`): across meet, turned
+ * about the vertex, across the hinge. The wedge from hinge to meet stays. On
+ * a folded edge: the edge's layer folding across the swivel crease, the
+ * other layer's paper on the half of the folded edge that opens, and its
+ * strip folding across its second crease.
+ */
 export type FoldSwivelWedge = 'near' | 'turn' | 'beyond';
 
 /** One crease of a swivel by its edge, as a tool previews it in the diagram pens (`SwivelCrease`). */
@@ -144,7 +155,13 @@ export interface FoldSwivelCrease {
   ray: FoldSwivelRay;
   /** A unit direction from the vertex, in the parent's model frame. */
   direction: FoldModelPoint;
-  /** Where it leaves the last layer it cuts, in the parent's model frame: the pen runs from the vertex to here. */
+  /**
+   * Where the pen starts, in the parent's model frame: the vertex, or on a
+   * folded edge, for the swivel crease of the layer the viewer sees under
+   * the other, where the other's ends (`to` when it is hidden all along).
+   */
+  from: FoldModelPoint;
+  /** Where it leaves the last layer it cuts, in the parent's model frame: the pen runs from `from` to here. */
   to: FoldModelPoint;
   /** As the viewer sees it: the op's direction's letter, the ridge the other. */
   letter: FoldLetter;
@@ -190,6 +207,18 @@ export interface FoldSwivelEdgeAnalysis {
   layers: number[];
   /** The paper that moves; empty when the fan cannot cut the layers (folding it says why). */
   regions: FoldSwivelRegion[];
+  /** On a folded edge (the op's `fold`): that edge and the half of it that opens. Absent for a free vertex. */
+  fold?: FoldSwivelFold;
+}
+
+/** The folded edge a swivel's creases meet on (`SwivelFold`), in the parent's model frame. */
+export interface FoldSwivelFold {
+  /** Its straight run. */
+  edge: [FoldModelPoint, FoldModelPoint];
+  /** The half that opens, from the vertex toward the edge that moves. */
+  opens: [FoldModelPoint, FoldModelPoint];
+  /** The two faces it joins at the vertex, ascending. */
+  faces: number[];
 }
 
 export type FoldVertexAnalysis =
@@ -222,6 +251,12 @@ export interface FoldVertexAnalysed {
    * ridge (`analysis.ridges`). Empty for the other folds.
    */
   emergents: boolean[];
+  /**
+   * A swivel on a folded edge's: valley, then mountain, as the viewer sees
+   * them, each whether the fold lands that way — its one choice besides the
+   * order. Absent for the other folds.
+   */
+  directions?: boolean[];
   /** Null when it lands with one order, or is refused (the preview says why). */
   orders: FoldVertexOrders | null;
 }
@@ -260,8 +295,12 @@ export type FoldNoPetalDetail = { kind: 'misses_flap' } | { kind: 'past_corner';
  * `point`): no raw or folded edge at the sheet point, a target parallel to
  * the edge, a vertex on the edge's line, an edge that ends before its foot
  * (with a `use_line` fix along the bisector), and an edge whose paper the
- * cut layers leave out. The fan's own follow (`fan_*`, `no_order`), and a
- * `use_emergent` fix names the other ridge, to store as the op's `ridge`.
+ * cut layers leave out. On a folded edge (`compound::swivel_on_edge`): no
+ * folded crease at the sheet point (naming its `point`), a bisector that
+ * crosses the folded edge nowhere, and a swivel crease meeting it at a right
+ * angle or wider, each naming the two faces it joins. The fan's own follow
+ * (`fan_*`, `no_order`), and a `use_emergent` fix names the other ridge, to
+ * store as the op's `ridge`.
  */
 export const FOLD_SWIVEL_EDGE_REFUSAL_CODES = [
   'swivel_not_an_edge',
@@ -269,4 +308,7 @@ export const FOLD_SWIVEL_EDGE_REFUSAL_CODES = [
   'swivel_pivot_on_edge',
   'swivel_edge_short',
   'swivel_edge_stays',
+  'swivel_not_a_fold',
+  'swivel_misses_fold',
+  'swivel_fold_wide',
 ] as const;

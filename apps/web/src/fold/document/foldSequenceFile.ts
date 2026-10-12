@@ -360,8 +360,12 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['unsink', ALONG_LINE_KEYS],
 ]);
 
-/** A swivel by its edge's keys (`via: 'edge'`); its rays form's are `OP_KEYS`'. */
-const SWIVEL_EDGE_KEYS = new Set(['kind', 'via', 'pivot', 'edge', 'target', 'seed', 'direction', 'ridge']);
+/**
+ * A swivel by its edge's keys (`via: 'edge'`), at a free vertex or on a
+ * folded edge (`fold`, which no build before it knew); its rays form's are
+ * `OP_KEYS`'.
+ */
+const SWIVEL_EDGE_KEYS = new Set(['kind', 'via', 'pivot', 'fold', 'edge', 'target', 'seed', 'direction', 'ridge']);
 
 /** The keys this build knows for an op: its kind's, or its form's when its kind has two. */
 function opKeys(value: Record<string, unknown>, kind: string): ReadonlySet<string> | undefined {
@@ -526,13 +530,22 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
  * A swivel by its edge (`via: 'edge'`): the pivot and a point on the edge,
  * the target as a crease's point or two points (an axiom's would need a root
  * the step does not store), the layers, and the ridge when the folder took
- * the other one. Any other `via` is a newer build's form.
+ * the other one. On a folded edge, `fold` in place of the pivot and no seed
+ * or ridge: a `fold` beside any of them does not read. Any other `via` is a
+ * newer build's form.
  */
 function readSwivelEdgeOp(value: Record<string, unknown>, direction: FoldDirection): FoldSwivelEdgeOp | null {
   if (value.via !== 'edge') return null;
-  const pivot = readPoint(value.pivot);
   const edge = readPoint(value.edge);
   const target = readLine(value.target);
+  if (value.fold !== undefined) {
+    const fold = readPoint(value.fold);
+    const alone = value.pivot === undefined && value.seed === undefined && value.ridge === undefined;
+    return alone && fold && edge && target && target.via !== 'axiom'
+      ? { kind: 'swivel', via: 'edge', fold, edge, target, direction }
+      : null;
+  }
+  const pivot = readPoint(value.pivot);
   const seed = readSeed(value.seed);
   const ridge = value.ridge === undefined ? undefined : readModelDirection(value.ridge);
   return pivot && edge && target && target.via !== 'axiom' && seed && ridge !== null
@@ -1018,6 +1031,18 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
         ...optional('ridge', op.ridge),
       };
     case 'swivel':
+      if ('via' in op && 'fold' in op) {
+        // On a folded edge: `fold` where the free form has its pivot, and
+        // neither a seed nor a ridge.
+        return {
+          kind: op.kind,
+          via: op.via,
+          fold: writePoint(op.fold),
+          edge: writePoint(op.edge),
+          target: writeLine(op.target),
+          direction: op.direction,
+        };
+      }
       if ('via' in op) {
         return {
           kind: op.kind,

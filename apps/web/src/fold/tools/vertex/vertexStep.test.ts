@@ -7,6 +7,7 @@ import type { FoldScene } from '../../engine/foldEngineWire';
 import { toPoint } from '../../canvas/foldCanvasGeometry';
 import { fanRegionAt } from './fanGeometry';
 import {
+  directionToFold,
   emergentToFold,
   fanCenterScene,
   fanGiven,
@@ -23,9 +24,11 @@ import {
   petalRegionKey,
   picksFanStayer,
   picksPetalRegion,
+  picksSwivelPivot,
   PLACEHOLDER_RAY,
   squashTargetToward,
   steppedFourth,
+  swivelFoldPick,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
@@ -192,6 +195,27 @@ describe('a swivel by its edge', () => {
     // A swivel has no given rays and no paper that stays to pick: the edge form computes them.
     expect(fanGiven({ tool: 'swivel', picks })).toBeNull();
     expect(picksFanStayer('swivel', 3)).toBe(false);
+  });
+
+  it('is asked by the folded edge its pivot was clicked on, with no seed: the creases meet on that edge', () => {
+    const onFold: FoldPick = { kind: 'point', provenance: 'fold', sheet: [0.5, 0.3], mark: null, scene: p(0.5, 0.3), fold };
+    const picks = [onFold, bottom, point(0, 1)];
+    // The pivot's step takes a folded edge; no other step does.
+    expect(picksSwivelPivot('swivel', 0)).toBe(true);
+    expect(picksSwivelPivot('swivel', 1)).toBe(false);
+    expect(picksSwivelPivot('rabbit-ear', 0)).toBe(false);
+    expect(swivelFoldPick({ tool: 'swivel', picks })).toBe(fold);
+    expect(swivelFoldPick({ tool: 'swivel', picks: [point(0.5, 0.3)] })).toBeNull();
+    expect(
+      vertexAskedOp(intent({ tool: 'swivel', swivelTarget: 'crease', picks: [onFold, bottom, bottom] }), index)
+    ).toEqual({
+      kind: 'swivel',
+      via: 'edge',
+      fold: [0.5, 0.3],
+      edge: [0.25, 0],
+      target: { via: 'crease', at: [0.25, 0] },
+      direction: 'valley',
+    });
   });
 
   it('tells a target parallel to its edge', () => {
@@ -361,9 +385,81 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     expect(vertexChosenOp(base, ridges([true, true]), { ...NONE, emergent: 1 })).toEqual({
       op: { ...base, ridge: [0.5, -0.5] },
       emergent: 1,
+      direction: 'valley',
       again: true,
     });
-    expect(vertexChosenOp(base, ridges([false, false]), NONE)).toEqual({ op: base, emergent: 0, again: false });
+    expect(vertexChosenOp(base, ridges([false, false]), NONE)).toEqual({
+      op: base,
+      emergent: 0,
+      direction: 'valley',
+      again: false,
+    });
+  });
+
+  it('folds a swivel on a folded edge the way that lands, with no ridge, and asks again when that is the other', () => {
+    const onFold = {
+      kind: 'swivel' as const,
+      via: 'edge' as const,
+      fold: [0.75, 0.6] as const,
+      edge: [1, 0.85] as const,
+      target: { via: 'crease' as const, at: [0.75, 0.5] as const },
+      direction: 'valley' as const,
+    };
+    const answer = (directions?: boolean[]): FoldVertexAnalysed => ({
+      analysis: {
+        kind: 'swivel-by-edge',
+        pivot: [0.15, 0.35],
+        vertex: [0.15, 0.35],
+        meet: [0, 0],
+        edge: [
+          [0, 0],
+          [0.2, 0.2],
+        ],
+        edge_faces: [18],
+        foot: [0.25, 0.25],
+        target: { n: [1, 0], d: 0 },
+        rotation: Math.PI / 2,
+        landed: [],
+        creases: [],
+        ridges: [],
+        ridge: 0,
+        layers: [17, 18],
+        regions: [],
+        fold: {
+          edge: [
+            [0.2, 0.2],
+            [0, 0.7],
+          ],
+          opens: [
+            [0.15, 0.35],
+            [0.2, 0.2],
+          ],
+          faces: [17, 18],
+        },
+      },
+      emergents: [],
+      ...(directions ? { directions } : {}),
+      orders: null,
+    });
+    // No ridge to store, whatever is taken.
+    expect(withEmergent(onFold, answer([true, false]), 1)).toEqual(onFold);
+    expect(directionToFold('valley', answer([true, false]))).toBe('valley');
+    expect(directionToFold('mountain', answer([true, false]))).toBe('valley');
+    expect(directionToFold('valley', answer([false, false]))).toBe('valley');
+    expect(directionToFold('mountain', answer())).toBe('mountain');
+    expect(vertexChosenOp(onFold, answer([true, false]), NONE)).toEqual({
+      op: onFold,
+      emergent: 0,
+      direction: 'valley',
+      again: false,
+    });
+    // Only the other way lands: that way is folded, and asked again.
+    expect(vertexChosenOp({ ...onFold, direction: 'mountain' }, answer([true, false]), NONE)).toEqual({
+      op: onFold,
+      emergent: 0,
+      direction: 'valley',
+      again: true,
+    });
   });
 
   it('steps through the fourth rays that land, round and round', () => {
@@ -414,10 +510,11 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       emergents: [],
       orders: null,
     };
-    expect(vertexChosenOp(squash, analysed, NONE)).toEqual({ op: squash, emergent: null, again: false });
+    expect(vertexChosenOp(squash, analysed, NONE)).toEqual({ op: squash, emergent: null, direction: 'valley', again: false });
     expect(vertexChosenOp(squash, analysed, { ...NONE, squashTarget: [0, 1] })).toEqual({
       op: { ...squash, target: [0, 1] },
       emergent: null,
+      direction: 'valley',
       again: true,
     });
     expect(squashTargetToward([0.5, 0.5], [0.5, 1])).toEqual([0, 1]);

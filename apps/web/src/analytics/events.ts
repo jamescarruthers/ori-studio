@@ -73,12 +73,13 @@ export type FoldStepRotationAmount = 'eighth' | 'quarter' | 'half' | 'other';
  * How a Fold vertex fold named what it takes (`fold step added`, since
  * 2026-10-12): a petal fold's hinge — a crease already there, or its two
  * ends, which the fold creases (`hinge`) — and a swivel's form, by its edge
- * or by its rays (`swivel_form`), the edge form's target a crease or edge,
+ * at a free vertex, by its edge on a folded edge (`fold`, since 2026-10-12)
+ * or by its rays (`swivel_form`), the edge forms' target a crease or edge,
  * or the line through two points (`target`).
  */
 export type FoldStepVertexForm =
   | { hinge: 'crease' | 'points' }
-  | { swivelForm: 'edge'; target: 'crease' | 'free' }
+  | { swivelForm: 'edge' | 'fold'; target: 'crease' | 'free' }
   | { swivelForm: 'rays' };
 
 /**
