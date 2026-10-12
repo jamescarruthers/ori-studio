@@ -21,6 +21,17 @@ interface PendingEdit {
 }
 
 /**
+ * What names the field: a label drawn above it (`labelHidden` keeps it for
+ * assistive technology only), or an element already on screen that says
+ * what it is — a section's title (`CollapsibleSection`'s `titleId`) — which
+ * it is labelled by, drawing no label of its own. A hidden label beside a
+ * title of the same words is read twice.
+ */
+type TextAreaRowName =
+  | { label: string; labelHidden?: boolean; labelledBy?: never }
+  | { labelledBy: string; label?: never; labelHidden?: never };
+
+/**
  * A multi-line text field in a row, its label above it.
  *
  * Commits on blur, after `idleMs` without typing, before any undo or redo
@@ -37,6 +48,7 @@ interface PendingEdit {
 export function TextAreaRow({
   label,
   labelHidden = false,
+  labelledBy,
   value,
   placeholder,
   disabled = false,
@@ -49,13 +61,7 @@ export function TextAreaRow({
   fitContent = false,
   fieldRef,
   onCommit,
-}: {
-  label: string;
-  /**
-   * Keep the label for assistive technology only, for a field whose section
-   * title already says what it is.
-   */
-  labelHidden?: boolean;
+}: TextAreaRowName & {
   value: string;
   placeholder?: string;
   disabled?: boolean;
@@ -131,12 +137,15 @@ export function TextAreaRow({
       data-fit={fitContent || undefined}
       title={title}
     >
-      <label className={labelHidden ? styles.labelHidden : styles.label} htmlFor={fieldId}>
-        {label}
-      </label>
+      {labelledBy === undefined && (
+        <label className={labelHidden ? styles.labelHidden : styles.label} htmlFor={fieldId}>
+          {label}
+        </label>
+      )}
       <textarea
         ref={fieldRef}
         id={fieldId}
+        aria-labelledby={labelledBy}
         className={styles.field}
         value={draft ?? value}
         placeholder={placeholder}

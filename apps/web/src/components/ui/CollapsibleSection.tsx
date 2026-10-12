@@ -23,6 +23,7 @@ export function CollapsibleSection({
   collapsible = false,
   defaultOpen = false,
   bodyLabel,
+  titleId,
   className,
   children,
 }: {
@@ -33,6 +34,12 @@ export function CollapsibleSection({
   defaultOpen?: boolean;
   /** Accessible name for the body group, when the title alone would not do. */
   bodyLabel?: string;
+  /**
+   * The title's id, for a field in the body that the title names
+   * (`aria-labelledby`): one name on screen and to assistive technology,
+   * where a label of the field's own would say it twice.
+   */
+  titleId?: string;
   className?: string;
   children: ReactNode;
 }) {
@@ -64,10 +71,14 @@ export function CollapsibleSection({
             onClick={() => setOpen((current) => !current)}
           >
             <ChevronRight size={13} className="collapsible-section__chevron" aria-hidden="true" />
-            <span className="collapsible-section__title">{title}</span>
+            <span id={titleId} className="collapsible-section__title">
+              {title}
+            </span>
           </button>
         ) : (
-          <span className="collapsible-section__title">{title}</span>
+          <span id={titleId} className="collapsible-section__title">
+            {title}
+          </span>
         )}
         {shown && action}
       </div>
