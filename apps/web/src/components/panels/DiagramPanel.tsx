@@ -135,7 +135,8 @@ export function DiagramPanel() {
   useDiagramPaneReveal();
   // Laid out in either view: the pages are the Pages view, and the cards say
   // whose text the pages cut, or which flow steps no longer fit their places.
-  const pages = useDiagramPages(steps.length > 0 ? diagram : null);
+  // A diagram of turns alone lays out too: an empty page, its turns having no steps to stand between.
+  const pages = useDiagramPages(entries.length > 0 ? diagram : null);
   const page = diagram?.page ?? DEFAULT_PAGE_SETUP;
   const pageCount = useMemo(() => paginate(steps, page).length, [steps, page]);
   const pageFits = useMemo(() => stepPageFits(pages.pages?.layout), [pages.pages]);
@@ -246,7 +247,7 @@ export function DiagramPanel() {
         <DiagramPageOverflowNotice pages={pages.pages} className={styles.notice} />
       )}
       <div className="panel-body" onContextMenu={entries.length > 0 ? menu.onContextMenu : undefined}>
-        {steps.length > 0 && view === 'pages' ? (
+        {entries.length > 0 && view === 'pages' ? (
           <DiagramPagesView
             pages={pages.pages}
             failed={pages.failed}

@@ -124,6 +124,9 @@ describe('pages as they printed before placement came', () => {
     // four pages' turns move (own counts 2 and 4, seven a page 1 and 2), each
     // off a picture it stood on or against, into the gap between the two
     // boxes (rasterised and checked by eye). No home moved.
+    // October 12, later (Zach): a turn prints only between two steps. The grid
+    // fixture's turn after its last step is no longer drawn, so its page 2
+    // changed, and only that page.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -156,7 +159,7 @@ describe('pages as they printed before placement came', () => {
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "ef3543b1450c3025 19349513437a562e 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "e7adcfca4f353a0a 86d43639bfc94328 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 1": "762034dc73a12f50 762034dc73a12f50 4f53cda18c2baa0c",
-        "grid, a page break, turns and an upload · page 2": "8254deff8fc82487 8254deff8fc82487 4f53cda18c2baa0c",
+        "grid, a page break, turns and an upload · page 2": "09fc08ba3982c9d1 09fc08ba3982c9d1 4f53cda18c2baa0c",
         "grid, enlarged steps at a Size of 2 and of 6 · page 1": "c9b60bfa75923571 c9b60bfa75923571 f2a6c074db74a98c",
         "grid, two pages · page 1": "55238bffde0a38d1 55238bffde0a38d1 4f53cda18c2baa0c",
         "grid, two pages · page 2": "776e2e1611d8dbc7 776e2e1611d8dbc7 4f53cda18c2baa0c",

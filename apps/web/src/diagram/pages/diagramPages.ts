@@ -88,9 +88,11 @@ export type PictureOf = (step: DiagramStep, measure: PictureMeasure) => LayoutSt
 /**
  * What the layout needs of each step, its marks measured at the size a first
  * layout found for it when known (`measureOf`), by `pictureOf`; each with
- * the turns between it and the step before (D22), the last with any after
- * it, and its picture's footprints, to be worked out only if a placement
- * clash asks for them (`footprints`).
+ * the turns between it and the step before (D22) — a turn with no step on
+ * one side, before the first or after the last, is not drawn on the pages
+ * (Zach, 12 Oct), though the document keeps it — and its picture's
+ * footprints, to be worked out only if a placement clash asks for them
+ * (`footprints`).
  */
 export function diagramLayoutSteps(
   document: DiagramDocument,
@@ -119,7 +121,8 @@ export function diagramLayoutSteps(
       ...(entry.pageSteps !== undefined ? { pageSteps: entry.pageSteps } : {}),
       picture,
       footprints: footprints.of(entry, picture, measure),
-      turnsBefore: turns,
+      // A turn is drawn only between two steps (Zach, 12 Oct): one before the first step has none before it.
+      turnsBefore: steps.length > 0 ? turns : [],
       turnsAfter: [],
       // Enlarged, with no window yet: in no run of enlarged steps, and parting none.
       ...(zoom ? { zoom } : entry.zoom ? { zoomPending: true as const } : {}),
@@ -128,8 +131,7 @@ export function diagramLayoutSteps(
     });
     turns = [];
   }
-  const last = steps.at(-1);
-  if (last && turns.length > 0) steps[steps.length - 1] = { ...last, turnsAfter: turns };
+  // Turns after the last step have no step after them: the pages leave them out, as the document keeps them.
   return steps;
 }
 

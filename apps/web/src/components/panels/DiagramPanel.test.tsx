@@ -181,6 +181,36 @@ describe('DiagramPanel', () => {
       expect(options()).toHaveLength(0);
       expect(host?.querySelector('[role="status"]')).not.toBeNull();
     });
+
+    it('switches to the pages for a diagram of turns alone, which no step stands either side of', () => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        }
+      );
+      onTestFinished(() => {
+        vi.unstubAllGlobals();
+      });
+      act(() => {
+        state().insertDiagramTurn({ kind: 'turn-over', axis: 'vertical' });
+        state().insertDiagramTurn({ kind: 'turn-over', axis: 'horizontal' });
+      });
+      // In the Steps view the turns are cards.
+      expect(options()).toHaveLength(2);
+      const pages = [...(host?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].find(
+        (tab) => tab.textContent === 'Pages'
+      )!;
+      act(() => {
+        pages.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+      });
+      expect(state().diagramView).toBe('pages');
+      // The page view, not the cards: and no turn drawn on it, with no step either side.
+      expect(options()).toHaveLength(0);
+      expect(host?.querySelector('[role="status"]')).not.toBeNull();
+    });
   });
 
   describe('keys', () => {

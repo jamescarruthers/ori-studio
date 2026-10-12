@@ -185,14 +185,15 @@ describe('DiagramPagesView', () => {
       4
     );
     render(preparedPages(turned, FONTS, subsetter));
-    // A flow page's box holds a long caption whole: nothing is cut.
+    // A flow page's box holds a long caption whole: nothing is cut. The rotation after the
+    // last step has no step after it, so the page leaves it out (Zach, 12 Oct).
     expect(cells().map((cell) => cell.getAttribute('aria-label'))).toEqual([
       'Step 1',
       'Turn over, side to side, between steps 1 and 2',
       'Step 2',
       'Step 3',
-      'Rotate 1/4 turn clockwise, after step 3',
     ]);
+    expect(host.querySelector('[data-step-id="turn-z"]')).toBeNull();
     const target = host.querySelector<HTMLElement>('[data-step-id="turn-a"]')!;
     // Wider than tall, as the side-to-side turn-over prints.
     expect(parseFloat(target.style.width)).toBeGreaterThan(parseFloat(target.style.height));
