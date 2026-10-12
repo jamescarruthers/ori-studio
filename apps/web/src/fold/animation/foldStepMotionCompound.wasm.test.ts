@@ -303,27 +303,64 @@ describe.skipIf(!available)('every compound fold’s motion from the engine’s 
     expect(played).toBeGreaterThan(0);
   });
 
-  it('plays a crimp of the triangle’s corner in two swings: about ℓ1, then about where ℓ2 went', () => {
-    const tri = triangle(engine);
-    const angle = (36.87 * Math.PI) / 180;
-    const op: FoldCrimpOp = {
+  /**
+   * The triangle's crimps (the engine's `the_triangles_crimp_lands_by_the_lines_angle`):
+   * ℓ1 across the spine at (0.4, 0.6), ℓ2 through (0.62, 0.38) at 36.87°
+   * (inside only), at 53.13° (outside only), or parallel to ℓ1 (either).
+   */
+  const CRIMPS: [string, number | 'parallel', FoldCrimpOp['crimp']][] = [
+    ['36.87°, inside', 36.87, 'inside'],
+    ['53.13°, outside', 53.13, 'outside'],
+    ['parallel, inside', 'parallel', 'inside'],
+    ['parallel, outside', 'parallel', 'outside'],
+  ];
+  const crimpOp = (degrees: number | 'parallel', kind: FoldCrimpOp['crimp']): FoldCrimpOp => {
+    const angle = degrees === 'parallel' ? Math.PI / 4 : (degrees * Math.PI) / 180;
+    const from: SheetPoint = degrees === 'parallel' ? [0.6, 0.4] : [0.62, 0.38];
+    return {
       kind: 'crimp',
       line: { via: 'free', through: [[0.4, 0.6], [0.6, 0.8]] },
-      second: {
-        via: 'free',
-        through: [
-          [0.62, 0.38],
-          [0.62 + 0.3 * Math.cos(angle), 0.38 + 0.3 * Math.sin(angle)],
-        ],
-      },
-      crimp: 'inside',
+      second: { via: 'free', through: [from, [from[0] + 0.3 * Math.cos(angle), from[1] + 0.3 * Math.sin(angle)]] },
+      crimp: kind,
       moving: [0.97, 0.06],
       seed: { scope: 'all' },
     };
+  };
+
+  it.each(CRIMPS)('plays the triangle’s crimp (%s) in one swing, both lines folding together', (_, degrees, kind) => {
+    const tri = triangle(engine);
+    const op = crimpOp(degrees, kind);
     const folded = landed(engine.compound.crimp(tri, op));
     if (folded.outcome !== 'landed') throw new Error(folded.outcome);
-    expect(folded.compound.motion.legs).toHaveLength(4);
-    expectPlays(engine, { op, parent: tri, state: folded.state, legs: folded.compound.motion }, 2);
+    expect(folded.compound.motion.legs.map((leg) => [leg.name, leg.stacking])).toEqual([
+      ['spread', 'parent'],
+      ['close', 'landed'],
+    ]);
+    expectPlays(engine, { op, parent: tri, state: folded.state, legs: folded.compound.motion }, 1);
+  });
+
+  it.each(CRIMPS)('keeps the crimp’s tip in sight all the way through (%s)', (_, degrees, kind) => {
+    const tri = triangle(engine);
+    const op = crimpOp(degrees, kind);
+    const folded = landed(engine.compound.crimp(tri, op));
+    if (folded.outcome !== 'landed') throw new Error(folded.outcome);
+    const legs = folded.compound.motion;
+    const { motion, after } = motionOf(engine, { op, parent: tri, state: folded.state, legs });
+    // The tip: the faces that turn about ℓ2 as the strip carries it, by their place in the scenes.
+    const tipIds = new Set(legs.legs[0]!.groups.flatMap((group) => (group.carrier ? group.faces : [])));
+    const tip = new Set(after.lineage.flatMap((face, index) => (tipIds.has(face.id) ? [index] : [])));
+    expect(tip.size).toBeGreaterThan(0);
+    const points = samples(motion.before, motion.after);
+    const seen: string[] = [];
+    for (let k = 1; k < 50; k += 1) {
+      const frame = foldStepFrameAt(motion, k / 50).scene;
+      const shown = points.filter((p) => {
+        const top = seenAt(frame, p);
+        return top !== null && tip.has(top.face);
+      }).length;
+      seen.push(`${(k / 50).toFixed(2)}:${shown}`);
+      expect(shown, `the tip at ${k / 50} (${seen.join(' ')})`).toBeGreaterThan(0);
+    }
   });
 
   it('plays a tuck of the book’s corner under the layer beside it', () => {

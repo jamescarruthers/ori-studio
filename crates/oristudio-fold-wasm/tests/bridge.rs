@@ -744,6 +744,144 @@ fn an_axiom_folds_along_its_stored_root() {
     assert!(matches!(not_axiom, Err(BridgeError::InvalidInput(_))));
 }
 
+/// O2, `p` onto `q`, and the first root the bridge names for it: its line
+/// and the side it implies.
+fn o2_root(bridge: &Bridge, state: u32, p: Point, q: Point) -> (Value, Value, Value) {
+    let line = json!({
+        "via": "axiom", "axiom": 2,
+        "inputs": [{ "kind": "point", "at": p }, { "kind": "point", "at": q }]
+    });
+    let candidates = ok(bridge.axiom_candidates(
+        state,
+        &serde_json::from_value(line.clone()).unwrap_or_else(|e| panic!("{e}")),
+    ));
+    let root = candidates["candidates"][0].clone();
+    assert!(root["side"].is_string(), "O2 says who moves: {root}");
+    (line, root["line"].clone(), root["side"].clone())
+}
+
+/// Where a sheet point lies in a state's model frame.
+fn image_of(bridge: &Bridge, state: u32, p: Point) -> Point {
+    bridge
+        .state(state)
+        .ok()
+        .and_then(|s| s.resolve_point(p))
+        .unwrap_or_else(|| panic!("{p:?} is off the paper"))
+}
+
+fn close(a: Point, b: Point) -> bool {
+    (a[0] - b[0]).hypot(a[1] - b[1]) < 1e-9
+}
+
+/// Swap over the bridge, the owner's case first: an axiom that carries a
+/// point names the side that moves, and a stored `moving` on the other side
+/// beats it — one rule, in the engine's anchored folds, for every op along a
+/// line: a valley, a mountain, a precrease, an inside and an outside reverse
+/// fold, a crimp's first line. The side comes back in each report, and the
+/// stored step replays to the same state.
+#[test]
+fn a_stored_moving_point_beats_the_side_an_axiom_implies() {
+    let mut bridge = Bridge::new();
+    let other = |side: &Value| {
+        json!(if side == "positive" {
+            "negative"
+        } else {
+            "positive"
+        })
+    };
+
+    // On the square: the top-left corner onto the bottom-right one, and,
+    // swapped, the bottom-right onto the top-left.
+    let sheet = square(&mut bridge);
+    let (line, root, implied) = o2_root(&bridge, sheet, [0.0, 1.0], [1.0, 0.0]);
+    let chosen = json!({ "root": root });
+    for (kind, extra) in [
+        ("valley", json!({})),
+        ("mountain", json!({})),
+        ("precrease", json!({ "direction": "valley" })),
+    ] {
+        let mut step = json!({ "kind": kind, "line": line, "seed": { "scope": "all" } });
+        let mut swapped = step.clone();
+        for value in [&mut step, &mut swapped] {
+            if let (Some(op), Some(more)) = (value.as_object_mut(), extra.as_object()) {
+                op.extend(more.clone());
+            }
+        }
+        swapped["moving"] = json!([0.9, 0.1]);
+        let (plain, landed) = land_with(&mut bridge, sheet, step, chosen.clone());
+        assert_eq!(landed["report"]["side"], implied, "{kind}");
+        let (moved, landed) = land_with(&mut bridge, sheet, swapped.clone(), chosen.clone());
+        assert_eq!(landed["report"]["side"], other(&implied), "{kind}");
+        if kind != "precrease" {
+            // The top-left corner comes onto the bottom-right one, or, swapped,
+            // stays while the bottom-right one comes onto it.
+            for (state, corner, lands) in [
+                (plain, [0.0, 1.0], [1.0, 0.0]),
+                (plain, [1.0, 0.0], [1.0, 0.0]),
+                (moved, [1.0, 0.0], [0.0, 1.0]),
+                (moved, [0.0, 1.0], [0.0, 1.0]),
+            ] {
+                let at = image_of(&bridge, state, corner);
+                assert!(close(at, lands), "{kind}: {corner:?} at {at:?}");
+            }
+        }
+        // Replayed as the document stores it: the same state.
+        let (again, _) = land_with(&mut bridge, sheet, swapped, chosen.clone());
+        assert_eq!(
+            bridge.canonical_keys(again).ok().map(sorted),
+            bridge.canonical_keys(moved).ok().map(sorted),
+            "{kind}"
+        );
+    }
+
+    // On the triangle b c d (the square folded along bd, its spine): b onto
+    // d is y = x, square to the spine at its middle, a tip either side. The
+    // axiom says b's tip; swapped, d's is the one reversed or crimped.
+    let tri = {
+        let step = json!({
+            "kind": "valley",
+            "line": { "via": "free", "through": [[1.0, 0.0], [0.0, 1.0]] },
+            "moving": [0.1, 0.1],
+            "seed": { "scope": "all" }
+        });
+        land(&mut bridge, sheet, step).0
+    };
+    let (line, root, implied) = o2_root(&bridge, tri, [1.0, 0.0], [0.0, 1.0]);
+    let chosen = json!({ "root": root });
+    // A point of d's tip, and each tip's crimp line beyond y = x.
+    let d_side = [0.2, 0.9];
+    let beyond = |toward_d: bool| {
+        let shift = if toward_d { 0.15 } else { -0.15 };
+        json!({ "via": "free", "through": [[0.5 - shift, 0.5 + shift], [0.8 - shift, 0.8 + shift]] })
+    };
+    for kind in ["inside-reverse", "outside-reverse", "crimp"] {
+        let step = |swapped: bool| {
+            let mut step = json!({ "kind": kind, "line": line, "seed": { "scope": "all" } });
+            if kind == "crimp" {
+                step["second"] = beyond(swapped);
+                step["crimp"] = json!("inside");
+            }
+            if swapped {
+                step["moving"] = json!(d_side);
+            }
+            step
+        };
+        let (_, landed) = land_with(&mut bridge, tri, step(false), chosen.clone());
+        assert_eq!(landed["compound"]["side"], implied, "{kind}");
+        let (moved, landed) = land_with(&mut bridge, tri, step(true), chosen.clone());
+        assert_eq!(landed["compound"]["side"], other(&implied), "{kind}");
+        // d's corner moved, b's stayed.
+        let [d, b] = [[0.0, 1.0], [1.0, 0.0]].map(|corner| image_of(&bridge, moved, corner));
+        assert!(!close(d, [0.0, 1.0]) && close(b, [1.0, 0.0]), "{kind}");
+        let (again, _) = land_with(&mut bridge, tri, step(true), chosen.clone());
+        assert_eq!(
+            bridge.canonical_keys(again).ok().map(sorted),
+            bridge.canonical_keys(moved).ok().map(sorted),
+            "{kind}"
+        );
+    }
+}
+
 fn sorted(mut keys: Vec<String>) -> Vec<String> {
     keys.sort();
     keys

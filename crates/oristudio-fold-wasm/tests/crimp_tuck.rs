@@ -141,11 +141,18 @@ fn a_crimp_lands_replays_and_refuses_the_kind_that_does_not_fit() {
     // Held as `apply` holds a step: no plain report, the crimp's as `compound`.
     assert_eq!(folded["report"], Value::Null);
     assert_eq!(folded["compound"]["family"], "crimp");
-    assert_eq!(
-        folded["compound"]["motion"]["legs"]
+    // Both lines fold together: a spread and a close, the tip's turn about
+    // ℓ2 carried by its strip's about ℓ1.
+    let legs = folded["compound"]["motion"]["legs"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(legs.len(), 2);
+    assert!(
+        legs[0]["groups"]
             .as_array()
-            .map(Vec::len),
-        Some(4)
+            .is_some_and(|groups| groups.iter().any(|g| g["carrier"]["axis"].is_object())),
+        "{legs:?}"
     );
     assert_eq!(folded["compound"]["kind"], "inside");
     // The step replays through `apply` to the same state and report, with

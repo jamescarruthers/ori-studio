@@ -17,11 +17,14 @@
 //! - **close**: from edge-on to landed, stacked as the landed state does,
 //!   so the last frame draws what lands, in the order it lands in.
 //!
-//! A tuck is one block turning the same way. A crimp is four legs: its strip
-//! and tip spread and close about ℓ1 as a reverse fold's blocks do, then the
-//! tip spreads and closes again about where ℓ2 went; the tip's first two
-//! legs end where the strip carried it, its turn about ℓ2 still to come
-//! (`MotionGroup::then`).
+//! A tuck is one block turning the same way. A crimp folds both its lines
+//! together, in one spread and one close: each strip block turns about ℓ1 as
+//! a reverse fold's block does, and its tip block turns about ℓ2 the other
+//! way at the same rate, carried by the strip's turn (`MotionGroup::carrier`)
+//! — so the tip's pose is the strip's turn of its own at every instant, ρ1∘ρ2
+//! once both are done, and between them the tip slides over as a pleat does
+//! (along parallel lines it never tilts) rather than standing edge-on with
+//! its strip.
 //!
 //! A vertex fold (squash, petal, rabbit ear, swivel) turns some paper about
 //! more than one crease: its blocks' motions are products of reflections.
@@ -88,42 +91,82 @@ pub struct MotionGroup {
     /// toward +z of the model frame.
     pub from: f64,
     pub to: f64,
+    /// The turn that carries this group's hinge while the group turns about
+    /// it, over the same leg: the paper the hinge joins the group to, turning
+    /// about its own hinge (a crimp's strip, carrying ℓ2 and its tip). It
+    /// applies after the group's own turn. None for a hinge that stays where
+    /// it lies.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub carrier: Option<Carrier>,
     /// What the faces still do after this turn, in the model frame: the
     /// identity (left out) when this turn lands them. A vertex fold turns
-    /// some paper twice (`StepMotion::staged`); a crimp's tip turns about ℓ1
-    /// with its strip and lands only after a second turn, about ℓ2. The
-    /// identity for every leg of a plain or reverse fold.
+    /// some paper twice (`StepMotion::staged`). The identity for every leg
+    /// of a plain or reverse fold, a tuck and a crimp.
     #[serde(default, skip_serializing_if = "is_identity")]
     pub then: Isometry,
 }
 
+/// A turn carrying another group's hinge ([`MotionGroup::carrier`]): its
+/// line, the side the carried paper starts on, and its turn at the leg's
+/// start and end, as a group's own.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Carrier {
+    pub axis: Line,
+    pub side: Side,
+    pub from: f64,
+    pub to: f64,
+}
+
 impl MotionGroup {
-    /// Where the turn `angle` puts a point of one of the group's faces,
-    /// given where it lands (a model-frame point of the landed state): its
-    /// model-frame position and its height above the paper that stays.
-    /// At ±π this is where the turn leaves it (`landed`, for the last turn)
-    /// at height 0; at 0, where it lay before the turn (where the parent
-    /// had it, for the first).
-    pub fn place(&self, landed: Point, angle: f64) -> [f64; 3] {
-        let n = match self.side {
-            Side::Positive => self.axis.n,
-            Side::Negative => [-self.axis.n[0], -self.axis.n[1]],
+    /// Where the leg puts a point of one of the group's faces `share` of the
+    /// way through it (0 its start, 1 its end), given where it lands (a
+    /// model-frame point of the landed state): its model-frame position and
+    /// its height above the paper that stays. The group's turn, and its
+    /// carrier's, each move by that share from their `from` to their `to`.
+    /// At ±π (each) this is where the turns leave it (`landed`, for the last
+    /// leg) at height 0; at 0, where it lay before them (where the parent had
+    /// it, for the first).
+    pub fn pose(&self, landed: Point, share: f64) -> [f64; 3] {
+        let at = |from: f64, to: f64| from + share * (to - from);
+        // Where the turns start it: where they leave it, back across the
+        // carrier's hinge and then the group's own.
+        let left = self.then.inverse().apply(landed);
+        let back = match &self.carrier {
+            Some(carrier) => carrier.axis.reflect_point(left),
+            None => left,
         };
-        // The point where the turn starts is where it leaves it reflected
-        // across the hinge.
-        let start = self.axis.reflect_point(self.then.inverse().apply(landed));
-        let d = n[0] * start[0] + n[1] * start[1]
-            - match self.side {
-                Side::Positive => self.axis.d,
-                Side::Negative => -self.axis.d,
-            };
-        let pulled = d * (1.0 - angle.cos());
-        [
-            start[0] - pulled * n[0],
-            start[1] - pulled * n[1],
-            d * angle.sin(),
-        ]
+        let start = self.axis.reflect_point(back);
+        let own = turn(
+            &self.axis,
+            self.side,
+            at(self.from, self.to),
+            [start[0], start[1], 0.0],
+        );
+        match &self.carrier {
+            Some(carrier) => turn(
+                &carrier.axis,
+                carrier.side,
+                at(carrier.from, carrier.to),
+                own,
+            ),
+            None => own,
+        }
     }
+}
+
+/// A point of space turned by `angle` about `axis`, a line in the paper's
+/// plane: the paper on its `side` lifts toward +z for a positive angle.
+fn turn(axis: &Line, side: Side, angle: f64, [x, y, z]: [f64; 3]) -> [f64; 3] {
+    let (n, d) = match side {
+        Side::Positive => (axis.n, axis.d),
+        Side::Negative => ([-axis.n[0], -axis.n[1]], -axis.d),
+    };
+    // Its distance from the axis across the plane, and its height, turn
+    // together.
+    let u = n[0] * x + n[1] * y - d;
+    let (sin, cos) = angle.sin_cos();
+    let moved = u * cos - z * sin - u;
+    [x + moved * n[0], y + moved * n[1], u * sin + z * cos]
 }
 
 /// One leg of a motion: groups turning at once.
@@ -174,37 +217,46 @@ impl StepMotion {
         }
     }
 
-    /// A crimp's motion, visual: the strip and the tip turn about ℓ1 as a
-    /// reverse fold's blocks do (`first`, from the side they start on), the
-    /// tip ending its turn where the strip carried it (`carried`, from where
-    /// it lands); then the tip turns about where ℓ2 went (`second`, from the
-    /// side it is carried to). Each group is its landed faces and whether
-    /// it turns upward; every turn spreads to edge-on and closes, stacked as
-    /// the parent stacks it only while nothing has landed.
+    /// A crimp's motion, visual, both lines folding together (see the
+    /// module docs): each strip block turns about ℓ1 as a reverse fold's
+    /// block does (`first`, from the side it starts on), and each tip block
+    /// turns about ℓ2 (`second`, where the parent has it, from the tip's
+    /// side) the other way from its strip, carried by the strip's turn about
+    /// ℓ1. Each group is its landed faces and whether its strip turns upward.
+    /// One spread, stacked as the parent stacks it, and one close, stacked
+    /// as the landed state.
     pub(crate) fn crimp(
         first: Turn,
         second: Turn,
         strip: &[(Vec<FaceId>, bool)],
         tip: &[(Vec<FaceId>, bool)],
-        carried: Isometry,
     ) -> StepMotion {
-        // The tip's turn about ℓ1 leaves it where the strip carried it; what
-        // it still does from there is the inverse of that.
-        let then = carried.inverse();
-        let both = |stacking: Stacking, from: f64, name: LegName| {
+        let leg = |name: LegName, stacking: Stacking, from: f64| {
             let mut leg = first.leg(name, stacking, from, strip, Isometry::IDENTITY);
-            leg.groups
-                .extend(first.leg(name, stacking, from, tip, then).groups);
+            leg.groups.extend(tip.iter().map(|(faces, up)| {
+                let sign = if *up { 1.0 } else { -1.0 };
+                MotionGroup {
+                    faces: faces.clone(),
+                    axis: second.axis,
+                    side: second.side,
+                    from: -sign * from,
+                    to: -sign * (from + FRAC_PI_2),
+                    carrier: Some(Carrier {
+                        axis: first.axis,
+                        side: first.side,
+                        from: sign * from,
+                        to: sign * (from + FRAC_PI_2),
+                    }),
+                    then: Isometry::IDENTITY,
+                }
+            }));
             leg
         };
-        let identity = Isometry::IDENTITY;
         StepMotion {
             kind: MotionKind::Visual,
             legs: vec![
-                both(Stacking::Parent, 0.0, LegName::Spread),
-                both(Stacking::Landed, FRAC_PI_2, LegName::Close),
-                second.leg(LegName::Spread, Stacking::Landed, 0.0, tip, identity),
-                second.leg(LegName::Close, Stacking::Landed, FRAC_PI_2, tip, identity),
+                leg(LegName::Spread, Stacking::Parent, 0.0),
+                leg(LegName::Close, Stacking::Landed, FRAC_PI_2),
             ],
         }
     }
@@ -281,6 +333,7 @@ impl Turn {
                         side: self.side,
                         from: sign * from,
                         to: sign * (from + FRAC_PI_2),
+                        carrier: None,
                         then,
                     }
                 })
@@ -328,6 +381,7 @@ impl StagedBlock {
             side: Side::of_point(&axis, start).unwrap_or(Side::Positive),
             from,
             to,
+            carrier: None,
             then,
         })
     }
@@ -352,57 +406,113 @@ mod tests {
         a.iter().zip(&b).all(|(x, y)| (x - y).abs() < 1e-12)
     }
 
-    #[test]
-    fn a_crimps_tip_turns_twice_and_its_legs_meet() {
-        // ℓ1: x = 0.5 and ℓ2: x = 0.8, the tip beyond x = 0.8: the strip
-        // reflects across ℓ1, the tip translates by −0.6 (ρ1 ∘ ρ2), and ℓ2
-        // goes to x = 0.2.
-        let line = |c: f64| Line::new([1.0, 0.0], c).unwrap_or_else(|| unreachable!());
-        let motion = StepMotion::crimp(
-            Turn {
-                axis: line(0.5),
-                side: Side::Positive,
-            },
-            Turn {
-                axis: line(0.2),
-                side: Side::Negative,
-            },
-            &[(vec![FaceId(1)], true)],
-            &[(vec![FaceId(2)], true)],
-            Isometry::reflection([1.0, 0.0], 0.2),
-        );
-        let names: Vec<LegName> = motion.legs.iter().map(|l| l.name).collect();
-        assert_eq!(
-            names,
-            [
-                LegName::Spread,
-                LegName::Close,
-                LegName::Spread,
-                LegName::Close
-            ]
-        );
-        let tip_of = |leg: &MotionLeg| {
-            leg.groups
-                .iter()
-                .find(|g| g.faces == [FaceId(2)])
-                .cloned()
-                .unwrap_or_else(|| panic!("no tip in {leg:?}"))
+    /// Where a crimp's motion has the point of `face` that lands at
+    /// `landed`, `t` of the way through it: its spread to ½, its close
+    /// after.
+    fn crimp_pose(motion: &StepMotion, face: FaceId, landed: Point, t: f64) -> [f64; 3] {
+        let (leg, share) = if t < 0.5 {
+            (0, 2.0 * t)
+        } else {
+            (1, 2.0 * t - 1.0)
         };
-        let tips: Vec<MotionGroup> = motion.legs.iter().map(tip_of).collect();
-        let landed = [0.3, 0.3];
-        assert!(close(tips[0].place(landed, tips[0].from), [0.9, 0.3, 0.0]));
-        assert!(close(tips[1].place(landed, tips[1].to), [0.1, 0.3, 0.0]));
-        assert!(close(tips[2].place(landed, tips[2].from), [0.1, 0.3, 0.0]));
-        assert!(close(tips[3].place(landed, tips[3].to), [0.3, 0.3, 0.0]));
-        for k in 0..3 {
-            let (a, b) = (&tips[k], &tips[k + 1]);
-            if a.axis == b.axis {
-                assert!(close(a.place(landed, a.to), b.place(landed, b.from)));
+        motion.legs[leg]
+            .groups
+            .iter()
+            .find(|g| g.faces == [face])
+            .map(|g| g.pose(landed, share))
+            .unwrap_or_else(|| panic!("no face {face} in leg {leg}"))
+    }
+
+    /// The area of the triangle three posed points make, seen from above.
+    fn area_from_above([a, b, c]: [[f64; 3]; 3]) -> f64 {
+        ((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])).abs() / 2.0
+    }
+
+    #[test]
+    fn a_crimps_tip_turns_about_its_line_as_the_strip_carries_it() {
+        // ℓ1: x = 0.5, the strip (face 1) beyond it, and ℓ2 through (0.8, 0)
+        // — parallel to ℓ1, or turned 20° — the tip (face 2) beyond that.
+        let x = |c: f64| Line::new([1.0, 0.0], c).unwrap_or_else(|| unreachable!());
+        let tilt = 20f64.to_radians();
+        let turned =
+            Line::new([tilt.cos(), tilt.sin()], 0.8 * tilt.cos()).unwrap_or_else(|| unreachable!());
+        for (second, kind) in [(x(0.8), "parallel"), (turned, "turned")] {
+            for up in [true, false] {
+                let label = format!("{kind}, strip up {up}");
+                let motion = StepMotion::crimp(
+                    Turn {
+                        axis: x(0.5),
+                        side: Side::Positive,
+                    },
+                    Turn {
+                        axis: second,
+                        side: Side::Positive,
+                    },
+                    &[(vec![FaceId(1)], up)],
+                    &[(vec![FaceId(2)], up)],
+                );
+                // One spread, as the parent stacks, and one close, as the
+                // landed state does.
+                let legs: Vec<(LegName, Stacking)> =
+                    motion.legs.iter().map(|l| (l.name, l.stacking)).collect();
+                assert_eq!(
+                    legs,
+                    [
+                        (LegName::Spread, Stacking::Parent),
+                        (LegName::Close, Stacking::Landed)
+                    ],
+                    "{label}"
+                );
+                // The tip lands by ρ1 ∘ ρ2, from where the parent had it.
+                let lands = |p: Point| x(0.5).reflect_point(second.reflect_point(p));
+                let tip = [[0.9, 0.3], [1.0, 0.3], [0.95, 0.6]];
+                for p in tip {
+                    let q = lands(p);
+                    let at = |t: f64| crimp_pose(&motion, FaceId(2), q, t);
+                    assert!(close(at(0.0), [p[0], p[1], 0.0]), "{label}: {p:?}");
+                    assert!(close(at(1.0), [q[0], q[1], 0.0]), "{label}: {p:?}");
+                    // The legs meet.
+                    let spread = motion.legs[0].groups[1].pose(q, 1.0);
+                    let closing = motion.legs[1].groups[1].pose(q, 0.0);
+                    assert!(close(spread, closing), "{label}: {p:?}");
+                }
+                for k in 0..=40 {
+                    let t = f64::from(k) / 40.0;
+                    // ℓ2 joins the tip to its strip all the way: a point of
+                    // it lands by ρ1 on either.
+                    for s in [0.0, 0.25, 0.5] {
+                        let on = [0.8 - s * second.n[1], s * second.n[0]];
+                        let landed = x(0.5).reflect_point(on);
+                        let a = crimp_pose(&motion, FaceId(1), landed, t);
+                        let b = crimp_pose(&motion, FaceId(2), landed, t);
+                        assert!(
+                            a.iter().zip(&b).all(|(u, v)| (u - v).abs() < 1e-9),
+                            "{label} at {t}: ℓ2's {on:?} parts, {a:?} and {b:?}"
+                        );
+                    }
+                    // The tip never stands edge-on: seen from above it keeps
+                    // its area, all of it along parallel lines, where it
+                    // slides without tilting.
+                    let posed = tip.map(|p| crimp_pose(&motion, FaceId(2), lands(p), t));
+                    let seen =
+                        area_from_above(posed) / area_from_above(tip.map(|p| [p[0], p[1], 0.0]));
+                    if kind == "parallel" {
+                        assert!((seen - 1.0).abs() < 1e-9, "{label} at {t}: {seen}");
+                        assert!((posed[0][2] - posed[1][2]).abs() < 1e-9);
+                        assert!((posed[0][2] - posed[2][2]).abs() < 1e-9);
+                    } else {
+                        assert!(seen > tilt.cos() - 1e-9, "{label} at {t}: {seen}");
+                    }
+                }
+                // Halfway, the strip stands edge-on over ℓ1 and the tip lies
+                // across its top, as high as the strip is wide there.
+                let strip = crimp_pose(&motion, FaceId(1), [0.4, 0.0], 0.5);
+                let sign = if up { 1.0 } else { -1.0 };
+                assert!(close(strip, [0.5, 0.0, sign * 0.1]), "{label}: {strip:?}");
+                let corner = crimp_pose(&motion, FaceId(2), lands([0.8, 0.0]), 0.5);
+                assert!(close(corner, [0.5, 0.0, sign * 0.3]), "{label}: {corner:?}");
             }
         }
-        // The strip turns about ℓ1 only.
-        assert_eq!(motion.legs[2].groups.len(), 1);
-        assert_eq!(motion.legs[0].groups[0].then, Isometry::IDENTITY);
     }
 
     #[test]
@@ -427,18 +537,22 @@ mod tests {
         assert_eq!(up.to, PI);
         assert_eq!(down.to, -PI);
         let landed = [0.2, 0.7];
-        assert!(close(up.place(landed, up.to), [0.2, 0.7, 0.0]));
-        assert!(close(up.place(landed, 0.0), [0.8, 0.7, 0.0]));
+        assert!(close(up.pose(landed, 1.0), [0.2, 0.7, 0.0]));
+        assert!(close(spread.groups[0].pose(landed, 0.0), [0.8, 0.7, 0.0]));
         // Edge-on: over the hinge, as high as the point was far from it.
-        assert!(close(up.place(landed, up.from), [0.5, 0.7, 0.3]));
-        assert!(close(down.place(landed, down.from), [0.5, 0.7, -0.3]));
+        assert!(close(up.pose(landed, 0.0), [0.5, 0.7, 0.3]));
+        assert!(close(down.pose(landed, 0.0), [0.5, 0.7, -0.3]));
+        assert!(close(spread.groups[0].pose(landed, 1.0), [0.5, 0.7, 0.3]));
         // The same from the other side.
-        let other = MotionGroup {
+        let other = |group: &MotionGroup| MotionGroup {
             side: Side::Negative,
-            ..up.clone()
+            ..group.clone()
         };
-        assert!(close(other.place([0.8, 0.1], PI), [0.8, 0.1, 0.0]));
-        assert!(close(other.place([0.8, 0.1], 0.0), [0.2, 0.1, 0.0]));
+        assert!(close(other(up).pose([0.8, 0.1], 1.0), [0.8, 0.1, 0.0]));
+        assert!(close(
+            other(&spread.groups[0]).pose([0.8, 0.1], 0.0),
+            [0.2, 0.1, 0.0]
+        ));
     }
 
     #[test]
@@ -470,8 +584,7 @@ mod tests {
         assert_eq!(motion.legs[3].stacking, Stacking::Landed);
         for (k, (landed, start)) in [(a, a0), (b, b0)].into_iter().enumerate() {
             let at = |leg: usize, end: bool| {
-                let g = &motion.legs[leg].groups[k];
-                g.place(landed, if end { g.to } else { g.from })
+                motion.legs[leg].groups[k].pose(landed, if end { 1.0 } else { 0.0 })
             };
             assert!(close(at(0, false), [start[0], start[1], 0.0]), "block {k}");
             assert!(close(at(3, true), [landed[0], landed[1], 0.0]), "block {k}");

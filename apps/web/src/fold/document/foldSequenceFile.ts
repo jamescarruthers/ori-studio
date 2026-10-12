@@ -533,11 +533,12 @@ function readAlongLine(
 }
 
 /**
- * The moving side and the seed. The side is stored only when nothing else
- * says it (the bridge's `Motion`): a depth or flaps seed says it, and so does
- * an axiom that carries a point — whether this one does is the engine's to
- * say on replay. A seed of `all` along any other line, or along a crease
- * (`line` null), needs it.
+ * The moving side and the seed. The side is stored when nothing else says it
+ * (the bridge's `Motion`) — a depth or flaps seed says it, and so does an
+ * axiom that carries a point, whether this one does being the engine's to
+ * say on replay — and when the step moves the other side than its axiom
+ * says, which the engine takes over the axiom's. A seed of `all` along any
+ * other line, or along a crease (`line` null), needs it.
  */
 function readMotion(
   value: Record<string, unknown>,

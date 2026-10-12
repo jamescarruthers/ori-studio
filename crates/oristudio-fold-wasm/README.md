@@ -289,8 +289,9 @@ vertex folds it was 843 KiB, and with every Phase 11 family it is 1,064,672 B
 pictures (the last row) it is 1,072,623 B (1,047 KiB), over by 253,423 B
 (247 KiB). **The budget has not been raised, and nothing here changes it.**
 
-**Open, for the owner: the budget without `kernel`.** Raise it, or trim the
-engine side to fit; until that is decided the shipped bridge is over its
+**Open, for the owner: the budget without `kernel`** — now a question
+about a Fold user's first load only (the decision below). Raise it, or trim
+the engine side to fit; until that is decided the shipped bridge is over its
 budget. Taking `kernel`'s 406 KiB as fixed, the engine side is now about
 634 KiB gzipped against its 288 KiB line. What moved it since the line was
 set: the compound pipeline (16 KiB), the vertex folds (92 KiB) and the rest
@@ -307,6 +308,17 @@ fallback is not taken. After the queries it adds about 406 KiB (the
 difference between two worktrees' builds, so approximate), which leaves
 about 106 KiB gzipped for the kernel's other writers (`.cp`, `.ori` and
 `.orh` export, D10), not linked yet.
+
+**Decision (2026-10-11): the bridge is fetched on first Fold use, not
+warmed for every visitor.** The PWA used to warm every kernel for every
+installed visitor, this one among them. The owner chose otherwise for the
+Fold engine (`519aacf96`): its worker and its `.wasm` are in
+`UNWARMED_PATTERNS` (`apps/web/vite.config.ts`), so they are downloaded the
+first time someone opens Fold and cached like any other asset after that.
+A visitor who never opens Fold downloads none of it, and a Fold user pays
+for it once. So the budget question above is about a Fold user's first load
+only — not every visit to the site, and not any Fold session after the
+first.
 
 ## Performance
 
@@ -360,6 +372,15 @@ slower than the table's.
   one closure. The costly ones are `landmarks` and `scene`, which are per
   state: a state is immutable under its handle, so the web side keeps them by
   handle.
+
+**Known limit, accepted (2026-10-11): previews on deep stacks.** Asking a
+reverse fold or a crimp (`compound_analysis`: the kinds that land, and per
+kind the orders still to choose) takes longer the more layers the flap it
+turns holds: about 2 s natively for 128 faces in one flap, against about
+50 ms on real models of about 60 faces. The owner accepted this as a
+known limit rather than something to fix now. When it is revisited, the
+direction is an engine API that prepares the step once and decides each
+kind from that one preparation under one shared budget.
 
 ## Tests
 

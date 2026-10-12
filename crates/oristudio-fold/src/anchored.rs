@@ -10,11 +10,14 @@
 //! - **a free line** through two sheet points, at least the minimum feature
 //!   apart in the model frame.
 //!
-//! The moving side is the axiom's when it implies one. Otherwise it is
-//! `toward`'s, a sheet point whose image lies on it; otherwise the seed's own
-//! point (a depth seed's, or the first flap's), which a seed requires to be on
-//! the moving side, so the step stores a side only when the seed does not
-//! imply one (plan D6).
+//! The moving side is `toward`'s, a sheet point whose image lies on it, when
+//! the step names one; otherwise the axiom's, when it implies one; otherwise
+//! the seed's own point (a depth seed's, or the first flap's), which a seed
+//! requires to be on the moving side. One rule: a side the step names beats
+//! the side its axiom implies. So the step stores a side when nothing else
+//! implies one (plan D6), and when it moves the other side than its axiom
+//! implies — Swap on a point carried onto a point: the point it would have
+//! carried stays, and the other comes onto it.
 //!
 //! Once the fold's moving set is known, every feature the axiom carries from
 //! the moving side must be on a layer that moves: a seed narrower than every
@@ -67,9 +70,9 @@ impl FoldLine {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnchoredFold {
     pub line: FoldLine,
-    /// A sheet point whose image is on the moving side, for a line that
-    /// implies none and a seed that names no point. A side the axiom implies
-    /// wins over it.
+    /// A sheet point whose image is on the moving side: for a line that
+    /// implies none and a seed that names no point, or to move the other
+    /// side than the axiom implies. It wins over both.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub toward: Option<Point>,
     /// As the viewer sees it.
@@ -230,12 +233,14 @@ impl State {
                 (line, None, None, None)
             }
         };
+        // A side the step names beats the axiom's (see the module docs).
         let side = match implied {
-            Some(side) => side,
-            None => self.side_from_points(&line, op)?,
+            Some(side) if op.toward.is_none() => side,
+            _ => self.side_from_points(&line, op)?,
         };
         // What the axiom carries from the side that moves: all of its movers
-        // when it implies the side, an O6's point on the side the step chose.
+        // when it moves the side the axiom implies, an O6's point on the
+        // side the step chose, none when the step moves the other side.
         let movers = match axiom {
             Some(axiom) => self.movers_on(axiom, &line, side)?,
             None => Vec::new(),
@@ -332,7 +337,8 @@ impl State {
         }
     }
 
-    /// The side `toward`, or else the seed's point, is on.
+    /// The side `toward`, or else the seed's point, is on: the side the step
+    /// names.
     fn side_from_points(&self, line: &Line, op: &AnchoredFold) -> Result<Side, LineRefusal> {
         let point = op.toward.or(match &op.seed {
             Seed::All => None,

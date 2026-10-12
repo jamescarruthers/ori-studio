@@ -296,6 +296,8 @@ describe('a compound step’s legs', () => {
       .rings[0]!;
   const side = (scene: PaperScene, id: number) =>
     (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).side;
+  const shade = (scene: PaperScene, id: number) =>
+    (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).shade;
 
   describe('of a reverse fold', () => {
     /**
@@ -350,8 +352,6 @@ describe('a compound step’s legs', () => {
       // Showing the side they showed until edge-on, shaded by the tilt.
       expect(side(poseLegs(legs(), 0, 0.25), 3)).toBe('front');
       expect(side(poseLegs(legs(), 1, 0.87), 3)).toBe('back');
-      const shade = (scene: PaperScene, id: number) =>
-        (scene.items.find((item) => item.kind === 'face' && item.face === id) as PaperFaceItem).shade;
       expect(shade(poseLegs(legs(), 0, 1), 3)).toBeCloseTo(1 - PAPER_TILT_SHADE[3], 9);
       expect(shade(poseLegs(legs(), 0, 1), 2)).toBe(1);
     });
@@ -371,10 +371,10 @@ describe('a compound step’s legs', () => {
   describe('of a crimp', () => {
     /**
      * A crimp across a strip, every coordinate scene px: ℓ1 at x = 50, ℓ2 at
-     * x = 80. The strip (face 1, x 50–80) turns over ℓ1; the tip's two layers
-     * (2 under 3, x 80–100) turn over ℓ1 with it, to x 0–20, and back over
-     * where ℓ2 went (x = 20), to x 20–40: a slide, the tip's stack read the
-     * same at both ends and reversed between its two turns.
+     * x = 80. The strip (face 1, x 50–80) turns up over ℓ1 while the tip's
+     * two layers (2 under 3, x 80–100) turn down about ℓ2, carried by the
+     * strip's turn: the tip slides over to x 20–40 without tilting, its stack
+     * read the same all the way.
      */
     const before = () =>
       sceneOf([
@@ -391,66 +391,102 @@ describe('a compound step’s legs', () => {
         face(3, 'back', square(20, 40)),
       ]);
     const parents = new Map([0, 1, 2, 3].map((id) => [id, id]));
-    const X20 = { n: [1, 0] as const, d: 20 };
-    /** The reflection across x = 20: what the tip still does after its turn about ℓ1. */
-    const ACROSS_20: FoldIsometry = [-1, 0, 40, 0, 1, 0];
-    const crimp = () =>
+    const X80 = { n: [1, 0] as const, d: 80 };
+    /** Faces turning about `axis` the other way from their carrier's turn about `carrier`, in a spread and a close. */
+    const carriedTurn = (axis: FoldModelLine, carrier: FoldModelLine, faces: number[]): FoldMotionLeg['groups'][] =>
+      [0, 1].map((k) => [
+        {
+          faces,
+          axis,
+          side: 'positive',
+          from: (-k * Math.PI) / 2,
+          to: (-(k + 1) * Math.PI) / 2,
+          carrier: { axis: carrier, side: 'positive', from: (k * Math.PI) / 2, to: ((k + 1) * Math.PI) / 2 },
+        },
+      ]);
+    const crimpOf = (second: FoldModelLine, landedScene: PaperScene) =>
       legsMotion(
         before(),
-        landed(),
-        [
-          ...halfTurn(X50, [[[1], 1]]).map((leg, k) => ({
-            ...leg,
-            groups: [...leg.groups, ...halfTurn(X50, [[[2, 3], 1]], ACROSS_20)[k]!.groups],
-          })),
-          ...halfTurn(X20, [[[2, 3], 1]]).map((leg) => ({ ...leg, stacking: 'landed' as const })),
-        ],
+        landedScene,
+        halfTurn(X50, [[[1], 1]]).map((leg, k) => ({
+          ...leg,
+          groups: [...leg.groups, ...carriedTurn(second, X50, [2, 3])[k]!],
+        })),
         PLACE(parents)
       )!;
+    const crimp = () => crimpOf(X80, landed());
     const xs = (scene: PaperScene, id: number) => ring(scene, id).map((p) => p[0]);
+    const SHARES = [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1];
 
-    it('plays two swings: the strip and the tip about ℓ1, then the tip about where ℓ2 went', () => {
+    it('folds both lines in one swing: the tip slides over as its strip turns', () => {
       const motion = crimp();
-      expect(motion.swings).toEqual([
-        [0, 1],
-        [2, 3],
-      ]);
+      expect(motion.swings).toEqual([[0, 1]]);
       expect(xs(poseLegs(motion, 0, 0), 2)).toEqual([80, 100, 100, 80].map((x) => expect.closeTo(x, 9)));
-      expect(xs(poseLegs(motion, 1, 1), 2)).toEqual([20, 0, 0, 20].map((x) => expect.closeTo(x, 9)));
-      expect(xs(poseLegs(motion, 3, 1), 2)).toEqual([20, 40, 40, 20]);
-      // The strip, done after the first swing, rests where it landed.
-      expect(ring(poseLegs(motion, 2, 0.5), 1)).toEqual(square(20, 50));
-    });
-
-    it('starts every leg where the one before it ended', () => {
-      const motion = crimp();
-      for (let k = 0; k + 1 < motion.legs.length; k += 1) {
-        const end = poseLegs(motion, k, 1);
-        const next = poseLegs(motion, k + 1, 0);
-        for (const id of [0, 1, 2, 3]) {
-          ring(end, id).forEach((p, j) => close(ring(next, id)[j]!, p));
-          expect(side(next, id), `face ${id} at leg ${k + 1}`).toBe(side(end, id));
+      // The strip edge-on over ℓ1, the tip lying across its top.
+      expect(xs(poseLegs(motion, 0, 1), 1).map((x) => x.toFixed(9))).toEqual(Array(4).fill((50).toFixed(9)));
+      expect(xs(poseLegs(motion, 0, 1), 2)).toEqual([50, 70, 70, 50].map((x) => expect.closeTo(x, 9)));
+      expect(xs(poseLegs(motion, 1, 1), 2)).toEqual([20, 40, 40, 20].map((x) => expect.closeTo(x, 9)));
+      // Never edge-on: the tip keeps its width, its side and its colour all the way.
+      for (const leg of [0, 1]) {
+        for (const share of SHARES) {
+          const scene = poseLegs(motion, leg, share);
+          const [left, right] = [Math.min(...xs(scene, 2)), Math.max(...xs(scene, 2))];
+          expect(right - left, `leg ${leg} at ${share}`).toBeCloseTo(20, 9);
+          expect(side(scene, 3)).toBe('back');
+          expect(side(scene, 2)).toBe('front');
+          expect(shade(scene, 3)).toBeCloseTo(1, 9);
         }
-        expect(facesIn(next), `leg ${k + 1}`).toEqual(facesIn(end));
       }
     });
 
-    it('reads the tip’s stack reversed while it lies turned over once', () => {
+    it('starts the close where the spread ended', () => {
       const motion = crimp();
-      expect(facesIn(poseLegs(motion, 0, 0.5))).toEqual([0, 1, 2, 3]);
-      expect(facesIn(poseLegs(motion, 1, 0.5))).toEqual([0, 1, 3, 2]);
-      expect(facesIn(poseLegs(motion, 2, 0.5))).toEqual([0, 1, 3, 2]);
-      expect(facesIn(poseLegs(motion, 3, 0.5))).toEqual([0, 1, 2, 3]);
-      // Showing its other side between the turns, its own at both ends.
-      expect(side(poseLegs(motion, 0, 0.2), 3)).toBe('back');
-      expect(side(poseLegs(motion, 2, 0.2), 3)).toBe('front');
-      expect(side(poseLegs(motion, 3, 0.8), 3)).toBe('back');
+      const end = poseLegs(motion, 0, 1);
+      const next = poseLegs(motion, 1, 0);
+      for (const id of [0, 1, 2, 3]) {
+        ring(end, id).forEach((p, j) => close(ring(next, id)[j]!, p));
+        expect(side(next, id), `face ${id}`).toBe(side(end, id));
+      }
+      expect(facesIn(next)).toEqual(facesIn(end));
     });
 
-    it('bounds every leg’s frames, and lands on the landed scene', () => {
+    it('reads the tip’s stack as it is, and the strip’s from its other side past edge-on', () => {
+      const motion = crimp();
+      expect(facesIn(poseLegs(motion, 0, 0.5))).toEqual([0, 1, 2, 3]);
+      expect(facesIn(poseLegs(motion, 1, 0.5))).toEqual([0, 1, 2, 3]);
+      expect(side(poseLegs(motion, 0, 0.5), 1)).toBe('front');
+      expect(side(poseLegs(motion, 1, 0.5), 1)).toBe('back');
+    });
+
+    it('keeps the tip joined to its strip along ℓ2 when the lines are not parallel', () => {
+      // ℓ2 through (80, 0), turned a little: its point (80, 0) lands, by ℓ1,
+      // at (20, 0), whether the strip's corner or the tip's.
+      const turned = { n: [Math.cos(0.2), Math.sin(0.2)] as const, d: 80 * Math.cos(0.2) };
+      const joined = sceneOf([
+        face(0, 'front', square(0, 50)),
+        face(1, 'back', square(20, 50)),
+        face(2, 'front', square(20, 40)),
+        face(3, 'back', square(20, 40)),
+      ]);
+      const motion = crimpOf(turned, joined);
+      expect(motion.legs[0]!.faces.get(2)!.carried).toEqual({ from: 0, to: Math.PI / 2 });
+      for (const leg of [0, 1]) {
+        for (const share of SHARES) {
+          const scene = poseLegs(motion, leg, share);
+          close(ring(scene, 2)[0]!, ring(scene, 1)[0]!);
+        }
+      }
+      // The tip tilts, but never stands edge-on: shaded no darker than its
+      // normal's least height, cos²θ + sin²θ · cos 0.2, allows.
+      const least = 1 - PAPER_TILT_SHADE[3] * (1 - Math.cos(0.2));
+      for (const share of SHARES) expect(shade(poseLegs(motion, 0, share), 2)).toBeGreaterThanOrEqual(least - 1e-9);
+      expect(shade(poseLegs(motion, 0, 1), 2)).toBeCloseTo(least, 9);
+    });
+
+    it('bounds every frame, and lands on the landed scene', () => {
       const motion = crimp();
       expect(motion.bounds).toEqual({ minX: 0, minY: 0, maxX: 100, maxY: 100 });
-      expect(poseLegs(motion, 3, 1).items).toEqual(landed().items);
+      expect(poseLegs(motion, 1, 1).items).toEqual(landed().items);
     });
   });
 

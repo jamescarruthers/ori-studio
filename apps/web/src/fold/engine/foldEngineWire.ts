@@ -444,10 +444,24 @@ export interface FoldMotionGroup {
   from: number;
   to: number;
   /**
+   * The turn that carries this group's hinge while the group turns about it,
+   * over the same leg, applied after the group's own: a crimp's strip about
+   * ℓ1, carrying ℓ2 and its tip. Absent for a hinge that stays where it lies.
+   */
+  carrier?: FoldMotionCarrier;
+  /**
    * What the faces still do after this turn, in the model frame; absent when
-   * it lands them: a vertex fold's paper turning twice, a crimp's tip about ℓ1.
+   * it lands them: a vertex fold's paper turning twice.
    */
   then?: FoldIsometry;
+}
+
+/** A turn carrying another group's hinge (`FoldMotionGroup.carrier`): its line, the side the carried paper starts on, and its turn at the leg's start and end. */
+export interface FoldMotionCarrier {
+  axis: FoldModelLine;
+  side: FoldSide;
+  from: number;
+  to: number;
 }
 
 /**

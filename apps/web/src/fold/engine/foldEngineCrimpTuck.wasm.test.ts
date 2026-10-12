@@ -208,7 +208,9 @@ describe.skipIf(!available)('the crimp and the tuck over the real bridge', () =>
     expect(folded.report).toBeNull();
     expect(folded.compound.family).toBe('crimp');
     expect(folded.compound.kind).toBe('inside');
-    expect(folded.compound.motion.legs).toHaveLength(4);
+    // Both lines fold together: a spread and a close, the tip carried.
+    expect(folded.compound.motion.legs).toHaveLength(2);
+    expect(folded.compound.motion.legs[0]!.groups.some((group) => group.carrier !== undefined)).toBe(true);
     expect(compoundStoredChoices(folded.compound)).toEqual(folded.stored);
     expect(folded.fingerprint).toMatch(/^fs1:[0-9a-f]{16}$/);
     // Stored and read back, the step replays through `step` to the same state and report.

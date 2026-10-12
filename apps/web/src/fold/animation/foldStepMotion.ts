@@ -182,8 +182,8 @@ export function foldStepMotion(input: FoldStepMotionInput, pane: FoldStepPane): 
     case 'cp-jump':
       return crossfade();
     // Compound folds (plan D4), every family on the engine's legs: a
-    // reverse fold's blocks about ℓ, a crimp's strip and tip about ℓ1 and
-    // its tip again about ℓ2, a tuck's block, a vertex fold's blocks in
+    // reverse fold's blocks about ℓ, a crimp's strip about ℓ1 carrying its
+    // tip about ℓ2 at once, a tuck's block, a vertex fold's blocks in
     // stages about their creases, a sink's about its ring. Without legs (a
     // step whose report is not in) it crossfades rather than inventing a
     // hinge.

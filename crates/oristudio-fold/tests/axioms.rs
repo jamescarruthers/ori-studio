@@ -1395,3 +1395,188 @@ fn axioms_over_landmarks_hold_after_the_fold_on_random_forms() {
         "{opposite} O6 folds moved one point and the other's line"
     );
 }
+
+/// Swap, one rule for every axiom that implies a side: a side the step
+/// names (`toward`) beats it. Each axiom that carries something, on the
+/// flat square and on the book fold's stacked layers: named nothing, the
+/// side the root implies moves and its mover lands where the axiom says;
+/// named the other side, that side moves — the mover stays put and what it
+/// was carried onto comes to it — the fold, mountain or a precrease alike,
+/// along the same line.
+#[test]
+fn a_side_the_step_names_beats_the_side_the_axiom_implies() {
+    /// One axiom fold, and what its two sides do.
+    struct Case<'a> {
+        name: &'a str,
+        state: &'a State,
+        axiom: Axiom,
+        line: Line,
+        /// The mover (a sheet point) and where it lands, model frame.
+        mover: Point,
+        target: Point,
+        /// A sheet point on the other side, and a point of that side with
+        /// where it lands once that side moves instead.
+        other: Point,
+        partner: Point,
+        onto: Point,
+    }
+    let square = flat(Sheet::square());
+    let book = book();
+    let bend = seg([0.5, 0.0], [0.5, 1.0]);
+    let lands = [0.5, 0.75f64.sqrt()];
+    let bisector =
+        |p: Point, q: Point| Line::perpendicular_bisector(p, q).unwrap_or_else(|| unreachable!());
+    let cases = [
+        // The owner's: the top-left corner onto the bottom-right one.
+        Case {
+            name: "O2",
+            state: &square,
+            axiom: Axiom::O2 {
+                p: [0.0, 1.0],
+                q: [1.0, 0.0],
+            },
+            line: through([0.0, 0.0], [1.0, 1.0]),
+            mover: [0.0, 1.0],
+            target: [1.0, 0.0],
+            other: [0.9, 0.1],
+            partner: [1.0, 0.0],
+            onto: [0.0, 1.0],
+        },
+        Case {
+            name: "O2 on the book",
+            state: &book,
+            axiom: Axiom::O2 {
+                p: [0.0, 1.0],
+                q: [0.5, 0.0],
+            },
+            line: bisector([0.0, 1.0], [0.5, 0.0]),
+            mover: [0.0, 1.0],
+            target: [0.5, 0.0],
+            other: [0.45, 0.05],
+            partner: [0.5, 0.0],
+            onto: [0.0, 1.0],
+        },
+        Case {
+            name: "O3 on the book",
+            state: &book,
+            axiom: Axiom::O3 {
+                m1: seg([1.0, 0.0], [1.0, 1.0]),
+                m2: seg([0.5, 0.0], [1.0, 0.0]),
+            },
+            line: through([0.0, 0.0], [1.0, 1.0]),
+            mover: [0.0, 1.0],
+            target: [1.0, 0.0],
+            other: [0.4, 0.1],
+            partner: [0.5, 0.0],
+            onto: [0.0, 0.5],
+        },
+        Case {
+            name: "O5 on the book",
+            state: &book,
+            axiom: Axiom::O5 {
+                pivot: [1.0, 0.0],
+                p: [0.0, 1.0],
+                m1: bend,
+            },
+            line: bisector([0.0, 1.0], lands),
+            mover: [0.0, 1.0],
+            target: lands,
+            other: [0.45, 0.05],
+            partner: lands,
+            onto: [0.0, 1.0],
+        },
+        Case {
+            name: "O6 on the square",
+            state: &square,
+            axiom: Axiom::O6 {
+                p1: [0.0, 0.0],
+                m1: seg([1.0, 0.0], [1.0, 1.0]),
+                p2: [0.0, 0.5],
+                m2: seg([1.0, 0.5], [0.5, 1.0]),
+            },
+            line: x_eq(0.5),
+            mover: [0.0, 0.0],
+            target: [1.0, 0.0],
+            other: [0.9, 0.5],
+            partner: [1.0, 0.0],
+            onto: [0.0, 0.0],
+        },
+        Case {
+            name: "O7 on the book",
+            state: &book,
+            axiom: Axiom::O7 {
+                p: [0.0, 1.0],
+                m1: bend,
+                m2: seg([0.0, 0.0], [0.5, 0.0]),
+            },
+            line: x_eq(0.25),
+            mover: [0.0, 1.0],
+            target: [0.5, 1.0],
+            other: [0.45, 0.5],
+            partner: [0.5, 1.0],
+            onto: [0.0, 1.0],
+        },
+    ];
+    for Case {
+        name,
+        state: s,
+        axiom,
+        line,
+        mover,
+        target,
+        other,
+        partner,
+        onto,
+    } in cases
+    {
+        let c = find(&candidates(s, &axiom), &line);
+        let implied = side(&line, image(s, mover));
+        assert_eq!(c.side, Some(implied), "{name}");
+        let op = |toward: Option<Point>, direction| {
+            let mut op = AnchoredFold::new(
+                FoldLine::Axiom {
+                    axiom: axiom.clone(),
+                    root: c.line,
+                },
+                direction,
+            );
+            op.toward = toward;
+            op
+        };
+        // Named nothing: the axiom's side, its mover carried.
+        let landed = along(s, &axiom, &c.line, None);
+        assert!(near(image(&landed, mover), target), "{name}");
+        // Named the other side: it moves, onto the mover, which stays.
+        let resolved = s
+            .resolve_anchored(&op(Some(other), Valley))
+            .unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_eq!(resolved.fold.side, implied.opposite(), "{name}");
+        let swapped = along(s, &axiom, &c.line, Some(other));
+        assert!(
+            near(image(&swapped, mover), image(s, mover)),
+            "{name}: the mover moved"
+        );
+        assert!(
+            near(image(&swapped, partner), onto),
+            "{name}: {partner:?} at {:?}, not {onto:?}",
+            image(&swapped, partner)
+        );
+        // A point on the axiom's side names that side, as nothing does.
+        let named = s
+            .resolve_anchored(&op(Some(mover), Valley))
+            .unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_eq!(named.fold.side, implied, "{name}");
+        // A mountain and a precrease take the named side too.
+        for (kind, folded) in [
+            ("mountain", s.fold_anchored(&op(Some(other), Mountain))),
+            ("precrease", s.precrease_anchored(&op(Some(other), Valley))),
+        ] {
+            let folded = folded.unwrap_or_else(|e| panic!("{name} {kind}: {e}"));
+            assert_eq!(
+                folded.report.analysis.side,
+                implied.opposite(),
+                "{name} {kind}"
+            );
+        }
+    }
+}

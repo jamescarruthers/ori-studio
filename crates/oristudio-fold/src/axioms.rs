@@ -22,8 +22,12 @@
 //!    realized from either side (below). A root with a mover on the fold line
 //!    carries nothing and is dropped.
 //! 4. **The movers a step checks** are those on the side it moves: every one
-//!    when the root implies the side, an O6's point on the chosen side, and
-//!    none of an O1, an O4 or a straddling O3. Which layers a fold moves is known only once it is analysed: a seed
+//!    when it moves the side the root implies, an O6's point on the chosen
+//!    side, and none of an O1, an O4 or a straddling O3. A step may name the
+//!    other side than the root implies (Swap, [`crate::anchored`]): the fold
+//!    is the same line's, so the movers stay and what they were carried onto
+//!    comes to them, as an O6's other side does (below), and none is checked.
+//!    Which layers a fold moves is known only once it is analysed: a seed
 //!    narrower than every layer can leave a mover's own layer in place, which
 //!    the anchored fold refuses ([`crate::anchored`]).
 //!

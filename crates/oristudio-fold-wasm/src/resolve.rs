@@ -6,9 +6,12 @@
 //! chose — becomes `oristudio_fold`'s [`AnchoredFold`], and the engine
 //! resolves it: sheet points through `State::resolve_point` (boundaries
 //! included, so a landmark on a crease or at a vertex resolves), the axiom's
-//! root to the nearest candidate, the moving side from the axiom, `moving` or
-//! the seed. Only a line the tools give in the model frame (`via: 'model'`)
-//! is folded here as a [`PlainFold`], its side taken by the same rule.
+//! root to the nearest candidate, the moving side from `moving`, else the
+//! axiom, else the seed — a side the step names beats the one its axiom
+//! implies, so Swap holds for every op along a line, compound ones included.
+//! Only a line the tools give in the model frame (`via: 'model'`) is folded
+//! here as a [`PlainFold`], its side taken from `side` or `moving`, else the
+//! seed.
 //!
 //! What the bridge checks itself is what the engine has no word for: the
 //! crease a point names and whether it is flat or folded, and which choices

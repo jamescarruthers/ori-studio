@@ -233,13 +233,15 @@ Compound folds (plan D4, D15, Phases 9 and 11):
   groups turning about a hinge with exact endpoints. A reverse fold is
   *visual* (it has no rigid path short of unfolding the vertex flat): its
   blocks turn opposite ways about ℓ, stacked as the parent until edge-on and
-  as the landed state after. A tuck is its block turning about ℓ. A crimp is
-  four legs: the strip and the tip spread and close about ℓ1 as a reverse
-  fold's blocks do, then the tip spreads and closes again about where ℓ2
-  went, its first two legs ending where the strip carried it, its turn about
-  ℓ2 still to come (`MotionGroup::then`). A vertex fold is staged: one half
-  turn per crease a block turns across, a stage each, every leg placing every
-  moving face.
+  as the landed state after. A tuck is its block turning about ℓ. A crimp
+  folds both lines together, in one spread and one close: each strip block
+  turns about ℓ1 as a reverse fold's block does while its tip block turns
+  about ℓ2 the other way, carried by the strip's turn
+  (`MotionGroup::carrier`), so the tip's pose is ρ1∘ρ2 once both are done
+  and between them it slides over as a pleat does instead of standing
+  edge-on with its strip. A vertex fold is staged: one half turn per crease a
+  block turns across, a stage each, every leg placing every moving face
+  (`MotionGroup::then`).
 
 The axioms on flat and folded forms (plan Phase 3):
 
