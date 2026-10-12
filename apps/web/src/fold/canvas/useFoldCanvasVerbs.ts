@@ -35,6 +35,7 @@ import {
 } from '../tools/foldToolCatalog';
 import { lineModeInput, nextStep } from '../tools/foldToolRegistry';
 import { steppedTuckTarget } from '../tools/tuck/tuckStep';
+import { rotationBucket } from '../tools/rotate/rotateTool';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
 import {
@@ -299,8 +300,13 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
 function trackCommitted(op: FoldOp): void {
   const kind = opKindOf(op);
   if (!kind) return;
+  // A rotation says how far it turned, bucketed: a preset, or `other` for an exact angle.
+  if (op.kind === 'rotate') {
+    trackFoldStepAdded(kind, { amount: rotationBucket(op.rotate) });
+    return;
+  }
   // A vertex fold takes no line and no layer scope of a plain fold's.
-  if (op.kind === 'turn' || op.kind === 'rotate' || op.kind === 'cp-jump' || isVertexOp(op)) {
+  if (op.kind === 'turn' || op.kind === 'cp-jump' || isVertexOp(op)) {
     trackFoldStepAdded(kind);
     return;
   }
@@ -359,6 +365,9 @@ export function useFoldCanvasVerbs(
         if (outcome.status !== 'committed') return;
         trackCommitted(op);
         tools.clear();
+        // A rotation applied puts Rotate down, as Turn over is done at once:
+        // left in hand, it would preview another turn on the step just made.
+        if (op.kind === 'rotate') tools.putDownRotate();
       });
     },
     [tools]
@@ -758,6 +767,12 @@ export function useFoldCanvasVerbs(
         // Escape steps back along the line first: the last point clicked on it.
         if (tools.unpickAlong()) {
           setQueued(null);
+          return true;
+        }
+        // Rotate holds its preview from the moment it is in hand: Escape puts it down, and the turn with it.
+        if (tools.putDownRotate()) {
+          setQueued(null);
+          live.current.session.cancel();
           return true;
         }
         const tool = state();

@@ -5,11 +5,13 @@
  *
  * Three kinds of item stand on the rail, and they combine:
  *
- * - **a tool** is taken in hand: a fold (valley, mountain, precrease) or the
- *   Divide line;
+ * - **a tool** is taken in hand: a fold (valley, mountain, precrease), the
+ *   Divide line, or Rotate, which previews the model turned by the amount
+ *   its window sets and adds the turn as a step once applied (`tools/rotate`);
  * - **a line mode** says how a fold's line is located — an axiom, a free line,
  *   or an existing crease — and stays chosen across fold tools;
- * - **a model verb** (turn over, rotate) is a step of its own, done at once.
+ * - **a model verb** (turn over) is a step of its own, done at once: it has
+ *   no amount to choose.
  *
  * React-free and store-free; literal `t()` keys so the extractor sees them.
  */
@@ -19,6 +21,7 @@ import { axiomPhrase, type FoldAxiom } from '../../lib/foldSentences';
 import type { TurnKind } from '../../lib/steps/turn';
 import { turnCardWords } from '../../lib/steps/turnWords';
 import type { FoldVertexOpKind } from '../document/foldSequenceDocument';
+import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
 
 /** A plain fold's kind, as the tool window's V / M / P control offers it. */
 export type FoldKind = 'valley' | 'mountain' | 'precrease';
@@ -53,7 +56,9 @@ export type FoldToolId =
   | FoldCompoundLineToolId
   | FoldVertexToolId
   | 'divide-line'
-  | FoldSinkToolId;
+  | FoldSinkToolId
+  // The model turned round, by a preset or an exact angle (`tools/rotate`).
+  | 'rotate';
 
 /** The compound folds along a located line that are tools of their own, beside inside reverse. */
 export type FoldCompoundLineToolId = 'crimp' | 'tuck';
@@ -179,13 +184,16 @@ export function lineModeAxiom(mode: FoldLineModeId): FoldAxiom | null {
   }
 }
 
-/** A step of its own that turns the whole model (lib/steps' turn type), done at once from the rail. */
-export type FoldModelVerbId = 'turn-over' | 'rotate';
+/**
+ * A step of its own that turns the whole model (lib/steps' turn type), done
+ * at once from the rail: Turn over, which has nothing to choose. A rotation
+ * has its amount and direction to choose, so it is a tool (`rotate`).
+ */
+export type FoldModelVerbId = 'turn-over';
 
 /** What each model verb adds: Fold's turn over mirrors side to side (`View::turned_over`). */
 export const FOLD_MODEL_TURNS: Readonly<Record<FoldModelVerbId, TurnKind>> = {
   'turn-over': { kind: 'turn-over', axis: 'vertical' },
-  rotate: { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } },
 };
 
 /**
@@ -229,6 +237,8 @@ export const FOLD_TOOL_SHORTCUTS: Readonly<Record<FoldToolId, FoldShortcutId>> =
   'open-sink': 'fold.toolOpenSink',
   'closed-sink': 'fold.toolClosedSink',
   unsink: 'fold.toolUnsink',
+  // Rotate, on R as the rotation was when it was done at once.
+  rotate: 'fold.rotate',
 };
 
 export const FOLD_LINE_MODE_SHORTCUTS: Readonly<Record<FoldLineModeId, FoldShortcutId>> = {
@@ -245,7 +255,6 @@ export const FOLD_LINE_MODE_SHORTCUTS: Readonly<Record<FoldLineModeId, FoldShort
 
 export const FOLD_MODEL_VERB_SHORTCUTS: Readonly<Record<FoldModelVerbId, FoldShortcutId>> = {
   'turn-over': 'fold.turnOver',
-  rotate: 'fold.rotate',
 };
 
 /** Why nothing on the sequence can change: a newer build wrote it (D7), or the step is locked (D6). */
@@ -292,6 +301,9 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.op.closedSink', 'Closed sink');
     case 'unsink':
       return t('tools:fold.op.unsink', 'Unsink');
+    case 'rotate':
+      // The turn's own word, so the tool, its step and the Diagram it is linked to name it alike.
+      return turnCardWords({ kind: 'rotate', rotate: FOLD_ROTATION_DEFAULT }, t).title;
   }
 }
 
@@ -333,6 +345,11 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.tool.closedSinkHelp', 'Push a closed point’s tip into a pocket, its layers kept together.');
     case 'unsink':
       return t('tools:fold.tool.unsinkHelp', 'Pull a sunk point’s tip back out.');
+    case 'rotate':
+      return t(
+        'tools:fold.tool.rotateHelp',
+        'Turn the model round by a part of a turn or an exact angle, previewed, then applied as a step of its own.'
+      );
   }
 }
 
@@ -496,8 +513,6 @@ export function foldModelVerbDescription(t: TFunction, id: FoldModelVerbId): str
   switch (id) {
     case 'turn-over':
       return t('tools:fold.verb.turnOverHelp', 'Turn the model over, side to side, as a step of its own.');
-    case 'rotate':
-      return t('tools:fold.verb.rotateHelp', 'Rotate the model a quarter turn clockwise, as a step of its own.');
   }
 }
 

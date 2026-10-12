@@ -422,6 +422,9 @@
       "freePoint": "Hold {{modifier}} to put a point down anywhere, without snapping.",
       "openSinkLine": "The line across the point sets how deep it sinks, and must be exactly square to its centre line. Axiom 4, through a point and perpendicular to the centre crease, gives one that is.",
       "queued": "Folding as soon as the preview is ready…",
+      "rotateCancel": "Esc puts Rotate down without adding the turn.",
+      "rotatePreview": "The folded pane shows the model turned as it will be.",
+      "rotateRefused": "This turn cannot be added here.",
       "severalSunk_one": "{{count}} sunk point lies here: the first is taken.",
       "severalSunk_other": "{{count}} sunk points lie here: the first is taken.",
       "snap": "Points snap to corners, marks, crease crossings, midpoints and edges.",
@@ -695,6 +698,12 @@
       "previous": "Previous",
       "tipSide": "Tip side"
     },
+    "rotate": {
+      "amount": "Amount",
+      "degrees": "Exact angle",
+      "direction": "Direction",
+      "presetTooltip": "{{fraction}} turn, {{degrees}}°"
+    },
     "scopeLabel": "fold",
     "section": {
       "label": "Layers at the fold line, top to bottom",
@@ -762,6 +771,10 @@
       "pickTuckTarget": "Pick the layer to tuck against.",
       "pinchAt": "Click where to pinch along the line.",
       "pointToMove": "Click the point to move.",
+      "rotateAmount": "Choose how far to turn the model: a part of a turn, or an exact angle.",
+      "rotateCommit": "Press Enter to add the turn.",
+      "rotateCommitTouch": "Tap {{action}} to add the turn.",
+      "rotateDirection": "Choose which way it turns.",
       "segmentFrom": "Click where the crease starts along the line.",
       "segmentTo": "Click where it ends."
     },
@@ -777,6 +790,7 @@
       "openSinkHelp": "Push a closed point’s tip in, turning every layer of it inside out.",
       "precrease": "Precrease",
       "precreaseHelp": "Fold and unfold, leaving a crease to use later.",
+      "rotateHelp": "Turn the model round by a part of a turn or an exact angle, previewed, then applied as a step of its own.",
       "tuckHelp": "Fold a flap and slide it under, or over, a layer that stays.",
       "unsinkHelp": "Pull a sunk point’s tip back out.",
       "valley": "Valley fold",
@@ -792,7 +806,6 @@
       "under": "Tuck under"
     },
     "verb": {
-      "rotateHelp": "Rotate the model a quarter turn clockwise, as a step of its own.",
       "turnOverHelp": "Turn the model over, side to side, as a step of its own."
     },
     "vertex": {

@@ -116,6 +116,7 @@ function landed(op: FoldOp, extent: FoldExtentState | null = null, extra: Partia
     vertex: null,
     sink: null,
     extent: extent ? { state: extent, along } : null,
+    turned: null,
     ...extra,
   };
 }

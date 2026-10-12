@@ -1,6 +1,10 @@
 import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const tracked = vi.hoisted(() => ({ added: vi.fn(), offered: vi.fn() }));
+vi.mock('../../analytics', () => ({ trackFoldStepAdded: tracked.added, trackFoldChoiceOffered: tracked.offered }));
+
 import type { FoldOp } from '../document/foldSequenceDocument';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import {
@@ -51,6 +55,7 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
     vertex: null,
     sink: null,
     extent: null,
+    turned: null,
     ...extra,
   };
 }
@@ -117,6 +122,45 @@ describe('the Fold canvas’s commit', () => {
     render(preview({ landing: false }));
     expect(commitStep).toHaveBeenCalledWith(BOOK, undefined);
     expect(bound!.queued).toBe(false);
+  });
+
+  it('applies Rotate’s turn as a step, says how far in a bucket, and puts Rotate down; Escape puts it down unapplied', async () => {
+    const commitStep = vi.fn<FoldSessionSurface['commitStep']>(() =>
+      Promise.resolve({ status: 'committed' as const, id: 'fstep-r', fingerprint: 'fs1:0' } as never)
+    );
+    const surface = session(commitStep);
+    const tools = createFoldTools();
+    act(() => tools.selectTool('precrease'));
+    act(() => tools.selectTool('rotate'));
+    act(() => tools.setRotation({ amount: 'degrees', degrees: 30, direction: 'cw' }));
+    const op: FoldOp = { kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'cw' } };
+    act(() => root.render(<Harness session={surface} tools={tools} preview={preview({ step: { op, key: 'turn' } })} />));
+    tracked.added.mockClear();
+    let applied = false;
+    await act(async () => {
+      applied = bound!.verbs.commit();
+    });
+    expect(applied).toBe(true);
+    expect(commitStep).toHaveBeenCalledWith(op, undefined);
+    // Never the angle: an exact one is `other`.
+    expect(tracked.added).toHaveBeenCalledWith('rotate', { amount: 'other' });
+    // The tool it was taken up from is back in hand: no second turn previewed on the step just made.
+    expect(tools.store.getState().tool).toBe('precrease');
+
+    act(() => tools.selectTool('rotate'));
+    let cancelled = false;
+    act(() => {
+      cancelled = bound!.verbs.cancel();
+    });
+    expect(cancelled).toBe(true);
+    expect(surface.cancel).toHaveBeenCalled();
+    expect(tools.store.getState().tool).toBe('precrease');
+    // A preset is counted as its preset.
+    act(() => tools.selectTool('rotate'));
+    const quarter: FoldOp = { kind: 'rotate', rotate: { amount: 'quarter', direction: 'ccw' } };
+    act(() => root.render(<Harness session={surface} tools={tools} preview={preview({ step: { op: quarter, key: 'quarter' } })} />));
+    await act(async () => void bound!.verbs.commit());
+    expect(tracked.added).toHaveBeenLastCalledWith('rotate', { amount: 'quarter' });
   });
 
   it('lets a queued commit go when the preview is refused, or the tools are asked for another fold', () => {

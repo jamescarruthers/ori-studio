@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight, RotateCcw, RotateCw } from 'lucide-react';
+import type { TurnDirection, TurnRotationPreset } from '../../lib/steps/turn';
 import type { FoldKeyLabel, FoldKind, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
 import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
 import type { FoldExtentMode } from '../../fold/tools/precrease/precreaseExtent';
@@ -77,6 +78,7 @@ export function FoldToolWindow({
     tuck,
     vertex,
     sink,
+    rotate,
     footer,
   } = model;
 
@@ -217,6 +219,58 @@ export function FoldToolWindow({
             onChange={extent.set}
           />
           {extent.note && <p className={styles.note}>{extent.note}</p>}
+        </div>
+      )}
+      {/* Rotate's amount — a part of a turn, or an exact angle — then which way the model turns. */}
+      {rotate && (
+        <div className={styles.section} data-fold-rotate="">
+          <span className={styles.heading}>{rotate.amount.label}</span>
+          <SegmentedControl<TurnRotationPreset>
+            size="sm"
+            fill
+            aria-label={rotate.amount.label}
+            value={rotate.amount.value}
+            disabled={rotate.disabled}
+            options={rotate.amount.options.map((option) => ({
+              value: option.value,
+              label: option.label,
+              tooltip: option.tooltip,
+            }))}
+            onChange={rotate.amount.set}
+          />
+          <NumberRow
+            label={rotate.degrees.label}
+            value={rotate.degrees.value}
+            step={rotate.degrees.step}
+            suffix={rotate.degrees.suffix}
+            disabled={rotate.disabled}
+            // A number that names no turn leaves the field as it was.
+            normalize={(typed) => (rotate.degrees.accepts(typed) ? typed : rotate.degrees.value)}
+            onCommit={rotate.degrees.set}
+          />
+        </div>
+      )}
+      {rotate && (
+        <div className={styles.section} data-fold-rotate-direction="">
+          <span className={styles.heading}>{rotate.direction.label}</span>
+          <SegmentedControl<TurnDirection>
+            size="sm"
+            fill
+            aria-label={rotate.direction.label}
+            value={rotate.direction.value}
+            disabled={rotate.disabled}
+            options={rotate.direction.options.map((option) => ({
+              value: option.value,
+              label: option.label,
+              icon:
+                option.value === 'cw' ? (
+                  <RotateCw size={13} aria-hidden="true" />
+                ) : (
+                  <RotateCcw size={13} aria-hidden="true" />
+                ),
+            }))}
+            onChange={rotate.direction.set}
+          />
         </div>
       )}
       {compound && (

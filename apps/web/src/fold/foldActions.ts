@@ -36,8 +36,7 @@ export type FoldActionIcon =
   | 'mountain'
   | 'precrease'
   | 'turn-over'
-  | 'rotate-ccw'
-  | 'rotate-cw'
+  | 'rotate'
   | 'import-cp'
   | 'send-to-edit'
   | 'send-to-diagram'
@@ -47,8 +46,7 @@ export type FoldActionIcon =
 
 export type FoldCommandId =
   | 'turn-over'
-  | 'rotate-ccw'
-  | 'rotate-cw'
+  | 'rotate'
   | 'import-cp'
   | 'send-to-edit'
   | 'send-to-diagram'
@@ -133,6 +131,8 @@ export interface FoldActionDeps {
   setFoldKind: (kind: FoldKind) => void;
   /** Add a turn step after the context's step. */
   turn: (turn: TurnKind) => void;
+  /** Take the Rotate tool in hand at the context's step: its window sets how far and which way. */
+  rotate: () => void;
   /** Delete a step and its subtree, locked ones included (plan D6). */
   deleteStep: (stepId: string) => void;
   /** Open Import CP's dialog. */
@@ -150,8 +150,6 @@ export interface FoldActionDeps {
 }
 
 const TURN_OVER: TurnKind = { kind: 'turn-over', axis: 'vertical' };
-const ROTATE_CCW: TurnKind = { kind: 'rotate', rotate: { amount: 'quarter', direction: 'ccw' } };
-const ROTATE_CW: TurnKind = { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } };
 
 /**
  * What Send to Edit says it sends from a Fold sequence: the same verb,
@@ -277,7 +275,7 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
   const toDiagram = diagramBlock(t, context);
   const step = context.step;
 
-  const turnCommand = (id: 'turn-over' | 'rotate-ccw' | 'rotate-cw', turn: TurnKind): FoldCommand => ({
+  const turnCommand = (id: 'turn-over', turn: TurnKind): FoldCommand => ({
     kind: 'command',
     id,
     label: turnName(turn, t),
@@ -319,8 +317,17 @@ export function buildFoldActions(context: FoldActionContext, deps: FoldActionDep
     },
     { kind: 'separator', id: 'after-fold-kind' },
     turnCommand('turn-over', TURN_OVER),
-    turnCommand('rotate-ccw', ROTATE_CCW),
-    turnCommand('rotate-cw', ROTATE_CW),
+    // Rotate takes its tool in hand, which previews the turn its window sets; applied, it adds the step.
+    {
+      kind: 'command',
+      id: 'rotate',
+      label: t('panels:fold.actions.rotate', 'Rotate…'),
+      icon: 'rotate',
+      disabled: addBlock !== null,
+      hint: addBlock ?? undefined,
+      note: branchNote,
+      run: deps.rotate,
+    },
     { kind: 'separator', id: 'after-turns' },
     {
       kind: 'command',

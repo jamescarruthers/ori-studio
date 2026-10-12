@@ -30,6 +30,8 @@ import {
   turnOp,
 } from './foldCommands';
 import { foldPathEntries } from './foldSequencePath';
+import { foldView, setFoldView } from './foldViewMode';
+import { foldTools } from '../tools/foldToolState';
 
 const t = i18n.t.bind(i18n);
 const state = () => useWorkspaceStore.getState();
@@ -154,12 +156,30 @@ describe('running the verbs', () => {
     await app.session!.commitStep(valleyAt(0.25));
     await settle();
     const [first] = shownSteps();
-    const turn = currentFoldActions(t, first!.id).find((action) => action.kind === 'command' && action.id === 'rotate-cw');
+    const turn = currentFoldActions(t, first!.id).find((action) => action.kind === 'command' && action.id === 'turn-over');
     expect(turn).toMatchObject({ note: 'Starts a new branch' });
     if (turn?.kind === 'command') turn.run();
     await settle();
     const added = shownSteps()[2];
-    expect(added).toMatchObject({ parent: first!.id, op: { kind: 'rotate' } });
+    expect(added).toMatchObject({ parent: first!.id, op: { kind: 'turn' } });
     expect(state().foldReader?.cursor).toBe(added?.id);
+  });
+
+  it('takes the Rotate tool at a card’s step, the reader put there first, and adds nothing until it is applied', async () => {
+    await app.session!.commitStep(valleyAt(0.5));
+    await app.session!.commitStep(valleyAt(0.25));
+    await settle();
+    const [first] = shownSteps();
+    const rotate = currentFoldActions(t, first!.id).find((action) => action.kind === 'command' && action.id === 'rotate');
+    expect(rotate).toMatchObject({ label: 'Rotate…', note: 'Starts a new branch' });
+    setFoldView('steps');
+    if (rotate?.kind === 'command') rotate.run();
+    await settle();
+    expect(state().foldReader?.cursor).toBe(first!.id);
+    expect(foldTools().store.getState().tool).toBe('rotate');
+    // On the canvas, where the tool previews.
+    expect(foldView()).toBe('fold');
+    expect(shownSteps()).toHaveLength(2);
+    foldTools().putDownRotate();
   });
 });

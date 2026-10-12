@@ -17,6 +17,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import { createToolRuntime, type ToolRuntime } from '../../cp-workspace/tools/runtime';
 import type { Point } from '../../lib/geometry';
+import { sameTurnRotation, type TurnRotation } from '../../lib/steps/turn';
 import type { OristudioCpRatioExpression } from '../../lib/oristudioCpToolSettings';
 import { ratioExpressionFromHalves } from '../../lib/oristudioCpToolSettings';
 import type { FoldPick, FoldPointPick } from '../canvas/foldPicking';
@@ -41,6 +42,7 @@ import {
 import { sameFlap } from './crossSection';
 import { lineModeInput, locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
 import { extentClicks, type FoldExtentMode } from './precrease/precreaseExtent';
+import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
 import { PETAL_LINE_MODES } from './vertex/vertexInputs';
 
 /**
@@ -156,6 +158,11 @@ export interface FoldToolState {
   /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
   hoveredFlap: number | null;
   compound: FoldCompoundToolChoices;
+  // The Rotate tool's (`tools/rotate`).
+  /** How far and which way Rotate turns the model: kept from one rotation to the next, as the line mode is. */
+  rotation: TurnRotation;
+  /** The tool Rotate was taken up from: what applying a rotation, or Escape, puts back in hand. */
+  resume: FoldToolId;
 }
 
 export const FOLD_TOOL_INITIAL: FoldToolState = {
@@ -176,6 +183,8 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   divide: FOLD_DIVIDE_DEFAULT,
   hoveredFlap: null,
   compound: FOLD_COMPOUND_CHOICES_INITIAL,
+  rotation: FOLD_ROTATION_DEFAULT,
+  resume: 'valley',
 };
 
 /** What a new locate starts from: the tool, the line mode, the extent and the Divide settings stay. */
@@ -311,6 +320,14 @@ export interface FoldTools {
   setFanLayers(layers: number | null): void;
   /** Step through a closed sink's pockets, of `count`: each stacks anew. */
   stepPocket(delta: number, count: number): void;
+  // The Rotate tool's (`tools/rotate`).
+  /** Turn the model by this rotation instead: a preset, a direction, an exact angle. */
+  setRotation(rotation: TurnRotation): void;
+  /**
+   * Put Rotate down, the tool it was taken up from back in hand: what
+   * applying a rotation and Escape do. Whether it was in hand.
+   */
+  putDownRotate(): boolean;
 }
 
 /**
@@ -352,7 +369,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
     return located(state);
   };
 
-  return {
+  const api: FoldTools = {
     store,
 
     selectTool(tool) {
@@ -377,6 +394,8 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
             compound: anotherTip(state.compound),
           };
         }
+        // Rotate remembers the tool it was taken up from, to give it back.
+        if (tool === 'rotate') return { ...restart(state), tool, resume: state.tool };
         // A petal fold's line H is a precrease, clicked or run through its
         // two ends: an axiom that moves a point onto another makes no sense
         // of it, so the tool starts on the existing crease.
@@ -593,7 +612,20 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         compound: { ...state.compound, pocket: (((state.compound.pocket + delta) % count) + count) % count, order: 0 },
       }));
     },
+
+    // The Rotate tool's.
+    setRotation(rotation) {
+      set((state) => (sameTurnRotation(state.rotation, rotation) ? state : { ...state, rotation }));
+    },
+
+    putDownRotate() {
+      const now = store.getState();
+      if (now.tool !== 'rotate') return false;
+      api.selectTool(now.resume === 'rotate' ? 'valley' : now.resume);
+      return true;
+    },
   };
+  return api;
 }
 
 /** Where a pick is, for the reducer that counts it: it reads positions, never what was picked. */

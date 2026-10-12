@@ -145,14 +145,14 @@ describe('foldRailGroups', () => {
     item(groups, 'crease').select();
     item(groups, 'turn-over').select();
     item(groups, 'rotate').select();
-    expect(calls.selectTool.mock.calls).toEqual([['precrease'], ['divide-line']]);
+    // Rotate is a tool: taken in hand, its window sets how far and which way before it is applied.
+    expect(calls.selectTool.mock.calls).toEqual([['precrease'], ['divide-line'], ['rotate']]);
     expect(calls.selectLineMode.mock.calls).toEqual([['crease']]);
-    expect(calls.turn.mock.calls).toEqual([
-      [{ kind: 'turn-over', axis: 'vertical' }],
-      [{ kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } }],
-    ]);
-    // Done at once: a verb is never the thing in hand.
+    expect(calls.turn.mock.calls).toEqual([[{ kind: 'turn-over', axis: 'vertical' }]]);
+    // Done at once: a verb is never the thing in hand; a tool is, while it is.
     expect(item(groups, 'turn-over').active).toBe(false);
+    expect(item(groups, 'rotate')).toMatchObject({ kind: 'tool', shortcut: 'fold.rotate', active: false });
+    expect(item(foldRailGroups(t, view({ tool: 'rotate' }), calls), 'rotate').active).toBe(true);
   });
 
   it('holds every tool on a read-only sequence, saying why', () => {

@@ -80,6 +80,10 @@ const engine = {
 };
 
 let analysis: FoldPendingAnalysis = { status: 'idle' };
+/** The session's pending step: idle unless a test lands one. */
+let pending: unknown = { status: 'idle' };
+/** What a query of a landed state answers: the turned scene a rotation's tests hand it. */
+const TURNED = { view_transform: [0, -1, 1, 1, 0, 0], subfaces: [], creases: [] } as unknown;
 const analyse = vi.fn(async () => undefined);
 const verbs = {
   analyse,
@@ -90,6 +94,7 @@ const verbs = {
     status: 'answered',
     value: await call(engine, PARENT),
   })),
+  query: vi.fn(async () => ({ status: 'answered', value: TURNED })),
 };
 /** The session as the hook reads it: stable verbs, a snapshot that is new each render. */
 const session = (): FoldSessionSurface =>
@@ -97,7 +102,7 @@ const session = (): FoldSessionSurface =>
     ...verbs,
     cursor: { state: PARENT },
     analysis,
-    pending: { status: 'idle' },
+    pending,
   }) as unknown as FoldSessionSurface;
 
 const view = { index: foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []) } as unknown as FoldStateView;
@@ -116,6 +121,7 @@ let root: Root | null = null;
 beforeEach(() => {
   root = createRoot(document.createElement('div'));
   analysis = { status: 'idle' };
+  pending = { status: 'idle' };
   seen = null;
   vi.clearAllMocks();
 });
@@ -512,5 +518,37 @@ describe('a vertex fold’s step', () => {
     await render({ ...squash, picks: [free(1.6, 0.5)] });
     expect(tracked.refused).toHaveBeenCalledTimes(3);
     expect(tracked.refused.mock.calls.every(([code]) => code === 'point_off_paper')).toBe(true);
+  });
+});
+
+describe('Rotate’s turn', () => {
+  const rotating = (rotation: FoldToolState['rotation']): FoldToolState => ({ ...FOLD_TOOL_INITIAL, tool: 'rotate', rotation });
+
+  it('is previewed through the session from the moment Rotate is in hand, with nothing analysed or pictured', async () => {
+    const thirty = { amount: 'degrees', degrees: 30, direction: 'cw' } as const;
+    await render(rotating(thirty));
+    const op = { kind: 'rotate', rotate: thirty };
+    expect(seen?.step?.op).toEqual(op);
+    expect(verbs.preview).toHaveBeenCalledWith(op, undefined);
+    // A rotation moves no paper: no layers to find, no line or arrow to draw.
+    expect(analyse).not.toHaveBeenCalled();
+    expect(engine.action).not.toHaveBeenCalled();
+    expect(seen?.landing).toBe(true);
+    expect(seen?.turned).toBeNull();
+
+    // Another amount is another turn, previewed in its place.
+    await render(rotating({ amount: 'half', direction: 'ccw' }));
+    expect(verbs.preview).toHaveBeenLastCalledWith({ kind: 'rotate', rotate: { amount: 'half', direction: 'ccw' } }, undefined);
+  });
+
+  it('shows the model turned on the folded pane once it lands, and leaves the crease pattern front up', async () => {
+    const thirty = { amount: 'degrees', degrees: 30, direction: 'ccw' } as const;
+    const op = { kind: 'rotate', rotate: thirty };
+    pending = { status: 'landed', request: { op }, parent: PARENT, state: { generation: 1, id: 8 }, summary: { step: 1 } };
+    await render(rotating(thirty));
+    expect(seen?.landing).toBe(false);
+    expect(seen?.turned).toBe(TURNED);
+    // The crease pattern does not turn: no landed state for its pane.
+    expect(seen?.landed).toBeNull();
   });
 });

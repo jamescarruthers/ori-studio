@@ -488,6 +488,58 @@ describe('FoldToolWindow', () => {
     expect(queryByRole(fold()!, 'group', 'Extent')).toBeNull();
   });
 
+  it('draws Rotate’s amount, exact angle and direction, each setting the turn, and applies it as Rotate', () => {
+    const calls = { ...verbs(), setRotation: vi.fn() };
+    const rotation = { amount: 'quarter', direction: 'cw' } as const;
+    render({ tool: 'rotate', preview: preview({ section: null }), rotate: { rotation } }, calls);
+    const window = fold()!;
+    const amount = byRole(window, 'group', 'Amount');
+    expect(allByRole(amount, 'button').map((button) => [button.textContent, button.getAttribute('aria-pressed')])).toEqual([
+      ['1/8', 'false'],
+      ['1/4', 'true'],
+      ['1/2', 'false'],
+    ]);
+    act(() => byRole(amount, 'button', '1/8').click());
+    expect(calls.setRotation).toHaveBeenLastCalledWith({ amount: 'eighth', direction: 'cw' });
+    const direction = byRole(window, 'group', 'Direction');
+    act(() => byRole(direction, 'button', 'Counterclockwise').click());
+    expect(calls.setRotation).toHaveBeenLastCalledWith({ amount: 'quarter', direction: 'ccw' });
+    // The exact angle: what a preset turns by, and a typed angle normalised.
+    const angle = window.querySelector<HTMLInputElement>('input[aria-label="Exact angle"]')!;
+    expect(angle.value).toBe('90');
+    act(() => {
+      angle.focus();
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(angle, '30');
+      angle.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => angle.blur());
+    expect(calls.setRotation).toHaveBeenLastCalledWith({ amount: 'degrees', degrees: 30, direction: 'cw' });
+    // A number that names no turn leaves it as it was.
+    calls.setRotation.mockClear();
+    act(() => {
+      angle.focus();
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(angle, '0');
+      angle.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => angle.blur());
+    expect(calls.setRotation).not.toHaveBeenCalled();
+    expect(angle.value).toBe('90');
+    // No line to locate, no layers to pick: Cancel and Rotate.
+    expect(queryByRole(window, 'combobox', 'Locate line')).toBeNull();
+    const apply = allByRole(window, 'button').filter((button) => button.textContent === 'Rotate').at(-1)!;
+    act(() => apply.click());
+    expect(calls.commit).toHaveBeenCalled();
+    // An exact angle chooses no preset.
+    render({ tool: 'rotate', preview: preview({ section: null }), rotate: { rotation: { amount: 'degrees', degrees: 30, direction: 'cw' } } }, calls);
+    expect(allByRole(byRole(fold()!, 'group', 'Amount'), 'button').map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'false',
+      'false',
+      'false',
+    ]);
+  });
+
   it('switches the kind, swaps the side and picks layers through the model', () => {
     const calls = render({ preview: preview({ seed: [0] }) });
     const window = fold()!;

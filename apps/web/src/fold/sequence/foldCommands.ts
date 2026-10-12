@@ -35,7 +35,9 @@ import {
 } from '../foldActions';
 import { FOLD_IO_ACTION_DEPS } from '../io/foldIoActions';
 import { FOLD_BLANK_SEQUENCE, FOLD_PENDING_NODE, type FoldSessionSnapshot } from '../session/foldSessionState';
+import { foldTools } from '../tools/foldToolState';
 import { paneShapeOf } from './foldPaperShapes';
+import { setFoldView } from './foldViewMode';
 import { cursorIndex, foldPathEntries, followerCount, type FoldEntryStatus, type FoldPathEntry } from './foldSequencePath';
 
 /**
@@ -155,6 +157,12 @@ export function foldActionsAt(
     turn: (turn) => {
       fromHere();
       void session.commitStep(turnOp(turn));
+    },
+    // Rotate is a tool: taken in hand on the canvas, at the step it is asked for there.
+    rotate: () => {
+      fromHere();
+      foldTools().selectTool('rotate');
+      setFoldView('fold');
     },
     deleteStep: (id) => {
       useWorkspaceStore.getState().deleteFoldStep(id);

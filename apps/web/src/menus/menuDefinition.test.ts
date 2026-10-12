@@ -42,9 +42,11 @@ describe('web menu definition', () => {
       'fold.mountain': 'M',
       'fold.precrease': 'P',
       'fold.turn-over': 'T',
-      'fold.rotate-cw': 'R',
+      // Rotate takes its tool in hand, as R does.
+      'fold.rotate': 'R',
     });
-    // Counterclockwise has no key of its own.
+    // The quarter turns done at once are gone: Rotate's window sets how far and which way.
+    expect(rows()['fold.rotate-cw']).toBeUndefined();
     expect(rows()['fold.rotate-ccw']).toBeUndefined();
     // The keys the canvas runs are the ones the rail and the window name.
     expect([FOLD_TOOL_SHORTCUTS.valley, FOLD_TOOL_SHORTCUTS.mountain, FOLD_TOOL_SHORTCUTS.precrease]).toEqual([
@@ -52,8 +54,9 @@ describe('web menu definition', () => {
       'fold.toolMountain',
       'fold.toolPrecrease',
     ]);
-    expect(FOLD_MODEL_VERB_SHORTCUTS).toEqual({ 'turn-over': 'fold.turnOver', rotate: 'fold.rotate' });
-    expect(FOLD_MODEL_TURNS.rotate).toEqual({ kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } });
+    expect(FOLD_TOOL_SHORTCUTS.rotate).toBe('fold.rotate');
+    expect(FOLD_MODEL_VERB_SHORTCUTS).toEqual({ 'turn-over': 'fold.turnOver' });
+    expect(FOLD_MODEL_TURNS).toEqual({ 'turn-over': { kind: 'turn-over', axis: 'vertical' } });
     // Rebound, the hint follows.
     expect(rows({ 'fold.toolValley': [{ key: 'w' }] })['fold.valley']).toBe('W');
   });

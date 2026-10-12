@@ -233,8 +233,15 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       ...(vertexView ? { vertex: vertexView } : {}),
       ...(sinkView ? { sink: sinkView } : {}),
       extent: { mode: toolState.extent, picked: toolState.extentPicks.length },
+      rotate: { rotation: toolState.rotation },
     },
-    { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind, tuckTarget: verbs.tuckTarget },
+    {
+      ...verbs,
+      setDivide: tools.setDivide,
+      otherKind: verbs.setReverseKind,
+      tuckTarget: verbs.tuckTarget,
+      setRotation: tools.setRotation,
+    },
     { coarse, alt: altModifierLabel(), keyLabel }
   );
   // The chooser over the folded pane: the deepest choice with more than one answer.

@@ -435,6 +435,9 @@
       "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar, sem ajuste.",
       "openSinkLine": "A linha que cruza a ponta define o quanto ela afunda, e precisa ser exatamente perpendicular à sua linha central. O axioma 4, por um ponto e perpendicular ao vinco central, dá uma que é.",
       "queued": "Dobrando assim que a prévia estiver pronta…",
+      "rotateCancel": "Esc larga a ferramenta Girar sem adicionar o giro.",
+      "rotatePreview": "O painel dobrado mostra o modelo girado como ficará.",
+      "rotateRefused": "Este giro não pode ser adicionado aqui.",
       "severalSunk_one": "Há {{count}} ponta afundada aqui: a primeira é usada.",
       "severalSunk_many": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
       "severalSunk_other": "Há {{count}} pontas afundadas aqui: a primeira é usada.",
@@ -711,6 +714,12 @@
       "previous": "Anterior",
       "tipSide": "Lado da ponta"
     },
+    "rotate": {
+      "amount": "Quantidade",
+      "degrees": "Ângulo exato",
+      "direction": "Sentido",
+      "presetTooltip": "{{fraction}} de volta, {{degrees}}°"
+    },
     "scopeLabel": "dobra",
     "section": {
       "label": "Camadas na linha de dobra, de cima para baixo",
@@ -778,6 +787,10 @@
       "pickTuckTarget": "Escolha a camada onde encaixar.",
       "pinchAt": "Clique ao longo da linha onde beliscar.",
       "pointToMove": "Clique no ponto a mover.",
+      "rotateAmount": "Escolha quanto girar o modelo: uma fração de volta ou um ângulo exato.",
+      "rotateCommit": "Pressione Enter para adicionar o giro.",
+      "rotateCommitTouch": "Toque em {{action}} para adicionar o giro.",
+      "rotateDirection": "Escolha para que lado ele gira.",
       "segmentFrom": "Clique ao longo da linha onde o vinco começa.",
       "segmentTo": "Clique onde ele termina."
     },
@@ -793,6 +806,7 @@
       "openSinkHelp": "Empurrar para dentro a extremidade de uma ponta fechada, virando cada camada do avesso.",
       "precrease": "Pré-vincar",
       "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
+      "rotateHelp": "Girar o modelo uma fração de volta ou um ângulo exato, primeiro em prévia e depois como um passo próprio.",
       "tuckHelp": "Dobrar uma aba e deslizá-la por baixo, ou por cima, de uma camada que fica parada.",
       "unsinkHelp": "Puxar de volta a extremidade de uma ponta afundada.",
       "valley": "Dobra vale",
@@ -810,7 +824,6 @@
       "under": "Encaixar por baixo"
     },
     "verb": {
-      "rotateHelp": "Girar o modelo um quarto de volta no sentido horário, como um passo próprio.",
       "turnOverHelp": "Virar o modelo de um lado para o outro, como um passo próprio."
     },
     "vertex": {

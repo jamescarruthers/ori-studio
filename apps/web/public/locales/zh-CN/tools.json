@@ -409,6 +409,9 @@
       "freePoint": "按住 {{modifier}} 可不吸附地把点放在任意位置。",
       "openSinkLine": "横跨角的线决定沉折的深度，并且必须与角的中线严格垂直。公理 4（过一点且垂直于中间折痕）就能给出这样的线。",
       "queued": "预览就绪后立即折叠…",
+      "rotateCancel": "按 Esc 放下旋转工具，不添加这次旋转。",
+      "rotatePreview": "折叠窗格会显示旋转后的模型。",
+      "rotateRefused": "无法在此处添加这次旋转。",
       "severalSunk_other": "这里有 {{count}} 个已沉入的角：使用第一个。",
       "snap": "点会吸附到角、标记、折痕交点、中点和边。",
       "unsinkLine": "定位沉折留下的环：「已有折痕」会选取环上沿已沉入角顶边的一条折痕。"
@@ -679,6 +682,12 @@
       "previous": "上一个",
       "tipSide": "尖端一侧"
     },
+    "rotate": {
+      "amount": "旋转量",
+      "degrees": "精确角度",
+      "direction": "方向",
+      "presetTooltip": "{{fraction}} 圈，{{degrees}}°"
+    },
     "scopeLabel": "折叠",
     "section": {
       "label": "折线处的层，从上到下",
@@ -746,6 +755,10 @@
       "pickTuckTarget": "选择要塞入的那一层。",
       "pinchAt": "沿线单击要捏折的位置。",
       "pointToMove": "单击要移动的点。",
+      "rotateAmount": "选择模型旋转多少：一部分圈数，或精确角度。",
+      "rotateCommit": "按 Enter 添加这次旋转。",
+      "rotateCommitTouch": "轻点“{{action}}”添加这次旋转。",
+      "rotateDirection": "选择旋转方向。",
       "segmentFrom": "沿线单击折痕开始的位置。",
       "segmentTo": "单击它结束的位置。"
     },
@@ -761,6 +774,7 @@
       "openSinkHelp": "把闭合角的尖端推进去，并把它的每一层翻转。",
       "precrease": "预折",
       "precreaseHelp": "折起再展开，留下一条之后用的折痕。",
+      "rotateHelp": "将模型旋转一部分圈数或精确角度，先预览，再作为单独的一步添加。",
       "tuckHelp": "折叠翼片，并把它滑到留在原处的层下面或上面。",
       "unsinkHelp": "把沉入的角的尖端拉回来。",
       "valley": "谷折",
@@ -774,7 +788,6 @@
       "under": "塞到下面"
     },
     "verb": {
-      "rotateHelp": "将模型顺时针旋转四分之一圈，作为单独的一步。",
       "turnOverHelp": "将模型左右翻面，作为单独的一步。"
     },
     "vertex": {

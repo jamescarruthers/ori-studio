@@ -435,6 +435,9 @@
       "freePoint": "Mantén {{modifier}} para colocar un punto en cualquier lugar, sin ajuste.",
       "openSinkLine": "La línea que cruza la punta fija cuánto se hunde, y debe ser exactamente perpendicular a su línea central. El axioma 4, por un punto y perpendicular al pliegue central, da una que lo es.",
       "queued": "Se plegará en cuanto la vista previa esté lista…",
+      "rotateCancel": "Esc suelta la herramienta Girar sin añadir el giro.",
+      "rotatePreview": "El panel plegado muestra el modelo girado tal como quedará.",
+      "rotateRefused": "Este giro no se puede añadir aquí.",
       "severalSunk_one": "Aquí hay {{count}} punta hundida: se toma la primera.",
       "severalSunk_many": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
       "severalSunk_other": "Aquí hay {{count}} puntas hundidas: se toma la primera.",
@@ -711,6 +714,12 @@
       "previous": "Anterior",
       "tipSide": "Lado de la punta"
     },
+    "rotate": {
+      "amount": "Cantidad",
+      "degrees": "Ángulo exacto",
+      "direction": "Sentido",
+      "presetTooltip": "{{fraction}} de vuelta, {{degrees}}°"
+    },
     "scopeLabel": "plegado",
     "section": {
       "label": "Capas en la línea de pliegue, de arriba abajo",
@@ -778,6 +787,10 @@
       "pickTuckTarget": "Elige la capa contra la que remeter.",
       "pinchAt": "Haz clic donde pellizcar a lo largo de la línea.",
       "pointToMove": "Haz clic en el punto que se mueve.",
+      "rotateAmount": "Elige cuánto girar el modelo: una parte de vuelta o un ángulo exacto.",
+      "rotateCommit": "Pulsa Intro para añadir el giro.",
+      "rotateCommitTouch": "Toca {{action}} para añadir el giro.",
+      "rotateDirection": "Elige hacia qué lado gira.",
       "segmentFrom": "Haz clic donde empieza el pliegue a lo largo de la línea.",
       "segmentTo": "Haz clic donde termina."
     },
@@ -793,6 +806,7 @@
       "openSinkHelp": "Empujar hacia dentro el extremo de una punta cerrada, dando la vuelta a cada una de sus capas.",
       "precrease": "Premarcar",
       "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
+      "rotateHelp": "Girar el modelo una parte de vuelta o un ángulo exacto, primero en vista previa y luego como un paso propio.",
       "tuckHelp": "Plegar una solapa y deslizarla bajo, o sobre, una capa que se queda quieta.",
       "unsinkHelp": "Sacar de nuevo el extremo de una punta hundida.",
       "valley": "Pliegue de valle",
@@ -810,7 +824,6 @@
       "under": "Remeter debajo"
     },
     "verb": {
-      "rotateHelp": "Girar el modelo un cuarto de vuelta en el sentido de las agujas del reloj, como un paso propio.",
       "turnOverHelp": "Dar la vuelta al modelo, de lado a lado, como un paso propio."
     },
     "vertex": {

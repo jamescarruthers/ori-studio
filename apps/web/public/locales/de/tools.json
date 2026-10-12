@@ -422,6 +422,9 @@
       "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt ohne Einrasten frei zu setzen.",
       "openSinkLine": "Die Linie quer über die Spitze legt fest, wie tief sie versenkt wird, und muss genau rechtwinklig zu ihrer Mittellinie liegen. Axiom 4, durch einen Punkt und senkrecht zur Mittelfalte, ergibt eine solche Linie.",
       "queued": "Wird gefaltet, sobald die Vorschau bereit ist…",
+      "rotateCancel": "Esc legt das Drehen-Werkzeug weg, ohne die Drehung hinzuzufügen.",
+      "rotatePreview": "Die gefaltete Ansicht zeigt das Modell so gedreht, wie es sein wird.",
+      "rotateRefused": "Diese Drehung kann hier nicht hinzugefügt werden.",
       "severalSunk_one": "Hier liegt {{count}} versenkte Spitze: Die erste wird genommen.",
       "severalSunk_other": "Hier liegen {{count}} versenkte Spitzen: Die erste wird genommen.",
       "snap": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien, Mittelpunkten und Kanten ein.",
@@ -695,6 +698,12 @@
       "previous": "Zurück",
       "tipSide": "Seite der Spitze"
     },
+    "rotate": {
+      "amount": "Drehung",
+      "degrees": "Genauer Winkel",
+      "direction": "Richtung",
+      "presetTooltip": "{{fraction}} Drehung, {{degrees}}°"
+    },
     "scopeLabel": "falten",
     "section": {
       "label": "Lagen an der Faltlinie, von oben nach unten",
@@ -762,6 +771,10 @@
       "pickTuckTarget": "Wähle die Lage, an der eingesteckt wird.",
       "pinchAt": "Klicke entlang der Linie dorthin, wo gekniffen werden soll.",
       "pointToMove": "Klicke auf den Punkt, der bewegt werden soll.",
+      "rotateAmount": "Wähle, wie weit das Modell gedreht wird: ein Teil einer Umdrehung oder ein genauer Winkel.",
+      "rotateCommit": "Drücke die Eingabetaste, um die Drehung hinzuzufügen.",
+      "rotateCommitTouch": "Tippe auf {{action}}, um die Drehung hinzuzufügen.",
+      "rotateDirection": "Wähle, in welche Richtung es sich dreht.",
       "segmentFrom": "Klicke entlang der Linie dorthin, wo die Faltlinie beginnt.",
       "segmentTo": "Klicke dorthin, wo sie endet."
     },
@@ -777,6 +790,7 @@
       "openSinkHelp": "Das Ende einer geschlossenen Spitze hineindrücken und dabei jede ihrer Lagen umstülpen.",
       "precrease": "Vorfalten",
       "precreaseHelp": "Falten und wieder öffnen: eine Faltlinie für später.",
+      "rotateHelp": "Das Modell um einen Teil einer Umdrehung oder einen genauen Winkel drehen: erst als Vorschau, dann als eigener Schritt.",
       "tuckHelp": "Eine Lasche falten und unter oder über eine liegen bleibende Lage stecken.",
       "unsinkHelp": "Das Ende einer versenkten Spitze wieder herausziehen.",
       "valley": "Talfalte",
@@ -792,7 +806,6 @@
       "under": "Darunter stecken"
     },
     "verb": {
-      "rotateHelp": "Das Modell eine Vierteldrehung im Uhrzeigersinn drehen, als eigener Schritt.",
       "turnOverHelp": "Das Modell seitlich umdrehen, als eigener Schritt."
     },
     "vertex": {

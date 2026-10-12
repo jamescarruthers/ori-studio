@@ -84,7 +84,8 @@ function union(a: Bounds | null, b: Bounds | null): Bounds | null {
 
 /**
  * What each pane of the Fold canvas paints (plan D11): the folded form of the
- * state on screen, with a located fold's line — a crimp's two, a vertex
+ * state on screen — or, with Rotate in hand, of that state turned as the
+ * rotation lands it (`preview.turned`) — with a located fold's line — a crimp's two, a vertex
  * fold's creases, a fan's given creases (`fan`, `useFoldFanMarks`) from their
  * clicks on — in the paper style's diagram-crease pen of its letter, and its
  * moving set lit over the paper, a tuck's listed targets lit too, through the shared
@@ -113,7 +114,11 @@ export function useFoldCanvasPaint(
   spread: LayerSpreadOptions | null = null,
   fan: FoldFanMarks | null = null
 ): FoldCanvasPaint {
-  const { scene, summary, index } = view;
+  const { summary, index } = view;
+  // Rotate's preview: the model turned as it will be, in place of the state
+  // on screen, turning about the sheet's middle as the offset places it. The
+  // crease pattern, front up, stays the state on screen's.
+  const scene = preview.turned ?? view.scene;
   const sheet = summary?.sheet;
   const offset = useMemo(() => (scene && sheet ? foldedDisplayOffset(scene, sheet) : NO_OFFSET), [scene, sheet]);
   const sheetBounds = useMemo(() => (sheet ? boundsOf(sheet.map(([x, y]) => ({ x, y }))) : null), [sheet]);
@@ -188,7 +193,7 @@ export function useFoldCanvasPaint(
   }, [scene, offset, sheetBounds]);
 
   const landed = preview.landed;
-  const cpSource = landed?.scene ?? scene;
+  const cpSource = landed?.scene ?? view.scene;
   const cpSummary = landed?.summary ?? summary;
   const cpLines = useMemo(() => {
     if (!cpSource || !cpSummary) return null;
@@ -201,7 +206,10 @@ export function useFoldCanvasPaint(
   }, [cpSource, cpSummary, display, landed, fanCreases]);
   const cpBounds = useMemo(() => (sheetBounds ? boundsToUser(sheetBounds) : null), [sheetBounds]);
 
-  const keepInView = foldedFormKey(view);
+  // A turned preview is another form: the pane keeps it in view as it keeps a new step's.
+  const formKey = foldedFormKey(view);
+  const turned = preview.turned;
+  const keepInView = formKey !== null && turned ? `${formKey}|turned:${turned.view_transform.join(',')}` : formKey;
 
   return {
     folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, keepInView, offset, tint },

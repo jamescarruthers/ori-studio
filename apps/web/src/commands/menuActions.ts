@@ -155,8 +155,8 @@ export const MENU_ACTION_IDS = [
   'fold.mountain',
   'fold.precrease',
   'fold.turn-over',
-  'fold.rotate-ccw',
-  'fold.rotate-cw',
+  // Rotate takes its tool in hand: how far and which way are its window's.
+  'fold.rotate',
   'fold.delete-step',
   // Fold's imports and hand-offs (plan D16, D10, D11): `fold.` and the action
   // catalog's command id (`fold/foldActions.ts`) where it has one.
@@ -416,8 +416,7 @@ const FOLD_SEQUENCE_ACTIONS: Partial<Record<MenuActionId, FoldMenuVerb>> = {
   'fold.mountain': { kind: 'fold-kind', id: 'mountain' },
   'fold.precrease': { kind: 'fold-kind', id: 'precrease' },
   'fold.turn-over': { kind: 'command', id: 'turn-over' },
-  'fold.rotate-ccw': { kind: 'command', id: 'rotate-ccw' },
-  'fold.rotate-cw': { kind: 'command', id: 'rotate-cw' },
+  'fold.rotate': { kind: 'command', id: 'rotate' },
   'fold.delete-step': { kind: 'command', id: 'delete-step' },
 };
 
