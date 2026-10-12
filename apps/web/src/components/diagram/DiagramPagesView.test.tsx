@@ -4,7 +4,9 @@ import { resolve } from 'node:path';
 import { act } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { handleShortcutRuntimeKeyDown } from '../../keyboard/shortcutRuntime';
+import { useDiagramShortcuts } from '../../diagram/useDiagramShortcuts';
 import {
   createDiagram,
   createStep,
@@ -258,6 +260,63 @@ describe('DiagramPagesView', () => {
   });
 });
 
+
+function Keys() {
+  useDiagramShortcuts({ openStepMenu: () => false });
+  return null;
+}
+
+it('focuses the step a press lands on, so the arrows nudge its frame and Enter opens it, the nudge kept', () => {
+  const doc = diagram();
+  useWorkspaceStore.getState().installDiagram({ document: doc, readOnly: false, raw: {} });
+  useWorkspaceStore.getState().setDiagramView('pages');
+  const keys = createRoot(document.createElement('div'));
+  act(() => keys.render(<Keys />));
+  const capture = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'setPointerCapture');
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  // Focus where a click on the Pages tab leaves it.
+  const tab = document.createElement('button');
+  tab.setAttribute('role', 'tab');
+  document.body.append(tab);
+  onTestFinished(() => {
+    act(() => keys.unmount());
+    tab.remove();
+    if (capture) Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', capture);
+    else delete (HTMLElement.prototype as Partial<HTMLElement>).setPointerCapture;
+  });
+  render(preparedPages(doc, FONTS, subsetter), {}, undefined, doc);
+  act(() => tab.focus());
+  const cell = cells()[0]!;
+  const pointer = (type: string) =>
+    new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerId: 1, pointerType: 'mouse' });
+  const down = pointer('pointerdown');
+  act(() => {
+    cell.dispatchEvent(down);
+    cell.dispatchEvent(pointer('pointerup'));
+    cell.click();
+  });
+  // The press stays the browser's (it is no drag), and focus is on the step.
+  expect(down.defaultPrevented).toBe(false);
+  expect(document.activeElement).toBe(cell);
+  expect(useWorkspaceStore.getState()).toMatchObject({ diagramSelectedStepId: 'step-a', diagramPagesPart: 'frame' });
+  const press = (key: string) => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'target', { value: document.activeElement });
+    let claimed = false;
+    act(() => {
+      claimed = handleShortcutRuntimeKeyDown(event, { context: { activeEditingContext: 'diagram' }, menu: () => undefined });
+    });
+    return claimed;
+  };
+  // Decision 7: an arrow nudges the selected frame, on the Pages view still.
+  expect(press('ArrowRight')).toBe(true);
+  expect(useWorkspaceStore.getState().diagramView).toBe('pages');
+  expect(useWorkspaceStore.getState().diagram?.steps[0]).not.toHaveProperty('place');
+  // Enter opens the step, after the nudge it showed has gone into the diagram.
+  expect(press('Enter')).toBe(true);
+  expect(useWorkspaceStore.getState()).toMatchObject({ diagramDetail: 'pose', diagramSelectedStepId: 'step-a' });
+  expect(useWorkspaceStore.getState().diagram?.steps[0]).toMatchObject({ place: { frame: [0.5, 0] } });
+});
 
 it('lets the selected frame own its picture hit area until a part is chosen', () => {
   const doc = diagram();

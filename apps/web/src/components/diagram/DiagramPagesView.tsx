@@ -101,7 +101,7 @@ export function DiagramPagesView({
     pageRef,
     cellRef,
   } = usePagesView({ pages: prepared, selectedStepId, fitKey });
-  const placement = usePagePlacement(prepared, spacePressed);
+  const placement = usePagePlacement(prepared, spacePressed, failed);
   const pages = placement.pages;
   const stepsById = useMemo(() => new Map(steps.map((step) => [step.id, step])), [steps]);
   const mm = (value: number) => value * PAGES_PX_PER_MM;
@@ -286,6 +286,7 @@ export function DiagramPagesView({
                             onPointerMove={placement.move}
                             onPointerUp={placement.end}
                             onPointerCancel={placement.cancel}
+                            onLostPointerCapture={placement.lost}
                             onClick={(event) => onCellClick(event, cell.stepId)}
                             onDoubleClick={(event) => {
                               event.stopPropagation();

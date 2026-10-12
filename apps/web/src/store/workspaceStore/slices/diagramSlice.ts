@@ -61,6 +61,7 @@ import {
 import { lacksPaperFaces } from '../../../diagram/capture/stepPaperFaces';
 import { resetStepPlace, resetStepPlaces, setStepPlace } from '../../../diagram/document/stepPlace';
 import { retainPageCounts, setPageSteps } from '../../../diagram/pages/pageCounts';
+import { flushPlacementNudge } from '../../../diagram/pages/placementGestures';
 import { cellSlots, settlePlaces } from '../../../diagram/pages/stepPlaces';
 import {
   emptySnapshotHistory,
@@ -127,6 +128,8 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
 
   /** Whether an edit in `session` at `key` extends the newest entry, and the session to remember after it. */
   const sessionFor = (key: string, session: number | undefined) => {
+    // Before the newest entry is read: a nudge in its pause is newer (`flushPlacementNudge`).
+    flushPlacementNudge();
     const loadId = get().diagramLoadId;
     const extend =
       session !== undefined &&
@@ -147,6 +150,10 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     edit: (document: DiagramDocument) => DiagramDocument,
     extend = false
   ): DiagramDocument | null => {
+    // A keyboard nudge on the Pages view still in its pause lands first, in an
+    // undo step of its own, so this edit comes after it as the screen showed
+    // them (`flushPlacementNudge`).
+    flushPlacementNudge();
     const state = get();
     if (state.diagramReadOnly) return null;
     const before = state.diagram;
@@ -223,6 +230,8 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
   };
 
   const travel = (direction: 'undo' | 'redo'): boolean => {
+    // An undo takes back a nudge in its pause as it would one committed.
+    flushPlacementNudge();
     const state = get();
     if (state.diagramReadOnly) return false;
     openSession = null;

@@ -38,7 +38,9 @@ export function DiagramPagesPlacement({
   const cell = page.cells.find((c) => c.stepId === selected);
   const document = useWorkspaceStore((s) => s.diagram);
   const step = document && selected ? stepById(document, selected) : null;
-  const local = draft?.page === index ? draft : null;
+  // The draft on this page, lifted whatever is selected; its readouts only on its own step.
+  const lifted = draft?.page === index ? draft : null;
+  const local = lifted?.cell.stepId === selected ? lifted : null;
   const editable = placement.enabled && step && !placementBlocker(step);
   const chosen = cell && part ? partBox(cell, part) : null;
   const baseCell = local?.cell ?? cell;
@@ -58,7 +60,7 @@ export function DiagramPagesPlacement({
   };
   return (
     <>
-      {local && <LiftedPicture draft={local} />}
+      {lifted && <LiftedPicture draft={lifted} />}
       {page.cells
         .filter((c) => c.clashes?.length)
         .map((c) => (
@@ -91,6 +93,7 @@ export function DiagramPagesPlacement({
                 onPointerMove={placement.move}
                 onPointerUp={placement.end}
                 onPointerCancel={placement.cancel}
+                onLostPointerCapture={placement.lost}
                 onClick={(event) => {
                   event.stopPropagation();
                   useWorkspaceStore.getState().selectDiagramPagesPart(p);
@@ -114,6 +117,7 @@ export function DiagramPagesPlacement({
                 onPointerMove={placement.move}
                 onPointerUp={placement.end}
                 onPointerCancel={placement.cancel}
+                onLostPointerCapture={placement.lost}
                 onClick={(event) => event.stopPropagation()}
               />
             ))}

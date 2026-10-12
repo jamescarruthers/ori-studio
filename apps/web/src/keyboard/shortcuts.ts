@@ -105,7 +105,6 @@ export type DiagramShortcutId =
 
 export type DiagramPlacementShortcutId =
   | `diagram.nudgePlacement${'Left' | 'Right' | 'Up' | 'Down'}${'' | 'Large'}`
-  | 'diagram.placementDelete'
   | 'diagram.placementUndo';
 
 /** Annotate's tools and Flip arc: live only while a step is open in Annotate. */
@@ -675,11 +674,12 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
   // otherwise only ⌘X. Zach plans a shortcut pass before merge.
   diagramShortcut('diagram.toolXRay', 'X-Ray', { key: 'x' }),
   diagramShortcut('diagram.flipArc', 'Flip Arc', { key: 'f' }),
-  // Edit Path's nudges (decision 6), on the step keys' own arrows: in a scope
-  // of their own ahead of `diagram`, whose executor claims them only while
-  // Edit Path has a node selected. Anywhere else it declines, and the arrows
-  // fall through to the steps — one scope could not hold both, as the
-  // dispatcher takes a scope's first match. Shift for ten times the step.
+  // The Pages view's nudges of a selected frame or part, and the Undo key that
+  // takes back a nudge still in its pause: in a scope of their own ahead of
+  // Edit Path's, whose executor claims a nudge only while a part of the
+  // selected step is selected on the pages, and Undo only while a nudge or a
+  // drag is in hand. Delete is not among them: it deletes the step, through
+  // `edit.delete`, as it does on the cards.
   diagramShortcut('diagram.nudgePlacementLeft', 'Nudge Placement Left', { key: 'arrowleft' }, 'diagram-place'),
   diagramShortcut('diagram.nudgePlacementLeftLarge', 'Nudge Placement Left (Large)', { shift: true, key: 'arrowleft' }, 'diagram-place'),
   diagramShortcut('diagram.nudgePlacementRight', 'Nudge Placement Right', { key: 'arrowright' }, 'diagram-place'),
@@ -688,8 +688,12 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
   diagramShortcut('diagram.nudgePlacementUpLarge', 'Nudge Placement Up (Large)', { shift: true, key: 'arrowup' }, 'diagram-place'),
   diagramShortcut('diagram.nudgePlacementDown', 'Nudge Placement Down', { key: 'arrowdown' }, 'diagram-place'),
   diagramShortcut('diagram.nudgePlacementDownLarge', 'Nudge Placement Down (Large)', { shift: true, key: 'arrowdown' }, 'diagram-place'),
-  diagramShortcut('diagram.placementDelete', 'Keep Selected Page Part', [{ key: 'delete' }, { key: 'backspace' }], 'diagram-place'),
   diagramShortcut('diagram.placementUndo', 'Cancel Page Placement', { primary: true, key: 'z' }, 'diagram-place'),
+  // Edit Path's nudges (decision 6), on the step keys' own arrows: in a scope
+  // of their own ahead of `diagram`, whose executor claims them only while
+  // Edit Path has a node selected. Anywhere else it declines, and the arrows
+  // fall through to the steps — one scope could not hold both, as the
+  // dispatcher takes a scope's first match. Shift for ten times the step.
   diagramShortcut('diagram.nudgeNodeLeft', 'Nudge Node Left', { key: 'arrowleft' }, 'diagram-path'),
   diagramShortcut('diagram.nudgeNodeRight', 'Nudge Node Right', { key: 'arrowright' }, 'diagram-path'),
   diagramShortcut('diagram.nudgeNodeUp', 'Nudge Node Up', { key: 'arrowup' }, 'diagram-path'),
