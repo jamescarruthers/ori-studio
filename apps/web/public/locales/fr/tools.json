@@ -287,6 +287,7 @@
         "opening": "Le rabat s’ouvre de plus d’une façon : les couches en surbrillance restent ensemble. Parcourez-les.",
         "order": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les.",
         "pocket": "La pointe peut s’enfoncer dans plus d’une poche entre ses couches. Parcourez-les.",
+        "ridge": "Les deux arêtes laissent le pli pivoté à plat. Parcourez-les.",
         "root": "Cet axiome donne ici plus d’un pli. Parcourez-les.",
         "target": "Plus d’une couche peut recevoir le rabat : la plus claire est celle retenue. Parcourez-les."
       },
@@ -295,6 +296,7 @@
         "opening": "Le rabat s’ouvre de plus d’une façon : les couches en surbrillance restent ensemble. Parcourez-les, ou appuyez sur {{keys}}.",
         "order": "Les couches peuvent se poser empilées de plus d’une façon. Parcourez-les, ou appuyez sur {{keys}}.",
         "pocket": "La pointe peut s’enfoncer dans plus d’une poche entre ses couches. Parcourez-les, ou appuyez sur {{keys}}.",
+        "ridge": "Les deux arêtes laissent le pli pivoté à plat. Parcourez-les, ou appuyez sur {{keys}}.",
         "root": "Cet axiome donne ici plus d’un pli. Parcourez-les, ou appuyez sur {{keys}}.",
         "target": "Plus d’une couche peut recevoir le rabat : la plus claire est celle retenue. Parcourez-les, ou appuyez sur {{keys}}."
       }
@@ -332,6 +334,7 @@
       "closedSinkInstead": "Plutôt un enfoncement fermé",
       "crimpFlap": "Faire le crimp seulement sur le rabat {{number}}",
       "crimpThisFlap": "Faire le crimp seulement sur ce rabat",
+      "foldOntoLine": "Plier plutôt le bord sur la ligne",
       "includeFlap": "Inclure le rabat {{number}}",
       "includeFlaps_one": "Inclure {{count}} rabat",
       "includeFlaps_many": "Inclure les {{count}} rabats",
@@ -817,27 +820,28 @@
       "direction": "Sens",
       "emergent": "Quatrième pli",
       "fix": {
+        "creaseKites": "Marquer les plis du cerf-volant en pliant",
         "emergent": "Prendre le quatrième pli qui convient",
         "emergentNumber": "Prendre le quatrième pli {{number}}",
+        "otherRidge": "Utiliser l’autre arête",
         "otherWay": "Plier dans l’autre sens",
+        "precreaseHinge": "Pré-plier d’abord la charnière",
         "precreaseKite": "Pré-plier le cerf-volant",
-        "precreaseLine": "Pré-plier d’abord cette ligne",
-        "resetTarget": "Poser le dos sur la charnière",
-        "usePrecrease": "Prendre le pré-pli"
+        "resetTarget": "Poser le dos sur la charnière"
       },
       "fourthNone": "Aucun",
       "fourthsFit_one": "Un quatrième pli convient avec ce papier en place.",
       "fourthsFit_many": "{{count}} quatrièmes plis conviennent avec ce papier en place.",
       "fourthsFit_other": "{{count}} quatrièmes plis conviennent avec ce papier en place.",
       "help": {
-        "petal": "Soulever la pointe inférieure d’un rabat le long d’un pré-pli H pendant que ses côtés se replient le long de deux pré-plis en cerf-volant.",
+        "petalHinge": "Soulever la pointe inférieure d’un rabat le long d’une charnière pendant que ses côtés se replient le long de deux plis en cerf-volant.",
         "rabbitEar": "Replier les coins d’un triangle le long de leurs bissectrices, pour qu’une pointe se dresse.",
         "squash": "Ouvrir un rabat de deux couches et l’aplatir, son dos sur sa charnière.",
-        "swivel": "Plier le papier autour d’un point que vous placez : trois plis que vous choisissez, et un quatrième qui le laisse à plat."
+        "swivelEdge": "Faire pivoter un bord sur une ligne, autour d’un point."
       },
       "intro": {
-        "petal": "Soulève la pointe inférieure d’un rabat le long d’une ligne H pendant que ses côtés se replient. Il replie des pré-plis, alors utilisez d’abord l’outil Pré-plier : amenez chaque bord inférieur du rabat du dessus sur sa ligne médiane (Axiome 3, rabat du dessus seulement), puis pré-pliez H par les extrémités des deux plis (Axiome 1, toutes les couches).",
-        "swivel": "Plie le papier autour d’un point, comme une oreille de lapin dont les plis n’ont rien à bissecter : vous placez le point et trois plis, et le quatrième est un pli qui laisse le papier à plat."
+        "petalHinge": "Soulève la pointe inférieure d’un rabat le long d’une charnière pendant que ses côtés se replient le long de deux plis en cerf-volant. Choisissez la charnière comme un pli qui traverse déjà le rabat, ou par ses deux extrémités : le pliage marque alors, en pliant, la charnière dans la couche du dessus et tout pli du cerf-volant manquant.",
+        "swivelEdge": "Fait pivoter un bord sur une ligne, autour d’un point. Les plis se rejoignent là où se trouve le pivot, ramené sur la ligne à mi-chemin entre le bord et la ligne où il se pose, et le papier entre eux tourne à plat."
       },
       "layers": "Couches",
       "layersAll_one": "Les {{count}}",
@@ -849,6 +853,18 @@
       "layersTop_one": "{{count}} du dessus sur {{total}}",
       "layersTop_many": "{{count}} du dessus sur {{total}}",
       "layersTop_other": "{{count}} du dessus sur {{total}}",
+      "lineBy": {
+        "creaseOrEdge": "Pli ou bord",
+        "creaseOrEdgeHelp": "Cliquez sur un pli ou un bord déjà là",
+        "hinge": "Charnière",
+        "hingeCrease": "Pli de charnière",
+        "hingeCreaseHelp": "Cliquez sur un pré-pli qui traverse déjà le rabat",
+        "target": "Se pose sur",
+        "twoEndpoints": "Deux extrémités",
+        "twoEndpointsHelp": "Cliquez sur les deux extrémités de la charnière : le pliage la marque",
+        "twoPoints": "Deux points",
+        "twoPointsHelp": "Cliquez sur deux points de la ligne"
+      },
       "mountain": "Montagne",
       "mountainTitle": "Montagne : le papier tourne en s’éloignant de vous",
       "noFourth": "Aucun quatrième pli ne convient avec ce papier en place : cliquez sur un autre papier à laisser en place.",
@@ -857,17 +873,31 @@
       "noFourthTouch": "Aucun quatrième pli ne convient avec ce papier en place : touchez un autre papier à laisser en place.",
       "note": {
         "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où.",
+        "freePointTouch": "Activez Point libre pour placer un point n’importe où.",
+        "petalCreasesAll": "Pendant que le rabat se soulève, le pliage marque la charnière dans la couche du dessus et les deux plis du cerf-volant dans les deux couches du dessus.",
+        "petalCreasesHinge": "Pendant que le rabat se soulève, le pliage marque la charnière dans la couche du dessus. Les plis du cerf-volant sont déjà là.",
+        "petalCreasesHingeKite": "Pendant que le rabat se soulève, le pliage marque la charnière dans la couche du dessus et un pli du cerf-volant dans les deux couches du dessus. L’autre pli du cerf-volant est déjà là.",
+        "petalCreasesKite": "Pendant que le rabat se soulève, le pliage marque un pli du cerf-volant dans les deux couches du dessus. La charnière et l’autre pli du cerf-volant sont déjà là.",
+        "petalCreasesKites": "Pendant que le rabat se soulève, le pliage marque les deux plis du cerf-volant dans les deux couches du dessus. La charnière est déjà là.",
+        "petalHingeCrease": "Seul un pré-pli peut servir de charnière : il s’éclaire sous le pointeur.",
+        "petalRefolds": "Chaque pli qu’il fait est déjà là : il replie la charnière et les plis du cerf-volant.",
+        "petalRegion": "Le papier sous la charnière s’éclaire là où un pli pétale peut le soulever : un clic ailleurs dit pourquoi pas.",
+        "petalRegionTouch": "Le rabat sous la charnière s’éclaire dès que vous le touchez.",
         "rabbitEar": "Les plis se rejoignent au centre du cercle inscrit du triangle : un vers chaque coin, plié dans le sens choisi, et un quatrième le long duquel l’oreille se dresse, plié dans l’autre sens.",
         "snapPoints": "Les points s’accrochent aux coins, aux repères, aux croisements de plis et aux milieux : un clic ailleurs ne choisit rien.",
-        "squash": "Un rabat s’écrase quand ses deux couches sont libres, tenues seulement le long de leur charnière, et découvertes, sans rien au-dessus du côté où il s’ouvre."
+        "snapPointsTouch": "Les points s’accrochent aux coins, aux repères, aux croisements de plis et aux milieux : toucher ailleurs ne choisit rien.",
+        "squash": "Un rabat s’écrase quand ses deux couches sont libres, tenues seulement le long de leur charnière, et découvertes, sans rien au-dessus du côté où il s’ouvre.",
+        "swivelVertex": "Les plis se rejoignent au point : le pivot, ramené sur la ligne à mi-chemin entre le bord et la ligne où il se pose. Le trait gras montre où le bord se pose ; le papier éclairé bouge, le plus clair tourne sur place."
       },
       "refusal": {
         "blocked": {
           "steppers": "Un pli buterait sur du papier qui ne plie pas avec lui, ou le papier retiendrait ensemble deux parties du pliage. Faites défiler Couches pour plier plus de couches, ou Quatrième pli pour en prendre un autre.",
+          "swivelEdge": "Un pli buterait sur du papier qui ne plie pas avec lui, ou le papier retiendrait ensemble deux parties du pliage. Choisissez un autre pivot, ou une autre ligne où poser le bord.",
           "title": "Du papier gêne"
         },
         "center": {
           "textEar": "Les plis du triangle se rejoignent au centre de son cercle inscrit, qui tombe sur un pli ou hors des couches. Choisissez des coins qui le placent dans les couches, loin de leurs plis.",
+          "textSwivelEdge": "Les plis se rejoignent là où se trouve le pivot, ramené sur la ligne à mi-chemin entre le bord et la ligne où il se pose, et ce point tombe sur un pli ou hors du papier. Appuyez sur Échap et choisissez un autre pivot.",
           "textSwivelStep": "Le point où les plis se rejoignent est sur un pli ou hors du papier. Appuyez sur Échap et replacez-le comme le dit l’étape 1 : dans le papier, loin de tout pli.",
           "title": "Les plis ne peuvent pas se rejoindre là"
         },
@@ -884,16 +914,13 @@
           "title": "Le quatrième pli ne peut pas se dresser ici"
         },
         "kite": {
-          "howTo": "Un pli pétale replie des plis déjà là. Le bouton ci-dessous prend l’outil Pré-plier sur l’Axiome 3 : cliquez sur un bord inférieur du rabat du dessus, puis sur sa ligne médiane, retirez les rabats de derrière sous Couches et appuyez sur Entrée. Pré-pliez l’autre bord de la même façon, puis faites le pli pétale.",
-          "title": "Pré-pliez d’abord le cerf-volant"
+          "creaseOrPrecrease": "Sur un pli de charnière, un pli pétale replie des plis déjà là, et un pli du cerf-volant manque. Désignez plutôt la charnière par ses deux extrémités, et le pliage marque lui-même le cerf-volant ; ou pré-pliez-le d’abord, avec l’outil Pré-plier sur l’Axiome 3 : un bord inférieur du rabat du dessus sur sa ligne médiane, sans les rabats de derrière.",
+          "titleMissing": "Les plis du cerf-volant manquent"
         },
         "line": {
-          "text": "Un pli pétale soulève le rabat le long d’un pré-pli traversant toutes les couches en dessous. Pré-pliez cette ligne à travers toutes les couches, puis faites le pli pétale.",
-          "title": "Pré-pliez d’abord la ligne"
-        },
-        "lineNear": {
-          "text": "Un pli pétale soulève le rabat le long d’un pré-pli. Cette ligne passe juste à côté de l’un d’eux : prenez-le, ou pré-pliez d’abord cette ligne.",
-          "title": "La ligne manque le pré-pli"
+          "crease": "Le pli de charnière ne traverse pas toutes les couches en dessous qui se plient. Pré-pliez la charnière à travers toutes les couches, puis faites le pli pétale.",
+          "ends": "La charnière traverse du papier de la deuxième couche, qui se replie à côté du cerf-volant, et le pliage ne peut pas le marquer pendant que le rabat se soulève. Pré-pliez la charnière à travers toutes les couches, puis faites le pli pétale.",
+          "titleHinge": "Pré-pliez d’abord la charnière"
         },
         "noFlap": {
           "noHinge": "Le rabat ne se plie sur aucune charnière à l’une ou l’autre extrémité de son dos : rien contre quoi l’aplatir.",
@@ -911,12 +938,18 @@
           "swivel": "Le pli pivot ne peut pas se poser à plat ici"
         },
         "noPetal": {
-          "noCorner": "Les plis du cerf-volant ne se rejoignent pas sous la ligne : aucune pointe à soulever.",
-          "noEnds": "La ligne ne croise pas les deux bords pliés du rabat. Choisissez un pré-pli qui va d’un bord du rabat à l’autre.",
-          "title": "Aucun rabat à soulever ici"
+          "missesFlap": "Le rabat cliqué est entièrement d’un côté de la charnière. Cliquez sur le rabat que la charnière traverse, ou choisissez une charnière qui va d’un de ses bords pliés à l’autre.",
+          "missesFlapTitle": "La charnière manque le rabat",
+          "noCornerHinge": "Les plis du cerf-volant partant des extrémités de la charnière ne se rejoignent pas en dessous : aucune pointe à soulever. Choisissez une charnière dont les extrémités sont là où les plis du cerf-volant rencontrent les bords du rabat.",
+          "noCornerTitle": "Aucune pointe à soulever",
+          "noEndsHinge": "La charnière d’un pli pétale traverse le rabat d’un bord plié à l’autre, et celle-ci n’en croise qu’un, ou aucun. Choisissez une charnière dont les extrémités sont sur les deux bords pliés du rabat.",
+          "noEndsTitle": "La charnière ne traverse pas le rabat",
+          "pastCorner": "Les plis du cerf-volant partant des extrémités de la charnière se rejoignent en dessous, mais le rabat va au-delà de leur point de rencontre, et ce papier ne pourrait se plier d’aucune façon. Éloignez la charnière de la pointe fermée du rabat : ses extrémités là où les plis du cerf-volant rencontrent les bords du rabat.",
+          "pastCornerTitle": "La charnière est trop près de la pointe fermée"
         },
         "notFlat": {
           "spread": "Aucun quatrième pli ne laisse ces plis à plat : deux pointent dans la même direction, ou deux voisins sont écartés d’un demi-tour ou plus. Appuyez sur Échap et choisissez des points mieux répartis autour du point de rencontre.",
+          "swivelEdge": "Aucun pli ne laisse le bord tourner sur cette ligne et rester à plat depuis ce pivot. Appuyez sur Échap et choisissez un autre pivot, ou une autre ligne.",
           "title": "Impossible de plier à plat"
         },
         "notFree": {
@@ -927,9 +960,38 @@
           "text": "D’autres couches recouvrent le rabat du côté où il se soulève. Écartez-les d’abord, ou soulevez-le dans l’autre sens.",
           "title": "Le rabat est recouvert"
         },
+        "ridgeBesideStayer": {
+          "pivot": "Le rabat se dresse le long de l’arête, qui doit donc se trouver en face du papier qui reste en place, et ici ce n’est pas le cas. Choisissez un autre pivot.",
+          "title": "L’arête est à côté du papier qui reste"
+        },
+        "ridgeCannotRise": {
+          "pivot": "L’arête se plie dans l’autre sens que les trois autres plis, et les angles entre eux ne le permettent pas. Choisissez un autre pivot.",
+          "title": "L’arête ne peut pas se dresser ici"
+        },
         "stayer": {
+          "swivelEdge": "Le papier à côté de la ligne, qui reste en place, n’est relié à aucune partie du pliage. Choisissez un autre pivot, plus près de l’endroit où le bord rencontre la ligne.",
           "text": "Le papier choisi pour rester en place n’est relié à aucune partie du pliage. Choisissez du papier que les plis traversent, ou du papier qui y est relié.",
           "title": "Quel papier reste en place ?"
+        },
+        "swivelEdgeShort": {
+          "text": "Aucune partie du bord ne dépasse le point à angle droit sous le pivot, donc rien ne pivoterait. Un simple pli le long de la ligne à mi-chemin entre le bord et sa cible l’y pose à la place.",
+          "title": "Le bord s’arrête avant de tourner"
+        },
+        "swivelEdgeStays": {
+          "text": "Le papier le long du bord resterait en place, ou se plierait par-dessus la charnière, au lieu de tourner sur la ligne. Choisissez un pivot plus près du bord, ou un autre bord.",
+          "title": "Le bord resterait en place"
+        },
+        "swivelNotAnEdge": {
+          "text": "Un pli pivoté déplace un bord du papier ou un bord plié, et la ligne choisie n’est ni l’un ni l’autre. Appuyez sur Échap et choisissez de nouveau le bord.",
+          "title": "Ce n’est pas un bord"
+        },
+        "swivelPivotOnEdge": {
+          "text": "Les plis se rejoignent là où se trouve le pivot, ramené sur la ligne à mi-chemin entre le bord et la ligne où il se pose, et ici ce point est sur le bord lui-même. Appuyez sur Échap et choisissez un pivot plus loin de l’endroit où le bord rencontre la ligne.",
+          "title": "Les plis se rejoindraient sur le bord"
+        },
+        "swivelTargetParallel": {
+          "text": "Aucune rotation autour d’un point ne pose un bord sur une ligne qui lui est parallèle, ni sur sa propre ligne. Choisissez une ligne qui coupe celle du bord.",
+          "title": "La ligne est parallèle au bord"
         },
         "targetOutside": {
           "text": "Le dos se pose entre l’endroit où il se trouve et la charnière. Cliquez sur un point dans le rabat, ou remettez-le sur la charnière.",
@@ -937,10 +999,17 @@
         }
       },
       "reset": "Revenir à la charnière",
+      "ridge": "Arête",
+      "ridgesBoth": "Les deux arêtes le laissent à plat : passez à l’autre.",
+      "ridgesNone": "Aucune arête ne le laisse à plat : l’avis ci-dessous dit pourquoi.",
+      "ridgesOne": "Seule cette arête le laisse à plat.",
       "steps": {
         "earFirstCorner": "Cliquez sur le premier coin du triangle.",
+        "earFirstCornerTouch": "Touchez le premier coin du triangle.",
         "earSecondCorner": "Cliquez sur son deuxième coin.",
+        "earSecondCornerTouch": "Touchez son deuxième coin.",
         "earThirdCorner": "Cliquez sur son troisième coin.",
+        "earThirdCornerTouch": "Touchez son troisième coin.",
         "fanChooseStayer": "Choisissez le quatrième pli et les couches. Cliquez sur un autre papier pour changer celui qui reste en place.",
         "fanChooseTouch": "Choisissez le quatrième pli et les couches. Touchez un autre papier pour changer celui qui reste en place.",
         "finish": "Choisissez les options, puis appuyez sur Entrée.",
@@ -949,26 +1018,36 @@
         "fixOrPickAgainTouch": "Touchez une correction ci-dessous, ou touchez Annuler et choisissez de nouveau.",
         "petalFinish": "Choisissez Vallée ou Montagne, puis appuyez sur Entrée.",
         "petalFinishTouch": "Choisissez Vallée ou Montagne, puis touchez {{action}}.",
-        "petalH": "Cliquez sur le pré-pli H, en travers du rabat là où finissent les plis du cerf-volant.",
-        "petalHFirstEnd": "Cliquez sur une extrémité de H, là où un pli du cerf-volant rencontre le bord du rabat.",
-        "petalHSecondEnd": "Cliquez sur l’autre extrémité de H, là où finit l’autre pli du cerf-volant.",
-        "petalLift": "Vallée soulève le rabat vers vous, Montagne loin de vous : l’aperçu montre lequel.",
-        "petalLiftingFlap": "Cliquez sur le rabat sous H, entre les plis du cerf-volant : la partie qui se soulève.",
+        "petalHingeCrease": "Choisissez le pli de charnière.",
+        "petalHingeFirstEnd": "Cliquez sur une extrémité de la charnière, là où un pli du cerf-volant rencontre le bord du rabat.",
+        "petalHingeFirstEndTouch": "Touchez une extrémité de la charnière, là où un pli du cerf-volant rencontre le bord du rabat.",
+        "petalHingeSecondEnd": "Cliquez sur son autre extrémité, là où l’autre pli du cerf-volant rencontre le bord.",
+        "petalHingeSecondEndTouch": "Touchez son autre extrémité, là où l’autre pli du cerf-volant rencontre le bord.",
+        "petalLiftOther": "Vallée soulève le rabat vers vous, Montagne l’éloigne de vous. Cliquez sur un autre rabat sous la charnière pour soulever celui-là.",
+        "petalLiftOtherTouch": "Vallée soulève le rabat vers vous, Montagne l’éloigne de vous. Touchez un autre rabat sous la charnière pour soulever celui-là.",
+        "petalRegion": "Cliquez sur le rabat sous la charnière : la partie qui se soulève s’éclaire sous le pointeur.",
+        "petalRegionTouch": "Touchez le rabat sous la charnière, la partie qui se soulève.",
         "pickAgainRead": "Appuyez sur Échap et choisissez de nouveau : l’avis ci-dessous dit quoi changer.",
         "pickAgainReadTouch": "Touchez Annuler et choisissez de nouveau : l’avis ci-dessous dit quoi changer.",
         "squashFlap": "Cliquez sur le rabat à écraser.",
+        "squashFlapTouch": "Touchez le rabat à écraser.",
         "squashTarget": "Cliquez là où le dos doit se poser, ou laissez-le sur la ligne de charnière.",
         "squashTargetTouch": "Touchez là où le dos doit se poser, ou laissez-le sur la ligne de charnière.",
         "stayer": "Cliquez sur le papier qui reste en place.",
-        "swivelFinish": "Choisissez le quatrième pli, puis appuyez sur Entrée.",
-        "swivelFinishTouch": "Choisissez le quatrième pli, puis touchez {{action}}.",
-        "swivelFirstLandmark": "Cliquez sur un coin, un milieu ou un repère vers lequel va le premier pli.",
-        "swivelPoint": "Maintenez {{modifier}} et cliquez là où les plis se rejoignent : dans le papier, hors de tout pli.",
-        "swivelPointTouch": "Activez Point libre, puis touchez là où les plis se rejoignent : dans le papier, hors de tout pli.",
-        "swivelSecondLandmark": "Cliquez sur un point pour le deuxième pli.",
-        "swivelStayer": "Cliquez sur la partie du papier qui reste en place.",
-        "swivelStep": "Faites défiler Quatrième pli parmi ceux qui laissent le papier à plat, et Couches, si affiché, pour plier moins de couches.",
-        "swivelThirdLandmark": "Cliquez sur un point pour le troisième pli."
+        "stayerTouch": "Touchez le papier qui reste en place.",
+        "swivelChooseRidge": "Faites passer Arête à l’autre pli qui peut se dresser, et choisissez Vallée ou Montagne.",
+        "swivelEdge": "Cliquez sur le bord qui bouge : un bord du papier ou un bord plié.",
+        "swivelEdgeTouch": "Touchez le bord qui bouge : un bord du papier ou un bord plié.",
+        "swivelFinishRidge": "Choisissez l’arête et le sens, puis appuyez sur Entrée.",
+        "swivelFinishRidgeTouch": "Choisissez l’arête et le sens, puis touchez {{action}}.",
+        "swivelOnto": "Cliquez sur la ligne où il doit se poser : un pli ou un bord.",
+        "swivelOntoFirst": "Cliquez sur un point de la ligne où il doit se poser.",
+        "swivelOntoFirstTouch": "Touchez un point de la ligne où il doit se poser.",
+        "swivelOntoSecond": "Cliquez sur un deuxième point de cette ligne.",
+        "swivelOntoSecondTouch": "Touchez un deuxième point de cette ligne.",
+        "swivelOntoTouch": "Touchez la ligne où il doit se poser : un pli ou un bord.",
+        "swivelPivot": "Cliquez sur le pivot.",
+        "swivelPivotTouch": "Touchez le pivot."
       },
       "target": "Le dos se pose sur",
       "targetHelp": "Cliquez sur le papier plié pour poser le dos hors de la charnière.",
