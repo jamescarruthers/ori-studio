@@ -39,7 +39,7 @@ import { layoutPicture, measureKey, wholeUnitsAcross, type PictureMeasure } from
 import { annotationTextRuns } from '../annotate/annotationPrimitives';
 import { hasDrawnAnnotations } from '../annotate/paintAnnotations';
 import { viewOfStep } from '../zoom/stepView';
-import type { FootprintsOf } from './pagePlacement';
+import { placementClashes, type FootprintsOf } from './pagePlacement';
 import { footprintCache, type FootprintCache } from './pictureFootprint';
 import { zoomAreas } from '../zoom/zoomCapture';
 import { enlargeArrowSizes } from '../zoom/enlargeArrow';
@@ -477,5 +477,12 @@ export function preparedPages(
     },
   };
   };
-  return make(layout);
+  const prepared = make(layout);
+  // A placed step is checked against the enlarge arrows where the page prints
+  // them: lifted to their areas, which only the pictures as drawn can say
+  // (`placedZoomArrows`), so a step over a lifted arrow's old place is clear.
+  // Only on a page with both: elsewhere the layout's places are the printed ones.
+  if (layout.pages.some((page) => page.cells.some((cell) => cell.placed) && page.zoomArrows.some((arrow) => arrow.liftable)))
+    placementClashes(layout, footprints.latest, prepared.zoomArrows);
+  return prepared;
 }

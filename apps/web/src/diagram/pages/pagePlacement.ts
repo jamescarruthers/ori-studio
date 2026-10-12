@@ -1,6 +1,23 @@
 import { rectangle, separate, type Polygon } from './pagePolygons';
 import type { DiagramStepPlace } from '../document/diagramDocument';
-import type { DiagramPagesLayout, LayoutCell, LayoutPage, LayoutStep, TextSetter } from './diagramPageLayout';
+import type {
+  DiagramPagesLayout,
+  LayoutCell,
+  LayoutPage,
+  LayoutStep,
+  LayoutZoomArrow,
+  TextSetter,
+} from './diagramPageLayout';
+import {
+  STEP_NUMBER_ASCENT_MM,
+  STEP_NUMBER_SIZE_MM,
+  STEP_TEXT_LEADING_MM,
+  STEP_TEXT_SIZE_MM,
+  TEXT_DESCENT_MM,
+} from './stepType';
+
+/** A step number's width where it was never set (`placeCell` measures it): two figures' room, mm. */
+const UNMEASURED_NUMBER_MM = 10;
 
 export type PagePart = 'frame' | 'number' | 'picture' | 'text';
 export interface PageBox {
@@ -52,19 +69,25 @@ export function translateCell(cell: LayoutCell, part: PagePart, dx: number, dy: 
   };
 }
 
-/** Add measured hit geometry and apply offsets after the automatic layout has finished sizing. */
+/**
+ * Add measured hit geometry and apply offsets after the automatic layout has
+ * finished sizing. The homes the Pages view draws a moved part's ghost at
+ * (`homeParts`): the frame's, the step's parts together where the layout
+ * puts them; a part's, where it sits in its frame once the frame has moved,
+ * since its offset is from there.
+ */
 export function placeCell(cell: LayoutCell, step: LayoutStep, rightToLeft: boolean, setter: TextSetter): LayoutCell {
-  const number = setter.line(String(cell.number), 6.2, 700);
+  const number = setter.line(String(cell.number), STEP_NUMBER_SIZE_MM, 700);
   let next: LayoutCell = {
     ...cell,
-    homeMm: { ...cell.cellMm },
     rightToLeft,
-    numberMm: { x: cell.numberAt.x, y: cell.numberAt.y - 4.65, w: number.widthMm, h: 6.2 },
+    numberMm: { x: cell.numberAt.x, y: cell.numberAt.y - STEP_NUMBER_ASCENT_MM, w: number.widthMm, h: STEP_NUMBER_SIZE_MM },
   };
-  next.homeParts = { number: partBox(next, 'number'), picture: partBox(next, 'picture'), text: partBox(next, 'text') };
-  for (const part of ['frame', 'number', 'picture', 'text'] as const) {
-    const [dx, dy] = pageOffset(step.place, part, rightToLeft);
-    next = translateCell(next, part, dx, dy);
+  const frame = partBox(next, 'frame');
+  next = translateCell(next, 'frame', ...pageOffset(step.place, 'frame', rightToLeft));
+  next.homeParts = { frame, number: partBox(next, 'number'), picture: partBox(next, 'picture'), text: partBox(next, 'text') };
+  for (const part of ['number', 'picture', 'text'] as const) {
+    next = translateCell(next, part, ...pageOffset(step.place, part, rightToLeft));
   }
   return next;
 }
@@ -82,15 +105,25 @@ export function partBox(cell: LayoutCell, part: PagePart): PageBox {
       return { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y };
     }
     case 'number':
-      return cell.numberMm ?? { x: cell.numberAt.x, y: cell.numberAt.y - 4.65, w: 10, h: 6.2 };
+      return (
+        cell.numberMm ?? {
+          x: cell.numberAt.x,
+          y: cell.numberAt.y - STEP_NUMBER_ASCENT_MM,
+          w: UNMEASURED_NUMBER_MM,
+          h: STEP_NUMBER_SIZE_MM,
+        }
+      );
     case 'picture':
       return cell.inkMm ?? cell.drawMm;
     case 'text':
+      // From the first line's cap height to the last line's descenders.
       return {
         x: cell.text.x,
-        y: cell.text.firstBaseline - 3.2,
+        y: cell.text.firstBaseline - STEP_TEXT_SIZE_MM,
         w: Math.max(0, ...cell.text.lines.map((line) => line.widthMm)),
-        h: cell.text.lines.length ? (cell.text.lines.length - 1) * 4.1 + 4.7 : 0,
+        h: cell.text.lines.length
+          ? (cell.text.lines.length - 1) * STEP_TEXT_LEADING_MM + (STEP_TEXT_SIZE_MM + TEXT_DESCENT_MM)
+          : 0,
       };
   }
 }
@@ -126,11 +159,18 @@ const CELL_PARTS = ['number', 'picture', 'text'] as const;
  * Manual placement is honored. Warnings are derived, never stored in the
  * document. A placed step's picture is checked as its footprints outline it
  * (`footprintsOf`), and another step's only where their boxes meet, so a
- * footprint is worked out only where it can decide a clash.
+ * footprint is worked out only where it can decide a clash. The enlarge
+ * arrows are checked where `arrowsOf` says a page prints them — lifted to
+ * their areas (`placedZoomArrows`), which only the pictures as drawn can say
+ * — else where the layout put them.
  */
-export function placementClashes(layout: DiagramPagesLayout, footprintsOf?: FootprintsOf): void {
+export function placementClashes(
+  layout: DiagramPagesLayout,
+  footprintsOf?: FootprintsOf,
+  arrowsOf?: (pageIndex: number) => readonly LayoutZoomArrow[],
+): void {
   const { widthMm: w, heightMm: h, marginMm: m } = layout.paper;
-  for (const page of layout.pages)
+  for (const [pageIndex, page] of layout.pages.entries())
     for (const cell of page.cells) {
       if (!cell.placed) continue;
       const parts = CELL_PARTS.map((part) => partPolygons(cell, part, footprintsOf));
@@ -154,7 +194,7 @@ export function placementClashes(layout: DiagramPagesLayout, footprintsOf?: Foot
         });
       const steps = page.cells.filter((other) => other !== cell && clashesWith(other)).map((other) => other.number);
       if (steps.length) clashes.push({ kind: 'step', steps });
-      const glyphs = [...page.turns, ...page.zoomArrows].map(({ at, box }) => ({
+      const glyphs = [...page.turns, ...(arrowsOf?.(pageIndex) ?? page.zoomArrows)].map(({ at, box }) => ({
         x: at.x - box.w / 2,
         y: at.y - box.h / 2,
         ...box,

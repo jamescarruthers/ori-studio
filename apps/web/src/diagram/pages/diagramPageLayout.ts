@@ -72,24 +72,21 @@ import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';
 import { placeCell, placementClashes, type PageBox, type PlacementClash } from './pagePlacement';
 import type { Polygon } from './pagePolygons';
+import { STEP_NUMBER_ASCENT_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 
-/** The instruction's size and leading, mm. */
-export const STEP_TEXT_SIZE_MM = 3.2;
-export const STEP_TEXT_LEADING_MM = 4.1;
-/** The step number: its size, and its baseline below the cell's top. */
-export const STEP_NUMBER_SIZE_MM = 6.2;
+// The type a step is set in, which placement's hit boxes measure too.
+export { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM } from './stepType';
+/** The step number's baseline below the cell's top, and its inset from the cell's side. */
 const STEP_NUMBER_BASELINE_MM = 7;
 const STEP_NUMBER_INSET_MM = 1.5;
 /** The top of the step number below the cell's top: its figures stand under three quarters of its size. */
-const STEP_NUMBER_TOP_MM = STEP_NUMBER_BASELINE_MM - 0.75 * STEP_NUMBER_SIZE_MM;
+const STEP_NUMBER_TOP_MM = STEP_NUMBER_BASELINE_MM - STEP_NUMBER_ASCENT_MM;
 /** The picture box's top below the cell's top: under the number. */
 export const PICTURE_TOP_MM = 8;
 // The picture box's share of a cell and the turn gutter choose a flow page's rows, so they live with its plan.
 export { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape } from './pagePlan';
 /** The instruction's first baseline below the picture box. */
 const TEXT_GAP_MM = 5;
-/** Room kept under the last baseline, for descenders. */
-const TEXT_DESCENT_MM = 1.5;
 /** Flow: the least room between an instruction's last line, descenders and all, and the step numbers of the row below. */
 export const CAPTION_GAP_MM = 2.5;
 /** The smallest a picture box gives way to text: half of it. */
@@ -383,10 +380,14 @@ export interface LayoutCell {
   /** 1-based, as printed. */
   number: number;
   cellMm: { x: number; y: number; w: number; h: number };
-  homeMm?: PageBox;
   /** Its row on its page, in reading order, as the page's plan cuts it (`pagePlan.ts`): in the flow only. */
   flowRow?: number;
-  homeParts?: { number: PageBox; picture: PageBox; text: PageBox };
+  /**
+   * Where each part is at home, for the Pages view's ghost of a moved one
+   * (`placeCell`): the frame where the layout puts the step, each other part
+   * where it sits in its frame, moved or not.
+   */
+  homeParts?: { frame: PageBox; number: PageBox; picture: PageBox; text: PageBox };
   numberMm?: PageBox;
   inkMm?: PageBox;
   /** Its row reads right to left: a flow row its page's plan turns back. Every grid row reads left to right. */

@@ -48,7 +48,7 @@ export function DiagramPagesPlacement({
   const editable = placement.enabled && step && !placementBlocker(step);
   const chosen = cell && part ? partBox(cell, part) : null;
   const baseCell = local?.cell ?? cell;
-  const home = baseCell && part ? (part === 'frame' ? baseCell.homeMm : baseCell.homeParts?.[part]) : null;
+  const home = part ? baseCell?.homeParts?.[part] : null;
   const moved = step?.place && part && step.place[part];
   const size = cell && step && document ? printedFrameMm(step, document.assets, document.style, cell) : null;
   const auto = baseCell?.placed?.auto;

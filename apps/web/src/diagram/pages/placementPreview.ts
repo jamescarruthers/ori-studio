@@ -1,4 +1,4 @@
-import type { DiagramPagesLayout, LayoutCell } from './diagramPageLayout';
+import type { DiagramPagesLayout, LayoutCell, LayoutZoomArrow } from './diagramPageLayout';
 import { flowLane } from './flowLane';
 import { partBox, placementClashes, translateCell, type FootprintsOf, type PagePart } from './pagePlacement';
 
@@ -6,7 +6,9 @@ import { partBox, placementClashes, translateCell, type FootprintsOf, type PageP
  * Local preview geometry. No font loading, layout, document writes, or
  * history entries. Clashes are checked against the pictures' footprints
  * where `footprintsOf` knows them (`PreparedDiagramPages.footprints`), else
- * against their boxes.
+ * against their boxes, and against the enlarge arrows where `arrowsOf` says
+ * the page on screen prints them (`PreparedDiagramPages.zoomArrows`): symbols
+ * are placed again on the drop, once the final layout is ready.
  */
 export function previewPlacement(
   base: DiagramPagesLayout,
@@ -16,6 +18,7 @@ export function previewPlacement(
   dy: number,
   factor = 1,
   footprintsOf?: FootprintsOf,
+  arrowsOf?: (pageIndex: number) => readonly LayoutZoomArrow[],
 ): DiagramPagesLayout {
   const layout: DiagramPagesLayout = {
     ...base,
@@ -62,7 +65,7 @@ export function previewPlacement(
     for (const cell of page.cells) cell.clashes = cell.clashes?.filter((clash) => clash.kind !== 'path');
     for (const n of lane?.warnings ?? []) if (page.cells[n]) page.cells[n]!.clashes = [{ kind: 'path' }];
   });
-  placementClashes(layout, footprintsOf);
+  placementClashes(layout, footprintsOf, arrowsOf);
   return layout;
 }
 

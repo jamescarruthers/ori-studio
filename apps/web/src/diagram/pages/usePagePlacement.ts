@@ -513,7 +513,16 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
   };
   const preview =
     draft?.base.withLayout?.(
-      previewPlacement(draft.base.layout, draft.cell.stepId, draft.part, draft.dx, draft.dy, draft.factor, draft.base.footprints),
+      previewPlacement(
+        draft.base.layout,
+        draft.cell.stepId,
+        draft.part,
+        draft.dx,
+        draft.dy,
+        draft.factor,
+        draft.base.footprints,
+        draft.base.zoomArrows,
+      ),
     ) ?? null;
   return {
     pages: preview ?? pages,

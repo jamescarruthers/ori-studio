@@ -5,6 +5,7 @@ import {
   setPageSetup,
   type DiagramDocument,
   type DiagramStepPlace,
+  type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { face, sceneOf } from '../../lib/paper/paperScene.fixtures';
 import { storedSceneJson } from '../document/diagramFile';
@@ -14,7 +15,7 @@ import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramLayoutSteps, preparedPages } from './diagramPages';
 import { layoutDiagramPages } from './diagramPageLayout';
 import { estimateTextSetter } from './estimateTextSetter';
-import { pageOffset, partBox, partPolygons } from './pagePlacement';
+import { pageOffset, partBox, partPolygons, placementClashes } from './pagePlacement';
 import { laneCrosses } from './flowLane';
 import { previewPlacement } from './placementPreview';
 
@@ -81,6 +82,22 @@ describe('printed manual placement', () => {
     expect(omit).not.toContain('Instruction 2');
     expect(omit).toContain('Instruction 1');
     expect(pages.compose(0).svg).toBe(normal);
+  });
+  it('draws a part’s home where it sits in its moved frame, and the frame’s where the layout puts the step', () => {
+    const auto = prepare(document()).layout.pages[0]!.cells[1]!;
+    const cell = prepare(document({ frame: [10, 5], picture: [3, -2] })).layout.pages[0]!.cells[1]!;
+    const shifted = (box: ReturnType<typeof partBox>, dx: number, dy: number) => ({ ...box, x: box.x + dx, y: box.y + dy });
+    expect(cell.homeParts?.frame).toEqual(partBox(auto, 'frame'));
+    for (const part of ['number', 'picture', 'text'] as const) {
+      const home = cell.homeParts![part];
+      expect(home.x).toBeCloseTo(partBox(auto, part).x + 10);
+      expect(home.y).toBeCloseTo(partBox(auto, part).y + 5);
+    }
+    // The picture prints its own offset from that home; the others print at it.
+    const picture = partBox(cell, 'picture');
+    expect(picture.x).toBeCloseTo(shifted(cell.homeParts!.picture, 3, -2).x);
+    expect(picture.y).toBeCloseTo(shifted(cell.homeParts!.picture, 3, -2).y);
+    expect(partBox(cell, 'number')).toEqual(cell.homeParts!.number);
   });
   it('previews a move and top-centred resize without mutating the saved layout', () => {
     const pages = prepare(document());
@@ -181,4 +198,34 @@ it('clears an old path warning when a moved step returns to a clear route', () =
   base.pages[0]!.cells[1]!.clashes = [{ kind: 'path' }];
   const next = previewPlacement(base, 's1', 'frame', 0, 0);
   expect(next.pages[0]!.cells[1]!.clashes?.some(c => c.kind === 'path') ?? false).toBe(false);
+});
+
+it('checks a placed step against an enlarge arrow where the page prints it, lifted to its area, not where the layout put it', () => {
+  const area: KnownDiagramAnnotation = { id: 'area-1', kind: 'zoom', from: [0.5, 0.4], to: [0.5, 0.4], radius: 0.2 };
+  const doc = insertSteps(
+    createDiagram({ title: 'Crane' }),
+    [
+      // Its instruction moved into the gutter, onto the arrow's place in the layout, under where the page lifts it.
+      { ...cpStep('step-area'), annotations: [area], text: 'Fold', place: { text: [52, -24] } },
+      { ...cpStep('step-enlarged'), zoom: { from: 'area-1', shape: 'circle', frame: { centre: [0.5, 0.4], radius: 0.2 } } },
+    ],
+    0
+  );
+  const pages = prepare(doc);
+  const page = pages.layout.pages[0]!;
+  const [laid] = page.zoomArrows,
+    [printed] = pages.zoomArrows(0);
+  const span = (arrow: typeof laid) => [arrow!.at.y - arrow!.box.h / 2, arrow!.at.y + arrow!.box.h / 2] as const;
+  const cell = page.cells[0]!,
+    text = partBox(cell, 'text');
+  // Lifted, and the instruction over the arrow's place in the layout, clear of where the page prints it.
+  expect(printed!.at.y).toBeLessThan(laid!.at.y);
+  expect(text.y).toBeLessThan(span(laid)[1]);
+  expect(text.y + text.h).toBeGreaterThan(span(laid)[0]);
+  expect(text.y).toBeGreaterThan(span(printed)[1]);
+  expect(cell.clashes ?? []).not.toContainEqual({ kind: 'glyph' });
+  // Checked against the layout's places, it would have warned of a symbol the page does not print there.
+  const asLaidOut = structuredClone(pages.layout);
+  placementClashes(asLaidOut);
+  expect(asLaidOut.pages[0]!.cells[0]!.clashes).toContainEqual({ kind: 'glyph' });
 });
