@@ -255,6 +255,56 @@ describe('flow pages cut from their plan (`diagram-flow-pages.md`, Phase 2)', ()
     expect(three!.cells.map(centreX)).toEqual([0, 1].map((n) => share(result, n, 3)));
   });
 
+  it('cuts 7 and 12 a page on A4 upright as their plans say, from either first side, the last page filled in order', () => {
+    /** How many steps each row of a page holds, in reading order. */
+    const rowCounts = (page: LayoutPage) =>
+      page.cells.reduce<number[]>((counts, cell) => {
+        counts[cell.flowRow!] = (counts[cell.flowRow!] ?? 0) + 1;
+        return counts;
+      }, []);
+    const homes = (page: LayoutPage) => page.cells.map((cell) => cell.cellMm);
+    const cases = [
+      // Left first: a left page that hands over takes odd rows (12: 5, not the 4 that print largest), the
+      // extra steps on its first rows; the right page the 4 rows; the last page its steps per page's rows.
+      { perPage: 7, side: 'left', count: 16, rows: [[3, 2, 2], [3, 2, 2], [2]] },
+      { perPage: 12, side: 'left', count: 30, rows: [[3, 3, 2, 2, 2], [3, 3, 3, 3], [3, 3]] },
+      // Right first: the first page hands over across a page turn, free to take the 4 rows.
+      { perPage: 7, side: 'right', count: 16, rows: [[3, 2, 2], [3, 2, 2], [2]] },
+      { perPage: 12, side: 'right', count: 30, rows: [[3, 3, 3, 3], [3, 3, 2, 2, 2], [3, 3]] },
+    ] as const;
+    const results = new Map<string, ReturnType<typeof layout>>();
+    for (const { perPage, side, count, rows } of cases) {
+      const label = `${perPage} a page, ${side} first`;
+      const result = flowLayout(steps(count), { stepsPerPage: perPage, firstPageSide: side });
+      results.set(`${perPage} ${side}`, result);
+      expect(result.pages.map(rowCounts), label).toEqual(rows);
+      // Step 1 at the top left.
+      const first = result.pages[0]!.cells[0]!;
+      expect(first.cellMm.x, label).toBeCloseTo(result.paper.marginMm, 9);
+      expect(first.cellMm.y, label).toBe(Math.min(...result.pages[0]!.cells.map((cell) => cell.cellMm.y)));
+      expect(first.rightToLeft, label).toBe(false);
+      for (const page of result.pages.slice(0, -1)) {
+        if (page.side !== 'left') continue;
+        // A left page that hands over ends its last row at the spine, read left to right along the bottom.
+        const last = page.cells.at(-1)!;
+        expect(last.rightToLeft, label).toBe(false);
+        expect(last.flowRow, label).toBe(rowCounts(page).length - 1);
+        expect(last.cellMm.y, label).toBeGreaterThan(Math.max(...page.cells.map((cell) => cell.cellMm.y)) - last.cellMm.h / 2);
+        expect(centreX(last), label).toBeGreaterThan(centreX(page.cells.at(-2)!));
+        expect(rowCounts(page).length % 2, label).toBe(1);
+      }
+    }
+    // The last page is laid out for its steps per page, its steps in that page's first places: where a
+    // full page of the same plan has them (a lone page read down from the top left, or a right page read
+    // up from the spine).
+    const fullFirst = (key: string) => results.get(key)!.pages[0]!;
+    const lastOf = (key: string) => results.get(key)!.pages.at(-1)!;
+    expect(homes(lastOf('7 left'))).toEqual(homes(fullFirst('7 right')).slice(0, 2));
+    expect(homes(lastOf('12 left'))).toEqual(homes(fullFirst('12 right')).slice(0, 6));
+    expect(homes(lastOf('7 right'))).toEqual(homes(results.get('7 left')!.pages[1]!).slice(0, 2));
+    expect(homes(lastOf('12 right'))).toEqual(homes(results.get('12 left')!.pages[1]!).slice(0, 6));
+  });
+
   it('stands every other step of a row a little lower, as the row reads, each picture hanging from the top of its box', () => {
     const page = flowLayout(steps(9)).pages[0]!;
     const tops = page.cells.map((cell) => cell.cellMm.y);

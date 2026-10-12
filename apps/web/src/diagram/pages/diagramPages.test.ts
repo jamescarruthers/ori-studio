@@ -1,9 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createDiagram, insertSteps, type DiagramStep } from '../document/diagramDocument';
+import {
+  createDiagram,
+  insertSteps,
+  isLockedStep,
+  setPageSetup,
+  stepsOf,
+  type DiagramDocument,
+  type DiagramStep,
+} from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { largestHeld, layoutDiagram, leastOverrunHeld, MEASURE_SETTLED, OVERRUN_SAME_MM, type RoomMeasure } from './diagramPages';
 import { estimateTextSetter } from './estimateTextSetter';
+import { pageLayoutFixtures } from './pageLayouts.fixtures';
 import { layoutPicture } from './pagePictures';
+import { paginate, printableArea } from './pagePlan';
 
 // Every measure counted, each as it was.
 vi.mock('./pagePictures', async (original) => {
@@ -171,5 +181,90 @@ describe('layoutDiagram', () => {
     const measures = vi.mocked(layoutPicture).mock.calls.map(([step, , , measure]) => `${step.id} ${JSON.stringify(measure)}`);
     expect(measures.length).toBeGreaterThan(steps.length);
     expect(new Set(measures).size).toBe(measures.length);
+  });
+
+  const fixture = (name: string) => pageLayoutFixtures().find((each) => each.name === name)!.document;
+
+  it('paginates a document by the counts its steps keep, and cuts each page as its plan says (`diagram-flow-pages.md`)', () => {
+    // Step 4 starts a page of four and step 11 one of five; the rest fill 9 a page.
+    const document = fixture('flow, pages with their own counts');
+    const layout = layoutDiagram(document, estimateTextSetter);
+    const steps = stepsOf(document);
+    const plan = paginate(steps, document.page);
+    expect(layout.pages.map((page) => page.cells.map((cell) => cell.stepId))).toEqual(
+      plan.map((page) => page.steps.map((index) => steps[index]!.id))
+    );
+    expect(layout.pages.map((page) => page.cells.length)).toEqual([3, 4, 3, 5, 5]);
+    expect(plan.map((page) => page.ownCount)).toEqual([false, true, false, true, false]);
+    const { w } = printableArea(document.page);
+    layout.pages.forEach((page, index) => {
+      const planned = plan[index]!;
+      // Its rows, each holding as many as the plan shares out — the automatic last page's in order, from the first.
+      const filled = planned.rowCounts.map((_, row) =>
+        Math.max(0, Math.min(planned.rowCounts[row]!, page.cells.length - planned.rowCounts.slice(0, row).reduce((a, b) => a + b, 0)))
+      );
+      const held = planned.rowCounts.map((_, row) => page.cells.filter((cell) => cell.flowRow === row).length);
+      expect(held, `page ${index + 1}`).toEqual(filled);
+      // Every step's room the page's longest row's.
+      for (const cell of page.cells) expect(cell.cellMm.w, `page ${index + 1}`).toBeCloseTo(w / planned.columns, 9);
+    });
+    // The last page, automatic, is laid out for 9: two rows of its three filled.
+    expect(plan.at(-1)!.rowCounts).toEqual([3, 3, 3]);
+    // A grid keeps the counts and does not read them: three pages of 3 × 3, the counts still on their steps.
+    const grid = setPageSetup(document, { layout: 'grid', columns: 3, rows: 3 });
+    expect(layoutDiagram(grid, estimateTextSetter).pages.map((page) => page.cells.length)).toEqual([9, 9, 2]);
+    expect(stepsOf(grid).map((step) => step.pageSteps).filter((count) => count !== undefined)).toEqual([4, 5]);
+  });
+
+  it('moves no other step’s home when a caption grows by lines: its cell, its number, its text’s origin', () => {
+    const long = 'Fold the bottom edge up to the top edge, crease firmly, unfold, then fold both sides in to meet the centre line. '.repeat(3);
+    const homes = (document: DiagramDocument) =>
+      new Map(
+        layoutDiagram(document, estimateTextSetter).pages.flatMap((page) =>
+          page.cells.map(
+            (cell) => [cell.stepId, { cell: cell.cellMm, number: cell.numberAt, text: cell.text, draw: cell.drawMm, scale: cell.mmPerUnit ?? cell.frameMm }] as const
+          )
+        )
+      );
+    let edits = 0;
+    let rescaled = 0;
+    for (const { name, document } of pageLayoutFixtures()) {
+      const steps = stepsOf(document).filter((step) => !isLockedStep(step));
+      if (steps.length === 0) continue;
+      const before = homes(document);
+      // The first, a middle and the last step.
+      for (const edited of new Set([steps[0]!, steps[Math.floor(steps.length / 2)]!, steps.at(-1)!])) {
+        const longer = { ...document, steps: document.steps.map((entry) => (entry.id === edited.id ? { ...edited, text: long } : entry)) };
+        const after = homes(longer);
+        expect(after.get(edited.id)!.text.lines.length, `${name}: ${edited.id}`).toBeGreaterThan(before.get(edited.id)!.text.lines.length);
+        let redrawn = false;
+        for (const [stepId, home] of before) {
+          const moved = after.get(stepId)!;
+          const label = `${name}: ${stepId}, ${edited.id} edited`;
+          expect(moved.cell, label).toEqual(home.cell);
+          expect(moved.number, label).toEqual(home.number);
+          expect(moved.text.x, label).toBe(home.text.x);
+          expect(moved.text.widthMm, label).toBe(home.text.widthMm);
+          // The edited step's words take room from its own picture.
+          if (stepId === edited.id) continue;
+          // Another's words stay under its picture as drawn. A picture's run is drawn at the scale every
+          // picture in it fits its room at (#436's Fit each), and a picture whose words grow loses the room
+          // under its box they took: its run may then draw a little smaller, and its words start higher.
+          expect(moved.text.firstBaseline - (moved.draw.y + moved.draw.h), label).toBeCloseTo(home.text.firstBaseline - (home.draw.y + home.draw.h), 9);
+          if (moved.scale === home.scale) expect(moved.text.firstBaseline, label).toBe(home.text.firstBaseline);
+          else {
+            // Only a picture of the edited step's run: drawn at its scale before.
+            expect(home.scale, label).toBe(before.get(edited.id)!.scale);
+            redrawn = true;
+          }
+        }
+        edits += 1;
+        if (redrawn) rescaled += 1;
+      }
+    }
+    expect(edits).toBeGreaterThan(20);
+    // Most edits redraw no other picture.
+    // Most edits redraw no other picture (6 of the 30 here).
+    expect(rescaled).toBeLessThan(edits / 2);
   });
 });
