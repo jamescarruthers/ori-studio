@@ -92,6 +92,7 @@ import {
   type FoldStep,
   type FoldStepNode,
   type FoldStepSpreadEntry,
+  type FoldSwivelEdgeOp,
   type FoldVertexOp,
   type FoldVertexOpKind,
   type SheetPoint,
@@ -352,6 +353,14 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['unsink', ALONG_LINE_KEYS],
 ]);
 
+/** A swivel by its edge's keys (`via: 'edge'`); its rays form's are `OP_KEYS`'. */
+const SWIVEL_EDGE_KEYS = new Set(['kind', 'via', 'pivot', 'edge', 'target', 'seed', 'direction', 'ridge']);
+
+/** The keys this build knows for an op: its kind's, or its form's when its kind has two. */
+function opKeys(value: Record<string, unknown>, kind: string): ReadonlySet<string> | undefined {
+  return kind === 'swivel' && value.via !== undefined ? SWIVEL_EDGE_KEYS : OP_KEYS.get(kind);
+}
+
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
 const ROTATION_AMOUNTS: readonly TurnRotation['amount'][] = ['eighth', 'quarter', 'half'];
 const ROTATION_DIRECTIONS: readonly TurnRotation['direction'][] = ['cw', 'ccw'];
@@ -365,7 +374,7 @@ const ROTATION_KEYS = new Set(['amount', 'direction']);
  */
 function readOp(value: unknown): FoldOp | null {
   if (!isRecord(value) || typeof value.kind !== 'string') return null;
-  const keys = OP_KEYS.get(value.kind);
+  const keys = opKeys(value, value.kind);
   if (!keys || hasNewerKey(value, keys)) return null;
   const kind = value.kind;
   switch (kind) {
@@ -489,6 +498,7 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
         : null;
     }
     case 'swivel': {
+      if (value.via !== undefined) return readSwivelEdgeOp(value, direction);
       const vertex = readPoint(value.vertex);
       const toward = readTriple(value.toward);
       const emergent = readModelDirection(value.emergent);
@@ -499,6 +509,24 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
         : null;
     }
   }
+}
+
+/**
+ * A swivel by its edge (`via: 'edge'`): the pivot and a point on the edge,
+ * the target as a crease's point or two points (an axiom's would need a root
+ * the step does not store), the layers, and the ridge when the folder took
+ * the other one. Any other `via` is a newer build's form.
+ */
+function readSwivelEdgeOp(value: Record<string, unknown>, direction: FoldDirection): FoldSwivelEdgeOp | null {
+  if (value.via !== 'edge') return null;
+  const pivot = readPoint(value.pivot);
+  const edge = readPoint(value.edge);
+  const target = readLine(value.target);
+  const seed = readSeed(value.seed);
+  const ridge = value.ridge === undefined ? undefined : readModelDirection(value.ridge);
+  return pivot && edge && target && target.via !== 'axiom' && seed && ridge !== null
+    ? { kind: 'swivel', via: 'edge', pivot, edge, target, seed, direction, ...(ridge ? { ridge } : {}) }
+    : null;
 }
 
 /** A direction: two finite numbers, not both (nearly) zero. */
@@ -970,6 +998,18 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
         ...optional('ridge', op.ridge),
       };
     case 'swivel':
+      if ('via' in op) {
+        return {
+          kind: op.kind,
+          via: op.via,
+          pivot: writePoint(op.pivot),
+          edge: writePoint(op.edge),
+          target: writeLine(op.target),
+          seed: writeSeed(op.seed),
+          direction: op.direction,
+          ...optional('ridge', op.ridge),
+        };
+      }
       return {
         kind: op.kind,
         vertex: writePoint(op.vertex),
