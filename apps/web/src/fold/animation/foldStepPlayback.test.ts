@@ -193,6 +193,47 @@ describe('FoldStepPlayback', () => {
     expect(onPlay).not.toHaveBeenCalled();
   });
 
+  it('rests at the landing, where the scrubber stands too, so 0% is always a move to the parent', () => {
+    for (const motion of [book(), twoStages()]) {
+      const p = playback();
+      p.setMotion(motion);
+      // The pane draws the landed step: the scrubber says so.
+      expect(p.frames.current()).toBeNull();
+      expect(p.position.current()).toBe(1);
+      expect(p.status().complete).toBe(false);
+      pushed = [];
+      p.seek(0);
+      expect(p.frames.current()?.scene).toBe(motion.before);
+      expect(p.position.current()).toBe(0);
+      // A listener heard the scrubber move.
+      expect(pushed.length).toBeGreaterThan(0);
+      p.seek(1);
+      expect(p.frames.current()).toBeNull();
+      expect(p.position.current()).toBe(1);
+      // Another step comes on screen landed, the scrubber with it.
+      p.setMotion(book());
+      expect(p.position.current()).toBe(1);
+      p.setMotion(null);
+      expect(p.position.current()).toBe(0);
+      p.dispose();
+    }
+  });
+
+  it('starts the step again from its parent when Step is pressed at the landing', () => {
+    const p = playback();
+    const motion = book();
+    p.setMotion(motion);
+    p.step(1);
+    expect(p.position.current()).toBeCloseTo(0.125, 9);
+    p.toggle();
+    playOut(p);
+    expect(p.status().complete).toBe(true);
+    // Played through, as at rest: an eighth from the parent.
+    p.step(1);
+    expect(p.position.current()).toBeCloseTo(0.125, 9);
+    expect(p.status().complete).toBe(false);
+  });
+
   it('steps by eighths, from between two to the next', () => {
     const p = playback();
     p.setMotion(book());

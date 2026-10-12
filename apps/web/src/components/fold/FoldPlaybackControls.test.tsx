@@ -131,6 +131,22 @@ describe('FoldPlaybackControls', () => {
     expect(slider()?.getAttribute('aria-valuetext')).toBe('25%');
   });
 
+  it('reads 100% at rest, where the pane shows the landed step, and takes Home to the parent', () => {
+    const motion = book();
+    playback.setMotion(motion);
+    render();
+    expect(slider()?.value).toBe('100');
+    expect(button('Play step')).not.toBeNull();
+    act(() => {
+      const input = slider()!;
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      set?.call(input, '0');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(playback.frames.current()?.scene).toBe(motion.before);
+    expect(slider()?.value).toBe('0');
+  });
+
   it('keeps Play and Step without the scrubber when compact, for a phone’s one-row bar', () => {
     playback.setMotion(book());
     render(true);
