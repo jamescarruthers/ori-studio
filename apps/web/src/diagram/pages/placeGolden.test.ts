@@ -106,7 +106,11 @@ describe('pages as they printed before placement came', () => {
     // October 12 (`diagram-flow-packing.md`, Phase 3): flow pages are packed by
     // their steps' shapes into bands, a step may stand in a bend, and the band
     // turns at the page's edge. Every flow fixture changed, both views; grid
-    // fixtures are unchanged.
+    // fixtures are unchanged. Phase 5 rasterised each of the 19 changed flow
+    // pages and checked them by eye against the plan's packing and the
+    // prototype's look: bands in reading order, steps in bends, the lane
+    // meeting the spine and ending at the last box. No digest changed in
+    // Phases 4 or 5.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -160,7 +164,9 @@ describe('homes as the layout computes them', () => {
     // October 12 (`diagram-flow-packing.md`, Phase 3): a flow step's home is its
     // box on its page as packed, and held from then on in the file. Every flow
     // fixture changed (a fresh pack: none holds an arrangement); grid fixtures
-    // are unchanged. No diagram with a placement had launched.
+    // are unchanged. No diagram with a placement had launched. Held from here:
+    // `heldPages.test.ts` shows no caption or picture edit moves a home, on any
+    // fixture, once its pages are packed and adopted.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         preparedPages(document, FIXTURE_FONTS, subsetter).layout.pages.map((page, index) => [

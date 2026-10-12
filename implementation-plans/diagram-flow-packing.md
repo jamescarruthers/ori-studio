@@ -1,6 +1,6 @@
 # Diagram flow pages: packed by shape, held once packed
 
-**Status: building, 2026-10-12, on `claude/diagram-launch-completion-59e60c`
+**Status: built (Phases 1–5), 2026-10-12, on `claude/diagram-launch-completion-59e60c`
 (PR #443's head plus the 12 Oct Layers commits), to land on #443 before
 launch.** Builds on `diagram-flow-pages.md` (pagination, per-page counts,
 placement), and replaces its flow geometry (balanced equal cells).
@@ -327,6 +327,68 @@ Phase 4 (UI, 2026-10-12):
   Re-pack Page from the notice re-packs page 2 alone (two bands, 5·4, k
   1.0601) and the notice goes; the page's context menu re-packs it too.
 
+Phase 5 (tests and gate, 2026-10-12):
+
+- Goldens: no digest moved in Phases 4 or 5, so both stay as Phase 3
+  re-recorded them (grid digests unchanged since Phase 2). Each of the 19
+  flow pages that changed was rasterised (Inkscape, 60 dpi) and looked at:
+  bands in reading order, odd on a page that hands over, steps in bends,
+  turns in their gutters and on bends, the lane meeting the spine and
+  ending at the last box. Both notes in `placeGolden.test.ts` say so.
+- `pages/heldPages.test.ts`, every page-golden fixture with the real fonts,
+  each edit landed as `commit` lands it: a long caption, an emptied one, a
+  wider capture and a photo on the first, middle and last step of each page
+  move no step's home, draw every other flow step exactly as before and pack
+  nothing; a turn before the last step, a page break, the first step removed
+  and a packing setting pack exactly the pages whose signature changed (a
+  turn before the last step, only the last page), and every held page draws
+  its steps and turns as before; every fixture packs the same twice and
+  after a write and read. Two things the tests pinned down, both as designed:
+  across a spread the lane meets the spine halfway between the two pages'
+  end stops, so a held page's band past its last step (or before its first)
+  follows a re-packed neighbour while its steps, turns and band through them
+  stay; and an empty step's placeholder gives way to its own longer caption,
+  which then starts higher in its box (only that step).
+- Budgets (`diagramLayoutBudget.test.ts`): the held 50-step layout now
+  asserts it packs no page (10–12 ms alone), a file holding its arrangements
+  opened with every picture new to the layout is held to the same 100 ms
+  (21–24 ms alone; a grid 15–19 ms), and a fresh pack keeps its 300 ms
+  (40–49 ms alone).
+- Old files (`store.test.ts`): a flow diagram written with no arrangement
+  opens through the store's real `openProject`, packs every page (the same
+  on a second open), is adopted with the project clean and no history,
+  saves every page's arrangement, and reopens with every page held and drawn
+  as packed.
+- Across engines (`artifacts/layout-review/cross-engine.mjs`, :5320): the
+  crane, chipmunk, heart and Stanford logo at 9, 10 and 13 a page pack
+  byte-identical arrangements in Playwright Chromium and WebKit, and every
+  box agrees (one drawn picture differs by 7e-15 mm). WebKit logs the dev
+  server's COEP refusal of the engine workers, which predates this work and
+  does not touch the layout (main thread).
+- Browser check (`probe.mjs`, `artifacts/layout-review/out/gate-*`): the
+  four diagrams at 9, 10 and 13 a page, every page looked at. Plans: crane
+  3·3·3 | 3·2·2, steps 13 and 16 in bends | 3·3·3 | 1 at 9; 3·3·4 | 4·3·3 |
+  3·3·2 at 10; 4·4·5 | 5·5·3 | 2 at 13. Chipmunk 3·3·3 | 3·2, 13 in a bend;
+  3·3·4 | 4·1; 4·4·5 | 2. Heart 3·2·4 | 3·3·2; 3·3·4 | 3·4; 4·5·4 | 4.
+  Stanford logo (one page) 3·3·2; 2·2·3·1; 3·4·1. Every page fits.
+- Against the prototype at 9 a page (`proto2/proto-9.png`, its defaults):
+  pages 1, 3 and 4 pack as it does; page 2 is 3·2·2 with steps 13 and 16 in
+  bends at k 1.05 where the prototype has 3·2·3 with 13 in a bend at 1.16.
+  The cause, now confirmed: Fit each gives steps 14–17 a reference scale
+  1.31× that of 10–13 (0.1711 against 0.1307 mm a unit), as the Reference
+  size rule says, where the prototype's extracted pictures all had one
+  (0.1249); so our 14–17 print larger, and `k` is not comparable between the
+  two. Phase 3's 13-a-page difference has the same source.
+- Gate: typecheck, full lint and `i18n:check` clean; the full web suite
+  (Node 22) 942 files and 13,143 tests passed (2 files and 15 tests
+  skipped); `npm run build:web` builds, every wasm bridge rebuilt by its
+  hook, and its prerender writes all 37 pages.
+- Review (targeted, by this phase's author): adoption in `useDiagramPages`
+  and the store (identity checks, placement preview, undo across an
+  adoption), `commit`'s drop of stale arrangements, Re-pack as an edit,
+  `SliderRow`'s commit mode, and the arrangements' reader and writer. No
+  defect found.
+
 ## Affected Areas
 
 - `apps/web/src/diagram/pages/`: a new pure `flowPacking.ts` (+ tests);
@@ -364,4 +426,4 @@ Phase 4 (UI, 2026-10-12):
 - [x] Re-pack Page in the Layers page list and the Page pane; the overflow notice; the export dialog's overflow line; analytics; i18n.
 
 ### Phase 5: tests and gate
-- [ ] Goldens re-recorded and checked by eye against the prototype; a test that a picture or caption edit moves no step; full suite, build, browser check of the four diagrams at 9, 10 and 13 a page; review.
+- [x] Goldens re-recorded and checked by eye against the prototype; a test that a picture or caption edit moves no step; full suite, build, browser check of the four diagrams at 9, 10 and 13 a page; review.
