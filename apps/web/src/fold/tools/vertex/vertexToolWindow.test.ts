@@ -113,6 +113,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
     ]);
     expect(ear?.instructions.notes).toEqual([
       'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
+      'Turn on Free point to put a point anywhere.',
     ]);
     const squash = foldToolWindow(t, view(vertex()), verbs(), finger);
     expect(squash?.instructions.items[0]).toBe('Tap the flap to squash.');
@@ -154,6 +155,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
     ]);
     expect(touch?.instructions.notes).toEqual([
       'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
+      'Turn on Free point to put a point anywhere.',
     ]);
   });
 

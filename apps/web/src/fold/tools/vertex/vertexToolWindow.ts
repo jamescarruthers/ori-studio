@@ -283,9 +283,9 @@ function locateNotes(t: TFunction, view: FoldToolWindowView, vertex: FoldVertexW
               'tools:fold.vertex.note.snapPoints',
               'Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.'
             ),
-        ...(host.coarse
-          ? []
-          : [t('tools:fold.vertex.note.freePoint', 'Hold {{modifier}} to put a point anywhere.', { modifier: host.alt })]),
+        host.coarse
+          ? t('tools:fold.vertex.note.freePointTouch', 'Turn on Free point to put a point anywhere.')
+          : t('tools:fold.vertex.note.freePoint', 'Hold {{modifier}} to put a point anywhere.', { modifier: host.alt }),
       ]
     : [];
   return [...snap, ...clear];
