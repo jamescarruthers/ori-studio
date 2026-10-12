@@ -100,7 +100,7 @@ import {
   type PackStep,
 } from './flowPacking';
 import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableArea, type PlannedPage } from './pagePlan';
-import { pageSignatures, titleShown } from './pageSignature';
+import { holdsArrangement, pageSignatures, titleShown } from './pageSignature';
 import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';
 import { placeCell, placementClashes, type PageBox, type PlacementClash } from './pagePlacement';
@@ -1540,10 +1540,11 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     }
     const pageArea = areaOf(entries);
     const stored = arrangements[first];
-    const holds =
-      stored !== undefined &&
-      stored.signature === signatures[pageIndex] &&
-      entries.every(({ step }) => Object.hasOwn(stored.steps, step.id));
+    const holds = holdsArrangement(
+      stored,
+      signatures[pageIndex],
+      entries.map(({ step }) => step.id)
+    );
     let arrangement = holds ? stored : null;
     if (!arrangement) {
       const plan = plans[pageIndex]!;

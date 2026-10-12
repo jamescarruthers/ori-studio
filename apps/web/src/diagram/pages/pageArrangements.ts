@@ -4,8 +4,9 @@
  * Decisions 1, 4 and 5).
  *
  * A page **holds** the arrangement stored under the step it starts with while
- * that arrangement's signature is the page's (`pageSignature.ts`): the layout
- * draws it as it is. Every other stored arrangement is stale — packed for a
+ * that arrangement's signature is the page's (`pageSignature.ts`) and it
+ * places every step on the page (`holdsArrangement`, the layout's test too):
+ * the layout draws it as it is. Every other stored arrangement is stale — packed for a
  * structure no page has any more — and goes as the next edit lands
  * ({@link dropStalePageArrangements}, which the store runs in `commit`), or
  * when the layout's own packing is adopted ({@link adoptPageArrangements}),
@@ -22,12 +23,14 @@ import {
   type DiagramPageArrangement,
 } from '../document/diagramDocument';
 import { roundPageArrangement } from '../document/pageArrangements';
+import { holdsArrangement } from './pageSignature';
 import { cellSlots, type CellSlots } from './stepPlaces';
 
 /**
  * The arrangements a diagram's flow pages hold, each under the step its page
- * starts with: the stored one whose signature is the page's. None on a grid,
- * whose pages are never packed.
+ * starts with: the stored one packed for the page as it is, placing every
+ * step on it (`holdsArrangement`). None on a grid, whose pages are never
+ * packed.
  */
 export function heldPageArrangements(
   document: DiagramDocument,
@@ -35,8 +38,9 @@ export function heldPageArrangements(
 ): Record<string, DiagramPageArrangement> {
   const held: Record<string, DiagramPageArrangement> = {};
   slots.stored.forEach((stored, page) => {
-    const first = slots.pages[page]?.[0];
-    if (first !== undefined && stored !== undefined && stored.signature === slots.signatures[page]) held[first] = stored;
+    const ids = slots.pages[page] ?? [];
+    const first = ids[0];
+    if (first !== undefined && holdsArrangement(stored, slots.signatures[page], ids)) held[first] = stored;
   });
   return held;
 }
@@ -74,7 +78,7 @@ export function adoptPageArrangements(
     const first = ids[0];
     if (first === undefined || Object.hasOwn(held, first) || !Object.hasOwn(adopted, first)) return;
     const offered = adopted[first]!;
-    if (offered.signature !== signature || !ids.every((id) => Object.hasOwn(offered.steps, id))) return;
+    if (!holdsArrangement(offered, signature, ids)) return;
     const steps: Record<string, DiagramArrangedStep> = {};
     for (const id of ids) steps[id] = offered.steps[id]!;
     held[first] = roundPageArrangement({ ...offered, steps });

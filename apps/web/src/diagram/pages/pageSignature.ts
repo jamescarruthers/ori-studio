@@ -21,7 +21,7 @@
  * it without loading the model; a diagram's own signatures are `cellSlots`'s
  * (`stepPlaces.ts`).
  */
-import type { DiagramPageSetup } from '../document/diagramDocument';
+import type { DiagramPageArrangement, DiagramPageSetup } from '../document/diagramDocument';
 import { digest } from '../pictures/pictureKey';
 import { flowPagePlan } from './flowLane';
 import type { PaginatedStep, PlannedPage } from './pagePlan';
@@ -97,4 +97,19 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
 /** Every page's signature, by its index. */
 export function pageSignatures(input: PageSignatureInput): string[] {
   return input.pages.map((_, pageIndex) => pageSignature(input, pageIndex));
+}
+
+/**
+ * Whether a page holds the arrangement stored for it (Decision 1): packed for
+ * the page as it is — its signature the page's — and placing every step on
+ * it. The one test the layout draws by and the store keeps and lets go by
+ * (`pageArrangements.ts`), so a damaged arrangement the layout packs over is
+ * never one the store holds on to.
+ */
+export function holdsArrangement(
+  stored: DiagramPageArrangement | undefined,
+  signature: string | undefined,
+  stepIds: readonly string[]
+): stored is DiagramPageArrangement {
+  return stored !== undefined && stored.signature === signature && stepIds.every((id) => Object.hasOwn(stored.steps, id));
 }

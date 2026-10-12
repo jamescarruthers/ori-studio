@@ -115,6 +115,19 @@ describe('heldPageArrangements / dropStalePageArrangements', () => {
     expect(dropStalePageArrangements(before)).toBe(before);
   });
 
+  it('holds none that leaves a step of its page without a place, as the layout does, so adoption replaces it', () => {
+    // A damaged or hand-edited file: page two's arrangement has its signature, and no place for s7.
+    const before = diagram();
+    const offered = packed(before);
+    const { s7: _s7, ...missing } = offered.s5!.steps;
+    const damaged = withPageArrangements(before, { ...offered, s5: roundPageArrangement({ ...offered.s5!, steps: missing }) });
+    expect(Object.keys(heldPageArrangements(damaged))).toEqual(['s0', 's10']);
+    expect(Object.keys(dropStalePageArrangements(damaged).pageArrangements!)).toEqual(['s0', 's10']);
+    // The layout packs the page; what it packed is taken in, places for every step.
+    const adopted = adoptPageArrangements(damaged, packed(before));
+    expect(Object.keys(adopted.pageArrangements!.s5!.steps)).toEqual(['s5', 's6', 's7', 's8', 's9']);
+  });
+
   it('leaves a newer build’s carried arrangements as they came', () => {
     const before = { ...diagram(), newer: { pageArrangements: { s0: { tilt: 1 } } } };
     const held = adoptPageArrangements(before, packed(before));
