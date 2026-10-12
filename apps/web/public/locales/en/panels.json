@@ -1867,6 +1867,10 @@
           }
         }
       },
+      "extent": {
+        "pinch": "{{sentence}} Crease only a short pinch at {{at}}.",
+        "segment": "{{sentence}} Crease only the stretch from {{from}} to {{to}}."
+      },
       "insideReverse": {
         "crease": {
           "all": "Inside reverse fold along the existing crease, through all layers.",
@@ -2378,6 +2382,8 @@
       "creases": "Creases",
       "creasesBackUp": "As seen from the front of the paper, which starts face down: they can read the other way to the folds you see.",
       "creasesFront": "As seen from the front of the paper.",
+      "extent": "Extent",
+      "extentHelp": "How much of the line the precrease creased: all of it, the stretch between two points, or a short pinch.",
       "firstLine": "First line",
       "flat": "Flat",
       "flatHelp": "Folded once and unfolded: these lie flat now, and remember which way they went.",
@@ -2418,6 +2424,10 @@
     "words": {
       "adds_one": "Adds {{count}} crease ({{mountain}} M, {{valley}} V)",
       "adds_other": "Adds {{count}} creases ({{mountain}} M, {{valley}} V)",
+      "addsCreaseMarks_one": "Adds {{count}} crease mark",
+      "addsCreaseMarks_other": "Adds {{count}} crease marks",
+      "addsPinchMarks_one": "Adds {{count}} pinch mark",
+      "addsPinchMarks_other": "Adds {{count}} pinch marks",
       "addsPrecreases_one": "Adds {{count}} precrease",
       "addsPrecreases_other": "Adds {{count}} precreases",
       "axiomLine": "Axiom {{axiom}} · {{phrase}}",
@@ -2445,6 +2455,9 @@
       "crimpInside": "Inside crimp",
       "crimpOutside": "Outside crimp",
       "existingCrease": "Existing crease",
+      "extentPinch": "Pinch",
+      "extentSegment": "Segment",
+      "extentWhole": "Whole line",
       "freeLine": "Free line",
       "insideReverse": "Inside reverse fold",
       "mountainFold": "Mountain fold",

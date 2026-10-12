@@ -311,6 +311,14 @@
       "ratio": "Verhältnis",
       "right": "Bis zum Ende"
     },
+    "extent": {
+      "commitPinch": "Kneifen",
+      "keyNote": "Drücke {{shortcut}}, um den Umfang der Reihe nach zu wechseln.",
+      "label": "Umfang",
+      "pinchHelp": "Nur eine kurze Markierung kneifen, mittig auf einem Punkt, den du entlang der Linie anklickst.",
+      "segmentHelp": "Die Linie nur zwischen zwei Punkten vorfalten, die du entlang der Linie anklickst.",
+      "wholeHelp": "Die Linie von Kante zu Kante vorfalten."
+    },
     "fix": {
       "closedSinkInstead": "Stattdessen geschlossen versenken",
       "crimpFlap": "Nur Lasche {{number}} crimpen",
@@ -326,6 +334,7 @@
       "outsideInstead": "Stattdessen äußerer Gegenbruch",
       "pickFlap": "Nur Lasche {{number}} falten",
       "pickThisFlap": "Nur diese Lasche falten",
+      "pinchInstead": "Stattdessen dort kneifen",
       "precreaseOtherWay": "Andersherum vorfalten",
       "reverseFlap": "Nur Lasche {{number}} als Gegenbruch falten",
       "reverseThisFlap": "Nur diese Lasche als Gegenbruch falten",
@@ -333,6 +342,7 @@
       "sinkThisFlap": "Nur diese Lasche versenken",
       "slideToEdge": "Die Linie verschieben, bis der Punkt auf der Kante liegt",
       "swapInstead": "Die bewegte Seite tauschen",
+      "throughAllLayers": "Durch alle Lagen vorfalten",
       "tuckFlap": "Nur Lasche {{number}} einstecken",
       "tuckOtherWay": "Andersherum einstecken",
       "tuckOver": "Stattdessen über die gelistete Lage {{number}} stecken",
@@ -343,6 +353,7 @@
       "turnToEdge": "Die Linie drehen, bis der Punkt auf der Kante liegt",
       "useLine": "Die Bezugslinie verwenden",
       "useSquareLine": "Die rechtwinklige Linie verwenden",
+      "useWholeLine": "Die ganze Linie verwenden",
       "valleyInstead": "Stattdessen Talfalte"
     },
     "flap": {
@@ -365,6 +376,7 @@
     },
     "key": {
       "commit": "Faltung ausführen",
+      "cycleExtent": "Nächster Umfang der Vorfalte",
       "nextRoot": "Nächste Lösung",
       "previousRoot": "Vorherige Lösung",
       "swapSide": "Bewegte Seite tauschen"
@@ -400,6 +412,8 @@
     },
     "note": {
       "acrossLayers": "Diese Punkte liegen auf Lagen, die durch das Falten auseinanderliegen, daher verläuft die Linie durch sie dort, wo sie in der gefalteten Form liegen. Das Faltmuster zeigt die Faltlinien, die dabei entstehen.",
+      "along": "Punkte rasten dort ein, wo die Linie Faltlinien, Kanten und Markierungen kreuzt, an Punkten auf ihr und in ihrer Mitte.",
+      "alongBack": "Esc nimmt den letzten Punkt zurück.",
       "clear": "Esc verwirft die gewählten Punkte.",
       "closedSinkLine": "Die Linie quer über die Spitze legt fest, wie tief sie versenkt wird.",
       "crease": "Entlang einer Vorfaltung wird sie wieder gefaltet; entlang einer gefalteten Kante wird die Lasche aufgeklappt.",
@@ -500,6 +514,23 @@
         "text": "Keine Lage ist gewählt. Wähle mindestens eine Lasche, die sich bewegen soll.",
         "title": "Nichts zu falten"
       },
+      "extentMissesLayers": {
+        "text": "Keine der Lagen, durch die diese Vorfalte geht, liegt an diesem Stück der Linie, oder die Linie ist dort schon gefaltet. Klicke andere Punkte entlang der Linie an, oder falte durch alle Lagen vor.",
+        "title": "Dort ist keine Lage zum Vorfalten"
+      },
+      "extentMissesPaper": {
+        "text": "Dieses Stück der Linie verläuft über kein Papier, es gibt also nichts vorzufalten. Klicke Punkte an, wo die Linie das Papier kreuzt.",
+        "title": "Dort ist kein Papier"
+      },
+      "extentOffPaper": {
+        "text": "Ein Punkt, von dem aus die Faltlinie bemessen wird, liegt nicht auf dem Papier, wie es jetzt gefaltet ist. Klicke ihre Punkte entlang der Linie dort an, wo die Linie das Papier kreuzt.",
+        "title": "Ein Punkt liegt nicht auf dem Papier"
+      },
+      "extentTooShort": {
+        "pinch": "Dieser Kniff ist zu kurz, als dass das Papier eine Faltlinie annimmt. Falte mehr von der Linie vor.",
+        "segment": "Die beiden Punkte liegen entlang der Linie zu dicht beieinander, um dazwischen vorzufalten. Klicke zwei weiter auseinanderliegende Punkte an, oder kneife stattdessen dort.",
+        "title": "Zu kurz zum Vorfalten"
+      },
       "insideInfeasible": {
         "title": "Nach innen geht es nicht"
       },
@@ -510,6 +541,22 @@
       "kindInfeasible": {
         "neither": "Hier passt keine Art von Gegenbruch: Bei keiner Stapelung der Lagen kann die Spitze umschlagen. Verschiebe die Linie oder kehre andere Laschen um.",
         "text": "Bei keiner Stapelung der Lagen kann die Spitze hier in diese Richtung umschlagen. Die andere Art von Gegenbruch passt vielleicht."
+      },
+      "markOffSheet": {
+        "text": "Ein Teil der Markierung läge außerhalb des Blatts. Klicke ihre Punkte entlang der Linie innerhalb des Papiers an.",
+        "title": "Die Markierung würde das Papier verlassen"
+      },
+      "markOnCrease": {
+        "text": "Die Markierung läge entlang einer Faltlinie, die schon da ist. Markiere ein anderes Stück der Linie, oder falte entlang der Faltlinie selbst.",
+        "title": "Dort ist schon gefaltet"
+      },
+      "marksOverlap": {
+        "text": "Die Markierung läge über einem Teil einer früheren Markierung, auf eine Weise, die das Papier nicht zulässt. Markiere ein anderes Stück der Linie, oder falte die ganze Linie vor.",
+        "title": "Die Markierungen würden sich überlappen"
+      },
+      "markTooShort": {
+        "text": "Auf einer ihrer Lagen wäre die Markierung zu kurz, als dass das Papier eine Faltlinie annimmt. Falte mehr von der Linie vor.",
+        "title": "Zu kurz zum Vorfalten"
       },
       "moverStays": {
         "text": "Die Lage, die den zu bewegenden Punkt trägt, ist nicht unter den Lagen, die gefaltet werden. Nimm ihre Lasche hinzu oder falte alle Lagen.",
@@ -713,7 +760,10 @@
       "pickPoint": "Wähle die Spitze, die versenkt wird: Versenken nimmt nur eine.",
       "pickSunkPoint": "Die versenkte Spitze wird für dich gefunden: Wähle in den Lagen eine andere, um diese herauszuziehen.",
       "pickTuckTarget": "Wähle die Lage, an der eingesteckt wird.",
-      "pointToMove": "Klicke auf den Punkt, der bewegt werden soll."
+      "pinchAt": "Klicke entlang der Linie dorthin, wo gekniffen werden soll.",
+      "pointToMove": "Klicke auf den Punkt, der bewegt werden soll.",
+      "segmentFrom": "Klicke entlang der Linie dorthin, wo die Faltlinie beginnt.",
+      "segmentTo": "Klicke dorthin, wo sie endet."
     },
     "tool": {
       "closedSinkHelp": "Das Ende einer geschlossenen Spitze in eine Tasche drücken, ihre Lagen bleiben zusammen.",

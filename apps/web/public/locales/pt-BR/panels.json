@@ -1992,6 +1992,10 @@
           }
         }
       },
+      "extent": {
+        "pinch": "{{sentence}} Vinque só um beliscão curto sobre {{at}}.",
+        "segment": "{{sentence}} Vinque só o trecho entre {{from}} e {{to}}."
+      },
       "insideReverse": {
         "crease": {
           "all": "Dobre todas as camadas com uma dobra invertida interna pelo vinco existente.",
@@ -2633,6 +2637,8 @@
       "creases": "Vincos",
       "creasesBackUp": "Vistos pela frente do papel, que começa virada para baixo: podem aparecer ao contrário das dobras que você vê.",
       "creasesFront": "Vistos pela frente do papel.",
+      "extent": "Extensão",
+      "extentHelp": "Quanto da linha a pré-dobra vincou: a linha toda, o trecho entre dois pontos ou um beliscão curto.",
       "firstLine": "Primeira linha",
       "flat": "Planos",
       "flatHelp": "Dobrados uma vez e desdobrados: agora estão planos e lembram para que lado foram dobrados.",
@@ -2674,6 +2680,12 @@
       "adds_one": "Adiciona {{count}} vinco ({{mountain}} M, {{valley}} V)",
       "adds_many": "Adiciona {{count}} vincos ({{mountain}} M, {{valley}} V)",
       "adds_other": "Adiciona {{count}} vincos ({{mountain}} M, {{valley}} V)",
+      "addsCreaseMarks_one": "Adiciona {{count}} marca de vinco",
+      "addsCreaseMarks_many": "Adiciona {{count}} marcas de vinco",
+      "addsCreaseMarks_other": "Adiciona {{count}} marcas de vinco",
+      "addsPinchMarks_one": "Adiciona {{count}} marca de beliscão",
+      "addsPinchMarks_many": "Adiciona {{count}} marcas de beliscão",
+      "addsPinchMarks_other": "Adiciona {{count}} marcas de beliscão",
       "addsPrecreases_one": "Adiciona {{count}} pré-dobra",
       "addsPrecreases_many": "Adiciona {{count}} pré-dobras",
       "addsPrecreases_other": "Adiciona {{count}} pré-dobras",
@@ -2702,6 +2714,9 @@
       "crimpInside": "Crimp interno",
       "crimpOutside": "Crimp externo",
       "existingCrease": "Vinco existente",
+      "extentPinch": "Beliscão",
+      "extentSegment": "Trecho",
+      "extentWhole": "Linha inteira",
       "freeLine": "Linha livre",
       "insideReverse": "Dobra invertida interna",
       "mountainFold": "Dobra monte",
