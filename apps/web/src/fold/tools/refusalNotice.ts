@@ -173,6 +173,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'short_crease':
     case 'thin_piece':
     case 'degenerate_split':
+    case 'extent_too_short':
       return {
         title: t('tools:fold.refusal.tooSmall.title', 'Too small to fold'),
         text: t(
@@ -198,11 +199,13 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
         title: t('tools:fold.refusal.tuckTarget.title', 'The layer to tuck under would move'),
         text: t('tools:fold.refusal.tuckTarget.text', 'Pick a layer that stays put to tuck the flap against.'),
       };
-    // A line located from references that do not name paper of this state.
+    // A line located from references that do not name paper of this state,
+    // or a partial precrease's point.
     case 'point_off_paper':
     case 'segment_too_short':
     case 'segment_not_on_a_face':
     case 'crease_not_found':
+    case 'extent_off_paper':
       return {
         title: t('tools:fold.refusal.offPaper.title', 'A reference is not on the paper'),
         text: t(
@@ -461,7 +464,9 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       };
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
-    // With them, a pick that names nothing and a defect.
+    // With them, a pick that names nothing and a defect; and, until they have
+    // words of their own, crease marks the gate refuses and a partial
+    // precrease over no paper, or none of its layers.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -489,6 +494,12 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'folded_image':
     case 'prediction_mismatch':
     case 'no_such_choice':
+    case 'mark_off_sheet':
+    case 'mark_too_short':
+    case 'mark_on_crease':
+    case 'marks_overlap':
+    case 'extent_misses_paper':
+    case 'extent_misses_layers':
     case 'internal':
       return invalidWords(t);
   }

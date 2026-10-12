@@ -61,6 +61,7 @@ export interface FoldWasmEngine {
   scene(state: number): unknown;
   landmarks(state: number, marks: unknown): unknown;
   top_visible_at(state: number, at: unknown): unknown;
+  default_pinch_length(state: number): number;
 }
 
 /** The largest handle the engine can hand out: a `u32`. */
@@ -146,6 +147,12 @@ export interface FoldEngineCalls {
   landmarks(state: number, marks: readonly SheetPoint[]): FoldLandmarks;
   /** The face the viewer sees at a model-frame point, and the sheet point there; null off the paper or on a crease. */
   topVisibleAt(state: number, at: FoldModelPoint): FoldTopVisible | null;
+  /**
+   * The pinch length a partial precrease's tool offers on the state's sheet
+   * (sheet units): a sixteenth of its shorter side. The op stores the length
+   * it was made with.
+   */
+  defaultPinchLength(state: number): number;
 }
 
 export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
@@ -250,6 +257,10 @@ export function createFoldEngineCalls(engine: FoldWasmEngine): FoldEngineCalls {
     topVisibleAt(state, at) {
       const handle = requireHandle('state', state);
       return engine.top_visible_at(handle, requirePoint('at', at)) as FoldTopVisible | null;
+    },
+
+    defaultPinchLength(state) {
+      return engine.default_pinch_length(requireHandle('state', state));
     },
   };
 }
