@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { PAGE_STEPS_RANGE } from '../../diagram/document/diagramDocument';
 import type { CurrentDiagramPage } from '../../diagram/pages/useCurrentDiagramPage';
 import { Button } from '../ui/Button';
 import { NumberRow } from '../ui/fieldRows';
@@ -12,9 +11,12 @@ import styles from './DiagramPageStepsRow.module.css';
  * page in view in the Pages view, else the selected step's — with its own
  * count and Use default, or what it is cut for now and a quiet "Default".
  *
- * A page without a count shows the steps it is laid out for (`layoutCount`):
- * its steps, but on an automatic last page the default, which its few steps
- * fill in order — so typing their number gives them the page to themselves.
+ * Every page shows the steps it is laid out for (`layoutCount`): the steps it
+ * holds — a counted page's too, which is laid out for them whatever its count
+ * says — but on an automatic last page the default, which its few steps fill
+ * in order. Typing their number there gives them the page to themselves; the
+ * default, or more, leaves it as it is. The field offers only what the page
+ * can be given (`pageStepsRange`).
  *
  * The line under the field holds the note or the action, so the stepper
  * stays where it is as one gives way to the other.
@@ -30,7 +32,7 @@ export function DiagramPageStepsRow({
   onChange: (count: number | null) => void;
 }) {
   const { t } = useTranslation();
-  const { page, index, name } = current;
+  const { page, index, name, range } = current;
   const own = page.ownCount;
   return (
     <div className={styles.row}>
@@ -38,9 +40,9 @@ export function DiagramPageStepsRow({
         // Another page, another field: a number half typed for one page is never committed to the next.
         key={index}
         label={t('panels:diagram.pagePane.pageSteps', 'Steps on page {{number}}', { number: name })}
-        value={own ? page.capacity : page.layoutCount}
-        min={PAGE_STEPS_RANGE.min}
-        max={PAGE_STEPS_RANGE.max}
+        value={page.layoutCount}
+        min={range.min}
+        max={range.max}
         step={1}
         disabled={disabled}
         divider={false}

@@ -163,19 +163,76 @@ function unmoved(was: readonly DiagramStep[], now: readonly DiagramStep[], favou
   return stays;
 }
 
+/** The counts one flow page may be given ({@link setPageSteps}), as whole numbers from `min` to `max`. */
+export interface PageStepsRange {
+  min: number;
+  max: number;
+}
+
+/**
+ * What {@link setPageSteps} holds a count for page `pageIndex` to:
+ *
+ * - at most the steps from its start to the diagram's end, so a count never
+ *   says more than the page holds; and never every step of a later page that
+ *   starts by a page break, which the page grows into as far as that page's
+ *   last step, so the break moves on and comes back as the page shrinks
+ *   rather than being lost with its page; and 30;
+ * - at least as few as leave a next page with its own count, starting
+ *   earlier to keep its last step, needing no more than 30.
+ *
+ * An automatic last page is laid out for the default, which no count of its
+ * own can give it, since a counted page is laid out for the steps it holds.
+ */
+function pageLimits(
+  steps: readonly DiagramStep[],
+  pages: readonly PageSplit[],
+  pageIndex: number
+): PageStepsRange & { automaticLast: boolean } {
+  const page = pages[pageIndex]!;
+  const from = page.steps[0]!;
+  const broken = pages.slice(pageIndex + 1).find((later) => steps[later.steps[0]!]!.breakBefore);
+  const end = broken ? broken.steps.at(-1)! : steps.length;
+  const following = pages[pageIndex + 1];
+  return {
+    min:
+      following && following.own !== null
+        ? Math.max(PAGE_STEPS_RANGE.min, page.steps.length + following.own - PAGE_STEPS_RANGE.max)
+        : PAGE_STEPS_RANGE.min,
+    max: Math.min(PAGE_STEPS_RANGE.max, end - from),
+    automaticLast: page.own === null && pageIndex === pages.length - 1,
+  };
+}
+
+/**
+ * The counts flow page `pageIndex` may be given, for the field that sets them:
+ * {@link setPageSteps}' own limits, but up to the default on an automatic
+ * last page — the number it shows, which leaves it as it is. Null for a page
+ * that is not there.
+ */
+export function pageStepsRange(document: DiagramDocument, pageIndex: number): PageStepsRange | null {
+  const steps = stepsOf(document);
+  const pages = flowPages(document, steps);
+  const page = pages[pageIndex];
+  if (!page || page.steps.length === 0) return null;
+  const { min, max, automaticLast } = pageLimits(steps, pages, pageIndex);
+  return { min, max: automaticLast ? Math.max(max, document.page.stepsPerPage) : max };
+}
+
 /**
  * The flow page `pageIndex` given its own count of steps — or, given null, its
  * own count taken away, so that it fills with the default
  * (`setDiagramPageSteps`). A count first gives every earlier page without one
  * its present size as its own, so that a later edit there cannot spill a step
- * across this page's start; then sets this page's count, clamped to 1–30, and
- * moves the boundary with the next page. A next page with its own count or a
- * break starts at this page's start plus the count, its count changed so its
- * last step stays where it was; one emptied that way is gone, and the move
- * carries on into the page after. A next page with neither simply refills.
+ * across this page's start; then sets this page's count, held to
+ * {@link pageLimits}, and moves the boundary with the next page. A next page
+ * with its own count or a break starts at this page's start plus the count,
+ * its count changed so its last step stays where it was; one emptied that way
+ * is gone, and the move carries on into the page after. A next page with
+ * neither simply refills.
  *
  * The same document where nothing changes — a page that already holds that
- * count, null for a page without one, a page that is not there — and where
+ * count, an automatic last page given the default or more (what it is laid
+ * out for), null for a page without one, a page that is not there — and where
  * it would have to edit a newer build's step to set this page or move its
  * boundary. An earlier page that such a step starts is left without a count.
  */
@@ -192,7 +249,10 @@ export function setPageSteps(document: DiagramDocument, pageIndex: number, count
     return withStarts(document, steps, starts);
   }
   if (!Number.isFinite(count)) return document;
-  const target = clampCount(Math.round(count));
+  const asked = Math.round(count);
+  const limits = pageLimits(steps, pages, pageIndex);
+  if (limits.automaticLast && asked >= document.page.stepsPerPage) return document;
+  const target = Math.min(limits.max, Math.max(limits.min, asked));
   if (page.own === target) return document;
   for (const earlier of pages.slice(0, pageIndex)) {
     const first = steps[earlier.steps[0]!]!;
@@ -203,7 +263,7 @@ export function setPageSteps(document: DiagramDocument, pageIndex: number, count
   const from = page.steps[0]!;
   // Where the next page starts now, and where it is to start.
   const next = from + page.steps.length;
-  const reach = Math.min(from + target, steps.length);
+  const reach = from + target;
   if (reach > next) {
     for (const later of pages.slice(pageIndex + 1)) {
       const start = later.steps[0]!;

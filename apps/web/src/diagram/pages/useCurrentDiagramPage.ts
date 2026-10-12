@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { isStep, stepsOf, type DiagramDocument, type DiagramPageSetup } from '../document/diagramDocument';
+import { PAGE_STEPS_RANGE, isStep, stepsOf, type DiagramDocument, type DiagramPageSetup } from '../document/diagramDocument';
+import { pageStepsRange, type PageStepsRange } from './pageCounts';
 import { usePageInView } from './pageInView';
 import { paginate, type PlannedPage } from './pagePlan';
 
@@ -12,6 +13,8 @@ export interface CurrentDiagramPage {
   name: number;
   /** The page as the document's page setup cuts it (`paginate`). */
   page: PlannedPage;
+  /** The counts of its own it may be given in the flow (`pageStepsRange`). */
+  range: PageStepsRange;
 }
 
 /** What the Pages view captions page `index`: the number it prints, or its place when it prints none. */
@@ -42,7 +45,12 @@ export function currentDiagramPage(
     const at = printedStepIndex(document, steps, selectedId);
     if (at !== null) index = Math.max(0, pages.findIndex((page) => page.steps.includes(at)));
   }
-  return { index, name: pageName(document.page, index), page: pages[index]! };
+  return {
+    index,
+    name: pageName(document.page, index),
+    page: pages[index]!,
+    range: pageStepsRange(document, index) ?? PAGE_STEPS_RANGE,
+  };
 }
 
 /** The index among the steps of the step `id` prints with: itself, or for a turn the step after it, else the last. */

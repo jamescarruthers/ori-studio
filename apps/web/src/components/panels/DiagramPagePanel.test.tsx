@@ -349,6 +349,25 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('page_steps');
   });
 
+  it('shows what the page is laid out for, and takes only what it can hold', () => {
+    // The last page holds one step, laid out for the default's nine: more than nine changes nothing.
+    showPage(1);
+    expect(field()?.value).toBe('9');
+    act(() => host!.querySelector<HTMLButtonElement>('button[aria-label="Increase Steps on page 2"]')!.click());
+    expect(firstSteps()).toEqual([
+      { size: 9, own: null },
+      { size: 1, own: null },
+    ]);
+    expect(field()?.value).toBe('9');
+    // A count past the steps it holds is the steps it holds, the number it then shows.
+    type('6');
+    expect(firstSteps()).toEqual([
+      { size: 9, own: 9 },
+      { size: 1, own: 1 },
+    ]);
+    expect(field()?.value).toBe('1');
+  });
+
   it('acts on the selected step’s page while no Pages view shows one', () => {
     act(() => state().selectDiagramStep(stepsOf(state().diagram!)[9]!.id));
     expect(field()?.getAttribute('aria-label')).toBe('Steps on page 2');

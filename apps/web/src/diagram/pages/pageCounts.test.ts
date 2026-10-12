@@ -16,7 +16,7 @@ import {
   type DiagramPageSetup,
   type DiagramStep,
 } from '../document/diagramDocument';
-import { retainPageCounts, setPageSteps } from './pageCounts';
+import { pageStepsRange, retainPageCounts, setPageSteps } from './pageCounts';
 import { paginate } from './pagePlan';
 
 /**
@@ -46,6 +46,13 @@ function pages(document: DiagramDocument): string[] {
   return paginate(steps, { ...document.page, layout: 'flow' }).map((page) =>
     page.steps.map((at, k) => (k === 0 && steps[at]!.pageSteps !== undefined ? `${steps[at]!.id}:${steps[at]!.pageSteps}` : steps[at]!.id)).join(' ')
   );
+}
+
+/** The steps that start a page by a break, by id. */
+function breaks(document: DiagramDocument): string[] {
+  return stepsOf(document)
+    .filter((step) => step.breakBefore)
+    .map((step) => step.id);
 }
 
 /** Every step's own count, by id: only the steps that have one. */
@@ -279,8 +286,45 @@ describe('setPageSteps', () => {
     const counted = diagram(14, { 4: 4, 8: 2, 10: 3 });
     expect(pages(counted)).toEqual(['s0 s1 s2 s3', 's4:4 s5 s6 s7', 's8:2 s9', 's10:3 s11 s12', 's13']);
     expect(pages(setPageSteps(counted, 1, 7))).toEqual(['s0:4 s1 s2 s3', 's4:7 s5 s6 s7 s8 s9 s10', 's11:2 s12', 's13']);
-    // As far as the last step: every page after is gone.
-    expect(pages(setPageSteps(counted, 1, 30))).toEqual(['s0:4 s1 s2 s3', 's4:30 s5 s6 s7 s8 s9 s10 s11 s12 s13']);
+    // As far as the last step: every page after is gone, and the count is the steps it holds.
+    expect(pages(setPageSteps(counted, 1, 30))).toEqual(['s0:4 s1 s2 s3', 's4:10 s5 s6 s7 s8 s9 s10 s11 s12 s13']);
+  });
+
+  it('never empties a page that starts by a page break: it grows to that page’s last step, and gives the steps back', () => {
+    // `s0 s1 s2 s3 | s4 s5 s6 s7 | |s8 s9 s10 s11 | s12:2 s13`: a break, and a count after it.
+    const broken = diagram(14, { 12: 2 }, [8]);
+    const grown = setPageSteps(broken, 1, 30);
+    expect(pages(grown)).toEqual(['s0:4 s1 s2 s3', 's4:7 s5 s6 s7 s8 s9 s10', 's11', 's12:2 s13']);
+    expect(breaks(grown)).toEqual(['s11']);
+    // Back to 4: the break where it was, and the count after it never touched.
+    const back = setPageSteps(grown, 1, 4);
+    expect(pages(back)).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8 s9 s10 s11', 's12:2 s13']);
+    expect(breaks(back)).toEqual(['s8']);
+    expect(pageStepsRange(broken, 1)).toEqual({ min: 1, max: 7 });
+  });
+
+  it('shrinks no further than leaves a next page with its own count 30 at most, so its last step stays', () => {
+    // 62 steps, 30 a page: pages of 30 and 29 by their counts, and 3 more.
+    const full = diagram(62, { 0: 30, 30: 29 }, [], { stepsPerPage: 30 });
+    expect(pages(full).map((page) => page.split(' ').length)).toEqual([30, 29, 3]);
+    expect(pageStepsRange(full, 0)).toEqual({ min: 29, max: 30 });
+    const shrunk = setPageSteps(full, 0, 20);
+    expect(pages(shrunk).map((page) => page.split(' ').length)).toEqual([29, 30, 3]);
+    expect(pages(shrunk)[1]!.split(' ').at(-1)).toBe('s58');
+  });
+
+  it('holds a count to the steps the page can hold: on the last page, its own', () => {
+    // A last page of its own 2: a count past them is the 2 it is laid out for.
+    const counted = diagram(14, { 12: 2 });
+    expect(setPageSteps(counted, 3, 7)).toBe(counted);
+    expect(pageStepsRange(counted, 3)).toEqual({ min: 1, max: 2 });
+    // An automatic last page is laid out for the default: as many or more changes nothing, fewer give its steps the page.
+    expect(setPageSteps(plain, 3, 4)).toBe(plain);
+    expect(setPageSteps(plain, 3, 12)).toBe(plain);
+    expect(pages(setPageSteps(plain, 3, 3))).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8:4 s9 s10 s11', 's12:2 s13']);
+    // The field offers up to the default there, the number it shows.
+    expect(pageStepsRange(plain, 3)).toEqual({ min: 1, max: 4 });
+    expect(pageStepsRange(plain, 9)).toBeNull();
   });
 
   it('moves a next page’s break with its start', () => {
@@ -314,10 +358,11 @@ describe('setPageSteps', () => {
     expect(setPageSteps(counted, 1, Number.NaN)).toBe(counted);
   });
 
-  it('holds a count to 1–30, whole', () => {
+  it('holds a count to 1–30, whole, and to the steps from the page’s start to the last', () => {
     expect(counts(setPageSteps(plain, 1, 0))).toMatchObject({ s4: 1 });
     expect(counts(setPageSteps(plain, 1, 2.4))).toMatchObject({ s4: 2 });
-    expect(counts(setPageSteps(plain, 1, 40))).toMatchObject({ s4: 30 });
+    expect(counts(setPageSteps(plain, 1, 40))).toMatchObject({ s4: 10 });
+    expect(counts(setPageSteps(diagram(40), 1, 40))).toMatchObject({ s4: 30 });
   });
 
   it('counts the flow’s pages on a grid too', () => {

@@ -136,6 +136,20 @@ As built (Phase 1, `diagram/pages/pagePlan.ts` and `pageCounts.ts`):
   (it then hands over at its spine, odd rows), the first page's side, or the
   orientation, where they change some page's rows.
 
+As built (the second review, 2026-10-11; the layout itself unchanged):
+
+- A count is held to what the page can hold (`pageStepsRange`, which the
+  Page pane's field offers too): never more than the steps from its start to
+  the diagram's end, so a count never says more than the page holds (R2-U2);
+  never every step of a later page that starts by a page break, which moves
+  on to that page's last step and comes back as the page shrinks, so a break
+  is never lost with its page (L4); and never so few that a counted next page,
+  starting earlier to keep its last step, would need more than 30 (L3).
+- An automatic last page is laid out for the default, which no count gives
+  it: the default or more leaves it as it is, and fewer give its steps the
+  page (a counted page is laid out for the steps it holds). The row shows
+  every page's layout count, a counted page's too.
+
 ### Layout (`diagramPageLayout.ts`, flow branch)
 
 Start from the cell path (#436's code, as on the 90b4cf001 Phase 1b commit)
