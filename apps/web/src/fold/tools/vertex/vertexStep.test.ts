@@ -5,6 +5,7 @@ import { foldPickIndex, type FoldPick } from '../../canvas/foldPicking';
 import type { FoldVertexAnalysed, FoldVertexOrders } from '../../engine/foldEngineSquashWire';
 import type { FoldScene } from '../../engine/foldEngineWire';
 import { toPoint } from '../../canvas/foldCanvasGeometry';
+import { isSwivelEdgeOp } from '../../document/foldSequenceDocument';
 import { fanRegionAt } from './fanGeometry';
 import {
   emergentToFold,
@@ -207,7 +208,9 @@ describe('a fan’s center and layers', () => {
     });
     // Straight up the region's middle from the vertex, half way to the edge,
     // on the one layer cut — the top, the right half mirrored.
-    if (!swivel || !('kind' in swivel) || swivel.kind !== 'swivel') throw new Error('no swivel');
+    if (!swivel || !('kind' in swivel) || swivel.kind !== 'swivel' || isSwivelEdgeOp(swivel)) {
+      throw new Error('no swivel by its rays');
+    }
     expect(swivel.stayer[0]).toBeCloseTo(0.75, 12);
     expect(swivel.stayer[1]).toBeCloseTo(0.75, 12);
   });
