@@ -50,8 +50,9 @@ const LINE_WIDTH_MUL = 2.6;
 const HOVER_LINE_ALPHA = 0.5;
 /** A located line awaiting its fold's picture: over the paper, narrower than a picked crease. */
 const LOCATED_WIDTH_MUL = 1.6;
-/** A line a click is offered (`offered`): lit, narrower and fainter than one picked. */
-const OFFERED_ALPHA = 0.55;
+/** A line a click is offered (`offered`): lit, a little narrower and fainter than one picked. */
+const OFFERED_ALPHA = 0.7;
+const OFFERED_WIDTH_MUL = 2.1;
 
 /** A dot on the overlay, in the pane's frame: its radius in CSS px. */
 export interface FoldOverlayDot {
@@ -403,7 +404,7 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
   // The lines offered, under everything picked.
   for (const line of offered ?? []) {
     const at = pickOnPane(line, pane, spread);
-    if (at && !('x' in at)) strokes.push({ a: at[0], b: at[1], color: withAlpha(inks.accent, OFFERED_ALPHA), widthMul: LOCATED_WIDTH_MUL });
+    if (at && !('x' in at)) strokes.push({ a: at[0], b: at[1], color: withAlpha(inks.accent, OFFERED_ALPHA), widthMul: OFFERED_WIDTH_MUL });
   }
   // A located line, under the picks that located it.
   if (pane === 'folded') {

@@ -195,7 +195,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     [preview.extent, toolState.extent, toolState.extentPicks]
   );
   // A swivel's pivot once its vertex is drawn in its place.
-  const shownPicks = foldShownPicks(toolState, preview);
+  const shownPicks = foldShownPicks(toolState, preview, swivelMarks.hovered !== null);
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks

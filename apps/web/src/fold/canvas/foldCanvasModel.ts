@@ -336,10 +336,16 @@ export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | FoldPoin
  * pivot sits moved onto the bisector of the edge and the target, which the
  * vertex overlay draws in its place, never the click (owner feedback,
  * 2026-10-12), and the edge's landing on the target is drawn bold where the
- * target lies. The edge it moves stays lit.
+ * target lies. The edge it moves stays lit. So too while a swivel is
+ * previewed under the pointer before its last click (`hovering`): its
+ * meeting point gives way to the vertex the preview draws.
  */
-export function foldShownPicks(tools: FoldToolState, preview: Pick<FoldToolPreview, 'vertex'>): readonly FoldPick[] {
-  const described = (preview.vertex?.answer ?? preview.vertex?.base)?.analysis.kind === 'swivel-by-edge';
+export function foldShownPicks(
+  tools: FoldToolState,
+  preview: Pick<FoldToolPreview, 'vertex'>,
+  hovering = false
+): readonly FoldPick[] {
+  const described = hovering || (preview.vertex?.answer ?? preview.vertex?.base)?.analysis.kind === 'swivel-by-edge';
   return tools.tool === 'swivel' && described ? tools.picks.slice(1, SWIVEL_TARGET_FROM) : tools.picks;
 }
 
