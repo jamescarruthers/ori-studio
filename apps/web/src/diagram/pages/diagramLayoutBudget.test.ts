@@ -56,14 +56,16 @@ function fiftySteps(page: Partial<DiagramPageSetup> = {}): DiagramDocument {
  * 22, 11 October 2026; 18–24 ms alone), for a CI runner as loaded and slower.
  * A search like #443's fails it by forty times. What every edit of a caption
  * or a picture costs: a flow diagram's pages held as they were packed
- * (`diagram-flow-packing.md`; 10–11 ms alone, 12 October 2026).
+ * (`diagram-flow-packing.md`; 10–12 ms alone, 12 October 2026). And what a
+ * file that holds its pages' packing costs as it opens, none of its pictures
+ * measured yet: 21–24 ms alone, against 15–19 ms for the grid's.
  */
 const BUDGET_MS = 100;
 
 /**
  * The slowest a layout that packs every flow page afresh may take: an edit
  * that re-cuts the pages, or a file saved before packing, opened. Its six
- * pages packed, each picture measured at its reference scale too: 41–49 ms
+ * pages packed, each picture measured at its reference scale too: 40–49 ms
  * alone, about 130 ms as the whole suite runs (12 October 2026).
  */
 const PACKING_BUDGET_MS = 300;
@@ -89,12 +91,25 @@ function medianLayoutMs(make: () => DiagramDocument): number {
 describe('the layout’s time budget', () => {
   it('lays out a 50-step diagram with annotations and turns in milliseconds, in the flow and on a grid', () => {
     for (const page of [{ layout: 'flow' }, { layout: 'flow', stepsPerPage: 7 }, { layout: 'grid', columns: 3, rows: 4 }] as const) {
+      const label = JSON.stringify(page);
       // A flow diagram's pages as they are held once packed and adopted, as the store does.
       const fresh = fiftySteps(page);
-      const held = adoptPageArrangements(fresh, layoutDiagram(fresh, setterFor(fresh)).packed ?? {});
-      expect(medianLayoutMs(() => ({ ...held, steps: held.steps.map((entry) => ({ ...entry })) })), JSON.stringify(page)).toBeLessThan(BUDGET_MS);
+      const packed = layoutDiagram(fresh, setterFor(fresh));
+      const held = adoptPageArrangements(fresh, packed.packed ?? {});
+      const copy = () => ({ ...held, steps: held.steps.map((entry) => ({ ...entry })) });
+      if (page.layout === 'flow') {
+        // Packed afresh, every page is packed; held, every page is held and none is packed.
+        expect(packed.pages.every((each) => each.packing?.packed), label).toBe(true);
+        expect(Object.keys(held.pageArrangements ?? {}), label).toHaveLength(packed.pages.length);
+        const again = layoutDiagram(copy(), setterFor(held));
+        expect(again.packed, label).toBeUndefined();
+        expect(again.pages.some((each) => each.packing?.packed), label).toBe(false);
+      }
+      expect(medianLayoutMs(copy), label).toBeLessThan(BUDGET_MS);
+      // A file that holds them, opened: every picture new to the layout, every page held.
+      expect(medianLayoutMs(() => ({ ...fiftySteps(page), pageArrangements: held.pageArrangements })), `${label} opened`).toBeLessThan(BUDGET_MS);
       // And packed afresh.
-      expect(medianLayoutMs(() => fiftySteps(page)), `${JSON.stringify(page)} packed`).toBeLessThan(PACKING_BUDGET_MS);
+      expect(medianLayoutMs(() => fiftySteps(page)), `${label} packed`).toBeLessThan(PACKING_BUDGET_MS);
     }
   });
 });
