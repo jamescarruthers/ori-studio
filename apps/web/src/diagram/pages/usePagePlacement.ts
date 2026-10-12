@@ -48,6 +48,27 @@ interface Draft {
   };
   snap?: { auto?: boolean; number?: number };
 }
+/** Where a pointer is, and the keys that change what a drag does there. */
+interface DragPoint {
+  clientX: number;
+  clientY: number;
+  shiftKey: boolean;
+  altKey: boolean;
+}
+/**
+ * A press made while the pages were an older diagram's — the nudge it
+ * committed, or another edit, still laying out: it has selected what it
+ * pressed, and becomes a draft once the pages catch up, dragged as far as the
+ * pointer went meanwhile, and committed then if it was let go after a drag.
+ */
+interface HeldPress {
+  stepId: string;
+  part: PagePart;
+  pointer: NonNullable<Draft['pointer']>;
+  last?: DragPoint;
+  released?: boolean;
+}
+const dragPoint = ({ clientX, clientY, shiftKey, altKey }: DragPoint): DragPoint => ({ clientX, clientY, shiftKey, altKey });
 const NUDGE_DELAY = 220;
 /** How far a press travels before it is a drag, in screen px. */
 const DRAG_SLOP_PX = 4;
@@ -75,17 +96,22 @@ function focusStep(event: ReactPointerEvent<HTMLElement>, page: HTMLElement, ste
  * and one still in its pause commits before anything else happens to the
  * diagram — another edit, an undo, a save, the selection or the view moving,
  * the view going (`flushPlacementNudge`); only Escape and the Undo key take
- * it back. A sitting's nudges of one part are one undo entry.
+ * it back. A sitting's nudges of one part are one undo entry. A press made
+ * while an edit is still laying out — the nudge the press itself commits
+ * included — selects what it pressed at once and is held until the pages
+ * catch up (`HeldPress`), so a click right after a nudge selects the frame
+ * and a drag there still moves it.
  */
 export function usePagePlacement(pages: PreparedDiagramPages | null, space: boolean, failed = false) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const live = useRef<Draft | null>(null);
+  const held = useRef<HeldPress | null>(null);
   const committing = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** The part being nudged at the keyboard and its sitting, until the selection moves. */
   const sitting = useRef<{ stepId: string; part: PagePart; session: number } | null>(null);
   /** This render's pages and flush, for what runs outside it: a timer, the store's listener, the unmount. */
-  const latest = useRef({ pages, failed, flush: () => {} });
+  const latest = useRef({ pages, failed, flush: () => {}, land: (): boolean => false });
   const phone = useIsPhoneSurface();
   const selected = useWorkspaceStore((state) => state.diagramSelectedStepId);
   const part = useWorkspaceStore((state) => state.diagramPagesPart);
@@ -104,6 +130,10 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
       ? { ...current, dx: current.committed.dx, dy: current.committed.dy, factor: 1, pending: current.document }
       : null;
   const drop = () => {
+    if (held.current) {
+      held.current = null;
+      return true;
+    }
     const current = live.current;
     if (!current || current.pending) return false;
     stopTimer();
@@ -196,19 +226,17 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     if (!current || current.pending || current.pointer || committing.current) return;
     commit();
   };
+  /** Whether step `stepId` can be placed by hand here at all, whatever diagram the pages are of. */
+  const editable = (stepId: string): boolean => {
+    const state = useWorkspaceStore.getState();
+    const step = state.diagram && stepById(state.diagram, stepId);
+    return Boolean(pages?.withLayout && step && !phone && !readOnly && !placementBlocker(step));
+  };
+  /** The pages are an older diagram's than the store's: an edit is still laying out. */
+  const stale = () => Boolean(pages?.document && pages.document !== useWorkspaceStore.getState().diagram);
   const make = (page: number, cell: LayoutCell, chosen: PagePart, source: Draft['source']): Draft | null => {
     const state = useWorkspaceStore.getState();
-    const step = state.diagram && stepById(state.diagram, cell.stepId);
-    if (
-      !pages?.withLayout ||
-      !state.diagram ||
-      phone ||
-      readOnly ||
-      !step ||
-      placementBlocker(step) ||
-      (pages.document && pages.document !== state.diagram)
-    )
-      return null;
+    if (!pages || !state.diagram || !editable(cell.stepId) || stale()) return null;
     return {
       base: pages,
       document: state.diagram,
@@ -221,6 +249,98 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
       factor: 1,
       source,
     };
+  };
+  /**
+   * `current`, a pointer's draft, dragged to `point`: null while the press is
+   * still inside its slop. Past it, what the drag moves is selected, once.
+   */
+  const dragTo = (current: Draft, point: DragPoint): Draft | null => {
+    const pointer = current.pointer!;
+    const dx = (point.clientX - pointer.x) * pointer.mmPerPx,
+      dy = (point.clientY - pointer.y) * pointer.mmPerPx;
+    let grip = pointer;
+    if (!pointer.moved) {
+      if (Math.hypot(dx, dy) < DRAG_SLOP_PX * pointer.mmPerPx) return null;
+      // A drag from here: what it moves is the selection, once.
+      grip = { ...pointer, moved: true };
+      useWorkspaceStore.getState().selectDiagramPagesPart(current.part);
+    }
+    const box = partBox(current.cell, current.part),
+      paper = current.base.layout.paper;
+    if (grip.size) {
+      const step = stepById(current.document, current.cell.stepId)!;
+      const sizeOf = (cell: LayoutCell) => {
+        const step = stepById(current.document, cell.stepId);
+        return step ? printedFrameMm(step, current.document.assets, current.document.style, cell) : null;
+      };
+      const max =
+          printedFrameMm(step, current.document.assets, current.document.style, current.cell) ?? Math.max(box.w, box.h),
+        near = 6 * grip.mmPerPx;
+      const horizontal = (dx * (grip.size === 'left' ? -2 : 2)) / box.w;
+      const vertical = dy / box.h;
+      const change = grip.size === 'middle' || Math.abs(vertical) > Math.abs(horizontal) ? vertical : horizontal;
+      let mm = Math.max(4, Math.min(Math.max(paper.widthMm, paper.heightMm) - paper.marginMm * 2, max * (1 + change)));
+      let snap: Draft['snap'];
+      if (!point.altKey) {
+        const auto = current.cell.placed?.auto;
+        const scale = current.cell.mmPerUnit ?? current.cell.frameMm;
+        const candidates: { mm: number; auto?: boolean; number?: number }[] = [
+          { mm: auto && scale ? (max * (auto.mmPerUnit ?? auto.frameMm ?? scale)) / scale : max, auto: true },
+        ];
+        for (const cell of current.base.layout.pages[current.page]!.cells) {
+          if (
+            cell.stepId === current.cell.stepId ||
+            !!cell.zoom !== !!current.cell.zoom ||
+            (cell.mmPerUnit !== null) !== (current.cell.mmPerUnit !== null)
+          )
+            continue;
+          const value = sizeOf(cell);
+          if (value !== null) candidates.push({ mm: value, number: cell.number });
+        }
+        const closest = candidates.sort((a, b) => Math.abs(a.mm - mm) - Math.abs(b.mm - mm))[0];
+        if (closest && Math.abs(closest.mm - mm) < near) {
+          mm = closest.mm;
+          snap = closest;
+        }
+      }
+      if (current.cell.zoom) {
+        const printed = current.cell.zoom.printed;
+        mm = (max * Math.max(1.25, Math.min(6, (printed * mm) / max))) / printed;
+      }
+      return { ...current, pointer: grip, factor: mm / max, snap };
+    }
+    let x = dx,
+      y = dy;
+    if (point.shiftKey) {
+      if (Math.abs(x) > Math.abs(y)) y = 0;
+      else x = 0;
+    }
+    if (!point.altKey) {
+      const step = stepById(current.document, current.cell.stepId)!;
+      const home = pageOffset(step.place, current.part, !!current.cell.rightToLeft);
+      const near = 6 * grip.mmPerPx;
+      const candidatesX = [-home[0]],
+        candidatesY = [-home[1]];
+      for (const other of current.base.layout.pages[current.page]!.cells)
+        if (other.stepId !== current.cell.stepId) {
+          const b = partBox(other, current.part);
+          candidatesX.push(b.x - box.x, b.x + b.w / 2 - box.x - box.w / 2, b.x + b.w - box.x - box.w);
+          candidatesY.push(b.y - box.y, b.y + b.h / 2 - box.y - box.h / 2, b.y + b.h - box.y - box.h);
+        }
+      const snap = (value: number, candidates: number[]) => {
+        const best = candidates.sort((a, b) => Math.abs(a - value) - Math.abs(b - value))[0];
+        return best !== undefined && Math.abs(best - value) < near ? best : value;
+      };
+      x = snap(x, candidatesX);
+      y = snap(y, candidatesY);
+    }
+    if (point.shiftKey) {
+      if (Math.abs(dx) > Math.abs(dy)) y = 0;
+      else x = 0;
+    }
+    x = Math.max(-box.x, Math.min(paper.widthMm - box.x - box.w, x));
+    y = Math.max(-box.y, Math.min(paper.heightMm - box.y - box.h, y));
+    return { ...current, pointer: grip, dx: x, dy: y };
   };
   const nudge = (id: DiagramShortcutId): boolean => {
     if (!part || !selected || phone || readOnly) return false;
@@ -266,10 +386,29 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     timer.current = setTimeout(commit, NUDGE_DELAY);
     return true;
   };
+  /**
+   * A held press once the pages it waited for have come: the draft it would
+   * have been, onto them, dragged as far as the pointer went, and committed if
+   * it was let go. Whether it took the draft; a failed layout lets it go.
+   */
+  const land = (): boolean => {
+    const press = held.current;
+    if (!press || (!failed && stale())) return false;
+    held.current = null;
+    const page = failed ? -1 : (pages?.layout.pages.findIndex((each) => each.cells.some((c) => c.stepId === press.stepId)) ?? -1);
+    const cell = pages?.layout.pages[page]?.cells.find((each) => each.stepId === press.stepId);
+    const next = cell ? make(page, cell, press.part, 'drag') : null;
+    if (!next) return false;
+    next.pointer = press.pointer;
+    update((press.last && dragTo(next, press.last)) || next);
+    if (press.released) commit();
+    return true;
+  };
   useEffect(() => {
-    latest.current = { pages, failed, flush: flushKeys };
+    latest.current = { pages, failed, flush: flushKeys, land };
   });
   useEffect(() => {
+    if (latest.current.land()) return;
     const current = live.current;
     if (!current) return;
     if (current.pending) {
@@ -302,6 +441,11 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
           next.diagramLoadId !== previous.diagramLoadId
         )
           sitting.current = null;
+        // A held press goes with its diagram, and once its step is no longer the selection.
+        const press = held.current;
+        if (press && (next.diagramLoadId !== previous.diagramLoadId || next.diagramSelectedStepId !== press.stepId)) {
+          held.current = null;
+        }
         const current = live.current;
         if (!current) return;
         // Another diagram, or this one changed under the draft: there is nothing left to commit it onto.
@@ -345,6 +489,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
       latest.current.flush();
       stopTimer();
       live.current = null;
+      held.current = null;
     },
     [],
   );
@@ -381,118 +526,60 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
       else if (selected === cell.stepId && part === 'frame' && hit !== 'frame') drill = hit;
     }
     const current = make(page, cell, chosen, 'drag');
-    if (!current) return;
+    // The pages an older diagram's — the nudge this press just committed, or another edit, laying out — hold the press.
+    if (!current && !(editable(cell.stepId) && stale())) return;
     // The press stays the browser's until it is a drag (`move`): a click focuses and selects as a card's does.
     event.stopPropagation();
     const state = useWorkspaceStore.getState();
     state.selectDiagramStep(cell.stepId);
     state.selectDiagramPagesPart(chosen);
     event.currentTarget.setPointerCapture(event.pointerId);
-    current.pointer = {
+    const pointer: Draft['pointer'] = {
       id: event.pointerId,
       x: event.clientX,
       y: event.clientY,
-      mmPerPx: current.base.layout.paper.widthMm / element.getBoundingClientRect().width,
+      mmPerPx: pages.layout.paper.widthMm / element.getBoundingClientRect().width,
       target: event.currentTarget,
       size,
       drill,
     };
+    if (!current) {
+      held.current = { stepId: cell.stepId, part: chosen, pointer };
+      return;
+    }
+    current.pointer = pointer;
     update(current);
   };
   const move = (event: ReactPointerEvent<HTMLElement>) => {
+    const press = held.current;
+    if (press?.pointer.id === event.pointerId) {
+      press.last = dragPoint(event);
+      return;
+    }
     const current = live.current,
       pointer = current?.pointer;
     if (!current || !pointer || pointer.id !== event.pointerId || current.pending) return;
-    const dx = (event.clientX - pointer.x) * pointer.mmPerPx,
-      dy = (event.clientY - pointer.y) * pointer.mmPerPx;
-    let held = pointer;
-    if (!pointer.moved) {
-      if (Math.hypot(dx, dy) < DRAG_SLOP_PX * pointer.mmPerPx) return;
-      // A drag from here: what it moves is the selection, once.
-      held = { ...pointer, moved: true };
-      useWorkspaceStore.getState().selectDiagramPagesPart(current.part);
-    }
+    const next = dragTo(current, event);
+    if (!next) return;
     event.preventDefault();
     event.stopPropagation();
-    const box = partBox(current.cell, current.part),
-      paper = current.base.layout.paper;
-    if (held.size) {
-      const step = stepById(current.document, current.cell.stepId)!;
-      const sizeOf = (cell: LayoutCell) => {
-        const step = stepById(current.document, cell.stepId);
-        return step ? printedFrameMm(step, current.document.assets, current.document.style, cell) : null;
-      };
-      const max =
-          printedFrameMm(step, current.document.assets, current.document.style, current.cell) ?? Math.max(box.w, box.h),
-        near = 6 * held.mmPerPx;
-      const horizontal = (dx * (held.size === 'left' ? -2 : 2)) / box.w;
-      const vertical = dy / box.h;
-      const change = held.size === 'middle' || Math.abs(vertical) > Math.abs(horizontal) ? vertical : horizontal;
-      let mm = Math.max(4, Math.min(Math.max(paper.widthMm, paper.heightMm) - paper.marginMm * 2, max * (1 + change)));
-      let snap: Draft['snap'];
-      if (!event.altKey) {
-        const auto = current.cell.placed?.auto;
-        const scale = current.cell.mmPerUnit ?? current.cell.frameMm;
-        const candidates: { mm: number; auto?: boolean; number?: number }[] = [
-          { mm: auto && scale ? (max * (auto.mmPerUnit ?? auto.frameMm ?? scale)) / scale : max, auto: true },
-        ];
-        for (const cell of current.base.layout.pages[current.page]!.cells) {
-          if (
-            cell.stepId === current.cell.stepId ||
-            !!cell.zoom !== !!current.cell.zoom ||
-            (cell.mmPerUnit !== null) !== (current.cell.mmPerUnit !== null)
-          )
-            continue;
-          const value = sizeOf(cell);
-          if (value !== null) candidates.push({ mm: value, number: cell.number });
-        }
-        const closest = candidates.sort((a, b) => Math.abs(a.mm - mm) - Math.abs(b.mm - mm))[0];
-        if (closest && Math.abs(closest.mm - mm) < near) {
-          mm = closest.mm;
-          snap = closest;
-        }
-      }
-      if (current.cell.zoom) {
-        const printed = current.cell.zoom.printed;
-        mm = (max * Math.max(1.25, Math.min(6, (printed * mm) / max))) / printed;
-      }
-      update({ ...current, pointer: held, factor: mm / max, snap });
-      return;
-    }
-    let x = dx,
-      y = dy;
-    if (event.shiftKey) {
-      if (Math.abs(x) > Math.abs(y)) y = 0;
-      else x = 0;
-    }
-    if (!event.altKey) {
-      const step = stepById(current.document, current.cell.stepId)!;
-      const home = pageOffset(step.place, current.part, !!current.cell.rightToLeft);
-      const near = 6 * held.mmPerPx;
-      const candidatesX = [-home[0]],
-        candidatesY = [-home[1]];
-      for (const other of current.base.layout.pages[current.page]!.cells)
-        if (other.stepId !== current.cell.stepId) {
-          const b = partBox(other, current.part);
-          candidatesX.push(b.x - box.x, b.x + b.w / 2 - box.x - box.w / 2, b.x + b.w - box.x - box.w);
-          candidatesY.push(b.y - box.y, b.y + b.h / 2 - box.y - box.h / 2, b.y + b.h - box.y - box.h);
-        }
-      const snap = (value: number, candidates: number[]) => {
-        const best = candidates.sort((a, b) => Math.abs(a - value) - Math.abs(b - value))[0];
-        return best !== undefined && Math.abs(best - value) < near ? best : value;
-      };
-      x = snap(x, candidatesX);
-      y = snap(y, candidatesY);
-    }
-    if (event.shiftKey) {
-      if (Math.abs(dx) > Math.abs(dy)) y = 0;
-      else x = 0;
-    }
-    x = Math.max(-box.x, Math.min(paper.widthMm - box.x - box.w, x));
-    y = Math.max(-box.y, Math.min(paper.heightMm - box.y - box.h, y));
-    update({ ...current, pointer: held, dx: x, dy: y });
+    update(next);
   };
   const end = (event: ReactPointerEvent<HTMLElement>) => {
+    const press = held.current;
+    if (press?.pointer.id === event.pointerId) {
+      event.stopPropagation();
+      press.last = dragPoint(event);
+      const { x, y, drill } = press.pointer;
+      // Let go after a drag: it lands once the pages catch up. A click is done: it selected what it pressed.
+      if (Math.hypot(press.last.clientX - x, press.last.clientY - y) >= DRAG_SLOP_PX) {
+        press.released = true;
+        return;
+      }
+      held.current = null;
+      if (drill) useWorkspaceStore.getState().selectDiagramPagesPart(drill);
+      return;
+    }
     const current = live.current;
     if (current?.pointer?.id !== event.pointerId || current.pending) return;
     event.stopPropagation();
@@ -506,6 +593,12 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
   };
   /** The press lost its capture — its element went, or the browser took it back: the gesture goes with it. */
   const lost = (event: ReactPointerEvent<HTMLElement>) => {
+    const press = held.current;
+    if (press?.pointer.id === event.pointerId) {
+      // Let go after a drag, the capture goes with the press: the drag still lands.
+      if (!press.released) held.current = null;
+      return;
+    }
     const current = live.current;
     if (current?.pointer?.id !== event.pointerId || current.pending) return;
     stopTimer();

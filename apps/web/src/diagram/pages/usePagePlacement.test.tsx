@@ -309,6 +309,66 @@ describe('page placement drags', () => {
     expect(binding.draft?.dx).toBe(0.5);
   });
 
+  describe('a press inside a nudge’s pause, which commits the nudge and leaves the pages laying out', () => {
+    const nudgeFirst = () =>
+      act(() => {
+        expect(runPlacementKey('diagram.nudgePlacementRight')).toBe(true);
+      });
+    const second = () => pages.layout.pages[0]!.cells[1]!;
+
+    it('selects the pressed step’s frame at once, and the next arrow nudges it once the pages catch up', () => {
+      nudgeFirst();
+      act(() => binding.start(event(50, 50), 0, second(), 'frame'));
+      act(() => binding.end(event(50, 50)));
+      expect(placeOf('s0')?.picture).toEqual([0.5, 0]);
+      expect(state().diagramSelectedStepId).toBe('s1');
+      expect(state().diagramPagesPart).toBe('frame');
+      relayout();
+      act(() => {
+        expect(runPlacementKey('diagram.nudgePlacementRight')).toBe(true);
+      });
+      act(() => vi.advanceTimersByTime(230));
+      expect(placeOf('s1')?.frame).toEqual([0.5, 0]);
+    });
+
+    it('drags from where the pointer went meanwhile, once the pages catch up', () => {
+      nudgeFirst();
+      act(() => binding.start(event(50, 50), 0, second(), 'frame'));
+      act(() => binding.move(event(58, 53)));
+      expect(binding.draft?.cell.stepId).not.toBe('s1');
+      relayout();
+      expect(binding.draft).toMatchObject({ dx: 8, dy: 3 });
+      expect(binding.draft?.cell.stepId).toBe('s1');
+      act(() => binding.end(event(58, 53)));
+      expect(placeOf('s1')?.frame).toEqual([8, 3]);
+    });
+
+    it('lands a drag let go before the pages catch up, once they do, in its own undo step', () => {
+      nudgeFirst();
+      act(() => binding.start(event(50, 50), 0, second(), 'frame'));
+      act(() => {
+        binding.move(event(56, 50));
+        binding.end(event(56, 50));
+        binding.lost({ pointerId: 1 } as Parameters<typeof binding.lost>[0]);
+      });
+      expect(placeOf('s1')).toBeUndefined();
+      relayout();
+      expect(placeOf('s1')?.frame).toEqual([6, 0]);
+      expect(state().diagramHistory.past).toHaveLength(2);
+    });
+
+    it('lets a held press go on Escape', () => {
+      nudgeFirst();
+      act(() => binding.start(event(50, 50), 0, second(), 'frame'));
+      act(() => binding.move(event(60, 50)));
+      act(() => expect(cancelPlacementGesture()).toBe(true));
+      relayout();
+      expect(binding.draft).toBeNull();
+      act(() => binding.end(event(60, 50)));
+      expect(placeOf('s1')).toBeUndefined();
+    });
+  });
+
   it('selects the frame first, drills into its picture on the next click, and still drags the whole frame', () => {
     page.getBoundingClientRect = () => ({ left: 0, top: 0, width: pages.layout.paper.widthMm }) as DOMRect;
     const cell = pages.layout.pages[0]!.cells[0]!,

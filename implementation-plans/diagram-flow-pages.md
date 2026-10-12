@@ -351,6 +351,12 @@ As built (the second review's UI fixes, 2026-10-11):
   Reset This Page act on the page holding the step just clicked, never an
   off-screen step on the page under the middle. The pager still reads the
   middle.
+- A press made while an edit is laying out — the nudge the press itself
+  commits included — is held, not dropped (R2-U3, `HeldPress` in
+  `usePagePlacement`): it selects the step and the part at once, and once the
+  pages catch up becomes the draft it would have been, dragged as far as the
+  pointer went and committed if it was let go after a drag. So "nudge, click
+  the next step, nudge" nudges the next step's frame.
 
 ## Affected Areas
 
