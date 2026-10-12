@@ -7,13 +7,10 @@
  *
  * - The border is Edit's `Black0`, a fold its `Red1` or `Blue2` by the letter
  *   it has from the front.
- * - A flat crease — a precrease, or a fold undone — is what Send to Edit makes
- *   of it (`foldEngineIoSendToEdit`): an unassigned crease, `None`,
- *   remembering the letter it was folded with, which Edit draws as its
- *   undecided dots with the direction on alternate marks.
- * - A crease mark — a pinch, a segment — is drawn as Edit draws a short
- *   crease of its letter (`foldPaneMark`): too short for a flat crease's
- *   dots to show, and never folded, so its letter is what its line says.
+ * - A flat crease — a precrease, or a fold undone — and a crease mark — a
+ *   pinch, a segment (`foldPaneMark`) — are what Send to Edit lands them as
+ *   (`foldEngineIoSendToEdit`): auxiliary lines, Edit's `Cyan3`, in the ink
+ *   and line style Edit draws its auxiliary lines in.
  * - The instruction — the step's own creases and marks, or the ones a
  *   previewed fold would add — is the line a tool is drawing, kept apart for
  *   the pane to draw as Edit draws a tool's preview: in the crease colour it
@@ -54,6 +51,9 @@ export function foldLetterLineColor(letter: FoldLetter): 'Red1' | 'Blue2' {
   return letter === 'mountain' ? 'Red1' : 'Blue2';
 }
 
+/** Edit's line colour for an auxiliary line (Oriedita's `CYAN_3`): what a flat crease is drawn as. */
+export const FOLD_AUX_LINE_COLOR = 'Cyan3';
+
 /** The pane's creases of a state, in Edit's vocabulary. */
 export function creasePatternPaneLines(scene: FoldScene, options: FoldPaneCreaseOptions): FoldCreasePatternLines {
   const flat: CpLineSegmentInput[] = [];
@@ -73,24 +73,19 @@ export function creasePatternPaneLines(scene: FoldScene, options: FoldPaneCrease
         folds.push({ a, b, color: foldLetterLineColor(shown.letter) });
         break;
       case 'flat':
-        flat.push({
-          a,
-          b,
-          color: 'None',
-          ...(shown.letter ? { fold_direction_hint: shown.letter === 'mountain' ? 'Mountain' : 'Valley' } : {}),
-        });
+        flat.push({ a, b, color: FOLD_AUX_LINE_COLOR });
         break;
       case 'instruction':
         instruction.push({ a, b, letter: shown.letter });
         break;
     }
   }
-  // A crease mark: a short crease of its letter, or the instruction it is.
+  // A crease mark: an auxiliary line as a flat crease is, or the instruction it is.
   for (const mark of scene.crease_marks ?? []) {
     const shown = foldPaneMark(mark, options);
     if (!shown) continue;
     if (shown.as === 'instruction') instruction.push({ a: mark.from, b: mark.to, letter: shown.letter });
-    else folds.push({ a: mark.from, b: mark.to, color: foldLetterLineColor(shown.letter) });
+    else flat.push({ a: mark.from, b: mark.to, color: FOLD_AUX_LINE_COLOR });
   }
   return { creases: [...flat, ...folds, ...border], instruction };
 }

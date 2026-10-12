@@ -60,7 +60,7 @@ describe('the Fold panes’ paper scenes', () => {
     expect([minX, minY, maxX, maxY].map((v) => v + 0)).toEqual([0, -FOLD_USER_PER_UNIT, FOLD_USER_PER_UNIT, 0]);
   });
 
-  it('draws a crease mark in the paper picture of a crease pattern by its letter, or as the instruction', () => {
+  it('draws a crease mark in the paper picture of a crease pattern in the aux pen, as a precrease, or as the instruction', () => {
     const scene = {
       ...bookScene(),
       crease_marks: [{ from: { x: 0.75, y: 0.45 }, to: { x: 0.75, y: 0.55 }, letter: 'valley' as const, made_at: 2, pieces: [] }],
@@ -70,8 +70,11 @@ describe('the Fold panes’ paper scenes', () => {
     // The bend is step 1's, the mark step 2's.
     expect(roles(2).filter((role) => role === 'diagram-valley')).toHaveLength(1);
     expect(roles(2)).toContain('valley');
-    expect(roles(3).filter((role) => role === 'valley')).toHaveLength(2);
-    expect(roles(3)).not.toContain('aux');
+    expect(roles(2)).not.toContain('aux');
+    // Context at a later step: the bend by its letter, the mark a flat crease, under the folds.
+    expect(roles(3).filter((role) => role === 'valley')).toHaveLength(1);
+    expect(roles(3).filter((role) => role === 'aux')).toHaveLength(1);
+    expect(roles(3).indexOf('aux')).toBeLessThan(roles(3).indexOf('valley'));
   });
 
   it('paints the folded form whole faces in painter’s order, a fold line over it in its pen', () => {

@@ -167,8 +167,11 @@ describe.skipIf(!available)('the classic pinch, through the session and the tool
     expect(marks.map((mark) => mark.letter).sort()).toEqual(['mountain', 'valley']);
     // Along the diagonal x + y = 1, square to the crease they were pinched across.
     for (const mark of marks) expect(mark.from.x + mark.from.y).toBeCloseTo(1, 9);
-    // The crease-pattern pane draws both, each a short crease of its letter.
+    // The crease-pattern pane draws both as Edit's auxiliary lines, as Send to Edit lands them.
     const lines = creasePatternPaneLines(scene.value, { display: FOLD_PANE_DISPLAY_DEFAULT, step: 4, instruction: null });
-    expect(lines.creases.filter((line) => line.color === 'Red1' || line.color === 'Blue2')).toHaveLength(2);
+    for (const mark of marks) {
+      const drawn = lines.creases.filter((line) => line.a.x === mark.from.x && line.a.y === mark.from.y && line.b.x === mark.to.x && line.b.y === mark.to.y);
+      expect(drawn.map((line) => line.color)).toEqual(['Cyan3']);
+    }
   });
 });

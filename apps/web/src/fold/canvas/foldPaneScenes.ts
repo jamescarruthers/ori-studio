@@ -325,20 +325,18 @@ export function foldPaneCrease(
  * What a crease mark — a pinch's, a segment's — is in a state's crease
  * pattern, by the same rule as a crease: the instruction when the step on
  * show made it (or the previewed fold would), by its letter; otherwise a
- * short crease of its letter, front-relative as it is stored. It is drawn by
- * its letter rather than as a flat crease's dots, which a mark a sixteenth
- * of the sheet long is too short to show: a mark is never folded, so the
- * letter is all its line has to say. Left out with Precreases off, as a
- * precrease of part of its line.
+ * flat crease remembering its letter, as the precrease of part of its line
+ * it is — never folded, and sent to Edit as an auxiliary line. Left out with
+ * Precreases off, as every flat crease is.
  */
 export function foldPaneMark(
   mark: FoldSceneCreaseMark,
   { display, step, instruction }: FoldPaneCreaseOptions
-): Extract<FoldPaneCrease, { as: 'instruction' | 'fold' }> | null {
+): Extract<FoldPaneCrease, { as: 'instruction' | 'flat' }> | null {
   // A previewed fold's marks are the landed state's newest, whatever the switch.
   const instructs = instruction ? mark.made_at === step : display.stepCreases && mark.made_at === step && step > 0;
   if (instructs) return { as: 'instruction', letter: mark.letter };
-  return display.precreases ? { as: 'fold', letter: mark.letter } : null;
+  return display.precreases ? { as: 'flat', letter: mark.letter } : null;
 }
 
 /** What a crease is drawn as in the paper picture of a crease pattern, or null when it is left out. */
@@ -407,10 +405,13 @@ export function creasePatternPaperScene(scene: FoldScene, options: CreasePattern
     else if (role === 'aux') aux.push({ ...item, onBoundary: onSheetEnds(crease, options.sheet) });
     else folds.push(item);
   }
-  // The crease marks, as short creases of their letters or the instruction they are.
+  // The crease marks, in the aux pen as the flat creases they are, or the instruction they are.
   for (const mark of scene.crease_marks ?? []) {
     const role = paneCreaseRole(foldPaneMark(mark, { display, step, instruction }));
-    if (role) folds.push(lineItem(role, mark.from, mark.to, 0, ORIGIN, toScenePx));
+    if (!role) continue;
+    const item = lineItem(role, mark.from, mark.to, 0, ORIGIN, toScenePx);
+    if (role === 'aux') aux.push(item);
+    else folds.push(item);
   }
   // Context under the folds, the instruction's dashes over both.
   items.push(...aux, ...folds.filter((item) => !isDiagram(item)), ...folds.filter(isDiagram), ...border);

@@ -90,7 +90,8 @@ export function FoldImportPicker({
                 onClick={() => onRequest({ kind: 'sample', sample: sample.id })}
               >
                 <span className={styles.picture}>
-                  {summary.thumbnail && <PatternThumbnail thumbnail={summary.thumbnail} />}
+                  {/* A flat crease in Edit's aux-line ink, as the crease-pattern pane and the Steps grid draw one. */}
+                  {summary.thumbnail && <PatternThumbnail thumbnail={summary.thumbnail} auxInk="aux" />}
                 </span>
                 <span className={styles.name}>{foldSampleName(t, sample.id)}</span>
                 <span className={styles.note}>

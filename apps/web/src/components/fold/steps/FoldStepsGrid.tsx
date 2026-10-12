@@ -177,7 +177,8 @@ function FoldStepCard({
       onOpen={open}
     >
       {picture ? (
-        <PatternThumbnail thumbnail={picture} className={styles.picture} />
+        // Precreases as the crease-pattern pane draws them: in Edit's aux-line ink.
+        <PatternThumbnail thumbnail={picture} className={styles.picture} auxInk="aux" />
       ) : (
         <StepCardPlaceholder>
           {entry.status === 'locked' && <Lock size={18} aria-hidden="true" />}

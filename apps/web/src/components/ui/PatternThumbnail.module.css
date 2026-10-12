@@ -25,3 +25,8 @@
 .stroke[data-role='valley'] {
   stroke: var(--sheet-thumb-valley);
 }
+
+/* An aux line in Edit's own aux-line ink, as Edit's canvas draws one (`auxInk="aux"`). */
+.thumbnail[data-aux-ink='aux'] .stroke[data-role='aux'] {
+  stroke: var(--fold-flat);
+}

@@ -61,6 +61,11 @@
   background: var(--sheet-thumb-valley);
 }
 
+/* The flat creases, in Edit's aux-line ink, as the cards draw them. */
+.key[data-role='flat']::before {
+  background: var(--fold-flat);
+}
+
 /* The crease pattern inside the card's well, with room around it. */
 .picture {
   padding: var(--space-3);
