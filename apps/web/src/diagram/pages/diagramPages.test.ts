@@ -293,7 +293,6 @@ describe('layoutDiagram', () => {
       }
     }
     expect(edits).toBeGreaterThan(20);
-    // Most edits redraw no other picture.
     // Most edits redraw no other picture (6 of the 30 here).
     expect(rescaled).toBeLessThan(edits / 2);
   });
