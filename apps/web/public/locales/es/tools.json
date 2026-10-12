@@ -831,6 +831,7 @@
     },
     "vertex": {
       "direction": "Sentido",
+      "directionCannot": "En este sentido no se puede plegar plano aquí.",
       "emergent": "Cuarto pliegue",
       "fix": {
         "creaseKites": "Marcar los pliegues de la cometa al plegar",
@@ -901,12 +902,16 @@
         "snapPoints": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues y puntos medios: un clic en cualquier otro sitio no elige nada.",
         "snapPointsTouch": "Los puntos se ajustan a esquinas, marcas, cruces de pliegues y puntos medios: un toque en cualquier otro sitio no elige nada.",
         "squash": "Una solapa se aplasta cuando sus dos capas están libres, sujetas solo por su bisagra, y descubiertas, sin nada encima del lado hacia el que se abre.",
+        "swivelFold": "Señala un borde plegado para que los pliegues se junten en él, el pliegue pivotante clásico: se ilumina bajo el puntero.",
+        "swivelFoldTouch": "Toca un borde plegado para que los pliegues se junten en él, el pliegue pivotante clásico: se ilumina al elegirlo.",
+        "swivelOnFold": "Los pliegues se juntan en el punto, donde la línea a medio camino entre el borde y la línea sobre la que cae cruza el borde plegado. La capa del borde se pliega por esa línea y deja el borde donde muestra la línea gruesa; la otra capa del borde plegado también se pliega por un segundo pliegue. El papel iluminado se mueve, y el más brillante pivota.",
         "swivelVertex": "Los pliegues se juntan en el punto: el pivote, llevado a la línea que queda a medio camino entre el borde y la línea sobre la que cae. La línea gruesa es donde cae el borde; el papel iluminado se mueve, y el más brillante gira en su sitio."
       },
       "refusal": {
         "blocked": {
           "steppers": "Un pliegue chocaría con papel que no se pliega con él, o el papel sujetaría juntas dos partes del pliegue. Cambia Capas para plegar más capas, o Cuarto pliegue para pasar a otro.",
           "swivelEdge": "Un pliegue chocaría con papel que no se pliega con él, o el papel sujetaría juntas dos partes del pliegue. Elige otro pivote, u otra línea sobre la que caiga el borde.",
+          "swivelOnFold": "Un pliegue chocaría con un doblez antes de llegar al borde del papel, o el papel sujetaría juntas dos partes del pliegue pivotante. Elige otro borde plegado, u otra línea sobre la que caiga el borde.",
           "title": "Hay papel en medio"
         },
         "center": {
@@ -992,8 +997,21 @@
           "title": "El borde termina antes de girar"
         },
         "swivelEdgeStays": {
+          "onFold": "Ninguna de las dos capas que une el borde plegado sostiene el borde que se mueve, así que se quedaría quieto. Elige un borde plegado de la capa de ese borde, u otro borde.",
           "text": "El papel a lo largo del borde se quedaría quieto, o se plegaría por encima de la bisagra, en vez de girar sobre la línea. Elige un pivote más cerca del borde, u otro borde.",
           "title": "El borde se quedaría quieto"
+        },
+        "swivelFoldWide": {
+          "text": "Del lado del borde que se mueve, el pliegue pivotante se encuentra con el borde plegado en ángulo recto o mayor, y no deja sitio para que la otra capa se pliegue. Elige una línea sobre la que caiga el borde que lo gire más, u otro borde plegado.",
+          "title": "El pliegue pivotante llega al borde demasiado empinado"
+        },
+        "swivelMissesFold": {
+          "text": "El pliegue pivotante sigue la línea a medio camino entre el borde y la línea sobre la que cae, y esa línea no cruza este borde plegado entre sus extremos. Pulsa Esc y elige el borde plegado que cruza, u otra línea.",
+          "title": "Los pliegues no pueden juntarse en ese borde"
+        },
+        "swivelNotAFold": {
+          "text": "Los pliegues solo pueden juntarse en un borde plegado donde el papel está doblado, y el punto elegido no está en ningún doblez. Pulsa Esc y vuelve a hacer clic en el borde plegado.",
+          "title": "Eso no es un borde plegado"
         },
         "swivelNotAnEdge": {
           "text": "Un pliegue pivotante mueve un borde del papel o un borde plegado, y la línea elegida no es ninguno de los dos. Pulsa Esc y vuelve a elegir el borde.",
@@ -1054,14 +1072,15 @@
         "swivelEdgeTouch": "Toca el borde que se mueve: un borde del papel o un borde plegado.",
         "swivelFinishRidge": "Elige la cresta y el sentido; luego pulsa Intro.",
         "swivelFinishRidgeTouch": "Elige la cresta y el sentido y toca {{action}}.",
+        "swivelOnFoldChoose": "Elige Valle o Monte: solo se ofrece un sentido que se pliegue plano.",
         "swivelOnto": "Haz clic en la línea sobre la que debe caer: un pliegue o un borde.",
         "swivelOntoFirst": "Haz clic en un punto de la línea sobre la que debe caer.",
         "swivelOntoFirstTouch": "Toca un punto de la línea sobre la que debe caer.",
         "swivelOntoSecond": "Haz clic en un segundo punto de esa línea.",
         "swivelOntoSecondTouch": "Toca un segundo punto de esa línea.",
         "swivelOntoTouch": "Toca la línea sobre la que debe caer: un pliegue o un borde.",
-        "swivelPivot": "Haz clic en el pivote.",
-        "swivelPivotTouch": "Toca el pivote."
+        "swivelPivotOrFold": "Haz clic en el pivote, o en un borde plegado donde se junten los pliegues.",
+        "swivelPivotOrFoldTouch": "Toca el pivote, o un borde plegado donde se junten los pliegues."
       },
       "target": "El lomo cae en",
       "targetHelp": "Haz clic en el papel plegado para que el lomo caiga fuera de la bisagra.",

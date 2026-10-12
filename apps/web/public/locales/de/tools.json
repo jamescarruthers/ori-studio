@@ -813,6 +813,7 @@
     },
     "vertex": {
       "direction": "Richtung",
+      "directionCannot": "In diese Richtung lässt es sich hier nicht flach falten.",
       "emergent": "Vierte Faltlinie",
       "fix": {
         "creaseKites": "Die Drachenlinien beim Falten mitfalten",
@@ -879,12 +880,16 @@
         "snapPoints": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien und Mittelpunkten ein: Ein Klick anderswo wählt nichts.",
         "snapPointsTouch": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien und Mittelpunkten ein: Ein Tippen anderswo wählt nichts.",
         "squash": "Eine Lasche lässt sich quetschen, wenn ihre beiden Lagen frei sind, nur an ihrem Scharnier gehalten, und unbedeckt, ohne etwas darüber auf der Seite, zu der sie sich öffnet.",
+        "swivelFold": "Zeige auf eine gefaltete Kante, damit sich die Faltlinien auf ihr treffen, die klassische Schwenkfalte: Sie leuchtet unter dem Zeiger auf.",
+        "swivelFoldTouch": "Tippe auf eine gefaltete Kante, damit sich die Faltlinien auf ihr treffen, die klassische Schwenkfalte: Sie leuchtet auf, sobald sie gewählt ist.",
+        "swivelOnFold": "Die Faltlinien treffen sich am Punkt, wo die Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet, die gefaltete Kante kreuzt. Die Lage der Kante faltet entlang dieser Linie und legt die Kante dorthin, wo die fette Linie es zeigt; die andere Lage an der gefalteten Kante faltet zusätzlich entlang einer zweiten Faltlinie. Das hervorgehobene Papier bewegt sich, das hellste schwenkt herum.",
         "swivelVertex": "Die Faltlinien treffen sich am Punkt: dem Drehpunkt, verschoben auf die Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet. Die fette Linie zeigt, wo die Kante landet; das hervorgehobene Papier bewegt sich, das hellste dreht sich an Ort und Stelle."
       },
       "refusal": {
         "blocked": {
           "steppers": "Eine Faltlinie würde auf Papier treffen, das nicht mitfaltet, oder Papier würde zwei Teile der Faltung zusammenhalten. Blättere bei Lagen, um mehr Lagen zu falten, oder bei Vierte Faltlinie zu einer anderen.",
           "swivelEdge": "Eine Faltlinie würde auf Papier treffen, das nicht mitfaltet, oder Papier würde zwei Teile der Faltung zusammenhalten. Wähle einen anderen Drehpunkt oder eine andere Linie, auf der die Kante landen soll.",
+          "swivelOnFold": "Eine Faltlinie würde auf eine Faltung treffen, bevor sie die Papierkante erreicht, oder Papier würde zwei Teile der Schwenkfalte zusammenhalten. Wähle eine andere gefaltete Kante oder eine andere Linie, auf der die Kante landen soll.",
           "title": "Papier ist im Weg"
         },
         "center": {
@@ -970,8 +975,21 @@
           "title": "Die Kante endet, bevor sie sich drehen würde"
         },
         "swivelEdgeStays": {
+          "onFold": "Keine der beiden Lagen, die die gefaltete Kante verbindet, trägt die Kante, die sich bewegt, also bliebe sie liegen. Wähle eine gefaltete Kante in der Lage dieser Kante oder eine andere Kante.",
           "text": "Das Papier entlang der Kante würde liegen bleiben oder über das Scharnier falten, statt sich auf die Linie zu drehen. Wähle einen Drehpunkt näher an der Kante oder eine andere Kante.",
           "title": "Die Kante würde liegen bleiben"
+        },
+        "swivelFoldWide": {
+          "text": "Auf der Seite der bewegten Kante trifft die Schwenkfaltlinie die gefaltete Kante in einem rechten oder stumpfen Winkel, sodass der anderen Lage kein Platz zum Falten bleibt. Wähle eine Linie für die Kante, die sie weiter dreht, oder eine andere gefaltete Kante.",
+          "title": "Die Schwenkfaltlinie trifft die Kante zu steil"
+        },
+        "swivelMissesFold": {
+          "text": "Die Schwenkfalte faltet entlang der Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet, und diese Linie kreuzt diese gefaltete Kante nicht zwischen ihren Enden. Drücke Esc und wähle die gefaltete Kante, die sie kreuzt, oder eine andere Linie.",
+          "title": "Die Faltlinien können sich auf dieser Kante nicht treffen"
+        },
+        "swivelNotAFold": {
+          "text": "Die Faltlinien können sich nur dort auf einer gefalteten Kante treffen, wo das Papier gefaltet ist, und der gewählte Punkt liegt auf keiner Faltung. Drücke Esc und klicke erneut auf die gefaltete Kante.",
+          "title": "Das ist keine gefaltete Kante"
         },
         "swivelNotAnEdge": {
           "text": "Eine Schwenkfalte bewegt eine Papierkante oder eine gefaltete Kante, und die gewählte Linie ist keins von beiden. Drücke Esc und wähle die Kante neu.",
@@ -1032,14 +1050,15 @@
         "swivelEdgeTouch": "Tippe auf die Kante, die sich bewegt: eine Papierkante oder eine gefaltete Kante.",
         "swivelFinishRidge": "Wähle den Grat und die Richtung, dann drücke die Eingabetaste.",
         "swivelFinishRidgeTouch": "Wähle den Grat und die Richtung, dann tippe auf {{action}}.",
+        "swivelOnFoldChoose": "Wähle Tal oder Berg: Angeboten wird nur eine Richtung, die flach faltet.",
         "swivelOnto": "Klicke auf die Linie, auf der sie landen soll: eine Faltlinie oder eine Kante.",
         "swivelOntoFirst": "Klicke auf einen Punkt der Linie, auf der sie landen soll.",
         "swivelOntoFirstTouch": "Tippe auf einen Punkt der Linie, auf der sie landen soll.",
         "swivelOntoSecond": "Klicke auf einen zweiten Punkt dieser Linie.",
         "swivelOntoSecondTouch": "Tippe auf einen zweiten Punkt dieser Linie.",
         "swivelOntoTouch": "Tippe auf die Linie, auf der sie landen soll: eine Faltlinie oder eine Kante.",
-        "swivelPivot": "Klicke auf den Drehpunkt.",
-        "swivelPivotTouch": "Tippe auf den Drehpunkt."
+        "swivelPivotOrFold": "Klicke auf den Drehpunkt oder auf eine gefaltete Kante, auf der sich die Faltlinien treffen sollen.",
+        "swivelPivotOrFoldTouch": "Tippe auf den Drehpunkt oder auf eine gefaltete Kante, auf der sich die Faltlinien treffen sollen."
       },
       "target": "Rücken landet auf",
       "targetHelp": "Klicke auf das gefaltete Papier, um den Rücken neben dem Scharnier landen zu lassen.",
