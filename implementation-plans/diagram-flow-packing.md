@@ -207,6 +207,74 @@ Phase 2 (the packer, 2026-10-12; not wired into the layout yet):
   (`shot-13.png`): 4·4·5 at 0.84, 5·4·4 at 0.79, 3·3·3·3 with a step in
   bend 1 at 0.83, page for page as packed here (0.8383, 0.7944, 0.8285).
 
+Phase 3 (layout, 2026-10-12):
+
+- `layoutDiagramPages(steps, setup, title, setter, arrangements)`: a flow
+  page holds the arrangement under its first step while its signature is the
+  page's and it places every step there; else it is packed and handed back in
+  `DiagramPagesLayout.packed`. Either way the page is drawn from the
+  arrangement as the store keeps it (`packedArrangement`, rounded), so a page
+  draws the same once adopted. `LayoutPage.packing` says its `k`, whether it
+  was packed by this layout, and whether every box fits its area (false only
+  for the least-scale fallback); cells carry `band`, `bend` and `overflow`.
+- Reference scales come from the page cut into cells as a grid's are, at the
+  page's own plan: Fit each's drawn scale (a picture its caption shrank,
+  shrunk) before any pin, an enlarged step's its run's. The flow's step-down,
+  the caption gap over the next row and the room kept for turns at a row's
+  end are gone, so these cells are a grid's exactly. Each picture is measured
+  at its reference scale for the packing (`LayoutStep.pictureAt`): measured
+  at a card's size, the crane's step 21 was packed 0.77 mm short and reported
+  a false overflow at once.
+- A held step (`flowArrangement.ts`): its number at the box's top left, its
+  picture at its kept scale centred under it, its caption at the measure read
+  back from the box (`captionWidthFor(box.w − 4)`, never narrower than
+  packed, so never more lines). `overflow` is `picture` where the picture by
+  itself needs more of the box, else `caption` where the caption runs out of
+  its foot, 0.5 mm allowed. A picture of the other measure is fitted to the
+  room its box leaves; an empty step's placeholder fills that room; a pin
+  draws over it as anywhere, `placed.auto` being the kept scale.
+- `layoutDiagram` packs once: the first layout packs, every later measuring
+  pass holds what it packed, and the result reports it as packed. The
+  `atMost` re-measure skips flow steps (their boxes hold their marks).
+- Adoption: `useDiagramPages` adopts `layout.packed` into the store's diagram
+  while it is still the one laid out; the adopted diagram takes the same
+  pages (`PreparedDiagramPages.adoptedAs`) and their composed images, with no
+  second layout. A save built before an adoption leaves the project clean
+  (`onlyPackedSince`). Export, Print and step files pack the same way through
+  `layoutDiagram` and write nothing back.
+- Lane: a bend with no step turns at the paper's edge, half the margin in
+  (`apexInset`), moved out only as far as `bendReach` needs for a wide band.
+  A step in a bend is a stop heading straight down or up, with no apex; each
+  side turns through a quarter circle as wide as that side is near, with a
+  straight run for the rest (`bendStepFeet`), and each side keeps its own
+  handle at the step (tangent, not C1, there): a shared handle pinched the
+  wider turn to a radius of 2.7 mm. A straight run's handles never shorten
+  its neighbours'. The last page's band ends at the last box's edge, or heads
+  on down from a step in a bend.
+- Turns: midway between two boxes in a band; on the band at a bend's apex
+  height (held on the paper, 7 mm in); on the lane midway between a step in a
+  bend and its neighbour; half the packed turn gutter outside a page's first
+  or last box. A page with turns keeps its boxes `TURN_GUTTER_MM − 2` from the
+  paper's edge in a narrower margin, as a grid does. An enlarge arrow keeps a
+  turn's gutter, so it is in the signature (`signedSteps` reads
+  `enlargeArrowArea`); an enlarged step's read-out is said against its area as
+  that prints on a packed page. The tallest aimed arrow, which only the row
+  end's room used, is gone.
+- Tests: flow assertions rewritten for bands (`flowLane.test.ts`,
+  `diagramPageLayout.test.ts`, `diagramPages.test.ts`, `zoomPages.test.ts`,
+  `referencesCardMarks.pages.test.ts`, `DiagramPagesView.test.tsx`,
+  `composeDiagramPage.test.ts`, `stepFiles.test.ts`); every flow digest of
+  both goldens re-recorded, grid digests unchanged. The time budget holds a
+  held 50-step layout to 100 ms (10–11 ms alone) and a fresh pack to 300 ms
+  (41–49 ms alone, about 130 ms under the suite).
+- Browser (:5320): the crane at 10 a page packs 3·3·4, 4·3·3, 3·3·4 as the
+  prototype does; at 13, 4·4·5 and the last page as the prototype, page 2
+  5·5·3 where the prototype has 5·4·4 (its references are 9-a-page cells and
+  it keeps no gutter for the enlarge arrow before step 24). Held layout of
+  the crane 14 ms, a fresh pack 20 ms. Hold proven in the running app: a long
+  caption on step 11, a far push arrow on step 13 and a new picture on step
+  15 moved no box of 28; 11 said `caption`, 13 `picture`, 15 was fitted.
+
 ## Affected Areas
 
 - `apps/web/src/diagram/pages/`: a new pure `flowPacking.ts` (+ tests);
@@ -235,9 +303,9 @@ Phase 2 (the packer, 2026-10-12; not wired into the layout yet):
 - [x] `flowPacking.ts`: the port, pure and deterministic, with unit tests (plans, odd bands, bend steps, nesting, steadiness cap, short last page, fixed band counts) and a time budget (a 13-step page packs within 50 ms under vitest).
 
 ### Phase 3: layout
-- [ ] Flow geometry from stored arrangements; packing for pages without a valid one; new arrangements returned to the caller; held steps drawn at their stored scale in their box; overflow reported.
-- [ ] `flowLane` bend steps; turn glyphs and enlarge arrows; hand placement on top.
-- [ ] Adopting arrangements in `useDiagramPages` (same document only, no dirty, no undo entry); export, print and step files pack missing pages the same way.
+- [x] Flow geometry from stored arrangements; packing for pages without a valid one; new arrangements returned to the caller; held steps drawn at their stored scale in their box; overflow reported.
+- [x] `flowLane` bend steps; turn glyphs and enlarge arrows; hand placement on top.
+- [x] Adopting arrangements in `useDiagramPages` (same document only, no dirty, no undo entry); export, print and step files pack missing pages the same way.
 
 ### Phase 4: UI
 - [ ] Page pane "Packing" section (flow only): Bands, Prefer three bands (Auto only), Steps in bends, Nesting, Scale steadiness; Re-pack All Pages.
