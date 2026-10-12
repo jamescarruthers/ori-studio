@@ -288,26 +288,44 @@ export function flowLane(input: {
 }
 
 /**
- * The stops as the lane turns through them. A step the packing stands in a
- * bend is centred, box and caption together, between the two bands, so its
- * picture can stand level with its neighbour's in the band before or after it:
- * a tall step beside one that dips. The lane would turn into it from that side
- * on a radius as small as the two are apart in height, and an elbow that tight
- * folds the band's inner edge.
- * So a step in a bend nearer than the band is half wide to its neighbour's
- * height is, to the lane, a step of that neighbour's band: the lane runs to
- * it along the band, and rounds the bend past it as it rounds one with no
- * step in it. Where it is that near to both, the nearer. A step placed by
- * hand, or beside one, is followed as it is.
+ * The stops as the lane turns through them. A step beside a row break that
+ * stands level with the step across it — its picture nearer in height than the
+ * band can turn in — and further toward the bend than that step is, to the
+ * lane, a step of that step's band: the lane runs on to it along the band, and
+ * rounds the bend past it at the page's edge, as it rounds one with no step in
+ * it. Turned into from the side instead, the lane would bend on a radius as
+ * small as the two are apart in height — an elbow that folds the band's inner
+ * edge — and an apex squeezed between them would send it out and back (the
+ * kink at step 17 of Zach's crane, a step dragged level with the one before
+ * its row break).
+ *
+ * Such a step is one the packing stands in a bend (centred, box and caption
+ * together, between the two bands, so a tall one can stand level with a
+ * neighbour that dips), or one placed by hand at either end of its row. Level
+ * is nearer than the band is half wide for a packed step beside a packed one,
+ * and than the band is wide where a hand placed either: the lane already
+ * reads a placed step that near as running level across the break. Where a
+ * step is that near to both sides, the nearer.
  */
 function laneStops(stops: readonly LaneStop[], halfWidth: number): readonly LaneStop[] {
   return stops.map((stop, n) => {
     const [before, after] = [stops[n - 1], stops[n + 1]];
-    if (!stop.bend || stop.placed || before?.placed || after?.placed) return stop;
-    const gap = (other: LaneStop | undefined, row: boolean) =>
-      other && !other.bend && (other.row === stop.row) === row ? Math.abs(other.y - stop.y) : Infinity;
-    const [up, down] = [gap(before, true), gap(after, false)];
-    if (Math.min(up, down) >= halfWidth) return stop;
+    if (!stop.bend && !stop.placed) return stop;
+    /**
+     * How far `other`, a step of a band across a row break from this one, is
+     * from it in height, if this one is further toward the bend: the end its
+     * earlier row (`earlier`) reads toward.
+     */
+    const level = (other: LaneStop | undefined, earlier: LaneStop): number => {
+      if (!other || other.bend) return Infinity;
+      const across = stop.bend ? other === after : other.row !== stop.row;
+      if (!across && !(stop.bend && other === before)) return Infinity;
+      const toward = (stop.x - other.x) * (earlier.rightToLeft ? -1 : 1) > 0;
+      const gap = Math.abs(other.y - stop.y);
+      return toward && gap < (stop.placed || other.placed ? 2 : 1) * halfWidth ? gap : Infinity;
+    };
+    const [up, down] = [before ? level(before, before) : Infinity, level(after, stop)];
+    if (!Number.isFinite(Math.min(up, down))) return stop;
     const band = up <= down ? before! : after!;
     return { ...stop, bend: false, row: band.row, rightToLeft: band.rightToLeft };
   });

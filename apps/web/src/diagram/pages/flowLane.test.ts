@@ -557,6 +557,43 @@ describe('a step standing in a bend', () => {
     expect([...laneOf(stops(170, 63)).bends.keys()]).toEqual([]);
   });
 
+  it('takes a step placed level with the one before its row break, and further toward the bend, into that band: no kink (Zach’s crane, page 2, step 17)', () => {
+    // A right page read upward: band 1 reads right to left, band 2 left to right. Step 17 (index 2), the first
+    // of band 2, was dragged down level with step 16, past it toward the left edge.
+    const up = flowPagePlan(1, 3, 'left', 3);
+    const list: LaneStop[] = [
+      { x: 126.35, y: 148.14, row: 1, rightToLeft: true, placed: true },
+      { x: 87.83, y: 144.04, row: 1, rightToLeft: true, placed: true },
+      { x: 33.53, y: 136.58, row: 2, rightToLeft: false, placed: true },
+      { x: 72.95, y: 54.66, row: 2, rightToLeft: false, placed: true },
+      { x: 125.49, y: 59.91, row: 2, rightToLeft: false, placed: true },
+    ];
+    const { lane, bends, into } = flowLane({ stops: list, plan: up, pageWidth: 210, apexInset: 6, halfWidth: 12.5, offPage: 10, spineIn: null, spineOut: null })!;
+    // No bend between 16 and 17: the lane runs on to 17 along band 1, level, and turns after it, out at the edge.
+    expect([...bends.keys()]).toEqual([3]);
+    expect(lane.curves[into[2]!]!.c2.y).toBeCloseTo(136.58, 9);
+    expect(curveStart(lane, into[3]!).x).toBeCloseTo(6, 9);
+    // From 16 to 18, no turn tighter than the band is half wide.
+    const tightest = Math.min(
+      ...[into[2]!, into[2]! + 1, into[3]!].flatMap((curve) =>
+        Array.from({ length: 201 }, (_, t) => radiusAt(curveStart(lane, curve), lane.curves[curve]!, t / 200))
+      )
+    );
+    expect(tightest).toBeGreaterThan(12.5);
+  });
+
+  it('keeps the bend before a step placed level with the one before its row break but back from the bend: the lane doubles back, as placed', () => {
+    const up = flowPagePlan(1, 3, 'left', 3);
+    const list: LaneStop[] = [
+      { x: 126.35, y: 148.14, row: 1, rightToLeft: true },
+      { x: 60, y: 144.04, row: 1, rightToLeft: true },
+      { x: 100, y: 140, row: 2, rightToLeft: false, placed: true },
+      { x: 150, y: 54.66, row: 2, rightToLeft: false },
+    ];
+    const { bends } = flowLane({ stops: list, plan: up, pageWidth: 210, apexInset: 6, halfWidth: 12.5, offPage: 10, spineIn: null, spineOut: null })!;
+    expect([...bends.keys()]).toEqual([2]);
+  });
+
   it('ends the diagram heading on down from a step in a bend that is its last', () => {
     const list = stops().slice(0, 3);
     const { lane } = flowLane({ stops: list, plan: flowPagePlan(0, 1, 'left', 3), pageWidth: 210, apexInset: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null, tail: 8 })!;
