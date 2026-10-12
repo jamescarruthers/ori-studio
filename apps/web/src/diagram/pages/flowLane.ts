@@ -24,7 +24,9 @@
  * its row (a packed page's band: `flowPacking.ts`), and turns between rows in
  * a half ellipse out at the page's edge, through an apex heading straight
  * down or up — or, where a step stands in the bend, through that step's
- * picture heading so, with no apex beside it. It is a cubic Hermite spline
+ * picture heading so, with no apex beside it. A step in a bend standing level
+ * with its neighbour in a band is, to the lane, a step of that band
+ * ({@link laneStops}). It is a cubic Hermite spline
  * through those knots: each knot has one handle, shared by the curves either
  * side, so the lane is tangent-continuous (C1) and has no corner — but for a
  * step in a bend, through which it keeps its way and each side's turn takes
@@ -137,7 +139,10 @@ export interface LaneStop extends LanePoint {
   /** The stop's row in reading order: for a step in a bend, the row before the bend. */
   row: number;
   rightToLeft: boolean;
-  /** Its step stands in the bend after its row: the lane turns through it, heading straight down or up, and needs no apex there. */
+  /**
+   * Its step stands in the bend after its row: the lane turns through it, heading straight down or up, and needs no
+   * apex there — unless it stands level with a step in a band ({@link laneStops}).
+   */
   bend?: boolean;
   /** Its step is placed by hand: the lane follows it there, and says where that turns it back or crosses it. */
   placed?: boolean;
@@ -183,7 +188,8 @@ export function flowLane(input: {
   spineOut: number | null;
   tail?: number;
 }): { lane: Lane; bends: Map<number, number>; into: number[]; warnings: number[] } | null {
-  const { stops, plan, pageWidth: W, apexInset, halfWidth, offPage } = input;
+  const { plan, pageWidth: W, apexInset, halfWidth, offPage } = input;
+  const stops = laneStops(input.stops, halfWidth);
   const first = stops[0];
   const last = stops.at(-1);
   if (!first || !last) return null;
@@ -279,6 +285,32 @@ export function flowLane(input: {
   const lane = { from: { x: knots[0]!.x, y: knots[0]!.y }, curves };
   if (stops.some((stop) => stop.placed) && laneCrosses(lane)) stops.forEach((stop, i) => { if (stop.placed) warnings.add(i); });
   return { lane, bends: bendAt, into, warnings: [...warnings] };
+}
+
+/**
+ * The stops as the lane turns through them. A step the packing stands in a
+ * bend is centred, box and caption together, between the two bands, so its
+ * picture can stand level with its neighbour's in the band before or after it:
+ * a tall step beside one that dips. The lane would turn into it from that side
+ * on a radius as small as the two are apart in height, and an elbow that tight
+ * folds the band's inner edge.
+ * So a step in a bend nearer than the band is half wide to its neighbour's
+ * height is, to the lane, a step of that neighbour's band: the lane runs to
+ * it along the band, and rounds the bend past it as it rounds one with no
+ * step in it. Where it is that near to both, the nearer. A step placed by
+ * hand, or beside one, is followed as it is.
+ */
+function laneStops(stops: readonly LaneStop[], halfWidth: number): readonly LaneStop[] {
+  return stops.map((stop, n) => {
+    const [before, after] = [stops[n - 1], stops[n + 1]];
+    if (!stop.bend || stop.placed || before?.placed || after?.placed) return stop;
+    const gap = (other: LaneStop | undefined, row: boolean) =>
+      other && !other.bend && (other.row === stop.row) === row ? Math.abs(other.y - stop.y) : Infinity;
+    const [up, down] = [gap(before, true), gap(after, false)];
+    if (Math.min(up, down) >= halfWidth) return stop;
+    const band = up <= down ? before! : after!;
+    return { ...stop, bend: false, row: band.row, rightToLeft: band.rightToLeft };
+  });
 }
 
 /**

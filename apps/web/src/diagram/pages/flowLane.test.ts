@@ -533,6 +533,30 @@ describe('a step standing in a bend', () => {
     }
   });
 
+  it('is a step of the band it stands level with, the lane rounding the bend past it: no elbow (A5, seven a page, page 2)', () => {
+    /** The tightest the lane turns from the band's last step on to the next band's first. */
+    const tightest = (lane: Lane, from: number, to: number) =>
+      Math.min(
+        ...Array.from({ length: to - from }, (_, n) => from + n).flatMap((curve) =>
+          Array.from({ length: 201 }, (_, t) => radiusAt(curveStart(lane, curve), lane.curves[curve]!, t / 200))
+        )
+      );
+    // Level with the band before it, nearer than the band is half wide (10 mm): the lane runs on to it along the
+    // band, and turns round an apex past it at the page's edge (210 − 6).
+    const before = laneOf(stops(170, 55));
+    expect([...before.bends.keys()]).toEqual([3]);
+    expect(before.lane.curves[before.into[2]!]!.c2.y).toBeCloseTo(55, 9);
+    expect(curveStart(before.lane, before.into[3]!).x).toBeCloseTo(204, 9);
+    expect(tightest(before.lane, before.into[1]! + 1, before.into[3]! + 1)).toBeGreaterThan(10);
+    // Level with the band after it: the apex is before it, and the lane runs on from it along the next band.
+    const after = laneOf(stops(170, 125));
+    expect([...after.bends.keys()]).toEqual([2]);
+    expect(after.lane.curves[after.into[2]! + 1]!.c1.y).toBeCloseTo(125, 9);
+    expect(tightest(after.lane, after.into[1]! + 1, after.into[3]! + 1)).toBeGreaterThan(10);
+    // Half the band's width or more from either: turned through, as before.
+    expect([...laneOf(stops(170, 63)).bends.keys()]).toEqual([]);
+  });
+
   it('ends the diagram heading on down from a step in a bend that is its last', () => {
     const list = stops().slice(0, 3);
     const { lane } = flowLane({ stops: list, plan: flowPagePlan(0, 1, 'left', 3), pageWidth: 210, apexInset: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null, tail: 8 })!;
