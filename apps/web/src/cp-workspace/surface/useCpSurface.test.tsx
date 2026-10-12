@@ -252,6 +252,103 @@ describe('useCpSurface camera', () => {
   });
 });
 
+/**
+ * The canvas's box, as layout gives it, and the observer that reports it:
+ * jsdom has neither, so a test lays the canvas out and resizes it by hand.
+ */
+function layOut(initial: { width: number; height: number }) {
+  const box = { ...initial };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockImplementation(
+    () =>
+      ({
+        left: 0,
+        top: 0,
+        x: 0,
+        y: 0,
+        width: box.width,
+        height: box.height,
+        right: box.width,
+        bottom: box.height,
+        toJSON: () => ({}),
+      }) as DOMRect
+  );
+  const observers: (() => void)[] = [];
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(callback: () => void) {
+        observers.push(callback);
+      }
+      observe() {}
+      disconnect() {}
+    }
+  );
+  return {
+    /** The canvas gets a new box, and the observer says so. */
+    resize(width: number, height: number) {
+      box.width = width;
+      box.height = height;
+      act(() => observers.forEach((notify) => notify()));
+    },
+  };
+}
+
+describe('useCpSurface opening fit', () => {
+  beforeEach(() => stubWebgl());
+
+  // The fit of the whole content to a 400 × 400 canvas, in percent.
+  const FIT_400 = Math.round((400 / 200) * 0.7 * 100);
+
+  it('fits to the box the canvas has at mount', () => {
+    layOut({ width: 400, height: 400 });
+    const onZoomPercentChange = vi.fn<(percent: number) => void>();
+    mount({ onZoomPercentChange });
+    expect(onZoomPercentChange).toHaveBeenLastCalledWith(FIT_400);
+  });
+
+  it('takes no fit while the canvas has no box, and fits once it has one', () => {
+    // A dock not laid out yet, or a page in a hidden tab: the canvas is in
+    // the document with nothing to draw in, and its content already known.
+    const layout = layOut({ width: 400, height: 0 });
+    const onZoomPercentChange = vi.fn<(percent: number) => void>();
+    mount({ onZoomPercentChange });
+    expect(surface().cssPerUserUnit()).toBeNull();
+    expect(onZoomPercentChange).not.toHaveBeenCalled();
+
+    layout.resize(400, 400);
+    expect(onZoomPercentChange).toHaveBeenLastCalledWith(FIT_400);
+    expect(surface().cssPerUserUnit()).toBeCloseTo((400 / 200) * 0.7);
+  });
+
+  it('fits content that arrives before the box once the box does', () => {
+    const layout = layOut({ width: 0, height: 0 });
+    const onZoomPercentChange = vi.fn<(percent: number) => void>();
+    mount({ onZoomPercentChange, contentBounds: null, framingKey: 'none' });
+    // The sheet comes in while the dock is still unsized.
+    mount({ onZoomPercentChange, framingKey: 'doc-1' });
+    expect(onZoomPercentChange).not.toHaveBeenCalled();
+
+    layout.resize(400, 400);
+    expect(onZoomPercentChange).toHaveBeenLastCalledWith(FIT_400);
+  });
+
+  it('keeps the camera it has while the box is gone, and takes a refit asked for then once the box is back', () => {
+    const layout = layOut({ width: 400, height: 400 });
+    const onZoomPercentChange = vi.fn<(percent: number) => void>();
+    mount({ onZoomPercentChange });
+    act(() => surface().controls.zoomIn());
+    const zoomed = surface().cssPerUserUnit();
+
+    // The pane is hidden, and a new document comes in meanwhile.
+    layout.resize(400, 0);
+    mount({ onZoomPercentChange, framingKey: 'doc-2' });
+    expect(surface().cssPerUserUnit()).toBe(zoomed);
+
+    layout.resize(400, 400);
+    expect(onZoomPercentChange).toHaveBeenLastCalledWith(FIT_400);
+  });
+});
+
 describe('useCpSurface press', () => {
   beforeEach(() => stubWebgl());
 
