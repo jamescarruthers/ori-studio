@@ -68,7 +68,6 @@ export type {
   FoldStepAddedOpKind,
   FoldStepExtent,
   FoldStepLayerScope,
-  FoldStepNoteAction,
   FoldStepVia,
   LandingCta,
   LandingFeatureId,
@@ -155,13 +154,7 @@ export {
 } from './trackDiagram';
 export { trackDiagramEnlargementChanged, trackDiagramStepEnlarged } from './trackDiagramZoom';
 export { trackDesktopDownload } from './trackDesktopDownload';
-export {
-  trackFoldChoiceOffered,
-  trackFoldRefused,
-  trackFoldSpreadChanged,
-  trackFoldStepAdded,
-  trackFoldStepNoteEdited,
-} from './trackFold';
+export { trackFoldChoiceOffered, trackFoldRefused, trackFoldSpreadChanged, trackFoldStepAdded } from './trackFold';
 export { trackCreasePatternExported } from './trackCreasePatternExport';
 export {
   trackPaperExportDismissed,

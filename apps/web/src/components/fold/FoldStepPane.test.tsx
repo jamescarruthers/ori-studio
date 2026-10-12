@@ -40,32 +40,6 @@ function rows(): Record<string, string> {
   );
 }
 
-/** An element's accessible name, as assistive technology takes it: `aria-labelledby`, then `aria-label`, then its labels. */
-function accessibleName(element: Element): string {
-  const ids = element.getAttribute('aria-labelledby');
-  if (ids) return ids.split(/\s+/).map((id) => document.getElementById(id)?.textContent?.trim() ?? '').join(' ');
-  const label = element.getAttribute('aria-label');
-  if (label) return label;
-  return [...document.querySelectorAll('label')]
-    .filter((label) => element.id !== '' && label.htmlFor === element.id)
-    .map((label) => label.textContent?.trim())
-    .join(' ');
-}
-
-const IMPLICIT_ROLES = { textbox: 'textarea, input:not([type]), input[type="text"]' } as const;
-
-/** The elements of `role` named `name`. */
-const byRole = (role: keyof typeof IMPLICIT_ROLES, name: string) =>
-  [...host.querySelectorAll(`[role="${role}"], ${IMPLICIT_ROLES[role]}`)].filter((element) => accessibleName(element) === name);
-
-/** The pane's text nodes that say exactly `text`: what a screen reader reads out, one by one. */
-function textNodes(text: string): Node[] {
-  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
-  const found: Node[] = [];
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) if (node.textContent?.trim() === text) found.push(node);
-  return found;
-}
-
 const heading = () => host.querySelector('h3')?.textContent;
 const notices = () => [...host.querySelectorAll('[role="status"], [role="alert"]')].map((n) => n.textContent);
 const section = (title: string) =>
@@ -229,6 +203,9 @@ describe('FoldStepPane', () => {
       },
     });
     const spread = section('Spread');
+    // Right after the step's rows: its first section, nothing written to read between.
+    expect(host.querySelector('[role="group"]')).toBe(spread);
+    expect(host.querySelector('textarea')).toBeNull();
     expect(spread?.textContent).toContain('As an earlier step sets it.');
     expect(spread?.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('true');
     expect(spread?.querySelector('input[type="range"]')?.getAttribute('aria-label')).toBe('Spread amount');
@@ -239,44 +216,6 @@ describe('FoldStepPane', () => {
     // The flat sheet has none to offer.
     render({ step: null, startSide: 'front', spread: null });
     expect(section('Spread')).toBeUndefined();
-  });
-
-  it('writes the step’s note in a field of its own, read where it cannot be written', () => {
-    vi.useFakeTimers();
-    try {
-      const set = vi.fn();
-      render({ step: VALLEY_STEP, startSide: 'front', note: { stepId: 's2', text: 'Corner to corner.', editable: true, set } });
-      const note = section('Note');
-      const field = note?.querySelector('textarea');
-      expect(field?.value).toBe('Corner to corner.');
-      // Named once, by the section's title: no label of its own saying "Note" again.
-      expect(byRole('textbox', 'Note')).toEqual([field]);
-      expect(textNodes('Note')).toHaveLength(1);
-      expect(note?.querySelector('label')).toBeNull();
-      // Typing commits as the field does, each commit carrying its sitting.
-      act(() => {
-        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(field, 'Corner to corner, then unfold.');
-        field?.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-      act(() => vi.advanceTimersByTime(600));
-      expect(set).toHaveBeenCalledWith('Corner to corner, then unfold.', expect.any(Number));
-      // After the rows, the first section: the step's own words, before its crease counts.
-      const sections = [...host.querySelectorAll('[role="group"]')].map((group) => group.getAttribute('aria-label'));
-      expect(sections).toEqual(['Note', 'Creases']);
-
-      // A newer build's step, or sequence: the note is read, never a field.
-      render({ step: VALLEY_STEP, startSide: 'front', note: { stepId: 's2', text: 'Kept as it came.', editable: false, set } });
-      expect(section('Note')?.querySelector('textarea')).toBeNull();
-      expect(section('Note')?.textContent).toBe('Kept as it came.');
-      // With none to read, nothing is shown.
-      render({ step: VALLEY_STEP, startSide: 'front', note: { stepId: 's2', text: '', editable: false, set } });
-      expect(section('Note')).toBeUndefined();
-      // Nor for the sheet.
-      render({ step: null, startSide: 'front', note: null });
-      expect(section('Note')).toBeUndefined();
-    } finally {
-      vi.useRealTimers();
-    }
   });
 
   it('gives each kind of change its own line', () => {
