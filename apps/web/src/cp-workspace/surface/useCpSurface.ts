@@ -300,6 +300,12 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
     setRendererStatus(null);
     rendererRef.current = renderer;
 
+    // Whether the canvas has a box to draw in, as the last size applied
+    // measured it. One laid out at nothing (a dock not sized yet, a page in a
+    // hidden tab) still has a 1 × 1 drawing buffer: a fit to that is a dot at
+    // 0%, and nothing would fit it again. The fit waits for the box.
+    let boxed = false;
+
     const ensureCamera = (viewport: Viewport): UserCamera | null => {
       if (preservedCameraRef.current) {
         cameraRef.current = preservedCameraRef.current;
@@ -309,7 +315,7 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
       }
       if (cameraRef.current && !fitRequestedRef.current) return cameraRef.current;
       const { contentBounds: bounds, inset } = liveRef.current;
-      if (!bounds) return cameraRef.current;
+      if (!bounds || !boxed) return cameraRef.current;
       fitRequestedRef.current = false;
       const fitted = inset
         ? fitUserCameraWithin(bounds, viewport, deviceInset(inset, viewport))
@@ -377,6 +383,7 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
 
     const applySize = () => {
       const rect = canvas.getBoundingClientRect();
+      boxed = rect.width > 0 && rect.height > 0;
       const ratio = dpr();
       const width = Math.max(1, Math.round(rect.width * ratio));
       const height = Math.max(1, Math.round(rect.height * ratio));
