@@ -858,6 +858,7 @@
         "petalCreasesKite": "Die Faltung faltet beim Anheben der Lasche eine Drachenlinie durch die beiden obersten Lagen. Das Scharnier und die andere Drachenlinie sind schon da.",
         "petalCreasesKites": "Die Faltung faltet beim Anheben der Lasche beide Drachenlinien durch die beiden obersten Lagen. Das Scharnier ist schon da.",
         "petalHingeCrease": "Nur Vorfaltungen können das Scharnier sein: Eine leuchtet unter dem Zeiger auf.",
+        "petalHingeCreaseTouch": "Nur Vorfaltungen können das Scharnier sein: Tippe auf eine, die über die Lasche läuft.",
         "petalRefolds": "Jede Faltlinie, die sie faltet, ist schon da: Sie faltet das Scharnier und die Drachenlinien nach.",
         "petalRegion": "Papier unter dem Scharnier leuchtet auf, wo eine Blütenblattfalte es anheben kann: Ein Klick anderswo sagt, warum nicht.",
         "petalRegionTouch": "Die Lasche unter dem Scharnier leuchtet auf, sobald du darauf tippst.",

@@ -880,6 +880,7 @@
         "petalCreasesKite": "Enquanto a aba sobe, a dobra vinca um vinco da pipa nas duas camadas de cima. A dobradiça e o outro vinco da pipa já existem.",
         "petalCreasesKites": "Enquanto a aba sobe, a dobra vinca os dois vincos da pipa nas duas camadas de cima. A dobradiça já existe.",
         "petalHingeCrease": "Só um pré-vinco pode ser a dobradiça: ele se acende sob o ponteiro.",
+        "petalHingeCreaseTouch": "Só um pré-vinco pode ser a dobradiça: toque em um que atravesse a aba.",
         "petalRefolds": "Todo vinco que ela dobra já existe: ela redobra a dobradiça e os vincos da pipa.",
         "petalRegion": "O papel abaixo da dobradiça se acende onde uma dobra pétala pode levantá-lo: um clique em outro lugar diz por que não.",
         "petalRegionTouch": "A aba abaixo da dobradiça se acende quando você toca nela.",

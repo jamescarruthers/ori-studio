@@ -880,6 +880,7 @@
         "petalCreasesKite": "Mientras la solapa se levanta, el pliegue marca un pliegue de la cometa en las dos capas superiores. La bisagra y el otro pliegue de la cometa ya están.",
         "petalCreasesKites": "Mientras la solapa se levanta, el pliegue marca los dos pliegues de la cometa en las dos capas superiores. La bisagra ya está.",
         "petalHingeCrease": "Solo un premarcado puede ser la bisagra: se ilumina bajo el puntero.",
+        "petalHingeCreaseTouch": "Solo un premarcado puede ser la bisagra: toca uno que cruce la solapa.",
         "petalRefolds": "Todos los pliegues que hace ya existen: vuelve a plegar la bisagra y los pliegues de la cometa.",
         "petalRegion": "El papel bajo la bisagra se ilumina donde un pliegue pétalo puede levantarlo: un clic en otro sitio dice por qué no.",
         "petalRegionTouch": "La solapa bajo la bisagra se ilumina cuando la tocas.",

@@ -858,6 +858,7 @@
         "petalCreasesKite": "The fold creases one kite crease through the top two layers as the flap lifts. The hinge and the other kite crease are there already.",
         "petalCreasesKites": "The fold creases both kite creases through the top two layers as the flap lifts. The hinge is there already.",
         "petalHingeCrease": "Only precreases can be the hinge: one lights up under the pointer.",
+        "petalHingeCreaseTouch": "Only precreases can be the hinge: tap one across the flap.",
         "petalRefolds": "Every crease it folds is there already: it refolds the hinge and the kite creases.",
         "petalRegion": "Paper below the hinge lights up where a petal fold can lift it: a click elsewhere says why not.",
         "petalRegionTouch": "The flap below the hinge lights up once you tap it.",

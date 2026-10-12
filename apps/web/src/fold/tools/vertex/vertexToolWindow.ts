@@ -266,7 +266,12 @@ function locateNotes(t: TFunction, view: FoldToolWindowView, vertex: FoldVertexW
     ];
   }
   if (tool === 'petal' && vertex.lineBy !== 'points') {
-    return [t('tools:fold.vertex.note.petalHingeCrease', 'Only precreases can be the hinge: one lights up under the pointer.'), ...clear];
+    return [
+      host.coarse
+        ? t('tools:fold.vertex.note.petalHingeCreaseTouch', 'Only precreases can be the hinge: tap one across the flap.')
+        : t('tools:fold.vertex.note.petalHingeCrease', 'Only precreases can be the hinge: one lights up under the pointer.'),
+      ...clear,
+    ];
   }
   // A rabbit ear's, a swivel's and a petal fold's ends are points: a
   // landmark, or with the key any point, never a place on an edge between

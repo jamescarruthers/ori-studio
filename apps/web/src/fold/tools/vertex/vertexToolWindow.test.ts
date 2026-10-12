@@ -170,6 +170,9 @@ describe('a vertex fold’s window while its clicks are made', () => {
       'Choose Valley or Mountain, then press Enter.',
     ]);
     expect(crease?.instructions.notes[0]).toBe('Only precreases can be the hinge: one lights up under the pointer.');
+    // A finger has no pointer to light one up under.
+    const tapped = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'crease' })), calls, finger);
+    expect(tapped?.instructions.notes).toEqual(['Only precreases can be the hinge: tap one across the flap.']);
     expect(crease?.vertex?.lineBy).toMatchObject({
       label: 'Hinge',
       value: 'crease',

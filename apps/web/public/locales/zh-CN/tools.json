@@ -836,6 +836,7 @@
         "petalCreasesKite": "翼片抬起时，会在最上面两层压出一条风筝形折痕。铰链和另一条风筝形折痕已经存在。",
         "petalCreasesKites": "翼片抬起时，会在最上面两层压出两条风筝形折痕。铰链已经存在。",
         "petalHingeCrease": "只有预折痕可以作为铰链：指针下的预折痕会高亮。",
+        "petalHingeCreaseTouch": "只有预折痕可以作为铰链：轻点一条横跨翼片的预折痕。",
         "petalRefolds": "要折的折痕都已存在：它会重新折起铰链和风筝形折痕。",
         "petalRegion": "铰链下方能被花瓣折抬起的纸会高亮：单击其他位置会说明原因。",
         "petalRegionTouch": "轻点铰链下方的翼片后，它会高亮。",

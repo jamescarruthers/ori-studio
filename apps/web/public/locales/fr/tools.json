@@ -880,6 +880,7 @@
         "petalCreasesKite": "Pendant que le rabat se soulève, le pliage marque un pli du cerf-volant dans les deux couches du dessus. La charnière et l’autre pli du cerf-volant sont déjà là.",
         "petalCreasesKites": "Pendant que le rabat se soulève, le pliage marque les deux plis du cerf-volant dans les deux couches du dessus. La charnière est déjà là.",
         "petalHingeCrease": "Seul un pré-pli peut servir de charnière : il s’éclaire sous le pointeur.",
+        "petalHingeCreaseTouch": "Seul un pré-pli peut servir de charnière : touchez-en un qui traverse le rabat.",
         "petalRefolds": "Chaque pli qu’il fait est déjà là : il replie la charnière et les plis du cerf-volant.",
         "petalRegion": "Le papier sous la charnière s’éclaire là où un pli pétale peut le soulever : un clic ailleurs dit pourquoi pas.",
         "petalRegionTouch": "Le rabat sous la charnière s’éclaire dès que vous le touchez.",
