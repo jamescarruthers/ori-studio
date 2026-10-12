@@ -62,7 +62,9 @@ export type FoldPointProvenance =
   | 'crease-mark-end'
   | 'crease-mark-crossing'
   | 'midpoint'
-  | 'free';
+  | 'free'
+  /** A point on a folded edge between its landmarks: where a swivel's creases may meet ({@link resolveFoldEdgePoint}). */
+  | 'fold';
 
 /** A point reference: what an axiom input stores, and where it is drawn. */
 export interface FoldPointPick {
@@ -74,6 +76,12 @@ export interface FoldPointPick {
   mark: string | null;
   /** Where it is in the folded pane's scene frame; null when it is on no face (cannot be). */
   scene: Point | null;
+  /**
+   * The folded edge it lies on, strictly between that crease's ends, when a
+   * swivel's first click took it there: its creases meet on that edge
+   * ({@link resolveFoldEdgePoint}). Absent for every other point.
+   */
+  fold?: FoldSegmentPick;
 }
 
 /** A line reference: an edge, a fold or a crease, by its sheet ends. */
@@ -580,6 +588,75 @@ export function resolveFoldPick(
       return best;
     }
   }
+}
+
+/** How far inside a folded crease's ends a point on it is kept: the engine takes one strictly inside. */
+const FOLD_END_MARGIN = 1e-3;
+
+/** Whether a sheet point lies on a segment's sheet stretch, strictly inside its ends. */
+function insideSheetSegment([a, b]: readonly [SheetPoint, SheetPoint], p: SheetPoint): boolean {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const length = Math.hypot(dx, dy);
+  if (!(length > 0)) return false;
+  const off = Math.abs((p[0] - a[0]) * dy - (p[1] - a[1]) * dx) / length;
+  const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (length * length);
+  return off <= 1e-7 && t > FOLD_END_MARGIN && t < 1 - FOLD_END_MARGIN;
+}
+
+/**
+ * A swivel's first click near a folded edge (a bend): the creases may meet
+ * on it, where the line halfway between the edge that moves and its target
+ * crosses it. A point landmark in reach that lies on a folded edge, strictly
+ * between its crease's ends, says so (`fold`); with none in reach, the point
+ * of the nearest folded edge under the pointer, kept inside its crease's
+ * ends (provenance `fold`). `point` is what the click would take otherwise
+ * (`resolveFoldPick`): returned as it is when it is no point on a folded
+ * edge, and when no folded edge is in reach. Never with the free-point key
+ * held, which takes any point of the paper.
+ */
+export function resolveFoldEdgePoint(
+  index: FoldPickIndex,
+  pane: FoldPaneId,
+  at: Point,
+  radii: FoldHitRadii,
+  point: FoldPick | null
+): FoldPick | null {
+  const onFolded = pane === 'folded';
+  const targets = onFolded ? index.folded : index.creasePattern;
+  const bends = targets.segments.filter((segment) => segment.segment === 'bend');
+  if (point?.kind === 'point') {
+    const fold = bends.find((segment) => insideSheetSegment(segment.sheet, point.sheet));
+    return fold ? { ...point, fold } : point;
+  }
+  if (point) return point;
+  let best: { segment: FoldSegmentPick; distance: number } | null = null;
+  for (const portion of targets.segmentHits.segmentsNear(at.x, at.y, radii.line)) {
+    const segment = targets.segments[targets.portionOf[portion.id - 1] ?? -1];
+    if (segment?.segment !== 'bend') continue;
+    const distance = distanceToSegment(at, portion.a, portion.b);
+    if (!best || distance < best.distance) best = { segment, distance };
+  }
+  if (!best) return null;
+  const { segment } = best;
+  // Where the pane draws it: the scene, or under a spread where the spread
+  // puts its ends; on the crease-pattern pane, the sheet.
+  const [p, q] = onFolded
+    ? index.spread
+      ? index.spread.segment(segment.sheet, segment.scene)
+      : segment.scene
+    : [toPoint(segment.sheet[0]), toPoint(segment.sheet[1])];
+  const dx = q.x - p.x;
+  const dy = q.y - p.y;
+  const length2 = dx * dx + dy * dy;
+  if (!(length2 > 0)) return null;
+  const raw = ((at.x - p.x) * dx + (at.y - p.y) * dy) / length2;
+  const t = Math.min(1 - FOLD_END_MARGIN * 2, Math.max(FOLD_END_MARGIN * 2, raw));
+  const [a, b] = segment.sheet;
+  const sheet: SheetPoint = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const [s, e] = segment.scene;
+  const scene = { x: s.x + (e.x - s.x) * t, y: s.y + (e.y - s.y) * t };
+  return { kind: 'point', provenance: 'fold', sheet, mark: null, scene, fold: segment };
 }
 
 /** A sheet point on the crease-pattern pane, when it is on the sheet. */

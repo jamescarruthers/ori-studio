@@ -8,6 +8,7 @@ import {
   type FoldPrecreaseOp,
   type FoldSequenceDocument,
   type FoldSwivelEdgeOp,
+  type FoldSwivelOnFoldOp,
 } from '../document/foldSequenceDocument';
 import { readFoldSequence, writeFoldSequence } from '../document/foldSequenceFile';
 import { createFoldEngineCalls, type FoldEngineCalls } from './foldEngineCalls';
@@ -180,4 +181,89 @@ describe.skipIf(!available)('the swivel’s edge form over the bridge', () => {
     expect(replayed.done).toBe(true);
     return replayed;
   }
+});
+
+/**
+ * The swivel on a folded edge (`FoldSwivelOnFoldOp`, engine
+ * `compound::swivel_on_edge`) over the real bridge: the kite base's right
+ * edge above its kite crease onto the diagonal, the creases meeting on that
+ * kite crease. Its question names the folded edge, three creases and no
+ * ridge, and the directions that land; it lands through `step` and the
+ * tools' call alike, and a saved sequence replays to `ok`.
+ */
+describe.skipIf(!available)('the swivel on a folded edge over the bridge', () => {
+  const t = Math.tan(Math.PI / 8);
+  const kiteFold = (through: [number, number], moving: [number, number]) => ({
+    kind: 'valley' as const,
+    line: { via: 'free' as const, through: [[0, 0], through] as [[number, number], [number, number]] },
+    moving,
+    seed: { scope: 'all' as const },
+  });
+  const right = kiteFold([1, t], [1, 0]);
+  const left = kiteFold([t, 1], [0, 1]);
+  const onFold: FoldSwivelOnFoldOp = {
+    kind: 'swivel',
+    via: 'edge',
+    fold: [0.5, t / 2],
+    edge: [1, (t + 1) / 2],
+    target: { via: 'crease', at: [0.5, 0.5] },
+    direction: 'valley',
+  };
+  let engine: Engine;
+  let kite: number;
+
+  beforeAll(async () => {
+    engine = await makeEngine();
+    const sheet = landed(engine.calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
+    const precreased = landed(engine.calls.step(sheet, diagonal)).state;
+    kite = landed(engine.calls.step(landed(engine.calls.step(precreased, right)).state, left)).state;
+  });
+
+  it('answers the question with the folded edge, three creases, no ridge, and the directions that land', () => {
+    const answer = landed(engine.question.compoundAnalysis(kite, onFold));
+    if (answer.family !== 'vertex' || answer.analysis.kind !== 'swivel-by-edge') throw new Error('not a swivel');
+    const { analysis } = answer;
+    expect(analysis.fold?.faces).toHaveLength(2);
+    expect(analysis.creases.map((crease) => [crease.ray, crease.letter])).toEqual([
+      ['meet', 'valley'],
+      ['meet', 'mountain'],
+      ['hinge', 'valley'],
+    ]);
+    expect(analysis.ridges).toEqual([]);
+    // The vertex where the bisector from c crosses the kite crease: (1/√2, 1 − 1/√2).
+    expect(analysis.vertex[0]).toBeCloseTo(Math.SQRT1_2, 9);
+    expect(analysis.vertex[1]).toBeCloseTo(1 - Math.SQRT1_2, 9);
+    expect(answer.directions).toEqual([true, false]);
+    expect(analysis.regions.map((region) => region.wedge).sort()).toEqual(['beyond', 'near', 'turn']);
+  });
+
+  it('lands through `step` and the tools’ call alike, and replays saved', async () => {
+    const folded = landed(engine.calls.step(kite, onFold));
+    expect(folded.compound?.family).toBe('vertex');
+    const tried = landed(engine.vertex.vertexFold(kite, onFold));
+    if (tried.result !== 'landed') throw new Error('a choice of orders');
+    expect(tried.fingerprint).toBe(folded.fingerprint);
+    const document = sequenceOf([
+      step('a', null, diagonal),
+      step('b', 'a', right),
+      step('c', 'b', left),
+      step('d', 'c', onFold),
+    ]);
+    const saved = JSON.parse(JSON.stringify(writeFoldSequence({ document, readOnlyRaw: null }))) as unknown;
+    const opened = readFoldSequence(saved);
+    if (!opened) throw new Error('no sequence');
+    expect(opened.document.steps.map(isLockedStep)).toEqual([false, false, false, false]);
+    const calls = engine.calls;
+    const source: FoldEngineSource = {
+      generation: () => 0,
+      sheet: async (paper) => calls.sheet(paper),
+      step: async (state, op, choices) => calls.step(state, op, choices),
+      release: async (states) => calls.release(states),
+    };
+    const replayed = await createFoldReplayer(createFoldEnginePort(source, engine.version)).run({
+      loadId: 2,
+      sequence: opened.document,
+    });
+    expect(replayed?.steps.get('d')?.status).toBe('ok');
+  });
 });

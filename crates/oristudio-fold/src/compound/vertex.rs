@@ -40,7 +40,10 @@
 //!   - a **rabbit ear** or a **swivel**: the crease the far wedge turns
 //!     across last, between the paper that stays and its neighbour, and the
 //!     arrow from that neighbour across it, the far wedge on it
-//!     ([`State::rabbit_ear_action`], [`State::swivel_action`]).
+//!     ([`State::rabbit_ear_action`], [`State::swivel_action`]);
+//!   - a **swivel on a folded edge**: its swivel crease from the vertex
+//!     across the edge's layer, and the arrow from the wedge that holds the
+//!     edge to where it lays it ([`State::swivel_by_edge_action`]).
 
 use oristudio_geometry::Line;
 use serde::{Deserialize, Serialize};

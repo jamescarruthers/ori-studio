@@ -116,7 +116,9 @@ export type FoldSinkSentenceKind = 'open' | 'closed' | 'unsink';
 export type FoldVertexSentenceForm =
   | { hinge: 'crease' | 'points' }
   | { swivel: 'rays' }
-  | { swivel: 'edge'; target: 'crease' | 'free'; ridge: 'foot' | 'end' };
+  | { swivel: 'edge'; target: 'crease' | 'free'; ridge: 'foot' | 'end' }
+  /** A swivel by its edge whose creases meet on a folded edge: no ridge to choose. */
+  | { swivel: 'fold'; target: 'crease' | 'free' };
 
 /**
  * How much of its line a precrease creased, when it was not all of it: a

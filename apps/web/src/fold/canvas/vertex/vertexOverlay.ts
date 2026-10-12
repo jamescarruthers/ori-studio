@@ -25,7 +25,11 @@
  *   them as its pending creases instead (`fanGeometry`'s `fanGivenCreases`).
  * - **Swivel by its edge**: its four creases from the vertex to where each
  *   leaves the last layer it cuts, each by the letter the engine gives it as
- *   seen — the ridge the odd one out (`compound/swivel.rs`).
+ *   seen — the ridge the odd one out (`compound/swivel.rs`). On a folded
+ *   edge, its three: the swivel crease in each of the two layers (the one
+ *   underneath drawn only past the one on top) and the other layer's second
+ *   crease, the other layer's swivel crease the odd one out
+ *   (`compound/swivel_on_edge.rs`).
  *
  * **The marks** stay the tool's feedback, never a pen, since none of them is
  * a crease the fold makes:
@@ -38,10 +42,11 @@
  *   creases that land (faint); one that does not land is not drawn, as it is
  *   not offered.
  * - **Swivel by its edge**: the vertex — where the pivot clicked really sits,
- *   moved onto the line halfway between the edge and the target, drawn in
- *   its place — where the edge lands on the target (bold), and the other
- *   ridge when it lands too (faint). Its moving paper is lit over the paper
- *   ({@link swivelRegionsTint}), the turning wedge brightest.
+ *   moved onto the line halfway between the edge and the target (on a folded
+ *   edge, along it to where that line crosses it), drawn in its place —
+ *   where the edge lands on the target (bold), and the other ridge when it
+ *   lands too (faint). Its moving paper is lit over the paper
+ *   ({@link swivelRegionsTint}), the part that carries the edge brightest.
  *
  * Each ray runs from its vertex to where it leaves the paper. Pure: the
  * colours are handed in, resolved by the pane.
@@ -178,8 +183,13 @@ export function vertexCreaseLines(
       break;
     }
     case 'swivel-by-edge':
-      // Each to where it leaves the last layer it cuts, by the engine's letter as seen.
-      for (const crease of analysis.creases) add(segment(index, analysis.vertex, crease.to), crease.letter);
+      // Each from where it is seen to where it leaves the last layer it
+      // cuts, by the engine's letter as seen: on a folded edge, the swivel
+      // crease of the layer underneath shows only past the one on top.
+      for (const crease of analysis.creases) {
+        const [a, b] = segment(index, crease.from, crease.to);
+        if (Math.hypot(b.x - a.x, b.y - a.y) > 1e-9) add([a, b], crease.letter);
+      }
       break;
   }
   return creases;
@@ -260,20 +270,22 @@ const SWIVEL_TURN_TINT = 0.36;
 
 /**
  * A swivel by its edge's paper that moves (`FoldSwivelEdgeAnalysis.regions`),
- * lit over the folded pane in the theme's accent: every piece, and the wedge
- * that turns about the vertex brighter — the part that carries the edge onto
- * its target. Null when the engine lists none.
+ * lit over the folded pane in the theme's accent: every piece, and the part
+ * that carries the edge onto its target brighter — the wedge that turns
+ * about the vertex, or on a folded edge the one that swivels across the
+ * swivel crease. Null when the engine lists none.
  */
 export function swivelRegionsTint(
   index: FoldPickIndex,
-  analysis: Pick<FoldSwivelEdgeAnalysis, 'regions'>,
+  analysis: Pick<FoldSwivelEdgeAnalysis, 'regions' | 'fold'>,
   accent: Rgba
 ): FillGeometry | null {
   const triangles: number[] = [];
   const colors: number[] = [];
+  const carrier = analysis.fold ? 'near' : 'turn';
   for (const region of analysis.regions) {
     const ring = region.polygon.map((p) => index.toScene(toPoint(p)));
-    const color = withAlpha(accent, region.wedge === 'turn' ? SWIVEL_TURN_TINT : SWIVEL_MOVING_TINT);
+    const color = withAlpha(accent, region.wedge === carrier ? SWIVEL_TURN_TINT : SWIVEL_MOVING_TINT);
     for (let k = 1; k + 1 < ring.length; k += 1) {
       for (const corner of [ring[0]!, ring[k]!, ring[k + 1]!]) {
         triangles.push(corner.x, corner.y);

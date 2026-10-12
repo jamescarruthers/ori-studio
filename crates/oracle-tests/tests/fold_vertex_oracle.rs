@@ -20,6 +20,10 @@
 //!   onto the centre crease off the incenter, a two-layer flap both ways
 //!   round, and the swivel at Beloch's `swivel-rabbit` pivot; valley and
 //!   mountain, each ridge that lands.
+//! - **The swivel on a folded edge** (`cases::fold_swivel_cases`):
+//!   Abrashi's on the owner's squashed preliminary base, the kite base
+//!   narrowed at its tip on either side and on both; valley and mountain,
+//!   each that lands.
 //!
 //! Seeded Oriedita (`fold_support::oriedita`) runs in process; Flat-Folder's
 //! `verify` (`fold_support::flat_folder`) when `FLATFOLDER_ORACLE` is set.
@@ -183,6 +187,45 @@ fn named() -> Vec<Landed> {
             push("fish base by swivels".to_string(), second.state);
         }
     }
+    // The swivel on a folded edge (`cases::fold_swivel_cases`): Abrashi's on
+    // the owner's squashed preliminary base, the kite base narrowed at its
+    // tip on either side and then on both; valley and mountain, each order
+    // that lands.
+    let mut kite_right = None;
+    for case in cases::fold_swivel_cases() {
+        for direction in [Direction::Valley, Direction::Mountain] {
+            let op = SwivelByEdge {
+                direction,
+                ..case.op.clone()
+            };
+            for (k, folded) in
+                cases::every(case.state.swivel_by_edge(&op, &VertexChoices::default()))
+                    .into_iter()
+                    .enumerate()
+            {
+                if case.name == "kite narrowed at c, right" && direction == Direction::Valley {
+                    kite_right = Some(folded.state.clone());
+                }
+                push(
+                    format!("{} {direction:?} on its folded edge c{k}", case.name),
+                    folded.state,
+                );
+            }
+        }
+    }
+    let left = cases::fold_swivel_cases()
+        .into_iter()
+        .find(|c| c.name == "kite narrowed at c, left")
+        .unwrap_or_else(|| panic!("no left kite swivel"));
+    let first = kite_right.unwrap_or_else(|| panic!("the right kite swivel did not land"));
+    let second = cases::on_fold(
+        &first,
+        left.op.fold.unwrap_or_default(),
+        left.op.edge,
+        [0.5, 0.5],
+    );
+    let both = cases::landed(first.swivel_by_edge(&second, &VertexChoices::default()));
+    push("kite narrowed at c, both".to_string(), both.state);
     out
 }
 

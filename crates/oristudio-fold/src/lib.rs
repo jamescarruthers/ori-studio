@@ -132,7 +132,8 @@ pub use compound::sink::{
 };
 pub use compound::squash::{NoFlap, Squash, SquashAnalysis};
 pub use compound::swivel::{
-    Swivel, SwivelByEdge, SwivelCrease, SwivelEdgeAnalysis, SwivelRay, SwivelRegion, SwivelWedge,
+    Swivel, SwivelByEdge, SwivelCrease, SwivelEdgeAnalysis, SwivelFold, SwivelRay, SwivelRegion,
+    SwivelWedge,
 };
 pub use compound::tuck::{
     TuckAnalysis, TuckChoice, TuckChoices, TuckFold, TuckFolded, TuckOutcome, TuckReport, TuckSide,

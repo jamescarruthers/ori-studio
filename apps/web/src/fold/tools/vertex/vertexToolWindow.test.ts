@@ -124,11 +124,15 @@ describe('a vertex fold’s window while its clicks are made', () => {
     const swivel = foldToolWindow(t, view(vertex({ tool: 'swivel', lineBy: 'crease' })), calls, mouse);
     expect(swivel?.instructions.intro).toMatch(/^Swivels an edge onto a line, pivoting at a point/);
     expect(swivel?.instructions.items).toEqual([
-      'Click the pivot.',
+      'Click the pivot, or a folded edge for the creases to meet on.',
       'Click the edge that moves: a raw edge or a folded edge.',
       'Click the line it should land on: a crease or an edge.',
       'Pick the ridge and the direction, then press Enter.',
     ]);
+    // Before the pivot: a folded edge lights up, for the creases to meet on.
+    expect(swivel?.instructions.notes).toContain(
+      'Point at a folded edge for the creases to meet on it, the classic swivel: it lights up under the pointer.'
+    );
     // Said in the steps, so not again under the direction.
     expect(swivel?.vertex?.note).toBeNull();
     // The line it lands on, by a crease or edge or by two points.
@@ -148,7 +152,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
     // A finger taps, and has no key to hold.
     const touch = foldToolWindow(t, view(vertex({ tool: 'swivel' })), calls, finger);
     expect(touch?.instructions.items).toEqual([
-      'Tap the pivot.',
+      'Tap the pivot, or a folded edge for the creases to meet on.',
       'Tap the edge that moves: a raw edge or a folded edge.',
       'Tap the line it should land on: a crease or an edge.',
       'Pick the ridge and the direction, then tap Swivel fold.',
@@ -156,6 +160,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
     expect(touch?.instructions.notes).toEqual([
       'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
       'Turn on Free point to put a point anywhere.',
+      'Tap a folded edge for the creases to meet on it, the classic swivel: it lights up when picked.',
     ]);
   });
 
@@ -333,6 +338,32 @@ describe('a vertex fold’s window while it previews', () => {
     expect(none?.vertex?.emergentNote).toBe('Neither ridge lets it fold flat: the notice below says why.');
   });
 
+  it('offers a swivel on a folded edge no ridge, only the directions that land, and says where its creases meet', () => {
+    const calls = verbs();
+    const onFold = vertex({ tool: 'swivel', lineBy: 'crease', onFold: true, directions: [true, false] });
+    const model = foldToolWindow(t, view(onFold, { preview: preview() }), calls, mouse);
+    const controls = model?.vertex;
+    expect(controls?.emergent).toBeNull();
+    expect(controls?.emergentNote).toBeNull();
+    expect(controls?.direction.options.map((option) => option.disabled ?? false)).toEqual([false, true]);
+    expect(controls?.direction.options[1]?.tooltip).toBe('This way it cannot fold flat here.');
+    expect(controls?.note).toMatch(/^The creases meet at the dot, where the line halfway between the edge and the line it lands on crosses the folded edge/);
+    expect(model?.instructions.items[0]).toBe('Choose Valley or Mountain: only a way that folds flat is offered.');
+    // Direction and the line it lands on.
+    expect(model?.meta).toBe('2 settings');
+    // Its last step while clicking: no ridge to pick.
+    const locating = foldToolWindow(t, view(onFold, { picks: 3 }), calls, mouse);
+    expect(locating?.instructions.items.at(-1)).toBe('Choose Valley or Mountain, then press Enter.');
+    // A refusal is worded on the folded edge.
+    const blocked = foldToolWindow(
+      t,
+      view(onFold, { preview: preview({ refused: refused({ code: 'fan_ray_blocked', faces: [12] }) }) }),
+      calls,
+      mouse
+    );
+    expect(blocked?.refusal?.text).toMatch(/^A crease would run into a fold before it reaches the paper’s edge/);
+  });
+
   it('steps the layer order when the fold leaves several', () => {
     const calls = verbs();
     const model = foldToolWindow(t, view(vertex({ orders: 3, order: 1 }), { preview: preview() }), calls, mouse);
@@ -406,6 +437,9 @@ describe('a vertex fold’s refusals', () => {
       swivel_pivot_on_edge: { code: 'swivel_pivot_on_edge', faces: [0] },
       swivel_edge_short: { code: 'swivel_edge_short', faces: [0] },
       swivel_edge_stays: { code: 'swivel_edge_stays', faces: [0] },
+      swivel_not_a_fold: { code: 'swivel_not_a_fold', point: [0.75, 0.6] },
+      swivel_misses_fold: { code: 'swivel_misses_fold', faces: [17, 18] },
+      swivel_fold_wide: { code: 'swivel_fold_wide', faces: [17, 18] },
     };
     const titles = new Set<string>();
     for (const code of FOLD_VERTEX_REFUSAL_CODES) {

@@ -5,12 +5,19 @@ import { parseNativeProjectFile } from '../../lib/nativeProjectFile';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEnginePort, type FoldEngineSource } from '../engine/foldEnginePort';
 import { createFoldReplayer } from './foldReplay';
-import { isLockedStep, isSwivelEdgeOp, type FoldSequenceDocument, type FoldStep } from './foldSequenceDocument';
+import {
+  isLockedStep,
+  isSwivelEdgeOp,
+  isSwivelOnFoldOp,
+  type FoldSequenceDocument,
+  type FoldStep,
+} from './foldSequenceDocument';
 import { readFoldSequences } from './foldSequenceFile';
 
 /**
  * The example projects in `tests/fixtures/fold-examples` — a petal fold to
- * the bird base, a swivel, an inside and an outside crimp — each built
+ * the bird base, a swivel by its edge, a swivel on a folded edge, an inside
+ * and an outside crimp — each built
  * through the real Fold tools and saved with File ▸ Save (see the folder's
  * README for the clicks). Each must open as the app reads a project and
  * replay every step to `ok` through the real bridge: none broken, locked or
@@ -66,15 +73,15 @@ function steps(document: FoldSequenceDocument): FoldStep[] {
 }
 
 describe.skipIf(!available)('the Fold example projects', () => {
-  it('holds the three examples the README names, and nothing else', () => {
+  it('holds the four examples the README names, and nothing else', () => {
     expect(
       readdirSync(EXAMPLES)
         .filter((name) => name.endsWith('.osf'))
         .sort()
-    ).toEqual(['crimp.osf', 'petal-fold.osf', 'swivel-fold.osf']);
+    ).toEqual(['crimp.osf', 'petal-fold.osf', 'swivel-fold.osf', 'swivel-on-edge.osf']);
   });
 
-  it.each(['petal-fold.osf', 'swivel-fold.osf', 'crimp.osf'])(
+  it.each(['petal-fold.osf', 'swivel-fold.osf', 'swivel-on-edge.osf', 'crimp.osf'])(
     'opens %s and replays every step to ok, each with the note that says how it was made',
     async (name) => {
       const document = opened(name);
@@ -96,7 +103,7 @@ describe.skipIf(!available)('the Fold example projects', () => {
     }
   );
 
-  it('shows each tool as its README says: the bird base, a swivel by its edge both ways, an inside and an outside crimp', async () => {
+  it('shows each tool as its README says: the bird base, a swivel by its edge both ways, a swivel on a folded edge, an inside and an outside crimp', async () => {
     const { calls, version } = await engine();
     const replay = async (document: FoldSequenceDocument) => {
       const done = await createFoldReplayer(createFoldEnginePort(sourceOf(calls), version)).run({
@@ -143,7 +150,26 @@ describe.skipIf(!available)('the Fold example projects', () => {
     ]);
     const edgeOps = swivels.map((step) => (isSwivelEdgeOp(step.op) ? step.op : null));
     expect(edgeOps.every((op) => op?.target.via === 'crease')).toBe(true);
-    expect(edgeOps.map((op) => (op?.ridge ? 'end' : 'foot'))).toEqual(['foot', 'end']);
+    expect(edgeOps.map((op) => (op && 'ridge' in op && op.ridge ? 'end' : 'foot'))).toEqual(['foot', 'end']);
+
+    // The owner's squashed preliminary base, then Abrashi's swivel: its
+    // creases meet on the kite's upper-left edge, a folded edge.
+    const onEdge = opened('swivel-on-edge.osf');
+    const onEdgeSteps = steps(onEdge);
+    expect(onEdgeSteps.map((step) => step.op.kind)).toEqual([
+      'valley',
+      'precrease',
+      'inside-reverse',
+      'inside-reverse',
+      'rotate',
+      'squash',
+      'swivel',
+    ]);
+    const swivelled = onEdgeSteps.at(-1);
+    expect(swivelled && isSwivelOnFoldOp(swivelled.op)).toBe(true);
+    const swivelledState = swivelled && (await replay(onEdge)).steps.get(swivelled.id)?.state;
+    if (!swivelledState) throw new Error('the swivel on the folded edge did not land');
+    expect(calls.summary(swivelledState.id).faces).toBe(14);
 
     // The book fold, then two branches from it: the inside crimp and the outside.
     const [book, inside, outside] = steps(opened('crimp.osf'));

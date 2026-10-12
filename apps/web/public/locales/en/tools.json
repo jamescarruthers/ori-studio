@@ -813,6 +813,7 @@
     },
     "vertex": {
       "direction": "Direction",
+      "directionCannot": "This way it cannot fold flat here.",
       "emergent": "Fourth crease",
       "fix": {
         "creaseKites": "Crease the kites as it folds",
@@ -879,12 +880,16 @@
         "snapPoints": "Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.",
         "snapPointsTouch": "Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.",
         "squash": "A flap squashes when its two layers are free, held only along its hinge, and uncovered, with nothing over it on the side it opens toward.",
+        "swivelFold": "Point at a folded edge for the creases to meet on it, the classic swivel: it lights up under the pointer.",
+        "swivelFoldTouch": "Tap a folded edge for the creases to meet on it, the classic swivel: it lights up when picked.",
+        "swivelOnFold": "The creases meet at the dot, where the line halfway between the edge and the line it lands on crosses the folded edge. The edge’s layer folds along that line, laying the edge where the bold line shows; the other layer at the folded edge folds along a second crease too. The lit paper moves, the brightest swivelling.",
         "swivelVertex": "The creases meet at the dot: the pivot, moved onto the line halfway between the edge and the line it lands on. The bold line is where the edge lands; the lit paper moves, the brightest turning in place."
       },
       "refusal": {
         "blocked": {
           "steppers": "A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Step Layers to fold more layers, or Fourth crease to another one.",
           "swivelEdge": "A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Pick another pivot, or another line for the edge to land on.",
+          "swivelOnFold": "A crease would run into a fold before it reaches the paper’s edge, or paper would hold two parts of the swivel together. Pick another folded edge, or another line for the edge to land on.",
           "title": "Paper is in the way"
         },
         "center": {
@@ -970,8 +975,21 @@
           "title": "The edge ends before it would turn"
         },
         "swivelEdgeStays": {
+          "onFold": "Neither layer the folded edge joins holds the edge that moves, so it would stay put. Pick a folded edge of the edge’s own layer, or another edge.",
           "text": "The paper along the edge would stay put, or fold across the hinge, rather than turn onto the line. Pick a pivot nearer the edge, or another edge.",
           "title": "The edge would stay put"
+        },
+        "swivelFoldWide": {
+          "text": "On the moving edge’s side the swivel crease meets the folded edge at a right angle or more, which leaves the other layer no room to fold. Pick a line for the edge to land on that turns it further, or another folded edge.",
+          "title": "The swivel crease meets the edge too steeply"
+        },
+        "swivelMissesFold": {
+          "text": "The swivel folds along the line halfway between the edge and the line it lands on, and that line does not cross this folded edge between its ends. Press Esc and pick the folded edge it crosses, or another line.",
+          "title": "The creases cannot meet on that edge"
+        },
+        "swivelNotAFold": {
+          "text": "The creases can meet on a folded edge only where the paper is folded, and the point picked lies on no fold. Press Esc and click the folded edge again.",
+          "title": "That is no folded edge"
         },
         "swivelNotAnEdge": {
           "text": "A swivel moves a raw edge of the paper or a folded edge, and the line picked is neither. Press Esc and pick the edge again.",
@@ -1032,14 +1050,15 @@
         "swivelEdgeTouch": "Tap the edge that moves: a raw edge or a folded edge.",
         "swivelFinishRidge": "Pick the ridge and the direction, then press Enter.",
         "swivelFinishRidgeTouch": "Pick the ridge and the direction, then tap {{action}}.",
+        "swivelOnFoldChoose": "Choose Valley or Mountain: only a way that folds flat is offered.",
         "swivelOnto": "Click the line it should land on: a crease or an edge.",
         "swivelOntoFirst": "Click a point on the line it should land on.",
         "swivelOntoFirstTouch": "Tap a point on the line it should land on.",
         "swivelOntoSecond": "Click a second point on that line.",
         "swivelOntoSecondTouch": "Tap a second point on that line.",
         "swivelOntoTouch": "Tap the line it should land on: a crease or an edge.",
-        "swivelPivot": "Click the pivot.",
-        "swivelPivotTouch": "Tap the pivot."
+        "swivelPivotOrFold": "Click the pivot, or a folded edge for the creases to meet on.",
+        "swivelPivotOrFoldTouch": "Tap the pivot, or a folded edge for the creases to meet on."
       },
       "target": "Spine lands on",
       "targetHelp": "Click the folded paper to land the spine off the hinge.",

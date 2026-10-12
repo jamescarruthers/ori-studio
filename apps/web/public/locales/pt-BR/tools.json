@@ -831,6 +831,7 @@
     },
     "vertex": {
       "direction": "Sentido",
+      "directionCannot": "Neste sentido não dá para dobrar plano aqui.",
       "emergent": "Quarto vinco",
       "fix": {
         "creaseKites": "Vincar a pipa ao dobrar",
@@ -901,12 +902,16 @@
         "snapPoints": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos e pontos médios: um clique em qualquer outro lugar não escolhe nada.",
         "snapPointsTouch": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos e pontos médios: um toque em qualquer outro lugar não escolhe nada.",
         "squash": "Uma aba se achata quando suas duas camadas estão livres, presas só pela dobradiça, e descobertas, sem nada por cima do lado para onde ela se abre.",
+        "swivelFold": "Aponte para uma borda dobrada para os vincos se encontrarem nela, a dobra pivotante clássica: ela acende sob o ponteiro.",
+        "swivelFoldTouch": "Toque em uma borda dobrada para os vincos se encontrarem nela, a dobra pivotante clássica: ela acende ao ser escolhida.",
+        "swivelOnFold": "Os vincos se encontram no ponto, onde a linha a meio caminho entre a borda e a linha onde ela pousa cruza a borda dobrada. A camada da borda dobra ao longo dessa linha e pousa a borda onde a linha grossa mostra; a outra camada da borda dobrada também dobra ao longo de um segundo vinco. O papel aceso se move, e o mais claro gira.",
         "swivelVertex": "Os vincos se encontram no ponto: o pivô, levado para a linha a meio caminho entre a borda e a linha onde ela pousa. A linha grossa é onde a borda pousa; o papel aceso se move, e o mais claro gira no lugar."
       },
       "refusal": {
         "blocked": {
           "steppers": "Um vinco esbarraria em papel que não dobra junto, ou o papel prenderia duas partes da dobra. Passe Camadas para dobrar mais camadas, ou Quarto vinco para outro.",
           "swivelEdge": "Um vinco esbarraria em papel que não dobra junto, ou o papel prenderia duas partes da dobra. Escolha outro pivô, ou outra linha para a borda pousar.",
+          "swivelOnFold": "Um vinco esbarraria em uma dobra antes de chegar à borda do papel, ou o papel prenderia duas partes da dobra pivotante. Escolha outra borda dobrada, ou outra linha para a borda pousar.",
           "title": "Há papel no caminho"
         },
         "center": {
@@ -992,8 +997,21 @@
           "title": "A borda termina antes de girar"
         },
         "swivelEdgeStays": {
+          "onFold": "Nenhuma das duas camadas que a borda dobrada une segura a borda que se move, então ela ficaria parada. Escolha uma borda dobrada da camada dessa borda, ou outra borda.",
           "text": "O papel ao longo da borda ficaria parado, ou dobraria por cima da dobradiça, em vez de girar sobre a linha. Escolha um pivô mais perto da borda, ou outra borda.",
           "title": "A borda ficaria parada"
+        },
+        "swivelFoldWide": {
+          "text": "Do lado da borda que se move, o vinco pivotante encontra a borda dobrada em ângulo reto ou maior, o que não deixa espaço para a outra camada dobrar. Escolha uma linha para a borda pousar que a gire mais, ou outra borda dobrada.",
+          "title": "O vinco pivotante encontra a borda íngreme demais"
+        },
+        "swivelMissesFold": {
+          "text": "A dobra pivotante segue a linha a meio caminho entre a borda e a linha onde ela pousa, e essa linha não cruza esta borda dobrada entre as pontas. Pressione Esc e escolha a borda dobrada que ela cruza, ou outra linha.",
+          "title": "Os vincos não podem se encontrar nessa borda"
+        },
+        "swivelNotAFold": {
+          "text": "Os vincos só podem se encontrar em uma borda dobrada onde o papel está dobrado, e o ponto escolhido não fica em nenhuma dobra. Pressione Esc e clique de novo na borda dobrada.",
+          "title": "Isso não é uma borda dobrada"
         },
         "swivelNotAnEdge": {
           "text": "Uma dobra pivotante move uma borda do papel ou uma borda dobrada, e a linha escolhida não é nenhuma das duas. Pressione Esc e escolha a borda de novo.",
@@ -1054,14 +1072,15 @@
         "swivelEdgeTouch": "Toque na borda que se move: uma borda do papel ou uma borda dobrada.",
         "swivelFinishRidge": "Escolha a crista e o sentido; depois pressione Enter.",
         "swivelFinishRidgeTouch": "Escolha a crista e o sentido e toque em {{action}}.",
+        "swivelOnFoldChoose": "Escolha Vale ou Montanha: só é oferecido um sentido que dobra plano.",
         "swivelOnto": "Clique na linha onde ela deve pousar: um vinco ou uma borda.",
         "swivelOntoFirst": "Clique em um ponto da linha onde ela deve pousar.",
         "swivelOntoFirstTouch": "Toque em um ponto da linha onde ela deve pousar.",
         "swivelOntoSecond": "Clique em um segundo ponto dessa linha.",
         "swivelOntoSecondTouch": "Toque em um segundo ponto dessa linha.",
         "swivelOntoTouch": "Toque na linha onde ela deve pousar: um vinco ou uma borda.",
-        "swivelPivot": "Clique no pivô.",
-        "swivelPivotTouch": "Toque no pivô."
+        "swivelPivotOrFold": "Clique no pivô, ou em uma borda dobrada onde os vincos devem se encontrar.",
+        "swivelPivotOrFoldTouch": "Toque no pivô, ou em uma borda dobrada onde os vincos devem se encontrar."
       },
       "target": "A lombada cai em",
       "targetHelp": "Clique no papel dobrado para a lombada cair fora da dobradiça.",

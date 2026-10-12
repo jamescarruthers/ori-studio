@@ -1,12 +1,13 @@
 # Fold examples
 
-Three Ori Studio projects that show how the Fold workspace's petal fold,
+Four Ori Studio projects that show how the Fold workspace's petal fold,
 swivel fold and crimp tools are used. Each was folded through the real tools
 in a browser (clicks on the folded pane, keys, the tool window) and saved
 with File ▸ Save, the native `.osf` project format. The petal fold's petal
 steps and the whole swivel were folded again when those tools changed
 (2026-10-12): the petal fold names its hinge by its two endpoints, and the
-swivel is made by its edge. Open one with File ▸ Open
+swivel is made by its edge. `swivel-on-edge.osf` was added the same day, for
+the swivel whose creases meet on a folded edge. Open one with File ▸ Open
 and the Fold workspace replays it. Step through the strip at the top to see
 each step.
 
@@ -103,6 +104,48 @@ it instead of a crease or edge already there. A swivel stored by its rays
 (the vertex and three points its creases run toward, the fourth computed,
 and the paper that stays), as this file held before, still replays and
 shows; the Swivel fold tool now makes a swivel by its edge.
+
+## swivel-on-edge.osf: a squashed flap's edge swivelled onto the centre line
+
+The classic swivel where the creases meet on a folded edge, after Abrashi's
+"What is Swivel fold?" diagram. On a preliminary base with one flap squashed
+into a kite, two valley folds meet at a point on the kite's upper-left edge.
+One runs to the kite's right corner: the top layer folds up along it. The
+other runs down to the bottom tip: the layers underneath swivel about the
+tip, so the model's lower-left edge lies along the centre line. The kite's
+upper-left edge unfolds where it is swivelled, and a third crease, a
+mountain as seen from the front, lies along the second valley in the other
+layer. The result is a
+narrow triangle along the centre line at the bottom.
+
+1. **Valley fold** (V), **Axiom 2: point onto point**. Click the bottom-left
+   corner, then the top-right corner. Press Enter. The square folds on its
+   diagonal.
+2. **Precrease** (P), Axiom 2. Click the bottom-right corner, then the
+   top-left corner. Press Enter: the other diagonal, creased and unfolded.
+3. **Inside reverse fold**, Axiom 2. Click the triangle's bottom-right
+   corner, then its right-angled corner (bottom left). The corner folds in
+   between the layers onto it. Press Enter.
+4. **Inside reverse fold**, Axiom 2. Click the top corner, then the
+   right-angled corner (bottom left). Press Enter. This is the preliminary
+   base, its closed point the sheet's centre.
+5. **Rotate** (Model group): ⅛ of a turn counterclockwise, so the open
+   corner points down. Press Enter.
+6. **Squash fold**. Click the front flap on the right and press Enter. The
+   flap opens into a kite on the centre line.
+7. **Swivel fold**. Click the kite's upper-left edge, anywhere along it: a
+   folded edge lights up under the pointer, with the point on it, and the
+   creases will meet on it. Click the kite's lower-left edge, which is the
+   model's lower-left edge: the edge that moves. Click the centre line: the
+   line it lands on. The window shows a dot where the creases meet, where the
+   line halfway between that edge and the centre line crosses the folded
+   edge, with the creases in their pens and the paper that moves lit. Only
+   **Valley** folds flat here, so Mountain is greyed out and no Ridge is
+   offered: the ridge is the folded edge itself. Press Enter.
+
+The stored step names the folded edge by `fold`, a point on it, in place of
+a pivot and the paper that stays. An older build that does not know `fold`
+locks the step rather than folding something else.
 
 ## crimp.osf: the bird's-head crimp, inside and outside
 

@@ -41,14 +41,18 @@
  * canvas lights from the engine's answer ({@link petalRegionKey}).
  *
  * **A swivel** is made by its edge (`FoldSwivelEdgeOp`): the pivot, the edge
- * clicked and the line it lands on. A swivel by its rays still replays and
- * shows; no tool makes one.
+ * clicked and the line it lands on. A pivot clicked on a folded edge makes
+ * the classic swivel whose creases meet on that edge
+ * (`FoldSwivelOnFoldOp`, `fold`): the point names the edge, and the creases
+ * meet where the line halfway between the edge and the target crosses it.
+ * A swivel by its rays still replays and shows; no tool makes one.
  *
  * Pure: no React, no store, no engine.
  */
 import type { Point } from '../../../lib/geometry';
 import {
   isSwivelEdgeOp,
+  isSwivelOnFoldOp,
   petalOp,
   type FoldChoices,
   type FoldCompletionChoice,
@@ -218,6 +222,24 @@ function swivelTargetOf(intent: Pick<FoldVertexIntent, 'swivelTarget'>, picks: r
   return a && b ? { via: 'free', through: [a, b] } : null;
 }
 
+/**
+ * Whether a click now picks a swivel's pivot — its first — which may sit on a
+ * folded edge, where its creases then meet (`resolveFoldEdgePoint`).
+ */
+export function picksSwivelPivot(tool: FoldToolId, picks: number): boolean {
+  return tool === 'swivel' && picks === 0;
+}
+
+/**
+ * The folded edge a swivel's pivot was clicked on, its creases meeting there
+ * (`FoldSwivelOnFoldOp`); null for a pivot anywhere else, and before it is
+ * clicked.
+ */
+export function swivelFoldPick(intent: { tool: FoldToolId; picks: readonly FoldPick[] }): FoldSegmentPick | null {
+  const pivot = intent.tool === 'swivel' ? intent.picks[0] : undefined;
+  return pivot?.kind === 'point' ? (pivot.fold ?? null) : null;
+}
+
 /** The edge a swivel's clicks moved, on the folded pane; null before it is clicked. */
 export function swivelEdgePick(intent: { tool: FoldToolId; picks: readonly FoldPick[] }): FoldSegmentPick | null {
   const edge = intent.tool === 'swivel' ? intent.picks[1] : undefined;
@@ -360,6 +382,9 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
       const pivot = sheetOf(pivotPick);
       const target = swivelTargetOf(intent, targetPicks);
       if (!pivot || edgePick?.kind !== 'segment' || !target) return offPaper(null);
+      // A pivot on a folded edge: the creases meet on that edge, through the
+      // two layers it joins.
+      if (swivelFoldPick(intent)) return { kind: 'swivel', via: 'edge', fold: pivot, edge: middleOf(edgePick), target, direction };
       return { kind: 'swivel', via: 'edge', pivot, edge: middleOf(edgePick), target, seed: { scope: 'all' }, direction };
     }
   }
@@ -438,6 +463,8 @@ export function steppedFourth(fourths: readonly number[], from: number | null, d
  */
 export function withEmergent(op: FoldVertexOp, answer: FoldVertexAnalysed, emergent: number | null): FoldVertexOp {
   const { analysis } = answer;
+  // On a folded edge a swivel has no ridge to choose.
+  if (isSwivelOnFoldOp(op)) return op;
   if (isSwivelEdgeOp(op)) {
     const ray = emergent === null || analysis.kind !== 'swivel-by-edge' ? undefined : analysis.ridges[emergent];
     if (!ray) return op;
@@ -470,11 +497,29 @@ export interface FoldVertexChosen {
   /** The fourth ray or ridge taken, by index; null for no fan. */
   emergent: number | null;
   /**
+   * The way it folds, as the viewer sees it: the folder's, or for a swivel
+   * on a folded edge the other when only that one lands.
+   */
+  direction: FoldDirection;
+  /**
    * Whether it is another fold than the one first asked — a spine aimed off
-   * the hinge, another fourth ray or ridge — whose orders must be asked of
-   * it; otherwise the first answer stands for it.
+   * the hinge, another fourth ray or ridge, the other direction — whose
+   * orders must be asked of it; otherwise the first answer stands for it.
    */
   again: boolean;
+}
+
+/**
+ * The way a fold is folded: the folder's, unless the engine says only the
+ * other lands (a swivel on a folded edge's `directions`) — a choice that
+ * cannot fold is not offered, so it is not taken either.
+ */
+export function directionToFold(chosen: FoldDirection, answer: FoldVertexAnalysed): FoldDirection {
+  const directions = answer.directions;
+  if (!directions || directions.length !== 2) return chosen;
+  const lands = (direction: FoldDirection) => directions[direction === 'valley' ? 0 : 1] === true;
+  const other: FoldDirection = chosen === 'valley' ? 'mountain' : 'valley';
+  return !lands(chosen) && lands(other) ? other : chosen;
 }
 
 /** The choice of what the engine lists that the asked op names: a fan's fourth ray, a swivel's ridge. */
@@ -497,10 +542,16 @@ export function vertexChosenOp(
   const emergent = emergentToFold(taken.emergent, first);
   const fan = base.kind === 'rabbit-ear' || (base.kind === 'swivel' && !isSwivelEdgeOp(base));
   if (fan && emergent === null) return null;
+  const direction = directionToFold(base.direction, first);
+  const op = withTarget(withEmergent(base, first, emergent), taken.squashTarget);
   return {
-    op: withTarget(withEmergent(base, first, emergent), taken.squashTarget),
+    op: direction === op.direction ? op : { ...op, direction },
     emergent,
-    again: (base.kind === 'squash' && taken.squashTarget !== null) || (emergent !== null && emergent !== namedChoice(first)),
+    direction,
+    again:
+      (base.kind === 'squash' && taken.squashTarget !== null) ||
+      (emergent !== null && emergent !== namedChoice(first)) ||
+      direction !== base.direction,
   };
 }
 

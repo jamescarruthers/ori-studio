@@ -831,6 +831,7 @@
     },
     "vertex": {
       "direction": "Sens",
+      "directionCannot": "Dans ce sens, il ne peut pas se plier à plat ici.",
       "emergent": "Quatrième pli",
       "fix": {
         "creaseKites": "Marquer les plis du cerf-volant en pliant",
@@ -901,12 +902,16 @@
         "snapPoints": "Les points s’accrochent aux coins, aux repères, aux croisements de plis et aux milieux : un clic ailleurs ne choisit rien.",
         "snapPointsTouch": "Les points s’accrochent aux coins, aux repères, aux croisements de plis et aux milieux : toucher ailleurs ne choisit rien.",
         "squash": "Un rabat s’écrase quand ses deux couches sont libres, tenues seulement le long de leur charnière, et découvertes, sans rien au-dessus du côté où il s’ouvre.",
+        "swivelFold": "Pointez un bord plié pour que les plis s’y rejoignent, le pli pivoté classique : il s’éclaire sous le pointeur.",
+        "swivelFoldTouch": "Touchez un bord plié pour que les plis s’y rejoignent, le pli pivoté classique : il s’éclaire une fois choisi.",
+        "swivelOnFold": "Les plis se rejoignent au point, là où la ligne à mi-chemin entre le bord et la ligne où il se pose croise le bord plié. La couche du bord se plie le long de cette ligne et pose le bord là où le trait gras le montre ; l’autre couche du bord plié se plie aussi le long d’un second pli. Le papier éclairé bouge, le plus clair pivote.",
         "swivelVertex": "Les plis se rejoignent au point : le pivot, ramené sur la ligne à mi-chemin entre le bord et la ligne où il se pose. Le trait gras montre où le bord se pose ; le papier éclairé bouge, le plus clair tourne sur place."
       },
       "refusal": {
         "blocked": {
           "steppers": "Un pli buterait sur du papier qui ne plie pas avec lui, ou le papier retiendrait ensemble deux parties du pliage. Faites défiler Couches pour plier plus de couches, ou Quatrième pli pour en prendre un autre.",
           "swivelEdge": "Un pli buterait sur du papier qui ne plie pas avec lui, ou le papier retiendrait ensemble deux parties du pliage. Choisissez un autre pivot, ou une autre ligne où poser le bord.",
+          "swivelOnFold": "Un pli buterait sur une pliure avant d’atteindre le bord du papier, ou le papier retiendrait ensemble deux parties du pli pivoté. Choisissez un autre bord plié, ou une autre ligne où poser le bord.",
           "title": "Du papier gêne"
         },
         "center": {
@@ -992,8 +997,21 @@
           "title": "Le bord s’arrête avant de tourner"
         },
         "swivelEdgeStays": {
+          "onFold": "Aucune des deux couches que relie le bord plié ne porte le bord qui bouge : il resterait en place. Choisissez un bord plié de la couche de ce bord, ou un autre bord.",
           "text": "Le papier le long du bord resterait en place, ou se plierait par-dessus la charnière, au lieu de tourner sur la ligne. Choisissez un pivot plus près du bord, ou un autre bord.",
           "title": "Le bord resterait en place"
+        },
+        "swivelFoldWide": {
+          "text": "Du côté du bord qui bouge, le pli pivoté rencontre le bord plié à angle droit ou plus, ce qui ne laisse pas à l’autre couche la place de se plier. Choisissez une ligne où poser le bord qui le fasse tourner davantage, ou un autre bord plié.",
+          "title": "Le pli pivoté rencontre le bord trop à pic"
+        },
+        "swivelMissesFold": {
+          "text": "Le pli pivoté suit la ligne à mi-chemin entre le bord et la ligne où il se pose, et cette ligne ne croise pas ce bord plié entre ses extrémités. Appuyez sur Échap et choisissez le bord plié qu’elle croise, ou une autre ligne.",
+          "title": "Les plis ne peuvent pas se rejoindre sur ce bord"
+        },
+        "swivelNotAFold": {
+          "text": "Les plis ne peuvent se rejoindre sur un bord plié que là où le papier est plié, et le point choisi n’est sur aucune pliure. Appuyez sur Échap et cliquez de nouveau sur le bord plié.",
+          "title": "Ce n’est pas un bord plié"
         },
         "swivelNotAnEdge": {
           "text": "Un pli pivoté déplace un bord du papier ou un bord plié, et la ligne choisie n’est ni l’un ni l’autre. Appuyez sur Échap et choisissez de nouveau le bord.",
@@ -1054,14 +1072,15 @@
         "swivelEdgeTouch": "Touchez le bord qui bouge : un bord du papier ou un bord plié.",
         "swivelFinishRidge": "Choisissez l’arête et le sens, puis appuyez sur Entrée.",
         "swivelFinishRidgeTouch": "Choisissez l’arête et le sens, puis touchez {{action}}.",
+        "swivelOnFoldChoose": "Choisissez Vallée ou Montagne : seul un sens qui se plie à plat est proposé.",
         "swivelOnto": "Cliquez sur la ligne où il doit se poser : un pli ou un bord.",
         "swivelOntoFirst": "Cliquez sur un point de la ligne où il doit se poser.",
         "swivelOntoFirstTouch": "Touchez un point de la ligne où il doit se poser.",
         "swivelOntoSecond": "Cliquez sur un deuxième point de cette ligne.",
         "swivelOntoSecondTouch": "Touchez un deuxième point de cette ligne.",
         "swivelOntoTouch": "Touchez la ligne où il doit se poser : un pli ou un bord.",
-        "swivelPivot": "Cliquez sur le pivot.",
-        "swivelPivotTouch": "Touchez le pivot."
+        "swivelPivotOrFold": "Cliquez sur le pivot, ou sur un bord plié où les plis se rejoignent.",
+        "swivelPivotOrFoldTouch": "Touchez le pivot, ou un bord plié où les plis se rejoignent."
       },
       "target": "Le dos se pose sur",
       "targetHelp": "Cliquez sur le papier plié pour poser le dos hors de la charnière.",

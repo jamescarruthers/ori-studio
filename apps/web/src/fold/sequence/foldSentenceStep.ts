@@ -128,10 +128,11 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
         op: 'vertex',
         fold: 'swivel',
         direction: op.direction,
-        form:
-          'via' in op && op.via === 'edge'
-            ? { swivel: 'edge', target: op.target.via, ridge: op.ridge ? 'end' : 'foot' }
-            : { swivel: 'rays' },
+        form: !('via' in op)
+          ? { swivel: 'rays' }
+          : 'fold' in op
+            ? { swivel: 'fold', target: op.target.via }
+            : { swivel: 'edge', target: op.target.via, ridge: op.ridge ? 'end' : 'foot' },
       };
     case 'open-sink':
     case 'closed-sink':

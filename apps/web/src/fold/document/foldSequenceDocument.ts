@@ -483,16 +483,23 @@ export type FoldSwivelTarget = Exclude<FoldLineInput, { via: 'axiom' }>;
 
 /**
  * A swivel as folders diagram it: swivel the edge through the sheet point
- * `edge` (a raw edge or a folded edge) onto `target`, pivoting at `pivot`
- * (engine `compound::swivel`). The creases are computed: they meet where the
- * pivot lands moved onto the nearer bisector of the edge and the target. The
- * ridge — the crease that folds the other way — is the one square to the
- * edge unless `ridge` names the turning wedge's other ray (a direction in the
- * parent's model frame; replay takes the nearer), stored only when the folder
- * took it. An older build reads `via` as a key it does not know and locks
- * the step rather than fold it.
+ * `edge` (a raw edge or a folded edge) onto `target` (engine
+ * `compound::swivel`). The creases are computed. They meet at a free vertex
+ * ({@link FoldSwivelFreeOp}) or on a folded edge ({@link FoldSwivelOnFoldOp}).
+ * An older build reads `via` as a key it does not know and locks the step
+ * rather than fold it.
  */
-export interface FoldSwivelEdgeOp {
+export type FoldSwivelEdgeOp = FoldSwivelFreeOp | FoldSwivelOnFoldOp;
+
+/**
+ * A swivel by its edge pivoting at `pivot`: its creases meet where the pivot
+ * lands moved onto the nearer bisector of the edge and the target, through
+ * the layers `seed` names. The ridge — the crease that folds the other way —
+ * is the one square to the edge unless `ridge` names the turning wedge's
+ * other ray (a direction in the parent's model frame; replay takes the
+ * nearer), stored only when the folder took it.
+ */
+export interface FoldSwivelFreeOp {
   kind: 'swivel';
   via: 'edge';
   pivot: SheetPoint;
@@ -503,9 +510,32 @@ export interface FoldSwivelEdgeOp {
   ridge?: FoldModelDirection;
 }
 
+/**
+ * The classic swivel, its creases meeting on a folded edge (engine
+ * `compound::swivel_on_edge`): the folded crease through the sheet point
+ * `fold`, where the bisector of the edge and the target nearer it crosses
+ * that crease. Its layers are the two the folded edge joins, and it has no
+ * ridge to choose, so it stores no `seed` and no `ridge`. An older build,
+ * whose edge form always had a `pivot`, reads `fold` as a key it does not
+ * know and locks the step rather than fold it.
+ */
+export interface FoldSwivelOnFoldOp {
+  kind: 'swivel';
+  via: 'edge';
+  fold: SheetPoint;
+  edge: SheetPoint;
+  target: FoldSwivelTarget;
+  direction: FoldDirection;
+}
+
 /** Whether a swivel op names its swivel by its edge, not its rays. */
 export function isSwivelEdgeOp(op: FoldOp): op is FoldSwivelEdgeOp {
   return op.kind === 'swivel' && 'via' in op && op.via === 'edge';
+}
+
+/** Whether a swivel op is the one whose creases meet on a folded edge. */
+export function isSwivelOnFoldOp(op: FoldOp): op is FoldSwivelOnFoldOp {
+  return isSwivelEdgeOp(op) && 'fold' in op;
 }
 
 export type FoldVertexOp = FoldSquashOp | FoldPetalOp | FoldRabbitEarOp | FoldSwivelOp | FoldSwivelEdgeOp;

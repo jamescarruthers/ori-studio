@@ -315,6 +315,23 @@ pub enum FoldRefusal {
     /// the hinge). `faces` bound the edge.
     #[error("the edge's paper does not swivel onto the target")]
     SwivelEdgeStays { faces: Vec<FaceId> },
+    /// A swivel on a folded edge (`compound::swivel_on_edge`): the sheet
+    /// point named for the folded edge its creases meet on lies on no
+    /// folded crease.
+    #[error("no folded edge passes through the sheet point {point:?}")]
+    SwivelNotAFold { point: Point },
+    /// The line halfway between the edge and the target crosses the folded
+    /// edge nowhere inside one of its creases, away from their ends (or
+    /// runs parallel to it): the creases cannot meet on it. `faces` are the
+    /// two the folded edge joins where it was named.
+    #[error("the swivel's crease does not cross the folded edge")]
+    SwivelMissesFold { faces: Vec<FaceId> },
+    /// The swivel's crease meets the folded edge at a right angle or wider
+    /// on the side of the edge that moves: the other layer's second crease,
+    /// the folded edge reflected in the swivel's, would lie past the folded
+    /// edge, outside its paper. `faces` are the two the folded edge joins.
+    #[error("the swivel's crease meets the folded edge too steeply")]
+    SwivelFoldWide { faces: Vec<FaceId> },
 
     // --- Sinks (plan Phase 11, research §5.4) ---------------------------
     /// The anchor names more than one of the moving side's flaps: a sink
@@ -455,6 +472,9 @@ impl FoldRefusal {
             FoldRefusal::SwivelPivotOnEdge { .. } => "swivel_pivot_on_edge",
             FoldRefusal::SwivelEdgeShort { .. } => "swivel_edge_short",
             FoldRefusal::SwivelEdgeStays { .. } => "swivel_edge_stays",
+            FoldRefusal::SwivelNotAFold { .. } => "swivel_not_a_fold",
+            FoldRefusal::SwivelMissesFold { .. } => "swivel_misses_fold",
+            FoldRefusal::SwivelFoldWide { .. } => "swivel_fold_wide",
             FoldRefusal::SinkSeveralPoints { .. } => "sink_several_points",
             FoldRefusal::SinkPointOpen { .. } => "sink_point_open",
             FoldRefusal::SinkOutlineMixed { .. } => "sink_outline_mixed",
@@ -509,6 +529,8 @@ impl FoldRefusal {
             | FoldRefusal::SwivelPivotOnEdge { faces }
             | FoldRefusal::SwivelEdgeShort { faces }
             | FoldRefusal::SwivelEdgeStays { faces }
+            | FoldRefusal::SwivelMissesFold { faces }
+            | FoldRefusal::SwivelFoldWide { faces }
             | FoldRefusal::SinkSeveralPoints { faces, .. }
             | FoldRefusal::SinkPointOpen { faces }
             | FoldRefusal::SinkOutlineMixed { faces }

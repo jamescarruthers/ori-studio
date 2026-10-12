@@ -37,10 +37,26 @@ function swivelEdgeSentence(t: TFunction, direction: FoldDirection, target: 'cre
     : t('panels:fold.sentence.swivelEdgeLine', 'Swivel the edge onto the line, pivoting at the point.');
 }
 
+/** A swivel on a folded edge's sentence: the edge onto the crease or the line clicked, its creases meeting on the folded edge. */
+function swivelFoldSentence(t: TFunction, direction: FoldDirection, target: 'crease' | 'free'): string {
+  if (direction === 'mountain') {
+    return target === 'crease'
+      ? t(
+          'panels:fold.sentence.behind.swivelFoldCrease',
+          'Swivel the edge behind onto the crease, the creases meeting on the folded edge.'
+        )
+      : t('panels:fold.sentence.behind.swivelFoldLine', 'Swivel the edge behind onto the line, the creases meeting on the folded edge.');
+  }
+  return target === 'crease'
+    ? t('panels:fold.sentence.swivelFoldCrease', 'Swivel the edge onto the crease, the creases meeting on the folded edge.')
+    : t('panels:fold.sentence.swivelFoldLine', 'Swivel the edge onto the line, the creases meeting on the folded edge.');
+}
+
 /**
  * The step's sentence: "Squash-fold the flap.", "Squash-fold the flap
  * behind." A petal fold by two points creases its hinge as it lifts; a
- * swivel by its edge lays the edge on its target.
+ * swivel by its edge lays the edge on its target, its creases meeting at a
+ * pivot or on a folded edge.
  */
 export function vertexSentence(
   t: TFunction,
@@ -49,6 +65,7 @@ export function vertexSentence(
   form?: FoldVertexSentenceForm
 ): string {
   if (form && 'swivel' in form && form.swivel === 'edge') return swivelEdgeSentence(t, direction, form.target);
+  if (form && 'swivel' in form && form.swivel === 'fold') return swivelFoldSentence(t, direction, form.target);
   const scores = form !== undefined && 'hinge' in form && form.hinge === 'points';
   if (direction === 'mountain') {
     switch (fold) {
@@ -154,15 +171,29 @@ export function vertexRows(t: TFunction, form: FoldVertexSentenceForm | undefine
       },
     ];
   }
-  if (form.swivel !== 'edge') return [];
+  if (form.swivel === 'rays') return [];
+  const landsOn: FoldVertexRow = {
+    label: t('panels:fold.step.landsOn', 'Lands on'),
+    value:
+      form.target === 'crease'
+        ? t('panels:fold.words.targetCrease', 'Existing crease or edge')
+        : t('panels:fold.words.targetLine', 'Line through two points'),
+  };
+  if (form.swivel === 'fold') {
+    return [
+      landsOn,
+      {
+        label: t('panels:fold.step.creasesMeet', 'Creases meet'),
+        value: t('panels:fold.words.meetOnFold', 'On a folded edge'),
+        help: t(
+          'panels:fold.step.creasesMeetHelp',
+          'Where the line halfway between the edge and the line it lands on crosses the folded edge. The other layer at that edge folds along a second crease too.'
+        ),
+      },
+    ];
+  }
   return [
-    {
-      label: t('panels:fold.step.landsOn', 'Lands on'),
-      value:
-        form.target === 'crease'
-          ? t('panels:fold.words.targetCrease', 'Existing crease or edge')
-          : t('panels:fold.words.targetLine', 'Line through two points'),
-    },
+    landsOn,
     {
       label: t('panels:fold.step.ridge', 'Ridge'),
       value: swivelRidgeName(t, form.ridge),

@@ -66,10 +66,11 @@ export interface FoldVertexRefusalContext {
   hinge?: FoldLineBy;
   /**
    * A swivel's form: by its edge — what the tool makes, whose creases are
-   * computed and whose fourth is its ridge — or by its rays (a stored step's).
-   * By its rays when unknown.
+   * computed and whose fourth is its ridge — by its edge with its creases
+   * meeting on a folded edge (`fold`), or by its rays (a stored step's). By
+   * its rays when unknown.
    */
-  swivel?: 'edge' | 'rays';
+  swivel?: 'edge' | 'fold' | 'rays';
 }
 
 /**
@@ -79,6 +80,10 @@ export interface FoldVertexRefusalContext {
  */
 export function vertexContextOf(code: string): FoldVertexRefusalContext {
   if (code.startsWith('petal')) return { tool: 'petal' };
+  // A swivel on a folded edge's own codes name the folded edge.
+  if (code === 'swivel_not_a_fold' || code === 'swivel_misses_fold' || code === 'swivel_fold_wide') {
+    return { tool: 'swivel', swivel: 'fold' };
+  }
   if (code.startsWith('swivel')) return { tool: 'swivel', swivel: 'edge' };
   return code.startsWith('fan') ? { tool: 'swivel' } : { tool: 'squash' };
 }
@@ -167,9 +172,41 @@ function noPetal(t: TFunction, cause: FoldNoPetal, detail: FoldNoPetalDetail | u
   }
 }
 
-/** A swivel by its edge's own refusals (`FOLD_SWIVEL_EDGE_REFUSAL_CODES`), in its words. */
-function swivelEdgeWords(t: TFunction, code: (typeof FOLD_SWIVEL_EDGE_REFUSAL_CODES)[number]): { title: string; text: string } {
+/**
+ * A swivel by its edge's own refusals (`FOLD_SWIVEL_EDGE_REFUSAL_CODES`), in
+ * its words: at a pivot, or with its creases meeting on a folded edge
+ * (`onFold`).
+ */
+function swivelEdgeWords(
+  t: TFunction,
+  code: (typeof FOLD_SWIVEL_EDGE_REFUSAL_CODES)[number],
+  onFold: boolean
+): { title: string; text: string } {
   switch (code) {
+    case 'swivel_not_a_fold':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelNotAFold.title', 'That is no folded edge'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelNotAFold.text',
+          'The creases can meet on a folded edge only where the paper is folded, and the point picked lies on no fold. Press Esc and click the folded edge again.'
+        ),
+      };
+    case 'swivel_misses_fold':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelMissesFold.title', 'The creases cannot meet on that edge'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelMissesFold.text',
+          'The swivel folds along the line halfway between the edge and the line it lands on, and that line does not cross this folded edge between its ends. Press Esc and pick the folded edge it crosses, or another line.'
+        ),
+      };
+    case 'swivel_fold_wide':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelFoldWide.title', 'The swivel crease meets the edge too steeply'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelFoldWide.text',
+          'On the moving edge’s side the swivel crease meets the folded edge at a right angle or more, which leaves the other layer no room to fold. Pick a line for the edge to land on that turns it further, or another folded edge.'
+        ),
+      };
     case 'swivel_not_an_edge':
       return {
         title: t('tools:fold.vertex.refusal.swivelNotAnEdge.title', 'That is no edge'),
@@ -205,10 +242,15 @@ function swivelEdgeWords(t: TFunction, code: (typeof FOLD_SWIVEL_EDGE_REFUSAL_CO
     case 'swivel_edge_stays':
       return {
         title: t('tools:fold.vertex.refusal.swivelEdgeStays.title', 'The edge would stay put'),
-        text: t(
-          'tools:fold.vertex.refusal.swivelEdgeStays.text',
-          'The paper along the edge would stay put, or fold across the hinge, rather than turn onto the line. Pick a pivot nearer the edge, or another edge.'
-        ),
+        text: onFold
+          ? t(
+              'tools:fold.vertex.refusal.swivelEdgeStays.onFold',
+              'Neither layer the folded edge joins holds the edge that moves, so it would stay put. Pick a folded edge of the edge’s own layer, or another edge.'
+            )
+          : t(
+              'tools:fold.vertex.refusal.swivelEdgeStays.text',
+              'The paper along the edge would stay put, or fold across the hinge, rather than turn onto the line. Pick a pivot nearer the edge, or another edge.'
+            ),
       };
   }
 }
@@ -285,7 +327,10 @@ export function vertexRefusalWords(
     case 'swivel_pivot_on_edge':
     case 'swivel_edge_short':
     case 'swivel_edge_stays':
-      return swivelEdgeWords(t, refusal.code);
+    case 'swivel_not_a_fold':
+    case 'swivel_misses_fold':
+    case 'swivel_fold_wide':
+      return swivelEdgeWords(t, refusal.code, context.swivel === 'fold');
     case 'fan_center':
       return {
         title: t('tools:fold.vertex.refusal.center.title', 'The creases cannot meet there'),
@@ -310,7 +355,12 @@ export function vertexRefusalWords(
         title: t('tools:fold.vertex.refusal.blocked.title', 'Paper is in the way'),
         // The steppers that change it, by the names the window gives them.
         text:
-          context.swivel === 'edge'
+          context.swivel === 'fold'
+            ? t(
+                'tools:fold.vertex.refusal.blocked.swivelOnFold',
+                'A crease would run into a fold before it reaches the paper’s edge, or paper would hold two parts of the swivel together. Pick another folded edge, or another line for the edge to land on.'
+              )
+            : context.swivel === 'edge'
             ? t(
                 'tools:fold.vertex.refusal.blocked.swivelEdge',
                 'A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Pick another pivot, or another line for the edge to land on.'

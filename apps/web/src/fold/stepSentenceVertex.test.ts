@@ -108,4 +108,29 @@ describe('a vertex fold’s words', () => {
     if (rays.op !== 'vertex') throw new Error('no vertex fold');
     expect(vertexRows(t, rays.form)).toEqual([]);
   });
+
+  it('say a swivel on a folded edge meets its creases there, with its target and where they meet as rows', () => {
+    const context = { paper: { kind: 'square' }, marks: [] } as unknown as Parameters<typeof foldSentenceStepOf>[1];
+    const onFold = {
+      kind: 'swivel' as const,
+      via: 'edge' as const,
+      fold: [0.75, 0.6] as const,
+      edge: [1, 0.85] as const,
+      target: { via: 'crease' as const, at: [0.75, 0.5] as const },
+      direction: 'valley' as const,
+    };
+    const step = foldSentenceStepOf(onFold, context);
+    expect(step).toEqual({ op: 'vertex', fold: 'swivel', direction: 'valley', form: { swivel: 'fold', target: 'crease' } });
+    expect(foldStepSentence(t, step)).toBe('Swivel the edge onto the crease, the creases meeting on the folded edge.');
+    if (step.op !== 'vertex') throw new Error('no vertex fold');
+    expect(vertexRows(t, step.form)).toMatchObject([
+      { label: 'Lands on', value: 'Existing crease or edge' },
+      { label: 'Creases meet', value: 'On a folded edge' },
+    ]);
+    const behind = foldSentenceStepOf(
+      { ...onFold, target: { via: 'free', through: [[0, 0], [1, 1]] }, direction: 'mountain' },
+      context
+    );
+    expect(foldStepSentence(t, behind)).toBe('Swivel the edge behind onto the line, the creases meeting on the folded edge.');
+  });
 });

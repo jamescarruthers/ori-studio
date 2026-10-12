@@ -14,11 +14,13 @@
  * - **Rabbit ear**: the triangle's three corners (`point` landmarks, or with
  *   Alt any point), then the paper that stays put (`free`).
  * - **Swivel**, by its edge (`FoldSwivelEdgeOp`): the pivot (`point`, Alt for
- *   any point), the edge that moves — a raw or folded edge, never a flat
- *   crease, which the engine refuses — and the line it lands on, as
- *   {@link FoldVertexLines.swivelTarget} names it: a crease or an edge, or two
- *   points. A swivel stored by its rays still replays; the tool no longer
- *   makes one.
+ *   any point) — or a point on a folded edge, near one and away from any
+ *   landmark, for the classic swivel whose creases meet on that edge
+ *   (`resolveFoldEdgePoint`, `FoldSwivelOnFoldOp`) — the edge that moves — a
+ *   raw or folded edge, never a flat crease, which the engine refuses — and
+ *   the line it lands on, as {@link FoldVertexLines.swivelTarget} names it: a
+ *   crease or an edge, or two points. A swivel stored by its rays still
+ *   replays; the tool no longer makes one.
  *
  * Which layer a flap click names is not decided by the click: it depends on
  * the direction (`vertexStep`), which the folder may change afterwards, so the
@@ -130,8 +132,8 @@ function swivelSteps(t: TFunction, target: FoldLineBy, coarse: boolean): string[
           ];
   return [
     coarse
-      ? t('tools:fold.vertex.steps.swivelPivotTouch', 'Tap the pivot.')
-      : t('tools:fold.vertex.steps.swivelPivot', 'Click the pivot.'),
+      ? t('tools:fold.vertex.steps.swivelPivotOrFoldTouch', 'Tap the pivot, or a folded edge for the creases to meet on.')
+      : t('tools:fold.vertex.steps.swivelPivotOrFold', 'Click the pivot, or a folded edge for the creases to meet on.'),
     coarse
       ? t('tools:fold.vertex.steps.swivelEdgeTouch', 'Tap the edge that moves: a raw edge or a folded edge.')
       : t('tools:fold.vertex.steps.swivelEdge', 'Click the edge that moves: a raw edge or a folded edge.'),

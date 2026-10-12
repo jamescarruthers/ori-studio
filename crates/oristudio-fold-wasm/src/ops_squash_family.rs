@@ -24,7 +24,12 @@
 //! with `kind: 'swivel-by-edge'` (the engine's `SwivelEdgeAnalysis`: vertex,
 //! creases with their letters as seen, landing, ridges, moving regions) and
 //! per ridge in `emergents`; a refusal's `use_emergent` fix names the other
-//! ridge, to store as `ridge`.
+//! ridge, to store as `ridge`. The edge form on a folded edge names `fold`,
+//! a sheet point on that folded crease, in place of `pivot` and `seed` and
+//! with no ridge (engine `compound::swivel_on_edge`): its answer adds the
+//! folded edge (`fold`), lists no ridges, and says which directions land
+//! (`directions`, valley then mountain), its one choice besides the order.
+//! An older build reads `fold` as a key it does not know and locks the step.
 //!
 //! **Replay** (`FoldEngine::apply`, through the compound seam,
 //! [`crate::compound`]): a stored step lands, or is refused — the engine's
@@ -176,19 +181,32 @@ pub struct SwivelRaysOp {
 }
 
 /// `FoldSwivelEdgeOp`: swivel the edge through the sheet point `edge` (a raw
-/// edge or a folded crease) onto `target`, pivoting at the sheet point
-/// `pivot` (its image moved onto the nearer bisector of edge and target);
-/// the layers at the vertex; the ridge, a model-frame direction, when it is
-/// not the crease square to the edge; the direction. The target is a crease
-/// or edge by a sheet point on it (`via: 'crease'`) or the line through two
-/// sheet points' images (`via: 'free'`): an axiom's would need a root the
-/// step does not store, and a model line is not one it can store.
+/// edge or a folded crease) onto `target`, its creases meeting at one of:
+///
+/// - **a free vertex** (`FoldSwivelFreeOp`): the sheet point `pivot`, its
+///   image moved onto the nearer bisector of edge and target; with the
+///   layers at the vertex (`seed`), and the ridge, a model-frame direction,
+///   when it is not the crease square to the edge;
+/// - **a folded edge** (`FoldSwivelOnFoldOp`): the folded crease through the
+///   sheet point `fold`, where the bisector nearer it crosses that crease —
+///   the classic swivel, through the two layers the folded edge joins, so
+///   it has no `seed` and no ridge to choose (engine
+///   `compound::swivel_on_edge`).
+///
+/// One of `pivot` and `fold`, never both; the direction. The target is a
+/// crease or edge by a sheet point on it (`via: 'crease'`) or the line
+/// through two sheet points' images (`via: 'free'`): an axiom's would need a
+/// root the step does not store, and a model line is not one it can store.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct SwivelEdgeOp {
-    pub pivot: Point,
+    #[serde(default)]
+    pub pivot: Option<Point>,
+    #[serde(default)]
+    pub fold: Option<Point>,
     pub edge: Point,
     pub target: LineInput,
-    pub seed: SeedInput,
+    #[serde(default)]
+    pub seed: Option<SeedInput>,
     #[serde(default)]
     pub ridge: Option<Point>,
     pub direction: Direction,
@@ -307,14 +325,49 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
         }
         Op::Swivel(SwivelOp::Edge(op)) => {
             finite_point("edge", op.edge)?;
-            EngineOp::SwivelByEdge(SwivelByEdge {
-                pivot: image("pivot", op.pivot)?,
-                edge: op.edge,
-                target: swivel_target(parent, &op.target)?,
-                layers: seed(&op.seed)?,
-                ridge: op.ridge.map(|r| direction("ridge", r)).transpose()?,
-                direction: op.direction,
-            })
+            let mistake = |message: &str| -> Rejection {
+                BridgeError::InvalidInput(message.to_string()).into()
+            };
+            let by_edge = match (op.pivot, op.fold, &op.seed) {
+                (Some(pivot), None, Some(layers)) => SwivelByEdge {
+                    pivot: image("pivot", pivot)?,
+                    edge: op.edge,
+                    target: swivel_target(parent, &op.target)?,
+                    layers: seed(layers)?,
+                    ridge: op.ridge.map(|r| direction("ridge", r)).transpose()?,
+                    direction: op.direction,
+                    fold: None,
+                },
+                (None, Some(fold), None) if op.ridge.is_none() => SwivelByEdge {
+                    // The bisector nearer the point clicked on the folded
+                    // edge is the one its creases meet on.
+                    pivot: image("fold", fold)?,
+                    edge: op.edge,
+                    target: swivel_target(parent, &op.target)?,
+                    layers: oristudio_fold::Seed::All,
+                    ridge: None,
+                    direction: op.direction,
+                    fold: Some(fold),
+                },
+                (Some(_), None, None) => {
+                    return Err(mistake(
+                        "a swivel at a free vertex names its layers (`seed`)",
+                    ));
+                }
+                (None, Some(_), _) => {
+                    return Err(mistake(
+                        "a swivel on a folded edge takes no `seed` and no `ridge`: its layers \
+                         are the two the edge joins",
+                    ));
+                }
+                _ => {
+                    return Err(mistake(
+                        "a swivel by its edge names where its creases meet by `pivot` or by \
+                         `fold`, one of the two",
+                    ));
+                }
+            };
+            EngineOp::SwivelByEdge(by_edge)
         }
         other => {
             return Err(BridgeError::InvalidInput(format!(
@@ -496,6 +549,31 @@ fn emergents(parent: &State, op: &EngineOp, analysis: &VertexAnalysis) -> Vec<bo
     }
 }
 
+/// A swivel on a folded edge's directions, valley then mountain as the
+/// viewer sees them, each whether the fold lands that way: its only choice
+/// besides the order, so a tool offers only the ways that land. Empty for
+/// every other fold.
+fn directions(parent: &State, op: &EngineOp) -> Vec<bool> {
+    let EngineOp::SwivelByEdge(swivel) = op else {
+        return Vec::new();
+    };
+    if swivel.fold.is_none() {
+        return Vec::new();
+    }
+    [Direction::Valley, Direction::Mountain]
+        .into_iter()
+        .map(|direction| {
+            let each = SwivelByEdge {
+                direction,
+                ..swivel.clone()
+            };
+            parent
+                .swivel_by_edge(&each, &VertexChoices::default())
+                .is_ok()
+        })
+        .collect()
+}
+
 impl CompoundOp for VertexFold {
     /// Its picture along the crease that tells it best: no plain fold's
     /// analysis or depth pick, since it folds along no one line.
@@ -519,6 +597,7 @@ impl CompoundOp for VertexFold {
         };
         Ok(Ok(CompoundAsked::Vertex(Box::new(VertexAnalysed {
             emergents: emergents(parent, &self.op, &analysis),
+            directions: directions(parent, &self.op),
             analysis,
             orders: listed(fold(parent, &unstored)),
         }))))
@@ -591,6 +670,11 @@ pub struct VertexAnalysed {
     /// edge's, per ridge (the analysis' `ridges`). Empty for the other
     /// folds.
     pub emergents: Vec<bool>,
+    /// A swivel on a folded edge's: valley, then mountain, as the viewer
+    /// sees them, each whether the fold lands that way. Empty for the other
+    /// folds.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub directions: Vec<bool>,
     /// The orders the op leaves as asked, its stored completion aside, when
     /// it leaves more than one; null when it lands with one, or is refused.
     pub orders: Option<VertexOrders>,
