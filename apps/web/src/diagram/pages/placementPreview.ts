@@ -1,8 +1,13 @@
 import type { DiagramPagesLayout, LayoutCell } from './diagramPageLayout';
 import { flowLane } from './flowLane';
-import { partBox, placementClashes, translateCell, type PagePart } from './pagePlacement';
+import { partBox, placementClashes, translateCell, type FootprintsOf, type PagePart } from './pagePlacement';
 
-/** Local preview geometry. No font loading, packing, document writes, or history entries. */
+/**
+ * Local preview geometry. No font loading, layout, document writes, or
+ * history entries. Clashes are checked against the pictures' footprints
+ * where `footprintsOf` knows them (`PreparedDiagramPages.footprints`), else
+ * against their boxes.
+ */
 export function previewPlacement(
   base: DiagramPagesLayout,
   stepId: string,
@@ -10,6 +15,7 @@ export function previewPlacement(
   dx: number,
   dy: number,
   factor = 1,
+  footprintsOf?: FootprintsOf,
 ): DiagramPagesLayout {
   const layout: DiagramPagesLayout = {
     ...base,
@@ -56,7 +62,7 @@ export function previewPlacement(
     for (const cell of page.cells) cell.clashes = cell.clashes?.filter((clash) => clash.kind !== 'path');
     for (const n of lane?.warnings ?? []) if (page.cells[n]) page.cells[n]!.clashes = [{ kind: 'path' }];
   });
-  placementClashes(layout);
+  placementClashes(layout, footprintsOf);
   return layout;
 }
 
@@ -76,7 +82,6 @@ export function scaleCell(cell: LayoutCell, factor: number): LayoutCell {
     ...next,
     drawMm: scaleBox(cell.drawMm),
     inkMm: cell.inkMm ? scaleBox(cell.inkMm) : undefined,
-    inkPolygons: cell.inkPolygons?.map((polygon) => polygon.map((p) => ({ x: cx + (p.x - cx) * factor, y: cy + (p.y - cy) * factor }))),
     pictureMm: {
       x: cx + (cell.pictureMm.x - cx) * factor,
       y: cy + (cell.pictureMm.y - cy) * factor,

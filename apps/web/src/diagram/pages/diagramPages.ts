@@ -35,12 +35,12 @@ import {
 } from './diagramPageLayout';
 import { fontTextSetter } from './fontTextSetter';
 import { uploadTextRuns, type UploadTextRun } from '../upload/uploadText';
-import { layoutPicture, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
+import { layoutPicture, measureKey, wholeUnitsAcross, type PictureMeasure } from './pagePictures';
 import { annotationTextRuns } from '../annotate/annotationPrimitives';
 import { hasDrawnAnnotations } from '../annotate/paintAnnotations';
 import { viewOfStep } from '../zoom/stepView';
-import { convexHull } from './pagePolygons';
-import { pictureFootprints } from './pictureFootprint';
+import type { FootprintsOf } from './pagePlacement';
+import { footprintCache, type FootprintCache } from './pictureFootprint';
 import { zoomAreas } from '../zoom/zoomCapture';
 import { enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomIndex, type ZoomIndex } from '../zoom/zoomIndex';
@@ -70,6 +70,8 @@ export interface PreparedDiagramPages {
    * their hit targets over. Worked out once a page.
    */
   zoomArrows: (index: number) => PlacedZoomArrow[];
+  /** Each step's picture footprints as the layout measured them, worked out when asked for: what a placement preview checks clashes against. */
+  footprints?: FootprintsOf;
 }
 
 /** A step's picture as the layout measures it at `measure` (`layoutPicture`). */
@@ -79,12 +81,14 @@ export type PictureOf = (step: DiagramStep, measure: PictureMeasure) => LayoutSt
  * What the layout needs of each step, its marks measured at the size a first
  * layout found for it when known (`measureOf`), by `pictureOf`; each with
  * the turns between it and the step before (D22), the last with any after
- * it.
+ * it, and its picture's footprints, to be worked out only if a placement
+ * clash asks for them (`footprints`).
  */
 export function diagramLayoutSteps(
   document: DiagramDocument,
   measureOf: (stepId: string) => PictureMeasure = () => null,
-  pictureOf: PictureOf = (step, measure) => layoutPicture(step, document.assets, document.style, measure)
+  pictureOf: PictureOf = (step, measure) => layoutPicture(step, document.assets, document.style, measure),
+  footprints: FootprintCache = footprintCache(document)
 ): LayoutStep[] {
   const steps: LayoutStep[] = [];
   const index = zoomIndex(document);
@@ -100,15 +104,13 @@ export function diagramLayoutSteps(
     const zoom = layoutZoom(entry, document, index);
     const measure = measureOf(entry.id);
     const picture = pictureOf(entry, measure);
-    const footprints = pictureFootprints(entry, document, picture, measure);
     steps.push({
       id: entry.id,
       text: entry.text,
       breakBefore: entry.breakBefore,
       ...(entry.pageSteps !== undefined ? { pageSteps: entry.pageSteps } : {}),
       picture,
-      footprints,
-      footprint: footprints && convexHull(footprints.flat()),
+      footprints: footprints.of(entry, picture, measure),
       turnsBefore: turns,
       turnsAfter: [],
       // Enlarged, with no window yet: in no run of enlarged steps, and parting none.
@@ -286,23 +288,31 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
  * marks may not shrink with them. Laid out last with each picture measured
  * at the scale it is drawn at, for how far it reaches there; its fits, and
  * so the scales, are the ones found. Every picture holds its room.
+ *
+ * A placed step's picture footprints are worked out only when its clashes
+ * are checked, once per step and measure, in `footprints` — which the
+ * caller may keep, to check a preview of a placement against the same.
  */
-export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
+export function layoutDiagram(
+  document: DiagramDocument,
+  setter: TextSetter,
+  footprints: FootprintCache = footprintCache(document)
+): DiagramPagesLayout {
   const layout = (steps: LayoutStep[]) => layoutDiagramPages(steps, document.page, document.title, setter);
   // An enlarged step's cut frame runs on past the paper by a length set in mm, as a mark's head is.
   const reaching = stepsOf(document).some(
     (step) => step.picture?.kind === 'step-diagram' || hasDrawnAnnotations(step.annotations) || viewOfStep(step).zoom !== null
   );
-  if (!reaching) return layout(diagramLayoutSteps(document));
+  if (!reaching) return layout(diagramLayoutSteps(document, undefined, undefined, footprints));
   // Each picture measured once at each scale, however often the search, the
   // layouts and the checks below ask for it.
   const measured = new Map<string, LayoutStep['picture']>();
   const pictureOf: PictureOf = (step, measure) => {
-    const key = `${step.id} ${measure === null ? '' : 'mmPerUnit' in measure ? `p${measure.mmPerUnit}` : `f${measure.frameMm}`}`;
+    const key = `${step.id} ${measureKey(measure)}`;
     if (!measured.has(key)) measured.set(key, layoutPicture(step, document.assets, document.style, measure));
     return measured.get(key)!;
   };
-  const stepsAt = (measureOf?: (stepId: string) => PictureMeasure) => diagramLayoutSteps(document, measureOf, pictureOf);
+  const stepsAt = (measureOf?: (stepId: string) => PictureMeasure) => diagramLayoutSteps(document, measureOf, pictureOf, footprints);
   const entries = new Map(stepsOf(document).map((step) => [step.id, step]));
   const kinds = new Map(stepsAt().map((step) => [step.id, step.picture?.kind]));
   /** A step's picture in a room `across` × `down`, measured at `scale` (a card's at null). */
@@ -423,7 +433,8 @@ export function preparedPages(
   subsetter: FontSubsetter
 ): PreparedDiagramPages {
   const setter = fontTextSetter((key, weight) => fonts.font(key, weight)?.metrics ?? null, document.hanStyle);
-  const layout = layoutDiagram(document, setter);
+  const footprints = footprintCache(document);
+  const layout = layoutDiagram(document, setter, footprints);
   // An upload's text is set as its page is composed; what no font has is known now.
   for (const { face, text } of [...diagramUploadTexts(document), ...diagramLabelTexts(document)]) {
     setter.runs(text, face);
@@ -438,6 +449,7 @@ export function preparedPages(
     setter,
     missing: [...setter.missing],
     unavailableFonts: fonts.unavailable,
+    footprints: footprints.latest,
     zoomArrows(index) {
       const page = layout.pages[index];
       if (!page) return [];

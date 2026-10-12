@@ -349,7 +349,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
   };
   const preview =
     draft?.base.withLayout?.(
-      previewPlacement(draft.base.layout, draft.cell.stepId, draft.part, draft.dx, draft.dy, draft.factor),
+      previewPlacement(draft.base.layout, draft.cell.stepId, draft.part, draft.dx, draft.dy, draft.factor, draft.base.footprints),
     ) ?? null;
   return {
     pages: preview ?? pages,

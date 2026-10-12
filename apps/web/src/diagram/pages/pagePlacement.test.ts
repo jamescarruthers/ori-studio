@@ -11,8 +11,10 @@ import { storedSceneJson } from '../document/diagramFile';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { FIXTURE_FONTS, fixtureSubsetter } from '../fonts/diagramFonts.fixtures';
 import type { FontSubsetter } from '../fonts/fontSubset';
-import { preparedPages } from './diagramPages';
-import { pageOffset, partBox } from './pagePlacement';
+import { diagramLayoutSteps, preparedPages } from './diagramPages';
+import { layoutDiagramPages } from './diagramPageLayout';
+import { estimateTextSetter } from './estimateTextSetter';
+import { pageOffset, partBox, partPolygons } from './pagePlacement';
 import { laneCrosses } from './flowLane';
 import { previewPlacement } from './placementPreview';
 
@@ -129,19 +131,48 @@ it('does not call an empty corner of marked diamond paper an overlap, but detect
   const step = { ...cpStep('diamond'), picture: { kind: 'scene' as const, sceneJson, paperScale: 100, styleKey: null, key: 'diamond' },
     annotations: [{ id: 'push', kind: 'push-arrow' as const, from: [.95, .5] as [number, number], to: [.8, .5] as [number, number] }] };
   const doc = setPageSetup(insertSteps(createDiagram(), [step], 0), { layout: 'grid', columns: 1, rows: 1 });
-  const base = prepare(doc).layout, cell = base.pages[0]!.cells[0]!;
-  expect(cell.inkPolygons).toHaveLength(2);
+  const pages = prepare(doc), base = pages.layout, cell = base.pages[0]!.cells[0]!;
+  const ink = (each: typeof cell) => partPolygons(each, 'picture', pages.footprints);
+  expect(ink(cell)).toHaveLength(2);
   const picture = partBox(cell, 'picture'), number = partBox(cell, 'number');
-  const empty = previewPlacement(base, step.id, 'number', picture.x + 2 - number.x, picture.y + 2 - number.y);
-  expect(empty.pages[0]!.cells[0]!.clashes?.some(c => c.kind === 'parts') ?? false).toBe(false);
-  const onPaper = previewPlacement(base, step.id, 'number', picture.x + picture.w / 2 - number.x, picture.y + picture.h / 2 - number.y);
-  expect(onPaper.pages[0]!.cells[0]!.clashes).toContainEqual({ kind: 'parts' });
-  const moved = previewPlacement(base, step.id, 'picture', 5, 3).pages[0]!.cells[0]!;
-  expect(moved.inkPolygons![0]![0]!.x).toBeCloseTo(cell.inkPolygons![0]![0]!.x + 5);
-  expect(moved.inkPolygons![0]![0]!.y).toBeCloseTo(cell.inkPolygons![0]![0]!.y + 3);
-  const resized = previewPlacement(base, step.id, 'picture', 0, 0, 1.5).pages[0]!.cells[0]!;
-  const xs = (polygons: NonNullable<typeof cell.inkPolygons>) => polygons.flat().map(p => p.x);
-  expect(Math.max(...xs(resized.inkPolygons!)) - Math.min(...xs(resized.inkPolygons!))).toBeCloseTo((Math.max(...xs(cell.inkPolygons!)) - Math.min(...xs(cell.inkPolygons!))) * 1.5);
+  const preview = (part: 'number' | 'picture', dx: number, dy: number, factor = 1) =>
+    previewPlacement(base, step.id, part, dx, dy, factor, pages.footprints).pages[0]!.cells[0]!;
+  const empty = preview('number', picture.x + 2 - number.x, picture.y + 2 - number.y);
+  expect(empty.clashes?.some(c => c.kind === 'parts') ?? false).toBe(false);
+  // Its box alone, without the footprints, calls the empty corner an overlap.
+  const boxed = previewPlacement(base, step.id, 'number', picture.x + 2 - number.x, picture.y + 2 - number.y).pages[0]!.cells[0]!;
+  expect(boxed.clashes).toContainEqual({ kind: 'parts' });
+  const onPaper = preview('number', picture.x + picture.w / 2 - number.x, picture.y + picture.h / 2 - number.y);
+  expect(onPaper.clashes).toContainEqual({ kind: 'parts' });
+  const moved = preview('picture', 5, 3);
+  expect(ink(moved)[0]![0]!.x).toBeCloseTo(ink(cell)[0]![0]!.x + 5);
+  expect(ink(moved)[0]![0]!.y).toBeCloseTo(ink(cell)[0]![0]!.y + 3);
+  const resized = preview('picture', 0, 0, 1.5);
+  const xs = (polygons: ReturnType<typeof ink>) => polygons.flat().map(p => p.x);
+  expect(Math.max(...xs(ink(resized))) - Math.min(...xs(ink(resized)))).toBeCloseTo((Math.max(...xs(ink(cell))) - Math.min(...xs(ink(cell)))) * 1.5);
+});
+
+it('works a footprint out only for a placed step and one whose box it meets', () => {
+  const calls: string[] = [];
+  const doc = setPageSetup(
+    insertSteps(createDiagram(), Array.from({ length: 4 }, (_, i) => ({ ...cpStep(`s${i}`), ...(i === 1 ? { place: { frame: [1, 0] as [number, number] } } : {}) })), 0),
+    { layout: 'grid', columns: 2, rows: 2 },
+  );
+  const steps = diagramLayoutSteps(doc).map((step) => ({
+    ...step,
+    footprints: step.footprints && (() => (calls.push(step.id), step.footprints!())),
+  }));
+  const plain = layoutDiagramPages(steps, doc.page, doc.title, estimateTextSetter);
+  // Only the placed step's own: nudged 1 mm, its boxes meet no other step's.
+  expect(calls).toEqual(['s1']);
+  // Its picture moved onto its neighbour's, the neighbour's too, to tell its paper from its box's corners.
+  calls.length = 0;
+  const [left, right] = plain.pages[0]!.cells;
+  const over = right!.drawMm.x - left!.drawMm.x;
+  // A little lower than the neighbour's, clear of its number: its number does not decide the clash first.
+  const onto = steps.map((step) => (step.id === 's1' ? { ...step, place: { picture: [-over, 10] as [number, number] } } : step));
+  layoutDiagramPages(onto, doc.page, doc.title, estimateTextSetter);
+  expect(calls.sort()).toEqual(['s0', 's1']);
 });
 
 it('clears an old path warning when a moved step returns to a clear route', () => {

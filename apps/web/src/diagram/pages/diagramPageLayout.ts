@@ -71,6 +71,7 @@ import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableAre
 import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';
 import { placeCell, placementClashes, type PageBox, type PlacementClash } from './pagePlacement';
+import type { Polygon } from './pagePolygons';
 
 /** The instruction's size and leading, mm. */
 export const STEP_TEXT_SIZE_MM = 3.2;
@@ -291,10 +292,14 @@ export interface LayoutStep {
    * before ribbon and symbol placement.
    */
   place?: DiagramStepPlace;
-  /** Convex picture outline, normalized to its measured ink box, for clipping exposed ribbon gaps. */
-  footprint?: readonly { x: number; y: number }[];
-  /** Separate occupied paper/mark outlines in the same ink-box coordinates; empty corners remain free. */
-  footprints?: readonly (readonly { x: number; y: number }[])[];
+  /**
+   * Its picture's paper and marks, each a convex outline in its ink box's
+   * terms, so the box's empty corners stay free (`pictureFootprints`):
+   * worked out only when a placement clash asks for them
+   * (`placementClashes`), once per picture and measure. Absent, or
+   * undefined when called, where only the box is known.
+   */
+  footprints?: () => readonly Polygon[] | undefined;
 }
 
 /**
@@ -384,7 +389,6 @@ export interface LayoutCell {
   homeParts?: { number: PageBox; picture: PageBox; text: PageBox };
   numberMm?: PageBox;
   inkMm?: PageBox;
-  inkPolygons?: readonly (readonly { x: number; y: number }[])[];
   /** Its row reads right to left: a flow row its page's plan turns back. Every grid row reads left to right. */
   rightToLeft?: boolean;
   placed?: {
@@ -1206,10 +1210,6 @@ export function layoutDiagramPages(
         },
         textOverflow: overflow,
       };
-      if (step.footprints && cell.inkMm) {
-        const inkMm = cell.inkMm;
-        cell.inkPolygons = step.footprints.map((polygon) => polygon.map((p) => ({ x: inkMm.x + p.x * inkMm.w, y: inkMm.y + p.y * inkMm.h })));
-      }
       // Placed by hand on top of its home: a frame's offset runs along its row as the row reads.
       return placeCell(cell, step, flow && rowRightToLeft(plans[pageIndex]!, row), setter);
     })
@@ -1308,7 +1308,8 @@ export function layoutDiagramPages(
     bandWidthMm,
     bandInk: setup.pathColor,
   };
-  placementClashes(result);
+  const byId = new Map(steps.map((step) => [step.id, step]));
+  placementClashes(result, (stepId) => byId.get(stepId)?.footprints?.());
   return result;
 }
 

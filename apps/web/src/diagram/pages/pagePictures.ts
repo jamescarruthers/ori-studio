@@ -143,6 +143,12 @@ interface DrawnPicture extends CellPicture {
  */
 export type PictureMeasure = { mmPerUnit: number } | { frameMm: number } | null;
 
+/** A measure as a key: one picture measured at it is measured once (`layoutDiagram`). */
+export function measureKey(measure: PictureMeasure): string {
+  if (measure === null) return '';
+  return 'mmPerUnit' in measure ? `p${measure.mmPerUnit}` : `f${measure.frameMm}`;
+}
+
 /** How a picture's own text is set: an upload's runs, its Han in the diagram's style. */
 export interface PictureText {
   hanStyle: DiagramHanStyle;

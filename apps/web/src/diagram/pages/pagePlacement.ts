@@ -14,6 +14,15 @@ export interface PlacementClash {
   steps?: number[];
 }
 
+/**
+ * A step's picture as its paper and marks occupy it, each a convex outline
+ * in its ink box's terms (0 to 1 across and down: `pictureFootprints`), so
+ * the box's empty corners stay free; undefined where only the box is known.
+ * Worked out only when asked for: for a placed step, and a step whose box
+ * one meets ({@link placementClashes}).
+ */
+export type FootprintsOf = (stepId: string) => readonly Polygon[] | undefined;
+
 /** Page axes, even on a page read upward. Only the frame's horizontal component follows reading order. */
 export function pageOffset(
   place: DiagramStepPlace | undefined,
@@ -34,7 +43,6 @@ export function translateCell(cell: LayoutCell, part: PagePart, dx: number, dy: 
     pictureMm: frame || part === 'picture' ? move(cell.pictureMm) : cell.pictureMm,
     drawMm: frame || part === 'picture' ? move(cell.drawMm) : cell.drawMm,
     inkMm: cell.inkMm && (frame || part === 'picture') ? move(cell.inkMm) : cell.inkMm,
-    inkPolygons: frame || part === 'picture' ? cell.inkPolygons?.map((p) => p.map(move)) : cell.inkPolygons,
     numberAt: frame || part === 'number' ? move(cell.numberAt) : cell.numberAt,
     numberMm: cell.numberMm && (frame || part === 'number') ? move(cell.numberMm) : cell.numberMm,
     text:
@@ -87,9 +95,18 @@ export function partBox(cell: LayoutCell, part: PagePart): PageBox {
   }
 }
 
-/** Hit boxes remain rectangular; collision checks use the occupied ink inside them. */
-export function partPolygons(cell: LayoutCell, part: PagePart): readonly Polygon[] {
-  if (part === 'picture' && cell.inkPolygons?.length) return cell.inkPolygons;
+/**
+ * The outlines a part of a cell occupies, for clashes: its box, but a
+ * picture's paper and marks where its footprints are known
+ * ({@link FootprintsOf}), laid on its ink box as drawn — moved or resized
+ * with it. Hit boxes stay rectangular ({@link partBox}).
+ */
+export function partPolygons(cell: LayoutCell, part: PagePart, footprintsOf?: FootprintsOf): readonly Polygon[] {
+  const ink = cell.inkMm;
+  if (part === 'picture' && ink && footprintsOf) {
+    const footprints = footprintsOf(cell.stepId);
+    if (footprints?.length) return footprints.map((polygon) => polygon.map((p) => ({ x: ink.x + p.x * ink.w, y: ink.y + p.y * ink.h })));
+  }
   const box = partBox(cell, part);
   return box.w > 0 && box.h > 0 ? [rectangle(box.x, box.y, box.w, box.h)] : [];
 }
@@ -98,16 +115,26 @@ function intersects(a: readonly Polygon[], b: readonly Polygon[]): boolean {
   return a.some((ap) => b.some((bp) => separate(ap, { x: 0, y: 0 }, bp, { x: 0, y: 0 }, -0.01)));
 }
 
-/** Manual placement is honored. Warnings are derived, never stored in the document. */
-export function placementClashes(layout: DiagramPagesLayout): void {
+/** Two boxes overlap: what outlines inside them must, to clash. */
+function boxesMeet(a: PageBox, b: PageBox): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+const CELL_PARTS = ['number', 'picture', 'text'] as const;
+
+/**
+ * Manual placement is honored. Warnings are derived, never stored in the
+ * document. A placed step's picture is checked as its footprints outline it
+ * (`footprintsOf`), and another step's only where their boxes meet, so a
+ * footprint is worked out only where it can decide a clash.
+ */
+export function placementClashes(layout: DiagramPagesLayout, footprintsOf?: FootprintsOf): void {
   const { widthMm: w, heightMm: h, marginMm: m } = layout.paper;
   for (const page of layout.pages)
     for (const cell of page.cells) {
       if (!cell.placed) continue;
-      const parts = (['number', 'picture', 'text'] as const).map((part) => partPolygons(cell, part));
-      const boxes = ['number', 'picture', 'text']
-        .map((part) => partBox(cell, part as PagePart))
-        .filter((b) => b.w > 0 && b.h > 0);
+      const parts = CELL_PARTS.map((part) => partPolygons(cell, part, footprintsOf));
+      const boxes = CELL_PARTS.map((part) => partBox(cell, part)).filter((b) => b.w > 0 && b.h > 0);
       const clashes: PlacementClash[] = [...(cell.clashes?.filter((c) => c.kind === 'path') ?? [])];
       const outside = (inset: number) =>
         boxes.some((b) => b.x < inset || b.y < inset || b.x + b.w > w - inset || b.y + b.h > h - inset);
@@ -115,15 +142,17 @@ export function placementClashes(layout: DiagramPagesLayout): void {
       else if (outside(m)) clashes.push({ kind: 'margin' });
       if (parts.some((shape, i) => parts.slice(i + 1).some((other) => intersects(shape, other))))
         clashes.push({ kind: 'parts' });
-      const steps = page.cells
-        .filter(
-          (other) =>
-            other !== cell &&
-            ['number', 'picture', 'text'].some((part) =>
-              parts.some((p) => intersects(p, partPolygons(other, part as PagePart))),
-            ),
-        )
-        .map((other) => other.number);
+      const meets = (other: LayoutCell, part: PagePart) => {
+        const box = partBox(other, part);
+        return box.w > 0 && box.h > 0 && boxes.some((own) => boxesMeet(own, box));
+      };
+      const clashesWith = (other: LayoutCell) =>
+        CELL_PARTS.some((part) => {
+          if (!meets(other, part)) return false;
+          const theirs = partPolygons(other, part, footprintsOf);
+          return parts.some((own) => intersects(own, theirs));
+        });
+      const steps = page.cells.filter((other) => other !== cell && clashesWith(other)).map((other) => other.number);
       if (steps.length) clashes.push({ kind: 'step', steps });
       const glyphs = [...page.turns, ...page.zoomArrows].map(({ at, box }) => ({
         x: at.x - box.w / 2,

@@ -33,8 +33,8 @@ export interface FontTextSetter extends TextSetter {
 
 export function fontTextSetter(fonts: FontLookup, hanStyle: DiagramHanStyle): FontTextSetter {
   const missing = new Set<string>();
-  // A layout treats its loaded font set as immutable. Packing asks for many
-  // candidate widths, so resolve each face once rather than per grapheme.
+  // A layout treats its loaded font set as immutable: each face is resolved
+  // once, rather than per grapheme.
   const metricsByFace = new Map<string, FontMetrics | null>();
   const lookup: FontLookup = (key, weight) => {
     const id = `${key}:${weight}`;
