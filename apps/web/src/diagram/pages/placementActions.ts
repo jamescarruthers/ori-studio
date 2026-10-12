@@ -4,21 +4,30 @@ import { stepById, type DiagramPlaceReset } from '../document/diagramDocument';
 import type { DiagramStepPlacePatch } from '../document/stepPlace';
 import { setFrameScale } from '../zoom/zoomFrames';
 
+/** How a commit that put a part back home was made, as the reset event names it. */
+const RESET_VIA = { drag: 'drag_home', keys: 'keys', pane: 'pane' } as const;
+
+/**
+ * Commit a hand placement, and count it: as a placement, or — where the
+ * store's normalised result leaves the part where the layout puts it (a drag
+ * that snapped home, nudges back to where they started, a 0 typed) — as a
+ * reset, by how it was made.
+ */
 export function commitPlacement(
   stepId: string,
   patch: DiagramStepPlacePatch,
   via: 'drag' | 'keys' | 'pane',
   options?: { loadId?: number; session?: number },
 ): boolean {
-  const store = useWorkspaceStore.getState();
-  if (!store.setDiagramStepPlace(stepId, patch, options)) return false;
+  if (!useWorkspaceStore.getState().setDiagramStepPlace(stepId, patch, options)) return false;
   const part =
     patch.scale !== undefined
       ? 'size'
       : ((['frame', 'number', 'picture', 'text'] as const).find((key) => patch[key] !== undefined) ?? 'frame');
-  if (Object.values(patch).every((value) => value === null))
-    trackDiagramPlacementReset(part, 'step', via === 'drag' ? 'drag_home' : 'pane');
-  else trackDiagramStepPlaced(part, via, store.diagram?.page.layout ?? 'flow');
+  const { diagram } = useWorkspaceStore.getState();
+  const place = diagram ? stepById(diagram, stepId)?.place : undefined;
+  if (place?.[part === 'size' ? 'scale' : part] === undefined) trackDiagramPlacementReset(part, 'step', RESET_VIA[via]);
+  else trackDiagramStepPlaced(part, via, diagram?.page.layout ?? 'flow');
   return true;
 }
 
@@ -48,4 +57,3 @@ export function commitZoomSize(stepId: string, scale: number | null, via: 'drag'
   if (changed) trackDiagramStepPlaced('size', via, store.diagram.page.layout);
   return changed;
 }
-

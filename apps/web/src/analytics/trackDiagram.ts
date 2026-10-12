@@ -383,7 +383,7 @@ export function trackDiagramExported(
 export function trackDiagramStepPlaced(part: 'frame' | 'number' | 'picture' | 'text' | 'size', via: 'drag' | 'keys' | 'pane', layout: 'grid' | 'flow'): void {
   track(ANALYTICS_EVENTS.diagramStepPlaced, { part, via, layout });
 }
-export function trackDiagramPlacementReset(part: 'frame' | 'number' | 'picture' | 'text' | 'size' | 'step', scope: 'step' | 'page' | 'diagram', via: 'pane' | 'menu' | 'drag_home'): void {
+export function trackDiagramPlacementReset(part: 'frame' | 'number' | 'picture' | 'text' | 'size' | 'step', scope: 'step' | 'page' | 'diagram', via: 'pane' | 'menu' | 'drag_home' | 'keys'): void {
   track(ANALYTICS_EVENTS.diagramPlacementReset, { part, scope, via });
 }
 export function trackDiagramPlacementsReflowed(count: number): void {

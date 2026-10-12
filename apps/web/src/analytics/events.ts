@@ -1595,8 +1595,22 @@ export const ANALYTICS_EVENTS = {
    * and in which form.
    */
   diagramExported: 'diagram exported',
+  /**
+   * A step's frame, number, picture or text moved by hand on the Pages view,
+   * or its picture's size set, and committed — by a drag, the arrow keys or
+   * the Step pane: whether hand placement is used, how, and on which layout.
+   */
   diagramStepPlaced: 'diagram step placed',
+  /**
+   * A hand placement taken back — a part, a step, a page or the diagram — or
+   * a commit that left the part where the layout puts it: how often the
+   * automatic placement is returned to, and from where.
+   */
   diagramPlacementReset: 'diagram placement reset',
+  /**
+   * An edit that put steps in other cells, and so sent frames moved by hand
+   * back to automatic placement: how often the reflow notice is seen.
+   */
   diagramPlacementsReflowed: 'diagram placements reflowed',
   /**
    * The References browser opened in the Diagram (D20), and for where: what
