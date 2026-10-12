@@ -10,6 +10,7 @@ import type { FoldedFaceInk } from '../../cp-workspace/adapters/cpFoldedToScene'
 import type { Rgba } from '../../cp-workspace/renderer/types';
 import type { CpToolOptionBounds } from '../../cp-workspace/toolOptions/toolOptionWindow';
 import type { Point } from '../../lib/geometry';
+import { isVertexOp } from '../document/foldSequenceDocument';
 import type { FoldFlap, FoldScene } from '../engine/foldEngineWire';
 import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
 import { sameFlap } from '../tools/crossSection';
@@ -417,9 +418,14 @@ function choiceNoteNoKeys(t: TFunction, kind: FoldCanvasChoice['kind']): string 
   }
 }
 
-/** Where the root chooser frames: round the fold line on the folded pane, or the paper when there is none yet. */
+/**
+ * Where the canvas chooser frames: round the fold line on the folded pane, or the paper when there is none
+ * yet. A vertex fold folds along no one line: its picture's line is a single crease from its center, too
+ * short to hang the chooser on, so a vertex fold's chooser frames the paper.
+ */
 export function chooserBounds(preview: FoldToolPreview, scene: FoldScene | null): CpToolOptionBounds | null {
-  const line = preview.action?.line;
+  const vertexFold = Boolean(preview.vertex) || (preview.step ? isVertexOp(preview.step.op) : false);
+  const line = vertexFold ? null : preview.action?.line;
   if (line) return boundsOf(line);
   return scene ? boundsOf(scene.subfaces.flatMap((cell) => cell.polygon)) : null;
 }

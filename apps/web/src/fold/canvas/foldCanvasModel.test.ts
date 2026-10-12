@@ -7,6 +7,7 @@ import type { FoldPick } from './foldPicking';
 import { bookScene } from './foldCanvas.fixtures';
 import { shortcutLabelForAction } from '../../keyboard/shortcuts';
 import {
+  chooserBounds,
   chooserKeys,
   foldChoiceNote,
   foldCrimpWindowView,
@@ -308,6 +309,35 @@ describe('the Fold canvas model', () => {
     // Not while the line is being located, nor for another tool.
     expect(foldSinkWindowView({ ...tools, picks: [] }, preview({ sink }), false)).toBeUndefined();
     expect(foldSinkWindowView(located, preview({ sink }), false)).toBeUndefined();
+  });
+});
+
+describe('where the canvas chooser frames', () => {
+  const action = {
+    kind: 'fold',
+    direction: 'valley',
+    line: [
+      { x: 0.1, y: 0.4 },
+      { x: 0.3, y: 0.6 },
+    ],
+    spans: [],
+    moving: [],
+    grip: null,
+  } as NonNullable<FoldToolPreview['action']>;
+  const paper = { minX: 0, minY: 0, maxX: 0.5, maxY: 1 };
+
+  it('frames a fold line, or the paper while there is none', () => {
+    expect(chooserBounds(preview({ action }), bookScene())).toEqual({ minX: 0.1, minY: 0.4, maxX: 0.3, maxY: 0.6 });
+    expect(chooserBounds(preview(), bookScene())).toEqual(paper);
+    expect(chooserBounds(preview(), null)).toBeNull();
+  });
+
+  it('frames the paper for a vertex fold, whose picture’s line is one short crease from its center', () => {
+    const swivel = {
+      op: { kind: 'swivel', vertex: [0.5, 0.3], toward: [], emergent: [0, -1], seed: { scope: 'all' }, stayer: [0.3, 0.9], direction: 'valley' },
+      key: 'k',
+    } as unknown as NonNullable<FoldToolPreview['step']>;
+    expect(chooserBounds(preview({ action, step: swivel }), bookScene())).toEqual(paper);
   });
 });
 
