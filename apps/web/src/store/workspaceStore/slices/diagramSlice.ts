@@ -60,6 +60,7 @@ import {
 } from '../diagramZoom';
 import { lacksPaperFaces } from '../../../diagram/capture/stepPaperFaces';
 import { resetStepPlace, resetStepPlaces, setStepPlace } from '../../../diagram/document/stepPlace';
+import { retainPageCounts, setPageSteps } from '../../../diagram/pages/pageCounts';
 import { cellSlots, settlePlaces } from '../../../diagram/pages/stepPlaces';
 import {
   emptySnapshotHistory,
@@ -154,10 +155,14 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     // An edit that changed nothing records nothing — and does not bring a
     // diagram into being just to leave it empty.
     if (edited === base) return null;
+    // A page with its own count gains the steps the edit put on it and loses
+    // those it took away, so later pages stay where they were
+    // (`diagram-flow-pages.md`): one rule, here, whatever the edit was.
+    const counted = retainPageCounts(base, edited);
     // A frame moved by hand whose step the edit put in another cell goes back
     // to it, in this edit's undo step (Decision 1A): one rule, here, whatever
     // the edit was, so no verb can forget it.
-    const { document: settled, settled: count } = settlePlaces(base, edited);
+    const { document: settled, settled: count } = settlePlaces(base, counted);
     // An asset nothing refers to any more goes as the edit lands. Each undo
     // snapshot keeps its own assets table, so undo still has the picture a
     // replace took away; and with the current diagram no longer holding it,
@@ -531,6 +536,11 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     setDiagramStepBreakBefore: (stepId, breakBefore) =>
       commit(breakBefore ? 'Start a new page' : 'Continue the page', (document) =>
         setStepBreakBefore(document, stepId, breakBefore)
+      ) !== null,
+
+    setDiagramPageSteps: (pageIndex, count) =>
+      commit(count === null ? 'Fill page by default' : 'Set steps on page', (document) =>
+        setPageSteps(document, pageIndex, count)
       ) !== null,
 
     setDiagramStyle: (style) =>

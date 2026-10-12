@@ -2148,6 +2148,14 @@ export interface DiagramSliceActions {
   setDiagramPage: (patch: Partial<DiagramPageSetup>, options?: { session?: number }) => boolean;
   /** Start a new page at the step, or stop doing so ("Start a new page here", D10). */
   setDiagramStepBreakBefore: (stepId: string, breakBefore: boolean) => boolean;
+  /**
+   * Give flow page `pageIndex` (from 0) its own count of steps, or — null —
+   * take it away so it fills with the default (`setPageSteps` in
+   * `diagram/pages/pageCounts.ts`): earlier pages without a count keep their
+   * size as one, and the boundary with the next page moves. One undo step;
+   * frames whose cell changed go home, as after any edit. Whether it changed.
+   */
+  setDiagramPageSteps: (pageIndex: number, count: number | null) => boolean;
   /** The paper style every step is painted in (D9): a built-in by id, or a resolved style. */
   setDiagramStyle: (style: DiagramStyle) => boolean;
   /** How Han characters are drawn when nothing else in a text says (Decision 2). */

@@ -115,6 +115,25 @@ A store verb `setDiagramPageSteps(pageIndex, count | null)`:
   continues into the one after). An automatic next page simply refills.
 - One undo entry. `settlePlaces` then sends moved frames home as today.
 
+As built (Phase 1, `diagram/pages/pagePlan.ts` and `pageCounts.ts`):
+
+- Which steps moved is read from the two orders alone: the steps that keep
+  their place are the longest run both orders share. Where two runs are as
+  long, the one that keeps a counted page's first step wins (rule 6), so
+  Move Earlier on a page's first step is read as the step before it moving
+  later: `s0 s1 s2 | s3 …` becomes `s0 s1 | s3 s2 …`, not `s0 s1 s3 s2 | …`.
+- Counts are the flow's on a grid too: both the edit rules and the verb read
+  the flow pagination whatever the layout.
+- A newer build's step is never edited: a count it carries stays as it came,
+  and the verb refuses an edit that would have to change one (an earlier page
+  it starts is just left without a count).
+- A count set to what the page already holds changes nothing (no earlier
+  page is frozen either).
+- A cell is keyed on its page's layout count and rows, so anything that
+  changes a page's rows sends its frames home: a page added after a left page
+  (it then hands over at its spine, odd rows), the first page's side, or the
+  orientation, where they change some page's rows.
+
 ### Layout (`diagramPageLayout.ts`, flow branch)
 
 Start from the cell path (#436's code, as on the 90b4cf001 Phase 1b commit)
@@ -224,7 +243,7 @@ and remove everything packing added.
 ### Phase 1: model, pagination, edit rules
 - [x] `pageSteps` in the model and file, with tests.
 - [x] Shared pagination function; `cellSlots` and the layout read it.
-- [ ] `retainPageCounts` in `commit`; `setDiagramPageSteps`; tests for every rule.
+- [x] `retainPageCounts` in `commit`; `setDiagramPageSteps`; tests for every rule.
 
 ### Phase 2: the layout
 - [ ] Geometry helpers moved; packing, its cache and tests deleted.
