@@ -61,6 +61,9 @@ export function runFoldCanvasShortcut(id: FoldShortcutId, focus: Element | null)
     case 'fold.swapSide':
       // Nothing located, no side to swap: S falls through.
       return verbs.swapSide();
+    case 'fold.cycleExtent':
+      // No Precrease tool in hand, no extent to change: E falls through.
+      return verbs.cycleExtent();
     case 'fold.previousCandidate':
     case 'fold.nextCandidate':
       // A control that moves with the arrows keeps them; with one candidate or none, the step keys may have them.

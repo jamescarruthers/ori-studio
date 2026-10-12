@@ -218,6 +218,8 @@ export type FoldShortcutId =
   | 'fold.lineFree'
   | 'fold.lineCrease'
   | 'fold.swapSide'
+  // A precrease's extent: the whole line, a segment, a pinch.
+  | 'fold.cycleExtent'
   | 'fold.previousCandidate'
   | 'fold.nextCandidate'
   | 'fold.commit'
@@ -824,6 +826,9 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.lineFree', 'Free Line', { key: 'f' }),
   foldShortcut('fold.lineCrease', 'Existing Crease', { key: 'c' }),
   foldShortcut('fold.swapSide', 'Swap Moving Side', { key: 's' }),
+  // A precrease's extent, on E: the whole line, a segment, a pinch, round
+  // again. Only with the Precrease tool in hand; otherwise E falls through.
+  foldShortcut('fold.cycleExtent', 'Next Precrease Extent', { key: 'e' }),
   // The axiom's roots, on Shift+arrows: the arrows alone are the steps'.
   foldShortcut('fold.previousCandidate', 'Previous Root', { shift: true, key: 'arrowleft' }),
   foldShortcut('fold.nextCandidate', 'Next Root', { shift: true, key: 'arrowright' }),

@@ -21,7 +21,8 @@ import { pocketNames } from '../tools/sink/sinkStep';
 import type { FoldSinkWindowView } from '../tools/sink/sinkToolWindow';
 import { isSinkRefusalCode } from '../engine/foldEngineSinkWire';
 import type { FoldTuckWindowView } from '../tools/tuck/tuckToolWindow';
-import { isLocated, type FoldToolState } from '../tools/foldToolState';
+import { isLocated, picksAlongLine, type FoldToolState } from '../tools/foldToolState';
+import { foldExtentLabel, foldExtentSteps, type FoldExtentMode } from '../tools/precrease/precreaseExtent';
 import {
   crimpFirstLineSteps,
   foldToolLabel,
@@ -36,9 +37,10 @@ import { vertexToolSteps, type FoldVertexStepsHost } from '../tools/vertex/verte
 import { nearestDirection } from '../tools/vertex/vertexStep';
 import type { FoldVertexWindowView } from '../tools/vertex/vertexToolWindow';
 import { boundsOf } from './foldCanvasGeometry';
-import type { FoldFreePick } from './foldPicking';
+import type { FoldOverlayAlong } from './foldPaneOverlays';
+import type { FoldFreePick, FoldPaneId, FoldPointPick } from './foldPicking';
 import type { FoldCanvasChoice } from './useFoldCanvasVerbs';
-import type { FoldToolPreview } from './useFoldToolPreview';
+import type { FoldExtentPreview, FoldToolPreview } from './useFoldToolPreview';
 
 /** Where a flap the engine named elsewhere is among the section's flaps; -1 when it is not there. */
 function sectionIndex(section: readonly FoldFlap[], flap: FoldFlap): number {
@@ -89,6 +91,31 @@ export function foldWindowPreview(
     landing: preview.landing,
     acrossLayers: preview.build.status === 'built' && preview.build.acrossLayers === true && !tools.override,
     ...(queued ? { queued } : {}),
+    ...(preview.extent?.state.status === 'incomplete' ? { incomplete: true } : {}),
+  };
+}
+
+/** A partial precrease's line and points as one pane's overlay draws them (`FoldPaneOverlayInput.along`). */
+export type FoldAlongOverlays = Readonly<Record<FoldPaneId, FoldOverlayAlong>>;
+
+/**
+ * What each pane draws of a partial precrease being made: the located line
+ * on it, the points clicked, and for a segment, the stretch from its first
+ * end to the point under the pointer. On the folded pane the line is bright
+ * while its points are clicked and faint once they are all in and the fold's
+ * picture draws the extent; on the crease pattern always faint, a guide
+ * among creases drawn in the same blue as a valley. Null for any other fold.
+ */
+export function foldAlongOverlay(
+  extent: FoldExtentPreview | null,
+  mode: FoldExtentMode,
+  picks: readonly FoldPointPick[]
+): FoldAlongOverlays | null {
+  if (!extent) return null;
+  const segment = mode === 'segment';
+  return {
+    folded: { pieces: extent.along.folded.pieces, picks, segment, faint: extent.state.status !== 'incomplete' },
+    'crease-pattern': { pieces: extent.along.creasePattern.pieces, picks, segment, faint: true },
   };
 }
 
@@ -303,6 +330,11 @@ export function foldLocatedLines(
 export function foldPromptWords(t: TFunction, tools: FoldToolState, host?: FoldVertexStepsHost): string | null {
   if (tools.tool === 'divide-line') {
     return tools.picks.length === 0 ? t('tools:fold.steps.divide', 'Click an edge or crease to divide it.') : null;
+  }
+  if (picksAlongLine(tools)) {
+    // A partial precrease's points along its located line, named by its extent.
+    const step = foldExtentSteps(t, tools.extent)[tools.extentPicks.length];
+    return step ? `${foldExtentLabel(t, tools.extent)} · ${step}` : null;
   }
   if (isLocated(tools)) return null;
   if (isVertexTool(tools.tool)) {

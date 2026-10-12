@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
-import type { FoldOp, FoldRef } from '../document/foldSequenceDocument';
+import type { FoldOp, FoldPrecreaseOp, FoldRef } from '../document/foldSequenceDocument';
 import { foldSentenceStepOf } from '../sequence/foldSentenceStep';
 import { foldStateFrame } from '../sequence/foldStateFrame';
 import { foldStepSentence } from '../stepSentence';
@@ -90,5 +90,23 @@ describe('the letters on the folded pane', () => {
     const free: FoldOp = { kind: 'valley', line: { via: 'free', through: [[0.5, 0], [0.5, 1]] }, seed: { scope: 'all' } };
     expect(foldStepLetters(free, parent, sheet)).toEqual([]);
     expect(foldStepLetters({ kind: 'turn', axis: 'vertical' }, parent, sheet)).toEqual([]);
+  });
+
+  it('letter a partial precrease’s points after the line’s, as its sentence does', () => {
+    const pinch: FoldPrecreaseOp = {
+      kind: 'precrease',
+      direction: 'valley',
+      line: { via: 'axiom', axiom: 2, inputs: [point(0.5, 0), point(0.5, 1)] },
+      seed: { scope: 'all' },
+      extent: { kind: 'pinch', at: { kind: 'point', at: [0.25, 0.5] }, length: 1 / 16 },
+    };
+    const letters = foldStepLetters(pinch, parent, sheet);
+    expect(letters.map(({ letter }) => letter)).toEqual(['P', 'Q', 'R']);
+    expect(round(letters[2]!.at)).toEqual([0.25, 0.5]);
+    const sentence = foldStepSentence(t, foldSentenceStepOf(pinch, { parent, child: null, report: null }));
+    expect(sentence).toContain('a short pinch at point R');
+    // Along a free line, the pinch alone is lettered.
+    const free: FoldPrecreaseOp = { ...pinch, line: { via: 'free', through: [[0, 0.5], [1, 0.5]] } };
+    expect(foldStepLetters(free, parent, sheet).map(({ letter }) => letter)).toEqual(['P']);
   });
 });

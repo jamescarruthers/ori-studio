@@ -269,7 +269,24 @@ export interface FoldPaneOverlayInput {
    * drawn where they lie.
    */
   spread?: FoldPaneSpreadMap | null;
+  /** A partial precrease being made: its located line on this pane, and the points clicked along it. */
+  along?: FoldOverlayAlong | null;
 }
+
+/** A partial precrease's located line on one pane, and its points along it (`foldAlongOverlay`). */
+export interface FoldOverlayAlong {
+  /** The line's stretches on the paper, in the pane's frame (`FoldAlongLine.pieces`). */
+  pieces: readonly (readonly [Point, Point])[];
+  /** The points clicked along it, in click order. */
+  picks: readonly FoldPick[];
+  /** A segment: from its first end, the stretch to the point under the pointer is drawn. */
+  segment: boolean;
+  /** Every point is in, and the fold's picture draws the extent: the line steps back. */
+  faint: boolean;
+}
+
+/** How bright the located line is once a partial precrease's picture draws its extent over it. */
+const ALONG_FAINT_ALPHA = 0.35;
 
 /** The overlay for one pane. */
 export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
@@ -313,10 +330,28 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
   if (pane === 'folded') {
     for (const [a, b] of input.located ?? []) strokes.push({ a, b, color: inks.accent, widthMul: LOCATED_WIDTH_MUL });
   }
+  // A partial precrease's line, where its points are clicked: solid, in the
+  // pick accent, as any located line — never dashed, which a crease is.
+  const along = input.along ?? null;
+  if (along) {
+    const color = along.faint ? withAlpha(inks.accent, ALONG_FAINT_ALPHA) : inks.accent;
+    for (const [a, b] of along.pieces) strokes.push({ a, b, color, widthMul: along.faint ? 1 : LOCATED_WIDTH_MUL });
+  }
   for (const pick of input.picks) draw(pick, false);
+  for (const pick of along?.picks ?? []) draw(pick, false);
 
   const hovered = input.hovered;
   if (hovered?.pick) draw(hovered.pick, true);
+  // A segment being drawn along the line, on the folded pane: from its first
+  // end to where a click would put the other.
+  const [first] = along?.picks ?? [];
+  if (along?.segment && along.picks.length === 1 && first && pane === 'folded' && hovered?.pick?.kind === 'point') {
+    const a = pickOnPane(first, pane, spread);
+    const b = pickOnPane(hovered.pick, pane, spread);
+    if (a && b && 'x' in a && 'x' in b) {
+      strokes.push({ a, b, color: withAlpha(inks.accent, HOVER_LINE_ALPHA), widthMul: LINE_WIDTH_MUL });
+    }
+  }
   // The line a free fold is being drawn along, on the pane under the
   // pointer: from its first end to where a click would put the other.
   const from = input.freeFrom ? pickOnPane(input.freeFrom, pane, spread) : null;

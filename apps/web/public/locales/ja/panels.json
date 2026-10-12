@@ -1744,6 +1744,10 @@
           }
         }
       },
+      "extent": {
+        "pinch": "{{sentence}}ただし、{{at}} を中心に短くつまんで印をつけるだけにします。",
+        "segment": "{{sentence}}ただし、折り筋をつけるのは {{from}} から {{to}} までの部分だけです。"
+      },
       "insideReverse": {
         "crease": {
           "all": "すべての層をまとめて、既存の折り筋で中割り折りします。",
@@ -2125,6 +2129,8 @@
       "creases": "折り筋",
       "creasesBackUp": "紙の表から見た数です。表は最初下を向いているため、見えている折りとは逆に読めることがあります。",
       "creasesFront": "紙の表から見た数です。",
+      "extent": "範囲",
+      "extentHelp": "下折りが線のどこまでに折り筋をつけたか。線全体、2 点の間の部分、または短いつまみです。",
       "firstLine": "1 本目の線",
       "flat": "平ら",
       "flatHelp": "一度折ってから開いた折り筋です。今は平らで、どちらに折ったかを覚えています。",
@@ -2164,6 +2170,8 @@
     },
     "words": {
       "adds_other": "折り筋を {{count}} 本追加（M {{mountain}}、V {{valley}}）",
+      "addsCreaseMarks_other": "折り筋の印を {{count}} 本追加",
+      "addsPinchMarks_other": "つまみの印を {{count}} 本追加",
       "addsPrecreases_other": "下折りを {{count}} 本追加",
       "axiomLine": "公理 {{axiom}} · {{phrase}}",
       "badgeCrimp": "クリンプ",
@@ -2190,6 +2198,9 @@
       "crimpInside": "段中割り折り",
       "crimpOutside": "段かぶせ折り",
       "existingCrease": "既存の折り筋",
+      "extentPinch": "つまみ",
+      "extentSegment": "部分",
+      "extentWhole": "線全体",
       "freeLine": "自由な線",
       "insideReverse": "中割り折り",
       "mountainFold": "山折り",

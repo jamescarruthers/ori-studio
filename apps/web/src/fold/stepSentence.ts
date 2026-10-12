@@ -11,6 +11,12 @@
  * shared vocabulary: the sheet's own edges, corners and diagonals by
  * description, anything else by its letter.
  *
+ * A precrease of part of its line is its precrease's sentence followed by a
+ * second whole sentence saying how much of it is creased ("Crease only a
+ * short pinch at point R."): one key that takes the first sentence whole, so
+ * each language joins the two its own way, and no extent multiplies the
+ * precrease's sentences by its own.
+ *
  * Inputs are the step's anchors as the axiom reads them, in the crate's axiom
  * order (`oristudio-geometry`'s `Construction`, plan D6): O1 `[p, q]`, O2
  * `[p, q]`, O3 `[m1, m2]`, O4 `[p, m]`, O5 `[pivot, p, m1]`, O6
@@ -100,11 +106,23 @@ export type FoldLayerScope =
 /** Which way a point sinks, or the unsink back. */
 export type FoldSinkSentenceKind = 'open' | 'closed' | 'unsink';
 
+/**
+ * How much of its line a precrease creased, when it was not all of it: a
+ * pinch at a point of the line, or the stretch between two. Its points are
+ * named as an axiom's inputs are, lettered after the line's own.
+ */
+export type FoldSentenceExtent =
+  | { kind: 'pinch'; at: FoldSentenceReference }
+  | { kind: 'segment'; from: FoldSentenceReference; to: FoldSentenceReference };
+
 /** A step as its sentence reads it. */
 export type FoldSentenceStep =
   | { op: 'fold'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope }
-  /** Fold and unfold: the creases stay, flat, remembering their letters. */
-  | { op: 'precrease'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope }
+  /**
+   * Fold and unfold: the creases stay, flat, remembering their letters — or,
+   * with an extent, only part of the line is creased.
+   */
+  | { op: 'precrease'; direction: FoldDirection; line: FoldSentenceLine; scope: FoldLayerScope; extent?: FoldSentenceExtent }
   /**
    * A fold along a bend that lays its layers flat again (plan D3): always
    * along an existing crease, so it has no line to describe.
@@ -147,6 +165,41 @@ function referenceKind(reference: FoldSentenceReference): ReferenceKind {
  */
 export function sentenceInputLetters(inputs: readonly FoldSentenceReference[]): InputLetters {
   return letterInputs(inputs.map(referenceKind));
+}
+
+/** A precrease extent's points, in order: a pinch's centre, a segment's two ends. */
+export function extentReferences(extent: FoldSentenceExtent): FoldSentenceReference[] {
+  return extent.kind === 'pinch' ? [extent.at] : [extent.from, extent.to];
+}
+
+/**
+ * The letters a precrease extent's points go by: after the line's own inputs
+ * (an axiom's; none for a free line or a crease), in the same scheme, so the
+ * picture and the sentence letter them alike.
+ */
+export function sentenceExtentLetters(line: FoldSentenceLine, extent: FoldSentenceExtent): string[] {
+  const inputs = line.via === 'axiom' ? line.inputs : [];
+  const points = extentReferences(extent);
+  return sentenceInputLetters([...inputs, ...points]).byInput.slice(inputs.length);
+}
+
+/** A precrease's sentence with what of its line it creases said after it, a whole sentence of its own. */
+function extentSentence(t: TFunction, sentence: string, line: FoldSentenceLine, extent: FoldSentenceExtent): string {
+  const letters = sentenceExtentLetters(line, extent);
+  const name = (reference: FoldSentenceReference, k: number) => {
+    const letter = letters[k];
+    return letter ? referenceName(t, reference, letter) : '?';
+  };
+  return extent.kind === 'pinch'
+    ? t('panels:fold.sentence.extent.pinch', '{{sentence}} Crease only a short pinch at {{at}}.', {
+        sentence,
+        at: name(extent.at, 0),
+      })
+    : t('panels:fold.sentence.extent.segment', '{{sentence}} Crease only the stretch from {{from}} to {{to}}.', {
+        sentence,
+        from: name(extent.from, 0),
+        to: name(extent.to, 1),
+      });
 }
 
 /** One reference's name in a sentence. */
@@ -245,8 +298,12 @@ function plainOp(op: 'fold' | 'precrease', direction: FoldDirection): PlainFoldS
 export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
   switch (step.op) {
     case 'fold':
-    case 'precrease':
       return plainFoldSentence(t, plainOp(step.op, step.direction), lineClause(t, step.line), step.scope);
+    case 'precrease': {
+      const sentence = plainFoldSentence(t, plainOp(step.op, step.direction), lineClause(t, step.line), step.scope);
+      // Part of the line only: the precrease as it is located, then how much of it is creased.
+      return step.extent ? extentSentence(t, sentence, step.line, step.extent) : sentence;
+    }
     case 'unfold':
       return unfoldSentence(t, step.direction, step.scope);
     case 'turn':

@@ -320,6 +320,14 @@
       "ratio": "Rapport",
       "right": "Jusqu’à la fin"
     },
+    "extent": {
+      "commitPinch": "Pincer",
+      "keyNote": "Appuyez sur {{shortcut}} pour passer d’une étendue à l’autre.",
+      "label": "Étendue",
+      "pinchHelp": "Ne marquer qu’un court repère, centré sur un point cliqué le long de la ligne.",
+      "segmentHelp": "Ne marquer la ligne qu’entre deux points cliqués le long de celle-ci.",
+      "wholeHelp": "Marquer la ligne d’un bord à l’autre."
+    },
     "fix": {
       "closedSinkInstead": "Plutôt un enfoncement fermé",
       "crimpFlap": "Faire le crimp seulement sur le rabat {{number}}",
@@ -336,6 +344,7 @@
       "outsideInstead": "Plutôt un pli inversé extérieur",
       "pickFlap": "Plier seulement le rabat {{number}}",
       "pickThisFlap": "Plier seulement ce rabat",
+      "pinchInstead": "Pincer à cet endroit à la place",
       "precreaseOtherWay": "Pré-plier dans l’autre sens",
       "reverseFlap": "Inverser seulement le rabat {{number}}",
       "reverseThisFlap": "Inverser seulement ce rabat",
@@ -343,6 +352,7 @@
       "sinkThisFlap": "Enfoncer seulement ce rabat",
       "slideToEdge": "Faire glisser la ligne pour poser le point sur le bord",
       "swapInstead": "Inverser le côté qui bouge",
+      "throughAllLayers": "Marquer à travers toutes les couches",
       "tuckFlap": "Rentrer seulement le rabat {{number}}",
       "tuckOtherWay": "Rentrer dans l’autre sens",
       "tuckOver": "Plutôt rentrer par-dessus la couche {{number}} de la liste",
@@ -353,6 +363,7 @@
       "turnToEdge": "Faire pivoter la ligne pour poser le point sur le bord",
       "useLine": "Utiliser la ligne de repère",
       "useSquareLine": "Utiliser la ligne perpendiculaire",
+      "useWholeLine": "Utiliser toute la ligne",
       "valleyInstead": "Plutôt un pli vallée"
     },
     "flap": {
@@ -378,6 +389,7 @@
     },
     "key": {
       "commit": "Faire le pli",
+      "cycleExtent": "Étendue de pré-pliage suivante",
       "nextRoot": "Solution suivante",
       "previousRoot": "Solution précédente",
       "swapSide": "Inverser le côté qui bouge"
@@ -413,6 +425,8 @@
     },
     "note": {
       "acrossLayers": "Ces points sont sur des couches que le pliage a écartées : la ligne passe par eux là où ils se trouvent dans la forme pliée. Le patron de plis montre les plis qu’elle crée.",
+      "along": "Les points s’accrochent là où la ligne croise des plis, des bords et des repères, aux points situés sur elle et à son milieu.",
+      "alongBack": "Échap annule le dernier point.",
       "clear": "Échap efface les points choisis.",
       "closedSinkLine": "La ligne en travers de la pointe fixe la profondeur de l’enfoncement.",
       "crease": "Plier le long d’un pré-pli le replie ; le long d’un bord plié, cela déplie le rabat.",
@@ -515,6 +529,23 @@
         "text": "Aucune couche n’est choisie. Choisissez au moins un rabat à déplacer.",
         "title": "Rien à plier"
       },
+      "extentMissesLayers": {
+        "text": "Aucune des couches que traverse ce pré-pliage ne se trouve le long de ce tronçon de la ligne, ou la ligne y est déjà pliée. Cliquez ailleurs le long de la ligne, ou marquez à travers toutes les couches.",
+        "title": "Aucune couche à marquer ici"
+      },
+      "extentMissesPaper": {
+        "text": "Ce tronçon de la ligne ne passe sur aucun papier : il n’y a rien à marquer. Cliquez sur des points où la ligne traverse le papier.",
+        "title": "Pas de papier ici"
+      },
+      "extentOffPaper": {
+        "text": "Un point à partir duquel le pli est mesuré ne se trouve pas sur le papier tel qu’il est plié maintenant. Cliquez ses points le long de la ligne, là où elle traverse le papier.",
+        "title": "Un point est hors du papier"
+      },
+      "extentTooShort": {
+        "pinch": "Ce pincement est trop court pour que le papier prenne un pli. Marquez une plus grande partie de la ligne.",
+        "segment": "Les deux points sont trop proches le long de la ligne pour marquer entre eux. Cliquez deux points plus éloignés, ou pincez à cet endroit à la place.",
+        "title": "Trop court pour marquer"
+      },
       "insideInfeasible": {
         "title": "Il ne peut pas rentrer à l’intérieur"
       },
@@ -525,6 +556,22 @@
       "kindInfeasible": {
         "neither": "Aucun type de pli inversé ne convient ici : aucun empilement des couches ne permet à la pointe de tourner. Déplacez la ligne, ou inversez d’autres rabats.",
         "text": "Aucun empilement des couches ne permet ici à la pointe de tourner de ce côté. L’autre type de pli inversé conviendra peut-être."
+      },
+      "markOffSheet": {
+        "text": "Une partie du repère se trouverait hors de la feuille. Cliquez ses points le long de la ligne, à l’intérieur du papier.",
+        "title": "Le repère sortirait du papier"
+      },
+      "markOnCrease": {
+        "text": "Le repère se trouverait le long d’un pli déjà présent. Marquez un autre tronçon de la ligne, ou pliez le long du pli lui-même.",
+        "title": "Déjà plié ici"
+      },
+      "marksOverlap": {
+        "text": "Le repère recouvrirait une partie d’un repère fait auparavant, d’une façon que le papier ne permet pas. Marquez un autre tronçon de la ligne, ou marquez toute la ligne.",
+        "title": "Les repères se chevaucheraient"
+      },
+      "markTooShort": {
+        "text": "Sur l’une de ses couches, le repère serait trop court pour que le papier prenne un pli. Marquez une plus grande partie de la ligne.",
+        "title": "Trop court pour marquer"
       },
       "moverStays": {
         "text": "La couche qui porte le point à déplacer ne fait pas partie des couches qui se plient. Incluez son rabat, ou pliez toutes les couches.",
@@ -729,7 +776,10 @@
       "pickPoint": "Choisissez la pointe à enfoncer : un enfoncement n’en prend qu’une.",
       "pickSunkPoint": "La pointe enfoncée est trouvée pour vous : choisissez-en une autre dans les couches pour sortir celle-là.",
       "pickTuckTarget": "Choisissez la couche contre laquelle rentrer.",
-      "pointToMove": "Cliquez sur le point à déplacer."
+      "pinchAt": "Cliquez le long de la ligne là où pincer.",
+      "pointToMove": "Cliquez sur le point à déplacer.",
+      "segmentFrom": "Cliquez le long de la ligne là où le pli commence.",
+      "segmentTo": "Cliquez là où il se termine."
     },
     "tool": {
       "closedSinkHelp": "Enfoncer l’extrémité d’une pointe fermée dans une poche, ses couches restant ensemble.",

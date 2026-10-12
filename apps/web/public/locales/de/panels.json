@@ -1867,6 +1867,10 @@
           }
         }
       },
+      "extent": {
+        "pinch": "{{sentence}} Kneife dabei nur eine kurze Markierung durch {{at}}.",
+        "segment": "{{sentence}} Falte dabei nur das Stück vor, das {{from}} und {{to}} begrenzen."
+      },
       "insideReverse": {
         "crease": {
           "all": "Falte alle Lagen entlang der vorhandenen Faltlinie als inneren Gegenbruch.",
@@ -2378,6 +2382,8 @@
       "creases": "Faltlinien",
       "creasesBackUp": "Von der Vorderseite des Papiers aus gesehen, die anfangs unten liegt: Sie können umgekehrt zu den Falten wirken, die du siehst.",
       "creasesFront": "Von der Vorderseite des Papiers aus gesehen.",
+      "extent": "Umfang",
+      "extentHelp": "Wie viel von der Linie die Vorfalte gefaltet hat: die ganze Linie, das Stück zwischen zwei Punkten oder einen kurzen Kniff.",
       "firstLine": "Erste Linie",
       "flat": "Flach",
       "flatHelp": "Einmal gefaltet und wieder geöffnet: Sie liegen jetzt flach und merken sich, in welche Richtung sie gingen.",
@@ -2418,6 +2424,10 @@
     "words": {
       "adds_one": "Fügt {{count}} Faltlinie hinzu ({{mountain}} M, {{valley}} V)",
       "adds_other": "Fügt {{count}} Faltlinien hinzu ({{mountain}} M, {{valley}} V)",
+      "addsCreaseMarks_one": "Fügt {{count}} Faltmarkierung hinzu",
+      "addsCreaseMarks_other": "Fügt {{count}} Faltmarkierungen hinzu",
+      "addsPinchMarks_one": "Fügt {{count}} Kniffmarkierung hinzu",
+      "addsPinchMarks_other": "Fügt {{count}} Kniffmarkierungen hinzu",
       "addsPrecreases_one": "Fügt {{count}} Vorfalte hinzu",
       "addsPrecreases_other": "Fügt {{count}} Vorfalten hinzu",
       "axiomLine": "Axiom {{axiom}} · {{phrase}}",
@@ -2445,6 +2455,9 @@
       "crimpInside": "Innerer Crimp",
       "crimpOutside": "Äußerer Crimp",
       "existingCrease": "Vorhandene Faltlinie",
+      "extentPinch": "Kniff",
+      "extentSegment": "Stück",
+      "extentWhole": "Ganze Linie",
       "freeLine": "Freie Linie",
       "insideReverse": "Innerer Gegenbruch",
       "mountainFold": "Bergfalte",

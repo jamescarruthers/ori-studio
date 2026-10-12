@@ -63,6 +63,9 @@ export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
 /** How a Fold step's line was located: an axiom, an existing crease, or a free line. */
 export type FoldStepVia = 'axiom' | 'crease' | 'free';
 
+/** How much of its line a Fold precrease creased: all of it, a segment between two points, or a pinch. */
+export type FoldStepExtent = 'whole' | 'segment' | 'pinch';
+
 /**
  * How the reader set a Fold step moving: Space, the Play button, or either on
  * a step already played through (Replay).

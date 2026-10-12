@@ -5,6 +5,7 @@ import { foldStepSentence, type FoldSentenceStep } from '../../fold/stepSentence
 import {
   cpOriginLabel,
   creaseDiffLines,
+  extentLabel,
   lineLabel,
   operationBadge,
   operationLabel,
@@ -155,6 +156,8 @@ export function FoldStepPane({
 
   const { words } = step;
   const line = lineLabel(t, words);
+  // A precrease says how much of its line it creased.
+  const extent = extentLabel(t, words);
   // A crimp names both its lines: the first, nearer the body, and the second beyond it.
   const secondLine = secondLineLabel(t, words);
   const title =
@@ -211,9 +214,21 @@ export function FoldStepPane({
           </FieldRow>
         )}
         {step.compound && <CompoundRows rows={step.compound} />}
+        {extent !== null && (
+          <FieldRow
+            label={t('panels:fold.step.extent', 'Extent')}
+            kind="static"
+            help={t(
+              'panels:fold.step.extentHelp',
+              'How much of the line the precrease creased: all of it, the stretch between two points, or a short pinch.'
+            )}
+          >
+            {extent}
+          </FieldRow>
+        )}
         {step.diff && (
           <FieldRow label={t('panels:fold.step.changes', 'Changes')} kind="static">
-            <ChangeLines lines={creaseDiffLines(t, step.diff)} />
+            <ChangeLines lines={creaseDiffLines(t, step.diff, words)} />
           </FieldRow>
         )}
       </div>
@@ -432,7 +447,7 @@ function PendingFold({ pending }: { pending: FoldPendingFold }) {
       ) : (
         pending.diff && (
           <ul className={styles.pendingChanges}>
-            {creaseDiffLines(t, pending.diff).map((line) => (
+            {creaseDiffLines(t, pending.diff, pending.words).map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>

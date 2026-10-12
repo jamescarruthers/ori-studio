@@ -68,6 +68,31 @@ describe('the crease-pattern pane in Edit’s vocabulary', () => {
     });
     expect(lines.creases.map((line) => line.color)).not.toContain('None');
   });
+
+  it('draws a crease mark as Edit draws a short crease of its letter, and the step’s or a preview’s as the instruction', () => {
+    const scene: FoldScene = {
+      ...bookScene(),
+      crease_marks: [
+        { from: { x: 0.25, y: 0.45 }, to: { x: 0.25, y: 0.55 }, letter: 'mountain', made_at: 2, pieces: [] },
+        { from: { x: 0.75, y: 0.45 }, to: { x: 0.75, y: 0.55 }, letter: 'valley', made_at: 2, pieces: [] },
+      ],
+    };
+    // At a later step: two short creases of their letters, front-relative, under the border.
+    const later = creasePatternPaneLines(scene, { display: FOLD_PANE_DISPLAY_DEFAULT, step: 3, instruction: null });
+    expect(later.creases.filter((line) => line.color === 'Red1')).toEqual([
+      { a: { x: 0.25, y: 0.45 }, b: { x: 0.25, y: 0.55 }, color: 'Red1' },
+    ]);
+    expect(later.creases.map((line) => line.color).slice(-6)).toEqual(Array(6).fill('Black0'));
+    // The step that made them: its instruction, by letter.
+    const own = creasePatternPaneLines(scene, { display: FOLD_PANE_DISPLAY_DEFAULT, step: 2, instruction: null });
+    expect(own.instruction.map((line) => line.letter)).toEqual(['mountain', 'valley']);
+    // A previewed pinch that adds no crease: its marks are still the instruction.
+    const previewed = creasePatternPaneLines(scene, { display: FOLD_PANE_DISPLAY_DEFAULT, step: 2, instruction: new Set() });
+    expect(previewed.instruction).toHaveLength(2);
+    // Precreases off: a mark is a precrease of part of its line.
+    const off = creasePatternPaneLines(scene, { display: { stepCreases: true, precreases: false }, step: 3, instruction: null });
+    expect(off.creases.map((line) => line.color)).not.toContain('Red1');
+  });
 });
 
 describe('the pane’s strokes, through Edit’s renderer path', () => {

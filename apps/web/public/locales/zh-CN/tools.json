@@ -302,6 +302,14 @@
       "ratio": "比率",
       "right": "到终点"
     },
+    "extent": {
+      "commitPinch": "捏折",
+      "keyNote": "按 {{shortcut}} 依次切换范围。",
+      "label": "范围",
+      "pinchHelp": "只在沿线单击的点处，捏出一小段印记。",
+      "segmentHelp": "只在沿线单击的两点之间压出折痕。",
+      "wholeHelp": "从一边到另一边压出整条折痕。"
+    },
     "fix": {
       "closedSinkInstead": "改为闭合沉折",
       "crimpFlap": "只压褶翼片 {{number}}",
@@ -316,6 +324,7 @@
       "outsideInstead": "改为外翻折",
       "pickFlap": "只折翼片 {{number}}",
       "pickThisFlap": "只折这个翼片",
+      "pinchInstead": "改为在该处捏折",
       "precreaseOtherWay": "向另一方向预折",
       "reverseFlap": "只翻折翼片 {{number}}",
       "reverseThisFlap": "只翻折这个翼片",
@@ -323,6 +332,7 @@
       "sinkThisFlap": "只沉折这个翼片",
       "slideToEdge": "平移折线，让该点正好落在边上",
       "swapInstead": "交换移动的一侧",
+      "throughAllLayers": "穿过所有层压出折痕",
       "tuckFlap": "只塞入翼片 {{number}}",
       "tuckOtherWay": "朝另一方向塞入",
       "tuckOver": "改为塞到列出的第 {{number}} 层上面",
@@ -333,6 +343,7 @@
       "turnToEdge": "转动折线，让该点正好落在边上",
       "useLine": "使用参考线",
       "useSquareLine": "使用垂直线",
+      "useWholeLine": "使用整条线",
       "valleyInstead": "改为谷折"
     },
     "flap": {
@@ -352,6 +363,7 @@
     },
     "key": {
       "commit": "完成折叠",
+      "cycleExtent": "切换预折范围",
       "nextRoot": "下一个解",
       "previousRoot": "上一个解",
       "swapSide": "交换移动的一侧"
@@ -387,6 +399,8 @@
     },
     "note": {
       "acrossLayers": "这些点位于被折叠分开的层上，因此折线经过它们在折叠形态中的位置。折痕图显示这次折叠产生的折痕。",
+      "along": "点会吸附到线与折痕、边和印记的交点、线上的点以及线的中点。",
+      "alongBack": "按 Esc 撤销最后一个点。",
       "clear": "按 Esc 清除已选的点。",
       "closedSinkLine": "横跨角的线决定沉折的深度。",
       "crease": "沿预折痕折叠会把它重新折起；沿折边折叠会展开翼片。",
@@ -485,6 +499,23 @@
         "text": "没有选中任何层。请至少选择一个要移动的翼片。",
         "title": "没有可折的部分"
       },
+      "extentMissesLayers": {
+        "text": "这次预折经过的层都不在线的那一段上，或者那里已经有折痕。请在线上的其他位置单击，或穿过所有层压出折痕。",
+        "title": "那里没有可压折痕的层"
+      },
+      "extentMissesPaper": {
+        "text": "线的那一段不经过纸，没有可压折痕的地方。请在线穿过纸的位置单击。",
+        "title": "那里没有纸"
+      },
+      "extentOffPaper": {
+        "text": "用来确定折痕范围的某个点，不在纸现在折好的样子上。请在线穿过纸的位置，沿线单击各点。",
+        "title": "有一个点不在纸上"
+      },
+      "extentTooShort": {
+        "pinch": "这个捏痕太短，纸上压不出折痕。请多折一段线。",
+        "segment": "这两个点沿线靠得太近，无法在它们之间压出折痕。请单击相距更远的两点，或改为在该处捏折。",
+        "title": "太短，无法压出折痕"
+      },
       "insideInfeasible": {
         "title": "无法向内翻折"
       },
@@ -495,6 +526,22 @@
       "kindInfeasible": {
         "neither": "这里两种翻折都不适用：无论各层如何叠放，尖端都无法翻转。请移动折线，或翻折其他翼片。",
         "text": "无论各层如何叠放，尖端都无法在这里朝这个方向翻转。另一种翻折也许可行。"
+      },
+      "markOffSheet": {
+        "text": "印记的一部分会落在纸外。请在纸内沿线单击各点。",
+        "title": "印记会超出纸面"
+      },
+      "markOnCrease": {
+        "text": "印记会落在已有的折痕上。请在线的另一段做印记，或沿那条折痕本身折叠。",
+        "title": "那里已经有折痕"
+      },
+      "marksOverlap": {
+        "text": "印记会以纸无法承受的方式盖住之前做的印记的一部分。请在线的另一段做印记，或压出整条折痕。",
+        "title": "印记会重叠"
+      },
+      "markTooShort": {
+        "text": "在其中一层上，印记会短到纸上压不出折痕。请多折一段线。",
+        "title": "太短，无法压出折痕"
       },
       "moverStays": {
         "text": "带着要移动的点的那一层不在要折的层里。请把它的翼片加进来，或折叠所有层。",
@@ -697,7 +744,10 @@
       "pickPoint": "选择要沉折的角：一次沉折只取一个。",
       "pickSunkPoint": "已沉入的角会自动找到：在层中选择另一个，即可把它拉出。",
       "pickTuckTarget": "选择要塞入的那一层。",
-      "pointToMove": "单击要移动的点。"
+      "pinchAt": "沿线单击要捏折的位置。",
+      "pointToMove": "单击要移动的点。",
+      "segmentFrom": "沿线单击折痕开始的位置。",
+      "segmentTo": "单击它结束的位置。"
     },
     "tool": {
       "closedSinkHelp": "把闭合角的尖端推入夹层，各层保持在一起。",

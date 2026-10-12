@@ -28,7 +28,7 @@ import { foldedFlatPaperScene, type FoldedFlatPaperSceneOptions } from '../../cp
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import type { FoldStepPane } from '../animation/foldStepMotion';
 import type { FoldDirection } from '../document/foldSequenceDocument';
-import type { FoldLetter, FoldScene, FoldSceneCrease } from '../engine/foldEngineWire';
+import type { FoldLetter, FoldScene, FoldSceneCrease, FoldSceneCreaseMark } from '../engine/foldEngineWire';
 import { applyIsometry, FOLD_USER_PER_UNIT, foldUnitToScenePx, toPoint } from './foldCanvasGeometry';
 
 /** The pane toggles on the viewport toolbar (the design's "Step creases | Precreases"). */
@@ -243,9 +243,32 @@ export function foldPaneCrease(
   return { as: 'fold', letter: crease.letter };
 }
 
+/**
+ * What a crease mark — a pinch's, a segment's — is in a state's crease
+ * pattern, by the same rule as a crease: the instruction when the step on
+ * show made it (or the previewed fold would), by its letter; otherwise a
+ * short crease of its letter, front-relative as it is stored. It is drawn by
+ * its letter rather than as a flat crease's dots, which a mark a sixteenth
+ * of the sheet long is too short to show: a mark is never folded, so the
+ * letter is all its line has to say. Left out with Precreases off, as a
+ * precrease of part of its line.
+ */
+export function foldPaneMark(
+  mark: FoldSceneCreaseMark,
+  { display, step, instruction }: FoldPaneCreaseOptions
+): Extract<FoldPaneCrease, { as: 'instruction' | 'fold' }> | null {
+  // A previewed fold's marks are the landed state's newest, whatever the switch.
+  const instructs = instruction ? mark.made_at === step : display.stepCreases && mark.made_at === step && step > 0;
+  if (instructs) return { as: 'instruction', letter: mark.letter };
+  return display.precreases ? { as: 'fold', letter: mark.letter } : null;
+}
+
 /** What a crease is drawn as in the paper picture of a crease pattern, or null when it is left out. */
 export function creaseRole(crease: FoldSceneCrease, options: FoldPaneCreaseOptions): PaperLineRole | null {
-  const shown = foldPaneCrease(crease, options);
+  return paneCreaseRole(foldPaneCrease(crease, options));
+}
+
+function paneCreaseRole(shown: FoldPaneCrease | null): PaperLineRole | null {
   if (!shown) return null;
   switch (shown.as) {
     case 'edge':
@@ -305,6 +328,11 @@ export function creasePatternPaperScene(scene: FoldScene, options: CreasePattern
     if (role === 'edge') border.push(item);
     else if (role === 'aux') aux.push({ ...item, onBoundary: onSheetEnds(crease, options.sheet) });
     else folds.push(item);
+  }
+  // The crease marks, as short creases of their letters or the instruction they are.
+  for (const mark of scene.crease_marks ?? []) {
+    const role = paneCreaseRole(foldPaneMark(mark, { display, step, instruction }));
+    if (role) folds.push(lineItem(role, mark.from, mark.to, 0, ORIGIN, toScenePx));
   }
   // Context under the folds, the instruction's dashes over both.
   items.push(...aux, ...folds.filter((item) => !isDiagram(item)), ...folds.filter(isDiagram), ...border);

@@ -320,6 +320,14 @@
       "ratio": "Proporção",
       "right": "Até o fim"
     },
+    "extent": {
+      "commitPinch": "Beliscar",
+      "keyNote": "Pressione {{shortcut}} para alternar entre as extensões.",
+      "label": "Extensão",
+      "pinchHelp": "Vincar só uma marca curta, centrada em um ponto clicado ao longo da linha.",
+      "segmentHelp": "Vincar a linha só entre dois pontos clicados ao longo dela.",
+      "wholeHelp": "Vincar a linha de borda a borda."
+    },
     "fix": {
       "closedSinkInstead": "Afundamento fechado em vez disso",
       "crimpFlap": "Fazer crimp só na aba {{number}}",
@@ -336,6 +344,7 @@
       "outsideInstead": "Dobra invertida externa em vez disso",
       "pickFlap": "Dobrar só a aba {{number}}",
       "pickThisFlap": "Dobrar só esta aba",
+      "pinchInstead": "Beliscar ali em vez disso",
       "precreaseOtherWay": "Pré-vincar no outro sentido",
       "reverseFlap": "Inverter só a aba {{number}}",
       "reverseThisFlap": "Inverter só esta aba",
@@ -343,6 +352,7 @@
       "sinkThisFlap": "Afundar só esta aba",
       "slideToEdge": "Deslizar a linha até o ponto ficar na borda",
       "swapInstead": "Trocar o lado que se move",
+      "throughAllLayers": "Vincar através de todas as camadas",
       "tuckFlap": "Encaixar só a aba {{number}}",
       "tuckOtherWay": "Encaixar no outro sentido",
       "tuckOver": "Encaixar sobre a camada {{number}} da lista em vez disso",
@@ -353,6 +363,7 @@
       "turnToEdge": "Girar a linha até o ponto ficar na borda",
       "useLine": "Usar a linha de referência",
       "useSquareLine": "Usar a linha perpendicular",
+      "useWholeLine": "Usar a linha inteira",
       "valleyInstead": "Dobra vale em vez disso"
     },
     "flap": {
@@ -378,6 +389,7 @@
     },
     "key": {
       "commit": "Fazer a dobra",
+      "cycleExtent": "Próxima extensão da pré-dobra",
       "nextRoot": "Solução seguinte",
       "previousRoot": "Solução anterior",
       "swapSide": "Trocar o lado que se move"
@@ -413,6 +425,8 @@
     },
     "note": {
       "acrossLayers": "Estes pontos ficam em camadas que a dobragem separou, então a linha passa por eles onde estão na forma dobrada. O padrão de vincos mostra os vincos que ela cria.",
+      "along": "Os pontos se ajustam onde a linha cruza vincos, bordas e marcas, aos pontos sobre ela e ao seu meio.",
+      "alongBack": "Esc desfaz o último ponto.",
       "clear": "Esc limpa os pontos escolhidos.",
       "closedSinkLine": "A linha que cruza a ponta define o quanto ela afunda.",
       "crease": "Dobrar ao longo de um pré-vinco o redobra; ao longo de uma borda dobrada, desdobra a aba.",
@@ -515,6 +529,23 @@
         "text": "Nenhuma camada foi escolhida. Escolha pelo menos uma aba para mover.",
         "title": "Nada para dobrar"
       },
+      "extentMissesLayers": {
+        "text": "Nenhuma das camadas por onde esta pré-dobra passa fica ao longo desse trecho da linha, ou a linha já está vincada ali. Clique em outros pontos ao longo da linha, ou vinque através de todas as camadas.",
+        "title": "Nenhuma camada para vincar ali"
+      },
+      "extentMissesPaper": {
+        "text": "Esse trecho da linha não passa sobre papel, então não há nada a vincar. Clique em pontos onde a linha cruza o papel.",
+        "title": "Não há papel ali"
+      },
+      "extentOffPaper": {
+        "text": "Um ponto a partir do qual o vinco é medido não está sobre o papel como ele está dobrado agora. Clique os pontos ao longo da linha, onde ela cruza o papel.",
+        "title": "Um ponto está fora do papel"
+      },
+      "extentTooShort": {
+        "pinch": "Este beliscão é curto demais para o papel pegar um vinco. Vinque uma parte maior da linha.",
+        "segment": "Os dois pontos estão perto demais ao longo da linha para vincar entre eles. Clique em dois pontos mais afastados, ou belisque ali em vez disso.",
+        "title": "Curto demais para vincar"
+      },
       "insideInfeasible": {
         "title": "Não dá para ir para dentro"
       },
@@ -525,6 +556,22 @@
       "kindInfeasible": {
         "neither": "Nenhum tipo de dobra invertida cabe aqui: nenhum jeito de empilhar as camadas deixa a ponta virar. Mova a linha ou inverta outras abas.",
         "text": "Nenhum jeito de empilhar as camadas deixa a ponta virar para este lado aqui. O outro tipo de dobra invertida talvez se encaixe."
+      },
+      "markOffSheet": {
+        "text": "Parte da marca ficaria fora da folha. Clique os pontos ao longo da linha, dentro do papel.",
+        "title": "A marca sairia do papel"
+      },
+      "markOnCrease": {
+        "text": "A marca ficaria ao longo de um vinco que já existe. Marque outro trecho da linha, ou dobre ao longo do próprio vinco.",
+        "title": "Já há um vinco ali"
+      },
+      "marksOverlap": {
+        "text": "A marca ficaria sobre parte de uma marca feita antes, de um jeito que o papel não aceita. Marque outro trecho da linha, ou vinque a linha inteira.",
+        "title": "As marcas se sobreporiam"
+      },
+      "markTooShort": {
+        "text": "Em uma de suas camadas, a marca seria curta demais para o papel pegar um vinco. Vinque uma parte maior da linha.",
+        "title": "Curto demais para vincar"
       },
       "moverStays": {
         "text": "A camada que leva o ponto a mover não está entre as camadas que dobram. Inclua a aba dela ou dobre todas as camadas.",
@@ -729,7 +776,10 @@
       "pickPoint": "Escolha qual ponta afunda: um afundamento usa só uma.",
       "pickSunkPoint": "A ponta afundada é encontrada para você: escolha outra nas camadas para puxar essa.",
       "pickTuckTarget": "Escolha a camada onde encaixar.",
-      "pointToMove": "Clique no ponto a mover."
+      "pinchAt": "Clique ao longo da linha onde beliscar.",
+      "pointToMove": "Clique no ponto a mover.",
+      "segmentFrom": "Clique ao longo da linha onde o vinco começa.",
+      "segmentTo": "Clique onde ele termina."
     },
     "tool": {
       "closedSinkHelp": "Empurrar a extremidade de uma ponta fechada para dentro de um bolso, mantendo as camadas juntas.",

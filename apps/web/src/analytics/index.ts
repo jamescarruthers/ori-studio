@@ -66,6 +66,7 @@ export type {
   FoldSpreadAction,
   FoldSpreadVia,
   FoldStepAddedOpKind,
+  FoldStepExtent,
   FoldStepLayerScope,
   FoldStepVia,
   LandingCta,

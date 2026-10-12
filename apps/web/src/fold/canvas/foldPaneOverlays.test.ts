@@ -71,6 +71,38 @@ describe('a free line drawn on the crease-pattern pane', () => {
     expect(overlay('folded', first, pointer).strokes).toBeNull();
   });
 
+  it('draws a partial precrease’s line on each pane, its points along it, and a segment to the pointer', () => {
+    const along: FoldPick = { kind: 'point', provenance: 'crossing', sheet: [0.75, 0.5], mark: null, scene: { x: 0.25, y: 0.5 } };
+    const hover: FoldPick = { kind: 'point', provenance: 'midpoint', sheet: [0.9, 0.5], mark: null, scene: { x: 0.1, y: 0.5 } };
+    const pieces = [[{ x: 0, y: 0.5 }, { x: 0.5, y: 0.5 }]] as const;
+    const drawn = (faint: boolean) =>
+      foldPaneOverlay({
+        pane: 'folded',
+        scene,
+        picks: [],
+        hovered: { pane: 'folded', at: { x: 0.1, y: 0.5 }, pick: hover },
+        freeFrom: null,
+        marks: [],
+        inks: INKS,
+        along: { pieces, picks: [along], segment: true, faint },
+      });
+    const bright = drawn(false);
+    // The line, then the stretch from the segment's first end to the point under the pointer.
+    expect(bright.strokes?.count).toBe(2);
+    expect(Array.from(bright.strokes!.a.slice(2, 4)).map(round)).toEqual([0.25, 0.5]);
+    expect(Array.from(bright.strokes!.b.slice(2, 4)).map(round)).toEqual([0.1, 0.5]);
+    // Solid, never dashed: a dash is a crease's.
+    expect(Array.from(bright.strokes!.dashSlot ?? [])).toEqual([0, 0]);
+    expect(dots(bright)).toEqual([
+      [0.25, 0.5],
+      [0.1, 0.5],
+    ]);
+    // Every point in: the line steps back behind the fold's picture.
+    const faint = drawn(true);
+    expect(faint.strokes!.color[3]).toBeLessThan(bright.strokes!.color[3]!);
+    expect(faint.strokes!.widthMul[0]).toBeLessThan(bright.strokes!.widthMul[0]!);
+  });
+
   it('draws a located line awaiting its picture on the folded pane only, under the picks', () => {
     const first = click('folded', 0.1, 0.5);
     const located = [[{ x: 0, y: 0.6 }, { x: 0.5, y: 0.6 }]] as const;

@@ -1992,6 +1992,10 @@
           }
         }
       },
+      "extent": {
+        "pinch": "{{sentence}} Marca solo un pellizco corto en {{at}}.",
+        "segment": "{{sentence}} Marca solo el tramo entre {{from}} y {{to}}."
+      },
       "insideReverse": {
         "crease": {
           "all": "Dobla todas las capas con un pliegue invertido interior por el pliegue existente.",
@@ -2633,6 +2637,8 @@
       "creases": "Pliegues",
       "creasesBackUp": "Vistos desde el anverso del papel, que empieza boca abajo: pueden leerse al revés que los pliegues que ves.",
       "creasesFront": "Vistos desde el anverso del papel.",
+      "extent": "Extensión",
+      "extentHelp": "Cuánto de la línea marcó el prepliegue: toda, el tramo entre dos puntos o un pellizco corto.",
       "firstLine": "Primera línea",
       "flat": "Planos",
       "flatHelp": "Doblados una vez y desdoblados: ahora están planos y recuerdan hacia dónde se doblaron.",
@@ -2674,6 +2680,12 @@
       "adds_one": "Añade {{count}} pliegue ({{mountain}} M, {{valley}} V)",
       "adds_many": "Añade {{count}} pliegues ({{mountain}} M, {{valley}} V)",
       "adds_other": "Añade {{count}} pliegues ({{mountain}} M, {{valley}} V)",
+      "addsCreaseMarks_one": "Añade {{count}} marca de pliegue",
+      "addsCreaseMarks_many": "Añade {{count}} marcas de pliegue",
+      "addsCreaseMarks_other": "Añade {{count}} marcas de pliegue",
+      "addsPinchMarks_one": "Añade {{count}} marca de pellizco",
+      "addsPinchMarks_many": "Añade {{count}} marcas de pellizco",
+      "addsPinchMarks_other": "Añade {{count}} marcas de pellizco",
       "addsPrecreases_one": "Añade {{count}} prepliegue",
       "addsPrecreases_many": "Añade {{count}} prepliegues",
       "addsPrecreases_other": "Añade {{count}} prepliegues",
@@ -2702,6 +2714,9 @@
       "crimpInside": "Crimp interior",
       "crimpOutside": "Crimp exterior",
       "existingCrease": "Pliegue existente",
+      "extentPinch": "Pellizco",
+      "extentSegment": "Tramo",
+      "extentWhole": "Línea entera",
       "freeLine": "Línea libre",
       "insideReverse": "Pliegue invertido interior",
       "mountainFold": "Pliegue monte",

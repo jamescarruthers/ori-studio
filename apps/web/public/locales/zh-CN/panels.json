@@ -1744,6 +1744,10 @@
           }
         }
       },
+      "extent": {
+        "pinch": "{{sentence}}只在{{at}}处捏出一小段折痕。",
+        "segment": "{{sentence}}只在{{from}}和{{to}}之间压出折痕。"
+      },
       "insideReverse": {
         "crease": {
           "all": "将所有层沿已有的折痕内翻折。",
@@ -2125,6 +2129,8 @@
       "creases": "折痕",
       "creasesBackUp": "从纸的正面看。正面一开始朝下，因此可能与你看到的折法相反。",
       "creasesFront": "从纸的正面看。",
+      "extent": "范围",
+      "extentHelp": "这次预折在线上压出折痕的范围：整条线、两点之间的一段，或一小段捏痕。",
       "firstLine": "第一条折线",
       "flat": "平折痕",
       "flatHelp": "折过一次又展开：现在是平的，并记得曾经朝哪个方向折。",
@@ -2164,6 +2170,8 @@
     },
     "words": {
       "adds_other": "新增 {{count}} 条折痕（M {{mountain}}，V {{valley}}）",
+      "addsCreaseMarks_other": "新增 {{count}} 条折痕印记",
+      "addsPinchMarks_other": "新增 {{count}} 个捏痕",
       "addsPrecreases_other": "新增 {{count}} 条预折痕",
       "axiomLine": "公理 {{axiom}} · {{phrase}}",
       "badgeCrimp": "阶梯折",
@@ -2190,6 +2198,9 @@
       "crimpInside": "内翻阶梯折",
       "crimpOutside": "外翻阶梯折",
       "existingCrease": "已有折痕",
+      "extentPinch": "捏痕",
+      "extentSegment": "一段",
+      "extentWhole": "整条线",
       "freeLine": "自由线",
       "insideReverse": "内翻折",
       "mountainFold": "山折",

@@ -320,6 +320,14 @@
       "ratio": "Proporción",
       "right": "Hasta el final"
     },
+    "extent": {
+      "commitPinch": "Pellizcar",
+      "keyNote": "Pulsa {{shortcut}} para pasar de una extensión a otra.",
+      "label": "Extensión",
+      "pinchHelp": "Marca solo un trazo corto, centrado en un punto en el que haces clic a lo largo de la línea.",
+      "segmentHelp": "Marca la línea solo entre dos puntos en los que haces clic a lo largo de ella.",
+      "wholeHelp": "Marca la línea de borde a borde."
+    },
     "fix": {
       "closedSinkInstead": "Mejor un hundido cerrado",
       "crimpFlap": "Hacer crimp solo en la solapa {{number}}",
@@ -336,6 +344,7 @@
       "outsideInstead": "Mejor un pliegue invertido exterior",
       "pickFlap": "Plegar solo la solapa {{number}}",
       "pickThisFlap": "Plegar solo esta solapa",
+      "pinchInstead": "Pellizcar ahí en su lugar",
       "precreaseOtherWay": "Premarcar en el otro sentido",
       "reverseFlap": "Invertir solo la solapa {{number}}",
       "reverseThisFlap": "Invertir solo esta solapa",
@@ -343,6 +352,7 @@
       "sinkThisFlap": "Hundir solo esta solapa",
       "slideToEdge": "Deslizar la línea hasta que el punto quede en el borde",
       "swapInstead": "Cambiar el lado que se mueve",
+      "throughAllLayers": "Marcar a través de todas las capas",
       "tuckFlap": "Remeter solo la solapa {{number}}",
       "tuckOtherWay": "Remeter en el otro sentido",
       "tuckOver": "Mejor remeter sobre la capa {{number}} de la lista",
@@ -353,6 +363,7 @@
       "turnToEdge": "Girar la línea hasta que el punto quede en el borde",
       "useLine": "Usar la línea de referencia",
       "useSquareLine": "Usar la línea perpendicular",
+      "useWholeLine": "Usar la línea entera",
       "valleyInstead": "Mejor un pliegue de valle"
     },
     "flap": {
@@ -378,6 +389,7 @@
     },
     "key": {
       "commit": "Hacer el pliegue",
+      "cycleExtent": "Siguiente extensión del premarcado",
       "nextRoot": "Solución siguiente",
       "previousRoot": "Solución anterior",
       "swapSide": "Cambiar el lado que se mueve"
@@ -413,6 +425,8 @@
     },
     "note": {
       "acrossLayers": "Estos puntos están en capas que el plegado ha separado, así que la línea pasa por ellos donde quedan en la forma plegada. El patrón de pliegues muestra los pliegues que crea.",
+      "along": "Los puntos se ajustan a donde la línea cruza pliegues, bordes y marcas, a los puntos sobre ella y a su punto medio.",
+      "alongBack": "Esc deshace el último punto.",
       "clear": "Esc borra los puntos elegidos.",
       "closedSinkLine": "La línea que cruza la punta fija cuánto se hunde.",
       "crease": "Plegar por un premarcado lo vuelve a plegar; por un borde plegado, despliega la solapa.",
@@ -515,6 +529,23 @@
         "text": "No hay ninguna capa elegida. Elige al menos una solapa para mover.",
         "title": "Nada que plegar"
       },
+      "extentMissesLayers": {
+        "text": "Ninguna de las capas por las que pasa este premarcado está a lo largo de ese tramo de la línea, o la línea ya está plegada ahí. Haz clic en otros puntos de la línea o marca a través de todas las capas.",
+        "title": "No hay capa que marcar ahí"
+      },
+      "extentMissesPaper": {
+        "text": "Ese tramo de la línea no pasa por encima del papel, así que no hay nada que marcar. Haz clic en puntos donde la línea cruza el papel.",
+        "title": "Ahí no hay papel"
+      },
+      "extentOffPaper": {
+        "text": "Un punto a partir del cual se mide el pliegue no está sobre el papel tal como está plegado ahora. Haz clic en sus puntos a lo largo de la línea, donde la línea cruza el papel.",
+        "title": "Un punto está fuera del papel"
+      },
+      "extentTooShort": {
+        "pinch": "Este pellizco es demasiado corto para que el papel tome un pliegue. Marca más parte de la línea.",
+        "segment": "Los dos puntos están demasiado cerca a lo largo de la línea para marcar entre ellos. Haz clic en dos puntos más separados o pellizca ahí en su lugar.",
+        "title": "Demasiado corto para marcar"
+      },
       "insideInfeasible": {
         "title": "No puede ir hacia dentro"
       },
@@ -525,6 +556,22 @@
       "kindInfeasible": {
         "neither": "Aquí no cabe ningún tipo de pliegue invertido: ninguna forma de apilar las capas deja girar la punta. Mueve la línea o invierte otras solapas.",
         "text": "Ninguna forma de apilar las capas deja que la punta gire hacia este lado aquí. Puede que el otro tipo de pliegue invertido encaje."
+      },
+      "markOffSheet": {
+        "text": "Parte de la marca quedaría fuera de la hoja. Haz clic en sus puntos a lo largo de la línea, dentro del papel.",
+        "title": "La marca saldría del papel"
+      },
+      "markOnCrease": {
+        "text": "La marca quedaría sobre un pliegue que ya existe. Marca otro tramo de la línea o pliega por el propio pliegue.",
+        "title": "Ya hay un pliegue ahí"
+      },
+      "marksOverlap": {
+        "text": "La marca quedaría sobre parte de una marca hecha antes, de un modo que el papel no admite. Marca otro tramo de la línea o marca la línea entera.",
+        "title": "Las marcas se solaparían"
+      },
+      "markTooShort": {
+        "text": "En una de sus capas la marca sería demasiado corta para que el papel tome un pliegue. Marca más parte de la línea.",
+        "title": "Demasiado corto para marcar"
       },
       "moverStays": {
         "text": "La capa que lleva el punto que hay que mover no está entre las capas que se pliegan. Incluye su solapa o pliega todas las capas.",
@@ -729,7 +776,10 @@
       "pickPoint": "Elige qué punta se hunde: un hundido toma solo una.",
       "pickSunkPoint": "La punta hundida se encuentra por ti: elige otra en las capas para sacar esa.",
       "pickTuckTarget": "Elige la capa contra la que remeter.",
-      "pointToMove": "Haz clic en el punto que se mueve."
+      "pinchAt": "Haz clic donde pellizcar a lo largo de la línea.",
+      "pointToMove": "Haz clic en el punto que se mueve.",
+      "segmentFrom": "Haz clic donde empieza el pliegue a lo largo de la línea.",
+      "segmentTo": "Haz clic donde termina."
     },
     "tool": {
       "closedSinkHelp": "Empujar el extremo de una punta cerrada dentro de un bolsillo, con sus capas juntas.",

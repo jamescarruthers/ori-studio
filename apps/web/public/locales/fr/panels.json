@@ -1992,6 +1992,10 @@
           }
         }
       },
+      "extent": {
+        "pinch": "{{sentence}} Ne marquez qu’un court pincement sur {{at}}.",
+        "segment": "{{sentence}} Ne marquez que le tronçon entre {{from}} et {{to}}."
+      },
       "insideReverse": {
         "crease": {
           "all": "Pliez toutes les couches en pli inversé intérieur le long du pli existant.",
@@ -2633,6 +2637,8 @@
       "creases": "Plis",
       "creasesBackUp": "Vus du recto du papier, qui est dessous au départ\u00a0: ils peuvent se lire à l’inverse des plis que vous voyez.",
       "creasesFront": "Vus du recto du papier.",
+      "extent": "Étendue",
+      "extentHelp": "La part de la ligne que le prépliage a marquée : toute la ligne, le tronçon entre deux points ou un court pincement.",
       "firstLine": "Première ligne",
       "flat": "À plat",
       "flatHelp": "Pliés une fois puis dépliés\u00a0: ils sont maintenant à plat et gardent le sens dans lequel ils ont été pliés.",
@@ -2674,6 +2680,12 @@
       "adds_one": "Ajoute {{count}} pli ({{mountain}} M, {{valley}} V)",
       "adds_many": "Ajoute {{count}} plis ({{mountain}} M, {{valley}} V)",
       "adds_other": "Ajoute {{count}} plis ({{mountain}} M, {{valley}} V)",
+      "addsCreaseMarks_one": "Ajoute {{count}} repère de pli",
+      "addsCreaseMarks_many": "Ajoute {{count}} repères de pli",
+      "addsCreaseMarks_other": "Ajoute {{count}} repères de pli",
+      "addsPinchMarks_one": "Ajoute {{count}} repère pincé",
+      "addsPinchMarks_many": "Ajoute {{count}} repères pincés",
+      "addsPinchMarks_other": "Ajoute {{count}} repères pincés",
       "addsPrecreases_one": "Ajoute {{count}} prépliage",
       "addsPrecreases_many": "Ajoute {{count}} prépliages",
       "addsPrecreases_other": "Ajoute {{count}} prépliages",
@@ -2702,6 +2714,9 @@
       "crimpInside": "Crimp intérieur",
       "crimpOutside": "Crimp extérieur",
       "existingCrease": "Pli existant",
+      "extentPinch": "Pincement",
+      "extentSegment": "Tronçon",
+      "extentWhole": "Ligne entière",
       "freeLine": "Ligne libre",
       "insideReverse": "Pli inversé intérieur",
       "mountainFold": "Pli montagne",

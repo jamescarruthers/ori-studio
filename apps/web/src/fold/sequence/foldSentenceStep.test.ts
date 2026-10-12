@@ -128,6 +128,40 @@ describe('a stored step as its sentence reads it', () => {
     expect(foldNodeSentenceStep(locked, none)).toEqual({ op: 'unknown' });
   });
 
+  it('names a partial precrease’s points as an axiom’s inputs are named', () => {
+    const op = {
+      kind: 'precrease' as const,
+      direction: 'valley' as const,
+      line: { via: 'free' as const, through: [[0.5, 0], [0.5, 1]] as [[number, number], [number, number]] },
+      moving: [0.75, 0.5] as [number, number],
+      seed: { scope: 'all' as const },
+    };
+    const none = { parent: square, child: null, report: null };
+    expect(
+      foldSentenceStepOf({ ...op, extent: { kind: 'pinch', at: { kind: 'point', at: [0.5, 0.5] }, length: 1 / 16 } }, none)
+    ).toEqual({
+      op: 'precrease',
+      direction: 'valley',
+      line: { via: 'free' },
+      scope: { kind: 'all' },
+      extent: { kind: 'pinch', at: { kind: 'point' } },
+    });
+    // A segment from the sheet's corner: named by description, as an axiom's corner is.
+    const segment = foldSentenceStepOf(
+      {
+        ...op,
+        extent: { kind: 'segment', from: { kind: 'point', at: [0, 0] }, to: { kind: 'mark', at: [0.5, 0.5], mark: 'fmark-1' } },
+      },
+      none
+    );
+    expect(segment).toMatchObject({ extent: { kind: 'segment', from: { kind: 'corner', corner: 'sw' }, to: { kind: 'point' } } });
+    expect(foldStepSentence(t, segment)).toBe(
+      'Valley fold and unfold along the line drawn, through all layers. Crease only the stretch from the bottom-left corner to point Q.'
+    );
+    // The whole line says nothing of an extent.
+    expect(foldSentenceStepOf(op, none)).not.toHaveProperty('extent');
+  });
+
   it('reads a line a tool gives in the model frame as one the user placed', () => {
     expect(
       foldSentenceStepOf(

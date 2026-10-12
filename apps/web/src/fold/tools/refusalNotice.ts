@@ -2,8 +2,9 @@
  * A refused fold, as the tool window says it (plan D14, Refusals and fixes):
  * what went wrong in a sentence a folder reads, and the engine's fixes as
  * buttons — include flap N, fold the other way, pick a flap, use the landmark
- * line, land a point exactly on an edge, the other reverse fold or sink. The
- * engine decides which fixes exist;
+ * line, land a point exactly on an edge, the other reverse fold or sink — and
+ * the tools' own where it offers none (a vertex fold's, a partial precrease's
+ * whole line). The engine decides which of its fixes exist;
  * this only names them and binds each to its verb.
  *
  * React-free and store-free.
@@ -15,6 +16,12 @@ import type { FoldSinkKind, FoldSinkRefusalCode } from '../engine/foldEngineSink
 import type { FoldCrossSection, FoldEngineRefused, FoldFix, FoldFlap, FoldRefusalCode } from '../engine/foldEngineWire';
 import { flapNumbers, sameFlap } from './crossSection';
 import type { FoldKind, FoldSinkToolId } from './foldToolCatalog';
+import {
+  extentExtraActions,
+  extentRefusalWords,
+  type FoldExtentFixVerbs,
+  type FoldExtentRefusalContext,
+} from './precrease/precreaseRefusal';
 import {
   vertexContextOf,
   vertexExtraActions,
@@ -31,8 +38,11 @@ export type FoldRefused = Pick<FoldEngineRefused, 'refusal' | 'fixes'>;
 /** A fold along another line: a near miss's landmark line, or a sliver remedy with its storable step. */
 export type FoldUseLineFix = Extract<FoldFix, { fix: 'use_line' }>;
 
-/** The calls a fix makes; the store binds them. A vertex fold's are its own (`vertex/vertexRefusal`). */
-export interface FoldFixVerbs extends FoldVertexFixVerbs {
+/**
+ * The calls a fix makes; the store binds them. A vertex fold's are its own
+ * (`vertex/vertexRefusal`), and a partial precrease's (`precrease/precreaseRefusal`).
+ */
+export interface FoldFixVerbs extends FoldVertexFixVerbs, FoldExtentFixVerbs {
   /** Add these flaps (engine indices) to the seed. */
   includeFlaps: (flaps: readonly number[]) => void;
   /** The same fold, the other way. */
@@ -87,6 +97,8 @@ export interface FoldRefusalContext {
   vertex?: FoldVertexRefusalContext;
   /** A sink's: its tool, a sink or the unsink, which its words name. */
   sink?: { tool: FoldSinkToolId };
+  /** A precrease's: how much of its line it creases, and whether through every layer (`precrease/precreaseRefusal`). */
+  extent?: FoldExtentRefusalContext;
 }
 
 /**
@@ -173,7 +185,6 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'short_crease':
     case 'thin_piece':
     case 'degenerate_split':
-    case 'extent_too_short':
       return {
         title: t('tools:fold.refusal.tooSmall.title', 'Too small to fold'),
         text: t(
@@ -199,13 +210,11 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
         title: t('tools:fold.refusal.tuckTarget.title', 'The layer to tuck under would move'),
         text: t('tools:fold.refusal.tuckTarget.text', 'Pick a layer that stays put to tuck the flap against.'),
       };
-    // A line located from references that do not name paper of this state,
-    // or a partial precrease's point.
+    // A line located from references that do not name paper of this state.
     case 'point_off_paper':
     case 'segment_too_short':
     case 'segment_not_on_a_face':
     case 'crease_not_found':
-    case 'extent_off_paper':
       return {
         title: t('tools:fold.refusal.offPaper.title', 'A reference is not on the paper'),
         text: t(
@@ -463,11 +472,19 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
           'Working out how the layers stack took too long here, so it is not known whether this fold fits. Fold fewer layers, or fold it elsewhere.'
         ),
       };
+    // A partial precrease's (`precrease/precreaseRefusal`), in its own words.
+    case 'extent_off_paper':
+    case 'extent_too_short':
+    case 'extent_misses_paper':
+    case 'extent_misses_layers':
+    case 'mark_off_sheet':
+    case 'mark_too_short':
+    case 'mark_on_crease':
+    case 'marks_overlap':
+      return extentRefusalWords(t, refusal.code, context.extent?.mode ?? null);
     // The sheet, and a state the engine itself could not make valid: nothing
     // a folder asked for by name, so nothing to say beyond that it cannot be.
-    // With them, a pick that names nothing and a defect; and, until they have
-    // words of their own, crease marks the gate refuses and a partial
-    // precrease over no paper, or none of its layers.
+    // With them, a pick that names nothing and a defect.
     case 'sheet_too_few_points':
     case 'sheet_not_finite':
     case 'sheet_not_convex':
@@ -495,12 +512,6 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'folded_image':
     case 'prediction_mismatch':
     case 'no_such_choice':
-    case 'mark_off_sheet':
-    case 'mark_too_short':
-    case 'mark_on_crease':
-    case 'marks_overlap':
-    case 'extent_misses_paper':
-    case 'extent_misses_layers':
     case 'internal':
       return invalidWords(t);
   }
@@ -908,6 +919,8 @@ export function foldRefusalNotice(
       ...refused.fixes.flatMap((fix, position) => fixActions(t, fix, position, context, verbs)),
       // What a vertex fold's tools can do where the engine offers no fix.
       ...(context.vertex ? vertexExtraActions(t, refused.refusal, context.readOnly, context.vertex, verbs) : []),
+      // And what the Precrease tool can do with part of a line.
+      ...(context.extent ? extentExtraActions(t, refused.refusal.code, context.extent, context.readOnly, verbs) : []),
     ],
   };
 }

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight } from 'lucide-react';
 import type { FoldKeyLabel, FoldKind, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
 import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
+import type { FoldExtentMode } from '../../fold/tools/precrease/precreaseExtent';
 import { STORAGE_KEYS } from '../../lib/storage';
 import { useIsPhoneLayout } from '../../platform/phoneLayout';
 import { Button } from '../ui/Button';
@@ -62,8 +63,22 @@ export function FoldToolWindow({
     const key = keyLabel?.(shortcut);
     return key ? `${label} (${key})` : label;
   };
-  const { instructions, lineMode, secondLine, kind, movingSide, layers, refusal, divide, compound, tuck, vertex, sink, footer } =
-    model;
+  const {
+    instructions,
+    lineMode,
+    secondLine,
+    kind,
+    extent,
+    movingSide,
+    layers,
+    refusal,
+    divide,
+    compound,
+    tuck,
+    vertex,
+    sink,
+    footer,
+  } = model;
 
   return (
     <ToolHintWindow
@@ -181,6 +196,27 @@ export function FoldToolWindow({
               onChange={kind.set}
             />
           </FieldRow>
+        </div>
+      )}
+      {/* A precrease's extent: the whole line, a segment or a pinch, under a heading of its own so the three names fit. */}
+      {extent && (
+        <div className={styles.section} data-fold-extent="">
+          <span className={styles.heading}>{extent.label}</span>
+          <SegmentedControl<FoldExtentMode>
+            size="sm"
+            fill
+            aria-label={extent.label}
+            value={extent.value}
+            disabled={extent.disabled}
+            options={extent.options.map((option) => ({
+              value: option.value,
+              label: option.short,
+              tooltip: option.label,
+              disabled: option.disabled,
+            }))}
+            onChange={extent.set}
+          />
+          {extent.note && <p className={styles.note}>{extent.note}</p>}
         </div>
       )}
       {compound && (

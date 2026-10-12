@@ -1,6 +1,7 @@
 import { act, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FoldSentenceExtent, FoldSentenceStep } from '../../fold/stepSentence';
 import type { FoldCreaseDiff } from '../../fold/stepWords';
 import { TooltipProvider } from '../ui/Tooltip';
 import { FoldStepPane, type FoldStepPaneStep } from './FoldStepPane';
@@ -221,6 +222,38 @@ describe('FoldStepPane', () => {
     });
     const changes = [...host.querySelectorAll('[data-field-value] > span > span')].map((line) => line.textContent);
     expect(changes).toEqual(['Adds 2 precreases', 'Refolds 1 precrease', 'Unfolds 1 crease']);
+  });
+
+  it('says how much of its line a precrease creased, and counts a pinch’s marks', () => {
+    const words = (extent?: FoldSentenceExtent): FoldSentenceStep => ({
+      op: 'precrease',
+      direction: 'valley',
+      line: { via: 'free' },
+      scope: { kind: 'all' },
+      ...(extent ? { extent } : {}),
+    });
+    const marks = (count: number): FoldCreaseDiff => ({
+      added: { mountain: 0, valley: 0, flat: 0 },
+      refolded: 0,
+      reversed: 0,
+      unfolded: 0,
+      marks: count,
+    });
+    const pinch: FoldStepPaneStep = { ...VALLEY_STEP, words: words({ kind: 'pinch', at: { kind: 'point' } }), diff: marks(2) };
+    render({
+      step: pinch,
+      startSide: 'front',
+      pending: { words: words({ kind: 'segment', from: { kind: 'point' }, to: { kind: 'point' } }), diff: marks(1) },
+    });
+    expect(rows()).toMatchObject({ Extent: 'Pinch', Changes: 'Adds 2 pinch marks' });
+    expect(host.textContent).toContain('Crease only a short pinch at point P.');
+    // The fold being made: a segment's mark.
+    expect([...host.querySelectorAll('li')].map((item) => item.textContent)).toEqual(['Adds 1 crease mark']);
+    // A precrease of the whole line says so; any other fold has no Extent row.
+    render({ step: { ...pinch, words: words() }, startSide: 'front' });
+    expect(rows()).toMatchObject({ Extent: 'Whole line' });
+    render({ step: VALLEY_STEP, startSide: 'front' });
+    expect(rows()).not.toHaveProperty('Extent');
   });
 
   it('titles a turn by what it is, with no number, line or layers', () => {

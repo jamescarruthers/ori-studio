@@ -80,6 +80,34 @@ describe('Fold picking', () => {
     expect(pickRef(mark)).toEqual({ kind: 'mark', at: [1 / 3, 0], mark: 'fmark-1' });
   });
 
+  it('snaps to a crease mark’s ends on both panes, hidden or not on the crease pattern', () => {
+    const landmarks = flatSquareLandmarks();
+    const end = (sheet: [number, number], visible: boolean) => ({
+      at: sheet,
+      sources: [{ kind: 'crease_mark_end' as const, crease_mark: 0, sheet, visible }],
+      visible,
+    });
+    const scene = {
+      ...flatSquareScene(),
+      crease_marks: [{ from: { x: 0.5, y: 0.45 }, to: { x: 0.5, y: 0.55 }, letter: 'valley' as const, made_at: 1, pieces: [] }],
+    };
+    const index = foldPickIndex(scene, { ...landmarks, points: [...landmarks.points, end([0.5, 0.45], true), end([0.5, 0.55], false)] }, []);
+    // Where the viewer sees it, on the folded pane; the hidden end is not there to click.
+    expect(resolveFoldPick(index, 'folded', { x: 0.51, y: 0.45 }, RADII, point)).toMatchObject({
+      provenance: 'crease-mark-end',
+      sheet: [0.5, 0.45],
+    });
+    expect(resolveFoldPick(index, 'folded', { x: 0.51, y: 0.55 }, RADII, point)).toBeNull();
+    // The crease pattern shows every layer: both ends.
+    expect(resolveFoldPick(index, 'crease-pattern', { x: 0.51, y: 0.55 }, RADII, point)).toMatchObject({
+      provenance: 'crease-mark-end',
+      sheet: [0.5, 0.55],
+    });
+    // The mark itself is no line to fold along.
+    expect(resolveFoldPick(index, 'crease-pattern', { x: 0.51, y: 0.5 }, RADII, line)).toBeNull();
+    expect(index.creasePattern.creaseMarks).toHaveLength(1);
+  });
+
   it('tells a hit from the one a frame ago by what it takes, a free one by where it is', () => {
     const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
     const at = (x: number, y: number) => ({

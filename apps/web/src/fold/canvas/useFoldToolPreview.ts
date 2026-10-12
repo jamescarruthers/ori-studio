@@ -14,12 +14,14 @@ import type {
 } from '../engine/foldEngineWire';
 import { canonicalJson } from '../document/foldDigest';
 import { foldStepInputKey } from '../session/foldSessionEngine';
-import { FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
+import { FOLD_PINCH_LENGTH_QUERY, FOLD_SCENE_QUERY, FOLD_STEP_SUMMARY_QUERY } from '../session/foldStateQueries';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
 import { isFoldKind, isSinkTool, isVertexTool, locatesLine } from '../tools/foldToolCatalog';
 import { lineModeInput } from '../tools/foldToolRegistry';
-import { foldToolInputKey, type FoldToolState } from '../tools/foldToolState';
+import { foldToolInputKey, picksAlongLine, type FoldToolState } from '../tools/foldToolState';
+import { foldExtentState, type FoldExtentState } from '../tools/precrease/precreaseExtent';
+import { foldAlongLine, type FoldAlongLine } from './foldAlongLine';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
@@ -41,6 +43,18 @@ export interface FoldLandedPreview {
   summary: FoldStateSummary;
   /** The landed state's edge ids the fold added: drawn as its instruction. */
   added: ReadonlySet<number>;
+}
+
+/**
+ * A precrease of part of its line, while it is being made: how far along its
+ * points are, and its line ℓ on each pane, where those points are clicked
+ * and drawn (`foldAlongLine`). Null for any other fold, for the whole line,
+ * and before the line is located.
+ */
+export interface FoldExtentPreview {
+  state: FoldExtentState;
+  /** ℓ on the folded pane and on the crease pattern. */
+  along: { folded: FoldAlongLine; creasePattern: FoldAlongLine };
 }
 
 /** Everything the canvas knows of the fold the tools describe, tier by tier (plan D14). */
@@ -72,6 +86,8 @@ export interface FoldToolPreview {
   vertex: FoldVertexPreview | null;
   /** The sink tools': the point or sunk points as the engine described them, and the pocket and order taken. */
   sink: FoldSinkPreview | null;
+  /** A partial precrease's: its points along the line, and the line on each pane. */
+  extent: FoldExtentPreview | null;
 }
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
@@ -184,6 +200,14 @@ export function useFoldToolPreview(
   // A vertex fold's, once the engine has described its flap, line or fan.
   const vertexing = isVertexTool(tools.tool);
   const vertexStep = useFoldVertexStep(session, index, tools, candidate, vertexing);
+  // A precrease of part of its line: its points along the line, and a pinch's
+  // length, which the engine names for the state's sheet.
+  const along = picksAlongLine(tools);
+  const pinchLength = usePinchLength(session, along && tools.extent === 'pinch');
+  const extentState = useMemo(
+    () => (along ? foldExtentState(tools.extent, tools.extentPicks, pinchLength) : WHOLE),
+    [along, tools.extent, tools.extentPicks, pinchLength]
+  );
   const plainBuild = useMemo<FoldStepBuild>(() => {
     if (!index || !isFoldKind(tools.tool)) return { status: 'unlocated' };
     return buildFoldStep(
@@ -195,14 +219,21 @@ export function useFoldToolPreview(
         swapped: tools.swapped,
         seed: tools.seed,
         precreaseDirection: tools.precreaseDirection,
+        ...(extentState.status === 'ready' ? { extent: extentState.extent } : {}),
       },
       index
     );
-  }, [index, tools, candidate]);
+  }, [index, tools, candidate, extentState]);
+  // While its points are still being clicked, the whole line's build stands
+  // in for it: what moves and the layers at the line are the whole
+  // precrease's (the engine marks through the same layers), but nothing is
+  // previewed or committed until the extent is whole.
+  const extentPending = extentState.status === 'incomplete' || extentState.status === 'length';
   const compounding = compoundStep !== null;
   const build = compoundStep ? compoundStep.build : vertexing ? UNLOCATED : plainBuild;
   const vertexBuilt = vertexStep.step;
   const step = useMemo<FoldToolStep | null>(() => {
+    if (extentPending) return null;
     // A plain fold's override is the whole step; a compound fold's is its
     // line, which its build already folds along. A vertex fold's step is
     // its own, built from the engine's answers.
@@ -211,7 +242,23 @@ export function useFoldToolPreview(
     const chosen = override ?? (vertexing ? vertexBuilt : built);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [compounding, vertexing, tools.override, build, vertexBuilt]);
+  }, [extentPending, compounding, vertexing, tools.override, build, vertexBuilt]);
+  // The located line on each pane, while points are clicked along it.
+  const sceneLine = along && plainBuild.status === 'built' ? plainBuild.sceneLine : null;
+  const lineKey = sceneLine ? `${sceneLine.n[0]},${sceneLine.n[1]},${sceneLine.d}` : null;
+  const alongPanes = useMemo(
+    () =>
+      index && sceneLine
+        ? { folded: foldAlongLine(index, sceneLine, 'folded'), creasePattern: foldAlongLine(index, sceneLine, 'crease-pattern') }
+        : null,
+    // The line is read through its key: an equal line must not index again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [index, lineKey]
+  );
+  const extent = useMemo<FoldExtentPreview | null>(
+    () => (alongPanes ? { state: extentState, along: alongPanes } : null),
+    [alongPanes, extentState]
+  );
 
   // --- Tier 2 and 3, asked whenever the step changes; let go when there is none.
   const asked = useRef<string | null>(null);
@@ -244,9 +291,11 @@ export function useFoldToolPreview(
   }, [analyse, preview, cancel, withCursor, step?.key, stateKey]);
 
   // --- With no step, a compound tool's refused fold may still show its
-  // layers (`FoldCompoundStepAnswer.layers`): asked what it moves, after the
-  // effect above has let the last step go, and never previewed.
-  const layersAsk = step ? null : (compoundStep?.layers ?? null);
+  // layers (`FoldCompoundStepAnswer.layers`), and a precrease whose extent's
+  // points are still being clicked the whole line's: asked what it moves,
+  // after the effect above has let the last step go, and never previewed.
+  const extentLayers = extentPending && plainBuild.status === 'built' ? { op: plainBuild.op, choices: plainBuild.choices } : null;
+  const layersAsk = step ? null : (compoundStep?.layers ?? extentLayers);
   const layersKey = layersAsk ? foldStepInputKey(layersAsk) : null;
   useEffect(() => {
     if (layersAsk) void analyse(layersAsk.op, layersAsk.choices);
@@ -366,5 +415,36 @@ export function useFoldToolPreview(
     tuck: tuckStep.tuck,
     vertex: vertexStep.vertex,
     sink: sinkStep.sink,
+    extent,
   };
+}
+
+const WHOLE: FoldExtentState = { status: 'whole' };
+
+/**
+ * The pinch length the engine offers on the sheet of the state on screen
+ * (`FOLD_PINCH_LENGTH_QUERY`), asked once per state while a pinch is being
+ * made: null until it answers, and while none is.
+ */
+function usePinchLength(session: FoldSessionSurface, wanted: boolean): number | null {
+  const { query } = session;
+  const handle = wanted ? session.cursor.state : null;
+  const key = handle ? `${handle.generation}:${handle.id}` : null;
+  const [length, setLength] = useState<{ key: string; length: number } | null>(null);
+  useEffect(() => {
+    if (!handle || key === null || length?.key === key) return undefined;
+    let current = true;
+    void query(handle, FOLD_PINCH_LENGTH_QUERY).then(
+      (answer) => {
+        if (current && answer.status === 'answered') setLength({ key, length: answer.value });
+      },
+      (error: unknown) => reportError(error, { surface: 'fold:pinch-length' })
+    );
+    return () => {
+      current = false;
+    };
+    // The handle is read through its key: an equal state must not ask again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, key, length?.key]);
+  return length && length.key === key ? length.length : null;
 }
