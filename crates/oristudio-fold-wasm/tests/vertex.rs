@@ -555,3 +555,223 @@ fn vertex_refusals_are_codes_with_fixes() {
     let mut pending = Pending::new();
     assert!(pending.pick(&mut bridge, 7, &[0]).is_err());
 }
+
+// --- The swivel by its edge (`via: 'edge'`) --------------------------------
+
+/// The flat square with its diagonal (0, 0)–(1, 1) precreased, as the
+/// document stores the step.
+fn diagonal_square(bridge: &mut Bridge) -> u32 {
+    let sheet = square(bridge);
+    land(
+        bridge,
+        sheet,
+        json!({
+            "kind": "precrease",
+            "line": { "via": "free", "through": [[0.0, 0.0], [1.0, 1.0]] },
+            "direction": "valley",
+            "moving": [0.0, 1.0],
+            "seed": { "scope": "all" }
+        }),
+    )
+}
+
+/// The bottom edge swivelled onto `target`, pivoting at `pivot`: the
+/// document's new form.
+fn edge_swivel(pivot: Point, target: Value) -> Value {
+    json!({
+        "kind": "swivel",
+        "via": "edge",
+        "pivot": pivot,
+        "edge": [0.5, 0.0],
+        "target": target,
+        "seed": { "scope": "all" },
+        "direction": "valley"
+    })
+}
+
+/// The pivot past the incenter on the bisector from a, at x = 0.8.
+fn past_the_incenter() -> Point {
+    [0.8, 0.8 * (std::f64::consts::PI / 8.0).tan()]
+}
+
+/// A swivel by its edge resolves its anchors in the parent — the pivot's
+/// image, the edge's sheet point, the target crease by a point on it or as
+/// the line through two points — and lands the engine's state, reported as
+/// a swivel. The question answers `swivel-by-edge`: the vertex, the four
+/// creases with their letters as seen, where the edge lands, its ridges and
+/// per ridge whether it lands. A ridge the step stores replays to its own
+/// state.
+#[test]
+fn a_swivel_by_its_edge_lands_through_the_bridge() {
+    let mut bridge = Bridge::new();
+    let parent = diagonal_square(&mut bridge);
+    let step = edge_swivel(
+        past_the_incenter(),
+        json!({ "via": "crease", "at": [0.5, 0.5] }),
+    );
+    let asked = analysis(&bridge, parent, step.clone());
+    let a = &asked["analysis"];
+    assert_eq!(a["kind"], "swivel-by-edge", "{asked}");
+    let rays: Vec<&Value> = a["creases"]
+        .as_array()
+        .map(|c| c.iter().map(|c| &c["ray"]).collect())
+        .unwrap_or_default();
+    assert_eq!(rays, vec!["meet", "foot", "end", "hinge"]);
+    let letters: Vec<&Value> = a["creases"]
+        .as_array()
+        .map(|c| c.iter().map(|c| &c["letter"]).collect())
+        .unwrap_or_default();
+    assert_eq!(letters, vec!["valley", "mountain", "valley", "valley"]);
+    assert_eq!(a["creases"][1]["ridge"], true);
+    assert_eq!(a["ridge"], 0);
+    assert_eq!(a["ridges"].as_array().map(Vec::len), Some(2));
+    assert_eq!(asked["emergents"], json!([true, true]));
+    assert!(asked["orders"].is_null(), "{asked}");
+    assert_eq!(a["landed"].as_array().map(Vec::len), Some(2));
+    assert!(
+        a["regions"]
+            .as_array()
+            .is_some_and(|r| r.iter().any(|r| r["wedge"] == "turn"))
+    );
+
+    let applied = apply(&mut bridge, parent, step.clone(), json!({}));
+    assert_eq!(applied["status"], "ok", "{applied}");
+    assert_eq!(applied["compound"]["family"], "vertex");
+    assert_eq!(applied["compound"]["kind"], "swivel");
+    assert!(
+        applied["compound"]["stored"]
+            .as_object()
+            .is_some_and(|o| o.is_empty())
+    );
+    let landed_state = applied["state"].as_u64().unwrap_or_default() as u32;
+    let parts = |bridge: &Bridge, h: u32| bridge.state(h).map(|s| s.parts().clone()).ok();
+    // The engine's own swivel on the same parent.
+    let engine_op = oristudio_fold::SwivelByEdge {
+        pivot: past_the_incenter(),
+        edge: [0.5, 0.0],
+        target: oristudio_geometry::Line::from_points([0.0, 0.0], [1.0, 1.0])
+            .unwrap_or_else(|| panic!("no line")),
+        layers: Seed::All,
+        ridge: None,
+        direction: oristudio_fold::Direction::Valley,
+    };
+    let engine = match bridge
+        .state(parent)
+        .unwrap_or_else(|e| panic!("{e}"))
+        .swivel_by_edge(&engine_op, &oristudio_fold::VertexChoices::default())
+    {
+        Ok(oristudio_fold::VertexOutcome::Landed(folded)) => folded.state.parts().clone(),
+        _ => panic!("the engine did not land it"),
+    };
+    assert_eq!(parts(&bridge, landed_state), Some(engine));
+    // Pictured from its vertex.
+    let pictured = ok(bridge.step_action(landed_state))["action"].clone();
+    assert!(
+        pictured["line"].is_array() && pictured["grip"].is_object(),
+        "{pictured}"
+    );
+    // The target as the line through two points on it: the same state.
+    let free = edge_swivel(
+        past_the_incenter(),
+        json!({ "via": "free", "through": [[0.2, 0.2], [0.9, 0.9]] }),
+    );
+    let by_points = land(&mut bridge, parent, free);
+    assert_eq!(parts(&bridge, by_points), parts(&bridge, landed_state));
+    // The other ridge, stored as a direction: another state, and replay
+    // takes the nearer far ray.
+    let mut other = step.clone();
+    other["ridge"] = a["ridges"][1].clone();
+    let by_end = land(&mut bridge, parent, other.clone());
+    assert_ne!(parts(&bridge, by_end), parts(&bridge, landed_state));
+    let ridge = &a["ridges"][1];
+    other["ridge"] = json!([
+        ridge[0].as_f64().unwrap_or_default() * 2.0 + 0.01,
+        ridge[1].as_f64().unwrap_or_default() * 2.0
+    ]);
+    let again = land(&mut bridge, parent, other);
+    assert_eq!(parts(&bridge, again), parts(&bridge, by_end));
+    // The tools' call lands it too.
+    let mut pending = Pending::new();
+    let tried = ok(pending.try_fold(&mut bridge, parent, &op(step), &Choices::default()));
+    assert_eq!(tried["result"], "landed", "{tried}");
+}
+
+/// What the bridge refuses by code, and what it throws: a sheet point on no
+/// edge (`swivel_not_an_edge`, naming it), a target crease that is not
+/// there (`crease_not_found`), a target parallel to the edge (naming the
+/// edge's face), an edge that ends before its foot (offering the plain fold
+/// along the bisector), a pivot off the paper; and, thrown, a target named
+/// by an axiom or a model line (the step could not store it), a `via` this
+/// build does not know, and a ridge with no direction.
+#[test]
+fn a_swivel_by_its_edge_is_refused_by_code_or_thrown() {
+    let mut bridge = Bridge::new();
+    let parent = diagonal_square(&mut bridge);
+    let diagonal = json!({ "via": "crease", "at": [0.5, 0.5] });
+    let mut inside = edge_swivel(past_the_incenter(), diagonal.clone());
+    inside["edge"] = json!([0.5, 0.3]);
+    let refused = apply(&mut bridge, parent, inside, json!({}));
+    assert_eq!(
+        refused["refusal"],
+        json!({ "code": "swivel_not_an_edge", "point": [0.5, 0.3] })
+    );
+    let nowhere = edge_swivel(
+        past_the_incenter(),
+        json!({ "via": "crease", "at": [0.5, 0.3] }),
+    );
+    let refused = apply(&mut bridge, parent, nowhere, json!({}));
+    assert_eq!(refused["refusal"]["code"], "crease_not_found");
+    let top = edge_swivel([0.5, 0.5], json!({ "via": "crease", "at": [0.5, 1.0] }));
+    let refused = apply(&mut bridge, parent, top, json!({}));
+    assert_eq!(refused["refusal"]["code"], "swivel_target_parallel");
+    assert_eq!(refused["faces"].as_array().map(Vec::len), Some(1));
+    // The right edge onto the bottom edge, pivoting at d: its foot is c, the
+    // edge's far end; b d folds it there plainly.
+    let mut short = edge_swivel([0.0, 1.0], json!({ "via": "crease", "at": [0.5, 0.0] }));
+    short["edge"] = json!([1.0, 0.5]);
+    let refused = apply(&mut bridge, parent, short, json!({}));
+    assert_eq!(refused["refusal"]["code"], "swivel_edge_short", "{refused}");
+    assert_eq!(refused["fixes"][0]["fix"], "use_line");
+    let n = &refused["fixes"][0]["line"]["n"];
+    let (nx, ny) = (n[0].as_f64().unwrap_or(0.0), n[1].as_f64().unwrap_or(0.0));
+    assert!((nx - ny).abs() < 1e-12, "the fix is b d: {refused}");
+    let off = edge_swivel([1.5, 0.3], diagonal.clone());
+    let refused = apply(&mut bridge, parent, off, json!({}));
+    assert_eq!(refused["refusal"]["code"], "point_off_paper");
+
+    let axiom = json!({
+        "via": "axiom", "axiom": 1,
+        "inputs": [{ "kind": "point", "at": [0.0, 0.0] }, { "kind": "point", "at": [1.0, 1.0] }]
+    });
+    let model = json!({ "via": "model", "line": { "n": [1.0, -1.0], "d": 0.0 } });
+    for target in [axiom, model] {
+        let step = edge_swivel(past_the_incenter(), target);
+        assert!(matches!(
+            bridge.apply(parent, &op(step), &Choices::default()),
+            Err(BridgeError::InvalidInput(_))
+        ));
+    }
+    let mut zero = edge_swivel(past_the_incenter(), diagonal.clone());
+    zero["ridge"] = json!([0.0, 0.0]);
+    assert!(matches!(
+        bridge.apply(parent, &op(zero), &Choices::default()),
+        Err(BridgeError::InvalidInput(_))
+    ));
+    let mut sideways = edge_swivel(past_the_incenter(), diagonal);
+    sideways["via"] = json!("sideways");
+    assert!(serde_json::from_value::<Op>(sideways).is_err());
+    // The rays form still reads without a `via`, and only without one.
+    let rays = json!({
+        "kind": "swivel",
+        "vertex": [0.5, 0.3],
+        "toward": [[1.0, 0.6], [0.0, 0.6], [0.5, 0.0]],
+        "emergent": [0.8, -0.6],
+        "seed": { "scope": "all" },
+        "stayer": [0.3, 0.9],
+        "direction": "valley"
+    });
+    assert!(serde_json::from_value::<Op>(rays.clone()).is_ok());
+    let mut edged = rays;
+    edged["via"] = json!("edge");
+    assert!(serde_json::from_value::<Op>(edged).is_err());
+}
