@@ -19,6 +19,16 @@
   line-height: 1.5;
 }
 
+/*
+ * The clash notice's sentences, in the notice's own type. Its own colour,
+ * --text-secondary, reads 3.7:1 on the warning tint in the default dark
+ * theme (4.2:1 in the light one); --text-primary reads 6.1:1 and 9.0:1.
+ */
+.clash {
+  margin: 0;
+  color: var(--text-primary);
+}
+
 /* The clash notice's offer of a new page: what it does, then the button. */
 .offer {
   display: flex;

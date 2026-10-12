@@ -33,7 +33,9 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
   return (
     <div className={styles.controls}>
       {place.blocked === 'newer' ? (
-        <Notice>{t('panels:diagram.placement.newer', 'Placed in a newer version')}</Notice>
+        <div className={styles.inset}>
+          <Notice>{t('panels:diagram.placement.newer', 'Placed in a newer version')}</Notice>
+        </div>
       ) : (
         <>
           {step.zoom ? (
@@ -55,11 +57,13 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
                 </p>
               )}
               {place.cell?.placed?.pin === 'kind' && (
-                <Notice>
-                  {'mmPerUnit' in (step.place?.scale ?? {})
-                    ? t('panels:diagram.placement.keptPattern', 'Size kept for a crease pattern')
-                    : t('panels:diagram.placement.keptFitted', 'Size kept for a fitted picture')}
-                </Notice>
+                <div className={styles.inset}>
+                  <Notice>
+                    {'mmPerUnit' in (step.place?.scale ?? {})
+                      ? t('panels:diagram.placement.keptPattern', 'Size kept for a crease pattern')
+                      : t('panels:diagram.placement.keptFitted', 'Size kept for a fitted picture')}
+                  </Notice>
+                </div>
               )}
             </>
           )}
@@ -92,28 +96,30 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
         </Button>
       </div>
       {!!place.cell?.clashes?.length && (
-        <Notice tone="warning">
-          {place.cell.clashes.map((clash, index) => (
-            <p key={index} className={styles.note}>
-              <ClashWords clash={clash} />
-            </p>
-          ))}
-          {place.offerNewPage && (
-            <div className={styles.offer}>
-              <p className={styles.note}>
-                {t(
-                  'panels:diagram.placement.breakBeforeNote',
-                  'A new page returns this step’s frame to automatic placement, and the frame of any step it moves.'
-                )}
+        <div className={styles.inset}>
+          <Notice tone="warning">
+            {place.cell.clashes.map((clash, index) => (
+              <p key={index} className={styles.clash}>
+                <ClashWords clash={clash} />
               </p>
-              <Button size="sm" disabled={place.readOnly} onClick={place.startOnNewPage}>
-                {t('panels:diagram.placement.breakBefore', 'Start step {{number}} on a new page', {
-                  number: place.cell.number,
-                })}
-              </Button>
-            </div>
-          )}
-        </Notice>
+            ))}
+            {place.offerNewPage && (
+              <div className={styles.offer}>
+                <p className={styles.clash}>
+                  {t(
+                    'panels:diagram.placement.breakBeforeNote',
+                    'A new page returns this step’s frame to automatic placement, and the frame of any step it moves.'
+                  )}
+                </p>
+                <Button size="sm" disabled={place.readOnly} onClick={place.startOnNewPage}>
+                  {t('panels:diagram.placement.breakBefore', 'Start step {{number}} on a new page', {
+                    number: place.cell.number,
+                  })}
+                </Button>
+              </div>
+            )}
+          </Notice>
+        </div>
       )}
     </div>
   );
