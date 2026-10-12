@@ -209,36 +209,19 @@ impl Context {
                 .collect()
         };
         let strip = groups(0..self.strip_blocks);
+        // Each tip block turns about ℓ2 as its strip block carries it.
         let tip = groups(self.strip_blocks..2 * self.strip_blocks);
-        // ℓ2 where the strip carries it, and the side of it the tip is on
-        // once carried.
-        let carried_line = reflect_line(&self.first, &self.second);
-        let toward = match self.second_side {
-            Side::Positive => 1.0,
-            Side::Negative => -1.0,
-        };
-        let foot = [
-            self.second.n[0] * self.second.d,
-            self.second.n[1] * self.second.d,
-        ];
-        let beyond = [
-            foot[0] + toward * self.second.n[0],
-            foot[1] + toward * self.second.n[1],
-        ];
-        let carried_side = Side::of_point(&carried_line, self.first.reflect_point(beyond))
-            .unwrap_or(Side::Positive);
         let motion = StepMotion::crimp(
             Turn {
                 axis: self.first,
                 side: self.side,
             },
             Turn {
-                axis: carried_line,
-                side: carried_side,
+                axis: self.second,
+                side: self.second_side,
             },
             &strip,
             &tip,
-            Isometry::reflection(carried_line.n, carried_line.d),
         );
         CrimpFolded {
             state: folded.state,
@@ -261,13 +244,6 @@ impl Context {
             },
         }
     }
-}
-
-/// `line` reflected across `mirror`.
-fn reflect_line(mirror: &Line, line: &Line) -> Line {
-    let foot = [line.n[0] * line.d, line.n[1] * line.d];
-    let along = [foot[0] - line.n[1], foot[1] + line.n[0]];
-    Line::from_points(mirror.reflect_point(foot), mirror.reflect_point(along)).unwrap_or(*line)
 }
 
 /// ℓ2's score composed with ℓ1's (`State::score_second`): what the shared

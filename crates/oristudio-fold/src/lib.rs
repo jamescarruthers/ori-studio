@@ -112,7 +112,9 @@ pub use compound::crimp::{
     CrimpAnalysis, CrimpChoice, CrimpFold, CrimpFolded, CrimpOutcome, CrimpReport,
 };
 pub use compound::fan::FanAnalysis;
-pub use compound::motion::{LegName, MotionGroup, MotionKind, MotionLeg, Stacking, StepMotion};
+pub use compound::motion::{
+    Carrier, LegName, MotionGroup, MotionKind, MotionLeg, Stacking, StepMotion,
+};
 pub use compound::petal::{NoPetal, PetalAnalysis, PetalCrease, PetalFold};
 pub use compound::rabbit::{RabbitEar, incenter};
 pub use compound::reverse::{

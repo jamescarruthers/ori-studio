@@ -60,7 +60,7 @@ pub fn assert_motion(parent: &State, folded: &VertexFolded) {
                     .iter()
                     .find(|g| g.faces.contains(&face))
                     .unwrap_or_else(|| unreachable!());
-                group.place(q, if end { group.to } else { group.from })
+                group.pose(q, if end { 1.0 } else { 0.0 })
             };
             assert!(
                 close(at(0, false), [p[0], p[1], 0.0]),

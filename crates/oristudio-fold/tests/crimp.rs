@@ -12,7 +12,8 @@ use std::collections::BTreeMap;
 
 use oristudio_fold::{
     CompoundRefused, CreaseKind, CrimpFold, CrimpFolded, CrimpOutcome, Direction, FaceId, Fix,
-    Letter, ReverseChoices, ReverseFold, ReverseKind, Seed, Sheet, StartSide, State,
+    LegName, Letter, MotionGroup, ReverseChoices, ReverseFold, ReverseKind, Seed, Sheet, Side,
+    Stacking, StartSide, State,
 };
 use oristudio_geometry::Line;
 use support::*;
@@ -110,12 +111,25 @@ fn assert_letters(parent: &State, folded: &CrimpFolded) -> [usize; 2] {
     counts
 }
 
-/// The motion starts every face where the parent had it, each of its turns
-/// starts where the one before ended, and its last turn ends where it lands.
+/// The motion folds both lines together in one spread and one close: it
+/// starts every face where the parent had it and ends it where it lands,
+/// its close starts where its spread ended, ℓ2 joins each tip face to its
+/// strip at every instant, and the tip never stands edge-on — seen from
+/// above, a tip face keeps at least the cosine of the lines' angle of its
+/// area all the way, and all of it along parallel lines.
 fn assert_motion(parent: &State, folded: &CrimpFolded) {
     let landed = &folded.state;
-    let mut appearances: BTreeMap<FaceId, Vec<oristudio_fold::MotionGroup>> = BTreeMap::new();
-    for leg in &folded.report.motion.legs {
+    let motion = &folded.report.motion;
+    let legs: Vec<_> = motion.legs.iter().map(|l| (l.name, l.stacking)).collect();
+    assert_eq!(
+        legs,
+        [
+            (LegName::Spread, Stacking::Parent),
+            (LegName::Close, Stacking::Landed)
+        ]
+    );
+    let mut appearances: BTreeMap<FaceId, Vec<MotionGroup>> = BTreeMap::new();
+    for leg in &motion.legs {
         for group in &leg.groups {
             for &f in &group.faces {
                 appearances.entry(f).or_default().push(group.clone());
@@ -125,7 +139,29 @@ fn assert_motion(parent: &State, folded: &CrimpFolded) {
     let moved: usize = folded.report.fold.blocks.iter().map(Vec::len).sum();
     assert_eq!(appearances.len(), moved);
     let near = |a: [f64; 3], b: [f64; 3]| a.iter().zip(&b).all(|(x, y)| (x - y).abs() < 1e-9);
+    // Where a face's turns have a landed point `t` of the way through the
+    // step: the spread to ½, the close after.
+    let at = |turns: &[MotionGroup], q: Point, t: f64| {
+        let (leg, share) = if t < 0.5 {
+            (0, 2.0 * t)
+        } else {
+            (1, 2.0 * t - 1.0)
+        };
+        turns[leg].pose(q, share)
+    };
+    let sweep: Vec<f64> = (0..=24).map(|k| f64::from(k) / 24.0).collect();
+    // Each moving face's block, a tip block numbered as its strip's.
+    let blocks = &folded.report.fold.blocks;
+    let pair_of: BTreeMap<FaceId, usize> = blocks
+        .iter()
+        .enumerate()
+        .flat_map(|(b, faces)| faces.iter().map(move |&f| (f, b % (blocks.len() / 2))))
+        .collect();
+    // Per landed vertex, its point and the block pair and turns of each
+    // moving face it bounds.
+    let mut corners: BTreeMap<u32, Corner> = BTreeMap::new();
     for (face, turns) in &appearances {
+        assert_eq!(turns.len(), 2, "face {face}");
         let t = landed.isometry(*face).unwrap_or_default();
         let lineage = landed
             .face(*face)
@@ -137,26 +173,91 @@ fn assert_motion(parent: &State, folded: &CrimpFolded) {
             .face(*face)
             .map(|f| f.ring.clone())
             .unwrap_or_default();
-        for v in ring {
+        let mut points = Vec::new();
+        for v in &ring {
             let sheet = landed.vertices()[v.0 as usize];
             let q = t.apply(sheet);
             let p = before.apply(sheet);
-            let (Some(first), Some(last)) = (turns.first(), turns.last()) else {
-                continue;
-            };
             assert!(
-                near(first.place(q, first.from), [p[0], p[1], 0.0]),
+                near(turns[0].pose(q, 0.0), [p[0], p[1], 0.0]),
                 "face {face} does not start where the parent had it"
             );
-            assert!(near(last.place(q, last.to), [q[0], q[1], 0.0]));
-            for pair in turns.windows(2) {
-                assert!(near(
-                    pair[0].place(q, pair[0].to),
-                    pair[1].place(q, pair[1].from)
-                ));
+            assert!(near(turns[1].pose(q, 1.0), [q[0], q[1], 0.0]));
+            assert!(near(turns[0].pose(q, 1.0), turns[1].pose(q, 0.0)));
+            corners
+                .entry(v.0)
+                .or_insert((q, Vec::new()))
+                .1
+                .push((pair_of[face], turns));
+            points.push(q);
+        }
+        // A tip face, carried by its strip's turn: never edge-on.
+        let Some(carrier) = turns[0].carrier else {
+            continue;
+        };
+        let oriented = |line: &Line, side: Side| match side {
+            Side::Positive => line.n,
+            Side::Negative => [-line.n[0], -line.n[1]],
+        };
+        let [a, b] = [
+            oriented(&turns[0].axis, turns[0].side),
+            oriented(&carrier.axis, carrier.side),
+        ];
+        let least = (a[0] * b[0] + a[1] * b[1]).min(1.0);
+        let whole = area(&points);
+        for &t in &sweep {
+            let seen: Vec<Point> = points
+                .iter()
+                .map(|&q| {
+                    let [x, y, _] = at(turns, q, t);
+                    [x, y]
+                })
+                .collect();
+            assert!(
+                area(&seen) >= least * whole - 1e-9,
+                "tip face {face} at {t}: {} of {whole}",
+                area(&seen)
+            );
+        }
+    }
+    // ℓ2 joins each tip block to its strip block (and the faces of a block
+    // to each other): a corner they share is where both put it, at every
+    // instant. Blocks across the spine part, as a reverse fold's do.
+    let mut joined = 0;
+    for (v, (q, faces)) in &corners {
+        for (k, (a, first)) in faces.iter().enumerate() {
+            for (b, second) in &faces[k + 1..] {
+                if a != b {
+                    continue;
+                }
+                joined += 1;
+                for &t in &sweep {
+                    assert!(
+                        near(at(first, *q, t), at(second, *q, t)),
+                        "corner {v} parts at {t}"
+                    );
+                }
             }
         }
     }
+    assert!(joined > 0, "no corner joins two moving faces");
+}
+
+/// A landed corner of moving paper: its point, and the block pair (a tip
+/// block numbered as its strip's) and turns of each moving face it bounds.
+type Corner<'a> = (Point, Vec<(usize, &'a Vec<MotionGroup>)>);
+
+/// The area a ring of points bounds.
+fn area(ring: &[Point]) -> f64 {
+    let n = ring.len();
+    (0..n)
+        .map(|i| {
+            let (p, q) = (ring[i], ring[(i + 1) % n]);
+            p[0] * q[1] - q[0] * p[1]
+        })
+        .sum::<f64>()
+        .abs()
+        / 2.0
 }
 
 /// Every check on one landed crimp, with its replay from what it stores.
@@ -227,7 +328,9 @@ fn the_triangles_crimp_lands_by_the_lines_angle() {
                 assert_eq!(folded.state.faces().len(), 6, "{name} {kind:?}");
                 assert_eq!(folded.report.fold.blocks.len(), 4, "{name} {kind:?}");
                 assert_eq!(folded.report.fold.created.len(), 4, "{name} {kind:?}");
-                assert_eq!(folded.report.motion.legs.len(), 4);
+                // Both lines fold together: one spread and one close
+                // (`assert_motion` sweeps them).
+                assert_eq!(folded.report.motion.legs.len(), 2);
                 let [strip, tip] = assert_letters(&tri, &folded);
                 assert_eq!((strip, tip), (1, 1), "{name} {kind:?}");
                 // The spine's strip half turned; its tip half kept its letter.

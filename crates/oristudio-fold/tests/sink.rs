@@ -119,9 +119,9 @@ fn check(parent: &State, folded: &SinkFolded) {
                     close_to(q, folded.report.line.reflect_point(p), 1e-9),
                     "face {face} is not reflected across ℓ"
                 );
-                let [x, y, z] = end.place(q, end.to);
+                let [x, y, z] = end.pose(q, 1.0);
                 assert!(close_to([x, y], q, 1e-9) && z.abs() < 1e-9);
-                let [x, y, z] = start.place(q, start.from);
+                let [x, y, z] = start.pose(q, 0.0);
                 assert!(
                     close_to([x, y], p, 1e-9) && z.abs() < 1e-9,
                     "face {face} does not start where the parent had it"

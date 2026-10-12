@@ -223,10 +223,10 @@ pub fn assert_motion(parent: &State, landed: &State, motion: &StepMotion) {
             {
                 let sheet = landed.vertices()[v.0 as usize];
                 let q = t.apply(sheet);
-                let [x, y, z] = end.place(q, end.to);
+                let [x, y, z] = end.pose(q, 1.0);
                 assert!((x - q[0]).abs() < 1e-9 && (y - q[1]).abs() < 1e-9 && z.abs() < 1e-9);
                 let p = before.apply(sheet);
-                let [x, y, z] = start.place(q, start.from);
+                let [x, y, z] = start.pose(q, 0.0);
                 assert!(
                     (x - p[0]).abs() < 1e-9 && (y - p[1]).abs() < 1e-9 && z.abs() < 1e-9,
                     "face {face} does not start where the parent had it"
