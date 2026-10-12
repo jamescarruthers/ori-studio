@@ -95,7 +95,43 @@ export interface DiagramPageSetup {
   /** Draws {@link DiagramDocument.title} in a tab at the top of every page. */
   showTitle: boolean;
   pageNumbers: { enabled: boolean; first: number };
+  /**
+   * Flow layout only, with the four after it: how a page is packed
+   * (`implementation-plans/diagram-flow-packing.md`, Decision 7). Each is
+   * written only when not its default ({@link DEFAULT_FLOW_PACKING}), which a
+   * file that does not say reads as. The bands a page's steps are packed
+   * into: `auto` tries each count and keeps the one that packs best, a number
+   * ({@link FLOW_BANDS_RANGE}) holds every page to it.
+   */
+  flowBands: DiagramFlowBands;
+  /** With {@link flowBands} `auto`: how strongly three bands are preferred, 0–1 ({@link FLOW_WEIGHT_RANGE}). */
+  flowPreferBands: number;
+  /** A step may stand in the bend between two bands, where that packs better. */
+  flowBendSteps: boolean;
+  /** How far a step rises or dips in its band to nest beside a taller one, 0–1. */
+  flowNesting: number;
+  /** How strongly a page's scale is held to the page before's, 0–1. */
+  flowSteadiness: number;
 }
+
+/** How many bands a flow page is packed into ({@link DiagramPageSetup.flowBands}): chosen per page, or fixed. */
+export type DiagramFlowBands = 'auto' | 2 | 3 | 4 | 5;
+
+/** The packing a page setup that does not say reads as, and a new diagram's: Zach's defaults (Decision 7). */
+export const DEFAULT_FLOW_PACKING: Readonly<
+  Pick<DiagramPageSetup, 'flowBands' | 'flowPreferBands' | 'flowBendSteps' | 'flowNesting' | 'flowSteadiness'>
+> = {
+  flowBands: 'auto',
+  flowPreferBands: 0.5,
+  flowBendSteps: true,
+  flowNesting: 0.8,
+  flowSteadiness: 0.85,
+};
+
+/** A fixed band count ({@link DiagramPageSetup.flowBands}); `auto` packs a short page into fewer. */
+export const FLOW_BANDS_RANGE = { min: 2, max: 5 } as const;
+/** The range of the packing's three weights: {@link DiagramPageSetup.flowPreferBands}, `flowNesting` and `flowSteadiness`. */
+export const FLOW_WEIGHT_RANGE = { min: 0, max: 1 } as const;
 
 /**
  * The paper style every step is painted in. A built-in with its saved values,
@@ -1277,6 +1313,7 @@ export const DEFAULT_PAGE_SETUP: DiagramPageSetup = {
   firstPageSide: 'left',
   showTitle: true,
   pageNumbers: { enabled: true, first: 1 },
+  ...DEFAULT_FLOW_PACKING,
 };
 
 export const DEFAULT_DIAGRAM_STYLE: DiagramStyle = snapshotDiagramStyle({ preset: 'diagram' });
@@ -2434,7 +2471,22 @@ export function normalizePageSetup(value: unknown): DiagramPageSetup {
           : DEFAULT_PAGE_SETUP.pageNumbers.enabled,
       first: clampWhole(numbers.first, FIRST_PAGE_NUMBER_RANGE, DEFAULT_PAGE_SETUP.pageNumbers.first),
     },
+    flowBands: readFlowBands(source.flowBands),
+    flowPreferBands: clampNumber(source.flowPreferBands, FLOW_WEIGHT_RANGE, DEFAULT_FLOW_PACKING.flowPreferBands),
+    flowBendSteps: typeof source.flowBendSteps === 'boolean' ? source.flowBendSteps : DEFAULT_FLOW_PACKING.flowBendSteps,
+    flowNesting: clampNumber(source.flowNesting, FLOW_WEIGHT_RANGE, DEFAULT_FLOW_PACKING.flowNesting),
+    flowSteadiness: clampNumber(source.flowSteadiness, FLOW_WEIGHT_RANGE, DEFAULT_FLOW_PACKING.flowSteadiness),
   };
+}
+
+/**
+ * A flow page's band count from anything: `auto`, or a count rounded whole
+ * and clamped to {@link FLOW_BANDS_RANGE}; anything else, the default.
+ */
+function readFlowBands(value: unknown): DiagramFlowBands {
+  if (value === 'auto') return 'auto';
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_FLOW_PACKING.flowBands;
+  return clampWhole(value, FLOW_BANDS_RANGE, FLOW_BANDS_RANGE.min) as DiagramFlowBands;
 }
 
 export function pageSetupEquals(a: DiagramPageSetup, b: DiagramPageSetup): boolean {
@@ -2452,7 +2504,12 @@ export function pageSetupEquals(a: DiagramPageSetup, b: DiagramPageSetup): boole
     a.firstPageSide === b.firstPageSide &&
     a.showTitle === b.showTitle &&
     a.pageNumbers.enabled === b.pageNumbers.enabled &&
-    a.pageNumbers.first === b.pageNumbers.first
+    a.pageNumbers.first === b.pageNumbers.first &&
+    a.flowBands === b.flowBands &&
+    a.flowPreferBands === b.flowPreferBands &&
+    a.flowBendSteps === b.flowBendSteps &&
+    a.flowNesting === b.flowNesting &&
+    a.flowSteadiness === b.flowSteadiness
   );
 }
 

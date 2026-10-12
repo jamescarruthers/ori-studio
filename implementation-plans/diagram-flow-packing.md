@@ -134,7 +134,7 @@ prototype does; only real steps are kept):
 ## Checklist
 
 ### Phase 1: model and file
-- [ ] The five parameters in `DiagramPageSetup` with defaults, ranges, reading and writing (unsaid = default), tests.
+- [x] The five parameters in `DiagramPageSetup` with defaults, ranges, reading and writing (unsaid = default), tests.
 - [ ] `DiagramDocument.pageArrangements` (by page's first step id: signature, `k`, per step box, scale, band, bend), rounding, reading (malformed dropped, newer carried) and writing, round-trip tests, v1 contract text.
 - [ ] `pageSignature(document, page)` and the rule in `settlePlaces`.
 

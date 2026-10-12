@@ -97,6 +97,9 @@ import {
   DIAGRAM_PAGE_SIDES,
   DIAGRAM_SHOW_AS,
   FIRST_PAGE_NUMBER_RANGE,
+  DEFAULT_FLOW_PACKING,
+  FLOW_BANDS_RANGE,
+  FLOW_WEIGHT_RANGE,
   PAGE_COLUMNS_RANGE,
   PAGE_MARGIN_MM_RANGE,
   PAGE_ROWS_RANGE,
@@ -257,12 +260,19 @@ const PAGE_KEYS = new Set([
   'scale',
   'showTitle',
   'pageNumbers',
+  'flowBands',
+  'flowPreferBands',
+  'flowBendSteps',
+  'flowNesting',
+  'flowSteadiness',
 ]);
 const PAGE_ENUMS: Record<string, readonly string[]> = {
   size: PAPER_SIZES,
   orientation: ['portrait', 'landscape'],
   layout: ['grid', 'flow'],
   firstPageSide: DIAGRAM_PAGE_SIDES,
+  // A word other than `auto`; a count is a number, read within its range below.
+  flowBands: ['auto'],
 };
 
 /** The ranges a page's numbers are read within: past one, a number is a newer build's. */
@@ -272,6 +282,10 @@ const PAGE_RANGES: Readonly<Record<string, { readonly min: number; readonly max:
   rows: PAGE_ROWS_RANGE,
   stepsPerPage: STEPS_PER_PAGE_RANGE,
   pathWidthMm: PATH_WIDTH_MM_RANGE,
+  flowBands: FLOW_BANDS_RANGE,
+  flowPreferBands: FLOW_WEIGHT_RANGE,
+  flowNesting: FLOW_WEIGHT_RANGE,
+  flowSteadiness: FLOW_WEIGHT_RANGE,
 };
 const PAGE_NUMBERS_KEYS: ReadonlySet<string> = new Set(['enabled', 'first']);
 const STYLE_KEYS: ReadonlySet<string> = new Set(['preset', 'style']);
@@ -451,16 +465,37 @@ function thumbnailJson(thumbnail: SheetThumbnail): string {
  * build's carried (`newerPage`) included: a flow diagram that never chose
  * them saves as it did before, and one that did keeps them on a grid too,
  * for when it turns back to flow.
+ *
+ * The flow's packing (`flowBands` and the four after it) is written a field
+ * at a time, each only when not its default (`DEFAULT_FLOW_PACKING`), so a
+ * diagram that never chose saves as it did before they could be.
  */
 function writePageSetup(page: DiagramPageSetup, newerPage?: Record<string, unknown>): Record<string, unknown> {
-  const { firstPageSide, pathWidthMm, pathColor, stepsPerPage, ...rest } = page;
+  const {
+    firstPageSide,
+    pathWidthMm,
+    pathColor,
+    stepsPerPage,
+    flowBands,
+    flowPreferBands,
+    flowBendSteps,
+    flowNesting,
+    flowSteadiness,
+    ...rest
+  } = page;
   const said = (key: 'columns' | 'rows') => (typeof newerPage?.[key] === 'number' ? newerPage[key] : page[key]);
+  const unsaid = DEFAULT_FLOW_PACKING;
   return {
     ...rest,
     ...(stepsPerPage !== unsaidStepsPerPage({ columns: said('columns'), rows: said('rows') }) ? { stepsPerPage } : {}),
     ...(pathWidthMm !== DEFAULT_PATH_WIDTH_MM ? { pathWidthMm } : {}),
     ...(pathColor !== DEFAULT_PATH_COLOR ? { pathColor } : {}),
     ...(firstPageSide === 'right' ? { firstPageSide } : {}),
+    ...(flowBands !== unsaid.flowBands ? { flowBands } : {}),
+    ...(flowPreferBands !== unsaid.flowPreferBands ? { flowPreferBands } : {}),
+    ...(flowBendSteps !== unsaid.flowBendSteps ? { flowBendSteps } : {}),
+    ...(flowNesting !== unsaid.flowNesting ? { flowNesting } : {}),
+    ...(flowSteadiness !== unsaid.flowSteadiness ? { flowSteadiness } : {}),
   };
 }
 

@@ -1744,7 +1744,13 @@ on its next save.
   without it reads), `showPath`, `pathWidthMm` (4–60, written only when
   not 20), `pathColor` (`#rrggbb`, only when not `#ecece8`), `firstPageSide`
   (only when `right`), `showTitle`, `pageNumbers` (`{ enabled, first }`,
-  first 1–9999). `scale` is retired (2026-10-06): read and let go.
+  first 1–9999). `scale` is retired (2026-10-06): read and let go. The flow's
+  packing (added 2026-10-12, `diagram-flow-packing.md`), each written only
+  when not its default, which a file without it reads: `flowBands` (`auto`
+  or a whole 2–5; default `auto`), `flowPreferBands` (0–1, 0.5),
+  `flowBendSteps` (boolean, true), `flowNesting` (0–1, 0.8) and
+  `flowSteadiness` (0–1, 0.85). A number past its range, or a `flowBands`
+  word other than `auto`, is a newer build's (rule 2).
 - `steps`: the order, steps and the turns between them (D22). A turn is
   `{ id: 'turn-<uuid>', kind: 'turn-over', axis }` (unsaid: `vertical`) or
   `{ id, kind: 'rotate', rotate: { amount, direction } }` (unsaid: a quarter

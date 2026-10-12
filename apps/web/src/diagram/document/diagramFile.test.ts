@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
 import {
   DEFAULT_DIAGRAM_STYLE,
+  DEFAULT_FLOW_PACKING,
   createDiagram,
   createStep,
   duplicateStep,
@@ -19,6 +20,7 @@ import {
   type DiagramIdFactory,
   type DiagramCpRender,
   type DiagramCpSource,
+  type DiagramPageSetup,
 } from './diagramDocument';
 import { readDiagram, storedSceneJson, writeDiagram } from './diagramFile';
 import { SVG_STORED_MAX_BYTES, sanitizeSvg } from '../upload/svgSanitize';
@@ -173,6 +175,95 @@ describe('writeDiagram / readDiagram', () => {
     const wide = page({ columns: 6, rows: 3 });
     expect(wide.document.page).toMatchObject({ columns: 5, rows: 3, stepsPerPage: 18 });
     expect(throughJson(writeDiagram(wide.document)).page).toEqual({ ...before, columns: 6, rows: 3 });
+  });
+
+  describe('the flow’s packing (diagram-flow-packing.md, Decision 7)', () => {
+    const PACKING_KEYS = ['flowBands', 'flowPreferBands', 'flowBendSteps', 'flowNesting', 'flowSteadiness'];
+    const packingSaid = (page: Record<string, unknown>) => Object.keys(page).filter((key) => PACKING_KEYS.includes(key));
+
+    it('writes each choice only when not its default, and reads a file without one as Zach’s default', () => {
+      const plain = throughJson(writeDiagram(sampleDiagram()));
+      expect(packingSaid(plain.page)).toEqual([]);
+      expect(readDiagram(plain)!.document.page).toMatchObject({
+        flowBands: 'auto',
+        flowPreferBands: 0.5,
+        flowBendSteps: true,
+        flowNesting: 0.8,
+        flowSteadiness: 0.85,
+      });
+      expect(createDiagram().page).toMatchObject(DEFAULT_FLOW_PACKING);
+      const choices = { flowBands: 3, flowPreferBands: 0.2, flowBendSteps: false, flowNesting: 0.4, flowSteadiness: 1 } as const;
+      const chosen = setPageSetup(sampleDiagram(), choices);
+      const written = throughJson(writeDiagram(chosen));
+      expect(written.page).toMatchObject(choices);
+      const read = readDiagram(written)!;
+      expect(read.readOnly).toBe(false);
+      expect(read.document).toEqual(chosen);
+      // One chosen: only it is said.
+      for (const [key, value] of Object.entries(choices)) {
+        const one = setPageSetup(sampleDiagram(), { [key]: value } as Partial<DiagramPageSetup>);
+        expect(packingSaid(throughJson(writeDiagram(one)).page)).toEqual([key]);
+      }
+      // Back to the defaults: unsaid again; and a file that says a default reads as it, and is written back without it.
+      expect(packingSaid(throughJson(writeDiagram(setPageSetup(chosen, DEFAULT_FLOW_PACKING))).page)).toEqual([]);
+      const said = readDiagram({ ...plain, page: { ...plain.page, ...DEFAULT_FLOW_PACKING } })!;
+      expect(said.document).toEqual(readDiagram(plain)!.document);
+      expect(packingSaid(throughJson(writeDiagram(said.document)).page)).toEqual([]);
+    });
+
+    it('holds each choice to its range, a band count whole, and reads damage as the default', () => {
+      // As a hand-made patch might say them: past the ranges, a band count not whole.
+      const set = (patch: Record<string, unknown>) => setPageSetup(sampleDiagram(), patch as Partial<DiagramPageSetup>).page;
+      expect(set({ flowBands: 7 })).toMatchObject({ flowBands: 5 });
+      expect(set({ flowBands: 3.4 })).toMatchObject({ flowBands: 3 });
+      expect(set({ flowNesting: 2, flowSteadiness: -1, flowPreferBands: 1.5 })).toMatchObject({
+        flowNesting: 1,
+        flowSteadiness: 0,
+        flowPreferBands: 1,
+      });
+      const plain = throughJson(writeDiagram(sampleDiagram()));
+      const page = (patch: Record<string, unknown>) => readDiagram({ ...plain, page: { ...plain.page, ...patch } })!;
+      // Within range, a band count not whole is rounded, as the steps per page are: this build's, not a newer one's.
+      expect(page({ flowBands: 3.4 }).document.page.flowBands).toBe(3);
+      expect(page({ flowBands: 3.4 }).document.newer).toBeUndefined();
+      for (const damage of [
+        { flowBendSteps: 'yes' },
+        { flowNesting: null },
+        { flowSteadiness: '0.5' },
+        { flowPreferBands: Number.NaN },
+        { flowBands: null },
+        { flowBands: true },
+      ]) {
+        const read = page(damage);
+        expect(read.readOnly, JSON.stringify(damage)).toBe(false);
+        expect(read.document.page, JSON.stringify(damage)).toMatchObject(DEFAULT_FLOW_PACKING);
+        expect(read.document.newer, JSON.stringify(damage)).toBeUndefined();
+      }
+    });
+
+    it('carries a choice past this build’s range, or a band word it has no name for, as a newer build’s', () => {
+      const plain = throughJson(writeDiagram(sampleDiagram()));
+      const page = (patch: Record<string, unknown>) => readDiagram({ ...plain, page: { ...plain.page, ...patch } })!;
+      for (const [patch, shown] of [
+        [{ flowBands: 6 }, { flowBands: 5 }],
+        [{ flowBands: 1 }, { flowBands: 2 }],
+        [{ flowBands: 'fit' }, { flowBands: 'auto' }],
+        [{ flowPreferBands: 1.5 }, { flowPreferBands: 1 }],
+        [{ flowNesting: -0.2 }, { flowNesting: 0 }],
+        [{ flowSteadiness: 2 }, { flowSteadiness: 1 }],
+      ] as const) {
+        const newer = page(patch);
+        expect(newer.readOnly).toBe(false);
+        expect(newer.document.page).toMatchObject(shown);
+        expect(newer.document.newer).toEqual({ page: patch });
+        expect(throughJson(writeDiagram(newer.document)).page).toEqual({ ...plain.page, ...patch });
+        // Chosen here, it is this build's.
+        const [key] = Object.keys(patch) as (keyof typeof DEFAULT_FLOW_PACKING)[];
+        const chosen = setPageSetup(newer.document, { [key!]: DEFAULT_FLOW_PACKING[key!] } as Partial<DiagramPageSetup>);
+        expect(chosen.newer).toBeUndefined();
+        expect(packingSaid(throughJson(writeDiagram(chosen)).page)).toEqual([]);
+      }
+    });
   });
 
   it('saves a legacy flow page setup byte for byte without adding steps per page', () => {
