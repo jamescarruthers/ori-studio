@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { packRibbon, rectangle, ribbonGaps, type PackingShape, type Polygon } from './ribbonPacking';
+import { rectangle, type Polygon } from './pagePolygons';
+import { packRibbon, ribbonGaps, type PackingShape } from './ribbonPacking';
 function diamond(size: number, ratio: number): PackingShape {
   const w = size * Math.min(1, ratio),
     h = size * Math.min(1, 1 / ratio);

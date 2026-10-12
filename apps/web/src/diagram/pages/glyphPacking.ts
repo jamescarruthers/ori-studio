@@ -1,7 +1,7 @@
 import type { Lane, LanePoint } from './flowLane';
 import { curvePoint, curveStart } from './flowLane';
 import { partPolygons, type PageBox } from './pagePlacement';
-import { rectangle, separate } from './ribbonPacking';
+import { rectangle, separate } from './pagePolygons';
 import type { LayoutCell } from './diagramPageLayout';
 
 /** Find clear room on the actual ribbon; hand placements may leave no clear point. */

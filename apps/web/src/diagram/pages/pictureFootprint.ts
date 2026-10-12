@@ -6,7 +6,7 @@ import { diagramSurfaceStyle } from '../pictures/diagramPaperStyle';
 import { stepAsDrawn, viewFrame, viewGeometry, viewOfStep } from '../zoom/stepView';
 import { pictureExtent, type LayoutStep } from './diagramPageLayout';
 import { cellPicture, type PictureMeasure } from './pagePictures';
-import { convexHull, rectangle, type Polygon } from './ribbonPacking';
+import { convexHull, rectangle, type Polygon } from './pagePolygons';
 
 /** Occupied paper and individual marks, normalized to the measured ink box.
  * Empty corners stay empty, including when a mark reaches past the paper.

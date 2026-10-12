@@ -1,10 +1,10 @@
 import { laneCrosses, type LanePoint, type LaneStop } from './flowLane';
 import type { PageBox } from './pagePlacement';
+import { rectangle, separate, type Polygon } from './pagePolygons';
 import { ribbonPath, pointOnRibbon } from './ribbonPath';
 
 export const RIBBON_CLEARANCE_MM = 6;
 export const RIBBON_GAP_RATIO = 1.5;
-export type Polygon = readonly LanePoint[];
 export interface PackingShape {
   /** Picture, number and caption, relative to the picture centre. */
   polygons: readonly Polygon[];
@@ -32,30 +32,6 @@ export interface RibbonPackingInput {
   /** Room for symbols only on the connections that carry them. */
   gapClearances?: readonly number[];
   gapBoxes?: readonly ({ w: number; h: number } | null)[];
-}
-
-export function rectangle(x: number, y: number, w: number, h: number): Polygon {
-  return [
-    { x, y },
-    { x: x + w, y },
-    { x: x + w, y: y + h },
-    { x, y: y + h },
-  ];
-}
-
-/** Convex occupied outlines retain the spare corners of folded paper. */
-export function convexHull(points: readonly LanePoint[]): Polygon {
-  const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
-  const cross = (a: LanePoint, b: LanePoint, c: LanePoint) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-  const half = (items: LanePoint[]) => {
-    const result: LanePoint[] = [];
-    for (const p of items) {
-      while (result.length >= 2 && cross(result.at(-2)!, result.at(-1)!, p) <= 1e-10) result.pop();
-      result.push(p);
-    }
-    return result.slice(0, -1);
-  };
-  return [...half(sorted), ...half([...sorted].reverse())];
 }
 
 function inside(p: LanePoint, polygon: Polygon, at: LanePoint): boolean {
@@ -97,45 +73,6 @@ export function ribbonGaps(
     }
     return length;
   });
-}
-
-/** Separating-axis displacement: polygons need at least `clearance` on one separating axis. */
-export function separate(a: Polygon, at: LanePoint, b: Polygon, bt: LanePoint, clearance: number): LanePoint | null {
-  let depth = Infinity,
-    axis: LanePoint = { x: 0, y: 0 };
-  for (const poly of [a, b])
-    for (let i = 0; i < poly.length; i++) {
-      const p = poly[i]!,
-        q = poly[(i + 1) % poly.length]!;
-      const length = Math.hypot(q.x - p.x, q.y - p.y);
-      if (length < 1e-8) continue;
-      const x = -(q.y - p.y) / length,
-        y = (q.x - p.x) / length;
-      let a0 = Infinity,
-        a1 = -Infinity,
-        b0 = Infinity,
-        b1 = -Infinity;
-      for (const v of a) {
-        const n = (v.x + at.x) * x + (v.y + at.y) * y;
-        a0 = Math.min(a0, n);
-        a1 = Math.max(a1, n);
-      }
-      for (const v of b) {
-        const n = (v.x + bt.x) * x + (v.y + bt.y) * y;
-        b0 = Math.min(b0, n);
-        b1 = Math.max(b1, n);
-      }
-      if (a1 + clearance <= b0 || b1 + clearance <= a0) return null;
-      const forward = a1 + clearance - b0,
-        back = b1 + clearance - a0;
-      const d = Math.min(forward, back);
-      if (d < depth) {
-        depth = d;
-        const sign = forward < back ? 1 : -1;
-        axis = { x: x * sign, y: y * sign };
-      }
-    }
-  return { x: axis.x * depth, y: axis.y * depth };
 }
 
 function clampStops(stops: LaneStop[], shapes: PackingShape[], area: PageBox): void {

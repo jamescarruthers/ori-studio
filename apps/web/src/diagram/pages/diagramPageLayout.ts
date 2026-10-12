@@ -64,7 +64,8 @@ import {
   type LaneStop,
 } from './flowLane';
 import { glyphSpot } from './glyphPacking';
-import { packRibbon, rectangle, type PackingShape } from './ribbonPacking';
+import { rectangle } from './pagePolygons';
+import { packRibbon, type PackingShape } from './ribbonPacking';
 import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableArea } from './pagePlan';
 import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';

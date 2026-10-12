@@ -39,7 +39,7 @@ import { layoutPicture, wholeUnitsAcross, type PictureMeasure } from './pagePict
 import { annotationTextRuns } from '../annotate/annotationPrimitives';
 import { hasDrawnAnnotations } from '../annotate/paintAnnotations';
 import { viewOfStep } from '../zoom/stepView';
-import { convexHull } from './ribbonPacking';
+import { convexHull } from './pagePolygons';
 import { pictureFootprints } from './pictureFootprint';
 import { zoomAreas } from '../zoom/zoomCapture';
 import { enlargeArrowSizes } from '../zoom/enlargeArrow';

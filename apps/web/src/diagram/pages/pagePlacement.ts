@@ -1,4 +1,4 @@
-import { rectangle, separate, type Polygon } from './ribbonPacking';
+import { rectangle, separate, type Polygon } from './pagePolygons';
 import type { DiagramStepPlace } from '../document/diagramDocument';
 import type { DiagramPagesLayout, LayoutCell, LayoutPage, LayoutStep, TextSetter } from './diagramPageLayout';
 
