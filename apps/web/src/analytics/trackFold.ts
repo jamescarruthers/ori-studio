@@ -7,7 +7,6 @@ import type {
   FoldStepAddedOpKind,
   FoldStepExtent,
   FoldStepLayerScope,
-  FoldStepNoteAction,
   FoldStepVia,
 } from './events';
 import { track } from './runtime';
@@ -57,14 +56,6 @@ export function trackFoldSpreadChanged(
     via,
     ...(spread ? spreadProperties(spreadTracking(spread)) : {}),
   });
-}
-
-/**
- * A sitting at a Fold step's note changed it (the Step pane's Note field):
- * what its first change did, once per sitting. Never the text, nor which step.
- */
-export function trackFoldStepNoteEdited(action: FoldStepNoteAction): void {
-  track(ANALYTICS_EVENTS.foldStepNoteEdited, { action });
 }
 
 /** The engine offered more than one answer to choose between: which kind, and how many, bucketed. */

@@ -1,7 +1,6 @@
 import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TextAreaRow } from '../../components/ui/fieldRows';
 import { installAppKeyboardListener } from '../../lib/appKeyboard';
 import type { Selection } from '../../lib/sampleProject';
 import type { FoldOp, FoldPrecreaseExtent, SheetPoint } from '../document/foldSequenceDocument';
@@ -145,8 +144,8 @@ const NO_CAMERA = { zoomIn: () => undefined, zoomOut: () => undefined, fit: () =
 
 /**
  * What the Fold panel mounts for its keys, and the surfaces focus can be in:
- * a pane, the tool window's layer controls, its buttons, a field, a select
- * and the Step pane's note.
+ * a pane, the tool window's layer controls, its buttons, a field and a
+ * select.
  */
 function Fold({ session, tools, preview }: { session: FoldSessionSurface; tools: FoldTools; preview: FoldToolPreview }) {
   useFoldKeyboard();
@@ -167,7 +166,6 @@ function Fold({ session, tools, preview }: { session: FoldSessionSurface; tools:
       <select aria-label="Locate line" defaultValue="axiom-2">
         <option value="axiom-2">Axiom 2</option>
       </select>
-      <TextAreaRow label="Note" value="" onCommit={() => undefined} />
     </>
   );
 }
@@ -212,8 +210,8 @@ function focus(element: HTMLElement | null) {
 }
 
 /** Enter as a browser sends it: at the focused element. The event, to read whether it was claimed. */
-function enter(init: KeyboardEventInit = {}): KeyboardEvent {
-  const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...init });
+function enter(): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
   act(() => {
     (document.activeElement ?? document.body).dispatchEvent(event);
   });
@@ -294,29 +292,14 @@ describe('Enter at each focus', () => {
     expect(commitStep).toHaveBeenCalledTimes(2);
   });
 
-  it('leaves Enter to a focused text field, select or note', () => {
+  it('leaves Enter to a focused text field or select', () => {
     render(landed(VALLEY));
-    for (const control of [
-      host.querySelector<HTMLElement>('input')!,
-      host.querySelector<HTMLElement>('select')!,
-      host.querySelector<HTMLElement>('textarea')!,
-    ]) {
+    for (const control of [host.querySelector<HTMLElement>('input')!, host.querySelector<HTMLElement>('select')!]) {
       focus(control);
-      // The control's own: a newline in the note, nothing taken from the field or the select.
+      // The control's own: nothing taken from the field or the select.
       expect(enter().defaultPrevented).toBe(false);
     }
     expect(commitStep).not.toHaveBeenCalled();
-  });
-
-  it('commits once the note is left, by ⌘Enter or a click away', () => {
-    render(landed(VALLEY));
-    focus(host.querySelector<HTMLElement>('textarea'));
-    // ⌘Enter leaves the note and commits nothing.
-    enter({ metaKey: true });
-    expect(document.activeElement).toBe(document.body);
-    expect(commitStep).not.toHaveBeenCalled();
-    enter();
-    expect(commitStep).toHaveBeenCalledOnce();
   });
 
   it('leaves Enter to a focused button, so the button presses itself rather than also committing', () => {

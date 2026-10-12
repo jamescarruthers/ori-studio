@@ -270,21 +270,6 @@
   background: var(--text-secondary);
 }
 
-/* A step with a note of its author's (`noted`): a small mark in the corner
-   the number, the badge and the dots leave free, on the card's own ground so
-   it reads over a picture that reaches the corner. Solid strokes only: on
-   Fold's cards a dashed line would read as a valley fold. */
-.noted {
-  position: absolute;
-  right: 3px;
-  bottom: 3px;
-  display: inline-flex;
-  padding: 1px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-canvas, #0c0f12) 80%, transparent);
-  color: var(--text-secondary);
-}
-
 .caption {
   min-height: 2.6em;
   margin: 0;

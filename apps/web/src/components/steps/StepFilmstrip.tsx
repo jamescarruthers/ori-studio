@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, MessageSquareText } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { IconButton } from '../ui/IconButton';
 import { useVerticalSwipe } from '../../hooks/useVerticalSwipe';
@@ -72,12 +72,6 @@ export interface StepFilmstripCard {
    * or empty for none.
    */
   tag?: string;
-  /**
-   * The step carries words of its author's beside its sentence: a small mark
-   * in the card's free corner, named by this ("Has a note") for the card's
-   * accessible name and the mark's hover. Absent or empty for none.
-   */
-  noted?: string;
 }
 
 /**
@@ -333,11 +327,6 @@ function StepFilmstripView<Card extends StepFilmstripCard>({
                             data-shown={way === step.ways?.index ? true : undefined}
                           />
                         ))}
-                      </span>
-                    )}
-                    {step.noted && (
-                      <span className={styles.noted} role="img" aria-label={step.noted} title={step.noted}>
-                        <MessageSquareText size={11} aria-hidden="true" />
                       </span>
                     )}
                     <span className={styles.thumb}>{renderThumbnail(step)}</span>

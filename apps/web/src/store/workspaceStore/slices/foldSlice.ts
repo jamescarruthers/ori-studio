@@ -126,15 +126,6 @@ export const createFoldSlice: WorkspaceSliceCreator<FoldSlice> = (set, get) => {
     deleteFoldStep: (stepId) =>
       commitShown('Delete step', (document) => foldEdits.deleteFoldStep(document, stepId)) !== null,
 
-    setFoldStepNote: (stepId, note, { session, loadId } = {}) => {
-      if (outlived(loadId)) return false;
-      const { extend, remember } = documentHistory.session(`note:${stepId}`, session);
-      const next = commitShown('Edit note', (document) => foldEdits.setFoldStepNote(document, stepId, note), extend);
-      if (!next) return false;
-      remember();
-      return true;
-    },
-
     setFoldStepSpread: (stepId, spread, { session, loadId } = {}) => {
       if (outlived(loadId)) return false;
       // A drag of one of its sliders is one sitting: one undo step, however many values it passed.

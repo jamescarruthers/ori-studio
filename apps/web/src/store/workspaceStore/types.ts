@@ -2395,12 +2395,6 @@ export interface FoldSliceActions {
    */
   deleteFoldStep: (stepId: string) => boolean;
   /**
-   * Set a step's note; an empty note clears it. Edits in one `session` at one
-   * step — a sitting at the field — are one undo step; `loadId` drops one
-   * that outlived its sequences. Whether it changed.
-   */
-  setFoldStepNote: (stepId: string, note: string, options?: { session?: number; loadId?: number }) => boolean;
-  /**
    * Set a step's own layer spread — a spread, or `'off'` — or, for null, let
    * it take an earlier step's (`setFoldStepSpread` in `foldSequenceEdits`).
    * Edits in one `session` at one step — a drag of a slider — are one undo

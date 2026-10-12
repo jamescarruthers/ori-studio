@@ -8,8 +8,8 @@ and the Fold workspace replays it. Step through the strip at the top to see
 each step.
 
 Every step's `note` field says which tool and which clicks made it. The Fold
-workspace shows the note of the step on screen in its Step pane, and marks
-each card that has one in the strip. The click paths are repeated below.
+workspace keeps notes but does not show them, so the click paths are repeated
+below.
 `apps/web/src/fold/document/foldExamples.wasm.test.ts` opens each file the
 way the app reads a project and replays every step through the real engine.
 Every step must come back `ok`: none broken, locked or changed.

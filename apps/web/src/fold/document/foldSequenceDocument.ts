@@ -660,7 +660,7 @@ export interface FoldLockedStep {
   parent: string | null;
   /** The node as it came. */
   unknown: Record<string, unknown>;
-  /** Its note, when one reads: shown, never edited. */
+  /** Its note, when one reads: kept, never edited. */
   note?: string;
   op?: undefined;
 }

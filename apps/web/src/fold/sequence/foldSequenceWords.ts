@@ -95,11 +95,6 @@ export function branchReadout(t: TFunction, index: number, count: number, short:
     : t('panels:fold.sequence.branch', 'Branch {{n}} of {{total}}', { n: index + 1, total: count });
 }
 
-/** The mark on a card whose step has a note, as its name says it. */
-export function notedLabel(t: TFunction): string {
-  return t('panels:fold.sequence.noted', 'Has a note');
-}
-
 /** What stands for a step's sentence where there is none to show. */
 export function stepPlaceholder(t: TFunction): string {
   return t('panels:fold.sequence.placeholder', 'Fold the sheet to make step 1.');
