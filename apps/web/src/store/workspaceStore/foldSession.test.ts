@@ -113,12 +113,12 @@ describe('the Fold session over the store', () => {
     expect(statuses()).toEqual({ [a]: 'ok', [b]: 'ok', [c]: 'ok' });
   });
 
-  it('replays a note for free, and a new sheet from scratch', async () => {
+  it('replays a spread for free, and a new sheet from scratch', async () => {
     const a = await commit(0.5);
     engine.log.length = 0;
     const before = snapshot().nodes.get(a);
 
-    expect(state().setFoldStepNote(a, 'Book fold.')).toBe(true);
+    expect(state().setFoldStepSpread(a, 'off')).toBe(true);
     await settle();
     expect(engine.log).toEqual([]);
     expect(snapshot().nodes.get(a)).toBe(before);
@@ -153,7 +153,7 @@ describe('the Fold session over the store', () => {
     });
     useWorkspaceStore.setState({ dirty: true });
     expect(heard).toBe(0);
-    state().setFoldStepNote('missing', 'nothing');
+    state().setFoldStepSpread('missing', 'off');
     expect(heard).toBe(0);
     state().setFoldPaperShape(rectangleShape(3, 4)!);
     expect(heard).toBeGreaterThan(0);

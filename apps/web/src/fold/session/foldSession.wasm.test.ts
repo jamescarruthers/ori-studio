@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { FoldOp, FoldSequenceDocument } from '../document/foldSequenceDocument';
+import type { FoldMark, FoldOp, FoldSequenceDocument } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls } from '../engine/foldEngineCalls';
 import { foldSessionDocumentSource } from '../../store/workspaceStore/foldSession';
 import { useWorkspaceStore } from '../../store/workspaceStore/store';
@@ -144,13 +144,14 @@ describe.skipIf(!available)('the Fold session over the real bridge', () => {
     await settle();
     const nodes = snapshot().nodes;
     const [first, second] = [...nodes.keys()];
-    expect(state().setFoldStepNote(first!, 'Precrease the diagonal.')).toBe(true);
+    const mark: FoldMark = { id: 'fmark-1', from: [0, 0], to: [1, 0], divide: { mode: 'count', parts: 3 } };
+    expect(state().setFoldMarks(first!, [mark])).toBe(true);
     await settle();
     expect(state().setFoldStepSpread(second!, 'off')).toBe(true);
     await settle();
     // The replay each edit asks for lands the same paths at the same states:
     // the session hands out the very nodes, reports and compounds it had.
-    expect(snapshot().sequence?.steps[0]?.note).toBe('Precrease the diagonal.');
+    expect(snapshot().sequence?.steps[0]).toMatchObject({ marks: [mark] });
     expect(snapshot().nodes).toBe(nodes);
     for (const [id, node] of nodes) expect(snapshot().nodes.get(id), id).toBe(node);
   });

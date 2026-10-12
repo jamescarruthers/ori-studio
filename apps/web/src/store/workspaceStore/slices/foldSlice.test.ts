@@ -59,7 +59,7 @@ describe('the Fold slice', () => {
   it('records nothing for an edit that changes nothing, and makes no sequence for one', () => {
     expect(state().commitFoldStep(valley('missing'))).toBeNull();
     expect(state().setFoldPaperShape({ kind: 'square' })).toBe(false);
-    expect(state().setFoldStepNote('missing', 'Hello')).toBe(false);
+    expect(state().setFoldStepSpread('missing', 'off')).toBe(false);
     expect(state().setFoldMarks(null, [])).toBe(false);
     expect(state().deleteFoldStep('missing')).toBe(false);
     expect(state().foldSequences).toEqual([]);
@@ -67,8 +67,8 @@ describe('the Fold slice', () => {
 
     const { a } = foldTwo();
     const past = state().foldHistory.past.length;
-    state().setFoldStepNote(a, 'Fold in half.');
-    expect(state().setFoldStepNote(a, 'Fold in half.')).toBe(false);
+    state().setFoldStepSpread(a, 'off');
+    expect(state().setFoldStepSpread(a, 'off')).toBe(false);
     expect(state().foldHistory.past).toHaveLength(past + 1);
   });
 
@@ -134,22 +134,21 @@ describe('the Fold slice', () => {
     expect(state().foldReader?.activeChild).toEqual({ '': a });
   });
 
-  it('makes one sitting at a note one undo step, until something else is recorded', () => {
+  it('makes one sitting at a step’s spread one undo step, until something else is recorded', () => {
     const { a, b } = foldTwo();
     const past = state().foldHistory.past.length;
+    const amount = (value: number) => ({ kind: 'depth' as const, amount: value, toward: 'down' as const });
 
-    state().setFoldStepNote(a, 'Fold', { session: 7 });
-    state().setFoldStepNote(a, 'Fold in', { session: 7 });
-    state().setFoldStepNote(a, 'Fold in half.', { session: 7 });
+    for (const value of [0.03, 0.05, 0.08]) state().setFoldStepSpread(a, amount(value), { session: 7 });
     expect(state().foldHistory.past).toHaveLength(past + 1);
-    expect(shown().steps[0]).toMatchObject({ note: 'Fold in half.' });
+    expect(shown().steps[0]).toMatchObject({ spread: amount(0.08) });
 
     state().undoFold();
-    expect(shown().steps[0]).not.toHaveProperty('note');
+    expect(shown().steps[0]).not.toHaveProperty('spread');
     // Another step, or another session, is an entry of its own.
-    state().setFoldStepNote(a, 'Again', { session: 7 });
-    state().setFoldStepNote(b, 'Other', { session: 7 });
-    state().setFoldStepNote(b, 'Other.', { session: 8 });
+    state().setFoldStepSpread(a, amount(0.04), { session: 7 });
+    state().setFoldStepSpread(b, amount(0.06), { session: 7 });
+    state().setFoldStepSpread(b, amount(0.09), { session: 8 });
     expect(state().foldHistory.past).toHaveLength(past + 3);
   });
 
@@ -249,7 +248,7 @@ describe('the Fold slice', () => {
     state().installFoldSequences(state().foldSequences, state().foldReader);
 
     expect(state().commitFoldStep(valley(null, 0.9), { loadId })).toBeNull();
-    expect(state().setFoldStepNote(stepIds()[0], 'Late', { loadId })).toBe(false);
+    expect(state().setFoldStepSpread(stepIds()[0], 'off', { loadId })).toBe(false);
     expect(stepIds()).toHaveLength(2);
     expect(state().commitFoldStep(valley(null, 0.9), { loadId: state().foldLoadId })).not.toBeNull();
   });
@@ -297,7 +296,7 @@ describe('the Fold slice', () => {
 
     expect(state().commitFoldStep(valley('fstep-9'))).toBeNull();
     expect(state().deleteFoldStep('fstep-9')).toBe(false);
-    expect(state().setFoldStepNote('fstep-1', 'Changed')).toBe(false);
+    expect(state().setFoldStepSpread('fstep-1', 'off')).toBe(false);
     expect(state().setFoldPaperShape({ kind: 'square' })).toBe(false);
     expect(state().foldSequences).toBe(read);
     expect(state().foldHistory.past).toEqual([]);
