@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   prepare.mockReset();
   prepare.mockImplementation(
-    async (document: DiagramDocument) => ({ of: document, layout: { pages: [] } }) as unknown as PreparedDiagramPages
+    async (document: DiagramDocument) => ({ of: document, layout: { pages: [] }, unavailableFonts: [] }) as unknown as PreparedDiagramPages
   );
   host = document.createElement('div');
   root = createRoot(host);
@@ -60,12 +60,12 @@ describe('useDiagramPages', () => {
     expect(seen?.of).toBe(widths.at(-1));
   });
 
-  it('adopts the flow pages a layout packed into the diagram it laid out, and takes the same pages for it, laid out once', async () => {
+  /** A diagram of one page installed in the store, and what a layout of it packed: that page, as it is. */
+  function installedWithPacking() {
     useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
     const document = insertSteps(createDiagram({ title: 'Heart' }), [cpStep('s0'), cpStep('s1')], 0);
     useWorkspaceStore.getState().installDiagram({ document, readOnly: false, raw: {} });
     const installed = useWorkspaceStore.getState().diagram!;
-    // What the layout packed: the one page, under the step it starts with, packed for it as it is.
     const packed = {
       s0: {
         signature: cellSlots(installed).signatures[0]!,
@@ -76,9 +76,14 @@ describe('useDiagramPages', () => {
         },
       },
     };
-    const adoptedAs = vi.fn((of: DiagramDocument) => ({ of, layout: { pages: [] } }) as unknown as PreparedDiagramPages);
+    return { installed, packed };
+  }
+
+  it('adopts the flow pages a layout packed into the diagram it laid out, and takes the same pages for it, laid out once', async () => {
+    const { installed, packed } = installedWithPacking();
+    const adoptedAs = vi.fn((of: DiagramDocument) => ({ of, layout: { pages: [] }, unavailableFonts: [] }) as unknown as PreparedDiagramPages);
     prepare.mockImplementation(
-      async (of: DiagramDocument) => ({ of, layout: { pages: [], packed }, adoptedAs }) as unknown as PreparedDiagramPages
+      async (of: DiagramDocument) => ({ of, layout: { pages: [], packed }, adoptedAs, unavailableFonts: [] }) as unknown as PreparedDiagramPages
     );
     act(() => root.render(<Pages document={installed} />));
     await act(async () => {
@@ -98,5 +103,20 @@ describe('useDiagramPages', () => {
     expect(adoptedAs).toHaveBeenCalledWith(adopted);
     expect(seen?.of).toBe(adopted);
     expect(seen?.pages).toBe(adoptedAs.mock.results[0]!.value);
+  });
+
+  it('draws, but never adopts, the packing of a layout that went without a CJK face its text needs', async () => {
+    const { installed, packed } = installedWithPacking();
+    const pages = { of: installed, layout: { pages: [], packed }, adoptedAs: vi.fn(), unavailableFonts: [{ key: 'sc', weight: 400 }] };
+    prepare.mockImplementation(async () => pages as unknown as PreparedDiagramPages);
+    act(() => root.render(<Pages document={installed} />));
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    // Drawn as packed; the store's diagram as it was, its pages to be packed again once the face is had.
+    expect(seen?.pages).toBe(pages);
+    expect(useWorkspaceStore.getState().diagram).toBe(installed);
+    expect(installed.pageArrangements).toBeUndefined();
+    expect(pages.adoptedAs).not.toHaveBeenCalled();
   });
 });

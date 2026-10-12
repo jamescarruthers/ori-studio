@@ -36,7 +36,10 @@ const adoptedPages = new WeakMap<DiagramDocument, PreparedDiagramPages>();
  * The flow pages a layout packed are adopted into the store's diagram while
  * it is still the one laid out ({@link adoptPacked}), so the next layout
  * holds them; the adopted diagram takes these same pages, not a layout of its
- * own.
+ * own. Not a layout that went without a CJK face its text needs
+ * (`PreparedDiagramPages.unavailableFonts`, offline on the desktop): its
+ * captions were measured with another face's advances, and boxes cut for
+ * those would be held, and saved, once the face is had.
  */
 export function useDiagramPages(document: DiagramDocument | null): DiagramPagesState {
   const [state, setState] = useState<DiagramPagesState>(EMPTY);
@@ -53,7 +56,9 @@ export function useDiagramPages(document: DiagramDocument | null): DiagramPagesS
         .then((pages) => {
           if (!current) return;
           setState({ pages, of: document, failed: false });
-          adoptPacked(pages, document);
+          // Captions measured without a face they need would be held in boxes cut for the wrong metrics:
+          // the pages are drawn as packed, and packed again, and adopted, once the face is had.
+          if (pages.unavailableFonts.length === 0) adoptPacked(pages, document);
         })
         .catch((error: unknown) => {
           reportError(error, { surface: 'diagram:pages' });
