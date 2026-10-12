@@ -6,6 +6,7 @@ import { foldPickIndex, resolveFoldPick, sheetToScene, type FoldPick, type FoldP
 import type { SheetPoint } from '../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
+import type { FoldEngineCompoundOp } from '../engine/foldEngineCompoundWire';
 import { createFoldEngineIoCalls } from '../engine/foldEngineIoCalls';
 import { FOLD_SAMPLES, foldSampleSource } from '../engine/foldEngineIoSamples';
 import type { FoldAxiomCandidate, FoldEngineOp, FoldEngineOutcome } from '../engine/foldEngineWire';
@@ -101,7 +102,7 @@ function plainSide(calls: FoldEngineCalls, state: number, step: Built): string {
  * or the refusal's code when that side has no tip to fold.
  */
 function compoundSide(compound: FoldEngineCompoundCalls, state: number, step: Built): string {
-  const answer = compound.compoundAnalysis(state, step.op as FoldEngineOp, step.choices);
+  const answer = compound.compoundAnalysis(state, step.op as FoldEngineCompoundOp, step.choices);
   if (answer.status !== 'ok') return `refused:${answer.refusal.code}`;
   switch (answer.family) {
     case 'reverse':
