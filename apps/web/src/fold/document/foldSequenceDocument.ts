@@ -204,9 +204,11 @@ export const FOLD_SEED_MAX_LAYERS = 0xffff_ffff;
 
 /**
  * The fields every fold along a line shares. `moving` is a sheet point whose
- * image lies on the moving side, stored only when neither the line (an axiom
- * that carries a point) nor the seed implies the side: never needed for a
- * depth or flaps seed, always for `all` along a free line or a crease.
+ * image lies on the moving side, stored when neither the line (an axiom that
+ * carries a point) nor the seed implies the side — always for `all` along a
+ * free line or a crease — and when the step moves the other side than its
+ * axiom implies (Swap), whatever the seed: the engine takes the side it
+ * names over the axiom's.
  */
 interface FoldAlongLine {
   line: FoldLineInput;

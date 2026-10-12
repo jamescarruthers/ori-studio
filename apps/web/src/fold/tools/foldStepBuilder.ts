@@ -441,16 +441,21 @@ export function locateAlongLine(
   // layer deep, whose top face is the flap hinged on the bend — never a cell
   // chosen by area, which ties between equal flaps and rounds differently
   // from one browser to the next.
+  //
+  // A point names the moving side where nothing else does — an axiom that
+  // carries a point, or a seed's own point — and where a swap turns round the
+  // side an axiom implies, whatever the seed: the engine takes a side the
+  // step names over the axiom's.
   let seed = intent.seed;
   let moving: SheetPoint | undefined;
-  if (seed.scope === 'all') {
-    const needsPoint = implied === null || intent.swapped || unfolding;
-    if (needsPoint) {
-      const point = unfolding && crease ? besideBend(index, crease, sceneLine, movingSign) : movingPoint(index, sceneLine, movingSign);
-      if (!point) return { status: 'refused', refused: clientRefusal('no_moving_side') };
-      if (unfolding) seed = { scope: 'depth', at: point.sheet, scene: point.scene, choice: 1 };
-      else moving = point.sheet;
-    }
+  const swappedAxiom = implied !== null && intent.swapped;
+  const needsPoint = seed.scope === 'all' ? implied === null || intent.swapped || unfolding : swappedAxiom;
+  if (needsPoint) {
+    // Unfolding is along an existing crease, which implies no side: its seed is `all` here.
+    const point = unfolding && crease ? besideBend(index, crease, sceneLine, movingSign) : movingPoint(index, sceneLine, movingSign);
+    if (!point) return { status: 'refused', refused: clientRefusal('no_moving_side') };
+    if (unfolding) seed = { scope: 'depth', at: point.sheet, scene: point.scene, choice: 1 };
+    else moving = point.sheet;
   }
   return {
     line,

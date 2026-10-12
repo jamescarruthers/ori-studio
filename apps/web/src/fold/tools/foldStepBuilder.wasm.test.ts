@@ -2,11 +2,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Point } from '../../lib/geometry';
+import { applyIsometry, insideConvex, toPoint } from '../canvas/foldCanvasGeometry';
 import { foldPickIndex, resolveFoldPick, type FoldPaneId, type FoldPick, type FoldPickIndex } from '../canvas/foldPicking';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import type { FoldAxiomLine, FoldEngineOutcome } from '../engine/foldEngineWire';
 import { sequenceOf, step } from '../document/foldSequence.fixtures';
-import { isLockedStep, type FoldChoices, type FoldOp } from '../document/foldSequenceDocument';
+import { isLockedStep, type FoldChoices, type FoldOp, type SheetPoint } from '../document/foldSequenceDocument';
 import { readFoldSequence, writeFoldSequence } from '../document/foldSequenceFile';
 import {
   axiomLineOfPicks,
@@ -300,5 +301,65 @@ describe.skipIf(!available)('the Fold step builder over the real bridge', () => 
     expect(swapped.op.moving?.[0]).toBeGreaterThan(0.3);
     expect(swapped.movingSign).toBe(-plain.movingSign);
     landed(calls.apply(sheet, swapped.op));
+  });
+
+  it('turns an axiom’s own side round on a swap — the owner’s point onto point — whatever the fold or the seed', async () => {
+    const calls = await engine();
+    const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
+    const index = indexOf(calls, sheet);
+    // Axiom 2: the top-left corner, then the bottom-right one. The axiom
+    // moves the first onto the second; Swap, the second onto the first.
+    const picks = clicks(index, 'axiom-2', [p(0, 1), p(1, 0)]);
+    const line = axiomLineOfPicks('axiom-2', picks);
+    if (!line) throw new Error('not located');
+    const candidate = rootOf(calls, sheet, line);
+    expect(candidate.side).not.toBeNull();
+    // Where the paper just inside each corner lies once folded.
+    const imageOf = (state: number, at: SheetPoint): Point => {
+      const scene = calls.scene(state);
+      const face = scene.faces.findIndex(({ points }) =>
+        insideConvex(
+          points.map((v) => scene.sheet_points[v]!),
+          toPoint(at)
+        )
+      );
+      return applyIsometry(scene.face_transforms[face]!, toPoint(at));
+    };
+    const [topLeft, bottomRight]: SheetPoint[] = [
+      [0.02, 0.98],
+      [0.98, 0.02],
+    ];
+    const near = (a: Point, b: Point) => expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(1e-9);
+    const built = (kind: FoldStepIntent['kind'], swapped: boolean, seed: FoldStepIntent['seed'] = { scope: 'all' }) => {
+      const step = buildFoldStep(intent({ kind, lineMode: 'axiom-2', picks, candidate, swapped, seed }), index);
+      if (step.status !== 'built') throw new Error(`not built: ${JSON.stringify(step)}`);
+      return { step, folded: landed(calls.step(sheet, step.op, step.choices)) };
+    };
+    for (const kind of ['valley', 'mountain', 'precrease'] as const) {
+      const [plain, swapped] = [built(kind, false), built(kind, true)];
+      // The axiom says the side: nothing is stored for it, until a swap names the other.
+      expect(plain.step.op).not.toHaveProperty('moving');
+      expect(swapped.step.op).toHaveProperty('moving');
+      expect(swapped.step.movingSign).toBe(-plain.step.movingSign);
+      expect(swapped.folded.report?.side, kind).not.toBe(plain.folded.report?.side);
+      if (kind === 'precrease') continue;
+      near(imageOf(plain.folded.state, topLeft), imageOf(sheet, bottomRight));
+      near(imageOf(swapped.folded.state, topLeft), imageOf(sheet, topLeft));
+      near(imageOf(swapped.folded.state, bottomRight), imageOf(sheet, topLeft));
+      // Saved and opened again, the swapped step replays to the same state.
+      const made = [step('fstep-1', null, swapped.step.op, swapped.step.choices ? { choices: swapped.step.choices } : {})];
+      const saved = JSON.stringify(writeFoldSequence({ document: sequenceOf(made), readOnlyRaw: null }));
+      const [reopened] = readFoldSequence(JSON.parse(saved))?.document.steps ?? [];
+      if (!reopened || isLockedStep(reopened)) throw new Error(`not reopened: ${JSON.stringify(reopened)}`);
+      expect(reopened.op).toEqual(swapped.step.op);
+      expect(landed(calls.step(sheet, reopened.op, reopened.choices)).fingerprint).toBe(swapped.folded.fingerprint);
+    }
+    // The flap picked after a swap is the swapped side's: the swap still
+    // names its side, which the flap's own point alone would lose to the axiom's.
+    const flap = { faces: [0], witness: bottomRight };
+    const picked = built('valley', true, { scope: 'flaps', flaps: [flap] });
+    expect(picked.step.op).toMatchObject({ seed: { scope: 'flaps', at: [bottomRight] } });
+    expect(picked.step.op).toHaveProperty('moving');
+    near(imageOf(picked.folded.state, bottomRight), imageOf(sheet, topLeft));
   });
 });
