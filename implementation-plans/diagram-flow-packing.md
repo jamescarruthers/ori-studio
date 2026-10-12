@@ -509,8 +509,16 @@ earlier note, this holds:
   `flowLane.test.ts`'s tangent check fails on one synthetic case the new
   packing reaches (A5, seven a page, page 1 on the right, page 2): a step in
   a bend whose band neighbour dips to 0.69 mm of its level, so the lane turns
-  into it through a quarter circle that small (a corner); a lane or packing
-  rule for Zach, not changed here.
+  into it through a quarter circle that small (a corner). Fixed in the lane
+  since (below).
+- The lane at a level step in a bend (2026-10-12): a step in a bend nearer
+  than the band is half wide to its neighbour's height is, to the lane, a
+  step of that neighbour's band, and the lane rounds the bend past it at the
+  page's edge, as it rounds one with no step in it (`laneStops` in
+  `flowLane.ts`). The packing is unchanged: it centres the step's box,
+  caption included, between the bands, so its picture can stand level with a
+  dipped neighbour's, and a lane rule covers every packing that does. Before
+  and after: `artifacts/layout-review/out/f2-lane-after/elbow-before-after.png`.
 
 ## Affected Areas
 
@@ -564,4 +572,5 @@ earlier note, this holds:
 - [x] UI-1 … UI-5: Re-pack keeps focus; Steps view warning; touch targets; analytics docs.
 - [x] F2: every step's reference scale from the diagram's one cell; the default steps per page in the signature; `pack-3`.
 - [ ] hold-3: a design call for Zach.
-- [ ] After F2, for Zach: steadiness only upward (a small page holds later pages down); a page below the default count held to 1.4× its cell; the lane's corner at a bend step with a level neighbour (`flowLane.test.ts`, A5 at seven a page).
+- [x] The lane's corner at a bend step with a level neighbour (`flowLane.test.ts`, A5 at seven a page): rounded past it.
+- [ ] After F2, for Zach: steadiness only upward (a small page holds later pages down); a page below the default count held to 1.4× its cell.
