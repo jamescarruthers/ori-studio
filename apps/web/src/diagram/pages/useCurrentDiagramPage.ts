@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { PAGE_STEPS_RANGE, isStep, stepsOf, type DiagramDocument, type DiagramPageSetup } from '../document/diagramDocument';
-import { pageStepsRange, type PageStepsRange } from './pageCounts';
+import { countHoldsLaterPages, pageStepsRange, type PageStepsRange } from './pageCounts';
 import { usePageInView } from './pageInView';
 import { paginate, type PlannedPage } from './pagePlan';
 
@@ -15,6 +15,8 @@ export interface CurrentDiagramPage {
   page: PlannedPage;
   /** The counts of its own it may be given in the flow (`pageStepsRange`). */
   range: PageStepsRange;
+  /** Its own count stays, holding a later page with one still (`countHoldsLaterPages`): it has no Use default. */
+  holdsLaterPages: boolean;
 }
 
 /** What the Pages view captions page `index`: the number it prints, or its place when it prints none. */
@@ -50,6 +52,7 @@ export function currentDiagramPage(
     name: pageName(document.page, index),
     page: pages[index]!,
     range: pageStepsRange(document, index) ?? PAGE_STEPS_RANGE,
+    holdsLaterPages: countHoldsLaterPages(document, index),
   };
 }
 

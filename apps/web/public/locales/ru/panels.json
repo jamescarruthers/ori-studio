@@ -1193,6 +1193,7 @@
       "pageNumbers": "Номера страниц",
       "pageSteps": "Шагов на странице {{number}}",
       "pageStepsDefault": "По умолчанию",
+      "pageStepsHolds": "Удерживает следующие страницы на месте",
       "pageStepsUseDefault": "Использовать по умолчанию",
       "paper": "Бумага",
       "pathColor": "Цвет пути",

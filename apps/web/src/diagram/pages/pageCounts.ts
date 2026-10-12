@@ -169,8 +169,43 @@ export interface PageStepsRange {
   max: number;
 }
 
+/** Whether a later page than `pageIndex` has its own count. */
+function laterCount(pages: readonly PageSplit[], pageIndex: number): boolean {
+  return pages.slice(pageIndex + 1).some((page) => page.own !== null);
+}
+
 /**
- * What {@link setPageSteps} holds a count for page `pageIndex` to:
+ * Whether flow page `pageIndex` keeps its own count: a later page has one.
+ * Every page in front of a page with its own count holds one too, so that a
+ * step added there grows its page rather than spilling onto a page of one in
+ * front of that page; so Use default leaves such a page as it is, and the
+ * Page pane says why.
+ */
+export function countHoldsLaterPages(document: DiagramDocument, pageIndex: number): boolean {
+  const pages = flowPages(document, stepsOf(document));
+  const own = pages[pageIndex]?.own ?? null;
+  return own !== null && laterCount(pages, pageIndex);
+}
+
+/**
+ * Each page's own count once page `pageIndex` is given one: every page
+ * without one in front of it, and every one between it and a later page with
+ * one, takes its present size, so that no later edit there spills a step
+ * across the start of a page with a count, and the boundary this edit moves
+ * adds or drops no page in front of one. A page that a newer build's step
+ * starts stays without: it is never edited. Page `pageIndex`'s is as it was.
+ */
+function heldCounts(steps: readonly DiagramStep[], pages: readonly PageSplit[], pageIndex: number): (number | null)[] {
+  return pages.map((page, index) => {
+    if (page.own !== null || index === pageIndex) return page.own;
+    const held = index < pageIndex || laterCount(pages, index);
+    return held && !isLockedStep(steps[page.steps[0]!]!) ? page.steps.length : null;
+  });
+}
+
+/**
+ * What {@link setPageSteps} holds a count for page `pageIndex` to, with every
+ * page's own count as it gives them (`held`):
  *
  * - at most the steps from its start to the diagram's end, so a count never
  *   says more than the page holds; and never every step of a later page that
@@ -186,17 +221,18 @@ export interface PageStepsRange {
 function pageLimits(
   steps: readonly DiagramStep[],
   pages: readonly PageSplit[],
-  pageIndex: number
+  pageIndex: number,
+  held: readonly (number | null)[]
 ): PageStepsRange & { automaticLast: boolean } {
   const page = pages[pageIndex]!;
   const from = page.steps[0]!;
   const broken = pages.slice(pageIndex + 1).find((later) => steps[later.steps[0]!]!.breakBefore);
   const end = broken ? broken.steps.at(-1)! : steps.length;
-  const following = pages[pageIndex + 1];
+  const following = held[pageIndex + 1] ?? null;
   return {
     min:
-      following && following.own !== null
-        ? Math.max(PAGE_STEPS_RANGE.min, page.steps.length + following.own - PAGE_STEPS_RANGE.max)
+      following !== null
+        ? Math.max(PAGE_STEPS_RANGE.min, page.steps.length + following - PAGE_STEPS_RANGE.max)
         : PAGE_STEPS_RANGE.min,
     max: Math.min(PAGE_STEPS_RANGE.max, end - from),
     automaticLast: page.own === null && pageIndex === pages.length - 1,
@@ -214,16 +250,16 @@ export function pageStepsRange(document: DiagramDocument, pageIndex: number): Pa
   const pages = flowPages(document, steps);
   const page = pages[pageIndex];
   if (!page || page.steps.length === 0) return null;
-  const { min, max, automaticLast } = pageLimits(steps, pages, pageIndex);
+  const { min, max, automaticLast } = pageLimits(steps, pages, pageIndex, heldCounts(steps, pages, pageIndex));
   return { min, max: automaticLast ? Math.max(max, document.page.stepsPerPage) : max };
 }
 
 /**
  * The flow page `pageIndex` given its own count of steps — or, given null, its
  * own count taken away, so that it fills with the default
- * (`setDiagramPageSteps`). A count first gives every earlier page without one
- * its present size as its own, so that a later edit there cannot spill a step
- * across this page's start; then sets this page's count, held to
+ * (`setDiagramPageSteps`). A count first gives the pages in front of it, and
+ * those between it and a later page with a count, their present size as
+ * their own ({@link heldCounts}); then sets this page's count, held to
  * {@link pageLimits}, and moves the boundary with the next page. A next page
  * with its own count or a break starts at this page's start plus the count,
  * its count changed so its last step stays where it was; one emptied that way
@@ -232,9 +268,10 @@ export function pageStepsRange(document: DiagramDocument, pageIndex: number): Pa
  *
  * The same document where nothing changes — a page that already holds that
  * count, an automatic last page given the default or more (what it is laid
- * out for), null for a page without one, a page that is not there — and where
- * it would have to edit a newer build's step to set this page or move its
- * boundary. An earlier page that such a step starts is left without a count.
+ * out for), null for a page without one or one that holds a later page still
+ * ({@link countHoldsLaterPages}), a page that is not there — and where it
+ * would have to edit a newer build's step to set this page or move its
+ * boundary.
  */
 export function setPageSteps(document: DiagramDocument, pageIndex: number, count: number | null): DiagramDocument {
   const steps = stepsOf(document);
@@ -244,44 +281,47 @@ export function setPageSteps(document: DiagramDocument, pageIndex: number, count
   if (!page || !head) return document;
   const starts = new Map<string, DiagramPageStart>();
   if (count === null) {
-    if (page.own === null) return document;
+    if (page.own === null || laterCount(pages, pageIndex)) return document;
     starts.set(head.id, { pageSteps: null });
     return withStarts(document, steps, starts);
   }
   if (!Number.isFinite(count)) return document;
+  const held = heldCounts(steps, pages, pageIndex);
   const asked = Math.round(count);
-  const limits = pageLimits(steps, pages, pageIndex);
+  const limits = pageLimits(steps, pages, pageIndex, held);
   if (limits.automaticLast && asked >= document.page.stepsPerPage) return document;
   const target = Math.min(limits.max, Math.max(limits.min, asked));
   if (page.own === target) return document;
-  for (const earlier of pages.slice(0, pageIndex)) {
-    const first = steps[earlier.steps[0]!]!;
-    // One started by a newer build's step stays without: it is never edited.
-    if (earlier.own === null && !isLockedStep(first)) starts.set(first.id, { pageSteps: earlier.steps.length });
-  }
+  pages.forEach((each, index) => {
+    const own = held[index] ?? null;
+    if (each.own === null && own !== null) starts.set(steps[each.steps[0]!]!.id, { pageSteps: own });
+  });
   starts.set(head.id, { pageSteps: target });
   const from = page.steps[0]!;
   // Where the next page starts now, and where it is to start.
   const next = from + page.steps.length;
   const reach = from + target;
   if (reach > next) {
-    for (const later of pages.slice(pageIndex + 1)) {
+    for (let index = pageIndex + 1; index < pages.length; index += 1) {
+      const later = pages[index]!;
       const start = later.steps[0]!;
       if (start >= reach) break;
       const first = steps[start]!;
-      const asked = later.own !== null || first.breakBefore;
+      const own = held[index] ?? null;
+      const asked = own !== null || first.breakBefore;
       if (asked) starts.set(first.id, { pageSteps: null, breakBefore: false });
       // Emptied: it is gone, and the move carries on.
       if (start + later.steps.length <= reach) continue;
-      if (asked) starts.set(steps[reach]!.id, movedStart(later, first, reach - start));
+      if (asked) starts.set(steps[reach]!.id, movedStart(own, first.breakBefore, reach - start));
       break;
     }
   } else if (reach < next) {
     const following = pages[pageIndex + 1];
     const first = following ? steps[following.steps[0]!] : undefined;
-    if (following && first && (following.own !== null || first.breakBefore)) {
+    const own = held[pageIndex + 1] ?? null;
+    if (following && first && (own !== null || first.breakBefore)) {
       starts.set(first.id, { pageSteps: null, breakBefore: false });
-      starts.set(steps[reach]!.id, movedStart(following, first, reach - next));
+      starts.set(steps[reach]!.id, movedStart(own, first.breakBefore, reach - next));
     }
   }
   return withStarts(document, steps, starts);
@@ -292,10 +332,10 @@ export function setPageSteps(document: DiagramDocument, pageIndex: number, count
  * it, and its own count less the steps it gave up — or more, those it took —
  * so its last step stays where it was.
  */
-function movedStart(page: PageSplit, first: DiagramStep, shift: number): DiagramPageStart {
+function movedStart(own: number | null, breakBefore: boolean, shift: number): DiagramPageStart {
   return {
-    ...(page.own !== null ? { pageSteps: clampCount(page.own - shift) } : {}),
-    ...(first.breakBefore ? { breakBefore: true } : {}),
+    ...(own !== null ? { pageSteps: clampCount(own - shift) } : {}),
+    ...(breakBefore ? { breakBefore: true } : {}),
   };
 }
 

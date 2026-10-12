@@ -1079,6 +1079,7 @@
       "pageNumbers": "ページ番号",
       "pageSteps": "{{number}} ページのステップ数",
       "pageStepsDefault": "既定",
+      "pageStepsHolds": "後のページの位置を保ちます",
       "pageStepsUseDefault": "既定を使う",
       "paper": "用紙",
       "pathColor": "経路の色",

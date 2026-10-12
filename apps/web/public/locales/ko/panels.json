@@ -1079,6 +1079,7 @@
       "pageNumbers": "페이지 번호",
       "pageSteps": "{{number}}페이지 단계 수",
       "pageStepsDefault": "기본값",
+      "pageStepsHolds": "다음 페이지 위치를 유지합니다",
       "pageStepsUseDefault": "기본값 사용",
       "paper": "용지",
       "pathColor": "경로 색상",

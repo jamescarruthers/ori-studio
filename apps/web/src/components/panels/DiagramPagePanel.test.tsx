@@ -368,6 +368,17 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(field()?.value).toBe('1');
   });
 
+  it('keeps a count that holds a later page still, and says so where Use default would be', () => {
+    // Page 2 given its one step: page 1 holds its nine as its own, for page 2's sake.
+    act(() => state().setDiagramPageSteps(1, 1));
+    expect(field()?.getAttribute('aria-label')).toBe('Steps on page 1');
+    expect(useDefault()).toBeUndefined();
+    expect(host?.textContent).toContain('Keeps later pages in place');
+    showPage(1);
+    expect(useDefault()).toBeDefined();
+    expect(host?.textContent).not.toContain('Keeps later pages in place');
+  });
+
   it('acts on the selected step’s page while no Pages view shows one', () => {
     act(() => state().selectDiagramStep(stepsOf(state().diagram!)[9]!.id));
     expect(field()?.getAttribute('aria-label')).toBe('Steps on page 2');

@@ -1155,6 +1155,7 @@
       "pageNumbers": "Números de página",
       "pageSteps": "Pasos en la página {{number}}",
       "pageStepsDefault": "Predeterminado",
+      "pageStepsHolds": "Mantiene las páginas siguientes en su sitio",
       "pageStepsUseDefault": "Usar predeterminado",
       "paper": "Papel",
       "pathColor": "Color del recorrido",

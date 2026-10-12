@@ -149,6 +149,13 @@ As built (the second review, 2026-10-11; the layout itself unchanged):
   it: the default or more leaves it as it is, and fewer give its steps the
   page (a counted page is laid out for the steps it holds). The row shows
   every page's layout count, a counted page's too.
+- Every page in front of a page with its own count holds one too (L2). Use
+  default leaves such a page as it is (`countHoldsLaterPages`), and the row
+  says "Keeps later pages in place" where its button would be: without its
+  count, a step added there would spill onto a page of one in front of the
+  counted page. A count set also gives every automatic page between its page
+  and a later counted page its present size, so the boundary it moves adds or
+  drops no page in front of that one.
 
 ### Layout (`diagramPageLayout.ts`, flow branch)
 

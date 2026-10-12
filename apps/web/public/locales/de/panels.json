@@ -1117,6 +1117,7 @@
       "pageNumbers": "Seitenzahlen",
       "pageSteps": "Schritte auf Seite {{number}}",
       "pageStepsDefault": "Standard",
+      "pageStepsHolds": "Hält die folgenden Seiten an ihrem Platz",
       "pageStepsUseDefault": "Standard verwenden",
       "paper": "Papier",
       "pathColor": "Pfadfarbe",

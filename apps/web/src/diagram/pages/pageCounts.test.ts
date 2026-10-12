@@ -16,7 +16,7 @@ import {
   type DiagramPageSetup,
   type DiagramStep,
 } from '../document/diagramDocument';
-import { pageStepsRange, retainPageCounts, setPageSteps } from './pageCounts';
+import { countHoldsLaterPages, pageStepsRange, retainPageCounts, setPageSteps } from './pageCounts';
 import { paginate } from './pagePlan';
 
 /**
@@ -294,11 +294,12 @@ describe('setPageSteps', () => {
     // `s0 s1 s2 s3 | s4 s5 s6 s7 | |s8 s9 s10 s11 | s12:2 s13`: a break, and a count after it.
     const broken = diagram(14, { 12: 2 }, [8]);
     const grown = setPageSteps(broken, 1, 30);
-    expect(pages(grown)).toEqual(['s0:4 s1 s2 s3', 's4:7 s5 s6 s7 s8 s9 s10', 's11', 's12:2 s13']);
+    // The page in front of s12's holds its size, which it gives up as the break moves on.
+    expect(pages(grown)).toEqual(['s0:4 s1 s2 s3', 's4:7 s5 s6 s7 s8 s9 s10', 's11:1', 's12:2 s13']);
     expect(breaks(grown)).toEqual(['s11']);
     // Back to 4: the break where it was, and the count after it never touched.
     const back = setPageSteps(grown, 1, 4);
-    expect(pages(back)).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8 s9 s10 s11', 's12:2 s13']);
+    expect(pages(back)).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8:4 s9 s10 s11', 's12:2 s13']);
     expect(breaks(back)).toEqual(['s8']);
     expect(pageStepsRange(broken, 1)).toEqual({ min: 1, max: 7 });
   });
@@ -347,6 +348,33 @@ describe('setPageSteps', () => {
     const counted = diagram(14, { 4: 2 });
     expect(pages(counted)).toEqual(['s0 s1 s2 s3', 's4:2 s5', 's6 s7 s8 s9', 's10 s11 s12 s13']);
     expect(pages(setPageSteps(counted, 1, null))).toEqual(['s0 s1 s2 s3', 's4 s5 s6 s7', 's8 s9 s10 s11', 's12 s13']);
+  });
+
+  it('keeps the count of a page in front of a page with one: an added step grows it, never a page of one between', () => {
+    // Page 2 given 6: page 1 holds its 4 as its own.
+    const counted = setPageSteps(plain, 1, 6);
+    expect(pages(counted)).toEqual(['s0:4 s1 s2 s3', 's4:6 s5 s6 s7 s8 s9', 's10 s11 s12 s13']);
+    expect(countHoldsLaterPages(counted, 0)).toBe(true);
+    expect(setPageSteps(counted, 0, null)).toBe(counted);
+    expect(pages(kept(counted, (d) => insertSteps(d, [fresh('x')], after(d, 's3'))))).toEqual([
+      's0:5 s1 s2 s3 x',
+      's4:6 s5 s6 s7 s8 s9',
+      's10 s11 s12 s13',
+    ]);
+    // Page 2's count taken away, page 1's can go.
+    expect(countHoldsLaterPages(counted, 1)).toBe(false);
+    const back = setPageSteps(counted, 1, null);
+    expect(countHoldsLaterPages(back, 0)).toBe(false);
+    expect(pages(setPageSteps(back, 0, null))).toEqual(['s0 s1 s2 s3', 's4 s5 s6 s7', 's8 s9 s10 s11', 's12 s13']);
+    // A page without a count holds nothing.
+    expect(countHoldsLaterPages(plain, 0)).toBe(false);
+  });
+
+  it('gives a page between this one and a later one with a count its size, so the boundary adds no page in front of that', () => {
+    // `s0 s1 s2 s3 | s4 s5 s6 s7 | s8:4 …`: page 1 to 2 hands page 2 its steps, which keeps them all.
+    const counted = diagram(12, { 8: 4 });
+    expect(pages(setPageSteps(counted, 0, 2))).toEqual(['s0:2 s1', 's2:6 s3 s4 s5 s6 s7', 's8:4 s9 s10 s11']);
+    expect(pageStepsRange(counted, 0)).toEqual({ min: 1, max: 12 });
   });
 
   it('changes nothing for a count a page already has, null on a page without one, or a page that is not there', () => {

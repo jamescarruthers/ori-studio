@@ -1117,6 +1117,7 @@
       "pageNumbers": "Page numbers",
       "pageSteps": "Steps on page {{number}}",
       "pageStepsDefault": "Default",
+      "pageStepsHolds": "Keeps later pages in place",
       "pageStepsUseDefault": "Use default",
       "paper": "Paper",
       "pathColor": "Path color",

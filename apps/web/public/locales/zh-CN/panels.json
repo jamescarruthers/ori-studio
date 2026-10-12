@@ -1079,6 +1079,7 @@
       "pageNumbers": "页码",
       "pageSteps": "第 {{number}} 页的步骤数",
       "pageStepsDefault": "默认",
+      "pageStepsHolds": "保持后面的页面不变",
       "pageStepsUseDefault": "使用默认值",
       "paper": "纸张",
       "pathColor": "路径颜色",
