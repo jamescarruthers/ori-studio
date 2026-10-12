@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FoldStartSide } from '../../fold/paperShape';
 import { foldStepSentence, type FoldSentenceStep } from '../../fold/stepSentence';
@@ -261,6 +261,7 @@ const NOTE_MAX_LENGTH = 2000;
  */
 function NoteSection({ note }: { note: FoldStepNote }) {
   const { t } = useTranslation();
+  const titleId = useId();
   const title = t('panels:fold.step.note', 'Note');
   if (!note.editable) {
     return note.text ? (
@@ -270,12 +271,12 @@ function NoteSection({ note }: { note: FoldStepNote }) {
     ) : null;
   }
   return (
-    <CollapsibleSection title={title}>
+    // The section's title names the field: one "Note", where a label of its own would say it again.
+    <CollapsibleSection title={title} titleId={titleId}>
       <TextAreaRow
         // One field per step: a draft never carries over to the next one.
         key={note.stepId}
-        label={title}
-        labelHidden
+        labelledBy={titleId}
         value={note.text}
         placeholder={t('panels:fold.step.notePlaceholder', 'Add a note: how to make this step, or what to watch for…')}
         rows={3}

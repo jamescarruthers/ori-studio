@@ -85,6 +85,24 @@ describe('TextAreaRow', () => {
     expect(label?.htmlFor).toBe(field().id);
   });
 
+  it('takes its name from a title already on screen, drawing no label of its own', () => {
+    container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    act(() => {
+      root?.render(
+        <>
+          <span id="note-title">Note</span>
+          <TextAreaRow labelledBy="note-title" value="" onCommit={vi.fn()} />
+        </>
+      );
+    });
+    expect(field().getAttribute('aria-labelledby')).toBe('note-title');
+    expect(container.querySelector('label')).toBeNull();
+    // The title says it once: the field's name and the only "Note" on screen.
+    expect(container.textContent).toBe('Note');
+  });
+
   it('draws its rule unless the section it ends draws one', () => {
     render(<Controlled onCommit={vi.fn()} />);
     expect(field().parentElement?.dataset.divider).toBeUndefined();

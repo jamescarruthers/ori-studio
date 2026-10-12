@@ -40,6 +40,32 @@ function rows(): Record<string, string> {
   );
 }
 
+/** An element's accessible name, as assistive technology takes it: `aria-labelledby`, then `aria-label`, then its labels. */
+function accessibleName(element: Element): string {
+  const ids = element.getAttribute('aria-labelledby');
+  if (ids) return ids.split(/\s+/).map((id) => document.getElementById(id)?.textContent?.trim() ?? '').join(' ');
+  const label = element.getAttribute('aria-label');
+  if (label) return label;
+  return [...document.querySelectorAll('label')]
+    .filter((label) => element.id !== '' && label.htmlFor === element.id)
+    .map((label) => label.textContent?.trim())
+    .join(' ');
+}
+
+const IMPLICIT_ROLES = { textbox: 'textarea, input:not([type]), input[type="text"]' } as const;
+
+/** The elements of `role` named `name`. */
+const byRole = (role: keyof typeof IMPLICIT_ROLES, name: string) =>
+  [...host.querySelectorAll(`[role="${role}"], ${IMPLICIT_ROLES[role]}`)].filter((element) => accessibleName(element) === name);
+
+/** The pane's text nodes that say exactly `text`: what a screen reader reads out, one by one. */
+function textNodes(text: string): Node[] {
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+  const found: Node[] = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) if (node.textContent?.trim() === text) found.push(node);
+  return found;
+}
+
 const heading = () => host.querySelector('h3')?.textContent;
 const notices = () => [...host.querySelectorAll('[role="status"], [role="alert"]')].map((n) => n.textContent);
 const section = (title: string) =>
@@ -223,7 +249,10 @@ describe('FoldStepPane', () => {
       const note = section('Note');
       const field = note?.querySelector('textarea');
       expect(field?.value).toBe('Corner to corner.');
-      expect(note?.querySelector('label')?.textContent).toBe('Note');
+      // Named once, by the section's title: no label of its own saying "Note" again.
+      expect(byRole('textbox', 'Note')).toEqual([field]);
+      expect(textNodes('Note')).toHaveLength(1);
+      expect(note?.querySelector('label')).toBeNull();
       // Typing commits as the field does, each commit carrying its sitting.
       act(() => {
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(field, 'Corner to corner, then unfold.');
