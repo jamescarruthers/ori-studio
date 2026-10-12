@@ -80,7 +80,7 @@ describe('a vertex tool’s marks over the folded pane', () => {
     close(marks.strokes[0]!.b, { x: 0.8, y: 0.5 });
   });
 
-  it('draws a fan’s rays, the fourth taken bold among the others, and one that does not fit fainter', () => {
+  it('draws a fan’s fourth crease taken bold among the others that land, never one that does not, nor the given rays', () => {
     const fan: FoldVertexAnalysis = {
       kind: 'rabbit-ear',
       center: [0.5, 0.5],
@@ -92,18 +92,20 @@ describe('a vertex tool’s marks over the folded pane', () => {
       candidates: [
         [0, -1],
         [0.6, -0.8],
+        [-0.6, -0.8],
       ],
       emergent: 0,
       layers: [0],
     };
-    const marks = vertexOverlayMarks(index, { analysis: fan, emergent: 1, emergents: [false, true] }, inks);
-    // Three given rays, two candidates: no halo, since the fourth taken is the ridge.
-    expect(marks.strokes).toHaveLength(5);
-    const [given, , , unfit, taken] = marks.strokes;
-    expect(taken!.widthMul).toBeGreaterThan(given!.widthMul);
-    close(given!.b, { x: 1, y: 0.5 });
+    const marks = vertexOverlayMarks(index, { analysis: fan, emergent: 1, emergents: [false, true, true] }, inks);
+    // The given rays are the paper's pending creases, drawn in its pens; the
+    // first candidate does not land: the two that do, the one taken bold.
+    expect(marks.strokes).toHaveLength(2);
+    const [taken, other] = marks.strokes;
+    expect(taken!.widthMul).toBeGreaterThan(other!.widthMul);
+    close(taken!.a, { x: 0.5, y: 0.5 });
     expect(taken!.color).toEqual(accent);
-    expect(unfit!.color[3]).toBeLessThan(0.3);
+    expect(other!.color[3]).toBeLessThan(accent[3]);
     expect(marks.dots).toHaveLength(1);
   });
 });

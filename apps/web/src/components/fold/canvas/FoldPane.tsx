@@ -26,7 +26,7 @@ import { PAPER_STYLE_POLICIES } from '../../../lib/paper/paperStyleResolve';
 import type { FoldCreasePatternStrokes } from '../../../fold/canvas/useFoldCreasePatternStrokes';
 import type { WheelGesturePreference } from '../../../lib/wheelGesture';
 import { FOLD_UNITS_PER_CP_UNIT, foldUnitToUser } from '../../../fold/canvas/foldCanvasGeometry';
-import type { FoldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
+import { joinFills, type FoldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { sameFoldHit, type FoldHit, type FoldHitRadii, type FoldPaneId } from '../../../fold/canvas/foldPicking';
 import type { FoldPosedSceneSource } from '../../../fold/animation/foldStepPlayback';
 import type { Point } from '../../../lib/geometry';
@@ -229,26 +229,28 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     render();
   }, [lines, rendererGeneration, rendererRef, render]);
 
-  // The moving set over the paper: the overlay fill channel draws above the
-  // folded channel, in the pane's frame.
-  useEffect(() => {
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    renderer.setDiagnosticFills(posing ? null : tint);
-    render();
-  }, [tint, posing, rendererGeneration, rendererRef, render]);
-
   // The tool's feedback, which follows the pointer, over a crease pattern's
-  // instruction: both are the preview channel's, the instruction first.
+  // instruction: both are the preview channel's, the instruction first. The
+  // moving set over the paper, and a region the pointer would pick over that:
+  // the overlay fill channel draws above the folded channel, in the pane's frame.
   const instruction = creases?.instruction ?? null;
+  const feedback = useMemo<FoldPaneOverlay>(
+    () => (posing ? { points: null, strokes: null } : overlay(hovered)),
+    [overlay, hovered, posing]
+  );
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
-    const { points, strokes } = posing ? { points: null, strokes: null } : overlay(hovered);
-    renderer.setOverlayPoints(points);
-    renderer.setPreview(concatStrokes(instruction, strokes));
+    renderer.setDiagnosticFills(posing ? null : joinFills(tint, feedback.fills ?? null));
     render();
-  }, [overlay, hovered, posing, instruction, inkKey, rendererGeneration, rendererRef, render]);
+  }, [tint, feedback, posing, rendererGeneration, rendererRef, render]);
+  useEffect(() => {
+    const renderer = rendererRef.current;
+    if (!renderer) return;
+    renderer.setOverlayPoints(feedback.points);
+    renderer.setPreview(concatStrokes(instruction, feedback.strokes));
+    render();
+  }, [feedback, instruction, inkKey, rendererGeneration, rendererRef, render]);
 
   useEffect(() => {
     onHover?.(hovered);

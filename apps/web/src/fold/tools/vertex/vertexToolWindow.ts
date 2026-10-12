@@ -18,10 +18,12 @@
  * - a squash's **spine target**: its hinge line until a point is clicked on
  *   the folded pane, drawn there either way, with a way back to the hinge;
  * - a fan's **fourth crease**, among the candidates the engine lists (three
- *   at most), the ones that do not fit said so, and the **layers** it cuts,
- *   from the direction's side. A rabbit ear's fourth crease is its ridge,
- *   folding the other way from the three to the corners, so there is no
- *   ridge to choose;
+ *   at most) that land — one that cannot fold is never offered (owner
+ *   feedback, 2026-10-12) — in a row that stays put with one or none, and
+ *   under it, in a place kept for it, how many fit with this paper staying
+ *   put; and the **layers** it cuts, from the direction's side. A rabbit
+ *   ear's fourth crease is its ridge, folding the other way from the three to
+ *   the corners, so there is no ridge to choose;
  * - the **layer order**, when the fold leaves more than one;
  * - a refusal in the folder's words with every fix a button, and Cancel and
  *   the fold.
@@ -56,9 +58,14 @@ export interface FoldVertexWindowView {
   known: boolean;
   /** A squash's spine lands on its hinge line, or toward a point clicked. */
   target: 'hinge' | 'point';
-  /** A fan's: per emergent candidate, whether it fits; and the one taken. */
-  emergents: readonly boolean[];
-  emergent: number;
+  /**
+   * A fan's fourth creases that land — the only ones offered, numbered among
+   * themselves — and the position of the one taken among them.
+   */
+  fourths: number;
+  fourth: number;
+  /** With none that lands: whether one would with other paper staying; null while that is asked. */
+  fourthElsewhere?: boolean | null;
   /** The layers at a fan's center, and how many it cuts (null for every one). */
   layers: number;
   fanLayers: number | null;
@@ -96,9 +103,16 @@ export interface FoldVertexControls {
     help: string;
     reset: { label: string; disabled: boolean; run: () => void } | null;
   } | null;
-  /** A fan's fourth crease, when it has more than one candidate. */
+  /**
+   * A fan's fourth crease, once the engine has described the fan: a stepper
+   * through the ones that land, its arrows off when one lands or none. Always
+   * there, so the window keeps its shape whichever paper stays.
+   */
   emergent: FoldChoiceStepper | null;
-  /** Said under it when the one taken does not fit, or which do. */
+  /**
+   * Said under it, in a place kept for it: how many fit with this paper
+   * staying put — when none does, to pick other paper to stay.
+   */
   emergentNote: string | null;
   /** The layers a fan cuts, when more than one lies at its center. */
   layers: FoldChoiceStepper | null;
@@ -231,7 +245,16 @@ function chooseStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
         'Valley lifts the flap toward you, Mountain away from you: the preview shows which.'
       );
     case 'rabbit-ear':
-      return t('tools:fold.vertex.steps.fanChoose', 'Choose the fourth crease and the layers.');
+      // The paper that stays is picked again by a click on another region.
+      return host.coarse
+        ? t(
+            'tools:fold.vertex.steps.fanChooseTouch',
+            'Choose the fourth crease and the layers. Tap other paper to change what stays put.'
+          )
+        : t(
+            'tools:fold.vertex.steps.fanChooseStayer',
+            'Choose the fourth crease and the layers. Click other paper to change what stays put.'
+          );
     case 'swivel':
       return t(
         'tools:fold.vertex.steps.swivelStep',
@@ -285,16 +308,61 @@ function previewInstructions(
   };
 }
 
-/** What the fourth crease's stepper says beneath it: that the one taken does not fit. */
-function emergentNote(t: TFunction, vertex: FoldVertexWindowView): string | null {
-  const { emergents, emergent } = vertex;
-  if (emergents.length === 0) return null;
-  const fitting = emergents.filter(Boolean).length;
-  if (fitting === 0) return t('tools:fold.vertex.noEmergentFits', 'No fourth crease fits these layers here.');
-  if (emergents[emergent] === false) {
-    return t('tools:fold.vertex.emergentDoesNotFit', 'This fourth crease does not fit here: step to another.');
+/**
+ * A fan's fourth crease: a stepper through the ones that land, the only ones
+ * offered. With one, or none, the row stays where it is with its arrows off,
+ * so the window keeps its shape as the paper that stays changes.
+ */
+function fourthStepper(
+  t: TFunction,
+  vertex: FoldVertexWindowView,
+  verbs: FoldToolWindowVerbs,
+  readOnly: boolean
+): FoldChoiceStepper {
+  const label = t('tools:fold.vertex.emergent', 'Fourth crease');
+  const stepper = choiceStepper(t, label, vertex.fourth, vertex.fourths, verbs.stepEmergent, readOnly);
+  if (stepper) return stepper;
+  const still = (name: string) => ({ label: name, disabled: true, run: () => undefined });
+  return {
+    label,
+    value:
+      vertex.fourths === 1
+        ? t('tools:fold.reverse.ofCount', '{{index}} of {{total}}', { index: 1, total: 1 })
+        : t('tools:fold.vertex.fourthNone', 'None'),
+    previous: still(t('tools:fold.reverse.previous', 'Previous')),
+    next: still(t('tools:fold.reverse.next', 'Next')),
+  };
+}
+
+/**
+ * What the fourth crease's stepper says beneath it, in a place kept for it:
+ * how many fit with this paper staying put — and when none does, the change
+ * that helps: other paper to stay, or, when no paper staying would do,
+ * other picks.
+ */
+function emergentNote(t: TFunction, vertex: FoldVertexWindowView, host: FoldToolHost): string {
+  const { fourths } = vertex;
+  if (fourths === 0 && vertex.fourthElsewhere === false) {
+    return host.coarse
+      ? t(
+          'tools:fold.vertex.noFourthAnywhereTouch',
+          'No fourth crease fits these creases, whichever paper stays: tap Cancel and pick again.'
+        )
+      : t(
+          'tools:fold.vertex.noFourthAnywhere',
+          'No fourth crease fits these creases, whichever paper stays: press Esc and pick again.'
+        );
   }
-  return null;
+  if (fourths === 0) {
+    return host.coarse
+      ? t('tools:fold.vertex.noFourthTouch', 'No fourth crease fits with this paper staying put: tap other paper to stay.')
+      : t('tools:fold.vertex.noFourth', 'No fourth crease fits with this paper staying put: click other paper to stay.');
+  }
+  return t('tools:fold.vertex.fourthsFit', {
+    count: fourths,
+    defaultValue_one: 'One fourth crease fits with this paper staying put.',
+    defaultValue_other: '{{count}} fourth creases fit with this paper staying put.',
+  });
 }
 
 /** The layers stepper's value: every layer, or the first few from the direction's side. */
@@ -359,18 +427,8 @@ export function vertexControls(
                 : null,
           }
         : null,
-    emergent:
-      fan && located
-        ? choiceStepper(
-            t,
-            t('tools:fold.vertex.emergent', 'Fourth crease'),
-            vertex.emergent,
-            vertex.emergents.length,
-            verbs.stepEmergent,
-            readOnly
-          )
-        : null,
-    emergentNote: fan && located ? emergentNote(t, vertex) : null,
+    emergent: fan && located ? fourthStepper(t, vertex, verbs, readOnly) : null,
+    emergentNote: fan && located ? emergentNote(t, vertex, host) : null,
     layers:
       fan && located
         ? choiceStepper(

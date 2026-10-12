@@ -10,6 +10,8 @@ import {
   type FoldShortcutId,
 } from '../../fold/tools/foldToolCatalog';
 import { foldRailGroups, type FoldToolsView } from '../../fold/tools/foldRailGroups';
+import { CpToolGlyph } from '../../cp-workspace/toolCatalog/cpToolGlyph';
+import { cpActionByOperation } from '../../lib/oristudioCpActions';
 import { allByRole, byRole } from '../../test/roleQueries';
 import { TooltipProvider } from '../ui/Tooltip';
 import { FoldToolGlyph } from './FoldToolGlyph';
@@ -163,5 +165,33 @@ describe('FoldToolGlyph', () => {
     }
     expect(glyphs.querySelector('[data-glyph="valley"]')?.textContent).toBe('V');
     expect(glyphs.querySelector('[data-glyph="inside-reverse"]')?.textContent).toBe('IR');
+  });
+
+  it('draws the rabbit ear as Edit draws its own Rabbit Ear tool, in the rail and compact', () => {
+    const edit = cpActionByOperation('Inward');
+    expect(edit?.label).toBe('Rabbit Ear');
+    if (!edit) return;
+    const glyphs = mount(
+      <>
+        <span data-glyph="fold">
+          <FoldToolGlyph id="rabbit-ear" />
+        </span>
+        <span data-glyph="edit">
+          <CpToolGlyph action={edit} />
+        </span>
+        <span data-glyph="fold-compact">
+          <FoldToolGlyph id="rabbit-ear" compact />
+        </span>
+        <span data-glyph="edit-compact">
+          <CpToolGlyph action={edit} compact />
+        </span>
+      </>
+    );
+    const html = (name: string) => glyphs.querySelector(`[data-glyph="${name}"]`)?.innerHTML ?? '';
+    expect(html('fold')).not.toBe('');
+    expect(html('fold')).toBe(html('edit'));
+    expect(html('fold-compact')).toBe(html('edit-compact'));
+    // Decoration: the button around it carries the name.
+    expect(glyphs.querySelector('[data-glyph="fold"]')?.firstElementChild?.getAttribute('aria-hidden')).toBe('true');
   });
 });

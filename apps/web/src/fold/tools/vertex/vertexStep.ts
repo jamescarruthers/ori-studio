@@ -25,9 +25,13 @@
  * **Which layer a click names** is the one the viewer sees on the side the
  * direction names, at the point clicked: the top for a valley, the bottom for
  * a mountain (the engine's own reading of a squash's flap and a petal fold's
- * petal), and the other side's for the paper that stays. It is found here,
- * from the scene, so a click keeps meaning the same flap when the direction
- * changes.
+ * petal). It is found here, from the scene, so a click keeps meaning the same
+ * flap when the direction changes.
+ *
+ * **The paper that stays** in a fan is one of the regions between its given
+ * rays, the one clicked in (`fanGeometry`): the stayer stored is the sheet
+ * point that names that region, on the farthest layer the fan cuts, so the
+ * wedge the engine keeps still is the region the canvas lit.
  *
  * **A petal fold's line H** is located through the line modes, as a fold's
  * line is, and stored as the precrease it is: clicked, or the one lying along
@@ -59,8 +63,15 @@ import {
   transformLine,
 } from '../../canvas/foldCanvasGeometry';
 import { foldStackAt, type FoldPick, type FoldPickIndex, type FoldSegmentPick } from '../../canvas/foldPicking';
-import { lineModeAxiom, type FoldLineModeId, type FoldVertexToolId } from '../foldToolCatalog';
+import {
+  isVertexTool,
+  lineModeAxiom,
+  type FoldLineModeId,
+  type FoldToolId,
+  type FoldVertexToolId,
+} from '../foldToolCatalog';
 import { lineModeInput } from '../foldToolRegistry';
+import { fanRegionAt, fanStayer, fanToward, type FoldFanGiven } from './fanGeometry';
 
 /** What the tools have picked for a vertex fold, and every choice made of what the engine lists. */
 export interface FoldVertexIntent {
@@ -238,6 +249,43 @@ export function fanCenterScene(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>)
   return a && b && c ? incenter([a, b, c]) : null;
 }
 
+/** How many clicks place a fan's given rays; the paper that stays is the click after them. Null for any other fold. */
+export function fanGivenClicks(tool: FoldVertexToolId): number | null {
+  if (tool === 'rabbit-ear') return 3;
+  if (tool === 'swivel') return 4;
+  return null;
+}
+
+/**
+ * A fan's given rays on the folded pane (`fanGeometry`): a rabbit ear's from
+ * its incenter to its corners, a swivel's from its vertex toward its three
+ * points. Null before those clicks are in, or for any other fold.
+ */
+export function fanGiven(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>): FoldFanGiven | null {
+  const clicks = fanGivenClicks(intent.tool);
+  const center = fanCenterScene(intent);
+  if (clicks === null || !center || intent.picks.length < clicks) return null;
+  const toward = intent.picks.slice(clicks - 3, clicks).map(sceneOf);
+  return toward.every((q): q is Point => q !== null) ? fanToward(center, toward) : null;
+}
+
+/**
+ * Whether a click now picks a fan's paper that stays: its next click, once
+ * its given rays are placed, or a click while its fold is previewed, which
+ * picks it again. `picks` is how many clicks are in.
+ */
+export function picksFanStayer(tool: FoldToolId, picks: number): boolean {
+  const clicks = isVertexTool(tool) ? fanGivenClicks(tool) : null;
+  return clicks !== null && (picks === clicks || picks === clicks + 1);
+}
+
+/** The region of `fan` the paper that stays was clicked in; null before that click, or at the center. */
+export function fanStayerRegion(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>, fan: FoldFanGiven): number | null {
+  const clicks = fanGivenClicks(intent.tool);
+  const scene = clicks === null ? null : sceneOf(intent.picks[clicks]);
+  return scene ? fanRegionAt(fan, scene) : null;
+}
+
 /** How many layers lie at a fan's center: what its layers stepper counts up to. */
 export function fanLayerCount(index: FoldPickIndex, center: Point): number {
   return foldStackAt(index, center).length;
@@ -272,9 +320,9 @@ export function fanSeed(
  */
 export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): FoldVertexOp | FoldEngineRefused | null {
   const { picks, direction } = intent;
-  const layer = (pick: FoldPick | undefined, seen: Seen = 'near') => {
+  const layer = (pick: FoldPick | undefined) => {
     const scene = sceneOf(pick);
-    return scene ? layerSheetPointAt(index, scene, direction, seen) : null;
+    return scene ? layerSheetPointAt(index, scene, direction) : null;
   };
   switch (intent.tool) {
     case 'squash': {
@@ -298,8 +346,11 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
       const given = intent.tool === 'rabbit-ear' ? 3 : 4;
       if (picks.length < given + 1) return null;
       const points = picks.slice(0, given).map(sheetOf);
-      const stayer = layer(picks[given], 'far');
-      const center = fanCenterScene(intent);
+      // The paper that stays: the region clicked in, named on a layer the fan cuts.
+      const fan = fanGiven(intent);
+      const region = fan ? fanStayerRegion(intent, fan) : null;
+      const stayer = fan && region !== null ? fanStayer(index, fan, region, direction, intent.fanLayers) : null;
+      const center = fan?.center ?? null;
       const seed = center ? fanSeed(index, center, direction, intent.fanLayers) : null;
       if (points.some((point) => point === null) || !stayer || !seed) return offPaper(null);
       const [a, b, c, d] = points as SheetPoint[];
@@ -310,15 +361,58 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
   }
 }
 
-/** The fan's fourth ray taken: the folder's while it is listed, else the first that lands, else the one the engine named. */
+/**
+ * The asked op of a fan with each other region as the paper that stays: what
+ * is asked when none of its fourth creases lands with the region picked, to
+ * tell whether other paper would help. Empty for any other fold, or before
+ * the paper that stays is picked.
+ */
+export function fanOpsElsewhere(intent: FoldVertexIntent, index: FoldPickIndex, asked: FoldVertexOp): FoldVertexOp[] {
+  if (asked.kind !== 'rabbit-ear' && asked.kind !== 'swivel') return [];
+  const fan = fanGiven(intent);
+  const picked = fan ? fanStayerRegion(intent, fan) : null;
+  if (!fan || picked === null) return [];
+  return fan.rays.flatMap((_, k) => {
+    const stayer = k === picked ? null : fanStayer(index, fan, k, intent.direction, intent.fanLayers);
+    return stayer ? [{ ...asked, stayer }] : [];
+  });
+}
+
+/**
+ * A fan's fourth creases that land, by index into the candidates, in order:
+ * all the folder is offered (owner feedback, 2026-10-12: a fourth crease that
+ * cannot fold is never a choice, refused after it is made). A candidate the
+ * answer has no word on lands, as far as is known. Empty for no fan.
+ */
+export function landingFourths(answer: FoldVertexAnalysed | null): number[] {
+  const analysis = answer?.analysis;
+  if (analysis?.kind !== 'rabbit-ear' && analysis?.kind !== 'swivel') return [];
+  return analysis.candidates.flatMap((_, k) => ((answer?.emergents[k] ?? true) ? [k] : []));
+}
+
+/**
+ * The fan's fourth ray taken: the folder's while it lands, else the first
+ * that lands. Null for no fan, and for a fan none of whose fourth creases
+ * lands — there is nothing to fold until the paper that stays is changed.
+ */
 export function emergentToFold(chosen: number | null, answer: FoldVertexAnalysed): number | null {
-  const { analysis, emergents } = answer;
-  if (analysis.kind !== 'rabbit-ear' && analysis.kind !== 'swivel') return null;
-  const count = analysis.candidates.length;
+  const fourths = landingFourths(answer);
+  if (chosen !== null && fourths.includes(chosen)) return chosen;
+  return fourths[0] ?? null;
+}
+
+/** A fan the engine has described, none of whose fourth creases lands: nothing to fold until other paper stays. */
+export function fanHasNoFourth(answer: FoldVertexAnalysed | null): boolean {
+  const kind = answer?.analysis.kind;
+  return (kind === 'rabbit-ear' || kind === 'swivel') && landingFourths(answer).length === 0;
+}
+
+/** The fourth crease `delta` on from `from` among the ones that land, round and round; null when none does. */
+export function steppedFourth(fourths: readonly number[], from: number | null, delta: number): number | null {
+  const count = fourths.length;
   if (count === 0) return null;
-  if (chosen !== null && chosen >= 0 && chosen < count) return chosen;
-  const landing = emergents.findIndex(Boolean);
-  return landing >= 0 ? landing : (analysis.emergent ?? 0);
+  const at = Math.max(0, from === null ? 0 : fourths.indexOf(from));
+  return fourths[(((at + delta) % count) + count) % count] ?? null;
 }
 
 /**
@@ -361,9 +455,18 @@ export interface FoldVertexChosen {
   again: boolean;
 }
 
-/** The base op with the folder's choices made (see {@link FoldVertexChosen}). */
-export function vertexChosenOp(base: FoldVertexOp, first: FoldVertexAnalysed, taken: FoldVertexTaken): FoldVertexChosen {
+/**
+ * The base op with the folder's choices made (see {@link FoldVertexChosen});
+ * null for a fan none of whose fourth creases lands, which is no fold to
+ * preview — the window says so, and offers other paper to stay.
+ */
+export function vertexChosenOp(
+  base: FoldVertexOp,
+  first: FoldVertexAnalysed,
+  taken: FoldVertexTaken
+): FoldVertexChosen | null {
   const emergent = emergentToFold(taken.emergent, first);
+  if ((base.kind === 'rabbit-ear' || base.kind === 'swivel') && emergent === null) return null;
   const named =
     first.analysis.kind === 'rabbit-ear' || first.analysis.kind === 'swivel' ? first.analysis.emergent : null;
   return {

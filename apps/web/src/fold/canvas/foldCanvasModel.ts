@@ -196,7 +196,8 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   const vertex = preview.vertex;
   const analysis = vertex?.base?.analysis;
   const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates : [];
-  const emergents = vertex?.base?.emergents ?? [];
+  // Only the fourth creases that land are offered, numbered among themselves.
+  const fourths = vertex?.fourths ?? [];
   const { orders = [], order = null } = vertex ?? {};
   return {
     tool,
@@ -204,16 +205,17 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
     described: vertex?.base != null,
     known: preview.step !== null,
     target: tools.compound.squashTarget ? 'point' : 'hinge',
-    // A candidate the answer has no word on fits, as far as is known.
-    emergents: candidates.map((_, k) => emergents[k] ?? true),
-    emergent: vertex?.emergent ?? 0,
+    fourths: fourths.length,
+    fourth: Math.max(0, fourths.indexOf(vertex?.emergent ?? -1)),
+    fourthElsewhere: vertex?.elsewhere ?? null,
     layers: vertex?.layers ?? 0,
     fanLayers: tools.compound.fanLayers,
     orders: orders.length > 1 ? orders.length : 0,
     order: order ? Math.max(0, orders.indexOf(order)) : 0,
     emergentNumber: (direction) => {
       const k = nearestDirection(candidates, direction);
-      return k === null ? null : k + 1;
+      const at = k === null ? -1 : fourths.indexOf(k);
+      return at < 0 ? null : at + 1;
     },
     ...(vertex?.nearPrecrease ? { nearPrecrease: true } : {}),
   };

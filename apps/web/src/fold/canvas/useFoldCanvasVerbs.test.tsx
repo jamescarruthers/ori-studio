@@ -390,6 +390,9 @@ describe('a vertex fold’s choices on the canvas', () => {
     base: fan,
     answer: fan,
     emergent: 1,
+    // The third candidate does not land: never offered.
+    fourths: [0, 1],
+    elsewhere: null,
     orders: [],
     order: null,
     layers: 2,
@@ -397,9 +400,11 @@ describe('a vertex fold’s choices on the canvas', () => {
     ...extra,
   });
 
-  it('steps the order, then a fan’s fourth ray: the deepest with more than one', () => {
+  it('steps the order, then a fan’s fourth ray among those that land: the deepest with more than one', () => {
     const tools = FOLD_TOOL_INITIAL;
-    expect(foldCanvasChoice(preview({ vertex: vertex() }), tools)).toEqual({ kind: 'emergent', index: 1, count: 3 });
+    expect(foldCanvasChoice(preview({ vertex: vertex() }), tools)).toEqual({ kind: 'emergent', index: 1, count: 2 });
+    // One lands: nothing to step through on the canvas.
+    expect(foldCanvasChoice(preview({ vertex: vertex({ fourths: [1] }) }), tools)).toBeNull();
     const order = { faces: [], orders: [] };
     const other = { faces: [], orders: [] };
     expect(foldCanvasChoice(preview({ vertex: vertex({ orders: [order, other], order: other }) }), tools)).toEqual({
@@ -409,14 +414,69 @@ describe('a vertex fold’s choices on the canvas', () => {
     });
   });
 
-  it('steps a rabbit ear’s fourth ray, its only choice: the fourth crease is its ridge', () => {
+  it('steps a rabbit ear’s fourth ray, its only choice, through the ones that land: the fourth crease is its ridge', () => {
     const tools = createFoldTools();
     const shown = preview({ vertex: vertex() });
     act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={shown} />));
     act(() => tools.selectTool('rabbit-ear'));
+    // From the second of the two that land, round to the first: never the third, which does not.
     act(() => void bound!.verbs.stepChoice(1));
-    expect(tools.store.getState().compound.emergent).toBe(2);
+    expect(tools.store.getState().compound.emergent).toBe(0);
+    act(() => void bound!.verbs.stepChoice(-1));
+    expect(tools.store.getState().compound.emergent).toBe(0);
     expect(Object.keys(tools.store.getState().compound)).not.toContain('ridge');
+  });
+
+  it('commits nothing, and waits for nothing, while none of a fan’s fourth creases lands', () => {
+    const commitStep = vi.fn<FoldSessionSurface['commitStep']>(() => Promise.resolve({ status: 'stale' as const }));
+    const tools = createFoldTools();
+    const stuck = { ...fan, emergents: [false, false, false] };
+    const shown = preview({ step: null, vertex: vertex({ base: stuck, answer: stuck, emergent: null, fourths: [] }) });
+    act(() => root.render(<Harness session={session(commitStep)} tools={tools} preview={shown} />));
+    act(() => tools.selectTool('rabbit-ear'));
+    let claimed = true;
+    act(() => {
+      claimed = bound!.verbs.commit();
+    });
+    expect(claimed).toBe(false);
+    expect(bound!.queued).toBe(false);
+    expect(commitStep).not.toHaveBeenCalled();
+    // A commit queued before the answer came is let go once it says none lands.
+    expect(queuedCommit('input', shown, false, 'input')).toBe('drop');
+  });
+
+  it('picks a fan’s paper that stays on the paper only, and again while previewed in another region, on either pane', () => {
+    const tools = createFoldTools();
+    const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
+    const view = { index } as unknown as FoldStateView;
+    act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={preview({ step: null })} view={view} />));
+    act(() => tools.selectTool('rabbit-ear'));
+    const corner = (x: number, y: number) =>
+      ({ kind: 'point', provenance: 'vertex', sheet: [x, y], mark: null, scene: { x, y } }) as const;
+    for (const [x, y] of [
+      [0, 1],
+      [1, 1],
+      [1, 0],
+    ] as const) {
+      act(() => void tools.pick(corner(x, y)));
+    }
+    const radii = { point: 0.02, line: 0.02 };
+    // Off the paper, nothing a click would take; on it, the paper under the pointer.
+    expect(bound!.verbs.hitTest('folded', { x: 1.3, y: 0.5 }, radii)?.pick).toBeNull();
+    const below = bound!.verbs.hitTest('folded', { x: 0.3, y: 0.3 }, radii);
+    expect(below?.pick).toMatchObject({ kind: 'free', sheet: [0.3, 0.3] });
+    act(() => bound!.verbs.pick(below));
+    expect(tools.store.getState().picks).toHaveLength(4);
+    // Previewed: a click in the same region changes nothing, the choices made kept.
+    act(() => tools.setEmergent(1));
+    act(() => bound!.verbs.pick(bound!.verbs.hitTest('folded', { x: 0.2, y: 0.25 }, radii)));
+    expect(tools.store.getState().picks[3]).toMatchObject({ scene: { x: 0.3, y: 0.3 } });
+    expect(tools.store.getState().compound.emergent).toBe(1);
+    // In another region — here on the crease pattern — it is the paper that stays now, its fourth creases listed anew.
+    act(() => bound!.verbs.pick(bound!.verbs.hitTest('crease-pattern', { x: 0.75, y: 0.95 }, radii)));
+    expect(tools.store.getState().picks).toHaveLength(4);
+    expect(tools.store.getState().picks[3]).toMatchObject({ pane: 'crease-pattern', sheet: [0.75, 0.95] });
+    expect(tools.store.getState().compound.emergent).toBeNull();
   });
 
   it('binds the chooser, the fixes and a click on the folded paper to the vertex tools', () => {
@@ -462,9 +522,9 @@ describe('a vertex fold’s choices on the canvas', () => {
     // A fan: its fourth ray stepped and taken by a fix's direction, its layers.
     render(preview({ vertex: vertex() }));
     act(() => bound!.verbs.stepEmergent(1));
-    expect(tools.store.getState().compound.emergent).toBe(2);
-    act(() => bound!.verbs.takeEmergent([0.9, 1.1]));
     expect(tools.store.getState().compound.emergent).toBe(0);
+    act(() => bound!.verbs.takeEmergent([-1, 0.1]));
+    expect(tools.store.getState().compound.emergent).toBe(1);
     act(() => bound!.verbs.stepFanLayers(-1));
     expect(tools.store.getState().compound.fanLayers).toBe(1);
     act(() => bound!.verbs.stepFanLayers(-1));

@@ -816,7 +816,6 @@
     "vertex": {
       "direction": "Sens",
       "emergent": "Quatrième pli",
-      "emergentDoesNotFit": "Ce quatrième pli ne convient pas ici : passez à un autre.",
       "fix": {
         "emergent": "Prendre le quatrième pli qui convient",
         "emergentNumber": "Prendre le quatrième pli {{number}}",
@@ -826,6 +825,10 @@
         "resetTarget": "Poser le dos sur la charnière",
         "usePrecrease": "Prendre le pré-pli"
       },
+      "fourthNone": "Aucun",
+      "fourthsFit_one": "Un quatrième pli convient avec ce papier en place.",
+      "fourthsFit_many": "{{count}} quatrièmes plis conviennent avec ce papier en place.",
+      "fourthsFit_other": "{{count}} quatrièmes plis conviennent avec ce papier en place.",
       "help": {
         "petal": "Soulever la pointe inférieure d’un rabat le long d’un pré-pli H pendant que ses côtés se replient le long de deux pré-plis en cerf-volant.",
         "rabbitEar": "Replier les coins d’un triangle le long de leurs bissectrices, pour qu’une pointe se dresse.",
@@ -848,7 +851,10 @@
       "layersTop_other": "{{count}} du dessus sur {{total}}",
       "mountain": "Montagne",
       "mountainTitle": "Montagne : le papier tourne en s’éloignant de vous",
-      "noEmergentFits": "Aucun quatrième pli ne convient à ces couches ici.",
+      "noFourth": "Aucun quatrième pli ne convient avec ce papier en place : cliquez sur un autre papier à laisser en place.",
+      "noFourthAnywhere": "Aucun quatrième pli ne convient à ces plis, quel que soit le papier laissé en place : appuyez sur Échap et choisissez de nouveau.",
+      "noFourthAnywhereTouch": "Aucun quatrième pli ne convient à ces plis, quel que soit le papier laissé en place : touchez Annuler et choisissez de nouveau.",
+      "noFourthTouch": "Aucun quatrième pli ne convient avec ce papier en place : touchez un autre papier à laisser en place.",
       "note": {
         "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où.",
         "rabbitEar": "Les plis se rejoignent au centre du cercle inscrit du triangle : un vers chaque coin, plié dans le sens choisi, et un quatrième le long duquel l’oreille se dresse, plié dans l’autre sens.",
@@ -935,7 +941,8 @@
         "earFirstCorner": "Cliquez sur le premier coin du triangle.",
         "earSecondCorner": "Cliquez sur son deuxième coin.",
         "earThirdCorner": "Cliquez sur son troisième coin.",
-        "fanChoose": "Choisissez le quatrième pli et les couches.",
+        "fanChooseStayer": "Choisissez le quatrième pli et les couches. Cliquez sur un autre papier pour changer celui qui reste en place.",
+        "fanChooseTouch": "Choisissez le quatrième pli et les couches. Touchez un autre papier pour changer celui qui reste en place.",
         "finish": "Choisissez les options, puis appuyez sur Entrée.",
         "finishTouch": "Choisissez les options, puis touchez {{action}}.",
         "fixOrPickAgain": "Cliquez sur une correction ci-dessous, ou appuyez sur Échap et choisissez de nouveau.",

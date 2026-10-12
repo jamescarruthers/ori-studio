@@ -1,9 +1,10 @@
 /**
  * What the Fold canvas draws over the paper of each pane, beside the painted
  * scene: the references picked so far, the one under the pointer, the line a
- * free fold is being drawn along, and the Divide-line marks — on the
- * renderer's overlay channels (points on top of everything, strokes on the
- * preview channel), in the pane's own frame.
+ * free fold is being drawn along, the Divide-line marks, and a region a click
+ * would pick — on the renderer's overlay channels (points on top of
+ * everything, strokes on the preview channel, regions on the fill channel
+ * with the pane's tint), in the pane's own frame.
  *
  * These are the tool's feedback, not the paper, so they take theme accents
  * rather than the paper style's pens: the pick accent for what is picked and
@@ -136,6 +137,52 @@ function pickOnPane(
 export interface FoldPaneOverlay {
   points: PointGeometry | null;
   strokes: StrokeGeometry | null;
+  /** Tints that follow the pointer, over the pane's own (`tint`): a region a click would pick. */
+  fills?: FillGeometry | null;
+}
+
+/**
+ * The regions a click picks among on one pane — a fan's paper that stays —
+ * and the one picked: lit over the paper, the one under the pointer too.
+ */
+export interface FoldOverlayRegions {
+  /** Per region, its convex polygons in the pane's frame. */
+  polygons: readonly (readonly (readonly Point[])[])[];
+  /** The region picked; null before one is. */
+  picked: number | null;
+  /** The region a hit on this pane would pick; null off the paper. */
+  at: (hit: FoldHit) => number | null;
+}
+
+/** How strongly the region picked is lit, and one under the pointer. */
+const REGION_PICKED_TINT = 0.42;
+const REGION_HOVERED_TINT = 0.26;
+
+/** The regions lit (see {@link FoldOverlayRegions}): the one picked, and the one under the pointer when it is another. */
+export function foldRegionTint(
+  regions: FoldOverlayRegions | null,
+  hovered: FoldHit | null,
+  accent: Rgba
+): FillGeometry | null {
+  if (!regions) return null;
+  const triangles: number[] = [];
+  const colors: number[] = [];
+  const light = (region: number | null, alpha: number) => {
+    const color = [accent[0], accent[1], accent[2], accent[3] * alpha];
+    for (const ring of region === null ? [] : (regions.polygons[region] ?? [])) {
+      for (let k = 1; k + 1 < ring.length; k += 1) {
+        for (const corner of [ring[0]!, ring[k]!, ring[k + 1]!]) {
+          triangles.push(corner.x, corner.y);
+          colors.push(...color);
+        }
+      }
+    }
+  };
+  const under = hovered ? regions.at(hovered) : null;
+  light(regions.picked, REGION_PICKED_TINT);
+  if (under !== regions.picked) light(under, REGION_HOVERED_TINT);
+  if (triangles.length === 0) return null;
+  return { position: new Float32Array(triangles), color: new Float32Array(colors), count: triangles.length / 2 };
 }
 
 /** How strongly the moving set is tinted, and the flap under the pointer over that. */
@@ -271,6 +318,8 @@ export interface FoldPaneOverlayInput {
   spread?: FoldPaneSpreadMap | null;
   /** A partial precrease being made: its located line on this pane, and the points clicked along it. */
   along?: FoldOverlayAlong | null;
+  /** The regions a click picks among on this pane — a fan's paper that stays — lit under the picks. */
+  regions?: FoldOverlayRegions | null;
 }
 
 /** A partial precrease's located line on one pane, and its points along it (`foldAlongOverlay`). */
@@ -359,5 +408,9 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
   if (from && to && 'x' in from && 'x' in to) {
     strokes.push({ a: from, b: to, color: withAlpha(inks.accent, HOVER_LINE_ALPHA), widthMul: 1 });
   }
-  return { points: packDots(dots), strokes: packStrokes(strokes) };
+  return {
+    points: packDots(dots),
+    strokes: packStrokes(strokes),
+    fills: foldRegionTint(input.regions ?? null, hovered, inks.accent),
+  };
 }

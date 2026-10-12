@@ -12,7 +12,9 @@ import { boundsOf, boundsToUser, transformLine, type Bounds } from './foldCanvas
 import { refusedFaceInks } from './foldCanvasModel';
 import { creasePatternPaneLines, type FoldCreasePatternLines } from './foldCreasePatternLines';
 import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
-import { foldedDisplayOffset, foldedPaneScene, withFoldLine, type FoldPaneDisplay } from './foldPaneScenes';
+import { foldedDisplayOffset, foldedPaneScene, withCreaseLines, withFoldLine, type FoldPaneDisplay } from './foldPaneScenes';
+import { fanGivenOnFolded } from '../tools/vertex/fanGeometry';
+import type { FoldFanMarks } from './vertex/useFoldFanMarks';
 import type { FoldCanvasInks } from './useFoldCanvasInks';
 import type { FoldStateView } from './useFoldStateView';
 import type { FoldToolPreview } from './useFoldToolPreview';
@@ -84,11 +86,13 @@ function union(a: Bounds | null, b: Bounds | null): Bounds | null {
 
 /**
  * What each pane of the Fold canvas paints (plan D11): the folded form of the
- * state on screen, with a located fold's line — a crimp's two — and its moving
+ * state on screen, with a located fold's line — a crimp's two, a fan's given
+ * creases (`fan`, `useFoldFanMarks`) from their clicks on — and its moving
  * set lit over the paper, a tuck's listed targets lit too, through the shared
  * paper painter (`paperSceneToFoldedGeometry`, which the pane calls) with the
  * `fold` policy; and the crease pattern — of the previewed fold's landed
- * state while there is one, the creases it adds its instruction — as the
+ * state while there is one, the creases it adds its instruction, else a
+ * fan's given creases its instruction while they are pending — as the
  * lines Edit's document would hold, which the canvas inks as Edit does
  * (`useFoldCreasePatternStrokes`).
  *
@@ -107,7 +111,8 @@ export function useFoldCanvasPaint(
   display: FoldPaneDisplay,
   hoveredFlap: number | null,
   inks: FoldCanvasInks | null,
-  spread: LayerSpreadOptions | null = null
+  spread: LayerSpreadOptions | null = null,
+  fan: FoldFanMarks | null = null
 ): FoldCanvasPaint {
   const { scene, summary, index } = view;
   const sheet = summary?.sheet;
@@ -115,17 +120,21 @@ export function useFoldCanvasPaint(
   const sheetBounds = useMemo(() => (sheet ? boundsOf(sheet.map(([x, y]) => ({ x, y }))) : null), [sheet]);
 
   // A crimp's second line, beside its picture's first: the other letter on
-  // the near layer, as a pleat's two creases are.
+  // the near layer, as a pleat's two creases are. A fan's given creases,
+  // pending from the moment their clicks are in, in the pen of their letter.
   const secondLine = preview.action ? (preview.crimp?.lines.second ?? null) : null;
+  const fanCreases = fan?.creases;
+  const fanDirection = fan?.direction ?? 'valley';
   const foldedScene = useMemo(() => {
     if (!scene) return null;
-    const base = foldedPaneScene(scene, display, offset, spread);
+    const plain = foldedPaneScene(scene, display, offset, spread);
+    const base = fanCreases ? withCreaseLines(plain, fanGivenOnFolded(fanCreases), fanDirection, offset) : plain;
     const action = preview.action;
     if (!action) return base;
     const along = withFoldLine(base, action.line, action.direction, offset);
     if (!secondLine) return along;
     return withFoldLine(along, secondLine, action.direction === 'valley' ? 'mountain' : 'valley', offset);
-  }, [scene, display, offset, spread, preview.action, secondLine]);
+  }, [scene, display, offset, spread, preview.action, secondLine, fanCreases, fanDirection]);
   const foldedInk = useMemo<FoldedSceneInk>(
     () => ({
       policy: PAPER_STYLE_POLICIES.fold,
@@ -182,13 +191,15 @@ export function useFoldCanvasPaint(
   const landed = preview.landed;
   const cpSource = landed?.scene ?? scene;
   const cpSummary = landed?.summary ?? summary;
-  const cpLines = useMemo(
-    () =>
-      cpSource && cpSummary
-        ? creasePatternPaneLines(cpSource, { display, step: cpSummary.step, instruction: landed?.added ?? null })
-        : null,
-    [cpSource, cpSummary, display, landed]
-  );
+  const cpLines = useMemo(() => {
+    if (!cpSource || !cpSummary) return null;
+    const lines = creasePatternPaneLines(cpSource, { display, step: cpSummary.step, instruction: landed?.added ?? null });
+    // Until a fold lands and draws its own, a fan's given creases are the
+    // instruction: on each layer it cuts, by the letter each has from the front.
+    if (landed || !fanCreases || fanCreases.length === 0) return lines;
+    const pending = fanCreases.map(({ sheet: [a, b], letter }) => ({ a, b, letter }));
+    return { ...lines, instruction: [...lines.instruction, ...pending] };
+  }, [cpSource, cpSummary, display, landed, fanCreases]);
   const cpBounds = useMemo(() => (sheetBounds ? boundsToUser(sheetBounds) : null), [sheetBounds]);
 
   const keepInView = foldedFormKey(view);

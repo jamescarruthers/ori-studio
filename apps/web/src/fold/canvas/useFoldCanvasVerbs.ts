@@ -47,7 +47,15 @@ import {
   type FoldToolState,
 } from '../tools/foldToolState';
 import { extentClicks, nextExtentMode, type FoldExtentMode } from '../tools/precrease/precreaseExtent';
-import { nearestDirection, squashTargetToward } from '../tools/vertex/vertexStep';
+import {
+  fanGiven,
+  fanHasNoFourth,
+  fanStayerRegion,
+  nearestDirection,
+  picksFanStayer,
+  squashTargetToward,
+  steppedFourth,
+} from '../tools/vertex/vertexStep';
 import { isFoldAltLatched } from './foldAltLatch';
 import { resolveAlongPick } from './foldAlongLine';
 import { toPair, transformLine } from './foldCanvasGeometry';
@@ -55,6 +63,7 @@ import {
   resolveFoldPick,
   topSheetPointAt,
   type FoldHit,
+  type FoldPick,
   type FoldHitRadii,
   type FoldPaneId,
   type FoldPickIndex,
@@ -182,17 +191,18 @@ export interface FoldCanvasVerbBinding {
  * nothing queued; wait while that input's step is still being built (a
  * reverse fold's tip or an axiom's roots still being asked about) or is
  * landing; commit once it has landed; drop it when it was refused, the input
- * changed, or nothing can be committed.
+ * changed, or nothing can be committed — a fan none of whose fourth creases
+ * lands among them.
  */
 export function queuedCommit(
   queued: string | null,
-  preview: Pick<FoldToolPreview, 'step' | 'refused' | 'landing'>,
+  preview: Pick<FoldToolPreview, 'step' | 'refused' | 'landing'> & Partial<Pick<FoldToolPreview, 'vertex'>>,
   readOnly: boolean,
   input: string
 ): 'idle' | 'wait' | 'commit' | 'drop' {
   if (queued === null) return 'idle';
   const { step, refused, landing } = preview;
-  if (input !== queued || refused || readOnly) return 'drop';
+  if (input !== queued || refused || readOnly || fanHasNoFourth(preview.vertex?.base ?? null)) return 'drop';
   return !step || landing ? 'wait' : 'commit';
 }
 
@@ -232,11 +242,11 @@ export function compoundListed(preview: Pick<FoldToolPreview, 'reverse' | 'crimp
 function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
   const vertex = preview.vertex;
   if (!vertex) return null;
-  const { orders, order, emergent, base } = vertex;
+  const { orders, order, emergent, fourths } = vertex;
   if (orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
-  const analysis = base?.analysis;
-  const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates.length : 0;
-  return candidates > 1 && emergent !== null ? { kind: 'emergent', index: emergent, count: candidates } : null;
+  // Only the fourth creases that land, numbered among themselves.
+  const at = emergent === null ? -1 : fourths.indexOf(emergent);
+  return fourths.length > 1 && at >= 0 ? { kind: 'emergent', index: at, count: fourths.length } : null;
 }
 
 /**
@@ -404,6 +414,25 @@ export function useFoldCanvasVerbs(
       if (target) tools.setSquashTarget(target);
     };
 
+    /** A fan's paper that stays, clicked again while its fold is previewed: taken when it is another region. */
+    const restay = (pick: FoldPick) => {
+      const now = state();
+      const tool = now.tool;
+      if (!isVertexTool(tool)) return;
+      const fan = fanGiven({ tool, picks: now.picks });
+      const region = (picks: readonly FoldPick[]) => (fan ? fanStayerRegion({ tool, picks }, fan) : null);
+      const next = region([...now.picks.slice(0, -1), pick]);
+      if (next === null || next === region(now.picks)) return;
+      tools.repick(pick);
+    };
+
+    /** Step a fan's fourth crease through the ones that land, the only ones offered. */
+    const stepFourth = (delta: number) => {
+      const vertex = live.current.preview.vertex;
+      const next = steppedFourth(vertex?.fourths ?? [], vertex?.emergent ?? null, delta);
+      if (next !== null) tools.setEmergent(next);
+    };
+
     /** A vertex fold the other way round, as its direction control turns it. */
     const vertexOtherWay = () => {
       const now = state();
@@ -432,6 +461,12 @@ export function useFoldCanvasVerbs(
         const index = drawn === undefined ? shown.index : drawn;
         if (!index) return null;
         const tool = state();
+        // A fan's paper that stays, picked or picked again: the paper under
+        // the pointer, whose region the panes light — off it, nothing.
+        if (picksFanStayer(tool.tool, tool.picks.length)) {
+          const pick = resolveFoldPick(index, pane, at, radii, { snap: 'free', edges: false, free: false });
+          return { pane, at, pick: pick?.kind === 'free' && pick.sheet ? pick : null };
+        }
         const model = foldToolInput(tool);
         const step = model ? nextStep(model, tool.picks.length) : null;
         // Located: a click on the paper picks layers, so what is under the
@@ -470,6 +505,8 @@ export function useFoldCanvasVerbs(
           if (hit.pane === 'folded' && isLineTool(tool.tool)) pickDepth(hit.at);
           // A squash's spine lands toward the point clicked on the folded paper.
           else if (hit.pane === 'folded' && tool.tool === 'squash') aimSquash(hit.at);
+          // A fan's paper that stays, picked again in another region, on either pane.
+          else if (hit.pick && picksFanStayer(tool.tool, tool.picks.length)) restay(hit.pick);
           return;
         }
         if (!hit.pick) return;
@@ -563,12 +600,7 @@ export function useFoldCanvasVerbs(
 
       vertexOtherWay,
 
-      stepEmergent: (delta) => {
-        const vertex = live.current.preview.vertex;
-        const analysis = vertex?.base?.analysis;
-        const count = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates.length : 0;
-        tools.stepEmergent(delta, count, vertex?.emergent ?? 0);
-      },
+      stepEmergent: (delta) => stepFourth(delta),
 
       takeEmergent: (direction) => {
         const analysis = live.current.preview.vertex?.base?.analysis;
@@ -697,15 +729,17 @@ export function useFoldCanvasVerbs(
             tools.stepRoot(delta, choice.count);
             break;
           case 'emergent':
-            tools.stepEmergent(delta, choice.count, choice.index);
+            stepFourth(delta);
             break;
         }
         return true;
       },
 
       commit: () => {
-        const { step, refused, landing, extent } = live.current.preview;
+        const { step, refused, landing, extent, vertex } = live.current.preview;
         if (refused || live.current.session.readOnly) return false;
+        // A fan none of whose fourth creases lands: nothing to fold, or to wait for, until other paper stays.
+        if (!step && fanHasNoFourth(vertex?.base ?? null)) return false;
         // A partial precrease whose points along the line are still to be clicked has nothing to commit.
         if (extent?.state.status === 'incomplete') return false;
         // Located, its step still being built (a reverse fold's tip, an

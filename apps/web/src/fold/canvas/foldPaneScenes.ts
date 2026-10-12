@@ -202,6 +202,24 @@ export function withFoldLine(
   return { ...scene, items: [...scene.items, item] };
 }
 
+/**
+ * A scene with creases a fold will make drawn over it before it is folded —
+ * a fan's given creases, as soon as their clicks are in — each in the
+ * diagram-crease pen of the way it folds as the viewer sees it, from end to
+ * end (a crease, unlike a fold line, stops where the paper does). In the
+ * scene frame, shown at `offset`.
+ */
+export function withCreaseLines(
+  scene: PaperScene,
+  lines: readonly (readonly [Point, Point])[],
+  direction: FoldDirection,
+  offset: Point = ORIGIN
+): PaperScene {
+  if (lines.length === 0) return scene;
+  const role = diagramRole(direction);
+  return { ...scene, items: [...scene.items, ...lines.map(([a, b]) => lineItem(role, a, b, undefined, offset))] };
+}
+
 /** Which creases a state's crease pattern shows, and which of them are the instruction. */
 export interface FoldPaneCreaseOptions {
   display: FoldPaneDisplay;

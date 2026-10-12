@@ -798,7 +798,6 @@
     "vertex": {
       "direction": "Direction",
       "emergent": "Fourth crease",
-      "emergentDoesNotFit": "This fourth crease does not fit here: step to another.",
       "fix": {
         "emergent": "Use the fourth crease that fits",
         "emergentNumber": "Use fourth crease {{number}}",
@@ -808,6 +807,9 @@
         "resetTarget": "Put the spine onto the hinge",
         "usePrecrease": "Use the precrease"
       },
+      "fourthNone": "None",
+      "fourthsFit_one": "One fourth crease fits with this paper staying put.",
+      "fourthsFit_other": "{{count}} fourth creases fit with this paper staying put.",
       "help": {
         "petal": "Lift a flap’s lower point along a precrease H while its sides fold in along two kite precreases.",
         "rabbitEar": "Fold a triangle’s corners in along their bisectors, so a point stands up.",
@@ -827,7 +829,10 @@
       "layersTop_other": "Top {{count}} of {{total}}",
       "mountain": "Mountain",
       "mountainTitle": "Mountain: the paper turns away from you",
-      "noEmergentFits": "No fourth crease fits these layers here.",
+      "noFourth": "No fourth crease fits with this paper staying put: click other paper to stay.",
+      "noFourthAnywhere": "No fourth crease fits these creases, whichever paper stays: press Esc and pick again.",
+      "noFourthAnywhereTouch": "No fourth crease fits these creases, whichever paper stays: tap Cancel and pick again.",
+      "noFourthTouch": "No fourth crease fits with this paper staying put: tap other paper to stay.",
       "note": {
         "freePoint": "Hold {{modifier}} to put a point anywhere.",
         "rabbitEar": "The creases meet at the triangle’s incenter: one to each corner, folded the way you choose, and a fourth the ear rises along, folded the other way.",
@@ -914,7 +919,8 @@
         "earFirstCorner": "Click the triangle’s first corner.",
         "earSecondCorner": "Click its second corner.",
         "earThirdCorner": "Click its third corner.",
-        "fanChoose": "Choose the fourth crease and the layers.",
+        "fanChooseStayer": "Choose the fourth crease and the layers. Click other paper to change what stays put.",
+        "fanChooseTouch": "Choose the fourth crease and the layers. Tap other paper to change what stays put.",
         "finish": "Choose the options, then press Enter.",
         "finishTouch": "Choose the options, then tap {{action}}.",
         "fixOrPickAgain": "Click a fix below, or press Esc and pick again.",

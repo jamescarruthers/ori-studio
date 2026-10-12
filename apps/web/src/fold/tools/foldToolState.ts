@@ -248,6 +248,12 @@ export interface FoldTools {
   selectLineMode(mode: FoldLineModeId): void;
   /** A click: the pick it made. Whether it was taken (a click past the last is not). */
   pick(pick: FoldPick): boolean;
+  /**
+   * Another answer for the last click, every choice made of what it led to
+   * let go: a fan's paper that stays, picked again while its fold is
+   * previewed — its fourth creases are listed anew.
+   */
+  repick(pick: FoldPick): void;
   /** Let go of the clicks and every choice made since: Escape's rung, and what a commit leaves. */
   clear(): void;
   /**
@@ -301,8 +307,6 @@ export interface FoldTools {
   setSquashTarget(target: FoldModelDirection | null): void;
   /** Take a fan's emergent candidate by index; null for the first that lands. */
   setEmergent(emergent: number | null): void;
-  /** Step through a fan's emergent candidates, of `count`, from the one `from` taken now. */
-  stepEmergent(delta: number, count: number, from: number): void;
   /** How many layers at the fan's center are cut; null for every one. */
   setFanLayers(layers: number | null): void;
   /** Step through a closed sink's pockets, of `count`: each stacks anew. */
@@ -399,6 +403,19 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       if (out.ignored) return false;
       store.setState({ ...state, picks: [...state.picks, pick], override: null }, true);
       return true;
+    },
+
+    repick(pick) {
+      set((state) =>
+        state.picks.length === 0
+          ? state
+          : {
+              ...state,
+              picks: [...state.picks.slice(0, -1), pick],
+              override: null,
+              compound: { ...state.compound, emergent: null, order: 0 },
+            }
+      );
     },
 
     clear() {
@@ -559,12 +576,6 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
           ? state
           : { ...state, compound: { ...state.compound, emergent, order: 0 } }
       );
-    },
-
-    stepEmergent(delta, count, from) {
-      if (count <= 1) return;
-      const emergent = (((from + delta) % count) + count) % count;
-      set((state) => ({ ...state, compound: { ...state.compound, emergent, order: 0 } }));
     },
 
     setFanLayers(fanLayers) {

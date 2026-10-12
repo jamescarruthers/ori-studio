@@ -798,7 +798,6 @@
     "vertex": {
       "direction": "Richtung",
       "emergent": "Vierte Faltlinie",
-      "emergentDoesNotFit": "Diese vierte Faltlinie passt hier nicht: blättere zu einer anderen.",
       "fix": {
         "emergent": "Die vierte Faltlinie nehmen, die passt",
         "emergentNumber": "Vierte Faltlinie {{number}} nehmen",
@@ -808,6 +807,9 @@
         "resetTarget": "Den Rücken auf das Scharnier legen",
         "usePrecrease": "Die Vorfaltung nehmen"
       },
+      "fourthNone": "Keine",
+      "fourthsFit_one": "Eine vierte Faltlinie passt, wenn dieses Papier liegen bleibt.",
+      "fourthsFit_other": "{{count}} vierte Faltlinien passen, wenn dieses Papier liegen bleibt.",
       "help": {
         "petal": "Die untere Spitze einer Lasche entlang einer Vorfaltung H anheben, während sich ihre Seiten entlang zweier Drachen-Vorfaltungen einfalten.",
         "rabbitEar": "Die Ecken eines Dreiecks entlang ihrer Winkelhalbierenden einfalten, sodass sich eine Spitze aufstellt.",
@@ -827,7 +829,10 @@
       "layersTop_other": "Obere {{count}} von {{total}}",
       "mountain": "Berg",
       "mountainTitle": "Berg: das Papier dreht sich von dir weg",
-      "noEmergentFits": "Keine vierte Faltlinie passt hier zu diesen Lagen.",
+      "noFourth": "Keine vierte Faltlinie passt, wenn dieses Papier liegen bleibt: Klicke auf anderes Papier, das liegen bleiben soll.",
+      "noFourthAnywhere": "Keine vierte Faltlinie passt zu diesen Faltlinien, welches Papier auch liegen bleibt: Drücke Esc und wähle neu.",
+      "noFourthAnywhereTouch": "Keine vierte Faltlinie passt zu diesen Faltlinien, welches Papier auch liegen bleibt: Tippe auf Abbrechen und wähle neu.",
+      "noFourthTouch": "Keine vierte Faltlinie passt, wenn dieses Papier liegen bleibt: Tippe auf anderes Papier, das liegen bleiben soll.",
       "note": {
         "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt beliebig zu setzen.",
         "rabbitEar": "Die Faltlinien treffen sich im Inkreismittelpunkt des Dreiecks: eine zu jeder Ecke, in die gewählte Richtung gefaltet, und eine vierte, an der sich das Ohr aufrichtet, andersherum gefaltet.",
@@ -914,7 +919,8 @@
         "earFirstCorner": "Klicke auf die erste Ecke des Dreiecks.",
         "earSecondCorner": "Klicke auf seine zweite Ecke.",
         "earThirdCorner": "Klicke auf seine dritte Ecke.",
-        "fanChoose": "Wähle die vierte Faltlinie und die Lagen.",
+        "fanChooseStayer": "Wähle die vierte Faltlinie und die Lagen. Klicke auf anderes Papier, um zu ändern, was liegen bleibt.",
+        "fanChooseTouch": "Wähle die vierte Faltlinie und die Lagen. Tippe auf anderes Papier, um zu ändern, was liegen bleibt.",
         "finish": "Wähle die Optionen, dann drücke die Eingabetaste.",
         "finishTouch": "Wähle die Optionen, dann tippe auf {{action}}.",
         "fixOrPickAgain": "Klicke unten auf eine Lösung, oder drücke Esc und wähle neu.",
