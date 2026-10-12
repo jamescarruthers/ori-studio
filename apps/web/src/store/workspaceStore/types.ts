@@ -62,6 +62,7 @@ import type {
   SentReferencesEntry,
   DiagramDocument,
   DiagramHanStyle,
+  DiagramPageArrangement,
   DiagramPageSetup,
   KnownDiagramAnnotation,
   DiagramStyle,
@@ -2346,6 +2347,30 @@ export interface DiagramSliceActions {
    * and Reset All. One undo step. Whether it changed.
    */
   resetDiagramPlaces: (pageIndex: number | null) => boolean;
+  /**
+   * Take in the arrangements a layout of `ofDocument` packed, by the step each
+   * flow page starts with (`implementation-plans/diagram-flow-packing.md`,
+   * Decision 5; `adoptPageArrangements`): only while the diagram is still that
+   * very document, and never a read-only one. A page that holds an
+   * arrangement keeps it, one packed for another structure is refused, and a
+   * stored one no page holds goes. Not an edit: no undo entry, the undo
+   * history left as it is, and the project no dirtier than it was — they are
+   * written with the next save. Whether it changed.
+   */
+  adoptDiagramPageArrangements: (
+    arrangements: Readonly<Record<string, DiagramPageArrangement>>,
+    ofDocument: DiagramDocument
+  ) => boolean;
+  /**
+   * Re-pack Page: drop the arrangement stored for flow page `pageIndex` (from
+   * 0, as the layout numbers them), a newer build's too, so the layout packs
+   * it afresh (`repackPages`). One undo step, which Undo takes back with the
+   * old arrangement; frames placed by hand on it go home, with the reflow
+   * notice. Whether it changed: false on a grid and where none is stored.
+   */
+  repackDiagramPage: (pageIndex: number) => boolean;
+  /** Re-pack All Pages: {@link repackDiagramPage} for every page at once, one undo step. */
+  repackDiagramPages: () => boolean;
 }
 
 export type DiagramSlice = DiagramSliceState & DiagramSliceActions;

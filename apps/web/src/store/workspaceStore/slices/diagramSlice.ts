@@ -60,6 +60,7 @@ import {
 } from '../diagramZoom';
 import { lacksPaperFaces } from '../../../diagram/capture/stepPaperFaces';
 import { resetStepPlace, resetStepPlaces, setStepPlace } from '../../../diagram/document/stepPlace';
+import { adoptPageArrangements, dropStalePageArrangements, repackPages } from '../../../diagram/pages/pageArrangements';
 import { retainPageCounts, setPageSteps } from '../../../diagram/pages/pageCounts';
 import { flushPlacementNudge } from '../../../diagram/pages/placementGestures';
 import { cellSlots, settlePlaces } from '../../../diagram/pages/stepPlaces';
@@ -170,11 +171,15 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     // to it, in this edit's undo step (Decision 1A): one rule, here, whatever
     // the edit was, so no verb can forget it.
     const { document: settled, settled: count } = settlePlaces(base, counted);
+    // A page arrangement packed for a structure no page has any more goes in
+    // the same undo step (`diagram-flow-packing.md`): the layout packs that
+    // page afresh, and the file never carries one no page holds.
+    const held = dropStalePageArrangements(settled);
     // An asset nothing refers to any more goes as the edit lands. Each undo
     // snapshot keeps its own assets table, so undo still has the picture a
     // replace took away; and with the current diagram no longer holding it,
     // the history byte cap (`trimDiagramHistory`) sees what only history keeps.
-    const next = withReferencedAssets(settled);
+    const next = withReferencedAssets(held);
     if (!extend) openSession = null;
     const history = extend
       ? state.diagramHistory
@@ -758,5 +763,21 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
         const page = cellSlots(document).pages[pageIndex];
         return page ? resetStepPlaces(document, new Set(page)) : document;
       }) !== null,
+
+    adoptDiagramPageArrangements: (arrangements, ofDocument) => {
+      const { diagram, diagramReadOnly } = get();
+      // Packed from a diagram that has changed since, or one that is shown and never edited: nothing to take in.
+      if (diagramReadOnly || diagram === null || diagram !== ofDocument) return false;
+      const next = adoptPageArrangements(diagram, arrangements);
+      if (next === diagram) return false;
+      // Not an edit: no undo entry, the history as it was, and the project no dirtier than it was.
+      set({ diagram: next });
+      return true;
+    },
+
+    repackDiagramPage: (pageIndex) =>
+      commit('Re-pack page', (document) => repackPages(document, pageIndex)) !== null,
+
+    repackDiagramPages: () => commit('Re-pack all pages', (document) => repackPages(document, null)) !== null,
   };
 };

@@ -114,6 +114,51 @@ prototype does; only real steps are kept):
 - **Turn glyphs** stand in their gutter, on the bend when the turn crosses
   bands, or between a bend step and its neighbour; enlarge arrows as today.
 
+## As built
+
+Phase 1 (model and file, 2026-10-12):
+
+- `DiagramPageSetup.flowBands` (`DiagramFlowBands`), `flowPreferBands`,
+  `flowBendSteps`, `flowNesting`, `flowSteadiness`; defaults in
+  `DEFAULT_FLOW_PACKING`, ranges `FLOW_BANDS_RANGE` and `FLOW_WEIGHT_RANGE`
+  (in the import-free `document/pageRanges.ts`). Each is written only when
+  not its default; a count not whole is rounded, a number past its range or a
+  band word other than `auto` is a newer build's (carried in `newer.page`).
+- `DiagramDocument.pageArrangements` (`DiagramPageArrangement`,
+  `DiagramArrangedStep`); values, reading and writing in
+  `document/pageArrangements.ts` (`roundPageArrangement`,
+  `samePageArrangement(s)`, `readPageArrangements`, `writePageArrangements`).
+  Rounded when adopted, read as written. An arrangement with any part that
+  does not read is dropped whole (a page cannot be held with a step it has
+  no place for); one with a field, a scale measure or a band past 4 this
+  build has no name for is carried whole in `newer.pageArrangements`, wins
+  over this build's on write, and goes only with a re-pack of its page.
+  Written only in the flow.
+- `pages/pageSignature.ts`: `pageSignature(input, pageIndex)`, `pageSignatures`,
+  `titleShown` (the layout's predicate too), `PACKING_VERSION = 'pack-1'`.
+  Readings of Decision 2 made here: the turns before a page's first step are
+  its own; the turns after the diagram's last step count on the last page; a
+  turn's kind does not count (every turn keeps the same gutter), nor does a
+  newer build's turn (the layout does not draw it); "title shown" is the tab
+  as printed (asked for and a title there); a page's own count equal to the
+  default is the same capacity. Enlarge arrows are not in the signature.
+- `stepPlaces.ts`: a flow step keeps its cell exactly while its page keeps its
+  signature and its stored arrangement (`CellSlots.signatures`, `.stored`).
+  So a flow page's frames now go home on a paper, orientation, margin, title
+  tab, page numbers, side or packing change, and when the page is renumbered;
+  grid pages keep the old rule.
+- `pages/pageArrangements.ts`: `heldPageArrangements`,
+  `dropStalePageArrangements` (run in the store's `commit`, after
+  `settlePlaces`, so an edit that re-cuts a page drops its arrangement in the
+  same undo step and the file never carries one no page holds),
+  `adoptPageArrangements` (held means held; an offered one must match the
+  page's signature and place every step; stand-ins are left out; stale ones
+  go) and `repackPages`.
+- Store: `adoptDiagramPageArrangements(arrangements, ofDocument)` (same
+  document only, not read-only, no dirty, no undo entry, history untouched),
+  `repackDiagramPage(pageIndex)` and `repackDiagramPages()` (undoable;
+  `settlePlaces` sends the page's frames home with the reflow notice).
+
 ## Affected Areas
 
 - `apps/web/src/diagram/pages/`: a new pure `flowPacking.ts` (+ tests);
