@@ -34,7 +34,7 @@ import type { PaginatedStep, PlannedPage } from './pagePlan';
  * The packing's version, part of every signature: a build that packs another
  * way changes it, and every page stored by the old way is packed afresh.
  * `pack-2` (the review fixes): boxes grown to hold their pictures as they
- * print.
+ * print, and no step in a bend with only stand-ins after it.
  */
 export const PACKING_VERSION = 'pack-2';
 

@@ -9,13 +9,14 @@
  * last page's stand-ins in the gitignored
  * `artifacts/layout-review/proto2/template.html`), which is the visual
  * reference: at the same inputs this packs the same plan at the same scale and
- * puts every box where the prototype does. Four things the prototype never
+ * puts every box where the prototype does. Five things the prototype never
  * met are decided here: a fixed even band count on a left page that hands over
  * at its spine takes the odd count either side that packs larger (Decision 7);
  * a fixed count past the page's steps is held to them; Prefer three bands
- * weighs only in Auto; and a page no plan fits even at the least scale is
- * drawn at that scale, its steps shared evenly over whichever band count
- * overflows least, and says so (`fits`).
+ * weighs only in Auto; a step stands in a bend only with a real step after
+ * it, never before only a short last page's stand-ins; and a page no plan
+ * fits even at the least scale is drawn with its steps shared evenly over
+ * whichever band count overflows least, and says so (`fits`).
  *
  * The search is exactly the prototype's, made fast without changing its
  * answer: a caption is set once per step and measure (its measure is the
@@ -495,7 +496,9 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
    * split of the rest into bands, the first band shortest first, and so on.
    * `admit` may pass over a choice of bends whole. A band too wide at any
    * scale passes over every split that starts so, and every split that gives
-   * it more steps: a step more only widens it.
+   * it more steps: a step more only widens it. A step stands in a bend only
+   * with a real step after it, which the prototype never asked (its short
+   * last page could seat its last step in a bend before only stand-ins).
    */
   const eachPlan = (B: number, admit: () => boolean, visit: () => void) => {
     bandCount = B;
@@ -506,6 +509,9 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
       const most = last ? left : left - (B - 1 - part);
       for (let count = last ? left : 1; count <= most; count += 1) {
         const after = !last && bends[part] ? from + count : -1;
+        // A step in a bend has a real step after it: on a short last page, never its last step nor a stand-in,
+        // which would leave the diagram's last step hanging at the page's edge, its band turning into nothing.
+        if (after >= real - 1) break;
         if (bandFloor(from, from + count, before, after) > area.w + BOUND_SLACK) {
           plansPruned += 1;
           break;

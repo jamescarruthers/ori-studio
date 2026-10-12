@@ -114,7 +114,11 @@ describe('pages as they printed before placement came', () => {
     // Review fixes (`diagram-flow-packing.md`, "Review fixes"): a flow page keeps
     // the enlarge arrow's gutter before every enlarged step after another,
     // printing or not, so the enlarged steps' page 1 packs with a gutter before
-    // its Size step and its step waiting for a picture.
+    // its Size step and its step waiting for a picture. A step stands in a
+    // bend only with a real step after it: the last pages of "flow from the
+    // right" and "seven steps a page" no longer end on a step hanging in a
+    // bend before stand-ins; their last step starts the next band, the lane
+    // turning at the page's edge into it (rasterised and checked by eye).
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -131,7 +135,7 @@ describe('pages as they printed before placement came', () => {
         "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "7567279ba8e45613 c52f3443c9cecbdb 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 1": "3adc839b90b06e69 d18cb08c628e142e 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 2": "f5faf59273415481 695bf878af508a8f 4f53cda18c2baa0c",
-        "flow from the right, across spreads, rows read upward · page 3": "4562bcbee00c20f5 8fbbd3ad574de69a 4f53cda18c2baa0c",
+        "flow from the right, across spreads, rows read upward · page 3": "f6ff5c4a93050a59 5ba008c7c43a6712 4f53cda18c2baa0c",
         "flow landscape, an odd row count · page 1": "81216da6f2c3d926 10954478bcdf7dcd 4f53cda18c2baa0c",
         "flow landscape, an odd row count · page 2": "018335b79929e7db ddb51c3f178d5e25 4f53cda18c2baa0c",
         "flow, a last page with its own count · page 1": "6c05bc9fcdccb4df 343cb88846799ef4 4f53cda18c2baa0c",
@@ -145,7 +149,7 @@ describe('pages as they printed before placement came', () => {
         "flow, pages with their own counts · page 5": "8a95a046f153d6ed 2873d674b446dad6 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "9c3a128e37951971 95d3863f46483042 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "808c33db5ef46ea1 08c187cc2e2fc8a0 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "01ac4786e9350d57 cd31a506449d1835 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "e7adcfca4f353a0a 86d43639bfc94328 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 1": "762034dc73a12f50 762034dc73a12f50 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 2": "8254deff8fc82487 8254deff8fc82487 4f53cda18c2baa0c",
         "grid, enlarged steps at a Size of 2 and of 6 · page 1": "c9b60bfa75923571 c9b60bfa75923571 f2a6c074db74a98c",
@@ -172,7 +176,8 @@ describe('homes as the layout computes them', () => {
     // `heldPages.test.ts` shows no caption or picture edit moves a home, on any
     // fixture, once its pages are packed and adopted.
     // Review fixes: the enlarged steps' page 1 keeps an arrow's gutter before
-    // each enlarged step after another (a fresh pack; nothing held moved).
+    // each enlarged step after another, and two short last pages put no step
+    // in a bend before stand-ins (fresh packs; nothing held moved).
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         preparedPages(document, FIXTURE_FONTS, subsetter).layout.pages.map((page, index) => [
@@ -198,7 +203,7 @@ describe('homes as the layout computes them', () => {
         "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "f08f2a468e25e577",
         "flow from the right, across spreads, rows read upward · page 1": "4f0bca842b52a7ef",
         "flow from the right, across spreads, rows read upward · page 2": "08df522a3b034889",
-        "flow from the right, across spreads, rows read upward · page 3": "906f9534fc4ba412",
+        "flow from the right, across spreads, rows read upward · page 3": "3afe57aa6f06d44b",
         "flow landscape, an odd row count · page 1": "03088ac492d37755",
         "flow landscape, an odd row count · page 2": "aefd7a63f15d62e0",
         "flow, a last page with its own count · page 1": "84fc2444cdad79d5",
@@ -212,7 +217,7 @@ describe('homes as the layout computes them', () => {
         "flow, pages with their own counts · page 5": "e7bb148b952fe126",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "818f22dba22bd0b6",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "93808b3c0d3a085a",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "a14008e8ad11a722",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "63e6925e3ad87871",
         "grid, a page break, turns and an upload · page 1": "b2981a60e29ba484",
         "grid, a page break, turns and an upload · page 2": "2866f10b51c574cb",
         "grid, enlarged steps at a Size of 2 and of 6 · page 1": "7e2d6a88628ee042",

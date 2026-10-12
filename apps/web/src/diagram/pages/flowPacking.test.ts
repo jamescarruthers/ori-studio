@@ -174,6 +174,16 @@ function bestScale(items: ProtoStep[], plan: ProtoPlan, kMax: number) {
   }
   return lo;
 }
+/** A plan seating a step in a bend with no real step after it: a short last page's last step, or a stand-in. */
+function seatBeforeNoStep(items: ProtoStep[], plan: ProtoPlan): boolean {
+  let i = 0;
+  return plan.bands.some((count, b) => {
+    i += count;
+    if (!(b < plan.seats.length && plan.seats[b])) return false;
+    const seat = i++;
+    return items[seat + 1]?.phantom === true || items[seat]!.phantom === true;
+  });
+}
 function packPage(items: ProtoStep[], opts: ProtoOpts, kPrev: number | null, oddOnly: boolean) {
   const n = items.length;
   const bandChoices = opts.bands === 'auto' ? (n <= 4 ? [1, 2, 3] : [2, 3, 4, 5]) : [Number(opts.bands)];
@@ -193,6 +203,8 @@ function packPage(items: ProtoStep[], opts: ProtoOpts, kPrev: number | null, odd
       if (n - s < B) continue;
       for (const bands of compositions(n - s, B)) {
         const plan = { bands, seats };
+        // Decided in the port, not the prototype: a step stands in a bend only with a real step after it.
+        if (seatBeforeNoStep(items, plan)) continue;
         const cap = kPrev ? Math.min(opts.kMax, kPrev * (1 + 0.6 * (1 - opts.steady))) : opts.kMax;
         const k = bestScale(items, plan, cap);
         if (!k) continue;
@@ -620,14 +632,35 @@ describe('packFlowPage: a short last page', () => {
     const short = pack(own, { layoutCount: 10 });
     expect(short.steps.map((step) => step.id)).toEqual(['crane-27', 'crane-28']);
     expect(short.summary.standIns).toBe(8);
-    // As if its stand-ins were steps of their own: cyclic copies of its steps, with no turns before.
+    // As if its stand-ins were steps of their own: cyclic copies of its steps, with no turns before — but with
+    // no step in a bend, since one stands there only with a real step after it, and here only stand-ins follow
+    // the first step.
     const full = pack(
       Array.from({ length: 10 }, (_, i) => ({ ...own[i % own.length]!, id: `copy-${i}`, turnsBefore: i < own.length && own[i]!.turnsBefore })),
-      { layoutCount: 10 }
+      { layoutCount: 10, settings: { flowBendSteps: false } }
     );
     expect(short.k).toBe(full.k);
     expect(short.plan).toEqual(full.plan);
     expect(short.steps.map((step) => step.box)).toEqual(full.steps.slice(0, 2).map((step) => step.box));
+  });
+
+  it('never stands a step in a bend with no real step after it: the page’s last step, or a stand-in', () => {
+    const crane = craneSteps(setter);
+    let seated = 0;
+    for (let real = 2; real <= 8; real += 1) {
+      for (const layoutCount of [7, 9, 10, 13]) {
+        for (let start = 0; start + real <= crane.length; start += 3) {
+          for (const up of [false, true]) {
+            const page = pack(crane.slice(start, start + real), { layoutCount: Math.max(real + 1, layoutCount), up });
+            const label = `${real} of ${layoutCount} from ${start}${up ? ', read up' : ''}`;
+            expect(page.steps.at(-1)!.bend, label).toBe(false);
+            seated += page.steps.filter((step) => step.bend).length;
+          }
+        }
+      }
+    }
+    // Steps still stand in bends on short pages, with a step after them.
+    expect(seated).toBeGreaterThan(0);
   });
 
   it('keeps a full page’s spacing on the crane’s last page', () => {
