@@ -51,10 +51,11 @@ function fiftySteps(page: Partial<DiagramPageSetup> = {}): DiagramDocument {
 
 /**
  * The slowest a layout may take here: about 3× the median measured locally
- * (18–24 ms on an M-series Mac, Node 22, 11 October 2026), for a loaded CI
- * runner. A search like #443's fails it by two orders of magnitude.
+ * as the whole web suite runs around it (29–37 ms on an M-series Mac, Node
+ * 22, 11 October 2026; 18–24 ms alone), for a CI runner as loaded and slower.
+ * A search like #443's fails it by forty times.
  */
-const BUDGET_MS = 75;
+const BUDGET_MS = 100;
 
 /** The median time, in ms, of laying out a fresh copy of the diagram, after two layouts to warm the code. */
 function medianLayoutMs(make: () => DiagramDocument): number {

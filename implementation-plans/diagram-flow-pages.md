@@ -281,11 +281,22 @@ As built (Phase 2, `diagramPageLayout.ts`, `flowLane.ts`):
 - [x] Explicit flow cell rows; packed mode switches gone.
 - [x] Fit each per cell; explicit Size held to its room; caption gap.
 - [x] Lazy, cached footprints.
-- [ ] Timeouts reverted, assertions restored, new tests and goldens.
-  (Done: page goldens re-recorded, layout tests for the plan's rows, spread,
-  step-down, odd rows, own counts, caption gap, band end and homes, and a
-  footprint laziness test. Left: #443's timeouts and loosened assertions,
-  the homes golden, the 50-step time budget, grid goldens at Size 2 and 6.)
+- [x] Timeouts reverted, assertions restored, new tests and goldens.
+  Every suite runs at vitest's 5 s default; the slowest diagram test takes
+  under 1.5 s with the whole web suite running. The assertions are #436's
+  again, adapted only where the plan moves a step: a left page that hands
+  over has odd rows (6 a page on its side is 3 rows of 2; four steps after
+  a break are 2 · 1 · 1, no empty cells), and the band's last join on the
+  diagram's last page is G1, not C1, its handle held to the run to its end.
+  New: 7 and 12 a page from either side, per-page counts end to end, a
+  caption that grows (no other cell, number or text x moves), a 50-step
+  time budget (100 ms; 18–24 ms measured alone, 29–37 ms under the suite),
+  the homes golden, and a grid's enlarged steps at a Size of 2 and of 6,
+  #436's to the byte. Found while writing the caption test: a step's text
+  starts below its picture as drawn, and #436's Fit each lets a caption
+  that grows lower its run's scale (6 of 30 edits over the fixtures), so a
+  neighbour in that run starts its text a little higher; its cell, number
+  and text x never move.
 
 ### Phase 3: UI and review fixes
 - [ ] Page pane per-page count.
