@@ -13,7 +13,9 @@
 //!    reverse fold scores one line (`Macro`, [`prepare`]); a crimp two, the
 //!    second over the first's pieces (`crimp`); a squash one line
 //!    per layer (`pieces::score_cuts`); a rabbit ear or a swivel a fan of
-//!    rays from a point inside the paper ([`fan`]); a petal fold nothing.
+//!    rays from a point inside the paper ([`fan`]); a petal fold nothing
+//!    over precreases, or its kite creases and H where they are missing
+//!    (`pieces::score_cuts`, [`petal`]).
 //!    From here on the steps are one implementation for all of them
 //!    (`pieces::prepare_pieces`).
 //! 3. **Hinge diff.** A crease folds where its two faces' new orientations

@@ -61,7 +61,7 @@ use std::collections::HashMap;
 
 use oristudio_fold::{
     ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, PetalAnalysis,
-    PetalFold, RabbitEar, Refused, Squash, SquashAnalysis, State, StepSummary, Swivel,
+    PetalFold, PetalHinge, RabbitEar, Refused, Squash, SquashAnalysis, State, StepSummary, Swivel,
     VertexChoice, VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
 };
 use serde::{Deserialize, Serialize};
@@ -180,7 +180,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
                 .and_then(|c| parent.crease_line(c.id))
                 .ok_or(BridgeRefusal::CreaseNotFound { point: op.crease })?;
             EngineOp::Petal(PetalFold {
-                line,
+                hinge: PetalHinge::Crease { line },
                 petal: op.petal,
                 direction: op.direction,
             })

@@ -277,6 +277,24 @@ pub fn folded_segments(state: &State) -> BTreeSet<Segment> {
     )
 }
 
+/// A state's flat creases (precreases, and folds unfolded since) on the
+/// sheet, with the letter each remembers, merged.
+pub fn flat_segments(state: &State) -> BTreeSet<Segment> {
+    merged(
+        state
+            .creases()
+            .iter()
+            .filter_map(|c| {
+                let CreaseKind::Flat(letter) = c.kind else {
+                    return None;
+                };
+                let [a, b] = c.vertices.map(|v| state.vertices()[v.0 as usize]);
+                Some((letter, a, b))
+            })
+            .collect(),
+    )
+}
+
 /// A Beloch frame's folded creases on the paper, merged.
 pub fn frame_segments(frame: &beloch::Frame) -> BTreeSet<Segment> {
     merged(

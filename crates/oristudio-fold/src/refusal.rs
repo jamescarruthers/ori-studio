@@ -11,7 +11,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::complete::BudgetLimit;
-use crate::compound::petal::{NoPetal, PetalCrease};
+use crate::compound::petal::{NoPetal, NoPetalDetail, PetalCrease};
 use crate::compound::reverse::{NoOpening, ReverseKind};
 use crate::compound::sink::SinkKind;
 use crate::compound::squash::NoFlap;
@@ -245,15 +245,26 @@ pub enum FoldRefusal {
     #[error("the spine cannot land there: outside the wedge between its hinge and itself")]
     SquashTargetOutside,
     /// A petal fold's line or kite crease crosses `faces` instead of
-    /// bounding them: it must be precreased first.
+    /// bounding them: it must be precreased first. H named by a crease needs
+    /// both there; H named by two points scores what is missing, except H
+    /// across the second layer's paper outside a kite crease, which folds in
+    /// below H (`missing: line`).
     #[error("the petal fold's {missing:?} is not precreased across faces {faces:?}")]
     PetalNotPrecreased {
         faces: Vec<FaceId>,
         missing: PetalCrease,
     },
-    /// The top layer below the petal fold's line, `faces`, is no petal's.
-    #[error("faces {faces:?} make no flap to petal fold ({cause:?})")]
-    PetalNoFlap { faces: Vec<FaceId>, cause: NoPetal },
+    /// The top layer below the petal fold's line, `faces`, is no petal's;
+    /// `detail` says more where the cause's name does not: the line misses
+    /// the flap altogether, or the flap reaches past the kite creases'
+    /// corner (`faces` then the paper beyond it).
+    #[error("faces {faces:?} make no flap to petal fold ({cause:?}, {detail:?})")]
+    PetalNoFlap {
+        faces: Vec<FaceId>,
+        cause: NoPetal,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        detail: Option<NoPetalDetail>,
+    },
     /// A rabbit ear's or a swivel's center is not inside layer `faces` by
     /// half the minimum feature: on a crease, or off the layer.
     #[error("the fan's center is not inside faces {faces:?}")]

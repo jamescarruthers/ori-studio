@@ -47,8 +47,8 @@ pub(crate) struct Scoring {
 }
 
 impl Scoring {
-    /// The parent's paper as it is: nothing scored (a petal fold, whose
-    /// creases are all precreased).
+    /// The parent's paper as it is: nothing scored (a petal fold over its
+    /// precreases).
     pub(crate) fn unscored(state: &State) -> Scoring {
         let parts = state.parts();
         Scoring {
@@ -222,6 +222,18 @@ pub(crate) fn score_cuts(state: &State, cuts: &[Cut]) -> Result<Scoring, Refused
         parts.creases = scored.creases;
         parts.faces = scored.faces.into_iter().map(|s| s.face).collect();
         topology = Topology::build(&parts)?;
+    }
+    // Every piece names the parent's face as its own, numbered afresh in
+    // order from the parent's next id: a piece one cut made and a later one
+    // split again never was (the crimp's rule). Pieces cut once keep theirs.
+    let next_face = state.faces().iter().map(|f| f.id.0 + 1).max().unwrap_or(0);
+    let mut fresh = next_face;
+    for (face, &o) in parts.faces.iter_mut().zip(&old) {
+        if face.id.0 >= next_face {
+            face.id = FaceId(fresh);
+            face.parent = Some(state.faces()[o].id);
+            fresh += 1;
+        }
     }
     Ok(Scoring {
         vertices: parts.vertices,

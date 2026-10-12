@@ -37,7 +37,7 @@
 //!   reverse fold with per-flap openings, kind feasibility, refusals with
 //!   fixes and stored choices; the vertex folds (research §5.3) —
 //!   [`State::squash`] with per-layer creases, [`State::petal_fold`] over
-//!   precreases, [`State::rabbit_ear`] and [`State::swivel`] with their
+//!   precreases or creasing its own, [`State::rabbit_ear`] and [`State::swivel`] with their
 //!   fourth crease rising as the ridge, the odd letter out — each a
 //!   direction-seeded completion with its preconditions refused up front; [`State::sink`] and [`State::unsink`], the open and closed sink
 //!   of a closed point and the unsink back; and the [`StepMotion`] a
@@ -118,7 +118,9 @@ pub use compound::fan::FanAnalysis;
 pub use compound::motion::{
     Carrier, LegName, MotionGroup, MotionKind, MotionLeg, Stacking, StepMotion,
 };
-pub use compound::petal::{NoPetal, PetalAnalysis, PetalCrease, PetalFold};
+pub use compound::petal::{
+    NoPetal, NoPetalDetail, PetalAnalysis, PetalCrease, PetalFold, PetalHinge,
+};
 pub use compound::rabbit::{RabbitEar, incenter};
 pub use compound::reverse::{
     NoOpening, Opening, ReverseAnalysis, ReverseChoice, ReverseChoices, ReverseFold, ReverseFolded,
