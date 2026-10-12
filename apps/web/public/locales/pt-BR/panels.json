@@ -1126,6 +1126,23 @@
       "pageList": "Passos na página {{number}}",
       "parts": "Partes do passo {{number}}"
     },
+    "packing": {
+      "bands": "Faixas",
+      "bandsAuto": "Auto",
+      "bandsHelp": "Quantas vezes o trajeto atravessa uma página. Auto testa cada número e fica com o que imprime os passos maiores.",
+      "bendSteps": "Passos nas curvas",
+      "bendStepsHelp": "Deixa um passo ficar na borda da página, onde o trajeto vira de uma faixa para a próxima, quando isso preenche melhor a página.",
+      "nesting": "Encaixe",
+      "nestingHelp": "Quanto os passos de uma faixa sobem e descem alternadamente, para que um passo alto e um baixo ao lado se encaixem.",
+      "notPackedHint": "As páginas ainda estão sendo arranjadas",
+      "preferBands": "Preferir três faixas",
+      "preferBandsHelp": "Com que força o Auto fica com três faixas quando outro número imprimiria os passos um pouco maiores.",
+      "repackAll": "Rearranjar todas as páginas",
+      "repackPage": "Rearranjar página",
+      "steadiness": "Constância da escala",
+      "steadinessHelp": "Quanto cada página mantém o tamanho em que a página anterior imprime seus passos. Mais alto mantém os passos do mesmo tamanho de página em página; mais baixo deixa cada página se preencher sozinha.",
+      "title": "Arranjo"
+    },
     "pagePane": {
       "columns": "Colunas",
       "exportStyle": "Estilo de exportação das Configurações",

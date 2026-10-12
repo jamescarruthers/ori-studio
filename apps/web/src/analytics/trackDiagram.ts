@@ -37,6 +37,8 @@ import type {
   DiagramPictureKind,
   DiagramPictureSide,
   DiagramPageSetting,
+  DiagramRepackScope,
+  DiagramRepackVia,
   DiagramPictureUploadOutcome,
   DiagramPoseAction,
   DiagramPulledInto,
@@ -388,4 +390,9 @@ export function trackDiagramPlacementReset(part: 'frame' | 'number' | 'picture' 
 }
 export function trackDiagramPlacementsReflowed(count: number): void {
   track(ANALYTICS_EVENTS.diagramPlacementsReflowed, { count_bucket: bucketCount(count, COUNT_BUCKETS) });
+}
+
+/** Re-pack Page or Re-pack All Pages, when it let an arrangement go: which, and where it was pressed. Never a page. */
+export function trackDiagramPagesRepacked(scope: DiagramRepackScope, via: DiagramRepackVia): void {
+  track(ANALYTICS_EVENTS.diagramPagesRepacked, { scope, via });
 }

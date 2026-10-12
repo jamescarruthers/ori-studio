@@ -421,7 +421,9 @@ export type DiagramView = 'steps' | 'pages';
  * Which page setting changed in the Page pane (D10). `scale` is retired: every diagram fits each since 2026-10-06.
  * `columns` and `rows` are the grid's; the flow takes `steps_per_page` instead (since 2026-10-07).
  * `page_steps` gives one flow page its own count of steps, and `page_steps_reset` returns it to the
- * default (since 2026-10-11).
+ * default (since 2026-10-11). The `flow_*` settings are the flow's packing, in the Page pane's
+ * Packing section (since 2026-10-12): Bands, Prefer three bands, Steps in bends, Nesting and
+ * Scale steadiness, set or reset to the default.
  */
 export type DiagramPageSetting =
   | 'size'
@@ -433,6 +435,11 @@ export type DiagramPageSetting =
   | 'steps_per_page'
   | 'page_steps'
   | 'page_steps_reset'
+  | 'flow_bands'
+  | 'flow_prefer_bands'
+  | 'flow_bend_steps'
+  | 'flow_nesting'
+  | 'flow_steadiness'
   | 'path'
   | 'path_width'
   | 'path_color'
@@ -442,6 +449,16 @@ export type DiagramPageSetting =
   | 'first_page'
   | 'style'
   | 'han_style';
+
+/** What Re-pack packed afresh: one flow page (Re-pack Page) or every one (Re-pack All Pages). */
+export type DiagramRepackScope = 'page' | 'all';
+
+/**
+ * Where Re-pack was pressed: the Page pane's Packing section, the Layers
+ * pane's page list, the notice over the Pages view that a step no longer fits
+ * its place, or a page's context menu.
+ */
+export type DiagramRepackVia = 'page_pane' | 'layers_pane' | 'notice' | 'context_menu';
 
 /** A diagram style as chosen: a built-in by id, the Settings export style, or a saved preset (`custom`). */
 export type DiagramStyleChoiceName = 'default' | 'diagram' | 'export-style' | 'custom';
@@ -1612,6 +1629,11 @@ export const ANALYTICS_EVENTS = {
    * back to automatic placement: how often the reflow notice is seen.
    */
   diagramPlacementsReflowed: 'diagram placements reflowed',
+  /**
+   * A flow page, or every one, packed afresh on request (Re-pack Page, Re-pack
+   * All Pages): how often a held arrangement is let go, and from where.
+   */
+  diagramPagesRepacked: 'diagram pages repacked',
   /**
    * The References browser opened in the Diagram (D20), and for where: what
    * `diagram steps pulled from references` is read against.

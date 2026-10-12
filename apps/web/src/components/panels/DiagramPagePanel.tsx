@@ -17,6 +17,7 @@ import {
 import { layoutLabel, orientationLabel, paperSizeLabel } from '../../diagram/pages/pageSetupLabels';
 import { useCurrentDiagramPage } from '../../diagram/pages/useCurrentDiagramPage';
 import { useDiagramPageSetup } from '../../diagram/pages/useDiagramPageSetup';
+import { DiagramPagePacking } from '../diagram/DiagramPagePacking';
 import { DiagramPagePlacements } from '../diagram/DiagramPagePlacements';
 import { DiagramPageStepsRow } from '../diagram/DiagramPageStepsRow';
 import { DiagramPathColorRow } from '../diagram/DiagramPathColorRow';
@@ -29,8 +30,9 @@ import styles from './DiagramPagePanel.module.css';
 const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'];
 
 /**
- * The Page pane: the paper, how steps are laid out on it, what the header and
- * footer carry, and the style every step is drawn in (D10, D13).
+ * The Page pane: the paper, how steps are laid out on it — in the flow, how
+ * its pages are packed (`DiagramPagePacking`) — what the header and footer
+ * carry, and the style every step is drawn in (D10, D13).
  *
  * A composition site (AGENTS.md › Panel components): the bindings, each one
  * undo step and one count, are `useDiagramPageSetup`, and the page a count of
@@ -211,6 +213,7 @@ export function DiagramPagePanel() {
             })}
           </p>
         </CollapsibleSection>
+        {flow && <DiagramPagePacking page={page} readOnly={readOnly} setPage={setPage} />}
         <DiagramPagePlacements />
         <CollapsibleSection title={t('panels:diagram.pagePane.headerFooter', 'Header & footer')}>
           <ToggleRow

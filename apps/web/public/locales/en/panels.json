@@ -1089,6 +1089,23 @@
       "pageList": "Steps on page {{number}}",
       "parts": "Parts of step {{number}}"
     },
+    "packing": {
+      "bands": "Bands",
+      "bandsAuto": "Auto",
+      "bandsHelp": "How many times the path crosses a page. Auto tries each count and keeps the one that prints the steps largest.",
+      "bendSteps": "Steps in bends",
+      "bendStepsHelp": "Let a step stand at the page’s edge, where the path turns from one band into the next, when that packs the page better.",
+      "nesting": "Nesting",
+      "nestingHelp": "How far the steps in a band rise and drop in turn, so that a tall step and a short one beside it fit together.",
+      "notPackedHint": "The pages are still being packed",
+      "preferBands": "Prefer three bands",
+      "preferBandsHelp": "How strongly Auto keeps to three bands where another count would print the steps a little larger.",
+      "repackAll": "Re-pack All Pages",
+      "repackPage": "Re-pack Page",
+      "steadiness": "Scale steadiness",
+      "steadinessHelp": "How closely each page keeps to the size the page before it prints its steps at. Higher keeps the steps one size from page to page; lower lets each page fill itself.",
+      "title": "Packing"
+    },
     "pagePane": {
       "columns": "Columns",
       "exportStyle": "Export style from Settings",

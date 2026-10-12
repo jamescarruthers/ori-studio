@@ -1,15 +1,16 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { stepsOf } from '../../diagram/document/diagramDocument';
+import { stepsOf, type DiagramDocument, type DiagramPageArrangement } from '../../diagram/document/diagramDocument';
 import { usePublishPageInView } from '../../diagram/pages/pageInView';
 import { paginate } from '../../diagram/pages/pagePlan';
+import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { PATH_COLOR_SETTLE_MS } from '../../diagram/pages/usePathColorPick';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramPagePanel } from './DiagramPagePanel';
 
-const analytics = vi.hoisted(() => ({ trackDiagramPageSetupChanged: vi.fn() }));
+const analytics = vi.hoisted(() => ({ trackDiagramPageSetupChanged: vi.fn(), trackDiagramPagesRepacked: vi.fn() }));
 vi.mock('../../analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../analytics')>()),
   ...analytics,
@@ -401,5 +402,150 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     act(() => useWorkspaceStore.setState({ diagramReadOnly: true }));
     expect(field()?.disabled).toBe(true);
     expect(useDefault()?.disabled).toBe(true);
+  });
+});
+
+describe('DiagramPagePanel › Packing', () => {
+  /** The row whose label reads `label`. */
+  const row = (label: string) =>
+    [...host!.querySelectorAll<HTMLElement>('[data-field-row]')].find(
+      (element) => element.querySelector('[data-field-label]')?.textContent === label
+    );
+  const readout = (label: string) => row(label)?.querySelector('[data-field-readout]')?.textContent;
+  const slider = (label: string) => host!.querySelector<HTMLInputElement>(`input[type="range"][aria-label="${label}"]`)!;
+  /** A drag of slider `label` through `values`, let go at the last. */
+  const drag = (label: string, values: readonly string[]) => {
+    const input = slider(label);
+    for (const value of values) {
+      act(() => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+    act(() => input.dispatchEvent(new Event('change', { bubbles: true })));
+  };
+  const button = (name: string) =>
+    [...host!.querySelectorAll<HTMLButtonElement>('button')].find((element) => element.textContent === name);
+  const stored = () => Object.keys(state().diagram?.pageArrangements ?? {});
+  /** What a layout might have packed for each of the diagram's pages, as the Pages view adopts it. */
+  const adoptPacking = () => {
+    const document = state().diagram!;
+    const slots = cellSlots(document);
+    const packed: Record<string, DiagramPageArrangement> = Object.fromEntries(
+      slots.pages.map((ids, page) => [
+        ids[0]!,
+        {
+          signature: slots.signatures[page]!,
+          k: 0.9,
+          steps: Object.fromEntries(
+            ids.map((id, at) => [id, { box: [12 + 30 * at, 30, 28, 50], scale: { frameMm: 24 }, band: 0 }] as const)
+          ),
+        },
+      ])
+    );
+    act(() => {
+      expect(state().adoptDiagramPageArrangements(packed, document as DiagramDocument)).toBe(true);
+    });
+  };
+
+  // “Add step” selects the step it adds, on page 2: with none selected, the current page is page 1.
+  beforeEach(() => act(() => state().selectDiagramStep(null)));
+
+  it('is the flow’s alone', () => {
+    expect(host?.textContent).toContain('Packing');
+    expect(row('Bands')).toBeDefined();
+    act(() => radio('Grid').click());
+    expect(host?.textContent).not.toContain('Packing');
+    expect(row('Bands')).toBeUndefined();
+    expect(button('Re-pack All Pages')).toBeUndefined();
+  });
+
+  it('shows Zach’s defaults: Auto preferring three bands at 0.5, steps in bends, nesting 0.8, steadiness 0.85', () => {
+    expect(segment('Bands', 'Auto').getAttribute('aria-pressed')).toBe('true');
+    expect(readout('Prefer three bands')).toBe('0.5');
+    expect(toggle('Steps in bends').getAttribute('aria-checked')).toBe('true');
+    expect(readout('Nesting')).toBe('0.8');
+    expect(readout('Scale steadiness')).toBe('0.85');
+    // Nothing to reset at a default.
+    expect(host!.querySelector('[aria-label^="Reset Nesting"]')).toBeNull();
+  });
+
+  it('sets a band count, one undo step and one count, and offers Prefer three bands only while Bands is Auto', () => {
+    const past = state().diagramHistory.past.length;
+    act(() => segment('Bands', '3').click());
+    expect(state().diagram?.page.flowBands).toBe(3);
+    expect(state().diagramHistory.past).toHaveLength(past + 1);
+    expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('flow_bands');
+    expect(row('Prefer three bands')).toBeUndefined();
+    act(() => segment('Bands', 'Auto').click());
+    expect(state().diagram?.page.flowBands).toBe('auto');
+    expect(row('Prefer three bands')).toBeDefined();
+  });
+
+  it('writes a slider once, where it is let go: one store change, one undo step and one count', () => {
+    const past = state().diagramHistory.past.length;
+    const changes = diagramChanges();
+    drag('Nesting', ['0.75', '0.6', '0.45']);
+    expect(changes.count).toBe(1);
+    expect(state().diagram?.page.flowNesting).toBe(0.45);
+    expect(state().diagramHistory.past).toHaveLength(past + 1);
+    expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('flow_nesting');
+    expect(readout('Nesting')).toBe('0.45');
+    // Its reset puts the default back, as one more change.
+    act(() => host!.querySelector<HTMLButtonElement>('[aria-label="Reset Nesting to default"]')!.click());
+    expect(state().diagram?.page.flowNesting).toBe(0.8);
+    expect(state().diagramHistory.past).toHaveLength(past + 2);
+    changes.stop();
+  });
+
+  it('sets each of the other settings, one undo step and one count each', () => {
+    const past = state().diagramHistory.past.length;
+    drag('Prefer three bands', ['0.2']);
+    expect(state().diagram?.page.flowPreferBands).toBe(0.2);
+    drag('Scale steadiness', ['0.5']);
+    expect(state().diagram?.page.flowSteadiness).toBe(0.5);
+    act(() => toggle('Steps in bends').click());
+    expect(state().diagram?.page.flowBendSteps).toBe(false);
+    expect(state().diagramHistory.past).toHaveLength(past + 3);
+    expect(analytics.trackDiagramPageSetupChanged.mock.calls).toEqual([
+      ['flow_prefer_bands'],
+      ['flow_steadiness'],
+      ['flow_bend_steps'],
+    ]);
+  });
+
+  it('re-packs the current page, or every page, each one undo step and one count', () => {
+    // Before the pages are packed and taken in, there is nothing to let go.
+    expect(button('Re-pack Page')?.disabled).toBe(true);
+    expect(button('Re-pack All Pages')?.disabled).toBe(true);
+    adoptPacking();
+    const [first, second] = stored();
+    expect(stored()).toHaveLength(2);
+    const past = state().diagramHistory.past.length;
+    act(() => button('Re-pack Page')!.click());
+    expect(stored()).toEqual([second]);
+    expect(state().diagramHistory.past).toHaveLength(past + 1);
+    expect(analytics.trackDiagramPagesRepacked).toHaveBeenCalledExactlyOnceWith('page', 'page_pane');
+    // The page lets its arrangement go: until the pages are laid out again, there is nothing more to re-pack on it.
+    expect(button('Re-pack Page')?.disabled).toBe(true);
+    act(() => button('Re-pack All Pages')!.click());
+    expect(stored()).toEqual([]);
+    expect(analytics.trackDiagramPagesRepacked).toHaveBeenLastCalledWith('all', 'page_pane');
+    // Undo brings each back.
+    act(() => state().undoDiagram());
+    expect(stored()).toEqual([second]);
+    act(() => state().undoDiagram());
+    expect(stored()).toEqual([first, second]);
+  });
+
+  it('changes nothing on a read-only diagram', () => {
+    adoptPacking();
+    act(() => useWorkspaceStore.setState({ diagramReadOnly: true }));
+    expect(slider('Nesting').disabled).toBe(true);
+    expect(button('Re-pack Page')?.disabled).toBe(true);
+    expect(button('Re-pack All Pages')?.disabled).toBe(true);
+    act(() => segment('Bands', '4').click());
+    expect(state().diagram?.page.flowBands).toBe('auto');
+    expect(analytics.trackDiagramPageSetupChanged).not.toHaveBeenCalled();
   });
 });

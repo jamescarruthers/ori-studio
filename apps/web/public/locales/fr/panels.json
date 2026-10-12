@@ -1126,6 +1126,23 @@
       "pageList": "Étapes sur la page {{number}}",
       "parts": "Parties de l’étape {{number}}"
     },
+    "packing": {
+      "bands": "Bandes",
+      "bandsAuto": "Auto",
+      "bandsHelp": "Combien de fois le chemin traverse une page. Auto essaie chaque nombre et garde celui qui imprime les étapes le plus grand.",
+      "bendSteps": "Étapes dans les virages",
+      "bendStepsHelp": "Laisse une étape se placer au bord de la page, là où le chemin passe d’une bande à la suivante, quand la page s’en trouve mieux remplie.",
+      "nesting": "Imbrication",
+      "nestingHelp": "De combien les étapes d’une bande montent et descendent tour à tour, pour qu’une étape haute et une étape basse à côté s’emboîtent.",
+      "notPackedHint": "Les pages sont encore en cours d’agencement",
+      "preferBands": "Préférer trois bandes",
+      "preferBandsHelp": "À quel point Auto s’en tient à trois bandes quand un autre nombre imprimerait les étapes un peu plus grand.",
+      "repackAll": "Réagencer toutes les pages",
+      "repackPage": "Réagencer la page",
+      "steadiness": "Constance de l’échelle",
+      "steadinessHelp": "À quel point chaque page garde la taille à laquelle la page précédente imprime ses étapes. Plus haut garde les étapes à la même taille d’une page à l’autre ; plus bas laisse chaque page se remplir elle-même.",
+      "title": "Agencement"
+    },
     "pagePane": {
       "columns": "Colonnes",
       "exportStyle": "Style d’export des Réglages",

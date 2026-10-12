@@ -1,0 +1,7 @@
+/* The Page pane's Packing section (DiagramPagePacking.tsx): Re-pack Page and Re-pack All Pages under its rows. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+}

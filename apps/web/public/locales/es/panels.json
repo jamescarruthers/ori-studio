@@ -1126,6 +1126,23 @@
       "pageList": "Pasos en la página {{number}}",
       "parts": "Partes del paso {{number}}"
     },
+    "packing": {
+      "bands": "Franjas",
+      "bandsAuto": "Auto",
+      "bandsHelp": "Cuántas veces cruza el recorrido una página. Auto prueba cada número y se queda con el que imprime los pasos más grandes.",
+      "bendSteps": "Pasos en las curvas",
+      "bendStepsHelp": "Permite que un paso quede en el borde de la página, donde el recorrido gira de una franja a la siguiente, cuando así la página se llena mejor.",
+      "nesting": "Encaje",
+      "nestingHelp": "Cuánto suben y bajan por turnos los pasos de una franja, para que un paso alto y uno bajo a su lado encajen.",
+      "notPackedHint": "Las páginas aún se están acomodando",
+      "preferBands": "Preferir tres franjas",
+      "preferBandsHelp": "Con qué fuerza Auto se queda con tres franjas cuando otro número imprimiría los pasos un poco más grandes.",
+      "repackAll": "Reacomodar todas las páginas",
+      "repackPage": "Reacomodar página",
+      "steadiness": "Constancia de escala",
+      "steadinessHelp": "Cuánto mantiene cada página el tamaño al que la página anterior imprime sus pasos. Más alto mantiene los pasos del mismo tamaño de una página a otra; más bajo deja que cada página se llene por sí misma.",
+      "title": "Acomodo"
+    },
     "pagePane": {
       "columns": "Columnas",
       "exportStyle": "Estilo de exportación de Ajustes",

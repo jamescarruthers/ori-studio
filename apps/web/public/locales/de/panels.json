@@ -1089,6 +1089,23 @@
       "pageList": "Schritte auf Seite {{number}}",
       "parts": "Teile von Schritt {{number}}"
     },
+    "packing": {
+      "bands": "Bänder",
+      "bandsAuto": "Auto",
+      "bandsHelp": "Wie oft der Pfad eine Seite durchquert. „Auto“ probiert jede Anzahl und behält die, bei der die Schritte am größten gedruckt werden.",
+      "bendSteps": "Schritte in Kurven",
+      "bendStepsHelp": "Ein Schritt darf am Seitenrand stehen, wo der Pfad von einem Band ins nächste wendet, wenn die Seite sich so besser füllt.",
+      "nesting": "Verschachtelung",
+      "nestingHelp": "Wie weit die Schritte eines Bands abwechselnd steigen und sinken, damit ein hoher Schritt und ein niedriger daneben ineinandergreifen.",
+      "notPackedHint": "Die Seiten werden noch gepackt",
+      "preferBands": "Drei Bänder bevorzugen",
+      "preferBandsHelp": "Wie stark „Auto“ bei drei Bändern bleibt, wo eine andere Anzahl die Schritte etwas größer drucken würde.",
+      "repackAll": "Alle Seiten neu packen",
+      "repackPage": "Seite neu packen",
+      "steadiness": "Gleichmäßiger Maßstab",
+      "steadinessHelp": "Wie genau jede Seite die Größe beibehält, in der die Seite davor ihre Schritte druckt. Höher hält die Schritte von Seite zu Seite gleich groß; niedriger lässt jede Seite sich selbst füllen.",
+      "title": "Packen"
+    },
     "pagePane": {
       "columns": "Spalten",
       "exportStyle": "Exportstil aus den Einstellungen",

@@ -1052,6 +1052,23 @@
       "pageList": "第 {{number}} 页的步骤",
       "parts": "第 {{number}} 步的组成部分"
     },
+    "packing": {
+      "bands": "条带",
+      "bandsAuto": "自动",
+      "bandsHelp": "路径横穿一页的次数。自动会逐个尝试，保留让步骤打印得最大的数目。",
+      "bendSteps": "转弯处放步骤",
+      "bendStepsHelp": "在路径从一条带转入下一条带的页边处放置步骤，前提是这样能把页面排得更满。",
+      "nesting": "嵌套",
+      "nestingHelp": "带中步骤交替升降的幅度，使高的步骤与旁边矮的步骤彼此嵌合。",
+      "notPackedHint": "页面仍在排布中",
+      "preferBands": "偏好三条带",
+      "preferBandsHelp": "当其他数目能把步骤印得稍大时，自动坚持三条带的程度。",
+      "repackAll": "重新排布所有页",
+      "repackPage": "重新排布页面",
+      "steadiness": "比例稳定度",
+      "steadinessHelp": "每页沿用上一页步骤打印尺寸的程度。越高，各页步骤大小越一致；越低，每页各自排满。",
+      "title": "排布"
+    },
     "pagePane": {
       "columns": "列",
       "exportStyle": "设置中的导出样式",
