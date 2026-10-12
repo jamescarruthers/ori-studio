@@ -1774,11 +1774,15 @@ on its next save.
   in its box. Lengths are kept to 0.01 mm, scales and Sizes to six
   significant digits. A page holds its arrangement while the signature
   matches and it places every step on the page; a file without one packs the
-  page when opened. Written only in the flow, keys and
-  each page's steps sorted. An arrangement that does not read is dropped
-  alone; one with a field, a scale or a band past 4 this build has no name
-  for is a newer build's (rule 2): the page is packed here as if none were
-  stored, and the newer one written back until the page is re-packed here.
+  page when opened. Keys and each page's steps are written sorted. An
+  arrangement that does not read is dropped alone; one with a field, a scale
+  or a band past 4 this build has no name for is a newer build's (rule 2):
+  the page is packed here as if none were stored, and the newer one written
+  back, in its place, until the page is re-packed here. This build writes its
+  own arrangements only in the flow; a newer build's are carried as they came
+  in either layout, so a reader must accept `pageArrangements` on a grid
+  diagram too (a grid page is never re-packed, so they stay until the
+  diagram is back in the flow and its page re-packed there).
 - `thumbnails`: `{ "thumb-<digest>": "<a SheetThumbnail as JSON>" }`, every
   thumbnail a link shows, once, sorted by key (decision 4), and any entry
   something a newer build wrote names, as it came. A file from before the
