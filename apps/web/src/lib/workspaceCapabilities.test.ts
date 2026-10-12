@@ -373,8 +373,7 @@ describe('workspace capabilities', () => {
       'fold.mountain',
       'fold.precrease',
       'fold.turn-over',
-      'fold.rotate-ccw',
-      'fold.rotate-cw',
+      'fold.rotate',
       'fold.delete-step',
     ] as const;
     for (const activeEditingContext of ['treemaker-tree', 'crease-pattern', 'diagram'] as const) {

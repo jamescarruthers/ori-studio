@@ -352,10 +352,15 @@ impl From<&Seed> for SeedInput {
     }
 }
 
-/// How far, and which way, a rotate step turns the model (`TurnRotation`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+/// How far, and which way, a rotate step turns the model (`TurnRotation`):
+/// a part of a turn, or an exact angle — `amount: "degrees"` with its
+/// `degrees`, more than 0 and at most 180, the way `direction` says.
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 pub struct Rotation {
     pub amount: RotationAmount,
+    /// The exact angle, in degrees: present with `amount: "degrees"` only.
+    #[serde(default)]
+    pub degrees: Option<f64>,
     pub direction: RotationDirection,
 }
 
@@ -365,6 +370,8 @@ pub enum RotationAmount {
     Eighth,
     Quarter,
     Half,
+    /// An exact angle, in the rotation's `degrees`.
+    Degrees,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -375,17 +382,35 @@ pub enum RotationDirection {
 }
 
 impl Rotation {
-    /// Radians, counter-clockwise on the display: the engine's sense.
-    pub fn angle(&self) -> f64 {
-        let turn = match self.amount {
-            RotationAmount::Eighth => std::f64::consts::FRAC_PI_4,
-            RotationAmount::Quarter => std::f64::consts::FRAC_PI_2,
-            RotationAmount::Half => std::f64::consts::PI,
+    /// Radians, counter-clockwise on the display: the engine's sense. An
+    /// exact angle that is not one — missing, not finite, outside (0, 180]
+    /// — or degrees beside a preset is the caller's mistake: the document
+    /// never writes either (`lib/steps/turn`'s `readTurnRotation`).
+    pub fn angle(&self) -> Result<f64, BridgeError> {
+        let turn = match (self.amount, self.degrees) {
+            (RotationAmount::Eighth, None) => std::f64::consts::FRAC_PI_4,
+            (RotationAmount::Quarter, None) => std::f64::consts::FRAC_PI_2,
+            (RotationAmount::Half, None) => std::f64::consts::PI,
+            (RotationAmount::Degrees, Some(degrees))
+                if degrees.is_finite() && degrees > 0.0 && degrees <= 180.0 =>
+            {
+                degrees.to_radians()
+            }
+            (RotationAmount::Degrees, _) => {
+                return Err(BridgeError::InvalidInput(
+                    "an exact rotation needs its degrees: more than 0 and at most 180".to_string(),
+                ));
+            }
+            (_, Some(_)) => {
+                return Err(BridgeError::InvalidInput(
+                    "a rotation by a part of a turn takes no degrees".to_string(),
+                ));
+            }
         };
-        match self.direction {
+        Ok(match self.direction {
             RotationDirection::Ccw => turn,
             RotationDirection::Cw => -turn,
-        }
+        })
     }
 }
 

@@ -19,6 +19,7 @@ import type { FoldSessionSurface } from '../session/useFoldSession';
 import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } from '../tools/foldStepBuilder';
 import { isFoldKind, isSinkTool, isVertexTool, locatesLine } from '../tools/foldToolCatalog';
 import { lineModeInput } from '../tools/foldToolRegistry';
+import { rotateStepOp } from '../tools/rotate/rotateTool';
 import { foldToolInputKey, picksAlongLine, type FoldToolState } from '../tools/foldToolState';
 import { foldExtentState, type FoldExtentState } from '../tools/precrease/precreaseExtent';
 import { foldAlongLine, type FoldAlongLine } from './foldAlongLine';
@@ -88,6 +89,13 @@ export interface FoldToolPreview {
   sink: FoldSinkPreview | null;
   /** A partial precrease's: its points along the line, and the line on each pane. */
   extent: FoldExtentPreview | null;
+  /**
+   * The Rotate tool's: the state on screen as the rotation lands it — the
+   * same model, seen turned — which the folded pane shows in its place.
+   * Null for any other tool, and until it has landed. The crease pattern,
+   * front up, does not turn: a rotation leaves `landed` null.
+   */
+  turned: FoldScene | null;
 }
 
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
@@ -232,7 +240,14 @@ export function useFoldToolPreview(
   const compounding = compoundStep !== null;
   const build = compoundStep ? compoundStep.build : vertexing ? UNLOCATED : plainBuild;
   const vertexBuilt = vertexStep.step;
+  // Rotate's step is its rotation, from the moment it is in hand: it locates nothing.
+  const rotating = tools.tool === 'rotate';
+  const rotation = tools.rotation;
   const step = useMemo<FoldToolStep | null>(() => {
+    if (rotating) {
+      const op = rotateStepOp(rotation);
+      return { op, key: foldStepInputKey({ op }) };
+    }
     if (extentPending) return null;
     // A plain fold's override is the whole step; a compound fold's is its
     // line, which its build already folds along. A vertex fold's step is
@@ -242,7 +257,7 @@ export function useFoldToolPreview(
     const chosen = override ?? (vertexing ? vertexBuilt : built);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [extentPending, compounding, vertexing, tools.override, build, vertexBuilt]);
+  }, [rotating, rotation, extentPending, compounding, vertexing, tools.override, build, vertexBuilt]);
   // The located line on each pane, while points are clicked along it.
   const sceneLine = along && plainBuild.status === 'built' ? plainBuild.sceneLine : null;
   const lineKey = sceneLine ? `${sceneLine.n[0]},${sceneLine.n[1]},${sceneLine.d}` : null;
@@ -271,6 +286,9 @@ export function useFoldToolPreview(
     }
     asked.current = step.key;
     void preview(step.op, step.choices);
+    // A rotation moves no paper: nothing to analyse, no line or arrow to
+    // picture. The folded pane shows the model turned instead (`turned`).
+    if (step.op.kind === 'rotate') return undefined;
     // A vertex fold folds along no one line: there is no plain fold's
     // analysis to ask of it (its tool draws its own creases). Its picture —
     // along the one crease that tells it best — it has, like every fold.
@@ -400,6 +418,7 @@ export function useFoldToolPreview(
     trackFoldRefused(refused.refusal.code);
   }, [refused, stateKey, tools]);
 
+  const landedPreview = landed && landed.key === landedKey ? landed.landed : null;
   return {
     candidates,
     build,
@@ -407,7 +426,9 @@ export function useFoldToolPreview(
     analysis,
     section: shownSection,
     action: action && step && action.key === step.key ? action.action : null,
-    landed: landed && landed.key === landedKey ? landed.landed : null,
+    // A rotation's landed state is the folded pane's, not the crease pattern's: the pattern does not turn.
+    landed: rotating ? null : landedPreview,
+    turned: rotating ? (landedPreview?.scene ?? null) : null,
     refused,
     landing: step !== null && (pendingFor === null || pendingFor.status === 'working'),
     reverse: reverseStep.reverse,

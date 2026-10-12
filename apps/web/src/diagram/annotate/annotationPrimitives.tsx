@@ -119,6 +119,7 @@ import {
   closeUpFrame,
   closeUpShape,
   DEFAULT_PLEAT_KINKS,
+  DEFAULT_ROTATION,
   divisionsOffsetOf,
   divisionsPartsOf,
   DEFAULT_WHITE_ARROW,
@@ -496,12 +497,8 @@ function compileAnnotation(annotation: KnownDiagramAnnotation): CompiledAnnotati
     case 'rotate':
       return {
         kind: 'mark',
-        primitive: {
-          kind: 'rotate',
-          at: up(from),
-          amount: annotation.rotate?.amount ?? 'quarter',
-          direction: annotation.rotate?.direction ?? 'cw',
-        },
+        // A part of a turn or an exact angle, either way round: the rotation's own fields.
+        primitive: { kind: 'rotate', at: up(from), ...(annotation.rotate ?? DEFAULT_ROTATION) },
       };
     case 'circle':
       // No letter (decision 8): a label names it, if anything does.

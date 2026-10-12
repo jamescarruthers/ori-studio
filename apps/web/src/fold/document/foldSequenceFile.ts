@@ -48,7 +48,13 @@ import {
 } from '../../lib/documentFile';
 import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
 import type { OristudioCpRatioExpression } from '../../lib/oristudioCpToolSettings';
-import type { TurnOverAxis, TurnRotation } from '../../lib/steps/turn';
+import {
+  readTurnRotation,
+  TURN_ROTATION_KEYS,
+  writeTurnRotation,
+  type TurnOverAxis,
+  type TurnRotation,
+} from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
 import {
   AXIOM_SLOTS,
@@ -363,9 +369,6 @@ function opKeys(value: Record<string, unknown>, kind: string): ReadonlySet<strin
 }
 
 const TURN_AXES: readonly TurnOverAxis[] = ['vertical', 'horizontal'];
-const ROTATION_AMOUNTS: readonly TurnRotation['amount'][] = ['eighth', 'quarter', 'half'];
-const ROTATION_DIRECTIONS: readonly TurnRotation['direction'][] = ['cw', 'ccw'];
-const ROTATION_KEYS = new Set(['amount', 'direction']);
 
 /**
  * An op, or null for one this build cannot read: a kind it does not know, a
@@ -552,11 +555,15 @@ function readDirection(value: unknown): FoldDirection | null {
   return FOLD_DIRECTIONS.find((direction) => direction === value) ?? null;
 }
 
+/**
+ * A rotate step's rotation: a part of a turn, or an exact angle as this build
+ * writes one (`lib/steps/turn`). Anything else locks the step, as an op that
+ * does not read does — so a build that knows only the presets locks an exact
+ * angle rather than turning by some other amount.
+ */
 function readRotation(value: unknown): TurnRotation | null {
-  if (!isRecord(value) || hasNewerKey(value, ROTATION_KEYS)) return null;
-  const amount = ROTATION_AMOUNTS.find((known) => known === value.amount);
-  const direction = ROTATION_DIRECTIONS.find((known) => known === value.direction);
-  return amount && direction ? { amount, direction } : null;
+  if (!isRecord(value) || hasNewerKey(value, TURN_ROTATION_KEYS)) return null;
+  return readTurnRotation(value);
 }
 
 /** A fold along a line's line, side and seed. */
@@ -952,7 +959,8 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
     case 'turn':
       return { kind: op.kind, axis: op.axis };
     case 'rotate':
-      return { kind: op.kind, rotate: { amount: op.rotate.amount, direction: op.rotate.direction } };
+      // A preset as it always was; an exact angle with its degrees between.
+      return { kind: op.kind, rotate: writeTurnRotation(op.rotate) };
     case 'cp-jump':
       return { kind: op.kind, cpJson: op.cpJson, orderJson: op.orderJson, origin: op.origin };
     // Compound folds (plan D4), one block per family.

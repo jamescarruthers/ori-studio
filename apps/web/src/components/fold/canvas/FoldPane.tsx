@@ -104,8 +104,6 @@ export interface FoldPaneProps {
   onZoomPercentChange?: (percent: number) => void;
   /** Called when a press on the pane begins: the pane the keyboard's zoom now means. */
   onActivate?: () => void;
-  /** The pane's status chip, in its top-left corner. */
-  status: ReactNode;
   /** Layers drawn over the canvas through its camera: the fold's arrow, the root chooser. */
   layers?: (view: CpOverlayView) => ReactNode;
   /**
@@ -122,7 +120,7 @@ export interface FoldPaneProps {
  * One pane of the Fold canvas (plan D13): a WebGL canvas on `useCpSurface`
  * — the renderer's lifecycle, the camera, pan, pinch and wheel, a click told
  * from a drag, the hover probe — with the tool's feedback on the overlay
- * channels and its status chip in the corner.
+ * channels.
  *
  * Both panes are this component, and differ in what they are handed: the
  * folded form is a paper scene, painted through the shared painter on the
@@ -154,7 +152,6 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     inkKey,
     onZoomPercentChange,
     onActivate,
-    status,
     layers,
     posedScene = NOT_POSED,
     ariaLabel,
@@ -284,7 +281,6 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
         style={cursor ? { cursor } : undefined}
       />
       {view && !posing && layers?.(view)}
-      {status}
       {rendererStatus && <CpRendererUnavailable status={rendererStatus} />}
     </div>
   );

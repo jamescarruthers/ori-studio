@@ -1,4 +1,4 @@
-import { BookImage, Download, Images, RotateCcw, RotateCcwSquare, RotateCw, Send, Trash2, Upload } from 'lucide-react';
+import { BookImage, Download, Images, RotateCcwSquare, RotateCw, Send, Trash2, Upload } from 'lucide-react';
 import type { FoldActionIcon as FoldActionIconName } from '../../fold/foldActions';
 import { FoldKindMark } from './FoldKindMark';
 
@@ -18,9 +18,8 @@ export function FoldActionIcon({ icon, size = 14 }: { icon: FoldActionIconName; 
       return <FoldKindMark kind={icon} />;
     case 'turn-over':
       return <RotateCcwSquare size={size} aria-hidden="true" />;
-    case 'rotate-ccw':
-      return <RotateCcw size={size} aria-hidden="true" />;
-    case 'rotate-cw':
+    case 'rotate':
+      // The rail's Rotate tool, and the Diagram's rotate glyph tool: one icon for the one concept.
       return <RotateCw size={size} aria-hidden="true" />;
     case 'import-cp':
       return <Upload size={size} aria-hidden="true" />;

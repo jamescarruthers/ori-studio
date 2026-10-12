@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 import type { TurnKind } from './turn';
-import { turnCardWords, turnLabel, turnName, turnPlace } from './turnWords';
+import { turnAmountOptions, turnCardWords, turnDegreesLabel, turnLabel, turnName, turnPlace } from './turnWords';
 
 const t = ((_key: string, fallback: string, values?: Record<string, unknown>) =>
   fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''))) as unknown as TFunction;
@@ -34,5 +34,30 @@ describe('turn words', () => {
     expect(turnCardWords({ kind: 'turn-over', axis: 'horizontal' }, t)).toEqual({ title: 'Turn over', how: 'Top to bottom' });
     expect(turnCardWords(eighthCcw, t)).toEqual({ title: 'Rotate', how: '1/8 turn counterclockwise' });
     expect(turnCardWords(newer, t)).toEqual({ title: 'Turn', how: 'Turn from a newer Ori Studio' });
+  });
+
+  it('says an exact angle in degrees, either way round, wherever a turn is named', () => {
+    const thirtyCw: TurnKind = { kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'cw' } };
+    const halfDegreeCcw: TurnKind = { kind: 'rotate', rotate: { amount: 'degrees', degrees: 22.5, direction: 'ccw' } };
+    expect(turnName(thirtyCw, t)).toBe('Rotate 30° clockwise');
+    expect(turnName(halfDegreeCcw, t)).toBe('Rotate 22.5° counterclockwise');
+    expect(turnCardWords(thirtyCw, t)).toEqual({ title: 'Rotate', how: '30° clockwise' });
+    expect(turnCardWords(halfDegreeCcw, t)).toEqual({ title: 'Rotate', how: '22.5° counterclockwise' });
+    expect(turnLabel(thirtyCw, { before: 3, after: 4 }, t)).toBe('Rotate 30° clockwise, between steps 3 and 4');
+  });
+
+  it('offers a rotation’s amounts as the presets, and an exact angle after them while it is one', () => {
+    expect(turnAmountOptions({ amount: 'quarter', direction: 'cw' }, t)).toEqual([
+      { id: 'eighth', label: '1/8' },
+      { id: 'quarter', label: '1/4' },
+      { id: 'half', label: '1/2' },
+    ]);
+    expect(turnAmountOptions({ amount: 'degrees', degrees: 30, direction: 'cw' }, t).map((option) => option.label)).toEqual([
+      '1/8',
+      '1/4',
+      '1/2',
+      '30°',
+    ]);
+    expect(turnDegreesLabel(100 / 3, t)).toBe('33.33°');
   });
 });

@@ -13,13 +13,11 @@ import {
   foldCrimpWindowView,
   foldFreeLineStart,
   foldLocatedLines,
-  foldPromptWords,
   foldSinkWindowView,
   foldTuckWindowView,
   foldVertexWindowView,
   foldWindowPreview,
   refusedFaceInks,
-  sceneLayers,
 } from './foldCanvasModel';
 import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
 
@@ -122,11 +120,6 @@ describe('the Fold canvas model', () => {
     expect(foldMovingTint(index, null, [0, 0, 1, 1])).toBeNull();
   });
 
-  it('counts a state’s layers as its deepest stack', () => {
-    expect(sceneLayers(bookScene())).toBe(2);
-    expect(sceneLayers(null)).toBe(1);
-  });
-
   it('lights a tuck’s listed layers whole over the paper, the one taken brighter, drawn with the moving set', () => {
     const index = foldPickIndex(bookScene(), null, []);
     const accent: [number, number, number, number] = [0, 0, 1, 1];
@@ -160,24 +153,6 @@ describe('the Fold canvas model', () => {
     // Once the fold's picture is in, it draws both lines itself.
     expect(foldLocatedLines('crimp', true, lines)).toEqual([]);
     expect(foldLocatedLines('valley', false, lines)).toEqual([]);
-    expect(foldPromptWords(t, state)).toBe('Second line · Click where it ends.');
-    expect(foldPromptWords(t, { ...state, picks: state.picks.slice(0, 1) })).toBe(
-      'Axiom 1: through two points · Click the second point.'
-    );
-    // A drawn first line, in a crimp's words.
-    expect(foldPromptWords(t, { ...crimping, lineMode: 'free', picks: [] })).toBe(
-      'First line · Click where the first line starts, nearer the body: where the flap turns in.'
-    );
-  });
-
-  it('prompts a swivel’s first click with the key, or the latch, that frees its point', () => {
-    const swivel: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel' };
-    expect(foldPromptWords(t, swivel, { coarse: false, alt: 'Option' })).toBe(
-      'Swivel fold · Hold Option and click where the creases meet: inside the paper, off every crease.'
-    );
-    expect(foldPromptWords(t, swivel, { coarse: true, alt: 'Alt' })).toBe(
-      'Swivel fold · Turn on Free point, then tap where the creases meet: inside the paper, off every crease.'
-    );
   });
 
   it('hands the crimp’s and the tuck’s windows what they choose among, only for their own tool once located', () => {

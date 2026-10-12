@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, Trash2, type LucideIcon } from 'lucide-react';
 import { turnLabels } from '../../diagram/actions/diagramTurnActions';
-import { turnName, turnPlace } from '../../lib/steps/turnWords';
+import { TURN_ROTATION_PRESETS, withTurnDirection, withTurnPreset } from '../../lib/steps/turn';
+import { turnAmountOptions, turnName, turnPlace } from '../../lib/steps/turnWords';
 import type { DiagramStepAction } from '../../diagram/actions/diagramActions';
 import { DEFAULT_ROTATION } from '../../diagram/annotate/annotationModel';
 import { isLockedTurn, type DiagramTurn, type DiagramTurnKind } from '../../diagram/document/diagramDocument';
@@ -73,7 +74,11 @@ export function DiagramTurnPane({
   );
 }
 
-/** What a turn is and how it turns, as controls: a turn-over's axis, a rotation's amount and direction. */
+/**
+ * What a turn is and how it turns, as controls: a turn-over's axis, a
+ * rotation's amount and direction. A rotation by an exact angle (made in
+ * Fold) shows its angle beside the presets, chosen; a preset replaces it.
+ */
 function TurnControls({
   turn,
   readOnly,
@@ -118,14 +123,12 @@ function TurnControls({
             label={t('panels:diagram.turns.amount', 'Amount')}
             value={turn.rotate.amount}
             disabled={readOnly}
-            options={[
-              { id: 'eighth', label: '1/8' },
-              { id: 'quarter', label: '1/4' },
-              { id: 'half', label: '1/2' },
-            ]}
-            onChange={(amount) =>
-              onSet({ kind: 'rotate', rotate: { ...turn.rotate, amount: amount as 'eighth' | 'quarter' | 'half' } })
-            }
+            options={turnAmountOptions(turn.rotate, t)}
+            onChange={(amount) => {
+              // The exact angle's own segment is what the turn is already: only a preset changes it.
+              const preset = TURN_ROTATION_PRESETS.find((each) => each === amount);
+              if (preset) onSet({ kind: 'rotate', rotate: withTurnPreset(turn.rotate, preset) });
+            }}
           />
           <SegmentedRow
             label={t('panels:diagram.annotations.direction', 'Direction')}
@@ -136,7 +139,7 @@ function TurnControls({
               { id: 'ccw', label: labels.direction.ccw },
             ]}
             onChange={(direction) =>
-              onSet({ kind: 'rotate', rotate: { ...turn.rotate, direction: direction as 'cw' | 'ccw' } })
+              onSet({ kind: 'rotate', rotate: withTurnDirection(turn.rotate, direction === 'ccw' ? 'ccw' : 'cw') })
             }
           />
         </>

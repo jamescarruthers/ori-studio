@@ -17,6 +17,7 @@ function deps(): FoldActionDeps {
     t,
     setFoldKind: vi.fn(),
     turn: vi.fn(),
+    rotate: vi.fn(),
     deleteStep: vi.fn(),
     importCp: vi.fn(),
     sendToEdit: vi.fn(),
@@ -59,8 +60,7 @@ describe('buildFoldActions', () => {
       'fold-kind',
       '—',
       'turn-over',
-      'rotate-ccw',
-      'rotate-cw',
+      'rotate',
       '—',
       'import-cp',
       '—',
@@ -102,25 +102,24 @@ describe('buildFoldActions', () => {
     expect(none.options.map((option) => option.checked)).toEqual([false, false, false]);
   });
 
-  it('names the turns as their cards do, and adds each as a turn step', () => {
+  it('names Turn over as its card does and adds it at once, and takes the Rotate tool for a rotation', () => {
     const bound = deps();
     const actions = buildFoldActions(CONTEXT, bound);
-    expect(['turn-over', 'rotate-ccw', 'rotate-cw'].map((id) => command(actions, id as 'turn-over').label)).toEqual([
-      'Turn over, side to side',
-      'Rotate 1/4 turn counterclockwise',
-      'Rotate 1/4 turn clockwise',
-    ]);
+    expect(command(actions, 'turn-over').label).toBe('Turn over, side to side');
+    // A rotation has an amount and a direction to choose: the verb takes the tool, which previews it.
+    expect(command(actions, 'rotate')).toMatchObject({ label: 'Rotate…', icon: 'rotate', disabled: false });
     command(actions, 'turn-over').run();
-    command(actions, 'rotate-cw').run();
-    expect(bound.turn).toHaveBeenNthCalledWith(1, { kind: 'turn-over', axis: 'vertical' });
-    expect(bound.turn).toHaveBeenNthCalledWith(2, { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } });
+    command(actions, 'rotate').run();
+    expect(bound.turn).toHaveBeenCalledTimes(1);
+    expect(bound.turn).toHaveBeenCalledWith({ kind: 'turn-over', axis: 'vertical' });
+    expect(bound.rotate).toHaveBeenCalledTimes(1);
   });
 
   it('says a verb that adds a step starts a branch anywhere but the tip', () => {
     const tip = buildFoldActions(CONTEXT, deps());
     expect(command(tip, 'turn-over').note).toBeUndefined();
     const inside = buildFoldActions(at({ atTip: false }), deps());
-    for (const id of ['turn-over', 'rotate-ccw', 'rotate-cw', 'import-cp'] as const) {
+    for (const id of ['turn-over', 'rotate', 'import-cp'] as const) {
       expect(command(inside, id).note).toBe('Starts a new branch');
     }
     // Taking the sequence out or deleting a step starts nothing.
@@ -138,7 +137,7 @@ describe('buildFoldActions', () => {
     for (const [context, hint] of cases) {
       const actions = buildFoldActions(context, deps());
       expect(choice(actions)).toMatchObject({ disabled: true, hint });
-      for (const id of ['turn-over', 'rotate-ccw', 'rotate-cw', 'import-cp'] as const) {
+      for (const id of ['turn-over', 'rotate', 'import-cp'] as const) {
         expect(command(actions, id)).toMatchObject({ disabled: true, hint });
       }
     }

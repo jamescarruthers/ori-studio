@@ -96,6 +96,21 @@ describe('FoldStepsGrid', () => {
     expect(new Set(inks)).toEqual(new Set(['currentColor']));
   });
 
+  it('draws a card’s precreases in Edit’s aux-line ink, as the crease-pattern pane does', () => {
+    const view = viewOf(DOCUMENT, ['a', 't', 'b', 'c']);
+    const pattern = {
+      viewBox: '0 0 100 100',
+      strokes: [
+        { x1: 0, y1: 100, x2: 100, y2: 0, role: 'aux' as const },
+        { x1: 50, y1: 0, x2: 50, y2: 100, role: 'valley' as const },
+      ],
+    };
+    const frames = view.entries.map(() => ({ pattern }) as unknown as NonNullable<FoldSequenceView['frames'][number]>);
+    act(() => root.render(<FoldStepsGrid view={{ ...view, frames }} />));
+    const card = host.querySelector('[data-step-id="a"]');
+    expect(card?.querySelector('svg[data-aux-ink="aux"] line[data-role="aux"]')).not.toBeNull();
+  });
+
   it('offers no Delete on a sequence a newer build wrote', () => {
     act(() => root.render(<FoldStepsGrid view={viewOf(DOCUMENT, ['a', 't', 'b', 'c'], true)} />));
     expect(deleteLabels().every(([, label]) => label === null)).toBe(true);

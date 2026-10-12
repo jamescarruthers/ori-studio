@@ -637,6 +637,11 @@ describe('annotations in the file', () => {
     expect(withAnnotations([newer])).toEqual([{ id: 'n-8', unknown: newer }]);
   });
 
+  it('reads a rotate glyph by an exact angle, as a turn carries one, and writes it back', () => {
+    const exact = { id: 'r-1', kind: 'rotate', from: [0.5, 0.5], to: [0.5, 0.5], rotate: { amount: 'degrees', degrees: 30, direction: 'ccw' } };
+    expect(withAnnotations([exact])).toEqual([exact]);
+  });
+
   describe('a solid line (17a)', () => {
     const solid = (more: Record<string, unknown> = {}) => ({ id: 's-1', kind: 'solid-line', from: [0.1, 0.5], to: [0.7, 0.5], ...more });
 
@@ -2049,5 +2054,40 @@ describe('turns between steps (D22)', () => {
     written.steps[3] = { kind: 'rotate' };
     const read = readDiagram(written)!.document;
     expect(read.steps.map((entry) => entry.id)).toEqual(['step-2', 'step-4']);
+  });
+
+  it('writes a rotation by an exact angle — a Fold rotate step’s, pulled in — with its degrees, and reads it back', () => {
+    const ids = sequentialIds();
+    const diagram = insertSteps(
+      createDiagram({ title: 'Crane', newId: ids }),
+      [createStep(ids), createTurn({ kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'cw' } }, ids)],
+      0
+    );
+    const written = throughJson(writeDiagram(diagram));
+    expect(JSON.stringify(written.steps[1])).toBe(
+      '{"id":"turn-3","kind":"rotate","rotate":{"amount":"degrees","degrees":30,"direction":"cw"}}'
+    );
+    expect(readDiagram(written)!.document).toEqual(diagram);
+    // A preset is written as it always was: an older file reads and writes byte for byte.
+    expect(JSON.stringify(throughJson(writeDiagram(turning())).steps[3])).toBe(
+      '{"id":"turn-5","kind":"rotate","rotate":{"amount":"eighth","direction":"ccw"}}'
+    );
+  });
+
+  it('carries an exact angle it cannot read as a newer build’s turn, never as a preset', () => {
+    for (const rotate of [
+      { amount: 'degrees', direction: 'cw' },
+      { amount: 'degrees', degrees: 0, direction: 'cw' },
+      { amount: 'degrees', degrees: 270, direction: 'cw' },
+      { amount: 'degrees', degrees: 90, direction: 'cw' },
+      { amount: 'quarter', degrees: 30, direction: 'cw' },
+    ]) {
+      const newer = { id: 'turn-3', kind: 'rotate', rotate };
+      const written = throughJson(writeDiagram(turning()));
+      written.steps[1] = newer;
+      const carried = readDiagram(written)!.document.steps[1]!;
+      expect(isTurn(carried) && isLockedTurn(carried), JSON.stringify(rotate)).toBe(true);
+      expect(throughJson(writeDiagram(readDiagram(written)!.document)).steps[1]).toEqual(newer);
+    }
   });
 });

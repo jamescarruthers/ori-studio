@@ -8,6 +8,7 @@
  * style is a name the picture turns into a CSS class or a pen; the colours are
  * theme tokens, never values carried here.
  */
+import type { TurnRotation } from '../steps/turn';
 import type { DiagramWhiteArrowFill, DiagramWhiteArrowWidth } from './diagramInk';
 import type {
   DiagramArc,
@@ -163,16 +164,12 @@ export type StepDiagramPrimitive =
     }
   /**
    * Turn the model round in its plane, centred on `at`: a circle of two
-   * arrows going the way it turns, and how far, as a fraction of a turn. Its
-   * size is the drawing's, and it is drawn in screen space, as the turn-over
-   * glyph is.
+   * arrows going the way it turns, and how far — a fraction of a turn, or an
+   * exact angle in degrees (`lib/steps/turn`'s rotation, whose fields it
+   * carries). Its size is the drawing's, and it is drawn in screen space, as
+   * the turn-over glyph is.
    */
-  | {
-      kind: 'rotate';
-      at: readonly [number, number];
-      amount: 'eighth' | 'quarter' | 'half';
-      direction: 'cw' | 'ccw';
-    }
+  | ({ kind: 'rotate'; at: readonly [number, number] } & TurnRotation)
   /**
    * The turn-over glyph, centred on `at`.
    *

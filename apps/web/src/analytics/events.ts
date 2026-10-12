@@ -66,6 +66,9 @@ export type FoldStepVia = 'axiom' | 'crease' | 'free';
 /** How much of its line a Fold precrease creased: all of it, a segment between two points, or a pinch. */
 export type FoldStepExtent = 'whole' | 'segment' | 'pinch';
 
+/** How far a Fold rotation turned the model: its preset, or `other` for an exact angle (never the angle itself). */
+export type FoldStepRotationAmount = 'eighth' | 'quarter' | 'half' | 'other';
+
 /**
  * How the reader set a Fold step moving: Space, the Play button, or either on
  * a step already played through (Replay).
@@ -1578,7 +1581,7 @@ export const ANALYTICS_EVENTS = {
    * The Fold workspace's canvas tools (plan D18). `fold step added` is a step
    * committed from the canvas — a fold, a precrease, an unfold or refold, a
    * turn, a crimp or a tuck — with how much it took (`layer_scope`) and how its line was located
-   * (`via`); never the axiom (per-step axiom codes would add up to the axiom
+   * (`via`), and a rotation how far it turned (`amount`, a preset or `other`); never the axiom (per-step axiom codes would add up to the axiom
    * histogram this document forbids). `fold refused` is a refusal shown to the
    * folder, by the engine's stable `code`, once per fold asked for; `fold
    * choice offered` is the engine handing back more than one answer the folder

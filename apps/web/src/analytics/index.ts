@@ -68,6 +68,7 @@ export type {
   FoldStepAddedOpKind,
   FoldStepExtent,
   FoldStepLayerScope,
+  FoldStepRotationAmount,
   FoldStepVia,
   LandingCta,
   LandingFeatureId,

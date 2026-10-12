@@ -49,6 +49,17 @@ describe('foldStateFrame', () => {
     expect(folded.form!.strokes.length).toBeLessThanOrEqual(MAX_STORED_STROKES);
   });
 
+  it('draws a precrease and a crease mark in the crease pattern as aux lines, as the crease-pattern pane does', () => {
+    const scene = diagonalHalfScene();
+    const flat = { ...scene.creases.find((crease) => crease.kind !== 'border')!, kind: 'flat' as const };
+    const marked = {
+      ...scene,
+      creases: scene.creases.map((crease) => (crease.kind === 'border' ? crease : flat)),
+      crease_marks: [{ from: { x: 0.2, y: 0.5 }, to: { x: 0.3, y: 0.5 }, letter: 'mountain' as const, made_at: 1, pieces: [] }],
+    };
+    expect(roles(foldStateFrame(marked).pattern?.strokes)).toEqual(['aux', 'aux', 'edge', 'edge', 'edge', 'edge']);
+  });
+
   it('inverts an isometry', () => {
     const turned: [number, number, number, number, number, number] = [0, -1, 1, 1, 0, 0];
     const inverse = invertIsometry(turned)!;

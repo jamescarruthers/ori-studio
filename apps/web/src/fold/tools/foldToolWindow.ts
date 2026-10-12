@@ -16,7 +16,8 @@
  * a segment or a pinch — and a segment's or a pinch's clicks along the line
  * to its steps (`tools/precrease/precreaseToolWindow`).
  *
- * The Divide line's window says how to use it.
+ * The Divide line's window says how to use it. Rotate's previews from the
+ * start: its amount, exact angle and direction (`tools/rotate/rotateToolWindow`).
  *
  * React-free and store-free: it takes a view and bound verbs and returns data.
  */
@@ -77,6 +78,8 @@ import {
   type FoldReverseWindowView,
 } from './reverse/reverseToolWindow';
 import { sinkToolWindow, type FoldSinkControls, type FoldSinkWindowView } from './sink/sinkToolWindow';
+import { rotateToolWindow, type FoldRotateControls, type FoldRotateWindowView } from './rotate/rotateToolWindow';
+import type { TurnRotation } from '../../lib/steps/turn';
 import { tuckToolWindow, type FoldTuckControls, type FoldTuckWindowView } from './tuck/tuckToolWindow';
 import {
   vertexToolWindow,
@@ -140,6 +143,8 @@ export interface FoldToolWindowView extends FoldToolsView {
   sink?: FoldSinkWindowView;
   /** The Precrease tool's extent and its points along the line (`tools/precrease`); absent for every other tool. */
   extent?: FoldExtentWindowView;
+  /** The Rotate tool's rotation (`tools/rotate`); absent where the surface offers none. */
+  rotate?: FoldRotateWindowView;
 }
 
 /** What the window can promise on this device. */
@@ -182,6 +187,8 @@ export interface FoldToolWindowVerbs
   stepPocket?: (delta: number) => void;
   /** How much of its line a precrease creases (`tools/precrease`). */
   setExtent?: (mode: FoldExtentMode) => void;
+  /** How far and which way Rotate turns the model (`tools/rotate`). */
+  setRotation?: (rotation: TurnRotation) => void;
 }
 
 /** The Divide line's controls: count or exact ratio (Edit's ratio expression), and clearing what is made. */
@@ -293,6 +300,8 @@ export interface FoldToolWindowModel {
   sink?: FoldSinkControls;
   /** How much of its line a precrease creases (`tools/precrease`); absent for every other tool. */
   extent?: FoldKindChoice<FoldExtentMode> | null;
+  /** Rotate's amount, exact angle and direction (`tools/rotate`); absent for every other tool. */
+  rotate?: FoldRotateControls;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
 }
 
@@ -559,6 +568,7 @@ export function foldToolWindow(
   if (view.tool === 'tuck') return tuckToolWindow(t, view, verbs, host);
   if (isVertexTool(view.tool)) return view.vertex ? vertexToolWindow(t, view, view.vertex, verbs, host) : null;
   if (isSinkTool(view.tool)) return sinkToolWindow(t, view, verbs, host);
+  if (view.tool === 'rotate') return view.rotate ? rotateToolWindow(t, view, view.rotate, verbs, host) : null;
   if (!isFoldKind(view.tool)) return null;
   const kind = view.tool;
   const title = foldToolLabel(t, kind);

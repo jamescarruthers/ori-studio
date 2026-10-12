@@ -52,11 +52,9 @@ export function runFoldCanvasShortcut(id: FoldShortcutId, focus: Element | null)
     return true;
   }
   switch (id) {
+    // Rotate is a tool: R takes it in hand through the tools' table above.
     case 'fold.turnOver':
       verbs.turn(FOLD_MODEL_TURNS['turn-over']);
-      return true;
-    case 'fold.rotate':
-      verbs.turn(FOLD_MODEL_TURNS.rotate);
       return true;
     case 'fold.swapSide':
       // Nothing located, no side to swap: S falls through.

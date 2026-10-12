@@ -139,8 +139,7 @@ export type FoldSequenceCapabilityId =
   | 'fold.mountain'
   | 'fold.precrease'
   | 'fold.turn-over'
-  | 'fold.rotate-ccw'
-  | 'fold.rotate-cw'
+  | 'fold.rotate'
   | 'fold.delete-step';
 
 export interface WorkspaceCapability {
@@ -1477,8 +1476,7 @@ function foldSequenceCapabilities(
     'fold.mountain': verb(canChange, t('common:capability.foldMountain', 'Mountain Fold'), t('common:capability.armMountainFold', 'Fold the moving side away from you')),
     'fold.precrease': verb(canChange, t('common:capability.foldPrecrease', 'Precrease'), t('common:capability.armPrecrease', 'Fold and unfold, leaving a crease')),
     'fold.turn-over': verb(canChange, t('common:capability.foldTurnOver', 'Turn Over'), t('common:capability.addTurnOver', 'Turn the model over, as a step of its own')),
-    'fold.rotate-ccw': verb(canChange, t('common:capability.foldRotateCcw', 'Rotate Counterclockwise'), t('common:capability.addRotateCcw', 'Rotate the model a quarter turn counterclockwise, as a step of its own')),
-    'fold.rotate-cw': verb(canChange, t('common:capability.foldRotateCw', 'Rotate Clockwise'), t('common:capability.addRotateCw', 'Rotate the model a quarter turn clockwise, as a step of its own')),
+    'fold.rotate': verb(canChange, t('common:capability.foldRotate', 'Rotate'), t('common:capability.takeRotate', 'Take the Rotate tool: turn the model by a part of a turn or an exact angle, as a step of its own')),
     'fold.delete-step': verb(
       canDelete,
       t('common:capability.foldDeleteStep', 'Delete Step'),

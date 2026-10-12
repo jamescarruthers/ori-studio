@@ -29,6 +29,7 @@ function deps(): FoldActionDeps {
     t,
     setFoldKind: vi.fn(),
     turn: vi.fn(),
+    rotate: vi.fn(),
     deleteStep: vi.fn(),
     importCp: vi.fn(),
     sendToEdit: vi.fn(),

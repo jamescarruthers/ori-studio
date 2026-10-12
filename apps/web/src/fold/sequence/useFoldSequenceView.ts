@@ -63,15 +63,6 @@ function useFoldPath() {
 }
 
 /**
- * The step on screen as the strip numbers it, for a surface that needs only
- * that (the canvas's chips) and not every step's picture and words.
- */
-export function useFoldCursorEntry(): FoldPathEntry | null {
-  const { entries, cursor } = useFoldPath();
-  return entries[cursor] ?? null;
-}
-
-/**
  * The shown sequence, its active path, each step's picture and words, and the
  * step a tool is folding (plan D14). Every Fold surface that lists steps reads
  * this, so a step is numbered, pictured and worded alike wherever it appears.

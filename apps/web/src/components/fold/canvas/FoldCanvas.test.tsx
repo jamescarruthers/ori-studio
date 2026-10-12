@@ -198,13 +198,10 @@ describe("the Fold canvas", () => {
     ).toBe(true);
   });
 
-  it("names the step on screen and the click in hand in the folded pane’s chip", () => {
+  it("puts no status chip over either pane: the tool window says what to click", () => {
     const canvas = mount();
-    const chip = canvas.querySelector(
-      '[data-fold-pane="folded"] [data-viewport-status-readout]',
-    );
-    expect(chip?.textContent).toContain("Step 0");
-    expect(chip?.textContent).toContain("Click the point to move.");
+    expect(canvas.querySelector('[data-fold-pane="folded"]')).not.toBeNull();
+    expect(canvas.querySelector("[data-viewport-status-readout]")).toBeNull();
   });
 
   it("turns a phone to the folded pane when the step is played, where its frames are drawn", () => {

@@ -116,7 +116,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
         Op::Unfold(c) => along_crease(parent, c, true),
         Op::Refold(c) => along_crease(parent, c, false),
         Op::Turn { axis } => Ok(Resolved::View(parent.turn_over_about(*axis))),
-        Op::Rotate { rotate } => Ok(Resolved::View(parent.rotate(rotate.angle()))),
+        Op::Rotate { rotate } => Ok(Resolved::View(parent.rotate(rotate.angle()?))),
         // Import CP: the stored pattern and order, landed whole after the
         // parent (plan D16).
         Op::CpJump(jump) => crate::io::land(parent, jump)

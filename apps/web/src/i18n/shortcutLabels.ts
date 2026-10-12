@@ -220,7 +220,7 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
     case 'fold.turnOver':
       return foldModelVerbLabel(t, 'turn-over');
     case 'fold.rotate':
-      return foldModelVerbLabel(t, 'rotate');
+      return foldToolLabel(t, 'rotate');
     case 'fold.lineAxiom1':
       return lineModeLabel(t, 'axiom-1');
     case 'fold.lineAxiom2':

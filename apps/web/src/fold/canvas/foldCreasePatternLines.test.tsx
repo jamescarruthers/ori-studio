@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { UNASSIGNED_DASH_SLOT } from '../../lib/oristudioCpLineStyle';
+import { SOLID_DASH_SLOT } from '../../lib/oristudioCpLineStyle';
 import { CP_CREASE_WIDTH_FACTOR } from '../../lib/stepDiagram/diagramInk';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { FoldScene, FoldSceneCrease } from '../engine/foldEngineWire';
@@ -32,7 +32,7 @@ function bookWithPrecrease(): FoldScene {
 }
 
 describe('the crease-pattern pane in Edit’s vocabulary', () => {
-  it('holds each crease as the line Edit would: the border black, folds by letter, a precrease unassigned remembering its letter', () => {
+  it('holds each crease as the line Edit would: the border black, folds by letter, a precrease an auxiliary line', () => {
     const lines = creasePatternPaneLines(bookWithPrecrease(), {
       display: { ...FOLD_PANE_DISPLAY_DEFAULT, stepCreases: false },
       step: 1,
@@ -40,8 +40,9 @@ describe('the crease-pattern pane in Edit’s vocabulary', () => {
     });
     expect(lines.instruction).toEqual([]);
     // Flat creases under the folds, the border over both.
-    expect(lines.creases.map((line) => line.color)).toEqual(['None', 'Blue2', ...Array(6).fill('Black0')]);
-    expect(lines.creases[0]).toMatchObject({ fold_direction_hint: 'Mountain', a: { x: 0, y: 0 }, b: { x: 1, y: 1 } });
+    expect(lines.creases.map((line) => line.color)).toEqual(['Cyan3', 'Blue2', ...Array(6).fill('Black0')]);
+    // As Send to Edit lands it: an auxiliary line, with no letter to show.
+    expect(lines.creases[0]).toEqual({ a: { x: 0, y: 0 }, b: { x: 1, y: 1 }, color: 'Cyan3' });
     // In the pane's model space: sheet units, as the engine gives them.
     expect(lines.creases[1]).toMatchObject({ a: { x: 0.5, y: 0 }, b: { x: 0.5, y: 1 } });
   });
@@ -66,10 +67,10 @@ describe('the crease-pattern pane in Edit’s vocabulary', () => {
       step: 2,
       instruction: null,
     });
-    expect(lines.creases.map((line) => line.color)).not.toContain('None');
+    expect(lines.creases.map((line) => line.color)).not.toContain('Cyan3');
   });
 
-  it('draws a crease mark as Edit draws a short crease of its letter, and the step’s or a preview’s as the instruction', () => {
+  it('draws a crease mark as an auxiliary line, as a precrease is, and the step’s or a preview’s as the instruction', () => {
     const scene: FoldScene = {
       ...bookScene(),
       crease_marks: [
@@ -77,11 +78,14 @@ describe('the crease-pattern pane in Edit’s vocabulary', () => {
         { from: { x: 0.75, y: 0.45 }, to: { x: 0.75, y: 0.55 }, letter: 'valley', made_at: 2, pieces: [] },
       ],
     };
-    // At a later step: two short creases of their letters, front-relative, under the border.
+    // At a later step: two auxiliary lines whatever their letters, under the folds and the border.
     const later = creasePatternPaneLines(scene, { display: FOLD_PANE_DISPLAY_DEFAULT, step: 3, instruction: null });
-    expect(later.creases.filter((line) => line.color === 'Red1')).toEqual([
-      { a: { x: 0.25, y: 0.45 }, b: { x: 0.25, y: 0.55 }, color: 'Red1' },
+    expect(later.creases.filter((line) => line.color === 'Cyan3')).toEqual([
+      { a: { x: 0.25, y: 0.45 }, b: { x: 0.25, y: 0.55 }, color: 'Cyan3' },
+      { a: { x: 0.75, y: 0.45 }, b: { x: 0.75, y: 0.55 }, color: 'Cyan3' },
     ]);
+    expect(later.creases.map((line) => line.color).slice(0, 3)).toEqual(['Cyan3', 'Cyan3', 'Blue2']);
+    expect(later.creases.map((line) => line.color)).not.toContain('Red1');
     expect(later.creases.map((line) => line.color).slice(-6)).toEqual(Array(6).fill('Black0'));
     // The step that made them: its instruction, by letter.
     const own = creasePatternPaneLines(scene, { display: FOLD_PANE_DISPLAY_DEFAULT, step: 2, instruction: null });
@@ -91,7 +95,7 @@ describe('the crease-pattern pane in Edit’s vocabulary', () => {
     expect(previewed.instruction).toHaveLength(2);
     // Precreases off: a mark is a precrease of part of its line.
     const off = creasePatternPaneLines(scene, { display: { stepCreases: true, precreases: false }, step: 3, instruction: null });
-    expect(off.creases.map((line) => line.color)).not.toContain('Red1');
+    expect(off.creases.map((line) => line.color)).not.toContain('Cyan3');
   });
 });
 
@@ -112,6 +116,7 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
     themed.style.setProperty('--fold-mountain', '#ff4d5d');
     themed.style.setProperty('--fold-valley', '#60a5fa');
     themed.style.setProperty('--fold-unassigned', '#9aa4ad');
+    themed.style.setProperty('--fold-flat', '#64c8c8');
     document.body.append(themed);
     host = document.createElement('div');
     document.body.append(host);
@@ -139,12 +144,13 @@ describe('the pane’s strokes, through Edit’s renderer path', () => {
     const strokes = latest!;
     // Edit's crease width law over Edit's default line width.
     expect(strokes.widthCss).toBe(CP_CREASE_WIDTH_FACTOR);
-    // The precrease in the undecided dots, its letter's colour on alternate marks; the border in Edit's ink.
-    expect(rgb(strokes.creases.color, 0)).toBe('9aa4ad');
-    expect(strokes.creases.dashSlot?.[0]).toBe(UNASSIGNED_DASH_SLOT);
+    // The precrease in Edit's auxiliary ink, solid, as Edit draws an aux line; the border in Edit's ink.
+    expect(rgb(strokes.creases.color, 0)).toBe('64c8c8');
+    expect(strokes.creases.dashSlot?.[0]).toBe(SOLID_DASH_SLOT);
     expect(rgb(strokes.creases.color, 1)).toBe('111417');
-    const hint = strokes.creases.count - 1;
-    expect(rgb(strokes.creases.color, hint)).toBe('ff4d5d');
+    // No second stroke for a letter: the precrease and the six edges of the border, and nothing else.
+    expect(strokes.creases.count).toBe(7);
+    expect([...Array(strokes.creases.count).keys()].map((at) => rgb(strokes.creases.color, at))).not.toContain('ff4d5d');
     // The step's valley: the tool's line, solid, in the valley colour.
     const instruction = strokes.instruction!;
     expect(instruction.count).toBe(1);

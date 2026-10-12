@@ -435,6 +435,9 @@
       "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où, sans magnétisme.",
       "openSinkLine": "La ligne en travers de la pointe fixe la profondeur de l’enfoncement, et doit être exactement perpendiculaire à sa ligne médiane. L’axiome 4, par un point et perpendiculaire au pli central, en donne une qui l’est.",
       "queued": "Pliage dès que l’aperçu est prêt…",
+      "rotateCancel": "Échap repose Tourner sans ajouter la rotation.",
+      "rotatePreview": "Le panneau plié montre le modèle tourné tel qu’il sera.",
+      "rotateRefused": "Cette rotation ne peut pas être ajoutée ici.",
       "severalSunk_one": "{{count}} pointe enfoncée se trouve ici : la première est prise.",
       "severalSunk_many": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
       "severalSunk_other": "{{count}} pointes enfoncées se trouvent ici : la première est prise.",
@@ -711,6 +714,12 @@
       "previous": "Précédent",
       "tipSide": "Côté de la pointe"
     },
+    "rotate": {
+      "amount": "Quantité",
+      "degrees": "Angle exact",
+      "direction": "Sens",
+      "presetTooltip": "{{fraction}} de tour, {{degrees}}°"
+    },
     "scopeLabel": "pliage",
     "section": {
       "label": "Couches sur la ligne de pli, de haut en bas",
@@ -778,6 +787,10 @@
       "pickTuckTarget": "Choisissez la couche contre laquelle rentrer.",
       "pinchAt": "Cliquez le long de la ligne là où pincer.",
       "pointToMove": "Cliquez sur le point à déplacer.",
+      "rotateAmount": "Choisissez de combien tourner le modèle : une fraction de tour ou un angle exact.",
+      "rotateCommit": "Appuyez sur Entrée pour ajouter la rotation.",
+      "rotateCommitTouch": "Touchez {{action}} pour ajouter la rotation.",
+      "rotateDirection": "Choisissez dans quel sens il tourne.",
       "segmentFrom": "Cliquez le long de la ligne là où le pli commence.",
       "segmentTo": "Cliquez là où il se termine."
     },
@@ -793,6 +806,7 @@
       "openSinkHelp": "Enfoncer l’extrémité d’une pointe fermée en retournant chacune de ses couches.",
       "precrease": "Pré-plier",
       "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
+      "rotateHelp": "Tourner le modèle d’une fraction de tour ou d’un angle exact, d’abord en aperçu, puis en une étape à part.",
       "tuckHelp": "Plier un rabat et le glisser sous, ou sur, une couche qui reste en place.",
       "unsinkHelp": "Ressortir l’extrémité d’une pointe enfoncée.",
       "valley": "Pli vallée",
@@ -810,7 +824,6 @@
       "under": "Rentrer dessous"
     },
     "verb": {
-      "rotateHelp": "Tourner le modèle d’un quart de tour dans le sens horaire, en une étape à part.",
       "turnOverHelp": "Retourner le modèle de gauche à droite, en une étape à part."
     },
     "vertex": {

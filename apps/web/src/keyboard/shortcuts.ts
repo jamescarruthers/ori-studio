@@ -815,7 +815,8 @@ const FOLD_SHORTCUTS: ShortcutDefinition[] = [
   foldShortcut('fold.toolClosedSink', 'Closed Sink', null),
   foldShortcut('fold.toolUnsink', 'Unsink', null),
   foldShortcut('fold.turnOver', 'Turn Over', { key: 't' }),
-  foldShortcut('fold.rotate', 'Rotate a Quarter Turn', { key: 'r' }),
+  // R takes the Rotate tool in hand: its window sets how far and which way, Enter applies.
+  foldShortcut('fold.rotate', 'Rotate', { key: 'r' }),
   foldShortcut('fold.lineAxiom1', 'Axiom 1', { key: '1' }),
   foldShortcut('fold.lineAxiom2', 'Axiom 2', { key: '2' }),
   foldShortcut('fold.lineAxiom3', 'Axiom 3', { key: '3' }),

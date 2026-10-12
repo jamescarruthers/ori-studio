@@ -2369,13 +2369,6 @@ export function rotateGlyph(
 const ROTATE_ARC_START = (200 * Math.PI) / 180;
 const ROTATE_ARC_SWEEP = (140 * Math.PI) / 180;
 
-/** The fraction of a turn the rotate glyph names, as it is printed. */
-export const ROTATE_FRACTION: Readonly<Record<'eighth' | 'quarter' | 'half', string>> = {
-  eighth: '1/8',
-  quarter: '1/4',
-  half: '1/2',
-};
-
 /** A cubic Bézier's four control points. */
 type Cubic = readonly [SvgPoint, SvgPoint, SvgPoint, SvgPoint];
 

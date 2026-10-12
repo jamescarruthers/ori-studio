@@ -22,6 +22,8 @@ import {
 import { useFieldFocusRequest } from '../../diagram/annotate/useFieldFocusRequest';
 import { useStepAnnotations } from '../../diagram/annotate/useStepAnnotations';
 import { DEFAULT_DIAGRAM_STYLE, type DiagramStep, type KnownDiagramAnnotation } from '../../diagram/document/diagramDocument';
+import { TURN_ROTATION_PRESETS, withTurnDirection, withTurnPreset } from '../../lib/steps/turn';
+import { turnAmountOptions } from '../../lib/steps/turnWords';
 import { marksTouchingWindow, viewOfStep } from '../../diagram/zoom/stepView';
 import { useAreaSubtitle } from '../../diagram/zoom/useZoomControls';
 import { frameSubtitle, areaStepOf } from '../../diagram/zoom/zoomActions';
@@ -268,14 +270,12 @@ function SelectedAnnotation({
             label={t('panels:diagram.annotations.turn', 'Turn')}
             value={annotation.rotate.amount}
             disabled={!editable}
-            options={[
-              { id: 'eighth', label: '1/8' },
-              { id: 'quarter', label: '1/4' },
-              { id: 'half', label: '1/2' },
-            ]}
-            onChange={(amount) =>
-              annotations.setRotation(id, { ...annotation.rotate!, amount: amount as 'eighth' | 'quarter' | 'half' })
-            }
+            options={turnAmountOptions(annotation.rotate, t)}
+            onChange={(amount) => {
+              // An exact angle's segment is the glyph as it is: only a preset changes it.
+              const preset = TURN_ROTATION_PRESETS.find((each) => each === amount);
+              if (preset) annotations.setRotation(id, withTurnPreset(annotation.rotate!, preset));
+            }}
           />
           <SegmentedRow
             label={t('panels:diagram.annotations.direction', 'Direction')}
@@ -286,7 +286,7 @@ function SelectedAnnotation({
               { id: 'ccw', label: t('panels:diagram.annotations.counterclockwise', 'Counterclockwise') },
             ]}
             onChange={(direction) =>
-              annotations.setRotation(id, { ...annotation.rotate!, direction: direction as 'cw' | 'ccw' })
+              annotations.setRotation(id, withTurnDirection(annotation.rotate!, direction === 'ccw' ? 'ccw' : 'cw'))
             }
           />
         </>

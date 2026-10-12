@@ -115,8 +115,9 @@ function groupLabel(t: TFunction, id: FoldRailGroupId): string {
 
 /**
  * The rail's groups, in order: the folds; the sinks; Reference points; Locate
- * line; the model verbs; and the planned folds, collapsed. Every surface that shows the
- * Fold tools reads this list.
+ * line; the model — Turn over, done at once, and the Rotate tool; and the
+ * planned folds, collapsed. Every surface that shows the Fold tools reads
+ * this list.
  */
 export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRailVerbs): FoldRailGroup[] {
   const locked = view.readOnly === null ? null : foldReadOnlyReason(t, view.readOnly);
@@ -171,7 +172,8 @@ export function foldRailGroups(t: TFunction, view: FoldToolsView, verbs: FoldRai
     ['sink', FOLD_SINK_TOOLS.map(tool)],
     ['reference', [tool('divide-line')]],
     ['locate', FOLD_LINE_MODES.map(lineMode)],
-    ['model', [verb('turn-over'), verb('rotate')]],
+    // Turn over at once; Rotate a tool, its amount and direction to choose.
+    ['model', [verb('turn-over'), tool('rotate')]],
     [
       'planned',
       FOLD_PLANNED_OPS.map((id) => {

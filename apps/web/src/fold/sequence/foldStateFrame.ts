@@ -177,7 +177,7 @@ export function foldStateFrame(scene: FoldScene): FoldStateFrame {
     rectangular: boxArea > 0 && Math.abs(area - boxArea) <= AREA_TOLERANCE * boxArea,
     creases: new Map(scene.creases.map((crease) => [crease.id, crease])),
     form: storedThumbnail(visibleEdges(scene)),
-    pattern: storedThumbnail(patternStrokes(scene.creases)),
+    pattern: storedThumbnail(patternStrokes(scene)),
   };
 }
 
@@ -195,13 +195,19 @@ function storedThumbnail(strokes: readonly SheetStroke[]): SheetThumbnail | null
   return fitted ? storedSheetThumbnail(fitted) : null;
 }
 
-/** The crease pattern in sheet coordinates, by its letters as stored: from the front. */
-function patternStrokes(creases: readonly FoldSceneCrease[]): SheetStroke[] {
-  return creases.map((crease) => {
+/**
+ * The crease pattern in sheet coordinates, by its letters as stored: from the
+ * front. A flat crease and a crease mark — a partial precrease — are aux
+ * lines, as the crease-pattern pane draws them (`creasePatternPaneLines`).
+ */
+function patternStrokes(scene: FoldScene): SheetStroke[] {
+  const creases = scene.creases.map((crease) => {
     const role: SheetStrokeRole =
       crease.kind === 'border' ? 'edge' : crease.kind === 'flat' ? 'aux' : crease.letter === 'mountain' ? 'mountain' : 'valley';
     return stroke(pointOf(crease.from), pointOf(crease.to), role);
   });
+  const marks = (scene.crease_marks ?? []).map((mark) => stroke(pointOf(mark.from), pointOf(mark.to), 'aux'));
+  return [...creases, ...marks];
 }
 
 /** The subfaces, bucketed on a grid over the silhouette's box, to find the ones under a point quickly. */

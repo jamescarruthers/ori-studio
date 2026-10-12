@@ -12,7 +12,8 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   old handles (`unknown_state`); the web side stamps each handle with its
   worker's generation so an old one is never sent to a new engine.
 - **Coarse calls.** `sheet(paper)`; `apply(state, op, choices)` for valley,
-  mountain, precrease, unfold, refold, turn and rotate, along a free line, a
+  mountain, precrease, unfold, refold, turn and rotate (by a part of a turn,
+  or `amount: "degrees"` with its `degrees`, in (0, 180]), along a free line, a
   crease or an axiom; `summary`; `canonical_keys` for the `fs1` fingerprint;
   `release`, `clear`, `live`.
 - **Partial precreases** (`src/partial.rs`): a precrease op with an

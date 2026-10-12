@@ -1,8 +1,8 @@
 /*
  * The Fold canvas (FoldCanvas.tsx, FoldPane.tsx): the viewport — the two
  * panes side by side, the folded form first as the design has it, one at a
- * time on a phone — with the viewport toolbar and the panes' status chips
- * over it. The tool rail beside it is the panel's.
+ * time on a phone — with the viewport toolbar over it. The tool rail beside
+ * it is the panel's.
  */
 .root {
   display: grid;
@@ -31,7 +31,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-/* One pane's box: the canvas fills it, and its chip and layers sit over it. */
+/* One pane's box: the canvas fills it, and its layers sit over it. */
 .pane {
   position: relative;
   min-width: 0;
@@ -49,18 +49,6 @@
   width: 100%;
   height: 100%;
   touch-action: none;
-}
-
-/* The click in hand, after the chip's counts: the step prompt Edit's readout carries too. */
-.prompt {
-  color: var(--text-primary);
-}
-
-/* A crease count, its letter in the ink of its crease. */
-.count {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
 }
 
 /* An SVG drawn over a pane through its camera: the fold's arrow. Never takes a press. */

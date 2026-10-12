@@ -398,6 +398,65 @@ fn precrease_turn_and_rotate_are_one_step_each() {
 }
 
 #[test]
+fn a_rotation_by_an_exact_angle_turns_the_view_by_it() {
+    let mut bridge = Bridge::new();
+    let sheet = square(&mut bridge);
+    // 30° clockwise is −π/6 in the engine's counter-clockwise sense.
+    let (cw, clockwise) = land(
+        &mut bridge,
+        sheet,
+        json!({ "kind": "rotate", "rotate": { "amount": "degrees", "degrees": 30.0, "direction": "cw" } }),
+    );
+    assert_eq!(clockwise["report"], Value::Null);
+    assert_eq!(clockwise["summary"]["step"], 1);
+    let rotation = number(&clockwise["summary"]["view"]["rotation"]);
+    assert!(
+        (rotation + std::f64::consts::FRAC_PI_6).abs() < 1e-12,
+        "{rotation}"
+    );
+    // Then 22.5° counterclockwise: the turns add up.
+    let (_, back) = land(
+        &mut bridge,
+        cw,
+        json!({ "kind": "rotate", "rotate": { "amount": "degrees", "degrees": 22.5, "direction": "ccw" } }),
+    );
+    let rotation = number(&back["summary"]["view"]["rotation"]);
+    assert!(
+        (rotation - (22.5f64 - 30.0).to_radians()).abs() < 1e-12,
+        "{rotation}"
+    );
+    // The same angle by its preset and by its degrees lands the same view.
+    let (_, eighth) = land(
+        &mut bridge,
+        sheet,
+        json!({ "kind": "rotate", "rotate": { "amount": "eighth", "direction": "ccw" } }),
+    );
+    assert!(
+        (number(&eighth["summary"]["view"]["rotation"]) - std::f64::consts::FRAC_PI_4).abs()
+            < 1e-12
+    );
+
+    // An exact angle that is none, or degrees beside a preset: the caller's mistake.
+    for rotate in [
+        json!({ "amount": "degrees", "direction": "cw" }),
+        json!({ "amount": "degrees", "degrees": 0.0, "direction": "cw" }),
+        json!({ "amount": "degrees", "degrees": -30.0, "direction": "cw" }),
+        json!({ "amount": "degrees", "degrees": 200.0, "direction": "cw" }),
+        json!({ "amount": "quarter", "degrees": 90.0, "direction": "cw" }),
+    ] {
+        let wrong = bridge.apply(
+            sheet,
+            &op(json!({ "kind": "rotate", "rotate": rotate })),
+            &none(),
+        );
+        assert!(
+            matches!(wrong, Err(BridgeError::InvalidInput(_))),
+            "{rotate}"
+        );
+    }
+}
+
+#[test]
 fn a_model_line_takes_its_side_against_the_normal_as_given() {
     let mut bridge = Bridge::new();
     let sheet = square(&mut bridge);

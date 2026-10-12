@@ -55,8 +55,8 @@ function shortcut(id: MenuActionId, resolution?: ShortcutResolutionInput): strin
 /**
  * The Fold menu's rows a key of the `fold` scope also runs — the same verb by
  * another route (`fold/canvas/useFoldCanvasShortcuts`): V, M and P take the
- * fold in hand as the menu's kinds arm it, T and R add the turns its turn-over
- * and clockwise rotation add. Their hint is that key, as the user's layout
+ * fold in hand as the menu's kinds arm it, T adds the turn-over its row adds,
+ * and R takes the Rotate tool as its row does. Their hint is that key, as the user's layout
  * resolves it. The hint only: the native menu reads its accelerators by the
  * row's own id, which binds nothing, so a bare letter is never taken from a
  * text field there.
@@ -66,7 +66,7 @@ const FOLD_ROW_KEYS: Partial<Record<MenuActionId, FoldShortcutId>> = {
   'fold.mountain': 'fold.toolMountain',
   'fold.precrease': 'fold.toolPrecrease',
   'fold.turn-over': 'fold.turnOver',
-  'fold.rotate-cw': 'fold.rotate',
+  'fold.rotate': 'fold.rotate',
 };
 
 function foldRowKey(id: MenuActionId, resolution?: ShortcutResolutionInput): string | undefined {
@@ -340,8 +340,7 @@ export function getMenuBarDef(
         { type: 'action', id: 'fold.precrease', label: t('menu:fold.precrease', 'Precrease'), shortcut: foldRowKey('fold.precrease', resolution) },
         { type: 'separator' },
         { type: 'action', id: 'fold.turn-over', label: t('menu:fold.turn-over', 'Turn Over'), shortcut: foldRowKey('fold.turn-over', resolution) },
-        { type: 'action', id: 'fold.rotate-ccw', label: t('menu:fold.rotate-ccw', 'Rotate Counterclockwise'), shortcut: foldRowKey('fold.rotate-ccw', resolution) },
-        { type: 'action', id: 'fold.rotate-cw', label: t('menu:fold.rotate-cw', 'Rotate Clockwise'), shortcut: foldRowKey('fold.rotate-cw', resolution) },
+        { type: 'action', id: 'fold.rotate', label: t('menu:fold.rotate', 'Rotate...'), shortcut: foldRowKey('fold.rotate', resolution) },
         { type: 'separator' },
         { type: 'action', id: 'fold.delete-step', label: t('menu:fold.delete-step', 'Delete Step'), shortcut: shortcut('fold.delete-step', resolution) },
         { type: 'separator' },

@@ -5,7 +5,7 @@ import { foldCanvasVerbs, foldToolKindControl, registerFoldCanvasVerbs, withFold
 import type { FoldCanvasVerbs } from './useFoldCanvasVerbs';
 
 const OVER = FOLD_MODEL_TURNS['turn-over'];
-const QUARTER = FOLD_MODEL_TURNS.rotate;
+const QUARTER = { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } } as const;
 
 /** A canvas's verbs as far as a turn needs them. */
 const canvas = () => ({ turn: vi.fn() }) as unknown as FoldCanvasVerbs & { turn: ReturnType<typeof vi.fn> };
