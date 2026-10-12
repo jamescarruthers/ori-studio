@@ -43,6 +43,8 @@ vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
             pictureMm: { x: 0, y: 0, size: 40 },
             clashes: printed.clashes[step.id],
             overflow: printed.overflow[step.id],
+            // Its caption as the layout sets it, a line a word: what the Step pane's Text width reads.
+            text: { x: 0, firstBaseline: 50, widthMm: 36, lines: step.text.split(' ').filter(Boolean).map((text) => ({ text, widthMm: 8, runs: [], ellipsis: false })) },
           }))
         : [];
       return { pages: { layout: { pages: [{ cells }] } }, document };

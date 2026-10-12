@@ -15,7 +15,7 @@ import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramLayoutSteps, preparedPages } from './diagramPages';
 import { layoutDiagramPages } from './diagramPageLayout';
 import { estimateTextSetter } from './estimateTextSetter';
-import { pageOffset, partBox, partPolygons, placementClashes } from './pagePlacement';
+import { laneFollowsPlacement, pageOffset, partBox, partPolygons, placementClashes } from './pagePlacement';
 import { laneCrosses } from './flowLane';
 import { previewPlacement } from './placementPreview';
 
@@ -135,6 +135,26 @@ it('keeps the ribbon over moved pictures and keeps both sides of the spine level
     if (laneCrosses(shifted.pages[0]!.band!))
       expect(shifted.pages[0]!.cells.find((c) => c.stepId === 's2')!.clashes).toContainEqual({ kind: 'path' });
   }
+});
+
+it('follows a step with the lane only where its picture was moved or resized, never for its number or its caption alone', () => {
+  const placed = (offsets: DiagramStepPlace) => ({ placed: { offsets, pin: null, auto: { mmPerUnit: null, frameMm: null, drawMm: { x: 0, y: 0, w: 1, h: 1 } } } });
+  expect(laneFollowsPlacement({})).toBe(false);
+  for (const offsets of [{ number: [2, 0] }, { text: [0, 3] }, { textWidth: 60 }, { text: [-4, 0], textWidth: 60 }] as DiagramStepPlace[])
+    expect(laneFollowsPlacement(placed(offsets)), JSON.stringify(offsets)).toBe(false);
+  for (const offsets of [{ frame: [2, 0] }, { picture: [0, 3] }, { scale: { mmPerUnit: 0.3 } }, { text: [1, 0], picture: [1, 1] }] as DiagramStepPlace[])
+    expect(laneFollowsPlacement(placed(offsets)), JSON.stringify(offsets)).toBe(true);
+  // On a flow page: the band as it ran, a caption moved and resized and a number moved; not so a picture moved.
+  const flow = (place?: DiagramStepPlace) =>
+    setPageSetup(
+      insertSteps(createDiagram(), Array.from({ length: 7 }, (_, i) => ({ ...cpStep(`s${i}`), text: 'Fold the corner up to the top.', ...(i === 3 && place ? { place } : {}) })), 0),
+      { layout: 'flow', stepsPerPage: 7 },
+    );
+  // The page held as first packed: a caption's pin would otherwise be packed for.
+  const held = layoutDiagramPages(diagramLayoutSteps(flow()), flow().page, '', estimateTextSetter).packed!;
+  const band = (place?: DiagramStepPlace) => layoutDiagramPages(diagramLayoutSteps(flow(place)), flow().page, '', estimateTextSetter, held).pages[0]!.band;
+  expect(band({ text: [-6, 2], textWidth: 64, number: [1, 0] })).toEqual(band());
+  expect(band({ picture: [0, 6] })).not.toEqual(band());
 });
 
 it('returns to the identical printed page when a pin and offsets are cleared', () => {

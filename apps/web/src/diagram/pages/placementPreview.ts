@@ -18,8 +18,9 @@ import {
  * are placed again on the drop, once the final layout is ready.
  *
  * A caption being resized (`caption`, its lines re-set by the caller with the
- * pages' own setter) replaces the step's caption, and moves nothing else: the
- * lane follows the step only as far as its placement already had it.
+ * pages' own setter) replaces the step's caption, and moves nothing else. The
+ * lane follows the step where the drag moves or resizes its picture, and
+ * otherwise as far as its placement already had it (`laneFollowsPlacement`).
  */
 export function previewPlacement(
   base: DiagramPagesLayout,
@@ -51,7 +52,8 @@ export function previewPlacement(
       auto: { mmPerUnit: old.mmPerUnit, frameMm: old.frameMm, drawMm: old.drawMm },
     };
     page.cells[index] = cell;
-    follows.set(pageIndex, { index, follows: caption ? laneFollowsPlacement(old) : true });
+    // The lane runs through the picture: it follows the step where the drag moves or resizes it.
+    follows.set(pageIndex, { index, follows: part === 'frame' || part === 'picture' || factor !== 1 || laneFollowsPlacement(old) });
     // Symbols are re-placed on drop, once the final layout is ready.
   });
   // Both sides of a printed spread share the moved spine height.

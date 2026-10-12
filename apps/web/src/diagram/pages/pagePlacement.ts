@@ -92,14 +92,19 @@ export function placeCell(cell: LayoutCell, step: LayoutStep, rightToLeft: boole
   return next;
 }
 
+/** The fields of a placement that move or resize a step's picture, which the flow lane runs through. */
+const LANE_FIELDS: readonly (keyof DiagramStepPlace)[] = ['frame', 'picture', 'scale'];
+
 /**
  * Whether the flow lane follows a placed step as a hand put it (`LaneStop.placed`):
- * any part moved or its picture's scale pinned. A step placed only by its
- * caption's measure (`DiagramStepPlace.textWidth`) stands where the layout
- * puts it, so the band runs through it as through any other.
+ * its frame or its picture moved, or its picture's scale pinned. The lane
+ * runs through the step's picture, so a step whose number or caption alone
+ * was placed — moved, or its caption's measure pinned — has its picture
+ * where the layout puts it, and the band runs through it as through any other.
  */
 export function laneFollowsPlacement(cell: Pick<LayoutCell, 'placed'>): boolean {
-  return !!cell.placed && Object.keys(cell.placed.offsets).some((field) => field !== 'textWidth');
+  const offsets = cell.placed?.offsets;
+  return !!offsets && LANE_FIELDS.some((field) => offsets[field] !== undefined);
 }
 
 export function partBox(cell: LayoutCell, part: PagePart): PageBox {
