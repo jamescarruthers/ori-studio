@@ -275,6 +275,58 @@ Phase 3 (layout, 2026-10-12):
   caption on step 11, a far push arrow on step 13 and a new picture on step
   15 moved no box of 28; 11 said `caption`, 13 `picture`, 15 was fitted.
 
+Phase 4 (UI, 2026-10-12):
+
+- Page pane: `components/diagram/DiagramPagePacking.tsx`, a Packing section
+  under Layout, the flow's alone. Bands is a segmented row (Auto, 2–5);
+  Prefer three bands (a nested slider, shown only for Auto), Nesting and
+  Scale steadiness are sliders 0–1 in twentieths, each with a reset to
+  Zach's default while it is not; Steps in bends is a switch. Each is one
+  `setDiagramPage`, one undo step and one count. A setting re-signs every
+  page, so a slider hands its value over only where it is let go:
+  `SliderRow` gained an `onCommit` mode (it holds the drag itself, shows it,
+  and commits once per drag or keyboard step, never a drag that ends where it
+  began) and a `help` prop. Under the rows, Re-pack Page (the current page,
+  `useCurrentDiagramPage`) and Re-pack All Pages.
+- The verbs: a page action catalog, `diagram/actions/diagramPageActions.ts`
+  (`foldedFigureActions.ts`'s shape; none on a grid; each held back, with
+  why, on a read-only diagram or where nothing is stored to let go — only a
+  moment, before a layout's packing is taken in). Bound in
+  `pages/repackActions.ts` (`repackPage`, `repackAllPages`,
+  `diagramPageActions` for a menu as it opens) and for a pane in
+  `pages/useDiagramPageActions.ts`. Surfaces: the Packing section, the
+  Layers pane's page list (Re-pack Page under the list), the overflow
+  notice, and a page's context menu in the Pages view (a right-click on a
+  page past its steps: Add Step, then Re-pack Page and Re-pack All Pages).
+  The step catalog has no place for a page's verbs, so they are their own.
+  No keyboard shortcut.
+- The overflow report reads `LayoutCell.overflow` and `LayoutPage.packing.fits`
+  (`pages/pageOverflow.ts`, words in `pages/overflowLabels.ts`): the Pages
+  view outlines the step's place (its frame) dashed, with a "No longer fits"
+  tab over its top right, clear of what runs out of its foot, and names the
+  option "Step N, no longer fits its place"; the Layers pane badges the row;
+  `DiagramPageOverflowNotice` over the Pages view (the Diagram panel's
+  notice slot, like the enlarge-split notice) names the current page's steps
+  and offers Re-pack Page, or for a page no plan fits says only fewer steps
+  mend it (no Re-pack: it would pack the same); the export dialog lists the
+  steps and the unfit pages for the PDF and the SVG, as it lists clashes.
+- Analytics: `diagram page setup changed` gains `flow_bands`,
+  `flow_prefer_bands`, `flow_bend_steps`, `flow_nesting`, `flow_steadiness`
+  (which setting, never the value); `diagram pages repacked` with `scope`
+  (`page`/`all`) and `via` (`page_pane`/`layers_pane`/`notice`/`context_menu`),
+  sent only when an arrangement was let go. Both in `docs/analytics.md`.
+- Browser (:5320, the crane, `artifacts/layout-review/packing-ui-probe.mjs`,
+  screenshots in `out/packing-ui/`): each control re-packs as expected —
+  Bands 4 gives page 2 four bands while the left pages keep three (the odd
+  count either side, Decision 7); Prefer three bands 0 gives page 2 two
+  bands (5·4 from the foot); Steps in bends off and Scale steadiness 0 each
+  give page 2 3·4·2 with no step in a bend (k 1.0017 against 1.0465 with
+  steps 13 and 16 in bends); Nesting 0 lines page 1's steps up in their
+  bands; every change is one "Change page setup" undo step. A long caption
+  on step 11 shows the tag, the badge, the notice and the export line;
+  Re-pack Page from the notice re-packs page 2 alone (two bands, 5·4, k
+  1.0601) and the notice goes; the page's context menu re-packs it too.
+
 ## Affected Areas
 
 - `apps/web/src/diagram/pages/`: a new pure `flowPacking.ts` (+ tests);
@@ -308,8 +360,8 @@ Phase 3 (layout, 2026-10-12):
 - [x] Adopting arrangements in `useDiagramPages` (same document only, no dirty, no undo entry); export, print and step files pack missing pages the same way.
 
 ### Phase 4: UI
-- [ ] Page pane "Packing" section (flow only): Bands, Prefer three bands (Auto only), Steps in bends, Nesting, Scale steadiness; Re-pack All Pages.
-- [ ] Re-pack Page in the Layers page list and the Page pane; the overflow notice; the export dialog's overflow line; analytics; i18n.
+- [x] Page pane "Packing" section (flow only): Bands, Prefer three bands (Auto only), Steps in bends, Nesting, Scale steadiness; Re-pack All Pages.
+- [x] Re-pack Page in the Layers page list and the Page pane; the overflow notice; the export dialog's overflow line; analytics; i18n.
 
 ### Phase 5: tests and gate
 - [ ] Goldens re-recorded and checked by eye against the prototype; a test that a picture or caption edit moves no step; full suite, build, browser check of the four diagrams at 9, 10 and 13 a page; review.
