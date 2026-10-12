@@ -362,6 +362,23 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
 }
 
 /**
+ * The asked op of a fan with each other region as the paper that stays: what
+ * is asked when none of its fourth creases lands with the region picked, to
+ * tell whether other paper would help. Empty for any other fold, or before
+ * the paper that stays is picked.
+ */
+export function fanOpsElsewhere(intent: FoldVertexIntent, index: FoldPickIndex, asked: FoldVertexOp): FoldVertexOp[] {
+  if (asked.kind !== 'rabbit-ear' && asked.kind !== 'swivel') return [];
+  const fan = fanGiven(intent);
+  const picked = fan ? fanStayerRegion(intent, fan) : null;
+  if (!fan || picked === null) return [];
+  return fan.rays.flatMap((_, k) => {
+    const stayer = k === picked ? null : fanStayer(index, fan, k, intent.direction, intent.fanLayers);
+    return stayer ? [{ ...asked, stayer }] : [];
+  });
+}
+
+/**
  * A fan's fourth creases that land, by index into the candidates, in order:
  * all the folder is offered (owner feedback, 2026-10-12: a fourth crease that
  * cannot fold is never a choice, refused after it is made). A candidate the

@@ -64,6 +64,8 @@ export interface FoldVertexWindowView {
    */
   fourths: number;
   fourth: number;
+  /** With none that lands: whether one would with other paper staying; null while that is asked. */
+  fourthElsewhere?: boolean | null;
   /** The layers at a fan's center, and how many it cuts (null for every one). */
   layers: number;
   fanLayers: number | null;
@@ -335,10 +337,22 @@ function fourthStepper(
 /**
  * What the fourth crease's stepper says beneath it, in a place kept for it:
  * how many fit with this paper staying put — and when none does, the change
- * that helps, other paper to stay.
+ * that helps: other paper to stay, or, when no paper staying would do,
+ * other picks.
  */
 function emergentNote(t: TFunction, vertex: FoldVertexWindowView, host: FoldToolHost): string {
   const { fourths } = vertex;
+  if (fourths === 0 && vertex.fourthElsewhere === false) {
+    return host.coarse
+      ? t(
+          'tools:fold.vertex.noFourthAnywhereTouch',
+          'No fourth crease fits these creases, whichever paper stays: tap Cancel and pick again.'
+        )
+      : t(
+          'tools:fold.vertex.noFourthAnywhere',
+          'No fourth crease fits these creases, whichever paper stays: press Esc and pick again.'
+        );
+  }
   if (fourths === 0) {
     return host.coarse
       ? t('tools:fold.vertex.noFourthTouch', 'No fourth crease fits with this paper staying put: tap other paper to stay.')

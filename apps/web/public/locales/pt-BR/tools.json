@@ -852,6 +852,8 @@
       "mountain": "Montanha",
       "mountainTitle": "Montanha: o papel gira para longe de você",
       "noFourth": "Nenhum quarto vinco cabe com este papel parado: clique em outro papel para ficar parado.",
+      "noFourthAnywhere": "Nenhum quarto vinco cabe com estes vincos, qualquer que seja o papel que fica parado: pressione Esc e escolha de novo.",
+      "noFourthAnywhereTouch": "Nenhum quarto vinco cabe com estes vincos, qualquer que seja o papel que fica parado: toque em Cancelar e escolha de novo.",
       "noFourthTouch": "Nenhum quarto vinco cabe com este papel parado: toque em outro papel para ficar parado.",
       "note": {
         "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar.",

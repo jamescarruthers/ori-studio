@@ -207,6 +207,7 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
     target: tools.compound.squashTarget ? 'point' : 'hinge',
     fourths: fourths.length,
     fourth: Math.max(0, fourths.indexOf(vertex?.emergent ?? -1)),
+    fourthElsewhere: vertex?.elsewhere ?? null,
     layers: vertex?.layers ?? 0,
     fanLayers: tools.compound.fanLayers,
     orders: orders.length > 1 ? orders.length : 0,

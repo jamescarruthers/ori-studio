@@ -5681,7 +5681,9 @@
     "tools:fold.vertex.noFourth": "d8220a2e1d84",
     "tools:fold.vertex.noFourthTouch": "ea17dc1a20fe",
     "tools:fold.vertex.steps.fanChooseStayer": "6f0e857d20ea",
-    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412"
+    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412",
+    "tools:fold.vertex.noFourthAnywhere": "fbaedf98e0a1",
+    "tools:fold.vertex.noFourthAnywhereTouch": "6643695f4dda"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -11365,7 +11367,9 @@
     "tools:fold.vertex.noFourth": "d8220a2e1d84",
     "tools:fold.vertex.noFourthTouch": "ea17dc1a20fe",
     "tools:fold.vertex.steps.fanChooseStayer": "6f0e857d20ea",
-    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412"
+    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412",
+    "tools:fold.vertex.noFourthAnywhere": "fbaedf98e0a1",
+    "tools:fold.vertex.noFourthAnywhereTouch": "6643695f4dda"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -17051,7 +17055,9 @@
     "tools:fold.vertex.noFourth": "d8220a2e1d84",
     "tools:fold.vertex.noFourthTouch": "ea17dc1a20fe",
     "tools:fold.vertex.steps.fanChooseStayer": "6f0e857d20ea",
-    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412"
+    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412",
+    "tools:fold.vertex.noFourthAnywhere": "fbaedf98e0a1",
+    "tools:fold.vertex.noFourthAnywhereTouch": "6643695f4dda"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -22409,7 +22415,9 @@
     "tools:fold.vertex.noFourth": "d8220a2e1d84",
     "tools:fold.vertex.noFourthTouch": "ea17dc1a20fe",
     "tools:fold.vertex.steps.fanChooseStayer": "6f0e857d20ea",
-    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412"
+    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412",
+    "tools:fold.vertex.noFourthAnywhere": "fbaedf98e0a1",
+    "tools:fold.vertex.noFourthAnywhereTouch": "6643695f4dda"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -27767,7 +27775,9 @@
     "tools:fold.vertex.noFourth": "d8220a2e1d84",
     "tools:fold.vertex.noFourthTouch": "ea17dc1a20fe",
     "tools:fold.vertex.steps.fanChooseStayer": "6f0e857d20ea",
-    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412"
+    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412",
+    "tools:fold.vertex.noFourthAnywhere": "fbaedf98e0a1",
+    "tools:fold.vertex.noFourthAnywhereTouch": "6643695f4dda"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -33451,7 +33461,9 @@
     "tools:fold.vertex.noFourth": "d8220a2e1d84",
     "tools:fold.vertex.noFourthTouch": "ea17dc1a20fe",
     "tools:fold.vertex.steps.fanChooseStayer": "6f0e857d20ea",
-    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412"
+    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412",
+    "tools:fold.vertex.noFourthAnywhere": "fbaedf98e0a1",
+    "tools:fold.vertex.noFourthAnywhereTouch": "6643695f4dda"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -39135,7 +39147,9 @@
     "tools:fold.vertex.noFourth": "d8220a2e1d84",
     "tools:fold.vertex.noFourthTouch": "ea17dc1a20fe",
     "tools:fold.vertex.steps.fanChooseStayer": "6f0e857d20ea",
-    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412"
+    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412",
+    "tools:fold.vertex.noFourthAnywhere": "fbaedf98e0a1",
+    "tools:fold.vertex.noFourthAnywhereTouch": "6643695f4dda"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -44493,6 +44507,8 @@
     "tools:fold.vertex.noFourth": "d8220a2e1d84",
     "tools:fold.vertex.noFourthTouch": "ea17dc1a20fe",
     "tools:fold.vertex.steps.fanChooseStayer": "6f0e857d20ea",
-    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412"
+    "tools:fold.vertex.steps.fanChooseTouch": "e846aed90412",
+    "tools:fold.vertex.noFourthAnywhere": "fbaedf98e0a1",
+    "tools:fold.vertex.noFourthAnywhereTouch": "6643695f4dda"
   }
 }

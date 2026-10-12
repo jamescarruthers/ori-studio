@@ -830,6 +830,8 @@
       "mountain": "Berg",
       "mountainTitle": "Berg: das Papier dreht sich von dir weg",
       "noFourth": "Keine vierte Faltlinie passt, wenn dieses Papier liegen bleibt: Klicke auf anderes Papier, das liegen bleiben soll.",
+      "noFourthAnywhere": "Keine vierte Faltlinie passt zu diesen Faltlinien, welches Papier auch liegen bleibt: Drücke Esc und wähle neu.",
+      "noFourthAnywhereTouch": "Keine vierte Faltlinie passt zu diesen Faltlinien, welches Papier auch liegen bleibt: Tippe auf Abbrechen und wähle neu.",
       "noFourthTouch": "Keine vierte Faltlinie passt, wenn dieses Papier liegen bleibt: Tippe auf anderes Papier, das liegen bleiben soll.",
       "note": {
         "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt beliebig zu setzen.",

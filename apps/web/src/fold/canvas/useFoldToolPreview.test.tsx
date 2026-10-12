@@ -436,6 +436,28 @@ describe('a vertex fold’s step', () => {
     if (unpictured) engine.action.mockImplementation(unpictured);
   });
 
+  it('builds no step when none of a fan’s fourth creases lands, refuses nothing, and asks whether other paper staying would help', async () => {
+    let picked: string | null = null;
+    engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { emergent: [number, number]; stayer: [number, number] }) => {
+      const stayer = op.stayer.join();
+      picked ??= stayer;
+      // None lands with the paper picked; one does with other paper staying.
+      return { ...swivelAnswer(op), emergents: stayer === picked ? [false, false, false] : [false, true, false] };
+    }) as never);
+    await render(SWIVEL);
+    for (let k = 0; k < 3; k += 1) await render(SWIVEL);
+    expect(seen?.step).toBeNull();
+    expect(seen?.refused).toBeNull();
+    expect(seen?.landing).toBe(false);
+    expect(seen?.vertex).toMatchObject({ emergent: null, fourths: [], elsewhere: true });
+    expect(verbs.preview).not.toHaveBeenCalled();
+    // The fan, then another region as the paper that stays — the first that has one is enough.
+    const stayers = engine.compoundAnalysis.mock.calls.map((call) => (call as unknown as [unknown, { stayer: number[] }])[1].stayer.join());
+    expect(stayers).toHaveLength(2);
+    expect(stayers[1]).not.toBe(stayers[0]);
+    expect(tracked.refused).not.toHaveBeenCalled();
+  });
+
   it('asks the compound question, again for the fourth ray that lands, and previews the step with its picture but no line to analyse', async () => {
     engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { emergent: [number, number] }) =>
       swivelAnswer(op)) as never);

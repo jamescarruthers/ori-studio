@@ -852,6 +852,8 @@
       "mountain": "Monte",
       "mountainTitle": "Monte: el papel gira alejándose de ti",
       "noFourth": "Ningún cuarto pliegue cabe con este papel quieto: haz clic en otro papel para que se quede quieto.",
+      "noFourthAnywhere": "Ningún cuarto pliegue cabe con estos pliegues, sea cual sea el papel que se quede quieto: pulsa Esc y vuelve a elegir.",
+      "noFourthAnywhereTouch": "Ningún cuarto pliegue cabe con estos pliegues, sea cual sea el papel que se quede quieto: toca Cancelar y vuelve a elegir.",
       "noFourthTouch": "Ningún cuarto pliegue cabe con este papel quieto: toca otro papel para que se quede quieto.",
       "note": {
         "freePoint": "Mantén {{modifier}} para colocar un punto en cualquier lugar.",

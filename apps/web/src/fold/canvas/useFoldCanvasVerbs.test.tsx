@@ -392,6 +392,7 @@ describe('a vertex fold’s choices on the canvas', () => {
     emergent: 1,
     // The third candidate does not land: never offered.
     fourths: [0, 1],
+    elsewhere: null,
     orders: [],
     order: null,
     layers: 2,

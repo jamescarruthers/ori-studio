@@ -218,6 +218,18 @@ describe('a vertex fold’s window while it previews', () => {
     expect(none?.footer?.commit.disabled).toBe(true);
     const touch = foldToolWindow(t, view({ ...ear, fourths: 0, known: false }, { preview: preview() }), calls, finger);
     expect(touch?.vertex?.emergentNote).toBe('No fourth crease fits with this paper staying put: tap other paper to stay.');
+    // Nor would other paper staying: pick again.
+    const nowhere = { ...ear, fourths: 0, known: false, fourthElsewhere: false };
+    expect(foldToolWindow(t, view(nowhere, { preview: preview() }), calls, mouse)?.vertex?.emergentNote).toBe(
+      'No fourth crease fits these creases, whichever paper stays: press Esc and pick again.'
+    );
+    expect(foldToolWindow(t, view(nowhere, { preview: preview() }), calls, finger)?.vertex?.emergentNote).toBe(
+      'No fourth crease fits these creases, whichever paper stays: tap Cancel and pick again.'
+    );
+    // Other paper would: said so, as before the answer is in.
+    expect(
+      foldToolWindow(t, view({ ...nowhere, fourthElsewhere: true }, { preview: preview() }), calls, mouse)?.vertex?.emergentNote
+    ).toBe('No fourth crease fits with this paper staying put: click other paper to stay.');
     // A swivel's the same.
     const swivel = foldToolWindow(t, view({ ...ear, tool: 'swivel', fourths: 3, fourth: 2 }, { preview: preview() }), calls, mouse);
     expect(swivel?.vertex?.emergent?.value).toBe('3 of 3');

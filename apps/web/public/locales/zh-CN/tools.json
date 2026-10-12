@@ -808,6 +808,8 @@
       "mountain": "山",
       "mountainTitle": "山：纸朝远离你的方向转",
       "noFourth": "此纸不动时，没有适用的第四折痕：单击另一处纸，让它保持不动。",
+      "noFourthAnywhere": "无论哪处纸保持不动，都没有适合这些折痕的第四折痕：按 Esc 后重新选择。",
+      "noFourthAnywhereTouch": "无论哪处纸保持不动，都没有适合这些折痕的第四折痕：轻点“取消”后重新选择。",
       "noFourthTouch": "此纸不动时，没有适用的第四折痕：轻点另一处纸，让它保持不动。",
       "note": {
         "freePoint": "按住 {{modifier}} 可以把点放在任意位置。",

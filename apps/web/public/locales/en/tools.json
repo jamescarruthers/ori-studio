@@ -830,6 +830,8 @@
       "mountain": "Mountain",
       "mountainTitle": "Mountain: the paper turns away from you",
       "noFourth": "No fourth crease fits with this paper staying put: click other paper to stay.",
+      "noFourthAnywhere": "No fourth crease fits these creases, whichever paper stays: press Esc and pick again.",
+      "noFourthAnywhereTouch": "No fourth crease fits these creases, whichever paper stays: tap Cancel and pick again.",
       "noFourthTouch": "No fourth crease fits with this paper staying put: tap other paper to stay.",
       "note": {
         "freePoint": "Hold {{modifier}} to put a point anywhere.",

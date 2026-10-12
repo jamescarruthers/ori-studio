@@ -255,6 +255,7 @@ describe('the Fold canvas model', () => {
           emergent: 2,
           // The first candidate does not land: the other two are offered, numbered among themselves.
           fourths: [1, 2],
+          elsewhere: null,
           orders: [order, second],
           order: second,
           layers: 3,

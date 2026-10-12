@@ -852,6 +852,8 @@
       "mountain": "Montagne",
       "mountainTitle": "Montagne : le papier tourne en s’éloignant de vous",
       "noFourth": "Aucun quatrième pli ne convient avec ce papier en place : cliquez sur un autre papier à laisser en place.",
+      "noFourthAnywhere": "Aucun quatrième pli ne convient à ces plis, quel que soit le papier laissé en place : appuyez sur Échap et choisissez de nouveau.",
+      "noFourthAnywhereTouch": "Aucun quatrième pli ne convient à ces plis, quel que soit le papier laissé en place : touchez Annuler et choisissez de nouveau.",
       "noFourthTouch": "Aucun quatrième pli ne convient avec ce papier en place : touchez un autre papier à laisser en place.",
       "note": {
         "freePoint": "Maintenez {{modifier}} pour poser un point n’importe où.",
