@@ -3,7 +3,10 @@
 Three Ori Studio projects that show how the Fold workspace's petal fold,
 swivel fold and crimp tools are used. Each was folded through the real tools
 in a browser (clicks on the folded pane, keys, the tool window) and saved
-with File ▸ Save, the native `.osf` project format. Open one with File ▸ Open
+with File ▸ Save, the native `.osf` project format. The petal fold's petal
+steps and the whole swivel were folded again when those tools changed
+(2026-10-12): the petal fold names its hinge by its two endpoints, and the
+swivel is made by its edge. Open one with File ▸ Open
 and the Fold workspace replays it. Step through the strip at the top to see
 each step.
 
@@ -37,56 +40,69 @@ commits the fold the window previews; the window's own button does the same.
    kite crease.
 7. **Precrease**, Axiom 3. Click the right edge, then the centre line. Leave
    out Flap 2 again and press Enter. This is the second kite crease.
-8. **Precrease**, **Axiom 1: through two points**. Click where the first kite
-   crease meets the left edge, then where the second meets the top edge.
-   Fold every layer and press Enter. This is the line H.
-9. **Petal fold**, Locate line **Existing crease**. Click the H precrease,
-   then the kite between the two kite creases below H. Choose Direction
-   Valley and press Enter.
-10. **Turn over**.
-11. **Precrease**, Axiom 3. Click the bottom edge, then the centre line, and
+8. **Petal fold**. The window starts on **Select the hinge crease**; under
+   **Hinge**, choose **Two endpoints** instead. Click where the first kite
+   crease meets the left edge, then where the second meets the top edge:
+   the hinge, drawn in the valley pen as you go. The fold creases the hinge
+   itself, through the top layer only, so it needs no precrease. Then move
+   the pointer below the hinge: the kite between the two kite creases lights
+   up, with the hinge and the kite creases in their pens, and the window
+   says the fold will crease the hinge. Click it, keep Direction Valley and
+   press Enter.
+9. **Turn over**.
+10. **Precrease**, Axiom 3. Click the bottom edge, then the centre line, and
     press Enter. Only the top flap lies at this line.
-12. **Precrease**, Axiom 3. Click the left edge, then the centre line, and
-    press Enter. H is already creased through every layer.
-13. **Petal fold**, Existing crease. Click H, then the kite below it, and
+11. **Precrease**, Axiom 3. Click the left edge, then the centre line, and
+    press Enter.
+12. **Petal fold**. Hinge stays on Two endpoints. Click where this side's
+    two kite creases meet the flap's edges, then the kite below them, and
     press Enter. This is the bird base.
 
-## swivel-fold.osf: one swivel, three ways
+With a precrease through every layer along the hinge first (Precrease,
+**Axiom 1: through two points**, the same two points), keep **Hinge crease**
+and click that precrease instead: the fold then refolds it and creases
+nothing itself. The bird base this file ends on has 20 faces rather than 24,
+since each hinge is creased through the top layer alone.
 
-The swivel folds the flat square about a point placed by hand. This is
-Beloch's swivel rabbit ear (research §5.3): a rabbit ear whose creases need
-not bisect anything. You give the point and three creases, and the fourth is
-one of the creases that let the paper lie flat. As in a rabbit ear, the
-fourth crease folds the other way from the three, and it must lie across
-from the paper that stays put, never beside it. The file has three branches
-from the sheet, one per fourth crease. With step 1 on screen, switch between
-them with the ↑ and ↓ beside "Branch 3 of 3" (the file opens on the last)
+## swivel-fold.osf: an edge swivelled onto a line, both ridges
+
+A swivel as folders diagram it: *swivel this edge onto that line, pivoting
+at this point*. You click the pivot, the edge that moves and the line it
+lands on; the four creases are computed. They meet where the pivot sits
+moved onto the line halfway between the edge and the line it lands on (one
+of the two bisectors of the edge and that line), which the window draws as
+a dot in place of the click. A rabbit ear is the swivel whose creases meet
+at its triangle's incenter. The file precreases the diagonal, then has two
+branches from it, one per ridge: the crease the paper rises along, folded
+the other way from the other three. With step 2 on screen, switch between
+them with the ↑ and ↓ beside "Branch 2 of 2" (the file opens on the last)
 under the strip.
 
-- **Branch 1.** Take the **Swivel fold** tool. Hold Option (Alt on Windows
-  and Linux) and click halfway between the centre and the bottom edge: the
-  point where the creases meet. The point must be off every crease, which is
-  why it is placed with Option rather than snapped. Click the right edge's
-  midpoint, the left edge's midpoint and the bottom edge's midpoint. Then
-  click the lower left of the paper, the part that stays put. The window
-  shows Fourth crease **1 of 3**, straight up the middle. Press Enter. The
-  upper half folds over along it while the bottom swivels.
-- **Branch 2.** Click card 0, then make the same four clicks, but click the
-  upper left of the paper as the part that stays put. Fourth crease 1 of 3
-  would lie beside that paper, so the window opens on **2 of 3**, toward the
-  lower left: a rabbit ear stands up, leaning left. Press Enter.
-- **Branch 3.** Make the same clicks as branch 2 and step **Fourth crease**
-  with its › button to **3 of 3**, toward the lower right. This is the
-  mirror image. Click the **Swivel fold** button. Enter would press › again
-  while › has the focus.
+1. **Precrease** (P), **Axiom 2: point onto point**. Click the top-left
+   corner, then the bottom-right corner. Press Enter. This is the diagonal
+   from the bottom-left corner to the top-right, the line the edge will
+   land on.
+2. **Branch 1.** Take the **Swivel fold** tool. Hold Option (Alt on Windows
+   and Linux) and click about four fifths of the way across and a third of
+   the way up: the pivot. The pivot need not be a landmark, which is why it
+   is placed with Option rather than snapped. Click the bottom edge, the
+   edge that moves; only raw and folded edges light up under the pointer.
+   Click the diagonal precrease, the line it lands on; the top edge, parallel
+   to the bottom one, never lights. The window shows the dot where the
+   creases meet, the four creases in their pens, where the edge lands on
+   the diagonal in bold, and the paper that moves lit, the part that turns
+   in place brightest. Ridge reads **Square to the edge**. Press Enter.
+3. **Branch 2.** Click card 1 (the precrease) first, so that the next swivel
+   starts a new branch. Make the same three clicks, then step **Ridge** with
+   its › button to **Toward the edge’s end**: the paper rises along the
+   crease to the bottom-right corner instead. Click the **Swivel fold**
+   button. Enter would press › again while › has the focus.
 
-No single paper that stays fits all three: each fourth crease lies beside one
-part of the paper, so branch 1 keeps a different part still.
-
-There are no precreases. A swivel's point must lie off every crease, so the
-tool cuts its four creases fresh and cannot refold precreases through its
-point. The classic swivel, whose point sits on a folded edge, is not one this
-tool can make yet.
+Under **Lands on**, **Two points** names the line by two points clicked on
+it instead of a crease or edge already there. A swivel stored by its rays
+(the vertex and three points its creases run toward, the fourth computed,
+and the paper that stays), as this file held before, still replays and
+shows; the Swivel fold tool now makes a swivel by its edge.
 
 ## crimp.osf: the bird's-head crimp, inside and outside
 

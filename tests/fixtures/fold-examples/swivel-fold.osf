@@ -5,12 +5,12 @@
   "createdBy": {
     "app": "Ori Studio",
     "version": "0.5.2",
-    "savedAt": "2026-10-12T02:54:30.331Z"
+    "savedAt": "2026-10-12T16:26:08.529Z"
   },
   "modifiedBy": {
     "app": "Ori Studio",
     "version": "0.5.2",
-    "savedAt": "2026-10-12T02:54:30.331Z"
+    "savedAt": "2026-10-12T16:26:08.529Z"
   },
   "workspace": {
     "id": "workspace",
@@ -32,121 +32,108 @@
         },
         "steps": [
           {
-            "id": "fstep-9d43db0d-6cd8-47d7-b332-25d375f5417f",
+            "id": "fstep-8749c890-3f8c-4dba-9095-0c1b3b271805",
             "parent": null,
             "op": {
-              "kind": "swivel",
-              "vertex": [
-                0.4999999999999999,
-                0.25000003663574816
-              ],
-              "toward": [
-                [
-                  1,
-                  0.5
-                ],
-                [
-                  0,
-                  0.5
-                ],
-                [
-                  0.5,
-                  0
+              "kind": "precrease",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      1
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      0
+                    ]
+                  }
                 ]
-              ],
-              "emergent": [
-                6.123233995736766e-17,
-                1
-              ],
+              },
+              "direction": "valley",
               "seed": {
                 "scope": "all"
-              },
-              "stayer": [
-                0.15000001465429919,
-                0.15000001465429932
-              ],
-              "direction": "valley"
+              }
             },
-            "expect": "fs1:4deaf1a2d9ce94fb",
-            "note": "Swivel fold tool. Hold Option (Alt on Windows and Linux) and click inside the paper halfway between the centre and the bottom edge: where the creases meet. Then click three landmarks the creases run to: the right edge’s midpoint, the left edge’s midpoint, the bottom edge’s midpoint. Click the lower left of the paper (it stays put). Fourth crease 1 of 3, straight up the middle, is the first that fits: the upper half folds over along it while the bottom swivels. Press Enter."
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865475,
+                  -0.7071067811865475
+                ],
+                "d": 0
+              }
+            },
+            "expect": "fs1:90e1e44c76b3127f",
+            "note": "Precrease tool (P), Axiom 2: point onto point. Click the top-left corner, then the bottom-right corner; press Enter. The diagonal from the bottom-left corner to the top-right corner: the line the edge will land on."
           },
           {
-            "id": "fstep-87103f79-8f00-4ecf-8cda-89e7eaf29d16",
-            "parent": null,
+            "id": "fstep-ff710632-63fc-4d65-8883-5b5c58430ee2",
+            "parent": "fstep-8749c890-3f8c-4dba-9095-0c1b3b271805",
             "op": {
               "kind": "swivel",
-              "vertex": [
-                0.4999999999999999,
-                0.25000003663574816
+              "via": "edge",
+              "pivot": [
+                0.8000000050243318,
+                0.2999999966504485
               ],
-              "toward": [
-                [
-                  1,
-                  0.5
-                ],
-                [
-                  0,
-                  0.5
-                ],
-                [
+              "edge": [
+                0.5,
+                0
+              ],
+              "target": {
+                "via": "crease",
+                "at": [
                   0.5,
-                  0
+                  0.5
                 ]
-              ],
-              "emergent": [
-                -0.7999999296593563,
-                -0.6000000937875135
-              ],
+              },
               "seed": {
                 "scope": "all"
               },
-              "stayer": [
-                0.250000036635748,
-                0.8499999853457009
-              ],
               "direction": "valley"
             },
-            "expect": "fs1:02e7019fada46da8",
-            "note": "Swivel fold, from the flat sheet (click the sheet’s card, 0, first: a new branch). The same four clicks, then click the upper left of the paper as the part that stays put. Fourth crease 1 of 3 would lie beside that paper, so the window opens on 2 of 3, down to the lower left: a rabbit ear stands up, leaning left. Press Enter."
+            "expect": "fs1:10dbc13afa445d5d",
+            "note": "Swivel fold tool. Hold Option (Alt on Windows and Linux) and click about four fifths of the way across and a third of the way up: the pivot. Click the bottom edge: the edge that moves. Click the diagonal precrease: the line it lands on. The creases meet at the dot, where the pivot sits moved onto the line halfway between the bottom edge and the diagonal. Ridge: Square to the edge, the default; press Enter."
           },
           {
-            "id": "fstep-30efd364-f376-4e3e-b94b-b277a265a068",
-            "parent": null,
+            "id": "fstep-051ed80c-8b5c-44e4-8451-437b05296137",
+            "parent": "fstep-8749c890-3f8c-4dba-9095-0c1b3b271805",
             "op": {
               "kind": "swivel",
-              "vertex": [
-                0.4999999999999999,
-                0.25000003663574816
+              "via": "edge",
+              "pivot": [
+                0.8000000050243318,
+                0.2999999966504485
               ],
-              "toward": [
-                [
-                  1,
-                  0.5
-                ],
-                [
-                  0,
-                  0.5
-                ],
-                [
+              "edge": [
+                0.5,
+                0
+              ],
+              "target": {
+                "via": "crease",
+                "at": [
                   0.5,
-                  0
+                  0.5
                 ]
-              ],
-              "emergent": [
-                0.7999999296593561,
-                -0.6000000937875138
-              ],
+              },
               "seed": {
                 "scope": "all"
               },
-              "stayer": [
-                0.250000036635748,
-                0.8499999853457009
-              ],
-              "direction": "valley"
+              "direction": "valley",
+              "ridge": [
+                0.5426124678942101,
+                -0.8399831603584411
+              ]
             },
-            "expect": "fs1:0b1f089966d15ae6",
-            "note": "Swivel fold, the same five clicks as the second branch, from the flat sheet (card 0 first). In the window, step Fourth crease with its › button to 3 of 3, down to the lower right: the mirror image, leaning right. Click the Swivel fold button (Enter would press › again while it has the focus)."
+            "expect": "fs1:70aa1f8c6226c12b",
+            "note": "Branch 2: click card 1 (the precrease) first. The same three clicks, then step Ridge with its › button to Toward the edge’s end, and click the Swivel fold button. The paper rises along the crease to the bottom-right corner instead of the one square to the edge."
           }
         ]
       }
@@ -155,9 +142,10 @@
       "fold": {
         "v": 1,
         "sequenceId": "fold-067cb0b6-0dd7-4abc-a560-4846b1165bfe",
-        "cursor": "fstep-30efd364-f376-4e3e-b94b-b277a265a068",
+        "cursor": "fstep-051ed80c-8b5c-44e4-8451-437b05296137",
         "activeChild": {
-          "": "fstep-30efd364-f376-4e3e-b94b-b277a265a068"
+          "": "fstep-8749c890-3f8c-4dba-9095-0c1b3b271805",
+          "fstep-8749c890-3f8c-4dba-9095-0c1b3b271805": "fstep-051ed80c-8b5c-44e4-8451-437b05296137"
         }
       }
     }

@@ -5,12 +5,12 @@
   "createdBy": {
     "app": "Ori Studio",
     "version": "0.5.2",
-    "savedAt": "2026-10-12T02:21:33.625Z"
+    "savedAt": "2026-10-12T16:24:09.585Z"
   },
   "modifiedBy": {
     "app": "Ori Studio",
     "version": "0.5.2",
-    "savedAt": "2026-10-12T02:21:33.625Z"
+    "savedAt": "2026-10-12T16:24:09.585Z"
   },
   "workspace": {
     "id": "workspace",
@@ -264,82 +264,42 @@
             "note": "Precrease, Axiom 3. Click the right edge, then the centre line; leave out Flap 2 again; press Enter: the second kite crease."
           },
           {
-            "id": "fstep-3254ae86-8e80-43c4-9ea8-bb0aa5c09041",
+            "id": "fstep-028e5e48-b9d2-405d-84ba-45ce2411f470",
             "parent": "fstep-6d95dd2c-50d8-4c2d-977c-446dda79a18f",
             "op": {
-              "kind": "precrease",
-              "line": {
-                "via": "axiom",
-                "axiom": 1,
-                "inputs": [
-                  {
-                    "kind": "point",
-                    "at": [
-                      0.2071067811865481,
-                      0.5
-                    ]
-                  },
-                  {
-                    "kind": "point",
-                    "at": [
-                      0.5000000000000001,
-                      0.7928932188134531
-                    ]
-                  }
-                ]
-              },
-              "direction": "valley",
-              "moving": [
-                0.45118446353109054,
-                0.6464466094067254
-              ],
-              "seed": {
-                "scope": "all"
-              }
-            },
-            "choices": {
-              "root": {
-                "n": [
-                  0.7071067811865458,
-                  0.7071067811865492
-                ],
-                "d": 0.5000000000000001
-              }
-            },
-            "expect": "fs1:84e17f7200b71385",
-            "note": "Precrease, Axiom 1: through two points. Click where the first kite crease meets the left edge, then where the second meets the top edge. Every layer folds (all flaps); press Enter. This is the line H the petal lifts along."
-          },
-          {
-            "id": "fstep-f3d2cea2-ba37-4b28-871d-2d24a8a3d172",
-            "parent": "fstep-3254ae86-8e80-43c4-9ea8-bb0aa5c09041",
-            "op": {
               "kind": "petal",
-              "crease": [
-                0.28033008588991093,
-                0.5732233047033631
+              "ends": [
+                [
+                  0.2071067811865481,
+                  0.5
+                ],
+                [
+                  0.5000000000000001,
+                  0.7928932188134531
+                ]
               ],
               "petal": [
-                0.20000005867883444,
-                0.7399999163826614
+                0.19999996289656102,
+                0.7400000667861883
               ],
               "direction": "valley"
             },
-            "expect": "fs1:acb69268bec49cb7",
-            "note": "Petal fold tool, Locate line: Existing crease. Click the H precrease, then the kite between the two kite creases (the part below H that lifts). Direction Valley; press Enter. The flap lifts along H as its sides fold in along the kite creases."
+            "expect": "fs1:50f7fea679a8ee51",
+            "note": "Petal fold tool. Under Hinge choose Two endpoints. Click where the first kite crease meets the left edge, then where the second meets the top edge: the hinge, which the fold creases through the top layer, so it needs no precrease. Then click the kite between the two kite creases below it, the part that lifts: it lights up under the pointer. Direction Valley; press Enter. The flap lifts along the hinge as its sides fold in along the kite creases."
           },
           {
-            "id": "fstep-b633cbe9-fe27-4907-9699-492433a69e7c",
-            "parent": "fstep-f3d2cea2-ba37-4b28-871d-2d24a8a3d172",
+            "id": "fstep-32345fd5-5045-4550-9763-0b489a64796d",
+            "parent": "fstep-028e5e48-b9d2-405d-84ba-45ce2411f470",
             "op": {
               "kind": "turn",
               "axis": "vertical"
             },
-            "expect": "fs1:e0b845bb6066c7ae",
+            "expect": "fs1:589803ff504a8822",
             "note": "Turn over (Model group on the rail): the other flap comes on top."
           },
           {
-            "id": "fstep-2d47b819-a1e3-4877-a07f-acee5c313b43",
-            "parent": "fstep-b633cbe9-fe27-4907-9699-492433a69e7c",
+            "id": "fstep-5a14b20d-a2fb-4cf1-a9cb-f43480b41d92",
+            "parent": "fstep-32345fd5-5045-4550-9763-0b489a64796d",
             "op": {
               "kind": "precrease",
               "line": {
@@ -364,8 +324,8 @@
                       0
                     ],
                     "b": [
-                      0.6464466094067263,
-                      0.35355339059327373
+                      0.5,
+                      0.5
                     ]
                   }
                 ]
@@ -378,18 +338,18 @@
             "choices": {
               "root": {
                 "n": [
-                  0.3826834323650897,
-                  -0.9238795325112867
+                  0.3826834323650902,
+                  -0.9238795325112866
                 ],
-                "d": 8.497279155086129e-17
+                "d": 1.699455831017226e-16
               }
             },
-            "expect": "fs1:02badf484d243f0b",
-            "note": "Precrease, Axiom 3. Click the bottom edge, then the centre line; only the top flap is at the line, so every layer listed folds. Press Enter: a kite crease on this side."
+            "expect": "fs1:9aedbbcb21e524b8",
+            "note": "Precrease, Axiom 3. Click the bottom edge, then the centre line, and press Enter. Only the top flap lies at this line, so every layer listed folds: a kite crease on this side."
           },
           {
-            "id": "fstep-e161a459-3060-41f6-a657-fc2f75178cd5",
-            "parent": "fstep-2d47b819-a1e3-4877-a07f-acee5c313b43",
+            "id": "fstep-3c38495a-907a-4465-a75d-775f5f83ebd0",
+            "parent": "fstep-5a14b20d-a2fb-4cf1-a9cb-f43480b41d92",
             "op": {
               "kind": "precrease",
               "line": {
@@ -414,8 +374,8 @@
                       0
                     ],
                     "b": [
-                      0.6464466094067263,
-                      0.35355339059327373
+                      0.5,
+                      0.5
                     ]
                   }
                 ]
@@ -428,32 +388,38 @@
             "choices": {
               "root": {
                 "n": [
-                  0.9238795325112867,
-                  -0.3826834323650898
+                  0.923879532511287,
+                  -0.38268343236508934
                 ],
-                "d": 2.0514246579479128e-16
+                "d": 4.102849315895826e-16
               }
             },
-            "expect": "fs1:62189733d55b216e",
-            "note": "Precrease, Axiom 3. Click the left edge, then the centre line; press Enter: the other kite crease. H is already creased through every layer."
+            "expect": "fs1:d2b87ce38c095d8a",
+            "note": "Precrease, Axiom 3. Click the left edge, then the centre line, and press Enter: the other kite crease."
           },
           {
-            "id": "fstep-459836d9-1676-42dc-b9da-dd503122373e",
-            "parent": "fstep-e161a459-3060-41f6-a657-fc2f75178cd5",
+            "id": "fstep-7493097d-ad9d-417c-ab08-fe1b4feff92d",
+            "parent": "fstep-3c38495a-907a-4465-a75d-775f5f83ebd0",
             "op": {
               "kind": "petal",
-              "crease": [
-                0.5732233047033632,
-                0.28033008588991093
+              "ends": [
+                [
+                  0.792893218813453,
+                  0.5000000000000001
+                ],
+                [
+                  0.2071067811865481,
+                  0.5
+                ]
               ],
               "petal": [
-                0.7400000080683393,
-                0.2000000586788341
+                0.7399999740275929,
+                0.19999996289656147
               ],
               "direction": "valley"
             },
-            "expect": "fs1:b0e0c4cde0adc868",
-            "note": "Petal fold, Existing crease. Click the H crease, then the kite below it; Valley; press Enter. Both petals lifted: the bird base."
+            "expect": "fs1:215bdd6e3cbda1b9",
+            "note": "Petal fold, Two endpoints (the Hinge control keeps it). Click where the first kite crease meets its edge, then where the second meets the other edge: the hinge. Click the kite below it; Valley; press Enter. Both petals lifted: the bird base."
           }
         ]
       }
@@ -462,7 +428,7 @@
       "fold": {
         "v": 1,
         "sequenceId": "fold-47a022dc-2d12-40d2-80fa-4b81ca257e93",
-        "cursor": "fstep-459836d9-1676-42dc-b9da-dd503122373e",
+        "cursor": "fstep-7493097d-ad9d-417c-ab08-fe1b4feff92d",
         "activeChild": {
           "": "fstep-de17830d-4ffa-4533-9a17-895bbf90825b",
           "fstep-de17830d-4ffa-4533-9a17-895bbf90825b": "fstep-c3a7acd3-770c-4cbd-8deb-2a6d9f756a68",
@@ -471,12 +437,11 @@
           "fstep-d08db2e1-f45c-470c-a78d-4ac27083518f": "fstep-d46193ff-f93d-409b-91ad-3b86d0387a0e",
           "fstep-d46193ff-f93d-409b-91ad-3b86d0387a0e": "fstep-ef00fdb7-a7b9-4ee5-8dca-3becd2ec61a4",
           "fstep-ef00fdb7-a7b9-4ee5-8dca-3becd2ec61a4": "fstep-6d95dd2c-50d8-4c2d-977c-446dda79a18f",
-          "fstep-6d95dd2c-50d8-4c2d-977c-446dda79a18f": "fstep-3254ae86-8e80-43c4-9ea8-bb0aa5c09041",
-          "fstep-3254ae86-8e80-43c4-9ea8-bb0aa5c09041": "fstep-f3d2cea2-ba37-4b28-871d-2d24a8a3d172",
-          "fstep-f3d2cea2-ba37-4b28-871d-2d24a8a3d172": "fstep-b633cbe9-fe27-4907-9699-492433a69e7c",
-          "fstep-b633cbe9-fe27-4907-9699-492433a69e7c": "fstep-2d47b819-a1e3-4877-a07f-acee5c313b43",
-          "fstep-2d47b819-a1e3-4877-a07f-acee5c313b43": "fstep-e161a459-3060-41f6-a657-fc2f75178cd5",
-          "fstep-e161a459-3060-41f6-a657-fc2f75178cd5": "fstep-459836d9-1676-42dc-b9da-dd503122373e"
+          "fstep-6d95dd2c-50d8-4c2d-977c-446dda79a18f": "fstep-028e5e48-b9d2-405d-84ba-45ce2411f470",
+          "fstep-028e5e48-b9d2-405d-84ba-45ce2411f470": "fstep-32345fd5-5045-4550-9763-0b489a64796d",
+          "fstep-32345fd5-5045-4550-9763-0b489a64796d": "fstep-5a14b20d-a2fb-4cf1-a9cb-f43480b41d92",
+          "fstep-5a14b20d-a2fb-4cf1-a9cb-f43480b41d92": "fstep-3c38495a-907a-4465-a75d-775f5f83ebd0",
+          "fstep-3c38495a-907a-4465-a75d-775f5f83ebd0": "fstep-7493097d-ad9d-417c-ab08-fe1b4feff92d"
         }
       }
     }

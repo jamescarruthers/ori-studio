@@ -5,7 +5,7 @@ import { parseNativeProjectFile } from '../../lib/nativeProjectFile';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
 import { createFoldEnginePort, type FoldEngineSource } from '../engine/foldEnginePort';
 import { createFoldReplayer } from './foldReplay';
-import { isLockedStep, type FoldSequenceDocument, type FoldStep } from './foldSequenceDocument';
+import { isLockedStep, isSwivelEdgeOp, type FoldSequenceDocument, type FoldStep } from './foldSequenceDocument';
 import { readFoldSequences } from './foldSequenceFile';
 
 /**
@@ -24,6 +24,13 @@ const ROOT = process.cwd();
 const WASM = resolve(ROOT, 'src/generated/oristudio-fold-wasm/oristudio_fold_wasm_bg.wasm');
 const EXAMPLES = resolve(ROOT, '../../tests/fixtures/fold-examples');
 const available = existsSync(WASM) && existsSync(EXAMPLES);
+
+/**
+ * The bird base's faces: 20, each petal fold's hinge creased through the top
+ * layer it lifts alone — four fewer than with the hinge precreased through
+ * every layer first, which split the layers below it too.
+ */
+const BIRD_FACES = 20;
 
 async function engine(): Promise<{ calls: FoldEngineCalls; version: number }> {
   const wasm = await import('../../generated/oristudio-fold-wasm/oristudio_fold_wasm');
@@ -89,7 +96,7 @@ describe.skipIf(!available)('the Fold example projects', () => {
     }
   );
 
-  it('shows each tool as its README says: the bird base, three swivels, an inside and an outside crimp', async () => {
+  it('shows each tool as its README says: the bird base, a swivel by its edge both ways, an inside and an outside crimp', async () => {
     const { calls, version } = await engine();
     const replay = async (document: FoldSequenceDocument) => {
       const done = await createFoldReplayer(createFoldEnginePort(sourceOf(calls), version)).run({
@@ -100,7 +107,8 @@ describe.skipIf(!available)('the Fold example projects', () => {
       return done;
     };
 
-    // Two squashes to the preliminary base, two petal folds to the bird base.
+    // Two squashes to the preliminary base, the kites precreased, two petal
+    // folds by their hinges' two endpoints to the bird base: no hinge precrease.
     const petal = opened('petal-fold.osf');
     const petalSteps = steps(petal);
     expect(petalSteps.map((step) => step.op.kind)).toEqual([
@@ -111,30 +119,31 @@ describe.skipIf(!available)('the Fold example projects', () => {
       'squash',
       'precrease',
       'precrease',
-      'precrease',
       'petal',
       'turn',
       'precrease',
       'precrease',
       'petal',
     ]);
+    const petals = petalSteps.flatMap((step) => (step.op.kind === 'petal' ? [step.op] : []));
+    expect(petals.map((op) => ('ends' in op ? 'ends' : 'crease'))).toEqual(['ends', 'ends']);
     const last = petalSteps.at(-1);
     const bird = last && (await replay(petal)).steps.get(last.id)?.state;
     if (!bird) throw new Error('the bird base did not land');
-    expect(calls.summary(bird.id).faces).toBe(24);
+    expect(calls.summary(bird.id).faces).toBe(BIRD_FACES);
 
-    // Three branches from the sheet, one per fourth crease that lands.
-    const swivels = steps(opened('swivel-fold.osf'));
+    // The diagonal precreased, then two branches from it: the bottom edge
+    // swivelled onto it about one pivot, its ridge square to the edge, then
+    // toward its end (stored as the ridge taken).
+    const [diagonal, ...swivels] = steps(opened('swivel-fold.osf'));
+    expect(diagonal?.op.kind).toBe('precrease');
     expect(swivels.map((step) => [step.parent, step.op.kind])).toEqual([
-      [null, 'swivel'],
-      [null, 'swivel'],
-      [null, 'swivel'],
+      [diagonal?.id, 'swivel'],
+      [diagonal?.id, 'swivel'],
     ]);
-    // Each in the swivel's rays form, as the file was saved.
-    const emergents = swivels.map((step) =>
-      step.op.kind === 'swivel' && !('via' in step.op) ? step.op.emergent.map(Math.round).join() : ''
-    );
-    expect(new Set(emergents).size).toBe(3);
+    const edgeOps = swivels.map((step) => (isSwivelEdgeOp(step.op) ? step.op : null));
+    expect(edgeOps.every((op) => op?.target.via === 'crease')).toBe(true);
+    expect(edgeOps.map((op) => (op?.ridge ? 'end' : 'foot'))).toEqual(['foot', 'end']);
 
     // The book fold, then two branches from it: the inside crimp and the outside.
     const [book, inside, outside] = steps(opened('crimp.osf'));
