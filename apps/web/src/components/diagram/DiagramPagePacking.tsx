@@ -12,7 +12,12 @@ import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { SegmentedRow, SliderRow, ToggleRow } from '../ui/fieldRows';
 import styles from './DiagramPagePacking.module.css';
 
-const BANDS: readonly DiagramFlowBands[] = ['auto', 2, 3, 4, 5];
+/**
+ * The band counts offered: Auto and the odd counts. A left page that hands over
+ * at its spine must end its last band there, so it takes an odd count; an even
+ * one would be rounded on such a page, so it is not offered (Zach, 12 Oct).
+ */
+const BANDS: readonly DiagramFlowBands[] = ['auto', 3, 5];
 
 /** The weights move in twentieths, as the prototype's sliders did. */
 const WEIGHT_STEP = 0.05;
@@ -61,7 +66,8 @@ export function DiagramPagePacking({
     />
   );
   return (
-    <CollapsibleSection title={t('panels:diagram.packing.title', 'Packing')}>
+    // Closed until opened, as Edit's More foldability settings is: the defaults suit most diagrams.
+    <CollapsibleSection collapsible title={t('panels:diagram.packing.title', 'Packing')}>
       <SegmentedRow
         label={t('panels:diagram.packing.bands', 'Bands')}
         help={t(

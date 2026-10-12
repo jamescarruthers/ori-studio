@@ -198,20 +198,6 @@ export function DiagramPagePanel() {
             ]}
             onChange={(side) => setPage({ firstPageSide: side as DiagramPageSide }, 'first_page_side')}
           />
-          <p className={styles.readout}>
-            {/* The flow's steps per page are its own row, just above. */}
-            {!flow &&
-              `${t('panels:diagram.pagePane.perPage', {
-                count: setup.perPage,
-                defaultValue_one: '1 step per page',
-                defaultValue_other: '{{count}} steps per page',
-              })} · `}
-            {t('panels:diagram.pagePane.pageCount', {
-              count: setup.pageCount,
-              defaultValue_one: '1 page',
-              defaultValue_other: '{{count}} pages',
-            })}
-          </p>
         </CollapsibleSection>
         {flow && <DiagramPagePacking page={page} readOnly={readOnly} setPage={setPage} />}
         <DiagramPagePlacements />

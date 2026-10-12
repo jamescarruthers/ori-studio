@@ -231,19 +231,18 @@ describe('DiagramPagePanel', () => {
     expect(state().diagramHistory.past).toHaveLength(past + 1);
     expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('steps_per_page');
     // Ten steps, eight a page: two pages. The grid's columns and rows are left as they were.
-    expect(host?.textContent).toContain('2 pages');
+    expect(paginate(stepsOf(state().diagram!), state().diagram!.page)).toHaveLength(2);
     expect(state().diagram?.page).toMatchObject({ columns: 3, rows: 3 });
     act(() => useWorkspaceStore.getState().undoDiagram());
     expect(state().diagram?.page.stepsPerPage).toBe(9);
     expect(field().value).toBe('9');
   });
 
-  it('says how many pages there are, and in the grid how many steps a page holds', () => {
-    // The flow's steps per page are its own row.
-    expect(host?.textContent).toContain('2 pages');
-    expect(host?.textContent).not.toContain('steps per page ·');
+  it('says nothing about how many pages there are, in either layout (Zach, 12 Oct: not useful)', () => {
+    expect(host?.textContent).not.toContain('2 pages');
     act(() => radio('Grid').click());
-    expect(host?.textContent).toContain('9 steps per page · 2 pages');
+    expect(host?.textContent).not.toContain('2 pages');
+    expect(host?.textContent).not.toContain('steps per page ·');
   });
 
   it('shows the first page number only while numbers are on', () => {
@@ -451,6 +450,21 @@ describe('DiagramPagePanel › Packing', () => {
   // “Add step” selects the step it adds, on page 2: with none selected, the current page is page 1.
   beforeEach(() => act(() => state().selectDiagramStep(null)));
 
+  // Closed until opened, as Edit's More foldability settings is (Zach, 12 Oct).
+  beforeEach(() => {
+    const disclosure = button('Packing')!;
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    expect(row('Bands')).toBeUndefined();
+    act(() => disclosure.click());
+  });
+
+  it('offers only the band counts every page can take: Auto, 3 and 5', () => {
+    const labels = [...(host?.querySelectorAll<HTMLElement>('[role="group"][aria-label="Bands"] button') ?? [])].map(
+      (element) => element.textContent
+    );
+    expect(labels).toEqual(['Auto', '3', '5']);
+  });
+
   it('is the flow’s alone', () => {
     expect(host?.textContent).toContain('Packing');
     expect(row('Bands')).toBeDefined();
@@ -552,7 +566,7 @@ describe('DiagramPagePanel › Packing', () => {
     expect(slider('Nesting').disabled).toBe(true);
     expect(button('Re-pack Page')?.disabled).toBe(true);
     expect(button('Re-pack All Pages')?.disabled).toBe(true);
-    act(() => segment('Bands', '4').click());
+    act(() => segment('Bands', '5').click());
     expect(state().diagram?.page.flowBands).toBe('auto');
     expect(analytics.trackDiagramPageSetupChanged).not.toHaveBeenCalled();
   });
