@@ -72,6 +72,14 @@
 .handle[data-place-scale='middle'] {
   cursor: ns-resize;
 }
+/* A caption's grips: its width at its sides, its lines at its foot. */
+.handle[data-place-caption='left'],
+.handle[data-place-caption='right'] {
+  cursor: ew-resize;
+}
+.handle[data-place-caption='bottom'] {
+  cursor: ns-resize;
+}
 .guide {
   position: absolute;
   inset: 0;

@@ -14,6 +14,7 @@ import { breakOpportunities, graphemesOf } from '../../lib/paper/textWrap';
 import type { DiagramStepPlace } from '../document/diagramDocument';
 import type { LayoutCell, SetLine, TextSetter } from './diagramPageLayout';
 import { captionCentreWidth } from './flowPacking';
+import { partBox, type PageBox } from './pagePlacement';
 import type { PrintPaper } from './printPaper';
 import { STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 
@@ -103,4 +104,146 @@ export function captionWidthForLines(text: string, lines: number, least: number,
 export function captionStartShift(cell: Pick<LayoutCell, 'band' | 'cellMm'>, from: number | undefined, to: number | undefined): number {
   if (cell.band === undefined) return 0;
   return (captionCentreWidth(cell.cellMm.w, from) - captionCentreWidth(cell.cellMm.w, to)) / 2;
+}
+
+/** A grip on a selected caption's box (`DiagramPagesPlacement`): its left or right edge, or its foot. */
+export type CaptionGrip = 'left' | 'right' | 'bottom';
+
+/** What a resize of a caption by its grips starts from, read once as the drag begins ({@link captionStart}). */
+export interface CaptionStart {
+  /** The caption's box as drawn: from its first line's cap height to its last's descenders, its longest line wide. */
+  box: PageBox;
+  /** Where its lines start, and the measure they are set at. */
+  x: number;
+  width: number;
+  /** Its pin, as the layout holds it; undefined where its measure is automatic. */
+  pinned: number | undefined;
+  /** The measure the layout gives it with no pin. */
+  auto: number;
+  /** Its picture's width: a width a grip snaps to. */
+  picture: number;
+  /** The narrowest and widest it may be set ({@link narrowestCaptionWidth}, {@link captionCeilingMm}). */
+  least: number;
+  most: number;
+  /** How many lines it sets in: now, at its widest, and at its narrowest. */
+  lines: number;
+  fewest: number;
+  longest: number;
+}
+
+/** A caption's {@link CaptionStart}: its cell as laid out, its text, the pages' setter and the paper. */
+export function captionStart(cell: LayoutCell, text: string, setter: TextSetter, paper: PrintPaper): CaptionStart {
+  const least = narrowestCaptionWidth(text, setter);
+  const most = Math.max(least, captionCeilingMm(paper));
+  return {
+    box: partBox(cell, 'text'),
+    x: cell.text.x,
+    width: cell.text.widthMm,
+    pinned: cell.placed?.offsets.textWidth !== undefined ? cell.text.widthMm : undefined,
+    auto: cell.placed?.auto.textWidthMm ?? cell.text.widthMm,
+    picture: partBox(cell, 'picture').w,
+    least,
+    most,
+    lines: cell.text.lines.length,
+    fewest: setCaption(text, most, setter).length,
+    longest: setCaption(text, least, setter).length,
+  };
+}
+
+/** A caption as a grip has it so far ({@link resizedCaption}). */
+export interface CaptionResize {
+  /** The measure it is set at. */
+  width: number;
+  /** What its placement keeps: the width to a tenth of a mm, or null where it is the automatic one. */
+  pin: number | null;
+  /** The caption as the layout will draw it: its lines at {@link width}, where it then starts. */
+  text: LayoutCell['text'];
+  /** How far its text offset moves across, mm: the left grip's, which keeps the box's right edge. */
+  dx: number;
+  /** The width it snapped to: the automatic one, or its picture's. */
+  snap?: 'auto' | 'picture';
+}
+
+/** How a pointer has moved a grip: across and down, mm; how near a width snaps; and whether it may (Alt held, never). */
+export interface CaptionMove {
+  dx: number;
+  dy: number;
+  near: number;
+  snap: boolean;
+}
+
+/**
+ * A caption resized by `grip` as far as `move` takes it, from `start`:
+ *
+ * - **Right**: its box's right edge follows the pointer — as far as the
+ *   least and most it may be — its left edge where the layout starts it.
+ * - **Left**: its box's left edge follows the pointer; its right edge stays
+ *   where it was, its text offset moving across by as much as the layout's
+ *   start does not.
+ * - **Bottom**: asks for the whole number of lines nearest the pointer's
+ *   height, between the fewest and the most it can take, at the narrowest
+ *   width that sets it in them ({@link captionWidthForLines}); back at the
+ *   lines it had, the width it had. Its left edge where the layout starts it.
+ *
+ * A width grip snaps, within `near`, to the automatic width (the pin let
+ * go) and to the picture's.
+ */
+export function resizedCaption(
+  start: CaptionStart,
+  cell: Pick<LayoutCell, 'band' | 'cellMm' | 'text'>,
+  grip: CaptionGrip,
+  move: CaptionMove,
+  text: string,
+  setter: TextSetter
+): CaptionResize {
+  const startAt = (pin: number | null) => start.x + captionStartShift(cell, start.pinned, pin ?? undefined);
+  const least = Math.ceil(start.least * 10 - 1e-6) / 10;
+  const held = (mm: number) => Math.min(start.most, Math.max(least, Math.round(mm * 10) / 10));
+  let width: number;
+  let pin: number | null;
+  let snap: CaptionResize['snap'];
+  if (grip === 'bottom') {
+    const lines = Math.min(start.longest, Math.max(start.fewest, captionLinesIn(start.box.h + move.dy)));
+    width = lines === start.lines ? start.width : captionWidthForLines(text, lines, start.least, start.most, setter);
+    pin = lines === start.lines ? (start.pinned ?? null) : width;
+  } else {
+    const right = start.box.x + start.box.w;
+    // Its line start moves half as far as its width where its box centres a wide pin: the edge still follows the pointer.
+    const asked = grip === 'left' ? start.box.w - move.dx : widthReaching(right + move.dx, start, (mm) => startAt(mm) + mm);
+    width = Math.min(start.most, Math.max(start.least, asked));
+    if (move.snap) {
+      const near = [
+        { mm: start.auto, snap: 'auto' as const },
+        { mm: start.picture, snap: 'picture' as const },
+      ].filter(({ mm }) => mm >= start.least && mm <= start.most && Math.abs(mm - width) < move.near);
+      const closest = near.sort((a, b) => Math.abs(a.mm - width) - Math.abs(b.mm - width))[0];
+      if (closest) ({ mm: width, snap } = closest);
+    }
+    width = snap === 'auto' ? start.auto : held(width);
+    pin = snap === 'auto' ? null : width;
+  }
+  // A width the automatic one to a tenth of a mm is the automatic one.
+  if (pin !== null && Math.abs(pin - start.auto) < 0.05) [width, pin] = [start.auto, null];
+  const lines = setCaption(text, width, setter);
+  let x = startAt(pin);
+  let dx = 0;
+  if (grip === 'left') {
+    const kept = start.box.x + start.box.w - Math.max(0, ...lines.map((line) => line.widthMm));
+    dx = kept - x;
+    x = kept;
+  }
+  return { width, pin, text: { ...cell.text, x, widthMm: width, lines }, dx, ...(snap ? { snap } : {}) };
+}
+
+/** The width, between `start`'s least and most, at which a caption's measure reaches `edge` (`reach`, never falling as it widens). */
+function widthReaching(edge: number, start: CaptionStart, reach: (width: number) => number): number {
+  let [lo, hi] = [start.least, start.most];
+  if (reach(lo) >= edge) return lo;
+  if (reach(hi) <= edge) return hi;
+  for (let step = 0; step < 40; step += 1) {
+    const mid = (lo + hi) / 2;
+    if (reach(mid) < edge) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
 }

@@ -2,7 +2,9 @@ import { Pin } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import type { LayoutPage } from '../../diagram/pages/diagramPageLayout';
+import type { CaptionGrip } from '../../diagram/pages/captionMeasure';
+import type { PreparedDiagramPages } from '../../diagram/pages/diagramPages';
+import type { LayoutCell, LayoutPage } from '../../diagram/pages/diagramPageLayout';
 import { printedFrameMm } from '../../diagram/pages/pagePictures';
 import { clashTag } from '../../diagram/pages/clashLabels';
 import { cellClashGroup, partBox, type PageBox, type PagePart } from '../../diagram/pages/pagePlacement';
@@ -23,6 +25,16 @@ export const PAGE_PLACEMENT_PAN_EXCLUDED = [styles.drag, styles.handle];
 
 type Placement = ReturnType<typeof usePagePlacement>;
 const mm = (value: number) => value * PAGES_PX_PER_MM;
+/**
+ * The selected caption's grips (`diagram-caption-resize.md`): the midpoints
+ * of its box's left and right edges, which set its width, and of its foot,
+ * which sets how many lines it takes.
+ */
+const CAPTION_GRIPS: readonly { grip: CaptionGrip; at: (box: PageBox) => [number, number] }[] = [
+  { grip: 'left', at: (box) => [box.x, box.y + box.h / 2] },
+  { grip: 'right', at: (box) => [box.x + box.w, box.y + box.h / 2] },
+  { grip: 'bottom', at: (box) => [box.x + box.w / 2, box.y + box.h] },
+];
 const position = (box: PageBox): CSSProperties => ({
   left: mm(box.x),
   top: mm(box.y),
@@ -70,7 +82,7 @@ export function DiagramPagesPlacement({
   };
   return (
     <>
-      {lifted && <LiftedPicture draft={lifted} />}
+      {lifted && <LiftedPicture draft={lifted} pages={placement.pages} />}
       {page.cells.map((c) => {
         const group = cellClashGroup(c);
         return (
@@ -130,7 +142,27 @@ export function DiagramPagesPlacement({
                 onClick={(event) => event.stopPropagation()}
               />
             ))}
-          {part === 'picture' && chosen && step.place?.scale && (
+          {part === 'text' &&
+            chosen &&
+            CAPTION_GRIPS.map(({ grip, at }) => {
+              const [x, y] = at(chosen);
+              return (
+                <div
+                  key={grip}
+                  data-place-caption={grip}
+                  aria-hidden="true"
+                  className={styles.handle}
+                  style={{ left: mm(x), top: mm(y) }}
+                  onPointerDown={(event) => placement.start(event, index, local?.cell ?? cell, 'text', false, grip)}
+                  onPointerMove={placement.move}
+                  onPointerUp={placement.end}
+                  onPointerCancel={placement.cancel}
+                  onLostPointerCapture={placement.lost}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              );
+            })}
+          {chosen && ((part === 'picture' && step.place?.scale) || (part === 'text' && step.place?.textWidth)) && (
             <span className={styles.pin} style={{ left: mm(chosen.x), top: mm(chosen.y) }} aria-hidden="true">
               <Pin size={10} />
             </span>
@@ -148,24 +180,39 @@ export function DiagramPagesPlacement({
               </svg>
             </>
           )}
-          {local && (local.dx !== 0 || local.dy !== 0 || local.factor !== 1) && (
+          {local && (local.dx !== 0 || local.dy !== 0 || local.factor !== 1 || local.caption) && (
             <>
               <div
                 className={styles.chip}
                 style={{ left: mm(chosen?.x ?? cell.cellMm.x), top: mm((chosen?.y ?? cell.cellMm.y) - 7) }}
               >
-                {local.pointer?.size
-                  ? t('panels:diagram.placement.dragSize', '{{mm}} mm · auto {{auto}} mm', {
-                      mm: size === null ? '' : tenths(size),
-                      auto: autoSize === null ? '' : tenths(autoSize),
-                    })
-                  : t('panels:diagram.placement.dragMove', '{{part}} · {{x}}, {{y}} mm', {
-                      part: labels[local.part],
-                      x: tenths(local.dx),
-                      y: tenths(local.dy),
-                    })}
+                {local.caption && local.captionFrom
+                  ? local.pointer?.caption === 'bottom'
+                    ? t('panels:diagram.placement.dragLines', {
+                        count: local.caption.text.lines.length,
+                        mm: tenths(local.caption.width),
+                        defaultValue_one: '{{count}} line · {{mm}} mm',
+                        defaultValue_other: '{{count}} lines · {{mm}} mm',
+                      })
+                    : t('panels:diagram.placement.dragSize', '{{mm}} mm · auto {{auto}} mm', {
+                        mm: tenths(local.caption.width),
+                        auto: tenths(local.captionFrom.auto),
+                      })
+                  : local.pointer?.size
+                    ? t('panels:diagram.placement.dragSize', '{{mm}} mm · auto {{auto}} mm', {
+                        mm: size === null ? '' : tenths(size),
+                        auto: autoSize === null ? '' : tenths(autoSize),
+                      })
+                    : t('panels:diagram.placement.dragMove', '{{part}} · {{x}}, {{y}} mm', {
+                        part: labels[local.part],
+                        x: tenths(local.dx),
+                        y: tenths(local.dy),
+                      })}
                 {local.snap?.number && (
                   <> · {t('panels:diagram.placement.matchStep', '= step {{number}}', { number: local.snap.number })}</>
+                )}
+                {local.caption?.snap === 'picture' && (
+                  <> · {t('panels:diagram.placement.matchPicture', '= picture')}</>
                 )}
               </div>
             </>
@@ -176,10 +223,40 @@ export function DiagramPagesPlacement({
   );
 }
 
-function LiftedPicture({ draft }: { draft: NonNullable<Placement['draft']> }) {
-  const { base, cell, part, page, dx, dy, factor, pointer } = draft;
+/**
+ * A caption a grip is resizing, composed from the preview's layout, by what
+ * it draws: a few at a time, since its lines rewrap only now and then as the
+ * grip moves, and each preview is new pages.
+ */
+const liftedCaptions = new Map<string, string>();
+const LIFTED_CAPTIONS_KEPT = 16;
+function liftedCaptionUrl(pages: PreparedDiagramPages, page: number, stepId: string, text: LayoutCell['text']): string {
+  const { widthMm, heightMm } = pages.layout.paper;
+  const runs = text.lines.map((line) => line.runs.map(({ font, text, xMm }) => [font, text, xMm]));
+  const key = JSON.stringify([widthMm, heightMm, text.x, text.firstBaseline, runs]);
+  let url = liftedCaptions.get(key);
+  if (url === undefined) {
+    url = composedPageUrl(pages, page, { band: false, only: { stepId, part: 'text' } });
+    const oldest = liftedCaptions.keys().next();
+    if (liftedCaptions.size >= LIFTED_CAPTIONS_KEPT && !oldest.done) liftedCaptions.delete(oldest.value);
+    liftedCaptions.set(key, url);
+  }
+  return url;
+}
+
+function LiftedPicture({ draft, pages }: { draft: NonNullable<Placement['draft']>; pages: PreparedDiagramPages | null }) {
+  const { base, cell, part, page, dx, dy, factor, pointer, caption } = draft;
   const picture = partBox(cell, 'picture');
   const only = (part: PagePart) => composedPageUrl(base, page, { band: false, only: { stepId: cell.stepId, part } });
+  if (caption)
+    return (
+      <img
+        alt=""
+        draggable={false}
+        className={styles.lifted}
+        src={liftedCaptionUrl(pages ?? base, page, cell.stepId, caption.text)}
+      />
+    );
   if (!pointer?.size)
     return (
       <img

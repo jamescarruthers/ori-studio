@@ -471,6 +471,71 @@ it('lets a press on the paper go of a resized picture, so the next drag on its s
   expect(place()).not.toMatchObject({ place: { picture: expect.anything() } });
 });
 
+it('resizes a selected caption by its grips, its lines rewrapping as the grip moves, and commits once on release', () => {
+  const doc = diagram();
+  useWorkspaceStore.getState().installDiagram({ document: doc, readOnly: false, raw: {} });
+  useWorkspaceStore.getState().setDiagramView('pages');
+  useWorkspaceStore.getState().selectDiagramStep('step-long');
+  useWorkspaceStore.getState().selectDiagramPagesPart('text');
+  const capture = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'setPointerCapture');
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  onTestFinished(() => {
+    if (capture) Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', capture);
+    else delete (HTMLElement.prototype as Partial<HTMLElement>).setPointerCapture;
+  });
+  function Bound() {
+    const document = useWorkspaceStore((state) => state.diagram!);
+    const selected = useWorkspaceStore((state) => state.diagramSelectedStepId);
+    const pages = useMemo(() => preparedPages(document, FONTS, subsetter), [document]);
+    return (
+      <DiagramPagesView
+        pages={pages}
+        failed={false}
+        steps={stepsIn(document)}
+        selectedStepId={selected}
+        pathColor={pages.layout.bandInk}
+        fitKey="test"
+        onSelect={useWorkspaceStore.getState().selectDiagramStep}
+        onPageClick={() => {}}
+      />
+    );
+  }
+  act(() =>
+    root.render(
+      <TooltipProvider>
+        <Bound />
+      </TooltipProvider>
+    )
+  );
+  const page = host.querySelector<HTMLElement>('[data-page="0"]')!;
+  const paper = preparedPages(doc, FONTS, subsetter).layout.paper;
+  page.getBoundingClientRect = () => ({ left: 0, top: 0, width: paper.widthMm, height: paper.heightMm }) as DOMRect;
+  const pointer = (element: Element, type: string, x: number, y: number) =>
+    act(() => {
+      element.dispatchEvent(
+        new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerId: 1, pointerType: 'mouse', clientX: x, clientY: y, altKey: true })
+      );
+    });
+  // Its sides set its width, its foot its lines; the picture's size grips are not there.
+  expect([...host.querySelectorAll<HTMLElement>('[data-place-caption]')].map((grip) => grip.dataset.placeCaption)).toEqual(['left', 'right', 'bottom']);
+  expect(host.querySelector('[data-place-scale]')).toBeNull();
+  const right = host.querySelector<HTMLElement>('[data-place-caption="right"]')!;
+  const [x, y] = [parseFloat(right.style.left) / PX_PER_MM, parseFloat(right.style.top) / PX_PER_MM];
+  const before = useWorkspaceStore.getState().diagram;
+  pointer(right, 'pointerdown', x, y);
+  pointer(right, 'pointermove', x + 40, y);
+  // Live: the caption lifted, set at the wider measure, the width and Auto said; nothing committed.
+  expect(useWorkspaceStore.getState().diagram).toBe(before);
+  expect(host.textContent).toMatch(/\d+\.\d mm · auto \d+\.\d mm/);
+  const lifted = [...host.querySelectorAll<HTMLImageElement>('img')].map(svgOf).filter((svg) => svg.includes('Fold the corner'));
+  expect(lifted.length).toBeGreaterThan(0);
+  pointer(right, 'pointerup', x + 40, y);
+  const step = useWorkspaceStore.getState().diagram!.steps[2]!;
+  expect(step).toMatchObject({ place: { textWidth: expect.any(Number) } });
+  expect(useWorkspaceStore.getState().diagramHistory.past).toHaveLength(1);
+  expect(useWorkspaceStore.getState()).toMatchObject({ diagramSelectedStepId: 'step-long', diagramPagesPart: 'text' });
+});
+
 it('lets the selected frame own its picture hit area until a part is chosen', () => {
   const doc = diagram();
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);

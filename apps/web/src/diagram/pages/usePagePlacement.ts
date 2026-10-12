@@ -8,6 +8,7 @@ import { stepById, type DiagramDocument } from '../document/diagramDocument';
 import { placementBlocker, placeOffset } from '../document/stepPlace';
 import type { PreparedDiagramPages } from './diagramPages';
 import type { LayoutCell } from './diagramPageLayout';
+import { captionStart, resizedCaption, type CaptionGrip, type CaptionResize, type CaptionStart } from './captionMeasure';
 import { partBox, pageOffset, type PagePart } from './pagePlacement';
 import { commitPlacement, commitZoomSize } from './placementActions';
 import { previewPlacement } from './placementPreview';
@@ -41,12 +42,17 @@ interface Draft {
     mmPerPx: number;
     target: HTMLElement;
     size: false | 'left' | 'middle' | 'right';
+    /** A grip on the selected caption's box: its width, or its lines (`captionMeasure.ts`). */
+    caption?: CaptionGrip;
     /** A click drills into an already selected frame; a drag still moves it whole. */
     drill?: PagePart;
     /** Past the slop: the press is a drag now, not a click. */
     moved?: boolean;
   };
   snap?: { auto?: boolean; number?: number };
+  /** A caption's grip drag: what it started from, read once, and the caption as it has it so far. */
+  captionFrom?: CaptionStart;
+  caption?: CaptionResize;
 }
 /** Where a pointer is, and the keys that change what a drag does there. */
 interface DragPoint {
@@ -101,6 +107,12 @@ function focusStep(event: ReactPointerEvent<HTMLElement>, page: HTMLElement, ste
  * included — selects what it pressed at once and is held until the pages
  * catch up (`HeldPress`), so a click right after a nudge selects the frame
  * and a drag there still moves it.
+ *
+ * A caption's grips set its measure (`captionMeasure.ts`,
+ * `implementation-plans/diagram-caption-resize.md`): the preview re-sets its
+ * lines with the pages' own setter at each width the grip asks for, and the
+ * release commits the width — with the left grip's move of the caption that
+ * keeps its right edge — as one undo entry.
  */
 export function usePagePlacement(pages: PreparedDiagramPages | null, space: boolean, failed = false) {
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -161,14 +173,24 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     }
     const dx = current.dx - (current.committed?.dx ?? 0),
       dy = current.dy - (current.committed?.dy ?? 0);
-    if (!dx && !dy && current.factor === 1) {
+    if (!current.caption && !dx && !dy && current.factor === 1) {
       update(holding(current));
       return;
     }
     committing.current = true;
     let changed = false;
     try {
-      if (current.pointer?.size) {
+      if (current.caption) {
+        // One commit, one undo entry: the caption's width, and the left grip's move of it that keeps its right edge.
+        const { pin, dx: across } = current.caption;
+        const [x, y] = step.place?.text ?? [0, 0];
+        changed = commitPlacement(
+          step.id,
+          { textWidth: pin, ...(across !== 0 ? { text: placeOffset([x + across, y]) } : {}) },
+          'drag',
+          { loadId: current.loadId, grip: current.pointer?.caption === 'bottom' ? 'lines' : 'width' },
+        );
+      } else if (current.pointer?.size) {
         const scale = current.cell.mmPerUnit ?? current.cell.frameMm;
         if (step.zoom)
           changed = commitZoomSize(
@@ -267,6 +289,14 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     }
     const box = partBox(current.cell, current.part),
       paper = current.base.layout.paper;
+    if (grip.caption) {
+      // The caption re-set with the pages' own setter at each width the grip asks for: what the layout will draw.
+      const text = stepById(current.document, current.cell.stepId)?.text ?? '';
+      const from = current.captionFrom ?? captionStart(current.cell, text, current.base.setter, paper);
+      const move = { dx, dy, near: 6 * grip.mmPerPx, snap: !point.altKey };
+      const caption = resizedCaption(from, current.cell, grip.caption, move, text, current.base.setter);
+      return { ...current, pointer: grip, captionFrom: from, caption };
+    }
     if (grip.size) {
       const step = stepById(current.document, current.cell.stepId)!;
       const sizeOf = (cell: LayoutCell) => {
@@ -359,7 +389,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     }
     const state = useWorkspaceStore.getState();
     let next: Draft | null = null;
-    if (current?.pending && same && !current.pointer?.size && state.diagram === current.pending) {
+    if (current?.pending && same && !current.pointer?.size && !current.caption && state.diagram === current.pending) {
       // Committed, and its pages still laying out: the arrow carries on from where the last nudge went.
       next = {
         ...current,
@@ -500,6 +530,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
     cell: LayoutCell,
     chosen: PagePart = 'frame',
     size: false | 'left' | 'middle' | 'right' = false,
+    caption?: CaptionGrip,
   ) => {
     if (
       space ||
@@ -541,6 +572,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
       mmPerPx: pages.layout.paper.widthMm / element.getBoundingClientRect().width,
       target: event.currentTarget,
       size,
+      ...(caption ? { caption } : {}),
       drill,
     };
     if (!current) {
@@ -615,6 +647,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
         draft.factor,
         draft.base.footprints,
         draft.base.zoomArrows,
+        draft.caption?.text,
       ),
     ) ?? null;
   return {

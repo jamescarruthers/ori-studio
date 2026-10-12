@@ -132,14 +132,17 @@ export function composeDiagramPage(input: ComposeDiagramPageInput): ComposedPage
   page.cells.forEach((cell, index) => {
     const step = input.steps.get(cell.stepId);
     const parts: string[] = [];
-    const picture = step
-      ? cellPicture(step, input.assets, input.style, cell, `c${index}-`, { hanStyle: input.hanStyle, runs: setter.runs })
-      : null;
-    pictures.push(picture);
     const draw = (part: PagePart) => {
       const matches = (filter: { stepId: string; part: PagePart }) => filter.stepId === cell.stepId && (filter.part === 'frame' || filter.part === part);
       return (!input.only || matches(input.only)) && (!input.omit || !matches(input.omit));
     };
+    // A composition of one part of one step (`only`) draws no other picture and no arrow, so none is made for it:
+    // a caption lifted while its grip is dragged is composed afresh, cheaply, each time its lines rewrap.
+    const picture =
+      step && (!input.only || draw('picture'))
+        ? cellPicture(step, input.assets, input.style, cell, `c${index}-`, { hanStyle: input.hanStyle, runs: setter.runs })
+        : null;
+    pictures.push(picture);
     if (picture && draw('picture')) {
       parts.push(picture.markup);
       for (const { face, characters } of picture.text) use(face, characters);

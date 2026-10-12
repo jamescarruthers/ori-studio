@@ -1,7 +1,7 @@
 import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { beforeAll, beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
-import { createDiagram, insertSteps, setPageSetup, stepById } from '../document/diagramDocument';
+import { createDiagram, insertSteps, setPageSetup, setStepText, stepById } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { FIXTURE_FONTS, fixtureSubsetter } from '../fonts/diagramFonts.fixtures';
 import type { FontSubsetter } from '../fonts/fontSubset';
@@ -10,6 +10,9 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { preparedPages, type PreparedDiagramPages } from './diagramPages';
 import { usePagePlacement } from './usePagePlacement';
 import { partBox } from './pagePlacement';
+import { captionStartShift, setCaption } from './captionMeasure';
+import type { LayoutCell } from './diagramPageLayout';
+import { STEP_TEXT_LEADING_MM } from './stepType';
 import { runPlacementKey, cancelPlacementGesture } from './placementGestures';
 
 let subsetter: FontSubsetter;
@@ -366,6 +369,127 @@ describe('page placement drags', () => {
       expect(binding.draft).toBeNull();
       act(() => binding.end(event(60, 50)));
       expect(placeOf('s1')).toBeUndefined();
+    });
+  });
+
+  describe('a caption’s grips (`diagram-caption-resize.md`)', () => {
+    const LONG = 'Valley fold the flaps inward. Note that the top of each crease does not line up with the top corner of the paper';
+    /** The diagram with a long caption on `s0`, its text selected, laid out — on a flow page, held as packed. */
+    function withCaption(layout: 'grid' | 'flow') {
+      const doc = setPageSetup(setStepText(insertSteps(createDiagram(), [cpStep('s0'), cpStep('s1'), cpStep('s2')], 0), 's0', LONG), { layout });
+      act(() => {
+        state().installDiagram({ document: doc, readOnly: false, raw: {} });
+        state().setDiagramView('pages');
+        if (layout === 'flow') state().adoptDiagramPageArrangements(preparedPages(doc, FIXTURE_FONTS, subsetter).layout.packed ?? {}, doc);
+        state().selectDiagramStep('s0');
+        state().selectDiagramPagesPart('text');
+      });
+      relayout();
+      expect(state().diagramHistory.past).toHaveLength(0);
+    }
+    const s0 = () => pages.layout.pages[0]!.cells.find((cell) => cell.stepId === 's0')!;
+    const previewOf = (stepId: string) => binding.pages!.layout.pages[0]!.cells.find((cell) => cell.stepId === stepId)!;
+    const lines = (cell: LayoutCell) => cell.text.lines.map((line) => line.text);
+    /** A press on `grip`, dragged by `dx`, `dy` — by way of `via`, past the slop, when given — and the release that ends it. */
+    const drag = (grip: 'left' | 'right' | 'bottom', dx: number, dy: number, snap = false, via?: [number, number]) => {
+      const box = partBox(s0(), 'text');
+      const [x, y] = grip === 'left' ? [box.x, box.y + box.h / 2] : grip === 'right' ? [box.x + box.w, box.y + box.h / 2] : [box.x + box.w / 2, box.y + box.h];
+      const at = (px: number, py: number) => ({ ...event(px, py), altKey: !snap }) as unknown as Parameters<typeof binding.start>[0];
+      act(() => binding.start(at(x, y), 0, s0(), 'text', false, grip));
+      if (via) act(() => binding.move(at(x + via[0], y + via[1])));
+      act(() => binding.move(at(x + dx, y + dy)));
+      return () => act(() => binding.end(at(x + dx, y + dy)));
+    };
+
+    it.each(['grid', 'flow'] as const)('widens by the right grip, rewrapping live, and commits once on release as the layout draws it: %s', (layout) => {
+      withCaption(layout);
+      const before = s0();
+      const box = partBox(before, 'text');
+      const original = state().diagram;
+      const release = drag('right', 22, 0);
+      // Live: the caption re-set at the width the grip asks for — its measure reaching the pointer — nothing committed.
+      expect(state().diagram).toBe(original);
+      const width = binding.draft!.caption!.width;
+      const preview = previewOf('s0').text;
+      expect(Math.abs(preview.x + width - (box.x + box.w + 22))).toBeLessThanOrEqual(0.05 + 1e-9);
+      expect(preview.x).toBeCloseTo(before.text.x + captionStartShift(before, undefined, width), 9);
+      expect(preview.lines.length).toBeLessThan(before.text.lines.length);
+      release();
+      expect(state().diagramHistory.past).toHaveLength(1);
+      expect(placeOf('s0')).toEqual({ textWidth: binding.draft!.caption!.width });
+      relayout();
+      // The layout draws what the preview showed; no other step moves.
+      expect(s0().text).toEqual(preview);
+      expect(lines(s0())).toEqual(preview.lines.map((line) => line.text));
+      for (const id of ['s1', 's2']) expect(previewOf(id)).toEqual(pages.layout.pages[0]!.cells.find((cell) => cell.stepId === id));
+      act(() => state().undoDiagram());
+      expect(placeOf('s0')).toBeUndefined();
+    });
+
+    it('keeps the box’s right edge with the left grip, the caption’s offset moving the other way in the same commit', () => {
+      withCaption('flow');
+      const box = partBox(s0(), 'text');
+      const release = drag('left', -18, 0);
+      expect(binding.draft?.caption?.width).toBeCloseTo(Math.round((box.w + 18) * 10) / 10, 9);
+      const preview = partBox(previewOf('s0'), 'text');
+      expect(preview.x + preview.w).toBeCloseTo(box.x + box.w, 9);
+      release();
+      expect(state().diagramHistory.past).toHaveLength(1);
+      const place = placeOf('s0')!;
+      expect(place.textWidth).toBe(binding.draft!.caption!.width);
+      expect(place.text![0]).toBeLessThan(0);
+      expect(place.text![1]).toBe(0);
+      relayout();
+      const after = partBox(s0(), 'text');
+      // The offset is kept to a tenth of a mm.
+      expect(Math.abs(after.x + after.w - (box.x + box.w))).toBeLessThanOrEqual(0.05 + 1e-9);
+      act(() => state().undoDiagram());
+      expect(placeOf('s0')).toBeUndefined();
+    });
+
+    it('asks for fewer lines by the bottom grip, at the narrowest width that sets in them, its left edge kept; back where it began, nothing', () => {
+      withCaption('grid');
+      const before = s0();
+      const back = drag('bottom', 0, 1, false, [0, 2 * STEP_TEXT_LEADING_MM]);
+      expect(binding.draft?.caption).toMatchObject({ pin: null, width: before.text.widthMm });
+      back();
+      expect(state().diagramHistory.past).toHaveLength(0);
+      relayout();
+      const release = drag('bottom', 0, -2 * STEP_TEXT_LEADING_MM);
+      const wanted = before.text.lines.length - 2;
+      const width = binding.draft!.caption!.width;
+      expect(previewOf('s0').text.lines).toHaveLength(wanted);
+      expect(setCaption(LONG, width - 0.1, pages.setter).length).toBeGreaterThan(wanted);
+      expect(previewOf('s0').text.x).toBe(before.text.x);
+      release();
+      expect(placeOf('s0')).toEqual({ textWidth: width });
+      relayout();
+      expect(s0().text.lines).toHaveLength(wanted);
+      expect(s0().text.x).toBe(before.text.x);
+    });
+
+    it('snaps a width grip to the automatic width, which lets the pin go, and counts nothing it did not change', () => {
+      withCaption('grid');
+      const auto = s0().text.widthMm;
+      // Pinned wide first.
+      drag('right', 30, 0)();
+      relayout();
+      expect(placeOf('s0')?.textWidth).toBeGreaterThan(auto);
+      // Then dragged back near the automatic width, snapping.
+      const box = partBox(s0(), 'text');
+      const release = drag('right', auto - box.w + 0.8, 0, true);
+      expect(binding.draft?.caption).toMatchObject({ pin: null, snap: 'auto', width: auto });
+      release();
+      expect(placeOf('s0')).toBeUndefined();
+      expect(state().diagramHistory.past).toHaveLength(2);
+    });
+
+    it('lets Escape drop a grip’s drag with nothing committed', () => {
+      withCaption('grid');
+      drag('right', 25, 0);
+      act(() => expect(cancelPlacementGesture()).toBe(true));
+      expect(binding.draft).toBeNull();
+      expect(state().diagramHistory.past).toHaveLength(0);
     });
   });
 
