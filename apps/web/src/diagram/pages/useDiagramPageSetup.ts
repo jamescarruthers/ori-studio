@@ -17,8 +17,9 @@ const NO_STEPS: readonly DiagramStep[] = [];
 
 /**
  * The Page pane's store bindings (AGENTS.md › Panel components): the page
- * setup, style and Han style, each change one undo step and one count of
- * which setting changed, and how many pages the steps make.
+ * setup, a flow page's own count of steps, style and Han style, each change
+ * one undo step and one count of which setting changed, and how many pages
+ * the steps make.
  *
  * The flow path's colour is not here: its row binds itself
  * (`usePathColorPick`), so that a pick's moves re-render the row alone.
@@ -40,6 +41,12 @@ export function useDiagramPageSetup() {
   const setPage = useCallback((patch: Partial<DiagramPageSetup>, setting: DiagramPageSetting) => {
     if (useWorkspaceStore.getState().setDiagramPage(patch)) trackDiagramPageSetupChanged(setting);
   }, []);
+  /** Give flow page `pageIndex` its own count of steps, or with null return it to the default. */
+  const setPageSteps = useCallback((pageIndex: number, count: number | null) => {
+    if (useWorkspaceStore.getState().setDiagramPageSteps(pageIndex, count)) {
+      trackDiagramPageSetupChanged(count === null ? 'page_steps_reset' : 'page_steps');
+    }
+  }, []);
   const setStyle = useCallback((choice: DiagramStyleChoice) => {
     if (useWorkspaceStore.getState().setDiagramStyle(choice.style)) {
       trackDiagramPageSetupChanged('style', choice.analytics);
@@ -58,6 +65,7 @@ export function useDiagramPageSetup() {
     perPage,
     pageCount,
     setPage,
+    setPageSteps,
     setStyle,
     setHanStyle,
   };

@@ -15,8 +15,10 @@ import {
   type DiagramPaperSize,
 } from '../../diagram/document/diagramDocument';
 import { layoutLabel, orientationLabel, paperSizeLabel } from '../../diagram/pages/pageSetupLabels';
+import { useCurrentDiagramPage } from '../../diagram/pages/useCurrentDiagramPage';
 import { useDiagramPageSetup } from '../../diagram/pages/useDiagramPageSetup';
 import { DiagramPagePlacements } from '../diagram/DiagramPagePlacements';
+import { DiagramPageStepsRow } from '../diagram/DiagramPageStepsRow';
 import { DiagramPathColorRow } from '../diagram/DiagramPathColorRow';
 import { DiagramStyleControl } from '../diagram/DiagramStyleControl';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
@@ -31,13 +33,15 @@ const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'
  * footer carry, and the style every step is drawn in (D10, D13).
  *
  * A composition site (AGENTS.md › Panel components): the bindings, each one
- * undo step and one count, are `useDiagramPageSetup`; the rows are the shared
- * field rows, but for the path's colour (`DiagramPathColorRow`), whose
- * pick re-renders its row and not the pane.
+ * undo step and one count, are `useDiagramPageSetup`, and the page a count of
+ * its own is for `useCurrentDiagramPage`; the rows are the shared field rows,
+ * but for the path's colour (`DiagramPathColorRow`), whose pick re-renders its
+ * row and not the pane, and the current page's count (`DiagramPageStepsRow`).
  */
 export function DiagramPagePanel() {
   const { t } = useTranslation();
   const setup = useDiagramPageSetup();
+  const current = useCurrentDiagramPage();
   const { page, readOnly, setPage } = setup;
   const flow = page.layout === 'flow';
   return (
@@ -102,16 +106,26 @@ export function DiagramPagePanel() {
             />
           </div>
           {flow ? (
-            // The flow takes a number of steps and chooses its rows to suit the paper (`flowShape`).
-            <NumberRow
-              label={t('panels:diagram.pagePane.stepsPerPage', 'Steps per page')}
-              value={page.stepsPerPage}
-              min={STEPS_PER_PAGE_RANGE.min}
-              max={STEPS_PER_PAGE_RANGE.max}
-              step={1}
-              disabled={readOnly}
-              onCommit={(stepsPerPage) => setPage({ stepsPerPage }, 'steps_per_page')}
-            />
+            <>
+              {/* The flow takes a number of steps and chooses its rows to suit the paper (`flowShape`): the
+                  default, and the current page's own. */}
+              <NumberRow
+                label={t('panels:diagram.pagePane.stepsPerPage', 'Steps per page')}
+                value={page.stepsPerPage}
+                min={STEPS_PER_PAGE_RANGE.min}
+                max={STEPS_PER_PAGE_RANGE.max}
+                step={1}
+                disabled={readOnly}
+                onCommit={(stepsPerPage) => setPage({ stepsPerPage }, 'steps_per_page')}
+              />
+              {current && current.page.steps.length > 0 && (
+                <DiagramPageStepsRow
+                  current={current}
+                  disabled={readOnly}
+                  onChange={(count) => setup.setPageSteps(current.index, count)}
+                />
+              )}
+            </>
           ) : (
             <>
               <NumberRow

@@ -420,6 +420,8 @@ export type DiagramView = 'steps' | 'pages';
 /**
  * Which page setting changed in the Page pane (D10). `scale` is retired: every diagram fits each since 2026-10-06.
  * `columns` and `rows` are the grid's; the flow takes `steps_per_page` instead (since 2026-10-07).
+ * `page_steps` gives one flow page its own count of steps, and `page_steps_reset` returns it to the
+ * default (since 2026-10-11).
  */
 export type DiagramPageSetting =
   | 'size'
@@ -429,6 +431,8 @@ export type DiagramPageSetting =
   | 'columns'
   | 'rows'
   | 'steps_per_page'
+  | 'page_steps'
+  | 'page_steps_reset'
   | 'path'
   | 'path_width'
   | 'path_color'

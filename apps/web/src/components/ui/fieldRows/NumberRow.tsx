@@ -18,6 +18,7 @@ export function NumberRow({
   title,
   normalize,
   fieldRef,
+  divider,
   onCommit,
   onReset,
 }: {
@@ -32,6 +33,8 @@ export function NumberRow({
   normalize?: (value: number) => number;
   /** The input itself, for a caller that puts the focus in it. */
   fieldRef?: Ref<HTMLInputElement>;
+  /** The rule under the row (`FieldRow.divider`). */
+  divider?: boolean;
   onCommit: (value: number) => void;
   onReset?: () => void;
 }) {
@@ -43,6 +46,7 @@ export function NumberRow({
       kind="input"
       disabled={disabled}
       title={title}
+      divider={divider}
       onReset={onReset}
     >
       <NumberField

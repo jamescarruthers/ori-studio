@@ -4395,7 +4395,10 @@
     "toasts:diagram.placementsReflowed_one": "3adba6f4f692",
     "toasts:diagram.placementsReflowed_other": "3adba6f4f692",
     "panels:diagram.placement.outsideMargin": "92651b485f4d",
-    "panels:diagram.placement.pathWarning": "747809309f87"
+    "panels:diagram.placement.pathWarning": "747809309f87",
+    "panels:diagram.pagePane.pageSteps": "0895c31f40d7",
+    "panels:diagram.pagePane.pageStepsDefault": "21b111cbfe6e",
+    "panels:diagram.pagePane.pageStepsUseDefault": "a769cedc7992"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8793,7 +8796,10 @@
     "toasts:diagram.placementsReflowed_one": "3adba6f4f692",
     "toasts:diagram.placementsReflowed_other": "3adba6f4f692",
     "panels:diagram.placement.outsideMargin": "92651b485f4d",
-    "panels:diagram.placement.pathWarning": "747809309f87"
+    "panels:diagram.placement.pathWarning": "747809309f87",
+    "panels:diagram.pagePane.pageSteps": "0895c31f40d7",
+    "panels:diagram.pagePane.pageStepsDefault": "21b111cbfe6e",
+    "panels:diagram.pagePane.pageStepsUseDefault": "a769cedc7992"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13193,7 +13199,10 @@
     "toasts:diagram.placementsReflowed_one": "3adba6f4f692",
     "toasts:diagram.placementsReflowed_other": "3adba6f4f692",
     "panels:diagram.placement.outsideMargin": "92651b485f4d",
-    "panels:diagram.placement.pathWarning": "747809309f87"
+    "panels:diagram.placement.pathWarning": "747809309f87",
+    "panels:diagram.pagePane.pageSteps": "0895c31f40d7",
+    "panels:diagram.pagePane.pageStepsDefault": "21b111cbfe6e",
+    "panels:diagram.pagePane.pageStepsUseDefault": "a769cedc7992"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -17493,7 +17502,10 @@
     "dialogs:diagramExport.placementLeftOut": "4249187dc57b",
     "toasts:diagram.placementsReflowed_other": "3adba6f4f692",
     "panels:diagram.placement.outsideMargin": "92651b485f4d",
-    "panels:diagram.placement.pathWarning": "747809309f87"
+    "panels:diagram.placement.pathWarning": "747809309f87",
+    "panels:diagram.pagePane.pageSteps": "0895c31f40d7",
+    "panels:diagram.pagePane.pageStepsDefault": "21b111cbfe6e",
+    "panels:diagram.pagePane.pageStepsUseDefault": "a769cedc7992"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -21793,7 +21805,10 @@
     "dialogs:diagramExport.placementLeftOut": "4249187dc57b",
     "toasts:diagram.placementsReflowed_other": "3adba6f4f692",
     "panels:diagram.placement.outsideMargin": "92651b485f4d",
-    "panels:diagram.placement.pathWarning": "747809309f87"
+    "panels:diagram.placement.pathWarning": "747809309f87",
+    "panels:diagram.pagePane.pageSteps": "0895c31f40d7",
+    "panels:diagram.pagePane.pageStepsDefault": "21b111cbfe6e",
+    "panels:diagram.pagePane.pageStepsUseDefault": "a769cedc7992"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -26191,7 +26206,10 @@
     "toasts:diagram.placementsReflowed_one": "3adba6f4f692",
     "toasts:diagram.placementsReflowed_other": "3adba6f4f692",
     "panels:diagram.placement.outsideMargin": "92651b485f4d",
-    "panels:diagram.placement.pathWarning": "747809309f87"
+    "panels:diagram.placement.pathWarning": "747809309f87",
+    "panels:diagram.pagePane.pageSteps": "0895c31f40d7",
+    "panels:diagram.pagePane.pageStepsDefault": "21b111cbfe6e",
+    "panels:diagram.pagePane.pageStepsUseDefault": "a769cedc7992"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -30589,7 +30607,10 @@
     "toasts:diagram.placementsReflowed_one": "3adba6f4f692",
     "toasts:diagram.placementsReflowed_other": "3adba6f4f692",
     "panels:diagram.placement.outsideMargin": "92651b485f4d",
-    "panels:diagram.placement.pathWarning": "747809309f87"
+    "panels:diagram.placement.pathWarning": "747809309f87",
+    "panels:diagram.pagePane.pageSteps": "0895c31f40d7",
+    "panels:diagram.pagePane.pageStepsDefault": "21b111cbfe6e",
+    "panels:diagram.pagePane.pageStepsUseDefault": "a769cedc7992"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -34889,6 +34910,9 @@
     "dialogs:diagramExport.placementLeftOut": "4249187dc57b",
     "toasts:diagram.placementsReflowed_other": "3adba6f4f692",
     "panels:diagram.placement.outsideMargin": "92651b485f4d",
-    "panels:diagram.placement.pathWarning": "747809309f87"
+    "panels:diagram.placement.pathWarning": "747809309f87",
+    "panels:diagram.pagePane.pageSteps": "0895c31f40d7",
+    "panels:diagram.pagePane.pageStepsDefault": "21b111cbfe6e",
+    "panels:diagram.pagePane.pageStepsUseDefault": "a769cedc7992"
   }
 }

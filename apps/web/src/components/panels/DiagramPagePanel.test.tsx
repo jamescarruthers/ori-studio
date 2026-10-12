@@ -1,6 +1,9 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { stepsOf } from '../../diagram/document/diagramDocument';
+import { usePublishPageInView } from '../../diagram/pages/pageInView';
+import { paginate } from '../../diagram/pages/pagePlan';
 import { PATH_COLOR_SETTLE_MS } from '../../diagram/pages/usePathColorPick';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
@@ -255,5 +258,117 @@ describe('DiagramPagePanel', () => {
     act(() => radio('Grid').click());
     expect(state().diagram?.page.layout).toBe('flow');
     expect(analytics.trackDiagramPageSetupChanged).not.toHaveBeenCalled();
+  });
+});
+
+describe('DiagramPagePanel › the current page’s own count', () => {
+  /** The Pages view, as far as the pane sees it: the page it has in view. */
+  function PagesView({ page }: { page: number }) {
+    usePublishPageInView(page);
+    return null;
+  }
+  const showPage = (page: number) => {
+    act(() => useWorkspaceStore.setState({ diagramView: 'pages' }));
+    act(() =>
+      root?.render(
+        <TooltipProvider>
+          <PagesView page={page} />
+          <DiagramPagePanel />
+        </TooltipProvider>
+      )
+    );
+  };
+  const field = () => host!.querySelector<HTMLInputElement>('input[aria-label^="Steps on page"]');
+  const useDefault = () =>
+    [...host!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Use default');
+  const firstSteps = () => {
+    const steps = stepsOf(state().diagram!);
+    return paginate(steps, state().diagram!.page).map((page) => ({
+      size: page.steps.length,
+      own: steps[page.steps[0]!]!.pageSteps ?? null,
+    }));
+  };
+  /** Types `value` into the field and leaves it, as a commit. */
+  const type = (value: string) => {
+    const input = field()!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => input.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+  };
+
+  // “Add step” selects the step it adds: the last, on page 2.
+  beforeEach(() => act(() => state().selectDiagramStep(null)));
+
+  it('shows page 1 with nothing selected: what it is cut for, and that it is the default', () => {
+    // Ten steps, nine a page by default.
+    expect(field()?.getAttribute('aria-label')).toBe('Steps on page 1');
+    expect(field()?.value).toBe('9');
+    expect(host?.textContent).toContain('Default');
+    expect(useDefault()).toBeUndefined();
+  });
+
+  it('gives the page its own count, one undo step and one count, and Use default takes it away', () => {
+    const past = state().diagramHistory.past.length;
+    act(() => host!.querySelector<HTMLButtonElement>('button[aria-label="Decrease Steps on page 1"]')!.click());
+    expect(firstSteps()).toEqual([
+      { size: 8, own: 8 },
+      { size: 2, own: null },
+    ]);
+    expect(state().diagramHistory.past).toHaveLength(past + 1);
+    expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('page_steps');
+    expect(field()?.value).toBe('8');
+    expect(useDefault()).toBeDefined();
+    // The default stays the diagram's.
+    expect(state().diagram?.page.stepsPerPage).toBe(9);
+    act(() => useDefault()!.click());
+    expect(firstSteps()).toEqual([
+      { size: 9, own: null },
+      { size: 1, own: null },
+    ]);
+    expect(state().diagramHistory.past).toHaveLength(past + 2);
+    expect(analytics.trackDiagramPageSetupChanged).toHaveBeenLastCalledWith('page_steps_reset');
+    expect(field()?.value).toBe('9');
+    expect(useDefault()).toBeUndefined();
+  });
+
+  it('acts on the page in view in the Pages view, over the selection', () => {
+    act(() => state().selectDiagramStep(stepsOf(state().diagram!)[0]!.id));
+    showPage(1);
+    // The last page holds one step, laid out for the default's nine: typing 1 gives it the page to itself.
+    expect(field()?.getAttribute('aria-label')).toBe('Steps on page 2');
+    expect(field()?.value).toBe('9');
+    type('1');
+    // The page before keeps its size, as its own count.
+    expect(firstSteps()).toEqual([
+      { size: 9, own: 9 },
+      { size: 1, own: 1 },
+    ]);
+    expect(field()?.value).toBe('1');
+    expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('page_steps');
+  });
+
+  it('acts on the selected step’s page while no Pages view shows one', () => {
+    act(() => state().selectDiagramStep(stepsOf(state().diagram!)[9]!.id));
+    expect(field()?.getAttribute('aria-label')).toBe('Steps on page 2');
+  });
+
+  it('names the page by the number it prints', () => {
+    act(() => state().setDiagramPage({ pageNumbers: { enabled: true, first: 5 } }));
+    expect(field()?.getAttribute('aria-label')).toBe('Steps on page 5');
+  });
+
+  it('is the flow’s alone', () => {
+    act(() => radio('Grid').click());
+    expect(field()).toBeNull();
+    expect(useDefault()).toBeUndefined();
+  });
+
+  it('changes nothing on a read-only diagram', () => {
+    act(() => state().setDiagramPageSteps(0, 6));
+    act(() => useWorkspaceStore.setState({ diagramReadOnly: true }));
+    expect(field()?.disabled).toBe(true);
+    expect(useDefault()?.disabled).toBe(true);
   });
 });
