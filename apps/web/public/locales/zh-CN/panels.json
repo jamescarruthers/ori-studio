@@ -1199,6 +1199,7 @@
       "breakBefore": "从新一页开始步骤 {{number}}",
       "breakBeforeNote": "从新一页开始后，此步骤的整体位置以及因此移动的步骤的位置都会恢复为自动排版。",
       "count_other": "手动排版：{{count}} 个步骤",
+      "dragLines_other": "{{count}} 行 · {{mm}} mm",
       "dragMove": "{{part}} · {{x}}, {{y}} mm",
       "dragSize": "{{mm}} mm · 自动 {{auto}} mm",
       "frame": "整体",
@@ -1206,6 +1207,7 @@
       "keptFitted": "保留适配图片的尺寸",
       "keptPattern": "保留折痕图的尺寸",
       "marginClash": "此步骤的部分内容进入了页边距。",
+      "matchPicture": "= 图片",
       "matchStep": "= 步骤 {{number}}",
       "moved": "已移动",
       "newer": "由更新版本排版",
@@ -1231,6 +1233,7 @@
       "stepClash": "此步骤与步骤 {{steps}} 重叠。",
       "stepClashOne": "此步骤与步骤 {{steps}} 重叠。",
       "text": "文字",
+      "textWidth": "文字宽度 (mm)",
       "title": "页面排版"
     },
     "pose": {

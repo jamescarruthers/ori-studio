@@ -1237,6 +1237,8 @@
       "breakBeforeNote": "Eine neue Seite setzt den gesamten Schritt auf die automatische Platzierung zurück, ebenso jeden Schritt, den sie verschiebt.",
       "count_one": "Von Hand platzierte Schritte: {{count}}",
       "count_other": "Von Hand platzierte Schritte: {{count}}",
+      "dragLines_one": "{{count}} Zeile · {{mm}} mm",
+      "dragLines_other": "{{count}} Zeilen · {{mm}} mm",
       "dragMove": "{{part}} · {{x}}; {{y}} mm",
       "dragSize": "{{mm}} mm · auto {{auto}} mm",
       "frame": "Gesamter Schritt",
@@ -1244,6 +1246,7 @@
       "keptFitted": "Größe für ein eingepasstes Bild beibehalten",
       "keptPattern": "Größe für ein Faltmuster beibehalten",
       "marginClash": "Ein Teil dieses Schritts reicht in den Rand.",
+      "matchPicture": "= Bild",
       "matchStep": "= Schritt {{number}}",
       "moved": "Verschoben",
       "newer": "In einer neueren Version platziert",
@@ -1269,6 +1272,7 @@
       "stepClash": "Dieser Schritt überlappt die Schritte {{steps}}.",
       "stepClashOne": "Dieser Schritt überlappt Schritt {{steps}}.",
       "text": "Text",
+      "textWidth": "Textbreite (mm)",
       "title": "Auf der Seite"
     },
     "pose": {

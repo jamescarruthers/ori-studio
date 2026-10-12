@@ -1275,6 +1275,9 @@
       "count_one": "Passos posicionados à mão: {{count}}",
       "count_many": "Passos posicionados à mão: {{count}}",
       "count_other": "Passos posicionados à mão: {{count}}",
+      "dragLines_one": "{{count}} linha · {{mm}} mm",
+      "dragLines_many": "{{count}} linhas · {{mm}} mm",
+      "dragLines_other": "{{count}} linhas · {{mm}} mm",
       "dragMove": "{{part}} · {{x}}; {{y}} mm",
       "dragSize": "{{mm}} mm · auto {{auto}} mm",
       "frame": "Conjunto",
@@ -1282,6 +1285,7 @@
       "keptFitted": "Tamanho mantido para uma imagem ajustada",
       "keptPattern": "Tamanho mantido para um padrão de vincos",
       "marginClash": "Parte deste passo invade a margem.",
+      "matchPicture": "= imagem",
       "matchStep": "= passo {{number}}",
       "moved": "Movido",
       "newer": "Posicionado em uma versão mais recente",
@@ -1307,6 +1311,7 @@
       "stepClash": "Este passo se sobrepõe aos passos {{steps}}.",
       "stepClashOne": "Este passo se sobrepõe ao passo {{steps}}.",
       "text": "Texto",
+      "textWidth": "Largura do texto (mm)",
       "title": "Na página"
     },
     "pose": {

@@ -1199,6 +1199,7 @@
       "breakBefore": "ステップ{{number}}を新しいページで開始",
       "breakBeforeNote": "新しいページにすると、このステップ全体の配置と、それで動くステップの配置が自動に戻ります。",
       "count_other": "手動配置：{{count}}ステップ",
+      "dragLines_other": "{{count}}行 · {{mm}} mm",
       "dragMove": "{{part}} · {{x}}, {{y}} mm",
       "dragSize": "{{mm}} mm · 自動 {{auto}} mm",
       "frame": "全体",
@@ -1206,6 +1207,7 @@
       "keptFitted": "画像用のサイズを保持",
       "keptPattern": "折り図用のサイズを保持",
       "marginClash": "このステップの一部が余白にはみ出しています。",
+      "matchPicture": "= 図",
       "matchStep": "= ステップ{{number}}",
       "moved": "移動済み",
       "newer": "新しいバージョンで配置されています",
@@ -1231,6 +1233,7 @@
       "stepClash": "このステップはステップ{{steps}}と重なっています。",
       "stepClashOne": "このステップはステップ{{steps}}と重なっています。",
       "text": "テキスト",
+      "textWidth": "テキストの幅 (mm)",
       "title": "ページ上の配置"
     },
     "pose": {

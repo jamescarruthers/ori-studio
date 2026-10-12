@@ -1237,6 +1237,8 @@
       "breakBeforeNote": "A new page returns this step’s frame to automatic placement, and the frame of any step it moves.",
       "count_one": "Steps placed by hand: {{count}}",
       "count_other": "Steps placed by hand: {{count}}",
+      "dragLines_one": "{{count}} line · {{mm}} mm",
+      "dragLines_other": "{{count}} lines · {{mm}} mm",
       "dragMove": "{{part}} · {{x}}, {{y}} mm",
       "dragSize": "{{mm}} mm · auto {{auto}} mm",
       "frame": "Frame",
@@ -1244,6 +1246,7 @@
       "keptFitted": "Size kept for a fitted picture",
       "keptPattern": "Size kept for a crease pattern",
       "marginClash": "Part of this step crosses the margin.",
+      "matchPicture": "= picture",
       "matchStep": "= step {{number}}",
       "moved": "Moved",
       "newer": "Placed in a newer version",
@@ -1269,6 +1272,7 @@
       "stepClash": "This step overlaps steps {{steps}}.",
       "stepClashOne": "This step overlaps step {{steps}}.",
       "text": "Text",
+      "textWidth": "Text width (mm)",
       "title": "On the page"
     },
     "pose": {

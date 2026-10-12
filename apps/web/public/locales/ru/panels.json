@@ -1313,6 +1313,10 @@
       "count_few": "Шагов размещено вручную: {{count}}",
       "count_many": "Шагов размещено вручную: {{count}}",
       "count_other": "Шагов размещено вручную: {{count}}",
+      "dragLines_one": "{{count}} строка · {{mm}} мм",
+      "dragLines_few": "{{count}} строки · {{mm}} мм",
+      "dragLines_many": "{{count}} строк · {{mm}} мм",
+      "dragLines_other": "{{count}} строки · {{mm}} мм",
       "dragMove": "{{part}} · {{x}}; {{y}} мм",
       "dragSize": "{{mm}} мм · авто {{auto}} мм",
       "frame": "Весь шаг",
@@ -1320,6 +1324,7 @@
       "keptFitted": "Размер сохранён для вписанного изображения",
       "keptPattern": "Размер сохранён для схемы складок",
       "marginClash": "Часть этого шага заходит на поля.",
+      "matchPicture": "= изображение",
       "matchStep": "= шаг {{number}}",
       "moved": "Перемещено",
       "newer": "Размещено в более новой версии",
@@ -1345,6 +1350,7 @@
       "stepClash": "Этот шаг перекрывает шаги {{steps}}.",
       "stepClashOne": "Этот шаг перекрывает шаг {{steps}}.",
       "text": "Текст",
+      "textWidth": "Ширина текста (мм)",
       "title": "На странице"
     },
     "pose": {

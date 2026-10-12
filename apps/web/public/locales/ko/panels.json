@@ -1199,6 +1199,7 @@
       "breakBefore": "{{number}}단계를 새 페이지에서 시작",
       "breakBeforeNote": "새 페이지로 시작하면 이 단계 전체와, 그로 인해 옮겨지는 단계가 자동 배치로 돌아갑니다.",
       "count_other": "수동 배치: {{count}}단계",
+      "dragLines_other": "{{count}}줄 · {{mm}} mm",
       "dragMove": "{{part}} · {{x}}, {{y}} mm",
       "dragSize": "{{mm}} mm · 자동 {{auto}} mm",
       "frame": "전체",
@@ -1206,6 +1207,7 @@
       "keptFitted": "맞춤 이미지용 크기 유지",
       "keptPattern": "접기 패턴용 크기 유지",
       "marginClash": "이 단계의 일부가 여백을 침범합니다.",
+      "matchPicture": "= 그림",
       "matchStep": "= {{number}}단계",
       "moved": "이동됨",
       "newer": "더 최신 버전에서 배치됨",
@@ -1231,6 +1233,7 @@
       "stepClash": "이 단계가 {{steps}}단계와 겹칩니다.",
       "stepClashOne": "이 단계가 {{steps}}단계와 겹칩니다.",
       "text": "텍스트",
+      "textWidth": "텍스트 너비 (mm)",
       "title": "페이지 배치"
     },
     "pose": {
