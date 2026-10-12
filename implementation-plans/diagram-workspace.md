@@ -770,12 +770,22 @@ vocabulary at paint time.**
 
 **D10. Pages come from one pure layout, at one paper scale, and the screen
 shows the composed page.**
-- **October 10 amendment:** balanced occupied-shape ribbon packing replaces the
-  fixed flow grid and empty-cell tail. Page placement adds independent picture
-  size pins and frame/number/picture/text offsets, applied after Fit each. The
-  ribbon follows final picture centres, including across the spine. Pages,
-  PDF, Print and SVG share that result; step files ignore page placement. See
-  [page placement as built](diagram-page-overrides.md#as-built-page-placement-and-balanced-ribbons-2026-10-10).
+- **October 11 amendment** (supersedes the October 10 one, whose balanced
+  ribbon packing is deleted): the flow is #436's cells again, cut per page by
+  [diagram-flow-pages.md](diagram-flow-pages.md). Each page holds the flow's
+  steps per page, or its own count (`pageSteps` on the step it starts with);
+  its rows print the largest pictures, shared out evenly with the extra steps
+  on the first rows, and are held to an odd number on a left page that hands
+  over at its spine; every other step on a row sits a little lower; the ribbon
+  is one curve through the picture centres and ends just after the diagram's
+  last step. A step's home depends only on the page setup, the pagination and
+  its place on its page, never on any step's content, and a golden of every
+  fixture's homes freezes it. Page placement adds independent picture size
+  pins and frame/number/picture/text offsets on top of those homes, applied
+  after Fit each. Pages, PDF, Print and SVG share that result; step files
+  ignore page placement. See
+  [page placement as built](diagram-page-overrides.md#as-built-page-placement-and-balanced-ribbons-2026-10-10)
+  for the placement half, which stands.
 
 - **Print paper** (`diagram/pages/printPaper.ts`):
   - sizes `a4` 210×297, `a5` 148×210, `b5-jis` 182×257 (labelled "B5 (JIS)"; a
@@ -1758,7 +1768,9 @@ on its next save.
   dropped alone. **Pagination** (flow): walking the steps in order, turns
   taking no place, a step starts a page when it is the first, or has
   `breakBefore` or `pageSteps`, or the page has reached its capacity — its
-  first step's `pageSteps`, else `page.stepsPerPage`. A grid's pages hold
+  first step's `pageSteps`, else `page.stepsPerPage`. A flow page is laid out
+  for the steps it holds, but a last page without `pageSteps` for
+  `page.stepsPerPage`, which its few steps fill in order. A grid's pages hold
   `columns × rows` and ignore `pageSteps`, which they keep.
 - `source`, null for an empty step, or:
   - `{ kind: 'upload', assetId, rotationQuarterTurns (0–3), mirrored }`;

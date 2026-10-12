@@ -1,8 +1,10 @@
 # Diagram: placing things on the page by hand
 
-**Status: Phases 1–5 built and locally validated on `claude/diagram-page-layout` (PR #443), 2026-10-10.** Decisions 1–6 remain A. Decision 7 is now the balanced ribbon packing design agreed below. Decision 8 is decided: the first step starts at the top left; subsequent pages continue from the previous page at the spine. Frame Y always means down the page; frame X follows the row's reading direction.
+**Status: Phases 1–5 built and locally validated on `claude/diagram-page-layout` (PR #443), 2026-10-10.** Decisions 1–6 remain A. Decision 8 is decided: the first step starts at the top left; subsequent pages continue from the previous page at the spine. Frame Y always means down the page; frame X follows the row's reading direction.
 
-### October 10 implementation decisions (supersede older shape notes below)
+**Superseded 2026-10-11: Decision 7's balanced ribbon packing.** Packing is deleted; the flow is #436's cells with balanced rows and a count per page, as [diagram-flow-pages.md](diagram-flow-pages.md) describes and builds. The October 10 layout decisions below, the `ribbonPacking` notes in "As built", and every claim that flow output follows the packing are history. The placement half of this plan (what a step stores, the Pages view, the panes, clearing, analytics) stands, on top of the new homes.
+
+### October 10 implementation decisions (superseded for the layout on 2026-10-11, see above; they superseded older shape notes below)
 
 - Choose balanced back-and-forth bends and distribute every page's actual steps across the available paper. No reserved empty grid slots or long unused ribbon tail.
 - Maximize picture size subject to minimum clearance and bounded visible gap variation. Initial constants: 6 mm minimum clearance and longest exposed ribbon gap at most 1.5 times shortest. Measure gaps along the curve between picture edges, including bends, not just between centers.
@@ -1476,6 +1478,11 @@ data are under `po1b/verify/`.
 
 
 ## As built: page placement and balanced ribbons (2026-10-10)
+
+*Superseded for the layout on 2026-10-11:* `ribbonPacking`, `ribbonPath`,
+the packing's clearance and gap constants and its fixed-grid fallback are
+deleted, and flow pages are laid out as [diagram-flow-pages.md](diagram-flow-pages.md)
+says. The placement notes below stand.
 
 The October 10 decisions at the top supersede the historical Phase 1b shape,
 empty-cell tail and vertical-axis notes. `pageGrid` remains the stable logical
