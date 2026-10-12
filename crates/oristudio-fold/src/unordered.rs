@@ -371,6 +371,7 @@ mod tests {
             order: LayerOrder::new(),
             view: View::default(),
             step: 1,
+            marks: Vec::new(),
         }
     }
 

@@ -9,17 +9,21 @@
 //! in one place; hinge consistency; the folded image as the layer order sees
 //! it; and the layer order through `oristudio-layer-order`'s checker. Each
 //! refusal names what failed. Turning over and rotating change only the view,
-//! which no other check depends on, so they keep the model they were given.
+//! which no other check depends on, so they keep the model they were given;
+//! a partial precrease changes only the crease marks, which are checked on
+//! their own (`crate::crease_marks`).
 
 mod derive;
 mod gate;
 
 use std::collections::BTreeSet;
+use std::fmt;
 use std::sync::Arc;
 
 use oristudio_geometry::{Line, convex};
 use oristudio_layer_order::{CheckReport, ConstraintProblem, FoldedView, LayerOrder, check};
 
+use crate::crease_marks::{self, CreaseMark};
 use crate::isometry::Isometry;
 use crate::numerics::TOL;
 use crate::pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, VertexId};
@@ -33,7 +37,7 @@ pub(crate) use gate::{BeforeOrder, before_order, touched_scope};
 type Point = [f64; 2];
 
 /// Everything a state stores. [`State::make`] derives and checks the rest.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct StateParts {
     pub sheet: Sheet,
     /// Crease-pattern vertices in sheet coordinates; a vertex's id is its
@@ -50,6 +54,32 @@ pub struct StateParts {
     pub view: View,
     /// How many operations led here; the flat sheet is 0.
     pub step: u32,
+    /// Partial creases (`crate::crease_marks`): beside the face graph, not
+    /// in it.
+    pub marks: Vec<CreaseMark>,
+}
+
+/// The derived `Debug`, except that no marks print nothing: a state without
+/// crease marks prints exactly as it did before they existed, so the
+/// campaign digests that hash this output (`tests/random.rs`,
+/// `tests/compound_digest.rs`) still prove a change leaves results alone.
+impl fmt::Debug for StateParts {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = f.debug_struct("StateParts");
+        s.field("sheet", &self.sheet)
+            .field("vertices", &self.vertices)
+            .field("creases", &self.creases)
+            .field("faces", &self.faces)
+            .field("root", &self.root)
+            .field("root_isometry", &self.root_isometry)
+            .field("order", &self.order)
+            .field("view", &self.view)
+            .field("step", &self.step);
+        if !self.marks.is_empty() {
+            s.field("marks", &self.marks);
+        }
+        s.finish()
+    }
 }
 
 /// What the gate derived, shared by the states that differ only in view.
@@ -153,6 +183,7 @@ impl State {
             order: LayerOrder::new(),
             view: View::starting(start),
             step: 0,
+            marks: Vec::new(),
         })
     }
 
@@ -165,6 +196,24 @@ impl State {
             parts,
             derived: Arc::clone(&self.derived),
         }
+    }
+
+    /// The same model with other crease marks, as step `step`: a partial
+    /// precrease. Marks are beside the face graph, so nothing the gate
+    /// derived depends on them; they pass the gate's own check of them.
+    pub(crate) fn with_marks(
+        &self,
+        marks: Vec<CreaseMark>,
+        step: u32,
+    ) -> Result<State, FoldRefusal> {
+        let mut parts = self.parts.clone();
+        parts.marks = marks;
+        parts.step = step;
+        crease_marks::check(&parts)?;
+        Ok(State {
+            parts,
+            derived: Arc::clone(&self.derived),
+        })
     }
 
     pub fn parts(&self) -> &StateParts {

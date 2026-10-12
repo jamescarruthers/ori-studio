@@ -16,8 +16,17 @@
 //!   because the isometries of the faces on either side agree along it.
 //! - **Lines**: the distinct lines segments lie on.
 //! - **Points**: vertex images; crossings of two segments, one source per
-//!   segment, each with the sheet point on its own layer; and marks, which
-//!   are annotations outside the state (plan D6) and come in as sheet points.
+//!   segment, each with the sheet point on its own layer; marks, which
+//!   are annotations outside the state (plan D6) and come in as sheet points;
+//!   and the crease marks' ends and crossings (below).
+//! - **Crease marks** (partial creases, `crate::crease_marks`) are state: each
+//!   mark's part on each face it crosses, with the visibility a crease on
+//!   that layer has. Their ends are points, and so are their crossings with
+//!   segments and with one another, one source per feature as for a
+//!   crossing of two segments. They are not among the segments and lines,
+//!   which are creases, what the existing-crease line mode folds along; an
+//!   axiom can still take a mark's sheet segment as a line input, as it can
+//!   any straight piece of paper (`crate::anchor`).
 //!
 //! Midpoints are not landmarks: a step that needs one makes it, with an O2
 //! fold or a Divide-line mark.
@@ -45,7 +54,7 @@ use serde::Serialize;
 use crate::anchor::SheetSegment;
 use crate::index::BoxIndex;
 use crate::numerics::{MIN_FEATURE, TOL};
-use crate::pattern::{CreaseKind, EdgeId, FaceId, VertexId};
+use crate::pattern::{CreaseKind, EdgeId, FaceId, Letter, VertexId};
 use crate::state::State;
 
 type Point = [f64; 2];
@@ -105,6 +114,38 @@ pub enum PointKind {
     Crossing { segment: usize, other: usize },
     /// A mark the caller passed in, by its index.
     Mark { mark: usize },
+    /// An end of a crease mark (a partial crease), by its index in the
+    /// state's crease marks.
+    CreaseMarkEnd { crease_mark: usize },
+    /// Where a crease mark crosses a segment or another crease mark, on
+    /// `on` (whose layer the sheet point is on), crossing `other`.
+    CreaseMarkCrossing { on: Feature, other: Feature },
+}
+
+/// A feature a crease mark crosses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Feature {
+    /// An index into [`Landmarks::segments`].
+    Segment(usize),
+    /// A crease mark, by its index in the state's crease marks.
+    CreaseMark(usize),
+}
+
+/// One crease mark's part on one face: a partial crease.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CreaseMarkLandmark {
+    /// The mark, by its index in the state's crease marks.
+    pub crease_mark: usize,
+    /// Front-relative.
+    pub letter: Letter,
+    /// The part's ends in sheet coordinates.
+    pub sheet: SheetSegment,
+    /// Its image in the model frame, `at[0]` the image of `sheet.a`.
+    pub at: [Point; 2],
+    /// The parts the viewer sees, as fractions of the way from `at[0]` to
+    /// `at[1]`, ascending and disjoint: none on a hidden layer.
+    pub visible: Vec<[f64; 2]>,
 }
 
 /// One feature at a point landmark.
@@ -123,7 +164,7 @@ pub struct PointSource {
 pub struct PointLandmark {
     pub at: Point,
     /// Every feature here: vertices first (by id), then crossings, then
-    /// marks.
+    /// marks, then crease marks' ends and crossings.
     pub sources: Vec<PointSource>,
     /// Whether the viewer sees one of them.
     pub visible: bool,
@@ -135,6 +176,10 @@ pub struct Landmarks {
     pub points: Vec<PointLandmark>,
     pub lines: Vec<LineLandmark>,
     pub segments: Vec<SegmentLandmark>,
+    /// The crease marks' parts, one per face each crosses, by mark; left out
+    /// when there are none.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub crease_marks: Vec<CreaseMarkLandmark>,
 }
 
 impl Landmarks {
@@ -254,12 +299,154 @@ impl State {
                 },
             );
         }
+        let crease_marks = self.crease_mark_landmarks(&cover, &segments, &mut points);
 
         Landmarks {
             points: points.finish(),
             lines,
             segments,
+            crease_marks,
         }
+    }
+
+    /// The crease marks' parts, and among the points their ends and their
+    /// crossings with `segments` and with one another.
+    ///
+    /// A mark crosses a crease of its own layer where its part on one face
+    /// ends and its part on the next begins, so a crossing at the end of a
+    /// part counts, once per mark and feature; at the mark's own ends it is
+    /// the end. A crease mark lies on one layer like any crease, so its
+    /// visibility is a crease's, and one on a hidden layer is not seen.
+    fn crease_mark_landmarks(
+        &self,
+        cover: &Cover<'_>,
+        segments: &[SegmentLandmark],
+        points: &mut Points,
+    ) -> Vec<CreaseMarkLandmark> {
+        let marks = self.crease_marks();
+        if marks.is_empty() {
+            return Vec::new();
+        }
+        let geometry = self.geometry();
+        // Each piece, and the span of its mark it covers.
+        let mut pieces: Vec<(CreaseMarkLandmark, [f64; 2])> = Vec::new();
+        for piece in self.mark_pieces() {
+            let mark = &marks[piece.mark];
+            let [u0, u1] = piece.span;
+            let sheet = SheetSegment::new(mark.at(u0), mark.at(u1));
+            let t = geometry.isometries[piece.face];
+            let at = [t.apply(sheet.a), t.apply(sheet.b)];
+            pieces.push((
+                CreaseMarkLandmark {
+                    crease_mark: piece.mark,
+                    letter: mark.letter,
+                    sheet,
+                    at,
+                    visible: cover.visible_spans(at, &[piece.face]),
+                },
+                piece.span,
+            ));
+        }
+
+        for (k, mark) in marks.iter().enumerate() {
+            for end in [mark.a, mark.b] {
+                let holders = self.holding_positions(end);
+                let Some(&f) = holders.first() else {
+                    continue;
+                };
+                let at = geometry.isometries[f].apply(end);
+                points.add(
+                    at,
+                    PointSource {
+                        sheet: end,
+                        visible: cover.point_visible(at, &holders),
+                        kind: PointKind::CreaseMarkEnd { crease_mark: k },
+                    },
+                );
+            }
+        }
+
+        // Crossings: (mark, its fraction, feature, the feature's sheet point
+        // and fraction along it, the point), deduplicated by mark, feature
+        // and fraction.
+        let mut seen: Vec<(usize, Feature, f64)> = Vec::new();
+        let mut first_time = |mark: usize, feature: Feature, s: f64| {
+            let slack = TOL / marks[mark].length().max(f64::MIN_POSITIVE);
+            let new = !seen
+                .iter()
+                .any(|&(m, f, t)| m == mark && f == feature && (t - s).abs() <= slack);
+            if new {
+                seen.push((mark, feature, s));
+            }
+            new
+        };
+        for (piece, span) in &pieces {
+            let mark = piece.crease_mark;
+            // Another mark's parts are taken from the lower-numbered mark of
+            // the two, so each crossing of two marks is found from one side.
+            let others = segments
+                .iter()
+                .enumerate()
+                .map(|(j, s)| (Feature::Segment(j), s.at, &s.visible, s.sheet))
+                .chain(
+                    pieces
+                        .iter()
+                        .filter(|(other, _)| other.crease_mark > mark)
+                        .map(|(other, _)| {
+                            (
+                                Feature::CreaseMark(other.crease_mark),
+                                other.at,
+                                &other.visible,
+                                other.sheet,
+                            )
+                        }),
+                );
+            let piece_slack = TOL / distance(piece.at[0], piece.at[1]).max(f64::MIN_POSITIVE);
+            let mark_slack = TOL / marks[mark].length().max(f64::MIN_POSITIVE);
+            for (feature, other_at, other_visible, other_sheet) in others {
+                let Some((x, u, v)) = crossing(piece.at, other_at) else {
+                    continue;
+                };
+                // On this part, and along the mark short of its ends; along
+                // the other, short of a segment's ends (its vertices), or
+                // anywhere on another mark's part.
+                if u < -piece_slack || u > 1.0 + piece_slack {
+                    continue;
+                }
+                let s = span[0] + u * (span[1] - span[0]);
+                if s <= mark_slack || s >= 1.0 - mark_slack {
+                    continue;
+                }
+                let other_slack = TOL / distance(other_at[0], other_at[1]).max(f64::MIN_POSITIVE);
+                let other_inside = match feature {
+                    Feature::Segment(_) => v > other_slack && v < 1.0 - other_slack,
+                    Feature::CreaseMark(_) => v >= -other_slack && v <= 1.0 + other_slack,
+                };
+                if !other_inside || !first_time(mark, feature, s) {
+                    continue;
+                }
+                let visible =
+                    covers(&piece.visible, u, &piece.at) && covers(other_visible, v, &other_at);
+                let on = Feature::CreaseMark(mark);
+                for (where_, crossed, sheet) in [
+                    (on, feature, piece.sheet.at(u)),
+                    (feature, on, other_sheet.at(v)),
+                ] {
+                    points.add(
+                        x,
+                        PointSource {
+                            sheet,
+                            visible,
+                            kind: PointKind::CreaseMarkCrossing {
+                                on: where_,
+                                other: crossed,
+                            },
+                        },
+                    );
+                }
+            }
+        }
+        pieces.into_iter().map(|(piece, _)| piece).collect()
     }
 
     /// The face the viewer sees at a model-frame point inside a face, and the
@@ -499,6 +686,17 @@ fn crossings(segments: &[SegmentLandmark]) -> Vec<(usize, usize, Point, [f64; 2]
         }
     }
     out
+}
+
+/// Where the lines of two segments meet, and how far along each that is, as
+/// fractions of the way from its first end; none when they are parallel.
+fn crossing(a: [Point; 2], b: [Point; 2]) -> Option<(Point, f64, f64)> {
+    let x = Line::from_points(a[0], a[1])?.intersect(&Line::from_points(b[0], b[1])?)?;
+    let fraction = |at: [Point; 2]| {
+        let d = [at[1][0] - at[0][0], at[1][1] - at[0][1]];
+        ((x[0] - at[0][0]) * d[0] + (x[1] - at[0][1]) * d[1]) / (d[0] * d[0] + d[1] * d[1])
+    };
+    Some((x, fraction(a), fraction(b)))
 }
 
 /// How far along `at` the point `x` (on its line) is, when it is more than

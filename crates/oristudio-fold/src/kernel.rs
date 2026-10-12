@@ -15,6 +15,14 @@
 //! | M | `Red1` |
 //! | V | `Blue2` |
 //! | F remembering X | `None`, with the direction hint X |
+//! | a crease mark (a partial crease) | `Cyan3`, an auxiliary line |
+//!
+//! A crease mark ends inside the paper, which Edit's checks take for an
+//! error in a crease, so it goes over as the auxiliary line Edit's
+//! "precreases as auxiliary lines" would make of it: in both Send to Edit
+//! variants, and in the FOLD export's crease-pattern frame. Its letter stays
+//! in Fold, as an aux line has none. Import CP reads it back as a guide line,
+//! as it reads every aux colour.
 //!
 //! Lossless means lossless for everything the kernel can hold — segments,
 //! colours, hints — through the kernel's own FOLD writer and reader. Ids,
@@ -127,25 +135,34 @@ fn on_reader_grid(c: f64) -> f64 {
 }
 
 /// The state's crease pattern as a kernel model, one segment per crease in id
-/// order, in [`KernelFrame`] placement.
+/// order, then one auxiliary line per crease mark, in [`KernelFrame`]
+/// placement.
 pub fn fold_cp_to_model(state: &State) -> CreasePatternModel {
     let frame = KernelFrame::of(state.sheet());
-    let points: Vec<KernelPoint> = state
-        .vertices()
-        .iter()
-        .map(|&p| {
-            let [x, y] = frame.to_model(p);
-            KernelPoint::new(x, y)
-        })
-        .collect();
+    let place = |p: Point| {
+        let [x, y] = frame.to_model(p);
+        KernelPoint::new(x, y)
+    };
+    let points: Vec<KernelPoint> = state.vertices().iter().map(|&p| place(p)).collect();
     let mut model = CreasePatternModel::default();
     for crease in state.creases() {
         // A state's creases name its own vertices (the gate checked).
         let [a, b] = crease.vertices.map(|v| points[v.index()]);
         model.add_line_segment(kernel_segment(a, b, crease.kind));
     }
+    for mark in state.crease_marks() {
+        model.add_line_segment(LineSegment::with_color(
+            place(mark.a),
+            place(mark.b),
+            AUXILIARY,
+        ));
+    }
     model
 }
+
+/// What a crease mark is in Edit: the auxiliary line Edit's "precreases as
+/// auxiliary lines" also turns a precrease into.
+pub const AUXILIARY: LineColor = LineColor::Cyan3;
 
 fn kernel_segment(a: KernelPoint, b: KernelPoint, kind: CreaseKind) -> LineSegment {
     match kind {

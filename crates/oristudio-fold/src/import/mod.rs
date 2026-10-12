@@ -465,6 +465,9 @@ impl ImportedPattern {
             order: LayerOrder::new(),
             view: target.view(),
             step,
+            // An import replaces the state: its aux lines are guides, never
+            // crease marks (plan D10).
+            marks: Vec::new(),
         };
         let unordered = Unordered::new(parts.clone(), unknown).map_err(|refusal| {
             ImportRefusal::NotFlatFoldable {

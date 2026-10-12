@@ -28,6 +28,7 @@ use thiserror::Error;
 
 use crate::anchor::SheetSegment;
 use crate::axioms::{Axiom, AxiomReplay, Mover};
+use crate::crease_marks::Extent;
 use crate::fold::{ClosurePolicy, FoldAnalysis, Folded, Placement, PlainFold, Seed};
 use crate::numerics::MIN_FEATURE;
 use crate::pattern::FaceId;
@@ -275,6 +276,29 @@ impl State {
     /// An anchored fold and unfold: a precrease along the line it names.
     pub fn precrease_anchored(&self, op: &AnchoredFold) -> Result<Folded, AnchoredRefused> {
         self.anchored(op, Kind::Precrease, true)
+    }
+
+    /// [`State::precrease_anchored`] of `extent` of the line it names: a
+    /// partial precrease ([`State::precrease_extent`]), which lands nothing,
+    /// so it has no sliver to remedy. The axiom's movers must still be on
+    /// layers it goes through.
+    pub fn precrease_anchored_extent(
+        &self,
+        op: &AnchoredFold,
+        extent: &Extent,
+    ) -> Result<Folded, AnchoredRefused> {
+        if extent.is_whole() {
+            return self.precrease_anchored(op);
+        }
+        let resolved = self.resolve_anchored(op)?;
+        let folded = self
+            .precrease_extent(&resolved.fold, extent)
+            .map_err(|refused| AnchoredRefused::Fold {
+                refused,
+                remedies: Vec::new(),
+            })?;
+        self.check_movers(&resolved.movers, &folded.report.analysis.moving)?;
+        Ok(folded)
     }
 
     pub(crate) fn anchored(

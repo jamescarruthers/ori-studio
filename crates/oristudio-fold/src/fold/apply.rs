@@ -23,12 +23,15 @@
 //! - **Letters**, for the new creases and the refolds, from the order: valley
 //!   iff the front-up face lies below. Every other letter is checked by the
 //!   gate, so a drifted letter is refused there.
+//! - **Crease marks** are carried, less what a new crease along one covers
+//!   (`crate::crease_marks::carry`).
 
 use std::collections::BTreeSet;
 
 use oristudio_geometry::convex::{self, HalfPlane};
 use oristudio_layer_order::{FacePair, LayerOrder, LayerOrderBuilder, Letter, Violation};
 
+use crate::crease_marks;
 use crate::fold::closure::Analysis;
 use crate::fold::score::{self, Piece};
 use crate::index::BoxIndex;
@@ -128,6 +131,7 @@ pub(crate) fn land(
             .or_else(|| new_faces.iter().position(|n| !n.moving))
             .ok_or(FoldRefusal::NothingStays)?
     };
+    let marks = crease_marks::carry(&parts.marks, &vertices, &creases);
     let mut next = StateParts {
         sheet: parts.sheet.clone(),
         vertices,
@@ -138,6 +142,7 @@ pub(crate) fn land(
         order: LayerOrder::new(),
         view: parts.view,
         step,
+        marks,
     };
     let new_topology = Topology::build(&next)?;
 

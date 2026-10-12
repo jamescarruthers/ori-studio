@@ -307,6 +307,33 @@ pub enum FoldRefusal {
     #[error("faces {faces:?} are not a sunk point on this line")]
     UnsinkNotSunk { faces: Vec<FaceId> },
 
+    // --- Crease marks: partial precreases (`crate::crease_marks`) -------
+    /// A crease mark (by its index in the state's marks) has an end that is
+    /// not finite or not on the sheet (State::make).
+    #[error("crease mark {mark} has an end off the sheet")]
+    MarkOffSheet { mark: usize },
+    #[error("crease mark {mark} is {length}, shorter than the minimum feature")]
+    MarkTooShort { mark: usize, length: f64 },
+    /// A crease mark lies along a crease: the crease should have subsumed it.
+    #[error("crease mark {mark} lies along crease {edge}")]
+    MarkOnCrease { mark: usize, edge: EdgeId },
+    #[error("crease marks {marks:?} overlap")]
+    MarksOverlap { marks: [usize; 2] },
+    /// A sheet point naming a partial precrease's extent is off the paper.
+    #[error("the sheet point {point:?} naming the extent is not on the paper")]
+    ExtentOffPaper { point: Point },
+    /// The extent is shorter than the minimum feature along the line: a
+    /// segment's ends project that close, or a pinch is that short.
+    #[error("the extent is {length} along the line, shorter than the minimum feature")]
+    ExtentTooShort { length: f64 },
+    /// No paper lies along the line within the extent.
+    #[error("the extent misses the paper along the line")]
+    ExtentMissesPaper,
+    /// Paper lies along the line within the extent, but none of the layers
+    /// the precrease goes through crosses it there.
+    #[error("the extent crosses none of the layers the precrease goes through")]
+    ExtentMissesLayers,
+
     /// A defect, never the input's fault.
     #[error("internal error: {message}")]
     Internal { message: String },
@@ -386,6 +413,14 @@ impl FoldRefusal {
             FoldRefusal::SinkLineTilted { .. } => "sink_line_tilted",
             FoldRefusal::SinkNoPocket { .. } => "sink_no_pocket",
             FoldRefusal::UnsinkNotSunk { .. } => "unsink_not_sunk",
+            FoldRefusal::MarkOffSheet { .. } => "mark_off_sheet",
+            FoldRefusal::MarkTooShort { .. } => "mark_too_short",
+            FoldRefusal::MarkOnCrease { .. } => "mark_on_crease",
+            FoldRefusal::MarksOverlap { .. } => "marks_overlap",
+            FoldRefusal::ExtentOffPaper { .. } => "extent_off_paper",
+            FoldRefusal::ExtentTooShort { .. } => "extent_too_short",
+            FoldRefusal::ExtentMissesPaper => "extent_misses_paper",
+            FoldRefusal::ExtentMissesLayers => "extent_misses_layers",
             FoldRefusal::Internal { .. } => "internal",
         }
     }

@@ -686,6 +686,7 @@ impl State {
             order: LayerOrder::new(),
             view: self.view(),
             step,
+            marks: Vec::new(),
         };
         let topology = Topology::build(&parts)?;
         let after_first = (

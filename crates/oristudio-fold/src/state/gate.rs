@@ -5,10 +5,11 @@
 //!    side a crease, every crease bounding one face (border) or two.
 //! 2. Faces convex and counter-clockwise in sheet coordinates, covering the
 //!    sheet: every vertex finite and on it, every border crease along one of
-//!    its sides, and the faces' areas adding up to its area. With the faces
-//!    on both sides of every other crease (step 5), that is coverage: the
-//!    border winds once around the sheet, so each point of it lies in one
-//!    face.
+//!    its sides, every crease mark on it and along no crease or other mark
+//!    (`crate::crease_marks`), and the faces' areas adding up to its area.
+//!    With the faces on both sides of every other crease (step 5), that is
+//!    coverage: the border winds once around the sheet, so each point of it
+//!    lies in one face.
 //! 3. Isometries from the root, whose own isometry must be a rigid motion,
 //!    every vertex landing in one place (residual ≤ tol).
 //! 4. Hinge consistency: a folded crease joins faces of opposite orientation,
@@ -163,6 +164,7 @@ pub(crate) fn before_order(
     let topology = Topology::build(parts)?;
 
     on_the_sheet(parts)?;
+    crate::crease_marks::check(parts)?;
     let mut area = 0.0;
     for face in &parts.faces {
         let ring: Vec<[f64; 2]> = face

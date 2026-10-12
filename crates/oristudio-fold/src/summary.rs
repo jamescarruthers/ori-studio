@@ -10,17 +10,23 @@
 //!   midpoint. One with no parent crease was *added* (a precrease's creases
 //!   are added flat); one whose letter changed while folded was *reversed*;
 //!   folded to flat was *unfolded*; flat to folded was *refolded*, with the
-//!   letter it remembered. Lists hold the child's edge ids, in order.
+//!   letter it remembered. Lists hold the child's edge ids, in order. The
+//!   crease marks a partial precrease made are counted apart
+//!   (`marks_added`): they are no edges.
 //! - **Layers**: the cross-section's display-layer depth along the fold line
-//!   in the parent ([`crate::fold::CrossSection::layers`]); none for a step
-//!   that folds nothing (a turn-over, a rotation).
+//!   in the parent ([`crate::fold::CrossSection::layers`]), along a partial
+//!   precrease's extent only; none for a step that folds nothing (a
+//!   turn-over, a rotation).
 
 use serde::Serialize;
 
-use crate::fold::{Folded, Refold};
+use crate::fold::{CrossSection, Folded, Refold};
+use crate::numerics::TOL;
 use crate::pattern::{CreaseKind, EdgeId, Letter};
 use crate::refusal::Refused;
 use crate::state::State;
+
+type Point = [f64; 2];
 
 /// A crease pattern's folded and unfolded edges, front-relative.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
@@ -37,6 +43,14 @@ pub struct CreaseDiff {
     pub reversed: Vec<EdgeId>,
     pub unfolded: Vec<EdgeId>,
     pub refolded: Vec<Refold>,
+    /// The crease marks the step made (a partial precrease's: "adds 2 pinch
+    /// marks"), counted apart from the edges; left out of the wire when 0.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub marks_added: usize,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
 }
 
 impl CreaseDiff {
@@ -45,6 +59,7 @@ impl CreaseDiff {
             && self.reversed.is_empty()
             && self.unfolded.is_empty()
             && self.refolded.is_empty()
+            && self.marks_added == 0
     }
 }
 
@@ -117,18 +132,53 @@ impl State {
                 _ => {}
             }
         }
+        diff.marks_added = child
+            .crease_marks()
+            .iter()
+            .filter(|m| m.made_at > self.step())
+            .count();
         diff
     }
 }
 
 impl Folded {
     /// This fold's summary: `parent` is the state it folded, whose
-    /// cross-section along the line folded along gives the layers.
+    /// cross-section along the line folded along gives the layers — along a
+    /// partial precrease's extent only.
     pub fn summary(&self, parent: &State) -> Result<StepSummary, Refused> {
         let analysis = &self.report.analysis;
         let section = parent.cross_section(&analysis.line, analysis.side)?;
-        Ok(StepSummary::new(parent, &self.state, Some(section.layers)))
+        let layers = match self.extent {
+            Some(extent) => layers_within(parent, &section, extent),
+            None => section.layers,
+        };
+        Ok(StepSummary::new(parent, &self.state, Some(layers)))
     }
+}
+
+/// The most rows one interval of `section` stacks within `extent` (model
+/// points on its line): a partial precrease's "Layers".
+fn layers_within(parent: &State, section: &CrossSection, extent: [Point; 2]) -> usize {
+    let to_scene = parent.view().transform();
+    let from: Point = section.from.into();
+    let to: Point = section.to.into();
+    let length = (to[0] - from[0]).hypot(to[1] - from[1]);
+    if length == 0.0 {
+        return section.layers;
+    }
+    let along = |p: Point| {
+        let p = to_scene.apply(p);
+        ((p[0] - from[0]) * (to[0] - from[0]) + (p[1] - from[1]) * (to[1] - from[1])) / length
+    };
+    let (a, b) = (along(extent[0]), along(extent[1]));
+    let (lo, hi) = (a.min(b), a.max(b));
+    section
+        .intervals
+        .iter()
+        .filter(|i| i.end > lo + TOL && i.start < hi - TOL)
+        .map(|i| i.rows.len())
+        .max()
+        .unwrap_or(0)
 }
 
 #[cfg(test)]

@@ -19,8 +19,12 @@
 //!   sit side by side: the overlay cuts along whole edge lines.
 //! - `sheet_points`: the crease-pattern vertices in sheet coordinates.
 //! - `sheet`: the sheet's longer side, 1 in the unit sheet frame.
-//! - `aux_lines`: always empty. Fold's precreases are creases between faces,
-//!   so they travel as `flat` edges, not as lines carried through the fold.
+//! - `aux_lines`: the crease marks (partial creases, `crate::crease_marks`),
+//!   one line per face each crosses: the kernel's lines carried through the
+//!   fold, which every painter draws cut to where their face is on top, as
+//!   Edit's folded figure draws the auxiliary lines a mark becomes there
+//!   (plan D10). Whole precreases are creases between faces, so they travel
+//!   as `flat` edges instead. Empty without marks.
 //!
 //! # The view
 //!
@@ -44,13 +48,18 @@
 //!   and the step that made it.
 //! - `lineage`: per face, its id, the face it was split from and the step that
 //!   made it.
+//! - `crease_marks`: the crease marks in sheet coordinates (what the
+//!   crease-pattern pane draws), each with its front-relative letter, the
+//!   step that made it, and its parts per face in the scene frame with the
+//!   letter as the viewer sees it there. Left out without marks, so every
+//!   other scene serializes as before.
 
 use oristudio_geometry::convex;
 use oristudio_layer_order::OrderTable;
 use serde::{Deserialize, Serialize};
 
 use crate::isometry::Isometry;
-use crate::pattern::{CreaseKind, EdgeId, FaceId, Letter, VertexId};
+use crate::pattern::{CreaseKind, EdgeId, FaceId, Letter, VertexId, opposite};
 use crate::state::{State, sort_top_first};
 use crate::view::View;
 
@@ -96,7 +105,8 @@ pub struct FoldScene {
     /// In face id order.
     pub faces: Vec<SceneFace>,
     pub subfaces: Vec<SceneSubface>,
-    /// Always empty (see the module docs).
+    /// The crease marks' parts, one per face each crosses (see the module
+    /// docs); empty without marks.
     pub aux_lines: Vec<SceneAuxLine>,
     /// Sheet coordinates of every crease-pattern vertex, by vertex id.
     pub sheet_points: Vec<ScenePoint>,
@@ -111,6 +121,35 @@ pub struct FoldScene {
     pub creases: Vec<SceneCrease>,
     /// Per face.
     pub lineage: Vec<FaceLineage>,
+    /// The crease marks, in the state's order; left out when there are none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub crease_marks: Vec<SceneCreaseMark>,
+}
+
+/// A crease mark: a partial crease (`crate::crease_marks`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SceneCreaseMark {
+    /// Its ends, in sheet coordinates.
+    pub from: ScenePoint,
+    pub to: ScenePoint,
+    /// Front-relative, as stored.
+    pub letter: Letter,
+    pub made_at: u32,
+    /// Its part on each face it crosses, in the scene frame: the same lines
+    /// as its `aux_lines`.
+    pub pieces: Vec<SceneMarkPiece>,
+}
+
+/// A crease mark's part on one face, in the scene frame.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SceneMarkPiece {
+    /// An index into `faces`.
+    pub face: usize,
+    pub from: ScenePoint,
+    pub to: ScenePoint,
+    /// The letter as the viewer sees it on this face: the stored one where
+    /// the face shows its front, the other where it shows its back.
+    pub seen: Letter,
 }
 
 /// One face's folded image.
@@ -165,7 +204,8 @@ pub struct SceneSubface {
     pub faces_top_to_bottom: Vec<usize>,
 }
 
-/// The kernel's carried auxiliary line; Fold emits none.
+/// The kernel's carried auxiliary line, on one face, in the scene frame:
+/// Fold's are crease marks' parts.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SceneAuxLine {
     pub from: ScenePoint,
@@ -269,6 +309,46 @@ impl State {
             })
             .collect();
 
+        // Each crease mark's part on each face it crosses, through that
+        // face's transform: aux lines for every painter, pieces for the
+        // marks.
+        let mut aux_lines = Vec::new();
+        let mut crease_marks: Vec<SceneCreaseMark> = self
+            .crease_marks()
+            .iter()
+            .map(|m| SceneCreaseMark {
+                from: m.a.into(),
+                to: m.b.into(),
+                letter: m.letter,
+                made_at: m.made_at,
+                pieces: Vec::new(),
+            })
+            .collect();
+        for piece in self.mark_pieces() {
+            let mark = &self.crease_marks()[piece.mark];
+            let transform = &face_transforms[piece.face];
+            let [u0, u1] = piece.span;
+            let (from, to) = (
+                ScenePoint::from(transform.apply(mark.at(u0))),
+                ScenePoint::from(transform.apply(mark.at(u1))),
+            );
+            aux_lines.push(SceneAuxLine {
+                from,
+                to,
+                face: piece.face,
+            });
+            crease_marks[piece.mark].pieces.push(SceneMarkPiece {
+                face: piece.face,
+                from,
+                to,
+                seen: if transform.front_up() {
+                    mark.letter
+                } else {
+                    opposite(mark.letter)
+                },
+            });
+        }
+
         let [x0, y0, x1, y1] = convex::bounding_box(self.sheet().outline());
         FoldScene {
             schema_version: SCENE_SCHEMA_VERSION,
@@ -276,7 +356,7 @@ impl State {
             sheet: (x1 - x0).max(y1 - y0),
             faces,
             subfaces,
-            aux_lines: Vec::new(),
+            aux_lines,
             sheet_points: vertices.iter().map(|&p| p.into()).collect(),
             fold_schema: FOLD_SCENE_SCHEMA,
             view,
@@ -303,6 +383,7 @@ impl State {
                     born: f.born,
                 })
                 .collect(),
+            crease_marks,
         }
     }
 }

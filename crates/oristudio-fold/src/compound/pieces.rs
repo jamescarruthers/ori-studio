@@ -293,6 +293,8 @@ pub(crate) fn prepare_pieces(state: &State, pieces: Pieces) -> Result<Prepared, 
         created,
         split: split_count,
     } = scoring;
+    // Crease marks ride along, less what a new crease along one covers.
+    let marks = crate::crease_marks::carry(&parts.marks, &vertices, &creases);
     let mut next = StateParts {
         sheet: parts.sheet.clone(),
         vertices,
@@ -303,6 +305,7 @@ pub(crate) fn prepare_pieces(state: &State, pieces: Pieces) -> Result<Prepared, 
         order: LayerOrder::new(),
         view: parts.view,
         step,
+        marks,
     };
     next.root = next.faces[root].id;
     let topology = Topology::build(&next)?;

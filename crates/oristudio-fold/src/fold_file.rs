@@ -7,9 +7,12 @@
 //! - **Frame 0, the root,** is the path's final crease pattern as the kernel's
 //!   own FOLD writer writes it from [`fold_cp_to_model`]: Oriedita model
 //!   space, precreases as `U` plus the `oristudio:edges_fold_direction_hint`
-//!   extension. Edit opens it exactly as it opens Send to Edit, and keeps the
-//!   step frames when it saves the file again: only frames carrying the 3D
-//!   writer's marker are regenerated (`append_folded_form_frames`).
+//!   extension, and crease marks (partial creases) as auxiliary lines, `F`
+//!   with the aux colour in `oristudio:edges_line_colors`, as the kernel
+//!   writes every aux line. Edit opens it exactly as it opens Send to Edit,
+//!   and keeps the step frames when it saves the file again: only frames
+//!   carrying the 3D writer's marker are regenerated
+//!   (`append_folded_form_frames`).
 //! - **One `foldedForm` frame per state**, in `file_frames`, in path order
 //!   ([`step_frame`]): the state's own crease pattern, folded. Vertices sit at
 //!   their images as the viewer sees them (the view applied, so a turned-over
@@ -19,7 +22,8 @@
 //!   Beloch's `beloch:faces_matrix` layout, so a reader that takes each frame
 //!   by itself reads Beloch's goldens and these files alike.
 //!   [`FOLD_STEP_MARKER`] marks the frame as ours and records the step and
-//!   the view.
+//!   the view. A step frame carries no crease marks: they are no edges of
+//!   its folded form, and the root holds the last state's.
 //!
 //! # Two frames of reference, mirror images
 //!
