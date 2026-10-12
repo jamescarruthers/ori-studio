@@ -2,7 +2,10 @@
 //! ([`super::vertex`]) at a free vertex: four rays from a point inside the
 //! chosen layers ([`super::fan`]), folded as the rabbit ear's are. Free: the
 //! vertex lies in no crease, so the layers are cut there afresh. A step names
-//! a swivel in one of two forms, which fold through the same fan.
+//! a swivel in one of two forms, which fold through the same fan. The
+//! classic swivel whose creases meet on a folded edge is the edge form with
+//! its `fold` named ([`super::swivel_on_edge`]), folded per crease rather
+//! than as a fan.
 //!
 //! # By its rays ([`Swivel`])
 //!
@@ -82,8 +85,7 @@
 //! **Refusals** (plan D14): a sheet point on no raw or folded edge
 //! (`swivel_not_an_edge`); a target parallel to the edge, or its own line
 //! (`swivel_target_parallel`); a vertex on the edge's line, where no free
-//! vertex is (`swivel_pivot_on_edge` — the classic swivel whose point sits
-//! on a folded edge is not one the fan folds); an edge that ends before its
+//! vertex is (`swivel_pivot_on_edge`); an edge that ends before its
 //! foot, so none of it swivels (`swivel_edge_short`, offering the plain fold
 //! along the bisector that lands it); an edge whose paper the cut layers
 //! leave out, so it would stay put (`swivel_edge_stays`); then the fan's
@@ -96,6 +98,13 @@
 //! What this form cannot say is a swivel whose hinges are free: Beloch's
 //! `swivel-rabbit` puts its two hinges at a height no landmark fixes, which
 //! the rays form states and this one computes.
+//!
+//! # On a folded edge (`fold`)
+//!
+//! The same three inputs, but the pivot is a point on a folded edge: the
+//! creases meet where the bisector crosses that edge, through the two layers
+//! it joins — the classic swivel of folding diagrams. Its geometry, letters
+//! and refusals are [`super::swivel_on_edge`]'s.
 
 use std::f64::consts::PI;
 
@@ -225,19 +234,29 @@ pub struct SwivelByEdge {
     /// As the viewer sees it: the three creases' letter, the ridge taking
     /// the other.
     pub direction: Direction,
+    /// A sheet point on the folded edge the creases meet on: the classic
+    /// swivel, its vertex where the bisector nearer the pivot crosses that
+    /// edge, its layers the two the edge joins (`layers` and `ridge` are not
+    /// read; [`super::swivel_on_edge`]). None for a free vertex, the pivot
+    /// moved onto the bisector.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fold: Option<Point>,
 }
 
 /// One of a swivel's four creases, by what it runs toward.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SwivelRay {
-    /// Toward where the edge's line meets the target: the bisector.
+    /// Toward where the edge's line meets the target: the bisector. On a
+    /// folded edge, the swivel crease, in each of the two layers.
     Meet,
     /// Square to the edge, toward the vertex's foot on it.
     Foot,
     /// Toward the edge's far end.
     End,
-    /// The direction Kawasaki's theorem leaves.
+    /// The direction Kawasaki's theorem leaves. On a folded edge, the other
+    /// layer's second crease: the folded edge reflected in the swivel
+    /// crease.
     Hinge,
 }
 
@@ -247,12 +266,16 @@ pub enum SwivelRay {
 #[serde(rename_all = "snake_case")]
 pub enum SwivelWedge {
     /// Between meet and foot: folds across meet, laying the edge's near
-    /// part on the target.
+    /// part on the target. On a folded edge, the edge's layer between the
+    /// folded edge and the swivel crease, folding across it.
     Near,
     /// Between foot and end: turns in place about the vertex, laying the
-    /// rest of the edge on the target.
+    /// rest of the edge on the target. On a folded edge, the other layer's
+    /// paper on the half that opens, going with the near wedge.
     Turn,
-    /// Between end and hinge: folds across the hinge.
+    /// Between end and hinge: folds across the hinge. On a folded edge, the
+    /// other layer's strip between its two creases, folding across the
+    /// second.
     Beyond,
 }
 
@@ -262,6 +285,11 @@ pub struct SwivelCrease {
     pub ray: SwivelRay,
     /// A unit direction from the vertex, in the parent's model frame.
     pub direction: Point,
+    /// Where it is seen from, in the parent's model frame: the vertex, or
+    /// on a folded edge, for the swivel crease of the layer farther from the
+    /// direction's side, where the nearer one's ends (`to` when it is hidden
+    /// all along).
+    pub from: Point,
     /// Where it leaves the last of the layers it cuts, in the parent's model
     /// frame.
     pub to: Point,
@@ -318,6 +346,21 @@ pub struct SwivelEdgeAnalysis {
     /// The paper that moves, by wedge; empty when the fan cannot cut the
     /// layers (folding it says why).
     pub regions: Vec<SwivelRegion>,
+    /// A swivel on a folded edge's: that edge, and the half of it that
+    /// opens. None for a free vertex.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fold: Option<SwivelFold>,
+}
+
+/// The folded edge a swivel's creases meet on, as a tool previews it.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SwivelFold {
+    /// Its straight run, in the parent's model frame.
+    pub edge: [Point; 2],
+    /// The half that opens, from the vertex toward the edge that moves.
+    pub opens: [Point; 2],
+    /// The two faces it joins at the vertex, ascending.
+    pub faces: Vec<FaceId>,
 }
 
 /// A swivel by its edge resolved in its parent: its vertex and rays.
@@ -341,23 +384,24 @@ struct Construction {
     landed: Vec<[Point; 2]>,
 }
 
-/// An edge's straight run: its two ends on the sheet and their images, and
-/// the faces it bounds.
-struct EdgeRun {
-    sheet: [Point; 2],
-    ends: [Point; 2],
-    faces: Vec<FaceId>,
+/// An edge's straight run: its two ends on the sheet and their images, the
+/// faces it bounds, and its creases by position.
+pub(crate) struct EdgeRun {
+    pub(crate) sheet: [Point; 2],
+    pub(crate) ends: [Point; 2],
+    pub(crate) faces: Vec<FaceId>,
+    pub(crate) creases: Vec<usize>,
 }
 
-fn sub(a: Point, b: Point) -> Point {
+pub(crate) fn sub(a: Point, b: Point) -> Point {
     [a[0] - b[0], a[1] - b[1]]
 }
 
-fn dot(a: Point, b: Point) -> f64 {
+pub(crate) fn dot(a: Point, b: Point) -> f64 {
     a[0] * b[0] + a[1] * b[1]
 }
 
-fn internal(message: &str) -> Refused {
+pub(crate) fn internal(message: &str) -> Refused {
     FoldRefusal::Internal {
         message: message.to_string(),
     }
@@ -367,7 +411,7 @@ fn internal(message: &str) -> Refused {
 /// The edge the sheet point `point` names: the raw edge or folded crease
 /// whose sheet segment holds it, run on through every crease of its kind
 /// that continues it straight, on the sheet and in the model frame alike.
-fn edge_run(state: &State, point: Point) -> Result<EdgeRun, Refused> {
+pub(crate) fn edge_run(state: &State, point: Point) -> Result<EdgeRun, Refused> {
     let not_an_edge = || Refused::from(FoldRefusal::SwivelNotAnEdge { point });
     let start = state
         .crease_at(point)
@@ -447,6 +491,7 @@ fn edge_run(state: &State, point: Point) -> Result<EdgeRun, Refused> {
         sheet: [sheet[end_a.index()], sheet[end_b.index()]],
         ends: [ea, eb],
         faces,
+        creases: used,
     })
 }
 
@@ -464,7 +509,7 @@ fn hinge_ray(meet: Point, foot: Point, end: Point) -> Option<Point> {
 }
 
 /// An angle wrapped into (−π, π].
-fn wrap(angle: f64) -> f64 {
+pub(crate) fn wrap(angle: f64) -> f64 {
     let a = angle.rem_euclid(2.0 * PI);
     if a > PI { a - 2.0 * PI } else { a }
 }
@@ -684,6 +729,9 @@ impl State {
     /// their letters, where the edge lands, the ridges it can take and the
     /// paper that moves.
     pub fn analyse_swivel_by_edge(&self, op: &SwivelByEdge) -> Result<SwivelEdgeAnalysis, Refused> {
+        if let Some(fold) = op.fold {
+            return self.analyse_swivel_on_fold(op, fold);
+        }
         let built = op.construct(self)?;
         let ridge = built.ridge(op.ridge);
         let input = built.fan(self, op, ridge)?;
@@ -717,6 +765,7 @@ impl State {
                 SwivelCrease {
                     ray,
                     direction,
+                    from: built.vertex,
                     to: reach(direction),
                     letter: if is_ridge { opposite(given) } else { given },
                     ridge: is_ridge,
@@ -741,12 +790,22 @@ impl State {
                 .compile(self, &input)
                 .map(|compiled| regions(self, &built, &compiled))
                 .unwrap_or_default(),
+            fold: None,
         })
     }
 
     /// The same swivel by its rays: what the pipeline folds (the module
-    /// docs). Its `toward` points lie one unit from the vertex.
+    /// docs). Its `toward` points lie one unit from the vertex. A swivel on
+    /// a folded edge has none: its vertex lies on a crease, inside no
+    /// layer (`fan_center`, naming the two the edge joins).
     pub fn swivel_by_edge_as_rays(&self, op: &SwivelByEdge) -> Result<Swivel, Refused> {
+        if let Some(fold) = op.fold {
+            let analysis = self.analyse_swivel_on_fold(op, fold)?;
+            return Err(FoldRefusal::FanCenter {
+                faces: analysis.fold.map(|f| f.faces).unwrap_or_default(),
+            }
+            .into());
+        }
         let built = op.construct(self)?;
         let input = built.fan(self, op, built.ridge(op.ridge))?;
         let v = built.vertex;
@@ -768,6 +827,9 @@ impl State {
         op: &SwivelByEdge,
         landed: Option<&State>,
     ) -> Result<FoldActionGeometry, Refused> {
+        if let Some(fold) = op.fold {
+            return self.swivel_on_fold_action(op, fold, landed);
+        }
         let built = op.construct(self)?;
         built
             .fan(self, op, built.ridge(op.ridge))?
@@ -793,6 +855,9 @@ impl State {
         choices: &VertexChoices,
         limits: &CompletionLimits,
     ) -> Result<VertexOutcome, CompoundRefused> {
+        if let Some(fold) = op.fold {
+            return self.swivel_on_fold_within(op, fold, choices, limits);
+        }
         let built = op.construct(self).map_err(CompoundRefused::Refused)?;
         let k = built.ridge(op.ridge);
         let fan = built.fan(self, op, k).map_err(CompoundRefused::Refused)?;
@@ -831,7 +896,7 @@ impl State {
 /// How far the ray from `from` along the unit `u` runs inside the convex,
 /// counter-clockwise `polygon` holding `from`; none when it does not hold
 /// it.
-fn exit(polygon: &[Point], from: Point, u: Point) -> Option<f64> {
+pub(crate) fn exit(polygon: &[Point], from: Point, u: Point) -> Option<f64> {
     let n = polygon.len();
     let mut best: Option<f64> = None;
     for i in 0..n {

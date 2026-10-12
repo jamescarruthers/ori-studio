@@ -13,7 +13,9 @@
 //!    reverse fold scores one line (`Macro`, [`prepare`]); a crimp two, the
 //!    second over the first's pieces (`crimp`); a squash one line
 //!    per layer (`pieces::score_cuts`); a rabbit ear or a swivel a fan of
-//!    rays from a point inside the paper ([`fan`]); a petal fold nothing
+//!    rays from a point inside the paper ([`fan`]), a swivel on a folded
+//!    edge a line per crease through the layers it runs through
+//!    ([`swivel_on_edge`]); a petal fold nothing
 //!    over precreases, or its kite creases and H where they are missing
 //!    (`pieces::score_cuts`, [`petal`]).
 //!    From here on the steps are one implementation for all of them
@@ -63,6 +65,7 @@ pub(crate) mod pieces;
 pub mod rabbit;
 pub mod squash;
 pub mod swivel;
+pub mod swivel_on_edge;
 pub mod vertex;
 
 use std::collections::HashSet;
