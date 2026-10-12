@@ -594,6 +594,43 @@ describe('a step standing in a bend', () => {
     expect([...bends.keys()]).toEqual([2]);
   });
 
+  it('passes a placed picture on a slant where its band rises through it, never past either neighbour, and level at a top or a foot', () => {
+    const plan = flowPagePlan(0, 1, 'left', 1);
+    const laneThrough = (list: LaneStop[]) =>
+      flowLane({ stops: list, plan, pageWidth: 210, apexInset: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null })!;
+    // Rising through step 1, placed: the lane heads down the page there, as the band falls on the page.
+    const rising: LaneStop[] = [
+      { x: 30, y: 100, row: 0, rightToLeft: false },
+      { x: 75, y: 118, row: 0, rightToLeft: false, placed: true },
+      { x: 120, y: 130, row: 0, rightToLeft: false },
+      { x: 165, y: 136, row: 0, rightToLeft: false },
+    ];
+    const { lane, into } = laneThrough(rising);
+    const into1 = lane.curves[into[1]!]!;
+    const out1 = lane.curves[into[1]! + 1]!;
+    expect(into1.c2.y).toBeLessThan(118);
+    expect(out1.c1.y).toBeGreaterThan(118);
+    // Collinear either side of it: a slant, not a corner.
+    const [a, b] = [{ x: 75 - into1.c2.x, y: 118 - into1.c2.y }, { x: out1.c1.x - 75, y: out1.c1.y - 118 }];
+    expect(a.x * b.y - a.y * b.x).toBeCloseTo(0, 9);
+    // Between each two pictures the lane stays between their heights.
+    for (let n = 1; n < rising.length; n += 1) {
+      const [from, curve] = [rising[n - 1]!, lane.curves[into[n]!]!];
+      for (let t = 0; t <= 40; t += 1) {
+        const y = curvePoint(from, curve, t / 40).y;
+        expect(y).toBeGreaterThanOrEqual(Math.min(from.y, rising[n]!.y) - 1e-9);
+        expect(y).toBeLessThanOrEqual(Math.max(from.y, rising[n]!.y) + 1e-9);
+      }
+    }
+    // Lifted above both neighbours: the top of its rise, passed level.
+    const lifted = rising.map((stop, n) => (n === 1 ? { ...stop, y: 80 } : stop));
+    const top = laneThrough(lifted);
+    expect(top.lane.curves[top.into[1]!]!.c2.y).toBeCloseTo(80, 9);
+    // Nothing placed: every picture passed level, as packed.
+    const packed = laneThrough(rising.map(({ placed: _, ...stop }) => stop));
+    expect(packed.lane.curves[packed.into[1]!]!.c2.y).toBeCloseTo(118, 9);
+  });
+
   it('ends the diagram heading on down from a step in a bend that is its last', () => {
     const list = stops().slice(0, 3);
     const { lane } = flowLane({ stops: list, plan: flowPagePlan(0, 1, 'left', 3), pageWidth: 210, apexInset: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null, tail: 8 })!;

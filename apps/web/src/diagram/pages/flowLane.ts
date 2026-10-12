@@ -21,7 +21,9 @@
  * - on the diagram's last page it ends just past its last step.
  *
  * **The curve.** The lane passes through every picture's centre heading along
- * its row (a packed page's band: `flowPacking.ts`), and turns between rows in
+ * its row (a packed page's band: `flowPacking.ts`) — on a slant through a
+ * picture placed by hand and its neighbours, where the band rises or falls
+ * through them ({@link bandSlopes}) — and turns between rows in
  * a half ellipse out at the page's edge, through an apex heading straight
  * down or up — or, where a step stands in the bend, through that step's
  * picture heading so, with no apex beside it. A step in a bend standing level
@@ -161,6 +163,8 @@ interface Knot extends LanePoint {
   tail?: true;
   /** The picture of a step in a bend: the lane turns through it. */
   inBend?: true;
+  /** A picture in a band the lane passes on a slant, rising or falling through it ({@link bandSlopes}). */
+  slant?: true;
 }
 
 /**
@@ -228,6 +232,7 @@ export function flowLane(input: {
   const bendAt = new Map<number, number>();
   const into: number[] = [];
   const warnings = new Set<number>();
+  const slopes = bandSlopes(stops);
   stops.forEach((stop, n) => {
     const before = stops[n - 1];
     // A step in the bend is the bend: the lane turns through it, with no apex either side.
@@ -243,14 +248,24 @@ export function flowLane(input: {
     const moved = stop.placed || before?.placed || next?.placed;
     const reversed = !bendStep && before?.row === stop.row && (stop.x - before.x) * (stop.rightToLeft ? -1 : 1) <= 0;
     const level = before && before.row !== stop.row && !bendStep && Math.abs(stop.y - before.y) < 2 * halfWidth;
-    let heading = stop.bend ? turnDown : along(stop.rightToLeft);
+    const slope = slopes[n] ?? 0;
+    const dir = stop.rightToLeft ? -1 : 1;
+    let heading = stop.bend ? turnDown : slope !== 0 ? unit({ x: dir, y: slope }) : along(stop.rightToLeft);
     if (moved && (reversed || level)) {
       for (const index of [n - 1, n, n + 1]) if (stops[index]?.placed) warnings.add(index);
       const a = before ?? stop, b = next ?? stop, length = Math.hypot(b.x - a.x, b.y - a.y);
       if (length > 0) heading = { x: (b.x - a.x) / length, y: (b.y - a.y) / length };
     }
     into.push(knots.length - 1);
-    knots.push({ x: stop.x, y: stop.y, heading, off: false, ...(stop.bend ? { inBend: true as const } : {}) });
+    const slanted = !stop.bend && slope !== 0 && heading.y !== 0 && !(moved && (reversed || level));
+    knots.push({
+      x: stop.x,
+      y: stop.y,
+      heading,
+      off: false,
+      ...(stop.bend ? { inBend: true as const } : {}),
+      ...(slanted ? { slant: true as const } : {}),
+    });
   });
 
   if (plan.exit === 'spine' && input.spineOut !== null) {
@@ -302,33 +317,89 @@ export function flowLane(input: {
  * Such a step is one the packing stands in a bend (centred, box and caption
  * together, between the two bands, so a tall one can stand level with a
  * neighbour that dips), or one placed by hand at either end of its row. Level
- * is nearer than the band is half wide for a packed step beside a packed one,
- * and than the band is wide where a hand placed either: the lane already
- * reads a placed step that near as running level across the break. Where a
- * step is that near to both sides, the nearer.
+ * is nearer than the band is half wide for a step in a bend, and than the
+ * band is wide for one placed at the end of its row: the lane already reads a
+ * placed step that near as running level across the break, while a step in a
+ * bend between the two the lane turns through well. It joins the band only
+ * where the bend it moves on to has the band's width to turn in; where it is
+ * that near to both sides, the nearer. A packed step in a bend beside a placed
+ * one is followed as it is.
  */
 function laneStops(stops: readonly LaneStop[], halfWidth: number): readonly LaneStop[] {
   return stops.map((stop, n) => {
     const [before, after] = [stops[n - 1], stops[n + 1]];
     if (!stop.bend && !stop.placed) return stop;
+    if (stop.bend && !stop.placed && (before?.placed || after?.placed)) return stop;
+    const limit = (stop.placed && !stop.bend ? 2 : 1) * halfWidth;
+    /** Whether `far`, across the bend this step would move the lane's turn on to, leaves the band room to turn. */
+    const room = (far: LaneStop | undefined, row: number) => !far || far.row === row || Math.abs(far.y - stop.y) >= 2 * halfWidth;
     /**
-     * How far `other`, a step of a band across a row break from this one, is
-     * from it in height, if this one is further toward the bend: the end its
-     * earlier row (`earlier`) reads toward.
+     * How far `band`, a step of the band on one side of the row break, is
+     * from this step in height, if this step is further toward the bend — the
+     * end `earlier`, its row before the break, reads toward — and the turn it
+     * moves on to past `far` has room: else none.
      */
-    const level = (other: LaneStop | undefined, earlier: LaneStop): number => {
-      if (!other || other.bend) return Infinity;
-      const across = stop.bend ? other === after : other.row !== stop.row;
-      if (!across && !(stop.bend && other === before)) return Infinity;
-      const toward = (stop.x - other.x) * (earlier.rightToLeft ? -1 : 1) > 0;
-      const gap = Math.abs(other.y - stop.y);
-      return toward && gap < (stop.placed || other.placed ? 2 : 1) * halfWidth ? gap : Infinity;
+    const level = (band: LaneStop | undefined, earlier: LaneStop | undefined, far: LaneStop | undefined): number => {
+      if (!band || !earlier || band.bend) return Infinity;
+      const toward = (stop.x - band.x) * (earlier.rightToLeft ? -1 : 1) > 0;
+      const gap = Math.abs(band.y - stop.y);
+      return toward && gap < limit && room(far, band.row) ? gap : Infinity;
     };
-    const [up, down] = [before ? level(before, before) : Infinity, level(after, stop)];
+    // The band before: the one a step in a bend follows, or across the break from the first step of a row.
+    const up = before && (stop.bend ? before.row === stop.row : before.row !== stop.row) ? level(before, before, after) : Infinity;
+    // The band after: across the break from a step in a bend, or from the last step of a row.
+    const down = after && after.row !== stop.row ? level(after, stop, before) : Infinity;
     if (!Number.isFinite(Math.min(up, down))) return stop;
     const band = up <= down ? before! : after!;
     return { ...stop, bend: false, row: band.row, rightToLeft: band.rightToLeft };
   });
+}
+
+/** `vector` as a unit vector. */
+function unit(vector: LanePoint): LanePoint {
+  const length = Math.hypot(vector.x, vector.y);
+  return { x: vector.x / length, y: vector.y / length };
+}
+
+/**
+ * How steeply the lane passes each picture in a band, down the page for each
+ * mm along it as it reads: none for most. The lane passes a packed band's
+ * pictures level, each the top or foot of its nesting; but a picture placed by
+ * hand above or below its neighbours, passed level, sends the lane up or down
+ * between them in a Z, tight at both ends (Zach: "the flow doesn't have to
+ * pass horizontally through the center … it should just curve and turn
+ * through it"). So a placed picture, and the pictures beside it in its band,
+ * take the slope of a monotone cubic through the band's pictures — Fritsch
+ * and Butland's weighted harmonic mean of the runs either side (Brodlie's
+ * form), none where the band turns up or down there, so the lane never rises
+ * past a picture or dips under one between them. A band's first and last
+ * pictures stay level, to turn into and out of its bends as they always have;
+ * so does a band read back on itself, which the lane follows as placed.
+ */
+function bandSlopes(stops: readonly LaneStop[]): number[] {
+  const slopes = stops.map(() => 0);
+  let start = 0;
+  while (start < stops.length) {
+    // A run: one band's pictures in reading order, none in a bend.
+    let end = start + 1;
+    const first = stops[start]!;
+    while (end < stops.length && !stops[end]!.bend && !first.bend && stops[end]!.row === first.row) end += 1;
+    const run = stops.slice(start, end);
+    const dir = first.rightToLeft ? -1 : 1;
+    const along = run.map((stop) => stop.x * dir);
+    const forward = along.every((u, i) => i === 0 || u > along[i - 1]!);
+    if (!first.bend && forward && run.length >= 3) {
+      for (let i = 1; i + 1 < run.length; i += 1) {
+        if (!(run[i]!.placed || run[i - 1]!.placed || run[i + 1]!.placed)) continue;
+        const [h0, h1] = [along[i]! - along[i - 1]!, along[i + 1]! - along[i]!];
+        const [d0, d1] = [(run[i]!.y - run[i - 1]!.y) / h0, (run[i + 1]!.y - run[i]!.y) / h1];
+        if (d0 * d1 <= 0) continue;
+        slopes[start + i] = (3 * (h0 + h1)) / ((2 * h1 + h0) / d0 + (h1 + 2 * h0) / d1);
+      }
+    }
+    start = end;
+  }
+  return slopes;
 }
 
 /**
@@ -411,9 +482,11 @@ function knotHandles(knots: readonly Knot[]): { into: number; out: number }[] {
   // Each step in a bend's own handle into it and out of it.
   const into = knots.map(() => Number.NaN);
   const out = knots.map(() => Number.NaN);
+  /** Whether a knot heads up or down the page round a bend: not a picture the lane passes on a slant in its band. */
+  const bending = (knot: Knot) => knot.heading.y !== 0 && !knot.slant;
   const turning = (n: number) => {
     const [a, b] = [knots[n], knots[n + 1]];
-    return a !== undefined && b !== undefined && (a.heading.y !== 0 || b.heading.y !== 0);
+    return a !== undefined && b !== undefined && (bending(a) || bending(b));
   };
   for (let n = 0; n + 1 < knots.length; n += 1) {
     const [a, b] = [knots[n]!, knots[n + 1]!];
@@ -437,7 +510,8 @@ function knotHandles(knots: readonly Knot[]): { into: number; out: number }[] {
     // Round a bend: each end's handle a quarter ellipse's, across its radius that way.
     const handle = (end: Knot, at: number) => {
       if (straight) return Math.hypot(dx, dy);
-      if (!bend) return dx * share(at);
+      // Along a band: a share of the run across, however steeply the lane passes a slanted picture.
+      if (!bend) return (dx * share(at)) / Math.abs(end.heading.x);
       if (round !== null) return QUARTER * round + (end.heading.y !== 0 ? dy : dx) - round;
       return end.heading.y !== 0 ? QUARTER * dy : QUARTER * reach + (dx - reach);
     };
@@ -445,8 +519,8 @@ function knotHandles(knots: readonly Knot[]): { into: number; out: number }[] {
     alone[n + 1] = Math.min(alone[n + 1]!, handle(b, n + 1));
     if (!(b.off && !a.off) && !b.tail) handles[n] = Math.min(handles[n]!, handle(a, n));
     if (!(a.off && !b.off)) handles[n + 1] = Math.min(handles[n + 1]!, handle(b, n + 1));
-    if (a.inBend) out[n] = handle(a, n);
-    if (b.inBend) into[n + 1] = handle(b, n + 1);
+    if (a.inBend || a.slant) out[n] = handle(a, n);
+    if (b.inBend || b.slant) into[n + 1] = handle(b, n + 1);
   }
   // A picture with only stubs either side — alone on its page — takes theirs: they are straight.
   const shared = handles.map((handle, n) => (Number.isFinite(handle) ? handle : Number.isFinite(alone[n]!) ? alone[n]! : 0));
