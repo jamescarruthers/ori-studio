@@ -27,6 +27,12 @@ import {
 import type { FoldStateView } from './useFoldStateView';
 import type { FoldToolPreview } from './useFoldToolPreview';
 import type { FoldVertexAnalysed } from '../engine/foldEngineSquashWire';
+import {
+  SWIVEL_REACH_ASKING,
+  swivelReachView,
+  type FoldSwivelLanding,
+  type FoldSwivelReachView,
+} from '../tools/vertex/swivelReach';
 import type { FoldVertexPreview } from './vertex/useFoldVertexStep';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -669,6 +675,66 @@ describe('a vertex fold’s choices on the canvas', () => {
     act(() => bound!.verbs.setVertexLineBy('points'));
     expect(tools.store.getState()).toMatchObject({ swivelTarget: 'points' });
     expect(tools.store.getState().picks).toHaveLength(2);
+  });
+
+  it('offers a swivel’s next click only what its reach lands, and takes another meeting point when nothing can swing', () => {
+    const tools = createFoldTools();
+    const scene = flatSquareScene();
+    const precreased = {
+      ...scene,
+      creases: [
+        ...scene.creases,
+        { id: 4, vertices: [0, 2] as [number, number], from: { x: 0, y: 0 }, to: { x: 1, y: 1 }, kind: 'flat' as const, letter: 'valley' as const, made_at: 1 },
+      ],
+    };
+    const index = foldPickIndex(precreased, flatSquareLandmarks(), []);
+    const view = { index } as unknown as FoldStateView;
+    const landing = (edge: number, target: number): FoldSwivelLanding => ({
+      edge,
+      target,
+      directions: [true, true],
+      op: { kind: 'swivel', via: 'edge', pivot: [1, 1], edge: [0, 0.5], target: { via: 'crease', at: [0.5, 0.5] }, seed: { scope: 'all' }, direction: 'valley' },
+      answer: { analysis: { kind: 'swivel-by-edge' }, emergents: [true], orders: null } as unknown as FoldVertexAnalysed,
+    });
+    const render = (reach: FoldSwivelReachView | null) =>
+      act(() =>
+        root.render(
+          <Harness
+            session={session(vi.fn())}
+            tools={tools}
+            preview={preview({
+              step: null,
+              vertex: { base: null, answer: null, emergent: null, fourths: [], elsewhere: null, direction: 'valley', orders: [], order: null, layers: 0, reach },
+            })}
+            view={view}
+          />
+        )
+      );
+    render(null);
+    act(() => tools.selectTool('swivel'));
+    const radii = { point: 0.03, line: 0.03 };
+    const at = (x: number, y: number) => bound!.verbs.hitTest('crease-pattern', { x, y }, radii);
+    act(() => bound!.verbs.pick(at(0.99, 0.99)));
+    // While the worker is asked, nothing is offered.
+    render(SWIVEL_REACH_ASKING);
+    expect(at(0.005, 0.5)?.pick).toBeNull();
+    // Only the left edge swings, onto the diagonal: the bottom edge is no choice.
+    render(swivelReachView({ landings: [landing(3, 4)] }));
+    expect(at(0.5, 0.005)?.pick).toBeNull();
+    const left = at(0.005, 0.5);
+    expect(left?.pick).toMatchObject({ kind: 'segment', edge: 3 });
+    act(() => bound!.verbs.pick(left));
+    // Of the lines, only the one it lands on: not the bottom edge, square to it though it is.
+    expect(at(0.5, 0.005)?.pick).toBeNull();
+    expect(at(0.5, 0.5)?.pick).toMatchObject({ kind: 'segment', edge: 4 });
+    // From a point nothing can swing from, the next click takes another point in its place.
+    act(() => tools.clear());
+    act(() => bound!.verbs.pick(at(0.99, 0.99)));
+    render(swivelReachView({ landings: [] }));
+    const other = at(0.01, 0.01);
+    expect(other?.pick).toMatchObject({ kind: 'point', sheet: [0, 0] });
+    act(() => bound!.verbs.pick(other));
+    expect(tools.store.getState().picks).toEqual([other?.pick]);
   });
 
   it('clicks a pinch along the located line, holds the commit until it is in, and steps back on Escape', () => {

@@ -25,8 +25,10 @@ import {
   type FoldVertexIntent,
   type FoldVertexTaken,
 } from '../../tools/vertex/vertexStep';
+import { swivelPickedLanding, type FoldSwivelReachView } from '../../tools/vertex/swivelReach';
 import type { FoldPickIndex } from '../foldPicking';
 import { useFoldCompoundAsk } from '../useFoldCompoundAsk';
+import { useFoldSwivelReach } from './useFoldSwivelReach';
 
 /** What the vertex tool knows of the fold it is previewing, beside the step. */
 export interface FoldVertexPreview {
@@ -60,6 +62,19 @@ export interface FoldVertexPreview {
   order: FoldCompletionChoice | null;
   /** The layers at a rabbit ear's center; 0 for any other fold. */
   layers: number;
+  /**
+   * A swivel's reach from where its creases meet (`useFoldSwivelReach`): the
+   * edges that can swing and the lines each lands on. Absent or null for
+   * any other fold, and before the meeting point.
+   */
+  reach?: FoldSwivelReachView | null;
+  /**
+   * Valley, then mountain: whether the fold lands that way, once known — a
+   * swivel on a folded edge's from the engine's answer, a swivel at a free
+   * vertex's from its reach. Absent or null when unknown, and for the other
+   * folds.
+   */
+  directions?: readonly boolean[] | null;
 }
 
 export interface FoldVertexStepAnswer {
@@ -139,12 +154,17 @@ export function useFoldVertexStep(
   const { tool, petalHinge, swivelTarget, picks, vertexDirection, compound } = tools;
   const { squashTarget, fanLayers, emergent: chosenEmergent, order: chosenOrder } = compound;
 
+  // --- A swivel's reach from where its creases meet: what its next clicks
+  // are offered, and the way its edge and line land — the folder's, or the
+  // other when only that one does.
+  const reach = useFoldSwivelReach(session, stateKey, index, tools, enabled && tool === 'swivel');
+  const landing = swivelPickedLanding(reach, picks);
+  const direction = landing?.op.direction ?? vertexDirection;
+
   const intent = useMemo<FoldVertexIntent | null>(
     () =>
-      enabled && isVertexTool(tool)
-        ? { tool, petalHinge, swivelTarget, picks, direction: vertexDirection, fanLayers }
-        : null,
-    [enabled, tool, petalHinge, swivelTarget, picks, vertexDirection, fanLayers]
+      enabled && isVertexTool(tool) ? { tool, petalHinge, swivelTarget, picks, direction, fanLayers } : null,
+    [enabled, tool, petalHinge, swivelTarget, picks, direction, fanLayers]
   );
   const taken = useMemo<FoldVertexTaken>(
     () => ({ squashTarget, emergent: chosenEmergent, order: chosenOrder }),
@@ -229,6 +249,8 @@ export function useFoldVertexStep(
       orders: built?.orders ?? [],
       order: built?.order ?? null,
       layers,
+      reach,
+      directions: firstAnswer?.directions ?? landing?.directions ?? null,
     },
     refused,
   };
