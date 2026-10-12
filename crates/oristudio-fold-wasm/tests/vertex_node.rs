@@ -10,7 +10,9 @@
 //! The swivel by its edge: the document's new form (`via: 'edge'`) arrives
 //! as a plain JS object, its question and its landing leave as plain
 //! objects, its refusals are values, and a `via` this build does not know is
-//! a thrown `invalid_input` envelope.
+//! a thrown `invalid_input` envelope. On a folded edge (`fold`, no seed) the
+//! same, its question naming the folded edge, and a seed beside its `fold`
+//! thrown.
 
 #![cfg(target_arch = "wasm32")]
 
@@ -273,5 +275,85 @@ fn a_swivel_by_its_edge_crosses_the_boundary_in_plain_objects() {
     let thrown = engine
         .apply(parent, js(sideways), JsValue::UNDEFINED)
         .expect_err("an unknown via");
+    assert_eq!(json_of(thrown)["code"], "invalid_input");
+}
+
+// ---------------------------------------------------------------------------
+// The swivel on a folded edge
+
+/// The kite base: the diagonal precreased, the bottom and left edges valley
+/// folded onto it.
+fn kite_base(engine: &mut FoldEngine) -> u32 {
+    let t = (std::f64::consts::PI / 8.0).tan();
+    let mut state = diagonal_square(engine);
+    for (through, moving) in [
+        ([[0.0, 0.0], [1.0, t]], [1.0, 0.0]),
+        ([[0.0, 0.0], [t, 1.0]], [0.0, 1.0]),
+    ] {
+        let valley = json!({
+            "kind": "valley",
+            "line": { "via": "free", "through": through },
+            "moving": moving,
+            "seed": { "scope": "all" }
+        });
+        let landed = json_of(
+            engine
+                .apply(state, js(valley), JsValue::UNDEFINED)
+                .expect("valley"),
+        );
+        state = landed["state"].as_u64().expect("handle") as u32;
+    }
+    state
+}
+
+/// The kite base's right edge above the kite crease onto the diagonal, the
+/// creases meeting on that kite crease.
+fn kite_swivel() -> Value {
+    let t = (std::f64::consts::PI / 8.0).tan();
+    json!({
+        "kind": "swivel",
+        "via": "edge",
+        "fold": [0.5, t / 2.0],
+        "edge": [1.0, (t + 1.0) / 2.0],
+        "target": { "via": "crease", "at": [0.5, 0.5] },
+        "direction": "valley"
+    })
+}
+
+/// The swivel on a folded edge (`fold` for `pivot`, no seed) crosses the
+/// boundary as a plain object: its question names the folded edge, it lands
+/// through `apply` and the tools' call alike, and a `seed` beside its `fold`
+/// is the caller's mistake, thrown.
+#[wasm_bindgen_test]
+fn a_swivel_on_a_folded_edge_crosses_the_boundary_in_plain_objects() {
+    let mut engine = FoldEngine::new();
+    let parent = kite_base(&mut engine);
+    let asked = json_of(
+        engine
+            .compound_analysis(parent, js(kite_swivel()), JsValue::UNDEFINED)
+            .expect("question"),
+    );
+    assert_eq!(asked["status"], "ok", "{asked}");
+    assert_eq!(asked["analysis"]["kind"], "swivel-by-edge");
+    assert!(asked["analysis"]["fold"].is_object(), "{asked}");
+    assert_eq!(asked["analysis"]["ridges"], json!([]));
+    let applied = json_of(
+        engine
+            .apply(parent, js(kite_swivel()), JsValue::UNDEFINED)
+            .expect("apply"),
+    );
+    assert_eq!(applied["status"], "ok", "{applied}");
+    assert_eq!(applied["compound"]["kind"], "swivel");
+    let tried = json_of(
+        engine
+            .vertex_fold(parent, js(kite_swivel()), JsValue::NULL)
+            .expect("vertex fold"),
+    );
+    assert_eq!(tried["result"], "landed", "{tried}");
+    let mut seeded = kite_swivel();
+    seeded["seed"] = json!({ "scope": "all" });
+    let thrown = engine
+        .apply(parent, js(seeded), JsValue::UNDEFINED)
+        .expect_err("a seed beside a fold");
     assert_eq!(json_of(thrown)["code"], "invalid_input");
 }

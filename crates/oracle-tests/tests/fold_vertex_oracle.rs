@@ -20,6 +20,10 @@
 //!   onto the centre crease off the incenter, a two-layer flap both ways
 //!   round, and the swivel at Beloch's `swivel-rabbit` pivot; valley and
 //!   mountain, each ridge that lands.
+//! - **The swivel on a folded edge** (`cases::fold_swivel_cases`):
+//!   Abrashi's on the owner's squashed preliminary base, the kite base
+//!   narrowed at its tip on either side and on both; valley and mountain,
+//!   each that lands.
 //!
 //! Seeded Oriedita (`fold_support::oriedita`) runs in process; Flat-Folder's
 //! `verify` (`fold_support::flat_folder`) when `FLATFOLDER_ORACLE` is set.
