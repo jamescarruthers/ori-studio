@@ -2098,7 +2098,6 @@
       "branchShort": "{{n}} / {{total}}",
       "nextBranch": "次の分岐",
       "nextStep": "次のステップ",
-      "noted": "メモあり",
       "noTools": "キャンバスで折りツールを選ぶと、種類を選べます。",
       "placeholder": "紙を折るとステップ 1 になります。",
       "previousBranch": "前の分岐",

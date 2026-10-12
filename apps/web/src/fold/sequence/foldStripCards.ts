@@ -13,8 +13,6 @@
  * - **The active card** is the step on screen — or the step being folded,
  *   which is drawn after it and whose sentence the caption then reads, tagged
  *   "Next".
- * - **A note** of the author's, which the Step pane shows, is a small mark
- *   on its step's card.
  *
  * Pure: words in, cards out.
  */
@@ -24,7 +22,7 @@ import type { FoldPaper } from '../document/foldSequenceDocument';
 import { foldStepSentence, type FoldSentenceStep } from '../stepSentence';
 import { operationBadge } from '../stepWords';
 import type { FoldEntryStatus, FoldPathEntry } from './foldSequencePath';
-import { notedLabel, pendingBadge, pendingTag, sheetBadge, sheetSentence, statusBadge } from './foldSequenceWords';
+import { pendingBadge, pendingTag, sheetBadge, sheetSentence, statusBadge } from './foldSequenceWords';
 import type { FoldCardPictureSource } from './useFoldCardPictures';
 
 /** A card, and what it is a card of. */
@@ -103,8 +101,6 @@ export function foldStripCards(
       sentence: foldStepSentence(t, stepWords),
       ways,
       state: cardState(entry.status, stepWords.op === 'cp-jump'),
-      // The author's words, which the Step pane shows: marked on the card that has them.
-      ...(entry.node?.note ? { noted: notedLabel(t) } : {}),
       entry: index,
       picture,
     };

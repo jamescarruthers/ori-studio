@@ -2348,7 +2348,6 @@
       "branchShort": "{{n}} / {{total}}",
       "nextBranch": "Next branch",
       "nextStep": "Next step",
-      "noted": "Has a note",
       "noTools": "Take a fold tool on the canvas to choose its kind.",
       "placeholder": "Fold the sheet to make step 1.",
       "previousBranch": "Previous branch",
