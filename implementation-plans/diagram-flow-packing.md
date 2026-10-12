@@ -389,6 +389,74 @@ Phase 5 (tests and gate, 2026-10-12):
   `SliderRow`'s commit mode, and the arrangements' reader and writer. No
   defect found.
 
+Review fixes (the third review's verified findings, 2026-10-12). Where these
+change an earlier phase's note, this section is what holds:
+
+- One test for "a page holds its arrangement" (hold-6): `holdsArrangement`
+  in `pageSignature.ts` — signature the page's and every step placed — read
+  by the layout and by `heldPageArrangements`, so a damaged arrangement the
+  layout packs over is replaced at adoption and dropped at the next commit.
+- Structure only in the signature (hold-1): a step counts as enlarged
+  (`DiagramStep.zoom`, which only the Enlarge verbs change), no longer as
+  "an arrow prints before it", which turned on the step's picture and the
+  area mark on the step before. The packing keeps a turn's gutter before
+  every enlarged step after another (`keepsGlyphGutter`), arrow or not, so a
+  mark or picture edit that brings or takes away the arrow re-packs nothing.
+  This replaces Phase 3's "an enlarge arrow ... is in the signature". Cost:
+  an enlarged run keeps a gutter between its steps (the crane's 24–26 at 10
+  and 16 a page pack a little smaller, k 1.106 → 1.098 on page 3 at 10).
+- An enlarged step's own Size on a held page (hold-2): the arrangement keeps
+  the Size each enlarged step was packed for (`DiagramArrangedStep.zoomScale`,
+  unsaid for Fill; v1 contract text updated). A Size changed since scales its
+  kept window by the new Size over the packed one (a step packed at Fill by
+  the ratio it prints at now; Fill fills its box's room, 1–6 times its area),
+  drawn as far as its box holds and reported as no longer fitting when it
+  asks for more, so Re-pack Page is offered and then packs it for the Size.
+  The read-out says what the step prints against its area as that prints, and
+  `zoomReadout` says a Size as typed only where it prints at it. Comparing
+  against the area alone would have flagged freshly packed steps whose area
+  prints on another page, or that their cell had reduced.
+- Fonts (hold-4): a layout that went without a CJK face its text needs is
+  drawn, but its packing is not adopted.
+- Contract wording (hold-5): this build writes its own arrangements only in
+  the flow; a newer build's are carried in either layout.
+- Boxes cut to what prints (F3): after packing, each picture is measured at
+  its kept scale and its box grows by what it lacks where that is more than
+  half `ARRANGED_SLACK_MM` (`grownToHold`), so a page never reports a step it
+  has just packed (the crane at 7 a page, A4 landscape: step 21's box 58.69
+  → 59.3 mm).
+- No step in a bend before only stand-ins (F4): a bend seats a step only with
+  a real step after it; the prototype reference in the tests takes the same
+  rule. Two fixtures' short last pages re-pack.
+- A page no plan fits (F5): drawn at the largest scale at which its overflow
+  does not grow (the caption floor overflows the width at any scale), not at
+  0.25. Holding the steps a page may hold to what the paper can hold is left
+  to Zach.
+- `PACKING_VERSION` is `pack-2`: F3, F4 and F5 pack the same structure
+  differently, so pages stored by `pack-1` are packed afresh when opened.
+- Glyphs beside a step in a bend (F1): they start midway between the two
+  pictures' centres (the prototype's place), and on a flow page every glyph
+  stack moves the least way clear of each step's number, picture and caption
+  (`clearSpot`, 0.5 mm), held on the paper — clear of where the layout puts a
+  step, not of a part placed onto it by hand, which stays a reported clash.
+  The matrix of 120 configurations (four diagrams × 7/9/10/13/16 a page × A4
+  portrait, A4 landscape, Letter × either first side) went from 15 glyphs on
+  steps and one fresh overflow to none (`artifacts/layout-review/fixes/`).
+- Re-pack buttons (UI-1): held back only on a read-only diagram; a press with
+  nothing stored does nothing. This replaces Phase 4's "where nothing is
+  stored to let go". Focus stays on the button after Enter (checked in the
+  browser).
+- Steps view (UI-2): a card says "No longer fits" for a flow step past its
+  place (`stepPageFits`), as "Text doesn't fit" for a grid cell's cut text.
+- Touch targets (UI-3): a segmented option is never narrower than
+  `--touch-target` on a coarse pointer (Bands' 2–5 now 44 × 44).
+- Analytics docs (UI-4, UI-5): Re-pack All Pages from the context menu, and a
+  re-pack that changes nothing still counts.
+- Left for Zach: reference scales cut per page, so spine parity changes
+  picture sizes between pages (F2), and a newer build's arrangement packed
+  afresh in every session here (hold-3, the documented forward-compatibility
+  trade-off).
+
 ## Affected Areas
 
 - `apps/web/src/diagram/pages/`: a new pure `flowPacking.ts` (+ tests);
@@ -427,3 +495,16 @@ Phase 5 (tests and gate, 2026-10-12):
 
 ### Phase 5: tests and gate
 - [x] Goldens re-recorded and checked by eye against the prototype; a test that a picture or caption edit moves no step; full suite, build, browser check of the four diagrams at 9, 10 and 13 a page; review.
+
+### Review fixes (third review)
+- [x] hold-6: one predicate for a held page, layout and store.
+- [x] hold-1: the signature reads structure only; an enlarged step after another keeps the arrow's gutter.
+- [x] hold-2: an enlarged step's own Size resizes it on a held page, reported when its box is too small; honest read-out.
+- [x] hold-4: no adoption of a layout without a CJK face it needs.
+- [x] hold-5: v1 contract wording for a newer build's arrangements.
+- [x] F3: packed boxes hold their pictures as they print.
+- [x] F4: no step in a bend before only stand-ins.
+- [x] F5: an unfit page drawn as large as its overflow allows (the steps-per-page cap left to Zach).
+- [x] F1: glyphs beside a bend step clear of every step.
+- [x] UI-1 … UI-5: Re-pack keeps focus; Steps view warning; touch targets; analytics docs.
+- [ ] F2 and hold-3: design calls for Zach.
