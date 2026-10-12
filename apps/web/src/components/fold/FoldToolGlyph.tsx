@@ -7,10 +7,10 @@ import {
   BetweenHorizontalStart,
   ChevronsDownUp,
   Divide,
-  FlipHorizontal2,
   Flower2,
   IterationCw,
   Rabbit,
+  RotateCcwSquare,
   RotateCw,
   Shrink,
   type LucideIcon,
@@ -161,7 +161,8 @@ const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
 /**
  * Every Fold rail item's icon: a fold's letter in its crease's ink; a line
  * mode's picture of what it locates; the app's own icons for the crimp and
- * the tuck, the Divide line, the model verbs, the vertex folds, the sinks and
+ * the tuck, the Divide line, the model verbs (Turn over is the turn-over icon
+ * of Edit's Flip and the Diagram's turns), the vertex folds, the sinks and
  * the folds still to come.
  */
 export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
@@ -178,7 +179,8 @@ export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
     case 'divide-line':
       return <Divide size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'turn-over':
-      return <FlipHorizontal2 size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
+      // Edit's Flip and the Diagram's Turn over: a sheet with a turn arrow, never a mirror.
+      return <RotateCcwSquare size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'rotate':
       return <RotateCw size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
     case 'axiom-1':

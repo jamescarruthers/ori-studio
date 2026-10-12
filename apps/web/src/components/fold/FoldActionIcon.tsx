@@ -1,4 +1,4 @@
-import { BookImage, Download, FlipHorizontal2, Images, RotateCcw, RotateCw, Send, Trash2, Upload } from 'lucide-react';
+import { BookImage, Download, Images, RotateCcw, RotateCcwSquare, RotateCw, Send, Trash2, Upload } from 'lucide-react';
 import type { FoldActionIcon as FoldActionIconName } from '../../fold/foldActions';
 import { FoldKindMark } from './FoldKindMark';
 
@@ -6,8 +6,9 @@ import { FoldKindMark } from './FoldKindMark';
  * The icon of a Fold verb (`fold/foldActions`' `FoldActionIcon`), wherever a
  * surface draws one with an icon — the header, the step cards' menus. The
  * fold kinds are their letters in the ink of the crease each leaves, as on the
- * rail; turn over is the rail's own glyph; Send to Edit is the verb's icon in
- * every workspace. Decorative: every verb is named in words beside it.
+ * rail; turn over is the rail's own glyph, the turn-over icon of Edit's Flip
+ * and the Diagram's turns; Send to Edit is the verb's icon in every
+ * workspace. Decorative: every verb is named in words beside it.
  */
 export function FoldActionIcon({ icon, size = 14 }: { icon: FoldActionIconName; size?: number }) {
   switch (icon) {
@@ -16,7 +17,7 @@ export function FoldActionIcon({ icon, size = 14 }: { icon: FoldActionIconName; 
     case 'precrease':
       return <FoldKindMark kind={icon} />;
     case 'turn-over':
-      return <FlipHorizontal2 size={size} aria-hidden="true" />;
+      return <RotateCcwSquare size={size} aria-hidden="true" />;
     case 'rotate-ccw':
       return <RotateCcw size={size} aria-hidden="true" />;
     case 'rotate-cw':
