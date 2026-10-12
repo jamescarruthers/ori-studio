@@ -254,8 +254,15 @@ export class FoldStepPlayback {
     },
   };
 
+  /**
+   * Where the scrubber stands: at the landing while the pane draws its own
+   * scene of the step — at rest, before the reader has asked for it — and
+   * where the play is once they have. The transport rests at the start, as a
+   * card does, so read off it alone the scrubber would sit at 0% under the
+   * landed step, and a scrub to 0% would change nothing to answer.
+   */
   readonly position: FoldPlaybackPosition = {
-    current: () => this.transport.progress(),
+    current: () => this.place(),
     subscribe: this.frames.subscribe,
   };
 
@@ -343,12 +350,17 @@ export class FoldStepPlayback {
     this.changed();
   }
 
-  /** Step: the scrubber moved to the next stop of the step (`foldStepStops`), or back to the one before. */
+  /**
+   * Step: the scrubber moved to the next stop of the step (`foldStepStops`),
+   * or back to the one before. From the landing — at rest, or played
+   * through — Step on starts the step again from its parent, as Play does.
+   */
   step(direction: 1 | -1): void {
     const motion = this.motion;
     if (!motion) return;
     const stops = foldStepStops(foldStepProgramme(motion), this.spreadEnds, this.reducedMotion());
-    const at = this.transport.progress();
+    const place = this.place();
+    const at = direction > 0 && place >= 1 ? 0 : place;
     const next =
       direction > 0
         ? (stops.find((stop) => stop > at + ON_A_STEP) ?? 1)
@@ -360,6 +372,14 @@ export class FoldStepPlayback {
     this.transport.dispose();
     this.statusListeners.clear();
     this.frameListeners.clear();
+  }
+
+  /** Where the step is, 0 to 1, as the pane shows it ({@link position}): the landing until the reader asks for the step. */
+  private place(): number {
+    if (this.engaged) return this.transport.progress();
+    // Read off the motion, not the transport's status, which it publishes after the push a new step makes.
+    const motion = this.motion;
+    return motion && foldStepProgramme(motion).legs.length > 0 ? 1 : 0;
   }
 
   /** A pose the transport pushed: the frame it makes, or the pane's own scene. */

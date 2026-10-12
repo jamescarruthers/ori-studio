@@ -215,6 +215,41 @@ describe('FoldStepPane', () => {
     expect(section('Spread')).toBeUndefined();
   });
 
+  it('writes the step’s note in a field of its own, read where it cannot be written', () => {
+    vi.useFakeTimers();
+    try {
+      const set = vi.fn();
+      render({ step: VALLEY_STEP, startSide: 'front', note: { stepId: 's2', text: 'Corner to corner.', editable: true, set } });
+      const note = section('Note');
+      const field = note?.querySelector('textarea');
+      expect(field?.value).toBe('Corner to corner.');
+      expect(note?.querySelector('label')?.textContent).toBe('Note');
+      // Typing commits as the field does, each commit carrying its sitting.
+      act(() => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(field, 'Corner to corner, then unfold.');
+        field?.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      act(() => vi.advanceTimersByTime(600));
+      expect(set).toHaveBeenCalledWith('Corner to corner, then unfold.', expect.any(Number));
+      // After the rows, the first section: the step's own words, before its crease counts.
+      const sections = [...host.querySelectorAll('[role="group"]')].map((group) => group.getAttribute('aria-label'));
+      expect(sections).toEqual(['Note', 'Creases']);
+
+      // A newer build's step, or sequence: the note is read, never a field.
+      render({ step: VALLEY_STEP, startSide: 'front', note: { stepId: 's2', text: 'Kept as it came.', editable: false, set } });
+      expect(section('Note')?.querySelector('textarea')).toBeNull();
+      expect(section('Note')?.textContent).toBe('Kept as it came.');
+      // With none to read, nothing is shown.
+      render({ step: VALLEY_STEP, startSide: 'front', note: { stepId: 's2', text: '', editable: false, set } });
+      expect(section('Note')).toBeUndefined();
+      // Nor for the sheet.
+      render({ step: null, startSide: 'front', note: null });
+      expect(section('Note')).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('gives each kind of change its own line', () => {
     render({
       step: { ...VALLEY_STEP, diff: { added: { mountain: 0, valley: 0, flat: 2 }, refolded: 1, reversed: 0, unfolded: 1 } },

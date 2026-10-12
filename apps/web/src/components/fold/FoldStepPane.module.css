@@ -1,7 +1,7 @@
 /*
  * The Fold Step pane (FoldStepPane.tsx): the step's title and badge, its
- * sentence, its notices, its rows, then the crease counts and the fold in
- * progress. The rows and sections are the shared field rows and
+ * sentence, its notices, its rows, its note, then the spread, the crease
+ * counts and the fold in progress. The rows and sections are the shared field rows and
  * CollapsibleSection; this places them and styles only the pane's own text.
  */
 .pane {
@@ -49,6 +49,17 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
+}
+
+/* A note that can only be read: its words as written, line breaks kept. */
+.note {
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .pendingSentence {

@@ -9,6 +9,7 @@ import {
   panUserCamera,
   projectModelPoint,
   unprojectDevicePoint,
+  userBoundsInView,
   userCameraToView,
   userCamerasEqual,
   validateUserCamera,
@@ -324,6 +325,35 @@ describe('frameUserCameraOnBounds', () => {
     const turned = camera({ rotation: Math.PI / 3 });
     const framed = frameUserCameraOnBounds(issue, vp, turned, documentBounds);
     expect(framed.rotation).toBe(turned.rotation);
+  });
+});
+
+describe('userBoundsInView', () => {
+  const viewport: Viewport = { width: 400, height: 400, dpr: 1 };
+  const square = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+
+  it('holds what a fit shows, and nothing that runs past an edge', () => {
+    const fitted = fitUserCamera(square, viewport);
+    expect(userBoundsInView(square, fitted, viewport)).toBe(true);
+    // A fit with no padding touches the edges: still in view.
+    expect(userBoundsInView(square, fitUserCamera(square, viewport, 1), viewport)).toBe(true);
+    expect(userBoundsInView({ ...square, minX: -50 }, fitted, viewport)).toBe(false);
+    expect(userBoundsInView({ ...square, maxY: 150 }, fitted, viewport)).toBe(false);
+  });
+
+  it('holds only the part an inset leaves, as a fit within it fills', () => {
+    const covered = { top: 0, right: 0, bottom: 200, left: 0 };
+    const fitted = fitUserCameraWithin(square, viewport, covered);
+    expect(userBoundsInView(square, fitted, viewport, covered)).toBe(true);
+    // Fitted to the whole canvas, the square's lower part is under the window.
+    expect(userBoundsInView(square, fitUserCamera(square, viewport), viewport, covered)).toBe(false);
+  });
+
+  it('measures along the turned axes of a turned view', () => {
+    const turned = fitUserCamera(square, viewport, 0.7, Math.PI / 4);
+    expect(userBoundsInView(square, turned, viewport)).toBe(true);
+    // The unturned fit's zoom leaves the turned square's corners off the canvas.
+    expect(userBoundsInView(square, { ...fitUserCamera(square, viewport, 0.95), rotation: Math.PI / 4 }, viewport)).toBe(false);
   });
 });
 

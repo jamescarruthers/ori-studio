@@ -5674,7 +5674,10 @@
     "tools:fold.refusal.markTooShort.title": "4c5aa7e8c81d",
     "tools:fold.steps.pinchAt": "b3ac331d7684",
     "tools:fold.steps.segmentFrom": "eba111cc5df3",
-    "tools:fold.steps.segmentTo": "1455b56dc815"
+    "tools:fold.steps.segmentTo": "1455b56dc815",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -11351,7 +11354,10 @@
     "tools:fold.refusal.markTooShort.title": "4c5aa7e8c81d",
     "tools:fold.steps.pinchAt": "b3ac331d7684",
     "tools:fold.steps.segmentFrom": "eba111cc5df3",
-    "tools:fold.steps.segmentTo": "1455b56dc815"
+    "tools:fold.steps.segmentTo": "1455b56dc815",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -17030,7 +17036,10 @@
     "tools:fold.refusal.markTooShort.title": "4c5aa7e8c81d",
     "tools:fold.steps.pinchAt": "b3ac331d7684",
     "tools:fold.steps.segmentFrom": "eba111cc5df3",
-    "tools:fold.steps.segmentTo": "1455b56dc815"
+    "tools:fold.steps.segmentTo": "1455b56dc815",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -22382,7 +22391,10 @@
     "tools:fold.refusal.markTooShort.title": "4c5aa7e8c81d",
     "tools:fold.steps.pinchAt": "b3ac331d7684",
     "tools:fold.steps.segmentFrom": "eba111cc5df3",
-    "tools:fold.steps.segmentTo": "1455b56dc815"
+    "tools:fold.steps.segmentTo": "1455b56dc815",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -27734,7 +27746,10 @@
     "tools:fold.refusal.markTooShort.title": "4c5aa7e8c81d",
     "tools:fold.steps.pinchAt": "b3ac331d7684",
     "tools:fold.steps.segmentFrom": "eba111cc5df3",
-    "tools:fold.steps.segmentTo": "1455b56dc815"
+    "tools:fold.steps.segmentTo": "1455b56dc815",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -33411,7 +33426,10 @@
     "tools:fold.refusal.markTooShort.title": "4c5aa7e8c81d",
     "tools:fold.steps.pinchAt": "b3ac331d7684",
     "tools:fold.steps.segmentFrom": "eba111cc5df3",
-    "tools:fold.steps.segmentTo": "1455b56dc815"
+    "tools:fold.steps.segmentTo": "1455b56dc815",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -39088,7 +39106,10 @@
     "tools:fold.refusal.markTooShort.title": "4c5aa7e8c81d",
     "tools:fold.steps.pinchAt": "b3ac331d7684",
     "tools:fold.steps.segmentFrom": "eba111cc5df3",
-    "tools:fold.steps.segmentTo": "1455b56dc815"
+    "tools:fold.steps.segmentTo": "1455b56dc815",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -44440,6 +44461,9 @@
     "tools:fold.refusal.markTooShort.title": "4c5aa7e8c81d",
     "tools:fold.steps.pinchAt": "b3ac331d7684",
     "tools:fold.steps.segmentFrom": "eba111cc5df3",
-    "tools:fold.steps.segmentTo": "1455b56dc815"
+    "tools:fold.steps.segmentTo": "1455b56dc815",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   }
 }

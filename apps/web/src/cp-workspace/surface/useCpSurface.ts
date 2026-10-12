@@ -14,6 +14,7 @@ import {
   frameUserCameraOnBounds,
   modelViewFromCamera,
   unprojectDevicePoint,
+  userBoundsInView,
   userCamerasEqual,
   userCameraToView,
   zoomUserCameraAt,
@@ -97,6 +98,16 @@ export interface UseCpSurfaceOptions<Hit> {
   contentBounds: UserBounds | null;
   /** The camera refits when this changes (a new document), never on an edit. */
   framingKey: string;
+  /**
+   * What the content is, for a surface whose content changes in kind rather
+   * than by edits alone — Fold's folded pane names the step on screen. When
+   * it changes and the new content does not lie wholly in the part of the
+   * canvas that shows, a camera still where the surface last fitted it fits
+   * the content again; a camera the user has moved stays where it was put,
+   * until Fit hands it back. The same content growing, or other content that
+   * still shows, moves nothing. Absent or null, never.
+   */
+  keepInViewKey?: string | null;
   /**
    * How far in from each edge of the canvas something drawn over it covers
    * it, CSS px: a tool window across the bottom of a phone's pane. A fit
@@ -182,6 +193,16 @@ interface LiveOptions<Hit> extends UseCpSurfaceOptions<Hit> {
   /** The hit floors, in CSS px: fingertip-sized under a coarse pointer. */
   pointFloorCss: number;
   lineFloorCss: number;
+}
+
+/** An inset in CSS px, as the viewport's device px measure it. */
+function deviceInset(inset: CpSurfaceInset, viewport: Viewport): ViewportInset {
+  return {
+    top: inset.top * viewport.dpr,
+    right: inset.right * viewport.dpr,
+    bottom: inset.bottom * viewport.dpr,
+    left: inset.left * viewport.dpr,
+  };
 }
 
 function sameView(a: CpOverlayView, b: CpOverlayView): boolean {
@@ -290,14 +311,8 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
       const { contentBounds: bounds, inset } = liveRef.current;
       if (!bounds) return cameraRef.current;
       fitRequestedRef.current = false;
-      // The inset is CSS px; the viewport, device px.
       const fitted = inset
-        ? fitUserCameraWithin(bounds, viewport, {
-            top: inset.top * viewport.dpr,
-            right: inset.right * viewport.dpr,
-            bottom: inset.bottom * viewport.dpr,
-            left: inset.left * viewport.dpr,
-          })
+        ? fitUserCameraWithin(bounds, viewport, deviceInset(inset, viewport))
         : fitUserCamera(bounds, viewport);
       cameraRef.current = fitted;
       lastFitRef.current = { ...fitted };
@@ -442,6 +457,23 @@ export function useCpSurface<Hit>(options: UseCpSurfaceOptions<Hit>): CpSurface<
     if (camera && fit && userCamerasEqual(camera, fit)) fitRequestedRef.current = true;
     renderNowRef.current();
   }, [insetKey]);
+
+  // Content of another kind that has left what shows is fitted, while the
+  // camera is the last fit's: the user's own camera is never taken back.
+  const keepInViewKey = options.keepInViewKey ?? null;
+  useEffect(() => {
+    if (keepInViewKey === null) return;
+    const canvas = canvasRef.current;
+    const camera = cameraRef.current;
+    const fit = lastFitRef.current;
+    const { contentBounds: bounds, inset: covered } = liveRef.current;
+    if (!canvas || !camera || !fit || !bounds || !userCamerasEqual(camera, fit)) return;
+    const viewport = cpCanvasViewport(canvas, dpr());
+    if (viewport.width === 0 || viewport.height === 0) return;
+    if (userBoundsInView(bounds, camera, viewport, covered ? deviceInset(covered, viewport) : null)) return;
+    fitRequestedRef.current = true;
+    renderNowRef.current();
+  }, [keepInViewKey]);
 
   // A new map, not a new camera: the content moves in place (a reflection,
   // say) rather than refitting.

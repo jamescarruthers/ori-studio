@@ -189,6 +189,38 @@ export function fitUserCameraWithin(
   return { ...fitted, centerX: fitted.centerX - shift.x, centerY: fitted.centerY - shift.y };
 }
 
+/**
+ * Whether `bounds` lies wholly in the part of the viewport an inset leaves —
+ * the part a fit within it fills ({@link fitUserCameraWithin}) — at `camera`.
+ * Within half a device pixel: a fit that just touches an edge is in view.
+ */
+export function userBoundsInView(
+  bounds: UserBounds,
+  camera: UserCamera,
+  viewport: Viewport,
+  inset: ViewportInset | null = null
+): boolean {
+  const [left, right] = insetPair(inset?.left ?? 0, inset?.right ?? 0, viewport.width);
+  const [top, bottom] = insetPair(inset?.top ?? 0, inset?.bottom ?? 0, viewport.height);
+  const view = userCameraToView(camera, viewport);
+  const slack = 0.5;
+  const corners: [number, number][] = [
+    [bounds.minX, bounds.minY],
+    [bounds.maxX, bounds.minY],
+    [bounds.maxX, bounds.maxY],
+    [bounds.minX, bounds.maxY],
+  ];
+  return corners.every(([x, y]) => {
+    const at = projectModelPoint(view, x, y);
+    return (
+      at.x >= left - slack &&
+      at.x <= viewport.width - right + slack &&
+      at.y >= top - slack &&
+      at.y <= viewport.height - bottom + slack
+    );
+  });
+}
+
 /** How tightly {@link frameUserCameraOnBounds} packs its target into the viewport. */
 const FRAME_PADDING = 0.5;
 /**

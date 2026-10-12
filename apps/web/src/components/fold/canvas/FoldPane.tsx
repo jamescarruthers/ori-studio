@@ -80,6 +80,13 @@ export interface FoldPaneProps {
   contentBounds: UserBounds | null;
   /** The camera refits when this changes: a new sequence or a new sheet, never a fold. */
   framingKey: string;
+  /**
+   * The step whose form `contentBounds` frames, once its own picture is in:
+   * when it changes and the form has left what the pane shows, a camera still
+   * at the pane's last fit fits it (`useCpSurface`'s `keepInViewKey`). Null
+   * or absent for a pane whose content is always the sheet.
+   */
+  keepInViewKey?: string | null;
   /** The pane's edges the tool window covers, CSS px: the fit keeps the paper out from under it (a phone's). */
   inset?: CpSurfaceInset | null;
   wheelGesture: WheelGesturePreference;
@@ -136,6 +143,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     offset,
     contentBounds,
     framingKey,
+    keepInViewKey = null,
     inset = null,
     wheelGesture,
     snapRadius,
@@ -170,6 +178,7 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
       modelToSvg,
       contentBounds,
       framingKey,
+      keepInViewKey,
       inset,
       wheelGesture,
       snapRadius,

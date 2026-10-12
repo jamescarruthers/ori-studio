@@ -85,6 +85,20 @@ describe('TextAreaRow', () => {
     expect(label?.htmlFor).toBe(field().id);
   });
 
+  it('draws its rule unless the section it ends draws one', () => {
+    render(<Controlled onCommit={vi.fn()} />);
+    expect(field().parentElement?.dataset.divider).toBeUndefined();
+    rerender(<TextAreaRow label="Note" value="" divider={false} onCommit={vi.fn()} />);
+    expect(field().parentElement?.dataset.divider).toBe('none');
+  });
+
+  it('is sized to its text only when asked', () => {
+    render(<Controlled onCommit={vi.fn()} />);
+    expect(field().parentElement?.dataset.fit).toBeUndefined();
+    rerender(<TextAreaRow label="Note" value="" fitContent onCommit={vi.fn()} />);
+    expect(field().parentElement?.dataset.fit).toBe('true');
+  });
+
   it('commits once typing pauses, and not on every keystroke', () => {
     const onCommit = vi.fn();
     render(<Controlled onCommit={onCommit} />);
