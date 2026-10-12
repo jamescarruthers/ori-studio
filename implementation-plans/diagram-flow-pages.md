@@ -252,6 +252,25 @@ As built (Phase 2, `diagramPageLayout.ts`, `flowLane.ts`):
   token use in the placement CSS modules; one undo entry per nudge sitting;
   the stale Pages docstring and dead code.
 
+As built (Phase 3, part 1):
+
+- The Pages view publishes the page in the middle of its view while it is
+  laid out (`pageInView.ts`, as `printedFrames.ts` publishes the layout);
+  `useCurrentDiagramPage` gives every pane the same current page from it, the
+  selection (a turn's page is the step after it) and the shared pagination.
+- The row is `DiagramPageStepsRow`, under Steps per page: "Steps on page N",
+  N as the Pages view captions the page (its printed number, else its
+  place). A page with its own count shows it and Use default; one without
+  shows what it is laid out for (`layoutCount`) and a quiet "Default". That
+  is its steps, but the default on an automatic last page, so typing the
+  number of its few steps gives them the page. Analytics: `page_steps` and
+  `page_steps_reset` on the page setup event.
+- Reset This Page resets the current page, and is disabled only where that
+  page has no step placed by hand (U4). The clash notice offers a new page
+  only for a `step` or `glyph` clash on a step that does not start a page
+  (`startsPage`), and says the frames it moves return to automatic
+  placement (U5).
+
 ## Affected Areas
 
 - `apps/web/src/diagram/document/diagramDocument.ts`, `diagramFile.ts`,
@@ -299,8 +318,13 @@ As built (Phase 2, `diagramPageLayout.ts`, `flowLane.ts`):
   and text x never move.
 
 ### Phase 3: UI and review fixes
-- [ ] Page pane per-page count.
+- [x] Page pane per-page count, on the current page; checked in the browser
+  on the crane (page 2 set to 6: pages 9 · 6 · 9 · 4, page 1 keeping 9 as its
+  own; Use default: 9 · 9 · 9 · 1).
 - [ ] The review fixes listed above.
+  - [x] Reset This Page acts on the page in view (U4).
+  - [x] The page-break offer only where a break helps, saying it sends the
+    frame home (U5).
 
 ### Phase 4: gate and land
 - [ ] Lint, typecheck, i18n check, full web suite (Node 22), build and prerender.
