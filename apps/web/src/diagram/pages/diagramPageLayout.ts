@@ -77,9 +77,11 @@ import {
   arrangedOverflow,
   arrangedPictureRoom,
   arrangementFits,
+  grownToHold,
   packedArrangement,
   type ArrangedOverflow,
 } from './flowArrangement';
+import { roundPageArrangement } from '../document/pageArrangements';
 import {
   bendXAt,
   curvePoint,
@@ -1580,6 +1582,38 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     return { ...area, x: area.x + lacks, w: area.w - 2 * lacks };
   };
 
+  /**
+   * A page just packed, each box grown to hold its step's picture measured at
+   * the scale it prints at (`grownToHold`), as every later layout measures it
+   * (`LayoutStep.pictureAt`): so a page never says at once that a step it
+   * has just packed no longer fits, which Re-pack Page, packing the same,
+   * could never mend.
+   */
+  const asMeasured = (arrangement: DiagramPageArrangement, entries: readonly T[], pageArea: PackRect): DiagramPageArrangement => {
+    let grown = false;
+    const placed: Record<string, DiagramArrangedStep> = { ...arrangement.steps };
+    for (const { step } of entries) {
+      const place = placed[step.id];
+      const picture = step.picture;
+      if (!place || !picture || !step.pictureAt) continue;
+      // A picture of the measure its scale is kept in: one with none drew at its box's side.
+      const paper = 'mmPerUnit' in place.scale;
+      if (paper !== (picture.kind === 'paper')) continue;
+      const at = 'mmPerUnit' in place.scale ? place.scale.mmPerUnit : place.scale.frameMm;
+      const measured = step.pictureAt(at);
+      if (!measured) continue;
+      const extent = pictureExtent(measured, at);
+      const box = arrangedBox(place);
+      const lines =
+        step.text.trim() === '' ? 0 : setter.paragraph(step.text, arrangedCaptionWidth(box), STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER).lines.length;
+      const held = grownToHold(box, { w: extent.width, h: extent.height }, lines, pageArea);
+      if (held === box) continue;
+      placed[step.id] = { ...place, box: [held.x, held.y, held.w, held.h] };
+      grown = true;
+    }
+    return grown ? roundPageArrangement({ ...arrangement, steps: placed }) : arrangement;
+  };
+
   let kPrev: number | null = null;
   const cells = placedPages.map((entries, pageIndex) => {
     const page = planned[pageIndex]!;
@@ -1614,7 +1648,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
       );
       // An enlarged step's Size, which its scale is packed for.
       const zoomSizes = new Map(entries.flatMap(({ step }) => (step.zoom?.scale != null ? [[step.id, step.zoom.scale] as const] : [])));
-      arrangement = packedArrangement(found, references, signatures[pageIndex]!, zoomSizes);
+      arrangement = asMeasured(packedArrangement(found, references, signatures[pageIndex]!, zoomSizes), entries, pageArea);
       packed[first] = arrangement;
     }
     kPrev = arrangement.k;

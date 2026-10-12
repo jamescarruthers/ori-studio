@@ -366,6 +366,35 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     expect(cells.get('step-12')!.drawMm.w).toBeGreaterThan(cells.get('step-12')!.cellMm.w);
   });
 
+  it('cuts each box a page packs to hold its picture measured at the scale it prints at, so the page never says a step it just packed no longer fits', () => {
+    // Pictures whose marks reach 2 mm further at any scale but the one they are packed by (their reference):
+    // a mark's pt-size part need not keep its reach as the picture's scale changes.
+    const reaching = (index: number): Partial<LayoutStep> => {
+      let reference: number | null = null;
+      return {
+        picture: marked(400, 400, { width: 2, height: 2 }),
+        pictureAt: (scale) => {
+          reference ??= scale;
+          return marked(400, 400, { width: 2, height: scale === reference ? 2 : 4 + (index % 3) });
+        },
+      };
+    };
+    const list = steps(16, reaching);
+    const first = flowLayout(list, { stepsPerPage: 7 });
+    const kept = (cell: LayoutCell) => cell.mmPerUnit!;
+    // Laid out again as every later layout measures it: each picture at the scale it prints at.
+    const measured = list.map((step) => {
+      const cell = first.pages.flatMap((page) => page.cells).find((each) => each.stepId === step.id)!;
+      expect(first.pages.flatMap((page) => page.packing!.k)).not.toContain(1);
+      return { ...step, picture: step.pictureAt!(kept(cell)) };
+    });
+    const held = flowLayout(measured, { stepsPerPage: 7 }, first.packed!);
+    expect(held.packed).toBeUndefined();
+    for (const cell of held.pages.flatMap((page) => page.cells)) expect(cell.overflow, cell.stepId).toBeUndefined();
+    // Every box still inside its page's area.
+    expect(held.pages.map((page) => page.packing!.fits)).toEqual([true, true, true]);
+  });
+
   it('fits a held step’s picture of another measure — a new one — to the room its box leaves it', () => {
     const list = steps(9);
     const first = flowLayout(list);

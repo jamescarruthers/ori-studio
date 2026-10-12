@@ -9,6 +9,7 @@ import {
   arrangedOverflow,
   arrangedPictureRoom,
   arrangementFits,
+  grownToHold,
   packedArrangement,
 } from './flowArrangement';
 import { craneSteps, PROTOTYPE_AREA } from './flowPacking.fixtures';
@@ -108,5 +109,33 @@ describe('a step drawn in its box', () => {
     expect(arrangementFits(arrangement, PROTOTYPE_AREA)).toBe(true);
     const narrower = { ...PROTOTYPE_AREA, w: PROTOTYPE_AREA.w - 20 };
     expect(arrangementFits(arrangement, narrower)).toBe(false);
+  });
+});
+
+describe('a packed box grown to hold its step as it prints', () => {
+  const area = { x: 10, y: 20, w: 190, h: 250 };
+  const box = { x: 50, y: 60, w: 40, h: 60 };
+  /** The picture the box holds exactly, with a caption of two lines under it. */
+  const fits = { w: 40 - PICTURE_SIDE_MM, h: 60 - NUMBER_ROOM_MM - CAPTION_TOP_MM - 2 * STEP_TEXT_LEADING_MM };
+  const expectBox = (actual: { x: number; y: number; w: number; h: number }, expected: typeof actual) =>
+    (['x', 'y', 'w', 'h'] as const).forEach((side) => expect(actual[side], side).toBeCloseTo(expected[side], 9));
+
+  it('stays as it was where it holds the step, or lacks no more than half the slack', () => {
+    expect(grownToHold(box, fits, 2, area)).toBe(box);
+    expect(grownToHold(box, { w: fits.w + ARRANGED_SLACK_MM / 2, h: fits.h + ARRANGED_SLACK_MM / 2 }, 2, area)).toBe(box);
+  });
+
+  it('grows by what it lacks, wider about its middle and taller at its foot', () => {
+    expectBox(grownToHold(box, { w: fits.w + 1, h: fits.h + 0.6 }, 2, area), { x: 49.5, y: 60, w: 41, h: 60.6 });
+  });
+
+  it('moves back into its area, by no more than it grew', () => {
+    const foot = { ...box, y: area.y + area.h - box.h };
+    expectBox(grownToHold(foot, { w: fits.w, h: fits.h + 0.6 }, 2, area), { ...foot, y: foot.y - 0.6, h: 60.6 });
+    const edge = { ...box, x: area.x };
+    expectBox(grownToHold(edge, { w: fits.w + 1, h: fits.h }, 2, area), { ...edge, w: 41 });
+    // Already out of it, on a page no plan fits: back no further than it grew.
+    const out = { ...box, y: area.y + area.h };
+    expectBox(grownToHold(out, { w: fits.w, h: fits.h + 0.6 }, 2, area), { ...out, y: out.y - 0.6, h: 60.6 });
   });
 });

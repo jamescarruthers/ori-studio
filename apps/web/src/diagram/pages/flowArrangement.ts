@@ -124,6 +124,31 @@ export function arrangedOverflow(box: PackRect, picture: { w: number; h: number 
 }
 
 /**
+ * A freshly packed box grown to hold its step as it prints: its picture
+ * `picture` mm, measured at the scale it prints at, and its caption of
+ * `lines` lines. The packing reckons a picture's marks at the size they take
+ * at its reference scale, but a mark's pt-size part need not keep its reach
+ * as the picture's scale changes, so a picture can print a little larger
+ * than packed, and its page would say at once that it no longer fits. Where
+ * it needs more than half the slack a held step is allowed
+ * ({@link ARRANGED_SLACK_MM}), the box grows by what it lacks — wider about
+ * its middle, taller at its foot — and moves back, by no more than it grew,
+ * where that would take it out of `area`. The same box otherwise.
+ */
+export function grownToHold(box: PackRect, picture: { w: number; h: number }, lines: number, area: PackRect): PackRect {
+  const lackW = picture.w + PICTURE_SIDE_MM - box.w;
+  const lackH = NUMBER_ROOM_MM + picture.h + captionHeight(lines) - box.h;
+  const growW = lackW > ARRANGED_SLACK_MM / 2 ? lackW : 0;
+  const growH = lackH > ARRANGED_SLACK_MM / 2 ? lackH : 0;
+  if (growW === 0 && growH === 0) return box;
+  const [w, h] = [box.w + growW, box.h + growH];
+  let x = box.x - growW / 2;
+  x += Math.min(growW / 2, Math.max(0, area.x - x)) - Math.min(growW / 2, Math.max(0, x + w - (area.x + area.w)));
+  const y = box.y - Math.min(growH, Math.max(0, box.y + h - (area.y + area.h)));
+  return { x, y, w, h };
+}
+
+/**
  * Whether every step's box lies inside `area` ({@link ARRANGED_SLACK_MM}
  * allowed): false only for a page no plan fitted, packed at the least scale
  * and overflowing (`FlowPagePacking.fits`), which a held page says alike.
