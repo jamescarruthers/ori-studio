@@ -11,10 +11,13 @@
  *   of it (`foldEngineIoSendToEdit`): an unassigned crease, `None`,
  *   remembering the letter it was folded with, which Edit draws as its
  *   undecided dots with the direction on alternate marks.
- * - The instruction — the step's own creases, or the creases a previewed fold
- *   would add — is the line a tool is drawing, kept apart for the pane to
- *   draw as Edit draws a tool's preview: in the crease colour it would make,
- *   solid (`useFoldCreasePatternStrokes`).
+ * - A crease mark — a pinch, a segment — is drawn as Edit draws a short
+ *   crease of its letter (`foldPaneMark`): too short for a flat crease's
+ *   dots to show, and never folded, so its letter is what its line says.
+ * - The instruction — the step's own creases and marks, or the ones a
+ *   previewed fold would add — is the line a tool is drawing, kept apart for
+ *   the pane to draw as Edit draws a tool's preview: in the crease colour it
+ *   would make, solid (`useFoldCreasePatternStrokes`).
  *
  * Which creases are shown, and which are the instruction, is the pane's one
  * rule (`foldPaneCrease`), shared with the paper picture of the same state
@@ -26,7 +29,7 @@
 import type { CpLineSegmentInput } from '../../cp-workspace/adapters/cpSnapshotToScene';
 import type { Point } from '../../lib/geometry';
 import type { FoldLetter, FoldScene } from '../engine/foldEngineWire';
-import { foldPaneCrease, type FoldPaneCreaseOptions } from './foldPaneScenes';
+import { foldPaneCrease, foldPaneMark, type FoldPaneCreaseOptions } from './foldPaneScenes';
 
 /** One line of the instruction: where it runs, and which way it folds. */
 export interface FoldInstructionLine {
@@ -81,6 +84,13 @@ export function creasePatternPaneLines(scene: FoldScene, options: FoldPaneCrease
         instruction.push({ a, b, letter: shown.letter });
         break;
     }
+  }
+  // A crease mark: a short crease of its letter, or the instruction it is.
+  for (const mark of scene.crease_marks ?? []) {
+    const shown = foldPaneMark(mark, options);
+    if (!shown) continue;
+    if (shown.as === 'instruction') instruction.push({ a: mark.from, b: mark.to, letter: shown.letter });
+    else folds.push({ a: mark.from, b: mark.to, color: foldLetterLineColor(shown.letter) });
   }
   return { creases: [...flat, ...folds, ...border], instruction };
 }

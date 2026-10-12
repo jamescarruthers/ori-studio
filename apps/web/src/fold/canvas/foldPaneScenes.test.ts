@@ -52,6 +52,20 @@ describe('the Fold panes’ paper scenes', () => {
     expect([minX, minY, maxX, maxY].map((v) => v + 0)).toEqual([0, -FOLD_USER_PER_UNIT, FOLD_USER_PER_UNIT, 0]);
   });
 
+  it('draws a crease mark in the paper picture of a crease pattern by its letter, or as the instruction', () => {
+    const scene = {
+      ...bookScene(),
+      crease_marks: [{ from: { x: 0.75, y: 0.45 }, to: { x: 0.75, y: 0.55 }, letter: 'valley' as const, made_at: 2, pieces: [] }],
+    };
+    const roles = (step: number) =>
+      lines(creasePatternPaperScene(scene, { display: FOLD_PANE_DISPLAY_DEFAULT, sheet: SQUARE, step }).items).map((item) => item.role);
+    // The bend is step 1's, the mark step 2's.
+    expect(roles(2).filter((role) => role === 'diagram-valley')).toHaveLength(1);
+    expect(roles(2)).toContain('valley');
+    expect(roles(3).filter((role) => role === 'valley')).toHaveLength(2);
+    expect(roles(3)).not.toContain('aux');
+  });
+
   it('paints the folded form whole faces in painter’s order, a fold line over it in its pen', () => {
     const base = foldedPaneScene(bookScene(), FOLD_PANE_DISPLAY_DEFAULT);
     const faces = base.items.filter((item) => item.kind === 'face');
