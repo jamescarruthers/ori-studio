@@ -15,6 +15,7 @@ import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
 import { roundPageArrangement } from '../../diagram/document/pageArrangements';
 import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { useWorkspaceStore } from '../workspaceStore';
+import { onlyPackedSince } from './diagramState';
 
 /**
  * A flow page's packed arrangement through the store
@@ -112,6 +113,18 @@ describe('adoptDiagramPageArrangements', () => {
     state().undoDiagram();
     expect(stepById(state().diagram!, 's1')!.text).toBe('');
     expect(undoSteps()).toBe(0);
+  });
+
+  it('leaves a file written before it holding every edit: a save that built it before the adoption leaves the project clean', () => {
+    const document = install();
+    expect(onlyPackedSince(adoptAll(), document)).toBe(true);
+    expect(onlyPackedSince(document, document)).toBe(true);
+    expect(onlyPackedSince(null, null)).toBe(true);
+    // An edit since is in no file written before it; nor is a diagram there was none of.
+    state().setDiagramStepText('s1', 'Fold.');
+    expect(onlyPackedSince(state().diagram, document)).toBe(false);
+    expect(onlyPackedSince(document, null)).toBe(false);
+    expect(onlyPackedSince(null, document)).toBe(false);
   });
 
   it('is carried by the next edit, into its undo entry', () => {

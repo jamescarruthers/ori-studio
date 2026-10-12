@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { reportError } from '../../monitoring';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramDocument } from '../document/diagramDocument';
 import { browserFontSource } from '../fonts/browserFontSource';
 import { browserFontSubsetter } from '../fonts/browserFontSubsetter';
@@ -18,6 +19,9 @@ export interface DiagramPagesState {
 
 const EMPTY: DiagramPagesState = { pages: null, of: null, failed: false };
 
+/** The pages each diagram the store adopted a layout's packing into already has: that layout's. */
+const adoptedPages = new WeakMap<DiagramDocument, PreparedDiagramPages>();
+
 /**
  * A diagram's pages, laid out with the fonts its text needs (`diagramPages.ts`),
  * for the Pages view and for the cards' "Text doesn't fit".
@@ -28,16 +32,28 @@ const EMPTY: DiagramPagesState = { pages: null, of: null, failed: false };
  * and one whose diagram is outlived before it starts is never begun: it
  * starts a task later, behind the input already waiting, so a burst of edits
  * — Arrow Up held in the path's width — lays out its last diagram, not each.
+ *
+ * The flow pages a layout packed are adopted into the store's diagram while
+ * it is still the one laid out ({@link adoptPacked}), so the next layout
+ * holds them; the adopted diagram takes these same pages, not a layout of its
+ * own.
  */
 export function useDiagramPages(document: DiagramDocument | null): DiagramPagesState {
   const [state, setState] = useState<DiagramPagesState>(EMPTY);
   useEffect(() => {
     if (!document) return;
+    const ready = adoptedPages.get(document);
+    if (ready) {
+      setState({ pages: ready, of: document, failed: false });
+      return;
+    }
     let current = true;
     const start = setTimeout(() => {
       prepareDiagramPages(document, { fontSource: browserFontSource, subsetter: browserFontSubsetter })
         .then((pages) => {
-          if (current) setState({ pages, of: document, failed: false });
+          if (!current) return;
+          setState({ pages, of: document, failed: false });
+          adoptPacked(pages, document);
         })
         .catch((error: unknown) => {
           reportError(error, { surface: 'diagram:pages' });
@@ -52,7 +68,34 @@ export function useDiagramPages(document: DiagramDocument | null): DiagramPagesS
   return document ? state : EMPTY;
 }
 
+/**
+ * The arrangements `pages` packed (`DiagramPagesLayout.packed`), taken into
+ * the store's diagram while it is still `document`, the one laid out — no
+ * edit, no undo entry (`adoptDiagramPageArrangements`). The adopted diagram
+ * lays out as `pages` do, so it takes them as its own, the pages they have
+ * composed with them.
+ */
+function adoptPacked(pages: PreparedDiagramPages, document: DiagramDocument): void {
+  const packed = pages.layout.packed;
+  if (!packed || !useWorkspaceStore.getState().adoptDiagramPageArrangements(packed, document)) return;
+  const adopted = useWorkspaceStore.getState().diagram;
+  if (!adopted || !pages.adoptedAs) return;
+  const same = pages.adoptedAs(adopted);
+  composed.set(same, composedOf(pages));
+  adoptedPages.set(adopted, same);
+}
+
 const composed = new WeakMap<PreparedDiagramPages, Map<string, string>>();
+
+/** The pages composed of `pages` so far, by page and options. */
+function composedOf(pages: PreparedDiagramPages): Map<string, string> {
+  let byPage = composed.get(pages);
+  if (!byPage) {
+    byPage = new Map();
+    composed.set(pages, byPage);
+  }
+  return byPage;
+}
 
 /**
  * Page `index` as a `data:` URL, composed once per layout. `band: false`
@@ -61,11 +104,7 @@ const composed = new WeakMap<PreparedDiagramPages, Map<string, string>>();
  * image, and a new one leaves the image as it was.
  */
 export function composedPageUrl(pages: PreparedDiagramPages, index: number, options: PageComposeOptions = {}): string {
-  let byPage = composed.get(pages);
-  if (!byPage) {
-    byPage = new Map();
-    composed.set(pages, byPage);
-  }
+  const byPage = composedOf(pages);
   const key = `${index} ${JSON.stringify(options)}`;
   let url = byPage.get(key);
   if (url === undefined) {

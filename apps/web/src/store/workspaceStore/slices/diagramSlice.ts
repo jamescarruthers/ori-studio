@@ -45,7 +45,7 @@ import { annotationEventKind } from '../../../diagram/annotate/annotationEventKi
 import { cardMarkEdits } from '../../../diagram/document/cardMarks';
 import { requestConfirmation } from '../../commandDialogStore';
 import { commitStepCapture, runDiagramCapture, stopDiagramCapture } from '../diagramCapture';
-import { discardDiagramState, selectedDiagramAnnotation, trimDiagramHistory } from '../diagramState';
+import { discardDiagramState, noteAdoptedPacking, selectedDiagramAnnotation, trimDiagramHistory } from '../diagramState';
 import { pathNodesOf } from '../../../diagram/annotate/annotationPath';
 import { showsFrame } from '../../../diagram/zoom/zoomActions';
 import { seedNewSteps, type SeededStep } from '../../../diagram/zoom/zoomFrames';
@@ -771,6 +771,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       const next = adoptPageArrangements(diagram, arrangements);
       if (next === diagram) return false;
       // Not an edit: no undo entry, the history as it was, and the project no dirtier than it was.
+      noteAdoptedPacking(next, diagram);
       set({ diagram: next });
       return true;
     },

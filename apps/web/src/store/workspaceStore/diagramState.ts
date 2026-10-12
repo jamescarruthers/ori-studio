@@ -269,6 +269,27 @@ export function nextDiagramLoadId(): number {
   return lastDiagramLoadId;
 }
 
+/** Each diagram a layout's packed flow pages were adopted into (`adoptDiagramPageArrangements`), and the diagram it was before. */
+const adoptedFrom = new WeakMap<DiagramDocument, DiagramDocument>();
+
+/** Note that `adopted` is `from` with a layout's packing taken in: not an edit. */
+export function noteAdoptedPacking(adopted: DiagramDocument, from: DiagramDocument): void {
+  adoptedFrom.set(adopted, from);
+}
+
+/**
+ * Whether `now` is `written`, or `written` with nothing since but layouts'
+ * packing taken in: a file written from `written` holds every edit of `now`,
+ * and the packing it lacks is packed again, the same, when it opens.
+ */
+export function onlyPackedSince(now: DiagramDocument | null, written: DiagramDocument | null): boolean {
+  if (now === written) return true;
+  for (let at = now ? adoptedFrom.get(now) : undefined; at; at = adoptedFrom.get(at)) {
+    if (at === written) return true;
+  }
+  return false;
+}
+
 /**
  * Let go of the project's diagram, for a replacement that brings its own (or
  * none). Spread it into the replacing `set`.
