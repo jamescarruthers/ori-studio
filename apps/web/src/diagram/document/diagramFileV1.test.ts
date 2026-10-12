@@ -1,18 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
 import { diagramLayoutSteps } from '../pages/diagramPages';
+import { paginate } from '../pages/pagePlan';
 import frozen from './__fixtures__/diagram-v1.json';
 import { isKnownAnnotation, isTurn, snapshotDiagramStyle, type DiagramStep } from './diagramDocument';
 import { readDiagram, writeDiagram } from './diagramFile';
 
 /**
  * A diagram as the Diagram workspace launched with it (format v1, frozen
- * 2026-10-10; the plan's Contracts › The v1 file): every kind of step, picture,
- * render, turn and mark it writes — linked steps shown each way, a spread, a
+ * 2026-10-10, and before launch given the flow's page counts on 2026-10-11;
+ * the plan's Contracts › The v1 file): every kind of step, picture, render,
+ * turn and mark it writes — linked steps shown each way, a spread, a
  * remembered pose, uploads, References steps with their pulled marks, turns,
  * an enlarged step and its area, a step placed by hand, a label with every
- * option, a mark behind a flap — in one diagram on a set-up page, as this
- * build wrote it.
+ * option, a mark behind a flap, a page of its own count and a page break —
+ * in one diagram on a set-up page with its own steps per page, as this build
+ * wrote it.
  *
  * Every saved diagram is read by today's reader. A change that reads this file
  * otherwise, or writes it back otherwise, changes what saved diagrams mean, and
@@ -49,6 +52,22 @@ describe('a diagram saved at launch (format v1)', () => {
     expect(all.filter((step) => step.place !== undefined)).toHaveLength(1);
     const marks = new Set(all.flatMap((step) => step.annotations.flatMap((mark) => (isKnownAnnotation(mark) ? [mark.kind] : []))));
     expect(marks.size).toBeGreaterThanOrEqual(25);
+    expect(document.page).toMatchObject({ layout: 'flow', columns: 4, rows: 3, stepsPerPage: 7 });
+    expect(all.flatMap((step) => (step.pageSteps !== undefined ? [[step.id, step.pageSteps]] : []))).toEqual([['step-2', 3]]);
+    expect(all.filter((step) => step.breakBefore).map((step) => step.id)).toEqual(['step-marks']);
+  });
+
+  it('cuts its pages by its steps per page, its page count and its break', () => {
+    const { document } = read();
+    const pages = paginate(steps(document), document.page);
+    // 7 a page; cut short by step-2's own 3; and the break at step-marks, which starts the last page, laid out for 7.
+    expect(pages.map((page) => [page.firstStepId, page.steps.length, page.ownCount, page.layoutCount])).toEqual([
+      ['step-cp', 7, false, 7],
+      ['step-spread', 4, false, 4],
+      ['step-2', 3, true, 3],
+      ['step-find', 4, false, 4],
+      ['step-marks', 1, false, 7],
+    ]);
   });
 
   it('only adds the explicit preset snapshot migration, preserving the frozen legacy file', () => {
