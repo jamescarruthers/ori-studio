@@ -26,7 +26,10 @@ import {
   stepToTurn,
   stepsOf,
   turnById,
+  withPageArrangements,
+  withoutPageArrangements,
   type DiagramDocument,
+  type DiagramPageArrangement,
   type DiagramPageSetup,
   type DiagramRasterAsset,
   type DiagramStep,
@@ -239,15 +242,6 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     expect(settle(before, setPageSetup(before, patch))).toEqual(ids(0, 15));
   });
 
-  it('sends home the frames of a flow page whose rows the orientation changes, and only those', () => {
-    // 9 steps print in 3 rows on A4 upright, and in 2 on its side — but a left page handing over at its
-    // spine keeps an odd number, 3 either way, so only the last page's cells change.
-    const before = placed(16, { layout: 'flow' }, []);
-    const turned = setPageSetup(before, { orientation: 'landscape' });
-    expect([cellSlots(before).shapes, cellSlots(turned).shapes]).toEqual([['9/3', '9/3'], ['9/3', '9/2']]);
-    expect(settle(before, turned)).toEqual(ids(9, 15));
-  });
-
   it('sends a flow page’s frames home when its steps per page change, though the rows they make do not', () => {
     // 7 and 8 steps are both 3 rows on A4 portrait; the eighth cell takes a step that was on page two.
     const before = placed(16, { layout: 'flow', stepsPerPage: 7 }, []);
@@ -256,35 +250,91 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     expect(settle(before, setPageSetup(before, { stepsPerPage: 8 }))).toEqual(ids(0, 15));
   });
 
-  it('keeps a flow page’s frames through a paper, orientation or margin that leaves its shape as it was', () => {
-    // 9 steps are 3 × 3 on A4 and on Letter, upright, and at a margin of 25 mm.
+  it.each([
+    ['paper size', { size: 'letter' }],
+    ['orientation', { orientation: 'landscape' }],
+    ['margin', { marginMm: 25 }],
+    ['title shown', { showTitle: false }],
+    ['page numbers', { pageNumbers: { enabled: false, first: 4 } }],
+    ['first page’s side', { firstPageSide: 'right' }],
+    ['band count', { flowBands: 3 }],
+    ['steps in bends', { flowBendSteps: false }],
+    ['scale steadiness', { flowSteadiness: 0.5 }],
+  ] as const)('sends every flow frame home when the %s changes: every page is packed afresh (diagram-flow-packing.md, Decision 6)', (_label, patch) => {
     const before = placed(16, { layout: 'flow' });
-    for (const patch of [{ size: 'letter' }, { marginMm: 25 }] as const) {
-      expect(cellSlots(setPageSetup(before, patch)).shapes).toEqual(cellSlots(before).shapes);
-      expect(settle(before, setPageSetup(before, patch))).toEqual([]);
-    }
-    // 6 steps are 2 × 3 upright, 3 × 2 on its side, on A4 and on Letter alike.
-    const six = placed(16, { layout: 'flow', stepsPerPage: 6, orientation: 'landscape' });
-    expect(settle(six, setPageSetup(six, { size: 'letter' }))).toEqual([]);
+    expect(settle(before, setPageSetup(before, patch as Partial<DiagramPageSetup>))).toEqual(ids(0, 15));
+  });
+
+  it('keeps a grid page’s frames through the paper, and a flow page’s through the grid’s columns and rows', () => {
     // The grid's shape is its own, whatever the paper.
     const grid = placed(16);
     expect(settle(grid, setPageSetup(grid, { orientation: 'landscape' }))).toEqual([]);
+    expect(settle(grid, setPageSetup(grid, { size: 'letter', marginMm: 25 }))).toEqual([]);
     // A flow page's columns and rows say nothing: its steps per page do.
+    const before = placed(16, { layout: 'flow' });
     expect(settle(before, setPageSetup(before, { columns: 4, rows: 2 }))).toEqual([]);
   });
 
-  it('keeps every frame through the first page’s side where every page keeps its rows', () => {
-    // 9 steps print in 3 rows, an odd number, whether a page hands over at its spine or not.
-    const before = placed(16, { layout: 'flow' }, []);
-    expect(settle(before, setPageSetup(before, { firstPageSide: 'right' }))).toEqual([]);
-    // Page two, cut to 4 steps by the break at s13, prints in 2 rows on the right; on the left, handing over
-    // at its spine, in 3: its cells change.
-    const broken = placed(16, { layout: 'flow' });
-    expect(settle(broken, setPageSetup(broken, { firstPageSide: 'right' }))).toEqual(ids(9, 12));
-    // Three rows: appending a page makes the last page's exit the spine, and turns every row of it, in the same cells.
+  it('sends a flow page’s frames home when a page added after it makes it hand over at its spine', () => {
+    // Its rows are three either way, but it is no longer the last page, and hands over at its spine: it is packed afresh.
     const one = placed(9, { layout: 'flow' }, []);
     expect(flowPagePlan(0, 1, 'left', 3)).not.toEqual(flowPagePlan(0, 2, 'left', 3));
-    expect(settle(one, insertSteps(one, [createStep(() => 'next')], one.steps.length))).toEqual([]);
+    expect(settle(one, insertSteps(one, [createStep(() => 'next')], one.steps.length))).toEqual(ids(0, 8));
+  });
+
+  it('sends a flow page’s frames home when an edit earlier renumbers it, though it holds the same steps on the same side', () => {
+    // Breaks at s1 and s3 add two pages in front of the one s4 starts: still a right page, of the same steps, but the
+    // fourth now, which a grid would keep (above) and a packed flow packs afresh.
+    const before = placed(16, { layout: 'flow' }, [4, 13]);
+    expect(cellSlots(before).slots.get('s5')).toEqual({ page: 1, first: 's4', k: 1 });
+    const after = setStepBreakBefore(setStepBreakBefore(before, 's1', true), 's3', true);
+    expect(cellSlots(after).slots.get('s5')).toEqual({ page: 3, first: 's4', k: 1 });
+    expect(settle(before, after)).toEqual(ids(0, 15));
+  });
+
+  it('sends home only the frames of the flow page a turn is added to, moved on or taken from', () => {
+    const before = placed(16, { layout: 'flow' });
+    const turned = insertSteps(before, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'turn')], stepIndex(before, 's3'));
+    expect(settle(before, turned)).toEqual(ids(0, 8));
+    // Moved from before s3 to before s10, on page two.
+    expect(settle(turned, moveStep(turned, 'turn', stepIndex(turned, 's10') - 1)).sort()).toEqual([...ids(0, 8), ...ids(9, 12)].sort());
+    expect(settle(turned, removeSteps(turned, ['turn']))).toEqual(ids(0, 8));
+    // After the last step: the last page's.
+    expect(settle(before, insertSteps(before, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'end')], before.steps.length))).toEqual(ids(13, 15));
+  });
+
+  it('sends home the frames of a flow page whose stored arrangement goes — Re-pack Page — and only those', () => {
+    const arrangement = (signature: string): DiagramPageArrangement => ({ signature, k: 1, steps: {} });
+    const before = withPageArrangements(placed(16, { layout: 'flow' }), { s0: arrangement('a'), s9: arrangement('b') });
+    expect(settle(before, withoutPageArrangements(before, ['s9']))).toEqual(ids(9, 12));
+    expect(settle(before, withoutPageArrangements(before, null))).toEqual(ids(0, 12));
+    // One the page holds in its place is another home too.
+    expect(settle(before, withPageArrangements(before, { s0: arrangement('c'), s9: arrangement('b') }))).toEqual(ids(0, 8));
+    // A page with none stored keeps its frames through an edit that leaves it its structure.
+    expect(settle(before, setStepText(before, 's14', 'Fold.'))).toEqual([]);
+    // Grid pages hold no arrangement: they keep their own rule.
+    const grid = withPageArrangements(placed(16), { s0: arrangement('a') });
+    expect(settle(grid, withoutPageArrangements(grid, null))).toEqual([]);
+  });
+
+  it('keeps every flow frame through an edit that leaves every page’s signature alone: a caption, a picture, a mark, a pin, the title', () => {
+    const before = placed(16, { layout: 'flow' });
+    const label = { id: 'label-1', kind: 'label' as const, from: [0.5, 0.5] as [number, number], to: [0.5, 0.5] as [number, number], text: 'A' };
+    const edits = [
+      setStepText(before, 's3', 'A much longer instruction that will be cut to its box at last.'),
+      setStepPicture(before, 's3', RASTER),
+      removeStepPicture(before, 's4'),
+      editStepAnnotations(before, 's3', () => [label]),
+      setUploadPose(setStepPicture(before, 's3', RASTER), 's3', { rotationQuarterTurns: 1, mirrored: true }),
+      setDiagramTitle(before, 'Swan'),
+      setDiagramStyle(before, { preset: 'default' }),
+      setPageSetup(before, { pageNumbers: { enabled: true, first: 4 } }),
+      { ...before, steps: before.steps.map((each) => (each.id === 's5' ? { ...each, place: { frame: [9, 9] as [number, number] } } : each)) },
+    ];
+    for (const after of edits) {
+      expect(after).not.toBe(before);
+      expect(settle(before, after)).toEqual([]);
+    }
   });
 
   it('sends a left page’s frames home when a page added or removed after it changes its rows to hand over at its spine', () => {
@@ -301,16 +351,23 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
   });
 
   it.each([
+    ['path width', { pathWidthMm: 30 }],
+    ['path colour', { pathColor: '#d6e8f5' }],
+    ['path shown', { showPath: false }],
+  ] as const)('keeps every flow frame through the %s', (_label, patch) => {
+    const before = placed(16, { layout: 'flow' });
+    expect(settle(before, setPageSetup(before, patch))).toEqual([]);
+  });
+
+  it.each([
     ['paper size', { size: 'letter' }],
     ['margin', { marginMm: 25 }],
     ['title shown', { showTitle: false }],
     ['page numbers', { pageNumbers: { enabled: false, first: 4 } }],
-    ['path width', { pathWidthMm: 30 }],
-    ['path colour', { pathColor: '#d6e8f5' }],
-    ['path shown', { showPath: false }],
-  ] as const)('keeps every frame through the %s', (_label, patch) => {
-    const before = placed(16, { layout: 'flow' });
-    expect(settle(before, setPageSetup(before, patch))).toEqual([]);
+    ['packing', { flowNesting: 0.2, flowBands: 4 }],
+  ] as const)('keeps every grid frame through the %s', (_label, patch) => {
+    const before = placed();
+    expect(settle(before, setPageSetup(before, patch as Partial<DiagramPageSetup>))).toEqual([]);
   });
 
   it('keeps every frame through the title, the style and an instruction', () => {

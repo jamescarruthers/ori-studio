@@ -68,6 +68,7 @@ import {
   type LaneStop,
 } from './flowLane';
 import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableArea, type PlannedPage } from './pagePlan';
+import { titleShown } from './pageSignature';
 import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';
 import { placeCell, placementClashes, type PageBox, type PlacementClash } from './pagePlacement';
@@ -985,7 +986,7 @@ export function layoutDiagramPages(
   const paper = printPaper(setup);
   const { widthMm: W, heightMm: H, marginMm: m } = paper;
   const flow = setup.layout === 'flow';
-  const showTitle = setup.showTitle && title.trim() !== '';
+  const showTitle = titleShown(setup, title);
   const headH = showTitle ? HEADER_MM : 0;
   const footH = setup.pageNumbers.enabled ? FOOTER_MM : 0;
   const bandWidthMm = setup.pathWidthMm;

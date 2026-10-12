@@ -136,7 +136,7 @@ prototype does; only real steps are kept):
 ### Phase 1: model and file
 - [x] The five parameters in `DiagramPageSetup` with defaults, ranges, reading and writing (unsaid = default), tests.
 - [x] `DiagramDocument.pageArrangements` (by page's first step id: signature, `k`, per step box, scale, band, bend), rounding, reading (malformed dropped, newer carried) and writing, round-trip tests, v1 contract text.
-- [ ] `pageSignature(document, page)` and the rule in `settlePlaces`.
+- [x] `pageSignature(document, page)` and the rule in `settlePlaces`.
 
 ### Phase 2: packing
 - [ ] `flowPacking.ts`: the port, pure and deterministic, with unit tests (plans, odd bands, bend steps, nesting, steadiness cap, short last page, fixed band counts) and a time budget (a 13-step page packs within 50 ms under vitest).
