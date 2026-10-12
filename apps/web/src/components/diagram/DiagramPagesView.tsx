@@ -65,7 +65,8 @@ function pageImageUrl(
  * part under it; the arrows nudge what is selected, and a drag moves it
  * (Decision 7, `usePagePlacement`, drawn by `DiagramPagesPlacement`). With no
  * part selected the arrows move the selection. A press elsewhere on a page is
- * a question about the page, which brings the Page tab forward; a press that
+ * a question about the page, which brings the Page tab forward; any press on
+ * a page makes it the panes' "this page" (`pageInView.ts`); a press that
  * ends a pan is none of these; a double press opens nothing. An enlarge arrow
  * (Revision 2) is a target for the pointer only, over where the page prints
  * it: a press selects the enlarged step it leads to, which the keyboard
@@ -109,6 +110,7 @@ export function DiagramPagesView({
     onPanningStart,
     onPanningStop,
     pressWasPan,
+    pressPage,
     current,
     count,
     goToPage,
@@ -126,13 +128,16 @@ export function DiagramPagesView({
   const mm = (value: number) => value * PAGES_PX_PER_MM;
   const tabStop = selectedStepId ?? pages?.layout.pages[0]?.cells[0]?.stepId ?? null;
 
-  const onCellClick = (event: MouseEvent, stepId: string) => {
+  // A press on a step, a turn or an arrow on page `index` selects it, and makes that page "this page" for the panes.
+  const onCellClick = (event: MouseEvent, stepId: string, index: number) => {
     event.stopPropagation();
-    if (!pressWasPan()) onSelect(stepId);
+    if (pressWasPan()) return;
+    onSelect(stepId);
+    pressPage(index, stepId);
   };
 
   // A turn between steps (D22): its glyph's box, selected as a cell is; it opens nothing.
-  const turnTarget = (turn: LayoutPage['turns'][number], between: TurnBetween) => (
+  const turnTarget = (turn: LayoutPage['turns'][number], between: TurnBetween, index: number) => (
     <div
       key={turn.id}
       ref={cellRef(turn.id)}
@@ -148,7 +153,7 @@ export function DiagramPagesView({
         width: mm(turn.box.w + 2 * TURN_TARGET_PAD_MM),
         height: mm(turn.box.h + 2 * TURN_TARGET_PAD_MM),
       }}
-      onClick={(event) => onCellClick(event, turn.id)}
+      onClick={(event) => onCellClick(event, turn.id, index)}
       onDoubleClick={(event) => event.stopPropagation()}
     />
   );
@@ -205,7 +210,9 @@ export function DiagramPagesView({
                     className={styles.page}
                     style={{ left: PAGES_PAD, top, width: pageW, height: pageH }}
                     onClick={() => {
-                      if (!pressWasPan()) onPageClick();
+                      if (pressWasPan()) return;
+                      pressPage(index, selectedStepId);
+                      onPageClick();
                     }}
                   >
                     {isNear(index) && page.band && page.band.curves.length > 0 && (
@@ -240,7 +247,11 @@ export function DiagramPagesView({
                           {page.turns
                             .filter((turn) => turn.beforeStepId === cell.stepId)
                             .map((turn) =>
-                              turnTarget(turn, { before: cell.number > 1 ? cell.number - 1 : null, after: cell.number })
+                              turnTarget(
+                                turn,
+                                { before: cell.number > 1 ? cell.number - 1 : null, after: cell.number },
+                                index
+                              )
                             )}
                           {empty && (
                             <div
@@ -306,7 +317,7 @@ export function DiagramPagesView({
                             onPointerUp={placement.end}
                             onPointerCancel={placement.cancel}
                             onLostPointerCapture={placement.lost}
-                            onClick={(event) => onCellClick(event, cell.stepId)}
+                            onClick={(event) => onCellClick(event, cell.stepId, index)}
                             onDoubleClick={(event) => {
                               event.stopPropagation();
                             }}
@@ -316,7 +327,7 @@ export function DiagramPagesView({
                     })}
                     {page.turns
                       .filter((turn) => turn.beforeStepId === null)
-                      .map((turn) => turnTarget(turn, { before: page.cells.at(-1)?.number ?? null, after: null }))}
+                      .map((turn) => turnTarget(turn, { before: page.cells.at(-1)?.number ?? null, after: null }, index))}
                     {/* The enlarge arrows where the page prints them, lifted to their areas. */}
                     {isNear(index) &&
                       pages.zoomArrows(index).map((arrow) => (
@@ -331,7 +342,7 @@ export function DiagramPagesView({
                             width: mm(arrow.box.w + 2 * TURN_TARGET_PAD_MM),
                             height: mm(arrow.box.h + 2 * TURN_TARGET_PAD_MM),
                           }}
-                          onClick={(event) => onCellClick(event, arrow.beforeStepId)}
+                          onClick={(event) => onCellClick(event, arrow.beforeStepId, index)}
                           onDoubleClick={(event) => {
                             event.stopPropagation();
                           }}

@@ -24,8 +24,9 @@ const OBSERVES = typeof IntersectionObserver !== 'undefined';
 /**
  * The Pages view's behaviour (AGENTS.md › Panel components): its camera — the
  * BP panes' (`useViewportSurface`), registered with the Diagram's own viewport
- * keys — which page is in the middle of the view (published for the panes,
- * `pageInView.ts`), which pages are near enough
+ * keys — which page is in the middle of the view, which are on screen and
+ * which was last pressed (published for the panes, `pageInView.ts`), which
+ * pages are near enough
  * to compose, the selected step brought into view and given the focus, and
  * whether a press was really the end of a pan.
  */
@@ -63,20 +64,46 @@ export function usePagesView({
   const { containerRef, transformRef, handleViewportShortcut, onTransformed: cameraTransformed } = camera;
   useEffect(() => registerDiagramViewCamera(handleViewportShortcut), [handleViewportShortcut]);
 
-  // The page in the middle of the view, for the panes too once the pages are
-  // laid out: held to the pages there are, which a re-cut can make fewer.
-  const [middlePage, setCurrent] = useState(0);
-  const current = Math.min(middlePage, Math.max(0, count - 1));
-  usePublishPageInView(pages ? current : null);
+  // The page in the middle of the view and the pages on screen, and the page
+  // last pressed, for the panes too once the pages are laid out (`pageInView.ts`):
+  // held to the pages there are, which a re-cut can make fewer.
+  const [onScreen, setOnScreen] = useState<{ middle: number; first: number; last: number }>({ middle: 0, first: 0, last: 0 });
+  const [pressed, setPressed] = useState<{ page: number; selection: string | null } | null>(null);
+  const lastPage = Math.max(0, count - 1);
+  const current = Math.min(onScreen.middle, lastPage);
+  const first = Math.min(onScreen.first, lastPage);
+  const lastShown = Math.min(onScreen.last, lastPage);
+  // A press stands while its page is on screen and the selection is what the press left.
+  const pressedPage =
+    pressed && pressed.selection === selectedStepId && pressed.page >= first && pressed.page <= lastShown
+      ? pressed.page
+      : null;
+  const view = useMemo(
+    () => (pages ? { middle: current, first, last: lastShown, pressed: pressedPage } : null),
+    [pages, current, first, lastShown, pressedPage]
+  );
+  usePublishPageInView(view);
   const onTransformed = useCallback(
     (ref: ReactZoomPanPinchRef, state: { scale: number; positionY: number }) => {
       cameraTransformed(ref, state);
       const height = containerRef.current?.clientHeight ?? 0;
-      const middle = (height / 2 - state.positionY) / state.scale;
-      setCurrent(Math.min(Math.max(0, Math.floor((middle - PAGES_PAD) / pitch)), Math.max(0, count - 1)));
+      const top = -state.positionY / state.scale;
+      const bottom = (height - state.positionY) / state.scale;
+      const clamp = (index: number) => Math.min(Math.max(0, index), Math.max(0, count - 1));
+      // A page is on screen from its top edge, PAGES_PAD + index × pitch, to its bottom, pageH below.
+      const next = {
+        middle: clamp(Math.floor(((top + bottom) / 2 - PAGES_PAD) / pitch)),
+        first: clamp(Math.floor((top - PAGES_PAD - pageH) / pitch) + 1),
+        last: clamp(Math.ceil((bottom - PAGES_PAD) / pitch) - 1),
+      };
+      setOnScreen((previous) =>
+        previous.middle === next.middle && previous.first === next.first && previous.last === next.last ? previous : next
+      );
     },
-    [cameraTransformed, containerRef, pitch, count]
+    [cameraTransformed, containerRef, pitch, pageH, count]
   );
+  /** A press on page `index` — its paper, or a step or turn on it — leaving `selection` selected: "this page" for the panes. */
+  const pressPage = useCallback((index: number, selection: string | null) => setPressed({ page: index, selection }), []);
 
   /**
    * Turn to a page: frame it whole, its caption and the column's margin
@@ -209,6 +236,7 @@ export function usePagesView({
     onPanningStart,
     onPanningStop,
     pressWasPan,
+    pressPage,
     current,
     count,
     goToPage,

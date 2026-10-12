@@ -11,9 +11,8 @@ const placed = (step: DiagramStep) => Boolean(step.place || step.placeNewer);
 
 /**
  * The Page pane's steps placed by hand: how many, and the way back to the
- * layout's places for the current page — the page in view in the Pages
- * view, else the selected step's (`useCurrentDiagramPage`) — or for every
- * page.
+ * layout's places for the current page — the page last acted on
+ * (`useCurrentDiagramPage`) — or for every page.
  */
 export function DiagramPagePlacements() {
   const { t } = useTranslation();

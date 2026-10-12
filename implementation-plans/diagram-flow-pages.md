@@ -339,6 +339,19 @@ As built (Phase 3, part 2):
   into a step deleted, `pageImageUrl`, `placementState`, tokens and module
   classes in the placement styles (N3, N4).
 
+As built (the second review's UI fixes, 2026-10-11):
+
+- "This page" is the page the user last acted on (R2-U1). The Pages view
+  publishes the page under its middle, the pages on screen and the page last
+  pressed — its paper, or a step, turn or arrow on it — which stands while it
+  is on screen and the selection is what the press left (`pageInView.ts`).
+  `currentDiagramPage` takes the pressed page, else the selected step's page
+  while that page is on screen, else the middle; with no Pages view, the
+  selected step's page. So with two pages on screen, the Page pane's row and
+  Reset This Page act on the page holding the step just clicked, never an
+  off-screen step on the page under the middle. The pager still reads the
+  middle.
+
 ## Affected Areas
 
 - `apps/web/src/diagram/document/diagramDocument.ts`, `diagramFile.ts`,

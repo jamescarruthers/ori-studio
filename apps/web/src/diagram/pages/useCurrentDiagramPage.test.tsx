@@ -11,12 +11,14 @@ import {
   type DiagramEntry,
 } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
-import { usePublishPageInView } from './pageInView';
+import { usePublishPageInView, type PagesInView } from './pageInView';
 import { currentDiagramPage, pageName, useCurrentDiagramPage, type CurrentDiagramPage } from './useCurrentDiagramPage';
 
 /**
  * The page a pane's "this page" means (`implementation-plans/diagram-flow-pages.md`,
- * UI): the page in view in the Pages view, else the selected step's, else
+ * UI; review R2-U1): the page the user last acted on — in the Pages view the
+ * page pressed while it is on screen, else the selected step's while its page
+ * is on screen, else the middle of the view — else the selected step's, else
  * page 1.
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -35,9 +37,17 @@ function diagram(size: number, turnsBefore: readonly number[] = [], trailingTurn
   });
 }
 
+/** Where the Pages view stands: its middle page, the pages on screen (just the middle's, unless said) and the page pressed. */
+const at = (middle: number, first = middle, last = middle, pressed: number | null = null): PagesInView => ({
+  middle,
+  first,
+  last,
+  pressed,
+});
+
 describe('currentDiagramPage', () => {
   it('is page 1 with nothing selected and no page in view, and nothing without a diagram', () => {
-    expect(currentDiagramPage(null, 2, 's5')).toBeNull();
+    expect(currentDiagramPage(null, at(2), 's5')).toBeNull();
     const page = currentDiagramPage(diagram(10), null, null)!;
     expect(page.index).toBe(0);
     expect(page.name).toBe(1);
@@ -57,18 +67,30 @@ describe('currentDiagramPage', () => {
     expect(currentDiagramPage(document, null, 't-end')!.index).toBe(2);
   });
 
-  it('is the page in view over any selection, held to the pages there are', () => {
-    expect(currentDiagramPage(diagram(10), 2, 's1')!.index).toBe(2);
-    expect(currentDiagramPage(diagram(10), 0, 's9')!.index).toBe(0);
+  it('is the selected step’s page while that page is on screen, though the middle of the view is on another', () => {
+    // s1 on page 1, the middle of the view on page 2, page 1 still on screen above it.
+    expect(currentDiagramPage(diagram(10), at(1, 0, 1), 's1')!.index).toBe(0);
+    // Zoomed out on every page: the selection's, wherever the middle is.
+    expect(currentDiagramPage(diagram(10), at(0, 0, 2), 's9')!.index).toBe(2);
+  });
+
+  it('is the page in the middle of the view once the selected step’s page is off screen, or nothing is selected', () => {
+    expect(currentDiagramPage(diagram(10), at(2, 1, 2), 's1')!.index).toBe(2);
+    expect(currentDiagramPage(diagram(10), at(1, 0, 2), null)!.index).toBe(1);
     // A re-cut left fewer pages than the view last counted.
-    expect(currentDiagramPage(diagram(10), 7, null)!.index).toBe(2);
+    expect(currentDiagramPage(diagram(10), at(7), null)!.index).toBe(2);
+  });
+
+  it('is the page last pressed while it is on screen, over the selection and the middle', () => {
+    expect(currentDiagramPage(diagram(10), at(0, 0, 2, 2), 's1')!.index).toBe(2);
+    expect(currentDiagramPage(diagram(10), at(1, 0, 1, 0), 's5')!.index).toBe(0);
   });
 
   it('is named as the Pages view captions it: the number it prints, else its place', () => {
     const numbered = setPageSetup(diagram(10), { pageNumbers: { enabled: true, first: 5 } });
-    expect(currentDiagramPage(numbered, 1, null)!.name).toBe(6);
+    expect(currentDiagramPage(numbered, at(1), null)!.name).toBe(6);
     const unnumbered = setPageSetup(diagram(10), { pageNumbers: { enabled: false, first: 5 } });
-    expect(currentDiagramPage(unnumbered, 1, null)!.name).toBe(2);
+    expect(currentDiagramPage(unnumbered, at(1), null)!.name).toBe(2);
     expect(pageName({ pageNumbers: { enabled: true, first: 1 } }, 0)).toBe(1);
   });
 });
@@ -86,9 +108,9 @@ describe('useCurrentDiagramPage', () => {
     });
     return null;
   }
-  /** The Pages view, as far as the panes see it: the page it has in view. */
+  /** The Pages view, as far as the panes see it: the one page it has on screen. */
   function PagesView({ page }: { page: number | null }) {
-    usePublishPageInView(page);
+    usePublishPageInView(page === null ? null : at(page));
     return null;
   }
   const render = (inView?: number | null) =>

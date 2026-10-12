@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
-import { act } from 'react';
+import { act, useEffect } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -22,6 +22,7 @@ import { readFontMetrics } from '../../diagram/fonts/fontMetrics';
 import { createFontSubsetter, type FontSubsetter } from '../../diagram/fonts/fontSubset';
 import { bandPath } from '../../diagram/pages/composeDiagramPage';
 import { preparedPages, type PreparedDiagramPages } from '../../diagram/pages/diagramPages';
+import { usePageInView, type PagesInView } from '../../diagram/pages/pageInView';
 import { clearPathColorPick, publishPathColorPick } from '../../diagram/pages/pathColorPick';
 import { TooltipProvider } from '../ui/Tooltip';
 import { focusLeavesEnterToSteps, focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
@@ -82,7 +83,8 @@ function render(
   pages: PreparedDiagramPages,
   handlers: Partial<Record<'onSelect' | 'onPageClick', () => void>> = {},
   pathColor = pages.layout.bandInk,
-  document = diagram()
+  document = diagram(),
+  selectedStepId = 'step-a'
 ) {
   const props = { onSelect: vi.fn(), onPageClick: vi.fn(), ...handlers };
   act(() =>
@@ -92,7 +94,7 @@ function render(
           pages={pages}
           failed={false}
           steps={stepsIn(document)}
-          selectedStepId="step-a"
+          selectedStepId={selectedStepId}
           pathColor={pathColor}
           fitKey="test"
           {...props}
@@ -257,6 +259,34 @@ describe('DiagramPagesView', () => {
     expect(useWorkspaceStore.getState().diagramDetail).toBeNull();
     act(() => host.querySelector<HTMLElement>('[data-page="0"]')!.click());
     expect(props.onPageClick).toHaveBeenCalledOnce();
+  });
+
+  it('makes the page last pressed the panes’ “this page”, while the selection is what the press left', () => {
+    let seen: PagesInView | null = null;
+    function Pane() {
+      const view = usePageInView();
+      useEffect(() => {
+        seen = view;
+      });
+      return null;
+    }
+    const pane = createRoot(document.createElement('div'));
+    act(() => pane.render(<Pane />));
+    onTestFinished(() => act(() => pane.unmount()));
+    const pages = preparedPages(diagram(), FONTS, subsetter);
+    render(pages);
+    expect(seen).toMatchObject({ middle: 0, first: 0, last: 0, pressed: null });
+    // Its paper, the selection left as it was.
+    act(() => host.querySelector<HTMLElement>('[data-page="0"]')!.click());
+    expect(seen).toMatchObject({ pressed: 0 });
+    // A step on it: it stands once the step it selects is the selection.
+    act(() => cells()[1]!.click());
+    expect(seen).toMatchObject({ pressed: null });
+    render(pages, {}, pages.layout.bandInk, diagram(), 'step-empty');
+    expect(seen).toMatchObject({ pressed: 0 });
+    // Another selection since, made elsewhere: the press no longer stands.
+    render(pages, {}, pages.layout.bandInk, diagram(), 'step-long');
+    expect(seen).toMatchObject({ pressed: null });
   });
 });
 

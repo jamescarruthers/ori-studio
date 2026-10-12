@@ -262,9 +262,9 @@ describe('DiagramPagePanel', () => {
 });
 
 describe('DiagramPagePanel › the current page’s own count', () => {
-  /** The Pages view, as far as the pane sees it: the page it has in view. */
+  /** The Pages view, as far as the pane sees it: the one page it has on screen. */
   function PagesView({ page }: { page: number }) {
-    usePublishPageInView(page);
+    usePublishPageInView({ middle: page, first: page, last: page, pressed: null });
     return null;
   }
   const showPage = (page: number) => {
@@ -333,7 +333,7 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(useDefault()).toBeUndefined();
   });
 
-  it('acts on the page in view in the Pages view, over the selection', () => {
+  it('acts on the page in view in the Pages view while the selected step’s page is off screen', () => {
     act(() => state().selectDiagramStep(stepsOf(state().diagram!)[0]!.id));
     showPage(1);
     // The last page holds one step, laid out for the default's nine: typing 1 gives it the page to itself.

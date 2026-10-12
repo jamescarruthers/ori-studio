@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { PAGE_STEPS_RANGE, isStep, stepsOf, type DiagramDocument, type DiagramPageSetup } from '../document/diagramDocument';
 import { countHoldsLaterPages, pageStepsRange, type PageStepsRange } from './pageCounts';
-import { usePageInView } from './pageInView';
+import { usePageInView, type PagesInView } from './pageInView';
 import { paginate, type PlannedPage } from './pagePlan';
 
 /** The page a pane's "this page" means: its index, what it is called, and how the page setup cuts it. */
@@ -26,27 +26,31 @@ export function pageName(setup: Pick<DiagramPageSetup, 'pageNumbers'>, index: nu
 
 /**
  * The page a pane acts on as "this page" (`implementation-plans/diagram-flow-pages.md`,
- * UI): the page in the middle of the Pages view while it shows one; else the
- * page the selected step prints on — a turn's is the page of the step after
- * it, or with none after it the last step's, as the pages print turns; else
- * page 1. Null for no diagram.
+ * UI): the page the user last acted on. While the Pages view shows pages,
+ * that is the page last pressed there while it is still on screen; else the
+ * selected step's page while that page is on screen; else the page in the
+ * middle of the view. With no Pages view, the selected step's page, else
+ * page 1. A step's page is the one it prints on — a turn's is the page of
+ * the step after it, or with none after it the last step's, as the pages
+ * print turns. Null for no diagram.
  */
 export function currentDiagramPage(
   document: DiagramDocument | null,
-  inView: number | null,
+  view: PagesInView | null,
   selectedId: string | null
 ): CurrentDiagramPage | null {
   if (!document) return null;
   const steps = stepsOf(document);
   const pages = paginate(steps, document.page);
   const last = pages.length - 1;
-  let index = 0;
-  if (inView !== null) {
-    index = Math.min(Math.max(0, inView), last);
-  } else if (selectedId !== null) {
-    const at = printedStepIndex(document, steps, selectedId);
-    if (at !== null) index = Math.max(0, pages.findIndex((page) => page.steps.includes(at)));
+  const at = selectedId === null ? null : printedStepIndex(document, steps, selectedId);
+  const selected = at === null ? null : Math.max(0, pages.findIndex((page) => page.steps.includes(at)));
+  let index = selected ?? 0;
+  if (view) {
+    if (view.pressed !== null) index = view.pressed;
+    else if (selected === null || selected < view.first || selected > view.last) index = view.middle;
   }
+  index = Math.min(Math.max(0, index), last);
   return {
     index,
     name: pageName(document.page, index),
@@ -79,9 +83,9 @@ export function useCurrentDiagramPage(): CurrentDiagramPage | null {
   const document = useWorkspaceStore((state) => state.diagram);
   const pagesShown = useWorkspaceStore((state) => state.diagramView === 'pages');
   const selectedId = useWorkspaceStore((state) => state.diagramSelectedStepId);
-  const inView = usePageInView();
+  const view = usePageInView();
   return useMemo(
-    () => currentDiagramPage(document, pagesShown ? inView : null, selectedId),
-    [document, pagesShown, inView, selectedId]
+    () => currentDiagramPage(document, pagesShown ? view : null, selectedId),
+    [document, pagesShown, view, selectedId]
   );
 }

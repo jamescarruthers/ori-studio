@@ -9,7 +9,7 @@ import {
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
-import { usePublishPageInView } from '../../diagram/pages/pageInView';
+import { usePublishPageInView, type PagesInView } from '../../diagram/pages/pageInView';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramPagePlacements } from './DiagramPagePlacements';
@@ -21,8 +21,10 @@ vi.mock('../../analytics/trackDiagram', async (importOriginal) => ({
 }));
 
 /**
- * The Page pane's Reset This Page (review finding U4): the page in view in the
- * Pages view, whatever is selected or not, else the selected step's page.
+ * The Page pane's Reset This Page (review findings U4, R2-U1): the page the
+ * user last acted on — in the Pages view the page pressed, else the selected
+ * step's while it is on screen, else the page in view — else the selected
+ * step's page.
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -34,15 +36,20 @@ const placedIds = () =>
 const resetPage = () =>
   [...host!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Reset This Page')!;
 
-function PagesView({ page }: { page: number | null }) {
-  usePublishPageInView(page);
+function PagesView({ view }: { view: PagesInView }) {
+  usePublishPageInView(view);
   return null;
 }
-const render = (inView?: number) =>
+/** Renders the button, with the Pages view standing on one page, or where `inView` says. */
+const render = (inView?: number | PagesInView) =>
   act(() =>
     root?.render(
       <TooltipProvider>
-        {inView !== undefined && <PagesView page={inView} />}
+        {inView !== undefined && (
+          <PagesView
+            view={typeof inView === 'number' ? { middle: inView, first: inView, last: inView, pressed: null } : inView}
+          />
+        )}
         <DiagramPagePlacements />
       </TooltipProvider>
     )
@@ -82,10 +89,27 @@ describe('DiagramPagePlacements', () => {
     expect(tracked.trackDiagramPlacementReset).toHaveBeenCalledExactlyOnceWith('step', 'page', 'pane');
   });
 
-  it('resets the page in view rather than the selected step’s', () => {
+  it('resets the page in view once the selected step’s page is off screen', () => {
     act(() => useWorkspaceStore.setState({ diagramView: 'pages' }));
     act(() => state().selectDiagramStep('s1'));
     render(1);
+    act(() => resetPage().click());
+    expect(placedIds()).toEqual(['s1']);
+  });
+
+  it('resets the selected step’s page while it is on screen, though the middle of the view is on the next', () => {
+    // Two pages on screen, page 2 under the middle; s1, on page 1, selected: its page, and no step off screen.
+    act(() => useWorkspaceStore.setState({ diagramView: 'pages' }));
+    act(() => state().selectDiagramStep('s1'));
+    render({ middle: 1, first: 0, last: 1, pressed: null });
+    act(() => resetPage().click());
+    expect(placedIds()).toEqual(['s5', 's6']);
+  });
+
+  it('resets the page last pressed while it is on screen', () => {
+    act(() => useWorkspaceStore.setState({ diagramView: 'pages' }));
+    act(() => state().selectDiagramStep('s1'));
+    render({ middle: 0, first: 0, last: 1, pressed: 1 });
     act(() => resetPage().click());
     expect(placedIds()).toEqual(['s1']);
   });
