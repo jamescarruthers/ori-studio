@@ -92,6 +92,16 @@ export function placeCell(cell: LayoutCell, step: LayoutStep, rightToLeft: boole
   return next;
 }
 
+/**
+ * Whether the flow lane follows a placed step as a hand put it (`LaneStop.placed`):
+ * any part moved or its picture's scale pinned. A step placed only by its
+ * caption's measure (`DiagramStepPlace.textWidth`) stands where the layout
+ * puts it, so the band runs through it as through any other.
+ */
+export function laneFollowsPlacement(cell: Pick<LayoutCell, 'placed'>): boolean {
+  return !!cell.placed && Object.keys(cell.placed.offsets).some((field) => field !== 'textWidth');
+}
+
 export function partBox(cell: LayoutCell, part: PagePart): PageBox {
   switch (part) {
     case 'frame': {

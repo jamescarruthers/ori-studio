@@ -188,6 +188,7 @@ describe('pageSignature', () => {
       ['a picture', setStepPicture(before, 's3', RASTER)],
       ['a mark', editStepAnnotations(before, 's3', () => [label])],
       ['a placement', setStepPlace(before, 's3', { frame: [3, 1], text: [0, 2], scale: { mmPerUnit: 0.4 } })],
+      ['a caption’s pinned width', setStepPlace(before, 's3', { textWidth: 72 })],
       ['the band’s width', setPageSetup(before, { pathWidthMm: 30 })],
       ['the band’s colour', setPageSetup(before, { pathColor: '#d6e8f5' })],
       ['the band shown', setPageSetup(before, { showPath: false })],

@@ -96,6 +96,7 @@ import {
 import {
   PACKED_TURN_GUTTER_MM,
   PICTURE_SIDE_MM,
+  captionCentreWidth,
   packFlowPage,
   packingArea,
   stepPartsInBox,
@@ -106,7 +107,16 @@ import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableAre
 import { holdsArrangement, keepsGlyphGutter, pageSignatures, titleShown } from './pageSignature';
 import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';
-import { pageOffset, partBox, placeCell, placementClashes, type PageBox, type PlacementClash } from './pagePlacement';
+import { pinnedCaptionWidth, setCaption } from './captionMeasure';
+import {
+  laneFollowsPlacement,
+  pageOffset,
+  partBox,
+  placeCell,
+  placementClashes,
+  type PageBox,
+  type PlacementClash,
+} from './pagePlacement';
 import type { Polygon } from './pagePolygons';
 import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 
@@ -436,7 +446,12 @@ export interface LayoutCell {
   placed?: {
     offsets: DiagramStepPlace;
     pin: 'applied' | 'kind' | 'empty' | null;
-    auto: { mmPerUnit: number | null; frameMm: number | null; drawMm: PageBox };
+    /**
+     * What the layout gives the step with no pin: its picture's scale and
+     * room, and — where its caption's measure is pinned — the measure its
+     * caption would have (`textWidthMm`).
+     */
+    auto: { mmPerUnit: number | null; frameMm: number | null; drawMm: PageBox; textWidthMm?: number };
   };
   clashes?: PlacementClash[];
   /** The picture's square box: where a fitted picture goes, and an empty step's placeholder. */
@@ -1232,6 +1247,7 @@ export function layoutDiagramPages(
         arrangements,
         area: packingArea(paper, headH, footH),
         margin: m,
+        paper,
         // A step's reference scale: Fit each's in its cell, before any pin — an enlarged step's, its run's.
         referenceOf: (entry) => autoScales.get(entry) ?? (entry.step.zoom ? scales.get(entry) : undefined),
         pinned: (entry) => (pinStates.get(entry) === 'applied' ? scales.get(entry)! : null),
@@ -1263,6 +1279,11 @@ export function layoutDiagramPages(
       const autoAt = auto?.mmPerUnit ?? auto?.frameMm ?? null;
       const autoH = autoAt !== null && step.picture ? pictureExtent(step.picture, autoAt).height : 0;
       const place = normalizeStepPlace(step.place);
+      // A caption whose measure is pinned is set at it, whole, from where its
+      // cell starts it; the picture and every scale were worked out from the
+      // caption as the layout sets it, so nothing else changes for it.
+      const pinnedText = pinnedCaptionWidth(place, paper);
+      const autoDraw = { x: x + (cellW - roomW) / 2, y: pictureY, w: roomW, h: Math.min(Math.max(box, autoH), roomH(entry)) };
       const cell: LayoutCell = {
         stepId: step.id,
         number: index + 1,
@@ -1270,7 +1291,20 @@ export function layoutDiagramPages(
         pictureMm: { x: pictureX, y: pictureY, size: box },
         drawMm: { x: x + (cellW - drawW) / 2, y: pictureY, w: drawW, h: drawH },
         inkMm: { x: x + (cellW - ink.width) / 2, y: pictureY + (drawH - ink.height) / 2, w: ink.width, h: ink.height },
-        ...(place ? { placed: { offsets: place, pin, auto: { mmPerUnit: auto?.mmPerUnit ?? null, frameMm: auto?.frameMm ?? null, drawMm: { x: x + (cellW - roomW) / 2, y: pictureY, w: roomW, h: Math.min(Math.max(box, autoH), roomH(entry)) } } } } : {}),
+        ...(place
+          ? {
+              placed: {
+                offsets: place,
+                pin,
+                auto: {
+                  mmPerUnit: auto?.mmPerUnit ?? null,
+                  frameMm: auto?.frameMm ?? null,
+                  drawMm: autoDraw,
+                  ...(pinnedText !== null ? { textWidthMm: textWidth } : {}),
+                },
+              },
+            }
+          : {}),
         mmPerUnit: scale?.mmPerUnit ?? null,
         frameMm: scale?.frameMm ?? null,
         scaleReduced: scale?.reduced ?? false,
@@ -1279,10 +1313,10 @@ export function layoutDiagramPages(
         text: {
           x: x + cellW * 0.1,
           firstBaseline: pictureY + drawH + TEXT_GAP_MM,
-          widthMm: textWidth,
-          lines: text.lines,
+          widthMm: pinnedText ?? textWidth,
+          lines: pinnedText === null ? text.lines : setCaption(step.text, pinnedText, setter),
         },
-        textOverflow: overflow,
+        textOverflow: pinnedText === null && overflow,
       };
       // Placed by hand on top of its home: every grid row reads left to right.
       return placeCell(cell, step, false, setter);
@@ -1300,7 +1334,7 @@ export function layoutDiagramPages(
             row: band,
             rightToLeft: band % 2 === 1,
             ...(cell.bend ? { bend: true } : {}),
-            ...(cell.placed ? { placed: true } : {}),
+            ...(laneFollowsPlacement(cell) ? { placed: true } : {}),
           };
         })
       : []
@@ -1436,6 +1470,8 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   area: PackRect;
   /** The page's margin: one too narrow for a turn at the page's edge has the area give up what it lacks. */
   margin: number;
+  /** The paper, which a caption's pinned measure is held to (`pinnedCaptionWidth`). */
+  paper: PrintPaper;
   referenceOf: (entry: T) => CellScale | undefined;
   pinned: (entry: T) => CellScale | null;
   pinState: (entry: T) => 'applied' | 'kind' | 'empty' | null;
@@ -1515,10 +1551,13 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   const arrangedCell = (entry: T, place: DiagramArrangedStep): LayoutCell => {
     const { step, index } = entry;
     const box = arrangedBox(place);
-    const measure = arrangedCaptionWidth(box);
-    const lines =
-      step.text.trim() === '' ? [] : setter.paragraph(step.text, measure, STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER).lines;
-    const room = arrangedPictureRoom(box, lines.length);
+    const autoMeasure = arrangedCaptionWidth(box);
+    const autoLines = setCaption(step.text, autoMeasure, setter);
+    // A pinned measure sets the caption alone: its picture's room is read from the caption as its box sets it.
+    const pinnedText = pinnedCaptionWidth(step.place, input.paper);
+    const measure = pinnedText ?? autoMeasure;
+    const lines = pinnedText === null ? autoLines : setCaption(step.text, pinnedText, setter);
+    const room = arrangedPictureRoom(box, autoLines.length);
     const kept = keptScale(step, place.scale, room);
     // An enlarged step is measured against its area as that prints here: each page draws at its own scale.
     const run = input.zoomAreasOf.get(entry);
@@ -1535,7 +1574,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     const placeholder = Math.min(room.w, room.h);
     const autoSize = sizeAt(step.picture, auto) ?? { w: placeholder, h: placeholder };
     const drawnSize = sizeAt(step.picture, drawn) ?? autoSize;
-    const parts = stepPartsInBox(box, drawnSize, measure);
+    const parts = stepPartsInBox(box, drawnSize, captionCentreWidth(box.w, pinnedText ?? undefined));
     const square = Math.min(drawnSize.w, drawnSize.h);
     const offsets = normalizeStepPlace(step.place);
     // What it asks its box for: its kept scale, or the window a new Size asks for, whole.
@@ -1567,7 +1606,8 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
               auto: {
                 mmPerUnit: auto?.mmPerUnit ?? null,
                 frameMm: auto?.frameMm ?? null,
-                drawMm: stepPartsInBox(box, autoSize, measure).picture,
+                drawMm: stepPartsInBox(box, autoSize, autoMeasure).picture,
+                ...(pinnedText !== null ? { textWidthMm: autoMeasure } : {}),
               },
             },
           }
@@ -1619,8 +1659,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
       if (!measured) continue;
       const extent = pictureExtent(measured, at);
       const box = arrangedBox(place);
-      const lines =
-        step.text.trim() === '' ? 0 : setter.paragraph(step.text, arrangedCaptionWidth(box), STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER).lines.length;
+      const lines = setCaption(step.text, pinnedCaptionWidth(step.place, input.paper) ?? arrangedCaptionWidth(box), setter).length;
       const held = grownToHold(box, { w: extent.width, h: extent.height }, lines, pageArea);
       if (held === box) continue;
       placed[step.id] = { ...place, box: [held.x, held.y, held.w, held.h] };
@@ -1648,7 +1687,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     if (!arrangement) {
       const plan = plans[pageIndex]!;
       const references = new Map<string, DiagramPlaceScale>();
-      const packSteps = entries.map((entry) => packStep(entry, input.referenceOf(entry), setter, references));
+      const packSteps = entries.map((entry) => packStep(entry, input.referenceOf(entry), setter, references, input.paper));
       const found = packFlowPage(
         {
           steps: packSteps,
@@ -1688,13 +1727,17 @@ function packStep(
   entry: ReferenceCell,
   reference: CellScale | undefined,
   setter: TextSetter,
-  references: Map<string, DiagramPlaceScale>
+  references: Map<string, DiagramPlaceScale>,
+  paper: PrintPaper
 ): PackStep {
   const { step, index, box } = entry;
+  // A caption's pinned measure is packed for: its lines, and its box's width.
+  const textWidth = pinnedCaptionWidth(step.place, paper);
   const base = {
     id: step.id,
     numberWidth: setter.line(String(index + 1), STEP_NUMBER_SIZE_MM, 700).widthMm,
     text: step.text,
+    ...(textWidth !== null ? { textWidth } : {}),
     turnsBefore: keepsGlyphGutter(step, index),
   };
   const at = reference ? (reference.mmPerUnit ?? reference.frameMm) : null;

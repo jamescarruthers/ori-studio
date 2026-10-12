@@ -31,6 +31,8 @@ import { zoomReadout } from '../zoom/zoomActions';
 import { adoptPageArrangements, dropStalePageArrangements, repackPages } from './pageArrangements';
 import { pageLayoutFixtures } from './pageLayouts.fixtures';
 import { cellSlots, settlePlaces } from './stepPlaces';
+import { setStepPlace } from '../document/stepPlace';
+import { captionStartShift } from './captionMeasure';
 
 /**
  * Held means held (`implementation-plans/diagram-flow-packing.md`, Goal and
@@ -148,6 +150,51 @@ describe('a held page', () => {
       }
       // A long caption, a wider capture and a photo are each an edit of every step sampled.
       expect(edits).toBeGreaterThanOrEqual(3 * sampled(document).length);
+    }
+  );
+});
+
+describe('a caption resized on a held page (`diagram-caption-resize.md`)', () => {
+  it.each(pageLayoutFixtures().map(({ name, document }) => [name, document] as const))(
+    'sets only that caption, every other step byte for byte, and re-packs to hold it: %s',
+    (name, fixture) => {
+      const document = adopted(fixture);
+      const flow = document.page.layout === 'flow';
+      const first = layOut(document);
+      const before = cellsOf(document);
+      // A fixture with no caption sampled (no steps, only enlarged or a newer build's) has none to resize.
+      const texted = sampled(document).filter((id) => (before.get(id)?.text.lines.length ?? 0) > 0);
+      if (texted.length === 0) return;
+      for (const stepId of texted) {
+        const at = before.get(stepId)!;
+        for (const textWidth of [at.text.widthMm + 25, Math.max(14, at.text.widthMm - 10)].map((mm) => Math.round(mm * 10) / 10)) {
+          const label = `${name}: ${stepId} at ${textWidth} mm`;
+          const landed = committed(document, setStepPlace(document, stepId, { textWidth }));
+          // Not structure: every page keeps its arrangement, and nothing is packed again.
+          expect(landed.pageArrangements, label).toBe(document.pageArrangements);
+          const layout = layOut(landed);
+          expect(layout.packed, label).toBeUndefined();
+          const after = new Map(layout.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell] as const)));
+          for (const [id, cell] of before) if (id !== stepId) expect(JSON.stringify(after.get(id)), `${label}: ${id}`).toBe(JSON.stringify(cell));
+          const cell = after.get(stepId)!;
+          expect([cell.cellMm, cell.numberAt, cell.drawMm, cell.mmPerUnit, cell.frameMm], label).toEqual([at.cellMm, at.numberAt, at.drawMm, at.mmPerUnit, at.frameMm]);
+          expect(cell.text.widthMm, label).toBeCloseTo(textWidth, 9);
+          expect(cell.text.x, label).toBeCloseTo(at.text.x + captionStartShift(at, undefined, textWidth), 9);
+          if (flow) expect(layout.pages.map((page) => page.band), label).toEqual(first.pages.map((page) => page.band));
+        }
+      }
+      if (!flow) return;
+      // Re-pack Page honours the pin: the step's box holds its caption, its side room either side.
+      const stepId = texted[0]!;
+      const textWidth = Math.round((before.get(stepId)!.text.widthMm + 25) * 10) / 10;
+      const pinned = committed(document, setStepPlace(document, stepId, { textWidth }));
+      const page = cellSlots(pinned).pages.findIndex((ids) => ids.includes(stepId));
+      const repacked = adopted(committed(pinned, repackPages(pinned, page)));
+      const cell = cellsOf(repacked).get(stepId)!;
+      expect(cell.cellMm.w, name).toBeGreaterThanOrEqual(textWidth + 4 - 0.01);
+      expect(cell.text.x, name).toBeGreaterThanOrEqual(cell.cellMm.x + 1.75 - 0.01);
+      expect(cell.text.x + textWidth, name).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w - 1.75 + 0.01);
+      expect(cell.overflow, name).toBeUndefined();
     }
   );
 });

@@ -106,6 +106,13 @@ export interface PackStep {
   numberWidth: number;
   /** Its caption, set by the page's text setter. */
   text: string;
+  /**
+   * Its caption's measure, pinned by hand (`DiagramStepPlace.textWidth`), mm:
+   * its caption is set at this at every scale, and its box is at least this
+   * and the side room wide. Absent, the measure follows its picture's width
+   * ({@link captionWidthFor}).
+   */
+  textWidth?: number;
   /** Turns stand before it, so it keeps their gutter before it in its band. */
   turnsBefore: boolean;
 }
@@ -201,6 +208,25 @@ export function captionWidthFor(pictureWidth: number): number {
 }
 
 /**
+ * How wide a caption is taken to be where a box `boxWidth` mm wide centres
+ * it (`stepPartsInBox`): the measure the box gives it, read back from its
+ * picture's room (`arrangedCaptionWidth`) — whatever the caption's pinned
+ * measure (`DiagramStepPlace.textWidth`, `pinned`) — but for a pin past the
+ * automatic cap under a picture wider than the cap, which is taken as wide as
+ * the pin, up to the picture's room. So a pin keeps the caption's left edge
+ * where its box's automatic caption starts (its lines are left-aligned), and
+ * never jumps it when first set; it is centred under a wide picture as far
+ * as that picture reaches; and a box packed for a pin, its measure and the
+ * side room wide, holds it with the side room either side.
+ */
+export function captionCentreWidth(boxWidth: number, pinned?: number): number {
+  const room = boxWidth - PICTURE_SIDE_MM;
+  const auto = captionWidthFor(room);
+  if (pinned === undefined || pinned <= CAPTION_WIDTH_MM.max || room <= CAPTION_WIDTH_MM.max) return auto;
+  return Math.min(pinned, room);
+}
+
+/**
  * Where a step's parts go in its box: its number at the top left, its
  * picture centred across under it, and its caption, set at `captionWidth`,
  * centred across under the picture.
@@ -281,6 +307,8 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
   const hFix = new Float64Array(n);
   const least = new Float64Array(n);
   const gapBefore = new Float64Array(n);
+  // A caption's pinned measure, or 0 where it follows its picture.
+  const pinned = new Float64Array(n);
   for (let i = 0; i < n; i += 1) {
     const s = i % real;
     const step = steps[s]!;
@@ -294,6 +322,7 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
     hFix[i] = marksH;
     least[i] = step.numberWidth;
     gapBefore[i] = i < real && step.turnsBefore ? PACKED_TURN_GUTTER_MM : STEP_GAP_MM;
+    pinned[i] = step.textWidth !== undefined && Number.isFinite(step.textWidth) && step.textWidth > 0 ? step.textWidth : 0;
   }
 
   // Each step's caption, set once per measure: its lines, and how many.
@@ -311,16 +340,32 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
     return slot;
   };
   const linesAt = (i: number, measure: number) => lineCounts[setAt(of[i]!, measure)]!;
+  // A pinned caption, set once at its own measure, whatever the scale.
+  const pinnedSets: (SetLine[] | undefined)[] = new Array(real);
+  const pinnedSet = (s: number): SetLine[] => {
+    let lines = pinnedSets[s];
+    if (!lines) {
+      const text = steps[s]!.text;
+      lines = text.trim() === '' ? [] : setter.paragraph(text, pinned[s]!, STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER).lines;
+      pinnedSets[s] = lines;
+    }
+    return lines;
+  };
 
   // A box at page scale k (the prototype's `box`).
   const pictureW = (i: number, k: number) => wGrow[i]! * k + wFix[i]!;
   const pictureH = (i: number, k: number) => hGrow[i]! * k + hFix[i]!;
+  // A pinned caption keeps the side room a picture has, in a box no narrower
+  // than an automatic caption's least, so its box always holds it where it
+  // centres it (`captionCentreWidth`).
+  const captionNeeds = (i: number, pw: number) =>
+    pinned[i]! > 0 ? Math.max(pinned[i]! + PICTURE_SIDE_MM, CAPTION_WIDTH_MM.min) : captionWidthFor(pw);
   const widthAt = (i: number, k: number) => {
     const pw = pictureW(i, k);
-    return Math.max(pw + PICTURE_SIDE_MM, captionWidthFor(pw), least[i]!);
+    return Math.max(pw + PICTURE_SIDE_MM, captionNeeds(i, pw), least[i]!);
   };
   const heightAt = (i: number, k: number) => {
-    const lines = linesAt(i, captionWidthFor(pictureW(i, k)));
+    const lines = pinned[i]! > 0 ? pinnedSet(of[i]!).length : linesAt(i, captionWidthFor(pictureW(i, k)));
     return NUMBER_ROOM_MM + pictureH(i, k) + (lines ? CAPTION_TOP_MM + lines * STEP_TEXT_LEADING_MM : 0);
   };
 
@@ -423,7 +468,7 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
   const floorsBefore = new Float64Array(n + 1);
   for (let i = 0; i < n; i += 1) {
     widthFixed[i] = wFix[i]! + PICTURE_SIDE_MM;
-    widthFloor[i] = Math.max(CAPTION_WIDTH_MM.min, least[i]!, widthFixed[i]!);
+    widthFloor[i] = Math.max(captionNeeds(i, 0), CAPTION_WIDTH_MM.min, least[i]!, widthFixed[i]!);
     floorsBefore[i + 1] = floorsBefore[i]! + widthFloor[i]! + gapBefore[i]!;
   }
   /** The least a band of steps [from, to) is across at any scale, with the steps in the bends either end of it (−1 for none). */
@@ -694,15 +739,16 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
   const packedSteps = steps.map((step, i): PackedStep => {
     const at = placed[i]!;
     const pw = pictureW(i, k);
-    const measure = captionWidthFor(pw);
+    const pin = pinned[i]! > 0 ? pinned[i]! : null;
+    const measure = pin ?? captionWidthFor(pw);
     const box = { x: at.x, y: at.y, w: widthAt(i, k), h: heightAt(i, k) };
-    const parts = stepPartsInBox(box, { w: pw, h: pictureH(i, k) }, measure);
+    const parts = stepPartsInBox(box, { w: pw, h: pictureH(i, k) }, pin === null ? measure : captionCentreWidth(box.w, pin));
     return {
       id: step.id,
       box,
       picture: parts.picture,
       numberAt: parts.numberAt,
-      caption: { ...parts.caption, widthMm: measure, lines: lineSets[setAt(i, measure)]! },
+      caption: { ...parts.caption, widthMm: measure, lines: pin === null ? lineSets[setAt(i, measure)]! : pinnedSet(i) },
       band: at.band,
       bend: at.bend,
       rightToLeft: at.band % 2 === 1,

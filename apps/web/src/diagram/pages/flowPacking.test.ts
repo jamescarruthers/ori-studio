@@ -6,6 +6,8 @@ import { estimateTextSetter } from './estimateTextSetter';
 import { craneSteps, PROTOTYPE_AREA } from './flowPacking.fixtures';
 import {
   bandGroups,
+  captionCentreWidth,
+  captionWidthFor,
   packFlowPage,
   packingArea,
   PACKED_TURN_GUTTER_MM,
@@ -601,6 +603,53 @@ describe('packFlowPage: a step’s box', () => {
     const [step] = page.steps;
     expect(step!.picture.w).toBeCloseTo(30 * page.k + 10, 9);
     expect(step!.picture.h).toBeCloseTo(24 * page.k + 6, 9);
+  });
+
+  it('sets a caption pinned by hand at its own measure, and cuts its box to hold it with the side room', () => {
+    const text = 'Valley fold the flaps inward. Note that the top of each crease does not line up with the top corner of the paper';
+    const steps = alike(9, 30, 30).map((step, index) => (index === 4 ? { ...step, text } : step));
+    for (const textWidth of [22, 44.5, 72]) {
+      const page = pack(steps.map((step, index) => (index === 4 ? { ...step, textWidth } : step)));
+      const { box: b, picture, caption } = page.steps[4]!;
+      expect(caption.widthMm).toBe(textWidth);
+      expect(caption.lines.map((line) => line.text)).toEqual(
+        setter.paragraph(text, textWidth, STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER).lines.map((line) => line.text)
+      );
+      // As wide as its measure and the side room, or its picture's; as tall as its lines.
+      expect(b.w).toBeCloseTo(Math.max(picture.w + 4, textWidth + 4, 28), 9);
+      expect(b.h).toBeCloseTo(5 + picture.h + 2 + caption.lines.length * STEP_TEXT_LEADING_MM, 9);
+      // Inside its box, the side room either side (to the half mm a box rounds its measure to).
+      expect(caption.x).toBeGreaterThanOrEqual(b.x + 1.75 - 1e-9);
+      expect(caption.x + textWidth).toBeLessThanOrEqual(b.x + b.w - 1.75 + 1e-9);
+    }
+    // A pin under the least an automatic caption takes, beside a small picture: its box no narrower than that least.
+    const [tiny] = pack([{ ...alike(1, 5, 5)[0]!, text, textWidth: 15 }]).steps;
+    expect(tiny!.box.w).toBeCloseTo(28, 9);
+    expect(tiny!.caption.x).toBeGreaterThanOrEqual(tiny!.box.x - 1e-9);
+    expect(tiny!.caption.x + 15).toBeLessThanOrEqual(tiny!.box.x + tiny!.box.w + 1e-9);
+    // Wider, it takes fewer lines and a wider box; no other step's caption changes.
+    const [narrow, wide] = [22, 72].map((textWidth) => pack(steps.map((step, index) => (index === 4 ? { ...step, textWidth } : step))));
+    expect(wide!.steps[4]!.caption.lines.length).toBeLessThan(narrow!.steps[4]!.caption.lines.length);
+    for (const index of [0, 3, 8]) expect(wide!.steps[index]!.caption.widthMm).toBe(narrow!.steps[index]!.caption.widthMm);
+  });
+});
+
+describe('captionCentreWidth', () => {
+  it('is the measure a box gives its caption, whatever a pin, in a box up to the automatic cap and the side room', () => {
+    for (const boxWidth of [28, 30, 36.4, 54]) {
+      for (const pin of [undefined, 12, 40, 50, 51, 90]) expect(captionCentreWidth(boxWidth, pin)).toBe(captionWidthFor(boxWidth - 4));
+    }
+  });
+
+  it('takes a pin past the cap as wide as it is under a wider picture, as far as the picture’s room, and moves smoothly from the cap', () => {
+    expect(captionCentreWidth(74, undefined)).toBe(50);
+    expect(captionCentreWidth(74, 40)).toBe(50);
+    expect(captionCentreWidth(74, 50)).toBe(50);
+    expect(captionCentreWidth(74, 50.1)).toBeCloseTo(50.1, 9);
+    expect(captionCentreWidth(74, 61)).toBe(61);
+    expect(captionCentreWidth(74, 90)).toBe(70);
+    // A box packed for a pin holds it with the side room either side: (box − width) / 2 = 2.
+    for (const pin of [52, 66, 120]) expect((pin + 4 - captionCentreWidth(pin + 4, pin)) / 2).toBeCloseTo(2, 9);
   });
 });
 

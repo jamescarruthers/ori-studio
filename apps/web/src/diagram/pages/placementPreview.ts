@@ -1,6 +1,13 @@
 import type { DiagramPagesLayout, LayoutCell, LayoutZoomArrow } from './diagramPageLayout';
 import { flowLane } from './flowLane';
-import { partBox, placementClashes, translateCell, type FootprintsOf, type PagePart } from './pagePlacement';
+import {
+  laneFollowsPlacement,
+  partBox,
+  placementClashes,
+  translateCell,
+  type FootprintsOf,
+  type PagePart,
+} from './pagePlacement';
 
 /**
  * Local preview geometry. No font loading, layout, document writes, or
@@ -9,6 +16,10 @@ import { partBox, placementClashes, translateCell, type FootprintsOf, type PageP
  * against their boxes, and against the enlarge arrows where `arrowsOf` says
  * the page on screen prints them (`PreparedDiagramPages.zoomArrows`): symbols
  * are placed again on the drop, once the final layout is ready.
+ *
+ * A caption being resized (`caption`, its lines re-set by the caller with the
+ * pages' own setter) replaces the step's caption, and moves nothing else: the
+ * lane follows the step only as far as its placement already had it.
  */
 export function previewPlacement(
   base: DiagramPagesLayout,
@@ -19,35 +30,41 @@ export function previewPlacement(
   factor = 1,
   footprintsOf?: FootprintsOf,
   arrowsOf?: (pageIndex: number) => readonly LayoutZoomArrow[],
+  caption?: LayoutCell['text'],
 ): DiagramPagesLayout {
   const layout: DiagramPagesLayout = {
     ...base,
     pages: base.pages.map((page) => ({ ...page, cells: page.cells.map((cell) => ({ ...cell })) })),
   };
-  for (const page of layout.pages) {
+  // Where the lane follows the step being placed, by its page.
+  const follows = new Map<number, { index: number; follows: boolean }>();
+  layout.pages.forEach((page, pageIndex) => {
     const index = page.cells.findIndex((cell) => cell.stepId === stepId);
-    if (index < 0) continue;
+    if (index < 0) return;
     const old = page.cells[index]!;
     let cell = translateCell(old, part, dx, dy);
     if (factor !== 1) cell = scaleCell(cell, factor);
+    if (caption) cell = { ...cell, text: caption };
     cell.placed ??= {
       offsets: {},
       pin: null,
       auto: { mmPerUnit: old.mmPerUnit, frameMm: old.frameMm, drawMm: old.drawMm },
     };
     page.cells[index] = cell;
+    follows.set(pageIndex, { index, follows: caption ? laneFollowsPlacement(old) : true });
     // Symbols are re-placed on drop, once the final layout is ready.
-  }
+  });
   // Both sides of a printed spread share the moved spine height.
-  const stops = layout.pages.map((page) =>
+  const stops = layout.pages.map((page, pageIndex) =>
     page.flow?.stops.map((stop, index) => {
       const cell = page.cells[index];
       if (!cell) return stop;
+      const placed = follows.get(pageIndex);
       return {
         ...stop,
         x: cell.drawMm.x + cell.drawMm.w / 2,
         y: cell.drawMm.y + cell.drawMm.h / 2,
-        placed: !!cell.placed,
+        placed: placed?.index === index ? placed.follows : laneFollowsPlacement(cell),
       };
     }),
   );

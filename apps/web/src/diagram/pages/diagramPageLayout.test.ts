@@ -42,6 +42,7 @@ import { readFontMetrics, type FontMetrics } from '../fonts/fontMetrics';
 import { curvePoint, curveStart, type Lane } from './flowLane';
 import { estimateTextSetter } from './estimateTextSetter';
 import { PACKED_TURN_GUTTER_MM, packingArea } from './flowPacking';
+import { captionStartShift } from './captionMeasure';
 import { fontTextSetter } from './fontTextSetter';
 import { pageCapacity } from './pagePlan';
 import { printPaper } from './printPaper';
@@ -491,6 +492,99 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     const result = flowLayout(steps(30, () => ({ text: `${LONG} ${LONG}` })), { stepsPerPage: 30, size: 'a5' });
     expect(result.pages[0]!.packing).toMatchObject({ k: 0.25, fits: false });
     expect(lowest(result.pages[0]!)).toBeGreaterThan(areaOf(result).y + areaOf(result).h);
+  });
+});
+
+describe('a caption’s pinned measure (`diagram-caption-resize.md`)', () => {
+  const flowLayout = (list: LayoutStep[], setup: Partial<DiagramPageSetup> = {}, arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}) =>
+    layoutDiagramPages(list, { ...DEFAULT_PAGE_SETUP, layout: 'flow', ...setup }, 'Crane', estimateTextSetter, arrangements);
+  const pin = (list: readonly LayoutStep[], index: number, textWidth: number) =>
+    list.map((each, at) => (at === index ? { ...each, place: { ...each.place, textWidth } } : each));
+  const cellsById = (result: DiagramPagesLayout) => new Map(result.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell] as const)));
+  const setLines = (text: string, widthMm: number) =>
+    estimateTextSetter.paragraph(text, widthMm, STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER).lines.map((line) => line.text);
+
+  it('sets a grid step’s caption at its pin, whole, from where its cell starts it, and changes nothing else', () => {
+    const list = steps(6, (index) => (index === 2 ? { text: LONG } : {}));
+    const before = cellsById(layout(list));
+    const at = before.get('step-2')!;
+    for (const textWidth of [70, 25]) {
+      const cells = cellsById(layout(pin(list, 2, textWidth)));
+      const cell = cells.get('step-2')!;
+      expect(cell.text).toMatchObject({ x: at.text.x, firstBaseline: at.text.firstBaseline, widthMm: textWidth });
+      expect(cell.text.lines.map((line) => line.text)).toEqual(setLines(LONG, textWidth));
+      // Its picture as the layout drew it, and what Auto would set it at.
+      expect([cell.drawMm, cell.inkMm, cell.pictureMm, cell.mmPerUnit]).toEqual([at.drawMm, at.inkMm, at.pictureMm, at.mmPerUnit]);
+      expect(cell.placed!.auto.textWidthMm).toBe(at.text.widthMm);
+      for (const [id, other] of before) if (id !== 'step-2') expect(cells.get(id), id).toEqual(other);
+    }
+    expect(cellsById(layout(pin(list, 2, 70))).get('step-2')!.text.lines.length).toBeLessThan(at.text.lines.length);
+  });
+
+  it('never cuts a grid caption it pins, which the cell cut with "…"', () => {
+    const list = steps(4, () => ({ text: `${LONG} ${LONG}` }));
+    const setup = { columns: 4, rows: 6 };
+    const cut = layout(list, setup).pages[0]!.cells[0]!;
+    expect(cut.textOverflow).toBe(true);
+    const pinned = layout(pin(list, 0, cut.text.widthMm), setup).pages[0]!.cells[0]!;
+    expect(pinned.textOverflow).toBe(false);
+    expect(pinned.text.lines.map((line) => line.text)).toEqual(setLines(`${LONG} ${LONG}`, cut.text.widthMm));
+    expect(pinned.text.lines.some((line) => line.ellipsis)).toBe(false);
+  });
+
+  it('holds a pin to the paper inside its margins and to a short word’s room', () => {
+    const list = steps(4);
+    const wide = layout(pin(list, 0, 5000));
+    expect(wide.pages[0]!.cells[0]!.text.widthMm).toBe(wide.paper.widthMm - 2 * wide.paper.marginMm);
+    expect(layout(pin(list, 0, 1)).pages[0]!.cells[0]!.text.widthMm).toBe(10);
+  });
+
+  it('sets a held flow step’s caption at its pin, keeps its box, picture and left edge, and moves no other step nor the band', () => {
+    const list = steps(16, (index) => (index === 4 ? { text: LONG } : {}));
+    const first = flowLayout(list, { stepsPerPage: 7 });
+    const before = cellsById(first);
+    const at = before.get('step-4')!;
+    for (const textWidth of [80, 20]) {
+      const after = flowLayout(pin(list, 4, textWidth), { stepsPerPage: 7 }, first.packed!);
+      expect(after.packed).toBeUndefined();
+      const cells = cellsById(after);
+      const cell = cells.get('step-4')!;
+      expect([cell.cellMm, cell.drawMm, cell.numberAt, cell.mmPerUnit]).toEqual([at.cellMm, at.drawMm, at.numberAt, at.mmPerUnit]);
+      expect(cell.text.widthMm).toBe(textWidth);
+      // Its left edge where its box's caption starts; under a picture wider than the automatic cap, a pin past the
+      // cap stands centred under it as far as the picture reaches (`captionCentreWidth`).
+      expect(cell.text.x).toBeCloseTo(at.text.x + captionStartShift(at, undefined, textWidth), 9);
+      expect(cell.text.firstBaseline).toBe(at.text.firstBaseline);
+      expect(cell.text.lines.map((line) => line.text)).toEqual(setLines(LONG, textWidth));
+      expect(cell.placed!.auto.textWidthMm).toBe(at.text.widthMm);
+      // Every other step byte for byte, and the band as it ran: the step's picture has not moved.
+      for (const [id, other] of before) if (id !== 'step-4') expect(JSON.stringify(cells.get(id)), id).toBe(JSON.stringify(other));
+      expect(after.pages.map((page) => page.band)).toEqual(first.pages.map((page) => page.band));
+    }
+    // Narrower than its box was cut for, its lines run past its box's foot, and it says so: only a re-pack moves anything.
+    expect(cellsById(flowLayout(pin(list, 4, 20), { stepsPerPage: 7 }, first.packed!)).get('step-4')!.overflow).toBe('caption');
+    // In a box no wider than the automatic cap and the side room, its left edge never moves, whatever its pin.
+    const narrowBoxes = steps(16, (index) => ({ text: index === 4 ? LONG : SHORT, picture: paper(400, 400) }));
+    const packedNarrow = flowLayout(narrowBoxes, { stepsPerPage: 12 });
+    const home = cellsById(packedNarrow).get('step-4')!;
+    expect(home.cellMm.w).toBeLessThanOrEqual(54);
+    for (const textWidth of [18, 44, 96]) {
+      const cell = cellsById(flowLayout(pin(narrowBoxes, 4, textWidth), { stepsPerPage: 12 }, packedNarrow.packed!)).get('step-4')!;
+      expect(cell.text.x, String(textWidth)).toBe(home.text.x);
+    }
+  });
+
+  it('packs a flow step’s box for its pin, its caption inside it, and keeps it out of the page’s signature', () => {
+    const list = steps(16, (index) => (index === 4 ? { text: LONG } : {}));
+    const packed = flowLayout(pin(list, 4, 70), { stepsPerPage: 7 });
+    const cell = cellsById(packed).get('step-4')!;
+    expect(cell.text.widthMm).toBe(70);
+    expect(cell.text.lines.map((line) => line.text)).toEqual(setLines(LONG, 70));
+    expect(cell.cellMm.w).toBeGreaterThanOrEqual(74 - 0.01);
+    expect(cell.text.x).toBeGreaterThanOrEqual(cell.cellMm.x + 1.75 - 0.01);
+    expect(cell.text.x + 70).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w - 1.75 + 0.01);
+    expect(cell.overflow).toBeUndefined();
+    expect(packed.packed!['step-0']!.signature).toBe(flowLayout(list, { stepsPerPage: 7 }).packed!['step-0']!.signature);
   });
 });
 
