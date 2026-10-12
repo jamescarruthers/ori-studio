@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import type { FoldModelDirection } from '../../document/foldSequenceDocument';
 import type { FoldOverlayInks, FoldOverlayMarks } from '../foldPaneOverlays';
+import type { FoldPaneCreaseLine } from '../foldPaneScenes';
 import type { FoldPickIndex } from '../foldPicking';
 import type { FoldVertexPreview } from './useFoldVertexStep';
-import { vertexOverlayMarks } from './vertexOverlay';
+import { vertexCreaseLines, vertexOverlayMarks } from './vertexOverlay';
 
 const NONE: readonly boolean[] = [];
+const NO_CREASES: readonly FoldPaneCreaseLine[] = [];
 
 /**
  * A vertex tool's marks over the folded pane (`vertexOverlay`), once the
@@ -35,4 +37,24 @@ export function useFoldVertexMarks(
         : null,
     [index, analysis, emergent, emergents, aimed, inks]
   );
+}
+
+/**
+ * A vertex tool's creases on the folded pane, each by the letter it folds by
+ * as the viewer sees it (`vertexCreaseLines`), from the same answer its marks
+ * are drawn from: none until the engine has described the fold. Null for no
+ * vertex tool, whose fold the pane pictures by its action's line instead.
+ */
+export function useFoldVertexCreases(
+  index: FoldPickIndex | null,
+  vertex: FoldVertexPreview | null
+): readonly FoldPaneCreaseLine[] | null {
+  const vertexing = vertex !== null;
+  const analysis = vertex?.answer?.analysis ?? vertex?.base?.analysis ?? null;
+  const emergent = vertex?.emergent ?? null;
+  const direction = vertex?.direction ?? null;
+  return useMemo(() => {
+    if (!vertexing) return null;
+    return index && analysis && direction ? vertexCreaseLines(index, { analysis, emergent }, direction) : NO_CREASES;
+  }, [vertexing, index, analysis, emergent, direction]);
 }

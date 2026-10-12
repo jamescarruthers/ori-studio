@@ -390,6 +390,7 @@ describe('a vertex fold’s choices on the canvas', () => {
     base: fan,
     answer: fan,
     emergent: 1,
+    direction: 'valley',
     orders: [],
     order: null,
     layers: 2,

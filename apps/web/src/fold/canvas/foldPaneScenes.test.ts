@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { paperSceneToFoldedGeometry } from '../../cp-workspace/adapters/cpFoldedToScene';
+import type { Point } from '../../lib/geometry';
 import type { PaperLineItem } from '../../lib/paper/paperScene';
+import { DEFAULT_PAPER_STYLE, type PaperStyle } from '../../lib/paper/paperStyle';
+import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import { bookScene, flatSquareScene } from './foldCanvas.fixtures';
 import { FOLD_USER_PER_UNIT } from './foldCanvasGeometry';
 import {
@@ -9,7 +13,11 @@ import {
   foldedDisplayOffset,
   foldedPaneScene,
   foldFrameSpread,
+  withFoldCreases,
   withFoldLine,
+  withPreviewCreases,
+  type FoldPaneCreaseLine,
+  type FoldPanePreviewCreases,
 } from './foldPaneScenes';
 import { restingSpread } from './useFoldCanvasPaint';
 
@@ -144,5 +152,98 @@ describe('the Fold panes’ paper scenes', () => {
     // (0.5, 0.5) turns to (−0.5, 0.5): shifted back by one along x.
     expect(offset.x).toBeCloseTo(1, 12);
     expect(offset.y).toBeCloseTo(0, 12);
+  });
+});
+
+describe('a tool’s preview on the folded pane, every crease in the diagram-crease pen of its letter', () => {
+  const base = () => foldedPaneScene(flatSquareScene(), FOLD_PANE_DISPLAY_DEFAULT);
+  const across: [Point, Point] = [
+    { x: 0, y: 0.5 },
+    { x: 1, y: 0.5 },
+  ];
+  const upright: [Point, Point] = [
+    { x: 0.5, y: 0 },
+    { x: 0.5, y: 1 },
+  ];
+  /** The lines the preview added over the paper's own, by role. */
+  const added = (preview: FoldPanePreviewCreases) => {
+    const before = lines(base().items).length;
+    return lines(withPreviewCreases(base(), preview).items)
+      .slice(before)
+      .map((item) => item.role);
+  };
+  const none = { second: null, vertex: null };
+
+  it('draws a valley fold’s, a mountain fold’s and a precrease’s line — its extent, for part of a line — by its direction', () => {
+    expect(added({ action: { line: across, direction: 'valley' }, ...none })).toEqual(['diagram-valley']);
+    expect(added({ action: { line: across, direction: 'mountain' }, ...none })).toEqual(['diagram-mountain']);
+    // A precrease is drawn by the way it folds; a pinch's line is the pinch.
+    const pinch: [Point, Point] = [
+      { x: 0.5, y: 0.47 },
+      { x: 0.5, y: 0.53 },
+    ];
+    expect(added({ action: { line: pinch, direction: 'mountain' }, ...none })).toEqual(['diagram-mountain']);
+  });
+
+  it('draws a reverse fold’s, a sink’s and a tuck’s picture by the direction it shows the viewer', () => {
+    // The compound line folds' pictures are one line each, lettered by the engine as the viewer sees it.
+    for (const direction of ['valley', 'mountain'] as const) {
+      expect(added({ action: { line: across, direction }, ...none })).toEqual([`diagram-${direction}`]);
+    }
+  });
+
+  it('draws a crimp’s two lines, the second the other way', () => {
+    expect(added({ action: { line: across, direction: 'valley' }, second: upright, vertex: null })).toEqual([
+      'diagram-valley',
+      'diagram-mountain',
+    ]);
+    expect(added({ action: { line: across, direction: 'mountain' }, second: upright, vertex: null })).toEqual([
+      'diagram-mountain',
+      'diagram-valley',
+    ]);
+  });
+
+  it('draws a vertex fold’s creases by their own letters, not its action’s one line across the paper', () => {
+    const vertex: FoldPaneCreaseLine[] = [
+      { line: [{ x: 0.5, y: 0.5 }, { x: 1, y: 0.5 }], letter: 'valley' },
+      { line: [{ x: 0.5, y: 0.5 }, { x: 0.5, y: 1 }], letter: 'mountain' },
+    ];
+    expect(added({ action: { line: across, direction: 'valley' }, second: null, vertex })).toEqual([
+      'diagram-valley',
+      'diagram-mountain',
+    ]);
+    // Run as given, from the vertex: no overhang past it.
+    const [ray] = lines(withPreviewCreases(base(), { action: null, second: null, vertex }).items).slice(-2);
+    expect(ray?.a).toEqual([0.5 * FOLD_USER_PER_UNIT, -0.5 * FOLD_USER_PER_UNIT]);
+    // Before the engine describes it, nothing: never the action's line in its place.
+    expect(added({ action: { line: across, direction: 'valley' }, second: null, vertex: [] })).toEqual([]);
+  });
+
+  it('leaves the paper as it is while nothing is located', () => {
+    expect(added({ action: null, ...none })).toEqual([]);
+    expect(withFoldCreases(base(), [])).toEqual(base());
+  });
+
+  it('strokes each in the user’s own mountain and valley diagram crease pens, not the fold pens', () => {
+    const style: PaperStyle = {
+      ...DEFAULT_PAPER_STYLE,
+      valleyDiagramCreases: { width: 2.2, color: '#00ff00', dash: [4, 2], cap: 'butt' },
+      mountainDiagramCreases: { width: 1.7, color: '#ff00ff', dash: [8, 2, 1, 2], cap: 'butt' },
+    };
+    const scene = withPreviewCreases(
+      { bounds: { minX: 0, minY: -FOLD_USER_PER_UNIT, maxX: FOLD_USER_PER_UNIT, maxY: 0 }, sheet: FOLD_USER_PER_UNIT, items: [] },
+      { action: { line: across, direction: 'valley' }, second: upright, vertex: null }
+    );
+    const drawn = paperSceneToFoldedGeometry(scene, style, { policy: PAPER_STYLE_POLICIES.fold }).strokes;
+    expect(drawn.count).toBe(2);
+    const color = (k: number) => [...drawn.color.slice(k * 4, k * 4 + 3)];
+    expect(color(0)).toEqual([0, 1, 0]);
+    expect(drawn.widthMul[0]).toBeCloseTo(2.2, 6);
+    expect(color(1)).toEqual([1, 0, 1]);
+    expect(drawn.widthMul[1]).toBeCloseTo(1.7, 6);
+    // Both dashed, each in its own pattern.
+    expect(drawn.dashSlot?.[0]).toBeGreaterThan(0);
+    expect(drawn.dashSlot?.[1]).toBeGreaterThan(0);
+    expect(drawn.dashSlot?.[0]).not.toBe(drawn.dashSlot?.[1]);
   });
 });

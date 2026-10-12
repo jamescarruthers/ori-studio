@@ -8,7 +8,8 @@
  *   the route Edit's flat figure takes: whole faces in painter's order, folds
  *   in the edge pen, flat creases in the aux pen, the layers spread apart as
  *   the step says (`foldStepSpread`). A located fold adds its line in the
- *   diagram-crease pen of its direction, over the paper.
+ *   diagram-crease pen of its direction, over the paper — a vertex fold its
+ *   creases, each in the pen of its own letter (`withFoldCreases`).
  * - **A crease pattern** shows every crease as what it is (`foldPaneCrease`):
  *   the border, a folded crease by its (front-relative) letter, a flat crease.
  *   The creases the step on show made — or, while a fold is previewed, the
@@ -28,7 +29,13 @@ import { foldedFlatPaperScene, type FoldedFlatPaperSceneOptions } from '../../cp
 import type { LayerSpreadOptions } from '../../cp-workspace/folded/foldedLayerSpread';
 import type { FoldStepPane } from '../animation/foldStepMotion';
 import type { FoldDirection } from '../document/foldSequenceDocument';
-import type { FoldLetter, FoldScene, FoldSceneCrease, FoldSceneCreaseMark } from '../engine/foldEngineWire';
+import type {
+  FoldActionGeometry,
+  FoldLetter,
+  FoldScene,
+  FoldSceneCrease,
+  FoldSceneCreaseMark,
+} from '../engine/foldEngineWire';
 import { applyIsometry, FOLD_USER_PER_UNIT, foldUnitToScenePx, toPoint } from './foldCanvasGeometry';
 
 /** The pane toggles on the viewport toolbar (the design's "Step creases | Precreases"). */
@@ -183,6 +190,32 @@ function lineItem(
 }
 
 /**
+ * A crease a tool previews on the folded pane, in the scene frame: a stretch
+ * of paper and the letter it folds by as the viewer sees it, which picks its
+ * pen — the user's mountain or valley diagram crease (`withFoldCreases`).
+ */
+export interface FoldPaneCreaseLine {
+  line: readonly [Point, Point];
+  letter: FoldLetter;
+}
+
+/**
+ * A scene with a tool's creases over the paper, each in the diagram-crease
+ * pen of its letter as the viewer sees it — the instruction, drawn with the
+ * pens the Diagram and References draw theirs with. Each runs as given, from
+ * end to end; shown at `offset`, as the scene is.
+ */
+export function withFoldCreases(
+  scene: PaperScene,
+  creases: readonly FoldPaneCreaseLine[],
+  offset: Point = ORIGIN
+): PaperScene {
+  if (creases.length === 0) return scene;
+  const items = creases.map(({ line: [a, b], letter }) => lineItem(diagramRole(letter), a, b, undefined, offset));
+  return { ...scene, items: [...scene.items, ...items] };
+}
+
+/**
  * A scene with a located fold's line over it, in the diagram-crease pen of
  * its direction as the viewer sees it, run a little past the paper at both
  * ends. `line` is in the scene frame, shown at `offset`; null leaves the
@@ -198,8 +231,44 @@ export function withFoldLine(
   const [a, b] = line;
   const dx = (b.x - a.x) * FOLD_LINE_OVERHANG;
   const dy = (b.y - a.y) * FOLD_LINE_OVERHANG;
-  const item = lineItem(diagramRole(direction), { x: a.x - dx, y: a.y - dy }, { x: b.x + dx, y: b.y + dy }, undefined, offset);
-  return { ...scene, items: [...scene.items, item] };
+  const past: FoldPaneCreaseLine = {
+    line: [
+      { x: a.x - dx, y: a.y - dy },
+      { x: b.x + dx, y: b.y + dy },
+    ],
+    letter: direction,
+  };
+  return withFoldCreases(scene, [past], offset);
+}
+
+/** What a tool's preview draws as creases on the folded pane (`withPreviewCreases`). */
+export interface FoldPanePreviewCreases {
+  /** The located fold's picture: its line, by its direction as the viewer sees it. Null while none is located. */
+  action: Pick<FoldActionGeometry, 'line' | 'direction'> | null;
+  /** A crimp's second line, beside its picture's first: the other letter. */
+  second: readonly [Point, Point] | null;
+  /** A vertex fold's own creases, each by its letter (`vertexCreaseLines`); null for every other tool. */
+  vertex: readonly FoldPaneCreaseLine[] | null;
+}
+
+/**
+ * The folded pane's scene with a tool's preview over it, every crease in the
+ * diagram-crease pen of its letter as the viewer sees it: a fold's line —
+ * a plain fold's, a precrease's or its extent's, a reverse fold's, a sink's,
+ * a tuck's — by its direction, a crimp's second line the other way, and a
+ * vertex fold's creases each by its own. A vertex fold's creases are its
+ * picture: its action's line is one of them, run across the whole paper in
+ * one letter, so it is not drawn as well.
+ */
+export function withPreviewCreases(
+  scene: PaperScene,
+  { action, second, vertex }: FoldPanePreviewCreases,
+  offset: Point = ORIGIN
+): PaperScene {
+  if (vertex) return withFoldCreases(scene, vertex, offset);
+  if (!action) return scene;
+  const along = withFoldLine(scene, action.line, action.direction, offset);
+  return second ? withFoldLine(along, second, action.direction === 'valley' ? 'mountain' : 'valley', offset) : along;
 }
 
 /** Which creases a state's crease pattern shows, and which of them are the instruction. */

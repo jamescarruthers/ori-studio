@@ -1,41 +1,62 @@
 /**
- * What a vertex tool draws over the folded pane while it previews (plan
- * D14): the creases its fold would make and the choices it offers, from the
- * engine's description, in the theme's pick accent — the tool's feedback,
- * never the paper's pens, since which of these creases is a mountain and
- * which a valley is the landed state's to say (the crease-pattern pane draws
- * it).
+ * What a vertex tool draws on the folded pane while it previews (plan D14),
+ * from the engine's description of its flap, line or fan: the creases its
+ * fold makes, as paper (`vertexCreaseLines`), and what is not a crease — its
+ * vertex, a line it lands on, the choices it offers — over the paper in the
+ * theme's pick accent (`vertexOverlayMarks`).
  *
- * - **Squash**: its vertex, each layer's crease, the spine as it lies
- *   (faint), and where it lands (bold): the hinge line until a point is
- *   clicked; where it was aimed, faint, when that cannot land.
- * - **Petal fold**: H between its ends, and the kite creases down to the
- *   open corner.
- * - **Rabbit ear, swivel**: the center, the three given rays, and the fourth
- *   crease taken (bold) — the ridge the flap rises along — among the other
- *   candidates (faint; one that does not fit fainter still).
+ * **The creases** are drawn as the instruction a diagram draws, in the user's
+ * diagram-crease pens (`withFoldCreases`), each by the letter it folds by as
+ * the viewer sees it. Which letter is the engine's rule for each fold, as the
+ * direction (`FoldVertexIntent.direction`, as the viewer sees it) names it,
+ * and what its landed states show:
+ *
+ * - **Squash**: the lower layer creases the direction's way, the upper layer
+ *   (on top, as seen) the other (`compound/squash.rs`; a valley squash's
+ *   upper crease shows the viewer a mountain). Where the two lie on one line
+ *   — the spine landing on the hinge — the line is drawn once, the
+ *   direction's way, as the step's own picture draws it (`squash_action`).
+ * - **Petal fold**: H the direction's way, the top layer's kite creases the
+ *   other (`compound/petal.rs`: a valley petal's kites show a mountain).
+ * - **Rabbit ear, swivel**: the three given rays the direction's way and the
+ *   fourth crease taken the other (`compound/fan.rs`, Lang; Beloch's
+ *   `flatten-rabbit-ear-*`).
+ *
+ * **The marks** stay the tool's feedback, never a pen, since none of them is
+ * a crease the fold makes:
+ *
+ * - **Squash**: its vertex, the spine as it lies (faint), and where it lands
+ *   (bold): the hinge line until a point is clicked; where it was aimed,
+ *   faint, when that cannot land.
+ * - **Petal fold**: the ends of H and the open corner.
+ * - **Rabbit ear, swivel**: the center, and the fourth creases not taken
+ *   (faint; one that does not fit fainter still).
  *
  * Each ray runs from its vertex to where it leaves the paper. Pure: the
  * colours are handed in, resolved by the pane.
  */
 import type { Point } from '../../../lib/geometry';
 import type { Rgba } from '../../../cp-workspace/renderer/types';
+import type { FoldDirection } from '../../document/foldSequenceDocument';
 import type { FoldFanAnalysis, FoldVertexAnalysis } from '../../engine/foldEngineSquashWire';
-import type { FoldModelPoint } from '../../engine/foldEngineWire';
+import type { FoldLetter, FoldModelPoint } from '../../engine/foldEngineWire';
 import { alongLine, chordOfConvex, lineThrough, pointOnLine, toPoint } from '../foldCanvasGeometry';
 import type { FoldOverlayDot, FoldOverlayInks, FoldOverlayMarks, FoldOverlayStroke } from '../foldPaneOverlays';
+import type { FoldPaneCreaseLine } from '../foldPaneScenes';
 import type { FoldPickIndex } from '../foldPicking';
 
 /** CSS px: a vertex's dot. */
 const VERTEX_RADIUS = 4;
-/** Stroke widths, as multiples of the frame's: a crease, the choice taken. */
-const CREASE_WIDTH = 1.6;
+/** Stroke widths, as multiples of the frame's: a line, the one landed on. */
+const LINE_WIDTH = 1.6;
 const CHOSEN_WIDTH = 2.6;
 /** How faint what is not taken is drawn: the spine as it lies, a candidate not taken, one that does not fit. */
 const FAINT = 0.4;
 const UNFIT = 0.18;
 /** How far a ray runs, in model units, when it starts on the paper's edge and the paper gives it no length. */
 const EDGE_RAY = 0.2;
+/** Two of a squash's crease directions closer than this are one line. */
+const SAME_DIRECTION = 1e-9;
 
 const withAlpha = ([r, g, b, a]: Rgba, alpha: number): Rgba => [r, g, b, a * alpha];
 
@@ -59,6 +80,8 @@ function rotate([x, y]: FoldModelPoint, angle: number): FoldModelPoint {
   const s = Math.sin(angle);
   return [c * x - s * y, s * x + c * y];
 }
+
+const other = (letter: FoldLetter): FoldLetter => (letter === 'valley' ? 'mountain' : 'valley');
 
 /**
  * Where a ray from a point of the folded form leaves the paper: walked from
@@ -94,25 +117,77 @@ function ray(index: FoldPickIndex, from: FoldModelPoint, direction: FoldModelPoi
   return [a, rayOnPaper(index, a, b)];
 }
 
-function fanStrokes(
+/** A stretch between two model points, in the scene frame. */
+function segment(index: FoldPickIndex, a: FoldModelPoint, b: FoldModelPoint): [Point, Point] {
+  return [index.toScene(toPoint(a)), index.toScene(toPoint(b))];
+}
+
+/** A squash's two layer creases' directions from its vertex: the lower layer's, then the upper's. */
+function squashCreaseDirections(analysis: Extract<FoldVertexAnalysis, { kind: 'squash' }>): {
+  lower: FoldModelPoint;
+  upper: FoldModelPoint;
+} {
+  const { hinge_direction: hinge, wedge, share } = analysis;
+  return { lower: rotate(hinge, ((1 + share) * wedge) / 2), upper: rotate(hinge, ((1 - share) * wedge) / 2) };
+}
+
+/**
+ * The creases a vertex fold makes, each by the letter it folds by as the
+ * viewer sees it, for `direction` (see the module docs): what the folded
+ * pane draws in the diagram-crease pens. A fan's fourth crease is drawn once
+ * one is taken; the others are choices, not creases (`vertexOverlayMarks`).
+ */
+export function vertexCreaseLines(
+  index: FoldPickIndex,
+  input: Pick<FoldVertexOverlayInput, 'analysis' | 'emergent'>,
+  direction: FoldDirection
+): FoldPaneCreaseLine[] {
+  const { analysis } = input;
+  const creases: FoldPaneCreaseLine[] = [];
+  const add = (line: [Point, Point], letter: FoldLetter) => creases.push({ line, letter });
+  switch (analysis.kind) {
+    case 'squash': {
+      const { lower, upper } = squashCreaseDirections(analysis);
+      add(ray(index, analysis.vertex, lower), direction);
+      const apart = Math.hypot(upper[0] - lower[0], upper[1] - lower[1]) > SAME_DIRECTION;
+      if (apart) add(ray(index, analysis.vertex, upper), other(direction));
+      break;
+    }
+    case 'petal': {
+      const [left, right] = analysis.ends;
+      add(segment(index, left, right), direction);
+      add(segment(index, left, analysis.corner), other(direction));
+      add(segment(index, right, analysis.corner), other(direction));
+      break;
+    }
+    case 'rabbit-ear':
+    case 'swivel': {
+      for (const given of analysis.given) add(ray(index, analysis.center, given), direction);
+      const taken = input.emergent === null ? undefined : analysis.candidates[input.emergent];
+      if (taken) add(ray(index, analysis.center, taken), other(direction));
+      break;
+    }
+  }
+  return creases;
+}
+
+function fanChoices(
   index: FoldPickIndex,
   analysis: FoldFanAnalysis,
   input: FoldVertexOverlayInput,
   accent: Rgba
 ): FoldOverlayStroke[] {
   const strokes: FoldOverlayStroke[] = [];
-  const stroke = ([a, b]: [Point, Point], color: Rgba, widthMul: number) => strokes.push({ a, b, color, widthMul });
-  for (const given of analysis.given) stroke(ray(index, analysis.center, given), accent, CREASE_WIDTH);
   analysis.candidates.forEach((candidate, k) => {
-    const taken = k === input.emergent;
+    if (k === input.emergent) return;
     const fits = input.emergents[k] ?? true;
-    const color = taken ? accent : withAlpha(accent, fits ? FAINT : UNFIT);
-    stroke(ray(index, analysis.center, candidate), color, taken ? CHOSEN_WIDTH : CREASE_WIDTH);
+    const [a, b] = ray(index, analysis.center, candidate);
+    strokes.push({ a, b, color: withAlpha(accent, fits ? FAINT : UNFIT), widthMul: LINE_WIDTH });
   });
   return strokes;
 }
 
-/** The vertex tool's marks over the folded pane (see the module docs). */
+/** The vertex tool's marks over the folded pane: everything but its creases (see the module docs). */
 export function vertexOverlayMarks(
   index: FoldPickIndex,
   input: FoldVertexOverlayInput,
@@ -124,8 +199,6 @@ export function vertexOverlayMarks(
   const strokes: FoldOverlayStroke[] = [];
   const dot = (p: FoldModelPoint) =>
     dots.push({ at: index.toScene(toPoint(p)), radius: VERTEX_RADIUS, fill: accent, stroke: outline });
-  const segment = (a: FoldModelPoint, b: FoldModelPoint, widthMul: number) =>
-    strokes.push({ a: index.toScene(toPoint(a)), b: index.toScene(toPoint(b)), color: accent, widthMul });
   switch (analysis.kind) {
     case 'squash': {
       const { vertex, hinge_direction: hinge, wedge, share } = analysis;
@@ -133,26 +206,19 @@ export function vertexOverlayMarks(
         const [a, b] = ray(index, vertex, direction);
         strokes.push({ a, b, color, widthMul });
       };
-      along(analysis.spine_direction, withAlpha(accent, FAINT), CREASE_WIDTH);
-      // Each layer's crease, and where the spine lands, `share` of the wedge from the hinge.
-      along(rotate(hinge, ((1 + share) * wedge) / 2), accent, CREASE_WIDTH);
-      along(rotate(hinge, ((1 - share) * wedge) / 2), accent, CREASE_WIDTH);
+      along(analysis.spine_direction, withAlpha(accent, FAINT), LINE_WIDTH);
+      // Where the spine lands, `share` of the wedge from the hinge.
       along(rotate(hinge, share * wedge), accent, CHOSEN_WIDTH);
       if (input.aimed) along(input.aimed, withAlpha(accent, FAINT), CHOSEN_WIDTH);
       dot(vertex);
       break;
     }
-    case 'petal': {
-      const [left, right] = analysis.ends;
-      segment(left, right, CHOSEN_WIDTH);
-      segment(left, analysis.corner, CREASE_WIDTH);
-      segment(right, analysis.corner, CREASE_WIDTH);
-      for (const p of [left, right, analysis.corner]) dot(p);
+    case 'petal':
+      for (const p of [...analysis.ends, analysis.corner]) dot(p);
       break;
-    }
     case 'rabbit-ear':
     case 'swivel':
-      strokes.push(...fanStrokes(index, analysis, input, accent));
+      strokes.push(...fanChoices(index, analysis, input, accent));
       dot(analysis.center);
       break;
   }

@@ -252,6 +252,7 @@ describe('the Fold canvas model', () => {
           },
           answer: null,
           emergent: 1,
+          direction: 'mountain',
           orders: [order, second],
           order: second,
           layers: 3,

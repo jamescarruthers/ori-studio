@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { trackFoldChoiceOffered } from '../../../analytics';
-import type { FoldChoices, FoldCompletionChoice, FoldVertexOp } from '../../document/foldSequenceDocument';
+import type {
+  FoldChoices,
+  FoldCompletionChoice,
+  FoldDirection,
+  FoldVertexOp,
+} from '../../document/foldSequenceDocument';
 import type { FoldVertexAnalysed } from '../../engine/foldEngineSquashWire';
 import type { FoldAxiomCandidate, FoldEngineRefused } from '../../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../../session/useFoldSession';
@@ -27,6 +32,8 @@ export interface FoldVertexPreview {
   answer: FoldVertexAnalysed | null;
   /** A fan's fourth ray taken, by index into the candidates; null for no fan, or none yet. */
   emergent: number | null;
+  /** The way it folds, as the viewer sees it: what its creases' letters are read from (`vertexCreaseLines`). */
+  direction: FoldDirection;
   /** The orders the step leaves, when more than one; the one taken. */
   orders: readonly FoldCompletionChoice[];
   order: FoldCompletionChoice | null;
@@ -148,6 +155,7 @@ export function useFoldVertexStep(
       base: firstAnswer,
       answer,
       emergent: chosen?.emergent ?? null,
+      direction: intent.direction,
       orders: built?.orders ?? [],
       order: built?.order ?? null,
       layers,
