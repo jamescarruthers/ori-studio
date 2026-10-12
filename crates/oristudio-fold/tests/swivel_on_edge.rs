@@ -550,15 +550,61 @@ fn a_swivel_on_a_folded_edge_that_does_not_fit_is_refused_by_code() {
     );
     let refused = refusal(state.swivel_by_edge(&op, &none));
     assert_eq!(refused.refusal.code(), "fan_ray_blocked", "{refused:?}");
-    // The base's lower-left edge onto the centre line: the same bisector
-    // and vertex, but neither layer the folded edge joins holds that edge.
-    let op = cases::on_fold(
-        state,
-        c.op.fold.unwrap_or_default(),
-        [0.0, 0.75],
-        [0.75, 0.5],
-    );
-    let refused = refusal(state.swivel_by_edge(&op, &none));
+}
+
+/// The edge names a line: the base flaps' lower-left edges lie behind the
+/// kite's along the model's lower-left edge, and a click on any of them
+/// names that line — the swivel is the same, its own triangle's edge laid
+/// on the centre line.
+#[test]
+fn edges_stacked_on_one_line_name_one_swivel() {
+    let c = case("Abrashi's swivel");
+    let state = &c.state;
+    let none = VertexChoices::default();
+    let by_kite = landed(state.swivel_by_edge(&c.op, &none));
+    for behind in [[0.0, 0.75], [0.75, 1.0]] {
+        let op = cases::on_fold(state, c.op.fold.unwrap_or_default(), behind, [0.75, 0.5]);
+        let by_base = landed(state.swivel_by_edge(&op, &none));
+        assert_eq!(
+            folded_segments(&by_base.state),
+            folded_segments(&by_kite.state),
+            "{behind:?}"
+        );
+        let a = analysis(state, &op);
+        let [p, q] = a.landed[0];
+        let k = FRAC_1_SQRT_2;
+        let near = |x: Point, y: Point| (x[0] - y[0]).hypot(x[1] - y[1]) < 1e-9;
+        // From the tip up the centre line to (0, 1 − k), as the viewer sees it.
+        assert!(near(scene(state, p), [0.0, 0.0]), "{p:?}");
+        assert!(near(scene(state, q), [0.0, 1.0 - k]), "{q:?}");
+    }
+}
+
+/// An edge of a third flap: on a drawn state (the square's top two thirds
+/// folded down, that flap's corner folded back up), the swivel's creases
+/// meet on the first fold, but the edge clicked — the corner's, along the
+/// line x ≈ 0.33 — is in neither layer that fold joins, and the swivelling
+/// wedge has no side along its line: nothing would land on the target.
+#[test]
+fn an_edge_neither_layer_holds_stays() {
+    let mut rng = Rng::new(77_319);
+    let state = random::folded(&mut rng).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(state.faces().len(), 3);
+    let fold = [0.5, 0.328_091_868_022_873_05];
+    let op = SwivelByEdge {
+        pivot: state.resolve_point(fold).unwrap_or_default(),
+        edge: [0.664_020_994_937_064_8, 1.0],
+        target: Line::new(
+            [0.311_617_507_588_146_77, 0.950_207_624_135_141_9],
+            0.311_617_507_588_146_77,
+        )
+        .unwrap_or_else(|| panic!("no target")),
+        layers: Seed::All,
+        ridge: None,
+        direction: Direction::Valley,
+        fold: Some(fold),
+    };
+    let refused = refusal(state.swivel_by_edge(&op, &VertexChoices::default()));
     assert_eq!(refused.refusal.code(), "swivel_edge_stays", "{refused:?}");
 }
 

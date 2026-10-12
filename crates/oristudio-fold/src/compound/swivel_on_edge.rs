@@ -20,6 +20,14 @@
 //! (by a point on it), the edge that moves, the line it lands on — and the
 //! layers are the two the folded edge joins, so there are none to pick.
 //!
+//! The edge that moves names a line. Edges of several layers can lie along
+//! one line of the folded form — the squashed flap's lower-left edge runs
+//! along the base flaps' behind it, the model's lower-left edge — and a click
+//! takes whichever is nearest; what swivels is the edge layer's own side
+//! along that line, which is what lands on the target. The edge's layer is
+//! the one of the two whose wedge `D` has such a side (the face the clicked
+//! edge bounds is tried first).
+//!
 //! At `V` the folded edge has two halves: `h₋`, toward the edge that moves,
 //! and `h₊`, the other. With `α` the angle from `h₋` to `s` (at `V`, inside
 //! the paper):
@@ -73,8 +81,9 @@
 //! crease meeting the folded edge at a right angle or wider
 //! (`swivel_fold_wide`); a crease that runs into a fold before the paper's
 //! edge, or paper that joins two wedges (`fan_ray_blocked`, naming it); an
-//! edge that the wedge `D` does not hold (`swivel_edge_stays`); and no order
-//! (`no_order`, offering the other direction when it lands).
+//! edge whose line neither layer's wedge `D` has a side along, past where it
+//! meets the target (`swivel_edge_stays`); and no order (`no_order`, offering
+//! the other direction when it lands).
 
 use std::collections::HashMap;
 
@@ -108,7 +117,6 @@ pub(crate) struct OnFold {
     meet: Point,
     /// The edge's straight run, its end nearer `meet` first.
     edge: [Point; 2],
-    edge_sheet: [Point; 2],
     edge_faces: Vec<FaceId>,
     /// The same faces, by position.
     edge_faces_positions: Vec<usize>,
@@ -152,9 +160,26 @@ struct FoldCompiled {
     /// Where each crease leaves its layer: the edge layer's `s`, the other
     /// layer's `s`, its `s′`.
     ends: [Point; 3],
-    /// Whether the edge's paper, past where it meets the target, is all in
-    /// the wedge that folds across `s`.
-    edge_moves: bool,
+    /// The stretch of the edge's line, past where it meets the target, that
+    /// the wedge folding across `s` has a side along (`edge_reach`): the
+    /// edge that swivels onto the target. None when it has none.
+    reach: Option<[f64; 2]>,
+}
+
+impl FoldCompiled {
+    /// Where the edge lies once folded, on the target: the wedge's side
+    /// along it, reflected in the swivel crease.
+    fn landed(&self, built: &OnFold) -> Option<[Point; 2]> {
+        let [a, b] = self.reach?;
+        let s_line = built.swivel_line().ok()?;
+        let at = |t: f64| {
+            [
+                built.meet[0] + t * built.along[0],
+                built.meet[1] + t * built.along[1],
+            ]
+        };
+        Some([s_line.reflect_point(at(a)), s_line.reflect_point(at(b))])
+    }
 }
 
 impl OnFold {
@@ -174,15 +199,15 @@ impl OnFold {
             .ok_or_else(|| internal("a swivel crease has no line"))
     }
 
-    /// The readings of the two layers to try, the edge's own layer first:
-    /// only it when the edge bounds one of the two faces, both otherwise.
+    /// The readings of the two layers to try, which is the edge's: the face
+    /// the edge clicked bounds first, when it bounds one of the two.
     fn readings(&self) -> Vec<usize> {
         let [a, b] = self.faces;
-        let own: Vec<usize> = [a, b]
-            .into_iter()
-            .filter(|&f| self.edge_faces_positions.contains(&f))
-            .collect();
-        if own.len() == 1 { own } else { vec![a, b] }
+        if self.edge_faces_positions.contains(&b) && !self.edge_faces_positions.contains(&a) {
+            vec![b, a]
+        } else {
+            vec![a, b]
+        }
     }
 }
 
@@ -193,7 +218,6 @@ impl SwivelByEdge {
         let run = edge_run(state, self.edge)?;
         let edge_faces = run.faces.clone();
         let [e1, e2] = run.ends;
-        let [s1, s2] = run.sheet;
         let edge = Line::from_points(e1, e2).ok_or_else(|| internal("an edge has no length"))?;
         let parallel = || {
             Refused::from(FoldRefusal::SwivelTargetParallel {
@@ -279,10 +303,10 @@ impl SwivelByEdge {
         let along = |p: Point| dot(sub(p, meet), es);
         let at = |s: f64| [meet[0] + s * es[0], meet[1] + s * es[1]];
         let foot = at(along(vertex));
-        let ((near, far), edge_sheet) = if along(e1) <= along(e2) {
-            ((e1, e2), [s1, s2])
+        let (near, far) = if along(e1) <= along(e2) {
+            (e1, e2)
         } else {
-            ((e2, e1), [s2, s1])
+            (e2, e1)
         };
 
         // The swivel crease into the paper: the side of the folded edge
@@ -326,7 +350,6 @@ impl SwivelByEdge {
             vertex,
             meet,
             edge: [near, far],
-            edge_sheet,
             edge_faces_positions: edge_faces
                 .iter()
                 .filter_map(|&id| state.face_position(id))
@@ -632,7 +655,7 @@ fn compile(
         vec![(0, opened_line), (1, s_line)],
         vec![(1, second_line)],
     ];
-    let edge_moves = edge_moves(built, &scoring, &block_of, 0);
+    let reach = edge_reach(state, built, &scoring, &block_of, 0);
     let wedge_names: Vec<SwivelWedge> = wedges.iter().map(|&(w, _)| w).collect();
     let mut kept = Vec::new();
     for (b, &w) in wedge_names.iter().enumerate() {
@@ -655,46 +678,51 @@ fn compile(
         edge_layer,
         other_layer,
         ends: [s_edge.end, s_other.end, s_second.end],
-        edge_moves,
+        reach,
     })
 }
 
-/// Whether the edge's paper, from where it meets the target to its far end,
-/// is all in block `near`, the one that folds across the swivel crease and
-/// lays it on the target.
-fn edge_moves(built: &OnFold, scoring: &Scoring, block_of: &[Option<usize>], near: usize) -> bool {
-    let [sa, sb] = built.edge_sheet;
-    let [ma, mb] = built.edge;
-    let Some(sheet_line) = Line::from_points(sa, sb) else {
-        return false;
-    };
-    let run = sub(sb, sa);
-    let length2 = dot(run, run);
-    let mut seen = false;
+/// Where the swivelling wedge's own paper runs along the edge's line, past
+/// where it meets the target: the stretch of block `near`'s sides on that
+/// line, as distances along `eₛ` from the meeting point. None when it has no
+/// side there, so nothing it carries lands on the target.
+///
+/// The edge names a line, not one layer's crease: edges stacked along one
+/// line of the folded form (the squashed flap's lower-left edge over the
+/// base flaps' behind it) all name it, and the wedge's own is the one that
+/// swivels.
+fn edge_reach(
+    state: &State,
+    built: &OnFold,
+    scoring: &Scoring,
+    block_of: &[Option<usize>],
+    near: usize,
+) -> Option<[f64; 2]> {
+    let geometry = state.geometry();
+    let line = Line::from_points(built.edge[0], built.edge[1])?;
+    let along = |p: Point| dot(sub(p, built.meet), built.along);
+    let mut reach: Option<[f64; 2]> = None;
     for (p, face) in scoring.faces.iter().enumerate() {
+        if block_of[p] != Some(near) {
+            continue;
+        }
+        let isometry = geometry.isometries[scoring.old[p]];
         let m = face.ring.len();
         for i in 0..m {
-            let x = scoring.vertices[face.ring[i].index()];
-            let y = scoring.vertices[face.ring[(i + 1) % m].index()];
-            if sheet_line.distance_to_point(x) > TOL || sheet_line.distance_to_point(y) > TOL {
+            let x = isometry.apply(scoring.vertices[face.ring[i].index()]);
+            let y = isometry.apply(scoring.vertices[face.ring[(i + 1) % m].index()]);
+            if line.distance_to_point(x) > TOL || line.distance_to_point(y) > TOL {
                 continue;
             }
-            let mid = [(x[0] + y[0]) / 2.0, (x[1] + y[1]) / 2.0];
-            let s = dot(sub(mid, sa), run) / length2;
-            if !(0.0..=1.0).contains(&s) {
+            let (a, b) = (along(x).min(along(y)), along(x).max(along(y)));
+            if b <= MIN_FEATURE / 2.0 {
                 continue;
             }
-            let model = [ma[0] + s * (mb[0] - ma[0]), ma[1] + s * (mb[1] - ma[1])];
-            if dot(sub(model, built.meet), built.along) <= MIN_FEATURE / 2.0 {
-                continue;
-            }
-            seen = true;
-            if block_of[p] != Some(near) {
-                return false;
-            }
+            let a = a.max(0.0);
+            reach = Some(reach.map_or([a, b], |[lo, hi]| [lo.min(a), hi.max(b)]));
         }
     }
-    seen
+    reach
 }
 
 /// The reading that lands the edge on the target, compiled. Otherwise, when
@@ -709,7 +737,7 @@ fn compile_reading(
     let mut compiled_any = false;
     for layer in built.readings() {
         match compile(state, built, layer, direction) {
-            Ok(compiled) if compiled.edge_moves => return Ok(compiled),
+            Ok(compiled) if compiled.reach.is_some() => return Ok(compiled),
             Ok(_) => compiled_any = true,
             Err(refused) => {
                 first.get_or_insert(refused);
@@ -853,7 +881,12 @@ impl State {
             foot: built.foot,
             target: built.target,
             rotation: built.rotation,
-            landed: built.landed.clone(),
+            // The wedge's own side along the edge's line, where it compiled.
+            landed: compiled
+                .as_ref()
+                .ok()
+                .and_then(|c| c.landed(&built))
+                .map_or_else(|| built.landed.clone(), |segment| vec![segment]),
             creases,
             ridges: Vec::new(),
             ridge: 0,
