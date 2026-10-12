@@ -21,6 +21,26 @@ export function pageOverflow(page: Pick<LayoutPage, 'cells' | 'packing'>): PageO
 }
 
 /**
+ * What a step's card in the Steps view says of its place on the pages: its
+ * instruction cut with "…" to fit a grid cell, or its picture or caption no
+ * longer fitting the place its flow page keeps for it (a flow step's caption
+ * is never cut: it prints whole, past its box).
+ */
+export type StepPageFit = 'text-cut' | 'no-longer-fits';
+
+/** Each step's {@link StepPageFit} on the pages laid out, by its id: none for a step that fits. */
+export function stepPageFits(layout: Pick<DiagramPagesLayout, 'pages'> | null | undefined): ReadonlyMap<string, StepPageFit> {
+  const fits = new Map<string, StepPageFit>();
+  for (const page of layout?.pages ?? []) {
+    for (const cell of page.cells) {
+      if (cell.textOverflow) fits.set(cell.stepId, 'text-cut');
+      else if (cell.overflow) fits.set(cell.stepId, 'no-longer-fits');
+    }
+  }
+  return fits;
+}
+
+/**
  * Every page's overflow in a layout, as the export dialog lists it: the
  * steps that no longer fit their places, and the pages that cannot hold
  * their steps, each by what the Pages view captions it — the number it

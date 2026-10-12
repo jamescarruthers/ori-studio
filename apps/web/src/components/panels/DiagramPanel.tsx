@@ -11,7 +11,7 @@ import {
   type DiagramEntry,
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
-import type { PreparedDiagramPages } from '../../diagram/pages/diagramPages';
+import { stepPageFits } from '../../diagram/pages/pageOverflow';
 import { paginate } from '../../diagram/pages/pagePlan';
 import { useDiagramPages } from '../../diagram/pages/useDiagramPages';
 import { fillStepFromReferences, openReferencesBrowser } from '../../diagram/references/referencesBrowserActions';
@@ -53,15 +53,6 @@ import styles from './DiagramPanel.module.css';
 
 const NO_STEPS: readonly DiagramStep[] = [];
 const NO_ENTRIES: readonly DiagramEntry[] = [];
-const NONE_CUT: ReadonlySet<string> = new Set();
-
-/** The steps whose instruction the pages cut with "…". */
-function cutStepIds(pages: PreparedDiagramPages | null): ReadonlySet<string> {
-  if (!pages) return NONE_CUT;
-  const cut = new Set<string>();
-  for (const page of pages.layout.pages) for (const cell of page.cells) if (cell.textOverflow) cut.add(cell.stepId);
-  return cut.size > 0 ? cut : NONE_CUT;
-}
 const NO_ASSETS: Readonly<Record<string, DiagramAsset>> = {};
 
 const openOnDoubleClick = (stepId: string) => void openDiagramStep(stepId, 'double_click');
@@ -143,11 +134,11 @@ export function DiagramPanel() {
   const view = useWorkspaceStore((state) => state.diagramView);
   useDiagramPaneReveal();
   // Laid out in either view: the pages are the Pages view, and the cards say
-  // whose text the pages cut.
+  // whose text the pages cut, or which flow steps no longer fit their places.
   const pages = useDiagramPages(steps.length > 0 ? diagram : null);
   const page = diagram?.page ?? DEFAULT_PAGE_SETUP;
   const pageCount = useMemo(() => paginate(steps, page).length, [steps, page]);
-  const textCut = useMemo(() => cutStepIds(pages.pages), [pages.pages]);
+  const pageFits = useMemo(() => stepPageFits(pages.pages?.layout), [pages.pages]);
   // And the size each step prints at, for the Layers pane's warnings (Revision 2).
   usePublishPrintedFrames(pages.pages, pages.of);
   usePlacementReflowNotice();
@@ -289,7 +280,7 @@ export function DiagramPanel() {
             onOpen={openOnDoubleClick}
             onUpload={uploadPictureFor}
             links={links}
-            textCut={textCut}
+            pageFits={pageFits}
             patternOpen={patternOpen}
             onLink={openDiagramPatternPicker}
             onFromReferences={fillStepFromReferences}

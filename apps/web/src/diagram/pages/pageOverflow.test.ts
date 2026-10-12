@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 import type { LayoutCell, LayoutPage } from './diagramPageLayout';
 import { exportOverflowSentence, exportUnfitSentence, pageOverflowSentence, pageUnfitSentence } from './overflowLabels';
-import { layoutOverflow, pageOverflow } from './pageOverflow';
+import { layoutOverflow, pageOverflow, stepPageFits } from './pageOverflow';
 
 /**
  * What a flow page reports of the steps that no longer fit their places, and
@@ -32,6 +32,21 @@ describe('pageOverflow', () => {
   it('has nothing to say of a page where every step fits, nor of a grid page', () => {
     expect(pageOverflow(page([cell(1), cell(2)]))).toBeNull();
     expect(pageOverflow({ cells: [cell(1)] })).toBeNull();
+  });
+});
+
+describe('stepPageFits', () => {
+  it('says which steps the cards should warn of: a grid cell’s cut instruction, and a flow step past its place', () => {
+    const at = (stepId: string, patch: Partial<LayoutCell>) => ({ stepId, number: 1, textOverflow: false, ...patch }) as LayoutCell;
+    const fits = stepPageFits({
+      pages: [page([at('cut', { textOverflow: true }), at('fine', {})]), page([at('grown', { overflow: 'caption' }), at('wider', { overflow: 'picture' })])],
+    });
+    expect([...fits]).toEqual([
+      ['cut', 'text-cut'],
+      ['grown', 'no-longer-fits'],
+      ['wider', 'no-longer-fits'],
+    ]);
+    expect(stepPageFits(null).size).toBe(0);
   });
 });
 
