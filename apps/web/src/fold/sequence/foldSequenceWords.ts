@@ -10,8 +10,21 @@
  * extractor sees them. Pure.
  */
 import type { TFunction } from 'i18next';
-import type { FoldPaper } from '../document/foldSequenceDocument';
-import type { FoldEntryStatus } from './foldSequencePath';
+import { isLockedStep, turnKindOf, type FoldPaper } from '../document/foldSequenceDocument';
+import { turnName } from '../../lib/steps/turnWords';
+import type { FoldEntryStatus, FoldPathEntry } from './foldSequencePath';
+
+/**
+ * The step on screen as the canvas's chip names it: "Step 5" by the strip's
+ * numbering (turns unnumbered), or a turn's own name ("Turn over").
+ */
+export function cursorStepLabel(t: TFunction, entry: FoldPathEntry | null): string {
+  const node = entry?.node;
+  if (entry?.kind === 'turn' && node && !isLockedStep(node) && (node.op.kind === 'turn' || node.op.kind === 'rotate')) {
+    return turnName(turnKindOf(node.op), t);
+  }
+  return t('panels:fold.canvas.step', 'Step {{number}}', { number: entry?.number ?? 0 });
+}
 
 /** "Start with a square, front side up." */
 export function sheetSentence(t: TFunction, paper: FoldPaper): string {

@@ -47,28 +47,41 @@ export interface FoldSequenceView {
   failed: boolean;
 }
 
+/** The shown sequence and its active path, numbered, with the step on screen. */
+function useFoldPath() {
+  const sequence = useFoldSessionState((snapshot) => snapshot.sequence);
+  const activePath = useFoldSessionState((snapshot) => snapshot.activePath);
+  const sheet = useFoldSessionState((snapshot) => snapshot.sheet);
+  const nodes = useFoldSessionState((snapshot) => snapshot.nodes);
+  const cursorId = useFoldSessionState((snapshot) => snapshot.cursor);
+  const document = sequence ?? FOLD_BLANK_SEQUENCE;
+  const entries = useMemo(
+    () => foldPathEntries(document, activePath, sheet, nodes, FOLD_PENDING_NODE),
+    [document, activePath, sheet, nodes]
+  );
+  return { sequence, document, entries, cursor: cursorIndex(entries, cursorId) };
+}
+
+/**
+ * The step on screen as the strip numbers it, for a surface that needs only
+ * that (the canvas's chips) and not every step's picture and words.
+ */
+export function useFoldCursorEntry(): FoldPathEntry | null {
+  const { entries, cursor } = useFoldPath();
+  return entries[cursor] ?? null;
+}
+
 /**
  * The shown sequence, its active path, each step's picture and words, and the
  * step a tool is folding (plan D14). Every Fold surface that lists steps reads
  * this, so a step is numbered, pictured and worded alike wherever it appears.
  */
 export function useFoldSequenceView(): FoldSequenceView {
-  const sequence = useFoldSessionState((snapshot) => snapshot.sequence);
+  const { sequence, document, entries, cursor } = useFoldPath();
   const readOnly = useFoldSessionState((snapshot) => snapshot.readOnly);
-  const activePath = useFoldSessionState((snapshot) => snapshot.activePath);
-  const sheet = useFoldSessionState((snapshot) => snapshot.sheet);
-  const nodes = useFoldSessionState((snapshot) => snapshot.nodes);
-  const cursorId = useFoldSessionState((snapshot) => snapshot.cursor);
   const pendingStep = useFoldSessionState((snapshot) => snapshot.pending);
   const progress = useFoldSessionState((snapshot) => snapshot.progress);
   const failed = useFoldSessionState((snapshot) => snapshot.error !== null);
-  const document = sequence ?? FOLD_BLANK_SEQUENCE;
-
-  const entries = useMemo(
-    () => foldPathEntries(document, activePath, sheet, nodes, FOLD_PENDING_NODE),
-    [document, activePath, sheet, nodes]
-  );
-  const cursor = cursorIndex(entries, cursorId);
   const pendingState = pendingStep.status === 'landed' ? pendingStep.state : null;
   const states = useMemo(
     () => [...entries.map((entry) => entry.session.state), pendingState],

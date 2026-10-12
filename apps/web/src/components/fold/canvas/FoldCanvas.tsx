@@ -15,6 +15,8 @@ import { foldToolWindow } from '../../../fold/tools/foldToolWindow';
 import { useFoldShortcutLabels } from '../../../fold/tools/useFoldShortcutLabels';
 import { foldToolKindControl, registerFoldCanvasVerbs } from '../../../fold/canvas/foldCanvasCommands';
 import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
+import { cursorStepLabel } from '../../../fold/sequence/foldSequenceWords';
+import { useFoldCursorEntry } from '../../../fold/sequence/useFoldSequenceView';
 import {
   chooserBounds,
   chooserKeys,
@@ -145,6 +147,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   // pane fits again when the step on screen changes to a form that has left it — never a camera the
   // user has moved.
   const summary = view.summary;
+  const cursorEntry = useFoldCursorEntry();
   const spread = useFoldStepSpread(view.cursorId, 'canvas_bar');
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread);
   // The crease pattern as Edit's canvas draws one, not as paper.
@@ -257,11 +260,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   // --- The status chips.
   const layers = sceneLayers(view.scene);
   const prompt = foldPromptWords(t, toolState, { coarse, alt: altModifierLabel() });
-  const stepNumber = summary?.step ?? 0;
   const foldedStatus = (
     <ViewportStatusReadout hideOnPhone>
       <span>{t('panels:fold.canvas.folded', 'Folded')}</span>
-      <span>{t('panels:fold.canvas.step', 'Step {{number}}', { number: stepNumber })}</span>
+      <span>{cursorStepLabel(t, cursorEntry)}</span>
       <span>{t('panels:fold.canvas.layers', { count: layers, defaultValue_one: '{{count}} layer', defaultValue_other: '{{count}} layers' })}</span>
       {prompt && <span className={styles.prompt}>{prompt}</span>}
     </ViewportStatusReadout>
