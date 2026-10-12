@@ -166,6 +166,28 @@ describe('FoldStepPane', () => {
     expect(rows()).not.toHaveProperty('Second line');
   });
 
+  it('names a petal fold’s hinge, and a swivel’s target and ridge, as rows of their own', () => {
+    const vertex = (words: FoldSentenceStep): FoldStepPaneStep => ({
+      words,
+      number: 4,
+      layers: null,
+      creases: { mountain: 2, valley: 2, flat: 0 },
+      diff: DIFF,
+      status: 'ok',
+      compound: { blocks: 3, opening: null, orderChosen: false, blocksOf: 'vertex' },
+    });
+    render({ step: vertex({ op: 'vertex', fold: 'petal', direction: 'valley', form: { hinge: 'points' } }), startSide: 'front' });
+    expect(host.textContent).toContain('Petal-fold the flap, creasing its hinge as it lifts.');
+    expect(rows()).toMatchObject({ Operation: 'Petal fold', Hinge: 'Two points, creased by the fold' });
+    render({
+      step: vertex({ op: 'vertex', fold: 'swivel', direction: 'valley', form: { swivel: 'edge', target: 'crease', ridge: 'foot' } }),
+      startSide: 'front',
+    });
+    expect(host.textContent).toContain('Swivel the edge onto the crease, pivoting at the point.');
+    expect(rows()).toMatchObject({ 'Lands on': 'Existing crease or edge', Ridge: 'Square to the edge' });
+    expect(rows()).not.toHaveProperty('Hinge');
+  });
+
   it('labels the crease counts as the front’s, and says so plainly when the back starts up', () => {
     render({ step: VALLEY_STEP, startSide: 'front' });
     expect(section('Creases')?.textContent).toContain('As seen from the front of the paper.');

@@ -27,8 +27,9 @@ import { createStepSequenceTool, type SequenceState } from '../../cp-workspace/t
 import type { ToolEngine } from '../../cp-workspace/tools/types';
 import type { FoldAxiom, ReferenceKind } from '../../lib/foldSentences';
 import { AXIOM_SLOTS } from '../document/foldSequenceDocument';
+import type { FoldSegmentPick } from '../canvas/foldPicking';
 import { lineModeAxiom, type FoldLineModeId, type FoldSecondLineModeId, type FoldToolId } from './foldToolCatalog';
-import { vertexToolInput } from './vertex/vertexInputs';
+import { FOLD_VERTEX_LINES_DEFAULT, vertexToolInput, type FoldVertexLines } from './vertex/vertexInputs';
 
 /** How one click snaps: Edit's vocabulary, and the raw point a free line takes. */
 export type FoldStepSnap = CpStepSnap | 'free';
@@ -40,7 +41,16 @@ export interface FoldLocateStep {
   slot: number | null;
   /** For a `crease-required` click: whether the paper's raw edge counts, or only folds and creases. */
   edges: boolean;
+  /**
+   * For a `crease-required` click that takes only some kinds of line, in
+   * place of `edges`: a petal fold's hinge is a precrease, a swivel's moving
+   * edge a raw or folded edge. A line of any other kind is never offered.
+   */
+  kinds?: readonly FoldSegmentKind[];
 }
+
+/** A line's kind, as the landmarks name it: the paper's raw edge, a fold (a bend), or a flat crease. */
+export type FoldSegmentKind = FoldSegmentPick['segment'];
 
 export interface FoldInputModel {
   steps: readonly FoldLocateStep[];
@@ -127,11 +137,16 @@ export function crimpInput(mode: FoldLineModeId, second: FoldSecondLineModeId): 
 
 /**
  * The clicks the tool in hand collects: a fold along a line, its line mode's
- * — a crimp's, its two lines' —; a vertex fold, its own
- * (`tools/vertex/vertexInputs`), a petal fold's beginning with its line
- * mode's; the Divide line's, its segment; Rotate's, none.
+ * — a crimp's, its two lines' —; a vertex fold, its own, a petal fold's hinge
+ * and a swivel's target named as `vertex` says (`tools/vertex/vertexInputs`);
+ * the Divide line's, its segment; Rotate's, none.
  */
-export function toolInput(tool: FoldToolId, mode: FoldLineModeId, second: FoldSecondLineModeId = 'free'): FoldInputModel {
+export function toolInput(
+  tool: FoldToolId,
+  mode: FoldLineModeId,
+  second: FoldSecondLineModeId = 'free',
+  vertex: FoldVertexLines = FOLD_VERTEX_LINES_DEFAULT
+): FoldInputModel {
   switch (tool) {
     case 'rotate':
       return NO_CLICKS;
@@ -150,7 +165,7 @@ export function toolInput(tool: FoldToolId, mode: FoldLineModeId, second: FoldSe
     case 'petal':
     case 'rabbit-ear':
     case 'swivel':
-      return vertexToolInput(tool, lineModeInput(mode));
+      return vertexToolInput(tool, vertex);
     case 'divide-line':
       return DIVIDE_LINE;
   }

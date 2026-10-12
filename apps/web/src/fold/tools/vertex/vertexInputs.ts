@@ -6,14 +6,19 @@
  * - **Squash**: the flap, a point anywhere on it (`free`: a landmark would sit
  *   on a crease, where no one layer is the flap's). Where its spine lands is
  *   drawn afterwards, by a click on the folded pane (`useFoldCanvasVerbs`).
- * - **Petal fold**: its line H, located through the line modes as a fold's
- *   line is — clicked as the precrease it is, or run through its two ends —
- *   then the flap below it (`free`).
+ * - **Petal fold**: its hinge, as {@link FoldVertexLines.petalHinge} names it
+ *   — the precrease across the flap, or its two ends (`point` landmarks, or
+ *   with Alt any point), which the fold creases itself — then the flap below
+ *   it (`free`): a region the canvas lights as the pointer crosses it, the
+ *   part that lifts (`useFoldPetalMarks`).
  * - **Rabbit ear**: the triangle's three corners (`point` landmarks, or with
  *   Alt any point), then the paper that stays put (`free`).
- * - **Swivel**: the point the creases meet at and a point each of its three
- *   given rays runs toward (`point`, Alt for any point: the swivel's vertex is
- *   free, so it is usually no landmark), then the paper that stays (`free`).
+ * - **Swivel**, by its edge (`FoldSwivelEdgeOp`): the pivot (`point`, Alt for
+ *   any point), the edge that moves — a raw or folded edge, never a flat
+ *   crease, which the engine refuses — and the line it lands on, as
+ *   {@link FoldVertexLines.swivelTarget} names it: a crease or an edge, or two
+ *   points. A swivel stored by its rays still replays; the tool no longer
+ *   makes one.
  *
  * Which layer a flap click names is not decided by the click: it depends on
  * the direction (`vertexStep`), which the folder may change afterwards, so the
@@ -22,77 +27,116 @@
  * React-free and store-free; literal `t()` keys so the extractor sees them.
  */
 import type { TFunction } from 'i18next';
-import { lineModeSteps, type FoldLineModeId, type FoldVertexToolId } from '../foldToolCatalog';
+import type { FoldLineBy, FoldVertexToolId } from '../foldToolCatalog';
 import type { FoldInputModel, FoldLocateStep } from '../foldToolRegistry';
 
 const FREE: FoldLocateStep = { snap: 'free', slot: null, edges: false };
 const POINT: FoldLocateStep = { snap: 'point', slot: null, edges: true };
+/** A petal fold's hinge as a crease already there: a precrease, the only kind the fold refolds as its hinge. */
+const HINGE: FoldLocateStep = { snap: 'crease-required', slot: null, edges: false, kinds: ['crease'] };
+/** A swivel's edge: the paper's raw edge or a folded edge. A flat crease is no edge. */
+const EDGE: FoldLocateStep = { snap: 'crease-required', slot: null, edges: true, kinds: ['raw_edge', 'bend'] };
+/** The line a swivel lays its edge on: any crease or edge. */
+const LINE: FoldLocateStep = { snap: 'crease-required', slot: null, edges: true };
 
-/**
- * The line modes a petal fold's H is meant to be located by: the precrease
- * itself, the line through its two ends, or a line drawn through them. The
- * tool starts on the precrease when another is in hand (`selectTool`); any
- * other stays offered, since its line may be a precrease too.
- */
-export const PETAL_LINE_MODES: ReadonlySet<FoldLineModeId> = new Set<FoldLineModeId>(['crease', 'axiom-1', 'free']);
-
-/** One model per tool (per line model, for the petal fold), made once: a model's identity is what a click counter is kept for. */
-const SQUASH: FoldInputModel = { steps: [FREE] };
-const RABBIT_EAR: FoldInputModel = { steps: [POINT, POINT, POINT, FREE] };
-const SWIVEL: FoldInputModel = { steps: [POINT, POINT, POINT, POINT, FREE] };
-const PETAL = new WeakMap<FoldInputModel, FoldInputModel>();
-
-function petalInput(line: FoldInputModel): FoldInputModel {
-  let model = PETAL.get(line);
-  if (!model) {
-    model = { steps: [...line.steps, FREE] };
-    PETAL.set(line, model);
-  }
-  return model;
+/** How a petal fold's hinge and a swivel's target are named: what the window's control switches. */
+export interface FoldVertexLines {
+  petalHinge: FoldLineBy;
+  swivelTarget: FoldLineBy;
 }
 
-/**
- * The clicks a vertex fold collects. A petal fold's begin with `line`, the
- * clicks its line mode locates H by (the registry's `lineModeInput`).
- */
-export function vertexToolInput(tool: FoldVertexToolId, line: FoldInputModel): FoldInputModel {
+export const FOLD_VERTEX_LINES_DEFAULT: FoldVertexLines = { petalHinge: 'crease', swivelTarget: 'crease' };
+
+/** One model per tool and way of naming its line, made once: a model's identity is what a click counter is kept for. */
+const SQUASH: FoldInputModel = { steps: [FREE] };
+const PETAL: Readonly<Record<FoldLineBy, FoldInputModel>> = {
+  crease: { steps: [HINGE, FREE] },
+  points: { steps: [POINT, POINT, FREE] },
+};
+const RABBIT_EAR: FoldInputModel = { steps: [POINT, POINT, POINT, FREE] };
+const SWIVEL: Readonly<Record<FoldLineBy, FoldInputModel>> = {
+  crease: { steps: [POINT, EDGE, LINE] },
+  points: { steps: [POINT, EDGE, POINT, POINT] },
+};
+
+/** The clicks a vertex fold collects. */
+export function vertexToolInput(tool: FoldVertexToolId, lines: FoldVertexLines = FOLD_VERTEX_LINES_DEFAULT): FoldInputModel {
   switch (tool) {
     case 'squash':
       return SQUASH;
     case 'petal':
-      return petalInput(line);
+      return PETAL[lines.petalHinge];
     case 'rabbit-ear':
       return RABBIT_EAR;
     case 'swivel':
-      return SWIVEL;
+      return SWIVEL[lines.swivelTarget];
   }
 }
 
-/**
- * The clicks that locate a petal fold's H — the precrease across the flap
- * through the ends of its two kite creases — in its own words where the line
- * mode is one H is meant for.
- */
-function petalLineSteps(t: TFunction, mode: FoldLineModeId): string[] {
-  switch (mode) {
-    case 'crease':
-      return [t('tools:fold.vertex.steps.petalH', 'Click the precrease H, across the flap where the kite creases end.')];
-    case 'axiom-1':
-    case 'free':
-      return [
-        t('tools:fold.vertex.steps.petalHFirstEnd', 'Click one end of H, where a kite crease meets the flap’s edge.'),
-        t('tools:fold.vertex.steps.petalHSecondEnd', 'Click the other end of H, where the other kite crease ends.'),
-      ];
-    default:
-      return lineModeSteps(t, mode);
-  }
+/** How many clicks name a line by `lineBy`: one crease, or two points. */
+export function lineByClicks(lineBy: FoldLineBy): number {
+  return lineBy === 'crease' ? 1 : 2;
 }
+
+/** The clicks before a swivel's target: its pivot and its edge. */
+export const SWIVEL_TARGET_FROM = 2;
 
 /** What a vertex fold's clicks are asked on: a finger has no key to hold for a free point. */
 export interface FoldVertexStepsHost {
   coarse: boolean;
   /** The platform's name for Alt. */
   alt: string;
+}
+
+/** A petal fold's hinge clicks, then the flap below it: the part that lifts, lit as the pointer crosses it. */
+function petalSteps(t: TFunction, hinge: FoldLineBy, coarse: boolean): string[] {
+  const ends =
+    hinge === 'crease'
+      ? [t('tools:fold.vertex.steps.petalHingeCrease', 'Select the hinge crease.')]
+      : coarse
+        ? [
+            t('tools:fold.vertex.steps.petalHingeFirstEndTouch', 'Tap one end of the hinge, where a kite crease meets the flap’s edge.'),
+            t('tools:fold.vertex.steps.petalHingeSecondEndTouch', 'Tap its other end, where the other kite crease meets the edge.'),
+          ]
+        : [
+            t('tools:fold.vertex.steps.petalHingeFirstEnd', 'Click one end of the hinge, where a kite crease meets the flap’s edge.'),
+            t('tools:fold.vertex.steps.petalHingeSecondEnd', 'Click its other end, where the other kite crease meets the edge.'),
+          ];
+  return [
+    ...ends,
+    coarse
+      ? t('tools:fold.vertex.steps.petalRegionTouch', 'Tap the flap below the hinge, the part that lifts.')
+      : t('tools:fold.vertex.steps.petalRegion', 'Click the flap below the hinge: the part that lifts lights up under the pointer.'),
+  ];
+}
+
+/** A swivel's pivot, its edge and the line it lands on. */
+function swivelSteps(t: TFunction, target: FoldLineBy, coarse: boolean): string[] {
+  const onto =
+    target === 'crease'
+      ? [
+          coarse
+            ? t('tools:fold.vertex.steps.swivelOntoTouch', 'Tap the line it should land on: a crease or an edge.')
+            : t('tools:fold.vertex.steps.swivelOnto', 'Click the line it should land on: a crease or an edge.'),
+        ]
+      : coarse
+        ? [
+            t('tools:fold.vertex.steps.swivelOntoFirstTouch', 'Tap a point on the line it should land on.'),
+            t('tools:fold.vertex.steps.swivelOntoSecondTouch', 'Tap a second point on that line.'),
+          ]
+        : [
+            t('tools:fold.vertex.steps.swivelOntoFirst', 'Click a point on the line it should land on.'),
+            t('tools:fold.vertex.steps.swivelOntoSecond', 'Click a second point on that line.'),
+          ];
+  return [
+    coarse
+      ? t('tools:fold.vertex.steps.swivelPivotTouch', 'Tap the pivot.')
+      : t('tools:fold.vertex.steps.swivelPivot', 'Click the pivot.'),
+    coarse
+      ? t('tools:fold.vertex.steps.swivelEdgeTouch', 'Tap the edge that moves: a raw edge or a folded edge.')
+      : t('tools:fold.vertex.steps.swivelEdge', 'Click the edge that moves: a raw edge or a folded edge.'),
+    ...onto,
+  ];
 }
 
 /**
@@ -102,42 +146,34 @@ export interface FoldVertexStepsHost {
 export function vertexToolSteps(
   t: TFunction,
   tool: FoldVertexToolId,
-  mode: FoldLineModeId,
+  lines: FoldVertexLines = FOLD_VERTEX_LINES_DEFAULT,
   host: FoldVertexStepsHost = { coarse: false, alt: 'Alt' }
 ): string[] {
   switch (tool) {
     case 'squash':
-      return [t('tools:fold.vertex.steps.squashFlap', 'Click the flap to squash.')];
-    case 'petal':
-      return [
-        ...petalLineSteps(t, mode),
-        t('tools:fold.vertex.steps.petalLiftingFlap', 'Click the flap below H, between the kite creases: the part that lifts.'),
-      ];
-    case 'rabbit-ear':
-      return [
-        t('tools:fold.vertex.steps.earFirstCorner', 'Click the triangle’s first corner.'),
-        t('tools:fold.vertex.steps.earSecondCorner', 'Click its second corner.'),
-        t('tools:fold.vertex.steps.earThirdCorner', 'Click its third corner.'),
-        t('tools:fold.vertex.steps.stayer', 'Click the paper that stays put.'),
-      ];
-    case 'swivel':
-      // The meeting point is rarely a landmark, and must lie off every
-      // crease: said in the step, with the key (or the latch) that frees it.
       return [
         host.coarse
-          ? t(
-              'tools:fold.vertex.steps.swivelPointTouch',
-              'Turn on Free point, then tap where the creases meet: inside the paper, off every crease.'
-            )
-          : t(
-              'tools:fold.vertex.steps.swivelPoint',
-              'Hold {{modifier}} and click where the creases meet: inside the paper, off every crease.',
-              { modifier: host.alt }
-            ),
-        t('tools:fold.vertex.steps.swivelFirstLandmark', 'Click a corner, midpoint or mark the first crease runs to.'),
-        t('tools:fold.vertex.steps.swivelSecondLandmark', 'Click a point for the second crease.'),
-        t('tools:fold.vertex.steps.swivelThirdLandmark', 'Click a point for the third crease.'),
-        t('tools:fold.vertex.steps.swivelStayer', 'Click the part of the paper that stays put.'),
+          ? t('tools:fold.vertex.steps.squashFlapTouch', 'Tap the flap to squash.')
+          : t('tools:fold.vertex.steps.squashFlap', 'Click the flap to squash.'),
       ];
+    case 'petal':
+      return petalSteps(t, lines.petalHinge, host.coarse);
+    case 'rabbit-ear':
+      // A finger taps: the same steps in its words, as the choose step's are.
+      return host.coarse
+        ? [
+            t('tools:fold.vertex.steps.earFirstCornerTouch', 'Tap the triangle’s first corner.'),
+            t('tools:fold.vertex.steps.earSecondCornerTouch', 'Tap its second corner.'),
+            t('tools:fold.vertex.steps.earThirdCornerTouch', 'Tap its third corner.'),
+            t('tools:fold.vertex.steps.stayerTouch', 'Tap the paper that stays put.'),
+          ]
+        : [
+            t('tools:fold.vertex.steps.earFirstCorner', 'Click the triangle’s first corner.'),
+            t('tools:fold.vertex.steps.earSecondCorner', 'Click its second corner.'),
+            t('tools:fold.vertex.steps.earThirdCorner', 'Click its third corner.'),
+            t('tools:fold.vertex.steps.stayer', 'Click the paper that stays put.'),
+          ];
+    case 'swivel':
+      return swivelSteps(t, lines.swivelTarget, host.coarse);
   }
 }

@@ -27,9 +27,10 @@ function verbs() {
     takeEmergent: vi.fn(),
     stepFanLayers: vi.fn(),
     resetSquashTarget: vi.fn(),
-    useNearPrecrease: vi.fn(),
+    setVertexLineBy: vi.fn(),
     precreaseLine: vi.fn(),
     precreaseKite: vi.fn(),
+    petalByEnds: vi.fn(),
   } satisfies FoldToolWindowVerbs;
 }
 
@@ -101,53 +102,129 @@ describe('a vertex fold’s window while its clicks are made', () => {
     expect(ear?.vertex?.note).toMatch(/incenter/);
   });
 
-  it('says what a swivel is above its steps, and how to place its point in the first one', () => {
-    const swivel = foldToolWindow(t, view(vertex({ tool: 'swivel' })), verbs(), mouse);
-    expect(swivel?.instructions.intro).toMatch(/^Folds the paper about a point/);
+  it('words a finger’s clicks as taps, as its choose step does', () => {
+    const ear = foldToolWindow(t, view(vertex({ tool: 'rabbit-ear' })), verbs(), finger);
+    expect(ear?.instructions.items).toEqual([
+      'Tap the triangle’s first corner.',
+      'Tap its second corner.',
+      'Tap its third corner.',
+      'Tap the paper that stays put.',
+      'Choose the options, then tap Rabbit ear.',
+    ]);
+    expect(ear?.instructions.notes).toEqual([
+      'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
+      'Turn on Free point to put a point anywhere.',
+    ]);
+    const squash = foldToolWindow(t, view(vertex()), verbs(), finger);
+    expect(squash?.instructions.items[0]).toBe('Tap the flap to squash.');
+  });
+
+  it('says what a swivel is above its steps, then its pivot, its edge and the line it lands on', () => {
+    const calls = verbs();
+    const swivel = foldToolWindow(t, view(vertex({ tool: 'swivel', lineBy: 'crease' })), calls, mouse);
+    expect(swivel?.instructions.intro).toMatch(/^Swivels an edge onto a line, pivoting at a point/);
     expect(swivel?.instructions.items).toEqual([
-      'Hold Option and click where the creases meet: inside the paper, off every crease.',
-      'Click a corner, midpoint or mark the first crease runs to.',
-      'Click a point for the second crease.',
-      'Click a point for the third crease.',
-      'Click the part of the paper that stays put.',
-      'Pick the fourth crease, then press Enter.',
+      'Click the pivot.',
+      'Click the edge that moves: a raw edge or a folded edge.',
+      'Click the line it should land on: a crease or an edge.',
+      'Pick the ridge and the direction, then press Enter.',
     ]);
     // Said in the steps, so not again under the direction.
     expect(swivel?.vertex?.note).toBeNull();
-    // A finger has no key to hold: the latch that frees a point, and the button.
-    const touch = foldToolWindow(t, view(vertex({ tool: 'swivel' })), verbs(), finger);
-    expect(touch?.instructions.items[0]).toBe(
-      'Turn on Free point, then tap where the creases meet: inside the paper, off every crease.'
-    );
-    expect(touch?.instructions.items[5]).toBe('Pick the fourth crease, then tap Swivel fold.');
+    // The line it lands on, by a crease or edge or by two points.
+    expect(swivel?.vertex?.lineBy).toMatchObject({
+      label: 'Lands on',
+      value: 'crease',
+      options: [{ short: 'Crease or edge' }, { short: 'Two points' }],
+    });
+    expect(swivel?.meta).toBe('2 settings');
+    swivel?.vertex?.lineBy?.set('points');
+    expect(calls.setVertexLineBy).toHaveBeenCalledWith('points');
+    const points = foldToolWindow(t, view(vertex({ tool: 'swivel', lineBy: 'points' })), calls, mouse);
+    expect(points?.instructions.items.slice(2, 4)).toEqual([
+      'Click a point on the line it should land on.',
+      'Click a second point on that line.',
+    ]);
+    // A finger taps, and has no key to hold.
+    const touch = foldToolWindow(t, view(vertex({ tool: 'swivel' })), calls, finger);
+    expect(touch?.instructions.items).toEqual([
+      'Tap the pivot.',
+      'Tap the edge that moves: a raw edge or a folded edge.',
+      'Tap the line it should land on: a crease or an edge.',
+      'Pick the ridge and the direction, then tap Swivel fold.',
+    ]);
     expect(touch?.instructions.notes).toEqual([
-      'Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.',
+      'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
+      'Turn on Free point to put a point anywhere.',
     ]);
   });
 
-  it('locates a petal fold’s line H through the line modes, its precreases said before the first click', () => {
-    const crease = foldToolWindow(t, view(vertex({ tool: 'petal' })), verbs(), mouse);
-    expect(crease?.lineMode?.value).toBe('crease');
-    expect(crease?.instructions.intro).toMatch(/first use the Precrease tool: fold each lower edge of the top flap/);
+  it('starts a petal fold on its hinge crease, or its two ends, then the flap that lifts', () => {
+    const calls = verbs();
+    const crease = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'crease' })), calls, mouse);
+    expect(crease?.lineMode).toBeNull();
+    expect(crease?.instructions.intro).toMatch(/^Lifts a flap’s lower point up along a hinge/);
     expect(crease?.instructions.items).toEqual([
-      'Click the precrease H, across the flap where the kite creases end.',
-      'Click the flap below H, between the kite creases: the part that lifts.',
+      'Select the hinge crease.',
+      'Click the flap below the hinge: the part that lifts lights up under the pointer.',
       'Choose Valley or Mountain, then press Enter.',
     ]);
-    const ends = foldToolWindow(t, view(vertex({ tool: 'petal' }), { lineMode: 'axiom-1' }), verbs(), mouse);
+    expect(crease?.instructions.notes[0]).toBe('Only precreases can be the hinge: one lights up under the pointer.');
+    // A finger has no pointer to light one up under.
+    const tapped = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'crease' })), calls, finger);
+    expect(tapped?.instructions.notes).toEqual(['Only precreases can be the hinge: tap one across the flap.']);
+    expect(crease?.vertex?.lineBy).toMatchObject({
+      label: 'Hinge',
+      value: 'crease',
+      options: [{ short: 'Hinge crease' }, { short: 'Two endpoints' }],
+    });
+    crease?.vertex?.lineBy?.set('points');
+    expect(calls.setVertexLineBy).toHaveBeenCalledWith('points');
+    const ends = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'points' }), { picks: 1 }), calls, mouse);
     expect(ends?.instructions.items.slice(0, 3)).toEqual([
-      'Click one end of H, where a kite crease meets the flap’s edge.',
-      'Click the other end of H, where the other kite crease ends.',
-      'Click the flap below H, between the kite creases: the part that lifts.',
+      'Click one end of the hinge, where a kite crease meets the flap’s edge.',
+      'Click its other end, where the other kite crease meets the edge.',
+      'Click the flap below the hinge: the part that lifts lights up under the pointer.',
     ]);
+    expect(ends?.instructions.current).toBe(1);
+    expect(ends?.instructions.notes[0]).toMatch(/^Points snap to corners/);
+    // The hinge named: the flap's step, and what lights up.
+    const region = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'points' }), { picks: 2 }), calls, mouse);
+    expect(region?.instructions.current).toBe(2);
+    expect(region?.instructions.notes[0]).toBe(
+      'Paper below the hinge lights up where a petal fold can lift it: a click elsewhere says why not.'
+    );
     expect(ends?.vertex?.note).toBeNull();
-    // Previewing: what the direction does, and the commit by key or button.
-    const previewing = foldToolWindow(t, view(vertex({ tool: 'petal' }), { preview: preview() }), verbs(), mouse);
+    // Previewing: what the direction does, another flap, and the commit by key or button.
+    const previewing = foldToolWindow(t, view(vertex({ tool: 'petal' }), { preview: preview() }), calls, mouse);
     expect(previewing?.instructions.intro).toBeUndefined();
     expect(previewing?.instructions.items).toEqual([
-      'Valley lifts the flap toward you, Mountain away from you: the preview shows which.',
+      'Valley lifts the flap toward you, Mountain away from you. Click another flap below the hinge to lift that one.',
       'Press Enter, or click Petal fold, to fold.',
     ]);
+    // A finger taps.
+    const touch = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'points' })), calls, finger);
+    expect(touch?.instructions.items.slice(0, 3)).toEqual([
+      'Tap one end of the hinge, where a kite crease meets the flap’s edge.',
+      'Tap its other end, where the other kite crease meets the edge.',
+      'Tap the flap below the hinge, the part that lifts.',
+    ]);
+  });
+
+  it('says what a petal fold creases itself as the flap lifts', () => {
+    const said = (hinge: boolean, kites: number) =>
+      foldToolWindow(t, view(vertex({ tool: 'petal', petalScores: { hinge, kites } }), { preview: preview() }), verbs(), mouse)
+        ?.vertex?.note;
+    expect(said(true, 2)).toBe(
+      'The fold creases the hinge through the top layer and both kite creases through the top two layers as the flap lifts.'
+    );
+    expect(said(true, 1)).toMatch(/^The fold creases the hinge through the top layer and one kite crease/);
+    expect(said(true, 0)).toBe(
+      'The fold creases the hinge through the top layer as the flap lifts. The kite creases are there already.'
+    );
+    expect(said(false, 2)).toMatch(/^The fold creases both kite creases through the top two layers/);
+    expect(said(false, 1)).toMatch(/^The fold creases one kite crease/);
+    expect(said(false, 0)).toBe('Every crease it folds is there already: it refolds the hinge and the kite creases.');
   });
 });
 
@@ -230,10 +307,30 @@ describe('a vertex fold’s window while it previews', () => {
     expect(
       foldToolWindow(t, view({ ...nowhere, fourthElsewhere: true }, { preview: preview() }), calls, mouse)?.vertex?.emergentNote
     ).toBe('No fourth crease fits with this paper staying put: click other paper to stay.');
-    // A swivel's the same.
-    const swivel = foldToolWindow(t, view({ ...ear, tool: 'swivel', fourths: 3, fourth: 2 }, { preview: preview() }), calls, mouse);
-    expect(swivel?.vertex?.emergent?.value).toBe('3 of 3');
-    expect(swivel?.vertex?.emergentNote).toBe('3 fourth creases fit with this paper staying put.');
+  });
+
+  it('steps a swivel’s ridge by name among those that land, and says what its vertex is', () => {
+    const calls = verbs();
+    const swivel = vertex({ tool: 'swivel', lineBy: 'crease', fourths: 2, fourth: 1, ridge: 'end' });
+    const model = foldToolWindow(t, view(swivel, { preview: preview() }), calls, mouse);
+    const controls = model?.vertex;
+    expect(controls?.emergent).toMatchObject({ label: 'Ridge', value: 'Toward the edge’s end' });
+    expect(controls?.emergentNote).toBe('Either ridge lets it fold flat: step to the other.');
+    // Every layer at its vertex: no layers to step.
+    expect(controls?.layers).toBeNull();
+    expect(controls?.note).toMatch(/^The creases meet at the dot: the pivot, moved onto the line halfway/);
+    expect(model?.instructions.items[0]).toBe('Step Ridge to the other crease that can rise, and choose Valley or Mountain.');
+    // Direction, the line it lands on, the ridge.
+    expect(model?.meta).toBe('3 settings');
+    controls?.emergent?.previous.run();
+    expect(calls.stepEmergent).toHaveBeenCalledWith(-1);
+    // One lands: named, its arrows off.
+    const one = foldToolWindow(t, view({ ...swivel, fourths: 1, fourth: 0, ridge: 'foot' }, { preview: preview() }), calls, mouse);
+    expect(one?.vertex?.emergent).toMatchObject({ value: 'Square to the edge', next: { disabled: true } });
+    expect(one?.vertex?.emergentNote).toBe('Only this ridge lets it fold flat.');
+    const none = foldToolWindow(t, view({ ...swivel, fourths: 0, fourth: 0 }, { preview: preview() }), calls, mouse);
+    expect(none?.vertex?.emergent?.value).toBe('None');
+    expect(none?.vertex?.emergentNote).toBe('Neither ridge lets it fold flat: the notice below says why.');
   });
 
   it('steps the layer order when the fold leaves several', () => {
@@ -269,7 +366,7 @@ describe('a vertex fold’s window while it previews', () => {
       verbs(),
       mouse
     );
-    expect(petal?.refusal?.actions.map((action) => action.label)).toEqual(['Precrease this line first']);
+    expect(petal?.refusal?.actions.map((action) => action.label)).toEqual(['Precrease the hinge first']);
     expect(petal?.instructions.items).toEqual(['Click a fix below, or press Esc and pick again.']);
     const touch = foldToolWindow(
       t,
@@ -304,6 +401,11 @@ describe('a vertex fold’s refusals', () => {
       fan_fourth_beside_stayer: { code: 'fan_fourth_beside_stayer' },
       fan_fourth_cannot_rise: { code: 'fan_fourth_cannot_rise' },
       fan_stayer_detached: { code: 'fan_stayer_detached', point: [0.5, 0.5] },
+      swivel_not_an_edge: { code: 'swivel_not_an_edge', point: [0.5, 0.3] },
+      swivel_target_parallel: { code: 'swivel_target_parallel', faces: [0] },
+      swivel_pivot_on_edge: { code: 'swivel_pivot_on_edge', faces: [0] },
+      swivel_edge_short: { code: 'swivel_edge_short', faces: [0] },
+      swivel_edge_stays: { code: 'swivel_edge_stays', faces: [0] },
     };
     const titles = new Set<string>();
     for (const code of FOLD_VERTEX_REFUSAL_CODES) {
@@ -315,7 +417,7 @@ describe('a vertex fold’s refusals', () => {
       const bare = foldRefusalNotice(t, refused(bodies[code]), { ...vertexContext('squash'), vertex: undefined }, verbs());
       expect(bare.title, code).toBe(notice.title);
     }
-    expect(titles.size).toBeGreaterThan(9);
+    expect(titles.size).toBeGreaterThan(14);
     // Each cause says its own reason.
     for (const cause of ['single_layer', 'no_spine', 'no_hinge', 'upper_not_hinged'] as const) {
       const notice = foldRefusalNotice(t, refused({ code: 'squash_no_flap', faces: [0], cause }), vertexContext('squash'), verbs());
@@ -339,6 +441,50 @@ describe('a vertex fold’s refusals', () => {
     expect(beside.actions.map((action) => action.label)).toEqual(['Use fourth crease 2']);
     beside.actions[0]?.run();
     expect(calls.takeEmergent).toHaveBeenCalledWith([0, -1]);
+  });
+
+  it('words a petal fold with no flap by what the engine names of it: a hinge that misses the flap, or too near its closed point', () => {
+    const noFlap = (cause: 'no_ends' | 'no_corner', detail?: object) =>
+      foldRefusalNotice(t, refused({ code: 'petal_no_flap', faces: [1], cause, ...(detail ? { detail } : {}) } as FoldRefusalBody), vertexContext('petal'), verbs());
+    expect(noFlap('no_ends', { kind: 'misses_flap' })).toMatchObject({
+      title: 'The hinge misses the flap',
+      text: expect.stringMatching(/lies wholly on one side of the hinge/),
+    });
+    expect(noFlap('no_corner', { kind: 'past_corner', corner: [0.1, 0.1] })).toMatchObject({
+      title: 'The hinge is too near the closed point',
+      text: expect.stringMatching(/Move the hinge farther from the flap’s closed point/),
+    });
+    expect(noFlap('no_ends').title).toBe('The hinge does not cross the flap');
+    expect(noFlap('no_corner').title).toBe('No point to lift');
+  });
+
+  it('words a swivel by its edge in its own words: its ridge, its pivot, and the plain fold along the bisector', () => {
+    const calls = verbs();
+    const swivel = vertexContext('swivel', { swivel: 'edge' });
+    const short = foldRefusalNotice(
+      t,
+      refused({ code: 'swivel_edge_short', faces: [0] }, [{ fix: 'use_line', line: { n: [0.38, -0.92], d: 0 }, side: 'negative' }]),
+      swivel,
+      calls
+    );
+    expect(short.title).toBe('The edge ends before it would turn');
+    expect(short.actions.map((action) => action.label)).toEqual(['Fold the edge onto the line instead']);
+    short.actions[0]?.run();
+    expect(calls.useLine).toHaveBeenCalledTimes(1);
+    const blocked = foldRefusalNotice(
+      t,
+      refused({ code: 'fan_ray_blocked', faces: [1] }, [{ fix: 'use_emergent', direction: [0.5, -0.5] }]),
+      swivel,
+      calls
+    );
+    expect(blocked.text).toMatch(/Pick another pivot, or another line for the edge to land on/);
+    expect(blocked.actions.map((action) => action.label)).toEqual(['Use the other ridge']);
+    blocked.actions[0]?.run();
+    expect(calls.takeEmergent).toHaveBeenCalledWith([0.5, -0.5]);
+    expect(foldRefusalNotice(t, refused({ code: 'fan_center', faces: [1] }), swivel, calls).text).toMatch(/pick another pivot/);
+    // Read away from its tool, a swivel by its edge's own code is still its own.
+    const bare = foldRefusalNotice(t, refused({ code: 'swivel_target_parallel', faces: [0] }), { ...swivel, vertex: undefined }, calls);
+    expect(bare.title).toBe('The line runs parallel to the edge');
   });
 
   it('makes every fix a button that acts: the other direction, a fourth crease that fits', () => {
@@ -367,25 +513,25 @@ describe('a vertex fold’s refusals', () => {
     expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
 
     const line = { code: 'petal_not_precreased' as const, faces: [], missing: 'line' as const };
-    const far = foldRefusalNotice(t, refused(line), vertexContext('petal'), calls);
-    expect(far.title).toBe('Precrease the line first');
-    expect(far.actions.map((action) => action.label)).toEqual(['Precrease this line first']);
-    const near = foldRefusalNotice(t, refused(line), vertexContext('petal', { nearPrecrease: true }), calls);
-    expect(near.title).toBe('The line misses the precrease');
-    expect(near.actions.map((action) => action.label)).toEqual(['Use the precrease', 'Precrease this line first']);
-    near.actions.forEach((action) => action.run());
-    expect(calls.useNearPrecrease).toHaveBeenCalledTimes(1);
+    const crease = foldRefusalNotice(t, refused(line), vertexContext('petal'), calls);
+    expect(crease.title).toBe('Precrease the hinge first');
+    expect(crease.text).toMatch(/^The hinge crease does not run through every layer/);
+    expect(crease.actions.map((action) => action.label)).toEqual(['Precrease the hinge first']);
+    const ends = foldRefusalNotice(t, refused(line), vertexContext('petal', { hinge: 'points' }), calls);
+    expect(ends.text).toMatch(/^The hinge crosses paper of the second layer/);
+    ends.actions[0]?.run();
     expect(calls.precreaseLine).toHaveBeenCalledTimes(1);
 
-    const kite = foldRefusalNotice(
-      t,
-      refused({ code: 'petal_not_precreased', faces: [1], missing: 'kite' }),
-      vertexContext('petal'),
-      calls
-    );
-    expect(kite.actions.map((action) => action.label)).toEqual(['Precrease the kite']);
-    kite.actions[0]?.run();
+    const kiteBody = { code: 'petal_not_precreased' as const, faces: [1], missing: 'kite' as const };
+    const kite = foldRefusalNotice(t, refused(kiteBody), vertexContext('petal', { hinge: 'crease' }), calls);
+    expect(kite.title).toBe('The kite creases are not there');
+    expect(kite.actions.map((action) => action.label)).toEqual(['Crease the kites as it folds', 'Precrease the kite']);
+    kite.actions.forEach((action) => action.run());
+    expect(calls.petalByEnds).toHaveBeenCalledTimes(1);
     expect(calls.precreaseKite).toHaveBeenCalledTimes(1);
+    // By its ends, the fold creases the kite already: only the Precrease tool is left to offer.
+    const byEnds = foldRefusalNotice(t, refused(kiteBody), vertexContext('petal', { hinge: 'points' }), calls);
+    expect(byEnds.actions.map((action) => action.label)).toEqual(['Precrease the kite']);
     // Read-only: shown, none taken.
     const locked = foldRefusalNotice(t, refused(line), { ...vertexContext('petal'), readOnly: true }, calls);
     expect(locked.actions.every((action) => action.disabled)).toBe(true);

@@ -21,8 +21,8 @@ import { vertexCreaseLines } from './vertexOverlay';
  * layer it lies in, read on the paper on top there — its front-relative
  * letter, the other one where that layer shows its back. Steps from the
  * example projects (`tests/fixtures/fold-examples`), replayed through the
- * real bridge: a swivel's three branches, the petal folds front and back, the
- * squashes. The engine's rules are in `compound/fan.rs`, `petal.rs` and
+ * real bridge: a swivel's two branches, by its edge, one per ridge; the petal
+ * folds front and back, by H's ends; the squashes. The engine's rules are in `compound/fan.rs`, `petal.rs` and
  * `squash.rs`.
  *
  * Skipped when the bridge has not been built (a fresh worktree before
@@ -150,14 +150,15 @@ function compare(engined: Engine, name: string, n: number, op?: (stored: FoldVer
 }
 
 describe.skipIf(!available)('a vertex fold’s creases on the folded pane, against what the fold shows the viewer', () => {
-  it.each([1, 2, 3])('letters swivel branch %i as its landed creases show: three the direction’s way, the fourth the other', async (n) => {
+  // Step 1 is the diagonal precrease; each branch from it swivels the bottom edge onto it.
+  it.each([2, 3])('letters swivel step %i, by its edge, as its landed creases show: three the direction’s way, the ridge the other', async (n) => {
     const { seen, drawn: lines } = compare(await engine(), 'swivel-fold.osf', n);
     expect(seen).toHaveLength(4);
     for (const crease of seen) expect(drawnAt(lines, crease.at)).toBe(crease.letter);
     expect(lines.map((line) => line.letter).sort()).toEqual(['mountain', 'valley', 'valley', 'valley']);
   });
 
-  it.each([9, 13])('letters petal fold %i as the top layer shows it: H the direction’s way, the kites the other', async (n) => {
+  it.each([8, 12])('letters petal fold %i as the top layer shows it: H the direction’s way, the kites the other', async (n) => {
     const { seen, drawn: lines } = compare(await engine(), 'petal-fold.osf', n);
     const top = seen.filter((crease) => crease.depth === 0);
     expect(top.length).toBeGreaterThan(0);

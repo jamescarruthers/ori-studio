@@ -24,12 +24,12 @@ import type { FoldEngineOutcome, FoldModelPoint, FoldSceneCrease } from './foldE
 /**
  * The petal fold with H named by its two ends, over the real bridge: the
  * bird-base example (`tests/fixtures/fold-examples/petal-fold.osf`, built in
- * the app over precreases) folded again from its preliminary base with no
- * precrease at all — each petal fold's H through the ends its own crease-form
- * fold found — crossing the boundary as the document stores it, answering the
- * compound question with what it creases, and landing the same folded
- * creases as the example, with fewer creased layers; then the whole path
- * replayed from the document, every step ok.
+ * the app with each H by its ends over precreased kites) folded again from
+ * its preliminary base with no precrease at all — the example's own two petal
+ * ops, unchanged — crossing the boundary as the document stores it, answering
+ * the compound question with what it creases (the kites now too), and landing
+ * the same folded creases as the example; then the whole path replayed from
+ * the document, every step ok.
  *
  * Skipped when the bridge has not been built (a fresh worktree before
  * `build:wasm`); CI builds it before the web tests run.
@@ -147,7 +147,7 @@ describe.skipIf(!available)('the petal fold by its ends over the bridge', () => 
     );
   }
 
-  it('folds the example’s bird base again with no precrease, its H by its ends, and replays it from the document', async () => {
+  it('folds the example’s bird base again with no precrease, its H by the same ends, and replays it from the document', async () => {
     const { document, steps } = example();
     expect(steps.map((step) => step.op.kind)).toEqual([
       'valley',
@@ -157,37 +157,33 @@ describe.skipIf(!available)('the petal fold by its ends over the bridge', () => 
       'squash',
       'precrease',
       'precrease',
-      'precrease',
       'petal',
       'turn',
       'precrease',
       'precrease',
       'petal',
     ]);
-    // The example as saved: over precreases.
+    // The example as saved: H by its ends, creased by the fold; the kites precreased.
     const states = [landed(engine.calls.sheet(document.paper)).state];
     for (const step of steps) states.push(landed(engine.calls.step(states.at(-1)!, step.op, step.choices)).state);
-    const [first, second] = [steps[8]!.op, steps[12]!.op];
-    if (first.kind !== 'petal' || second.kind !== 'petal') throw new Error('no petal folds');
-    expect(petalHinge(first).kind).toBe('crease');
-    const overPrecreases = petalAnalysis(states[8]!, first);
-    expect([overPrecreases.scores_line, overPrecreases.scores_kites]).toEqual([false, [false, false]]);
-
-    // From the preliminary base, nothing precreased: H through the ends the
-    // example's own petal fold found, the petal where it named it.
-    const base = states[5]!;
-    const [from, to] = endsOn(base, overPrecreases);
-    const byEnds = petalOp({ kind: 'points', from, to }, first.petal, first.direction);
+    const [byEnds, byEndsBack] = [steps[7]!.op, steps[11]!.op];
+    if (byEnds.kind !== 'petal' || byEndsBack.kind !== 'petal') throw new Error('no petal folds');
+    expect(petalHinge(byEnds).kind).toBe('points');
     expect(Object.keys(byEnds)).toEqual(['kind', 'ends', 'petal', 'direction']);
+    const overKites = petalAnalysis(states[7]!, byEnds);
+    expect([overKites.scores_line, overKites.scores_kites]).toEqual([true, [false, false]]);
+
+    // From the preliminary base, nothing precreased: the same op.
+    const base = states[5]!;
     const asked = petalAnalysis(base, byEnds);
     expect(asked.scores_line).toBe(true);
     expect(asked.scores_kites).toEqual([true, true]);
-    // The same two ends, in whichever order each finds them.
+    // The same two ends, in whichever order each finds them, and the same corner.
     for (const end of asked.ends) {
-      const nearest = Math.min(...overPrecreases.ends.map((other) => Math.hypot(end[0] - other[0], end[1] - other[1])));
+      const nearest = Math.min(...overKites.ends.map((other) => Math.hypot(end[0] - other[0], end[1] - other[1])));
       expect(nearest).toBeLessThan(1e-9);
     }
-    expect(Math.hypot(asked.corner[0] - overPrecreases.corner[0], asked.corner[1] - overPrecreases.corner[1])).toBeLessThan(1e-9);
+    expect(Math.hypot(asked.corner[0] - overKites.corner[0], asked.corner[1] - overKites.corner[1])).toBeLessThan(1e-9);
 
     const front = landed(engine.calls.step(base, byEnds));
     const report = vertexOf(front.compound);
@@ -200,31 +196,25 @@ describe.skipIf(!available)('the petal fold by its ends over the bridge', () => 
     expect(tried.result).toBe('landed');
     if (tried.result === 'landed') expect(tried.fingerprint).toEqual(front.fingerprint);
 
-    // Turned over, the back flap the same way.
-    const turned = landed(engine.calls.step(front.state, steps[9]!.op)).state;
-    const overPrecreasesBack = petalAnalysis(states[12]!, second);
-    const [fromBack, toBack] = endsOn(turned, overPrecreasesBack);
-    const byEndsBack = petalOp({ kind: 'points', from: fromBack, to: toBack }, second.petal, second.direction);
+    // Turned over, the back flap the same way: the example's own op again.
+    const turned = landed(engine.calls.step(front.state, steps[8]!.op)).state;
     const bird = landed(engine.calls.step(turned, byEndsBack));
     expect(vertexOf(bird.compound).created).toHaveLength(6);
 
-    // The example's folded creases, letter for letter, and fewer creased
-    // layers: its H ran through every layer.
+    // The example's folded creases, letter for letter, whether the kites
+    // were precreased first or creased by the petal fold.
     const ours = engine.calls.scene(bird.state).creases;
-    const theirs = engine.calls.scene(states[13]!).creases;
+    const theirs = engine.calls.scene(states[12]!).creases;
     expect(foldedAlong(ours, theirs)).toBe(true);
     expect(foldedAlong(theirs, ours)).toBe(true);
-    const ourSummary = engine.calls.summary(bird.state);
-    const theirSummary = engine.calls.summary(states[13]!);
-    expect(ourSummary.creases.flat).toBeLessThan(theirSummary.creases.flat);
-    expect(ourSummary.faces).toBeLessThan(theirSummary.faces);
+    expect(engine.calls.summary(bird.state).faces).toBe(engine.calls.summary(states[12]!).faces);
 
     // The path as a document stores it — written, read back — replays every
     // step to ok through the document's replayer.
     const path: FoldStep[] = [
       ...steps.slice(0, 5),
       { id: 'petal-front', parent: steps[4]!.id, op: byEnds },
-      { id: 'turn-back', parent: 'petal-front', op: steps[9]!.op },
+      { id: 'turn-back', parent: 'petal-front', op: steps[8]!.op },
       { id: 'petal-back', parent: 'turn-back', op: byEndsBack },
     ];
     const written = writeFoldSequence({ document: { ...document, steps: path }, readOnlyRaw: null });
@@ -250,13 +240,13 @@ describe.skipIf(!available)('the petal fold by its ends over the bridge', () => 
     const { document, steps } = example();
     let state = landed(engine.calls.sheet(document.paper)).state;
     for (const step of steps.slice(0, 5)) state = landed(engine.calls.step(state, step.op, step.choices)).state;
-    const first = steps[8]!.op;
+    const first = steps[7]!.op;
     if (first.kind !== 'petal') throw new Error('no petal fold');
     // The closed point, where the two folded edges meet: each edge is H
     // reflected in the kite crease at its end. Ends most of the way to it
     // put the kite creases' corner inside the flap.
     let over = state;
-    for (const step of steps.slice(5, 8)) over = landed(engine.calls.step(over, step.op, step.choices)).state;
+    for (const step of steps.slice(5, 7)) over = landed(engine.calls.step(over, step.op, step.choices)).state;
     const found = petalAnalysis(over, first);
     const [a, b] = found.ends;
     const unit = (v: FoldModelPoint): FoldModelPoint => [v[0] / Math.hypot(...v), v[1] / Math.hypot(...v)];

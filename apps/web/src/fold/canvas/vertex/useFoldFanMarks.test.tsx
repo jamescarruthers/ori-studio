@@ -54,7 +54,7 @@ let seen: { fan: FoldFanMarks | null; paint: FoldCanvasPaint } | null;
 
 function Harness({ tools, preview = NO_PREVIEW }: { tools: FoldToolState; preview?: FoldToolPreview }) {
   const fan = useFoldFanMarks(index, tools);
-  const paint = useFoldCanvasPaint(view, preview, FOLD_PANE_DISPLAY_DEFAULT, null, null, null, fan);
+  const paint = useFoldCanvasPaint(view, preview, FOLD_PANE_DISPLAY_DEFAULT, null, null, null, fan?.pending ?? null);
   useEffect(() => {
     seen = { fan, paint };
   });
@@ -142,7 +142,6 @@ describe('a rabbit ear’s marks from its clicks', () => {
       orders: [],
       order: null,
       layers: 1,
-      nearPrecrease: null,
     } satisfies FoldVertexPreview;
     // The paper that stays picked; the engine's answer on its way: the pending three.
     render(ear([...CORNERS, free(0.3, 0.3)]), { ...NO_PREVIEW, vertex: { ...vertex, base: null, emergent: null, fourths: [] } });

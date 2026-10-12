@@ -429,7 +429,8 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
             ),
       };
     }
-    // The vertex folds' (`vertex/vertexRefusal`), in their tool's words.
+    // The vertex folds' (`vertex/vertexRefusal`), in their tool's words: the
+    // swivel by its edge's among them.
     case 'squash_no_flap':
     case 'squash_flap_not_free':
     case 'squash_flap_covered':
@@ -442,15 +443,12 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'fan_fourth_beside_stayer':
     case 'fan_fourth_cannot_rise':
     case 'fan_stayer_detached':
-      return vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? invalidWords(t);
-    // The swivel by its edge's (`foldEngineSquashWire`): no tool folds it
-    // yet, so no words of its own.
     case 'swivel_not_an_edge':
     case 'swivel_target_parallel':
     case 'swivel_pivot_on_edge':
     case 'swivel_edge_short':
     case 'swivel_edge_stays':
-      return invalidWords(t);
+      return vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? invalidWords(t);
     // The sinks'.
     case 'sink_several_points':
     case 'sink_point_open':
@@ -810,6 +808,8 @@ function tuckTargetLabel(t: TFunction, context: FoldRefusalContext, face: number
  */
 function lineFixLabel(t: TFunction, fix: FoldUseLineFix, kind: FoldRefusalContext['kind']): string {
   if (kind === 'sink' && !fix.step) return t('tools:fold.fix.useSquareLine', 'Use the square line');
+  // A swivel whose edge ends before it would turn: the plain fold along the bisector lays it on the line.
+  if (kind === 'vertex' && !fix.step) return t('tools:fold.fix.foldOntoLine', 'Fold the edge onto the line instead');
   const line = fix.step?.op.line;
   if (line?.via !== 'axiom') return t('tools:fold.fix.useLine', 'Use the landmark line');
   return line.axiom === 7

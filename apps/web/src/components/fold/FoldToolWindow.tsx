@@ -4,6 +4,7 @@ import type { TurnDirection, TurnRotationPreset } from '../../lib/steps/turn';
 import type { FoldKeyLabel, FoldKind, FoldShortcutId } from '../../fold/tools/foldToolCatalog';
 import type { FoldToolWindowModel } from '../../fold/tools/foldToolWindow';
 import type { FoldExtentMode } from '../../fold/tools/precrease/precreaseExtent';
+import type { FoldKindChoice } from '../../fold/tools/reverse/reverseToolWindow';
 import { STORAGE_KEYS } from '../../lib/storage';
 import { useIsPhoneLayout } from '../../platform/phoneLayout';
 import { Button } from '../ui/Button';
@@ -24,6 +25,38 @@ import { FoldSinkChoices, FoldSinkLine } from './sink/FoldSinkControls';
 import { hasVertexChoices } from '../../fold/tools/vertex/vertexToolWindow';
 import { FoldVertexChoices, FoldVertexDirection } from './vertex/FoldVertexControls';
 import styles from './FoldToolWindow.module.css';
+
+/**
+ * A choice of a few named ways, under a heading of its own so their names
+ * fit across the window: a precrease's extent (`data-fold-extent`), a petal
+ * fold's hinge or a swivel's target (`data-fold-line-by`).
+ */
+function ChoiceSegments<K extends string>({ choice, section }: { choice: FoldKindChoice<K>; section: 'extent' | 'lineBy' }) {
+  return (
+    <div
+      className={styles.section}
+      data-fold-extent={section === 'extent' ? '' : undefined}
+      data-fold-line-by={section === 'lineBy' ? '' : undefined}
+    >
+      <span className={styles.heading}>{choice.label}</span>
+      <SegmentedControl<K>
+        size="sm"
+        fill
+        aria-label={choice.label}
+        value={choice.value}
+        disabled={choice.disabled}
+        options={choice.options.map((option) => ({
+          value: option.value,
+          label: option.short,
+          tooltip: option.label,
+          disabled: option.disabled,
+        }))}
+        onChange={choice.set}
+      />
+      {choice.note && <p className={styles.note}>{choice.note}</p>}
+    </div>
+  );
+}
 
 /**
  * The Fold canvas's tool window: the app's window chrome (`ToolHintWindow`)
@@ -113,6 +146,8 @@ export function FoldToolWindow({
           </p>
         ))}
       </div>
+      {/* A petal fold's hinge, or a swivel's target: how it is named, which its steps above follow. */}
+      {vertex?.lineBy && <ChoiceSegments choice={vertex.lineBy} section="lineBy" />}
       {/* No dividers: the window divides its own sections. */}
       {divide && (
         <div className={styles.section} data-fold-divide="">
@@ -201,26 +236,7 @@ export function FoldToolWindow({
         </div>
       )}
       {/* A precrease's extent: the whole line, a segment or a pinch, under a heading of its own so the three names fit. */}
-      {extent && (
-        <div className={styles.section} data-fold-extent="">
-          <span className={styles.heading}>{extent.label}</span>
-          <SegmentedControl<FoldExtentMode>
-            size="sm"
-            fill
-            aria-label={extent.label}
-            value={extent.value}
-            disabled={extent.disabled}
-            options={extent.options.map((option) => ({
-              value: option.value,
-              label: option.short,
-              tooltip: option.label,
-              disabled: option.disabled,
-            }))}
-            onChange={extent.set}
-          />
-          {extent.note && <p className={styles.note}>{extent.note}</p>}
-        </div>
-      )}
+      {extent && <ChoiceSegments<FoldExtentMode> choice={extent} section="extent" />}
       {/* Rotate's amount — a part of a turn, or an exact angle — then which way the model turns. */}
       {rotate && (
         <div className={styles.section} data-fold-rotate="">

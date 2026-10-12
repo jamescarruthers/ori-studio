@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { trackFoldChoiceOffered, trackFoldStepAdded } from '../../analytics';
-import type { FoldStepAddedOpKind } from '../../analytics';
+import type { FoldStepAddedOpKind, FoldStepVertexForm } from '../../analytics';
 import { readHeldModifiers } from '../../keyboard/heldModifiers';
 import type { TurnKind } from '../../lib/steps/turn';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { shownFoldSequence } from '../../store/workspaceStore/foldState';
 import {
   isLockedStep,
+  isSwivelEdgeOp,
   isVertexOp,
   randomFoldId,
   type FoldCrimpOp,
@@ -33,7 +34,7 @@ import {
   type FoldSecondLineModeId,
   type FoldToolId,
 } from '../tools/foldToolCatalog';
-import { lineModeInput, nextStep } from '../tools/foldToolRegistry';
+import { nextStep } from '../tools/foldToolRegistry';
 import { steppedTuckTarget } from '../tools/tuck/tuckStep';
 import { rotationBucket } from '../tools/rotate/rotateTool';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
@@ -53,10 +54,17 @@ import {
   fanHasNoFourth,
   fanStayerRegion,
   nearestDirection,
+  parallelSegments,
+  petalHingeClicks,
+  petalRegionKey,
   picksFanStayer,
+  picksPetalRegion,
   squashTargetToward,
   steppedFourth,
+  swivelEdgePick,
 } from '../tools/vertex/vertexStep';
+import { SWIVEL_TARGET_FROM } from '../tools/vertex/vertexInputs';
+import type { FoldLineBy } from '../tools/foldToolCatalog';
 import { isFoldAltLatched } from './foldAltLatch';
 import { resolveAlongPick } from './foldAlongLine';
 import { toPair, transformLine } from './foldCanvasGeometry';
@@ -68,6 +76,8 @@ import {
   type FoldHitRadii,
   type FoldPaneId,
   type FoldPickIndex,
+  type FoldPointPick,
+  type FoldSegmentPick,
 } from './foldPicking';
 import type { FoldToolPreview } from './useFoldToolPreview';
 import type { FoldStateView } from './useFoldStateView';
@@ -158,11 +168,13 @@ export interface FoldCanvasVerbs {
   stepFanLayers: (delta: number) => void;
   /** Put a squash's spine back onto its hinge line. */
   resetSquashTarget: () => void;
-  /** A petal fold's H along the precrease beside the line its clicks located. */
-  useNearPrecrease: () => void;
-  /** Precrease a petal fold's H, or its kite, first: the Precrease tool on that line, or on the edge-to-edge axiom. */
+  /** Name a petal fold's hinge, or a swivel's target, by a crease or by two points. */
+  setVertexLineBy: (lineBy: FoldLineBy) => void;
+  /** Precrease a petal fold's hinge, or its kite, first: the Precrease tool through the hinge's ends, or on the edge-to-edge axiom. */
   precreaseLine: () => void;
   precreaseKite: () => void;
+  /** A petal fold over a hinge crease whose kite is not creased: the same hinge by its ends, so the fold creases the kite. */
+  petalByEnds: () => void;
   /** The sinks: the other kind of sink (its tool taken in hand, the line kept), and a closed sink's pockets. */
   otherSink: (kind: FoldSinkKind) => void;
   stepPocket: (delta: number) => void;
@@ -214,8 +226,8 @@ export type FoldCanvasChoice = {
   count: number;
 };
 
-/** A vertex fold's choice the chooser steps through, beside its order: a fan's fourth ray. */
-export type FoldVertexCanvasChoiceKind = 'emergent';
+/** A vertex fold's choice the chooser steps through, beside its order: a rabbit ear's fourth ray, a swivel's ridge. */
+export type FoldVertexCanvasChoiceKind = 'emergent' | 'ridge';
 
 /**
  * What the compound fold in hand lists to choose from: the ways a reverse
@@ -245,9 +257,10 @@ function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
   if (!vertex) return null;
   const { orders, order, emergent, fourths } = vertex;
   if (orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
-  // Only the fourth creases that land, numbered among themselves.
+  // Only the fourth creases — a swivel's ridges — that land, numbered among themselves.
   const at = emergent === null ? -1 : fourths.indexOf(emergent);
-  return fourths.length > 1 && at >= 0 ? { kind: 'emergent', index: at, count: fourths.length } : null;
+  const kind = vertex.base?.analysis.kind === 'swivel-by-edge' ? 'ridge' : 'emergent';
+  return fourths.length > 1 && at >= 0 ? { kind, index: at, count: fourths.length } : null;
 }
 
 /**
@@ -297,6 +310,13 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
   }
 }
 
+/** How a vertex fold named what it takes, as `fold step added` counts it: a petal fold's hinge, a swivel's form and target. */
+function vertexFormOf(op: FoldOp): FoldStepVertexForm | undefined {
+  if (op.kind === 'petal') return { hinge: 'ends' in op ? 'points' : 'crease' };
+  if (op.kind !== 'swivel') return undefined;
+  return isSwivelEdgeOp(op) ? { swivelForm: 'edge', target: op.target.via } : { swivelForm: 'rays' };
+}
+
 function trackCommitted(op: FoldOp): void {
   const kind = opKindOf(op);
   if (!kind) return;
@@ -305,8 +325,13 @@ function trackCommitted(op: FoldOp): void {
     trackFoldStepAdded(kind, { amount: rotationBucket(op.rotate) });
     return;
   }
-  // A vertex fold takes no line and no layer scope of a plain fold's.
-  if (op.kind === 'turn' || op.kind === 'cp-jump' || isVertexOp(op)) {
+  // A vertex fold takes no line and no layer scope of a plain fold's: how it named its own lines instead.
+  if (isVertexOp(op)) {
+    const vertex = vertexFormOf(op);
+    trackFoldStepAdded(kind, vertex ? { vertex } : undefined);
+    return;
+  }
+  if (op.kind === 'turn' || op.kind === 'cp-jump') {
     trackFoldStepAdded(kind);
     return;
   }
@@ -435,6 +460,18 @@ export function useFoldCanvasVerbs(
       tools.repick(pick);
     };
 
+    /** A petal fold's flap, clicked again while its fold is previewed: taken when it is other paper below the hinge. */
+    const repetal = (pick: FoldPick) => {
+      const now = state();
+      const index = live.current.view.index;
+      const last = now.picks.at(-1);
+      if (!index || pick.kind !== 'free' || last?.kind !== 'free') return;
+      const intent = { petalHinge: now.petalHinge, picks: now.picks, direction: now.vertexDirection };
+      const next = petalRegionKey(index, intent, pick.scene);
+      if (next === null || next === petalRegionKey(index, intent, last.scene)) return;
+      tools.repick(pick);
+    };
+
     /** Step a fan's fourth crease through the ones that land, the only ones offered. */
     const stepFourth = (delta: number) => {
       const vertex = live.current.preview.vertex;
@@ -448,11 +485,32 @@ export function useFoldCanvasVerbs(
       tools.setVertexDirection(now.vertexDirection === 'valley' ? 'mountain' : 'valley');
     };
 
-    /** A petal fold's line clicks, and the flap clicked after them. */
+    /** A petal fold's hinge clicks, and the flap clicked after them. */
     const petalPicks = () => {
       const now = state();
-      const clicks = lineModeInput(now.lineMode).steps.length;
-      return { line: now.picks.slice(0, clicks), flap: now.picks[clicks] };
+      const clicks = petalHingeClicks(now);
+      return { hinge: now.picks.slice(0, clicks), flap: now.picks[clicks] };
+    };
+
+    /**
+     * The hinge's two ends as points to click: the ends clicked, or a hinge
+     * crease's ends, where the folded form puts them. Null before the hinge
+     * is named.
+     */
+    const hingeEnds = (): [FoldPointPick, FoldPointPick] | null => {
+      const { hinge } = petalPicks();
+      const [first, second] = hinge;
+      if (first?.kind === 'segment') {
+        const end = (k: 0 | 1): FoldPointPick => ({
+          kind: 'point',
+          provenance: 'vertex',
+          sheet: first.sheet[k],
+          mark: null,
+          scene: first.scene[k],
+        });
+        return [end(0), end(1)];
+      }
+      return first?.kind === 'point' && second?.kind === 'point' ? [first, second] : null;
     };
 
     return {
@@ -470,9 +528,10 @@ export function useFoldCanvasVerbs(
         const index = drawn === undefined ? shown.index : drawn;
         if (!index) return null;
         const tool = state();
-        // A fan's paper that stays, picked or picked again: the paper under
-        // the pointer, whose region the panes light — off it, nothing.
-        if (picksFanStayer(tool.tool, tool.picks.length)) {
+        // A fan's paper that stays, or a petal fold's flap, picked or picked
+        // again: the paper under the pointer, whose region the panes light —
+        // off it, nothing.
+        if (picksFanStayer(tool.tool, tool.picks.length) || picksPetalRegion(tool.tool, tool.petalHinge, tool.picks.length)) {
           const pick = resolveFoldPick(index, pane, at, radii, { snap: 'free', edges: false, free: false });
           return { pane, at, pick: pick?.kind === 'free' && pick.sheet ? pick : null };
         }
@@ -493,7 +552,16 @@ export function useFoldCanvasVerbs(
           const interval = pane === 'folded' ? wovenIntervalAt(live.current.preview.section, at) : null;
           return interval === null ? { pane, at, pick: null } : { pane, at, pick: null, interval };
         }
-        const pick = resolveFoldPick(index, pane, at, radii, { snap: step.snap, edges: step.edges, free: freePointHeld() });
+        // A swivel's target is never parallel to its edge: no turn lays one on the other.
+        const edge = swivelEdgePick(tool);
+        const target = edge && tool.picks.length === SWIVEL_TARGET_FROM && step.snap === 'crease-required';
+        const pick = resolveFoldPick(index, pane, at, radii, {
+          snap: step.snap,
+          edges: step.edges,
+          free: freePointHeld(),
+          ...(step.kinds ? { kinds: step.kinds } : {}),
+          ...(target ? { accept: (segment: FoldSegmentPick) => !parallelSegments(segment.scene, edge.scene) } : {}),
+        });
         return { pane, at, pick };
       },
 
@@ -516,6 +584,8 @@ export function useFoldCanvasVerbs(
           else if (hit.pane === 'folded' && tool.tool === 'squash') aimSquash(hit.at);
           // A fan's paper that stays, picked again in another region, on either pane.
           else if (hit.pick && picksFanStayer(tool.tool, tool.picks.length)) restay(hit.pick);
+          // A petal fold's flap, picked again below the hinge, on either pane.
+          else if (hit.pick && picksPetalRegion(tool.tool, tool.petalHinge, tool.picks.length)) repetal(hit.pick);
           return;
         }
         if (!hit.pick) return;
@@ -613,8 +683,14 @@ export function useFoldCanvasVerbs(
 
       takeEmergent: (direction) => {
         const analysis = live.current.preview.vertex?.base?.analysis;
-        if (analysis?.kind !== 'rabbit-ear' && analysis?.kind !== 'swivel') return;
-        const k = nearestDirection(analysis.candidates, direction);
+        // A fan's fourth ray, or a swivel's ridge: the one the direction names.
+        const listed =
+          analysis?.kind === 'swivel-by-edge'
+            ? analysis.ridges
+            : analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel'
+              ? analysis.candidates
+              : null;
+        const k = listed ? nearestDirection(listed, direction) : null;
         if (k !== null) tools.setEmergent(k);
       },
 
@@ -628,27 +704,33 @@ export function useFoldCanvasVerbs(
 
       resetSquashTarget: () => tools.setSquashTarget(null),
 
-      useNearPrecrease: () => {
-        const near = live.current.preview.vertex?.nearPrecrease;
-        const { flap } = petalPicks();
-        if (!near) return;
-        // H as the precrease it is, the flap as it was clicked.
-        tools.selectLineMode('crease');
-        tools.pick(near);
-        if (flap) tools.pick(flap);
+      setVertexLineBy: (lineBy) => {
+        const now = state();
+        if (now.tool === 'petal') tools.setPetalHinge(lineBy);
+        else if (now.tool === 'swivel') tools.setSwivelTarget(lineBy);
       },
 
       precreaseLine: () => {
-        const { line } = petalPicks();
-        // The Precrease tool on H as located, through every layer.
+        const ends = hingeEnds();
+        // The Precrease tool on the hinge, through its two ends, through every layer.
         tools.selectTool('precrease');
-        for (const pick of line) tools.pick(pick);
+        tools.selectLineMode('axiom-1');
+        for (const pick of ends ?? []) tools.pick(pick);
       },
 
       precreaseKite: () => {
         // A kite crease folds a side edge onto the centre line: the edge-to-edge axiom.
         tools.selectTool('precrease');
         tools.selectLineMode('axiom-3');
+      },
+
+      petalByEnds: () => {
+        const ends = hingeEnds();
+        const { flap } = petalPicks();
+        if (!ends) return;
+        // The same hinge by its ends, and the flap as it was clicked: the fold creases what is missing.
+        tools.setPetalHinge('points');
+        for (const pick of [...ends, ...(flap ? [flap] : [])]) tools.pick(pick);
       },
 
       // The sinks'.
@@ -698,11 +780,15 @@ export function useFoldCanvasVerbs(
         const sceneLine = transformLine(index.scene.view_transform, fix.line);
         if (!op) {
           // No step to put it in: an axiom whose roots were refused as a
-          // near miss. The landmark line is located as a free line instead,
-          // its side the fix's.
+          // near miss, or a swivel whose edge ends before it would turn (its
+          // plain fold along the bisector). The line is located as a free
+          // line instead, its side the fix's — a swivel's folded the way it
+          // was to fold.
           const picks = freePicksAlong(index, sceneLine);
           if (!picks) return;
+          const before = state();
           tools.selectLineMode('free');
+          if (isVertexTool(before.tool) && before.vertexDirection === 'mountain') tools.selectTool('mountain');
           for (const pick of picks) tools.pick(pick);
           if (defaultMovingSign(index, sceneLine, false) !== (fix.side === 'positive' ? 1 : -1)) tools.swapSide();
           return;
@@ -738,6 +824,7 @@ export function useFoldCanvasVerbs(
             tools.stepRoot(delta, choice.count);
             break;
           case 'emergent':
+          case 'ridge':
             stepFourth(delta);
             break;
         }

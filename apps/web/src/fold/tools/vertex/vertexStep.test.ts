@@ -5,7 +5,6 @@ import { foldPickIndex, type FoldPick } from '../../canvas/foldPicking';
 import type { FoldVertexAnalysed, FoldVertexOrders } from '../../engine/foldEngineSquashWire';
 import type { FoldScene } from '../../engine/foldEngineWire';
 import { toPoint } from '../../canvas/foldCanvasGeometry';
-import { isSwivelEdgeOp } from '../../document/foldSequenceDocument';
 import { fanRegionAt } from './fanGeometry';
 import {
   emergentToFold,
@@ -19,16 +18,18 @@ import {
   landingFourths,
   layerSheetPointAt,
   nearestDirection,
-  nearPrecrease,
-  petalLine,
+  parallelSegments,
+  petalHingeOf,
+  petalRegionKey,
   picksFanStayer,
+  picksPetalRegion,
   PLACEHOLDER_RAY,
-  precreaseAlong,
   squashTargetToward,
   steppedFourth,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
+  withEmergent,
   type FoldVertexIntent,
   type FoldVertexTaken,
 } from './vertexStep';
@@ -67,9 +68,9 @@ const point = (x: number, y: number): FoldPick => ({
 
 const intent = (extra: Partial<FoldVertexIntent>): FoldVertexIntent => ({
   tool: 'squash',
-  lineMode: 'crease',
+  petalHinge: 'crease',
+  swivelTarget: 'crease',
   picks: [],
-  candidate: null,
   direction: 'valley',
   fanLayers: null,
   ...extra,
@@ -105,48 +106,108 @@ describe('which layer a vertex fold’s click names', () => {
   });
 });
 
-describe('a petal fold’s line H', () => {
+describe('a petal fold’s hinge', () => {
   const index = foldPickIndex(precreasedScene(), flatSquareLandmarks(), []);
+  const [crease] = index.creasePattern.segments.filter((segment) => segment.segment === 'crease');
 
-  it('is the precrease clicked, or the one along the line its ends locate', () => {
-    const [crease] = index.creasePattern.segments.filter((segment) => segment.segment === 'crease');
+  it('is the precrease clicked, or the line through its two ends', () => {
     if (!crease) throw new Error('no precrease');
-    expect(petalLine(intent({ tool: 'petal', picks: [crease] }), index)).toEqual({ kind: 'crease', crease: [0.5, 0.5] });
-    const ends = [free(0.1, 0.5), free(0.9, 0.5)];
-    expect(petalLine(intent({ tool: 'petal', lineMode: 'free', picks: ends }), index)).toEqual({
-      kind: 'crease',
-      crease: [0.5, 0.5],
+    expect(petalHingeOf(intent({ tool: 'petal', picks: [crease] }))).toEqual({ kind: 'crease', at: [0.5, 0.5] });
+    const ends = [point(0, 0.5), point(1, 0.5)];
+    expect(petalHingeOf(intent({ tool: 'petal', petalHinge: 'points', picks: ends }))).toEqual({
+      kind: 'points',
+      from: [0, 0.5],
+      to: [1, 0.5],
     });
-    expect(precreaseAlong(index, { n: [0, 1], d: 0.5 })).toEqual([0.5, 0.5]);
+    // Before its clicks are in, none.
+    expect(petalHingeOf(intent({ tool: 'petal', petalHinge: 'points', picks: ends.slice(0, 1) }))).toBeNull();
   });
 
-  it('runs along no precrease off it, offering the one beside it as the landmark', () => {
-    const beside = [free(0.1, 0.51), free(0.9, 0.51)];
-    const line = petalLine(intent({ tool: 'petal', lineMode: 'free', picks: beside }), index);
-    expect(line).toMatchObject({ kind: 'missing', near: { segment: 'crease', edge: 4 } });
-    // Far from every precrease: none is offered.
-    expect(nearPrecrease(index, { n: [0, 1], d: 0.8 })).toBeNull();
-    // Refused before the engine is asked, in the engine's own words.
-    const asked = vertexAskedOp(intent({ tool: 'petal', lineMode: 'free', picks: [...beside, free(0.5, 0.2)] }), index);
-    expect(asked).toMatchObject({ status: 'refused', refusal: { code: 'petal_not_precreased', missing: 'line' } });
+  it('builds the petal fold from its hinge and the flap below it, its hinge as it was named', () => {
+    if (!crease) throw new Error('no precrease');
+    const flap = free(0.5, 0.2, [0.5, 0.2]);
+    expect(vertexAskedOp(intent({ tool: 'petal', picks: [crease, flap] }), index)).toEqual({
+      kind: 'petal',
+      crease: [0.5, 0.5],
+      petal: [0.5, 0.2],
+      direction: 'valley',
+    });
+    // By its ends, on no crease necessarily: the fold creases what is missing.
+    const ends = [point(0, 0.5), point(1, 0.5)];
+    expect(vertexAskedOp(intent({ tool: 'petal', petalHinge: 'points', picks: [...ends, flap] }), index)).toEqual({
+      kind: 'petal',
+      ends: [
+        [0, 0.5],
+        [1, 0.5],
+      ],
+      petal: [0.5, 0.2],
+      direction: 'valley',
+    });
+    // The hinge alone: no op yet.
+    expect(vertexAskedOp(intent({ tool: 'petal', petalHinge: 'points', picks: ends }), index)).toBeNull();
   });
 
-  it('builds the petal fold from H and the flap below it', () => {
-    const ends = [free(0.1, 0.5), free(0.9, 0.5)];
-    const asked = vertexAskedOp(intent({ tool: 'petal', lineMode: 'free', picks: [...ends, free(0.5, 0.2, [0.5, 0.2])] }), index);
-    expect(asked).toEqual({ kind: 'petal', crease: [0.5, 0.5], petal: [0.5, 0.2], direction: 'valley' });
-    // H alone: no op yet.
-    expect(vertexAskedOp(intent({ tool: 'petal', lineMode: 'free', picks: ends }), index)).toBeNull();
+  it('picks its flap after the hinge, and again while previewed; the flap named by its layer and its side of the hinge', () => {
+    expect(picksPetalRegion('petal', 'crease', 0)).toBe(false);
+    expect(picksPetalRegion('petal', 'crease', 1)).toBe(true);
+    expect(picksPetalRegion('petal', 'crease', 2)).toBe(true);
+    expect(picksPetalRegion('petal', 'points', 1)).toBe(false);
+    expect(picksPetalRegion('petal', 'points', 2)).toBe(true);
+    expect(picksPetalRegion('rabbit-ear', 'crease', 1)).toBe(false);
+    if (!crease) throw new Error('no precrease');
+    const hinged = intent({ tool: 'petal', picks: [crease] });
+    const below = petalRegionKey(index, hinged, p(0.3, 0.2));
+    expect(below).toBe(petalRegionKey(index, hinged, p(0.7, 0.4)));
+    expect(below).not.toBe(petalRegionKey(index, hinged, p(0.3, 0.8)));
+    // Off the paper, or before the hinge: none.
+    expect(petalRegionKey(index, hinged, p(1.5, 0.2))).toBeNull();
+    expect(petalRegionKey(index, intent({ tool: 'petal' }), p(0.3, 0.2))).toBeNull();
+  });
+});
+
+describe('a swivel by its edge', () => {
+  const index = book();
+  const fold = { kind: 'segment', edge: 6, segment: 'bend', sheet: [[0.5, 0], [0.5, 1]], scene: [p(0.5, 0), p(0.5, 1)] } as const;
+  const bottom = { kind: 'segment', edge: 0, segment: 'raw_edge', sheet: [[0, 0], [0.5, 0]], scene: [p(0, 0), p(0.5, 0)] } as const;
+
+  it('is asked with its pivot, the edge it moves and the line that edge lands on, every layer cut', () => {
+    const picks = [point(0.25, 0.6), bottom, fold];
+    expect(vertexAskedOp(intent({ tool: 'swivel', picks }), index)).toEqual({
+      kind: 'swivel',
+      via: 'edge',
+      pivot: [0.25, 0.6],
+      edge: [0.25, 0],
+      target: { via: 'crease', at: [0.5, 0.5] },
+      seed: { scope: 'all' },
+      direction: 'valley',
+    });
+    // The line through two points.
+    const byPoints = vertexAskedOp(
+      intent({ tool: 'swivel', swivelTarget: 'points', picks: [point(0.25, 0.6), bottom, point(0, 1), point(0.5, 0.5)] }),
+      index
+    );
+    expect(byPoints).toMatchObject({ target: { via: 'free', through: [[0, 1], [0.5, 0.5]] } });
+    // Its target still to click: nothing yet.
+    expect(vertexAskedOp(intent({ tool: 'swivel', picks: picks.slice(0, 2) }), index)).toBeNull();
+    // A swivel has no given rays and no paper that stays to pick: the edge form computes them.
+    expect(fanGiven({ tool: 'swivel', picks })).toBeNull();
+    expect(picksFanStayer('swivel', 3)).toBe(false);
+  });
+
+  it('tells a target parallel to its edge', () => {
+    expect(parallelSegments([p(0, 0), p(1, 0)], [p(0, 1), p(1, 1)])).toBe(true);
+    expect(parallelSegments([p(0, 0), p(1, 0)], [p(1, 1), p(0, 1)])).toBe(true);
+    expect(parallelSegments([p(0, 0), p(1, 0)], [p(0, 0), p(1, 1)])).toBe(false);
   });
 });
 
 describe('a fan’s center and layers', () => {
-  it('meets at a rabbit ear’s incenter, or a swivel’s vertex', () => {
+  it('meets at a rabbit ear’s incenter', () => {
     const center = incenter([p(0, 0), p(1, 0), p(0, 1)]);
     const r = 1 - Math.SQRT1_2;
     expect(center?.x).toBeCloseTo(r, 12);
     expect(center?.y).toBeCloseTo(r, 12);
-    expect(fanCenterScene({ tool: 'swivel', picks: [point(0.5, 0.3)] })).toEqual(p(0.5, 0.3));
+    expect(fanCenterScene({ tool: 'swivel', picks: [point(0.5, 0.3)] })).toBeNull();
     expect(fanCenterScene({ tool: 'rabbit-ear', picks: [point(0, 0), point(1, 0)] })).toBeNull();
   });
 
@@ -161,7 +222,7 @@ describe('a fan’s center and layers', () => {
     expect(fanSeed(index, p(0.75, 0.5), 'valley', 1)).toBeNull();
   });
 
-  it('asks a rabbit ear and a swivel with a placeholder fourth ray, the paper that stays named by the region clicked', () => {
+  it('asks a rabbit ear with a placeholder fourth ray, the paper that stays named by the region clicked', () => {
     const index = book();
     const corners = [point(0, 0), point(0.5, 0), point(0, 1)];
     const clicked = intent({ tool: 'rabbit-ear', picks: [...corners, free(0.1, 0.5)] });
@@ -188,46 +249,21 @@ describe('a fan’s center and layers', () => {
     expect(fanRegionAt(fan, toPoint(ear.stayer))).toBe(0);
     // Anywhere else in that region names the same paper.
     expect(vertexAskedOp({ ...clicked, picks: [...corners, free(0.05, 0.6)] }, index)).toEqual(ear);
-    const swivel = vertexAskedOp(
-      intent({
-        tool: 'swivel',
-        fanLayers: 1,
-        picks: [point(0.25, 0.5), point(0.5, 0.8), point(0, 0.8), point(0.25, 0), free(0.1, 0.9)],
-      }),
-      index
-    );
-    expect(swivel).toMatchObject({
-      kind: 'swivel',
-      vertex: [0.25, 0.5],
-      toward: [
-        [0.5, 0.8],
-        [0, 0.8],
-        [0.25, 0],
-      ],
-      seed: { scope: 'depth', at: [0.75, 0.5], layers: 1 },
-    });
-    // Straight up the region's middle from the vertex, half way to the edge,
-    // on the one layer cut — the top, the right half mirrored.
-    if (!swivel || !('kind' in swivel) || swivel.kind !== 'swivel' || isSwivelEdgeOp(swivel)) {
-      throw new Error('no swivel by its rays');
-    }
-    expect(swivel.stayer[0]).toBeCloseTo(0.75, 12);
-    expect(swivel.stayer[1]).toBeCloseTo(0.75, 12);
+    // Its layers: the first one from the direction's side, at the incenter.
+    const one = vertexAskedOp({ ...clicked, fanLayers: 1 }, index);
+    expect(one).toMatchObject({ kind: 'rabbit-ear', seed: { scope: 'depth', layers: 1 } });
   });
 
-  it('picks a fan’s paper that stays on its next click, and again while its fold is previewed', () => {
+  it('picks a rabbit ear’s paper that stays on its next click, and again while its fold is previewed', () => {
     expect(picksFanStayer('rabbit-ear', 2)).toBe(false);
     expect(picksFanStayer('rabbit-ear', 3)).toBe(true);
     expect(picksFanStayer('rabbit-ear', 4)).toBe(true);
-    expect(picksFanStayer('swivel', 3)).toBe(false);
-    expect(picksFanStayer('swivel', 4)).toBe(true);
     expect(picksFanStayer('squash', 0)).toBe(false);
     expect(picksFanStayer('valley', 2)).toBe(false);
-    // The swivel's rays run from its vertex toward its three points.
-    const swivel = fanGiven({ tool: 'swivel', picks: [point(0.25, 0.5), point(0.5, 0.8), point(0, 0.8), point(0.25, 0)] });
-    expect(swivel?.center).toEqual(p(0.25, 0.5));
-    expect(swivel?.rays).toHaveLength(3);
-    expect(fanGiven({ tool: 'swivel', picks: [point(0.25, 0.5), point(0.5, 0.8)] })).toBeNull();
+    // Its rays run from its incenter toward its three corners.
+    const ear = fanGiven({ tool: 'rabbit-ear', picks: [point(0, 0), point(0.5, 0), point(0, 1)] });
+    expect(ear?.rays).toHaveLength(3);
+    expect(fanGiven({ tool: 'rabbit-ear', picks: [point(0, 0), point(0.5, 0)] })).toBeNull();
   });
 });
 
@@ -273,6 +309,61 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     expect(fanHasNoFourth(fan([false, true, false]))).toBe(false);
     expect(nearestDirection([[1, 0], [0, 1]], [0.2, 0.9])).toBe(1);
     expect(nearestDirection([[1, 0]], [0, 0])).toBeNull();
+  });
+
+  it('offers a swivel’s ridges that land, stores the one taken only when it is not the foot’s, and folds its own when none does', () => {
+    const ridges = (emergents: boolean[], ridge = 0): FoldVertexAnalysed => ({
+      analysis: {
+        kind: 'swivel-by-edge',
+        pivot: [0.8, 0.3],
+        vertex: [0.8, 0.33],
+        meet: [0, 0],
+        edge: [
+          [0, 0],
+          [1, 0],
+        ],
+        edge_faces: [0],
+        foot: [0.8, 0],
+        target: { n: [0.7071, -0.7071], d: 0 },
+        rotation: 0.78,
+        landed: [],
+        creases: [],
+        ridges: [
+          [0, -1],
+          [0.5, -0.5],
+        ],
+        ridge,
+        layers: [0],
+        regions: [],
+      },
+      emergents,
+      orders: null,
+    });
+    const base = {
+      kind: 'swivel' as const,
+      via: 'edge' as const,
+      pivot: [0.8, 0.3] as const,
+      edge: [0.5, 0] as const,
+      target: { via: 'crease' as const, at: [0.5, 0.5] as const },
+      seed: { scope: 'all' as const },
+      direction: 'valley' as const,
+    };
+    expect(landingFourths(ridges([true, false]))).toEqual([0]);
+    expect(landingFourths(ridges([true, true]))).toEqual([0, 1]);
+    // None lands: still folded, by its own ridge, so the engine says why.
+    expect(emergentToFold(null, ridges([false, false]))).toBe(0);
+    expect(fanHasNoFourth(ridges([false, false]))).toBe(false);
+    // The foot's ridge is the default: nothing stored; the end's is stored as its direction.
+    expect(withEmergent(base, ridges([true, true]), 0)).toEqual(base);
+    expect(withEmergent({ ...base, ridge: [0.5, -0.5] }, ridges([true, true]), 0)).toEqual(base);
+    expect(withEmergent(base, ridges([true, true]), 1)).toEqual({ ...base, ridge: [0.5, -0.5] });
+    // Taking the other ridge is another fold, asked again for its orders.
+    expect(vertexChosenOp(base, ridges([true, true]), { ...NONE, emergent: 1 })).toEqual({
+      op: { ...base, ridge: [0.5, -0.5] },
+      emergent: 1,
+      again: true,
+    });
+    expect(vertexChosenOp(base, ridges([false, false]), NONE)).toEqual({ op: base, emergent: 0, again: false });
   });
 
   it('steps through the fourth rays that land, round and round', () => {

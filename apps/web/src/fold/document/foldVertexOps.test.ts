@@ -175,7 +175,7 @@ describe('a petal fold’s H', () => {
     expect(Object.keys(writeFoldOp(byEnds))).toEqual(['kind', 'ends', 'petal', 'direction']);
   });
 
-  it('reads an older step byte for byte: the bird-base example’s petal folds come back exactly as saved', () => {
+  it('reads a saved step byte for byte: the bird-base example’s petal folds, H by its ends, come back exactly as saved', () => {
     const file = JSON.parse(
       readFileSync(resolve(process.cwd(), '../../tests/fixtures/fold-examples/petal-fold.osf'), 'utf8')
     ) as { workspace: { foldSequences: unknown[] } };
@@ -186,7 +186,7 @@ describe('a petal fold’s H', () => {
     expect(petals).toHaveLength(2);
     for (const node of petals) {
       if (isLockedStep(node) || node.op.kind !== 'petal') continue;
-      expect(petalHinge(node.op).kind).toBe('crease');
+      expect(petalHinge(node.op).kind).toBe('points');
     }
     expect(JSON.stringify(writeFoldSequence(held))).toBe(JSON.stringify(raw));
   });

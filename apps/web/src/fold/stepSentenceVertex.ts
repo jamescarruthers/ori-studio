@@ -13,19 +13,51 @@
  * says it, in a sentence of its own. The badge is the fold's alone, as the
  * tuck's is.
  *
+ * What a fold named besides is said where it changes the step: a petal fold
+ * whose hinge is two points creases it as it lifts, which its sentence says;
+ * a swivel by its edge lays the edge on a crease or a line, which its
+ * sentence says, and the Step pane's rows say how each was named
+ * ({@link vertexRows}): a petal fold's hinge, a swivel's target and ridge.
+ *
  * React-free.
  */
 import type { TFunction } from 'i18next';
 import type { FoldDirection, FoldVertexOpKind } from './document/foldSequenceDocument';
+import type { FoldVertexSentenceForm } from './stepSentence';
 
-/** The step's sentence: "Squash-fold the flap.", "Squash-fold the flap behind." */
-export function vertexSentence(t: TFunction, fold: FoldVertexOpKind, direction: FoldDirection): string {
+/** A swivel by its edge's sentence: the edge onto the crease or the line clicked, about its pivot. */
+function swivelEdgeSentence(t: TFunction, direction: FoldDirection, target: 'crease' | 'free'): string {
+  if (direction === 'mountain') {
+    return target === 'crease'
+      ? t('panels:fold.sentence.behind.swivelEdgeCrease', 'Swivel the edge behind onto the crease, pivoting at the point.')
+      : t('panels:fold.sentence.behind.swivelEdgeLine', 'Swivel the edge behind onto the line, pivoting at the point.');
+  }
+  return target === 'crease'
+    ? t('panels:fold.sentence.swivelEdgeCrease', 'Swivel the edge onto the crease, pivoting at the point.')
+    : t('panels:fold.sentence.swivelEdgeLine', 'Swivel the edge onto the line, pivoting at the point.');
+}
+
+/**
+ * The step's sentence: "Squash-fold the flap.", "Squash-fold the flap
+ * behind." A petal fold by two points creases its hinge as it lifts; a
+ * swivel by its edge lays the edge on its target.
+ */
+export function vertexSentence(
+  t: TFunction,
+  fold: FoldVertexOpKind,
+  direction: FoldDirection,
+  form?: FoldVertexSentenceForm
+): string {
+  if (form && 'swivel' in form && form.swivel === 'edge') return swivelEdgeSentence(t, direction, form.target);
+  const scores = form !== undefined && 'hinge' in form && form.hinge === 'points';
   if (direction === 'mountain') {
     switch (fold) {
       case 'squash':
         return t('panels:fold.sentence.behind.squash', 'Squash-fold the flap behind.');
       case 'petal':
-        return t('panels:fold.sentence.behind.petal', 'Petal-fold the flap behind.');
+        return scores
+          ? t('panels:fold.sentence.behind.petalScores', 'Petal-fold the flap behind, creasing its hinge as it lifts.')
+          : t('panels:fold.sentence.behind.petal', 'Petal-fold the flap behind.');
       case 'rabbit-ear':
         return t('panels:fold.sentence.behind.rabbitEar', 'Rabbit-ear the triangle behind.');
       case 'swivel':
@@ -36,7 +68,9 @@ export function vertexSentence(t: TFunction, fold: FoldVertexOpKind, direction: 
     case 'squash':
       return t('panels:fold.sentence.squash', 'Squash-fold the flap.');
     case 'petal':
-      return t('panels:fold.sentence.petal', 'Petal-fold the flap.');
+      return scores
+        ? t('panels:fold.sentence.petalScores', 'Petal-fold the flap, creasing its hinge as it lifts.')
+        : t('panels:fold.sentence.petal', 'Petal-fold the flap.');
     case 'rabbit-ear':
       return t('panels:fold.sentence.rabbitEar', 'Rabbit-ear the triangle.');
     case 'swivel':
@@ -82,4 +116,57 @@ export function vertexBadge(t: TFunction, fold: FoldVertexOpKind): string {
     case 'swivel':
       return t('panels:fold.words.badgeSwivel', 'Swivel');
   }
+}
+
+/** Which of a swivel's two creases rose as its ridge, by name: square to the edge, or toward its end. */
+export function swivelRidgeName(t: TFunction, ridge: 'foot' | 'end'): string {
+  return ridge === 'foot'
+    ? t('panels:fold.words.ridgeFoot', 'Square to the edge')
+    : t('panels:fold.words.ridgeEnd', 'Toward the edge’s end');
+}
+
+/** One of a vertex fold's own rows in the Step pane: what it named, and how. */
+export interface FoldVertexRow {
+  label: string;
+  value: string;
+  help?: string;
+}
+
+/**
+ * A vertex fold's own rows in the Step pane: a petal fold's hinge, as it was
+ * named; a swivel by its edge's target and ridge. None for the other folds,
+ * and for a swivel by its rays, whose creases its sentence covers.
+ */
+export function vertexRows(t: TFunction, form: FoldVertexSentenceForm | undefined): FoldVertexRow[] {
+  if (!form) return [];
+  if ('hinge' in form) {
+    return [
+      {
+        label: t('panels:fold.step.hinge', 'Hinge'),
+        value:
+          form.hinge === 'crease'
+            ? t('panels:fold.words.hingeCrease', 'Existing crease')
+            : t('panels:fold.words.hingePoints', 'Two points, creased by the fold'),
+        help: t(
+          'panels:fold.step.hingeHelp',
+          'The line the flap lifts along: a crease already there, or the line through two points, which the fold creases through the top layer.'
+        ),
+      },
+    ];
+  }
+  if (form.swivel !== 'edge') return [];
+  return [
+    {
+      label: t('panels:fold.step.landsOn', 'Lands on'),
+      value:
+        form.target === 'crease'
+          ? t('panels:fold.words.targetCrease', 'Existing crease or edge')
+          : t('panels:fold.words.targetLine', 'Line through two points'),
+    },
+    {
+      label: t('panels:fold.step.ridge', 'Ridge'),
+      value: swivelRidgeName(t, form.ridge),
+      help: t('panels:fold.step.ridgeHelp', 'The crease the swivel rises along, folded the other way from the other three.'),
+    },
+  ];
 }

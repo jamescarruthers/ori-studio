@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Point } from '../../../lib/geometry';
 import { lineThrough, sideOf } from '../../canvas/foldCanvasGeometry';
-import { foldPickIndex, type FoldPick, type FoldPickIndex } from '../../canvas/foldPicking';
+import { foldPickIndex, topSheetPointAt, type FoldPick, type FoldPickIndex } from '../../canvas/foldPicking';
 import type { FoldChoices, FoldOp, FoldVertexOp } from '../../document/foldSequenceDocument';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../../engine/foldEngineCompoundCalls';
@@ -42,8 +42,9 @@ import { vertexControls } from './vertexToolWindow';
  * the engine's frame: `crates/oristudio-fold/tests/vertex/cases.rs`); a
  * rabbit ear on the two-layer triangle and on the flat square with its
  * diagonal precreased, each one ear whose three corner creases share a letter
- * and whose fourth has the other; a swivel on the flat square, its fourth ray
- * stepped.
+ * and whose fourth has the other; a swivel by its edge on the square with its
+ * diagonal precreased, its ridge stepped. A petal fold's hinge is clicked as
+ * the precrease it is, or by its two ends, which the fold creases.
  *
  * Skipped when the bridge has not been built (a fresh worktree before
  * `build:wasm`); CI builds it before the web tests run.
@@ -88,9 +89,9 @@ const NONE: FoldVertexTaken = { squashTarget: null, emergent: null, order: 0 };
 
 const intent = (extra: Partial<FoldVertexIntent>): FoldVertexIntent => ({
   tool: 'squash',
-  lineMode: 'free',
+  petalHinge: 'crease',
+  swivelTarget: 'crease',
   picks: [],
-  candidate: null,
   direction: 'valley',
   fanLayers: null,
   ...extra,
@@ -213,11 +214,31 @@ function kites(engined: Engine, state: number, flipped: boolean): number {
   return s;
 }
 
-/** A petal fold, H by its two ends (the line-mode route), the flap at the spike's petal point. */
-function petal(engined: Engine, state: number, flipped: boolean): Folded {
-  const [a, b] = MARKS.ends;
-  const picks = [free(sceneOf(flipped, a)), free(sceneOf(flipped, b)), free(sceneOf(flipped, MARKS.petal))];
-  return vertexFold(engined, state, intent({ tool: 'petal', lineMode: 'free', picks }));
+/** A point clicked on the folded pane, named by the top layer's sheet point there, as a free point's click is. */
+function pointAt(index: FoldPickIndex, at: Point): FoldPick {
+  const sheet = topSheetPointAt(index, at);
+  if (!sheet) throw new Error(`no paper at ${at.x},${at.y}`);
+  return { kind: 'point', provenance: 'free', sheet, mark: null, scene: at };
+}
+
+/**
+ * A petal fold at the spike's petal point, its hinge named as the tool names
+ * it: by its two ends, clicked where the kite creases meet the flap's edges;
+ * or by the precrease along the line through them, clicked on the folded pane.
+ */
+function petal(engined: Engine, state: number, flipped: boolean, hinge: 'points' | 'crease' = 'points'): Folded {
+  const index = indexOf(engined.calls, state);
+  const [a, b] = MARKS.ends.map((end) => sceneOf(flipped, end)) as [Point, Point];
+  const flap = free(sceneOf(flipped, MARKS.petal));
+  if (hinge === 'points') {
+    return vertexFold(engined, state, intent({ tool: 'petal', petalHinge: 'points', picks: [pointAt(index, a), pointAt(index, b), flap] }));
+  }
+  const line = lineThrough(a, b);
+  const crease = index.folded.segments.find(
+    (segment) => segment.segment === 'crease' && line && segment.scene.every((end) => Math.abs(sideOf(line, end)) < 1e-9)
+  );
+  if (!crease) throw new Error('no precrease along the hinge');
+  return vertexFold(engined, state, intent({ tool: 'petal', petalHinge: 'crease', picks: [crease, flap] }));
 }
 
 describe.skipIf(!available)('the vertex folds over the real bridge, as their tools build them', () => {
@@ -281,35 +302,56 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
     });
   });
 
-  it('petal folds the preliminary base front and back into the bird base, refusing H until it is precreased', async () => {
-    const engined = await engine();
+  /** The preliminary base: the small triangle squashed front and back. */
+  function preliminaryBase(engined: Engine): number {
     const { calls } = engined;
     const tri = smallTriangle(engined);
     const front = land(engined, tri, vertexFold(engined, tri, intent({ picks: [free(p(0.1, 0.5))] })).built.step);
     const turned = landed(calls.step(front.state, TURN)).state;
     const back = vertexFold(engined, turned, intent({ picks: [free(sceneOf(true, [0.1, 0.7]))] }));
-    const base = land(engined, turned, back.built.step).state;
+    return land(engined, turned, back.built.step).state;
+  }
 
-    // H through its ends before it is precreased: refused by the tools, in the engine's words.
+  it('petal folds the preliminary base front and back into the bird base over its precreases, the hinge clicked', async () => {
+    const engined = await engine();
+    const { calls } = engined;
+    const base = preliminaryBase(engined);
+    // The kites and the hinge precreased: the hinge clicked as the crease it is.
     const [a, b] = MARKS.ends;
-    const early = vertexAskedOp(
-      intent({ tool: 'petal', picks: [free(sceneOf(true, a)), free(sceneOf(true, b)), free(sceneOf(true, MARKS.petal))] }),
-      indexOf(calls, base)
-    );
-    expect(early).toMatchObject({ status: 'refused', refusal: { code: 'petal_not_precreased', missing: 'line' } });
-
-    // The kites and H precreased: the petal fold, its H the precrease along the line through its ends.
     const kited = kites(engined, base, true);
     const ready = precrease(engined, kited, sceneOf(true, a), sceneOf(true, b), { toward: sceneOf(true, MARKS.t) });
-    const first = petal(engined, ready, true);
-    expect(first.first.analysis.kind).toBe('petal');
+    const first = petal(engined, ready, true, 'crease');
+    if (first.first.analysis.kind !== 'petal') throw new Error('not a petal fold');
+    // Over precreases, it creases nothing itself.
+    expect(first.first.analysis.scores_line).toBe(false);
+    expect(first.first.analysis.scores_kites).toEqual([false, false]);
     expect(first.built.step.op).toMatchObject({ kind: 'petal', direction: 'valley' });
+    expect(first.built.step.op).toHaveProperty('crease');
     const petalled = land(engined, ready, first.built.step);
 
-    // Turned over, the kites again (H runs through every layer), the second petal fold: the bird base.
+    // Turned over, the kites again (the hinge runs through every layer), the second petal fold: the bird base.
     const over = kites(engined, landed(calls.step(petalled.state, TURN)).state, false);
-    const bird = land(engined, over, petal(engined, over, false).built.step);
+    const bird = land(engined, over, petal(engined, over, false, 'crease').built.step);
     expect(bird.summary.faces).toBe(24);
+  });
+
+  it('petal folds by the hinge’s two ends, creasing the hinge through the top layer as it lifts', async () => {
+    const engined = await engine();
+    const { calls } = engined;
+    // Only the kites precreased: the hinge by its ends, which the fold creases.
+    const kited = kites(engined, preliminaryBase(engined), true);
+    const first = petal(engined, kited, true);
+    if (first.first.analysis.kind !== 'petal') throw new Error('not a petal fold');
+    expect(first.built.step.op).toHaveProperty('ends');
+    expect(first.first.analysis.scores_line).toBe(true);
+    expect(first.first.analysis.scores_kites).toEqual([false, false]);
+    const petalled = land(engined, kited, first.built.step);
+    // The other side the same way: both petals lifted.
+    const over = kites(engined, landed(calls.step(petalled.state, TURN)).state, false);
+    const second = petal(engined, over, false);
+    if (second.first.analysis.kind !== 'petal') throw new Error('not a petal fold');
+    expect(second.first.analysis.scores_line).toBe(true);
+    land(engined, over, second.built.step);
   });
 
   /**
@@ -422,32 +464,45 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
     }
   });
 
-  it('swivels the flat square about a free vertex, stepping its fourth ray among those that land', async () => {
+  it('swivels the bottom edge onto the precreased diagonal by its edge, stepping its ridge among those that land', async () => {
     const engined = await engine();
     const { calls } = engined;
     const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
-    const picks = [
-      landmark(p(0.5, 0.3), [0.5, 0.3]),
-      landmark(p(1, 0.6), [1, 0.6]),
-      landmark(p(0, 0.6), [0, 0.6]),
-      landmark(p(0.5, 0), [0.5, 0]),
-      free(p(0.3, 0.9)),
-    ];
-    const wanted = intent({ tool: 'swivel', picks });
-    const swivel = vertexFold(engined, sheet, wanted);
-    if (swivel.first.analysis.kind !== 'swivel') throw new Error('not a swivel');
-    const candidates = swivel.first.analysis.candidates;
-    expect(candidates).toHaveLength(3);
+    const diagonal = landed(
+      calls.step(sheet, {
+        kind: 'precrease',
+        direction: 'valley',
+        line: { via: 'free', through: [[0, 0], [1, 1]] },
+        moving: [0, 1],
+        seed: { scope: 'all' },
+      })
+    ).state;
+    const index = indexOf(calls, diagonal);
+    const edge = index.folded.segments.find((segment) => segment.segment === 'raw_edge' && segment.scene.every((end) => end.y === 0));
+    const crease = index.folded.segments.find((segment) => segment.segment === 'crease');
+    if (!edge || !crease) throw new Error('no edge or precrease');
+    // The pivot past the incenter, a point clicked freely; the edge; the diagonal it lands on.
+    const pivot = pointAt(index, p(0.8, 0.3));
+    const wanted = intent({ tool: 'swivel', picks: [pivot, edge, crease] });
+    const swivel = vertexFold(engined, diagonal, wanted);
+    const analysis = swivel.first.analysis;
+    if (analysis.kind !== 'swivel-by-edge') throw new Error('not a swivel by its edge');
+    // Where the creases meet: the pivot moved onto the bisector from the corner, y = x·tan 22.5°.
+    expect(analysis.vertex[1]).toBeCloseTo(analysis.vertex[0] * Math.tan(Math.PI / 8), 9);
+    expect(analysis.creases.map((each) => each.ray)).toEqual(['meet', 'foot', 'end', 'hinge']);
     const fourths = landingFourths(swivel.first);
+    expect(fourths.length).toBeGreaterThan(0);
     const fingerprints = new Set<string>();
-    swivel.first.emergents.forEach((lands, emergent) => {
-      // What the question says of each candidate is what landing it does.
-      const asIs = calls.step(sheet, withEmergent(swivel.base, swivel.first, emergent));
-      expect(asIs.status === 'ok', `candidate ${emergent}`).toBe(lands);
+    swivel.first.emergents.forEach((lands, ridge) => {
+      // What the question says of each ridge is what landing it does.
+      const asIs = calls.step(diagonal, withEmergent(swivel.base, swivel.first, ridge));
+      expect(asIs.status === 'ok', `ridge ${ridge}`).toBe(lands);
       // One that does not land is never taken: the first that does is, in its place.
-      const stepped = vertexFold(engined, sheet, wanted, { ...NONE, emergent });
-      expect(stepped.emergent).toBe(lands ? emergent : fourths[0]);
-      const folded = landed(calls.step(sheet, stepped.built.step.op, stepped.built.step.choices));
+      const stepped = vertexFold(engined, diagonal, wanted, { ...NONE, emergent: ridge });
+      expect(stepped.emergent).toBe(lands ? ridge : fourths[0]);
+      // The foot's ridge is stored as no ridge at all; the end's by its direction.
+      expect('ridge' in stepped.built.step.op).toBe(stepped.emergent === 1);
+      const folded = landed(calls.step(diagonal, stepped.built.step.op, stepped.built.step.choices));
       fingerprints.add(folded.fingerprint);
     });
     expect(fingerprints.size).toBe(fourths.length);
@@ -485,7 +540,6 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
         orders: [],
         order: null,
         layers: 1,
-        nearPrecrease: null,
       };
       const preview = { step: { op: ear.built.step.op, key: 'ear' }, vertex } as unknown as FoldToolPreview;
       const view = foldVertexWindowView(tools, preview);

@@ -279,6 +279,7 @@
         "opening": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie.",
         "order": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie.",
         "pocket": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Blättere durch sie.",
+        "ridge": "Mit beiden Graten liegt die Schwenkfalte flach. Blättere durch sie.",
         "root": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie.",
         "target": "Mehr als eine Lage nimmt die Lasche auf: Die hellste ist die gewählte. Blättere durch sie."
       },
@@ -287,6 +288,7 @@
         "opening": "Die Lasche lässt sich auf mehr als eine Weise öffnen: Die hervorgehobenen Lagen bleiben zusammen. Blättere durch sie oder drücke {{keys}}.",
         "order": "Die Lagen können auf mehr als eine Weise gestapelt landen. Blättere durch sie oder drücke {{keys}}.",
         "pocket": "Die Spitze kann in mehr als eine Tasche zwischen ihren Lagen versenkt werden. Blättere durch sie oder drücke {{keys}}.",
+        "ridge": "Mit beiden Graten liegt die Schwenkfalte flach. Blättere durch sie oder drücke {{keys}}.",
         "root": "Dieses Axiom ergibt hier mehr als eine Faltung. Blättere durch sie oder drücke {{keys}}.",
         "target": "Mehr als eine Lage nimmt die Lasche auf: Die hellste ist die gewählte. Blättere durch sie oder drücke {{keys}}."
       }
@@ -323,6 +325,7 @@
       "closedSinkInstead": "Stattdessen geschlossen versenken",
       "crimpFlap": "Nur Lasche {{number}} crimpen",
       "crimpThisFlap": "Nur diese Lasche crimpen",
+      "foldOntoLine": "Stattdessen die Kante auf die Linie falten",
       "includeFlap": "Lasche {{number}} einbeziehen",
       "includeFlaps_one": "Die {{count}} Lasche einbeziehen",
       "includeFlaps_other": "Die {{count}} Laschen einbeziehen",
@@ -812,26 +815,27 @@
       "direction": "Richtung",
       "emergent": "Vierte Faltlinie",
       "fix": {
+        "creaseKites": "Die Drachenlinien beim Falten mitfalten",
         "emergent": "Die vierte Faltlinie nehmen, die passt",
         "emergentNumber": "Vierte Faltlinie {{number}} nehmen",
+        "otherRidge": "Den anderen Grat nehmen",
         "otherWay": "Andersherum falten",
+        "precreaseHinge": "Zuerst das Scharnier vorfalten",
         "precreaseKite": "Den Drachen vorfalten",
-        "precreaseLine": "Diese Linie zuerst vorfalten",
-        "resetTarget": "Den Rücken auf das Scharnier legen",
-        "usePrecrease": "Die Vorfaltung nehmen"
+        "resetTarget": "Den Rücken auf das Scharnier legen"
       },
       "fourthNone": "Keine",
       "fourthsFit_one": "Eine vierte Faltlinie passt, wenn dieses Papier liegen bleibt.",
       "fourthsFit_other": "{{count}} vierte Faltlinien passen, wenn dieses Papier liegen bleibt.",
       "help": {
-        "petal": "Die untere Spitze einer Lasche entlang einer Vorfaltung H anheben, während sich ihre Seiten entlang zweier Drachen-Vorfaltungen einfalten.",
+        "petalHinge": "Die untere Spitze einer Lasche entlang eines Scharniers anheben, während sich ihre Seiten entlang zweier Drachenlinien einfalten.",
         "rabbitEar": "Die Ecken eines Dreiecks entlang ihrer Winkelhalbierenden einfalten, sodass sich eine Spitze aufstellt.",
         "squash": "Eine zweilagige Lasche öffnen und flach drücken, ihren Rücken auf ihr Scharnier.",
-        "swivel": "Papier um einen gesetzten Punkt falten: drei gewählte Faltlinien und eine vierte, mit der es flach liegt."
+        "swivelEdge": "Eine Kante um einen Drehpunkt auf eine Linie schwenken."
       },
       "intro": {
-        "petal": "Hebt die untere Spitze einer Lasche entlang einer Linie H an, während sich ihre Seiten einfalten. Sie faltet Vorfaltungen nach, also nimm zuerst das Werkzeug Vorfalten: Falte jede untere Kante der oberen Lasche auf ihre Mittellinie (Axiom 3, nur die obere Lasche), dann falte H durch die Enden der beiden Linien vor (Axiom 1, alle Lagen).",
-        "swivel": "Faltet das Papier um einen Punkt, wie ein Hasenohr, dessen Faltlinien nichts halbieren müssen: Du setzt den Punkt und drei Faltlinien, und die vierte ist eine, mit der das Papier flach liegt."
+        "petalHinge": "Hebt die untere Spitze einer Lasche entlang eines Scharniers an, während sich ihre Seiten entlang zweier Drachenlinien einfalten. Wähle das Scharnier als Faltlinie, die schon über die Lasche läuft, oder über seine beiden Enden: Dann faltet die Faltung beim Falten das Scharnier durch die oberste Lage und jede fehlende Drachenlinie mit.",
+        "swivelEdge": "Schwenkt eine Kante um einen Drehpunkt auf eine Linie. Die Faltlinien treffen sich dort, wo der Drehpunkt liegt, verschoben auf die Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet, und das Papier dazwischen dreht sich flach."
       },
       "layers": "Lagen",
       "layersAll_one": "Alle {{count}}",
@@ -840,6 +844,18 @@
       "layersBottom_other": "Untere {{count}} von {{total}}",
       "layersTop_one": "Obere {{count}} von {{total}}",
       "layersTop_other": "Obere {{count}} von {{total}}",
+      "lineBy": {
+        "creaseOrEdge": "Faltlinie oder Kante",
+        "creaseOrEdgeHelp": "Klicke auf eine vorhandene Faltlinie oder Kante",
+        "hinge": "Scharnier",
+        "hingeCrease": "Scharnierlinie",
+        "hingeCreaseHelp": "Klicke auf eine Vorfaltung, die schon über die Lasche läuft",
+        "target": "Landet auf",
+        "twoEndpoints": "Zwei Endpunkte",
+        "twoEndpointsHelp": "Klicke auf die beiden Enden des Scharniers: Die Faltung faltet es mit",
+        "twoPoints": "Zwei Punkte",
+        "twoPointsHelp": "Klicke auf zwei Punkte der Linie"
+      },
       "mountain": "Berg",
       "mountainTitle": "Berg: das Papier dreht sich von dir weg",
       "noFourth": "Keine vierte Faltlinie passt, wenn dieses Papier liegen bleibt: Klicke auf anderes Papier, das liegen bleiben soll.",
@@ -848,17 +864,32 @@
       "noFourthTouch": "Keine vierte Faltlinie passt, wenn dieses Papier liegen bleibt: Tippe auf anderes Papier, das liegen bleiben soll.",
       "note": {
         "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt beliebig zu setzen.",
+        "freePointTouch": "Schalte Freier Punkt ein, um einen Punkt beliebig zu setzen.",
+        "petalCreasesAll": "Die Faltung faltet beim Anheben der Lasche das Scharnier durch die oberste Lage und beide Drachenlinien durch die beiden obersten Lagen.",
+        "petalCreasesHinge": "Die Faltung faltet beim Anheben der Lasche das Scharnier durch die oberste Lage. Die Drachenlinien sind schon da.",
+        "petalCreasesHingeKite": "Die Faltung faltet beim Anheben der Lasche das Scharnier durch die oberste Lage und eine Drachenlinie durch die beiden obersten Lagen. Die andere Drachenlinie ist schon da.",
+        "petalCreasesKite": "Die Faltung faltet beim Anheben der Lasche eine Drachenlinie durch die beiden obersten Lagen. Das Scharnier und die andere Drachenlinie sind schon da.",
+        "petalCreasesKites": "Die Faltung faltet beim Anheben der Lasche beide Drachenlinien durch die beiden obersten Lagen. Das Scharnier ist schon da.",
+        "petalHingeCrease": "Nur Vorfaltungen können das Scharnier sein: Eine leuchtet unter dem Zeiger auf.",
+        "petalHingeCreaseTouch": "Nur Vorfaltungen können das Scharnier sein: Tippe auf eine, die über die Lasche läuft.",
+        "petalRefolds": "Jede Faltlinie, die sie faltet, ist schon da: Sie faltet das Scharnier und die Drachenlinien nach.",
+        "petalRegion": "Papier unter dem Scharnier leuchtet auf, wo eine Blütenblattfalte es anheben kann: Ein Klick anderswo sagt, warum nicht.",
+        "petalRegionTouch": "Die Lasche unter dem Scharnier leuchtet auf, sobald du darauf tippst.",
         "rabbitEar": "Die Faltlinien treffen sich im Inkreismittelpunkt des Dreiecks: eine zu jeder Ecke, in die gewählte Richtung gefaltet, und eine vierte, an der sich das Ohr aufrichtet, andersherum gefaltet.",
         "snapPoints": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien und Mittelpunkten ein: Ein Klick anderswo wählt nichts.",
-        "squash": "Eine Lasche lässt sich quetschen, wenn ihre beiden Lagen frei sind, nur an ihrem Scharnier gehalten, und unbedeckt, ohne etwas darüber auf der Seite, zu der sie sich öffnet."
+        "snapPointsTouch": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien und Mittelpunkten ein: Ein Tippen anderswo wählt nichts.",
+        "squash": "Eine Lasche lässt sich quetschen, wenn ihre beiden Lagen frei sind, nur an ihrem Scharnier gehalten, und unbedeckt, ohne etwas darüber auf der Seite, zu der sie sich öffnet.",
+        "swivelVertex": "Die Faltlinien treffen sich am Punkt: dem Drehpunkt, verschoben auf die Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet. Die fette Linie zeigt, wo die Kante landet; das hervorgehobene Papier bewegt sich, das hellste dreht sich an Ort und Stelle."
       },
       "refusal": {
         "blocked": {
           "steppers": "Eine Faltlinie würde auf Papier treffen, das nicht mitfaltet, oder Papier würde zwei Teile der Faltung zusammenhalten. Blättere bei Lagen, um mehr Lagen zu falten, oder bei Vierte Faltlinie zu einer anderen.",
+          "swivelEdge": "Eine Faltlinie würde auf Papier treffen, das nicht mitfaltet, oder Papier würde zwei Teile der Faltung zusammenhalten. Wähle einen anderen Drehpunkt oder eine andere Linie, auf der die Kante landen soll.",
           "title": "Papier ist im Weg"
         },
         "center": {
           "textEar": "Die Faltlinien des Dreiecks treffen sich in seinem Inkreismittelpunkt, der auf einer Faltlinie oder außerhalb der Lagen liegt. Wähle Ecken, die ihn in die Lagen legen, abseits ihrer Faltlinien.",
+          "textSwivelEdge": "Die Faltlinien treffen sich dort, wo der Drehpunkt liegt, verschoben auf die Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet, und das ist auf einer Faltlinie oder außerhalb des Papiers. Drücke Esc und wähle einen anderen Drehpunkt.",
           "textSwivelStep": "Der Punkt, an dem sich die Faltlinien treffen, liegt auf einer Faltlinie oder außerhalb des Papiers. Drücke Esc und setze ihn neu, wie Schritt 1 sagt: im Papier, abseits jeder Faltlinie.",
           "title": "Die Faltlinien können sich dort nicht treffen"
         },
@@ -875,16 +906,13 @@
           "title": "Die vierte Faltlinie kann sich hier nicht aufrichten"
         },
         "kite": {
-          "howTo": "Eine Blütenblattfalte faltet vorhandene Faltlinien nach. Die Schaltfläche unten nimmt das Werkzeug Vorfalten mit Axiom 3: Klicke auf eine untere Kante der oberen Lasche, dann auf ihre Mittellinie, nimm unter Lagen die Laschen dahinter heraus und drücke die Eingabetaste. Falte die andere Kante genauso vor, dann die Blütenblattfalte.",
-          "title": "Zuerst den Drachen vorfalten"
+          "creaseOrPrecrease": "Über einer Scharnierlinie faltet eine Blütenblattfalte vorhandene Faltlinien nach, und eine Drachenlinie ist noch nicht da. Nenne das Scharnier stattdessen über seine beiden Enden, dann faltet die Faltung die Drachenlinien selbst; oder falte sie zuerst vor, mit dem Werkzeug Vorfalten auf Axiom 3: eine untere Kante der oberen Lasche auf ihre Mittellinie, die Laschen dahinter herausgenommen.",
+          "titleMissing": "Die Drachenlinien fehlen"
         },
         "line": {
-          "text": "Eine Blütenblattfalte hebt die Lasche entlang einer Vorfaltung durch jede Lage darunter an. Falte diese Linie durch alle Lagen vor, dann falte das Blütenblatt.",
-          "title": "Zuerst die Linie vorfalten"
-        },
-        "lineNear": {
-          "text": "Eine Blütenblattfalte hebt die Lasche entlang einer Vorfaltung an. Diese Linie verläuft knapp neben einer: nimm sie oder falte zuerst diese Linie vor.",
-          "title": "Die Linie verfehlt die Vorfaltung"
+          "crease": "Die Scharnierlinie läuft nicht durch jede Lage darunter, die mitfaltet. Falte das Scharnier durch alle Lagen vor, dann die Blütenblattfalte.",
+          "ends": "Das Scharnier kreuzt Papier der zweiten Lage, das sich neben dem Drachen einfaltet, und die Faltung kann es beim Anheben der Lasche nicht falten. Falte das Scharnier durch alle Lagen vor, dann die Blütenblattfalte.",
+          "titleHinge": "Zuerst das Scharnier vorfalten"
         },
         "noFlap": {
           "noHinge": "Die Lasche faltet sich an keinem Ende ihres Rückens über ein Scharnier, also gibt es nichts, wogegen sie flach gedrückt werden kann.",
@@ -902,12 +930,18 @@
           "swivel": "Die Drehfalte lässt sich hier nicht flach legen"
         },
         "noPetal": {
-          "noCorner": "Die Drachenlinien treffen sich nicht unterhalb der Linie, also gibt es keine Spitze zum Anheben.",
-          "noEnds": "Die Linie kreuzt nicht die beiden gefalteten Kanten der Lasche. Wähle eine Vorfaltung, die von einer Kante der Lasche zur anderen läuft.",
-          "title": "Hier ist keine Lasche zum Anheben"
+          "missesFlap": "Die angeklickte Lasche liegt ganz auf einer Seite des Scharniers. Klicke auf die Lasche, über die das Scharnier läuft, oder wähle ein Scharnier von einer ihrer gefalteten Kanten zur anderen.",
+          "missesFlapTitle": "Das Scharnier verfehlt die Lasche",
+          "noCornerHinge": "Die Drachenlinien von den Enden des Scharniers treffen sich nicht darunter, also gibt es keine Spitze zum Anheben. Wähle ein Scharnier, dessen Enden dort liegen, wo die Drachenlinien die Kanten der Lasche treffen.",
+          "noCornerTitle": "Keine Spitze zum Anheben",
+          "noEndsHinge": "Das Scharnier einer Blütenblattfalte läuft von einer gefalteten Kante der Lasche zur anderen, und dieses kreuzt nur eine davon oder keine. Wähle ein Scharnier, dessen Enden auf den beiden gefalteten Kanten der Lasche liegen.",
+          "noEndsTitle": "Das Scharnier kreuzt die Lasche nicht",
+          "pastCorner": "Die Drachenlinien von den Enden des Scharniers treffen sich darunter, aber die Lasche reicht über ihren Treffpunkt hinaus, und dieses Papier ließe sich auf keine Weise falten. Lege das Scharnier weiter weg von der geschlossenen Spitze der Lasche: seine Enden dort, wo die Drachenlinien die Kanten der Lasche treffen.",
+          "pastCornerTitle": "Das Scharnier liegt zu nah an der geschlossenen Spitze"
         },
         "notFlat": {
           "spread": "Keine vierte Faltlinie lässt diese Faltlinien flach liegen: Zwei zeigen in dieselbe Richtung, oder zwei Nachbarn liegen eine halbe Drehung oder mehr auseinander. Drücke Esc und wähle Punkte, die gleichmäßiger um den Treffpunkt verteilt sind.",
+          "swivelEdge": "Keine Faltlinie lässt die Kante von diesem Drehpunkt aus auf diese Linie drehen und flach liegen. Drücke Esc und wähle einen anderen Drehpunkt oder eine andere Linie.",
           "title": "Es lässt sich nicht flach falten"
         },
         "notFree": {
@@ -918,9 +952,38 @@
           "text": "Andere Lagen liegen über der Lasche auf der Seite, zu der sie sich hebt. Falte sie zuerst aus dem Weg oder hebe sie andersherum an.",
           "title": "Die Lasche ist bedeckt"
         },
+        "ridgeBesideStayer": {
+          "pivot": "Die Lasche richtet sich entlang des Grats auf, daher muss er gegenüber dem Papier liegen, das liegen bleibt, und hier tut er das nicht. Wähle einen anderen Drehpunkt.",
+          "title": "Der Grat liegt neben dem liegenbleibenden Papier"
+        },
+        "ridgeCannotRise": {
+          "pivot": "Der Grat faltet andersherum als die anderen drei Faltlinien, und die Winkel zwischen ihnen lassen das nicht zu. Wähle einen anderen Drehpunkt.",
+          "title": "Der Grat kann sich hier nicht aufrichten"
+        },
         "stayer": {
+          "swivelEdge": "Das Papier neben der Linie, das liegen bleibt, hängt an keinem Teil der Faltung. Wähle einen anderen Drehpunkt, näher an der Stelle, wo die Kante die Linie trifft.",
           "text": "Das Papier, das liegen bleiben soll, hängt an keinem Teil der Faltung. Wähle Papier, das die Faltlinien schneiden, oder Papier, das daran hängt.",
           "title": "Welches Papier bleibt liegen?"
+        },
+        "swivelEdgeShort": {
+          "text": "Kein Teil der Kante liegt jenseits des Punkts rechtwinklig unter dem Drehpunkt, also würde sich nichts davon schwenken. Eine einfache Faltung entlang der Linie in der Mitte zwischen der Kante und ihrem Ziel legt sie stattdessen dorthin.",
+          "title": "Die Kante endet, bevor sie sich drehen würde"
+        },
+        "swivelEdgeStays": {
+          "text": "Das Papier entlang der Kante würde liegen bleiben oder über das Scharnier falten, statt sich auf die Linie zu drehen. Wähle einen Drehpunkt näher an der Kante oder eine andere Kante.",
+          "title": "Die Kante würde liegen bleiben"
+        },
+        "swivelNotAnEdge": {
+          "text": "Eine Schwenkfalte bewegt eine Papierkante oder eine gefaltete Kante, und die gewählte Linie ist keins von beiden. Drücke Esc und wähle die Kante neu.",
+          "title": "Das ist keine Kante"
+        },
+        "swivelPivotOnEdge": {
+          "text": "Die Faltlinien treffen sich dort, wo der Drehpunkt liegt, verschoben auf die Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet, und hier ist das auf der Kante selbst. Drücke Esc und wähle einen Drehpunkt weiter weg von der Stelle, wo die Kante die Linie trifft.",
+          "title": "Die Faltlinien würden sich auf der Kante treffen"
+        },
+        "swivelTargetParallel": {
+          "text": "Keine Drehung um einen Punkt legt eine Kante auf eine Linie, die zu ihr parallel ist, oder auf ihre eigene Linie. Wähle eine Linie, die die Linie der Kante trifft.",
+          "title": "Die Linie läuft parallel zur Kante"
         },
         "targetOutside": {
           "text": "Der Rücken landet zwischen der Stelle, an der er liegt, und dem Scharnier. Klicke auf einen Punkt in der Lasche oder lege ihn zurück auf das Scharnier.",
@@ -928,10 +991,17 @@
         }
       },
       "reset": "Zurück auf das Scharnier",
+      "ridge": "Grat",
+      "ridgesBoth": "Mit beiden Graten lässt es sich flach falten: Blättere zum anderen.",
+      "ridgesNone": "Mit keinem Grat lässt es sich flach falten: Der Hinweis unten sagt, warum.",
+      "ridgesOne": "Nur mit diesem Grat lässt es sich flach falten.",
       "steps": {
         "earFirstCorner": "Klicke auf die erste Ecke des Dreiecks.",
+        "earFirstCornerTouch": "Tippe auf die erste Ecke des Dreiecks.",
         "earSecondCorner": "Klicke auf seine zweite Ecke.",
+        "earSecondCornerTouch": "Tippe auf seine zweite Ecke.",
         "earThirdCorner": "Klicke auf seine dritte Ecke.",
+        "earThirdCornerTouch": "Tippe auf seine dritte Ecke.",
         "fanChooseStayer": "Wähle die vierte Faltlinie und die Lagen. Klicke auf anderes Papier, um zu ändern, was liegen bleibt.",
         "fanChooseTouch": "Wähle die vierte Faltlinie und die Lagen. Tippe auf anderes Papier, um zu ändern, was liegen bleibt.",
         "finish": "Wähle die Optionen, dann drücke die Eingabetaste.",
@@ -940,26 +1010,36 @@
         "fixOrPickAgainTouch": "Tippe unten auf eine Lösung, oder tippe auf Abbrechen und wähle neu.",
         "petalFinish": "Wähle Tal oder Berg, dann drücke die Eingabetaste.",
         "petalFinishTouch": "Wähle Tal oder Berg, dann tippe auf {{action}}.",
-        "petalH": "Klicke auf die Vorfaltung H, quer über die Lasche, wo die Drachenlinien enden.",
-        "petalHFirstEnd": "Klicke auf ein Ende von H, wo eine Drachenlinie auf die Kante der Lasche trifft.",
-        "petalHSecondEnd": "Klicke auf das andere Ende von H, wo die andere Drachenlinie endet.",
-        "petalLift": "Tal hebt die Lasche zu dir hin an, Berg von dir weg: Die Vorschau zeigt, welches.",
-        "petalLiftingFlap": "Klicke auf die Lasche unter H, zwischen den Drachenlinien: der Teil, der sich hebt.",
+        "petalHingeCrease": "Wähle die Scharnierlinie.",
+        "petalHingeFirstEnd": "Klicke auf ein Ende des Scharniers, wo eine Drachenlinie die Kante der Lasche trifft.",
+        "petalHingeFirstEndTouch": "Tippe auf ein Ende des Scharniers, wo eine Drachenlinie die Kante der Lasche trifft.",
+        "petalHingeSecondEnd": "Klicke auf sein anderes Ende, wo die andere Drachenlinie die Kante trifft.",
+        "petalHingeSecondEndTouch": "Tippe auf sein anderes Ende, wo die andere Drachenlinie die Kante trifft.",
+        "petalLiftOther": "Tal hebt die Lasche zu dir hin, Berg von dir weg. Klicke auf eine andere Lasche unter dem Scharnier, um diese anzuheben.",
+        "petalLiftOtherTouch": "Tal hebt die Lasche zu dir hin, Berg von dir weg. Tippe auf eine andere Lasche unter dem Scharnier, um diese anzuheben.",
+        "petalRegion": "Klicke auf die Lasche unter dem Scharnier: Der Teil, der sich hebt, leuchtet unter dem Zeiger auf.",
+        "petalRegionTouch": "Tippe auf die Lasche unter dem Scharnier, den Teil, der sich hebt.",
         "pickAgainRead": "Drücke Esc und wähle neu: Der Hinweis unten sagt, was zu ändern ist.",
         "pickAgainReadTouch": "Tippe auf Abbrechen und wähle neu: Der Hinweis unten sagt, was zu ändern ist.",
         "squashFlap": "Klicke auf die Lasche, die gequetscht werden soll.",
+        "squashFlapTouch": "Tippe auf die Lasche, die gequetscht werden soll.",
         "squashTarget": "Klicke, wo der Rücken landen soll, oder lass ihn auf der Scharnierlinie.",
         "squashTargetTouch": "Tippe, wo der Rücken landen soll, oder lass ihn auf der Scharnierlinie.",
         "stayer": "Klicke auf das Papier, das liegen bleibt.",
-        "swivelFinish": "Wähle die vierte Faltlinie, dann drücke die Eingabetaste.",
-        "swivelFinishTouch": "Wähle die vierte Faltlinie, dann tippe auf {{action}}.",
-        "swivelFirstLandmark": "Klicke auf eine Ecke, einen Mittelpunkt oder eine Markierung, zu der die erste Faltlinie läuft.",
-        "swivelPoint": "Halte {{modifier}} gedrückt und klicke dorthin, wo sich die Faltlinien treffen: im Papier, auf keiner Faltlinie.",
-        "swivelPointTouch": "Schalte Freier Punkt ein, dann tippe dorthin, wo sich die Faltlinien treffen: im Papier, auf keiner Faltlinie.",
-        "swivelSecondLandmark": "Klicke auf einen Punkt für die zweite Faltlinie.",
-        "swivelStayer": "Klicke auf den Teil des Papiers, der liegen bleibt.",
-        "swivelStep": "Blättere bei Vierte Faltlinie durch die, mit denen das Papier flach liegt, und bei Lagen, falls angezeigt, um weniger Lagen zu falten.",
-        "swivelThirdLandmark": "Klicke auf einen Punkt für die dritte Faltlinie."
+        "stayerTouch": "Tippe auf das Papier, das liegen bleibt.",
+        "swivelChooseRidge": "Blättere bei Grat zur anderen Faltlinie, die sich aufrichten kann, und wähle Tal oder Berg.",
+        "swivelEdge": "Klicke auf die Kante, die sich bewegt: eine Papierkante oder eine gefaltete Kante.",
+        "swivelEdgeTouch": "Tippe auf die Kante, die sich bewegt: eine Papierkante oder eine gefaltete Kante.",
+        "swivelFinishRidge": "Wähle den Grat und die Richtung, dann drücke die Eingabetaste.",
+        "swivelFinishRidgeTouch": "Wähle den Grat und die Richtung, dann tippe auf {{action}}.",
+        "swivelOnto": "Klicke auf die Linie, auf der sie landen soll: eine Faltlinie oder eine Kante.",
+        "swivelOntoFirst": "Klicke auf einen Punkt der Linie, auf der sie landen soll.",
+        "swivelOntoFirstTouch": "Tippe auf einen Punkt der Linie, auf der sie landen soll.",
+        "swivelOntoSecond": "Klicke auf einen zweiten Punkt dieser Linie.",
+        "swivelOntoSecondTouch": "Tippe auf einen zweiten Punkt dieser Linie.",
+        "swivelOntoTouch": "Tippe auf die Linie, auf der sie landen soll: eine Faltlinie oder eine Kante.",
+        "swivelPivot": "Klicke auf den Drehpunkt.",
+        "swivelPivotTouch": "Tippe auf den Drehpunkt."
       },
       "target": "Rücken landet auf",
       "targetHelp": "Klicke auf das gefaltete Papier, um den Rücken neben dem Scharnier landen zu lassen.",

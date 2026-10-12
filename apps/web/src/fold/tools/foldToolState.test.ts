@@ -21,6 +21,21 @@ const point = (x: number, y: number): FoldPick => ({
   scene: { x, y },
 });
 
+/** The bottom edge, as a line click takes it. */
+const edge: FoldPick = {
+  kind: 'segment',
+  edge: 0,
+  segment: 'raw_edge',
+  sheet: [
+    [0, 0],
+    [1, 0],
+  ],
+  scene: [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+  ],
+};
+
 const flapA = { faces: [1], witness: [0.2, 0.2] as [number, number] };
 const flapB = { faces: [2], witness: [0.8, 0.2] as [number, number] };
 
@@ -218,30 +233,58 @@ describe('the vertex folds’ tool state', () => {
     expect(isLocated(tools.store.getState())).toBe(true);
     expect(tools.pick(free(0.3, 0.3))).toBe(false);
     expect(tools.swapSide()).toBe(false);
+    // A swivel: its pivot, its edge and the line it lands on.
     tools.selectTool('swivel');
     expect(tools.store.getState().picks).toEqual([]);
-    for (let k = 0; k < 4; k += 1) tools.pick(point(0.1 * k, 0.5));
+    tools.pick(point(0.5, 0.3));
+    tools.pick(edge);
     expect(isLocated(tools.store.getState())).toBe(false);
-    tools.pick(free(0.5, 0.9));
+    tools.pick(edge);
     expect(isLocated(tools.store.getState())).toBe(true);
   });
 
-  it('starts a petal fold on the existing crease, keeps a line mode H is meant for, and keeps the petal through a line mode', () => {
+  it('names a swivel’s target by a crease or two points, its pivot and edge kept when that changes', () => {
     const tools = createFoldTools();
-    expect(tools.store.getState().lineMode).toBe('axiom-2');
+    tools.selectTool('swivel');
+    tools.pick(point(0.5, 0.3));
+    tools.pick(edge);
+    tools.setEmergent(1);
+    tools.setSwivelTarget('points');
+    expect(tools.store.getState()).toMatchObject({ swivelTarget: 'points', compound: { emergent: null } });
+    expect(tools.store.getState().picks).toHaveLength(2);
+    tools.pick(point(0, 1));
+    expect(isLocated(tools.store.getState())).toBe(false);
+    tools.pick(point(1, 0.5));
+    expect(isLocated(tools.store.getState())).toBe(true);
+    // Kept from fold to fold, as the line mode is.
+    tools.clear();
+    expect(tools.store.getState().swivelTarget).toBe('points');
+  });
+
+  it('names a petal fold’s hinge by its crease or its two ends, its clicks starting again, and takes no line mode', () => {
+    const tools = createFoldTools();
     tools.selectTool('petal');
-    expect(tools.store.getState().lineMode).toBe('crease');
-    tools.selectLineMode('axiom-1');
-    expect(tools.store.getState()).toMatchObject({ tool: 'petal', lineMode: 'axiom-1' });
-    tools.selectTool('squash');
-    tools.selectTool('petal');
-    expect(tools.store.getState().lineMode).toBe('axiom-1');
-    // H's two ends, then the flap.
+    expect(tools.store.getState().petalHinge).toBe('crease');
+    // The hinge crease, then the flap.
+    tools.pick(edge);
+    expect(isLocated(tools.store.getState())).toBe(false);
+    tools.pick(free(0.5, 0.2));
+    expect(isLocated(tools.store.getState())).toBe(true);
+    tools.setPetalHinge('points');
+    expect(tools.store.getState()).toMatchObject({ tool: 'petal', petalHinge: 'points', picks: [] });
+    // Its two ends, then the flap.
     tools.pick(point(0.2, 0.5));
     tools.pick(point(0.8, 0.5));
     expect(isLocated(tools.store.getState())).toBe(false);
     tools.pick(free(0.5, 0.2));
     expect(isLocated(tools.store.getState())).toBe(true);
+    // A line mode is a fold's: choosing one takes a fold in hand.
+    tools.selectLineMode('axiom-1');
+    expect(tools.store.getState()).toMatchObject({ tool: 'valley', lineMode: 'axiom-1' });
+    // Another tool's hinge setting changes no picks of its own.
+    tools.pick(point(0.2, 0.5));
+    tools.setPetalHinge('crease');
+    expect(tools.store.getState().picks).toHaveLength(1);
   });
 
   it('lists the choices after one made anew, and keeps the direction from fold to fold', () => {

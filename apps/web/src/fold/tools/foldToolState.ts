@@ -34,6 +34,7 @@ import type { FoldFlap } from '../engine/foldEngineWire';
 import {
   isLineTool,
   locatesLine,
+  type FoldLineBy,
   type FoldLineModeId,
   type FoldLineToolId,
   type FoldSecondLineModeId,
@@ -43,7 +44,7 @@ import { sameFlap } from './crossSection';
 import { lineModeInput, locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
 import { extentClicks, type FoldExtentMode } from './precrease/precreaseExtent';
 import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
-import { PETAL_LINE_MODES } from './vertex/vertexInputs';
+import { SWIVEL_TARGET_FROM } from './vertex/vertexInputs';
 
 /**
  * What a fold takes along with the moving side (D6's seed, before it names
@@ -153,6 +154,13 @@ export interface FoldToolState {
   tuckDirection: FoldDirection;
   /** The way a vertex fold folds, as the viewer sees it: kept from fold to fold, as a precrease's is. */
   vertexDirection: FoldDirection;
+  /**
+   * How a petal fold's hinge is named — a crease already there, or its two
+   * ends, which the fold creases — and a swivel's target line: a crease or an
+   * edge, or two points. Each kept from fold to fold, as the line mode is.
+   */
+  petalHinge: FoldLineBy;
+  swivelTarget: FoldLineBy;
   override: FoldToolOverride | null;
   divide: FoldDivideSettings;
   /** The flap the pointer is over in the layer picker or the chips, which the canvas lights. */
@@ -179,6 +187,8 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   secondLineMode: 'free',
   tuckDirection: 'valley',
   vertexDirection: 'valley',
+  petalHinge: 'crease',
+  swivelTarget: 'crease',
   override: null,
   divide: FOLD_DIVIDE_DEFAULT,
   hoveredFlap: null,
@@ -214,11 +224,18 @@ function isSinkKindTool(tool: FoldToolId): boolean {
   return tool === 'open-sink' || tool === 'closed-sink';
 }
 
-/** The clicks the state's tool and line mode collect (a crimp's, its second line's too). */
+/**
+ * The clicks the state's tool and line mode collect (a crimp's, its second
+ * line's too; a petal fold's hinge and a swivel's target as they are named).
+ */
 export function foldToolInput(
-  state: Pick<FoldToolState, 'tool' | 'lineMode'> & Partial<Pick<FoldToolState, 'secondLineMode'>>
+  state: Pick<FoldToolState, 'tool' | 'lineMode'> &
+    Partial<Pick<FoldToolState, 'secondLineMode' | 'petalHinge' | 'swivelTarget'>>
 ): FoldInputModel | null {
-  return toolInput(state.tool, state.lineMode, state.secondLineMode);
+  return toolInput(state.tool, state.lineMode, state.secondLineMode, {
+    petalHinge: state.petalHinge ?? 'crease',
+    swivelTarget: state.swivelTarget ?? 'crease',
+  });
 }
 
 /**
@@ -312,6 +329,10 @@ export interface FoldTools {
   // The vertex folds (`tools/vertex`): each choice made anew lists the
   // choices after it anew — the fourth ray its orders.
   setVertexDirection(direction: FoldDirection): void;
+  /** Name a petal fold's hinge by a crease or by its two ends: its clicks start again. */
+  setPetalHinge(hinge: FoldLineBy): void;
+  /** Name a swivel's target by a crease or edge, or by two points: its pivot and edge stay, its target is clicked anew. */
+  setSwivelTarget(target: FoldLineBy): void;
   /** Where a squash's spine lands; null for the hinge line. */
   setSquashTarget(target: FoldModelDirection | null): void;
   /** Take a fan's emergent candidate by index; null for the first that lands. */
@@ -396,19 +417,15 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         }
         // Rotate remembers the tool it was taken up from, to give it back.
         if (tool === 'rotate') return { ...restart(state), tool, resume: state.tool };
-        // A petal fold's line H is a precrease, clicked or run through its
-        // two ends: an axiom that moves a point onto another makes no sense
-        // of it, so the tool starts on the existing crease.
-        const lineMode = tool === 'petal' && !PETAL_LINE_MODES.has(state.lineMode) ? 'crease' : state.lineMode;
-        return { ...restart(state), tool, lineMode };
+        return { ...restart(state), tool };
       });
     },
 
     selectLineMode(lineMode) {
       set((state) => {
-        // A line mode belongs to the folds, and to the petal fold's line H:
-        // choosing one from any other tool takes a fold in hand.
-        const tool: FoldLineToolId | 'petal' = locatesLine(state.tool) ? state.tool : 'valley';
+        // A line mode belongs to the folds along a line: choosing one from
+        // any other tool takes a fold in hand.
+        const tool: FoldLineToolId = locatesLine(state.tool) ? state.tool : 'valley';
         if (state.lineMode === lineMode && state.tool === tool) return state;
         return { ...restart(state), tool, lineMode };
       });
@@ -583,6 +600,29 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
           ? state
           : { ...state, vertexDirection, compound: { ...state.compound, order: 0 } }
       );
+    },
+
+    setPetalHinge(petalHinge) {
+      // Another way to name the hinge: its clicks, and the flap's after them, start again.
+      set((state) => {
+        if (state.petalHinge === petalHinge) return state;
+        return state.tool === 'petal' ? { ...restart(state), petalHinge } : { ...state, petalHinge };
+      });
+    },
+
+    setSwivelTarget(swivelTarget) {
+      set((state) => {
+        if (state.swivelTarget === swivelTarget) return state;
+        // The pivot and the edge stay: only the target is clicked anew.
+        const picks = state.tool === 'swivel' ? state.picks.slice(0, SWIVEL_TARGET_FROM) : state.picks;
+        return {
+          ...state,
+          swivelTarget,
+          picks,
+          override: null,
+          compound: { ...state.compound, emergent: null, order: 0 },
+        };
+      });
     },
 
     setSquashTarget(squashTarget) {

@@ -11,13 +11,18 @@ import { boundsOf, boundsToUser, transformLine, type Bounds } from './foldCanvas
 import { refusedFaceInks } from './foldCanvasModel';
 import { creasePatternPaneLines, type FoldCreasePatternLines } from './foldCreasePatternLines';
 import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
-import { foldedDisplayOffset, foldedPaneScene, withPreviewCreases, type FoldPaneDisplay } from './foldPaneScenes';
-import { fanGivenOnFolded } from '../tools/vertex/fanGeometry';
-import type { FoldFanMarks } from './vertex/useFoldFanMarks';
+import {
+  foldedDisplayOffset,
+  foldedPaneScene,
+  withPreviewCreases,
+  type FoldPaneDisplay,
+  type FoldPendingCreases,
+} from './foldPaneScenes';
 import type { FoldCanvasInks } from './useFoldCanvasInks';
 import type { FoldStateView } from './useFoldStateView';
 import type { FoldToolPreview } from './useFoldToolPreview';
 import { useFoldVertexCreases } from './vertex/useFoldVertexMarks';
+import { swivelRegionsTint } from './vertex/vertexOverlay';
 
 export interface FoldCanvasPaint {
   /** The folded form, as paper in the user's style. */
@@ -86,15 +91,17 @@ function union(a: Bounds | null, b: Bounds | null): Bounds | null {
  * What each pane of the Fold canvas paints (plan D11): the folded form of the
  * state on screen — or, with Rotate in hand, of that state turned as the
  * rotation lands it (`preview.turned`) — with a located fold's line — a crimp's two, a vertex
- * fold's creases, a fan's given creases (`fan`, `useFoldFanMarks`) from their
- * clicks on — in the paper style's diagram-crease pen of its letter, and its
- * moving set lit over the paper, a tuck's listed targets lit too, through the shared
- * paper painter (`paperSceneToFoldedGeometry`, which the pane calls) with the
- * `fold` policy; and the crease pattern — of the previewed fold's landed
- * state while there is one, the creases it adds its instruction, else a
- * fan's given creases its instruction while they are pending — as the
- * lines Edit's document would hold, which the canvas inks as Edit does
- * (`useFoldCreasePatternStrokes`).
+ * fold's creases, a vertex tool's pending creases (`pending`: a rabbit ear's
+ * given creases from their clicks on, `useFoldFanMarks`; a petal fold's
+ * hinge and the flap under the pointer, `useFoldPetalMarks`) — in the paper
+ * style's diagram-crease pen of its letter, and its moving set lit over the
+ * paper (a swivel's moving regions, its turning wedge brightest), a tuck's
+ * listed targets lit too, through the shared paper painter
+ * (`paperSceneToFoldedGeometry`, which the pane calls) with the `fold`
+ * policy; and the crease pattern — of the previewed fold's landed state while
+ * there is one, the creases it adds its instruction, else the pending
+ * creases its instruction — as the lines Edit's document would hold, which
+ * the canvas inks as Edit does (`useFoldCreasePatternStrokes`).
  *
  * The folded form's layers are spread by `spread`: the step's
  * (`foldStepSpread`) while the pane is at rest, none once a tool picks or
@@ -112,7 +119,7 @@ export function useFoldCanvasPaint(
   hoveredFlap: number | null,
   inks: FoldCanvasInks | null,
   spread: LayerSpreadOptions | null = null,
-  fan: FoldFanMarks | null = null
+  pending: FoldPendingCreases | null = null
 ): FoldCanvasPaint {
   const { summary, index } = view;
   // Rotate's preview: the model turned as it will be, in place of the state
@@ -124,21 +131,22 @@ export function useFoldCanvasPaint(
   const sheetBounds = useMemo(() => (sheet ? boundsOf(sheet.map(([x, y]) => ({ x, y }))) : null), [sheet]);
 
   // A crimp's second line, beside its picture's first: the other letter on
-  // the near layer, as a pleat's two creases are. A fan's given creases,
-  // pending from the moment their clicks are in, the direction's way as the
-  // viewer sees them, until the engine's own take their place.
+  // the near layer, as a pleat's two creases are. A vertex tool's pending
+  // creases, each by its letter as the viewer sees it, until the engine's
+  // own take their place.
   const secondLine = preview.action ? (preview.crimp?.lines.second ?? null) : null;
-  const fanCreases = fan?.creases;
-  const pending = useMemo(
-    () => (fan ? fanGivenOnFolded(fan.creases).map((line) => ({ line, letter: fan.direction })) : null),
-    [fan]
-  );
+  const pendingFolded = pending?.folded ?? null;
+  const pendingSheet = pending?.creasePattern;
   const vertexCreases = useFoldVertexCreases(index, preview.vertex);
   const foldedScene = useMemo(() => {
     if (!scene) return null;
     const base = foldedPaneScene(scene, display, offset, spread);
-    return withPreviewCreases(base, { action: preview.action, second: secondLine, vertex: vertexCreases, pending }, offset);
-  }, [scene, display, offset, spread, preview.action, secondLine, vertexCreases, pending]);
+    return withPreviewCreases(
+      base,
+      { action: preview.action, second: secondLine, vertex: vertexCreases, pending: pendingFolded },
+      offset
+    );
+  }, [scene, display, offset, spread, preview.action, secondLine, vertexCreases, pendingFolded]);
   const foldedInk = useMemo<FoldedSceneInk>(
     () => ({
       policy: PAPER_STYLE_POLICIES.fold,
@@ -154,8 +162,12 @@ export function useFoldCanvasPaint(
   const opening = opens && opens.ways.length > 1 ? opens.way : null;
   // A tuck's targets: every layer listed to tuck against, the one taken brightest.
   const tuck = preview.tuck;
+  // A swivel's paper that moves, once the engine has described it: what the
+  // turn carries, lit as a fold's moving set is.
+  const swivel = preview.vertex?.answer?.analysis ?? preview.vertex?.base?.analysis ?? null;
   const tint = useMemo(() => {
     if (!index || !inks) return null;
+    if (swivel?.kind === 'swivel-by-edge') return swivelRegionsTint(index, swivel, inks.accent);
     const targets = tuck
       ? foldTargetsTint(
           index,
@@ -183,7 +195,7 @@ export function useFoldCanvasPaint(
       inks.accent
     );
     return joinFills(targets, moving);
-  }, [index, inks, analysis, refused, section, hoveredFlap, opening, tuck]);
+  }, [index, inks, analysis, refused, section, hoveredFlap, opening, tuck, swivel]);
   const foldedBounds = useMemo(() => {
     const form = scene
       ? boundsOf(scene.subfaces.flatMap((cell) => cell.polygon.map((p) => ({ x: p.x + offset.x, y: p.y + offset.y }))))
@@ -198,12 +210,11 @@ export function useFoldCanvasPaint(
   const cpLines = useMemo(() => {
     if (!cpSource || !cpSummary) return null;
     const lines = creasePatternPaneLines(cpSource, { display, step: cpSummary.step, instruction: landed?.added ?? null });
-    // Until a fold lands and draws its own, a fan's given creases are the
-    // instruction: on each layer it cuts, by the letter each has from the front.
-    if (landed || !fanCreases || fanCreases.length === 0) return lines;
-    const pending = fanCreases.map(({ sheet: [a, b], letter }) => ({ a, b, letter }));
-    return { ...lines, instruction: [...lines.instruction, ...pending] };
-  }, [cpSource, cpSummary, display, landed, fanCreases]);
+    // Until a fold lands and draws its own, a vertex tool's pending creases
+    // are the instruction: on each layer, by the letter each has from the front.
+    if (landed || !pendingSheet || pendingSheet.length === 0) return lines;
+    return { ...lines, instruction: [...lines.instruction, ...pendingSheet] };
+  }, [cpSource, cpSummary, display, landed, pendingSheet]);
   const cpBounds = useMemo(() => (sheetBounds ? boundsToUser(sheetBounds) : null), [sheetBounds]);
 
   // A turned preview is another form: the pane keeps it in view as it keeps a new step's.

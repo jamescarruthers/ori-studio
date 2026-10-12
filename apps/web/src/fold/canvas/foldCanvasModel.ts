@@ -23,12 +23,13 @@ import { isSinkRefusalCode } from '../engine/foldEngineSinkWire';
 import type { FoldTuckWindowView } from '../tools/tuck/tuckToolWindow';
 import { isLocated, type FoldToolState } from '../tools/foldToolState';
 import type { FoldExtentMode } from '../tools/precrease/precreaseExtent';
-import { isSinkTool, isVertexTool, type FoldKeyLabel } from '../tools/foldToolCatalog';
+import { isLineTool, isSinkTool, isVertexTool, type FoldKeyLabel } from '../tools/foldToolCatalog';
+import { SWIVEL_TARGET_FROM } from '../tools/vertex/vertexInputs';
 import { nearestDirection } from '../tools/vertex/vertexStep';
 import type { FoldVertexWindowView } from '../tools/vertex/vertexToolWindow';
 import { boundsOf } from './foldCanvasGeometry';
 import type { FoldOverlayAlong } from './foldPaneOverlays';
-import type { FoldFreePick, FoldPaneId, FoldPointPick } from './foldPicking';
+import type { FoldFreePick, FoldPaneId, FoldPick, FoldPointPick } from './foldPicking';
 import type { FoldCanvasChoice } from './useFoldCanvasVerbs';
 import type { FoldExtentPreview, FoldToolPreview } from './useFoldToolPreview';
 
@@ -185,10 +186,18 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   if (!isVertexTool(tool)) return undefined;
   const vertex = preview.vertex;
   const analysis = vertex?.base?.analysis;
-  const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates : [];
-  // Only the fourth creases that land are offered, numbered among themselves.
+  const candidates =
+    analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel'
+      ? analysis.candidates
+      : analysis?.kind === 'swivel-by-edge'
+        ? analysis.ridges
+        : [];
+  // Only the fourth creases — a swivel's ridges — that land are offered, numbered among themselves.
   const fourths = vertex?.fourths ?? [];
   const { orders = [], order = null } = vertex ?? {};
+  // What the petal fold creases itself, as the engine describes the flap folded.
+  const petal = vertex?.answer?.analysis ?? analysis;
+  const lineBy = tool === 'petal' ? tools.petalHinge : tool === 'swivel' ? tools.swivelTarget : null;
   return {
     tool,
     direction: tools.vertexDirection,
@@ -207,7 +216,16 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
       const at = k === null ? -1 : fourths.indexOf(k);
       return at < 0 ? null : at + 1;
     },
-    ...(vertex?.nearPrecrease ? { nearPrecrease: true } : {}),
+    ...(lineBy ? { lineBy } : {}),
+    ...(analysis?.kind === 'swivel-by-edge' ? { ridge: vertex?.emergent === 1 ? 'end' : 'foot' } : {}),
+    ...(petal?.kind === 'petal'
+      ? {
+          petalScores: {
+            hinge: petal.scores_line === true,
+            kites: (petal.scores_kites ?? [false, false]).filter(Boolean).length,
+          },
+        }
+      : {}),
   };
 }
 
@@ -282,16 +300,36 @@ export function refusedFaceInks(
 }
 
 /**
- * While a free line is being drawn, its first end, which the live line runs
- * from to where a click would end it: a free fold line's, or a crimp's
- * second line drawn free after its first. Null otherwise.
+ * While a line is being drawn through two clicks, its first end, which the
+ * live line runs from to where a click would end it: a free fold line's, a
+ * crimp's second line drawn free after its first, or the line through two
+ * points a swivel lays its edge on. Null otherwise. (A petal fold's hinge by
+ * its ends is a crease the fold makes: the paper draws it in its pen,
+ * `useFoldPetalMarks`.)
  */
-export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | null {
+export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | FoldPointPick | null {
+  if (tools.tool === 'swivel') {
+    const pick = tools.swivelTarget === 'points' && tools.picks.length === SWIVEL_TARGET_FROM + 1 ? tools.picks.at(-1) : undefined;
+    return pick?.kind === 'point' ? pick : null;
+  }
   const first = lineModeInput(tools.lineMode).steps.length;
   const [mode, from] =
     tools.tool === 'crimp' && tools.picks.length > first ? [tools.secondLineMode, first] : [tools.lineMode, 0];
-  const pick = mode === 'free' && tools.picks.length === from + 1 ? tools.picks[from] : undefined;
+  const pick = isLineTool(tools.tool) && mode === 'free' && tools.picks.length === from + 1 ? tools.picks[from] : undefined;
   return pick?.kind === 'free' ? pick : null;
+}
+
+/**
+ * The picks the panes draw: every one clicked, but a swivel's pivot and
+ * target once the engine has described its fold — the creases meet where the
+ * pivot sits moved onto the bisector of the edge and the target, which the
+ * vertex overlay draws in its place, never the click (owner feedback,
+ * 2026-10-12), and the edge's landing on the target is drawn bold where the
+ * target lies. The edge it moves stays lit.
+ */
+export function foldShownPicks(tools: FoldToolState, preview: Pick<FoldToolPreview, 'vertex'>): readonly FoldPick[] {
+  const described = (preview.vertex?.answer ?? preview.vertex?.base)?.analysis.kind === 'swivel-by-edge';
+  return tools.tool === 'swivel' && described ? tools.picks.slice(1, SWIVEL_TARGET_FROM) : tools.picks;
 }
 
 /**
@@ -351,6 +389,12 @@ function choiceNoteWithKeys(t: TFunction, kind: FoldCanvasChoice['kind'], keys: 
         'More than one fourth crease lets these creases lie flat. Step through them, or press {{keys}}.',
         { keys }
       );
+    case 'ridge':
+      return t(
+        'tools:fold.chooser.withKeys.ridge',
+        'Either ridge lets the swivel lie flat. Step through them, or press {{keys}}.',
+        { keys }
+      );
     case 'root':
       return t(
         'tools:fold.chooser.withKeys.root',
@@ -386,6 +430,8 @@ function choiceNoteNoKeys(t: TFunction, kind: FoldCanvasChoice['kind']): string 
       );
     case 'emergent':
       return t('tools:fold.chooser.noKeys.emergent', 'More than one fourth crease lets these creases lie flat. Step through them.');
+    case 'ridge':
+      return t('tools:fold.chooser.noKeys.ridge', 'Either ridge lets the swivel lie flat. Step through them.');
     case 'root':
       return t('tools:fold.chooser.noKeys.root', 'This axiom has more than one fold here. Step through them.');
     case 'opening':

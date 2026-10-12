@@ -37,6 +37,7 @@ import type {
   FoldSceneCreaseMark,
 } from '../engine/foldEngineWire';
 import { applyIsometry, FOLD_USER_PER_UNIT, foldUnitToScenePx, toPoint } from './foldCanvasGeometry';
+import type { FoldInstructionLine } from './foldCreasePatternLines';
 
 /** The pane toggles on the viewport toolbar (the design's "Step creases | Precreases"). */
 export interface FoldPaneDisplay {
@@ -241,6 +242,20 @@ export function withFoldLine(
   return withFoldCreases(scene, [past], offset);
 }
 
+/**
+ * A vertex tool's creases from its clicks, before the engine has described
+ * its fold: a rabbit ear's given creases (`useFoldFanMarks`), a petal fold's
+ * hinge and the creases of the flap under the pointer (`useFoldPetalMarks`).
+ * The folded pane draws them in the diagram-crease pens, the crease pattern
+ * as its instruction, until a preview draws the fold's own.
+ */
+export interface FoldPendingCreases {
+  /** On the folded pane, in the scene frame, each by its letter as the viewer sees it. */
+  folded: readonly FoldPaneCreaseLine[];
+  /** On the crease pattern, in sheet coordinates, each by its letter from the front. */
+  creasePattern: readonly FoldInstructionLine[];
+}
+
 /** What a tool's preview draws as creases on the folded pane (`withPreviewCreases`). */
 export interface FoldPanePreviewCreases {
   /** The located fold's picture: its line, by its direction as the viewer sees it. Null while none is located. */
@@ -250,9 +265,11 @@ export interface FoldPanePreviewCreases {
   /** A vertex fold's own creases, each by its letter (`vertexCreaseLines`); null for every other tool. */
   vertex: readonly FoldPaneCreaseLine[] | null;
   /**
-   * A fan's given creases, pending from the moment their clicks are in, each
-   * by its letter as the viewer sees it (`fanGivenCreases`): drawn until the
-   * engine has described the fold, whose own creases then take their place.
+   * A vertex tool's pending creases (`FoldPendingCreases.folded`) — a fan's
+   * given creases from the moment their clicks are in, a petal fold's hinge
+   * and the flap under the pointer — each by its letter as the viewer sees
+   * it: drawn until the engine has described the fold, whose own creases then
+   * take their place.
    */
   pending?: readonly FoldPaneCreaseLine[] | null;
 }

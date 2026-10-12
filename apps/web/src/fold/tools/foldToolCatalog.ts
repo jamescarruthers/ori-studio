@@ -104,12 +104,22 @@ export const FOLD_SECOND_LINE_MODES: readonly FoldSecondLineModeId[] = ['free', 
 
 /**
  * A tool whose first clicks locate a line through the line modes: every fold
- * along a line, and the petal fold, whose line H is located the same way
- * (`tools/vertex/vertexInputs`) though nothing folds along it alone.
+ * along a line. A vertex fold names its own lines — a petal fold's hinge, a
+ * swivel's target — by a crease or two points (`FoldLineBy`), never an axiom.
  */
-export function locatesLine(id: FoldToolId): id is FoldLineToolId | 'petal' {
-  return isLineTool(id) || id === 'petal';
+export function locatesLine(id: FoldToolId): id is FoldLineToolId {
+  return isLineTool(id);
 }
+
+/**
+ * How a vertex fold names a line it takes (`tools/vertex/vertexInputs`): an
+ * existing crease clicked, or the line through two points clicked — a petal
+ * fold's hinge, which the fold then creases itself, or the line a swivel lays
+ * its edge on.
+ */
+export type FoldLineBy = 'crease' | 'points';
+
+export const FOLD_LINE_BY: readonly FoldLineBy[] = ['crease', 'points'];
 
 /** A reverse fold's kind, as the reverse tool's kind control names it. */
 export function foldReverseKindLabel(t: TFunction, kind: 'inside' | 'outside'): string {
@@ -327,16 +337,13 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
       return t('tools:fold.vertex.help.squash', 'Open a two-layer flap and press it flat, its spine onto its hinge.');
     case 'petal':
       return t(
-        'tools:fold.vertex.help.petal',
-        'Lift a flap’s lower point along a precrease H while its sides fold in along two kite precreases.'
+        'tools:fold.vertex.help.petalHinge',
+        'Lift a flap’s lower point along a hinge while its sides fold in along two kite creases.'
       );
     case 'rabbit-ear':
       return t('tools:fold.vertex.help.rabbitEar', 'Fold a triangle’s corners in along their bisectors, so a point stands up.');
     case 'swivel':
-      return t(
-        'tools:fold.vertex.help.swivel',
-        'Fold the paper about a point you place: three creases you pick, and a fourth that lets it lie flat.'
-      );
+      return t('tools:fold.vertex.help.swivelEdge', 'Swivel an edge onto a line, pivoting at a point.');
     case 'divide-line':
       return t('tools:fold.tool.divideLineHelp', 'Mark points that divide an edge or a crease into equal parts.');
     case 'open-sink':

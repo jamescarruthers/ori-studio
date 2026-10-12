@@ -7,24 +7,37 @@
  * one was covered.
  *
  * Every fix the engine offers a vertex fold is a button — the other
- * direction, a fan's other fourth ray (`use_emergent`) — and so is what the
- * tools can do for a refusal the engine offers no fix for:
+ * direction, a fan's other fourth ray or a swivel's other ridge
+ * (`use_emergent`), a swivel's plain fold along its bisector (`use_line`,
+ * the shared notice's) — and so is what the tools can do for a refusal the
+ * engine offers no fix for:
  *
  * - a squash's spine aimed outside its wedge goes back onto the hinge;
- * - a petal fold's H that runs along no precrease takes the precrease beside
- *   it when there is one (the landmark), or precreases the line first; its
- *   missing kite creases take the Precrease tool on the edge-to-edge axiom
- *   that makes them. The engine cannot offer these: it cannot know the
- *   kite's corner before the kite is creased.
+ * - a petal fold over a hinge crease whose kite creases are not there takes
+ *   the same hinge by its two ends, so the fold creases them, or the
+ *   Precrease tool on the edge-to-edge axiom that makes them; a hinge the
+ *   fold cannot crease through the layers that fold takes the Precrease
+ *   tool through its two ends. The engine cannot offer these: it cannot
+ *   know the kite's corner before the kite is creased.
+ *
+ * A petal fold with no flap says what its cause names more precisely, where
+ * the engine does (`FoldNoPetalDetail`): a hinge that misses the flap, or
+ * lies too near its closed point.
  *
  * React-free and store-free; literal `t()` keys so the extractor sees them.
  */
 import type { TFunction } from 'i18next';
 import type { NoticeAction } from '../../../components/ui/Notice';
-import type { FoldNoFlap, FoldNoPetal } from '../../engine/foldEngineSquashWire';
+import {
+  FOLD_SWIVEL_EDGE_REFUSAL_CODES,
+  type FoldNoFlap,
+  type FoldNoPetal,
+  type FoldNoPetalDetail,
+} from '../../engine/foldEngineSquashWire';
 import type { FoldFix, FoldModelPoint, FoldRefusalBody } from '../../engine/foldEngineWire';
+import type { FoldLineBy } from '../foldToolCatalog';
 
-/** The vertex folds' refusal codes, which {@link vertexRefusalWords} words. */
+/** The vertex folds' refusal codes, which {@link vertexRefusalWords} words: the swivel by its edge's among them. */
 export const FOLD_VERTEX_REFUSAL_CODES = [
   'squash_no_flap',
   'squash_flap_not_free',
@@ -38,6 +51,7 @@ export const FOLD_VERTEX_REFUSAL_CODES = [
   'fan_fourth_beside_stayer',
   'fan_fourth_cannot_rise',
   'fan_stayer_detached',
+  ...FOLD_SWIVEL_EDGE_REFUSAL_CODES,
 ] as const;
 
 export type FoldVertexRefusalCode = (typeof FOLD_VERTEX_REFUSAL_CODES)[number];
@@ -48,8 +62,14 @@ export interface FoldVertexRefusalContext {
   tool: 'squash' | 'petal' | 'rabbit-ear' | 'swivel';
   /** A fan's fourth ray's number on screen (1-based), by its direction: what a `use_emergent` fix names. */
   emergentNumber?: (direction: FoldModelPoint) => number | null;
-  /** A petal fold's H runs along no precrease, but one lies beside it: the landmark offered. */
-  nearPrecrease?: boolean;
+  /** How a petal fold's hinge was named: a crease already there, or its two ends. A crease when unknown. */
+  hinge?: FoldLineBy;
+  /**
+   * A swivel's form: by its edge — what the tool makes, whose creases are
+   * computed and whose fourth is its ridge — or by its rays (a stored step's).
+   * By its rays when unknown.
+   */
+  swivel?: 'edge' | 'rays';
 }
 
 /**
@@ -59,6 +79,7 @@ export interface FoldVertexRefusalContext {
  */
 export function vertexContextOf(code: string): FoldVertexRefusalContext {
   if (code.startsWith('petal')) return { tool: 'petal' };
+  if (code.startsWith('swivel')) return { tool: 'swivel', swivel: 'edge' };
   return code.startsWith('fan') ? { tool: 'swivel' } : { tool: 'squash' };
 }
 
@@ -66,16 +87,16 @@ export function vertexContextOf(code: string): FoldVertexRefusalContext {
 export interface FoldVertexFixVerbs {
   /** The same fold, the other direction. */
   vertexOtherWay?: () => void;
-  /** Fold the fan with this fourth ray, a direction in the parent's model frame. */
+  /** Fold the fan with this fourth ray — a swivel with this ridge —, a direction in the parent's model frame. */
   takeEmergent?: (direction: FoldModelPoint) => void;
   /** Put a squash's spine back onto its hinge line. */
   resetSquashTarget?: () => void;
-  /** Take the precrease beside a petal fold's H as H. */
-  useNearPrecrease?: () => void;
-  /** Precrease a petal fold's H first: the Precrease tool on the same line. */
+  /** Precrease a petal fold's hinge first: the Precrease tool through its two ends. */
   precreaseLine?: () => void;
   /** Precrease a petal fold's kite first: the Precrease tool on the edge-to-edge axiom. */
   precreaseKite?: () => void;
+  /** The same petal fold with its hinge named by its two ends, so the fold creases the kite creases it lacks. */
+  petalByEnds?: () => void;
 }
 
 function noFlap(t: TFunction, cause: FoldNoFlap): string {
@@ -103,18 +124,92 @@ function noFlap(t: TFunction, cause: FoldNoFlap): string {
   }
 }
 
-function noPetal(t: TFunction, cause: FoldNoPetal): string {
+/**
+ * Why a petal fold has no flap, in its words: the cause, and what the engine
+ * names of it more precisely where it does (`FoldNoPetalDetail`).
+ */
+function noPetal(t: TFunction, cause: FoldNoPetal, detail: FoldNoPetalDetail | undefined): { title: string; text: string } {
+  if (cause === 'no_ends' && detail?.kind === 'misses_flap') {
+    return {
+      title: t('tools:fold.vertex.refusal.noPetal.missesFlapTitle', 'The hinge misses the flap'),
+      text: t(
+        'tools:fold.vertex.refusal.noPetal.missesFlap',
+        'The flap you clicked lies wholly on one side of the hinge. Click the flap the hinge runs across, or pick a hinge from one of its folded edges to the other.'
+      ),
+    };
+  }
+  if (cause === 'no_corner' && detail?.kind === 'past_corner') {
+    return {
+      title: t('tools:fold.vertex.refusal.noPetal.pastCornerTitle', 'The hinge is too near the closed point'),
+      text: t(
+        'tools:fold.vertex.refusal.noPetal.pastCorner',
+        'The kite creases from the hinge’s ends meet below it, but the flap reaches past where they meet, and that paper would fold no way. Move the hinge farther from the flap’s closed point: its ends where the kite creases meet the flap’s edges.'
+      ),
+    };
+  }
   switch (cause) {
     case 'no_ends':
-      return t(
-        'tools:fold.vertex.refusal.noPetal.noEnds',
-        'The line does not cross the flap’s two folded edges. Pick a precrease that runs from one edge of the flap to the other.'
-      );
+      return {
+        title: t('tools:fold.vertex.refusal.noPetal.noEndsTitle', 'The hinge does not cross the flap'),
+        text: t(
+          'tools:fold.vertex.refusal.noPetal.noEndsHinge',
+          'A petal fold’s hinge runs across the flap from one folded edge to the other, and this one crosses one of them, or neither. Pick a hinge whose ends lie on the flap’s two folded edges.'
+        ),
+      };
     case 'no_corner':
-      return t(
-        'tools:fold.vertex.refusal.noPetal.noCorner',
-        'The kite creases do not meet below the line, so there is no point to lift.'
-      );
+      return {
+        title: t('tools:fold.vertex.refusal.noPetal.noCornerTitle', 'No point to lift'),
+        text: t(
+          'tools:fold.vertex.refusal.noPetal.noCornerHinge',
+          'The kite creases from the hinge’s ends do not meet below it, so there is no point to lift. Pick a hinge whose ends lie where the kite creases meet the flap’s edges.'
+        ),
+      };
+  }
+}
+
+/** A swivel by its edge's own refusals (`FOLD_SWIVEL_EDGE_REFUSAL_CODES`), in its words. */
+function swivelEdgeWords(t: TFunction, code: (typeof FOLD_SWIVEL_EDGE_REFUSAL_CODES)[number]): { title: string; text: string } {
+  switch (code) {
+    case 'swivel_not_an_edge':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelNotAnEdge.title', 'That is no edge'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelNotAnEdge.text',
+          'A swivel moves a raw edge of the paper or a folded edge, and the line picked is neither. Press Esc and pick the edge again.'
+        ),
+      };
+    case 'swivel_target_parallel':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelTargetParallel.title', 'The line runs parallel to the edge'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelTargetParallel.text',
+          'No turn about a point lays an edge on a line parallel to it, or on its own line. Pick a line that meets the edge’s line.'
+        ),
+      };
+    case 'swivel_pivot_on_edge':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelPivotOnEdge.title', 'The creases would meet on the edge'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelPivotOnEdge.text',
+          'The creases meet where the pivot sits, moved onto the line halfway between the edge and the line it lands on, and here that is on the edge itself. Press Esc and pick a pivot farther from where the edge meets the line.'
+        ),
+      };
+    case 'swivel_edge_short':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelEdgeShort.title', 'The edge ends before it would turn'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelEdgeShort.text',
+          'No part of the edge lies past the point square below the pivot, so none of it would swivel. A plain fold along the line halfway between the edge and its target lays it there instead.'
+        ),
+      };
+    case 'swivel_edge_stays':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelEdgeStays.title', 'The edge would stay put'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelEdgeStays.text',
+          'The paper along the edge would stay put, or fold across the hinge, rather than turn onto the line. Pick a pivot nearer the edge, or another edge.'
+        ),
+      };
   }
 }
 
@@ -162,31 +257,35 @@ export function vertexRefusalWords(
     case 'petal_not_precreased':
       if (refusal.missing === 'kite') {
         return {
-          title: t('tools:fold.vertex.refusal.kite.title', 'Precrease the kite first'),
-          // What the button sets up, and what is left to click once it has.
+          title: t('tools:fold.vertex.refusal.kite.titleMissing', 'The kite creases are not there'),
+          // What each button does: the fold creases them, or the Precrease tool makes them first.
           text: t(
-            'tools:fold.vertex.refusal.kite.howTo',
-            'A petal fold refolds creases already there. The button below takes the Precrease tool on Axiom 3: click a lower edge of the top flap, then its centre line, leave out the flaps behind under Layers, and press Enter. Crease the other edge the same way, then petal fold.'
+            'tools:fold.vertex.refusal.kite.creaseOrPrecrease',
+            'Over a hinge crease, a petal fold refolds creases already there, and a kite crease is not. Name the hinge by its two ends instead, and the fold creases the kites itself; or precrease them first, with the Precrease tool on Axiom 3: a lower edge of the top flap onto its centre line, the flaps behind left out.'
           ),
         };
       }
-      return context.nearPrecrease
-        ? {
-            title: t('tools:fold.vertex.refusal.lineNear.title', 'The line misses the precrease'),
-            text: t(
-              'tools:fold.vertex.refusal.lineNear.text',
-              'A petal fold lifts the flap along a precrease. This line runs just beside one: use it, or precrease this line first.'
-            ),
-          }
-        : {
-            title: t('tools:fold.vertex.refusal.line.title', 'Precrease the line first'),
-            text: t(
-              'tools:fold.vertex.refusal.line.text',
-              'A petal fold lifts the flap along a precrease through every layer below it. Precrease this line through all the layers, then petal fold.'
-            ),
-          };
+      return {
+        title: t('tools:fold.vertex.refusal.line.titleHinge', 'Precrease the hinge first'),
+        text:
+          context.hinge === 'points'
+            ? t(
+                'tools:fold.vertex.refusal.line.ends',
+                'The hinge crosses paper of the second layer that folds in beside the kite, and the fold cannot crease that as the flap lifts. Precrease the hinge through every layer, then petal fold.'
+              )
+            : t(
+                'tools:fold.vertex.refusal.line.crease',
+                'The hinge crease does not run through every layer below it that folds. Precrease the hinge through every layer, then petal fold.'
+              ),
+      };
     case 'petal_no_flap':
-      return { title: t('tools:fold.vertex.refusal.noPetal.title', 'No flap to lift here'), text: noPetal(t, refusal.cause) };
+      return noPetal(t, refusal.cause, refusal.detail);
+    case 'swivel_not_an_edge':
+    case 'swivel_target_parallel':
+    case 'swivel_pivot_on_edge':
+    case 'swivel_edge_short':
+    case 'swivel_edge_stays':
+      return swivelEdgeWords(t, refusal.code);
     case 'fan_center':
       return {
         title: t('tools:fold.vertex.refusal.center.title', 'The creases cannot meet there'),
@@ -196,51 +295,90 @@ export function vertexRefusalWords(
                 'tools:fold.vertex.refusal.center.textEar',
                 'The triangle’s creases meet at its incenter, which lies on a crease or off the layers. Pick corners that put it inside the layers, away from their creases.'
               )
-            : t(
-                'tools:fold.vertex.refusal.center.textSwivelStep',
-                'The point the creases meet at is on a crease or off the paper. Press Esc and place it again as step 1 says: inside the paper, away from every crease.'
-              ),
+            : context.swivel === 'edge'
+              ? t(
+                  'tools:fold.vertex.refusal.center.textSwivelEdge',
+                  'The creases meet where the pivot sits, moved onto the line halfway between the edge and the line it lands on, and that is on a crease or off the paper. Press Esc and pick another pivot.'
+                )
+              : t(
+                  'tools:fold.vertex.refusal.center.textSwivelStep',
+                  'The point the creases meet at is on a crease or off the paper. Press Esc and place it again as step 1 says: inside the paper, away from every crease.'
+                ),
       };
     case 'fan_ray_blocked':
       return {
         title: t('tools:fold.vertex.refusal.blocked.title', 'Paper is in the way'),
-        // The two steppers that change it, by the names the window gives them.
-        text: t(
-          'tools:fold.vertex.refusal.blocked.steppers',
-          'A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Step Layers to fold more layers, or Fourth crease to another one.'
-        ),
+        // The steppers that change it, by the names the window gives them.
+        text:
+          context.swivel === 'edge'
+            ? t(
+                'tools:fold.vertex.refusal.blocked.swivelEdge',
+                'A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Pick another pivot, or another line for the edge to land on.'
+              )
+            : t(
+                'tools:fold.vertex.refusal.blocked.steppers',
+                'A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Step Layers to fold more layers, or Fourth crease to another one.'
+              ),
       };
     case 'fan_not_flat':
       return {
         title: t('tools:fold.vertex.refusal.notFlat.title', 'It cannot fold flat'),
-        text: t(
-          'tools:fold.vertex.refusal.notFlat.spread',
-          'No fourth crease lets these creases lie flat: two of them point the same way, or two neighbours are half a turn or more apart. Press Esc and pick points spread more evenly round the meeting point.'
-        ),
+        text:
+          context.swivel === 'edge'
+            ? t(
+                'tools:fold.vertex.refusal.notFlat.swivelEdge',
+                'No crease lets the edge turn onto that line and lie flat from this pivot. Press Esc and pick another pivot, or another line.'
+              )
+            : t(
+                'tools:fold.vertex.refusal.notFlat.spread',
+                'No fourth crease lets these creases lie flat: two of them point the same way, or two neighbours are half a turn or more apart. Press Esc and pick points spread more evenly round the meeting point.'
+              ),
       };
     case 'fan_fourth_beside_stayer':
-      return {
-        title: t('tools:fold.vertex.refusal.fourthBesideStayer.title', 'The fourth crease is beside the paper that stays'),
-        text: t(
-          'tools:fold.vertex.refusal.fourthBesideStayer.text',
-          'The flap rises along the fourth crease, so it lies across from the paper that stays put. Pick another fourth crease, or other paper to stay put.'
-        ),
-      };
+      return context.swivel === 'edge'
+        ? {
+            title: t('tools:fold.vertex.refusal.ridgeBesideStayer.title', 'The ridge is beside the paper that stays'),
+            text: t(
+              'tools:fold.vertex.refusal.ridgeBesideStayer.pivot',
+              'The flap rises along the ridge, so it lies across from the paper that stays put, and here it does not. Pick another pivot.'
+            ),
+          }
+        : {
+            title: t('tools:fold.vertex.refusal.fourthBesideStayer.title', 'The fourth crease is beside the paper that stays'),
+            text: t(
+              'tools:fold.vertex.refusal.fourthBesideStayer.text',
+              'The flap rises along the fourth crease, so it lies across from the paper that stays put. Pick another fourth crease, or other paper to stay put.'
+            ),
+          };
     case 'fan_fourth_cannot_rise':
-      return {
-        title: t('tools:fold.vertex.refusal.fourthCannotRise.title', 'The fourth crease cannot rise here'),
-        text: t(
-          'tools:fold.vertex.refusal.fourthCannotRise.text',
-          'The fourth crease folds the other way from the other three, and the angles between these creases do not let it. Pick another fourth crease, or other points.'
-        ),
-      };
+      return context.swivel === 'edge'
+        ? {
+            title: t('tools:fold.vertex.refusal.ridgeCannotRise.title', 'The ridge cannot rise here'),
+            text: t(
+              'tools:fold.vertex.refusal.ridgeCannotRise.pivot',
+              'The ridge folds the other way from the other three creases, and the angles between them do not let it. Pick another pivot.'
+            ),
+          }
+        : {
+            title: t('tools:fold.vertex.refusal.fourthCannotRise.title', 'The fourth crease cannot rise here'),
+            text: t(
+              'tools:fold.vertex.refusal.fourthCannotRise.text',
+              'The fourth crease folds the other way from the other three, and the angles between these creases do not let it. Pick another fourth crease, or other points.'
+            ),
+          };
     case 'fan_stayer_detached':
       return {
         title: t('tools:fold.vertex.refusal.stayer.title', 'Which paper stays?'),
-        text: t(
-          'tools:fold.vertex.refusal.stayer.text',
-          'The paper picked to stay put is joined to no part of the fold. Pick paper the creases cut, or paper joined to it.'
-        ),
+        text:
+          context.swivel === 'edge'
+            ? t(
+                'tools:fold.vertex.refusal.stayer.swivelEdge',
+                'The paper beside the line, which stays put, is joined to no part of the fold. Pick another pivot, nearer where the edge meets the line.'
+              )
+            : t(
+                'tools:fold.vertex.refusal.stayer.text',
+                'The paper picked to stay put is joined to no part of the fold. Pick paper the creases cut, or paper joined to it.'
+              ),
       };
     default:
       return null;
@@ -316,17 +454,14 @@ export function vertexFixActions(
       const { takeEmergent } = verbs;
       if (!takeEmergent) return [];
       const number = context.emergentNumber?.(fix.direction) ?? null;
-      return [
-        {
-          id: `vertex-emergent-${position}`,
-          label:
-            number === null
-              ? t('tools:fold.vertex.fix.emergent', 'Use the fourth crease that fits')
-              : t('tools:fold.vertex.fix.emergentNumber', 'Use fourth crease {{number}}', { number }),
-          run: () => takeEmergent(fix.direction),
-          disabled,
-        },
-      ];
+      // A swivel by its edge has two ridges: the fix names the other.
+      const label =
+        context.swivel === 'edge'
+          ? t('tools:fold.vertex.fix.otherRidge', 'Use the other ridge')
+          : number === null
+            ? t('tools:fold.vertex.fix.emergent', 'Use the fourth crease that fits')
+            : t('tools:fold.vertex.fix.emergentNumber', 'Use fourth crease {{number}}', { number });
+      return [{ id: `vertex-emergent-${position}`, label, run: () => takeEmergent(fix.direction), disabled }];
     }
     default:
       return null;
@@ -355,18 +490,19 @@ export function vertexExtraActions(
       );
     case 'petal_not_precreased':
       if (refusal.missing === 'kite') {
-        return action(
-          'vertex-precrease-kite',
-          t('tools:fold.vertex.fix.precreaseKite', 'Precrease the kite'),
-          verbs.precreaseKite
-        );
+        return [
+          // Over a hinge crease: the same hinge by its ends, which creases the kite as it folds.
+          ...(context.hinge === 'points'
+            ? []
+            : action('vertex-petal-ends', t('tools:fold.vertex.fix.creaseKites', 'Crease the kites as it folds'), verbs.petalByEnds)),
+          ...action('vertex-precrease-kite', t('tools:fold.vertex.fix.precreaseKite', 'Precrease the kite'), verbs.precreaseKite),
+        ];
       }
-      return [
-        ...(context.nearPrecrease
-          ? action('vertex-near-precrease', t('tools:fold.vertex.fix.usePrecrease', 'Use the precrease'), verbs.useNearPrecrease)
-          : []),
-        ...action('vertex-precrease-line', t('tools:fold.vertex.fix.precreaseLine', 'Precrease this line first'), verbs.precreaseLine),
-      ];
+      return action(
+        'vertex-precrease-line',
+        t('tools:fold.vertex.fix.precreaseHinge', 'Precrease the hinge first'),
+        verbs.precreaseLine
+      );
     default:
       return [];
   }

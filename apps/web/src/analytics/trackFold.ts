@@ -8,10 +8,17 @@ import type {
   FoldStepExtent,
   FoldStepLayerScope,
   FoldStepRotationAmount,
+  FoldStepVertexForm,
   FoldStepVia,
 } from './events';
 import { track } from './runtime';
 import { spreadProperties, spreadTracking } from './trackDiagram';
+
+/** What a committed step says beyond its kind: how its line was located, how far it turned, or how it named its lines. */
+type FoldStepAddedDetails =
+  | { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent }
+  | { amount: FoldStepRotationAmount }
+  | { vertex: FoldStepVertexForm };
 
 /**
  * A step committed from the Fold canvas (plan D18). Hand-placed: a commit is
@@ -19,27 +26,30 @@ import { spreadProperties, spreadTracking } from './trackDiagram';
  * none of which dispatches a `MENU_ACTION_ID`. A turn takes no layers and
  * locates no line, so it carries `op_kind` alone, and a rotation how far it
  * turned (`amount`: its preset, or `other` for an exact angle — never the
- * angle); a precrease says how much of its line it creased (`extent`).
+ * angle); a precrease says how much of its line it creased (`extent`). A
+ * vertex fold locates no line either: a petal fold says how its hinge was
+ * named (`hinge`), a swivel its form and, by its edge, its target
+ * (`swivel_form`, `target`).
  */
-export function trackFoldStepAdded(
-  opKind: FoldStepAddedOpKind,
-  details?:
-    | { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent }
-    | { amount: FoldStepRotationAmount }
-): void {
-  track(
-    ANALYTICS_EVENTS.foldStepAdded,
-    !details
-      ? { op_kind: opKind }
-      : 'amount' in details
-        ? { op_kind: opKind, amount: details.amount }
-        : {
-            op_kind: opKind,
-            layer_scope: details.layerScope,
-            via: details.via,
-            ...(details.extent ? { extent: details.extent } : {}),
-          }
-  );
+export function trackFoldStepAdded(opKind: FoldStepAddedOpKind, details?: FoldStepAddedDetails): void {
+  track(ANALYTICS_EVENTS.foldStepAdded, { op_kind: opKind, ...detailProperties(details) });
+}
+
+function detailProperties(details: FoldStepAddedDetails | undefined): Record<string, string> {
+  if (!details) return {};
+  if ('amount' in details) return { amount: details.amount };
+  if ('vertex' in details) return vertexFormProperties(details.vertex);
+  return {
+    layer_scope: details.layerScope,
+    via: details.via,
+    ...(details.extent ? { extent: details.extent } : {}),
+  };
+}
+
+/** A vertex fold's form as `fold step added`'s properties: enums only. */
+function vertexFormProperties(form: FoldStepVertexForm): Record<string, string> {
+  if ('hinge' in form) return { hinge: form.hinge };
+  return form.swivelForm === 'edge' ? { swivel_form: 'edge', target: form.target } : { swivel_form: 'rays' };
 }
 
 /** A refusal shown to the folder, by the engine's stable code: never a face, a vertex or a line. */

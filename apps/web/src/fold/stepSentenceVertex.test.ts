@@ -3,6 +3,7 @@ import i18n from '../i18n';
 import { FOLD_VERTEX_OP_KINDS } from './document/foldSequenceDocument';
 import { foldSentenceStepOf } from './sequence/foldSentenceStep';
 import { foldStepSentence } from './stepSentence';
+import { vertexRows } from './stepSentenceVertex';
 import { lineLabel, operationBadge, operationLabel } from './stepWords';
 
 const t = i18n.t.bind(i18n);
@@ -41,5 +42,70 @@ describe('a vertex fold’s words', () => {
       fold: 'squash',
       direction: 'mountain',
     });
+  });
+
+  it('say how a petal fold named its hinge: a crease there, or two points the fold creases', () => {
+    const context = { paper: { kind: 'square' }, marks: [] } as unknown as Parameters<typeof foldSentenceStepOf>[1];
+    const byCrease = foldSentenceStepOf({ kind: 'petal', crease: [0.3, 0.6], petal: [0.2, 0.7], direction: 'valley' }, context);
+    const byEnds = foldSentenceStepOf(
+      { kind: 'petal', ends: [[0.2, 0.5], [0.5, 0.8]], petal: [0.2, 0.7], direction: 'valley' },
+      context
+    );
+    expect(byCrease).toEqual({ op: 'vertex', fold: 'petal', direction: 'valley', form: { hinge: 'crease' } });
+    expect(foldStepSentence(t, byCrease)).toBe('Petal-fold the flap.');
+    expect(foldStepSentence(t, byEnds)).toBe('Petal-fold the flap, creasing its hinge as it lifts.');
+    expect(foldStepSentence(t, { ...byEnds, direction: 'mountain' } as typeof byEnds)).toBe(
+      'Petal-fold the flap behind, creasing its hinge as it lifts.'
+    );
+    if (byEnds.op !== 'vertex' || byCrease.op !== 'vertex') throw new Error('no vertex fold');
+    expect(vertexRows(t, byCrease.form)).toMatchObject([{ label: 'Hinge', value: 'Existing crease' }]);
+    expect(vertexRows(t, byEnds.form)).toMatchObject([{ label: 'Hinge', value: 'Two points, creased by the fold' }]);
+  });
+
+  it('say a swivel by its edge lays the edge on its target about its pivot, with its target and ridge as rows', () => {
+    const context = { paper: { kind: 'square' }, marks: [] } as unknown as Parameters<typeof foldSentenceStepOf>[1];
+    const edge = {
+      kind: 'swivel' as const,
+      via: 'edge' as const,
+      pivot: [0.8, 0.3] as const,
+      edge: [0.5, 0] as const,
+      target: { via: 'crease' as const, at: [0.5, 0.5] as const },
+      seed: { scope: 'all' as const },
+      direction: 'valley' as const,
+    };
+    const onCrease = foldSentenceStepOf(edge, context);
+    expect(onCrease).toEqual({
+      op: 'vertex',
+      fold: 'swivel',
+      direction: 'valley',
+      form: { swivel: 'edge', target: 'crease', ridge: 'foot' },
+    });
+    expect(foldStepSentence(t, onCrease)).toBe('Swivel the edge onto the crease, pivoting at the point.');
+    const onLine = foldSentenceStepOf(
+      { ...edge, target: { via: 'free', through: [[0, 0], [1, 1]] }, ridge: [0.5, -0.5], direction: 'mountain' },
+      context
+    );
+    expect(foldStepSentence(t, onLine)).toBe('Swivel the edge behind onto the line, pivoting at the point.');
+    if (onLine.op !== 'vertex') throw new Error('no vertex fold');
+    expect(vertexRows(t, onLine.form)).toMatchObject([
+      { label: 'Lands on', value: 'Line through two points' },
+      { label: 'Ridge', value: 'Toward the edge’s end' },
+    ]);
+    // By its rays, as before: its sentence, and no rows.
+    const rays = foldSentenceStepOf(
+      {
+        kind: 'swivel',
+        vertex: [0.5, 0.3],
+        toward: [[1, 0.6], [0, 0.6], [0.5, 0]],
+        emergent: [0, 1],
+        seed: { scope: 'all' },
+        stayer: [0.1, 0.1],
+        direction: 'valley',
+      },
+      context
+    );
+    expect(foldStepSentence(t, rays)).toBe('Swivel-fold the paper about the point.');
+    if (rays.op !== 'vertex') throw new Error('no vertex fold');
+    expect(vertexRows(t, rays.form)).toEqual([]);
   });
 });

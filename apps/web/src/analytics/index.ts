@@ -69,6 +69,7 @@ export type {
   FoldStepExtent,
   FoldStepLayerScope,
   FoldStepRotationAmount,
+  FoldStepVertexForm,
   FoldStepVia,
   LandingCta,
   LandingFeatureId,
