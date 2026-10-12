@@ -307,18 +307,24 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
     case 'inside-reverse':
       return t('tools:fold.tool.insideReverseHelp', 'Push a flap inside itself, reversing its spine.');
     case 'crimp':
-      return t('tools:fold.tool.crimpHelp', 'Reverse a flap along two lines at once: in, then back out.');
+      return t('tools:fold.tool.crimpHelp', 'Fold a flap in along one line and back out along a second, so its end turns.');
     case 'tuck':
       return t('tools:fold.tool.tuckHelp', 'Fold a flap and slide it under, or over, a layer that stays.');
     // The vertex folds.
     case 'squash':
       return t('tools:fold.vertex.help.squash', 'Open a two-layer flap and press it flat, its spine onto its hinge.');
     case 'petal':
-      return t('tools:fold.vertex.help.petal', 'Lift a flap’s lower point along a precreased line while its sides fold in.');
+      return t(
+        'tools:fold.vertex.help.petal',
+        'Lift a flap’s lower point along a precrease H while its sides fold in along two kite precreases.'
+      );
     case 'rabbit-ear':
       return t('tools:fold.vertex.help.rabbitEar', 'Fold a triangle’s corners in along their bisectors, so a point stands up.');
     case 'swivel':
-      return t('tools:fold.vertex.help.swivel', 'Fold paper about a point inside it, along rays you pick and one that lets it lie flat.');
+      return t(
+        'tools:fold.vertex.help.swivel',
+        'Fold the paper about a point you place: three creases you pick, and a fourth that lets it lie flat.'
+      );
     case 'divide-line':
       return t('tools:fold.tool.divideLineHelp', 'Mark points that divide an edge or a crease into equal parts.');
     case 'open-sink':
@@ -444,16 +450,40 @@ export function secondLineModeLabel(t: TFunction, mode: FoldSecondLineModeId): s
   return lineModeLabel(t, mode);
 }
 
+/**
+ * The clicks that locate a crimp's first line, where the flap turns in: a
+ * free line's and a crease's in a crimp's words, an axiom's as the axiom
+ * says them.
+ */
+export function crimpFirstLineSteps(t: TFunction, mode: FoldLineModeId): string[] {
+  switch (mode) {
+    case 'free':
+      return [
+        t('tools:fold.steps.crimpFirstStart', 'Click where the first line starts, nearer the body: where the flap turns in.'),
+        t('tools:fold.steps.freeEnd', 'Click where it ends.'),
+      ];
+    case 'crease':
+      return [t('tools:fold.steps.crimpFirstCrease', 'Click the crease or folded edge where the flap turns in.')];
+    default:
+      return lineModeSteps(t, mode);
+  }
+}
+
 /** The clicks that locate a crimp's second line, after its first line's: one step each. */
 export function secondLineSteps(t: TFunction, mode: FoldSecondLineModeId): string[] {
   switch (mode) {
     case 'free':
       return [
-        t('tools:fold.steps.secondFreeStart', 'Click where the second line starts.'),
+        t(
+          'tools:fold.steps.crimpSecondStart',
+          'Click where the second line starts, beyond the first toward the tip: where the flap turns back out.'
+        ),
         t('tools:fold.steps.freeEnd', 'Click where it ends.'),
       ];
     case 'crease':
-      return [t('tools:fold.steps.secondCrease', 'Click the crease or folded edge the second line runs along.')];
+      return [
+        t('tools:fold.steps.crimpSecondCrease', 'Click the crease or folded edge beyond the first line where the flap turns back out.'),
+      ];
   }
 }
 

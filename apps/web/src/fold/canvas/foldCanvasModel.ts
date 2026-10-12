@@ -23,6 +23,7 @@ import { isSinkRefusalCode } from '../engine/foldEngineSinkWire';
 import type { FoldTuckWindowView } from '../tools/tuck/tuckToolWindow';
 import { isLocated, type FoldToolState } from '../tools/foldToolState';
 import {
+  crimpFirstLineSteps,
   foldToolLabel,
   isSinkTool,
   isVertexTool,
@@ -31,7 +32,7 @@ import {
   secondLineSteps,
   type FoldKeyLabel,
 } from '../tools/foldToolCatalog';
-import { vertexToolSteps } from '../tools/vertex/vertexInputs';
+import { vertexToolSteps, type FoldVertexStepsHost } from '../tools/vertex/vertexInputs';
 import { nearestDirection } from '../tools/vertex/vertexStep';
 import type { FoldVertexWindowView } from '../tools/vertex/vertexToolWindow';
 import { boundsOf } from './foldCanvasGeometry';
@@ -294,24 +295,34 @@ export function foldLocatedLines(
   return [lines.first, lines.second].filter((line): line is [Point, Point] => line !== null);
 }
 
-/** The words after the folded pane's chip: the line mode and the click in hand, while one is. */
-export function foldPromptWords(t: TFunction, tools: FoldToolState): string | null {
+/**
+ * The words after the folded pane's chip: the line mode and the click in
+ * hand, while one is — the tool window's own step (`host`: a finger's words
+ * where they differ).
+ */
+export function foldPromptWords(t: TFunction, tools: FoldToolState, host?: FoldVertexStepsHost): string | null {
   if (tools.tool === 'divide-line') {
     return tools.picks.length === 0 ? t('tools:fold.steps.divide', 'Click an edge or crease to divide it.') : null;
   }
   if (isLocated(tools)) return null;
   if (isVertexTool(tools.tool)) {
     // A vertex fold's own clicks, named by the fold they make.
-    const step = vertexToolSteps(t, tools.tool, tools.lineMode)[tools.picks.length];
+    const step = vertexToolSteps(t, tools.tool, tools.lineMode, host)[tools.picks.length];
     return step ? `${foldToolLabel(t, tools.tool)} · ${step}` : null;
   }
-  const steps = lineModeSteps(t, tools.lineMode);
-  // A crimp's second line, once its first is in.
-  if (tools.tool === 'crimp' && tools.picks.length >= steps.length) {
-    const second = secondLineSteps(t, tools.secondLineMode)[tools.picks.length - steps.length];
+  if (tools.tool === 'crimp') {
+    // A crimp's lines in its own words, each named as the window names it —
+    // a first line located by an axiom by the axiom, whose steps it takes.
+    const first = crimpFirstLineSteps(t, tools.lineMode);
+    if (tools.picks.length < first.length) {
+      const drawn = tools.lineMode === 'free' || tools.lineMode === 'crease';
+      const name = drawn ? t('tools:fold.crimp.firstLine', 'First line') : lineModeLabel(t, tools.lineMode);
+      return `${name} · ${first[tools.picks.length]}`;
+    }
+    const second = secondLineSteps(t, tools.secondLineMode)[tools.picks.length - first.length];
     return second ? `${t('tools:fold.crimp.secondLine', 'Second line')} · ${second}` : null;
   }
-  const step = steps[tools.picks.length];
+  const step = lineModeSteps(t, tools.lineMode)[tools.picks.length];
   return step ? `${lineModeLabel(t, tools.lineMode)} · ${step}` : null;
 }
 

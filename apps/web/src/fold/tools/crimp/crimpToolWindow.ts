@@ -25,9 +25,10 @@ import type { TFunction } from 'i18next';
 import { FOLD_CRIMP_KINDS } from '../../document/foldSequenceDocument';
 import {
   FOLD_SECOND_LINE_MODES,
+  crimpFirstLineSteps,
   foldCrimpKindLabel,
   foldToolLabel,
-  lineModeSteps,
+  lineModeLabel,
   secondLineModeLabel,
   secondLineSteps,
   type FoldSecondLineModeId,
@@ -95,6 +96,11 @@ function crimpControls(
 /**
  * How to locate both lines, step by step, then pick and commit; what snaps,
  * for the line in hand. `action` is the commit button's name.
+ *
+ * What a crimp is comes first, above the steps (owner feedback, 2026-10-11):
+ * which line is which, and which end is the tip, is what a first-time folder
+ * cannot guess. A first line located by an axiom — the mode a fold before
+ * left in hand, its steps an axiom's — says so, and how to draw it instead.
  */
 export function crimpLocateInstructions(
   t: TFunction,
@@ -104,15 +110,31 @@ export function crimpLocateInstructions(
 ): FoldToolInstructions {
   const second = view.secondLineMode ?? 'free';
   const finish = host.coarse
-    ? t('tools:fold.steps.finishTouch', 'Pick the fold and the layers, then tap {{action}}.', { action })
-    : t('tools:fold.steps.finish', 'Pick the fold and the layers, then press Enter.');
-  const items = [...lineModeSteps(t, view.lineMode), ...secondLineSteps(t, second), finish];
+    ? t('tools:fold.steps.crimpFinishTouch', 'Choose Inside or Outside, then tap {{action}}.', { action })
+    : t('tools:fold.steps.crimpFinish', 'Choose Inside or Outside, then press Enter.');
+  const items = [...crimpFirstLineSteps(t, view.lineMode), ...secondLineSteps(t, second), finish];
   const onSecond = view.picks >= lineModeInput(view.lineMode).steps.length;
+  const byAxiom = view.lineMode !== 'free' && view.lineMode !== 'crease';
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
+    intro: t(
+      'tools:fold.crimp.intro',
+      'Folds a flap in along a first line and back out along a second, so its end turns. Draw the first line nearer the body and the second nearer the tip; each runs across the flap.'
+    ),
     items,
     current: Math.min(Math.max(0, view.picks), items.length - 1),
-    notes: lineModeNotes(t, onSecond ? second : view.lineMode, host),
+    notes: [
+      ...(byAxiom && !onSecond
+        ? [
+            t(
+              'tools:fold.crimp.firstLineAxiom',
+              'The first line is located by {{mode}}, the line mode in hand. To draw it, choose Free line under First line.',
+              { mode: lineModeLabel(t, view.lineMode) }
+            ),
+          ]
+        : []),
+      ...lineModeNotes(t, onSecond ? second : view.lineMode, host),
+    ],
   };
 }
 
@@ -129,14 +151,28 @@ export function secondLineSelect(t: TFunction, view: FoldToolWindowView, verbs: 
   };
 }
 
+/**
+ * What to check and choose once both lines are in, in the order the window
+ * shows them: the tip, the kind, the flaps, then the commit — named as a
+ * button too, since a stepper pressed last keeps the focus and Enter would
+ * press it again.
+ */
 function previewInstructions(t: TFunction, action: string, host: FoldToolHost, view: FoldToolWindowView): FoldToolInstructions {
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items: [
-      t('tools:fold.steps.pickFlapsToCrimp', 'Pick which flaps crimp.'),
+      t(
+        'tools:fold.steps.crimpTip',
+        'The end beyond the second line is the tip, which turns: if it is the wrong end, Swap the tip side.'
+      ),
+      t(
+        'tools:fold.steps.crimpKind',
+        'Choose Inside to tuck the paper between the lines inside the flap, or Outside to wrap it round the flap; a kind that does not fit is greyed out.'
+      ),
+      t('tools:fold.steps.crimpLayers', 'Under Layers, leave out any flap that should not crimp.'),
       host.coarse
         ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action })
-        : t('tools:fold.steps.commit', 'Press Enter to fold.'),
+        : t('tools:fold.steps.commitOrClick', 'Press Enter, or click {{action}}, to fold.', { action }),
     ],
     current: 0,
     notes: view.preview ? queuedNote(t, view.preview) : [],

@@ -163,9 +163,10 @@ export function vertexRefusalWords(
       if (refusal.missing === 'kite') {
         return {
           title: t('tools:fold.vertex.refusal.kite.title', 'Precrease the kite first'),
+          // What the button sets up, and what is left to click once it has.
           text: t(
-            'tools:fold.vertex.refusal.kite.text',
-            'A petal fold refolds creases already there. Fold each side edge of the flap’s top layer onto its centre line and unfold, then petal fold.'
+            'tools:fold.vertex.refusal.kite.howTo',
+            'A petal fold refolds creases already there. The button below takes the Precrease tool on Axiom 3: click a lower edge of the top flap, then its centre line, leave out the flaps behind under Layers, and press Enter. Crease the other edge the same way, then petal fold.'
           ),
         };
       }
@@ -196,24 +197,25 @@ export function vertexRefusalWords(
                 'The triangle’s creases meet at its incenter, which lies on a crease or off the layers. Pick corners that put it inside the layers, away from their creases.'
               )
             : t(
-                'tools:fold.vertex.refusal.center.textSwivel',
-                'The point the creases meet at lies on a crease or off the layers. Put it inside the layers, away from their creases.'
+                'tools:fold.vertex.refusal.center.textSwivelStep',
+                'The point the creases meet at is on a crease or off the paper. Press Esc and place it again as step 1 says: inside the paper, away from every crease.'
               ),
       };
     case 'fan_ray_blocked':
       return {
         title: t('tools:fold.vertex.refusal.blocked.title', 'Paper is in the way'),
+        // The two steppers that change it, by the names the window gives them.
         text: t(
-          'tools:fold.vertex.refusal.blocked.text',
-          'A crease runs into paper that cannot fold with it, or paper holds two parts of the fold together. Cut more layers, or try another fourth crease.'
+          'tools:fold.vertex.refusal.blocked.steppers',
+          'A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Step Layers to fold more layers, or Fourth crease to another one.'
         ),
       };
     case 'fan_not_flat':
       return {
         title: t('tools:fold.vertex.refusal.notFlat.title', 'It cannot fold flat'),
         text: t(
-          'tools:fold.vertex.refusal.notFlat.text',
-          'No fourth crease lets these creases lie flat: two of them coincide, or the gaps between them are too wide. Pick other points.'
+          'tools:fold.vertex.refusal.notFlat.spread',
+          'No fourth crease lets these creases lie flat: two of them point the same way, or two neighbours are half a turn or more apart. Press Esc and pick points spread more evenly round the meeting point.'
         ),
       };
     case 'fan_fourth_beside_stayer':

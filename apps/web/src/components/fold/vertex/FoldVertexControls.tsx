@@ -11,7 +11,7 @@ import styles from './FoldVertexControls.module.css';
  * A vertex fold's direction in the Fold tool window (`vertexToolWindow`):
  * Valley and Mountain, each saying in its tooltip which way the paper turns,
  * and under them what the fold needs of the paper — its precondition, said
- * up front.
+ * up front — unless the window's instructions already say it above the steps.
  */
 export function FoldVertexDirection({ controls }: { controls: FoldVertexControls }) {
   const { direction } = controls;
@@ -31,9 +31,11 @@ export function FoldVertexDirection({ controls }: { controls: FoldVertexControls
           onChange={direction.set}
         />
       </FieldRow>
-      <p className={styles.note} data-fold-vertex-note="">
-        {controls.note}
-      </p>
+      {controls.note && (
+        <p className={styles.note} data-fold-vertex-note="">
+          {controls.note}
+        </p>
+      )}
     </>
   );
 }

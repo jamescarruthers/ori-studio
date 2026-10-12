@@ -164,6 +164,20 @@ describe('the Fold canvas model', () => {
     expect(foldPromptWords(t, { ...state, picks: state.picks.slice(0, 1) })).toBe(
       'Axiom 1: through two points · Click the second point.'
     );
+    // A drawn first line, in a crimp's words.
+    expect(foldPromptWords(t, { ...crimping, lineMode: 'free', picks: [] })).toBe(
+      'First line · Click where the first line starts, nearer the body: where the flap turns in.'
+    );
+  });
+
+  it('prompts a swivel’s first click with the key, or the latch, that frees its point', () => {
+    const swivel: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel' };
+    expect(foldPromptWords(t, swivel, { coarse: false, alt: 'Option' })).toBe(
+      'Swivel fold · Hold Option and click where the creases meet: inside the paper, off every crease.'
+    );
+    expect(foldPromptWords(t, swivel, { coarse: true, alt: 'Alt' })).toBe(
+      'Swivel fold · Turn on Free point, then tap where the creases meet: inside the paper, off every crease.'
+    );
   });
 
   it('hands the crimp’s and the tuck’s windows what they choose among, only for their own tool once located', () => {
