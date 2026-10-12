@@ -136,6 +136,80 @@ describe('the step tree', () => {
     }
   });
 
+  it('reads a precrease’s extent, a segment or a pinch, and writes it back only when present', () => {
+    const precrease = { kind: 'precrease', line: valleyOp.line, direction: 'valley', moving: [0.5, 0.75], seed: { scope: 'all' } };
+    const pinch = { kind: 'pinch', at: { kind: 'point', at: [0.5, 0.5] }, length: 0.0625 };
+    const segment = {
+      kind: 'segment',
+      from: { kind: 'mark', at: [0.25, 0.5], mark: 'fmark-1' },
+      to: { kind: 'point', at: [0.75, 0.5] },
+    };
+    const { document } = readSteps([
+      raw('whole', null, { op: precrease }),
+      raw('pinch', null, { op: { ...precrease, extent: pinch } }),
+      raw('segment', null, { op: { ...precrease, extent: segment } }),
+    ]);
+    const [whole, pinched, segmented] = document.steps as FoldStep[];
+    expect(document.steps.map(isLockedStep)).toEqual([false, false, false]);
+    expect(whole!.op).toEqual(precrease);
+    expect(pinched!.op).toEqual({ ...precrease, extent: pinch });
+    expect(segmented!.op).toEqual({ ...precrease, extent: segment });
+    // A whole precrease writes no `extent` key; a partial one writes it last.
+    const written = writeFoldSequence({ document, readOnlyRaw: null }).steps as { op: Record<string, unknown> }[];
+    expect(Object.keys(written[0]!.op)).toEqual(['kind', 'line', 'direction', 'moving', 'seed']);
+    expect(Object.keys(written[1]!.op)).toEqual(['kind', 'line', 'direction', 'moving', 'seed', 'extent']);
+    expect(written[2]!.op.extent).toEqual(segment);
+  });
+
+  it('locks a precrease whose extent does not read, rather than folding the whole line', () => {
+    const precrease = { kind: 'precrease', line: valleyOp.line, direction: 'valley', moving: [0.5, 0.75], seed: { scope: 'all' } };
+    const point = { kind: 'point', at: [0.5, 0.5] };
+    const extents = [
+      // A kind or a key a newer build may write.
+      { kind: 'arc', at: point, length: 0.1 },
+      { kind: 'pinch', at: point, length: 0.1, align: 'start' },
+      { kind: 'segment', from: point, to: point, through: point },
+      // Damage: no length, or one that is no positive number.
+      { kind: 'pinch', at: point },
+      { kind: 'pinch', at: point, length: 0 },
+      { kind: 'pinch', at: point, length: -0.1 },
+      { kind: 'pinch', at: point, length: '0.1' },
+      { kind: 'pinch', at: point, length: Number.NaN },
+      // A point that is no point input: a bare point, an edge, a mark without its id.
+      { kind: 'pinch', at: [0.5, 0.5], length: 0.1 },
+      { kind: 'segment', from: { kind: 'edge', a: [0, 0], b: [1, 0] }, to: point },
+      { kind: 'segment', from: { kind: 'mark', at: [0.5, 0.5], mark: '' }, to: point },
+      { kind: 'segment', from: point },
+      'pinch',
+      null,
+    ];
+    for (const extent of extents) {
+      const op = { ...precrease, extent };
+      const held = readSteps([raw('a', null, { op }), raw('b', 'a')]);
+      expect(isLockedStep(held.document.steps[0]!), JSON.stringify(extent)).toBe(true);
+      expect([...lockedIds(foldStepTree(held.document.steps))].sort(), JSON.stringify(extent)).toEqual(['a', 'b']);
+      // Written back as it came.
+      expect((writeFoldSequence(held).steps as { op: unknown }[])[0]!.op).toEqual(op);
+    }
+  });
+
+  it('locks a precrease with a key it does not know: the rule that makes a build without extents lock one', () => {
+    // A build that predates `extent` knew a precrease's keys to be the line's,
+    // `moving`, the seed's and `direction`, and locked any other: an extent it
+    // cannot read never folds as the whole line there. This build applies the
+    // same rule to a key newer than it.
+    const op = {
+      kind: 'precrease',
+      line: valleyOp.line,
+      direction: 'valley',
+      moving: [0.5, 0.75],
+      seed: { scope: 'all' },
+      reach: { kind: 'pinch' },
+    };
+    const held = readSteps([raw('a', null, { op })]);
+    expect(isLockedStep(held.document.steps[0]!)).toBe(true);
+  });
+
   it('reads every seed and root the engine can take, up to its limits', () => {
     const { document } = readSteps([
       raw('a', null, { op: { ...valleyOp, seed: { scope: 'depth', at: [0.5, 0.75], layers: 2 ** 32 - 1 } } }),

@@ -219,11 +219,48 @@ export interface FoldPlainOp extends FoldAlongLine {
   kind: 'valley' | 'mountain';
 }
 
-/** Fold and unfold: the creases are left flat, remembering their letters. */
+/**
+ * Fold and unfold: the creases are left flat, remembering their letters.
+ * With an `extent`, only part of the line is creased ({@link FoldPrecreaseExtent}).
+ */
 export interface FoldPrecreaseOp extends FoldAlongLine {
   kind: 'precrease';
   direction: FoldDirection;
+  /** Part of the line only: a segment or a pinch. Absent for the whole line. */
+  extent?: FoldPrecreaseExtent;
 }
+
+/**
+ * A point input, as an axiom's point slot takes one: a sheet point, or a
+ * Divide-line mark's resolved sheet point with its id riding along for the
+ * sentence only. Replay reads `at`.
+ */
+export type FoldPointRef = Extract<FoldRef, { kind: 'point' | 'mark' }>;
+
+/**
+ * How much of its line a partial precrease creases. Each point is resolved
+ * through the parent and its image projected onto the located line, one rule
+ * for every point:
+ *
+ * - **segment**: between two points of the line, in either order;
+ * - **pinch**: a short mark `length` long (sheet units: the sheet's longer
+ *   side is 1), centred on a point of the line — where it crosses another
+ *   crease, say. The tool offers the engine's default (`defaultPinchLength`,
+ *   a sixteenth of the sheet's shorter side) and the step stores the length
+ *   it used, so replay never depends on the default.
+ *
+ * The marks it leaves are real creases — each keeps its letter, front-relative,
+ * and every later fold carries it — that end inside the paper: they split no
+ * face, change no layer order, and go to Edit and the FOLD export as
+ * auxiliary lines. A crease folded along one later takes it in.
+ */
+export type FoldPrecreaseExtent =
+  | { kind: 'segment'; from: FoldPointRef; to: FoldPointRef }
+  | { kind: 'pinch'; at: FoldPointRef; length: number };
+
+export type FoldPrecreaseExtentKind = FoldPrecreaseExtent['kind'];
+
+export const FOLD_PRECREASE_EXTENT_KINDS: readonly FoldPrecreaseExtentKind[] = ['segment', 'pinch'];
 
 /**
  * A plain fold along an existing crease, named by a sheet point inside its

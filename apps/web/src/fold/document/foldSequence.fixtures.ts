@@ -316,6 +316,42 @@ export function writtenSequence(): Record<string, unknown> {
           seed: { scope: 'flaps', at: [[0.4, 0.45]] },
         },
       },
+      // Partial precreases: a pinch, and a segment from a mark to a point.
+      {
+        id: 'fstep-21',
+        parent: 'fstep-9',
+        op: {
+          kind: 'precrease',
+          line: { via: 'free', through: [[0.5, 0], [0.5, 0.5]] },
+          direction: 'valley',
+          moving: [0.75, 0.25],
+          seed: { scope: 'all' },
+          extent: { kind: 'pinch', at: { kind: 'point', at: [0.5, 0.25] }, length: 0.03125 },
+        },
+      },
+      {
+        id: 'fstep-22',
+        parent: 'fstep-21',
+        op: {
+          kind: 'precrease',
+          line: {
+            via: 'axiom',
+            axiom: 1,
+            inputs: [
+              { kind: 'point', at: [0, 0] },
+              { kind: 'point', at: [1, 0.5] },
+            ],
+          },
+          direction: 'mountain',
+          seed: { scope: 'flaps', at: [[0.9, 0.1]] },
+          extent: {
+            kind: 'segment',
+            from: { kind: 'mark', at: [1 / 3, 1 / 6], mark: 'fmark-1' },
+            to: { kind: 'point', at: [0.8, 0.4] },
+          },
+        },
+        choices: { root: { n: [0.4472135954999579, -0.8944271909999159], d: 0 } },
+      },
     ],
   };
 }
