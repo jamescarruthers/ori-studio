@@ -19,3 +19,9 @@
 .partIcon {
   flex: none;
 }
+
+/* Under the list, the page's own verb: Re-pack Page, on a flow page. */
+.pageActions {
+  display: flex;
+  padding: 0 var(--space-3);
+}

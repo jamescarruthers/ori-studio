@@ -7,6 +7,7 @@ import { STEP_FILE_MM_RANGE } from '../../diagram/export/stepFiles';
 import type { DiagramExportBinding } from '../../diagram/export/useDiagramExport';
 import type { DiagramPageSetup } from '../../diagram/document/diagramDocument';
 import { clashSentence } from '../../diagram/pages/clashLabels';
+import { exportOverflowSentence, exportUnfitSentence } from '../../diagram/pages/overflowLabels';
 import { CLASH_GROUPS } from '../../diagram/pages/pagePlacement';
 import { pageSetupSummary, pageSideLabel } from '../../diagram/pages/pageSetupLabels';
 import { zoomSplitSentence } from '../../diagram/pages/zoomSplitLabels';
@@ -45,6 +46,8 @@ export function DiagramExportOptions({
   const steps = (numbers: readonly number[]) => formatStepNumbers(numbers, i18n.language, t);
   // A sentence for each kind of clash there is: an overlap, the paper's edge, the margin, the path.
   const clashGroups = CLASH_GROUPS.filter((group) => binding.clashes[group].length > 0);
+  // And for the flow's steps that no longer fit their places, and its pages that cannot hold their steps.
+  const overflowing = binding.overflow.steps.length > 0 || binding.overflow.unfitPages.length > 0;
   const pageSetup = (
     <div className={styles.pageSetup}>
       <span className={styles.setup}>
@@ -199,7 +202,7 @@ export function DiagramExportOptions({
 
       {(binding.empty.length > 0 ||
         binding.cut.length > 0 ||
-        (printed && clashGroups.length > 0) || (!printed && binding.placed > 0) ||
+        (printed && (clashGroups.length > 0 || overflowing)) || (!printed && binding.placed > 0) ||
         binding.missing.length > 0 ||
         binding.unavailable ||
         (printed && binding.splits.length > 0) ||
@@ -246,6 +249,12 @@ export function DiagramExportOptions({
                   {clashSentence(group, binding.clashes[group], t, i18n.language)}
                 </li>
               ))}
+            {printed && binding.overflow.steps.length > 0 && (
+              <li data-overflow="steps">{exportOverflowSentence(binding.overflow.steps, t, i18n.language)}</li>
+            )}
+            {printed && binding.overflow.unfitPages.length > 0 && (
+              <li data-overflow="pages">{exportUnfitSentence(binding.overflow.unfitPages, t, i18n.language)}</li>
+            )}
             {!printed && binding.placed > 0 && <li>{t('dialogs:diagramExport.placementLeftOut', 'Page placements and size pins do not affect step files.')}</li>}
             {binding.empty.length > 0 && (
               <li>{emptySentence(t, printed, steps(binding.empty), binding.empty.length)}</li>

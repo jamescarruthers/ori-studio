@@ -7,13 +7,16 @@ import {
   useContextMenuController,
   type ContextMenuController,
 } from '../menus/context/useContextMenuController';
-import { diagramStepMenuItems } from './actions/diagramContextMenu';
+import { diagramPageMenuItems, diagramStepMenuItems } from './actions/diagramContextMenu';
+import { diagramPageActions } from './pages/repackActions';
 import { addDiagramStep, diagramStepActions } from './useDiagramActions';
 
 /**
- * The Steps view's context menu: a card's step verbs, or Add Step on the space
- * between cards. A right-click selects the card it lands on first, so the Step
- * pane and the menu are about the same step.
+ * The Diagram's context menu: a card's or a page's step verbs, or Add Step on
+ * the space between them — and on a flow page in the Pages view, past its
+ * steps, the page's verbs (`diagramPageActions.ts`). A right-click selects
+ * the step it lands on first, so the Step pane and the menu are about the
+ * same step.
  *
  * The rows are built when the menu opens, from the store as it is then.
  */
@@ -57,23 +60,29 @@ export function useDiagramStepMenu(root: RefObject<HTMLElement | null>): {
         requestStepMenu(stepId, at, 'pointer');
         return;
       }
+      // A press on a page in the Pages view, past its steps: the page's own verbs too.
+      const pageIndex = Number((event.target as Element).closest<HTMLElement>('[data-page]')?.dataset.page);
       request({
         ...at,
         targetKind: 'empty',
         hasSelection: useWorkspaceStore.getState().diagramSelectedStepId !== null,
-        build: () =>
-          useWorkspaceStore.getState().diagramReadOnly
-            ? []
-            : [
-                {
-                  kind: 'action',
-                  id: 'add-step',
-                  label: t('panels:diagram.actions.addStep', 'Add Step'),
-                  onSelect: () => {
-                    addDiagramStep();
-                  },
-                },
-              ],
+        build: () => {
+          if (useWorkspaceStore.getState().diagramReadOnly) return [];
+          const pageItems = Number.isInteger(pageIndex)
+            ? diagramPageMenuItems(diagramPageActions(pageIndex, t, 'context_menu'))
+            : [];
+          return [
+            {
+              kind: 'action',
+              id: 'add-step',
+              label: t('panels:diagram.actions.addStep', 'Add Step'),
+              onSelect: () => {
+                addDiagramStep();
+              },
+            },
+            ...(pageItems.length > 0 ? [{ kind: 'separator' as const }, ...pageItems] : []),
+          ];
+        },
       });
     },
     [request, requestStepMenu, t]

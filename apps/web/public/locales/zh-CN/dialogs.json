@@ -172,6 +172,8 @@
     "nothing": "还没有带图的步骤：没有可导出的内容。",
     "number": "步骤编号",
     "numberHelp": "在每个文件中绘入步骤编号。",
+    "overflowStep": "第 {{steps}} 步已放不进它的位置，会超出位置打印。重新排布它所在的页面即可腾出空间。",
+    "overflowSteps": "第 {{steps}} 步已放不进各自的位置，会超出位置打印。重新排布它们所在的页面即可腾出空间。",
     "overlapStep": "第 {{steps}} 步放在了其他步骤、符号或自身的部分上。",
     "overlapSteps": "第 {{steps}} 步放在了其他步骤、符号或各自的部分上。",
     "pageCount_other": "{{count}} 页",
@@ -219,6 +221,8 @@
     "transparent": "透明背景",
     "turnsAndArrowsLeftOut": "翻面、旋转和放大箭头只印在页面上，单步文件中不包含。",
     "turnsLeftOut_other": "步骤之间的 {{count}} 个翻面或旋转会印在页面上，但单步文件中不包含。",
+    "unfitPage": "第 {{pages}} 页即使缩到最小也放不下它的步骤，会超出页边距打印。",
+    "unfitPages": "第 {{pages}} 页即使缩到最小也放不下各自的步骤，会超出页边距打印。",
     "width": "宽度",
     "writingPdf": "正在生成 PDF…"
   },

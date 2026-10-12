@@ -31,6 +31,8 @@ export interface PageLayerRow {
   moved: boolean;
   /** Its most pressing clash as the pages last laid it out, or null. */
   clash: ClashGroup | null;
+  /** It no longer fits the place its flow page keeps for it, as the pages last laid it out (`LayoutCell.overflow`). */
+  overflow: boolean;
   /** The selection, with its frame — or no part, as a step selected by the keys or in the Steps view is. */
   pressed: boolean;
   /** Its parts, while it is the selection and can be placed here; null otherwise. */
@@ -45,7 +47,8 @@ const placeable = (step: DiagramStep, readOnly: boolean, phone: boolean) =>
  * The Layers pane in the Pages view: the current page's steps
  * (`useCurrentDiagramPage`) in the order they paint — a later step over an
  * earlier one, so the first at the top, as Annotate lists its marks — each
- * badged when placed by hand and when it clashes, the selected one opening
+ * badged when placed by hand, when it clashes and when it no longer fits the
+ * place its flow page keeps for it, the selected one opening
  * into its parts; and the step whose placement it offers under the list. A
  * press on a row selects as a press on the page does: a step with its whole
  * frame, as the first press there; a part, as the second. Turns are no rows.
@@ -72,6 +75,7 @@ export function usePageLayers() {
         text: step.text.trim(),
         moved: isPlacedStep(step),
         clash: cell ? cellClashGroup(cell) : null,
+        overflow: cell?.overflow !== undefined,
         pressed: selected && (part === null || part === 'frame'),
         parts:
           selected && placeable(step, readOnly, phone)

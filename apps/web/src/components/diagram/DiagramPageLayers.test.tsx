@@ -7,16 +7,26 @@ import {
   insertSteps,
   setPageSetup,
   type DiagramDocument,
+  type DiagramPageArrangement,
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
 import type { PlacementClash } from '../../diagram/pages/pagePlacement';
+import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { DiagramLayersPanel } from '../panels/DiagramLayersPanel';
 import { TooltipProvider } from '../ui/Tooltip';
 
 /** Each step's clashes as the pages last laid them out, as the Diagram panel publishes its layout. */
-const printed = vi.hoisted(() => ({ clashes: {} as Record<string, PlacementClash[]> }));
+const printed = vi.hoisted(() => ({
+  clashes: {} as Record<string, PlacementClash[]>,
+  overflow: {} as Record<string, 'picture' | 'caption'>,
+}));
+const analytics = vi.hoisted(() => ({ trackDiagramPagesRepacked: vi.fn() }));
+vi.mock('../../analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../analytics')>()),
+  ...analytics,
+}));
 vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
   const { useWorkspaceStore: store } = await import('../../store/workspaceStore');
   const { stepsOf } = await import('../../diagram/document/diagramDocument');
@@ -32,6 +42,7 @@ vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
             mmPerUnit: null,
             pictureMm: { x: 0, y: 0, size: 40 },
             clashes: printed.clashes[step.id],
+            overflow: printed.overflow[step.id],
           }))
         : [];
       return { pages: { layout: { pages: [{ cells }] } }, document };
@@ -77,7 +88,9 @@ const parts = () => [...host!.querySelectorAll<HTMLButtonElement>('ul[aria-label
 const part = (name: string) => host!.querySelector<HTMLButtonElement>(`button[data-layer-part="${name}"]`)!;
 
 beforeEach(() => {
+  vi.clearAllMocks();
   printed.clashes = {};
+  printed.overflow = {};
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   host = document.createElement('div');
   document.body.append(host);
@@ -181,6 +194,51 @@ describe('DiagramLayersPanel › in the Pages view', () => {
     install();
     act(() => state().setDiagramView('steps'));
     expect(host!.textContent).toBe('Open a step in Annotate to see its layers.');
+  });
+
+  it('badges a flow step that no longer fits its place, and re-packs the page under the list: one undo step, one count', () => {
+    printed.overflow = { s1: 'caption' };
+    install();
+    render();
+    expect(rows().map((each) => each.textContent)).toEqual([
+      '1Step 1',
+      '2Fold in half.No longer fits',
+      '3Step 3Moved',
+      '4Step 4',
+    ]);
+    const repack = () =>
+      [...host!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Re-pack Page');
+    // Nothing packed and taken in yet: nothing to let go.
+    expect(repack()?.disabled).toBe(true);
+    const document = state().diagram!;
+    const slots = cellSlots(document);
+    const packed: Record<string, DiagramPageArrangement> = Object.fromEntries(
+      slots.pages.map((ids, page) => [
+        ids[0]!,
+        {
+          signature: slots.signatures[page]!,
+          k: 1,
+          steps: Object.fromEntries(
+            ids.map((id, at) => [id, { box: [12 + 40 * at, 30, 38, 60], scale: { frameMm: 30 }, band: 0 }] as const)
+          ),
+        },
+      ])
+    );
+    act(() => {
+      state().adoptDiagramPageArrangements(packed, document);
+    });
+    const past = state().diagramHistory.past.length;
+    act(() => repack()!.click());
+    expect(Object.keys(state().diagram?.pageArrangements ?? {})).toEqual(['s4']);
+    expect(state().diagramHistory.past).toHaveLength(past + 1);
+    expect(analytics.trackDiagramPagesRepacked).toHaveBeenCalledExactlyOnceWith('page', 'layers_pane');
+  });
+
+  it('offers no Re-pack Page on a grid', () => {
+    install();
+    act(() => state().setDiagramPage({ layout: 'grid' }));
+    render();
+    expect(host!.textContent).not.toContain('Re-pack');
   });
 
   it('says nothing of a clash out of the Pages view', () => {

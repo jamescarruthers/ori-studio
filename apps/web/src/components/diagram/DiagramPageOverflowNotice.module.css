@@ -1,0 +1,8 @@
+/* The Pages view's notice that a step no longer fits its place (DiagramPageOverflowNotice.tsx). */
+.text {
+  margin: 0 0 var(--space-1);
+}
+
+.text:last-child {
+  margin-bottom: 0;
+}

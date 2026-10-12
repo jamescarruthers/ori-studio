@@ -176,6 +176,8 @@
     "nothing": "Noch kein Schritt hat ein Bild: Es gibt nichts zu exportieren.",
     "number": "Schrittnummer",
     "numberHelp": "Zeichnet die Nummer des Schritts in seine Datei.",
+    "overflowStep": "Schritt {{steps}} passt nicht mehr auf seinen Platz und wird darüber hinaus gedruckt. Packen Sie seine Seite neu, um ihm Platz zu geben.",
+    "overflowSteps": "Die Schritte {{steps}} passen nicht mehr auf ihre Plätze und werden darüber hinaus gedruckt. Packen Sie ihre Seiten neu, um ihnen Platz zu geben.",
     "overlapStep": "Schritt {{steps}} liegt über einem anderen Schritt, einem Symbol oder seinen eigenen Teilen.",
     "overlapSteps": "Die Schritte {{steps}} liegen über anderen Schritten, Symbolen oder ihren eigenen Teilen.",
     "pageCount_one": "{{count}} Seite",
@@ -227,6 +229,8 @@
     "turnsAndArrowsLeftOut": "Wendungen und Vergrößerungspfeile werden nur auf die Seiten gedruckt; die Schrittdateien lassen sie weg.",
     "turnsLeftOut_one": "Die Wendung zwischen den Schritten wird auf die Seiten gedruckt; die Schrittdateien lassen sie weg.",
     "turnsLeftOut_other": "Die {{count}} Wendungen zwischen den Schritten werden auf die Seiten gedruckt; die Schrittdateien lassen sie weg.",
+    "unfitPage": "Seite {{pages}} fasst ihre Schritte nicht, nicht einmal in der kleinsten Größe, und wird über ihre Ränder hinaus gedruckt.",
+    "unfitPages": "Die Seiten {{pages}} fassen ihre Schritte nicht, nicht einmal in der kleinsten Größe, und werden über ihre Ränder hinaus gedruckt.",
     "width": "Breite",
     "writingPdf": "PDF wird erstellt …"
   },

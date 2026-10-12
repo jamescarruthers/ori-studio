@@ -154,6 +154,16 @@
   white-space: nowrap;
 }
 
+/*
+ * A flow step past the place its page keeps for it: the word over the
+ * place's end, clear of the caption or picture that runs out of its foot.
+ */
+.overflow[data-step-overflow] .overflowTab {
+  top: auto;
+  bottom: 100%;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
 .status {
   position: absolute;
   inset: 0;

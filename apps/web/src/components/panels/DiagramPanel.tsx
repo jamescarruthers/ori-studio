@@ -40,6 +40,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { DiagramViewMode } from '../../store/workspaceStore/types';
 import { DiagramEmptyState } from '../diagram/DiagramEmptyState';
 import { DiagramHeader } from '../diagram/DiagramHeader';
+import { DiagramPageOverflowNotice } from '../diagram/DiagramPageOverflowNotice';
 import { DiagramPagesView } from '../diagram/DiagramPagesView';
 import { useReferencesStepWays } from '../../diagram/references/useReferencesStepWays';
 import { usePublishPrintedFrames } from '../../diagram/pages/printedFrames';
@@ -249,6 +250,9 @@ export function DiagramPanel() {
         <div className={styles.notice}>
           <Notice>{zoomSplitNotice}</Notice>
         </div>
+      )}
+      {view === 'pages' && steps.length > 0 && (
+        <DiagramPageOverflowNotice pages={pages.pages} className={styles.notice} />
       )}
       <div className="panel-body" onContextMenu={entries.length > 0 ? menu.onContextMenu : undefined}>
         {steps.length > 0 && view === 'pages' ? (

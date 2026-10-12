@@ -1,8 +1,11 @@
 import { AlignLeft, Hash, Image, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { clashTag } from '../../diagram/pages/clashLabels';
+import { overflowTag } from '../../diagram/pages/overflowLabels';
+import { useDiagramPageActions } from '../../diagram/pages/useDiagramPageActions';
 import { usePageLayers, type PageLayerPart, type PageLayerRow } from '../../diagram/pages/usePageLayers';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import { DiagramLayerControls, DiagramLayerList, DiagramLayerRow } from './DiagramLayerList';
 import { DiagramStepPlacement } from './DiagramStepPlacement';
 import styles from './DiagramPageLayers.module.css';
@@ -13,12 +16,14 @@ const PART_ICONS: Readonly<Record<PageLayerPart, LucideIcon>> = { number: Hash, 
  * The Layers pane in the Pages view: the steps on the current page as
  * Annotate lists its marks (`usePageLayers`) — a press on one selects it with
  * its whole frame, the selected one opens into its Number, Picture and Text,
- * and a press on one of those selects it, as the presses on the page do — and
- * under the list the selection's placement (`DiagramStepPlacement`).
+ * and a press on one of those selects it, as the presses on the page do — on
+ * a flow page Re-pack Page under the list, and under that the selection's
+ * placement (`DiagramStepPlacement`).
  */
 export function DiagramPageLayers() {
   const { t } = useTranslation();
   const layers = usePageLayers();
+  const { repackPage } = useDiagramPageActions('layers_pane');
   const partLabels: Record<PageLayerPart, string> = {
     number: t('panels:diagram.placement.number', 'Number'),
     picture: t('panels:diagram.placement.picture', 'Picture'),
@@ -26,10 +31,11 @@ export function DiagramPageLayers() {
   };
   const moved = <Badge tone="neutral">{t('panels:diagram.placement.moved', 'Moved')}</Badge>;
   const badges = (row: PageLayerRow) =>
-    row.moved || row.clash ? (
+    row.moved || row.clash || row.overflow ? (
       <>
         {row.moved && moved}
         {row.clash && <Badge tone="neutral">{clashTag(row.clash, t)}</Badge>}
+        {row.overflow && <Badge tone="neutral">{overflowTag(t)}</Badge>}
       </>
     ) : null;
   return (
@@ -74,6 +80,13 @@ export function DiagramPageLayers() {
           </li>
         ))}
       </DiagramLayerList>
+      {repackPage && layers.rows.length > 0 && (
+        <div className={styles.pageActions}>
+          <Button size="sm" disabled={repackPage.disabled} title={repackPage.hint} onClick={repackPage.run}>
+            {repackPage.label}
+          </Button>
+        </div>
+      )}
       {layers.selected && (
         <DiagramLayerControls>
           <DiagramStepPlacement step={layers.selected} />

@@ -176,6 +176,8 @@
     "nothing": "No step has a picture yet: there is nothing to export.",
     "number": "Step number",
     "numberHelp": "Draws the step’s number into its file.",
+    "overflowStep": "Step {{steps}} no longer fits its place, and prints past it. Re-pack its page to give it room.",
+    "overflowSteps": "Steps {{steps}} no longer fit their places, and print past them. Re-pack their pages to give them room.",
     "overlapStep": "Step {{steps}} is placed over another step, a symbol, or its own parts.",
     "overlapSteps": "Steps {{steps}} are placed over other steps, symbols, or their own parts.",
     "pageCount_one": "{{count}} page",
@@ -227,6 +229,8 @@
     "turnsAndArrowsLeftOut": "Turns and enlarge arrows print only on the pages; the step files leave them out.",
     "turnsLeftOut_one": "The turn between steps prints on the pages; the step files leave it out.",
     "turnsLeftOut_other": "The {{count}} turns between steps print on the pages; the step files leave them out.",
+    "unfitPage": "Page {{pages}} can’t hold its steps, even at the smallest size, and prints past its margins.",
+    "unfitPages": "Pages {{pages}} can’t hold their steps, even at the smallest size, and print past their margins.",
     "width": "Width",
     "writingPdf": "Writing PDF…"
   },

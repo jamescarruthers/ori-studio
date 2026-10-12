@@ -180,6 +180,8 @@
     "nothing": "Aucune étape n’a encore d’image : rien à exporter.",
     "number": "Numéro de l’étape",
     "numberHelp": "Dessine le numéro de l’étape dans son fichier.",
+    "overflowStep": "L’étape {{steps}} ne tient plus à sa place et s’imprime au-delà. Réagencez sa page pour lui faire de la place.",
+    "overflowSteps": "Les étapes {{steps}} ne tiennent plus à leur place et s’impriment au-delà. Réagencez leurs pages pour leur faire de la place.",
     "overlapStep": "L’étape {{steps}} est placée sur une autre étape, un symbole ou ses propres éléments.",
     "overlapSteps": "Les étapes {{steps}} sont placées sur d’autres étapes, des symboles ou leurs propres éléments.",
     "pageCount_one": "{{count}} page",
@@ -235,6 +237,8 @@
     "turnsLeftOut_one": "Le mouvement entre deux étapes s’imprime sur les pages\u00a0; les fichiers d’étape l’omettent.",
     "turnsLeftOut_many": "Les {{count}} mouvements entre étapes s’impriment sur les pages\u00a0; les fichiers d’étape les omettent.",
     "turnsLeftOut_other": "Les {{count}} mouvements entre étapes s’impriment sur les pages\u00a0; les fichiers d’étape les omettent.",
+    "unfitPage": "La page {{pages}} ne peut pas contenir ses étapes, même à la plus petite taille, et s’imprime au-delà de ses marges.",
+    "unfitPages": "Les pages {{pages}} ne peuvent pas contenir leurs étapes, même à la plus petite taille, et s’impriment au-delà de leurs marges.",
     "width": "Largeur",
     "writingPdf": "Création du PDF…"
   },

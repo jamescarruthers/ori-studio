@@ -1,6 +1,7 @@
 import type { ContextMenuItem } from '../../components/ui/contextMenuTypes';
 import { shortcutLabelForAction, type ShortcutResolutionInput } from '../../keyboard/shortcuts';
 import type { DiagramStepAction } from './diagramActions';
+import type { DiagramPageCommand } from './diagramPageActions';
 
 /**
  * A step card's context menu: the step verbs, as rows. Each row shows the key
@@ -73,4 +74,16 @@ export function diagramStepMenuItems(
   }
   while (items.length > 0 && items[items.length - 1].kind === 'separator') items.pop();
   return items;
+}
+
+/** A page's verbs (`diagramPageActions.ts`) as context-menu rows, for a press on a page in the Pages view. */
+export function diagramPageMenuItems(actions: readonly DiagramPageCommand[]): ContextMenuItem[] {
+  return actions.map((action) => ({
+    kind: 'action',
+    id: action.id,
+    label: action.label,
+    disabled: action.disabled,
+    hint: action.hint,
+    onSelect: action.run,
+  }));
 }

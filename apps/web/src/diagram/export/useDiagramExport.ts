@@ -42,6 +42,7 @@ import { browserFontSubsetter } from '../fonts/browserFontSubsetter';
 import { loadDiagramFonts, type DiagramFonts } from '../fonts/diagramFonts';
 import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramFontTexts, enlargeArrowCount, preparedPages, type PreparedDiagramPages } from '../pages/diagramPages';
+import { layoutOverflow } from '../pages/pageOverflow';
 import { clashingStepsByGroup, type ClashGroup } from '../pages/pagePlacement';
 import { composedPageUrl } from '../pages/useDiagramPages';
 import { zoomSplits, type ZoomSplit } from '../pages/zoomArrows';
@@ -91,6 +92,12 @@ export interface DiagramExportBinding {
   placed: number;
   /** The steps whose placement clashes, by what is wrong (`ClashGroup`): each group is a sentence of its own. */
   clashes: Record<ClashGroup, number[]>;
+  /**
+   * The flow steps that no longer fit the places their pages keep for them,
+   * and the pages that cannot hold their steps even at the smallest size, by
+   * how the Pages view captions them (`layoutOverflow`): each prints past its room.
+   */
+  overflow: { steps: number[]; unfitPages: number[] };
   /** How many turns between steps the diagram has (D22): the pages print them, step files leave them out. */
   turns: number;
   /** How many enlarge arrows print between steps (Revision 2): on the pages, as turns are, never in step files. */
@@ -122,6 +129,8 @@ export interface DiagramExportBinding {
   canExport: boolean;
   exportNow: () => Promise<void>;
 }
+
+const NO_OVERFLOW: DiagramExportBinding['overflow'] = { steps: [], unfitPages: [] };
 
 interface Loaded {
   fonts: DiagramFonts;
@@ -434,6 +443,7 @@ export function useDiagramExport(
     cut,
     placed: stepsOf(document).filter((step) => step.place || step.placeNewer).length,
     clashes: pages ? clashingStepsByGroup(pages.layout) : { overlap: [], paper: [], margin: [], path: [] },
+    overflow: pages ? layoutOverflow(pages.layout) : NO_OVERFLOW,
     turns: document.steps.length - stepsOf(document).length,
     enlargeArrows,
     splits,

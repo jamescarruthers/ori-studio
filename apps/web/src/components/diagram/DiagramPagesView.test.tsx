@@ -22,6 +22,7 @@ import { readFontMetrics } from '../../diagram/fonts/fontMetrics';
 import { createFontSubsetter, type FontSubsetter } from '../../diagram/fonts/fontSubset';
 import { bandPath } from '../../diagram/pages/composeDiagramPage';
 import { preparedPages, type PreparedDiagramPages } from '../../diagram/pages/diagramPages';
+import { overflowingDiagram } from '../../diagram/pages/pageOverflow.fixtures';
 import { usePageInView, type PagesInView } from '../../diagram/pages/pageInView';
 import { PAGES_PX_PER_MM as PX_PER_MM } from '../../diagram/pages/usePagesView';
 import { clearPathColorPick, publishPathColorPick } from '../../diagram/pages/pathColorPick';
@@ -230,6 +231,31 @@ describe('DiagramPagesView', () => {
     render(preparedPages(diagram(), FONTS, subsetter));
     expect(host.textContent).toContain('No picture yet');
     expect(host.textContent).not.toContain('Text doesn’t fit');
+  });
+
+  it('marks a flow step that no longer fits its place over the page, never in it, and names it so', () => {
+    const { overflowing, pages } = overflowingDiagram(subsetter);
+    render(pages, {}, pages.layout.bandInk, overflowing, null);
+    const marks = [...host.querySelectorAll<HTMLElement>('[data-step-overflow]')];
+    expect(marks.map((mark) => [mark.getAttribute('data-step-overflow'), mark.textContent])).toEqual([
+      ['caption', 'No longer fits'],
+    ]);
+    expect(cells().map((cell) => cell.getAttribute('aria-label'))).toEqual([
+      'Step 1',
+      'Step 2',
+      'Step 3, no longer fits its place',
+      'Step 4',
+      'Step 5',
+      'Step 6',
+    ]);
+    // Round the place the page keeps for it: its box, where the step's own option is.
+    const own = cells()[2]!;
+    expect([marks[0]!.style.left, marks[0]!.style.top, marks[0]!.style.width]).toEqual([
+      own.style.left,
+      own.style.top,
+      own.style.width,
+    ]);
+    expect(pages.compose(0).svg).not.toContain('No longer fits');
   });
 
   it('puts a target over an enlarge arrow where the page prints it: a press selects the enlarged step, a double press stays on the page', () => {

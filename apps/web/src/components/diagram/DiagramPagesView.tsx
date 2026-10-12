@@ -17,6 +17,7 @@ import {
   type LayoutPage,
 } from '../../diagram/pages/diagramPageLayout';
 import type { PreparedDiagramPages } from '../../diagram/pages/diagramPages';
+import { overflowTag } from '../../diagram/pages/overflowLabels';
 import { composedPageUrl } from '../../diagram/pages/useDiagramPages';
 import { PAGES_PAD, PAGES_PX_PER_MM, usePagesView } from '../../diagram/pages/usePagesView';
 import { ViewportToolbar } from '../panels/ViewportToolbar';
@@ -58,7 +59,8 @@ function pageImageUrl(
  * band alone and a new colour composes no page again.
  *
  * Over each page, and never in it: the margin guide, a box for a step with no
- * picture yet, a mark where an instruction was cut, and each step as an option
+ * picture yet, a mark where an instruction was cut or where a flow step no
+ * longer fits the place its page keeps for it, and each step as an option
  * of one listbox — the Steps grid's keyboard, so Enter opens the step, Delete
  * deletes it and the selected one is the tab stop. A press on a step focuses
  * it and selects it with its frame; a press on a selected frame selects the
@@ -253,6 +255,7 @@ export function DiagramPagesView({
                     {page.cells.map((cell) => {
                       const step = stepsById.get(cell.stepId);
                       const empty = step ? !stepHasPicture(step) : false;
+                      const frame = partBox(cell, 'frame');
                       return (
                         <div key={cell.stepId}>
                           {/* The turns before this step (D22), before it in reading order as on the page. */}
@@ -304,6 +307,18 @@ export function DiagramPagesView({
                               </span>
                             </div>
                           )}
+                          {cell.overflow && (
+                            // A flow step's own new picture or caption, past the place its page keeps for it
+                            // (`diagram-flow-packing.md`, Decision 3): round that place, the word under its end.
+                            <div
+                              className={styles.overflow}
+                              aria-hidden="true"
+                              data-step-overflow={cell.overflow}
+                              style={{ left: mm(frame.x), top: mm(frame.y), width: mm(frame.w), height: mm(frame.h) }}
+                            >
+                              <span className={styles.overflowTab}>{overflowTag(t)}</span>
+                            </div>
+                          )}
                           <div
                             ref={cellRef(cell.stepId)}
                             role="option"
@@ -313,17 +328,16 @@ export function DiagramPagesView({
                                 ? t('panels:diagram.pages.stepCut', 'Step {{number}}, text doesn’t fit', {
                                     number: cell.number,
                                   })
-                                : t('panels:diagram.pages.step', 'Step {{number}}', { number: cell.number })
+                                : cell.overflow
+                                  ? t('panels:diagram.pages.stepNoLongerFits', 'Step {{number}}, no longer fits its place', {
+                                      number: cell.number,
+                                    })
+                                  : t('panels:diagram.pages.step', 'Step {{number}}', { number: cell.number })
                             }
                             aria-selected={cell.stepId === selectedStepId}
                             data-step-id={cell.stepId}
                             className={`${styles.cell} ${cell.stepId === selectedStepId ? styles.selectedCell : ''}`}
-                            style={{
-                              left: mm(partBox(cell, 'frame').x),
-                              top: mm(partBox(cell, 'frame').y),
-                              width: mm(partBox(cell, 'frame').w),
-                              height: mm(partBox(cell, 'frame').h),
-                            }}
+                            style={{ left: mm(frame.x), top: mm(frame.y), width: mm(frame.w), height: mm(frame.h) }}
                             onPointerDown={(event) => placement.start(event, index, cell)}
                             onPointerMove={placement.move}
                             onPointerUp={placement.end}
