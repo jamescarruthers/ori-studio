@@ -6,6 +6,7 @@ import {
   type DiagramPageSide,
 } from '../document/diagramDocument';
 import {
+  GLYPH_CLEAR_MM,
   layoutDiagramPages,
   pageGrid,
   type LayoutCell,
@@ -14,6 +15,7 @@ import {
   type LayoutTurn,
 } from './diagramPageLayout';
 import { estimateTextSetter } from './estimateTextSetter';
+import { partBox } from './pagePlacement';
 import {
   curvePoint,
   curveStart,
@@ -544,7 +546,7 @@ describe('a turn on a packed page, on the lane', () => {
   const distance = (lane: Lane, point: LanePoint) =>
     Math.min(...sample(lane, 2000).flat().map((at) => Math.hypot(at.x - point.x, at.y - point.y)));
 
-  it('stands in its gutter within a band, on the band at a bend, and on the lane beside a step in a bend, drawn or not', () => {
+  it('stands in its gutter within a band, on the band at a bend, and beside a step in a bend between the two, drawn or not, clear of every step', () => {
     // A turn before every other step, over setups whose bends have a step in them and none.
     const list = steps(23, (index) => (index % 2 === 1 ? { turnsBefore: [over(`turn-${index}`)] } : {}));
     const seen = new Set<string>();
@@ -556,8 +558,16 @@ describe('a turn on a packed page, on the lane', () => {
         drawn.pages.forEach((page, pageIndex) => {
           // Where the band is not drawn, its turns stand where they would.
           expect(hidden.pages[pageIndex]!.turns).toEqual(page.turns);
+          const parts = page.cells.flatMap((cell) => [partBox(cell, 'number'), partBox(cell, 'picture'), partBox(cell, 'text')]);
+          /** Whether a glyph centred at `at` stands the glyphs' clearance clear of every step's number, picture and caption. */
+          const clear = (at: { x: number; y: number }, box: { w: number; h: number }) => {
+            const [w, h] = [box.w / 2 + GLYPH_CLEAR_MM - 1e-9, box.h / 2 + GLYPH_CLEAR_MM - 1e-9];
+            return parts.every((part) => at.x + w <= part.x || at.x - w >= part.x + part.w || at.y + h <= part.y || at.y - h >= part.y + part.h);
+          };
           for (const turn of page.turns) {
             const label = `${JSON.stringify(setup)} ${firstPageSide} page ${page.number} ${turn.id}`;
+            // Wherever it stands, never on a step's number, picture or caption.
+            expect(clear(turn.at, turn.box), label).toBe(true);
             const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
             if (k <= 0) continue;
             const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
@@ -573,8 +583,15 @@ describe('a turn on a packed page, on the lane', () => {
               expect(turn.at.x + turn.box.w / 2, label).toBeLessThan(right.cellMm.x);
             } else if (before.bend || next.bend) {
               seen.add('beside');
-              // On the lane, between the step in the bend and its neighbour.
-              expect(distance(page.band!, turn.at), label).toBeLessThan(0.05);
+              // Midway between the step in the bend's picture and its neighbour's, where that is clear of both;
+              // else moved off them, never further than to beyond the nearer.
+              const mid = { x: (centreOf(before).x + centreOf(next).x) / 2, y: (centreOf(before).y + centreOf(next).y) / 2 };
+              if (clear(mid, turn.box)) expect(turn.at, label).toEqual(mid);
+              else {
+                seen.add('moved');
+                const reach = Math.max(...[before, next].map((cell) => Math.hypot(cell.cellMm.w, cell.cellMm.h)));
+                expect(Math.hypot(turn.at.x - mid.x, turn.at.y - mid.y), label).toBeLessThan(reach);
+              }
             } else {
               seen.add('bend');
               // On the band where it turns, at the page's edge, out past both steps.
@@ -590,6 +607,7 @@ describe('a turn on a packed page, on the lane', () => {
         });
       }
     }
-    expect([...seen].sort()).toEqual(['beside', 'bend', 'gutter'].sort());
+    // A glyph beside a step in a bend has had to move off one at least once: the case the review found.
+    expect([...seen].sort()).toEqual(['beside', 'bend', 'gutter', 'moved'].sort());
   });
 });

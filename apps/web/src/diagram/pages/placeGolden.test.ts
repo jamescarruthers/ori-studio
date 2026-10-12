@@ -118,7 +118,12 @@ describe('pages as they printed before placement came', () => {
     // bend only with a real step after it: the last pages of "flow from the
     // right" and "seven steps a page" no longer end on a step hanging in a
     // bend before stand-ins; their last step starts the next band, the lane
-    // turning at the page's edge into it (rasterised and checked by eye).
+    // turning at the page's edge into it (rasterised and checked by eye). A
+    // turn beside a step in a bend stands midway between the two pictures and
+    // moves the least way clear of every step's number, picture and caption:
+    // four pages' turns move (own counts 2 and 4, seven a page 1 and 2), each
+    // off a picture it stood on or against, into the gap between the two
+    // boxes (rasterised and checked by eye). No home moved.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -143,12 +148,12 @@ describe('pages as they printed before placement came', () => {
         "flow, a page break and turns at a row’s end · page 1": "e8b1dca476981867 e302a897a6e66327 4f53cda18c2baa0c",
         "flow, a page break and turns at a row’s end · page 2": "372d43af6e0189e9 a25af6b03ca9a62c 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 1": "39c2a8aa1cd3ab1b c205bf1605b4f329 4f53cda18c2baa0c",
-        "flow, pages with their own counts · page 2": "2300d9f6d2bf08fe 14f01c0aaf840285 4f53cda18c2baa0c",
+        "flow, pages with their own counts · page 2": "df239d3561890a75 aa5aa34ad4e9f120 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 3": "e008cce09c3949b0 ae83ede599c4b9dc 4f53cda18c2baa0c",
-        "flow, pages with their own counts · page 4": "adfded301df7f1ce 05a9e4514c7602d5 4f53cda18c2baa0c",
+        "flow, pages with their own counts · page 4": "dc08533273b66cce d5f3321361d4fa21 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 5": "8a95a046f153d6ed 2873d674b446dad6 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "9c3a128e37951971 95d3863f46483042 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "808c33db5ef46ea1 08c187cc2e2fc8a0 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "8f031e7af79f79fa e89145c7e336dd06 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "ef3543b1450c3025 19349513437a562e 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "e7adcfca4f353a0a 86d43639bfc94328 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 1": "762034dc73a12f50 762034dc73a12f50 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 2": "8254deff8fc82487 8254deff8fc82487 4f53cda18c2baa0c",
