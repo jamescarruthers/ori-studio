@@ -1254,6 +1254,7 @@
       "count_one": "Passos posicionados à mão: {{count}}",
       "count_many": "Passos posicionados à mão: {{count}}",
       "count_other": "Passos posicionados à mão: {{count}}",
+      "dragMove": "{{part}} · {{x}}; {{y}} mm",
       "dragSize": "{{mm}} mm · auto {{auto}} mm",
       "frame": "Conjunto",
       "glyphClash": "Este passo se sobrepõe a um símbolo, título ou número de página.",

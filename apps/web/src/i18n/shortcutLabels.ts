@@ -187,6 +187,25 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return t('tools:diagram.nudgeNodeUpLarge', 'Nudge Node Up (Large)');
     case 'diagram.nudgeNodeDownLarge':
       return t('tools:diagram.nudgeNodeDownLarge', 'Nudge Node Down (Large)');
+    // The Pages view's placement keys.
+    case 'diagram.nudgePlacementLeft':
+      return t('tools:diagram.nudgePlacementLeft', 'Nudge Placement Left');
+    case 'diagram.nudgePlacementRight':
+      return t('tools:diagram.nudgePlacementRight', 'Nudge Placement Right');
+    case 'diagram.nudgePlacementUp':
+      return t('tools:diagram.nudgePlacementUp', 'Nudge Placement Up');
+    case 'diagram.nudgePlacementDown':
+      return t('tools:diagram.nudgePlacementDown', 'Nudge Placement Down');
+    case 'diagram.nudgePlacementLeftLarge':
+      return t('tools:diagram.nudgePlacementLeftLarge', 'Nudge Placement Left (Large)');
+    case 'diagram.nudgePlacementRightLarge':
+      return t('tools:diagram.nudgePlacementRightLarge', 'Nudge Placement Right (Large)');
+    case 'diagram.nudgePlacementUpLarge':
+      return t('tools:diagram.nudgePlacementUpLarge', 'Nudge Placement Up (Large)');
+    case 'diagram.nudgePlacementDownLarge':
+      return t('tools:diagram.nudgePlacementDownLarge', 'Nudge Placement Down (Large)');
+    case 'diagram.placementUndo':
+      return t('tools:diagram.placementUndo', 'Cancel Page Placement');
     default:
       return definition.label;
   }
@@ -206,6 +225,8 @@ export function shortcutScopeLabel(t: TFunction, scope: ShortcutScope): string {
       return t('tools:diagram.scopeLabel', 'diagram');
     case 'diagram-path':
       return t('tools:diagram.pathScopeLabel', 'edit path');
+    case 'diagram-place':
+      return t('tools:diagram.placeScopeLabel', 'place on page');
     default:
       return scope;
   }

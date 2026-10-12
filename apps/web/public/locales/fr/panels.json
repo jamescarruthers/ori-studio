@@ -1254,6 +1254,7 @@
       "count_one": "Étapes placées à la main : {{count}}",
       "count_many": "Étapes placées à la main : {{count}}",
       "count_other": "Étapes placées à la main : {{count}}",
+      "dragMove": "{{part}} · {{x}} ; {{y}} mm",
       "dragSize": "{{mm}} mm · auto {{auto}} mm",
       "frame": "Ensemble",
       "glyphClash": "Cette étape chevauche un symbole, un titre ou un numéro de page.",

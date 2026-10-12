@@ -1214,6 +1214,7 @@
       "breakBeforeNote": "Eine neue Seite setzt den gesamten Schritt auf die automatische Platzierung zurück, ebenso jeden Schritt, den sie verschiebt.",
       "count_one": "Von Hand platzierte Schritte: {{count}}",
       "count_other": "Von Hand platzierte Schritte: {{count}}",
+      "dragMove": "{{part}} · {{x}}; {{y}} mm",
       "dragSize": "{{mm}} mm · auto {{auto}} mm",
       "frame": "Gesamter Schritt",
       "glyphClash": "Dieser Schritt überlappt ein Symbol, eine Überschrift oder eine Seitenzahl.",

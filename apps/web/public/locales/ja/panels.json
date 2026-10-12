@@ -1174,6 +1174,7 @@
       "breakBefore": "ステップ{{number}}を新しいページで開始",
       "breakBeforeNote": "新しいページにすると、このステップ全体の配置と、それで動くステップの配置が自動に戻ります。",
       "count_other": "手動配置：{{count}}ステップ",
+      "dragMove": "{{part}} · {{x}}, {{y}} mm",
       "dragSize": "{{mm}} mm · 自動 {{auto}} mm",
       "frame": "全体",
       "glyphClash": "このステップは記号、見出し、またはページ番号と重なっています。",

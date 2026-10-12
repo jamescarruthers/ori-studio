@@ -311,6 +311,8 @@ it('focuses the step a press lands on, so the arrows nudge its frame and Enter o
   // Decision 7: an arrow nudges the selected frame, on the Pages view still.
   expect(press('ArrowRight')).toBe(true);
   expect(useWorkspaceStore.getState().diagramView).toBe('pages');
+  // The readout says it in words, its numbers and unit as the language writes them.
+  expect(host.textContent).toContain('Frame · 0.5, 0.0 mm');
   expect(useWorkspaceStore.getState().diagram?.steps[0]).not.toHaveProperty('place');
   // Enter opens the step, after the nudge it showed has gone into the diagram.
   expect(press('Enter')).toBe(true);

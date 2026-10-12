@@ -33,7 +33,10 @@ export function DiagramPagesPlacement({
   index: number;
   placement: Placement;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // A length in the readout, to a tenth of a mm, as the language writes it: 1.5, or 1,5 in German.
+  const tenths = (value: number) =>
+    new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
   const { draft, selected, part } = placement;
   const cell = page.cells.find((c) => c.stepId === selected);
   const document = useWorkspaceStore((s) => s.diagram);
@@ -147,10 +150,14 @@ export function DiagramPagesPlacement({
               >
                 {local.pointer?.size
                   ? t('panels:diagram.placement.dragSize', '{{mm}} mm · auto {{auto}} mm', {
-                      mm: size?.toFixed(1),
-                      auto: autoSize?.toFixed(1),
+                      mm: size === null ? '' : tenths(size),
+                      auto: autoSize === null ? '' : tenths(autoSize),
                     })
-                  : `${labels[local.part]} · ${local.dx.toFixed(1)}, ${local.dy.toFixed(1)} mm`}
+                  : t('panels:diagram.placement.dragMove', '{{part}} · {{x}}, {{y}} mm', {
+                      part: labels[local.part],
+                      x: tenths(local.dx),
+                      y: tenths(local.dy),
+                    })}
                 {local.snap?.number && (
                   <> · {t('panels:diagram.placement.matchStep', '= step {{number}}', { number: local.snap.number })}</>
                 )}

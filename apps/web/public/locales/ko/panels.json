@@ -1174,6 +1174,7 @@
       "breakBefore": "{{number}}단계를 새 페이지에서 시작",
       "breakBeforeNote": "새 페이지로 시작하면 이 단계 전체와, 그로 인해 옮겨지는 단계가 자동 배치로 돌아갑니다.",
       "count_other": "수동 배치: {{count}}단계",
+      "dragMove": "{{part}} · {{x}}, {{y}} mm",
       "dragSize": "{{mm}} mm · 자동 {{auto}} mm",
       "frame": "전체",
       "glyphClash": "이 단계가 기호, 제목 또는 페이지 번호와 겹칩니다.",
