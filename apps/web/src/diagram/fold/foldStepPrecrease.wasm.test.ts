@@ -55,6 +55,8 @@ describe.skipIf(!available)('a precreased Fold step in the Diagram', () => {
   it.each([
     ['front', 'the default affine spread', DEFAULT_LAYER_SPREAD],
     ['back', 'the default affine spread', DEFAULT_LAYER_SPREAD],
+    ['front', 'a wide affine spread', { ...DEFAULT_LAYER_SPREAD, amount: 0.2 } as LayerSpreadOptions],
+    ['back', 'a wide affine spread', { ...DEFAULT_LAYER_SPREAD, amount: 0.2 } as LayerSpreadOptions],
     ['front', 'the default depth spread', DEFAULT_DEPTH_SPREAD],
     ['front', 'a wide depth spread', { kind: 'depth', amount: 0.2, toward: 'up-right' } as LayerSpreadOptions],
   ] as const)('draws the %s with %s as the step before it, side for side', async (side, _label, spread) => {

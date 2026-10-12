@@ -1347,7 +1347,9 @@ describe('a precrease', () => {
   });
 
   it.each([
+    // The default's axis and its mirror, which opens the leaf beneath toward the other piece of the leaf over it.
     ['the affine spread', { kind: 'affine', amount: 0.2, keep: 'top', skew: 1, axisDeg: 81 }],
+    ['the affine spread on its mirrored axis', { kind: 'affine', amount: 0.2, keep: 'top', skew: 1, axisDeg: 99 }],
     ['an affine spread held at the bottom', { kind: 'affine', amount: 0.2, keep: 'bottom', skew: 1, axisDeg: 30 }],
     ['a depth spread', { kind: 'depth', amount: 0.2, toward: 'up-left' }],
     ['a depth spread down', { kind: 'depth', amount: 0.2, toward: 'down' }],
