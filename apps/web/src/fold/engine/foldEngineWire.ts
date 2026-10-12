@@ -98,6 +98,24 @@ export type FoldEngineOp = WithTools<FoldOp>;
 // ---------------------------------------------------------------------------
 // Refusals
 
+/**
+ * A partial precrease's refusals (`oristudio-fold/src/fold/partial.rs`), in
+ * `FoldRefusal::code`'s order: the gate's checks of crease marks, then an
+ * extent that does not resolve — a point off the paper, shorter than the
+ * minimum feature along the line, over no paper, or over no layer the
+ * precrease goes through.
+ */
+export const FOLD_PARTIAL_PRECREASE_REFUSAL_CODES = [
+  'mark_off_sheet',
+  'mark_too_short',
+  'mark_on_crease',
+  'marks_overlap',
+  'extent_off_paper',
+  'extent_too_short',
+  'extent_misses_paper',
+  'extent_misses_layers',
+] as const;
+
 /** The engine's refusals, in `FoldRefusal::code`'s order (`oristudio-fold/src/refusal.rs`). */
 export const FOLD_ENGINE_REFUSAL_CODES = [
   'sheet_too_few_points',
@@ -168,6 +186,7 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'fan_stayer_detached',
   // Sinks (plan Phase 11).
   ...FOLD_SINK_REFUSAL_CODES,
+  ...FOLD_PARTIAL_PRECREASE_REFUSAL_CODES,
   'internal',
 ] as const;
 
@@ -388,6 +407,8 @@ export interface FoldStateSummary {
   residual: number;
   /** The sheet's outline, counter-clockwise, in sheet coordinates. */
   sheet: [number, number][];
+  /** How many crease marks (partial creases) the state has; absent for none. */
+  crease_marks?: number;
 }
 
 export interface FoldSheetLanded {
@@ -477,6 +498,37 @@ export interface FoldSceneCrease {
   made_at: number;
 }
 
+/**
+ * A crease mark's part on one face, in the scene frame: what the folded pane
+ * draws. The same line is among the scene's `aux_lines`, which every folded
+ * painter already draws cut to where its face is on top.
+ */
+export interface FoldSceneMarkPiece {
+  /** An index into `faces`. */
+  face: number;
+  from: Point;
+  to: Point;
+  /** The letter as the viewer sees it on this face: the stored one where it shows its front, the other where its back. */
+  seen: FoldLetter;
+}
+
+/**
+ * A crease mark: a partial crease a pinch or a segment precrease left. It
+ * keeps its letter and every later fold carries it, but it ends inside the
+ * paper, so it bounds no face (`oristudio-fold/src/crease_marks.rs`).
+ */
+export interface FoldSceneCreaseMark {
+  /** Its ends in sheet coordinates: what the crease-pattern pane draws. */
+  from: Point;
+  to: Point;
+  /** Front-relative, as stored. */
+  letter: FoldLetter;
+  /** The step that made it. */
+  made_at: number;
+  /** Its part on each face it crosses. */
+  pieces: FoldSceneMarkPiece[];
+}
+
 /** Where a face came from. */
 export interface FoldFaceLineage {
   id: number;
@@ -504,6 +556,8 @@ export interface FoldScene extends OristudioCpFoldedPaperScene {
   creases: FoldSceneCrease[];
   /** Per face. */
   lineage: FoldFaceLineage[];
+  /** The crease marks, in the state's order; absent for none. */
+  crease_marks?: FoldSceneCreaseMark[];
 }
 
 /** A stretch of the fold line where moving paper is creased or turned. */
@@ -641,8 +695,12 @@ export interface FoldDepthChosen {
 export interface FoldStepSummary {
   /** The child's crease pattern, front-relative. */
   counts: { mountain: number; valley: number; flat: number };
-  /** The child's edge ids that the step added, reversed, unfolded and refolded. */
-  diff: { added: number[]; reversed: number[]; unfolded: number[]; refolded: FoldRefold[] };
+  /**
+   * The child's edge ids that the step added, reversed, unfolded and
+   * refolded; and the crease marks a partial precrease made, counted apart
+   * (absent for none): "adds 2 pinch marks".
+   */
+  diff: { added: number[]; reversed: number[]; unfolded: number[]; refolded: FoldRefold[]; marks_added?: number };
   /** The display layers the fold went through; null for a turn, a rotation or an import. */
   layers: number | null;
 }
@@ -683,6 +741,9 @@ export interface FoldSheetSegment {
   b: SheetPoint;
 }
 
+/** A feature a crease mark crosses: a segment (an index into the segments), or a crease mark (by its index in the state's). */
+export type FoldFeatureRef = { segment: number } | { crease_mark: number };
+
 /** One feature at a point landmark, with the sheet point that names it. */
 export type FoldPointSource = { sheet: SheetPoint; visible: boolean } & (
   | { kind: 'vertex'; vertex: number }
@@ -690,13 +751,30 @@ export type FoldPointSource = { sheet: SheetPoint; visible: boolean } & (
   | { kind: 'crossing'; segment: number; other: number }
   /** A mark passed in, by its index. */
   | { kind: 'mark'; mark: number }
+  /** An end of a crease mark, by its index in the state's crease marks (the scene's `crease_marks`). */
+  | { kind: 'crease_mark_end'; crease_mark: number }
+  /** Where a crease mark crosses a segment or another crease mark, on `on` (whose layer the sheet point is on), crossing `other`. */
+  | { kind: 'crease_mark_crossing'; on: FoldFeatureRef; other: FoldFeatureRef }
 );
 
 export interface FoldPointLandmark {
   at: FoldModelPoint;
-  /** Vertices first, then crossings, then marks. */
+  /** Vertices first, then crossings, then marks, then crease marks' ends and crossings. */
   sources: FoldPointSource[];
   visible: boolean;
+}
+
+/** A crease mark's part on one face, with what the viewer sees of it: like a segment, but no crease and on no line. */
+export interface FoldCreaseMarkLandmark {
+  /** The mark, by its index in the state's crease marks. */
+  crease_mark: number;
+  /** Front-relative. */
+  letter: FoldLetter;
+  sheet: FoldSheetSegment;
+  /** Its image in the model frame. */
+  at: [FoldModelPoint, FoldModelPoint];
+  /** The parts the viewer sees, as fractions from `at[0]` to `at[1]`: none on a hidden layer. */
+  visible: [number, number][];
 }
 
 export interface FoldLineLandmark {
@@ -723,6 +801,8 @@ export interface FoldLandmarks {
   points: FoldPointLandmark[];
   lines: FoldLineLandmark[];
   segments: FoldSegmentLandmark[];
+  /** The crease marks' parts, one per face each crosses; absent for none. */
+  crease_marks?: FoldCreaseMarkLandmark[];
 }
 
 /** The face the viewer sees at a model-frame point, and the sheet point there: where a mark made by a pick goes. */

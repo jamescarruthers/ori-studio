@@ -107,6 +107,36 @@ describe('fh1', () => {
     expect(foldStepKey(locked)).toBe(foldStepKey(known));
   });
 
+  it('tells apart a whole precrease and its partial ones by every field of the extent', () => {
+    const line = { via: 'free', through: [[0, 0.5], [1, 0.5]] } as const;
+    const whole = step('x', 'a', { kind: 'precrease', line, direction: 'valley', moving: [0.5, 0.75], seed: { scope: 'all' } });
+    const point = (at: readonly [number, number]) => ({ kind: 'point', at }) as const;
+    const pinch = (at: readonly [number, number], length: number) =>
+      ({ ...whole, op: { ...whole.op, extent: { kind: 'pinch', at: point(at), length } } }) as FoldStep;
+    const segment = (from: readonly [number, number], to: readonly [number, number]) =>
+      ({ ...whole, op: { ...whole.op, extent: { kind: 'segment', from: point(from), to: point(to) } } }) as FoldStep;
+    const keys = [
+      whole,
+      pinch([0.5, 0.5], 0.0625),
+      pinch([0.25, 0.5], 0.0625),
+      pinch([0.5, 0.5], 0.125),
+      segment([0.2, 0.5], [0.8, 0.5]),
+      segment([0.8, 0.5], [0.2, 0.5]),
+    ].map(foldStepKey);
+    expect(new Set(keys).size).toBe(keys.length);
+    // A whole precrease spells as it did before extents existed.
+    expect(foldStepKey(whole)).not.toContain('extent');
+    // A mark's id is the sentence's, and it rides along in `fh1` as an axiom's does.
+    const marked = {
+      ...whole,
+      op: {
+        ...whole.op,
+        extent: { kind: 'pinch', at: { kind: 'mark', at: [0.5, 0.5], mark: 'fmark-1' }, length: 0.0625 },
+      },
+    } as FoldStep;
+    expect(foldStepKey(marked)).not.toBe(foldStepKey(pinch([0.5, 0.5], 0.0625)));
+  });
+
   it('tells apart crimps and tucks by every field they fold by, and by their stored order', () => {
     const line = { via: 'free', through: [[0, 0.5], [1, 0.5]] } as const;
     const second = { via: 'free', through: [[0, 0.3], [1, 0.3]] } as const;

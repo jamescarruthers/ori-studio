@@ -22,6 +22,18 @@ tuck and the vertex folds (squash, petal fold, rabbit ear, swivel) on it.
   place the movers, derive the letters. Seeds: all layers, a depth at a sheet
   point, or flaps by sheet points; a tuck over or under a named face is accepted
   only if it validates. Precrease, refold, unfold, turn over and rotate.
+- `fold::partial` and `crease_marks`: a precrease of part of its line — a
+  segment between two sheet anchors, or a pinch of a stored length (the
+  default a sixteenth of the sheet's shorter side) centred on one, each
+  projected onto the located line — through the layers the seed and closure
+  pick. Every face of U the line crosses gets the part inside the extent, in
+  sheet coordinates, with the letter the whole precrease would give it.
+  These crease marks live beside the face graph: they split no face, change
+  no order, are carried by every later operation (a crease made along one
+  subsumes what it covers), and are checked by `State::make`. The scene
+  carries them (and their per-face parts as the kernel's `aux_lines`), the
+  landmarks their ends and crossings, the summary `marks_added`; Send to Edit
+  and the FOLD export write them as auxiliary lines.
 - `sheet`: convex sheets only — square, rectangle, regular polygon with its
   first vertex at −π/2, or a convex outline in the unit frame.
 - `numerics`: tol = 1e-6 of the sheet (the shared `TOL`) and the minimum
@@ -270,6 +282,18 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   each recorded under `tests/fixtures/classics/` as its operations and the
   canonical outcome of every step, and replayed from the JSON alone.
   Regenerate with `ORISTUDIO_FOLD_BLESS=1` and review the diff.
+- `tests/partial_precrease.rs`: partial precreases — the pinch at an edge's
+  middle; a sheet folded in half, pinched through both layers along the
+  other diagonal and unfolded to a valley and a mountain mark at its quarter
+  points; subsumption by a later crease along a mark, whole or in part; the
+  summary, the picture, the scene and the landmarks; and a property campaign
+  over the random sequences (about 140 partial precreases and 140 later
+  folds): no face split and nothing but the marks changed, every mark on the
+  line within its extent, the whole precrease's creases cut to the extent
+  letter for letter (and end to end for an extent over all the paper), marks
+  carried by later folds less only what their creases cover, every state
+  through the full gate. With `kernel`, the marks as Edit's aux lines and in
+  the FOLD export's crease-pattern frame.
 - `tests/random.rs`: seeded random sequences along lines through landmarks,
   drawn by the `random` module below. Every landed state passes the full gate
   from scratch and a freshly built checker; every applied fold keeps each

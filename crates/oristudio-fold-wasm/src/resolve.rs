@@ -103,7 +103,8 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<Resolved, R
     match op {
         Op::Valley(a) => along_line(parent, a, Direction::Valley, ActionKind::Fold, root),
         Op::Mountain(a) => along_line(parent, a, Direction::Mountain, ActionKind::Fold, root),
-        Op::Precrease(a) => {
+        Op::Precrease(p) => {
+            let a = &p.along;
             let direction = a.direction.ok_or_else(|| {
                 BridgeError::InvalidInput("a precrease needs its direction".to_string())
             })?;
@@ -410,6 +411,53 @@ pub fn finite_point(name: &str, p: Point) -> Result<(), BridgeError> {
             "{name} must be finite, got {p:?}"
         )))
     }
+}
+
+// --- Partial precreases (`crate::partial`) ----------------------------------
+
+/// How much of its line an op creases: a precrease's `extent`, as the
+/// engine's `Extent` of sheet points; the whole line for any other op, or
+/// a precrease without one. One rule for every extent point: a point slot's
+/// input (a sheet point, or a mark's resolved sheet point) whose image the
+/// engine projects onto the located line — a segment's two ends and a
+/// pinch's centre alike. The line's own anchors, `moving` and the seed
+/// resolve as they do for the whole precrease, before it.
+pub fn precrease_extent(op: &Op) -> Result<oristudio_fold::Extent, BridgeError> {
+    use crate::wire::ExtentInput;
+    use oristudio_fold::Extent;
+
+    let Op::Precrease(precrease) = op else {
+        return Ok(Extent::Whole);
+    };
+    let point = |name: &str, input: &RefInput| -> Result<Point, BridgeError> {
+        match input {
+            RefInput::Point { at } | RefInput::Mark { at, .. } => {
+                finite_point(name, *at)?;
+                Ok(*at)
+            }
+            RefInput::Edge { .. } => Err(BridgeError::InvalidInput(format!(
+                "{name} must be a point or a mark, got an edge"
+            ))),
+        }
+    };
+    Ok(match &precrease.extent {
+        None => Extent::Whole,
+        Some(ExtentInput::Segment { from, to }) => Extent::Segment {
+            from: point("extent.from", from)?,
+            to: point("extent.to", to)?,
+        },
+        Some(ExtentInput::Pinch { at, length }) => {
+            if !length.is_finite() {
+                return Err(BridgeError::InvalidInput(format!(
+                    "extent.length must be finite, got {length}"
+                )));
+            }
+            Extent::Pinch {
+                at: point("extent.at", at)?,
+                length: *length,
+            }
+        }
+    })
 }
 
 #[cfg(test)]

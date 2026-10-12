@@ -27,6 +27,7 @@ use oristudio_geometry::Line;
 use crate::canonical::canonical_keys;
 use crate::compound::{CompoundLanded, asks_its_own};
 use crate::joins::section_joins;
+use crate::partial::{mark, partial_extent};
 use crate::resolve::{Rejection, Resolved, axiom_of, finite_point, model_line, resolve};
 use crate::wire::{
     Acted, Analysed, Applied, BridgeError, Candidates, Choices, CreaseCounts, DepthChosen, Fix,
@@ -107,6 +108,14 @@ impl Bridge {
         choices: &Choices,
     ) -> Result<Outcome<Analysed>, BridgeError> {
         let parent = self.state(state)?;
+        // A partial precrease answers with what it would mark (`partial`).
+        if let Some(extent) = partial_extent(op)? {
+            return Ok(mark(parent, op, choices, &extent)?
+                .map(|folded| Analysed {
+                    analysis: folded.report.analysis,
+                })
+                .into());
+        }
         Ok(analysis(parent, op, choices)?
             .map(|(analysis, _)| Analysed { analysis })
             .into())
@@ -123,6 +132,17 @@ impl Bridge {
         choices: &Choices,
     ) -> Result<Outcome<Acted>, BridgeError> {
         let parent = self.state(state)?;
+        // A partial precrease pictures its extent only (`partial`).
+        if let Some(extent) = partial_extent(op)? {
+            return Ok(mark(parent, op, choices, &extent)?
+                .and_then(|folded| {
+                    folded
+                        .action(parent, ActionKind::Precrease)
+                        .map_err(Refusal::from)
+                })
+                .map(|action| Acted { action })
+                .into());
+        }
         let action = match settle(resolve(parent, op, choices))? {
             // A compound fold pictures itself: a reverse fold's push, a
             // crimp's pleat, a vertex fold along the crease that tells it.
@@ -222,6 +242,14 @@ impl Bridge {
             parent: state,
             kind,
         };
+        // A partial precrease lands crease marks, held as a fold
+        // (`partial`).
+        if let Some(extent) = partial_extent(op)? {
+            return Ok(match mark(parent, op, choices, &extent)? {
+                Ok(folded) => Outcome::Ok(self.hold_step(fold(folded, ActionKind::Precrease))),
+                Err(refusal) => Outcome::Refused(refusal),
+            });
+        }
         let landed = match settle(resolve(parent, op, choices))? {
             Ok(Resolved::Anchored {
                 fold: anchored,
@@ -372,6 +400,14 @@ impl Bridge {
     /// The keys of the state's `fs1` fingerprint ([`canonical_keys`]).
     pub fn canonical_keys(&self, state: u32) -> Result<Vec<String>, BridgeError> {
         self.state(state).map(canonical_keys)
+    }
+
+    /// The pinch length the tools offer on the state's sheet
+    /// (`oristudio_fold::default_pinch_length`); a step stores the length
+    /// it was made with.
+    pub fn default_pinch_length(&self, state: u32) -> Result<f64, BridgeError> {
+        self.state(state)
+            .map(|s| oristudio_fold::default_pinch_length(s.sheet()))
     }
 
     /// Let a state go; whether it was held.
@@ -530,5 +566,6 @@ pub(crate) fn summary(state: &State) -> Summary {
         view: state.view(),
         residual: state.residual(),
         sheet: state.sheet().outline().to_vec(),
+        crease_marks: state.crease_marks().len(),
     }
 }

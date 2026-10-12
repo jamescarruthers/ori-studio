@@ -14,7 +14,9 @@
 //! a precrease folds and folds back the faces it moved; refolding a precrease
 //! and unfolding a flap are plain folds along an existing crease
 //! ([`State::crease_line`]), the flap picked by a seed; turning over and
-//! rotating change the view.
+//! rotating change the view. A precrease of part of its line — a segment or
+//! a pinch — goes through the same analysis and lands crease marks instead
+//! (`partial`, [`State::precrease_extent`]).
 //!
 //! # Inputs
 //!
@@ -26,6 +28,7 @@ mod action;
 pub(crate) mod apply;
 pub(crate) mod closure;
 pub(crate) mod line;
+mod partial;
 pub(crate) mod score;
 mod section;
 
@@ -197,6 +200,10 @@ pub struct FoldReport {
 pub struct Folded {
     pub state: State,
     pub report: FoldReport,
+    /// A partial precrease's stretch of the line, in the parent's model
+    /// frame, the two ends in order along it: what its picture draws. None
+    /// for any other fold, which folds along the whole line.
+    pub extent: Option<[Point; 2]>,
 }
 
 impl State {
@@ -286,6 +293,7 @@ impl State {
         Ok(Folded {
             state: unfolded.state,
             report,
+            extent: None,
         })
     }
 
@@ -302,6 +310,7 @@ impl State {
                 refolded: landed.refolded,
                 split: landed.split,
             },
+            extent: None,
         })
     }
 
@@ -332,7 +341,7 @@ impl State {
         &self,
         op: &PlainFold,
         mut refused: Refused,
-        attempt: fn(&State, &PlainFold) -> Result<Folded, Refused>,
+        attempt: impl Fn(&State, &PlainFold) -> Result<Folded, Refused>,
     ) -> Refused {
         let depends_on_direction = !matches!(
             refused.refusal,
@@ -340,6 +349,9 @@ impl State {
                 | FoldRefusal::NoMovingSide
                 | FoldRefusal::WitnessNotInFace { .. }
                 | FoldRefusal::SeedNotOnMovingSide { .. }
+                | FoldRefusal::ExtentOffPaper { .. }
+                | FoldRefusal::ExtentTooShort { .. }
+                | FoldRefusal::ExtentMissesPaper
         );
         if depends_on_direction {
             let other = PlainFold {

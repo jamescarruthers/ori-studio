@@ -10,7 +10,9 @@
 //!   a valid flat folded state ([`refusal`]).
 //! - [`PlainFold`]: valley and mountain folds through all layers or down to
 //!   picked flaps, closed-form with no solver call ([`fold`]); precrease,
-//!   refold, unfold, turn over and rotate.
+//!   refold, unfold, turn over and rotate; and a precrease of part of its
+//!   line, a segment or a pinch ([`State::precrease_extent`]), which leaves
+//!   [`crease_marks`]: partial creases beside the face graph.
 //! - [`sheet`]: convex sheets — square, rectangle, regular polygon.
 //! - [`numerics`]: one tolerance, line snapping and the minimum feature.
 //! - [`scene`]: what a painter draws a state from (plan D12), a superset of
@@ -71,6 +73,7 @@ pub mod anchored;
 pub mod axioms;
 pub mod complete;
 pub mod compound;
+pub mod crease_marks;
 pub mod fold;
 #[cfg(feature = "kernel")]
 pub mod fold_file;
@@ -133,6 +136,7 @@ pub use compound::vertex::{
     VertexChoice, VertexChoices, VertexFoldKind, VertexFolded, VertexOutcome, VertexReport,
 };
 pub use compound::{CompoundFolded, CompoundRefused, CompoundReport};
+pub use crease_marks::{CreaseMark, Extent, PINCH_FRACTION, default_pinch_length};
 pub use fold::{
     ActionKind, ClosurePolicy, CrossSection, DepthChoice, FoldActionGeometry, FoldAnalysis,
     FoldLineSpan, FoldReport, Folded, Grip, Placement, PlainFold, Pleat, Push, Refold, RowOrder,
@@ -144,7 +148,8 @@ pub use import::{
 };
 pub use isometry::Isometry;
 pub use landmarks::{
-    Landmarks, LineLandmark, PointKind, PointLandmark, PointSource, SegmentKind, SegmentLandmark,
+    CreaseMarkLandmark, Feature, Landmarks, LineLandmark, PointKind, PointLandmark, PointSource,
+    SegmentKind, SegmentLandmark,
 };
 pub use pattern::{Crease, CreaseKind, EdgeId, Face, FaceId, Letter, VertexId};
 pub use refusal::{Fix, Flap, FoldRefusal, NearMissCause, Refused, Side};

@@ -192,6 +192,10 @@ const POINT_PRIORITY: Readonly<Record<FoldPointSource['kind'], FoldPointProvenan
   vertex: 'vertex',
   crossing: 'crossing',
   mark: 'mark',
+  // A crease mark's end is where a crease stops, as at a vertex; where one
+  // crosses a crease or another mark is a crossing.
+  crease_mark_end: 'vertex',
+  crease_mark_crossing: 'crossing',
 };
 
 function pointIndex(points: readonly PointCandidate[]): LineHitIndex {

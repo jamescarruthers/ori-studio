@@ -84,6 +84,8 @@ import {
   type FoldOpeningChoice,
   type FoldPaper,
   type FoldPaperShape,
+  type FoldPointRef,
+  type FoldPrecreaseExtent,
   type FoldRef,
   type FoldSeed,
   type FoldSequenceDocument,
@@ -329,7 +331,7 @@ const ALONG_LINE_KEYS = new Set(['kind', 'line', 'moving', 'seed']);
 const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['valley', ALONG_LINE_KEYS],
   ['mountain', ALONG_LINE_KEYS],
-  ['precrease', new Set([...ALONG_LINE_KEYS, 'direction'])],
+  ['precrease', new Set([...ALONG_LINE_KEYS, 'direction', 'extent'])],
   ['unfold', new Set(['kind', 'crease', 'direction', 'moving', 'seed'])],
   ['refold', new Set(['kind', 'crease', 'direction', 'moving', 'seed'])],
   ['turn', new Set(['kind', 'axis'])],
@@ -375,7 +377,12 @@ function readOp(value: unknown): FoldOp | null {
     case 'precrease': {
       const along = readAlongLine(value);
       const direction = readDirection(value.direction);
-      return along && direction && { kind, direction, ...along };
+      // Absent is the whole line; present, it must read, or the step would
+      // fold a whole line its author did not fold.
+      const extent = value.extent === undefined ? undefined : readExtent(value.extent);
+      return along && direction && extent !== null
+        ? { kind, direction, ...along, ...(extent ? { extent } : {}) }
+        : null;
     }
     case 'unfold':
     case 'refold': {
@@ -540,6 +547,43 @@ function readMotion(
   if (value.moving === undefined) return seed.scope === 'all' && line?.via !== 'axiom' ? null : { seed };
   const moving = readPoint(value.moving);
   return moving && { moving, seed };
+}
+
+const EXTENT_KEYS = new Map<string, ReadonlySet<string>>([
+  ['segment', new Set(['kind', 'from', 'to'])],
+  ['pinch', new Set(['kind', 'at', 'length'])],
+]);
+
+/**
+ * A partial precrease's extent, or null for one this build cannot read: an
+ * unknown kind or key, a point that is not a point input, or a length that
+ * is not a positive number. Whether its points resolve, or the pinch is
+ * long enough to crease, is the engine's to say on replay.
+ */
+function readExtent(value: unknown): FoldPrecreaseExtent | null {
+  if (!isRecord(value) || typeof value.kind !== 'string') return null;
+  const keys = EXTENT_KEYS.get(value.kind);
+  if (!keys || hasNewerKey(value, keys)) return null;
+  switch (value.kind) {
+    case 'segment': {
+      const from = readPointRef(value.from);
+      const to = readPointRef(value.to);
+      return from && to && { kind: 'segment', from, to };
+    }
+    case 'pinch': {
+      const at = readPointRef(value.at);
+      const length = finiteNumber(value.length);
+      return at && length !== null && length > 0 ? { kind: 'pinch', at, length } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/** A point input: what an axiom's point slot reads. */
+function readPointRef(value: unknown): FoldPointRef | null {
+  const ref = readRef(value, 'point');
+  return ref && ref.kind !== 'edge' ? ref : null;
 }
 
 const SEED_KEYS = new Map<string, ReadonlySet<string>>([
@@ -855,7 +899,15 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
     case 'mountain':
       return { kind: op.kind, line: writeLine(op.line), ...writeMotion(op) };
     case 'precrease':
-      return { kind: op.kind, line: writeLine(op.line), direction: op.direction, ...writeMotion(op) };
+      return {
+        kind: op.kind,
+        line: writeLine(op.line),
+        direction: op.direction,
+        ...writeMotion(op),
+        // Last, and only when present: a whole precrease is written as it
+        // always was.
+        ...(op.extent ? { extent: writeExtent(op.extent) } : {}),
+      };
     case 'unfold':
     case 'refold':
       return { kind: op.kind, crease: writePoint(op.crease), direction: op.direction, ...writeMotion(op) };
@@ -930,6 +982,15 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
 
 function writeMotion({ moving, seed }: { moving?: SheetPoint; seed: FoldSeed }): Record<string, unknown> {
   return { ...(moving ? { moving: writePoint(moving) } : {}), seed: writeSeed(seed) };
+}
+
+function writeExtent(extent: FoldPrecreaseExtent): Record<string, unknown> {
+  switch (extent.kind) {
+    case 'segment':
+      return { kind: extent.kind, from: writeRef(extent.from), to: writeRef(extent.to) };
+    case 'pinch':
+      return { kind: extent.kind, at: writeRef(extent.at), length: extent.length };
+  }
 }
 
 function writeSeed(seed: FoldSeed): Record<string, unknown> {

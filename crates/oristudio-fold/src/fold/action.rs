@@ -19,6 +19,9 @@
 //!   puts it. Each end counts the layers over it as the viewer sees them; the
 //!   image's count needs the landed state.
 //! - **Push and pleat** are for compound folds; a plain fold has neither.
+//! - **A partial precrease** draws all of this along its extent only: the
+//!   line is the pinch or the segment, and so are the spans and the grip's
+//!   foot.
 
 use std::collections::BTreeSet;
 
@@ -145,6 +148,19 @@ impl State {
         landed: Option<&State>,
         within: Within<'_>,
     ) -> Result<FoldActionGeometry, Refused> {
+        self.fold_action_along(analysis, kind, landed, within, None)
+    }
+
+    /// [`State::fold_action_within`], and only between the model points
+    /// `extent` on ℓ: a partial precrease's stretch of its line.
+    fn fold_action_along(
+        &self,
+        analysis: &FoldAnalysis,
+        kind: ActionKind,
+        landed: Option<&State>,
+        within: Within<'_>,
+        extent: Option<[Point; 2]>,
+    ) -> Result<FoldActionGeometry, Refused> {
         let along = Along::new(self, &analysis.line, analysis.side)?;
         let to_scene = self.view().transform();
         let scene = |p: Point| ScenePoint::from(to_scene.apply(p));
@@ -154,12 +170,17 @@ impl State {
             .filter_map(|&id| self.face_position(id))
             .collect();
         let geometry = self.geometry();
-        // The stretch of ℓ looked along: all of it, or the ray.
+        // The stretch of ℓ looked along: all of it, or the ray, within the
+        // extent.
         let [from, to] = within
             .ray
             .map_or([f64::NEG_INFINITY, f64::INFINITY], |(at, toward)| {
                 along.ray(at, toward)
             });
+        let [from, to] = extent.map_or([from, to], |[a, b]| {
+            let (a, b) = (along.param(a), along.param(b));
+            [from.max(a.min(b)), to.min(a.max(b))]
+        });
         let keep = |[lo, hi]: [f64; 2]| {
             let (lo, hi) = (lo.max(from), hi.min(to));
             (hi - lo > TOL).then_some([lo, hi])
@@ -228,9 +249,15 @@ impl State {
 
 impl Folded {
     /// [`State::fold_action`] for this fold of `parent`, with its landed
-    /// state.
+    /// state; a partial precrease's along its extent only.
     pub fn action(&self, parent: &State, kind: ActionKind) -> Result<FoldActionGeometry, Refused> {
-        parent.fold_action(&self.report.analysis, kind, Some(&self.state))
+        parent.fold_action_along(
+            &self.report.analysis,
+            kind,
+            Some(&self.state),
+            Within::default(),
+            self.extent,
+        )
     }
 }
 

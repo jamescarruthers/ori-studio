@@ -10,6 +10,10 @@
 //! | `c:` | a crease: its sheet end points, smaller first, and what it is (`B`, `M`, `V`, or `F` with the letter it remembers) |
 //! | `o:` | an ordered pair of overlapping faces, by witnesses, as a FOLD `faceOrders` sign |
 //! | `v:` | the view, as the display sees one face |
+//! | `m:` | a crease mark (a partial crease): its sheet end points, smaller first, and its letter (`M` or `V`) |
+//!
+//! A state without crease marks has no `m:` key, so its keys, and its
+//! `fs1`, are what they were before marks existed.
 //!
 //! - **Witnesses** are each face's sheet-polygon centroid: interior, and a
 //!   function of the creases alone.
@@ -45,6 +49,16 @@ pub fn canonical_keys(state: &State) -> Vec<String> {
             CreaseKind::Flat(Letter::Valley) => "Fv",
         };
         keys.push(format!("c:{a};{b}:{kind}"));
+    }
+
+    for mark in state.crease_marks() {
+        let [a, b] = [point(mark.a), point(mark.b)];
+        let (a, b) = if a <= b { (a, b) } else { (b, a) };
+        let letter = match mark.letter {
+            Letter::Mountain => "M",
+            Letter::Valley => "V",
+        };
+        keys.push(format!("m:{a};{b}:{letter}"));
     }
 
     let witnesses: Vec<String> = state

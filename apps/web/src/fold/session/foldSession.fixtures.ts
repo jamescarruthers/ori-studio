@@ -246,6 +246,7 @@ export function fakeFoldEngine({ refuse, fail, compound }: FakeFoldEngineOptions
     scene: () => notFaked('scene'),
     landmarks: () => notFaked('landmarks'),
     topVisibleAt: () => notFaked('topVisibleAt'),
+    defaultPinchLength: () => notFaked('defaultPinchLength'),
   };
 }
 
@@ -292,6 +293,7 @@ function workerOver(calls: FoldEngineCalls, version: number): FoldSessionWorker 
     scene: async (state) => calls.scene(state),
     landmarks: async (state, marks) => calls.landmarks(state, marks),
     topVisibleAt: async (state, at) => calls.topVisibleAt(state, at),
+    defaultPinchLength: async (state) => calls.defaultPinchLength(state),
   } satisfies Partial<FoldSessionWorker>;
   // Any other call the engine has — the queries, Import CP's and the
   // exports', when a test hands in an engine that has them — passes through

@@ -241,6 +241,11 @@ const api = {
     return call((calls) => calls.topVisibleAt(state, at));
   },
 
+  /** The pinch length a partial precrease's tool offers on the state's sheet. */
+  async defaultPinchLength(state: number): Promise<number> {
+    return call((calls) => calls.defaultPinchLength(state));
+  },
+
   // Import CP, Edit's folded figure, Send to Edit and the FOLD export
   // (`fold/engine/foldEngineIoCalls.ts`).
 
