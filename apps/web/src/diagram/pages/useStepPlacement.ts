@@ -1,6 +1,7 @@
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { stepsOf, type DiagramStep } from '../document/diagramDocument';
 import { placementBlocker } from '../document/stepPlace';
+import { captionCeilingMm, narrowestCaptionWidth } from './captionMeasure';
 import { printedFrameMm } from './pagePictures';
 import { startsPage } from './pagePlan';
 import { pageOffset, type PagePart, type PlacementClash } from './pagePlacement';
@@ -50,11 +51,21 @@ export function useStepPlacement(step: DiagramStep) {
   const auto = cell?.placed?.auto;
   const autoSize =
     cell && document && auto ? printedFrameMm(step, document.assets, document.style, { ...cell, ...auto }) : size;
+  // The caption's measure, when it has lines to set: as printed, what Auto gives it, and how narrow and wide it may be.
+  const textWidth = cell && cell.text.lines.length > 0 ? cell.text.widthMm : null;
+  const autoTextWidth = textWidth === null ? null : (auto?.textWidthMm ?? textWidth);
+  const textWidthRange =
+    selected === 'text' && textWidth !== null && pages
+      ? { least: narrowestCaptionWidth(step.text, pages.setter), most: captionCeilingMm(pages.layout.paper) }
+      : null;
   return {
     cell,
     selected,
     size,
     autoSize,
+    textWidth,
+    autoTextWidth,
+    textWidthRange,
     readOnly,
     blocked,
     disabled: readOnly || blocked !== null || !cell,
@@ -89,6 +100,15 @@ export function useStepPlacement(step: DiagramStep) {
         'pane',
         { loadId },
       );
+    },
+    /** The caption's measure typed: pinned, or — the automatic one — let go. */
+    setTextWidth(mm: number) {
+      if (textWidth === null) return;
+      if (autoTextWidth !== null && Math.abs(mm - autoTextWidth) < 0.05) {
+        if (step.place?.textWidth !== undefined) resetPlacement(step.id, 'textWidth');
+        return;
+      }
+      commitPlacement(step.id, { textWidth: mm }, 'pane', { loadId });
     },
     reset: (part: Parameters<typeof resetPlacement>[1]) => resetPlacement(step.id, part),
   };

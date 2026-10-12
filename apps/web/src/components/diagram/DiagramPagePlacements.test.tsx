@@ -131,4 +131,16 @@ describe('DiagramPagePlacements', () => {
     render(0);
     expect(resetPage().disabled).toBe(false);
   });
+
+  it('counts a step placed only by its caption’s width as placed by hand, and resets it with its page', () => {
+    act(() => useWorkspaceStore.setState({ diagramView: 'pages' }));
+    render(2);
+    expect(host!.textContent).toContain('Steps placed by hand: 3');
+    act(() => state().setDiagramStepPlace('s9', { textWidth: 64 }));
+    render(2);
+    expect(host!.textContent).toContain('Steps placed by hand: 4');
+    expect(resetPage().disabled).toBe(false);
+    act(() => resetPage().click());
+    expect(placedIds()).toEqual(['s1', 's5', 's6']);
+  });
 });

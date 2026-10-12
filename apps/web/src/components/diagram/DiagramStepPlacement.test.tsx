@@ -22,25 +22,42 @@ import { DiagramStepPlacement } from './DiagramStepPlacement';
  * in the store — a layout of a newer one under way.
  */
 const printed = vi.hoisted(() => ({ clashes: [] as PlacementClash[], of: undefined as DiagramDocument | undefined }));
+/** The measure the mocked layout sets a caption with no pin at, mm. */
+const AUTO_TEXT_MM = vi.hoisted(() => 36);
 vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
   const { useWorkspaceStore: store } = await import('../../store/workspaceStore');
   const { stepsOf } = await import('../../diagram/document/diagramDocument');
+  const { estimateTextSetter: setter } = await import('../../diagram/pages/estimateTextSetter');
+  const { printPaper } = await import('../../diagram/pages/printPaper');
   return {
     ...(await importOriginal<typeof import('../../diagram/pages/printedFrames')>()),
-    // One page holding every step, laid out from the diagram as it is.
+    // One page holding every step, laid out from the diagram as it is: each caption at its pin, else 36 mm.
     usePrintedLayout: () => {
       const document = printed.of ?? store.getState().diagram;
       const cells = document
-        ? stepsOf(document).map((step, index) => ({
-            stepId: step.id,
-            number: index + 1,
-            frameMm: 40,
-            mmPerUnit: null,
-            pictureMm: { x: 0, y: 0, size: 40 },
-            clashes: printed.clashes,
-          }))
+        ? stepsOf(document).map((step, index) => {
+            const widthMm = step.place?.textWidth ?? AUTO_TEXT_MM;
+            return {
+              stepId: step.id,
+              number: index + 1,
+              frameMm: 40,
+              mmPerUnit: null,
+              pictureMm: { x: 0, y: 0, size: 40 },
+              clashes: printed.clashes,
+              text: { x: 0, firstBaseline: 50, widthMm, lines: setter.paragraph(step.text, widthMm, 3.2, 99).lines },
+              ...(step.place?.textWidth !== undefined
+                ? {
+                    placed: {
+                      offsets: step.place,
+                      pin: null,
+                      auto: { mmPerUnit: null, frameMm: 40, drawMm: { x: 0, y: 0, w: 40, h: 40 }, textWidthMm: AUTO_TEXT_MM },
+                    },
+                  }
+                : {}),
+            };
+          })
         : [];
-      return { pages: { layout: { pages: [{ cells }] } }, document };
+      return { pages: { setter, layout: { paper: printPaper(document!.page), pages: [{ cells }] } }, document };
     },
   };
 });
@@ -188,6 +205,88 @@ describe('DiagramStepPlacement › the part selected', () => {
     show('s1', []);
     expect(button('Reset Picture')?.disabled).toBe(true);
     expect(button('Reset Layout')?.disabled).toBe(true);
+  });
+});
+
+describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.md`)', () => {
+  const LONG = 'Valley fold the flaps inward. Note that the top of each crease does not line up with the top corner of the paper';
+  const width = () => host!.querySelector<HTMLInputElement>('input[aria-label="Text width (mm)"]');
+  const reset = () => host!.querySelector<HTMLButtonElement>('button[aria-label="Reset Text width (mm) to default"]');
+  const button = (name: string) => [...host!.querySelectorAll<HTMLButtonElement>('button')].find((each) => each.textContent === name);
+  const type = (input: HTMLInputElement, value: string) => {
+    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+    act(() => {
+      input.focus();
+      set?.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => input.blur());
+  };
+  const placeOf = () => stepById(state().diagram!, 's1')!.place;
+
+  it('offers the caption’s width with its text selected, Auto beside it, a reset only while pinned, and sets and lets it go', () => {
+    act(() => {
+      state().setDiagramView('pages');
+      state().setDiagramStepText('s1', LONG);
+      state().selectDiagramStep('s1');
+      state().selectDiagramPagesPart('picture');
+    });
+    show('s1', []);
+    expect(width()).toBeNull();
+    act(() => state().selectDiagramPagesPart('text'));
+    show('s1', []);
+    expect(width()!.value).toBe('36');
+    expect(host!.textContent).toContain('Auto: 36.0 mm');
+    expect(reset()).toBeNull();
+    expect(button('Reset Text')?.disabled).toBe(true);
+    // Typed: pinned, and counted as the pane's; Reset Text now has something to take back.
+    type(width()!, '62.5');
+    expect(placeOf()).toEqual({ textWidth: 62.5 });
+    show('s1', []);
+    expect(width()!.value).toBe('62.5');
+    expect(host!.textContent).toContain('Auto: 36.0 mm');
+    expect(reset()).not.toBeNull();
+    expect(button('Reset Text')?.disabled).toBe(false);
+    // Typed as the automatic width, the pin goes; so does its reset.
+    type(width()!, '36');
+    expect(placeOf()).toBeUndefined();
+    show('s1', []);
+    expect(reset()).toBeNull();
+    // Pinned again, the row's reset lets the width go and keeps the caption's offset.
+    act(() => state().setDiagramStepPlace('s1', { textWidth: 50, text: [2, 0] }));
+    show('s1', []);
+    act(() => reset()!.click());
+    expect(placeOf()).toEqual({ text: [2, 0] });
+    // Reset Text takes both.
+    act(() => state().setDiagramStepPlace('s1', { textWidth: 50 }));
+    show('s1', []);
+    act(() => button('Reset Text')!.click());
+    expect(placeOf()).toBeUndefined();
+  });
+
+  it('holds a typed width to the caption’s widest word and the page’s width', () => {
+    act(() => {
+      state().setDiagramView('pages');
+      state().setDiagramStepText('s1', LONG);
+      state().selectDiagramStep('s1');
+      state().selectDiagramPagesPart('text');
+    });
+    show('s1', []);
+    type(width()!, '1');
+    expect(placeOf()!.textWidth).toBeGreaterThan(9);
+    show('s1', []);
+    type(width()!, '5000');
+    expect(placeOf()!.textWidth).toBe(210 - 2 * state().diagram!.page.marginMm);
+  });
+
+  it('shows no width for a caption with no text', () => {
+    act(() => {
+      state().setDiagramView('pages');
+      state().selectDiagramStep('s1');
+      state().selectDiagramPagesPart('text');
+    });
+    show('s1', []);
+    expect(width()).toBeNull();
   });
 });
 

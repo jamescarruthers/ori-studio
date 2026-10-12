@@ -16,9 +16,10 @@ const FRAME = { kind: 'frame' } as const;
  * The selected step's placement on the page, under the Pages view's Layers
  * list (`DiagramPageLayers`): its Size — an enlarged step's Size rows — with
  * what Auto would give and why a size is kept; X and Y of the part selected,
- * or of the frame when the step is selected alone, and the way back for that
- * part; Reset Layout; and what clashes, with the offer of a new page where
- * one helps. The list's rows select the part.
+ * or of the frame when the step is selected alone — with the text, its
+ * width, the keyboard's way to what its grips set, and what Auto would give —
+ * and the way back for that part; Reset Layout; and what clashes, with the
+ * offer of a new page where one helps. The list's rows select the part.
  */
 export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
   const { t } = useTranslation();
@@ -82,12 +83,34 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
               disabled={place.disabled}
               onCommit={(value) => place.setOffset(part, 1, value)}
             />
+            {part === 'text' && place.textWidth !== null && (
+              <NumberRow
+                label={t('panels:diagram.placement.textWidth', 'Text width (mm)')}
+                value={Math.round(place.textWidth * 10) / 10}
+                min={place.textWidthRange ? Math.ceil(place.textWidthRange.least * 10) / 10 : undefined}
+                max={place.textWidthRange?.most}
+                step={0.5}
+                disabled={place.disabled}
+                onCommit={place.setTextWidth}
+                onReset={step.place?.textWidth !== undefined ? () => place.reset('textWidth') : undefined}
+              />
+            )}
           </div>
+          {part === 'text' && place.autoTextWidth !== null && (
+            <p className={`${styles.note} ${styles.inset}`}>
+              {t('panels:diagram.placement.autoSize', 'Auto: {{mm}} mm', { mm: place.autoTextWidth.toFixed(1) })}
+            </p>
+          )}
         </>
       )}
       <div className={`${styles.actions} ${styles.inset}`}>
         {place.blocked !== 'newer' && (
-          <Button size="sm" disabled={place.disabled || !step.place?.[part]} onClick={() => place.reset(part)}>
+          <Button
+            size="sm"
+            // The text's reset takes its pinned width with its offset.
+            disabled={place.disabled || !(step.place?.[part] || (part === 'text' && step.place?.textWidth !== undefined))}
+            onClick={() => place.reset(part)}
+          >
             {t('panels:diagram.placement.resetPart', 'Reset {{part}}', { part: labels[part] })}
           </Button>
         )}
