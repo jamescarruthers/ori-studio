@@ -23,7 +23,8 @@ export function NumberRow({
   onReset,
 }: {
   label: string;
-  value: number;
+  /** Null while there is no number to show: the field is empty (`NumberField`). */
+  value: number | null;
   min?: number;
   max?: number;
   step?: number;

@@ -36,7 +36,7 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
               <>
                 <NumberRow
                   label={t('panels:diagram.placement.size', 'Size (mm)')}
-                  value={Math.round((place.size ?? 0) * 10) / 10}
+                  value={place.size === null ? null : Math.round(place.size * 10) / 10}
                   min={4}
                   step={0.1}
                   disabled={place.disabled || place.size === null}

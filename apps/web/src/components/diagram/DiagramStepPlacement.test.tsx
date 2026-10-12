@@ -6,6 +6,7 @@ import {
   insertSteps,
   setPageSetup,
   stepById,
+  type DiagramDocument,
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
@@ -15,8 +16,12 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramStepPlacement } from './DiagramStepPlacement';
 
-/** The clashes the pages give the step shown, as the Diagram panel publishes its layout. */
-const printed = vi.hoisted(() => ({ clashes: [] as PlacementClash[] }));
+/**
+ * The clashes the pages give the step shown, as the Diagram panel publishes
+ * its layout; and the diagram they are laid out from, when it is not the one
+ * in the store — a layout of a newer one under way.
+ */
+const printed = vi.hoisted(() => ({ clashes: [] as PlacementClash[], of: undefined as DiagramDocument | undefined }));
 vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
   const { useWorkspaceStore: store } = await import('../../store/workspaceStore');
   const { stepsOf } = await import('../../diagram/document/diagramDocument');
@@ -24,7 +29,7 @@ vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
     ...(await importOriginal<typeof import('../../diagram/pages/printedFrames')>()),
     // One page holding every step, laid out from the diagram as it is.
     usePrintedLayout: () => {
-      const document = store.getState().diagram;
+      const document = printed.of ?? store.getState().diagram;
       const cells = document
         ? stepsOf(document).map((step, index) => ({
             stepId: step.id,
@@ -83,6 +88,7 @@ function show(stepId: string, clashes: PlacementClash[]) {
 }
 
 beforeEach(() => {
+  printed.of = undefined;
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   install();
   host = document.createElement('div');
@@ -154,5 +160,36 @@ describe('DiagramStepPlacement › the offer of a new page', () => {
     expect(offer()?.textContent).toBe('Start step 9 on a new page');
     show('s4', [{ kind: 'step', steps: [6] }]);
     expect(offer()).toBeUndefined();
+  });
+});
+
+describe('DiagramStepPlacement › while the pages lay out (review finding U8)', () => {
+  const size = () => host!.querySelector<HTMLInputElement>('input[aria-label="Size (mm)"]')!;
+  const selectPicture = () =>
+    host!.querySelector<HTMLButtonElement>('button[aria-label="Select Picture"]')!;
+
+  it('keeps the step’s last cell while a layout of a newer diagram is under way', () => {
+    show('s1', []);
+    const laidOut = size().value;
+    expect(laidOut).not.toBe('');
+    expect(laidOut).not.toBe('0');
+    // An edit: the pages are still the last diagram's.
+    printed.of = state().diagram!;
+    act(() => state().setDiagramStepText('s1', 'Fold in half.'));
+    show('s1', []);
+    expect(size().value).toBe(laidOut);
+    expect(size().disabled).toBe(false);
+    expect(selectPicture().disabled).toBe(false);
+  });
+
+  it('shows a step the pages have not laid out yet with an empty size, not 0', () => {
+    printed.of = state().diagram!;
+    let added = '';
+    act(() => {
+      added = state().addDiagramStep()!;
+    });
+    show(added, []);
+    expect(size().value).toBe('');
+    expect(size().disabled).toBe(true);
   });
 });

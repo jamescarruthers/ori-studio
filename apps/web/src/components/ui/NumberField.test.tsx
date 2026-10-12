@@ -241,6 +241,21 @@ describe('NumberField', () => {
     );
   });
 
+  it('shows no number while it has none, keeps an empty commit empty, and steps from its minimum', () => {
+    const onCommit = vi.fn();
+    const view = render(<NumberField label="Size" value={null} min={4} onCommit={onCommit} />);
+    const { input, up } = field(view);
+    expect(input.value).toBe('');
+    act(() => {
+      input.focus();
+      input.blur();
+    });
+    expect(input.value).toBe('');
+    expect(onCommit).not.toHaveBeenCalled();
+    act(() => up?.click());
+    expect(onCommit).toHaveBeenLastCalledWith(5);
+  });
+
   it('labels the input with the region the unit is in, so a click on the unit lands in it', () => {
     const view = render(<Harness initial={10} suffix="mm" />);
     const { input } = field(view);

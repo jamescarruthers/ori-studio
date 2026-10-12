@@ -23,13 +23,16 @@ export function newPageHelps(clashes: readonly PlacementClash[] | undefined, sta
   return !startsAPage && (clashes ?? []).some((clash) => NEW_PAGE_CLEARS.has(clash.kind));
 }
 
+/**
+ * The Step pane's On the page section, bound to its step. The step's cell is
+ * the one the pages last laid out for it, kept while a layout of a newer
+ * diagram is under way (review finding U8): an edit then never flashes the
+ * section to disabled with a size of 0. A step the pages have not laid out
+ * yet has no cell, and its size shows empty.
+ */
 export function useStepPlacement(step: DiagramStep) {
   const { pages, document } = usePrintedLayout();
-  const currentDocument = useWorkspaceStore((state) => state.diagram);
-  const cell =
-    document === currentDocument
-      ? (pages?.layout.pages.flatMap((page) => page.cells).find((each) => each.stepId === step.id) ?? null)
-      : null;
+  const cell = pages?.layout.pages.flatMap((page) => page.cells).find((each) => each.stepId === step.id) ?? null;
   const selected = useWorkspaceStore((state) =>
     state.diagramSelectedStepId === step.id ? state.diagramPagesPart : null,
   );
