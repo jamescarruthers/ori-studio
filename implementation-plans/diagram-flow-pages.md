@@ -365,6 +365,27 @@ As built (the second review's UI fixes, 2026-10-11):
   pointer went and committed if it was let go after a drag. So "nudge, click
   the next step, nudge" nudges the next step's frame.
 
+As built (12 Oct, Zach's asks after trying the placement UI):
+
+- A press on a page's paper, or on the space round the pages, lets the
+  selection go, step and part, so the next press on a step selects its whole
+  frame and a drag moves the frame, never the part last resized. The pressed
+  page is still "this page"; Escape's ladder is unchanged.
+- The placement controls left the Step pane for the Layers pane, Pages view
+  only (`DiagramPageLayers`, `usePageLayers`): the current page's steps in
+  paint order, first at the top, as Annotate lists marks, badged Moved and with
+  the page tag's clash words (`clashTag`, so a margin clash never reads as an
+  overlap); a row press selects the frame, the selected step opens into
+  Number, Picture and Text rows that select the part. Under the list, Size,
+  X and Y of the part (the frame with none), Reset for it, Reset Layout and the
+  clash notice; no Select buttons. The rows are `DiagramLayerList`, moved out
+  of `DiagramLayers` with no change on screen. A step selected in Pages brings
+  Layers, not Step, and letting it go gives back the tab Layers covered; a
+  turn, or a step opened from the pages, brings Step.
+- The clash notice is Pages-only, inset as its neighbours, and its sentences
+  take `--text-primary` (6.1:1 dark, 9.0:1 light on the warning tint; the
+  notice's own `--text-secondary` is 3.7:1 and 4.2:1).
+
 ## Affected Areas
 
 - `apps/web/src/diagram/document/diagramDocument.ts`, `diagramFile.ts`,
@@ -449,6 +470,9 @@ As built (the second review's UI fixes, 2026-10-11):
     packing (F-DOCS).
   - [x] What a count means on the last page: the last page is laid out for
     its capacity, counted or not (see "Keeping later pages still").
+- [x] Zach's 12 Oct asks, checked in the browser on the crane (:5320): a press
+  away lets the selection go; placement in the Pages view's Layers pane; the
+  clash notice Pages-only, legible and inset.
 
 ### Phase 4: gate and land
 - [ ] Lint, typecheck, i18n check, full web suite (Node 22), build and prerender.
