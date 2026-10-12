@@ -80,19 +80,27 @@ describe('the sink tools’ window', () => {
     expect(open.sink).toBeUndefined();
     expect(open.lineMode?.value).toBe('axiom-4');
     expect(open.instructions.current).toBe(1);
-    expect(open.instructions.notes[0]).toContain('must be exactly square to its centre line');
+    expect(open.instructions.notes[0]).toBe(
+      'The line across the point sets how deep it sinks, and must be exactly square to its centre line: Axiom 4 draws one.'
+    );
+    // Once the line is in, the point that sinks is picked: said as the last step, not a plain fold's.
+    expect(open.instructions.items.at(-1)).toBe('Pick the point, then press Enter.');
     expect(window({ tool: 'closed-sink' }).instructions.notes[0]).toBe('The line across the point sets how deep it sinks.');
     const unsink = window({ tool: 'unsink', lineMode: 'crease' });
     expect(unsink.title).toBe('Unsink');
-    expect(unsink.instructions.notes[0]).toContain('Existing crease');
+    // What its line is, and nothing of what folding along any crease does.
+    expect(unsink.instructions.notes).toEqual(['The line is a crease of the ring the sink left, along the sunk point’s top.']);
+    // Its sunk point is found for the folder.
+    expect(unsink.instructions.items.at(-1)).toBe('Press Enter to fold.');
   });
 
-  it('switches between the open and the closed sink, the one that does not fit disabled with why', () => {
+  it('switches between the open and the closed sink while there is a choice, the one that does not fit disabled with why', () => {
     const calls = verbs();
     const tilted = window(
       { preview: preview(), sink: sink({ openRefusal: 'sink_line_tilted' }) },
       calls
     );
+    // The open sink in hand does not fit; the closed one does: a choice.
     const kind = tilted.sink?.kind;
     expect(kind?.value).toBe('open');
     expect(kind?.options.map((option) => [option.short, option.disabled, option.reason])).toEqual([
@@ -102,8 +110,8 @@ describe('the sink tools’ window', () => {
     expect(kind?.note).toBe('Only the closed sink fits here.');
     kind?.set('closed');
     expect(calls.selectTool).toHaveBeenCalledWith('closed-sink');
-    // The rule for its line, said while the open sink is in hand, and the depth.
-    expect(tilted.sink?.square).toContain('tilted even a little');
+    // The depth; the rule for its line was said while it was located, and the refusal's fix folds along it.
+    expect(tilted.sink).not.toHaveProperty('square');
     expect(tilted.sink?.depth).toMatchObject({ label: 'Depth', value: '0.212 from the tip' });
     expect(tilted.movingSide?.label).toBe('Tip side');
 
@@ -111,11 +119,13 @@ describe('the sink tools’ window', () => {
     expect(both.title).toBe('Closed sink');
     expect(both.sink?.kind?.value).toBe('closed');
     expect(both.sink?.kind?.note).toContain('Both sinks fit here');
-    expect(both.sink?.square).toBeNull();
 
+    // Only the sink in hand fits: nothing to choose, so no control; the title names it.
     const pocketless = window({ preview: preview(), sink: sink({ pocketsFound: 0 }) });
-    expect(pocketless.sink?.kind?.options[1]).toMatchObject({ disabled: true, reason: 'The point has no pocket' });
-    expect(pocketless.sink?.kind?.note).toBe('Only the open sink fits here.');
+    expect(pocketless.sink?.kind).toBeNull();
+    expect(pocketless.meta).toBe('2 settings');
+    // Nor before the engine has described the point.
+    expect(window({ preview: preview(), sink: sink({ known: false }) }).sink?.kind).toBeNull();
   });
 
   it('steps a closed sink’s pockets, named front and back, and the layer orders', () => {

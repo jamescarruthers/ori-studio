@@ -48,46 +48,39 @@ import {
   type FoldToolWindowView,
 } from '../foldToolWindow';
 import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
-import { choiceStepper, type FoldReverseControls, type FoldReverseWindowView } from '../reverse/reverseToolWindow';
+import { bothKindsFit, choiceStepper, type FoldReverseControls, type FoldReverseWindowView } from '../reverse/reverseToolWindow';
 
 const isSecondLineMode = (id: string): id is FoldSecondLineModeId =>
   (FOLD_SECOND_LINE_MODES as readonly string[]).includes(id);
 
-/** What the kinds that land say, in a line: only one fits, or both. */
-function kindNote(t: TFunction, crimp: FoldReverseWindowView): string | null {
-  if (!crimp.known || (crimp.ways > 1 && crimp.kinds.length === 0)) return null;
-  if (crimp.kinds.length === 2) {
-    return t('tools:fold.crimp.bothFit', 'Both kinds of crimp fit here: choose which way the tip goes.');
-  }
-  const [only] = crimp.kinds;
-  if (only === 'inside') return t('tools:fold.crimp.onlyInside', 'Only the inside crimp fits here.');
-  if (only === 'outside') return t('tools:fold.crimp.onlyOutside', 'Only the outside crimp fits here.');
-  return null;
-}
-
-/** The crimp's kind and its listed choices, in the reverse fold's controls. */
+/**
+ * The crimp's kind — only while both fit, as the reverse fold's: the title
+ * names the one folded — and its listed choices, in the reverse fold's
+ * controls.
+ */
 function crimpControls(
   t: TFunction,
   crimp: FoldReverseWindowView,
   verbs: FoldToolWindowVerbs,
   readOnly: boolean
 ): FoldReverseControls {
-  const lands = (kind: 'inside' | 'outside') => !crimp.known || crimp.kinds.length === 0 || crimp.kinds.includes(kind);
   return {
-    kind: {
-      label: t('tools:fold.reverse.kind', 'Kind'),
-      value: crimp.kind,
-      options: FOLD_CRIMP_KINDS.map((value) => ({
-        value,
-        short: value === 'inside' ? t('tools:fold.reverse.inside', 'Inside') : t('tools:fold.reverse.outside', 'Outside'),
-        label: foldCrimpKindLabel(t, value),
-        disabled: !lands(value),
-        reason: lands(value) ? null : t('tools:fold.reverse.doesNotFit', 'Does not fit here'),
-      })),
-      disabled: readOnly,
-      note: kindNote(t, crimp),
-      set: (kind) => verbs.setReverseKind?.(kind),
-    },
+    kind: bothKindsFit(crimp)
+      ? {
+          label: t('tools:fold.reverse.kind', 'Kind'),
+          value: crimp.kind,
+          options: FOLD_CRIMP_KINDS.map((value) => ({
+            value,
+            short: value === 'inside' ? t('tools:fold.reverse.inside', 'Inside') : t('tools:fold.reverse.outside', 'Outside'),
+            label: foldCrimpKindLabel(t, value),
+            disabled: false,
+            reason: null,
+          })),
+          disabled: readOnly,
+          note: t('tools:fold.crimp.bothFit', 'Both kinds of crimp fit here: choose which way the tip goes.'),
+          set: (kind) => verbs.setReverseKind?.(kind),
+        }
+      : null,
     opening: choiceStepper(t, t('tools:fold.reverse.opening', 'Opening'), crimp.way, crimp.ways, verbs.stepOpening, readOnly),
     order: choiceStepper(t, t('tools:fold.reverse.order', 'Layer order'), crimp.order, crimp.orders, verbs.stepOrder, readOnly),
   };
@@ -117,10 +110,7 @@ export function crimpLocateInstructions(
   const byAxiom = view.lineMode !== 'free' && view.lineMode !== 'crease';
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    intro: t(
-      'tools:fold.crimp.intro',
-      'Folds a flap in along a first line and back out along a second, so its end turns. Draw the first line nearer the body and the second nearer the tip; each runs across the flap.'
-    ),
+    intro: t('tools:fold.crimp.introTurn', 'Turns a flap’s end in along one line and back out along a second.'),
     items,
     current: Math.min(Math.max(0, view.picks), items.length - 1),
     notes: [
@@ -153,22 +143,24 @@ export function secondLineSelect(t: TFunction, view: FoldToolWindowView, verbs: 
 
 /**
  * What to check and choose once both lines are in, in the order the window
- * shows them: the tip, the kind, the flaps, then the commit — named as a
- * button too, since a stepper pressed last keeps the focus and Enter would
- * press it again.
+ * shows them: the tip, the kind when both fit, the flaps, then the commit —
+ * named as a button too, since a stepper pressed last keeps the focus and
+ * Enter would press it again.
  */
-function previewInstructions(t: TFunction, action: string, host: FoldToolHost, view: FoldToolWindowView): FoldToolInstructions {
+function previewInstructions(
+  t: TFunction,
+  action: string,
+  host: FoldToolHost,
+  view: FoldToolWindowView,
+  crimp: FoldReverseWindowView
+): FoldToolInstructions {
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items: [
-      t(
-        'tools:fold.steps.crimpTip',
-        'The end beyond the second line is the tip, which turns: if it is the wrong end, Swap the tip side.'
-      ),
-      t(
-        'tools:fold.steps.crimpKind',
-        'Choose Inside to tuck the paper between the lines inside the flap, or Outside to wrap it round the flap; a kind that does not fit is greyed out.'
-      ),
+      t('tools:fold.steps.crimpTipEnd', 'The end beyond the second line turns: if it is the wrong end, press Swap.'),
+      ...(bothKindsFit(crimp)
+        ? [t('tools:fold.steps.crimpKindBoth', 'Choose Inside to tuck the end inside the flap, or Outside to wrap it round.')]
+        : []),
       t('tools:fold.steps.crimpLayers', 'Under Layers, leave out any flap that should not crimp.'),
       host.coarse
         ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action })
@@ -207,12 +199,12 @@ export function crimpToolWindow(
   }
   const title = foldCrimpKindLabel(t, crimp.kind);
   const compound = crimpControls(t, crimp, verbs, readOnly);
-  const settings = 3 + (compound.opening ? 1 : 0) + (compound.order ? 1 : 0);
+  const settings = 2 + (compound.kind ? 1 : 0) + (compound.opening ? 1 : 0) + (compound.order ? 1 : 0);
   return {
     phase: 'preview',
     title,
     meta: settingsMeta(t, settings),
-    instructions: previewInstructions(t, title, host, view),
+    instructions: previewInstructions(t, title, host, view, crimp),
     lineMode: null,
     kind: null,
     movingSide: {

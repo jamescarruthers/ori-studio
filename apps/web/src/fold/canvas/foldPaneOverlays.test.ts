@@ -154,4 +154,39 @@ describe('a free line drawn on the crease-pattern pane', () => {
     expect(click('folded', 0.9, 0.5).sheet).toBeNull();
     expect(dots(overlay('crease-pattern', click('folded', 0.9, 0.5), null))).toEqual([]);
   });
+
+  it('lights the lines a click is offered under the picks, and the one under the pointer as brightly as a pick', () => {
+    const [left, right] = index.creasePattern.segments;
+    if (!left || !right) throw new Error('no lines');
+    const drawn = (hovered: FoldPick | null) =>
+      foldPaneOverlay({
+        pane: 'crease-pattern',
+        scene,
+        picks: [],
+        hovered: hovered && { pane: 'crease-pattern', at: { x: 0, y: 0 }, pick: hovered },
+        freeFrom: null,
+        marks: [],
+        inks: INKS,
+        offered: [left, right],
+      }).strokes!;
+    const quiet = drawn(null);
+    expect(quiet.count).toBe(2);
+    expect(round(quiet.color[3]!)).toBeLessThan(1);
+    // Under the pointer: drawn again over it, at full strength.
+    const lit = drawn(left);
+    expect(lit.count).toBe(3);
+    expect(round(lit.color[2 * 4 + 3]!)).toBe(1);
+    expect(round(lit.widthMul[2]!)).toBeGreaterThan(round(lit.widthMul[0]!));
+    // A line not offered, under the pointer, is the hover's as ever.
+    const elsewhere = foldPaneOverlay({
+      pane: 'crease-pattern',
+      scene,
+      picks: [],
+      hovered: { pane: 'crease-pattern', at: { x: 0, y: 0 }, pick: left },
+      freeFrom: null,
+      marks: [],
+      inks: INKS,
+    }).strokes!;
+    expect(round(elsewhere.color[3]!)).toBeLessThan(1);
+  });
 });

@@ -83,10 +83,8 @@ describe('the crimp tool’s window', () => {
     const first = foldToolWindow(t, view({ picks: 1 }), verbs(), mouse);
     expect(first).toMatchObject({ phase: 'locate', title: 'Crimp', meta: '2 settings', kind: null });
     expect(first?.compound).toBeUndefined();
-    // What a crimp is, and which line is which, before the first click.
-    expect(first?.instructions.intro).toBe(
-      'Folds a flap in along a first line and back out along a second, so its end turns. Draw the first line nearer the body and the second nearer the tip; each runs across the flap.'
-    );
+    // What a crimp is, in a line, before the first click; which line is which, in the steps.
+    expect(first?.instructions.intro).toBe('Turns a flap’s end in along one line and back out along a second.');
     expect(first?.instructions.items).toEqual([
       'Click where the first line starts, nearer the body: where the flap turns in.',
       'Click where it ends.',
@@ -137,28 +135,29 @@ describe('the crimp tool’s window', () => {
     const both = foldToolWindow(t, view({ picks: 4, preview: preview(), crimp: crimp() }), calls, mouse);
     expect(both).toMatchObject({ phase: 'preview', title: 'Inside crimp', meta: '3 settings', lineMode: null });
     expect(both?.secondLine).toBeUndefined();
-    expect(both?.compound?.kind.note).toBe('Both kinds of crimp fit here: choose which way the tip goes.');
-    expect(both?.compound?.kind.options.map((option) => [option.value, option.short, option.label, option.disabled])).toEqual([
+    expect(both?.compound?.kind?.note).toBe('Both kinds of crimp fit here: choose which way the tip goes.');
+    expect(both?.compound?.kind?.options.map((option) => [option.value, option.short, option.label, option.disabled])).toEqual([
       ['inside', 'Inside', 'Inside crimp', false],
       ['outside', 'Outside', 'Outside crimp', false],
     ]);
-    both?.compound?.kind.set('outside');
+    both?.compound?.kind?.set('outside');
     expect(calls.setReverseKind).toHaveBeenCalledWith('outside');
     expect(both?.movingSide?.label).toBe('Tip side');
     // The tip, the kind, the flaps, then the commit, as the window shows them.
     expect(both?.instructions.items).toEqual([
-      'The end beyond the second line is the tip, which turns: if it is the wrong end, Swap the tip side.',
-      'Choose Inside to tuck the paper between the lines inside the flap, or Outside to wrap it round the flap; a kind that does not fit is greyed out.',
+      'The end beyond the second line turns: if it is the wrong end, press Swap.',
+      'Choose Inside to tuck the end inside the flap, or Outside to wrap it round.',
       'Under Layers, leave out any flap that should not crimp.',
       'Press Enter, or click Inside crimp, to fold.',
     ]);
     expect(both?.footer?.commit.label).toBe('Inside crimp');
 
-    // Only the outside fits: the inside is shown, disabled with why.
+    // Only the outside fits: no kind to choose, so no control and no step for it; the title names it.
     const only = foldToolWindow(t, view({ picks: 4, preview: preview(), crimp: crimp({ kind: 'outside', kinds: ['outside'] }) }), calls, mouse);
     expect(only?.title).toBe('Outside crimp');
-    expect(only?.compound?.kind.note).toBe('Only the outside crimp fits here.');
-    expect(only?.compound?.kind.options[0]).toMatchObject({ disabled: true, reason: 'Does not fit here' });
+    expect(only?.compound?.kind).toBeNull();
+    expect(only?.meta).toBe('2 settings');
+    expect(only?.instructions.items).toHaveLength(3);
 
     // An opening and an order to choose: a stepper each.
     const choosing = foldToolWindow(

@@ -7,12 +7,12 @@
  * an open sink, why it must be exactly square — and then, previewing:
  *
  * - **the kind**, Open or Closed, as a segmented control that switches
- *   between the two tools, as the reverse fold's switches its kinds: one
- *   whose preconditions fail is shown, disabled, with which one in its
- *   tooltip (research §5.4: any tilt kills an open sink; a point with no
- *   pocket has no closed one);
- * - for an open sink, **the square line**: the rule, said, beside the
- *   refusal's fix that folds along it;
+ *   between the two tools, while there is a choice: both fit, or the other
+ *   fits where the one in hand does not — one whose preconditions fail
+ *   shown, disabled, with which one in its tooltip (research §5.4: any tilt
+ *   kills an open sink; a point with no pocket has no closed one). The open
+ *   sink's square line is said while its line is located, and its fix is
+ *   the refusal's;
  * - **the depth**: how far ℓ lies from the point's tip along its centre line;
  * - **the tip side**, Swap, and **the point**, through the layer picker and
  *   the chips — a sink takes one point; an unsink's is found for the folder;
@@ -69,10 +69,13 @@ export interface FoldSinkWindowView {
 
 /** The sink tools' own controls in the window. */
 export interface FoldSinkControls {
-  /** Open or Closed, switching the tool; null for an unsink. */
+  /**
+   * Open or Closed, switching the tool, while there is a choice: both fit,
+   * or the sink in hand does not and the other does. Null for an unsink, and
+   * while the sink in hand is the only one that fits (owner feedback,
+   * 2026-10-12: a control with no choice in it is not shown).
+   */
   kind: FoldKindChoice<FoldSinkKind> | null;
-  /** The open sink's rule for its line, said while it is in hand. */
-  square: string | null;
   depth: { label: string; value: string; help: string } | null;
   pocket: FoldChoiceStepper | null;
   order: FoldChoiceStepper | null;
@@ -91,17 +94,17 @@ function kindReasons(t: TFunction, sink: FoldSinkWindowView): Record<FoldSinkKin
   };
 }
 
-function kindNote(t: TFunction, reasons: Record<FoldSinkKind, string | null>, known: boolean): string | null {
-  if (!known) return null;
+/** What the sinks that fit say beside the choice: both, or only the other one than the sink in hand. */
+function kindNote(t: TFunction, reasons: Record<FoldSinkKind, string | null>): string {
   if (reasons.open === null && reasons.closed === null) {
     return t(
       'tools:fold.sink.bothFit',
       'Both sinks fit here: an open sink turns every layer inside out, a closed one keeps them together.'
     );
   }
-  if (reasons.open === null) return t('tools:fold.sink.onlyOpen', 'Only the open sink fits here.');
-  if (reasons.closed === null) return t('tools:fold.sink.onlyClosed', 'Only the closed sink fits here.');
-  return t('tools:fold.sink.neither', 'Neither sink fits this point here.');
+  return reasons.open === null
+    ? t('tools:fold.sink.onlyOpen', 'Only the open sink fits here.')
+    : t('tools:fold.sink.onlyClosed', 'Only the closed sink fits here.');
 }
 
 function pocketStepper(
@@ -119,6 +122,15 @@ function pocketStepper(
   return choiceStepper(t, t('tools:fold.sink.pocket', 'Pocket'), sink.pocket, sink.pockets, verbs.stepPocket, readOnly, value);
 }
 
+/**
+ * Whether the folder has a sink to choose: the engine has described the
+ * point, and the other sink fits — beside the one in hand, or in its place.
+ */
+function sinkChoice(sink: FoldSinkWindowView, kind: FoldSinkKind, reasons: Record<FoldSinkKind, string | null>): boolean {
+  const other: FoldSinkKind = kind === 'open' ? 'closed' : 'open';
+  return sink.known && reasons[other] === null;
+}
+
 function sinkControls(t: TFunction, sink: FoldSinkWindowView, verbs: FoldToolWindowVerbs, readOnly: boolean): FoldSinkControls {
   const kind = kindOf(sink.tool);
   const reasons = kindReasons(t, sink);
@@ -131,23 +143,16 @@ function sinkControls(t: TFunction, sink: FoldSinkWindowView, verbs: FoldToolWin
   });
   return {
     kind:
-      kind === null
+      kind === null || !sinkChoice(sink, kind, reasons)
         ? null
         : {
             label: t('tools:fold.sink.kind', 'Sink'),
             value: kind,
             options: [option('open'), option('closed')],
             disabled: readOnly,
-            note: kindNote(t, reasons, sink.known),
+            note: kindNote(t, reasons),
             set: (next) => verbs.selectTool(next === 'open' ? 'open-sink' : 'closed-sink'),
           },
-    square:
-      sink.tool === 'open-sink'
-        ? t(
-            'tools:fold.sink.squareNote',
-            'An open sink needs the line exactly square to the point’s centre line: tilted even a little, the point cannot open-sink. A closed sink takes a tilted line.'
-          )
-        : null,
     depth:
       sink.depth !== null && sink.tool !== 'unsink'
         ? {
@@ -171,16 +176,13 @@ function locateNote(t: TFunction, tool: FoldSinkToolId): string {
   switch (tool) {
     case 'open-sink':
       return t(
-        'tools:fold.note.openSinkLine',
-        'The line across the point sets how deep it sinks, and must be exactly square to its centre line. Axiom 4, through a point and perpendicular to the centre crease, gives one that is.'
+        'tools:fold.note.openSinkSquare',
+        'The line across the point sets how deep it sinks, and must be exactly square to its centre line: Axiom 4 draws one.'
       );
     case 'closed-sink':
       return t('tools:fold.note.closedSinkLine', 'The line across the point sets how deep it sinks.');
     case 'unsink':
-      return t(
-        'tools:fold.note.unsinkLine',
-        'Locate the ring the sink left: Existing crease takes a crease of it along the sunk point’s top.'
-      );
+      return t('tools:fold.note.unsinkRing', 'The line is a crease of the ring the sink left, along the sunk point’s top.');
   }
 }
 
@@ -230,12 +232,24 @@ export function sinkToolWindow(
   const tool = sink?.tool ?? (view.tool === 'closed-sink' || view.tool === 'unsink' ? view.tool : 'open-sink');
   const title = foldToolLabel(t, tool);
   if (!preview || !sink) {
-    const located = locateInstructions(t, view, title, host);
+    // Once the line is in: the point that sinks, as the preview's steps pick
+    // it — an unsink's is found for the folder.
+    const then =
+      tool === 'unsink'
+        ? host.coarse
+          ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action: title })
+          : t('tools:fold.steps.commit', 'Press Enter to fold.')
+        : host.coarse
+          ? t('tools:fold.steps.sinkFinishTouch', 'Pick the point, then tap {{action}}.', { action: title })
+          : t('tools:fold.steps.sinkFinish', 'Pick the point, then press Enter.');
+    const located = locateInstructions(t, view, title, host, then);
+    // An unsink's line is a crease of the ring: what folding along any crease does is not its to say.
+    const lineNotes = tool === 'unsink' && view.lineMode === 'crease' ? [] : located.notes;
     return {
       phase: 'locate',
       title,
       meta: settingsMeta(t, 1),
-      instructions: { ...located, notes: [locateNote(t, tool), ...located.notes] },
+      instructions: { ...located, notes: [locateNote(t, tool), ...lineNotes] },
       lineMode: lineModeSelect(t, view, verbs),
       kind: null,
       movingSide: null,

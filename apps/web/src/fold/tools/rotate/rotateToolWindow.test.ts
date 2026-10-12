@@ -60,7 +60,8 @@ describe('the Rotate tool’s window', () => {
     expect(rotate.direction.value).toBe('cw');
     expect(rotate.direction.options.map((option) => option.label)).toEqual(['Clockwise', 'Counterclockwise']);
     expect(model.instructions.items).toEqual([
-      'Choose how far to turn the model: a part of a turn, or an exact angle.',
+      // The controls under it say how: a part of a turn, or an exact angle.
+      'Choose how far to turn the model.',
       'Choose which way it turns.',
       'Press Enter to add the turn.',
     ]);

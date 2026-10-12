@@ -66,6 +66,7 @@ import {
   swivelEdgePick,
 } from '../tools/vertex/vertexStep';
 import { SWIVEL_TARGET_FROM } from '../tools/vertex/vertexInputs';
+import { swivelOffered, swivelReachesNothing, type FoldSwivelReachView } from '../tools/vertex/swivelReach';
 import type { FoldLineBy } from '../tools/foldToolCatalog';
 import { isFoldAltLatched } from './foldAltLatch';
 import { resolveAlongPick } from './foldAlongLine';
@@ -76,6 +77,7 @@ import {
   topSheetPointAt,
   type FoldHit,
   type FoldPick,
+  type FoldPickRule,
   type FoldHitRadii,
   type FoldPaneId,
   type FoldPickIndex,
@@ -345,6 +347,25 @@ function trackCommitted(op: FoldOp): void {
   trackFoldStepAdded(kind, { layerScope: op.seed.scope, via, ...(extent ? { extent } : {}) });
 }
 
+/** A swivel's meeting point, clicked again: its first click's rule (`vertexInputs`). */
+const SWIVEL_MEET_RULE = { snap: 'point', edges: true } as const;
+
+/**
+ * What a swivel's next line click may take: once its reach is known, only
+ * an edge that can swing, then only a line that edge lands on — nothing
+ * while the worker is asked (`swivelOffered`). Without a reach — a target
+ * named by two points — any line but one parallel to the edge, which no
+ * turn lays it on. Nothing to add for any other tool.
+ */
+function swivelOffer(tool: FoldToolState, reach: FoldSwivelReachView | null): Pick<FoldPickRule, 'accept'> {
+  if (tool.tool !== 'swivel') return {};
+  const offered = swivelOffered(reach, tool.picks);
+  if (offered) return { accept: (segment: FoldSegmentPick) => offered(segment.edge) };
+  const edge = swivelEdgePick(tool);
+  if (!edge || tool.picks.length !== SWIVEL_TARGET_FROM) return {};
+  return { accept: (segment: FoldSegmentPick) => !parallelSegments(segment.scene, edge.scene) };
+}
+
 /** Within this many sheet units, a second depth pick is the same spot, and goes a layer deeper. */
 const SAME_SPOT = 1e-3;
 
@@ -556,20 +577,19 @@ export function useFoldCanvasVerbs(
           const interval = pane === 'folded' ? wovenIntervalAt(live.current.preview.section, at) : null;
           return interval === null ? { pane, at, pick: null } : { pane, at, pick: null, interval };
         }
-        // A swivel's target is never parallel to its edge: no turn lays one on the other.
-        const edge = swivelEdgePick(tool);
-        const target = edge && tool.picks.length === SWIVEL_TARGET_FROM && step.snap === 'crease-required';
         const free = freePointHeld();
+        // A swivel's meeting point from which nothing can swing: a click
+        // picks another point in its place, as its first click would.
+        const reach = live.current.preview.vertex?.reach ?? null;
+        const remeet = tool.tool === 'swivel' && tool.picks.length === 1 && swivelReachesNothing(reach);
         const pick = resolveFoldPick(index, pane, at, radii, {
-          snap: step.snap,
-          edges: step.edges,
+          ...(remeet ? SWIVEL_MEET_RULE : { snap: step.snap, edges: step.edges, ...(step.kinds ? { kinds: step.kinds } : {}) }),
           free,
-          ...(step.kinds ? { kinds: step.kinds } : {}),
-          ...(target ? { accept: (segment: FoldSegmentPick) => !parallelSegments(segment.scene, edge.scene) } : {}),
+          ...(remeet ? {} : swivelOffer(tool, reach)),
         });
         // A swivel's pivot may sit on a folded edge, where its creases meet:
         // the edge lights with the point under the pointer.
-        if (picksSwivelPivot(tool.tool, tool.picks.length) && !free) {
+        if ((picksSwivelPivot(tool.tool, tool.picks.length) || remeet) && !free) {
           return { pane, at, pick: resolveFoldEdgePoint(index, pane, at, radii, pick) };
         }
         return { pane, at, pick };
@@ -599,6 +619,16 @@ export function useFoldCanvasVerbs(
           return;
         }
         if (!hit.pick) return;
+        // A swivel's meeting point from which nothing can swing: the point clicked takes its place.
+        if (
+          tool.tool === 'swivel' &&
+          tool.picks.length === 1 &&
+          hit.pick.kind === 'point' &&
+          swivelReachesNothing(live.current.preview.vertex?.reach ?? null)
+        ) {
+          tools.repick(hit.pick);
+          return;
+        }
         tools.pick(hit.pick);
         if (tool.tool !== 'divide-line') return;
         // The Divide line takes one click: the mark is made at once.

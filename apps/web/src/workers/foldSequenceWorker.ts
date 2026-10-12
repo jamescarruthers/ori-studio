@@ -43,6 +43,7 @@ import type {
 import { createFoldEngineVertexCalls, type FoldEngineVertexCalls } from '../fold/engine/foldEngineSquashCalls';
 import type { FoldVertexFingerprinted, FoldVertexTried } from '../fold/engine/foldEngineSquashWire';
 import type { FoldVertexOp } from '../fold/document/foldSequenceDocument';
+import { swivelReach, type FoldSwivelReach, type FoldSwivelReachAsk } from '../fold/tools/vertex/swivelReach';
 import type {
   FoldExported,
   FoldImportFingerprinted,
@@ -338,6 +339,15 @@ const api = {
   /** Let pending choices go; how many were held. */
   async releaseVertexChoices(pending: readonly number[]): Promise<number> {
     return call((calls) => calls.releaseVertexChoices(pending));
+  },
+
+  /**
+   * What a swivel can do from where its creases meet: every edge offered
+   * against every line, through the compound question here, what lands kept
+   * (`fold/tools/vertex/swivelReach.ts`) — one round trip for a pick.
+   */
+  async swivelReach(state: number, ask: FoldSwivelReachAsk): Promise<FoldSwivelReach> {
+    return call((calls) => swivelReach((op) => calls.compoundAnalysis(state, op), ask));
   },
 
   // A sink tool's own queries (`fold/engine/foldEngineSinkCalls.ts`); a sink

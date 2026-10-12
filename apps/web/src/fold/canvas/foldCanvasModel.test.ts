@@ -179,6 +179,10 @@ describe('the Fold canvas model', () => {
     // The edge it moves stays lit.
     expect(foldShownPicks(swivel, described)).toEqual([free(0.5, 0)]);
     expect(foldShownPicks({ ...swivel, tool: 'petal' }, described)).toBe(swivel.picks);
+    // Previewed under the pointer before its last click: its meeting point gives way to the vertex drawn.
+    const twoClicks = { ...swivel, picks: swivel.picks.slice(0, 2) };
+    expect(foldShownPicks(twoClicks, { vertex: null }, true)).toEqual([free(0.5, 0)]);
+    expect(foldShownPicks(twoClicks, { vertex: null }, false)).toBe(twoClicks.picks);
   });
 
   it('hands the crimp’s and the tuck’s windows what they choose among, only for their own tool once located', () => {

@@ -1,8 +1,9 @@
 /**
  * What the Fold canvas draws over the paper of each pane, beside the painted
- * scene: the references picked so far, the one under the pointer, the line a
- * free fold is being drawn along, the Divide-line marks, and a region a click
- * would pick — on the renderer's overlay channels (points on top of
+ * scene: the references picked so far, the one under the pointer, the lines
+ * a click is offered, the line a free fold is being drawn along, the
+ * Divide-line marks, and a region a click would pick — on the renderer's
+ * overlay channels (points on top of
  * everything, strokes on the preview channel, regions on the fill channel
  * with the pane's tint), in the pane's own frame.
  *
@@ -25,6 +26,7 @@ import {
   type FoldPick,
   type FoldPickIndex,
   type FoldPointPick,
+  type FoldSegmentPick,
 } from './foldPicking';
 import type { FoldScene } from '../engine/foldEngineWire';
 import { clipConvex, toPoint } from './foldCanvasGeometry';
@@ -48,6 +50,9 @@ const LINE_WIDTH_MUL = 2.6;
 const HOVER_LINE_ALPHA = 0.5;
 /** A located line awaiting its fold's picture: over the paper, narrower than a picked crease. */
 const LOCATED_WIDTH_MUL = 1.6;
+/** A line a click is offered (`offered`): lit, a little narrower and fainter than one picked. */
+const OFFERED_ALPHA = 0.7;
+const OFFERED_WIDTH_MUL = 2.1;
 
 /** A dot on the overlay, in the pane's frame: its radius in CSS px. */
 export interface FoldOverlayDot {
@@ -329,6 +334,12 @@ export interface FoldPaneOverlayInput {
   along?: FoldOverlayAlong | null;
   /** The regions a click picks among on this pane — a fan's paper that stays — lit under the picks. */
   regions?: FoldOverlayRegions | null;
+  /**
+   * The lines a click is offered on this pane, lit under the picks — a
+   * swivel's edges that can swing, then the lines its edge lands on — and
+   * the one under the pointer lit as brightly as a pick.
+   */
+  offered?: readonly FoldSegmentPick[] | null;
 }
 
 /** A partial precrease's located line on one pane, and its points along it (`foldAlongOverlay`). */
@@ -366,6 +377,7 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
     }
   }
 
+  const offered = input.offered ?? null;
   const draw = (pick: FoldPick, hover: boolean) => {
     // A point on a folded edge, where a swivel's creases meet: the edge it
     // names lit with it, under its dot.
@@ -379,14 +391,21 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
           : { at, radius: PICKED_RADIUS, fill: inks.accent, stroke: inks.outline }
       );
     } else {
+      // A line offered and under the pointer is lit as brightly as a pick: the one a click takes.
+      const strong = !hover || offered?.some((line) => pick.kind === 'segment' && line.edge === pick.edge) === true;
       strokes.push({
         a: at[0],
         b: at[1],
-        color: hover ? withAlpha(inks.accent, HOVER_LINE_ALPHA) : inks.accent,
+        color: strong ? inks.accent : withAlpha(inks.accent, HOVER_LINE_ALPHA),
         widthMul: LINE_WIDTH_MUL,
       });
     }
   };
+  // The lines offered, under everything picked.
+  for (const line of offered ?? []) {
+    const at = pickOnPane(line, pane, spread);
+    if (at && !('x' in at)) strokes.push({ a: at[0], b: at[1], color: withAlpha(inks.accent, OFFERED_ALPHA), widthMul: OFFERED_WIDTH_MUL });
+  }
   // A located line, under the picks that located it.
   if (pane === 'folded') {
     for (const [a, b] of input.located ?? []) strokes.push({ a, b, color: inks.accent, widthMul: LOCATED_WIDTH_MUL });

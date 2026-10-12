@@ -68,8 +68,8 @@ since each hinge is creased through the top layer alone.
 ## swivel-fold.osf: an edge swivelled onto a line, both ridges
 
 A swivel as folders diagram it: *swivel this edge onto that line, pivoting
-at this point*. You click the pivot, the edge that moves and the line it
-lands on; the four creases are computed. They meet where the pivot sits
+at this point*. You click where the creases meet, the edge to swing onto a
+line and the line it lands on; the four creases are computed. They meet where the pivot sits
 moved onto the line halfway between the edge and the line it lands on (one
 of the two bisectors of the edge and that line), which the window draws as
 a dot in place of the click. A rabbit ear is the swivel whose creases meet
@@ -85,14 +85,17 @@ under the strip.
    land on.
 2. **Branch 1.** Take the **Swivel fold** tool. Hold Option (Alt on Windows
    and Linux) and click about four fifths of the way across and a third of
-   the way up: the pivot. The pivot need not be a landmark, which is why it
-   is placed with Option rather than snapped. Click the bottom edge, the
-   edge that moves; only raw and folded edges light up under the pointer.
-   Click the diagonal precrease, the line it lands on; the top edge, parallel
-   to the bottom one, never lights. The window shows the dot where the
-   creases meet, the four creases in their pens, where the edge lands on
-   the diagonal in bold, and the paper that moves lit, the part that turns
-   in place brightest. Ridge reads **Square to the edge**. Press Enter.
+   the way up: where the creases meet. The point need not be a landmark,
+   which is why it is placed with Option rather than snapped. The edges that
+   can swing from there light up: the bottom edge and the right edge. Click
+   the bottom edge, the edge to swing. The lines it can land on light up in
+   its place: the diagonal precrease and the right edge, never the top edge,
+   parallel to it. Point at the diagonal: the swivel is previewed before the
+   click, and the click previews the same one: the dot where the creases
+   meet, the four creases in their pens, where the edge lands on the
+   diagonal in bold, and the paper that moves lit, the part that turns in
+   place brightest. Both ridges land, so **Ridge** is offered and reads
+   **Square to the edge**. Press Enter.
 3. **Branch 2.** Click card 1 (the precrease) first, so that the next swivel
    starts a new branch. Make the same three clicks, then step **Ridge** with
    its › button to **Toward the edge’s end**: the paper rises along the
@@ -133,15 +136,17 @@ narrow triangle along the centre line at the bottom.
    corner points down. Press Enter.
 6. **Squash fold**. Click the front flap on the right and press Enter. The
    flap opens into a kite on the centre line.
-7. **Swivel fold**. Click the kite's upper-left edge, anywhere along it: a
-   folded edge lights up under the pointer, with the point on it, and the
-   creases will meet on it. Click the kite's lower-left edge, which is the
-   model's lower-left edge: the edge that moves. Click the centre line: the
-   line it lands on. The window shows a dot where the creases meet, where the
-   line halfway between that edge and the centre line crosses the folded
-   edge, with the creases in their pens and the paper that moves lit. Only
-   **Valley** folds flat here, so Mountain is greyed out and no Ridge is
-   offered: the ridge is the folded edge itself. Press Enter.
+7. **Swivel fold**. Click the kite's upper-left edge, anywhere along it,
+   where the creases meet: a folded edge lights up under the pointer, with
+   the point on it. The edges that can swing from there light up: the
+   model's lower-left edge. Point at it: every line it
+   can land on is the centre line, so the swivel is previewed already. Click
+   it, the edge to swing; the centre line lights up. Click the centre line,
+   the line it lands on. The window shows a dot where the creases meet,
+   where the line halfway between that edge and the centre line crosses the
+   folded edge, with the creases in their pens and the paper that moves lit.
+   Only **Valley** folds flat here, so no Direction is offered, and no Ridge:
+   the ridge is the folded edge itself. Press Enter.
 
 The stored step names the folded edge by `fold`, a point on it, in place of
 a pivot and the paper that stays. An older build that does not know `fold`

@@ -257,21 +257,36 @@ describe('foldToolWindow for the other tools', () => {
       'Click an edge or crease to divide it.',
       'Use the new points as references for any fold.',
     ]);
+    // The step says what can be divided: no note says it again.
+    expect(model?.instructions.notes).toEqual([]);
   });
 
   it('locates the reverse fold’s line, then names the window for the kind it folds', () => {
     const locating = foldToolWindow(t, view({ tool: 'inside-reverse' }), verbs(), mouse);
     expect(locating).toMatchObject({ phase: 'locate', title: 'Inside reverse fold', kind: null });
     expect(locating?.lineMode?.value).toBe('axiom-2');
+    // Once the line is in, the flaps that reverse are picked: no plain fold's kind.
+    expect(locating?.instructions.items.at(-1)).toBe('Pick which flaps reverse, then press Enter.');
     const reverse = { kind: 'outside' as const, kinds: ['outside' as const], known: true, ways: 0, way: 0, orders: 0, order: 0 };
     const previewing = foldToolWindow(t, view({ tool: 'inside-reverse', preview: preview(), reverse }), verbs(), mouse);
     expect(previewing).toMatchObject({ phase: 'preview', title: 'Outside reverse fold', kind: null });
-    expect(previewing?.compound?.kind.options.map((option) => [option.value, option.disabled])).toEqual([
-      ['inside', true],
-      ['outside', false],
-    ]);
+    // Only the outside fits: the title names it, and there is no kind to choose.
+    expect(previewing?.compound?.kind).toBeNull();
+    expect(previewing?.meta).toBe('2 settings');
     expect(previewing?.compound?.opening).toBeNull();
     expect(previewing?.footer?.commit.label).toBe('Outside reverse fold');
+    // Both fit: the kind is the folder's to choose.
+    const both = foldToolWindow(
+      t,
+      view({ tool: 'inside-reverse', preview: preview(), reverse: { ...reverse, kinds: ['inside', 'outside'] } }),
+      verbs(),
+      mouse
+    );
+    expect(both?.compound?.kind?.options.map((option) => [option.value, option.disabled])).toEqual([
+      ['inside', false],
+      ['outside', false],
+    ]);
+    expect(both?.compound?.kind?.note).toBe('Both kinds fit here: choose which way the tip goes.');
   });
 
   it('names the flaps a refused tip can open by their chips, when the engine lists only those', () => {

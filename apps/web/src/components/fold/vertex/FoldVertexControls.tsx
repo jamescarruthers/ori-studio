@@ -17,22 +17,25 @@ export function FoldVertexDirection({ controls }: { controls: FoldVertexControls
   const { direction } = controls;
   return (
     <>
-      <FieldRow label={direction.label} kind="segmented" divider={false} disabled={direction.disabled}>
-        <SegmentedControl<FoldDirection>
-          size="sm"
-          aria-label={direction.label}
-          value={direction.value}
-          disabled={direction.disabled}
-          options={direction.options.map((option) => ({
-            value: option.value,
-            label: option.label,
-            tooltip: option.tooltip,
-            // A way that does not land: offered, its tooltip saying why, never taken.
-            ...(option.disabled ? { disabled: true } : {}),
-          }))}
-          onChange={direction.set}
-        />
-      </FieldRow>
+      {/* A swivel's only while it has a way to choose. */}
+      {direction && (
+        <FieldRow label={direction.label} kind="segmented" divider={false} disabled={direction.disabled}>
+          <SegmentedControl<FoldDirection>
+            size="sm"
+            aria-label={direction.label}
+            value={direction.value}
+            disabled={direction.disabled}
+            options={direction.options.map((option) => ({
+              value: option.value,
+              label: option.label,
+              tooltip: option.tooltip,
+              // A way that does not land: offered, its tooltip saying why, never taken.
+              ...(option.disabled ? { disabled: true } : {}),
+            }))}
+            onChange={direction.set}
+          />
+        </FieldRow>
+      )}
       {controls.note && (
         <p className={styles.note} data-fold-vertex-note="">
           {controls.note}
@@ -51,29 +54,27 @@ export function FoldVertexChoices({ controls }: { controls: FoldVertexControls }
   const { target, emergent, emergentNote, layers, order } = controls;
   return (
     <>
+      {/* Moved by a click on the folded paper, as the steps above say. */}
       {target && (
-        <>
-          <FieldRow label={target.label} kind="static" divider={false}>
-            <span className={styles.target}>
-              <span className={styles.value} aria-live="polite">
-                {target.value}
-              </span>
-              {target.reset && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  title={target.reset.label}
-                  aria-label={target.reset.label}
-                  disabled={target.reset.disabled}
-                  onClick={target.reset.run}
-                >
-                  <Undo2 size={13} aria-hidden="true" />
-                </Button>
-              )}
+        <FieldRow label={target.label} kind="static" divider={false}>
+          <span className={styles.target}>
+            <span className={styles.value} aria-live="polite">
+              {target.value}
             </span>
-          </FieldRow>
-          <p className={styles.note}>{target.help}</p>
-        </>
+            {target.reset && (
+              <Button
+                size="sm"
+                variant="secondary"
+                title={target.reset.label}
+                aria-label={target.reset.label}
+                disabled={target.reset.disabled}
+                onClick={target.reset.run}
+              >
+                <Undo2 size={13} aria-hidden="true" />
+              </Button>
+            )}
+          </span>
+        </FieldRow>
       )}
       {emergent && <FoldChoiceStepperRow stepper={emergent} />}
       {/* Kept to its height whatever it says, so the rows under it never move. */}

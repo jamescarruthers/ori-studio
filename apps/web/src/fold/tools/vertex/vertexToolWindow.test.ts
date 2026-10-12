@@ -84,22 +84,28 @@ describe('a vertex fold’s window while its clicks are made', () => {
   it('numbers each tool’s clicks and says its precondition up front', () => {
     const squash = foldToolWindow(t, view(vertex()), verbs(), mouse);
     expect(squash).toMatchObject({ phase: 'locate', title: 'Squash fold', lineMode: null, movingSide: null });
-    expect(squash?.instructions.items).toEqual(['Click the flap to squash.', 'Choose the options, then press Enter.']);
-    expect(squash?.vertex?.note).toMatch(/free, held only along its hinge, and uncovered/);
+    expect(squash?.instructions.items).toEqual(['Click the flap to squash.', 'Press Enter to fold.']);
+    expect(squash?.instructions.notes).toEqual(['Esc clears the picks.']);
+    expect(squash?.vertex?.note).toBe('A flap squashes when its two layers are joined only at its hinge and nothing lies on top of it.');
     // Nothing to choose yet beside the direction.
     expect(squash?.vertex && hasVertexChoices(squash.vertex)).toBe(false);
 
     const ear = foldToolWindow(t, view(vertex({ tool: 'rabbit-ear' }), { picks: 3 }), verbs(), mouse);
     expect(ear?.instructions.items).toHaveLength(5);
     expect(ear?.instructions.current).toBe(3);
-    expect(ear?.instructions.items[3]).toBe('Click the paper that stays put.');
-    // A point click takes a landmark, never a place on an edge between them; the key frees it.
-    expect(ear?.instructions.notes.slice(0, 2)).toEqual([
-      'Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.',
-      'Hold Option to put a point anywhere.',
+    // The paper that stays, by what the folder sees: a part of it, lit under the pointer.
+    expect(ear?.instructions.items[3]).toBe('Click the part of the paper that stays put.');
+    expect(ear?.instructions.items[4]).toBe('Choose the fourth crease, then press Enter.');
+    // Its corners clicked: no point is asked for, so nothing is said of snapping.
+    expect(ear?.instructions.notes).toEqual(['Esc clears the picks.']);
+    // While a corner is asked for: what a point snaps to, and the key that frees it, in one note.
+    const corners = foldToolWindow(t, view(vertex({ tool: 'rabbit-ear' })), verbs(), mouse);
+    expect(corners?.instructions.notes).toEqual([
+      'Points snap to corners, crossings, marks and midpoints: hold Option to put one anywhere.',
+      'Esc clears the picks.',
     ]);
     expect(ear?.instructions.intro).toBeNull();
-    expect(ear?.vertex?.note).toMatch(/incenter/);
+    expect(ear?.vertex?.note).toBe('The creases meet at the triangle’s incenter: one to each corner, and a fourth the ear stands up along.');
   });
 
   it('words a finger’s clicks as taps, as its choose step does', () => {
@@ -108,32 +114,31 @@ describe('a vertex fold’s window while its clicks are made', () => {
       'Tap the triangle’s first corner.',
       'Tap its second corner.',
       'Tap its third corner.',
-      'Tap the paper that stays put.',
-      'Choose the options, then tap Rabbit ear.',
+      'Tap the part of the paper that stays put.',
+      'Choose the fourth crease, then tap Rabbit ear.',
     ]);
     expect(ear?.instructions.notes).toEqual([
-      'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
-      'Turn on Free point to put a point anywhere.',
+      'Points snap to corners, crossings, marks and midpoints: turn on Free point to put one anywhere.',
     ]);
     const squash = foldToolWindow(t, view(vertex()), verbs(), finger);
-    expect(squash?.instructions.items[0]).toBe('Tap the flap to squash.');
+    expect(squash?.instructions.items).toEqual(['Tap the flap to squash.', 'Tap Squash fold to fold.']);
+    expect(squash?.instructions.notes).toEqual([]);
   });
 
-  it('says what a swivel is above its steps, then its pivot, its edge and the line it lands on', () => {
+  it('says what a swivel is in a line, then names each click by its part in the fold, and offers no direction while clicking', () => {
     const calls = verbs();
     const swivel = foldToolWindow(t, view(vertex({ tool: 'swivel', lineBy: 'crease' })), calls, mouse);
-    expect(swivel?.instructions.intro).toMatch(/^Swivels an edge onto a line, pivoting at a point/);
+    expect(swivel?.instructions.intro).toBe('Swings an edge of the paper onto a line.');
     expect(swivel?.instructions.items).toEqual([
-      'Click the pivot, or a folded edge for the creases to meet on.',
-      'Click the edge that moves: a raw edge or a folded edge.',
-      'Click the line it should land on: a crease or an edge.',
-      'Pick the ridge and the direction, then press Enter.',
+      'Click where the creases meet: on a folded edge, or hold Option for any point.',
+      'Click the edge to swing onto a line.',
+      'Click the line it lands on.',
+      'Press Enter to fold.',
     ]);
-    // Before the pivot: a folded edge lights up, for the creases to meet on.
-    expect(swivel?.instructions.notes).toContain(
-      'Point at a folded edge for the creases to meet on it, the classic swivel: it lights up under the pointer.'
-    );
-    // Said in the steps, so not again under the direction.
+    // One note, never a step said again.
+    expect(swivel?.instructions.notes).toEqual(['Esc clears the picks.']);
+    // The canvas offers only what lands either way: no direction to choose yet, nothing under it.
+    expect(swivel?.vertex?.direction).toBeNull();
     expect(swivel?.vertex?.note).toBeNull();
     // The line it lands on, by a crease or edge or by two points.
     expect(swivel?.vertex?.lineBy).toMatchObject({
@@ -141,43 +146,56 @@ describe('a vertex fold’s window while its clicks are made', () => {
       value: 'crease',
       options: [{ short: 'Crease or edge' }, { short: 'Two points' }],
     });
-    expect(swivel?.meta).toBe('2 settings');
+    expect(swivel?.meta).toBe('1 setting');
     swivel?.vertex?.lineBy?.set('points');
     expect(calls.setVertexLineBy).toHaveBeenCalledWith('points');
     const points = foldToolWindow(t, view(vertex({ tool: 'swivel', lineBy: 'points' })), calls, mouse);
     expect(points?.instructions.items.slice(2, 4)).toEqual([
-      'Click a point on the line it should land on.',
+      'Click a point on the line it lands on.',
       'Click a second point on that line.',
     ]);
     // A finger taps, and has no key to hold.
     const touch = foldToolWindow(t, view(vertex({ tool: 'swivel' })), calls, finger);
     expect(touch?.instructions.items).toEqual([
-      'Tap the pivot, or a folded edge for the creases to meet on.',
-      'Tap the edge that moves: a raw edge or a folded edge.',
-      'Tap the line it should land on: a crease or an edge.',
-      'Pick the ridge and the direction, then tap Swivel fold.',
+      'Tap where the creases meet: on a folded edge, or turn on Free point for any point.',
+      'Tap the edge to swing onto a line.',
+      'Tap the line it lands on.',
+      'Tap Swivel fold to fold.',
     ]);
-    expect(touch?.instructions.notes).toEqual([
-      'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
-      'Turn on Free point to put a point anywhere.',
-      'Tap a folded edge for the creases to meet on it, the classic swivel: it lights up when picked.',
-    ]);
+    expect(touch?.instructions.notes).toEqual([]);
+  });
+
+  it('says in the step in hand when nothing can swing from where the creases meet', () => {
+    const nothing = vertex({ tool: 'swivel', lineBy: 'crease', described: false, known: false, nothingSwings: true });
+    const model = foldToolWindow(t, view(nothing, { picks: 1 }), verbs(), mouse);
+    expect(model?.instructions.current).toBe(1);
+    expect(model?.instructions.items[1]).toBe('Nothing can swing from there: click another point.');
+    // In its place, the window's shape kept: no notice, no note below.
+    expect(model?.refusal).toBeNull();
+    expect(model?.vertex?.note).toBeNull();
+    expect(foldToolWindow(t, view(nothing, { picks: 1 }), verbs(), finger)?.instructions.items[1]).toBe(
+      'Nothing can swing from there: tap another point.'
+    );
   });
 
   it('starts a petal fold on its hinge crease, or its two ends, then the flap that lifts', () => {
     const calls = verbs();
     const crease = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'crease' })), calls, mouse);
     expect(crease?.lineMode).toBeNull();
-    expect(crease?.instructions.intro).toMatch(/^Lifts a flap’s lower point up along a hinge/);
+    expect(crease?.instructions.intro).toBe('Lifts a flap’s point up along a hinge.');
     expect(crease?.instructions.items).toEqual([
-      'Select the hinge crease.',
-      'Click the flap below the hinge: the part that lifts lights up under the pointer.',
+      'Click the hinge: a precrease across the flap.',
+      'Click the flap that lifts, below the hinge.',
       'Choose Valley or Mountain, then press Enter.',
     ]);
-    expect(crease?.instructions.notes[0]).toBe('Only precreases can be the hinge: one lights up under the pointer.');
-    // A finger has no pointer to light one up under.
+    expect(crease?.instructions.notes).toEqual(['Esc clears the picks.']);
+    // A finger taps, and has no key to clear with.
     const tapped = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'crease' })), calls, finger);
-    expect(tapped?.instructions.notes).toEqual(['Only precreases can be the hinge: tap one across the flap.']);
+    expect(tapped?.instructions.items.slice(0, 2)).toEqual([
+      'Tap the hinge: a precrease across the flap.',
+      'Tap the flap that lifts, below the hinge.',
+    ]);
+    expect(tapped?.instructions.notes).toEqual([]);
     expect(crease?.vertex?.lineBy).toMatchObject({
       label: 'Hinge',
       value: 'crease',
@@ -189,22 +207,20 @@ describe('a vertex fold’s window while its clicks are made', () => {
     expect(ends?.instructions.items.slice(0, 3)).toEqual([
       'Click one end of the hinge, where a kite crease meets the flap’s edge.',
       'Click its other end, where the other kite crease meets the edge.',
-      'Click the flap below the hinge: the part that lifts lights up under the pointer.',
+      'Click the flap that lifts, below the hinge.',
     ]);
     expect(ends?.instructions.current).toBe(1);
     expect(ends?.instructions.notes[0]).toMatch(/^Points snap to corners/);
-    // The hinge named: the flap's step, and what lights up.
+    // The hinge named: the flap's step; the canvas lights it, so no note says so.
     const region = foldToolWindow(t, view(vertex({ tool: 'petal', lineBy: 'points' }), { picks: 2 }), calls, mouse);
     expect(region?.instructions.current).toBe(2);
-    expect(region?.instructions.notes[0]).toBe(
-      'Paper below the hinge lights up where a petal fold can lift it: a click elsewhere says why not.'
-    );
+    expect(region?.instructions.notes).toEqual(['Esc clears the picks.']);
     expect(ends?.vertex?.note).toBeNull();
-    // Previewing: what the direction does, another flap, and the commit by key or button.
+    // Previewing: the way it lifts, another flap, and the commit by key or button.
     const previewing = foldToolWindow(t, view(vertex({ tool: 'petal' }), { preview: preview() }), calls, mouse);
     expect(previewing?.instructions.intro).toBeUndefined();
     expect(previewing?.instructions.items).toEqual([
-      'Valley lifts the flap toward you, Mountain away from you. Click another flap below the hinge to lift that one.',
+      'Choose which way it lifts, or click another flap to lift that one.',
       'Press Enter, or click Petal fold, to fold.',
     ]);
     // A finger taps.
@@ -212,7 +228,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
     expect(touch?.instructions.items.slice(0, 3)).toEqual([
       'Tap one end of the hinge, where a kite crease meets the flap’s edge.',
       'Tap its other end, where the other kite crease meets the edge.',
-      'Tap the flap below the hinge, the part that lifts.',
+      'Tap the flap that lifts, below the hinge.',
     ]);
   });
 
@@ -238,12 +254,14 @@ describe('a vertex fold’s window while it previews', () => {
     const calls = verbs();
     const onHinge = foldToolWindow(t, view(vertex(), { preview: preview() }), calls, mouse);
     expect(onHinge).toMatchObject({ phase: 'preview', meta: '2 settings' });
-    expect(onHinge?.vertex?.target).toMatchObject({ label: 'Spine lands on', value: 'The hinge line', reset: null });
+    expect(onHinge?.vertex?.target).toEqual({ label: 'Spine lands on', value: 'The hinge line', reset: null });
+    // Where it lands, as the folded pane draws it, and how to move it: said once, in the step.
+    expect(onHinge?.instructions.items[0]).toBe('The spine lands on the bold line: click the paper to land it elsewhere.');
     const aimed = foldToolWindow(t, view(vertex({ target: 'point' }), { preview: preview() }), calls, mouse);
     expect(aimed?.vertex?.target?.value).toBe('The point clicked');
     aimed?.vertex?.target?.reset?.run();
     expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
-    aimed?.vertex?.direction.set('mountain');
+    aimed?.vertex?.direction?.set('mountain');
     expect(calls.setVertexDirection).toHaveBeenCalledWith('mountain');
     expect(aimed?.footer?.commit).toMatchObject({ label: 'Squash fold', disabled: false });
   });
@@ -267,12 +285,12 @@ describe('a vertex fold’s window while it previews', () => {
     // Direction, fourth crease, layers.
     expect(model?.meta).toBe('3 settings');
     expect(model?.instructions.items[0]).toBe(
-      'Choose the fourth crease and the layers. Click other paper to change what stays put.'
+      'Choose the fourth crease and the layers, or click another part to stay put.'
     );
     expect(foldToolWindow(t, view(ear, { preview: preview() }), calls, finger)?.instructions.items[0]).toBe(
-      'Choose the fourth crease and the layers. Tap other paper to change what stays put.'
+      'Choose the fourth crease and the layers, or tap another part to stay put.'
     );
-    expect(controls?.note).toMatch(/a fourth the ear rises along, folded the other way/);
+    expect(controls?.note).toMatch(/a fourth the ear stands up along/);
     controls?.emergent?.next.run();
     controls?.layers?.previous.run();
     expect(calls.stepEmergent).toHaveBeenCalledWith(1);
@@ -314,46 +332,68 @@ describe('a vertex fold’s window while it previews', () => {
     ).toBe('No fourth crease fits with this paper staying put: click other paper to stay.');
   });
 
-  it('steps a swivel’s ridge by name among those that land, and says what its vertex is', () => {
+  it('keeps a swivel’s steps once previewed, its last in hand, and steps its ridge by name only when both land', () => {
     const calls = verbs();
-    const swivel = vertex({ tool: 'swivel', lineBy: 'crease', fourths: 2, fourth: 1, ridge: 'end' });
+    const swivel = vertex({ tool: 'swivel', lineBy: 'crease', fourths: 2, fourth: 1, ridge: 'end', directions: [true, true] });
     const model = foldToolWindow(t, view(swivel, { preview: preview() }), calls, mouse);
     const controls = model?.vertex;
     expect(controls?.emergent).toMatchObject({ label: 'Ridge', value: 'Toward the edge’s end' });
-    expect(controls?.emergentNote).toBe('Either ridge lets it fold flat: step to the other.');
+    expect(controls?.emergentNote).toBeNull();
     // Every layer at its vertex: no layers to step.
     expect(controls?.layers).toBeNull();
-    expect(controls?.note).toMatch(/^The creases meet at the dot: the pivot, moved onto the line halfway/);
-    expect(model?.instructions.items[0]).toBe('Step Ridge to the other crease that can rise, and choose Valley or Mountain.');
-    // Direction, the line it lands on, the ridge.
+    // How to read the picture, in a line.
+    expect(controls?.note).toBe('The creases meet at the dot, the edge lands on the bold line, and the lit paper moves.');
+    // The same steps, the commit in hand: by key or by button, a stepper above it may hold the focus.
+    expect(model?.instructions.items).toEqual([
+      'Click where the creases meet: on a folded edge, or hold Option for any point.',
+      'Click the edge to swing onto a line.',
+      'Click the line it lands on.',
+      'Press Enter, or click Swivel fold, to fold.',
+    ]);
+    expect(model?.instructions.current).toBe(3);
+    // Both ways land: direction, the line it lands on, the ridge.
+    expect(controls?.direction?.options.map((option) => option.disabled ?? false)).toEqual([false, false]);
     expect(model?.meta).toBe('3 settings');
     controls?.emergent?.previous.run();
     expect(calls.stepEmergent).toHaveBeenCalledWith(-1);
-    // One lands: named, its arrows off.
-    const one = foldToolWindow(t, view({ ...swivel, fourths: 1, fourth: 0, ridge: 'foot' }, { preview: preview() }), calls, mouse);
-    expect(one?.vertex?.emergent).toMatchObject({ value: 'Square to the edge', next: { disabled: true } });
-    expect(one?.vertex?.emergentNote).toBe('Only this ridge lets it fold flat.');
-    const none = foldToolWindow(t, view({ ...swivel, fourths: 0, fourth: 0 }, { preview: preview() }), calls, mouse);
-    expect(none?.vertex?.emergent?.value).toBe('None');
-    expect(none?.vertex?.emergentNote).toBe('Neither ridge lets it fold flat: the notice below says why.');
+    // One ridge and one way land: nothing to choose, so nothing offered, and Enter folds.
+    const one = foldToolWindow(
+      t,
+      view({ ...swivel, fourths: 1, fourth: 0, ridge: 'foot', directions: [true, false] }, { preview: preview() }),
+      calls,
+      mouse
+    );
+    expect(one?.vertex?.emergent).toBeNull();
+    expect(one?.vertex?.direction).toBeNull();
+    expect(one?.instructions.items.at(-1)).toBe('Press Enter to fold.');
+    expect(one?.meta).toBe('1 setting');
+    // Before the engine has described it, nothing is offered that may go again.
+    const asking = foldToolWindow(t, view({ ...swivel, described: false, known: false, directions: undefined }, { preview: preview() }), calls, mouse);
+    expect(asking?.vertex?.direction).toBeNull();
+    // A target named by two points: which ways land is not known, so both are offered.
+    const drawn = foldToolWindow(t, view({ ...swivel, lineBy: 'points', directions: undefined }, { preview: preview() }), calls, mouse);
+    expect(drawn?.vertex?.direction?.options).toHaveLength(2);
   });
 
-  it('offers a swivel on a folded edge no ridge, only the directions that land, and says where its creases meet', () => {
+  it('offers a swivel on a folded edge no ridge, and no direction when only one way lands', () => {
     const calls = verbs();
     const onFold = vertex({ tool: 'swivel', lineBy: 'crease', onFold: true, directions: [true, false] });
     const model = foldToolWindow(t, view(onFold, { preview: preview() }), calls, mouse);
     const controls = model?.vertex;
     expect(controls?.emergent).toBeNull();
     expect(controls?.emergentNote).toBeNull();
-    expect(controls?.direction.options.map((option) => option.disabled ?? false)).toEqual([false, true]);
-    expect(controls?.direction.options[1]?.tooltip).toBe('This way it cannot fold flat here.');
-    expect(controls?.note).toMatch(/^The creases meet at the dot, where the line halfway between the edge and the line it lands on crosses the folded edge/);
-    expect(model?.instructions.items[0]).toBe('Choose Valley or Mountain: only a way that folds flat is offered.');
-    // Direction and the line it lands on.
-    expect(model?.meta).toBe('2 settings');
-    // Its last step while clicking: no ridge to pick.
+    expect(controls?.direction).toBeNull();
+    expect(controls?.note).toBe('The creases meet at the dot, the edge lands on the bold line, and the lit paper moves.');
+    expect(model?.instructions.items.at(-1)).toBe('Press Enter to fold.');
+    // The line it lands on.
+    expect(model?.meta).toBe('1 setting');
+    // Both ways land: the way is offered, and the commit names its button.
+    const both = foldToolWindow(t, view({ ...onFold, directions: [true, true] }, { preview: preview() }), calls, mouse);
+    expect(both?.vertex?.direction?.value).toBe('valley');
+    expect(both?.instructions.items.at(-1)).toBe('Press Enter, or click Swivel fold, to fold.');
+    // Its last step while clicking: the commit.
     const locating = foldToolWindow(t, view(onFold, { picks: 3 }), calls, mouse);
-    expect(locating?.instructions.items.at(-1)).toBe('Choose Valley or Mountain, then press Enter.');
+    expect(locating?.instructions.items.at(-1)).toBe('Press Enter to fold.');
     // A refusal is worded on the folded edge.
     const blocked = foldToolWindow(
       t,

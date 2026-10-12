@@ -26,6 +26,7 @@ import type { FoldExtentMode } from '../tools/precrease/precreaseExtent';
 import { isLineTool, isSinkTool, isVertexTool, type FoldKeyLabel } from '../tools/foldToolCatalog';
 import { SWIVEL_TARGET_FROM } from '../tools/vertex/vertexInputs';
 import { nearestDirection, swivelFoldPick } from '../tools/vertex/vertexStep';
+import { swivelReachesNothing } from '../tools/vertex/swivelReach';
 import type { FoldVertexWindowView } from '../tools/vertex/vertexToolWindow';
 import { boundsOf } from './foldCanvasGeometry';
 import type { FoldOverlayAlong } from './foldPaneOverlays';
@@ -198,16 +199,19 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   // What the petal fold creases itself, as the engine describes the flap folded.
   const petal = vertex?.answer?.analysis ?? analysis;
   const lineBy = tool === 'petal' ? tools.petalHinge : tool === 'swivel' ? tools.swivelTarget : null;
-  // A swivel whose pivot was clicked on a folded edge: no ridge, and only
-  // the directions that land.
+  // A swivel whose creases meet on a folded edge has no ridge; any swivel
+  // folds only a way that lands, and offers the other only when it lands too.
   const onFold = swivelFoldPick(tools) !== null;
-  const directions = vertex?.base?.directions;
+  const directions = vertex?.directions;
+  // A swivel's meeting point nothing can swing from: its next click takes another.
+  const nothingSwings = tool === 'swivel' && tools.picks.length === 1 && swivelReachesNothing(vertex?.reach ?? null);
   return {
     tool,
     // The way it folds: the folder's, or the other when only that lands.
     direction: vertex?.direction ?? tools.vertexDirection,
     ...(onFold ? { onFold } : {}),
     ...(directions && directions.length === 2 ? { directions } : {}),
+    ...(nothingSwings ? { nothingSwings } : {}),
     described: vertex?.base != null,
     known: preview.step !== null,
     target: tools.compound.squashTarget ? 'point' : 'hinge',
@@ -332,10 +336,16 @@ export function foldFreeLineStart(tools: FoldToolState): FoldFreePick | FoldPoin
  * pivot sits moved onto the bisector of the edge and the target, which the
  * vertex overlay draws in its place, never the click (owner feedback,
  * 2026-10-12), and the edge's landing on the target is drawn bold where the
- * target lies. The edge it moves stays lit.
+ * target lies. The edge it moves stays lit. So too while a swivel is
+ * previewed under the pointer before its last click (`hovering`): its
+ * meeting point gives way to the vertex the preview draws.
  */
-export function foldShownPicks(tools: FoldToolState, preview: Pick<FoldToolPreview, 'vertex'>): readonly FoldPick[] {
-  const described = (preview.vertex?.answer ?? preview.vertex?.base)?.analysis.kind === 'swivel-by-edge';
+export function foldShownPicks(
+  tools: FoldToolState,
+  preview: Pick<FoldToolPreview, 'vertex'>,
+  hovering = false
+): readonly FoldPick[] {
+  const described = hovering || (preview.vertex?.answer ?? preview.vertex?.base)?.analysis.kind === 'swivel-by-edge';
   return tools.tool === 'swivel' && described ? tools.picks.slice(1, SWIVEL_TARGET_FROM) : tools.picks;
 }
 

@@ -289,12 +289,13 @@ export function FoldToolWindow({
           />
         </div>
       )}
-      {compound && (
+      {/* A reverse fold's or a crimp's kind, only while both fit: the title names the one folded. */}
+      {compound?.kind && (
         <div className={styles.section} data-fold-reverse-kind="">
-          <FoldReverseKindControl controls={compound} />
+          <FoldReverseKindControl kind={compound.kind} />
         </div>
       )}
-      {vertex && (
+      {vertex && (vertex.direction || vertex.note) && (
         <div className={styles.section} data-fold-vertex="">
           <FoldVertexDirection controls={vertex} />
         </div>
@@ -304,7 +305,7 @@ export function FoldToolWindow({
           <FoldVertexChoices controls={vertex} />
         </div>
       )}
-      {sink && (sink.kind || sink.square || sink.depth) && (
+      {sink && (sink.kind || sink.depth) && (
         <div className={styles.section} data-fold-sink-kind="">
           <FoldSinkLine controls={sink} />
         </div>

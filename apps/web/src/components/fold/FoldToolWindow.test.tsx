@@ -115,7 +115,7 @@ describe('FoldToolWindow', () => {
     expect(queryByRole(window, 'group', 'Kind')).toBeNull();
   });
 
-  it('takes the reverse fold’s kind that fits, offers the other only when it fits too, and steps its choices', () => {
+  it('takes the reverse fold’s kind that fits, offers a kind only when both fit, and steps its choices', () => {
     const calls = {
       ...verbs(),
       setReverseKind: vi.fn(),
@@ -126,14 +126,11 @@ describe('FoldToolWindow', () => {
     const reverse = { kind: 'outside' as const, kinds: ['outside' as const], known: true, ways: 0, way: 0, orders: 3, order: 1 };
     render({ tool: 'inside-reverse', preview: preview(), reverse }, calls);
     let window = fold()!;
-    // Named for the kind folded: the only one that fits here.
+    // Named for the kind folded: the only one that fits here, so no kind to choose.
     expect(byRole(window, 'button', /^Outside reverse fold \d settings/).getAttribute('aria-expanded')).toBe('true');
     expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Outside reverse fold')).toBeTruthy();
-    const kinds = byRole(window, 'group', 'Kind');
-    // Disabled as an option is, still focusable so its tooltip can say why.
-    expect(byRole(kinds, 'button', 'Inside').getAttribute('aria-disabled')).toBe('true');
-    expect(byRole(kinds, 'button', 'Outside').getAttribute('aria-pressed')).toBe('true');
-    expect(window.textContent).toContain('Only the outside reverse fold fits here.');
+    expect(queryByRole(window, 'group', 'Kind')).toBeNull();
+    expect(window.querySelector('[data-fold-reverse-kind]')).toBeNull();
     expect(window.textContent).toContain('Tip side');
     // One of three orders: a stepper, and no opening to choose.
     expect(window.textContent).toContain('2 of 3');
@@ -177,18 +174,21 @@ describe('FoldToolWindow', () => {
       'Click where the second line starts, beyond the first toward the tip: where the flap turns back out.'
     );
     // What a crimp is, above the steps, before any click.
-    expect(window.textContent).toContain('Folds a flap in along a first line and back out along a second');
+    expect(window.textContent).toContain('Turns a flap’s end in along one line and back out along a second.');
   });
 
-  it('previews a crimp under its kind’s name, with the kind that fits', () => {
+  it('previews a crimp under its kind’s name, and offers a kind only when both fit', () => {
     const calls = { ...verbs(), setReverseKind: vi.fn() } satisfies FoldToolWindowVerbs;
     const crimp = { kind: 'inside' as const, kinds: ['inside' as const], known: true, ways: 0, way: 0, orders: 0, order: 0 };
     render({ tool: 'crimp', lineMode: 'free', picks: 4, preview: preview(), crimp }, calls);
-    const window = fold()!;
+    let window = fold()!;
     expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Inside crimp')).toBeTruthy();
-    expect(byRole(byRole(window, 'group', 'Kind'), 'button', 'Outside').getAttribute('aria-disabled')).toBe('true');
-    expect(window.textContent).toContain('Only the inside crimp fits here.');
+    expect(queryByRole(window, 'group', 'Kind')).toBeNull();
     expect(queryByRole(window, 'combobox', 'Second line')).toBeNull();
+    render({ tool: 'crimp', lineMode: 'free', picks: 4, preview: preview(), crimp: { ...crimp, kinds: ['inside', 'outside'] } }, calls);
+    window = fold()!;
+    act(() => byRole(byRole(window, 'group', 'Kind'), 'button', 'Outside').click());
+    expect(calls.setReverseKind).toHaveBeenCalledWith('outside');
   });
 
   it('previews a tuck with the layers it can go against, stepped through, and its direction', () => {
@@ -276,14 +276,21 @@ describe('FoldToolWindow', () => {
     act(() => byRole(window, 'button', 'Back to the hinge').click());
     expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
 
-    // A petal fold and a swivel say what they are and need above their steps,
-    // before the first click, and nothing again under the direction; how
-    // they name their line, in a control of its own.
+    // A petal fold and a swivel say what they are in a line above their
+    // steps, before the first click, and nothing again under the direction;
+    // how they name their line, in a control of its own. A swivel offers no
+    // direction while its clicks are made: the canvas offers only what lands.
     const setVertexLineBy = vi.fn();
     const withLineBy = { ...calls, setVertexLineBy };
     for (const [tool, intro, first, heading, other] of [
-      ['petal', 'Lifts a flap’s lower point up along a hinge', 'Select the hinge crease.', 'Hinge', 'Two endpoints'],
-      ['swivel', 'Swivels an edge onto a line', 'Click the pivot, or a folded edge for the creases to meet on.', 'Lands on', 'Two points'],
+      ['petal', 'Lifts a flap’s point up along a hinge.', 'Click the hinge: a precrease across the flap.', 'Hinge', 'Two endpoints'],
+      [
+        'swivel',
+        'Swings an edge of the paper onto a line.',
+        'Click where the creases meet: on a folded edge, or hold Alt for any point.',
+        'Lands on',
+        'Two points',
+      ],
     ] as const) {
       render(
         { tool, lineMode: 'crease', picks: 0, vertex: { ...vertex, tool, lineBy: 'crease', described: false, known: false } },
@@ -295,7 +302,9 @@ describe('FoldToolWindow', () => {
       expect(text.indexOf(intro), tool).toBeLessThan(text.indexOf(first));
       expect(window.querySelector('[aria-current="step"]')?.textContent, tool).toBe(first);
       expect(window.querySelector('[data-fold-vertex-note]'), tool).toBeNull();
-      expect(byRole(window, 'group', 'Direction')).toBeTruthy();
+      expect(queryByRole(window, 'group', 'Direction') !== null, tool).toBe(tool === 'petal');
+      // Nothing under the steps but the key that clears them: no section left empty.
+      expect(window.querySelector('[data-fold-vertex]') !== null, tool).toBe(tool === 'petal');
       const lineBy = window.querySelector<HTMLElement>('[data-fold-line-by]');
       expect(lineBy?.textContent, tool).toContain(heading);
       act(() => byRole(byRole(window, 'group', heading), 'button', other).click());
@@ -363,7 +372,7 @@ describe('FoldToolWindow', () => {
     expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Rabbit ear').hasAttribute('disabled')).toBe(true);
   });
 
-  it('draws a sink’s kind, its line’s rule and depth, its pocket, and a refusal whose fixes act', () => {
+  it('draws a sink’s kind while there is a choice, its depth, its pocket, and a refusal whose fixes act', () => {
     const calls = {
       ...verbs(),
       otherSink: vi.fn(),
@@ -403,7 +412,6 @@ describe('FoldToolWindow', () => {
     expect(byRole(kinds, 'button', 'Open').getAttribute('aria-disabled')).toBe('true');
     act(() => byRole(kinds, 'button', 'Closed').click());
     expect(calls.selectTool).toHaveBeenCalledWith('closed-sink');
-    expect(window.querySelector('[data-fold-sink-square]')?.textContent).toContain('exactly square');
     expect(window.querySelector('[data-fold-sink-depth]')?.textContent).toBe('0.3 from the tip');
     const alert = byRole(window, 'alert', /^The line is not square to the point/);
     act(() => byRole(alert, 'button', 'Use the square line').click());
@@ -421,7 +429,6 @@ describe('FoldToolWindow', () => {
       calls
     );
     window = fold()!;
-    expect(window.querySelector('[data-fold-sink-square]')).toBeNull();
     expect(window.querySelector('[data-fold-choice="Pocket"]')?.textContent).toContain('Front');
     act(() => byRole(window, 'button', 'Pocket: Next').click());
     expect(calls.stepPocket).toHaveBeenCalledWith(1);

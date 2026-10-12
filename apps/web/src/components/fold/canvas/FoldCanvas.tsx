@@ -32,8 +32,9 @@ import {
 } from '../../../fold/canvas/foldCanvasModel';
 import { useFoldFanMarks } from '../../../fold/canvas/vertex/useFoldFanMarks';
 import { useFoldPetalMarks } from '../../../fold/canvas/vertex/useFoldPetalMarks';
+import { useFoldSwivelMarks } from '../../../fold/canvas/vertex/useFoldSwivelMarks';
 import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
-import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
+import { foldPaneOverlay, joinFills } from '../../../fold/canvas/foldPaneOverlays';
 import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
 import type { FoldHit, FoldPaneId } from '../../../fold/canvas/foldPicking';
 import { revealFoldedPane, useFoldPhonePane } from '../../../fold/canvas/foldPhonePane';
@@ -149,9 +150,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   // a petal fold's hinge, and the flaps below it the pointer finds.
   const fanMarks = useFoldFanMarks(view.index, toolState);
   const petalMarks = useFoldPetalMarks(session, view.index, toolState);
-  const pending = fanMarks?.pending ?? petalMarks.pending;
+  // A swivel's edges that can swing, then the lines its edge lands on, and the swivel under the pointer.
+  const swivelMarks = useFoldSwivelMarks(view.index, toolState, preview.vertex?.reach ?? null, inks);
+  const pending = fanMarks?.pending ?? petalMarks.pending ?? swivelMarks.pending;
   const regions = fanMarks?.regions ?? petalMarks.regions;
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending);
+  const foldedTint = useMemo(() => joinFills(paint.folded.tint, swivelMarks.tint), [paint.folded.tint, swivelMarks.tint]);
   // The crease pattern as Edit's canvas draws one, not as paper.
   const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, viewport, theme.name);
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
@@ -182,14 +186,16 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     () => foldLocatedLines(toolState.tool, preview.action !== null, crimpLines),
     [toolState.tool, preview.action, crimpLines]
   );
-  const vertexMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
+  const previewMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
+  const vertexMarks = previewMarks ?? swivelMarks.marks;
+  const swivelOffered = swivelMarks.offered;
   // A partial precrease's line on each pane, and its points along it.
   const along = useMemo(
     () => foldAlongOverlay(preview.extent, toolState.extent, toolState.extentPicks),
     [preview.extent, toolState.extent, toolState.extentPicks]
   );
   // A swivel's pivot once its vertex is drawn in its place.
-  const shownPicks = foldShownPicks(toolState, preview);
+  const shownPicks = foldShownPicks(toolState, preview, swivelMarks.hovered !== null);
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks
@@ -206,9 +212,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             spread: paneSpread.map,
             along: along?.[pane] ?? null,
             regions: regions?.[pane] ?? null,
+            offered: swivelOffered?.[pane] ?? null,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, shownPicks, freeFrom, located, vertexMarks, paneSpread.map, along, regions]
+    [inks, view.scene, view.marks, shownPicks, freeFrom, located, vertexMarks, paneSpread.map, along, regions, swivelOffered]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
@@ -220,15 +227,25 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const sequence = useWorkspaceStore((state) => shownFoldSequence(state)?.document ?? null);
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
   const woven = useFoldWovenInterval(preview.section);
-  // The folded pane's hover: a woven section's stack, and a petal fold's flap; the crease pattern's, the flap.
+  // The folded pane's hover: a woven section's stack, a petal fold's flap, a
+  // swivel's line; the crease pattern's, the flap and the line.
   const { onHover: onWovenHover } = woven;
   const { onHover: onPetalHover } = petalMarks;
+  const { onHover: onSwivelHover } = swivelMarks;
   const onFoldedHover = useCallback(
     (hit: FoldHit | null) => {
       onWovenHover(hit);
       onPetalHover(hit);
+      onSwivelHover(hit);
     },
-    [onWovenHover, onPetalHover]
+    [onWovenHover, onPetalHover, onSwivelHover]
+  );
+  const onCreaseHover = useCallback(
+    (hit: FoldHit | null) => {
+      onPetalHover(hit);
+      onSwivelHover(hit);
+    },
+    [onPetalHover, onSwivelHover]
   );
   const reverseView = foldReverseWindowView(toolState, preview);
   const crimpView = foldCrimpWindowView(toolState, preview);
@@ -300,7 +317,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               pane="folded"
               scene={paint.folded.scene}
               ink={paint.folded.ink}
-              tint={paint.folded.tint}
+              tint={foldedTint}
               offset={paint.folded.offset}
               contentBounds={paint.folded.contentBounds}
               keepInViewKey={paint.folded.keepInView}
@@ -345,7 +362,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               contentBounds={paint.creasePattern.contentBounds}
               hitTest={(at, radii) => verbs.hitTest('crease-pattern', at, radii)}
               overlay={creaseOverlay}
-              onHover={onPetalHover}
+              onHover={onCreaseHover}
               onZoomPercentChange={showFolded ? undefined : setZoomPercent}
               ariaLabel={t(
                 'panels:fold.canvas.creasePatternLabel',
