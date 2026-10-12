@@ -189,6 +189,15 @@ describe('the caller’s words', () => {
     expect(waysRow()?.textContent).toContain('Branch 1 of 2');
   });
 
+  it('marks a card whose step has a note, named in the caller’s words, and no other', () => {
+    show({ steps: steps.map((each, k) => (k === 0 ? { ...each, noted: 'Has a note' } : each)) });
+    const marks = cards().map((c) => c.querySelector('[role="img"][aria-label="Has a note"]'));
+    expect(marks.map((mark) => mark !== null)).toEqual([true, false, false, false, false]);
+    expect(marks[0]?.getAttribute('title')).toBe('Has a note');
+    // Its picture is still the card's own.
+    expect(cards()[0]?.querySelector('[data-picture="half"]')).not.toBeNull();
+  });
+
   it('asks for the short readout on the phone, where the row is the readout alone', () => {
     show({ navigation: false });
     expect(waysRow()?.textContent).toContain('1/2');

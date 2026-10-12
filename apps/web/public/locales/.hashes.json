@@ -5631,7 +5631,10 @@
     "tools:fold.vertex.steps.swivelSecondLandmark": "ba83654f4943",
     "tools:fold.vertex.steps.swivelStayer": "3ea20f798e61",
     "tools:fold.vertex.steps.swivelStep": "9608dd334ce3",
-    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679"
+    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -11265,7 +11268,10 @@
     "tools:fold.vertex.steps.swivelSecondLandmark": "ba83654f4943",
     "tools:fold.vertex.steps.swivelStayer": "3ea20f798e61",
     "tools:fold.vertex.steps.swivelStep": "9608dd334ce3",
-    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679"
+    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -16901,7 +16907,10 @@
     "tools:fold.vertex.steps.swivelSecondLandmark": "ba83654f4943",
     "tools:fold.vertex.steps.swivelStayer": "3ea20f798e61",
     "tools:fold.vertex.steps.swivelStep": "9608dd334ce3",
-    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679"
+    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -22212,7 +22221,10 @@
     "tools:fold.vertex.steps.swivelSecondLandmark": "ba83654f4943",
     "tools:fold.vertex.steps.swivelStayer": "3ea20f798e61",
     "tools:fold.vertex.steps.swivelStep": "9608dd334ce3",
-    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679"
+    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -27523,7 +27535,10 @@
     "tools:fold.vertex.steps.swivelSecondLandmark": "ba83654f4943",
     "tools:fold.vertex.steps.swivelStayer": "3ea20f798e61",
     "tools:fold.vertex.steps.swivelStep": "9608dd334ce3",
-    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679"
+    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -33157,7 +33172,10 @@
     "tools:fold.vertex.steps.swivelSecondLandmark": "ba83654f4943",
     "tools:fold.vertex.steps.swivelStayer": "3ea20f798e61",
     "tools:fold.vertex.steps.swivelStep": "9608dd334ce3",
-    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679"
+    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -38791,7 +38809,10 @@
     "tools:fold.vertex.steps.swivelSecondLandmark": "ba83654f4943",
     "tools:fold.vertex.steps.swivelStayer": "3ea20f798e61",
     "tools:fold.vertex.steps.swivelStep": "9608dd334ce3",
-    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679"
+    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -44102,6 +44123,9 @@
     "tools:fold.vertex.steps.swivelSecondLandmark": "ba83654f4943",
     "tools:fold.vertex.steps.swivelStayer": "3ea20f798e61",
     "tools:fold.vertex.steps.swivelStep": "9608dd334ce3",
-    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679"
+    "tools:fold.vertex.steps.swivelThirdLandmark": "7e6cf7b0c679",
+    "panels:fold.sequence.noted": "286543fdddea",
+    "panels:fold.step.note": "d8da2c49df39",
+    "panels:fold.step.notePlaceholder": "ca263e37cecc"
   }
 }

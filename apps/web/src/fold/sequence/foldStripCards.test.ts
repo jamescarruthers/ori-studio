@@ -89,6 +89,30 @@ describe('foldStripCards', () => {
     expect(refused.cards[5]).not.toHaveProperty('tag');
   });
 
+  it('marks a card whose step has a note, a newer build’s included, and none without', () => {
+    const noted = sequenceOf([
+      step('a', null, valleyAt(0.5), { note: 'Fold the square in half.' }),
+      step('b', 'a', valleyAt(0.25)),
+      { id: 'l', parent: 'b', unknown: { op: { kind: 'sink' } }, note: 'Kept as it came.' },
+    ]);
+    const entries = foldPathEntries(
+      noted,
+      ['a', 'b', 'l'],
+      node('ok'),
+      new Map(Object.entries({ a: node('ok'), b: node('ok'), l: node('locked') })),
+      FOLD_PENDING_NODE
+    );
+    const { cards } = foldStripCards(t, {
+      paper: SQUARE_PAPER,
+      entries,
+      words: [{ op: 'unknown' }, VALLEY, VALLEY, { op: 'unknown' }],
+      pictures: entries.map(() => null),
+      cursor: 1,
+      pending: null,
+    });
+    expect(cards.map((card) => card.noted ?? null)).toEqual([null, 'Has a note', null, 'Has a note']);
+  });
+
   it('says a polygon sheet by its sides, and the back up', () => {
     const entries = foldPathEntries(sequenceOf([]), [], node('ok'), new Map(), FOLD_PENDING_NODE);
     const { cards } = foldStripCards(t, {

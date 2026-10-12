@@ -105,6 +105,9 @@ export type FoldSpreadAction =
 /** Where a Fold step's spread was changed: the Step pane's Spread section, or the canvas bar's toggle. */
 export type FoldSpreadVia = 'step_pane' | 'canvas_bar';
 
+/** What a sitting at a Fold step's note did first (`fold step note edited`): wrote one, rewrote it, or cleared it. */
+export type FoldStepNoteAction = 'added' | 'changed' | 'cleared';
+
 /**
  * Which control added a diagram step. `grid` is the Diagram workspace's own:
  * the header's Add step, the empty state, and Insert before / after. `fold`
@@ -1594,6 +1597,12 @@ export const ANALYTICS_EVENTS = {
    * value itself. A slider's drag is one event, at its end.
    */
   foldSpreadChanged: 'fold spread changed',
+  /**
+   * A Fold step's note written, rewritten or cleared in the Step pane: once
+   * per sitting at the field, by what its first change did — never per
+   * keystroke, and never the text or which step.
+   */
+  foldStepNoteEdited: 'fold step note edited',
   /**
    * One file of an upload into the Diagram, and what became of it: whether
    * people's own drawings survive the sanitizer, and how big they are.

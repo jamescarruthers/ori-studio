@@ -31,6 +31,12 @@ import { FoldStepPanel } from './FoldStepPanel';
 const monitoring = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../../monitoring', () => ({ reportError: monitoring.reportError }));
 
+const tracked = vi.hoisted(() => ({ trackFoldStepNoteEdited: vi.fn() }));
+vi.mock('../../analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../analytics')>()),
+  ...tracked,
+}));
+
 const ONE_VALLEY: ReturnType<FoldEngineCalls['stepSummary']> = {
   status: 'ok',
   summary: {
@@ -107,6 +113,83 @@ describe('the Fold Step pane', () => {
     expect(host.querySelector('h3')?.textContent).toBe('Step 1');
     expect(host.textContent).toContain('Valley fold along the line drawn, through all layers.');
     expect(rows()).toMatchObject({ Operation: 'Valley fold', Layers: '1', Changes: 'Adds 1 crease (0 M, 1 V)', Valley: '1' });
+  });
+
+  it('shows the step’s note and writes it: one undo step and one count per sitting at the field', async () => {
+    tracked.trackFoldStepNoteEdited.mockClear();
+    useWorkspaceStore.getState().installFoldSequences(
+      [
+        {
+          document: {
+            formatVersion: 1,
+            id: 'fold-noted',
+            title: '',
+            paper: { shape: { kind: 'square' }, startSide: 'front' },
+            steps: [{ id: 'fstep-1', parent: null, op: valleyAt(0.5), note: 'Book fold.' }],
+          },
+          readOnlyRaw: null,
+        },
+      ],
+      { v: 1, sequenceId: 'fold-noted', cursor: 'fstep-1', activeChild: {} }
+    );
+    await act(async () => settle());
+    const field = () => host.querySelector<HTMLTextAreaElement>('[role="group"][aria-label="Note"] textarea');
+    expect(field()?.value).toBe('Book fold.');
+
+    const type = (text: string) =>
+      act(() => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(field(), text);
+        field()?.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    const past = () => useWorkspaceStore.getState().foldHistory.past.length;
+    const before = past();
+    // One sitting: two commits (a pause, then leaving the field), one undo step.
+    act(() => field()?.focus());
+    type('Book fold, left over right.');
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 700)));
+    type('Book fold, left over right. Crease sharply.');
+    act(() => field()?.blur());
+    const note = () => useWorkspaceStore.getState().foldSequences[0]?.document.steps[0]?.note;
+    expect(note()).toBe('Book fold, left over right. Crease sharply.');
+    expect(past()).toBe(before + 1);
+    expect(useWorkspaceStore.getState().foldHistory.past.at(-1)?.label).toBe('Edit note');
+    expect(tracked.trackFoldStepNoteEdited.mock.calls).toEqual([['changed']]);
+    expect(field()?.value).toBe('Book fold, left over right. Crease sharply.');
+
+    // Another sitting, clearing it: another step, counted as a clearing.
+    act(() => field()?.focus());
+    type('');
+    act(() => field()?.blur());
+    expect(note()).toBeUndefined();
+    expect(past()).toBe(before + 2);
+    expect(tracked.trackFoldStepNoteEdited.mock.calls.at(-1)).toEqual(['cleared']);
+
+    // Undo brings it back, in the field too.
+    act(() => void useWorkspaceStore.getState().undoFold());
+    await act(async () => settle());
+    expect(field()?.value).toBe('Book fold, left over right. Crease sharply.');
+  });
+
+  it('reads a newer build’s note and writes none', async () => {
+    useWorkspaceStore.getState().installFoldSequences(
+      [
+        {
+          document: {
+            formatVersion: 1,
+            id: 'fold-newer',
+            title: '',
+            paper: { shape: { kind: 'square' }, startSide: 'front' },
+            steps: [{ id: 'fstep-new', parent: null, unknown: { op: { kind: 'sink' } }, note: 'From a newer build.' }],
+          },
+          readOnlyRaw: null,
+        },
+      ],
+      { v: 1, sequenceId: 'fold-newer', cursor: 'fstep-new', activeChild: {} }
+    );
+    await act(async () => settle());
+    const note = [...host.querySelectorAll('[role="group"]')].find((group) => group.getAttribute('aria-label') === 'Note');
+    expect(note?.textContent).toBe('From a newer build.');
+    expect(note?.querySelector('textarea')).toBeNull();
   });
 
   it('says folding away from the tip starts a branch', async () => {

@@ -14,11 +14,12 @@ import {
   type FoldCreaseDiff,
 } from '../../fold/stepWords';
 import type { FoldStepSpreadControls } from '../../fold/sequence/foldStepSpreadControls';
+import type { FoldStepNote } from '../../fold/sequence/useFoldStepNote';
 import { turnCardWords } from '../../lib/steps/turnWords';
 import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { Badge } from '../ui/Badge';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
-import { FieldRow } from '../ui/fieldRows';
+import { FieldRow, TextAreaRow } from '../ui/fieldRows';
 import { Notice, type NoticeAction } from '../ui/Notice';
 import styles from './FoldStepPane.module.css';
 
@@ -92,9 +93,9 @@ export interface FoldBranchPosition {
 
 /**
  * The Step pane: the step at the cursor in words and numbers — its sentence,
- * operation, line, layers and what it did to the crease pattern — how its
- * folded picture spreads its layers, then the fold in progress, if there is
- * one.
+ * operation, line, layers and what it did to the crease pattern — the note
+ * its author wrote, how its folded picture spreads its layers, then the fold
+ * in progress, if there is one.
  *
  * Presentation only: every value arrives in props, from the engine's
  * per-step summary and the sequence's derived state. The words are
@@ -112,6 +113,7 @@ export function FoldStepPane({
   branch = null,
   fixes = [],
   spread = null,
+  note = null,
 }: {
   /** The step at the cursor; null is the flat sheet. */
   step: FoldStepPaneStep | null;
@@ -123,6 +125,8 @@ export function FoldStepPane({
   fixes?: readonly NoticeAction[];
   /** How the step's folded picture spreads its layers (`useFoldStepSpread`); null for none to offer. */
   spread?: FoldStepSpreadControls | null;
+  /** The step's note, to read and write (`useFoldStepNote`); null for none to offer. */
+  note?: FoldStepNote | null;
 }) {
   const { t } = useTranslation();
 
@@ -218,10 +222,55 @@ export function FoldStepPane({
         )}
       </div>
 
+      {note && <NoteSection note={note} />}
       {spread && <SpreadSection spread={spread} />}
       {step.creases && <CreaseCounts creases={step.creases} startSide={startSide} />}
       {pendingSection}
     </div>
+  );
+}
+
+/**
+ * Longest note the field takes: a guard against a paste of something that
+ * was never a note, as the Diagram's instruction has. The example projects'
+ * notes, which say every click, run to a few hundred characters.
+ */
+const NOTE_MAX_LENGTH = 2000;
+
+/**
+ * The step's note: the author's words beside the sentence the step's op
+ * says of itself — how it is made, or what to watch for. Written in the
+ * Diagram's instruction field, which commits as it goes, one undo step per
+ * sitting; read as text where it cannot be written (a newer build's sequence
+ * or step), and not shown there when there is none.
+ */
+function NoteSection({ note }: { note: FoldStepNote }) {
+  const { t } = useTranslation();
+  const title = t('panels:fold.step.note', 'Note');
+  if (!note.editable) {
+    return note.text ? (
+      <CollapsibleSection title={title}>
+        <p className={styles.note}>{note.text}</p>
+      </CollapsibleSection>
+    ) : null;
+  }
+  return (
+    <CollapsibleSection title={title}>
+      <TextAreaRow
+        // One field per step: a draft never carries over to the next one.
+        key={note.stepId}
+        label={title}
+        labelHidden
+        value={note.text}
+        placeholder={t('panels:fold.step.notePlaceholder', 'Add a note: how to make this step, or what to watch for…')}
+        rows={3}
+        maxLength={NOTE_MAX_LENGTH}
+        divider={false}
+        // Read as often as written: the whole note shows, as far as a cap.
+        fitContent
+        onCommit={note.set}
+      />
+    </CollapsibleSection>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useFoldSequenceView } from '../../fold/sequence/useFoldSequenceView';
+import { useFoldStepNote } from '../../fold/sequence/useFoldStepNote';
 import { useFoldStepPane } from '../../fold/sequence/useFoldStepPane';
 import { useFoldStepSpread } from '../../fold/sequence/useFoldStepSpread';
 import { useFoldSession } from '../../fold/session/useFoldSession';
@@ -9,9 +10,9 @@ import styles from './FoldStepPanel.module.css';
 
 /**
  * Fold's Step pane: what the step on show does — its kind, its layers, its
- * crease-pattern diff and its sentence — how its picture spreads its layers,
- * then the fold a tool is making (`implementation-plans/fold-workspace.md`,
- * D14).
+ * crease-pattern diff and its sentence — its note, how its picture spreads
+ * its layers, then the fold a tool is making
+ * (`implementation-plans/fold-workspace.md`, D14).
  *
  * A composition site: the rows are `FoldStepPane`'s, their data
  * `useFoldStepPane`'s, from the same view of the sequence the strip and the
@@ -23,7 +24,9 @@ export function FoldStepPanel() {
   const session = useFoldSession({ retain: false });
   const view = useFoldSequenceView();
   const pane = useFoldStepPane(view);
-  const spread = useFoldStepSpread(view.entries[view.cursor]?.id ?? null, 'step_pane');
+  const cursorId = view.entries[view.cursor]?.id ?? null;
+  const spread = useFoldStepSpread(cursorId, 'step_pane');
+  const note = useFoldStepNote(cursorId);
   return (
     <section className="panel-shell" aria-label={t('panels:sidePane.step', 'Step')}>
       <div className={`panel-body ${styles.body}`}>
@@ -44,6 +47,7 @@ export function FoldStepPanel() {
           branch={pane.branch}
           fixes={pane.fixes}
           spread={spread}
+          note={note}
         />
       </div>
     </section>
