@@ -4,8 +4,9 @@
  * `crates/oristudio-fold-wasm/src/ops_squash_family.rs` and the engine's
  * `compound::vertex`; the Rust side is the truth.
  *
- * - **Ops** are the document's (`FoldSquashOp`, `FoldPetalOp`,
- *   `FoldRabbitEarOp`, `FoldSwivelOp`), and a stored one replays through the
+ * - **Ops** are the document's (`FoldSquashOp`, `FoldPetalOp` — its H by a
+ *   precrease's `crease` point, or by its two `ends`, which the fold creases
+ *   itself — `FoldRabbitEarOp`, `FoldSwivelOp`), and a stored one replays through the
  *   ordinary `step` call: it lands with its `compound` report
  *   (`family: 'vertex'`), or is refused — the engine's codes, or the compound
  *   folds' `choice_needed` and `choice_broken` when its stored choice no
@@ -91,14 +92,30 @@ export interface FoldSquashAnalysis {
   share: number;
 }
 
-/** A petal fold's ends, corner, kite creases and layers (`PetalAnalysis`). */
+/**
+ * A petal fold's ends, corner, kite creases and layers (`PetalAnalysis`),
+ * whichever way its op names H (`FoldPetalOp`'s `crease` or `ends`).
+ */
 export interface FoldPetalAnalysis {
+  /** H, in the parent's model frame. */
   line: FoldModelLine;
+  /** H's ends on the flap's folded edges, and the corner the kite creases meet at. */
   ends: [FoldModelPoint, FoldModelPoint];
   corner: FoldModelPoint;
+  /** The kite creases from each end: precreased, or — H named by its ends — the bisector of H and the folded edge there. */
   kites: [FoldModelLine, FoldModelLine];
+  /** The parent's faces of the top and second layers: below H, or across it where H is not creased. */
   top: number[];
   second: number[];
+  /**
+   * What the fold creases itself (H named by its ends): H where it crosses
+   * the top layer, and each kite crease (in `kites`' order) where it crosses
+   * the top two layers. All false over precreases, and always for H named by
+   * a crease. The bridge always sends both; they are optional only so an
+   * analysis written before them still types.
+   */
+  scores_line?: boolean;
+  scores_kites?: [boolean, boolean];
 }
 
 /** A rabbit ear's or a swivel's rays and layers (`FanAnalysis`). */
@@ -152,8 +169,24 @@ export interface FoldVertexAnalysed {
 /** Why there is no flap to squash at a point (`NoFlap`). */
 export type FoldNoFlap = 'single_layer' | 'no_spine' | 'no_hinge' | 'upper_not_hinged';
 
-/** Which crease of a petal fold is not precreased (`PetalCrease`). */
+/**
+ * Which crease of a petal fold is not precreased (`PetalCrease`). H named by
+ * its ends creases what is missing, except H across the second layer's paper
+ * outside a kite crease (`line`).
+ */
 export type FoldPetalCrease = 'line' | 'kite';
 
 /** Why a petal fold has no flap (`NoPetal`). */
 export type FoldNoPetal = 'no_ends' | 'no_corner';
+
+/**
+ * What a `petal_no_flap` cause names more precisely, where it does
+ * (`NoPetalDetail`), as the refusal's optional `detail`:
+ *
+ * - `misses_flap` (with `no_ends`): H misses the flap altogether; its top
+ *   layer, the refusal's `faces`, lies wholly on the petal's side of it.
+ * - `past_corner` (with `no_corner`): the kite creases meet below H at
+ *   `corner` (model frame), but the flap reaches past it; `faces` are the
+ *   paper beyond. H lies too near the flap's closed point.
+ */
+export type FoldNoPetalDetail = { kind: 'misses_flap' } | { kind: 'past_corner'; corner: FoldModelPoint };

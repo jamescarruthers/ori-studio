@@ -343,7 +343,8 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['crimp', new Set([...ALONG_LINE_KEYS, 'second', 'crimp'])],
   ['tuck', new Set([...ALONG_LINE_KEYS, 'direction', 'target'])],
   ['squash', new Set(['kind', 'flap', 'target', 'direction'])],
-  ['petal', new Set(['kind', 'crease', 'petal', 'direction'])],
+  // H by `crease` or by `ends`, one of the two (`FoldPetalOp`).
+  ['petal', new Set(['kind', 'crease', 'ends', 'petal', 'direction'])],
   ['rabbit-ear', new Set(['kind', 'corners', 'emergent', 'seed', 'stayer', 'direction', 'ridge'])],
   ['swivel', new Set(['kind', 'vertex', 'toward', 'emergent', 'seed', 'stayer', 'direction'])],
   // Sinks: a fold along a line's fields.
@@ -473,9 +474,16 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
       return flap && target !== null ? { kind, flap, ...(target ? { target } : {}), direction } : null;
     }
     case 'petal': {
-      const crease = readPoint(value.crease);
       const petal = readPoint(value.petal);
-      return crease && petal && { kind, crease, petal, direction };
+      if (!petal) return null;
+      // H by its precrease, as every step before `ends` stored it; or by its
+      // two ends. Both, or neither, does not read.
+      if (value.ends === undefined) {
+        const crease = readPoint(value.crease);
+        return crease && { kind, crease, petal, direction };
+      }
+      const ends = value.crease === undefined ? readPoints(value.ends) : null;
+      return ends && ends.length === 2 ? { kind, ends: [ends[0], ends[1]], petal, direction } : null;
     }
     case 'rabbit-ear': {
       const corners = readTriple(value.corners);
@@ -958,7 +966,11 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
     case 'squash':
       return { kind: op.kind, flap: writePoint(op.flap), ...optional('target', op.target), direction: op.direction };
     case 'petal':
-      return { kind: op.kind, crease: writePoint(op.crease), petal: writePoint(op.petal), direction: op.direction };
+      // The precrease form exactly as it was always written; the ends form
+      // in the same place.
+      return 'ends' in op
+        ? { kind: op.kind, ends: op.ends.map(writePoint), petal: writePoint(op.petal), direction: op.direction }
+        : { kind: op.kind, crease: writePoint(op.crease), petal: writePoint(op.petal), direction: op.direction };
     case 'rabbit-ear':
       return {
         kind: op.kind,

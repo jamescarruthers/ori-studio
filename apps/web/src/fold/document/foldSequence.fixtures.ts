@@ -352,6 +352,20 @@ export function writtenSequence(): Record<string, unknown> {
         },
         choices: { root: { n: [0.4472135954999579, -0.8944271909999159], d: 0 } },
       },
+      // A petal fold whose H is named by its two ends, which it creases.
+      {
+        id: 'fstep-23',
+        parent: 'fstep-14',
+        op: {
+          kind: 'petal',
+          ends: [
+            [0.2, 0.5],
+            [0.5, 0.2],
+          ],
+          petal: [0.25, 0.1],
+          direction: 'mountain',
+        },
+      },
     ],
   };
 }
