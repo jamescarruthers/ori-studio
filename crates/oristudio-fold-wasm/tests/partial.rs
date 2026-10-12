@@ -336,3 +336,106 @@ fn a_malformed_extent_is_the_callers_mistake() {
         );
     }
 }
+
+/// Over random states, a pinch's `fs1` keys are its parent's and one `m:`
+/// key per mark, so `fs1` changes with the marks; a later fold's keep one
+/// per mark it carries.
+#[test]
+fn fs1_keys_follow_the_marks_over_random_sequences() {
+    use oristudio_fold::random::{self, Rng, Sequence};
+    use oristudio_fold::{Extent, State};
+    use oristudio_fold_wasm::canonical::canonical_keys;
+
+    let keys = |state: &State| {
+        let mut keys = canonical_keys(state);
+        keys.sort();
+        keys
+    };
+    let without_marks = |state: &State| {
+        let mut keys = keys(state);
+        keys.retain(|k| !k.starts_with("m:"));
+        keys
+    };
+    // The marks as geometry: their ends, to a nanometre of the sheet, and
+    // their letters.
+    let signature = |state: &State| {
+        let at = |p: [f64; 2]| ((p[0] * 1e9).round() as i64, (p[1] * 1e9).round() as i64);
+        let mut marks: Vec<_> = state
+            .crease_marks()
+            .iter()
+            .map(|m| {
+                let (a, b) = (at(m.a), at(m.b));
+                (a.min(b), a.max(b), format!("{:?}", m.letter))
+            })
+            .collect();
+        marks.sort();
+        marks
+    };
+    let mut rng = Rng::new(0x51);
+    let (mut pinched, mut carried) = (0, 0);
+    for seed in 0..40u64 {
+        let Ok(sequence) = Sequence::new(seed, 1 + (seed % 5) as usize, 40) else {
+            continue;
+        };
+        let mut state = sequence.state().clone();
+        for step in sequence {
+            if let Some(s) = step.state() {
+                state = s.clone();
+            }
+        }
+        for _ in 0..4 {
+            let Some(op) = random::plain_fold(&state, &mut rng) else {
+                continue;
+            };
+            // A pinch at a drawn face's centre, taken onto the line.
+            let faces = state.faces();
+            let Some(face) = faces.get(rng.below(faces.len())) else {
+                continue;
+            };
+            let Some(image) = state.face_image(face.id) else {
+                continue;
+            };
+            let n = image.len() as f64;
+            let centre = image
+                .iter()
+                .fold([0.0, 0.0], |s, p| [s[0] + p[0] / n, s[1] + p[1] / n]);
+            let Some((_, at)) = state.top_visible_at(op.line.project_point(centre)) else {
+                continue;
+            };
+            let Ok(marked) = state.precrease_extent(&op, &Extent::Pinch { at, length: 0.05 })
+            else {
+                continue;
+            };
+            pinched += 1;
+            let child = &marked.state;
+            assert_eq!(without_marks(child), without_marks(&state));
+            let marks = keys(child)
+                .into_iter()
+                .filter(|k| k.starts_with("m:"))
+                .count();
+            assert_eq!(marks, child.crease_marks().len());
+            // The keys differ exactly when the marks do: a pinch over one just
+            // like it (the same place, the same letter) lands the same state.
+            assert_eq!(
+                keys(child) != keys(&state),
+                signature(child) != signature(&state)
+            );
+            // A later fold: one key per mark it carries.
+            if let Some(next) = random::plain_fold(child, &mut rng)
+                && let Ok(folded) = child.fold(&next)
+            {
+                carried += 1;
+                let marks = keys(&folded.state)
+                    .into_iter()
+                    .filter(|k| k.starts_with("m:"))
+                    .count();
+                assert_eq!(marks, folded.state.crease_marks().len());
+            }
+            state = marked.state;
+        }
+    }
+    assert!(
+        pinched >= 40 && carried >= 30,
+        "{pinched} pinched, {carried} carried"
+    );
+}
