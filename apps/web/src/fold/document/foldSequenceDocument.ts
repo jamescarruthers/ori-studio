@@ -465,7 +465,8 @@ export interface FoldRabbitEarOp {
 /**
  * A swivel at a free vertex: the vertex and the points its three given rays
  * run toward as sheet points, the emergent ray, the layers at the vertex and
- * a sheet point on paper that stays.
+ * a sheet point on paper that stays. The swivel's rays form; its edge form
+ * is {@link FoldSwivelEdgeOp}, which alone has `via` ({@link isSwivelEdgeOp}).
  */
 export interface FoldSwivelOp {
   kind: 'swivel';
@@ -477,7 +478,37 @@ export interface FoldSwivelOp {
   direction: FoldDirection;
 }
 
-export type FoldVertexOp = FoldSquashOp | FoldPetalOp | FoldRabbitEarOp | FoldSwivelOp;
+/** A swivel's target: an existing crease or edge by a sheet point on it, or the line through two sheet points. */
+export type FoldSwivelTarget = Exclude<FoldLineInput, { via: 'axiom' }>;
+
+/**
+ * A swivel as folders diagram it: swivel the edge through the sheet point
+ * `edge` (a raw edge or a folded edge) onto `target`, pivoting at `pivot`
+ * (engine `compound::swivel`). The creases are computed: they meet where the
+ * pivot lands moved onto the nearer bisector of the edge and the target. The
+ * ridge — the crease that folds the other way — is the one square to the
+ * edge unless `ridge` names the turning wedge's other ray (a direction in the
+ * parent's model frame; replay takes the nearer), stored only when the folder
+ * took it. An older build reads `via` as a key it does not know and locks
+ * the step rather than fold it.
+ */
+export interface FoldSwivelEdgeOp {
+  kind: 'swivel';
+  via: 'edge';
+  pivot: SheetPoint;
+  edge: SheetPoint;
+  target: FoldSwivelTarget;
+  seed: FoldSeed;
+  direction: FoldDirection;
+  ridge?: FoldModelDirection;
+}
+
+/** Whether a swivel op names its swivel by its edge, not its rays. */
+export function isSwivelEdgeOp(op: FoldOp): op is FoldSwivelEdgeOp {
+  return op.kind === 'swivel' && 'via' in op && op.via === 'edge';
+}
+
+export type FoldVertexOp = FoldSquashOp | FoldPetalOp | FoldRabbitEarOp | FoldSwivelOp | FoldSwivelEdgeOp;
 
 export type FoldVertexOpKind = FoldVertexOp['kind'];
 

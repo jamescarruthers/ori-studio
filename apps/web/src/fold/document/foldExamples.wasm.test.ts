@@ -130,7 +130,10 @@ describe.skipIf(!available)('the Fold example projects', () => {
       [null, 'swivel'],
       [null, 'swivel'],
     ]);
-    const emergents = swivels.map((step) => (step.op.kind === 'swivel' ? step.op.emergent.map(Math.round).join() : ''));
+    // Each in the swivel's rays form, as the file was saved.
+    const emergents = swivels.map((step) =>
+      step.op.kind === 'swivel' && !('via' in step.op) ? step.op.emergent.map(Math.round).join() : ''
+    );
     expect(new Set(emergents).size).toBe(3);
 
     // The book fold, then two branches from it: the inside crimp and the outside.

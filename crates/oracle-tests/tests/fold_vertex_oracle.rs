@@ -15,6 +15,11 @@
 //!   the flap that lands; every rabbit ear's
 //!   every emergent ray that lands, valley and mountain (one ear each, its
 //!   fourth crease the ridge); every swivel ray that lands.
+//! - **The swivel by its edge's classic cases** (`cases::edge_swivel_cases`):
+//!   the rabbit ear at its incenter, the fish base's two swivels, an edge
+//!   onto the centre crease off the incenter, a two-layer flap both ways
+//!   round, and the swivel at Beloch's `swivel-rabbit` pivot; valley and
+//!   mountain, each ridge that lands.
 //!
 //! Seeded Oriedita (`fold_support::oriedita`) runs in process; Flat-Folder's
 //! `verify` (`fold_support::flat_folder`) when `FLATFOLDER_ORACLE` is set.
@@ -135,6 +140,47 @@ fn named() -> Vec<Landed> {
         };
         for folded in cases::every(square.swivel(&op, &VertexChoices::default())) {
             push(format!("swivel ray {k}"), folded.state);
+        }
+    }
+    // The swivel by its edge's classic cases (`cases::edge_swivel_cases`),
+    // valley and mountain, each ridge that lands; and the fish base's
+    // second swivel on its first.
+    use oristudio_fold::{Direction, SwivelByEdge};
+    for case in cases::edge_swivel_cases() {
+        for direction in [Direction::Valley, Direction::Mountain] {
+            let op = SwivelByEdge {
+                direction,
+                ..case.op.clone()
+            };
+            let Ok(analysis) = case.state.analyse_swivel_by_edge(&op) else {
+                continue;
+            };
+            for (k, &ridge) in analysis.ridges.iter().enumerate() {
+                let op = SwivelByEdge {
+                    ridge: Some(ridge),
+                    ..op.clone()
+                };
+                for folded in
+                    cases::every(case.state.swivel_by_edge(&op, &VertexChoices::default()))
+                {
+                    push(
+                        format!("{} {direction:?} ridge {k}", case.name),
+                        folded.state,
+                    );
+                }
+            }
+        }
+        if case.name == "fish ear 1" {
+            let first = cases::landed(
+                case.state
+                    .swivel_by_edge(&case.op, &VertexChoices::default()),
+            );
+            let second = cases::landed(
+                first
+                    .state
+                    .swivel_by_edge(&cases::fish_second(), &VertexChoices::default()),
+            );
+            push("fish base by swivels".to_string(), second.state);
         }
     }
     out

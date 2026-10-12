@@ -599,7 +599,8 @@ pub enum Fix {
     /// point back as the tuck's `target`.
     TuckTarget { face: FaceId, at: Point },
     /// The same rabbit ear or swivel with this emergent ray (a direction in
-    /// the parent's model frame) lands: store it as the op's `emergent`.
+    /// the parent's model frame) lands: store it as the op's `emergent` —
+    /// a swivel by its edge's as its `ridge`.
     UseEmergent { direction: Point },
     /// The same point sinks the other way: closed, or open.
     OtherSink { kind: SinkKind },

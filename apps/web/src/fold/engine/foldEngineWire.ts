@@ -38,7 +38,13 @@ import type {
 import type { FoldCompoundReport } from './foldEngineCompoundWire';
 import { FOLD_IMPORT_REFUSAL_CODES } from './foldEngineIoWire';
 import type { FoldNoOpening, FoldReverseKind } from './foldEngineReverseWire';
-import type { FoldNoFlap, FoldNoPetal, FoldNoPetalDetail, FoldPetalCrease } from './foldEngineSquashWire';
+import {
+  FOLD_SWIVEL_EDGE_REFUSAL_CODES,
+  type FoldNoFlap,
+  type FoldNoPetal,
+  type FoldNoPetalDetail,
+  type FoldPetalCrease,
+} from './foldEngineSquashWire';
 import { FOLD_SINK_REFUSAL_CODES, type FoldSinkKind } from './foldEngineSinkWire';
 
 /** A side of a line: `positive` is where `n · p > d`. */
@@ -185,6 +191,8 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'fan_fourth_beside_stayer',
   'fan_fourth_cannot_rise',
   'fan_stayer_detached',
+  // The swivel by its edge (`compound::swivel`), before its fan's own.
+  ...FOLD_SWIVEL_EDGE_REFUSAL_CODES,
   // Sinks (plan Phase 11).
   ...FOLD_SINK_REFUSAL_CODES,
   ...FOLD_PARTIAL_PRECREASE_REFUSAL_CODES,
@@ -329,7 +337,11 @@ export type FoldFix =
   | { readonly fix: 'other_kind'; readonly kind: 'inside' | 'outside' }
   /** The same tuck against this layer is valid: send `at` back as the tuck's `target`. */
   | { readonly fix: 'tuck_target'; readonly face: number; readonly at: SheetPoint }
-  /** The same rabbit ear or swivel with this emergent ray, a direction in the parent's model frame, lands. */
+  /**
+   * The same rabbit ear or swivel with this emergent ray, a direction in the
+   * parent's model frame, lands; for a swivel by its edge, with this ridge
+   * (store it as the op's `ridge`).
+   */
   | { readonly fix: 'use_emergent'; readonly direction: FoldModelPoint }
   /** The same point sinks the other way: closed where an open sink is refused, open where a closed one is. */
   | { readonly fix: 'other_sink'; readonly kind: FoldSinkKind };

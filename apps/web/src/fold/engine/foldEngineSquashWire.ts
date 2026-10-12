@@ -6,9 +6,11 @@
  *
  * - **Ops** are the document's (`FoldSquashOp`, `FoldPetalOp` — its H by a
  *   precrease's `crease` point, or by its two `ends`, which the fold creases
- *   itself — `FoldRabbitEarOp`, `FoldSwivelOp`), and a stored one replays through the
- *   ordinary `step` call: it lands with its `compound` report
- *   (`family: 'vertex'`), or is refused — the engine's codes, or the compound
+ *   itself — `FoldRabbitEarOp`, `FoldSwivelOp` and its edge form
+ *   `FoldSwivelEdgeOp`, answered as `kind: 'swivel-by-edge'`), and a stored
+ *   one replays through the ordinary `step` call: it lands with its
+ *   `compound` report (`family: 'vertex'`), or is refused — the engine's
+ *   codes, or the compound
  *   folds' `choice_needed` and `choice_broken` when its stored choice no
  *   longer decides the order.
  * - **The tools** ask the compound question (`compoundAnalysis`,
@@ -29,7 +31,7 @@
 
 import type { FoldCompletionChoice, FoldDirection, FoldModelLine } from '../document/foldSequenceDocument';
 import type { FoldCompoundFingerprinted, FoldCompoundLanded, FoldCompoundReportBase } from './foldEngineCompoundWire';
-import type { FoldModelPoint } from './foldEngineWire';
+import type { FoldLetter, FoldModelPoint } from './foldEngineWire';
 
 /** Which vertex fold a report is (`VertexFoldKind`). */
 export type FoldVertexFoldKind = 'squash' | 'petal' | 'rabbit_ear' | 'swivel';
@@ -131,11 +133,71 @@ export interface FoldFanAnalysis {
   layers: number[];
 }
 
+/** Which of a swivel by its edge's four creases (`SwivelRay`): toward where the edge meets the target, square to the edge, toward its far end, and Kawasaki's. */
+export type FoldSwivelRay = 'meet' | 'foot' | 'end' | 'hinge';
+
+/** A wedge a swivel by its edge moves (`SwivelWedge`): across meet, turned about the vertex, across the hinge. The wedge from hinge to meet stays. */
+export type FoldSwivelWedge = 'near' | 'turn' | 'beyond';
+
+/** One crease of a swivel by its edge, as a tool previews it in the diagram pens (`SwivelCrease`). */
+export interface FoldSwivelCrease {
+  ray: FoldSwivelRay;
+  /** A unit direction from the vertex, in the parent's model frame. */
+  direction: FoldModelPoint;
+  /** Where it leaves the last layer it cuts, in the parent's model frame: the pen runs from the vertex to here. */
+  to: FoldModelPoint;
+  /** As the viewer sees it: the op's direction's letter, the ridge the other. */
+  letter: FoldLetter;
+  /** Whether it is the ridge, the odd letter out. */
+  ridge: boolean;
+}
+
+/** A piece of paper a swivel by its edge moves, in the parent's model frame (`SwivelRegion`). */
+export interface FoldSwivelRegion {
+  wedge: FoldSwivelWedge;
+  /** Counter-clockwise. */
+  polygon: FoldModelPoint[];
+}
+
+/**
+ * A swivel by its edge before it folds (`SwivelEdgeAnalysis`), for the edge
+ * form of the swivel op (`FoldSwivelEdgeOp`): where its creases meet, the
+ * creases with their letters, where the edge lands, the ridges it can take
+ * and the paper that moves.
+ */
+export interface FoldSwivelEdgeAnalysis {
+  /** The pivot as given, and the vertex: the pivot moved onto the nearer bisector of edge and target. */
+  pivot: FoldModelPoint;
+  vertex: FoldModelPoint;
+  /** Where the edge's line meets the target. */
+  meet: FoldModelPoint;
+  /** The edge's straight run, its end nearer `meet` first, and the parent's faces it bounds. */
+  edge: [FoldModelPoint, FoldModelPoint];
+  edge_faces: number[];
+  /** The vertex's foot on the edge's line. */
+  foot: FoldModelPoint;
+  target: FoldModelLine;
+  /** How far the turning wedge turns about the vertex: radians, counter-clockwise, in (−π, π]. */
+  rotation: number;
+  /** Where the edge's moving part lies once folded, on the target: its near part folded across meet, then its turned part (one segment when it starts past the foot). */
+  landed: [FoldModelPoint, FoldModelPoint][];
+  /** Meet, foot, end, hinge. */
+  creases: FoldSwivelCrease[];
+  /** The rays the ridge can be, foot's then end's: the op's `ridge` names one; `emergents` says which land. */
+  ridges: FoldModelPoint[];
+  ridge: number;
+  /** The layers the creases cut, the first nearest the side the direction names. */
+  layers: number[];
+  /** The paper that moves; empty when the fan cannot cut the layers (folding it says why). */
+  regions: FoldSwivelRegion[];
+}
+
 export type FoldVertexAnalysis =
   | ({ kind: 'squash' } & FoldSquashAnalysis)
   | ({ kind: 'petal' } & FoldPetalAnalysis)
   | ({ kind: 'rabbit-ear' } & FoldFanAnalysis)
-  | ({ kind: 'swivel' } & FoldFanAnalysis);
+  | ({ kind: 'swivel' } & FoldFanAnalysis)
+  | ({ kind: 'swivel-by-edge' } & FoldSwivelEdgeAnalysis);
 
 /** The orders a vertex fold leaves to choose from (`VertexOrders`), as a reverse fold's question lists its own. */
 export interface FoldVertexOrders {
@@ -156,7 +218,8 @@ export interface FoldVertexAnalysed {
   analysis: FoldVertexAnalysis;
   /**
    * A rabbit ear's or a swivel's: per emergent candidate, whether the fold
-   * lands with it, its other inputs as asked. Empty for the other folds.
+   * lands with it, its other inputs as asked; a swivel by its edge's, per
+   * ridge (`analysis.ridges`). Empty for the other folds.
    */
   emergents: boolean[];
   /** Null when it lands with one order, or is refused (the preview says why). */
@@ -190,3 +253,20 @@ export type FoldNoPetal = 'no_ends' | 'no_corner';
  *   paper beyond. H lies too near the flap's closed point.
  */
 export type FoldNoPetalDetail = { kind: 'misses_flap' } | { kind: 'past_corner'; corner: FoldModelPoint };
+
+/**
+ * A swivel by its edge's own refusals, in `FoldRefusal::code`'s order, each
+ * naming the edge's faces (but `swivel_not_an_edge`, which names its
+ * `point`): no raw or folded edge at the sheet point, a target parallel to
+ * the edge, a vertex on the edge's line, an edge that ends before its foot
+ * (with a `use_line` fix along the bisector), and an edge whose paper the
+ * cut layers leave out. The fan's own follow (`fan_*`, `no_order`), and a
+ * `use_emergent` fix names the other ridge, to store as the op's `ridge`.
+ */
+export const FOLD_SWIVEL_EDGE_REFUSAL_CODES = [
+  'swivel_not_an_edge',
+  'swivel_target_parallel',
+  'swivel_pivot_on_edge',
+  'swivel_edge_short',
+  'swivel_edge_stays',
+] as const;

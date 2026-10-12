@@ -443,6 +443,14 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'fan_fourth_cannot_rise':
     case 'fan_stayer_detached':
       return vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? invalidWords(t);
+    // The swivel by its edge's (`foldEngineSquashWire`): no tool folds it
+    // yet, so no words of its own.
+    case 'swivel_not_an_edge':
+    case 'swivel_target_parallel':
+    case 'swivel_pivot_on_edge':
+    case 'swivel_edge_short':
+    case 'swivel_edge_stays':
+      return invalidWords(t);
     // The sinks'.
     case 'sink_several_points':
     case 'sink_point_open':

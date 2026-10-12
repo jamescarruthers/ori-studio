@@ -1,11 +1,16 @@
-//! The petal fold across the wasm boundary (`wasm-pack test --node`): its H
-//! named by the two ends, as the document stores it, arrives as a plain
-//! object; the compound question answers what the fold creases; the fold
-//! lands through the tools' call and replays through `apply` to the same
-//! state. `tests/vertex.rs` covers it natively.
+//! The vertex folds across the wasm boundary (`wasm-pack test --node`).
+//! `tests/vertex.rs` covers the same natively.
 //!
-//! The sheet points are named on the same route folded by the engine in
-//! process, as the tools name them from the scene.
+//! The petal fold: its H named by the two ends, as the document stores it,
+//! arrives as a plain object; the compound question answers what the fold
+//! creases; the fold lands through the tools' call and replays through
+//! `apply` to the same state. Its sheet points are named on the same route
+//! folded by the engine in process, as the tools name them from the scene.
+//!
+//! The swivel by its edge: the document's new form (`via: 'edge'`) arrives
+//! as a plain JS object, its question and its landing leave as plain
+//! objects, its refusals are values, and a `via` this build does not know is
+//! a thrown `invalid_input` envelope.
 
 #![cfg(target_arch = "wasm32")]
 
@@ -31,6 +36,9 @@ fn js(value: Value) -> JsValue {
 fn json_of(value: JsValue) -> Value {
     serde_wasm_bindgen::from_value(value).expect("json-compatible value")
 }
+
+// ---------------------------------------------------------------------------
+// The petal fold by its ends
 
 /// The sheet point under the model point `p` on the layer the viewer sees on
 /// top at `near`.
@@ -170,4 +178,100 @@ fn a_petal_fold_by_its_ends_crosses_the_boundary_and_replays() {
         keys
     };
     assert_eq!(keys(&engine, again), keys(&engine, folded));
+}
+
+// ---------------------------------------------------------------------------
+// The swivel by its edge
+
+/// The flat square with its diagonal precreased.
+fn diagonal_square(engine: &mut FoldEngine) -> u32 {
+    let made = json_of(
+        engine
+            .sheet(js(
+                json!({ "shape": { "kind": "square" }, "startSide": "front" }),
+            ))
+            .expect("sheet"),
+    );
+    let sheet = made["state"].as_u64().expect("handle") as u32;
+    let precrease = json!({
+        "kind": "precrease",
+        "line": { "via": "free", "through": [[0.0, 0.0], [1.0, 1.0]] },
+        "direction": "valley",
+        "moving": [0.0, 1.0],
+        "seed": { "scope": "all" }
+    });
+    let landed = json_of(
+        engine
+            .apply(sheet, js(precrease), JsValue::UNDEFINED)
+            .expect("precrease"),
+    );
+    landed["state"].as_u64().expect("handle") as u32
+}
+
+fn swivel(edge: Point) -> Value {
+    json!({
+        "kind": "swivel",
+        "via": "edge",
+        "pivot": [0.8, 0.8 * (std::f64::consts::PI / 8.0).tan()],
+        "edge": edge,
+        "target": { "via": "crease", "at": [0.5, 0.5] },
+        "seed": { "scope": "all" },
+        "direction": "valley"
+    })
+}
+
+#[wasm_bindgen_test]
+fn a_swivel_by_its_edge_crosses_the_boundary_in_plain_objects() {
+    let mut engine = FoldEngine::new();
+    let parent = diagonal_square(&mut engine);
+    let asked = json_of(
+        engine
+            .compound_analysis(parent, js(swivel([0.5, 0.0])), JsValue::UNDEFINED)
+            .expect("question"),
+    );
+    assert_eq!(asked["status"], "ok", "{asked}");
+    assert_eq!(asked["family"], "vertex");
+    assert_eq!(asked["analysis"]["kind"], "swivel-by-edge");
+    assert_eq!(
+        asked["analysis"]["creases"]
+            .as_array()
+            .map(|c| c.iter().map(|c| c["letter"].clone()).collect::<Vec<_>>()),
+        Some(vec![
+            json!("valley"),
+            json!("mountain"),
+            json!("valley"),
+            json!("valley")
+        ])
+    );
+    assert_eq!(asked["emergents"], json!([true, true]));
+
+    let applied = json_of(
+        engine
+            .apply(parent, js(swivel([0.5, 0.0])), JsValue::UNDEFINED)
+            .expect("apply"),
+    );
+    assert_eq!(applied["status"], "ok", "{applied}");
+    assert_eq!(applied["compound"]["kind"], "swivel");
+    let tried = json_of(
+        engine
+            .vertex_fold(parent, js(swivel([0.5, 0.0])), JsValue::NULL)
+            .expect("vertex fold"),
+    );
+    assert_eq!(tried["result"], "landed", "{tried}");
+
+    // Inside the paper: no edge, a refusal value naming the point.
+    let refused = json_of(
+        engine
+            .apply(parent, js(swivel([0.5, 0.3])), JsValue::UNDEFINED)
+            .expect("refusal value"),
+    );
+    assert_eq!(refused["refusal"]["code"], "swivel_not_an_edge");
+
+    // A `via` this build does not know: the caller's mistake, thrown.
+    let mut sideways = swivel([0.5, 0.0]);
+    sideways["via"] = json!("sideways");
+    let thrown = engine
+        .apply(parent, js(sideways), JsValue::UNDEFINED)
+        .expect_err("an unknown via");
+    assert_eq!(json_of(thrown)["code"], "invalid_input");
 }

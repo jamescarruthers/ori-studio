@@ -16,6 +16,16 @@
 //! as its ridge, so it has none to choose: an older step's `ridge` is an
 //! unknown field, ignored.
 //!
+//! A swivel takes either form ([`SwivelOp`]): by its rays, or by its edge
+//! (`via: 'edge'`: the pivot, a sheet point on the edge, the target line as
+//! a crease's point or two points, the layers, the direction, and the ridge
+//! when it is not the foot's — a direction, the nearer far ray taken, the
+//! choice stored as its result). `compound_analysis` answers the edge form
+//! with `kind: 'swivel-by-edge'` (the engine's `SwivelEdgeAnalysis`: vertex,
+//! creases with their letters as seen, landing, ridges, moving regions) and
+//! per ridge in `emergents`; a refusal's `use_emergent` fix names the other
+//! ridge, to store as `ridge`.
+//!
 //! **Replay** (`FoldEngine::apply`, through the compound seam,
 //! [`crate::compound`]): a stored step lands, or is refused — the engine's
 //! refusal, a stored choice that no longer resolves (`choice_broken`), or a
@@ -65,8 +75,10 @@ use oristudio_fold::numerics::MIN_FEATURE;
 use oristudio_fold::{
     ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, LineRefusal,
     PetalAnalysis, PetalFold, PetalHinge, RabbitEar, Refused, Squash, SquashAnalysis, State,
-    StepSummary, Swivel, VertexChoice, VertexChoices, VertexFolded, VertexOutcome, WitnessOrder,
+    StepSummary, Swivel, SwivelByEdge, SwivelEdgeAnalysis, VertexChoice, VertexChoices,
+    VertexFolded, VertexOutcome, WitnessOrder,
 };
+use oristudio_geometry::Line;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -77,7 +89,7 @@ use crate::compound::{
 use crate::ops_reverse::MAX_ORDERS;
 use crate::resolve::{Rejection, check_choices, finite_point};
 use crate::wire::{
-    Applied, BridgeError, BridgeRefusal, Choices, Op, Outcome, Point, Refusal, SeedInput,
+    Applied, BridgeError, BridgeRefusal, Choices, LineInput, Op, Outcome, Point, Refusal, SeedInput,
 };
 use crate::{FoldEngine, bridge_error, parse, parse_choices, to_js_value};
 
@@ -123,16 +135,62 @@ pub struct RabbitEarOp {
     pub direction: Direction,
 }
 
+/// A swivel op in either of the document's forms: by its rays
+/// (`FoldSwivelOp`, no `via`) or by its edge (`FoldSwivelEdgeOp`,
+/// `via: 'edge'`). Any other `via` is the caller's mistake.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SwivelOp {
+    Rays(SwivelRaysOp),
+    Edge(SwivelEdgeOp),
+}
+
+impl<'de> Deserialize<'de> for SwivelOp {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<SwivelOp, D::Error> {
+        use serde::de::Error;
+        let value = serde_json::Value::deserialize(deserializer)?;
+        match value.get("via") {
+            None => serde_json::from_value(value)
+                .map(SwivelOp::Rays)
+                .map_err(D::Error::custom),
+            Some(via) if via == "edge" => serde_json::from_value(value)
+                .map(SwivelOp::Edge)
+                .map_err(D::Error::custom),
+            Some(via) => Err(D::Error::custom(format!(
+                "a swivel's `via` is 'edge' or absent, got {via}"
+            ))),
+        }
+    }
+}
+
 /// `FoldSwivelOp`: the vertex and the points its three given rays run
 /// toward as sheet points, the emergent ray as a model-frame direction, the
 /// layers at the vertex, a sheet point that stays, the direction.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct SwivelOp {
+pub struct SwivelRaysOp {
     pub vertex: Point,
     pub toward: [Point; 3],
     pub emergent: Point,
     pub seed: SeedInput,
     pub stayer: Point,
+    pub direction: Direction,
+}
+
+/// `FoldSwivelEdgeOp`: swivel the edge through the sheet point `edge` (a raw
+/// edge or a folded crease) onto `target`, pivoting at the sheet point
+/// `pivot` (its image moved onto the nearer bisector of edge and target);
+/// the layers at the vertex; the ridge, a model-frame direction, when it is
+/// not the crease square to the edge; the direction. The target is a crease
+/// or edge by a sheet point on it (`via: 'crease'`) or the line through two
+/// sheet points' images (`via: 'free'`): an axiom's would need a root the
+/// step does not store, and a model line is not one it can store.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct SwivelEdgeOp {
+    pub pivot: Point,
+    pub edge: Point,
+    pub target: LineInput,
+    pub seed: SeedInput,
+    #[serde(default)]
+    pub ridge: Option<Point>,
     pub direction: Direction,
 }
 
@@ -151,6 +209,7 @@ pub enum EngineOp {
     Petal(PetalFold),
     RabbitEar(RabbitEar),
     Swivel(Swivel),
+    SwivelByEdge(SwivelByEdge),
 }
 
 /// Resolve a vertex op's anchors in `parent`; any other op is the caller's
@@ -230,7 +289,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
                 direction: op.direction,
             })
         }
-        Op::Swivel(op) => {
+        Op::Swivel(SwivelOp::Rays(op)) => {
             finite_point("stayer", op.stayer)?;
             let [a, b, c] = op.toward;
             EngineOp::Swivel(Swivel {
@@ -243,6 +302,17 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
                 emergent: direction("emergent", op.emergent)?,
                 layers: seed(&op.seed)?,
                 stayer: op.stayer,
+                direction: op.direction,
+            })
+        }
+        Op::Swivel(SwivelOp::Edge(op)) => {
+            finite_point("edge", op.edge)?;
+            EngineOp::SwivelByEdge(SwivelByEdge {
+                pivot: image("pivot", op.pivot)?,
+                edge: op.edge,
+                target: swivel_target(parent, &op.target)?,
+                layers: seed(&op.seed)?,
+                ridge: op.ridge.map(|r| direction("ridge", r)).transpose()?,
                 direction: op.direction,
             })
         }
@@ -260,6 +330,53 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
             completion: choices.completion().cloned(),
         },
     })
+}
+
+/// A swivel's target in the parent's model frame: the line of the crease
+/// or edge whose sheet segment holds a point, or the line through two sheet
+/// points' images.
+fn swivel_target(parent: &State, target: &LineInput) -> Result<Line, Rejection> {
+    match target {
+        LineInput::Crease { at } => {
+            finite_point("target.at", *at)?;
+            parent
+                .crease_at(*at)
+                .and_then(|c| parent.crease_line(c.id))
+                .ok_or_else(|| BridgeRefusal::CreaseNotFound { point: *at }.into())
+        }
+        LineInput::Free { through: [a, b] } => {
+            let image = |p: Point| -> Result<Point, Rejection> {
+                finite_point("target.through", p)?;
+                parent
+                    .resolve_point(p)
+                    .ok_or_else(|| LineRefusal::PointOffPaper { point: p }.into())
+            };
+            let (pa, pb) = (image(*a)?, image(*b)?);
+            let distance = (pb[0] - pa[0]).hypot(pb[1] - pa[1]);
+            if distance < MIN_FEATURE {
+                return Err(LineRefusal::FreeLineTooShort {
+                    a: *a,
+                    b: *b,
+                    distance,
+                }
+                .into());
+            }
+            Line::from_points(pa, pb).ok_or_else(|| {
+                LineRefusal::FreeLineTooShort {
+                    a: *a,
+                    b: *b,
+                    distance,
+                }
+                .into()
+            })
+        }
+        LineInput::Axiom { .. } | LineInput::Model { .. } => Err(BridgeError::InvalidInput(
+            "a swivel's target is a crease or edge (`via: 'crease'`) or a line through two \
+             points (`via: 'free'`)"
+                .to_string(),
+        )
+        .into()),
+    }
 }
 
 fn seed(seed: &SeedInput) -> Result<oristudio_fold::Seed, BridgeError> {
@@ -287,6 +404,7 @@ fn picture(
         EngineOp::Petal(op) => parent.petal_action(op, landed),
         EngineOp::RabbitEar(op) => parent.rabbit_ear_action(op, landed),
         EngineOp::Swivel(op) => parent.swivel_action(op, landed),
+        EngineOp::SwivelByEdge(op) => parent.swivel_by_edge_action(op, landed),
     }
 }
 
@@ -298,6 +416,7 @@ fn fold(parent: &State, fold: &VertexFold) -> Result<VertexOutcome, CompoundRefu
         EngineOp::Petal(op) => parent.petal_fold(op, choices),
         EngineOp::RabbitEar(op) => parent.rabbit_ear(op, choices),
         EngineOp::Swivel(op) => parent.swivel(op, choices),
+        EngineOp::SwivelByEdge(op) => parent.swivel_by_edge(op, choices),
     }
 }
 
@@ -308,6 +427,9 @@ fn analyse(parent: &State, op: &EngineOp) -> Result<VertexAnalysis, Refused> {
         EngineOp::Petal(op) => parent.analyse_petal(op).map(VertexAnalysis::Petal),
         EngineOp::RabbitEar(op) => parent.analyse_rabbit_ear(op).map(VertexAnalysis::RabbitEar),
         EngineOp::Swivel(op) => parent.analyse_swivel(op).map(VertexAnalysis::Swivel),
+        EngineOp::SwivelByEdge(op) => parent
+            .analyse_swivel_by_edge(op)
+            .map(|a| VertexAnalysis::SwivelByEdge(Box::new(a))),
     }
 }
 
@@ -356,6 +478,18 @@ fn emergents(parent: &State, op: &EngineOp, analysis: &VertexAnalysis) -> Vec<bo
                     ..swivel.clone()
                 };
                 parent.swivel(&each, &none).is_ok()
+            })
+            .collect(),
+        // A swivel by its edge's: per ridge it can take.
+        (EngineOp::SwivelByEdge(swivel), VertexAnalysis::SwivelByEdge(analysis)) => analysis
+            .ridges
+            .iter()
+            .map(|&ridge| {
+                let each = SwivelByEdge {
+                    ridge: Some(ridge),
+                    ..swivel.clone()
+                };
+                parent.swivel_by_edge(&each, &none).is_ok()
             })
             .collect(),
         _ => Vec::new(),
@@ -443,6 +577,9 @@ pub enum VertexAnalysis {
     Petal(PetalAnalysis),
     RabbitEar(FanAnalysis),
     Swivel(FanAnalysis),
+    /// A swivel by its edge (`via: 'edge'`): its vertex, creases with their
+    /// letters, landing, ridges and moving paper.
+    SwivelByEdge(Box<SwivelEdgeAnalysis>),
 }
 
 /// What `compound_analysis` answers for a vertex op.
@@ -450,7 +587,8 @@ pub enum VertexAnalysis {
 pub struct VertexAnalysed {
     pub analysis: VertexAnalysis,
     /// A rabbit ear's or a swivel's: per emergent candidate (the analysis'
-    /// `candidates`), whether the fold lands with it. Empty for the other
+    /// `candidates`), whether the fold lands with it; a swivel by its
+    /// edge's, per ridge (the analysis' `ridges`). Empty for the other
     /// folds.
     pub emergents: Vec<bool>,
     /// The orders the op leaves as asked, its stored completion aside, when
