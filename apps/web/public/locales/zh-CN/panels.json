@@ -1047,7 +1047,10 @@
     "label": "图解",
     "layers": {
       "empty": "在“标注”中打开一个步骤即可查看其图层。",
-      "list": "图层"
+      "list": "图层",
+      "pageEmpty": "此页没有步骤。",
+      "pageList": "第 {{number}} 页的步骤",
+      "parts": "第 {{number}} 步的组成部分"
     },
     "pagePane": {
       "columns": "列",
@@ -1170,7 +1173,6 @@
       "view": "视角"
     },
     "placement": {
-      "auto": "自动",
       "autoSize": "自动：{{mm}} mm",
       "breakBefore": "从新一页开始步骤 {{number}}",
       "breakBeforeNote": "从新一页开始后，此步骤的整体位置以及因此移动的步骤的位置都会恢复为自动排版。",
@@ -1197,15 +1199,12 @@
       "pathWarning": "路径折返",
       "picture": "图片",
       "placed": "手动排版",
-      "reset": "重置",
       "resetAll": "全部重置",
       "resetLayout": "重置排版",
       "resetPage": "重置此页",
       "resetPart": "重置{{part}}",
       "resetPosition": "重置位置",
       "resetSize": "重置尺寸",
-      "select": "选择",
-      "selectPart": "选择{{part}}",
       "size": "尺寸 (mm)",
       "stepClash": "此步骤与步骤 {{steps}} 重叠。",
       "stepClashOne": "此步骤与步骤 {{steps}} 重叠。",

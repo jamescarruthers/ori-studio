@@ -4,7 +4,8 @@ import { isCoarsePointerSurface } from '../platform/pointerSurface';
 import { useLayoutStore } from '../store/layoutStore';
 import { selectionPaneReveal } from '../store/sidePaneReveal';
 import { useWorkspaceStore } from '../store/workspaceStore';
-import { activeAnchorPick, layersSelectionId } from '../store/workspaceStore/diagramState';
+import { activeAnchorPick, layersSelectionId, pagesLayersStepId } from '../store/workspaceStore/diagramState';
+import type { WorkspaceState } from '../store/workspaceStore/types';
 
 export const DIAGRAM_STEP_PANE_ID = 'diagram-step';
 export const DIAGRAM_PAGE_PANE_ID = 'diagram-page';
@@ -30,8 +31,21 @@ export function revealDiagramPane(id: DiagramPaneId, wanted: () => boolean = () 
   });
 }
 
-/** Whether a mark or a frame is selected on the step open in Annotate, which keeps Step back when its step is selected with it. */
-const layerSelected = () => layersSelectionId(useWorkspaceStore.getState()) !== null;
+/**
+ * What the Layers pane shows selected, by a key that changes with it: a mark
+ * or a frame on the step open in Annotate; in the Pages view, a step and the
+ * part of it selected (`pagesLayersStepId`) — another part is another
+ * selection, as another mark is. Null while it shows none.
+ */
+function layersSubject(state: WorkspaceState): string | null {
+  const layer = layersSelectionId(state);
+  if (layer !== null) return layer;
+  const stepId = pagesLayersStepId(state);
+  return stepId === null ? null : `${stepId}:${state.diagramPagesPart ?? ''}`;
+}
+
+/** Whether Layers shows something selected, which keeps Step back when its step is selected with it. */
+const layerSelected = () => layersSubject(useWorkspaceStore.getState()) !== null;
 
 /**
  * Bring the Step or Page tab forward because the reader asked for it (Edit
@@ -52,34 +66,39 @@ export function showDiagramPane(id: DiagramPaneId): void {
  */
 const layerToReveal = () => {
   const state = useWorkspaceStore.getState();
-  return layersSelectionId(state) !== null && activeAnchorPick(state) === null;
+  return layersSubject(state) !== null && activeAnchorPick(state) === null;
 };
 
 /**
  * Layers, brought forward by a mark selected — or an enlarged step's frame
- * (Revision 2) — and giving its tab back when it is let go, as Edit's
- * Properties is.
+ * (Revision 2), or in the Pages view a step or a part of it — and giving its
+ * tab back when it is let go, as Edit's Properties is.
  */
 const layers = selectionPaneReveal(DIAGRAM_LAYERS_PANE_ID, layerToReveal);
 
 /**
  * The reveal rules, on transitions only, so a tab the user picks stays until
  * the next one: switching to Pages brings Page forward and back to Steps
- * brings Step; selecting a different step brings Step, unless a mark there
- * is selected with it; selecting a different mark brings Layers, and
- * letting it go gives back the tab Layers covered —
- * unless the user changed the tab since, as Edit's Properties does. Mounted
- * by the Diagram panel, which is mounted whichever tab is on top of the side
- * column.
+ * brings Step; selecting a different step brings Step, unless Layers shows it
+ * selected — a mark on it in Annotate, or in the Pages view the step itself,
+ * whose placement Layers holds; selecting a different mark, or on the pages a
+ * different step or part, brings Layers, and letting it go gives back the tab
+ * Layers covered — unless the user changed the tab since, as Edit's
+ * Properties does. A step opened from the pages, which takes it from Layers,
+ * brings Step, as a step opened from the Steps view has it. Mounted by the
+ * Diagram panel, which is mounted whichever tab is on top of the side column.
  */
 export function useDiagramPaneReveal(): void {
   useEffect(() => {
     const initial = useWorkspaceStore.getState();
     let view = initial.diagramView;
     let selected = initial.diagramSelectedStepId;
-    let layer = layersSelectionId(initial);
+    let detail = initial.diagramDetail;
+    let layer = layersSubject(initial);
     return useWorkspaceStore.subscribe((state) => {
-      const nextLayer = layersSelectionId(state);
+      const nextLayer = layersSubject(state);
+      const opened = detail === null && state.diagramDetail !== null;
+      detail = state.diagramDetail;
       if (state.diagramView !== view) {
         view = state.diagramView;
         selected = state.diagramSelectedStepId;
@@ -95,6 +114,7 @@ export function useDiagramPaneReveal(): void {
       if (nextLayer === layer) return;
       layer = nextLayer;
       if (layer !== null) layers.reveal();
+      else if (opened && selected !== null) revealDiagramPane(DIAGRAM_STEP_PANE_ID, () => !layerSelected());
       else layers.restore();
     });
   }, []);

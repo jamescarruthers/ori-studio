@@ -1121,7 +1121,10 @@
     "label": "Diagrama",
     "layers": {
       "empty": "Abra um passo em Anotar para ver suas camadas.",
-      "list": "Camadas"
+      "list": "Camadas",
+      "pageEmpty": "Nenhum passo nesta página.",
+      "pageList": "Passos na página {{number}}",
+      "parts": "Partes do passo {{number}}"
     },
     "pagePane": {
       "columns": "Colunas",
@@ -1248,7 +1251,6 @@
       "view": "Vista"
     },
     "placement": {
-      "auto": "Auto",
       "autoSize": "Auto: {{mm}} mm",
       "breakBefore": "Iniciar o passo {{number}} em uma nova página",
       "breakBeforeNote": "Uma nova página devolve este passo, em conjunto, ao posicionamento automático, assim como qualquer passo que ela mova.",
@@ -1277,15 +1279,12 @@
       "pathWarning": "O caminho retorna",
       "picture": "Imagem",
       "placed": "Posicionado à mão",
-      "reset": "Redefinir",
       "resetAll": "Redefinir tudo",
       "resetLayout": "Redefinir disposição",
       "resetPage": "Redefinir esta página",
       "resetPart": "Redefinir {{part}}",
       "resetPosition": "Redefinir posição",
       "resetSize": "Redefinir tamanho",
-      "select": "Selecionar",
-      "selectPart": "Selecionar {{part}}",
       "size": "Tamanho (mm)",
       "stepClash": "Este passo se sobrepõe aos passos {{steps}}.",
       "stepClashOne": "Este passo se sobrepõe ao passo {{steps}}.",

@@ -24,7 +24,8 @@ export function newPageHelps(clashes: readonly PlacementClash[] | undefined, sta
 }
 
 /**
- * The Step pane's On the page section, bound to its step. The step's cell is
+ * A step's placement controls under the Pages view's Layers list
+ * (`DiagramStepPlacement`), bound to its step. The step's cell is
  * the one the pages last laid out for it, kept while a layout of a newer
  * diagram is under way (review finding U8): an edit then never flashes the
  * section to disabled with a size of 0. A step the pages have not laid out
@@ -61,9 +62,6 @@ export function useStepPlacement(step: DiagramStep) {
     offerNewPage: newPageHelps(cell?.clashes, startsAPage),
     startOnNewPage() {
       useWorkspaceStore.getState().setDiagramStepBreakBefore(step.id, true);
-    },
-    select(part: PagePart) {
-      useWorkspaceStore.getState().selectDiagramPagesPart(part);
     },
     offset(part: PagePart) {
       return pageOffset(step.place, part, cell?.rightToLeft ?? false);

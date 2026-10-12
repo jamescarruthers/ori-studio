@@ -1047,7 +1047,10 @@
     "label": "折り図",
     "layers": {
       "empty": "ステップを注記で開くと、そのレイヤーが表示されます。",
-      "list": "レイヤー"
+      "list": "レイヤー",
+      "pageEmpty": "このページにはステップがありません。",
+      "pageList": "{{number}} ページのステップ",
+      "parts": "ステップ {{number}} の部分"
     },
     "pagePane": {
       "columns": "列",
@@ -1170,7 +1173,6 @@
       "view": "視点"
     },
     "placement": {
-      "auto": "自動",
       "autoSize": "自動：{{mm}} mm",
       "breakBefore": "ステップ{{number}}を新しいページで開始",
       "breakBeforeNote": "新しいページにすると、このステップ全体の配置と、それで動くステップの配置が自動に戻ります。",
@@ -1197,15 +1199,12 @@
       "pathWarning": "経路が折り返しています",
       "picture": "図",
       "placed": "手動配置",
-      "reset": "リセット",
       "resetAll": "すべてリセット",
       "resetLayout": "配置をリセット",
       "resetPage": "このページをリセット",
       "resetPart": "{{part}}をリセット",
       "resetPosition": "位置をリセット",
       "resetSize": "サイズをリセット",
-      "select": "選択",
-      "selectPart": "{{part}}を選択",
       "size": "サイズ (mm)",
       "stepClash": "このステップはステップ{{steps}}と重なっています。",
       "stepClashOne": "このステップはステップ{{steps}}と重なっています。",

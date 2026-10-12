@@ -199,6 +199,21 @@ export function layersSelectionId(
     : null;
 }
 
+/**
+ * The step the Layers pane shows selected in the Pages view: the selected
+ * step, which it lists with the rest of its page and whose placement it
+ * offers — a step, never a turn, which is the Step pane's — while no detail
+ * is open over the pages; null otherwise. With its part, what brings Layers
+ * forward there (`useDiagramPaneReveal`).
+ */
+export function pagesLayersStepId(
+  state: Pick<WorkspaceState, 'diagram' | 'diagramView' | 'diagramDetail' | 'diagramSelectedStepId'>
+): string | null {
+  const { diagram, diagramSelectedStepId: stepId } = state;
+  if (state.diagramView !== 'pages' || state.diagramDetail !== null || !diagram || stepId === null) return null;
+  return stepById(diagram, stepId) ? stepId : null;
+}
+
 /** The selected annotation, when it is one this build reads, on the selected step. */
 export function selectedDiagramAnnotation(
   state: Pick<WorkspaceState, 'diagram' | 'diagramSelectedStepId' | 'diagramSelectedAnnotationId'>

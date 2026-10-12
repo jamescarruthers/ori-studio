@@ -1084,7 +1084,10 @@
     "label": "Diagram",
     "layers": {
       "empty": "Open a step in Annotate to see its layers.",
-      "list": "Layers"
+      "list": "Layers",
+      "pageEmpty": "No steps on this page.",
+      "pageList": "Steps on page {{number}}",
+      "parts": "Parts of step {{number}}"
     },
     "pagePane": {
       "columns": "Columns",
@@ -1209,7 +1212,6 @@
       "view": "View"
     },
     "placement": {
-      "auto": "Auto",
       "autoSize": "Auto: {{mm}} mm",
       "breakBefore": "Start step {{number}} on a new page",
       "breakBeforeNote": "A new page returns this step’s frame to automatic placement, and the frame of any step it moves.",
@@ -1237,15 +1239,12 @@
       "pathWarning": "Path doubles back",
       "picture": "Picture",
       "placed": "Placed by hand",
-      "reset": "Reset",
       "resetAll": "Reset All",
       "resetLayout": "Reset Layout",
       "resetPage": "Reset This Page",
       "resetPart": "Reset {{part}}",
       "resetPosition": "Reset Position",
       "resetSize": "Reset Size",
-      "select": "Select",
-      "selectPart": "Select {{part}}",
       "size": "Size (mm)",
       "stepClash": "This step overlaps steps {{steps}}.",
       "stepClashOne": "This step overlaps step {{steps}}.",

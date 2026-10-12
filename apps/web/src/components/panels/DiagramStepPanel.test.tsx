@@ -87,6 +87,17 @@ describe('DiagramStepPanel', () => {
     expect(host?.textContent).toContain('Select a step to edit it.');
   });
 
+  it('leaves where a step sits on the page to the Pages view’s Layers pane, in either view', () => {
+    threeSteps();
+    for (const view of ['steps', 'pages'] as const) {
+      act(() => state().setDiagramView(view));
+      expect(host?.textContent, view).toContain('Instruction');
+      expect(host?.textContent, view).not.toContain('On the page');
+      expect(host?.textContent, view).not.toContain('Reset Layout');
+      expect(host?.querySelector('input[aria-label="Size (mm)"]'), view).toBeNull();
+    }
+  });
+
   it('writes the instruction to the selected step, as one undo step', () => {
     const [, , third] = threeSteps();
     const past = state().diagramHistory.past.length;

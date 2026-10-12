@@ -1084,7 +1084,10 @@
     "label": "Diagramm",
     "layers": {
       "empty": "Öffnen Sie einen Schritt in Annotieren, um seine Ebenen zu sehen.",
-      "list": "Ebenen"
+      "list": "Ebenen",
+      "pageEmpty": "Auf dieser Seite sind keine Schritte.",
+      "pageList": "Schritte auf Seite {{number}}",
+      "parts": "Teile von Schritt {{number}}"
     },
     "pagePane": {
       "columns": "Spalten",
@@ -1209,7 +1212,6 @@
       "view": "Ansicht"
     },
     "placement": {
-      "auto": "Auto",
       "autoSize": "Auto: {{mm}} mm",
       "breakBefore": "Schritt {{number}} auf einer neuen Seite beginnen",
       "breakBeforeNote": "Eine neue Seite setzt den gesamten Schritt auf die automatische Platzierung zurück, ebenso jeden Schritt, den sie verschiebt.",
@@ -1237,15 +1239,12 @@
       "pathWarning": "Pfad läuft zurück",
       "picture": "Bild",
       "placed": "Von Hand platziert",
-      "reset": "Zurücksetzen",
       "resetAll": "Alles zurücksetzen",
       "resetLayout": "Anordnung zurücksetzen",
       "resetPage": "Diese Seite zurücksetzen",
       "resetPart": "{{part}} zurücksetzen",
       "resetPosition": "Position zurücksetzen",
       "resetSize": "Größe zurücksetzen",
-      "select": "Auswählen",
-      "selectPart": "{{part}} auswählen",
       "size": "Größe (mm)",
       "stepClash": "Dieser Schritt überlappt die Schritte {{steps}}.",
       "stepClashOne": "Dieser Schritt überlappt Schritt {{steps}}.",

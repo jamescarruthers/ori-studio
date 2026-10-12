@@ -278,6 +278,87 @@ describe('useDiagramPaneReveal', () => {
       expect(shown).toBe('diagram-step');
     });
 
+    describe('in the Pages view, where it holds the page’s steps (Zach, 2026-10-12)', () => {
+      /** Three steps and a turn, on the Pages view with Page on top and nothing selected. */
+      function onPages() {
+        const ids = [state().addDiagramStep()!, state().addDiagramStep()!, state().addDiagramStep()!];
+        let turn = '';
+        act(() => {
+          turn = state().insertDiagramTurn({ kind: 'turn-over', axis: 'vertical' }, { stepId: ids[0]!, where: 'after' })!;
+          state().selectDiagramStep(null);
+          state().setDiagramView('pages');
+        });
+        expect(shown).toBe('diagram-page');
+        activatePanel.mockClear();
+        return { ids, turn };
+      }
+
+      it('comes forward for a step selected, not Step, stays for its part and the next step, and gives Page back when it is let go', () => {
+        const { ids } = onPages();
+        act(() => {
+          state().selectDiagramStep(ids[0]!);
+          state().selectDiagramPagesPart('frame');
+        });
+        expect(shown).toBe('diagram-layers');
+        act(() => state().selectDiagramPagesPart('picture'));
+        act(() => {
+          state().selectDiagramStep(ids[1]!);
+          state().selectDiagramPagesPart('frame');
+        });
+        expect(shown).toBe('diagram-layers');
+        expect(activatePanel).toHaveBeenCalledTimes(1);
+        // A press on the paper lets it go.
+        act(() => state().selectDiagramStep(null));
+        expect(shown).toBe('diagram-page');
+      });
+
+      it('gives back whichever tab it covered: Step, from where the reader was', () => {
+        const { ids } = onPages();
+        show('diagram-step');
+        act(() => state().selectDiagramStep(ids[2]!));
+        expect(shown).toBe('diagram-layers');
+        act(() => state().selectDiagramStep(null));
+        expect(shown).toBe('diagram-step');
+      });
+
+      it('comes forward again for a part chosen after the user picked another tab, as for another mark', () => {
+        const { ids } = onPages();
+        act(() => {
+          state().selectDiagramStep(ids[0]!);
+          state().selectDiagramPagesPart('frame');
+        });
+        show('diagram-page');
+        act(() => state().selectDiagramPagesPart('number'));
+        expect(shown).toBe('diagram-layers');
+      });
+
+      it('comes forward for the step selected before the switch once a press on the page selects its frame', () => {
+        const ids = [state().addDiagramStep()!, state().addDiagramStep()!];
+        act(() => state().selectDiagramStep(ids[1]!));
+        act(() => state().setDiagramView('pages'));
+        expect(shown).toBe('diagram-page');
+        act(() => state().selectDiagramPagesPart('frame'));
+        expect(shown).toBe('diagram-layers');
+      });
+
+      it('leaves a turn selected to Step, whose it is', () => {
+        const { turn } = onPages();
+        act(() => state().selectDiagramStep(turn));
+        expect(shown).toBe('diagram-step');
+      });
+
+      it('brings Step for a step opened from the pages, as one opened from the Steps view has it', () => {
+        const { ids } = onPages();
+        act(() => {
+          state().selectDiagramStep(ids[0]!);
+          state().selectDiagramPagesPart('frame');
+        });
+        expect(shown).toBe('diagram-layers');
+        act(() => state().openDiagramStep(ids[0]!, 'pose'));
+        expect(shown).toBe('diagram-step');
+      });
+    });
+
     it('comes forward for a mark that is its subject only: one selected out of Annotate is not', () => {
       const stepId = annotating();
       act(() => state().closeDiagramStep());

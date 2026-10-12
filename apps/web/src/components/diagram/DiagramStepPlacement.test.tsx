@@ -163,10 +163,37 @@ describe('DiagramStepPlacement › the offer of a new page', () => {
   });
 });
 
+describe('DiagramStepPlacement › the part selected', () => {
+  const field = (label: string) => host!.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+  const button = (name: string) =>
+    [...host!.querySelectorAll<HTMLButtonElement>('button')].find((each) => each.textContent === name);
+
+  it('offers X and Y of the frame with the step selected alone, and of a part once one is, and resets that part', () => {
+    act(() => {
+      state().setDiagramView('pages');
+      state().selectDiagramStep('s1');
+      state().setDiagramStepPlace('s1', { picture: [2, 3] });
+    });
+    show('s1', []);
+    expect([field('X (mm)').value, field('Y (mm)').value]).toEqual(['0', '0']);
+    expect(button('Reset Frame')?.disabled).toBe(true);
+    expect(button('Reset Picture')).toBeUndefined();
+    // No Select buttons: the Layers list's rows select the part.
+    expect(button('Select')).toBeUndefined();
+    act(() => state().selectDiagramPagesPart('picture'));
+    show('s1', []);
+    expect([field('X (mm)').value, field('Y (mm)').value]).toEqual(['2', '3']);
+    act(() => button('Reset Picture')!.click());
+    expect(stepById(state().diagram!, 's1')!.place).toBeUndefined();
+    show('s1', []);
+    expect(button('Reset Picture')?.disabled).toBe(true);
+    expect(button('Reset Layout')?.disabled).toBe(true);
+  });
+});
+
 describe('DiagramStepPlacement › while the pages lay out (review finding U8)', () => {
   const size = () => host!.querySelector<HTMLInputElement>('input[aria-label="Size (mm)"]')!;
-  const selectPicture = () =>
-    host!.querySelector<HTMLButtonElement>('button[aria-label="Select Picture"]')!;
+  const offsetX = () => host!.querySelector<HTMLInputElement>('input[aria-label="X (mm)"]')!;
 
   it('keeps the step’s last cell while a layout of a newer diagram is under way', () => {
     show('s1', []);
@@ -179,7 +206,7 @@ describe('DiagramStepPlacement › while the pages lay out (review finding U8)',
     show('s1', []);
     expect(size().value).toBe(laidOut);
     expect(size().disabled).toBe(false);
-    expect(selectPicture().disabled).toBe(false);
+    expect(offsetX().disabled).toBe(false);
   });
 
   it('shows a step the pages have not laid out yet with an empty size, not 0', () => {

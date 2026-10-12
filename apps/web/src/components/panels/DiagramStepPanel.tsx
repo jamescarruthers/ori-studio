@@ -19,7 +19,6 @@ import { DiagramStepAnnotations } from '../diagram/DiagramStepAnnotations';
 import { DiagramStepEnlarged } from '../diagram/DiagramStepEnlarged';
 import { DiagramStepHeader } from '../diagram/DiagramStepHeader';
 import { DiagramStepPicture } from '../diagram/DiagramStepPicture';
-import { DiagramStepPlacement } from '../diagram/DiagramStepPlacement';
 import { DiagramStepPose } from '../diagram/DiagramStepPose';
 import { DiagramStepShowAs } from '../diagram/DiagramStepShowAs';
 import { DiagramStepZoomStatus } from '../diagram/DiagramStepZoomStatus';
@@ -55,6 +54,8 @@ const NO_NOTICES: readonly SanitizeNotice[] = [];
  * (`DiagramStepZoomStatus`); in Pose, nothing — Pose only draws the frame —
  * but on a step Annotate cannot open yet, with no picture (one made after an
  * enlarged step starts enlarged), what it is, read-only, as out of the detail.
+ * Where a step sits on the page is the Pages view's Layers pane's
+ * (`DiagramPageLayers`), with the page it is on.
  */
 export function DiagramStepPanel() {
   const { t } = useTranslation();
@@ -196,7 +197,6 @@ export function DiagramStepPanel() {
             <DiagramStepAnnotations step={step} />
           </CollapsibleSection>
         )}
-        {!locked && !detailOpen && <DiagramStepPlacement step={step} />}
         <CollapsibleSection title={t('panels:diagram.stepPane.instruction', 'Instruction')}>
           <TextAreaRow
             // One field per step: a draft never carries over to the next one.

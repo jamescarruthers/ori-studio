@@ -1121,7 +1121,10 @@
     "label": "Diagramme",
     "layers": {
       "empty": "Ouvrez une étape dans Annoter pour voir ses calques.",
-      "list": "Calques"
+      "list": "Calques",
+      "pageEmpty": "Aucune étape sur cette page.",
+      "pageList": "Étapes sur la page {{number}}",
+      "parts": "Parties de l’étape {{number}}"
     },
     "pagePane": {
       "columns": "Colonnes",
@@ -1248,7 +1251,6 @@
       "view": "Vue"
     },
     "placement": {
-      "auto": "Auto",
       "autoSize": "Auto : {{mm}} mm",
       "breakBefore": "Commencer l’étape {{number}} sur une nouvelle page",
       "breakBeforeNote": "Une nouvelle page rend cette étape, dans son ensemble, au placement automatique, comme toute étape qu’elle déplace.",
@@ -1277,15 +1279,12 @@
       "pathWarning": "Le tracé revient en arrière",
       "picture": "Image",
       "placed": "Placé à la main",
-      "reset": "Réinitialiser",
       "resetAll": "Tout réinitialiser",
       "resetLayout": "Réinitialiser la disposition",
       "resetPage": "Réinitialiser cette page",
       "resetPart": "Réinitialiser {{part}}",
       "resetPosition": "Réinitialiser la position",
       "resetSize": "Réinitialiser la taille",
-      "select": "Sélectionner",
-      "selectPart": "Sélectionner {{part}}",
       "size": "Taille (mm)",
       "stepClash": "Cette étape chevauche les étapes {{steps}}.",
       "stepClashOne": "Cette étape chevauche l’étape {{steps}}.",

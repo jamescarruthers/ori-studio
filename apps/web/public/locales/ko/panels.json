@@ -1047,7 +1047,10 @@
     "label": "도해",
     "layers": {
       "empty": "단계를 주석에서 열면 레이어가 표시됩니다.",
-      "list": "레이어"
+      "list": "레이어",
+      "pageEmpty": "이 페이지에는 단계가 없습니다.",
+      "pageList": "{{number}}페이지의 단계",
+      "parts": "{{number}}단계의 구성 요소"
     },
     "pagePane": {
       "columns": "열",
@@ -1170,7 +1173,6 @@
       "view": "보기"
     },
     "placement": {
-      "auto": "자동",
       "autoSize": "자동: {{mm}} mm",
       "breakBefore": "{{number}}단계를 새 페이지에서 시작",
       "breakBeforeNote": "새 페이지로 시작하면 이 단계 전체와, 그로 인해 옮겨지는 단계가 자동 배치로 돌아갑니다.",
@@ -1197,15 +1199,12 @@
       "pathWarning": "경로가 되돌아감",
       "picture": "그림",
       "placed": "수동 배치",
-      "reset": "초기화",
       "resetAll": "모두 초기화",
       "resetLayout": "배치 초기화",
       "resetPage": "이 페이지 초기화",
       "resetPart": "{{part}} 초기화",
       "resetPosition": "위치 초기화",
       "resetSize": "크기 초기화",
-      "select": "선택",
-      "selectPart": "{{part}} 선택",
       "size": "크기 (mm)",
       "stepClash": "이 단계가 {{steps}}단계와 겹칩니다.",
       "stepClashOne": "이 단계가 {{steps}}단계와 겹칩니다.",
