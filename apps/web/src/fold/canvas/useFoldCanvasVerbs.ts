@@ -38,7 +38,7 @@ import { steppedTuckTarget } from '../tools/tuck/tuckStep';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
 import { flapSeed, foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
-import { landingRidges, nearestDirection, squashTargetToward, steppedRidge } from '../tools/vertex/vertexStep';
+import { nearestDirection, squashTargetToward } from '../tools/vertex/vertexStep';
 import { isFoldAltLatched } from './foldAltLatch';
 import { toPair, transformLine } from './foldCanvasGeometry';
 import {
@@ -134,8 +134,6 @@ export interface FoldCanvasVerbs {
   /** Step through a fan's fourth-ray candidates; take one by its direction (a fix's). */
   stepEmergent: (delta: number) => void;
   takeEmergent: (direction: FoldModelPoint) => void;
-  /** A rabbit ear's ridge, by index into the two listed. */
-  setRidge: (ridge: number) => void;
   /** Step through how many layers at a fan's center are cut. */
   stepFanLayers: (delta: number) => void;
   /** Put a squash's spine back onto its hinge line. */
@@ -184,8 +182,8 @@ export type FoldCanvasChoice = {
   count: number;
 };
 
-/** A vertex fold's choices the chooser steps through, beside its order: a rabbit ear's ridge, a fan's fourth ray. */
-export type FoldVertexCanvasChoiceKind = 'ridge' | 'emergent';
+/** A vertex fold's choice the chooser steps through, beside its order: a fan's fourth ray. */
+export type FoldVertexCanvasChoiceKind = 'emergent';
 
 /**
  * What the compound fold in hand lists to choose from: the ways a reverse
@@ -207,20 +205,14 @@ export function compoundListed(preview: Pick<FoldToolPreview, 'reverse' | 'crimp
 
 /**
  * A vertex fold's deepest choice with more than one answer — its layer
- * order, then a rabbit ear's ridge, then a fan's fourth ray — since each
- * earlier choice lists the ones after it anew. Null when none has more than
- * one, or for any other tool.
+ * order, then a fan's fourth ray — since the fourth ray lists the orders
+ * anew. Null when none has more than one, or for any other tool.
  */
 function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
   const vertex = preview.vertex;
   if (!vertex) return null;
-  const { orders, order, ridges, ridge, emergent, base } = vertex;
+  const { orders, order, emergent, base } = vertex;
   if (orders.length > 1) return { kind: 'order', index: Math.max(0, order ? orders.indexOf(order) : 0), count: orders.length };
-  // The ridges the ear lands with: one that does not is no choice to step to.
-  const landing = landingRidges(ridges);
-  if (landing.length > 1 && ridge !== null) {
-    return { kind: 'ridge', index: Math.max(0, landing.indexOf(ridge)), count: landing.length };
-  }
   const analysis = base?.analysis;
   const candidates = analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel' ? analysis.candidates.length : 0;
   return candidates > 1 && emergent !== null ? { kind: 'emergent', index: emergent, count: candidates } : null;
@@ -229,8 +221,8 @@ function vertexCanvasChoice(preview: FoldToolPreview): FoldCanvasChoice | null {
 /**
  * The chooser on the canvas: the deepest choice with more than one answer —
  * the layer order, then the way the tip opens, the layer a tuck goes
- * against or the pocket a point sinks into (a vertex fold's ridge and fourth
- * ray), then the axiom's root — since each earlier choice resets the ones
+ * against or the pocket a point sinks into (a vertex fold's fourth ray),
+ * then the axiom's root — since each earlier choice resets the ones
  * after it. Null when none has more than one.
  */
 export function foldCanvasChoice(preview: FoldToolPreview, tools: FoldToolState): FoldCanvasChoice | null {
@@ -545,8 +537,6 @@ export function useFoldCanvasVerbs(
         if (k !== null) tools.setEmergent(k);
       },
 
-      setRidge: (ridge) => tools.setRidge(ridge),
-
       stepFanLayers: (delta) => {
         const layers = live.current.preview.vertex?.layers ?? 0;
         if (layers <= 1) return;
@@ -645,12 +635,6 @@ export function useFoldCanvasVerbs(
           case 'root':
             tools.stepRoot(delta, choice.count);
             break;
-          case 'ridge': {
-            const vertex = live.current.preview.vertex;
-            const next = steppedRidge(vertex?.ridges ?? [], vertex?.ridge ?? null, delta);
-            if (next !== null) tools.setRidge(next);
-            break;
-          }
           case 'emergent':
             tools.stepEmergent(delta, choice.count, choice.index);
             break;

@@ -10,7 +10,8 @@
 //!   `tests/vertex/cases.rs`: the preliminary base by the diagonal route (and
 //!   in mirror image) and the waterbomb base by the midline route, each
 //!   squash; the bird base's two petal folds, both ways; every rabbit ear's
-//!   every emergent ray and every order it offers; every swivel ray.
+//!   every emergent ray that lands, valley and mountain (one ear each, its
+//!   fourth crease the ridge); every swivel ray that lands.
 //!
 //! Seeded Oriedita (`fold_support::oriedita`) runs in process; Flat-Folder's
 //! `verify` (`fold_support::flat_folder`) when `FLATFOLDER_ORACLE` is set.
@@ -82,7 +83,10 @@ fn named() -> Vec<Landed> {
             push(format!("{name} step {k}"), folded.state);
         }
     }
-    for case in cases::ear_cases() {
+    for case in cases::ear_cases()
+        .into_iter()
+        .chain(cases::mountain_ear_cases())
+    {
         for (deg, emergent) in cases::candidates_of(&case.state, &case.op) {
             let op = RabbitEar {
                 emergent,

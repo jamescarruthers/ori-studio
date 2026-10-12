@@ -12,9 +12,10 @@
  *   longer decides the order.
  * - **The tools** ask the compound question (`compoundAnalysis`,
  *   `family: 'vertex'`), as the reverse fold's tools do: what the op names,
- *   the orders it leaves (each the `FoldChoices.completion` that picks it),
- *   and a rabbit ear's two ridge options; then preview and commit the step
- *   with its choices through `step`. The family's own calls besides
+ *   which of a fan's fourth rays land, and the orders it leaves (each the
+ *   `FoldChoices.completion` that picks it); then preview and commit the
+ *   step with its choices through `step`. A rabbit ear's fourth crease rises
+ *   as its ridge, so there is no ridge to choose. The family's own calls besides
  *   (`vertexFold`): one order lands; more are held under a `pending` handle
  *   until a pick lands one, whose `compound.stored` is the
  *   `FoldChoices.completion` the step stores.
@@ -129,35 +130,20 @@ export interface FoldVertexOrders {
   more: boolean;
 }
 
-/** One of a rabbit ear's two ridge options: a ray of its far wedge (`VertexRidge`). */
-export interface FoldVertexRidge {
-  /** The ray, a direction from the incenter in the parent's model frame: what the step stores as `ridge`. */
-  direction: FoldModelPoint;
-  /** Which corner's ray it is, in the op's corner order; null for the emergent ray. */
-  given: number | null;
-  /** Whether the ear lands with it. */
-  lands: boolean;
-  /** The orders it leaves, when more than one. */
-  orders: FoldVertexOrders | null;
-}
-
 /**
  * The compound question's answer for a vertex op (`VertexAnalysed`): what it
- * names, and what a tool chooses among — the orders it leaves, its stored
- * completion aside, and a rabbit ear's ridges when it was asked without one.
+ * names, and what a tool chooses among — which fourth rays land, and the
+ * orders it leaves, its stored completion aside.
  */
 export interface FoldVertexAnalysed {
   analysis: FoldVertexAnalysis;
   /**
    * A rabbit ear's or a swivel's: per emergent candidate, whether the fold
-   * lands with it, its other inputs as asked (a rabbit ear's without its
-   * ridge). Empty for the other folds.
+   * lands with it, its other inputs as asked. Empty for the other folds.
    */
   emergents: boolean[];
   /** Null when it lands with one order, or is refused (the preview says why). */
   orders: FoldVertexOrders | null;
-  /** Empty unless a rabbit ear was asked without its ridge and got as far as its completion. */
-  ridges: FoldVertexRidge[];
 }
 
 // ---------------------------------------------------------------------------

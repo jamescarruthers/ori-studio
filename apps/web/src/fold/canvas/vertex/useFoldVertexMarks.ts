@@ -12,9 +12,9 @@ const NONE: readonly boolean[] = [];
  * engine has described its flap, line or fan: from its answer for the fold
  * as it will be folded when there is one (a squash's spine where it was
  * aimed), else its first, with where the spine was aimed (`target`) drawn
- * faint when that fold was refused. Rebuilt when those, the fourth crease or
- * the ridge taken, or the pane's inks change — never on a pointer move,
- * which redraws the overlay with them as they are.
+ * faint when that fold was refused. Rebuilt when those, the fourth crease
+ * taken, or the pane's inks change — never on a pointer move, which redraws
+ * the overlay with them as they are.
  */
 export function useFoldVertexMarks(
   index: FoldPickIndex | null,
@@ -26,14 +26,13 @@ export function useFoldVertexMarks(
   const analysis = answered ?? vertex?.base?.analysis ?? null;
   const emergent = vertex?.emergent ?? null;
   const emergents = vertex?.base?.emergents ?? NONE;
-  const ridge = vertex && vertex.ridge !== null ? (vertex.ridges[vertex.ridge]?.direction ?? null) : null;
   // The tools keep the target until it is aimed again: its identity is its value.
   const aimed = answered ? null : target;
   return useMemo(
     () =>
       index && analysis && inks
-        ? vertexOverlayMarks(index, { analysis, emergent, emergents, ridge, aimed: aimed && [aimed[0], aimed[1]] }, inks)
+        ? vertexOverlayMarks(index, { analysis, emergent, emergents, aimed: aimed && [aimed[0], aimed[1]] }, inks)
         : null,
-    [index, analysis, emergent, emergents, ridge, aimed, inks]
+    [index, analysis, emergent, emergents, aimed, inks]
   );
 }

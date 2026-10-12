@@ -247,15 +247,14 @@ describe('the vertex folds’ tool state', () => {
     const tools = createFoldTools();
     tools.selectTool('rabbit-ear');
     tools.setEmergent(2);
-    tools.setRidge(1);
     tools.stepOrder(1, 3);
-    expect(tools.store.getState().compound).toMatchObject({ emergent: 2, ridge: 1, order: 1 });
-    // Another fourth ray: its ridges and orders are listed anew.
+    expect(tools.store.getState().compound).toMatchObject({ emergent: 2, order: 1 });
+    // Another fourth ray: its orders are listed anew.
     tools.stepEmergent(1, 3, 2);
-    expect(tools.store.getState().compound).toMatchObject({ emergent: 0, ridge: null, order: 0 });
-    tools.setRidge(1);
+    expect(tools.store.getState().compound).toMatchObject({ emergent: 0, order: 0 });
+    tools.stepOrder(1, 3);
     tools.setFanLayers(2);
-    expect(tools.store.getState().compound).toMatchObject({ fanLayers: 2, ridge: null, order: 0 });
+    expect(tools.store.getState().compound).toMatchObject({ fanLayers: 2, order: 0 });
     tools.setVertexDirection('mountain');
     tools.setSquashTarget([0, 1]);
     expect(tools.store.getState().compound.squashTarget).toEqual([0, 1]);
@@ -264,7 +263,7 @@ describe('the vertex folds’ tool state', () => {
     tools.clear();
     expect(tools.store.getState()).toMatchObject({
       vertexDirection: 'mountain',
-      compound: { squashTarget: null, emergent: null, ridge: null, fanLayers: null, order: 0 },
+      compound: { squashTarget: null, emergent: null, fanLayers: null, order: 0 },
     });
     expect(FOLD_TOOL_INITIAL.vertexDirection).toBe('valley');
   });

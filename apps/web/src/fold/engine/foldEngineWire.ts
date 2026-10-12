@@ -182,7 +182,8 @@ export const FOLD_ENGINE_REFUSAL_CODES = [
   'fan_center',
   'fan_ray_blocked',
   'fan_not_flat',
-  'fan_ridge_not_ray',
+  'fan_fourth_beside_stayer',
+  'fan_fourth_cannot_rise',
   'fan_stayer_detached',
   // Sinks (plan Phase 11).
   ...FOLD_SINK_REFUSAL_CODES,

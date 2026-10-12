@@ -15,7 +15,8 @@
 //!   stays where they overlap, for a valley as the model frame sees it, or
 //!   below it for a mountain. Pairs across blocks are left to the
 //!   completion ([`super::Across::Free`]). With it the spike found every
-//!   squash and petal unique; a rabbit ear needs its ridge too.
+//!   squash and petal unique; a rabbit ear or a swivel also seeds its fourth
+//!   crease as the ridge ([`super::fan`]), the odd letter out.
 //! - **Choices** are the completion's, stored as the pairs they decided,
 //!   keyed by witnesses (plan D6), and replayed.
 //! - **The motion** (plan D15) turns each block about its creases in
@@ -161,8 +162,9 @@ pub(crate) struct Compiled {
     pub(crate) vertices: Vec<Point>,
     /// The direction in the model frame.
     pub(crate) direction: Direction,
-    /// More seeds, `[upper, lower]` by scored face position: a rabbit
-    /// ear's ridge.
+    /// More seeds, `[upper, lower]` by scored face position: a fan's far
+    /// wedge against its neighbours, in every layer, with its fourth crease
+    /// as the ridge.
     pub(crate) extra: Vec<[usize; 2]>,
 }
 

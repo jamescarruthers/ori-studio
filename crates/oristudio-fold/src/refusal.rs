@@ -266,9 +266,16 @@ pub enum FoldRefusal {
     /// two rays coincide.
     #[error("the fan's rays cannot fold flat")]
     FanNotFlat,
-    /// The ridge names no ray of the far wedge.
-    #[error("the ridge is not one of the far wedge's rays")]
-    FanRidgeNotRay,
+    /// The fourth crease runs beside the paper that stays: a rabbit ear's
+    /// (or a swivel's) fourth crease is the ridge its flap rises along, so it
+    /// must lie across from that paper, one of the far wedge's two rays.
+    #[error("the fourth crease runs beside the paper that stays")]
+    FanFourthBesideStayer,
+    /// The angles between the rays will not let the fourth crease fold
+    /// opposite the other three: a narrowest angle lies between two creases
+    /// that would fold alike (a swivel's; a rabbit ear's never does).
+    #[error("the fourth crease cannot fold opposite the other three")]
+    FanFourthCannotRise,
     /// The paper at the stayer point is joined to none of the fan's wedges.
     #[error("the paper at {point:?} holds none of the fan's wedges")]
     FanStayerDetached { point: Point },
@@ -404,7 +411,8 @@ impl FoldRefusal {
             FoldRefusal::FanCenter { .. } => "fan_center",
             FoldRefusal::FanRayBlocked { .. } => "fan_ray_blocked",
             FoldRefusal::FanNotFlat => "fan_not_flat",
-            FoldRefusal::FanRidgeNotRay => "fan_ridge_not_ray",
+            FoldRefusal::FanFourthBesideStayer => "fan_fourth_beside_stayer",
+            FoldRefusal::FanFourthCannotRise => "fan_fourth_cannot_rise",
             FoldRefusal::FanStayerDetached { .. } => "fan_stayer_detached",
             FoldRefusal::SinkSeveralPoints { .. } => "sink_several_points",
             FoldRefusal::SinkPointOpen { .. } => "sink_point_open",

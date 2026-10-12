@@ -37,7 +37,7 @@ describe('a vertex tool’s marks over the folded pane', () => {
   });
 
   it('draws a squash’s spine faint, each layer’s crease, and where the spine lands bold', () => {
-    const marks = vertexOverlayMarks(index, { analysis: squash, emergent: null, emergents: [], ridge: null }, inks);
+    const marks = vertexOverlayMarks(index, { analysis: squash, emergent: null, emergents: [] }, inks);
     expect(marks.dots).toHaveLength(1);
     close(marks.dots[0]!.at, { x: 0.5, y: 0.5 });
     expect(marks.strokes).toHaveLength(4);
@@ -49,7 +49,7 @@ describe('a vertex tool’s marks over the folded pane', () => {
     // Aimed where it cannot land: drawn too, faint.
     const aimed = vertexOverlayMarks(
       index,
-      { analysis: squash, emergent: null, emergents: [], ridge: null, aimed: [0, 1] },
+      { analysis: squash, emergent: null, emergents: [], aimed: [0, 1] },
       inks
     );
     expect(aimed.strokes).toHaveLength(5);
@@ -73,14 +73,14 @@ describe('a vertex tool’s marks over the folded pane', () => {
       top: [1],
       second: [2],
     };
-    const marks = vertexOverlayMarks(index, { analysis: petal, emergent: null, emergents: [], ridge: null }, inks);
+    const marks = vertexOverlayMarks(index, { analysis: petal, emergent: null, emergents: [] }, inks);
     expect(marks.dots).toHaveLength(3);
     expect(marks.strokes).toHaveLength(3);
     close(marks.strokes[0]!.a, { x: 0.2, y: 0.5 });
     close(marks.strokes[0]!.b, { x: 0.8, y: 0.5 });
   });
 
-  it('draws a fan’s rays, the fourth taken bold among the others, one that does not fit fainter, and the ridge haloed', () => {
+  it('draws a fan’s rays, the fourth taken bold among the others, and one that does not fit fainter', () => {
     const fan: FoldVertexAnalysis = {
       kind: 'rabbit-ear',
       center: [0.5, 0.5],
@@ -96,12 +96,12 @@ describe('a vertex tool’s marks over the folded pane', () => {
       emergent: 0,
       layers: [0],
     };
-    const marks = vertexOverlayMarks(index, { analysis: fan, emergent: 1, emergents: [false, true], ridge: [0, 1] }, inks);
-    // The halo, three given rays, two candidates.
-    expect(marks.strokes).toHaveLength(6);
-    const [halo, , , , unfit, taken] = marks.strokes;
-    expect(halo!.widthMul).toBeGreaterThan(taken!.widthMul);
-    close(halo!.b, { x: 0.5, y: 1 });
+    const marks = vertexOverlayMarks(index, { analysis: fan, emergent: 1, emergents: [false, true] }, inks);
+    // Three given rays, two candidates: no halo, since the fourth taken is the ridge.
+    expect(marks.strokes).toHaveLength(5);
+    const [given, , , unfit, taken] = marks.strokes;
+    expect(taken!.widthMul).toBeGreaterThan(given!.widthMul);
+    close(given!.b, { x: 1, y: 0.5 });
     expect(taken!.color).toEqual(accent);
     expect(unfit!.color[3]).toBeLessThan(0.3);
     expect(marks.dots).toHaveLength(1);

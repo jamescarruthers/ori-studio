@@ -279,7 +279,6 @@
         "opening": "The flap opens more than one way: the lit layers stay together. Step through them.",
         "order": "The layers can land stacked more than one way. Step through them.",
         "pocket": "The point can sink into more than one pocket between its layers. Step through them.",
-        "ridge": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them.",
         "root": "This axiom has more than one fold here. Step through them.",
         "target": "More than one layer takes the tuck: the brightest is the one taken. Step through them."
       },
@@ -288,7 +287,6 @@
         "opening": "The flap opens more than one way: the lit layers stay together. Step through them, or press {{keys}}.",
         "order": "The layers can land stacked more than one way. Step through them, or press {{keys}}.",
         "pocket": "The point can sink into more than one pocket between its layers. Step through them, or press {{keys}}.",
-        "ridge": "Either crease across from the paper that stays can rise as the ear’s ridge. Step through them, or press {{keys}}.",
         "root": "This axiom has more than one fold here. Step through them, or press {{keys}}.",
         "target": "More than one layer takes the tuck: the brightest is the one taken. Step through them, or press {{keys}}."
       }
@@ -740,7 +738,6 @@
     },
     "vertex": {
       "direction": "Direction",
-      "doesNotFit": "Does not fit here",
       "emergent": "Fourth crease",
       "emergentDoesNotFit": "This fourth crease does not fit here: step to another.",
       "fix": {
@@ -770,7 +767,7 @@
       "noEmergentFits": "No fourth crease fits these layers here.",
       "note": {
         "petal": "A petal fold refolds creases already there: precrease the kite creases from the flap’s lower point and the line H across their ends first.",
-        "rabbitEar": "The creases meet at the triangle’s incenter: one to each corner, and a fourth that lets them lie flat.",
+        "rabbitEar": "The creases meet at the triangle’s incenter: one to each corner, folded the way you choose, and a fourth the ear rises along, folded the other way.",
         "squash": "A flap squashes when its two layers are free, held only along its hinge, and uncovered, with nothing over it on the side it opens toward.",
         "swivel": "The point the creases meet at must lie inside the paper, off every crease: hold {{modifier}} to put it anywhere.",
         "swivelTouch": "The point the creases meet at must lie inside the paper, off every crease."
@@ -788,6 +785,14 @@
         "covered": {
           "text": "Other layers lie over the flap, or inside it, on the side it opens toward. Fold them out of the way first, or squash it the other way.",
           "title": "The flap is covered"
+        },
+        "fourthBesideStayer": {
+          "text": "The flap rises along the fourth crease, so it lies across from the paper that stays put. Pick another fourth crease, or other paper to stay put.",
+          "title": "The fourth crease is beside the paper that stays"
+        },
+        "fourthCannotRise": {
+          "text": "The fourth crease folds the other way from the other three, and the angles between these creases do not let it. Pick another fourth crease, or other points.",
+          "title": "The fourth crease cannot rise here"
         },
         "kite": {
           "text": "A petal fold refolds creases already there. Fold each side edge of the flap’s top layer onto its centre line and unfold, then petal fold.",
@@ -833,10 +838,6 @@
           "text": "Other layers lie over the flap on the side it lifts toward. Fold them out of the way first, or lift it the other way.",
           "title": "The flap is covered"
         },
-        "ridge": {
-          "text": "The ridge is one of the two creases across from the paper that stays. Pick the other ridge, or other paper to stay put.",
-          "title": "That ridge does not fit"
-        },
         "stayer": {
           "text": "The paper picked to stay put is joined to no part of the fold. Pick paper the creases cut, or paper joined to it.",
           "title": "Which paper stays?"
@@ -847,16 +848,11 @@
         }
       },
       "reset": "Back to the hinge",
-      "ridge": "Ridge",
-      "ridgeCorner": "Corner {{number}}",
-      "ridgeCornerTitle": "The crease to corner {{number}} rises as the ridge",
-      "ridgeFourth": "Fourth",
-      "ridgeFourthTitle": "The fourth crease rises as the ridge",
       "steps": {
-        "earChoose": "Choose the fourth crease, the layers and the ridge.",
         "earFirstCorner": "Click the triangle’s first corner.",
         "earSecondCorner": "Click its second corner.",
         "earThirdCorner": "Click its third corner.",
+        "fanChoose": "Choose the fourth crease and the layers.",
         "finish": "Choose the options, then press Enter.",
         "finishTouch": "Choose the options, then tap {{action}}.",
         "petalCrease": "Click the precreased line H the flap lifts along.",
@@ -870,7 +866,6 @@
         "squashTarget": "Click where the spine should land, or keep it on the hinge line.",
         "squashTargetTouch": "Tap where the spine should land, or keep it on the hinge line.",
         "stayer": "Click the paper that stays put.",
-        "swivelChoose": "Choose the fourth crease and the layers.",
         "swivelFirstRay": "Click a point the first crease runs toward.",
         "swivelSecondRay": "Click a point the second crease runs toward.",
         "swivelThirdRay": "Click a point the third crease runs toward.",

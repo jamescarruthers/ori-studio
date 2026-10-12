@@ -395,9 +395,9 @@ export interface FoldPetalOp {
 
 /**
  * A rabbit ear: the triangle's corners as sheet points; the emergent ray, a
- * direction from the incenter; the layers at the incenter; a sheet point on
- * paper that stays; and the ridge, a direction naming one of the far wedge's
- * rays, absent to leave the two orders it decides to the completion.
+ * direction from the incenter; the layers at the incenter; and a sheet point
+ * on paper that stays. Its three creases to the corners fold as `direction`
+ * says and its fourth the other way, as the ridge the ear rises along.
  */
 export interface FoldRabbitEarOp {
   kind: 'rabbit-ear';
@@ -406,6 +406,13 @@ export interface FoldRabbitEarOp {
   seed: FoldSeed;
   stayer: SheetPoint;
   direction: FoldDirection;
+  /**
+   * An older step's choice of which far ray rose as the ridge, before the
+   * fourth crease always did. Read and written back as it came, so the
+   * step's path (`fh1`) holds, but never read by the engine (an unknown
+   * field there) and never written by the tools: a step that named a
+   * corner's crease now lands the rabbit ear, and replays as changed.
+   */
   ridge?: FoldModelDirection;
 }
 

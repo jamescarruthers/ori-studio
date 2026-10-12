@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Point } from '../../../lib/geometry';
 import { bookScene, flatSquareLandmarks, flatSquareScene } from '../../canvas/foldCanvas.fixtures';
 import { foldPickIndex, type FoldPick } from '../../canvas/foldPicking';
-import type { FoldVertexAnalysed, FoldVertexRidge } from '../../engine/foldEngineSquashWire';
+import type { FoldVertexAnalysed, FoldVertexOrders } from '../../engine/foldEngineSquashWire';
 import type { FoldScene } from '../../engine/foldEngineWire';
 import {
   emergentToFold,
@@ -10,20 +10,16 @@ import {
   fanLayerCount,
   fanSeed,
   incenter,
-  landingRidges,
   layerSheetPointAt,
   nearestDirection,
   nearPrecrease,
   petalLine,
   PLACEHOLDER_RAY,
   precreaseAlong,
-  ridgeToFold,
   squashTargetToward,
-  steppedRidge,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
-  withRidge,
   type FoldVertexIntent,
   type FoldVertexTaken,
 } from './vertexStep';
@@ -70,7 +66,7 @@ const intent = (extra: Partial<FoldVertexIntent>): FoldVertexIntent => ({
   ...extra,
 });
 
-const NONE: FoldVertexTaken = { squashTarget: null, emergent: null, ridge: null, order: 0 };
+const NONE: FoldVertexTaken = { squashTarget: null, emergent: null, order: 0 };
 
 describe('which layer a vertex fold’s click names', () => {
   it('is the one the viewer sees on the direction’s side, or the far one for the paper that stays', () => {
@@ -214,20 +210,11 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     },
     emergents,
     orders: null,
-    ridges: [],
   });
-  const ridge = (lands: boolean, given: number | null, orders: number = 0): FoldVertexRidge => ({
-    direction: given === null ? [-1, 0] : [1, 0],
-    given,
-    lands,
-    orders:
-      orders > 1
-        ? {
-            count: { orders, exact: true },
-            orders: Array.from({ length: orders }, (_, k) => ({ faces: [], orders: [[k, k + 1, 1] as const] })),
-            more: false,
-          }
-        : null,
+  const listed = (orders: number): FoldVertexOrders => ({
+    count: { orders, exact: true },
+    orders: Array.from({ length: orders }, (_, k) => ({ faces: [], orders: [[k, k + 1, 1] as const] })),
+    more: false,
   });
 
   it('takes the folder’s fourth ray, else the first that lands, else the engine’s', () => {
@@ -237,27 +224,6 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     expect(emergentToFold(null, fan([false, false, false], 1))).toBe(1);
     expect(nearestDirection([[1, 0], [0, 1]], [0.2, 0.9])).toBe(1);
     expect(nearestDirection([[1, 0]], [0, 0])).toBeNull();
-  });
-
-  it('takes the folder’s ridge, else the first that lands', () => {
-    expect(ridgeToFold(null, [])).toBeNull();
-    expect(ridgeToFold(null, [ridge(false, 0), ridge(true, null)])).toBe(1);
-    expect(ridgeToFold(0, [ridge(false, 0), ridge(true, null)])).toBe(0);
-    expect(withRidge({ kind: 'squash', flap: [0, 0], direction: 'valley' }, ridge(true, 0))).toEqual({
-      kind: 'squash',
-      flap: [0, 0],
-      direction: 'valley',
-    });
-  });
-
-  it('steps only through the ridges the ear lands with', () => {
-    expect(landingRidges([ridge(true, 0), ridge(false, null)])).toEqual([0]);
-    expect(landingRidges([ridge(true, 0), ridge(true, null)])).toEqual([0, 1]);
-    // One that does not land is no choice: nothing to step to.
-    expect(steppedRidge([ridge(true, 0), ridge(false, null)], 0, 1)).toBeNull();
-    expect(steppedRidge([ridge(true, 0), ridge(true, null)], 0, 1)).toBe(1);
-    expect(steppedRidge([ridge(true, 0), ridge(true, null)], 1, 1)).toBe(0);
-    expect(steppedRidge([ridge(true, 0), ridge(true, null)], null, -1)).toBe(1);
   });
 
   it('asks again once the fold is another than the one first asked', () => {
@@ -297,7 +263,6 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       },
       emergents: [],
       orders: null,
-      ridges: [],
     };
     expect(vertexChosenOp(squash, analysed, NONE)).toEqual({ op: squash, emergent: null, again: false });
     expect(vertexChosenOp(squash, analysed, { ...NONE, squashTarget: [0, 1] })).toEqual({
@@ -309,7 +274,7 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
     expect(squashTargetToward([0.5, 0.5], [0.5, 0.5])).toBeNull();
   });
 
-  it('builds the step with the ridge taken and the completion of the order taken', () => {
+  it('builds the step with the completion of the order taken, and no ridge: the fourth crease is the ridge', () => {
     const op = {
       kind: 'rabbit-ear' as const,
       corners: [
@@ -322,14 +287,18 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       stayer: [0.6, 0.35] as const,
       direction: 'valley' as const,
     };
-    const answer = { ...fan([true]), ridges: [ridge(true, 0), ridge(true, null, 3)] };
+    // One order: nothing to store.
+    const one = vertexStepFrom(op, fan([true]), NONE);
+    expect(one.step).toEqual({ op });
+    expect(one.orders).toEqual([]);
+    const answer = { ...fan([true]), orders: listed(3) };
     const first = vertexStepFrom(op, answer, NONE);
-    expect(first.ridge).toBe(0);
-    expect(first.step).toEqual({ op: { ...op, ridge: [1, 0] } });
-    const second = vertexStepFrom(op, answer, { ...NONE, ridge: 1, order: 2 });
+    expect(first.step).toEqual({ op, choices: { completion: first.orders[0] } });
+    const second = vertexStepFrom(op, answer, { ...NONE, order: 2 });
     expect(second.orders).toHaveLength(3);
-    expect(second.step).toEqual({ op: { ...op, ridge: [-1, 0] }, choices: { completion: second.orders[2] } });
+    expect(second.step).toEqual({ op, choices: { completion: second.orders[2] } });
+    expect(second.step.op).not.toHaveProperty('ridge');
     // An order index past the list is the last one listed.
-    expect(vertexStepFrom(op, answer, { ...NONE, ridge: 1, order: 9 }).order).toBe(second.orders[2]);
+    expect(vertexStepFrom(op, answer, { ...NONE, order: 9 }).order).toBe(second.orders[2]);
   });
 });

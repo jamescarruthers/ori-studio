@@ -207,8 +207,15 @@ Compound folds (plan D4, D15, Phases 9 and 11):
     or a free vertex toward given points — the fourth one of Kawasaki's
     candidates (three at most, offered by the analysis; a refused ray offers
     the ones that land, `use_emergent`). A ray into paper that does not fold
-    with the layers is `fan_ray_blocked`. The rabbit ear's ridge (one of the
-    far wedge's rays) seeds the order the direction leaves open.
+    with the layers is `fan_ray_blocked`. The three given creases take the
+    direction's letter and the fourth the other (a valley ear is V, V, V and
+    M; a swivel is a rabbit ear on free hinges): the fourth rises as the
+    ridge, one of the far wedge's rays, seeded in every layer, which settles
+    the order the direction leaves open. A fourth crease beside the paper
+    that stays is `fan_fourth_beside_stayer`, and one the angles will not
+    let fold opposite the other three (a swivel's) `fan_fourth_cannot_rise`,
+    each offering the rays that land. A stored order is replayed only when
+    the fold leaves several; an older step's `ridge` is no longer read.
 - `compound::sink`: the open sink, the closed sink and the unsink (research
   §5.4). The point is one flap; its geometry is the plain fold of the whole
   point, so only letters and order are decided. Refused up front: an open
@@ -441,9 +448,11 @@ Flat-Folder's search is called through `treemaker-flatfold`, not copied.
   route the waterbomb base, an asymmetric squash creases each layer on its
   own line; two petal folds on that base are `bird-base-petal.fold`'s
   creases, with eight hinge changes each; each rabbit ear's emergent ray
-  comes to the spike's ‹ n of m › (two with the direction alone, one with
-  the ridge), each blocked ray refused with the rays that land, and every
-  swivel ray is unique. Every landed state passes `tests/vertex`: the full
+  lands one ear (the spike's two orders with the direction alone, one with
+  the fourth crease as the ridge) whose bisectors share the direction's
+  letter in every layer and whose fourth crease has the other, a ray beside
+  the paper that stays and each blocked ray refused with the rays that land,
+  and every swivel ray that lands is unique with the same letters. Every landed state passes `tests/vertex`: the full
   gate, and a staged motion whose every leg places every moving face,
   starting at the parent and ending at the landed state, never jumping. The
   squash campaign draws a squash on each of 400 seeded states; at the

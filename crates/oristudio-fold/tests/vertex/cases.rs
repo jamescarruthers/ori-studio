@@ -289,7 +289,6 @@ fn ear(state: &State, corners: [Point; 3], layers: Seed, stayer_at: Point) -> Ra
         layers,
         stayer: seen_bottom(state, stayer_at),
         direction: Direction::Valley,
-        ridge: None,
     }
 }
 
@@ -367,6 +366,57 @@ pub fn ear_cases() -> Vec<EarCase> {
             state: kite,
         },
     ]
+}
+
+/// Cases 3a–3d folded the other way: a mountain ear through both layers of
+/// the two-layer triangle, through its bottom layer alone (the layer
+/// nearest the mountain's side, as the top one is a valley's), and on the
+/// flat square and the fish base, the paper that stays seen from the other
+/// side.
+pub fn mountain_ear_cases() -> Vec<EarCase> {
+    let tri = valley(&square(), [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]);
+    let ear = |state: &State, layers: Seed| RabbitEar {
+        corners: [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
+        emergent: [1.0, 0.0],
+        layers,
+        stayer: seen_top(state, [0.6, 0.35]),
+        direction: Direction::Mountain,
+    };
+    let bottom = seen_bottom(&tri, [0.3, 0.3]);
+    let mut out = vec![
+        EarCase {
+            name: "3a both layers, mountain",
+            op: ear(&tri, Seed::All),
+            state: tri.clone(),
+        },
+        EarCase {
+            name: "3b bottom layer, mountain",
+            op: ear(
+                &tri,
+                Seed::Depth {
+                    at: bottom,
+                    layers: 1,
+                },
+            ),
+            state: tri,
+        },
+    ];
+    for valley in ear_cases() {
+        let name = match valley.name {
+            "3c flat square" => "3c flat square, mountain",
+            "3d fish ear 1" => "3d fish ear 1, mountain",
+            _ => continue,
+        };
+        out.push(EarCase {
+            name,
+            op: RabbitEar {
+                direction: Direction::Mountain,
+                ..valley.op
+            },
+            state: valley.state,
+        });
+    }
+    out
 }
 
 /// Spike case 3f: a free four-ray vertex on the flat square (Beloch's

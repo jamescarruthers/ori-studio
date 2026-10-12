@@ -25,7 +25,6 @@ function verbs() {
     vertexOtherWay: vi.fn(),
     stepEmergent: vi.fn(),
     takeEmergent: vi.fn(),
-    setRidge: vi.fn(),
     stepFanLayers: vi.fn(),
     resetSquashTarget: vi.fn(),
     useNearPrecrease: vi.fn(),
@@ -45,8 +44,6 @@ const vertex = (extra: Partial<FoldVertexWindowView> = {}): FoldVertexWindowView
   target: 'hinge',
   emergents: [],
   emergent: 0,
-  ridges: [],
-  ridge: 0,
   layers: 0,
   fanLayers: null,
   orders: 0,
@@ -134,7 +131,7 @@ describe('a vertex fold’s window while it previews', () => {
     expect(aimed?.footer?.commit).toMatchObject({ label: 'Squash fold', disabled: false });
   });
 
-  it('steps a fan’s fourth crease and layers, says which do not fit, and offers a rabbit ear’s ridge', () => {
+  it('steps a fan’s fourth crease and layers, says which do not fit, and offers no ridge: the fourth crease is the ear’s', () => {
     const calls = verbs();
     const ear = vertex({
       tool: 'rabbit-ear',
@@ -142,33 +139,21 @@ describe('a vertex fold’s window while it previews', () => {
       emergent: 1,
       layers: 4,
       fanLayers: 2,
-      ridges: [
-        { given: 0, lands: true },
-        { given: null, lands: false },
-      ],
-      ridge: 0,
     });
     const model = foldToolWindow(t, view(ear, { preview: preview() }), calls, mouse);
     const controls = model?.vertex;
     expect(controls?.emergent?.value).toBe('2 of 3');
     expect(controls?.emergentNote).toBe('This fourth crease does not fit here: step to another.');
     expect(controls?.layers?.value).toBe('Top 2 of 4');
-    expect(controls?.ridge?.options).toEqual([
-      { value: 0, label: 'Corner 1', tooltip: 'The crease to corner 1 rises as the ridge', disabled: false },
-      {
-        value: 1,
-        label: 'Fourth',
-        tooltip: 'The fourth crease rises as the ridge - Does not fit here',
-        disabled: true,
-      },
-    ]);
-    expect(model?.meta).toBe('4 settings');
+    expect(controls).not.toHaveProperty('ridge');
+    // Direction, fourth crease, layers.
+    expect(model?.meta).toBe('3 settings');
+    expect(model?.instructions.items[0]).toBe('Choose the fourth crease and the layers.');
+    expect(controls?.note).toMatch(/a fourth the ear rises along, folded the other way/);
     controls?.emergent?.next.run();
     controls?.layers?.previous.run();
-    controls?.ridge?.set(1);
     expect(calls.stepEmergent).toHaveBeenCalledWith(1);
     expect(calls.stepFanLayers).toHaveBeenCalledWith(-1);
-    expect(calls.setRidge).toHaveBeenCalledWith(1);
     // From the bottom, for a mountain; every layer, said so.
     const mountain = foldToolWindow(t, view({ ...ear, direction: 'mountain' }, { preview: preview() }), calls, mouse);
     expect(mountain?.vertex?.layers?.value).toBe('Bottom 2 of 4');
@@ -224,7 +209,8 @@ describe('a vertex fold’s refusals', () => {
       fan_center: { code: 'fan_center', faces: [1] },
       fan_ray_blocked: { code: 'fan_ray_blocked', faces: [1] },
       fan_not_flat: { code: 'fan_not_flat' },
-      fan_ridge_not_ray: { code: 'fan_ridge_not_ray' },
+      fan_fourth_beside_stayer: { code: 'fan_fourth_beside_stayer' },
+      fan_fourth_cannot_rise: { code: 'fan_fourth_cannot_rise' },
       fan_stayer_detached: { code: 'fan_stayer_detached', point: [0.5, 0.5] },
     };
     const titles = new Set<string>();
@@ -248,6 +234,19 @@ describe('a vertex fold’s refusals', () => {
     expect(petal.text).toMatch(/lift it the other way/);
     const ear = foldRefusalNotice(t, refused(bodies.fan_center), vertexContext('rabbit-ear'), verbs());
     expect(ear.text).toMatch(/incenter/);
+    // A fourth crease beside the paper that stays: refused, offering the ones across from it.
+    const calls = verbs();
+    const beside = foldRefusalNotice(
+      t,
+      refused(bodies.fan_fourth_beside_stayer, [{ fix: 'use_emergent', direction: [0, -1] }]),
+      vertexContext('rabbit-ear', { emergentNumber: () => 2 }),
+      calls
+    );
+    expect(beside.title).toBe('The fourth crease is beside the paper that stays');
+    expect(beside.text).toMatch(/rises along the fourth crease/);
+    expect(beside.actions.map((action) => action.label)).toEqual(['Use fourth crease 2']);
+    beside.actions[0]?.run();
+    expect(calls.takeEmergent).toHaveBeenCalledWith([0, -1]);
   });
 
   it('makes every fix a button that acts: the other direction, a fourth crease that fits', () => {

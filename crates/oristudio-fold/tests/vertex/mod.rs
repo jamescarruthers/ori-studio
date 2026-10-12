@@ -10,9 +10,10 @@ pub mod cases;
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use oristudio_fold::pattern::opposite;
 use oristudio_fold::{
-    CompletionLimits, CreaseKind, CreasePatternInput, FaceId, ImportKind, ImportTarget,
-    ImportedPattern, Letter, StartSide, State, VertexFolded,
+    CompletionLimits, CreaseKind, CreasePatternInput, Direction, FaceId, FanAnalysis, ImportKind,
+    ImportTarget, ImportedPattern, Letter, StartSide, State, VertexFolded,
 };
 
 use crate::beloch;
@@ -94,6 +95,101 @@ pub fn check(parent: &State, folded: &VertexFolded) {
                 .crease(edge)
                 .is_some_and(|c| c.kind.is_folded()),
             "new crease {edge} is not folded"
+        );
+    }
+}
+
+/// A fan fold's new creases' letters per layer it cut, as the viewer saw
+/// that layer in the parent (a layer seen face down has its sheet letters
+/// the other way round): the three given rays' in the analysis' `given`
+/// order, then the fourth's.
+pub fn fan_letters(
+    parent: &State,
+    folded: &VertexFolded,
+    fan: &FanAnalysis,
+) -> Vec<(FaceId, [Letter; 4])> {
+    let center = fan.center;
+    let fourth = fan
+        .emergent
+        .and_then(|k| fan.candidates.get(k))
+        .copied()
+        .unwrap_or_else(|| panic!("no fourth ray in {fan:?}"));
+    let rays: Vec<Point> = fan.given.iter().copied().chain([fourth]).collect();
+    let state = &folded.state;
+    fan.layers
+        .iter()
+        .map(|&layer| {
+            let t = parent
+                .isometry(layer)
+                .unwrap_or_else(|| panic!("no layer {layer}"));
+            let seen_up = parent.seen_front_up(layer).unwrap_or(true);
+            let mut letters: [Option<Letter>; 4] = [None; 4];
+            for &edge in &folded.report.fold.created {
+                let Some(crease) = state.crease(edge) else {
+                    continue;
+                };
+                let [a, b] = crease.vertices;
+                if !state
+                    .faces()
+                    .iter()
+                    .any(|f| f.parent == Some(layer) && f.ring.contains(&a) && f.ring.contains(&b))
+                {
+                    continue;
+                }
+                let [p, q] = [a, b].map(|v| t.apply(state.vertices()[v.0 as usize]));
+                let at_center = |x: Point| (x[0] - center[0]).hypot(x[1] - center[1]) < 1e-7;
+                let tip = if at_center(p) {
+                    q
+                } else {
+                    assert!(at_center(q), "crease {edge} does not run from the center");
+                    p
+                };
+                let d = [tip[0] - center[0], tip[1] - center[1]];
+                let length = d[0].hypot(d[1]);
+                let ray = (0..4)
+                    .find(|&r| (rays[r][0] * d[0] + rays[r][1] * d[1]) / length > 1.0 - 1e-7)
+                    .unwrap_or_else(|| panic!("crease {edge} runs along no ray"));
+                let letter = crease
+                    .kind
+                    .letter()
+                    .unwrap_or_else(|| panic!("crease {edge} has no letter"));
+                assert!(letters[ray].is_none(), "two creases along ray {ray}");
+                letters[ray] = Some(if seen_up { letter } else { opposite(letter) });
+            }
+            let letters =
+                letters.map(|l| l.unwrap_or_else(|| panic!("layer {layer} misses a ray")));
+            (layer, letters)
+        })
+        .collect()
+}
+
+/// The letter a direction folds, as the viewer sees it.
+pub fn letter_of(direction: Direction) -> Letter {
+    match direction {
+        Direction::Valley => Letter::Valley,
+        Direction::Mountain => Letter::Mountain,
+    }
+}
+
+/// A rabbit ear's (or a swivel's) letters (Lang; Beloch's
+/// `flatten-rabbit-ear-*` and `swivel-rabbit`): in every layer it cut, the
+/// three given creases fold as the direction names and the fourth the other
+/// way, as the viewer saw the layer.
+pub fn assert_ear_letters(parent: &State, folded: &VertexFolded, fan: &FanAnalysis, label: &str) {
+    let given = letter_of(folded.report.direction);
+    // The report's direction is the model frame's; as seen, it is the op's.
+    let given = if parent.view().flipped {
+        opposite(given)
+    } else {
+        given
+    };
+    let layers = fan_letters(parent, folded, fan);
+    assert!(!layers.is_empty(), "{label}: no layers");
+    for (layer, letters) in layers {
+        assert_eq!(
+            letters,
+            [given, given, given, opposite(given)],
+            "{label}: layer {layer} (given, given, given, fourth)"
         );
     }
 }

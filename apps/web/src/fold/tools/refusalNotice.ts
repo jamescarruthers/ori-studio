@@ -430,7 +430,8 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'fan_center':
     case 'fan_ray_blocked':
     case 'fan_not_flat':
-    case 'fan_ridge_not_ray':
+    case 'fan_fourth_beside_stayer':
+    case 'fan_fourth_cannot_rise':
     case 'fan_stayer_detached':
       return vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? invalidWords(t);
     // The sinks'.
