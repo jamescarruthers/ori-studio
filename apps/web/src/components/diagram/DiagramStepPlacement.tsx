@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { DiagramStep } from '../../diagram/document/diagramDocument';
-import type { PagePart, PlacementClash } from '../../diagram/pages/pagePlacement';
+import { outsideMarginNote } from '../../diagram/pages/marginLabels';
+import type { PagePart } from '../../diagram/pages/pagePlacement';
 import { useStepPlacement } from '../../diagram/pages/useStepPlacement';
-import { formatStepNumbers } from '../../diagram/stepNumberList';
 import { useZoomControls } from '../../diagram/zoom/useZoomControls';
 import { Button } from '../ui/Button';
 import { NumberRow } from '../ui/fieldRows';
@@ -18,8 +18,9 @@ const FRAME = { kind: 'frame' } as const;
  * what Auto would give and why a size is kept; X and Y of the part selected,
  * or of the frame when the step is selected alone — with the text, its
  * width, the keyboard's way to what its grips set, and what Auto would give —
- * and the way back for that part; Reset Layout; and what clashes, with the
- * offer of a new page where one helps. The list's rows select the part.
+ * and the way back for that part; Reset Layout; and, where a part lies past
+ * the margin, that it does — the one thing said of a placement
+ * (`markOutsideMargin`). The list's rows select the part.
  */
 export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
   const { t } = useTranslation();
@@ -118,29 +119,12 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
           {t('panels:diagram.placement.resetLayout', 'Reset Layout')}
         </Button>
       </div>
-      {!!place.cell?.clashes?.length && (
+      {place.cell?.outsideMargin && (
         <div className={styles.inset}>
           <Notice tone="warning">
-            {place.cell.clashes.map((clash, index) => (
-              <p key={index} className={styles.clash}>
-                <ClashWords clash={clash} />
-              </p>
-            ))}
-            {place.offerNewPage && (
-              <div className={styles.offer}>
-                <p className={styles.clash}>
-                  {t(
-                    'panels:diagram.placement.breakBeforeNote',
-                    'A new page returns this step’s frame to automatic placement, and the frame of any step it moves.'
-                  )}
-                </p>
-                <Button size="sm" disabled={place.readOnly} onClick={place.startOnNewPage}>
-                  {t('panels:diagram.placement.breakBefore', 'Start step {{number}} on a new page', {
-                    number: place.cell.number,
-                  })}
-                </Button>
-              </div>
-            )}
+            <p className={styles.margin} data-placement-notice="margin">
+              {outsideMarginNote(t)}
+            </p>
           </Notice>
         </div>
       )}
@@ -151,27 +135,4 @@ export function DiagramStepPlacement({ step }: { step: DiagramStep }) {
 function EnlargedSize({ step }: { step: DiagramStep }) {
   const controls = useZoomControls(step, FRAME);
   return <ZoomSizeRows controls={controls} />;
-}
-
-function ClashWords({ clash }: { clash: PlacementClash }) {
-  const { t, i18n } = useTranslation();
-  switch (clash.kind) {
-    case 'parts':
-      return t('panels:diagram.placement.partsClash', 'The picture, number, or text overlap within this step.');
-    case 'paper':
-      return t('panels:diagram.placement.paperClash', 'Part of this step is outside the paper.');
-    case 'margin':
-      return t('panels:diagram.placement.marginClash', 'Part of this step crosses the margin.');
-    case 'glyph':
-      return t('panels:diagram.placement.glyphClash', 'This step overlaps a symbol, heading, or page number.');
-    case 'path':
-      return t('panels:diagram.placement.pathClash', 'This placement makes the path double back or cross itself.');
-    case 'step': {
-      const numbers = clash.steps ?? [];
-      const steps = formatStepNumbers(numbers, i18n.language, t);
-      return numbers.length === 1
-        ? t('panels:diagram.placement.stepClashOne', 'This step overlaps step {{steps}}.', { steps })
-        : t('panels:diagram.placement.stepClash', 'This step overlaps steps {{steps}}.', { steps });
-    }
-  }
 }

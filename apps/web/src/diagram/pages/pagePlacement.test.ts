@@ -5,18 +5,14 @@ import {
   setPageSetup,
   type DiagramDocument,
   type DiagramStepPlace,
-  type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
-import { face, sceneOf } from '../../lib/paper/paperScene.fixtures';
-import { storedSceneJson } from '../document/diagramFile';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { FIXTURE_FONTS, fixtureSubsetter } from '../fonts/diagramFonts.fixtures';
 import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramLayoutSteps, preparedPages } from './diagramPages';
 import { layoutDiagramPages } from './diagramPageLayout';
 import { estimateTextSetter } from './estimateTextSetter';
-import { laneFollowsPlacement, pageOffset, partBox, partPolygons, placementClashes } from './pagePlacement';
-import { laneCrosses } from './flowLane';
+import { laneFollowsPlacement, pageOffset, partBox } from './pagePlacement';
 import { previewPlacement } from './placementPreview';
 
 let subsetter: FontSubsetter;
@@ -53,7 +49,8 @@ describe('printed manual placement', () => {
     }
     expect(b[1]!.drawMm.h).toBeGreaterThan(a[1]!.drawMm.h);
     expect(b[1]!.text.firstBaseline).toBeGreaterThan(a[1]!.text.firstBaseline);
-    expect(b[1]!.clashes?.length).toBeGreaterThan(0);
+    // Drawn past its room and the margin: said as outside the margin.
+    expect(b[1]!.outsideMargin).toBe(true);
   });
   it('keeps a pin of the other picture kind sleeping', () => {
     const auto = prepare(document()).layout.pages[0]!.cells[1]!;
@@ -129,12 +126,6 @@ it('keeps the ribbon over moved pictures and keeps both sides of the spine level
   expect(left.band!.curves.some((c) => Math.hypot(c.to.x - centre.x, c.to.y - centre.y) <= base.bandWidthMm / 4 + 1e-8)).toBe(true);
   expect(left.flow!.spineOut).toBe(right.flow!.spineIn);
   expect(left.band!.curves.at(-1)!.to.y).toBe(right.band!.from.y);
-  // Repeatable adversarial moves: every introduced crossing is reported.
-  for (let n = 0; n < 30; n++) {
-    const shifted = previewPlacement(base, 's2', 'picture', Math.sin(n * 3.1) * 160, Math.cos(n * 2.7) * 200);
-    if (laneCrosses(shifted.pages[0]!.band!))
-      expect(shifted.pages[0]!.cells.find((c) => c.stepId === 's2')!.clashes).toContainEqual({ kind: 'path' });
-  }
 });
 
 it('follows a step with the lane only where its picture was moved or resized, never for its number or its caption alone', () => {
@@ -163,89 +154,50 @@ it('returns to the identical printed page when a pin and offsets are cleared', (
   expect(prepare(cleared).compose(0).svg).toBe(prepare(document()).compose(0).svg);
 });
 
-it('does not call an empty corner of marked diamond paper an overlap, but detects ink collisions', () => {
-  const sceneJson = storedSceneJson(sceneOf([face([[[50, 0], [100, 50], [50, 100], [0, 50]]])]))!;
-  const step = { ...cpStep('diamond'), picture: { kind: 'scene' as const, sceneJson, paperScale: 100, styleKey: null, key: 'diamond' },
-    annotations: [{ id: 'push', kind: 'push-arrow' as const, from: [.95, .5] as [number, number], to: [.8, .5] as [number, number] }] };
-  const doc = setPageSetup(insertSteps(createDiagram(), [step], 0), { layout: 'grid', columns: 1, rows: 1 });
-  const pages = prepare(doc), base = pages.layout, cell = base.pages[0]!.cells[0]!;
-  const ink = (each: typeof cell) => partPolygons(each, 'picture', pages.footprints);
-  expect(ink(cell)).toHaveLength(2);
-  const picture = partBox(cell, 'picture'), number = partBox(cell, 'number');
-  const preview = (part: 'number' | 'picture', dx: number, dy: number, factor = 1) =>
-    previewPlacement(base, step.id, part, dx, dy, factor, pages.footprints).pages[0]!.cells[0]!;
-  const empty = preview('number', picture.x + 2 - number.x, picture.y + 2 - number.y);
-  expect(empty.clashes?.some(c => c.kind === 'parts') ?? false).toBe(false);
-  // Its box alone, without the footprints, calls the empty corner an overlap.
-  const boxed = previewPlacement(base, step.id, 'number', picture.x + 2 - number.x, picture.y + 2 - number.y).pages[0]!.cells[0]!;
-  expect(boxed.clashes).toContainEqual({ kind: 'parts' });
-  const onPaper = preview('number', picture.x + picture.w / 2 - number.x, picture.y + picture.h / 2 - number.y);
-  expect(onPaper.clashes).toContainEqual({ kind: 'parts' });
-  const moved = preview('picture', 5, 3);
-  expect(ink(moved)[0]![0]!.x).toBeCloseTo(ink(cell)[0]![0]!.x + 5);
-  expect(ink(moved)[0]![0]!.y).toBeCloseTo(ink(cell)[0]![0]!.y + 3);
-  const resized = preview('picture', 0, 0, 1.5);
-  const xs = (polygons: ReturnType<typeof ink>) => polygons.flat().map(p => p.x);
-  expect(Math.max(...xs(ink(resized))) - Math.min(...xs(ink(resized)))).toBeCloseTo((Math.max(...xs(ink(cell))) - Math.min(...xs(ink(cell)))) * 1.5);
-});
+describe('what is said of a placement (Zach, 2026-10-12)', () => {
+  /** Step `s1` with its frame moved `frame` mm, as laid out; every other step as the layout puts it. */
+  const placedAt = (frame: [number, number]) => prepare(document({ frame })).layout.pages[0]!.cells;
+  const paper = () => prepare(document()).layout.paper;
 
-it('works a footprint out only for a placed step and one whose box it meets', () => {
-  const calls: string[] = [];
-  const doc = setPageSetup(
-    insertSteps(createDiagram(), Array.from({ length: 4 }, (_, i) => ({ ...cpStep(`s${i}`), ...(i === 1 ? { place: { frame: [1, 0] as [number, number] } } : {}) })), 0),
-    { layout: 'grid', columns: 2, rows: 2 },
-  );
-  const steps = diagramLayoutSteps(doc).map((step) => ({
-    ...step,
-    footprints: step.footprints && (() => (calls.push(step.id), step.footprints!())),
-  }));
-  const plain = layoutDiagramPages(steps, doc.page, doc.title, estimateTextSetter);
-  // Only the placed step's own: nudged 1 mm, its boxes meet no other step's.
-  expect(calls).toEqual(['s1']);
-  // Its picture moved onto its neighbour's, the neighbour's too, to tell its paper from its box's corners.
-  calls.length = 0;
-  const [left, right] = plain.pages[0]!.cells;
-  const over = right!.drawMm.x - left!.drawMm.x;
-  // A little lower than the neighbour's, clear of its number: its number does not decide the clash first.
-  const onto = steps.map((step) => (step.id === 's1' ? { ...step, place: { picture: [-over, 10] as [number, number] } } : step));
-  layoutDiagramPages(onto, doc.page, doc.title, estimateTextSetter);
-  expect(calls.sort()).toEqual(['s0', 's1']);
-});
+  it('says a part past the margin, and a part past the paper’s edge, as outside the margin', () => {
+    const { marginMm, widthMm } = paper();
+    const home = partBox(prepare(document()).layout.pages[0]!.cells[1]!, 'frame');
+    // Nudged inside the margin: nothing to say.
+    expect(placedAt([1, 0])[1]!.outsideMargin).toBeUndefined();
+    // Its right edge past the margin, still on the paper.
+    const pastMargin = widthMm - marginMm - (home.x + home.w) + 1;
+    expect(pastMargin + home.x + home.w).toBeLessThan(widthMm);
+    expect(placedAt([pastMargin, 0])[1]!.outsideMargin).toBe(true);
+    // Past the paper's edge, where it may be clipped out of sight: the same notice.
+    expect(placedAt([widthMm, 0])[1]!.outsideMargin).toBe(true);
+    // A step placed by no one is never said to be.
+    for (const i of [0, 2, 3]) expect(placedAt([widthMm, 0])[i]!.outsideMargin).toBeUndefined();
+  });
 
-it('clears an old path warning when a moved step returns to a clear route', () => {
-  const doc = setPageSetup(insertSteps(createDiagram(), Array.from({ length: 9 }, (_, i) => cpStep(`s${i}`)), 0), { layout: 'flow', stepsPerPage: 9 });
-  const base = prepare(doc).layout;
-  base.pages[0]!.cells[1]!.clashes = [{ kind: 'path' }];
-  const next = previewPlacement(base, 's1', 'frame', 0, 0);
-  expect(next.pages[0]!.cells[1]!.clashes?.some(c => c.kind === 'path') ?? false).toBe(false);
-});
+  it('says nothing of a step placed over another step, over a symbol or the title, or where the path bends round it', () => {
+    const cells = prepare(document()).layout.pages[0]!.cells;
+    const [left, right] = cells;
+    // Step 2's frame laid exactly over step 1's: a plain overlap, inside the margin.
+    const onto = placedAt([partBox(left!, 'frame').x - partBox(right!, 'frame').x, 0]);
+    expect(partBox(onto[1]!, 'frame').x).toBeCloseTo(partBox(left!, 'frame').x);
+    expect(onto[1]!.outsideMargin).toBeUndefined();
+    // Nothing else is carried on a cell to be said: no clash of any other kind.
+    for (const cell of onto) expect(Object.keys(cell)).not.toContain('clashes');
+  });
 
-it('checks a placed step against an enlarge arrow where the page prints it, lifted to its area, not where the layout put it', () => {
-  const area: KnownDiagramAnnotation = { id: 'area-1', kind: 'zoom', from: [0.5, 0.4], to: [0.5, 0.4], radius: 0.2 };
-  const doc = insertSteps(
-    createDiagram({ title: 'Crane' }),
-    [
-      // Its instruction moved into the gutter, onto the arrow's place in the layout, under where the page lifts it.
-      { ...cpStep('step-area'), annotations: [area], text: 'Fold', place: { text: [52, -24] } },
-      { ...cpStep('step-enlarged'), zoom: { from: 'area-1', shape: 'circle', frame: { centre: [0.5, 0.4], radius: 0.2 } } },
-    ],
-    0
-  );
-  const pages = prepare(doc);
-  const page = pages.layout.pages[0]!;
-  const [laid] = page.zoomArrows,
-    [printed] = pages.zoomArrows(0);
-  const span = (arrow: typeof laid) => [arrow!.at.y - arrow!.box.h / 2, arrow!.at.y + arrow!.box.h / 2] as const;
-  const cell = page.cells[0]!,
-    text = partBox(cell, 'text');
-  // Lifted, and the instruction over the arrow's place in the layout, clear of where the page prints it.
-  expect(printed!.at.y).toBeLessThan(laid!.at.y);
-  expect(text.y).toBeLessThan(span(laid)[1]);
-  expect(text.y + text.h).toBeGreaterThan(span(laid)[0]);
-  expect(text.y).toBeGreaterThan(span(printed)[1]);
-  expect(cell.clashes ?? []).not.toContainEqual({ kind: 'glyph' });
-  // Checked against the layout's places, it would have warned of a symbol the page does not print there.
-  const asLaidOut = structuredClone(pages.layout);
-  placementClashes(asLaidOut);
-  expect(asLaidOut.pages[0]!.cells[0]!.clashes).toContainEqual({ kind: 'glyph' });
+  it('says it as the drag goes, and lets it go when the part comes back inside the margin', () => {
+    const base = prepare(document()).layout;
+    const { widthMm } = base.paper;
+    const out = previewPlacement(base, 's1', 'picture', widthMm, 0).pages[0]!.cells[1]!;
+    expect(out.outsideMargin).toBe(true);
+    // Dragged onto its neighbour instead: an overlap, which the page shows as it is.
+    const [left, right] = base.pages[0]!.cells;
+    const over = previewPlacement(base, 's1', 'frame', left!.cellMm.x - right!.cellMm.x, 0).pages[0]!.cells[1]!;
+    expect(over.outsideMargin).toBeUndefined();
+    // A step past the margin as laid out, brought back by the drag, is clear again.
+    const placedOut = prepare(document({ frame: [widthMm, 0] })).layout;
+    expect(placedOut.pages[0]!.cells[1]!.outsideMargin).toBe(true);
+    expect(previewPlacement(placedOut, 's1', 'frame', -widthMm, 0).pages[0]!.cells[1]!.outsideMargin).toBeUndefined();
+    expect(placedOut.pages[0]!.cells[1]!.outsideMargin).toBe(true);
+  });
 });

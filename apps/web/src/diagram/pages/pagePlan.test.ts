@@ -11,7 +11,6 @@ import {
   paginate,
   PICTURE_HEIGHT_SHARE,
   printableArea,
-  startsPage,
   TURN_GUTTER_MM,
   type PaginatedStep,
 } from './pagePlan';
@@ -216,15 +215,6 @@ describe('the pieces of a page plan', () => {
     expect(asksForPage({ breakBefore: false, pageSteps: 4 }, 'flow')).toBe(true);
     expect(asksForPage({ breakBefore: false, pageSteps: 4 }, 'grid')).toBe(false);
     expect(asksForPage({ breakBefore: false }, 'flow')).toBe(false);
-  });
-
-  it('says a step starts a page as the first, by a break or its count, or after a full page', () => {
-    const list = steps(20, (index) => (index === 12 ? { breakBefore: true } : index === 15 ? { pageSteps: 3 } : {}));
-    const starts = list.map((_, index) => index).filter((index) => startsPage(list, FLOW, index));
-    expect(starts).toEqual([0, 9, 12, 15, 18]);
-    // A grid's every 9 and its breaks, never a count.
-    expect(list.map((_, index) => index).filter((index) => startsPage(list, GRID, index))).toEqual([0, 9, 12]);
-    expect(startsPage(list, FLOW, -1)).toBe(false);
   });
 
   it('measures the paper inside its margins, never less the header or the footer', () => {

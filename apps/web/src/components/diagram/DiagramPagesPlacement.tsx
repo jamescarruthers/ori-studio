@@ -6,8 +6,8 @@ import type { CaptionGrip } from '../../diagram/pages/captionMeasure';
 import type { PreparedDiagramPages } from '../../diagram/pages/diagramPages';
 import type { LayoutCell, LayoutPage } from '../../diagram/pages/diagramPageLayout';
 import { printedFrameMm } from '../../diagram/pages/pagePictures';
-import { clashTag } from '../../diagram/pages/clashLabels';
-import { cellClashGroup, partBox, type PageBox, type PagePart } from '../../diagram/pages/pagePlacement';
+import { outsideMarginTag } from '../../diagram/pages/marginLabels';
+import { partBox, type PageBox, type PagePart } from '../../diagram/pages/pagePlacement';
 import { placementBlocker } from '../../diagram/document/stepPlace';
 import { stepById } from '../../diagram/document/diagramDocument';
 import type { usePagePlacement } from '../../diagram/pages/usePagePlacement';
@@ -83,21 +83,20 @@ export function DiagramPagesPlacement({
   return (
     <>
       {lifted && <LiftedPicture draft={lifted} pages={placement.pages} />}
-      {page.cells.map((c) => {
-        const group = cellClashGroup(c);
-        return (
-          group && (
+      {/* The one thing said of a placement: a part past the margin (`markOutsideMargin`). */}
+      {page.cells.map(
+        (c) =>
+          c.outsideMargin && (
             <div
               key={c.stepId}
-              className={styles.clash}
+              className={styles.margin}
               style={position(partBox(c, 'frame'))}
-              data-placement-clash={c.stepId}
+              data-outside-margin={c.stepId}
             >
-              <span>{clashTag(group, t)}</span>
+              <span>{outsideMarginTag(t)}</span>
             </div>
           )
-        );
-      })}
+      )}
       {editable && cell && (
         <>
           {(['number', 'picture', 'text'] as const)

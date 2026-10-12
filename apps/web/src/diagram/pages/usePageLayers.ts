@@ -3,7 +3,7 @@ import { useIsPhoneSurface } from '../../platform/mobileSurface';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { isLockedStep, stepById, stepsOf, type DiagramStep } from '../document/diagramDocument';
 import { isPlacedStep, placementBlocker } from '../document/stepPlace';
-import { cellClashGroup, type ClashGroup, type PagePart } from './pagePlacement';
+import type { PagePart } from './pagePlacement';
 import { usePrintedLayout } from './printedFrames';
 import { useCurrentDiagramPage } from './useCurrentDiagramPage';
 
@@ -29,8 +29,8 @@ export interface PageLayerRow {
   text: string;
   /** Placed by hand, any part or its size (`isPlacedStep`). */
   moved: boolean;
-  /** Its most pressing clash as the pages last laid it out, or null. */
-  clash: ClashGroup | null;
+  /** Placed by hand with a part past the margin, as the pages last laid it out (`LayoutCell.outsideMargin`). */
+  outsideMargin: boolean;
   /** It no longer fits the place its flow page keeps for it, as the pages last laid it out (`LayoutCell.overflow`). */
   overflow: boolean;
   /** The selection, with its frame — or no part, as a step selected by the keys or in the Steps view is. */
@@ -47,8 +47,8 @@ const placeable = (step: DiagramStep, readOnly: boolean, phone: boolean) =>
  * The Layers pane in the Pages view: the current page's steps
  * (`useCurrentDiagramPage`) in the order they paint — a later step over an
  * earlier one, so the first at the top, as Annotate lists its marks — each
- * badged when placed by hand, when it clashes and when it no longer fits the
- * place its flow page keeps for it, the selected one opening
+ * badged when placed by hand, when a part of it is past the margin and when
+ * it no longer fits the place its flow page keeps for it, the selected one opening
  * into its parts; and the step whose placement it offers under the list. A
  * press on a row selects as a press on the page does: a step with its whole
  * frame, as the first press there; a part, as the second. Turns are no rows.
@@ -74,7 +74,7 @@ export function usePageLayers() {
         number: index + 1,
         text: step.text.trim(),
         moved: isPlacedStep(step),
-        clash: cell ? cellClashGroup(cell) : null,
+        outsideMargin: cell?.outsideMargin === true,
         overflow: cell?.overflow !== undefined,
         pressed: selected && (part === null || part === 'frame'),
         parts:

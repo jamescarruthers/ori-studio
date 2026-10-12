@@ -40,8 +40,6 @@ import { layoutPicture, measureKey, wholeUnitsAcross, type PictureMeasure } from
 import { annotationTextRuns } from '../annotate/annotationPrimitives';
 import { hasDrawnAnnotations } from '../annotate/paintAnnotations';
 import { viewOfStep } from '../zoom/stepView';
-import { placementClashes, type FootprintsOf } from './pagePlacement';
-import { footprintCache, type FootprintCache } from './pictureFootprint';
 import { enlargeArrowArea } from '../zoom/enlargeArrowArea';
 import { enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomIndex, type ZoomIndex } from '../zoom/zoomIndex';
@@ -78,8 +76,6 @@ export interface PreparedDiagramPages {
    * their hit targets over. Worked out once a page.
    */
   zoomArrows: (index: number) => PlacedZoomArrow[];
-  /** Each step's picture footprints as the layout measured them, worked out when asked for: what a placement preview checks clashes against. */
-  footprints?: FootprintsOf;
 }
 
 /** A step's picture as the layout measures it at `measure` (`layoutPicture`). */
@@ -90,15 +86,12 @@ export type PictureOf = (step: DiagramStep, measure: PictureMeasure) => LayoutSt
  * layout found for it when known (`measureOf`), by `pictureOf`; each with
  * the turns between it and the step before (D22) — a turn with no step on
  * one side, before the first or after the last, is not drawn on the pages
- * (Zach, 12 Oct), though the document keeps it — and its picture's
- * footprints, to be worked out only if a placement clash asks for them
- * (`footprints`).
+ * (Zach, 12 Oct), though the document keeps it.
  */
 export function diagramLayoutSteps(
   document: DiagramDocument,
   measureOf: (stepId: string) => PictureMeasure = () => null,
-  pictureOf: PictureOf = (step, measure) => layoutPicture(step, document.assets, document.style, measure),
-  footprints: FootprintCache = footprintCache(document)
+  pictureOf: PictureOf = (step, measure) => layoutPicture(step, document.assets, document.style, measure)
 ): LayoutStep[] {
   const steps: LayoutStep[] = [];
   const index = zoomIndex(document);
@@ -112,15 +105,12 @@ export function diagramLayoutSteps(
       continue;
     }
     const zoom = layoutZoom(entry, document, index);
-    const measure = measureOf(entry.id);
-    const picture = pictureOf(entry, measure);
     steps.push({
       id: entry.id,
       text: entry.text,
       breakBefore: entry.breakBefore,
       ...(entry.pageSteps !== undefined ? { pageSteps: entry.pageSteps } : {}),
-      picture,
-      footprints: footprints.of(entry, picture, measure),
+      picture: pictureOf(entry, measureOf(entry.id)),
       // A turn is drawn only between two steps (Zach, 12 Oct): one before the first step has none before it.
       turnsBefore: steps.length > 0 ? turns : [],
       turnsAfter: [],
@@ -287,21 +277,13 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
  * at the scale it is drawn at, for how far it reaches there; its fits, and
  * so the scales, are the ones found. Every picture holds its room.
  *
- * A placed step's picture footprints are worked out only when its clashes
- * are checked, once per step and measure, in `footprints` — which the
- * caller may keep, to check a preview of a placement against the same.
- *
  * A flow page is drawn from the arrangement the document holds for it, or
  * packed (`implementation-plans/diagram-flow-packing.md`): once, by the
  * first of these layouts, whose arrangement every later one holds, so the
  * measuring never packs a page twice. The pages say what was packed
  * (`DiagramPagesLayout.packed`); nothing is written back here.
  */
-export function layoutDiagram(
-  document: DiagramDocument,
-  setter: TextSetter,
-  footprints: FootprintCache = footprintCache(document)
-): DiagramPagesLayout {
+export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
   let packed: Record<string, DiagramPageArrangement> = {};
   const layout = (steps: LayoutStep[]): DiagramPagesLayout => {
     const pages = layoutDiagramPages(steps, document.page, document.title, setter, {
@@ -323,7 +305,7 @@ export function layoutDiagram(
   const reaching = stepsOf(document).some(
     (step) => step.picture?.kind === 'step-diagram' || hasDrawnAnnotations(step.annotations) || viewOfStep(step).zoom !== null
   );
-  if (!reaching) return layout(diagramLayoutSteps(document, undefined, undefined, footprints));
+  if (!reaching) return layout(diagramLayoutSteps(document));
   // Each picture measured once at each scale, however often the search, the
   // layouts and the checks below ask for it.
   const measured = new Map<string, LayoutStep['picture']>();
@@ -332,7 +314,7 @@ export function layoutDiagram(
     if (!measured.has(key)) measured.set(key, layoutPicture(step, document.assets, document.style, measure));
     return measured.get(key)!;
   };
-  const stepsAt = (measureOf?: (stepId: string) => PictureMeasure) => diagramLayoutSteps(document, measureOf, pictureOf, footprints);
+  const stepsAt = (measureOf?: (stepId: string) => PictureMeasure) => diagramLayoutSteps(document, measureOf, pictureOf);
   const entries = new Map(stepsOf(document).map((step) => [step.id, step]));
   const kinds = new Map(stepsAt().map((step) => [step.id, step.picture?.kind]));
   /** A step's picture in a room `across` × `down`, measured at `scale` (a card's at null). */
@@ -465,8 +447,7 @@ export function preparedPages(
   subsetter: FontSubsetter
 ): PreparedDiagramPages {
   const setter = fontTextSetter((key, weight) => fonts.font(key, weight)?.metrics ?? null, document.hanStyle);
-  const footprints = footprintCache(document);
-  const layout = layoutDiagram(document, setter, footprints);
+  const layout = layoutDiagram(document, setter);
   // An upload's text is set as its page is composed; what no font has is known now.
   for (const { face, text } of [...diagramUploadTexts(document), ...diagramLabelTexts(document)]) {
     setter.runs(text, face);
@@ -484,7 +465,6 @@ export function preparedPages(
     setter,
     missing: [...setter.missing],
     unavailableFonts: fonts.unavailable,
-    footprints: footprints.latest,
     zoomArrows(index) {
       const page = layout.pages[index];
       if (!page) return [];
@@ -511,12 +491,5 @@ export function preparedPages(
       });
     },
   });
-  const prepared = make(layout);
-  // A placed step is checked against the enlarge arrows where the page prints
-  // them: lifted to their areas, which only the pictures as drawn can say
-  // (`placedZoomArrows`), so a step over a lifted arrow's old place is clear.
-  // Only on a page with both: elsewhere the layout's places are the printed ones.
-  if (layout.pages.some((page) => page.cells.some((cell) => cell.placed) && page.zoomArrows.some((arrow) => arrow.liftable)))
-    placementClashes(layout, footprints.latest, prepared.zoomArrows);
-  return prepared;
+  return make(layout);
 }

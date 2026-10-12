@@ -645,8 +645,6 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
         draft.dx,
         draft.dy,
         draft.factor,
-        draft.base.footprints,
-        draft.base.zoomArrows,
         draft.caption?.text,
       ),
     ) ?? null;

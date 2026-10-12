@@ -160,7 +160,7 @@ describe('DiagramExportDialog', () => {
     expect(host.textContent).toContain('Crane.zip');
   });
 
-  it('says what is wrong with a placement in words of its own: off the paper is not an overlap', async () => {
+  it('lists a step placed off the paper as past the margin, the one thing said of a placement, and counts it', async () => {
     const document = diagram();
     await open({
       ...document,
@@ -168,9 +168,13 @@ describe('DiagramExportDialog', () => {
         entry.id === 'step-b' ? { ...entry, place: { picture: [0, 400] as [number, number] } } : entry
       ),
     });
-    expect(notice()).toContain('Part of step 3 is off the paper.');
-    expect(notice()).not.toContain('placed over');
-    expect(notice()).not.toContain('page boundaries');
+    expect(notice()).toContain('Part of step 3 crosses the margin.');
+    expect(notice()).not.toMatch(/placed over|off the paper|path|page boundaries/);
+    await click(exportButton());
+    expect(track).toHaveBeenCalledWith(
+      'diagram exported',
+      expect.objectContaining({ placed_step_bucket: '<=1', clash_bucket: '<=1' })
+    );
   });
 
   it('writes the PDF, saves it under the title, remembers how, and says so', async () => {

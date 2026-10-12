@@ -1,13 +1,5 @@
-import { rectangle, separate, type Polygon } from './pagePolygons';
 import type { DiagramStepPlace } from '../document/diagramDocument';
-import type {
-  DiagramPagesLayout,
-  LayoutCell,
-  LayoutPage,
-  LayoutStep,
-  LayoutZoomArrow,
-  TextSetter,
-} from './diagramPageLayout';
+import type { DiagramPagesLayout, LayoutCell, LayoutStep, TextSetter } from './diagramPageLayout';
 import {
   STEP_NUMBER_ASCENT_MM,
   STEP_NUMBER_SIZE_MM,
@@ -26,19 +18,6 @@ export interface PageBox {
   w: number;
   h: number;
 }
-export interface PlacementClash {
-  kind: 'step' | 'glyph' | 'margin' | 'paper' | 'path' | 'parts';
-  steps?: number[];
-}
-
-/**
- * A step's picture as its paper and marks occupy it, each a convex outline
- * in its ink box's terms (0 to 1 across and down: `pictureFootprints`), so
- * the box's empty corners stay free; undefined where only the box is known.
- * Worked out only when asked for: for a placed step, and a step whose box
- * one meets ({@link placementClashes}).
- */
-export type FootprintsOf = (stepId: string) => readonly Polygon[] | undefined;
 
 /** Page axes, even on a page read upward. Only the frame's horizontal component follows reading order. */
 export function pageOffset(
@@ -143,121 +122,33 @@ export function partBox(cell: LayoutCell, part: PagePart): PageBox {
   }
 }
 
-/**
- * The outlines a part of a cell occupies, for clashes: its box, but a
- * picture's paper and marks where its footprints are known
- * ({@link FootprintsOf}), laid on its ink box as drawn — moved or resized
- * with it. Hit boxes stay rectangular ({@link partBox}).
- */
-export function partPolygons(cell: LayoutCell, part: PagePart, footprintsOf?: FootprintsOf): readonly Polygon[] {
-  const ink = cell.inkMm;
-  if (part === 'picture' && ink && footprintsOf) {
-    const footprints = footprintsOf(cell.stepId);
-    if (footprints?.length) return footprints.map((polygon) => polygon.map((p) => ({ x: ink.x + p.x * ink.w, y: ink.y + p.y * ink.h })));
-  }
-  const box = partBox(cell, part);
-  return box.w > 0 && box.h > 0 ? [rectangle(box.x, box.y, box.w, box.h)] : [];
-}
-
-function intersects(a: readonly Polygon[], b: readonly Polygon[]): boolean {
-  return a.some((ap) => b.some((bp) => separate(ap, { x: 0, y: 0 }, bp, { x: 0, y: 0 }, -0.01)));
-}
-
-/** Two boxes overlap: what outlines inside them must, to clash. */
-function boxesMeet(a: PageBox, b: PageBox): boolean {
-  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-}
-
 const CELL_PARTS = ['number', 'picture', 'text'] as const;
 
 /**
- * Manual placement is honored. Warnings are derived, never stored in the
- * document. A placed step's picture is checked as its footprints outline it
- * (`footprintsOf`), and another step's only where their boxes meet, so a
- * footprint is worked out only where it can decide a clash. The enlarge
- * arrows are checked where `arrowsOf` says a page prints them — lifted to
- * their areas (`placedZoomArrows`), which only the pictures as drawn can say
- * — else where the layout put them.
+ * Manual placement is honored, and one thing is said of it (Zach,
+ * 2026-10-12): a placed step with a part past the margin — or past the
+ * paper's edge, which lies past the margin too and may clip the part out of
+ * sight — is marked `outsideMargin`. Derived, never stored in the document.
+ * Nothing else a hand placement does is said: a step over another, over a
+ * symbol or over its own parts, or the path bending round it, shows on the
+ * page as plainly as it would print.
  */
-export function placementClashes(
-  layout: DiagramPagesLayout,
-  footprintsOf?: FootprintsOf,
-  arrowsOf?: (pageIndex: number) => readonly LayoutZoomArrow[],
-): void {
+export function markOutsideMargin(layout: DiagramPagesLayout): void {
   const { widthMm: w, heightMm: h, marginMm: m } = layout.paper;
-  for (const [pageIndex, page] of layout.pages.entries())
+  for (const page of layout.pages)
     for (const cell of page.cells) {
-      if (!cell.placed) continue;
-      const parts = CELL_PARTS.map((part) => partPolygons(cell, part, footprintsOf));
-      const boxes = CELL_PARTS.map((part) => partBox(cell, part)).filter((b) => b.w > 0 && b.h > 0);
-      const clashes: PlacementClash[] = [...(cell.clashes?.filter((c) => c.kind === 'path') ?? [])];
-      const outside = (inset: number) =>
-        boxes.some((b) => b.x < inset || b.y < inset || b.x + b.w > w - inset || b.y + b.h > h - inset);
-      if (outside(0)) clashes.push({ kind: 'paper' });
-      else if (outside(m)) clashes.push({ kind: 'margin' });
-      if (parts.some((shape, i) => parts.slice(i + 1).some((other) => intersects(shape, other))))
-        clashes.push({ kind: 'parts' });
-      const meets = (other: LayoutCell, part: PagePart) => {
-        const box = partBox(other, part);
-        return box.w > 0 && box.h > 0 && boxes.some((own) => boxesMeet(own, box));
-      };
-      const clashesWith = (other: LayoutCell) =>
+      const outside =
+        !!cell.placed &&
         CELL_PARTS.some((part) => {
-          if (!meets(other, part)) return false;
-          const theirs = partPolygons(other, part, footprintsOf);
-          return parts.some((own) => intersects(own, theirs));
+          const b = partBox(cell, part);
+          return b.w > 0 && b.h > 0 && (b.x < m || b.y < m || b.x + b.w > w - m || b.y + b.h > h - m);
         });
-      const steps = page.cells.filter((other) => other !== cell && clashesWith(other)).map((other) => other.number);
-      if (steps.length) clashes.push({ kind: 'step', steps });
-      const glyphs = [...page.turns, ...(arrowsOf?.(pageIndex) ?? page.zoomArrows)].map(({ at, box }) => ({
-        x: at.x - box.w / 2,
-        y: at.y - box.h / 2,
-        ...box,
-      }));
-      if (layout.title) glyphs.push(layout.title.tab);
-      if (page.pageNumberAt)
-        glyphs.push({
-          x: page.pageNumberAt.x - (page.pageNumberAt.anchor === 'end' ? 10 : 0),
-          y: page.pageNumberAt.y - 3.4,
-          w: 10,
-          h: 4,
-        });
-      if (glyphs.some((g) => parts.some((p) => intersects(p, [rectangle(g.x, g.y, g.w, g.h)]))))
-        clashes.push({ kind: 'glyph' });
-      cell.clashes = clashes.length ? clashes : undefined;
+      if (outside) cell.outsideMargin = true;
+      else delete cell.outsideMargin;
     }
 }
 
-export function pageClashingSteps(page: LayoutPage): number[] {
-  return page.cells.filter((cell) => cell.clashes?.length).map((cell) => cell.number);
-}
-
-/**
- * What a clash is, as it is said: parts lying over others (another step, a
- * symbol, heading or page number, or the step's own parts), part of the step
- * past the paper's edge, past the margin, or the ribbon doubling back.
- */
-export type ClashGroup = 'overlap' | 'paper' | 'margin' | 'path';
-
-/** The groups, the most pressing first: what a step's one tag on the page says. */
-export const CLASH_GROUPS: readonly ClashGroup[] = ['overlap', 'paper', 'margin', 'path'];
-
-export function clashGroup(kind: PlacementClash['kind']): ClashGroup {
-  return kind === 'step' || kind === 'glyph' || kind === 'parts' ? 'overlap' : kind;
-}
-
-/** A cell's most pressing clash, or null for a cell with none. */
-export function cellClashGroup(cell: Pick<LayoutCell, 'clashes'>): ClashGroup | null {
-  const groups = new Set(cell.clashes?.map((clash) => clashGroup(clash.kind)));
-  return CLASH_GROUPS.find((group) => groups.has(group)) ?? null;
-}
-
-/** The steps with clashes, by group, each step once a group and in print order. */
-export function clashingStepsByGroup(layout: DiagramPagesLayout): Record<ClashGroup, number[]> {
-  const steps: Record<ClashGroup, number[]> = { overlap: [], paper: [], margin: [], path: [] };
-  for (const cell of layout.pages.flatMap((page) => page.cells)) {
-    const groups = new Set(cell.clashes?.map((clash) => clashGroup(clash.kind)));
-    for (const group of CLASH_GROUPS) if (groups.has(group)) steps[group].push(cell.number);
-  }
-  return steps;
+/** The steps placed past the margin (`markOutsideMargin`), in print order. */
+export function outsideMarginSteps(layout: Pick<DiagramPagesLayout, 'pages'>): number[] {
+  return layout.pages.flatMap((page) => page.cells.filter((cell) => cell.outsideMargin).map((cell) => cell.number));
 }

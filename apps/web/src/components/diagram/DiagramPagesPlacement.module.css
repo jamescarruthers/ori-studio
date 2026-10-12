@@ -1,7 +1,8 @@
 /*
  * Hand placement over a page in the Pages view (DiagramPagesPlacement.tsx):
- * the selected part's targets, grips, home ghost and readout, and the clash
- * outlines. Screen only: none of it is in the composed page.
+ * the selected part's targets, grips, home ghost and readout, and the
+ * outline of a step placed past the margin. Screen only: none of it is in
+ * the composed page.
  */
 .target {
   position: absolute;
@@ -13,7 +14,7 @@
 }
 .selection,
 .home,
-.clash {
+.margin {
   position: absolute;
   pointer-events: none;
   box-sizing: border-box;
@@ -27,7 +28,7 @@
   border: 1px dashed var(--accent-primary);
   opacity: 0.5;
 }
-.clash {
+.margin {
   z-index: 3;
   border: 1px solid var(--status-warning, #d7a85c);
 }
@@ -99,7 +100,7 @@
   font-size: 10px;
   transform: translate(-50%, -50%);
 }
-.clash > span {
+.margin > span {
   position: absolute;
   top: -15px;
   right: 0;

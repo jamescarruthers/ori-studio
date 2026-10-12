@@ -347,14 +347,16 @@ export interface DiagramStepFilesExported {
  * The diagram written out: a PDF for home or a print shop, the pages as one
  * SVG (no options: `how` is null), or a ZIP of its steps' files and how they
  * were made. `files` is the PDF's or the SVG's pages or the ZIP's files,
- * `steps` the diagram's steps, `empty` those with no picture and `enlarged`
- * those enlarged (Revision 2), all bucketed. Enums and buckets only: never
- * the title, a step or a size.
+ * `steps` the diagram's steps, `empty` those with no picture, `enlarged`
+ * those enlarged (Revision 2), `placed` those placed by hand and
+ * `outsideMargin` those placed with a part past the margin — the one
+ * placement notice the export lists, sent as `clash_bucket` — all bucketed.
+ * Enums and buckets only: never the title, a step or a size.
  */
 export function trackDiagramExported(
   format: DiagramExportFormat,
   how: { preset: DiagramPdfPreset } | DiagramStepFilesExported | null,
-  counts: { files: number; steps: number; empty: number; enlarged: number; placed?: number; clashes?: number }
+  counts: { files: number; steps: number; empty: number; enlarged: number; placed?: number; outsideMargin?: number }
 ): void {
   const shown = (value: boolean) => (value ? 'shown' : 'hidden');
   track(ANALYTICS_EVENTS.diagramExported, {
@@ -377,7 +379,8 @@ export function trackDiagramExported(
     // The same ladder: none, one, a few, many.
     enlarged_step_bucket: bucketCount(counts.enlarged, DIAGRAM_EMPTY_STEP_BUCKETS),
     placed_step_bucket: bucketCount(counts.placed ?? 0, DIAGRAM_EMPTY_STEP_BUCKETS),
-    clash_bucket: bucketCount(counts.clashes ?? 0, DIAGRAM_EMPTY_STEP_BUCKETS),
+    // Steps placed past the margin since 2026-10-12; before, steps with any placement clash.
+    clash_bucket: bucketCount(counts.outsideMargin ?? 0, DIAGRAM_EMPTY_STEP_BUCKETS),
   });
 }
 

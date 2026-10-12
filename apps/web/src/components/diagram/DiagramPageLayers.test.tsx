@@ -11,15 +11,14 @@ import {
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
-import type { PlacementClash } from '../../diagram/pages/pagePlacement';
 import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { DiagramLayersPanel } from '../panels/DiagramLayersPanel';
 import { TooltipProvider } from '../ui/Tooltip';
 
-/** Each step's clashes as the pages last laid them out, as the Diagram panel publishes its layout. */
+/** The steps placed past the margin as the pages last laid them out, as the Diagram panel publishes its layout. */
 const printed = vi.hoisted(() => ({
-  clashes: {} as Record<string, PlacementClash[]>,
+  outsideMargin: {} as Record<string, true>,
   overflow: {} as Record<string, 'picture' | 'caption'>,
 }));
 const analytics = vi.hoisted(() => ({ trackDiagramPagesRepacked: vi.fn() }));
@@ -41,7 +40,7 @@ vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
             frameMm: 40,
             mmPerUnit: null,
             pictureMm: { x: 0, y: 0, size: 40 },
-            clashes: printed.clashes[step.id],
+            outsideMargin: printed.outsideMargin[step.id],
             overflow: printed.overflow[step.id],
             // Its caption as the layout sets it, a line a word: what the Step pane's Text width reads.
             text: { x: 0, firstBaseline: 50, widthMm: 36, lines: step.text.split(' ').filter(Boolean).map((text) => ({ text, widthMm: 8, runs: [], ellipsis: false })) },
@@ -91,7 +90,7 @@ const part = (name: string) => host!.querySelector<HTMLButtonElement>(`button[da
 
 beforeEach(() => {
   vi.clearAllMocks();
-  printed.clashes = {};
+  printed.outsideMargin = {};
   printed.overflow = {};
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   host = document.createElement('div');
@@ -115,8 +114,8 @@ function render() {
 }
 
 describe('DiagramLayersPanel › in the Pages view', () => {
-  it('lists the current page’s steps first painted first, by instruction or number, badged when moved and by their clash; no turn', () => {
-    printed.clashes = { s3: [{ kind: 'step', steps: [3] }], s0: [{ kind: 'margin' }] };
+  it('lists the current page’s steps first painted first, by instruction or number, badged when moved and past the margin; no turn', () => {
+    printed.outsideMargin = { s0: true };
     install();
     render();
     expect(list()?.getAttribute('aria-label')).toBe('Steps on page 1');
@@ -124,7 +123,7 @@ describe('DiagramLayersPanel › in the Pages view', () => {
       '1Step 1Outside margin',
       '2Fold in half.',
       '3Step 3Moved',
-      '4Step 4Overlaps',
+      '4Step 4',
     ]);
     expect(host!.querySelector('[data-layer-step="turn-a"]')).toBeNull();
     // Nothing selected: no row pressed, no parts and no placement.
@@ -252,13 +251,13 @@ describe('DiagramLayersPanel › in the Pages view', () => {
     expect(host!.textContent).not.toContain('Re-pack');
   });
 
-  it('says nothing of a clash out of the Pages view', () => {
-    printed.clashes = { s1: [{ kind: 'step', steps: [3] }] };
+  it('says nothing of a step past the margin out of the Pages view', () => {
+    printed.outsideMargin = { s1: true };
     install();
     render();
     act(() => row('s1').click());
-    expect(host!.textContent).toContain('This step overlaps step 3.');
+    expect(host!.textContent).toContain('Part of this step crosses the margin.');
     act(() => state().setDiagramView('steps'));
-    expect(host!.textContent).not.toContain('overlaps');
+    expect(host!.textContent).not.toContain('margin');
   });
 });

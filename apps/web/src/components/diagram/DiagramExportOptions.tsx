@@ -6,9 +6,8 @@ import { PRINT_SHOP_BLEED_MM } from '../../diagram/export/diagramPdf';
 import { STEP_FILE_MM_RANGE } from '../../diagram/export/stepFiles';
 import type { DiagramExportBinding } from '../../diagram/export/useDiagramExport';
 import type { DiagramPageSetup } from '../../diagram/document/diagramDocument';
-import { clashSentence } from '../../diagram/pages/clashLabels';
+import { outsideMarginSentence } from '../../diagram/pages/marginLabels';
 import { exportOverflowSentence, exportUnfitSentence } from '../../diagram/pages/overflowLabels';
-import { CLASH_GROUPS } from '../../diagram/pages/pagePlacement';
 import { pageSetupSummary, pageSideLabel } from '../../diagram/pages/pageSetupLabels';
 import { zoomSplitSentence } from '../../diagram/pages/zoomSplitLabels';
 import { formatStepNumbers } from '../../diagram/stepNumberList';
@@ -44,8 +43,8 @@ export function DiagramExportOptions({
   // The PDF and the SVG print the pages: a step with no picture is blank space there, not a file left out.
   const printed = pdf || svg;
   const steps = (numbers: readonly number[]) => formatStepNumbers(numbers, i18n.language, t);
-  // A sentence for each kind of clash there is: an overlap, the paper's edge, the margin, the path.
-  const clashGroups = CLASH_GROUPS.filter((group) => binding.clashes[group].length > 0);
+  // The one thing said of a placement: the steps with a part past the margin.
+  const outsideMargin = binding.outsideMargin.length > 0;
   // And for the flow's steps that no longer fit their places, and its pages that cannot hold their steps.
   const overflowing = binding.overflow.steps.length > 0 || binding.overflow.unfitPages.length > 0;
   const pageSetup = (
@@ -202,7 +201,7 @@ export function DiagramExportOptions({
 
       {(binding.empty.length > 0 ||
         binding.cut.length > 0 ||
-        (printed && (clashGroups.length > 0 || overflowing)) || (!printed && binding.placed > 0) ||
+        (printed && (outsideMargin || overflowing)) || (!printed && binding.placed > 0) ||
         binding.missing.length > 0 ||
         binding.unavailable ||
         (printed && binding.splits.length > 0) ||
@@ -243,12 +242,9 @@ export function DiagramExportOptions({
                     )}
               </li>
             )}
-            {printed &&
-              clashGroups.map((group) => (
-                <li key={group} data-clash-group={group}>
-                  {clashSentence(group, binding.clashes[group], t, i18n.language)}
-                </li>
-              ))}
+            {printed && outsideMargin && (
+              <li data-outside-margin="">{outsideMarginSentence(binding.outsideMargin, t, i18n.language)}</li>
+            )}
             {printed && binding.overflow.steps.length > 0 && (
               <li data-overflow="steps">{exportOverflowSentence(binding.overflow.steps, t, i18n.language)}</li>
             )}

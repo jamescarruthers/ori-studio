@@ -24,6 +24,7 @@ import { bandPath } from '../../diagram/pages/composeDiagramPage';
 import { preparedPages, type PreparedDiagramPages } from '../../diagram/pages/diagramPages';
 import { overflowingDiagram } from '../../diagram/pages/pageOverflow.fixtures';
 import { usePageInView, type PagesInView } from '../../diagram/pages/pageInView';
+import { partBox } from '../../diagram/pages/pagePlacement';
 import { PAGES_PX_PER_MM as PX_PER_MM } from '../../diagram/pages/usePagesView';
 import { clearPathColorPick, publishPathColorPick } from '../../diagram/pages/pathColorPick';
 import { TooltipProvider } from '../ui/Tooltip';
@@ -232,6 +233,40 @@ describe('DiagramPagesView', () => {
     render(preparedPages(diagram(), FONTS, subsetter));
     expect(host.textContent).toContain('No picture yet');
     expect(host.textContent).not.toContain('Text doesn’t fit');
+  });
+
+  it('tags a step placed past the margin, or off the paper, “Outside margin”, and says nothing of a step placed over another', () => {
+    const steps = ['s0', 's1', 's2', 's3'].map((id) => cpStep(id));
+    const grid = (document: DiagramDocument) => ({ ...document, page: { ...document.page, layout: 'grid' as const, columns: 2, rows: 2 } });
+    const plain = preparedPages(grid(insertSteps(createDiagram({ title: 'Crane' }), steps, 0)), FONTS, subsetter).layout;
+    const [first, second, , fourth] = plain.pages[0]!.cells;
+    const { widthMm, marginMm } = plain.paper;
+    const fourthFrame = partBox(fourth!, 'frame');
+    const fourthRight = fourthFrame.x + fourthFrame.w;
+    const placed = grid(
+      insertSteps(
+        createDiagram({ title: 'Crane' }),
+        [
+          // Off the paper, past its foot.
+          { ...steps[0]!, place: { picture: [0, 400] as [number, number] } },
+          // Laid over step 1: an overlap the page shows as it prints.
+          { ...steps[1]!, place: { frame: [first!.cellMm.x - second!.cellMm.x, 0] as [number, number] } },
+          steps[2]!,
+          // Past the right margin, still on the paper.
+          { ...steps[3]!, place: { frame: [widthMm - marginMm - fourthRight + 2, 0] as [number, number] } },
+        ],
+        0
+      )
+    );
+    const pages = preparedPages(placed, FONTS, subsetter);
+    render(pages, {}, pages.layout.bandInk, placed, null);
+    const tags = [...host.querySelectorAll<HTMLElement>('[data-outside-margin]')];
+    expect(tags.map((tag) => [tag.getAttribute('data-outside-margin'), tag.textContent])).toEqual([
+      ['s0', 'Outside margin'],
+      ['s3', 'Outside margin'],
+    ]);
+    expect(host.textContent).not.toMatch(/Overlaps|Off the paper|Path doubles back|No longer fits/);
+    expect(pages.compose(0).svg).not.toContain('Outside margin');
   });
 
   it('marks a flow step that no longer fits its place over the page, never in it, and names it so', () => {

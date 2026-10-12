@@ -1,20 +1,11 @@
-import type { DiagramPagesLayout, LayoutCell, LayoutZoomArrow } from './diagramPageLayout';
+import type { DiagramPagesLayout, LayoutCell } from './diagramPageLayout';
 import { flowLane } from './flowLane';
-import {
-  laneFollowsPlacement,
-  partBox,
-  placementClashes,
-  translateCell,
-  type FootprintsOf,
-  type PagePart,
-} from './pagePlacement';
+import { laneFollowsPlacement, markOutsideMargin, partBox, translateCell, type PagePart } from './pagePlacement';
 
 /**
  * Local preview geometry. No font loading, layout, document writes, or
- * history entries. Clashes are checked against the pictures' footprints
- * where `footprintsOf` knows them (`PreparedDiagramPages.footprints`), else
- * against their boxes, and against the enlarge arrows where `arrowsOf` says
- * the page on screen prints them (`PreparedDiagramPages.zoomArrows`): symbols
+ * history entries. Whether a part is past the margin is said as the drag
+ * goes (`markOutsideMargin`), as the page will say it on the drop; symbols
  * are placed again on the drop, once the final layout is ready.
  *
  * A caption being resized (`caption`, its lines re-set by the caller with the
@@ -29,8 +20,6 @@ export function previewPlacement(
   dx: number,
   dy: number,
   factor = 1,
-  footprintsOf?: FootprintsOf,
-  arrowsOf?: (pageIndex: number) => readonly LayoutZoomArrow[],
   caption?: LayoutCell['text'],
 ): DiagramPagesLayout {
   const layout: DiagramPagesLayout = {
@@ -78,13 +67,10 @@ export function previewPlacement(
       return a && b ? (a.y + b.y) / 2 : null;
     };
     const flow = { ...page.flow, stops: stops[index]!, spineIn: shared(index - 1), spineOut: shared(index) };
-    const lane = flowLane(flow);
     page.flow = flow;
-    if (page.band) page.band = lane?.lane ?? null;
-    for (const cell of page.cells) cell.clashes = cell.clashes?.filter((clash) => clash.kind !== 'path');
-    for (const n of lane?.warnings ?? []) if (page.cells[n]) page.cells[n]!.clashes = [{ kind: 'path' }];
+    if (page.band) page.band = flowLane(flow)?.lane ?? null;
   });
-  placementClashes(layout, footprintsOf, arrowsOf);
+  markOutsideMargin(layout);
   return layout;
 }
 

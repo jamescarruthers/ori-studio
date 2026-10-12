@@ -10,18 +10,16 @@ import {
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
-import type { PlacementClash } from '../../diagram/pages/pagePlacement';
-import { newPageHelps } from '../../diagram/pages/useStepPlacement';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramStepPlacement } from './DiagramStepPlacement';
 
 /**
- * The clashes the pages give the step shown, as the Diagram panel publishes
- * its layout; and the diagram they are laid out from, when it is not the one
- * in the store — a layout of a newer one under way.
+ * Whether the pages put the step shown past the margin, as the Diagram panel
+ * publishes its layout; and the diagram they are laid out from, when it is
+ * not the one in the store — a layout of a newer one under way.
  */
-const printed = vi.hoisted(() => ({ clashes: [] as PlacementClash[], of: undefined as DiagramDocument | undefined }));
+const printed = vi.hoisted(() => ({ outsideMargin: false, of: undefined as DiagramDocument | undefined }));
 /** The measure the mocked layout sets a caption with no pin at, mm. */
 const AUTO_TEXT_MM = vi.hoisted(() => 36);
 vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
@@ -43,7 +41,7 @@ vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
               frameMm: 40,
               mmPerUnit: null,
               pictureMm: { x: 0, y: 0, size: 40 },
-              clashes: printed.clashes,
+              ...(printed.outsideMargin ? { outsideMargin: true } : {}),
               text: { x: 0, firstBaseline: 50, widthMm, lines: setter.paragraph(step.text, widthMm, 3.2, 99).lines },
               ...(step.place?.textWidth !== undefined
                 ? {
@@ -63,9 +61,10 @@ vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
 });
 
 /**
- * The Step pane's clash notice (review finding U5): "Start step N on a new
- * page" only for a clash a new page clears, only on a step that does not
- * start a page already, and saying what it does to the frame.
+ * The selected step's placement under the Layers list: its size, offsets and
+ * caption width, and the one notice a placement gets — a part past the
+ * margin. No overlap, symbol or path notice, and no offer of a new page
+ * (Zach, 2026-10-12).
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -77,24 +76,18 @@ const offer = () =>
     button.textContent?.endsWith('on a new page')
   );
 
-/** Ten steps on flow pages of 4; s6 asks for a page, and s8 has its own count. */
-function install(layout: 'flow' | 'grid' = 'flow') {
-  const steps = Array.from({ length: 10 }, (_, index): DiagramStep => ({
-    ...cpStep(`s${index}`),
-    ...(index === 6 ? { breakBefore: true } : {}),
-    ...(index === 8 ? { pageSteps: 2 } : {}),
-  }));
+/** Ten steps on flow pages of 4. */
+function install() {
+  const steps = Array.from({ length: 10 }, (_, index): DiagramStep => cpStep(`s${index}`));
   const diagram = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
-    layout,
+    layout: 'flow',
     stepsPerPage: 4,
-    columns: 2,
-    rows: 2,
   });
   state().installDiagram({ document: diagram, readOnly: false, raw: {} });
 }
 
-function show(stepId: string, clashes: PlacementClash[]) {
-  printed.clashes = clashes;
+function show(stepId: string, outsideMargin = false) {
+  printed.outsideMargin = outsideMargin;
   act(() =>
     root?.render(
       <TooltipProvider>
@@ -118,65 +111,24 @@ afterEach(() => {
   host?.remove();
 });
 
-describe('newPageHelps', () => {
-  it('is for a clash with another step or a glyph, on a step that does not start a page', () => {
-    expect(newPageHelps([{ kind: 'step', steps: [3] }], false)).toBe(true);
-    expect(newPageHelps([{ kind: 'glyph' }], false)).toBe(true);
-    expect(newPageHelps([{ kind: 'margin' }, { kind: 'glyph' }], false)).toBe(true);
-    expect(newPageHelps([{ kind: 'step', steps: [3] }], true)).toBe(false);
-    for (const kind of ['margin', 'paper', 'path', 'parts'] as const) expect(newPageHelps([{ kind }], false)).toBe(false);
-    expect(newPageHelps([], false)).toBe(false);
-    expect(newPageHelps(undefined, false)).toBe(false);
-  });
-});
-
-describe('DiagramStepPlacement › the offer of a new page', () => {
-  it('offers it for an overlap with another step, says it sends the frame home, and starts the page', () => {
-    // s1: second on page 1.
-    show('s1', [{ kind: 'step', steps: [3] }]);
-    expect(host?.textContent).toContain('This step overlaps step 3.');
-    expect(host?.textContent).toContain('returns this step’s frame to automatic placement');
-    expect(offer()?.textContent).toBe('Start step 2 on a new page');
-    act(() => offer()!.click());
-    expect(stepById(state().diagram!, 's1')!.breakBefore).toBe(true);
+describe('DiagramStepPlacement › what it says of the placement (Zach, 2026-10-12)', () => {
+  it('says a part past the margin — or past the paper’s edge, which the pages mark the same — and nothing else', () => {
+    show('s1', true);
+    const notices = [...host!.querySelectorAll('[data-placement-notice]')];
+    expect(notices.map((notice) => notice.textContent)).toEqual(['Part of this step crosses the margin.']);
+    expect(notices[0]!.closest('[role="status"]')).not.toBeNull();
+    // No offer of a new page: Start a New Page Here is in the step's menu.
+    expect(offer()).toBeUndefined();
   });
 
-  it('names the steps it overlaps as every Diagram notice lists them', () => {
-    show('s1', [{ kind: 'step', steps: [3, 4] }]);
-    expect(host?.textContent).toContain('This step overlaps steps 3 and 4.');
-  });
-
-  it('offers it for an overlap with a symbol, heading or page number', () => {
-    show('s2', [{ kind: 'glyph' }]);
-    expect(offer()).toBeDefined();
-  });
-
-  it('offers nothing for the margin, the paper, the path or the step’s own parts', () => {
-    for (const kind of ['margin', 'paper', 'path', 'parts'] as const) {
-      show('s1', [{ kind }]);
-      expect(host?.querySelector('[role="status"]'), kind).not.toBeNull();
-      expect(offer(), kind).toBeUndefined();
-      expect(host?.textContent, kind).not.toContain('automatic placement');
-    }
-  });
-
-  it('offers nothing on a step that starts a page: the first, a full page’s next, a break, its own count', () => {
-    // s0 is the first; s4 follows a full page of 4; s6 has a break; s8 its own count.
-    for (const id of ['s0', 's4', 's6', 's8']) {
-      show(id, [{ kind: 'step', steps: [2] }]);
+  it('says nothing of a step inside the margin, whatever it lies over: the page shows that as it prints', () => {
+    for (const id of ['s0', 's1', 's5']) {
+      show(id, false);
+      expect(host!.querySelector('[data-placement-notice]'), id).toBeNull();
+      expect(host!.querySelector('[role="status"]'), id).toBeNull();
+      expect(host!.textContent, id).not.toMatch(/overlap|path|new page|paper/i);
       expect(offer(), id).toBeUndefined();
     }
-    show('s5', [{ kind: 'step', steps: [2] }]);
-    expect(offer()).toBeDefined();
-  });
-
-  it('reads a grid’s pages, which ignore a count of their own', () => {
-    install('grid');
-    // Grid pages of 2 × 2: s4 still starts one, s6 has its break, and s8’s count says nothing there.
-    show('s8', [{ kind: 'step', steps: [8] }]);
-    expect(offer()?.textContent).toBe('Start step 9 on a new page');
-    show('s4', [{ kind: 'step', steps: [6] }]);
-    expect(offer()).toBeUndefined();
   });
 });
 
@@ -191,18 +143,18 @@ describe('DiagramStepPlacement › the part selected', () => {
       state().selectDiagramStep('s1');
       state().setDiagramStepPlace('s1', { picture: [2, 3] });
     });
-    show('s1', []);
+    show('s1');
     expect([field('X (mm)').value, field('Y (mm)').value]).toEqual(['0', '0']);
     expect(button('Reset Frame')?.disabled).toBe(true);
     expect(button('Reset Picture')).toBeUndefined();
     // No Select buttons: the Layers list's rows select the part.
     expect(button('Select')).toBeUndefined();
     act(() => state().selectDiagramPagesPart('picture'));
-    show('s1', []);
+    show('s1');
     expect([field('X (mm)').value, field('Y (mm)').value]).toEqual(['2', '3']);
     act(() => button('Reset Picture')!.click());
     expect(stepById(state().diagram!, 's1')!.place).toBeUndefined();
-    show('s1', []);
+    show('s1');
     expect(button('Reset Picture')?.disabled).toBe(true);
     expect(button('Reset Layout')?.disabled).toBe(true);
   });
@@ -231,10 +183,10 @@ describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.m
       state().selectDiagramStep('s1');
       state().selectDiagramPagesPart('picture');
     });
-    show('s1', []);
+    show('s1');
     expect(width()).toBeNull();
     act(() => state().selectDiagramPagesPart('text'));
-    show('s1', []);
+    show('s1');
     expect(width()!.value).toBe('36');
     expect(host!.textContent).toContain('Auto: 36.0 mm');
     expect(reset()).toBeNull();
@@ -242,7 +194,7 @@ describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.m
     // Typed: pinned, and counted as the pane's; Reset Text now has something to take back.
     type(width()!, '62.5');
     expect(placeOf()).toEqual({ textWidth: 62.5 });
-    show('s1', []);
+    show('s1');
     expect(width()!.value).toBe('62.5');
     expect(host!.textContent).toContain('Auto: 36.0 mm');
     expect(reset()).not.toBeNull();
@@ -250,16 +202,16 @@ describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.m
     // Typed as the automatic width, the pin goes; so does its reset.
     type(width()!, '36');
     expect(placeOf()).toBeUndefined();
-    show('s1', []);
+    show('s1');
     expect(reset()).toBeNull();
     // Pinned again, the row's reset lets the width go and keeps the caption's offset.
     act(() => state().setDiagramStepPlace('s1', { textWidth: 50, text: [2, 0] }));
-    show('s1', []);
+    show('s1');
     act(() => reset()!.click());
     expect(placeOf()).toEqual({ text: [2, 0] });
     // Reset Text takes both.
     act(() => state().setDiagramStepPlace('s1', { textWidth: 50 }));
-    show('s1', []);
+    show('s1');
     act(() => button('Reset Text')!.click());
     expect(placeOf()).toBeUndefined();
   });
@@ -271,10 +223,10 @@ describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.m
       state().selectDiagramStep('s1');
       state().selectDiagramPagesPart('text');
     });
-    show('s1', []);
+    show('s1');
     type(width()!, '1');
     expect(placeOf()!.textWidth).toBeGreaterThan(9);
-    show('s1', []);
+    show('s1');
     type(width()!, '5000');
     expect(placeOf()!.textWidth).toBe(210 - 2 * state().diagram!.page.marginMm);
   });
@@ -285,7 +237,7 @@ describe('DiagramStepPlacement › the text’s width (`diagram-caption-resize.m
       state().selectDiagramStep('s1');
       state().selectDiagramPagesPart('text');
     });
-    show('s1', []);
+    show('s1');
     expect(width()).toBeNull();
   });
 });
@@ -295,14 +247,14 @@ describe('DiagramStepPlacement › while the pages lay out (review finding U8)',
   const offsetX = () => host!.querySelector<HTMLInputElement>('input[aria-label="X (mm)"]')!;
 
   it('keeps the step’s last cell while a layout of a newer diagram is under way', () => {
-    show('s1', []);
+    show('s1');
     const laidOut = size().value;
     expect(laidOut).not.toBe('');
     expect(laidOut).not.toBe('0');
     // An edit: the pages are still the last diagram's.
     printed.of = state().diagram!;
     act(() => state().setDiagramStepText('s1', 'Fold in half.'));
-    show('s1', []);
+    show('s1');
     expect(size().value).toBe(laidOut);
     expect(size().disabled).toBe(false);
     expect(offsetX().disabled).toBe(false);
@@ -314,7 +266,7 @@ describe('DiagramStepPlacement › while the pages lay out (review finding U8)',
     act(() => {
       added = state().addDiagramStep()!;
     });
-    show(added, []);
+    show(added);
     expect(size().value).toBe('');
     expect(size().disabled).toBe(true);
   });

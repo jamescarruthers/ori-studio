@@ -108,16 +108,7 @@ import { holdsArrangement, keepsGlyphGutter, pageSignatures, titleShown } from '
 import { printPaper, type PrintPaper } from './printPaper';
 import { normalizeStepPlace } from '../document/placeValues';
 import { pinnedCaptionWidth, setCaption } from './captionMeasure';
-import {
-  laneFollowsPlacement,
-  pageOffset,
-  partBox,
-  placeCell,
-  placementClashes,
-  type PageBox,
-  type PlacementClash,
-} from './pagePlacement';
-import type { Polygon } from './pagePolygons';
+import { laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
 import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 
 // The type a step is set in, which placement's hit boxes measure too.
@@ -332,14 +323,6 @@ export interface LayoutStep {
    * before ribbon and symbol placement.
    */
   place?: DiagramStepPlace;
-  /**
-   * Its picture's paper and marks, each a convex outline in its ink box's
-   * terms, so the box's empty corners stay free (`pictureFootprints`):
-   * worked out only when a placement clash asks for them
-   * (`placementClashes`), once per picture and measure. Absent, or
-   * undefined when called, where only the box is known.
-   */
-  footprints?: () => readonly Polygon[] | undefined;
 }
 
 /**
@@ -453,7 +436,8 @@ export interface LayoutCell {
      */
     auto: { mmPerUnit: number | null; frameMm: number | null; drawMm: PageBox; textWidthMm?: number };
   };
-  clashes?: PlacementClash[];
+  /** Placed by hand with a part past the margin, or past the paper's edge (`markOutsideMargin`): all the pages say of a placement. */
+  outsideMargin?: true;
   /** The picture's square box: where a fitted picture goes, and an empty step's placeholder. */
   pictureMm: { x: number; y: number; size: number };
   /**
@@ -1371,10 +1355,6 @@ export function layoutDiagramPages(
           }
         : null;
     const lane = flowInput ? flowLane(flowInput) : null;
-    for (const index of lane?.warnings ?? []) {
-      const cell = cells[index];
-      if (cell?.placed) cell.clashes = [{ kind: 'path' }];
-    }
     const band = setup.showPath ? (lane?.lane ?? null) : null;
     const { turns, zoomArrows } = placeTurns(
       placed.map(({ step }) => step),
@@ -1425,8 +1405,7 @@ export function layoutDiagramPages(
     bandInk: setup.pathColor,
     ...(flowPages && Object.keys(flowPages.packed).length > 0 ? { packed: flowPages.packed } : {}),
   };
-  const byId = new Map(steps.map((step) => [step.id, step]));
-  placementClashes(result, (stepId) => byId.get(stepId)?.footprints?.());
+  markOutsideMargin(result);
   return result;
 }
 
@@ -2003,7 +1982,7 @@ function placeTurns(
   /**
    * A step's part where the layout puts it, before any hand placement: a
    * glyph keeps clear of where the layout puts the steps, and a part placed
-   * onto one is a clash for the page to say, not a reason to move the glyph.
+   * onto one shows there as placed: never a reason to move the glyph.
    */
   const homePart = (cell: LayoutCell, part: 'number' | 'picture' | 'text'): PageBox => {
     if (!cell.placed || !cell.homeParts) return partBox(cell, part);

@@ -43,7 +43,7 @@ import { loadDiagramFonts, type DiagramFonts } from '../fonts/diagramFonts';
 import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramFontTexts, enlargeArrowCount, preparedPages, type PreparedDiagramPages } from '../pages/diagramPages';
 import { layoutOverflow } from '../pages/pageOverflow';
-import { clashingStepsByGroup, type ClashGroup } from '../pages/pagePlacement';
+import { outsideMarginSteps } from '../pages/pagePlacement';
 import { composedPageUrl } from '../pages/useDiagramPages';
 import { zoomSplits, type ZoomSplit } from '../pages/zoomArrows';
 import { stepPictureSource } from '../pictures/paintDiagramStep';
@@ -90,8 +90,8 @@ export interface DiagramExportBinding {
   /** The steps whose instruction is cut. */
   cut: number[];
   placed: number;
-  /** The steps whose placement clashes, by what is wrong (`ClashGroup`): each group is a sentence of its own. */
-  clashes: Record<ClashGroup, number[]>;
+  /** The steps placed by hand with a part past the margin (`outsideMarginSteps`): all that is said of a placement. */
+  outsideMargin: number[];
   /**
    * The flow steps that no longer fit the places their pages keep for them,
    * and the pages that cannot hold their steps even at the smallest size, by
@@ -397,7 +397,7 @@ export function useDiagramExport(
         {
           files: count,
           placed: stepsOf(document).filter((step) => step.place || step.placeNewer).length,
-          clashes: pages?.layout.pages.flatMap((page) => page.cells.filter((cell) => cell.clashes?.length)).length ?? 0,
+          outsideMargin: pages ? outsideMarginSteps(pages.layout).length : 0,
           steps: stepsOf(document).length,
           empty: empty.length,
           enlarged: stepsOf(document).filter((step) => step.zoom !== undefined).length,
@@ -442,7 +442,7 @@ export function useDiagramExport(
     empty,
     cut,
     placed: stepsOf(document).filter((step) => step.place || step.placeNewer).length,
-    clashes: pages ? clashingStepsByGroup(pages.layout) : { overlap: [], paper: [], margin: [], path: [] },
+    outsideMargin: pages ? outsideMarginSteps(pages.layout) : [],
     overflow: pages ? layoutOverflow(pages.layout) : NO_OVERFLOW,
     turns: document.steps.length - stepsOf(document).length,
     enlargeArrows,
