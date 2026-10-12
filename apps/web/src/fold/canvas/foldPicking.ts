@@ -507,17 +507,31 @@ function paperUnder(index: FoldPickIndex, at: Point): { scene: Point; sheet: She
   return sheet ? { scene: at, sheet } : null;
 }
 
+/** How a click resolves (`resolveFoldPick`): its step's snap, and what a line click may take. */
+export interface FoldPickRule {
+  snap: FoldStepSnap;
+  /** Whether a line click takes the paper's raw edge, or only folds and creases. */
+  edges: boolean;
+  /** Alt held, or its latch: any point of the paper. */
+  free: boolean;
+  /** The kinds of line a line click takes, in place of `edges`: a petal fold's hinge is a precrease, a swivel's edge no flat crease. */
+  kinds?: readonly FoldSegmentPick['segment'][];
+  /** A line click's own test of each line in reach: a swivel's target is never parallel to its edge. */
+  accept?: (segment: FoldSegmentPick) => boolean;
+}
+
 /**
  * What a click at `at` on `pane` takes for a click that snaps by `snap`:
  * the nearest point landmark, or with `free` held any point of the paper; the
- * nearest line (a fold or a crease only, unless `edges`); or the point itself.
+ * nearest line (a fold or a crease only, unless `edges`; only `kinds`, when
+ * given, and only one `accept` takes); or the point itself.
  */
 export function resolveFoldPick(
   index: FoldPickIndex,
   pane: FoldPaneId,
   at: Point,
   radii: FoldHitRadii,
-  { snap, edges, free }: { snap: FoldStepSnap; edges: boolean; free: boolean }
+  { snap, edges, free, kinds, accept }: FoldPickRule
 ): FoldPick | null {
   const onFolded = pane === 'folded';
   const targets = onFolded ? index.folded : index.creasePattern;
@@ -554,7 +568,9 @@ export function resolveFoldPick(
       let bestDistance = Infinity;
       for (const portion of hits) {
         const segment = targets.segments[targets.portionOf[portion.id - 1] ?? -1];
-        if (!segment || (!edges && segment.segment === 'raw_edge')) continue;
+        if (!segment) continue;
+        if (kinds ? !kinds.includes(segment.segment) : !edges && segment.segment === 'raw_edge') continue;
+        if (accept && !accept(segment)) continue;
         const distance = distanceToSegment(at, portion.a, portion.b);
         if (distance < bestDistance) {
           bestDistance = distance;

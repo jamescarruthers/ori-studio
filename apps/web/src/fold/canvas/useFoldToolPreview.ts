@@ -98,10 +98,7 @@ const lineSideKey = (build: FoldStepBuild) =>
     ? `${build.sceneLine.n[0]},${build.sceneLine.n[1]},${build.sceneLine.d}:${build.movingSign}`
     : null;
 
-/**
- * The axiom line a tool's picks locate, once every click of it is in: a
- * fold's line, or a petal fold's H, its first clicks.
- */
+/** The axiom line a fold's picks locate, once every click of it is in. */
 function axiomLineOf({ tool, lineMode, picks }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): FoldAxiomLine | null {
   return locatesLine(tool) ? axiomLineOfPicks(lineMode, picks.slice(0, lineModeInput(lineMode).steps.length)) : null;
 }
@@ -199,7 +196,7 @@ export function useFoldToolPreview(
             : null;
   // A vertex fold's, once the engine has described its flap, line or fan.
   const vertexing = isVertexTool(tools.tool);
-  const vertexStep = useFoldVertexStep(session, index, tools, candidate, vertexing);
+  const vertexStep = useFoldVertexStep(session, index, tools, vertexing);
   // A precrease of part of its line: its points along the line, and a pinch's
   // length, which the engine names for the state's sheet.
   const along = picksAlongLine(tools);

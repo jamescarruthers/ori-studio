@@ -24,6 +24,7 @@ import {
   type FoldPaneId,
   type FoldPick,
   type FoldPickIndex,
+  type FoldPointPick,
 } from './foldPicking';
 import type { FoldScene } from '../engine/foldEngineWire';
 import { clipConvex, toPoint } from './foldCanvasGeometry';
@@ -301,8 +302,12 @@ export interface FoldPaneOverlayInput {
   scene: FoldScene | null;
   picks: readonly FoldPick[];
   hovered: FoldHit | null;
-  /** While a free line is being drawn: its first end, which the live line runs from to where a click would end it. */
-  freeFrom: FoldFreePick | null;
+  /**
+   * While a line is being drawn through two clicks: its first end, which the
+   * live line runs from to where a click would end it — a free line's, or
+   * the first of two snapped points (a swivel's target).
+   */
+  freeFrom: FoldFreePick | FoldPointPick | null;
   /**
    * Lines the tools have located that no fold's picture draws yet — a
    * crimp's first line while its second is being located — across the
@@ -405,10 +410,12 @@ export function foldPaneOverlay(input: FoldPaneOverlayInput): FoldPaneOverlay {
       strokes.push({ a, b, color: withAlpha(inks.accent, HOVER_LINE_ALPHA), widthMul: LINE_WIDTH_MUL });
     }
   }
-  // The line a free fold is being drawn along, on the pane under the
-  // pointer: from its first end to where a click would put the other.
+  // The line a free fold — or a line through two snapped points — is being
+  // drawn along, on the pane under the pointer: from its first end to where
+  // a click would put the other.
   const from = input.freeFrom ? pickOnPane(input.freeFrom, pane, spread) : null;
-  const to = hovered?.pane === pane && hovered.pick?.kind === 'free' ? pickOnPane(hovered.pick, pane, spread) : null;
+  const toKind = input.freeFrom?.kind ?? null;
+  const to = hovered?.pane === pane && hovered.pick && hovered.pick.kind === toKind ? pickOnPane(hovered.pick, pane, spread) : null;
   if (from && to && 'x' in from && 'x' in to) {
     strokes.push({ a: from, b: to, color: withAlpha(inks.accent, HOVER_LINE_ALPHA), widthMul: 1 });
   }

@@ -27,6 +27,7 @@ import {
   foldLocatedLines,
   foldPromptWords,
   foldReverseWindowView,
+  foldShownPicks,
   foldSinkWindowView,
   foldTuckWindowView,
   foldVertexWindowView,
@@ -34,6 +35,7 @@ import {
   sceneLayers,
 } from '../../../fold/canvas/foldCanvasModel';
 import { useFoldFanMarks } from '../../../fold/canvas/vertex/useFoldFanMarks';
+import { useFoldPetalMarks } from '../../../fold/canvas/vertex/useFoldPetalMarks';
 import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
 import { foldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { setFoldPaneDisplay, useFoldPaneDisplay } from '../../../fold/canvas/foldPaneDisplay';
@@ -150,9 +152,13 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const summary = view.summary;
   const cursorEntry = useFoldCursorEntry();
   const spread = useFoldStepSpread(view.cursorId, 'canvas_bar');
-  // A fan's given creases, and the regions its paper that stays is picked among, from its clicks.
+  // A rabbit ear's given creases, and the regions its paper that stays is picked among, from its clicks;
+  // a petal fold's hinge, and the flaps below it the pointer finds.
   const fanMarks = useFoldFanMarks(view.index, toolState);
-  const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, fanMarks);
+  const petalMarks = useFoldPetalMarks(session, view.index, toolState);
+  const pending = fanMarks?.pending ?? petalMarks.pending;
+  const regions = fanMarks?.regions ?? petalMarks.regions;
+  const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, pending);
   // The crease pattern as Edit's canvas draws one, not as paper.
   const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, viewport, theme.name);
   const landed = preview.landed;
@@ -191,13 +197,15 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     () => foldAlongOverlay(preview.extent, toolState.extent, toolState.extentPicks),
     [preview.extent, toolState.extent, toolState.extentPicks]
   );
+  // A swivel's pivot once its vertex is drawn in its place.
+  const shownPicks = foldShownPicks(toolState, preview);
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks
         ? foldPaneOverlay({
             pane,
             scene: view.scene,
-            picks: toolState.picks,
+            picks: shownPicks,
             hovered: hovered?.pane === pane ? hovered : null,
             freeFrom,
             located,
@@ -206,10 +214,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             tool: pane === 'folded' ? vertexMarks : null,
             spread: paneSpread.map,
             along: along?.[pane] ?? null,
-            regions: fanMarks?.regions?.[pane] ?? null,
+            regions: regions?.[pane] ?? null,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, toolState.picks, freeFrom, located, vertexMarks, paneSpread.map, along, fanMarks]
+    [inks, view.scene, view.marks, shownPicks, freeFrom, located, vertexMarks, paneSpread.map, along, regions]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
@@ -221,6 +229,16 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   const sequence = useWorkspaceStore((state) => shownFoldSequence(state)?.document ?? null);
   const marksHere = marksMadeAt(sequence, session.cursorId).length;
   const woven = useFoldWovenInterval(preview.section);
+  // The folded pane's hover: a woven section's stack, and a petal fold's flap; the crease pattern's, the flap.
+  const { onHover: onWovenHover } = woven;
+  const { onHover: onPetalHover } = petalMarks;
+  const onFoldedHover = useCallback(
+    (hit: FoldHit | null) => {
+      onWovenHover(hit);
+      onPetalHover(hit);
+    },
+    [onWovenHover, onPetalHover]
+  );
   const reverseView = foldReverseWindowView(toolState, preview);
   const crimpView = foldCrimpWindowView(toolState, preview);
   const tuckView = foldTuckWindowView(toolState, preview);
@@ -315,7 +333,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               keepInViewKey={paint.folded.keepInView}
               hitTest={(at, radii) => verbs.hitTest('folded', at, radii)}
               overlay={foldedOverlay}
-              onHover={woven.onHover}
+              onHover={onFoldedHover}
               onZoomPercentChange={setZoomPercent}
               status={foldedStatus}
               posedScene={playback.frames}
@@ -355,6 +373,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               contentBounds={paint.creasePattern.contentBounds}
               hitTest={(at, radii) => verbs.hitTest('crease-pattern', at, radii)}
               overlay={creaseOverlay}
+              onHover={onPetalHover}
               onZoomPercentChange={showFolded ? undefined : setZoomPercent}
               status={creaseStatus}
               ariaLabel={t(

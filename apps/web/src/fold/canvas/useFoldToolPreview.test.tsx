@@ -403,17 +403,17 @@ describe('a vertex fold’s step', () => {
     [-0.8824, -0.4706],
     [0.8824, -0.4706],
   ];
-  /** The compound question of a swivel: three candidates, the first not landing, no orders. */
-  const swivelAnswer = (op: { emergent: [number, number] }) => ({
+  /** The compound question of a rabbit ear: three candidates, the first not landing, no orders. */
+  const fanAnswer = (op: { emergent: [number, number] }) => ({
     status: 'ok',
     family: 'vertex',
     analysis: {
-      kind: 'swivel',
-      center: [0.5, 0.3],
+      kind: 'rabbit-ear',
+      center: [0.7, 0.7],
       given: [
-        [0.86, 0.51],
-        [-0.86, 0.51],
-        [0, -1],
+        [-0.92, 0.38],
+        [0.71, 0.71],
+        [0.38, -0.92],
       ],
       candidates: CANDIDATES,
       // The engine names the candidate nearest the ray asked for.
@@ -423,10 +423,49 @@ describe('a vertex fold’s step', () => {
     emergents: [false, true, true],
     orders: null,
   });
+  const EAR: FoldToolState = {
+    ...FOLD_TOOL_INITIAL,
+    tool: 'rabbit-ear',
+    picks: [point(0, 1), point(1, 1), point(1, 0), free(0.3, 0.3)],
+  };
+  const RIDGES: [number, number][] = [
+    [0, -1],
+    [0.5, -0.5],
+  ];
+  /** The compound question of a swivel by its edge: its two ridges, as `emergents` says each lands. */
+  const swivelAnswer = (op: { ridge?: [number, number] }, emergents: boolean[]) => ({
+    status: 'ok',
+    family: 'vertex',
+    analysis: {
+      kind: 'swivel-by-edge',
+      pivot: [0.8, 0.3],
+      vertex: [0.8, 0.33],
+      meet: [0, 0],
+      edge: [
+        [0, 0],
+        [1, 0],
+      ],
+      edge_faces: [0],
+      foot: [0.8, 0],
+      target: { n: [1, 0], d: 0 },
+      rotation: 0.78,
+      landed: [],
+      creases: [],
+      ridges: RIDGES,
+      // The engine names the ridge nearest the one asked for: the foot's when none is.
+      ridge: op.ridge ? 1 : 0,
+      layers: [0],
+      regions: [],
+    },
+    emergents,
+    orders: null,
+  });
+  const edges = view.index!.folded.segments;
   const SWIVEL: FoldToolState = {
     ...FOLD_TOOL_INITIAL,
     tool: 'swivel',
-    picks: [point(0.5, 0.3), point(1, 0.6), point(0, 0.6), point(0.5, 0), free(0.3, 0.9)],
+    // The pivot, the bottom edge, the left edge it lands on.
+    picks: [point(0.8, 0.3), edges.find((edge) => edge.edge === 0)!, edges.find((edge) => edge.edge === 3)!],
   };
 
   const reverseTip = engine.compoundAnalysis.getMockImplementation();
@@ -442,10 +481,10 @@ describe('a vertex fold’s step', () => {
       const stayer = op.stayer.join();
       picked ??= stayer;
       // None lands with the paper picked; one does with other paper staying.
-      return { ...swivelAnswer(op), emergents: stayer === picked ? [false, false, false] : [false, true, false] };
+      return { ...fanAnswer(op), emergents: stayer === picked ? [false, false, false] : [false, true, false] };
     }) as never);
-    await render(SWIVEL);
-    for (let k = 0; k < 3; k += 1) await render(SWIVEL);
+    await render(EAR);
+    for (let k = 0; k < 3; k += 1) await render(EAR);
     expect(seen?.step).toBeNull();
     expect(seen?.refused).toBeNull();
     expect(seen?.landing).toBe(false);
@@ -460,7 +499,7 @@ describe('a vertex fold’s step', () => {
 
   it('asks the compound question, again for the fourth ray that lands, and previews the step with its picture but no line to analyse', async () => {
     engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { emergent: [number, number] }) =>
-      swivelAnswer(op)) as never);
+      fanAnswer(op)) as never);
     const PICTURE = {
       kind: 'fold',
       direction: 'valley',
@@ -473,13 +512,13 @@ describe('a vertex fold’s step', () => {
       grip: null,
     };
     engine.action.mockImplementation((async () => ({ status: 'ok', action: PICTURE })) as never);
-    await render(SWIVEL);
-    for (let k = 0; k < 3; k += 1) await render(SWIVEL);
+    await render(EAR);
+    for (let k = 0; k < 3; k += 1) await render(EAR);
     // The placeholder ray first, then the first candidate that lands.
     expect(engine.compoundAnalysis).toHaveBeenCalledTimes(2);
     const asked = engine.compoundAnalysis.mock.calls.map((call) => (call as unknown as [unknown, { emergent: unknown }])[1].emergent);
     expect(asked).toEqual([[1, 0], CANDIDATES[1]]);
-    expect(seen?.step?.op).toMatchObject({ kind: 'swivel', emergent: CANDIDATES[1], seed: { scope: 'all' } });
+    expect(seen?.step?.op).toMatchObject({ kind: 'rabbit-ear', emergent: CANDIDATES[1], seed: { scope: 'all' } });
     // Only the two that land are offered.
     expect(seen?.vertex).toMatchObject({ emergent: 1, fourths: [1, 2], layers: 1, orders: [] });
     // Previewed through the session and pictured; a vertex fold has no line to analyse.
@@ -489,6 +528,39 @@ describe('a vertex fold’s step', () => {
     expect(seen?.action).toEqual(PICTURE);
     expect(tracked.offered).toHaveBeenCalledWith('emergent', 2);
     expect(seen?.refused).toBeNull();
+  });
+
+  it('asks a swivel by its edge, takes the foot’s ridge by storing none, and still folds its own when no ridge lands', async () => {
+    let lands = [true, true];
+    engine.compoundAnalysis.mockImplementation((async (_at: unknown, op: { ridge?: [number, number] }) =>
+      swivelAnswer(op, lands)) as never);
+    await render(SWIVEL);
+    for (let k = 0; k < 3; k += 1) await render(SWIVEL);
+    // Asked once: the foot's ridge is the one asked with.
+    expect(engine.compoundAnalysis).toHaveBeenCalledTimes(1);
+    expect((engine.compoundAnalysis.mock.calls[0] as unknown as [unknown, unknown] | undefined)?.[1]).toMatchObject({
+      kind: 'swivel',
+      via: 'edge',
+      pivot: [0.8, 0.3],
+      edge: [0.5, 0],
+      target: { via: 'crease', at: [0, 0.5] },
+      seed: { scope: 'all' },
+    });
+    expect(seen?.step?.op).not.toHaveProperty('ridge');
+    expect(seen?.vertex).toMatchObject({ emergent: 0, fourths: [0, 1], layers: 0 });
+    expect(tracked.offered).toHaveBeenCalledWith('ridge', 2);
+    // The other ridge taken: stored as its direction, asked again.
+    await render({ ...SWIVEL, compound: { ...SWIVEL.compound, emergent: 1 } });
+    for (let k = 0; k < 3; k += 1) await render({ ...SWIVEL, compound: { ...SWIVEL.compound, emergent: 1 } });
+    expect(seen?.step?.op).toMatchObject({ ridge: RIDGES[1] });
+    // Neither lands: the step is the foot's, previewed, so the engine's refusal says why.
+    lands = [false, false];
+    const other = { ...SWIVEL, vertexDirection: 'mountain' as const };
+    await render(other);
+    for (let k = 0; k < 3; k += 1) await render(other);
+    expect(seen?.vertex).toMatchObject({ emergent: 0, fourths: [] });
+    expect(seen?.step?.op).toMatchObject({ kind: 'swivel', via: 'edge', direction: 'mountain' });
+    expect(verbs.preview).toHaveBeenLastCalledWith(seen?.step?.op, undefined);
   });
 
   it('says why before the engine is asked: a click that names no paper', async () => {

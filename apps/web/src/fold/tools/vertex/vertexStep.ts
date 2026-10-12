@@ -11,13 +11,15 @@
  *   against. A fan's fourth ray is not known before the engine lists its
  *   candidates, so it is asked with a placeholder ray, and the answer lists
  *   every candidate and which land; a squash is asked with its spine on the
- *   hinge, so its vertex is known wherever the folder aims it.
+ *   hinge, so its vertex is known wherever the folder aims it; a swivel by its
+ *   edge is asked with the ridge square to the edge, and the answer lists both
+ *   ridges and which land.
  * - **The folded op** is the asked one with the choices made: a squash's
- *   spine target ({@link withTarget}) and a fan's fourth ray — the folder's,
- *   else the first that lands ({@link emergentToFold}, {@link withEmergent}).
- *   A rabbit ear's fourth crease rises as its ridge, the odd letter out of
- *   its four, so there is no ridge to choose (an older step's `ridge` is not
- *   read).
+ *   spine target ({@link withTarget}) and a fan's fourth ray, or a swivel's
+ *   ridge — the folder's, else the first that lands ({@link emergentToFold},
+ *   {@link withEmergent}). A rabbit ear's fourth crease rises as its ridge,
+ *   the odd letter out of its four, so there is no ridge to choose (an older
+ *   step's `ridge` is not read).
  *
  * What a step stores is each one's result — a direction, a depth at a sheet
  * point, the completion's FOLD triples — never an index (plan D6).
@@ -28,78 +30,62 @@
  * petal). It is found here, from the scene, so a click keeps meaning the same
  * flap when the direction changes.
  *
- * **The paper that stays** in a fan is one of the regions between its given
- * rays, the one clicked in (`fanGeometry`): the stayer stored is the sheet
- * point that names that region, on the farthest layer the fan cuts, so the
- * wedge the engine keeps still is the region the canvas lit.
+ * **The paper that stays** in a rabbit ear is one of the regions between its
+ * given rays, the one clicked in (`fanGeometry`): the stayer stored is the
+ * sheet point that names that region, on the farthest layer the fan cuts, so
+ * the wedge the engine keeps still is the region the canvas lit.
  *
- * **A petal fold's line H** is located through the line modes, as a fold's
- * line is, and stored as the precrease it is: clicked, or the one lying along
- * the line run through H's two ends ({@link precreaseAlong}). A line no
- * precrease lies along is refused under the engine's own code, offering the
- * precrease nearest it as the landmark when one is near ({@link nearPrecrease}).
+ * **A petal fold's hinge** is named as the folder chose ({@link petalHingeOf}):
+ * the precrease clicked, or the line through two points clicked, which the
+ * fold creases itself. The flap below it is a region of the folded form the
+ * canvas lights from the engine's answer ({@link petalRegionKey}).
+ *
+ * **A swivel** is made by its edge (`FoldSwivelEdgeOp`): the pivot, the edge
+ * clicked and the line it lands on. A swivel by its rays still replays and
+ * shows; no tool makes one.
  *
  * Pure: no React, no store, no engine.
  */
 import type { Point } from '../../../lib/geometry';
-import type {
-  FoldChoices,
-  FoldCompletionChoice,
-  FoldDirection,
-  FoldModelDirection,
-  FoldModelLine,
-  FoldSeed,
-  FoldVertexOp,
-  SheetPoint,
+import {
+  isSwivelEdgeOp,
+  petalOp,
+  type FoldChoices,
+  type FoldCompletionChoice,
+  type FoldDirection,
+  type FoldModelDirection,
+  type FoldModelLine,
+  type FoldPetalHinge,
+  type FoldSeed,
+  type FoldSwivelTarget,
+  type FoldVertexOp,
+  type SheetPoint,
 } from '../../document/foldSequenceDocument';
 import type { FoldVertexAnalysed } from '../../engine/foldEngineSquashWire';
-import type { FoldAxiomCandidate, FoldEngineRefused, FoldModelPoint } from '../../engine/foldEngineWire';
-import {
-  applyIsometry,
-  invertIsometry,
-  lineThrough,
-  sideOf,
-  toPair,
-  transformLine,
-} from '../../canvas/foldCanvasGeometry';
+import type { FoldEngineRefused, FoldModelPoint } from '../../engine/foldEngineWire';
+import { applyIsometry, invertIsometry, lineThrough, sideOf, toPair } from '../../canvas/foldCanvasGeometry';
 import { foldStackAt, type FoldPick, type FoldPickIndex, type FoldSegmentPick } from '../../canvas/foldPicking';
-import {
-  isVertexTool,
-  lineModeAxiom,
-  type FoldLineModeId,
-  type FoldToolId,
-  type FoldVertexToolId,
-} from '../foldToolCatalog';
-import { lineModeInput } from '../foldToolRegistry';
+import { isVertexTool, type FoldLineBy, type FoldToolId, type FoldVertexToolId } from '../foldToolCatalog';
 import { fanRegionAt, fanStayer, fanToward, type FoldFanGiven } from './fanGeometry';
+import { lineByClicks, SWIVEL_TARGET_FROM } from './vertexInputs';
 
 /** What the tools have picked for a vertex fold, and every choice made of what the engine lists. */
 export interface FoldVertexIntent {
   tool: FoldVertexToolId;
-  /** How a petal fold's line H is located. */
-  lineMode: FoldLineModeId;
+  /** How a petal fold's hinge is named: a precrease, or its two ends. */
+  petalHinge: FoldLineBy;
+  /** How a swivel's target is named: a crease or an edge, or two points. */
+  swivelTarget: FoldLineBy;
   /** In click order (`vertexInputs`). */
   picks: readonly FoldPick[];
-  /** A petal fold's H located by an axiom: the root the engine gave; null until it has. */
-  candidate: FoldAxiomCandidate | null;
   /** As the viewer sees it. */
   direction: FoldDirection;
-  /** The layers a fan cuts from the direction's side; null for every one. */
+  /** The layers a rabbit ear cuts from the direction's side; null for every one. */
   fanLayers: number | null;
 }
 
 /** A fan's fourth ray before one is taken: the analysis lists every candidate whatever it is. */
 export const PLACEHOLDER_RAY: FoldModelDirection = [1, 0];
-
-/** How far, in model units, a precrease may lie off H's line and still be H. */
-const ON_LINE = 1e-6;
-
-/**
- * How far a precrease may lie off H's line, at both ends, to be offered as
- * the landmark H was meant to run along: a hand-drawn line a click's width
- * beside it.
- */
-const NEAR_LINE = 0.02;
 
 /** A refusal the tools can tell without the engine, under the engine's own code. */
 function refusedAs(refusal: FoldEngineRefused['refusal']): FoldEngineRefused {
@@ -109,11 +95,6 @@ function refusedAs(refusal: FoldEngineRefused['refusal']): FoldEngineRefused {
 /** Why a vertex op cannot be built from the clicks: one of them names no paper. */
 export function offPaper(point: SheetPoint | null): FoldEngineRefused {
   return refusedAs({ code: 'point_off_paper', ...(point ? { point } : {}) });
-}
-
-/** A petal fold's H runs along no precrease: the engine's word for it, before the engine is asked. */
-export function lineNotPrecreased(): FoldEngineRefused {
-  return refusedAs({ code: 'petal_not_precreased', faces: [], missing: 'line' });
 }
 
 /** Which side of the paper a layer is read from: the direction's own, or the far one. */
@@ -149,84 +130,110 @@ function sheetOf(pick: FoldPick | undefined): SheetPoint | null {
   return pick.sheet;
 }
 
+/** A sheet point inside a line pick's sheet segment: what names the crease or edge it is. */
+export const middleOf = ({ sheet: [a, b] }: FoldSegmentPick): SheetPoint => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+
 // ---------------------------------------------------------------------------
-// A petal fold's line H
+// A petal fold's hinge, and the flap below it
 
-/** A precrease, as the pick index lists it, with its ends where the folded form puts them. */
-function precreases(index: FoldPickIndex): FoldSegmentPick[] {
-  return index.creasePattern.segments.filter((segment) => segment.segment === 'crease');
-}
-
-const middleOf = ({ sheet: [a, b] }: FoldSegmentPick): SheetPoint => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-
-const lengthOf = ({ scene: [a, b] }: FoldSegmentPick) => Math.hypot(b.x - a.x, b.y - a.y);
-
-/** How far a segment's ends lie off a scene line, the farther of the two. */
-const offLine = (line: FoldModelLine, { scene: [a, b] }: FoldSegmentPick) =>
-  Math.max(Math.abs(sideOf(line, a)), Math.abs(sideOf(line, b)));
-
-/**
- * A sheet point inside a precrease lying along the scene line `line` — the
- * longest, for the steadiest replay: how a petal fold stores its H. Null when
- * no precrease lies along it.
- */
-export function precreaseAlong(index: FoldPickIndex, line: FoldModelLine): SheetPoint | null {
-  let best: FoldSegmentPick | null = null;
-  for (const crease of precreases(index)) {
-    if (offLine(line, crease) > ON_LINE) continue;
-    if (!best || lengthOf(crease) > lengthOf(best)) best = crease;
-  }
-  return best ? middleOf(best) : null;
+/** The clicks that name a petal fold's hinge, by how it is named. */
+export function petalHingeClicks(intent: Pick<FoldVertexIntent, 'petalHinge'>): number {
+  return lineByClicks(intent.petalHinge);
 }
 
 /**
- * The precrease nearest the scene line `line`, when one lies within a hand's
- * width of it at both ends: the landmark a petal fold's H was meant to run
- * along (a refusal's fix). Null when none is that near.
+ * A petal fold's hinge as its clicks name it (`FoldPetalHinge`): the
+ * precrease clicked, by a sheet point inside it, or the line through the two
+ * points clicked. Null before those clicks are in.
  */
-export function nearPrecrease(index: FoldPickIndex, line: FoldModelLine): FoldSegmentPick | null {
-  let best: { crease: FoldSegmentPick; off: number } | null = null;
-  for (const crease of precreases(index)) {
-    const off = offLine(line, crease);
-    if (off > NEAR_LINE || lengthOf(crease) < NEAR_LINE) continue;
-    if (!best || off < best.off) best = { crease, off };
-  }
-  return best?.crease ?? null;
+export function petalHingeOf(intent: Pick<FoldVertexIntent, 'petalHinge' | 'picks'>): FoldPetalHinge | null {
+  const [first, second] = intent.picks;
+  if (intent.petalHinge === 'crease') return first?.kind === 'segment' ? { kind: 'crease', at: middleOf(first) } : null;
+  const from = sheetOf(first);
+  const to = sheetOf(second);
+  return from && to ? { kind: 'points', from, to } : null;
 }
 
-/** H as a petal fold's clicks locate it: a precrease's sheet point, or the scene line no precrease lies along. */
-export type FoldPetalLine =
-  | { kind: 'crease'; crease: SheetPoint }
-  | { kind: 'missing'; sceneLine: FoldModelLine; near: FoldSegmentPick | null };
-
-/** The scene line the H clicks locate under the intent's line mode; null before every one is in. */
-function petalSceneLine(intent: FoldVertexIntent, picks: readonly FoldPick[], index: FoldPickIndex): FoldModelLine | null {
-  if (lineModeAxiom(intent.lineMode) !== null) {
-    return intent.candidate ? transformLine(index.scene.view_transform, intent.candidate.line) : null;
-  }
-  const [p, q] = picks;
-  if (intent.lineMode === 'free') {
-    return p?.kind === 'free' && q?.kind === 'free' ? lineThrough(p.scene, q.scene) : null;
-  }
-  return p?.kind === 'segment' ? lineThrough(p.scene[0], p.scene[1]) : null;
+/** The hinge's line on the folded pane, from its clicks; null before they are in. */
+export function petalHingeScene(intent: Pick<FoldVertexIntent, 'petalHinge' | 'picks'>): FoldModelLine | null {
+  const [first, second] = intent.picks;
+  if (intent.petalHinge === 'crease') return first?.kind === 'segment' ? lineThrough(first.scene[0], first.scene[1]) : null;
+  const a = sceneOf(first);
+  const b = sceneOf(second);
+  return a && b ? lineThrough(a, b) : null;
 }
 
-/** A petal fold's H, from its line clicks (see the module docs); null before they are all in. */
-export function petalLine(intent: FoldVertexIntent, index: FoldPickIndex): FoldPetalLine | null {
-  const clicks = lineModeInput(intent.lineMode).steps.length;
-  if (intent.picks.length < clicks) return null;
-  const picks = intent.picks.slice(0, clicks);
-  // A crease clicked is H as it is, whatever kind: the engine says when it is no precrease.
-  const [first] = picks;
-  if (intent.lineMode === 'crease' && first?.kind === 'segment') return { kind: 'crease', crease: middleOf(first) };
-  const sceneLine = petalSceneLine(intent, picks, index);
-  if (!sceneLine) return null;
-  const crease = precreaseAlong(index, sceneLine);
-  return crease ? { kind: 'crease', crease } : { kind: 'missing', sceneLine, near: nearPrecrease(index, sceneLine) };
+/**
+ * Whether a click now picks a petal fold's flap: its next click, once its
+ * hinge is named, or a click while its fold is previewed, which picks it
+ * again. `picks` is how many clicks are in.
+ */
+export function picksPetalRegion(tool: FoldToolId, petalHinge: FoldLineBy, picks: number): boolean {
+  if (tool !== 'petal') return false;
+  const clicks = lineByClicks(petalHinge);
+  return picks === clicks || picks === clicks + 1;
+}
+
+/**
+ * Which flap a point of the folded pane names below a petal fold's hinge, as
+ * a key: the layer the direction names there (the top one for a valley) and
+ * the hinge's side it lies on. The engine grows the flap from that layer, on
+ * that side, so two points with one key name one flap: the canvas asks the
+ * engine once per key (`useFoldPetalMarks`). Null off the paper, or before the
+ * hinge is named.
+ */
+export function petalRegionKey(
+  index: FoldPickIndex,
+  intent: Pick<FoldVertexIntent, 'petalHinge' | 'picks' | 'direction'>,
+  scene: Point
+): string | null {
+  const line = petalHingeScene(intent);
+  if (!line) return null;
+  const stack = foldStackAt(index, scene);
+  const face = intent.direction === 'valley' ? stack[0] : stack[stack.length - 1];
+  if (face === undefined) return null;
+  return `${face}${sideOf(line, scene) >= 0 ? '+' : '-'}`;
+}
+
+/** The petal op whose flap is the paper at a point of the folded pane; null off the paper or before the hinge. */
+export function petalOpAt(
+  index: FoldPickIndex,
+  intent: Pick<FoldVertexIntent, 'petalHinge' | 'picks' | 'direction'>,
+  scene: Point
+): FoldVertexOp | null {
+  const hinge = petalHingeOf(intent);
+  const petal = layerSheetPointAt(index, scene, intent.direction);
+  return hinge && petal ? petalOp(hinge, petal, intent.direction) : null;
 }
 
 // ---------------------------------------------------------------------------
-// A fan's center and layers
+// A swivel's target
+
+/** The line a swivel's target clicks name; null before they are in. */
+function swivelTargetOf(intent: Pick<FoldVertexIntent, 'swivelTarget'>, picks: readonly FoldPick[]): FoldSwivelTarget | null {
+  const [first, second] = picks;
+  if (intent.swivelTarget === 'crease') return first?.kind === 'segment' ? { via: 'crease', at: middleOf(first) } : null;
+  const a = sheetOf(first);
+  const b = sheetOf(second);
+  return a && b ? { via: 'free', through: [a, b] } : null;
+}
+
+/** The edge a swivel's clicks moved, on the folded pane; null before it is clicked. */
+export function swivelEdgePick(intent: { tool: FoldToolId; picks: readonly FoldPick[] }): FoldSegmentPick | null {
+  const edge = intent.tool === 'swivel' ? intent.picks[1] : undefined;
+  return edge?.kind === 'segment' ? edge : null;
+}
+
+/** Whether two scene segments run parallel: a target no turn lays the edge on. */
+export function parallelSegments([a, b]: readonly [Point, Point], [c, d]: readonly [Point, Point]): boolean {
+  const u = { x: b.x - a.x, y: b.y - a.y };
+  const v = { x: d.x - c.x, y: d.y - c.y };
+  const lengths = Math.hypot(u.x, u.y) * Math.hypot(v.x, v.y);
+  return !(lengths > 0) || Math.abs(u.x * v.y - u.y * v.x) / lengths < 1e-6;
+}
+
+// ---------------------------------------------------------------------------
+// A rabbit ear's center and layers
 
 /** The incenter of a triangle: its corners weighted by the opposite sides (the engine's `incenter`). */
 export function incenter([a, b, c]: readonly [Point, Point, Point]): Point | null {
@@ -238,12 +245,11 @@ export function incenter([a, b, c]: readonly [Point, Point, Point]): Point | nul
 }
 
 /**
- * Where a fan's creases meet, on the folded pane: a rabbit ear's incenter
- * (an isometry keeps it, so the scene's is the model's, carried), a swivel's
- * vertex. Null before the clicks that place it are in.
+ * Where a rabbit ear's creases meet, on the folded pane: its incenter (an
+ * isometry keeps it, so the scene's is the model's, carried). Null before the
+ * clicks that place it are in, and for any other fold.
  */
 export function fanCenterScene(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>): Point | null {
-  if (intent.tool === 'swivel') return sceneOf(intent.picks[0]);
   if (intent.tool !== 'rabbit-ear') return null;
   const [a, b, c] = intent.picks.slice(0, 3).map(sceneOf);
   return a && b && c ? incenter([a, b, c]) : null;
@@ -251,15 +257,13 @@ export function fanCenterScene(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>)
 
 /** How many clicks place a fan's given rays; the paper that stays is the click after them. Null for any other fold. */
 export function fanGivenClicks(tool: FoldVertexToolId): number | null {
-  if (tool === 'rabbit-ear') return 3;
-  if (tool === 'swivel') return 4;
-  return null;
+  return tool === 'rabbit-ear' ? 3 : null;
 }
 
 /**
- * A fan's given rays on the folded pane (`fanGeometry`): a rabbit ear's from
- * its incenter to its corners, a swivel's from its vertex toward its three
- * points. Null before those clicks are in, or for any other fold.
+ * A rabbit ear's given rays on the folded pane (`fanGeometry`), from its
+ * incenter to its corners. Null before those clicks are in, or for any other
+ * fold.
  */
 export function fanGiven(intent: Pick<FoldVertexIntent, 'tool' | 'picks'>): FoldFanGiven | null {
   const clicks = fanGivenClicks(intent.tool);
@@ -315,8 +319,7 @@ export function fanSeed(
 /**
  * The op the engine is asked to describe once every click is in (see the
  * module docs); null before then, or a refusal the tools can tell without
- * the engine: a click that names no paper, a petal fold's H along no
- * precrease.
+ * the engine: a click that names no paper.
  */
 export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): FoldVertexOp | FoldEngineRefused | null {
   const { picks, direction } = intent;
@@ -332,43 +335,44 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
       return { kind: 'squash', flap, direction };
     }
     case 'petal': {
-      const clicks = lineModeInput(intent.lineMode).steps.length;
+      const clicks = petalHingeClicks(intent);
       if (picks.length < clicks + 1) return null;
-      const line = petalLine(intent, index);
-      if (!line) return null;
-      if (line.kind === 'missing') return lineNotPrecreased();
+      const hinge = petalHingeOf(intent);
       const petal = layer(picks[clicks]);
-      if (!petal) return offPaper(null);
-      return { kind: 'petal', crease: line.crease, petal, direction };
+      if (!hinge || !petal) return offPaper(null);
+      return petalOp(hinge, petal, direction);
     }
-    case 'rabbit-ear':
-    case 'swivel': {
-      const given = intent.tool === 'rabbit-ear' ? 3 : 4;
-      if (picks.length < given + 1) return null;
-      const points = picks.slice(0, given).map(sheetOf);
+    case 'rabbit-ear': {
+      if (picks.length < 4) return null;
+      const points = picks.slice(0, 3).map(sheetOf);
       // The paper that stays: the region clicked in, named on a layer the fan cuts.
       const fan = fanGiven(intent);
       const region = fan ? fanStayerRegion(intent, fan) : null;
       const stayer = fan && region !== null ? fanStayer(index, fan, region, direction, intent.fanLayers) : null;
-      const center = fan?.center ?? null;
-      const seed = center ? fanSeed(index, center, direction, intent.fanLayers) : null;
-      if (points.some((point) => point === null) || !stayer || !seed) return offPaper(null);
-      const [a, b, c, d] = points as SheetPoint[];
-      return intent.tool === 'rabbit-ear'
-        ? { kind: 'rabbit-ear', corners: [a!, b!, c!], emergent: PLACEHOLDER_RAY, seed, stayer, direction }
-        : { kind: 'swivel', vertex: a!, toward: [b!, c!, d!], emergent: PLACEHOLDER_RAY, seed, stayer, direction };
+      const seed = fan ? fanSeed(index, fan.center, direction, intent.fanLayers) : null;
+      const [a, b, c] = points;
+      if (!a || !b || !c || !stayer || !seed) return offPaper(null);
+      return { kind: 'rabbit-ear', corners: [a, b, c], emergent: PLACEHOLDER_RAY, seed, stayer, direction };
+    }
+    case 'swivel': {
+      if (picks.length < SWIVEL_TARGET_FROM + lineByClicks(intent.swivelTarget)) return null;
+      const [pivotPick, edgePick, ...targetPicks] = picks;
+      const pivot = sheetOf(pivotPick);
+      const target = swivelTargetOf(intent, targetPicks);
+      if (!pivot || edgePick?.kind !== 'segment' || !target) return offPaper(null);
+      return { kind: 'swivel', via: 'edge', pivot, edge: middleOf(edgePick), target, seed: { scope: 'all' }, direction };
     }
   }
 }
 
 /**
- * The asked op of a fan with each other region as the paper that stays: what
- * is asked when none of its fourth creases lands with the region picked, to
- * tell whether other paper would help. Empty for any other fold, or before
- * the paper that stays is picked.
+ * The asked op of a rabbit ear with each other region as the paper that
+ * stays: what is asked when none of its fourth creases lands with the region
+ * picked, to tell whether other paper would help. Empty for any other fold,
+ * or before the paper that stays is picked.
  */
 export function fanOpsElsewhere(intent: FoldVertexIntent, index: FoldPickIndex, asked: FoldVertexOp): FoldVertexOp[] {
-  if (asked.kind !== 'rabbit-ear' && asked.kind !== 'swivel') return [];
+  if (asked.kind !== 'rabbit-ear') return [];
   const fan = fanGiven(intent);
   const picked = fan ? fanStayerRegion(intent, fan) : null;
   if (!fan || picked === null) return [];
@@ -379,26 +383,36 @@ export function fanOpsElsewhere(intent: FoldVertexIntent, index: FoldPickIndex, 
 }
 
 /**
- * A fan's fourth creases that land, by index into the candidates, in order:
- * all the folder is offered (owner feedback, 2026-10-12: a fourth crease that
- * cannot fold is never a choice, refused after it is made). A candidate the
- * answer has no word on lands, as far as is known. Empty for no fan.
+ * A fan's fourth creases that land, by index into the candidates, in order —
+ * a swivel by its edge's ridges that land, by index into its ridges: all the
+ * folder is offered (owner feedback, 2026-10-12: a choice that cannot fold is
+ * never offered, refused after it is made). A candidate the answer has no
+ * word on lands, as far as is known. Empty for any other fold.
  */
 export function landingFourths(answer: FoldVertexAnalysed | null): number[] {
   const analysis = answer?.analysis;
-  if (analysis?.kind !== 'rabbit-ear' && analysis?.kind !== 'swivel') return [];
-  return analysis.candidates.flatMap((_, k) => ((answer?.emergents[k] ?? true) ? [k] : []));
+  const listed =
+    analysis?.kind === 'swivel-by-edge'
+      ? analysis.ridges
+      : analysis?.kind === 'rabbit-ear' || analysis?.kind === 'swivel'
+        ? analysis.candidates
+        : [];
+  return listed.flatMap((_, k) => ((answer?.emergents[k] ?? true) ? [k] : []));
 }
 
 /**
- * The fan's fourth ray taken: the folder's while it lands, else the first
- * that lands. Null for no fan, and for a fan none of whose fourth creases
- * lands — there is nothing to fold until the paper that stays is changed.
+ * The fan's fourth ray taken — a swivel's ridge —: the folder's while it
+ * lands, else the first that lands. With none that lands, null for a fan:
+ * there is nothing to fold until the paper that stays is changed. A swivel
+ * by its edge has no paper to change, so it folds the ridge it was asked
+ * with, and the engine's refusal says why it cannot.
  */
 export function emergentToFold(chosen: number | null, answer: FoldVertexAnalysed): number | null {
   const fourths = landingFourths(answer);
   if (chosen !== null && fourths.includes(chosen)) return chosen;
-  return fourths[0] ?? null;
+  const first = fourths[0];
+  if (first !== undefined) return first;
+  return answer.analysis.kind === 'swivel-by-edge' ? answer.analysis.ridge : null;
 }
 
 /** A fan the engine has described, none of whose fourth creases lands: nothing to fold until other paper stays. */
@@ -417,12 +431,20 @@ export function steppedFourth(fourths: readonly number[], from: number | null, d
 
 /**
  * The asked op with the fan's fourth ray `emergent` taken (an index into the
- * analysis' candidates); the op unchanged for a squash or a petal fold, or
- * when the candidate is not listed.
+ * analysis' candidates), or a swivel by its edge's ridge (an index into its
+ * ridges: stored only when it is not the first, the one square to the edge);
+ * the op unchanged for a squash or a petal fold, or when the choice is not
+ * listed.
  */
 export function withEmergent(op: FoldVertexOp, answer: FoldVertexAnalysed, emergent: number | null): FoldVertexOp {
-  if (op.kind !== 'rabbit-ear' && op.kind !== 'swivel') return op;
   const { analysis } = answer;
+  if (isSwivelEdgeOp(op)) {
+    const ray = emergent === null || analysis.kind !== 'swivel-by-edge' ? undefined : analysis.ridges[emergent];
+    if (!ray) return op;
+    const { ridge: _stored, ...rest } = op;
+    return emergent === 0 ? rest : { ...rest, ridge: ray };
+  }
+  if (op.kind !== 'rabbit-ear' && op.kind !== 'swivel') return op;
   if (analysis.kind !== op.kind || emergent === null) return op;
   const ray = analysis.candidates[emergent];
   return ray ? { ...op, emergent: ray } : op;
@@ -436,7 +458,7 @@ export function withTarget(op: FoldVertexOp, target: FoldModelDirection | null):
 /** The folder's choices of what the engine lists, by index, and where a squash's spine was aimed. */
 export interface FoldVertexTaken {
   squashTarget: FoldModelDirection | null;
-  /** A fan's fourth ray; null for the first that lands. */
+  /** A fan's fourth ray, or a swivel's ridge; null for the first that lands. */
   emergent: number | null;
   /** The layer order, of those listed. */
   order: number;
@@ -445,14 +467,21 @@ export interface FoldVertexTaken {
 /** The op as it will be folded: the base op with the folder's spine target and fourth ray. */
 export interface FoldVertexChosen {
   op: FoldVertexOp;
-  /** The fourth ray taken, by index; null for no fan. */
+  /** The fourth ray or ridge taken, by index; null for no fan. */
   emergent: number | null;
   /**
    * Whether it is another fold than the one first asked — a spine aimed off
-   * the hinge, another fourth ray — whose orders must be asked of it;
-   * otherwise the first answer stands for it.
+   * the hinge, another fourth ray or ridge — whose orders must be asked of
+   * it; otherwise the first answer stands for it.
    */
   again: boolean;
+}
+
+/** The choice of what the engine lists that the asked op names: a fan's fourth ray, a swivel's ridge. */
+function namedChoice(answer: FoldVertexAnalysed): number | null {
+  const { analysis } = answer;
+  if (analysis.kind === 'rabbit-ear' || analysis.kind === 'swivel') return analysis.emergent;
+  return analysis.kind === 'swivel-by-edge' ? analysis.ridge : null;
 }
 
 /**
@@ -466,13 +495,12 @@ export function vertexChosenOp(
   taken: FoldVertexTaken
 ): FoldVertexChosen | null {
   const emergent = emergentToFold(taken.emergent, first);
-  if ((base.kind === 'rabbit-ear' || base.kind === 'swivel') && emergent === null) return null;
-  const named =
-    first.analysis.kind === 'rabbit-ear' || first.analysis.kind === 'swivel' ? first.analysis.emergent : null;
+  const fan = base.kind === 'rabbit-ear' || (base.kind === 'swivel' && !isSwivelEdgeOp(base));
+  if (fan && emergent === null) return null;
   return {
     op: withTarget(withEmergent(base, first, emergent), taken.squashTarget),
     emergent,
-    again: (base.kind === 'squash' && taken.squashTarget !== null) || (emergent !== null && emergent !== named),
+    again: (base.kind === 'squash' && taken.squashTarget !== null) || (emergent !== null && emergent !== namedChoice(first)),
   };
 }
 

@@ -18,11 +18,14 @@
  *   direction's way, as the step's own picture draws it (`squash_action`).
  * - **Petal fold**: H the direction's way, the top layer's kite creases the
  *   other (`compound/petal.rs`: a valley petal's kites show a mountain).
- * - **Rabbit ear, swivel**: the three given rays the direction's way and the
- *   fourth crease taken the other (`compound/fan.rs`, Lang; Beloch's
- *   `flatten-rabbit-ear-*`). Before the engine has described the fan — from
- *   the moment the given rays' clicks are in — the paper draws them as its
- *   pending creases instead (`fanGeometry`'s `fanGivenCreases`).
+ * - **Rabbit ear, swivel by its rays**: the three given rays the direction's
+ *   way and the fourth crease taken the other (`compound/fan.rs`, Lang;
+ *   Beloch's `flatten-rabbit-ear-*`). Before the engine has described the
+ *   fan — from the moment the given rays' clicks are in — the paper draws
+ *   them as its pending creases instead (`fanGeometry`'s `fanGivenCreases`).
+ * - **Swivel by its edge**: its four creases from the vertex to where each
+ *   leaves the last layer it cuts, each by the letter the engine gives it as
+ *   seen — the ridge the odd one out (`compound/swivel.rs`).
  *
  * **The marks** stay the tool's feedback, never a pen, since none of them is
  * a crease the fold makes:
@@ -30,17 +33,23 @@
  * - **Squash**: its vertex, the spine as it lies (faint), and where it lands
  *   (bold): the hinge line until a point is clicked; where it was aimed,
  *   faint, when that cannot land.
- * - **Petal fold**: the ends of H and the open corner.
- * - **Rabbit ear, swivel**: the center, and the other fourth creases that land
- *   (faint); one that does not land is not drawn, as it is not offered.
+ * - **Petal fold**: the ends of the hinge and the open corner.
+ * - **Rabbit ear, swivel by its rays**: the center, and the other fourth
+ *   creases that land (faint); one that does not land is not drawn, as it is
+ *   not offered.
+ * - **Swivel by its edge**: the vertex — where the pivot clicked really sits,
+ *   moved onto the line halfway between the edge and the target, drawn in
+ *   its place — where the edge lands on the target (bold), and the other
+ *   ridge when it lands too (faint). Its moving paper is lit over the paper
+ *   ({@link swivelRegionsTint}), the turning wedge brightest.
  *
  * Each ray runs from its vertex to where it leaves the paper. Pure: the
  * colours are handed in, resolved by the pane.
  */
 import type { Point } from '../../../lib/geometry';
-import type { Rgba } from '../../../cp-workspace/renderer/types';
+import type { FillGeometry, Rgba } from '../../../cp-workspace/renderer/types';
 import type { FoldDirection } from '../../document/foldSequenceDocument';
-import type { FoldFanAnalysis, FoldVertexAnalysis } from '../../engine/foldEngineSquashWire';
+import type { FoldFanAnalysis, FoldSwivelEdgeAnalysis, FoldVertexAnalysis } from '../../engine/foldEngineSquashWire';
 import type { FoldLetter, FoldModelPoint } from '../../engine/foldEngineWire';
 import { alongLine, chordOfConvex, lineThrough, pointOnLine, toPoint } from '../foldCanvasGeometry';
 import type { FoldOverlayDot, FoldOverlayInks, FoldOverlayMarks, FoldOverlayStroke } from '../foldPaneOverlays';
@@ -168,6 +177,10 @@ export function vertexCreaseLines(
       if (taken) add(ray(index, analysis.center, taken), other(direction));
       break;
     }
+    case 'swivel-by-edge':
+      // Each to where it leaves the last layer it cuts, by the engine's letter as seen.
+      for (const crease of analysis.creases) add(segment(index, analysis.vertex, crease.to), crease.letter);
+      break;
   }
   return creases;
 }
@@ -223,6 +236,51 @@ export function vertexOverlayMarks(
       strokes.push(...fanChoices(index, analysis, input, accent));
       dot(analysis.center);
       break;
+    case 'swivel-by-edge':
+      // Where the edge lands, on the target.
+      for (const [a, b] of analysis.landed) {
+        const [p, q] = segment(index, a, b);
+        strokes.push({ a: p, b: q, color: accent, widthMul: CHOSEN_WIDTH });
+      }
+      // The other ridge, when it lands too: a choice, not a crease.
+      analysis.ridges.forEach((ridge, k) => {
+        if (k === input.emergent || !(input.emergents[k] ?? true)) return;
+        const [a, b] = ray(index, analysis.vertex, ridge);
+        strokes.push({ a, b, color: withAlpha(accent, FAINT), widthMul: LINE_WIDTH });
+      });
+      dot(analysis.vertex);
+      break;
   }
   return { dots, strokes };
+}
+
+/** How strongly a swivel's moving paper is lit, and its turning wedge over that. */
+const SWIVEL_MOVING_TINT = 0.2;
+const SWIVEL_TURN_TINT = 0.36;
+
+/**
+ * A swivel by its edge's paper that moves (`FoldSwivelEdgeAnalysis.regions`),
+ * lit over the folded pane in the theme's accent: every piece, and the wedge
+ * that turns about the vertex brighter — the part that carries the edge onto
+ * its target. Null when the engine lists none.
+ */
+export function swivelRegionsTint(
+  index: FoldPickIndex,
+  analysis: Pick<FoldSwivelEdgeAnalysis, 'regions'>,
+  accent: Rgba
+): FillGeometry | null {
+  const triangles: number[] = [];
+  const colors: number[] = [];
+  for (const region of analysis.regions) {
+    const ring = region.polygon.map((p) => index.toScene(toPoint(p)));
+    const color = withAlpha(accent, region.wedge === 'turn' ? SWIVEL_TURN_TINT : SWIVEL_MOVING_TINT);
+    for (let k = 1; k + 1 < ring.length; k += 1) {
+      for (const corner of [ring[0]!, ring[k]!, ring[k + 1]!]) {
+        triangles.push(corner.x, corner.y);
+        colors.push(...color);
+      }
+    }
+  }
+  if (triangles.length === 0) return null;
+  return { position: new Float32Array(triangles), color: new Float32Array(colors), count: triangles.length / 2 };
 }

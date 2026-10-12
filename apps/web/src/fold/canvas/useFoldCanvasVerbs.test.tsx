@@ -397,7 +397,6 @@ describe('a vertex fold’s choices on the canvas', () => {
     orders: [],
     order: null,
     layers: 2,
-    nearPrecrease: null,
     ...extra,
   });
 
@@ -411,6 +410,13 @@ describe('a vertex fold’s choices on the canvas', () => {
     expect(foldCanvasChoice(preview({ vertex: vertex({ orders: [order, other], order: other }) }), tools)).toEqual({
       kind: 'order',
       index: 1,
+      count: 2,
+    });
+    // A swivel's two ridges, by name on the chooser too.
+    const swivel = { analysis: { kind: 'swivel-by-edge' }, emergents: [true, true], orders: null } as unknown as FoldVertexAnalysed;
+    expect(foldCanvasChoice(preview({ vertex: vertex({ base: swivel, answer: swivel, emergent: 0, fourths: [0, 1] }) }), tools)).toEqual({
+      kind: 'ridge',
+      index: 0,
       count: 2,
     });
   });
@@ -531,15 +537,94 @@ describe('a vertex fold’s choices on the canvas', () => {
     act(() => bound!.verbs.stepFanLayers(-1));
     expect(tools.store.getState().compound.fanLayers).toBeNull();
 
-    // A petal fold's H refused: the Precrease tool, on the same line, or on the edge-to-edge axiom.
+    // A petal fold's hinge refused: the Precrease tool through its two ends, or on the edge-to-edge axiom.
+    const end = (x: number) => ({ kind: 'point', provenance: 'free', sheet: [x, 0.5], mark: null, scene: { x, y: 0.5 } }) as const;
     act(() => tools.selectTool('petal'));
-    act(() => tools.selectLineMode('free'));
-    for (const x of [0.2, 0.8]) act(() => void tools.pick({ kind: 'free', pane: 'folded', scene: { x, y: 0.5 }, sheet: [x, 0.5] }));
+    act(() => bound!.verbs.setVertexLineBy('points'));
+    expect(tools.store.getState().petalHinge).toBe('points');
+    for (const x of [0.2, 0.8]) act(() => void tools.pick(end(x)));
     act(() => bound!.verbs.precreaseLine());
-    expect(tools.store.getState()).toMatchObject({ tool: 'precrease', lineMode: 'free' });
-    expect(tools.store.getState().picks).toHaveLength(2);
+    expect(tools.store.getState()).toMatchObject({ tool: 'precrease', lineMode: 'axiom-1', picks: [end(0.2), end(0.8)] });
     act(() => bound!.verbs.precreaseKite());
     expect(tools.store.getState()).toMatchObject({ tool: 'precrease', lineMode: 'axiom-3', picks: [] });
+
+    // Over a hinge crease whose kite is not creased: the same hinge by its ends, the flap as clicked.
+    const hinge = index.folded.segments[0]!;
+    const flap = { kind: 'free', pane: 'folded', scene: { x: 0.5, y: 0.3 }, sheet: [0.5, 0.3] } as const;
+    act(() => tools.selectTool('petal'));
+    act(() => bound!.verbs.setVertexLineBy('crease'));
+    act(() => void tools.pick({ ...hinge, segment: 'crease' }));
+    act(() => void tools.pick(flap));
+    act(() => bound!.verbs.petalByEnds());
+    const byEnds = tools.store.getState();
+    expect(byEnds).toMatchObject({ tool: 'petal', petalHinge: 'points' });
+    expect(byEnds.picks).toEqual([
+      { kind: 'point', provenance: 'vertex', sheet: hinge.sheet[0], mark: null, scene: hinge.scene[0] },
+      { kind: 'point', provenance: 'vertex', sheet: hinge.sheet[1], mark: null, scene: hinge.scene[1] },
+      flap,
+    ]);
+  });
+
+  it('picks a petal fold’s flap on the paper below its hinge, and again while previewed on the hinge’s other side', () => {
+    const tools = createFoldTools();
+    const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
+    const view = { index } as unknown as FoldStateView;
+    act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={preview({ step: null })} view={view} />));
+    act(() => tools.selectTool('petal'));
+    act(() => tools.setPetalHinge('points'));
+    const radii = { point: 0.03, line: 0.03 };
+    // The hinge's ends snap to landmarks: the corners here.
+    for (const at of [
+      { x: 0.01, y: 0.99 },
+      { x: 0.99, y: 0.01 },
+    ]) {
+      const hit = bound!.verbs.hitTest('folded', at, radii);
+      expect(hit?.pick).toMatchObject({ kind: 'point', provenance: 'vertex' });
+      act(() => bound!.verbs.pick(hit));
+    }
+    // Then the paper under the pointer: off it, nothing.
+    expect(bound!.verbs.hitTest('folded', { x: 1.3, y: 0.5 }, radii)?.pick).toBeNull();
+    const below = bound!.verbs.hitTest('folded', { x: 0.2, y: 0.2 }, radii);
+    expect(below?.pick).toMatchObject({ kind: 'free', sheet: [0.2, 0.2] });
+    act(() => bound!.verbs.pick(below));
+    expect(tools.store.getState().picks).toHaveLength(3);
+    // Previewed: the same side of the hinge changes nothing; the other side is the flap now.
+    act(() => bound!.verbs.pick(bound!.verbs.hitTest('folded', { x: 0.3, y: 0.1 }, radii)));
+    expect(tools.store.getState().picks[2]).toMatchObject({ scene: { x: 0.2, y: 0.2 } });
+    act(() => bound!.verbs.pick(bound!.verbs.hitTest('folded', { x: 0.8, y: 0.8 }, radii)));
+    expect(tools.store.getState().picks).toHaveLength(3);
+    expect(tools.store.getState().picks[2]).toMatchObject({ scene: { x: 0.8, y: 0.8 } });
+  });
+
+  it('takes a swivel’s pivot, an edge — never a flat crease — and a line not parallel to it', () => {
+    const tools = createFoldTools();
+    const scene = flatSquareScene();
+    const precreased = {
+      ...scene,
+      creases: [
+        ...scene.creases,
+        { id: 4, vertices: [0, 2] as [number, number], from: { x: 0, y: 0 }, to: { x: 1, y: 1 }, kind: 'flat' as const, letter: 'valley' as const, made_at: 1 },
+      ],
+    };
+    const index = foldPickIndex(precreased, flatSquareLandmarks(), []);
+    const view = { index } as unknown as FoldStateView;
+    act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={preview({ step: null })} view={view} />));
+    act(() => tools.selectTool('swivel'));
+    const radii = { point: 0.03, line: 0.03 };
+    // The pivot: a landmark — here the top-right corner.
+    act(() => bound!.verbs.pick(bound!.verbs.hitTest('crease-pattern', { x: 0.99, y: 0.99 }, radii)));
+    // The edge: the diagonal precrease is no edge, so a click on it picks nothing.
+    expect(bound!.verbs.hitTest('crease-pattern', { x: 0.5, y: 0.5 }, radii)?.pick).toBeNull();
+    const bottom = bound!.verbs.hitTest('crease-pattern', { x: 0.5, y: 0.005 }, radii);
+    expect(bottom?.pick).toMatchObject({ kind: 'segment', segment: 'raw_edge' });
+    act(() => bound!.verbs.pick(bottom));
+    // The line it lands on: the top edge runs parallel to it, so nothing; the diagonal does not.
+    expect(bound!.verbs.hitTest('crease-pattern', { x: 0.5, y: 0.995 }, radii)?.pick).toBeNull();
+    expect(bound!.verbs.hitTest('crease-pattern', { x: 0.5, y: 0.5 }, radii)?.pick).toMatchObject({ kind: 'segment', segment: 'crease' });
+    // Two points instead: the pivot and the edge stay.
+    act(() => bound!.verbs.setVertexLineBy('points'));
+    expect(tools.store.getState()).toMatchObject({ swivelTarget: 'points' });
+    expect(tools.store.getState().picks).toHaveLength(2);
   });
 
   it('clicks a pinch along the located line, holds the commit until it is in, and steps back on Escape', () => {

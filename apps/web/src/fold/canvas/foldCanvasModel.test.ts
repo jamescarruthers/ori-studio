@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
 import type { Point } from '../../lib/geometry';
 import type { FoldAnalysis, FoldCrossSection, FoldEngineRefused } from '../engine/foldEngineWire';
+import type { FoldVertexAnalysis } from '../engine/foldEngineSquashWire';
 import { FOLD_TOOL_INITIAL, type FoldToolState } from '../tools/foldToolState';
 import type { FoldPick } from './foldPicking';
 import { bookScene } from './foldCanvas.fixtures';
@@ -14,6 +15,7 @@ import {
   foldFreeLineStart,
   foldLocatedLines,
   foldPromptWords,
+  foldShownPicks,
   foldSinkWindowView,
   foldTuckWindowView,
   foldVertexWindowView,
@@ -170,14 +172,37 @@ describe('the Fold canvas model', () => {
     );
   });
 
-  it('prompts a swivel’s first click with the key, or the latch, that frees its point', () => {
+  it('prompts a swivel’s clicks by its edge — the pivot, the edge, the line — and a petal fold’s hinge', () => {
     const swivel: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel' };
-    expect(foldPromptWords(t, swivel, { coarse: false, alt: 'Option' })).toBe(
-      'Swivel fold · Hold Option and click where the creases meet: inside the paper, off every crease.'
+    expect(foldPromptWords(t, swivel, { coarse: false, alt: 'Option' })).toBe('Swivel fold · Click the pivot.');
+    expect(foldPromptWords(t, swivel, { coarse: true, alt: 'Alt' })).toBe('Swivel fold · Tap the pivot.');
+    const point = (x: number, y: number): FoldPick => ({ kind: 'point', provenance: 'vertex', sheet: [x, y], mark: null, scene: { x, y } });
+    const edge: FoldPick = { kind: 'segment', edge: 0, segment: 'raw_edge', sheet: [[0, 0], [1, 0]], scene: [{ x: 0, y: 0 }, { x: 1, y: 0 }] };
+    expect(foldPromptWords(t, { ...swivel, picks: [point(0.5, 0.2)] })).toBe(
+      'Swivel fold · Click the edge that moves: a raw edge or a folded edge.'
     );
-    expect(foldPromptWords(t, swivel, { coarse: true, alt: 'Alt' })).toBe(
-      'Swivel fold · Turn on Free point, then tap where the creases meet: inside the paper, off every crease.'
-    );
+    const byPoints: FoldToolState = { ...swivel, swivelTarget: 'points', picks: [point(0.5, 0.2), edge, point(0, 1)] };
+    expect(foldPromptWords(t, byPoints)).toBe('Swivel fold · Click a second point on that line.');
+    // The second target point's live line runs from the first; a crease target has none.
+    expect(foldFreeLineStart(byPoints)).toEqual(point(0, 1));
+    expect(foldFreeLineStart({ ...byPoints, swivelTarget: 'crease' })).toBeNull();
+    // A petal fold's hinge, by a crease or by its ends: drawn in its pen, not as a live line.
+    const petal: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'petal' };
+    expect(foldPromptWords(t, petal)).toBe('Petal fold · Select the hinge crease.');
+    const ends = { ...petal, petalHinge: 'points' as const, picks: [point(0.2, 0.5)] };
+    expect(foldPromptWords(t, ends)).toBe('Petal fold · Click its other end, where the other kite crease meets the edge.');
+    expect(foldFreeLineStart(ends)).toBeNull();
+  });
+
+  it('shows a swivel’s pivot and target until the engine has drawn the vertex and the landing in their place', () => {
+    const point = (x: number, y: number): FoldPick => ({ kind: 'point', provenance: 'free', sheet: [x, y], mark: null, scene: { x, y } });
+    const swivel: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel', picks: [point(0.8, 0.3), free(0.5, 0), free(0.3, 0.3)] };
+    expect(foldShownPicks(swivel, { vertex: null })).toBe(swivel.picks);
+    const analysis = { kind: 'swivel-by-edge' } as unknown as FoldVertexAnalysis;
+    const described = { vertex: { base: { analysis, emergents: [], orders: null } } } as unknown as Pick<FoldToolPreview, 'vertex'>;
+    // The edge it moves stays lit.
+    expect(foldShownPicks(swivel, described)).toEqual([free(0.5, 0)]);
+    expect(foldShownPicks({ ...swivel, tool: 'petal' }, described)).toBe(swivel.picks);
   });
 
   it('hands the crimp’s and the tuck’s windows what they choose among, only for their own tool once located', () => {
@@ -260,7 +285,6 @@ describe('the Fold canvas model', () => {
           orders: [order, second],
           order: second,
           layers: 3,
-          nearPrecrease: null,
         },
       })
     );
@@ -275,10 +299,95 @@ describe('the Fold canvas model', () => {
       orders: 2,
       order: 1,
     });
+    // A rabbit ear names no line of its own.
+    expect(shown).not.toHaveProperty('lineBy');
     // A fix's fourth crease is named by its number among those offered; one not offered has none.
     expect(shown?.emergentNumber?.([0.1, 0.9])).toBe(1);
     expect(shown?.emergentNumber?.([-0.9, 0.1])).toBe(2);
     expect(shown?.emergentNumber?.([0.9, -0.1])).toBeNull();
+  });
+
+  it('reads a petal fold’s hinge and what it creases itself, and a swivel’s target and ridge by name', () => {
+    const petalTools: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'petal', petalHinge: 'points' };
+    expect(foldVertexWindowView(petalTools, preview({ vertex: null }))).toMatchObject({ tool: 'petal', lineBy: 'points' });
+    const petalAnalysis = {
+      kind: 'petal' as const,
+      line: { n: [0, 1] as [number, number], d: 0.5 },
+      ends: [
+        [0.2, 0.5],
+        [0.8, 0.5],
+      ] as [[number, number], [number, number]],
+      corner: [0.5, 0.1] as [number, number],
+      kites: [
+        { n: [1, 0] as [number, number], d: 0.2 },
+        { n: [1, 0] as [number, number], d: 0.8 },
+      ] as [{ n: [number, number]; d: number }, { n: [number, number]; d: number }],
+      top: [1],
+      second: [2],
+      scores_line: true,
+      scores_kites: [true, false] as [boolean, boolean],
+    };
+    const lifted = foldVertexWindowView(
+      petalTools,
+      preview({
+        vertex: {
+          base: { analysis: petalAnalysis, emergents: [], orders: null },
+          answer: null,
+          emergent: null,
+          fourths: [],
+          elsewhere: null,
+          direction: 'valley',
+          orders: [],
+          order: null,
+          layers: 0,
+        },
+      })
+    );
+    expect(lifted?.petalScores).toEqual({ hinge: true, kites: 1 });
+
+    const swivelTools: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'swivel', swivelTarget: 'points' };
+    const swivelAnalysis = {
+      kind: 'swivel-by-edge' as const,
+      pivot: [0.8, 0.3] as [number, number],
+      vertex: [0.8, 0.33] as [number, number],
+      meet: [0, 0] as [number, number],
+      edge: [
+        [0, 0],
+        [1, 0],
+      ] as [[number, number], [number, number]],
+      edge_faces: [0],
+      foot: [0.8, 0] as [number, number],
+      target: { n: [0.7071, -0.7071] as [number, number], d: 0 },
+      rotation: 0.78,
+      landed: [],
+      creases: [],
+      ridges: [
+        [0, -1],
+        [0.5, -0.5],
+      ] as [number, number][],
+      ridge: 0,
+      layers: [0],
+      regions: [],
+    };
+    const swivel = foldVertexWindowView(
+      swivelTools,
+      preview({
+        vertex: {
+          base: { analysis: swivelAnalysis, emergents: [true, true], orders: null },
+          answer: null,
+          emergent: 1,
+          fourths: [0, 1],
+          elsewhere: null,
+          direction: 'valley',
+          orders: [],
+          order: null,
+          layers: 0,
+        },
+      })
+    );
+    expect(swivel).toMatchObject({ lineBy: 'points', ridge: 'end', fourths: 2, fourth: 1 });
+    // The other ridge, as a fix names it, is the first offered.
+    expect(swivel?.emergentNumber?.([0, -1])).toBe(1);
   });
 
   it('reads a sink tool’s window from its point: what fits, the pocket named as seen, the depth', () => {
@@ -359,7 +468,7 @@ describe('where the canvas chooser frames', () => {
 });
 
 describe('the canvas chooser’s note', () => {
-  const kinds = ['pocket', 'target', 'emergent', 'root', 'opening', 'order'] as const;
+  const kinds = ['pocket', 'target', 'emergent', 'ridge', 'root', 'opening', 'order'] as const;
 
   it('offers the keys the user’s shortcuts step it with', () => {
     const keys = chooserKeys((id) => shortcutLabelForAction(id), false);

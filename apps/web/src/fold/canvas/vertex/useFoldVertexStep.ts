@@ -9,7 +9,7 @@ import type {
   FoldVertexOp,
 } from '../../document/foldSequenceDocument';
 import type { FoldVertexAnalysed } from '../../engine/foldEngineSquashWire';
-import type { FoldAxiomCandidate, FoldEngineRefused } from '../../engine/foldEngineWire';
+import type { FoldEngineRefused } from '../../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../../session/useFoldSession';
 import { isVertexTool } from '../../tools/foldToolCatalog';
 import type { FoldToolState } from '../../tools/foldToolState';
@@ -19,14 +19,13 @@ import {
   fanLayerCount,
   fanOpsElsewhere,
   landingFourths,
-  petalLine,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
   type FoldVertexIntent,
   type FoldVertexTaken,
 } from '../../tools/vertex/vertexStep';
-import type { FoldPickIndex, FoldSegmentPick } from '../foldPicking';
+import type { FoldPickIndex } from '../foldPicking';
 import { useFoldCompoundAsk } from '../useFoldCompoundAsk';
 
 /** What the vertex tool knows of the fold it is previewing, beside the step. */
@@ -35,12 +34,17 @@ export interface FoldVertexPreview {
   base: FoldVertexAnalysed | null;
   /** Its answer for the op folded, with the choices made: what its orders are read from. */
   answer: FoldVertexAnalysed | null;
-  /** A fan's fourth ray taken, by index into the candidates; null for no fan, none yet, or none that lands. */
+  /**
+   * A fan's fourth ray taken, by index into the candidates — a swivel's
+   * ridge, by index into its ridges; null for no fan, none yet, or none that
+   * lands.
+   */
   emergent: number | null;
   /**
-   * A fan's fourth creases that land, by index into the candidates: the only
-   * ones offered (`landingFourths`). Empty for no fan, before the engine has
-   * described it, and when none lands.
+   * A fan's fourth creases that land, by index into the candidates — a
+   * swivel's ridges that land: the only ones offered (`landingFourths`).
+   * Empty for any other fold, before the engine has described it, and when
+   * none lands.
    */
   fourths: readonly number[];
   /**
@@ -54,17 +58,15 @@ export interface FoldVertexPreview {
   /** The orders the step leaves, when more than one; the one taken. */
   orders: readonly FoldCompletionChoice[];
   order: FoldCompletionChoice | null;
-  /** The layers at a fan's center; 0 for no fan. */
+  /** The layers at a rabbit ear's center; 0 for any other fold. */
   layers: number;
-  /** A petal fold's H runs along no precrease: the precrease beside it, when one is near. */
-  nearPrecrease: FoldSegmentPick | null;
 }
 
 export interface FoldVertexStepAnswer {
   /** What a commit appends: the folded op, and the completion that picks its order; null until it is known. */
   step: { op: FoldVertexOp; choices?: FoldChoices } | null;
   vertex: FoldVertexPreview | null;
-  /** Why it cannot be folded before it is previewed: a click off the paper, H along no precrease, the engine's question. */
+  /** Why it cannot be folded before it is previewed: a click off the paper, the engine's question. */
   refused: FoldEngineRefused | null;
 }
 
@@ -130,20 +132,19 @@ export function useFoldVertexStep(
   session: FoldSessionSurface,
   index: FoldPickIndex | null,
   tools: FoldToolState,
-  candidate: FoldAxiomCandidate | null,
   enabled: boolean
 ): FoldVertexStepAnswer {
   const state = session.cursor.state;
   const stateKey = state ? `${state.generation}:${state.id}` : null;
-  const { tool, lineMode, picks, vertexDirection, compound } = tools;
+  const { tool, petalHinge, swivelTarget, picks, vertexDirection, compound } = tools;
   const { squashTarget, fanLayers, emergent: chosenEmergent, order: chosenOrder } = compound;
 
   const intent = useMemo<FoldVertexIntent | null>(
     () =>
       enabled && isVertexTool(tool)
-        ? { tool, lineMode, picks, candidate, direction: vertexDirection, fanLayers }
+        ? { tool, petalHinge, swivelTarget, picks, direction: vertexDirection, fanLayers }
         : null,
-    [enabled, tool, lineMode, picks, candidate, vertexDirection, fanLayers]
+    [enabled, tool, petalHinge, swivelTarget, picks, vertexDirection, fanLayers]
   );
   const taken = useMemo<FoldVertexTaken>(
     () => ({ squashTarget, emergent: chosenEmergent, order: chosenOrder }),
@@ -189,31 +190,29 @@ export function useFoldVertexStep(
   const elsewhere = useFourthElsewhere(session, stateKey, asksElsewhere);
 
   // --- What the window and the canvas read beside the step.
-  const petal = useMemo(
-    () => (intent?.tool === 'petal' && index ? petalLine(intent, index) : null),
-    [intent, index]
-  );
   const center = intent ? fanCenterScene(intent) : null;
   const layers = center && index ? fanLayerCount(index, center) : 0;
 
   // Each choice offered is counted once, by what it was offered for: a fan's
-  // fourth creases by the ones that land, the only ones offered.
+  // fourth creases by the ones that land, the only ones offered — a swivel's
+  // ridges likewise.
   const offered = useRef<{ emergent: string | null; order: string | null }>({ emergent: null, order: null });
   const fourths = useMemo(() => landingFourths(firstAnswer), [firstAnswer]);
   const candidates = fourths.length;
+  const ridges = firstAnswer?.analysis.kind === 'swivel-by-edge';
   const firstKey = first?.key ?? null;
   const orderKey = again ? (second?.key ?? null) : firstKey;
   const orderCount = built?.orders.length ?? 0;
   useEffect(() => {
     if (firstKey !== null && candidates > 1 && offered.current.emergent !== firstKey) {
       offered.current.emergent = firstKey;
-      trackFoldChoiceOffered('emergent', candidates);
+      trackFoldChoiceOffered(ridges ? 'ridge' : 'emergent', candidates);
     }
     if (orderKey !== null && orderCount > 1 && offered.current.order !== orderKey) {
       offered.current.order = orderKey;
       trackFoldChoiceOffered('order', orderCount);
     }
-  }, [firstKey, candidates, orderKey, orderCount]);
+  }, [firstKey, candidates, ridges, orderKey, orderCount]);
 
   if (!intent) return NONE;
   const refused = told ?? first?.refused ?? answerRefused;
@@ -229,7 +228,6 @@ export function useFoldVertexStep(
       orders: built?.orders ?? [],
       order: built?.order ?? null,
       layers,
-      nearPrecrease: petal?.kind === 'missing' ? petal.near : null,
     },
     refused,
   };

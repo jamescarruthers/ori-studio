@@ -185,17 +185,17 @@ describe('foldRailGroups', () => {
     );
   });
 
-  it('takes the vertex folds as tools, the petal fold locating its line through the line modes', () => {
+  it('takes the vertex folds as tools, none of them locating a line through the line modes', () => {
     const calls = verbs();
     let groups = foldRailGroups(t, view({ tool: 'squash', lineMode: 'crease' }), calls);
     for (const id of ['squash', 'petal', 'rabbit-ear', 'swivel']) {
       expect(item(groups, id)).toMatchObject({ kind: 'tool', available: true, reason: null });
     }
     expect(foldRailTooltip(item(groups, 'petal'), undefined)).toBe(
-      'Petal fold - Lift a flap’s lower point along a precrease H while its sides fold in along two kite precreases.'
+      'Petal fold - Lift a flap’s lower point along a hinge while its sides fold in along two kite creases.'
     );
     expect(foldRailTooltip(item(groups, 'swivel'), undefined)).toBe(
-      'Swivel fold - Fold the paper about a point you place: three creases you pick, and a fourth that lets it lie flat.'
+      'Swivel fold - Swivel an edge onto a line, pivoting at a point.'
     );
     // A squash locates no line: no line mode is what the canvas is doing.
     expect(groups.flatMap((group) => group.items).filter((each) => each.active).map((each) => each.id)).toEqual([
@@ -203,11 +203,8 @@ describe('foldRailGroups', () => {
     ]);
     item(groups, 'rabbit-ear').select();
     expect(calls.selectTool).toHaveBeenCalledWith('rabbit-ear');
-    // A petal fold's H is located through the line mode chosen.
+    // A petal fold names its hinge in its own window, by a crease or by its two ends: no line mode is lit.
     groups = foldRailGroups(t, view({ tool: 'petal', lineMode: 'crease' }), calls);
-    expect(groups.flatMap((group) => group.items).filter((each) => each.active).map((each) => each.id)).toEqual([
-      'petal',
-      'crease',
-    ]);
+    expect(groups.flatMap((group) => group.items).filter((each) => each.active).map((each) => each.id)).toEqual(['petal']);
   });
 });

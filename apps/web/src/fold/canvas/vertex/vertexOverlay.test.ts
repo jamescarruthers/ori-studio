@@ -4,7 +4,7 @@ import type { FoldVertexAnalysis } from '../../engine/foldEngineSquashWire';
 import { flatSquareLandmarks, flatSquareScene } from '../foldCanvas.fixtures';
 import type { FoldPaneCreaseLine } from '../foldPaneScenes';
 import { foldPickIndex } from '../foldPicking';
-import { rayOnPaper, vertexCreaseLines, vertexOverlayMarks } from './vertexOverlay';
+import { rayOnPaper, swivelRegionsTint, vertexCreaseLines, vertexOverlayMarks } from './vertexOverlay';
 
 const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
 const accent: Rgba = [0.2, 0.4, 1, 1];
@@ -170,5 +170,71 @@ describe('a vertex fold’s creases on the folded pane, by the letter each shows
     const aimed = vertexCreaseLines(index, { analysis: { ...squash, share: 0.5 }, emergent: null }, 'valley');
     expect(letters(aimed)).toEqual(['valley', 'mountain']);
     expect(aimed[0]!.line[1].y).toBeGreaterThan(aimed[1]!.line[1].y);
+  });
+});
+
+describe('a swivel by its edge on the folded pane', () => {
+  const swivel: FoldVertexAnalysis = {
+    kind: 'swivel-by-edge',
+    pivot: [0.8, 0.3],
+    vertex: [0.8, 0.33],
+    meet: [0, 0],
+    edge: [
+      [0, 0],
+      [1, 0],
+    ],
+    edge_faces: [0],
+    foot: [0.8, 0],
+    target: { n: [Math.SQRT1_2, -Math.SQRT1_2], d: 0 },
+    rotation: Math.PI / 4,
+    landed: [
+      [
+        [0.4, 0.4],
+        [0.56, 0.56],
+      ],
+    ],
+    creases: [
+      { ray: 'meet', direction: [-0.92, -0.38], to: [0, 0], letter: 'valley', ridge: false },
+      { ray: 'foot', direction: [0, -1], to: [0.8, 0], letter: 'mountain', ridge: true },
+      { ray: 'end', direction: [0.52, -0.85], to: [1, 0], letter: 'valley', ridge: false },
+      { ray: 'hinge', direction: [0.3, 0.95], to: [0.92, 0.68], letter: 'valley', ridge: false },
+    ],
+    ridges: [
+      [0, -1],
+      [0.52, -0.85],
+    ],
+    ridge: 0,
+    layers: [0],
+    regions: [
+      { wedge: 'near', polygon: [[0, 0], [0.8, 0], [0.8, 0.33]] },
+      { wedge: 'turn', polygon: [[0.8, 0], [1, 0], [0.8, 0.33]] },
+    ],
+  };
+
+  it('draws its four creases from the vertex, each by the engine’s letter as seen, the ridge the odd one', () => {
+    const creases = vertexCreaseLines(index, { analysis: swivel, emergent: 0 }, 'valley');
+    expect(creases.map((crease) => crease.letter)).toEqual(['valley', 'mountain', 'valley', 'valley']);
+    for (const crease of creases) close(crease.line[0], { x: 0.8, y: 0.33 });
+    close(creases[1]!.line[1], { x: 0.8, y: 0 });
+  });
+
+  it('marks the vertex in the click’s place, where the edge lands, and the other ridge when it lands too', () => {
+    const marks = vertexOverlayMarks(index, { analysis: swivel, emergent: 0, emergents: [true, true] }, inks);
+    expect(marks.dots.map((dot) => dot.at)).toEqual([{ x: 0.8, y: 0.33 }]);
+    // The landing, bold; the other ridge, faint.
+    expect(marks.strokes).toHaveLength(2);
+    expect(marks.strokes[0]).toMatchObject({ a: { x: 0.4, y: 0.4 }, b: { x: 0.56, y: 0.56 }, color: accent });
+    expect(marks.strokes[1]!.color[3]).toBeLessThan(1);
+    // The other ridge does not land: not drawn, as it is not offered.
+    expect(vertexOverlayMarks(index, { analysis: swivel, emergent: 0, emergents: [true, false] }, inks).strokes).toHaveLength(1);
+  });
+
+  it('lights the paper that moves, the wedge that turns brightest', () => {
+    const tint = swivelRegionsTint(index, swivel, accent);
+    // One triangle each.
+    expect(tint?.count).toBe(6);
+    const alpha = (k: number) => tint!.color[k * 4 + 3]!;
+    expect(alpha(3)).toBeGreaterThan(alpha(0));
+    expect(swivelRegionsTint(index, { regions: [] }, accent)).toBeNull();
   });
 });

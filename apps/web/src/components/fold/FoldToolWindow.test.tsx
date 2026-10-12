@@ -277,19 +277,29 @@ describe('FoldToolWindow', () => {
     expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
 
     // A petal fold and a swivel say what they are and need above their steps,
-    // before the first click, and nothing again under the direction.
-    for (const [tool, intro, first] of [
-      ['petal', 'Lifts a flap’s lower point up along a line H', 'Click the precrease H'],
-      ['swivel', 'Folds the paper about a point', 'Hold '],
+    // before the first click, and nothing again under the direction; how
+    // they name their line, in a control of its own.
+    const setVertexLineBy = vi.fn();
+    const withLineBy = { ...calls, setVertexLineBy };
+    for (const [tool, intro, first, heading, other] of [
+      ['petal', 'Lifts a flap’s lower point up along a hinge', 'Select the hinge crease.', 'Hinge', 'Two endpoints'],
+      ['swivel', 'Swivels an edge onto a line', 'Click the pivot.', 'Lands on', 'Two points'],
     ] as const) {
-      render({ tool, lineMode: 'crease', picks: 0, vertex: { ...vertex, tool, described: false, known: false } }, calls);
+      render(
+        { tool, lineMode: 'crease', picks: 0, vertex: { ...vertex, tool, lineBy: 'crease', described: false, known: false } },
+        withLineBy
+      );
       window = fold()!;
       const text = window.textContent ?? '';
       expect(text.indexOf(intro), tool).toBeGreaterThan(-1);
       expect(text.indexOf(intro), tool).toBeLessThan(text.indexOf(first));
-      expect(window.querySelector('[aria-current="step"]')?.textContent, tool).toMatch(new RegExp(`^${first}`));
+      expect(window.querySelector('[aria-current="step"]')?.textContent, tool).toBe(first);
       expect(window.querySelector('[data-fold-vertex-note]'), tool).toBeNull();
       expect(byRole(window, 'group', 'Direction')).toBeTruthy();
+      const lineBy = window.querySelector<HTMLElement>('[data-fold-line-by]');
+      expect(lineBy?.textContent, tool).toContain(heading);
+      act(() => byRole(byRole(window, 'group', heading), 'button', other).click());
+      expect(setVertexLineBy).toHaveBeenLastCalledWith('points');
     }
   });
 
