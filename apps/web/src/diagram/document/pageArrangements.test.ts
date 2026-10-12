@@ -14,7 +14,7 @@ const RAW: DiagramPageArrangement = {
   k: 1.23456789,
   steps: {
     a: { box: [12.3456, -0.004, 0.001, 80.107], scale: { mmPerUnit: 0.123456789 }, band: 1 },
-    b: { box: [99.999, 40, 30, 20], scale: { frameMm: 41.23456789 }, band: 0, bend: true },
+    b: { box: [99.999, 40, 30, 20], scale: { frameMm: 41.23456789 }, band: 0, bend: true, zoomScale: 2.123456789 },
   },
 };
 
@@ -26,7 +26,7 @@ describe('roundPageArrangement', () => {
       steps: {
         // Never a negative zero, never a box of no width.
         a: { box: [12.35, 0, 0.01, 80.11], scale: { mmPerUnit: 0.123457 }, band: 1 },
-        b: { box: [100, 40, 30, 20], scale: { frameMm: 41.2346 }, band: 0, bend: true },
+        b: { box: [100, 40, 30, 20], scale: { frameMm: 41.2346 }, band: 0, bend: true, zoomScale: 2.12346 },
       },
     });
     expect(Object.is(roundPageArrangement(RAW).steps.a!.box[1], 0)).toBe(true);
@@ -60,6 +60,7 @@ describe('samePageArrangement', () => {
     expect(step({ box: [12.35, 0, 0.02, 80.11] })).toBe(false);
     expect(step({ band: 2 })).toBe(false);
     expect(step({ bend: true })).toBe(false);
+    expect(step({ zoomScale: 2 })).toBe(false);
     expect(step({ scale: { frameMm: 0.123457 } })).toBe(false);
     expect(step({ scale: { mmPerUnit: 0.123457 } })).toBe(true);
   });

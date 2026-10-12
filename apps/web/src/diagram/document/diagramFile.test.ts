@@ -270,12 +270,12 @@ describe('writeDiagram / readDiagram', () => {
   });
 
   describe('the page arrangements (diagram-flow-packing.md, Decision 1)', () => {
-    /** A packed page of the sample's two steps, the second standing in the bend after band 0. */
+    /** A packed page of the sample's two steps, the second standing in the bend after band 0, packed for a Size of 2. */
     const ARRANGED: DiagramPageArrangement = {
       signature: 'pack-1:abc',
       k: 0.912345,
       steps: {
-        'step-3': { box: [120.5, 40, 62.25, 80.1], scale: { frameMm: 41.2346 }, band: 0, bend: true },
+        'step-3': { box: [120.5, 40, 62.25, 80.1], scale: { frameMm: 41.2346 }, band: 0, bend: true, zoomScale: 2 },
         'step-2': { box: [12, 30.04, 70, 90], scale: { mmPerUnit: 0.512346 }, band: 0 },
       },
     };
@@ -290,12 +290,12 @@ describe('writeDiagram / readDiagram', () => {
         k: 0.912345,
         steps: {
           'step-2': { box: [12, 30.04, 70, 90], scale: { mmPerUnit: 0.512346 }, band: 0 },
-          'step-3': { box: [120.5, 40, 62.25, 80.1], scale: { frameMm: 41.2346 }, band: 0, bend: true },
+          'step-3': { box: [120.5, 40, 62.25, 80.1], scale: { frameMm: 41.2346 }, band: 0, bend: true, zoomScale: 2 },
         },
       });
       // Steps by id, each step's fields as this build writes them.
       expect(Object.keys(written.pageArrangements['step-2'].steps)).toEqual(['step-2', 'step-3']);
-      expect(Object.keys(written.pageArrangements['step-2'].steps['step-3'])).toEqual(['box', 'scale', 'band', 'bend']);
+      expect(Object.keys(written.pageArrangements['step-2'].steps['step-3'])).toEqual(['box', 'scale', 'band', 'bend', 'zoomScale']);
       const read = readDiagram(written)!;
       expect(read.readOnly).toBe(false);
       expect(read.document).toEqual(document);
@@ -336,6 +336,8 @@ describe('writeDiagram / readDiagram', () => {
         withStep({ band: 1.5 }),
         withStep({ band: undefined }),
         withStep({ bend: 'yes' }),
+        withStep({ zoomScale: 0 }),
+        withStep({ zoomScale: 'fill' }),
       ]) {
         const read = readDiagram({ ...written, pageArrangements: { 'step-2': damage, 'step-3': good } })!;
         expect(read.readOnly, JSON.stringify(damage)).toBe(false);

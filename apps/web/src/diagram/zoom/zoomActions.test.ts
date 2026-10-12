@@ -370,6 +370,8 @@ describe('what an enlarged step prints at, as its read-outs say it (Z4)', () => 
     expect(say({ asked: null, printed: 4.4316, reduced: false })).toBe('Prints ×4.4');
     expect(say({ asked: 2.75, printed: 2.3812, reduced: true })).toBe('Asked ×2.75 · prints ×2.4 — the room is too small');
     expect(say({ asked: null, printed: 1.0812, reduced: false })).toBe('Prints only ×1.1 — draw a smaller area');
+    // A held flow page whose area prints at another page's scale: what it prints, never the Size it does not.
+    expect(say({ asked: 2, printed: 2.4983, reduced: false })).toBe('Prints ×2.5');
   });
 
   it('writes its numbers as the language does, as the Size field beside it shows them (review of 16g)', () => {

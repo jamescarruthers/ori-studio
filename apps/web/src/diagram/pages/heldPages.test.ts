@@ -26,7 +26,9 @@ import { FIXTURE_FONTS } from '../fonts/diagramFonts.fixtures';
 import type { LayoutCell, LayoutPage } from './diagramPageLayout';
 import { layoutDiagram } from './diagramPages';
 import { fontTextSetter } from './fontTextSetter';
-import { adoptPageArrangements, dropStalePageArrangements } from './pageArrangements';
+import { setFrameScale } from '../zoom/zoomFrames';
+import { zoomReadout } from '../zoom/zoomActions';
+import { adoptPageArrangements, dropStalePageArrangements, repackPages } from './pageArrangements';
 import { pageLayoutFixtures } from './pageLayouts.fixtures';
 import { cellSlots, settlePlaces } from './stepPlaces';
 
@@ -52,6 +54,10 @@ const committed = (before: DiagramDocument, edited: DiagramDocument) => dropStal
 /** Every step's cell, by its id. */
 const cellsOf = (document: DiagramDocument) =>
   new Map(layOut(document).pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell] as const)));
+
+/** A step's cell in a layout, by its id. */
+const cellOf = (layout: ReturnType<typeof layOut>, stepId: string) =>
+  layout.pages.flatMap((page) => page.cells).find((cell) => cell.stepId === stepId)!;
 
 /** Where a step is at home: its frame, its number and its caption's start and measure. */
 const home = ({ cellMm, numberAt, text }: LayoutCell) => ({ cellMm, numberAt, text: { x: text.x, widthMm: text.widthMm } });
@@ -185,6 +191,44 @@ describe('an enlarged run on a held page', () => {
     }
     // With the area gone no arrow prints; its gutter is kept for it.
     expect(layOut(committed(document, withoutArea)).pages[0]!.zoomArrows).toEqual([]);
+  });
+
+  it('resizes an enlarged step in its box for its own new Size, says what it prints, and asks for a re-pack where the box is too small', () => {
+    const document = adopted(fixture());
+    const before = cellsOf(document);
+    const was = before.get('step-zoom-2')!;
+    expect(zoomReadout(was.zoom!)).toEqual({ kind: 'prints', asked: 2, printed: 2, warn: false });
+    /** The read-out's share of the window as printed: one area for the run, so the same at any Size. */
+    const perMm = (cell: LayoutCell) => cell.zoom!.printed / cell.frameMm!;
+
+    // Smaller: its window at 1.25 / 2 of the one kept, in its place; nothing re-packed, no other step changed.
+    const smaller = committed(document, setFrameScale(document, 'step-zoom-2', 1.25));
+    expect(smaller.pageArrangements).toBe(document.pageArrangements);
+    const layout = layOut(smaller);
+    expect(layout.packed).toBeUndefined();
+    const after = cellOf(layout, 'step-zoom-2');
+    expect(after.frameMm).toBeCloseTo((was.frameMm! * 1.25) / 2, 9);
+    expect(home(after)).toEqual(home(was));
+    expect(after.overflow).toBeUndefined();
+    expect(perMm(after)).toBeCloseTo(perMm(was), 12);
+    expect(zoomReadout(after.zoom!)).toEqual({ kind: 'prints', asked: 1.25, printed: 1.25, warn: false });
+    for (const [id, cell] of before) if (id !== 'step-zoom-2') expect(cellOf(layout, id), id).toEqual(cell);
+
+    // Larger than its box holds: as large as the box allows, the room said, and the step reported for a re-pack.
+    const larger = committed(document, setFrameScale(document, 'step-zoom-2', 6));
+    expect(larger.pageArrangements).toBe(document.pageArrangements);
+    const big = cellOf(layOut(larger), 'step-zoom-2');
+    expect(big.frameMm!).toBeCloseTo(was.frameMm!, 2);
+    expect(big.overflow).toBe('picture');
+    expect(perMm(big)).toBeCloseTo(perMm(was), 12);
+    expect(zoomReadout(big.zoom!)).toMatchObject({ kind: 'room', asked: 6, warn: true });
+
+    // Re-pack Page packs it for its Size: its new place holds it, and it prints as large as that.
+    const repacked = adopted(committed(larger, repackPages(larger, 0)));
+    const packed = cellOf(layOut(repacked), 'step-zoom-2');
+    expect(packed.overflow).toBeUndefined();
+    expect(repacked.pageArrangements!['step-a']!.steps['step-zoom-2']!.zoomScale).toBe(6);
+    expect(packed.frameMm!).toBeGreaterThan(big.frameMm!);
   });
 });
 

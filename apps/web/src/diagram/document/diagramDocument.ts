@@ -1280,6 +1280,13 @@ export interface DiagramArrangedStep {
   band: number;
   /** It stands in the bend after its band, between that band and the next. */
   bend?: true;
+  /**
+   * An enlarged step's Size when it was packed (`DiagramStepZoom.scale`): so
+   * many times its area. Absent for Fill, and on a step that is not enlarged.
+   * What its printed scale was packed for, so a Size changed since resizes
+   * the step in its box rather than going unseen.
+   */
+  zoomScale?: number;
 }
 
 /**

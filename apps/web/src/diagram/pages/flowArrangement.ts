@@ -7,9 +7,9 @@
  * the page draws the same once the store adopts it and it is held.
  *
  * A held step keeps its box and its printed scale, so nothing another step
- * does moves or resizes it. Its own new picture or caption may no longer fit
- * the box: that is said ({@link arrangedOverflow}), never mended here — only
- * a re-pack moves anything.
+ * does moves or resizes it. Its own new picture, caption or (enlarged) Size
+ * may no longer fit the box: that is said ({@link arrangedOverflow}), never
+ * mended here — only a re-pack moves anything.
  *
  * Pure.
  */
@@ -43,13 +43,15 @@ export type ArrangedOverflow = 'picture' | 'caption';
  * The page as packed, kept as its arrangement, rounded as the store keeps it
  * (`roundPageArrangement`): each step's box; its printed scale, its reference
  * scale (`scales`) times the page's, in its own measure — or, for a step with
- * none, its picture box's side as a frame; its band; and whether it stands in
- * a bend.
+ * none, its picture box's side as a frame; its band; whether it stands in a
+ * bend; and an enlarged step's Size (`zoomScales`), which its scale was
+ * packed for.
  */
 export function packedArrangement(
   packing: FlowPagePacking,
   scales: ReadonlyMap<string, DiagramPlaceScale>,
-  signature: string
+  signature: string,
+  zoomScales: ReadonlyMap<string, number> = new Map()
 ): DiagramPageArrangement {
   const steps: Record<string, DiagramArrangedStep> = {};
   for (const step of packing.steps) {
@@ -59,11 +61,13 @@ export function packedArrangement(
       : 'mmPerUnit' in reference
         ? { mmPerUnit: reference.mmPerUnit * packing.k }
         : { frameMm: reference.frameMm * packing.k };
+    const zoomScale = zoomScales.get(step.id);
     steps[step.id] = {
       box: [step.box.x, step.box.y, step.box.w, step.box.h],
       scale,
       band: step.band,
       ...(step.bend ? { bend: true as const } : {}),
+      ...(zoomScale !== undefined ? { zoomScale } : {}),
     };
   }
   return roundPageArrangement({ signature, k: packing.k, steps });

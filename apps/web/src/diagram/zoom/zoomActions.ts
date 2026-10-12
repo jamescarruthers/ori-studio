@@ -495,9 +495,15 @@ export function zoomReadout(zoom: LayoutCell['zoom'] | null): ZoomReadout | null
   const asked = zoom.asked === null ? null : Math.round(zoom.asked * 100) / 100;
   if (asked !== null && zoom.reduced) return { kind: 'room', asked, printed: tenths, warn: true };
   if (asked === null && zoom.printed < FIT_ZOOM) return { kind: 'barely', asked: null, printed: tenths, warn: true };
-  // A fixed Size its room holds prints as typed.
-  return { kind: 'prints', asked, printed: asked ?? tenths, warn: false };
+  // A fixed Size its room holds prints as typed, where it prints at it: on a
+  // held flow page, against an area its page prints at another scale, it may
+  // not, and says what it does.
+  const asTyped = asked !== null && Math.abs(zoom.printed - zoom.asked!) <= READOUT_AS_TYPED * zoom.asked!;
+  return { kind: 'prints', asked, printed: asTyped ? asked : tenths, warn: false };
 }
+
+/** How near, as a share, what a fixed Size prints at is to it to be said as typed: rounding, never a change of size. */
+const READOUT_AS_TYPED = 1e-3;
 
 /** A Size or a read-out's number as `language` writes it, to two decimals at most: 1.25, or 1,25 in German. */
 export function zoomNumber(value: number, language: string): string {

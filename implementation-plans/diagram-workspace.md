@@ -1763,14 +1763,18 @@ on its next save.
 - `pageArrangements` (added 2026-10-12, `diagram-flow-packing.md`), only
   when one is stored: how each flow page was packed, by the id of the step
   it starts with — `{ signature, k, steps: { "<step id>": { box: [x, y, w,
-  h], scale, band, bend? } } }`. `signature` is the page's structure when it
-  was packed (`pages/pageSignature.ts`, tagged with the packing's version),
-  `k` its page scale, `box` the step's box on the page in mm, `scale` its
-  printed scale as a pin's (`{ mmPerUnit }` or `{ frameMm }`), `band` its
-  band from 0 in reading order (0–4), and `bend: true` a step standing in the
-  bend after its band. Lengths are kept to 0.01 mm, scales to six significant
-  digits. A page holds its arrangement while the signature matches; a file
-  without one packs the page when opened. Written only in the flow, keys and
+  h], scale, band, bend?, zoomScale? } } }`. `signature` is the page's
+  structure when it was packed (`pages/pageSignature.ts`, tagged with the
+  packing's version), `k` its page scale, `box` the step's box on the page in
+  mm, `scale` its printed scale as a pin's (`{ mmPerUnit }` or `{ frameMm }`),
+  `band` its band from 0 in reading order (0–4), `bend: true` a step standing
+  in the bend after its band, and `zoomScale` (added in the review fixes) an
+  enlarged step's Size when it was packed, a number above 0, unsaid for Fill
+  and for a step that is not enlarged: a Size changed since resizes the step
+  in its box. Lengths are kept to 0.01 mm, scales and Sizes to six
+  significant digits. A page holds its arrangement while the signature
+  matches and it places every step on the page; a file without one packs the
+  page when opened. Written only in the flow, keys and
   each page's steps sorted. An arrangement that does not read is dropped
   alone; one with a field, a scale or a band past 4 this build has no name
   for is a newer build's (rule 2): the page is packed here as if none were

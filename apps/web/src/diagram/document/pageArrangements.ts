@@ -35,8 +35,9 @@ function roundScale(scale: DiagramPlaceScale): DiagramPlaceScale {
 
 /**
  * An arrangement as it is kept: every length in mm to a hundredth (a box
- * never narrower or shorter than one), its page scale and each printed scale
- * to six significant digits, and `bend` only where it is true. What the store
+ * never narrower or shorter than one), its page scale, each printed scale and
+ * an enlarged step's Size to six significant digits, and `bend` only where it
+ * is true. What the store
  * adopts, so a held page draws as it will after a save and a reload.
  */
 export function roundPageArrangement(arrangement: DiagramPageArrangement): DiagramPageArrangement {
@@ -48,6 +49,7 @@ export function roundPageArrangement(arrangement: DiagramPageArrangement): Diagr
       scale: roundScale(step.scale),
       band: step.band,
       ...(step.bend ? { bend: true as const } : {}),
+      ...(step.zoomScale !== undefined ? { zoomScale: toSixDigits(step.zoomScale) } : {}),
     };
   }
   return { signature: arrangement.signature, k: toSixDigits(arrangement.k), steps };
@@ -69,6 +71,7 @@ function sameArrangedStep(a: DiagramArrangedStep, b: DiagramArrangedStep): boole
     a.box.every((value, index) => value === b.box[index]) &&
     a.band === b.band &&
     Boolean(a.bend) === Boolean(b.bend) &&
+    a.zoomScale === b.zoomScale &&
     ('mmPerUnit' in a.scale
       ? 'mmPerUnit' in b.scale && a.scale.mmPerUnit === b.scale.mmPerUnit
       : 'frameMm' in b.scale && a.scale.frameMm === b.scale.frameMm)
@@ -92,7 +95,7 @@ export function samePageArrangements(
 export const NEWER_ARRANGEMENT: unique symbol = Symbol('newer arrangement');
 
 const ARRANGEMENT_KEYS: ReadonlySet<string> = new Set(['signature', 'k', 'steps']);
-const ARRANGED_STEP_KEYS: ReadonlySet<string> = new Set(['box', 'scale', 'band', 'bend']);
+const ARRANGED_STEP_KEYS: ReadonlySet<string> = new Set(['box', 'scale', 'band', 'bend', 'zoomScale']);
 const SCALE_KEYS: ReadonlySet<string> = new Set(['mmPerUnit', 'frameMm']);
 
 /**
@@ -123,17 +126,25 @@ export function readPageArrangement(value: unknown): DiagramPageArrangement | ty
 /**
  * One step's place: a box of four finite numbers, its width and height above
  * zero; a printed scale as a pin keeps one; a whole band from 0, past the last
- * a newer build's; and `bend` true, or false or unsaid for none.
+ * a newer build's; `bend` true, or false or unsaid for none; and an enlarged
+ * step's Size as packed, a number above zero, or unsaid for Fill.
  */
 function readArrangedStep(value: unknown): DiagramArrangedStep | typeof NEWER_ARRANGEMENT | null {
   if (!isRecord(value)) return null;
-  const { box, scale, band, bend } = value;
+  const { box, scale, band, bend, zoomScale } = value;
   if (hasNewerKey(value, ARRANGED_STEP_KEYS) || (isRecord(scale) && hasNewerKey(scale, SCALE_KEYS))) return NEWER_ARRANGEMENT;
   if (typeof band === 'number' && Number.isInteger(band) && band > LAST_BAND) return NEWER_ARRANGEMENT;
   const read = placeScale(scale);
   if (!isBox(box) || !read || typeof band !== 'number' || !Number.isInteger(band) || band < 0) return null;
   if (bend !== undefined && typeof bend !== 'boolean') return null;
-  return { box: [box[0], box[1], box[2], box[3]], scale: read, band, ...(bend ? { bend: true as const } : {}) };
+  if (zoomScale !== undefined && !isPositive(zoomScale)) return null;
+  return {
+    box: [box[0], box[1], box[2], box[3]],
+    scale: read,
+    band,
+    ...(bend ? { bend: true as const } : {}),
+    ...(zoomScale !== undefined ? { zoomScale } : {}),
+  };
 }
 
 /**
@@ -180,7 +191,13 @@ function writePageArrangement(arrangement: DiagramPageArrangement): Record<strin
     steps: Object.fromEntries(
       steps.map(([stepId, step]) => [
         stepId,
-        { box: [...step.box], scale: { ...step.scale }, band: step.band, ...(step.bend ? { bend: true } : {}) },
+        {
+          box: [...step.box],
+          scale: { ...step.scale },
+          band: step.band,
+          ...(step.bend ? { bend: true } : {}),
+          ...(step.zoomScale !== undefined ? { zoomScale: step.zoomScale } : {}),
+        },
       ])
     ),
   };
