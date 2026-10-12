@@ -535,6 +535,7 @@ pub fn by_edge(pivot: Point, edge: Point, target: Line) -> SwivelByEdge {
         layers: Seed::All,
         ridge: None,
         direction: Direction::Valley,
+        fold: None,
     }
 }
 
@@ -627,6 +628,143 @@ pub fn edge_swivel_cases() -> Vec<EdgeSwivelCase> {
             state: square(),
             op: by_edge([0.5, 0.3], [0.5, 0.0], beloch_target),
             edge: bottom,
+        },
+    ]
+}
+
+// --- The swivel on a folded edge (`compound::swivel_on_edge`) ---------------
+
+use oristudio_fold::{ReverseChoices, ReverseFold, ReverseKind, ReverseOutcome};
+
+/// An inside reverse fold of every layer along `p q`, the tip on `toward`'s
+/// side.
+pub fn inside_reverse(state: &State, p: Point, q: Point, toward: Point) -> State {
+    let l = line(p, q);
+    let op = ReverseFold {
+        line: l,
+        side: side(&l, toward),
+        anchor: Seed::All,
+        kind: ReverseKind::Inside,
+    };
+    match state.reverse_fold(&op, &ReverseChoices::default()) {
+        Ok(ReverseOutcome::Landed(folded)) => folded.state,
+        Ok(_) => panic!("the reverse fold leaves a choice"),
+        Err(e) => panic!("{e:?}"),
+    }
+}
+
+/// tan(π/8): where a corner's bisector crosses the square's far edge.
+pub fn t22() -> f64 {
+    (std::f64::consts::PI / 8.0).tan()
+}
+
+/// The owner's `squash.osf` (the swivel-on-edge example's start), folded
+/// through the engine: the square valley-folded on b d, a c precreased, the
+/// two inside reverses that make the preliminary base (its closed point the
+/// sheet's centre, its open corner the four corners), turned 1/8 of a turn
+/// counter-clockwise so the open corner points down, and the front flap on
+/// the right squashed into a kite.
+pub fn abrashi_squash() -> State {
+    let s = valley(&square(), [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]);
+    let s = precrease(&s, [0.0, 0.0], [1.0, 1.0], [1.0, 0.0], Seed::All);
+    let s = inside_reverse(&s, [0.5, 0.0], [0.5, 1.0], [1.0, 0.2]);
+    let s = inside_reverse(&s, [0.0, 0.5], [1.0, 0.5], [0.2, 1.0]);
+    let s = s.rotate(std::f64::consts::FRAC_PI_4);
+    landed(s.squash(
+        &Squash {
+            flap: [0.8521078475219173, 0.5697560410122267],
+            target: None,
+            direction: Direction::Valley,
+        },
+        &VertexChoices::default(),
+    ))
+    .state
+}
+
+/// A swivel on a folded edge: its parent, the op (valley), the sheet
+/// segment of the edge it names and of the folded edge its creases meet on.
+pub struct FoldSwivelCase {
+    pub name: &'static str,
+    pub state: State,
+    pub op: SwivelByEdge,
+    pub edge: [Point; 2],
+    pub fold: [Point; 2],
+}
+
+/// A valley swivel whose creases meet on the folded crease through the
+/// sheet point `fold`, laying the edge through the sheet point `edge` on
+/// the line of the crease through the sheet point `onto`.
+pub fn on_fold(state: &State, fold: Point, edge: Point, onto: Point) -> SwivelByEdge {
+    let target = state
+        .crease_at(onto)
+        .and_then(|c| state.crease_line(c.id))
+        .unwrap_or_else(|| panic!("no crease at {onto:?}"));
+    SwivelByEdge {
+        pivot: state
+            .resolve_point(fold)
+            .unwrap_or_else(|| panic!("{fold:?} is off the paper")),
+        edge,
+        target,
+        layers: Seed::All,
+        ridge: None,
+        direction: Direction::Valley,
+        fold: Some(fold),
+    }
+}
+
+/// The kite base: a c precreased, then the bottom and left edges valley
+/// folded onto it, their flaps hinged on the kite creases a q₁ and a q₂
+/// (q₁ = (1, tan π/8), q₂ = (tan π/8, 1)).
+pub fn kite_base() -> State {
+    let t = t22();
+    let s = precrease(&square(), [0.0, 0.0], [1.0, 1.0], [1.0, 0.0], Seed::All);
+    let s = valley(&s, [0.0, 0.0], [1.0, t], [1.0, 0.0]);
+    valley(&s, [0.0, 0.0], [t, 1.0], [0.0, 1.0])
+}
+
+/// The classic swivels on a folded edge (the module docs of
+/// `compound::swivel_on_edge`):
+///
+/// - **Abrashi's "What is Swivel fold?"** on the owner's squashed
+///   preliminary base ([`abrashi_squash`]): the kite's lower-left edge onto
+///   the centre line, the creases meeting on its upper-left (folded) edge:
+///   the swivel turns about the bottom tip, the top layer folds up along the
+///   line to the kite's right corner;
+/// - **the kite base narrowed at c**: the right edge's part q₁ c onto the
+///   diagonal a c, its creases meeting on the kite crease a q₁ where the
+///   bisector from c crosses it, the flap over it folding across the
+///   diagonal; and the same on the other side (q₂ c, on a q₂).
+pub fn fold_swivel_cases() -> Vec<FoldSwivelCase> {
+    let t = t22();
+    let squashed = abrashi_squash();
+    let h = 1.0 / std::f64::consts::SQRT_2;
+    let kite = kite_base();
+    vec![
+        FoldSwivelCase {
+            name: "Abrashi's swivel",
+            op: on_fold(
+                &squashed,
+                [0.75, (0.5 + h) / 2.0],
+                [1.0, (h + 1.0) / 2.0],
+                [0.75, 0.5],
+            ),
+            state: squashed,
+            edge: [[1.0, h], [1.0, 1.0]],
+            fold: [[0.5, 0.5], [1.0, h]],
+        },
+        FoldSwivelCase {
+            name: "kite narrowed at c, right",
+            op: on_fold(&kite, [0.5, t / 2.0], [1.0, (t + 1.0) / 2.0], [0.5, 0.5]),
+            state: kite.clone(),
+            edge: [[1.0, t], [1.0, 1.0]],
+            fold: [[0.0, 0.0], [1.0, t]],
+        },
+        FoldSwivelCase {
+            name: "kite narrowed at c, left",
+            op: on_fold(&kite, [t / 2.0, 0.5], [(t + 1.0) / 2.0, 1.0], [0.5, 0.5]),
+            state: kite,
+            edge: [[t, 1.0], [1.0, 1.0]],
+            fold: [[0.0, 0.0], [t, 1.0]],
         },
     ]
 }
