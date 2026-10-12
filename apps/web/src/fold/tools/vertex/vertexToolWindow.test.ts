@@ -101,6 +101,22 @@ describe('a vertex fold’s window while its clicks are made', () => {
     expect(ear?.vertex?.note).toMatch(/incenter/);
   });
 
+  it('words a finger’s clicks as taps, as its choose step does', () => {
+    const ear = foldToolWindow(t, view(vertex({ tool: 'rabbit-ear' })), verbs(), finger);
+    expect(ear?.instructions.items).toEqual([
+      'Tap the triangle’s first corner.',
+      'Tap its second corner.',
+      'Tap its third corner.',
+      'Tap the paper that stays put.',
+      'Choose the options, then tap Rabbit ear.',
+    ]);
+    expect(ear?.instructions.notes).toEqual([
+      'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
+    ]);
+    const squash = foldToolWindow(t, view(vertex()), verbs(), finger);
+    expect(squash?.instructions.items[0]).toBe('Tap the flap to squash.');
+  });
+
   it('says what a swivel is above its steps, and how to place its point in the first one', () => {
     const swivel = foldToolWindow(t, view(vertex({ tool: 'swivel' })), verbs(), mouse);
     expect(swivel?.instructions.intro).toMatch(/^Folds the paper about a point/);
@@ -121,7 +137,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
     );
     expect(touch?.instructions.items[5]).toBe('Pick the fourth crease, then tap Swivel fold.');
     expect(touch?.instructions.notes).toEqual([
-      'Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.',
+      'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.',
     ]);
   });
 

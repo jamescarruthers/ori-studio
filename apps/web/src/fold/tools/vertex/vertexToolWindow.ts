@@ -183,10 +183,15 @@ function locateNotes(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): 
   const snaps = tool === 'rabbit-ear' || tool === 'swivel';
   const snap = snaps
     ? [
-        t(
-          'tools:fold.vertex.note.snapPoints',
-          'Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.'
-        ),
+        host.coarse
+          ? t(
+              'tools:fold.vertex.note.snapPointsTouch',
+              'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.'
+            )
+          : t(
+              'tools:fold.vertex.note.snapPoints',
+              'Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.'
+            ),
         ...(host.coarse
           ? []
           : [t('tools:fold.vertex.note.freePoint', 'Hold {{modifier}} to put a point anywhere.', { modifier: host.alt })]),

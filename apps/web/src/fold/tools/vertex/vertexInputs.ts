@@ -107,19 +107,31 @@ export function vertexToolSteps(
 ): string[] {
   switch (tool) {
     case 'squash':
-      return [t('tools:fold.vertex.steps.squashFlap', 'Click the flap to squash.')];
+      return [
+        host.coarse
+          ? t('tools:fold.vertex.steps.squashFlapTouch', 'Tap the flap to squash.')
+          : t('tools:fold.vertex.steps.squashFlap', 'Click the flap to squash.'),
+      ];
     case 'petal':
       return [
         ...petalLineSteps(t, mode),
         t('tools:fold.vertex.steps.petalLiftingFlap', 'Click the flap below H, between the kite creases: the part that lifts.'),
       ];
     case 'rabbit-ear':
-      return [
-        t('tools:fold.vertex.steps.earFirstCorner', 'Click the triangle’s first corner.'),
-        t('tools:fold.vertex.steps.earSecondCorner', 'Click its second corner.'),
-        t('tools:fold.vertex.steps.earThirdCorner', 'Click its third corner.'),
-        t('tools:fold.vertex.steps.stayer', 'Click the paper that stays put.'),
-      ];
+      // A finger taps: the same steps in its words, as the choose step's are.
+      return host.coarse
+        ? [
+            t('tools:fold.vertex.steps.earFirstCornerTouch', 'Tap the triangle’s first corner.'),
+            t('tools:fold.vertex.steps.earSecondCornerTouch', 'Tap its second corner.'),
+            t('tools:fold.vertex.steps.earThirdCornerTouch', 'Tap its third corner.'),
+            t('tools:fold.vertex.steps.stayerTouch', 'Tap the paper that stays put.'),
+          ]
+        : [
+            t('tools:fold.vertex.steps.earFirstCorner', 'Click the triangle’s first corner.'),
+            t('tools:fold.vertex.steps.earSecondCorner', 'Click its second corner.'),
+            t('tools:fold.vertex.steps.earThirdCorner', 'Click its third corner.'),
+            t('tools:fold.vertex.steps.stayer', 'Click the paper that stays put.'),
+          ];
     case 'swivel':
       // The meeting point is rarely a landmark, and must lie off every
       // crease: said in the step, with the key (or the latch) that frees it.
