@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDiagram, insertSteps, setPageSetup } from '../document/diagramDocument';
+import { createDiagram, insertSteps, setPageSetup, stepById } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { commitPlacement } from './placementActions';
+import { commitPlacement, resetPlacement } from './placementActions';
 
 const tracked = vi.hoisted(() => ({ trackDiagramStepPlaced: vi.fn(), trackDiagramPlacementReset: vi.fn() }));
 vi.mock('../../analytics/trackDiagram', async (importOriginal) => ({
@@ -53,6 +53,33 @@ describe('commitPlacement', () => {
     expect(tracked.trackDiagramStepPlaced).toHaveBeenLastCalledWith('size', 'drag', 'grid');
     commitPlacement('s1', { scale: null }, 'drag');
     expect(tracked.trackDiagramPlacementReset).toHaveBeenLastCalledWith('size', 'step', 'drag_home');
+  });
+
+  it('counts a caption’s width by what set it, the left grip’s move with it, and one let go as a reset of the width', () => {
+    commitPlacement('s1', { textWidth: 60 }, 'drag', { grip: 'width' });
+    expect(tracked.trackDiagramStepPlaced).toHaveBeenLastCalledWith('text_width', 'drag', 'grid');
+    commitPlacement('s1', { textWidth: 72, text: [-12, 0] }, 'drag', { grip: 'width' });
+    expect(tracked.trackDiagramStepPlaced).toHaveBeenLastCalledWith('text_width', 'drag', 'grid');
+    commitPlacement('s1', { textWidth: 41.5 }, 'drag', { grip: 'lines' });
+    expect(tracked.trackDiagramStepPlaced).toHaveBeenLastCalledWith('text_lines', 'drag', 'grid');
+    commitPlacement('s1', { textWidth: 45 }, 'pane');
+    expect(tracked.trackDiagramStepPlaced).toHaveBeenLastCalledWith('text_width', 'pane', 'grid');
+    expect(tracked.trackDiagramStepPlaced).toHaveBeenCalledTimes(4);
+    // Snapped back to the automatic width: the width is let go, the caption's offset kept.
+    commitPlacement('s1', { textWidth: null }, 'drag', { grip: 'width' });
+    expect(tracked.trackDiagramPlacementReset).toHaveBeenLastCalledWith('text_width', 'step', 'drag_home');
+    expect(stepById(state().diagram!, 's1')!.place).toEqual({ text: [-12, 0] });
+    expect(tracked.trackDiagramPlacementReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts a reset of the caption’s width alone as its own part, and Reset Text as the text', () => {
+    commitPlacement('s1', { textWidth: 60, text: [2, 0] }, 'pane');
+    resetPlacement('s1', 'textWidth');
+    expect(tracked.trackDiagramPlacementReset).toHaveBeenLastCalledWith('text_width', 'step', 'pane');
+    commitPlacement('s1', { textWidth: 60 }, 'pane');
+    resetPlacement('s1', 'text');
+    expect(tracked.trackDiagramPlacementReset).toHaveBeenLastCalledWith('text', 'step', 'pane');
+    expect(stepById(state().diagram!, 's1')).not.toHaveProperty('place');
   });
 
   it('counts nothing for a commit that changes nothing', () => {

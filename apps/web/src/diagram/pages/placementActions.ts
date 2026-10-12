@@ -1,32 +1,51 @@
-import { trackDiagramPlacementReset, trackDiagramStepPlaced } from '../../analytics/trackDiagram';
+import { trackDiagramPlacementReset, trackDiagramStepPlaced, type DiagramPlacedPart } from '../../analytics/trackDiagram';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { stepById, type DiagramPlaceReset } from '../document/diagramDocument';
+import { stepById, type DiagramPlaceReset, type DiagramStepPlace } from '../document/diagramDocument';
 import type { DiagramStepPlacePatch } from '../document/stepPlace';
 import { setFrameScale } from '../zoom/zoomFrames';
 
 /** How a commit that put a part back home was made, as the reset event names it. */
 const RESET_VIA = { drag: 'drag_home', keys: 'keys', pane: 'pane' } as const;
 
+/** The field of a placement each counted part is kept in. */
+const FIELD_OF = {
+  frame: 'frame',
+  number: 'number',
+  picture: 'picture',
+  text: 'text',
+  size: 'scale',
+  text_width: 'textWidth',
+  text_lines: 'textWidth',
+} as const satisfies Record<DiagramPlacedPart, keyof DiagramStepPlace>;
+
 /**
  * Commit a hand placement, and count it: as a placement, or — where the
  * store's normalised result leaves the part where the layout puts it (a drag
  * that snapped home, nudges back to where they started, a 0 typed) — as a
- * reset, by how it was made.
+ * reset, by how it was made. A caption's measure counts as what set it
+ * (`grip`): a width grip or the pane, or the bottom grip's lines; with it the
+ * left grip's move of the caption is one commit and one count.
  */
 export function commitPlacement(
   stepId: string,
   patch: DiagramStepPlacePatch,
   via: 'drag' | 'keys' | 'pane',
-  options?: { loadId?: number; session?: number },
+  options?: { loadId?: number; session?: number; grip?: 'width' | 'lines' },
 ): boolean {
-  if (!useWorkspaceStore.getState().setDiagramStepPlace(stepId, patch, options)) return false;
-  const part =
-    patch.scale !== undefined
-      ? 'size'
-      : ((['frame', 'number', 'picture', 'text'] as const).find((key) => patch[key] !== undefined) ?? 'frame');
+  const { grip, ...store } = options ?? {};
+  if (!useWorkspaceStore.getState().setDiagramStepPlace(stepId, patch, store)) return false;
+  const part: DiagramPlacedPart =
+    patch.textWidth !== undefined
+      ? grip === 'lines'
+        ? 'text_lines'
+        : 'text_width'
+      : patch.scale !== undefined
+        ? 'size'
+        : ((['frame', 'number', 'picture', 'text'] as const).find((key) => patch[key] !== undefined) ?? 'frame');
   const { diagram } = useWorkspaceStore.getState();
   const place = diagram ? stepById(diagram, stepId)?.place : undefined;
-  if (place?.[part === 'size' ? 'scale' : part] === undefined) trackDiagramPlacementReset(part, 'step', RESET_VIA[via]);
+  if (place?.[FIELD_OF[part]] === undefined)
+    trackDiagramPlacementReset(part === 'text_lines' ? 'text_width' : part, 'step', RESET_VIA[via]);
   else trackDiagramStepPlaced(part, via, diagram?.page.layout ?? 'flow');
   return true;
 }
@@ -34,7 +53,7 @@ export function commitPlacement(
 export function resetPlacement(stepId: string, part: DiagramPlaceReset, via: 'pane' | 'menu' = 'pane'): void {
   if (useWorkspaceStore.getState().resetDiagramStepPlace(stepId, part))
     trackDiagramPlacementReset(
-      part === 'scale' ? 'size' : part === 'all' || part === 'position' ? 'step' : part,
+      part === 'scale' ? 'size' : part === 'textWidth' ? 'text_width' : part === 'all' || part === 'position' ? 'step' : part,
       'step',
       via,
     );

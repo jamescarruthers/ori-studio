@@ -1617,14 +1617,16 @@ export const ANALYTICS_EVENTS = {
   diagramExported: 'diagram exported',
   /**
    * A step's frame, number, picture or text moved by hand on the Pages view,
-   * or its picture's size set, and committed — by a drag, the arrow keys or
-   * the Step pane: whether hand placement is used, how, and on which layout.
+   * its picture's size set, or its caption's width set — by a width grip or
+   * the pane, or in lines by its bottom grip — and committed, by a drag, the
+   * arrow keys or the Step pane: whether hand placement is used, how, and on
+   * which layout.
    */
   diagramStepPlaced: 'diagram step placed',
   /**
-   * A hand placement taken back — a part, a step, a page or the diagram — or
-   * a commit that left the part where the layout puts it: how often the
-   * automatic placement is returned to, and from where.
+   * A hand placement taken back — a part, a caption's width, a step, a page
+   * or the diagram — or a commit that left the part where the layout puts it:
+   * how often the automatic placement is returned to, and from where.
    */
   diagramPlacementReset: 'diagram placement reset',
   /**

@@ -381,11 +381,20 @@ export function trackDiagramExported(
   });
 }
 
+/**
+ * What a placement set: a part moved, its picture's size, or its caption's
+ * measure — by a width grip or the Step pane (`text_width`), or by the
+ * caption's bottom grip, which asks for a number of lines (`text_lines`).
+ */
+export type DiagramPlacedPart = 'frame' | 'number' | 'picture' | 'text' | 'size' | 'text_width' | 'text_lines';
+/** What a placement reset took back: a part, its picture's size, its caption's measure, or the whole step's placement. */
+export type DiagramResetPart = 'frame' | 'number' | 'picture' | 'text' | 'size' | 'text_width' | 'step';
+
 /** Placement events contain choices and buckets only, never coordinates or sizes. */
-export function trackDiagramStepPlaced(part: 'frame' | 'number' | 'picture' | 'text' | 'size', via: 'drag' | 'keys' | 'pane', layout: 'grid' | 'flow'): void {
+export function trackDiagramStepPlaced(part: DiagramPlacedPart, via: 'drag' | 'keys' | 'pane', layout: 'grid' | 'flow'): void {
   track(ANALYTICS_EVENTS.diagramStepPlaced, { part, via, layout });
 }
-export function trackDiagramPlacementReset(part: 'frame' | 'number' | 'picture' | 'text' | 'size' | 'step', scope: 'step' | 'page' | 'diagram', via: 'pane' | 'menu' | 'drag_home' | 'keys'): void {
+export function trackDiagramPlacementReset(part: DiagramResetPart, scope: 'step' | 'page' | 'diagram', via: 'pane' | 'menu' | 'drag_home' | 'keys'): void {
   track(ANALYTICS_EVENTS.diagramPlacementReset, { part, scope, via });
 }
 export function trackDiagramPlacementsReflowed(count: number): void {
