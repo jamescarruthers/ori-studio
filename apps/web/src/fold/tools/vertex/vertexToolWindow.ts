@@ -3,21 +3,31 @@
  * Phase 11, D14) — as the plain descriptor the one Fold window renderer draws
  * (`components/fold/FoldToolWindow`), the reverse tool's window's sibling.
  *
- * While the clicks are being made: numbered steps for them, what each snaps
- * to, the fold's precondition — said up front, since research §5.3 found the
- * preconditions, not the stacking, to be what stops these folds: for the
- * petal fold and the swivel above the steps, with what the fold is, since
- * their first click already depends on it; for the others under the
- * direction — and the direction, which decides which layer a click names.
- * A petal fold's hinge is named by a crease or by its two ends, and a
- * swivel's target by a crease or edge or by two points: a control switches
- * each (`lineBy`), in both phases, so the window keeps its shape.
+ * While the clicks are being made: numbered steps for them, each naming what
+ * the folder sees by its part in the fold (owner feedback, 2026-10-12: "the
+ * edge that moves" named nothing), the fold's precondition — said up front,
+ * since research §5.3 found the preconditions, not the stacking, to be what
+ * stops these folds: for the petal fold and the swivel, a line above the
+ * steps says what the fold is; for the others a note under the direction —
+ * and the direction, which decides which layer a click names. Notes never
+ * repeat a step: what a point snaps to while points are clicked, and Esc. A
+ * petal fold's hinge is named by a crease or by its two ends, and a swivel's
+ * target by a crease or edge or by two points: a control switches each
+ * (`lineBy`), in both phases, so the window keeps its shape.
+ *
+ * A swivel offers no direction while its clicks are made: the canvas lights
+ * only the edges and lines that land either way (`swivelReach`), and it
+ * folds the folder's way when that lands, else the other. Once previewed
+ * its steps stay, the last in hand, and a control is shown only where there
+ * is a choice (owner feedback, 2026-10-12).
  *
  * Once every click is in, previewing:
  *
- * - **the direction**, valley or mountain, as the viewer sees it;
+ * - **the direction**, valley or mountain, as the viewer sees it — a
+ *   swivel's only when it lands both ways;
  * - a squash's **spine target**: its hinge line until a point is clicked on
- *   the folded pane, drawn there either way, with a way back to the hinge;
+ *   the folded pane, drawn there either way (the bold line its step names),
+ *   with a way back to the hinge;
  * - a rabbit ear's **fourth crease**, among the candidates the engine lists
  *   (three at most) that land — one that cannot fold is never offered (owner
  *   feedback, 2026-10-12) — in a row that stays put with one or none, and
@@ -26,10 +36,10 @@
  *   crease is its ridge, folding the other way from the three to the
  *   corners, so there is no ridge to choose;
  * - a swivel's **ridge**, the crease of its four that folds the other way:
- *   square to the edge, or toward its end — only the ones that land, by name,
- *   in the same row and its note;
+ *   square to the edge, or toward its end — by name, only when both land;
  * - a petal fold's note: what the fold creases itself, the hinge and the
- *   kite creases, when they are not there already;
+ *   kite creases, when they are not there already; a swivel's, how to read
+ *   its picture;
  * - the **layer order**, when the fold leaves more than one;
  * - a refusal in the folder's words with every fix a button, and Cancel and
  *   the fold.
@@ -102,13 +112,14 @@ export interface FoldVertexWindowView {
    */
   onFold?: boolean;
   /**
-   * Valley, then mountain: whether the fold lands that way, once the engine
-   * has said (a swivel on a folded edge's). A way that does not is not
-   * offered. Absent when unknown.
+   * Valley, then mountain: whether the fold lands that way, once known (a
+   * swivel's). A way that does not is not offered. Absent when unknown.
    */
   directions?: readonly boolean[];
   /** What a petal fold creases itself, once the engine has described its flap. */
   petalScores?: FoldPetalScores | null;
+  /** A swivel's meeting point from which no edge can swing: its next click picks another point. */
+  nothingSwings?: boolean;
 }
 
 /** The vertex folds' own calls in the window; the canvas binds them. */
@@ -122,6 +133,10 @@ export interface FoldVertexWindowVerbs {
 
 /** A vertex fold's own controls in the window. */
 export interface FoldVertexControls {
+  /**
+   * Valley or Mountain. Null for a swivel while its clicks are made, and
+   * once previewed unless it lands both ways: it folds the way that lands.
+   */
   direction: {
     label: string;
     value: FoldDirection;
@@ -129,7 +144,7 @@ export interface FoldVertexControls {
     options: readonly { value: FoldDirection; label: string; tooltip: string; disabled?: boolean }[];
     disabled: boolean;
     set: (direction: FoldDirection) => void;
-  };
+  } | null;
   /**
    * How a petal fold's hinge is named — a hinge crease, or two endpoints —
    * or a swivel's target: a crease or edge, or two points. Null for the
@@ -141,21 +156,19 @@ export interface FoldVertexControls {
     label: string;
     /** "The hinge line", or "The point clicked". */
     value: string;
-    /** How to move it. */
-    help: string;
     reset: { label: string; disabled: boolean; run: () => void } | null;
   } | null;
   /**
-   * A rabbit ear's fourth crease, or a swivel's ridge, once the engine has
-   * described the fold: a stepper through the ones that land, its arrows off
-   * when one lands or none. Always there, so the window keeps its shape
-   * whichever paper stays.
+   * A rabbit ear's fourth crease, once the engine has described the fold: a
+   * stepper through the ones that land, its arrows off when one lands or
+   * none — always there, so the window keeps its shape whichever paper
+   * stays. A swivel's ridge, only when both of its ridges land.
    */
   emergent: FoldChoiceStepper | null;
   /**
-   * Said under it, in a place kept for it: how many fit with this paper
-   * staying put — when none does, to pick other paper to stay; how many of a
-   * swivel's ridges fit.
+   * Said under a rabbit ear's fourth crease, in a place kept for it: how
+   * many fit with this paper staying put — when none does, to pick other
+   * paper to stay. Null for the other folds.
    */
   emergentNote: string | null;
   /** The layers a rabbit ear cuts, when more than one lies at its center. */
@@ -185,13 +198,13 @@ function preconditionNote(t: TFunction, tool: FoldVertexToolId): string | null {
   switch (tool) {
     case 'squash':
       return t(
-        'tools:fold.vertex.note.squash',
-        'A flap squashes when its two layers are free, held only along its hinge, and uncovered, with nothing over it on the side it opens toward.'
+        'tools:fold.vertex.note.squashFlap',
+        'A flap squashes when its two layers are joined only at its hinge and nothing lies on top of it.'
       );
     case 'rabbit-ear':
       return t(
-        'tools:fold.vertex.note.rabbitEar',
-        'The creases meet at the triangle’s incenter: one to each corner, folded the way you choose, and a fourth the ear rises along, folded the other way.'
+        'tools:fold.vertex.note.rabbitEarMeet',
+        'The creases meet at the triangle’s incenter: one to each corner, and a fourth the ear stands up along.'
       );
     case 'petal':
     case 'swivel':
@@ -239,112 +252,68 @@ function petalScoresNote(t: TFunction, scores: FoldPetalScores): string {
 }
 
 /**
- * What the petal fold and the swivel are, and what they need first, above
- * their steps: what a first-time folder could not otherwise know before the
- * first click (owner feedback, 2026-10-11). Null for the others.
+ * What the petal fold and the swivel are, in a line above their steps: what
+ * a first-time folder could not otherwise know before the first click (owner
+ * feedback, 2026-10-11) — and no more (2026-10-12: a paragraph above the
+ * steps went unread). Null for the others.
  */
 function vertexIntro(t: TFunction, tool: FoldVertexToolId): string | null {
   switch (tool) {
     case 'petal':
-      return t(
-        'tools:fold.vertex.intro.petalHinge',
-        'Lifts a flap’s lower point up along a hinge while its sides fold in along two kite creases. Select the hinge as a crease already across the flap, or by its two ends: then the fold creases the hinge through the top layer, and any kite crease that is missing, as it folds.'
-      );
+      return t('tools:fold.vertex.intro.petalLift', 'Lifts a flap’s point up along a hinge.');
     case 'swivel':
-      return t(
-        'tools:fold.vertex.intro.swivelEdge',
-        'Swivels an edge onto a line, pivoting at a point. The creases meet where the pivot sits, moved onto the line halfway between the edge and the line it lands on, and the paper between them turns flat.'
-      );
+      return t('tools:fold.vertex.intro.swivelSwing', 'Swings an edge of the paper onto a line.');
     case 'squash':
     case 'rabbit-ear':
       return null;
   }
 }
 
-/** What the clicks snap to, and the keys that change and clear them. */
+/**
+ * The notes under the steps: what a click on a point snaps to, while one is
+ * asked for — a rabbit ear's corners, a petal fold's hinge by its ends — and
+ * the key that clears the picks. Never what a step already says (owner
+ * feedback, 2026-10-12): the canvas lights what each click can take.
+ */
 function locateNotes(t: TFunction, view: FoldToolWindowView, vertex: FoldVertexWindowView, host: FoldToolHost): string[] {
   const { tool } = vertex;
   const clear = host.coarse ? [] : [t('tools:fold.note.clear', 'Esc clears the picks.')];
-  // A petal fold's flap: lit under the pointer once the engine names one there.
-  if (tool === 'petal' && view.picks >= (vertex.lineBy === 'points' ? 2 : 1)) {
-    return [
-      host.coarse
-        ? t('tools:fold.vertex.note.petalRegionTouch', 'The flap below the hinge lights up once you tap it.')
-        : t(
-            'tools:fold.vertex.note.petalRegion',
-            'Paper below the hinge lights up where a petal fold can lift it: a click elsewhere says why not.'
-          ),
-      ...clear,
-    ];
-  }
-  if (tool === 'petal' && vertex.lineBy !== 'points') {
-    return [
-      host.coarse
-        ? t('tools:fold.vertex.note.petalHingeCreaseTouch', 'Only precreases can be the hinge: tap one across the flap.')
-        : t('tools:fold.vertex.note.petalHingeCrease', 'Only precreases can be the hinge: one lights up under the pointer.'),
-      ...clear,
-    ];
-  }
-  // A rabbit ear's, a swivel's and a petal fold's ends are points: a
-  // landmark, or with the key any point, never a place on an edge between
-  // landmarks.
-  const snaps = tool !== 'squash';
-  const snap = snaps
-    ? [
-        host.coarse
-          ? t(
-              'tools:fold.vertex.note.snapPointsTouch',
-              'Points snap to corners, marks, crease crossings and midpoints: a tap anywhere else picks nothing.'
-            )
-          : t(
-              'tools:fold.vertex.note.snapPoints',
-              'Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.'
-            ),
-        host.coarse
-          ? t('tools:fold.vertex.note.freePointTouch', 'Turn on Free point to put a point anywhere.')
-          : t('tools:fold.vertex.note.freePoint', 'Hold {{modifier}} to put a point anywhere.', { modifier: host.alt }),
-      ]
-    : [];
-  // A swivel's pivot may sit on a folded edge, where the creases then meet.
-  const fold =
-    tool === 'swivel' && view.picks === 0
-      ? [
-          host.coarse
-            ? t(
-                'tools:fold.vertex.note.swivelFoldTouch',
-                'Tap a folded edge for the creases to meet on it, the classic swivel: it lights up when picked.'
-              )
-            : t(
-                'tools:fold.vertex.note.swivelFold',
-                'Point at a folded edge for the creases to meet on it, the classic swivel: it lights up under the pointer.'
-              ),
-        ]
-      : [];
-  return [...snap, ...fold, ...clear];
+  const points = tool === 'rabbit-ear' ? view.picks < 3 : tool === 'petal' && vertex.lineBy === 'points' && view.picks < 2;
+  if (!points) return clear;
+  return [
+    host.coarse
+      ? t('tools:fold.vertex.note.snapOrFreeTouch', 'Points snap to corners, crossings, marks and midpoints: turn on Free point to put one anywhere.')
+      : t('tools:fold.vertex.note.snapOrFree', 'Points snap to corners, crossings, marks and midpoints: hold {{modifier}} to put one anywhere.', {
+          modifier: host.alt,
+        }),
+    ...clear,
+  ];
 }
 
-/** The last step while the clicks are made: what comes after them (a swivel on a folded edge has no ridge to pick). */
-function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost, onFold: boolean): string {
+/** The commit, as a step: Enter, or on a finger the fold's button. */
+function commitStepPlain(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string {
+  const action = foldToolLabel(t, tool);
+  return host.coarse
+    ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action })
+    : t('tools:fold.steps.commit', 'Press Enter to fold.');
+}
+
+/** The last step while the clicks are made: what comes after them. */
+function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string {
   const action = foldToolLabel(t, tool);
   switch (tool) {
     case 'petal':
       return host.coarse
         ? t('tools:fold.vertex.steps.petalFinishTouch', 'Choose Valley or Mountain, then tap {{action}}.', { action })
         : t('tools:fold.vertex.steps.petalFinish', 'Choose Valley or Mountain, then press Enter.');
-    case 'swivel':
-      if (onFold) {
-        return host.coarse
-          ? t('tools:fold.vertex.steps.petalFinishTouch', 'Choose Valley or Mountain, then tap {{action}}.', { action })
-          : t('tools:fold.vertex.steps.petalFinish', 'Choose Valley or Mountain, then press Enter.');
-      }
-      return host.coarse
-        ? t('tools:fold.vertex.steps.swivelFinishRidgeTouch', 'Pick the ridge and the direction, then tap {{action}}.', { action })
-        : t('tools:fold.vertex.steps.swivelFinishRidge', 'Pick the ridge and the direction, then press Enter.');
-    case 'squash':
     case 'rabbit-ear':
       return host.coarse
-        ? t('tools:fold.vertex.steps.finishTouch', 'Choose the options, then tap {{action}}.', { action })
-        : t('tools:fold.vertex.steps.finish', 'Choose the options, then press Enter.');
+        ? t('tools:fold.vertex.steps.earFinishTouch', 'Choose the fourth crease, then tap {{action}}.', { action })
+        : t('tools:fold.vertex.steps.earFinish', 'Choose the fourth crease, then press Enter.');
+    // A swivel's ridge and way are offered only when there is a choice, once it is previewed.
+    case 'swivel':
+    case 'squash':
+      return commitStepPlain(t, tool, host);
   }
 }
 
@@ -356,7 +325,7 @@ function locateInstructions(
 ): FoldToolInstructions {
   const { tool } = vertex;
   const lines = { petalHinge: vertex.lineBy ?? 'crease', swivelTarget: vertex.lineBy ?? 'crease' };
-  const items = [...vertexToolSteps(t, tool, lines, host), finishStep(t, tool, host, vertex.onFold === true)];
+  const items = [...vertexToolSteps(t, tool, lines, host, vertex.nothingSwings === true), finishStep(t, tool, host)];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     intro: vertexIntro(t, tool),
@@ -366,46 +335,24 @@ function locateInstructions(
   };
 }
 
-/** What is left to choose once every click is in. */
-function chooseStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost, onFold: boolean): string {
-  if (tool === 'swivel' && onFold) {
-    return t(
-      'tools:fold.vertex.steps.swivelOnFoldChoose',
-      'Choose Valley or Mountain: only a way that folds flat is offered.'
-    );
-  }
+/** What is left to choose once every click is in (a swivel keeps its steps instead: `swivelPreviewSteps`). */
+function chooseStep(t: TFunction, tool: Exclude<FoldVertexToolId, 'swivel'>, host: FoldToolHost): string {
   switch (tool) {
     case 'squash':
+      // Where the spine lands, as the folded pane draws it: the bold line.
       return host.coarse
-        ? t('tools:fold.vertex.steps.squashTargetTouch', 'Tap where the spine should land, or keep it on the hinge line.')
-        : t('tools:fold.vertex.steps.squashTarget', 'Click where the spine should land, or keep it on the hinge line.');
+        ? t('tools:fold.vertex.steps.squashSpineTouch', 'The spine lands on the bold line: tap the paper to land it elsewhere.')
+        : t('tools:fold.vertex.steps.squashSpine', 'The spine lands on the bold line: click the paper to land it elsewhere.');
     case 'petal':
       // Another flap below the hinge is picked by a click on it.
       return host.coarse
-        ? t(
-            'tools:fold.vertex.steps.petalLiftOtherTouch',
-            'Valley lifts the flap toward you, Mountain away from you. Tap another flap below the hinge to lift that one.'
-          )
-        : t(
-            'tools:fold.vertex.steps.petalLiftOther',
-            'Valley lifts the flap toward you, Mountain away from you. Click another flap below the hinge to lift that one.'
-          );
+        ? t('tools:fold.vertex.steps.petalWayTouch', 'Choose which way it lifts, or tap another flap to lift that one.')
+        : t('tools:fold.vertex.steps.petalWay', 'Choose which way it lifts, or click another flap to lift that one.');
     case 'rabbit-ear':
-      // The paper that stays is picked again by a click on another region.
+      // The paper that stays is picked again by a click on another part.
       return host.coarse
-        ? t(
-            'tools:fold.vertex.steps.fanChooseTouch',
-            'Choose the fourth crease and the layers. Tap other paper to change what stays put.'
-          )
-        : t(
-            'tools:fold.vertex.steps.fanChooseStayer',
-            'Choose the fourth crease and the layers. Click other paper to change what stays put.'
-          );
-    case 'swivel':
-      return t(
-        'tools:fold.vertex.steps.swivelChooseRidge',
-        'Step Ridge to the other crease that can rise, and choose Valley or Mountain.'
-      );
+        ? t('tools:fold.vertex.steps.earChooseTouch', 'Choose the fourth crease and the layers, or tap another part to stay put.')
+        : t('tools:fold.vertex.steps.earChoose', 'Choose the fourth crease and the layers, or click another part to stay put.');
   }
 }
 
@@ -420,12 +367,39 @@ function commitStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
     : t('tools:fold.steps.commitOrClick', 'Press Enter, or click {{action}}, to fold.', { action });
 }
 
+/**
+ * A swivel's steps once every click is in: the same steps, its last in hand
+ * — a press of Enter, or of the button when a ridge or a way to choose sits
+ * above it and may hold the focus.
+ */
+function swivelPreviewSteps(
+  t: TFunction,
+  vertex: FoldVertexWindowView,
+  host: FoldToolHost,
+  controls: FoldVertexControls
+): FoldToolInstructions {
+  const lines = { petalHinge: 'crease' as const, swivelTarget: vertex.lineBy ?? 'crease' };
+  const choice = controls.direction !== null || controls.emergent !== null || controls.order !== null;
+  const items = [
+    ...vertexToolSteps(t, 'swivel', lines, host),
+    choice ? commitStep(t, 'swivel', host) : commitStepPlain(t, 'swivel', host),
+  ];
+  return {
+    heading: t('tools:fold.window.instructions', 'Instructions'),
+    intro: vertexIntro(t, 'swivel'),
+    items,
+    current: items.length - 1,
+    notes: [],
+  };
+}
+
 function previewInstructions(
   t: TFunction,
   vertex: FoldVertexWindowView,
   host: FoldToolHost,
   view: FoldToolWindowView,
-  fixes: boolean
+  fixes: boolean,
+  controls: FoldVertexControls
 ): FoldToolInstructions {
   const { tool } = vertex;
   if (!vertex.described && view.preview?.refused) {
@@ -445,20 +419,25 @@ function previewInstructions(
       notes: [],
     };
   }
+  const queued = view.preview ? queuedNote(t, view.preview) : [];
+  if (tool === 'swivel') {
+    const steps = swivelPreviewSteps(t, vertex, host, controls);
+    return { ...steps, notes: queued };
+  }
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    items: [chooseStep(t, tool, host, vertex.onFold === true), commitStep(t, tool, host)],
+    items: [chooseStep(t, tool, host), commitStep(t, tool, host)],
     // The choices are optional, so the window leads with them and never marks them done.
     current: 0,
-    notes: view.preview ? queuedNote(t, view.preview) : [],
+    notes: queued,
   };
 }
 
 /**
- * A rabbit ear's fourth crease, or a swivel's ridge: a stepper through the
- * ones that land, the only ones offered. With one, or none, the row stays
- * where it is with its arrows off, so the window keeps its shape as the
- * paper that stays changes.
+ * A rabbit ear's fourth crease: a stepper through the ones that land, the
+ * only ones offered. With one, or none, the row stays where it is with its
+ * arrows off, so the window keeps its shape as the paper that stays changes.
+ * A swivel's ridge, likewise named — offered only when both land.
  */
 function fourthStepper(
   t: TFunction,
@@ -488,15 +467,10 @@ function fourthStepper(
  * What the fourth crease's stepper says beneath it, in a place kept for it:
  * how many fit with this paper staying put — and when none does, the change
  * that helps: other paper to stay, or, when no paper staying would do,
- * other picks. A swivel's: how many of its ridges fit.
+ * other picks.
  */
 function emergentNote(t: TFunction, vertex: FoldVertexWindowView, host: FoldToolHost): string {
   const { fourths } = vertex;
-  if (vertex.tool === 'swivel') {
-    if (fourths >= 2) return t('tools:fold.vertex.ridgesBoth', 'Either ridge lets it fold flat: step to the other.');
-    if (fourths === 1) return t('tools:fold.vertex.ridgesOne', 'Only this ridge lets it fold flat.');
-    return t('tools:fold.vertex.ridgesNone', 'Neither ridge lets it fold flat: the notice below says why.');
-  }
   if (fourths === 0 && vertex.fourthElsewhere === false) {
     return host.coarse
       ? t(
@@ -572,26 +546,34 @@ function lineByControl(
   };
 }
 
-/** What the fold will do, said under the direction while it is previewed: a petal fold's creases, a swivel's vertex. */
+/**
+ * What the fold will do, said under the direction while it is previewed: a
+ * petal fold's creases; a swivel's picture, read in a line — the dot, the
+ * bold line, the lit paper the folded pane draws.
+ */
 function previewNote(t: TFunction, vertex: FoldVertexWindowView): string | null {
   if (vertex.tool === 'petal') return vertex.petalScores ? petalScoresNote(t, vertex.petalScores) : null;
-  if (vertex.tool === 'swivel' && vertex.onFold) {
-    return vertex.described
-      ? t(
-          'tools:fold.vertex.note.swivelOnFold',
-          'The creases meet at the dot, where the line halfway between the edge and the line it lands on crosses the folded edge. The edge’s layer folds along that line, laying the edge where the bold line shows; the other layer at the folded edge folds along a second crease too. The lit paper moves, the brightest swivelling.'
-        )
-      : null;
-  }
   if (vertex.tool === 'swivel') {
     return vertex.described
-      ? t(
-          'tools:fold.vertex.note.swivelVertex',
-          'The creases meet at the dot: the pivot, moved onto the line halfway between the edge and the line it lands on. The bold line is where the edge lands; the lit paper moves, the brightest turning in place.'
-        )
+      ? t('tools:fold.vertex.note.swivelPicture', 'The creases meet at the dot, the edge lands on the bold line, and the lit paper moves.')
       : null;
   }
   return preconditionNote(t, vertex.tool);
+}
+
+/**
+ * Whether a vertex fold offers its direction: always, but a swivel — whose
+ * clicks are offered only what lands, and which folds the folder's way when
+ * it lands, else the other — only once the engine has described it, and
+ * then only when it lands both ways, or which ways land is not known (a
+ * target named by two points). Owner feedback, 2026-10-12: a control with no
+ * choice in it is not shown.
+ */
+function offersDirection(vertex: FoldVertexWindowView, clicked: boolean): boolean {
+  if (vertex.tool !== 'swivel') return true;
+  if (!clicked || !vertex.described) return false;
+  const ways = vertex.directions;
+  return !ways || ways.length !== 2 || (ways[0] === true && ways[1] === true);
 }
 
 /**
@@ -609,34 +591,39 @@ export function vertexControls(
 ): FoldVertexControls {
   const { tool } = vertex;
   const located = clicked && vertex.described;
-  // A swivel on a folded edge has no ridge to choose.
-  const fan = tool === 'rabbit-ear' || (tool === 'swivel' && !vertex.onFold);
+  // A rabbit ear's fourth crease, its row kept whichever paper stays; a
+  // swivel's ridge only when both land (one on a folded edge has none).
+  const ear = tool === 'rabbit-ear';
+  const ridges = tool === 'swivel' && !vertex.onFold && vertex.fourths >= 2;
   const { setVertexDirection, resetSquashTarget } = verbs;
   // A way the engine says does not land is offered, but not taken.
   const lands = (k: number) => !located || vertex.directions?.[k] !== false;
   const cannot = t('tools:fold.vertex.directionCannot', 'This way it cannot fold flat here.');
   return {
-    direction: {
-      label: t('tools:fold.vertex.direction', 'Direction'),
-      value: vertex.direction,
-      options: [
-        {
-          value: 'valley',
-          label: t('tools:fold.vertex.valley', 'Valley'),
-          tooltip: lands(0) ? t('tools:fold.vertex.valleyTitle', 'Valley: the paper turns toward you') : cannot,
-          ...(lands(0) ? {} : { disabled: true }),
-        },
-        {
-          value: 'mountain',
-          label: t('tools:fold.vertex.mountain', 'Mountain'),
-          tooltip: lands(1) ? t('tools:fold.vertex.mountainTitle', 'Mountain: the paper turns away from you') : cannot,
-          ...(lands(1) ? {} : { disabled: true }),
-        },
-      ],
-      disabled: readOnly || !setVertexDirection,
-      set: (direction) => setVertexDirection?.(direction),
-    },
+    direction: offersDirection(vertex, clicked)
+      ? {
+          label: t('tools:fold.vertex.direction', 'Direction'),
+          value: vertex.direction,
+          options: [
+            {
+              value: 'valley',
+              label: t('tools:fold.vertex.valley', 'Valley'),
+              tooltip: lands(0) ? t('tools:fold.vertex.valleyTitle', 'Valley: the paper turns toward you') : cannot,
+              ...(lands(0) ? {} : { disabled: true }),
+            },
+            {
+              value: 'mountain',
+              label: t('tools:fold.vertex.mountain', 'Mountain'),
+              tooltip: lands(1) ? t('tools:fold.vertex.mountainTitle', 'Mountain: the paper turns away from you') : cannot,
+              ...(lands(1) ? {} : { disabled: true }),
+            },
+          ],
+          disabled: readOnly || !setVertexDirection,
+          set: (direction) => setVertexDirection?.(direction),
+        }
+      : null,
     lineBy: lineByControl(t, vertex, verbs, readOnly),
+    // Where a squash's spine lands: the bold line on the folded pane, moved by a click there.
     target:
       tool === 'squash' && located
         ? {
@@ -645,17 +632,14 @@ export function vertexControls(
               vertex.target === 'hinge'
                 ? t('tools:fold.vertex.targetHinge', 'The hinge line')
                 : t('tools:fold.vertex.targetPoint', 'The point clicked'),
-            help: host.coarse
-              ? t('tools:fold.vertex.targetHelpTouch', 'Tap the folded paper to land the spine off the hinge.')
-              : t('tools:fold.vertex.targetHelp', 'Click the folded paper to land the spine off the hinge.'),
             reset:
               vertex.target === 'point' && resetSquashTarget
                 ? { label: t('tools:fold.vertex.reset', 'Back to the hinge'), disabled: readOnly, run: resetSquashTarget }
                 : null,
           }
         : null,
-    emergent: fan && located ? fourthStepper(t, vertex, verbs, readOnly) : null,
-    emergentNote: fan && located ? emergentNote(t, vertex, host) : null,
+    emergent: (ear || ridges) && located ? fourthStepper(t, vertex, verbs, readOnly) : null,
+    emergentNote: ear && located ? emergentNote(t, vertex, host) : null,
     // A rabbit ear's layers; a swivel by its edge folds every layer at its vertex.
     layers:
       tool === 'rabbit-ear' && located
@@ -693,7 +677,7 @@ export function vertexToolWindow(
     return {
       phase: 'locate',
       title,
-      meta: settingsMeta(t, controls.lineBy ? 2 : 1),
+      meta: settingsMeta(t, [controls.direction, controls.lineBy].filter(Boolean).length),
       instructions: locateInstructions(t, view, vertex, host),
       lineMode: null,
       kind: null,
@@ -731,7 +715,7 @@ export function vertexToolWindow(
     phase: 'preview',
     title,
     meta: settingsMeta(t, settings.filter(Boolean).length),
-    instructions: previewInstructions(t, vertex, host, view, (refusal?.actions.length ?? 0) > 0),
+    instructions: previewInstructions(t, vertex, host, view, (refusal?.actions.length ?? 0) > 0, controls),
     lineMode: null,
     kind: null,
     movingSide: null,

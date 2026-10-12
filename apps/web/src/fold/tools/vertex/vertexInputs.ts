@@ -13,14 +13,16 @@
  *   part that lifts (`useFoldPetalMarks`).
  * - **Rabbit ear**: the triangle's three corners (`point` landmarks, or with
  *   Alt any point), then the paper that stays put (`free`).
- * - **Swivel**, by its edge (`FoldSwivelEdgeOp`): the pivot (`point`, Alt for
- *   any point) — or a point on a folded edge, near one and away from any
- *   landmark, for the classic swivel whose creases meet on that edge
- *   (`resolveFoldEdgePoint`, `FoldSwivelOnFoldOp`) — the edge that moves — a
- *   raw or folded edge, never a flat crease, which the engine refuses — and
- *   the line it lands on, as {@link FoldVertexLines.swivelTarget} names it: a
- *   crease or an edge, or two points. A swivel stored by its rays still
- *   replays; the tool no longer makes one.
+ * - **Swivel**, by its edge (`FoldSwivelEdgeOp`): where its creases meet — a
+ *   point on a folded edge, near one and away from any landmark, for the
+ *   classic swivel whose creases meet on that edge (`resolveFoldEdgePoint`,
+ *   `FoldSwivelOnFoldOp`), or a pivot (`point`, Alt for any point) — the
+ *   edge to swing — a raw or folded edge, never a flat crease, which the
+ *   engine refuses; only one that can swing from there is offered
+ *   (`swivelReach`) — and the line it lands on, as
+ *   {@link FoldVertexLines.swivelTarget} names it: a crease or an edge it
+ *   lands on, or two points. A swivel stored by its rays still replays; the
+ *   tool no longer makes one.
  *
  * Which layer a flap click names is not decided by the click: it depends on
  * the direction (`vertexStep`), which the folder may change afterwards, so the
@@ -94,7 +96,11 @@ export interface FoldVertexStepsHost {
 function petalSteps(t: TFunction, hinge: FoldLineBy, coarse: boolean): string[] {
   const ends =
     hinge === 'crease'
-      ? [t('tools:fold.vertex.steps.petalHingeCrease', 'Select the hinge crease.')]
+      ? [
+          coarse
+            ? t('tools:fold.vertex.steps.petalHingeTouch', 'Tap the hinge: a precrease across the flap.')
+            : t('tools:fold.vertex.steps.petalHinge', 'Click the hinge: a precrease across the flap.'),
+        ]
       : coarse
         ? [
             t('tools:fold.vertex.steps.petalHingeFirstEndTouch', 'Tap one end of the hinge, where a kite crease meets the flap’s edge.'),
@@ -107,49 +113,66 @@ function petalSteps(t: TFunction, hinge: FoldLineBy, coarse: boolean): string[] 
   return [
     ...ends,
     coarse
-      ? t('tools:fold.vertex.steps.petalRegionTouch', 'Tap the flap below the hinge, the part that lifts.')
-      : t('tools:fold.vertex.steps.petalRegion', 'Click the flap below the hinge: the part that lifts lights up under the pointer.'),
+      ? t('tools:fold.vertex.steps.petalFlapTouch', 'Tap the flap that lifts, below the hinge.')
+      : t('tools:fold.vertex.steps.petalFlap', 'Click the flap that lifts, below the hinge.'),
   ];
 }
 
-/** A swivel's pivot, its edge and the line it lands on. */
-function swivelSteps(t: TFunction, target: FoldLineBy, coarse: boolean): string[] {
+/**
+ * A swivel's clicks, each naming what the folder sees by its part in the
+ * fold (owner feedback, 2026-10-12: "the edge that moves" named nothing — a
+ * bunch of edges move): where the creases meet, the edge to swing, the line
+ * it lands on. The canvas lights what each click can take. From a point
+ * nothing can swing from, the second click says so and takes another point
+ * (`nothingSwings`).
+ */
+function swivelSteps(t: TFunction, target: FoldLineBy, host: FoldVertexStepsHost, nothingSwings: boolean): string[] {
+  const { coarse } = host;
   const onto =
     target === 'crease'
       ? [
           coarse
-            ? t('tools:fold.vertex.steps.swivelOntoTouch', 'Tap the line it should land on: a crease or an edge.')
-            : t('tools:fold.vertex.steps.swivelOnto', 'Click the line it should land on: a crease or an edge.'),
+            ? t('tools:fold.vertex.steps.swivelLandsTouch', 'Tap the line it lands on.')
+            : t('tools:fold.vertex.steps.swivelLands', 'Click the line it lands on.'),
         ]
       : coarse
         ? [
-            t('tools:fold.vertex.steps.swivelOntoFirstTouch', 'Tap a point on the line it should land on.'),
+            t('tools:fold.vertex.steps.swivelLandsFirstTouch', 'Tap a point on the line it lands on.'),
             t('tools:fold.vertex.steps.swivelOntoSecondTouch', 'Tap a second point on that line.'),
           ]
         : [
-            t('tools:fold.vertex.steps.swivelOntoFirst', 'Click a point on the line it should land on.'),
+            t('tools:fold.vertex.steps.swivelLandsFirst', 'Click a point on the line it lands on.'),
             t('tools:fold.vertex.steps.swivelOntoSecond', 'Click a second point on that line.'),
           ];
+  const swing = nothingSwings
+    ? coarse
+      ? t('tools:fold.vertex.steps.swivelNothingSwingsTouch', 'Nothing can swing from there: tap another point.')
+      : t('tools:fold.vertex.steps.swivelNothingSwings', 'Nothing can swing from there: click another point.')
+    : coarse
+      ? t('tools:fold.vertex.steps.swivelSwingTouch', 'Tap the edge to swing onto a line.')
+      : t('tools:fold.vertex.steps.swivelSwing', 'Click the edge to swing onto a line.');
   return [
     coarse
-      ? t('tools:fold.vertex.steps.swivelPivotOrFoldTouch', 'Tap the pivot, or a folded edge for the creases to meet on.')
-      : t('tools:fold.vertex.steps.swivelPivotOrFold', 'Click the pivot, or a folded edge for the creases to meet on.'),
-    coarse
-      ? t('tools:fold.vertex.steps.swivelEdgeTouch', 'Tap the edge that moves: a raw edge or a folded edge.')
-      : t('tools:fold.vertex.steps.swivelEdge', 'Click the edge that moves: a raw edge or a folded edge.'),
+      ? t('tools:fold.vertex.steps.swivelMeetTouch', 'Tap where the creases meet: on a folded edge, or turn on Free point for any point.')
+      : t('tools:fold.vertex.steps.swivelMeet', 'Click where the creases meet: on a folded edge, or hold {{modifier}} for any point.', {
+          modifier: host.alt,
+        }),
+    swing,
     ...onto,
   ];
 }
 
 /**
  * The clicks a vertex fold takes, one instruction each in click order: the
- * window's numbered steps, and the canvas chip's prompt.
+ * window's numbered steps. `nothingSwings`: a swivel's meeting point from
+ * which no edge can swing, whose next click picks another point.
  */
 export function vertexToolSteps(
   t: TFunction,
   tool: FoldVertexToolId,
   lines: FoldVertexLines = FOLD_VERTEX_LINES_DEFAULT,
-  host: FoldVertexStepsHost = { coarse: false, alt: 'Alt' }
+  host: FoldVertexStepsHost = { coarse: false, alt: 'Alt' },
+  nothingSwings = false
 ): string[] {
   switch (tool) {
     case 'squash':
@@ -167,15 +190,15 @@ export function vertexToolSteps(
             t('tools:fold.vertex.steps.earFirstCornerTouch', 'Tap the triangle’s first corner.'),
             t('tools:fold.vertex.steps.earSecondCornerTouch', 'Tap its second corner.'),
             t('tools:fold.vertex.steps.earThirdCornerTouch', 'Tap its third corner.'),
-            t('tools:fold.vertex.steps.stayerTouch', 'Tap the paper that stays put.'),
+            t('tools:fold.vertex.steps.earStayTouch', 'Tap the part of the paper that stays put.'),
           ]
         : [
             t('tools:fold.vertex.steps.earFirstCorner', 'Click the triangle’s first corner.'),
             t('tools:fold.vertex.steps.earSecondCorner', 'Click its second corner.'),
             t('tools:fold.vertex.steps.earThirdCorner', 'Click its third corner.'),
-            t('tools:fold.vertex.steps.stayer', 'Click the paper that stays put.'),
+            t('tools:fold.vertex.steps.earStay', 'Click the part of the paper that stays put.'),
           ];
     case 'swivel':
-      return swivelSteps(t, lines.swivelTarget, host.coarse);
+      return swivelSteps(t, lines.swivelTarget, host, nothingSwings);
   }
 }

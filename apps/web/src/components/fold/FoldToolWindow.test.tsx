@@ -276,14 +276,21 @@ describe('FoldToolWindow', () => {
     act(() => byRole(window, 'button', 'Back to the hinge').click());
     expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
 
-    // A petal fold and a swivel say what they are and need above their steps,
-    // before the first click, and nothing again under the direction; how
-    // they name their line, in a control of its own.
+    // A petal fold and a swivel say what they are in a line above their
+    // steps, before the first click, and nothing again under the direction;
+    // how they name their line, in a control of its own. A swivel offers no
+    // direction while its clicks are made: the canvas offers only what lands.
     const setVertexLineBy = vi.fn();
     const withLineBy = { ...calls, setVertexLineBy };
     for (const [tool, intro, first, heading, other] of [
-      ['petal', 'Lifts a flap’s lower point up along a hinge', 'Select the hinge crease.', 'Hinge', 'Two endpoints'],
-      ['swivel', 'Swivels an edge onto a line', 'Click the pivot, or a folded edge for the creases to meet on.', 'Lands on', 'Two points'],
+      ['petal', 'Lifts a flap’s point up along a hinge.', 'Click the hinge: a precrease across the flap.', 'Hinge', 'Two endpoints'],
+      [
+        'swivel',
+        'Swings an edge of the paper onto a line.',
+        'Click where the creases meet: on a folded edge, or hold Alt for any point.',
+        'Lands on',
+        'Two points',
+      ],
     ] as const) {
       render(
         { tool, lineMode: 'crease', picks: 0, vertex: { ...vertex, tool, lineBy: 'crease', described: false, known: false } },
@@ -295,7 +302,9 @@ describe('FoldToolWindow', () => {
       expect(text.indexOf(intro), tool).toBeLessThan(text.indexOf(first));
       expect(window.querySelector('[aria-current="step"]')?.textContent, tool).toBe(first);
       expect(window.querySelector('[data-fold-vertex-note]'), tool).toBeNull();
-      expect(byRole(window, 'group', 'Direction')).toBeTruthy();
+      expect(queryByRole(window, 'group', 'Direction') !== null, tool).toBe(tool === 'petal');
+      // Nothing under the steps but the key that clears them: no section left empty.
+      expect(window.querySelector('[data-fold-vertex]') !== null, tool).toBe(tool === 'petal');
       const lineBy = window.querySelector<HTMLElement>('[data-fold-line-by]');
       expect(lineBy?.textContent, tool).toContain(heading);
       act(() => byRole(byRole(window, 'group', heading), 'button', other).click());
