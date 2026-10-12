@@ -35,7 +35,8 @@ import { followAreaRecords, recordAreaBeforeEdit } from '../zoom/areaRecord';
 import { marksIntoUnits, startsWhole } from '../zoom/zoomFrames';
 import { stepReach } from '../zoom/zoomModel';
 import { authorMarksChanged, authorMarksOf, editedCardMarksGone, isCardMark, releaseCardMarks, withEditTags } from './cardMarks';
-import { PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE } from './pageRanges';
+import { samePageArrangements } from './pageArrangements';
+import { FLOW_BANDS_RANGE, FLOW_WEIGHT_RANGE, PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE } from './pageRanges';
 
 /** The version of this document's own shape, inside the project file. */
 export const DIAGRAM_FORMAT_VERSION = 1;
@@ -128,10 +129,8 @@ export const DEFAULT_FLOW_PACKING: Readonly<
   flowSteadiness: 0.85,
 };
 
-/** A fixed band count ({@link DiagramPageSetup.flowBands}); `auto` packs a short page into fewer. */
-export const FLOW_BANDS_RANGE = { min: 2, max: 5 } as const;
-/** The range of the packing's three weights: {@link DiagramPageSetup.flowPreferBands}, `flowNesting` and `flowSteadiness`. */
-export const FLOW_WEIGHT_RANGE = { min: 0, max: 1 } as const;
+// A fixed band count, and the range of the packing's three weights: in the import-free module, for a stored arrangement's reader.
+export { FLOW_BANDS_RANGE, FLOW_WEIGHT_RANGE };
 
 /**
  * The paper style every step is painted in. A built-in with its saved values,
@@ -1241,8 +1240,46 @@ export interface DiagramDocument {
   steps: DiagramEntry[];
   /** Uploaded art, shared by id between steps, duplicates and undo snapshots. */
   assets: Record<string, DiagramAsset>;
+  /**
+   * How each flow page was packed, by the id of the step it starts with
+   * (`implementation-plans/diagram-flow-packing.md`, Decision 1): held while
+   * its signature matches the page's structure (`pages/pageSignature.ts`), so
+   * a picture or caption edit moves no step. Absent where none is stored; the
+   * layout packs such a page and the store adopts what it packed.
+   */
+  pageArrangements?: Readonly<Record<string, DiagramPageArrangement>>;
   /** What a newer build wrote here that this build cannot read, written back as it came. */
   newer?: DiagramNewerFields;
+}
+
+/**
+ * A flow page as it was packed (`diagram-flow-packing.md`, Decision 1): the
+ * structure it was packed for, its page scale, and each step's place. Its
+ * numbers are kept rounded (`document/pageArrangements.ts`): mm to a
+ * hundredth, scales to six significant digits.
+ */
+export interface DiagramPageArrangement {
+  /** The page's structure when it was packed (`pageSignature`): the arrangement holds while it matches. */
+  signature: string;
+  /** The page scale it was packed at, which every step's reference scale was multiplied by. */
+  k: number;
+  /** Each of its steps' places, by step id. */
+  steps: Readonly<Record<string, DiagramArrangedStep>>;
+}
+
+/** One step's place on a packed flow page ({@link DiagramPageArrangement}). */
+export interface DiagramArrangedStep {
+  /** Its box on the page, mm: left, top, width and height, number, picture and caption inside it. */
+  box: [x: number, y: number, w: number, h: number];
+  /**
+   * The scale its picture prints at, absolute, in the measure a pin takes
+   * ({@link DiagramPlaceScale}), so another step's re-pose never resizes it.
+   */
+  scale: DiagramPlaceScale;
+  /** Its band, from 0 in reading order; a step standing in a bend, the band before that bend. */
+  band: number;
+  /** It stands in the bend after its band, between that band and the next. */
+  bend?: true;
 }
 
 /**
@@ -1271,6 +1308,13 @@ export interface DiagramNewerFields {
    * name, as they came: written back while one of those steps is here.
    */
   thumbnails?: Readonly<Record<string, unknown>>;
+  /**
+   * Page arrangements with a field or a value this build has no name for,
+   * each under its page's first step id, as they came. The page is packed
+   * here as if none were stored; the newer one is written back in its place
+   * until the page is re-packed here.
+   */
+  pageArrangements?: Readonly<Record<string, unknown>>;
 }
 
 export type DiagramIdFactory = (prefix: 'diagram' | 'step' | 'turn' | 'annotation' | 'asset') => string;
@@ -2164,8 +2208,8 @@ function jsonOnce(value: object): string {
 /**
  * Everything a newer build wrote that this build carries without reading, as
  * JSON, one part each: its steps and turns, the annotations and assets this
- * build cannot read, and the document's own fields, page fields and style it
- * does not read. An asset or a thumbnail named anywhere in it is kept, since
+ * build cannot read, and the document's own fields, page fields, style and
+ * page arrangements it does not read. An asset or a thumbnail named anywhere in it is kept, since
  * only that newer build knows what the name is for. The thumbnails carried
  * for those steps are no part of it: they are what it keeps.
  */
@@ -2183,7 +2227,7 @@ export function carriedJson(document: Pick<DiagramDocument, 'steps' | 'assets' |
     if (!isKnownAsset(asset)) parts.push(jsonOnce(asset.unknown));
   }
   const { newer } = document;
-  for (const part of [newer?.fields, newer?.page, newer?.style]) {
+  for (const part of [newer?.fields, newer?.page, newer?.style, newer?.pageArrangements]) {
     if (part) parts.push(jsonOnce(part));
   }
   return parts;
@@ -2303,6 +2347,40 @@ export function setPageSetup(
   const newerPage = withoutKeys(document.newer?.page, Object.keys(patch));
   if (pageSetupEquals(document.page, next) && newerPage === document.newer?.page) return document;
   return withNewer({ ...document, page: next }, { ...document.newer, page: newerPage });
+}
+
+/**
+ * The document with `arrangements` as its stored page arrangements
+ * ({@link DiagramDocument.pageArrangements}), and no field at all when there
+ * are none; the same document when they say what it holds. A newer build's
+ * carried arrangements stay as they are: this build's stand beside them,
+ * and theirs are what the file writes.
+ */
+export function withPageArrangements(
+  document: DiagramDocument,
+  arrangements: Readonly<Record<string, DiagramPageArrangement>>
+): DiagramDocument {
+  if (samePageArrangements(document.pageArrangements, arrangements)) return document;
+  const { pageArrangements: _was, ...rest } = document;
+  return Object.keys(arrangements).length > 0 ? { ...rest, pageArrangements: arrangements } : rest;
+}
+
+/**
+ * The arrangements stored for the pages `firstStepIds` start with dropped —
+ * or every one, for null — a newer build's carried ones among them, which a
+ * re-pack here lets go of: Re-pack Page and Re-pack All Pages. The same
+ * document when none is stored there.
+ */
+export function withoutPageArrangements(document: DiagramDocument, firstStepIds: readonly string[] | null): DiagramDocument {
+  const own = document.pageArrangements;
+  const newer = document.newer?.pageArrangements;
+  const keys = firstStepIds ?? [...Object.keys(own ?? {}), ...Object.keys(newer ?? {})];
+  const keptOwn = withoutKeys(own, keys);
+  const keptNewer = withoutKeys(newer, keys);
+  if (keptOwn === own && keptNewer === newer) return document;
+  const { pageArrangements: _was, ...rest } = document;
+  const next = keptOwn ? { ...rest, pageArrangements: keptOwn as Readonly<Record<string, DiagramPageArrangement>> } : rest;
+  return keptNewer === newer ? next : withNewer(next, { ...document.newer, pageArrangements: keptNewer });
 }
 
 /** A document with the newer build's values that still stand, and no `newer` at all when none does. */

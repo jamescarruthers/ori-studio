@@ -164,6 +164,7 @@ import {
   type QuarterTurns,
   type ReferencesPlanSettings,
 } from './diagramDocument';
+import { readPageArrangements, writePageArrangements } from './pageArrangements';
 import { validateStepDiagramModel } from './stepDiagramModelFile';
 import { normalizeStepPlace, PLACE_OFFSETS, placeOffset, placeScale } from './stepPlace';
 
@@ -210,7 +211,8 @@ export function readDiagram(value: unknown, options: ReadDiagramOptions = {}): R
       steps.push(step);
     }
   }
-  const newer = readNewerFields(value);
+  const arranged = readPageArrangements(value.pageArrangements);
+  const newer = readNewerFields(value, arranged.newer);
   const document: DiagramDocument = {
     formatVersion: DIAGRAM_FORMAT_VERSION,
     id: typeof value.id === 'string' && value.id.length > 0 ? value.id : newId('diagram'),
@@ -220,6 +222,7 @@ export function readDiagram(value: unknown, options: ReadDiagramOptions = {}): R
     page: normalizePageSetup(value.page),
     steps,
     assets,
+    ...(Object.keys(arranged.arrangements).length > 0 ? { pageArrangements: arranged.arrangements } : {}),
     ...(newer ? { newer } : {}),
   };
   // The entries only a newer build's writing names go back with it, as they came.
@@ -241,6 +244,7 @@ const DOCUMENT_KEYS = new Set([
   'steps',
   'assets',
   'thumbnails',
+  'pageArrangements',
 ]);
 const PAGE_KEYS = new Set([
   'size',
@@ -297,9 +301,11 @@ const STYLE_KEYS: ReadonlySet<string> = new Set(['preset', 'style']);
  * has no name for or whose value it does not read. Each falls back alone —
  * shown as this build's default or nearest, the rest of the diagram editable
  * — and is written back as it came until it is changed here. A value of the
- * wrong type is damage rather than news, and is replaced as before.
+ * wrong type is damage rather than news, and is replaced as before. So is a
+ * page arrangement this build does not read (`pageArrangements`, read by
+ * `readPageArrangements`): the page is packed here as if none were stored.
  */
-function readNewerFields(value: Record<string, unknown>): DiagramNewerFields | undefined {
+function readNewerFields(value: Record<string, unknown>, pageArrangements: Record<string, unknown>): DiagramNewerFields | undefined {
   const fields = Object.fromEntries(Object.entries(value).filter(([key]) => !DOCUMENT_KEYS.has(key)));
   const page = readNewerPage(value.page);
   const newer: DiagramNewerFields = {
@@ -307,6 +313,7 @@ function readNewerFields(value: Record<string, unknown>): DiagramNewerFields | u
     ...(typeof value.hanStyle === 'string' && !HAN_STYLES.includes(value.hanStyle) ? { hanStyle: value.hanStyle } : {}),
     ...(isRecord(value.style) && isNewerStyle(value.style) ? { style: value.style } : {}),
     ...(page ? { page } : {}),
+    ...(Object.keys(pageArrangements).length > 0 ? { pageArrangements } : {}),
   };
   return Object.keys(newer).length > 0 ? newer : undefined;
 }
@@ -375,6 +382,11 @@ export function writeDiagram(
   const { newer } = document;
   const thumbnails = new ThumbnailWriter(document, newer?.thumbnails);
   const steps = document.steps.map((step) => writeStep(step, thumbnails));
+  // Only a flow's: a grid packs no page, and a switch back to the flow packs its pages afresh.
+  const pageArrangements = writePageArrangements(
+    document.page.layout === 'flow' ? document.pageArrangements : undefined,
+    newer?.pageArrangements
+  );
   return {
     formatVersion: DIAGRAM_FORMAT_VERSION,
     id: document.id,
@@ -386,6 +398,7 @@ export function writeDiagram(
     assets: Object.fromEntries(
       Object.entries(document.assets).map(([id, asset]) => [id, writeAsset(asset)])
     ),
+    ...(pageArrangements ? { pageArrangements } : {}),
     ...thumbnails.table(),
     ...newer?.fields,
   };

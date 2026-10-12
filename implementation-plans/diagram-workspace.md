@@ -1727,7 +1727,7 @@ on its next save.
 
 **A diagram** — `formatVersion: 1`, `id` (`diagram-<uuid>`), `title`,
 `hanStyle` (`sc`/`tc`/`jp`/`kr`), `style`, `page`, `steps`, `assets`,
-`thumbnails`:
+`pageArrangements`, `thumbnails`:
 - `style` is `{ preset: string, style: PaperStyle }`, a built-in with its
   saved values, or `{ style: PaperStyle }`, a custom or export style stored
   whole (D9). Saved values take precedence over the name, including a name
@@ -1760,6 +1760,21 @@ on its next save.
   heightPx, bytes }`, a PNG or JPEG data URL whose header must agree with its
   size, at most 2,048 px a side (D7). One nothing names, no step of this
   build's and nothing a newer build wrote, is not written.
+- `pageArrangements` (added 2026-10-12, `diagram-flow-packing.md`), only
+  when one is stored: how each flow page was packed, by the id of the step
+  it starts with — `{ signature, k, steps: { "<step id>": { box: [x, y, w,
+  h], scale, band, bend? } } }`. `signature` is the page's structure when it
+  was packed (`pages/pageSignature.ts`, tagged with the packing's version),
+  `k` its page scale, `box` the step's box on the page in mm, `scale` its
+  printed scale as a pin's (`{ mmPerUnit }` or `{ frameMm }`), `band` its
+  band from 0 in reading order (0–4), and `bend: true` a step standing in the
+  bend after its band. Lengths are kept to 0.01 mm, scales to six significant
+  digits. A page holds its arrangement while the signature matches; a file
+  without one packs the page when opened. Written only in the flow, keys and
+  each page's steps sorted. An arrangement that does not read is dropped
+  alone; one with a field, a scale or a band past 4 this build has no name
+  for is a newer build's (rule 2): the page is packed here as if none were
+  stored, and the newer one written back until the page is re-packed here.
 - `thumbnails`: `{ "thumb-<digest>": "<a SheetThumbnail as JSON>" }`, every
   thumbnail a link shows, once, sorted by key (decision 4), and any entry
   something a newer build wrote names, as it came. A file from before the
