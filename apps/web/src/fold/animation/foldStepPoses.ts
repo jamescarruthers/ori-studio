@@ -36,13 +36,15 @@
  *   research §9), played from the engine's `StepMotion`, whatever the family
  *   (reverse, crimp, tuck, the vertex folds, the sinks): legs in turn, each
  *   turning groups of paper rigidly about their own hinges — each its own
- *   line, some paper twice (a crimp's tip, a squash's flap) — or resting
- *   where their turns leave them. A leg is drawn in the stacking the engine
- *   names, the parent's or the landed state's, and a group the reader now
- *   sees from its other side than that stacking does has its stack read
- *   reversed; past edge-on a face shows its other side and is shaded by its
- *   tilt, as a hinge's are. The first frame is the parent's picture and the
- *   last the landed scene, and every leg starts where the one before ended.
+ *   line, some paper twice (a squash's flap), some about a hinge another
+ *   group's turn carries (a crimp's tip about ℓ2, as its strip turns about
+ *   ℓ1) — or resting where their turns leave them. A leg is drawn in the
+ *   stacking the engine names, the parent's or the landed state's, and a
+ *   group the reader now sees from its other side than that stacking does
+ *   has its stack read reversed; past edge-on a face shows its other side
+ *   and is shaded by its tilt, as a hinge's are. The first frame is the
+ *   parent's picture and the last the landed scene, and every leg starts
+ *   where the one before ended.
  * - **A crossfade** — Import CP, which replaces the state with no motion
  *   between the two (D16), and the fallback for a step whose rigid motion
  *   cannot be built. The before scene fades out under the after scene's fade
@@ -56,7 +58,8 @@
 
 import type { FoldedFaceInk } from '../../cp-workspace/adapters/cpFoldedToScene';
 import { rigidHinge, seenFromOtherFace, shownFace, tiltLighting } from '../../lib/foldMotion/foldHinge';
-import type { FoldIsometry, FoldMotionGroup, FoldMotionLeg } from '../engine/foldEngineWire';
+import type { FoldModelLine } from '../document/foldSequenceDocument';
+import type { FoldIsometry, FoldMotionGroup, FoldMotionLeg, FoldSide } from '../engine/foldEngineWire';
 import type {
   PaperFaceItem,
   PaperItem,
@@ -154,22 +157,35 @@ export interface FoldCrossfadeMotion {
  * the paper still does after the turn (`then`), and across the axis; and
  * `toScene` back to the scene's px. At swing θ a point sits at its start
  * pulled toward the axis and past it, `cos θ` of the way across
- * (`MotionGroup::place`, seen from above): where the turn starts it at 0,
+ * (`MotionGroup::pose`, seen from above): where the turn starts it at 0,
  * where it leaves it at ±π. Up or down only says which way it lifts, which
- * a picture from above cannot see; the stacking says what covers what.
+ * a picture from above cannot see; the stacking says what covers what — but
+ * a hinge another turn carries (`carrier`) is carried through the height its
+ * own turn lifts the paper to, so for one both are read with their sides.
  */
 export interface FoldPosedHinge {
-  /** The axis' unit normal and offset, in the model frame. */
+  /** The axis' unit normal, toward the side the paper starts on, and its offset, in the model frame. */
   readonly n: ScenePoint;
   readonly d: number;
   readonly start: SceneAffine;
   readonly toScene: SceneAffine;
-  /** −1 when what the paper still does after this turn turns it over: it then shows its landed side on the near half. */
+  /**
+   * How the paper's tilt reads against the side it lands showing: it shows
+   * the other side while `tilt · kept ≥ 0`. One half turn lands it turned
+   * over, so 1 — and −1 when the turns still to come turn it over once more:
+   * a `then` that does, or a carrier's half turn.
+   */
   readonly kept: 1 | -1;
   /** Nothing is left to do after this turn: at ±π the paper lies where it lands. */
   readonly lands: boolean;
   /** Which faces turn as one stack — about one line, one way — for a stack read from its other side. */
   readonly unit: string;
+  /**
+   * The hinge whose turn carries this one, applied after it — a crimp's ℓ1,
+   * carrying ℓ2 and its tip — as `n` and `d` are given; absent for a hinge
+   * that stays where it lies.
+   */
+  readonly carrier?: { readonly n: ScenePoint; readonly d: number };
 }
 
 /** A face's turn during one leg: about its hinge from one swing to another, or resting there (`from === to`). */
@@ -177,6 +193,8 @@ export interface FoldFaceTurn {
   readonly hinge: FoldPosedHinge;
   readonly from: number;
   readonly to: number;
+  /** The carrier's swing over the same leg, for a hinge that has one. */
+  readonly carried?: { readonly from: number; readonly to: number };
 }
 
 /** One leg of a compound step's motion, as posing reads it. */
@@ -311,7 +329,12 @@ export function legsMotion(
     for (const group of leg.groups) {
       const hinge = posedHinge(group, placement.toScene, fromScene);
       if (!hinge) return null;
-      const turn: FoldFaceTurn = { hinge, from: group.from, to: group.to };
+      const turn: FoldFaceTurn = {
+        hinge,
+        from: group.from,
+        to: group.to,
+        ...(group.carrier ? { carried: { from: group.carrier.from, to: group.carrier.to } } : {}),
+      };
       for (const id of group.faces) {
         const face = placement.faceAt(id);
         if (face !== undefined) faces.set(face, turn);
@@ -330,10 +353,10 @@ export function legsMotion(
     }
     return { name: leg.name, stacking: leg.stacking, faces };
   });
-  // Where each face starts: its first leg's turn at its first angle.
+  // Where each face starts: its first leg's turn at its start.
   const startFlipped = new Set<number>();
   for (const [face, turn] of posed[0]!.faces) {
-    if (flippedAt(turn.hinge, turn.from)) startFlipped.add(face);
+    if (facePose(turn, 0).flipped) startFlipped.add(face);
   }
   const motion: FoldLegsMotion = {
     kind: 'legs',
@@ -344,43 +367,68 @@ export function legsMotion(
     startFlipped,
     bounds: unionBounds(before.bounds, after.bounds),
   };
-  // A face's footprint moves along a straight line within a leg, so the
-  // legs' ends bound every pose between them.
+  // A face's footprint moves along a straight line within a leg about one
+  // hinge, so the legs' ends bound every pose between them; a carried
+  // hinge's can bow, so its leg is sampled between.
   let bounds = motion.bounds;
   for (let k = 0; k < posed.length; k += 1) {
-    bounds = unionBounds(bounds, itemBounds(poseLegs(motion, k, 0).items));
-    bounds = unionBounds(bounds, itemBounds(poseLegs(motion, k, 1).items));
+    const carried = [...posed[k]!.faces.values()].some((turn) => turn.carried !== undefined);
+    for (const share of carried ? CARRIED_BOUNDS_SHARES : [0, 1]) {
+      bounds = unionBounds(bounds, itemBounds(poseLegs(motion, k, share).items));
+    }
   }
   return { ...motion, bounds };
 }
+
+/** Where a leg with a carried hinge is posed to bound its frames: its ends and between. */
+const CARRIED_BOUNDS_SHARES = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1];
 
 /**
  * A group's hinge in the scene (see {@link FoldPosedHinge}); null for an
  * axis with no direction or a `then` that cannot be undone.
  */
 function posedHinge(group: FoldMotionGroup, toScene: SceneAffine, fromScene: SceneAffine): FoldPosedHinge | null {
-  const [nx, ny] = group.axis.n;
-  const length = Math.hypot(nx, ny);
-  if (!(length > 0) || !Number.isFinite(group.axis.d)) return null;
-  const n: ScenePoint = [nx / length, ny / length];
-  const d = group.axis.d / length;
+  const axis = sidedLine(group.axis, group.side);
+  const carrier = group.carrier ? sidedLine(group.carrier.axis, group.carrier.side) : undefined;
+  if (!axis || carrier === null) return null;
+  const { n, d } = axis;
   const then = group.then ? isometryAffine(group.then) : IDENTITY_AFFINE;
   const back = invertAffine(then);
   if (!back) return null;
-  // The way the group turns; a resting one, which way it rests.
-  const sense = Math.sign(group.to - group.from) || Math.sign(group.from);
-  // One line, either way its normal points.
-  const canonical = n[0] < 0 || (n[0] === 0 && n[1] < 0) ? -1 : 1;
-  const key = [n[0] * canonical, n[1] * canonical, d * canonical].map((v) => v.toFixed(6)).join(',');
+  // Where the turns start a point: back across the carrier's hinge, then its own.
+  const across = carrier ? composeAffine(swingAffine(n, d, 2), swingAffine(carrier.n, carrier.d, 2)) : swingAffine(n, d, 2);
+  const turnsOver = (determinant(then) < 0 ? -1 : 1) * (carrier ? -1 : 1);
+  const unit = [lineKey(n, d, group.from, group.to)];
+  if (carrier && group.carrier) unit.push(lineKey(carrier.n, carrier.d, group.carrier.from, group.carrier.to));
   return {
     n,
     d,
-    start: composeAffine(swingAffine(n, d, 2), composeAffine(back, fromScene)),
+    start: composeAffine(across, composeAffine(back, fromScene)),
     toScene,
-    kept: determinant(then) < 0 ? -1 : 1,
+    kept: turnsOver < 0 ? -1 : 1,
     lands: group.then === undefined,
-    unit: `${key}:${sense}`,
+    unit: unit.join('|'),
+    ...(carrier ? { carrier } : {}),
   };
+}
+
+/**
+ * A line `n · p = d` with a unit normal toward `side`: the side the paper
+ * turning about it starts on. Null for one with no direction.
+ */
+function sidedLine({ n: [nx, ny], d }: FoldModelLine, side: FoldSide): { n: ScenePoint; d: number } | null {
+  const length = Math.hypot(nx, ny);
+  if (!(length > 0) || !Number.isFinite(d)) return null;
+  const toward = side === 'negative' ? -1 : 1;
+  return { n: [(toward * nx) / length, (toward * ny) / length], d: (toward * d) / length };
+}
+
+/** A turn's line, either way its normal points, and the way it turns — a resting one, which way it rests. */
+function lineKey(n: ScenePoint, d: number, from: number, to: number): string {
+  const sense = Math.sign(to - from) || Math.sign(from);
+  const canonical = n[0] < 0 || (n[0] === 0 && n[1] < 0) ? -1 : 1;
+  const key = [n[0] * canonical, n[1] * canonical, d * canonical].map((v) => v.toFixed(6)).join(',');
+  return `${key}:${sense}`;
 }
 
 /**
@@ -389,13 +437,19 @@ function posedHinge(group: FoldMotionGroup, toScene: SceneAffine, fromScene: Sce
  * starts it.
  */
 function restingTurn(legs: readonly ReadonlyMap<number, FoldFaceTurn>[], k: number, face: number): FoldFaceTurn | null {
+  const resting = (turn: FoldFaceTurn, end: 'from' | 'to'): FoldFaceTurn => ({
+    hinge: turn.hinge,
+    from: turn[end],
+    to: turn[end],
+    ...(turn.carried ? { carried: { from: turn.carried[end], to: turn.carried[end] } } : {}),
+  });
   for (let j = k - 1; j >= 0; j -= 1) {
     const turn = legs[j]!.get(face);
-    if (turn) return { hinge: turn.hinge, from: turn.to, to: turn.to };
+    if (turn) return resting(turn, 'to');
   }
   for (let j = k + 1; j < legs.length; j += 1) {
     const turn = legs[j]!.get(face);
-    if (turn) return { hinge: turn.hinge, from: turn.from, to: turn.from };
+    if (turn) return resting(turn, 'from');
   }
   return null;
 }
@@ -521,7 +575,7 @@ export function poseLegs(motion: FoldLegsMotion, index: number, share: number): 
     if (!turn) return null;
     let pose = poses.get(turn);
     if (!pose) {
-      pose = facePose(turn.hinge, turn.from + t * (turn.to - turn.from));
+      pose = facePose(turn, t);
       poses.set(turn, pose);
     }
     return pose;
@@ -572,22 +626,45 @@ interface FacePose {
   readonly moved: boolean;
 }
 
-/** Whether paper turned to `angle` about `hinge` shows the other side than it lands showing: edge-on counts as turned. */
-function flippedAt(hinge: FoldPosedHinge, angle: number): boolean {
-  // The footprint's orientation against the landed one's is −cos θ · det(then).
-  return shownFace(Math.cos(angle) * hinge.kept) > 0;
-}
-
-function facePose(hinge: FoldPosedHinge, angle: number): FacePose {
-  const tilt = Math.cos(angle);
-  const map = composeAffine(hinge.toScene, composeAffine(swingAffine(hinge.n, hinge.d, 1 - tilt), hinge.start));
-  const flipped = flippedAt(hinge, angle);
+/** A turn `share` of the way through its leg: how it places its faces, and what the stacking needs to know of it. */
+function facePose(turn: FoldFaceTurn, share: number): FacePose {
+  const { hinge } = turn;
+  const angle = turn.from + share * (turn.to - turn.from);
+  const carried = hinge.carrier && turn.carried ? turn.carried.from + share * (turn.carried.to - turn.carried.from) : null;
+  const { swing, tilt } = swungAt(hinge, angle, carried);
+  const map = composeAffine(hinge.toScene, composeAffine(swing, hinge.start));
+  // Showing the other side than it lands showing; edge-on counts as turned.
+  const flipped = shownFace(tilt * hinge.kept) > 0;
+  const atRest = (turned: number | null) => turned === null || Math.abs(Math.abs(turned) - Math.PI) < 1e-12;
   return {
     how: { point: (p) => applyAffine(map, p), flip: flipped, lighting: tiltLighting(tilt) },
     hinge,
     flipped,
-    moved: !(hinge.lands && Math.abs(Math.abs(angle) - Math.PI) < 1e-12),
+    moved: !(hinge.lands && atRest(angle) && atRest(carried)),
   };
+}
+
+/**
+ * Where paper swung to `angle` about `hinge` — and its carrier to `carried` —
+ * lies seen from above, as a map of the points where the turns start it, and
+ * how far it tilts: its normal's height, 1 where it started.
+ *
+ * About one hinge, a point `u` from the axis is pulled `u (1 − cos θ)` toward
+ * it, and lifted `u sin θ`. A carrier then turns that point, height and all,
+ * about its own axis: the pull across it again, and the height swung into
+ * the plane — `−sin φ sin θ u` along the carrier's normal.
+ */
+function swungAt(hinge: FoldPosedHinge, angle: number, carried: number | null): { swing: SceneAffine; tilt: number } {
+  const own = swingAffine(hinge.n, hinge.d, 1 - Math.cos(angle));
+  const carrier = hinge.carrier;
+  if (!carrier || carried === null) return { swing: own, tilt: Math.cos(angle) };
+  const k = Math.sin(carried) * Math.sin(angle);
+  const [nx, ny] = hinge.n;
+  const [cx, cy] = carrier.n;
+  const lifted: SceneAffine = [-k * cx * nx, -k * cy * nx, -k * cx * ny, -k * cy * ny, k * hinge.d * cx, k * hinge.d * cy];
+  const swing = addAffine(composeAffine(swingAffine(carrier.n, carrier.d, 1 - Math.cos(carried)), own), lifted);
+  const tilt = Math.cos(angle) * Math.cos(carried) - k * (nx * cx + ny * cy);
+  return { swing, tilt };
 }
 
 /** The turn step at `angle`: 0 the before scene, π the after scene. */
@@ -750,6 +827,11 @@ export function composeAffine(outer: SceneAffine, inner: SceneAffine): SceneAffi
   const [a, b, c, d, e, f] = outer;
   const [p, q, r, s, t, u] = inner;
   return [a * p + c * q, b * p + d * q, a * r + c * s, b * r + d * s, a * t + c * u + e, b * t + d * u + f];
+}
+
+/** The two maps' sum, point by point: `a(p) + b(p)`. */
+function addAffine(a: SceneAffine, b: SceneAffine): SceneAffine {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3], a[4] + b[4], a[5] + b[5]];
 }
 
 /** The map undone, or null when it flattens the plane. */
