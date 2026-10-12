@@ -8,6 +8,11 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* No rule under it: the last row of a section that draws its own (`divider`). */
+.row[data-divider='none'] {
+  border-bottom: 0;
+}
+
 .label {
   color: var(--text-secondary);
   font-size: 0.74rem;
@@ -31,6 +36,13 @@
   border-color: var(--accent-primary);
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+}
+
+/* Sized to its text (`fitContent`): from the field's least height up to a
+   cap, then it scrolls. Where `field-sizing` is unknown the rows hold. */
+.row[data-fit] .field {
+  field-sizing: content;
+  max-height: 40vh;
 }
 
 .field::placeholder {

@@ -45,6 +45,8 @@ export function TextAreaRow({
   maxLength,
   idleMs = 600,
   singleLine = false,
+  divider = true,
+  fitContent = false,
   fieldRef,
   onCommit,
 }: {
@@ -68,6 +70,18 @@ export function TextAreaRow({
    * as Escape does, and a line break pasted in is a space.
    */
   singleLine?: boolean;
+  /**
+   * A rule under the row, as `FieldRow`'s: off for the last row of a section
+   * that draws its own, where two would stack.
+   */
+  divider?: boolean;
+  /**
+   * The field grows with its text, from its least height up to a cap, and
+   * scrolls past that: for prose read as often as written, which a few rows
+   * would cut off. A browser that cannot size a field to its text keeps
+   * `rows`.
+   */
+  fitContent?: boolean;
   /** The field itself, for a caller that puts the focus in it. */
   fieldRef?: Ref<HTMLTextAreaElement>;
   onCommit: (value: string, session: number) => void;
@@ -110,7 +124,13 @@ export function TextAreaRow({
   };
 
   return (
-    <div className={styles.row} data-disabled={disabled || undefined} title={title}>
+    <div
+      className={styles.row}
+      data-disabled={disabled || undefined}
+      data-divider={divider ? undefined : 'none'}
+      data-fit={fitContent || undefined}
+      title={title}
+    >
       <label className={labelHidden ? styles.labelHidden : styles.label} htmlFor={fieldId}>
         {label}
       </label>
