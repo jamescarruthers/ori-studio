@@ -41,6 +41,7 @@ import { DiagramBehindControls } from './DiagramBehindControls';
 import { DiagramCardMarksNotice } from './DiagramCardMarksNotice';
 import { DiagramColorSelect } from './DiagramColorSelect';
 import { DiagramDivisionsControls } from './DiagramDivisionsControls';
+import { DiagramLayerControls, DiagramLayerList, DiagramLayerRow } from './DiagramLayerList';
 import { DiagramLineTypeMark } from './DiagramLineTypeMark';
 import { DiagramPathNodeControls } from './DiagramPathNodeControls';
 import { DiagramTextStyleRows } from './DiagramTextStyleRows';
@@ -121,51 +122,30 @@ export function DiagramLayers({ step }: { step: DiagramStep }) {
           </Notice>
         </div>
       )}
-      {known.length === 0 && !frame ? (
-        <p className={styles.empty}>{t('panels:diagram.annotations.empty', 'Nothing drawn yet.')}</p>
-      ) : (
-        <ul className={styles.list} aria-label={t('panels:diagram.layers.list', 'Layers')}>
-          {frame && (
-            <li>
-              <FrameRow step={step} shape={frame.zoom.shape} selected={frameSelected} onSelect={annotations.select} />
-            </li>
-          )}
-          {known.map((annotation) => (
-            <li key={annotation.id}>
-              <button
-                type="button"
-                className={styles.row}
-                aria-pressed={annotation.id === selected?.id}
-                onClick={() => annotations.select(annotation.id === selected?.id ? null : annotation.id)}
-              >
-                {isSolidArrow(annotation) ? (
-                  <SolidArrowGlyph />
-                ) : annotation.kind === 'zoom' ? (
-                  <EnlargeGlyph shape={zoomShapeOf(annotation)} />
-                ) : (
-                  <DiagramAnnotationGlyph kind={annotation.kind} color={annotation.color} fill={annotation.fill} />
-                )}
-                <span className={styles.rowText}>
-                  <span className={styles.rowName}>
-                    {carriesText(annotation.kind) && annotation.text ? annotation.text : annotationLabel(t, annotation)}
-                  </span>
-                  {annotation.kind === 'zoom' && <AreaSubtitle area={annotation} />}
-                  {/* Under its name, as a subtitle is: beside it, the badge took the row's width and cut the name off. */}
-                  {outside?.has(annotation.id) && (
-                    <span className={styles.rowBadge}>
-                      <Badge tone="neutral">{t('panels:diagram.annotations.outsideFrame', 'Outside the enlarged frame')}</Badge>
-                    </span>
-                  )}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <DiagramLayerList
+        label={t('panels:diagram.layers.list', 'Layers')}
+        empty={known.length === 0 && !frame ? t('panels:diagram.annotations.empty', 'Nothing drawn yet.') : null}
+      >
+        {frame && (
+          <li>
+            <FrameRow step={step} shape={frame.zoom.shape} selected={frameSelected} onSelect={annotations.select} />
+          </li>
+        )}
+        {known.map((annotation) => (
+          <li key={annotation.id}>
+            <AnnotationRow
+              annotation={annotation}
+              selected={annotation.id === selected?.id}
+              outside={outside?.has(annotation.id) ?? false}
+              onSelect={annotations.select}
+            />
+          </li>
+        ))}
+      </DiagramLayerList>
       {frameSelected && (
-        <div className={styles.selected}>
+        <DiagramLayerControls>
           <DiagramZoomControls step={step} target={FRAME_TARGET} />
-        </div>
+        </DiagramLayerControls>
       )}
       {selected && <SelectedAnnotation step={step} annotation={selected} editable={editable} annotations={annotations} />}
     </div>
@@ -195,26 +175,57 @@ function FrameRow({
   // In the Step pane's words: the area changed, or was deleted (review fix 4).
   const area = useMemo(() => (diagram ? areaStatus(diagram, step.id) : null), [diagram, step.id]);
   return (
-    <button
-      type="button"
-      className={styles.row}
-      aria-pressed={selected}
-      data-zoom-frame-row=""
-      onClick={() => onSelect(selected ? null : ZOOM_FRAME_ID)}
-    >
-      <EnlargeGlyph shape={shape} />
-      <span className={styles.rowText}>
-        <span className={styles.rowName}>{t('panels:diagram.annotations.enlargedFrame', 'Enlarged frame')}</span>
-        <span className={styles.rowNote}>{frameSubtitle(t, area)}</span>
-      </span>
-    </button>
+    <DiagramLayerRow
+      glyph={<EnlargeGlyph shape={shape} />}
+      name={t('panels:diagram.annotations.enlargedFrame', 'Enlarged frame')}
+      note={frameSubtitle(t, area)}
+      pressed={selected}
+      onPress={() => onSelect(selected ? null : ZOOM_FRAME_ID)}
+      data={FRAME_ROW}
+    />
   );
 }
 
-/** Which steps an area was enlarged on, under its row's name. */
-function AreaSubtitle({ area }: { area: KnownDiagramAnnotation }) {
-  const subtitle = useAreaSubtitle(area);
-  return subtitle ? <span className={styles.rowNote}>{subtitle}</span> : null;
+const FRAME_ROW = { 'data-zoom-frame-row': '' } as const;
+
+/**
+ * A mark's row: its glyph, its text or its kind, and under it — for an
+ * enlarge area — which steps were enlarged from it, and a badge when it lies
+ * wholly outside an enlarged step's frame. Pressed again, it lets the mark go.
+ */
+function AnnotationRow({
+  annotation,
+  selected,
+  outside,
+  onSelect,
+}: {
+  annotation: KnownDiagramAnnotation;
+  selected: boolean;
+  outside: boolean;
+  onSelect: (id: string | null) => void;
+}) {
+  const { t } = useTranslation();
+  const subtitle = useAreaSubtitle(annotation.kind === 'zoom' ? annotation : null);
+  return (
+    <DiagramLayerRow
+      glyph={
+        isSolidArrow(annotation) ? (
+          <SolidArrowGlyph />
+        ) : annotation.kind === 'zoom' ? (
+          <EnlargeGlyph shape={zoomShapeOf(annotation)} />
+        ) : (
+          <DiagramAnnotationGlyph kind={annotation.kind} color={annotation.color} fill={annotation.fill} />
+        )
+      }
+      name={carriesText(annotation.kind) && annotation.text ? annotation.text : annotationLabel(t, annotation)}
+      note={subtitle || null}
+      badge={
+        outside ? <Badge tone="neutral">{t('panels:diagram.annotations.outsideFrame', 'Outside the enlarged frame')}</Badge> : null
+      }
+      pressed={selected}
+      onPress={() => onSelect(selected ? null : annotation.id)}
+    />
+  );
 }
 
 /** The selected annotation's own controls, by its kind, and Delete. */
@@ -249,7 +260,7 @@ function SelectedAnnotation({
   const style = useWorkspaceStore((state) => state.diagram?.style ?? DEFAULT_DIAGRAM_STYLE);
 
   return (
-    <div className={styles.selected}>
+    <DiagramLayerControls>
       {nodeActions.length > 0 && (
         <DiagramPathNodeControls
           actions={nodeActions}
@@ -474,6 +485,6 @@ function SelectedAnnotation({
             })}
         </span>
       </FieldRow>
-    </div>
+    </DiagramLayerControls>
   );
 }
