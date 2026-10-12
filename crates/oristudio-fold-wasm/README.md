@@ -179,6 +179,7 @@ Apache-2.0; nothing it reaches has an edge to `treemaker-core`.
 | With the vertex folds: squash, petal fold, rabbit ear, swivel (2026-10-09) | 2,162,136 B (2,111 KiB) | 862,907 B (843 KiB) |
 | Every Phase 11 family: with the compound motions' legs, the crimp and tuck, and the sinks (2026-10-11) | 2,697,550 B (2,634 KiB) | 1,064,672 B (1,040 KiB) |
 | With the vertex folds' pictures and the tuck listing's deadline (2026-10-11) | 2,711,257 B (2,648 KiB) | 1,072,623 B (1,047 KiB) |
+| Shipped at `94082c8d3`, the merge of the petal fold and swivel UI (2026-10-12) | 2,926,227 B (2,858 KiB) | 1,143,295 B (1,116 KiB) |
 
 The vertex folds add **245,476 B raw (+240 KiB), 93,958 B gzipped
 (+92 KiB)**: the staged motions, the fan scoring and the general pieces
@@ -200,6 +201,17 @@ The last row adds each vertex fold's picture (`action`, `step_action`: a
 squash's crease, arrow and push, a petal fold's H, a fan's crease from its
 center) and the tuck listing's reads of its deadline: **13,707 B raw
 (+13 KiB), 7,951 B gzipped (+8 KiB)**.
+
+The 2026-10-12 row is the bridge `npm run build:web` built at the merge of
+the petal fold and swivel UI, the same bytes as `dist/`'s hashed copy. That
+branch changed no Rust: the row measures what the engine and the bridge
+gained in the merges before it. These are the partial precreases and their
+crease marks, the crimp's two lines folding together, the rabbit ear's
+fourth crease as its ridge, the petal fold's hinge by its precrease or its
+two ends, the swivel by its edge, and the turn by an exact angle. Together
+they add **214,970 B raw (+210 KiB), 70,672 B gzipped (+69 KiB)** over the
+row before. That leaves the bridge **324,095 B (316 KiB) gzipped over the
+two budgets' 800 KiB sum**.
 
 The fourth row was the bridge that shipped when the budget was set. Rebuilt at `44005c2d9`, with the
 Fold workspace's UI merged, it is the same 1,879,638 B raw, and 752,480 B
