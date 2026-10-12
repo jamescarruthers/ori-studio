@@ -570,7 +570,7 @@ export interface DiagramPaperFaces {
    * order; empty for a face the kernel could not name on the paper.
    */
   rings: number[][];
-  /** Per face: the longest chain of faces stacked over it as the picture is seen (`layerLevels`); the greatest is backmost. */
+  /** Per face: the longest chain of display layers stacked over its own as the picture is seen (`layerLevels`); the greatest is backmost. */
   levels: number[];
 }
 
