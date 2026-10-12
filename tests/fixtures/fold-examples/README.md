@@ -55,7 +55,9 @@ commits the fold the window previews; the window's own button does the same.
 The swivel folds the flat square about a point placed by hand. This is
 Beloch's swivel rabbit ear (research §5.3): a rabbit ear whose creases need
 not bisect anything. You give the point and three creases, and the fourth is
-any of the creases that let the paper lie flat. The file has three branches
+one of the creases that let the paper lie flat. As in a rabbit ear, the
+fourth crease folds the other way from the three, and it must lie across
+from the paper that stays put, never beside it. The file has three branches
 from the sheet, one per fourth crease. With step 1 on screen, switch between
 them with the ↑ and ↓ beside "Branch 3 of 3" (the file opens on the last)
 under the strip.
@@ -65,15 +67,20 @@ under the strip.
   point where the creases meet. The point must be off every crease, which is
   why it is placed with Option rather than snapped. Click the right edge's
   midpoint, the left edge's midpoint and the bottom edge's midpoint. Then
-  click the upper left of the paper, the part that stays put. The window
+  click the lower left of the paper, the part that stays put. The window
   shows Fourth crease **1 of 3**, straight up the middle. Press Enter. The
-  paper folds in half while its bottom swivels.
-- **Branch 2.** Click card 0, then make the same five clicks. Step **Fourth
-  crease** with its › button to **2 of 3**, toward the lower left: a rabbit
-  ear stands up, leaning left. Click the **Swivel fold** button. Enter would
-  press › again while › has the focus.
-- **Branch 3.** Make the same clicks and step to **3 of 3**, toward the
-  lower right. This is the mirror image.
+  upper half folds over along it while the bottom swivels.
+- **Branch 2.** Click card 0, then make the same four clicks, but click the
+  upper left of the paper as the part that stays put. Fourth crease 1 of 3
+  would lie beside that paper, so the window opens on **2 of 3**, toward the
+  lower left: a rabbit ear stands up, leaning left. Press Enter.
+- **Branch 3.** Make the same clicks as branch 2 and step **Fourth crease**
+  with its › button to **3 of 3**, toward the lower right. This is the
+  mirror image. Click the **Swivel fold** button. Enter would press › again
+  while › has the focus.
+
+No single paper that stays fits all three: each fourth crease lies beside one
+part of the paper, so branch 1 keeps a different part still.
 
 There are no precreases. A swivel's point must lie off every crease, so the
 tool cuts its four creases fresh and cannot refold precreases through its

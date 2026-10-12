@@ -5,12 +5,12 @@
   "createdBy": {
     "app": "Ori Studio",
     "version": "0.5.2",
-    "savedAt": "2026-10-12T02:22:30.158Z"
+    "savedAt": "2026-10-12T02:54:30.331Z"
   },
   "modifiedBy": {
     "app": "Ori Studio",
     "version": "0.5.2",
-    "savedAt": "2026-10-12T02:22:30.158Z"
+    "savedAt": "2026-10-12T02:54:30.331Z"
   },
   "workspace": {
     "id": "workspace",
@@ -22,7 +22,7 @@
     "foldSequences": [
       {
         "formatVersion": 1,
-        "id": "fold-7ecc4be5-12f9-49d6-ba58-aafc9e6232bf",
+        "id": "fold-067cb0b6-0dd7-4abc-a560-4846b1165bfe",
         "title": "Swivel fold",
         "paper": {
           "shape": {
@@ -32,13 +32,13 @@
         },
         "steps": [
           {
-            "id": "fstep-32c4b26b-568e-419d-b913-78adff9061c8",
+            "id": "fstep-9d43db0d-6cd8-47d7-b332-25d375f5417f",
             "parent": null,
             "op": {
               "kind": "swivel",
               "vertex": [
-                0.5000000000000001,
-                0.24999992665145698
+                0.4999999999999999,
+                0.25000003663574816
               ],
               "toward": [
                 [
@@ -55,29 +55,29 @@
                 ]
               ],
               "emergent": [
-                -8.269460797427576e-16,
+                6.123233995736766e-17,
                 1
               ],
               "seed": {
                 "scope": "all"
               },
               "stayer": [
-                0.25000001833713575,
-                0.8499999926651457
+                0.15000001465429919,
+                0.15000001465429932
               ],
               "direction": "valley"
             },
-            "expect": "fs1:b836d55de9738e7e",
-            "note": "Swivel fold tool. Hold Option (Alt on Windows and Linux) and click inside the paper halfway between the centre and the bottom edge: where the creases meet. Then click three landmarks the creases run to: the right edge’s midpoint, the left edge’s midpoint, the bottom edge’s midpoint. Click the upper left of the paper (it stays put). Fourth crease 1 of 3, straight up the middle, is the first that fits: the paper folds in half while its bottom swivels. Press Enter."
+            "expect": "fs1:4deaf1a2d9ce94fb",
+            "note": "Swivel fold tool. Hold Option (Alt on Windows and Linux) and click inside the paper halfway between the centre and the bottom edge: where the creases meet. Then click three landmarks the creases run to: the right edge’s midpoint, the left edge’s midpoint, the bottom edge’s midpoint. Click the lower left of the paper (it stays put). Fourth crease 1 of 3, straight up the middle, is the first that fits: the upper half folds over along it while the bottom swivels. Press Enter."
           },
           {
-            "id": "fstep-dfca59aa-96db-4c6b-96ff-0cd36a2d215e",
+            "id": "fstep-87103f79-8f00-4ecf-8cda-89e7eaf29d16",
             "parent": null,
             "op": {
               "kind": "swivel",
               "vertex": [
-                0.5000000000000001,
-                0.24999992665145698
+                0.4999999999999999,
+                0.25000003663574816
               ],
               "toward": [
                 [
@@ -94,64 +94,29 @@
                 ]
               ],
               "emergent": [
-                -0.8000001408291728,
-                -0.5999998122277237
+                -0.7999999296593563,
+                -0.6000000937875135
               ],
               "seed": {
                 "scope": "all"
               },
               "stayer": [
-                0.25000001833713575,
-                0.8499999926651457
+                0.250000036635748,
+                0.8499999853457009
               ],
               "direction": "valley"
             },
-            "choices": {
-              "completion": {
-                "faces": [
-                  [
-                    0.38888886715598925,
-                    0.08333330888381896
-                  ],
-                  [
-                    0.7777777886442296,
-                    0.19444443086138197
-                  ],
-                  [
-                    0.1746031668414268,
-                    0.22619046571211118
-                  ]
-                ],
-                "orders": [
-                  [
-                    0,
-                    1,
-                    -1
-                  ],
-                  [
-                    2,
-                    1,
-                    -1
-                  ],
-                  [
-                    2,
-                    0,
-                    1
-                  ]
-                ]
-              }
-            },
-            "expect": "fs1:e81d29ec3ba6d4cb",
-            "note": "Swivel fold, the same five clicks from the flat sheet (click the sheet’s card, 0, first: a new branch). In the window, step Fourth crease with its › button to 2 of 3, down to the lower left: a rabbit ear stands up, leaning left. Layer order 1 of 2. Click the Swivel fold button (Enter would press › again while it has the focus)."
+            "expect": "fs1:02e7019fada46da8",
+            "note": "Swivel fold, from the flat sheet (click the sheet’s card, 0, first: a new branch). The same four clicks, then click the upper left of the paper as the part that stays put. Fourth crease 1 of 3 would lie beside that paper, so the window opens on 2 of 3, down to the lower left: a rabbit ear stands up, leaning left. Press Enter."
           },
           {
-            "id": "fstep-8f7ee629-9e93-4f28-902b-7772584e4fbc",
+            "id": "fstep-30efd364-f376-4e3e-b94b-b277a265a068",
             "parent": null,
             "op": {
               "kind": "swivel",
               "vertex": [
-                0.5000000000000001,
-                0.24999992665145698
+                0.4999999999999999,
+                0.25000003663574816
               ],
               "toward": [
                 [
@@ -168,55 +133,20 @@
                 ]
               ],
               "emergent": [
-                0.8000001408291716,
-                -0.5999998122277254
+                0.7999999296593561,
+                -0.6000000937875138
               ],
               "seed": {
                 "scope": "all"
               },
               "stayer": [
-                0.25000001833713575,
-                0.8499999926651457
+                0.250000036635748,
+                0.8499999853457009
               ],
               "direction": "valley"
             },
-            "choices": {
-              "completion": {
-                "faces": [
-                  [
-                    0.6111111328440104,
-                    0.08333330888381896
-                  ],
-                  [
-                    0.8253968331585733,
-                    0.22619046571211104
-                  ],
-                  [
-                    0.22222221135577042,
-                    0.19444443086138197
-                  ]
-                ],
-                "orders": [
-                  [
-                    0,
-                    1,
-                    -1
-                  ],
-                  [
-                    2,
-                    1,
-                    -1
-                  ],
-                  [
-                    2,
-                    0,
-                    1
-                  ]
-                ]
-              }
-            },
-            "expect": "fs1:b5164c4c9df2490f",
-            "note": "Swivel fold, the same five clicks from the flat sheet (click the sheet’s card, 0, first: a new branch). In the window, step Fourth crease with its › button to 3 of 3, down to the lower right: the mirror image, leaning right. Layer order 1 of 2. Click the Swivel fold button (Enter would press › again while it has the focus)."
+            "expect": "fs1:0b1f089966d15ae6",
+            "note": "Swivel fold, the same five clicks as the second branch, from the flat sheet (card 0 first). In the window, step Fourth crease with its › button to 3 of 3, down to the lower right: the mirror image, leaning right. Click the Swivel fold button (Enter would press › again while it has the focus)."
           }
         ]
       }
@@ -224,10 +154,10 @@
     "viewState": {
       "fold": {
         "v": 1,
-        "sequenceId": "fold-7ecc4be5-12f9-49d6-ba58-aafc9e6232bf",
-        "cursor": "fstep-8f7ee629-9e93-4f28-902b-7772584e4fbc",
+        "sequenceId": "fold-067cb0b6-0dd7-4abc-a560-4846b1165bfe",
+        "cursor": "fstep-30efd364-f376-4e3e-b94b-b277a265a068",
         "activeChild": {
-          "": "fstep-8f7ee629-9e93-4f28-902b-7772584e4fbc"
+          "": "fstep-30efd364-f376-4e3e-b94b-b277a265a068"
         }
       }
     }
