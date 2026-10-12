@@ -38,8 +38,10 @@ build must look like it at its defaults.
 2. **Structure** (what the signature covers): the page's steps in order, the
    turns before each, its index, side, whether it hands over at its spine,
    whether it is the last page, its capacity (per-page count or default), the
-   page setup's geometry (size, orientation, margin, title shown, page numbers
-   shown), the packing parameters, and an algorithm version tag. **Not**
+   diagram's steps per page (the cell every reference scale is found in; added
+   with F2), the page setup's geometry (size, orientation, margin, title
+   shown, page numbers shown), the packing parameters, and an algorithm
+   version tag. **Not**
    covered: pictures, captions, annotations, hand placements, path width and
    colour, style.
 3. **Held means held.** A held step draws at its stored printed scale
@@ -79,9 +81,13 @@ capacity with invisible stand-ins: cyclic copies of its own steps, as the
 prototype does; only real steps are kept):
 
 - **Reference size.** Each step's picture at its reference scale: the scale
-  Fit each gives it in today's cell layout at that page's count (the existing
-  `scaleRuns`/`zoomScales` path), measured with its marks. The page scale `k`
-  multiplies every reference scale on the page.
+  Fit each gives it (the existing `scaleRuns`/`zoomScales` path) with every
+  step of the diagram in one cell, the cell a page of the diagram's steps per
+  page is cut into under `flowShape`'s largest-picture rule (`pageGrid`),
+  measured with its marks. Never its own page's cell: a page's side, its
+  spine, its own count and the odd rows a left page that hands over takes size
+  no picture (F2, below). The page scale `k` multiplies every reference scale
+  on the page, so steadiness on `k` is steadiness of printed size.
 - **A step's box at `k`:** number at the top left; picture below it (5 mm);
   caption under the picture, wrapped at `round(clamp(pictureWidth, 28, 50))`
   mm with the layout's text setter; box width `max(pictureWidth + 4, caption
@@ -218,7 +224,8 @@ Phase 3 (layout, 2026-10-12):
   was packed by this layout, and whether every box fits its area (false only
   for the least-scale fallback); cells carry `band`, `bend` and `overflow`.
 - Reference scales come from the page cut into cells as a grid's are, at the
-  page's own plan: Fit each's drawn scale (a picture its caption shrank,
+  page's own plan (replaced by F2: one cell for the whole diagram): Fit
+  each's drawn scale (a picture its caption shrank,
   shrunk) before any pin, an enlarged step's its run's. The flow's step-down,
   the caption gap over the next row and the room kept for turns at a row's
   end are gone, so these cells are a grid's exactly. Each picture is measured
@@ -453,9 +460,57 @@ change an earlier phase's note, this section is what holds:
 - Analytics docs (UI-4, UI-5): Re-pack All Pages from the context menu, and a
   re-pack that changes nothing still counts.
 - Left for Zach: reference scales cut per page, so spine parity changes
-  picture sizes between pages (F2), and a newer build's arrangement packed
-  afresh in every session here (hold-3, the documented forward-compatibility
-  trade-off).
+  picture sizes between pages (F2, since decided and built: below), and a
+  newer build's arrangement packed afresh in every session here (hold-3, the
+  documented forward-compatibility trade-off).
+
+F2, one reference cell (2026-10-12, Zach's call). Where this changes an
+earlier note, this holds:
+
+- Every flow step's reference scale is Fit each's with the whole diagram in
+  one cell, the one a page of its steps per page is cut into (`pageGrid`:
+  `flowShape` at the default count, no odd rows), not its own page's
+  (`layoutDiagramPages`, `referenceCut`). Packing multiplies it by each
+  page's `k` as before; nothing else in the packer changed. An empty step's
+  box and an enlarged run's Fill are measured in the same cell.
+- The signature reads the diagram's steps per page too: a page of its own
+  count no longer takes its cell from that count, but from the default, so
+  changing the default re-packs it. `PACKING_VERSION` is `pack-3`, so pages
+  stored by `pack-2` are packed afresh once (their placed frames go home).
+- Tests: the chipmunk at A4 landscape, seven a page, with page 1 on either
+  side (`diagramPageLayout.test.ts`): every step's reference is the same
+  from both sides (it was 0.68 times as large on the left before), and the
+  page turn inside one Fit each run (14 → 15) prints within a zoom. A
+  signature test for the default on pages that all have their own counts.
+  Goldens: seven flow pages moved, each one whose own rows were not the
+  default's ("flow from the right" pages 2–3; every page of "pages with their
+  own counts"); rasterised beside the old pages and checked by eye; grid
+  digests unchanged.
+- Measured (`artifacts/layout-review/f2-matrix.mjs`, the four diagrams × 7,
+  9, 10, 13, 16 a page × A4 portrait, A4 landscape, Letter × either first
+  side, fresh packs): page turns whose reference differs between the two
+  sides, 19 → 0; printed jumps of a zoom or more at a page turn, 27 → 26,
+  the largest ×3.14 → ×2.20, the mean |ln| 0.200 → 0.185. Of the 26, 21 are
+  Fit each's own zooms (the model shrinking or growing at that step, now the
+  same whichever side), and 5 are a page scale falling on a page that hands
+  over at its spine. The chipmunk's 7 → 8 (A4 landscape, seven a page) is
+  ×1.89 with page 1 on the left and ×1.22 on the right (was ×3.14 and
+  ×0.99): Fit each zooms in ×1.74 at step 8, where the model narrows from 400
+  units to 237, times each side's change of `k`. No fresh overflow, no unfit
+  page, no lane corner across the 120.
+- What it shows Zach (open): steadiness caps `k` only upward, so a page that
+  cannot be packed large now holds every page after it down — the chipmunk
+  above with page 1 on the left prints at `k` 0.50, 0.55, 0.59 (pages 2–3
+  at 0.098 and 0.079 mm a unit, where they printed 0.157 and 0.126) — and a
+  page after a large one may still drop (the crane, A4 landscape, nine a
+  page, page 1 on the right: 9 → 10 ×0.45, `k` 1.36 → 0.62). A page of fewer
+  steps than the default is held to 1.4 times the default's cell (the
+  own-counts fixture: 54 mm frames, where it printed 59–63). And
+  `flowLane.test.ts`'s tangent check fails on one synthetic case the new
+  packing reaches (A5, seven a page, page 1 on the right, page 2): a step in
+  a bend whose band neighbour dips to 0.69 mm of its level, so the lane turns
+  into it through a quarter circle that small (a corner); a lane or packing
+  rule for Zach, not changed here.
 
 ## Affected Areas
 
@@ -507,4 +562,6 @@ change an earlier phase's note, this section is what holds:
 - [x] F5: an unfit page drawn as large as its overflow allows (the steps-per-page cap left to Zach).
 - [x] F1: glyphs beside a bend step clear of every step.
 - [x] UI-1 … UI-5: Re-pack keeps focus; Steps view warning; touch targets; analytics docs.
-- [ ] F2 and hold-3: design calls for Zach.
+- [x] F2: every step's reference scale from the diagram's one cell; the default steps per page in the signature; `pack-3`.
+- [ ] hold-3: a design call for Zach.
+- [ ] After F2, for Zach: steadiness only upward (a small page holds later pages down); a page below the default count held to 1.4× its cell; the lane's corner at a bend step with a level neighbour (`flowLane.test.ts`, A5 at seven a page).

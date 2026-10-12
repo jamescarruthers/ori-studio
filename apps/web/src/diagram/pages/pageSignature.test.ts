@@ -120,6 +120,13 @@ describe('pageSignature', () => {
       expect(changed(before, setPageSetup(before, { stepsPerPage: 6 }))).toEqual([0, 1, 2]);
     });
 
+    it('the diagram’s steps per page on a page of its own count too: the cell every step’s reference scale is found in', () => {
+      const counted = setPageStarts(diagram(), new Map(['s0', 's5', 's10'].map((id) => [id, { pageSteps: 5 }])));
+      // Every page holds five by its own count, so the default neither places a step nor is any page's capacity;
+      // it still sizes every picture.
+      expect(changed(counted, setPageSetup(counted, { stepsPerPage: 6 }))).toEqual([0, 1, 2]);
+    });
+
     it('whether it is the last page, and whether it hands over at its spine', () => {
       // Ten steps fill two pages; an eleventh starts a third, after which page two is no longer the last.
       const ten = setPageSetup(insertSteps(createDiagram({ title: 'Crane' }), Array.from({ length: 10 }, (_, index) => cpStep(`s${index}`)), 0), {

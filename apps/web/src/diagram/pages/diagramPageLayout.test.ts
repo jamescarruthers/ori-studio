@@ -274,6 +274,68 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     expect(wide!.drawMm.w / narrow!.drawMm.w).toBeCloseTo(2, 9);
   });
 
+  it('finds every step’s reference scale in the diagram’s one cell, whichever side page 1 falls on, so a page turn changes a picture’s size only by its page’s scale and Fit each’s zooms', () => {
+    // The chipmunk (`artifacts/layout-review/chipmunk.osf`) as the layout reads it at a card's measure: each
+    // picture's extent and frame in units, its marks' reach in mm, its caption, and the turn before step 12.
+    const CHIPMUNK: readonly (readonly [number, number, number, number, number, number, string])[] = [
+      [400, 400, 400, 400, 0.26, 0.26, 'Fold diagonals and unfold'],
+      [400, 400, 400, 400, 0.26, 0.26, 'Mark on the center line by folding the top corner to the center point'],
+      [400, 400, 400, 400, 0.26, 0.26, 'Mark on the center line by folding the bottom corner to the mark made in step 2'],
+      [400, 400, 400, 400, 0.26, 0.26, ''],
+      [400, 400, 400, 400, 0.26, 0.26, ''],
+      [400, 400, 400, 400, 0.26, 0.26, ''],
+      [438.77, 522.52, 400, 400, 0.23, 0.23, 'Valley fold the flaps inward. Note that the top of each crease does not line up with the top corner of the paper'],
+      [237.5, 408.88, 237.5, 400, 0.26, 0.26, ''],
+      [237.5, 200, 237.5, 202.02, 0.26, 1.32, ''],
+      [168.33, 281.23, 168.33, 281.23, 0.26, 0.26, ''],
+      [168.33, 401.37, 168.33, 401.37, 0.26, 0.26, ''],
+      [168.33, 401.37, 168.33, 401.37, 0.26, 0.26, ''],
+      [233.86, 296.21, 170.19, 257.46, 0.23, 0.23, 'Unfold everything'],
+      [400, 400, 400, 400, 1.32, 0.26, 'Fold in half.'],
+      [400, 270.74, 400, 200, 0.26, 0.17, 'Fold at the existing crease line. Model will not lie flat.'],
+    ];
+    const chipmunk = CHIPMUNK.map(([width, height, frameW, frameH, marksW, marksH, text], index) =>
+      step(index, {
+        text,
+        picture: { kind: 'paper', width, height, frame: { width: frameW, height: frameH }, marks: { width: marksW, height: marksH } },
+        turnsBefore: index === 11 ? [{ id: 'turn-11', turn: { kind: 'turn-over', axis: 'vertical' } }] : [],
+      })
+    );
+    // The review's case (F2): A4 on its side, seven a page, page 1 on the left and on the right. Page 1 on the
+    // left hands over at its spine, so its own rows were odd and its references were cut from other cells than
+    // page 2's: step 7's reference was 0.6 times what it was with page 1 on the right, and steps 7 → 8 printed
+    // 3.14 times larger across the page turn, against 0.99 times.
+    const setup = { size: 'a4', orientation: 'landscape', stepsPerPage: 7 } as const;
+    const [left, right] = (['left', 'right'] as const).map((firstPageSide) => flowLayout(chipmunk, { ...setup, firstPageSide }));
+    /** Each step's printed scale, and its reference: that over its page's scale. */
+    const scalesOf = (result: DiagramPagesLayout) =>
+      new Map(
+        result.pages.flatMap((page) =>
+          page.cells.map((cell) => [cell.stepId, { printed: cell.mmPerUnit!, reference: cell.mmPerUnit! / page.packing!.k }] as const)
+        )
+      );
+    const [fromLeft, fromRight] = [scalesOf(left!), scalesOf(right!)];
+    expect(fromLeft.size).toBe(15);
+    // Whichever side page 1 falls on, every step's reference is the same (to the six figures a page keeps): the
+    // two sides print each picture alike but for their pages' scales.
+    for (const [id, { reference }] of fromLeft) expect(reference / fromRight.get(id)!.reference, id).toBeCloseTo(1, 4);
+    // Across a page turn, two steps of one Fit each run (one reference) print within a zoom of each other, the
+    // page scale's steadiness now the printed size's. Steps 7 → 8 are not one run: Fit each zooms in at step 8,
+    // where the model narrows from 400 units to 237, on whichever page the step falls.
+    for (const result of [left!, right!]) {
+      expect(result.pages.length).toBe(3);
+      const turns = result.pages.slice(1).map((page, index) => [result.pages[index]!.cells.at(-1)!, page.cells[0]!] as const);
+      const inOneRun = turns.filter(
+        ([before, after]) => Math.abs(fromLeft.get(after.stepId)!.reference / fromLeft.get(before.stepId)!.reference - 1) < 1e-4
+      );
+      expect(inOneRun.map(([before, after]) => `${before.number} → ${after.number}`)).toEqual(['14 → 15']);
+      for (const [before, after] of inOneRun) {
+        const change = after.mmPerUnit! / before.mmPerUnit!;
+        expect(Math.max(change, 1 / change), `${before.number} → ${after.number}`).toBeLessThan(FIT_ZOOM);
+      }
+    }
+  });
+
   it('packs the automatic last page for its count, its few steps in the first places, room left under them', () => {
     // Step 10 starts a page of four, which fills its page; the four left over are packed for the default nine.
     const result = flowLayout(steps(17, (index) => (index === 9 ? { pageSteps: 4 } : {})));

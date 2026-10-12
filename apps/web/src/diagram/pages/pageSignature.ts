@@ -11,11 +11,13 @@
  * step too) and which of them are enlarged steps after another step, whose
  * enlarge arrow may print before them — each keeps a gutter
  * ({@link keepsGlyphGutter}) — its index, side, whether it hands over at its
- * spine, whether it is the last page, its capacity, the page setup's geometry
- * (size, orientation, margin, the title tab shown, page numbers shown), the
- * five packing settings, and {@link PACKING_VERSION}. Never a picture, a
- * caption, a mark, a hand placement, the band's width or colour, or the
- * style: an edit of those keeps every page as it is packed. Whether an
+ * spine, whether it is the last page, its capacity, the diagram's steps per
+ * page (the one cell every step's reference scale is found in), the page
+ * setup's geometry (size, orientation, margin, the title tab shown, page
+ * numbers shown), the five packing settings, and {@link PACKING_VERSION}.
+ * Never a picture, a caption, a mark, a hand placement, the band's width or
+ * colour, or the style: an edit of those keeps every page as it is packed.
+ * Whether an
  * enlarge arrow prints is one of those — it needs the enlarged step's picture
  * and an area on the step before — so it never counts: its gutter is kept
  * either way, and an arrow that comes or goes is drawn in it.
@@ -35,9 +37,10 @@ import type { PaginatedStep, PlannedPage } from './pagePlan';
  * way changes it, and every page stored by the old way is packed afresh.
  * `pack-2` (the review fixes): boxes grown to hold their pictures as they
  * print, no step in a bend with only stand-ins after it, and a page no plan
- * fits drawn as large as its overflow allows.
+ * fits drawn as large as its overflow allows. `pack-3` (F2): every step's
+ * reference scale found in the diagram's one cell, never its own page's.
  */
-export const PACKING_VERSION = 'pack-2';
+export const PACKING_VERSION = 'pack-3';
 
 /**
  * What a page's signature reads of a step: what paginates it, how many turns
@@ -86,7 +89,7 @@ export function titleShown(setup: Pick<DiagramPageSetup, 'showTitle'>, title: st
   return setup.showTitle && title.trim() !== '';
 }
 
-/** The signature of the `pageIndex`th page: `pack-1:` and a digest of its structure. */
+/** The signature of the `pageIndex`th page: {@link PACKING_VERSION}, a colon and a digest of its structure. */
 export function pageSignature(input: PageSignatureInput, pageIndex: number): string {
   const { steps, pages, setup, title } = input;
   const page = pages[pageIndex];
@@ -101,6 +104,8 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
     plan.exit === 'spine',
     last,
     page.capacity,
+    // The cell every step's reference scale is found in, a page of its own count's too.
+    setup.stepsPerPage,
     setup.size,
     setup.orientation,
     setup.marginMm,

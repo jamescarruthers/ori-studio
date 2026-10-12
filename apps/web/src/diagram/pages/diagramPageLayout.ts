@@ -23,9 +23,10 @@
  * model has grown much smaller, or out where it has grown for good. A picture
  * in a cell whose box gave room to text, and no longer fits there at its
  * run's scale, is drawn smaller, alone. Pictures with no paper — uploads, 3D
- * captures — keep one size of frame the same way. On a flow page these are
- * its pictures' reference scales, found in the page cut into cells as a grid
- * page is, which its packing multiplies by one page scale.
+ * captures — keep one size of frame the same way. In the flow these are the
+ * pictures' reference scales, every step's found in one cell, the one a page
+ * of the diagram's steps per page is cut into ({@link pageGrid}), which each
+ * page's packing multiplies by its one page scale.
  *
  * Which steps go on which page are the page plan's (`pagePlan.ts`,
  * {@link paginate}). A grid page is cut into its columns × rows, and a row of
@@ -527,9 +528,9 @@ export interface DiagramPagesLayout {
   paper: PrintPaper;
   pages: LayoutPage[];
   /**
-   * The first page's cells: every grid page's. A flow page's cells are cut
-   * from its own plan only to find its pictures' reference scales, and each
-   * step carries its own box.
+   * The first page's cells: every grid page's. In the flow, the one cell
+   * every step finds its reference scale in ({@link pageGrid}); each step
+   * carries its own box.
    */
   cellMm: { w: number; h: number };
   /**
@@ -555,9 +556,10 @@ export interface DiagramPagesLayout {
 /**
  * The columns and rows a full page is cut into under a setup: a grid's own; a
  * flow page of its default steps per page, {@link flowShape}'s on the paper
- * inside its margins. Each page's own rows are its plan's (`pagePlan.ts`,
- * {@link paginate}): a flow page holds its own number of steps, and a left
- * page that hands over at its spine takes an odd number of rows.
+ * inside its margins — the one cell every flow step finds its reference scale
+ * in, whatever page it is on. A flow page's own rows are its plan's
+ * (`pagePlan.ts`, {@link paginate}), which hold its own number of steps, odd
+ * on a left page that hands over at its spine; no picture's size reads them.
  *
  * Read from the setup alone, never the title, and never less the header and
  * the footer: typing a title or turning page numbers on never re-cuts a page
@@ -581,20 +583,24 @@ function rowSlots(page: PlannedPage): RowSlot[] {
 }
 
 /**
- * How a page is cut (D10): its plan, each cell as tall as the page inside its
- * margins, less the header and the footer, over the plan's rows, and as wide
- * as the paper inside its margins over its longest row; a picture's room
- * across it, the cell less the gutter between pictures; the square box, the
- * lesser of that and the cell's {@link PICTURE_HEIGHT_SHARE}; and the
- * instruction's width, as the mockup sets it.
+ * A cell of a page cut into columns × rows (D10): as tall as the page inside
+ * its margins, less the header and the footer, over the rows, and as wide as
+ * the paper inside its margins over the columns; a picture's room across it,
+ * the cell less the gutter between pictures; the square box, the lesser of
+ * that and the cell's {@link PICTURE_HEIGHT_SHARE}; and the instruction's
+ * width, as the mockup sets it.
  */
-interface PageCut {
-  page: PlannedPage;
+interface CellCut {
   cellW: number;
   cellH: number;
   roomW: number;
   fullBox: number;
   textWidth: number;
+}
+
+/** How a page is cut: its plan and its places in its rows, and its cells — a grid's by its plan, every flow page's the diagram's one reference cell. */
+interface PageCut extends CellCut {
+  page: PlannedPage;
   slots: RowSlot[];
 }
 
@@ -1045,8 +1051,9 @@ export function pictureExtent(picture: NonNullable<LayoutStep['picture']>, scale
  * at its kept scale in its kept box; else one packed now (`flowPacking.ts`),
  * which the layout hands back (`DiagramPagesLayout.packed`) for the store to
  * adopt. Packing reads each picture at its reference scale: the one Fit each
- * gives it in the page cut into cells as a grid would be, at the page's count
- * ({@link scaleRuns}).
+ * gives it with every step of the diagram in one cell, the cell a page of its
+ * steps per page is cut into ({@link pageGrid}, {@link scaleRuns}), whatever
+ * page it is on, so a page's side, spine or own count sizes no picture.
  */
 export function layoutDiagramPages(
   steps: readonly LayoutStep[],
@@ -1071,14 +1078,21 @@ export function layoutDiagramPages(
   const outerShortfall = turning ? Math.max(0, TURN_GUTTER_MM / 2 - m) : 0;
 
   const planned = paginate(steps, setup);
-  const cuts = planned.map((page): PageCut => {
-    const cellW = (W - 2 * m) / page.columns;
-    const cellH = (H - 2 * m - headH - footH) / page.rows;
+  const cutInto = ({ columns, rows }: { columns: number; rows: number }): CellCut => {
+    const cellW = (W - 2 * m) / columns;
+    const cellH = (H - 2 * m - headH - footH) / rows;
     // A picture's room across the cell: the cell less the gutter between pictures.
     const roomW = Math.max(12, cellW - (turning ? TURN_GUTTER_MM : PICTURE_SIDE_ROOM_MM) - 2 * outerShortfall);
     const fullBox = Math.max(12, Math.min(roomW, cellH * PICTURE_HEIGHT_SHARE));
-    return { page, cellW, cellH, roomW, fullBox, textWidth: cellW * 0.8, slots: rowSlots(page) };
-  });
+    return { cellW, cellH, roomW, fullBox, textWidth: cellW * 0.8 };
+  };
+  // A grid page is cut into its plan's cells. Every flow step finds its
+  // reference scale in one cell, the diagram's ({@link pageGrid}), never its
+  // own page's: a page's own rows turn on its side, its spine, its own count
+  // and the odd rows a left page that hands over takes, which a picture's size
+  // must not (`diagram-flow-packing.md`, Reference size).
+  const referenceCut = flow ? cutInto(pageGrid(setup)) : null;
+  const cuts = planned.map((page): PageCut => ({ ...(referenceCut ?? cutInto(page)), page, slots: rowSlots(page) }));
   const pagesOfSteps = planned.map((page) => page.steps.map((index) => ({ step: steps[index]!, index })));
   // Which way each page's rows run: in a grid, down and left to right; in a
   // flow, so that the lane carries on across each spread — every page's first
@@ -1090,12 +1104,12 @@ export function layoutDiagramPages(
   );
 
   // Each cell's box and text, before the scale is known: a grid page's, and
-  // the cells a flow page's pictures find their reference scales in.
+  // each flow step's in the one cell it finds its reference scale in.
   interface Placed {
     step: LayoutStep;
     index: number;
-    /** How its page is cut. */
-    cut: PageCut;
+    /** Its cell: its grid page's, or the flow's one reference cell. */
+    cut: CellCut;
     x: number;
     y: number;
     /** How far down the page the text's last line may sit. */
@@ -1110,6 +1124,8 @@ export function layoutDiagramPages(
    * full row's cells side by side, a shorter row's spread across the page.
    */
   const cellAt = (pageIndex: number, k: number) => {
+    // A flow step's reference cell: where on the page it stands changes nothing it measures.
+    if (referenceCut) return { x: m, y: m + headH };
     const { page, cellW, cellH, slots } = cuts[pageIndex]!;
     const { row, along, count } = slots[k]!;
     const x = count === page.columns ? m + along * cellW : m + ((along + 0.5) / count) * (W - 2 * m) - cellW / 2;
