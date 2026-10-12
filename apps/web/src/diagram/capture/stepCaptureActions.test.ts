@@ -140,6 +140,24 @@ describe('linkDiagramStep', () => {
       expect(asked(capture)).toMatchObject({ mode: 'folded-flat', side: 'front', rotationDeg: 0 });
     });
 
+    it('from a crease pattern turned over: turned over as a crease pattern; from an area on one, folded as its front lies', async () => {
+      const over = { mode: 'crease-pattern' as const, rotationDeg: 45, side: 'back' as const, flipCreases: true as const };
+      afterTurned(over);
+      const capture = answer(CAPTURED);
+      await linkDiagramStep('step-seeded', left!, 'crease-pattern');
+      expect(asked(capture)).toEqual(over);
+      const area = { id: 'area-head', kind: 'zoom' as const, from: [0.4, 0.3] as [number, number], to: [0.4, 0.3] as [number, number], radius: 0.1 };
+      useWorkspaceStore.setState({
+        diagram: insertSteps(createDiagram({ title: 'Crane' }), [
+          { ...cpStep('step-area', over), annotations: [area] },
+          { ...cpStep('step-own', undefined, null), source: null, zoom },
+        ], 0),
+      });
+      // The turn of the pattern before it was turned over: 315°, the crane's step 4.
+      await linkDiagramStep('step-own', left!, 'folded');
+      expect(asked(capture)).toMatchObject({ mode: 'folded-flat', side: 'front', rotationDeg: 315 });
+    });
+
     it('after an empty step seeded before it, in the turn of the step the run is enlarged from', async () => {
       afterTurned({ mode: 'folded-flat', side: 'front', rotationDeg: 158, foldCase: 2 }, 2);
       const capture = answer(CAPTURED);

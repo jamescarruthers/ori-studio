@@ -210,7 +210,7 @@ function describeLinked(source: DiagramCpSource, posed: boolean, t: TFunction): 
   switch (render.mode) {
     case 'crease-pattern':
       if (creasesFlipped(render)) {
-        return t('panels:diagram.picture.linkedCreasePatternFlipped', 'Crease pattern, back color, creases flipped');
+        return t('panels:diagram.picture.linkedCreasePatternFlipped', 'Crease pattern, turned over');
       }
       return render.side === 'back'
         ? t('panels:diagram.picture.linkedCreasePatternBack', 'Crease pattern, back color')

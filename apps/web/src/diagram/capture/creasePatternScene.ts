@@ -40,7 +40,11 @@ function lineRole(color: string, flipped: boolean): PaperLineRole {
 export interface CreasePatternPaper {
   /** The side whose colour the paper is filled with. */
   side?: 'front' | 'back';
-  /** Every mountain drawn as a valley and every valley as a mountain. */
+  /**
+   * The paper turned over side to side, as a real sheet is: mirrored about
+   * its vertical centre line before it is turned, and every mountain drawn
+   * as a valley and every valley as a mountain.
+   */
   flipped?: boolean;
 }
 
@@ -61,9 +65,16 @@ const ROLE_LAYER: Partial<Record<PaperLineRole, number>> = {
  * `back` the paper is filled with the style's back colour, and every line is
  * where the front draws it, its mountains and valleys as they are (Zach,
  * 2026-10-06: "just change the color of the face and not flip the creases").
- * `flipped` swaps the mountains and valleys alone (Flip creases, which the
- * render keeps for its back), every line where it was and drawn in the same
- * order; aux lines and the edge are as they are.
+ *
+ * `flipped` turns the paper over side to side, as a real sheet turns over
+ * (Flip creases, which the render keeps for its back; Zach, 2026-10-12: "it's
+ * like flipping the paper over for real"): mirrored about the vertical line
+ * through its centre, and then turned, so a pattern turned the other way —
+ * as Flip creases leaves it (`linkedPose`) — is the mirror of what it showed
+ * side to side, as it is drawn. Every mountain is drawn as a valley and every
+ * valley as a mountain; aux lines, the edge and the paper are mirrored with
+ * them, in the same order. A ring mirrored winds the other way, which no fill
+ * minds: one ring fills whichever way it winds, and several fill even-odd.
  */
 export function creasePatternScene(
   document: OristudioCpDocumentSnapshot,
@@ -76,8 +87,9 @@ export function creasePatternScene(
   const epsilon = Math.max(span, 1) * 1e-6;
   const centre = { x: (paperBox.minX + paperBox.maxX) / 2, y: (paperBox.minY + paperBox.maxY) / 2 };
   const turn = turnClockwise(rotationDeg);
+  const across = flipped ? -1 : 1;
   const toScene = (point: Point): ScenePoint => {
-    const turned = turn({ x: point.x - centre.x, y: point.y - centre.y });
+    const turned = turn({ x: across * (point.x - centre.x), y: point.y - centre.y });
     return [turned.x * CAPTURE_PX_PER_UNIT, turned.y * CAPTURE_PX_PER_UNIT];
   };
 

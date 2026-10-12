@@ -174,44 +174,103 @@ describe('a crease pattern on the paper’s back colour', () => {
     expect(sceneOf(pattern).items[0]).toMatchObject({ side: 'back' });
   });
 
-  // Zach, 2026-10-12: the pattern drawn from the front, its creases flipped for a step seen from the back.
-  describe('with its creases flipped', () => {
-    const FLIPPED: DiagramCpRender = { ...BACK, flipCreases: true };
+  // Zach, 2026-10-12: "the lines should also mirror... basically it's like flipping the paper over for real."
+  describe('turned over (Flip creases)', () => {
+    /** {@link BACK} turned over: its turn run the other way, as a flat fold's Turn Over runs it. */
+    const OVER: DiagramCpRender = { mode: 'crease-pattern', rotationDeg: 345, side: 'back', flipCreases: true };
+    type Scene = { bounds: { minX: number; minY: number; maxX: number; maxY: number }; items: SceneItem[] };
+    type SceneItem = { kind: string; role?: string; a?: [number, number]; b?: [number, number]; rings?: [number, number][][] };
     const roles = (result: Awaited<ReturnType<typeof pose>>) =>
-      (sceneOf(result).items as { kind: string; role?: string }[]).flatMap((item) => (item.kind === 'line' ? [item.role] : []));
+      (sceneOf(result).items as SceneItem[]).flatMap((item) => (item.kind === 'line' ? [item.role] : []));
+    /** Every point a scene draws, in its order. */
+    const pointsOf = (scene: Scene) =>
+      scene.items.flatMap((item) => (item.kind === 'line' ? [item.a!, item.b!] : item.rings!.flat()));
+    const expectNear = (point: readonly number[], expected: readonly number[]) => {
+      // Within two of a stored scene's steps: each picture rounds its points to one.
+      expect(Math.abs(point[0]! - expected[0]!)).toBeLessThanOrEqual(0.02);
+      expect(Math.abs(point[1]! - expected[1]!)).toBeLessThanOrEqual(0.02);
+    };
+    /** Whether `over` is `seen` mirrored side to side as it is shown: about its picture's vertical centre line. */
+    const expectMirrored = (seen: Scene, over: Scene) => {
+      const [was, now] = [pointsOf(seen), pointsOf(over)];
+      expect(now).toHaveLength(was.length);
+      now.forEach((point, index) => {
+        const [x, y] = was[index]!;
+        expectNear([point[0] - over.bounds.minX, point[1] - over.bounds.minY], [seen.bounds.maxX - x, y - seen.bounds.minY]);
+      });
+    };
 
-    it('swaps the mountains and valleys on the back, every line where it was, and back again, folding nothing', async () => {
+    it('turns the paper over on the back: mirrored side to side as it is shown, its mountains and valleys swapped', async () => {
       const { session, runtime } = sessionWith();
       const back = await pose(session, BACK, { verb: 'show-crease-pattern' });
-      const flipped = await pose(session, BACK, { verb: 'flip-creases', on: true });
-      expect(flipped).toMatchObject({ status: 'posed', render: FLIPPED });
+      const over = await pose(session, BACK, { verb: 'flip-creases', on: true });
+      expect(over).toMatchObject({ status: 'posed', render: OVER });
       expect(roles(back)).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
-      expect(roles(flipped)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
-      const [seen, swapped] = [sceneOf(back), sceneOf(flipped)];
-      expect(swapped.bounds).toEqual(seen.bounds);
-      expect(swapped.items[0]).toEqual(seen.items[0]);
-      expect(swapped.items.map((item: { role?: string }) => ({ ...item, role: undefined }))).toEqual(
-        seen.items.map((item: { role?: string }) => ({ ...item, role: undefined }))
-      );
-      const off = await pose(session, FLIPPED, { verb: 'flip-creases', on: false });
-      expect(off).toMatchObject({ render: BACK });
-      expect(off.status === 'posed' && 'flipCreases' in off.render).toBe(false);
-      expect(sceneOf(off)).toEqual(seen);
+      expect(roles(over)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+      expectMirrored(sceneOf(back), sceneOf(over));
+      // The paper on the back's colour still.
+      expect(sceneOf(over).items[0]).toMatchObject({ kind: 'face', side: 'back' });
       expect(runtime.fold).not.toHaveBeenCalled();
     });
 
-    it('keeps it through every turn, and on the front, where it draws nothing, for the back to bring back', async () => {
+    it('comes back exactly when turned off: the same render, turn included, and the same picture', async () => {
+      const { session } = sessionWith();
+      // The crane's step 4 lies at 315°.
+      for (const render of [BACK, { mode: 'crease-pattern', rotationDeg: 315, side: 'back' } as const]) {
+        const seen = await pose(session, render, { verb: 'show-crease-pattern' });
+        const on = await pose(session, render, { verb: 'flip-creases', on: true });
+        expect(on.status === 'posed' && on.render).toEqual({
+          ...render,
+          rotationDeg: (360 - render.rotationDeg) % 360,
+          flipCreases: true,
+        });
+        expectMirrored(sceneOf(seen), sceneOf(on));
+        const off = await pose(session, (on as { render: DiagramCpRender }).render, { verb: 'flip-creases', on: false });
+        expect(off.status === 'posed' && off.render).toEqual(render);
+        expect(sceneOf(off)).toEqual(sceneOf(seen));
+      }
+    });
+
+    it('turns as it looks: Rotate Right turns the picture shown clockwise, Rotate Left the other way', async () => {
+      const { session } = sessionWith();
+      const over = sceneOf(await pose(session, OVER, { verb: 'show-crease-pattern' })) as Scene;
+      for (const [verb, degrees] of [
+        ['rotate-right', 15],
+        ['rotate-left', -15],
+      ] as const) {
+        const turned = await pose(session, OVER, { verb });
+        expect(turned).toMatchObject({ render: { side: 'back', flipCreases: true } });
+        // About the paper's centre, the scene's origin, clockwise on a y-down page.
+        const [cos, sin] = [Math.cos((degrees * Math.PI) / 180), Math.sin((degrees * Math.PI) / 180)];
+        const [was, now] = [pointsOf(over), pointsOf(sceneOf(turned))];
+        now.forEach((point, index) => {
+          const [x, y] = was[index]!;
+          expectNear(point, [x * cos - y * sin, x * sin + y * cos]);
+        });
+      }
+    });
+
+    it('keeps it through every turn, and on the front, where it draws nothing; the side turns the paper with it', async () => {
       const { session } = sessionWith();
       for (const request of [{ verb: 'rotate-right' }, { verb: 'rotate-to', degrees: 40 }, { verb: 'reset' }] as const) {
-        expect(await pose(session, FLIPPED, request)).toMatchObject({ render: { side: 'back', flipCreases: true } });
+        expect(await pose(session, OVER, request)).toMatchObject({ render: { side: 'back', flipCreases: true } });
       }
-      const front = await pose(session, FLIPPED, { verb: 'paper-side', side: 'front' });
-      expect(front).toMatchObject({ render: { mode: 'crease-pattern', rotationDeg: 15, flipCreases: true } });
+      // The front: the pattern as it is drawn, at the turn it had before it was turned over.
+      const front = await pose(session, OVER, { verb: 'paper-side', side: 'front' });
+      expect(front.status === 'posed' && front.render).toEqual({ mode: 'crease-pattern', rotationDeg: 15, flipCreases: true });
       expect(roles(front)).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
       expect(sceneOf(front)).toEqual(sceneOf(await pose(session, CP, { verb: 'rotate-to', degrees: 15 })));
+      // The back brings it back, turned over again.
       const again = await pose(session, { mode: 'crease-pattern', rotationDeg: 15, flipCreases: true }, { verb: 'paper-side', side: 'back' });
-      expect(again).toMatchObject({ render: FLIPPED });
+      expect(again.status === 'posed' && again.render).toEqual(OVER);
       expect(roles(again)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+    });
+
+    it('folds from the front, turned as the pattern was before it was turned over', async () => {
+      const { session } = sessionWith();
+      expect(await pose(session, OVER, { verb: 'show-folded' })).toMatchObject({
+        render: { mode: 'folded-flat', side: 'front', rotationDeg: 15, foldCase: 1 },
+      });
     });
 
     it('changes nothing on the front: the field is the back’s', async () => {

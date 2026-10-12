@@ -183,7 +183,7 @@ export async function captureSimulated(
 
 /**
  * A crease-pattern picture, from the document alone: no fold. On the colour of
- * the side its render says, its creases flipped when the render flips them.
+ * the side its render says, its paper turned over when the render turns it.
  */
 export function captureCreasePattern(
   document: OristudioCpDocumentSnapshot,

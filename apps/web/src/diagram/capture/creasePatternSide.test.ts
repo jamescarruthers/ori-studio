@@ -210,62 +210,109 @@ describe('flipCreasePatternCreases', () => {
   }
 
   const roles = (step: DiagramStep) => sceneOf(step).items.flatMap((item) => (item.kind === 'line' ? [item.role] : []));
+  /** A scene point in its picture's units, as marks are kept. */
+  const inPicture = (step: DiagramStep, [x, y]: readonly [number, number]): [number, number] => {
+    const { minX, minY, maxX, maxY } = sceneOf(step).bounds;
+    const longer = Math.max(maxX - minX, maxY - minY);
+    return [(x - minX) / longer, (y - minY) / longer];
+  };
+  const near = (point: readonly number[], expected: readonly number[]) =>
+    point.forEach((value, index) => expect(value).toBeCloseTo(expected[index]!, 4));
 
-  it('swaps the mountains and valleys alone, as one pose: the same lines, turn, colour and marks, counted as on or off', async () => {
+  // Zach, 2026-10-12: "the lines should also mirror... basically it's like flipping the paper over for real."
+  it('turns the paper over as one pose: mirrored as it is shown, its folds and marks named from the back, counted as on or off', async () => {
     const stepId = await markedBack();
+    // A valley line laid on the pattern's mountain crease, end to end: on known points of the paper.
+    const crease = sceneOf(stepOf(stepId)).items.find((item) => item.kind === 'line' && item.role === 'diagram-mountain');
+    if (crease?.kind !== 'line') throw new Error('the mountain crease');
+    const onCrease: KnownDiagramAnnotation = {
+      id: 'on-crease',
+      kind: 'valley-line',
+      from: inPicture(stepOf(stepId), crease.a),
+      to: inPicture(stepOf(stepId), crease.b),
+    };
+    state().editDiagramAnnotations(stepId, 'Add annotation', (marks) => [...marks, onCrease]);
     const back = stepOf(stepId);
     const past = state().diagramHistory.past.length;
     expect(await flipCreasePatternCreases(stepId, true)).toBe(true);
-    const flipped = stepOf(stepId);
-    expect(sourceOf(stepId).render).toEqual({ mode: 'crease-pattern', rotationDeg: 30, side: 'back', flipCreases: true });
+    const over = stepOf(stepId);
+    // Its turn run the other way, as a flat fold's Turn Over runs it.
+    expect(sourceOf(stepId).render).toEqual({ mode: 'crease-pattern', rotationDeg: 330, side: 'back', flipCreases: true });
     expect(sourceOf(stepId).fingerprint).toBe((back.source as DiagramCpSource).fingerprint);
     expect(state().diagramHistory.past.slice(past).map((entry) => entry.label)).toEqual(['Adjust pose']);
-    // Every mountain a valley and every valley a mountain, every line where it was; the paper's back colour as it was.
+    // Every mountain a valley and every valley a mountain; the paper's back colour as it was.
     expect(roles(back)).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
-    expect(roles(flipped)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
-    const [seen, swapped] = [sceneOf(back), sceneOf(flipped)];
-    expect(swapped.items[0]).toEqual(seen.items[0]);
-    expect(swapped.items.map((item) => ({ ...item, role: undefined }))).toEqual(
-      seen.items.map((item) => ({ ...item, role: undefined }))
-    );
-    expect(swapped.bounds).toEqual(seen.bounds);
-    // Another picture; the marks where they were, named as they were, and in step with it.
-    expect(flipped.picture!.key).not.toBe(back.picture!.key);
-    expect(flipped.annotations).toEqual([ARROW]);
-    expect(flipped.annotatedPictureKey).toBe(flipped.picture!.key);
+    expect(roles(over)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+    expect(sceneOf(over).items[0]).toMatchObject({ kind: 'face', side: 'back' });
+    // The picture mirrored side to side as it is shown: every line's ends, in its frame.
+    const [seen, shown] = [sceneOf(back), sceneOf(over)];
+    const width = (seen.bounds.maxX - seen.bounds.minX) / Math.max(seen.bounds.maxX - seen.bounds.minX, seen.bounds.maxY - seen.bounds.minY);
+    shown.items.forEach((item, index) => {
+      const was = seen.items[index]!;
+      if (item.kind !== 'line' || was.kind !== 'line') return;
+      for (const end of ['a', 'b'] as const) {
+        const [u, v] = inPicture(back, was[end]);
+        near(inPicture(over, item[end]), [width - u, v]);
+      }
+    });
+    // Another picture, its marks carried with it and in step with it: the arrow mirrored and a mountain now,
+    // bulging the other way; the line on the crease still on it, end to end, and a mountain now as the crease is a valley.
+    expect(over.picture!.key).not.toBe(back.picture!.key);
+    const [arrow, line] = over.annotations as KnownDiagramAnnotation[];
+    expect(arrow).toMatchObject({ kind: 'mountain-arrow', bend: -0.3 });
+    near(arrow!.from, [width - ARROW.from[0], ARROW.from[1]]);
+    near(arrow!.to, [width - ARROW.to[0], ARROW.to[1]]);
+    const flippedCrease = shown.items.find((item) => item.kind === 'line' && item.role === 'diagram-valley');
+    if (flippedCrease?.kind !== 'line') throw new Error('the crease, a valley now');
+    expect(line!.kind).toBe('mountain-line');
+    near(line!.from, inPicture(over, flippedCrease.a));
+    near(line!.to, inPicture(over, flippedCrease.b));
+    expect(over.annotatedPictureKey).toBe(over.picture!.key);
     expect(analytics.trackDiagramPicturePosed).toHaveBeenCalledExactlyOnceWith('flip_creases_on', 'crease_pattern', {});
     expect(state().diagramCaptures).toEqual({});
 
-    // Off again: exactly as it was.
+    // Off again: the render, turn and picture exactly as they were, every mark back where and as it was drawn.
     expect(await flipCreasePatternCreases(stepId, false)).toBe(true);
-    expect(stepOf(stepId).source).toEqual(back.source);
-    expect(stepOf(stepId).picture).toEqual(back.picture);
+    const off = stepOf(stepId);
+    expect(off.source).toEqual(back.source);
+    expect(off.picture).toEqual(back.picture);
+    const drawn = back.annotations as KnownDiagramAnnotation[];
+    (off.annotations as KnownDiagramAnnotation[]).forEach((mark, index) => {
+      const { from, to, ...rest } = drawn[index]!;
+      expect({ ...mark, from, to }).toEqual({ ...rest, from, to });
+      near(mark.from, from);
+      near(mark.to, to);
+    });
+    expect(off.annotatedPictureKey).toBe(back.picture!.key);
     expect(analytics.trackDiagramPicturePosed).toHaveBeenLastCalledWith('flip_creases_off', 'crease_pattern', {});
 
-    // Undone, flipped; undone again, the back exactly.
+    // Undone, turned over; undone again, the back exactly.
     state().undoDiagram();
-    expect(stepOf(stepId)).toEqual(flipped);
+    expect(stepOf(stepId)).toEqual(over);
     state().undoDiagram();
     expect(stepOf(stepId)).toEqual(back);
   });
 
-  it('is kept on the front, where the creases are drawn as they are, and the back brings it back', async () => {
+  it('is kept on the front, where the pattern is drawn as it is, and the back turns the paper over again', async () => {
     const stepId = await markedBack();
     const front = stepOf(stepId);
     expect(await showCreasePatternSide(stepId, 'front')).toBe(true);
     const unflipped = stepOf(stepId);
     expect(await showCreasePatternSide(stepId, 'back')).toBe(true);
     expect(await flipCreasePatternCreases(stepId, true)).toBe(true);
-    const flipped = stepOf(stepId);
+    const over = stepOf(stepId);
     expect(await showCreasePatternSide(stepId, 'front')).toBe(true);
-    // Kept, and inert: the front's picture, mountains and valleys as they are.
+    // Kept, and inert: the front's picture at the turn it had, mountains and valleys as they are, its marks as drawn.
     expect(sourceOf(stepId).render).toEqual({ mode: 'crease-pattern', rotationDeg: 30, flipCreases: true });
     expect(stepOf(stepId).picture).toEqual(unflipped.picture);
     expect(roles(stepOf(stepId))).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
+    expect((stepOf(stepId).annotations[0] as KnownDiagramAnnotation).kind).toBe('valley-arrow');
+    near((stepOf(stepId).annotations[0] as KnownDiagramAnnotation).from, ARROW.from);
     expect(await showCreasePatternSide(stepId, 'back')).toBe(true);
-    expect(stepOf(stepId).source).toEqual(flipped.source);
-    expect(stepOf(stepId).picture).toEqual(flipped.picture);
-    expect(front.source).not.toEqual(flipped.source);
+    expect(stepOf(stepId).source).toEqual(over.source);
+    expect(stepOf(stepId).picture).toEqual(over.picture);
+    expect((stepOf(stepId).annotations[0] as KnownDiagramAnnotation).kind).toBe('mountain-arrow');
+    expect(front.source).not.toEqual(over.source);
   });
 
   it('does nothing on the front, for the state it is in, a step shown another way, or a read-only diagram', async () => {

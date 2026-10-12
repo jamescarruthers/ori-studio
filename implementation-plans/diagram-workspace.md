@@ -729,12 +729,14 @@ vocabulary at paint time.**
     `diagram-references-annotations.md`).* A References Turn over also
     renames the folds on the step, drawn by hand or not: valley and mountain
     lines swap, and so do valley and mountain arrows, a shaped arrow's head
-    with them; turning back restores every name. Nothing else renames: a
-    crease-pattern step's Front | Back only recolours the face and carries
-    nothing (Zach, 2026-10-06), nor does its Flip creases on the back
-    (2026-10-12: its mountains and valleys swap where they lie, and every
-    mark stays where it is, named as it was), and Flip, an upload's mirror
-    and a linked picture's turn keep every name.
+    with them; turning back restores every name. A crease-pattern step's
+    Flip creases on the back does the same (2026-10-12, amended the same
+    day: "it's like flipping the paper over for real"): the paper turns over
+    side to side, so every mark is mirrored with the picture and renamed,
+    and turning it off brings every mark and name back. Nothing else
+    renames: Front | Back only recolours the face and carries nothing (Zach,
+    2026-10-06), and Flip, an upload's mirror and a linked picture's turn
+    keep every name.
   - **Anything else** leaves annotations in place: a refold, Refresh, a camera
     or fold-% change, a fold's turn-over (a different side), or a replace. Annotate then shows "The picture
     changed since these annotations were drawn" until they are touched.
@@ -1809,8 +1811,13 @@ on its next save.
     thumbnail, render, remembered? }`, `thumbnail` a key into the table;
     `render` one of `{ mode: 'crease-pattern', rotationDeg, side?: 'back',
     flipCreases?: true }` (`flipCreases`, added 2026-10-12, the Step pane's
-    Flip creases: on the back, every mountain drawn as a valley and every
-    valley as a mountain; kept on the front, where it draws nothing; written
+    Flip creases: on the back, the paper turned over side to side — the
+    pattern mirrored about its vertical centre line before `rotationDeg`
+    turns it, every mountain drawn as a valley and every valley as a
+    mountain; turning it on or off runs `rotationDeg` the other way, as a
+    flat fold's Turn Over does, so the picture is the mirror of the one
+    before it as displayed; kept on the front, where it draws nothing, and
+    the side changing on a step that keeps it turns the paper too; written
     only when true, `false` read as unsaid, anything else damage),
     `{ mode: 'folded-flat', side, rotationDeg, foldCase, spread? }` (a spread
     `{ kind: 'depth', amount, toward }` or `{ kind: 'affine', amount, keep,

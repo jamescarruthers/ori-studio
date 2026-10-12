@@ -296,6 +296,31 @@ describe('a crease pattern’s one face', () => {
     const centre = toScene(there, captured.zoom.frame!).centre;
     expect(distance(facePlacement(there, 0)!.invert(centre), anchor.on)).toBeLessThan(1e-9);
   });
+
+  // Zach, 2026-10-12: a pattern turned over on its back (Flip creases) is the paper seen from behind.
+  it('reads a pattern turned over as its paper seen from behind, and lands a frame on the same paper there', async () => {
+    // The crane's step 4 lies at 315°; turned over, its turn runs the other way.
+    const step = await patternStep({ mode: 'crease-pattern', rotationDeg: 315 });
+    const over = { ...(await patternStep({ mode: 'crease-pattern', rotationDeg: 45, side: 'back', flipCreases: true })), id: 'step-over' };
+    const [faces, overFaces] = [paperFacesOf(step)!, paperFacesOf(over)!];
+    // The same paper, corner for corner, placed reflected.
+    overFaces.paper[0]!.forEach((corner, index) => expect(distance(corner, faces.paper[0]![index]!)).toBeLessThan(0.01));
+    const placement = facePlacement(overFaces, 0)!;
+    expect(placement.reflected).toBe(true);
+    overFaces.paper[0]!.forEach((corner, index) =>
+      expect(distance(placement.apply(corner), overFaces.unspread[0]![index]!)).toBeLessThan(1e-6)
+    );
+    // A frame drawn on the pattern lands on the same paper turned over: mirrored side to side in its picture.
+    const frame = { centre: [0.4, 0.45] as PicturePoint, radius: 0.1 };
+    const anchor = anchorOf(faces, toScene(faces, frame))!;
+    const area: KnownDiagramAnnotation = { id: 'area-cp', kind: 'zoom', from: frame.centre, to: frame.centre, radius: 0.1 };
+    const captured = capture(diagramOf(withArea(step, area), over), 'step-over')!;
+    expect(captured.placed).toBe('sheet');
+    const centre = toScene(overFaces, captured.zoom.frame!).centre;
+    expect(distance(placement.invert(centre), anchor.on)).toBeLessThan(1e-6);
+    expect(captured.zoom.frame!.centre[0]).toBeCloseTo(1 - 0.4, 3);
+    expect(captured.zoom.frame!.centre[1]).toBeCloseTo(0.45, 3);
+  });
 });
 
 describe('what a capture leaves alone', () => {

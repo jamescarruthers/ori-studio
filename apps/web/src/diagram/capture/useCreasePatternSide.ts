@@ -7,15 +7,15 @@ import {
 } from '../document/diagramDocument';
 import { flipCreasePatternCreases, showCreasePatternSide } from './creasePatternSide';
 
-/** The side whose colour a crease pattern's paper is drawn in, its creases flipped or not, and the ways to change them. */
+/** The side whose colour a crease pattern's paper is drawn in, turned over or not, and the ways to change them. */
 export interface CreasePatternSideField {
   side: 'front' | 'back';
   /** Draw its paper in `side`'s colour, as one undo step, nothing else changed; nothing for the side it is on. */
   choose: (side: 'front' | 'back') => void;
   /**
-   * Whether Flip creases is on: on the back, its mountains drawn as valleys
-   * and its valleys as mountains. Kept on the front, where it draws nothing
-   * and the pane does not offer it.
+   * Whether Flip creases is on: on the back, its paper turned over side to
+   * side, mirrored and its mountains and valleys swapped. Kept on the front,
+   * where it draws nothing and the pane does not offer it.
    */
   flipCreases: boolean;
   /** Turn Flip creases on or off, as one undo step; nothing on the front. */
@@ -24,7 +24,7 @@ export interface CreasePatternSideField {
 
 /**
  * The side of the paper whose colour a step shown as its crease pattern is
- * drawn in, and on the back whether its creases are flipped, for the Step
+ * drawn in, and on the back whether it is turned over, for the Step
  * pane's Front | Back and Flip creases: fields, beside Show as, never Pose's
  * verbs. Null for any other step — one shown folded or simulated, one not
  * linked, a newer build's.

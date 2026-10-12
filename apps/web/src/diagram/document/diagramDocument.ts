@@ -187,11 +187,13 @@ export type DiagramCpRender =
        */
       side?: 'back';
       /**
-       * On the back, its mountains drawn as valleys and its valleys as
-       * mountains, every line where it was: the same pattern drawn from the
-       * front, its creases read from the back (the Step pane's Flip creases;
-       * Zach, 2026-10-12). Kept on the front, where it draws nothing, so the
-       * back brings it back. Written only when on.
+       * On the back, the paper turned over side to side, as a real sheet is:
+       * the pattern mirrored, and its mountains drawn as valleys and its
+       * valleys as mountains — one pattern drawn from the front, read from
+       * the back (the Step pane's Flip creases; Zach, 2026-10-12). Its turn
+       * is the turned-over paper's, run the other way, as a flat fold's back
+       * is. Kept on the front, where it draws nothing, so the back brings it
+       * back. Written only when on.
        */
       flipCreases?: true;
     }
@@ -420,7 +422,7 @@ export function withCreasePatternSide(
   return creasePatternRender(render.rotationDeg, side, render.flipCreases === true);
 }
 
-/** Whether a crease pattern's mountains and valleys are drawn swapped: Flip creases on, and its back shown. */
+/** Whether a crease pattern is drawn turned over, mirrored and its mountains and valleys swapped: Flip creases on, and its back shown. */
 export function creasesFlipped(render: DiagramCreasePatternRender): boolean {
   return render.side === 'back' && render.flipCreases === true;
 }
@@ -478,7 +480,8 @@ export interface DiagramCpSource {
  * start — a crease pattern or a flat fold lying as the step lies now, from the
  * front at the first layer order. A flat fold's back at a turn is its front at
  * the opposite turn, mirrored (Turn Over, 12d), so its front's turn is the one
- * carried; a crease pattern's back is only its paper's colour, so its own turn
+ * carried, and so is a crease pattern's turned over (Flip creases); a crease
+ * pattern's back alone is only its paper's colour, so its own turn
  * is. A flat fold asked of creases that fold in 3D becomes the 3D one where it
  * is captured (`renderForRoute`). A flat fold started here, not
  * remembered, has its layers spread by `spread` (13g: on by default — the
@@ -498,14 +501,15 @@ export function renderToShowAs(
   if (way === 'simulated') {
     return { mode: 'simulated', foldPercent: 0, view: kept?.mode === 'simulated' ? kept.view : DEFAULT_SIMULATED_VIEW };
   }
+  const turnedOver =
+    (render.mode === 'crease-pattern' && creasesFlipped(render)) ||
+    (render.mode === 'folded-flat' && render.side === 'back');
   const turn =
-    render.mode === 'crease-pattern'
-      ? render.rotationDeg
-      : render.mode === 'folded-flat'
-        ? render.side === 'back'
-          ? (360 - render.rotationDeg) % 360
-          : render.rotationDeg
-        : 0;
+    render.mode === 'crease-pattern' || render.mode === 'folded-flat'
+      ? turnedOver
+        ? (360 - render.rotationDeg) % 360
+        : render.rotationDeg
+      : 0;
   return way === 'crease-pattern'
     ? { mode: 'crease-pattern', rotationDeg: turn }
     : { mode: 'folded-flat', side: 'front', rotationDeg: turn, foldCase: 1, ...(spread ? { spread } : {}) };

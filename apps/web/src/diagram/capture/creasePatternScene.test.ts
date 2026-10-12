@@ -89,45 +89,72 @@ describe('creasePatternScene', () => {
     });
   });
 
-  // Zach, 2026-10-12: one pattern drawn from the front, its creases flipped for a step seen from the back.
-  describe('with its creases flipped', () => {
-    const both = () =>
-      creasePatternScene(cpDocument(), regionCreases(left), 0).items.concat(
-        creasePatternScene(cpDocument(), regionCreases(right), 0).items
-      );
-    const flippedBoth = () =>
-      creasePatternScene(cpDocument(), regionCreases(left), 0, { side: 'back', flipped: true }).items.concat(
-        creasePatternScene(cpDocument(), regionCreases(right), 0, { side: 'back', flipped: true }).items
-      );
+  // Zach, 2026-10-12: "the lines should also mirror... basically it's like flipping the paper over for real."
+  describe('turned over (Flip creases)', () => {
     const SWAP: Partial<Record<string, string>> = { 'diagram-mountain': 'diagram-valley', 'diagram-valley': 'diagram-mountain' };
+    const back = (segment: typeof left, rotationDeg: number) =>
+      creasePatternScene(cpDocument(), regionCreases(segment), rotationDeg, { side: 'back' });
+    /** Turned over as Flip creases leaves it: its turn run the other way (`linkedPose`). */
+    const turnedOver = (segment: typeof left, rotationDeg: number) =>
+      creasePatternScene(cpDocument(), regionCreases(segment), (360 - rotationDeg) % 360, { side: 'back', flipped: true });
+    /** A point of `seen` mirrored about its picture's vertical centre line, as `into`'s frame places it. */
+    const mirroredInto = (seen: PaperScene, into: PaperScene, [x, y]: readonly [number, number]) => [
+      into.bounds.minX + (seen.bounds.maxX - x),
+      into.bounds.minY + (y - seen.bounds.minY),
+    ];
+    const expectNear = (point: readonly number[], expected: readonly number[]) => {
+      expect(point[0]).toBeCloseTo(expected[0]!, 9);
+      expect(point[1]).toBeCloseTo(expected[1]!, 9);
+    };
 
-    it('draws every mountain as a valley and every valley as a mountain, every line where it was, in the same order', () => {
-      const [seen, flipped] = [both(), flippedBoth()];
-      expect(flipped).toHaveLength(seen.length);
-      flipped.forEach((item, index) => {
-        const was = seen[index]!;
-        if (item.kind !== 'line' || was.kind !== 'line') {
-          // The paper: the back's colour, nothing else changed.
-          expect({ ...item, side: 'front' }).toEqual(was);
-          return;
+    it('is the picture mirrored side to side as it is shown, at every turn: every line, the paper and the frame', () => {
+      // The crane's step 4 lies at 315°.
+      for (const rotationDeg of [0, 30, 315]) {
+        for (const segment of [left, right]) {
+          const [seen, over] = [back(segment, rotationDeg), turnedOver(segment, rotationDeg)];
+          expect(over.items).toHaveLength(seen.items.length);
+          expect(over.sheet).toBe(seen.sheet);
+          // The same frame, mirrored about the paper's centre: as wide and as tall.
+          expect(over.bounds.minX).toBeCloseTo(-seen.bounds.maxX, 9);
+          expect(over.bounds.maxX).toBeCloseTo(-seen.bounds.minX, 9);
+          expect(over.bounds.minY).toBeCloseTo(seen.bounds.minY, 9);
+          expect(over.bounds.maxY).toBeCloseTo(seen.bounds.maxY, 9);
+          over.items.forEach((item, index) => {
+            const was = seen.items[index]!;
+            if (item.kind === 'face' && was.kind === 'face') {
+              // The paper on the back's colour, every corner mirrored, in its order.
+              expect({ ...item, rings: [] }).toEqual({ ...was, rings: [] });
+              item.rings.forEach((ring, r) =>
+                ring.forEach((corner, c) => expectNear(corner, mirroredInto(seen, over, was.rings[r]![c]!)))
+              );
+              return;
+            }
+            if (item.kind !== 'line' || was.kind !== 'line') throw new Error('a line for a line');
+            expectNear(item.a, mirroredInto(seen, over, was.a));
+            expectNear(item.b, mirroredInto(seen, over, was.b));
+            // Mountains and valleys swapped; aux lines and the edge as they are, and joined and ended alike.
+            expect(item.role).toBe(SWAP[was.role] ?? was.role);
+            expect({ ...item, role: was.role, a: was.a, b: was.b }).toEqual(was);
+          });
         }
-        expect(item.role).toBe(SWAP[was.role] ?? was.role);
-        expect({ ...item, role: was.role }).toEqual(was);
-      });
-      // Aux lines and the paper's edge as they are.
-      const roles = (items: typeof seen) => items.flatMap((item) => (item.kind === 'line' ? [item.role] : []));
-      expect(roles(flipped)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
-      expect(roles(seen)).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+      }
+      const roles = (scene: PaperScene) => lines(scene).map((item) => item.role);
+      expect(roles(turnedOver(left, 315))).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+      expect(roles(turnedOver(right, 315))).toEqual(['diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
     });
 
-    it('keeps the frame: the same bounds and sheet at every turn', () => {
-      for (const rotationDeg of [0, 30, 315]) {
-        const seen = creasePatternScene(cpDocument(), leftCreases(), rotationDeg, { side: 'back' });
-        const flipped = creasePatternScene(cpDocument(), leftCreases(), rotationDeg, { side: 'back', flipped: true });
-        expect(flipped.bounds).toEqual(seen.bounds);
-        expect(flipped.sheet).toBe(seen.sheet);
-        expect(flipped.items[0]).toEqual(seen.items[0]);
-      }
+    it('mirrors the pattern on the paper before it turns it: upright, the front’s lines mirrored about the paper’s middle', () => {
+      const [seen, over] = [back(left, 0), turnedOver(left, 0)];
+      // The mountain diagonal, top-left to bottom-right, now runs top-right to bottom-left.
+      const [was, now] = [lines(seen)[1]!, lines(over)[1]!];
+      expectNear(now.a, [-was.a[0], was.a[1]]);
+      expectNear(now.b, [-was.b[0], was.b[1]]);
+      expect(Math.sign(was.a[0])).toBe(-1);
+      expect(Math.sign(now.a[0])).toBe(1);
+      // Turned by a quarter, it turns about the paper as any picture does.
+      const quarter = creasePatternScene(cpDocument(), leftCreases(), 90, { side: 'back', flipped: true });
+      const [qa, oa] = [lines(quarter)[1]!.a, now.a];
+      expectNear(qa, [-oa[1], oa[0]]);
     });
   });
 });

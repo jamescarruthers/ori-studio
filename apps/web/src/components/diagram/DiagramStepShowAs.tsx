@@ -15,7 +15,8 @@ import styles from './DiagramStepShowAs.module.css';
  * on, Front or Back, right under it (`useCreasePatternSide`): a field, as a
  * flat fold's side is in Pose's section, and held whenever Show as is — each
  * captures the step again from its pattern. On the back, Flip creases under
- * that: its mountains drawn as valleys and its valleys as mountains.
+ * that: the paper turned over side to side, its pattern mirrored and its
+ * mountains and valleys swapped.
  */
 export function DiagramStepShowAs({
   actions,
@@ -70,7 +71,7 @@ export function DiagramStepShowAs({
           label={t('panels:diagram.picture.flipCreases', 'Flip creases')}
           help={t(
             'panels:diagram.picture.flipCreasesHelp',
-            'Draws mountains as valleys and valleys as mountains, as the creases read from the back. The lines stay where they are.'
+            'Turns the paper over, side to side: the crease pattern is mirrored and its mountains and valleys swap, as the creases read from the back.'
           )}
           checked={side.flipCreases}
           disabled={showAs.disabled}

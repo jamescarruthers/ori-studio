@@ -2463,10 +2463,11 @@ export interface PictureMove {
   /**
    * The picture now shows the paper's other side: a References step turned
    * over (RM7), whose card names its folds from that side as its own lines
-   * do (`seenFromTheBack`). Every mark that says which way a fold goes is
-   * named from it too ({@link kindFromOtherSide}). Absent, the same side: a
-   * mark flipped in place, an upload mirrored, a crease pattern put on its
-   * back's colour (which moves nothing at all).
+   * do (`seenFromTheBack`), or a crease pattern turned over on its back
+   * (Flip creases), whose mountains and valleys swap. Every mark that says
+   * which way a fold goes is named from it too ({@link kindFromOtherSide}).
+   * Absent, the same side: a mark flipped in place, an upload mirrored, a
+   * crease pattern put on its back's colour (which moves nothing at all).
    */
   otherSide?: true;
 }

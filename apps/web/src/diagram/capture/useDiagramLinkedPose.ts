@@ -81,10 +81,10 @@ export interface DiagramLinkedPose {
    */
   setSide: (side: 'front' | 'back') => Promise<boolean>;
   /**
-   * Turn a crease pattern's Flip creases on or off, on its back — its
-   * mountains drawn as valleys and its valleys as mountains, every line where
-   * it was — for the Step pane's switch, counted as on or off. Whether it is
-   * now as asked; false for a pattern on its front, which has no such field.
+   * Turn a crease pattern's Flip creases on or off, on its back — its paper
+   * turned over side to side, mirrored and its mountains and valleys swapped
+   * — for the Step pane's switch, counted as on or off. Whether it is now as
+   * asked; false for a pattern on its front, which has no such field.
    */
   setFlipCreases: (on: boolean) => Promise<boolean>;
   /** Pose's simulator came to rest: captured, if it is not the step's picture already (D19). */

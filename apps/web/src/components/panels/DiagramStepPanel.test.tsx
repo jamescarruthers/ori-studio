@@ -345,7 +345,7 @@ describe('DiagramStepPanel', () => {
       expect(host?.textContent).not.toContain('from the back');
     });
 
-    // Zach, 2026-10-12: one pattern drawn from the front, its creases flipped for a step seen from the back.
+    // Zach, 2026-10-12: one pattern drawn from the front, turned over for a step seen from the back.
     it('offers Flip creases right under Side on the back alone, off until turned on, held while read-only', () => {
       side.flipCreasePatternCreases.mockClear();
       const flip = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Flip creases"]');
@@ -374,7 +374,7 @@ describe('DiagramStepPanel', () => {
       expect(flipRow.hasAttribute('data-nested')).toBe(false);
       const help = flipRow.querySelector('[data-field-help]')?.getAttribute('aria-label');
       expect(help).toBe(
-        'Draws mountains as valleys and valleys as mountains, as the creases read from the back. The lines stay where they are.'
+        'Turns the paper over, side to side: the crease pattern is mirrored and its mountains and valleys swap, as the creases read from the back.'
       );
       // One verb per press, the step's own.
       act(() => flip()!.click());
@@ -382,7 +382,7 @@ describe('DiagramStepPanel', () => {
       // On, it says so, and turns off.
       showWith({ mode: 'crease-pattern', rotationDeg: 0, side: 'back', flipCreases: true });
       expect(flip()!.getAttribute('aria-checked')).toBe('true');
-      expect(host?.textContent).toContain('Crease pattern, back color, creases flipped');
+      expect(host?.textContent).toContain('Crease pattern, turned over');
       act(() => flip()!.click());
       expect(side.flipCreasePatternCreases).toHaveBeenLastCalledWith('step-cp', false);
       expect(side.flipCreasePatternCreases).toHaveBeenCalledTimes(2);

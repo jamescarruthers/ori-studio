@@ -290,7 +290,7 @@ export type DiagramPoseAction =
   | 'spread_skew'
   | 'spread_axis'
   | 'paper_side'
-  // A crease pattern on its back with its mountains and valleys swapped, or back (the Step pane's Flip creases).
+  // A crease pattern on its back turned over side to side, or back (the Step pane's Flip creases).
   | 'flip_creases_on'
   | 'flip_creases_off';
 

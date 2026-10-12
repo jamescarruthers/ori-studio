@@ -4440,8 +4440,8 @@
     "dialogs:diagramExport.unfitPage": "439872e97252",
     "dialogs:diagramExport.unfitPages": "24fff27150dd",
     "panels:diagram.picture.flipCreases": "f73c28eee383",
-    "panels:diagram.picture.flipCreasesHelp": "d0ced6118580",
-    "panels:diagram.picture.linkedCreasePatternFlipped": "a8b1c47352d8"
+    "panels:diagram.picture.flipCreasesHelp": "dd686ad88b7d",
+    "panels:diagram.picture.linkedCreasePatternFlipped": "cac06a7b57c7"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8884,8 +8884,8 @@
     "dialogs:diagramExport.unfitPage": "439872e97252",
     "dialogs:diagramExport.unfitPages": "24fff27150dd",
     "panels:diagram.picture.flipCreases": "f73c28eee383",
-    "panels:diagram.picture.flipCreasesHelp": "d0ced6118580",
-    "panels:diagram.picture.linkedCreasePatternFlipped": "a8b1c47352d8"
+    "panels:diagram.picture.flipCreasesHelp": "dd686ad88b7d",
+    "panels:diagram.picture.linkedCreasePatternFlipped": "cac06a7b57c7"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13330,8 +13330,8 @@
     "dialogs:diagramExport.unfitPage": "439872e97252",
     "dialogs:diagramExport.unfitPages": "24fff27150dd",
     "panels:diagram.picture.flipCreases": "f73c28eee383",
-    "panels:diagram.picture.flipCreasesHelp": "d0ced6118580",
-    "panels:diagram.picture.linkedCreasePatternFlipped": "a8b1c47352d8"
+    "panels:diagram.picture.flipCreasesHelp": "dd686ad88b7d",
+    "panels:diagram.picture.linkedCreasePatternFlipped": "cac06a7b57c7"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -17678,8 +17678,8 @@
     "dialogs:diagramExport.unfitPage": "439872e97252",
     "dialogs:diagramExport.unfitPages": "24fff27150dd",
     "panels:diagram.picture.flipCreases": "f73c28eee383",
-    "panels:diagram.picture.flipCreasesHelp": "d0ced6118580",
-    "panels:diagram.picture.linkedCreasePatternFlipped": "a8b1c47352d8"
+    "panels:diagram.picture.flipCreasesHelp": "dd686ad88b7d",
+    "panels:diagram.picture.linkedCreasePatternFlipped": "cac06a7b57c7"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -22026,8 +22026,8 @@
     "dialogs:diagramExport.unfitPage": "439872e97252",
     "dialogs:diagramExport.unfitPages": "24fff27150dd",
     "panels:diagram.picture.flipCreases": "f73c28eee383",
-    "panels:diagram.picture.flipCreasesHelp": "d0ced6118580",
-    "panels:diagram.picture.linkedCreasePatternFlipped": "a8b1c47352d8"
+    "panels:diagram.picture.flipCreasesHelp": "dd686ad88b7d",
+    "panels:diagram.picture.linkedCreasePatternFlipped": "cac06a7b57c7"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -26470,8 +26470,8 @@
     "dialogs:diagramExport.unfitPage": "439872e97252",
     "dialogs:diagramExport.unfitPages": "24fff27150dd",
     "panels:diagram.picture.flipCreases": "f73c28eee383",
-    "panels:diagram.picture.flipCreasesHelp": "d0ced6118580",
-    "panels:diagram.picture.linkedCreasePatternFlipped": "a8b1c47352d8"
+    "panels:diagram.picture.flipCreasesHelp": "dd686ad88b7d",
+    "panels:diagram.picture.linkedCreasePatternFlipped": "cac06a7b57c7"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -30914,8 +30914,8 @@
     "dialogs:diagramExport.unfitPage": "439872e97252",
     "dialogs:diagramExport.unfitPages": "24fff27150dd",
     "panels:diagram.picture.flipCreases": "f73c28eee383",
-    "panels:diagram.picture.flipCreasesHelp": "d0ced6118580",
-    "panels:diagram.picture.linkedCreasePatternFlipped": "a8b1c47352d8"
+    "panels:diagram.picture.flipCreasesHelp": "dd686ad88b7d",
+    "panels:diagram.picture.linkedCreasePatternFlipped": "cac06a7b57c7"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -35262,7 +35262,7 @@
     "dialogs:diagramExport.unfitPage": "439872e97252",
     "dialogs:diagramExport.unfitPages": "24fff27150dd",
     "panels:diagram.picture.flipCreases": "f73c28eee383",
-    "panels:diagram.picture.flipCreasesHelp": "d0ced6118580",
-    "panels:diagram.picture.linkedCreasePatternFlipped": "a8b1c47352d8"
+    "panels:diagram.picture.flipCreasesHelp": "dd686ad88b7d",
+    "panels:diagram.picture.linkedCreasePatternFlipped": "cac06a7b57c7"
   }
 }

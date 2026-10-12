@@ -8,10 +8,13 @@
  * keeps it, the step's marks left where they are and in step with the new
  * picture, counted as the paper's side.
  *
- * On the back, Flip creases under it draws every mountain as a valley and
- * every valley as a mountain, every line where it was: one pattern drawn from
- * the front, its creases read from the back for the steps that show the back
- * (Zach, 2026-10-12). A pose too (`flip-creases`), in every way the side is.
+ * On the back, Flip creases under it turns the paper over side to side, as a
+ * real sheet turns over: the pattern mirrored, every mountain drawn as a
+ * valley and every valley as a mountain — one pattern drawn from the front,
+ * read from the back for the steps that show the back (Zach, 2026-10-12). A
+ * pose too (`flip-creases`), in every way the side is, but that the step's
+ * marks go over with the paper, mirrored and named from its other side, as
+ * References' Turn over takes a card's.
  *
  * Store-bound, React-free.
  */
@@ -27,7 +30,7 @@ import { openLinkedPoseOf } from './openLinkedPose';
 import { createPoseController, type PoseControllerListener } from './poseController';
 import type { DiagramLinkedPose } from './useDiagramLinkedPose';
 
-/** A crease pattern's paper verbs: the side whose colour it is on, and its creases flipped on its back. */
+/** A crease pattern's paper verbs: the side whose colour it is on, and its paper turned over on its back. */
 export type CreasePatternPaperRequest = Extract<LinkedPoseRequest, { verb: 'paper-side' | 'flip-creases' }>;
 
 /** A controller's listener for a verb no view watches: a crease pattern folds nothing to show. */
