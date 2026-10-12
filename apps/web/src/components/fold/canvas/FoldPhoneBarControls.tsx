@@ -52,7 +52,7 @@ export function FoldPhoneBarControls() {
         isActive={open}
         onClick={openPicker}
       >
-        <FoldToolGlyph id={tool} />
+        <FoldToolGlyph id={tool} compact />
       </ViewportToolbarButton>
       <ViewportToolbarButton
         aria-label={other.title}

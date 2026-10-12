@@ -15,6 +15,8 @@ import {
   Shrink,
   type LucideIcon,
 } from 'lucide-react';
+import { CpToolGlyph } from '../../cp-workspace/toolCatalog/cpToolGlyph';
+import { cpActionByOperation } from '../../lib/oristudioCpActions';
 import type {
   FoldLineModeId,
   FoldPlannedOpId,
@@ -143,13 +145,24 @@ const PLANNED_ICONS: Readonly<Record<FoldPlannedOpId, LucideIcon>> = {
   pleat: Activity,
 };
 
-/** The vertex folds keep the icons the rail showed them by while they were planned. */
+/**
+ * The vertex folds keep the icons the rail showed them by while they were
+ * planned — the rabbit ear only until Edit's own tool is found
+ * ({@link EDIT_RABBIT_EAR}).
+ */
 const VERTEX_ICONS: Readonly<Record<FoldVertexToolId, LucideIcon>> = {
   squash: Shrink,
   petal: Flower2,
   'rabbit-ear': Rabbit,
   swivel: IterationCw,
 };
+
+/**
+ * Edit's Rabbit Ear tool (Oriedita's `Inward`): the rabbit ear is drawn as
+ * Edit's rail draws it, so the one fold looks the same in both workspaces
+ * (owner feedback, 2026-10-12).
+ */
+const EDIT_RABBIT_EAR = cpActionByOperation('Inward');
 
 /** The sinks: the point pushed down to the line, into a pocket, or pulled back up. */
 const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
@@ -160,11 +173,13 @@ const SINK_ICONS: Readonly<Record<FoldSinkToolId, LucideIcon>> = {
 
 /**
  * Every Fold rail item's icon: a fold's letter in its crease's ink; a line
- * mode's picture of what it locates; the app's own icons for the crimp and
- * the tuck, the Divide line, the model verbs, the vertex folds, the sinks and
- * the folds still to come.
+ * mode's picture of what it locates; Edit's own glyph for the rabbit ear; the
+ * app's own icons for the crimp and the tuck, the Divide line, the model
+ * verbs, the other vertex folds, the sinks and the folds still to come.
+ * `compact`: beside text in a toolbar button, at the text's scale, as Edit's
+ * "Tools" trigger draws its glyph.
  */
-export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
+export function FoldToolGlyph({ id, compact = false }: { id: FoldRailItemId; compact?: boolean }): ReactElement {
   switch (id) {
     case 'valley':
     case 'mountain':
@@ -191,9 +206,11 @@ export function FoldToolGlyph({ id }: { id: FoldRailItemId }): ReactElement {
     case 'free':
     case 'crease':
       return lineModeGlyph(id);
+    case 'rabbit-ear':
+      if (EDIT_RABBIT_EAR) return <CpToolGlyph action={EDIT_RABBIT_EAR} compact={compact} />;
+    // falls through: Edit's tool not found
     case 'squash':
     case 'petal':
-    case 'rabbit-ear':
     case 'swivel': {
       const Icon = VERTEX_ICONS[id];
       return <Icon size={SIZE} strokeWidth={1.5} aria-hidden="true" />;
