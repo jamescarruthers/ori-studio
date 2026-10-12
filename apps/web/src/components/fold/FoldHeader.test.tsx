@@ -134,7 +134,7 @@ describe('FoldHeader', () => {
         disabled: false,
         menuLabel: 'More',
         run,
-        actions: [{ id: 'precreases-as-aux', label: 'Send to Edit (precreases as auxiliary lines)', onSelect: vi.fn() }],
+        actions: [],
       },
     });
     expect(host.querySelector('[data-phone]')).not.toBeNull();
@@ -155,7 +155,6 @@ describe('FoldHeader', () => {
     expect(rows.map((row) => row.textContent)).toEqual([
       'Import CP…',
       'Send to Edit',
-      'Send to Edit (precreases as auxiliary lines)',
       'Export FOLD…',
       'Export steps…',
     ]);
@@ -163,7 +162,7 @@ describe('FoldHeader', () => {
     expect(bound.importCp).toHaveBeenCalledOnce();
   });
 
-  it('makes Send to Edit the shared split button when given its model, the variants behind the caret', () => {
+  it('makes Send to Edit the shared button when given its model, with no caret: there is one Send to Edit', () => {
     const run = vi.fn();
     render({
       sendToEdit: {
@@ -172,12 +171,12 @@ describe('FoldHeader', () => {
         disabled: false,
         menuLabel: 'More ways to send to Edit',
         run,
-        actions: [{ id: 'precreases-as-aux', label: 'Precreases as Auxiliary Lines', onSelect: vi.fn() }],
+        actions: [],
       },
     });
     act(() => button('Send to Edit')?.click());
     expect(run).toHaveBeenCalledOnce();
-    expect(host.querySelector('button[aria-label="More ways to send to Edit"]')).not.toBeNull();
+    expect(host.querySelector('button[aria-label="More ways to send to Edit"]')).toBeNull();
   });
 
   it('shows the split button’s own gate and says why it is disabled, as the model words it', () => {

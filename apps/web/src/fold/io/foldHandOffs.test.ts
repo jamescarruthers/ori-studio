@@ -89,9 +89,9 @@ function setup(document: FoldSequenceDocument = sequence(), cursor: string | nul
 }
 
 describe('Fold’s hand-offs', () => {
-  it('sends the tip of the active path to Edit, holding the engine only while it does', async () => {
+  it('sends the tip of the active path to Edit, its precreases as aux lines, holding the engine only while it does', async () => {
     const { deps, asked, runtime } = setup();
-    await expect(sendFoldSequenceToEdit(deps, 'precreases-as-aux')).resolves.toBe(true);
+    await expect(sendFoldSequenceToEdit(deps)).resolves.toBe(true);
     expect(asked).toEqual(['sendToEdit:sheet:square:front>valley@0.5>turn>valley@0.25:Crane']);
     expect(deps.sendToEdit).toHaveBeenCalledExactlyOnceWith({
       text: expect.stringMatching(/^\{"fold"/),
@@ -100,14 +100,14 @@ describe('Fold’s hand-offs', () => {
       filename: 'Crane.fold',
       unassignedAsAuxiliary: true,
     });
-    expect(deps.sentToEdit).toHaveBeenCalledExactlyOnceWith('precreases-as-aux');
+    expect(deps.sentToEdit).toHaveBeenCalledExactlyOnceWith();
     expect(runtime.holders()).toBe(0);
   });
 
   it('counts a Send to Edit only when Edit took it', async () => {
     const { deps } = setup();
     deps.sendToEdit = vi.fn(async () => false);
-    await expect(sendFoldSequenceToEdit(deps, 'plain')).resolves.toBe(false);
+    await expect(sendFoldSequenceToEdit(deps)).resolves.toBe(false);
     expect(deps.sentToEdit).not.toHaveBeenCalled();
   });
 
@@ -124,7 +124,7 @@ describe('Fold’s hand-offs', () => {
     const { deps, asked, saved } = setup();
     deps.title = () => 'Crane 1/2: base';
     await expect(exportFoldSequence(deps)).resolves.toBe(true);
-    await expect(sendFoldSequenceToEdit(deps, 'plain')).resolves.toBe(true);
+    await expect(sendFoldSequenceToEdit(deps)).resolves.toBe(true);
     expect(saved.map((options) => options.suggestedName)).toEqual(['Crane-1-2-base.fold']);
     expect(vi.mocked(deps.sendToEdit).mock.calls[0]?.[0].filename).toBe('Crane-1-2-base.fold');
     // The title inside the file is the sequence's, as it is written.
@@ -175,7 +175,7 @@ describe('Fold’s hand-offs', () => {
     const locked = { id: 'd', parent: 'c', unknown: { id: 'd', parent: 'c', op: { kind: 'sink' } } };
     const document = { ...sequence(), steps: [...sequence().steps, locked] };
     const { deps, asked } = setup(document, 'd');
-    await expect(sendFoldSequenceToEdit(deps, 'plain')).resolves.toBe(false);
+    await expect(sendFoldSequenceToEdit(deps)).resolves.toBe(false);
     await expect(exportFoldSequence(deps)).resolves.toBe(false);
     expect(deps.blocked).toHaveBeenCalledWith('path-broken');
     expect(asked).toEqual([]);

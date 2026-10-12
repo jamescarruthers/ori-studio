@@ -1,5 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { RotateCcwSquare } from 'lucide-react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import {
@@ -14,6 +15,7 @@ import { CpToolGlyph } from '../../cp-workspace/toolCatalog/cpToolGlyph';
 import { cpActionByOperation } from '../../lib/oristudioCpActions';
 import { allByRole, byRole } from '../../test/roleQueries';
 import { TooltipProvider } from '../ui/Tooltip';
+import { FoldActionIcon } from './FoldActionIcon';
 import { FoldToolGlyph } from './FoldToolGlyph';
 import { FoldToolPickerSheet } from './FoldToolPickerSheet';
 import { FoldToolRail } from './FoldToolRail';
@@ -193,5 +195,26 @@ describe('FoldToolGlyph', () => {
     expect(html('fold-compact')).toBe(html('edit-compact'));
     // Decoration: the button around it carries the name.
     expect(glyphs.querySelector('[data-glyph="fold"]')?.firstElementChild?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('draws Turn over, on the rail and in the menus, as the turn-over icon Edit’s Flip and the Diagram draw', () => {
+    const drawn = mount(
+      <>
+        <span data-glyph="rail">
+          <FoldToolGlyph id="turn-over" />
+        </span>
+        <span data-glyph="menu">
+          <FoldActionIcon icon="turn-over" />
+        </span>
+        <span data-glyph="shared">
+          <RotateCcwSquare />
+        </span>
+      </>
+    );
+    const paths = (which: string) =>
+      [...drawn.querySelectorAll(`[data-glyph="${which}"] svg > *`)].map((shape) => shape.outerHTML);
+    expect(paths('shared').length).toBeGreaterThan(0);
+    expect(paths('rail')).toEqual(paths('shared'));
+    expect(paths('menu')).toEqual(paths('shared'));
   });
 });

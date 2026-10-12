@@ -67,7 +67,7 @@ function phoneVerbGroups(
             (variant): ViewportToolbarAction => ({
               kind: 'action',
               id: `${sendToEdit.id}-${variant.id}`,
-              // A variant names the verb itself ("Send to Edit (precreases as auxiliary lines)").
+              // A variant names the verb itself ("Send to Edit (include circles)").
               label: variant.label,
               title: variant.title,
               icon: <FoldActionIcon icon={sendToEdit.icon} />,

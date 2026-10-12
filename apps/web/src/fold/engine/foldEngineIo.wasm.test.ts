@@ -148,8 +148,8 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
       expect(figure.fingerprint).toBe(pleat.fingerprint);
     }
 
-    // A precrease reaches Edit unassigned, remembering its letter; the
-    // payload's flag asks Edit to make it an auxiliary line instead.
+    // A precrease is written unassigned, remembering its letter; the
+    // payload's flag, always set, asks Edit to make it an auxiliary line.
     const base = importSample(engine, 'preliminary-base');
     const sent = io.sendToEdit(base.state);
     const document = load_fold_file(sent);
@@ -158,7 +158,7 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
     const unassigned = snapshot.crease_pattern.line_segments.filter((s) => s.color === 'None');
     expect(unassigned.length).toBeGreaterThan(0);
     expect(unassigned.every((s) => s.fold_direction_hint === 'Valley')).toBe(true);
-    const payload = foldSendToEditPayload(sent, { label: 'Send to Edit', filename: 'fold.fold', precreasesAsAux: true });
+    const payload = foldSendToEditPayload(sent, { label: 'Send to Edit', filename: 'fold.fold' });
     expect(payload).toEqual({
       text: sent,
       format: 'fold',
@@ -166,7 +166,6 @@ describe.skipIf(!available)('Import CP and the FOLD hand-offs through the built 
       filename: 'fold.fold',
       unassignedAsAuxiliary: true,
     });
-    expect(foldSendToEditPayload(sent, { label: 'L', filename: 'f.fold' })).not.toHaveProperty('unassignedAsAuxiliary');
 
     // Send to Edit, then Import CP after the same state: the state again.
     const reopened = landed(io.importCp({ format: 'fold', text: sent }, { kind: 'after', state: base.state }));

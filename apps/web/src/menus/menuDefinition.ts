@@ -374,11 +374,6 @@ export function getMenuBarDef(
         },
         { type: 'separator' },
         { type: 'action', id: 'fold.send-to-edit', label: t('menu:fold.sendToEdit', 'Send to Edit') },
-        {
-          type: 'action',
-          id: 'fold.send-to-edit-precreases-as-aux',
-          label: t('menu:fold.sendToEditPrecreasesAsAux', 'Send to Edit (Precreases as Auxiliary Lines)'),
-        },
         { type: 'action', id: 'fold.send-to-diagram', label: t('menu:fold.sendToDiagram', 'Send Step to Diagram') },
         { type: 'action', id: 'fold.send-path-to-diagram', label: t('menu:fold.sendPathToDiagram', 'Send Steps to Diagram') },
         { type: 'separator' },

@@ -393,6 +393,7 @@ describe('a vertex fold’s choices on the canvas', () => {
     // The third candidate does not land: never offered.
     fourths: [0, 1],
     elsewhere: null,
+    direction: 'valley',
     orders: [],
     order: null,
     layers: 2,

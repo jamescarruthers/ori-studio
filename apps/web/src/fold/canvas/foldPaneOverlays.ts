@@ -64,7 +64,11 @@ export interface FoldOverlayStroke {
   widthMul: number;
 }
 
-/** What a tool draws over a pane beside its picks: a vertex fold's creases and rays (`vertex/vertexOverlay`). */
+/**
+ * What a tool draws over a pane beside its picks: a vertex fold's vertex, the
+ * line it lands on and the choices it offers (`vertex/vertexOverlay`). Its
+ * creases are paper, in the diagram-crease pens (`withFoldCreases`).
+ */
 export interface FoldOverlayMarks {
   dots: readonly FoldOverlayDot[];
   strokes: readonly FoldOverlayStroke[];
@@ -307,7 +311,7 @@ export interface FoldPaneOverlayInput {
   located?: readonly (readonly [Point, Point])[];
   marks: readonly FoldMark[];
   inks: FoldOverlayInks;
-  /** The tool's own marks for this pane, under its picks: a vertex fold's creases and rays. */
+  /** The tool's own marks for this pane, under its picks: a vertex fold's vertex, landing line and choices. */
   tool?: FoldOverlayMarks | null;
   /**
    * How the folded pane draws the paper while its layers are spread

@@ -30,13 +30,8 @@ export function kindHasPackingCircles(kind: DesignKindId): boolean {
   return KINDS_WITH_PACKING_CIRCLES.includes(kind);
 }
 
-/**
- * The variants behind the caret, by id. The primary is always `'plain'`.
- * `'precreases-as-aux'` is a Fold sequence's: its precreases, which reach
- * Edit unassigned and remembering their letter, arrive as auxiliary lines
- * instead (the payload's `unassignedAsAuxiliary`).
- */
-export type SendToEditExtraVariantId = 'with-circles' | 'precreases-as-aux';
+/** The variants behind the caret, by id. The primary is always `'plain'`. */
+export type SendToEditExtraVariantId = 'with-circles';
 
 export interface SendToEditVariant {
   /** Stable id — also the analytics value, so an enum and never free text. */
@@ -107,15 +102,6 @@ const EXTRA_VARIANTS: Record<SendToEditExtraVariantId, (t: TFunction) => SendToE
       "Send this design's crease pattern along with its packed circles"
     ),
     includeCircles: true,
-  }),
-  'precreases-as-aux': (t) => ({
-    id: 'precreases-as-aux',
-    label: t('common:toolbar.sendToEditPrecreasesAsAux', 'Send to Edit (precreases as auxiliary lines)'),
-    title: t(
-      'common:toolbar.sendToEditPrecreasesAsAuxTooltip',
-      'Send the crease pattern with its precreases as auxiliary lines, not unassigned creases'
-    ),
-    includeCircles: false,
   }),
 };
 

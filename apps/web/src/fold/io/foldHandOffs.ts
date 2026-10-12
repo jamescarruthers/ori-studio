@@ -33,9 +33,6 @@ import {
   type FoldStepPage,
 } from './foldStepPages';
 
-/** Which Send to Edit: the plain one, or precreases as auxiliary lines (`sendToEditActions`' variant ids). */
-export type FoldSendToEditVariant = 'plain' | 'precreases-as-aux';
-
 /** Why a hand-off did not happen, for the toast. */
 export type FoldHandOffBlock =
   /** A step of the active path no longer folds, or was made by a newer build. */
@@ -59,7 +56,7 @@ export interface FoldHandOffDeps {
   /** Merge the crease pattern into Edit's — the chokepoint every Send to Edit goes through — and show Edit. */
   sendToEdit: (payload: SendToEditPayload) => Promise<boolean>;
   /** The analytics event for a Send to Edit that landed. */
-  sentToEdit: (variant: FoldSendToEditVariant) => void;
+  sentToEdit: () => void;
   fileService: () => FileService;
   /** The Settings export style. */
   exportStyle: () => PaperStyle;
@@ -122,10 +119,10 @@ async function ask<T>(
 /**
  * Send to Edit (plan D10): the tip's crease pattern as FOLD, merged into
  * Edit's through `importAddOristudioCpText` with its undo entry. Precreases
- * arrive unassigned, remembering their letter, or — the variant — as
- * auxiliary lines.
+ * arrive as auxiliary lines (`foldSendToEditPayload`); the folds keep their
+ * letters.
  */
-export async function sendFoldSequenceToEdit(deps: FoldHandOffDeps, variant: FoldSendToEditVariant): Promise<boolean> {
+export async function sendFoldSequenceToEdit(deps: FoldHandOffDeps): Promise<boolean> {
   return withLandedPath(deps, async (path) => {
     const title = stem(deps.title());
     const text = await ask(deps, tipOf(path), (engine, id) => engine.sendToEdit(id, title));
@@ -133,10 +130,9 @@ export async function sendFoldSequenceToEdit(deps: FoldHandOffDeps, variant: Fol
     const payload = foldSendToEditPayload(text, {
       label: deps.t('common:toolbar.sendToEdit', 'Send to Edit'),
       filename: foldFilename(title),
-      precreasesAsAux: variant === 'precreases-as-aux',
     });
     const sent = await deps.sendToEdit(payload);
-    if (sent) deps.sentToEdit(variant);
+    if (sent) deps.sentToEdit();
     return sent;
   });
 }

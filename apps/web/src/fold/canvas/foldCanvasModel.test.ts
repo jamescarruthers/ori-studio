@@ -256,6 +256,7 @@ describe('the Fold canvas model', () => {
           // The first candidate does not land: the other two are offered, numbered among themselves.
           fourths: [1, 2],
           elsewhere: null,
+          direction: 'mountain',
           orders: [order, second],
           order: second,
           layers: 3,

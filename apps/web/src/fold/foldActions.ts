@@ -155,8 +155,9 @@ const ROTATE_CW: TurnKind = { kind: 'rotate', rotate: { amount: 'quarter', direc
 
 /**
  * What Send to Edit says it sends from a Fold sequence: the same verb,
- * label and button every design kind offers, with Fold's own tooltip, and
- * behind its caret the precreases as auxiliary lines (plan D10).
+ * label and button every design kind offers, with Fold's own tooltip (plan
+ * D10). No variant: precreases always go as auxiliary lines
+ * (`foldSendToEditPayload`).
  */
 export function foldSendToEditSource(t: TFunction): SendToEditSurfaceSource {
   return {
@@ -164,7 +165,6 @@ export function foldSendToEditSource(t: TFunction): SendToEditSurfaceSource {
       'panels:fold.actions.sendToEditTitle',
       'Send the crease pattern of the steps shown to the Edit canvas'
     ),
-    variants: ['precreases-as-aux'],
   };
 }
 

@@ -9,7 +9,6 @@ const FOLD_IO: WorkspaceCapabilityId[] = [
   'fold.import-sample-pleat-in-eighths',
   'fold.start-from-edit-folded-figure',
   'fold.send-to-edit',
-  'fold.send-to-edit-precreases-as-aux',
   'fold.export-fold',
   'fold.export-step',
   'fold.export-steps',

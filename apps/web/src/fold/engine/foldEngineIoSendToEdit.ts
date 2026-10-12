@@ -4,10 +4,11 @@
  * takes, `importAddOristudioCpText` — the path every other Send to Edit uses,
  * with its undo entry and its merge.
  *
- * Fold's precreases arrive as unassigned creases remembering their letter.
- * "Precreases as auxiliary lines" is the payload's existing
- * `unassignedAsAuxiliary` flag: Edit recolours them after the import, in the
- * same undo entry, and nothing else Fold sends is unassigned.
+ * Fold's precreases are written as unassigned creases remembering their
+ * letter, and arrive in Edit as auxiliary lines, always: the payload's
+ * `unassignedAsAuxiliary` flag has Edit recolour them after the import, in
+ * the same undo entry. Nothing else Fold sends is unassigned, and a partial
+ * precrease's marks already go as auxiliary lines.
  *
  * Pure: no React, no store.
  */
@@ -19,8 +20,6 @@ export interface FoldSendToEditOptions {
   label: string;
   /** A `.fold` name for the payload; never sent anywhere as analytics. */
   filename: string;
-  /** Send precreases as auxiliary lines rather than unassigned creases. */
-  precreasesAsAux?: boolean;
 }
 
 export function foldSendToEditPayload(text: string, options: FoldSendToEditOptions): SendToEditPayload {
@@ -29,6 +28,6 @@ export function foldSendToEditPayload(text: string, options: FoldSendToEditOptio
     format: 'fold',
     label: options.label,
     filename: options.filename,
-    ...(options.precreasesAsAux ? { unassignedAsAuxiliary: true } : {}),
+    unassignedAsAuxiliary: true,
   };
 }

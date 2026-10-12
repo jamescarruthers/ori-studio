@@ -1690,10 +1690,10 @@ export const ANALYTICS_EVENTS = {
    */
   foldCpImported: 'fold cp imported',
   /**
-   * A Fold sequence's crease pattern reached the Edit canvas, by `variant`:
-   * the plain one, or with its precreases as auxiliary lines. Its toolbar
-   * button calls the hand-off directly, so the menu chokepoint sees only the
-   * menu's.
+   * A Fold sequence's crease pattern reached the Edit canvas, its precreases
+   * as auxiliary lines. No property: there is one Send to Edit. Counted where
+   * Edit took it, since a send can be refused after the menu chokepoint
+   * counted the press.
    */
   foldSequenceSentToEdit: 'fold sequence sent to edit',
   /**

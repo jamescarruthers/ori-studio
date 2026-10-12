@@ -177,7 +177,8 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   });
 
   // --- The tool's feedback on each pane: a crimp's first line while its
-  // second is located; a vertex fold's creases on the folded one.
+  // second is located; a vertex fold's vertex and choices on the folded one
+  // (its creases are paper, `useFoldCanvasPaint`).
   const freeFrom = foldFreeLineStart(toolState);
   const crimpLines = preview.crimp?.lines ?? null;
   const located = useMemo(
