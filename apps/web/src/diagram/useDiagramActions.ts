@@ -20,6 +20,7 @@ import { DEFAULT_ROTATION } from './annotate/annotationModel';
 import { buildDiagramTurnActions } from './actions/diagramTurnActions';
 import {
   buildDiagramStepActions,
+  placementState,
   type DiagramStepAction,
   type DiagramStepActionState,
 } from './actions/diagramActions';
@@ -183,7 +184,7 @@ export function diagramStepActions(stepId: string, t: TFunction): DiagramStepAct
       count: diagram.steps.length,
       number: stepNumber(diagram, stepId) ?? 0,
       locked: isLockedStep(step),
-      ...(step.place || step.placeNewer ? { placement: { size: !!step.place?.scale, position: !!(step.place?.frame || step.place?.number || step.place?.picture || step.place?.text), newer: !!step.placeNewer } } : {}),
+      ...placementState(step),
       readOnly: diagramReadOnly,
       hasPicture: hasDrawablePicture(step, diagram.assets),
       hasSource: stepHasPicture(step),
@@ -438,7 +439,7 @@ export function useDiagramStepActions(stepId: string | null): DiagramStepAction[
               cardMarks,
               enlargedArea: enlargedAreaGate(areaNumber, stale, updating),
               heldAreas: heldAreasGate(heldStale),
-              ...(step.place || step.placeNewer ? { placement: { size: !!step.place?.scale, position: !!(step.place?.frame || step.place?.number || step.place?.picture || step.place?.text), newer: !!step.placeNewer } } : {}),
+              ...placementState(step),
             },
             t,
             'pane',

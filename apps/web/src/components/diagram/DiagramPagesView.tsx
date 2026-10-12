@@ -35,6 +35,22 @@ const CUT_OUTLINE_MM = 1;
 const TURN_TARGET_PAD_MM = TURN_STACK_CLEAR_MM / 2;
 
 /**
+ * Page `index`'s image: composed without its band, and while a part of a step
+ * is lifted off it — a drag, or a nudge in its pause — without that part,
+ * from the layout the lift began on; the part is drawn over it on its own
+ * (`DiagramPagesPlacement`). A resize lifts the whole step.
+ */
+function pageImageUrl(
+  pages: PreparedDiagramPages,
+  index: number,
+  draft: ReturnType<typeof usePagePlacement>['draft']
+): string {
+  if (draft?.page !== index) return composedPageUrl(pages, index, { band: false });
+  const part = draft.pointer?.size ? 'frame' : draft.part;
+  return composedPageUrl(draft.base, index, { band: false, omit: { stepId: draft.cell.stepId, part } });
+}
+
+/**
  * The Pages view (D10): each page as it will print, composed into an SVG and
  * shown as an `<img>`, so what the screen shows is the file — all but the
  * flow band, which the view draws under the image from the file's own path
@@ -43,15 +59,18 @@ const TURN_TARGET_PAD_MM = TURN_STACK_CLEAR_MM / 2;
  *
  * Over each page, and never in it: the margin guide, a box for a step with no
  * picture yet, a mark where an instruction was cut, and each step as an option
- * of one listbox — the Steps grid's keyboard, so the arrows move the
- * selection, Enter opens the step and the selected one is the tab stop. A
- * press on a step selects it, a double press opens it, a press elsewhere on a
- * page is a question about the page, which brings the Page tab forward; a
- * press that ends a pan is none of these. An enlarge arrow (Revision 2) is a
- * target for the pointer only, over where the page prints it: a press selects
- * the enlarged step it leads to, a double press opens the area it leaves —
- * the keyboard reaches both by their steps. The camera and the rest of the
- * behaviour are `usePagesView`'s.
+ * of one listbox — the Steps grid's keyboard, so Enter opens the step, Delete
+ * deletes it and the selected one is the tab stop. A press on a step focuses
+ * it and selects it with its frame; a press on a selected frame selects the
+ * part under it; the arrows nudge what is selected, and a drag moves it
+ * (Decision 7, `usePagePlacement`, drawn by `DiagramPagesPlacement`). With no
+ * part selected the arrows move the selection. A press elsewhere on a page is
+ * a question about the page, which brings the Page tab forward; a press that
+ * ends a pan is none of these; a double press opens nothing. An enlarge arrow
+ * (Revision 2) is a target for the pointer only, over where the page prints
+ * it: a press selects the enlarged step it leads to, which the keyboard
+ * reaches as a step. The camera and the rest of the behaviour are
+ * `usePagesView`'s.
  */
 export function DiagramPagesView({
   pages: prepared,
@@ -201,7 +220,7 @@ export function DiagramPagesView({
                     {isNear(index) && (
                       <img
                         className={styles.image}
-                        src={placement.draft?.page === index ? composedPageUrl(placement.draft.base, index, { band: false, omit: { stepId: placement.draft.cell.stepId, part: placement.draft.pointer?.size ? 'frame' : placement.draft.part } }) : composedPageUrl(prepared ?? pages, index, { band: false })}
+                        src={pageImageUrl(prepared ?? pages, index, placement.draft)}
                         alt=""
                         draggable={false}
                       />

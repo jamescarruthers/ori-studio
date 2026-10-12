@@ -68,7 +68,7 @@ export type DiagramPictureUploadOutcome =
  * a double-click on an enlarge arrow in the Pages view, which opens the step
  * its area is on (Revision 2).
  */
-export type DiagramStepOpenedVia = 'keyboard' | 'double_click' | 'card' | 'command' | 'pose_again' | 'enlarge_arrow';
+export type DiagramStepOpenedVia = 'keyboard' | 'double_click' | 'card' | 'command' | 'pose_again';
 
 /** Which half of the detail a step opened in. */
 export type DiagramStepOpenedMode = 'pose' | 'annotate';
