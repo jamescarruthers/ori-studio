@@ -515,9 +515,14 @@ describe('DiagramPagePanel › Packing', () => {
   });
 
   it('re-packs the current page, or every page, each one undo step and one count', () => {
-    // Before the pages are packed and taken in, there is nothing to let go.
-    expect(button('Re-pack Page')?.disabled).toBe(true);
-    expect(button('Re-pack All Pages')?.disabled).toBe(true);
+    // Before the pages are packed and taken in, offered all the same: there is nothing to let go, and nothing happens.
+    expect(button('Re-pack Page')?.disabled).toBe(false);
+    expect(button('Re-pack All Pages')?.disabled).toBe(false);
+    const unpacked = state().diagramHistory.past.length;
+    act(() => button('Re-pack Page')!.click());
+    act(() => button('Re-pack All Pages')!.click());
+    expect(state().diagramHistory.past).toHaveLength(unpacked);
+    expect(analytics.trackDiagramPagesRepacked).not.toHaveBeenCalled();
     adoptPacking();
     const [first, second] = stored();
     expect(stored()).toHaveLength(2);
@@ -526,8 +531,11 @@ describe('DiagramPagePanel › Packing', () => {
     expect(stored()).toEqual([second]);
     expect(state().diagramHistory.past).toHaveLength(past + 1);
     expect(analytics.trackDiagramPagesRepacked).toHaveBeenCalledExactlyOnceWith('page', 'page_pane');
-    // The page lets its arrangement go: until the pages are laid out again, there is nothing more to re-pack on it.
-    expect(button('Re-pack Page')?.disabled).toBe(true);
+    // The page lets its arrangement go, and the button stays as it was, keeping focus: pressed again before the pages
+    // are laid out, it has nothing more to let go.
+    expect(button('Re-pack Page')?.disabled).toBe(false);
+    act(() => button('Re-pack Page')!.click());
+    expect(state().diagramHistory.past).toHaveLength(past + 1);
     act(() => button('Re-pack All Pages')!.click());
     expect(stored()).toEqual([]);
     expect(analytics.trackDiagramPagesRepacked).toHaveBeenLastCalledWith('all', 'page_pane');
