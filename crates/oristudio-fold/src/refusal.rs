@@ -332,6 +332,12 @@ pub enum FoldRefusal {
     /// edge, outside its paper. `faces` are the two the folded edge joins.
     #[error("the swivel's crease meets the folded edge too steeply")]
     SwivelFoldWide { faces: Vec<FaceId> },
+    /// An inside swivel at a free vertex: the strip it tucks lies between
+    /// the two layers a folded edge joins, and a free vertex lies on none —
+    /// its creases cut every layer alike, which move as one. `faces` bound
+    /// the edge.
+    #[error("an inside swivel's creases meet on a folded edge")]
+    SwivelInsideFree { faces: Vec<FaceId> },
 
     // --- Sinks (plan Phase 11, research §5.4) ---------------------------
     /// The anchor names more than one of the moving side's flaps: a sink
@@ -475,6 +481,7 @@ impl FoldRefusal {
             FoldRefusal::SwivelNotAFold { .. } => "swivel_not_a_fold",
             FoldRefusal::SwivelMissesFold { .. } => "swivel_misses_fold",
             FoldRefusal::SwivelFoldWide { .. } => "swivel_fold_wide",
+            FoldRefusal::SwivelInsideFree { .. } => "swivel_inside_free",
             FoldRefusal::SinkSeveralPoints { .. } => "sink_several_points",
             FoldRefusal::SinkPointOpen { .. } => "sink_point_open",
             FoldRefusal::SinkOutlineMixed { .. } => "sink_outline_mixed",
@@ -531,6 +538,7 @@ impl FoldRefusal {
             | FoldRefusal::SwivelEdgeStays { faces }
             | FoldRefusal::SwivelMissesFold { faces }
             | FoldRefusal::SwivelFoldWide { faces }
+            | FoldRefusal::SwivelInsideFree { faces }
             | FoldRefusal::SinkSeveralPoints { faces, .. }
             | FoldRefusal::SinkPointOpen { faces }
             | FoldRefusal::SinkOutlineMixed { faces }

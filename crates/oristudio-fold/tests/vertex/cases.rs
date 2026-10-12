@@ -510,7 +510,7 @@ pub fn swivel_case() -> (State, Swivel) {
 
 // --- The swivel by its edge (`compound::swivel`) ----------------------------
 
-use oristudio_fold::SwivelByEdge;
+use oristudio_fold::{SwivelByEdge, SwivelKind};
 
 /// A swivel by its edge: its parent, the op, and the sheet segment of the
 /// edge it names (its straight run).
@@ -536,6 +536,7 @@ pub fn by_edge(pivot: Point, edge: Point, target: Line) -> SwivelByEdge {
         ridge: None,
         direction: Direction::Valley,
         fold: None,
+        kind: SwivelKind::Open,
     }
 }
 
@@ -709,6 +710,7 @@ pub fn on_fold(state: &State, fold: Point, edge: Point, onto: Point) -> SwivelBy
         ridge: None,
         direction: Direction::Valley,
         fold: Some(fold),
+        kind: SwivelKind::Open,
     }
 }
 

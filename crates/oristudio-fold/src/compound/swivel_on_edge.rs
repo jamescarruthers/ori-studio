@@ -65,6 +65,38 @@
 //! `W₂` the one beyond (it folds across `s′`, as the free swivel's beyond
 //! wedge folds across its hinge).
 //!
+//! # Open or inside ([`SwivelKind`])
+//!
+//! That is the **open** swivel (Abrashi's figure 1): `W₂` folds up over
+//! `W₁`, its back on show, and `W₃` lies on it. The **inside** (closed)
+//! swivel, his figure 2, has the same creases, the same wedges and the same
+//! motions — so the same crease pattern and the same picture of where the
+//! paper goes — but `W₂` folds the other way across `s′`, under `W₁`, into
+//! the pocket between the folded edge's two layers, and `W₃` follows it in,
+//! under `W₂`. `D` still swings the direction's way. As the viewer sees it,
+//! `s′` takes the other letter (the diagram's mountain to the squashed
+//! flap's right corner) and the other layer's `s` the direction's, so the
+//! whole line from `V` to `M` is one letter; `h₋` still opens, and the
+//! letters are still Maekawa's 3 : 1, now with `s′` the odd one out.
+//!
+//! The direction seed would put `W₂` and `W₃` above everything that stays,
+//! so an inside swivel places them otherwise: `D` against everything that
+//! stays, the direction's way, as the open one does; `W₂` and `W₃` against
+//! `W₁` — the other layer's paper `W₂` is hinged to across `s′`, its body,
+//! as a reverse fold places its tip against its body — the other way. The
+//! completion does the rest: no paper joined flat across `s′`, `s` or the
+//! opened `h₋` can come between the folds there, which puts `W₂` right
+//! under `W₁` and `W₃` right under `W₂`, above the edge's layer. Where `W₂`
+//! reaches past `W₁` over other paper (the kite base's other flap), over it
+//! or under it is the step's choice of order.
+//!
+//! Every swivel that lands has the other layer on the direction's side of
+//! the edge's (the squashed flap's top layer, folding toward the viewer):
+//! with it on the far side, `s′` lies inside the edge layer's `W₅`, which
+//! can be neither between `W₁` and `W₂` nor on either side of both and
+//! still let `D` and `W₃` meet across `h₋`. So open is always on top and
+//! inside always between the two layers.
+//!
 //! **Into the pipeline** (`super::vertex`): each crease is scored through
 //! the layers it runs through (`pieces::score_cuts`, a line per crease, as a
 //! squash's per layer): from `V` through its layer, on across every flat
@@ -90,15 +122,15 @@ use std::collections::HashMap;
 use oristudio_geometry::{Line, convex};
 
 use crate::complete::CompletionLimits;
-use crate::compound::CompoundRefused;
 use crate::compound::pieces::{Cut, Scoring, score_cuts};
 use crate::compound::swivel::{
-    SwivelByEdge, SwivelCrease, SwivelEdgeAnalysis, SwivelFold, SwivelRay, SwivelRegion,
-    SwivelWedge, dot, edge_run, internal, sub, wrap,
+    SwivelByEdge, SwivelCrease, SwivelEdgeAnalysis, SwivelFold, SwivelKind, SwivelRay,
+    SwivelRegion, SwivelWedge, dot, edge_run, internal, sub, wrap,
 };
 use crate::compound::vertex::{
     Compiled, VertexChoices, VertexFoldKind, VertexOutcome, angle_between, cross, drop_empty, unit,
 };
+use crate::compound::{Against, CompoundRefused};
 use crate::fold::line::Axis;
 use crate::fold::{ActionKind, FoldActionGeometry, FoldAnalysis, Snap, Within};
 use crate::numerics::{Band, MIN_FEATURE, TOL};
@@ -482,6 +514,7 @@ fn compile(
     built: &OnFold,
     edge_layer: usize,
     direction: Direction,
+    kind: SwivelKind,
 ) -> Result<FoldCompiled, Refused> {
     let [a, b] = built.faces;
     let other_layer = if edge_layer == a { b } else { a };
@@ -664,6 +697,35 @@ fn compile(
         }
     }
     let turns = drop_empty(&mut block_of, turns);
+    // Open, the direction seed puts every wedge above (a valley) what
+    // stays. Inside, the near wedge still swings that way, but the strip
+    // and the wedge that turns in place go the other way about the paper
+    // the strip is hinged to across its second crease: under it, between
+    // the folded edge's two layers.
+    let against = match kind {
+        SwivelKind::Open => None,
+        SwivelKind::Inside => {
+            let toward = direction == Direction::Valley;
+            let every: Vec<usize> = (0..state.faces().len()).collect();
+            Some(
+                kept.iter()
+                    .enumerate()
+                    .map(|(block, &wedge)| match wedge {
+                        SwivelWedge::Near => Against {
+                            block,
+                            faces: every.clone(),
+                            above: toward,
+                        },
+                        SwivelWedge::Turn | SwivelWedge::Beyond => Against {
+                            block,
+                            faces: s_second.faces.clone(),
+                            above: !toward,
+                        },
+                    })
+                    .collect(),
+            )
+        }
+    };
     Ok(FoldCompiled {
         compiled: Compiled {
             kind: VertexFoldKind::Swivel,
@@ -673,6 +735,7 @@ fn compile(
             vertices: vec![v],
             direction,
             extra: Vec::new(),
+            against,
         },
         wedges: kept,
         edge_layer,
@@ -732,11 +795,12 @@ fn compile_reading(
     state: &State,
     built: &OnFold,
     direction: Direction,
+    kind: SwivelKind,
 ) -> Result<FoldCompiled, Refused> {
     let mut first: Option<Refused> = None;
     let mut compiled_any = false;
     for layer in built.readings() {
-        match compile(state, built, layer, direction) {
+        match compile(state, built, layer, direction, kind) {
             Ok(compiled) if compiled.reach.is_some() => return Ok(compiled),
             Ok(_) => compiled_any = true,
             Err(refused) => {
@@ -779,7 +843,7 @@ impl State {
             Direction::Valley => Letter::Valley,
             Direction::Mountain => Letter::Mountain,
         };
-        let compiled = compile_reading(self, &built, direction);
+        let compiled = compile_reading(self, &built, direction, op.kind);
         // The layers' order as the direction names it, the nearer first;
         // the edge's layer is the first reading's when nothing compiled.
         let (edge_layer, other_layer) = match &compiled {
@@ -834,6 +898,11 @@ impl State {
             letter,
             ridge,
         };
+        // The odd letter out of the three: open, the other layer's swivel
+        // crease (the little wedge folds back over the strip); inside, its
+        // second (the strip folds under), the whole line to the meeting
+        // point taking the direction's letter.
+        let inside = op.kind == SwivelKind::Inside;
         let creases = vec![
             crease(
                 SwivelRay::Meet,
@@ -848,16 +917,16 @@ impl State {
                 built.swivel,
                 other_from,
                 other_s,
-                opposite(given),
-                true,
+                if inside { given } else { opposite(given) },
+                !inside,
             ),
             crease(
                 SwivelRay::Hinge,
                 built.second,
                 v,
                 other_second,
-                given,
-                false,
+                if inside { opposite(given) } else { given },
+                inside,
             ),
         ];
         let opens_to = {
@@ -910,10 +979,11 @@ impl State {
     ) -> Result<VertexOutcome, CompoundRefused> {
         let built = op.on_fold(self, fold).map_err(CompoundRefused::Refused)?;
         let direction = self.view().model_direction(op.direction);
-        let reading = compile_reading(self, &built, direction).map_err(CompoundRefused::Refused)?;
+        let reading =
+            compile_reading(self, &built, direction, op.kind).map_err(CompoundRefused::Refused)?;
         let edge_layer = reading.edge_layer;
         reading.compiled.land(self, choices, limits, || {
-            compile(self, &built, edge_layer, direction.opposite())
+            compile(self, &built, edge_layer, direction.opposite(), op.kind)
                 .ok()
                 .map(|c| c.compiled)
         })
@@ -931,7 +1001,7 @@ impl State {
     ) -> Result<FoldActionGeometry, Refused> {
         let built = op.on_fold(self, fold)?;
         let direction = self.view().model_direction(op.direction);
-        let reading = compile_reading(self, &built, direction)?;
+        let reading = compile_reading(self, &built, direction, op.kind)?;
         let compiled = &reading.compiled;
         let scoring = &compiled.scoring;
         let geometry = self.geometry();

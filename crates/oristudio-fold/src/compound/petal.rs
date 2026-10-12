@@ -350,6 +350,7 @@ impl State {
             vertices: petal.ends.to_vec(),
             direction,
             extra: Vec::new(),
+            against: None,
         })
     }
 

@@ -104,7 +104,13 @@
 //! The same three inputs, but the pivot is a point on a folded edge: the
 //! creases meet where the bisector crosses that edge, through the two layers
 //! it joins — the classic swivel of folding diagrams. Its geometry, letters
-//! and refusals are [`super::swivel_on_edge`]'s.
+//! and refusals are [`super::swivel_on_edge`]'s. It comes in two kinds
+//! ([`SwivelKind`]): open, the other layer's strip folded up on top, or
+//! inside, the strip tucked between the two layers.
+//!
+//! A free vertex has only the open kind (`swivel_inside_free`): its creases
+//! cut every layer at the vertex alike, the layers move together, and no
+//! folded edge joins two of them there to open a pocket between.
 
 use std::f64::consts::PI;
 
@@ -241,6 +247,42 @@ pub struct SwivelByEdge {
     /// moved onto the bisector.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fold: Option<Point>,
+    /// On a folded edge, where the other layer's strip goes: on top
+    /// ([`SwivelKind::Open`]) or tucked between the two layers
+    /// ([`SwivelKind::Inside`]). Spelled only when inside, so every open
+    /// swivel's op reads and writes as it always did. A free vertex has
+    /// only the open kind (`swivel_inside_free`).
+    #[serde(default, skip_serializing_if = "SwivelKind::is_open")]
+    pub kind: SwivelKind,
+}
+
+/// Where a swivel on a folded edge puts the other layer's strip, the paper
+/// between its two creases (`super::swivel_on_edge`), as folders tell the
+/// two apart (Abrashi's "What is Swivel fold?", figures 1 and 2).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SwivelKind {
+    /// The open swivel: the strip folds up over the rest of its layer, its
+    /// back on show, its second crease taking the direction's letter.
+    #[default]
+    Open,
+    /// The inside (closed) swivel: the strip folds under the rest of its
+    /// layer, tucked between the folded edge's two layers, its second
+    /// crease taking the other letter.
+    Inside,
+}
+
+impl SwivelKind {
+    pub fn is_open(&self) -> bool {
+        *self == SwivelKind::Open
+    }
+
+    pub fn other(self) -> SwivelKind {
+        match self {
+            SwivelKind::Open => SwivelKind::Inside,
+            SwivelKind::Inside => SwivelKind::Open,
+        }
+    }
 }
 
 /// One of a swivel's four creases, by what it runs toward.
@@ -519,6 +561,10 @@ impl SwivelByEdge {
     fn construct(&self, state: &State) -> Result<Construction, Refused> {
         let run = edge_run(state, self.edge)?;
         let faces = run.faces;
+        if self.kind == SwivelKind::Inside {
+            // Only a folded edge has two layers to tuck the strip between.
+            return Err(FoldRefusal::SwivelInsideFree { faces }.into());
+        }
         let [e1, e2] = run.ends;
         let [s1, s2] = run.sheet;
         let edge = Line::from_points(e1, e2).ok_or_else(|| internal("an edge has no length"))?;
