@@ -2383,12 +2383,14 @@ export const UNSAID_PAGE_LAYOUT: DiagramPageLayout = 'grid';
 
 /**
  * The steps per page of a setup that does not say: as many as its columns
- * and rows hold, as every flow file before they could be chosen. The file
- * writes the steps per page only where they differ from this, so a diagram
- * that never chose them saves as it did before.
+ * and rows hold, as every flow file before they could be chosen — the
+ * columns and rows as said, a newer build's past this build's range too, so
+ * that its unsaid steps per page read here as it meant them. The file writes
+ * the steps per page only where they differ from this, so a diagram that
+ * never chose them saves as it did before.
  */
 export function unsaidStepsPerPage(page: Pick<DiagramPageSetup, 'columns' | 'rows'>): number {
-  return clampInteger(page.columns * page.rows, STEPS_PER_PAGE_RANGE.min, STEPS_PER_PAGE_RANGE.max);
+  return clampInteger(Math.round(page.columns * page.rows), STEPS_PER_PAGE_RANGE.min, STEPS_PER_PAGE_RANGE.max);
 }
 
 /**
@@ -2413,7 +2415,11 @@ export function normalizePageSetup(value: unknown): DiagramPageSetup {
     layout: source.layout === 'flow' || source.layout === 'grid' ? source.layout : UNSAID_PAGE_LAYOUT,
     columns,
     rows,
-    stepsPerPage: clampWhole(source.stepsPerPage, STEPS_PER_PAGE_RANGE, unsaidStepsPerPage({ columns, rows })),
+    stepsPerPage: clampWhole(
+      source.stepsPerPage,
+      STEPS_PER_PAGE_RANGE,
+      unsaidStepsPerPage({ columns: wholeOr(source.columns, columns), rows: wholeOr(source.rows, rows) })
+    ),
     showPath: typeof source.showPath === 'boolean' ? source.showPath : DEFAULT_PAGE_SETUP.showPath,
     pathWidthMm: clampNumber(source.pathWidthMm, PATH_WIDTH_MM_RANGE, DEFAULT_PAGE_SETUP.pathWidthMm),
     pathColor: readHexColor(source.pathColor) ?? DEFAULT_PATH_COLOR,
@@ -2475,6 +2481,11 @@ function clampNumber(
 function clampWhole(value: unknown, range: { min: number; max: number }, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   return clampInteger(Math.round(value), range.min, range.max);
+}
+
+/** `value` as said, rounded whole, when it is a finite number; else `fallback`. */
+function wholeOr(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : fallback;
 }
 
 function clampInteger(value: number, min: number, max: number): number {

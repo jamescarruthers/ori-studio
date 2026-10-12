@@ -106,6 +106,7 @@ import {
   SPREAD_AMOUNT_RANGE,
   SPREAD_AXIS_RANGE,
   SPREAD_SKEW_RANGE,
+  STEPS_PER_PAGE_RANGE,
   isTurn,
   showAsOf,
   carriedJson,
@@ -269,6 +270,7 @@ const PAGE_RANGES: Readonly<Record<string, { readonly min: number; readonly max:
   marginMm: PAGE_MARGIN_MM_RANGE,
   columns: PAGE_COLUMNS_RANGE,
   rows: PAGE_ROWS_RANGE,
+  stepsPerPage: STEPS_PER_PAGE_RANGE,
   pathWidthMm: PATH_WIDTH_MM_RANGE,
 };
 const PAGE_NUMBERS_KEYS: ReadonlySet<string> = new Set(['enabled', 'first']);
@@ -365,7 +367,7 @@ export function writeDiagram(
     title: document.title,
     hanStyle: newer?.hanStyle ?? document.hanStyle,
     style: newer?.style ?? snapshotDiagramStyle(document.style),
-    page: { ...writePageSetup(document.page), ...newer?.page },
+    page: { ...writePageSetup(document.page, newer?.page), ...newer?.page },
     steps,
     assets: Object.fromEntries(
       Object.entries(document.assets).map(([id, asset]) => [id, writeAsset(asset)])
@@ -445,15 +447,17 @@ function thumbnailJson(thumbnail: SheetThumbnail): string {
  *
  * The steps per page are written only where they differ from what a page
  * without them reads, as many as its columns and rows hold
- * (`unsaidStepsPerPage`): a flow diagram that never chose them saves as it
- * did before, and one that did keeps them on a grid too, for when it turns
- * back to flow.
+ * (`unsaidStepsPerPage`) — the columns and rows the file says, a newer
+ * build's carried (`newerPage`) included: a flow diagram that never chose
+ * them saves as it did before, and one that did keeps them on a grid too,
+ * for when it turns back to flow.
  */
-function writePageSetup(page: DiagramPageSetup): Record<string, unknown> {
+function writePageSetup(page: DiagramPageSetup, newerPage?: Record<string, unknown>): Record<string, unknown> {
   const { firstPageSide, pathWidthMm, pathColor, stepsPerPage, ...rest } = page;
+  const said = (key: 'columns' | 'rows') => (typeof newerPage?.[key] === 'number' ? newerPage[key] : page[key]);
   return {
     ...rest,
-    ...(stepsPerPage !== unsaidStepsPerPage(page) ? { stepsPerPage } : {}),
+    ...(stepsPerPage !== unsaidStepsPerPage({ columns: said('columns'), rows: said('rows') }) ? { stepsPerPage } : {}),
     ...(pathWidthMm !== DEFAULT_PATH_WIDTH_MM ? { pathWidthMm } : {}),
     ...(pathColor !== DEFAULT_PATH_COLOR ? { pathColor } : {}),
     ...(firstPageSide === 'right' ? { firstPageSide } : {}),

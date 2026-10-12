@@ -1729,8 +1729,9 @@ on its next save.
 - `page`: `size` (`a4`/`a5`/`b5-jis`/`letter`), `orientation`, `marginMm`
   (0–30), `layout` (`grid`/`flow`; unsaid reads as the grid), `columns`
   (2–5), `rows` (1–6), `stepsPerPage` (2–30, the flow's default count of a
-  page, written only when not `columns × rows`, which a file without it
-  reads), `showPath`, `pathWidthMm` (4–60, written only when
+  page, written only when not `columns × rows` — the columns and rows the
+  file says, a newer build's past their ranges included — which a file
+  without it reads), `showPath`, `pathWidthMm` (4–60, written only when
   not 20), `pathColor` (`#rrggbb`, only when not `#ecece8`), `firstPageSide`
   (only when `right`), `showTitle`, `pageNumbers` (`{ enabled, first }`,
   first 1–9999). `scale` is retired (2026-10-06): read and let go.

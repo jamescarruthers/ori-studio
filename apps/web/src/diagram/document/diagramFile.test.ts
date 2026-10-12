@@ -153,6 +153,28 @@ describe('writeDiagram / readDiagram', () => {
     expect(page({ stepsPerPage: '7' }).readOnly).toBe(false);
   });
 
+  it('carries steps per page past this build’s range as a newer build’s, and reads unsaid ones from the columns and rows as said', () => {
+    const written = throughJson(writeDiagram(sampleDiagram()));
+    const { stepsPerPage: _unsaid, ...before } = written.page;
+    const page = (patch: Record<string, unknown>) => readDiagram({ ...written, page: { ...before, ...patch } })!;
+    for (const [stepsPerPage, shown] of [
+      [36, 30],
+      [1, 2],
+    ] as const) {
+      const newer = page({ stepsPerPage });
+      expect(newer.readOnly).toBe(false);
+      expect(newer.document.page.stepsPerPage).toBe(shown);
+      expect(newer.document.newer).toEqual({ page: { stepsPerPage } });
+      expect(throughJson(writeDiagram(newer.document)).page.stepsPerPage).toBe(stepsPerPage);
+      // Chosen here, they are this build's.
+      expect(throughJson(writeDiagram(setPageSetup(newer.document, { stepsPerPage: 8 }))).page.stepsPerPage).toBe(8);
+    }
+    // A newer build's 6 columns of 3 rows, its steps per page unsaid: 18, as it meant them, and saved as it came.
+    const wide = page({ columns: 6, rows: 3 });
+    expect(wide.document.page).toMatchObject({ columns: 5, rows: 3, stepsPerPage: 18 });
+    expect(throughJson(writeDiagram(wide.document)).page).toEqual({ ...before, columns: 6, rows: 3 });
+  });
+
   it('saves a legacy flow page setup byte for byte without adding steps per page', () => {
     // As the build before wrote a flow page: every field it knew, none of the choices made.
     for (const [columns, rows] of [
