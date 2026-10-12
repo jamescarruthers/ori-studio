@@ -68,31 +68,50 @@ export function vertexToolInput(tool: FoldVertexToolId, line: FoldInputModel): F
   }
 }
 
-/** The clicks that locate a petal fold's H, in its own words where the line mode is one H is meant for. */
+/**
+ * The clicks that locate a petal fold's H — the precrease across the flap
+ * through the ends of its two kite creases — in its own words where the line
+ * mode is one H is meant for.
+ */
 function petalLineSteps(t: TFunction, mode: FoldLineModeId): string[] {
   switch (mode) {
     case 'crease':
-      return [t('tools:fold.vertex.steps.petalCrease', 'Click the precreased line H the flap lifts along.')];
+      return [t('tools:fold.vertex.steps.petalH', 'Click the precrease H, across the flap where the kite creases end.')];
     case 'axiom-1':
     case 'free':
       return [
-        t('tools:fold.vertex.steps.petalFirstEnd', 'Click one end of the line H the flap lifts along.'),
-        t('tools:fold.vertex.steps.petalSecondEnd', 'Click its other end.'),
+        t('tools:fold.vertex.steps.petalHFirstEnd', 'Click one end of H, where a kite crease meets the flap’s edge.'),
+        t('tools:fold.vertex.steps.petalHSecondEnd', 'Click the other end of H, where the other kite crease ends.'),
       ];
     default:
       return lineModeSteps(t, mode);
   }
 }
 
-/** The clicks a vertex fold takes, one instruction each in click order: the window's numbered steps. */
-export function vertexToolSteps(t: TFunction, tool: FoldVertexToolId, mode: FoldLineModeId): string[] {
+/** What a vertex fold's clicks are asked on: a finger has no key to hold for a free point. */
+export interface FoldVertexStepsHost {
+  coarse: boolean;
+  /** The platform's name for Alt. */
+  alt: string;
+}
+
+/**
+ * The clicks a vertex fold takes, one instruction each in click order: the
+ * window's numbered steps, and the canvas chip's prompt.
+ */
+export function vertexToolSteps(
+  t: TFunction,
+  tool: FoldVertexToolId,
+  mode: FoldLineModeId,
+  host: FoldVertexStepsHost = { coarse: false, alt: 'Alt' }
+): string[] {
   switch (tool) {
     case 'squash':
       return [t('tools:fold.vertex.steps.squashFlap', 'Click the flap to squash.')];
     case 'petal':
       return [
         ...petalLineSteps(t, mode),
-        t('tools:fold.vertex.steps.petalFlap', 'Click the flap below that line.'),
+        t('tools:fold.vertex.steps.petalLiftingFlap', 'Click the flap below H, between the kite creases: the part that lifts.'),
       ];
     case 'rabbit-ear':
       return [
@@ -102,12 +121,23 @@ export function vertexToolSteps(t: TFunction, tool: FoldVertexToolId, mode: Fold
         t('tools:fold.vertex.steps.stayer', 'Click the paper that stays put.'),
       ];
     case 'swivel':
+      // The meeting point is rarely a landmark, and must lie off every
+      // crease: said in the step, with the key (or the latch) that frees it.
       return [
-        t('tools:fold.vertex.steps.swivelVertex', 'Click the point the creases meet at.'),
-        t('tools:fold.vertex.steps.swivelFirstRay', 'Click a point the first crease runs toward.'),
-        t('tools:fold.vertex.steps.swivelSecondRay', 'Click a point the second crease runs toward.'),
-        t('tools:fold.vertex.steps.swivelThirdRay', 'Click a point the third crease runs toward.'),
-        t('tools:fold.vertex.steps.stayer', 'Click the paper that stays put.'),
+        host.coarse
+          ? t(
+              'tools:fold.vertex.steps.swivelPointTouch',
+              'Turn on Free point, then tap where the creases meet: inside the paper, off every crease.'
+            )
+          : t(
+              'tools:fold.vertex.steps.swivelPoint',
+              'Hold {{modifier}} and click where the creases meet: inside the paper, off every crease.',
+              { modifier: host.alt }
+            ),
+        t('tools:fold.vertex.steps.swivelFirstLandmark', 'Click a corner, midpoint or mark the first crease runs to.'),
+        t('tools:fold.vertex.steps.swivelSecondLandmark', 'Click a point for the second crease.'),
+        t('tools:fold.vertex.steps.swivelThirdLandmark', 'Click a point for the third crease.'),
+        t('tools:fold.vertex.steps.swivelStayer', 'Click the part of the paper that stays put.'),
       ];
   }
 }

@@ -87,7 +87,7 @@ describe('foldRailGroups', () => {
     expect(item(groups, 'crimp')).toMatchObject({
       kind: 'tool',
       label: 'Crimp',
-      description: 'Reverse a flap along two lines at once: in, then back out.',
+      description: 'Fold a flap in along one line and back out along a second, so its end turns.',
       shortcut: 'fold.toolCrimp',
       available: true,
       active: true,
@@ -192,7 +192,10 @@ describe('foldRailGroups', () => {
       expect(item(groups, id)).toMatchObject({ kind: 'tool', available: true, reason: null });
     }
     expect(foldRailTooltip(item(groups, 'petal'), undefined)).toBe(
-      'Petal fold - Lift a flap’s lower point along a precreased line while its sides fold in.'
+      'Petal fold - Lift a flap’s lower point along a precrease H while its sides fold in along two kite precreases.'
+    );
+    expect(foldRailTooltip(item(groups, 'swivel'), undefined)).toBe(
+      'Swivel fold - Fold the paper about a point you place: three creases you pick, and a fourth that lets it lie flat.'
     );
     // A squash locates no line: no line mode is what the canvas is doing.
     expect(groups.flatMap((group) => group.items).filter((each) => each.active).map((each) => each.id)).toEqual([

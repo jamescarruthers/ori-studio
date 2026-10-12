@@ -336,16 +336,16 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
       return {
         title: t('tools:fold.refusal.crimpLinesMeet.title', 'The lines meet'),
         text: t(
-          'tools:fold.refusal.crimpLinesMeet.text',
-          'The two lines cross, or come too close, over the paper the crimp moves. Draw the second line clear of the first across the flap.'
+          'tools:fold.refusal.crimpLinesMeet.redraw',
+          'The two lines cross, or come too close, over the paper the crimp moves. Press Esc and draw the second line clear of the first, all the way across the flap.'
         ),
       };
     case 'crimp_misses_tip':
       return {
         title: t('tools:fold.refusal.crimpMissesTip.title', 'The second line misses the flap'),
         text: t(
-          'tools:fold.refusal.crimpMissesTip.text',
-          'The second line crosses none of the paper beyond the first, so nothing would turn back. Draw it across the flap, beyond the first line.'
+          'tools:fold.refusal.crimpMissesTip.redraw',
+          'The second line crosses none of the paper beyond the first, so nothing would turn back. Swap the tip side if the tip is the other end, or press Esc and draw the second line across the flap, beyond the first.'
         ),
       };
     case 'crimp_no_opening':
@@ -369,8 +369,8 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
               'No way of stacking the layers lets the tip turn this way on both lines. The other kind of crimp may fit.'
             )
           : t(
-              'tools:fold.refusal.crimpKindInfeasible.neither',
-              'Neither kind of crimp fits here: no way of stacking the layers lets the tip turn on both lines. Move a line, or crimp other flaps.'
+              'tools:fold.refusal.crimpKindInfeasible.neitherRedraw',
+              'Neither an inside nor an outside crimp fits these lines: no way of stacking the layers lets the tip turn on both. Press Esc and draw the lines closer to parallel, or crimp fewer flaps.'
             ),
       };
     case 'crimp_tip_not_free':

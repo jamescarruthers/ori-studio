@@ -183,6 +183,11 @@ export interface FoldDivideControls {
 
 export interface FoldToolInstructions {
   heading: string;
+  /**
+   * What the fold does and what it needs first, above the steps: the words a
+   * first-time folder reads before the first click (a compound fold's).
+   */
+  intro?: string | null;
   items: readonly string[];
   /** The step in hand; past the last, every step is done. */
   current: number;

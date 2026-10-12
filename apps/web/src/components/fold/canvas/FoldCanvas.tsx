@@ -249,7 +249,7 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
 
   // --- The status chips.
   const layers = sceneLayers(view.scene);
-  const prompt = foldPromptWords(t, toolState);
+  const prompt = foldPromptWords(t, toolState, { coarse, alt: altModifierLabel() });
   const stepNumber = summary?.step ?? 0;
   const foldedStatus = (
     <ViewportStatusReadout hideOnPhone>

@@ -173,7 +173,11 @@ describe('FoldToolWindow', () => {
     expect(byRole(window, 'combobox', 'First line')).toBeTruthy();
     expect(byRole(window, 'combobox', 'Second line')).toBeTruthy();
     // The step in hand: the second line's first click.
-    expect(window.querySelector('[aria-current="step"]')?.textContent).toBe('Click where the second line starts.');
+    expect(window.querySelector('[aria-current="step"]')?.textContent).toBe(
+      'Click where the second line starts, beyond the first toward the tip: where the flap turns back out.'
+    );
+    // What a crimp is, above the steps, before any click.
+    expect(window.textContent).toContain('Folds a flap in along a first line and back out along a second');
   });
 
   it('previews a crimp under its kind’s name, with the kind that fits', () => {
@@ -277,6 +281,22 @@ describe('FoldToolWindow', () => {
     act(() => byRole(window, 'button', 'Back to the hinge').click());
     expect(calls.resetSquashTarget).toHaveBeenCalledTimes(1);
     expect(queryByRole(window, 'group', 'Ridge')).toBeNull();
+
+    // A petal fold and a swivel say what they are and need above their steps,
+    // before the first click, and nothing again under the direction.
+    for (const [tool, intro, first] of [
+      ['petal', 'Lifts a flap’s lower point up along a line H', 'Click the precrease H'],
+      ['swivel', 'Folds the paper about a point', 'Hold '],
+    ] as const) {
+      render({ tool, lineMode: 'crease', picks: 0, vertex: { ...vertex, tool, described: false, known: false } }, calls);
+      window = fold()!;
+      const text = window.textContent ?? '';
+      expect(text.indexOf(intro), tool).toBeGreaterThan(-1);
+      expect(text.indexOf(intro), tool).toBeLessThan(text.indexOf(first));
+      expect(window.querySelector('[aria-current="step"]')?.textContent, tool).toMatch(new RegExp(`^${first}`));
+      expect(window.querySelector('[data-fold-vertex-note]'), tool).toBeNull();
+      expect(byRole(window, 'group', 'Direction')).toBeTruthy();
+    }
   });
 
   it('draws a sink’s kind, its line’s rule and depth, its pocket, and a refusal whose fixes act', () => {

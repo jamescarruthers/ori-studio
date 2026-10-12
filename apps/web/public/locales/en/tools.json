@@ -296,6 +296,8 @@
     "crimp": {
       "bothFit": "Both kinds of crimp fit here: choose which way the tip goes.",
       "firstLine": "First line",
+      "firstLineAxiom": "The first line is located by {{mode}}, the line mode in hand. To draw it, choose Free line under First line.",
+      "intro": "Folds a flap in along a first line and back out along a second, so its end turns. Draw the first line nearer the body and the second nearer the tip; each runs across the flap.",
       "onlyInside": "Only the inside crimp fits here.",
       "onlyOutside": "Only the outside crimp fits here.",
       "secondLine": "Second line"
@@ -474,15 +476,15 @@
         "title": "It cannot crimp inside"
       },
       "crimpKindInfeasible": {
-        "neither": "Neither kind of crimp fits here: no way of stacking the layers lets the tip turn on both lines. Move a line, or crimp other flaps.",
+        "neitherRedraw": "Neither an inside nor an outside crimp fits these lines: no way of stacking the layers lets the tip turn on both. Press Esc and draw the lines closer to parallel, or crimp fewer flaps.",
         "text": "No way of stacking the layers lets the tip turn this way on both lines. The other kind of crimp may fit."
       },
       "crimpLinesMeet": {
-        "text": "The two lines cross, or come too close, over the paper the crimp moves. Draw the second line clear of the first across the flap.",
+        "redraw": "The two lines cross, or come too close, over the paper the crimp moves. Press Esc and draw the second line clear of the first, all the way across the flap.",
         "title": "The lines meet"
       },
       "crimpMissesTip": {
-        "text": "The second line crosses none of the paper beyond the first, so nothing would turn back. Draw it across the flap, beyond the first line.",
+        "redraw": "The second line crosses none of the paper beyond the first, so nothing would turn back. Swap the tip side if the tip is the other end, or press Esc and draw the second line across the flap, beyond the first.",
         "title": "The second line misses the flap"
       },
       "crimpNoOpening": {
@@ -687,8 +689,18 @@
       "axiom6SecondLine": "Click the edge or crease that one should land on.",
       "axiom6SecondPoint": "Click the second point to move.",
       "commit": "Press Enter to fold.",
+      "commitOrClick": "Press Enter, or click {{action}}, to fold.",
       "commitTouch": "Tap {{action}} to fold.",
       "crease": "Click the crease or folded edge to fold along.",
+      "crimpFinish": "Choose Inside or Outside, then press Enter.",
+      "crimpFinishTouch": "Choose Inside or Outside, then tap {{action}}.",
+      "crimpFirstCrease": "Click the crease or folded edge where the flap turns in.",
+      "crimpFirstStart": "Click where the first line starts, nearer the body: where the flap turns in.",
+      "crimpKind": "Choose Inside to tuck the paper between the lines inside the flap, or Outside to wrap it round the flap; a kind that does not fit is greyed out.",
+      "crimpLayers": "Under Layers, leave out any flap that should not crimp.",
+      "crimpSecondCrease": "Click the crease or folded edge beyond the first line where the flap turns back out.",
+      "crimpSecondStart": "Click where the second line starts, beyond the first toward the tip: where the flap turns back out.",
+      "crimpTip": "The end beyond the second line is the tip, which turns: if it is the wrong end, Swap the tip side.",
       "divide": "Click an edge or crease to divide it.",
       "divideUse": "Use the new points as references for any fold.",
       "finish": "Pick the fold and the layers, then press Enter.",
@@ -697,20 +709,17 @@
       "freeStart": "Click where the fold line starts.",
       "landOnLine": "Click the edge or crease it should land on.",
       "perpendicularTo": "Click the edge or crease the fold is perpendicular to.",
-      "pickFlapsToCrimp": "Pick which flaps crimp.",
       "pickFlapsToReverse": "Pick which flaps reverse.",
       "pickFlapsToTuck": "Pick which flaps tuck.",
       "pickLayers": "Pick which layers move.",
       "pickPoint": "Pick which point sinks: a sink takes one.",
       "pickSunkPoint": "The sunk point is found for you: pick another in the layers to pull that out.",
       "pickTuckTarget": "Pick the layer to tuck against.",
-      "pointToMove": "Click the point to move.",
-      "secondCrease": "Click the crease or folded edge the second line runs along.",
-      "secondFreeStart": "Click where the second line starts."
+      "pointToMove": "Click the point to move."
     },
     "tool": {
       "closedSinkHelp": "Push a closed point’s tip into a pocket, its layers kept together.",
-      "crimpHelp": "Reverse a flap along two lines at once: in, then back out.",
+      "crimpHelp": "Fold a flap in along one line and back out along a second, so its end turns.",
       "divideLine": "Divide line",
       "divideLineHelp": "Mark points that divide an edge or a crease into equal parts.",
       "insideReverse": "Inside reverse fold",
@@ -753,10 +762,14 @@
         "usePrecrease": "Use the precrease"
       },
       "help": {
-        "petal": "Lift a flap’s lower point along a precreased line while its sides fold in.",
+        "petal": "Lift a flap’s lower point along a precrease H while its sides fold in along two kite precreases.",
         "rabbitEar": "Fold a triangle’s corners in along their bisectors, so a point stands up.",
         "squash": "Open a two-layer flap and press it flat, its spine onto its hinge.",
-        "swivel": "Fold paper about a point inside it, along rays you pick and one that lets it lie flat."
+        "swivel": "Fold the paper about a point you place: three creases you pick, and a fourth that lets it lie flat."
+      },
+      "intro": {
+        "petal": "Lifts a flap’s lower point up along a line H while its sides fold in. It refolds precreases, so first use the Precrease tool: fold each lower edge of the top flap onto its centre line (Axiom 3, top flap only), then crease H through the two creases’ ends (Axiom 1, every layer).",
+        "swivel": "Folds the paper about a point, like a rabbit ear whose creases need not bisect anything: you place the point and three creases, and the fourth is one that lets the paper lie flat."
       },
       "layers": "Layers",
       "layersAll_one": "All {{count}}",
@@ -769,20 +782,19 @@
       "mountainTitle": "Mountain: the paper turns away from you",
       "noEmergentFits": "No fourth crease fits these layers here.",
       "note": {
-        "petal": "A petal fold refolds creases already there: precrease the kite creases from the flap’s lower point and the line H across their ends first.",
+        "freePoint": "Hold {{modifier}} to put a point anywhere.",
         "rabbitEar": "The creases meet at the triangle’s incenter: one to each corner, and a fourth that lets them lie flat.",
-        "squash": "A flap squashes when its two layers are free, held only along its hinge, and uncovered, with nothing over it on the side it opens toward.",
-        "swivel": "The point the creases meet at must lie inside the paper, off every crease: hold {{modifier}} to put it anywhere.",
-        "swivelTouch": "The point the creases meet at must lie inside the paper, off every crease."
+        "snapPoints": "Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.",
+        "squash": "A flap squashes when its two layers are free, held only along its hinge, and uncovered, with nothing over it on the side it opens toward."
       },
       "refusal": {
         "blocked": {
-          "text": "A crease runs into paper that cannot fold with it, or paper holds two parts of the fold together. Cut more layers, or try another fourth crease.",
+          "steppers": "A crease would run into paper that does not fold with it, or paper would hold two parts of the fold together. Step Layers to fold more layers, or Fourth crease to another one.",
           "title": "Paper is in the way"
         },
         "center": {
           "textEar": "The triangle’s creases meet at its incenter, which lies on a crease or off the layers. Pick corners that put it inside the layers, away from their creases.",
-          "textSwivel": "The point the creases meet at lies on a crease or off the layers. Put it inside the layers, away from their creases.",
+          "textSwivelStep": "The point the creases meet at is on a crease or off the paper. Press Esc and place it again as step 1 says: inside the paper, away from every crease.",
           "title": "The creases cannot meet there"
         },
         "covered": {
@@ -790,7 +802,7 @@
           "title": "The flap is covered"
         },
         "kite": {
-          "text": "A petal fold refolds creases already there. Fold each side edge of the flap’s top layer onto its centre line and unfold, then petal fold.",
+          "howTo": "A petal fold refolds creases already there. The button below takes the Precrease tool on Axiom 3: click a lower edge of the top flap, then its centre line, leave out the flaps behind under Layers, and press Enter. Crease the other edge the same way, then petal fold.",
           "title": "Precrease the kite first"
         },
         "line": {
@@ -822,7 +834,7 @@
           "title": "No flap to lift here"
         },
         "notFlat": {
-          "text": "No fourth crease lets these creases lie flat: two of them coincide, or the gaps between them are too wide. Pick other points.",
+          "spread": "No fourth crease lets these creases lie flat: two of them point the same way, or two neighbours are half a turn or more apart. Press Esc and pick points spread more evenly round the meeting point.",
           "title": "It cannot fold flat"
         },
         "notFree": {
@@ -859,22 +871,30 @@
         "earThirdCorner": "Click its third corner.",
         "finish": "Choose the options, then press Enter.",
         "finishTouch": "Choose the options, then tap {{action}}.",
-        "petalCrease": "Click the precreased line H the flap lifts along.",
-        "petalDirection": "Choose which way the flap lifts.",
-        "petalFirstEnd": "Click one end of the line H the flap lifts along.",
-        "petalFlap": "Click the flap below that line.",
-        "petalSecondEnd": "Click its other end.",
-        "pickAgain": "Press Esc, then pick again.",
-        "pickAgainTouch": "Tap Cancel, then pick again.",
+        "fixOrPickAgain": "Click a fix below, or press Esc and pick again.",
+        "fixOrPickAgainTouch": "Tap a fix below, or tap Cancel and pick again.",
+        "petalFinish": "Choose Valley or Mountain, then press Enter.",
+        "petalFinishTouch": "Choose Valley or Mountain, then tap {{action}}.",
+        "petalH": "Click the precrease H, across the flap where the kite creases end.",
+        "petalHFirstEnd": "Click one end of H, where a kite crease meets the flap’s edge.",
+        "petalHSecondEnd": "Click the other end of H, where the other kite crease ends.",
+        "petalLift": "Valley lifts the flap toward you, Mountain away from you: the preview shows which.",
+        "petalLiftingFlap": "Click the flap below H, between the kite creases: the part that lifts.",
+        "pickAgainRead": "Press Esc and pick again: the notice below says what to change.",
+        "pickAgainReadTouch": "Tap Cancel and pick again: the notice below says what to change.",
         "squashFlap": "Click the flap to squash.",
         "squashTarget": "Click where the spine should land, or keep it on the hinge line.",
         "squashTargetTouch": "Tap where the spine should land, or keep it on the hinge line.",
         "stayer": "Click the paper that stays put.",
-        "swivelChoose": "Choose the fourth crease and the layers.",
-        "swivelFirstRay": "Click a point the first crease runs toward.",
-        "swivelSecondRay": "Click a point the second crease runs toward.",
-        "swivelThirdRay": "Click a point the third crease runs toward.",
-        "swivelVertex": "Click the point the creases meet at."
+        "swivelFinish": "Pick the fourth crease, then press Enter.",
+        "swivelFinishTouch": "Pick the fourth crease, then tap {{action}}.",
+        "swivelFirstLandmark": "Click a corner, midpoint or mark the first crease runs to.",
+        "swivelPoint": "Hold {{modifier}} and click where the creases meet: inside the paper, off every crease.",
+        "swivelPointTouch": "Turn on Free point, then tap where the creases meet: inside the paper, off every crease.",
+        "swivelSecondLandmark": "Click a point for the second crease.",
+        "swivelStayer": "Click the part of the paper that stays put.",
+        "swivelStep": "Step Fourth crease through the ones that let the paper lie flat, and Layers, if shown, to fold fewer layers.",
+        "swivelThirdLandmark": "Click a point for the third crease."
       },
       "target": "Spine lands on",
       "targetHelp": "Click the folded paper to land the spine off the hinge.",

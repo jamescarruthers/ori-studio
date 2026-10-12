@@ -85,6 +85,7 @@ export function FoldToolWindow({
       <div className={styles.section}>
         <ToolHintInstructions
           heading={instructions.heading}
+          intro={instructions.intro}
           items={instructions.items}
           ordered
           current={instructions.current}

@@ -83,12 +83,16 @@ describe('the crimp tool’s window', () => {
     const first = foldToolWindow(t, view({ picks: 1 }), verbs(), mouse);
     expect(first).toMatchObject({ phase: 'locate', title: 'Crimp', meta: '2 settings', kind: null });
     expect(first?.compound).toBeUndefined();
+    // What a crimp is, and which line is which, before the first click.
+    expect(first?.instructions.intro).toBe(
+      'Folds a flap in along a first line and back out along a second, so its end turns. Draw the first line nearer the body and the second nearer the tip; each runs across the flap.'
+    );
     expect(first?.instructions.items).toEqual([
-      'Click where the fold line starts.',
+      'Click where the first line starts, nearer the body: where the flap turns in.',
       'Click where it ends.',
-      'Click where the second line starts.',
+      'Click where the second line starts, beyond the first toward the tip: where the flap turns back out.',
       'Click where it ends.',
-      'Pick the fold and the layers, then press Enter.',
+      'Choose Inside or Outside, then press Enter.',
     ]);
     expect(first?.instructions.current).toBe(1);
     // What snaps is the first line's mode's while it is in hand, then the second's.
@@ -103,13 +107,20 @@ describe('the crimp tool’s window', () => {
     // An axiom's first line, a crease's second: its one click after the axiom's.
     const second = foldToolWindow(t, view({ lineMode: 'axiom-2', secondLineMode: 'crease', picks: 2 }), verbs(), finger);
     expect(second?.instructions.items.slice(2)).toEqual([
-      'Click the crease or folded edge the second line runs along.',
-      'Pick the fold and the layers, then tap Crimp.',
+      'Click the crease or folded edge beyond the first line where the flap turns back out.',
+      'Choose Inside or Outside, then tap Crimp.',
     ]);
     expect(second?.instructions.current).toBe(2);
     expect(second?.instructions.notes).toEqual([
       'Folding along a precrease refolds it; along a folded edge, it unfolds the flap.',
     ]);
+
+    // An axiom left in hand by the fold before: its steps, and how to draw the line instead.
+    const axiom = foldToolWindow(t, view({ lineMode: 'axiom-2', picks: 0 }), verbs(), mouse);
+    expect(axiom?.instructions.items.slice(0, 2)).toEqual(['Click the point to move.', 'Click where it should land.']);
+    expect(axiom?.instructions.notes[0]).toBe(
+      'The first line is located by Axiom 2: point onto point, the line mode in hand. To draw it, choose Free line under First line.'
+    );
   });
 
   it('passes on a second line mode, and only one that is one', () => {
@@ -134,7 +145,13 @@ describe('the crimp tool’s window', () => {
     both?.compound?.kind.set('outside');
     expect(calls.setReverseKind).toHaveBeenCalledWith('outside');
     expect(both?.movingSide?.label).toBe('Tip side');
-    expect(both?.instructions.items[0]).toBe('Pick which flaps crimp.');
+    // The tip, the kind, the flaps, then the commit, as the window shows them.
+    expect(both?.instructions.items).toEqual([
+      'The end beyond the second line is the tip, which turns: if it is the wrong end, Swap the tip side.',
+      'Choose Inside to tuck the paper between the lines inside the flap, or Outside to wrap it round the flap; a kind that does not fit is greyed out.',
+      'Under Layers, leave out any flap that should not crimp.',
+      'Press Enter, or click Inside crimp, to fold.',
+    ]);
     expect(both?.footer?.commit.label).toBe('Inside crimp');
 
     // Only the outside fits: the inside is shown, disabled with why.
@@ -163,7 +180,16 @@ describe('the crimp tool’s window', () => {
       foldToolWindow(t, view({ picks: 4, preview: preview({ refused }), crimp: crimp({ kinds: [] }) }), calls, mouse);
     const meet = refusedPreview({ refusal: { code: 'crimp_lines_meet', faces: [0] }, fixes: [] });
     expect(meet?.refusal).toMatchObject({ code: 'crimp_lines_meet', title: 'The lines meet', actions: [] });
+    expect(meet?.refusal?.text).toMatch(/Press Esc and draw the second line clear of the first/);
     expect(meet?.footer?.commit.disabled).toBe(true);
+    // Neither kind fits, and nothing to press: what to draw instead.
+    const neither = refusedPreview({ refusal: { code: 'crimp_kind_infeasible', kind: 'inside', faces: [0] }, fixes: [] });
+    expect(neither?.refusal?.text).toBe(
+      'Neither an inside nor an outside crimp fits these lines: no way of stacking the layers lets the tip turn on both. Press Esc and draw the lines closer to parallel, or crimp fewer flaps.'
+    );
+    // The second line beyond nothing: the tip may be the other end.
+    const misses = refusedPreview({ refusal: { code: 'crimp_misses_tip', faces: [0] }, fixes: [] });
+    expect(misses?.refusal?.text).toMatch(/^The second line crosses none of the paper beyond the first.*Swap the tip side/);
     const everything = refusedPreview({
       refusal: { code: 'nothing_stays' },
       fixes: [{ fix: 'pick_flap', flaps: [{ faces: [0, 1], witness: [0.2, 0.7] }] }],

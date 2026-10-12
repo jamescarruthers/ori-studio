@@ -304,6 +304,8 @@
     "crimp": {
       "bothFit": "Os dois tipos de crimp cabem aqui: escolha para onde vai a ponta.",
       "firstLine": "Primeira linha",
+      "firstLineAxiom": "A primeira linha é posicionada por {{mode}}, o modo de linha atual. Para desenhá-la, escolha Linha livre em Primeira linha.",
+      "intro": "Dobra uma aba para dentro ao longo de uma primeira linha e de volta para fora ao longo de uma segunda, de modo que a ponta gire. Desenhe a primeira linha mais perto do corpo e a segunda mais perto da ponta; cada uma atravessa a aba.",
       "onlyInside": "Aqui só cabe o crimp interno.",
       "onlyOutside": "Aqui só cabe o crimp externo.",
       "secondLine": "Segunda linha"
@@ -489,15 +491,15 @@
         "title": "Não dá para fazer crimp para dentro"
       },
       "crimpKindInfeasible": {
-        "neither": "Nenhum tipo de crimp cabe aqui: nenhum jeito de empilhar as camadas deixa a ponta virar nas duas linhas. Mova uma linha ou faça crimp em outras abas.",
+        "neitherRedraw": "Nem o crimp interno nem o externo cabem nestas linhas: nenhum jeito de empilhar as camadas deixa a ponta virar nas duas. Pressione Esc e desenhe as linhas mais próximas de paralelas, ou faça o crimp em menos abas.",
         "text": "Nenhum jeito de empilhar as camadas deixa a ponta virar para este lado nas duas linhas. O outro tipo de crimp talvez se encaixe."
       },
       "crimpLinesMeet": {
-        "text": "As duas linhas se cruzam, ou chegam perto demais, sobre o papel que o crimp move. Trace a segunda linha afastada da primeira ao longo de toda a aba.",
+        "redraw": "As duas linhas se cruzam, ou ficam próximas demais, sobre o papel que o crimp move. Pressione Esc e desenhe a segunda linha afastada da primeira, atravessando a aba inteira.",
         "title": "As linhas se encontram"
       },
       "crimpMissesTip": {
-        "text": "A segunda linha não cruza nada do papel além da primeira, então nada voltaria. Trace-a atravessando a aba, além da primeira linha.",
+        "redraw": "A segunda linha não atravessa nenhum papel além da primeira, então nada voltaria para fora. Troque o lado da ponta se a ponta estiver na outra extremidade, ou pressione Esc e desenhe a segunda linha atravessando a aba, além da primeira.",
         "title": "A segunda linha não pega a aba"
       },
       "crimpNoOpening": {
@@ -703,8 +705,18 @@
       "axiom6SecondLine": "Clique na borda ou vinco onde esse deve cair.",
       "axiom6SecondPoint": "Clique no segundo ponto a mover.",
       "commit": "Pressione Enter para dobrar.",
+      "commitOrClick": "Pressione Enter, ou clique em {{action}}, para dobrar.",
       "commitTouch": "Toque em {{action}} para dobrar.",
       "crease": "Clique no vinco ou borda dobrada ao longo do qual dobrar.",
+      "crimpFinish": "Escolha Interna ou Externa e pressione Enter.",
+      "crimpFinishTouch": "Escolha Interna ou Externa e toque em {{action}}.",
+      "crimpFirstCrease": "Clique no vinco ou na borda dobrada onde a aba se dobra para dentro.",
+      "crimpFirstStart": "Clique onde a primeira linha começa, mais perto do corpo: onde a aba se dobra para dentro.",
+      "crimpKind": "Escolha Interna para enfiar o papel entre as linhas dentro da aba, ou Externa para envolvê-lo por fora da aba; um tipo que não cabe aparece em cinza.",
+      "crimpLayers": "Em Camadas, tire as abas que não devem fazer o crimp.",
+      "crimpSecondCrease": "Clique no vinco ou na borda dobrada além da primeira linha, onde a aba volta para fora.",
+      "crimpSecondStart": "Clique onde a segunda linha começa, além da primeira em direção à ponta: onde a aba volta para fora.",
+      "crimpTip": "A extremidade além da segunda linha é a ponta, que gira: se for a extremidade errada, troque o lado da ponta.",
       "divide": "Clique em uma borda ou vinco para dividi-lo.",
       "divideUse": "Use os novos pontos como referências para qualquer dobra.",
       "finish": "Escolha a dobra e as camadas e pressione Enter.",
@@ -713,20 +725,17 @@
       "freeStart": "Clique onde a linha de dobra começa.",
       "landOnLine": "Clique na borda ou vinco onde ele deve cair.",
       "perpendicularTo": "Clique na borda ou vinco ao qual a dobra é perpendicular.",
-      "pickFlapsToCrimp": "Escolha em quais abas fazer crimp.",
       "pickFlapsToReverse": "Escolha quais abas se invertem.",
       "pickFlapsToTuck": "Escolha quais abas se encaixam.",
       "pickLayers": "Escolha quais camadas se movem.",
       "pickPoint": "Escolha qual ponta afunda: um afundamento usa só uma.",
       "pickSunkPoint": "A ponta afundada é encontrada para você: escolha outra nas camadas para puxar essa.",
       "pickTuckTarget": "Escolha a camada onde encaixar.",
-      "pointToMove": "Clique no ponto a mover.",
-      "secondCrease": "Clique no vinco ou borda dobrada que a segunda linha segue.",
-      "secondFreeStart": "Clique onde a segunda linha começa."
+      "pointToMove": "Clique no ponto a mover."
     },
     "tool": {
       "closedSinkHelp": "Empurrar a extremidade de uma ponta fechada para dentro de um bolso, mantendo as camadas juntas.",
-      "crimpHelp": "Inverter uma aba ao longo de duas linhas de uma vez: para dentro e depois de volta para fora.",
+      "crimpHelp": "Dobrar uma aba para dentro ao longo de uma linha e de volta para fora ao longo de uma segunda, de modo que a ponta gire.",
       "divideLine": "Dividir linha",
       "divideLineHelp": "Marcar pontos que dividem uma borda ou um vinco em partes iguais.",
       "insideReverse": "Dobra invertida interna",
@@ -771,10 +780,14 @@
         "usePrecrease": "Usar o pré-vinco"
       },
       "help": {
-        "petal": "Levantar a ponta de baixo de uma aba ao longo de uma linha pré-vincada enquanto os lados se dobram para dentro.",
+        "petal": "Levantar a ponta de baixo de uma aba ao longo de um pré-vinco H enquanto os lados se dobram para dentro por dois pré-vincos de pipa.",
         "rabbitEar": "Dobrar os cantos de um triângulo ao longo das bissetrizes, para que uma ponta se levante.",
         "squash": "Abrir uma aba de duas camadas e achatá-la, com a lombada sobre a dobradiça.",
-        "swivel": "Dobrar o papel em torno de um ponto interno, ao longo de raios que você escolhe e de um que o deixa plano."
+        "swivel": "Dobrar o papel em torno de um ponto que você posiciona: três vincos que você escolhe e um quarto que o deixa plano."
+      },
+      "intro": {
+        "petal": "Levanta a ponta de baixo de uma aba ao longo de uma linha H enquanto os lados se dobram para dentro. Ela redobra pré-vincos, então primeiro use a ferramenta Pré-vincar: leve cada borda de baixo da aba de cima até a linha central (Axioma 3, só a aba de cima) e depois pré-vinque H pelas pontas dos dois vincos (Axioma 1, todas as camadas).",
+        "swivel": "Dobra o papel em torno de um ponto, como uma orelha de coelho cujos vincos não precisam dividir nada ao meio: você posiciona o ponto e três vincos, e o quarto é um que deixa o papel plano."
       },
       "layers": "Camadas",
       "layersAll_one": "Todas as {{count}}",
@@ -790,20 +803,19 @@
       "mountainTitle": "Montanha: o papel gira para longe de você",
       "noEmergentFits": "Nenhum quarto vinco cabe aqui com estas camadas.",
       "note": {
-        "petal": "Uma dobra pétala redobra vincos que já existem: pré-vinque antes os vincos da pipa a partir da ponta de baixo da aba e a linha H entre as pontas deles.",
+        "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar.",
         "rabbitEar": "Os vincos se encontram no incentro do triângulo: um para cada canto e um quarto que os deixa planos.",
-        "squash": "Uma aba se achata quando suas duas camadas estão livres, presas só pela dobradiça, e descobertas, sem nada por cima do lado para onde ela se abre.",
-        "swivel": "O ponto onde os vincos se encontram deve ficar dentro do papel, fora de qualquer vinco: segure {{modifier}} para colocá-lo em qualquer lugar.",
-        "swivelTouch": "O ponto onde os vincos se encontram deve ficar dentro do papel, fora de qualquer vinco."
+        "snapPoints": "Os pontos se ajustam a cantos, marcas, cruzamentos de vincos e pontos médios: um clique em qualquer outro lugar não escolhe nada.",
+        "squash": "Uma aba se achata quando suas duas camadas estão livres, presas só pela dobradiça, e descobertas, sem nada por cima do lado para onde ela se abre."
       },
       "refusal": {
         "blocked": {
-          "text": "Um vinco entra em papel que não pode dobrar com ele, ou há papel unindo duas partes da dobra. Corte mais camadas ou tente outro quarto vinco.",
+          "steppers": "Um vinco esbarraria em papel que não dobra junto, ou o papel prenderia duas partes da dobra. Passe Camadas para dobrar mais camadas, ou Quarto vinco para outro.",
           "title": "Há papel no caminho"
         },
         "center": {
           "textEar": "Os vincos do triângulo se encontram no incentro, que cai sobre um vinco ou fora das camadas. Escolha cantos que o deixem dentro das camadas, longe dos vincos delas.",
-          "textSwivel": "O ponto onde os vincos se encontram cai sobre um vinco ou fora das camadas. Coloque-o dentro das camadas, longe dos vincos delas.",
+          "textSwivelStep": "O ponto onde os vincos se encontram está sobre um vinco ou fora do papel. Pressione Esc e posicione-o de novo como diz o passo 1: dentro do papel, longe de todo vinco.",
           "title": "Os vincos não podem se encontrar ali"
         },
         "covered": {
@@ -811,7 +823,7 @@
           "title": "A aba está coberta"
         },
         "kite": {
-          "text": "Uma dobra pétala redobra vincos que já existem. Leve cada borda lateral da camada de cima da aba até a linha central e desdobre; depois faça a dobra pétala.",
+          "howTo": "Uma dobra pétala redobra vincos que já existem. O botão abaixo pega a ferramenta Pré-vincar com o Axioma 3: clique em uma borda de baixo da aba de cima, depois na linha central, tire as abas de trás em Camadas e pressione Enter. Pré-vinque a outra borda do mesmo jeito e depois faça a dobra pétala.",
           "title": "Pré-vinque antes a pipa"
         },
         "line": {
@@ -843,7 +855,7 @@
           "title": "Não há aba para levantar aqui"
         },
         "notFlat": {
-          "text": "Nenhum quarto vinco deixa estes vincos planos: dois deles coincidem ou os vãos entre eles são largos demais. Escolha outros pontos.",
+          "spread": "Nenhum quarto vinco deixa estes vincos planos: dois apontam na mesma direção, ou dois vizinhos estão a meia volta ou mais de distância. Pressione Esc e escolha pontos espalhados de forma mais uniforme em volta do ponto de encontro.",
           "title": "Não fica plano"
         },
         "notFree": {
@@ -880,22 +892,30 @@
         "earThirdCorner": "Clique no terceiro canto.",
         "finish": "Escolha as opções e pressione Enter.",
         "finishTouch": "Escolha as opções e toque em {{action}}.",
-        "petalCrease": "Clique na linha pré-vincada H ao longo da qual a aba sobe.",
-        "petalDirection": "Escolha para que lado a aba sobe.",
-        "petalFirstEnd": "Clique numa ponta da linha H ao longo da qual a aba sobe.",
-        "petalFlap": "Clique na aba abaixo dessa linha.",
-        "petalSecondEnd": "Clique na outra ponta.",
-        "pickAgain": "Pressione Esc e escolha de novo.",
-        "pickAgainTouch": "Toque em Cancelar e escolha de novo.",
+        "fixOrPickAgain": "Clique em uma correção abaixo, ou pressione Esc e escolha de novo.",
+        "fixOrPickAgainTouch": "Toque em uma correção abaixo, ou toque em Cancelar e escolha de novo.",
+        "petalFinish": "Escolha Vale ou Montanha e pressione Enter.",
+        "petalFinishTouch": "Escolha Vale ou Montanha e toque em {{action}}.",
+        "petalH": "Clique no pré-vinco H, que atravessa a aba onde terminam os vincos da pipa.",
+        "petalHFirstEnd": "Clique em uma extremidade de H, onde um vinco da pipa encontra a borda da aba.",
+        "petalHSecondEnd": "Clique na outra extremidade de H, onde termina o outro vinco da pipa.",
+        "petalLift": "Vale levanta a aba na sua direção, Montanha para longe de você: a prévia mostra qual.",
+        "petalLiftingFlap": "Clique na aba abaixo de H, entre os vincos da pipa: a parte que se levanta.",
+        "pickAgainRead": "Pressione Esc e escolha de novo: o aviso abaixo diz o que mudar.",
+        "pickAgainReadTouch": "Toque em Cancelar e escolha de novo: o aviso abaixo diz o que mudar.",
         "squashFlap": "Clique na aba a achatar.",
         "squashTarget": "Clique onde a lombada deve cair, ou deixe-a na linha da dobradiça.",
         "squashTargetTouch": "Toque onde a lombada deve cair, ou deixe-a na linha da dobradiça.",
         "stayer": "Clique no papel que fica parado.",
-        "swivelChoose": "Escolha o quarto vinco e as camadas.",
-        "swivelFirstRay": "Clique num ponto para onde vai o primeiro vinco.",
-        "swivelSecondRay": "Clique num ponto para onde vai o segundo vinco.",
-        "swivelThirdRay": "Clique num ponto para onde vai o terceiro vinco.",
-        "swivelVertex": "Clique no ponto onde os vincos se encontram."
+        "swivelFinish": "Escolha o quarto vinco e pressione Enter.",
+        "swivelFinishTouch": "Escolha o quarto vinco e toque em {{action}}.",
+        "swivelFirstLandmark": "Clique em um canto, ponto médio ou marca para onde vai o primeiro vinco.",
+        "swivelPoint": "Segure {{modifier}} e clique onde os vincos se encontram: dentro do papel, fora de todo vinco.",
+        "swivelPointTouch": "Ative Ponto livre e toque onde os vincos se encontram: dentro do papel, fora de todo vinco.",
+        "swivelSecondLandmark": "Clique em um ponto para o segundo vinco.",
+        "swivelStayer": "Clique na parte do papel que fica parada.",
+        "swivelStep": "Passe Quarto vinco pelos que deixam o papel plano, e Camadas, se aparecer, para dobrar menos camadas.",
+        "swivelThirdLandmark": "Clique em um ponto para o terceiro vinco."
       },
       "target": "A lombada cai em",
       "targetHelp": "Clique no papel dobrado para a lombada cair fora da dobradiça.",

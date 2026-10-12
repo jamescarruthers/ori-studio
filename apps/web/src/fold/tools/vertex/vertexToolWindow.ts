@@ -5,9 +5,12 @@
  *
  * While the clicks are being made: numbered steps for them, what each snaps
  * to, the fold's precondition — said up front, since research §5.3 found the
- * preconditions, not the stacking, to be what stops these folds — and the
- * direction, which decides which layer a click names. A petal fold locates
- * its line H through the line-mode select, as a fold locates its line.
+ * preconditions, not the stacking, to be what stops these folds: for the
+ * petal fold and the swivel above the steps, with what the fold is, since
+ * their first click already depends on it; for the others under the
+ * direction — and the direction, which decides which layer a click names. A
+ * petal fold locates its line H through the line-mode select, as a fold
+ * locates its line.
  *
  * Once every click is in, previewing:
  *
@@ -119,8 +122,11 @@ export interface FoldVertexControls {
     set: (ridge: number) => void;
   } | null;
   order: FoldChoiceStepper | null;
-  /** What the fold needs of the paper, said under the controls. */
-  note: string;
+  /**
+   * What the fold needs of the paper, said under the controls; null for a
+   * fold whose window says it above its steps instead (`vertexIntro`).
+   */
+  note: string | null;
 }
 
 /** Whether a vertex fold has any choice to show beside its direction. */
@@ -128,41 +134,91 @@ export function hasVertexChoices(controls: FoldVertexControls): boolean {
   return Boolean(controls.target || controls.emergent || controls.layers || controls.ridge || controls.order);
 }
 
-/** What the fold needs of the paper (research §5.3: its preconditions are what stop it). */
-function preconditionNote(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string {
+/**
+ * What the fold needs of the paper (research §5.3: its preconditions are
+ * what stop it), said under its direction; null for the petal fold and the
+ * swivel, whose windows say it above their steps (`vertexIntro`), before the
+ * first click it governs.
+ */
+function preconditionNote(t: TFunction, tool: FoldVertexToolId): string | null {
   switch (tool) {
     case 'squash':
       return t(
         'tools:fold.vertex.note.squash',
         'A flap squashes when its two layers are free, held only along its hinge, and uncovered, with nothing over it on the side it opens toward.'
       );
-    case 'petal':
-      return t(
-        'tools:fold.vertex.note.petal',
-        'A petal fold refolds creases already there: precrease the kite creases from the flap’s lower point and the line H across their ends first.'
-      );
     case 'rabbit-ear':
       return t(
         'tools:fold.vertex.note.rabbitEar',
         'The creases meet at the triangle’s incenter: one to each corner, and a fourth that lets them lie flat.'
       );
+    case 'petal':
     case 'swivel':
-      return host.coarse
-        ? t('tools:fold.vertex.note.swivelTouch', 'The point the creases meet at must lie inside the paper, off every crease.')
-        : t(
-            'tools:fold.vertex.note.swivel',
-            'The point the creases meet at must lie inside the paper, off every crease: hold {{modifier}} to put it anywhere.',
-            { modifier: host.alt }
-          );
+      return null;
   }
 }
 
-/** What the clicks snap to, and the key that clears them. */
+/**
+ * What the petal fold and the swivel are, and what they need first, above
+ * their steps: what a first-time folder could not otherwise know before the
+ * first click (owner feedback, 2026-10-11). Null for the others.
+ */
+function vertexIntro(t: TFunction, tool: FoldVertexToolId): string | null {
+  switch (tool) {
+    case 'petal':
+      return t(
+        'tools:fold.vertex.intro.petal',
+        'Lifts a flap’s lower point up along a line H while its sides fold in. It refolds precreases, so first use the Precrease tool: fold each lower edge of the top flap onto its centre line (Axiom 3, top flap only), then crease H through the two creases’ ends (Axiom 1, every layer).'
+      );
+    case 'swivel':
+      return t(
+        'tools:fold.vertex.intro.swivel',
+        'Folds the paper about a point, like a rabbit ear whose creases need not bisect anything: you place the point and three creases, and the fourth is one that lets the paper lie flat.'
+      );
+    case 'squash':
+    case 'rabbit-ear':
+      return null;
+  }
+}
+
+/** What the clicks snap to, and the keys that change and clear them. */
 function locateNotes(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string[] {
+  // A rabbit ear's and a swivel's clicks are points: a landmark, or with the
+  // key any point, never a place on an edge between landmarks.
   const snaps = tool === 'rabbit-ear' || tool === 'swivel';
-  const snap = snaps ? [t('tools:fold.note.snap', 'Points snap to corners, marks, crease crossings, midpoints and edges.')] : [];
+  const snap = snaps
+    ? [
+        t(
+          'tools:fold.vertex.note.snapPoints',
+          'Points snap to corners, marks, crease crossings and midpoints: a click anywhere else picks nothing.'
+        ),
+        ...(host.coarse
+          ? []
+          : [t('tools:fold.vertex.note.freePoint', 'Hold {{modifier}} to put a point anywhere.', { modifier: host.alt })]),
+      ]
+    : [];
   const clear = host.coarse ? [] : [t('tools:fold.note.clear', 'Esc clears the picks.')];
   return [...snap, ...clear];
+}
+
+/** The last step while the clicks are made: what comes after them. */
+function finishStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string {
+  const action = foldToolLabel(t, tool);
+  switch (tool) {
+    case 'petal':
+      return host.coarse
+        ? t('tools:fold.vertex.steps.petalFinishTouch', 'Choose Valley or Mountain, then tap {{action}}.', { action })
+        : t('tools:fold.vertex.steps.petalFinish', 'Choose Valley or Mountain, then press Enter.');
+    case 'swivel':
+      return host.coarse
+        ? t('tools:fold.vertex.steps.swivelFinishTouch', 'Pick the fourth crease, then tap {{action}}.', { action })
+        : t('tools:fold.vertex.steps.swivelFinish', 'Pick the fourth crease, then press Enter.');
+    case 'squash':
+    case 'rabbit-ear':
+      return host.coarse
+        ? t('tools:fold.vertex.steps.finishTouch', 'Choose the options, then tap {{action}}.', { action })
+        : t('tools:fold.vertex.steps.finish', 'Choose the options, then press Enter.');
+  }
 }
 
 function locateInstructions(
@@ -171,13 +227,10 @@ function locateInstructions(
   tool: FoldVertexToolId,
   host: FoldToolHost
 ): FoldToolInstructions {
-  const action = foldToolLabel(t, tool);
-  const finish = host.coarse
-    ? t('tools:fold.vertex.steps.finishTouch', 'Choose the options, then tap {{action}}.', { action })
-    : t('tools:fold.vertex.steps.finish', 'Choose the options, then press Enter.');
-  const items = [...vertexToolSteps(t, tool, view.lineMode), finish];
+  const items = [...vertexToolSteps(t, tool, view.lineMode, host), finishStep(t, tool, host)];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
+    intro: vertexIntro(t, tool),
     items,
     current: Math.min(Math.max(0, view.picks), items.length - 1),
     notes: locateNotes(t, tool, host),
@@ -192,42 +245,59 @@ function chooseStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): s
         ? t('tools:fold.vertex.steps.squashTargetTouch', 'Tap where the spine should land, or keep it on the hinge line.')
         : t('tools:fold.vertex.steps.squashTarget', 'Click where the spine should land, or keep it on the hinge line.');
     case 'petal':
-      return t('tools:fold.vertex.steps.petalDirection', 'Choose which way the flap lifts.');
+      return t(
+        'tools:fold.vertex.steps.petalLift',
+        'Valley lifts the flap toward you, Mountain away from you: the preview shows which.'
+      );
     case 'rabbit-ear':
       return t('tools:fold.vertex.steps.earChoose', 'Choose the fourth crease, the layers and the ridge.');
     case 'swivel':
-      return t('tools:fold.vertex.steps.swivelChoose', 'Choose the fourth crease and the layers.');
+      return t(
+        'tools:fold.vertex.steps.swivelStep',
+        'Step Fourth crease through the ones that let the paper lie flat, and Layers, if shown, to fold fewer layers.'
+      );
   }
+}
+
+/**
+ * The commit, in a window with buttons in it: a stepper pressed last keeps
+ * the focus, and Enter would press it again, so the button is named too.
+ */
+function commitStep(t: TFunction, tool: FoldVertexToolId, host: FoldToolHost): string {
+  const action = foldToolLabel(t, tool);
+  return host.coarse
+    ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action })
+    : t('tools:fold.steps.commitOrClick', 'Press Enter, or click {{action}}, to fold.', { action });
 }
 
 function previewInstructions(
   t: TFunction,
   vertex: FoldVertexWindowView,
   host: FoldToolHost,
-  view: FoldToolWindowView
+  view: FoldToolWindowView,
+  fixes: boolean
 ): FoldToolInstructions {
   const { tool } = vertex;
   if (!vertex.described && view.preview?.refused) {
-    // Refused before anything was described: nothing to choose, only to pick again.
+    // Refused before anything was described: nothing to choose, only to pick
+    // again — or to take a fix the notice offers.
+    const again = fixes
+      ? host.coarse
+        ? t('tools:fold.vertex.steps.fixOrPickAgainTouch', 'Tap a fix below, or tap Cancel and pick again.')
+        : t('tools:fold.vertex.steps.fixOrPickAgain', 'Click a fix below, or press Esc and pick again.')
+      : host.coarse
+        ? t('tools:fold.vertex.steps.pickAgainReadTouch', 'Tap Cancel and pick again: the notice below says what to change.')
+        : t('tools:fold.vertex.steps.pickAgainRead', 'Press Esc and pick again: the notice below says what to change.');
     return {
       heading: t('tools:fold.window.instructions', 'Instructions'),
-      items: [
-        host.coarse
-          ? t('tools:fold.vertex.steps.pickAgainTouch', 'Tap Cancel, then pick again.')
-          : t('tools:fold.vertex.steps.pickAgain', 'Press Esc, then pick again.'),
-      ],
+      items: [again],
       current: 0,
       notes: [],
     };
   }
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
-    items: [
-      chooseStep(t, tool, host),
-      host.coarse
-        ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action: foldToolLabel(t, tool) })
-        : t('tools:fold.steps.commit', 'Press Enter to fold.'),
-    ],
+    items: [chooseStep(t, tool, host), commitStep(t, tool, host)],
     // The choices are optional, so the window leads with them and never marks them done.
     current: 0,
     notes: view.preview ? queuedNote(t, view.preview) : [],
@@ -366,7 +436,7 @@ export function vertexControls(
     order: located
       ? choiceStepper(t, t('tools:fold.reverse.order', 'Layer order'), vertex.order, vertex.orders, verbs.stepOrder, readOnly)
       : null,
-    note: preconditionNote(t, tool, host),
+    note: preconditionNote(t, tool),
   };
 }
 
@@ -401,33 +471,34 @@ export function vertexToolWindow(
   }
   const controls = vertexControls(t, vertex, verbs, readOnly, host, true);
   const settings = [controls.direction, controls.target, controls.emergent, controls.layers, controls.ridge, controls.order];
+  const refusal = preview.refused
+    ? foldRefusalNotice(
+        t,
+        preview.refused,
+        {
+          kind: 'vertex',
+          readOnly,
+          // A vertex fold shows no section: no chips number its flaps.
+          ...sectionFlapNames(null),
+          vertex: {
+            tool,
+            ...(vertex.emergentNumber ? { emergentNumber: vertex.emergentNumber } : {}),
+            ...(vertex.nearPrecrease ? { nearPrecrease: true } : {}),
+          },
+        },
+        verbs
+      )
+    : null;
   return {
     phase: 'preview',
     title,
     meta: settingsMeta(t, settings.filter(Boolean).length),
-    instructions: previewInstructions(t, vertex, host, view),
+    instructions: previewInstructions(t, vertex, host, view, (refusal?.actions.length ?? 0) > 0),
     lineMode: null,
     kind: null,
     movingSide: null,
     layers: null,
-    refusal: preview.refused
-      ? foldRefusalNotice(
-          t,
-          preview.refused,
-          {
-            kind: 'vertex',
-            readOnly,
-            // A vertex fold shows no section: no chips number its flaps.
-            ...sectionFlapNames(null),
-            vertex: {
-              tool,
-              ...(vertex.emergentNumber ? { emergentNumber: vertex.emergentNumber } : {}),
-              ...(vertex.nearPrecrease ? { nearPrecrease: true } : {}),
-            },
-          },
-          verbs
-        )
-      : null,
+    refusal,
     divide: null,
     vertex: controls,
     footer: {

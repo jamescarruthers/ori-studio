@@ -296,6 +296,8 @@
     "crimp": {
       "bothFit": "Hier passen beide Arten von Crimp: Wähle, wohin die Spitze geht.",
       "firstLine": "Erste Linie",
+      "firstLineAxiom": "Die erste Linie wird mit {{mode}} bestimmt, der gewählten Linienart. Um sie zu zeichnen, wähle unter Erste Linie die Option Freie Linie.",
+      "intro": "Faltet eine Lasche entlang einer ersten Linie hinein und entlang einer zweiten wieder heraus, sodass sich ihr Ende dreht. Zeichne die erste Linie näher am Körper und die zweite näher an der Spitze; jede läuft quer über die Lasche.",
       "onlyInside": "Hier passt nur der innere Crimp.",
       "onlyOutside": "Hier passt nur der äußere Crimp.",
       "secondLine": "Zweite Linie"
@@ -474,15 +476,15 @@
         "title": "Ein innerer Crimp geht nicht"
       },
       "crimpKindInfeasible": {
-        "neither": "Hier passt keine Art von Crimp: Bei keiner Stapelung der Lagen kann die Spitze an beiden Linien umschlagen. Verschiebe eine Linie oder crimpe andere Laschen.",
+        "neitherRedraw": "Weder ein innerer noch ein äußerer Crimp passt zu diesen Linien: Keine Lagenfolge lässt die Spitze an beiden umschlagen. Drücke Esc und zeichne die Linien paralleler, oder crimpe weniger Laschen.",
         "text": "Bei keiner Stapelung der Lagen kann die Spitze an beiden Linien in diese Richtung umschlagen. Die andere Art von Crimp passt vielleicht."
       },
       "crimpLinesMeet": {
-        "text": "Die beiden Linien kreuzen sich über dem Papier, das der Crimp bewegt, oder kommen sich dort zu nahe. Zeichne die zweite Linie über die Lasche, ohne die erste zu berühren.",
+        "redraw": "Die beiden Linien kreuzen sich oder kommen sich zu nahe über dem Papier, das der Crimp bewegt. Drücke Esc und zeichne die zweite Linie mit Abstand zur ersten, ganz quer über die Lasche.",
         "title": "Die Linien treffen sich"
       },
       "crimpMissesTip": {
-        "text": "Die zweite Linie kreuzt kein Papier jenseits der ersten, also würde nichts zurückschlagen. Zeichne sie über die Lasche, jenseits der ersten Linie.",
+        "redraw": "Die zweite Linie kreuzt kein Papier jenseits der ersten, also würde nichts zurückschlagen. Tausche die Seite der Spitze, wenn die Spitze am anderen Ende ist, oder drücke Esc und zeichne die zweite Linie quer über die Lasche, jenseits der ersten.",
         "title": "Die zweite Linie verfehlt die Lasche"
       },
       "crimpNoOpening": {
@@ -687,8 +689,18 @@
       "axiom6SecondLine": "Klicke auf die Kante oder Faltlinie, auf der dieser landen soll.",
       "axiom6SecondPoint": "Klicke auf den zweiten Punkt, der bewegt werden soll.",
       "commit": "Drücke die Eingabetaste, um zu falten.",
+      "commitOrClick": "Drücke die Eingabetaste oder klicke auf {{action}}, um zu falten.",
       "commitTouch": "Tippe auf {{action}}, um zu falten.",
       "crease": "Klicke auf die Faltlinie oder gefaltete Kante, entlang der gefaltet werden soll.",
+      "crimpFinish": "Wähle Innen oder Außen, dann drücke die Eingabetaste.",
+      "crimpFinishTouch": "Wähle Innen oder Außen, dann tippe auf {{action}}.",
+      "crimpFirstCrease": "Klicke auf die Faltlinie oder gefaltete Kante, an der die Lasche nach innen umschlägt.",
+      "crimpFirstStart": "Klicke dorthin, wo die erste Linie beginnt, näher am Körper: wo die Lasche nach innen umschlägt.",
+      "crimpKind": "Wähle Innen, um das Papier zwischen den Linien in die Lasche zu stecken, oder Außen, um es um die Lasche zu legen; eine Art, die nicht passt, ist ausgegraut.",
+      "crimpLayers": "Nimm unter Lagen jede Lasche heraus, die nicht gecrimpt werden soll.",
+      "crimpSecondCrease": "Klicke auf die Faltlinie oder gefaltete Kante jenseits der ersten Linie, an der die Lasche wieder nach außen umschlägt.",
+      "crimpSecondStart": "Klicke dorthin, wo die zweite Linie beginnt, jenseits der ersten zur Spitze hin: wo die Lasche wieder nach außen umschlägt.",
+      "crimpTip": "Das Ende jenseits der zweiten Linie ist die Spitze, die sich dreht: Ist es das falsche Ende, tausche die Seite der Spitze.",
       "divide": "Klicke auf eine Kante oder Faltlinie, um sie zu teilen.",
       "divideUse": "Verwende die neuen Punkte als Bezug für jede Faltung.",
       "finish": "Wähle die Faltung und die Lagen, dann drücke die Eingabetaste.",
@@ -697,20 +709,17 @@
       "freeStart": "Klicke dorthin, wo die Faltlinie beginnt.",
       "landOnLine": "Klicke auf die Kante oder Faltlinie, auf der er landen soll.",
       "perpendicularTo": "Klicke auf die Kante oder Faltlinie, zu der die Faltung senkrecht steht.",
-      "pickFlapsToCrimp": "Wähle die Laschen für den Crimp.",
       "pickFlapsToReverse": "Wähle die Laschen für den Gegenbruch.",
       "pickFlapsToTuck": "Wähle die Laschen zum Einstecken.",
       "pickLayers": "Wähle, welche Lagen sich bewegen.",
       "pickPoint": "Wähle die Spitze, die versenkt wird: Versenken nimmt nur eine.",
       "pickSunkPoint": "Die versenkte Spitze wird für dich gefunden: Wähle in den Lagen eine andere, um diese herauszuziehen.",
       "pickTuckTarget": "Wähle die Lage, an der eingesteckt wird.",
-      "pointToMove": "Klicke auf den Punkt, der bewegt werden soll.",
-      "secondCrease": "Klicke auf die Faltlinie oder gefaltete Kante, entlang der die zweite Linie verläuft.",
-      "secondFreeStart": "Klicke dorthin, wo die zweite Linie beginnt."
+      "pointToMove": "Klicke auf den Punkt, der bewegt werden soll."
     },
     "tool": {
       "closedSinkHelp": "Das Ende einer geschlossenen Spitze in eine Tasche drücken, ihre Lagen bleiben zusammen.",
-      "crimpHelp": "Eine Lasche entlang zweier Linien zugleich umkehren: hinein und wieder heraus.",
+      "crimpHelp": "Eine Lasche entlang einer Linie hinein- und entlang einer zweiten wieder herausfalten, sodass sich ihr Ende dreht.",
       "divideLine": "Linie teilen",
       "divideLineHelp": "Punkte markieren, die eine Kante oder Faltlinie in gleiche Teile teilen.",
       "insideReverse": "Innerer Gegenbruch",
@@ -753,10 +762,14 @@
         "usePrecrease": "Die Vorfaltung nehmen"
       },
       "help": {
-        "petal": "Die untere Spitze einer Lasche entlang einer vorgefalteten Linie anheben, während sich ihre Seiten einfalten.",
+        "petal": "Die untere Spitze einer Lasche entlang einer Vorfaltung H anheben, während sich ihre Seiten entlang zweier Drachen-Vorfaltungen einfalten.",
         "rabbitEar": "Die Ecken eines Dreiecks entlang ihrer Winkelhalbierenden einfalten, sodass sich eine Spitze aufstellt.",
         "squash": "Eine zweilagige Lasche öffnen und flach drücken, ihren Rücken auf ihr Scharnier.",
-        "swivel": "Papier um einen Punkt darin falten, entlang gewählter Strahlen und eines, das es flach liegen lässt."
+        "swivel": "Papier um einen gesetzten Punkt falten: drei gewählte Faltlinien und eine vierte, mit der es flach liegt."
+      },
+      "intro": {
+        "petal": "Hebt die untere Spitze einer Lasche entlang einer Linie H an, während sich ihre Seiten einfalten. Sie faltet Vorfaltungen nach, also nimm zuerst das Werkzeug Vorfalten: Falte jede untere Kante der oberen Lasche auf ihre Mittellinie (Axiom 3, nur die obere Lasche), dann falte H durch die Enden der beiden Linien vor (Axiom 1, alle Lagen).",
+        "swivel": "Faltet das Papier um einen Punkt, wie ein Hasenohr, dessen Faltlinien nichts halbieren müssen: Du setzt den Punkt und drei Faltlinien, und die vierte ist eine, mit der das Papier flach liegt."
       },
       "layers": "Lagen",
       "layersAll_one": "Alle {{count}}",
@@ -769,20 +782,19 @@
       "mountainTitle": "Berg: das Papier dreht sich von dir weg",
       "noEmergentFits": "Keine vierte Faltlinie passt hier zu diesen Lagen.",
       "note": {
-        "petal": "Eine Blütenblattfalte faltet vorhandene Faltlinien erneut: falte zuerst die Drachenlinien von der unteren Spitze der Lasche und die Linie H über ihre Enden vor.",
+        "freePoint": "Halte {{modifier}} gedrückt, um einen Punkt beliebig zu setzen.",
         "rabbitEar": "Die Faltlinien treffen sich im Inkreismittelpunkt des Dreiecks: eine zu jeder Ecke und eine vierte, die sie flach liegen lässt.",
-        "squash": "Eine Lasche lässt sich quetschen, wenn ihre beiden Lagen frei sind, nur an ihrem Scharnier gehalten, und unbedeckt, ohne etwas darüber auf der Seite, zu der sie sich öffnet.",
-        "swivel": "Der Punkt, in dem sich die Faltlinien treffen, muss im Papier liegen, auf keiner Faltlinie: halte {{modifier}} gedrückt, um ihn beliebig zu setzen.",
-        "swivelTouch": "Der Punkt, in dem sich die Faltlinien treffen, muss im Papier liegen, auf keiner Faltlinie."
+        "snapPoints": "Punkte rasten an Ecken, Markierungen, Kreuzungen von Faltlinien und Mittelpunkten ein: Ein Klick anderswo wählt nichts.",
+        "squash": "Eine Lasche lässt sich quetschen, wenn ihre beiden Lagen frei sind, nur an ihrem Scharnier gehalten, und unbedeckt, ohne etwas darüber auf der Seite, zu der sie sich öffnet."
       },
       "refusal": {
         "blocked": {
-          "text": "Eine Faltlinie läuft in Papier, das nicht mitgefaltet werden kann, oder Papier hält zwei Teile der Faltung zusammen. Schneide mehr Lagen oder versuche eine andere vierte Faltlinie.",
+          "steppers": "Eine Faltlinie würde auf Papier treffen, das nicht mitfaltet, oder Papier würde zwei Teile der Faltung zusammenhalten. Blättere bei Lagen, um mehr Lagen zu falten, oder bei Vierte Faltlinie zu einer anderen.",
           "title": "Papier ist im Weg"
         },
         "center": {
           "textEar": "Die Faltlinien des Dreiecks treffen sich in seinem Inkreismittelpunkt, der auf einer Faltlinie oder außerhalb der Lagen liegt. Wähle Ecken, die ihn in die Lagen legen, abseits ihrer Faltlinien.",
-          "textSwivel": "Der Punkt, in dem sich die Faltlinien treffen, liegt auf einer Faltlinie oder außerhalb der Lagen. Lege ihn in die Lagen, abseits ihrer Faltlinien.",
+          "textSwivelStep": "Der Punkt, an dem sich die Faltlinien treffen, liegt auf einer Faltlinie oder außerhalb des Papiers. Drücke Esc und setze ihn neu, wie Schritt 1 sagt: im Papier, abseits jeder Faltlinie.",
           "title": "Die Faltlinien können sich dort nicht treffen"
         },
         "covered": {
@@ -790,7 +802,7 @@
           "title": "Die Lasche ist bedeckt"
         },
         "kite": {
-          "text": "Eine Blütenblattfalte faltet vorhandene Faltlinien erneut. Falte jede Seitenkante der obersten Lage der Lasche auf ihre Mittellinie und wieder auf, dann falte das Blütenblatt.",
+          "howTo": "Eine Blütenblattfalte faltet vorhandene Faltlinien nach. Die Schaltfläche unten nimmt das Werkzeug Vorfalten mit Axiom 3: Klicke auf eine untere Kante der oberen Lasche, dann auf ihre Mittellinie, nimm unter Lagen die Laschen dahinter heraus und drücke die Eingabetaste. Falte die andere Kante genauso vor, dann die Blütenblattfalte.",
           "title": "Zuerst den Drachen vorfalten"
         },
         "line": {
@@ -822,7 +834,7 @@
           "title": "Hier ist keine Lasche zum Anheben"
         },
         "notFlat": {
-          "text": "Keine vierte Faltlinie lässt diese Faltlinien flach liegen: zwei fallen zusammen oder die Lücken zwischen ihnen sind zu weit. Wähle andere Punkte.",
+          "spread": "Keine vierte Faltlinie lässt diese Faltlinien flach liegen: Zwei zeigen in dieselbe Richtung, oder zwei Nachbarn liegen eine halbe Drehung oder mehr auseinander. Drücke Esc und wähle Punkte, die gleichmäßiger um den Treffpunkt verteilt sind.",
           "title": "Es lässt sich nicht flach falten"
         },
         "notFree": {
@@ -859,22 +871,30 @@
         "earThirdCorner": "Klicke auf seine dritte Ecke.",
         "finish": "Wähle die Optionen, dann drücke die Eingabetaste.",
         "finishTouch": "Wähle die Optionen, dann tippe auf {{action}}.",
-        "petalCrease": "Klicke auf die vorgefaltete Linie H, entlang der sich die Lasche hebt.",
-        "petalDirection": "Wähle, in welche Richtung sich die Lasche hebt.",
-        "petalFirstEnd": "Klicke auf ein Ende der Linie H, entlang der sich die Lasche hebt.",
-        "petalFlap": "Klicke auf die Lasche unterhalb dieser Linie.",
-        "petalSecondEnd": "Klicke auf ihr anderes Ende.",
-        "pickAgain": "Drücke Esc, dann wähle neu.",
-        "pickAgainTouch": "Tippe auf Abbrechen, dann wähle neu.",
+        "fixOrPickAgain": "Klicke unten auf eine Lösung, oder drücke Esc und wähle neu.",
+        "fixOrPickAgainTouch": "Tippe unten auf eine Lösung, oder tippe auf Abbrechen und wähle neu.",
+        "petalFinish": "Wähle Tal oder Berg, dann drücke die Eingabetaste.",
+        "petalFinishTouch": "Wähle Tal oder Berg, dann tippe auf {{action}}.",
+        "petalH": "Klicke auf die Vorfaltung H, quer über die Lasche, wo die Drachenlinien enden.",
+        "petalHFirstEnd": "Klicke auf ein Ende von H, wo eine Drachenlinie auf die Kante der Lasche trifft.",
+        "petalHSecondEnd": "Klicke auf das andere Ende von H, wo die andere Drachenlinie endet.",
+        "petalLift": "Tal hebt die Lasche zu dir hin an, Berg von dir weg: Die Vorschau zeigt, welches.",
+        "petalLiftingFlap": "Klicke auf die Lasche unter H, zwischen den Drachenlinien: der Teil, der sich hebt.",
+        "pickAgainRead": "Drücke Esc und wähle neu: Der Hinweis unten sagt, was zu ändern ist.",
+        "pickAgainReadTouch": "Tippe auf Abbrechen und wähle neu: Der Hinweis unten sagt, was zu ändern ist.",
         "squashFlap": "Klicke auf die Lasche, die gequetscht werden soll.",
         "squashTarget": "Klicke, wo der Rücken landen soll, oder lass ihn auf der Scharnierlinie.",
         "squashTargetTouch": "Tippe, wo der Rücken landen soll, oder lass ihn auf der Scharnierlinie.",
         "stayer": "Klicke auf das Papier, das liegen bleibt.",
-        "swivelChoose": "Wähle die vierte Faltlinie und die Lagen.",
-        "swivelFirstRay": "Klicke auf einen Punkt, zu dem die erste Faltlinie läuft.",
-        "swivelSecondRay": "Klicke auf einen Punkt, zu dem die zweite Faltlinie läuft.",
-        "swivelThirdRay": "Klicke auf einen Punkt, zu dem die dritte Faltlinie läuft.",
-        "swivelVertex": "Klicke auf den Punkt, in dem sich die Faltlinien treffen."
+        "swivelFinish": "Wähle die vierte Faltlinie, dann drücke die Eingabetaste.",
+        "swivelFinishTouch": "Wähle die vierte Faltlinie, dann tippe auf {{action}}.",
+        "swivelFirstLandmark": "Klicke auf eine Ecke, einen Mittelpunkt oder eine Markierung, zu der die erste Faltlinie läuft.",
+        "swivelPoint": "Halte {{modifier}} gedrückt und klicke dorthin, wo sich die Faltlinien treffen: im Papier, auf keiner Faltlinie.",
+        "swivelPointTouch": "Schalte Freier Punkt ein, dann tippe dorthin, wo sich die Faltlinien treffen: im Papier, auf keiner Faltlinie.",
+        "swivelSecondLandmark": "Klicke auf einen Punkt für die zweite Faltlinie.",
+        "swivelStayer": "Klicke auf den Teil des Papiers, der liegen bleibt.",
+        "swivelStep": "Blättere bei Vierte Faltlinie durch die, mit denen das Papier flach liegt, und bei Lagen, falls angezeigt, um weniger Lagen zu falten.",
+        "swivelThirdLandmark": "Klicke auf einen Punkt für die dritte Faltlinie."
       },
       "target": "Rücken landet auf",
       "targetHelp": "Klicke auf das gefaltete Papier, um den Rücken neben dem Scharnier landen zu lassen.",
