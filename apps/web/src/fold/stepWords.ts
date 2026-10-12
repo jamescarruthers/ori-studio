@@ -37,6 +37,28 @@ export interface FoldCreaseDiff {
   reversed: number;
   /** Folded creases laid flat. */
   unfolded: number;
+  /** Crease marks a partial precrease made — a pinch's or a segment's, one per layer it went through; absent for none. */
+  marks?: number;
+}
+
+/** How much of its line a precrease creases: the whole line, a segment, a pinch. */
+export type FoldExtentName = 'whole' | 'segment' | 'pinch';
+
+/** The extent's name: the Step pane's Extent row, and the tool window's extent control. */
+export function extentName(t: TFunction, extent: FoldExtentName): string {
+  switch (extent) {
+    case 'whole':
+      return t('panels:fold.words.extentWhole', 'Whole line');
+    case 'segment':
+      return t('panels:fold.words.extentSegment', 'Segment');
+    case 'pinch':
+      return t('panels:fold.words.extentPinch', 'Pinch');
+  }
+}
+
+/** How much of its line a precrease creased, as the Step pane's Extent row says it; null for any other step. */
+export function extentLabel(t: TFunction, step: FoldSentenceStep): string | null {
+  return step.op === 'precrease' ? extentName(t, step.extent?.kind ?? 'whole') : null;
 }
 
 /** Where an imported crease pattern came from (plan D16's closed enum), never a file name. */
@@ -167,10 +189,12 @@ function lineWords(t: TFunction, line: FoldSentenceLine): string {
 
 /**
  * What a step does to the crease pattern, a line per kind of change, in this
- * order: new folded creases with their letters, new precreases, refolds,
- * reversals, unfolds. A step that changes nothing — a turn — says so.
+ * order: new folded creases with their letters, new precreases, new crease
+ * marks — a pinch's by that name (`step`, the step as its sentence reads it,
+ * says which) — refolds, reversals, unfolds. A step that changes nothing — a
+ * turn — says so.
  */
-export function creaseDiffLines(t: TFunction, diff: FoldCreaseDiff): string[] {
+export function creaseDiffLines(t: TFunction, diff: FoldCreaseDiff, step?: FoldSentenceStep): string[] {
   const lines: string[] = [];
   const folded = diff.added.mountain + diff.added.valley;
   if (folded > 0) {
@@ -191,6 +215,23 @@ export function creaseDiffLines(t: TFunction, diff: FoldCreaseDiff): string[] {
         defaultValue_one: 'Adds {{count}} precrease',
         defaultValue_other: 'Adds {{count}} precreases',
       })
+    );
+  }
+  const marks = diff.marks ?? 0;
+  if (marks > 0) {
+    const pinch = step?.op === 'precrease' && step.extent?.kind === 'pinch';
+    lines.push(
+      pinch
+        ? t('panels:fold.words.addsPinchMarks', {
+            count: marks,
+            defaultValue_one: 'Adds {{count}} pinch mark',
+            defaultValue_other: 'Adds {{count}} pinch marks',
+          })
+        : t('panels:fold.words.addsCreaseMarks', {
+            count: marks,
+            defaultValue_one: 'Adds {{count}} crease mark',
+            defaultValue_other: 'Adds {{count}} crease marks',
+          })
     );
   }
   if (diff.refolded > 0) {

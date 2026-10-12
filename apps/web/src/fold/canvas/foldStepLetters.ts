@@ -11,7 +11,7 @@
  * Pure: no React, no store, no engine.
  */
 import type { Point } from '../../lib/geometry';
-import type { FoldOp, SheetPoint } from '../document/foldSequenceDocument';
+import type { FoldOp, FoldRef, SheetPoint } from '../document/foldSequenceDocument';
 import type { FoldScene } from '../engine/foldEngineWire';
 import { anchorOf, referenceOf } from '../sequence/foldSentenceStep';
 import type { FoldStateFrame } from '../sequence/foldStateFrame';
@@ -28,7 +28,8 @@ export interface FoldLetteredReference {
 }
 
 /**
- * The lettered references of a step whose line an axiom finds, placed on the
+ * The lettered references of a step whose line an axiom finds — and a
+ * partial precrease's points along its line, whatever found it — placed on the
  * scene of the state shown: the step's parent while it is being folded,
  * where its picks are, or its own landed state once it is on screen, where
  * what the sentence says it did can be seen (P lying on Q). `parent` is the
@@ -45,8 +46,17 @@ export function foldStepLetters(
   shown: FoldScene,
   place: (sheet: SheetPoint) => Point | null = (sheet) => sheetToScene(shown, sheet)
 ): FoldLetteredReference[] {
-  if (!('line' in op) || op.line.via !== 'axiom') return [];
-  const { inputs } = op.line;
+  // An axiom's inputs, then a partial precrease's points along its line,
+  // lettered after them as its sentence letters them (`sentenceExtentLetters`).
+  const axiom: readonly FoldRef[] = 'line' in op && op.line.via === 'axiom' ? op.line.inputs : [];
+  const extent: readonly FoldRef[] =
+    op.kind === 'precrease' && op.extent
+      ? op.extent.kind === 'pinch'
+        ? [op.extent.at]
+        : [op.extent.from, op.extent.to]
+      : [];
+  const inputs = [...axiom, ...extent];
+  if (inputs.length === 0) return [];
   const references = inputs.map((input) => referenceOf(input, parent));
   const letters = sentenceInputLetters(references).byInput;
   return inputs.flatMap((input, index): FoldLetteredReference[] => {

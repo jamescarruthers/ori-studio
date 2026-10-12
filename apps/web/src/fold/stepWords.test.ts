@@ -4,6 +4,7 @@ import type { FoldSentenceStep } from './stepSentence';
 import {
   cpOriginLabel,
   creaseDiffLines,
+  extentLabel,
   lineLabel,
   operationBadge,
   operationLabel,
@@ -154,6 +155,32 @@ describe('creaseDiffLines', () => {
 
   it('says a step that changes nothing does so', () => {
     expect(creaseDiffLines(t, NO_CHANGE)).toEqual(['Changes no creases']);
+  });
+
+  it('counts a partial precrease’s marks, a pinch’s by that name', () => {
+    const pinch: FoldSentenceStep = {
+      op: 'precrease',
+      direction: 'valley',
+      line: { via: 'free' },
+      scope: ALL,
+      extent: { kind: 'pinch', at: { kind: 'point' } },
+    };
+    const segment: FoldSentenceStep = { ...pinch, extent: { kind: 'segment', from: { kind: 'point' }, to: { kind: 'point' } } };
+    expect(creaseDiffLines(t, { ...NO_CHANGE, marks: 2 }, pinch)).toEqual(['Adds 2 pinch marks']);
+    expect(creaseDiffLines(t, { ...NO_CHANGE, marks: 1 }, segment)).toEqual(['Adds 1 crease mark']);
+    expect(creaseDiffLines(t, { ...NO_CHANGE, marks: 0 }, pinch)).toEqual(['Changes no creases']);
+  });
+});
+
+describe('extentLabel', () => {
+  it('says how much of its line a precrease creased, and nothing for any other step', () => {
+    const precrease: FoldSentenceStep = { op: 'precrease', direction: 'valley', line: { via: 'free' }, scope: ALL };
+    expect(extentLabel(t, precrease)).toBe('Whole line');
+    expect(extentLabel(t, { ...precrease, extent: { kind: 'pinch', at: { kind: 'point' } } })).toBe('Pinch');
+    expect(
+      extentLabel(t, { ...precrease, extent: { kind: 'segment', from: { kind: 'point' }, to: { kind: 'point' } } })
+    ).toBe('Segment');
+    expect(extentLabel(t, fold('valley'))).toBeNull();
   });
 });
 

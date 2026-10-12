@@ -34,10 +34,13 @@ export function foldCreaseDiff(
     else added.valley += 1;
   }
   const sameWay = summary.diff.refolded.filter((refold) => refold.letter === refold.remembered).length;
+  // A partial precrease's crease marks, which the engine counts apart: no crease is added.
+  const marks = summary.diff.marks_added ?? 0;
   return {
     added,
     refolded: sameWay,
     reversed: summary.diff.refolded.length - sameWay + summary.diff.reversed.length,
     unfolded: summary.diff.unfolded.length,
+    ...(marks > 0 ? { marks } : {}),
   };
 }

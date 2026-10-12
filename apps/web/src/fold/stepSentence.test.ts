@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import i18n from '../i18n';
 import {
   foldStepSentence,
+  sentenceExtentLetters,
   sentenceInputLetters,
   type FoldLayerScope,
   type FoldSentenceLine,
@@ -90,6 +91,29 @@ describe('foldStepSentence', () => {
         scope: { kind: 'depth', layers: 2 },
       })
     ).toBe('Mountain fold and unfold along the existing crease, folding only the bottom 2 layers.');
+  });
+
+  it('says how much of its line a partial precrease creases, its points lettered after the line’s', () => {
+    const through: FoldSentenceLine = { via: 'axiom', axiom: 1, inputs: [corner('se'), POINT] };
+    // O1's corner keeps P, its point is Q: the pinch is R.
+    expect(
+      foldStepSentence(t, { op: 'precrease', direction: 'valley', line: through, scope: ALL, extent: { kind: 'pinch', at: POINT } })
+    ).toBe(
+      'Valley fold and unfold along the line joining the bottom-right corner and point Q, through all layers. Crease only a short pinch at point R.'
+    );
+    // A free line has no inputs of its own: a segment's ends are P and Q, the sheet's corner named as one.
+    expect(
+      foldStepSentence(t, {
+        op: 'precrease',
+        direction: 'mountain',
+        line: { via: 'free' },
+        scope: { kind: 'flaps', flaps: 1 },
+        extent: { kind: 'segment', from: corner('sw'), to: POINT },
+      })
+    ).toBe(
+      'Mountain fold and unfold along the line drawn, folding only the flap shown. Crease only the stretch from the bottom-left corner to point Q.'
+    );
+    expect(sentenceExtentLetters(through, { kind: 'segment', from: POINT, to: POINT })).toEqual(['R', 'S']);
   });
 
   it('names the sheet’s own references by description and the rest by their letters', () => {

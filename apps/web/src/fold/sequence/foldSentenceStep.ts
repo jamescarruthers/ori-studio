@@ -29,13 +29,20 @@ import {
   isLockedStep,
   turnKindOf,
   type FoldLineInput,
+  type FoldPrecreaseExtent,
   type FoldRef,
   type FoldSeed,
   type FoldStepNode,
   type SheetPoint,
 } from '../document/foldSequenceDocument';
 import type { FoldEngineLine, FoldEngineOp, FoldReport } from '../engine/foldEngineWire';
-import type { FoldLayerScope, FoldSentenceLine, FoldSentenceReference, FoldSentenceStep } from '../stepSentence';
+import type {
+  FoldLayerScope,
+  FoldSentenceExtent,
+  FoldSentenceLine,
+  FoldSentenceReference,
+  FoldSentenceStep,
+} from '../stepSentence';
 import { sceneToModel, sheetToScene, type FoldStateFrame } from './foldStateFrame';
 
 /** What the engine said about the states either side of a step. Each is null while unknown. */
@@ -74,6 +81,7 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
         direction: op.direction,
         line: sentenceLine(op.line, op.seed, context),
         scope: scopeOf(op.seed),
+        ...(op.extent ? { extent: sentenceExtent(op.extent, context.parent) } : {}),
       };
     case 'refold':
       // A precrease folded again: a fold along a crease that is there.
@@ -123,6 +131,13 @@ export function foldSentenceStepOf(op: FoldEngineOp, context: FoldSentenceContex
 
 /** A sink op's kind, as its sentence reads it. */
 const SINK_KINDS = { 'open-sink': 'open', 'closed-sink': 'closed', unsink: 'unsink' } as const;
+
+/** A partial precrease's points, named as an axiom's inputs are, in the parent's frame. */
+function sentenceExtent(extent: FoldPrecreaseExtent, parent: FoldStateFrame | null): FoldSentenceExtent {
+  return extent.kind === 'pinch'
+    ? { kind: 'pinch', at: referenceOf(extent.at, parent) }
+    : { kind: 'segment', from: referenceOf(extent.from, parent), to: referenceOf(extent.to, parent) };
+}
 
 /** Which layers a seed takes (plan D18's `layer_scope`). */
 function scopeOf(seed: FoldSeed): FoldLayerScope {
