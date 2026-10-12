@@ -42,4 +42,21 @@ describe('TurnGlyph', () => {
   it('writes how far a rotation turns in its middle', () => {
     expect(draw({ kind: 'rotate', rotate: { amount: 'half', direction: 'cw' } }).svg.querySelector('text')?.textContent).toBe('1/2');
   });
+
+  it('draws a rotation by any angle as the same circle of arrows, its angle written in its middle', () => {
+    const quarter = draw({ kind: 'rotate', rotate: { amount: 'quarter', direction: 'ccw' } });
+    const quarterArcs = [...quarter.svg.querySelectorAll('path')].map((path) => path.getAttribute('d'));
+    const quarterSize = Number(quarter.svg.querySelector('text')?.getAttribute('font-size'));
+    const thirty = draw({ kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'ccw' } });
+    expect(thirty.svg.querySelector('text')?.textContent).toBe('30°');
+    // The arrows say which way, not how far: the same glyph, in the same frame.
+    expect([...thirty.svg.querySelectorAll('path')].map((path) => path.getAttribute('d'))).toEqual(quarterArcs);
+    expect(thirty.width).toBe(quarter.width);
+    expect(Number(thirty.svg.querySelector('text')?.getAttribute('font-size'))).toBe(quarterSize);
+    // A longer angle is set smaller, so it stays inside the circle.
+    const fine = draw({ kind: 'rotate', rotate: { amount: 'degrees', degrees: 22.5, direction: 'cw' } });
+    expect(fine.svg.querySelector('text')?.textContent).toBe('22.5°');
+    expect(Number(fine.svg.querySelector('text')?.getAttribute('font-size'))).toBeLessThan(quarterSize);
+    expect(new Set(fine.inks)).toEqual(new Set(['currentColor']));
+  });
 });

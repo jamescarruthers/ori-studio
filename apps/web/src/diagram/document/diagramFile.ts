@@ -49,6 +49,7 @@ import {
 import { isBuiltInPaperPresetId } from '../../lib/paper/paperPresets';
 import { readPaperScene } from '../../lib/paper/paperSceneValidate';
 import { normalizePaperStyle } from '../../lib/paper/paperStyle';
+import { readTurnRotation, TURN_ROTATION_KEYS, writeTurnRotation } from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
 import {
   PICTURE_REACH,
@@ -314,7 +315,7 @@ function writeStep(step: DiagramEntry): Record<string, unknown> {
   if (isTurn(step)) {
     if (step.unknown) return step.unknown;
     return step.kind === 'rotate'
-      ? { id: step.id, kind: step.kind, rotate: step.rotate }
+      ? { id: step.id, kind: step.kind, rotate: writeTurnRotation(step.rotate) }
       : { id: step.id, kind: step.kind, axis: step.axis };
   }
   if (step.unknown) return step.unknown;
@@ -402,7 +403,7 @@ function writeAnnotation(annotation: DiagramAnnotation): Record<string, unknown>
     ...(halo ? { halo } : {}),
     ...(sizePt !== undefined ? { sizePt } : {}),
     ...(offsetPt !== undefined ? { offsetPt: [offsetPt[0], offsetPt[1]] } : {}),
-    ...(rotate !== undefined ? { rotate } : {}),
+    ...(rotate !== undefined ? { rotate: writeTurnRotation(rotate) } : {}),
     ...(axis !== undefined ? { axis } : {}),
     ...(other !== undefined ? { other } : {}),
     ...(ticks !== undefined ? { ticks } : {}),
@@ -1768,17 +1769,20 @@ function readPreset<T extends string>(value: unknown, known: readonly T[], fallb
   return (known as readonly string[]).includes(value) ? (value as T) : NEWER;
 }
 
-/** How far and which way a rotation turns: a quarter clockwise when unsaid. Shared by the glyph and the turn (D22). */
+/**
+ * How far and which way a rotation turns: a quarter clockwise when unsaid. Shared by the glyph and the turn (D22).
+ * A part of a turn, or an exact angle (`lib/steps/turn`); one this build cannot read as either — a value it has no
+ * name for, an angle not as this build writes one — is a newer build's, kept as it came.
+ */
 function readRotation(value: unknown): DiagramRotation | typeof NEWER | null {
   if (value === undefined) return DEFAULT_ROTATION;
   if (!isRecord(value)) return null;
   // A field it has no name for is news before a missing one is damage, as for a whole annotation.
-  if (Object.keys(value).some((key) => key !== 'amount' && key !== 'direction')) return NEWER;
+  if (Object.keys(value).some((key) => !TURN_ROTATION_KEYS.has(key))) return NEWER;
+  // An angle is the newest thing a rotation says: one this build cannot read is a newer build's, never damage.
+  if (value.degrees !== undefined) return readTurnRotation(value) ?? NEWER;
   if (typeof value.amount !== 'string' || typeof value.direction !== 'string') return null;
-  if (!['eighth', 'quarter', 'half'].includes(value.amount) || !['cw', 'ccw'].includes(value.direction)) {
-    return NEWER;
-  }
-  return { amount: value.amount as DiagramRotation['amount'], direction: value.direction as DiagramRotation['direction'] };
+  return readTurnRotation(value) ?? NEWER;
 }
 
 /** The axis a turn-over turns about: the vertical one, side to side, when unsaid. */

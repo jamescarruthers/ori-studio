@@ -1,5 +1,13 @@
 import type { TFunction } from 'i18next';
-import type { TurnBetween, TurnKind } from './turn';
+import {
+  formatTurnDegrees,
+  TURN_FRACTION,
+  TURN_ROTATION_PRESETS,
+  type TurnBetween,
+  type TurnKind,
+  type TurnRotation,
+  type TurnRotationAmount,
+} from './turn';
 
 /**
  * The words for a turn wherever it is shown — a Steps grid's turn card, a
@@ -10,7 +18,10 @@ import type { TurnBetween, TurnKind } from './turn';
  * first written.
  */
 
-/** What a turn says it is, in a few words: "Turn over", or "Rotate 1/4 turn clockwise". */
+/**
+ * What a turn says it is, in a few words: "Turn over", "Rotate 1/4 turn
+ * clockwise", or for an exact angle "Rotate 30° clockwise".
+ */
 export function turnName(turn: TurnKind & { unknown?: unknown }, t: TFunction): string {
   if (turn.unknown !== undefined) return t('panels:diagram.turns.newer', 'Turn from a newer Ori Studio');
   if (turn.kind === 'turn-over') {
@@ -18,9 +29,15 @@ export function turnName(turn: TurnKind & { unknown?: unknown }, t: TFunction): 
       ? t('panels:diagram.turns.turnOverTopToBottom', 'Turn over, top to bottom')
       : t('panels:diagram.turns.turnOverSideToSide', 'Turn over, side to side');
   }
-  const { amount, direction } = turn.rotate;
-  const fraction = { eighth: '1/8', quarter: '1/4', half: '1/2' }[amount];
-  return direction === 'cw'
+  const rotation = turn.rotate;
+  if (rotation.amount === 'degrees') {
+    const degrees = formatTurnDegrees(rotation.degrees);
+    return rotation.direction === 'cw'
+      ? t('panels:diagram.turns.rotateDegreesClockwise', 'Rotate {{degrees}}° clockwise', { degrees })
+      : t('panels:diagram.turns.rotateDegreesCounterclockwise', 'Rotate {{degrees}}° counterclockwise', { degrees });
+  }
+  const fraction = TURN_FRACTION[rotation.amount];
+  return rotation.direction === 'cw'
     ? t('panels:diagram.turns.rotateClockwise', 'Rotate {{fraction}} turn clockwise', { fraction })
     : t('panels:diagram.turns.rotateCounterclockwise', 'Rotate {{fraction}} turn counterclockwise', { fraction });
 }
@@ -56,7 +73,7 @@ export function turnPlace(between: TurnBetween, t: TFunction): string | null {
 /**
  * A turn's card's words (D24): its title, where a step has its number, and
  * how it turns — "Turn over" and "Side to side", "Rotate" and "1/4 turn
- * clockwise". A newer build's says only that it is one.
+ * clockwise" or "30° clockwise". A newer build's says only that it is one.
  */
 export function turnCardWords(turn: TurnKind & { unknown?: unknown }, t: TFunction): { title: string; how: string } {
   if (turn.unknown !== undefined) {
@@ -71,13 +88,45 @@ export function turnCardWords(turn: TurnKind & { unknown?: unknown }, t: TFuncti
           : t('panels:diagram.turns.howSideToSide', 'Side to side'),
     };
   }
-  const { amount, direction } = turn.rotate;
-  const fraction = { eighth: '1/8', quarter: '1/4', half: '1/2' }[amount];
+  const rotation = turn.rotate;
+  const title = t('panels:diagram.turns.cardRotate', 'Rotate');
+  if (rotation.amount === 'degrees') {
+    const degrees = formatTurnDegrees(rotation.degrees);
+    return {
+      title,
+      how:
+        rotation.direction === 'cw'
+          ? t('panels:diagram.turns.howDegreesClockwise', '{{degrees}}° clockwise', { degrees })
+          : t('panels:diagram.turns.howDegreesCounterclockwise', '{{degrees}}° counterclockwise', { degrees }),
+    };
+  }
+  const fraction = TURN_FRACTION[rotation.amount];
   return {
-    title: t('panels:diagram.turns.cardRotate', 'Rotate'),
+    title,
     how:
-      direction === 'cw'
+      rotation.direction === 'cw'
         ? t('panels:diagram.turns.howClockwise', '{{fraction}} turn clockwise', { fraction })
         : t('panels:diagram.turns.howCounterclockwise', '{{fraction}} turn counterclockwise', { fraction }),
   };
+}
+
+/**
+ * An exact angle as a choice beside the presets' fractions — a segment of the
+ * Diagram's amount control, a row of its menu: "30°". Its words, so a control
+ * that shows an exact turn reads it as the turn's card does.
+ */
+export function turnDegreesLabel(degrees: number, t: TFunction): string {
+  return t('panels:diagram.turns.degrees', '{{degrees}}°', { degrees: formatTurnDegrees(degrees) });
+}
+
+/**
+ * The amounts a rotation's control offers, by `amount`: the presets' fractions,
+ * and — for a rotation by an exact angle — that angle after them, chosen, so
+ * the control reads the turn as it is rather than showing no amount at all.
+ */
+export function turnAmountOptions(rotation: TurnRotation, t: TFunction): { id: TurnRotationAmount; label: string }[] {
+  const presets = TURN_ROTATION_PRESETS.map((id) => ({ id, label: TURN_FRACTION[id] }));
+  return rotation.amount === 'degrees'
+    ? [...presets, { id: 'degrees' as const, label: turnDegreesLabel(rotation.degrees, t) }]
+    : presets;
 }

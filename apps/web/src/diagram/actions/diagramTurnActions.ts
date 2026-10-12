@@ -1,4 +1,6 @@
 import type { TFunction } from 'i18next';
+import { TURN_DIRECTIONS, TURN_ROTATION_PRESETS, withTurnDirection, withTurnPreset } from '../../lib/steps/turn';
+import { turnDegreesLabel } from '../../lib/steps/turnWords';
 import { DEFAULT_ROTATION } from '../annotate/annotationModel';
 import type { DiagramRotation, DiagramTurnKind } from '../document/diagramDocument';
 import type { DiagramStepAction, DiagramStepCommand } from './diagramActions';
@@ -19,6 +21,8 @@ export type DiagramTurnActionId =
   | 'rotate-eighth'
   | 'rotate-quarter'
   | 'rotate-half'
+  /** A rotation by an exact angle (made in Fold): its angle, chosen, beside the presets. */
+  | 'rotate-degrees'
   | 'rotate-cw'
   | 'rotate-ccw';
 
@@ -91,17 +95,21 @@ export function buildDiagramTurnActions(
           choose(`axis-${value}`, labels.axis[value], axis === value, { kind: 'turn-over', axis: value })
         )
       : [
-          ...(['eighth', 'quarter', 'half'] as const).map((amount) =>
+          ...TURN_ROTATION_PRESETS.map((amount) =>
             choose(`rotate-${amount}`, labels.amount[amount], rotation.amount === amount, {
               kind: 'rotate',
-              rotate: { ...rotation, amount },
+              rotate: withTurnPreset(rotation, amount),
             })
           ),
+          // An exact angle is what the turn is already: listed, chosen, so the menu says how far it turns.
+          ...(rotation.amount === 'degrees'
+            ? [choose('rotate-degrees', turnDegreesLabel(rotation.degrees, t), true, { kind: 'rotate', rotate: rotation })]
+            : []),
           { kind: 'separator', id: 'after-amount' },
-          ...(['cw', 'ccw'] as const).map((direction) =>
+          ...TURN_DIRECTIONS.map((direction) =>
             choose(`rotate-${direction}`, labels.direction[direction], rotation.direction === direction, {
               kind: 'rotate',
-              rotate: { ...rotation, direction },
+              rotate: withTurnDirection(rotation, direction),
             })
           ),
         ];

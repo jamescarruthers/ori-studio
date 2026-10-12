@@ -23,6 +23,7 @@ import type {
   StepDiagramPrimitive,
 } from '../../lib/stepDiagram/stepDiagramModel';
 import type { DiagramArc, DiagramSheet } from '../../lib/stepDiagram/stepDiagramGeometry';
+import { readTurnRotation, TURN_DIRECTIONS, TURN_ROTATION_PRESETS } from '../../lib/steps/turn';
 import { xmlText } from '../../lib/xmlEscape';
 
 /** More than any card draws: a dense sheet's last step carries a few thousand. */
@@ -79,7 +80,7 @@ const PRIMITIVE_KINDS: ReadonlySet<string> = new Set<StepDiagramPrimitive['kind'
 /** The values each enumerated field of a primitive takes; another is a newer build's. */
 const PRIMITIVE_ENUMS: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>> = {
   'one-way-arrow': { fold: ['valley', 'mountain'] },
-  rotate: { amount: ['eighth', 'quarter', 'half'], direction: ['cw', 'ccw'] },
+  rotate: { amount: [...TURN_ROTATION_PRESETS, 'degrees'], direction: TURN_DIRECTIONS },
   'turn-over': { axis: ['vertical', 'horizontal'] },
 };
 
@@ -215,11 +216,10 @@ function readPrimitive(value: unknown): StepDiagramPrimitive | null {
       return from && to ? { kind: 'push-arrow', from, to } : null;
     }
     case 'rotate': {
+      // A part of a turn, or an exact angle: the rotation's own fields, as a turn reads them.
       const at = readPoint(value.at);
-      const amount =
-        value.amount === 'eighth' || value.amount === 'quarter' || value.amount === 'half' ? value.amount : null;
-      const direction = value.direction === 'cw' || value.direction === 'ccw' ? value.direction : null;
-      return at && amount && direction ? { kind: 'rotate', at, amount, direction } : null;
+      const rotation = readTurnRotation(value);
+      return at && rotation ? { kind: 'rotate', at, ...rotation } : null;
     }
     case 'turn-over': {
       const at = readPoint(value.at);

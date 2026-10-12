@@ -31,11 +31,11 @@ const ONE_INK: DiagramInlineInk = (() => {
   return { ...diagramInlineInk(tokens), ground: { arrow: 'currentColor', mark: 'currentColor' } };
 })();
 
-/** A turn as the step diagram's primitive draws it: the turn-over glyph, or the rotate one. */
+/** A turn as the step diagram's primitive draws it: the turn-over glyph, or the rotate one, by a part of a turn or an angle. */
 function turnPrimitive(turn: TurnKind): Extract<StepDiagramPrimitive, { kind: 'turn-over' | 'rotate' }> {
   return turn.kind === 'turn-over'
     ? { kind: 'turn-over', at: [0.5, 0.5], axis: turn.axis }
-    : { kind: 'rotate', at: [0.5, 0.5], amount: turn.rotate.amount, direction: turn.rotate.direction };
+    : { kind: 'rotate', at: [0.5, 0.5], ...turn.rotate };
 }
 
 /** The glyph's shapes, and the square frame round its ink that it is shown in. */

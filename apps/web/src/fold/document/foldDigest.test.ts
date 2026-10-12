@@ -36,6 +36,24 @@ describe('fh1', () => {
     expect(foldNodeDigest(document, 'x')).not.toBe(foldNodeDigest(document, 'y'));
   });
 
+  it('spells a rotation’s exact angle into its path, and a preset’s as it always was', () => {
+    const rotate = (id: string, rotation: Extract<FoldStep['op'], { kind: 'rotate' }>['rotate']) =>
+      step(id, 'a', { kind: 'rotate', rotate: rotation });
+    const document = sequenceOf([
+      step('a', null),
+      rotate('thirty', { amount: 'degrees', degrees: 30, direction: 'cw' }),
+      rotate('thirtyOne', { amount: 'degrees', degrees: 31, direction: 'cw' }),
+      rotate('thirtyBack', { amount: 'degrees', degrees: 30, direction: 'ccw' }),
+      rotate('eighth', { amount: 'eighth', direction: 'cw' }),
+      rotate('quarter', { amount: 'quarter', direction: 'cw' }),
+    ]);
+    const digests = ['thirty', 'thirtyOne', 'thirtyBack', 'eighth', 'quarter'].map((id) => foldNodeDigest(document, id));
+    expect(new Set(digests).size).toBe(5);
+    // A preset is spelled as before exact angles: `{ amount, direction }`, so an old path keeps its `fh1`.
+    const quarter = document.steps.find((node) => node.id === 'quarter') as FoldStep;
+    expect(canonicalJson(writeFoldOp(quarter.op))).toBe('{"kind":"rotate","rotate":{"amount":"quarter","direction":"cw"}}');
+  });
+
   it('gives siblings with the same op and choices one digest: the same path is the same state', () => {
     const document = sequenceOf([step('a', null), step('x', 'a'), step('y', 'a')]);
     expect(foldNodeDigest(document, 'x')).toBe(foldNodeDigest(document, 'y'));

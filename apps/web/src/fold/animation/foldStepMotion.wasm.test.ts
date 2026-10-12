@@ -250,6 +250,9 @@ describe.skipIf(!available)('a step’s motion from the engine’s scenes', () =
     ['a quarter turn clockwise', { amount: 'quarter', direction: 'cw' }],
     ['an eighth anticlockwise', { amount: 'eighth', direction: 'ccw' }],
     ['a half turn', { amount: 'half', direction: 'cw' }],
+    // The Rotate tool's exact angle turns as far as it says, and no further.
+    ['30° clockwise', { amount: 'degrees', degrees: 30, direction: 'cw' }],
+    ['22.5° counterclockwise', { amount: 'degrees', degrees: 22.5, direction: 'ccw' }],
   ] as const)('turns the model round by %s', async (_, rotate) => {
     const motion = await motionOf([BOOK, { kind: 'rotate', rotate }]);
     expect(motion.motion.kind === 'turn' && motion.motion.turn.kind).toBe('round');
@@ -260,6 +263,9 @@ describe.skipIf(!available)('a step’s motion from the engine’s scenes', () =
     // clockwise quarter turn's first move takes the top of the sheet right.
     if (rotate.amount === 'quarter' && motion.motion.kind === 'turn' && motion.motion.turn.kind === 'round') {
       expect(motion.motion.turn.angle).toBeCloseTo(Math.PI / 2, 9);
+    }
+    if (rotate.amount === 'degrees' && motion.motion.kind === 'turn' && motion.motion.turn.kind === 'round') {
+      expect(Math.abs(motion.motion.turn.angle)).toBeCloseTo((rotate.degrees * Math.PI) / 180, 9);
     }
   });
 

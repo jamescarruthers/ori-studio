@@ -193,6 +193,45 @@ describe('the step tree', () => {
     }
   });
 
+  it('reads and writes a rotation by an exact angle, its degrees between, and a preset as it always was', () => {
+    const exact = { kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'cw' } };
+    const preset = { kind: 'rotate', rotate: { amount: 'eighth', direction: 'ccw' } };
+    const held = readSteps([raw('a', null, { op: exact }), raw('b', 'a', { op: preset })]);
+    expect(held.document.steps.map((node) => node.op)).toEqual([
+      { kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'cw' } },
+      { kind: 'rotate', rotate: { amount: 'eighth', direction: 'ccw' } },
+    ]);
+    const written = writeFoldSequence(held).steps as { op: unknown }[];
+    expect(JSON.stringify(written[0]!.op)).toBe('{"kind":"rotate","rotate":{"amount":"degrees","degrees":30,"direction":"cw"}}');
+    expect(JSON.stringify(written[1]!.op)).toBe('{"kind":"rotate","rotate":{"amount":"eighth","direction":"ccw"}}');
+  });
+
+  it('locks a rotation it cannot read as one, and one a build without exact angles could not: never another amount', () => {
+    for (const rotate of [
+      // Not as this build writes an exact angle: no number, no turn, past a half turn, a preset's own angle.
+      { amount: 'degrees', direction: 'cw' },
+      { amount: 'degrees', degrees: 0, direction: 'cw' },
+      { amount: 'degrees', degrees: -30, direction: 'cw' },
+      { amount: 'degrees', degrees: 270, direction: 'cw' },
+      { amount: 'degrees', degrees: 90, direction: 'cw' },
+      // Degrees beside a preset, and a key newer than this build.
+      { amount: 'quarter', degrees: 30, direction: 'cw' },
+      { amount: 'degrees', degrees: 30, direction: 'cw', about: [0.5, 0.5] },
+    ]) {
+      const held = readSteps([raw('a', null, { op: { kind: 'rotate', rotate } }), raw('b', 'a')]);
+      expect(isLockedStep(held.document.steps[0]!), JSON.stringify(rotate)).toBe(true);
+      expect([...lockedIds(foldStepTree(held.document.steps))].sort()).toEqual(['a', 'b']);
+      expect((writeFoldSequence(held).steps as { op: unknown }[])[0]!.op).toEqual({ kind: 'rotate', rotate });
+    }
+    // A build that predates exact angles read a rotation's keys as `amount` and
+    // `direction`, and locked any other: an exact angle's `degrees` locks its
+    // step there, as a key newer than this build locks one here.
+    const written = writeFoldSequence(readSteps([raw('a', null, { op: { kind: 'rotate', rotate: { amount: 'degrees', degrees: 30, direction: 'cw' } } })]));
+    const rotate = (written.steps as { op: { rotate: Record<string, unknown> } }[])[0]!.op.rotate;
+    expect(Object.keys(rotate).filter((key) => key !== 'amount' && key !== 'direction')).toEqual(['degrees']);
+    expect(['eighth', 'quarter', 'half']).not.toContain(rotate.amount);
+  });
+
   it('locks a precrease with a key it does not know: the rule that makes a build without extents lock one', () => {
     // A build that predates `extent` knew a precrease's keys to be the line's,
     // `moving`, the seed's and `direction`, and locked any other: an extent it
