@@ -241,6 +241,8 @@ export function shortcutActionLabel(t: TFunction, definition: ShortcutDefinition
       return lineModeLabel(t, 'crease');
     case 'fold.swapSide':
       return t('tools:fold.key.swapSide', 'Swap moving side');
+    case 'fold.cycleExtent':
+      return t('tools:fold.key.cycleExtent', 'Next precrease extent');
     case 'fold.previousCandidate':
       return t('tools:fold.key.previousRoot', 'Previous root');
     case 'fold.nextCandidate':

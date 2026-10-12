@@ -5,6 +5,7 @@ import type {
   FoldSpreadAction,
   FoldSpreadVia,
   FoldStepAddedOpKind,
+  FoldStepExtent,
   FoldStepLayerScope,
   FoldStepVia,
 } from './events';
@@ -15,15 +16,23 @@ import { spreadProperties, spreadTracking } from './trackDiagram';
  * A step committed from the Fold canvas (plan D18). Hand-placed: a commit is
  * the session's verb, reached from the tool window, Enter and the chooser,
  * none of which dispatches a `MENU_ACTION_ID`. A turn or a rotation takes no
- * layers and locates no line, so it carries `op_kind` alone.
+ * layers and locates no line, so it carries `op_kind` alone; a precrease
+ * says how much of its line it creased (`extent`).
  */
 export function trackFoldStepAdded(
   opKind: FoldStepAddedOpKind,
-  located?: { layerScope: FoldStepLayerScope; via: FoldStepVia }
+  located?: { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent }
 ): void {
   track(
     ANALYTICS_EVENTS.foldStepAdded,
-    located ? { op_kind: opKind, layer_scope: located.layerScope, via: located.via } : { op_kind: opKind }
+    located
+      ? {
+          op_kind: opKind,
+          layer_scope: located.layerScope,
+          via: located.via,
+          ...(located.extent ? { extent: located.extent } : {}),
+        }
+      : { op_kind: opKind }
   );
 }
 
