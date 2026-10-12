@@ -15,6 +15,14 @@ shapes are `apps/web/src/fold/engine/foldEngineWire.ts`.
   mountain, precrease, unfold, refold, turn and rotate, along a free line, a
   crease or an axiom; `summary`; `canonical_keys` for the `fs1` fingerprint;
   `release`, `clear`, `live`.
+- **Partial precreases** (`src/partial.rs`): a precrease op with an
+  `extent` — a segment between two point inputs, or a pinch of a `length`
+  centred on one — creases only that stretch of its line and lands crease
+  marks. `apply`, `analyse` and `action` answer it (its refusals by code:
+  `extent_off_paper`, `extent_too_short`, `extent_misses_paper`,
+  `extent_misses_layers`); the summaries, the scene, the landmarks and the
+  `fs1` keys (`m:`) carry its marks; `default_pinch_length(state)` is the
+  length the tools offer.
 - **Queries on a handle** (plan D12, D14): `analyse(state, op, choices)`, what
   a fold would move (the moving set, the flaps, which the seed picked and
   which the closure added); `action(state, op, choices)`, its picture before
@@ -384,12 +392,20 @@ slower than the table's.
   sent), an empty sequence adopting the pattern's sheet, stored ops that no
   longer land refused; and Edit's folded figure, folded by the kernel from
   114 states, front and rear, landing the state it was folded from.
+- `cargo test -p oristudio-fold-wasm --test partial`: `tests/partial.rs`,
+  partial precreases natively — a pinch's marks in the report, the
+  summaries, the picture, the scene, the landmarks and the `fs1` keys (and
+  gone again under a whole precrease along the line), a whole precrease
+  unchanged, segments named by a mark and a point, along an axiom, the
+  extent's refusals from `apply`, `analyse` and `action` alike, and a
+  malformed extent thrown.
 - `cargo test -p oristudio-fold-wasm --test sink`: `tests/sink.rs`, the
   sinks natively on the samples as Import CP lands them — open and closed
   sinks and the unsink back by `apply`, the pocket asked for, stored and
   replayed, the tilted line's fixes, the choices a sink takes, the queries.
 - `wasm-pack test --node crates/oristudio-fold-wasm`: `tests/node.rs`,
-  `tests/io_node.rs` and `tests/crimp_tuck_node.rs`, the same calls across
+  `tests/io_node.rs`, `tests/crimp_tuck_node.rs` and
+  `tests/partial_node.rs`, the same calls across
   the wasm boundary (plain objects in and out, refusals as values, thrown
   envelopes, the kernel's scene object as input; the crimp's and the tuck's
   ops, analyses and landings, and the tuck's target listing timed by the

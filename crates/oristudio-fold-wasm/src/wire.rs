@@ -78,8 +78,8 @@ impl PaperShape {
 pub enum Op {
     Valley(AlongLine),
     Mountain(AlongLine),
-    /// Its `direction` is required.
-    Precrease(AlongLine),
+    /// Its `direction` is required; an `extent` makes it partial.
+    Precrease(PrecreaseOp),
     /// Along a folded crease: unfolding the flap the seed picks.
     Unfold(AlongCrease),
     /// Along a flat crease: refolding a precrease.
@@ -167,8 +167,12 @@ impl Op {
             ..Takes::default()
         };
         match self {
-            Op::Valley(a) | Op::Mountain(a) | Op::Precrease(a) => Takes {
+            Op::Valley(a) | Op::Mountain(a) => Takes {
                 root: a.line.is_axiom(),
+                ..Takes::default()
+            },
+            Op::Precrease(p) => Takes {
+                root: p.along.line.is_axiom(),
                 ..Takes::default()
             },
             Op::Unfold(_) | Op::Refold(_) | Op::Turn { .. } | Op::Rotate { .. } | Op::CpJump(_) => {
@@ -215,6 +219,29 @@ pub struct AlongLine {
     pub direction: Option<Direction>,
     #[serde(flatten)]
     pub motion: Motion,
+}
+
+/// A precrease (`FoldPrecreaseOp`): a fold along a line's fields and, for a
+/// partial precrease, the stretch of the line it creases. Without `extent`
+/// it is the whole line.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct PrecreaseOp {
+    #[serde(flatten)]
+    pub along: AlongLine,
+    #[serde(default)]
+    pub extent: Option<ExtentInput>,
+}
+
+/// `FoldPrecreaseExtent`: a segment between two points of the line, or a
+/// pinch `length` long (sheet units) centred on one. Each point is a point
+/// slot's input, a sheet point or a mark's (whose id rides along for the
+/// sentence only); its image is projected onto the line (`oristudio_fold`'s
+/// `Extent`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ExtentInput {
+    Segment { from: RefInput, to: RefInput },
+    Pinch { at: RefInput, length: f64 },
 }
 
 /// A fold along an existing crease, named by a sheet point inside its sheet
@@ -839,6 +866,14 @@ pub struct Summary {
     pub residual: f64,
     /// The sheet's outline, counter-clockwise, in sheet coordinates.
     pub sheet: Vec<Point>,
+    /// How many crease marks (partial creases) the state has; left out when
+    /// none, so every other summary reads as before.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub crease_marks: usize,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
 }
 
 /// Creases by what they are now: `B | M | V | F`.

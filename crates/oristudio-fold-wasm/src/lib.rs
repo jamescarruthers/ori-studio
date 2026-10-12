@@ -28,6 +28,8 @@
 //!   summary(state: number): Summary;
 //!   /** The keys of the state's `fs1` fingerprint, in no order. */
 //!   canonical_keys(state: number): string[];
+//!   /** The pinch length a partial precrease's tool offers on the sheet. */
+//!   default_pinch_length(state: number): number;
 //!   /** Let states go; how many were held. */
 //!   release(states: Uint32Array): number;
 //!   clear(): void;
@@ -65,6 +67,11 @@
 //! `FoldEngine` beside these calls, and a stored `cp-jump` op is applied like
 //! any other step. `README.md` records the size that costs.
 //!
+//! A precrease with an `extent` — a segment or a pinch of its line — creases
+//! that stretch only and lands crease marks ([`partial`]); `apply`,
+//! `analyse` and `action` answer it, and the scene, the landmarks, the
+//! summaries and the `fs1` keys carry its marks.
+//!
 //! Compound folds (plan D4) are steps like any other — `apply`, a step's
 //! summary and picture — through one seam ([`compound`]): one held state,
 //! one report on `apply`'s answer (`compound`, tagged by family), one
@@ -81,6 +88,7 @@ pub mod canonical;
 pub mod compound;
 pub mod io;
 pub mod joins;
+pub mod partial;
 pub mod resolve;
 pub mod wire;
 // Compound folds, one module per family (`compound`).
@@ -170,6 +178,11 @@ impl FoldEngine {
     /// The keys of the state's `fs1` fingerprint, in no order.
     pub fn canonical_keys(&self, state: u32) -> Result<Vec<String>, JsValue> {
         self.inner.canonical_keys(state).map_err(bridge_error)
+    }
+
+    /// The pinch length the tools offer on the state's sheet.
+    pub fn default_pinch_length(&self, state: u32) -> Result<f64, JsValue> {
+        self.inner.default_pinch_length(state).map_err(bridge_error)
     }
 
     /// Let states go; how many were held.
