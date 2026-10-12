@@ -928,6 +928,7 @@ fn a_swivel_by_its_edge_lands_through_the_bridge() {
         ridge: None,
         direction: oristudio_fold::Direction::Valley,
         fold: None,
+        kind: oristudio_fold::SwivelKind::Open,
     };
     let engine = match bridge
         .state(parent)
@@ -1138,8 +1139,10 @@ fn a_swivel_on_a_folded_edge_lands_through_the_bridge() {
     assert_eq!(a["ridges"], json!([]));
     assert_eq!(asked["emergents"], json!([]));
     assert!(asked["orders"].is_null(), "{asked}");
-    // Its one choice besides the order: valley lands, mountain does not.
+    // Its choices besides the order: valley lands, mountain does not, of
+    // both kinds, open and inside.
     assert_eq!(asked["directions"], json!([true, false]));
+    assert_eq!(asked["kinds"], json!([[true, false], [true, false]]));
     let letters: Vec<&Value> = a["creases"]
         .as_array()
         .map(|c| c.iter().map(|c| &c["letter"]).collect())
@@ -1172,6 +1175,7 @@ fn a_swivel_on_a_folded_edge_lands_through_the_bridge() {
         ridge: None,
         direction: oristudio_fold::Direction::Valley,
         fold: Some(fold),
+        kind: oristudio_fold::SwivelKind::Open,
     };
     let engine =
         match parent_state.swivel_by_edge(&engine_op, &oristudio_fold::VertexChoices::default()) {
@@ -1194,6 +1198,111 @@ fn a_swivel_on_a_folded_edge_lands_through_the_bridge() {
     let refused = apply(&mut bridge, parent, mountain, json!({}));
     assert_eq!(refused["refusal"]["code"], "no_order", "{refused}");
     assert_eq!(refused["fixes"], json!([{ "fix": "opposite_direction" }]));
+}
+
+/// The inside swivel on the same folded edge (`swivel: 'inside'`): the
+/// question answers the same vertex and creases with the inside letters as
+/// seen — the swivel crease a valley in both layers, the second crease the
+/// mountain — and the same ways landing; the step lands the engine's inside
+/// swivel, with the open swivel's lines and another order. The other
+/// direction is refused offering this one; an inside swivel at a free
+/// vertex is refused by code; a kind the bridge does not know is thrown.
+#[test]
+fn an_inside_swivel_on_a_folded_edge_lands_through_the_bridge() {
+    let mut bridge = Bridge::new();
+    let parent = abrashi_squash(&mut bridge);
+    let mut step = abrashi_swivel();
+    step["swivel"] = json!("inside");
+    let asked = analysis(&bridge, parent, step.clone());
+    let a = &asked["analysis"];
+    assert_eq!(a["kind"], "swivel-by-edge", "{asked}");
+    let open = analysis(&bridge, parent, abrashi_swivel());
+    assert_eq!(a["vertex"], open["analysis"]["vertex"]);
+    let letters: Vec<(&Value, &Value)> = a["creases"]
+        .as_array()
+        .map(|c| c.iter().map(|c| (&c["letter"], &c["ridge"])).collect())
+        .unwrap_or_default();
+    assert_eq!(
+        letters,
+        vec![
+            (&json!("valley"), &json!(false)),
+            (&json!("valley"), &json!(false)),
+            (&json!("mountain"), &json!(true)),
+        ]
+    );
+    assert_eq!(asked["directions"], json!([true, false]));
+    assert_eq!(asked["kinds"], json!([[true, false], [true, false]]));
+    assert!(asked["orders"].is_null(), "{asked}");
+
+    let applied = apply(&mut bridge, parent, step.clone(), json!({}));
+    assert_eq!(applied["status"], "ok", "{applied}");
+    assert_eq!(applied["compound"]["kind"], "swivel");
+    let landed_state = applied["state"].as_u64().unwrap_or_default() as u32;
+    let parent_state = bridge.state(parent).unwrap_or_else(|e| panic!("{e}"));
+    let fold: Point = serde_json::from_value(step["fold"].clone()).unwrap_or_default();
+    let engine_op = oristudio_fold::SwivelByEdge {
+        pivot: parent_state.resolve_point(fold).unwrap_or_default(),
+        edge: serde_json::from_value(step["edge"].clone()).unwrap_or_default(),
+        target: parent_state
+            .crease_at([0.75, 0.5])
+            .and_then(|c| parent_state.crease_line(c.id))
+            .unwrap_or_else(|| panic!("no centre line")),
+        layers: Seed::All,
+        ridge: None,
+        direction: oristudio_fold::Direction::Valley,
+        fold: Some(fold),
+        kind: oristudio_fold::SwivelKind::Inside,
+    };
+    let engine =
+        match parent_state.swivel_by_edge(&engine_op, &oristudio_fold::VertexChoices::default()) {
+            Ok(oristudio_fold::VertexOutcome::Landed(folded)) => folded.state.parts().clone(),
+            _ => panic!("the engine did not land it"),
+        };
+    let landed_parts = bridge
+        .state(landed_state)
+        .map(|s| s.parts().clone())
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(landed_parts, engine);
+    // The open swivel's lines, another order.
+    let opened = apply(&mut bridge, parent, abrashi_swivel(), json!({}));
+    let opened_state = opened["state"].as_u64().unwrap_or_default() as u32;
+    let opened_parts = bridge
+        .state(opened_state)
+        .map(|s| s.parts().clone())
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(landed_parts.vertices, opened_parts.vertices);
+    assert_ne!(landed_parts.order, opened_parts.order);
+    // The paper behind: refused for want of an order, offering the valley.
+    let mut mountain = step.clone();
+    mountain["direction"] = json!("mountain");
+    let refused = apply(&mut bridge, parent, mountain, json!({}));
+    assert_eq!(refused["refusal"]["code"], "no_order", "{refused}");
+    assert_eq!(refused["fixes"], json!([{ "fix": "opposite_direction" }]));
+    // An inside swivel needs a folded edge.
+    let diagonal = diagonal_square(&mut bridge);
+    let mut free = edge_swivel(
+        past_the_incenter(),
+        json!({ "via": "crease", "at": [0.5, 0.5] }),
+    );
+    free["swivel"] = json!("inside");
+    let refused = apply(&mut bridge, diagonal, free, json!({}));
+    assert_eq!(
+        refused["refusal"]["code"], "swivel_inside_free",
+        "{refused}"
+    );
+    // `'open'` is the open swivel, spelled out.
+    let mut spelled = abrashi_swivel();
+    spelled["swivel"] = json!("open");
+    let spelled = apply(&mut bridge, parent, spelled, json!({}));
+    let spelled_state = spelled["state"].as_u64().unwrap_or_default() as u32;
+    assert_eq!(
+        bridge.state(spelled_state).map(|s| s.parts().clone()).ok(),
+        Some(opened_parts)
+    );
+    // A kind it does not know does not parse.
+    let mut closed = abrashi_swivel();
+    closed["swivel"] = json!("closed");
+    assert!(serde_json::from_value::<Op>(closed).is_err());
 }
 
 /// A swivel on a folded edge refused by code — a point on no folded crease
