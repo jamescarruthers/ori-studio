@@ -15,8 +15,6 @@ import { foldToolWindow } from '../../../fold/tools/foldToolWindow';
 import { useFoldShortcutLabels } from '../../../fold/tools/useFoldShortcutLabels';
 import { foldToolKindControl, registerFoldCanvasVerbs } from '../../../fold/canvas/foldCanvasCommands';
 import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
-import { cursorStepLabel } from '../../../fold/sequence/foldSequenceWords';
-import { useFoldCursorEntry } from '../../../fold/sequence/useFoldSequenceView';
 import {
   chooserBounds,
   chooserKeys,
@@ -25,13 +23,11 @@ import {
   foldCrimpWindowView,
   foldFreeLineStart,
   foldLocatedLines,
-  foldPromptWords,
   foldReverseWindowView,
   foldSinkWindowView,
   foldTuckWindowView,
   foldVertexWindowView,
   foldWindowPreview,
-  sceneLayers,
 } from '../../../fold/canvas/foldCanvasModel';
 import { useFoldFanMarks } from '../../../fold/canvas/vertex/useFoldFanMarks';
 import { useFoldVertexMarks } from '../../../fold/canvas/vertex/useFoldVertexMarks';
@@ -53,8 +49,6 @@ import { useFoldWindowInset } from '../../../fold/canvas/useFoldWindowInset';
 import { useFoldWovenInterval } from '../../../fold/canvas/useFoldWovenInterval';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { shownFoldSequence } from '../../../store/workspaceStore/foldState';
-import { ViewportStatusReadout } from '../../ui/ViewportStatusReadout';
-import { FoldKindMark } from '../FoldKindMark';
 import { FoldToolWindow } from '../FoldToolWindow';
 import { FoldActionLayer } from './FoldActionLayer';
 import { FoldPane } from './FoldPane';
@@ -148,15 +142,12 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
   // pane fits again when the step on screen changes to a form that has left it — never a camera the
   // user has moved.
   const summary = view.summary;
-  const cursorEntry = useFoldCursorEntry();
   const spread = useFoldStepSpread(view.cursorId, 'canvas_bar');
   // A fan's given creases, and the regions its paper that stays is picked among, from its clicks.
   const fanMarks = useFoldFanMarks(view.index, toolState);
   const paint = useFoldCanvasPaint(view, preview, display, toolState.hoveredFlap, inks, shownSpread, fanMarks);
   // The crease pattern as Edit's canvas draws one, not as paper.
   const cpStrokes = useFoldCreasePatternStrokes(paint.creasePattern.lines, viewport, theme.name);
-  const landed = preview.landed;
-  const cpSummary = paint.creasePattern.summary;
   const sequenceId = useWorkspaceStore((state) => shownFoldSequence(state)?.document.id ?? 'blank');
   const sheetKey = summary ? summary.sheet.map(([x, y]) => `${x},${y}`).join(';') : 'none';
   const framingKey = `${sequenceId}:${sheetKey}`;
@@ -262,31 +253,6 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
         }
       : null;
 
-  // --- The status chips.
-  const layers = sceneLayers(view.scene);
-  const prompt = foldPromptWords(t, toolState, { coarse, alt: altModifierLabel() });
-  const foldedStatus = (
-    <ViewportStatusReadout hideOnPhone>
-      <span>{t('panels:fold.canvas.folded', 'Folded')}</span>
-      <span>{cursorStepLabel(t, cursorEntry)}</span>
-      <span>{t('panels:fold.canvas.layers', { count: layers, defaultValue_one: '{{count}} layer', defaultValue_other: '{{count}} layers' })}</span>
-      {prompt && <span className={styles.prompt}>{prompt}</span>}
-    </ViewportStatusReadout>
-  );
-  const counts = cpSummary?.creases;
-  const creaseStatus = (
-    <ViewportStatusReadout hideOnPhone>
-      <span>{t('panels:fold.canvas.creasePattern', 'Crease pattern')}</span>
-      <span className={styles.count}>
-        <FoldKindMark kind="mountain" /> {counts?.mountain ?? 0}
-      </span>
-      <span className={styles.count}>
-        <FoldKindMark kind="valley" /> {counts?.valley ?? 0}
-      </span>
-      {landed && <span>{t('panels:fold.canvas.adds', 'Bold: creases this fold adds')}</span>}
-    </ViewportStatusReadout>
-  );
-
   const showFolded = !phone || phonePane === 'folded';
   const showCreases = !phone || phonePane === 'crease-pattern';
   const paneProps = {
@@ -317,7 +283,6 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               overlay={foldedOverlay}
               onHover={woven.onHover}
               onZoomPercentChange={setZoomPercent}
-              status={foldedStatus}
               posedScene={playback.frames}
               layers={(camera) => (
                 <>
@@ -356,7 +321,6 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
               hitTest={(at, radii) => verbs.hitTest('crease-pattern', at, radii)}
               overlay={creaseOverlay}
               onZoomPercentChange={showFolded ? undefined : setZoomPercent}
-              status={creaseStatus}
               ariaLabel={t(
                 'panels:fold.canvas.creasePatternLabel',
                 'The crease pattern so far, front up. Click its points and creases to locate a fold.'

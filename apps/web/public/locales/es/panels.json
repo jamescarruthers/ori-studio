@@ -1549,19 +1549,14 @@
       "startsBranch": "Empieza una rama nueva"
     },
     "canvas": {
-      "adds": "En trazo grueso: pliegues que añade este pliegue",
       "creasePattern": "Patrón de pliegues",
       "creasePatternLabel": "El patrón de pliegues hasta ahora, anverso arriba. Haz clic en sus puntos y pliegues para situar un pliegue.",
       "folded": "Plegado",
       "foldedLabel": "La forma plegada. Haz clic en sus puntos y pliegues para situar un pliegue; arrastra para desplazar, desplázate para hacer zoom.",
-      "layers_one": "{{count}} capa",
-      "layers_many": "{{count}} capas",
-      "layers_other": "{{count}} capas",
       "precreases": "Premarcados",
       "precreasesTitle": "Mostrar los pliegues planos: premarcados y pliegues deshechos",
       "spreadLayers": "Separar capas",
       "spreadLayersTitle": "Separa las capas plegadas, como las dibuja un diagrama, en este paso y los siguientes",
-      "step": "Paso {{number}}",
       "stepCreases": "Pliegues del paso",
       "stepCreasesTitle": "Dibujar en trazo grueso los pliegues que hizo el paso mostrado, como su instrucción",
       "toolbar": "Vista de plegado"

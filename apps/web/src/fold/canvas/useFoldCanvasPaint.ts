@@ -7,7 +7,6 @@ import type { Point } from '../../lib/geometry';
 import type { PaperScene } from '../../lib/paper/paperScene';
 import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import { FOLD_SHEET_KEY } from '../document/foldStepTree';
-import type { FoldStateSummary } from '../engine/foldEngineWire';
 import { boundsOf, boundsToUser, transformLine, type Bounds } from './foldCanvasGeometry';
 import { refusedFaceInks } from './foldCanvasModel';
 import { creasePatternPaneLines, type FoldCreasePatternLines } from './foldCreasePatternLines';
@@ -43,8 +42,6 @@ export interface FoldCanvasPaint {
     lines: FoldCreasePatternLines | null;
     /** In user space: the sheet. */
     contentBounds: UserBounds | null;
-    /** The state the crease pattern is of: the previewed fold's, while one has landed. */
-    summary: FoldStateSummary | null;
   };
 }
 
@@ -208,6 +205,6 @@ export function useFoldCanvasPaint(
 
   return {
     folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, keepInView, offset, tint },
-    creasePattern: { lines: cpLines, contentBounds: cpBounds, summary: cpSummary },
+    creasePattern: { lines: cpLines, contentBounds: cpBounds },
   };
 }

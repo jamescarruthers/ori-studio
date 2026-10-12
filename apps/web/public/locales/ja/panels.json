@@ -1449,17 +1449,14 @@
       "startsBranch": "新しい分岐を始めます"
     },
     "canvas": {
-      "adds": "太線：この折りで加わる折り筋",
       "creasePattern": "展開図",
       "creasePatternLabel": "ここまでの展開図（表を上）。点や折り筋をクリックして折りの位置を決めます。",
       "folded": "折った形",
       "foldedLabel": "折った形。点や折り筋をクリックして折りの位置を決めます。ドラッグで移動、スクロールでズームします。",
-      "layers_other": "{{count}} 層",
       "precreases": "下折り",
       "precreasesTitle": "平らな折り筋を表示：下折りと、開いた折り",
       "spreadLayers": "層をずらす",
       "spreadLayersTitle": "折った層を折り図のようにずらして描く（このステップとその後のステップ）",
-      "step": "ステップ {{number}}",
       "stepCreases": "ステップの折り筋",
       "stepCreasesTitle": "表示中のステップで付いた折り筋を、その指示として太線で描く",
       "toolbar": "折りの表示"

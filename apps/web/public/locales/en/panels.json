@@ -1498,18 +1498,14 @@
       "startsBranch": "Starts a new branch"
     },
     "canvas": {
-      "adds": "Bold: creases this fold adds",
       "creasePattern": "Crease pattern",
       "creasePatternLabel": "The crease pattern so far, front up. Click its points and creases to locate a fold.",
       "folded": "Folded",
       "foldedLabel": "The folded form. Click its points and creases to locate a fold; drag to pan, scroll to zoom.",
-      "layers_one": "{{count}} layer",
-      "layers_other": "{{count}} layers",
       "precreases": "Precreases",
       "precreasesTitle": "Draw the flat creases: precreases, and folds undone",
       "spreadLayers": "Spread layers",
       "spreadLayersTitle": "Spread the folded layers apart, as a diagram draws them, on this step and the ones after it",
-      "step": "Step {{number}}",
       "stepCreases": "Step creases",
       "stepCreasesTitle": "Draw the creases the step on show made in bold, as its instruction",
       "toolbar": "Fold view"

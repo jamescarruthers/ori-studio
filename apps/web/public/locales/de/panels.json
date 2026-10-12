@@ -1498,18 +1498,14 @@
       "startsBranch": "Beginnt einen neuen Zweig"
     },
     "canvas": {
-      "adds": "Fett: Faltlinien, die diese Faltung hinzufügt",
       "creasePattern": "Faltmuster",
       "creasePatternLabel": "Das bisherige Faltmuster, Vorderseite oben. Klicke seine Punkte und Faltlinien an, um eine Faltung festzulegen.",
       "folded": "Gefaltet",
       "foldedLabel": "Die gefaltete Form. Klicke ihre Punkte und Faltlinien an, um eine Faltung festzulegen; ziehen zum Verschieben, scrollen zum Zoomen.",
-      "layers_one": "{{count}} Lage",
-      "layers_other": "{{count}} Lagen",
       "precreases": "Vorfalten",
       "precreasesTitle": "Die flachen Faltlinien zeigen: Vorfalten und wieder geöffnete Falten",
       "spreadLayers": "Lagen auffächern",
       "spreadLayersTitle": "Die gefalteten Lagen auffächern, wie ein Diagramm sie zeichnet, in diesem Schritt und den folgenden",
-      "step": "Schritt {{number}}",
       "stepCreases": "Schritt-Faltlinien",
       "stepCreasesTitle": "Die Faltlinien des gezeigten Schritts fett zeichnen, als dessen Anleitung",
       "toolbar": "Faltansicht"

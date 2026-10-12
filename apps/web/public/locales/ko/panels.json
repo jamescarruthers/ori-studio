@@ -1449,17 +1449,14 @@
       "startsBranch": "새 분기를 시작합니다"
     },
     "canvas": {
-      "adds": "굵은 선: 이 접기로 더해지는 접은 선",
       "creasePattern": "전개도",
       "creasePatternLabel": "지금까지의 전개도(앞면이 위). 점과 접은 선을 클릭해 접을 위치를 정하세요.",
       "folded": "접은 모양",
       "foldedLabel": "접은 모양. 점과 접은 선을 클릭해 접을 위치를 정하세요. 끌어서 이동하고 스크롤해서 확대·축소합니다.",
-      "layers_other": "{{count}}겹",
       "precreases": "미리 접은 선",
       "precreasesTitle": "평평한 접은 선 표시: 미리 접은 선과 펼친 접기",
       "spreadLayers": "층 벌리기",
       "spreadLayersTitle": "접은 층을 접기 도해처럼 벌려 그립니다. 이 단계와 그 뒤의 단계에 적용됩니다",
-      "step": "{{number}}단계",
       "stepCreases": "단계의 접은 선",
       "stepCreasesTitle": "표시된 단계에서 생긴 접은 선을 그 단계의 지시로, 굵은 선으로 그리기",
       "toolbar": "접기 보기"

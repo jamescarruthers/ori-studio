@@ -2,8 +2,8 @@
  * What the Fold canvas shows of the fold being located, from the tools and
  * the session's pipeline: the window's preview (the layers at the line and
  * what the seed asks of them), the faces lit on the folded pane, and the
- * status chips. React-free and store-free, so each reading is tested on its
- * own.
+ * canvas's chooser. React-free and store-free, so each reading is tested on
+ * its own.
  */
 import type { TFunction } from 'i18next';
 import type { FoldedFaceInk } from '../../cp-workspace/adapters/cpFoldedToScene';
@@ -21,19 +21,9 @@ import { pocketNames } from '../tools/sink/sinkStep';
 import type { FoldSinkWindowView } from '../tools/sink/sinkToolWindow';
 import { isSinkRefusalCode } from '../engine/foldEngineSinkWire';
 import type { FoldTuckWindowView } from '../tools/tuck/tuckToolWindow';
-import { isLocated, picksAlongLine, type FoldToolState } from '../tools/foldToolState';
-import { foldExtentLabel, foldExtentSteps, type FoldExtentMode } from '../tools/precrease/precreaseExtent';
-import {
-  crimpFirstLineSteps,
-  foldToolLabel,
-  isSinkTool,
-  isVertexTool,
-  lineModeLabel,
-  lineModeSteps,
-  secondLineSteps,
-  type FoldKeyLabel,
-} from '../tools/foldToolCatalog';
-import { vertexToolSteps, type FoldVertexStepsHost } from '../tools/vertex/vertexInputs';
+import { isLocated, type FoldToolState } from '../tools/foldToolState';
+import type { FoldExtentMode } from '../tools/precrease/precreaseExtent';
+import { isSinkTool, isVertexTool, type FoldKeyLabel } from '../tools/foldToolCatalog';
 import { nearestDirection } from '../tools/vertex/vertexStep';
 import type { FoldVertexWindowView } from '../tools/vertex/vertexToolWindow';
 import { boundsOf } from './foldCanvasGeometry';
@@ -291,12 +281,6 @@ export function refusedFaceInks(
   return faces.size > 0 ? faces : undefined;
 }
 
-/** The most layers any point of a state stacks: what the status chip calls its layers. */
-export function sceneLayers(scene: FoldScene | null): number {
-  if (!scene) return 1;
-  return scene.subfaces.reduce((most, cell) => Math.max(most, cell.faces_top_to_bottom.length), 1);
-}
-
 /**
  * While a free line is being drawn, its first end, which the live line runs
  * from to where a click would end it: a free fold line's, or a crimp's
@@ -322,42 +306,6 @@ export function foldLocatedLines(
 ): readonly (readonly [Point, Point])[] {
   if (tool !== 'crimp' || pictured || !lines) return [];
   return [lines.first, lines.second].filter((line): line is [Point, Point] => line !== null);
-}
-
-/**
- * The words after the folded pane's chip: the line mode and the click in
- * hand, while one is — the tool window's own step (`host`: a finger's words
- * where they differ).
- */
-export function foldPromptWords(t: TFunction, tools: FoldToolState, host?: FoldVertexStepsHost): string | null {
-  if (tools.tool === 'divide-line') {
-    return tools.picks.length === 0 ? t('tools:fold.steps.divide', 'Click an edge or crease to divide it.') : null;
-  }
-  if (picksAlongLine(tools)) {
-    // A partial precrease's points along its located line, named by its extent.
-    const step = foldExtentSteps(t, tools.extent)[tools.extentPicks.length];
-    return step ? `${foldExtentLabel(t, tools.extent)} · ${step}` : null;
-  }
-  if (isLocated(tools)) return null;
-  if (isVertexTool(tools.tool)) {
-    // A vertex fold's own clicks, named by the fold they make.
-    const step = vertexToolSteps(t, tools.tool, tools.lineMode, host)[tools.picks.length];
-    return step ? `${foldToolLabel(t, tools.tool)} · ${step}` : null;
-  }
-  if (tools.tool === 'crimp') {
-    // A crimp's lines in its own words, each named as the window names it —
-    // a first line located by an axiom by the axiom, whose steps it takes.
-    const first = crimpFirstLineSteps(t, tools.lineMode);
-    if (tools.picks.length < first.length) {
-      const drawn = tools.lineMode === 'free' || tools.lineMode === 'crease';
-      const name = drawn ? t('tools:fold.crimp.firstLine', 'First line') : lineModeLabel(t, tools.lineMode);
-      return `${name} · ${first[tools.picks.length]}`;
-    }
-    const second = secondLineSteps(t, tools.secondLineMode)[tools.picks.length - first.length];
-    return second ? `${t('tools:fold.crimp.secondLine', 'Second line')} · ${second}` : null;
-  }
-  const step = lineModeSteps(t, tools.lineMode)[tools.picks.length];
-  return step ? `${lineModeLabel(t, tools.lineMode)} · ${step}` : null;
 }
 
 /**

@@ -1549,19 +1549,14 @@
       "startsBranch": "Commence une nouvelle branche"
     },
     "canvas": {
-      "adds": "En gras : les plis que ce pliage ajoute",
       "creasePattern": "Patron de plis",
       "creasePatternLabel": "Le patron de plis jusqu’ici, recto en haut. Cliquez sur ses points et ses plis pour situer un pliage.",
       "folded": "Plié",
       "foldedLabel": "La forme pliée. Cliquez sur ses points et ses plis pour situer un pliage ; faites glisser pour vous déplacer, défilez pour zoomer.",
-      "layers_one": "{{count}} couche",
-      "layers_many": "{{count}} couches",
-      "layers_other": "{{count}} couches",
       "precreases": "Prépliages",
       "precreasesTitle": "Afficher les plis à plat : prépliages et plis défaits",
       "spreadLayers": "Écarter les couches",
       "spreadLayersTitle": "Écarte les couches pliées, comme un diagramme les dessine, à cette étape et aux suivantes",
-      "step": "Étape {{number}}",
       "stepCreases": "Plis de l’étape",
       "stepCreasesTitle": "Dessiner en gras les plis faits par l’étape affichée, comme son instruction",
       "toolbar": "Vue de pliage"
