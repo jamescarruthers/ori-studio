@@ -21,6 +21,17 @@
  * draws its outline itself (`PaperFaceItem.outline`), so reshaping it in an
  * editor moves the fill and the outline together.
  *
+ * # A layer at a time
+ *
+ * A flat crease — a precrease, or a crease a flap was unfolded along — cuts
+ * one physical layer into faces no stack relates, since they lie side by side
+ * (`foldedDisplayLayers.ts`). The relation alone would let a face of another
+ * layer be drawn between them, which is harmless where the paper lies but not
+ * once a spread moves the layers apart: the face drawn later is then laid
+ * over paper that lies over it. So the order is taken a display layer at a
+ * time — each layer's faces drawn together, the layers in the relation's
+ * order — and a precrease leaves the picture as it was.
+ *
  * # Woven flaps
  *
  * A layer order can be cyclic — flaps woven so that each lies over the next
@@ -74,6 +85,7 @@ import type {
   OristudioCpFoldedPaperSubface,
 } from '../../engine/oristudioCpTypes';
 import type { Point } from '../../lib/geometry';
+import { foldedDisplayLayers, type FoldedDisplayLayers } from './foldedDisplayLayers';
 import { affineSpread, layerSpread, type LayerSpreadOptions } from './foldedLayerSpread';
 import type {
   PaperFaceItem,
@@ -160,12 +172,29 @@ function paintPlan(
   kernel: OristudioCpFoldedPaperScene,
   epsilon: number
 ): { edges: SubfaceEdges; ink: Map<number, number[]>; order: number[] } {
-  const components = faceComponents(kernel.faces.length, kernel.subfaces);
+  const faceCount = kernel.faces.length;
+  const components = faceComponents(faceCount, kernel.subfaces);
   const edges = new SubfaceEdges(kernel, epsilon);
   const ink = wovenInk(kernel, edges, components);
-  const order = componentOrder(components, kernel.subfaces).flatMap((component) =>
-    component.length === 1 ? component : wovenDrawOrder(component, wovenArcs(kernel, ink, component))
-  );
+  const layers = foldedDisplayLayers(kernel);
+  // The face components each group holds: a group is a union of them.
+  const inGroup = new Map<number, number[][]>();
+  const groups = layerGroups(faceCount, kernel.subfaces, layers);
+  const groupOf = new Int32Array(faceCount);
+  groups.forEach((group, id) => {
+    for (const face of group) groupOf[face] = id;
+  });
+  for (const component of components) {
+    const id = groupOf[component[0]!]!;
+    inGroup.set(id, [...(inGroup.get(id) ?? []), component]);
+  }
+  const order = componentOrder(faceCount, groups, kernel.subfaces).flatMap((group) => {
+    // One display layer: its faces never overlap one another, so any order is right.
+    if (group.every((face) => layers.layerOf[face] === layers.layerOf[group[0]!])) return group;
+    return componentOrder(faceCount, inGroup.get(groupOf[group[0]!]!) ?? [], kernel.subfaces).flatMap((component) =>
+      component.length === 1 ? component : wovenDrawOrder(component, wovenArcs(kernel, ink, component))
+    );
+  });
   return { edges, ink, order };
 }
 
@@ -251,7 +280,41 @@ export function faceComponents(
   faceCount: number,
   subfaces: readonly OristudioCpFoldedPaperSubface[]
 ): number[][] {
-  const below = facesBelow(faceCount, subfaces);
+  return strongComponents(facesBelow(faceCount, subfaces));
+}
+
+/**
+ * What the painter draws as one block: the strongly-connected components of
+ * the "over" relation with each display layer's faces tied together, so a
+ * layer is never split by paper that lies over or under it. A flat crease
+ * cuts one piece of paper in two faces that no stack relates — they lie side
+ * by side — and an order of faces alone may draw a face of another layer
+ * between them; a spread, which moves the layers apart, then lays the one
+ * drawn later over paper that lies over it. A block that is one layer has no
+ * face over another in it; a block of several is woven, by its faces or
+ * through its layers.
+ */
+function layerGroups(
+  faceCount: number,
+  subfaces: readonly OristudioCpFoldedPaperSubface[],
+  { layers }: FoldedDisplayLayers
+): number[][] {
+  const linked = facesBelow(faceCount, subfaces);
+  for (const faces of layers) {
+    // A ring through the layer's faces: each reaches every other.
+    if (faces.length < 2) continue;
+    faces.forEach((face, i) => linked[face]!.push(faces[(i + 1) % faces.length]!));
+  }
+  return strongComponents(linked);
+}
+
+/**
+ * Tarjan's algorithm: the strongly-connected components of the graph whose
+ * arcs run from each face to the faces its list in `below` names, each
+ * component's faces in ascending order.
+ */
+function strongComponents(below: readonly (readonly number[])[]): number[][] {
+  const faceCount = below.length;
   const index = new Int32Array(faceCount).fill(-1);
   const lowLink = new Int32Array(faceCount);
   const onStack = new Uint8Array(faceCount);
@@ -323,15 +386,16 @@ function facesBelow(
 /**
  * The components back to front: Kahn's order on the condensation, a component
  * ready once every component beneath it is out. Ties go to the lowest face,
- * so the order is a function of the stacks alone.
+ * so the order is a function of the stacks alone. The components may be some
+ * of the faces only — those of one group — and pairs with a face in none are
+ * passed over.
  */
 function componentOrder(
+  faceCount: number,
   components: readonly number[][],
   subfaces: readonly OristudioCpFoldedPaperSubface[]
 ): number[][] {
-  const componentOf = new Int32Array(
-    components.reduce((count, component) => count + component.length, 0)
-  );
+  const componentOf = new Int32Array(faceCount).fill(-1);
   components.forEach((component, id) => {
     for (const face of component) componentOf[face] = id;
   });
@@ -341,9 +405,9 @@ function componentOrder(
   const pending = new Int32Array(components.length);
   for (const { faces_top_to_bottom: stack } of subfaces) {
     for (let i = 0; i + 1 < stack.length; i += 1) {
-      const over = componentOf[stack[i]!];
-      const under = componentOf[stack[i + 1]!];
-      if (over === undefined || under === undefined || over === under) continue;
+      const over = componentOf[stack[i]!] ?? -1;
+      const under = componentOf[stack[i + 1]!] ?? -1;
+      if (over < 0 || under < 0 || over === under) continue;
       if (above[under]!.has(over)) continue;
       above[under]!.add(over);
       pending[over] += 1;
