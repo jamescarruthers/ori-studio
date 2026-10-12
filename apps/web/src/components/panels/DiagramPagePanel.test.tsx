@@ -349,23 +349,24 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     expect(analytics.trackDiagramPageSetupChanged).toHaveBeenCalledExactlyOnceWith('page_steps');
   });
 
-  it('shows what the page is laid out for, and takes only what it can hold', () => {
-    // The last page holds one step, laid out for the default's nine: more than nine changes nothing.
+  it('shows what the page is laid out for, and lays the last page out for any count it is given', () => {
+    // The last page holds one step, laid out for the default's nine.
     showPage(1);
     expect(field()?.value).toBe('9');
+    // One more: a page of ten's cells, its one step in the first, the page before held at its nine.
     act(() => host!.querySelector<HTMLButtonElement>('button[aria-label="Increase Steps on page 2"]')!.click());
     expect(firstSteps()).toEqual([
-      { size: 9, own: null },
-      { size: 1, own: null },
+      { size: 9, own: 9 },
+      { size: 1, own: 10 },
     ]);
-    expect(field()?.value).toBe('9');
-    // A count past the steps it holds is the steps it holds, the number it then shows.
+    expect(field()?.value).toBe('10');
+    // Fewer than the default: a page of six's cells, the number it then shows.
     type('6');
     expect(firstSteps()).toEqual([
       { size: 9, own: 9 },
-      { size: 1, own: 1 },
+      { size: 1, own: 6 },
     ]);
-    expect(field()?.value).toBe('1');
+    expect(field()?.value).toBe('6');
   });
 
   it('keeps a count that holds a later page still, and says so where Use default would be', () => {

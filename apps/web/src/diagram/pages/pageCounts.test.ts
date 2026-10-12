@@ -314,17 +314,20 @@ describe('setPageSteps', () => {
     expect(pages(shrunk)[1]!.split(' ').at(-1)).toBe('s58');
   });
 
-  it('holds a count to the steps the page can hold: on the last page, its own', () => {
-    // A last page of its own 2: a count past them is the 2 it is laid out for.
+  it('lets the last page take any count up to 30, the count it is then laid out for', () => {
+    // A last page of its own 2 holding 2: a count past them sizes the page for more, its steps filling it in order.
     const counted = diagram(14, { 12: 2 });
-    expect(setPageSteps(counted, 3, 7)).toBe(counted);
-    expect(pageStepsRange(counted, 3)).toEqual({ min: 1, max: 2 });
-    // An automatic last page is laid out for the default: as many or more changes nothing, fewer give its steps the page.
+    const roomier = setPageSteps(counted, 3, 7);
+    expect(pages(roomier)).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8:4 s9 s10 s11', 's12:7 s13']);
+    expect(pageStepsRange(counted, 3)).toEqual({ min: 1, max: 30 });
+    // An automatic last page is laid out for the default already: given it, it stays automatic.
     expect(setPageSteps(plain, 3, 4)).toBe(plain);
-    expect(setPageSteps(plain, 3, 12)).toBe(plain);
-    expect(pages(setPageSteps(plain, 3, 3))).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8:4 s9 s10 s11', 's12:2 s13']);
-    // The field offers up to the default there, the number it shows.
-    expect(pageStepsRange(plain, 3)).toEqual({ min: 1, max: 4 });
+    // More or fewer give it a count of its own, which it is laid out for.
+    expect(pages(setPageSteps(plain, 3, 12))).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8:4 s9 s10 s11', 's12:12 s13']);
+    expect(pages(setPageSteps(plain, 3, 3))).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8:4 s9 s10 s11', 's12:3 s13']);
+    // Fewer than it holds: the rest start an automatic page after it.
+    expect(pages(setPageSteps(plain, 3, 1))).toEqual(['s0:4 s1 s2 s3', 's4:4 s5 s6 s7', 's8:4 s9 s10 s11', 's12:1', 's13']);
+    expect(pageStepsRange(plain, 3)).toEqual({ min: 1, max: 30 });
     expect(pageStepsRange(plain, 9)).toBeNull();
   });
 

@@ -105,7 +105,7 @@ describe('paginate: which steps go on which page', () => {
 });
 
 describe('paginate: what each flow page is laid out for', () => {
-  it('lays a page out for its own steps, but an automatic last page for a full page', () => {
+  it('lays a page out for its own steps, but the last page for its capacity', () => {
     const list = steps(20, (index) => (index === 9 ? { pageSteps: 5 } : index === 17 ? { breakBefore: true } : {}));
     // 9 automatic, 5 counted, 3 automatic cut by the break, and the last 3 automatic: laid out for 9.
     expect(paginate(list, FLOW).map((page) => [page.steps.length, page.layoutCount])).toEqual([
@@ -114,8 +114,15 @@ describe('paginate: what each flow page is laid out for', () => {
       [3, 3],
       [3, 9],
     ]);
-    // A counted last page is laid out for its own steps.
-    expect(paginate(steps(12, (index) => (index === 9 ? { pageSteps: 5 } : {})), FLOW).at(-1)).toMatchObject({ layoutCount: 3, capacity: 5 });
+    // A counted last page is laid out for its count, the steps it holds filling it in order: 3 on a page of 5.
+    expect(paginate(steps(12, (index) => (index === 9 ? { pageSteps: 5 } : {})), FLOW).at(-1)).toMatchObject({
+      steps: [9, 10, 11],
+      layoutCount: 5,
+      capacity: 5,
+      rowCounts: [2, 2, 1],
+    });
+    // A count of 1 gives the last step the page.
+    expect(paginate(steps(10, (index) => (index === 9 ? { pageSteps: 1 } : {})), FLOW).at(-1)).toMatchObject({ layoutCount: 1, rows: 1 });
   });
 
   it('cuts its rows for the largest pictures, as flowShape does, on a right page and on the last', () => {
@@ -135,8 +142,8 @@ describe('paginate: what each flow page is laid out for', () => {
     expect(twelve.map((page) => [page.rows, page.rowCounts])).toEqual([
       [5, [3, 3, 2, 2, 2]],
       [4, [3, 3, 3, 3]],
-      // The last page, on the left, hands over to nothing: its own 6 steps, 3 rows of 2.
-      [3, [2, 2, 2]],
+      // The last page, on the left, hands over to nothing: laid out for its count of 12, 4 rows of 3, its 6 steps filling two.
+      [4, [3, 3, 3, 3]],
     ]);
     // 4 a page: 2 rows of 2 where it may, 3 rows of 2 · 1 · 1 where it hands over.
     const four = paginate(steps(12, () => ({})), { ...FLOW, stepsPerPage: 4 });

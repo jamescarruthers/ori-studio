@@ -147,6 +147,18 @@ export function pageLayoutFixtures(): PageLayoutFixture[] {
       ),
     },
     {
+      name: 'flow, a last page with its own count',
+      // Nine steps fill page 1; step 10 starts a last page of its own three, laid out for three, its
+      // one step in the first place: a count on the last page sizes it as the count says.
+      document: diagram(
+        withTurns(
+          steps(10).map((step, index) => (index === 9 ? { ...step, pageSteps: 3 } : step)),
+          [4]
+        ),
+        { layout: 'flow' }
+      ),
+    },
+    {
       name: 'flow landscape, an odd row count',
       document: diagram(withTurns(steps(16), [7]), { layout: 'flow', stepsPerPage: 12, orientation: 'landscape', size: 'letter', marginMm: 6 }),
     },

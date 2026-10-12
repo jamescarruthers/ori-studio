@@ -55,9 +55,10 @@ export interface PlannedPage {
   capacity: number;
   /**
    * How many steps it is laid out for: in the flow its own number of steps,
-   * but an automatic last page its capacity, which a few steps left over fill
-   * in order; on a grid always its capacity, every page cut into the same
-   * columns × rows.
+   * but the last page its capacity — its own count, or the default — which
+   * the steps it holds fill in order, so a count on the last page sizes it as
+   * the count says, and a few steps left over keep a full page's cells; on a
+   * grid always its capacity, every page cut into the same columns × rows.
    */
   layoutCount: number;
   /** How many rows it is cut into: in the flow {@link flowRows} for its layout count; on a grid the setup's rows. */
@@ -223,7 +224,7 @@ export function paginate(steps: readonly PaginatedStep[], setup: DiagramPageSetu
   return pages.map((page, pageIndex) => {
     const capacity = page.own ?? fallback;
     const last = pageIndex === pages.length - 1;
-    const layoutCount = last && page.own === null ? capacity : page.steps.length;
+    const layoutCount = last ? capacity : page.steps.length;
     // A left page handing over at its spine (`flowPagePlan`'s exit), which no row count changes.
     const spine = flowPagePlan(pageIndex, pages.length, setup.firstPageSide, 1).exit === 'spine';
     const rows = flowRows(layoutCount, area, spine);

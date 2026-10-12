@@ -80,9 +80,10 @@ whichever comes first. Turns take no place, as today.
 
 Each page reports: its step indices, its first step id, whether it has its
 own count, its capacity, and its **layout count**: the number of steps it is
-laid out for. That is its own size for every page except an automatic last
-page, which is laid out for its capacity so a few leftover steps keep a full
-page's cell size (filled in order).
+laid out for. That is its own size for every page except the last page,
+which is laid out for its capacity (its own count, or the default), so a
+few leftover steps keep a full page's cell size and a count there sizes the
+page as it says (filled in order).
 
 ### Keeping later pages still (edit rules, in the store's `commit`)
 
@@ -140,15 +141,22 @@ As built (the second review, 2026-10-11; the layout itself unchanged):
 
 - A count is held to what the page can hold (`pageStepsRange`, which the
   Page pane's field offers too): never more than the steps from its start to
-  the diagram's end, so a count never says more than the page holds (R2-U2);
+  the diagram's end, so a count never says more than the page holds (R2-U2),
+  except on the last page, which takes any count up to 30;
   never every step of a later page that starts by a page break, which moves
   on to that page's last step and comes back as the page shrinks, so a break
   is never lost with its page (L4); and never so few that a counted next page,
   starting earlier to keep its last step, would need more than 30 (L3).
-- An automatic last page is laid out for the default, which no count gives
-  it: the default or more leaves it as it is, and fewer give its steps the
-  page (a counted page is laid out for the steps it holds). The row shows
-  every page's layout count, a counted page's too.
+- The last page is laid out for its capacity, its own count or the default,
+  the steps it holds filling it in order (11 Oct, decided under Zach's
+  standing "go with your recs"; it replaced "a counted page is laid out for
+  the steps it holds", which made every count from the steps held up print
+  the same page and one press below the default blow its few steps up to the
+  whole page). So on the last page 1 gives the finished model the page and
+  each count in between sizes it smoothly; an automatic last page given the
+  default stays automatic; a count below the steps it holds sends the rest to
+  an automatic page after it. Fixture 'flow, a last page with its own count'
+  holds the rule in the homes golden. The row shows every page's layout count.
 - Every page in front of a page with its own count holds one too (L2). Use
   default leaves such a page as it is (`countHoldsLaterPages`), and the row
   says "Keeps later pages in place" where its button would be: without its
@@ -284,9 +292,8 @@ As built (Phase 3, part 1):
 - The row is `DiagramPageStepsRow`, under Steps per page: "Steps on page N",
   N as the Pages view captions the page (its printed number, else its
   place). A page with its own count shows it and Use default; one without
-  shows what it is laid out for (`layoutCount`) and a quiet "Default". That
-  is its steps, but the default on an automatic last page, so typing the
-  number of its few steps gives them the page. Analytics: `page_steps` and
+  shows what it is laid out for (`layoutCount`) and a quiet "Default": its
+  steps, but its capacity on the last page. Analytics: `page_steps` and
   `page_steps_reset` on the page setup event.
 - Reset This Page resets the current page, and is disabled only where that
   page has no step placed by hand (U4). The clash notice offers a new page
@@ -440,13 +447,8 @@ As built (the second review's UI fixes, 2026-10-11):
   - [x] A newer build's steps per page carried (F-NEWER-SPP); page counts in
     the v1 fixture (F-V1FIX); the design record says the cells replaced
     packing (F-DOCS).
-  - [ ] Zach's call, open: what a count means on the diagram's last page. A
-    counted page is laid out for the steps it holds, so on the last page
-    every count from its steps up gives the same page, and one press below
-    the default on an automatic last page gives its few steps the whole page.
-    Laying a counted last page out for max(count, steps held) would make the
-    number mean what it says; it changes no golden home, but it is a layout
-    change, so it waits for his answer.
+  - [x] What a count means on the last page: the last page is laid out for
+    its capacity, counted or not (see "Keeping later pages still").
 
 ### Phase 4: gate and land
 - [ ] Lint, typecheck, i18n check, full web suite (Node 22), build and prerender.
