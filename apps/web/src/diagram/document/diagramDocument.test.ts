@@ -17,6 +17,7 @@ import {
   setDiagramTitle,
   setHanStyle,
   setPageSetup,
+  setPageStarts,
   setStepBreakBefore,
   setStepText,
   stepHasContent,
@@ -191,6 +192,14 @@ describe('duplicateStep', () => {
     expect(stepsIn(document).map((step) => step.breakBefore)).toEqual([false, true, false]);
   });
 
+  it('keeps a page’s own count with the original: the copy is one more step on its page', () => {
+    const { diagram, ids } = diagramWith(2);
+    const counted = setPageStarts(diagram, new Map([['step-3', { pageSteps: 4 }]]));
+    const { document } = duplicateStep(counted, 'step-3', ids)!;
+    expect(stepsIn(document).map((step) => step.pageSteps)).toEqual([undefined, 4, undefined]);
+    expect('pageSteps' in stepsIn(document)[2]!).toBe(false);
+  });
+
   it('refuses a missing or locked step', () => {
     const { diagram } = diagramWith(1);
     expect(duplicateStep(diagram, 'missing')).toBeNull();
@@ -217,6 +226,31 @@ describe('step and document fields', () => {
     expect(isLockedStep(lockedStep)).toBe(true);
     expect(setStepText(locked, 'step-2', 'hello')).toBe(locked);
     expect(setStepBreakBefore(locked, 'step-2', true)).toBe(locked);
+    expect(setPageStarts(locked, new Map([['step-2', { pageSteps: 3, breakBefore: true }]]))).toBe(locked);
+  });
+
+  it('sets page starts at once — a count clamped to 1–30, null taking it away — and is a no-op when unchanged', () => {
+    const { diagram } = diagramWith(3);
+    const next = setPageStarts(
+      diagram,
+      new Map([
+        ['step-2', { pageSteps: 7 }],
+        ['step-3', { pageSteps: 40, breakBefore: true }],
+        ['step-4', { pageSteps: 0 }],
+        ['missing', { pageSteps: 3 }],
+      ])
+    );
+    expect(stepsIn(next).map((step) => [step.pageSteps, step.breakBefore])).toEqual([
+      [7, false],
+      [30, true],
+      [1, false],
+    ]);
+    expect(setPageStarts(next, new Map([['step-2', { pageSteps: 7 }], ['step-3', { breakBefore: true }]]))).toBe(next);
+    expect(setPageStarts(next, new Map([['step-2', { pageSteps: Number.NaN }]]))).toBe(next);
+    const cleared = setPageStarts(next, new Map([['step-2', { pageSteps: null }], ['step-3', { pageSteps: null, breakBefore: false }]]));
+    expect('pageSteps' in stepsIn(cleared)[0]!).toBe(false);
+    expect(stepsIn(cleared)[1]).toEqual(stepsIn(diagram)[1]);
+    expect(setPageStarts(diagram, new Map())).toBe(diagram);
   });
 
   it('sets the title, Han style, paper style and page break', () => {

@@ -10,6 +10,7 @@ import {
   setDiagramStyle,
   setHanStyle,
   setPageSetup,
+  setPageStarts,
   setStepText,
   createTurn,
   isLockedTurn,
@@ -1807,6 +1808,71 @@ describe('a step placed by hand in the file (page overrides)', () => {
     // A build before placement knows no `place` key (`STEP_KEYS`): `hologram` stands for it here, as for `zoom`.
     const { written } = withPlace(undefined);
     written.steps[1].hologram = PLACED;
+    const older = readDiagram(written)!;
+    expect(stepsIn(older.document)[1]!.unknown).toEqual(written.steps[1]);
+    expect(JSON.stringify(writeDiagram(older.document))).toBe(JSON.stringify(written));
+  });
+});
+
+describe('a page’s own count in the file (diagram-flow-pages)', () => {
+  function withCount(value: unknown, step = 1) {
+    const written = throughJson(writeDiagram(linkedDiagram()));
+    written.steps[step].pageSteps = value;
+    const read = readDiagram(written)!;
+    return { written, read, step: stepsIn(read.document)[step]! };
+  }
+
+  it('round-trips a count from 1 to 30, after the page break, byte for byte', () => {
+    for (const value of [1, 7, 30]) {
+      const { written, read, step } = withCount(value);
+      expect(read.readOnly).toBe(false);
+      expect(step.unknown).toBeUndefined();
+      expect(step.pageSteps).toBe(value);
+      const again = throughJson(writeDiagram(read.document));
+      expect(JSON.stringify(again)).toBe(JSON.stringify(written));
+      const keys = Object.keys(again.steps[1]);
+      expect(keys[keys.indexOf('breakBefore') + 1]).toBe('pageSteps');
+    }
+  });
+
+  it('writes none for a step that starts no page of its own count, so a file without counts saves as it did', () => {
+    const written = throughJson(writeDiagram(linkedDiagram()));
+    expect(written.steps.every((step: Record<string, unknown>) => !('pageSteps' in step))).toBe(true);
+    const counted = throughJson(writeDiagram(setPageStarts(linkedDiagram(), new Map([['step-3d', { pageSteps: 5 }]]))));
+    expect(counted.steps.filter((step: Record<string, unknown>) => 'pageSteps' in step).map((step: Record<string, unknown>) => [step.id, step.pageSteps])).toEqual([['step-3d', 5]]);
+  });
+
+  it.each([
+    ['none', 0],
+    ['fewer than none', -3],
+    ['a number not whole', 7.5],
+    ['a word', 'seven'],
+    ['no number at all', null],
+    ['a list', [7]],
+  ])('drops a count of %s alone, the step editable, the rest of it read', (_label, value) => {
+    const { read, step } = withCount(value);
+    expect(read.readOnly).toBe(false);
+    expect(step.unknown).toBeUndefined();
+    expect('pageSteps' in step).toBe(false);
+    expect(step.picture).not.toBeNull();
+    expect(throughJson(writeDiagram(read.document)).steps[1].pageSteps).toBeUndefined();
+  });
+
+  it('carries a count past the most this build lays out: the step a newer build’s, locked and verbatim, starting a page of 30', () => {
+    const { written, read, step } = withCount(40);
+    expect(read.readOnly).toBe(false);
+    expect(step.unknown).toEqual(written.steps[1]);
+    // Shown as far as this build reads it: its picture, and a page of the most it lays out.
+    expect(step.picture).not.toBeNull();
+    expect(step.pageSteps).toBe(30);
+    expect(JSON.stringify(writeDiagram(read.document))).toBe(JSON.stringify(written));
+  });
+
+  it('is kept, locked and verbatim, by a build that reads no count: as any step field it has no name for', () => {
+    // A build before counts knows no `pageSteps` key (`STEP_KEYS`): `hologram` stands for it here.
+    const { written } = withCount(undefined);
+    delete written.steps[1].pageSteps;
+    written.steps[1].hologram = 7;
     const older = readDiagram(written)!;
     expect(stepsIn(older.document)[1]!.unknown).toEqual(written.steps[1]);
     expect(JSON.stringify(writeDiagram(older.document))).toBe(JSON.stringify(written));

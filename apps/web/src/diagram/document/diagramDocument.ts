@@ -70,13 +70,13 @@ export interface DiagramPageSetup {
   /** Grid layout only: 1–6. */
   rows: number;
   /**
-   * Flow layout only: how many steps a page holds ({@link STEPS_PER_PAGE_RANGE}).
-   * The layout cuts the page into the columns and rows that print the largest
-   * pictures (`flowShape` in `diagramPageLayout.ts`), the last row short where
-   * the steps do not fill it. Kept on a grid, for when it turns back to flow.
-   * Written only where it differs from `columns × rows`, which a file without
-   * it reads ({@link unsaidStepsPerPage}), as every flow file before it could
-   * be chosen.
+   * Flow layout only: how many steps a page holds ({@link STEPS_PER_PAGE_RANGE})
+   * when it has no count of its own ({@link DiagramStep.pageSteps}): the
+   * default. The layout cuts each page into the rows that print the largest
+   * pictures (`flowRows` in `pages/pagePlan.ts`). Kept on a grid, for when it
+   * turns back to flow. Written only where it differs from `columns × rows`,
+   * which a file without it reads ({@link unsaidStepsPerPage}), as every flow
+   * file before it could be chosen.
    */
   stepsPerPage: number;
   /** Flow layout only: the band that joins one step to the next. */
@@ -1117,6 +1117,16 @@ export interface DiagramStep {
   text: string;
   /** Start a new page at this step. */
   breakBefore: boolean;
+  /**
+   * Flow layout only: a page starts at this step and holds this many steps
+   * (`implementation-plans/diagram-flow-pages.md`), a whole number in
+   * {@link PAGE_STEPS_RANGE}. It starts a page as {@link breakBefore} does,
+   * and stands for {@link DiagramPageSetup.stepsPerPage} on that page alone.
+   * Unset on a page that fills with the default. A grid ignores it and keeps
+   * it, for when it turns back to flow. Kept up to date by the store as steps
+   * come and go (`retainPageCounts`), so later pages stay still.
+   */
+  pageSteps?: number;
   /** Set when the step is enlarged (Revision 2): the frame of its picture it shows. */
   zoom?: DiagramStepZoom;
   /** Set when the step is placed by hand on the printed pages; never empty. */
@@ -1235,6 +1245,8 @@ export const PAGE_COLUMNS_RANGE = { min: 2, max: 5 } as const;
 export const PAGE_ROWS_RANGE = { min: 1, max: 6 } as const;
 /** A flow page's steps per page: up to the 5 × 6 a flow page could hold before it took a count, so every one keeps its count. */
 export const STEPS_PER_PAGE_RANGE = { min: 2, max: 30 } as const;
+/** A page's own count of steps ({@link DiagramStep.pageSteps}): one step on a page of its own, up to the most a page holds by default. */
+export const PAGE_STEPS_RANGE = { min: 1, max: STEPS_PER_PAGE_RANGE.max } as const;
 export const FIRST_PAGE_NUMBER_RANGE = { min: 1, max: 9999 } as const;
 /** The flow band's width, mm: from a thin line to three times the default. */
 export const PATH_WIDTH_MM_RANGE = { min: 4, max: 60 } as const;
@@ -1476,7 +1488,7 @@ export function duplicateStep(
   const original = document.steps[index];
   // A turn is not duplicated: two turns in a row are one turn, or none.
   if (isTurn(original) || isLockedStep(original)) return null;
-  const { place, placeNewer, ...kept } = original;
+  const { place, placeNewer, pageSteps: _pageSteps, ...kept } = original;
   // Its pin and its parts' offsets are the original's; a frame offset belongs
   // to the original's cell — a newer build's too, whose `frame` this one knows.
   const { frame: _cell, ...placed } = place ?? {};
@@ -1487,7 +1499,7 @@ export function duplicateStep(
     ...(Object.keys(newer).length > 0 ? { placeNewer: newer } : {}),
     id: newId('step'),
     revision: 0,
-    // A new page belongs to where the original starts one; the copy follows it.
+    // A new page, and its count, belong to where the original starts one; the copy follows it.
     breakBefore: false,
     annotations: original.annotations.map((annotation) => {
       const id = newId('annotation');
@@ -2186,6 +2198,46 @@ export function setStepBreakBefore(
   return updateStep(document, stepId, (step) =>
     step.breakBefore === breakBefore ? step : { ...step, breakBefore }
   );
+}
+
+/** What starts a page at a step: its own count ({@link DiagramStep.pageSteps}; null, none) and its page break. Each left as it is when unsaid. */
+export interface DiagramPageStart {
+  pageSteps?: number | null;
+  breakBefore?: boolean;
+}
+
+/**
+ * Steps' page starts set at once, by step id: a count clamped to
+ * {@link PAGE_STEPS_RANGE}, null taking it away. A turn, an id the diagram
+ * does not have and a newer build's step are left as they are, as every edit
+ * leaves them (`updateStep`); the same document when nothing changes.
+ */
+export function setPageStarts(document: DiagramDocument, starts: ReadonlyMap<string, DiagramPageStart>): DiagramDocument {
+  if (starts.size === 0) return document;
+  let changed = false;
+  const steps = document.steps.map((entry) => {
+    const start = starts.get(entry.id);
+    if (!start || isTurn(entry) || isLockedStep(entry)) return entry;
+    const next = withPageStart(entry, start);
+    if (next !== entry) changed = true;
+    return next;
+  });
+  return changed ? { ...document, steps } : document;
+}
+
+/** A step with its page start set; the same step when it already is. A count that is no number is no change. */
+function withPageStart(step: DiagramStep, start: DiagramPageStart): DiagramStep {
+  const asked = start.pageSteps;
+  const pageSteps =
+    asked === null
+      ? undefined
+      : asked === undefined || !Number.isFinite(asked)
+        ? step.pageSteps
+        : clampInteger(Math.round(asked), PAGE_STEPS_RANGE.min, PAGE_STEPS_RANGE.max);
+  const breakBefore = start.breakBefore ?? step.breakBefore;
+  if (pageSteps === step.pageSteps && breakBefore === step.breakBefore) return step;
+  const { pageSteps: _was, ...rest } = step;
+  return { ...rest, breakBefore, ...(pageSteps !== undefined ? { pageSteps } : {}) };
 }
 
 export function setDiagramTitle(document: DiagramDocument, title: string): DiagramDocument {

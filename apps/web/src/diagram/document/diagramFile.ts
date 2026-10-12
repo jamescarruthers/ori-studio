@@ -100,6 +100,7 @@ import {
   PAGE_COLUMNS_RANGE,
   PAGE_MARGIN_MM_RANGE,
   PAGE_ROWS_RANGE,
+  PAGE_STEPS_RANGE,
   PAPER_SIZES,
   PATH_WIDTH_MM_RANGE,
   SPREAD_AMOUNT_RANGE,
@@ -476,6 +477,8 @@ function writeStep(step: DiagramEntry, thumbnails: ThumbnailWriter): Record<stri
     annotatedPictureKey: step.annotatedPictureKey,
     text: step.text,
     breakBefore: step.breakBefore,
+    // Only on a step that starts a page with its own count: a file without one saves as it did.
+    ...(step.pageSteps !== undefined ? { pageSteps: step.pageSteps } : {}),
     ...(step.zoom ? { zoom: writeStepZoom(step.zoom) } : {}),
     ...writeStepPlace(step),
   };
@@ -740,6 +743,7 @@ const STEP_KEYS: ReadonlySet<string> = new Set([
   'annotatedPictureKey',
   'text',
   'breakBefore',
+  'pageSteps',
   'zoom',
   'place',
 ]);
@@ -768,7 +772,8 @@ function isNewerWord(value: unknown, known: readonly string[]): boolean {
  * than this build keeps, or naming an asset of a kind this build does not
  * know, which only that newer build can draw ({@link readSource},
  * {@link readPicture}). So does a field of the step this build has no name
- * for ({@link STEP_KEYS}). One of a known kind that does not read — or that
+ * for ({@link STEP_KEYS}), and a page count past the most it lays out
+ * ({@link readPageSteps}). One of a known kind that does not read — or that
  * names an asset the file does not hold, or one dropped on the way in — is
  * left out, and the step keeps its words.
  */
@@ -784,6 +789,7 @@ function readStep(
   const zoom = value.zoom === undefined ? undefined : readStepZoom(value.zoom);
   // An enlarged step's marks are in its window's units, and reach as far as its window's reach.
   const reach = zoom && zoom !== NEWER && zoom.frame ? windowReach(zoom.frame) : PICTURE_REACH;
+  const pageSteps = readPageSteps(value.pageSteps);
   const base: DiagramStep = {
     id,
     revision: wholeNumber(value.revision) ?? 0,
@@ -795,6 +801,8 @@ function readStep(
       typeof value.annotatedPictureKey === 'string' ? value.annotatedPictureKey : null,
     text: typeof value.text === 'string' ? xmlText(value.text) : '',
     breakBefore: value.breakBefore === true,
+    // A count past the most this build lays out starts a page of that most, the step a newer build's (below).
+    ...(pageSteps === NEWER ? { pageSteps: PAGE_STEPS_RANGE.max } : typeof pageSteps === 'number' ? { pageSteps } : {}),
   };
   const paperFaces =
     isRecord(value.picture) && value.picture.kind === 'scene' && value.picture.paperFaces !== undefined
@@ -809,7 +817,13 @@ function readStep(
   // A newer build's step shows what this build reads of it (decision 2 of the
   // launch review): its picture, as its link and its frame say, and its marks
   // — never its hand placement, which this build would lay it out by.
-  if (hasNewerKey(value, STEP_KEYS) || paperFaces === NEWER_PAPER_FACES || sourceRead.newer || pictureRead.newer) {
+  if (
+    hasNewerKey(value, STEP_KEYS) ||
+    pageSteps === NEWER ||
+    paperFaces === NEWER_PAPER_FACES ||
+    sourceRead.newer ||
+    pictureRead.newer
+  ) {
     return { ...withPicture(framed, sourceRead.read, pictureRead.read, paperFaces), unknown: value };
   }
   return withPicture({ ...framed, ...readStepPlace(value.place) }, sourceRead.read, pictureRead.read, paperFaces);
@@ -2211,6 +2225,18 @@ function paperFacesFitScene(faces: DiagramPaperFaces, picture: DiagramScenePictu
   }
   if (!spread) return true;
   return faces.rings.every((ring, face) => ring.length === 0 || whole.get(face) === ring.length);
+}
+
+/**
+ * How many steps the page a step starts holds (`DiagramStep.pageSteps`):
+ * unsaid, none — the page fills with the default; a whole number past the
+ * most this build lays out, a newer build's; a whole number under one, a
+ * number not whole, or anything else, damage, dropped alone.
+ */
+function readPageSteps(value: unknown): number | undefined | typeof NEWER | null {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < PAGE_STEPS_RANGE.min) return null;
+  return value <= PAGE_STEPS_RANGE.max ? value : NEWER;
 }
 
 /** A pleat arrow's Zs: unsaid, one; a whole count past five, a newer build's; anything else, damage. */

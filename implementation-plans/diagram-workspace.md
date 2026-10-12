@@ -1728,7 +1728,9 @@ on its next save.
   checked on every font build and in the production deployment bundle.
 - `page`: `size` (`a4`/`a5`/`b5-jis`/`letter`), `orientation`, `marginMm`
   (0–30), `layout` (`grid`/`flow`; unsaid reads as the grid), `columns`
-  (2–5), `rows` (1–6), `showPath`, `pathWidthMm` (4–60, written only when
+  (2–5), `rows` (1–6), `stepsPerPage` (2–30, the flow's default count of a
+  page, written only when not `columns × rows`, which a file without it
+  reads), `showPath`, `pathWidthMm` (4–60, written only when
   not 20), `pathColor` (`#rrggbb`, only when not `#ecece8`), `firstPageSide`
   (only when `right`), `showTitle`, `pageNumbers` (`{ enabled, first }`,
   first 1–9999). `scale` is retired (2026-10-06): read and let go.
@@ -1747,8 +1749,16 @@ on its next save.
   table holds each thumbnail inline in its source.
 
 **A step** — `id` (`step-<uuid>`), `revision`, `source`, `picture`,
-`annotations`, `annotatedPictureKey`, `text`, `breakBefore`, and `zoom` and
-`place` only when set:
+`annotations`, `annotatedPictureKey`, `text`, `breakBefore`, and `pageSteps`,
+`zoom` and `place` only when set:
+- `pageSteps` (added 2026-10-11, `diagram-flow-pages.md`), a whole number
+  1–30: a page starts at this step and holds this many steps. Past 30 it is a
+  newer build's (the step carried, locked); under 1 or not whole, damage,
+  dropped alone. **Pagination** (flow): walking the steps in order, turns
+  taking no place, a step starts a page when it is the first, or has
+  `breakBefore` or `pageSteps`, or the page has reached its capacity — its
+  first step's `pageSteps`, else `page.stepsPerPage`. A grid's pages hold
+  `columns × rows` and ignore `pageSteps`, which they keep.
 - `source`, null for an empty step, or:
   - `{ kind: 'upload', assetId, rotationQuarterTurns (0–3), mirrored }`;
   - `{ kind: 'cp', scope: { kind: 'segment', region }, fingerprint,
