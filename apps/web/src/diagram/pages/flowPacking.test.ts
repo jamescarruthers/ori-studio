@@ -671,15 +671,29 @@ describe('packFlowPage: a short last page', () => {
 });
 
 describe('packFlowPage: a page no plan fits', () => {
-  it('draws it at the least scale, its steps shared evenly over the band count that overflows least, and says so', () => {
+  it('shares its steps evenly over the band count that overflows least, draws them as large as that overflow allows, and says so', () => {
     const crane = craneSteps(setter);
     const steps = [...crane, ...crane].slice(0, 30).map((step, i) => ({ ...step, id: `m${i}` }));
     const page = pack(steps);
     expect(page.fits).toBe(false);
-    expect(page.k).toBe(PAGE_SCALE.min);
     expect(page.plan).toEqual({ bands: [6, 6, 6, 6, 6], bends: [false, false, false, false] });
     expect(page.steps).toHaveLength(30);
     expect(page.steps.every((step) => Number.isFinite(step.box.x) && Number.isFinite(step.box.y))).toBe(true);
+    // Six steps a band overflow the page's width by the least each caption keeps, at any scale: the pictures are
+    // drawn larger than the least scale (held there by a page before at it, steadily), and overflow no more.
+    const least = pack(steps, { kPrev: PAGE_SCALE.min, settings: { flowSteadiness: 1 } });
+    expect(least.k).toBe(PAGE_SCALE.min);
+    expect(page.k).toBeGreaterThan(least.k * 1.2);
+    const across = (packing: FlowPagePacking) =>
+      Math.max(
+        ...packing.bands.map((_, band) => {
+          const boxes = packing.steps.filter((step) => step.band === band).map((step) => step.box);
+          return Math.max(...boxes.map((box) => box.x + box.w)) - Math.min(...boxes.map((box) => box.x));
+        })
+      );
+    expect(across(page)).toBeLessThanOrEqual(across(least) + 1e-6);
+    const lowest = Math.max(...page.steps.map((step) => step.box.y + step.box.h));
+    expect(lowest).toBeLessThanOrEqual(PROTOTYPE_AREA.y + PROTOTYPE_AREA.h + 1e-6);
   });
 
   it('packs nothing for a page of no steps', () => {

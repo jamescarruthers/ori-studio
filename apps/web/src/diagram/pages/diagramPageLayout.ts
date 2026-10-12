@@ -485,7 +485,7 @@ export interface LayoutPage {
    * A flow page's arrangement, as drawn: its page scale, whether it was packed
    * by this layout (and is in {@link DiagramPagesLayout.packed}) rather than
    * held, and whether every box fits the page's area — false only for a page
-   * no plan fitted, drawn at the least scale and overflowing. Absent on a
+   * no plan fitted even at the least scale, drawn overflowing. Absent on a
    * grid, and on the one page of a diagram with no steps.
    */
   packing?: { k: number; packed: boolean; fits: boolean };

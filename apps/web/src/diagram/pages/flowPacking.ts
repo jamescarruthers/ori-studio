@@ -165,7 +165,7 @@ export interface FlowPagePacking {
   /** The page's own steps, in reading order: no stand-in. */
   steps: PackedStep[];
   bands: PackedBand[];
-  /** Every band fits the area. False only where no plan fits at the least scale, which the page is then drawn at, overflowing. */
+  /** Every band fits the area. False only where no plan fits even at the least scale: the page is then drawn overflowing, as large as its overflow allows. */
   fits: boolean;
   /** How the search went, for the debug overlay and the tests. */
   summary: {
@@ -584,7 +584,10 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
    * For a page no plan fits: of each band count it tries, the steps shared
    * out over the bands as evenly as they go, the extra ones on the first
    * bands and none in a bend, at the least scale; the one that overflows the
-   * area least, the first on a tie.
+   * area least, the first on a tie. Drawn as large as that overflow allows:
+   * what overflows is mostly the least width a caption keeps, which no scale
+   * makes smaller, so the pictures grow until they would overflow more
+   * (found by halving, as a plan's scale is).
    */
   const leastOverflow = (all: readonly BandGroup[]): Best => {
     let fewest: { over: number; counts: number[]; bends: boolean[] } | null = null;
@@ -597,8 +600,24 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
       const over = overflowAt(PAGE_SCALE.min, true);
       if (!fewest || over < fewest.over) fewest = { over, ...snapshot() };
     }
-    const found = fewest ?? { counts: [n], bends: [] };
-    return { score: -Infinity, k: PAGE_SCALE.min, counts: found.counts, bends: found.bends };
+    const found = fewest ?? { over: 0, counts: [n], bends: [] };
+    bandCount = found.counts.length;
+    seats = 0;
+    bends.fill(0);
+    found.counts.forEach((count, b) => (counts[b] = count));
+    cut();
+    const holds = (k: number) => overflowAt(k, true) <= found.over + BOUND_SLACK;
+    let k: number = PAGE_SCALE.min;
+    if (holds(cap)) k = cap;
+    else {
+      let hi = cap;
+      for (let step = 0; step < SCALE_SEARCH_STEPS; step += 1) {
+        const mid = (k + hi) / 2;
+        if (holds(mid)) k = mid;
+        else hi = mid;
+      }
+    }
+    return { score: -Infinity, k, counts: found.counts, bends: found.bends };
   };
 
   const groups = bandGroups(settings.flowBands, n, input.handsOver);
@@ -607,7 +626,7 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
     const best = packGroup(group);
     if (best && (!chosen || best.k > chosen.k * (1 + SCORE_TIE))) chosen = best;
   }
-  // Nothing fits even at the least scale: the plan that overflows least there, drawn at it.
+  // Nothing fits even at the least scale: the plan that overflows least there, as large as that overflow allows.
   const fitsArea = chosen !== null;
   chosen ??= leastOverflow(groups);
 

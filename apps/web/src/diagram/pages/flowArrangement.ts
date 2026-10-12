@@ -150,8 +150,8 @@ export function grownToHold(box: PackRect, picture: { w: number; h: number }, li
 
 /**
  * Whether every step's box lies inside `area` ({@link ARRANGED_SLACK_MM}
- * allowed): false only for a page no plan fitted, packed at the least scale
- * and overflowing (`FlowPagePacking.fits`), which a held page says alike.
+ * allowed): false only for a page no plan fitted even at the least scale,
+ * packed overflowing (`FlowPagePacking.fits`), which a held page says alike.
  */
 export function arrangementFits(arrangement: DiagramPageArrangement, area: PackRect): boolean {
   return Object.values(arrangement.steps).every(({ box: [x, y, w, h] }) => {
