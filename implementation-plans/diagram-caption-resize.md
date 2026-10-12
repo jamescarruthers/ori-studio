@@ -42,8 +42,11 @@ held flow page stays held.
   than the cap — the pin, as far as the picture's room. So a pin never moves
   the caption's left edge in a box up to 54 mm wide, never jumps when it is
   first set, and a box packed for a pin always holds it.
-- A step placed only by its caption's width is not a placed stop for the
-  flow lane: its picture has not moved, so the band does not change.
+- The flow lane follows a placed step only where its frame or picture
+  moved or its scale is pinned: the band runs through the picture, so a
+  caption or number placed alone — moved, or its width pinned (the left
+  grip writes an offset) — leaves the band as it was. Before this, any
+  placement bent the band at that step.
 
 **The grips** (`usePagePlacement`, one transaction with the picture's size
 grips and the moves):
@@ -88,15 +91,34 @@ part `text_width`. Enums only.
 
 ## Checklist
 
-- [ ] Plan.
-- [ ] `textWidth` in the place model: normalise, patch, resets, read/write; tests.
-- [ ] Layout: grid and flow honour the pin; packer honours it; signature
+- [x] Plan.
+- [x] `textWidth` in the place model: normalise, patch, resets, read/write; tests.
+- [x] Layout: grid and flow honour the pin; packer honours it; signature
       unchanged; held pages move no other step; lane unchanged; tests.
-- [ ] Caption geometry helpers: narrowest width, width for n lines, resize; tests.
-- [ ] Transaction and grips: width grips, left grip offset, bottom grip,
+- [x] Caption geometry helpers: narrowest width, width for n lines, resize; tests.
+- [x] Transaction and grips: width grips, left grip offset, bottom grip,
       snaps, chip, live rewrap preview; tests.
-- [ ] Step pane row; tests.
-- [ ] Analytics parts and docs; tests.
-- [ ] i18n extract, translations, stamp, check.
-- [ ] Gates: typecheck, lint, i18n:check, full web suite.
-- [ ] Browser proof (chipmunk, A4 landscape, seven a page) and exported PDF.
+- [x] Step pane row; tests.
+- [x] Analytics parts and docs; tests.
+- [x] i18n extract, translations, stamp, check.
+- [x] The band unchanged by a caption placed alone (found in the browser
+      proof: the left grip's offset bent the band at a bend step).
+- [x] Gates: typecheck (with the wasm prebuild), lint, i18n:check, full web
+      suite (944 files, 13 239 tests passed, 15 skipped).
+- [x] Browser proof (chipmunk, A4 landscape, seven a page) and exported PDF:
+      `artifacts/layout-review/out/caption-resize/` (gitignored), from
+      `artifacts/layout-review/caption-resize-probe.mjs`.
+
+## Open behaviour to review
+
+- Under a picture wider than 50 mm, a pin between 50 mm and the picture's
+  width stands centred under the picture, so the right and bottom grips move
+  the caption's left edge there by half as much as its width changes (the
+  right edge still follows the pointer). Everywhere else the left edge stays.
+  Keeping it fixed there too would need an offset the right grip writes,
+  which a re-pack would then carry out of the step's box.
+- The left grip's offset is an ordinary text offset: the Step pane's X shows
+  it, the caption's home ghost shows where it would be without it, and Reset
+  Text clears it with the width.
+- Turn glyphs and enlarge arrows keep clear of a resized caption where it
+  stands at home, as they do of every caption the layout places.
