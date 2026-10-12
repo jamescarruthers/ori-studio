@@ -129,7 +129,9 @@ pub use compound::sink::{
     SinkReport, SinkStep, StoredPocket, SunkPoints, SunkTip, Unsink,
 };
 pub use compound::squash::{NoFlap, Squash, SquashAnalysis};
-pub use compound::swivel::Swivel;
+pub use compound::swivel::{
+    Swivel, SwivelByEdge, SwivelCrease, SwivelEdgeAnalysis, SwivelRay, SwivelRegion, SwivelWedge,
+};
 pub use compound::tuck::{
     TuckAnalysis, TuckChoice, TuckChoices, TuckFold, TuckFolded, TuckOutcome, TuckReport, TuckSide,
     TuckTarget,

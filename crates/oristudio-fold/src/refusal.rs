@@ -279,6 +279,31 @@ pub enum FoldRefusal {
     /// The paper at the stayer point is joined to none of the fan's wedges.
     #[error("the paper at {point:?} holds none of the fan's wedges")]
     FanStayerDetached { point: Point },
+    /// A swivel by its edge (`compound::swivel`): the sheet point names no
+    /// raw edge or folded crease, so no edge of the folded form to move.
+    #[error("no raw or folded edge passes through the sheet point {point:?}")]
+    SwivelNotAnEdge { point: Point },
+    /// The target line is parallel to the edge, or is its line: there is
+    /// no point to turn the edge about onto it. `faces` bound the edge.
+    #[error("the target line is parallel to the edge")]
+    SwivelTargetParallel { faces: Vec<FaceId> },
+    /// The vertex — the pivot moved square onto the nearer bisector of the
+    /// edge and the target — lies within the minimum feature of the edge's
+    /// line: a swivel's vertex is free, never on an edge. `faces` bound the
+    /// edge.
+    #[error("the swivel's vertex lies on the edge's line")]
+    SwivelPivotOnEdge { faces: Vec<FaceId> },
+    /// No part of the edge lies past the foot of the vertex, away from
+    /// where the edge meets the target: none of it would swivel, and a
+    /// plain fold along the bisector lands it (offered as a fix). `faces`
+    /// bound the edge.
+    #[error("the edge ends before the swivel's foot")]
+    SwivelEdgeShort { faces: Vec<FaceId> },
+    /// The edge's paper would not turn onto the target: the layers the
+    /// creases cut leave it out, and what joins it stays (or folds across
+    /// the hinge). `faces` bound the edge.
+    #[error("the edge's paper does not swivel onto the target")]
+    SwivelEdgeStays { faces: Vec<FaceId> },
 
     // --- Sinks (plan Phase 11, research §5.4) ---------------------------
     /// The anchor names more than one of the moving side's flaps: a sink
@@ -414,6 +439,11 @@ impl FoldRefusal {
             FoldRefusal::FanFourthBesideStayer => "fan_fourth_beside_stayer",
             FoldRefusal::FanFourthCannotRise => "fan_fourth_cannot_rise",
             FoldRefusal::FanStayerDetached { .. } => "fan_stayer_detached",
+            FoldRefusal::SwivelNotAnEdge { .. } => "swivel_not_an_edge",
+            FoldRefusal::SwivelTargetParallel { .. } => "swivel_target_parallel",
+            FoldRefusal::SwivelPivotOnEdge { .. } => "swivel_pivot_on_edge",
+            FoldRefusal::SwivelEdgeShort { .. } => "swivel_edge_short",
+            FoldRefusal::SwivelEdgeStays { .. } => "swivel_edge_stays",
             FoldRefusal::SinkSeveralPoints { .. } => "sink_several_points",
             FoldRefusal::SinkPointOpen { .. } => "sink_point_open",
             FoldRefusal::SinkOutlineMixed { .. } => "sink_outline_mixed",
@@ -464,6 +494,10 @@ impl FoldRefusal {
             | FoldRefusal::PetalNoFlap { faces, .. }
             | FoldRefusal::FanCenter { faces }
             | FoldRefusal::FanRayBlocked { faces }
+            | FoldRefusal::SwivelTargetParallel { faces }
+            | FoldRefusal::SwivelPivotOnEdge { faces }
+            | FoldRefusal::SwivelEdgeShort { faces }
+            | FoldRefusal::SwivelEdgeStays { faces }
             | FoldRefusal::SinkSeveralPoints { faces, .. }
             | FoldRefusal::SinkPointOpen { faces }
             | FoldRefusal::SinkOutlineMixed { faces }
@@ -564,7 +598,8 @@ pub enum Fix {
     /// sheet point that names it.
     TuckTarget { face: FaceId, at: Point },
     /// The same rabbit ear or swivel with this emergent ray (a direction in
-    /// the parent's model frame) lands.
+    /// the parent's model frame) lands; for a swivel by its edge, the same
+    /// swivel with this ridge, its other far crease (its `ridge`).
     UseEmergent { direction: Point },
     /// The same point sinks the other way: closed where an open sink is
     /// refused, open where a closed one is.

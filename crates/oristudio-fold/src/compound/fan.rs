@@ -784,7 +784,7 @@ impl FanInput {
     }
 
     /// [`FanInput::compile`], with its fan.
-    fn compile_fan(
+    pub(crate) fn compile_fan(
         &self,
         state: &State,
         candidates: &[Point],
@@ -928,31 +928,8 @@ impl FanInput {
         let candidates = kawasaki(&self.given);
         let k = nearest(&candidates, self.emergent)
             .ok_or(CompoundRefused::Refused(FoldRefusal::FanNotFlat.into()))?;
-        let other = || {
-            self.compile(state, &candidates, k, direction.opposite())
-                .ok()
-        };
-        let landed = self
-            .compile(state, &candidates, k, direction)
-            .map_err(CompoundRefused::Refused)
-            .and_then(|compiled| {
-                if choices.completion.is_none() {
-                    return compiled.land(state, choices, limits, other);
-                }
-                match compiled.land(state, &VertexChoices::default(), limits, other) {
-                    Ok(VertexOutcome::ChooseOrder(_)) => {
-                        compiled.land(state, choices, limits, || None)
-                    }
-                    outcome => outcome,
-                }
-            });
-        match landed {
-            Err(CompoundRefused::Refused(mut refused))
-                if !matches!(
-                    refused.refusal,
-                    FoldRefusal::WitnessNotInFace { .. } | FoldRefusal::EmptySeed
-                ) =>
-            {
+        match self.land_alone(state, choices, limits) {
+            Err(CompoundRefused::Refused(mut refused)) if offers_fixes(&refused.refusal) => {
                 for j in (0..candidates.len()).filter(|&j| j != k) {
                     if self
                         .compile(state, &candidates, j, direction)
@@ -968,6 +945,59 @@ impl FanInput {
             other => other,
         }
     }
+
+    /// [`FanInput::land`] without the other emergent candidates as fixes:
+    /// the fold with this emergent ray, landed or refused (offering only
+    /// the other direction). A swivel by its edge offers its own
+    /// alternatives instead (`super::swivel`).
+    pub(crate) fn land_alone(
+        &self,
+        state: &State,
+        choices: &VertexChoices,
+        limits: &CompletionLimits,
+    ) -> Result<VertexOutcome, CompoundRefused> {
+        let direction = state.view().model_direction(self.direction);
+        let candidates = kawasaki(&self.given);
+        let k = nearest(&candidates, self.emergent)
+            .ok_or(CompoundRefused::Refused(FoldRefusal::FanNotFlat.into()))?;
+        let other = || {
+            self.compile(state, &candidates, k, direction.opposite())
+                .ok()
+        };
+        self.compile(state, &candidates, k, direction)
+            .map_err(CompoundRefused::Refused)
+            .and_then(|compiled| {
+                if choices.completion.is_none() {
+                    return compiled.land(state, choices, limits, other);
+                }
+                match compiled.land(state, &VertexChoices::default(), limits, other) {
+                    Ok(VertexOutcome::ChooseOrder(_)) => {
+                        compiled.land(state, choices, limits, || None)
+                    }
+                    outcome => outcome,
+                }
+            })
+    }
+
+    /// Whether the fold lands with at least one order, its emergent ray as
+    /// asked.
+    pub(crate) fn lands(&self, state: &State, limits: &CompletionLimits) -> bool {
+        let direction = state.view().model_direction(self.direction);
+        let candidates = kawasaki(&self.given);
+        nearest(&candidates, self.emergent).is_some_and(|k| {
+            self.compile(state, &candidates, k, direction)
+                .is_ok_and(|c| c.lands(state, limits))
+        })
+    }
+}
+
+/// Whether a fan fold's refusal is one an alternative might cure: not a
+/// stayer or a seed that names no paper.
+pub(crate) fn offers_fixes(refusal: &FoldRefusal) -> bool {
+    !matches!(
+        refusal,
+        FoldRefusal::WitnessNotInFace { .. } | FoldRefusal::EmptySeed
+    )
 }
 
 /// The candidate nearest `direction` (by angle) among `candidates`.

@@ -435,3 +435,126 @@ pub fn swivel_case() -> (State, Swivel) {
         },
     )
 }
+
+// --- The swivel by its edge (`compound::swivel`) ----------------------------
+
+use oristudio_fold::SwivelByEdge;
+
+/// A swivel by its edge: its parent, the op, and the sheet segment of the
+/// edge it names (its straight run).
+pub struct EdgeSwivelCase {
+    pub name: &'static str,
+    pub state: State,
+    pub op: SwivelByEdge,
+    pub edge: [Point; 2],
+}
+
+/// The rabbit ear's inradius on a right isosceles triangle with legs 1.
+pub fn inradius() -> f64 {
+    (2.0 - std::f64::consts::SQRT_2) / 2.0
+}
+
+/// A valley swivel by its edge through every layer at its vertex.
+pub fn by_edge(pivot: Point, edge: Point, target: Line) -> SwivelByEdge {
+    SwivelByEdge {
+        pivot,
+        edge,
+        target,
+        layers: Seed::All,
+        ridge: None,
+        direction: Direction::Valley,
+    }
+}
+
+/// The flat square with its diagonal a c (0, 0)–(1, 1) precreased: a centre
+/// crease to swivel an edge onto.
+pub fn diagonal_square() -> State {
+    precrease(&square(), [0.0, 0.0], [1.0, 1.0], [0.0, 1.0], Seed::All)
+}
+
+/// The flat square with b d (1, 0)–(0, 1) precreased: the fish base's.
+pub fn fish_square() -> State {
+    precrease(&square(), [1.0, 0.0], [0.0, 1.0], [1.0, 1.0], Seed::All)
+}
+
+/// The fish base's second swivel, on the state its first landed: the top
+/// edge onto b d, pivoting at the upper triangle's incenter, through the
+/// upper triangle's layer (as spike case 3d's second ear).
+pub fn fish_second() -> SwivelByEdge {
+    let r = inradius();
+    SwivelByEdge {
+        layers: Seed::Flaps {
+            at: vec![[0.8, 0.8]],
+        },
+        ..by_edge([1.0 - r, 1.0 - r], [0.5, 1.0], line([1.0, 0.0], [0.0, 1.0]))
+    }
+}
+
+/// The classic swivels by their edge (the module docs of
+/// `compound::swivel`), each through every layer at its vertex:
+///
+/// - **the rabbit ear** at the incenter of the flat square's half a b c,
+///   the bottom edge onto the diagonal (spike case 3c's 270° ear);
+/// - **the fish base's first ear**, the left edge onto b d at the incenter
+///   of a b d (case 3d's 180° ear; [`fish_second`] is the second);
+/// - **the bottom edge onto the centre crease** off the incenter, past it
+///   along the bisector at x = 0.8: a swivel that is no rabbit ear;
+/// - **a two-layer flap**: the square folded on b d, its raw bottom edge
+///   onto the folded edge b d off the incenter;
+/// - **a folded edge onto a raw one**: that flap's folded edge b d onto its
+///   bottom edge's line;
+/// - **the flat square at Beloch's `swivel-rabbit` pivot** (0.5, 0.3), the
+///   bottom edge onto where Beloch's swivel lands it: the reflection of a b
+///   across the hinge from b — the edge form computes its hinge up the
+///   spine where Beloch's runs free.
+pub fn edge_swivel_cases() -> Vec<EdgeSwivelCase> {
+    let r = inradius();
+    let t22 = (std::f64::consts::PI / 8.0).tan();
+    let diagonal = line([0.0, 0.0], [1.0, 1.0]);
+    let bd = line([1.0, 0.0], [0.0, 1.0]);
+    let ab = line([0.0, 0.0], [1.0, 0.0]);
+    let bottom = [[0.0, 0.0], [1.0, 0.0]];
+    let tri = valley(&square(), [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]);
+    let hinge_b = line([1.0, 0.0], [0.0, 0.6]);
+    let beloch_target = hinge_b
+        .reflect_line(&ab)
+        .unwrap_or_else(|| panic!("no reflection"));
+    vec![
+        EdgeSwivelCase {
+            name: "rabbit ear on the diagonal",
+            state: diagonal_square(),
+            op: by_edge([1.0 - r, r], [0.5, 0.0], diagonal),
+            edge: bottom,
+        },
+        EdgeSwivelCase {
+            name: "fish ear 1",
+            state: fish_square(),
+            op: by_edge([r, r], [0.0, 0.5], bd),
+            edge: [[0.0, 0.0], [0.0, 1.0]],
+        },
+        EdgeSwivelCase {
+            name: "bottom edge onto the centre crease",
+            state: diagonal_square(),
+            op: by_edge([0.8, 0.8 * t22], [0.5, 0.0], diagonal),
+            edge: bottom,
+        },
+        EdgeSwivelCase {
+            name: "two-layer flap",
+            op: by_edge([0.15, 0.15], [0.5, 0.0], bd),
+            state: tri.clone(),
+            edge: bottom,
+        },
+        EdgeSwivelCase {
+            name: "folded edge onto a raw one",
+            op: by_edge([0.4, 0.2], [0.5, 0.5], ab),
+            state: tri,
+            edge: [[1.0, 0.0], [0.0, 1.0]],
+        },
+        EdgeSwivelCase {
+            name: "at Beloch's swivel-rabbit pivot",
+            state: square(),
+            op: by_edge([0.5, 0.3], [0.5, 0.0], beloch_target),
+            edge: bottom,
+        },
+    ]
+}
