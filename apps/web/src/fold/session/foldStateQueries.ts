@@ -12,6 +12,9 @@ import type { FoldStateCall } from './foldSession';
 /** The state's scene. */
 export const FOLD_SCENE_QUERY: FoldStateCall<FoldScene> = (engine, state) => engine.scene(state);
 
+/** The pinch length a partial precrease's tool offers on the state's sheet (`defaultPinchLength`). */
+export const FOLD_PINCH_LENGTH_QUERY: FoldStateCall<number> = (engine, state) => engine.defaultPinchLength(state);
+
 /**
  * The engine's summary of the step that landed a state: its counts, its diff
  * and its layers (plan D14). None when refused, or when the state's parent is

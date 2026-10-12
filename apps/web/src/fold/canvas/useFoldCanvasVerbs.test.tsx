@@ -11,6 +11,7 @@ import {
 } from '../tools/foldToolState';
 import { buildReverseStep } from '../tools/reverse/reverseStep';
 import { flatSquareLandmarks, flatSquareScene } from './foldCanvas.fixtures';
+import { foldAlongLine } from './foldAlongLine';
 import { foldPickIndex } from './foldPicking';
 import {
   compoundListed,
@@ -49,6 +50,7 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
     tuck: null,
     vertex: null,
     sink: null,
+    extent: null,
     ...extra,
   };
 }
@@ -477,5 +479,69 @@ describe('a vertex fold’s choices on the canvas', () => {
     expect(tools.store.getState().picks).toHaveLength(2);
     act(() => bound!.verbs.precreaseKite());
     expect(tools.store.getState()).toMatchObject({ tool: 'precrease', lineMode: 'axiom-3', picks: [] });
+  });
+
+  it('clicks a pinch along the located line, holds the commit until it is in, and steps back on Escape', () => {
+    const commitStep = vi.fn<FoldSessionSurface['commitStep']>(() => Promise.resolve({ status: 'stale' as const }));
+    const surface = session(commitStep);
+    const index = foldPickIndex(flatSquareScene(), flatSquareLandmarks(), []);
+    const view = { index } as FoldStateView;
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'precrease', lineMode: 'free', extent: 'pinch' });
+    const across = { n: [0, 1] as [number, number], d: 0.5 };
+    const along = { folded: foldAlongLine(index, across, 'folded'), creasePattern: foldAlongLine(index, across, 'crease-pattern') };
+    const render = (shown: FoldToolPreview) =>
+      act(() => root.render(<Harness session={surface} tools={tools} preview={shown} view={view} />));
+    render(preview({ step: null }));
+    for (const x of [0, 1]) act(() => void tools.pick({ kind: 'free', pane: 'folded', scene: { x, y: 0.5 }, sheet: [x, 0.5] }));
+    render(preview({ step: null, extent: { state: { status: 'incomplete', mode: 'pinch', picked: 0, needed: 1 }, along } }));
+    // Nothing to commit while the pinch is still to click, and nothing queued.
+    let claimed = true;
+    act(() => {
+      claimed = bound!.verbs.commit();
+    });
+    expect(claimed).toBe(false);
+    expect(bound!.queued).toBe(false);
+    // Beside the line, a click picks nothing — no layer, no point.
+    const radii = { point: 0.03, line: 0.03 };
+    act(() => bound!.verbs.pick(bound!.verbs.hitTest('folded', { x: 0.3, y: 0.8 }, radii)));
+    expect(tools.store.getState()).toMatchObject({ extentPicks: [], seed: { scope: 'all' } });
+    // On it, the line's middle.
+    const hit = bound!.verbs.hitTest('folded', { x: 0.51, y: 0.49 }, radii);
+    expect(hit?.pick).toMatchObject({ kind: 'point', provenance: 'midpoint', sheet: [0.5, 0.5] });
+    act(() => bound!.verbs.pick(hit));
+    expect(tools.store.getState().extentPicks).toHaveLength(1);
+    // Escape takes back the point first, then the line.
+    act(() => void bound!.verbs.cancel());
+    expect(tools.store.getState()).toMatchObject({ extentPicks: [], extent: 'pinch' });
+    expect(tools.store.getState().picks).toHaveLength(2);
+    act(() => void bound!.verbs.cancel());
+    expect(tools.store.getState().picks).toHaveLength(0);
+    // The extent key steps it with the Precrease tool in hand, and declines otherwise.
+    let stepped = false;
+    act(() => {
+      stepped = bound!.verbs.cycleExtent();
+    });
+    expect(stepped).toBe(true);
+    expect(tools.store.getState().extent).toBe('whole');
+    act(() => tools.selectTool('valley'));
+    expect(bound!.verbs.cycleExtent()).toBe(false);
+    expect(commitStep).not.toHaveBeenCalled();
+  });
+
+  it('turns a too-short segment into a pinch at its first point, or the whole line, or every layer', () => {
+    const tools = createFoldTools({ ...FOLD_TOOL_INITIAL, tool: 'precrease', extent: 'segment' });
+    act(() => root.render(<Harness session={session(vi.fn())} tools={tools} preview={preview()} />));
+    const at = { kind: 'point' as const, provenance: 'crossing' as const, sheet: [0.5, 0.5] as [number, number], mark: null, scene: { x: 0.5, y: 0.5 } };
+    act(() => {
+      tools.pickAlong(at);
+      tools.pickAlong(at);
+      tools.setSeed({ scope: 'depth', at: [0.2, 0.2], scene: { x: 0.2, y: 0.2 }, choice: 1 });
+    });
+    act(() => bound!.verbs.pinchInstead());
+    expect(tools.store.getState()).toMatchObject({ extent: 'pinch', extentPicks: [at] });
+    act(() => bound!.verbs.throughAllLayers());
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+    act(() => bound!.verbs.useWholeLine());
+    expect(tools.store.getState()).toMatchObject({ extent: 'whole', extentPicks: [] });
   });
 });

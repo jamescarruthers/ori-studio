@@ -18,6 +18,7 @@ import { registerFoldKindControl } from '../../../fold/sequence/foldCommands';
 import {
   chooserBounds,
   chooserKeys,
+  foldAlongOverlay,
   foldChoiceNote,
   foldCrimpWindowView,
   foldFreeLineStart,
@@ -176,6 +177,11 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
     [toolState.tool, preview.action, crimpLines]
   );
   const vertexMarks = useFoldVertexMarks(view.index, preview.vertex, toolState.compound.squashTarget, inks?.overlay ?? null);
+  // A partial precrease's line on each pane, and its points along it.
+  const along = useMemo(
+    () => foldAlongOverlay(preview.extent, toolState.extent, toolState.extentPicks),
+    [preview.extent, toolState.extent, toolState.extentPicks]
+  );
   const overlayFor = useCallback(
     (pane: FoldPaneId) => (hovered: FoldHit | null) =>
       inks
@@ -190,9 +196,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
             inks: inks.overlay,
             tool: pane === 'folded' ? vertexMarks : null,
             spread: paneSpread.map,
+            along: along?.[pane] ?? null,
           })
         : { points: null, strokes: null },
-    [inks, view.scene, view.marks, toolState.picks, freeFrom, located, vertexMarks, paneSpread.map]
+    [inks, view.scene, view.marks, toolState.picks, freeFrom, located, vertexMarks, paneSpread.map, along]
   );
   const foldedOverlay = useMemo(() => overlayFor('folded'), [overlayFor]);
   const creaseOverlay = useMemo(() => overlayFor('crease-pattern'), [overlayFor]);
@@ -224,9 +231,10 @@ export function FoldCanvas({ sendToEdit }: { sendToEdit?: ReactNode }) {
       ...(tuckView ? { tuck: tuckView } : {}),
       ...(vertexView ? { vertex: vertexView } : {}),
       ...(sinkView ? { sink: sinkView } : {}),
+      extent: { mode: toolState.extent, picked: toolState.extentPicks.length },
     },
     { ...verbs, setDivide: tools.setDivide, otherKind: verbs.setReverseKind, tuckTarget: verbs.tuckTarget },
-    { coarse, alt: altModifierLabel() }
+    { coarse, alt: altModifierLabel(), keyLabel }
   );
   // The chooser over the folded pane: the deepest choice with more than one answer.
   const choice = foldCanvasChoice(preview, toolState);

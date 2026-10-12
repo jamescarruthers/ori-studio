@@ -12,6 +12,10 @@
  *   line (the cross-section picker and the flap chips), a refusal with its
  *   fixes, and Cancel / commit.
  *
+ * The Precrease tool adds its extent control in both phases — the whole line,
+ * a segment or a pinch — and a segment's or a pinch's clicks along the line
+ * to its steps (`tools/precrease/precreaseToolWindow`).
+ *
  * The Divide line's window says how to use it.
  *
  * React-free and store-free: it takes a view and bound verbs and returns data.
@@ -46,6 +50,7 @@ import {
   lineModeLabel,
   lineModeSteps,
   type FoldKind,
+  type FoldKeyLabel,
   type FoldLineModeId,
   type FoldSecondLineModeId,
   type FoldShortcutId,
@@ -55,8 +60,19 @@ import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import { crimpToolWindow } from './crimp/crimpToolWindow';
 import type { FoldRailVerbs, FoldToolsView } from './foldRailGroups';
 import type { FoldDivideSettings } from './foldToolState';
+import type { FoldExtentMode } from './precrease/precreaseExtent';
+import {
+  extentCommitLabel,
+  extentControl,
+  extentKeyNote,
+  extentLocateSteps,
+  extentNotes,
+  extentPreviewItems,
+  type FoldExtentWindowView,
+} from './precrease/precreaseToolWindow';
 import {
   reverseToolWindow,
+  type FoldKindChoice,
   type FoldReverseControls,
   type FoldReverseWindowView,
 } from './reverse/reverseToolWindow';
@@ -95,6 +111,8 @@ export interface FoldPreview {
   acrossLayers?: boolean;
   /** Enter was pressed while the preview was landing: the fold commits as soon as it has. */
   queued?: boolean;
+  /** A precrease of part of its line whose points along it are still to be clicked: nothing to commit yet. */
+  incomplete?: boolean;
 }
 
 export interface FoldToolWindowView extends FoldToolsView {
@@ -120,6 +138,8 @@ export interface FoldToolWindowView extends FoldToolsView {
   vertex?: FoldVertexWindowView;
   /** A sink tool's point and choices, while it previews (`tools/sink/sinkToolWindow`). */
   sink?: FoldSinkWindowView;
+  /** The Precrease tool's extent and its points along the line (`tools/precrease`); absent for every other tool. */
+  extent?: FoldExtentWindowView;
 }
 
 /** What the window can promise on this device. */
@@ -128,6 +148,8 @@ export interface FoldToolHost {
   coarse: boolean;
   /** The platform's name for Alt: Option or Alt (`altModifierLabel`). */
   alt: string;
+  /** The label of a Fold key, for a note that names one; without it none is named. */
+  keyLabel?: FoldKeyLabel;
 }
 
 /** The window's calls; the store binds them. */
@@ -158,6 +180,8 @@ export interface FoldToolWindowVerbs
   stepTuckTarget?: (delta: number) => void;
   /** Step through a closed sink's pockets (`tools/sink/sinkToolWindow`). */
   stepPocket?: (delta: number) => void;
+  /** How much of its line a precrease creases (`tools/precrease`). */
+  setExtent?: (mode: FoldExtentMode) => void;
 }
 
 /** The Divide line's controls: count or exact ratio (Edit's ratio expression), and clearing what is made. */
@@ -267,6 +291,8 @@ export interface FoldToolWindowModel {
   vertex?: FoldVertexControls;
   /** A sink's kind, line, depth and choices (`tools/sink/sinkToolWindow`); absent for every other tool. */
   sink?: FoldSinkControls;
+  /** How much of its line a precrease creases (`tools/precrease`); absent for every other tool. */
+  extent?: FoldKindChoice<FoldExtentMode> | null;
   footer: { cancel: FoldWindowButton; commit: FoldWindowButton } | null;
 }
 
@@ -382,12 +408,14 @@ export function locateInstructions(
   const finish = host.coarse
     ? t('tools:fold.steps.finishTouch', 'Pick the fold and the layers, then tap {{action}}.', { action })
     : t('tools:fold.steps.finish', 'Pick the fold and the layers, then press Enter.');
-  const items = [...lineModeSteps(t, view.lineMode), finish];
+  // A precrease of part of its line: its points along the line, once it is located.
+  const extent = view.tool === 'precrease' ? view.extent : undefined;
+  const items = [...lineModeSteps(t, view.lineMode), ...extentLocateSteps(t, extent), finish];
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items,
     current: Math.min(Math.max(0, view.picks), items.length - 1),
-    notes: lineModeNotes(t, view.lineMode, host),
+    notes: [...lineModeNotes(t, view.lineMode, host), ...(extent ? extentKeyNote(t, host) : [])],
   };
 }
 
@@ -395,20 +423,28 @@ function previewInstructions(
   t: TFunction,
   kind: FoldKind,
   host: FoldToolHost,
-  preview: FoldPreview
+  preview: FoldPreview,
+  extent: FoldExtentWindowView | undefined,
+  action: string
 ): FoldToolInstructions {
+  // A precrease of part of its line: its points along the line first.
+  const along = extent ? extentPreviewItems(t, extent) : null;
   return {
     heading: t('tools:fold.window.instructions', 'Instructions'),
     items: [
+      ...(along?.along ?? []),
       t('tools:fold.steps.pickLayers', 'Pick which layers move.'),
       host.coarse
-        ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action: foldToolLabel(t, kind) })
+        ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action: along ? action : foldToolLabel(t, kind) })
         : t('tools:fold.steps.commit', 'Press Enter to fold.'),
     ],
     // Picking layers is optional: every layer on the moving side folds unless
     // narrowed, so the window leads with the pick and never marks it done.
-    current: 0,
+    current: along ? (along.current ?? along.along.length) : 0,
     notes: [
+      // What a click along the line snaps to, while one is in hand.
+      ...(extent && along && along.current !== null ? extentNotes(t, extent, host) : []),
+      ...(extent ? extentKeyNote(t, host) : []),
       ...(preview.acrossLayers
         ? [
             t(
@@ -527,19 +563,25 @@ export function foldToolWindow(
   const kind = view.tool;
   const title = foldToolLabel(t, kind);
   const { preview } = view;
+  // A precrease's extent: the control in both phases, so a pinch can be
+  // chosen before its line is located, and its points along the line after.
+  const extentView = kind === 'precrease' ? view.extent : undefined;
+  const extent = extentView ? extentControl(t, extentView, verbs.setExtent, readOnly) : null;
+  const action = extentCommitLabel(t, extentView, title);
 
   if (!preview) {
     return {
       phase: 'locate',
       title,
-      meta: settingsMeta(t, 1),
-      instructions: locateInstructions(t, view, title, host),
+      meta: settingsMeta(t, extent ? 2 : 1),
+      instructions: locateInstructions(t, view, action, host),
       lineMode: lineModeSelect(t, view, verbs),
       kind: null,
       movingSide: null,
       layers: null,
       refusal: null,
       divide: null,
+      ...(extent ? { extent } : {}),
       footer: null,
     };
   }
@@ -547,8 +589,8 @@ export function foldToolWindow(
   return {
     phase: 'preview',
     title,
-    meta: settingsMeta(t, 3),
-    instructions: previewInstructions(t, kind, host, preview),
+    meta: settingsMeta(t, extent ? 4 : 3),
+    instructions: previewInstructions(t, kind, host, preview, extentView, action),
     lineMode: null,
     kind: {
       label: t('tools:fold.window.kind', 'Fold'),
@@ -571,11 +613,17 @@ export function foldToolWindow(
       ? foldRefusalNotice(
           t,
           preview.refused,
-          { kind, readOnly, ...sectionFlapNames(preview.section) },
+          {
+            kind,
+            readOnly,
+            ...sectionFlapNames(preview.section),
+            ...(extentView ? { extent: { mode: extentView.mode, allLayers: preview.seed === 'all' } } : {}),
+          },
           verbs
         )
       : null,
     divide: null,
+    ...(extent ? { extent } : {}),
     footer: {
       cancel: {
         label: t('tools:fold.window.cancel', 'Cancel'),
@@ -584,9 +632,9 @@ export function foldToolWindow(
         run: verbs.cancel,
       },
       commit: {
-        label: title,
+        label: action,
         shortcut: 'fold.commit',
-        disabled: readOnly || preview.landing || preview.refused !== null,
+        disabled: readOnly || preview.landing || preview.refused !== null || preview.incomplete === true,
         run: verbs.commit,
       },
     },

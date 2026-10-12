@@ -404,6 +404,28 @@ describe('FoldToolWindow', () => {
     expect(queryByRole(window, 'button', 'Cancel')).toBeNull();
   });
 
+  it('offers a precrease’s extent under its own heading, says what the one chosen creases, and switches it', () => {
+    const calls = { ...verbs(), setExtent: vi.fn() };
+    render({ tool: 'precrease', picks: 2, extent: { mode: 'pinch', picked: 0 }, preview: preview({ incomplete: true }) }, calls);
+    const window = fold()!;
+    const extent = byRole(window, 'group', 'Extent');
+    expect(allByRole(extent, 'button').map((button) => [button.textContent, button.getAttribute('aria-pressed')])).toEqual([
+      ['Whole line', 'false'],
+      ['Segment', 'false'],
+      ['Pinch', 'true'],
+    ]);
+    expect(window.textContent).toContain('Crease only a short mark, centred on a point you click along the line.');
+    act(() => byRole(extent, 'button', 'Segment').click());
+    expect(calls.setExtent).toHaveBeenCalledWith('segment');
+    // Its point along the line still to click: nothing to commit, and the commit is the pinch's.
+    const commit = allByRole(window, 'button').filter((button) => button.textContent === 'Pinch').at(-1);
+    expect(commit?.getAttribute('title')).toBe('Pinch');
+    expect(commit?.hasAttribute('disabled')).toBe(true);
+    // Any other fold has none.
+    render({ tool: 'valley', picks: 2, extent: { mode: 'pinch', picked: 0 }, preview: preview() }, calls);
+    expect(queryByRole(fold()!, 'group', 'Extent')).toBeNull();
+  });
+
   it('switches the kind, swaps the side and picks layers through the model', () => {
     const calls = render({ preview: preview({ seed: [0] }) });
     const window = fold()!;

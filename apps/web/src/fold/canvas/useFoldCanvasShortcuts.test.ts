@@ -6,7 +6,7 @@ import { registerFoldCanvasVerbs } from './foldCanvasCommands';
 import type { FoldCanvasVerbs } from './useFoldCanvasVerbs';
 import { focusLeavesEnterToFold, runFoldCanvasShortcut } from './useFoldCanvasShortcuts';
 
-function verbs(roots = 1): FoldCanvasVerbs {
+function verbs(roots = 1, extents = true): FoldCanvasVerbs {
   return {
     selectTool: vi.fn(),
     selectLineMode: vi.fn(),
@@ -39,6 +39,11 @@ function verbs(roots = 1): FoldCanvasVerbs {
     precreaseKite: vi.fn(),
     otherSink: vi.fn(),
     stepPocket: vi.fn(),
+    setExtent: vi.fn(),
+    cycleExtent: vi.fn(() => extents),
+    useWholeLine: vi.fn(),
+    pinchInstead: vi.fn(),
+    throughAllLayers: vi.fn(),
     commit: vi.fn(() => true),
     cancel: vi.fn(() => true),
     clearMarks: vi.fn(),
@@ -77,6 +82,18 @@ describe('the Fold canvas’s keys', () => {
     expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(true);
     vi.mocked(bound.swapSide).mockReturnValue(false);
     expect(runFoldCanvasShortcut('fold.swapSide', null)).toBe(false);
+  });
+
+  it('steps the precrease extent on E only with the Precrease tool in hand', () => {
+    const bound = verbs(1, true);
+    release = registerFoldCanvasVerbs(bound);
+    expect(runFoldCanvasShortcut('fold.cycleExtent', null)).toBe(true);
+    expect(bound.cycleExtent).toHaveBeenCalledTimes(1);
+    vi.mocked(bound.cycleExtent).mockReturnValue(false);
+    expect(runFoldCanvasShortcut('fold.cycleExtent', null)).toBe(false);
+    // E is bound in the fold scope alone, by default.
+    const extent = SHORTCUT_DEFINITIONS.find((definition) => definition.id === 'fold.cycleExtent');
+    expect(extent).toMatchObject({ scope: 'fold', defaultChord: { key: 'e' } });
   });
 
   it('commits on Enter unless a focused control owns it', () => {

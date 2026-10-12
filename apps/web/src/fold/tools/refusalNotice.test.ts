@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { FOLD_SINK_REFUSAL_CODES } from '../engine/foldEngineSinkWire';
-import { FOLD_REFUSAL_CODES, type FoldCrossSection, type FoldRefusalBody } from '../engine/foldEngineWire';
+import {
+  FOLD_PARTIAL_PRECREASE_REFUSAL_CODES,
+  FOLD_REFUSAL_CODES,
+  type FoldCrossSection,
+  type FoldRefusalBody,
+} from '../engine/foldEngineWire';
 import {
   foldRefusalNotice,
   neededFlaps,
@@ -367,6 +372,40 @@ describe('foldRefusalNotice', () => {
     expect(foldRefusalNotice(t, singleLayer, context({ kind: 'reverse' }), verbs()).text).toBe(
       'A single layer has no folded edge to reverse along. Reverse a flap of layers joined by a fold.'
     );
+  });
+
+  it('says every partial precrease refusal in its own words, none as a fold that cannot be made', () => {
+    const generic = foldRefusalNotice(t, { refusal: { code: 'internal' }, fixes: [] }, context(), verbs()).title;
+    const titles = FOLD_PARTIAL_PRECREASE_REFUSAL_CODES.map((code) => {
+      const notice = foldRefusalNotice(
+        t,
+        { refusal: { code } as FoldRefusalBody, fixes: [] },
+        context({ kind: 'precrease', extent: { mode: 'segment', allLayers: true } }),
+        verbs()
+      );
+      expect(notice.title, code).not.toBe(generic);
+      return [code, notice.title];
+    });
+    expect(Object.fromEntries(titles)).toEqual({
+      mark_off_sheet: 'The mark would leave the paper',
+      mark_too_short: 'Too short to crease',
+      mark_on_crease: 'Already creased there',
+      marks_overlap: 'The marks would overlap',
+      extent_off_paper: 'A point is off the paper',
+      extent_too_short: 'Too short to crease',
+      extent_misses_paper: 'No paper there',
+      extent_misses_layers: 'No layer to crease there',
+    });
+    // A pinch too short has no two points to move apart.
+    const pinch = foldRefusalNotice(
+      t,
+      { refusal: { code: 'extent_too_short' } as FoldRefusalBody, fixes: [{ fix: 'opposite_direction' }] },
+      context({ kind: 'precrease', extent: { mode: 'pinch', allLayers: true } }),
+      { ...verbs(), useWholeLine: vi.fn(), pinchInstead: vi.fn() }
+    );
+    expect(pinch.text).toBe('This pinch is too short for the paper to take a crease. Crease more of the line.');
+    // The engine's fix first, then the tool's own.
+    expect(pinch.actions.map((action) => action.label)).toEqual(['Precrease the other way', 'Use the whole line']);
   });
 
   it('binds a tuck’s other layer, and its narrowed flaps, in a tuck’s words', () => {

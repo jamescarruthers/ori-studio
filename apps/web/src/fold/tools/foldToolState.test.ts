@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { flatSquareLandmarks, flatSquareScene } from '../canvas/foldCanvas.fixtures';
-import { foldPickIndex, type FoldPick } from '../canvas/foldPicking';
+import { foldPickIndex, type FoldPick, type FoldPointPick } from '../canvas/foldPicking';
 import { foldStepInputKey } from '../session/foldSessionEngine';
 import { buildFoldStep } from './foldStepBuilder';
 import {
@@ -9,6 +9,7 @@ import {
   FOLD_TOOL_INITIAL,
   hasToolInput,
   isLocated,
+  picksAlongLine,
   type FoldToolState,
 } from './foldToolState';
 
@@ -267,4 +268,50 @@ describe('the vertex folds’ tool state', () => {
     });
     expect(FOLD_TOOL_INITIAL.vertexDirection).toBe('valley');
   });
+
+  it('clicks a precrease’s extent along its located line, steps back on Escape, and keeps the extent from fold to fold', () => {
+    const tools = createFoldTools();
+    tools.selectTool('precrease');
+    tools.setExtent('segment');
+    expect(FOLD_TOOL_INITIAL.extent).toBe('whole');
+    // Before the line is located, a click is the line's.
+    expect(picksAlongLine(tools.store.getState())).toBe(false);
+    tools.pick(point(1, 0));
+    tools.pick(point(0, 1));
+    expect(picksAlongLine(tools.store.getState())).toBe(true);
+    const [a, b, c] = [alongPoint(0.5, 0.5), alongPoint(0.75, 0.25), alongPoint(0.9, 0.1)];
+    tools.pickAlong(a);
+    tools.pickAlong(b);
+    expect(tools.store.getState().extentPicks).toEqual([a, b]);
+    // Once every point is in, a click starts the extent again from it.
+    tools.pickAlong(c);
+    expect(tools.store.getState().extentPicks).toEqual([c]);
+    expect(hasToolInput(tools.store.getState())).toBe(true);
+    // Escape's first rung: the last point along the line, then nothing more to step back.
+    expect(tools.unpickAlong()).toBe(true);
+    expect(tools.unpickAlong()).toBe(false);
+    expect(tools.store.getState().picks).toHaveLength(2);
+    // Another extent, or another root, starts its points over.
+    tools.pickAlong(a);
+    tools.setExtent('pinch');
+    expect(tools.store.getState().extentPicks).toEqual([]);
+    tools.pickAlong(b);
+    tools.stepRoot(1, 2);
+    expect(tools.store.getState().extentPicks).toEqual([]);
+    // A commit lets the points go; the extent stays chosen.
+    tools.pickAlong(b);
+    tools.clear();
+    expect(tools.store.getState()).toMatchObject({ extent: 'pinch', extentPicks: [], picks: [] });
+    // Any other tool, or the whole line, clicks nothing along the line.
+    tools.setExtent('whole');
+    tools.pick(point(1, 0));
+    tools.pick(point(0, 1));
+    expect(picksAlongLine(tools.store.getState())).toBe(false);
+    tools.pickAlong(a);
+    expect(tools.store.getState().extentPicks).toEqual([]);
+  });
 });
+
+function alongPoint(x: number, y: number): FoldPointPick {
+  return { kind: 'point', provenance: 'crossing', sheet: [x, y], mark: null, scene: { x, y } };
+}

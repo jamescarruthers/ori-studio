@@ -37,9 +37,19 @@ import { lineModeInput, nextStep } from '../tools/foldToolRegistry';
 import { steppedTuckTarget } from '../tools/tuck/tuckStep';
 import type { FoldUseLineFix } from '../tools/refusalNotice';
 import { defaultMovingSign, freeLineThrough, freePicksAlong, movingPoint } from '../tools/foldStepBuilder';
-import { flapSeed, foldToolInput, foldToolInputKey, isLocated, type FoldTools, type FoldToolState } from '../tools/foldToolState';
+import {
+  flapSeed,
+  foldToolInput,
+  foldToolInputKey,
+  isLocated,
+  picksAlongLine,
+  type FoldTools,
+  type FoldToolState,
+} from '../tools/foldToolState';
+import { extentClicks, nextExtentMode, type FoldExtentMode } from '../tools/precrease/precreaseExtent';
 import { nearestDirection, squashTargetToward } from '../tools/vertex/vertexStep';
 import { isFoldAltLatched } from './foldAltLatch';
+import { resolveAlongPick } from './foldAlongLine';
 import { toPair, transformLine } from './foldCanvasGeometry';
 import {
   resolveFoldPick,
@@ -146,6 +156,17 @@ export interface FoldCanvasVerbs {
   /** The sinks: the other kind of sink (its tool taken in hand, the line kept), and a closed sink's pockets. */
   otherSink: (kind: FoldSinkKind) => void;
   stepPocket: (delta: number) => void;
+  // A precrease's extent (`tools/precrease`), and what its refusals' buttons do.
+  /** Crease this much of the line. */
+  setExtent: (extent: FoldExtentMode) => void;
+  /** The extent after the one chosen, with the Precrease tool in hand; whether it was in hand. */
+  cycleExtent: () => boolean;
+  /** Crease the whole line instead of part of it. */
+  useWholeLine: () => void;
+  /** A segment too short to crease, as a pinch at its first point instead. */
+  pinchInstead: () => void;
+  /** Mark through every layer at the line, not the ones picked. */
+  throughAllLayers: () => void;
 }
 
 /** The verbs, and whether a commit waits for the preview to land. */
@@ -274,7 +295,9 @@ function trackCommitted(op: FoldOp): void {
     return;
   }
   const via = 'line' in op ? op.line.via : 'crease';
-  trackFoldStepAdded(kind, { layerScope: op.seed.scope, via });
+  // A precrease says how much of its line it creased.
+  const extent = op.kind === 'precrease' ? (op.extent?.kind ?? 'whole') : null;
+  trackFoldStepAdded(kind, { layerScope: op.seed.scope, via, ...(extent ? { extent } : {}) });
 }
 
 /** Within this many sheet units, a second depth pick is the same spot, and goes a layer deeper. */
@@ -413,8 +436,16 @@ export function useFoldCanvasVerbs(
         const step = model ? nextStep(model, tool.picks.length) : null;
         // Located: a click on the paper picks layers, so what is under the
         // pointer is the paper itself, never a reference — and over a woven
-        // section, which of its stacks the layer picker shows.
+        // section, which of its stacks the layer picker shows. A precrease of
+        // part of its line takes its points along the line first: near the
+        // line, the point of it under the pointer.
         if (!step) {
+          if (picksAlongLine(tool) && shown.index) {
+            const along = live.current.preview.extent?.along;
+            const line = pane === 'folded' ? along?.folded : along?.creasePattern;
+            const pick = line ? resolveAlongPick(shown.index, line, at, radii, freePointHeld()) : null;
+            if (pick) return { pane, at, pick };
+          }
           const interval = pane === 'folded' ? wovenIntervalAt(live.current.preview.section, at) : null;
           return interval === null ? { pane, at, pick: null } : { pane, at, pick: null, interval };
         }
@@ -427,6 +458,15 @@ export function useFoldCanvasVerbs(
         if (!hit || live.current.session.readOnly || live.current.session.cursor.status === 'locked') return;
         const tool = state();
         if (isLocated(tool)) {
+          if (picksAlongLine(tool)) {
+            // A point along the line, for a segment's end or a pinch's centre;
+            // while one is still to come, a click beside the line picks nothing.
+            if (hit.pick?.kind === 'point') {
+              tools.pickAlong(hit.pick);
+              return;
+            }
+            if (tool.extentPicks.length < extentClicks(tool.extent)) return;
+          }
           if (hit.pane === 'folded' && isLineTool(tool.tool)) pickDepth(hit.at);
           // A squash's spine lands toward the point clicked on the folded paper.
           else if (hit.pane === 'folded' && tool.tool === 'squash') aimSquash(hit.at);
@@ -575,6 +615,27 @@ export function useFoldCanvasVerbs(
 
       stepPocket: (delta) => tools.stepPocket(delta, live.current.preview.sink?.pockets.length ?? 0),
 
+      // A precrease's extent.
+      setExtent: (extent) => tools.setExtent(extent),
+
+      cycleExtent: () => {
+        const now = state();
+        if (now.tool !== 'precrease') return false;
+        tools.setExtent(nextExtentMode(now.extent));
+        return true;
+      },
+
+      useWholeLine: () => tools.setExtent('whole'),
+
+      pinchInstead: () => {
+        // The segment's first point is where the pinch goes.
+        const [first] = state().extentPicks;
+        tools.setExtent('pinch');
+        if (first) tools.pickAlong(first);
+      },
+
+      throughAllLayers: () => tools.setSeed({ scope: 'all' }),
+
       pickFlap: (flap) => tools.setSeed({ scope: 'flaps', flaps: [flap] }),
 
       useLine: (fix) => {
@@ -643,8 +704,10 @@ export function useFoldCanvasVerbs(
       },
 
       commit: () => {
-        const { step, refused, landing } = live.current.preview;
+        const { step, refused, landing, extent } = live.current.preview;
         if (refused || live.current.session.readOnly) return false;
+        // A partial precrease whose points along the line are still to be clicked has nothing to commit.
+        if (extent?.state.status === 'incomplete') return false;
         // Located, its step still being built (a reverse fold's tip, an
         // axiom's roots, being asked about) or still landing: committed once
         // it lands, never silently dropped.
@@ -658,6 +721,11 @@ export function useFoldCanvasVerbs(
       },
 
       cancel: () => {
+        // Escape steps back along the line first: the last point clicked on it.
+        if (tools.unpickAlong()) {
+          setQueued(null);
+          return true;
+        }
         const tool = state();
         const held = tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'all' || tool.swapped;
         if (!held) return false;

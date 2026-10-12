@@ -35,6 +35,7 @@ import type {
   FoldLineVia,
   FoldModelLine,
   FoldOp,
+  FoldPrecreaseExtent,
   FoldSeed,
   FoldSeedScope,
   SheetPoint,
@@ -81,6 +82,8 @@ export interface FoldLocateIntent {
 export interface FoldStepIntent extends FoldLocateIntent {
   kind: FoldKind;
   precreaseDirection: FoldDirection;
+  /** A precrease of part of its line only: a segment, or a pinch. Absent for the whole line. */
+  extent?: FoldPrecreaseExtent;
 }
 
 /** A step ready to preview and commit, with what the canvas draws and analytics names of it. */
@@ -497,7 +500,7 @@ export function buildFoldStep(intent: FoldStepIntent, index: FoldPickIndex): Fol
   if (line.via === 'crease' && intent.kind !== 'precrease') {
     op = { kind: unfolding ? 'unfold' : 'refold', crease: line.at, direction: intent.kind, ...along };
   } else if (intent.kind === 'precrease') {
-    op = { kind: 'precrease', direction: intent.precreaseDirection, line, ...along };
+    op = { kind: 'precrease', direction: intent.precreaseDirection, line, ...along, ...(intent.extent ? { extent: intent.extent } : {}) };
   } else {
     op = { kind: intent.kind, line, ...along };
   }

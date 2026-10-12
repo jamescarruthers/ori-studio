@@ -318,3 +318,91 @@ describe('foldToolWindow for the other tools', () => {
     expect(foldToolWindow(t, view({ tool: 'divide-line', divide: divide({}) }), verbs(), mouse)?.divide).toBeNull();
   });
 });
+
+describe('foldToolWindow for a precrease of part of its line', () => {
+  const precrease = (extra: Partial<FoldToolWindowView> = {}) =>
+    view({ tool: 'precrease', extent: { mode: 'pinch', picked: 0 }, ...extra });
+  const withExtent = () => ({ ...verbs(), setExtent: vi.fn() });
+
+  it('offers the extent from the start, and adds its clicks along the line to the steps', () => {
+    const calls = withExtent();
+    const model = foldToolWindow(t, precrease(), calls, { ...mouse, keyLabel: (id) => (id === 'fold.cycleExtent' ? 'E' : undefined) });
+    expect(model?.meta).toBe('2 settings');
+    expect(model?.extent).toMatchObject({ label: 'Extent', value: 'pinch' });
+    expect(model?.extent?.options.map((option) => option.short)).toEqual(['Whole line', 'Segment', 'Pinch']);
+    expect(model?.extent?.note).toBe('Crease only a short mark, centred on a point you click along the line.');
+    expect(model?.instructions.items).toEqual([
+      'Click the point to move.',
+      'Click where it should land.',
+      'Click where to pinch along the line.',
+      'Pick the fold and the layers, then press Enter.',
+    ]);
+    expect(model?.instructions.notes.at(-1)).toBe('Press E to step through the extents.');
+    model?.extent?.set('segment');
+    expect(calls.setExtent).toHaveBeenCalledWith('segment');
+    // The whole line says nothing more, and another tool has no extent.
+    const whole = foldToolWindow(t, precrease({ extent: { mode: 'whole', picked: 0 } }), calls, mouse);
+    expect(whole?.extent?.note).toBeNull();
+    expect(whole?.instructions.items).toHaveLength(3);
+    expect(foldToolWindow(t, view({ extent: { mode: 'pinch', picked: 0 } }), calls, mouse)?.extent).toBeUndefined();
+  });
+
+  it('marks the click along the line in hand and holds the commit until every point is in', () => {
+    const model = foldToolWindow(
+      t,
+      precrease({ picks: 2, extent: { mode: 'segment', picked: 1 }, preview: preview({ incomplete: true }) }),
+      withExtent(),
+      mouse
+    );
+    expect(model?.phase).toBe('preview');
+    expect(model?.meta).toBe('4 settings');
+    expect(model?.instructions.items).toEqual([
+      'Click where the crease starts along the line.',
+      'Click where it ends.',
+      'Pick which layers move.',
+      'Press Enter to fold.',
+    ]);
+    expect(model?.instructions.current).toBe(1);
+    expect(model?.instructions.notes).toEqual([
+      'Points snap to where the line crosses creases, edges and marks, to points on it, and to its middle.',
+      'Hold Option to put a point down anywhere, without snapping.',
+      'Esc takes back the last point.',
+    ]);
+    expect(model?.footer?.commit).toMatchObject({ label: 'Precrease', disabled: true });
+    // Every point in: the layers are next, and a pinch is committed by its own name.
+    const pinched = foldToolWindow(
+      t,
+      precrease({ picks: 2, extent: { mode: 'pinch', picked: 1 }, preview: preview() }),
+      withExtent(),
+      finger
+    );
+    expect(pinched?.instructions.current).toBe(1);
+    expect(pinched?.instructions.items.at(-1)).toBe('Tap Pinch to fold.');
+    expect(pinched?.instructions.notes).toEqual([]);
+    expect(pinched?.footer?.commit).toMatchObject({ label: 'Pinch', disabled: false });
+  });
+
+  it('words a partial precrease’s refusal, with the fixes the tool can make', () => {
+    const calls = { ...withExtent(), useWholeLine: vi.fn(), pinchInstead: vi.fn(), throughAllLayers: vi.fn() };
+    const refused = (code: string, mode: 'segment' | 'pinch', seed: FoldPreview['seed'] = 'all') =>
+      foldToolWindow(
+        t,
+        precrease({ picks: 2, extent: { mode, picked: mode === 'segment' ? 2 : 1 }, preview: preview({ seed, refused: { refusal: { code } as never, fixes: [] } }) }),
+        calls,
+        mouse
+      )?.refusal;
+    const short = refused('extent_too_short', 'segment');
+    expect(short?.title).toBe('Too short to crease');
+    expect(short?.actions.map((action) => action.label)).toEqual(['Pinch there instead', 'Use the whole line']);
+    short?.actions[0]?.run();
+    expect(calls.pinchInstead).toHaveBeenCalled();
+    const layers = refused('extent_misses_layers', 'pinch', [0]);
+    expect(layers?.title).toBe('No layer to crease there');
+    expect(layers?.actions.map((action) => action.label)).toEqual(['Crease through all layers', 'Use the whole line']);
+    layers?.actions[0]?.run();
+    expect(calls.throughAllLayers).toHaveBeenCalled();
+    // Through every layer already: only the whole line.
+    expect(refused('extent_misses_layers', 'pinch')?.actions.map((action) => action.label)).toEqual(['Use the whole line']);
+    expect(refused('mark_on_crease', 'pinch')?.actions).toEqual([]);
+  });
+});

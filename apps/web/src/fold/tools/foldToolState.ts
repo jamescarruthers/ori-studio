@@ -19,7 +19,7 @@ import { createToolRuntime, type ToolRuntime } from '../../cp-workspace/tools/ru
 import type { Point } from '../../lib/geometry';
 import type { OristudioCpRatioExpression } from '../../lib/oristudioCpToolSettings';
 import { ratioExpressionFromHalves } from '../../lib/oristudioCpToolSettings';
-import type { FoldPick } from '../canvas/foldPicking';
+import type { FoldPick, FoldPointPick } from '../canvas/foldPicking';
 import {
   FOLD_MARK_MAX_PARTS,
   type FoldChoices,
@@ -40,6 +40,7 @@ import {
 } from './foldToolCatalog';
 import { sameFlap } from './crossSection';
 import { lineModeInput, locateEngine, toolInput, type FoldInputModel } from './foldToolRegistry';
+import { extentClicks, type FoldExtentMode } from './precrease/precreaseExtent';
 import { PETAL_LINE_MODES } from './vertex/vertexInputs';
 
 /**
@@ -131,6 +132,17 @@ export interface FoldToolState {
   seed: FoldToolSeed;
   /** The way a precrease folds before it unfolds. */
   precreaseDirection: FoldDirection;
+  /**
+   * How much of its line a precrease creases (`tools/precrease`): the whole
+   * line, a segment or a pinch. Kept from one precrease to the next, as the
+   * line mode is.
+   */
+  extent: FoldExtentMode;
+  /**
+   * The points clicked along the located line for a segment's ends or a
+   * pinch's centre, in click order: let go with the line, as the picks are.
+   */
+  extentPicks: readonly FoldPointPick[];
   // The crimp's and the tuck's settings, which stay chosen as the line mode
   // does: from one fold to the next.
   /** How a crimp's second line is located, after its first. */
@@ -155,6 +167,8 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   swapped: false,
   seed: { scope: 'all' },
   precreaseDirection: 'valley',
+  extent: 'whole',
+  extentPicks: [],
   secondLineMode: 'free',
   tuckDirection: 'valley',
   vertexDirection: 'valley',
@@ -164,11 +178,12 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   compound: FOLD_COMPOUND_CHOICES_INITIAL,
 };
 
-/** What a new locate starts from: the tool, the line mode and the Divide settings stay. */
+/** What a new locate starts from: the tool, the line mode, the extent and the Divide settings stay. */
 function located(state: FoldToolState): FoldToolState {
   return {
     ...state,
     picks: [],
+    extentPicks: [],
     root: 0,
     swapped: false,
     seed: { scope: 'all' },
@@ -215,7 +230,16 @@ export function isLocated(state: FoldToolState): boolean {
 
 /** Whether anything is under way that Escape would let go. */
 export function hasToolInput(state: FoldToolState): boolean {
-  return state.picks.length > 0 || state.override !== null;
+  return state.picks.length > 0 || state.extentPicks.length > 0 || state.override !== null;
+}
+
+/**
+ * The precrease's extent is what the tools are asking for: the Precrease tool
+ * in hand, its line located, and a segment or a pinch chosen — so a click
+ * along the line is one of its points.
+ */
+export function picksAlongLine(state: FoldToolState): boolean {
+  return state.tool === 'precrease' && state.extent !== 'whole' && isLocated(state) && state.override === null;
 }
 
 export interface FoldTools {
@@ -242,6 +266,17 @@ export interface FoldTools {
    */
   toggleFlap(flap: FoldFlap, all: readonly FoldFlap[]): void;
   setPrecreaseDirection(direction: FoldDirection): void;
+  // A precrease's extent (`tools/precrease`).
+  /** Crease this much of the line: its points along the line start again. */
+  setExtent(extent: FoldExtentMode): void;
+  /**
+   * A point clicked along the located line, for the extent: a segment's next
+   * end, a pinch's centre. Once the extent has every point, a click starts it
+   * again from this one — the pinch moves there, a segment starts there.
+   */
+  pickAlong(pick: FoldPointPick): void;
+  /** Let go of the last point clicked along the line; whether there was one. Escape's first rung. */
+  unpickAlong(): boolean;
   setOverride(override: FoldToolOverride | null): void;
   setDivide(divide: Partial<FoldDivideSettings>): void;
   setHoveredFlap(flap: number | null): void;
@@ -392,6 +427,8 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         ...state,
         root: (((state.root + delta) % count) + count) % count,
         swapped: false,
+        // Another root is another line: points clicked along this one are off it.
+        extentPicks: [],
         override: null,
         compound: anotherTip(state.compound),
       }));
@@ -413,6 +450,25 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
 
     setPrecreaseDirection(precreaseDirection) {
       set((state) => (state.precreaseDirection === precreaseDirection ? state : { ...state, precreaseDirection, override: null }));
+    },
+
+    setExtent(extent) {
+      set((state) => (state.extent === extent ? state : { ...state, extent, extentPicks: [], override: null }));
+    },
+
+    pickAlong(pick) {
+      set((state) => {
+        if (state.extent === 'whole') return state;
+        const full = state.extentPicks.length >= extentClicks(state.extent);
+        return { ...state, extentPicks: full ? [pick] : [...state.extentPicks, pick], override: null };
+      });
+    },
+
+    unpickAlong() {
+      const now = store.getState();
+      if (now.extentPicks.length === 0) return false;
+      set((state) => ({ ...state, extentPicks: state.extentPicks.slice(0, -1), override: null }));
+      return true;
     },
 
     setOverride(override) {
