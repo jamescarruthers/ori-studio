@@ -42,6 +42,7 @@ import { browserFontSubsetter } from '../fonts/browserFontSubsetter';
 import { loadDiagramFonts, type DiagramFonts } from '../fonts/diagramFonts';
 import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramFontTexts, enlargeArrowCount, preparedPages, type PreparedDiagramPages } from '../pages/diagramPages';
+import { clashingStepsByGroup, type ClashGroup } from '../pages/pagePlacement';
 import { composedPageUrl } from '../pages/useDiagramPages';
 import { zoomSplits, type ZoomSplit } from '../pages/zoomArrows';
 import { stepPictureSource } from '../pictures/paintDiagramStep';
@@ -88,7 +89,8 @@ export interface DiagramExportBinding {
   /** The steps whose instruction is cut. */
   cut: number[];
   placed: number;
-  clashes: number[];
+  /** The steps whose placement clashes, by what is wrong (`ClashGroup`): each group is a sentence of its own. */
+  clashes: Record<ClashGroup, number[]>;
   /** How many turns between steps the diagram has (D22): the pages print them, step files leave them out. */
   turns: number;
   /** How many enlarge arrows print between steps (Revision 2): on the pages, as turns are, never in step files. */
@@ -431,7 +433,7 @@ export function useDiagramExport(
     empty,
     cut,
     placed: stepsOf(document).filter((step) => step.place || step.placeNewer).length,
-    clashes: pages?.layout.pages.flatMap((page) => page.cells.filter((cell) => cell.clashes?.length).map((cell) => cell.number)) ?? [],
+    clashes: pages ? clashingStepsByGroup(pages.layout) : { overlap: [], paper: [], margin: [], path: [] },
     turns: document.steps.length - stepsOf(document).length,
     enlargeArrows,
     splits,

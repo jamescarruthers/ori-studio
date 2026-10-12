@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { DiagramStep } from '../../diagram/document/diagramDocument';
 import type { PagePart, PlacementClash } from '../../diagram/pages/pagePlacement';
 import { useStepPlacement } from '../../diagram/pages/useStepPlacement';
+import { formatStepNumbers } from '../../diagram/stepNumberList';
 import { useZoomControls } from '../../diagram/zoom/useZoomControls';
 import { Button } from '../ui/Button';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
@@ -149,7 +150,7 @@ function EnlargedSize({ step }: { step: DiagramStep }) {
 }
 
 function ClashWords({ clash }: { clash: PlacementClash }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   switch (clash.kind) {
     case 'parts':
       return t('panels:diagram.placement.partsClash', 'The picture, number, or text overlap within this step.');
@@ -161,9 +162,12 @@ function ClashWords({ clash }: { clash: PlacementClash }) {
       return t('panels:diagram.placement.glyphClash', 'This step overlaps a symbol, heading, or page number.');
     case 'path':
       return t('panels:diagram.placement.pathClash', 'This placement makes the path double back or cross itself.');
-    case 'step':
-      return t('panels:diagram.placement.stepClash', 'This step overlaps steps {{steps}}.', {
-        steps: clash.steps?.join(', '),
-      });
+    case 'step': {
+      const numbers = clash.steps ?? [];
+      const steps = formatStepNumbers(numbers, i18n.language, t);
+      return numbers.length === 1
+        ? t('panels:diagram.placement.stepClashOne', 'This step overlaps step {{steps}}.', { steps })
+        : t('panels:diagram.placement.stepClash', 'This step overlaps steps {{steps}}.', { steps });
+    }
   }
 }

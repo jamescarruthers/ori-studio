@@ -1188,6 +1188,7 @@
       "offsetX": "X (mm)",
       "offsetY": "Y (mm)",
       "outsideMargin": "여백 밖",
+      "outsidePaper": "종이 밖",
       "overlaps": "겹침",
       "paperClash": "이 단계의 일부가 종이 밖에 있습니다.",
       "partsClash": "이 단계 안의 그림, 번호 또는 텍스트가 서로 겹칩니다.",
@@ -1206,6 +1207,7 @@
       "selectPart": "{{part}} 선택",
       "size": "크기 (mm)",
       "stepClash": "이 단계가 {{steps}}단계와 겹칩니다.",
+      "stepClashOne": "이 단계가 {{steps}}단계와 겹칩니다.",
       "text": "텍스트",
       "title": "페이지 배치"
     },

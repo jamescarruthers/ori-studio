@@ -111,11 +111,16 @@ describe('DiagramStepPlacement › the offer of a new page', () => {
   it('offers it for an overlap with another step, says it sends the frame home, and starts the page', () => {
     // s1: second on page 1.
     show('s1', [{ kind: 'step', steps: [3] }]);
-    expect(host?.textContent).toContain('This step overlaps steps 3.');
+    expect(host?.textContent).toContain('This step overlaps step 3.');
     expect(host?.textContent).toContain('returns this step’s frame to automatic placement');
     expect(offer()?.textContent).toBe('Start step 2 on a new page');
     act(() => offer()!.click());
     expect(stepById(state().diagram!, 's1')!.breakBefore).toBe(true);
+  });
+
+  it('names the steps it overlaps as every Diagram notice lists them', () => {
+    show('s1', [{ kind: 'step', steps: [3, 4] }]);
+    expect(host?.textContent).toContain('This step overlaps steps 3 and 4.');
   });
 
   it('offers it for an overlap with a symbol, heading or page number', () => {

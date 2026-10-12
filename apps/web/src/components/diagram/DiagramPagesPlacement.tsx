@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { LayoutPage } from '../../diagram/pages/diagramPageLayout';
 import { printedFrameMm } from '../../diagram/pages/pagePictures';
-import { partBox, type PageBox, type PagePart } from '../../diagram/pages/pagePlacement';
+import { clashTag } from '../../diagram/pages/clashLabels';
+import { cellClashGroup, partBox, type PageBox, type PagePart } from '../../diagram/pages/pagePlacement';
 import { placementBlocker } from '../../diagram/document/stepPlace';
 import { stepById } from '../../diagram/document/diagramDocument';
 import type { usePagePlacement } from '../../diagram/pages/usePagePlacement';
@@ -64,22 +65,21 @@ export function DiagramPagesPlacement({
   return (
     <>
       {lifted && <LiftedPicture draft={lifted} />}
-      {page.cells
-        .filter((c) => c.clashes?.length)
-        .map((c) => (
-          <div
-            key={c.stepId}
-            className={styles.clash}
-            style={position(partBox(c, 'frame'))}
-            data-placement-clash={c.stepId}
-          >
-            <span>{c.clashes?.some((clash) => ['step', 'parts', 'glyph'].includes(clash.kind))
-              ? t('panels:diagram.placement.overlaps', 'Overlaps')
-              : c.clashes?.some((clash) => clash.kind === 'paper' || clash.kind === 'margin')
-                ? t('panels:diagram.placement.outsideMargin', 'Outside margin')
-                : t('panels:diagram.placement.pathWarning', 'Path doubles back')}</span>
-          </div>
-        ))}
+      {page.cells.map((c) => {
+        const group = cellClashGroup(c);
+        return (
+          group && (
+            <div
+              key={c.stepId}
+              className={styles.clash}
+              style={position(partBox(c, 'frame'))}
+              data-placement-clash={c.stepId}
+            >
+              <span>{clashTag(group, t)}</span>
+            </div>
+          )
+        );
+      })}
       {editable && cell && (
         <>
           {(['number', 'picture', 'text'] as const)

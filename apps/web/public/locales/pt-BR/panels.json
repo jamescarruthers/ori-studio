@@ -1268,6 +1268,7 @@
       "offsetX": "X (mm)",
       "offsetY": "Y (mm)",
       "outsideMargin": "Fora da margem",
+      "outsidePaper": "Fora do papel",
       "overlaps": "Sobreposições",
       "paperClash": "Parte deste passo está fora do papel.",
       "partsClash": "A imagem, o número ou o texto se sobrepõem dentro deste passo.",
@@ -1286,6 +1287,7 @@
       "selectPart": "Selecionar {{part}}",
       "size": "Tamanho (mm)",
       "stepClash": "Este passo se sobrepõe aos passos {{steps}}.",
+      "stepClashOne": "Este passo se sobrepõe ao passo {{steps}}.",
       "text": "Texto",
       "title": "Na página"
     },

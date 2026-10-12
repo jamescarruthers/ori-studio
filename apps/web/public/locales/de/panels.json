@@ -1228,6 +1228,7 @@
       "offsetX": "X (mm)",
       "offsetY": "Y (mm)",
       "outsideMargin": "Außerhalb des Randes",
+      "outsidePaper": "Außerhalb des Papiers",
       "overlaps": "Überlappungen",
       "paperClash": "Ein Teil dieses Schritts liegt außerhalb des Papiers.",
       "partsClash": "Bild, Nummer oder Text überlappen sich innerhalb dieses Schritts.",
@@ -1246,6 +1247,7 @@
       "selectPart": "{{part}} auswählen",
       "size": "Größe (mm)",
       "stepClash": "Dieser Schritt überlappt die Schritte {{steps}}.",
+      "stepClashOne": "Dieser Schritt überlappt Schritt {{steps}}.",
       "text": "Text",
       "title": "Auf der Seite"
     },

@@ -1268,6 +1268,7 @@
       "offsetX": "X (mm)",
       "offsetY": "Y (mm)",
       "outsideMargin": "Hors des marges",
+      "outsidePaper": "Hors du papier",
       "overlaps": "Chevauchements",
       "paperClash": "Une partie de cette étape dépasse du papier.",
       "partsClash": "L’image, le numéro ou le texte se chevauchent dans cette étape.",
@@ -1286,6 +1287,7 @@
       "selectPart": "Sélectionner {{part}}",
       "size": "Taille (mm)",
       "stepClash": "Cette étape chevauche les étapes {{steps}}.",
+      "stepClashOne": "Cette étape chevauche l’étape {{steps}}.",
       "text": "Texte",
       "title": "Sur la page"
     },

@@ -1228,6 +1228,7 @@
       "offsetX": "X (mm)",
       "offsetY": "Y (mm)",
       "outsideMargin": "Outside margin",
+      "outsidePaper": "Off the paper",
       "overlaps": "Overlaps",
       "paperClash": "Part of this step is outside the paper.",
       "partsClash": "The picture, number, or text overlap within this step.",
@@ -1246,6 +1247,7 @@
       "selectPart": "Select {{part}}",
       "size": "Size (mm)",
       "stepClash": "This step overlaps steps {{steps}}.",
+      "stepClashOne": "This step overlaps step {{steps}}.",
       "text": "Text",
       "title": "On the page"
     },

@@ -1188,6 +1188,7 @@
       "offsetX": "X (mm)",
       "offsetY": "Y (mm)",
       "outsideMargin": "余白の外側",
+      "outsidePaper": "用紙の外側",
       "overlaps": "重なり",
       "paperClash": "このステップの一部が用紙の外にあります。",
       "partsClash": "このステップ内の図、番号、またはテキストが重なっています。",
@@ -1206,6 +1207,7 @@
       "selectPart": "{{part}}を選択",
       "size": "サイズ (mm)",
       "stepClash": "このステップはステップ{{steps}}と重なっています。",
+      "stepClashOne": "このステップはステップ{{steps}}と重なっています。",
       "text": "テキスト",
       "title": "ページ上の配置"
     },

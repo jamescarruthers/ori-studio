@@ -147,6 +147,19 @@ describe('DiagramExportDialog', () => {
     expect(host.textContent).toContain('Crane.zip');
   });
 
+  it('says what is wrong with a placement in words of its own: off the paper is not an overlap', async () => {
+    const document = diagram();
+    await open({
+      ...document,
+      steps: document.steps.map((entry) =>
+        entry.id === 'step-b' ? { ...entry, place: { picture: [0, 400] as [number, number] } } : entry
+      ),
+    });
+    expect(notice()).toContain('Part of step 3 is off the paper.');
+    expect(notice()).not.toContain('placed over');
+    expect(notice()).not.toContain('page boundaries');
+  });
+
   it('writes the PDF, saves it under the title, remembers how, and says so', async () => {
     await open();
     await click(exportButton());

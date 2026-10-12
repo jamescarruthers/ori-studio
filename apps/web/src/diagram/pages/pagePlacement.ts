@@ -176,3 +176,33 @@ export function placementClashes(layout: DiagramPagesLayout, footprintsOf?: Foot
 export function pageClashingSteps(page: LayoutPage): number[] {
   return page.cells.filter((cell) => cell.clashes?.length).map((cell) => cell.number);
 }
+
+/**
+ * What a clash is, as it is said: parts lying over others (another step, a
+ * symbol, heading or page number, or the step's own parts), part of the step
+ * past the paper's edge, past the margin, or the ribbon doubling back.
+ */
+export type ClashGroup = 'overlap' | 'paper' | 'margin' | 'path';
+
+/** The groups, the most pressing first: what a step's one tag on the page says. */
+export const CLASH_GROUPS: readonly ClashGroup[] = ['overlap', 'paper', 'margin', 'path'];
+
+export function clashGroup(kind: PlacementClash['kind']): ClashGroup {
+  return kind === 'step' || kind === 'glyph' || kind === 'parts' ? 'overlap' : kind;
+}
+
+/** A cell's most pressing clash, or null for a cell with none. */
+export function cellClashGroup(cell: Pick<LayoutCell, 'clashes'>): ClashGroup | null {
+  const groups = new Set(cell.clashes?.map((clash) => clashGroup(clash.kind)));
+  return CLASH_GROUPS.find((group) => groups.has(group)) ?? null;
+}
+
+/** The steps with clashes, by group, each step once a group and in print order. */
+export function clashingStepsByGroup(layout: DiagramPagesLayout): Record<ClashGroup, number[]> {
+  const steps: Record<ClashGroup, number[]> = { overlap: [], paper: [], margin: [], path: [] };
+  for (const cell of layout.pages.flatMap((page) => page.cells)) {
+    const groups = new Set(cell.clashes?.map((clash) => clashGroup(clash.kind)));
+    for (const group of CLASH_GROUPS) if (groups.has(group)) steps[group].push(cell.number);
+  }
+  return steps;
+}

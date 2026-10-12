@@ -1188,6 +1188,7 @@
       "offsetX": "X (mm)",
       "offsetY": "Y (mm)",
       "outsideMargin": "超出页边距",
+      "outsidePaper": "超出纸张",
       "overlaps": "重叠",
       "paperClash": "此步骤的部分内容超出了纸张。",
       "partsClash": "此步骤中的图片、编号或文字相互重叠。",
@@ -1206,6 +1207,7 @@
       "selectPart": "选择{{part}}",
       "size": "尺寸 (mm)",
       "stepClash": "此步骤与步骤 {{steps}} 重叠。",
+      "stepClashOne": "此步骤与步骤 {{steps}} 重叠。",
       "text": "文字",
       "title": "页面排版"
     },
