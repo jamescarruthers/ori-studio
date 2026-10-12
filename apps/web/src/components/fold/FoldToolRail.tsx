@@ -9,7 +9,8 @@ import { FoldToolGlyph } from './FoldToolGlyph';
 const RAIL_GROUPS_STORAGE_KEY = storageKey(STORAGE_KEYS.foldToolRailGroups);
 
 /**
- * The Fold tools down the left of the canvas (plan D14): the app's `ToolRail`,
+ * The Fold tools down the left of the workspace (plan D14), seated by
+ * `FoldWorkspaceRail`: the app's `ToolRail`,
  * in `foldRailGroups()`'s groups — the folds, Reference points, Locate line,
  * the model verbs, and the planned folds collapsed. Icon-only; each names its
  * key in its tooltip, resolved against the user's layout by `keyLabel`. A

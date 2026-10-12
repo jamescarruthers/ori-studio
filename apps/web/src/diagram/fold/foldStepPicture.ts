@@ -8,7 +8,7 @@
  *   paper ({@link PATTERN_PER_SHEET_UNIT} pattern units), y down as Edit's
  *   model is — what every canvas shows of Fold's y-up frames — so a page
  *   sizes a Fold step and an Edit capture alike (D10).
- * - **Crease pattern.** The step's own state's creases (`creasePatternPaneScene`,
+ * - **Crease pattern.** The step's own state's creases (`creasePatternPaperScene`,
  *   Fold's own builder): the folds earlier steps made in the fold pens, the
  *   precreases in the aux pen, and — for the state before the step — the
  *   creases the step makes in the diagram pens, its instruction. About the
@@ -28,7 +28,7 @@
  */
 
 import type { OristudioCpFoldedPaperScene } from '../../engine/oristudioCpTypes';
-import { creasePatternPaneScene } from '../../fold/canvas/foldPaneScenes';
+import { creasePatternPaperScene } from '../../fold/canvas/foldPaneScenes';
 import type { FoldActionGeometry, FoldScene } from '../../fold/engine/foldEngineWire';
 import { foldStateFrame } from '../../fold/sequence/foldStateFrame';
 import { ORIEDITA_PAPER_SIZE } from '../../lib/creasePatternViewport';
@@ -149,7 +149,7 @@ function creasePatternPicture(input: FoldStepPictureInput, render: Extract<Diagr
     const turned = turn({ x: placed.x - middle.x, y: placed.y - middle.y });
     return [turned.x * CAPTURE_PX_PER_UNIT, turned.y * CAPTURE_PX_PER_UNIT];
   };
-  const scene = creasePatternPaneScene(own.scene, {
+  const scene = creasePatternPaperScene(own.scene, {
     // Before the step its creases are its instruction; after it, folds like any.
     display: { stepCreases: moment === 'before', precreases: true },
     sheet: own.sheet,

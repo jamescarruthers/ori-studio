@@ -3,7 +3,7 @@ import type { PaperLineItem } from '../../lib/paper/paperScene';
 import { bookScene, flatSquareScene } from './foldCanvas.fixtures';
 import { FOLD_USER_PER_UNIT } from './foldCanvasGeometry';
 import {
-  creasePatternPaneScene,
+  creasePatternPaperScene,
   creaseRole,
   FOLD_PANE_DISPLAY_DEFAULT,
   foldedDisplayOffset,
@@ -38,7 +38,7 @@ describe('the Fold panes’ paper scenes', () => {
   });
 
   it('lays the crease pattern front up, the folds under the border, in user space', () => {
-    const scene = creasePatternPaneScene(bookScene(), {
+    const scene = creasePatternPaperScene(bookScene(), {
       display: FOLD_PANE_DISPLAY_DEFAULT,
       sheet: SQUARE,
       step: 1,

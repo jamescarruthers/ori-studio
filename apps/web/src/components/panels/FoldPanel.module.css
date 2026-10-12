@@ -1,8 +1,29 @@
 /*
- * The Fold workspace panel (FoldPanel.tsx): its body under the step strip is
- * the canvas, which fills it — the panes pan and zoom, so nothing in it
- * scrolls — and the Steps view's, which does.
+ * The Fold workspace panel (FoldPanel.tsx): the tool rail down its whole left
+ * side, as Edit's runs down its, and beside it a column of the header, the
+ * strip and the body — the canvas under the strip, which fills it (the panes
+ * pan and zoom, so nothing in it scrolls), or the Steps view, which scrolls.
+ * A phone has no rail, and the column is all of it.
  */
+.frame {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.frame[data-rail] {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.column {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
 .body {
   display: grid;
   min-height: 0;

@@ -1498,7 +1498,7 @@
       "startsBranch": "Beginnt einen neuen Zweig"
     },
     "canvas": {
-      "adds": "Gestrichelt: Faltlinien, die diese Faltung hinzufügt",
+      "adds": "Fett: Faltlinien, die diese Faltung hinzufügt",
       "creasePattern": "Faltmuster",
       "creasePatternLabel": "Das bisherige Faltmuster, Vorderseite oben. Klicke seine Punkte und Faltlinien an, um eine Faltung festzulegen.",
       "folded": "Gefaltet",
@@ -1511,7 +1511,7 @@
       "spreadLayersTitle": "Die gefalteten Lagen auffächern, wie ein Diagramm sie zeichnet, in diesem Schritt und den folgenden",
       "step": "Schritt {{number}}",
       "stepCreases": "Schritt-Faltlinien",
-      "stepCreasesTitle": "Die Faltlinien des gezeigten Schritts als dessen Anleitung zeichnen, mit den Diagramm-Stiften",
+      "stepCreasesTitle": "Die Faltlinien des gezeigten Schritts fett zeichnen, als dessen Anleitung",
       "toolbar": "Faltansicht"
     },
     "grid": {

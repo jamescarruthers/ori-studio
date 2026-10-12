@@ -37,6 +37,8 @@ import { clearFoldStateFrames } from '../../fold/sequence/useFoldStateFrames';
 import { squareScene } from '../../fold/sequence/foldScene.fixtures';
 import { createFoldSession } from '../../fold/session/foldSession';
 import { fakeFoldEngine, inProcessFoldRuntime, settle } from '../../fold/session/foldSession.fixtures';
+import { foldTools } from '../../fold/tools/foldToolState';
+import { PHONE_MEDIA_QUERY } from '../../platform/phoneLayout';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { foldSessionDocumentSource } from '../../store/workspaceStore/foldSession';
@@ -224,6 +226,46 @@ describe('the Fold panel', () => {
     expect(useWorkspaceStore.getState().foldReader?.cursor).toBeNull();
     expect(gridCards()).toEqual([]);
     expect(stripCards()).toHaveLength(2);
+  });
+
+  it('runs the tool rail down its whole side, beside the header — and beside the Steps view, where a press opens the canvas with the tool', async () => {
+    stubPointer(false);
+    foldTools().selectTool('valley');
+    await render();
+    const rail = () => panel()?.querySelector<HTMLElement>('aside[aria-label="Fold tools"]') ?? null;
+    const railButton = (label: string) => rail()?.querySelector<HTMLButtonElement>(`button[aria-label^="${label}"]`);
+    // Beside the header, not under it: the tabs come after the rail, outside it.
+    expect(rail()).not.toBeNull();
+    expect(rail()?.contains(tab('Fold') ?? null)).toBe(false);
+    expect(rail()!.compareDocumentPosition(tab('Fold')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The tool in hand is marked; a press takes another.
+    expect(railButton('Valley fold')?.hasAttribute('data-active')).toBe(true);
+    act(() => railButton('Divide line')?.click());
+    expect(foldTools().store.getState().tool).toBe('divide-line');
+    expect(railButton('Divide line')?.hasAttribute('data-active')).toBe(true);
+
+    // The Steps view keeps the rail, so the tabs stay where they were.
+    press(tab('Steps'));
+    expect(gridCards().length).toBeGreaterThan(0);
+    expect(rail()).not.toBeNull();
+    // A tool is for the canvas: picking one there goes back to it, the tool in hand.
+    act(() => railButton('Mountain fold')?.click());
+    expect(foldTools().store.getState().tool).toBe('mountain');
+    expect(gridCards()).toEqual([]);
+    expect(stripCards().length).toBeGreaterThan(0);
+  });
+
+  it('has no rail on a phone, whose tools are a sheet on the canvas’s bar', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === PHONE_MEDIA_QUERY || query.includes('pointer: coarse'),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }))
+    );
+    await render();
+    expect(panel()?.querySelector('aside[aria-label="Fold tools"]')).toBeNull();
   });
 
   it('runs the sequence’s verbs from its header through the commands every surface dispatches', async () => {

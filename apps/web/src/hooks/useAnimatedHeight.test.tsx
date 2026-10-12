@@ -140,6 +140,24 @@ describe('useAnimatedHeight', () => {
     expect(frame().dataset.resizing).toBeUndefined();
   });
 
+  it('holds the content at its width while the frame moves, so a scrollbar the move takes away cannot reflow it', () => {
+    render();
+    // Laid out beside a scrollbar: the frame was capped and scrolled.
+    content()!.getBoundingClientRect = () => ({ width: 262, height: 613 }) as DOMRect;
+    contentResized();
+
+    natural = 150;
+    contentResized();
+
+    // Pinned in the observer's own callback, before the frame stops scrolling.
+    expect(frame().dataset.resizing).toBe('');
+    expect(content()?.style.width).toBe('262px');
+
+    transitionEnded();
+
+    expect(content()?.style.width).toBe('');
+  });
+
   it('jumps under reduced motion', () => {
     reducedMotion = true;
     render();

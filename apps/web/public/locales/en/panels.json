@@ -1498,7 +1498,7 @@
       "startsBranch": "Starts a new branch"
     },
     "canvas": {
-      "adds": "Dashed: creases this fold adds",
+      "adds": "Bold: creases this fold adds",
       "creasePattern": "Crease pattern",
       "creasePatternLabel": "The crease pattern so far, front up. Click its points and creases to locate a fold.",
       "folded": "Folded",
@@ -1511,7 +1511,7 @@
       "spreadLayersTitle": "Spread the folded layers apart, as a diagram draws them, on this step and the ones after it",
       "step": "Step {{number}}",
       "stepCreases": "Step creases",
-      "stepCreasesTitle": "Draw the creases the step on show made as its instruction, in the diagram pens",
+      "stepCreasesTitle": "Draw the creases the step on show made in bold, as its instruction",
       "toolbar": "Fold view"
     },
     "grid": {

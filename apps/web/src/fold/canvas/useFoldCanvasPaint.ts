@@ -9,39 +9,33 @@ import { PAPER_STYLE_POLICIES } from '../../lib/paper/paperStyleResolve';
 import type { FoldStateSummary } from '../engine/foldEngineWire';
 import { boundsOf, boundsToUser, transformLine, type Bounds } from './foldCanvasGeometry';
 import { refusedFaceInks } from './foldCanvasModel';
+import { creasePatternPaneLines, type FoldCreasePatternLines } from './foldCreasePatternLines';
 import { foldMovingTint, foldTargetsTint, joinFills } from './foldPaneOverlays';
-import {
-  creasePatternPaneScene,
-  foldedDisplayOffset,
-  foldedPaneScene,
-  withFoldLine,
-  type FoldPaneDisplay,
-} from './foldPaneScenes';
+import { foldedDisplayOffset, foldedPaneScene, withFoldLine, type FoldPaneDisplay } from './foldPaneScenes';
 import type { FoldCanvasInks } from './useFoldCanvasInks';
 import type { FoldStateView } from './useFoldStateView';
 import type { FoldToolPreview } from './useFoldToolPreview';
 
-/** What one pane paints, and what its camera frames. */
-export interface FoldPanePaint {
-  scene: PaperScene | null;
-  ink: FoldedSceneInk;
-  /** In user space: the sheet, and on the folded pane the folded form too. */
-  contentBounds: UserBounds | null;
-}
-
 export interface FoldCanvasPaint {
-  folded: FoldPanePaint & {
+  /** The folded form, as paper in the user's style. */
+  folded: {
+    scene: PaperScene | null;
+    ink: FoldedSceneInk;
+    /** In user space: the sheet and the folded form. */
+    contentBounds: UserBounds | null;
     offset: Point;
     /** The moving set, lit over the paper on the pane's overlay fill channel. */
     tint: FillGeometry | null;
   };
-  creasePattern: FoldPanePaint & {
+  /** The crease pattern, as Edit's document lines (`creasePatternPaneLines`). */
+  creasePattern: {
+    lines: FoldCreasePatternLines | null;
+    /** In user space: the sheet. */
+    contentBounds: UserBounds | null;
     /** The state the crease pattern is of: the previewed fold's, while one has landed. */
     summary: FoldStateSummary | null;
   };
 }
-
-const CREASE_INK: FoldedSceneInk = { policy: PAPER_STYLE_POLICIES.fold };
 
 /**
  * The spread the folded pane draws: the step's at rest, none once a tool has
@@ -72,11 +66,12 @@ function union(a: Bounds | null, b: Bounds | null): Bounds | null {
 /**
  * What each pane of the Fold canvas paints (plan D11): the folded form of the
  * state on screen, with a located fold's line — a crimp's two — and its moving
- * set lit over the paper, a tuck's listed targets lit too; and the crease
- * pattern — of the previewed fold's landed state while
- * there is one, the creases it adds drawn as its instruction. The painter is
- * the shared one (`paperSceneToFoldedGeometry`, which the pane calls), with
- * the `fold` policy.
+ * set lit over the paper, a tuck's listed targets lit too, through the shared
+ * paper painter (`paperSceneToFoldedGeometry`, which the pane calls) with the
+ * `fold` policy; and the crease pattern — of the previewed fold's landed
+ * state while there is one, the creases it adds its instruction — as the
+ * lines Edit's document would hold, which the canvas inks as Edit does
+ * (`useFoldCreasePatternStrokes`).
  *
  * The folded form's layers are spread by `spread`: the step's
  * (`foldStepSpread`) while the pane is at rest, none once a tool picks or
@@ -168,15 +163,10 @@ export function useFoldCanvasPaint(
   const landed = preview.landed;
   const cpSource = landed?.scene ?? scene;
   const cpSummary = landed?.summary ?? summary;
-  const cpScene = useMemo(
+  const cpLines = useMemo(
     () =>
       cpSource && cpSummary
-        ? creasePatternPaneScene(cpSource, {
-            display,
-            sheet: cpSummary.sheet,
-            step: cpSummary.step,
-            instruction: landed?.added ?? null,
-          })
+        ? creasePatternPaneLines(cpSource, { display, step: cpSummary.step, instruction: landed?.added ?? null })
         : null,
     [cpSource, cpSummary, display, landed]
   );
@@ -184,6 +174,6 @@ export function useFoldCanvasPaint(
 
   return {
     folded: { scene: foldedScene, ink: foldedInk, contentBounds: foldedBounds, offset, tint },
-    creasePattern: { scene: cpScene, ink: CREASE_INK, contentBounds: cpBounds, summary: cpSummary },
+    creasePattern: { lines: cpLines, contentBounds: cpBounds, summary: cpSummary },
   };
 }

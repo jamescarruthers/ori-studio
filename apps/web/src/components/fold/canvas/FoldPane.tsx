@@ -15,12 +15,15 @@ import {
   paperSceneToFoldedGeometry,
   type FoldedSceneInk,
 } from '../../../cp-workspace/adapters/cpFoldedToScene';
+import { concatStrokes } from '../../../cp-workspace/references/referencesViewGeometry';
 import type { UserBounds } from '../../../cp-workspace/renderer/camera';
-import type { FillGeometry, FoldedGeometry } from '../../../cp-workspace/renderer/types';
+import type { FillGeometry, FoldedGeometry, StrokeGeometry } from '../../../cp-workspace/renderer/types';
 import { useCpSurface, type CpSurfaceControls, type CpSurfaceInset } from '../../../cp-workspace/surface/useCpSurface';
 import type { PaperScene } from '../../../lib/paper/paperScene';
 import type { PaperStyle } from '../../../lib/paper/paperStyle';
 import { ptToDevicePx } from '../../../lib/paper/paperStyle';
+import { PAPER_STYLE_POLICIES } from '../../../lib/paper/paperStyleResolve';
+import type { FoldCreasePatternStrokes } from '../../../fold/canvas/useFoldCreasePatternStrokes';
 import type { WheelGesturePreference } from '../../../lib/wheelGesture';
 import { FOLD_UNITS_PER_CP_UNIT, foldUnitToUser } from '../../../fold/canvas/foldCanvasGeometry';
 import type { FoldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
@@ -31,22 +34,40 @@ import styles from './FoldCanvas.module.css';
 
 const NOT_POSED: FoldPosedSceneSource = { current: () => null, subscribe: () => () => {} };
 
+const EMPTY_STROKES: StrokeGeometry = {
+  a: new Float32Array(0),
+  b: new Float32Array(0),
+  color: new Float32Array(0),
+  widthMul: new Float32Array(0),
+  count: 0,
+};
+
 const EMPTY_FOLDED: FoldedGeometry = {
   fills: { position: new Float32Array(0), color: new Float32Array(0), count: 0 },
-  strokes: { a: new Float32Array(0), b: new Float32Array(0), color: new Float32Array(0), widthMul: new Float32Array(0), count: 0 },
+  strokes: EMPTY_STROKES,
 };
+
+const FOLD_INK: FoldedSceneInk = { policy: PAPER_STYLE_POLICIES.fold };
 
 /** The crease width the preview channel's strokes are measured from, CSS px: the edge pen's at the default style. */
 const OVERLAY_STROKE_CSS = 1.2;
 
 export interface FoldPaneProps {
   pane: FoldPaneId;
-  /** What the pane paints, through the shared painter; null before the state's scene is in. */
+  /** The paper the pane paints, through the shared painter; null before the state's scene is in, or for none. */
   scene: PaperScene | null;
   /** The user's paper style: every pen and colour the painter reads. */
   style: PaperStyle;
-  /** The surface the style is read through, and the per-face overrides (a refusal's faces). */
-  ink: FoldedSceneInk;
+  /** The surface the style is read through, and the per-face overrides (a refusal's faces). The `fold` policy by default. */
+  ink?: FoldedSceneInk;
+  /**
+   * A crease pattern drawn as Edit draws one (`useFoldCreasePatternStrokes`):
+   * its lines on the crease channel, its instruction on the preview channel
+   * under the tool's feedback, and every stroke measured from its crease
+   * width. Absent, the pane draws no creases of its own and measures the
+   * feedback from the edge pen.
+   */
+  creases?: FoldCreasePatternStrokes | null;
   /** A tint over the paper, in the pane's frame: the moving set of a located fold. */
   tint?: FillGeometry | null;
   /**
@@ -93,21 +114,24 @@ export interface FoldPaneProps {
 /**
  * One pane of the Fold canvas (plan D13): a WebGL canvas on `useCpSurface`
  * — the renderer's lifecycle, the camera, pan, pinch and wheel, a click told
- * from a drag, the hover probe — painting a paper scene through the shared
- * painter on the folded channel (D11), with the tool's feedback on the
- * overlay channels and its status chip in the corner.
+ * from a drag, the hover probe — with the tool's feedback on the overlay
+ * channels and its status chip in the corner.
  *
- * Both panes are this component: the folded form's and the crease
- * pattern's differ in what they are handed, never in how they draw. It
- * publishes into no store and registers no singleton; the canvas that mounts
- * it holds the camera verbs through the handle.
+ * Both panes are this component, and differ in what they are handed: the
+ * folded form is a paper scene, painted through the shared painter on the
+ * folded channel in the user's paper style (D11); the crease pattern is drawn
+ * as Edit's canvas draws one — its creases on the crease channel in Edit's
+ * inks, on the canvas's own ground (`creases`). It publishes into no store
+ * and registers no singleton; the canvas that mounts it holds the camera
+ * verbs through the handle.
  */
 export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function FoldPane(props, ref) {
   const {
     pane,
     scene,
     style,
-    ink,
+    ink = FOLD_INK,
+    creases = null,
     tint = null,
     offset,
     contentBounds,
@@ -158,7 +182,8 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
       sameHit: sameFoldHit,
       onPick,
       strokeWidths: ({ ratio, widthBoost }) => ({
-        strokeWidthPx: OVERLAY_STROKE_CSS * ratio * widthBoost,
+        // A crease pattern's crease width, as Edit's canvas draws it; the edge pen's otherwise.
+        strokeWidthPx: (creases?.widthCss ?? OVERLAY_STROKE_CSS) * ratio * widthBoost,
         // A stroke multiplier on the folded channel is pt: device px per pt
         // is the unit, as Edit's canvas draws its figures.
         foldedStrokeWidthPx: ptToDevicePx(1, ratio),
@@ -186,6 +211,15 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     return posedScene.subscribe(paint);
   }, [geometry, posedScene, style, policy, rendererGeneration, rendererRef, render]);
 
+  // A crease pattern, on Edit's crease channel.
+  const lines = creases?.creases ?? null;
+  useEffect(() => {
+    const renderer = rendererRef.current;
+    if (!renderer) return;
+    renderer.setStrokes(lines ?? EMPTY_STROKES);
+    render();
+  }, [lines, rendererGeneration, rendererRef, render]);
+
   // The moving set over the paper: the overlay fill channel draws above the
   // folded channel, in the pane's frame.
   useEffect(() => {
@@ -195,15 +229,17 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
     render();
   }, [tint, posing, rendererGeneration, rendererRef, render]);
 
-  // The tool's feedback, which follows the pointer.
+  // The tool's feedback, which follows the pointer, over a crease pattern's
+  // instruction: both are the preview channel's, the instruction first.
+  const instruction = creases?.instruction ?? null;
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
     const { points, strokes } = posing ? { points: null, strokes: null } : overlay(hovered);
     renderer.setOverlayPoints(points);
-    renderer.setPreview(strokes);
+    renderer.setPreview(concatStrokes(instruction, strokes));
     render();
-  }, [overlay, hovered, posing, inkKey, rendererGeneration, rendererRef, render]);
+  }, [overlay, hovered, posing, instruction, inkKey, rendererGeneration, rendererRef, render]);
 
   useEffect(() => {
     onHover?.(hovered);

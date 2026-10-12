@@ -36,7 +36,13 @@
  * notification the browser cannot deliver in the same frame — it reports
  * "ResizeObserver loop completed with undelivered notifications" as an error,
  * which the app's global handler turns into a toast. Setting the frame's height
- * never changes the content's size, so watching the content alone cannot loop.
+ * never changes the content's height. It can change the content's *width*: where
+ * scrollbars take room (WebKit with a mouse, Windows), a frame capped by its
+ * max-height scrolls, and pinning it lower or stopping it scrolling
+ * (`data-resizing`) takes the scrollbar away, widening the content under it. So
+ * while the frame moves, the content is held at the width it had when the move
+ * began, and let go when the frame is; watching the content alone then cannot
+ * loop.
  *
  * Nothing animates under `prefers-reduced-motion: reduce`, nor where there is no
  * `ResizeObserver` or no layout to measure (jsdom): there the frame just takes
@@ -113,6 +119,9 @@ export function useAnimatedHeight({ collapsed }: { collapsed: boolean }): Animat
   const settle = useCallback(() => {
     window.clearTimeout(settleTimer.current);
     resizing.current = false;
+    // Outside the observer's callback now: a width the scrollbar's return
+    // changes is a resize like any other, delivered and measured.
+    if (content.current) content.current.style.width = '';
     const element = frame.current;
     if (element) {
       element.style.height = '';
@@ -139,6 +148,11 @@ export function useAnimatedHeight({ collapsed }: { collapsed: boolean }): Animat
         if (resizing.current) settle();
         return false;
       }
+      // Held at the width it was laid out at, before the frame moves: see the
+      // note at the top on the scrollbar the move can take away.
+      const box = content.current;
+      const width = box?.getBoundingClientRect().width ?? 0;
+      if (box && width > 0) box.style.width = `${width}px`;
       element.style.transition = 'none';
       element.style.height = `${from}px`;
       void element.offsetHeight;
