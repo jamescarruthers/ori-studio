@@ -43,7 +43,7 @@ type Point = [f64; 2];
 impl State {
     /// A precrease of `extent` of its line (see the module docs): the whole
     /// line is [`State::precrease`]. A refusal that depends on the direction
-    /// comes with "fold the other way" when that marks.
+    /// comes with "fold the other way" when the other direction would mark.
     pub fn precrease_extent(&self, op: &PlainFold, extent: &Extent) -> Result<Folded, Refused> {
         if extent.is_whole() {
             return self.precrease(op);
