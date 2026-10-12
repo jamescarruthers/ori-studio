@@ -231,8 +231,9 @@ pub struct AlongCrease {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Motion {
     /// A sheet point whose image lies on the moving side. The document
-    /// stores it only when neither the line (an axiom that carries a point)
-    /// nor the seed implies the side.
+    /// stores it when neither the line (an axiom that carries a point) nor
+    /// the seed implies the side, and when the step moves the other side
+    /// than its axiom implies (Swap): it beats the axiom's side.
     #[serde(default)]
     pub moving: Option<Point>,
     /// The tools' alternative to `moving` for a model line: a side of it,
