@@ -107,6 +107,18 @@ export type FoldLayerScope =
 export type FoldSinkSentenceKind = 'open' | 'closed' | 'unsink';
 
 /**
+ * How a vertex fold named what it takes: a petal fold's hinge — a crease
+ * already there, or two points the fold creases — and a swivel's form: by
+ * its rays, or by its edge, with the line it lands on (a crease or edge, or
+ * the line through two points) and the ridge it rose along (square to the
+ * edge, or toward its end).
+ */
+export type FoldVertexSentenceForm =
+  | { hinge: 'crease' | 'points' }
+  | { swivel: 'rays' }
+  | { swivel: 'edge'; target: 'crease' | 'free'; ridge: 'foot' | 'end' };
+
+/**
  * How much of its line a precrease creased, when it was not all of it: a
  * pinch at a point of the line, or the stretch between two. Its points are
  * named as an axiom's inputs are, lettered after the line's own.
@@ -144,8 +156,12 @@ export type FoldSentenceStep =
    * the viewer sees it, along its line (which its Step pane row names).
    */
   | { op: 'tuck'; direction: FoldDirection; line: FoldSentenceLine }
-  /** A vertex fold (plan Phase 11): its creases are its own, so it names no line (`stepSentenceVertex`). */
-  | { op: 'vertex'; fold: FoldVertexOpKind; direction: FoldDirection }
+  /**
+   * A vertex fold (plan Phase 11): its creases are its own, so it names no
+   * line (`stepSentenceVertex`) — but a petal fold says how its hinge was
+   * named, and a swivel its form (`form`).
+   */
+  | { op: 'vertex'; fold: FoldVertexOpKind; direction: FoldDirection; form?: FoldVertexSentenceForm }
   /** A sink of the point a seed names, or the unsink of a sunk one (plan Phase 11). */
   | { op: 'sink'; kind: FoldSinkSentenceKind; line: FoldSentenceLine }
   /** An operation a newer build wrote: locked, never described (plan D6). */
@@ -321,7 +337,7 @@ export function foldStepSentence(t: TFunction, step: FoldSentenceStep): string {
         ? t('panels:fold.sentence.tuckValley', 'Valley fold and tuck the flap in, under the chosen layer.')
         : t('panels:fold.sentence.tuckMountain', 'Mountain fold and tuck the flap in at the back, over the chosen layer.');
     case 'vertex':
-      return vertexSentence(t, step.fold, step.direction);
+      return vertexSentence(t, step.fold, step.direction, step.form);
     case 'sink':
       return sinkSentence(t, step.kind);
     case 'unknown':

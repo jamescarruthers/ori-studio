@@ -15,6 +15,7 @@ import {
   type FoldCreaseDiff,
 } from '../../fold/stepWords';
 import type { FoldStepSpreadControls } from '../../fold/sequence/foldStepSpreadControls';
+import { vertexRows } from '../../fold/stepSentenceVertex';
 import { turnCardWords } from '../../lib/steps/turnWords';
 import { LayerSpreadRows } from '../paper/LayerSpreadRows';
 import { Badge } from '../ui/Badge';
@@ -196,6 +197,13 @@ export function FoldStepPane({
             {secondLine}
           </FieldRow>
         )}
+        {/* A vertex fold's own: a petal fold's hinge, a swivel's target and ridge. */}
+        {words.op === 'vertex' &&
+          vertexRows(t, words.form).map((row) => (
+            <FieldRow key={row.label} label={row.label} kind="static" {...(row.help ? { help: row.help } : {})}>
+              {row.value}
+            </FieldRow>
+          ))}
         {step.layers !== null && (
           <FieldRow
             label={t('panels:fold.step.layers', 'Layers')}
