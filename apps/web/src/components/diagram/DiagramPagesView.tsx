@@ -65,9 +65,11 @@ function pageImageUrl(
  * part under it; the arrows nudge what is selected, and a drag moves it
  * (Decision 7, `usePagePlacement`, drawn by `DiagramPagesPlacement`). With no
  * part selected the arrows move the selection. A press elsewhere on a page is
- * a question about the page, which brings the Page tab forward; any press on
- * a page makes it the panes' "this page" (`pageInView.ts`); a press that
- * ends a pan is none of these; a double press opens nothing. An enlarge arrow
+ * a question about the page, which brings the Page tab forward; it lets the
+ * selection go, step and part, as a press on the space round the pages does,
+ * so the next press on a step selects its whole frame again. Any press on a
+ * page makes it the panes' "this page" (`pageInView.ts`); a press that ends a
+ * pan is none of these; a double press opens nothing. An enlarge arrow
  * (Revision 2) is a target for the pointer only, over where the page prints
  * it: a press selects the enlarged step it leads to, which the keyboard
  * reaches as a step. The camera and the rest of the behaviour are
@@ -91,7 +93,8 @@ export function DiagramPagesView({
   pathColor: string;
   /** What counts as a new set of pages to frame: a new diagram, or new paper. */
   fitKey: string;
-  onSelect: (stepId: string) => void;
+  /** Select a step, a turn or an arrow's step; null lets the selection go. */
+  onSelect: (stepId: string | null) => void;
   onPageClick: () => void;
 }) {
   const { t } = useTranslation();
@@ -186,6 +189,12 @@ export function DiagramPagesView({
         <TransformComponent
           wrapperStyle={{ width: '100%', height: '100%' }}
           contentStyle={{ width: worldRect.width, height: worldRect.height }}
+          // A press on the space round the pages, past every step and page, lets the selection go.
+          wrapperProps={{
+            onClick: () => {
+              if (!pressWasPan()) onSelect(null);
+            },
+          }}
         >
           <div
             role="listbox"
@@ -209,9 +218,12 @@ export function DiagramPagesView({
                     data-page={index}
                     className={styles.page}
                     style={{ left: PAGES_PAD, top, width: pageW, height: pageH }}
-                    onClick={() => {
+                    onClick={(event) => {
+                      // The page's, not the space round it.
+                      event.stopPropagation();
                       if (pressWasPan()) return;
-                      pressPage(index, selectedStepId);
+                      onSelect(null);
+                      pressPage(index, null);
                       onPageClick();
                     }}
                   >

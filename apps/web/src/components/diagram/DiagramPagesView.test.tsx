@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
-import { act, useEffect } from 'react';
+import { act, useEffect, useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -23,6 +23,7 @@ import { createFontSubsetter, type FontSubsetter } from '../../diagram/fonts/fon
 import { bandPath } from '../../diagram/pages/composeDiagramPage';
 import { preparedPages, type PreparedDiagramPages } from '../../diagram/pages/diagramPages';
 import { usePageInView, type PagesInView } from '../../diagram/pages/pageInView';
+import { PAGES_PX_PER_MM as PX_PER_MM } from '../../diagram/pages/usePagesView';
 import { clearPathColorPick, publishPathColorPick } from '../../diagram/pages/pathColorPick';
 import { TooltipProvider } from '../ui/Tooltip';
 import { focusLeavesEnterToSteps, focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
@@ -84,7 +85,7 @@ function render(
   handlers: Partial<Record<'onSelect' | 'onPageClick', () => void>> = {},
   pathColor = pages.layout.bandInk,
   document = diagram(),
-  selectedStepId = 'step-a'
+  selectedStepId: string | null = 'step-a'
 ) {
   const props = { onSelect: vi.fn(), onPageClick: vi.fn(), ...handlers };
   act(() =>
@@ -248,16 +249,23 @@ describe('DiagramPagesView', () => {
     expect(props.onPageClick).not.toHaveBeenCalled();
   });
 
-  it('selects a step on a press, stays on the page on a double press, and asks about the page elsewhere', () => {
+  it('selects a step on a press, stays on the page on a double press, and elsewhere asks about the page and lets the selection go', () => {
     const props = render(preparedPages(diagram(), FONTS, subsetter));
     act(() => cells()[1]!.click());
-    expect(props.onSelect).toHaveBeenCalledWith('step-empty');
+    expect(props.onSelect).toHaveBeenCalledExactlyOnceWith('step-empty');
     expect(props.onPageClick).not.toHaveBeenCalled();
     act(() => {
       cells()[2]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     });
     expect(useWorkspaceStore.getState().diagramDetail).toBeNull();
     act(() => host.querySelector<HTMLElement>('[data-page="0"]')!.click());
+    expect(props.onPageClick).toHaveBeenCalledOnce();
+    expect(props.onSelect).toHaveBeenLastCalledWith(null);
+    expect(props.onSelect).toHaveBeenCalledTimes(2);
+    // The space round the pages lets it go too, and asks nothing about a page.
+    act(() => host.querySelector<HTMLElement>('[role="listbox"]')!.click());
+    expect(props.onSelect).toHaveBeenCalledTimes(3);
+    expect(props.onSelect).toHaveBeenLastCalledWith(null);
     expect(props.onPageClick).toHaveBeenCalledOnce();
   });
 
@@ -276,8 +284,10 @@ describe('DiagramPagesView', () => {
     const pages = preparedPages(diagram(), FONTS, subsetter);
     render(pages);
     expect(seen).toMatchObject({ middle: 0, first: 0, last: 0, pressed: null });
-    // Its paper, the selection left as it was.
+    // Its paper, which lets the selection go: it stands once nothing is selected.
     act(() => host.querySelector<HTMLElement>('[data-page="0"]')!.click());
+    expect(seen).toMatchObject({ pressed: null });
+    render(pages, {}, pages.layout.bandInk, diagram(), null);
     expect(seen).toMatchObject({ pressed: 0 });
     // A step on it: it stands once the step it selects is the selection.
     act(() => cells()[1]!.click());
@@ -348,6 +358,77 @@ it('focuses the step a press lands on, so the arrows nudge its frame and Enter o
   expect(press('Enter')).toBe(true);
   expect(useWorkspaceStore.getState()).toMatchObject({ diagramDetail: 'pose', diagramSelectedStepId: 'step-a' });
   expect(useWorkspaceStore.getState().diagram?.steps[0]).toMatchObject({ place: { frame: [0.5, 0] } });
+});
+
+it('lets a press on the paper go of a resized picture, so the next drag on its step moves the whole frame', () => {
+  const doc = diagram();
+  useWorkspaceStore.getState().installDiagram({ document: doc, readOnly: false, raw: {} });
+  useWorkspaceStore.getState().setDiagramView('pages');
+  useWorkspaceStore.getState().selectDiagramStep('step-a');
+  useWorkspaceStore.getState().selectDiagramPagesPart('picture');
+  const capture = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'setPointerCapture');
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  onTestFinished(() => {
+    if (capture) Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', capture);
+    else delete (HTMLElement.prototype as Partial<HTMLElement>).setPointerCapture;
+  });
+  /** The view bound to the store, its pages laid out again as each edit lands. */
+  function Bound() {
+    const document = useWorkspaceStore((state) => state.diagram!);
+    const selected = useWorkspaceStore((state) => state.diagramSelectedStepId);
+    const pages = useMemo(() => preparedPages(document, FONTS, subsetter), [document]);
+    return (
+      <DiagramPagesView
+        pages={pages}
+        failed={false}
+        steps={stepsIn(document)}
+        selectedStepId={selected}
+        pathColor={pages.layout.bandInk}
+        fitKey="test"
+        onSelect={useWorkspaceStore.getState().selectDiagramStep}
+        onPageClick={() => {}}
+      />
+    );
+  }
+  act(() =>
+    root.render(
+      <TooltipProvider>
+        <Bound />
+      </TooltipProvider>
+    )
+  );
+  const page = host.querySelector<HTMLElement>('[data-page="0"]')!;
+  // A pixel a millimetre: the page as wide on screen as its paper.
+  const paper = preparedPages(doc, FONTS, subsetter).layout.paper;
+  page.getBoundingClientRect = () => ({ left: 0, top: 0, width: paper.widthMm, height: paper.heightMm }) as DOMRect;
+  const pointer = (element: Element, type: string, x: number, y: number) =>
+    act(() => {
+      element.dispatchEvent(
+        new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerId: 1, pointerType: 'mouse', clientX: x, clientY: y, altKey: true })
+      );
+    });
+  const drag = (element: Element, x: number, y: number, dx: number) => {
+    pointer(element, 'pointerdown', x, y);
+    pointer(element, 'pointermove', x + dx, y);
+    pointer(element, 'pointerup', x + dx, y);
+  };
+  const place = () => useWorkspaceStore.getState().diagram!.steps[0]!;
+  // The picture resized through its grip.
+  const grip = host.querySelector<HTMLElement>('[data-place-scale="right"]')!;
+  drag(grip, parseFloat(grip.style.left) / PX_PER_MM, parseFloat(grip.style.top) / PX_PER_MM, 10);
+  expect(place()).toMatchObject({ place: { scale: expect.anything() } });
+  expect(useWorkspaceStore.getState()).toMatchObject({ diagramSelectedStepId: 'step-a', diagramPagesPart: 'picture' });
+  // The paper round it: nothing selected, so no part lies over the step.
+  act(() => page.click());
+  expect(useWorkspaceStore.getState()).toMatchObject({ diagramSelectedStepId: null, diagramPagesPart: null });
+  expect(host.querySelector('[data-place-part]')).toBeNull();
+  // A drag from the middle of its picture, on what lies there: the whole frame moves.
+  const picture = host.querySelector<HTMLElement>('[data-place-part="picture"]') ?? cells()[0]!;
+  const { pictureMm } = preparedPages(useWorkspaceStore.getState().diagram!, FONTS, subsetter).layout.pages[0]!.cells[0]!;
+  drag(picture, pictureMm.x + pictureMm.size / 2, pictureMm.y + pictureMm.size / 2, 8);
+  expect(useWorkspaceStore.getState()).toMatchObject({ diagramSelectedStepId: 'step-a', diagramPagesPart: 'frame' });
+  expect(place()).toMatchObject({ place: { frame: expect.anything(), scale: expect.anything() } });
+  expect(place()).not.toMatchObject({ place: { picture: expect.anything() } });
 });
 
 it('lets the selected frame own its picture hit area until a part is chosen', () => {
