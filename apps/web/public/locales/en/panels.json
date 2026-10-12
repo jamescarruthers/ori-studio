@@ -1098,7 +1098,6 @@
       "nesting": "Nesting",
       "nestingHelp": "How far the steps in a band rise and drop in turn, so that a tall step and a short one beside it fit together.",
       "noLongerFits": "No longer fits",
-      "notPackedHint": "The pages are still being packed",
       "overflowStep": "Step {{steps}} on page {{page}} no longer fits its place.",
       "overflowSteps": "Steps {{steps}} on page {{page}} no longer fit their places.",
       "pageUnfit": "Page {{page}} can’t hold its steps, even at the smallest size. Give it fewer steps.",

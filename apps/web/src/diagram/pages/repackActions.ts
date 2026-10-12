@@ -7,7 +7,7 @@ import {
   type DiagramPageCommand,
 } from '../actions/diagramPageActions';
 import { stepsOf, type DiagramDocument } from '../document/diagramDocument';
-import { paginate, type PlannedPage } from './pagePlan';
+import { paginate } from './pagePlan';
 
 /**
  * Re-pack Page and Re-pack All Pages bound to the store
@@ -29,44 +29,23 @@ export function repackAllPages(via: DiagramRepackVia): boolean {
   return true;
 }
 
-/**
- * What the page verbs are gated on for the page that starts with step
- * `firstStepId` (null for a page with no steps): whether it — or any page —
- * holds an arrangement a re-pack would let go, a newer build's included, as
- * `repackPages` drops them.
- */
-export function pageActionState(
-  document: DiagramDocument,
-  readOnly: boolean,
-  firstStepId: string | null
-): DiagramPageActionState {
-  const own = document.pageArrangements ?? {};
-  const newer = document.newer?.pageArrangements ?? {};
-  const stored = (id: string) => Object.hasOwn(own, id) || Object.hasOwn(newer, id);
-  return {
-    flow: document.page.layout === 'flow',
-    readOnly,
-    pageStored: firstStepId !== null && stored(firstStepId),
-    anyStored: Object.keys(own).length + Object.keys(newer).length > 0,
-  };
+/** What the page verbs are gated on: the flow, and a diagram that may change. */
+export function pageActionState(document: DiagramDocument, readOnly: boolean): DiagramPageActionState {
+  return { flow: document.page.layout === 'flow', readOnly };
 }
 
 /**
- * The page verbs for page `pageIndex` of `document`, `page` its steps' places
- * among the steps as `paginate` cuts it, bound and counted as pressed `via`.
- * None on a grid.
+ * The page verbs for page `pageIndex` of `document`, bound and counted as
+ * pressed `via`. None on a grid.
  */
 export function bindDiagramPageActions(
   document: DiagramDocument,
   readOnly: boolean,
   pageIndex: number,
-  page: Pick<PlannedPage, 'steps'>,
   t: TFunction,
   via: DiagramRepackVia
 ): DiagramPageCommand[] {
-  const first = page.steps[0];
-  const firstId = first === undefined ? null : (stepsOf(document)[first]?.id ?? null);
-  return buildDiagramPageActions(pageActionState(document, readOnly, firstId), {
+  return buildDiagramPageActions(pageActionState(document, readOnly), {
     t,
     repackPage: () => void repackPage(pageIndex, via),
     repackAll: () => void repackAllPages(via),
@@ -81,5 +60,5 @@ export function bindDiagramPageActions(
 export function diagramPageActions(pageIndex: number, t: TFunction, via: DiagramRepackVia): DiagramPageCommand[] {
   const { diagram, diagramReadOnly } = useWorkspaceStore.getState();
   const page = diagram ? paginate(stepsOf(diagram), diagram.page)[pageIndex] : undefined;
-  return diagram && page ? bindDiagramPageActions(diagram, diagramReadOnly, pageIndex, page, t, via) : [];
+  return diagram && page ? bindDiagramPageActions(diagram, diagramReadOnly, pageIndex, t, via) : [];
 }

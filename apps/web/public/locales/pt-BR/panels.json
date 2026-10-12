@@ -1135,7 +1135,6 @@
       "nesting": "Encaixe",
       "nestingHelp": "Quanto os passos de uma faixa sobem e descem alternadamente, para que um passo alto e um baixo ao lado se encaixem.",
       "noLongerFits": "Não cabe mais",
-      "notPackedHint": "As páginas ainda estão sendo arranjadas",
       "overflowStep": "O passo {{steps}} da página {{page}} não cabe mais no seu lugar.",
       "overflowSteps": "Os passos {{steps}} da página {{page}} não cabem mais nos seus lugares.",
       "pageUnfit": "A página {{page}} não comporta seus passos, nem no menor tamanho. Dê a ela menos passos.",

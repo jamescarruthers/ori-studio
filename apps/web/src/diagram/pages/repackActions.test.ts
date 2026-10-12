@@ -71,14 +71,11 @@ describe('repackPage and repackAllPages', () => {
 });
 
 describe('pageActionState', () => {
-  it('says whether the page, and any page, holds an arrangement — a newer build’s too', () => {
+  it('says whether the diagram is in the flow and may change, never whether a page holds an arrangement', () => {
     install();
     const document = state().diagram!;
-    expect(pageActionState(document, false, 's4')).toEqual({ flow: true, readOnly: false, pageStored: true, anyStored: true });
-    expect(pageActionState(document, false, 's1').pageStored).toBe(false);
-    expect(pageActionState(document, false, null).pageStored).toBe(false);
-    const newer = { ...document, pageArrangements: undefined, newer: { pageArrangements: { s0: { signature: 'pack-9:x' } } } };
-    expect(pageActionState(newer, false, 's0')).toMatchObject({ pageStored: true, anyStored: true });
+    expect(pageActionState(document, false)).toEqual({ flow: true, readOnly: false });
+    expect(pageActionState({ ...document, pageArrangements: undefined }, true)).toEqual({ flow: true, readOnly: true });
   });
 });
 

@@ -22,7 +22,7 @@ export function useDiagramPageActions(via: DiagramRepackVia): {
   const current = useCurrentDiagramPage();
   return useMemo(() => {
     const actions =
-      document && current ? bindDiagramPageActions(document, readOnly, current.index, current.page, t, via) : [];
+      document && current ? bindDiagramPageActions(document, readOnly, current.index, t, via) : [];
     return {
       repackPage: actions.find((action) => action.id === 'repack-page') ?? null,
       repackAll: actions.find((action) => action.id === 'repack-all') ?? null,

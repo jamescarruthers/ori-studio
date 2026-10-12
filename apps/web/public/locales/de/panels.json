@@ -1098,7 +1098,6 @@
       "nesting": "Verschachtelung",
       "nestingHelp": "Wie weit die Schritte eines Bands abwechselnd steigen und sinken, damit ein hoher Schritt und ein niedriger daneben ineinandergreifen.",
       "noLongerFits": "Passt nicht mehr",
-      "notPackedHint": "Die Seiten werden noch gepackt",
       "overflowStep": "Schritt {{steps}} auf Seite {{page}} passt nicht mehr auf seinen Platz.",
       "overflowSteps": "Die Schritte {{steps}} auf Seite {{page}} passen nicht mehr auf ihre Plätze.",
       "pageUnfit": "Seite {{page}} fasst ihre Schritte nicht, nicht einmal in der kleinsten Größe. Geben Sie ihr weniger Schritte.",

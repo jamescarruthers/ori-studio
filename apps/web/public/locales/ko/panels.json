@@ -1061,7 +1061,6 @@
       "nesting": "맞물림",
       "nestingHelp": "띠 안의 단계가 번갈아 올라가고 내려가는 정도입니다. 키가 큰 단계와 옆의 낮은 단계가 서로 맞물리게 합니다.",
       "noLongerFits": "자리에 안 맞음",
-      "notPackedHint": "페이지를 아직 배치하는 중입니다",
       "overflowStep": "{{page}}페이지의 {{steps}}단계가 더 이상 제자리에 맞지 않습니다.",
       "overflowSteps": "{{page}}페이지의 {{steps}}단계가 더 이상 제자리에 맞지 않습니다.",
       "pageUnfit": "{{page}}페이지는 가장 작은 크기에서도 단계를 다 담을 수 없습니다. 단계 수를 줄이세요.",

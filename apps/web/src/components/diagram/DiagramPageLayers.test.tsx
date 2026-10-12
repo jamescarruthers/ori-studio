@@ -208,8 +208,11 @@ describe('DiagramLayersPanel › in the Pages view', () => {
     ]);
     const repack = () =>
       [...host!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Re-pack Page');
-    // Nothing packed and taken in yet: nothing to let go.
-    expect(repack()?.disabled).toBe(true);
+    // Nothing packed and taken in yet: offered all the same, and pressed it lets nothing go.
+    expect(repack()?.disabled).toBe(false);
+    act(() => repack()!.click());
+    expect(state().diagramHistory.past).toHaveLength(0);
+    expect(analytics.trackDiagramPagesRepacked).not.toHaveBeenCalled();
     const document = state().diagram!;
     const slots = cellSlots(document);
     const packed: Record<string, DiagramPageArrangement> = Object.fromEntries(
@@ -228,10 +231,16 @@ describe('DiagramLayersPanel › in the Pages view', () => {
       state().adoptDiagramPageArrangements(packed, document);
     });
     const past = state().diagramHistory.past.length;
-    act(() => repack()!.click());
+    const button = repack()!;
+    act(() => button.focus());
+    act(() => button.click());
     expect(Object.keys(state().diagram?.pageArrangements ?? {})).toEqual(['s4']);
     expect(state().diagramHistory.past).toHaveLength(past + 1);
     expect(analytics.trackDiagramPagesRepacked).toHaveBeenCalledExactlyOnceWith('page', 'layers_pane');
+    // Pressed from the keyboard, it keeps focus: letting its own arrangement go never turns it off.
+    expect(repack()).toBe(button);
+    expect(button.disabled).toBe(false);
+    expect(window.document.activeElement).toBe(button);
   });
 
   it('offers no Re-pack Page on a grid', () => {

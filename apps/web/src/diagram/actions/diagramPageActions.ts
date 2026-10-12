@@ -23,16 +23,18 @@ export interface DiagramPageCommand {
   run: () => void;
 }
 
-/** What the page verbs are gated on. */
+/**
+ * What the page verbs are gated on. Not on whether a page holds an
+ * arrangement to let go: a re-pack lets its own go, so a button gated on that
+ * turned itself off as it was pressed, until the layout's packing was taken
+ * in, and the browser moved keyboard focus off it. Pressed where nothing is
+ * stored, a re-pack does nothing.
+ */
 export interface DiagramPageActionState {
   /** The diagram is laid out in the flow, whose pages are packed. */
   flow: boolean;
   /** The whole diagram came from a newer build and nothing may change it. */
   readOnly: boolean;
-  /** The page holds a packed arrangement, which Re-pack Page lets go. */
-  pageStored: boolean;
-  /** Some page holds one, which Re-pack All Pages lets go. */
-  anyStored: boolean;
 }
 
 export interface DiagramPageActionDeps {
@@ -53,21 +55,16 @@ export function buildDiagramPageActions(
     'panels:diagram.actions.readOnlyHint',
     'This diagram was made with a newer Ori Studio and opens read-only'
   );
-  // Only for a moment, as a layout's packing is taken in: a page is packed as it is laid out.
-  const unpackedHint = t('panels:diagram.packing.notPackedHint', 'The pages are still being packed');
-  const command = (id: DiagramPageActionId, label: string, stored: boolean, run: () => void): DiagramPageCommand => {
-    const disabled = state.readOnly || !stored;
-    return {
-      kind: 'command',
-      id,
-      label,
-      disabled,
-      ...(disabled ? { hint: state.readOnly ? readOnlyHint : unpackedHint } : {}),
-      run,
-    };
-  };
+  const command = (id: DiagramPageActionId, label: string, run: () => void): DiagramPageCommand => ({
+    kind: 'command',
+    id,
+    label,
+    disabled: state.readOnly,
+    ...(state.readOnly ? { hint: readOnlyHint } : {}),
+    run,
+  });
   return [
-    command('repack-page', t('panels:diagram.packing.repackPage', 'Re-pack Page'), state.pageStored, deps.repackPage),
-    command('repack-all', t('panels:diagram.packing.repackAll', 'Re-pack All Pages'), state.anyStored, deps.repackAll),
+    command('repack-page', t('panels:diagram.packing.repackPage', 'Re-pack Page'), deps.repackPage),
+    command('repack-all', t('panels:diagram.packing.repackAll', 'Re-pack All Pages'), deps.repackAll),
   ];
 }

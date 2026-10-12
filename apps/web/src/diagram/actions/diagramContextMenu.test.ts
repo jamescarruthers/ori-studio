@@ -148,15 +148,17 @@ describe('the step card menu', () => {
 describe('diagramPageMenuItems', () => {
   it('lays a flow page’s verbs out as rows, each running its own, with why it is held back', () => {
     const deps = { t, repackPage: vi.fn(), repackAll: vi.fn() };
-    const items = diagramPageMenuItems(
-      buildDiagramPageActions({ flow: true, readOnly: false, pageStored: false, anyStored: true }, deps)
-    );
+    const items = diagramPageMenuItems(buildDiagramPageActions({ flow: true, readOnly: false }, deps));
     expect(items).toMatchObject([
-      { kind: 'action', id: 'repack-page', label: 'Re-pack Page', disabled: true, hint: 'The pages are still being packed' },
+      { kind: 'action', id: 'repack-page', label: 'Re-pack Page', disabled: false },
       { kind: 'action', id: 'repack-all', label: 'Re-pack All Pages', disabled: false },
     ]);
     const all = items[1]!;
     if (all.kind === 'action') all.onSelect();
     expect(deps.repackAll).toHaveBeenCalledOnce();
+    expect(diagramPageMenuItems(buildDiagramPageActions({ flow: true, readOnly: true }, deps))).toMatchObject([
+      { kind: 'action', id: 'repack-page', disabled: true, hint: expect.stringMatching(/read-only/) },
+      { kind: 'action', id: 'repack-all', disabled: true, hint: expect.stringMatching(/read-only/) },
+    ]);
   });
 });

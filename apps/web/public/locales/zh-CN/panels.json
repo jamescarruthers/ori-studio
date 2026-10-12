@@ -1061,7 +1061,6 @@
       "nesting": "嵌套",
       "nestingHelp": "带中步骤交替升降的幅度，使高的步骤与旁边矮的步骤彼此嵌合。",
       "noLongerFits": "放不下了",
-      "notPackedHint": "页面仍在排布中",
       "overflowStep": "第 {{page}} 页的第 {{steps}} 步已放不进它的位置。",
       "overflowSteps": "第 {{page}} 页的第 {{steps}} 步已放不进各自的位置。",
       "pageUnfit": "第 {{page}} 页即使缩到最小也放不下它的步骤。请减少该页的步骤数。",

@@ -1135,7 +1135,6 @@
       "nesting": "Imbrication",
       "nestingHelp": "De combien les étapes d’une bande montent et descendent tour à tour, pour qu’une étape haute et une étape basse à côté s’emboîtent.",
       "noLongerFits": "Ne tient plus",
-      "notPackedHint": "Les pages sont encore en cours d’agencement",
       "overflowStep": "L’étape {{steps}} de la page {{page}} ne tient plus à sa place.",
       "overflowSteps": "Les étapes {{steps}} de la page {{page}} ne tiennent plus à leur place.",
       "pageUnfit": "La page {{page}} ne peut pas contenir ses étapes, même à la plus petite taille. Donnez-lui moins d’étapes.",
