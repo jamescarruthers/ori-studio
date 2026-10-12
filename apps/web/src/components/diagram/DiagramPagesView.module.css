@@ -171,4 +171,7 @@
   white-space: nowrap;
 }
 
-.selectedCell { touch-action: none; }
+/* The selected step: a finger on it drags it (`usePagePlacement`), and the camera leaves it alone. */
+.selectedCell {
+  touch-action: none;
+}

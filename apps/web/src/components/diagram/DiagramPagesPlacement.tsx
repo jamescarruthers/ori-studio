@@ -13,6 +13,12 @@ import { composedPageUrl } from '../../diagram/pages/useDiagramPages';
 import { PAGES_PX_PER_MM } from '../../diagram/pages/usePagesView';
 import styles from './DiagramPagesPlacement.module.css';
 
+/**
+ * The elements a press on which is a placement's, never the camera's pan.
+ * react-zoom-pan-pinch's `panning.excluded` takes class names, not elements
+ * or attributes, so the Pages view hands it this module's own (hashed) names:
+ * the only module classes exported for another component's use.
+ */
 export const PAGE_PLACEMENT_PAN_EXCLUDED = [styles.drag, styles.handle];
 
 type Placement = ReturnType<typeof usePagePlacement>;

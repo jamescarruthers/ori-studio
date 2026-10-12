@@ -1,7 +1,7 @@
 .controls {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   padding-bottom: var(--space-2);
 }
 .inset {
@@ -11,7 +11,7 @@
   display: grid;
   grid-template-columns: 1fr auto auto auto;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: 12px;
   padding-inline: var(--space-3);
 }

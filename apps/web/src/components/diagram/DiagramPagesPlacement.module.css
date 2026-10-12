@@ -1,3 +1,8 @@
+/*
+ * Hand placement over a page in the Pages view (DiagramPagesPlacement.tsx):
+ * the selected part's targets, grips, home ghost and readout, and the clash
+ * outlines. Screen only: none of it is in the composed page.
+ */
 .target {
   position: absolute;
   z-index: 4;
@@ -24,7 +29,7 @@
 }
 .clash {
   z-index: 3;
-  border: 1px solid var(--status-warning, #c78c21);
+  border: 1px solid var(--status-warning, #d7a85c);
 }
 .handle {
   position: absolute;
@@ -33,7 +38,8 @@
   height: 10px;
   transform: translate(-50%, -50%);
   border: 1px solid var(--accent-primary);
-  background: white;
+  /* The page's own white, which no theme changes (DiagramPagesView's page). */
+  background: #ffffff;
   cursor: nwse-resize;
   touch-action: none;
 }
@@ -89,7 +95,7 @@
   position: absolute;
   top: -15px;
   right: 0;
-  color: var(--status-warning, #c78c21);
+  color: var(--status-warning, #d7a85c);
   font-size: 10px;
   white-space: nowrap;
 }
