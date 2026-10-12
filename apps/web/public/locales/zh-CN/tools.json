@@ -780,7 +780,6 @@
     "vertex": {
       "direction": "方向",
       "emergent": "第四折痕",
-      "emergentDoesNotFit": "这条第四折痕在此处不适用：请换一条。",
       "fix": {
         "emergent": "使用适用的第四折痕",
         "emergentNumber": "使用第四折痕 {{number}}",
@@ -790,6 +789,8 @@
         "resetTarget": "把脊放回铰链上",
         "usePrecrease": "使用该预折痕"
       },
+      "fourthNone": "无",
+      "fourthsFit_other": "此纸不动时，有 {{count}} 条第四折痕适用。",
       "help": {
         "petal": "沿预折痕 H 抬起翼片的下尖，同时沿两条风筝形预折痕把两侧向内折。",
         "rabbitEar": "沿角平分线把三角形的各角向内折，使一个尖立起来。",
@@ -806,7 +807,8 @@
       "layersTop_other": "顶部 {{count}} / {{total}}",
       "mountain": "山",
       "mountainTitle": "山：纸朝远离你的方向转",
-      "noEmergentFits": "此处没有适合这些层的第四折痕。",
+      "noFourth": "此纸不动时，没有适用的第四折痕：单击另一处纸，让它保持不动。",
+      "noFourthTouch": "此纸不动时，没有适用的第四折痕：轻点另一处纸，让它保持不动。",
       "note": {
         "freePoint": "按住 {{modifier}} 可以把点放在任意位置。",
         "rabbitEar": "折痕交于三角形的内心：每个角一条，按你选择的方向折；另有一条第四折痕，兔耳沿它立起，朝相反方向折。",
@@ -893,7 +895,8 @@
         "earFirstCorner": "单击三角形的第一个角。",
         "earSecondCorner": "单击它的第二个角。",
         "earThirdCorner": "单击它的第三个角。",
-        "fanChoose": "选择第四折痕和层。",
+        "fanChooseStayer": "选择第四折痕和层。单击另一处纸可更改保持不动的纸。",
+        "fanChooseTouch": "选择第四折痕和层。轻点另一处纸可更改保持不动的纸。",
         "finish": "选择选项，然后按 Enter。",
         "finishTouch": "选择选项，然后轻点“{{action}}”。",
         "fixOrPickAgain": "单击下面的修正，或按 Esc 后重新选择。",

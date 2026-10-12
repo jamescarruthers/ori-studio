@@ -9,16 +9,24 @@ import { createFoldEngineCalls, type FoldEngineCalls } from '../../engine/foldEn
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../../engine/foldEngineCompoundCalls';
 import type { FoldVertexAnalysed } from '../../engine/foldEngineSquashWire';
 import type { FoldEngineOutcome, FoldEngineRefused } from '../../engine/foldEngineWire';
+import i18n from '../../../i18n';
+import { foldVertexWindowView } from '../../canvas/foldCanvasModel';
+import type { FoldToolPreview } from '../../canvas/useFoldToolPreview';
 import { freeLineThrough, movingPoint } from '../foldStepBuilder';
+import { FOLD_TOOL_INITIAL, type FoldToolState } from '../foldToolState';
+import type { FoldToolHost, FoldToolWindowVerbs } from '../foldToolWindow';
 import {
+  landingFourths,
   layerSheetPointAt,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
+  withEmergent,
   type FoldVertexBuilt,
   type FoldVertexIntent,
   type FoldVertexTaken,
 } from './vertexStep';
+import { vertexControls } from './vertexToolWindow';
 
 /**
  * Each vertex fold over the real bridge, in-process, as its tool folds it:
@@ -101,11 +109,14 @@ function described(answer: FoldVertexAnalysed | FoldEngineRefused): FoldVertexAn
 }
 
 interface Folded {
+  base: FoldVertexOp;
   first: FoldVertexAnalysed;
   answer: FoldVertexAnalysed;
   built: FoldVertexBuilt;
   /** Whether the choices made it another fold, asked again. */
   again: boolean;
+  /** A fan's fourth ray taken, by index into the candidates. */
+  emergent: number | null;
 }
 
 /** A vertex fold as its tool builds it (see the module docs). */
@@ -114,8 +125,9 @@ function vertexFold(engined: Engine, state: number, wanted: FoldVertexIntent, ta
   if (!base || 'status' in base) throw new Error(`no op: ${JSON.stringify(base)}`);
   const first = described(ask(engined, state, base));
   const chosen = vertexChosenOp(base, first, taken);
+  if (!chosen) throw new Error('no fourth crease lands');
   const answer = chosen.again ? described(ask(engined, state, chosen.op)) : first;
-  return { first, answer, built: vertexStepFrom(chosen.op, answer, taken), again: chosen.again };
+  return { base, first, answer, built: vertexStepFrom(chosen.op, answer, taken), again: chosen.again, emergent: chosen.emergent };
 }
 
 /** Land a built step as a preview, a commit and a replay land it. */
@@ -424,14 +436,89 @@ describe.skipIf(!available)('the vertex folds over the real bridge, as their too
     if (swivel.first.analysis.kind !== 'swivel') throw new Error('not a swivel');
     const candidates = swivel.first.analysis.candidates;
     expect(candidates).toHaveLength(3);
+    const fourths = landingFourths(swivel.first);
     const fingerprints = new Set<string>();
     swivel.first.emergents.forEach((lands, emergent) => {
-      const stepped = vertexFold(engined, sheet, wanted, { ...NONE, emergent });
-      const folded = calls.step(sheet, stepped.built.step.op, stepped.built.step.choices);
       // What the question says of each candidate is what landing it does.
-      expect(folded.status === 'ok', `candidate ${emergent}`).toBe(lands);
-      if (folded.status === 'ok') fingerprints.add(folded.fingerprint);
+      const asIs = calls.step(sheet, withEmergent(swivel.base, swivel.first, emergent));
+      expect(asIs.status === 'ok', `candidate ${emergent}`).toBe(lands);
+      // One that does not land is never taken: the first that does is, in its place.
+      const stepped = vertexFold(engined, sheet, wanted, { ...NONE, emergent });
+      expect(stepped.emergent).toBe(lands ? emergent : fourths[0]);
+      const folded = landed(calls.step(sheet, stepped.built.step.op, stepped.built.step.choices));
+      fingerprints.add(folded.fingerprint);
     });
-    expect(fingerprints.size).toBe(swivel.first.emergents.filter(Boolean).length);
+    expect(fingerprints.size).toBe(fourths.length);
+  });
+
+  it('offers only the fourth creases that land in the owner’s case, each landing, listed anew for other paper', async () => {
+    // A square precreased on its diagonal, top left to bottom right; the
+    // triangle above it rabbit-eared, its corners clicked as landmarks.
+    const engined = await engine();
+    const { calls } = engined;
+    const sheet = landed(calls.sheet({ shape: { kind: 'square' }, startSide: 'front' })).state;
+    const precreased = landed(
+      calls.step(sheet, {
+        kind: 'precrease',
+        direction: 'valley',
+        line: { via: 'free', through: [[0, 1], [1, 0]] },
+        moving: [0, 0],
+        seed: { scope: 'all' },
+      })
+    ).state;
+    const corners = [landmark(p(0, 1), [0, 1]), landmark(p(1, 1), [1, 1]), landmark(p(1, 0), [1, 0])];
+    const tools: FoldToolState = { ...FOLD_TOOL_INITIAL, tool: 'rabbit-ear' };
+    const verbs = { cancel: () => undefined, commit: () => undefined, stepEmergent: () => undefined } as unknown as FoldToolWindowVerbs;
+    const host: FoldToolHost = { coarse: false, alt: 'Alt' };
+    /** The window's fourth-crease row and note, for the paper that stays clicked at `at`, as the canvas reads the engine's answer. */
+    const offered = (at: Point) => {
+      const ear = vertexFold(engined, precreased, intent({ tool: 'rabbit-ear', picks: [...corners, free(at)] }));
+      if (ear.first.analysis.kind !== 'rabbit-ear') throw new Error('not a rabbit ear');
+      const fourths = landingFourths(ear.first);
+      const vertex = {
+        base: ear.first,
+        answer: ear.answer,
+        emergent: ear.emergent,
+        fourths,
+        orders: [],
+        order: null,
+        layers: 1,
+        nearPrecrease: null,
+      };
+      const preview = { step: { op: ear.built.step.op, key: 'ear' }, vertex } as unknown as FoldToolPreview;
+      const view = foldVertexWindowView(tools, preview);
+      if (!view) throw new Error('no window view');
+      const controls = vertexControls(i18n.t.bind(i18n), view, verbs, false, host, true);
+      return { ear, fourths, candidates: ear.first.analysis.candidates.length, controls };
+    };
+
+    // The lower-left half stays: of three candidates, the one into it is refused; two are offered.
+    const below = offered(p(0.3, 0.3));
+    expect(below.candidates).toBe(3);
+    expect(below.fourths).toHaveLength(2);
+    expect(below.controls.emergent?.value).toBe('1 of 2');
+    expect(below.controls.emergentNote).toBe('2 fourth creases fit with this paper staying put.');
+    // Each offered one lands as the step its tool builds.
+    for (const emergent of below.fourths) {
+      const stepped = vertexFold(engined, precreased, intent({ tool: 'rabbit-ear', picks: [...corners, free(p(0.3, 0.3))] }), {
+        ...NONE,
+        emergent,
+      });
+      expect(stepped.emergent).toBe(emergent);
+      landed(calls.step(precreased, stepped.built.step.op, stepped.built.step.choices));
+    }
+    // The candidate not offered is the engine's to refuse, never the window's to show.
+    const refusedOne = [0, 1, 2].find((k) => !below.fourths.includes(k))!;
+    expect(calls.step(precreased, withEmergent(below.ear.base, below.ear.first, refusedOne)).status).toBe('refused');
+
+    // The triangle's top stays, or its right: one fourth crease lands each time, its row kept in place.
+    for (const at of [p(0.72, 0.9), p(0.9, 0.6)]) {
+      const other = offered(at);
+      expect(other.fourths, `${at.x},${at.y}`).toHaveLength(1);
+      expect(other.controls.emergent?.value).toBe('1 of 1');
+      expect(other.controls.emergent?.next.disabled).toBe(true);
+      expect(other.controls.emergentNote).toBe('One fourth crease fits with this paper staying put.');
+      landed(calls.step(precreased, other.ear.built.step.op, other.ear.built.step.choices));
+    }
   });
 });

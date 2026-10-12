@@ -780,7 +780,6 @@
     "vertex": {
       "direction": "방향",
       "emergent": "네 번째 접는 선",
-      "emergentDoesNotFit": "이 네 번째 접는 선은 여기서 맞지 않습니다. 다른 것으로 넘기세요.",
       "fix": {
         "emergent": "맞는 네 번째 접는 선 사용",
         "emergentNumber": "네 번째 접는 선 {{number}} 사용",
@@ -790,6 +789,8 @@
         "resetTarget": "등을 경첩에 맞추기",
         "usePrecrease": "그 미리 접은 선 사용"
       },
+      "fourthNone": "없음",
+      "fourthsFit_other": "이 종이가 그대로 있을 때 맞는 네 번째 접는 선은 {{count}}개입니다.",
       "help": {
         "petal": "미리 접은 선 H를 따라 플랩의 아래 끝을 들어 올리면서, 두 연 모양 미리 접은 선을 따라 양옆을 안으로 접습니다.",
         "rabbitEar": "삼각형의 모서리를 이등분선을 따라 접어 넣어 끝이 서도록 합니다.",
@@ -806,7 +807,8 @@
       "layersTop_other": "위 {{count}} / {{total}}",
       "mountain": "산",
       "mountainTitle": "산: 종이가 멀어지는 쪽으로 돕니다",
-      "noEmergentFits": "여기서는 이 겹들에 맞는 네 번째 접는 선이 없습니다.",
+      "noFourth": "이 종이가 그대로 있을 때 맞는 네 번째 접는 선이 없습니다. 그대로 둘 다른 종이를 클릭하세요.",
+      "noFourthTouch": "이 종이가 그대로 있을 때 맞는 네 번째 접는 선이 없습니다. 그대로 둘 다른 종이를 탭하세요.",
       "note": {
         "freePoint": "{{modifier}} 키를 누른 채로 두면 원하는 곳에 점을 놓을 수 있습니다.",
         "rabbitEar": "접는 선들은 삼각형의 내심에서 만납니다. 각 모서리로 가는 선은 고른 방향으로 접히고, 귀가 세워지는 네 번째 선은 반대 방향으로 접힙니다.",
@@ -893,7 +895,8 @@
         "earFirstCorner": "삼각형의 첫 번째 모서리를 클릭하세요.",
         "earSecondCorner": "두 번째 모서리를 클릭하세요.",
         "earThirdCorner": "세 번째 모서리를 클릭하세요.",
-        "fanChoose": "네 번째 접는 선과 겹을 고르세요.",
+        "fanChooseStayer": "네 번째 접는 선과 겹을 고르세요. 그대로 있는 종이를 바꾸려면 다른 종이를 클릭하세요.",
+        "fanChooseTouch": "네 번째 접는 선과 겹을 고르세요. 그대로 있는 종이를 바꾸려면 다른 종이를 탭하세요.",
         "finish": "옵션을 고른 뒤 Enter 키를 누르세요.",
         "finishTouch": "옵션을 고른 뒤 {{action}}을(를) 탭하세요.",
         "fixOrPickAgain": "아래의 해결 방법을 클릭하거나, Esc를 누르고 다시 고르세요.",

@@ -816,7 +816,6 @@
     "vertex": {
       "direction": "Sentido",
       "emergent": "Cuarto pliegue",
-      "emergentDoesNotFit": "Este cuarto pliegue no cabe aquí: pasa a otro.",
       "fix": {
         "emergent": "Usar el cuarto pliegue que cabe",
         "emergentNumber": "Usar el cuarto pliegue {{number}}",
@@ -826,6 +825,10 @@
         "resetTarget": "Llevar el lomo a la bisagra",
         "usePrecrease": "Usar el premarcado"
       },
+      "fourthNone": "Ninguno",
+      "fourthsFit_one": "Un cuarto pliegue cabe con este papel quieto.",
+      "fourthsFit_many": "{{count}} cuartos pliegues caben con este papel quieto.",
+      "fourthsFit_other": "{{count}} cuartos pliegues caben con este papel quieto.",
       "help": {
         "petal": "Levantar la punta inferior de una solapa a lo largo de una premarca H mientras sus lados se pliegan hacia dentro por dos premarcas de cometa.",
         "rabbitEar": "Plegar las esquinas de un triángulo a lo largo de sus bisectrices, para que se levante una punta.",
@@ -848,7 +851,8 @@
       "layersTop_other": "{{count}} de arriba de {{total}}",
       "mountain": "Monte",
       "mountainTitle": "Monte: el papel gira alejándose de ti",
-      "noEmergentFits": "Ningún cuarto pliegue cabe aquí con estas capas.",
+      "noFourth": "Ningún cuarto pliegue cabe con este papel quieto: haz clic en otro papel para que se quede quieto.",
+      "noFourthTouch": "Ningún cuarto pliegue cabe con este papel quieto: toca otro papel para que se quede quieto.",
       "note": {
         "freePoint": "Mantén {{modifier}} para colocar un punto en cualquier lugar.",
         "rabbitEar": "Los pliegues se juntan en el incentro del triángulo: uno hacia cada esquina, plegado en el sentido que elijas, y un cuarto por el que se alza la oreja, plegado en el sentido contrario.",
@@ -935,7 +939,8 @@
         "earFirstCorner": "Haz clic en la primera esquina del triángulo.",
         "earSecondCorner": "Haz clic en su segunda esquina.",
         "earThirdCorner": "Haz clic en su tercera esquina.",
-        "fanChoose": "Elige el cuarto pliegue y las capas.",
+        "fanChooseStayer": "Elige el cuarto pliegue y las capas. Haz clic en otro papel para cambiar el que se queda quieto.",
+        "fanChooseTouch": "Elige el cuarto pliegue y las capas. Toca otro papel para cambiar el que se queda quieto.",
         "finish": "Elige las opciones y pulsa Intro.",
         "finishTouch": "Elige las opciones y toca {{action}}.",
         "fixOrPickAgain": "Haz clic en una solución de abajo, o pulsa Esc y vuelve a elegir.",

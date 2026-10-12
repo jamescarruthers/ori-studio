@@ -1,19 +1,20 @@
 /**
  * What a vertex tool draws over the folded pane while it previews (plan
  * D14): the creases its fold would make and the choices it offers, from the
- * engine's description, in the theme's pick accent — the tool's feedback,
- * never the paper's pens, since which of these creases is a mountain and
- * which a valley is the landed state's to say (the crease-pattern pane draws
- * it).
+ * engine's description, in the theme's pick accent — the tool's feedback —
+ * save a fan's given creases, whose letter the direction already says, which
+ * the paper draws in its pens.
  *
  * - **Squash**: its vertex, each layer's crease, the spine as it lies
  *   (faint), and where it lands (bold): the hinge line until a point is
  *   clicked; where it was aimed, faint, when that cannot land.
  * - **Petal fold**: H between its ends, and the kite creases down to the
  *   open corner.
- * - **Rabbit ear, swivel**: the center, the three given rays, and the fourth
- *   crease taken (bold) — the ridge the flap rises along — among the other
- *   candidates (faint; one that does not fit fainter still).
+ * - **Rabbit ear, swivel**: the center, and the fourth crease taken (bold) —
+ *   the ridge the flap rises along — among the other candidates that land
+ *   (faint); one that does not land is not drawn, as it is not offered. The
+ *   three given rays are drawn as the paper's pending creases instead, from
+ *   the moment their clicks are in (`fanGeometry`'s `fanGivenCreases`).
  *
  * Each ray runs from its vertex to where it leaves the paper. Pure: the
  * colours are handed in, resolved by the pane.
@@ -31,9 +32,8 @@ const VERTEX_RADIUS = 4;
 /** Stroke widths, as multiples of the frame's: a crease, the choice taken. */
 const CREASE_WIDTH = 1.6;
 const CHOSEN_WIDTH = 2.6;
-/** How faint what is not taken is drawn: the spine as it lies, a candidate not taken, one that does not fit. */
+/** How faint what is not taken is drawn: the spine as it lies, a candidate not taken. */
 const FAINT = 0.4;
-const UNFIT = 0.18;
 /** How far a ray runs, in model units, when it starts on the paper's edge and the paper gives it no length. */
 const EDGE_RAY = 0.2;
 
@@ -102,12 +102,12 @@ function fanStrokes(
 ): FoldOverlayStroke[] {
   const strokes: FoldOverlayStroke[] = [];
   const stroke = ([a, b]: [Point, Point], color: Rgba, widthMul: number) => strokes.push({ a, b, color, widthMul });
-  for (const given of analysis.given) stroke(ray(index, analysis.center, given), accent, CREASE_WIDTH);
+  // The given rays are the pending creases the paper is drawn with
+  // (`fanGivenCreases`); a fourth crease that does not land is never offered.
   analysis.candidates.forEach((candidate, k) => {
+    if (!(input.emergents[k] ?? true)) return;
     const taken = k === input.emergent;
-    const fits = input.emergents[k] ?? true;
-    const color = taken ? accent : withAlpha(accent, fits ? FAINT : UNFIT);
-    stroke(ray(index, analysis.center, candidate), color, taken ? CHOSEN_WIDTH : CREASE_WIDTH);
+    stroke(ray(index, analysis.center, candidate), taken ? accent : withAlpha(accent, FAINT), taken ? CHOSEN_WIDTH : CREASE_WIDTH);
   });
   return strokes;
 }

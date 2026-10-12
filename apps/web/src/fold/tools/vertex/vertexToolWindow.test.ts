@@ -42,8 +42,8 @@ const vertex = (extra: Partial<FoldVertexWindowView> = {}): FoldVertexWindowView
   described: true,
   known: true,
   target: 'hinge',
-  emergents: [],
-  emergent: 0,
+  fourths: 0,
+  fourth: 0,
   layers: 0,
   fanLayers: null,
   orders: 0,
@@ -166,24 +166,30 @@ describe('a vertex fold’s window while it previews', () => {
     expect(aimed?.footer?.commit).toMatchObject({ label: 'Squash fold', disabled: false });
   });
 
-  it('steps a fan’s fourth crease and layers, says which do not fit, and offers no ridge: the fourth crease is the ear’s', () => {
+  it('steps a fan’s fourth crease among those that land, and layers, and offers no ridge: the fourth crease is the ear’s', () => {
     const calls = verbs();
     const ear = vertex({
       tool: 'rabbit-ear',
-      emergents: [true, false, true],
-      emergent: 1,
+      // Of three candidates, two land: only they are offered.
+      fourths: 2,
+      fourth: 1,
       layers: 4,
       fanLayers: 2,
     });
     const model = foldToolWindow(t, view(ear, { preview: preview() }), calls, mouse);
     const controls = model?.vertex;
-    expect(controls?.emergent?.value).toBe('2 of 3');
-    expect(controls?.emergentNote).toBe('This fourth crease does not fit here: step to another.');
+    expect(controls?.emergent?.value).toBe('2 of 2');
+    expect(controls?.emergentNote).toBe('2 fourth creases fit with this paper staying put.');
     expect(controls?.layers?.value).toBe('Top 2 of 4');
     expect(controls).not.toHaveProperty('ridge');
     // Direction, fourth crease, layers.
     expect(model?.meta).toBe('3 settings');
-    expect(model?.instructions.items[0]).toBe('Choose the fourth crease and the layers.');
+    expect(model?.instructions.items[0]).toBe(
+      'Choose the fourth crease and the layers. Click other paper to change what stays put.'
+    );
+    expect(foldToolWindow(t, view(ear, { preview: preview() }), calls, finger)?.instructions.items[0]).toBe(
+      'Choose the fourth crease and the layers. Tap other paper to change what stays put.'
+    );
     expect(controls?.note).toMatch(/a fourth the ear rises along, folded the other way/);
     controls?.emergent?.next.run();
     controls?.layers?.previous.run();
@@ -194,6 +200,28 @@ describe('a vertex fold’s window while it previews', () => {
     expect(mountain?.vertex?.layers?.value).toBe('Bottom 2 of 4');
     const all = foldToolWindow(t, view({ ...ear, fanLayers: null }, { preview: preview() }), calls, mouse);
     expect(all?.vertex?.layers?.value).toBe('All 4');
+  });
+
+  it('keeps a fan’s fourth crease row with one that lands, or none, and says in its place what helps', () => {
+    const calls = verbs();
+    const ear = vertex({ tool: 'rabbit-ear', fourths: 1, fourth: 0, layers: 1 });
+    const one = foldToolWindow(t, view(ear, { preview: preview() }), calls, mouse)?.vertex;
+    expect(one?.emergent).toMatchObject({ value: '1 of 1', previous: { disabled: true }, next: { disabled: true } });
+    expect(one?.emergentNote).toBe('One fourth crease fits with this paper staying put.');
+    one?.emergent?.next.run();
+    expect(calls.stepEmergent).not.toHaveBeenCalled();
+    // None lands: no step, so nothing to refuse, and the row says so where it always is.
+    const none = foldToolWindow(t, view({ ...ear, fourths: 0, known: false }, { preview: preview() }), calls, mouse);
+    expect(none?.vertex?.emergent).toMatchObject({ value: 'None', next: { disabled: true } });
+    expect(none?.vertex?.emergentNote).toBe('No fourth crease fits with this paper staying put: click other paper to stay.');
+    expect(none?.refusal).toBeNull();
+    expect(none?.footer?.commit.disabled).toBe(true);
+    const touch = foldToolWindow(t, view({ ...ear, fourths: 0, known: false }, { preview: preview() }), calls, finger);
+    expect(touch?.vertex?.emergentNote).toBe('No fourth crease fits with this paper staying put: tap other paper to stay.');
+    // A swivel's the same.
+    const swivel = foldToolWindow(t, view({ ...ear, tool: 'swivel', fourths: 3, fourth: 2 }, { preview: preview() }), calls, mouse);
+    expect(swivel?.vertex?.emergent?.value).toBe('3 of 3');
+    expect(swivel?.vertex?.emergentNote).toBe('3 fourth creases fit with this paper staying put.');
   });
 
   it('steps the layer order when the fold leaves several', () => {

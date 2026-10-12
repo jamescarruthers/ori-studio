@@ -816,7 +816,6 @@
     "vertex": {
       "direction": "Sentido",
       "emergent": "Quarto vinco",
-      "emergentDoesNotFit": "Este quarto vinco não cabe aqui: passe para outro.",
       "fix": {
         "emergent": "Usar o quarto vinco que cabe",
         "emergentNumber": "Usar o quarto vinco {{number}}",
@@ -826,6 +825,10 @@
         "resetTarget": "Levar a lombada à dobradiça",
         "usePrecrease": "Usar o pré-vinco"
       },
+      "fourthNone": "Nenhum",
+      "fourthsFit_one": "Um quarto vinco cabe com este papel parado.",
+      "fourthsFit_many": "{{count}} quartos vincos cabem com este papel parado.",
+      "fourthsFit_other": "{{count}} quartos vincos cabem com este papel parado.",
       "help": {
         "petal": "Levantar a ponta de baixo de uma aba ao longo de um pré-vinco H enquanto os lados se dobram para dentro por dois pré-vincos de pipa.",
         "rabbitEar": "Dobrar os cantos de um triângulo ao longo das bissetrizes, para que uma ponta se levante.",
@@ -848,7 +851,8 @@
       "layersTop_other": "{{count}} de cima de {{total}}",
       "mountain": "Montanha",
       "mountainTitle": "Montanha: o papel gira para longe de você",
-      "noEmergentFits": "Nenhum quarto vinco cabe aqui com estas camadas.",
+      "noFourth": "Nenhum quarto vinco cabe com este papel parado: clique em outro papel para ficar parado.",
+      "noFourthTouch": "Nenhum quarto vinco cabe com este papel parado: toque em outro papel para ficar parado.",
       "note": {
         "freePoint": "Segure {{modifier}} para colocar um ponto em qualquer lugar.",
         "rabbitEar": "Os vincos se encontram no incentro do triângulo: um para cada canto, dobrado no sentido que você escolher, e um quarto ao longo do qual a orelha sobe, dobrado no sentido oposto.",
@@ -935,7 +939,8 @@
         "earFirstCorner": "Clique no primeiro canto do triângulo.",
         "earSecondCorner": "Clique no segundo canto.",
         "earThirdCorner": "Clique no terceiro canto.",
-        "fanChoose": "Escolha o quarto vinco e as camadas.",
+        "fanChooseStayer": "Escolha o quarto vinco e as camadas. Clique em outro papel para mudar o que fica parado.",
+        "fanChooseTouch": "Escolha o quarto vinco e as camadas. Toque em outro papel para mudar o que fica parado.",
         "finish": "Escolha as opções e pressione Enter.",
         "finishTouch": "Escolha as opções e toque em {{action}}.",
         "fixOrPickAgain": "Clique em uma correção abaixo, ou pressione Esc e escolha de novo.",

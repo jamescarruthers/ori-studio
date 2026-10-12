@@ -229,8 +229,9 @@ describe('FoldToolWindow', () => {
       described: true,
       known: true,
       target: 'hinge' as const,
-      emergents: [true, true, false],
-      emergent: 0,
+      // Of three candidates, two land: only they are offered.
+      fourths: 2,
+      fourth: 0,
       layers: 2,
       fanLayers: null,
       orders: 0,
@@ -249,8 +250,9 @@ describe('FoldToolWindow', () => {
     expect(window.textContent).not.toContain('Moving side');
     // The fourth crease and the layers, steppers; no ridge to choose: the
     // fourth crease is the ear's ridge.
-    expect(window.textContent).toContain('1 of 3');
+    expect(window.textContent).toContain('1 of 2');
     expect(window.textContent).toContain('All 2');
+    expect(window.querySelector('[data-reserved]')?.textContent).toBe('2 fourth creases fit with this paper staying put.');
     act(() => byRole(window, 'button', 'Fourth crease: Next').click());
     expect(calls.stepEmergent).toHaveBeenCalledWith(1);
     act(() => byRole(window, 'button', 'Layers: Previous').click());
@@ -265,7 +267,7 @@ describe('FoldToolWindow', () => {
         lineMode: 'crease',
         picks: 1,
         preview: preview({ section: null }),
-        vertex: { ...vertex, tool: 'squash', target: 'point', emergents: [], layers: 0 },
+        vertex: { ...vertex, tool: 'squash', target: 'point', fourths: 0, layers: 0 },
       },
       calls
     );
@@ -289,6 +291,66 @@ describe('FoldToolWindow', () => {
       expect(window.querySelector('[data-fold-vertex-note]'), tool).toBeNull();
       expect(byRole(window, 'group', 'Direction')).toBeTruthy();
     }
+  });
+
+  it('keeps a fan’s fourth crease in one place whether two land, one or none, and never shows a refusal for it', () => {
+    const calls = { ...verbs(), setVertexDirection: vi.fn(), stepEmergent: vi.fn() } satisfies FoldToolWindowVerbs;
+    const vertex = {
+      tool: 'rabbit-ear' as const,
+      direction: 'valley' as const,
+      described: true,
+      known: true,
+      target: 'hinge' as const,
+      fourths: 2,
+      fourth: 1,
+      layers: 1,
+      fanLayers: null,
+      orders: 0,
+      order: 0,
+    };
+    const shape = (window: HTMLElement) => {
+      const choices = window.querySelector<HTMLElement>('[data-fold-choices]');
+      return {
+        rows: [...(choices?.children ?? [])].map((row) => row.tagName),
+        note: choices?.querySelector('[data-reserved]')?.textContent ?? null,
+        value: choices?.querySelector('[data-fold-choice="Fourth crease"]')?.textContent ?? null,
+        arrows: allByRole(choices ?? window, 'button').map((button) => (button as HTMLButtonElement).disabled),
+      };
+    };
+    render({ tool: 'rabbit-ear', lineMode: 'crease', picks: 4, preview: preview({ section: null }), vertex }, calls);
+    const two = shape(fold()!);
+    expect(two).toMatchObject({ value: '2 of 2', arrows: [false, false] });
+
+    render(
+      { tool: 'rabbit-ear', lineMode: 'crease', picks: 4, preview: preview({ section: null }), vertex: { ...vertex, fourths: 1, fourth: 0 } },
+      calls
+    );
+    const one = shape(fold()!);
+    expect(one).toMatchObject({ value: '1 of 1', note: 'One fourth crease fits with this paper staying put.', arrows: [true, true] });
+
+    // None lands: nothing to fold, said in the same place, with the change that helps.
+    render(
+      {
+        tool: 'rabbit-ear',
+        lineMode: 'crease',
+        picks: 4,
+        preview: preview({ section: null }),
+        vertex: { ...vertex, fourths: 0, fourth: 0, known: false },
+      },
+      calls
+    );
+    const window = fold()!;
+    const none = shape(window);
+    expect(none).toMatchObject({
+      value: 'None',
+      note: 'No fourth crease fits with this paper staying put: click other paper to stay.',
+      arrows: [true, true],
+    });
+    // The same rows in the same order each time: nothing moves.
+    expect(one.rows).toEqual(two.rows);
+    expect(none.rows).toEqual(two.rows);
+    expect(window.querySelector('[role="alert"]')).toBeNull();
+    expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Rabbit ear').hasAttribute('disabled')).toBe(true);
   });
 
   it('draws a sink’s kind, its line’s rule and depth, its pocket, and a refusal whose fixes act', () => {

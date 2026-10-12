@@ -74,8 +74,9 @@ export function FoldVertexChoices({ controls }: { controls: FoldVertexControls }
         </>
       )}
       {emergent && <FoldChoiceStepperRow stepper={emergent} />}
+      {/* Kept to its height whatever it says, so the rows under it never move. */}
       {emergentNote && (
-        <p className={styles.note} role="status">
+        <p className={styles.note} data-reserved="" role="status">
           {emergentNote}
         </p>
       )}

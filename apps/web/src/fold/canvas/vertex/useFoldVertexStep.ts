@@ -9,6 +9,7 @@ import type { FoldToolState } from '../../tools/foldToolState';
 import {
   fanCenterScene,
   fanLayerCount,
+  landingFourths,
   petalLine,
   vertexAskedOp,
   vertexChosenOp,
@@ -25,8 +26,14 @@ export interface FoldVertexPreview {
   base: FoldVertexAnalysed | null;
   /** Its answer for the op folded, with the choices made: what its orders are read from. */
   answer: FoldVertexAnalysed | null;
-  /** A fan's fourth ray taken, by index into the candidates; null for no fan, or none yet. */
+  /** A fan's fourth ray taken, by index into the candidates; null for no fan, none yet, or none that lands. */
   emergent: number | null;
+  /**
+   * A fan's fourth creases that land, by index into the candidates: the only
+   * ones offered (`landingFourths`). Empty for no fan, before the engine has
+   * described it, and when none lands.
+   */
+  fourths: readonly number[];
   /** The orders the step leaves, when more than one; the one taken. */
   orders: readonly FoldCompletionChoice[];
   order: FoldCompletionChoice | null;
@@ -120,12 +127,11 @@ export function useFoldVertexStep(
   const center = intent ? fanCenterScene(intent) : null;
   const layers = center && index ? fanLayerCount(index, center) : 0;
 
-  // Each choice offered is counted once, by what it was offered for.
+  // Each choice offered is counted once, by what it was offered for: a fan's
+  // fourth creases by the ones that land, the only ones offered.
   const offered = useRef<{ emergent: string | null; order: string | null }>({ emergent: null, order: null });
-  const candidates =
-    firstAnswer && (firstAnswer.analysis.kind === 'rabbit-ear' || firstAnswer.analysis.kind === 'swivel')
-      ? firstAnswer.analysis.candidates.length
-      : 0;
+  const fourths = useMemo(() => landingFourths(firstAnswer), [firstAnswer]);
+  const candidates = fourths.length;
   const firstKey = first?.key ?? null;
   const orderKey = again ? (second?.key ?? null) : firstKey;
   const orderCount = built?.orders.length ?? 0;
@@ -148,6 +154,7 @@ export function useFoldVertexStep(
       base: firstAnswer,
       answer,
       emergent: chosen?.emergent ?? null,
+      fourths,
       orders: built?.orders ?? [],
       order: built?.order ?? null,
       layers,

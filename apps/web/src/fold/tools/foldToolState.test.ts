@@ -251,7 +251,7 @@ describe('the vertex folds’ tool state', () => {
     tools.stepOrder(1, 3);
     expect(tools.store.getState().compound).toMatchObject({ emergent: 2, order: 1 });
     // Another fourth ray: its orders are listed anew.
-    tools.stepEmergent(1, 3, 2);
+    tools.setEmergent(0);
     expect(tools.store.getState().compound).toMatchObject({ emergent: 0, order: 0 });
     tools.stepOrder(1, 3);
     tools.setFanLayers(2);
@@ -267,6 +267,27 @@ describe('the vertex folds’ tool state', () => {
       compound: { squashTarget: null, emergent: null, fanLayers: null, order: 0 },
     });
     expect(FOLD_TOOL_INITIAL.vertexDirection).toBe('valley');
+  });
+
+  it('picks a fan’s paper that stays again, listing its fourth creases and orders anew', () => {
+    const tools = createFoldTools();
+    tools.selectTool('rabbit-ear');
+    for (const corner of [point(0, 1), point(1, 1), point(1, 0)]) tools.pick(corner);
+    tools.pick(free(0.3, 0.3));
+    expect(isLocated(tools.store.getState())).toBe(true);
+    tools.setEmergent(2);
+    tools.stepOrder(1, 3);
+    tools.repick(free(0.8, 0.95));
+    const state = tools.store.getState();
+    expect(state.picks).toHaveLength(4);
+    expect(state.picks[3]).toEqual(free(0.8, 0.95));
+    expect(state.picks.slice(0, 3)).toEqual([point(0, 1), point(1, 1), point(1, 0)]);
+    expect(state.compound).toMatchObject({ emergent: null, order: 0 });
+    expect(isLocated(state)).toBe(true);
+    // Nothing clicked: nothing to pick again.
+    const fresh = createFoldTools();
+    fresh.repick(free(0.5, 0.5));
+    expect(fresh.store.getState().picks).toEqual([]);
   });
 
   it('clicks a precrease’s extent along its located line, steps back on Escape, and keeps the extent from fold to fold', () => {

@@ -227,7 +227,7 @@ describe('the Fold canvas model', () => {
     };
     // Before the engine has described anything: only the direction.
     const waiting = foldVertexWindowView(tools, preview({ vertex: null }));
-    expect(waiting).toMatchObject({ tool: 'rabbit-ear', direction: 'mountain', described: false, known: false, emergents: [] });
+    expect(waiting).toMatchObject({ tool: 'rabbit-ear', direction: 'mountain', described: false, known: false, fourths: 0 });
     const order = { faces: [], orders: [] };
     const second = { faces: [], orders: [] };
     const shown = foldVertexWindowView(
@@ -243,15 +243,18 @@ describe('the Fold canvas model', () => {
               candidates: [
                 [1, 0],
                 [0, 1],
+                [-1, 0],
               ],
               emergent: 0,
               layers: [1, 2],
             },
-            emergents: [false],
+            emergents: [false, true, true],
             orders: null,
           },
           answer: null,
-          emergent: 1,
+          emergent: 2,
+          // The first candidate does not land: the other two are offered, numbered among themselves.
+          fourths: [1, 2],
           orders: [order, second],
           order: second,
           layers: 3,
@@ -263,15 +266,17 @@ describe('the Fold canvas model', () => {
       described: true,
       known: true,
       target: 'hinge',
-      // A candidate the answer says nothing of fits, as far as is known.
-      emergents: [false, true],
-      emergent: 1,
+      fourths: 2,
+      fourth: 1,
       layers: 3,
       fanLayers: 1,
       orders: 2,
       order: 1,
     });
-    expect(shown?.emergentNumber?.([0.1, 0.9])).toBe(2);
+    // A fix's fourth crease is named by its number among those offered; one not offered has none.
+    expect(shown?.emergentNumber?.([0.1, 0.9])).toBe(1);
+    expect(shown?.emergentNumber?.([-0.9, 0.1])).toBe(2);
+    expect(shown?.emergentNumber?.([0.9, -0.1])).toBeNull();
   });
 
   it('reads a sink tool’s window from its point: what fits, the pocket named as seen, the depth', () => {
