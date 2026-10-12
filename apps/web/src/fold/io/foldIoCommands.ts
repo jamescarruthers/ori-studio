@@ -28,7 +28,6 @@ import {
   sendFoldSequenceToEdit,
   type FoldHandOffBlock,
   type FoldHandOffDeps,
-  type FoldSendToEditVariant,
 } from './foldHandOffs';
 import { useFoldImportUiStore } from './foldImportUiStore';
 
@@ -37,7 +36,7 @@ export type FoldIoCommand =
   | { readonly kind: 'import-cp' }
   | { readonly kind: 'import-sample'; readonly sample: FoldSampleId }
   | { readonly kind: 'start-from-edit-folded-figure' }
-  | { readonly kind: 'send-to-edit'; readonly variant: FoldSendToEditVariant }
+  | { readonly kind: 'send-to-edit' }
   | { readonly kind: 'export-fold' }
   | { readonly kind: 'export-steps'; readonly scope: PaperExportScope };
 
@@ -102,7 +101,7 @@ export async function runFoldIoCommand(command: FoldIoCommand, fileService?: Fil
       imports.open({ kind: 'edit-folded-figure' });
       return true;
     case 'send-to-edit':
-      return sendFoldSequenceToEdit(foldHandOffDeps(fileService), command.variant);
+      return sendFoldSequenceToEdit(foldHandOffDeps(fileService));
     case 'export-fold':
       return exportFoldSequence(foldHandOffDeps(fileService));
     case 'export-steps':

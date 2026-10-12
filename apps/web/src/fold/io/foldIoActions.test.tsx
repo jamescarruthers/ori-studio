@@ -53,14 +53,13 @@ describe('Fold’s io verbs beside the menu', () => {
     ]);
   });
 
-  it('give Send to Edit the shared button, its precreases variant behind the caret', () => {
+  it('give Send to Edit the shared button, with nothing behind a caret', () => {
     act(() => root.render(<Probe />));
     const { model } = seen;
     expect(model).toMatchObject({ label: 'Send to Edit', disabled: false });
-    expect(model?.actions.map((action) => action.id)).toEqual(['precreases-as-aux']);
+    expect(model?.actions).toEqual([]);
     model?.run();
-    model?.actions[0]?.onSelect();
-    expect(menu.handleMenuAction.mock.calls).toEqual([['fold.send-to-edit'], ['fold.send-to-edit-precreases-as-aux']]);
+    expect(menu.handleMenuAction.mock.calls).toEqual([['fold.send-to-edit']]);
   });
 
   it('say why Send to Edit is disabled, as the menu row does', () => {

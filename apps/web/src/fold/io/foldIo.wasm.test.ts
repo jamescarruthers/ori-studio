@@ -181,7 +181,7 @@ describe.skipIf(!available)('Import CP and the hand-offs over the built bridge',
     expect(source.read().held?.document.steps).toHaveLength(1);
 
     const { deps, saved, sent, exported } = handOffDeps(session);
-    await expect(sendFoldSequenceToEdit(deps, 'plain')).resolves.toBe(true);
+    await expect(sendFoldSequenceToEdit(deps)).resolves.toBe(true);
     const document = load_fold_file(sent[0]!);
     const snapshot = document_snapshot(document) as OristudioCpDocumentSnapshot;
     free_document(document);

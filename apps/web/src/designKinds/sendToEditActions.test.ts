@@ -66,19 +66,6 @@ describe('sendToEditActions from a source that is not a design', () => {
   it('gives a design kind named as the source the design tooltip', () => {
     expect(sendToEditPrimary(t, 'explori')).toEqual(sendToEditPrimary(t));
   });
-
-  it('offers a Fold sequence its precreases as auxiliary lines, and no design kind that variant', () => {
-    expect(sendToEditVariants({ ...surface, variants: ['precreases-as-aux'] }, t)).toEqual([
-      expect.objectContaining({
-        id: 'precreases-as-aux',
-        label: 'Send to Edit (precreases as auxiliary lines)',
-        includeCircles: false,
-      }),
-    ]);
-    for (const kind of DESIGN_KINDS) {
-      expect(sendToEditVariants(kind.id, t).map((variant) => variant.id)).not.toContain('precreases-as-aux');
-    }
-  });
 });
 
 describe('sendToEditButtonModel', () => {

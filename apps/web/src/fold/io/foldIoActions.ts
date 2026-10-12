@@ -9,11 +9,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { handleMenuAction, type MenuActionId } from '../../commands/menuActions';
-import {
-  sendToEditButtonModel,
-  type SendToEditButtonModel,
-  type SendToEditVariant,
-} from '../../designKinds/sendToEditActions';
+import { sendToEditButtonModel, type SendToEditButtonModel } from '../../designKinds/sendToEditActions';
 import { useWorkspaceCapabilities } from '../../store/workspaceStore/useWorkspaceCapabilities';
 import { foldSendToEditSource, type FoldActionDeps, type FoldCommand } from '../foldActions';
 
@@ -44,16 +40,11 @@ export const FOLD_IO_ACTION_DEPS: Pick<
   exportSteps: dispatch(FOLD_IO_COMMAND_MENU_IDS['export-steps']),
 };
 
-/** The menu id a Send to Edit variant dispatches. */
-function sendToEditMenuId(variant: SendToEditVariant): MenuActionId {
-  return variant.id === 'precreases-as-aux' ? 'fold.send-to-edit-precreases-as-aux' : 'fold.send-to-edit';
-}
-
 /**
  * The Send to Edit button for a Fold sequence (plan D10, D14): the shared
  * model every design kind's button is (`sendToEditButtonModel`) over Fold's
- * source — its tooltip, and its precreases as auxiliary lines behind the
- * caret — gated by the menu row's capability and by the action catalog's
+ * source — its tooltip, and no caret: precreases always go as auxiliary
+ * lines — gated by the menu row's capability and by the action catalog's
  * command (`command`, the catalog's Send to Edit for the step on screen),
  * which knows what the store does not: a path still folding, or one with a
  * step that no longer folds. Disabled, its tooltip says why, in the words of
@@ -69,7 +60,7 @@ export function useFoldSendToEditButton(
   return useMemo(
     () =>
       sendToEditButtonModel(foldSendToEditSource(t), t, {
-        send: (variant) => void handleMenuAction(sendToEditMenuId(variant)),
+        send: () => void handleMenuAction(FOLD_IO_COMMAND_MENU_IDS['send-to-edit']),
         disabled: !capability.enabled || blocked,
         reason: capability.enabled ? hint : capability.reason,
       }),
