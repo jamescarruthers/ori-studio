@@ -22,11 +22,12 @@ import {
   type DiagramStepActionId,
 } from '../../diagram/actions/diagramActions';
 import type { DiagramLinkStatus } from '../../diagram/capture/linkStatus';
-import type {
-  DiagramCpSource,
-  DiagramReferencesSource,
-  DiagramStep,
-  KnownDiagramAsset,
+import {
+  creasesFlipped,
+  type DiagramCpSource,
+  type DiagramReferencesSource,
+  type DiagramStep,
+  type KnownDiagramAsset,
 } from '../../diagram/document/diagramDocument';
 import { cameraDegrees } from '../../diagram/pictures/cameraDegrees';
 import type { SanitizeNotice } from '../../diagram/upload/svgSanitize';
@@ -208,6 +209,9 @@ function describeLinked(source: DiagramCpSource, posed: boolean, t: TFunction): 
   const { render } = source;
   switch (render.mode) {
     case 'crease-pattern':
+      if (creasesFlipped(render)) {
+        return t('panels:diagram.picture.linkedCreasePatternFlipped', 'Crease pattern, back color, creases flipped');
+      }
       return render.side === 'back'
         ? t('panels:diagram.picture.linkedCreasePatternBack', 'Crease pattern, back color')
         : t('panels:diagram.picture.linkedCreasePattern', 'Crease pattern');

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { diagramStepChoice, type DiagramStepAction } from '../../diagram/actions/diagramActions';
 import type { CreasePatternSideField } from '../../diagram/capture/useCreasePatternSide';
-import { SegmentedRow } from '../ui/fieldRows';
+import { SegmentedRow, ToggleRow } from '../ui/fieldRows';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import styles from './DiagramStepShowAs.module.css';
 
@@ -14,7 +14,8 @@ import styles from './DiagramStepShowAs.module.css';
  * Shown as its crease pattern, the side of the paper whose colour it is drawn
  * on, Front or Back, right under it (`useCreasePatternSide`): a field, as a
  * flat fold's side is in Pose's section, and held whenever Show as is — each
- * captures the step again from its pattern.
+ * captures the step again from its pattern. On the back, Flip creases under
+ * that: its mountains drawn as valleys and its valleys as mountains.
  */
 export function DiagramStepShowAs({
   actions,
@@ -61,6 +62,20 @@ export function DiagramStepShowAs({
           disabled={showAs.disabled}
           title={showAs.hint}
           onChange={(next) => side.choose(next === 'back' ? 'back' : 'front')}
+        />
+      )}
+      {/* The back's alone: on the front the creases are drawn as they are, and the choice waits for the back. */}
+      {side?.side === 'back' && (
+        <ToggleRow
+          label={t('panels:diagram.picture.flipCreases', 'Flip creases')}
+          help={t(
+            'panels:diagram.picture.flipCreasesHelp',
+            'Draws mountains as valleys and valleys as mountains, as the creases read from the back. The lines stay where they are.'
+          )}
+          checked={side.flipCreases}
+          disabled={showAs.disabled}
+          title={showAs.hint}
+          onChange={side.setFlipCreases}
         />
       )}
     </>

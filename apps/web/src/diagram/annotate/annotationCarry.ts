@@ -6,8 +6,9 @@
  * turned over also shows the paper's other side, so a valley line or arrow
  * becomes a mountain and a mountain a valley, as the card's own folds do
  * (RM7). A crease pattern's paper put on the other side's colour moves
- * nothing and renames nothing (Zach, 2026-10-06), and every annotation stays
- * where it is, in step with the new picture. Anything else — a refold,
+ * nothing and renames nothing (Zach, 2026-10-06), nor do its creases flipped
+ * on its back (2026-10-12), and every annotation stays where it is, in step
+ * with the new picture. Anything else — a refold,
  * a Refresh, a new camera, the other side of a fold, a new picture — leaves
  * them where they were, and Annotate says the picture changed.
  *
@@ -22,6 +23,7 @@ import type { PaperFaceItem, PaperScene, SceneBounds, ScenePoint } from '../../l
 import { isCardMark } from '../document/cardMarks';
 import {
   creasePatternSide,
+  creasesFlipped,
   isKnownAnnotation,
   sameSpread,
   type DiagramAnnotation,
@@ -128,10 +130,11 @@ function sameRegion(from: DiagramCpSource, to: DiagramCpSource): boolean {
 }
 
 /**
- * Whether `after`'s picture is `before`'s in another colour and nothing else:
- * a crease pattern's paper put on the other side's colour (the Step pane's
- * Front | Back), of the same region and creases at the same turn — so every
- * line, and the frame, is where it was.
+ * Whether `after`'s picture is `before`'s in other colours and pens and
+ * nothing else: a crease pattern's paper put on the other side's colour (the
+ * Step pane's Front | Back), or its mountains and valleys swapped (Flip
+ * creases), of the same region and creases at the same turn — so every line,
+ * and the frame, is where it was.
  */
 function recolouredOnly(before: DiagramStep, after: DiagramStep): boolean {
   const [from, to] = [before.source, after.source];
@@ -143,7 +146,8 @@ function recolouredOnly(before: DiagramStep, after: DiagramStep): boolean {
     wasRender.mode === 'crease-pattern' &&
     isRender.mode === 'crease-pattern' &&
     wasRender.rotationDeg === isRender.rotationDeg &&
-    creasePatternSide(wasRender) !== creasePatternSide(isRender) &&
+    (creasePatternSide(wasRender) !== creasePatternSide(isRender) ||
+      creasesFlipped(wasRender) !== creasesFlipped(isRender)) &&
     from.fingerprint === to.fingerprint &&
     sameRegion(from, to)
   );

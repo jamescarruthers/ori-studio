@@ -42,7 +42,9 @@ import {
   setLinkedPicture,
   showAsOf,
   creasePatternSide,
+  creasesFlipped,
   withCreasePatternSide,
+  withCreasesFlipped,
   withRememberedPoses,
   anchorTakesCard,
   createTurn,
@@ -713,6 +715,24 @@ describe('the ways a linked pattern is shown (D19)', () => {
     expect(creasePatternSide(back)).toBe('back');
     expect(withCreasePatternSide(back, 'front')).toEqual(pattern);
     expect('side' in withCreasePatternSide(back, 'front')).toBe(false);
+  });
+
+  // Zach, 2026-10-12: draw the pattern from the front, and flip its creases for the steps seen from the back.
+  it('flips a crease pattern’s creases on its back alone, and keeps the choice on the front, where it draws nothing', () => {
+    const back = withCreasePatternSide(pattern, 'back');
+    const flipped = withCreasesFlipped(back, true);
+    expect(flipped).toEqual({ mode: 'crease-pattern', rotationDeg: 45, side: 'back', flipCreases: true });
+    expect(creasesFlipped(back)).toBe(false);
+    expect(creasesFlipped(flipped)).toBe(true);
+    // Front again: kept, inert; the back again brings it back.
+    const front = withCreasePatternSide(flipped, 'front');
+    expect(front).toEqual({ mode: 'crease-pattern', rotationDeg: 45, flipCreases: true });
+    expect(creasesFlipped(front)).toBe(false);
+    expect(withCreasePatternSide(front, 'back')).toEqual(flipped);
+    // Off is written as nothing, in the file's own order.
+    expect(withCreasesFlipped(flipped, false)).toEqual(back);
+    expect('flipCreases' in withCreasesFlipped(flipped, false)).toBe(false);
+    expect(Object.keys(withCreasePatternSide(front, 'back'))).toEqual(['mode', 'rotationDeg', 'side', 'flipCreases']);
   });
 
   it('keeps a crease pattern’s back through the other ways, and starts them from the front at its own turn', () => {

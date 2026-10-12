@@ -21,19 +21,27 @@ import type {
 import type { StepCreases } from './captureCreases';
 import { CAPTURE_PX_PER_UNIT, sceneBoundsOf, turnClockwise } from './captureGeometry';
 
-/** What a kernel line is on the paper, by its colour. */
-function lineRole(color: string): PaperLineRole {
+/** What a kernel line is on the paper, by its colour: a mountain and a valley swapped when `flipped`. */
+function lineRole(color: string, flipped: boolean): PaperLineRole {
   switch (color) {
     case 'Black0':
       return 'edge';
     case 'Red1':
-      return 'diagram-mountain';
+      return flipped ? 'diagram-valley' : 'diagram-mountain';
     case 'Blue2':
-      return 'diagram-valley';
+      return flipped ? 'diagram-mountain' : 'diagram-valley';
     default:
       // Cyan3, and any other colour a construction line can carry.
       return 'aux';
   }
+}
+
+/** How a crease pattern's paper is drawn (the Step pane's Side and Flip creases). */
+export interface CreasePatternPaper {
+  /** The side whose colour the paper is filled with. */
+  side?: 'front' | 'back';
+  /** Every mountain drawn as a valley and every valley as a mountain. */
+  flipped?: boolean;
 }
 
 /** Which draws over which: aux lines under the folds, the paper's edge over all. */
@@ -53,12 +61,15 @@ const ROLE_LAYER: Partial<Record<PaperLineRole, number>> = {
  * `back` the paper is filled with the style's back colour, and every line is
  * where the front draws it, its mountains and valleys as they are (Zach,
  * 2026-10-06: "just change the color of the face and not flip the creases").
+ * `flipped` swaps the mountains and valleys alone (Flip creases, which the
+ * render keeps for its back), every line where it was and drawn in the same
+ * order; aux lines and the edge are as they are.
  */
 export function creasePatternScene(
   document: OristudioCpDocumentSnapshot,
   creases: StepCreases,
   rotationDeg: number,
-  side: 'front' | 'back' = 'front'
+  { side = 'front', flipped = false }: CreasePatternPaper = {}
 ): PaperScene {
   const paperBox = boxOf(creases.paper.flat());
   const span = Math.max(paperBox.maxX - paperBox.minX, paperBox.maxY - paperBox.minY);
@@ -75,7 +86,7 @@ export function creasePatternScene(
     const line = document.crease_pattern.line_segments[id - 1];
     if (!line) continue;
     if (Math.hypot(line.b.x - line.a.x, line.b.y - line.a.y) <= epsilon) continue;
-    drawn.push({ role: lineRole(line.color), a: line.a, b: line.b });
+    drawn.push({ role: lineRole(line.color, flipped), a: line.a, b: line.b });
   }
   drawn.sort((left, right) => (ROLE_LAYER[left.role] ?? 0) - (ROLE_LAYER[right.role] ?? 0));
 

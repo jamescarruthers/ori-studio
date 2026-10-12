@@ -186,6 +186,14 @@ export type DiagramCpRender =
        * front, as every crease pattern was before.
        */
       side?: 'back';
+      /**
+       * On the back, its mountains drawn as valleys and its valleys as
+       * mountains, every line where it was: the same pattern drawn from the
+       * front, its creases read from the back (the Step pane's Flip creases;
+       * Zach, 2026-10-12). Kept on the front, where it draws nothing, so the
+       * back brings it back. Written only when on.
+       */
+      flipCreases?: true;
     }
   | {
       mode: 'folded-flat';
@@ -401,13 +409,35 @@ export function creasePatternSide(render: DiagramCreasePatternRender): 'front' |
   return render.side === 'back' ? 'back' : 'front';
 }
 
-/** A crease pattern on the colour of `side`, its turn as it was: the front written as no side at all. */
+/**
+ * A crease pattern on the colour of `side`, its turn and Flip creases as they
+ * were: the front written as no side at all.
+ */
 export function withCreasePatternSide(
   render: DiagramCreasePatternRender,
   side: 'front' | 'back'
 ): DiagramCreasePatternRender {
-  const { side: _was, ...front } = render;
-  return side === 'back' ? { ...front, side: 'back' } : front;
+  return creasePatternRender(render.rotationDeg, side, render.flipCreases === true);
+}
+
+/** Whether a crease pattern's mountains and valleys are drawn swapped: Flip creases on, and its back shown. */
+export function creasesFlipped(render: DiagramCreasePatternRender): boolean {
+  return render.side === 'back' && render.flipCreases === true;
+}
+
+/** A crease pattern with Flip creases on or off, its turn and side as they were: off written as nothing. */
+export function withCreasesFlipped(render: DiagramCreasePatternRender, on: boolean): DiagramCreasePatternRender {
+  return creasePatternRender(render.rotationDeg, creasePatternSide(render), on);
+}
+
+/** A crease pattern's render, its fields in the order the file writes them, each optional one only when said. */
+function creasePatternRender(rotationDeg: number, side: 'front' | 'back', flipCreases: boolean): DiagramCreasePatternRender {
+  return {
+    mode: 'crease-pattern',
+    rotationDeg,
+    ...(side === 'back' ? { side: 'back' as const } : {}),
+    ...(flipCreases ? { flipCreases: true as const } : {}),
+  };
 }
 
 /** How a render shows its pattern. */

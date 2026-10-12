@@ -2775,6 +2775,54 @@ describe('linked steps in the file', () => {
     expect((front.source as DiagramCpSource).render).toEqual({ mode: 'crease-pattern', rotationDeg: 45 });
   });
 
+  it('writes a crease pattern’s Flip creases only when on, and keeps it on the front, where it draws nothing', () => {
+    const flipped = { mode: 'crease-pattern' as const, rotationDeg: 330, side: 'back' as const, flipCreases: true as const };
+    const diagram = linkedDiagram();
+    const back = stepsIn(diagram)[10]!;
+    const withFlip = {
+      ...diagram,
+      steps: diagram.steps.map((entry) =>
+        entry === back ? { ...back, source: { ...(back.source as DiagramCpSource), render: flipped } } : entry
+      ),
+    };
+    const written = throughJson(writeDiagram(withFlip));
+    expect(written.steps[10].source.render).toEqual(flipped);
+    // Off, as every crease pattern was before: written as nothing.
+    expect(written.steps[0].source.render).not.toHaveProperty('flipCreases');
+    expect(throughJson(writeDiagram(linkedDiagram())).steps[10].source.render).not.toHaveProperty('flipCreases');
+    const read = readDiagram(written)!;
+    const step = stepsIn(read.document)[10]!;
+    expect(step.unknown).toBeUndefined();
+    expect((step.source as DiagramCpSource).render).toEqual(flipped);
+    // Written back as it came.
+    expect(JSON.stringify(writeDiagram(read.document))).toBe(JSON.stringify(writeDiagram(withFlip)));
+    // On the front: kept, for the back to bring back.
+    delete written.steps[10].source.render.side;
+    expect((stepsIn(readDiagram(written)!.document)[10].source as DiagramCpSource).render).toEqual({
+      mode: 'crease-pattern',
+      rotationDeg: 330,
+      flipCreases: true,
+    });
+    // Off said out loud — never written, but a hand may — is off, written back as nothing.
+    written.steps[10].source.render.flipCreases = false;
+    const off = stepsIn(readDiagram(written)!.document)[10];
+    expect(off.unknown).toBeUndefined();
+    expect((off.source as DiagramCpSource).render).toEqual({ mode: 'crease-pattern', rotationDeg: 330 });
+  });
+
+  it.each([
+    ['a word', 'yes'],
+    ['a number', 1],
+    ['null', null],
+  ])('drops a crease pattern whose Flip creases is %s, and the picture with it; the words stay', (_label, flip) => {
+    const written = throughJson(writeDiagram(linkedDiagram()));
+    written.steps[10].text = 'Turn it over.';
+    written.steps[10].source.render.flipCreases = flip;
+    const step = stepsIn(readDiagram(written)!.document)[10];
+    expect(step).toMatchObject({ source: null, picture: null, text: 'Turn it over.' });
+    expect(step.unknown).toBeUndefined();
+  });
+
   it.each([
     ['a side that is not a word', 3],
     ['a side of null', null],

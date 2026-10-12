@@ -173,6 +173,54 @@ describe('a crease pattern on the paper’s back colour', () => {
     expect(pattern).toMatchObject({ render: BACK });
     expect(sceneOf(pattern).items[0]).toMatchObject({ side: 'back' });
   });
+
+  // Zach, 2026-10-12: the pattern drawn from the front, its creases flipped for a step seen from the back.
+  describe('with its creases flipped', () => {
+    const FLIPPED: DiagramCpRender = { ...BACK, flipCreases: true };
+    const roles = (result: Awaited<ReturnType<typeof pose>>) =>
+      (sceneOf(result).items as { kind: string; role?: string }[]).flatMap((item) => (item.kind === 'line' ? [item.role] : []));
+
+    it('swaps the mountains and valleys on the back, every line where it was, and back again, folding nothing', async () => {
+      const { session, runtime } = sessionWith();
+      const back = await pose(session, BACK, { verb: 'show-crease-pattern' });
+      const flipped = await pose(session, BACK, { verb: 'flip-creases', on: true });
+      expect(flipped).toMatchObject({ status: 'posed', render: FLIPPED });
+      expect(roles(back)).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
+      expect(roles(flipped)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+      const [seen, swapped] = [sceneOf(back), sceneOf(flipped)];
+      expect(swapped.bounds).toEqual(seen.bounds);
+      expect(swapped.items[0]).toEqual(seen.items[0]);
+      expect(swapped.items.map((item: { role?: string }) => ({ ...item, role: undefined }))).toEqual(
+        seen.items.map((item: { role?: string }) => ({ ...item, role: undefined }))
+      );
+      const off = await pose(session, FLIPPED, { verb: 'flip-creases', on: false });
+      expect(off).toMatchObject({ render: BACK });
+      expect(off.status === 'posed' && 'flipCreases' in off.render).toBe(false);
+      expect(sceneOf(off)).toEqual(seen);
+      expect(runtime.fold).not.toHaveBeenCalled();
+    });
+
+    it('keeps it through every turn, and on the front, where it draws nothing, for the back to bring back', async () => {
+      const { session } = sessionWith();
+      for (const request of [{ verb: 'rotate-right' }, { verb: 'rotate-to', degrees: 40 }, { verb: 'reset' }] as const) {
+        expect(await pose(session, FLIPPED, request)).toMatchObject({ render: { side: 'back', flipCreases: true } });
+      }
+      const front = await pose(session, FLIPPED, { verb: 'paper-side', side: 'front' });
+      expect(front).toMatchObject({ render: { mode: 'crease-pattern', rotationDeg: 15, flipCreases: true } });
+      expect(roles(front)).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
+      expect(sceneOf(front)).toEqual(sceneOf(await pose(session, CP, { verb: 'rotate-to', degrees: 15 })));
+      const again = await pose(session, { mode: 'crease-pattern', rotationDeg: 15, flipCreases: true }, { verb: 'paper-side', side: 'back' });
+      expect(again).toMatchObject({ render: FLIPPED });
+      expect(roles(again)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+    });
+
+    it('changes nothing on the front: the field is the back’s', async () => {
+      const { session } = sessionWith();
+      const front = await pose(session, CP, { verb: 'flip-creases', on: true });
+      expect(front).toMatchObject({ render: CP });
+      expect(front.status === 'posed' && 'flipCreases' in front.render).toBe(false);
+    });
+  });
 });
 
 describe('showing it another way (D19)', () => {

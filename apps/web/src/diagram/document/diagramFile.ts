@@ -728,7 +728,7 @@ const PULLED_MARKS_KEYS: ReadonlySet<string> = new Set(['letters', 'highlights']
  * mode or a field it has no name for is a newer build's render.
  */
 const CP_RENDER_FIELDS: Readonly<Record<DiagramCpRender['mode'], ReadonlySet<string>>> = {
-  'crease-pattern': new Set(['mode', 'rotationDeg', 'side']),
+  'crease-pattern': new Set(['mode', 'rotationDeg', 'side', 'flipCreases']),
   'folded-flat': new Set(['mode', 'side', 'rotationDeg', 'foldCase', 'spread']),
   'folded-3d': new Set(['mode', 'camera', 'side']),
   // `shape` is Pose's mesh, which this build carries and never reads (`readCpRender`).
@@ -1292,13 +1292,16 @@ function readCpRender(value: unknown): DiagramCpRender | null {
   switch (value.mode) {
     case 'crease-pattern': {
       const seen = readPatternSide(value.side);
+      const flipCreases = readFlag(value.flipCreases);
       // A newer build's side made the step a newer build's before this was reached.
-      if (rotationDeg === null || seen === null || seen === NEWER) return null;
-      // The front is written as no side at all, so a front read with one is written back without it.
+      if (rotationDeg === null || seen === null || seen === NEWER || flipCreases === null) return null;
+      // The front is written as no side at all, and Flip creases off as nothing, so either read
+      // said out loud is written back without it. Flip creases on the front is kept: the back brings it back.
       return {
         mode: 'crease-pattern',
         rotationDeg: normalizeDegrees(rotationDeg),
         ...(seen === 'back' ? { side: 'back' as const } : {}),
+        ...(flipCreases ? { flipCreases: true as const } : {}),
       };
     }
     case 'folded-flat': {
@@ -1929,7 +1932,11 @@ function readLabelText(value: unknown): string | typeof NEWER | null {
   return text.length > LABEL_MAX_LENGTH ? NEWER : text;
 }
 
-/** A label's Bold or halo (17b), or equal divisions' short dividers (Revision 3), read as `numbered` is: unsaid or false, no; true, yes; anything else, damage. */
+/**
+ * A label's Bold or halo (17b), equal divisions' short dividers (Revision 3),
+ * or a crease pattern's Flip creases, read as `numbered` is: unsaid or false,
+ * no; true, yes; anything else, damage.
+ */
 function readFlag(value: unknown): boolean | null {
   if (value === undefined) return false;
   return typeof value === 'boolean' ? value : null;

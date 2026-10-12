@@ -731,8 +731,10 @@ vocabulary at paint time.**
     lines swap, and so do valley and mountain arrows, a shaped arrow's head
     with them; turning back restores every name. Nothing else renames: a
     crease-pattern step's Front | Back only recolours the face and carries
-    nothing (Zach, 2026-10-06), and Flip, an upload's mirror and a linked
-    picture's turn keep every name.
+    nothing (Zach, 2026-10-06), nor does its Flip creases on the back
+    (2026-10-12: its mountains and valleys swap where they lie, and every
+    mark stays where it is, named as it was), and Flip, an upload's mirror
+    and a linked picture's turn keep every name.
   - **Anything else** leaves annotations in place: a refold, Refresh, a camera
     or fold-% change, a fold's turn-over (a different side), or a replace. Annotate then shows "The picture
     changed since these annotations were drawn" until they are touched.
@@ -1805,7 +1807,11 @@ on its next save.
   - `{ kind: 'upload', assetId, rotationQuarterTurns (0–3), mirrored }`;
   - `{ kind: 'cp', scope: { kind: 'segment', region }, fingerprint,
     thumbnail, render, remembered? }`, `thumbnail` a key into the table;
-    `render` one of `{ mode: 'crease-pattern', rotationDeg, side?: 'back' }`,
+    `render` one of `{ mode: 'crease-pattern', rotationDeg, side?: 'back',
+    flipCreases?: true }` (`flipCreases`, added 2026-10-12, the Step pane's
+    Flip creases: on the back, every mountain drawn as a valley and every
+    valley as a mountain; kept on the front, where it draws nothing; written
+    only when true, `false` read as unsaid, anything else damage),
     `{ mode: 'folded-flat', side, rotationDeg, foldCase, spread? }` (a spread
     `{ kind: 'depth', amount, toward }` or `{ kind: 'affine', amount, keep,
     skew, axisDeg }`; one with no kind is by depth), `{ mode: 'folded-3d',

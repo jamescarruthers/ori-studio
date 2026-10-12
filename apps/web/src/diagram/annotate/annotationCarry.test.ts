@@ -218,6 +218,22 @@ describe('a crease pattern put on its back’s colour (Front | Back)', () => {
     expect(back.annotations).toEqual(marks);
     expect(back.annotatedPictureKey).toBe('scene-back');
   });
+
+  it('moves nothing and renames nothing with its creases flipped on its back, its marks in step with the new picture', () => {
+    const marks: KnownDiagramAnnotation[] = [
+      { id: 'valley', kind: 'valley-line', from: [0.1, 0.3], to: [0.9, 0.3] },
+      { id: 'arrow', kind: 'mountain-arrow', from: [0.1, 0.6], to: [0.4, 0.6], bend: 0.1 },
+    ];
+    const back = cpStep('step-1', { mode: 'crease-pattern', rotationDeg: 0, side: 'back' }, scenePicture('scene-back'));
+    const flipped = stepsIn(
+      setLinkedPicture(annotated(back, marks), 'step-1', {
+        source: cpSource({ mode: 'crease-pattern', rotationDeg: 0, side: 'back', flipCreases: true }),
+        picture: scenePicture('scene-flipped'),
+      })
+    )[0]!;
+    expect(flipped.annotations).toEqual(marks);
+    expect(flipped.annotatedPictureKey).toBe('scene-flipped');
+  });
 });
 
 /** A scene turned clockwise about its origin, as a linked capture turns its pattern. */

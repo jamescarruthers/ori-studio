@@ -259,7 +259,7 @@ export type DiagramArrowShapeGesture =
  * Pose's simulator to rest at a fold % and camera, or spread a flat fold's
  * layers: on, off, the other kind, another amount or direction, or an affine
  * spread's other layer held still, skew or axis; or put a crease pattern's
- * paper on the colour of one side).
+ * paper on the colour of one side, or flip its creases on its back).
  */
 export type DiagramPoseAction =
   | 'rotate_left'
@@ -289,7 +289,10 @@ export type DiagramPoseAction =
   | 'spread_keep'
   | 'spread_skew'
   | 'spread_axis'
-  | 'paper_side';
+  | 'paper_side'
+  // A crease pattern on its back with its mountains and valleys swapped, or back (the Step pane's Flip creases).
+  | 'flip_creases_on'
+  | 'flip_creases_off';
 
 /**
  * A side of the paper, for `diagram picture posed`: the one a picture shows

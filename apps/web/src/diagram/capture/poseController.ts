@@ -34,6 +34,7 @@ import {
 } from '../../store/workspaceStore/diagramCapture';
 import {
   creasePatternSide,
+  creasesFlipped,
   spreadStartsFor,
   stepById,
   type DiagramCpRender,
@@ -86,6 +87,8 @@ const TRACKED: Record<LinkedPoseRequest['verb'], TrackedPoseAction> = {
   'spread-axis': 'spread_axis',
   // A crease pattern's paper on the colour of one side: not a turn-over (Zach, 2026-10-06).
   'paper-side': 'paper_side',
+  // On, or off when the verb left them unflipped (`trackPose`).
+  'flip-creases': 'flip_creases_on',
 };
 
 /** The verbs that spread a flat fold's layers: they say how it is spread after them. */
@@ -105,11 +108,17 @@ const SPREAD_VERBS: ReadonlySet<LinkedPoseRequest['verb']> = new Set([
  * layers spread, how: its kind, the amount bucketed, and a depth spread's
  * direction or an affine one's layer held still, skew and axis (bucketed). A
  * turn-over says the side it left showing, and a crease pattern's paper side
- * the side whose colour it chose.
+ * the side whose colour it chose. Flip creases is counted as on or off by
+ * what it left, as Spread Layers is.
  */
 function trackPose(verb: LinkedPoseRequest['verb'], render: DiagramCpRender): void {
   const spread = render.mode === 'folded-flat' ? render.spread : undefined;
-  const action = verb === 'spread-layers' && !spread ? 'spread_off' : TRACKED[verb];
+  const action =
+    verb === 'spread-layers' && !spread
+      ? 'spread_off'
+      : verb === 'flip-creases' && !(render.mode === 'crease-pattern' && creasesFlipped(render))
+        ? 'flip_creases_off'
+        : TRACKED[verb];
   const how = SPREAD_VERBS.has(verb) && spread ? spreadTracking(spread) : undefined;
   const side = verb === 'turn-over' || verb === 'paper-side' ? renderSide(render) : undefined;
   trackDiagramPicturePosed(action, captureKind(render), { ...(how ? { spread: how } : {}), ...(side ? { side } : {}) });

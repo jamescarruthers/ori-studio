@@ -70,7 +70,7 @@ describe('creasePatternScene', () => {
   // Zach, 2026-10-06: "I wanted to just change the color of the face and not flip the creases."
   describe('on the paper’s back colour', () => {
     const front = (rotationDeg = 0) => creasePatternScene(cpDocument(), leftCreases(), rotationDeg);
-    const back = (rotationDeg = 0) => creasePatternScene(cpDocument(), leftCreases(), rotationDeg, 'back');
+    const back = (rotationDeg = 0) => creasePatternScene(cpDocument(), leftCreases(), rotationDeg, { side: 'back' });
 
     it('fills the paper with its back colour and changes nothing else: every line, the outline, the frame', () => {
       for (const rotationDeg of [0, 30, 315]) {
@@ -84,8 +84,50 @@ describe('creasePatternScene', () => {
         expect(recoloured.sheet).toBe(seen.sheet);
       }
       expect(lines(back()).map((item) => item.role)).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
-      const valley = creasePatternScene(cpDocument(), regionCreases(right), 0, 'back');
+      const valley = creasePatternScene(cpDocument(), regionCreases(right), 0, { side: 'back' });
       expect(lines(valley).map((item) => item.role)).toEqual(['diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+    });
+  });
+
+  // Zach, 2026-10-12: one pattern drawn from the front, its creases flipped for a step seen from the back.
+  describe('with its creases flipped', () => {
+    const both = () =>
+      creasePatternScene(cpDocument(), regionCreases(left), 0).items.concat(
+        creasePatternScene(cpDocument(), regionCreases(right), 0).items
+      );
+    const flippedBoth = () =>
+      creasePatternScene(cpDocument(), regionCreases(left), 0, { side: 'back', flipped: true }).items.concat(
+        creasePatternScene(cpDocument(), regionCreases(right), 0, { side: 'back', flipped: true }).items
+      );
+    const SWAP: Partial<Record<string, string>> = { 'diagram-mountain': 'diagram-valley', 'diagram-valley': 'diagram-mountain' };
+
+    it('draws every mountain as a valley and every valley as a mountain, every line where it was, in the same order', () => {
+      const [seen, flipped] = [both(), flippedBoth()];
+      expect(flipped).toHaveLength(seen.length);
+      flipped.forEach((item, index) => {
+        const was = seen[index]!;
+        if (item.kind !== 'line' || was.kind !== 'line') {
+          // The paper: the back's colour, nothing else changed.
+          expect({ ...item, side: 'front' }).toEqual(was);
+          return;
+        }
+        expect(item.role).toBe(SWAP[was.role] ?? was.role);
+        expect({ ...item, role: was.role }).toEqual(was);
+      });
+      // Aux lines and the paper's edge as they are.
+      const roles = (items: typeof seen) => items.flatMap((item) => (item.kind === 'line' ? [item.role] : []));
+      expect(roles(flipped)).toEqual(['aux', 'diagram-valley', 'edge', 'edge', 'edge', 'edge', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge']);
+      expect(roles(seen)).toEqual(['aux', 'diagram-mountain', 'edge', 'edge', 'edge', 'edge', 'diagram-valley', 'edge', 'edge', 'edge', 'edge']);
+    });
+
+    it('keeps the frame: the same bounds and sheet at every turn', () => {
+      for (const rotationDeg of [0, 30, 315]) {
+        const seen = creasePatternScene(cpDocument(), leftCreases(), rotationDeg, { side: 'back' });
+        const flipped = creasePatternScene(cpDocument(), leftCreases(), rotationDeg, { side: 'back', flipped: true });
+        expect(flipped.bounds).toEqual(seen.bounds);
+        expect(flipped.sheet).toBe(seen.sheet);
+        expect(flipped.items[0]).toEqual(seen.items[0]);
+      }
     });
   });
 });
