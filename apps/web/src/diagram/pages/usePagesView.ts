@@ -6,6 +6,7 @@ import type { PlotRect } from '../../lib/geometry';
 import { viewportSizeFromElement } from '../../lib/treeViewportPrimitives';
 import { registerDiagramViewCamera } from '../useDiagramShortcuts';
 import type { PreparedDiagramPages } from './diagramPages';
+import { usePublishPageInView } from './pageInView';
 
 /** A page at 100% is its paper's size on a 96 dpi screen. */
 export const PAGES_PX_PER_MM = 96 / 25.4;
@@ -23,7 +24,8 @@ const OBSERVES = typeof IntersectionObserver !== 'undefined';
 /**
  * The Pages view's behaviour (AGENTS.md › Panel components): its camera — the
  * BP panes' (`useViewportSurface`), registered with the Diagram's own viewport
- * keys — which page is in the middle of the view, which pages are near enough
+ * keys — which page is in the middle of the view (published for the panes,
+ * `pageInView.ts`), which pages are near enough
  * to compose, the selected step brought into view and given the focus, and
  * whether a press was really the end of a pan.
  */
@@ -61,8 +63,11 @@ export function usePagesView({
   const { containerRef, transformRef, handleViewportShortcut, onTransformed: cameraTransformed } = camera;
   useEffect(() => registerDiagramViewCamera(handleViewportShortcut), [handleViewportShortcut]);
 
-  // The page in the middle of the view.
-  const [current, setCurrent] = useState(0);
+  // The page in the middle of the view, for the panes too once the pages are
+  // laid out: held to the pages there are, which a re-cut can make fewer.
+  const [middlePage, setCurrent] = useState(0);
+  const current = Math.min(middlePage, Math.max(0, count - 1));
+  usePublishPageInView(pages ? current : null);
   const onTransformed = useCallback(
     (ref: ReactZoomPanPinchRef, state: { scale: number; positionY: number }) => {
       cameraTransformed(ref, state);
