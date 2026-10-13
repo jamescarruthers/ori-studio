@@ -693,3 +693,4 @@ changes Decisions 4 and 6, or the note just above, this holds:
 - [x] Hand moves keep their offsets across a re-pack while their steps keep page and band; Re-pack makes room for size pins, `pack-5` (Zach, 2026-10-13).
 - [ ] For Zach: a page whose pins no scale holds packs as before (decided here); kept offsets against homes moved inside their bands (evolution plan, part 2).
 - [x] Bends kept inside the margin, turning under the end pictures in round quarter circles; turns in a bend move with it (Zach, 2026-10-13).
+- [x] A caption 3 mm under its picture, 2 before (`CAPTION_TOP_MM`; Zach, 2026-10-13): a look on held pages (boxes and pictures kept, captions a millimetre lower), taller captioned boxes on fresh packs, `pack-6`.

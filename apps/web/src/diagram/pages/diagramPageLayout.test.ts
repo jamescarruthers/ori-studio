@@ -358,8 +358,8 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     let moved = 0;
     for (const band of bandsOf(centred)) {
       const flat = bandCells(centred, band);
-      // With no nesting a band's boxes stand on one middle line.
-      for (const cell of flat) expect(middle(cell)).toBeCloseTo(middle(flat[0]!), 9);
+      // With no nesting a band's boxes stand on one middle line, to the hundredth of a mm a box is kept to.
+      for (const cell of flat) expect(Math.abs(middle(cell) - middle(flat[0]!))).toBeLessThanOrEqual(0.005 + 1e-9);
       // Nested, the first rises, the next dips, and so on, the band where it was.
       bandCells(nested, band).forEach((cell, index) => {
         const shift = middle(cell) - middle(flat[index]!);

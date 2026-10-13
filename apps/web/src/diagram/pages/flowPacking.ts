@@ -48,8 +48,14 @@ export const PACKED_TURN_GUTTER_MM = 13;
 export const NUMBER_ROOM_MM = 5;
 /** A box is at least this much wider than its picture, mm. */
 export const PICTURE_SIDE_MM = 4;
-/** The room between a picture and its caption's first line, mm. */
-export const CAPTION_TOP_MM = 2;
+/**
+ * The room between a picture and its caption's first line, mm: 3, half as far
+ * again as the 2 it was (Zach, 2026-10-13: text "a bit further off the
+ * model"). A look: a page held as saved keeps its boxes and its pictures, and
+ * its captions stand this far under them (`savedPagesHold.test.ts`); a page
+ * packed now gets boxes this much taller for a caption.
+ */
+export const CAPTION_TOP_MM = 3;
 /** A caption is set at its picture's width, rounded to a whole mm and held to this range. */
 export const CAPTION_WIDTH_MM = { min: 28, max: 50 } as const;
 /** The page scale: never below `min`, which the search starts from, nor above `max`. */

@@ -807,7 +807,8 @@ describe('a turn on a packed page, on the lane', () => {
         drawn.pages.forEach((page, pageIndex) => {
           // Where the band is not drawn, its turns stand where they would.
           expect(hidden.pages[pageIndex]!.turns).toEqual(page.turns);
-          const parts = page.cells.flatMap((cell) => [partBox(cell, 'number'), partBox(cell, 'picture'), partBox(cell, 'text')]);
+          // A step with no caption has none to stand clear of: its empty caption is a point, not a box.
+          const parts = page.cells.flatMap((cell) => [partBox(cell, 'number'), partBox(cell, 'picture'), ...(cell.text.lines.length > 0 ? [partBox(cell, 'text')] : [])]);
           /** Whether a glyph centred at `at` stands the glyphs' clearance clear of every step's number, picture and caption. */
           const clear = (at: { x: number; y: number }, box: { w: number; h: number }) => {
             const [w, h] = [box.w / 2 + GLYPH_CLEAR_MM - 1e-9, box.h / 2 + GLYPH_CLEAR_MM - 1e-9];

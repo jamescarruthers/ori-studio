@@ -65,6 +65,33 @@ describe('a diagram saved with its pages held', () => {
     expect(stepsOf(document).filter((step) => step.place?.frame).map((step) => step.id)).toEqual(['step-2', 'step-7']);
   });
 
+  it('draws every picture where and as large as it was saved, its caption set the wider gap under it: a look, not a move (Zach, 2026-10-13)', () => {
+    // Each step's picture as drawn and its caption's first baseline, as this build drew the file with a 2 mm gap
+    // between them (`CAPTION_TOP_MM`). Its boxes were packed for that gap: held, they keep it, and the captions,
+    // a look, take the new one — each a millimetre lower, placed ones too, which keep their offsets from home.
+    const before: Record<string, readonly [readonly number[], number]> = {
+      'step-1': [[72.0784, 33, 65.8333, 65.8333], 104.0333],
+      'step-2': [[116.8284, 111.93, 65.8333, 65.8333], 182.9633],
+      'step-3': [[24.3284, 113.93, 65.8333, 65.8333], 184.9633],
+      'step-4': [[24.3284, 190.61, 65.8333, 65.8333], 261.6433],
+      'step-5': [[134.6127, 188.77, 40.2646, 40.2646], 234.2346],
+      'step-6': [[69.1278, 200.13, 71.7345, 71.7345], 277.0645],
+      'step-7': [[120.8778, 123.13, 71.7345, 71.7345], 201.2645],
+      'step-8': [[21.3778, 117.13, 71.7345, 71.7345], 194.0645],
+      'step-9': [[21.3778, 34.13, 71.7345, 71.7345], 111.0645],
+    };
+    const round = (value: number) => Math.round(value * 1e4) / 1e4;
+    const layout = layoutDiagram(read(), estimateTextSetter);
+    expect(layout.packed).toBeUndefined();
+    const cells = layout.pages.flatMap((page) => page.cells);
+    expect(cells.map((cell) => cell.stepId)).toEqual(Object.keys(before));
+    for (const cell of cells) {
+      const [picture, baseline] = before[cell.stepId]!;
+      expect([cell.drawMm.x, cell.drawMm.y, cell.drawMm.w, cell.drawMm.h].map(round), cell.stepId).toEqual(picture);
+      expect(cell.text.firstBaseline, cell.stepId).toBeCloseTo(baseline + 1, 4);
+    }
+  });
+
   it('writes back as it was read, every page setting it left unsaid now said at the value it was packed by', () => {
     const written = JSON.parse(JSON.stringify(writeDiagram(read())));
     const unsaid = {

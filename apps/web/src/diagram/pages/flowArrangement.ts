@@ -55,8 +55,10 @@ const LEAST_SCALE = 0.01;
  * page is packed from too, so its box is packed for the Size it asks for.
  * `pack-5` (2026-10-13): a picture whose size is pinned by hand is packed at
  * its pin, which no page scale changes, so its box holds it as it prints.
+ * `pack-6` (2026-10-13): a caption 3 mm under its picture (`CAPTION_TOP_MM`,
+ * 2 before), so a box with a caption is packed a millimetre taller.
  */
-export const PACKER_VERSION = 'pack-5';
+export const PACKER_VERSION = 'pack-6';
 
 /**
  * The page as packed, kept as its arrangement, rounded as the store keeps it

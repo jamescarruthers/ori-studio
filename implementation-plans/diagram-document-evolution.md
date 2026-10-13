@@ -45,7 +45,9 @@ new homes (reproduced with `artifacts/layout-review/crane_final_oldpack.osf`,
   yet. `pageSignature.test.ts` pins three digests so such a change cannot slip
   through unnoticed.
 - `PACKER_VERSION` (`pages/flowArrangement.ts`; `pack-4` when this part was
-  built, `pack-5` since 2026-10-13: a size pin packed at its pin) — the packer's own
+  built, `pack-5` since 2026-10-13: a size pin packed at its pin; `pack-6` the
+  same day: a caption 3 mm under its picture, so captioned boxes pack a
+  millimetre taller, while held pages keep their boxes) — the packer's own
   version, stamped on each newly packed arrangement as `packer`
   (`DiagramPageArrangement.packer`): read leniently (any string kept as it
   came; anything else dropped alone, the page still held), written back,

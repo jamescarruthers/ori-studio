@@ -106,6 +106,9 @@ interface ProtoPlan {
 }
 const TXT = 3.2;
 const LEAD = 4.1;
+// The prototype's 2 mm under a picture, widened to 3 as the port's was (Zach, 2026-10-13): a look, which every box
+// carries alike, not a change to how the packing chooses.
+const CAPTION_GAP = 3;
 const GAP_X = 5;
 const GAP_Y = 6;
 const TURN_GAP = 13;
@@ -124,7 +127,7 @@ function box(s: ProtoStep, k: number) {
   const ph = s.hMm * k;
   const tw = Math.round(Math.min(50, Math.max(28, pw)));
   const ls = lines(s.text, tw);
-  return { pw, ph, tw, ls, w: Math.max(pw + 4, tw), h: 5 + ph + (ls.length ? 2 + ls.length * LEAD : 0) };
+  return { pw, ph, tw, ls, w: Math.max(pw + 4, tw), h: 5 + ph + (ls.length ? CAPTION_GAP + ls.length * LEAD : 0) };
 }
 function compositions(n: number, parts: number): number[][] {
   const out: number[][] = [];
@@ -586,9 +589,10 @@ describe('packFlowPage: a step’s box', () => {
       setter.paragraph('Collapse the base along the shown creases', measure, STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER).lines.map((line) => line.text)
     );
     expect(caption.x + measure / 2).toBeCloseTo(b.x + b.w / 2, 9);
-    expect(caption.firstBaseline).toBeCloseTo(picture.y + picture.h + 2 + STEP_TEXT_SIZE_MM, 9);
+    // The caption 3 mm under its picture: half as far again as the 2 mm it had (Zach, 2026-10-13).
+    expect(caption.firstBaseline).toBeCloseTo(picture.y + picture.h + 3 + STEP_TEXT_SIZE_MM, 9);
     expect(b.w).toBeCloseTo(Math.max(width + 4, measure), 9);
-    expect(b.h).toBeCloseTo(5 + picture.h + 2 + caption.lines.length * STEP_TEXT_LEADING_MM, 9);
+    expect(b.h).toBeCloseTo(5 + picture.h + 3 + caption.lines.length * STEP_TEXT_LEADING_MM, 9);
   });
 
   it('gives a step with no caption no room for one, and never draws a box narrower than its number', () => {
@@ -617,7 +621,7 @@ describe('packFlowPage: a step’s box', () => {
       );
       // As wide as its measure and the side room, or its picture's; as tall as its lines.
       expect(b.w).toBeCloseTo(Math.max(picture.w + 4, textWidth + 4, 28), 9);
-      expect(b.h).toBeCloseTo(5 + picture.h + 2 + caption.lines.length * STEP_TEXT_LEADING_MM, 9);
+      expect(b.h).toBeCloseTo(5 + picture.h + 3 + caption.lines.length * STEP_TEXT_LEADING_MM, 9);
       // Inside its box, the side room either side (to the half mm a box rounds its measure to).
       expect(caption.x).toBeGreaterThanOrEqual(b.x + 1.75 - 1e-9);
       expect(caption.x + textWidth).toBeLessThanOrEqual(b.x + b.w - 1.75 + 1e-9);
