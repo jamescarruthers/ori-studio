@@ -1629,11 +1629,17 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   /**
    * A page just packed, each box grown to hold its step's picture measured at
    * the scale it prints at (`grownToHold`) — its pin's, where its size is
-   * pinned — as every later layout measures it (`LayoutStep.pictureAt`): so a
-   * step a page has just packed never prints past its box at once, which
-   * Re-pack Page, packing the same, could never mend.
+   * pinned and the page was packed to hold its pins (`pins`) — as every later
+   * layout measures it (`LayoutStep.pictureAt`): so a step a page has just
+   * packed never prints past its box at once, which Re-pack Page, packing the
+   * same, could never mend.
    */
-  const asMeasured = (arrangement: DiagramPageArrangement, entries: readonly T[], pageArea: PackRect): DiagramPageArrangement => {
+  const asMeasured = (
+    arrangement: DiagramPageArrangement,
+    entries: readonly T[],
+    pageArea: PackRect,
+    pins: boolean
+  ): DiagramPageArrangement => {
     let grown = false;
     const placed: Record<string, DiagramArrangedStep> = { ...arrangement.steps };
     for (const entry of entries) {
@@ -1641,7 +1647,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
       const place = placed[step.id];
       const picture = step.picture;
       if (!place || !picture || !step.pictureAt) continue;
-      const pin = input.pinned(entry);
+      const pin = pins ? input.pinned(entry) : null;
       const pinAt = pin ? (pin.mmPerUnit ?? pin.frameMm) : null;
       // A picture of the measure its scale is kept in: one with none drew at its box's side.
       const paper = 'mmPerUnit' in place.scale;
@@ -1675,23 +1681,26 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     let arrangement = holds ? stored : null;
     if (!arrangement) {
       const plan = plans[pageIndex]!;
-      const references = new Map<string, DiagramPlaceScale>();
-      const packSteps = entries.map((entry) => packStep(entry, input.referenceOf(entry), input.pinned(entry), setter, references, input.paper));
-      const found = packFlowPage(
-        {
-          steps: packSteps,
-          layoutCount: page.layoutCount,
-          area: pageArea,
-          up: plan.up,
-          handsOver: plan.exit === 'spine',
-          settings: setup,
-          kPrev,
-        },
-        setter
-      );
+      /** The page packed with every size pin held at its pin (`pins`), or each pinned picture at its automatic scale. */
+      const pack = (pins: boolean) => {
+        const references = new Map<string, DiagramPlaceScale>();
+        const packSteps = entries.map((entry) =>
+          packStep(entry, input.referenceOf(entry), pins ? input.pinned(entry) : null, setter, references, input.paper)
+        );
+        const request = { steps: packSteps, layoutCount: page.layoutCount, area: pageArea, up: plan.up, handsOver: plan.exit === 'spine', settings: setup, kPrev };
+        return { found: packFlowPage(request, setter), references, pins };
+      };
+      // Room made for every size pinned by hand (Zach, 2026-10-13) where some plan holds the pins at some scale.
+      // Where none does — pins that take more than the page has, which no page scale shrinks — the page is packed as
+      // it was before, each pinned picture at its automatic scale and drawn at its pin past its box, rather than
+      // overflowing the page.
+      const pinned = entries.some((entry) => input.pinned(entry) !== null);
+      let chosen = pack(pinned);
+      if (pinned && !chosen.found.fits) chosen = pack(false);
       // An enlarged step's Size, which its scale is packed for.
       const zoomSizes = new Map(entries.flatMap(({ step }) => (step.zoom?.scale != null ? [[step.id, step.zoom.scale] as const] : [])));
-      arrangement = asMeasured(packedArrangement(found, references, signatures[pageIndex]!, zoomSizes), entries, pageArea);
+      const { found, references, pins } = chosen;
+      arrangement = asMeasured(packedArrangement(found, references, signatures[pageIndex]!, zoomSizes), entries, pageArea, pins);
       packed[first] = arrangement;
     }
     kPrev = arrangement.k;

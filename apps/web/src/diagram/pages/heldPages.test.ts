@@ -226,9 +226,10 @@ describe('a picture whose size is pinned by hand (Zach, 2026-10-13)', () => {
 
   it('is packed at its pin, which no page scale changes: a fresh pack gives it a box that holds it', () => {
     const scales = new Set<number>();
-    for (const per of [4, 6, 9]) {
+    // Pins a page can hold: one no page scale holds is packed as before (below).
+    for (const per of [6, 9, 12]) {
       for (const page of [{}, { orientation: 'landscape' as const }]) {
-        for (const factor of [0.6, 1.6, 2.4]) {
+        for (const factor of [0.6, 1.4, 1.8]) {
           const { pinned, pin } = pinnedAt(factor, per, page);
           const layout = layOut(pinned);
           const at = layout.pages.find((each) => each.cells.some((cell) => cell.stepId === 's3'))!;
@@ -245,6 +246,24 @@ describe('a picture whose size is pinned by hand (Zach, 2026-10-13)', () => {
     }
     // Packed at several page scales.
     expect(scales.size).toBeGreaterThan(3);
+  });
+
+  it('packs a page whose pins no page scale can hold as it did before, its pinned pictures drawn past their boxes', () => {
+    const { base } = pinnedAt(1, 9);
+    const before = layOut(base);
+    // Every step pinned at four times the size it prints at: no plan holds them at any page scale.
+    const pinned = stepsOf(base).reduce((document, step) => {
+      const cell = cellOf(before, step.id);
+      const scale: DiagramPlaceScale = cell.mmPerUnit !== null ? { mmPerUnit: cell.mmPerUnit * 4 } : { frameMm: cell.frameMm! * 4 };
+      return setStepPlace(document, step.id, { scale });
+    }, base);
+    const layout = layOut(pinned);
+    expect(layout.pages[0]!.packing!.fits).toBe(true);
+    // The page packed as with no pin: every box where it was, each picture at its pin past it.
+    for (const cell of layout.pages[0]!.cells) {
+      expect(cell.cellMm, cell.stepId).toEqual(cellOf(before, cell.stepId).cellMm);
+      expect(pastItsBox(cell), cell.stepId).toBe('picture');
+    }
   });
 
   it('re-packs nothing when its pin changes on a held page, drawn past its box, until Re-pack Page makes room', () => {
