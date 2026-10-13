@@ -1304,6 +1304,13 @@ export interface DiagramDocument {
 export interface DiagramPageArrangement {
   /** The page's structure when it was packed (`pageSignature`): the arrangement holds while it matches. */
   signature: string;
+  /**
+   * The packer that packed it (`PACKER_VERSION` in `pages/flowArrangement.ts`),
+   * for a later build to offer a re-pack with a better one. Information only:
+   * it never decides whether the page holds. Absent on an arrangement saved
+   * before packers were recorded (every one that holds was packed by `pack-3`).
+   */
+  packer?: string;
   /** The page scale it was packed at, which every step's reference scale was multiplied by. */
   k: number;
   /** Each of its steps' places, by step id. */

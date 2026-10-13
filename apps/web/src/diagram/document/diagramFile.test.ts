@@ -353,6 +353,28 @@ describe('writeDiagram / readDiagram', () => {
       }
     });
 
+    it('keeps the packer an arrangement records as it came, none where none is said, and lets an unreadable one go alone', () => {
+      // Unsaid, as on every arrangement saved before packers were recorded: none read, none written.
+      const plain = throughJson(writeDiagram(arranged()));
+      expect('packer' in plain.pageArrangements['step-2']).toBe(false);
+      expect('packer' in readDiagram(plain)!.document.pageArrangements!['step-2']!).toBe(false);
+      // Said, any packer — this build's or another's — is kept, written after the signature, and holds the page alike.
+      for (const packer of ['pack-3', 'pack-99']) {
+        const stamped = throughJson(writeDiagram(withPageArrangements(sampleDiagram(), { 'step-2': { ...ARRANGED, packer } })));
+        expect(Object.keys(stamped.pageArrangements['step-2'])).toEqual(['signature', 'packer', 'k', 'steps']);
+        const read = readDiagram(stamped)!;
+        expect(read.document.pageArrangements!['step-2']).toEqual({ ...ARRANGED, packer });
+        expect(read.document.newer).toBeUndefined();
+        expect(throughJson(writeDiagram(read.document))).toEqual(stamped);
+      }
+      // Not a string: it says only what packed the page, so it alone goes, and the page is held as before.
+      for (const packer of [3, null, { version: 4 }]) {
+        const read = readDiagram({ ...plain, pageArrangements: { 'step-2': { ...plain.pageArrangements['step-2'], packer } } })!;
+        expect(read.document.pageArrangements!['step-2'], JSON.stringify(packer)).toEqual(ARRANGED);
+        expect(read.document.newer).toBeUndefined();
+      }
+    });
+
     it('carries one with a field or a value it has no name for as a newer build’s, until the page is re-packed here', () => {
       const written = throughJson(writeDiagram(arranged()));
       const good = written.pageArrangements['step-2'];

@@ -37,12 +37,30 @@ export const ARRANGED_SLACK_MM = 0.5;
 const LEAST_SCALE = 0.01;
 
 /**
+ * The packer's version, recorded on every arrangement it packs
+ * (`DiagramPageArrangement.packer`) and never part of a page's signature
+ * (`pageSignature.ts`): a build that packs another way changes it, and every
+ * page saved by an older packer holds as it was saved
+ * (`implementation-plans/diagram-document-evolution.md`). What it is for: a
+ * later build can tell a page packed before its improvements and offer to
+ * re-pack it, never re-pack it unasked.
+ *
+ * `pack-2` (the review fixes): boxes grown to hold their pictures as they
+ * print, no step in a bend with only stand-ins after it, and a page no plan
+ * fits drawn as large as its overflow allows. `pack-3` (F2): every step's
+ * reference scale found in the diagram's one cell, never its own page's.
+ * Every arrangement saved before packers were recorded that still holds —
+ * signed `pack-3:` — was packed by `pack-3`.
+ */
+export const PACKER_VERSION = 'pack-3';
+
+/**
  * The page as packed, kept as its arrangement, rounded as the store keeps it
  * (`roundPageArrangement`): each step's box; its printed scale, its reference
  * scale (`scales`) times the page's, in its own measure — or, for a step with
  * none, its picture box's side as a frame; its band; whether it stands in a
  * bend; and an enlarged step's Size (`zoomScales`), which its scale was
- * packed for.
+ * packed for. Stamped with the packer that packed it ({@link PACKER_VERSION}).
  */
 export function packedArrangement(
   packing: FlowPagePacking,
@@ -67,7 +85,7 @@ export function packedArrangement(
       ...(zoomScale !== undefined ? { zoomScale } : {}),
     };
   }
-  return roundPageArrangement({ signature, k: packing.k, steps });
+  return roundPageArrangement({ signature, packer: PACKER_VERSION, k: packing.k, steps });
 }
 
 /** A step's box, as a rectangle. */

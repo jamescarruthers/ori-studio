@@ -42,6 +42,11 @@ describe('roundPageArrangement', () => {
     const notInBend = { ...RAW, steps: { a: { ...RAW.steps.a!, bend: false as unknown as true } } };
     expect('bend' in roundPageArrangement(notInBend).steps.a!).toBe(false);
   });
+
+  it('keeps the packer it records, and records none where none was', () => {
+    expect(roundPageArrangement({ ...RAW, packer: 'pack-3' }).packer).toBe('pack-3');
+    expect('packer' in roundPageArrangement(RAW)).toBe(false);
+  });
 });
 
 describe('samePageArrangement', () => {
@@ -53,6 +58,7 @@ describe('samePageArrangement', () => {
     expect(samePageArrangement(rounded, undefined)).toBe(false);
     const changed = (patch: Partial<DiagramPageArrangement>) => samePageArrangement(rounded, { ...rounded, ...patch });
     expect(changed({ signature: 'pack-1:abd' })).toBe(false);
+    expect(changed({ packer: 'pack-3' })).toBe(false);
     expect(changed({ k: 1.2 })).toBe(false);
     expect(changed({ steps: { a: rounded.steps.a! } })).toBe(false);
     expect(changed({ steps: { ...rounded.steps, c: rounded.steps.a! } })).toBe(false);

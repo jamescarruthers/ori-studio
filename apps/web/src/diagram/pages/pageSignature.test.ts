@@ -22,7 +22,8 @@ import {
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { setStepPlace } from '../document/stepPlace';
 import type { PlannedPage } from './pagePlan';
-import { PACKING_VERSION, pageSignature, type PageSignatureInput, type SignedStep } from './pageSignature';
+import { PACKER_VERSION } from './flowArrangement';
+import { SIGNATURE_VERSION, holdsArrangement, pageSignature, type PageSignatureInput, type SignedStep } from './pageSignature';
 import { cellSlots } from './stepPlaces';
 
 /**
@@ -42,6 +43,9 @@ function diagram(page: Partial<DiagramPageSetup> = {}): DiagramDocument {
 
 const signatures = (document: DiagramDocument) => cellSlots(document).signatures;
 
+/** {@link diagram}'s pages' signatures as every build since 2026-10-12 has signed them. */
+const FROZEN_SIGNATURES = ['pack-3:8lau4w185srg7', 'pack-3:ka9psdp8lya6', 'pack-3:vp5q451hqxros'];
+
 /** Which pages' signatures differ between two diagrams, by index. */
 function changed(before: DiagramDocument, after: DiagramDocument): number[] {
   const [was, now] = [signatures(before), signatures(after)];
@@ -51,13 +55,32 @@ function changed(before: DiagramDocument, after: DiagramDocument): number[] {
 const RASTER: DiagramRasterAsset = { id: 'asset-1', kind: 'raster', src: 'data:image/png;base64,AA==', widthPx: 20, heightPx: 10, bytes: 24 };
 
 describe('pageSignature', () => {
-  it('is a short string, tagged with the packing’s version, the same every time it is asked', () => {
+  it('is a short string, tagged with the signature’s format, the same every time it is asked', () => {
     const [first] = signatures(diagram());
-    expect(first).toMatch(new RegExp(`^${PACKING_VERSION}:[0-9a-z]+$`));
+    expect(first).toMatch(new RegExp(`^${SIGNATURE_VERSION}:[0-9a-z]+$`));
     expect(first!.length).toBeLessThan(32);
     expect(signatures(diagram())).toEqual(signatures(diagram()));
     // Each page its own.
     expect(new Set(signatures(diagram())).size).toBe(3);
+  });
+
+  it('keeps its format, so every page saved so far still holds: the same structure signs as it always has', () => {
+    // The literal every saved page was signed with, and the digests of this diagram's pages under it. A change
+    // here re-packs every saved diagram: it is a new format, which must also accept these
+    // (`implementation-plans/diagram-document-evolution.md`). A change to the packing never is one.
+    expect(SIGNATURE_VERSION).toBe('pack-3');
+    expect(signatures(diagram())).toEqual(FROZEN_SIGNATURES);
+  });
+
+  it('is never the packer’s: an arrangement holds whatever packer packed it', () => {
+    const document = diagram();
+    const slots = cellSlots(document);
+    const ids = slots.pages[0]!;
+    const steps = Object.fromEntries(ids.map((id) => [id, { box: [0, 0, 10, 10] as [number, number, number, number], scale: { frameMm: 10 }, band: 0 }]));
+    const stored = { signature: slots.signatures[0]!, k: 1, steps };
+    expect(holdsArrangement(stored, slots.signatures[0], ids)).toBe(true);
+    expect(holdsArrangement({ ...stored, packer: PACKER_VERSION }, slots.signatures[0], ids)).toBe(true);
+    expect(holdsArrangement({ ...stored, packer: 'pack-99' }, slots.signatures[0], ids)).toBe(true);
   });
 
   describe('changes with everything it covers', () => {

@@ -36,8 +36,8 @@ function roundScale(scale: DiagramPlaceScale): DiagramPlaceScale {
 /**
  * An arrangement as it is kept: every length in mm to a hundredth (a box
  * never narrower or shorter than one), its page scale, each printed scale and
- * an enlarged step's Size to six significant digits, and `bend` only where it
- * is true. What the store
+ * an enlarged step's Size to six significant digits, `bend` only where it
+ * is true, and its packer as recorded. What the store
  * adopts, so a held page draws as it will after a save and a reload.
  */
 export function roundPageArrangement(arrangement: DiagramPageArrangement): DiagramPageArrangement {
@@ -52,7 +52,12 @@ export function roundPageArrangement(arrangement: DiagramPageArrangement): Diagr
       ...(step.zoomScale !== undefined ? { zoomScale: toSixDigits(step.zoomScale) } : {}),
     };
   }
-  return { signature: arrangement.signature, k: toSixDigits(arrangement.k), steps };
+  return {
+    signature: arrangement.signature,
+    ...(arrangement.packer !== undefined ? { packer: arrangement.packer } : {}),
+    k: toSixDigits(arrangement.k),
+    steps,
+  };
 }
 
 /** Whether two arrangements, or their absence, say the same, field for field. */
@@ -61,7 +66,7 @@ export function samePageArrangement(
   b: DiagramPageArrangement | undefined
 ): boolean {
   if (a === b) return true;
-  if (!a || !b || a.signature !== b.signature || a.k !== b.k) return false;
+  if (!a || !b || a.signature !== b.signature || a.packer !== b.packer || a.k !== b.k) return false;
   const ids = Object.keys(a.steps);
   return ids.length === Object.keys(b.steps).length && ids.every((id) => Object.hasOwn(b.steps, id) && sameArrangedStep(a.steps[id]!, b.steps[id]!));
 }
@@ -94,7 +99,7 @@ export function samePageArrangements(
 /** An arrangement written by a newer build: a field or a value this build has no name for. Carried as it came. */
 export const NEWER_ARRANGEMENT: unique symbol = Symbol('newer arrangement');
 
-const ARRANGEMENT_KEYS: ReadonlySet<string> = new Set(['signature', 'k', 'steps']);
+const ARRANGEMENT_KEYS: ReadonlySet<string> = new Set(['signature', 'packer', 'k', 'steps']);
 const ARRANGED_STEP_KEYS: ReadonlySet<string> = new Set(['box', 'scale', 'band', 'bend', 'zoomScale']);
 const SCALE_KEYS: ReadonlySet<string> = new Set(['mmPerUnit', 'frameMm']);
 
@@ -104,8 +109,10 @@ const SCALE_KEYS: ReadonlySet<string> = new Set(['mmPerUnit', 'frameMm']);
  * five a page packs into, is a newer build's ({@link NEWER_ARRANGEMENT}),
  * whatever else it holds. Otherwise anything that does not read is damage,
  * and the whole arrangement is: a page cannot be held with a step it does
- * not know the place of. Read as it came, unrounded, so a file is written
- * back as it was read.
+ * not know the place of. All but its packer, which says only what packed
+ * it and never whether it holds: any string is kept as it came, and anything
+ * else is let go alone, the page still held. Read as it came, unrounded, so a
+ * file is written back as it was read.
  */
 export function readPageArrangement(value: unknown): DiagramPageArrangement | typeof NEWER_ARRANGEMENT | null {
   if (!isRecord(value)) return null;
@@ -120,7 +127,12 @@ export function readPageArrangement(value: unknown): DiagramPageArrangement | ty
   }
   if (newer) return NEWER_ARRANGEMENT;
   if (damaged) return null;
-  return { signature: value.signature as string, k: value.k as number, steps };
+  return {
+    signature: value.signature as string,
+    ...(typeof value.packer === 'string' ? { packer: value.packer } : {}),
+    k: value.k as number,
+    steps,
+  };
 }
 
 /**
@@ -187,6 +199,7 @@ function writePageArrangement(arrangement: DiagramPageArrangement): Record<strin
   const steps = Object.entries(arrangement.steps).sort(([a], [b]) => byKey(a, b));
   return {
     signature: arrangement.signature,
+    ...(arrangement.packer !== undefined ? { packer: arrangement.packer } : {}),
     k: arrangement.k,
     steps: Object.fromEntries(
       steps.map(([stepId, step]) => [

@@ -8,19 +8,28 @@
  *
  * It covers exactly what the packing is cut from: the page's steps in order,
  * the turns before each (on the diagram's last page, those after its last
- * step too) and which of them are enlarged steps after another step, whose
+ * step too, which a diagram's pages no longer print: none) and which of them
+ * are enlarged steps after another step, whose
  * enlarge arrow may print before them — each keeps a gutter
  * ({@link keepsGlyphGutter}) — its index, side, whether it hands over at its
  * spine, whether it is the last page, its capacity, the diagram's steps per
  * page (the one cell every step's reference scale is found in), the page
  * setup's geometry (size, orientation, margin, the title tab shown, page
- * numbers shown), the five packing settings, and {@link PACKING_VERSION}.
+ * numbers shown), the five packing settings, and {@link SIGNATURE_VERSION}.
  * Never a picture, a caption, a mark, a hand placement, the band's width or
  * colour, or the style: an edit of those keeps every page as it is packed.
  * Whether an
  * enlarge arrow prints is one of those — it needs the enlarged step's picture
  * and an area on the step before — so it never counts: its gutter is kept
  * either way, and an arrow that comes or goes is drawn in it.
+ *
+ * Never the packer either (`implementation-plans/diagram-document-evolution.md`):
+ * a page's structure, not the build that packed it, says whether it holds, so
+ * a build that packs better leaves every saved page as it was saved — layout
+ * never moves without the user's consent. Its packing reaches a new page, and
+ * one the user re-packs (Re-pack Page); which packer packed a page is recorded
+ * beside its signature, for a later build to offer the improved packing
+ * (`DiagramPageArrangement.packer`, `PACKER_VERSION`).
  *
  * Pure and cheap: one short digest per page. Free of the document model's
  * values, as the pagination is, so the layout and the export's geometry read
@@ -33,14 +42,20 @@ import { flowPagePlan } from './flowLane';
 import type { PaginatedStep, PlannedPage } from './pagePlan';
 
 /**
- * The packing's version, part of every signature: a build that packs another
- * way changes it, and every page stored by the old way is packed afresh.
- * `pack-2` (the review fixes): boxes grown to hold their pictures as they
- * print, no step in a bend with only stand-ins after it, and a page no plan
- * fits drawn as large as its overflow allows. `pack-3` (F2): every step's
- * reference scale found in the diagram's one cell, never its own page's.
+ * The signature's format, part of every signature: frozen at `pack-3`, the
+ * literal every page saved so far was signed with, so each of them still
+ * matches and holds. (Until 2026-10-12 it was the packer's version, which
+ * changed whenever the packing did and re-packed every saved page; that
+ * version is now `PACKER_VERSION`, kept apart.)
+ *
+ * It changes only when the signature's inputs change — what the structure
+ * below covers, or how it is digested — never for a change to the packing. A
+ * build that changes them must also accept the signatures of the format
+ * before: a page saved under the old format whose structure is the same, as
+ * the old format read it, still holds ({@link holdsArrangement}). There is no
+ * second format yet.
  */
-export const PACKING_VERSION = 'pack-3';
+export const SIGNATURE_VERSION = 'pack-3';
 
 /**
  * What a page's signature reads of a step: what paginates it, how many turns
@@ -89,16 +104,17 @@ export function titleShown(setup: Pick<DiagramPageSetup, 'showTitle'>, title: st
   return setup.showTitle && title.trim() !== '';
 }
 
-/** The signature of the `pageIndex`th page: {@link PACKING_VERSION}, a colon and a digest of its structure. */
+/** The signature of the `pageIndex`th page: {@link SIGNATURE_VERSION}, a colon and a digest of its structure. */
 export function pageSignature(input: PageSignatureInput, pageIndex: number): string {
   const { steps, pages, setup, title } = input;
   const page = pages[pageIndex];
-  if (!page) return `${PACKING_VERSION}:none`;
+  if (!page) return `${SIGNATURE_VERSION}:none`;
   const last = pageIndex === pages.length - 1;
   const plan = flowPagePlan(pageIndex, pages.length, setup.firstPageSide, 1);
   const lastIndex = page.steps.at(-1);
+  // Each entry, and its place, is the format (`SIGNATURE_VERSION`): one added, taken out or read otherwise is a new one.
   const structure = [
-    PACKING_VERSION,
+    SIGNATURE_VERSION,
     pageIndex,
     plan.side,
     plan.exit === 'spine',
@@ -122,7 +138,7 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
     }),
     last && lastIndex !== undefined ? steps[lastIndex]!.turnsAfter.length : 0,
   ];
-  return `${PACKING_VERSION}:${digest(JSON.stringify(structure))}`;
+  return `${SIGNATURE_VERSION}:${digest(JSON.stringify(structure))}`;
 }
 
 /** Every page's signature, by its index. */
@@ -135,7 +151,8 @@ export function pageSignatures(input: PageSignatureInput): string[] {
  * the page as it is — its signature the page's — and placing every step on
  * it. The one test the layout draws by and the store keeps and lets go by
  * (`pageArrangements.ts`), so a damaged arrangement the layout packs over is
- * never one the store holds on to.
+ * never one the store holds on to. Which packer packed it (`packer`) is never
+ * asked: an arrangement packed by an older packer holds as one packed now.
  */
 export function holdsArrangement(
   stored: DiagramPageArrangement | undefined,
