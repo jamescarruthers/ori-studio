@@ -94,7 +94,7 @@ export function operationLabel(t: TFunction, step: FoldSentenceStep): string {
         ? t('panels:fold.words.tuckValley', 'Valley fold and tuck')
         : t('panels:fold.words.tuckMountain', 'Mountain fold and tuck');
     case 'vertex':
-      return vertexLabel(t, step.fold, step.direction);
+      return vertexLabel(t, step.fold, step.direction, step.form);
     case 'sink':
       return sinkLabel(t, step.kind);
     case 'unknown':
@@ -139,7 +139,7 @@ export function operationBadge(t: TFunction, step: FoldSentenceStep): string {
     case 'tuck':
       return t('panels:fold.words.badgeTuck', 'Tuck');
     case 'vertex':
-      return vertexBadge(t, step.fold);
+      return vertexBadge(t, step.fold, step.form);
     case 'sink':
       return sinkLabel(t, step.kind);
     case 'unknown':

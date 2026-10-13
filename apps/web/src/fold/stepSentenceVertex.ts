@@ -37,8 +37,27 @@ function swivelEdgeSentence(t: TFunction, direction: FoldDirection, target: 'cre
     : t('panels:fold.sentence.swivelEdgeLine', 'Swivel the edge onto the line, pivoting at the point.');
 }
 
+/** An inside swivel's sentence: the open one's, the verb saying the strip goes inside. */
+function swivelInsideSentence(t: TFunction, direction: FoldDirection, target: 'crease' | 'free'): string {
+  if (direction === 'mountain') {
+    return target === 'crease'
+      ? t(
+          'panels:fold.sentence.behind.swivelInsideCrease',
+          'Inside-swivel the edge behind onto the crease, the creases meeting on the folded edge.'
+        )
+      : t(
+          'panels:fold.sentence.behind.swivelInsideLine',
+          'Inside-swivel the edge behind onto the line, the creases meeting on the folded edge.'
+        );
+  }
+  return target === 'crease'
+    ? t('panels:fold.sentence.swivelInsideCrease', 'Inside-swivel the edge onto the crease, the creases meeting on the folded edge.')
+    : t('panels:fold.sentence.swivelInsideLine', 'Inside-swivel the edge onto the line, the creases meeting on the folded edge.');
+}
+
 /** A swivel on a folded edge's sentence: the edge onto the crease or the line clicked, its creases meeting on the folded edge. */
-function swivelFoldSentence(t: TFunction, direction: FoldDirection, target: 'crease' | 'free'): string {
+function swivelFoldSentence(t: TFunction, direction: FoldDirection, target: 'crease' | 'free', inside: boolean): string {
+  if (inside) return swivelInsideSentence(t, direction, target);
   if (direction === 'mountain') {
     return target === 'crease'
       ? t(
@@ -65,7 +84,9 @@ export function vertexSentence(
   form?: FoldVertexSentenceForm
 ): string {
   if (form && 'swivel' in form && form.swivel === 'edge') return swivelEdgeSentence(t, direction, form.target);
-  if (form && 'swivel' in form && form.swivel === 'fold') return swivelFoldSentence(t, direction, form.target);
+  if (form && 'swivel' in form && form.swivel === 'fold') {
+    return swivelFoldSentence(t, direction, form.target, form.inside === true);
+  }
   const scores = form !== undefined && 'hinge' in form && form.hinge === 'points';
   if (direction === 'mountain') {
     switch (fold) {
@@ -95,8 +116,23 @@ export function vertexSentence(
   }
 }
 
-/** What the operation is called: "Squash fold", "Squash fold behind". */
-export function vertexLabel(t: TFunction, fold: FoldVertexOpKind, direction: FoldDirection): string {
+/** Whether a vertex fold's form is the inside swivel. */
+function isInsideSwivel(form: FoldVertexSentenceForm | undefined): boolean {
+  return form !== undefined && 'swivel' in form && form.swivel === 'fold' && form.inside === true;
+}
+
+/** What the operation is called: "Squash fold", "Squash fold behind", "Inside swivel". */
+export function vertexLabel(
+  t: TFunction,
+  fold: FoldVertexOpKind,
+  direction: FoldDirection,
+  form?: FoldVertexSentenceForm
+): string {
+  if (isInsideSwivel(form)) {
+    return direction === 'mountain'
+      ? t('panels:fold.words.behind.swivelInside', 'Inside swivel behind')
+      : t('panels:fold.words.swivelInside', 'Inside swivel');
+  }
   if (direction === 'mountain') {
     switch (fold) {
       case 'squash':
@@ -121,8 +157,9 @@ export function vertexLabel(t: TFunction, fold: FoldVertexOpKind, direction: Fol
   }
 }
 
-/** The operation in a word, for a badge beside a step's number: "Squash". */
-export function vertexBadge(t: TFunction, fold: FoldVertexOpKind): string {
+/** The operation in a word, for a badge beside a step's number: "Squash", "Inside swivel". */
+export function vertexBadge(t: TFunction, fold: FoldVertexOpKind, form?: FoldVertexSentenceForm): string {
+  if (isInsideSwivel(form)) return t('panels:fold.words.badgeSwivelInside', 'Inside swivel');
   switch (fold) {
     case 'squash':
       return t('panels:fold.words.badgeSquash', 'Squash');
@@ -189,6 +226,18 @@ export function vertexRows(t: TFunction, form: FoldVertexSentenceForm | undefine
           'panels:fold.step.creasesMeetHelp',
           'Where the line halfway between the edge and the line it lands on crosses the folded edge. The other layer at that edge folds along a second crease too.'
         ),
+      },
+      {
+        label: t('panels:fold.step.swivelKind', 'Kind'),
+        value: form.inside
+          ? t('panels:fold.words.swivelKindInside', 'Inside')
+          : t('panels:fold.words.swivelKindOpen', 'Open'),
+        help: form.inside
+          ? t(
+              'panels:fold.step.swivelKindInsideHelp',
+              'The other layer’s strip folds under the rest of its layer, tucked between the two layers.'
+            )
+          : t('panels:fold.step.swivelKindOpenHelp', 'The other layer’s strip folds up over the rest of its layer, its back on show.'),
       },
     ];
   }

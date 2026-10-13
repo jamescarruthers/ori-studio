@@ -117,8 +117,12 @@ export type FoldVertexSentenceForm =
   | { hinge: 'crease' | 'points' }
   | { swivel: 'rays' }
   | { swivel: 'edge'; target: 'crease' | 'free'; ridge: 'foot' | 'end' }
-  /** A swivel by its edge whose creases meet on a folded edge: no ridge to choose. */
-  | { swivel: 'fold'; target: 'crease' | 'free' };
+  /**
+   * A swivel by its edge whose creases meet on a folded edge: no ridge to
+   * choose. `inside` for the inside swivel, its strip tucked between the two
+   * layers; absent for the open one.
+   */
+  | { swivel: 'fold'; target: 'crease' | 'free'; inside?: true };
 
 /**
  * How much of its line a precrease creased, when it was not all of it: a
