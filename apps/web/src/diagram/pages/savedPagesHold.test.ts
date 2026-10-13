@@ -5,7 +5,7 @@ import { readDiagram, writeDiagram } from '../document/diagramFile';
 import { layoutDiagram } from './diagramPages';
 import { estimateTextSetter } from './estimateTextSetter';
 import { PACKER_VERSION } from './flowArrangement';
-import { adoptPageArrangements, dropStalePageArrangements, heldPageArrangements, repackPages } from './pageArrangements';
+import { adoptPageArrangements, followPageArrangements, heldPageArrangements, repackPages } from './pageArrangements';
 import { pageOffset } from './pagePlacement';
 
 /**
@@ -47,7 +47,7 @@ describe('a diagram saved with its pages held', () => {
     expect(layout.pages.map((page) => page.packing?.packed)).toEqual([false, false]);
     expect(Object.keys(heldPageArrangements(document))).toEqual(['step-1', 'step-6']);
     expect(adoptPageArrangements(document, {})).toBe(document);
-    expect(dropStalePageArrangements(document)).toBe(document);
+    expect(followPageArrangements(document, document)).toBe(document);
   });
 
   it('draws every step in the box it was saved in, a moved frame moved from it, every placement as saved', () => {

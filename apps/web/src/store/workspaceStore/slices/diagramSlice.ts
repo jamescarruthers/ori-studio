@@ -60,7 +60,7 @@ import {
 } from '../diagramZoom';
 import { lacksPaperFaces } from '../../../diagram/capture/stepPaperFaces';
 import { resetStepPlace, resetStepPlaces, setStepPlace } from '../../../diagram/document/stepPlace';
-import { adoptPageArrangements, dropStalePageArrangements, repackPages } from '../../../diagram/pages/pageArrangements';
+import { adoptPacking, followPageArrangements, repackPages } from '../../../diagram/pages/pageArrangements';
 import { retainPageCounts, setPageSteps } from '../../../diagram/pages/pageCounts';
 import { flushPlacementNudge } from '../../../diagram/pages/placementGestures';
 import { cellSlots, settlePlaces } from '../../../diagram/pages/stepPlaces';
@@ -124,7 +124,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
   /** The References browser's openings, counted: what a pull names its browser by. */
   let browserOpenings = 0;
 
-  /** The edits that sent frames moved by hand home, counted: `diagramPlacesSettled`'s nonce. */
+  /** The edits and adoptions that sent frames moved by hand home, counted: `diagramPlacesSettled`'s nonce. */
   let placesSettled = 0;
 
   /** Whether an edit in `session` at `key` extends the newest entry, and the session to remember after it. */
@@ -139,6 +139,20 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       openSession.session === session &&
       openSession.loadId === loadId;
     return { extend, remember: () => (openSession = session === undefined ? null : { key, session, loadId }) };
+  };
+
+  /**
+   * The reflow notice for `added` frames sent home now, with the undo entry
+   * they went home in, so what offers to undo it can tell it is still the
+   * newest — none on a diagram opened with them (no entry). Frames a page's
+   * packing sends home after the edit that re-packed it count with the
+   * edit's own (`count`), as one notice for the edit.
+   */
+  const placesSettledNotice = (added: number, history = get().diagramHistory) => {
+    const entry = history.past.at(-1) ?? null;
+    const shown = get().diagramPlacesSettled;
+    const count = entry !== null && shown?.entry === entry ? shown.count + added : added;
+    return { count, added, nonce: (placesSettled += 1), entry };
   };
 
   /**
@@ -167,19 +181,21 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     // those it took away, so later pages stay where they were
     // (`diagram-flow-pages.md`): one rule, here, whatever the edit was.
     const counted = retainPageCounts(base, edited);
-    // A frame moved by hand whose step the edit put in another cell goes back
-    // to it, in this edit's undo step (Decision 1A): one rule, here, whatever
-    // the edit was, so no verb can forget it.
-    const { document: settled, settled: count } = settlePlaces(base, counted);
-    // A page arrangement packed for a structure no page has any more goes in
-    // the same undo step (`diagram-flow-packing.md`): the layout packs that
-    // page afresh, and the file never carries one no page holds.
-    const held = dropStalePageArrangements(settled);
+    // Each flow page's arrangement follows its page, in the same undo step
+    // (`diagram-flow-packing.md`): one the page no longer holds is kept for
+    // the bands its steps were in until the layout packs the page afresh, and
+    // one no page keeps goes, so the file never carries it.
+    const followed = followPageArrangements(base, counted);
+    // A frame moved by hand whose step the edit took out of its cell — in the
+    // flow, off its page — goes home, in this edit's undo step (Decision 1A;
+    // a flow step's band is judged as its page's packing is adopted): one
+    // rule, here, whatever the edit was, so no verb can forget it.
+    const { document: settled, settled: count } = settlePlaces(base, followed);
     // An asset nothing refers to any more goes as the edit lands. Each undo
     // snapshot keeps its own assets table, so undo still has the picture a
     // replace took away; and with the current diagram no longer holding it,
     // the history byte cap (`trimDiagramHistory`) sees what only history keeps.
-    const next = withReferencedAssets(held);
+    const next = withReferencedAssets(settled);
     if (!extend) openSession = null;
     const history = extend
       ? state.diagramHistory
@@ -188,8 +204,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       diagram: next,
       diagramHistory: history,
       dirty: true,
-      // With the undo entry they went home in, so what offers to undo it can tell it is still the newest.
-      ...(count > 0 ? { diagramPlacesSettled: { count, nonce: (placesSettled += 1), entry: history.past.at(-1) ?? null } } : {}),
+      ...(count > 0 ? { diagramPlacesSettled: placesSettledNotice(count, history) } : {}),
     });
     return next;
   };
@@ -770,11 +785,12 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       const { diagram, diagramReadOnly } = get();
       // Packed from a diagram that has changed since, or one that is shown and never edited: nothing to take in.
       if (diagramReadOnly || diagram === null || diagram !== ofDocument) return false;
-      const next = adoptPageArrangements(diagram, arrangements);
+      // A frame moved by hand on a page packed afresh goes home where its step changed band, as the layout drew it.
+      const { document: next, settled } = adoptPacking(diagram, arrangements);
       if (next === diagram) return false;
       // Not an edit: no undo entry, the history as it was, and the project no dirtier than it was.
       noteAdoptedPacking(next, diagram);
-      set({ diagram: next });
+      set({ diagram: next, ...(settled > 0 ? { diagramPlacesSettled: placesSettledNotice(settled) } : {}) });
       return true;
     },
 

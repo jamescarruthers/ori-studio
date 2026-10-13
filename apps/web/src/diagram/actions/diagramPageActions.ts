@@ -27,8 +27,9 @@ export interface DiagramPageCommand {
  * What the page verbs are gated on. Not on whether a page holds an
  * arrangement to let go: a re-pack lets its own go, so a button gated on that
  * turned itself off as it was pressed, until the layout's packing was taken
- * in, and the browser moved keyboard focus off it. Pressed where nothing is
- * stored, a re-pack does nothing.
+ * in, and the browser moved keyboard focus off it. Pressed where the page
+ * holds nothing to let go — it waits to be packed afresh — a re-pack does
+ * nothing.
  */
 export interface DiagramPageActionState {
   /** The diagram is laid out in the flow, whose pages are packed. */

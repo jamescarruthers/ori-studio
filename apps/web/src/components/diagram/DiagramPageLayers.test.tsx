@@ -11,6 +11,7 @@ import {
   type DiagramStep,
 } from '../../diagram/document/diagramDocument';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
+import { heldPageArrangements } from '../../diagram/pages/pageArrangements';
 import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { DiagramLayersPanel } from '../panels/DiagramLayersPanel';
@@ -225,7 +226,8 @@ describe('DiagramLayersPanel › in the Pages view', () => {
     const button = repack()!;
     act(() => button.focus());
     act(() => button.click());
-    expect(Object.keys(state().diagram?.pageArrangements ?? {})).toEqual(['s4']);
+    // The page's arrangement let go: kept, no longer held, until the page is packed again.
+    expect(Object.keys(heldPageArrangements(state().diagram!))).toEqual(['s4']);
     expect(state().diagramHistory.past).toHaveLength(past + 1);
     expect(analytics.trackDiagramPagesRepacked).toHaveBeenCalledExactlyOnceWith('page', 'layers_pane');
     // Pressed from the keyboard, it keeps focus: letting its own arrangement go never turns it off.

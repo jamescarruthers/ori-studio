@@ -8,6 +8,7 @@ import {
   type DiagramPageArrangement,
 } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
+import { heldPageArrangements } from './pageArrangements';
 import { diagramPageActions, pageActionState, repackAllPages, repackPage } from './repackActions';
 import { cellSlots } from './stepPlaces';
 
@@ -21,7 +22,8 @@ vi.mock('../../analytics', async (importOriginal) => ({
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 const state = () => useWorkspaceStore.getState();
-const stored = () => Object.keys(state().diagram?.pageArrangements ?? {});
+/** The pages that hold their arrangements: one let go is kept, no longer held, until its page is packed again. */
+const stored = () => Object.keys(heldPageArrangements(state().diagram!));
 
 /** Eight steps on flow pages of four, s0–s3 and s4–s7, each page's packing taken in. */
 function install() {

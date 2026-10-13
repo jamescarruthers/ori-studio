@@ -105,6 +105,7 @@ import {
 import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableArea, type PlannedPage } from './pagePlan';
 import { holdsArrangement, keepsGlyphGutter, pageSignatures, titleShown } from './pageSignature';
 import { printPaper, type PrintPaper } from './printPaper';
+import { keepsMovedFrame } from './repackedFrames';
 import { normalizeStepPlace } from '../document/placeValues';
 import { pinnedCaptionWidth, setCaption } from './captionMeasure';
 import { laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
@@ -1047,13 +1048,20 @@ export function pictureExtent(picture: NonNullable<LayoutStep['picture']>, scale
  * gives it with every step of the diagram in one cell, the cell a page of its
  * steps per page is cut into ({@link pageGrid}, {@link scaleRuns}), whatever
  * page it is on, so a page's side, spine or own count sizes no picture.
+ *
+ * `stored` is what the document keeps (`DiagramDocument.pageArrangements`),
+ * where `arrangements` adds what an earlier pass of the same layout packed: a
+ * page packed afresh, here or there, draws a frame moved by hand at its
+ * offset only where its step keeps its band (`repackedFrames.ts`), and at
+ * home where the store, adopting the packing, will send it.
  */
 export function layoutDiagramPages(
   steps: readonly LayoutStep[],
   setup: DiagramPageSetup,
   title: string,
   setter: TextSetter,
-  arrangements: Readonly<Record<string, DiagramPageArrangement>> = {}
+  arrangements: Readonly<Record<string, DiagramPageArrangement>> = {},
+  stored: Readonly<Record<string, DiagramPageArrangement>> = arrangements
 ): DiagramPagesLayout {
   const paper = printPaper(setup);
   const { widthMm: W, heightMm: H, marginMm: m } = paper;
@@ -1223,6 +1231,7 @@ export function layoutDiagramPages(
         title,
         setter,
         arrangements,
+        stored,
         area: packingArea(paper, headH, footH),
         margin: m,
         paper,
@@ -1443,6 +1452,12 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   title: string;
   setter: TextSetter;
   arrangements: Readonly<Record<string, DiagramPageArrangement>>;
+  /**
+   * The arrangements the document keeps, held, stale or let go: a page that
+   * holds its own is drawn as kept, and one packed afresh keeps a frame moved
+   * by hand only in its step's band there (`repackedFrames.ts`).
+   */
+  stored: Readonly<Record<string, DiagramPageArrangement>>;
   area: PackRect;
   /** The page's margin: one too narrow for a turn at the page's edge has the area give up what it lacks. */
   margin: number;
@@ -1524,8 +1539,10 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     return wanted > 0 && Number.isFinite(wanted) ? { wanted, drawn: Math.min(wanted, fit) } : null;
   };
 
-  const arrangedCell = (entry: T, place: DiagramArrangedStep): LayoutCell => {
-    const { step, index } = entry;
+  /** A step drawn in its place; `home`, with its frame drawn at home — sent home by a re-pack (`repackedFrames.ts`). */
+  const arrangedCell = (entry: T, place: DiagramArrangedStep, home: boolean): LayoutCell => {
+    const { index } = entry;
+    const step = home ? withFrameHome(entry.step) : entry.step;
     const box = arrangedBox(place);
     const autoMeasure = arrangedCaptionWidth(box);
     const autoLines = setCaption(step.text, autoMeasure, setter);
@@ -1653,11 +1670,8 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     }
     const pageArea = areaOf(entries);
     const stored = arrangements[first];
-    const holds = holdsArrangement(
-      stored,
-      signatures[pageIndex],
-      entries.map(({ step }) => step.id)
-    );
+    const ids = entries.map(({ step }) => step.id);
+    const holds = holdsArrangement(stored, signatures[pageIndex], ids);
     let arrangement = holds ? stored : null;
     if (!arrangement) {
       const plan = plans[pageIndex]!;
@@ -1683,9 +1697,23 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     kPrev = arrangement.k;
     packing.push({ k: arrangement.k, packed: !holds, fits: arrangementFits(arrangement, pageArea) });
     const kept = arrangement;
-    return entries.map((entry) => arrangedCell(entry, kept.steps[entry.step.id]!));
+    // Packed afresh — here, or by an earlier pass over the same diagram — rather than held as the document keeps
+    // it: a frame moved by hand keeps its offset only where its step keeps its band (`repackedFrames.ts`).
+    const asStored = holdsArrangement(input.stored[first], signatures[pageIndex], ids);
+    return entries.map((entry) => {
+      const place = kept.steps[entry.step.id]!;
+      const moved = entry.step.place?.frame !== undefined;
+      return arrangedCell(entry, place, !asStored && moved && !keepsMovedFrame(input.stored, first, entry.step.id, place));
+    });
   });
   return { cells, packing, packed };
+}
+
+/** A step with its frame at home: the rest of its placement — its parts' offsets, its pins — as it was. */
+function withFrameHome(step: LayoutStep): LayoutStep {
+  const { place, ...rest } = step;
+  const { frame: _home, ...parts } = place ?? {};
+  return Object.keys(parts).length > 0 ? { ...rest, place: parts } : rest;
 }
 
 /**

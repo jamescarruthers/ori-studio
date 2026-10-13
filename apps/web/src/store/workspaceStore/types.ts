@@ -1997,16 +1997,25 @@ export interface DiagramSliceState {
    */
   diagramPaperFacesFetching: Readonly<Record<string, true>>;
   /**
-   * The newest edit that sent frames moved by hand back to their cells
-   * (`settlePlaces`, inside that edit's undo step): how many; a `nonce` that
-   * is new with every such edit, so what tells the user — a toast with
-   * Undo — shows once per edit, never for one already shown; and the undo
-   * `entry` the edit landed in (null when the history kept none), so that
-   * Undo undoes only while that entry is still the newest — never another
-   * edit made since, or a duplicate a failed capture already took back.
-   * Undo and redo leave it as it is. Not saved.
+   * The newest time frames moved by hand were sent home: by an edit
+   * (`settlePlaces`, inside that edit's undo step), or as a flow page packed
+   * afresh was adopted, where its steps changed band (`adoptPacking`). How
+   * many the edit sent home in all (`count`: an adoption after the edit that
+   * re-packed its page adds to the edit's), and how many this time
+   * (`added`); a `nonce` that is new each time, so what tells the user — a
+   * toast with Undo — shows once each time, never for one already shown;
+   * and the undo `entry` the edit landed in (null when the history kept none,
+   * as for a diagram opened with a page to pack), so that Undo undoes only
+   * while that entry is still the newest — never another edit made since, or
+   * a duplicate a failed capture already took back. Undo and redo leave it as
+   * it is. Not saved.
    */
-  diagramPlacesSettled: { count: number; nonce: number; entry: SnapshotEntry<DiagramDocument | null> | null } | null;
+  diagramPlacesSettled: {
+    count: number;
+    added: number;
+    nonce: number;
+    entry: SnapshotEntry<DiagramDocument | null> | null;
+  } | null;
   /**
    * The newest paste of annotations (18d review): the step it landed on, the
    * ids of the marks it put there, and a `nonce` that is new with every
@@ -2172,7 +2181,8 @@ export interface DiagramSliceActions {
    * take it away so it fills with the default (`setPageSteps` in
    * `diagram/pages/pageCounts.ts`): earlier pages without a count keep their
    * size as one, and the boundary with the next page moves. One undo step;
-   * frames whose cell changed go home, as after any edit. Whether it changed.
+   * frames of steps it moves to another page go home, as after any edit.
+   * Whether it changed.
    */
   setDiagramPageSteps: (pageIndex: number, count: number | null) => boolean;
   /** The paper style every step is painted in (D9): a built-in by id, or a resolved style. */
@@ -2373,20 +2383,25 @@ export interface DiagramSliceActions {
    * Decision 5; `adoptPageArrangements`): only while the diagram is still that
    * very document, and never a read-only one. A page that holds an
    * arrangement keeps it, one packed for another structure is refused, and a
-   * stored one no page holds goes. Not an edit: no undo entry, the undo
-   * history left as it is, and the project no dirtier than it was — they are
-   * written with the next save. Whether it changed.
+   * stored one no page holds goes. On a page that takes one, a frame moved by
+   * hand whose step changed band or page goes home, as the layout drew it
+   * (`repackedFrames.ts`), with the reflow notice. Not an edit: no undo
+   * entry, the undo history left as it is, and the project no dirtier than it
+   * was — they are written with the next save, and a file written before
+   * packs and draws the same when it opens. Whether it changed.
    */
   adoptDiagramPageArrangements: (
     arrangements: Readonly<Record<string, DiagramPageArrangement>>,
     ofDocument: DiagramDocument
   ) => boolean;
   /**
-   * Re-pack Page: drop the arrangement stored for flow page `pageIndex` (from
-   * 0, as the layout numbers them), a newer build's too, so the layout packs
-   * it afresh (`repackPages`). One undo step, which Undo takes back with the
-   * old arrangement; frames placed by hand on it go home, with the reflow
-   * notice. Whether it changed: false on a grid and where none is stored.
+   * Re-pack Page: let go of the arrangement flow page `pageIndex` (from 0, as
+   * the layout numbers them) holds, and of a newer build's, so the layout
+   * packs it afresh (`repackPages`). One undo step, which Undo takes back
+   * with the old arrangement. Frames placed by hand on it keep their offsets
+   * where their steps keep their bands; the others go home, with the reflow
+   * notice, as the packing is adopted. Whether it changed: false on a grid
+   * and where nothing is held.
    */
   repackDiagramPage: (pageIndex: number) => boolean;
   /** Re-pack All Pages: {@link repackDiagramPage} for every page at once, one undo step. */

@@ -84,15 +84,16 @@ describe('setDiagramPageSteps', () => {
     expect(pages()).toEqual(['s0 s1 s2 s3', 's4:4 s5 s6 s7']);
   });
 
-  it('sends home the frames whose cells it changed, in its own undo step, and says so', () => {
+  it('sends home the frames of the steps it moved to another page, in its own undo step, and says so', () => {
     install(12, {}, false, true);
     expect(state().diagramPlacesSettled).toBeNull();
-    // Page two from 4 steps to 3: s7 starts page three, which refills, and every step of pages two and three is
-    // in a new cell. Page one keeps its 4 steps, now as its own count, in the same cells.
+    // Page two from 4 steps to 3: s7 starts page three, which refills — s7–s10 — and s11 makes a page four. A flow
+    // step keeps its frame while it stays on its page (Zach, 2026-10-13): s7 and s11 leave theirs. No page was
+    // packed and adopted, so no band is known: the others keep their offsets.
     expect(state().setDiagramPageSteps(1, 3)).toBe(true);
     const frames = Array.from({ length: 12 }, (_, index) => stepById(state().diagram!, `s${index}`)!.place?.frame ?? null);
-    expect(frames.map((frame) => frame !== null)).toEqual([true, true, true, true, false, false, false, false, false, false, false, false]);
-    expect(state().diagramPlacesSettled?.count).toBe(8);
+    expect(frames.map((frame) => frame !== null)).toEqual([true, true, true, true, true, true, true, false, true, true, true, false]);
+    expect(state().diagramPlacesSettled?.count).toBe(2);
     expect(state().diagramPlacesSettled?.entry).toBe(state().diagramHistory.past.at(-1));
     expect(undoSteps()).toBe(1);
     state().undoDiagram();

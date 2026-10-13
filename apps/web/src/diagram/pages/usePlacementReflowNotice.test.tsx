@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
+import { trackDiagramPlacementsReflowed } from '../../analytics/trackDiagram';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { createDiagram, insertSteps, setPageSetup, stepById } from '../document/diagramDocument';
 import { cpStep } from '../document/diagramSteps.fixtures';
@@ -51,6 +52,24 @@ it('announces each reflow once across remounts and restores its edit with Undo',
   undoNotice();
   expect(stepById(state().diagram!, 's0')?.place?.frame).toEqual([2, 3]);
   expect(state().diagram!.page.columns).toBe(2);
+});
+it('says the frames a page’s packing sends home with the edit’s, counting only those it sent; and offers no Undo with no edit', () => {
+  reflow();
+  const edit = state().diagramPlacesSettled!;
+  expect(trackDiagramPlacementsReflowed).toHaveBeenLastCalledWith(1);
+  // A page's packing adopted after the edit sends two more home: one notice for the edit, in the same toast. (Set by
+  // hand, between the store's own nonces, which later tests' edits take.)
+  act(() => useWorkspaceStore.setState({ diagramPlacesSettled: { count: 3, added: 2, nonce: edit.nonce + 0.25, entry: edit.entry } }));
+  expect(trackDiagramPlacementsReflowed).toHaveBeenLastCalledWith(2);
+  const [message, options] = vi.mocked(toast.message).mock.calls.at(-1)!;
+  expect(message).toContain('3');
+  expect(options!.id).toBe(vi.mocked(toast.message).mock.calls[0]![1]!.id);
+  undoNotice();
+  expect(stepById(state().diagram!, 's0')?.place?.frame).toEqual([2, 3]);
+  // Sent home as a diagram opened: nothing to undo, and the toast says so by offering none.
+  act(() => useWorkspaceStore.setState({ diagramPlacesSettled: { count: 4, added: 4, nonce: edit.nonce + 0.5, entry: null } }));
+  expect(vi.mocked(toast.message).mock.calls.at(-1)![1]!.action).toBeUndefined();
+  expect(trackDiagramPlacementsReflowed).toHaveBeenLastCalledWith(4);
 });
 it('does not undo an intervening edit or an unrelated newly loaded diagram', () => {
   reflow();

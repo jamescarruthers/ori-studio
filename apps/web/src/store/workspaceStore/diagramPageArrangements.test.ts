@@ -5,6 +5,8 @@ import {
   setPageSetup,
   stepById,
   stepIndex,
+  stepsOf,
+  type DiagramArrangedStep,
   type DiagramDocument,
   type DiagramPageArrangement,
   type DiagramStep,
@@ -13,6 +15,7 @@ import {
 import { writeDiagram } from '../../diagram/document/diagramFile';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
 import { roundPageArrangement } from '../../diagram/document/pageArrangements';
+import { LET_GO_SIGNATURE, heldPageArrangements } from '../../diagram/pages/pageArrangements';
 import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { useWorkspaceStore } from '../workspaceStore';
 import { onlyPackedSince } from './diagramState';
@@ -20,14 +23,16 @@ import { onlyPackedSince } from './diagramState';
 /**
  * A flow page's packed arrangement through the store
  * (`implementation-plans/diagram-flow-packing.md`, Decisions 1, 4 and 5):
- * adopted from a layout without an edit, dropped by Re-pack Page and Re-pack
- * All Pages as an edit, and let go as an edit re-cuts its page.
+ * adopted from a layout without an edit, let go by Re-pack Page and Re-pack
+ * All Pages as an edit, and no longer held as an edit re-cuts its page — kept
+ * until the page is packed again for the bands its steps were in, which say
+ * which frames moved by hand go home as the packing is adopted (Zach,
+ * 2026-10-13).
  */
 
 const state = () => useWorkspaceStore.getState();
 const undoSteps = () => state().diagramHistory.past.length;
 const stored = () => Object.keys(state().diagram?.pageArrangements ?? {});
-const frameOf = (id: string) => stepById(state().diagram!, id)?.place?.frame;
 
 const PLACE: DiagramStepPlace = { frame: [2, 1], text: [0, 1.5] };
 
@@ -43,8 +48,11 @@ function install(steps: DiagramStep[] = plain(12), readOnly = false): DiagramDoc
 
 const plain = (count: number) => Array.from({ length: count }, (_, index) => cpStep(`s${index}`));
 
-/** What a layout of `document` might pack: every page, its steps in a row. */
-function packed(document: DiagramDocument): Record<string, DiagramPageArrangement> {
+/** What a layout of `document` might pack: every page, its steps in a row, each in the band `bandOf` gives it (the first). */
+function packed(
+  document: DiagramDocument,
+  bandOf: (stepId: string) => Pick<DiagramArrangedStep, 'band' | 'bend'> = () => ({ band: 0 })
+): Record<string, DiagramPageArrangement> {
   const slots = cellSlots(document);
   return Object.fromEntries(
     slots.pages.map((ids, page) => [
@@ -52,11 +60,18 @@ function packed(document: DiagramDocument): Record<string, DiagramPageArrangemen
       {
         signature: slots.signatures[page]!,
         k: 0.912345678,
-        steps: Object.fromEntries(ids.map((id, at) => [id, { box: [12 + 40.0004 * at, 30, 38, 60], scale: { frameMm: 30.1234567 }, band: 0 }])),
+        steps: Object.fromEntries(
+          ids.map((id, at) => [id, { box: [12 + 40.0004 * at, 30, 38, 60], scale: { frameMm: 30.1234567 }, ...bandOf(id) }])
+        ),
       },
     ])
   );
 }
+
+const ids = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, index) => `s${from + index}`);
+
+/** The steps whose frames are moved by hand, in order. */
+const frames = () => stepsOf(state().diagram!).filter((step) => step.place?.frame).map((step) => step.id);
 
 /** The diagram as it is now, its pages' packing adopted. */
 function adoptAll(): DiagramDocument {
@@ -140,12 +155,16 @@ describe('adoptDiagramPageArrangements', () => {
 });
 
 describe('an edit that re-cuts a page', () => {
-  it('lets go of that page’s arrangement in its own undo step, and of no other', () => {
+  it('leaves that page’s arrangement no longer held, kept for its bands until the page is packed again', () => {
     install();
     const adopted = adoptAll();
     state().moveDiagramStep('s7', stepIndex(adopted, 's6'));
-    expect(stored()).toEqual(['s0', 's10']);
+    expect(stored()).toEqual(['s0', 's5', 's10']);
+    expect(Object.keys(heldPageArrangements(state().diagram!))).toEqual(['s0', 's10']);
     expect(state().diagram!.pageArrangements!.s0).toBe(adopted.pageArrangements!.s0);
+    // Packed afresh and adopted: the page holds its new one.
+    adoptAll();
+    expect(Object.keys(heldPageArrangements(state().diagram!))).toEqual(['s0', 's5', 's10']);
     state().undoDiagram();
     expect(state().diagram).toBe(adopted);
   });
@@ -159,24 +178,26 @@ describe('an edit that re-cuts a page', () => {
 });
 
 describe('repackDiagramPage / repackDiagramPages', () => {
-  it('drops one page’s arrangement as one undo step, which Undo takes back', () => {
+  it('lets go of one page’s arrangement as one undo step, which Undo takes back', () => {
     install();
     const adopted = adoptAll();
     expect(state().repackDiagramPage(1)).toBe(true);
-    expect(stored()).toEqual(['s0', 's10']);
+    expect(stored()).toEqual(['s0', 's5', 's10']);
+    expect(state().diagram!.pageArrangements!.s5!.signature).toBe(LET_GO_SIGNATURE);
+    expect(Object.keys(heldPageArrangements(state().diagram!))).toEqual(['s0', 's10']);
     expect(undoSteps()).toBe(1);
     expect(state().diagramHistory.past.at(-1)?.label).toBe('Re-pack page');
     expect(state().dirty).toBe(true);
     state().undoDiagram();
     expect(state().diagram).toBe(adopted);
-    expect(stored()).toEqual(['s0', 's5', 's10']);
+    expect(Object.keys(heldPageArrangements(state().diagram!))).toEqual(['s0', 's5', 's10']);
   });
 
-  it('drops every page’s as one undo step', () => {
+  it('lets go of every page’s as one undo step', () => {
     install();
     adoptAll();
     expect(state().repackDiagramPages()).toBe(true);
-    expect(state().diagram!.pageArrangements).toBeUndefined();
+    expect(heldPageArrangements(state().diagram!)).toEqual({});
     expect(state().diagramHistory.past.at(-1)?.label).toBe('Re-pack all pages');
     expect(undoSteps()).toBe(1);
   });
@@ -196,22 +217,69 @@ describe('repackDiagramPage / repackDiagramPages', () => {
     expect(state().diagram).toBe(readOnly);
   });
 
-  it('sends home the frames placed by hand on the page it re-packs, and only those, with the reflow notice', () => {
+  it('keeps the frames placed by hand on the page it re-packs; adopting its packing sends home those whose band changed', () => {
     install(plain(12).map((step) => ({ ...step, place: PLACE })));
-    adoptAll();
+    const held = adoptAll();
     expect(state().diagramPlacesSettled).toBeNull();
     expect(state().repackDiagramPage(1)).toBe(true);
-    expect(['s4', 's5', 's9', 's10'].map((id) => frameOf(id) ?? null)).toEqual([[2, 1], null, null, [2, 1]]);
+    // The edit sends none home: every step is on its page, its band not known yet.
+    expect(frames()).toEqual(ids(0, 11));
+    expect(state().diagramPlacesSettled).toBeNull();
+    const history = state().diagramHistory;
+    // Packed afresh: s6 lands in band 1, s8 in the bend after band 0; the rest where they were.
+    const repacked = state().diagram!;
+    expect(
+      state().adoptDiagramPageArrangements(
+        packed(repacked, (id) => (id === 's6' ? { band: 1 } : id === 's8' ? { band: 0, bend: true } : { band: 0 })),
+        repacked
+      )
+    ).toBe(true);
+    expect(frames()).toEqual(ids(0, 11).filter((id) => id !== 's6' && id !== 's8'));
     // The rest of each placement rides along.
-    expect(stepById(state().diagram!, 's5')!.place).toEqual({ text: [0, 1.5] });
+    expect(stepById(state().diagram!, 's6')!.place).toEqual({ text: [0, 1.5] });
+    // Not an edit: no undo entry, no dirtier; the notice counts the two, with Undo of the re-pack.
+    expect(state().diagramHistory).toBe(history);
     const settled = state().diagramPlacesSettled!;
-    expect(settled.count).toBe(5);
+    expect([settled.count, settled.added]).toEqual([2, 2]);
     expect(settled.entry).toBe(state().diagramHistory.past.at(-1));
+    // Undo of the re-pack brings back every frame and the arrangement the page held.
     state().undoDiagram();
-    expect(frameOf('s5')).toEqual([2, 1]);
-    // Every page: every frame.
-    expect(state().repackDiagramPages()).toBe(true);
-    expect(state().diagramPlacesSettled!.count).toBe(12);
+    expect(state().diagram).toBe(held);
+    expect(frames()).toEqual(ids(0, 11));
+  });
+
+  it('counts the frames an edit sends home and those its pages’ packing sends home as one notice', () => {
+    install(plain(12).map((step) => ({ ...step, place: PLACE })));
+    adoptAll();
+    // A step put in at the start of page two: s9 is pushed onto page three, home in the edit.
+    const added = state().insertDiagramStep('s5', 'before')!;
+    expect(frames()).toEqual(ids(0, 11).filter((id) => id !== 's9'));
+    const atEdit = state().diagramPlacesSettled!;
+    expect([atEdit.count, atEdit.added]).toEqual([1, 1]);
+    // Page two keeps its arrangement under its new first step; packed afresh, s7 lands in another band.
+    expect(stored()).toEqual(['s0', added, 's9']);
+    const edited = state().diagram!;
+    expect(state().adoptDiagramPageArrangements(packed(edited, (id) => ({ band: id === 's7' ? 2 : 0 })), edited)).toBe(true);
+    expect(frames()).toEqual(ids(0, 11).filter((id) => id !== 's9' && id !== 's7'));
+    const adopted = state().diagramPlacesSettled!;
+    expect([adopted.count, adopted.added, adopted.entry]).toEqual([2, 1, atEdit.entry]);
+    expect(adopted.nonce).toBeGreaterThan(atEdit.nonce);
+    state().undoDiagram();
+    expect(frames()).toEqual(ids(0, 11));
+  });
+
+  it('sends home, as a diagram opened with a stale arrangement adopts its packing, the frames whose band changed, with no edit to undo', () => {
+    // As a file saved by another build opens: page two's arrangement signed for no page it has now.
+    const document = install(plain(12).map((step) => ({ ...step, place: PLACE })));
+    const stale = packed(document, (id) => ({ band: id === 's9' ? 1 : 0 }));
+    const opened = { ...document, pageArrangements: { ...stale, s5: { ...stale.s5!, signature: 'pack-2:old' } } };
+    state().installDiagram({ document: opened, readOnly: false, raw: {} });
+    expect(state().adoptDiagramPageArrangements(packed(opened), opened)).toBe(true);
+    // s9 was in band 1, and is packed into band 0: home. Every other step keeps its band, and its offset.
+    expect(frames()).toEqual(ids(0, 11).filter((id) => id !== 's9'));
+    expect(state().diagramPlacesSettled).toMatchObject({ count: 1, added: 1, entry: null });
+    expect(state().dirty).toBe(false);
+    expect(undoSteps()).toBe(0);
   });
 
   it('sends no frame home through an edit that leaves every page as it was packed', () => {

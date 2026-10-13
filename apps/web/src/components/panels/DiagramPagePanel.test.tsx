@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stepsOf, type DiagramDocument, type DiagramPageArrangement } from '../../diagram/document/diagramDocument';
 import { usePublishPageInView } from '../../diagram/pages/pageInView';
 import { paginate } from '../../diagram/pages/pagePlan';
+import { heldPageArrangements } from '../../diagram/pages/pageArrangements';
 import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { PATH_COLOR_SETTLE_MS } from '../../diagram/pages/usePathColorPick';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -425,7 +426,8 @@ describe('DiagramPagePanel › Packing', () => {
   };
   const button = (name: string) =>
     [...host!.querySelectorAll<HTMLButtonElement>('button')].find((element) => element.textContent === name);
-  const stored = () => Object.keys(state().diagram?.pageArrangements ?? {});
+  /** The pages that hold their arrangements: one let go is kept, no longer held, until its page is packed again. */
+  const stored = () => Object.keys(heldPageArrangements(state().diagram!));
   /** What a layout might have packed for each of the diagram's pages, as the Pages view adopts it. */
   const adoptPacking = () => {
     const document = state().diagram!;

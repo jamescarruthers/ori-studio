@@ -281,15 +281,16 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
  * packed (`implementation-plans/diagram-flow-packing.md`): once, by the
  * first of these layouts, whose arrangement every later one holds, so the
  * measuring never packs a page twice. The pages say what was packed
- * (`DiagramPagesLayout.packed`); nothing is written back here.
+ * (`DiagramPagesLayout.packed`); nothing is written back here. On a page
+ * packed afresh a frame moved by hand is drawn at its offset only where its
+ * step keeps its band, judged against the document's own arrangements in
+ * every pass (`repackedFrames.ts`).
  */
 export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {
   let packed: Record<string, DiagramPageArrangement> = {};
+  const stored = document.pageArrangements ?? {};
   const layout = (steps: LayoutStep[]): DiagramPagesLayout => {
-    const pages = layoutDiagramPages(steps, document.page, document.title, setter, {
-      ...document.pageArrangements,
-      ...packed,
-    });
+    const pages = layoutDiagramPages(steps, document.page, document.title, setter, { ...stored, ...packed }, stored);
     if (pages.packed) packed = { ...packed, ...pages.packed };
     if (Object.keys(packed).length === 0) return pages;
     // A page the first layout packed is held by the rest, and packed all the same.

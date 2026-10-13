@@ -1225,8 +1225,9 @@ export interface DiagramStep {
    * prints where the layout puts it and stays editable. Never beside
    * {@link place}. Carried as it is through every edit but for its `frame`,
    * which this build knows belongs to the step's cell: it goes home when the
-   * step changes cell, as this build's does, and a duplicate does not copy
-   * it. A reset of the whole placement drops the lot.
+   * step changes cell — in the flow, its page or its band — as this build's
+   * does, and a duplicate does not copy it. A reset of the whole placement
+   * drops the lot.
    */
   placeNewer?: Record<string, unknown>;
   /**
@@ -1297,7 +1298,11 @@ export interface DiagramDocument {
    * (`implementation-plans/diagram-flow-packing.md`, Decision 1): held while
    * its signature matches the page's structure (`pages/pageSignature.ts`), so
    * a picture or caption edit moves no step. Absent where none is stored; the
-   * layout packs such a page and the store adopts what it packed.
+   * layout packs such a page and the store adopts what it packed. A page whose
+   * structure changed, or that Re-pack Page let go, keeps the one it was last
+   * held in until then: not held, but saying which band each of its steps was
+   * in, which a frame moved by hand keeps its offset in
+   * (`pages/repackedFrames.ts`).
    */
   pageArrangements?: Readonly<Record<string, DiagramPageArrangement>>;
   /** What a newer build wrote here that this build cannot read, written back as it came. */
@@ -1311,7 +1316,11 @@ export interface DiagramDocument {
  * hundredth, scales to six significant digits.
  */
 export interface DiagramPageArrangement {
-  /** The page's structure when it was packed (`pageSignature`): the arrangement holds while it matches. */
+  /**
+   * The page's structure when it was packed (`pageSignature`): the arrangement
+   * holds while it matches. One Re-pack Page let go is signed for no page
+   * (`LET_GO_SIGNATURE` in `pages/pageArrangements.ts`).
+   */
   signature: string;
   /**
    * The packer that packed it (`PACKER_VERSION` in `pages/flowArrangement.ts`),

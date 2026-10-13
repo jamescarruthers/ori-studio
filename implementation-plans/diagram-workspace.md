@@ -1778,7 +1778,14 @@ on its next save.
   in its box. Lengths are kept to 0.01 mm, scales and Sizes to six
   significant digits. A page holds its arrangement while the signature
   matches and it places every step on the page; a file without one packs the
-  page when opened. Keys and each page's steps are written sorted. An
+  page when opened. One a page does not hold — packed for a structure the
+  page has since lost, or let go by Re-pack Page, its `signature` then
+  `"let-go"` (added 2026-10-13) — is kept under the page's first step until
+  the page is packed again, for one thing: a step whose frame was moved by
+  hand keeps its offset on the page packed afresh while it stays in the
+  band it had there (`diagram-document-evolution.md`, part 2). A reader
+  packs that page afresh as for any stale arrangement. Keys and each page's
+  steps are written sorted. An
   arrangement that does not read is dropped alone; one with a field, a scale
   or a band past 4 this build has no name for is a newer build's (rule 2):
   the page is packed here as if none were stored, and the newer one written

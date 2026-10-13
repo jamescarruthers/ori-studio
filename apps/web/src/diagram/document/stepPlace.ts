@@ -10,8 +10,9 @@
  * untouched file is written back as it was read.
  *
  * Which offsets clear when a step changes cell is `pages/stepPlaces.ts`'s
- * (`settlePlaces`), run once per edit by the store. Pure, React-free and
- * store-free.
+ * (`settlePlaces`), run once per edit by the store — and, for a flow step
+ * whose band a re-pack changed, `pages/repackedFrames.ts`'s, as the page's
+ * packing is adopted. Pure, React-free and store-free.
  */
 import {
   isLockedStep,

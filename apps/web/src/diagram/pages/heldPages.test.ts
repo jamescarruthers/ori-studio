@@ -18,6 +18,7 @@ import {
   stepsOf,
   type DiagramDocument,
   type DiagramPageSetup,
+  type DiagramPlaceScale,
   type DiagramRasterAsset,
   type DiagramScenePicture,
   type KnownDiagramAnnotation,
@@ -31,7 +32,7 @@ import { layoutDiagram } from './diagramPages';
 import { fontTextSetter } from './fontTextSetter';
 import { setFrameScale } from '../zoom/zoomFrames';
 import { zoomReadout } from '../zoom/zoomActions';
-import { adoptPageArrangements, dropStalePageArrangements, repackPages } from './pageArrangements';
+import { adoptPageArrangements, followPageArrangements, repackPages } from './pageArrangements';
 import { pageLayoutFixtures } from './pageLayouts.fixtures';
 import { pastItsBox } from './pageOverflow.fixtures';
 import { cellSlots, settlePlaces } from './stepPlaces';
@@ -54,8 +55,8 @@ const layOut = (document: DiagramDocument) =>
 /** The fixture as the store holds it once the Pages view has laid it out: its flow pages' packing adopted. */
 const adopted = (document: DiagramDocument) => adoptPageArrangements(document, layOut(document).packed ?? {});
 
-/** `edited` as the store's `commit` lands it on `before`: frames of re-cut cells sent home, stale arrangements let go. */
-const committed = (before: DiagramDocument, edited: DiagramDocument) => dropStalePageArrangements(settlePlaces(before, edited).document);
+/** `edited` as the store's `commit` lands it on `before`: arrangements following their pages, frames off their page sent home. */
+const committed = (before: DiagramDocument, edited: DiagramDocument) => settlePlaces(before, followPageArrangements(before, edited)).document;
 
 /** Every step's cell, by its id. */
 const cellsOf = (document: DiagramDocument) =>
@@ -217,7 +218,7 @@ describe('a picture whose size is pinned by hand (Zach, 2026-10-13)', () => {
       ...page,
     });
     const auto = cellOf(layOut(base), 's3');
-    const scale = auto.mmPerUnit !== null ? { mmPerUnit: auto.mmPerUnit * factor } : { frameMm: auto.frameMm! * factor };
+    const scale: DiagramPlaceScale = auto.mmPerUnit !== null ? { mmPerUnit: auto.mmPerUnit * factor } : { frameMm: auto.frameMm! * factor };
     return { base, pinned: setStepPlace(base, 's3', { scale }), pin: scale };
   };
   /** What a pin asks a cell to print at: its scale in the pin's measure. */

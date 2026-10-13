@@ -5,12 +5,17 @@
  *
  * A page **holds** the arrangement stored under the step it starts with while
  * that arrangement's signature is the page's (`pageSignature.ts`) and it
- * places every step on the page (`holdsArrangement`, the layout's test too):
- * the layout draws it as it is. Every other stored arrangement is stale — packed for a
- * structure no page has any more — and goes as the next edit lands
- * ({@link dropStalePageArrangements}, which the store runs in `commit`), or
- * when the layout's own packing is adopted ({@link adoptPageArrangements}),
- * so a file never carries more than its pages hold. A newer build's carried
+ * places every step on it (`holdsArrangement`, the layout's test too): the
+ * layout draws it as it is. Any other is packed afresh by the layout, and its
+ * packing is adopted ({@link adoptPacking}).
+ *
+ * Until then a page keeps the arrangement it was last held in — packed for a
+ * structure it no longer has, or let go by Re-pack Page — for one thing only:
+ * the band each of its steps was in, which says whether a frame moved by hand
+ * keeps its offset on the page packed afresh (Zach, 2026-10-13;
+ * `repackedFrames.ts`). It moves with its page as each edit lands, and any
+ * stored arrangement no page keeps goes ({@link followPageArrangements}, which
+ * the store runs in `commit`); adoption replaces it. A newer build's carried
  * arrangements are never touched here but by a re-pack.
  *
  * Pure.
@@ -24,7 +29,17 @@ import {
 } from '../document/diagramDocument';
 import { roundPageArrangement } from '../document/pageArrangements';
 import { holdsArrangement } from './pageSignature';
-import { cellSlots, type CellSlots } from './stepPlaces';
+import { keepsMovedFrame } from './repackedFrames';
+import { cellSlots, framesSentHome, type CellSlots } from './stepPlaces';
+
+/**
+ * The signature an arrangement Re-pack Page lets go of is kept under: no
+ * page's (a page's is `pageSignature`'s, its format and a colon first), so
+ * its page is packed afresh, while the arrangement still says which band each
+ * of its steps was in. Written to a file as any signature is; a build that
+ * reads it packs the page afresh, as for any stale arrangement.
+ */
+export const LET_GO_SIGNATURE = 'let-go';
 
 /**
  * The arrangements a diagram's flow pages hold, each under the step its page
@@ -46,15 +61,41 @@ export function heldPageArrangements(
 }
 
 /**
- * The diagram with every stored arrangement no page holds dropped: what the
- * store does as every edit lands, inside the edit's own undo step, so an edit
- * that re-cuts a page leaves no arrangement behind for it, and a switch to a
- * grid none at all. The same document when nothing is dropped — at once when
- * none is stored.
+ * `after`, an edit of `before`, with each flow page's stored arrangement
+ * following its page: what the store does as every edit lands, inside the
+ * edit's own undo step. A page keeps the arrangement stored under the step it
+ * starts with — held, or the one it was last held in. One that starts with
+ * another step now takes the arrangement of the page of its number before
+ * the edit, where no page starts with that page's first step any more: a
+ * step put in at the start of a page, or the page's first step removed or
+ * moved away, leaves the page its arrangement, under its new first step.
+ * Every other stored arrangement goes, so the file never carries one no page
+ * keeps; a grid keeps none. The same document when nothing moves or goes —
+ * at once when none is stored.
+ *
+ * What it keeps for a page whose structure the edit changed is stale: the
+ * layout packs the page afresh, and the arrangement says only which band each
+ * of its steps was in (`repackedFrames.ts`).
  */
-export function dropStalePageArrangements(document: DiagramDocument): DiagramDocument {
-  if (!document.pageArrangements) return document;
-  return withPageArrangements(document, heldPageArrangements(document));
+export function followPageArrangements(before: DiagramDocument, after: DiagramDocument): DiagramDocument {
+  const stored = after.pageArrangements;
+  if (!stored) return after;
+  if (after.page.layout !== 'flow') return withPageArrangements(after, {});
+  const was = cellSlots(before);
+  const now = cellSlots(after);
+  const firsts = new Set(now.pages.flatMap((ids) => (ids[0] === undefined ? [] : [ids[0]])));
+  const kept: Record<string, DiagramPageArrangement> = {};
+  now.pages.forEach((ids, page) => {
+    const first = ids[0];
+    if (first === undefined) return;
+    if (Object.hasOwn(stored, first)) {
+      kept[first] = stored[first]!;
+      return;
+    }
+    const wasFirst = was.layout === 'flow' ? was.pages[page]?.[0] : undefined;
+    if (wasFirst !== undefined && !firsts.has(wasFirst) && Object.hasOwn(stored, wasFirst)) kept[first] = stored[wasFirst]!;
+  });
+  return withPageArrangements(after, kept);
 }
 
 /**
@@ -64,15 +105,20 @@ export function dropStalePageArrangements(document: DiagramDocument): DiagramDoc
  * means held. One that holds none takes the one adopted for it when it was
  * packed for the page as it is — its signature the page's — and places every
  * step on it; the places of any other step (a short last page's stand-ins)
- * are left out. A stored arrangement no page holds goes. The same document
- * when that changes nothing.
+ * are left out. A stored arrangement no page holds goes.
+ *
+ * On a page that takes one, a frame moved by hand whose step's band changed
+ * since the arrangement it was last held in, or that was last held on another
+ * page, goes home: exactly the frames the layout drew at home
+ * (`repackedFrames.ts`). How many; the same document when nothing changes.
  */
-export function adoptPageArrangements(
+export function adoptPacking(
   document: DiagramDocument,
   adopted: Readonly<Record<string, DiagramPageArrangement>>
-): DiagramDocument {
+): { document: DiagramDocument; settled: number } {
   const slots = cellSlots(document);
   const held = heldPageArrangements(document, slots);
+  const home = new Set<string>();
   slots.signatures.forEach((signature, page) => {
     const ids = slots.pages[page] ?? [];
     const first = ids[0];
@@ -80,22 +126,44 @@ export function adoptPageArrangements(
     const offered = adopted[first]!;
     if (!holdsArrangement(offered, signature, ids)) return;
     const steps: Record<string, DiagramArrangedStep> = {};
-    for (const id of ids) steps[id] = offered.steps[id]!;
+    for (const id of ids) {
+      steps[id] = offered.steps[id]!;
+      if (!keepsMovedFrame(document.pageArrangements, first, id, steps[id])) home.add(id);
+    }
     held[first] = roundPageArrangement({ ...offered, steps });
   });
-  return withPageArrangements(document, held);
+  return framesSentHome(withPageArrangements(document, held), (step) => home.has(step.id));
+}
+
+/** {@link adoptPacking}'s document alone. */
+export function adoptPageArrangements(
+  document: DiagramDocument,
+  adopted: Readonly<Record<string, DiagramPageArrangement>>
+): DiagramDocument {
+  return adoptPacking(document, adopted).document;
 }
 
 /**
- * Re-pack Page (Decision 4): the arrangement stored for flow page
- * `pageIndex` dropped — or, for null, every page's (Re-pack All Pages) — a
- * newer build's carried one too, so the layout packs the page afresh. The
- * same document on a grid, for a page that is not there, and where nothing
- * is stored.
+ * Re-pack Page (Decision 4): the arrangement flow page `pageIndex` holds let
+ * go — or, for null, every page's (Re-pack All Pages) — so the layout packs
+ * the page afresh. It is kept, under {@link LET_GO_SIGNATURE}, for the band
+ * each of its steps was in, until the page's packing is adopted. A newer
+ * build's carried arrangement goes too. The same document on a grid, for a
+ * page that is not there, and where nothing is held or carried: a page that
+ * holds nothing is packed afresh already.
  */
 export function repackPages(document: DiagramDocument, pageIndex: number | null): DiagramDocument {
   if (document.page.layout !== 'flow') return document;
-  if (pageIndex === null) return withoutPageArrangements(document, null);
-  const first = cellSlots(document).pages[pageIndex]?.[0];
-  return first === undefined ? document : withoutPageArrangements(document, [first]);
+  const slots = cellSlots(document);
+  const pages = pageIndex === null ? slots.pages : [slots.pages[pageIndex] ?? []];
+  const firsts = pages.flatMap((ids) => (ids[0] === undefined ? [] : [ids[0]]));
+  const held = heldPageArrangements(document, slots);
+  const letGo = firsts.filter((first) => Object.hasOwn(held, first));
+  const newer = document.newer?.pageArrangements ?? {};
+  const carried = pageIndex === null ? Object.keys(newer) : firsts.filter((first) => Object.hasOwn(newer, first));
+  if (letGo.length === 0 && carried.length === 0) return document;
+  const own: Record<string, DiagramPageArrangement> = { ...document.pageArrangements };
+  for (const first of letGo) own[first] = { ...held[first]!, signature: LET_GO_SIGNATURE };
+  // The newer build's go with this build's under the same keys; this build's are put back, let go.
+  return withPageArrangements(withoutPageArrangements(document, carried), own);
 }
