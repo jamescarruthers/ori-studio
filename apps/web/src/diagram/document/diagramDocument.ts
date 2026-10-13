@@ -37,6 +37,15 @@ import { stepReach } from '../zoom/zoomModel';
 import { authorMarksChanged, authorMarksOf, editedCardMarksGone, isCardMark, releaseCardMarks, withEditTags } from './cardMarks';
 import { samePageArrangements } from './pageArrangements';
 import { FLOW_BANDS_RANGE, FLOW_WEIGHT_RANGE, PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE } from './pageRanges';
+import {
+  DEFAULT_FLOW_PACKING,
+  DEFAULT_PAGE_SETUP,
+  DEFAULT_PATH_COLOR,
+  DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTINGS,
+  PAGE_SETTING_KEYS,
+  legacyStepsPerPage,
+} from './pageSettings';
 
 /** The version of this document's own shape, inside the project file. */
 export const DIAGRAM_FORMAT_VERSION = 1;
@@ -61,6 +70,12 @@ export type DiagramPageLayout = 'grid' | 'flow';
 export type DiagramPageSide = 'left' | 'right';
 export const DIAGRAM_PAGE_SIDES: readonly DiagramPageSide[] = ['left', 'right'];
 
+/**
+ * How a diagram's pages are set up. Every setting is written to the file,
+ * always; one a file does not say reads as its legacy value, and a new
+ * diagram starts from each one's default: both are in one table
+ * (`PAGE_SETTINGS`, `pageSettings.ts`).
+ */
 export interface DiagramPageSetup {
   size: DiagramPaperSize;
   orientation: DiagramPageOrientation;
@@ -76,31 +91,25 @@ export interface DiagramPageSetup {
    * when it has no count of its own ({@link DiagramStep.pageSteps}): the
    * default. The layout cuts each page into the rows that print the largest
    * pictures (`flowRows` in `pages/pagePlan.ts`). Kept on a grid, for when it
-   * turns back to flow. Written only where it differs from `columns × rows`,
-   * which a file without it reads ({@link unsaidStepsPerPage}), as every flow
-   * file before it could be chosen.
+   * turns back to flow. A file without it reads `columns × rows`
+   * ({@link legacyStepsPerPage}), as every flow file before it could be chosen.
    */
   stepsPerPage: number;
   /** Flow layout only: the band that joins one step to the next. */
   showPath: boolean;
-  /**
-   * The band's printed width, mm ({@link PATH_WIDTH_MM_RANGE}); written only
-   * when not {@link DEFAULT_PATH_WIDTH_MM}, which a file that does not say
-   * reads as.
-   */
+  /** The band's printed width, mm ({@link PATH_WIDTH_MM_RANGE}). */
   pathWidthMm: number;
-  /** The band's colour, `#rrggbb`; written only when not {@link DEFAULT_PATH_COLOR}. */
+  /** The band's colour, `#rrggbb`. */
   pathColor: string;
-  /** The side the first page prints on ({@link DiagramPageSide}); written to the file only when `right`. */
+  /** The side the first page prints on ({@link DiagramPageSide}). */
   firstPageSide: DiagramPageSide;
   /** Draws {@link DiagramDocument.title} in a tab at the top of every page. */
   showTitle: boolean;
   pageNumbers: { enabled: boolean; first: number };
   /**
    * Flow layout only, with the four after it: how a page is packed
-   * (`implementation-plans/diagram-flow-packing.md`, Decision 7). Each is
-   * written only when not its default ({@link DEFAULT_FLOW_PACKING}), which a
-   * file that does not say reads as. The bands a page's steps are packed
+   * (`implementation-plans/diagram-flow-packing.md`, Decision 7), part of
+   * every flow page's signature. The bands a page's steps are packed
    * into: `auto` tries each count and keeps the one that packs best, a number
    * ({@link FLOW_BANDS_RANGE}) holds every page to it.
    */
@@ -118,15 +127,15 @@ export interface DiagramPageSetup {
 /** How many bands a flow page is packed into ({@link DiagramPageSetup.flowBands}): chosen per page, or fixed. */
 export type DiagramFlowBands = 'auto' | 2 | 3 | 4 | 5;
 
-/** The packing a page setup that does not say reads as, and a new diagram's: Zach's defaults (Decision 7). */
-export const DEFAULT_FLOW_PACKING: Readonly<
-  Pick<DiagramPageSetup, 'flowBands' | 'flowPreferBands' | 'flowBendSteps' | 'flowNesting' | 'flowSteadiness'>
-> = {
-  flowBands: 'auto',
-  flowPreferBands: 0.5,
-  flowBendSteps: true,
-  flowNesting: 0.8,
-  flowSteadiness: 0.85,
+// Every page setting's default and legacy value, in one table, and the defaults made of it.
+export {
+  DEFAULT_FLOW_PACKING,
+  DEFAULT_PAGE_SETUP,
+  DEFAULT_PATH_COLOR,
+  DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTINGS,
+  PAGE_SETTING_KEYS,
+  legacyStepsPerPage,
 };
 
 // A fixed band count, and the range of the packing's three weights: in the import-free module, for a stored arrangement's reader.
@@ -1386,36 +1395,6 @@ export { PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE };
 export const FIRST_PAGE_NUMBER_RANGE = { min: 1, max: 9999 } as const;
 /** The flow band's width, mm: from a thin line to three times the default. */
 export const PATH_WIDTH_MM_RANGE = { min: 4, max: 60 } as const;
-/**
- * The flow band's width where nothing else is chosen, mm: a new diagram's,
- * and a file's that does not say — every diagram saved before the width
- * could be chosen, which drew the band in proportion to its steps until
- * 2026-10-08 (`implementation-plans/diagram-review-fixes.md`, item 1).
- */
-export const DEFAULT_PATH_WIDTH_MM = 20;
-/** The flow band's colour: the mockup's light warm grey. */
-export const DEFAULT_PATH_COLOR = '#ecece8';
-
-/**
- * A new diagram's page setup. It starts in the flow layout; a page setup that
- * does not say its layout reads as the grid instead ({@link UNSAID_PAGE_LAYOUT}).
- */
-export const DEFAULT_PAGE_SETUP: DiagramPageSetup = {
-  size: 'a4',
-  orientation: 'portrait',
-  marginMm: 12,
-  layout: 'flow',
-  columns: 3,
-  rows: 3,
-  stepsPerPage: 9,
-  showPath: true,
-  pathWidthMm: DEFAULT_PATH_WIDTH_MM,
-  pathColor: DEFAULT_PATH_COLOR,
-  firstPageSide: 'left',
-  showTitle: true,
-  pageNumbers: { enabled: true, first: 1 },
-  ...DEFAULT_FLOW_PACKING,
-};
 
 export const DEFAULT_DIAGRAM_STYLE: DiagramStyle = snapshotDiagramStyle({ preset: 'diagram' });
 
@@ -2546,81 +2525,58 @@ function updateStep(
 export const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'];
 
 /**
- * The layout of a page setup that does not say: the grid, which every diagram
- * was in until the flow became a new one's (2026-10-06). Every file written
- * says its layout, so this reads a hand-edited or damaged one as it would have
- * read before — never a saved grid as a flow — and a new diagram says `flow`.
- */
-export const UNSAID_PAGE_LAYOUT: DiagramPageLayout = 'grid';
-
-/**
- * The steps per page of a setup that does not say: as many as its columns
- * and rows hold, as every flow file before they could be chosen — the
- * columns and rows as said, a newer build's past this build's range too, so
- * that its unsaid steps per page read here as it meant them. The file writes
- * the steps per page only where they differ from this, so a diagram that
- * never chose them saves as it did before.
- */
-export function unsaidStepsPerPage(page: Pick<DiagramPageSetup, 'columns' | 'rows'>): number {
-  return clampInteger(Math.round(page.columns * page.rows), STEPS_PER_PAGE_RANGE.min, STEPS_PER_PAGE_RANGE.max);
-}
-
-/**
  * A page setup from anything, every field checked and clamped, each falling
- * back to its default on its own. Used by the edit above and by the file
- * reader, so a hand-edited file and a stepper reach the same legal values.
+ * back on its own to its legacy value (`PAGE_SETTINGS`) where it is missing or
+ * damaged: a file that does not say a setting was written by a build that did
+ * not know it, and is drawn as that build drew it — never as today's default.
+ * Used by the edit above, which says every field, and by the file reader, so
+ * a hand-edited file and a stepper reach the same legal values.
  */
 export function normalizePageSetup(value: unknown): DiagramPageSetup {
+  const legacy = <K extends Exclude<keyof DiagramPageSetup, 'stepsPerPage'>>(key: K) => PAGE_SETTINGS[key].legacy;
   const source = isRecord(value) ? value : {};
   const numbers = isRecord(source.pageNumbers) ? source.pageNumbers : {};
-  const columns = clampWhole(source.columns, PAGE_COLUMNS_RANGE, DEFAULT_PAGE_SETUP.columns);
-  const rows = clampWhole(source.rows, PAGE_ROWS_RANGE, DEFAULT_PAGE_SETUP.rows);
+  const columns = clampWhole(source.columns, PAGE_COLUMNS_RANGE, legacy('columns'));
+  const rows = clampWhole(source.rows, PAGE_ROWS_RANGE, legacy('rows'));
   return {
-    size: PAPER_SIZES.includes(source.size as DiagramPaperSize)
-      ? (source.size as DiagramPaperSize)
-      : DEFAULT_PAGE_SETUP.size,
+    size: PAPER_SIZES.includes(source.size as DiagramPaperSize) ? (source.size as DiagramPaperSize) : legacy('size'),
     orientation:
-      source.orientation === 'landscape' || source.orientation === 'portrait'
-        ? source.orientation
-        : DEFAULT_PAGE_SETUP.orientation,
-    marginMm: clampNumber(source.marginMm, PAGE_MARGIN_MM_RANGE, DEFAULT_PAGE_SETUP.marginMm),
-    layout: source.layout === 'flow' || source.layout === 'grid' ? source.layout : UNSAID_PAGE_LAYOUT,
+      source.orientation === 'landscape' || source.orientation === 'portrait' ? source.orientation : legacy('orientation'),
+    marginMm: clampNumber(source.marginMm, PAGE_MARGIN_MM_RANGE, legacy('marginMm')),
+    layout: source.layout === 'flow' || source.layout === 'grid' ? source.layout : legacy('layout'),
     columns,
     rows,
     stepsPerPage: clampWhole(
       source.stepsPerPage,
       STEPS_PER_PAGE_RANGE,
-      unsaidStepsPerPage({ columns: wholeOr(source.columns, columns), rows: wholeOr(source.rows, rows) })
+      PAGE_SETTINGS.stepsPerPage.legacy({ columns: wholeOr(source.columns, columns), rows: wholeOr(source.rows, rows) })
     ),
-    showPath: typeof source.showPath === 'boolean' ? source.showPath : DEFAULT_PAGE_SETUP.showPath,
-    pathWidthMm: clampNumber(source.pathWidthMm, PATH_WIDTH_MM_RANGE, DEFAULT_PAGE_SETUP.pathWidthMm),
-    pathColor: readHexColor(source.pathColor) ?? DEFAULT_PATH_COLOR,
-    // Unsaid, as in every file before there was a choice: the left.
-    firstPageSide: source.firstPageSide === 'right' ? 'right' : DEFAULT_PAGE_SETUP.firstPageSide,
-    showTitle:
-      typeof source.showTitle === 'boolean' ? source.showTitle : DEFAULT_PAGE_SETUP.showTitle,
+    showPath: typeof source.showPath === 'boolean' ? source.showPath : legacy('showPath'),
+    pathWidthMm: clampNumber(source.pathWidthMm, PATH_WIDTH_MM_RANGE, legacy('pathWidthMm')),
+    pathColor: readHexColor(source.pathColor) ?? legacy('pathColor'),
+    firstPageSide: DIAGRAM_PAGE_SIDES.includes(source.firstPageSide as DiagramPageSide)
+      ? (source.firstPageSide as DiagramPageSide)
+      : legacy('firstPageSide'),
+    showTitle: typeof source.showTitle === 'boolean' ? source.showTitle : legacy('showTitle'),
     pageNumbers: {
-      enabled:
-        typeof numbers.enabled === 'boolean'
-          ? numbers.enabled
-          : DEFAULT_PAGE_SETUP.pageNumbers.enabled,
-      first: clampWhole(numbers.first, FIRST_PAGE_NUMBER_RANGE, DEFAULT_PAGE_SETUP.pageNumbers.first),
+      enabled: typeof numbers.enabled === 'boolean' ? numbers.enabled : legacy('pageNumbers').enabled,
+      first: clampWhole(numbers.first, FIRST_PAGE_NUMBER_RANGE, legacy('pageNumbers').first),
     },
     flowBands: readFlowBands(source.flowBands),
-    flowPreferBands: clampNumber(source.flowPreferBands, FLOW_WEIGHT_RANGE, DEFAULT_FLOW_PACKING.flowPreferBands),
-    flowBendSteps: typeof source.flowBendSteps === 'boolean' ? source.flowBendSteps : DEFAULT_FLOW_PACKING.flowBendSteps,
-    flowNesting: clampNumber(source.flowNesting, FLOW_WEIGHT_RANGE, DEFAULT_FLOW_PACKING.flowNesting),
-    flowSteadiness: clampNumber(source.flowSteadiness, FLOW_WEIGHT_RANGE, DEFAULT_FLOW_PACKING.flowSteadiness),
+    flowPreferBands: clampNumber(source.flowPreferBands, FLOW_WEIGHT_RANGE, legacy('flowPreferBands')),
+    flowBendSteps: typeof source.flowBendSteps === 'boolean' ? source.flowBendSteps : legacy('flowBendSteps'),
+    flowNesting: clampNumber(source.flowNesting, FLOW_WEIGHT_RANGE, legacy('flowNesting')),
+    flowSteadiness: clampNumber(source.flowSteadiness, FLOW_WEIGHT_RANGE, legacy('flowSteadiness')),
   };
 }
 
 /**
  * A flow page's band count from anything: `auto`, or a count rounded whole
- * and clamped to {@link FLOW_BANDS_RANGE}; anything else, the default.
+ * and clamped to {@link FLOW_BANDS_RANGE}; anything else, the legacy value.
  */
 function readFlowBands(value: unknown): DiagramFlowBands {
   if (value === 'auto') return 'auto';
-  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_FLOW_PACKING.flowBands;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return PAGE_SETTINGS.flowBands.legacy;
   return clampWhole(value, FLOW_BANDS_RANGE, FLOW_BANDS_RANGE.min) as DiagramFlowBands;
 }
 

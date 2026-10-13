@@ -2,7 +2,8 @@
  * A diagram as it is stored in the project file (each of `workspace.diagrams`),
  * read leniently and written back exactly.
  *
- * Three rules, from implementation-plans/diagram-workspace.md (Contracts):
+ * Four rules, the first three from implementation-plans/diagram-workspace.md
+ * (Contracts):
  *
  * - **Malformed is dropped.** A step, annotation or asset that does not read is
  *   left out; the rest of the diagram opens. A diagram that is not an object at
@@ -22,6 +23,27 @@
  *   shown is a best-effort reading of it. Nothing else does: a document-level
  *   field or value a newer build wrote falls back alone, and is written back
  *   as it came (`DiagramNewerFields`, decision 2 of the launch review).
+ * - **Every setting is said; one unsaid is older, never the default.**
+ *   (`implementation-plans/diagram-document-evolution.md`.) Look tweaks reach
+ *   every diagram, but layout never moves without the user's consent, so a
+ *   file says every page setting it was saved with, defaults included
+ *   (`writePageSetup`). One it does not say was written by a build that did
+ *   not know it, or before every setting was said (2026-10-12), and reads as
+ *   that setting's *legacy* value — the value that draws the page as that
+ *   build drew it — never as today's default, which only a new diagram takes
+ *   (`PAGE_SETTINGS` in `pageSettings.ts`: both, in one table, so a default is
+ *   changed in one line).
+ *   - **Adding a setting:** give it a default and a legacy value in that
+ *     table. Its legacy value reproduces how pages were drawn before it
+ *     existed, and never changes once a build that knows it has shipped.
+ *   - **Retiring a setting:** put its key on the explicit list of retired
+ *     fields (`RETIRED_PAGE_KEYS`), read there on purpose — migrated into what
+ *     replaced it, or let go — and never write it again. A retired field is
+ *     never left to be carried forever as a newer build's unknown field.
+ *   Fields elsewhere left out at their default are either look (an
+ *   annotation's pen, a label's size: a change to their default restyles
+ *   every diagram, by design) or say nothing by being absent (no placement,
+ *   no Size of an enlarged step, which is Fill); neither moves a page.
  *
  * Every string a user typed passes through `xmlText` on the way in, so what is
  * stored can always be written into an SVG page. Every uploaded SVG is
@@ -97,7 +119,6 @@ import {
   DIAGRAM_PAGE_SIDES,
   DIAGRAM_SHOW_AS,
   FIRST_PAGE_NUMBER_RANGE,
-  DEFAULT_FLOW_PACKING,
   FLOW_BANDS_RANGE,
   FLOW_WEIGHT_RANGE,
   PAGE_COLUMNS_RANGE,
@@ -115,9 +136,7 @@ import {
   carriedJson,
   isKnownAsset,
   normalizePageSetup,
-  unsaidStepsPerPage,
-  DEFAULT_PATH_COLOR,
-  DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTING_KEYS,
   readHexColor,
   randomDiagramId,
   withReferencedAssets,
@@ -246,30 +265,19 @@ const DOCUMENT_KEYS = new Set([
   'thumbnails',
   'pageArrangements',
 ]);
-const PAGE_KEYS = new Set([
-  'size',
-  'orientation',
-  'marginMm',
-  'layout',
-  'columns',
-  'rows',
-  'stepsPerPage',
-  'showPath',
-  'pathWidthMm',
-  'pathColor',
-  'firstPageSide',
+/**
+ * The page fields a build once wrote that this one has retired (the rule at
+ * the top of this file), each with what a file that still says it is read
+ * as: migrated into what replaced it, or let go. Either way it is read here
+ * on purpose, never carried as a newer build's field, and never written.
+ */
+const RETIRED_PAGE_KEYS: ReadonlySet<string> = new Set([
   // Retired 2026-10-06, when every diagram came to fit each: the choice of One
-  // scale (`paper`) or Fit each (`fit`). Whatever it says is let go, and it is
-  // never written.
+  // scale (`paper`) or Fit each (`fit`). Whatever it says is let go.
   'scale',
-  'showTitle',
-  'pageNumbers',
-  'flowBands',
-  'flowPreferBands',
-  'flowBendSteps',
-  'flowNesting',
-  'flowSteadiness',
 ]);
+/** Every page field this build reads: each page setting (`PAGE_SETTINGS`), and the retired ones. */
+const PAGE_KEYS: ReadonlySet<string> = new Set([...PAGE_SETTING_KEYS, ...RETIRED_PAGE_KEYS]);
 const PAGE_ENUMS: Record<string, readonly string[]> = {
   size: PAPER_SIZES,
   orientation: ['portrait', 'landscape'],
@@ -393,7 +401,7 @@ export function writeDiagram(
     title: document.title,
     hanStyle: newer?.hanStyle ?? document.hanStyle,
     style: newer?.style ?? snapshotDiagramStyle(document.style),
-    page: { ...writePageSetup(document.page, newer?.page), ...newer?.page },
+    page: { ...writePageSetup(document.page), ...newer?.page },
     steps,
     assets: Object.fromEntries(
       Object.entries(document.assets).map(([id, asset]) => [id, writeAsset(asset)])
@@ -463,53 +471,21 @@ function thumbnailJson(thumbnail: SheetThumbnail): string {
 }
 
 /**
- * The page setup as written: every field, but the first page's side only when
- * it is the right, and the flow band's width and colour only when not their
- * defaults — so a diagram that never chose, as every one before the choices,
- * opens in a build that does not know them as it was made.
- *
- * The layout is always written. One that is not said reads as the grid
- * (`UNSAID_PAGE_LAYOUT`), the layout of every diagram saved before the flow
- * became a new one's default; a new diagram's flow is said, so it stays one.
- *
- * The steps per page are written only where they differ from what a page
- * without them reads, as many as its columns and rows hold
- * (`unsaidStepsPerPage`) — the columns and rows the file says, a newer
- * build's carried (`newerPage`) included: a flow diagram that never chose
- * them saves as it did before, and one that did keeps them on a grid too,
- * for when it turns back to flow.
- *
- * The flow's packing (`flowBands` and the four after it) is written a field
- * at a time, each only when not its default (`DEFAULT_FLOW_PACKING`), so a
- * diagram that never chose saves as it did before they could be.
+ * The page setup as written: every setting, always, whatever its value, in
+ * the order of their table (`PAGE_SETTINGS`). A file says every choice it
+ * was saved with — a default included — so a later change to a default
+ * reaches only new diagrams, and a saved page is drawn and packed as it was.
+ * A file that does not say one was written before this build knew it, or
+ * before every setting was written (2026-10-12), and reads as its legacy
+ * value (`normalizePageSetup`).
  */
-function writePageSetup(page: DiagramPageSetup, newerPage?: Record<string, unknown>): Record<string, unknown> {
-  const {
-    firstPageSide,
-    pathWidthMm,
-    pathColor,
-    stepsPerPage,
-    flowBands,
-    flowPreferBands,
-    flowBendSteps,
-    flowNesting,
-    flowSteadiness,
-    ...rest
-  } = page;
-  const said = (key: 'columns' | 'rows') => (typeof newerPage?.[key] === 'number' ? newerPage[key] : page[key]);
-  const unsaid = DEFAULT_FLOW_PACKING;
-  return {
-    ...rest,
-    ...(stepsPerPage !== unsaidStepsPerPage({ columns: said('columns'), rows: said('rows') }) ? { stepsPerPage } : {}),
-    ...(pathWidthMm !== DEFAULT_PATH_WIDTH_MM ? { pathWidthMm } : {}),
-    ...(pathColor !== DEFAULT_PATH_COLOR ? { pathColor } : {}),
-    ...(firstPageSide === 'right' ? { firstPageSide } : {}),
-    ...(flowBands !== unsaid.flowBands ? { flowBands } : {}),
-    ...(flowPreferBands !== unsaid.flowPreferBands ? { flowPreferBands } : {}),
-    ...(flowBendSteps !== unsaid.flowBendSteps ? { flowBendSteps } : {}),
-    ...(flowNesting !== unsaid.flowNesting ? { flowNesting } : {}),
-    ...(flowSteadiness !== unsaid.flowSteadiness ? { flowSteadiness } : {}),
-  };
+function writePageSetup(page: DiagramPageSetup): Record<string, unknown> {
+  return Object.fromEntries(
+    PAGE_SETTING_KEYS.map((key) => [
+      key,
+      key === 'pageNumbers' ? { enabled: page.pageNumbers.enabled, first: page.pageNumbers.first } : page[key],
+    ])
+  );
 }
 
 function writeStep(step: DiagramEntry, thumbnails: ThumbnailWriter): Record<string, unknown> {

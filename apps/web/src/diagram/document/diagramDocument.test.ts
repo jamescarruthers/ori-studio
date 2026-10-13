@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_PAGE_SETUP,
+  PAGE_SETTINGS,
   snapshotDiagramStyle,
   createDiagram,
   createStep,
@@ -284,6 +285,16 @@ describe('page setup', () => {
   it('starts a new diagram in the flow layout', () => {
     expect(DEFAULT_PAGE_SETUP.layout).toBe('flow');
     expect(createDiagram().page.layout).toBe('flow');
+  });
+
+  it('takes a new diagram’s page setup from each setting’s default, and an unsaid one from its legacy value', () => {
+    const settings = Object.entries(PAGE_SETTINGS);
+    expect(createDiagram().page).toEqual(Object.fromEntries(settings.map(([key, values]) => [key, values.default])));
+    const legacy = Object.fromEntries(
+      settings.map(([key, values]) => [key, typeof values.legacy === 'function' ? values.legacy({ columns: 3, rows: 3 }) : values.legacy])
+    );
+    expect(normalizePageSetup(null)).toEqual(legacy);
+    expect(normalizePageSetup({})).toEqual(legacy);
   });
 
   it('reads anything, falling back field by field', () => {

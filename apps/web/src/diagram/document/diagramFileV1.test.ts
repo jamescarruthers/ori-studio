@@ -70,9 +70,13 @@ describe('a diagram saved at launch (format v1)', () => {
     ]);
   });
 
-  it('only adds the explicit preset snapshot migration, preserving the frozen legacy file', () => {
+  it('only adds the explicit preset snapshot, and says the page settings it left unsaid, preserving the frozen legacy file', () => {
     const written = JSON.parse(JSON.stringify(writeDiagram(read().document)));
-    expect(written).toEqual({ ...frozen, style: snapshotDiagramStyle(read().document.style) });
+    // Every page setting is said (2026-10-12, `diagram-document-evolution.md`): the packing it did not say, at the
+    // legacy values it was packed by.
+    const packing = { flowBands: 'auto', flowPreferBands: 0.5, flowBendSteps: true, flowNesting: 0.8, flowSteadiness: 0.85 };
+    expect(written).toEqual({ ...frozen, style: snapshotDiagramStyle(read().document.style), page: { ...frozen.page, ...packing } });
+    expect(readDiagram(written)!.document).toEqual(read().document);
     expect(writeDiagram(readDiagram(written)!.document)).toEqual(written);
   });
 

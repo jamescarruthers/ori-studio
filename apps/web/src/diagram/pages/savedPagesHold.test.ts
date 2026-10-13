@@ -65,8 +65,23 @@ describe('a diagram saved with its pages held', () => {
     expect(stepsOf(document).filter((step) => step.place?.frame).map((step) => step.id)).toEqual(['step-2', 'step-7']);
   });
 
-  it('writes back as it was read', () => {
-    expect(JSON.parse(JSON.stringify(writeDiagram(read())))).toEqual(frozen);
+  it('writes back as it was read, every page setting it left unsaid now said at the value it was packed by', () => {
+    const written = JSON.parse(JSON.stringify(writeDiagram(read())));
+    const unsaid = {
+      pathWidthMm: 20,
+      pathColor: '#ecece8',
+      firstPageSide: 'left',
+      flowBands: 'auto',
+      flowPreferBands: 0.5,
+      flowBendSteps: true,
+      flowNesting: 0.8,
+      flowSteadiness: 0.85,
+    };
+    expect(written).toEqual({ ...frozen, page: { ...frozen.page, ...unsaid } });
+    // Read again, it is the same diagram, every page still held.
+    const again = readDiagram(written)!.document;
+    expect(again).toEqual(read());
+    expect(layoutDiagram(again, estimateTextSetter).packed).toBeUndefined();
   });
 
   it('packs a page the user re-packs with this build’s packer, and records it; the other page holds as saved', () => {

@@ -4,6 +4,9 @@ import { DEFAULT_PAPER_STYLE } from '../../lib/paper/paperStyle';
 import {
   DEFAULT_DIAGRAM_STYLE,
   DEFAULT_FLOW_PACKING,
+  DEFAULT_PAGE_SETUP,
+  PAGE_SETTINGS,
+  PAGE_SETTING_KEYS,
   createDiagram,
   createStep,
   duplicateStep,
@@ -68,10 +71,34 @@ describe('writeDiagram / readDiagram', () => {
     expect(read!.document).toEqual(diagram);
   });
 
-  it('writes the first page’s side only when it is the right, and reads a file without it as the left', () => {
+  it('writes every page setting, whatever its value, in one order, and reads a file without one as its legacy value', () => {
+    // Every setting said, a default as much as a choice: a later change to a default reaches no saved diagram.
+    const fresh = throughJson(writeDiagram(createDiagram({ newId: sequentialIds() })));
+    expect(Object.keys(fresh.page)).toEqual([...PAGE_SETTING_KEYS]);
+    expect(fresh.page).toEqual(DEFAULT_PAGE_SETUP);
+    const chosen = throughJson(writeDiagram(sampleDiagram()));
+    expect(Object.keys(chosen.page)).toEqual([...PAGE_SETTING_KEYS]);
+    // One unsaid was written before this build knew it, or before every setting was said: its legacy value, never
+    // the default — the same today but for the layout, and the steps per page, read from the columns and rows.
+    for (const key of PAGE_SETTING_KEYS) {
+      const { [key]: _unsaid, ...page } = chosen.page;
+      const read = readDiagram({ ...chosen, page })!;
+      expect(read.readOnly, key).toBe(false);
+      expect(read.document.newer, key).toBeUndefined();
+      const legacy = key === 'stepsPerPage' ? PAGE_SETTINGS.stepsPerPage.legacy(chosen.page) : PAGE_SETTINGS[key].legacy;
+      expect(read.document.page[key], key).toEqual(legacy);
+      // Read, it is said from then on.
+      expect(throughJson(writeDiagram(read.document)).page[key], key).toEqual(legacy);
+    }
+    expect(PAGE_SETTINGS.layout).toEqual({ default: 'flow', legacy: 'grid' });
+    expect(PAGE_SETTINGS.stepsPerPage.legacy({ columns: 4, rows: 3 })).toBe(12);
+  });
+
+  it('writes the first page’s side, either one, and reads a file without it as the left', () => {
     const left = throughJson(writeDiagram(sampleDiagram()));
-    expect('firstPageSide' in left.page).toBe(false);
-    expect(readDiagram(left)!.document.page.firstPageSide).toBe('left');
+    expect(left.page.firstPageSide).toBe('left');
+    const { firstPageSide: _unsaid, ...unsaid } = left.page;
+    expect(readDiagram({ ...left, page: unsaid })!.document.page.firstPageSide).toBe('left');
     const onTheRight = setPageSetup(sampleDiagram(), { firstPageSide: 'right' });
     const right = throughJson(writeDiagram(onTheRight));
     expect(right.page.firstPageSide).toBe('right');
@@ -86,12 +113,12 @@ describe('writeDiagram / readDiagram', () => {
     expect(throughJson(writeDiagram(both.document)).page.firstPageSide).toBe('both');
   });
 
-  it('writes the flow band’s width and colour only when not the defaults, and reads a file without them as the defaults', () => {
+  it('writes the flow band’s width and colour whatever they are, and reads a file without them as their legacy values', () => {
     const plain = throughJson(writeDiagram(sampleDiagram()));
-    expect('pathWidthMm' in plain.page).toBe(false);
-    expect('pathColor' in plain.page).toBe(false);
+    expect(plain.page).toMatchObject({ pathWidthMm: 20, pathColor: '#ecece8' });
+    const { pathWidthMm: _width, pathColor: _color, ...unsaid } = plain.page;
     // 20 mm: a file that never chose, which drew the band in proportion to its steps until 2026-10-08, too.
-    expect(readDiagram(plain)!.document.page).toMatchObject({ pathWidthMm: 20, pathColor: '#ecece8' });
+    expect(readDiagram({ ...plain, page: unsaid })!.document.page).toMatchObject({ pathWidthMm: 20, pathColor: '#ecece8' });
     const chosen = setPageSetup(sampleDiagram(), { pathWidthMm: 18, pathColor: '#D6E8F5' });
     expect(chosen.page).toMatchObject({ pathWidthMm: 18, pathColor: '#d6e8f5' });
     const written = throughJson(writeDiagram(chosen));
@@ -99,13 +126,9 @@ describe('writeDiagram / readDiagram', () => {
     const read = readDiagram(written)!;
     expect(read.readOnly).toBe(false);
     expect(read.document).toEqual(chosen);
-    // Back to the defaults: unsaid again.
+    // Back to the defaults: said as they are.
     const reset = throughJson(writeDiagram(setPageSetup(chosen, { pathWidthMm: 20, pathColor: '#ecece8' })));
-    expect('pathWidthMm' in reset.page || 'pathColor' in reset.page).toBe(false);
-    // A file that says the default reads as it, and is written back without it.
-    const said = readDiagram({ ...written, page: { ...written.page, pathWidthMm: 20 } })!;
-    expect(said.document.page.pathWidthMm).toBe(20);
-    expect('pathWidthMm' in throughJson(writeDiagram(said.document)).page).toBe(false);
+    expect(reset.page).toMatchObject({ pathWidthMm: 20, pathColor: '#ecece8' });
     // A width past the range is shown clamped, as the margin is, and written back as it came; damage reads as the default.
     const page = (patch: Record<string, unknown>) => readDiagram({ ...written, page: { ...written.page, ...patch } })!;
     expect(page({ pathWidthMm: 400 }).document.page.pathWidthMm).toBe(60);
@@ -124,10 +147,10 @@ describe('writeDiagram / readDiagram', () => {
     }
   });
 
-  it('writes the steps per page only where they differ from the columns × rows a page without them reads', () => {
-    // A new diagram's flow, 9 on its 3 × 3: unsaid, as a build before the choice wrote it.
+  it('writes the steps per page always, and reads a file without them as its columns × rows', () => {
+    // A new diagram's flow, 9 on its 3 × 3: said.
     const fresh = throughJson(writeDiagram(createDiagram({ newId: sequentialIds() })));
-    expect('stepsPerPage' in fresh.page).toBe(false);
+    expect(fresh.page.stepsPerPage).toBe(9);
     expect(readDiagram(fresh)!.document.page.stepsPerPage).toBe(9);
     const seven = setPageSetup(sampleDiagram(), { stepsPerPage: 7 });
     const written = throughJson(writeDiagram(seven));
@@ -135,13 +158,13 @@ describe('writeDiagram / readDiagram', () => {
     const read = readDiagram(written)!;
     expect(read.readOnly).toBe(false);
     expect(read.document).toEqual(seven);
-    // A grid keeps them, for when it turns back to flow; where they are its cells, it says nothing.
+    // A grid keeps them, for when it turns back to flow, and says them where they are its cells too.
     const grid = setPageSetup(seven, { layout: 'grid', columns: 4, rows: 3 });
     const gridWritten = throughJson(writeDiagram(grid));
     expect(gridWritten.page.stepsPerPage).toBe(7);
     expect(readDiagram(gridWritten)!.document).toEqual(grid);
     const twelve = throughJson(writeDiagram(setPageSetup(grid, { stepsPerPage: 12 })));
-    expect('stepsPerPage' in twelve.page).toBe(false);
+    expect(twelve.page.stepsPerPage).toBe(12);
     expect(readDiagram(twelve)!.document.page).toMatchObject({ layout: 'grid', columns: 4, rows: 3, stepsPerPage: 12 });
     // A flow page from before they could be chosen holds as many steps as its columns and rows did, 5 × 6 included.
     const { stepsPerPage: _unsaid, ...before } = written.page;
@@ -174,27 +197,33 @@ describe('writeDiagram / readDiagram', () => {
       // Chosen here, they are this build's.
       expect(throughJson(writeDiagram(setPageSetup(newer.document, { stepsPerPage: 8 }))).page.stepsPerPage).toBe(8);
     }
-    // A newer build's 6 columns of 3 rows, its steps per page unsaid: 18, as it meant them, and saved as it came.
+    // A newer build's 6 columns of 3 rows, its steps per page unsaid: 18, as it meant them, saved as it came and said.
     const wide = page({ columns: 6, rows: 3 });
     expect(wide.document.page).toMatchObject({ columns: 5, rows: 3, stepsPerPage: 18 });
-    expect(throughJson(writeDiagram(wide.document)).page).toEqual({ ...before, columns: 6, rows: 3 });
+    expect(throughJson(writeDiagram(wide.document)).page).toEqual({ ...before, columns: 6, rows: 3, stepsPerPage: 18 });
   });
 
   describe('the flow’s packing (diagram-flow-packing.md, Decision 7)', () => {
     const PACKING_KEYS = ['flowBands', 'flowPreferBands', 'flowBendSteps', 'flowNesting', 'flowSteadiness'];
     const packingSaid = (page: Record<string, unknown>) => Object.keys(page).filter((key) => PACKING_KEYS.includes(key));
 
-    it('writes each choice only when not its default, and reads a file without one as Zach’s default', () => {
+    it('writes every choice, a default too, and reads a file without one as the packing every page had before: Zach’s', () => {
+      // Said, at its default: part of every flow page's signature, so a default changed later re-packs nothing saved.
       const plain = throughJson(writeDiagram(sampleDiagram()));
-      expect(packingSaid(plain.page)).toEqual([]);
-      expect(readDiagram(plain)!.document.page).toMatchObject({
+      expect(packingSaid(plain.page)).toEqual(PACKING_KEYS);
+      expect(plain.page).toMatchObject(DEFAULT_FLOW_PACKING);
+      expect(createDiagram().page).toMatchObject(DEFAULT_FLOW_PACKING);
+      // Unsaid, as every file before every setting was said: the legacy packing, Zach's (Decision 7).
+      const unsaid = Object.fromEntries(Object.entries(plain.page).filter(([key]) => !PACKING_KEYS.includes(key)));
+      const legacy = readDiagram({ ...plain, page: unsaid })!;
+      expect(legacy.document.page).toMatchObject({
         flowBands: 'auto',
         flowPreferBands: 0.5,
         flowBendSteps: true,
         flowNesting: 0.8,
         flowSteadiness: 0.85,
       });
-      expect(createDiagram().page).toMatchObject(DEFAULT_FLOW_PACKING);
+      expect(legacy.document).toEqual(readDiagram(plain)!.document);
       const choices = { flowBands: 3, flowPreferBands: 0.2, flowBendSteps: false, flowNesting: 0.4, flowSteadiness: 1 } as const;
       const chosen = setPageSetup(sampleDiagram(), choices);
       const written = throughJson(writeDiagram(chosen));
@@ -202,16 +231,8 @@ describe('writeDiagram / readDiagram', () => {
       const read = readDiagram(written)!;
       expect(read.readOnly).toBe(false);
       expect(read.document).toEqual(chosen);
-      // One chosen: only it is said.
-      for (const [key, value] of Object.entries(choices)) {
-        const one = setPageSetup(sampleDiagram(), { [key]: value } as Partial<DiagramPageSetup>);
-        expect(packingSaid(throughJson(writeDiagram(one)).page)).toEqual([key]);
-      }
-      // Back to the defaults: unsaid again; and a file that says a default reads as it, and is written back without it.
-      expect(packingSaid(throughJson(writeDiagram(setPageSetup(chosen, DEFAULT_FLOW_PACKING))).page)).toEqual([]);
-      const said = readDiagram({ ...plain, page: { ...plain.page, ...DEFAULT_FLOW_PACKING } })!;
-      expect(said.document).toEqual(readDiagram(plain)!.document);
-      expect(packingSaid(throughJson(writeDiagram(said.document)).page)).toEqual([]);
+      // Back to the defaults: said as they are.
+      expect(throughJson(writeDiagram(setPageSetup(chosen, DEFAULT_FLOW_PACKING))).page).toEqual(plain.page);
     });
 
     it('holds each choice to its range, a band count whole, and reads damage as the default', () => {
@@ -264,7 +285,7 @@ describe('writeDiagram / readDiagram', () => {
         const [key] = Object.keys(patch) as (keyof typeof DEFAULT_FLOW_PACKING)[];
         const chosen = setPageSetup(newer.document, { [key!]: DEFAULT_FLOW_PACKING[key!] } as Partial<DiagramPageSetup>);
         expect(chosen.newer).toBeUndefined();
-        expect(packingSaid(throughJson(writeDiagram(chosen)).page)).toEqual([]);
+        expect(throughJson(writeDiagram(chosen)).page).toEqual(plain.page);
       }
     });
   });
@@ -407,7 +428,7 @@ describe('writeDiagram / readDiagram', () => {
     });
   });
 
-  it('saves a legacy flow page setup byte for byte without adding steps per page', () => {
+  it('reads a legacy flow page setup as its build drew it, and saves it with every setting said', () => {
     // As the build before wrote a flow page: every field it knew, none of the choices made.
     for (const [columns, rows] of [
       [3, 3],
@@ -437,7 +458,35 @@ describe('writeDiagram / readDiagram', () => {
       const read = readDiagram(saved)!;
       expect(read.readOnly).toBe(false);
       expect(read.document.page.stepsPerPage).toBe(columns * rows);
-      expect(JSON.stringify(writeDiagram(read.document).page, null, 2)).toBe(JSON.stringify(saved.page, null, 2));
+      // What it said, as it said it, and every setting it did not say at the value it was drawn with, in one order.
+      expect(JSON.stringify(writeDiagram(read.document).page, null, 2)).toBe(
+        JSON.stringify(
+          {
+            size: 'a4',
+            orientation: 'portrait',
+            marginMm: 12,
+            layout: 'flow',
+            columns,
+            rows,
+            stepsPerPage: columns! * rows!,
+            showPath: true,
+            pathWidthMm: 20,
+            pathColor: '#ecece8',
+            firstPageSide: 'left',
+            showTitle: true,
+            pageNumbers: { enabled: true, first: 1 },
+            flowBands: 'auto',
+            flowPreferBands: 0.5,
+            flowBendSteps: true,
+            flowNesting: 0.8,
+            flowSteadiness: 0.85,
+          },
+          null,
+          2
+        )
+      );
+      // Written so, it reads back the same.
+      expect(readDiagram(throughJson(writeDiagram(read.document)))!.document).toEqual(read.document);
     }
   });
 
