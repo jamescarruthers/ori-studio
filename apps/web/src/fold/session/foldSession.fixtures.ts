@@ -275,7 +275,8 @@ function workerOver(calls: FoldEngineCalls, version: number): FoldSessionWorker 
   const worker = {
     engineVersion: async () => version,
     sheet: async (paper) => calls.sheet(paper),
-    analyse: async (state, op) => calls.analyse(state, op),
+    // An axiom's root is a choice: dropped, the engine refuses the analysis (`root_missing`), as the worker never does.
+    analyse: async (state, op, choices) => calls.analyse(state, op, choices),
     apply: async (state, op, choices) => calls.apply(state, op, choices),
     step: async (state, op, choices) => calls.step(state, op, choices),
     summary: async (state) => calls.summary(state),
