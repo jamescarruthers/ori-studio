@@ -5,6 +5,7 @@ import { createFoldReplayer } from '../document/foldReplay';
 import { sequenceOf, step } from '../document/foldSequence.fixtures';
 import {
   isLockedStep,
+  withSwivelKind,
   type FoldPrecreaseOp,
   type FoldSequenceDocument,
   type FoldSwivelEdgeOp,
@@ -263,6 +264,65 @@ describe.skipIf(!available)('the swivel on a folded edge over the bridge', () =>
     const replayed = await createFoldReplayer(createFoldEnginePort(source, engine.version)).run({
       loadId: 2,
       sequence: opened.document,
+    });
+    expect(replayed?.steps.get('d')?.status).toBe('ok');
+  });
+
+  it('answers which kinds land, and the inside swivel’s letters: the strip folds the other way', () => {
+    const inside = withSwivelKind(onFold, 'inside');
+    const answer = landed(engine.question.compoundAnalysis(kite, inside));
+    if (answer.family !== 'vertex' || answer.analysis.kind !== 'swivel-by-edge') throw new Error('not a swivel');
+    expect(answer.kinds).toEqual([
+      [true, false],
+      [true, false],
+    ]);
+    expect(answer.directions).toEqual([true, false]);
+    expect(answer.analysis.creases.map((crease) => [crease.ray, crease.letter, crease.ridge])).toEqual([
+      ['meet', 'valley', false],
+      ['meet', 'valley', false],
+      ['hinge', 'mountain', true],
+    ]);
+    // The strip, where it reaches past the flap over the other one, goes over it or under it: two orders.
+    expect(answer.orders?.count.orders).toBe(2);
+    const open = landed(engine.question.compoundAnalysis(kite, onFold));
+    if (open.family !== 'vertex') throw new Error('not a vertex fold');
+    expect(open.kinds).toEqual(answer.kinds);
+  });
+
+  it('lands the inside swivel with the order it stores, and replays it saved', async () => {
+    const inside = withSwivelKind(onFold, 'inside');
+    const answer = landed(engine.question.compoundAnalysis(kite, inside));
+    if (answer.family !== 'vertex') throw new Error('not a vertex fold');
+    const completion = answer.orders?.orders[1];
+    if (!completion) throw new Error('no second order');
+    const folded = landed(engine.calls.step(kite, inside, { completion }));
+    const opened = landed(engine.calls.step(kite, onFold));
+    expect(folded.fingerprint).not.toBe(opened.fingerprint);
+    // Without its order it cannot land: the step must store one.
+    expect(engine.calls.step(kite, inside).status).toBe('refused');
+    const document = sequenceOf([
+      step('a', null, diagonal),
+      step('b', 'a', right),
+      step('c', 'b', left),
+      step('d', 'c', inside, { choices: { completion } }),
+    ]);
+    const saved = JSON.parse(JSON.stringify(writeFoldSequence({ document, readOnlyRaw: null }))) as {
+      steps: { op: Record<string, unknown> }[];
+    };
+    expect(saved.steps[3]?.op.swivel).toBe('inside');
+    const reopened = readFoldSequence(saved);
+    if (!reopened) throw new Error('no sequence');
+    expect(reopened.document.steps.map(isLockedStep)).toEqual([false, false, false, false]);
+    const calls = engine.calls;
+    const source: FoldEngineSource = {
+      generation: () => 0,
+      sheet: async (paper) => calls.sheet(paper),
+      step: async (state, op, choices) => calls.step(state, op, choices),
+      release: async (states) => calls.release(states),
+    };
+    const replayed = await createFoldReplayer(createFoldEnginePort(source, engine.version)).run({
+      loadId: 3,
+      sequence: reopened.document,
     });
     expect(replayed?.steps.get('d')?.status).toBe('ok');
   });

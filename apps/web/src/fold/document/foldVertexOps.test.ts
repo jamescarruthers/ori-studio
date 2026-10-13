@@ -24,6 +24,8 @@ import {
   type FoldSwivelFreeOp,
   type FoldSwivelOnFoldOp,
   type FoldSwivelOp,
+  swivelKindOf,
+  withSwivelKind,
 } from './foldSequenceDocument';
 import { readBackFoldStep, readFoldSequence, writeFoldOp, writeFoldSequence } from './foldSequenceFile';
 
@@ -460,5 +462,85 @@ describe('the swivel on a folded edge', () => {
       key({ ...onFold, direction: 'mountain' }),
     ];
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+/**
+ * The inside swivel (`swivel: 'inside'`, engine `SwivelKind::Inside`): a
+ * swivel on a folded edge with its strip tucked between the two layers.
+ * Spelled only when inside, last, so every open swivel reads and writes as
+ * it always did; any other value, or one beside a pivot, does not read and
+ * locks the node; an older build locks it rather than fold it open; and
+ * `fh1` tells the two kinds apart.
+ */
+describe('the inside swivel', () => {
+  const open: FoldSwivelOnFoldOp = {
+    kind: 'swivel',
+    via: 'edge',
+    fold: [0.75, 0.6035533905932737],
+    edge: [1, 0.8535533905932737],
+    target: { via: 'crease', at: [0.75, 0.5] },
+    direction: 'valley',
+  };
+  const inside: FoldSwivelOnFoldOp = { ...open, swivel: 'inside' };
+
+  it('is a swivel on a folded edge of the inside kind, and the open one is spelled as before', () => {
+    expect(isSwivelOnFoldOp(inside)).toBe(true);
+    expect(swivelKindOf(inside)).toBe('inside');
+    expect(swivelKindOf(open)).toBe('open');
+    expect(withSwivelKind(open, 'inside')).toEqual(inside);
+    expect(withSwivelKind(inside, 'open')).toEqual(open);
+    expect('swivel' in withSwivelKind(inside, 'open')).toBe(false);
+    expect(JSON.stringify(writeFoldOp(open))).toBe(
+      '{"kind":"swivel","via":"edge","fold":[0.75,0.6035533905932737],"edge":[1,0.8535533905932737],' +
+        '"target":{"via":"crease","at":[0.75,0.5]},"direction":"valley"}'
+    );
+  });
+
+  it('reads and writes back exactly, its kind last', () => {
+    const ops = [inside, open, { ...inside, direction: 'mountain' }];
+    const held = readOps(ops);
+    expect(held.document.steps.map(isLockedStep)).toEqual(ops.map(() => false));
+    const written = writeFoldSequence(held).steps as { op: unknown }[];
+    expect(written.map((node) => node.op)).toEqual(ops);
+    expect(Object.keys(writeFoldOp(inside))).toEqual(['kind', 'via', 'fold', 'edge', 'target', 'direction', 'swivel']);
+    expect(readBackFoldStep(inside)?.op).toEqual(inside);
+  });
+
+  it('locks a node whose kind does not read, or stands beside a pivot', () => {
+    const free = {
+      kind: 'swivel',
+      via: 'edge',
+      pivot: [0.8, 0.33],
+      edge: [0.5, 0],
+      target: { via: 'crease', at: [0.5, 0.5] },
+      seed: { scope: 'all' },
+      direction: 'valley',
+    };
+    const malformed = [
+      { ...open, swivel: 'open' },
+      { ...open, swivel: 'closed' },
+      { ...open, swivel: null },
+      { ...free, swivel: 'inside' },
+      { ...free, swivel: 'open' },
+    ];
+    for (const op of malformed) {
+      const held = readOps([op]);
+      expect(isLockedStep(held.document.steps[0]), JSON.stringify(op)).toBe(true);
+      expect((writeFoldSequence(held).steps as { op: unknown }[])[0]?.op).toBe(op);
+    }
+  });
+
+  it('locks in an older build: `swivel` is a key its folded-edge form never had', () => {
+    const older = new Set(['kind', 'via', 'pivot', 'fold', 'edge', 'target', 'seed', 'direction', 'ridge']);
+    expect(hasNewerKey(writeFoldOp(inside), older)).toBe(true);
+    expect(hasNewerKey(writeFoldOp(open), older)).toBe(false);
+  });
+
+  it('gives fh1 its kind: the inside swivel is another path', () => {
+    const key = (op: FoldSwivelEdgeOp) => foldStepKey(step('x', null, op));
+    expect(key(inside)).not.toBe(key(open));
+    expect(key({ ...inside, direction: 'mountain' })).not.toBe(key(inside));
+    expect(key(withSwivelKind(inside, 'open'))).toBe(key(open));
   });
 });

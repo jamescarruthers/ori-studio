@@ -362,10 +362,21 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
 
 /**
  * A swivel by its edge's keys (`via: 'edge'`), at a free vertex or on a
- * folded edge (`fold`, which no build before it knew); its rays form's are
- * `OP_KEYS`'.
+ * folded edge (`fold`, which no build before it knew, and `swivel` for the
+ * inside kind, which none before that knew); its rays form's are `OP_KEYS`'.
  */
-const SWIVEL_EDGE_KEYS = new Set(['kind', 'via', 'pivot', 'fold', 'edge', 'target', 'seed', 'direction', 'ridge']);
+const SWIVEL_EDGE_KEYS = new Set([
+  'kind',
+  'via',
+  'pivot',
+  'fold',
+  'edge',
+  'target',
+  'seed',
+  'direction',
+  'ridge',
+  'swivel',
+]);
 
 /** The keys this build knows for an op: its kind's, or its form's when its kind has two. */
 function opKeys(value: Record<string, unknown>, kind: string): ReadonlySet<string> | undefined {
@@ -531,7 +542,9 @@ function readVertexOp(kind: FoldVertexOpKind, value: Record<string, unknown>): F
  * the target as a crease's point or two points (an axiom's would need a root
  * the step does not store), the layers, and the ridge when the folder took
  * the other one. On a folded edge, `fold` in place of the pivot and no seed
- * or ridge: a `fold` beside any of them does not read. Any other `via` is a
+ * or ridge: a `fold` beside any of them does not read; and `swivel:
+ * 'inside'` for the inside swivel — the only value it is written with (an
+ * open one spells none), and only on a folded edge. Any other `via` is a
  * newer build's form.
  */
 function readSwivelEdgeOp(value: Record<string, unknown>, direction: FoldDirection): FoldSwivelEdgeOp | null {
@@ -541,10 +554,13 @@ function readSwivelEdgeOp(value: Record<string, unknown>, direction: FoldDirecti
   if (value.fold !== undefined) {
     const fold = readPoint(value.fold);
     const alone = value.pivot === undefined && value.seed === undefined && value.ridge === undefined;
-    return alone && fold && edge && target && target.via !== 'axiom'
-      ? { kind: 'swivel', via: 'edge', fold, edge, target, direction }
+    const inside = value.swivel === 'inside';
+    const kind = inside || value.swivel === undefined;
+    return alone && kind && fold && edge && target && target.via !== 'axiom'
+      ? { kind: 'swivel', via: 'edge', fold, edge, target, direction, ...(inside ? { swivel: 'inside' as const } : {}) }
       : null;
   }
+  if (value.swivel !== undefined) return null;
   const pivot = readPoint(value.pivot);
   const seed = readSeed(value.seed);
   const ridge = value.ridge === undefined ? undefined : readModelDirection(value.ridge);
@@ -1033,7 +1049,8 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
     case 'swivel':
       if ('via' in op && 'fold' in op) {
         // On a folded edge: `fold` where the free form has its pivot, and
-        // neither a seed nor a ridge.
+        // neither a seed nor a ridge; last, and only when inside, its kind,
+        // so an open swivel is written as it always was.
         return {
           kind: op.kind,
           via: op.via,
@@ -1041,6 +1058,7 @@ function writeVertexOp(op: FoldVertexOp): Record<string, unknown> {
           edge: writePoint(op.edge),
           target: writeLine(op.target),
           direction: op.direction,
+          ...(op.swivel === 'inside' ? { swivel: op.swivel } : {}),
         };
       }
       if ('via' in op) {

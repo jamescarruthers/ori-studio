@@ -518,6 +518,13 @@ export interface FoldSwivelFreeOp {
  * ridge to choose, so it stores no `seed` and no `ridge`. An older build,
  * whose edge form always had a `pivot`, reads `fold` as a key it does not
  * know and locks the step rather than fold it.
+ *
+ * It is the open swivel, the other layer's strip folded up on top, unless
+ * `swivel` says `'inside'`: the inside (closed) swivel, the strip tucked
+ * between the two layers. Only the inside one spells it, so every open
+ * swivel reads and writes as it always did; a build before the inside
+ * swivel reads `swivel` as a key it does not know and locks the step rather
+ * than fold it open.
  */
 export interface FoldSwivelOnFoldOp {
   kind: 'swivel';
@@ -526,6 +533,24 @@ export interface FoldSwivelOnFoldOp {
   edge: SheetPoint;
   target: FoldSwivelTarget;
   direction: FoldDirection;
+  swivel?: 'inside';
+}
+
+/** Where a swivel on a folded edge puts the other layer's strip: on top, or tucked between the two layers. */
+export type FoldSwivelKind = 'open' | 'inside';
+
+/** The kinds in the order the engine's answer lists them (`kinds`). */
+export const FOLD_SWIVEL_KINDS: readonly FoldSwivelKind[] = ['open', 'inside'];
+
+/** A swivel op's kind: inside only on a folded edge that says so. */
+export function swivelKindOf(op: FoldSwivelOp | FoldSwivelEdgeOp): FoldSwivelKind {
+  return 'swivel' in op && op.swivel === 'inside' ? 'inside' : 'open';
+}
+
+/** A swivel on a folded edge of the kind given: `swivel` spelled only when inside. */
+export function withSwivelKind(op: FoldSwivelOnFoldOp, kind: FoldSwivelKind): FoldSwivelOnFoldOp {
+  const { swivel: _spelled, ...open } = op;
+  return kind === 'inside' ? { ...open, swivel: 'inside' } : open;
 }
 
 /** Whether a swivel op names its swivel by its edge, not its rays. */

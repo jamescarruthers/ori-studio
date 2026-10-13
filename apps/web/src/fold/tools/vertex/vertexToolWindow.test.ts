@@ -404,6 +404,47 @@ describe('a vertex fold’s window while it previews', () => {
     expect(blocked?.refusal?.text).toMatch(/^A crease would run into a fold before it reaches the paper’s edge/);
   });
 
+  it('offers a swivel on a folded edge its kind, Open or Inside, only when both land', () => {
+    const calls = { ...verbs(), setSwivelKind: vi.fn() };
+    const onFold = vertex({
+      tool: 'swivel',
+      lineBy: 'crease',
+      onFold: true,
+      directions: [true, false],
+      swivelKind: 'open',
+      swivelKinds: ['open', 'inside'],
+    });
+    const model = foldToolWindow(t, view(onFold, { preview: preview() }), calls, mouse);
+    const kind = model?.vertex?.kind;
+    expect(kind?.label).toBe('Kind');
+    expect(kind?.value).toBe('open');
+    expect(kind?.options.map((option) => [option.value, option.short, option.disabled])).toEqual([
+      ['open', 'Open', false],
+      ['inside', 'Inside', false],
+    ]);
+    expect(kind?.options[1]?.label).toBe('Inside swivel: the strip tucks between the layers');
+    expect(kind?.note).toBeNull();
+    // A choice above the commit: the commit names its button. The line it lands on and the kind.
+    expect(model?.instructions.items.at(-1)).toBe('Press Enter, or click Swivel fold, to fold.');
+    expect(model?.meta).toBe('2 settings');
+    kind?.set('inside');
+    expect(calls.setSwivelKind).toHaveBeenCalledWith('inside');
+    // Inside taken: shown as taken.
+    const inside = foldToolWindow(t, view({ ...onFold, swivelKind: 'inside' }, { preview: preview() }), calls, mouse);
+    expect(inside?.vertex?.kind?.value).toBe('inside');
+    // Only one kind lands: no control, the one that lands folded.
+    for (const swivelKinds of [['inside'], ['open'], []] as const) {
+      const one = foldToolWindow(t, view({ ...onFold, swivelKinds }, { preview: preview() }), calls, mouse);
+      expect(one?.vertex?.kind, swivelKinds.join()).toBeNull();
+    }
+    // Not while clicking, nor before the engine has described it, nor at a free vertex.
+    expect(foldToolWindow(t, view(onFold, { picks: 3 }), calls, mouse)?.vertex?.kind).toBeNull();
+    const asking = foldToolWindow(t, view({ ...onFold, described: false }, { preview: preview() }), calls, mouse);
+    expect(asking?.vertex?.kind).toBeNull();
+    const free = foldToolWindow(t, view({ ...onFold, onFold: false }, { preview: preview() }), calls, mouse);
+    expect(free?.vertex?.kind).toBeNull();
+  });
+
   it('steps the layer order when the fold leaves several', () => {
     const calls = verbs();
     const model = foldToolWindow(t, view(vertex({ orders: 3, order: 1 }), { preview: preview() }), calls, mouse);
@@ -480,6 +521,7 @@ describe('a vertex fold’s refusals', () => {
       swivel_not_a_fold: { code: 'swivel_not_a_fold', point: [0.75, 0.6] },
       swivel_misses_fold: { code: 'swivel_misses_fold', faces: [17, 18] },
       swivel_fold_wide: { code: 'swivel_fold_wide', faces: [17, 18] },
+      swivel_inside_free: { code: 'swivel_inside_free', faces: [0] },
     };
     const titles = new Set<string>();
     for (const code of FOLD_VERTEX_REFUSAL_CODES) {

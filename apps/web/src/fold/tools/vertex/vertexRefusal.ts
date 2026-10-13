@@ -199,6 +199,14 @@ function swivelEdgeWords(
           'The swivel folds along the line halfway between the edge and the line it lands on, and that line does not cross this folded edge between its ends. Press Esc and pick the folded edge it crosses, or another line.'
         ),
       };
+    case 'swivel_inside_free':
+      return {
+        title: t('tools:fold.vertex.refusal.swivelInsideFree.title', 'An inside swivel needs a folded edge'),
+        text: t(
+          'tools:fold.vertex.refusal.swivelInsideFree.text',
+          'An inside swivel tucks its strip between the two layers a folded edge joins, and these creases meet away from any folded edge. Press Esc and click a folded edge for the creases to meet on.'
+        ),
+      };
     case 'swivel_fold_wide':
       return {
         title: t('tools:fold.vertex.refusal.swivelFoldWide.title', 'The swivel crease meets the edge too steeply'),
@@ -330,6 +338,7 @@ export function vertexRefusalWords(
     case 'swivel_not_a_fold':
     case 'swivel_misses_fold':
     case 'swivel_fold_wide':
+    case 'swivel_inside_free':
       return swivelEdgeWords(t, refusal.code, context.swivel === 'fold');
     case 'fan_center':
       return {

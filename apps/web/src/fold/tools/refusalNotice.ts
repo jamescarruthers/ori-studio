@@ -451,6 +451,7 @@ function words(t: TFunction, refused: FoldRefused, context: FoldRefusalContext):
     case 'swivel_not_a_fold':
     case 'swivel_misses_fold':
     case 'swivel_fold_wide':
+    case 'swivel_inside_free':
       return vertexRefusalWords(t, refusal, context.vertex ?? vertexContextOf(refusal.code)) ?? invalidWords(t);
     // The sinks'.
     case 'sink_several_points':

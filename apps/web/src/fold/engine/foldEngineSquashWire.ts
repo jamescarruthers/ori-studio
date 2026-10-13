@@ -253,10 +253,17 @@ export interface FoldVertexAnalysed {
   emergents: boolean[];
   /**
    * A swivel on a folded edge's: valley, then mountain, as the viewer sees
-   * them, each whether the fold lands that way — its one choice besides the
-   * order. Absent for the other folds.
+   * them, each whether the fold lands that way, of the kind asked. Absent
+   * for the other folds.
    */
   directions?: boolean[];
+  /**
+   * A swivel on a folded edge's: per kind, open then inside
+   * (`FOLD_SWIVEL_KINDS`), its directions as `directions` lists them, each
+   * whether the fold lands that way — its choices besides the order. Absent
+   * for the other folds.
+   */
+  kinds?: [boolean, boolean][];
   /** Null when it lands with one order, or is refused (the preview says why). */
   orders: FoldVertexOrders | null;
 }
@@ -298,9 +305,10 @@ export type FoldNoPetalDetail = { kind: 'misses_flap' } | { kind: 'past_corner';
  * cut layers leave out. On a folded edge (`compound::swivel_on_edge`): no
  * folded crease at the sheet point (naming its `point`), a bisector that
  * crosses the folded edge nowhere, and a swivel crease meeting it at a right
- * angle or wider, each naming the two faces it joins. The fan's own follow
- * (`fan_*`, `no_order`), and a `use_emergent` fix names the other ridge, to
- * store as the op's `ridge`.
+ * angle or wider, each naming the two faces it joins. An inside swivel at a
+ * free vertex, which has no two layers to tuck its strip between, naming
+ * the edge's faces. The fan's own follow (`fan_*`, `no_order`), and a
+ * `use_emergent` fix names the other ridge, to store as the op's `ridge`.
  */
 export const FOLD_SWIVEL_EDGE_REFUSAL_CODES = [
   'swivel_not_an_edge',
@@ -311,4 +319,5 @@ export const FOLD_SWIVEL_EDGE_REFUSAL_CODES = [
   'swivel_not_a_fold',
   'swivel_misses_fold',
   'swivel_fold_wide',
+  'swivel_inside_free',
 ] as const;
