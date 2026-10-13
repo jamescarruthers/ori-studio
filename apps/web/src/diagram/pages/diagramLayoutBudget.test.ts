@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   createDiagram,
   createTurn,
@@ -88,28 +88,47 @@ function medianLayoutMs(make: () => DiagramDocument): number {
   return times.sort((a, b) => a - b)[3]!;
 }
 
-describe('the layout’s time budget', () => {
-  it('lays out a 50-step diagram with annotations and turns in milliseconds, in the flow and on a grid', () => {
-    for (const page of [{ layout: 'flow' }, { layout: 'flow', stepsPerPage: 7 }, { layout: 'grid', columns: 3, rows: 4 }] as const) {
-      const label = JSON.stringify(page);
+/**
+ * Each case is a test of its own. Together they lay the diagram out 86 times,
+ * about 2 s alone here but 7.4 s on a CI runner (13 October 2026), past the
+ * 5 s a test may take; each case's nine layouts take well under it.
+ */
+describe('the layout’s time budget: a 50-step diagram with annotations and turns, laid out in milliseconds', () => {
+  for (const page of [{ layout: 'flow' }, { layout: 'flow', stepsPerPage: 7 }, { layout: 'grid', columns: 3, rows: 4 }] as const) {
+    describe(JSON.stringify(page), () => {
       // A flow diagram's pages as they are held once packed and adopted, as the store does.
-      const fresh = fiftySteps(page);
-      const packed = layoutDiagram(fresh, setterFor(fresh));
-      const held = adoptPageArrangements(fresh, packed.packed ?? {});
+      let packed: ReturnType<typeof layoutDiagram>;
+      let held: DiagramDocument;
       const copy = () => ({ ...held, steps: held.steps.map((entry) => ({ ...entry })) });
+      beforeAll(() => {
+        const fresh = fiftySteps(page);
+        packed = layoutDiagram(fresh, setterFor(fresh));
+        held = adoptPageArrangements(fresh, packed.packed ?? {});
+      });
+
       if (page.layout === 'flow') {
         // Packed afresh, every page is packed; held, every page is held and none is packed.
-        expect(packed.pages.every((each) => each.packing?.packed), label).toBe(true);
-        expect(Object.keys(held.pageArrangements ?? {}), label).toHaveLength(packed.pages.length);
-        const again = layoutDiagram(copy(), setterFor(held));
-        expect(again.packed, label).toBeUndefined();
-        expect(again.pages.some((each) => each.packing?.packed), label).toBe(false);
+        it('packs every page afresh, and none once their packing is held', () => {
+          expect(packed.pages.every((each) => each.packing?.packed)).toBe(true);
+          expect(Object.keys(held.pageArrangements ?? {})).toHaveLength(packed.pages.length);
+          const again = layoutDiagram(copy(), setterFor(held));
+          expect(again.packed).toBeUndefined();
+          expect(again.pages.some((each) => each.packing?.packed)).toBe(false);
+        });
       }
-      expect(medianLayoutMs(copy), label).toBeLessThan(BUDGET_MS);
+
+      it('lays its pages out again, as the store holds them', () => {
+        expect(medianLayoutMs(copy)).toBeLessThan(BUDGET_MS);
+      });
+
       // A file that holds them, opened: every picture new to the layout, every page held.
-      expect(medianLayoutMs(() => ({ ...fiftySteps(page), pageArrangements: held.pageArrangements })), `${label} opened`).toBeLessThan(BUDGET_MS);
-      // And packed afresh.
-      expect(medianLayoutMs(() => fiftySteps(page)), `${label} packed`).toBeLessThan(PACKING_BUDGET_MS);
-    }
-  });
+      it('opens it as saved, every picture new to the layout', () => {
+        expect(medianLayoutMs(() => ({ ...fiftySteps(page), pageArrangements: held.pageArrangements }))).toBeLessThan(BUDGET_MS);
+      });
+
+      it('lays it out afresh, packing every flow page', () => {
+        expect(medianLayoutMs(() => fiftySteps(page))).toBeLessThan(PACKING_BUDGET_MS);
+      });
+    });
+  }
 });
