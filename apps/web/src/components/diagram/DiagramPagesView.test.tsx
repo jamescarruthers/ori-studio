@@ -23,6 +23,7 @@ import { createFontSubsetter, type FontSubsetter } from '../../diagram/fonts/fon
 import { bandPath } from '../../diagram/pages/composeDiagramPage';
 import { preparedPages, type PreparedDiagramPages } from '../../diagram/pages/diagramPages';
 import { overflowingDiagram, pastItsBox } from '../../diagram/pages/pageOverflow.fixtures';
+import { adoptPageArrangements } from '../../diagram/pages/pageArrangements';
 import { usePageInView, type PagesInView } from '../../diagram/pages/pageInView';
 import { partBox } from '../../diagram/pages/pagePlacement';
 import { PAGES_PX_PER_MM as PX_PER_MM } from '../../diagram/pages/usePagesView';
@@ -560,6 +561,120 @@ it('resizes a selected caption by its grips, its lines rewrapping as the grip mo
   expect(step).toMatchObject({ place: { textWidth: expect.any(Number) } });
   expect(useWorkspaceStore.getState().diagramHistory.past).toHaveLength(1);
   expect(useWorkspaceStore.getState()).toMatchObject({ diagramSelectedStepId: 'step-long', diagramPagesPart: 'text' });
+});
+
+describe('an enlarged step’s grip on a held flow page (Zach, 2026-10-12)', () => {
+  const AREA: KnownDiagramAnnotation = { id: 'area-1', kind: 'zoom', from: [0.5, 0.4], to: [0.5, 0.4], radius: 0.2 };
+  const enlarged = (scale?: number) => ({
+    ...cpStep('step-enlarged'),
+    zoom: { from: 'area-1', shape: 'circle' as const, frame: { centre: [0.5, 0.4] as [number, number], radius: 0.2 }, ...(scale ? { scale } : {}) },
+  });
+
+  /**
+   * `fresh` packed and held as the Pages view adopts it, step-enlarged's
+   * picture selected and its right grip dragged `dx` mm: its picture's box on
+   * screen before, during and after, its page's cells before and after, and
+   * the store once the drop has landed.
+   */
+  function dragGrip(fresh: DiagramDocument, dx: number) {
+    const doc = adoptPageArrangements(fresh, preparedPages(fresh, FONTS, subsetter).layout.packed ?? {});
+    expect(doc.page.layout).toBe('flow');
+    useWorkspaceStore.getState().installDiagram({ document: doc, readOnly: false, raw: {} });
+    useWorkspaceStore.getState().setDiagramView('pages');
+    useWorkspaceStore.getState().selectDiagramStep('step-enlarged');
+    useWorkspaceStore.getState().selectDiagramPagesPart('picture');
+    const capture = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'setPointerCapture');
+    HTMLElement.prototype.setPointerCapture = vi.fn();
+    onTestFinished(() => {
+      if (capture) Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', capture);
+      else delete (HTMLElement.prototype as Partial<HTMLElement>).setPointerCapture;
+    });
+    function Bound() {
+      const document = useWorkspaceStore((state) => state.diagram!);
+      const selected = useWorkspaceStore((state) => state.diagramSelectedStepId);
+      const pages = useMemo(() => preparedPages(document, FONTS, subsetter), [document]);
+      return (
+        <DiagramPagesView
+          pages={pages}
+          failed={false}
+          steps={stepsIn(document)}
+          selectedStepId={selected}
+          pathColor={pages.layout.bandInk}
+          fitKey="test"
+          onSelect={useWorkspaceStore.getState().selectDiagramStep}
+          onPageClick={() => {}}
+        />
+      );
+    }
+    act(() =>
+      root.render(
+        <TooltipProvider>
+          <Bound />
+        </TooltipProvider>
+      )
+    );
+    const layout = preparedPages(doc, FONTS, subsetter).layout;
+    const index = layout.pages.findIndex((each) => each.cells.some((cell) => cell.stepId === 'step-enlarged'));
+    const page = host.querySelector<HTMLElement>(`[data-page="${index}"]`)!;
+    page.getBoundingClientRect = () => ({ left: 0, top: 0, width: layout.paper.widthMm, height: layout.paper.heightMm }) as DOMRect;
+    const pointer = (element: Element, type: string, x: number, y: number) =>
+      act(() => {
+        element.dispatchEvent(
+          new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerId: 1, pointerType: 'mouse', clientX: x, clientY: y, altKey: true })
+        );
+      });
+    /** The selected picture's box on screen, px. */
+    const shown = () => {
+      const { style } = page.querySelector<HTMLElement>('[data-place-selection="picture"]')!;
+      return { w: parseFloat(style.width), h: parseFloat(style.height) };
+    };
+    const cellsOf = (document: DiagramDocument) => preparedPages(document, FONTS, subsetter).layout.pages[index]!.cells;
+    const before = cellsOf(doc);
+    const was = shown();
+    const grip = page.querySelector<HTMLElement>('[data-place-scale="right"]')!;
+    const [x, y] = [parseFloat(grip.style.left) / PX_PER_MM, parseFloat(grip.style.top) / PX_PER_MM];
+    pointer(grip, 'pointerdown', x, y);
+    pointer(grip, 'pointermove', x + dx, y);
+    const during = shown();
+    pointer(grip, 'pointerup', x + dx, y);
+    const state = useWorkspaceStore.getState();
+    return { doc, before, was, during, after: shown(), cells: cellsOf(state.diagram!), state };
+  }
+
+  it('grows it past its box, the drop drawing what the drag showed, every other step as it was', () => {
+    const fresh = insertSteps(
+      createDiagram({ title: 'Crane' }),
+      [{ ...cpStep('step-area'), annotations: [AREA] }, enlarged(), cpStep('step-after')],
+      0
+    );
+    const { doc, before, was, during, after, cells, state } = dragGrip(fresh, 30);
+    expect(during.w).toBeGreaterThan(was.w * 1.3);
+    expect(state.diagramHistory.past.map((entry) => entry.label)).toEqual(['Set enlarged size']);
+    // Held, not packed again: the step is drawn at its new Size past its box, as the drag showed it.
+    expect(state.diagram!.pageArrangements).toBe(doc.pageArrangements);
+    expect(after.w / during.w).toBeCloseTo(1, 2);
+    expect(after.h / during.h).toBeCloseTo(1, 2);
+    expect(pastItsBox(cells.find((cell) => cell.stepId === 'step-enlarged')!)).toBe('picture');
+    for (const cell of cells) if (cell.stepId !== 'step-enlarged') expect(cell, cell.stepId).toEqual(before.find((each) => each.stepId === cell.stepId));
+  });
+
+  it('draws what the drag showed where it prints at another multiple of its area than its Size: its area on the page before', () => {
+    // The area ends page 1 and the step, at ×6, starts page 2, which packs at a smaller scale to hold it: so
+    // the step prints at less than six times its area as page 1 prints it. The grip scales its Size, as the
+    // page resizes it from the Size it was packed at.
+    const fresh = insertSteps(
+      createDiagram({ title: 'Crane' }),
+      [cpStep('step-a'), { ...cpStep('step-area'), annotations: [AREA] }, enlarged(6), cpStep('step-after')],
+      0
+    );
+    const twoAPage = { ...fresh, page: { ...fresh.page, stepsPerPage: 2 } };
+    const { before, was, during, after, state } = dragGrip(twoAPage, -15);
+    expect(before.find((cell) => cell.stepId === 'step-enlarged')!.zoom!.printed).toBeLessThan(5.9);
+    expect(during.w).toBeLessThan(was.w * 0.9);
+    expect(state.diagram!.steps.find((entry) => entry.id === 'step-enlarged')).toMatchObject({ zoom: { scale: expect.closeTo((6 * during.w) / was.w, 2) } });
+    expect(after.w / during.w).toBeCloseTo(1, 2);
+    expect(after.h / during.h).toBeCloseTo(1, 2);
+  });
 });
 
 it('lets the selected frame own its picture hit area until a part is chosen', () => {

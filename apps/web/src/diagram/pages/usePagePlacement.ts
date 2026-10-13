@@ -4,7 +4,8 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { registerPendingEditFlush } from '../../lib/pendingEdits';
 import { useIsPhoneSurface } from '../../platform/mobileSurface';
 import type { DiagramShortcutId } from '../../keyboard/shortcuts';
-import { stepById, type DiagramDocument } from '../document/diagramDocument';
+import { ZOOM_SCALE } from '../annotate/annotationModel';
+import { stepById, type DiagramDocument, type DiagramStep } from '../document/diagramDocument';
 import { placementBlocker, placeOffset } from '../document/stepPlace';
 import type { PreparedDiagramPages } from './diagramPages';
 import type { LayoutCell } from './diagramPageLayout';
@@ -80,6 +81,19 @@ const NUDGE_DELAY = 220;
 const DRAG_SLOP_PX = 4;
 /** The keyboard's sittings, counted: what names each one's undo entry. */
 let sittings = 0;
+
+/**
+ * The Size an enlarged step's grip scales by its drag: its own Size, or under
+ * Fill what it prints at; null for a step that is not enlarged, or prints at
+ * nothing known yet. A flow page resizes a step from the Size it was packed
+ * at (`DiagramArrangedStep.zoomScale`), which can differ from what it prints
+ * at against an area on another page, so the grip starts from the Size, and
+ * the drop draws what the drag showed.
+ */
+const zoomSizeFrom = (step: DiagramStep, cell: LayoutCell): number | null =>
+  step.zoom ? (step.zoom.scale ?? cell.zoom?.printed ?? null) : null;
+/** A Size held to the range the Size field takes. */
+const clampZoomSize = (size: number) => Math.max(ZOOM_SCALE.min, Math.min(ZOOM_SCALE.max, size));
 
 /**
  * A press on a step focuses its option, as a press on a card does, so Enter
@@ -195,7 +209,7 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
         if (step.zoom)
           changed = commitZoomSize(
             step.id,
-            Math.max(1.25, Math.min(6, (current.cell.zoom?.printed ?? step.zoom.scale ?? 1.25) * current.factor)),
+            clampZoomSize((zoomSizeFrom(step, current.cell) ?? ZOOM_SCALE.min) * current.factor),
             'drag',
             current.loadId,
           );
@@ -333,10 +347,8 @@ export function usePagePlacement(pages: PreparedDiagramPages | null, space: bool
           snap = closest;
         }
       }
-      if (current.cell.zoom) {
-        const printed = current.cell.zoom.printed;
-        mm = (max * Math.max(1.25, Math.min(6, (printed * mm) / max))) / printed;
-      }
+      const from = zoomSizeFrom(step, current.cell);
+      if (from !== null) mm = (max * clampZoomSize((from * mm) / max)) / from;
       return { ...current, pointer: grip, factor: mm / max, snap };
     }
     let x = dx,
