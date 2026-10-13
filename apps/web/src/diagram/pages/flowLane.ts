@@ -178,8 +178,9 @@ interface Knot extends LanePoint {
  * `halfWidth` how far the band is drawn either side of it, which its bends
  * keep clear of ({@link bendReach}); `tail` how far on past its last stop,
  * the way it heads there, it runs on a page it leaves nowhere — the
- * diagram's last. And the stops of steps placed by hand where the lane turns
- * back, runs level across a row break, or crosses itself (`warnings`).
+ * diagram's last. A step placed by hand where the lane turns back or runs
+ * level across a row break is passed heading from the stop before it to the
+ * stop after; nothing is said of it, as the page shows it plainly.
  */
 export function flowLane(input: {
   stops: readonly LaneStop[];
@@ -191,7 +192,7 @@ export function flowLane(input: {
   spineIn: number | null;
   spineOut: number | null;
   tail?: number;
-}): { lane: Lane; bends: Map<number, number>; into: number[]; warnings: number[] } | null {
+}): { lane: Lane; bends: Map<number, number>; into: number[] } | null {
   const { plan, pageWidth: W, apexInset, halfWidth, offPage } = input;
   const stops = laneStops(input.stops, halfWidth);
   const first = stops[0];
@@ -231,7 +232,6 @@ export function flowLane(input: {
   // For each stop after a row break, the curve into the bend before it: the one from the knot before its apex.
   const bendAt = new Map<number, number>();
   const into: number[] = [];
-  const warnings = new Set<number>();
   const slopes = bandSlopes(stops);
   stops.forEach((stop, n) => {
     const before = stops[n - 1];
@@ -252,7 +252,6 @@ export function flowLane(input: {
     const dir = stop.rightToLeft ? -1 : 1;
     let heading = stop.bend ? turnDown : slope !== 0 ? unit({ x: dir, y: slope }) : along(stop.rightToLeft);
     if (moved && (reversed || level)) {
-      for (const index of [n - 1, n, n + 1]) if (stops[index]?.placed) warnings.add(index);
       const a = before ?? stop, b = next ?? stop, length = Math.hypot(b.x - a.x, b.y - a.y);
       if (length > 0) heading = { x: (b.x - a.x) / length, y: (b.y - a.y) / length };
     }
@@ -298,8 +297,7 @@ export function flowLane(input: {
     });
   }
   const lane = { from: { x: knots[0]!.x, y: knots[0]!.y }, curves };
-  if (stops.some((stop) => stop.placed) && laneCrosses(lane)) stops.forEach((stop, i) => { if (stop.placed) warnings.add(i); });
-  return { lane, bends: bendAt, into, warnings: [...warnings] };
+  return { lane, bends: bendAt, into };
 }
 
 /**
@@ -569,16 +567,4 @@ export function bendXAt(lane: Lane, index: number, y: number): number | null {
     return curvePoint(from, curve, (a + b) / 2).x;
   }
   return null;
-}
-
-/** Detect a crossing in the flattened centerline; moved steps may cross, but must say so. */
-export function laneCrosses(lane: Lane): boolean {
-  const points = [lane.from];
-  lane.curves.forEach((curve, i) => { for (let j = 1; j <= 12; j++) points.push(curvePoint(curveStart(lane, i), curve, j / 12)); });
-  const cross = (a: LanePoint, b: LanePoint, c: LanePoint) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-  for (let i = 1; i < points.length; i++) for (let j = i + 2; j < points.length; j++) {
-    const a = points[i - 1]!, b = points[i]!, c = points[j - 1]!, d = points[j]!;
-    if (cross(a, b, c) * cross(a, b, d) < -1e-10 && cross(c, d, a) * cross(c, d, b) < -1e-10) return true;
-  }
-  return false;
 }
