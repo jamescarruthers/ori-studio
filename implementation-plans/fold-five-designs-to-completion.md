@@ -534,6 +534,9 @@ these concerns rather than adding behavior to a panel.
 - [x] Test existing squash/flap composition for the heart pocket release.
 - [x] If necessary, implement the smallest derived compound extension and its refusals.
 - [x] Complete the heart's final corner folds and turnover.
+- [x] Owner review correction: select the tuck completion with the lowered flap
+      above the original bottom triangle. Assert exposed material on both halves,
+      retain the old admissible-but-wrong order, and exercise the UI order chooser.
 - [x] Reproduce the tutorial-order bird swivels with current buried-edge picking.
 - [x] Extend only proven valid unsupported swivel configurations; retain negative tests.
 - [x] Verify the crane neck/tail/head from the intended preparation.

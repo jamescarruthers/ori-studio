@@ -16,7 +16,7 @@ import {
   clickPane, commitPreviewed, exampleStep, FOLD_FLOW_AVAILABLE, foldFlowBridge,
   FoldFlowCanvas, shownPickIndex, untilFlow, type FoldFlowSeen,
 } from './foldToolFlow.fixtures';
-import { sheetToScene } from './foldPicking';
+import { foldPickIndex, sheetToScene, topSheetPointAt } from './foldPicking';
 import type { FoldStateView } from './useFoldStateView';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -79,6 +79,24 @@ describe.skipIf(!FOLD_FLOW_AVAILABLE)('flat design completion through the canvas
     await untilFlow(() => seen.current?.preview.step?.op.kind === 'tuck' && seen.current.preview.step.op.additionalTargets?.length && seen.current.preview.landed, 'combined tuck preview')
     expect(seen.current!.preview.refused).toBeNull();
     expect(seen.current!.preview.tuck?.additional?.map((t) => t.face)).toEqual([right.face]);
+    // Both target-constrained orders are valid, but only the tutorial order
+    // exposes the lowered upper flap over the stationary bottom triangle.
+    const exposesUpperFlap = () => {
+      const scene = seen.current?.preview.landed?.scene;
+      if (!scene) return false;
+      const index = foldPickIndex(scene, null, []);
+      return [0.4, 0.6].every((x) => {
+        const sheet = topSheetPointAt(index, { x, y: 0.4 });
+        return sheet && Math.abs(sheet[0] - x) < 1e-8 && Math.abs(sheet[1] - 0.85) < 1e-8;
+      });
+    };
+    const count = seen.current!.preview.tuck!.orders.length;
+    for (let k = 0; k < count && !exposesUpperFlap(); k++) {
+      const before = seen.current!.preview.step!.key;
+      await act(async () => { seen.current!.verbs.stepOrder(1); await settle(); });
+      await untilFlow(() => seen.current?.preview.step?.key !== before && seen.current?.preview.landed, 'the next layer order');
+    }
+    expect(exposesUpperFlap()).toBe(true);
     const landed = await commitPreviewed(session, seen);
     expect(landed.op).toMatchObject({ kind: 'tuck', additionalTargets: [right.at] });
     expect(landed.fingerprint).toBe(expected);

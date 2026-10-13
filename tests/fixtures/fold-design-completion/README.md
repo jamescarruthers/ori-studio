@@ -23,6 +23,11 @@ intermediate hand motion in the tutorial.
 - Heart `fstep-heart-9` is the 16-face parent. Node 10 is a valley tuck beneath
   the two separate side triangles, named by original-sheet points
   `(0.05, 0.6)` and `(0.95, 0.6)`. Its central seed is near `(0.4, 0.98)`.
+  The lowered flap must also lie above the stationary bottom triangle: both
+  `(0.4, 0.85)` and `(0.6, 0.85)` on the original sheet must cover the respective
+  `(x, 0.1)` bottom-strip points, which coincide after folding. The former choice
+  was admissible but exposed the wrong paper and an extra band;
+  `heart-tuck-layer-order.json` retains it as a semantic negative.
   Only four central faces split: the child has 20 faces. Each target's material
   face and isometry stay identical. The four corner folds select all layers at
   the outer corners and one layer at the inner corners; this avoids carrying
@@ -40,7 +45,7 @@ intermediate hand motion in the tutorial.
   so this change does not weaken either check.
 
 Rust acceptance tests replay every node and compare fresh-engine canonical
-results; check the heart's retained material and turn-over equivalence; reject a
+results; check the heart's retained material, exposed flap and turn-over equivalence; reject a
 moving target and wrong swan kind; and reproduce the swivel refusals. Canvas
 flow tests drive the actual preview/builder/commit path for the heart and both
 swan reverses, comparing it to these API-authored operations. Document tests

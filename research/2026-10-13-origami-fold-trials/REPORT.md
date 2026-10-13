@@ -2,6 +2,37 @@
 
 2026-10-13. Research and flat-completion implementation in the copied Fold workspace branch.
 
+## Heart tuck layer-order correction
+
+The owner's visual review caught a mistake in the saved step 8: the tuck had
+**two admissible layer orders**, and the generator took the first. Both leave
+the side triangles stationary, but the first puts the original bottom triangle
+above the lowered flap, exposing an extra horizontal band absent from the
+[reference's step 9 input](https://origami.me/heart/). The earlier material checks
+covered the side triangles but missed this additional relationship; the final
+heart silhouette and deterministic replay could not establish it.
+
+The generator now selects the unique completion that exposes the lowered upper
+flap over the original bottom triangle, by original-sheet witnesses on both
+halves, independent of solver enumeration. At scene `(0.4, 0.4)` and `(0.6, 0.4)`,
+the top paper must come from sheet `(x, 0.85)`, not the bottom strip `(x, 0.1)`.
+The tuck operation and engine are unchanged. The individual/combined native
+files, acceptance fixture, interchange export and all downstream replay hashes
+have been regenerated. The heart remains 18 nodes / 15 fold operations.
+
+The new Rust regression fails on the previously delivered choice and passes on
+the corrected one; the old choice is retained as an accepted-but-wrong semantic
+negative in `heart-tuck-layer-order.json`. The canvas flow test now exercises the
+layer-order chooser and verifies exposed material before commit. All 6 completion
+acceptance tests and 35 focused web reader/tool-flow tests pass. The corrected
+tuck and completed heart were visually checked in Fold; see
+[the corrected step 8](heart-tuck-corrected-workspace.jpg). No engine or application
+runtime source changed in this correction, so a WASM rebuild/full workspace
+rerun was unnecessary; the full checks below describe the preceding implementation.
+
+Reopen **models/heart.osf** (or the combined project) to load the corrected
+choice into an already-open app session.
+
 ## Implementation update — flat scope
 
 Merged source worktree commit `aa736f95d` before implementation. Delivery is local

@@ -93,6 +93,42 @@ fn heart_tucks_beneath_both_triangles_without_splitting_or_moving_them() {
 }
 
 #[test]
+fn heart_tuck_exposes_the_lowered_flap_above_the_stationary_bottom_triangle() {
+    let reference: Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/fold-design-completion/heart-tuck-layer-order.json"
+    ))
+    .unwrap();
+    let doc = sequence("heart");
+    let mut bridge = Bridge::new();
+    let at = prefix(&mut bridge, &doc, 9);
+    let step = &doc["steps"][9];
+    let correct = apply(&mut bridge, at, step);
+    let mut wrong_step = step.clone();
+    wrong_step["choices"] = reference["wrongChoices"].clone();
+    // Both orders are admissible. Only one represents the tutorial's material
+    // relationship; retaining the side triangles alone did not catch this.
+    let wrong = apply(&mut bridge, at, &wrong_step);
+    for witness in reference["witnesses"].as_array().unwrap() {
+        let upper: [f64; 2] = serde_json::from_value(witness["loweredFlap"].clone()).unwrap();
+        let lower: [f64; 2] = serde_json::from_value(witness["stationaryBottom"].clone()).unwrap();
+        for (state, expected) in [(correct, true), (wrong, false)] {
+            let child = bridge.state(state).unwrap();
+            let a = child.image_of(upper).unwrap();
+            let b = child.image_of(lower).unwrap();
+            assert!((a[0] - b[0]).abs() < 1e-9 && (a[1] - b[1]).abs() < 1e-9);
+            assert_eq!(
+                child.seen_above(child.face_at(upper).unwrap(), child.face_at(lower).unwrap()),
+                Some(expected),
+                "the lowered flap must cover the bottom triangle at {upper:?}"
+            );
+            if expected {
+                assert_eq!(child.stack_at(a).unwrap()[0], child.face_at(upper).unwrap());
+            }
+        }
+    }
+}
+
+#[test]
 fn swan_wraps_neck_and_head_outside_and_rejects_the_wrong_neck_kind() {
     let doc = sequence("swan");
     assert_eq!(doc["steps"][8]["op"]["kind"], "outside-reverse");
