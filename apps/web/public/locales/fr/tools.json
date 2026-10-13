@@ -994,6 +994,10 @@
           "text": "Du côté du bord qui bouge, le pli pivoté rencontre le bord plié à angle droit ou plus, ce qui ne laisse pas à l’autre couche la place de se plier. Choisissez une ligne où poser le bord qui le fasse tourner davantage, ou un autre bord plié.",
           "title": "Le pli pivoté rencontre le bord trop à pic"
         },
+        "swivelInsideFree": {
+          "text": "Un pli pivot intérieur glisse sa bande entre les deux couches que relie un bord plié, et ces plis se rejoignent loin de tout bord plié. Appuyez sur Échap et cliquez sur un bord plié où les plis se rejoindront.",
+          "title": "Un pli pivot intérieur demande un bord plié"
+        },
         "swivelMissesFold": {
           "text": "Le pli pivoté suit la ligne à mi-chemin entre le bord et la ligne où il se pose, et cette ligne ne croise pas ce bord plié entre ses extrémités. Appuyez sur Échap et choisissez le bord plié qu’elle croise, ou une autre ligne.",
           "title": "Les plis ne peuvent pas se rejoindre sur ce bord"
@@ -1067,6 +1071,11 @@
         "swivelSwing": "Cliquez sur le bord à faire pivoter sur une ligne.",
         "swivelSwingTouch": "Touchez le bord à faire pivoter sur une ligne."
       },
+      "swivelInside": "Intérieur",
+      "swivelInsideHelp": "Pli pivot intérieur : la bande se glisse entre les couches",
+      "swivelKind": "Type",
+      "swivelOpen": "Ouvert",
+      "swivelOpenHelp": "Pli pivot ouvert : la bande se replie par-dessus",
       "target": "Le dos se pose sur",
       "targetHinge": "La ligne de charnière",
       "targetPoint": "Le point cliqué",

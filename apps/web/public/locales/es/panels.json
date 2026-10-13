@@ -1628,7 +1628,9 @@
         "swivelEdgeCrease": "Gira el borde por detrás sobre el pliegue, pivotando en el punto.",
         "swivelEdgeLine": "Gira el borde por detrás sobre la línea, pivotando en el punto.",
         "swivelFoldCrease": "Gira el borde por detrás sobre el pliegue, con los pliegues juntándose en el borde plegado.",
-        "swivelFoldLine": "Gira el borde por detrás sobre la línea, con los pliegues juntándose en el borde plegado."
+        "swivelFoldLine": "Gira el borde por detrás sobre la línea, con los pliegues juntándose en el borde plegado.",
+        "swivelInsideCrease": "Gira el borde por detrás sobre el pliegue con un giro interior, con los pliegues juntándose en el borde plegado.",
+        "swivelInsideLine": "Gira el borde por detrás sobre la línea con un giro interior, con los pliegues juntándose en el borde plegado."
       },
       "closedSink": "Hunde la punta en hundido cerrado: empújala hacia dentro con sus capas juntas.",
       "cpJump": "Pliega el papel según el patrón de pliegues importado.",
@@ -2380,6 +2382,8 @@
       "swivelEdgeLine": "Gira el borde sobre la línea, pivotando en el punto.",
       "swivelFoldCrease": "Gira el borde sobre el pliegue, con los pliegues juntándose en el borde plegado.",
       "swivelFoldLine": "Gira el borde sobre la línea, con los pliegues juntándose en el borde plegado.",
+      "swivelInsideCrease": "Gira el borde sobre el pliegue con un giro interior, con los pliegues juntándose en el borde plegado.",
+      "swivelInsideLine": "Gira el borde sobre la línea con un giro interior, con los pliegues juntándose en el borde plegado.",
       "tuckMountain": "Pliega en monte y remete la solapa por detrás, sobre la capa elegida.",
       "tuckValley": "Pliega en valle y remete la solapa bajo la capa elegida.",
       "turn": "{{turn}}.",
@@ -2683,6 +2687,9 @@
       "spreadDefault": "La separación predeterminada. Un cambio aquí se aplica desde este paso en adelante.",
       "spreadEarlier": "Como la fija un paso anterior. Un cambio aquí se aplica desde este paso en adelante.",
       "spreadOwn": "Fijada en este paso. Los pasos siguientes también la toman.",
+      "swivelKind": "Tipo",
+      "swivelKindInsideHelp": "La tira de la otra capa se pliega bajo el resto de su capa, metida entre las dos capas.",
+      "swivelKindOpenHelp": "La tira de la otra capa se pliega por encima del resto de su capa, con el reverso a la vista.",
       "title": "Paso {{number}}",
       "valley": "Valle",
       "vertex": {
@@ -2719,13 +2726,15 @@
       "badgeRabbitEar": "Oreja de conejo",
       "badgeSquash": "Aplastado",
       "badgeSwivel": "Giro",
+      "badgeSwivelInside": "Giro interior",
       "badgeTuck": "Remeter",
       "badgeValley": "Valle",
       "behind": {
         "petal": "Pliegue de pétalo por detrás",
         "rabbitEar": "Oreja de conejo por detrás",
         "squash": "Pliegue aplastado por detrás",
-        "swivel": "Pliegue giratorio por detrás"
+        "swivel": "Pliegue giratorio por detrás",
+        "swivelInside": "Pliegue giratorio interior por detrás"
       },
       "closedSink": "Hundido cerrado",
       "cpJump": "Importar patrón de pliegues",
@@ -2763,6 +2772,9 @@
       "ridgeFoot": "Perpendicular al borde",
       "squash": "Pliegue aplastado",
       "swivel": "Pliegue giratorio",
+      "swivelInside": "Pliegue giratorio interior",
+      "swivelKindInside": "Interior",
+      "swivelKindOpen": "Abierto",
       "targetCrease": "Pliegue o borde existente",
       "targetLine": "Línea por dos puntos",
       "tuckMountain": "Pliegue monte y remeter",

@@ -950,6 +950,10 @@
           "text": "在移动边的一侧，旋转折痕与折边成直角或更大的角，另一层没有折叠的余地。请另选能让边转得更多的目标线，或另选一条折边。",
           "title": "旋转折痕与边的夹角过陡"
         },
+        "swivelInsideFree": {
+          "text": "内旋转折把窄条塞进折边所连的两层之间，而这些折痕交于远离任何折边的位置。按 Esc，点击一条让折痕相交的折边。",
+          "title": "内旋转折需要折边"
+        },
         "swivelMissesFold": {
           "text": "旋转折沿边与目标线正中间的那条线折叠，而这条线在这条折边的两端之间并不与其相交。按 Esc，选择这条线经过的折边，或另选一条线。",
           "title": "折痕无法在这条边上相交"
@@ -1023,6 +1027,11 @@
         "swivelSwing": "单击要旋转到一条线上的边。",
         "swivelSwingTouch": "轻点要旋转到一条线上的边。"
       },
+      "swivelInside": "向内",
+      "swivelInsideHelp": "内旋转折：窄条塞进两层之间",
+      "swivelKind": "类型",
+      "swivelOpen": "敞开",
+      "swivelOpenHelp": "敞开旋转折：窄条折到上面",
       "target": "脊落在",
       "targetHinge": "铰链线",
       "targetPoint": "单击的点",

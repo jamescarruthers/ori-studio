@@ -1628,7 +1628,9 @@
         "swivelEdgeCrease": "Faites pivoter le bord vers l’arrière sur le pli, autour du point.",
         "swivelEdgeLine": "Faites pivoter le bord vers l’arrière sur la ligne, autour du point.",
         "swivelFoldCrease": "Faites pivoter le bord vers l’arrière sur le pli, les plis se rejoignant sur le bord plié.",
-        "swivelFoldLine": "Faites pivoter le bord vers l’arrière sur la ligne, les plis se rejoignant sur le bord plié."
+        "swivelFoldLine": "Faites pivoter le bord vers l’arrière sur la ligne, les plis se rejoignant sur le bord plié.",
+        "swivelInsideCrease": "Faites pivoter le bord vers l’arrière sur le pli en pli pivot intérieur, les plis se rejoignant sur le bord plié.",
+        "swivelInsideLine": "Faites pivoter le bord vers l’arrière sur la ligne en pli pivot intérieur, les plis se rejoignant sur le bord plié."
       },
       "closedSink": "Enfoncez la pointe en enfoncement fermé : poussez-la vers l’intérieur, ses couches restant ensemble.",
       "cpJump": "Repliez le papier selon le patron de plis importé.",
@@ -2380,6 +2382,8 @@
       "swivelEdgeLine": "Faites pivoter le bord sur la ligne, autour du point.",
       "swivelFoldCrease": "Faites pivoter le bord sur le pli, les plis se rejoignant sur le bord plié.",
       "swivelFoldLine": "Faites pivoter le bord sur la ligne, les plis se rejoignant sur le bord plié.",
+      "swivelInsideCrease": "Faites pivoter le bord sur le pli en pli pivot intérieur, les plis se rejoignant sur le bord plié.",
+      "swivelInsideLine": "Faites pivoter le bord sur la ligne en pli pivot intérieur, les plis se rejoignant sur le bord plié.",
       "tuckMountain": "Pliez en montagne et rentrez le rabat par l’arrière, sur la couche choisie.",
       "tuckValley": "Pliez en vallée et rentrez le rabat sous la couche choisie.",
       "turn": "{{turn}}.",
@@ -2683,6 +2687,9 @@
       "spreadDefault": "L’écartement par défaut. Une modification ici s’applique à partir de cette étape.",
       "spreadEarlier": "Tel qu’une étape précédente le règle. Une modification ici s’applique à partir de cette étape.",
       "spreadOwn": "Réglé à cette étape. Les étapes suivantes le reprennent aussi.",
+      "swivelKind": "Type",
+      "swivelKindInsideHelp": "La bande de l’autre couche se plie sous le reste de sa couche, glissée entre les deux couches.",
+      "swivelKindOpenHelp": "La bande de l’autre couche se plie par-dessus le reste de sa couche, son revers visible.",
       "title": "Étape {{number}}",
       "valley": "Vallée",
       "vertex": {
@@ -2719,13 +2726,15 @@
       "badgeRabbitEar": "Oreille de lapin",
       "badgeSquash": "Écrasé",
       "badgeSwivel": "Pivot",
+      "badgeSwivelInside": "Pivot intérieur",
       "badgeTuck": "Rentré",
       "badgeValley": "Vallée",
       "behind": {
         "petal": "Pli pétale vers l’arrière",
         "rabbitEar": "Oreille de lapin vers l’arrière",
         "squash": "Pli écrasé vers l’arrière",
-        "swivel": "Pli pivot vers l’arrière"
+        "swivel": "Pli pivot vers l’arrière",
+        "swivelInside": "Pli pivot intérieur vers l’arrière"
       },
       "closedSink": "Enfoncement fermé",
       "cpJump": "Importer un patron de plis",
@@ -2763,6 +2772,9 @@
       "ridgeFoot": "À angle droit du bord",
       "squash": "Pli écrasé",
       "swivel": "Pli pivot",
+      "swivelInside": "Pli pivot intérieur",
+      "swivelKindInside": "Intérieur",
+      "swivelKindOpen": "Ouvert",
       "targetCrease": "Pli ou bord existant",
       "targetLine": "Ligne passant par deux points",
       "tuckMountain": "Pli montagne et rentrer",

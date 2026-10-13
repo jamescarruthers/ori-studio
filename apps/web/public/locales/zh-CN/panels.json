@@ -1526,7 +1526,9 @@
         "swivelEdgeCrease": "以该点为支点，将边向后旋转到折痕上。",
         "swivelEdgeLine": "以该点为支点，将边向后旋转到线上。",
         "swivelFoldCrease": "让折痕交于折边，将边向后旋转到折痕上。",
-        "swivelFoldLine": "让折痕交于折边，将边向后旋转到线上。"
+        "swivelFoldLine": "让折痕交于折边，将边向后旋转到线上。",
+        "swivelInsideCrease": "让折痕交于折边，以内旋转折将边向后旋转到折痕上。",
+        "swivelInsideLine": "让折痕交于折边，以内旋转折将边向后旋转到线上。"
       },
       "closedSink": "将尖角闭合沉折：把尖端压入，各层保持在一起。",
       "cpJump": "按导入的折痕图折叠。",
@@ -1974,6 +1976,8 @@
       "swivelEdgeLine": "以该点为支点，将边旋转到线上。",
       "swivelFoldCrease": "让折痕交于折边，将边旋转到折痕上。",
       "swivelFoldLine": "让折痕交于折边，将边旋转到线上。",
+      "swivelInsideCrease": "让折痕交于折边，以内旋转折将边旋转到折痕上。",
+      "swivelInsideLine": "让折痕交于折边，以内旋转折将边旋转到线上。",
       "tuckMountain": "山折，在背面把翼片塞到所选层的上面。",
       "tuckValley": "谷折，把翼片塞到所选层的下面。",
       "turn": "{{turn}}。",
@@ -2177,6 +2181,9 @@
       "spreadDefault": "默认的错开设置。在此更改将从本步起生效。",
       "spreadEarlier": "沿用前面某一步的设置。在此更改将从本步起生效。",
       "spreadOwn": "在本步设置，之后的步骤也会沿用。",
+      "swivelKind": "类型",
+      "swivelKindInsideHelp": "另一层的窄条折到该层其余部分的下面，塞进两层之间。",
+      "swivelKindOpenHelp": "另一层的窄条折到该层其余部分的上面，露出背面。",
       "title": "第 {{number}} 步",
       "valley": "谷折",
       "vertex": {
@@ -2205,13 +2212,15 @@
       "badgeRabbitEar": "兔耳",
       "badgeSquash": "压折",
       "badgeSwivel": "旋转",
+      "badgeSwivelInside": "内旋转",
       "badgeTuck": "塞入",
       "badgeValley": "谷折",
       "behind": {
         "petal": "向后花瓣折",
         "rabbitEar": "向后兔耳折",
         "squash": "向后压折",
-        "swivel": "向后旋转折"
+        "swivel": "向后旋转折",
+        "swivelInside": "向后内旋转折"
       },
       "closedSink": "闭合沉折",
       "cpJump": "导入折痕图",
@@ -2245,6 +2254,9 @@
       "ridgeFoot": "垂直于边",
       "squash": "压折",
       "swivel": "旋转折",
+      "swivelInside": "内旋转折",
+      "swivelKindInside": "向内",
+      "swivelKindOpen": "敞开",
       "targetCrease": "已有折痕或边",
       "targetLine": "经过两点的线",
       "tuckMountain": "山折并塞入",

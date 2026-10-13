@@ -1576,7 +1576,9 @@
         "swivelEdgeCrease": "Drehe die Kante nach hinten um den Punkt auf die Faltlinie.",
         "swivelEdgeLine": "Drehe die Kante nach hinten um den Punkt auf die Linie.",
         "swivelFoldCrease": "Drehe die Kante nach hinten auf die Faltlinie; die Faltlinien treffen sich auf der gefalteten Kante.",
-        "swivelFoldLine": "Drehe die Kante nach hinten auf die Linie; die Faltlinien treffen sich auf der gefalteten Kante."
+        "swivelFoldLine": "Drehe die Kante nach hinten auf die Linie; die Faltlinien treffen sich auf der gefalteten Kante.",
+        "swivelInsideCrease": "Drehe die Kante mit einer inneren Drehfalte nach hinten auf die Faltlinie; die Faltlinien treffen sich auf der gefalteten Kante.",
+        "swivelInsideLine": "Drehe die Kante mit einer inneren Drehfalte nach hinten auf die Linie; die Faltlinien treffen sich auf der gefalteten Kante."
       },
       "closedSink": "Versenke die Spitze geschlossen: Drücke sie hinein, ihre Lagen bleiben zusammen.",
       "cpJump": "Lege das Papier entlang des importierten Faltmusters zusammen.",
@@ -2176,6 +2178,8 @@
       "swivelEdgeLine": "Drehe die Kante um den Punkt auf die Linie.",
       "swivelFoldCrease": "Drehe die Kante auf die Faltlinie; die Faltlinien treffen sich auf der gefalteten Kante.",
       "swivelFoldLine": "Drehe die Kante auf die Linie; die Faltlinien treffen sich auf der gefalteten Kante.",
+      "swivelInsideCrease": "Drehe die Kante mit einer inneren Drehfalte auf die Faltlinie; die Faltlinien treffen sich auf der gefalteten Kante.",
+      "swivelInsideLine": "Drehe die Kante mit einer inneren Drehfalte auf die Linie; die Faltlinien treffen sich auf der gefalteten Kante.",
       "tuckMountain": "Falte als Bergfalte und stecke die Lasche hinten über die gewählte Lage.",
       "tuckValley": "Falte als Talfalte und stecke die Lasche unter die gewählte Lage.",
       "turn": "{{turn}}.",
@@ -2429,6 +2433,9 @@
       "spreadDefault": "Die Standard-Auffächerung. Eine Änderung hier gilt ab diesem Schritt.",
       "spreadEarlier": "Wie ein früherer Schritt sie festlegt. Eine Änderung hier gilt ab diesem Schritt.",
       "spreadOwn": "In diesem Schritt festgelegt. Die folgenden Schritte übernehmen sie auch.",
+      "swivelKind": "Art",
+      "swivelKindInsideHelp": "Der Streifen der anderen Lage faltet sich unter den Rest seiner Lage und steckt zwischen den beiden Lagen.",
+      "swivelKindOpenHelp": "Der Streifen der anderen Lage faltet sich über den Rest seiner Lage, seine Rückseite sichtbar.",
       "title": "Schritt {{number}}",
       "valley": "Tal",
       "vertex": {
@@ -2461,13 +2468,15 @@
       "badgeRabbitEar": "Hasenohr",
       "badgeSquash": "Quetschen",
       "badgeSwivel": "Drehen",
+      "badgeSwivelInside": "Drehen innen",
       "badgeTuck": "Einstecken",
       "badgeValley": "Tal",
       "behind": {
         "petal": "Blütenblattfalte nach hinten",
         "rabbitEar": "Hasenohr nach hinten",
         "squash": "Quetschfalte nach hinten",
-        "swivel": "Drehfalte nach hinten"
+        "swivel": "Drehfalte nach hinten",
+        "swivelInside": "Innere Drehfalte nach hinten"
       },
       "closedSink": "Geschlossenes Versenken",
       "cpJump": "Faltmuster importieren",
@@ -2503,6 +2512,9 @@
       "ridgeFoot": "Rechtwinklig zur Kante",
       "squash": "Quetschfalte",
       "swivel": "Drehfalte",
+      "swivelInside": "Innere Drehfalte",
+      "swivelKindInside": "Innen",
+      "swivelKindOpen": "Offen",
       "targetCrease": "Vorhandene Faltlinie oder Kante",
       "targetLine": "Linie durch zwei Punkte",
       "tuckMountain": "Bergfalte und einstecken",

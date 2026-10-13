@@ -1526,7 +1526,9 @@
         "swivelEdgeCrease": "点を支点に、辺を裏側へ回して折り筋に重ねます。",
         "swivelEdgeLine": "点を支点に、辺を裏側へ回して線に重ねます。",
         "swivelFoldCrease": "折られた辺の上で折り線を交わらせ、辺を裏側へ回して折り筋に重ねます。",
-        "swivelFoldLine": "折られた辺の上で折り線を交わらせ、辺を裏側へ回して線に重ねます。"
+        "swivelFoldLine": "折られた辺の上で折り線を交わらせ、辺を裏側へ回して線に重ねます。",
+        "swivelInsideCrease": "折られた辺の上で折り線を交わらせ、内側スイベル折りで辺を裏側へ回して折り筋に重ねます。",
+        "swivelInsideLine": "折られた辺の上で折り線を交わらせ、内側スイベル折りで辺を裏側へ回して線に重ねます。"
       },
       "closedSink": "角を閉じた沈め折りにします。層を重ねたまま先端を押し込みます。",
       "cpJump": "インポートした展開図のとおりに折りたたみます。",
@@ -1974,6 +1976,8 @@
       "swivelEdgeLine": "点を支点に、辺を回して線に重ねます。",
       "swivelFoldCrease": "折られた辺の上で折り線を交わらせ、辺を回して折り筋に重ねます。",
       "swivelFoldLine": "折られた辺の上で折り線を交わらせ、辺を回して線に重ねます。",
+      "swivelInsideCrease": "折られた辺の上で折り線を交わらせ、内側スイベル折りで辺を回して折り筋に重ねます。",
+      "swivelInsideLine": "折られた辺の上で折り線を交わらせ、内側スイベル折りで辺を回して線に重ねます。",
       "tuckMountain": "山折りして、裏側で選んだ層の上にフラップを差し込みます。",
       "tuckValley": "谷折りして、選んだ層の下にフラップを差し込みます。",
       "turn": "{{turn}}。",
@@ -2177,6 +2181,9 @@
       "spreadDefault": "既定のずらし方です。ここで変えると、このステップから先に適用されます。",
       "spreadEarlier": "前のステップの設定に従っています。ここで変えると、このステップから先に適用されます。",
       "spreadOwn": "このステップで設定しています。後のステップにも引き継がれます。",
+      "swivelKind": "種類",
+      "swivelKindInsideHelp": "もう一方の層の帯が、その層の残りの下へ折り込まれ、2 枚の層の間に差し込まれます。",
+      "swivelKindOpenHelp": "もう一方の層の帯が、その層の残りの上へ折り返され、裏面が見えます。",
       "title": "ステップ {{number}}",
       "valley": "谷",
       "vertex": {
@@ -2205,13 +2212,15 @@
       "badgeRabbitEar": "うさぎの耳",
       "badgeSquash": "つぶし",
       "badgeSwivel": "スイベル",
+      "badgeSwivelInside": "内側スイベル",
       "badgeTuck": "差し込み",
       "badgeValley": "谷折り",
       "behind": {
         "petal": "裏側へ花弁折り",
         "rabbitEar": "裏側へうさぎの耳折り",
         "squash": "裏側へつぶし折り",
-        "swivel": "裏側へスイベル折り"
+        "swivel": "裏側へスイベル折り",
+        "swivelInside": "裏側へ内側スイベル折り"
       },
       "closedSink": "閉じた沈め折り",
       "cpJump": "展開図をインポート",
@@ -2245,6 +2254,9 @@
       "ridgeFoot": "辺に直角",
       "squash": "つぶし折り",
       "swivel": "スイベル折り",
+      "swivelInside": "内側スイベル折り",
+      "swivelKindInside": "内側",
+      "swivelKindOpen": "開き",
       "targetCrease": "既存の折り筋または辺",
       "targetLine": "2 点を通る線",
       "tuckMountain": "山折りして差し込む",

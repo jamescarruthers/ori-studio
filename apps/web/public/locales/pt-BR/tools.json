@@ -994,6 +994,10 @@
           "text": "Do lado da borda que se move, o vinco pivotante encontra a borda dobrada em ângulo reto ou maior, o que não deixa espaço para a outra camada dobrar. Escolha uma linha para a borda pousar que a gire mais, ou outra borda dobrada.",
           "title": "O vinco pivotante encontra a borda íngreme demais"
         },
+        "swivelInsideFree": {
+          "text": "Uma dobra giratória interna enfia sua faixa entre as duas camadas que uma borda dobrada une, e estes vincos se encontram longe de qualquer borda dobrada. Pressione Esc e clique em uma borda dobrada onde os vincos se encontrem.",
+          "title": "Uma dobra giratória interna precisa de uma borda dobrada"
+        },
         "swivelMissesFold": {
           "text": "A dobra pivotante segue a linha a meio caminho entre a borda e a linha onde ela pousa, e essa linha não cruza esta borda dobrada entre as pontas. Pressione Esc e escolha a borda dobrada que ela cruza, ou outra linha.",
           "title": "Os vincos não podem se encontrar nessa borda"
@@ -1067,6 +1071,11 @@
         "swivelSwing": "Clique na borda que vai girar sobre uma linha.",
         "swivelSwingTouch": "Toque na borda que vai girar sobre uma linha."
       },
+      "swivelInside": "Interna",
+      "swivelInsideHelp": "Dobra giratória interna: a faixa entra entre as camadas",
+      "swivelKind": "Tipo",
+      "swivelOpen": "Aberta",
+      "swivelOpenHelp": "Dobra giratória aberta: a faixa dobra por cima",
       "target": "A lombada cai em",
       "targetHinge": "A linha da dobradiça",
       "targetPoint": "O ponto clicado",

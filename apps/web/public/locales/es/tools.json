@@ -994,6 +994,10 @@
           "text": "Del lado del borde que se mueve, el pliegue pivotante se encuentra con el borde plegado en ángulo recto o mayor, y no deja sitio para que la otra capa se pliegue. Elige una línea sobre la que caiga el borde que lo gire más, u otro borde plegado.",
           "title": "El pliegue pivotante llega al borde demasiado empinado"
         },
+        "swivelInsideFree": {
+          "text": "Un pliegue giratorio interior mete su tira entre las dos capas que une un borde plegado, y estos pliegues se juntan lejos de cualquier borde plegado. Pulsa Esc y haz clic en un borde plegado donde se junten los pliegues.",
+          "title": "Un pliegue giratorio interior necesita un borde plegado"
+        },
         "swivelMissesFold": {
           "text": "El pliegue pivotante sigue la línea a medio camino entre el borde y la línea sobre la que cae, y esa línea no cruza este borde plegado entre sus extremos. Pulsa Esc y elige el borde plegado que cruza, u otra línea.",
           "title": "Los pliegues no pueden juntarse en ese borde"
@@ -1067,6 +1071,11 @@
         "swivelSwing": "Haz clic en el borde que quieres girar sobre una línea.",
         "swivelSwingTouch": "Toca el borde que quieres girar sobre una línea."
       },
+      "swivelInside": "Interior",
+      "swivelInsideHelp": "Pliegue giratorio interior: la tira se mete entre las capas",
+      "swivelKind": "Tipo",
+      "swivelOpen": "Abierto",
+      "swivelOpenHelp": "Pliegue giratorio abierto: la tira se pliega por encima",
       "target": "El lomo cae en",
       "targetHinge": "La línea de la bisagra",
       "targetPoint": "El punto pulsado",
