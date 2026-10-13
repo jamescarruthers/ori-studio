@@ -49,7 +49,11 @@ build must look like it at its defaults.
    so another step's re-pose or Fit each run change never resizes it. If its
    own new picture or caption no longer fits its box, the page reports it
    ("Step N no longer fits its place") and offers **Re-pack Page**; nothing
-   moves until the user asks.
+   moves until the user asks. *Revised 2026-10-12 (Zach): nothing reports
+   it — the step is drawn whole past its box, which the page shows. The
+   notice, tags, badges, card chip and export sentence went, with
+   `LayoutCell.overflow`; Re-pack Page stays in the Page pane, the Layers
+   pane and the menus. The page-level "can't hold its steps" notice stays.*
 4. **Re-pack Page / Re-pack All Pages** clear stored arrangements on demand.
    Frames placed by hand on a repacked page go home with the existing reflow
    notice; Undo restores the old arrangement.

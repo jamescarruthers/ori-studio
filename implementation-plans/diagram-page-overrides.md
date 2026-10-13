@@ -4,6 +4,8 @@
 
 **Superseded 2026-10-11: Decision 7's balanced ribbon packing.** Packing is deleted; the flow is #436's cells with balanced rows and a count per page, as [diagram-flow-pages.md](diagram-flow-pages.md) describes and builds. The October 10 layout decisions below, the `ribbonPacking` notes in "As built", and every claim that flow output follows the packing are history. The placement half of this plan (what a step stores, the Pages view, the panes, clearing, analytics) stands, on top of the new homes.
 
+**Superseded 2026-10-12 (Zach): what a placement says.** Only a placed step past the margin — or past the paper's edge, which is past the margin too — is said, as "Outside margin" (tag, Layers badge, Step pane sentence, export sentence, drag preview; `LayoutCell.outsideMargin`). The `step`, `glyph`, `parts` and `path` clashes, their tags and sentences, picture footprints, and the Step pane's "Start step N on a new page" offer are gone: a hand placement shows on the page as it prints. Start a New Page Here stays in the step's menu. Everything below about clash kinds is history.
+
 ### October 10 implementation decisions (superseded for the layout on 2026-10-11, see above; they superseded older shape notes below)
 
 - Choose balanced back-and-forth bends and distribute every page's actual steps across the available paper. No reserved empty grid slots or long unused ribbon tail.
