@@ -50,6 +50,7 @@ import type { CpSegment } from '../../lib/creasePatternSegmentation';
 import type { CreaseExportFoldResult } from '../../lib/creaseExportFold';
 import type { SegmentExportFormat } from '../../lib/creaseSegmentExport';
 import type { FoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
+import type { KeptCamera } from '../../hooks/useViewportSurface';
 import type { FoldArtifactStatus } from './foldArtifactResource';
 import type { SnapshotEntry, SnapshotHistory } from './snapshotHistory';
 import type {
@@ -2015,6 +2016,14 @@ export interface DiagramSliceState {
    * and redo leave it as it is. Not saved.
    */
   diagramPasted: { stepId: string; ids: readonly string[]; nonce: number } | null;
+  /**
+   * Where the Pages view's camera stood when it last left the screen — a step
+   * opened in Pose or Annotate, or the Steps view chosen — and the fit key it
+   * stood under (`KeptCamera`), so the view comes back where the reader was,
+   * not framed on page 1 (Zach, 2026-10-12). View state: never saved, never
+   * history, gone with the diagram.
+   */
+  diagramPagesCamera: KeptCamera | null;
 }
 
 /** What an anchor is being picked for: an enlarge area on a step, or the step's own frame. */
@@ -2201,6 +2210,8 @@ export interface DiagramSliceActions {
   /** Turn or flip an upload's picture; refused for a step `poseBlocker` names. */
   setDiagramStepPose: (stepId: string, pose: UploadPose) => boolean;
   setDiagramView: (view: DiagramViewMode) => void;
+  /** Keep where the Pages view's camera stood as it leaves the screen (`diagramPagesCamera`). */
+  keepDiagramPagesCamera: (camera: KeptCamera) => void;
   /**
    * Capture a linked step's picture from the crease pattern as it stands and
    * commit it as one undo step (`diagramCapture.ts`): Link pattern, Refresh,

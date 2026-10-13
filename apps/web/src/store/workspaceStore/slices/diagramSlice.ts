@@ -677,6 +677,8 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       if (view !== get().diagramView) set({ diagramView: view });
     },
 
+    keepDiagramPagesCamera: (camera) => set({ diagramPagesCamera: camera }),
+
     captureDiagramStep: (stepId, request) =>
       runDiagramCapture({ get, set }, commit, stepId, request),
 

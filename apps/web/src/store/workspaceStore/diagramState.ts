@@ -49,6 +49,7 @@ export const DIAGRAM_SCOPED_KEYS = [
   'diagramPaperFacesFetching',
   'diagramPlacesSettled',
   'diagramPasted',
+  'diagramPagesCamera',
 ] as const;
 
 /**
@@ -318,6 +319,7 @@ export function discardDiagramState(): DiagramScopedState {
     diagramPaperFacesFetching: {},
     diagramPlacesSettled: null,
     diagramPasted: null,
+    diagramPagesCamera: null,
   };
 }
 

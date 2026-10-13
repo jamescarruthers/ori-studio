@@ -576,3 +576,79 @@ it('lets the selected frame own its picture hit area until a part is chosen', ()
   expect(host.querySelector('[data-place-part="picture"]')).not.toBeNull();
   expect(host.querySelectorAll('[data-place-scale]')).toHaveLength(3);
 });
+
+/**
+ * A view with a size, and its animation frames run when the test says — as a
+ * browser runs them, after the commit that asked, and never once cancelled.
+ * Returns what runs the frames due.
+ */
+function framesByHand(): () => void {
+  const sizes = { clientWidth: 900, clientHeight: 700 } as const;
+  const saved = Object.keys(sizes).map((key) => [key, Object.getOwnPropertyDescriptor(HTMLElement.prototype, key)] as const);
+  for (const [key, value] of Object.entries(sizes)) Object.defineProperty(HTMLElement.prototype, key, { configurable: true, get: () => value });
+  let frames = new Map<number, FrameRequestCallback>();
+  let next = 0;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => (frames.set((next += 1), callback), next));
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
+  onTestFinished(() => {
+    for (const [key, descriptor] of saved)
+      if (descriptor) Object.defineProperty(HTMLElement.prototype, key, descriptor);
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>)[key];
+  });
+  return () =>
+    act(() => {
+      const due = frames;
+      frames = new Map();
+      for (const callback of due.values()) callback(0);
+    });
+}
+
+it('still brings the selected step into view when new pages land before its frame runs, as they do coming back from Pose', () => {
+  const runFrames = framesByHand();
+  const doc = insertSteps(createDiagram({ title: 'Crane' }), Array.from({ length: 20 }, (_, index) => cpStep(`s${index}`)), 0);
+  useWorkspaceStore.getState().installDiagram({ document: doc, readOnly: false, raw: {} });
+  render(preparedPages(doc, FONTS, subsetter), {}, undefined, doc, 's15');
+  // A relayout lands — new pages, the same diagram — before the frame that shows the step runs.
+  render(preparedPages(doc, FONTS, subsetter), {}, undefined, doc, 's15');
+  runFrames();
+  expect(document.activeElement?.getAttribute('data-step-id')).toBe('s15');
+});
+
+it('comes back where the reader left it — from Pose or Annotate, which unmount it — not framed on page 1 (Zach, 2026-10-12)', () => {
+  const runFrames = framesByHand();
+  const show = (pages: PreparedDiagramPages, doc: DiagramDocument) => {
+    render(pages, {}, pages.layout.bandInk, doc, null);
+    runFrames();
+  };
+  const doc = insertSteps(createDiagram({ title: 'Crane' }), Array.from({ length: 20 }, (_, index) => cpStep(`s${index}`)), 0);
+  useWorkspaceStore.getState().installDiagram({ document: doc, readOnly: false, raw: {} });
+  const pages = preparedPages(doc, FONTS, subsetter);
+  expect(pages.layout.pages.length).toBeGreaterThan(2);
+  const transform = () => host.querySelector<HTMLElement>('.react-transform-component')!.style.transform;
+  const kept = () => useWorkspaceStore.getState().diagramPagesCamera;
+
+  // Nothing kept: framed on page 1, and that is what leaving keeps.
+  show(pages, doc);
+  const framed = transform();
+  expect(framed).not.toBe('translate(0px, 0px) scale(1)');
+  act(() => root.unmount());
+  expect(kept()).toMatchObject({ key: 'test:laid-out' });
+  const fit = kept()!;
+
+  // Where the reader had turned to — page 3, nearer — is where it stands again as it comes back.
+  const onPage3 = { key: 'test:laid-out', positionX: fit.positionX - 40, positionY: fit.positionY - 2 * 1100, scale: fit.scale * 1.5 };
+  act(() => useWorkspaceStore.getState().keepDiagramPagesCamera(onPage3));
+  root = createRoot(host);
+  show(pages, doc);
+  expect(transform()).not.toBe(framed);
+  expect(transform()).toBe(`translate(${onPage3.positionX}px, ${onPage3.positionY}px) scale(${onPage3.scale})`);
+  expect(host.textContent).toContain('Page 3 of');
+  act(() => root.unmount());
+  expect(kept()).toEqual(onPage3);
+
+  // Kept for other pages — another diagram, or other paper — it frames page 1 as ever.
+  act(() => useWorkspaceStore.getState().keepDiagramPagesCamera({ ...onPage3, key: 'other:laid-out' }));
+  root = createRoot(host);
+  show(pages, doc);
+  expect(transform()).toBe(framed);
+});
