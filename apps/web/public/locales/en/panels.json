@@ -1576,7 +1576,9 @@
         "swivelEdgeCrease": "Swivel the edge behind onto the crease, pivoting at the point.",
         "swivelEdgeLine": "Swivel the edge behind onto the line, pivoting at the point.",
         "swivelFoldCrease": "Swivel the edge behind onto the crease, the creases meeting on the folded edge.",
-        "swivelFoldLine": "Swivel the edge behind onto the line, the creases meeting on the folded edge."
+        "swivelFoldLine": "Swivel the edge behind onto the line, the creases meeting on the folded edge.",
+        "swivelInsideCrease": "Inside-swivel the edge behind onto the crease, the creases meeting on the folded edge.",
+        "swivelInsideLine": "Inside-swivel the edge behind onto the line, the creases meeting on the folded edge."
       },
       "closedSink": "Closed-sink the point: push its tip in, its layers kept together.",
       "cpJump": "Collapse into the imported crease pattern.",
@@ -2176,6 +2178,8 @@
       "swivelEdgeLine": "Swivel the edge onto the line, pivoting at the point.",
       "swivelFoldCrease": "Swivel the edge onto the crease, the creases meeting on the folded edge.",
       "swivelFoldLine": "Swivel the edge onto the line, the creases meeting on the folded edge.",
+      "swivelInsideCrease": "Inside-swivel the edge onto the crease, the creases meeting on the folded edge.",
+      "swivelInsideLine": "Inside-swivel the edge onto the line, the creases meeting on the folded edge.",
       "tuckMountain": "Mountain fold and tuck the flap in at the back, over the chosen layer.",
       "tuckValley": "Valley fold and tuck the flap in, under the chosen layer.",
       "turn": "{{turn}}.",
@@ -2429,6 +2433,9 @@
       "spreadDefault": "The default spread. A change here applies from this step on.",
       "spreadEarlier": "As an earlier step sets it. A change here applies from this step on.",
       "spreadOwn": "Set on this step. The steps after it take it too.",
+      "swivelKind": "Kind",
+      "swivelKindInsideHelp": "The other layer’s strip folds under the rest of its layer, tucked between the two layers.",
+      "swivelKindOpenHelp": "The other layer’s strip folds up over the rest of its layer, its back on show.",
       "title": "Step {{number}}",
       "valley": "Valley",
       "vertex": {
@@ -2461,13 +2468,15 @@
       "badgeRabbitEar": "Rabbit ear",
       "badgeSquash": "Squash",
       "badgeSwivel": "Swivel",
+      "badgeSwivelInside": "Inside swivel",
       "badgeTuck": "Tuck",
       "badgeValley": "Valley",
       "behind": {
         "petal": "Petal fold behind",
         "rabbitEar": "Rabbit ear behind",
         "squash": "Squash fold behind",
-        "swivel": "Swivel fold behind"
+        "swivel": "Swivel fold behind",
+        "swivelInside": "Inside swivel behind"
       },
       "closedSink": "Closed sink",
       "cpJump": "Import crease pattern",
@@ -2503,6 +2512,9 @@
       "ridgeFoot": "Square to the edge",
       "squash": "Squash fold",
       "swivel": "Swivel fold",
+      "swivelInside": "Inside swivel",
+      "swivelKindInside": "Inside",
+      "swivelKindOpen": "Open",
       "targetCrease": "Existing crease or edge",
       "targetLine": "Line through two points",
       "tuckMountain": "Mountain fold and tuck",

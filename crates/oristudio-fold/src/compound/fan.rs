@@ -649,6 +649,7 @@ impl FanFold {
             vertices: vec![fan.center],
             direction: self.direction,
             extra,
+            against: None,
         })
     }
 }

@@ -22,8 +22,9 @@
 //!   mountain, each ridge that lands.
 //! - **The swivel on a folded edge** (`cases::fold_swivel_cases`):
 //!   Abrashi's on the owner's squashed preliminary base, the kite base
-//!   narrowed at its tip on either side and on both; valley and mountain,
-//!   each that lands.
+//!   narrowed at its tip on either side and on both; open and inside (his
+//!   figure 2, the strip tucked between the layers), valley and mountain,
+//!   each order that lands.
 //!
 //! Seeded Oriedita (`fold_support::oriedita`) runs in process; Flat-Folder's
 //! `verify` (`fold_support::flat_folder`) when `FLATFOLDER_ORACLE` is set.
@@ -189,27 +190,37 @@ fn named() -> Vec<Landed> {
     }
     // The swivel on a folded edge (`cases::fold_swivel_cases`): Abrashi's on
     // the owner's squashed preliminary base, the kite base narrowed at its
-    // tip on either side and then on both; valley and mountain, each order
-    // that lands.
+    // tip on either side and then on both; open and inside, valley and
+    // mountain, each order that lands.
+    use oristudio_fold::SwivelKind;
     let mut kite_right = None;
     for case in cases::fold_swivel_cases() {
-        for direction in [Direction::Valley, Direction::Mountain] {
-            let op = SwivelByEdge {
-                direction,
-                ..case.op.clone()
-            };
-            for (k, folded) in
-                cases::every(case.state.swivel_by_edge(&op, &VertexChoices::default()))
-                    .into_iter()
-                    .enumerate()
-            {
-                if case.name == "kite narrowed at c, right" && direction == Direction::Valley {
-                    kite_right = Some(folded.state.clone());
+        for kind in [SwivelKind::Open, SwivelKind::Inside] {
+            for direction in [Direction::Valley, Direction::Mountain] {
+                let op = SwivelByEdge {
+                    direction,
+                    kind,
+                    ..case.op.clone()
+                };
+                for (k, folded) in
+                    cases::every(case.state.swivel_by_edge(&op, &VertexChoices::default()))
+                        .into_iter()
+                        .enumerate()
+                {
+                    let open = kind == SwivelKind::Open;
+                    if case.name == "kite narrowed at c, right"
+                        && direction == Direction::Valley
+                        && open
+                    {
+                        kite_right = Some(folded.state.clone());
+                    }
+                    // The open swivel's labels as they always were.
+                    let kind = if open { "" } else { " inside" };
+                    push(
+                        format!("{}{kind} {direction:?} on its folded edge c{k}", case.name),
+                        folded.state,
+                    );
                 }
-                push(
-                    format!("{} {direction:?} on its folded edge c{k}", case.name),
-                    folded.state,
-                );
             }
         }
     }

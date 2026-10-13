@@ -295,7 +295,7 @@ export function FoldToolWindow({
           <FoldReverseKindControl kind={compound.kind} />
         </div>
       )}
-      {vertex && (vertex.direction || vertex.note) && (
+      {vertex && (vertex.kind || vertex.direction || vertex.note) && (
         <div className={styles.section} data-fold-vertex="">
           <FoldVertexDirection controls={vertex} />
         </div>

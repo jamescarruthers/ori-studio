@@ -254,6 +254,7 @@ impl State {
             vertices: vec![flap.vertex],
             direction,
             extra: Vec::new(),
+            against: None,
         })
     }
 

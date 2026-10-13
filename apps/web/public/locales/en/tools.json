@@ -972,6 +972,10 @@
           "text": "On the moving edge’s side the swivel crease meets the folded edge at a right angle or more, which leaves the other layer no room to fold. Pick a line for the edge to land on that turns it further, or another folded edge.",
           "title": "The swivel crease meets the edge too steeply"
         },
+        "swivelInsideFree": {
+          "text": "An inside swivel tucks its strip between the two layers a folded edge joins, and these creases meet away from any folded edge. Press Esc and click a folded edge for the creases to meet on.",
+          "title": "An inside swivel needs a folded edge"
+        },
         "swivelMissesFold": {
           "text": "The swivel folds along the line halfway between the edge and the line it lands on, and that line does not cross this folded edge between its ends. Press Esc and pick the folded edge it crosses, or another line.",
           "title": "The creases cannot meet on that edge"
@@ -1045,6 +1049,11 @@
         "swivelSwing": "Click the edge to swing onto a line.",
         "swivelSwingTouch": "Tap the edge to swing onto a line."
       },
+      "swivelInside": "Inside",
+      "swivelInsideHelp": "Inside swivel: the strip tucks between the layers",
+      "swivelKind": "Kind",
+      "swivelOpen": "Open",
+      "swivelOpenHelp": "Open swivel: the strip folds up on top",
       "target": "Spine lands on",
       "targetHinge": "The hinge line",
       "targetPoint": "The point clicked",

@@ -357,3 +357,36 @@ fn a_swivel_on_a_folded_edge_crosses_the_boundary_in_plain_objects() {
         .expect_err("a seed beside a fold");
     assert_eq!(json_of(thrown)["code"], "invalid_input");
 }
+
+/// The inside swivel (`swivel: 'inside'`) crosses the boundary too: its
+/// question says which ways land of both kinds and lists its two orders
+/// (the strip over or under the other flap), the tools' call holds them,
+/// and a kind the bridge does not know is thrown.
+#[wasm_bindgen_test]
+fn an_inside_swivel_crosses_the_boundary_in_plain_objects() {
+    let mut engine = FoldEngine::new();
+    let parent = kite_base(&mut engine);
+    let mut inside = kite_swivel();
+    inside["swivel"] = json!("inside");
+    let asked = json_of(
+        engine
+            .compound_analysis(parent, js(inside.clone()), JsValue::UNDEFINED)
+            .expect("question"),
+    );
+    assert_eq!(asked["status"], "ok", "{asked}");
+    assert_eq!(asked["kinds"], json!([[true, false], [true, false]]));
+    assert_eq!(asked["directions"], json!([true, false]));
+    assert_eq!(asked["orders"]["count"]["orders"], 2, "{asked}");
+    let tried = json_of(
+        engine
+            .vertex_fold(parent, js(inside), JsValue::NULL)
+            .expect("vertex fold"),
+    );
+    assert_eq!(tried["result"], "choose", "{tried}");
+    let mut closed = kite_swivel();
+    closed["swivel"] = json!("closed");
+    let thrown = engine
+        .apply(parent, js(closed), JsValue::UNDEFINED)
+        .expect_err("a kind it does not know");
+    assert_eq!(json_of(thrown)["code"], "invalid_input");
+}

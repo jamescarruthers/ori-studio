@@ -17,7 +17,9 @@
 //!   below it for a mountain. Pairs across blocks are left to the
 //!   completion ([`super::Across::Free`]). With it the spike found every
 //!   squash and petal unique; a rabbit ear or a swivel also seeds its fourth
-//!   crease as the ridge ([`super::fan`]), the odd letter out.
+//!   crease as the ridge ([`super::fan`]), the odd letter out. An inside
+//!   swivel on a folded edge places its strip in place of the seed: under
+//!   the paper it is hinged to ([`super::swivel_on_edge`]).
 //! - **Choices** are the completion's, stored as the pairs they decided,
 //!   keyed by witnesses (plan D6), and replayed.
 //! - **The motion** (plan D15) turns each block about its creases in
@@ -170,6 +172,11 @@ pub(crate) struct Compiled {
     /// wedge against its neighbours, in every layer, with its fourth crease
     /// as the ridge.
     pub(crate) extra: Vec<[usize; 2]>,
+    /// The placements in place of the direction seed, when a block goes
+    /// elsewhere than above (valley) or below (mountain) everything that
+    /// stays: an inside swivel's strip, tucked under the paper it is hinged
+    /// to (`super::swivel_on_edge`). None for the direction seed.
+    pub(crate) against: Option<Vec<Against>>,
 }
 
 impl Compiled {
@@ -183,24 +190,27 @@ impl Compiled {
     }
 
     /// Steps 2–7 with the direction seed: every block above (valley) or
-    /// below (mountain) every face that stays, where they overlap; and the
-    /// extra seeds.
+    /// below (mountain) every face that stays, where they overlap — or the
+    /// placements given in its place; and the extra seeds.
     pub(crate) fn prepare(&self, state: &State) -> Result<Prepared, FoldRefusal> {
-        let above = self.direction == Direction::Valley;
-        let every: Vec<usize> = (0..state.faces().len()).collect();
+        let against = self.against.clone().unwrap_or_else(|| {
+            let above = self.direction == Direction::Valley;
+            let every: Vec<usize> = (0..state.faces().len()).collect();
+            (0..self.turns.len())
+                .map(|block| Against {
+                    block,
+                    faces: every.clone(),
+                    above,
+                })
+                .collect()
+        });
         let mut prepared = prepare_pieces(
             state,
             Pieces {
                 scoring: self.scoring.clone(),
                 block_of: self.block_of.clone(),
                 blocks: (0..self.turns.len()).map(|b| self.motion(b)).collect(),
-                against: (0..self.turns.len())
-                    .map(|block| Against {
-                        block,
-                        faces: every.clone(),
-                        above,
-                    })
-                    .collect(),
+                against,
                 across: Across::Free,
             },
         )?;

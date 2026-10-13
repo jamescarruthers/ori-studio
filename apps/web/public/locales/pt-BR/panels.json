@@ -1628,7 +1628,9 @@
         "swivelEdgeCrease": "Gire a borda por trás sobre o vinco, pivotando no ponto.",
         "swivelEdgeLine": "Gire a borda por trás sobre a linha, pivotando no ponto.",
         "swivelFoldCrease": "Gire a borda por trás sobre o vinco, com os vincos se encontrando na borda dobrada.",
-        "swivelFoldLine": "Gire a borda por trás sobre a linha, com os vincos se encontrando na borda dobrada."
+        "swivelFoldLine": "Gire a borda por trás sobre a linha, com os vincos se encontrando na borda dobrada.",
+        "swivelInsideCrease": "Gire a borda por trás sobre o vinco com um giro interno, com os vincos se encontrando na borda dobrada.",
+        "swivelInsideLine": "Gire a borda por trás sobre a linha com um giro interno, com os vincos se encontrando na borda dobrada."
       },
       "closedSink": "Afunde a ponta em afundamento fechado: empurre-a para dentro com as camadas juntas.",
       "cpJump": "Dobre o papel segundo o padrão de vincos importado.",
@@ -2380,6 +2382,8 @@
       "swivelEdgeLine": "Gire a borda sobre a linha, pivotando no ponto.",
       "swivelFoldCrease": "Gire a borda sobre o vinco, com os vincos se encontrando na borda dobrada.",
       "swivelFoldLine": "Gire a borda sobre a linha, com os vincos se encontrando na borda dobrada.",
+      "swivelInsideCrease": "Gire a borda sobre o vinco com um giro interno, com os vincos se encontrando na borda dobrada.",
+      "swivelInsideLine": "Gire a borda sobre a linha com um giro interno, com os vincos se encontrando na borda dobrada.",
       "tuckMountain": "Dobre em monte e encaixe a aba por trás, sobre a camada escolhida.",
       "tuckValley": "Dobre em vale e encaixe a aba sob a camada escolhida.",
       "turn": "{{turn}}.",
@@ -2683,6 +2687,9 @@
       "spreadDefault": "A separação padrão. Uma alteração aqui vale a partir deste passo.",
       "spreadEarlier": "Como um passo anterior a define. Uma alteração aqui vale a partir deste passo.",
       "spreadOwn": "Definida neste passo. Os passos seguintes também a seguem.",
+      "swivelKind": "Tipo",
+      "swivelKindInsideHelp": "A faixa da outra camada dobra por baixo do resto da sua camada, enfiada entre as duas camadas.",
+      "swivelKindOpenHelp": "A faixa da outra camada dobra por cima do resto da sua camada, com o verso à mostra.",
       "title": "Passo {{number}}",
       "valley": "Vale",
       "vertex": {
@@ -2719,13 +2726,15 @@
       "badgeRabbitEar": "Orelha de coelho",
       "badgeSquash": "Esmagada",
       "badgeSwivel": "Giro",
+      "badgeSwivelInside": "Giro interno",
       "badgeTuck": "Encaixe",
       "badgeValley": "Vale",
       "behind": {
         "petal": "Dobra pétala por trás",
         "rabbitEar": "Orelha de coelho por trás",
         "squash": "Dobra esmagada por trás",
-        "swivel": "Dobra giratória por trás"
+        "swivel": "Dobra giratória por trás",
+        "swivelInside": "Dobra giratória interna por trás"
       },
       "closedSink": "Afundamento fechado",
       "cpJump": "Importar padrão de vincos",
@@ -2763,6 +2772,9 @@
       "ridgeFoot": "Perpendicular à borda",
       "squash": "Dobra esmagada",
       "swivel": "Dobra giratória",
+      "swivelInside": "Dobra giratória interna",
+      "swivelKindInside": "Interna",
+      "swivelKindOpen": "Aberta",
       "targetCrease": "Vinco ou borda existente",
       "targetLine": "Linha por dois pontos",
       "tuckMountain": "Dobra monte e encaixar",

@@ -3,7 +3,16 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseNativeProjectFile } from '../../../lib/nativeProjectFile';
 import { foldPickIndex, sheetToScene, type FoldPick, type FoldPickIndex } from '../../canvas/foldPicking';
-import { isLockedStep, type FoldDirection, type FoldSequenceDocument, type FoldStep, type FoldVertexOp, type SheetPoint } from '../../document/foldSequenceDocument';
+import {
+  FOLD_SWIVEL_KINDS,
+  isLockedStep,
+  withSwivelKind,
+  type FoldDirection,
+  type FoldSequenceDocument,
+  type FoldStep,
+  type FoldVertexOp,
+  type SheetPoint,
+} from '../../document/foldSequenceDocument';
 import { readFoldSequences } from '../../document/foldSequenceFile';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../../engine/foldEngineCalls';
 import { createFoldEngineCompoundCalls, type FoldEngineCompoundCalls } from '../../engine/foldEngineCompoundCalls';
@@ -110,7 +119,10 @@ function meetingPick(index: FoldPickIndex, at: SheetPoint, onFold: boolean): Fol
   };
 }
 
-/** Every pair asked and not offered folds neither way; every pair offered folds the way it is kept. */
+/**
+ * Every pair asked and not offered folds neither way — on a folded edge, of
+ * neither kind; every pair offered folds the way it is kept.
+ */
 function expectExactlyWhatFolds(e: Engine, state: number, ask: FoldSwivelReachAsk, reach: FoldSwivelReach) {
   const offered = new Map(reach.landings.map((landing) => [`${landing.edge}:${landing.target}`, landing]));
   let refused = 0;
@@ -124,11 +136,11 @@ function expectExactlyWhatFolds(e: Engine, state: number, ask: FoldSwivelReachAs
       }
       const base = { kind: 'swivel', via: 'edge', edge: edge.at, target: { via: 'crease', at: target.at } } as const;
       for (const direction of ['valley', 'mountain'] as FoldDirection[]) {
-        const op: FoldVertexOp =
+        const ops: FoldVertexOp[] =
           'fold' in ask.at
-            ? { ...base, fold: ask.at.fold, direction }
-            : { ...base, pivot: ask.at.pivot, seed: { scope: 'all' }, direction };
-        expect(folds(e, state, op), `${edge.id} onto ${target.id}, ${direction}`).toBe(false);
+            ? FOLD_SWIVEL_KINDS.map((kind) => withSwivelKind({ ...base, fold: (ask.at as { fold: SheetPoint }).fold, direction }, kind))
+            : [{ ...base, pivot: ask.at.pivot, seed: { scope: 'all' }, direction }];
+        for (const op of ops) expect(folds(e, state, op), `${edge.id} onto ${target.id}, ${direction}`).toBe(false);
       }
       refused += 1;
     }
@@ -171,6 +183,37 @@ describe.skipIf(!available)('a swivel’s reach over the real bridge', () => {
     const asked = landed(e.compound.compoundAnalysis(state, his.op));
     expect(asked.family === 'vertex' && asked.analysis).toEqual(his.answer.analysis);
     expect(landed(e.calls.step(state, his.op)).fingerprint).toBe(step.expect);
+    // Both kinds land his: open and inside.
+    expect(his.kinds).toEqual([true, true]);
+  });
+
+  it('keeps, asked inside, the owner’s swivel inside: its letters as figure 2 draws them', async () => {
+    const e = await engine();
+    const document = opened('swivel-on-edge.osf');
+    const { state, step } = parentOf(e, document, 7);
+    const stored = step.op;
+    if (stored.kind !== 'swivel' || !('fold' in stored)) throw new Error('step 7 is the swivel on a folded edge');
+    const index = foldPickIndex(e.calls.scene(state), e.calls.landmarks(state, []), []);
+    const asked = swivelReachAsk(index, {
+      tool: 'swivel',
+      swivelTarget: 'crease',
+      picks: [meetingPick(index, stored.fold, true)],
+      vertexDirection: 'valley',
+    });
+    if (!asked) throw new Error('no ask');
+    const ask = { ...asked, kind: 'inside' as const };
+    const reach = swivelReach((op) => e.compound.compoundAnalysis(state, op), ask);
+    const view = swivelReachView(reach);
+    const edge = lineThrough(index, stored.edge);
+    const target = stored.target.via === 'crease' ? lineThrough(index, stored.target.at) : -1;
+    const his = view.targets.get(edge)?.get(target);
+    expect(his?.op).toEqual(withSwivelKind(stored, 'inside'));
+    const analysis = his?.answer.analysis;
+    if (analysis?.kind !== 'swivel-by-edge') throw new Error('not a swivel by its edge');
+    expect(analysis.creases.map((crease) => crease.letter)).toEqual(['valley', 'valley', 'mountain']);
+    // It lands, and not as the open one does.
+    const inside = landed(e.calls.step(state, his?.op ?? stored));
+    expect(inside.fingerprint).not.toBe(step.expect);
   });
 
   it('offers, from a free pivot, the pairs that fold either way, and folds the one picked the way it lands', async () => {

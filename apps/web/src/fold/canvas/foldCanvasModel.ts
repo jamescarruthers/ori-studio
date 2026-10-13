@@ -10,7 +10,7 @@ import type { FoldedFaceInk } from '../../cp-workspace/adapters/cpFoldedToScene'
 import type { Rgba } from '../../cp-workspace/renderer/types';
 import type { CpToolOptionBounds } from '../../cp-workspace/toolOptions/toolOptionWindow';
 import type { Point } from '../../lib/geometry';
-import { isVertexOp } from '../document/foldSequenceDocument';
+import { FOLD_SWIVEL_KINDS, isVertexOp } from '../document/foldSequenceDocument';
 import type { FoldFlap, FoldScene } from '../engine/foldEngineWire';
 import type { FoldCrimpLines } from '../tools/crimp/crimpStep';
 import { sameFlap } from '../tools/crossSection';
@@ -203,6 +203,9 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
   // folds only a way that lands, and offers the other only when it lands too.
   const onFold = swivelFoldPick(tools) !== null;
   const directions = vertex?.directions;
+  // A swivel on a folded edge's kind folded, and the kinds that land either way.
+  const kinds = vertex?.kinds;
+  const swivelKinds = onFold && kinds ? FOLD_SWIVEL_KINDS.filter((_, k) => kinds[k]) : null;
   // A swivel's meeting point nothing can swing from: its next click takes another.
   const nothingSwings = tool === 'swivel' && tools.picks.length === 1 && swivelReachesNothing(vertex?.reach ?? null);
   return {
@@ -211,6 +214,8 @@ export function foldVertexWindowView(tools: FoldToolState, preview: FoldToolPrev
     direction: vertex?.direction ?? tools.vertexDirection,
     ...(onFold ? { onFold } : {}),
     ...(directions && directions.length === 2 ? { directions } : {}),
+    ...(onFold && vertex?.kind ? { swivelKind: vertex.kind } : {}),
+    ...(swivelKinds ? { swivelKinds } : {}),
     ...(nothingSwings ? { nothingSwings } : {}),
     described: vertex?.base != null,
     known: preview.step !== null,

@@ -28,8 +28,13 @@
 //! a sheet point on that folded crease, in place of `pivot` and `seed` and
 //! with no ridge (engine `compound::swivel_on_edge`): its answer adds the
 //! folded edge (`fold`), lists no ridges, and says which directions land
-//! (`directions`, valley then mountain), its one choice besides the order.
-//! An older build reads `fold` as a key it does not know and locks the step.
+//! (`directions`, valley then mountain). An older build reads `fold` as a
+//! key it does not know and locks the step. It is the open swivel, or with
+//! `swivel: 'inside'` the inside one, its strip tucked between the two
+//! layers; the answer says which ways land of both kinds (`kinds`, open
+//! then inside, each valley then mountain) — its choices besides the
+//! order. A build before the inside swivel reads `swivel` as a key it does
+//! not know and locks the step rather than fold it open.
 //!
 //! **Replay** (`FoldEngine::apply`, through the compound seam,
 //! [`crate::compound`]): a stored step lands, or is refused — the engine's
@@ -80,7 +85,7 @@ use oristudio_fold::numerics::MIN_FEATURE;
 use oristudio_fold::{
     ChoiceCount, CompoundRefused, Direction, FanAnalysis, FoldActionGeometry, LineRefusal,
     PetalAnalysis, PetalFold, PetalHinge, RabbitEar, Refused, Squash, SquashAnalysis, State,
-    StepSummary, Swivel, SwivelByEdge, SwivelEdgeAnalysis, VertexChoice, VertexChoices,
+    StepSummary, Swivel, SwivelByEdge, SwivelEdgeAnalysis, SwivelKind, VertexChoice, VertexChoices,
     VertexFolded, VertexOutcome, WitnessOrder,
 };
 use oristudio_geometry::Line;
@@ -210,6 +215,11 @@ pub struct SwivelEdgeOp {
     #[serde(default)]
     pub ridge: Option<Point>,
     pub direction: Direction,
+    /// On a folded edge, `'inside'` for the inside swivel, the strip tucked
+    /// between the two layers; absent (or `'open'`) for the open one. At a
+    /// free vertex the engine refuses an inside one (`swivel_inside_free`).
+    #[serde(default)]
+    pub swivel: Option<SwivelKind>,
 }
 
 /// A vertex op resolved in its parent: the engine's op, and the choice the
@@ -328,6 +338,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
             let mistake = |message: &str| -> Rejection {
                 BridgeError::InvalidInput(message.to_string()).into()
             };
+            let kind = op.swivel.unwrap_or_default();
             let by_edge = match (op.pivot, op.fold, &op.seed) {
                 (Some(pivot), None, Some(layers)) => SwivelByEdge {
                     pivot: image("pivot", pivot)?,
@@ -337,6 +348,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
                     ridge: op.ridge.map(|r| direction("ridge", r)).transpose()?,
                     direction: op.direction,
                     fold: None,
+                    kind,
                 },
                 (None, Some(fold), None) if op.ridge.is_none() => SwivelByEdge {
                     // The bisector nearer the point clicked on the folded
@@ -348,6 +360,7 @@ pub fn resolve(parent: &State, op: &Op, choices: &Choices) -> Result<VertexFold,
                     ridge: None,
                     direction: op.direction,
                     fold: Some(fold),
+                    kind,
                 },
                 (Some(_), None, None) => {
                     return Err(mistake(
@@ -549,29 +562,59 @@ fn emergents(parent: &State, op: &EngineOp, analysis: &VertexAnalysis) -> Vec<bo
     }
 }
 
-/// A swivel on a folded edge's directions, valley then mountain as the
-/// viewer sees them, each whether the fold lands that way: its only choice
-/// besides the order, so a tool offers only the ways that land. Empty for
-/// every other fold.
-fn directions(parent: &State, op: &EngineOp) -> Vec<bool> {
+/// The kinds a swivel on a folded edge takes, in the order its answer lists
+/// them.
+const SWIVEL_KINDS: [SwivelKind; 2] = [SwivelKind::Open, SwivelKind::Inside];
+
+/// The directions, likewise: valley, then mountain, as the viewer sees them.
+const DIRECTIONS: [Direction; 2] = [Direction::Valley, Direction::Mountain];
+
+/// A swivel on a folded edge's ways: its only choices besides the order, so
+/// a tool offers only the ways that land.
+struct SwivelWays {
+    /// Per kind, open then inside, per direction, valley then mountain as
+    /// the viewer sees them: whether the fold lands that way.
+    kinds: Vec<[bool; 2]>,
+    /// The kind asked's row.
+    directions: Vec<bool>,
+    /// The way asked, as it folds: whose orders the answer lists.
+    asked: Result<VertexOutcome, CompoundRefused>,
+}
+
+/// A swivel on a folded edge's ways, each folded once; none for every other
+/// fold.
+fn swivel_ways(parent: &State, op: &EngineOp) -> Option<SwivelWays> {
     let EngineOp::SwivelByEdge(swivel) = op else {
-        return Vec::new();
+        return None;
     };
-    if swivel.fold.is_none() {
-        return Vec::new();
-    }
-    [Direction::Valley, Direction::Mountain]
-        .into_iter()
-        .map(|direction| {
+    swivel.fold?;
+    let mut asked = None;
+    let mut kinds = Vec::with_capacity(SWIVEL_KINDS.len());
+    let mut directions = Vec::new();
+    for kind in SWIVEL_KINDS {
+        let mut ways = [false; 2];
+        for (way, direction) in ways.iter_mut().zip(DIRECTIONS) {
             let each = SwivelByEdge {
+                kind,
                 direction,
                 ..swivel.clone()
             };
-            parent
-                .swivel_by_edge(&each, &VertexChoices::default())
-                .is_ok()
-        })
-        .collect()
+            let outcome = parent.swivel_by_edge(&each, &VertexChoices::default());
+            *way = outcome.is_ok();
+            if kind == swivel.kind && direction == swivel.direction {
+                asked = Some(outcome);
+            }
+        }
+        if kind == swivel.kind {
+            directions = ways.to_vec();
+        }
+        kinds.push(ways);
+    }
+    Some(SwivelWays {
+        kinds,
+        directions,
+        asked: asked?,
+    })
 }
 
 impl CompoundOp for VertexFold {
@@ -595,11 +638,23 @@ impl CompoundOp for VertexFold {
             op: self.op.clone(),
             choices: VertexChoices::default(),
         };
+        // A swivel on a folded edge folds each of its ways once, the way
+        // asked among them.
+        let SwivelWays {
+            kinds,
+            directions,
+            asked,
+        } = swivel_ways(parent, &self.op).unwrap_or_else(|| SwivelWays {
+            kinds: Vec::new(),
+            directions: Vec::new(),
+            asked: fold(parent, &unstored),
+        });
         Ok(Ok(CompoundAsked::Vertex(Box::new(VertexAnalysed {
             emergents: emergents(parent, &self.op, &analysis),
-            directions: directions(parent, &self.op),
+            directions,
+            kinds,
             analysis,
-            orders: listed(fold(parent, &unstored)),
+            orders: listed(asked),
         }))))
     }
 
@@ -671,10 +726,15 @@ pub struct VertexAnalysed {
     /// folds.
     pub emergents: Vec<bool>,
     /// A swivel on a folded edge's: valley, then mountain, as the viewer
-    /// sees them, each whether the fold lands that way. Empty for the other
-    /// folds.
+    /// sees them, each whether the fold lands that way, its kind as asked.
+    /// Empty for the other folds.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub directions: Vec<bool>,
+    /// A swivel on a folded edge's: per kind, open then inside, its
+    /// directions as `directions` lists them, each whether the fold lands
+    /// that way. Empty for the other folds.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub kinds: Vec<[bool; 2]>,
     /// The orders the op leaves as asked, its stored completion aside, when
     /// it leaves more than one; null when it lands with one, or is refused.
     pub orders: Option<VertexOrders>,

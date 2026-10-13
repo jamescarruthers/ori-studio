@@ -28,7 +28,10 @@ import {
   PLACEHOLDER_RAY,
   squashTargetToward,
   steppedFourth,
+  swivelDirectionsOf,
   swivelFoldPick,
+  swivelKindsLanding,
+  swivelWayToFold,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
@@ -386,12 +389,14 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       op: { ...base, ridge: [0.5, -0.5] },
       emergent: 1,
       direction: 'valley',
+      kind: null,
       again: true,
     });
     expect(vertexChosenOp(base, ridges([false, false]), NONE)).toEqual({
       op: base,
       emergent: 0,
       direction: 'valley',
+      kind: null,
       again: false,
     });
   });
@@ -405,7 +410,7 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       target: { via: 'crease' as const, at: [0.75, 0.5] as const },
       direction: 'valley' as const,
     };
-    const answer = (directions?: boolean[]): FoldVertexAnalysed => ({
+    const answer = (directions?: boolean[], kinds?: [boolean, boolean][]): FoldVertexAnalysed => ({
       analysis: {
         kind: 'swivel-by-edge',
         pivot: [0.15, 0.35],
@@ -439,6 +444,7 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       },
       emergents: [],
       ...(directions ? { directions } : {}),
+      ...(kinds ? { kinds } : {}),
       orders: null,
     });
     // No ridge to store, whatever is taken.
@@ -451,6 +457,7 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       op: onFold,
       emergent: 0,
       direction: 'valley',
+      kind: 'open',
       again: false,
     });
     // Only the other way lands: that way is folded, and asked again.
@@ -458,8 +465,84 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       op: onFold,
       emergent: 0,
       direction: 'valley',
+      kind: 'open',
       again: true,
     });
+  });
+
+  it('folds a swivel on a folded edge of the kind that lands, the one asked while it does', () => {
+    const open = {
+      kind: 'swivel' as const,
+      via: 'edge' as const,
+      fold: [0.75, 0.6] as const,
+      edge: [1, 0.85] as const,
+      target: { via: 'crease' as const, at: [0.75, 0.5] as const },
+      direction: 'valley' as const,
+    };
+    const inside = { ...open, swivel: 'inside' as const };
+    const answer = (kinds: [boolean, boolean][], asked: [boolean, boolean]): FoldVertexAnalysed => ({
+      analysis: { kind: 'squash' } as unknown as FoldVertexAnalysed['analysis'],
+      emergents: [],
+      directions: asked,
+      kinds,
+      orders: null,
+    });
+    // The owner's squash: both kinds land, valley only.
+    const both = answer(
+      [
+        [true, false],
+        [true, false],
+      ],
+      [true, false]
+    );
+    expect(swivelKindsLanding(both)).toEqual([true, true]);
+    expect(vertexChosenOp(open, both, NONE)).toMatchObject({ op: open, kind: 'open', again: false });
+    expect(vertexChosenOp(inside, both, NONE)).toMatchObject({ op: inside, kind: 'inside', again: false });
+    // Only inside lands: asked open, it folds inside, asked again.
+    const onlyInside = answer(
+      [
+        [false, false],
+        [true, false],
+      ],
+      [false, false]
+    );
+    expect(vertexChosenOp(open, onlyInside, NONE)).toMatchObject({
+      op: inside,
+      direction: 'valley',
+      kind: 'inside',
+      again: true,
+    });
+    // Only open lands, and only the other way: asked inside valley, it folds open mountain.
+    const onlyOpenMountain = answer(
+      [
+        [false, true],
+        [false, false],
+      ],
+      [false, false]
+    );
+    expect(swivelWayToFold({ kind: 'inside', direction: 'valley' }, 'inside', onlyOpenMountain)).toEqual({
+      kind: 'open',
+      direction: 'mountain',
+    });
+    expect(vertexChosenOp(inside, onlyOpenMountain, NONE)).toMatchObject({
+      op: { ...open, direction: 'mountain' },
+      kind: 'open',
+      again: true,
+    });
+    // None lands: the way asked, which the engine refuses.
+    const none = answer(
+      [
+        [false, false],
+        [false, false],
+      ],
+      [false, false]
+    );
+    expect(vertexChosenOp(inside, none, NONE)).toMatchObject({ op: inside, kind: 'inside', again: false });
+    // An answer with no word on the kinds: the directions of the kind asked.
+    expect(swivelDirectionsOf({ ...both, kinds: undefined }, 'open', 'open')).toEqual([true, false]);
+    expect(swivelDirectionsOf({ ...both, kinds: undefined }, 'inside', 'open')).toBeNull();
+    // Any other fold has no kind.
+    expect(swivelKindsLanding(null)).toBeNull();
   });
 
   it('steps through the fourth rays that land, round and round', () => {
@@ -510,11 +593,18 @@ describe('the choices a vertex fold takes of what the engine lists', () => {
       emergents: [],
       orders: null,
     };
-    expect(vertexChosenOp(squash, analysed, NONE)).toEqual({ op: squash, emergent: null, direction: 'valley', again: false });
+    expect(vertexChosenOp(squash, analysed, NONE)).toEqual({
+      op: squash,
+      emergent: null,
+      direction: 'valley',
+      kind: null,
+      again: false,
+    });
     expect(vertexChosenOp(squash, analysed, { ...NONE, squashTarget: [0, 1] })).toEqual({
       op: { ...squash, target: [0, 1] },
       emergent: null,
       direction: 'valley',
+      kind: null,
       again: true,
     });
     expect(squashTargetToward([0.5, 0.5], [0.5, 1])).toEqual([0, 1]);

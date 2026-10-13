@@ -126,11 +126,43 @@ describe('a vertex fold’s words', () => {
     expect(vertexRows(t, step.form)).toMatchObject([
       { label: 'Lands on', value: 'Existing crease or edge' },
       { label: 'Creases meet', value: 'On a folded edge' },
+      { label: 'Kind', value: 'Open' },
     ]);
     const behind = foldSentenceStepOf(
       { ...onFold, target: { via: 'free', through: [[0, 0], [1, 1]] }, direction: 'mountain' },
       context
     );
     expect(foldStepSentence(t, behind)).toBe('Swivel the edge behind onto the line, the creases meeting on the folded edge.');
+  });
+
+  it('say an inside swivel tucks its strip: its sentence, name, badge and Kind row', () => {
+    const context = { paper: { kind: 'square' }, marks: [] } as unknown as Parameters<typeof foldSentenceStepOf>[1];
+    const inside = {
+      kind: 'swivel' as const,
+      via: 'edge' as const,
+      fold: [0.75, 0.6] as const,
+      edge: [1, 0.85] as const,
+      target: { via: 'crease' as const, at: [0.75, 0.5] as const },
+      direction: 'valley' as const,
+      swivel: 'inside' as const,
+    };
+    const step = foldSentenceStepOf(inside, context);
+    expect(step).toEqual({
+      op: 'vertex',
+      fold: 'swivel',
+      direction: 'valley',
+      form: { swivel: 'fold', target: 'crease', inside: true },
+    });
+    expect(foldStepSentence(t, step)).toBe('Inside-swivel the edge onto the crease, the creases meeting on the folded edge.');
+    expect(operationLabel(t, step)).toBe('Inside swivel');
+    expect(operationBadge(t, step)).toBe('Inside swivel');
+    if (step.op !== 'vertex') throw new Error('no vertex fold');
+    expect(vertexRows(t, step.form)[2]).toMatchObject({ label: 'Kind', value: 'Inside' });
+    const behind = foldSentenceStepOf(
+      { ...inside, target: { via: 'free', through: [[0, 0], [1, 1]] }, direction: 'mountain' },
+      context
+    );
+    expect(foldStepSentence(t, behind)).toBe('Inside-swivel the edge behind onto the line, the creases meeting on the folded edge.');
+    expect(operationLabel(t, behind)).toBe('Inside swivel behind');
   });
 });

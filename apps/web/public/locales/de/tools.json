@@ -972,6 +972,10 @@
           "text": "Auf der Seite der bewegten Kante trifft die Schwenkfaltlinie die gefaltete Kante in einem rechten oder stumpfen Winkel, sodass der anderen Lage kein Platz zum Falten bleibt. Wähle eine Linie für die Kante, die sie weiter dreht, oder eine andere gefaltete Kante.",
           "title": "Die Schwenkfaltlinie trifft die Kante zu steil"
         },
+        "swivelInsideFree": {
+          "text": "Eine innere Drehfalte steckt ihren Streifen zwischen die beiden Lagen, die eine gefaltete Kante verbindet, und diese Faltlinien treffen sich abseits jeder gefalteten Kante. Drücke Esc und klicke auf eine gefaltete Kante, auf der sich die Faltlinien treffen.",
+          "title": "Eine innere Drehfalte braucht eine gefaltete Kante"
+        },
         "swivelMissesFold": {
           "text": "Die Schwenkfalte faltet entlang der Linie in der Mitte zwischen der Kante und der Linie, auf der sie landet, und diese Linie kreuzt diese gefaltete Kante nicht zwischen ihren Enden. Drücke Esc und wähle die gefaltete Kante, die sie kreuzt, oder eine andere Linie.",
           "title": "Die Faltlinien können sich auf dieser Kante nicht treffen"
@@ -1045,6 +1049,11 @@
         "swivelSwing": "Klicke auf die Kante, die auf eine Linie geschwenkt wird.",
         "swivelSwingTouch": "Tippe auf die Kante, die auf eine Linie geschwenkt wird."
       },
+      "swivelInside": "Innen",
+      "swivelInsideHelp": "Innere Drehfalte: der Streifen steckt zwischen den Lagen",
+      "swivelKind": "Art",
+      "swivelOpen": "Offen",
+      "swivelOpenHelp": "Offene Drehfalte: der Streifen faltet sich obenauf",
       "target": "Rücken landet auf",
       "targetHinge": "Der Scharnierlinie",
       "targetPoint": "Dem geklickten Punkt",

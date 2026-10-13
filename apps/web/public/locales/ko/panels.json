@@ -1526,7 +1526,9 @@
         "swivelEdgeCrease": "점을 중심으로 변을 뒤쪽으로 돌려 접은 선 위에 놓습니다.",
         "swivelEdgeLine": "점을 중심으로 변을 뒤쪽으로 돌려 선 위에 놓습니다.",
         "swivelFoldCrease": "접힌 변 위에서 접는 선들이 만나도록, 변을 뒤쪽으로 돌려 접은 선 위에 놓습니다.",
-        "swivelFoldLine": "접힌 변 위에서 접는 선들이 만나도록, 변을 뒤쪽으로 돌려 선 위에 놓습니다."
+        "swivelFoldLine": "접힌 변 위에서 접는 선들이 만나도록, 변을 뒤쪽으로 돌려 선 위에 놓습니다.",
+        "swivelInsideCrease": "접힌 변 위에서 접는 선들이 만나도록, 안쪽 회전 접기로 변을 뒤쪽으로 돌려 접은 선 위에 놓습니다.",
+        "swivelInsideLine": "접힌 변 위에서 접는 선들이 만나도록, 안쪽 회전 접기로 변을 뒤쪽으로 돌려 선 위에 놓습니다."
       },
       "closedSink": "끝을 닫힌 가라앉혀 접기로 접습니다. 층을 겹친 채로 끝을 밀어 넣습니다.",
       "cpJump": "가져온 전개도대로 접습니다.",
@@ -1974,6 +1976,8 @@
       "swivelEdgeLine": "점을 중심으로 변을 돌려 선 위에 놓습니다.",
       "swivelFoldCrease": "접힌 변 위에서 접는 선들이 만나도록, 변을 돌려 접은 선 위에 놓습니다.",
       "swivelFoldLine": "접힌 변 위에서 접는 선들이 만나도록, 변을 돌려 선 위에 놓습니다.",
+      "swivelInsideCrease": "접힌 변 위에서 접는 선들이 만나도록, 안쪽 회전 접기로 변을 돌려 접은 선 위에 놓습니다.",
+      "swivelInsideLine": "접힌 변 위에서 접는 선들이 만나도록, 안쪽 회전 접기로 변을 돌려 선 위에 놓습니다.",
       "tuckMountain": "산접기하고, 뒤쪽에서 고른 겹 위로 플랩을 끼워 넣습니다.",
       "tuckValley": "골접기하고, 고른 겹 아래로 플랩을 끼워 넣습니다.",
       "turn": "{{turn}}.",
@@ -2177,6 +2181,9 @@
       "spreadDefault": "기본 벌림입니다. 여기서 바꾸면 이 단계부터 적용됩니다.",
       "spreadEarlier": "앞 단계의 설정을 따릅니다. 여기서 바꾸면 이 단계부터 적용됩니다.",
       "spreadOwn": "이 단계에서 설정했습니다. 뒤의 단계도 이를 따릅니다.",
+      "swivelKind": "종류",
+      "swivelKindInsideHelp": "다른 층의 띠가 그 층의 나머지 아래로 접혀, 두 층 사이로 들어갑니다.",
+      "swivelKindOpenHelp": "다른 층의 띠가 그 층의 나머지 위로 접혀, 뒷면이 보입니다.",
       "title": "{{number}}단계",
       "valley": "골",
       "vertex": {
@@ -2205,13 +2212,15 @@
       "badgeRabbitEar": "토끼 귀",
       "badgeSquash": "눌러 접기",
       "badgeSwivel": "회전",
+      "badgeSwivelInside": "안쪽 회전",
       "badgeTuck": "끼워 넣기",
       "badgeValley": "골접기",
       "behind": {
         "petal": "뒤쪽으로 꽃잎 접기",
         "rabbitEar": "뒤쪽으로 토끼 귀 접기",
         "squash": "뒤쪽으로 눌러 접기",
-        "swivel": "뒤쪽으로 회전 접기"
+        "swivel": "뒤쪽으로 회전 접기",
+        "swivelInside": "뒤쪽으로 안쪽 회전 접기"
       },
       "closedSink": "닫힌 가라앉혀 접기",
       "cpJump": "전개도 가져오기",
@@ -2245,6 +2254,9 @@
       "ridgeFoot": "변에 수직",
       "squash": "눌러 접기",
       "swivel": "회전 접기",
+      "swivelInside": "안쪽 회전 접기",
+      "swivelKindInside": "안쪽",
+      "swivelKindOpen": "열림",
       "targetCrease": "기존 접은 선 또는 변",
       "targetLine": "두 점을 지나는 선",
       "tuckMountain": "산접기해서 끼워 넣기",

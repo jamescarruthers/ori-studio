@@ -18,7 +18,9 @@ import type { FoldPickIndex } from '../foldPicking';
  * asked of the worker in one call, and the answer kept for the state, the
  * point and the folder's way — what the canvas lights and previews at the
  * next two clicks, and what the window says when nothing can swing. Asked
- * again only when one of those changes, never as the pointer moves.
+ * again only when one of those changes, never as the pointer moves. A swivel
+ * on a folded edge is asked open first: its kind is chosen only once it is
+ * previewed, when the reach offers nothing more.
  *
  * Null for any other tool, before the meeting point, and for a target named
  * by two points; asking until the worker answers.

@@ -6,7 +6,12 @@
 //! then both; every landing passes the full gate, Kawasaki and Maekawa at
 //! its vertex, lays its edge on the target and takes the letters the module
 //! docs derive; the refusals are codes; a free swivel is spelled and folded
-//! as before; and a seeded campaign checks every one that lands.
+//! as before; and a seeded campaign checks every one that lands. The inside
+//! swivel — Abrashi's figure 2 — lands on the same case with the same lines,
+//! its strip tucked out of sight between the two layers; it narrows the kite
+//! base with a choice of two orders; it is refused at a free vertex; its
+//! kind is spelled only when inside; and the campaign's draws check every
+//! one of it that lands.
 
 mod beloch;
 mod support;
@@ -18,8 +23,8 @@ use oristudio_fold::pattern::opposite;
 use oristudio_fold::random::{self, Rng};
 use oristudio_fold::{
     CompoundRefused, CreaseKind, Direction, FaceId, Fix, FoldRefusal, Letter, Seed, State,
-    SwivelByEdge, SwivelEdgeAnalysis, SwivelRay, SwivelWedge, VertexChoices, VertexFolded,
-    VertexOutcome,
+    SwivelByEdge, SwivelEdgeAnalysis, SwivelKind, SwivelRay, SwivelWedge, VertexChoices,
+    VertexFolded, VertexOutcome,
 };
 use oristudio_geometry::Line;
 use vertex::cases::{self, FoldSwivelCase, landed};
@@ -253,18 +258,26 @@ fn seen_letters(
     out
 }
 
-/// Land a swivel on a folded edge as it must, and check it every way: the
-/// full gate and its motion, Kawasaki and Maekawa (3 : 1) at its vertex, the
-/// folded edge's half that opens lying flat, the letters (the edge layer's
-/// swivel crease and the other's second as the direction, the other's
-/// swivel crease the other way, as the viewer saw each layer), its edge on
-/// the target, the regions it previews, and its picture.
+/// Land a swivel on a folded edge as it must, and check it every way
+/// ([`landing_checked`]).
 fn swivel_checked(c: &FoldSwivelCase, op: &SwivelByEdge, label: &str) -> VertexFolded {
+    let folded = landed(c.state.swivel_by_edge(op, &VertexChoices::default()));
+    landing_checked(c, op, &folded, label);
+    folded
+}
+
+/// A swivel on a folded edge's landing, checked every way: the full gate and
+/// its motion, Kawasaki and Maekawa (3 : 1) at its vertex, the folded edge's
+/// half that opens lying flat, the letters as the viewer saw each layer
+/// (the edge layer's swivel crease as the direction; open, the other
+/// layer's second as the direction and its swivel crease the other way;
+/// inside, the other way round), its edge on the target, the regions it
+/// previews, and its picture.
+fn landing_checked(c: &FoldSwivelCase, op: &SwivelByEdge, folded: &VertexFolded, label: &str) {
     let parent = &c.state;
     let a = analysis(parent, op);
-    let folded = landed(parent.swivel_by_edge(op, &VertexChoices::default()));
-    check(parent, &folded);
-    let at = vertex_sheet(&folded);
+    check(parent, folded);
+    let at = vertex_sheet(folded);
     assert_kawasaki(&folded.state, at, label);
     let (m, v) = letters_at(&folded.state, at);
     assert!(
@@ -278,9 +291,16 @@ fn swivel_checked(c: &FoldSwivelCase, op: &SwivelByEdge, label: &str) -> VertexF
         Direction::Valley => Letter::Valley,
         Direction::Mountain => Letter::Mountain,
     };
+    // Open, the strip folds up across the second crease and the little
+    // wedge back over it; inside, the strip folds under and the wedge
+    // follows it in.
+    let (second, others) = match op.kind {
+        SwivelKind::Open => (given, opposite(given)),
+        SwivelKind::Inside => (opposite(given), given),
+    };
     // The other layer is the paper the second crease cuts, and all of it
     // joined flat (the edge's layer, folded to it, never is).
-    let letters = seen_letters(parent, &folded, &a);
+    let letters = seen_letters(parent, folded, &a);
     let other = flat_closure(
         parent,
         letters
@@ -289,17 +309,35 @@ fn swivel_checked(c: &FoldSwivelCase, op: &SwivelByEdge, label: &str) -> VertexF
             .map(|&(_, layer, _)| layer)
             .collect(),
     );
+    // It lies on the direction's side of the edge's layer, so open is on top
+    // and inside between the two (the module docs).
+    assert!(
+        other.contains(&a.layers[0]),
+        "{label}: the other layer is the farther, {:?}",
+        a.layers
+    );
     for (ray, layer, letter) in letters {
         let expected = match ray {
-            SwivelRay::Hinge => given,
-            SwivelRay::Meet if other.contains(&layer) => opposite(given),
+            SwivelRay::Hinge => second,
+            SwivelRay::Meet if other.contains(&layer) => others,
             SwivelRay::Meet => given,
             other => panic!("{label}: a {other:?} crease"),
         };
         assert_eq!(letter, expected, "{label}: {ray:?} in face {layer}");
     }
+    // The preview says so too.
+    let previewed: Vec<(SwivelRay, Letter)> = a.creases.iter().map(|c| (c.ray, c.letter)).collect();
+    assert_eq!(
+        previewed,
+        vec![
+            (SwivelRay::Meet, given),
+            (SwivelRay::Meet, others),
+            (SwivelRay::Hinge, second)
+        ],
+        "{label}"
+    );
     assert!(
-        assert_edge_on_target(parent, &folded, c.edge, &a, label) >= 1,
+        assert_edge_on_target(parent, folded, c.edge, &a, label) >= 1,
         "{label}: too few of the edge's vertices checked"
     );
     let wedges: std::collections::HashSet<_> = a.regions.iter().map(|r| r.wedge).collect();
@@ -315,7 +353,6 @@ fn swivel_checked(c: &FoldSwivelCase, op: &SwivelByEdge, label: &str) -> VertexF
         .unwrap_or_else(|e| panic!("{label}: {e}"));
     assert!(action.line.is_some(), "{label}: {action:?}");
     assert!(!action.moving.is_empty(), "{label}");
-    folded
 }
 
 /// Abrashi's "What is Swivel fold?" on the owner's squashed preliminary
@@ -536,6 +573,7 @@ fn a_swivel_on_a_folded_edge_that_does_not_fit_is_refused_by_code() {
         ridge: None,
         direction: Direction::Valley,
         fold: Some([0.5, 0.5]),
+        kind: SwivelKind::Open,
     };
     let refused = refusal(tri.swivel_by_edge(&op, &none));
     assert_eq!(refused.refusal.code(), "swivel_fold_wide", "{refused:?}");
@@ -603,6 +641,7 @@ fn an_edge_neither_layer_holds_stays() {
         ridge: None,
         direction: Direction::Valley,
         fold: Some(fold),
+        kind: SwivelKind::Open,
     };
     let refused = refusal(state.swivel_by_edge(&op, &VertexChoices::default()));
     assert_eq!(refused.refusal.code(), "swivel_edge_stays", "{refused:?}");
@@ -632,14 +671,12 @@ fn the_folded_edge_is_spelled_only_when_the_creases_meet_on_one() {
     assert_eq!(refused.refusal.code(), "fan_center");
 }
 
-/// The seeded campaign: on drawn folded states, a folded crease (its sheet
-/// midpoint), an edge (a raw or folded crease's), a target through two
-/// vertex images. Every swivel on a folded edge that lands passes the full
-/// gate, is flat at its vertex with Maekawa's 3 : 1, and lays its edge on
-/// the target.
-#[test]
-fn every_swivel_on_a_folded_edge_that_lands_folds_flat_with_its_edge_on_the_target() {
-    let (mut landed_count, mut tried) = (0, 0);
+/// The seeded campaign's draws: on drawn folded states, a folded crease (its
+/// sheet midpoint), an edge (a raw or folded crease's), a target through two
+/// vertex images, valley or mountain; an open swivel on that folded edge,
+/// each with the seed it was drawn from.
+fn drawn_swivels() -> Vec<(u64, FoldSwivelCase)> {
+    let mut out = Vec::new();
     for seed in 0..1500u64 {
         let mut rng = Rng::new(31_337 + seed);
         let Ok(state) = random::folded(&mut rng) else {
@@ -687,23 +724,350 @@ fn every_swivel_on_a_folded_edge_that_lands_folds_flat_with_its_edge_on_the_targ
                 Direction::Mountain
             },
             fold: Some(mid(fold)),
+            kind: SwivelKind::Open,
         };
-        tried += 1;
-        let Ok(VertexOutcome::Landed(_)) = state.swivel_by_edge(&op, &VertexChoices::default())
+        out.push((
+            seed,
+            FoldSwivelCase {
+                name: "campaign",
+                state,
+                op,
+                edge,
+                fold,
+            },
+        ));
+    }
+    out
+}
+
+/// The seeded campaign ([`drawn_swivels`]): every open swivel on a folded
+/// edge that lands passes the full gate, is flat at its vertex with
+/// Maekawa's 3 : 1, and lays its edge on the target.
+#[test]
+fn every_swivel_on_a_folded_edge_that_lands_folds_flat_with_its_edge_on_the_target() {
+    let drawn = drawn_swivels();
+    let mut landed_count = 0;
+    for (seed, c) in &drawn {
+        let Ok(VertexOutcome::Landed(_)) = c.state.swivel_by_edge(&c.op, &VertexChoices::default())
         else {
             continue;
         };
-        let label = format!("seed {seed}");
-        let c = FoldSwivelCase {
-            name: "campaign",
-            state: state.clone(),
-            op: op.clone(),
-            edge,
-            fold,
-        };
-        swivel_checked(&c, &op, &label);
+        swivel_checked(c, &c.op, &format!("seed {seed}"));
         landed_count += 1;
     }
+    let tried = drawn.len();
     eprintln!("{landed_count} of {tried} drawn swivels on folded edges landed");
     assert!(landed_count >= 30, "{landed_count} of {tried}");
+}
+
+// --- The inside swivel ------------------------------------------------------
+
+/// A case's op made inside.
+fn inside(op: &SwivelByEdge) -> SwivelByEdge {
+    SwivelByEdge {
+        kind: SwivelKind::Inside,
+        ..op.clone()
+    }
+}
+
+/// A folded state's crease pattern by its lines alone, letters aside.
+fn lines_of(state: &State) -> std::collections::BTreeSet<([i64; 2], [i64; 2])> {
+    folded_segments(state)
+        .into_iter()
+        .map(|(_, p, q)| (p, q))
+        .collect()
+}
+
+/// The parent's faces the viewer sees at a point of a landing, nearest
+/// first, each with whether it is turned over from how the parent showed it.
+fn seen_faces(parent: &State, state: &State, at_scene: Point) -> Vec<(FaceId, bool)> {
+    seen_stack(state, at_scene)
+        .into_iter()
+        .map(|f| {
+            let from = lineage(parent, state, f);
+            (from, state.seen_front_up(f) != parent.seen_front_up(from))
+        })
+        .collect()
+}
+
+/// Abrashi's figure 2, the closed or inside swivel, on the owner's squashed
+/// preliminary base: the same creases as the open swivel's, but the line
+/// from the vertex to the kite's right corner a mountain and the whole line
+/// down to the bottom tip a valley, as the diagram's first picture draws
+/// them. The edge's triangle still swings up onto the centre line; the top
+/// layer's strip folds under the rest of its layer, between the two layers,
+/// and the little triangle by the left corner follows it in. The second
+/// picture: the strip hidden (its outline, the triangle from the vertex to
+/// (0, √2 − 1) and the right corner, is the diagram's dashed one), the line
+/// from the vertex to the right corner an edge, the right flap's white
+/// below it.
+#[test]
+fn abrashi_s_inside_swivel_lands_as_figure_2_shows() {
+    let c = case("Abrashi's swivel");
+    let parent = &c.state;
+    let op = inside(&c.op);
+    let a = analysis(parent, &op);
+    let open = analysis(parent, &c.op);
+    // The same vertex, creases and landing as the open swivel's.
+    assert_eq!(a.vertex, open.vertex);
+    assert_eq!(a.landed, open.landed);
+    assert_eq!(a.regions, open.regions);
+    assert_eq!(a.layers, open.layers);
+    for (i, o) in a.creases.iter().zip(&open.creases) {
+        assert_eq!((i.ray, i.from, i.to), (o.ray, o.from, o.to));
+    }
+    // The letters as the viewer sees them: the swivel crease a valley in
+    // both layers, the second crease the mountain, the odd one out.
+    assert_eq!(
+        a.creases
+            .iter()
+            .map(|c| (c.ray, c.letter, c.ridge))
+            .collect::<Vec<_>>(),
+        vec![
+            (SwivelRay::Meet, Letter::Valley, false),
+            (SwivelRay::Meet, Letter::Valley, false),
+            (SwivelRay::Hinge, Letter::Mountain, true),
+        ]
+    );
+
+    let folded = swivel_checked(&c, &op, "Abrashi's inside swivel");
+    let state = &folded.state;
+    // One order, which the crease pattern and its letters alone allow.
+    assert!(only_order_of_its_pattern(state));
+    // The crease pattern: the open swivel's lines, two of its letters
+    // turned — the top layer's swivel crease and its second, both from the
+    // vertex.
+    let opened = landed(parent.swivel_by_edge(&c.op, &VertexChoices::default()));
+    assert_eq!(lines_of(state), lines_of(&opened.state));
+    let ours = folded_segments(state);
+    let theirs = folded_segments(&opened.state);
+    let turned: Vec<_> = ours.difference(&theirs).collect();
+    assert_eq!(turned.len(), 2, "{turned:?}");
+    let at = vertex_sheet(&folded);
+    let at = [(at[0] * 1e6).round() as i64, (at[1] * 1e6).round() as i64];
+    for &&(letter, p, q) in &turned {
+        assert!(p == at || q == at, "{p:?} {q:?}");
+        assert!(theirs.contains(&(opposite(letter), p, q)));
+    }
+
+    // The second picture, as the viewer sees it.
+    let (top_layer, edge_layer) = (a.layers[0], a.layers[1]);
+    let top = flat_closure(parent, vec![top_layer]);
+    // Between the vertex, the centre line and (0, √2 − 1): the rest of the
+    // top layer, over its strip folded under, over the little triangle
+    // turned in place, over the edge's layer.
+    let little = seen_faces(parent, state, [-0.05, 0.37]);
+    assert_eq!(little[0], (top_layer, false), "{little:?}");
+    assert_eq!(little[1], (top_layer, true), "{little:?}");
+    assert_eq!(little[2], (top_layer, false), "{little:?}");
+    assert_eq!(little[3], (edge_layer, false), "{little:?}");
+    // Below it, the swivelled triangle of the edge's layer, turned over, on
+    // the rest of that layer, as in the open swivel.
+    let swung = seen_faces(parent, state, [-0.03, 0.15]);
+    assert_eq!(swung[0], (edge_layer, true), "{swung:?}");
+    assert_eq!(swung[1], (edge_layer, false), "{swung:?}");
+    // Right of the centre line, above the line to the right corner: the top
+    // layer as it was, its strip under it.
+    let strip = seen_faces(parent, state, [0.06, 0.3]);
+    assert!(top.contains(&strip[0].0) && !strip[0].1, "{strip:?}");
+    assert!(top.contains(&strip[1].0) && strip[1].1, "{strip:?}");
+    // Below that line, the right flap the strip uncovered, as it was.
+    let below = seen_faces(parent, state, [0.05, 0.25]);
+    assert!(!top.contains(&below[0].0) && !below[0].1, "{below:?}");
+    // Nowhere does the strip show: no face of the top layer turned over is
+    // the one the viewer sees (on a grid off the creases' lines).
+    for i in -20..=20 {
+        for j in 0..=40 {
+            let p = [f64::from(i) * 0.02 + 0.0037, f64::from(j) * 0.02 + 0.0051];
+            if let Some(&(face, turned)) = seen_faces(parent, state, p).first() {
+                assert!(!(turned && top.contains(&face)), "the strip shows at {p:?}");
+            }
+        }
+    }
+    // The strip hidden under it is figure 2's dashed triangle: the vertex,
+    // (0, √2 − 1) and the right corner — its pieces (cut where the centre
+    // precrease crossed it) fill that triangle and no more.
+    let k = FRAC_1_SQRT_2;
+    let triangle = [
+        scene(parent, a.vertex),
+        [0.0, std::f64::consts::SQRT_2 - 1.0],
+        [k - 0.5, k - 0.5],
+    ];
+    let area = |ring: &[Point]| -> f64 {
+        let n = ring.len();
+        (0..n)
+            .map(|i| {
+                let (p, q) = (ring[i], ring[(i + 1) % n]);
+                p[0] * q[1] - p[1] * q[0]
+            })
+            .sum::<f64>()
+            .abs()
+            / 2.0
+    };
+    let (mut strip_area, mut corners) = (0.0, [false; 3]);
+    for face in state.faces() {
+        let from = lineage(parent, state, face.id);
+        if !top.contains(&from) || state.seen_front_up(face.id) == parent.seen_front_up(from) {
+            continue;
+        }
+        let ring: Vec<Point> = state
+            .face_image(face.id)
+            .unwrap_or_default()
+            .iter()
+            .map(|&p| scene(state, p))
+            .collect();
+        for &p in &ring {
+            if let Some(i) = triangle.iter().position(|&q| close(p, q)) {
+                corners[i] = true;
+            } else {
+                let inside = (0..3).all(|i| {
+                    let (a, b) = (triangle[i], triangle[(i + 1) % 3]);
+                    let c = triangle[(i + 2) % 3];
+                    let side =
+                        |q: Point| (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]);
+                    side(p) * side(c) >= -1e-12
+                });
+                assert!(inside, "the strip reaches {p:?}, outside the triangle");
+            }
+        }
+        strip_area += area(&ring);
+    }
+    assert_eq!(corners, [true; 3]);
+    assert!((strip_area - area(&triangle)).abs() < 1e-9, "{strip_area}");
+}
+
+/// The inside swivel the other way, the paper behind: refused as the open
+/// one is, for want of an order, offering the valley.
+#[test]
+fn abrashi_s_inside_swivel_as_a_mountain_offers_the_valley() {
+    let c = case("Abrashi's swivel");
+    let op = SwivelByEdge {
+        direction: Direction::Mountain,
+        ..inside(&c.op)
+    };
+    let refused = refusal(c.state.swivel_by_edge(&op, &VertexChoices::default()));
+    assert_eq!(refused.refusal.code(), "no_order", "{refused:?}");
+    assert_eq!(refused.fixes, vec![Fix::OppositeDirection]);
+}
+
+/// The kite base narrowed at its tip, inside: the flap's strip folds under
+/// it, between the flap and the square, and reaches past the diagonal,
+/// where the other flap lies — over it or under it, the two orders the step
+/// chooses between. Each passes every check, with the open swivel's lines.
+#[test]
+fn the_kite_base_narrows_inside_its_strip_over_or_under_the_other_flap() {
+    for name in ["kite narrowed at c, right", "kite narrowed at c, left"] {
+        let c = case(name);
+        let op = inside(&c.op);
+        let outcome = c.state.swivel_by_edge(&op, &VertexChoices::default());
+        let Ok(VertexOutcome::ChooseOrder(choice)) = &outcome else {
+            panic!("{name}: {outcome:?}");
+        };
+        assert_eq!(choice.count().orders, 2, "{name}");
+        let opened = landed(c.state.swivel_by_edge(&c.op, &VertexChoices::default()));
+        let every = cases::every(outcome);
+        assert_eq!(every.len(), 2);
+        for (k, folded) in every.iter().enumerate() {
+            let label = format!("{name} inside, order {k}");
+            landing_checked(&c, &op, folded, &label);
+            assert_eq!(lines_of(&folded.state), lines_of(&opened.state), "{label}");
+            // Replayed from what it stores, it lands the same.
+            let replayed = landed(c.state.swivel_by_edge(&op, &folded.report.stored));
+            assert_eq!(replayed.state.order(), folded.state.order(), "{label}");
+        }
+    }
+}
+
+/// An inside swivel needs a folded edge: at a free vertex the creases cut
+/// every layer alike, which move as one, and there is no pocket to tuck the
+/// strip into.
+#[test]
+fn an_inside_swivel_at_a_free_vertex_is_refused() {
+    let free = cases::edge_swivel_cases()
+        .into_iter()
+        .find(|c| c.name == "two-layer flap")
+        .unwrap_or_else(|| panic!("no two-layer flap"));
+    let op = inside(&free.op);
+    let none = VertexChoices::default();
+    let refused = refusal(free.state.swivel_by_edge(&op, &none));
+    assert_eq!(refused.refusal.code(), "swivel_inside_free", "{refused:?}");
+    assert!(!refused.refusal.faces().is_empty());
+    for result in [
+        free.state.analyse_swivel_by_edge(&op).err(),
+        free.state.swivel_by_edge_action(&op, None).err(),
+        free.state.swivel_by_edge_as_rays(&op).err(),
+    ] {
+        let code = result.map(|r| r.refusal.code());
+        assert_eq!(code, Some("swivel_inside_free"));
+    }
+    // Open, it lands as before.
+    landed(free.state.swivel_by_edge(&free.op, &none));
+}
+
+/// The kind is spelled only when inside: every open swivel's op reads and
+/// writes as it always did, and an inside one reads back as it was.
+#[test]
+fn the_kind_is_spelled_only_when_inside() {
+    let c = case("Abrashi's swivel");
+    let json = serde_json::to_value(&c.op).unwrap_or_default();
+    assert!(json.get("kind").is_none(), "{json}");
+    let op = inside(&c.op);
+    let json = serde_json::to_value(&op).unwrap_or_default();
+    assert_eq!(json["kind"], "inside", "{json}");
+    let read: SwivelByEdge = serde_json::from_value(json).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(read, op);
+    let open = serde_json::json!({ "kind": "open" });
+    assert_eq!(
+        serde_json::from_value::<SwivelKind>(open["kind"].clone()).ok(),
+        Some(SwivelKind::Open)
+    );
+}
+
+/// The seeded campaign's draws again ([`drawn_swivels`]), inside: every one
+/// that lands — each order, when it leaves several — passes every check, the
+/// inside letters among them; where the open swivel lands too, with the
+/// same lines. An inside swivel that cannot fold is refused for want of an
+/// order.
+#[test]
+fn every_inside_swivel_on_a_folded_edge_that_lands_tucks_its_strip_flat() {
+    let drawn = drawn_swivels();
+    let none = VertexChoices::default();
+    let (mut landed_count, mut both, mut refused_count) = (0, 0, 0);
+    for (seed, c) in &drawn {
+        let op = inside(&c.op);
+        let outcome = c.state.swivel_by_edge(&op, &none);
+        if let Err(CompoundRefused::Refused(refused)) = &outcome {
+            refused_count += 1;
+            let open = c.state.swivel_by_edge(&c.op, &none);
+            if matches!(open, Ok(VertexOutcome::Landed(_))) {
+                assert_eq!(
+                    refused.refusal.code(),
+                    "no_order",
+                    "seed {seed}: {refused:?}"
+                );
+            }
+            continue;
+        }
+        let every = cases::every(outcome);
+        assert!(!every.is_empty(), "seed {seed}");
+        let open = c.state.swivel_by_edge(&c.op, &none);
+        for (k, folded) in every.iter().enumerate() {
+            let label = format!("seed {seed} inside, order {k}");
+            landing_checked(c, &op, folded, &label);
+            if let Ok(VertexOutcome::Landed(opened)) = &open {
+                assert_eq!(lines_of(&folded.state), lines_of(&opened.state), "{label}");
+            }
+        }
+        landed_count += 1;
+        both += usize::from(matches!(open, Ok(VertexOutcome::Landed(_))));
+    }
+    eprintln!(
+        "{landed_count} of {} drawn inside swivels landed ({both} with the open one too), \
+         {refused_count} refused",
+        drawn.len()
+    );
+    assert!(
+        landed_count >= 20 && both >= 15,
+        "{landed_count} landed, {both} both"
+    );
 }

@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 /**
  * A Fold vertex fold's step is counted by how it named what it takes, enums
  * only: a petal fold's hinge, a swivel's form — by its edge at a pivot, by its
- * edge on a folded edge, or by its rays — and an edge form's target.
+ * edge on a folded edge, or by its rays — an edge form's target, and on a
+ * folded edge its kind, open or inside.
  */
 
 const runtime = vi.hoisted(() => ({ track: vi.fn() }));
@@ -20,12 +21,20 @@ beforeEach(() => {
 });
 
 describe('trackFoldStepAdded for a swivel', () => {
-  it('sends its form, and an edge form’s target', () => {
-    trackFoldStepAdded('swivel', { vertex: { swivelForm: 'fold', target: 'crease' } });
+  it('sends its form, an edge form’s target, and on a folded edge its kind', () => {
+    trackFoldStepAdded('swivel', { vertex: { swivelForm: 'fold', target: 'crease', swivelKind: 'open' } });
     expect(runtime.track).toHaveBeenCalledWith('fold step added', {
       op_kind: 'swivel',
       swivel_form: 'fold',
       target: 'crease',
+      swivel_kind: 'open',
+    });
+    trackFoldStepAdded('swivel', { vertex: { swivelForm: 'fold', target: 'free', swivelKind: 'inside' } });
+    expect(runtime.track).toHaveBeenLastCalledWith('fold step added', {
+      op_kind: 'swivel',
+      swivel_form: 'fold',
+      target: 'free',
+      swivel_kind: 'inside',
     });
     trackFoldStepAdded('swivel', { vertex: { swivelForm: 'edge', target: 'free' } });
     expect(runtime.track).toHaveBeenLastCalledWith('fold step added', {
