@@ -7,6 +7,7 @@ import {
   foldLayersSummary,
   foldSectionPicker,
   isWoven,
+  topFlapOf,
   wovenIntervalAt,
   type FoldSeedView,
 } from './crossSection';
@@ -61,6 +62,29 @@ describe('flapNumbers', () => {
   it('keeps the engine’s order for flaps with no row, after the rest, and without a section', () => {
     expect(flapNumbers({ ...twice, rows: [twice.rows[2]!] }, 3)).toEqual([2, 1, 3]);
     expect(flapNumbers(null, 3)).toEqual([1, 2, 3]);
+  });
+});
+
+describe('topFlapOf', () => {
+  it('is the flap of the top row as the front shows it — Flap 1 — not the engine’s first flap', () => {
+    const [a, b, c, d] = twice.rows;
+    expect(topFlapOf(twice)).toBe(0);
+    expect(topFlapOf({ ...twice, rows: [c!, d!, a!, b!] })).toBe(1);
+    expect(flapNumbers({ ...twice, rows: [c!, d!, a!, b!] }, 2)[1]).toBe(1);
+  });
+
+  it('is the top of the first interval’s stack for a woven section, the stack the picker shows first; none with no rows', () => {
+    const woven: FoldCrossSection = {
+      ...twice,
+      order: { kind: 'woven' },
+      intervals: [
+        { start: 0, end: 0.5, faces: [1, 3], rows: [2, 0] },
+        { start: 0.5, end: 1, faces: [3, 1], rows: [0, 2] },
+      ],
+    };
+    expect(topFlapOf(woven)).toBe(1);
+    expect(topFlapOf({ ...twice, rows: [], intervals: [] })).toBeNull();
+    expect(topFlapOf({ ...woven, intervals: [] })).toBeNull();
   });
 });
 

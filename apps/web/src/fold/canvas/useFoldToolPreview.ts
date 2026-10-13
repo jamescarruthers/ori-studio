@@ -20,11 +20,20 @@ import { axiomLineOfPicks, buildFoldStep, clientRefusal, type FoldStepBuild } fr
 import { isFoldKind, isSinkTool, isVertexTool, locatesLine } from '../tools/foldToolCatalog';
 import { lineModeInput } from '../tools/foldToolRegistry';
 import { rotateStepOp } from '../tools/rotate/rotateTool';
-import { foldToolInputKey, picksAlongLine, type FoldToolState } from '../tools/foldToolState';
+import {
+  FOLD_EVERY_LAYER,
+  foldToolInputKey,
+  picksAlongLine,
+  type FoldResolvedSeed,
+  type FoldSeededToolState,
+  type FoldToolState,
+} from '../tools/foldToolState';
 import { foldExtentState, type FoldExtentState } from '../tools/precrease/precreaseExtent';
+import { lineSideKeyOf } from '../tools/topFlapSeed';
 import { foldAlongLine, type FoldAlongLine } from './foldAlongLine';
 import type { FoldCompoundStepAnswer } from './useFoldCompoundAsk';
 import { useFoldCrimpStep, type FoldCrimpPreview } from './useFoldCrimpStep';
+import { useFoldLineSection } from './useFoldLineSection';
 import { useFoldReverseStep, type FoldReversePreview } from './useFoldReverseStep';
 import { useFoldSinkStep, type FoldSinkPreview } from './useFoldSinkStep';
 import { tuckRefusedWithFlaps, useFoldTuckStep, type FoldTuckPreview } from './useFoldTuckStep';
@@ -63,6 +72,12 @@ export interface FoldToolPreview {
   /** The axiom's roots for the picks, once the engine has named them; null for no axiom, or not yet. */
   candidates: readonly FoldAxiomCandidate[] | null;
   build: FoldStepBuild;
+  /**
+   * The seed every step is built with: the tools' own, the default top flap
+   * resolved against the section at the line (`useFoldLineSection`). Null
+   * while that section is still being asked, when there is no step yet.
+   */
+  seed: FoldResolvedSeed | null;
   /** What a commit appends; null while nothing is located. */
   step: FoldToolStep | null;
   /** Tier 2: what moves. */
@@ -101,10 +116,7 @@ export interface FoldToolPreview {
 const sectionKey = (analysis: FoldAnalysis) => `${analysis.line.n[0]},${analysis.line.n[1]},${analysis.line.d}:${analysis.side}`;
 
 /** The line and the side a built step folds, as the tools located them: what a new seed leaves alone. */
-const lineSideKey = (build: FoldStepBuild) =>
-  build.status === 'built'
-    ? `${build.sceneLine.n[0]},${build.sceneLine.n[1]},${build.sceneLine.d}:${build.movingSign}`
-    : null;
+const lineSideKey = (build: FoldStepBuild) => (build.status === 'built' ? lineSideKeyOf(build.sceneLine, build.movingSign) : null);
 
 /** The axiom line a fold's picks locate, once every click of it is in. */
 function axiomLineOf({ tool, lineMode, picks }: Pick<FoldToolState, 'tool' | 'lineMode' | 'picks'>): FoldAxiomLine | null {
@@ -183,15 +195,25 @@ export function useFoldToolPreview(
   const candidates = ownRoots?.candidates ?? null;
   const candidate = candidates ? (candidates[tools.root] ?? candidates[0] ?? null) : null;
 
+  // --- The section at the located line, and the seed resolved against it:
+  // a fold that takes the top flap by default (`tools/topFlapSeed`) has no
+  // step until the section says which flap that is. Every step below is
+  // built with the resolved seed, so what is previewed is what commits.
+  const lineSection = useFoldLineSection(session, index, tools, candidate);
+  const findingTop = lineSection.seed === null;
+  const resolvedSeed = lineSection.seed ?? FOLD_EVERY_LAYER;
+  const seeded = useMemo<FoldSeededToolState>(() => ({ ...tools, seed: resolvedSeed }), [tools, resolvedSeed]);
+
   // --- The step, built from the picks and every choice made since: a
   // plain fold's at once, a compound fold's once the engine has described
   // it — a reverse fold's tip (`useFoldReverseStep`), a crimp's
   // (`useFoldCrimpStep`), a tuck's targets (`useFoldTuckStep`), a sink's
   // point (`useFoldSinkStep`).
-  const reverseStep = useFoldReverseStep(session, index, tools, candidate, tools.tool === 'inside-reverse');
-  const crimpStep = useFoldCrimpStep(session, index, tools, candidate, tools.tool === 'crimp');
-  const tuckStep = useFoldTuckStep(session, index, tools, candidate, tools.tool === 'tuck');
-  const sinkStep = useFoldSinkStep(session, index, tools, candidate, isSinkTool(tools.tool));
+  const reverseStep = useFoldReverseStep(session, index, seeded, candidate, tools.tool === 'inside-reverse');
+  const crimpStep = useFoldCrimpStep(session, index, seeded, candidate, tools.tool === 'crimp');
+  // A tuck's targets are asked with its seed: not until its top flap is known.
+  const tuckStep = useFoldTuckStep(session, index, seeded, candidate, tools.tool === 'tuck' && !findingTop);
+  const sinkStep = useFoldSinkStep(session, index, seeded, candidate, isSinkTool(tools.tool));
   const compoundStep: FoldCompoundStepAnswer | null =
     tools.tool === 'inside-reverse'
       ? reverseStep
@@ -214,21 +236,21 @@ export function useFoldToolPreview(
     [along, tools.extent, tools.extentPicks, pinchLength]
   );
   const plainBuild = useMemo<FoldStepBuild>(() => {
-    if (!index || !isFoldKind(tools.tool)) return { status: 'unlocated' };
+    if (!index || !isFoldKind(seeded.tool)) return { status: 'unlocated' };
     return buildFoldStep(
       {
-        kind: tools.tool,
-        lineMode: tools.lineMode,
-        picks: tools.picks,
+        kind: seeded.tool,
+        lineMode: seeded.lineMode,
+        picks: seeded.picks,
         candidate,
-        swapped: tools.swapped,
-        seed: tools.seed,
-        precreaseDirection: tools.precreaseDirection,
+        swapped: seeded.swapped,
+        seed: seeded.seed,
+        precreaseDirection: seeded.precreaseDirection,
         ...(extentState.status === 'ready' ? { extent: extentState.extent } : {}),
       },
       index
     );
-  }, [index, tools, candidate, extentState]);
+  }, [index, seeded, candidate, extentState]);
   // While its points are still being clicked, the whole line's build stands
   // in for it: what moves and the layers at the line are the whole
   // precrease's (the engine marks through the same layers), but nothing is
@@ -250,11 +272,12 @@ export function useFoldToolPreview(
     // line, which its build already folds along. A vertex fold's step is
     // its own, built from the engine's answers.
     const override = compounding || vertexing ? null : tools.override;
-    const built = build.status === 'built' ? { op: build.op, choices: build.choices } : null;
+    // Until the top flap is known, the build is every layer's, which is not what will fold.
+    const built = build.status === 'built' && !findingTop ? { op: build.op, choices: build.choices } : null;
     const chosen = override ?? (vertexing ? vertexBuilt : built);
     if (!chosen) return null;
     return { op: chosen.op, ...(chosen.choices ? { choices: chosen.choices } : {}), key: foldStepInputKey(chosen) };
-  }, [rotating, rotation, extentPending, compounding, vertexing, tools.override, build, vertexBuilt]);
+  }, [rotating, rotation, extentPending, compounding, vertexing, tools.override, build, findingTop, vertexBuilt]);
   // The located line on each pane, while points are clicked along it.
   const sceneLine = along && plainBuild.status === 'built' ? plainBuild.sceneLine : null;
   const lineKey = sceneLine ? `${sceneLine.n[0]},${sceneLine.n[1]},${sceneLine.d}` : null;
@@ -309,7 +332,8 @@ export function useFoldToolPreview(
   // layers (`FoldCompoundStepAnswer.layers`), and a precrease whose extent's
   // points are still being clicked the whole line's: asked what it moves,
   // after the effect above has let the last step go, and never previewed.
-  const extentLayers = extentPending && plainBuild.status === 'built' ? { op: plainBuild.op, choices: plainBuild.choices } : null;
+  const extentLayers =
+    extentPending && !findingTop && plainBuild.status === 'built' ? { op: plainBuild.op, choices: plainBuild.choices } : null;
   const layersAsk = step ? null : (compoundStep?.layers ?? extentLayers);
   const layersKey = layersAsk ? foldStepInputKey(layersAsk) : null;
   useEffect(() => {
@@ -328,7 +352,10 @@ export function useFoldToolPreview(
       : null;
   const analysis = analysisFor?.status === 'analysed' ? analysisFor.analysis : null;
 
-  // --- The section, once per line and side on a state: a new seed of the same line asks nothing.
+  // --- The section, once per line and side on a state: a new seed of the
+  // same line asks nothing. A fold that takes the top flap has it from the
+  // line as soon as it is located (`useFoldLineSection`); any other, and a
+  // fix's line, from what its step's analysis says it folds along.
   const lineSide = tools.override ? null : lineSideKey(build);
   const [section, setSection] = useState<{
     key: string;
@@ -336,8 +363,9 @@ export function useFoldToolPreview(
     section: FoldCrossSection;
   } | null>(null);
   const wantedSection = analysis && stateKey ? `${stateKey}|${sectionKey(analysis)}` : null;
+  const locatedSection = lineSection.section;
   useEffect(() => {
-    if (!analysis || wantedSection === null || section?.key === wantedSection) return undefined;
+    if (locatedSection || !analysis || wantedSection === null || section?.key === wantedSection) return undefined;
     let current = true;
     void withCursor((engine, at) => engine.crossSection(at, analysis.line, analysis.side)).then(
       (answer) => {
@@ -349,17 +377,18 @@ export function useFoldToolPreview(
     return () => {
       current = false;
     };
-  }, [withCursor, analysis, wantedSection, section?.key, lineSide]);
+  }, [withCursor, analysis, wantedSection, section?.key, lineSide, locatedSection]);
   // A new seed of the same line and side is the same section: it stays on
   // show while that seed is analysed, so the picker the folder is pressing
   // (and the focus in it) is not taken away and put back under them.
   const analysing = analysedKey !== null && (analysisFor === null || analysisFor.status === 'working');
   const shownSection =
-    section &&
+    locatedSection ??
+    (section &&
     (section.key === wantedSection ||
       (analysing && lineSide !== null && section.lineSide === lineSide && section.key.startsWith(`${stateKey}|`)))
       ? section.section
-      : null;
+      : null);
 
   // --- The landed state's scene and its added creases, for the crease-pattern pane.
   // Asked as every surface asks them (`FoldSession.query`), so a commit of
@@ -419,6 +448,7 @@ export function useFoldToolPreview(
   return {
     candidates,
     build,
+    seed: lineSection.seed,
     step,
     analysis,
     section: shownSection,

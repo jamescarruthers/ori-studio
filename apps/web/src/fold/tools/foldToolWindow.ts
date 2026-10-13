@@ -102,7 +102,10 @@ export interface FoldPreview {
   section: FoldCrossSection | null;
   /** For a woven section, the interval under the pointer; null for the first. */
   interval: number | null;
-  /** What the seed asks for: every flap on the moving side, or these (indices into the section's flaps). */
+  /**
+   * What the seed asks for: every flap on the moving side, or these (indices
+   * into the section's flaps) — by default the top flap alone.
+   */
   seed: 'all' | readonly number[];
   /** Tier 3: the flaps the fold moved beyond the seed (`FoldAnalysis.added`), once it has landed. */
   added: readonly number[];
@@ -455,8 +458,8 @@ function previewInstructions(
         ? t('tools:fold.steps.commitTouch', 'Tap {{action}} to fold.', { action: along ? action : foldToolLabel(t, kind) })
         : t('tools:fold.steps.commit', 'Press Enter to fold.'),
     ],
-    // Picking layers is optional: every layer on the moving side folds unless
-    // narrowed, so the window leads with the pick and never marks it done.
+    // Picking layers is optional: the top flap folds unless the folder picks
+    // others, so the window leads with the pick and never marks it done.
     current: along ? (along.current ?? along.along.length) : 0,
     notes: [
       // What a click along the line snaps to, while one is in hand.

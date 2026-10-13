@@ -250,9 +250,114 @@ describe('the layers at the line', () => {
     await render(FREE_LINE);
     expect(seen?.section).toBe(SECTION);
 
+    // The other side's section, asked as soon as the side is swapped, and not yet in.
+    const other = deferredSection();
     const swapped: FoldToolState = { ...FREE_LINE, swapped: true };
     await render(swapped);
+    expect(engine.crossSection).toHaveBeenLastCalledWith(PARENT, expect.anything(), 'positive');
     expect(seen?.section).toBeNull();
+    other.resolve({ ...SECTION, side: 'positive' });
+    await render(swapped);
+    expect(seen?.section).toMatchObject({ side: 'positive' });
+  });
+});
+
+/** The next cross-section the engine is asked for, answered when the test says. */
+function deferredSection(): { resolve: (section: FoldCrossSection | null) => void } {
+  let settleIt: (section: FoldCrossSection | null) => void = () => {};
+  engine.crossSection.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        settleIt = (section) =>
+          resolve(
+            (section
+              ? { status: 'ok', section }
+              : { status: 'refused', refusal: { code: 'near_miss' }, fixes: [], faces: [], vertices: [] }) as never
+          );
+      })
+  );
+  return { resolve: (section) => settleIt(section) };
+}
+
+describe('the top flap a fold takes by default (owner request, 2026-10-13)', () => {
+  /** The ops the session was asked to preview, in order. */
+  const previewed = () => (verbs.preview.mock.calls as unknown as [Record<string, unknown>][]).map(([op]) => op);
+
+  it('builds no step until the section at the line says which flap is on top, then folds that flap alone', async () => {
+    const asked = deferredSection();
+    await render(FREE_LINE);
+    // The section is asked from the line and side the picks locate, before any step.
+    expect(engine.crossSection).toHaveBeenCalledTimes(1);
+    expect(engine.crossSection).toHaveBeenLastCalledWith(
+      PARENT,
+      expect.objectContaining({ n: [expect.closeTo(0), expect.closeTo(1)], d: expect.closeTo(0.5) }),
+      'negative'
+    );
+    expect(seen?.seed).toBeNull();
+    expect(seen?.step).toBeNull();
+    expect(verbs.preview).not.toHaveBeenCalled();
+    expect(analyse).not.toHaveBeenCalled();
+
+    asked.resolve(SECTION);
+    await render(FREE_LINE);
+    // The top row's flap, Flap 1: what the step folds, what is previewed and analysed.
+    expect(seen?.seed).toEqual({ scope: 'flaps', flaps: [FLAPS[0]] });
+    expect(seen?.step?.op).toMatchObject({ kind: 'valley', seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
+    expect(seen?.step?.op).not.toHaveProperty('moving');
+    expect(previewed()).toEqual([seen?.step?.op]);
+    expect(analyse).toHaveBeenLastCalledWith(seen?.step?.op, undefined);
+    // Shown from the line's own ask, whatever the analysis brings: never asked again.
+    expect(seen?.section).toBe(SECTION);
+    answer('analysed');
+    await render(FREE_LINE);
+    expect(engine.crossSection).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes the same top flap for a mountain, the top as the front shows it, and for a precrease and a tuck', async () => {
+    await render({ ...FREE_LINE, tool: 'mountain' });
+    expect(seen?.step?.op).toMatchObject({ kind: 'mountain', seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
+    await render({ ...FREE_LINE, tool: 'precrease' });
+    expect(seen?.step?.op).toMatchObject({ kind: 'precrease', seed: { scope: 'flaps', at: [FLAPS[0]!.witness] } });
+  });
+
+  it('folds every layer when the moving side is that one flap, as a fold always has', async () => {
+    const one = { ...SECTION, flaps: [FLAPS[0]!], rows: [SECTION.rows[0]!] } as FoldCrossSection;
+    engine.crossSection.mockImplementationOnce(async () => ({ status: 'ok', section: one }));
+    await render(FREE_LINE);
+    expect(seen?.seed).toEqual({ scope: 'all' });
+    expect(seen?.step?.op).toMatchObject({ kind: 'valley', seed: { scope: 'all' }, moving: expect.any(Array) });
+  });
+
+  it('folds every layer when the engine refuses the section, so the fold is refused and worded as before', async () => {
+    engine.crossSection.mockImplementationOnce(async () => ({
+      status: 'refused',
+      refusal: { code: 'near_miss' },
+      fixes: [],
+      faces: [],
+      vertices: [],
+    }) as never);
+    await render(FREE_LINE);
+    expect(seen?.section).toBeNull();
+    expect(seen?.step?.op).toMatchObject({ seed: { scope: 'all' } });
+  });
+
+  it('keeps the folder’s own seed, and reads a widened one off the section asked once', async () => {
+    await render({ ...FREE_LINE, seed: { scope: 'all' } });
+    expect(seen?.step?.op).toMatchObject({ seed: { scope: 'all' } });
+    await render({ ...FREE_LINE, seed: { scope: 'flaps', flaps: [FLAPS[1]!] } });
+    expect(seen?.step?.op).toMatchObject({ seed: { scope: 'flaps', at: [FLAPS[1]!.witness] } });
+    expect(engine.crossSection).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks no section first for a fold of a whole point: a reverse fold takes every layer', async () => {
+    await render({ ...FREE_LINE, tool: 'inside-reverse' });
+    expect(engine.crossSection).not.toHaveBeenCalled();
+    expect(seen?.seed).toEqual({ scope: 'all' });
+    expect(engine.compoundAnalysis).toHaveBeenLastCalledWith(
+      PARENT,
+      expect.objectContaining({ kind: 'inside-reverse', seed: { scope: 'all' } }),
+      undefined
+    );
   });
 });
 
