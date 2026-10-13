@@ -148,17 +148,18 @@ narrow triangle along the centre line at the bottom.
    corner points down. Press Enter.
 6. **Squash fold**. Click the front flap on the right and press Enter. The
    flap opens into a kite on the centre line.
-7. **Swivel fold**. Click the kite's upper-left edge, anywhere along it,
-   where the creases meet: a folded edge lights up under the pointer, with
-   the point on it. The edges that can swing from there light up: the
-   model's lower-left edge. Point at it: every line it
-   can land on is the centre line, so the swivel is previewed already. Click
-   it, the edge to swing; the centre line lights up. Click the centre line,
-   the line it lands on. The window shows a dot where the creases meet,
-   where the line halfway between that edge and the centre line crosses the
-   folded edge, with the creases in their pens and the paper that moves lit.
-   Only **Valley** folds flat here, so no Direction is offered, and no Ridge:
-   the ridge is the folded edge itself. Press Enter.
+7. **Swivel fold**. Click the kite's upper-left edge, anywhere along it:
+   the folded edge the creases meet on. It lights up, with no dot: where
+   along it the creases meet is found once the edge and its line are
+   picked, and holding Option changes nothing on a folded edge. The edges
+   that can swing from there light up: the model's lower-left edge. Click
+   it anywhere along it, the edge to swing; the centre line lights up.
+   Click the centre line, the line it lands on. The window shows a dot
+   where the creases meet, where the line halfway between that edge and the
+   centre line crosses the folded edge, with the creases in their pens and
+   the paper that moves lit. **Kind** offers Open and Inside, Open taken.
+   Only **Valley** folds flat here, so no Direction is offered, and no
+   Ridge: the ridge is the folded edge itself. Press Enter.
 
 The stored step names the folded edge by `fold`, a point on it, in place of
 a pivot and the paper that stays. An older build that does not know `fold`
