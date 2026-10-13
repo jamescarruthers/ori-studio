@@ -14,7 +14,14 @@ see each step.
 
 Every step's `note` field says which tool and which clicks made it. The Fold
 workspace keeps notes but does not show them, so the click paths are repeated
-below.
+below. Where the two differ, the clicks below are the current ones: since
+2026-10-13 a valley, mountain, precrease or tuck takes only the top flap at
+its line until more flaps are picked, so the kite creases of
+`petal-fold.osf` need no chip pressed, where their notes still say to leave
+out Flap 2.
+`apps/web/src/fold/canvas/foldExampleFlows.wasm.test.tsx` makes the first
+steps of `swivel-on-edge.osf` and `petal-fold.osf` afresh through the tools
+with these clicks and checks each against the step the file stores.
 `apps/web/src/fold/document/foldExamples.wasm.test.ts` opens each file the
 way the app reads a project and replays every step through the real engine.
 Every step must come back `ok`: none broken, locked or changed.
@@ -37,11 +44,11 @@ commits the fold the window previews; the window's own button does the same.
    preliminary base: a square with its open corner (the paper's four corners)
    at the bottom right and its closed point at the top left.
 6. **Precrease** (P), **Axiom 3: edge onto edge**. Click the bottom edge,
-   then the diagonal crease (the centre line). Under Layers, click the
-   **Flap 2** chip so only the top flap folds. Press Enter. This is the first
-   kite crease.
-7. **Precrease**, Axiom 3. Click the right edge, then the centre line. Leave
-   out Flap 2 again and press Enter. This is the second kite crease.
+   then the diagonal crease (the centre line). Two flaps lie at this line;
+   under Layers only **Flap 1**, the top flap, is pressed, so only it folds.
+   Press Enter. This is the first kite crease.
+7. **Precrease**, Axiom 3. Click the right edge, then the centre line. Again
+   only Flap 1 is pressed; press Enter. This is the second kite crease.
 8. **Petal fold**. The window starts on **Select the hinge crease**; under
    **Hinge**, choose **Two endpoints** instead. Click where the first kite
    crease meets the left edge, then where the second meets the top edge:
@@ -123,10 +130,14 @@ layer. The result is a
 narrow triangle along the centre line at the bottom.
 
 1. **Valley fold** (V), **Axiom 2: point onto point**. Click the bottom-left
-   corner, then the top-right corner. Press Enter. The square folds on its
-   diagonal.
+   corner, then the top-right corner. The axiom moves the point clicked
+   first; this file folds the other half, so press **Swap** (S) and the
+   top-right half folds down onto the bottom-left. Press Enter. The square
+   folds on its diagonal.
 2. **Precrease** (P), Axiom 2. Click the bottom-right corner, then the
    top-left corner. Press Enter: the other diagonal, creased and unfolded.
+   Each half of the triangle is one flap, its two layers joined by the
+   fold, so every layer is creased.
 3. **Inside reverse fold**, Axiom 2. Click the triangle's bottom-right
    corner, then its right-angled corner (bottom left). The corner folds in
    between the layers onto it. Press Enter.
@@ -137,17 +148,18 @@ narrow triangle along the centre line at the bottom.
    corner points down. Press Enter.
 6. **Squash fold**. Click the front flap on the right and press Enter. The
    flap opens into a kite on the centre line.
-7. **Swivel fold**. Click the kite's upper-left edge, anywhere along it,
-   where the creases meet: a folded edge lights up under the pointer, with
-   the point on it. The edges that can swing from there light up: the
-   model's lower-left edge. Point at it: every line it
-   can land on is the centre line, so the swivel is previewed already. Click
-   it, the edge to swing; the centre line lights up. Click the centre line,
-   the line it lands on. The window shows a dot where the creases meet,
-   where the line halfway between that edge and the centre line crosses the
-   folded edge, with the creases in their pens and the paper that moves lit.
-   Only **Valley** folds flat here, so no Direction is offered, and no Ridge:
-   the ridge is the folded edge itself. Press Enter.
+7. **Swivel fold**. Click the kite's upper-left edge, anywhere along it:
+   the folded edge the creases meet on. It lights up, with no dot: where
+   along it the creases meet is found once the edge and its line are
+   picked, and holding Option changes nothing on a folded edge. The edges
+   that can swing from there light up: the model's lower-left edge. Click
+   it anywhere along it, the edge to swing; the centre line lights up.
+   Click the centre line, the line it lands on. The window shows a dot
+   where the creases meet, where the line halfway between that edge and the
+   centre line crosses the folded edge, with the creases in their pens and
+   the paper that moves lit. **Kind** offers Open and Inside, Open taken.
+   Only **Valley** folds flat here, so no Direction is offered, and no
+   Ridge: the ridge is the folded edge itself. Press Enter.
 
 The stored step names the folded edge by `fold`, a point on it, in place of
 a pivot and the paper that stays. An older build that does not know `fold`

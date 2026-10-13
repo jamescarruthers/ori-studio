@@ -78,6 +78,11 @@ vi.mock("../../../fold/canvas/useFoldPanePlayback", async (importOriginal) => {
 import { foldPaneDisplay, resetFoldPaneDisplay } from "../../../fold/canvas/foldPaneDisplay";
 import { foldPhonePane, showFoldPhonePane } from "../../../fold/canvas/foldPhonePane";
 import { foldTools } from "../../../fold/tools/foldToolState";
+import {
+  clearHeldModifiers,
+  readHeldModifiers,
+  syncHeldModifiersFromEvent,
+} from "../../../keyboard/heldModifiers";
 import { PHONE_MEDIA_QUERY } from "../../../platform/phoneLayout";
 import { byRole } from "../../../test/roleQueries";
 import { TooltipProvider } from "../../ui/Tooltip";
@@ -196,6 +201,26 @@ describe("the Fold canvas", () => {
       transport?.querySelector<HTMLButtonElement>('button[aria-label="Play step"]')
         ?.disabled,
     ).toBe(true);
+  });
+
+  it("reads the keys held off every pointer event over a pane, so a modifier whose key-up was missed lets go", () => {
+    const canvas = mount();
+    const pane = canvas.querySelector('[data-fold-pane="folded"]');
+    if (!pane) throw new Error("no folded pane");
+    const press = (type: string, altKey: boolean) =>
+      act(() => {
+        pane.dispatchEvent(new MouseEvent(type, { bubbles: true, altKey }));
+      });
+    for (const type of ["pointermove", "pointerdown", "pointerup"]) {
+      // Alt down, its key-up landed in another window: held, as far as the app knows.
+      syncHeldModifiersFromEvent({ ctrlKey: false, altKey: true, shiftKey: false, metaKey: false });
+      press(type, false);
+      expect(readHeldModifiers().alt, type).toBe(false);
+      // Held for real: a press with it down says so.
+      press(type, true);
+      expect(readHeldModifiers().alt, type).toBe(true);
+      clearHeldModifiers();
+    }
   });
 
   it("puts no status chip over either pane: the tool window says what to click", () => {

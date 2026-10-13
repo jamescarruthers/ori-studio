@@ -19,6 +19,7 @@ import { selectFoldCursorNode } from '../../session/foldSessionState';
 import { creaseDiffLines } from '../../stepWords';
 import { buildFoldStep, type FoldStepIntent } from '../foldStepBuilder';
 import { createFoldTools, FOLD_TOOL_INITIAL } from '../foldToolState';
+import { lineSectionProbe, topFlapSeed } from '../topFlapSeed';
 import { foldExtentState } from './precreaseExtent';
 
 /**
@@ -102,9 +103,21 @@ describe.skipIf(!available)('the classic pinch, through the session and the tool
       if (!pick) throw new Error('no pick');
       tools.pick(pick);
     }
+    // The default seed, the top flap, resolved against the engine's section
+    // at the line as the canvas resolves it (`useFoldLineSection`): across the
+    // triangle the moving side is one flap, its two layers joined by the fold,
+    // so its top flap is both layers.
+    const probe = lineSectionProbe(tools.store.getState(), folded, null);
+    if (!probe) throw new Error('no line to section');
+    const sectioned = await session.withCursor((engine, at) => engine.crossSection(at, probe.line, probe.side));
+    if (sectioned.status !== 'answered' || sectioned.value.status !== 'ok') throw new Error('no section');
+    expect(sectioned.value.section.flaps).toHaveLength(1);
+    expect(sectioned.value.section.rows).toHaveLength(2);
+    const seed = topFlapSeed(sectioned.value.section);
+    expect(seed).toEqual({ scope: 'all' });
     const intent = (): FoldStepIntent => {
       const state = tools.store.getState();
-      return { kind: 'precrease', lineMode: state.lineMode, picks: state.picks, candidate: null, swapped: false, seed: state.seed, precreaseDirection: 'valley' };
+      return { kind: 'precrease', lineMode: state.lineMode, picks: state.picks, candidate: null, swapped: false, seed, precreaseDirection: 'valley' };
     };
     const whole = buildFoldStep(intent(), folded);
     if (whole.status !== 'built') throw new Error(whole.status);

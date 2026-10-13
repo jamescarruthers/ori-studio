@@ -55,13 +55,15 @@ export function foldWindowPreview(
   if (!isLocated(tools)) return null;
   const section = preview.section;
   const flaps = section?.flaps ?? [];
-  // What the step asks for, which is the tools' seed — or, along a fold
-  // being unfolded, the top flap the step builder took for it.
+  // What the step asks for, which is the seed it was built with — the
+  // tools', the default top flap resolved — or, along a fold being
+  // unfolded, the top flap the step builder took for it.
+  const asked = preview.seed;
   const op = preview.step?.op;
-  const scope = op && 'seed' in op ? op.seed.scope : tools.seed.scope;
+  const scope = op && 'seed' in op ? op.seed.scope : asked?.scope;
   const seed: FoldPreview['seed'] =
-    scope === 'flaps' && tools.seed.scope === 'flaps'
-      ? tools.seed.flaps.map((flap) => sectionIndex(flaps, flap)).filter((index) => index >= 0)
+    scope === 'flaps' && asked?.scope === 'flaps'
+      ? asked.flaps.map((flap) => sectionIndex(flaps, flap)).filter((index) => index >= 0)
       : scope === 'all'
         ? 'all'
         : (preview.analysis?.picked ?? []).flatMap((picked) => {

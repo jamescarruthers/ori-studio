@@ -17,7 +17,7 @@ import type { FoldSessionWorker } from '../session/foldSession';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { isSinkTool, type FoldSinkToolId } from '../tools/foldToolCatalog';
 import type { FoldStepBuild } from '../tools/foldStepBuilder';
-import type { FoldToolState } from '../tools/foldToolState';
+import type { FoldSeededToolState } from '../tools/foldToolState';
 import { chosenAt } from '../tools/reverse/reverseStep';
 import { buildSinkStep, pocketsAsSeen, sinkOrderPicks, type FoldSinkIntent } from '../tools/sink/sinkStep';
 import type { FoldPickIndex } from './foldPicking';
@@ -141,7 +141,7 @@ function alongFix(build: FoldStepBuild, fixed: FoldSinkOp | null, tool: FoldSink
 export function useFoldSinkStep(
   session: FoldSessionSurface,
   index: FoldPickIndex | null,
-  tools: FoldToolState,
+  tools: FoldSeededToolState,
   candidate: FoldAxiomCandidate | null,
   enabled: boolean
 ): FoldSinkStepAnswer {

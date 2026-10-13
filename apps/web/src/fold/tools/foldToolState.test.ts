@@ -6,10 +6,12 @@ import { buildFoldStep } from './foldStepBuilder';
 import {
   clampDivideParts,
   createFoldTools,
+  FOLD_EVERY_LAYER,
   FOLD_TOOL_INITIAL,
   hasToolInput,
   isLocated,
   picksAlongLine,
+  type FoldResolvedSeed,
   type FoldToolState,
 } from './foldToolState';
 
@@ -72,20 +74,59 @@ describe('the Fold tools’ state', () => {
     tools.stepRoot(1, 2);
     expect(hasToolInput(tools.store.getState())).toBe(true);
     tools.clear();
-    expect(tools.store.getState()).toMatchObject({ picks: [], swapped: false, root: 0, seed: { scope: 'all' } });
+    expect(tools.store.getState()).toMatchObject({ picks: [], swapped: false, root: 0, seed: { scope: 'top' } });
   });
 
-  it('swaps the side only once the line is located, and folds the new side whole', () => {
+  it('starts every fold on the top flap, and goes back to it on a clear and on a new pick (owner request, 2026-10-13)', () => {
+    const tools = createFoldTools();
+    expect(FOLD_TOOL_INITIAL.seed).toEqual({ scope: 'top' });
+    tools.pick(point(1, 0));
+    tools.pick(point(0, 1));
+    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    // Widened to every flap: every layer.
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+    // Escape's rung, and a commit's: the picks go, and the seed is the top flap again.
+    tools.clear();
+    expect(tools.store.getState()).toMatchObject({ picks: [], seed: { scope: 'top' } });
+    // A widened seed alone is still something to let go.
+    tools.setSeed({ scope: 'all' });
+    expect(hasToolInput(tools.store.getState())).toBe(false);
+    tools.clear();
+    expect(tools.store.getState().seed).toEqual({ scope: 'top' });
+    // Another line mode starts a new pick: the top flap again.
+    tools.pick(point(1, 0));
+    tools.pick(point(0, 1));
+    tools.setSeed({ scope: 'flaps', flaps: [flapB] });
+    tools.selectLineMode('free');
+    expect(tools.store.getState()).toMatchObject({ picks: [], seed: { scope: 'top' } });
+  });
+
+  it('keeps the flaps picked through V, M and P along one line: the same layers fold the other way', () => {
+    const tools = createFoldTools();
+    tools.pick(point(1, 0));
+    tools.pick(point(0, 1));
+    tools.selectTool('mountain');
+    expect(tools.store.getState().seed).toEqual({ scope: 'top' });
+    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    tools.selectTool('precrease');
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+  });
+
+  it('swaps the side only once the line is located, and folds the new side’s own top flap', () => {
     const tools = createFoldTools();
     tools.pick(point(1, 0));
     // No line yet, no side: nothing is latched for the line to come.
     expect(tools.swapSide()).toBe(false);
     expect(tools.store.getState().swapped).toBe(false);
     tools.pick(point(0, 1));
-    tools.toggleFlap(flapA, [flapA, flapB]);
+    tools.setSeed({ scope: 'flaps', flaps: [flapB] });
     expect(tools.swapSide()).toBe(true);
-    // The flap picked was the other side's.
-    expect(tools.store.getState()).toMatchObject({ swapped: true, seed: { scope: 'all' } });
+    // The flap picked was the other side's: the new side's top flap is read from its own section.
+    expect(tools.store.getState()).toMatchObject({ swapped: true, seed: { scope: 'top' } });
+    // And back: the first side's top flap again, not the flap picked there before.
+    tools.setSeed({ scope: 'all' });
+    tools.swapSide();
+    expect(tools.store.getState()).toMatchObject({ swapped: false, seed: { scope: 'top' } });
   });
 
   it('folds the other side on a swap under a flap seed', () => {
@@ -96,6 +137,8 @@ describe('the Fold tools’ state', () => {
     tools.pick(free(1, 0.5));
     tools.setSeed({ scope: 'flaps', flaps: [{ faces: [0], witness: [0.5, 0.25] }] });
     const stepOf = (state: FoldToolState) => {
+      // The flat square's moving side is one flap: its top flap is every layer (`topFlapSeed`).
+      const seed: FoldResolvedSeed = state.seed.scope === 'top' ? FOLD_EVERY_LAYER : state.seed;
       const built = buildFoldStep(
         {
           kind: 'valley',
@@ -103,7 +146,7 @@ describe('the Fold tools’ state', () => {
           picks: state.picks,
           candidate: null,
           swapped: state.swapped,
-          seed: state.seed,
+          seed,
           precreaseDirection: state.precreaseDirection,
         },
         index
@@ -113,31 +156,43 @@ describe('the Fold tools’ state', () => {
     };
     const before = stepOf(tools.store.getState());
     tools.swapSide();
+    expect(tools.store.getState().seed).toEqual({ scope: 'top' });
     const after = stepOf(tools.store.getState());
     expect(foldStepInputKey({ op: after.op })).not.toBe(foldStepInputKey({ op: before.op }));
     expect(after.movingSign).toBe(-before.movingSign);
-    // The new side folds whole, by a point of it.
+    // The new side's top flap, which is all of it, by a point of it.
     expect(after.op).toMatchObject({ seed: { scope: 'all' } });
   });
 
-  it('picks flaps one by one, every flap picked being every layer again', () => {
+  it('widens from the top flap one chip at a time, every flap picked being every layer', () => {
     const tools = createFoldTools();
-    tools.toggleFlap(flapA, [flapA, flapB]);
+    // The top flap is pressed alone: pressing the other picks both, every layer.
+    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+    // Unpressing it narrows back to the top flap, named now.
+    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    expect(tools.store.getState().seed).toEqual({ scope: 'flaps', flaps: [flapA] });
+    // From every layer, a chip unpressed leaves the others.
+    tools.setSeed({ scope: 'all' });
+    tools.toggleFlap(flapA, [flapA, flapB], flapA);
     expect(tools.store.getState().seed).toEqual({ scope: 'flaps', flaps: [flapB] });
-    tools.toggleFlap(flapA, [flapA, flapB]);
+    tools.toggleFlap(flapA, [flapA, flapB], flapA);
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
   });
 
-  it('never leaves a seed of no flaps: unpicking the only one picked is every layer again', () => {
+  it('never leaves a seed of no flaps: unpicking the only one picked is every layer', () => {
     const tools = createFoldTools();
-    tools.toggleFlap(flapA, [flapA, flapB]);
-    expect(tools.store.getState().seed).toEqual({ scope: 'flaps', flaps: [flapB] });
-    // The last chip pressed, unpressed: the engine would refuse a seed of none
-    // (`no_side`) and the window would have no chips left to pick one again.
-    tools.toggleFlap(flapB, [flapA, flapB]);
+    // The top flap, the only chip pressed, unpressed: the engine would refuse a
+    // seed of none (`no_side`) and the window would have no chips left to pick
+    // one again.
+    tools.toggleFlap(flapA, [flapA, flapB], flapA);
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
-    // A section of one flap: its chip cannot be unpressed into nothing either.
-    tools.toggleFlap(flapA, [flapA]);
+    tools.setSeed({ scope: 'flaps', flaps: [flapB] });
+    tools.toggleFlap(flapB, [flapA, flapB], flapA);
+    expect(tools.store.getState().seed).toEqual({ scope: 'all' });
+    // A section of one flap, the top flap every layer: its chip cannot be unpressed into nothing either.
+    tools.setSeed({ scope: 'top' });
+    tools.toggleFlap(flapA, [flapA], flapA);
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });
     tools.setSeed({ scope: 'flaps', flaps: [] });
     expect(tools.store.getState().seed).toEqual({ scope: 'all' });

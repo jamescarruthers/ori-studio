@@ -29,7 +29,7 @@ import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
 import type { FoldSinkKind } from '../engine/foldEngineSinkWire';
 import type { FoldFlap, FoldModelPoint } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { sameFlap, wovenIntervalAt } from '../tools/crossSection';
+import { sameFlap, topFlapOf, wovenIntervalAt } from '../tools/crossSection';
 import {
   isLineTool,
   isVertexTool,
@@ -332,7 +332,12 @@ function vertexFormOf(op: FoldOp): FoldStepVertexForm | undefined {
   return { swivelForm: 'edge', target: op.target.via };
 }
 
-function trackCommitted(op: FoldOp): void {
+/**
+ * `defaulted`: the tools' seed was still the default top flap when the step
+ * was committed, so a flaps seed is the top flap taken by default, not
+ * flaps the folder picked (`layer_scope: top`).
+ */
+function trackCommitted(op: FoldOp, defaulted: boolean): void {
   const kind = opKindOf(op);
   if (!kind) return;
   // A rotation says how far it turned, bucketed: a preset, or `other` for an exact angle.
@@ -353,7 +358,8 @@ function trackCommitted(op: FoldOp): void {
   const via = 'line' in op ? op.line.via : 'crease';
   // A precrease says how much of its line it creased.
   const extent = op.kind === 'precrease' ? (op.extent?.kind ?? 'whole') : null;
-  trackFoldStepAdded(kind, { layerScope: op.seed.scope, via, ...(extent ? { extent } : {}) });
+  const layerScope = defaulted && op.seed.scope === 'flaps' ? 'top' : op.seed.scope;
+  trackFoldStepAdded(kind, { layerScope, via, ...(extent ? { extent } : {}) });
 }
 
 /** A swivel's meeting point, clicked again: its first click's rule (`vertexInputs`). */
@@ -420,9 +426,10 @@ export function useFoldCanvasVerbs(
 
   const commitOp = useCallback(
     (op: FoldOp, choices?: Parameters<FoldSessionSurface['commitStep']>[1]) => {
+      const defaulted = tools.store.getState().seed.scope === 'top';
       void live.current.session.commitStep(op, choices).then((outcome) => {
         if (outcome.status !== 'committed') return;
-        trackCommitted(op);
+        trackCommitted(op, defaulted);
         tools.clear();
         // A rotation applied puts Rotate down, as Turn over is done at once:
         // left in hand, it would preview another turn on the step just made.
@@ -597,9 +604,13 @@ export function useFoldCanvasVerbs(
           ...(remeet ? {} : swivelOffer(tool, reach)),
         });
         // A swivel's pivot may sit on a folded edge, where its creases meet:
-        // the edge lights with the point under the pointer.
-        if ((picksSwivelPivot(tool.tool, tool.picks.length) || remeet) && !free) {
-          return { pane, at, pick: resolveFoldEdgePoint(index, pane, at, radii, pick) };
+        // the edge lights under the pointer. With the free-point key held
+        // too — the engine finds where along it they meet, so a point placed
+        // freely there would only make a pivot through every layer, which
+        // no folder means on a folded edge (owner feedback, 2026-10-13).
+        if (picksSwivelPivot(tool.tool, tool.picks.length) || remeet) {
+          const onFold = free ? resolveFoldEdgePoint(index, pane, at, radii, null) : null;
+          return { pane, at, pick: onFold ?? (free ? pick : resolveFoldEdgePoint(index, pane, at, radii, pick)) };
         }
         return { pane, at, pick };
       },
@@ -666,7 +677,10 @@ export function useFoldCanvasVerbs(
       toggleFlap: (flap) => {
         const section = live.current.preview.section;
         const target = section?.flaps[flap];
-        if (section && target) tools.toggleFlap(target, section.flaps);
+        if (!section || !target) return;
+        // The default seed picks the top flap: a press widens from it.
+        const top = topFlapOf(section);
+        tools.toggleFlap(target, section.flaps, top === null ? null : (section.flaps[top] ?? null));
       },
 
       hoverFlap: tools.setHoveredFlap,
@@ -676,8 +690,9 @@ export function useFoldCanvasVerbs(
         const section = live.current.preview.section;
         if (!analysis) return;
         // The fix's flaps join what the seed picked, never replace it: the
-        // flaps picked, or — for a stack picked by depth, which a reverse
-        // fold's tip grows into whole flaps — the flaps the analysis says it named.
+        // flaps picked, or — for the default top flap, or a stack picked by
+        // depth, which a reverse fold's tip grows into whole flaps — the
+        // flaps the analysis says it named.
         const seed = state().seed;
         const picked: FoldFlap[] =
           seed.scope === 'flaps'
@@ -914,7 +929,7 @@ export function useFoldCanvasVerbs(
           return true;
         }
         const tool = state();
-        const held = tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'all' || tool.swapped;
+        const held = tool.picks.length > 0 || tool.override !== null || tool.seed.scope !== 'top' || tool.swapped;
         if (!held) return false;
         setQueued(null);
         tools.clear();

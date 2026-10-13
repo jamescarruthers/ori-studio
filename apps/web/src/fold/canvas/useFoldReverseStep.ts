@@ -5,7 +5,7 @@ import type { FoldReverseAsked } from '../engine/foldEngineReverseWire';
 import type { FoldAxiomCandidate, FoldEngineRefused } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import type { FoldStepBuild } from '../tools/foldStepBuilder';
-import type { FoldToolState } from '../tools/foldToolState';
+import type { FoldSeededToolState } from '../tools/foldToolState';
 import {
   buildReverseStep,
   chosenAt,
@@ -66,7 +66,7 @@ function useReverseAsk(session: FoldSessionSurface, stateKey: string | null, ask
 export function useFoldReverseStep(
   session: FoldSessionSurface,
   index: FoldPickIndex | null,
-  tools: FoldToolState,
+  tools: FoldSeededToolState,
   candidate: FoldAxiomCandidate | null,
   enabled: boolean
 ): FoldReverseStepAnswer {

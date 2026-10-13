@@ -66,7 +66,7 @@ import {
 } from '../canvas/foldPicking';
 import { lineModeAxiom, type FoldKind, type FoldLineModeId, type FoldSecondLineModeId } from './foldToolCatalog';
 import { inSlotOrder, lineModeInput } from './foldToolRegistry';
-import type { FoldToolSeed } from './foldToolState';
+import type { FoldResolvedSeed } from './foldToolState';
 
 /** What the tools have picked to locate a line, and every choice of what moves made since. */
 export interface FoldLocateIntent {
@@ -75,7 +75,8 @@ export interface FoldLocateIntent {
   /** The axiom root chosen; null until the engine has named the roots, or for another line mode. */
   candidate: FoldAxiomCandidate | null;
   swapped: boolean;
-  seed: FoldToolSeed;
+  /** The tools' seed with the top flap resolved (`tools/topFlapSeed`): a step is never built with `top`. */
+  seed: FoldResolvedSeed;
 }
 
 /** What the tools have picked for a plain fold, and every choice made since. */
@@ -291,7 +292,7 @@ export function freeLineAsDrawn(scene: FoldScene, line: FoldModelLine, p: SheetP
 // ---------------------------------------------------------------------------
 // The step
 
-function seedOf(seed: FoldToolSeed): FoldSeed {
+function seedOf(seed: FoldResolvedSeed): FoldSeed {
   switch (seed.scope) {
     case 'all':
       return { scope: 'all' };
@@ -454,7 +455,8 @@ export function locateAlongLine(
   const swappedAxiom = implied !== null && intent.swapped;
   const needsPoint = seed.scope === 'all' ? implied === null || intent.swapped || unfolding : swappedAxiom;
   if (needsPoint) {
-    // Unfolding is along an existing crease, which implies no side: its seed is `all` here.
+    // Unfolding is along an existing crease, which implies no side: its seed
+    // is `all` here, which the default top flap resolves to (`topFlapProbe`).
     const point = unfolding && crease ? besideBend(index, crease, sceneLine, movingSign) : movingPoint(index, sceneLine, movingSign);
     if (!point) return { status: 'refused', refused: clientRefusal('no_moving_side') };
     if (unfolding) seed = { scope: 'depth', at: point.sheet, scene: point.scene, choice: 1 };
