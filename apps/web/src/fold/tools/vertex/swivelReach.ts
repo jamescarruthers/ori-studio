@@ -9,22 +9,40 @@
  * the lines the edge picked can land on, and previews a swivel under the
  * pointer before it is clicked.
  *
- * A pair lands when the engine folds it flat one way or the other. It is
- * kept as it will be folded (`vertexChosenOp`): the folder's way when that
- * lands, else the other — a swivel on a folded edge says which ways land in
+ * A pair lands when the engine folds it flat one way or the other — on a
+ * folded edge, open or inside. It is kept as it will be folded
+ * (`vertexChosenOp`): the folder's way and kind when they land, else the
+ * ones that do — a swivel on a folded edge says which kinds and ways land in
  * its answer, a swivel at a free vertex is asked both ways — and the first
  * ridge that lands. So the swivel previewed under the pointer is the one a
  * click previews and a commit folds.
  *
  * Pure: the compound question is handed in.
  */
-import type { FoldDirection, FoldModelLine, FoldVertexOp, SheetPoint } from '../../document/foldSequenceDocument';
+import {
+  isSwivelOnFoldOp,
+  swivelKindOf,
+  withSwivelKind,
+  type FoldDirection,
+  type FoldModelLine,
+  type FoldSwivelKind,
+  type FoldVertexOp,
+  type SheetPoint,
+} from '../../document/foldSequenceDocument';
 import type { FoldCompoundAnalysis } from '../../engine/foldEngineCompoundWire';
 import type { FoldVertexAnalysed } from '../../engine/foldEngineSquashWire';
 import type { FoldEngineOutcome } from '../../engine/foldEngineWire';
 import type { FoldPick, FoldPickIndex } from '../../canvas/foldPicking';
 import type { FoldToolState } from '../foldToolState';
-import { landingFourths, middleOf, swivelFoldPick, vertexChosenOp, type FoldVertexTaken } from './vertexStep';
+import {
+  landingFourths,
+  middleOf,
+  swivelDirectionsOf,
+  swivelFoldPick,
+  swivelKindsLanding,
+  vertexChosenOp,
+  type FoldVertexTaken,
+} from './vertexStep';
 
 /** A line offered, by Fold's edge id, and a sheet point inside it: what names it to the engine. */
 export interface FoldSwivelReachLine {
@@ -38,6 +56,8 @@ export interface FoldSwivelReachAsk {
   at: { pivot: SheetPoint } | { fold: SheetPoint };
   /** The way the folder would fold it, when it lands that way. */
   direction: FoldDirection;
+  /** On a folded edge, the kind the folder would fold, when it lands that kind: open until another is chosen, or absent. */
+  kind?: FoldSwivelKind;
   /** The raw and folded edges a click can take. */
   edges: readonly FoldSwivelReachLine[];
   /** Every line a click can take as the target. */
@@ -48,9 +68,11 @@ export interface FoldSwivelReachAsk {
 export interface FoldSwivelLanding {
   edge: number;
   target: number;
-  /** Valley, then mountain, as the viewer sees them: whether it lands that way. */
+  /** Valley, then mountain, as the viewer sees them: whether it lands that way, of the kind it will be folded. */
   directions: readonly [boolean, boolean];
-  /** The op as it will be folded: its way, and its ridge (`vertexChosenOp`). */
+  /** On a folded edge, open then inside: whether it lands that kind either way. Absent at a free vertex. */
+  kinds?: readonly [boolean, boolean];
+  /** The op as it will be folded: its way, its kind on a folded edge, and its ridge (`vertexChosenOp`). */
   op: FoldVertexOp;
   /** What the engine said of that op: what its preview draws. */
   answer: FoldVertexAnalysed;
@@ -73,9 +95,12 @@ function vertexAnswer(reply: FoldEngineOutcome<FoldCompoundAnalysis>): FoldVerte
   return reply.status === 'ok' && reply.family === 'vertex' && reply.analysis.kind === 'swivel-by-edge' ? reply : null;
 }
 
-/** Whether a swivel by its edge lands as `op` names it: on a folded edge, its way; at a free vertex, any ridge. */
+/** Whether a swivel by its edge lands as `op` names it: on a folded edge, its kind and way; at a free vertex, any ridge. */
 function lands(op: FoldVertexOp, answer: FoldVertexAnalysed): boolean {
-  if ('fold' in op) return answer.directions?.[op.direction === 'valley' ? 0 : 1] === true;
+  if (isSwivelOnFoldOp(op)) {
+    const kind = swivelKindOf(op);
+    return swivelDirectionsOf(answer, kind, kind)?.[op.direction === 'valley' ? 0 : 1] === true;
+  }
   return landingFourths(answer).length > 0;
 }
 
@@ -91,21 +116,24 @@ function landingOf(ask: FoldSwivelAsk, op: FoldVertexOp): { op: FoldVertexOp; an
 
 /** Every pair asked, what lands kept (see the module docs). */
 export function swivelReach(ask: FoldSwivelAsk, request: FoldSwivelReachAsk): FoldSwivelReach {
-  const { at, direction, edges, targets } = request;
+  const { at, direction, kind = 'open', edges, targets } = request;
   const landings: FoldSwivelLanding[] = [];
   for (const edge of edges) {
     for (const target of targets) {
       if (target.id === edge.id) continue;
       const base = { kind: 'swivel', via: 'edge', edge: edge.at, target: { via: 'crease', at: target.at } } as const;
       if ('fold' in at) {
-        // On a folded edge the answer says which ways land, and the choice takes the one that does.
-        const landed = landingOf(ask, { ...base, fold: at.fold, direction });
+        // On a folded edge the answer says which kinds and ways land, and the choice takes one that does.
+        const landed = landingOf(ask, withSwivelKind({ ...base, fold: at.fold, direction }, kind));
         if (landed) {
-          const ways = landed.first.directions;
+          const folded = isSwivelOnFoldOp(landed.op) ? swivelKindOf(landed.op) : kind;
+          const ways = swivelDirectionsOf(landed.first, folded, kind);
+          const kinds = swivelKindsLanding(landed.first);
           landings.push({
             edge: edge.id,
             target: target.id,
             directions: [ways?.[0] === true, ways?.[1] === true],
+            ...(kinds ? { kinds } : {}),
             op: landed.op,
             answer: landed.answer,
           });
@@ -144,7 +172,9 @@ export function swivelReach(ask: FoldSwivelAsk, request: FoldSwivelReachAsk): Fo
  */
 export function swivelReachAsk(
   index: FoldPickIndex,
-  tools: Pick<FoldToolState, 'tool' | 'swivelTarget' | 'picks' | 'vertexDirection'>
+  tools: Pick<FoldToolState, 'tool' | 'swivelTarget' | 'picks' | 'vertexDirection'> & {
+    compound?: Pick<FoldToolState['compound'], 'swivelKind'>;
+  }
 ): FoldSwivelReachAsk | null {
   const meet = tools.tool === 'swivel' && tools.swivelTarget === 'crease' ? tools.picks[0] : undefined;
   if (meet?.kind !== 'point') return null;
@@ -159,6 +189,7 @@ export function swivelReachAsk(
   return {
     at: swivelFoldPick(tools) ? { fold: meet.sheet } : { pivot: meet.sheet },
     direction: tools.vertexDirection,
+    kind: tools.compound?.swivelKind ?? 'open',
     edges: [...edges.values()],
     targets: [...targets.values()],
   };

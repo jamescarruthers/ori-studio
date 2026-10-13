@@ -45,15 +45,22 @@
  * the classic swivel whose creases meet on that edge
  * (`FoldSwivelOnFoldOp`, `fold`): the point names the edge, and the creases
  * meet where the line halfway between the edge and the target crosses it.
- * A swivel by its rays still replays and shows; no tool makes one.
+ * It is open — its strip folded up on top — or inside, the strip tucked
+ * between the two layers: asked as the folder chose (open until a kind is
+ * chosen), and folded as the kind and way that land when the one asked does
+ * not ({@link swivelWayToFold}). A swivel by its rays still replays and
+ * shows; no tool makes one.
  *
  * Pure: no React, no store, no engine.
  */
 import type { Point } from '../../../lib/geometry';
 import {
+  FOLD_SWIVEL_KINDS,
   isSwivelEdgeOp,
   isSwivelOnFoldOp,
   petalOp,
+  swivelKindOf,
+  withSwivelKind,
   type FoldChoices,
   type FoldCompletionChoice,
   type FoldDirection,
@@ -61,6 +68,7 @@ import {
   type FoldModelLine,
   type FoldPetalHinge,
   type FoldSeed,
+  type FoldSwivelKind,
   type FoldSwivelTarget,
   type FoldVertexOp,
   type SheetPoint,
@@ -86,6 +94,11 @@ export interface FoldVertexIntent {
   direction: FoldDirection;
   /** The layers a rabbit ear cuts from the direction's side; null for every one. */
   fanLayers: number | null;
+  /**
+   * A swivel on a folded edge's kind, as it is asked: its strip on top
+   * (open, absent) or tucked between the two layers. Read by no other fold.
+   */
+  swivelKind?: FoldSwivelKind;
 }
 
 /** A fan's fourth ray before one is taken: the analysis lists every candidate whatever it is. */
@@ -383,8 +396,11 @@ export function vertexAskedOp(intent: FoldVertexIntent, index: FoldPickIndex): F
       const target = swivelTargetOf(intent, targetPicks);
       if (!pivot || edgePick?.kind !== 'segment' || !target) return offPaper(null);
       // A pivot on a folded edge: the creases meet on that edge, through the
-      // two layers it joins.
-      if (swivelFoldPick(intent)) return { kind: 'swivel', via: 'edge', fold: pivot, edge: middleOf(edgePick), target, direction };
+      // two layers it joins — open, or inside when that is asked.
+      if (swivelFoldPick(intent)) {
+        const open = { kind: 'swivel', via: 'edge', fold: pivot, edge: middleOf(edgePick), target, direction } as const;
+        return withSwivelKind(open, intent.swivelKind ?? 'open');
+      }
       return { kind: 'swivel', via: 'edge', pivot, edge: middleOf(edgePick), target, seed: { scope: 'all' }, direction };
     }
   }
@@ -502,9 +518,15 @@ export interface FoldVertexChosen {
    */
   direction: FoldDirection;
   /**
+   * A swivel on a folded edge's kind: the one asked while it lands, else
+   * the other (`swivelWayToFold`). Null for any other fold.
+   */
+  kind: FoldSwivelKind | null;
+  /**
    * Whether it is another fold than the one first asked — a spine aimed off
-   * the hinge, another fourth ray or ridge, the other direction — whose
-   * orders must be asked of it; otherwise the first answer stands for it.
+   * the hinge, another fourth ray or ridge, the other direction or kind —
+   * whose orders must be asked of it; otherwise the first answer stands for
+   * it.
    */
   again: boolean;
 }
@@ -520,6 +542,62 @@ export function directionToFold(chosen: FoldDirection, answer: FoldVertexAnalyse
   const lands = (direction: FoldDirection) => directions[direction === 'valley' ? 0 : 1] === true;
   const other: FoldDirection = chosen === 'valley' ? 'mountain' : 'valley';
   return !lands(chosen) && lands(other) ? other : chosen;
+}
+
+/** A swivel on a folded edge's way: its kind, and its direction as the viewer sees it. */
+export interface FoldSwivelWay {
+  kind: FoldSwivelKind;
+  direction: FoldDirection;
+}
+
+/**
+ * Valley, then mountain: whether a swivel on a folded edge lands each way of
+ * `kind`, as the engine's answer for the kind `asked` says — of both kinds
+ * (`kinds`), or of the one asked alone (`directions`). Null when it has no
+ * word on that kind.
+ */
+export function swivelDirectionsOf(
+  answer: FoldVertexAnalysed,
+  kind: FoldSwivelKind,
+  asked: FoldSwivelKind
+): readonly [boolean, boolean] | null {
+  const row = answer.kinds?.[FOLD_SWIVEL_KINDS.indexOf(kind)];
+  if (row && row.length === 2) return [row[0] === true, row[1] === true];
+  const directions = answer.directions;
+  return kind === asked && directions && directions.length === 2 ? [directions[0] === true, directions[1] === true] : null;
+}
+
+/** Open, then inside: whether a swivel on a folded edge lands each kind one way or the other; null when unknown. */
+export function swivelKindsLanding(answer: FoldVertexAnalysed | null): readonly [boolean, boolean] | null {
+  const kinds = answer?.kinds;
+  if (!kinds || kinds.length !== 2) return null;
+  const either = (k: number) => kinds[k]?.some((lands) => lands === true) === true;
+  return [either(0), either(1)];
+}
+
+/**
+ * The way a swivel on a folded edge folds: the one `wanted` while the
+ * engine says it lands; else the first that does of the same kind the other
+ * way, the other kind the wanted way, and the other kind the other way — a
+ * choice that cannot fold is not offered, so it is not taken either. With
+ * none that lands, or none the answer has a word on, the one wanted: the
+ * engine's refusal says why.
+ */
+export function swivelWayToFold(wanted: FoldSwivelWay, asked: FoldSwivelKind, answer: FoldVertexAnalysed): FoldSwivelWay {
+  const flip: FoldDirection = wanted.direction === 'valley' ? 'mountain' : 'valley';
+  const kind: FoldSwivelKind = wanted.kind === 'open' ? 'inside' : 'open';
+  const ways: FoldSwivelWay[] = [
+    wanted,
+    { kind: wanted.kind, direction: flip },
+    { kind, direction: wanted.direction },
+    { kind, direction: flip },
+  ];
+  const lands = (way: FoldSwivelWay) => {
+    const directions = swivelDirectionsOf(answer, way.kind, asked);
+    return directions === null ? null : directions[way.direction === 'valley' ? 0 : 1];
+  };
+  if (lands(wanted) !== false) return wanted;
+  return ways.find((way) => lands(way) === true) ?? wanted;
 }
 
 /** The choice of what the engine lists that the asked op names: a fan's fourth ray, a swivel's ridge. */
@@ -542,16 +620,23 @@ export function vertexChosenOp(
   const emergent = emergentToFold(taken.emergent, first);
   const fan = base.kind === 'rabbit-ear' || (base.kind === 'swivel' && !isSwivelEdgeOp(base));
   if (fan && emergent === null) return null;
-  const direction = directionToFold(base.direction, first);
-  const op = withTarget(withEmergent(base, first, emergent), taken.squashTarget);
+  // A swivel on a folded edge chooses its kind and its way together.
+  const asked = isSwivelOnFoldOp(base) ? swivelKindOf(base) : null;
+  const way = asked ? swivelWayToFold({ kind: asked, direction: base.direction }, asked, first) : null;
+  const direction = way?.direction ?? directionToFold(base.direction, first);
+  const taking = withTarget(withEmergent(base, first, emergent), taken.squashTarget);
+  const turned = direction === taking.direction ? taking : { ...taking, direction };
+  const op = way && isSwivelOnFoldOp(turned) ? withSwivelKind(turned, way.kind) : turned;
   return {
-    op: direction === op.direction ? op : { ...op, direction },
+    op,
     emergent,
     direction,
+    kind: way?.kind ?? null,
     again:
       (base.kind === 'squash' && taken.squashTarget !== null) ||
       (emergent !== null && emergent !== namedChoice(first)) ||
-      direction !== base.direction,
+      direction !== base.direction ||
+      (way !== null && way.kind !== asked),
   };
 }
 

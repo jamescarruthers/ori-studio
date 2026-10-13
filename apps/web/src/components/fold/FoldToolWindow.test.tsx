@@ -214,6 +214,43 @@ describe('FoldToolWindow', () => {
     expect(byRole(window.querySelector<HTMLElement>('[data-footer]')!, 'button', 'Valley fold and tuck')).toBeTruthy();
   });
 
+  it('draws a swivel on a folded edge’s kind only while both land, each kind acting', () => {
+    const calls = { ...verbs(), setSwivelKind: vi.fn(), setVertexDirection: vi.fn() } satisfies FoldToolWindowVerbs;
+    const vertex = {
+      tool: 'swivel' as const,
+      direction: 'valley' as const,
+      described: true,
+      known: true,
+      target: 'hinge' as const,
+      fourths: 0,
+      fourth: 0,
+      layers: 0,
+      fanLayers: null,
+      orders: 0,
+      order: 0,
+      lineBy: 'crease' as const,
+      onFold: true,
+      directions: [true, false],
+      swivelKind: 'open' as const,
+      swivelKinds: ['open', 'inside'] as const,
+    };
+    render({ tool: 'swivel', lineMode: 'crease', picks: 3, preview: preview({ section: null }), vertex }, calls);
+    let window = fold()!;
+    const kind = byRole(window, 'group', 'Kind');
+    expect(byRole(kind, 'button', 'Open').getAttribute('aria-pressed')).toBe('true');
+    act(() => byRole(kind, 'button', 'Inside').click());
+    expect(calls.setSwivelKind).toHaveBeenCalledWith('inside');
+    // One way lands: no direction to choose.
+    expect(queryByRole(window, 'group', 'Direction')).toBeNull();
+    // Only one kind lands: no kind to choose either.
+    render(
+      { tool: 'swivel', lineMode: 'crease', picks: 3, preview: preview({ section: null }), vertex: { ...vertex, swivelKinds: ['inside'] } },
+      calls
+    );
+    window = fold()!;
+    expect(queryByRole(window, 'group', 'Kind')).toBeNull();
+  });
+
   it('draws a vertex fold’s direction, its precondition and its choices, each acting', () => {
     const calls = {
       ...verbs(),

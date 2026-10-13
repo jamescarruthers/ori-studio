@@ -11,6 +11,7 @@ import {
   isSwivelOnFoldOp,
   isVertexOp,
   randomFoldId,
+  swivelKindOf,
   type FoldCrimpOp,
   type FoldDirection,
   type FoldMark,
@@ -21,6 +22,7 @@ import {
   type FoldReverseOp,
   type FoldSequenceDocument,
   type FoldSinkOp,
+  type FoldSwivelKind,
   type FoldTuckOp,
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
@@ -164,6 +166,8 @@ export interface FoldCanvasVerbs {
   tuckTarget: (face: number) => void;
   // The vertex folds (`tools/vertex`), and what their refusals' buttons do.
   setVertexDirection: (direction: FoldDirection) => void;
+  /** A swivel on a folded edge's kind: its strip on top, or tucked between the layers. */
+  setSwivelKind: (kind: FoldSwivelKind) => void;
   /** The same vertex fold, the other direction. */
   vertexOtherWay: () => void;
   /** Step through a fan's fourth-ray candidates; take one by its direction (a fix's). */
@@ -315,12 +319,17 @@ function opKindOf(op: FoldOp): FoldStepAddedOpKind | null {
   }
 }
 
-/** How a vertex fold named what it takes, as `fold step added` counts it: a petal fold's hinge, a swivel's form and target. */
+/**
+ * How a vertex fold named what it takes, as `fold step added` counts it: a
+ * petal fold's hinge, a swivel's form and target, and on a folded edge its
+ * kind.
+ */
 function vertexFormOf(op: FoldOp): FoldStepVertexForm | undefined {
   if (op.kind === 'petal') return { hinge: 'ends' in op ? 'points' : 'crease' };
   if (op.kind !== 'swivel') return undefined;
   if (!isSwivelEdgeOp(op)) return { swivelForm: 'rays' };
-  return { swivelForm: isSwivelOnFoldOp(op) ? 'fold' : 'edge', target: op.target.via };
+  if (isSwivelOnFoldOp(op)) return { swivelForm: 'fold', target: op.target.via, swivelKind: swivelKindOf(op) };
+  return { swivelForm: 'edge', target: op.target.via };
 }
 
 function trackCommitted(op: FoldOp): void {
@@ -716,6 +725,8 @@ export function useFoldCanvasVerbs(
 
       // The vertex folds' choices, and what their refusals' buttons do.
       setVertexDirection: (direction) => tools.setVertexDirection(direction),
+
+      setSwivelKind: (kind) => tools.setSwivelKind(kind),
 
       vertexOtherWay,
 

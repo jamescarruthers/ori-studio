@@ -16,9 +16,9 @@ import type { FoldPickIndex } from '../foldPicking';
  * A swivel's reach from where its creases meet (`tools/vertex/swivelReach`):
  * once that point is clicked, every edge and line either pane offers is
  * asked of the worker in one call, and the answer kept for the state, the
- * point and the folder's way — what the canvas lights and previews at the
- * next two clicks, and what the window says when nothing can swing. Asked
- * again only when one of those changes, never as the pointer moves.
+ * point and the folder's way and kind — what the canvas lights and previews
+ * at the next two clicks, and what the window says when nothing can swing.
+ * Asked again only when one of those changes, never as the pointer moves.
  *
  * Null for any other tool, before the meeting point, and for a target named
  * by two points; asking until the worker answers.
@@ -27,20 +27,22 @@ export function useFoldSwivelReach(
   session: Pick<FoldSessionSurface, 'withCursor'>,
   stateKey: string | null,
   index: FoldPickIndex | null,
-  tools: Pick<FoldToolState, 'tool' | 'swivelTarget' | 'picks' | 'vertexDirection'>,
+  tools: Pick<FoldToolState, 'tool' | 'swivelTarget' | 'picks' | 'vertexDirection'> &
+    Partial<Pick<FoldToolState, 'compound'>>,
   enabled: boolean
 ): FoldSwivelReachView | null {
   const { withCursor } = session;
   const { tool, swivelTarget, picks, vertexDirection } = tools;
+  const swivelKind = tools.compound?.swivelKind ?? null;
   const meet = picks[0];
   const ask = useMemo(
     () =>
       enabled && index && meet
-        ? swivelReachAsk(index, { tool, swivelTarget, picks: [meet], vertexDirection })
+        ? swivelReachAsk(index, { tool, swivelTarget, picks: [meet], vertexDirection, compound: { swivelKind } })
         : null,
-    [enabled, index, tool, swivelTarget, meet, vertexDirection]
+    [enabled, index, tool, swivelTarget, meet, vertexDirection, swivelKind]
   );
-  const key = ask && stateKey ? `${stateKey}|${canonicalJson(ask.at)}|${ask.direction}` : null;
+  const key = ask && stateKey ? `${stateKey}|${canonicalJson(ask.at)}|${ask.direction}|${ask.kind}` : null;
   const [answer, setAnswer] = useState<{ key: string; reach: FoldSwivelReach } | null>(null);
   useEffect(() => {
     if (key === null || !ask || answer?.key === key) return undefined;

@@ -1,22 +1,25 @@
 import { Undo2 } from 'lucide-react';
-import type { FoldDirection } from '../../../fold/document/foldSequenceDocument';
+import type { FoldDirection, FoldSwivelKind } from '../../../fold/document/foldSequenceDocument';
 import type { FoldVertexControls } from '../../../fold/tools/vertex/vertexToolWindow';
 import { Button } from '../../ui/Button';
 import { FieldRow } from '../../ui/fieldRows/FieldRow';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { FoldChoiceStepperRow } from '../reverse/FoldReverseControls';
+import { FoldChoiceStepperRow, FoldKindChoiceRow } from '../reverse/FoldReverseControls';
 import styles from './FoldVertexControls.module.css';
 
 /**
  * A vertex fold's direction in the Fold tool window (`vertexToolWindow`):
- * Valley and Mountain, each saying in its tooltip which way the paper turns,
- * and under them what the fold needs of the paper — its precondition, said
- * up front — unless the window's instructions already say it above the steps.
+ * a swivel on a folded edge's kind, Open or Inside, when both land; Valley
+ * and Mountain, each saying in its tooltip which way the paper turns; and
+ * under them what the fold needs of the paper — its precondition, said up
+ * front — unless the window's instructions already say it above the steps.
  */
 export function FoldVertexDirection({ controls }: { controls: FoldVertexControls }) {
-  const { direction } = controls;
+  const { direction, kind } = controls;
   return (
     <>
+      {/* A swivel's kind, only while both kinds land. */}
+      {kind && <FoldKindChoiceRow<FoldSwivelKind> kind={kind} />}
       {/* A swivel's only while it has a way to choose. */}
       {direction && (
         <FieldRow label={direction.label} kind="segmented" divider={false} disabled={direction.disabled}>

@@ -75,11 +75,13 @@ export type FoldStepRotationAmount = 'eighth' | 'quarter' | 'half' | 'other';
  * ends, which the fold creases (`hinge`) — and a swivel's form, by its edge
  * at a free vertex, by its edge on a folded edge (`fold`, since 2026-10-12)
  * or by its rays (`swivel_form`), the edge forms' target a crease or edge,
- * or the line through two points (`target`).
+ * or the line through two points (`target`); and on a folded edge its kind,
+ * open or inside (`swivel_kind`, since 2026-10-12).
  */
 export type FoldStepVertexForm =
   | { hinge: 'crease' | 'points' }
-  | { swivelForm: 'edge' | 'fold'; target: 'crease' | 'free' }
+  | { swivelForm: 'edge'; target: 'crease' | 'free' }
+  | { swivelForm: 'fold'; target: 'crease' | 'free'; swivelKind: 'open' | 'inside' }
   | { swivelForm: 'rays' };
 
 /**

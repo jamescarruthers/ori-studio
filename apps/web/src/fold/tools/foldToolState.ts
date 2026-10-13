@@ -27,6 +27,7 @@ import {
   type FoldDirection,
   type FoldModelDirection,
   type FoldOp,
+  type FoldSwivelKind,
   type SheetPoint,
 } from '../document/foldSequenceDocument';
 import type { FoldReverseKind } from '../engine/foldEngineReverseWire';
@@ -108,6 +109,12 @@ export interface FoldCompoundToolChoices {
   emergent: number | null;
   /** How many layers at a fan's center its creases cut, from the side the direction names; null for every one. */
   fanLayers: number | null;
+  /**
+   * The kind the folder chose for a swivel on a folded edge — its strip on
+   * top, or tucked between the two layers — null while the tool takes the
+   * one that lands (open when both do).
+   */
+  swivelKind: FoldSwivelKind | null;
   /** A closed sink's pocket, by index into the pockets the engine lists for the point (`tools/sink`). */
   pocket: number;
 }
@@ -120,6 +127,7 @@ export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
   squashTarget: null,
   emergent: null,
   fanLayers: null,
+  swivelKind: null,
   pocket: 0,
 };
 
@@ -337,6 +345,8 @@ export interface FoldTools {
   setSquashTarget(target: FoldModelDirection | null): void;
   /** Take a fan's emergent candidate by index; null for the first that lands. */
   setEmergent(emergent: number | null): void;
+  /** A swivel on a folded edge's kind, open or inside; null for the one that lands. */
+  setSwivelKind(kind: FoldSwivelKind | null): void;
   /** How many layers at the fan's center are cut; null for every one. */
   setFanLayers(layers: number | null): void;
   /** Step through a closed sink's pockets, of `count`: each stacks anew. */
@@ -634,6 +644,15 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
         state.compound.emergent === emergent
           ? state
           : { ...state, compound: { ...state.compound, emergent, order: 0 } }
+      );
+    },
+
+    setSwivelKind(swivelKind) {
+      // Another kind is another fold: its orders are its own.
+      set((state) =>
+        state.compound.swivelKind === swivelKind
+          ? state
+          : { ...state, compound: { ...state.compound, swivelKind, order: 0 } }
       );
     },
 

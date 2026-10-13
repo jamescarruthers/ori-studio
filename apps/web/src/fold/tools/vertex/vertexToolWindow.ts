@@ -23,6 +23,9 @@
  *
  * Once every click is in, previewing:
  *
+ * - a swivel on a folded edge's **kind**, open (the strip folded up on top)
+ *   or inside (tucked between the two layers) — only when both land, the
+ *   one that lands taken otherwise;
  * - **the direction**, valley or mountain, as the viewer sees it — a
  *   swivel's only when it lands both ways;
  * - a squash's **spine target**: its hinge line until a point is clicked on
@@ -47,7 +50,7 @@
  * React-free and store-free.
  */
 import type { TFunction } from 'i18next';
-import type { FoldDirection } from '../../document/foldSequenceDocument';
+import { FOLD_SWIVEL_KINDS, type FoldDirection, type FoldSwivelKind } from '../../document/foldSequenceDocument';
 import type { FoldModelPoint } from '../../engine/foldEngineWire';
 import { FOLD_LINE_BY, foldToolLabel, type FoldLineBy, type FoldVertexToolId } from '../foldToolCatalog';
 import {
@@ -113,9 +116,14 @@ export interface FoldVertexWindowView {
   onFold?: boolean;
   /**
    * Valley, then mountain: whether the fold lands that way, once known (a
-   * swivel's). A way that does not is not offered. Absent when unknown.
+   * swivel's, of the kind it folds). A way that does not is not offered.
+   * Absent when unknown.
    */
   directions?: readonly boolean[];
+  /** A swivel on a folded edge's kind as it folds: the folder's, or the one that lands. */
+  swivelKind?: FoldSwivelKind;
+  /** The kinds a swivel on a folded edge lands one way or the other, once known: offered only when both do. */
+  swivelKinds?: readonly FoldSwivelKind[];
   /** What a petal fold creases itself, once the engine has described its flap. */
   petalScores?: FoldPetalScores | null;
   /** A swivel's meeting point from which no edge can swing: its next click picks another point. */
@@ -125,6 +133,8 @@ export interface FoldVertexWindowView {
 /** The vertex folds' own calls in the window; the canvas binds them. */
 export interface FoldVertexWindowVerbs {
   setVertexDirection?: (direction: FoldDirection) => void;
+  /** A swivel on a folded edge's kind: its strip on top, or tucked between the layers. */
+  setSwivelKind?: (kind: FoldSwivelKind) => void;
   stepEmergent?: (delta: number) => void;
   stepFanLayers?: (delta: number) => void;
   /** Name a petal fold's hinge, or a swivel's target, by a crease or by two points. */
@@ -133,6 +143,12 @@ export interface FoldVertexWindowVerbs {
 
 /** A vertex fold's own controls in the window. */
 export interface FoldVertexControls {
+  /**
+   * A swivel on a folded edge's kind, Open or Inside: only once previewed
+   * and only when both land — a control with no choice in it is not shown —
+   * the one that lands taken otherwise. Null for the other folds.
+   */
+  kind: FoldKindChoice<FoldSwivelKind> | null;
   /**
    * Valley or Mountain. Null for a swivel while its clicks are made, and
    * once previewed unless it lands both ways: it folds the way that lands.
@@ -379,7 +395,8 @@ function swivelPreviewSteps(
   controls: FoldVertexControls
 ): FoldToolInstructions {
   const lines = { petalHinge: 'crease' as const, swivelTarget: vertex.lineBy ?? 'crease' };
-  const choice = controls.direction !== null || controls.emergent !== null || controls.order !== null;
+  const choice =
+    controls.kind !== null || controls.direction !== null || controls.emergent !== null || controls.order !== null;
   const items = [
     ...vertexToolSteps(t, 'swivel', lines, host),
     choice ? commitStep(t, 'swivel', host) : commitStepPlain(t, 'swivel', host),
@@ -577,6 +594,44 @@ function offersDirection(vertex: FoldVertexWindowView, clicked: boolean): boolea
 }
 
 /**
+ * A swivel on a folded edge's kind, Open or Inside, each saying in its
+ * tooltip where the strip goes: only once it is previewed and the engine
+ * says both land (owner feedback, 2026-10-12: offer only what lands, and no
+ * control without a choice in it). Null otherwise: it folds the kind that
+ * lands, which its step and its picture name.
+ */
+function swivelKindControl(
+  t: TFunction,
+  vertex: FoldVertexWindowView,
+  verbs: FoldToolWindowVerbs,
+  readOnly: boolean,
+  located: boolean
+): FoldKindChoice<FoldSwivelKind> | null {
+  const kinds = vertex.swivelKinds ?? [];
+  if (vertex.tool !== 'swivel' || !vertex.onFold || !located || !FOLD_SWIVEL_KINDS.every((k) => kinds.includes(k))) {
+    return null;
+  }
+  return {
+    label: t('tools:fold.vertex.swivelKind', 'Kind'),
+    value: vertex.swivelKind ?? 'open',
+    options: FOLD_SWIVEL_KINDS.map((value) => ({
+      value,
+      short:
+        value === 'open' ? t('tools:fold.vertex.swivelOpen', 'Open') : t('tools:fold.vertex.swivelInside', 'Inside'),
+      label:
+        value === 'open'
+          ? t('tools:fold.vertex.swivelOpenHelp', 'Open swivel: the strip folds up on top')
+          : t('tools:fold.vertex.swivelInsideHelp', 'Inside swivel: the strip tucks between the layers'),
+      disabled: false,
+      reason: null,
+    })),
+    disabled: readOnly || !verbs.setSwivelKind,
+    note: null,
+    set: (kind) => verbs.setSwivelKind?.(kind),
+  };
+}
+
+/**
  * A vertex fold's controls (see the module docs). `located` once every click
  * is in: its choices are offered once the engine has described what the
  * clicks name, never about a flap it refused.
@@ -600,6 +655,7 @@ export function vertexControls(
   const lands = (k: number) => !located || vertex.directions?.[k] !== false;
   const cannot = t('tools:fold.vertex.directionCannot', 'This way it cannot fold flat here.');
   return {
+    kind: swivelKindControl(t, vertex, verbs, readOnly, located),
     direction: offersDirection(vertex, clicked)
       ? {
           label: t('tools:fold.vertex.direction', 'Direction'),
@@ -690,7 +746,15 @@ export function vertexToolWindow(
     };
   }
   const controls = vertexControls(t, vertex, verbs, readOnly, host, true);
-  const settings = [controls.direction, controls.lineBy, controls.target, controls.emergent, controls.layers, controls.order];
+  const settings = [
+    controls.kind,
+    controls.direction,
+    controls.lineBy,
+    controls.target,
+    controls.emergent,
+    controls.layers,
+    controls.order,
+  ];
   const refusal = preview.refused
     ? foldRefusalNotice(
         t,

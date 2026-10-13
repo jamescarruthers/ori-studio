@@ -2,11 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { trackFoldChoiceOffered } from '../../../analytics';
 import { reportError } from '../../../monitoring';
 import { canonicalJson } from '../../document/foldDigest';
-import type {
-  FoldChoices,
-  FoldCompletionChoice,
-  FoldDirection,
-  FoldVertexOp,
+import {
+  isSwivelOnFoldOp,
+  swivelKindOf,
+  type FoldChoices,
+  type FoldCompletionChoice,
+  type FoldDirection,
+  type FoldSwivelKind,
+  type FoldVertexOp,
 } from '../../document/foldSequenceDocument';
 import type { FoldVertexAnalysed } from '../../engine/foldEngineSquashWire';
 import type { FoldEngineRefused } from '../../engine/foldEngineWire';
@@ -19,6 +22,8 @@ import {
   fanLayerCount,
   fanOpsElsewhere,
   landingFourths,
+  swivelDirectionsOf,
+  swivelKindsLanding,
   vertexAskedOp,
   vertexChosenOp,
   vertexStepFrom,
@@ -70,11 +75,19 @@ export interface FoldVertexPreview {
   reach?: FoldSwivelReachView | null;
   /**
    * Valley, then mountain: whether the fold lands that way, once known — a
-   * swivel on a folded edge's from the engine's answer, a swivel at a free
-   * vertex's from its reach. Absent or null when unknown, and for the other
-   * folds.
+   * swivel on a folded edge's from the engine's answer, of the kind it
+   * folds; a swivel at a free vertex's from its reach. Absent or null when
+   * unknown, and for the other folds.
    */
   directions?: readonly boolean[] | null;
+  /**
+   * A swivel on a folded edge's kind as it folds: the folder's, or the one
+   * that lands when only that one does. Absent for the other folds, and
+   * before the engine has described it.
+   */
+  kind?: FoldSwivelKind;
+  /** Open, then inside: whether a swivel on a folded edge lands that kind one way or the other, once known. */
+  kinds?: readonly [boolean, boolean];
 }
 
 export interface FoldVertexStepAnswer {
@@ -155,16 +168,20 @@ export function useFoldVertexStep(
   const { squashTarget, fanLayers, emergent: chosenEmergent, order: chosenOrder } = compound;
 
   // --- A swivel's reach from where its creases meet: what its next clicks
-  // are offered, and the way its edge and line land — the folder's, or the
-  // other when only that one does.
+  // are offered, and the way and kind its edge and line land — the folder's,
+  // or the ones that do when those do not.
   const reach = useFoldSwivelReach(session, stateKey, index, tools, enabled && tool === 'swivel');
   const landing = swivelPickedLanding(reach, picks);
   const direction = landing?.op.direction ?? vertexDirection;
+  const swivelKind =
+    compound.swivelKind ?? (landing && isSwivelOnFoldOp(landing.op) ? swivelKindOf(landing.op) : 'open');
 
   const intent = useMemo<FoldVertexIntent | null>(
     () =>
-      enabled && isVertexTool(tool) ? { tool, petalHinge, swivelTarget, picks, direction, fanLayers } : null,
-    [enabled, tool, petalHinge, swivelTarget, picks, direction, fanLayers]
+      enabled && isVertexTool(tool)
+        ? { tool, petalHinge, swivelTarget, picks, direction, fanLayers, swivelKind }
+        : null,
+    [enabled, tool, petalHinge, swivelTarget, picks, direction, fanLayers, swivelKind]
   );
   const taken = useMemo<FoldVertexTaken>(
     () => ({ squashTarget, emergent: chosenEmergent, order: chosenOrder }),
@@ -236,6 +253,15 @@ export function useFoldVertexStep(
 
   if (!intent) return NONE;
   const refused = told ?? first?.refused ?? answerRefused;
+  // A swivel on a folded edge's kind folded, and the ways that land of it.
+  const kind = chosen?.kind ?? null;
+  const askedKind = base && isSwivelOnFoldOp(base) ? swivelKindOf(base) : null;
+  const directions =
+    (firstAnswer && kind && askedKind ? swivelDirectionsOf(firstAnswer, kind, askedKind) : null) ??
+    firstAnswer?.directions ??
+    landing?.directions ??
+    null;
+  const kinds = swivelKindsLanding(firstAnswer) ?? landing?.kinds ?? null;
   return {
     step: refused || !built ? null : built.step,
     vertex: {
@@ -250,7 +276,9 @@ export function useFoldVertexStep(
       order: built?.order ?? null,
       layers,
       reach,
-      directions: firstAnswer?.directions ?? landing?.directions ?? null,
+      directions,
+      ...(kind ? { kind } : {}),
+      ...(kinds ? { kinds } : {}),
     },
     refused,
   };
