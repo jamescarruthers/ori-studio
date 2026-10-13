@@ -47,7 +47,7 @@ describe('the Fold tool catalog', () => {
       'V',
       'M',
       'P',
-      'IR',
+      'RF',
     ]);
   });
 });

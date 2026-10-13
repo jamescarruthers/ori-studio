@@ -4,10 +4,10 @@ import type { FoldChoices, FoldCompletionChoice, FoldCrimpKind, FoldCrimpOp } fr
 import type { FoldCrimpAnalysed } from '../engine/foldEngineCrimpTuckWire';
 import type { FoldAxiomCandidate, FoldEngineRefused } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
-import { buildCrimpStep, crimpLines, type FoldCrimpLines } from '../tools/crimp/crimpStep';
+import { buildCrimpStep, crimpKindToFold, crimpLines, type FoldCrimpLines } from '../tools/crimp/crimpStep';
 import type { FoldStepBuild } from '../tools/foldStepBuilder';
 import type { FoldSeededToolState } from '../tools/foldToolState';
-import { chosenAt, reverseKindToFold, reverseOpenWays, type FoldReverseOpenWay } from '../tools/reverse/reverseStep';
+import { chosenAt, reverseOpenWays, type FoldReverseOpenWay, type FoldReverseWays } from '../tools/reverse/reverseStep';
 import type { FoldPickIndex } from './foldPicking';
 import { useFoldCompoundAsk, useFoldCompoundOrders } from './useFoldCompoundAsk';
 
@@ -15,12 +15,12 @@ import { useFoldCompoundAsk, useFoldCompoundOrders } from './useFoldCompoundAsk'
 export interface FoldCrimpPreview {
   /** The engine's answer for the tip at ℓ1 and what lies beyond ℓ2, with the openings chosen; null until it is in. */
   asked: FoldCrimpAnalysed | null;
-  /** The kind folded on both lines (`reverseKindToFold`). */
+  /** The kind folded on both lines (`crimpKindToFold`). */
   kind: FoldCrimpKind;
   /** The kinds that land; empty while unknown, or while neither does. */
   kinds: readonly FoldCrimpKind[];
   /** The ways the tip opens at ℓ1, when a flap has a choice; the one taken. */
-  ways: readonly FoldReverseOpenWay[];
+  ways: FoldReverseWays;
   way: FoldReverseOpenWay | null;
   /** The orders the kind leaves, when it leaves several; the one taken. */
   orders: readonly FoldCompletionChoice[];
@@ -103,7 +103,7 @@ export function useFoldCrimpStep(
   const answer = way ? second : first;
   const asked = answer?.asked ?? null;
   const kinds = asked?.kinds ?? [];
-  const kind = reverseKindToFold(compound.reverseKind, kinds);
+  const kind = crimpKindToFold(compound.reverseKind, kinds);
 
   // The orders, once the kind lands with its opening: the crimp's own call.
   const lands = asked !== null && kinds.includes(kind);

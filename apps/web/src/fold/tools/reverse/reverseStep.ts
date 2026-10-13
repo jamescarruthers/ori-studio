@@ -6,10 +6,9 @@
  *   (`locateAlongLine`): the axiom's root, a free line, or an existing crease
  *   — never unfolded along, which a reverse fold does not do — the moving
  *   side the tip's, and the seed what the tip grows from.
- * - **The kind** is the folder's when it lands, else the only one that does
- *   (research §5.2: on a two-layer flap and a generic line exactly one
- *   does), else inside — what is folded when neither lands, so the refusal
- *   says why and offers what does.
+ * - **The kind** preserves an explicit request, even when infeasible. With
+ *   no request it takes the only feasible kind, or defaults to Inside. A
+ *   refusal can offer another kind, but never silently changes intent.
  * - **The opening**, when a flap opens more than one way, is one of the ways
  *   the engine lists: each flap that has several takes one of its openings,
  *   the ways stepped through in the order the engine lists them.
@@ -33,8 +32,13 @@ import type { FoldPickIndex } from '../../canvas/foldPicking';
 import type { FoldOpening, FoldReverseAnalysis, FoldReverseAsked } from '../../engine/foldEngineReverseWire';
 import { locateAlongLine, type FoldLocateIntent, type FoldStepBuild } from '../foldStepBuilder';
 
-/** The most ways to open a tip the chooser steps through: one flap's openings, or several flaps' together. */
-export const MAX_REVERSE_OPENINGS = 16;
+/** A bounded-memory indexed choice list. Arrays used by fixtures also satisfy it. */
+export interface FoldReverseWays {
+  readonly length: number;
+  at(index: number): FoldReverseOpenWay | undefined;
+  /** The engine's scan (or the exact integer index space) was exhausted. */
+  readonly truncated?: boolean;
+}
 
 /** What the tools have picked for a reverse fold, and the choices made of what the engine lists. */
 export interface FoldReverseIntent extends FoldLocateIntent {
@@ -67,10 +71,10 @@ export function buildReverseStep(intent: FoldReverseIntent, index: FoldPickIndex
   };
 }
 
-/** The kind folded: the folder's when it lands, the only one that lands, or inside (see the module docs). */
+/** Explicit intent wins; automatic mode takes the only feasible kind, else Inside. */
 export function reverseKindToFold(chosen: FoldReverseKind | null, landing: readonly FoldReverseKind[]): FoldReverseKind {
-  if (chosen !== null && (landing.length === 0 || landing.includes(chosen))) return chosen;
-  return landing.length === 1 ? landing[0]! : (chosen ?? 'inside');
+  if (chosen !== null) return chosen;
+  return landing.length === 1 ? landing[0]! : 'inside';
 }
 
 /** One way the tip opens: per flap that opens several ways, its opening. */
@@ -82,26 +86,34 @@ export interface FoldReverseOpenWay {
 }
 
 /**
- * Every way the tip opens, as the chooser steps through them: each flap
- * that opens several ways taking one of its openings, the first flap's
- * openings stepping slowest, at most {@link MAX_REVERSE_OPENINGS}. Empty when
- * no flap has a choice to make.
+ * Index the Cartesian product without allocating it. Every returned engine
+ * opening is reachable, including combinations beyond the old 16-item cap.
+ * The last flap advances fastest. Truncation stays explicit if the engine
+ * stopped scanning or the product exceeds exact JavaScript integer indexing.
  */
-export function reverseOpenWays(analysis: FoldReverseAnalysis): FoldReverseOpenWay[] {
+export function reverseOpenWays(analysis: FoldReverseAnalysis): FoldReverseWays {
   const choosing = analysis.flaps.filter((flap) => flap.openings.length > 1);
-  if (choosing.length === 0) return [];
-  let ways: FoldOpening[][] = [[]];
+  let length = choosing.length === 0 ? 0 : 1;
+  let truncated = analysis.flaps.some((flap) => flap.truncated);
   for (const flap of choosing) {
-    const grown: FoldOpening[][] = [];
-    for (const way of ways) {
-      for (const opening of flap.openings) {
-        if (grown.length >= MAX_REVERSE_OPENINGS) break;
-        grown.push([...way, opening]);
-      }
-    }
-    ways = grown;
+    const product = length * flap.openings.length;
+    if (!Number.isSafeInteger(product)) truncated = true;
+    length = Math.min(product, Number.MAX_SAFE_INTEGER);
   }
-  return ways.map((openings) => ({ openings, stored: openings.map((opening) => opening.stored) }));
+  return {
+    length,
+    truncated,
+    at(index) {
+      if (!Number.isSafeInteger(index) || index < 0 || index >= length) return undefined;
+      const openings: FoldOpening[] = new Array(choosing.length);
+      for (let f = choosing.length - 1; f >= 0; f--) {
+        const choices = choosing[f]!.openings;
+        openings[f] = choices[index % choices.length]!;
+        index = Math.floor(index / choices.length);
+      }
+      return { openings, stored: openings.map((opening) => opening.stored) };
+    },
+  };
 }
 
 /** The orders the engine lists for a kind; none when it lands with one. */
@@ -110,6 +122,6 @@ export function reverseOrdersOf(asked: FoldReverseAsked | null, kind: FoldRevers
 }
 
 /** The listed choice at a stepped index, kept in range: the first while the list is empty or the index stale. */
-export function chosenAt<T>(list: readonly T[], index: number): T | null {
-  return list[index] ?? list[0] ?? null;
+export function chosenAt<T>(list: { at(index: number): T | undefined }, index: number): T | null {
+  return (index >= 0 && Number.isSafeInteger(index) ? list.at(index) : undefined) ?? list.at(0) ?? null;
 }

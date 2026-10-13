@@ -13,6 +13,7 @@ import { NumberRow } from '../ui/fieldRows/NumberRow';
 import { SegmentedRow } from '../ui/fieldRows/SegmentedRow';
 import { SelectRow } from '../ui/fieldRows/SelectRow';
 import { TextRow } from '../ui/fieldRows/TextRow';
+import { ToggleRow } from '../ui/fieldRows/ToggleRow';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { ToolHintInstructions } from '../ui/tools/ToolHintInstructions';
 import { ToolHintWindow } from '../ui/tools/ToolHintWindow';
@@ -290,6 +291,21 @@ export function FoldToolWindow({
         </div>
       )}
       {/* A reverse fold's or a crimp's kind, only while both fit: the title names the one folded. */}
+      {model.reversePreference && (
+        <div className={styles.section}>
+          <SelectRow
+            label={model.reversePreference.label}
+            value={model.reversePreference.value}
+            options={model.reversePreference.options.map((option) => ({ id: option.value, label: option.short }))}
+            disabled={model.reversePreference.disabled}
+            divider={false}
+            onChange={(value) => {
+              if (value === 'auto' || value === 'inside' || value === 'outside') model.reversePreference?.set(value);
+            }}
+          />
+          {model.reversePreference.note && <p className={styles.note}>{model.reversePreference.note}</p>}
+        </div>
+      )}
       {compound?.kind && (
         <div className={styles.section} data-fold-reverse-kind="">
           <FoldReverseKindControl kind={compound.kind} />
@@ -363,6 +379,9 @@ export function FoldToolWindow({
         <div className={styles.section} data-fold-tuck="">
           {tuck.note && <p className={styles.note}>{tuck.note}</p>}
           {tuck.target && <FoldChoiceStepperRow stepper={tuck.target} />}
+          {tuck.additional?.map((item) => (
+            <ToggleRow key={item.label} label={item.label} checked={item.checked} disabled={item.disabled} onChange={item.toggle} />
+          ))}
           {tuck.order && <FoldChoiceStepperRow stepper={tuck.order} />}
         </div>
       )}

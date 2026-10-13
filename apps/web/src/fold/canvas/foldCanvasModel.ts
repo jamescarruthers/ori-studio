@@ -121,11 +121,14 @@ export function foldAlongOverlay(
  */
 export function foldReverseWindowView(tools: FoldToolState, preview: FoldToolPreview): FoldReverseWindowView | undefined {
   const reverse = preview.reverse;
-  if (tools.tool !== 'inside-reverse' || !reverse || !isLocated(tools)) return undefined;
+  if (tools.tool !== 'inside-reverse') return undefined;
+  if (!reverse || !isLocated(tools)) return { kind: tools.compound.reverseKind ?? 'inside', requested: tools.compound.reverseKind, kinds: [], known: false, ways: 0, way: 0, orders: 0, order: 0 };
   const ways = reverse.ways.length;
   const orders = reverse.orders.length;
   return {
     kind: reverse.kind,
+    requested: tools.compound.reverseKind,
+    truncated: reverse.ways.truncated ?? false,
     kinds: reverse.kinds,
     known: reverse.asked !== null,
     ways,
@@ -171,6 +174,7 @@ export function foldTuckWindowView(tools: FoldToolState, preview: FoldToolPrevie
     direction: tuck.direction,
     known: tuck.asked !== null,
     targets: faces.length,
+    pinned: tools.compound.tuckPinned ?? [],
     target: Math.max(0, faces.indexOf(tuck.target?.face ?? -1)),
     faces,
     orders,

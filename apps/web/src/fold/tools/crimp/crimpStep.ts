@@ -105,3 +105,9 @@ export function crimpLines(intent: FoldCrimpIntent, index: FoldPickIndex): FoldC
     second: 'status' in second ? null : across(second.sceneLine),
   };
 }
+
+
+/** Crimp keeps its feasible-choice behavior; explicit preselection belongs to Reverse. */
+export function crimpKindToFold(chosen: FoldCrimpKind | null, kinds: readonly FoldCrimpKind[]): FoldCrimpKind {
+  return kinds.length === 1 ? kinds[0]! : (chosen ?? 'inside');
+}

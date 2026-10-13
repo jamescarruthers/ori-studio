@@ -168,6 +168,13 @@ export function writeFoldSequence({ document, readOnlyRaw }: HeldFoldSequence): 
 // ---------------------------------------------------------------------------
 // Reading the sequence
 
+/** Additional targets are witnesses, not face IDs; keep malformed constraints from being dropped. */
+function readTuckTargets(value: unknown): readonly SheetPoint[] | null {
+  if (!Array.isArray(value) || value.length > 64) return null;
+  const points = value.map(readPoint);
+  return points.every((point): point is SheetPoint => point !== null) ? points : null;
+}
+
 const SEQUENCE_KEYS = new Set(['formatVersion', 'id', 'title', 'paper', 'appearance', 'sheetMarks', 'steps']);
 
 function readDocument(value: Record<string, unknown>, newId: FoldIdFactory): FoldSequenceDocument {
@@ -348,7 +355,7 @@ const OP_KEYS = new Map<string, ReadonlySet<string>>([
   ['inside-reverse', ALONG_LINE_KEYS],
   ['outside-reverse', ALONG_LINE_KEYS],
   ['crimp', new Set([...ALONG_LINE_KEYS, 'second', 'crimp'])],
-  ['tuck', new Set([...ALONG_LINE_KEYS, 'direction', 'target'])],
+  ['tuck', new Set([...ALONG_LINE_KEYS, 'direction', 'target', 'additionalTargets'])],
   ['squash', new Set(['kind', 'flap', 'target', 'direction'])],
   // H by `crease` or by `ends`, one of the two (`FoldPetalOp`).
   ['petal', new Set(['kind', 'crease', 'ends', 'petal', 'direction'])],
@@ -451,7 +458,9 @@ function readOp(value: unknown): FoldOp | null {
       const along = readAlongLine(value);
       const direction = readDirection(value.direction);
       const target = readPoint(value.target);
-      return along && direction && target && { kind, direction, target, ...along };
+      const additionalTargets = value.additionalTargets === undefined ? undefined : readTuckTargets(value.additionalTargets);
+      if (additionalTargets === null) return null;
+      return along && direction && target && { kind, direction, target, ...along, ...(additionalTargets ? { additionalTargets } : {}) };
     }
     case 'squash':
     case 'petal':
@@ -1014,6 +1023,7 @@ export function writeFoldOp(op: FoldOp): Record<string, unknown> {
         direction: op.direction,
         ...writeMotion(op),
         target: writePoint(op.target),
+        ...(op.additionalTargets?.length ? { additionalTargets: op.additionalTargets.map(writePoint) } : {}),
       };
     case 'squash':
     case 'petal':

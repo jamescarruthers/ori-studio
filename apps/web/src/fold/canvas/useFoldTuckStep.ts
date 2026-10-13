@@ -24,6 +24,8 @@ export interface FoldTuckPreview {
   /** The layers offered to tuck against (`tuckTargetsOf`), and the one taken. */
   targets: readonly FoldTuckTarget[];
   target: FoldTuckTarget | null;
+  /** Other selected stationary targets, highlighted together with the primary one. */
+  additional?: readonly FoldTuckTarget[];
   /** The orders the tuck leaves against it, when it leaves several; the one taken. */
   orders: readonly FoldCompletionChoice[];
   order: FoldCompletionChoice | null;
@@ -117,14 +119,22 @@ export function useFoldTuckStep(
   const asked = listing?.asked?.analysis ?? null;
   const targets = useMemo(() => tuckTargetsOf(asked), [asked]);
   const target = tuckTargetChosen(targets, compound.tuckTarget);
+  const additional = useMemo(
+    () => targets.filter((item) => item.face !== target?.face && compound.tuckPinned?.includes(item.face)),
+    [targets, target, compound.tuckPinned]
+  );
+  const additionalTargets = useMemo(() => additional.map((item) => item.at), [additional]);
 
   // The orders against the target taken: the tuck's own call.
   const aimed = useMemo(() => {
     if (!unaimed || !target) return null;
-    return { op: { ...unaimed.op, target: target.at }, ...(unaimed.choices ? { choices: unaimed.choices } : {}) };
+    return {
+      op: { ...unaimed.op, target: target.at, ...(additionalTargets.length ? { additionalTargets } : {}) },
+      ...(unaimed.choices ? { choices: unaimed.choices } : {}),
+    };
     // The ask is rebuilt on every render; its identity is the located build's, or the fix's.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [located, fixed, target]);
+  }, [located, fixed, target, additionalTargets]);
   const listed = useFoldCompoundOrders(session, stateKey, aimed, 'fold:tuck');
   const orders = listed?.orders ?? [];
   const order = chosenAt(orders, compound.order);
@@ -157,7 +167,7 @@ export function useFoldTuckStep(
     if (refusedListing) return { status: 'refused', refused: refusedListing };
     if (!asked || !target || waiting) return { status: 'unlocated' };
     const built = buildTuckStep(
-      { lineMode, picks, candidate, swapped, seed, direction, target: target.at, completion: order },
+      { lineMode, picks, candidate, swapped, seed, direction, target: target.at, additionalTargets, completion: order },
       index
     );
     if (!fixed || built.status !== 'built' || built.op.kind !== 'tuck') return built;
@@ -170,7 +180,7 @@ export function useFoldTuckStep(
       ...(order ? { choices: { completion: order } } : {}),
       via: fixed.line.via,
     };
-  }, [located, index, refusedListing, asked, target, waiting, fixed, lineMode, picks, candidate, swapped, seed, direction, order]);
+  }, [located, index, refusedListing, asked, target, waiting, fixed, lineMode, picks, candidate, swapped, seed, direction, order, additionalTargets]);
 
   // Refused before a step is built: the layers are the plain fold's along the same line.
   const refusedEarly = refusedListing !== null || untargeted !== null;
@@ -185,7 +195,7 @@ export function useFoldTuckStep(
   if (!enabled) return { build: { status: 'unlocated' }, tuck: null, refused: null, layers: null };
   return {
     build,
-    tuck: { asked, direction, targets, target, orders, order },
+    tuck: { asked, direction, targets, target, additional, orders, order },
     refused: refusedListing ?? untargeted,
     layers,
   };

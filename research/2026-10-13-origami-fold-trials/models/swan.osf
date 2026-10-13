@@ -14,7 +14,7 @@
   },
   "workspace": {
     "id": "workspace-origami-swan",
-    "title": "Swan — reverse-fold alternative",
+    "title": "Swan — completed outside-reverse sequence",
     "activeDocumentId": "crease-pattern",
     "designs": [],
     "creasePattern": null,
@@ -23,7 +23,7 @@
       {
         "formatVersion": 1,
         "id": "fold-trial-swan",
-        "title": "Swan — reverse-fold alternative",
+        "title": "Swan — completed outside-reverse sequence",
         "paper": {
           "shape": {
             "kind": "square"
@@ -225,17 +225,17 @@
             "id": "fstep-swan-9",
             "parent": "fstep-swan-8",
             "op": {
-              "kind": "inside-reverse",
+              "kind": "outside-reverse",
               "line": {
                 "via": "free",
                 "through": [
                   [
-                    0.6532814824381885,
-                    0.14071098603801116
+                    0.8912282491679029,
+                    0.239271763940286
                   ],
                   [
-                    0.6532814824381885,
-                    0.2651860890716365
+                    0.6631959310519266,
+                    0.26929278815089797
                   ]
                 ]
               },
@@ -276,7 +276,7 @@
                 }
               ]
             },
-            "note": "Alternative: inside reverse long point to raise neck"
+            "note": "9: outside reverse the neck around the body"
           },
           {
             "id": "fstep-swan-10",
@@ -287,24 +287,24 @@
                 "via": "free",
                 "through": [
                   [
-                    0.1733166670918153,
-                    0.03189531085450482
+                    0.16332718512813615,
+                    0.020812302016217345
                   ],
                   [
-                    0.14291107550079385,
-                    0.0014897192634832652
+                    0.1581310327054295,
+                    0.017812302016217314
                   ]
                 ]
               },
               "moving": [
-                0.03330952441687897,
-                0.005025253169415834
+                0.04464697469910658,
+                0.0053645283378377425
               ],
               "seed": {
                 "scope": "depth",
                 "at": [
-                  0.03330952441687897,
-                  0.005025253169415834
+                  0.04464697469910658,
+                  0.0053645283378377425
                 ],
                 "layers": 1
               }
@@ -314,26 +314,26 @@
                 {
                   "upper": [
                     [
-                      0.13351460543672367,
-                      0.4355209882921258
+                      0.16102629176130978,
+                      0.5711995632993716
                     ],
                     [
-                      0.04331525541235747,
-                      0.4534627545415789
+                      0.06959871438575393,
+                      0.5885184640695388
                     ],
                     [
-                      0.21355076127867545,
-                      0.40236892706218275
+                      0.29389113940635864,
+                      0.5226067999427978
                     ],
                     [
-                      0.29001807792097595,
-                      0.35127509958278647
+                      0.37035845604865925,
+                      0.47151297246340174
                     ]
                   ]
                 }
               ]
             },
-            "note": "Alternative: outside reverse the tip to form the head (engine suggested kind)"
+            "note": "10: outside reverse the head tip"
           },
           {
             "id": "fstep-swan-11",
@@ -342,7 +342,7 @@
               "kind": "rotate",
               "rotate": {
                 "amount": "quarter",
-                "direction": "cw"
+                "direction": "ccw"
               }
             },
             "note": "Orient the swan upright"

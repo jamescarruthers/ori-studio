@@ -357,6 +357,8 @@ export interface FoldTuckOp extends FoldAlongLine {
   kind: 'tuck';
   direction: FoldDirection;
   target: SheetPoint;
+  /** Other stationary layers this tuck must land against; old readers lock this field. */
+  additionalTargets?: readonly SheetPoint[];
 }
 
 // The vertex folds (plan Phase 11): paper turned about a vertex. Each ends

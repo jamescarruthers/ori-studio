@@ -464,3 +464,28 @@ describe('readFoldSequences and writeFoldSequences', () => {
     expect(writeFoldSequences(sequences)?.map((value) => value.id)).toEqual(['fold-full', 'fold-other']);
   });
 });
+
+
+describe('tucks with several stationary targets', () => {
+  const op = { ...valleyOp, kind: 'tuck', direction: 'valley', target: [0.2, 0.6] };
+  it('round-trips every target witness and keeps legacy single-target steps unchanged', () => {
+    for (const tuck of [op, { ...op, additionalTargets: [[0.8, 0.6], [0.5, 0.7]] }]) {
+      const node = raw('tuck', null, { op: tuck });
+      const held = readSteps([node]);
+      expect(isLockedStep(held.document.steps[0])).toBe(false);
+      expect((writeFoldSequence(held).steps as unknown[])[0]).toEqual(node);
+    }
+  });
+  it('preserves and locks damaged or future target constraints rather than dropping them', () => {
+    for (const extra of [
+      { additionalTargets: 'all' }, { additionalTargets: [[0, Number.NaN]] },
+      { additionalTargets: [[0]] }, { additionalTargets: Array.from({ length: 65 }, () => [0, 0]) },
+      { targetRelation: 'between' },
+    ]) {
+      const node = raw('tuck', null, { op: { ...op, ...extra } });
+      const held = readSteps([node]);
+      expect(isLockedStep(held.document.steps[0])).toBe(true);
+      expect((writeFoldSequence(held).steps as unknown[])[0]).toBe(node);
+    }
+  });
+});

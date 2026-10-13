@@ -393,9 +393,9 @@
       "freeHelp": "기준 없이 아무 곳에나 그은 선입니다."
     },
     "mark": {
-      "insideReverse": "IR",
       "mountain": "M",
       "precrease": "P",
+      "reverse": "RF",
       "valley": "V"
     },
     "note": {
@@ -668,15 +668,19 @@
       }
     },
     "reverse": {
+      "auto": "자동",
       "bothFit": "여기서는 두 종류 모두 맞습니다. 끝이 갈 방향을 고르세요.",
       "inside": "안으로",
+      "intentHelp": "자동 모드는 가능한 유형을 사용합니다. 유형을 직접 선택하면 접을 수 없어도 선택이 유지됩니다.",
       "kind": "종류",
       "next": "다음",
       "ofCount": "{{index}} / {{total}}",
       "opening": "벌리는 방식",
+      "openingsTruncated": "다른 여는 방식이 더 있을 수 있습니다. 선택한 플랩을 줄여 확인하세요.",
       "order": "겹 순서",
       "outside": "바깥으로",
       "previous": "이전",
+      "requestedKind": "뒤집어 접기 유형",
       "tipSide": "끝 쪽"
     },
     "rotate": {
@@ -769,12 +773,13 @@
       "divideLine": "선 나누기",
       "divideLineHelp": "변이나 접는 선을 같은 길이로 나누는 점을 표시합니다.",
       "insideReverse": "안으로 뒤집어 접기",
-      "insideReverseHelp": "플랩을 그 안쪽으로 밀어 넣어 등을 뒤집습니다.",
       "mountain": "산접기",
       "mountainHelp": "움직이는 쪽을 바깥쪽으로 접어 아래에 놓습니다.",
       "openSinkHelp": "닫힌 꼭지의 끝을 밀어 넣어 모든 겹을 뒤집습니다.",
       "precrease": "미리 접기",
       "precreaseHelp": "접었다 펼쳐 나중에 쓸 접는 선을 남깁니다.",
+      "reverse": "뒤집어 접기",
+      "reverseHelp": "플랩을 안으로 접어 넣거나 바깥으로 뒤집어 중심 접힌 선을 반전합니다.",
       "rotateHelp": "모델을 회전의 일부나 정확한 각도만큼 돌립니다. 미리 본 뒤 별도의 단계로 추가됩니다.",
       "tuckHelp": "플랩을 접어 제자리에 남는 겹의 아래나 위로 밀어 넣습니다.",
       "unsinkHelp": "가라앉힌 꼭지의 끝을 다시 끌어냅니다.",
@@ -782,6 +787,8 @@
       "valleyHelp": "움직이는 쪽을 안쪽으로 접어 위에 놓습니다."
     },
     "tuck": {
+      "alsoOver": "{{number}}번 층 위로도 접어 넣기",
+      "alsoUnder": "{{number}}번 층 아래로도 접어 넣기",
       "noTargets": "여기서는 끼워 넣을 겹이 없습니다.",
       "over": "위로 끼워 넣기",
       "targetsOver_other": "여기서 위로 끼워 넣을 수 있는 겹은 {{count}}개입니다. 접힌 종이에 각각 밝게 표시됩니다.",

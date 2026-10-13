@@ -419,9 +419,9 @@
       "freeHelp": "Une ligne tracée n’importe où, sans repère."
     },
     "mark": {
-      "insideReverse": "IR",
       "mountain": "M",
       "precrease": "P",
+      "reverse": "RF",
       "valley": "V"
     },
     "note": {
@@ -700,15 +700,19 @@
       }
     },
     "reverse": {
+      "auto": "Automatique",
       "bothFit": "Les deux types conviennent ici : choisissez de quel côté va la pointe.",
       "inside": "Intérieur",
+      "intentHelp": "Le mode automatique utilise le type réalisable. Un type choisi reste sélectionné même si le pli est impossible.",
       "kind": "Type",
       "next": "Suivant",
       "ofCount": "{{index}} sur {{total}}",
       "opening": "Ouverture",
+      "openingsTruncated": "D’autres ouvertures peuvent exister. Réduisez les rabats sélectionnés pour les explorer.",
       "order": "Ordre des couches",
       "outside": "Extérieur",
       "previous": "Précédent",
+      "requestedKind": "Type de pli inversé",
       "tipSide": "Côté de la pointe"
     },
     "rotate": {
@@ -801,12 +805,13 @@
       "divideLine": "Diviser une ligne",
       "divideLineHelp": "Marquer des points qui divisent un bord ou un pli en parties égales.",
       "insideReverse": "Pli inversé intérieur",
-      "insideReverseHelp": "Rentrer un rabat à l’intérieur de lui-même, en inversant son dos.",
       "mountain": "Pli montagne",
       "mountainHelp": "Plier le côté qui bouge en l’éloignant de vous, pour qu’il passe dessous.",
       "openSinkHelp": "Enfoncer l’extrémité d’une pointe fermée en retournant chacune de ses couches.",
       "precrease": "Pré-plier",
       "precreaseHelp": "Plier et déplier, en laissant un pli pour plus tard.",
+      "reverse": "Pli inversé",
+      "reverseHelp": "Inversez un rabat vers l’intérieur ou enveloppez-le par l’extérieur, en inversant son pli central.",
       "rotateHelp": "Tourner le modèle d’une fraction de tour ou d’un angle exact, d’abord en aperçu, puis en une étape à part.",
       "tuckHelp": "Plier un rabat et le glisser sous, ou sur, une couche qui reste en place.",
       "unsinkHelp": "Ressortir l’extrémité d’une pointe enfoncée.",
@@ -814,6 +819,8 @@
       "valleyHelp": "Plier le côté qui bouge vers vous, pour qu’il passe dessus."
     },
     "tuck": {
+      "alsoOver": "Replier aussi au-dessus de la couche {{number}}",
+      "alsoUnder": "Replier aussi sous la couche {{number}}",
       "noTargets": "Aucune couche ici ne reçoit le rabat.",
       "over": "Rentrer par-dessus",
       "targetsOver_one": "Une couche ici reçoit le rabat par-dessus elle.",

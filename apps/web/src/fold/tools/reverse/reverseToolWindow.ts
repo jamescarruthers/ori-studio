@@ -43,6 +43,9 @@ import { foldRefusalNotice, sectionFlapNames } from '../refusalNotice';
 export interface FoldReverseWindowView {
   /** The kind folded. */
   kind: FoldReverseKind;
+  /** Null selects the feasible kind automatically. */
+  requested?: FoldReverseKind | null;
+  truncated?: boolean;
   /** The kinds that land; empty while unknown, or while neither does. */
   kinds: readonly FoldReverseKind[];
   /** The engine has described the tip: what lands is known. */
@@ -88,6 +91,24 @@ export interface FoldKindChoice<K extends string> {
 }
 
 export type FoldReverseKindOption = FoldKindChoiceOption<FoldReverseKind>;
+
+export type FoldReversePreference = 'auto' | FoldReverseKind;
+
+/** Select intent before locating a line, without guessing which kind can land. */
+function reversePreference(t: TFunction, requested: FoldReverseKind | null, verbs: FoldToolWindowVerbs, readOnly: boolean): FoldKindChoice<FoldReversePreference> {
+  const auto = t('tools:fold.reverse.auto', 'Automatic');
+  return {
+    label: t('tools:fold.reverse.requestedKind', 'Reverse kind'),
+    value: requested ?? 'auto',
+    options: [
+      { value: 'auto', short: auto, label: auto, disabled: false, reason: null },
+      ...FOLD_REVERSE_KINDS.map((value) => ({ value, short: value === 'inside' ? t('tools:fold.reverse.inside', 'Inside') : t('tools:fold.reverse.outside', 'Outside'), label: foldReverseKindLabel(t, value), disabled: false, reason: null })),
+    ],
+    disabled: readOnly,
+    note: t('tools:fold.reverse.intentHelp', 'Automatic uses the kind that fits. A chosen kind stays selected if it cannot fold.'),
+    set: (kind) => verbs.setReverseKind?.(kind === 'auto' ? null : kind),
+  };
+}
 
 /** The reverse fold's own controls in the window. */
 export interface FoldReverseControls {
@@ -173,7 +194,10 @@ function previewInstructions(t: TFunction, action: string, host: FoldToolHost, v
         : t('tools:fold.steps.commit', 'Press Enter to fold.'),
     ],
     current: 0,
-    notes: view.preview ? queuedNote(t, view.preview) : [],
+    notes: [
+      ...(view.preview ? queuedNote(t, view.preview) : []),
+      ...(view.reverse?.truncated ? [t('tools:fold.reverse.openingsTruncated', 'More openings may exist. Narrow the selected flaps to explore them.')] : []),
+    ],
   };
 }
 
@@ -195,7 +219,8 @@ export function reverseToolWindow(
     return {
       phase: 'locate',
       title,
-      meta: settingsMeta(t, 1),
+      meta: settingsMeta(t, 2),
+      reversePreference: reversePreference(t, reverse?.requested ?? null, verbs, readOnly),
       instructions: locateInstructions(t, view, title, host, then),
       lineMode: lineModeSelect(t, view, verbs),
       kind: null,

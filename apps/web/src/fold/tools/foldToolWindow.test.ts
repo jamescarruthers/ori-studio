@@ -263,7 +263,7 @@ describe('foldToolWindow for the other tools', () => {
 
   it('locates the reverse fold’s line, then names the window for the kind it folds', () => {
     const locating = foldToolWindow(t, view({ tool: 'inside-reverse' }), verbs(), mouse);
-    expect(locating).toMatchObject({ phase: 'locate', title: 'Inside reverse fold', kind: null });
+    expect(locating).toMatchObject({ phase: 'locate', title: 'Reverse fold', kind: null });
     expect(locating?.lineMode?.value).toBe('axiom-2');
     // Once the line is in, the flaps that reverse are picked: no plain fold's kind.
     expect(locating?.instructions.items.at(-1)).toBe('Pick which flaps reverse, then press Enter.');

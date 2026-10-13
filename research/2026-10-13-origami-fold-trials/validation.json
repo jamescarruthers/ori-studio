@@ -1,5 +1,6 @@
 {
-  "sourceCommit": "ad3b1265b1cb37d7d7bb708a04a7d76463b0c89d",
+  "sourceCommit": "aa736f95d126d339f70cd531b85daf60770193a3",
+  "completion": "flat-only; outside reverse and multiple-target tuck",
   "models": [
     {
       "model": "cicada",
@@ -26,7 +27,7 @@
     },
     {
       "model": "swan",
-      "status": "complete flat alternative",
+      "status": "complete flat sequence; outside neck and head",
       "source": "swan-reverse-alternative.sequence.json",
       "nodes": 11,
       "folds": 8,
@@ -42,19 +43,19 @@
         "0d2175a786757c17601da4ec0653b35e6e0e4f99eb00b9bce6cb2c173f7a8b43",
         "c9f96cb8599681395765e1df743b85a5aff728e598cd9dd47eb44757ab326b33",
         "f66a13c95b2473f5cf59428d20a468facaf4a5cfc39359e6493aac96c2817ddc",
-        "12460ee6bbe46d2013d636f6a09f66df10aa388070bf175ba324e1fe4678d4cb",
-        "b23eb7d1afc0b0df6dee66028a97729671e5d9e8cafed63a8a0caff98983ad16",
-        "3afc8b2aa283f824ccd2600de12d35c653d0076cd732551f0bbf4af300a21ae0"
+        "bce1eca3d64b13cad2b75c739c4c270940b79fec3b4c206058ec368b81072bd9",
+        "078d3da128bdfd670506ca69f52bdb1ccfed0af69b40461bb0e175c5e395f573",
+        "22ce5e1147f7fb0972f4f22c7a1a94f118b406e38b2bb08f56f50d0d51ee0400"
       ]
     },
     {
       "model": "heart",
-      "status": "partial; pocket opening unresolved",
+      "status": "complete flat sequence",
       "source": "heart.sequence.json",
-      "nodes": 9,
-      "folds": 7,
-      "finalFaces": 16,
-      "foldFrames": 10,
+      "nodes": 18,
+      "folds": 15,
+      "finalFaces": 52,
+      "foldFrames": 19,
       "allStatesReplayedIdentically": true,
       "stateHashes": [
         "a1064139d762226fc155a685befee84fd8e9001e42516adf668ee09b96fe2b7e",
@@ -65,12 +66,21 @@
         "b0996f8c7b2a509425de6a69af229993ee00ce4d693096c3934240cb24a54b52",
         "aaa94123994fa79d1687a6a15c3ae9b5417cedbce72a18df90d54d75b4a5b113",
         "ffb699a264b969725986f92b46fee4bfb6312f47932956412ab63d6111fa231d",
-        "cb14683a4af0b0d624d394aacb3da9fde20e5b5878a5d3cd6cd0c12c4ec3f573"
+        "cb14683a4af0b0d624d394aacb3da9fde20e5b5878a5d3cd6cd0c12c4ec3f573",
+        "dfcbf0766ee06dbd192742cb436fc4a8fca27a5a2dc6fbb74b439b0f12345005",
+        "81012d0834fa1e69bd1ce6c75919796f00d33d5238f67d600e7ecafacde01ebd",
+        "c7d908dd08c584fbd09d0feef7fbd69414fe2c14447b58cabb7f1c8cb6b89c31",
+        "1117b33ded23d88c9b8acfe1c8154a639e108c16ef5d11108b384ab30f2e677b",
+        "f83293c928dbf0294f40ae48c7a6627a45742cd68d726c2e68f0a44273263151",
+        "a094bae4660205a73d95c7bb32b8c60368e4bbad7d0a63ccfd31c9cc849ba69e",
+        "948d514b6bd35ee745d6b1931e4c3c36ac0109e8c0068231db9e72d986e2b024",
+        "c7cddfa736df644e6dd7f6bcaf57e50e8016c1333d42e3600aedb47a95483f09",
+        "5b8f173cf3442b71b17b4bb5941aacc1f729149e2b4bda62822e1b07d757e28d"
       ]
     },
     {
       "model": "box",
-      "status": "partial; upright walls unavailable in flat state",
+      "status": "complete flat preparation; upright assembly deferred",
       "source": "box.sequence.json",
       "nodes": 13,
       "folds": 12,
@@ -95,7 +105,7 @@
     },
     {
       "model": "crane",
-      "status": "complete flat alternative; 3D opening excluded",
+      "status": "complete flat model; wing opening deferred",
       "source": "crane-reverse-alternative.sequence.json",
       "nodes": 24,
       "folds": 19,

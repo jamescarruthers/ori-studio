@@ -171,7 +171,7 @@ export function useFoldCanvasPaint(
     const targets = tuck
       ? foldTargetsTint(
           index,
-          { listed: tuck.targets.map((target) => target.face), taken: tuck.target?.face ?? null },
+          { listed: tuck.targets.map((target) => target.face), taken: tuck.target?.face ?? null, additional: tuck.additional?.map((target) => target.face) },
           inks.accent
         )
       : null;

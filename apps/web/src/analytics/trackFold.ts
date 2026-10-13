@@ -1,5 +1,5 @@
 import type { LayerSpreadOptions } from '../cp-workspace/folded/foldedLayerSpread';
-import { ANALYTICS_EVENTS, bucketCount, FOLD_CHOICE_COUNT_BUCKETS } from './events';
+import { ANALYTICS_EVENTS, bucketCount, COUNT_BUCKETS, FOLD_CHOICE_COUNT_BUCKETS } from './events';
 import type {
   FoldChoiceKind,
   FoldSpreadAction,
@@ -16,7 +16,7 @@ import { spreadProperties, spreadTracking } from './trackDiagram';
 
 /** What a committed step says beyond its kind: how its line was located, how far it turned, or how it named its lines. */
 type FoldStepAddedDetails =
-  | { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent }
+  | { layerScope: FoldStepLayerScope; via: FoldStepVia; extent?: FoldStepExtent; targetCount?: number }
   | { amount: FoldStepRotationAmount }
   | { vertex: FoldStepVertexForm };
 
@@ -45,6 +45,7 @@ function detailProperties(details: FoldStepAddedDetails | undefined): Record<str
     layer_scope: details.layerScope,
     via: details.via,
     ...(details.extent ? { extent: details.extent } : {}),
+    ...(details.targetCount !== undefined ? { target_count_bucket: bucketCount(details.targetCount, COUNT_BUCKETS) } : {}),
   };
 }
 

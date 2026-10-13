@@ -75,6 +75,7 @@ import {
   reverseToolWindow,
   type FoldKindChoice,
   type FoldReverseControls,
+  type FoldReversePreference,
   type FoldReverseWindowView,
 } from './reverse/reverseToolWindow';
 import { sinkToolWindow, type FoldSinkControls, type FoldSinkWindowView } from './sink/sinkToolWindow';
@@ -177,7 +178,7 @@ export interface FoldToolWindowVerbs
   /** Clear the marks made on the step on screen: one undo entry. */
   clearMarks?: () => void;
   // A compound fold's choices (`tools/reverse/reverseToolWindow`).
-  setReverseKind?: (kind: FoldReverseKind) => void;
+  setReverseKind?: (kind: FoldReverseKind | null) => void;
   /** Step through the ways the tip opens, or the layer orders listed. */
   stepOpening?: (delta: number) => void;
   stepOrder?: (delta: number) => void;
@@ -186,6 +187,7 @@ export interface FoldToolWindowVerbs
   setTuckDirection?: (direction: FoldDirection) => void;
   /** Step through the layers listed to tuck against. */
   stepTuckTarget?: (delta: number) => void;
+  toggleTuckPinned?: (face: number) => void;
   /** Step through a closed sink's pockets (`tools/sink/sinkToolWindow`). */
   stepPocket?: (delta: number) => void;
   /** How much of its line a precrease creases (`tools/precrease`). */
@@ -277,6 +279,7 @@ export interface FoldWindowButton {
 }
 
 export interface FoldToolWindowModel {
+  reversePreference?: FoldKindChoice<FoldReversePreference>;
   phase: 'locate' | 'preview' | 'divide';
   title: string;
   meta: string;

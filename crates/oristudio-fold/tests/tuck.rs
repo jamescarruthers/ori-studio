@@ -40,6 +40,7 @@ fn tuck(line: Line, toward: Point, direction: Direction, seed: Seed, target: Poi
         direction,
         seed,
         target,
+        additional_targets: Vec::new(),
     }
 }
 

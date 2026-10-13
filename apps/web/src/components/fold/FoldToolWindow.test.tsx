@@ -110,9 +110,37 @@ describe('FoldToolWindow', () => {
   it('locates the reverse fold’s line as every fold does', () => {
     render({ tool: 'inside-reverse', picks: 1 });
     const window = fold()!;
-    expect(byRole(window, 'button', /^Inside reverse fold/).getAttribute('aria-expanded')).toBe('true');
+    expect(byRole(window, 'button', /^Reverse fold/).getAttribute('aria-expanded')).toBe('true');
     expect(byRole(window, 'combobox', 'Locate line')).toBeTruthy();
     expect(queryByRole(window, 'group', 'Kind')).toBeNull();
+  });
+
+  it('offers Automatic, Inside and Outside before a line is located', () => {
+    const calls = { ...verbs(), setReverseKind: vi.fn() };
+    render({ tool: 'inside-reverse', picks: 1 }, calls);
+    const select = byRole(fold()!, 'combobox', 'Reverse kind');
+    expect(select.textContent).toContain('Automatic');
+    // The descriptor binds the menu options to the same intent verb.
+    const model = foldToolWindow(t, { tool: 'inside-reverse', lineMode: 'free', readOnly: null, picks: 0, preview: null }, calls, { coarse: false, alt: 'Alt' });
+    if (!model) throw new Error('reverse window missing');
+    expect(model.reversePreference?.options.map((o) => o.value)).toEqual(['auto', 'inside', 'outside']);
+    model.reversePreference?.set('outside');
+    expect(calls.setReverseKind).toHaveBeenLastCalledWith('outside');
+    model.reversePreference?.set('auto');
+    expect(calls.setReverseKind).toHaveBeenLastCalledWith(null);
+  });
+
+  it('selects additional stationary tuck targets and disables their controls for a locked sequence', () => {
+    const calls = { ...verbs(), toggleTuckPinned: vi.fn() };
+    const tuck = { direction: 'valley' as const, known: true, targets: 3, target: 0, faces: [2, 5, 6], pinned: [5], orders: 0, order: 0 };
+    const view = { tool: 'tuck' as const, picks: 2, preview: preview(), tuck };
+    render(view, calls);
+    const checked = byRole(fold()!, 'switch', 'Also tuck under layer 2');
+    expect(checked.getAttribute('aria-checked')).toBe('true');
+    act(() => byRole(fold()!, 'switch', 'Also tuck under layer 3').click());
+    expect(calls.toggleTuckPinned).toHaveBeenCalledWith(6);
+    render({ ...view, readOnly: 'newer' }, calls);
+    expect(byRole(fold()!, 'switch', 'Also tuck under layer 3').hasAttribute('disabled')).toBe(true);
   });
 
   it('takes the reverse fold’s kind that fits, offers a kind only when both fit, and steps its choices', () => {

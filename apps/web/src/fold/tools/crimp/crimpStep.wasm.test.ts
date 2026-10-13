@@ -19,8 +19,8 @@ import { foldStepSentence } from '../../stepSentence';
 import { buildFoldStep } from '../foldStepBuilder';
 import { lineModeInput, nextStep } from '../foldToolRegistry';
 import { foldRefusalNotice } from '../refusalNotice';
-import { chosenAt, reverseKindToFold, reverseOpenWays } from '../reverse/reverseStep';
-import { buildCrimpStep } from './crimpStep';
+import { chosenAt, reverseOpenWays } from '../reverse/reverseStep';
+import { buildCrimpStep, crimpKindToFold } from './crimpStep';
 
 /**
  * The crimp over the real bridge, in-process, as the crimp tool folds it:
@@ -132,7 +132,7 @@ function crimpAlong(
   const way = chosenAt(reverseOpenWays(asked.analysis.tip), 0);
   if (way) asked = ask({ opening: way.stored });
   const kinds = asked.kinds ?? [];
-  const kind = reverseKindToFold(chosen, kinds);
+  const kind = crimpKindToFold(chosen, kinds);
   // The orders, from the crimp's own call; every state it landed let go.
   const tried = landed(crimpTuck.crimp(state, { ...op, crimp: kind }, way ? { opening: way.stored } : undefined));
   const listed =

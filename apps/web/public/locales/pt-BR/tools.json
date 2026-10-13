@@ -419,9 +419,9 @@
       "freeHelp": "Uma linha traçada em qualquer lugar, sem referência."
     },
     "mark": {
-      "insideReverse": "IR",
       "mountain": "M",
       "precrease": "P",
+      "reverse": "RF",
       "valley": "V"
     },
     "note": {
@@ -700,15 +700,19 @@
       }
     },
     "reverse": {
+      "auto": "Automático",
       "bothFit": "Os dois tipos cabem aqui: escolha para onde vai a ponta.",
       "inside": "Interna",
+      "intentHelp": "Automático usa o tipo viável. Um tipo escolhido permanece selecionado mesmo quando não é possível dobrar.",
       "kind": "Tipo",
       "next": "Próximo",
       "ofCount": "{{index}} de {{total}}",
       "opening": "Abertura",
+      "openingsTruncated": "Pode haver mais aberturas. Reduza as abas selecionadas para explorá-las.",
       "order": "Ordem das camadas",
       "outside": "Externa",
       "previous": "Anterior",
+      "requestedKind": "Tipo de dobra reversa",
       "tipSide": "Lado da ponta"
     },
     "rotate": {
@@ -801,12 +805,13 @@
       "divideLine": "Dividir linha",
       "divideLineHelp": "Marcar pontos que dividem uma borda ou um vinco em partes iguais.",
       "insideReverse": "Dobra invertida interna",
-      "insideReverseHelp": "Empurrar uma aba para dentro de si mesma, invertendo sua lombada.",
       "mountain": "Dobra montanha",
       "mountainHelp": "Dobrar o lado que se move para longe de você, para que fique por baixo.",
       "openSinkHelp": "Empurrar para dentro a extremidade de uma ponta fechada, virando cada camada do avesso.",
       "precrease": "Pré-vincar",
       "precreaseHelp": "Dobrar e desdobrar, deixando um vinco para usar depois.",
+      "reverse": "Dobra reversa",
+      "reverseHelp": "Inverta uma aba para dentro ou envolva-a por fora, invertendo seu vinco central.",
       "rotateHelp": "Girar o modelo uma fração de volta ou um ângulo exato, primeiro em prévia e depois como um passo próprio.",
       "tuckHelp": "Dobrar uma aba e deslizá-la por baixo, ou por cima, de uma camada que fica parada.",
       "unsinkHelp": "Puxar de volta a extremidade de uma ponta afundada.",
@@ -814,6 +819,8 @@
       "valleyHelp": "Dobrar o lado que se move na sua direção, para que fique por cima."
     },
     "tuck": {
+      "alsoOver": "Dobrar também sobre a camada {{number}}",
+      "alsoUnder": "Dobrar também sob a camada {{number}}",
       "noTargets": "Nenhuma camada aqui recebe o encaixe.",
       "over": "Encaixar por cima",
       "targetsOver_one": "Uma camada aqui recebe o encaixe por cima dela.",

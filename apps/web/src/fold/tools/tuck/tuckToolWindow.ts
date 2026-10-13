@@ -50,6 +50,7 @@ export interface FoldTuckWindowView {
   target: number;
   /** The listed layers' faces, in the order they are stepped through: what a fix's layer is numbered by. */
   faces: readonly number[];
+  pinned?: readonly number[];
   /** How many orders the tuck leaves, when it leaves several (else 0), and the one taken. */
   orders: number;
   order: number;
@@ -62,6 +63,7 @@ export interface FoldTuckControls {
   order: FoldChoiceStepper | null;
   /** How many layers take the tuck here, in a line; null while unknown. */
   note: string | null;
+  additional?: readonly { label: string; checked: boolean; disabled: boolean; toggle: () => void }[];
 }
 
 /**
@@ -95,6 +97,14 @@ function tuckControls(t: TFunction, tuck: FoldTuckWindowView, verbs: FoldToolWin
     target: choiceStepper(t, targetLabel, tuck.target, tuck.targets, verbs.stepTuckTarget, readOnly),
     order: choiceStepper(t, t('tools:fold.reverse.order', 'Layer order'), tuck.order, tuck.orders, verbs.stepOrder, readOnly),
     note: targetsNote(t, tuck),
+    additional: verbs.toggleTuckPinned ? tuck.faces.flatMap((face, index) => index === tuck.target ? [] : [{
+      label: under(tuck)
+        ? t('tools:fold.tuck.alsoUnder', 'Also tuck under layer {{number}}', { number: index + 1 })
+        : t('tools:fold.tuck.alsoOver', 'Also tuck over layer {{number}}', { number: index + 1 }),
+      checked: tuck.pinned?.includes(face) ?? false,
+      disabled: readOnly || ((tuck.pinned?.length ?? 0) >= 64 && !tuck.pinned?.includes(face)),
+      toggle: () => verbs.toggleTuckPinned?.(face),
+    }]) : [],
   };
 }
 

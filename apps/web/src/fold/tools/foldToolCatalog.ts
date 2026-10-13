@@ -288,7 +288,7 @@ export function foldToolLabel(t: TFunction, id: FoldToolId): string {
     case 'precrease':
       return t('tools:fold.tool.precrease', 'Precrease');
     case 'inside-reverse':
-      return t('tools:fold.tool.insideReverse', 'Inside reverse fold');
+      return t('tools:fold.tool.reverse', 'Reverse fold');
     case 'crimp':
       return t('tools:fold.op.crimp', 'Crimp');
     case 'tuck':
@@ -327,7 +327,7 @@ export function foldToolDescription(t: TFunction, id: FoldToolId): string {
     case 'precrease':
       return t('tools:fold.tool.precreaseHelp', 'Fold and unfold, leaving a crease to use later.');
     case 'inside-reverse':
-      return t('tools:fold.tool.insideReverseHelp', 'Push a flap inside itself, reversing its spine.');
+      return t('tools:fold.tool.reverseHelp', 'Reverse a flap inside itself or wrap it around the outside, reversing its spine.');
     case 'crimp':
       return t('tools:fold.tool.crimpHelp', 'Fold a flap in along one line and back out along a second, so its end turns.');
     case 'tuck':
@@ -374,7 +374,7 @@ export function foldKindLetter(t: TFunction, id: FoldKind | 'inside-reverse'): s
     case 'precrease':
       return t('tools:fold.mark.precrease', 'P');
     case 'inside-reverse':
-      return t('tools:fold.mark.insideReverse', 'IR');
+      return t('tools:fold.mark.reverse', 'RF');
   }
 }
 

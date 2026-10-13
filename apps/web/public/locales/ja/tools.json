@@ -393,9 +393,9 @@
       "freeHelp": "基準なしでどこにでも引く線。"
     },
     "mark": {
-      "insideReverse": "IR",
       "mountain": "M",
       "precrease": "P",
+      "reverse": "RF",
       "valley": "V"
     },
     "note": {
@@ -668,15 +668,19 @@
       }
     },
     "reverse": {
+      "auto": "自動",
       "bothFit": "ここでは両方の種類が使えます。先端の向きを選んでください。",
       "inside": "中割り",
+      "intentHelp": "自動では折れる種類を選びます。種類を指定すると、折れない場合もその指定を維持します。",
       "kind": "種類",
       "next": "次へ",
       "ofCount": "{{index}} / {{total}}",
       "opening": "開き方",
+      "openingsTruncated": "ほかにも開き方がある可能性があります。選択するフラップを絞って確認してください。",
       "order": "層の順序",
       "outside": "かぶせ",
       "previous": "前へ",
+      "requestedKind": "反転折りの種類",
       "tipSide": "先端の側"
     },
     "rotate": {
@@ -769,12 +773,13 @@
       "divideLine": "線を分割",
       "divideLineHelp": "辺や折り線を等分する点をマークします。",
       "insideReverse": "中割り折り",
-      "insideReverseHelp": "フラップを内側に押し込み、背を反転させます。",
       "mountain": "山折り",
       "mountainHelp": "動く側を向こう側へ折り、下に重ねます。",
       "openSinkHelp": "閉じた角の先端を押し込み、すべての層を裏返します。",
       "precrease": "折り筋をつける",
       "precreaseHelp": "折って開き、後で使う折り筋を残します。",
+      "reverse": "反転折り",
+      "reverseHelp": "フラップを内側に押し込むか外側にかぶせ、背の折り目を反転します。",
       "rotateHelp": "モデルを回転の一部または正確な角度で回します。プレビューしてから、独立したステップとして追加します。",
       "tuckHelp": "フラップを折り、動かない層の下か上に差し込みます。",
       "unsinkHelp": "沈めた角の先端を引き出して戻します。",
@@ -782,6 +787,8 @@
       "valleyHelp": "動く側を手前へ折り、上に重ねます。"
     },
     "tuck": {
+      "alsoOver": "層 {{number}} の上にも折り込む",
+      "alsoUnder": "層 {{number}} の下にも折り込む",
       "noTargets": "ここには差し込める層がありません。",
       "over": "上に差し込む",
       "targetsOver_other": "ここで上に差し込める層は {{count}} 枚です。折った紙にそれぞれ明るく示されます。",

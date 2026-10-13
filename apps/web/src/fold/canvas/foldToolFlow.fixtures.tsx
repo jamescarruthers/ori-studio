@@ -18,6 +18,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore/store';
 import { isLockedStep, type FoldOp, type FoldSequenceDocument, type FoldStep } from '../document/foldSequenceDocument';
 import { readFoldSequences } from '../document/foldSequenceFile';
 import { createFoldEngineCalls, type FoldEngineCalls } from '../engine/foldEngineCalls';
+import { createFoldEngineCrimpTuckCalls } from '../engine/foldEngineCrimpTuckCalls';
 import { createFoldEngineCompoundCalls } from '../engine/foldEngineCompoundCalls';
 import { createFoldEngineVertexCalls } from '../engine/foldEngineSquashCalls';
 import type { FoldSession } from '../session/foldSession';
@@ -70,6 +71,7 @@ export async function foldFlowBridge() {
     return {
       ...createFoldEngineCalls(engine),
       ...compound,
+      ...createFoldEngineCrimpTuckCalls(engine),
       ...createFoldEngineVertexCalls(engine),
       swivelReach: (state: number, ask: FoldSwivelReachAsk) => swivelReach((op) => compound.compoundAnalysis(state, op), ask),
     } as FoldEngineCalls;

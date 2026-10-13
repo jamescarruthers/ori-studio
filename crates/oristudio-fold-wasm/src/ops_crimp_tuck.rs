@@ -143,6 +143,8 @@ pub struct TuckOp {
     pub seed: SeedInput,
     /// A sheet point inside the layer the block lands against.
     pub target: Point,
+    #[serde(default, rename = "additionalTargets")]
+    pub additional_targets: Vec<Point>,
 }
 
 impl TuckOp {
@@ -359,6 +361,14 @@ pub fn resolve_crimp(
 /// A tuck op resolved in `parent`. Its choices are checked before.
 pub fn resolve_tuck(parent: &State, op: &TuckOp, choices: &Choices) -> Result<TuckStep, Rejection> {
     finite_point("target", op.target)?;
+    if op.additional_targets.len() > 64 {
+        return Err(
+            BridgeError::InvalidInput("at most 64 additional tuck targets".to_string()).into(),
+        );
+    }
+    for &target in &op.additional_targets {
+        finite_point("additionalTargets", target)?;
+    }
     let fold = plain(
         parent,
         &op.line,
@@ -375,6 +385,7 @@ pub fn resolve_tuck(parent: &State, op: &TuckOp, choices: &Choices) -> Result<Tu
             direction: op.direction,
             seed: fold.seed,
             target: op.target,
+            additional_targets: op.additional_targets.clone(),
         },
         choices: TuckChoices {
             order: order(choices),

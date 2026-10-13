@@ -393,9 +393,9 @@
       "freeHelp": "随处画出的线，没有参考。"
     },
     "mark": {
-      "insideReverse": "IR",
       "mountain": "M",
       "precrease": "P",
+      "reverse": "RF",
       "valley": "V"
     },
     "note": {
@@ -668,15 +668,19 @@
       }
     },
     "reverse": {
+      "auto": "自动",
       "bothFit": "两种都可以：请选择尖端的朝向。",
       "inside": "向内",
+      "intentHelp": "自动模式会选择可行的类型。手动选择后，即使无法折叠也会保留该类型。",
       "kind": "类型",
       "next": "下一个",
       "ofCount": "{{index}} / {{total}}",
       "opening": "张开方式",
+      "openingsTruncated": "可能还有其他打开方式。请缩小所选折翼的范围以查看。",
       "order": "层序",
       "outside": "向外",
       "previous": "上一个",
+      "requestedKind": "反折类型",
       "tipSide": "尖端一侧"
     },
     "rotate": {
@@ -769,12 +773,13 @@
       "divideLine": "等分线",
       "divideLineHelp": "标出把边或折痕等分的点。",
       "insideReverse": "内翻折",
-      "insideReverseHelp": "把翼片推入其自身内部，翻转它的脊线。",
       "mountain": "山折",
       "mountainHelp": "把移动的一侧向远离你的方向折，使它落在下面。",
       "openSinkHelp": "把闭合角的尖端推进去，并把它的每一层翻转。",
       "precrease": "预折",
       "precreaseHelp": "折起再展开，留下一条之后用的折痕。",
+      "reverse": "反折",
+      "reverseHelp": "将折翼向内折入或向外包折，反转脊线折痕。",
       "rotateHelp": "将模型旋转一部分圈数或精确角度，先预览，再作为单独的一步添加。",
       "tuckHelp": "折叠翼片，并把它滑到留在原处的层下面或上面。",
       "unsinkHelp": "把沉入的角的尖端拉回来。",
@@ -782,6 +787,8 @@
       "valleyHelp": "把移动的一侧朝你折，使它落在上面。"
     },
     "tuck": {
+      "alsoOver": "同时折到第 {{number}} 层上方",
+      "alsoUnder": "同时折到第 {{number}} 层下方",
       "noTargets": "这里没有可以塞入的层。",
       "over": "塞到上面",
       "targetsOver_other": "这里有 {{count}} 层可以让翼片塞到上面：折好的纸会逐一点亮它们。",

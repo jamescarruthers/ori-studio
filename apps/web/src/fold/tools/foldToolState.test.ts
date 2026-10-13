@@ -434,3 +434,32 @@ describe('the vertex folds’ tool state', () => {
 function alongPoint(x: number, y: number): FoldPointPick {
   return { kind: 'point', provenance: 'crossing', sheet: [x, y], mark: null, scene: { x, y } };
 }
+
+
+it('retains additional tuck targets while comparing the primary target, and clears them for new geometry', () => {
+  const tools = createFoldTools();
+  tools.selectTool('tuck');
+  tools.setTuckTarget(5);
+  tools.stepOrder(1, 2);
+  tools.toggleTuckPinned(7);
+  expect(tools.store.getState().compound).toMatchObject({ tuckPinned: [7], order: 0 });
+  tools.setTuckTarget(9);
+  expect(tools.store.getState().compound.tuckPinned).toEqual([7]);
+  tools.toggleTuckPinned(7);
+  expect(tools.store.getState().compound.tuckPinned).toEqual([]);
+  tools.toggleTuckPinned(7);
+  tools.setSeed({ scope: 'all' });
+  expect(tools.store.getState().compound.tuckPinned).toEqual([]);
+});
+
+
+it('steps the largest indexed opening list without losing a choice to integer rounding', () => {
+  const tools = createFoldTools();
+  const count = Number.MAX_SAFE_INTEGER;
+  tools.stepOpening(2, count);
+  expect(tools.store.getState().compound.opening).toBe(2);
+  tools.stepOpening(-3, count);
+  expect(tools.store.getState().compound.opening).toBe(count - 1);
+  tools.stepOpening(1, count);
+  expect(tools.store.getState().compound.opening).toBe(0);
+});

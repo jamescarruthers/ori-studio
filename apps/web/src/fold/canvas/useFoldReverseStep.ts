@@ -13,6 +13,7 @@ import {
   reverseOpenWays,
   reverseOrdersOf,
   type FoldReverseOpenWay,
+  type FoldReverseWays,
 } from '../tools/reverse/reverseStep';
 import type { FoldPickIndex } from './foldPicking';
 import { useFoldCompoundAsk, type FoldCompoundAsk } from './useFoldCompoundAsk';
@@ -26,7 +27,7 @@ export interface FoldReversePreview {
   /** The kinds that land; empty while unknown, or while neither does. */
   kinds: readonly FoldReverseKind[];
   /** The ways the tip opens, when a flap has a choice; the one taken. */
-  ways: readonly FoldReverseOpenWay[];
+  ways: FoldReverseWays;
   way: FoldReverseOpenWay | null;
   /** The orders the kind leaves, when it leaves several; the one taken. */
   orders: readonly FoldCompletionChoice[];

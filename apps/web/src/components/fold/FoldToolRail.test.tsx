@@ -73,7 +73,7 @@ describe('FoldToolRail', () => {
     const calls = verbs();
     const rail = mount(<FoldToolRail groups={foldRailGroups(t, view, calls)} />);
     act(() => byRole(rail, 'button', 'Mountain fold').click());
-    act(() => byRole(rail, 'button', 'Inside reverse fold').click());
+    act(() => byRole(rail, 'button', 'Reverse fold').click());
     act(() => byRole(rail, 'button', 'Crimp').click());
     act(() => byRole(rail, 'button', 'Tuck').click());
     act(() => byRole(rail, 'button', 'Open sink').click());
@@ -166,7 +166,7 @@ describe('FoldToolGlyph', () => {
       expect(glyph?.firstElementChild?.getAttribute('aria-hidden'), id).toBe('true');
     }
     expect(glyphs.querySelector('[data-glyph="valley"]')?.textContent).toBe('V');
-    expect(glyphs.querySelector('[data-glyph="inside-reverse"]')?.textContent).toBe('IR');
+    expect(glyphs.querySelector('[data-glyph="inside-reverse"]')?.textContent).toBe('RF');
   });
 
   it('draws the rabbit ear as Edit draws its own Rabbit Ear tool, in the rail and compact', () => {

@@ -232,6 +232,7 @@ describe('the Fold canvas model', () => {
       direction: 'mountain',
       known: false,
       targets: 2,
+      pinned: [],
       target: 1,
       faces: [3, 7],
       orders: 0,

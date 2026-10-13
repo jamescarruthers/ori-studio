@@ -47,6 +47,15 @@ import { extentClicks, type FoldExtentMode } from './precrease/precreaseExtent';
 import { FOLD_ROTATION_DEFAULT } from './rotate/rotateTool';
 import { SWIVEL_TARGET_FROM } from './vertex/vertexInputs';
 
+/** Wrap without adding two potentially MAX_SAFE_INTEGER-sized indices. */
+function wrappedOpening(index: number, delta: number, count: number): number {
+  const at = index % count;
+  const offset = delta % count;
+  return offset >= 0
+    ? (at >= count - offset ? at - (count - offset) : at + offset)
+    : (at < -offset ? count + (at + offset) : at + offset);
+}
+
 /**
  * What a fold takes along with the moving side (D6's seed, before it names
  * sheet points): the top flap at the line, which is where a fold starts;
@@ -121,6 +130,8 @@ export interface FoldCompoundToolChoices {
    * it chosen.
    */
   tuckTarget: number | null;
+  /** Additional stationary targets, reset when the fold geometry changes. */
+  tuckPinned?: readonly number[];
   // The vertex folds (`tools/vertex`): each a choice of what the engine
   // lists, by index, or of where the folder points, as a direction.
   /** Where a squash's spine lands: a direction from its vertex in the parent's model frame; null for the hinge line. */
@@ -144,6 +155,7 @@ export const FOLD_COMPOUND_CHOICES_INITIAL: FoldCompoundToolChoices = {
   opening: 0,
   order: 0,
   tuckTarget: null,
+  tuckPinned: [],
   squashTarget: null,
   emergent: null,
   fanLayers: null,
@@ -245,9 +257,9 @@ function located(state: FoldToolState): FoldToolState {
 
 /** A new tip — another side, another seed, another root — opens, sinks and stacks anew: the kind stays chosen. */
 function anotherTip(compound: FoldCompoundToolChoices): FoldCompoundToolChoices {
-  return compound.opening === 0 && compound.order === 0 && compound.pocket === 0
+  return compound.opening === 0 && compound.order === 0 && compound.pocket === 0 && !compound.tuckPinned?.length
     ? compound
-    : { ...compound, opening: 0, order: 0, pocket: 0 };
+    : { ...compound, opening: 0, order: 0, pocket: 0, tuckPinned: [] };
 }
 
 /** A sink with a kind, open or closed: the tools the sink window's kind control switches between. */
@@ -359,6 +371,7 @@ export interface FoldTools {
   setTuckDirection(direction: FoldDirection): void;
   /** The layer a tuck goes against, by its face; null takes the first listed. */
   setTuckTarget(face: number | null): void;
+  toggleTuckPinned(face: number): void;
   // The vertex folds (`tools/vertex`): each choice made anew lists the
   // choices after it anew — the fourth ray its orders.
   setVertexDirection(direction: FoldDirection): void;
@@ -485,7 +498,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
               ...state,
               picks: [...state.picks.slice(0, -1), pick],
               override: null,
-              compound: { ...state.compound, emergent: null, order: 0 },
+              compound: { ...state.compound, emergent: null, order: 0, tuckPinned: [] },
             }
       );
     },
@@ -591,7 +604,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       if (count <= 1) return;
       set((state) => ({
         ...state,
-        compound: { ...state.compound, opening: (((state.compound.opening + delta) % count) + count) % count, order: 0 },
+        compound: { ...state.compound, opening: wrappedOpening(state.compound.opening, delta, count), order: 0 },
       }));
     },
 
@@ -620,6 +633,20 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
           ? state
           : { ...state, tuckDirection, override: null, compound: { ...anotherTip(state.compound), tuckTarget: null } }
       );
+    },
+
+    toggleTuckPinned(face) {
+      set((state) => {
+        const pinned = state.compound.tuckPinned ?? [];
+        return {
+          ...state,
+          compound: {
+            ...state.compound,
+            order: 0,
+            tuckPinned: pinned.includes(face) ? pinned.filter((f) => f !== face) : [...pinned, face],
+          },
+        };
+      });
     },
 
     setTuckTarget(tuckTarget) {
@@ -658,7 +685,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
           swivelTarget,
           picks,
           override: null,
-          compound: { ...state.compound, emergent: null, order: 0 },
+          compound: { ...state.compound, emergent: null, order: 0, tuckPinned: [] },
         };
       });
     },

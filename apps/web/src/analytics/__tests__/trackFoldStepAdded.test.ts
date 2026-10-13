@@ -20,6 +20,15 @@ beforeEach(() => {
   runtime.track.mockClear();
 });
 
+it('counts tuck targets only in buckets, distinguishing a single target from multiple targets', () => {
+  for (const [targetCount, bucket] of [[1, '<=1'], [2, '<=5'], [6, '<=10']] as const) {
+    trackFoldStepAdded('tuck', { layerScope: 'depth', via: 'free', targetCount });
+    expect(runtime.track).toHaveBeenLastCalledWith('fold step added', {
+      op_kind: 'tuck', layer_scope: 'depth', via: 'free', target_count_bucket: bucket,
+    });
+  }
+});
+
 describe('trackFoldStepAdded for a swivel', () => {
   it('sends its form, an edge form’s target, and on a folded edge its kind', () => {
     trackFoldStepAdded('swivel', { vertex: { swivelForm: 'fold', target: 'crease', swivelKind: 'open' } });

@@ -257,7 +257,7 @@ const TARGET_TAKEN_TINT = 0.42;
  */
 export function foldTargetsTint(
   index: FoldPickIndex,
-  targets: { listed: readonly number[]; taken: number | null },
+  targets: { listed: readonly number[]; taken: number | null; additional?: readonly number[] },
   accent: Rgba
 ): FillGeometry | null {
   if (targets.listed.length === 0) return null;
@@ -268,7 +268,7 @@ export function foldTargetsTint(
       return k === undefined ? [] : [k];
     }));
   const listed = positions(targets.listed);
-  const taken = positions(targets.taken === null ? [] : [targets.taken]);
+  const taken = positions([...(targets.taken === null ? [] : [targets.taken]), ...(targets.additional ?? [])]);
   const triangles: number[] = [];
   const colors: number[] = [];
   const add = (lit: ReadonlySet<number>, alpha: number) => {

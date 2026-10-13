@@ -487,6 +487,7 @@ pub fn tuck_fold(state: &State, rng: &mut Rng) -> Option<TuckFold> {
             direction: plain.direction,
             seed: plain.seed,
             target: state.face_witness(target)?,
+            additional_targets: Vec::new(),
         });
     }
     None

@@ -152,7 +152,7 @@ export interface FoldCanvasVerbs {
   clearMarks: () => void;
   // A compound fold's choices, one block per family.
   /** The reverse fold's kind, and a crimp's. */
-  setReverseKind: (kind: FoldReverseKind) => void;
+  setReverseKind: (kind: FoldReverseKind | null) => void;
   /** Step through the ways the tip opens, and the layer orders listed. */
   stepOpening: (delta: number) => void;
   stepOrder: (delta: number) => void;
@@ -162,6 +162,7 @@ export interface FoldCanvasVerbs {
   setTuckDirection: (direction: FoldDirection) => void;
   /** Step through the layers listed to tuck against. */
   stepTuckTarget: (delta: number) => void;
+  toggleTuckPinned: (face: number) => void;
   /** Tuck against this listed layer instead: a refusal's `tuck_target` fix. */
   tuckTarget: (face: number) => void;
   // The vertex folds (`tools/vertex`), and what their refusals' buttons do.
@@ -359,7 +360,12 @@ function trackCommitted(op: FoldOp, defaulted: boolean): void {
   // A precrease says how much of its line it creased.
   const extent = op.kind === 'precrease' ? (op.extent?.kind ?? 'whole') : null;
   const layerScope = defaulted && op.seed.scope === 'flaps' ? 'top' : op.seed.scope;
-  trackFoldStepAdded(kind, { layerScope, via, ...(extent ? { extent } : {}) });
+  trackFoldStepAdded(kind, {
+    layerScope,
+    via,
+    ...(extent ? { extent } : {}),
+    ...(op.kind === 'tuck' ? { targetCount: 1 + (op.additionalTargets?.length ?? 0) } : {}),
+  });
 }
 
 /** A swivel's meeting point, clicked again: its first click's rule (`vertexInputs`). */
@@ -737,6 +743,7 @@ export function useFoldCanvasVerbs(
       },
 
       tuckTarget: (face) => tools.setTuckTarget(face),
+      toggleTuckPinned: (face) => tools.toggleTuckPinned(face),
 
       // The vertex folds' choices, and what their refusals' buttons do.
       setVertexDirection: (direction) => tools.setVertexDirection(direction),

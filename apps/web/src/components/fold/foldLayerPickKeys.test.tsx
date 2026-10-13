@@ -67,6 +67,7 @@ function verbs(): FoldCanvasVerbs {
     setSecondLineMode: vi.fn(),
     setTuckDirection: vi.fn(),
     stepTuckTarget: vi.fn(),
+    toggleTuckPinned: vi.fn(),
     tuckTarget: vi.fn(),
     setVertexDirection: vi.fn(),
     setSwivelKind: vi.fn(),

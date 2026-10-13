@@ -419,9 +419,9 @@
       "freeHelp": "Una línea trazada en cualquier lugar, sin referencia."
     },
     "mark": {
-      "insideReverse": "IR",
       "mountain": "M",
       "precrease": "P",
+      "reverse": "RF",
       "valley": "V"
     },
     "note": {
@@ -700,15 +700,19 @@
       }
     },
     "reverse": {
+      "auto": "Automático",
       "bothFit": "Aquí caben los dos tipos: elige hacia dónde va la punta.",
       "inside": "Interior",
+      "intentHelp": "Automático usa el tipo viable. Un tipo elegido sigue seleccionado aunque no se pueda plegar.",
       "kind": "Tipo",
       "next": "Siguiente",
       "ofCount": "{{index}} de {{total}}",
       "opening": "Abertura",
+      "openingsTruncated": "Puede haber más aperturas. Reduce las solapas seleccionadas para explorarlas.",
       "order": "Orden de las capas",
       "outside": "Exterior",
       "previous": "Anterior",
+      "requestedKind": "Tipo de pliegue inverso",
       "tipSide": "Lado de la punta"
     },
     "rotate": {
@@ -801,12 +805,13 @@
       "divideLine": "Dividir línea",
       "divideLineHelp": "Marcar puntos que dividen un borde o un pliegue en partes iguales.",
       "insideReverse": "Pliegue invertido interior",
-      "insideReverseHelp": "Empujar una solapa hacia dentro de sí misma, invirtiendo su lomo.",
       "mountain": "Pliegue de monte",
       "mountainHelp": "Plegar el lado que se mueve alejándolo de ti, para que quede debajo.",
       "openSinkHelp": "Empujar hacia dentro el extremo de una punta cerrada, dando la vuelta a cada una de sus capas.",
       "precrease": "Premarcar",
       "precreaseHelp": "Plegar y desplegar, dejando un pliegue para usarlo después.",
+      "reverse": "Pliegue inverso",
+      "reverseHelp": "Invierte una solapa hacia dentro o envuélvela por fuera, invirtiendo su pliegue central.",
       "rotateHelp": "Girar el modelo una parte de vuelta o un ángulo exacto, primero en vista previa y luego como un paso propio.",
       "tuckHelp": "Plegar una solapa y deslizarla bajo, o sobre, una capa que se queda quieta.",
       "unsinkHelp": "Sacar de nuevo el extremo de una punta hundida.",
@@ -814,6 +819,8 @@
       "valleyHelp": "Plegar el lado que se mueve hacia ti, para que quede encima."
     },
     "tuck": {
+      "alsoOver": "Plegar también sobre la capa {{number}}",
+      "alsoUnder": "Plegar también bajo la capa {{number}}",
       "noTargets": "Aquí ninguna capa admite el remetido.",
       "over": "Remeter encima",
       "targetsOver_one": "Aquí una capa admite el remetido sobre ella.",

@@ -2,13 +2,23 @@
 
 ## Goal
 
+**Scope update (2026-10-13, owner instruction): keep Fold entirely flat/2D.**
+The active implementation is A–D plus the flat portions of H. Sections 5–6,
+spatial work in section 7, and phases E–G are deferred, not acceptance gates for
+this change. Masu box stops at its complete flat preparation; crane stops at its
+flat finished form. No spatial states, angle folds, 3D controls, or spatial schema
+changes will be added. Preserve the deferred design below as future research.
+
+**Implementation baseline:** merged source `aa736f95d` into
+`codex/fold-origami-trials` and rebuilt the matching Fold WASM bridge.
+
 Make it possible to author, save, reopen, inspect, and continue all five
 Origami.me designs in **Fold**: cicada, swan, heart, masu box, and crane. The
 finished models must match the intended paper construction and layer order,
 not merely have a recognizable outline or return an engine success code.
 
-This is an implementation plan, requested on 2026-10-13. No functionality is
-implemented by this document. The initial trials and reproduction inputs are in
+This plan was requested on 2026-10-13. The flat-only implementation is complete;
+the spatial sections below remain deferred research. The initial trials and reproduction inputs are in
 [the research report](../research/2026-10-13-origami-fold-trials/REPORT.md).
 
 Completion means:
@@ -16,14 +26,14 @@ Completion means:
 - Cicada: all seven tutorial stages, including the separate head layers and
   side folds behind the wings.
 - Swan: the intended outward neck construction and head orientation, with the
-  correct layers wrapping around or remaining outside the body. The current
-  inside-reverse neck is a comparison case, **not an accepted completion**.
+  correct layers wrapping around or remaining outside the body. The former
+  inside-reverse neck is retained as a comparison case, **not an accepted completion**.
 - Heart: release the side pockets while lowering the upper flap, finish the
   corner folds, and turn the model over to its completed heart outline.
-- Masu box: a base, four upright walls, collapsed corners, and both securing
-  flaps folded into the box. Flat preparation alone does not count.
-- Crane: the intended neck, tail, and head construction and **opened wings**.
-  Both wings folded down flat do not count as final completion.
+- Masu box: complete flat preparation through tutorial stage 6. Upright walls,
+  corner collapse and securing flaps are deferred by the owner.
+- Crane: the intended neck, tail and head construction with both wings folded
+  down flat. Opening the wings is deferred by the owner.
 - Every model is an editable native `.osf` sequence, uses the same operations
   and choices exposed by the UI, and opens directly in Fold on browser and
   desktop. Exporting pictures into Edit is not a substitute.
@@ -56,7 +66,7 @@ flattening the neck/head; the user's correction identifies the desired outward
 neck result. Establish the intended layer arrangement from the reference and a
 paper-fold check before choosing a kernel primitive.
 
-| Area | Evidence today | Classification and required response |
+| Area | Evidence at planning time (superseded by findings below) | Classification and required response |
 | --- | --- | --- |
 | Outside reverse fold | Rust has `ReverseKind::Outside`; the document has `outside-reverse`; the tool builder emits it; the UI exposes Inside/Outside when both are feasible. The existing outside-reverse tool test passes. | **Exists.** Correct the swan construction and improve discovery/explicit intent; do not build a second outside-reverse engine. |
 | Swan neck | `models/swan.osf` node 9 is `inside-reverse`; node 10 is already `outside-reverse` for the head. Replaying the same node-9 line, seed, and opening with Outside returns `reverse_kind_infeasible`, with faces `[16, 21, 29]` and an Inside suggestion. | **Reference mismatch, cause unresolved.** The preparation, opening, moving layers, or supported reverse configuration must change. A kind-string replacement is insufficient. Face IDs describe this reproduction only. |
@@ -71,6 +81,35 @@ The initial audit also ran
 `apps/web/src/fold/tools/reverse/reverseStep.wasm.test.ts`: all three tests passed,
 including the case that can only land Outside. This establishes implementation
 coverage, not that the current swan is correct.
+
+
+### Implementation findings (flat scope)
+
+- The corrected swan uses existing Outside reverses with a descending neck
+  crease and the balanced central-spine opening. Its former ascending line was
+  an input mismatch; no reverse-kernel relaxation is needed. Both operations are
+  reachable through the tool builder and reproduce the API states.
+- Heart squash/plain-fold attempts changed the wrong paper. The smallest useful
+  extension is **multiple stationary tuck targets**, not a new pocket macro.
+  Closure is bounded by every target, retains adjacency refusal, requires overlap
+  with every target, and intersects the existing strict placement constraints
+  before normal completion/admission. No arbitrary fixed-face exception is used.
+  The two side triangles retain face identity and isometry; only the four central
+  faces split. The final corner/lobe folds and turnover now complete the heart.
+- The 12 old bird swivel probes reproduce their geometric refusals on the merged
+  source. These inputs do not prove a valid missing swivel configuration. Existing
+  reverse folds reach the required flat endpoints; guards and algorithms remain
+  unchanged. The fixtures retain the probes as negatives.
+- Reverse discovery now names both kinds. Explicit intent stays selected through
+  refusals; Automatic keeps the only-feasible behavior. A lazy mixed-radix chooser
+  exposes all returned opening combinations, with bounded memory, safe integer
+  wraparound and explicit scan truncation.
+- `additionalTargets` is optional in a native tuck step; old steps remain valid.
+  It is limited to 64 additional finite witnesses at the wire/file boundary.
+  Unknown/malformed constraints lock and preserve the step. No native version
+  change or spatial data is introduced. Existing committed-op analytics covers
+  the tuck/reverse actions, with a bucketed tuck target count to distinguish
+  multi-target adoption. All new control text is translated.
 
 ### 2. Establish reference cases before changing algorithms
 
@@ -185,7 +224,7 @@ Equivalent source stages may contain several atomic saved steps, but the
 reference stage and resulting paper relationships must be documented. The
 current failed and infeasible cases remain explicit negative tests.
 
-### 5. Add persistent nonflat states without weakening flat-state correctness
+### 5. [DEFERRED — nonflat]  Add persistent nonflat states without weakening flat-state correctness
 
 This is a deliberate extension of
 [the original Fold plan](fold-workspace.md), which explicitly excludes nonflat
@@ -277,7 +316,7 @@ explicit forming representation before calling it supported. Arbitrary mesh
 stretching or hidden new creases are not acceptable substitutes. Optional rounded
 sculpting remains outside the completion target.
 
-### 6. Finish the box and crane using those spatial operations
+### 6. [DEFERRED — nonflat] Finish the box and crane using those spatial operations
 
 **Masu box assembly:**
 
@@ -471,35 +510,35 @@ these concerns rather than adding behavior to a panel.
 - [x] Reproduce the saved swan neck's Outside refusal without changing its geometry.
 - [x] Run the existing reverse tool/WASM tests: 3 passed.
 - [x] Identify existing 3D placement/admission/rendering and the original flat-only scope.
-- [x] Write this implementation plan; implementation remains pending.
+- [x] Write this implementation plan; superseded by the flat scope and findings above.
 
 ### A — Establish the acceptance corpus
 
-- [ ] Integrate the current Fold source and rebuild the matching bridge.
-- [ ] Add attributed reference manifests, valid prefixes, and reduced negative cases.
-- [ ] Establish correct swan material/layer relationships and heart pocket endpoint.
-- [ ] Audit cicada colors, geometry, and both-sided layer ordering as a regression.
-- [ ] Demonstrate valid box-corner and opened-crane endpoints in the kinematic spike.
+- [x] Integrate the current Fold source and rebuild the matching bridge.
+- [x] Add attributed reference manifests, valid prefixes, and reduced negative cases.
+- [x] Establish correct swan material/layer relationships and heart pocket endpoint.
+- [x] Audit cicada geometry, paper sides and both-sided rendering; retain native replay regression.
+- Deferred: demonstrate spatial box-corner/opened-crane endpoints in a later kinematic spike.
 
 ### B — Reverse fold and swan
 
-- [ ] Make both reverse kinds discoverable through the shared tool/commands.
-- [ ] Preserve explicit Outside intent and make infeasible requests actionable.
-- [ ] Expose the required openings without hiding them behind a combined-choice cap.
-- [ ] Correct or extend the swan neck construction based on the reference fixture.
-- [ ] Complete the head and verify the intended outside/inside relationships.
-- [ ] Prove tool/API equivalence and native replay for the corrected swan.
+- [x] Make both reverse kinds discoverable through the shared tool/commands.
+- [x] Preserve explicit Outside intent and make infeasible requests actionable.
+- [x] Expose the required openings without hiding them behind a combined-choice cap.
+- [x] Correct or extend the swan neck construction based on the reference fixture.
+- [x] Complete the head and verify the intended outside/inside relationships.
+- [x] Prove tool/API equivalence and native replay for the corrected swan.
 
 ### C/D — Heart and swivel coverage
 
-- [ ] Test existing squash/flap composition for the heart pocket release.
-- [ ] If necessary, implement the smallest derived compound extension and its refusals.
-- [ ] Complete the heart's final corner folds and turnover.
-- [ ] Reproduce the tutorial-order bird swivels with current buried-edge picking.
-- [ ] Extend only proven valid unsupported swivel configurations; retain negative tests.
-- [ ] Verify the crane neck/tail/head from the intended preparation.
+- [x] Test existing squash/flap composition for the heart pocket release.
+- [x] If necessary, implement the smallest derived compound extension and its refusals.
+- [x] Complete the heart's final corner folds and turnover.
+- [x] Reproduce the tutorial-order bird swivels with current buried-edge picking.
+- [x] Extend only proven valid unsupported swivel configurations; retain negative tests.
+- [x] Verify the crane neck/tail/head from the intended preparation.
 
-### E/F — Nonflat authoring foundation
+### E/F — Nonflat authoring foundation (deferred by owner)
 
 - [ ] Extract/reuse neutral 3D geometry without changing Edit's behavior.
 - [ ] Define spatial states, rigid face/hinge checks, contacts, and collision diagnostics.
@@ -510,15 +549,20 @@ these concerns rather than adding behavior to a panel.
 - [ ] Keep playback/view settings distinct from saved model state.
 - [ ] Add privacy-preserving events for new committed operations and failures.
 
-### G/H — Finish and deliver all five
+### G/H — Deliver flat models; spatial finishing deferred
 
-- [ ] Masu box: upright walls, both sets of corners, both interior securing flaps.
-- [ ] Crane: opened wings with valid body articulation and preserved neck/head/tail.
-- [ ] Cicada: reference-correct final flat sequence and regression coverage.
-- [ ] Swan: reference-correct outward neck/head construction, not the trial substitute.
-- [ ] Heart: completed pockets, lobes/notch/corners, and final front view.
-- [ ] Every model can be authored through Fold's public tools and saved as `.osf`.
-- [ ] Every file opens automatically in Fold and can continue from its last step.
-- [ ] Browser and desktop checks, legacy/unknown-file checks, and affected CI gates pass.
-- [ ] Replace the “partial/alternative” deliverables only after semantic acceptance;
+- [x] Masu box: full flat preparation; upright assembly deferred.
+- [x] Crane: flat reverse-fold neck, tail, head and both flat wings; wing opening deferred.
+- [x] Cicada: completed final flat sequence, front/back visual audit and replay coverage.
+- [x] Swan: reference-correct outward neck/head construction, not the trial substitute.
+- [x] Heart: completed pockets, lobes/notch/corners, and final front view.
+- [x] Every model uses operations exposed by Fold and saves as `.osf`; critical new
+      heart/swan constructions have tool-to-API equivalence coverage. A complete
+      mouse-only authoring study is separate from this implementation.
+- [x] Every file opens automatically in the browser Fold workspace. Desktop heart
+      open/save/reopen preserves every operation and choice; continued editing
+      is exercised from the cicada endpoint.
+- [x] Browser/desktop smoke checks and legacy/unknown-file regressions pass.
+      Validation commands and limitations are recorded in the research report.
+- [x] Replace the “partial/alternative” deliverables only after semantic acceptance;
       retain original experiments as historical evidence and update the report.

@@ -406,9 +406,9 @@
       "freeHelp": "A line drawn anywhere, with no reference."
     },
     "mark": {
-      "insideReverse": "IR",
       "mountain": "M",
       "precrease": "P",
+      "reverse": "RF",
       "valley": "V"
     },
     "note": {
@@ -684,15 +684,19 @@
       }
     },
     "reverse": {
+      "auto": "Automatic",
       "bothFit": "Both kinds fit here: choose which way the tip goes.",
       "inside": "Inside",
+      "intentHelp": "Automatic uses the kind that fits. A chosen kind stays selected if it cannot fold.",
       "kind": "Kind",
       "next": "Next",
       "ofCount": "{{index}} of {{total}}",
       "opening": "Opening",
+      "openingsTruncated": "More openings may exist. Narrow the selected flaps to explore them.",
       "order": "Layer order",
       "outside": "Outside",
       "previous": "Previous",
+      "requestedKind": "Reverse kind",
       "tipSide": "Tip side"
     },
     "rotate": {
@@ -785,12 +789,13 @@
       "divideLine": "Divide line",
       "divideLineHelp": "Mark points that divide an edge or a crease into equal parts.",
       "insideReverse": "Inside reverse fold",
-      "insideReverseHelp": "Push a flap inside itself, reversing its spine.",
       "mountain": "Mountain fold",
       "mountainHelp": "Fold the moving side away from you, so it lands underneath.",
       "openSinkHelp": "Push a closed point’s tip in, turning every layer of it inside out.",
       "precrease": "Precrease",
       "precreaseHelp": "Fold and unfold, leaving a crease to use later.",
+      "reverse": "Reverse fold",
+      "reverseHelp": "Reverse a flap inside itself or wrap it around the outside, reversing its spine.",
       "rotateHelp": "Turn the model round by a part of a turn or an exact angle, previewed, then applied as a step of its own.",
       "tuckHelp": "Fold a flap and slide it under, or over, a layer that stays.",
       "unsinkHelp": "Pull a sunk point’s tip back out.",
@@ -798,6 +803,8 @@
       "valleyHelp": "Fold the moving side toward you, so it lands on top."
     },
     "tuck": {
+      "alsoOver": "Also tuck over layer {{number}}",
+      "alsoUnder": "Also tuck under layer {{number}}",
       "noTargets": "No layer here takes the tuck.",
       "over": "Tuck over",
       "targetsOver_one": "One layer here takes the tuck over it.",

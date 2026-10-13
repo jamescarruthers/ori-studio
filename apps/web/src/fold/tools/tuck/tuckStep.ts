@@ -33,6 +33,7 @@ export interface FoldTuckIntent extends FoldLocateIntent {
   direction: FoldDirection;
   /** The listed target's sheet point; null while the targets are being asked for. */
   target: SheetPoint | null;
+  additionalTargets?: readonly SheetPoint[];
   completion: FoldCompletionChoice | null;
 }
 
@@ -58,6 +59,7 @@ export function buildTuckStep(intent: FoldTuckIntent, index: FoldPickIndex): Fol
     direction: intent.direction,
     target: intent.target ?? TUCK_TARGET_UNASKED,
     ...along,
+    ...(intent.additionalTargets?.length ? { additionalTargets: intent.additionalTargets } : {}),
   };
   const choices: FoldChoices = {
     ...rooted,
