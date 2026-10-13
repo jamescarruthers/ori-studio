@@ -4,7 +4,9 @@
 
 ## Results and files
 
-Three recognizable flat models are saved: cicada, swan, and crane. The swan and crane use alternate reverse-fold routes after the tutorial-order swivel attempts failed. The heart and masu box are saved at their verified stopping points. These are editable native sequences, not authored diagrams.
+The cicada is complete as a flat model. The swan and crane are saved as recognizable flat prototypes using alternate routes; the heart and masu box are saved at verified stopping points. These are editable native sequences, not authored diagrams.
+
+**Review correction (2026-10-13):** the user identified that the swan needs an outward neck construction; the current inside-reverse neck does not meet that target. Engine acceptance and native replay did not establish reference correctness. The crane also still needs its wings opened. The detailed follow-up is [Complete the five origami trials](../../implementation-plans/fold-five-designs-to-completion.md).
 
 **For the Fold workspace, use File → Open and choose an individual `.osf` below. It opens directly in Fold with its editable step history.** The native projects contain fold operations and their choices, with no Edit crease-pattern document.
 
@@ -13,7 +15,7 @@ The `.fold` files are interchange exports: opening them produces an Edit crease 
 | Design / tutorial | Native sequence | Fold steps | Result |
 | --- | --- | ---: | --- |
 | [Cicada](https://origami.me/cicada/) | [cicada.osf](models/cicada.osf) | 10 | Complete flat model; all seven tutorial stages represented. |
-| [Swan](https://origami.me/swan/) | [swan.osf](models/swan.osf) | 8 | Complete flat alternative; inside reverse neck and outside reverse head. |
+| [Swan](https://origami.me/swan/) | [swan.osf](models/swan.osf) | 8 | Alternate prototype; inside-reverse neck differs from the requested outward construction. Outside-reverse head is implemented. |
 | [Heart](https://origami.me/heart/) | [heart.osf](models/heart.osf) | 7 | Partial, through tutorial step 7. Pocket opening remains unresolved. |
 | [Masu box](https://origami.me/box/) | [box.osf](models/box.osf) | 12 | Flat preparation through tutorial step 6. Upright walls need a nonflat state. |
 | [Crane](https://origami.me/crane/) | [crane.osf](models/crane.osf) | 19 | Complete flat alternative with head and both wings folded down. Final three-dimensional opening excluded. |
@@ -41,11 +43,11 @@ Plain valleys, one-layer wing folds, successive head-band folds, and mountain fo
 
 Native reopening, history selection, final rendering, and playback were checked. [Workspace capture](cicada-workspace.png).
 
-### Swan — completed by an alternate route
+### Swan — alternate prototype; intended neck remains incomplete
 
 The tutorial-order attempt reached the double kite, folded-up neck, head tip, and body half-fold. Trying to raise the neck with the folded-edge swivel produced `swivel_fold_wide` on one hinge choice and `fan_ray_blocked` on another. Open/inside and valley/mountain variants were tested; exact inputs and responses are in [compound-probes.json](compound-probes.json).
 
-A workable alternative starts from the double kite, folds the body in half, then inside-reverses the long point. The head's inside reverse returned `reverse_kind_infeasible` with an `other_kind: outside` suggestion. Applying that suggestion succeeded. The saved model has 11 nodes and 24 faces; its neck leans and its proportions differ from the reference. The original attempt remains in `swan.osf` at this report's root, while **models/swan.osf is the completed alternative**.
+A workable alternative starts from the double kite, folds the body in half, then inside-reverses the long point. The head's inside reverse returned `reverse_kind_infeasible` with an `other_kind: outside` suggestion. Applying that suggestion succeeded. The saved model has 11 nodes and 24 faces; its neck leans and its proportions differ from the reference. The original attempt remains in `swan.osf` at this report's root, while **models/swan.osf is the alternate prototype**.
 
 The UI reopened the alternate sequence and played its head fold to completion. [Workspace capture](swan-workspace.png).
 
@@ -65,7 +67,7 @@ The next tutorial stage raises walls out of the plane. The current engine repres
 
 A sequential square base using two squash folds replaces the tutorial's simultaneous collapse. Petal folds produce the bird base, then the four narrowing folds land. The tutorial-order book folds and point raises also landed through step 23, but the attempted outward tail swivel returned `fan_ray_blocked` in all four open/inside and valley/mountain combinations tested.
 
-Starting instead from the narrowed bird base, inside reverses raise the neck and tail. The engine offered several openings; selecting the central spine opening made both succeed. Another inside reverse forms the head, followed by two flat wing folds. The saved alternative has 24 nodes and 80 faces. It represents the flat crane; pulling the wings apart and inflating the body into the final 3D pose has the same nonflat-state limitation as the box.
+Starting instead from the narrowed bird base, inside reverses raise the neck and tail. The engine offered several openings; selecting the central spine opening made both succeed. Another inside reverse forms the head, followed by two flat wing folds. The saved alternative has 24 nodes and 80 faces. It represents the flat crane; opening the wings into the final pose has the same nonflat-state limitation as the box. The tutorial does not explicitly require separate body inflation; only body articulation needed for the wing opening is part of the completion target.
 
 The root `crane.osf` retains the tutorial-order attempt. **models/crane.osf is the completed flat alternative.** [Workspace capture](crane-workspace.png).
 
@@ -110,7 +112,10 @@ The first four scripts preserve experiments and logs in this directory. Their ro
 
 ## Next investigations
 
-1. Work out the heart pocket-opening decomposition with explicit flap/opening selections; preserve the accepted-but-wrong valley as a negative shape example.
-2. Reduce the crane and swan swivel cases to small regression fixtures and decide whether the intended paper motion fits the current primitive or needs a different compound operation.
-3. Decide whether nonflat authored poses belong in Fold. If they do, box-wall raising is a small concrete acceptance case; a visual playback frame alone will not satisfy it.
-4. Run a separate mouse-only study of hidden-edge selection and opening choices. This experiment establishes representability much more strongly than authoring ergonomics.
+The detailed phase order, acceptance cases, state/operation changes, and tests are now in [the completion plan](../../implementation-plans/fold-five-designs-to-completion.md).
+
+1. Correct the swan neck to the intended outward construction; Outside reverse already exists, so determine whether preparation, opening selection, or engine coverage must change.
+2. Work out the heart pocket-opening decomposition with explicit flap/opening selections; preserve the accepted-but-wrong valley as a negative shape example.
+3. Reduce the crane and swan swivel cases to small regression fixtures and decide whether the intended paper motion fits the current primitive or needs a different compound operation.
+4. Add nonflat authored states as required by the completion plan: box-wall raising and opened crane wings are concrete acceptance cases; a visual playback frame alone will not satisfy them.
+5. Run a separate mouse-only study of hidden-edge selection and opening choices. This experiment establishes representability much more strongly than authoring ergonomics.
