@@ -1,15 +1,16 @@
 # Fold examples
 
-Four Ori Studio projects that show how the Fold workspace's petal fold,
+Five Ori Studio projects that show how the Fold workspace's petal fold,
 swivel fold and crimp tools are used. Each was folded through the real tools
 in a browser (clicks on the folded pane, keys, the tool window) and saved
 with File ▸ Save, the native `.osf` project format. The petal fold's petal
 steps and the whole swivel were folded again when those tools changed
 (2026-10-12): the petal fold names its hinge by its two endpoints, and the
 swivel is made by its edge. `swivel-on-edge.osf` was added the same day, for
-the swivel whose creases meet on a folded edge. Open one with File ▸ Open
-and the Fold workspace replays it. Step through the strip at the top to see
-each step.
+the swivel whose creases meet on a folded edge, and `swivel-inside.osf` for
+the inside swivel, its strip tucked between the layers. Open one with File ▸
+Open and the Fold workspace replays it. Step through the strip at the top to
+see each step.
 
 Every step's `note` field says which tool and which clicks made it. The Fold
 workspace keeps notes but does not show them, so the click paths are repeated
@@ -151,6 +152,33 @@ narrow triangle along the centre line at the bottom.
 The stored step names the folded edge by `fold`, a point on it, in place of
 a pivot and the paper that stays. An older build that does not know `fold`
 locks the step rather than folding something else.
+
+## swivel-inside.osf: the same swivel, its strip tucked inside
+
+Abrashi's figure 2, the closed or inside swivel. The same squashed flap and
+the same three clicks as `swivel-on-edge.osf`, but the top layer's strip
+folds under the rest of its layer, between the two layers, instead of up on
+top. The line from where the creases meet to the kite's right corner is a
+mountain now, and the whole line down to the bottom tip a valley. The
+model's lower-left edge still lies along the centre line; the strip is out of
+sight, and the line to the right corner is an edge with the right flap's
+back showing below it.
+
+1. to 6. As in `swivel-on-edge.osf`: the valley fold on the diagonal, the
+   other diagonal precreased, the two inside reverse folds, Rotate ⅛ of a
+   turn counterclockwise, and the squash of the front flap on the right.
+7. **Swivel fold**. Click the kite's upper-left edge, where the creases meet.
+   Click the model's lower-left edge, the edge to swing. Click the centre
+   line, the line it lands on. The preview shows the open swivel. Both kinds
+   fold flat here, so the window offers **Kind**: choose **Inside**. The
+   preview redraws its creases: the line to the right corner in the mountain
+   pen, the line to the bottom tip in the valley pen. Only **Valley** folds
+   flat, so no Direction is offered. Press Enter.
+
+The stored step is `swivel-on-edge.osf`'s with `swivel: "inside"` added. An
+open swivel stores no `swivel` and reads as it always did. A build from
+before the inside swivel does not know `swivel`, so it locks the step rather
+than folding it open.
 
 ## crimp.osf: the bird's-head crimp, inside and outside
 
