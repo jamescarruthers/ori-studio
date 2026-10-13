@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { face, sceneOf } from '../../lib/paper/paperScene.fixtures';
 import {
+  createDiagram,
   createTurn,
   editStepAnnotations,
   insertSteps,
@@ -16,12 +17,14 @@ import {
   stepIndex,
   stepsOf,
   type DiagramDocument,
+  type DiagramPageSetup,
   type DiagramRasterAsset,
   type DiagramScenePicture,
   type KnownDiagramAnnotation,
 } from '../document/diagramDocument';
 import { readDiagram, storedSceneJson, writeDiagram } from '../document/diagramFile';
-import { cpSource } from '../document/diagramSteps.fixtures';
+import { cpSource, cpStep } from '../document/diagramSteps.fixtures';
+import { PACKER_VERSION } from './flowArrangement';
 import { FIXTURE_FONTS } from '../fonts/diagramFonts.fixtures';
 import type { LayoutCell, LayoutPage } from './diagramPageLayout';
 import { layoutDiagram } from './diagramPages';
@@ -198,6 +201,69 @@ describe('a caption resized on a held page (`diagram-caption-resize.md`)', () =>
       expect(pastItsBox(cell), name).toBeNull();
     }
   );
+});
+
+describe('a picture whose size is pinned by hand (Zach, 2026-10-13)', () => {
+  /**
+   * Nine crease-pattern steps, `per` a flow page, `s3` with its size pinned at
+   * `factor` times the scale it prints at unpinned: the pinned diagram, laid
+   * out from no stored arrangement, and the scale the pin asks for.
+   */
+  const pinnedAt = (factor: number, per: number, page: Partial<DiagramPageSetup> = {}) => {
+    const steps = Array.from({ length: 9 }, (_, index) => ({ ...cpStep(`s${index}`), text: 'Fold the corner up.' }));
+    const base = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
+      layout: 'flow',
+      stepsPerPage: per,
+      ...page,
+    });
+    const auto = cellOf(layOut(base), 's3');
+    const scale = auto.mmPerUnit !== null ? { mmPerUnit: auto.mmPerUnit * factor } : { frameMm: auto.frameMm! * factor };
+    return { base, pinned: setStepPlace(base, 's3', { scale }), pin: scale };
+  };
+  /** What a pin asks a cell to print at: its scale in the pin's measure. */
+  const printedAt = (cell: LayoutCell) => cell.mmPerUnit ?? cell.frameMm;
+
+  it('is packed at its pin, which no page scale changes: a fresh pack gives it a box that holds it', () => {
+    const scales = new Set<number>();
+    for (const per of [4, 6, 9]) {
+      for (const page of [{}, { orientation: 'landscape' as const }]) {
+        for (const factor of [0.6, 1.6, 2.4]) {
+          const { pinned, pin } = pinnedAt(factor, per, page);
+          const layout = layOut(pinned);
+          const at = layout.pages.find((each) => each.cells.some((cell) => cell.stepId === 's3'))!;
+          scales.add(Math.round(at.packing!.k * 1000));
+          const cell = cellOf(layout, 's3');
+          const label = `${per} a page ${JSON.stringify(page)}, ×${factor}`;
+          // It prints at its pin, and its box holds it there.
+          expect(printedAt(cell), label).toBeCloseTo('mmPerUnit' in pin ? pin.mmPerUnit : pin.frameMm, 9);
+          expect(pastItsBox(cell), label).toBeNull();
+          // Every other step on the page in its box too.
+          for (const other of at.cells) expect(pastItsBox(other), `${label}: ${other.stepId}`).toBeNull();
+        }
+      }
+    }
+    // Packed at several page scales.
+    expect(scales.size).toBeGreaterThan(3);
+  });
+
+  it('re-packs nothing when its pin changes on a held page, drawn past its box, until Re-pack Page makes room', () => {
+    const { base, pinned } = pinnedAt(2.4, 9);
+    const held = adopted(base);
+    // A pin is not structure: the page keeps its arrangement, and nothing is packed.
+    const landed = committed(held, setStepPlace(held, 's3', { scale: stepsOf(pinned).find((step) => step.id === 's3')!.place!.scale! }));
+    expect(landed.pageArrangements).toBe(held.pageArrangements);
+    const layout = layOut(landed);
+    expect(layout.packed).toBeUndefined();
+    const before = cellsOf(held);
+    expect(home(cellOf(layout, 's3'))).toEqual(home(before.get('s3')!));
+    expect(pastItsBox(cellOf(layout, 's3'))).toBe('picture');
+    // Re-pack Page packs it at its pin: its new box holds it.
+    const repacked = adopted(committed(landed, repackPages(landed, 0)));
+    expect(repacked.pageArrangements!.s0!.packer).toBe(PACKER_VERSION);
+    const cell = cellsOf(repacked).get('s3')!;
+    expect(pastItsBox(cell)).toBeNull();
+    expect(cell.cellMm.w).toBeGreaterThan(before.get('s3')!.cellMm.w);
+  });
 });
 
 describe('an enlarged run on a held page', () => {

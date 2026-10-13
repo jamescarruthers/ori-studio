@@ -1611,22 +1611,25 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
 
   /**
    * A page just packed, each box grown to hold its step's picture measured at
-   * the scale it prints at (`grownToHold`), as every later layout measures it
-   * (`LayoutStep.pictureAt`): so a step a page has just packed never prints
-   * past its box at once, which Re-pack Page, packing the same, could never
-   * mend.
+   * the scale it prints at (`grownToHold`) — its pin's, where its size is
+   * pinned — as every later layout measures it (`LayoutStep.pictureAt`): so a
+   * step a page has just packed never prints past its box at once, which
+   * Re-pack Page, packing the same, could never mend.
    */
   const asMeasured = (arrangement: DiagramPageArrangement, entries: readonly T[], pageArea: PackRect): DiagramPageArrangement => {
     let grown = false;
     const placed: Record<string, DiagramArrangedStep> = { ...arrangement.steps };
-    for (const { step } of entries) {
+    for (const entry of entries) {
+      const { step } = entry;
       const place = placed[step.id];
       const picture = step.picture;
       if (!place || !picture || !step.pictureAt) continue;
+      const pin = input.pinned(entry);
+      const pinAt = pin ? (pin.mmPerUnit ?? pin.frameMm) : null;
       // A picture of the measure its scale is kept in: one with none drew at its box's side.
       const paper = 'mmPerUnit' in place.scale;
-      if (paper !== (picture.kind === 'paper')) continue;
-      const at = 'mmPerUnit' in place.scale ? place.scale.mmPerUnit : place.scale.frameMm;
+      if (pinAt === null && paper !== (picture.kind === 'paper')) continue;
+      const at = pinAt ?? ('mmPerUnit' in place.scale ? place.scale.mmPerUnit : place.scale.frameMm);
       const measured = step.pictureAt(at);
       if (!measured) continue;
       const extent = pictureExtent(measured, at);
@@ -1659,7 +1662,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     if (!arrangement) {
       const plan = plans[pageIndex]!;
       const references = new Map<string, DiagramPlaceScale>();
-      const packSteps = entries.map((entry) => packStep(entry, input.referenceOf(entry), setter, references, input.paper));
+      const packSteps = entries.map((entry) => packStep(entry, input.referenceOf(entry), input.pinned(entry), setter, references, input.paper));
       const found = packFlowPage(
         {
           steps: packSteps,
@@ -1694,10 +1697,18 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
  * enlarge arrow may stand before it, which keeps their gutter — an arrow's
  * whether or not it prints now (`keepsGlyphGutter`). Its reference
  * scale is noted in `references`, in its own measure.
+ *
+ * A picture whose size is pinned by hand (`pinned`, the pin as it prints) is
+ * read at its pin, measured there, and the whole of it as fixed: a pin is
+ * absolute, so no page scale changes it, and its box is packed to hold it,
+ * as an enlarged step's box is packed for its Size (Zach, 2026-10-13). Its
+ * reference scale is still noted: the arrangement keeps the scale it would
+ * print at without the pin, which the pin draws over.
  */
 function packStep(
   entry: ReferenceCell,
   reference: CellScale | undefined,
+  pinned: CellScale | null,
   setter: TextSetter,
   references: Map<string, DiagramPlaceScale>,
   paper: PrintPaper
@@ -1713,10 +1724,17 @@ function packStep(
     turnsBefore: keepsGlyphGutter(step, index),
   };
   const at = reference ? (reference.mmPerUnit ?? reference.frameMm) : null;
+  const noteReference = () => references.set(step.id, reference!.mmPerUnit !== null ? { mmPerUnit: at! } : { frameMm: at! });
+  const pin = pinned ? (pinned.mmPerUnit ?? pinned.frameMm) : null;
+  if (pin !== null && pin > 0 && step.picture) {
+    if (at !== null && at > 0) noteReference();
+    const size = pictureExtent((step.pictureAt ? step.pictureAt(pin) : null) ?? step.picture, pin);
+    return { ...base, size, marks: size };
+  }
   // Measured there: its marks reach as far as they do at that scale.
   const picture = at !== null && at > 0 && step.pictureAt ? step.pictureAt(at) : step.picture;
   if (!picture || at === null || !(at > 0)) return { ...base, size: { width: box, height: box } };
-  references.set(step.id, reference!.mmPerUnit !== null ? { mmPerUnit: at } : { frameMm: at });
+  noteReference();
   const size = pictureExtent(picture, at);
   // What grows with the picture; the rest is its marks at their pt size, which no page scale changes.
   const grows = {

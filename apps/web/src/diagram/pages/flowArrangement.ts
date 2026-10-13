@@ -53,8 +53,10 @@ const LEAST_SCALE = 0.01;
  * signed `pack-3:` — was packed by `pack-3`. `pack-4` (2026-10-12): an
  * enlarged step's set Size no longer cut to its room, in the reference cell a
  * page is packed from too, so its box is packed for the Size it asks for.
+ * `pack-5` (2026-10-13): a picture whose size is pinned by hand is packed at
+ * its pin, which no page scale changes, so its box holds it as it prints.
  */
-export const PACKER_VERSION = 'pack-4';
+export const PACKER_VERSION = 'pack-5';
 
 /**
  * The page as packed, kept as its arrangement, rounded as the store keeps it
