@@ -13,6 +13,7 @@ const specs=[
  {slug:'crane',source:'crane-reverse-alternative',title:'Crane — flat reverse-fold alternative',status:'complete flat alternative; 3D opening excluded'},
 ];
 const out=path.join(dir,'models');fs.mkdirSync(out,{recursive:true});
+const exports=path.join(dir,'interchange-exports');fs.mkdirSync(exports,{recursive:true});
 const template=JSON.parse(fs.readFileSync(path.join(dir,'../../tests/fixtures/fold-examples/petal-fold.osf')));
 for(const key of ['createdBy','modifiedBy'])template[key].savedAt='2026-10-13T00:00:00.000Z';
 const docs=[];const validation=[];
@@ -26,7 +27,7 @@ for(const spec of specs){
  p.workspace.viewState={fold:{v:1,sequenceId:t.doc.id,cursor:t.doc.steps.at(-1)?.id??null,activeChild:Object.fromEntries(t.doc.steps.map(s=>[s.parent??'',s.id]))}};
  const osf=path.join(out,spec.slug+'.osf');fs.writeFileSync(osf,JSON.stringify(p,null,2)+'\n');
  const f=t.e.export_fold(new Uint32Array(t.states),spec.title);assert.equal(f.status,'ok');
- fs.writeFileSync(path.join(out,spec.slug+'.fold'),JSON.stringify(JSON.parse(f.text))+'\n');
+ fs.writeFileSync(path.join(exports,spec.slug+'.fold'),JSON.stringify(JSON.parse(f.text))+'\n');
  const exported=JSON.parse(f.text);assert.equal(exported.file_frames.length,t.states.length);
  // Reopen the serialized native file in a fresh engine, including every stored choice.
  const reopened=JSON.parse(fs.readFileSync(osf));const check=new Trial('check',spec.title,d.paper);

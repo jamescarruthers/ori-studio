@@ -16,6 +16,11 @@ await useWorkspaceStore.getState().initEngine();
 const text = await (await fetch(fixtureUrl)).text();
 const opened = await useWorkspaceStore.getState().openProject({openTextFile: async () => ({text,name:filename,path:null})}, {confirmDiscard:false});
 if (!opened) throw new Error(JSON.stringify(useWorkspaceStore.getState().error));
-history.replaceState(null, '', '/fold');
+// Follow the loader's own workspace decision, just like desktop open-with.
+// Deliberately do not force /fold: that would hide a native-file landing bug.
+const { currentWorkspacePath } = await import('/src/routing/landing.ts');
+const destination = currentWorkspacePath();
+if (destination !== '/fold') throw new Error('Native Fold project landed on ' + destination);
+history.replaceState(null, '', destination);
 await import('/src/main.tsx');
 </script></body></html>

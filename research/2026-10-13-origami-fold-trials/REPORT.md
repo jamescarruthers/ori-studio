@@ -6,7 +6,9 @@
 
 Three recognizable flat models are saved: cicada, swan, and crane. The swan and crane use alternate reverse-fold routes after the tutorial-order swivel attempts failed. The heart and masu box are saved at their verified stopping points. These are editable native sequences, not authored diagrams.
 
-Open an individual `.osf` in this branch of Ori Studio and select **Fold**. The `.fold` files alongside them contain the sheet and every subsequent folded state. Counts below exclude rotations and turnovers; the native files retain those too.
+**For the Fold workspace, use File → Open and choose an individual `.osf` below. It opens directly in Fold with its editable step history.** The native projects contain fold operations and their choices, with no Edit crease-pattern document.
+
+The `.fold` files are interchange exports: opening them produces an Edit crease pattern plus separate folded figures, as seen in the screenshot reported after the first handoff. They have been moved out of `models/` into `interchange-exports/` to prevent that confusion. They are not the native authoring sequences. Counts below exclude rotations and turnovers; the `.osf` files retain those too.
 
 | Design / tutorial | Native sequence | Fold steps | Result |
 | --- | --- | ---: | --- |
@@ -29,7 +31,7 @@ Open an individual `.osf` in this branch of Ori Studio and select **Fold**. The 
 
 One initial diagonal fold was authored directly in the canvas with Axiom 2 and Enter. The multi-step models were then constructed with the unchanged public Fold WASM API, saved as ordinary operation/choice sequences, and reopened in the workspace. This tests what the engine can express and the UI can replay; it is not an end-to-end mouse usability test of every tool. No fabricated final geometry or imported final state substitutes for the steps.
 
-The embedded browser's native File System Access picker did not yield an automatable chooser. `viewer.html` is a development-only fixture loader using the ordinary `openProject` reader and app entry point. It can open `?model=cicada`, `swan`, `heart`, `box`, or `crane`; it does not change product source. The crane's square/petal-base construction also reuses operation inputs from the repository's existing petal-fold example, replayed from a blank sheet.
+The embedded browser's native File System Access picker did not yield an automatable chooser. `viewer.html` is a development-only fixture loader using the ordinary `openProject` reader and app entry point. It can open `?model=cicada`, `swan`, `heart`, `box`, or `crane`; it does not change product source. After the handoff correction it follows `currentWorkspacePath()` from the loader's actual decision and fails if the native file does not land in Fold; it no longer forces `/fold`. The crane's square/petal-base construction also reuses operation inputs from the repository's existing petal-fold example, replayed from a blank sheet.
 
 ## Trial ledger
 
@@ -90,7 +92,7 @@ Usability observations are narrower than engine coverage: the welcome page did n
 
 - Rebuilt `oristudio-fold-wasm` before running these trials.
 - All **68 native nodes / 56 fold operations** in the delivered paths replayed in fresh engines. Canonical hashes matched at every node; **73 FOLD frames**, including five blank sheets, were exported.
-- Reopened all five delivered model paths in the app and checked their final folded silhouettes and history. Playback was exercised for the cicada and swan head.
+- Reopened all five delivered `.osf` files using the normal project loader and its own landing decision: each selected `/fold` automatically and showed its saved history (10, 8, 7, 12, and 19 folds respectively). No forced workspace selection was used in this follow-up check. Checked final folded silhouettes and history. Playback was exercised for the cicada and swan head.
 - Existing focused tests: `foldSequenceFile.test.ts`, `foldSequence.wasm.test.ts`, and `foldEngineIo.wasm.test.ts`: **42 passed**.
 - `git diff --check` run on research changes. Full lint/typecheck/Rust workspace tests were not run: no product code changed; validation targeted native document reading, engine replay, and export.
 
@@ -104,7 +106,7 @@ node research/2026-10-13-origami-fold-trials/swan-alternative.mjs
 node research/2026-10-13-origami-fold-trials/build-deliverables.mjs
 ```
 
-The first four scripts preserve experiments and logs in this directory. Their root `origami-trials.osf` is a transient probe bundle. The final script writes the reviewed deliverables under **models/** and verifies native-file replay plus FOLD frame counts. `validation.json` is the machine-readable result.
+The first four scripts preserve experiments and logs in this directory. Their root `origami-trials.osf` is a transient probe bundle. The final script writes native Fold projects under **models/** and FOLD exports under **interchange-exports/**, then verifies native-file replay plus FOLD frame counts. `validation.json` is the machine-readable result.
 
 ## Next investigations
 
