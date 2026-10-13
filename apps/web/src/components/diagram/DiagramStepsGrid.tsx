@@ -82,7 +82,7 @@ export function DiagramStepsGrid({
   onUpload: (stepId: string) => void;
   /** Each card's link: how it stands, its capture, and a Stop. */
   links: DiagramCardLinks;
-  /** What the pages say of each step's place, by its id: its instruction cut with "…", or no longer fitting its flow place. */
+  /** What the pages say of each step's place, by its id: its instruction cut with "…". */
   pageFits: ReadonlyMap<string, StepPageFit>;
   /** A crease pattern is open to link an empty step to. */
   patternOpen: boolean;

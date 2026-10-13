@@ -1,59 +1,38 @@
 import type { DiagramPagesLayout, LayoutPage } from './diagramPageLayout';
 
 /**
- * What a flow page reports of the steps that no longer fit the places its
- * held arrangement keeps for them (`implementation-plans/diagram-flow-packing.md`,
- * Decision 3): their numbers, in print order — each one's own new picture
- * or caption, which Re-pack Page gives room — and whether the page's boxes
- * fit its area at all, false only for a page no plan fitted even at the
- * least scale, which a re-pack cannot mend. Pure.
+ * Whether a flow page's boxes fit its area (`LayoutPage.packing`): false only
+ * for a page no plan fitted even at the least scale, drawn overflowing — the
+ * automatic layout failing, which a re-pack cannot mend and fewer steps can,
+ * so it is said (`implementation-plans/diagram-flow-packing.md`, Decision 3).
+ * A held step's own new picture or caption past its box is not: it shows on
+ * the page as it prints (Zach, 2026-10-12). True on every grid page. Pure.
  */
-export interface PageOverflow {
-  steps: number[];
-  fits: boolean;
-}
-
-/** Page `page`'s overflow, or null for a page that has none to report (and every grid page). */
-export function pageOverflow(page: Pick<LayoutPage, 'cells' | 'packing'>): PageOverflow | null {
-  const steps = page.cells.filter((cell) => cell.overflow).map((cell) => cell.number);
-  const fits = page.packing?.fits ?? true;
-  return steps.length > 0 || !fits ? { steps, fits } : null;
+export function pageHoldsItsSteps(page: Pick<LayoutPage, 'packing'>): boolean {
+  return page.packing?.fits ?? true;
 }
 
 /**
  * What a step's card in the Steps view says of its place on the pages: its
- * instruction cut with "…" to fit a grid cell, or its picture or caption no
- * longer fitting the place its flow page keeps for it (a flow step's caption
- * is never cut: it prints whole, past its box).
+ * instruction cut with "…" to fit a grid cell (a flow step's caption is never
+ * cut: it prints whole).
  */
-export type StepPageFit = 'text-cut' | 'no-longer-fits';
+export type StepPageFit = 'text-cut';
 
 /** Each step's {@link StepPageFit} on the pages laid out, by its id: none for a step that fits. */
 export function stepPageFits(layout: Pick<DiagramPagesLayout, 'pages'> | null | undefined): ReadonlyMap<string, StepPageFit> {
   const fits = new Map<string, StepPageFit>();
   for (const page of layout?.pages ?? []) {
-    for (const cell of page.cells) {
-      if (cell.textOverflow) fits.set(cell.stepId, 'text-cut');
-      else if (cell.overflow) fits.set(cell.stepId, 'no-longer-fits');
-    }
+    for (const cell of page.cells) if (cell.textOverflow) fits.set(cell.stepId, 'text-cut');
   }
   return fits;
 }
 
 /**
- * Every page's overflow in a layout, as the export dialog lists it: the
- * steps that no longer fit their places, and the pages that cannot hold
- * their steps, each by what the Pages view captions it — the number it
+ * The pages that cannot hold their steps (`pageHoldsItsSteps`), as the export
+ * dialog lists them: each by what the Pages view captions it — the number it
  * prints, or its place when it prints none.
  */
-export function layoutOverflow(layout: Pick<DiagramPagesLayout, 'pages'>): { steps: number[]; unfitPages: number[] } {
-  const steps: number[] = [];
-  const unfitPages: number[] = [];
-  layout.pages.forEach((page, index) => {
-    const overflow = pageOverflow(page);
-    if (!overflow) return;
-    steps.push(...overflow.steps);
-    if (!overflow.fits) unfitPages.push(page.pageNumberAt ? page.number : index + 1);
-  });
-  return { steps, unfitPages };
+export function unfitPages(layout: Pick<DiagramPagesLayout, 'pages'>): number[] {
+  return layout.pages.flatMap((page, index) => (pageHoldsItsSteps(page) ? [] : [page.pageNumberAt ? page.number : index + 1]));
 }

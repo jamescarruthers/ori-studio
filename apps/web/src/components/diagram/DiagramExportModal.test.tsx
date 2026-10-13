@@ -134,16 +134,11 @@ async function click(element: HTMLElement) {
 }
 
 describe('DiagramExportDialog', () => {
-  it('lists a flow step that no longer fits its place, as it lists clashes, for the pages alone', async () => {
+  it('says nothing of a flow step past its place, which the page shows as it prints', async () => {
     await open(overflowingDiagram(subsetter).overflowing);
-    const line = () => host.querySelector('[data-overflow]');
-    expect(line()?.getAttribute('data-overflow')).toBe('steps');
-    expect(line()?.textContent).toBe(
-      'Step 3 no longer fits its place, and prints past it. Re-pack its page to give it room.'
-    );
-    // Step files draw each step on its own canvas: nothing to say there.
-    await click(radio('Step files'));
-    expect(line()).toBeNull();
+    expect(host.querySelector('[data-overflow]')).toBeNull();
+    expect(host.querySelector('[data-outside-margin]')).toBeNull();
+    expect(notice()).not.toMatch(/no longer fit|Re-pack/);
   });
 
   it('opens on a PDF of the pages: one shown, its size, and the steps that print blank', async () => {

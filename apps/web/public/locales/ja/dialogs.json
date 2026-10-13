@@ -172,8 +172,6 @@
     "nothing": "図のあるステップがまだありません。書き出すものがありません。",
     "number": "ステップ番号",
     "numberHelp": "各ファイルにステップ番号を描き込みます。",
-    "overflowStep": "ステップ {{steps}} が枠に収まらなくなり、はみ出して印刷されます。そのページを再配置すると収まります。",
-    "overflowSteps": "ステップ {{steps}} が枠に収まらなくなり、はみ出して印刷されます。それぞれのページを再配置すると収まります。",
     "pageCount_other": "{{count}} ページ",
     "pageLabel": "{{number}} ページ",
     "pagerLabel": "{{label}} · {{total}} 件中 {{index}}",

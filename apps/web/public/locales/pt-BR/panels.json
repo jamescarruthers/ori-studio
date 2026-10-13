@@ -1134,9 +1134,6 @@
       "bendStepsHelp": "Deixa um passo ficar na borda da página, onde o trajeto vira de uma faixa para a próxima, quando isso preenche melhor a página.",
       "nesting": "Encaixe",
       "nestingHelp": "Quanto os passos de uma faixa sobem e descem alternadamente, para que um passo alto e um baixo ao lado se encaixem.",
-      "noLongerFits": "Não cabe mais",
-      "overflowStep": "O passo {{steps}} da página {{page}} não cabe mais no seu lugar.",
-      "overflowSteps": "Os passos {{steps}} da página {{page}} não cabem mais nos seus lugares.",
       "pageUnfit": "A página {{page}} não comporta seus passos, nem no menor tamanho. Dê a ela menos passos.",
       "preferBands": "Preferir três faixas",
       "preferBandsHelp": "Com que força o Auto fica com três faixas quando outro número imprimiria os passos um pouco maiores.",
@@ -1211,7 +1208,6 @@
       "previousPage": "Página anterior",
       "step": "Passo {{number}}",
       "stepCut": "Passo {{number}}, o texto não cabe",
-      "stepNoLongerFits": "Passo {{number}}, não cabe mais no seu lugar",
       "textCut": "O texto não cabe",
       "zoomSplitStep": "O passo {{step}} está na página seguinte à da área que amplia, no passo {{area}}. “Começar uma nova página aqui” no passo {{area}} mantém os dois juntos.",
       "zoomSplitSteps": "Os passos {{steps}} estão cada um na página seguinte à da área que ampliam. “Começar uma nova página aqui” nos passos {{areas}} os mantém juntos."

@@ -458,10 +458,11 @@ export type DiagramRepackScope = 'page' | 'all';
 
 /**
  * Where Re-pack was pressed: the Page pane's Packing section, the Layers
- * pane's page list, the notice over the Pages view that a step no longer fits
- * its place, or a page's context menu.
+ * pane's page list, or a page's context menu. (`notice`, the notice over the
+ * Pages view that a step no longer fit its place, was sent until 2026-10-12,
+ * when that notice went.)
  */
-export type DiagramRepackVia = 'page_pane' | 'layers_pane' | 'notice' | 'context_menu';
+export type DiagramRepackVia = 'page_pane' | 'layers_pane' | 'context_menu';
 
 /** A diagram style as chosen: a built-in by id, the Settings export style, or a saved preset (`custom`). */
 export type DiagramStyleChoiceName = 'default' | 'diagram' | 'export-style' | 'custom';

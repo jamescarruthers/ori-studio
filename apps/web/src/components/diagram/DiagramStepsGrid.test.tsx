@@ -389,7 +389,7 @@ describe('DiagramStepsGrid', () => {
     expect(stop).toHaveBeenCalledWith('step-d');
   });
 
-  it('says a 3D step was lit by another style, that the pages cut a step’s text, and that a flow step no longer fits its place', () => {
+  it('says a 3D step was lit by another style and that the pages cut a step’s text, and nothing of a flow step past its place', () => {
     const lit = cpStep('step-3d', { mode: 'folded-3d', side: 'front', camera: { yaw: 0, pitch: 0, zoom: 1 } } as never, {
       ...scenePicture(),
       styleKey: 'another light',
@@ -397,13 +397,11 @@ describe('DiagramStepsGrid', () => {
     render(null, vi.fn(), {
       steps: [lit, { ...cpStep('step-cut'), text: 'A long one.' }, { ...cpStep('step-grown'), text: 'A longer one, held.' }],
       links: { statuses: new Map([['step-3d', 'current'], ['step-cut', 'current'], ['step-grown', 'current']]) },
-      pageFits: new Map([
-        ['step-cut', 'text-cut'],
-        ['step-grown', 'no-longer-fits'],
-      ]),
+      // The pages report only a cut instruction (`stepPageFits`): a flow step past its place shows on the page.
+      pageFits: new Map([['step-cut', 'text-cut']]),
     });
     const chips = options().map((card) => card.querySelector('[data-tone]')?.textContent ?? null);
-    expect(chips).toEqual(['Lighting changed', 'Text doesn’t fit', 'No longer fits']);
+    expect(chips).toEqual(['Lighting changed', 'Text doesn’t fit', null]);
   });
 
   it('offers an empty card a pattern to link only with one open, and Go to Edit without one', () => {

@@ -30,6 +30,7 @@ import { setFrameScale } from '../zoom/zoomFrames';
 import { zoomReadout } from '../zoom/zoomActions';
 import { adoptPageArrangements, dropStalePageArrangements, repackPages } from './pageArrangements';
 import { pageLayoutFixtures } from './pageLayouts.fixtures';
+import { pastItsBox } from './pageOverflow.fixtures';
 import { cellSlots, settlePlaces } from './stepPlaces';
 import { setStepPlace } from '../document/stepPlace';
 import { captionStartShift } from './captionMeasure';
@@ -194,7 +195,7 @@ describe('a caption resized on a held page (`diagram-caption-resize.md`)', () =>
       expect(cell.cellMm.w, name).toBeGreaterThanOrEqual(textWidth + 4 - 0.01);
       expect(cell.text.x, name).toBeGreaterThanOrEqual(cell.cellMm.x + 1.75 - 0.01);
       expect(cell.text.x + textWidth, name).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w - 1.75 + 0.01);
-      expect(cell.overflow, name).toBeUndefined();
+      expect(pastItsBox(cell), name).toBeNull();
     }
   );
 });
@@ -240,7 +241,7 @@ describe('an enlarged run on a held page', () => {
     expect(layOut(committed(document, withoutArea)).pages[0]!.zoomArrows).toEqual([]);
   });
 
-  it('resizes an enlarged step in its box for its own new Size, says what it prints, and asks for a re-pack where the box is too small', () => {
+  it('resizes an enlarged step in its box for its own new Size, and says what it prints where the box is too small', () => {
     const document = adopted(fixture());
     const before = cellsOf(document);
     const was = before.get('step-zoom-2')!;
@@ -256,24 +257,24 @@ describe('an enlarged run on a held page', () => {
     const after = cellOf(layout, 'step-zoom-2');
     expect(after.frameMm).toBeCloseTo((was.frameMm! * 1.25) / 2, 9);
     expect(home(after)).toEqual(home(was));
-    expect(after.overflow).toBeUndefined();
+    expect(pastItsBox(after)).toBeNull();
     expect(perMm(after)).toBeCloseTo(perMm(was), 12);
     expect(zoomReadout(after.zoom!)).toEqual({ kind: 'prints', asked: 1.25, printed: 1.25, warn: false });
     for (const [id, cell] of before) if (id !== 'step-zoom-2') expect(cellOf(layout, id), id).toEqual(cell);
 
-    // Larger than its box holds: as large as the box allows, the room said, and the step reported for a re-pack.
+    // Larger than its box holds: as large as the box allows, inside it, and its read-out says what it prints.
     const larger = committed(document, setFrameScale(document, 'step-zoom-2', 6));
     expect(larger.pageArrangements).toBe(document.pageArrangements);
     const big = cellOf(layOut(larger), 'step-zoom-2');
     expect(big.frameMm!).toBeCloseTo(was.frameMm!, 2);
-    expect(big.overflow).toBe('picture');
+    expect(pastItsBox(big)).toBeNull();
     expect(perMm(big)).toBeCloseTo(perMm(was), 12);
     expect(zoomReadout(big.zoom!)).toMatchObject({ kind: 'room', asked: 6, warn: true });
 
     // Re-pack Page packs it for its Size: its new place holds it, and it prints as large as that.
     const repacked = adopted(committed(larger, repackPages(larger, 0)));
     const packed = cellOf(layOut(repacked), 'step-zoom-2');
-    expect(packed.overflow).toBeUndefined();
+    expect(pastItsBox(packed)).toBeNull();
     expect(repacked.pageArrangements!['step-a']!.steps['step-zoom-2']!.zoomScale).toBe(6);
     expect(packed.frameMm!).toBeGreaterThan(big.frameMm!);
   });
@@ -281,7 +282,7 @@ describe('an enlarged run on a held page', () => {
 
 describe('a structural edit', () => {
   /** Where a step prints and how, whatever its number. */
-  const drawn = ({ stepId, cellMm, numberAt, pictureMm, drawMm, mmPerUnit, frameMm, text, band, bend, overflow }: LayoutCell) => ({
+  const drawn = ({ stepId, cellMm, numberAt, pictureMm, drawMm, mmPerUnit, frameMm, text, band, bend }: LayoutCell) => ({
     stepId,
     cellMm,
     numberAt,
@@ -292,7 +293,6 @@ describe('a structural edit', () => {
     text,
     band,
     bend,
-    overflow,
   });
 
   /**

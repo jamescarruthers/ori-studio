@@ -42,6 +42,7 @@ import { readFontMetrics, type FontMetrics } from '../fonts/fontMetrics';
 import { curvePoint, curveStart, type Lane } from './flowLane';
 import { estimateTextSetter } from './estimateTextSetter';
 import { PACKED_TURN_GUTTER_MM, packingArea } from './flowPacking';
+import { pastItsBox } from './pageOverflow.fixtures';
 import { captionStartShift } from './captionMeasure';
 import { fontTextSetter } from './fontTextSetter';
 import { pageCapacity } from './pagePlan';
@@ -410,18 +411,20 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     expect(homes(flowLayout(edited, { stepsPerPage: 7 }))).not.toEqual(homes(first));
   });
 
-  it('says a held step whose own picture or caption no longer fits its box, and draws it whole all the same', () => {
+  it('draws a held step whose own picture or caption no longer fits its box whole, past the box, and marks nothing of it', () => {
     const list = steps(16);
     const first = flowLayout(list, { stepsPerPage: 7 });
-    for (const cell of first.pages.flatMap((page) => page.cells)) expect(cell.overflow).toBeUndefined();
+    for (const cell of first.pages.flatMap((page) => page.cells)) expect(pastItsBox(cell), cell.stepId).toBeNull();
     const edited = list.map((step, index) =>
       index === 4 ? { ...step, text: `${LONG} ${LONG}` } : index === 9 ? { ...step, text: '' } : index === 12 ? { ...step, picture: paper(800, 400) } : step
     );
     const cells = new Map(flowLayout(edited, { stepsPerPage: 7 }, first.packed!).pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell])));
-    expect(cells.get('step-4')!.overflow).toBe('caption');
-    expect(cells.get('step-12')!.overflow).toBe('picture');
-    // An emptied caption leaves room to spare; no other step says anything.
-    expect([...cells.values()].filter((cell) => cell.overflow).map((cell) => cell.stepId)).toEqual(['step-4', 'step-12']);
+    expect(pastItsBox(cells.get('step-4')!)).toBe('caption');
+    expect(pastItsBox(cells.get('step-12')!)).toBe('picture');
+    // An emptied caption leaves room to spare; every other step prints inside its box.
+    expect([...cells.values()].filter((cell) => pastItsBox(cell)).map((cell) => cell.stepId)).toEqual(['step-4', 'step-12']);
+    // Nothing is carried on a cell to say so (Zach, 2026-10-12): the page shows it.
+    for (const cell of cells.values()) expect(Object.keys(cell), cell.stepId).not.toContain('overflow');
     // The caption in full, at the measure its box was packed for; the picture at its kept scale.
     const grown = cells.get('step-4')!;
     expect(grown.text.lines.length).toBe(estimateTextSetter.paragraph(`${LONG} ${LONG}`, grown.text.widthMm, STEP_TEXT_SIZE_MM, 99).lines.length);
@@ -429,7 +432,7 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     expect(cells.get('step-12')!.drawMm.w).toBeGreaterThan(cells.get('step-12')!.cellMm.w);
   });
 
-  it('cuts each box a page packs to hold its picture measured at the scale it prints at, so the page never says a step it just packed no longer fits', () => {
+  it('cuts each box a page packs to hold its picture measured at the scale it prints at, so no step it just packed prints past its box', () => {
     // Pictures whose marks reach 2 mm further at any scale but the one they are packed by (their reference):
     // a mark's pt-size part need not keep its reach as the picture's scale changes.
     const reaching = (index: number): Partial<LayoutStep> => {
@@ -453,7 +456,7 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     });
     const held = flowLayout(measured, { stepsPerPage: 7 }, first.packed!);
     expect(held.packed).toBeUndefined();
-    for (const cell of held.pages.flatMap((page) => page.cells)) expect(cell.overflow, cell.stepId).toBeUndefined();
+    for (const cell of held.pages.flatMap((page) => page.cells)) expect(pastItsBox(cell), cell.stepId).toBeNull();
     // Every box still inside its page's area.
     expect(held.pages.map((page) => page.packing!.fits)).toEqual([true, true, true]);
   });
@@ -466,7 +469,7 @@ describe('flow pages packed by their steps’ shapes, and held (`diagram-flow-pa
     const cell = page.cells[4]!;
     expect(cell.mmPerUnit).toBeNull();
     expect(cell.frameMm).toBeGreaterThan(0);
-    expect(cell.overflow).toBeUndefined();
+    expect(pastItsBox(cell)).toBeNull();
     expect(cell.cellMm).toEqual(first.pages[0]!.cells[4]!.cellMm);
     expect(cell.drawMm.x).toBeGreaterThanOrEqual(cell.cellMm.x);
     expect(cell.drawMm.x + cell.drawMm.w).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w + 1e-9);
@@ -561,8 +564,8 @@ describe('a caption’s pinned measure (`diagram-caption-resize.md`)', () => {
       for (const [id, other] of before) if (id !== 'step-4') expect(JSON.stringify(cells.get(id)), id).toBe(JSON.stringify(other));
       expect(after.pages.map((page) => page.band)).toEqual(first.pages.map((page) => page.band));
     }
-    // Narrower than its box was cut for, its lines run past its box's foot, and it says so: only a re-pack moves anything.
-    expect(cellsById(flowLayout(pin(list, 4, 20), { stepsPerPage: 7 }, first.packed!)).get('step-4')!.overflow).toBe('caption');
+    // Narrower than its box was cut for, its lines run past its box's foot: only a re-pack moves anything.
+    expect(pastItsBox(cellsById(flowLayout(pin(list, 4, 20), { stepsPerPage: 7 }, first.packed!)).get('step-4')!)).toBe('caption');
     // In a box no wider than the automatic cap and the side room, its left edge never moves, whatever its pin.
     const narrowBoxes = steps(16, (index) => ({ text: index === 4 ? LONG : SHORT, picture: paper(400, 400) }));
     const packedNarrow = flowLayout(narrowBoxes, { stepsPerPage: 12 });
@@ -583,7 +586,7 @@ describe('a caption’s pinned measure (`diagram-caption-resize.md`)', () => {
     expect(cell.cellMm.w).toBeGreaterThanOrEqual(74 - 0.01);
     expect(cell.text.x).toBeGreaterThanOrEqual(cell.cellMm.x + 1.75 - 0.01);
     expect(cell.text.x + 70).toBeLessThanOrEqual(cell.cellMm.x + cell.cellMm.w - 1.75 + 0.01);
-    expect(cell.overflow).toBeUndefined();
+    expect(pastItsBox(cell)).toBeNull();
     expect(packed.packed!['step-0']!.signature).toBe(flowLayout(list, { stepsPerPage: 7 }).packed!['step-0']!.signature);
   });
 });

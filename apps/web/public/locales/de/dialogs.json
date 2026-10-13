@@ -176,8 +176,6 @@
     "nothing": "Noch kein Schritt hat ein Bild: Es gibt nichts zu exportieren.",
     "number": "Schrittnummer",
     "numberHelp": "Zeichnet die Nummer des Schritts in seine Datei.",
-    "overflowStep": "Schritt {{steps}} passt nicht mehr auf seinen Platz und wird darüber hinaus gedruckt. Packen Sie seine Seite neu, um ihm Platz zu geben.",
-    "overflowSteps": "Die Schritte {{steps}} passen nicht mehr auf ihre Plätze und werden darüber hinaus gedruckt. Packen Sie ihre Seiten neu, um ihnen Platz zu geben.",
     "pageCount_one": "{{count}} Seite",
     "pageCount_other": "{{count}} Seiten",
     "pageLabel": "Seite {{number}}",

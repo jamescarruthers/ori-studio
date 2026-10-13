@@ -172,8 +172,6 @@
     "nothing": "还没有带图的步骤：没有可导出的内容。",
     "number": "步骤编号",
     "numberHelp": "在每个文件中绘入步骤编号。",
-    "overflowStep": "第 {{steps}} 步已放不进它的位置，会超出位置打印。重新排布它所在的页面即可腾出空间。",
-    "overflowSteps": "第 {{steps}} 步已放不进各自的位置，会超出位置打印。重新排布它们所在的页面即可腾出空间。",
     "pageCount_other": "{{count}} 页",
     "pageLabel": "第 {{number}} 页",
     "pagerLabel": "{{label}} · 第 {{index}}/{{total}}",

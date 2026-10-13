@@ -75,12 +75,10 @@ import type { DiagramFontFace } from '../fonts/diagramFontFaces';
 import {
   arrangedBox,
   arrangedCaptionWidth,
-  arrangedOverflow,
   arrangedPictureRoom,
   arrangementFits,
   grownToHold,
   packedArrangement,
-  type ArrangedOverflow,
 } from './flowArrangement';
 import { roundPageArrangement } from '../document/pageArrangements';
 import {
@@ -410,12 +408,6 @@ export interface LayoutCell {
   band?: number;
   /** It stands in the bend after its band, between that band and the next: in the flow only. */
   bend?: true;
-  /**
-   * Its picture or its caption no longer fits the box its flow page keeps for
-   * it (`flowArrangement.ts`): its own new picture or caption, which is drawn
-   * whole all the same, until a re-pack gives it another box. Absent where both fit.
-   */
-  overflow?: ArrangedOverflow;
   /**
    * Where each part is at home, for the Pages view's ghost of a moved one
    * (`placeCell`): the frame where the layout puts the step, each other part
@@ -1434,8 +1426,9 @@ type CellScale = { mmPerUnit: number | null; frameMm: number | null; reduced: bo
  * (`flowArrangement.ts`). An enlarged step given another Size since its page
  * was packed is resized in its box for it, its own edit, as far as the box
  * holds it, and its read-out says what it prints. One whose picture, caption
- * or Size no longer fits its box says so (`LayoutCell.overflow`); nothing
- * moves for it.
+ * or Size no longer fits its box is drawn whole past it, as the page shows:
+ * nothing moves for it, and nothing is said of it (Zach, 2026-10-12) — Re-pack
+ * Page gives it room.
  */
 function arrangeFlowPages<T extends ReferenceCell>(input: {
   placedPages: readonly (readonly T[])[];
@@ -1556,9 +1549,6 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     const parts = stepPartsInBox(box, drawnSize, captionCentreWidth(box.w, pinnedText ?? undefined));
     const square = Math.min(drawnSize.w, drawnSize.h);
     const offsets = normalizeStepPlace(step.place);
-    // What it asks its box for: its kept scale, or the window a new Size asks for, whole.
-    const asked = resized ? sizeAt(step.picture, { mmPerUnit: null, frameMm: resized.wanted, reduced: false }) : null;
-    const overflow = arrangedOverflow(box, asked ?? sizeAt(step.picture, kept) ?? autoSize, lines.length);
     const frame = step.picture?.frame;
     const printedFrame = drawn?.mmPerUnit != null && frame ? drawn.mmPerUnit * Math.max(frame.width, frame.height) : drawn?.frameMm;
     if (printedFrame != null) printedFrames.set(step.id, printedFrame);
@@ -1598,7 +1588,6 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
       numberAt: parts.numberAt,
       text: { x: parts.caption.x, firstBaseline: parts.caption.firstBaseline, widthMm: measure, lines },
       textOverflow: false,
-      ...(overflow ? { overflow } : {}),
     };
     // Placed by hand on top of its home: a frame's offset runs along its band as the band reads.
     return placeCell(cell, step, place.band % 2 === 1, setter);
@@ -1619,9 +1608,9 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
   /**
    * A page just packed, each box grown to hold its step's picture measured at
    * the scale it prints at (`grownToHold`), as every later layout measures it
-   * (`LayoutStep.pictureAt`): so a page never says at once that a step it
-   * has just packed no longer fits, which Re-pack Page, packing the same,
-   * could never mend.
+   * (`LayoutStep.pictureAt`): so a step a page has just packed never prints
+   * past its box at once, which Re-pack Page, packing the same, could never
+   * mend.
    */
   const asMeasured = (arrangement: DiagramPageArrangement, entries: readonly T[], pageArea: PackRect): DiagramPageArrangement => {
     let grown = false;

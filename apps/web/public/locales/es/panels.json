@@ -1134,9 +1134,6 @@
       "bendStepsHelp": "Permite que un paso quede en el borde de la página, donde el recorrido gira de una franja a la siguiente, cuando así la página se llena mejor.",
       "nesting": "Encaje",
       "nestingHelp": "Cuánto suben y bajan por turnos los pasos de una franja, para que un paso alto y uno bajo a su lado encajen.",
-      "noLongerFits": "Ya no cabe",
-      "overflowStep": "El paso {{steps}} de la página {{page}} ya no cabe en su sitio.",
-      "overflowSteps": "Los pasos {{steps}} de la página {{page}} ya no caben en sus sitios.",
       "pageUnfit": "La página {{page}} no puede contener sus pasos, ni siquiera al tamaño más pequeño. Dale menos pasos.",
       "preferBands": "Preferir tres franjas",
       "preferBandsHelp": "Con qué fuerza Auto se queda con tres franjas cuando otro número imprimiría los pasos un poco más grandes.",
@@ -1211,7 +1208,6 @@
       "previousPage": "Página anterior",
       "step": "Paso {{number}}",
       "stepCut": "Paso {{number}}, el texto no cabe",
-      "stepNoLongerFits": "Paso {{number}}, ya no cabe en su sitio",
       "textCut": "El texto no cabe",
       "zoomSplitStep": "El paso {{step}} está en la página siguiente al área que amplía, en el paso {{area}}. «Empezar una página nueva aquí» en el paso {{area}} los mantiene juntos.",
       "zoomSplitSteps": "Los pasos {{steps}} están cada uno en la página siguiente al área que amplían. «Empezar una página nueva aquí» en los pasos {{areas}} los mantiene juntos."

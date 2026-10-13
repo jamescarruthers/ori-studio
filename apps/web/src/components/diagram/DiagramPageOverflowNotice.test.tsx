@@ -1,24 +1,19 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FontSubsetter } from '../../diagram/fonts/fontSubset';
 import { FIXTURE_FONTS, fixtureSubsetter } from '../../diagram/fonts/diagramFonts.fixtures';
-import { preparedPages } from '../../diagram/pages/diagramPages';
-import { overflowingDiagram } from '../../diagram/pages/pageOverflow.fixtures';
+import { preparedPages, type PreparedDiagramPages } from '../../diagram/pages/diagramPages';
+import { overflowingDiagram, pastItsBox } from '../../diagram/pages/pageOverflow.fixtures';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramPageOverflowNotice } from './DiagramPageOverflowNotice';
 
-const analytics = vi.hoisted(() => ({ trackDiagramPagesRepacked: vi.fn() }));
-vi.mock('../../analytics', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../analytics')>()),
-  ...analytics,
-}));
-
 /**
- * The Pages view's notice when a step no longer fits the place its flow page
- * keeps for it (`diagram-flow-packing.md`, Decision 3): which step, and
- * Re-pack Page — nothing moves until it is pressed.
+ * The Pages view's notice about the current page: only that it cannot hold
+ * its steps even at the smallest size (`diagram-flow-packing.md`, Decision
+ * 3), the automatic layout failing. A step whose own new caption or picture
+ * runs past its place is not said: the page shows it (Zach, 2026-10-12).
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -30,7 +25,6 @@ beforeAll(async () => {
 let root: Root;
 let host: HTMLDivElement;
 beforeEach(() => {
-  vi.clearAllMocks();
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   host = document.createElement('div');
   document.body.append(host);
@@ -42,7 +36,7 @@ afterEach(() => {
 });
 
 const state = () => useWorkspaceStore.getState();
-const render = (pages: Parameters<typeof DiagramPageOverflowNotice>[0]['pages']) =>
+const render = (pages: PreparedDiagramPages | null) =>
   act(() =>
     root.render(
       <TooltipProvider>
@@ -50,37 +44,43 @@ const render = (pages: Parameters<typeof DiagramPageOverflowNotice>[0]['pages'])
       </TooltipProvider>
     )
   );
-const repack = () =>
-  [...host.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Re-pack Page');
+
+/** `pages` with their first page laid out as no plan fits, even at the least scale. */
+const unfit = (pages: PreparedDiagramPages): PreparedDiagramPages => ({
+  ...pages,
+  layout: {
+    ...pages.layout,
+    pages: pages.layout.pages.map((page, index) => (index === 0 ? { ...page, packing: { ...page.packing!, fits: false } } : page)),
+  },
+});
 
 describe('DiagramPageOverflowNotice', () => {
-  it('names the step past its place on the current page, and Re-pack Page packs that page afresh: one undo step, one count', () => {
+  it('says nothing of a step past its place, which the page shows, and offers no Re-pack Page for it', () => {
     const { overflowing, pages } = overflowingDiagram(subsetter);
-    expect(pages.layout.pages[0]!.cells.find((cell) => cell.stepId === 's2')?.overflow).toBe('caption');
+    // Step 3's caption prints past its box, drawn whole.
+    expect(pastItsBox(pages.layout.pages[0]!.cells.find((cell) => cell.stepId === 's2')!)).toBe('caption');
     act(() => state().installDiagram({ document: overflowing, readOnly: false, raw: {} }));
     render(pages);
-    expect(host.querySelector('[role="status"]')?.textContent).toContain('Step 3 on page 1 no longer fits its place.');
-    expect(repack()?.disabled).toBe(false);
-    act(() => repack()!.click());
-    expect(state().diagram?.pageArrangements).toBeUndefined();
-    expect(state().diagramHistory.past.at(-1)?.label).toBe('Re-pack page');
-    expect(analytics.trackDiagramPagesRepacked).toHaveBeenCalledExactlyOnceWith('page', 'notice');
+    expect(host.textContent).toBe('');
+    expect(host.querySelector('button')).toBeNull();
   });
 
-  it('says nothing on a page whose steps all fit, nor before the pages are laid out', () => {
+  it('says a page that can’t hold its steps even at the smallest size, and what to do, with nothing to press', () => {
+    const { held } = overflowingDiagram(subsetter);
+    act(() => state().installDiagram({ document: held, readOnly: false, raw: {} }));
+    render(unfit(preparedPages(held, FIXTURE_FONTS, subsetter)));
+    expect(host.querySelector('[role="status"]')?.textContent).toBe(
+      'Page 1 can’t hold its steps, even at the smallest size. Give it fewer steps.'
+    );
+    expect(host.querySelector('button')).toBeNull();
+  });
+
+  it('says nothing on a page that holds its steps, nor before the pages are laid out', () => {
     const { held } = overflowingDiagram(subsetter);
     act(() => state().installDiagram({ document: held, readOnly: false, raw: {} }));
     render(preparedPages(held, FIXTURE_FONTS, subsetter));
     expect(host.textContent).toBe('');
     render(null);
     expect(host.textContent).toBe('');
-  });
-
-  it('offers no Re-pack Page that would change a read-only diagram', () => {
-    const { overflowing, pages } = overflowingDiagram(subsetter);
-    act(() => state().installDiagram({ document: overflowing, readOnly: true, raw: {} }));
-    render(pages);
-    expect(host.textContent).toContain('no longer fits its place');
-    expect(repack()?.disabled).toBe(true);
   });
 });

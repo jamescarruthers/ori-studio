@@ -1060,9 +1060,6 @@
       "bendStepsHelp": "在路径从一条带转入下一条带的页边处放置步骤，前提是这样能把页面排得更满。",
       "nesting": "嵌套",
       "nestingHelp": "带中步骤交替升降的幅度，使高的步骤与旁边矮的步骤彼此嵌合。",
-      "noLongerFits": "放不下了",
-      "overflowStep": "第 {{page}} 页的第 {{steps}} 步已放不进它的位置。",
-      "overflowSteps": "第 {{page}} 页的第 {{steps}} 步已放不进各自的位置。",
       "pageUnfit": "第 {{page}} 页即使缩到最小也放不下它的步骤。请减少该页的步骤数。",
       "preferBands": "偏好三条带",
       "preferBandsHelp": "当其他数目能把步骤印得稍大时，自动坚持三条带的程度。",
@@ -1137,7 +1134,6 @@
       "previousPage": "上一页",
       "step": "第 {{number}} 步",
       "stepCut": "第 {{number}} 步，文字放不下",
-      "stepNoLongerFits": "第 {{number}} 步，已放不进它的位置",
       "textCut": "文字放不下",
       "zoomSplitStep": "第 {{step}} 步在它所放大的区域（第 {{area}} 步）的下一页。在第 {{area}} 步上选择“从这里开始新的一页”可让两者在同一页。",
       "zoomSplitSteps": "第 {{steps}} 步各自在所放大区域的下一页。在第 {{areas}} 步上选择“从这里开始新的一页”可让它们在同一页。"

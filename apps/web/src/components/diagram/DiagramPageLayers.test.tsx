@@ -17,10 +17,7 @@ import { DiagramLayersPanel } from '../panels/DiagramLayersPanel';
 import { TooltipProvider } from '../ui/Tooltip';
 
 /** The steps placed past the margin as the pages last laid them out, as the Diagram panel publishes its layout. */
-const printed = vi.hoisted(() => ({
-  outsideMargin: {} as Record<string, true>,
-  overflow: {} as Record<string, 'picture' | 'caption'>,
-}));
+const printed = vi.hoisted(() => ({ outsideMargin: {} as Record<string, true> }));
 const analytics = vi.hoisted(() => ({ trackDiagramPagesRepacked: vi.fn() }));
 vi.mock('../../analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../analytics')>()),
@@ -41,7 +38,6 @@ vi.mock('../../diagram/pages/printedFrames', async (importOriginal) => {
             mmPerUnit: null,
             pictureMm: { x: 0, y: 0, size: 40 },
             outsideMargin: printed.outsideMargin[step.id],
-            overflow: printed.overflow[step.id],
             // Its caption as the layout sets it, a line a word: what the Step pane's Text width reads.
             text: { x: 0, firstBaseline: 50, widthMm: 36, lines: step.text.split(' ').filter(Boolean).map((text) => ({ text, widthMm: 8, runs: [], ellipsis: false })) },
           }))
@@ -91,7 +87,6 @@ const part = (name: string) => host!.querySelector<HTMLButtonElement>(`button[da
 beforeEach(() => {
   vi.clearAllMocks();
   printed.outsideMargin = {};
-  printed.overflow = {};
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState(), true);
   host = document.createElement('div');
   document.body.append(host);
@@ -197,16 +192,11 @@ describe('DiagramLayersPanel › in the Pages view', () => {
     expect(host!.textContent).toBe('Open a step in Annotate to see its layers.');
   });
 
-  it('badges a flow step that no longer fits its place, and re-packs the page under the list: one undo step, one count', () => {
-    printed.overflow = { s1: 'caption' };
+  it('re-packs the page under the list: one undo step, one count', () => {
     install();
     render();
-    expect(rows().map((each) => each.textContent)).toEqual([
-      '1Step 1',
-      '2Fold in half.No longer fits',
-      '3Step 3Moved',
-      '4Step 4',
-    ]);
+    // No badge says a step is past its place: the page shows it (Zach, 2026-10-12).
+    expect(rows().map((each) => each.textContent)).toEqual(['1Step 1', '2Fold in half.', '3Step 3Moved', '4Step 4']);
     const repack = () =>
       [...host!.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Re-pack Page');
     // Nothing packed and taken in yet: offered all the same, and pressed it lets nothing go.

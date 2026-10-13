@@ -134,7 +134,7 @@ export function DiagramPanel() {
   const view = useWorkspaceStore((state) => state.diagramView);
   useDiagramPaneReveal();
   // Laid out in either view: the pages are the Pages view, and the cards say
-  // whose text the pages cut, or which flow steps no longer fit their places.
+  // whose text the pages cut.
   // A diagram of turns alone lays out too: an empty page, its turns having no steps to stand between.
   const pages = useDiagramPages(entries.length > 0 ? diagram : null);
   const page = diagram?.page ?? DEFAULT_PAGE_SETUP;

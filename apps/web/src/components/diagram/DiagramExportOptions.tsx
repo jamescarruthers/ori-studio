@@ -7,7 +7,7 @@ import { STEP_FILE_MM_RANGE } from '../../diagram/export/stepFiles';
 import type { DiagramExportBinding } from '../../diagram/export/useDiagramExport';
 import type { DiagramPageSetup } from '../../diagram/document/diagramDocument';
 import { outsideMarginSentence } from '../../diagram/pages/marginLabels';
-import { exportOverflowSentence, exportUnfitSentence } from '../../diagram/pages/overflowLabels';
+import { exportUnfitSentence } from '../../diagram/pages/overflowLabels';
 import { pageSetupSummary, pageSideLabel } from '../../diagram/pages/pageSetupLabels';
 import { zoomSplitSentence } from '../../diagram/pages/zoomSplitLabels';
 import { formatStepNumbers } from '../../diagram/stepNumberList';
@@ -45,8 +45,8 @@ export function DiagramExportOptions({
   const steps = (numbers: readonly number[]) => formatStepNumbers(numbers, i18n.language, t);
   // The one thing said of a placement: the steps with a part past the margin.
   const outsideMargin = binding.outsideMargin.length > 0;
-  // And for the flow's steps that no longer fit their places, and its pages that cannot hold their steps.
-  const overflowing = binding.overflow.steps.length > 0 || binding.overflow.unfitPages.length > 0;
+  // And the flow's pages that cannot hold their steps: the automatic layout failing.
+  const overflowing = binding.unfitPages.length > 0;
   const pageSetup = (
     <div className={styles.pageSetup}>
       <span className={styles.setup}>
@@ -245,11 +245,8 @@ export function DiagramExportOptions({
             {printed && outsideMargin && (
               <li data-outside-margin="">{outsideMarginSentence(binding.outsideMargin, t, i18n.language)}</li>
             )}
-            {printed && binding.overflow.steps.length > 0 && (
-              <li data-overflow="steps">{exportOverflowSentence(binding.overflow.steps, t, i18n.language)}</li>
-            )}
-            {printed && binding.overflow.unfitPages.length > 0 && (
-              <li data-overflow="pages">{exportUnfitSentence(binding.overflow.unfitPages, t, i18n.language)}</li>
+            {printed && overflowing && (
+              <li data-overflow="pages">{exportUnfitSentence(binding.unfitPages, t, i18n.language)}</li>
             )}
             {!printed && binding.placed > 0 && <li>{t('dialogs:diagramExport.placementLeftOut', 'Page placements and size pins do not affect step files.')}</li>}
             {binding.empty.length > 0 && (

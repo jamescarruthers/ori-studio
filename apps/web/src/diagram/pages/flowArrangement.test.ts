@@ -6,7 +6,6 @@ import {
   ARRANGED_SLACK_MM,
   arrangedBox,
   arrangedCaptionWidth,
-  arrangedOverflow,
   arrangedPictureRoom,
   arrangementFits,
   grownToHold,
@@ -83,24 +82,6 @@ describe('a step drawn in its box', () => {
     const box = { x: 10, y: 20, w: 40, h: 60 };
     expect(arrangedPictureRoom(box, 0)).toEqual({ w: 40 - PICTURE_SIDE_MM, h: 60 - NUMBER_ROOM_MM });
     expect(arrangedPictureRoom(box, 2)).toEqual({ w: 40 - PICTURE_SIDE_MM, h: 60 - NUMBER_ROOM_MM - CAPTION_TOP_MM - 2 * STEP_TEXT_LEADING_MM });
-  });
-
-  it('says its picture no longer fits where by itself it needs more of its box, else its caption where it runs out of the foot', () => {
-    const box = { x: 0, y: 0, w: 40, h: 60 };
-    const caption = (lines: number) => CAPTION_TOP_MM + lines * STEP_TEXT_LEADING_MM;
-    // As packed: the picture its box's width less its side room, the caption filling the rest of its height.
-    const fitted = { w: 40 - PICTURE_SIDE_MM, h: 60 - NUMBER_ROOM_MM - caption(3) };
-    expect(arrangedOverflow(box, fitted, 3)).toBeNull();
-    // Within the slack, still its place.
-    expect(arrangedOverflow(box, { w: fitted.w + ARRANGED_SLACK_MM * 0.9, h: fitted.h + ARRANGED_SLACK_MM * 0.9 }, 3)).toBeNull();
-    // A picture wider than its box, or taller than its box with no caption at all.
-    expect(arrangedOverflow(box, { w: fitted.w + 1, h: fitted.h }, 3)).toBe('picture');
-    expect(arrangedOverflow(box, { w: fitted.w, h: 60 }, 0)).toBe('picture');
-    // A caption a line longer; or a taller picture that pushes it out of the foot.
-    expect(arrangedOverflow(box, fitted, 4)).toBe('caption');
-    expect(arrangedOverflow(box, { w: fitted.w, h: fitted.h + 2 }, 3)).toBe('caption');
-    // A shorter caption, or none, fits.
-    expect(arrangedOverflow(box, fitted, 0)).toBeNull();
   });
 
   it('says a page fits where every box lies in its area, and not where one runs past it', () => {

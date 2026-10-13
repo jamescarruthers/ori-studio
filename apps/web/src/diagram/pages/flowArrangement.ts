@@ -8,8 +8,8 @@
  *
  * A held step keeps its box and its printed scale, so nothing another step
  * does moves or resizes it. Its own new picture, caption or (enlarged) Size
- * may no longer fit the box: that is said ({@link arrangedOverflow}), never
- * mended here — only a re-pack moves anything.
+ * may no longer fit the box: it is drawn whole past it, as the page shows,
+ * and never mended here — only a re-pack moves anything.
  *
  * Pure.
  */
@@ -26,18 +26,15 @@ import {
 import { STEP_TEXT_LEADING_MM } from './stepType';
 
 /**
- * How far past its box a step's picture or caption may reach and still fit
- * its place, mm: room for what keeping lengths to a hundredth of a mm and
- * measuring a picture's marks at the scale it prints at, not the one it was
- * packed by, leave.
+ * How far past its box or its page's area a box, a step's picture or its
+ * caption may reach and still fit, mm: room for what keeping lengths to a
+ * hundredth of a mm and measuring a picture's marks at the scale it prints
+ * at, not the one it was packed by, leave.
  */
 export const ARRANGED_SLACK_MM = 0.5;
 
 /** The least a printed scale is kept at: a stored scale is a positive number. */
 const LEAST_SCALE = 0.01;
-
-/** Which part of a step no longer fits its box: its picture by itself, or its caption under it. */
-export type ArrangedOverflow = 'picture' | 'caption';
 
 /**
  * The page as packed, kept as its arrangement, rounded as the store keeps it
@@ -110,28 +107,14 @@ export function arrangedPictureRoom(box: PackRect, lines: number): { w: number; 
 }
 
 /**
- * What of a step no longer fits its box ({@link ARRANGED_SLACK_MM} allowed),
- * with its picture `picture` mm at its kept scale and its caption set in
- * `lines` lines: its picture, where that by itself — with its side room and
- * its number — needs more of the box than it has; else its caption, where
- * under the picture it runs out of the box's foot; null where both fit.
- */
-export function arrangedOverflow(box: PackRect, picture: { w: number; h: number }, lines: number): ArrangedOverflow | null {
-  if (picture.w + PICTURE_SIDE_MM > box.w + ARRANGED_SLACK_MM || NUMBER_ROOM_MM + picture.h > box.h + ARRANGED_SLACK_MM) {
-    return 'picture';
-  }
-  return NUMBER_ROOM_MM + picture.h + captionHeight(lines) > box.h + ARRANGED_SLACK_MM ? 'caption' : null;
-}
-
-/**
  * A freshly packed box grown to hold its step as it prints: its picture
  * `picture` mm, measured at the scale it prints at, and its caption of
  * `lines` lines. The packing reckons a picture's marks at the size they take
  * at its reference scale, but a mark's pt-size part need not keep its reach
  * as the picture's scale changes, so a picture can print a little larger
- * than packed, and its page would say at once that it no longer fits. Where
- * it needs more than half the slack a held step is allowed
- * ({@link ARRANGED_SLACK_MM}), the box grows by what it lacks — wider about
+ * than packed, and would print past the box its page has only just packed.
+ * Where it needs more than half the slack ({@link ARRANGED_SLACK_MM}), the
+ * box grows by what it lacks — wider about
  * its middle, taller at its foot — and moves back, by no more than it grew,
  * where that would take it out of `area`. The same box otherwise.
  */

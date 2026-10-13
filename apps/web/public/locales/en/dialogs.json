@@ -176,8 +176,6 @@
     "nothing": "No step has a picture yet: there is nothing to export.",
     "number": "Step number",
     "numberHelp": "Draws the step’s number into its file.",
-    "overflowStep": "Step {{steps}} no longer fits its place, and prints past it. Re-pack its page to give it room.",
-    "overflowSteps": "Steps {{steps}} no longer fit their places, and print past them. Re-pack their pages to give them room.",
     "pageCount_one": "{{count}} page",
     "pageCount_other": "{{count}} pages",
     "pageLabel": "Page {{number}}",

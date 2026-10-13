@@ -42,7 +42,7 @@ import { browserFontSubsetter } from '../fonts/browserFontSubsetter';
 import { loadDiagramFonts, type DiagramFonts } from '../fonts/diagramFonts';
 import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramFontTexts, enlargeArrowCount, preparedPages, type PreparedDiagramPages } from '../pages/diagramPages';
-import { layoutOverflow } from '../pages/pageOverflow';
+import { unfitPages } from '../pages/pageOverflow';
 import { outsideMarginSteps } from '../pages/pagePlacement';
 import { composedPageUrl } from '../pages/useDiagramPages';
 import { zoomSplits, type ZoomSplit } from '../pages/zoomArrows';
@@ -93,11 +93,10 @@ export interface DiagramExportBinding {
   /** The steps placed by hand with a part past the margin (`outsideMarginSteps`): all that is said of a placement. */
   outsideMargin: number[];
   /**
-   * The flow steps that no longer fit the places their pages keep for them,
-   * and the pages that cannot hold their steps even at the smallest size, by
-   * how the Pages view captions them (`layoutOverflow`): each prints past its room.
+   * The pages that cannot hold their steps even at the smallest size, by how
+   * the Pages view captions them (`unfitPages`): each prints past its margins.
    */
-  overflow: { steps: number[]; unfitPages: number[] };
+  unfitPages: number[];
   /** How many turns between steps the diagram has (D22): the pages print them, step files leave them out. */
   turns: number;
   /** How many enlarge arrows print between steps (Revision 2): on the pages, as turns are, never in step files. */
@@ -129,8 +128,6 @@ export interface DiagramExportBinding {
   canExport: boolean;
   exportNow: () => Promise<void>;
 }
-
-const NO_OVERFLOW: DiagramExportBinding['overflow'] = { steps: [], unfitPages: [] };
 
 interface Loaded {
   fonts: DiagramFonts;
@@ -443,7 +440,7 @@ export function useDiagramExport(
     cut,
     placed: stepsOf(document).filter((step) => step.place || step.placeNewer).length,
     outsideMargin: pages ? outsideMarginSteps(pages.layout) : [],
-    overflow: pages ? layoutOverflow(pages.layout) : NO_OVERFLOW,
+    unfitPages: pages ? unfitPages(pages.layout) : [],
     turns: document.steps.length - stepsOf(document).length,
     enlargeArrows,
     splits,

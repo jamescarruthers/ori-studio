@@ -1,7 +1,6 @@
 import { AlignLeft, Hash, Image, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { outsideMarginTag } from '../../diagram/pages/marginLabels';
-import { overflowTag } from '../../diagram/pages/overflowLabels';
 import { useDiagramPageActions } from '../../diagram/pages/useDiagramPageActions';
 import { usePageLayers, type PageLayerPart, type PageLayerRow } from '../../diagram/pages/usePageLayers';
 import { Badge } from '../ui/Badge';
@@ -31,11 +30,10 @@ export function DiagramPageLayers() {
   };
   const moved = <Badge tone="neutral">{t('panels:diagram.placement.moved', 'Moved')}</Badge>;
   const badges = (row: PageLayerRow) =>
-    row.moved || row.outsideMargin || row.overflow ? (
+    row.moved || row.outsideMargin ? (
       <>
         {row.moved && moved}
         {row.outsideMargin && <Badge tone="neutral">{outsideMarginTag(t)}</Badge>}
-        {row.overflow && <Badge tone="neutral">{overflowTag(t)}</Badge>}
       </>
     ) : null;
   return (

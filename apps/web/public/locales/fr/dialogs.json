@@ -180,8 +180,6 @@
     "nothing": "Aucune étape n’a encore d’image : rien à exporter.",
     "number": "Numéro de l’étape",
     "numberHelp": "Dessine le numéro de l’étape dans son fichier.",
-    "overflowStep": "L’étape {{steps}} ne tient plus à sa place et s’imprime au-delà. Réagencez sa page pour lui faire de la place.",
-    "overflowSteps": "Les étapes {{steps}} ne tiennent plus à leur place et s’impriment au-delà. Réagencez leurs pages pour leur faire de la place.",
     "pageCount_one": "{{count}} page",
     "pageCount_many": "{{count}} pages",
     "pageCount_other": "{{count}} pages",

@@ -365,7 +365,7 @@ export function layoutDiagram(document: DiagramDocument, setter: TextSetter): Di
   };
   const pages = measuredAt(layout(fitted(stepsAt())));
   for (const cell of pages.pages.flatMap((page) => page.cells)) {
-    // A flow step keeps the scale its page's arrangement gives it: one that no longer fits says so instead.
+    // A flow step keeps the scale its page's arrangement gives it: one that no longer fits prints past its box instead.
     if (cell.band !== undefined) continue;
     const auto = cell.placed?.auto;
     const scale = auto ? auto.mmPerUnit ?? auto.frameMm : cell.mmPerUnit ?? cell.frameMm;

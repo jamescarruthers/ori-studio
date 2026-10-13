@@ -180,8 +180,6 @@
     "nothing": "Aún no hay ningún paso con imagen: no hay nada que exportar.",
     "number": "Número del paso",
     "numberHelp": "Dibuja el número del paso en su archivo.",
-    "overflowStep": "El paso {{steps}} ya no cabe en su sitio y se imprime fuera de él. Reacomoda su página para darle espacio.",
-    "overflowSteps": "Los pasos {{steps}} ya no caben en sus sitios y se imprimen fuera de ellos. Reacomoda sus páginas para darles espacio.",
     "pageCount_one": "{{count}} página",
     "pageCount_many": "{{count}} páginas",
     "pageCount_other": "{{count}} páginas",

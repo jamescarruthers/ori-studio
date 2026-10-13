@@ -27,7 +27,6 @@ import {
   type DiagramTurn,
 } from '../../diagram/document/diagramDocument';
 import { linkedSourceOf, needsPose, type DiagramLinkStatus } from '../../diagram/capture/linkStatus';
-import { overflowTag } from '../../diagram/pages/overflowLabels';
 import type { StepPageFit } from '../../diagram/pages/pageOverflow';
 import { stepPictureSource, type StepPictureSource } from '../../diagram/pictures/paintDiagramStep';
 import { useStepPictureUrl } from '../../diagram/pictures/useStepPictureUrl';
@@ -85,7 +84,7 @@ export const DiagramStepCard = forwardRef<
     onUpload: (stepId: string) => void;
     /** How the step's link stands; null for a step that is not linked. */
     link: DiagramLinkStatus | null;
-    /** What the pages say of the step's place: its instruction cut with "…", or no longer fitting its flow place; null where it fits. */
+    /** What the pages say of the step's place: its instruction cut with "…"; null where it fits. */
     pageFit: StepPageFit | null;
     /**
      * An enlarged step (Revision 2): the number of the step its area is on,
@@ -183,9 +182,7 @@ export const DiagramStepCard = forwardRef<
             ? t('panels:diagram.card.styleChanged', 'Style changed')
             : pageFit === 'text-cut'
             ? t('panels:diagram.card.textCut', 'Text doesn’t fit')
-            : pageFit === 'no-longer-fits'
-              ? overflowTag(t)
-              : null;
+            : null;
   // A press must not take focus from the card's keys.
   const keepFocus = (event: { preventDefault: () => void }) => event.preventDefault();
 

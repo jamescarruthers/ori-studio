@@ -64,7 +64,7 @@ describe('repackPage and repackAllPages', () => {
   it('count nothing where there was nothing to let go', () => {
     install();
     state().repackDiagramPages();
-    expect(repackPage(0, 'notice')).toBe(false);
+    expect(repackPage(0, 'layers_pane')).toBe(false);
     expect(repackAllPages('page_pane')).toBe(false);
     expect(analytics.trackDiagramPagesRepacked).not.toHaveBeenCalled();
   });
