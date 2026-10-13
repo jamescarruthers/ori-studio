@@ -21,7 +21,9 @@ step makes a branch.
 
 **V0** ships:
 
-- valley and mountain folds through all layers, or down to picked flaps;
+- valley and mountain folds of the top flap at the line by default, or of
+  the flaps picked, up to every layer (2026-10-13, owner request: all layers
+  by default before);
 - precreases (fold and unfold), refolding a precrease, and unfolding a flap;
 - turning over and rotating;
 - the axioms on the flat sheet and on the folded form;
@@ -83,8 +85,12 @@ or third user of a shared piece, never the author of a parallel copy. The
 - **Fold sequences are saved as an array.** One is shown for now, so supporting
   several is a UI change only (D7).
 - **Recommendations accepted:**
-  - default fold scope: all layers on the moving side, narrowed by picking
-    flaps, with a preview of what moves;
+  - default fold scope: the top flap on the moving side — the flap of the
+    cross-section's top row, as the front shows it — widened by picking more
+    flaps (every flap picked is every layer), with a preview of what moves
+    (2026-10-13, owner request; it was all layers on the moving side,
+    narrowed by picking flaps). A reverse fold, a crimp and a sink take
+    every layer of their point, as before;
   - a near miss snaps to an offered landmark, otherwise it is refused and the
     vertex is named;
   - replay on open, with an in-memory cache;
@@ -920,7 +926,7 @@ values; this table is the plan's summary of it.
 
 | Event | Properties |
 |---|---|
-| `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth, via: axiom\|crease\|free}`; a turn, a rotation or a vertex fold (`squash` to `swivel`) carries `op_kind` alone |
+| `fold step added` | `{op_kind, layer_scope: all\|flaps\|depth\|top, via: axiom\|crease\|free}` (`top`, the default top flap kept, since 2026-10-13); a turn, a rotation or a vertex fold (`squash` to `swivel`) carries `op_kind` alone |
 | `fold step played` | `{trigger: user\|auto, step_kind, via: space\|button\|replay}` (`via` on a user play) |
 | `fold refused` | `{code}` |
 | `fold spread changed` | `{action: spread_on\|spread_off\|spread_kind\|spread_amount\|spread_direction\|spread_keep\|spread_skew\|spread_axis, via: step_pane\|canvas_bar}`, plus the Diagram's bucketed spread properties when the layers stay spread |
@@ -1349,6 +1355,11 @@ unless marked.
   - [x] the tool-window model (`fold/tools/foldToolWindow.ts`);
   - [x] the accessible cross-section picker (a listbox, keyboard tested);
   - [x] flap chips;
+  - [x] the top flap pressed by default (2026-10-13, owner request): a
+    valley, mountain, precrease or tuck starts on the topmost flap at the
+    line, resolved against the section before any step is built
+    (`tools/topFlapSeed`, `useFoldLineSection`); a reverse fold, crimp or
+    sink takes every layer;
   - [x] the refusal notice with fixes;
   - [x] the candidate chooser: axiom roots through `ToolOptionLayer`, and
     Import CP's orders in its dialog (openings and completions arrive with
