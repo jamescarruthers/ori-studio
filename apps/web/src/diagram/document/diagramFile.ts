@@ -42,8 +42,9 @@
  *     never left to be carried forever as a newer build's unknown field.
  *   Fields elsewhere left out at their default are either look (an
  *   annotation's pen, a label's size: a change to their default restyles
- *   every diagram, by design) or say nothing by being absent (no placement,
- *   no Size of an enlarged step, which is Fill); neither moves a page.
+ *   every diagram, by design) or say something fixed by being absent (no
+ *   placement; Fill, for an enlarged step's Size), a meaning that is never
+ *   redefined; neither moves a page.
  *
  * Every string a user typed passes through `xmlText` on the way in, so what is
  * stored can always be written into an SVG page. Every uploaded SVG is
