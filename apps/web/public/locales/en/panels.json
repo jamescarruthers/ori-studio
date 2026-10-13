@@ -891,7 +891,6 @@
       "enlargeFixed": "Fixed",
       "enlargePrints": "Prints ×{{printed}}",
       "enlargePrintsBarely": "Prints only ×{{printed}} — draw a smaller area",
-      "enlargePrintsRoom": "Asked ×{{asked}} · prints ×{{printed}} — the room is too small",
       "enlargeReadoutFill": "Prints as large as its room allows, up to ×6 the area.",
       "enlargeReadoutFixed": "Prints at {{size}} × the area’s printed size.",
       "enlargeRounded": "Rounded rectangle",

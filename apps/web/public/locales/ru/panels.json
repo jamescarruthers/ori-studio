@@ -955,7 +955,6 @@
       "enlargeFixed": "Фиксированный",
       "enlargePrints": "Печатается в ×{{printed}}",
       "enlargePrintsBarely": "Печатается лишь в ×{{printed}} — нарисуйте область поменьше",
-      "enlargePrintsRoom": "Задано ×{{asked}} · печатается в ×{{printed}} — места не хватает",
       "enlargeReadoutFill": "Печатается настолько крупно, насколько позволяет место, до ×6 области.",
       "enlargeReadoutFixed": "Печатается в {{size}} × от печатного размера области.",
       "enlargeRounded": "Скруглённый прямоугольник",

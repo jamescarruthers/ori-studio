@@ -364,19 +364,21 @@ describe('what an enlarged step prints at, as its read-outs say it (Z4)', () => 
   const say = (zoom: { asked: number | null; printed: number; reduced: boolean }, language = 'en') =>
     zoomReadoutText(t, zoomReadout(zoom)!, language);
 
-  it('says a fixed Size as it was typed, two decimals where it has them, and what Fill or a room makes of it to one', () => {
+  it('says a fixed Size as it was typed, two decimals where it has them, and what Fill makes of it to one', () => {
     expect(say({ asked: 1.25, printed: 1.2500000000002, reduced: false })).toBe('Prints ×1.25');
     expect(say({ asked: 2, printed: 2, reduced: false })).toBe('Prints ×2');
+    expect(say({ asked: 6, printed: 6, reduced: false })).toBe('Prints ×6');
     expect(say({ asked: null, printed: 4.4316, reduced: false })).toBe('Prints ×4.4');
-    expect(say({ asked: 2.75, printed: 2.3812, reduced: true })).toBe('Asked ×2.75 · prints ×2.4 — the room is too small');
     expect(say({ asked: null, printed: 1.0812, reduced: false })).toBe('Prints only ×1.1 — draw a smaller area');
     // A held flow page whose area prints at another page's scale: what it prints, never the Size it does not.
     expect(say({ asked: 2, printed: 2.4983, reduced: false })).toBe('Prints ×2.5');
+    // A Size is drawn as asked, past its room if need be (Zach, 2026-10-12): no room is said to hold it back.
+    expect(zoomReadout({ asked: 2.75, printed: 2.3812, reduced: true })).toEqual({ kind: 'prints', asked: 2.75, printed: 2.4, warn: false });
   });
 
   it('writes its numbers as the language does, as the Size field beside it shows them (review of 16g)', () => {
     expect(say({ asked: 1.25, printed: 1.25, reduced: false }, 'de')).toBe('Prints ×1,25');
-    expect(say({ asked: 2.75, printed: 2.3812, reduced: true }, 'fr')).toBe('Asked ×2,75 · prints ×2,4 — the room is too small');
+    expect(say({ asked: 2.75, printed: 2.75, reduced: false }, 'fr')).toBe('Prints ×2,75');
     expect(say({ asked: null, printed: 4.4316, reduced: false }, 'ja')).toBe('Prints ×4.4');
   });
 });

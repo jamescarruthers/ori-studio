@@ -76,7 +76,7 @@ export function ZoomAnchorRow({ controls }: { controls: ZoomControls }) {
 
 /**
  * The read-out under the rows: what a frame prints at once the pages are laid
- * out, amber when its room or its area holds it back; else what Size means.
+ * out, amber when its area leaves Fill barely enlarged; else what Size means.
  */
 export function ZoomReadout({ controls }: { controls: ZoomControls }) {
   const { t, i18n } = useTranslation();

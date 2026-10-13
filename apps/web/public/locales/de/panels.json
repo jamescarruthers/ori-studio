@@ -891,7 +891,6 @@
       "enlargeFixed": "Fest",
       "enlargePrints": "Druckt ×{{printed}}",
       "enlargePrintsBarely": "Druckt nur ×{{printed}} – zeichnen Sie einen kleineren Bereich",
-      "enlargePrintsRoom": "Verlangt ×{{asked}} · druckt ×{{printed}} – der Platz reicht nicht",
       "enlargeReadoutFill": "Wird so groß gedruckt, wie der Platz zulässt, bis zum Sechsfachen des Bereichs.",
       "enlargeReadoutFixed": "Wird mit dem {{size}}-Fachen der gedruckten Größe des Bereichs gedruckt.",
       "enlargeRounded": "Abgerundetes Rechteck",

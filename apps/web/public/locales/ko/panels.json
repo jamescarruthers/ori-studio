@@ -859,7 +859,6 @@
       "enlargeFixed": "고정",
       "enlargePrints": "×{{printed}}로 인쇄",
       "enlargePrintsBarely": "×{{printed}}로만 인쇄됩니다. 더 작은 영역을 그리세요",
-      "enlargePrintsRoom": "×{{asked}} 요청 · ×{{printed}}로 인쇄. 자리가 너무 좁습니다",
       "enlargeReadoutFill": "자리가 허락하는 만큼 크게, 영역의 최대 6배로 인쇄합니다.",
       "enlargeReadoutFixed": "영역 인쇄 크기의 {{size}}배로 인쇄합니다.",
       "enlargeRounded": "둥근 사각형",

@@ -923,7 +923,6 @@
       "enlargeFixed": "Fixo",
       "enlargePrints": "Imprime a ×{{printed}}",
       "enlargePrintsBarely": "Imprime só a ×{{printed}} — desenhe uma área menor",
-      "enlargePrintsRoom": "Pedido ×{{asked}} · imprime a ×{{printed}} — o espaço é pequeno demais",
       "enlargeReadoutFill": "Imprime tão grande quanto o espaço permite, até ×6 a área.",
       "enlargeReadoutFixed": "Imprime a {{size}} × o tamanho impresso da área.",
       "enlargeRounded": "Retângulo arredondado",

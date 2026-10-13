@@ -859,7 +859,6 @@
       "enlargeFixed": "固定",
       "enlargePrints": "×{{printed}} で印刷",
       "enlargePrintsBarely": "×{{printed}} でしか印刷されません。もっと小さな範囲を描いてください",
-      "enlargePrintsRoom": "×{{asked}} を指定 · ×{{printed}} で印刷。場所が足りません",
       "enlargeReadoutFill": "場所が許す限り大きく、範囲の最大6倍で印刷します。",
       "enlargeReadoutFixed": "範囲の印刷サイズの {{size}} 倍で印刷します。",
       "enlargeRounded": "角丸長方形",

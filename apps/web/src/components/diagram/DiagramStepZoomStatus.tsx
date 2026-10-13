@@ -25,8 +25,8 @@ type T = ReturnType<typeof useTranslation>['t'];
  * step detail: where its frame came from — the area's step a row that goes
  * to it, or that the area was deleted — its Size and, once the pages are
  * laid out, what it prints at; and the notices that need a hand: its area
- * changed since (review fix 4), with the step's Update; it prints smaller
- * than asked, or barely enlarged; the frame holds no paper here; its anchor
+ * changed since (review fix 4), with the step's Update; it prints barely
+ * enlarged; the frame holds no paper here; its anchor
  * is not on this step's paper; a frame copied in picture units that its
  * steps' faces would anchor, after a Refresh of the steps captured before
  * steps kept them. Each names the verb that fixes it; Update, the step's

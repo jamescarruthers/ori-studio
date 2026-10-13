@@ -923,7 +923,6 @@
       "enlargeFixed": "Fixe",
       "enlargePrints": "S’imprime à ×{{printed}}",
       "enlargePrintsBarely": "Ne s’imprime qu’à ×{{printed}} : dessinez une zone plus petite",
-      "enlargePrintsRoom": "Demandé ×{{asked}} · s’imprime à ×{{printed}} : la place est trop petite",
       "enlargeReadoutFill": "S’imprime aussi grand que sa place le permet, jusqu’à ×6 la zone.",
       "enlargeReadoutFixed": "S’imprime à {{size}} × la taille imprimée de la zone.",
       "enlargeRounded": "Rectangle arrondi",

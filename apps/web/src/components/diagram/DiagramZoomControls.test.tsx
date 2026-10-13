@@ -301,7 +301,7 @@ describe('an enlarged step’s frame in Layers', () => {
     expect(rows()[0]!.textContent).toBe('Enlarged frameStep 1’s area was deleted');
   });
 
-  it('reads out what the frame prints at once the pages are laid out, amber where its room holds it back (Z4)', async () => {
+  it('reads out what the frame prints at once the pages are laid out, a fixed Size as asked (Z4)', async () => {
     await enlarged();
     act(() => rows()[0]!.click());
     const readout = () => host!.querySelector<HTMLElement>('[data-readout]')!;
@@ -311,10 +311,11 @@ describe('an enlarged step’s frame in Layers', () => {
     act(() => rows()[0]!.click());
     expect(readout().textContent).toBe('Prints ×4.4');
     expect(readout().dataset.tone).toBeUndefined();
-    printed.zoom = { asked: 3, printed: 2.38, reduced: true };
+    // A Size is drawn as asked, past its room if need be (Zach, 2026-10-12): nothing amber to say of it.
+    printed.zoom = { asked: 3, printed: 3, reduced: false };
     act(() => buttonNamed('Fixed').click());
-    expect(readout().textContent).toBe('Asked ×3 · prints ×2.4 — the room is too small');
-    expect(readout().dataset.tone).toBe('warning');
+    expect(readout().textContent).toBe('Prints ×3');
+    expect(readout().dataset.tone).toBeUndefined();
   });
 
   it('sizes its frame as one undo step, counted as the frame’s', async () => {

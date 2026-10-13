@@ -859,7 +859,6 @@
       "enlargeFixed": "固定",
       "enlargePrints": "按 ×{{printed}} 打印",
       "enlargePrintsBarely": "只按 ×{{printed}} 打印——请绘制更小的区域",
-      "enlargePrintsRoom": "要求 ×{{asked}} · 按 ×{{printed}} 打印——空间太小",
       "enlargeReadoutFill": "在空间允许的范围内尽量放大打印，最多为区域的 6 倍。",
       "enlargeReadoutFixed": "按区域打印尺寸的 {{size}} 倍打印。",
       "enlargeRounded": "圆角矩形",
