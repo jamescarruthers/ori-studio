@@ -49,14 +49,34 @@ import { SWIVEL_TARGET_FROM } from './vertex/vertexInputs';
 
 /**
  * What a fold takes along with the moving side (D6's seed, before it names
- * sheet points): every layer, the flaps picked — as the engine named them,
- * so a new section of the same line finds them again — or the stack at a
- * point of the folded pane, at the depth a repeated click went down to.
+ * sheet points): the top flap at the line, which is where a fold starts;
+ * every layer; the flaps picked — as the engine named them, so a new section
+ * of the same line finds them again — or the stack at a point of the folded
+ * pane, at the depth a repeated click went down to.
+ *
+ * `top` names no flap: which flap is on top is the cross-section's to say,
+ * and the section is the line's and the side's. It is resolved where the
+ * section is known (`tools/topFlapSeed`, `useFoldLineSection`), before any
+ * step is built, so no step is ever built with it.
  */
 export type FoldToolSeed =
+  | { scope: 'top' }
   | { scope: 'all' }
   | { scope: 'flaps'; flaps: readonly FoldFlap[] }
   | { scope: 'depth'; at: SheetPoint; scene: Point; choice: number };
+
+/** A seed a step can be built with: the top flap resolved to the flaps it is, or every layer. */
+export type FoldResolvedSeed = Exclude<FoldToolSeed, { scope: 'top' }>;
+
+/**
+ * The default seed (owner request, 2026-10-13): the topmost flap at the
+ * line, as the front shows it, not every layer. A fold that takes a whole
+ * point takes every layer of it instead (`seedForTool`).
+ */
+export const FOLD_TOP_FLAP: FoldToolSeed = { scope: 'top' };
+
+/** Every layer on the moving side. */
+export const FOLD_EVERY_LAYER: FoldResolvedSeed = { scope: 'all' };
 
 /** A fold a refusal's fix offers, folded in place of the one the picks locate until they change. */
 export interface FoldToolOverride {
@@ -181,6 +201,9 @@ export interface FoldToolState {
   resume: FoldToolId;
 }
 
+/** The tools' state with the seed resolved (`useFoldLineSection`): what every step is built from. */
+export type FoldSeededToolState = Omit<FoldToolState, 'seed'> & { seed: FoldResolvedSeed };
+
 export const FOLD_TOOL_INITIAL: FoldToolState = {
   tool: 'valley',
   // The design opens on point to point, the first fold of most models.
@@ -188,7 +211,7 @@ export const FOLD_TOOL_INITIAL: FoldToolState = {
   picks: [],
   root: 0,
   swapped: false,
-  seed: { scope: 'all' },
+  seed: FOLD_TOP_FLAP,
   precreaseDirection: 'valley',
   extent: 'whole',
   extentPicks: [],
@@ -213,7 +236,7 @@ function located(state: FoldToolState): FoldToolState {
     extentPicks: [],
     root: 0,
     swapped: false,
-    seed: { scope: 'all' },
+    seed: FOLD_TOP_FLAP,
     override: null,
     hoveredFlap: null,
     compound: FOLD_COMPOUND_CHOICES_INITIAL,
@@ -303,8 +326,10 @@ export interface FoldTools {
    * Pick or unpick a flap; `all` is the section's every flap, so picking the
    * last unpicked one is `all` again — and so is unpicking the only one
    * picked, which would otherwise leave a seed that moves nothing (`flapSeed`).
+   * `top` is the section's top flap (`topFlapOf`): what the default seed
+   * picks, and so what a press widens from.
    */
-  toggleFlap(flap: FoldFlap, all: readonly FoldFlap[]): void;
+  toggleFlap(flap: FoldFlap, all: readonly FoldFlap[], top: FoldFlap | null): void;
   setPrecreaseDirection(direction: FoldDirection): void;
   // A precrease's extent (`tools/precrease`).
   /** Crease this much of the line: its points along the line start again. */
@@ -366,9 +391,10 @@ export interface FoldTools {
  * at the line, or none of them. A seed of no flaps names nothing on the
  * moving side, so the engine refuses it (`no_side`) and the window, with no
  * section to show, has no chips left to pick one again: the last chip
- * unpressed would strand the fold. Every layer is where a fold starts.
+ * unpressed would strand the fold. Every layer is the widest it can be, so
+ * unpressing the last chip moves every layer: one press from the top flap.
  */
-export function flapSeed(flaps: readonly FoldFlap[], all: readonly FoldFlap[] = []): FoldToolSeed {
+export function flapSeed(flaps: readonly FoldFlap[], all: readonly FoldFlap[] = []): FoldResolvedSeed {
   if (flaps.length === 0) return { scope: 'all' };
   const everything = all.length > 0 && all.every((each) => flaps.some((other) => sameFlap(each, other)));
   return everything ? { scope: 'all' } : { scope: 'flaps', flaps };
@@ -465,7 +491,7 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
     },
 
     clear() {
-      set((state) => (hasToolInput(state) || state.seed.scope !== 'all' || state.swapped ? restart(state) : state));
+      set((state) => (hasToolInput(state) || state.seed.scope !== 'top' || state.swapped ? restart(state) : state));
     },
 
     swapSide() {
@@ -473,11 +499,11 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       const now = store.getState();
       if (!isLocated(now) || !isLineTool(now.tool)) return false;
       // The flaps picked, or the stack a depth pick went down, are the old
-      // side's: the new side folds whole until something of it is picked.
+      // side's: the new side folds its own top flap until something of it is picked.
       set((state) => ({
         ...state,
         swapped: !state.swapped,
-        seed: { scope: 'all' },
+        seed: FOLD_TOP_FLAP,
         override: null,
         compound: anotherTip(state.compound),
       }));
@@ -502,9 +528,11 @@ export function createFoldTools(initial: FoldToolState = FOLD_TOOL_INITIAL): Fol
       set((state) => ({ ...state, seed, override: null, compound: anotherTip(state.compound) }));
     },
 
-    toggleFlap(flap, all) {
+    toggleFlap(flap, all, top) {
       set((state) => {
-        const picked = state.seed.scope === 'flaps' ? state.seed.flaps : state.seed.scope === 'all' ? all : [];
+        const { seed } = state;
+        const picked =
+          seed.scope === 'flaps' ? seed.flaps : seed.scope === 'all' ? all : seed.scope === 'top' && top ? [top] : [];
         const has = picked.some((each) => sameFlap(each, flap));
         const next = has ? picked.filter((each) => !sameFlap(each, flap)) : [...picked, flap];
         return { ...state, seed: flapSeed(next, all), override: null, compound: anotherTip(state.compound) };

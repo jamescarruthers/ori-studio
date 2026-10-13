@@ -84,7 +84,7 @@ export interface FoldFlapChip {
 }
 
 /** Grouping faces into rows made a cycle: only one interval's stack at a time means anything. */
-export function isWoven(section: FoldCrossSection): boolean {
+export function isWoven(section: Pick<FoldCrossSection, 'order'>): boolean {
   return section.order.kind === 'woven';
 }
 
@@ -124,6 +124,18 @@ export function flapNumbers(section: FoldCrossSection | null, flapCount: number)
     numbers[flap] = position + 1;
   });
   return numbers;
+}
+
+/**
+ * The topmost flap at the line as the front shows it (an index into the
+ * section's flaps): the flap of the section's top row. The rows run top to
+ * bottom as the viewer sees them, so this is Flap 1. A woven section has no
+ * one row order: its top is the top of the stack the picker shows first, its
+ * first interval's. Null for a section with no rows.
+ */
+export function topFlapOf(section: Pick<FoldCrossSection, 'rows' | 'order' | 'intervals'>): number | null {
+  const index = isWoven(section) ? section.intervals[0]?.rows[0] : 0;
+  return index === undefined ? null : (section.rows[index]?.flap ?? null);
 }
 
 /** The same flap, by its faces: the engine names a flap by them wherever it lists one. */

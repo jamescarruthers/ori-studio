@@ -103,6 +103,7 @@ function landed(op: FoldOp, extent: FoldExtentState | null = null, extra: Partia
   return {
     candidates: null,
     build: { status: 'unlocated' },
+    seed: { scope: 'all' },
     step: { op, key: JSON.stringify(op) },
     analysis: null,
     section: null,

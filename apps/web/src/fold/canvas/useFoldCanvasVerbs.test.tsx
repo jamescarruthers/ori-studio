@@ -14,6 +14,7 @@ import {
   type FoldTools,
 } from '../tools/foldToolState';
 import { buildReverseStep } from '../tools/reverse/reverseStep';
+import { seedForTool } from '../tools/topFlapSeed';
 import { flatSquareLandmarks, flatSquareScene } from './foldCanvas.fixtures';
 import { foldAlongLine } from './foldAlongLine';
 import { foldPickIndex } from './foldPicking';
@@ -48,6 +49,7 @@ function preview(extra: Partial<FoldToolPreview> = {}): FoldToolPreview {
   return {
     candidates: null,
     build: { status: 'unlocated' },
+    seed: { scope: 'all' },
     step: { op: BOOK, key: 'book' },
     analysis: null,
     section: null,
@@ -128,6 +130,29 @@ describe('the Fold canvas’s commit', () => {
     render(preview({ landing: false }));
     expect(commitStep).toHaveBeenCalledWith(BOOK, undefined);
     expect(bound!.queued).toBe(false);
+  });
+
+  it('counts a fold of the default top flap as `top`, a flap the folder picked as `flaps`, and every layer as `all`', async () => {
+    const commitStep = vi.fn<FoldSessionSurface['commitStep']>(() =>
+      Promise.resolve({ status: 'committed' as const, id: 'fstep-t', fingerprint: 'fs1:0' } as never)
+    );
+    const surface = session(commitStep);
+    const tools = createFoldTools();
+    const topFlap: FoldOp = { ...BOOK, seed: { scope: 'flaps', at: [[0.75, 0.5]] } };
+    const commitWith = async (op: FoldOp) => {
+      act(() => root.render(<Harness session={surface} tools={tools} preview={preview({ step: { op, key: JSON.stringify(op) } })} />));
+      await act(async () => void bound!.verbs.commit());
+    };
+    // The tools still hold the default: the flap the step names is the top flap.
+    await commitWith(topFlap);
+    expect(tracked.added).toHaveBeenLastCalledWith('valley', { layerScope: 'top', via: 'free' });
+    // The same flap pressed by the folder.
+    act(() => tools.setSeed({ scope: 'flaps', flaps: [{ faces: [2], witness: [0.75, 0.5] }] }));
+    await commitWith(topFlap);
+    expect(tracked.added).toHaveBeenLastCalledWith('valley', { layerScope: 'flaps', via: 'free' });
+    // A moving side of one flap: the default is every layer, and reads so.
+    await commitWith(BOOK);
+    expect(tracked.added).toHaveBeenLastCalledWith('valley', { layerScope: 'all', via: 'free' });
   });
 
   it('applies Rotate’s turn as a step, says how far in a bucket, and puts Rotate down; Escape puts it down unapplied', async () => {
@@ -347,7 +372,12 @@ describe('a near miss’s fix', () => {
       expect(pick.scene.x).toBeCloseTo(0.5, 9);
     }
     // The fix's side moves: x > ½, which an even split does not take unswapped.
-    const built = buildReverseStep({ ...state, candidate: null, kind: 'inside', openings: [], completion: null }, index);
+    // A reverse fold takes every layer of its point (`seedForTool`).
+    expect(seedForTool(state.tool, state.seed)).toEqual({ scope: 'all' });
+    const built = buildReverseStep(
+      { ...state, seed: { scope: 'all' }, candidate: null, kind: 'inside', openings: [], completion: null },
+      index
+    );
     if (built.status !== 'built' || built.op.kind !== 'inside-reverse') throw new Error('not built');
     expect(built.op.moving?.[0]).toBeGreaterThan(0.5);
   });
@@ -757,10 +787,10 @@ describe('a vertex fold’s choices on the canvas', () => {
     });
     expect(claimed).toBe(false);
     expect(bound!.queued).toBe(false);
-    // Beside the line, a click picks nothing — no layer, no point.
+    // Beside the line, a click picks nothing — no layer, no point: the seed is still the default top flap.
     const radii = { point: 0.03, line: 0.03 };
     act(() => bound!.verbs.pick(bound!.verbs.hitTest('folded', { x: 0.3, y: 0.8 }, radii)));
-    expect(tools.store.getState()).toMatchObject({ extentPicks: [], seed: { scope: 'all' } });
+    expect(tools.store.getState()).toMatchObject({ extentPicks: [], seed: { scope: 'top' } });
     // On it, the line's middle.
     const hit = bound!.verbs.hitTest('folded', { x: 0.51, y: 0.49 }, radii);
     expect(hit?.pick).toMatchObject({ kind: 'point', provenance: 'midpoint', sheet: [0.5, 0.5] });

@@ -6,7 +6,7 @@ import type { FoldAxiomCandidate, FoldEngineRefused } from '../engine/foldEngine
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import { buildCrimpStep, crimpLines, type FoldCrimpLines } from '../tools/crimp/crimpStep';
 import type { FoldStepBuild } from '../tools/foldStepBuilder';
-import type { FoldToolState } from '../tools/foldToolState';
+import type { FoldSeededToolState } from '../tools/foldToolState';
 import { chosenAt, reverseKindToFold, reverseOpenWays, type FoldReverseOpenWay } from '../tools/reverse/reverseStep';
 import type { FoldPickIndex } from './foldPicking';
 import { useFoldCompoundAsk, useFoldCompoundOrders } from './useFoldCompoundAsk';
@@ -55,7 +55,7 @@ const NO_LINES: FoldCrimpLines = { first: null, second: null };
 export function useFoldCrimpStep(
   session: FoldSessionSurface,
   index: FoldPickIndex | null,
-  tools: FoldToolState,
+  tools: FoldSeededToolState,
   candidate: FoldAxiomCandidate | null,
   enabled: boolean
 ): FoldCrimpStepAnswer {

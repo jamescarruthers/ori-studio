@@ -57,8 +57,12 @@ export type FoldStepAddedOpKind =
   | 'closed_sink'
   | 'unsink';
 
-/** How much of the moving side a Fold step took: every layer, flaps picked, or a depth at a point. */
-export type FoldStepLayerScope = 'all' | 'flaps' | 'depth';
+/**
+ * How much of the moving side a Fold step took: every layer, flaps picked, a
+ * depth at a point, or the top flap the tools take by default when the folder
+ * picked nothing (`top`, since 2026-10-13; stored as a flaps seed).
+ */
+export type FoldStepLayerScope = 'all' | 'flaps' | 'depth' | 'top';
 
 /** How a Fold step's line was located: an axiom, an existing crease, or a free line. */
 export type FoldStepVia = 'axiom' | 'crease' | 'free';

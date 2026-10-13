@@ -5,7 +5,7 @@ import type { FoldTuckAnalysis, FoldTuckPlacement, FoldTuckTarget } from '../eng
 import type { FoldAnalysis, FoldAxiomCandidate, FoldEngineRefused } from '../engine/foldEngineWire';
 import type { FoldSessionSurface } from '../session/useFoldSession';
 import type { FoldStepBuild } from '../tools/foldStepBuilder';
-import type { FoldToolState } from '../tools/foldToolState';
+import type { FoldSeededToolState } from '../tools/foldToolState';
 import { chosenAt } from '../tools/reverse/reverseStep';
 import { buildTuckStep, tuckTargetChosen, tuckTargetsOf } from '../tools/tuck/tuckStep';
 import type { FoldPickIndex } from './foldPicking';
@@ -93,7 +93,7 @@ export function tuckRefusedWithFlaps(
 export function useFoldTuckStep(
   session: FoldSessionSurface,
   index: FoldPickIndex | null,
-  tools: FoldToolState,
+  tools: FoldSeededToolState,
   candidate: FoldAxiomCandidate | null,
   enabled: boolean
 ): FoldTuckStepAnswer {

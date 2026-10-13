@@ -83,14 +83,32 @@ const located: FoldToolState = { ...FOLD_TOOL_INITIAL, lineMode: 'free', picks: 
 describe('the Fold canvas model', () => {
   it('names what the seed asks for and what the closure adds by the section’s flaps', () => {
     expect(foldWindowPreview({ ...located, picks: located.picks.slice(0, 1) }, preview())).toBeNull();
-    expect(foldWindowPreview(located, preview())).toMatchObject({ seed: 'all', added: [1] });
+    expect(foldWindowPreview(located, preview({ seed: { scope: 'all' } }))).toMatchObject({ seed: 'all', added: [1] });
     const picked = foldWindowPreview({ ...located, seed: { scope: 'flaps', flaps: [flaps[1]!] } }, preview({
+      seed: { scope: 'flaps', flaps: [flaps[1]!] },
       step: {
         op: { kind: 'valley', line: { via: 'free', through: [[0, 0.5], [0.5, 0.5]] }, seed: { scope: 'flaps', at: [[0.25, 0.5]] } },
         key: 'k',
       },
     }));
     expect(picked?.seed).toEqual([1]);
+  });
+
+  it('presses the top flap the step was built with while the tools hold the default (owner request, 2026-10-13)', () => {
+    // The tools hold `top`; the preview's seed is the section's top flap, the step's flaps seed its witness.
+    expect(located.seed).toEqual({ scope: 'top' });
+    const top = foldWindowPreview(located, preview({
+      seed: { scope: 'flaps', flaps: [flaps[0]!] },
+      step: {
+        op: { kind: 'valley', line: { via: 'free', through: [[0, 0.5], [0.5, 0.5]] }, seed: { scope: 'flaps', at: [[0.75, 0.5]] } },
+        key: 'top',
+      },
+    }));
+    expect(top).toMatchObject({ seed: [0], added: [1] });
+    // A moving side of one flap: its top flap is every layer, every chip pressed, as before.
+    expect(foldWindowPreview(located, preview({ seed: { scope: 'all' }, step: { op: { kind: 'valley', line: { via: 'free', through: [[0, 0.5], [0.5, 0.5]] }, seed: { scope: 'all' } }, key: 'one' } }))?.seed).toBe('all');
+    // While the section the top flap is read from is asked, nothing is pressed.
+    expect(foldWindowPreview(located, preview({ seed: null, analysis: null, section: null }))?.seed).toEqual([]);
   });
 
   it('hands the window the woven stack the pointer is over, the first while it has been over none', () => {
