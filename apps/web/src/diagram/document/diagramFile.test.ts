@@ -379,8 +379,9 @@ describe('writeDiagram / readDiagram', () => {
       const plain = throughJson(writeDiagram(arranged()));
       expect('packer' in plain.pageArrangements['step-2']).toBe(false);
       expect('packer' in readDiagram(plain)!.document.pageArrangements!['step-2']!).toBe(false);
-      // Said, any packer — this build's or another's — is kept, written after the signature, and holds the page alike.
-      for (const packer of ['pack-3', 'pack-99']) {
+      // Said, any packer — an older build's, this one's or a later one's — is kept, written after the signature, and
+      // holds the page alike.
+      for (const packer of ['pack-3', 'pack-4', 'pack-99']) {
         const stamped = throughJson(writeDiagram(withPageArrangements(sampleDiagram(), { 'step-2': { ...ARRANGED, packer } })));
         expect(Object.keys(stamped.pageArrangements['step-2'])).toEqual(['signature', 'packer', 'k', 'steps']);
         const read = readDiagram(stamped)!;

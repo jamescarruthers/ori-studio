@@ -50,9 +50,11 @@ const LEAST_SCALE = 0.01;
  * fits drawn as large as its overflow allows. `pack-3` (F2): every step's
  * reference scale found in the diagram's one cell, never its own page's.
  * Every arrangement saved before packers were recorded that still holds —
- * signed `pack-3:` — was packed by `pack-3`.
+ * signed `pack-3:` — was packed by `pack-3`. `pack-4` (2026-10-12): an
+ * enlarged step's set Size no longer cut to its room, in the reference cell a
+ * page is packed from too, so its box is packed for the Size it asks for.
  */
-export const PACKER_VERSION = 'pack-3';
+export const PACKER_VERSION = 'pack-4';
 
 /**
  * The page as packed, kept as its arrangement, rounded as the store keeps it

@@ -44,14 +44,19 @@ new homes (reproduced with `artifacts/layout-review/crane_final_oldpack.osf`,
   the same, as the old format read it, still holds. No second format exists
   yet. `pageSignature.test.ts` pins three digests so such a change cannot slip
   through unnoticed.
-- `PACKER_VERSION = 'pack-3'` (`pages/flowArrangement.ts`) — the packer's own
+- `PACKER_VERSION = 'pack-4'` (`pages/flowArrangement.ts`) — the packer's own
   version, stamped on each newly packed arrangement as `packer`
   (`DiagramPageArrangement.packer`): read leniently (any string kept as it
   came; anything else dropped alone, the page still held), written back,
   absent on arrangements saved before. It never decides whether a page holds
   (`holdsArrangement` never reads it). It exists so a later build can offer
   "Re-pack to get the improved packing" without forcing it; every arrangement
-  without one that holds was packed by `pack-3`.
+  without one that holds was packed by `pack-3`. It was stamped `pack-3` at
+  first, then bumped to `pack-4` the same day for the enlarged-step change
+  (c1bd3d0a2: a set Size is no longer cut to its room, in the reference cell a
+  fresh pack uses too, so an enlarged step gets a bigger box), so pages packed
+  before and after that change can be told apart. Bump it with every change to
+  what a fresh pack produces.
 - An arrangement must stay drawable as stored. A packer change that needs data
   an old arrangement lacks gives the old arrangement a legacy reading; it never
   re-packs it.
@@ -172,6 +177,7 @@ legacy value.
 
 - [x] Signature covers the page's structure only; `SIGNATURE_VERSION` frozen at `pack-3`, the format rule written down
 - [x] `PACKER_VERSION` stamped on newly packed arrangements as `packer`, read leniently, written back, never asked
+- [x] `PACKER_VERSION` bumped to `pack-4` for the enlarged-step packing change (c1bd3d0a2)
 - [x] Store and layout sign a diagram's first and last pages alike (turns at the ends)
 - [x] Frozen fixture: a file saved before the change opens with every page held, nothing adopted, every step in its box
 - [x] A bumped packer version holds every saved page and packs only a re-packed one, stamped with it

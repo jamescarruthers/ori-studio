@@ -96,12 +96,14 @@ describe('a diagram saved with its pages held', () => {
   it('holds every page in a build with another packer, which packs only the pages re-packed there', async () => {
     // A later build: its packer's version bumped, and every arrangement it packs stamped with it.
     vi.resetModules();
+    const LATER = 'pack-later';
+    expect(LATER).not.toBe(PACKER_VERSION);
     vi.doMock('./flowArrangement', async (importOriginal) => {
       const actual = await importOriginal<typeof import('./flowArrangement')>();
       return {
         ...actual,
-        PACKER_VERSION: 'pack-4',
-        packedArrangement: (...args: Parameters<typeof actual.packedArrangement>) => ({ ...actual.packedArrangement(...args), packer: 'pack-4' }),
+        PACKER_VERSION: LATER,
+        packedArrangement: (...args: Parameters<typeof actual.packedArrangement>) => ({ ...actual.packedArrangement(...args), packer: LATER }),
       };
     });
     const later = {
@@ -119,7 +121,7 @@ describe('a diagram saved with its pages held', () => {
     const packed = later.layoutDiagram(repacked, later.estimateTextSetter).packed ?? {};
     expect(Object.keys(packed)).toEqual(['step-6']);
     const adopted = later.adoptPageArrangements(repacked, packed);
-    expect(adopted.pageArrangements!['step-6']!.packer).toBe('pack-4');
+    expect(adopted.pageArrangements!['step-6']!.packer).toBe(LATER);
     expect(adopted.pageArrangements!['step-1']).toEqual(document.pageArrangements!['step-1']);
   });
 });
