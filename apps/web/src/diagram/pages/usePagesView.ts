@@ -22,7 +22,9 @@ const PAGE_TURN_MS = 220;
 
 const OBSERVES = typeof IntersectionObserver !== 'undefined';
 
-const keepCamera = (camera: KeptCamera) => useWorkspaceStore.getState().keepDiagramPagesCamera(camera);
+/** The page in the middle of the view, and the first and last on screen, from 0. */
+type OnScreen = { middle: number; first: number; last: number };
+const NONE_ON_SCREEN: OnScreen = { middle: 0, first: 0, last: 0 };
 
 /**
  * The Pages view's behaviour (AGENTS.md › Panel components): its camera — the
@@ -58,16 +60,34 @@ export function usePagesView({
     [pageW, pageH]
   );
   // Where the reader left the pages — a step opened in Pose or Annotate, or the
-  // Steps view chosen, unmounts this view — to come back to, not to page 1.
-  const [keptCamera] = useState(() => useWorkspaceStore.getState().diagramPagesCamera);
+  // Steps view chosen, unmounts this view — to come back to, not to page 1:
+  // the camera, the pages it had on screen (so the panes and the pages' images
+  // are this page's from the first frame), and the step it showed, which needs
+  // no bringing into view again.
+  const viewKey = `${fitKey}:${pages ? 'laid-out' : 'waiting'}`;
+  const [kept] = useState(() => useWorkspaceStore.getState().diagramPagesCamera);
+  const restoring = kept?.key === viewKey ? kept : null;
+  const restoredShows = useRef(restoring?.shownStepId ?? null);
+  // The selected step once brought into view: what a frame shows, and the view hands back as it leaves.
+  const shown = useRef<{ stepId: string | null; laidOut: boolean }>({ stepId: null, laidOut: false });
+  const onScreenRef = useRef<OnScreen>(restoring?.onScreen ?? NONE_ON_SCREEN);
+  const onLeave = useCallback(
+    (camera: KeptCamera) =>
+      useWorkspaceStore.getState().keepDiagramPagesCamera({
+        ...camera,
+        shownStepId: shown.current.laidOut ? shown.current.stepId : null,
+        onScreen: onScreenRef.current,
+      }),
+    []
+  );
   const camera = useViewportSurface({
     surface: null,
     worldRect,
     fitRect,
     fitAnchor: 'fit-rect',
-    fitKey: `${fitKey}:${pages ? 'laid-out' : 'waiting'}`,
-    keptCamera,
-    onLeave: keepCamera,
+    fitKey: viewKey,
+    keptCamera: kept,
+    onLeave,
   });
   const { containerRef, transformRef, handleViewportShortcut, onTransformed: cameraTransformed } = camera;
   useEffect(() => registerDiagramViewCamera(handleViewportShortcut), [handleViewportShortcut]);
@@ -75,7 +95,7 @@ export function usePagesView({
   // The page in the middle of the view and the pages on screen, and the page
   // last pressed, for the panes too once the pages are laid out (`pageInView.ts`):
   // held to the pages there are, which a re-cut can make fewer.
-  const [onScreen, setOnScreen] = useState<{ middle: number; first: number; last: number }>({ middle: 0, first: 0, last: 0 });
+  const [onScreen, setOnScreen] = useState<OnScreen>(() => restoring?.onScreen ?? NONE_ON_SCREEN);
   const [pressed, setPressed] = useState<{ page: number; selection: string | null } | null>(null);
   const lastPage = Math.max(0, count - 1);
   const current = Math.min(onScreen.middle, lastPage);
@@ -104,6 +124,7 @@ export function usePagesView({
         first: clamp(Math.floor((top - PAGES_PAD - pageH) / pitch) + 1),
         last: clamp(Math.ceil((bottom - PAGES_PAD) / pitch) - 1),
       };
+      onScreenRef.current = next;
       setOnScreen((previous) =>
         previous.middle === next.middle && previous.first === next.first && previous.last === next.last ? previous : next
       );
@@ -140,8 +161,13 @@ export function usePagesView({
     [transformRef, containerRef, count, pageW, pageH, pitch]
   );
 
-  // Pages are composed once they come within a view's height of the screen.
-  const [near, setNear] = useState<ReadonlySet<number>>(() => new Set([0]));
+  // Pages are composed once they come within a view's height of the screen:
+  // the first, or the ones round those a view coming back had on screen.
+  const [near, setNear] = useState<ReadonlySet<number>>(() => {
+    if (!restoring) return new Set([0]);
+    const { first: from, last: to } = restoring.onScreen;
+    return new Set(Array.from({ length: to - from + 3 }, (_, k) => from - 1 + k).filter((index) => index >= 0));
+  });
   const pageElements = useRef(new Map<number, HTMLElement>());
   const pageRef = useCallback(
     (index: number) => (element: HTMLElement | null) => {
@@ -185,7 +211,6 @@ export function usePagesView({
     },
     []
   );
-  const shown = useRef<{ stepId: string | null; laidOut: boolean }>({ stepId: null, laidOut: false });
   useLayoutEffect(() => {
     const laidOut = pages !== null;
     if (selectedStepId === null || !laidOut) {
@@ -200,6 +225,9 @@ export function usePagesView({
     // from Pose with a relayout under way did.
     const frame = requestAnimationFrame(() => {
       shown.current = { stepId: selectedStepId, laidOut: true };
+      // Put back where the reader left it with this step selected, the view shows it as it did: focus, no scroll.
+      const restored = restoredShows.current === selectedStepId;
+      restoredShows.current = null;
       const cell = cells.current.get(selectedStepId);
       const container = containerRef.current;
       const api = transformRef.current;
@@ -208,7 +236,7 @@ export function usePagesView({
       if ((active === null || active === document.body || container.contains(active)) && active !== cell) {
         cell.focus({ preventScroll: true });
       }
-      if (!api) return;
+      if (!api || restored) return;
       const view = container.getBoundingClientRect();
       const box = cell.getBoundingClientRect();
       const dx = box.left < view.left ? view.left - box.left : box.right > view.right ? view.right - box.right : 0;

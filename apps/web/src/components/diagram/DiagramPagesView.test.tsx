@@ -616,8 +616,8 @@ it('still brings the selected step into view when new pages land before its fram
 
 it('comes back where the reader left it — from Pose or Annotate, which unmount it — not framed on page 1 (Zach, 2026-10-12)', () => {
   const runFrames = framesByHand();
-  const show = (pages: PreparedDiagramPages, doc: DiagramDocument) => {
-    render(pages, {}, pages.layout.bandInk, doc, null);
+  const show = (pages: PreparedDiagramPages, doc: DiagramDocument, selected: string | null = null) => {
+    render(pages, {}, pages.layout.bandInk, doc, selected);
     runFrames();
   };
   const doc = insertSteps(createDiagram({ title: 'Crane' }), Array.from({ length: 20 }, (_, index) => cpStep(`s${index}`)), 0);
@@ -632,19 +632,31 @@ it('comes back where the reader left it — from Pose or Annotate, which unmount
   const framed = transform();
   expect(framed).not.toBe('translate(0px, 0px) scale(1)');
   act(() => root.unmount());
-  expect(kept()).toMatchObject({ key: 'test:laid-out' });
+  expect(kept()).toMatchObject({ key: 'test:laid-out', shownStepId: null });
   const fit = kept()!;
 
   // Where the reader had turned to — page 3, nearer — is where it stands again as it comes back.
-  const onPage3 = { key: 'test:laid-out', positionX: fit.positionX - 40, positionY: fit.positionY - 2 * 1100, scale: fit.scale * 1.5 };
+  const onPage3 = {
+    key: 'test:laid-out',
+    positionX: fit.positionX - 40,
+    positionY: fit.positionY - 2 * 1100,
+    scale: fit.scale * 1.5,
+    onScreen: { middle: 2, first: 2, last: 2 },
+    shownStepId: 's19',
+  };
   act(() => useWorkspaceStore.getState().keepDiagramPagesCamera(onPage3));
   root = createRoot(host);
-  show(pages, doc);
+  render(pages, {}, pages.layout.bandInk, doc, 's19');
+  // Page 3's from the first frame, before the camera is put back: the pager, and the panes' "this page".
+  expect(host.textContent).toContain('Page 3 of');
+  runFrames();
   expect(transform()).not.toBe(framed);
   expect(transform()).toBe(`translate(${onPage3.positionX}px, ${onPage3.positionY}px) scale(${onPage3.scale})`);
   expect(host.textContent).toContain('Page 3 of');
+  // The step it showed, still selected, is given the focus back, so Enter opens it again.
+  expect(document.activeElement?.getAttribute('data-step-id')).toBe('s19');
   act(() => root.unmount());
-  expect(kept()).toEqual(onPage3);
+  expect(kept()).toMatchObject({ ...onPage3, onScreen: { middle: 2 } });
 
   // Kept for other pages — another diagram, or other paper — it frames page 1 as ever.
   act(() => useWorkspaceStore.getState().keepDiagramPagesCamera({ ...onPage3, key: 'other:laid-out' }));

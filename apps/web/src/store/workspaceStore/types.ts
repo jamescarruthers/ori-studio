@@ -2020,11 +2020,20 @@ export interface DiagramSliceState {
    * Where the Pages view's camera stood when it last left the screen — a step
    * opened in Pose or Annotate, or the Steps view chosen — and the fit key it
    * stood under (`KeptCamera`), so the view comes back where the reader was,
-   * not framed on page 1 (Zach, 2026-10-12). View state: never saved, never
+   * not framed on page 1 (Zach, 2026-10-12); the pages it had on screen, from
+   * 0, so the panes and the pages' images are those pages' from its first
+   * frame back; and the step it had brought into view, which coming back with
+   * it still selected scrolls to no further. View state: never saved, never
    * history, gone with the diagram.
    */
-  diagramPagesCamera: KeptCamera | null;
+  diagramPagesCamera: DiagramPagesCamera | null;
 }
+
+/** The Pages view as it left the screen: its camera, the pages on screen, and the step it showed (`diagramPagesCamera`). */
+export type DiagramPagesCamera = KeptCamera & {
+  onScreen: { middle: number; first: number; last: number };
+  shownStepId: string | null;
+};
 
 /** What an anchor is being picked for: an enlarge area on a step, or the step's own frame. */
 export interface DiagramAnchorPick {
@@ -2211,7 +2220,7 @@ export interface DiagramSliceActions {
   setDiagramStepPose: (stepId: string, pose: UploadPose) => boolean;
   setDiagramView: (view: DiagramViewMode) => void;
   /** Keep where the Pages view's camera stood as it leaves the screen (`diagramPagesCamera`). */
-  keepDiagramPagesCamera: (camera: KeptCamera) => void;
+  keepDiagramPagesCamera: (camera: DiagramPagesCamera) => void;
   /**
    * Capture a linked step's picture from the crease pattern as it stands and
    * commit it as one undo step (`diagramCapture.ts`): Link pattern, Refresh,
