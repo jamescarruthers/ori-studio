@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ori Studio trial loader</title></head><body><div id="root"></div>
+<script type="module">
+import RefreshRuntime from '/@react-refresh';
+RefreshRuntime.injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
+window.__vite_plugin_react_preamble_installed__ = true;
+// Local research fixture loader. Uses the normal project reader and app;
+// avoids the embedded browser's inaccessible native File System Access picker.
+const model = new URLSearchParams(location.search).get('model');
+const filename = ['cicada','swan','heart','box','crane'].includes(model) ? model + '.osf' : 'origami-trials.osf';
+const fixtureUrl = new URL('./models/' + filename, location.href);
+const { useWorkspaceStore } = await import('/src/store/workspaceStore.ts');
+await useWorkspaceStore.getState().initEngine();
+const text = await (await fetch(fixtureUrl)).text();
+const opened = await useWorkspaceStore.getState().openProject({openTextFile: async () => ({text,name:filename,path:null})}, {confirmDiscard:false});
+if (!opened) throw new Error(JSON.stringify(useWorkspaceStore.getState().error));
+history.replaceState(null, '', '/fold');
+await import('/src/main.tsx');
+</script></body></html>

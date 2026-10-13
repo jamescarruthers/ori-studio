@@ -1,0 +1,320 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-origami-trials",
+    "title": "Heart — Origami.me",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-heart",
+        "title": "Heart — Origami.me",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "front"
+        },
+        "steps": [
+          {
+            "id": "fstep-heart-1",
+            "parent": null,
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0
+                  ],
+                  [
+                    0.5,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.8,
+                0.4
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: vertical center precrease"
+          },
+          {
+            "id": "fstep-heart-2",
+            "parent": "fstep-heart-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.5
+                  ],
+                  [
+                    1,
+                    0.5
+                  ]
+                ]
+              },
+              "moving": [
+                0.4,
+                0.2
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "2: horizontal center precrease"
+          },
+          {
+            "id": "fstep-heart-3",
+            "parent": "fstep-heart-2",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.5,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.5,
+                      0.5
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0,
+                  1
+                ],
+                "d": 0.25
+              }
+            },
+            "note": "3: bottom edge to center"
+          },
+          {
+            "id": "fstep-heart-4",
+            "parent": "fstep-heart-3",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "4: turn over"
+          },
+          {
+            "id": "fstep-heart-5",
+            "parent": "fstep-heart-4",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.25
+                  ],
+                  [
+                    1,
+                    0.75
+                  ]
+                ]
+              },
+              "moving": [
+                0.9,
+                0.35
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "5a: left bottom edge to center"
+          },
+          {
+            "id": "fstep-heart-6",
+            "parent": "fstep-heart-5",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.25
+                  ],
+                  [
+                    0,
+                    0.75
+                  ]
+                ]
+              },
+              "moving": [
+                0.1,
+                0.35
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "5b: right bottom edge to center"
+          },
+          {
+            "id": "fstep-heart-7",
+            "parent": "fstep-heart-6",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "6: turn over"
+          },
+          {
+            "id": "fstep-heart-8",
+            "parent": "fstep-heart-7",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.125,
+                    0.625
+                  ],
+                  [
+                    0.5,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.1,
+                0.9
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7a: upper left edge inward"
+          },
+          {
+            "id": "fstep-heart-9",
+            "parent": "fstep-heart-8",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    1
+                  ],
+                  [
+                    0.875,
+                    0.625
+                  ]
+                ]
+              },
+              "moving": [
+                0.9,
+                0.9
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7b: upper right edge inward"
+          },
+          {
+            "id": "fstep-heart-10",
+            "parent": "fstep-heart-9",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.10000000000000005,
+                    0.6250000000000001
+                  ],
+                  [
+                    0.9000000000000001,
+                    0.6250000000000001
+                  ]
+                ]
+              },
+              "moving": [
+                0.4000000000000001,
+                0.98
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.4000000000000001,
+                  0.98
+                ],
+                "layers": 1
+              }
+            },
+            "note": "8 probe: lower the upper flap using one top layer"
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-heart",
+        "cursor": "fstep-heart-10",
+        "activeChild": {
+          "": "fstep-heart-1",
+          "fstep-heart-1": "fstep-heart-2",
+          "fstep-heart-2": "fstep-heart-3",
+          "fstep-heart-3": "fstep-heart-4",
+          "fstep-heart-4": "fstep-heart-5",
+          "fstep-heart-5": "fstep-heart-6",
+          "fstep-heart-6": "fstep-heart-7",
+          "fstep-heart-7": "fstep-heart-8",
+          "fstep-heart-8": "fstep-heart-9",
+          "fstep-heart-9": "fstep-heart-10"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

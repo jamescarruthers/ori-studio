@@ -1,0 +1,376 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-13T00:00:00.000Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-13T00:00:00.000Z"
+  },
+  "workspace": {
+    "id": "workspace-origami-swan",
+    "title": "Swan — reverse-fold alternative",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-swan",
+        "title": "Swan — reverse-fold alternative",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "front"
+        },
+        "steps": [
+          {
+            "id": "fstep-swan-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "ccw"
+              }
+            },
+            "note": "Orientation: square to diamond"
+          },
+          {
+            "id": "fstep-swan-2",
+            "parent": "fstep-swan-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.6414213562373096,
+                0.3585786437626906
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: center precrease"
+          },
+          {
+            "id": "fstep-swan-3",
+            "parent": "fstep-swan-2",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.4142135623730949,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.1464466094067262,
+                0.8535533905932738
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2a: lower left edge to center"
+          },
+          {
+            "id": "fstep-swan-4",
+            "parent": "fstep-swan-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0.41421356237309503
+                  ]
+                ]
+              },
+              "moving": [
+                0.8535533905932737,
+                0.14644660940672638
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2b: lower right edge to center"
+          },
+          {
+            "id": "fstep-swan-5",
+            "parent": "fstep-swan-4",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "3: turn over the kite"
+          },
+          {
+            "id": "fstep-swan-6",
+            "parent": "fstep-swan-5",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0.668178637919299
+                  ]
+                ]
+              },
+              "moving": [
+                0.8838834764831843,
+                0.45961940777125593
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "4a: narrow left side again"
+          },
+          {
+            "id": "fstep-swan-7",
+            "parent": "fstep-swan-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.6681786379192989,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.45961940777125576,
+                0.8838834764831844
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "4b: narrow right side again"
+          },
+          {
+            "id": "fstep-swan-8",
+            "parent": "fstep-swan-7",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.04619397662556435,
+                    0.019134171618254488
+                  ],
+                  [
+                    0.9545941546018392,
+                    0.9545941546018393
+                  ]
+                ]
+              },
+              "moving": [
+                0.09632743905930098,
+                0.2848175284006879
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "Alternative: fold kite in half"
+          },
+          {
+            "id": "fstep-swan-9",
+            "parent": "fstep-swan-8",
+            "op": {
+              "kind": "inside-reverse",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.6532814824381885,
+                    0.14071098603801116
+                  ],
+                  [
+                    0.6532814824381885,
+                    0.2651860890716365
+                  ]
+                ]
+              },
+              "moving": [
+                0.14432218136216937,
+                0.04354432186709414
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.14432218136216937,
+                  0.04354432186709414
+                ],
+                "layers": 1
+              }
+            },
+            "choices": {
+              "opening": [
+                {
+                  "upper": [
+                    [
+                      0.20437530991758424,
+                      0.6666666666666666
+                    ],
+                    [
+                      0.0663041224598859,
+                      0.6666666666666666
+                    ],
+                    [
+                      0.36079740009746464,
+                      0.6666666666666667
+                    ],
+                    [
+                      0.5560595459730997,
+                      0.6666666666666666
+                    ]
+                  ]
+                }
+              ]
+            },
+            "note": "Alternative: inside reverse long point to raise neck"
+          },
+          {
+            "id": "fstep-swan-10",
+            "parent": "fstep-swan-9",
+            "op": {
+              "kind": "outside-reverse",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.1733166670918153,
+                    0.03189531085450482
+                  ],
+                  [
+                    0.14291107550079385,
+                    0.0014897192634832652
+                  ]
+                ]
+              },
+              "moving": [
+                0.03330952441687897,
+                0.005025253169415834
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.03330952441687897,
+                  0.005025253169415834
+                ],
+                "layers": 1
+              }
+            },
+            "choices": {
+              "opening": [
+                {
+                  "upper": [
+                    [
+                      0.13351460543672367,
+                      0.4355209882921258
+                    ],
+                    [
+                      0.04331525541235747,
+                      0.4534627545415789
+                    ],
+                    [
+                      0.21355076127867545,
+                      0.40236892706218275
+                    ],
+                    [
+                      0.29001807792097595,
+                      0.35127509958278647
+                    ]
+                  ]
+                }
+              ]
+            },
+            "note": "Alternative: outside reverse the tip to form the head (engine suggested kind)"
+          },
+          {
+            "id": "fstep-swan-11",
+            "parent": "fstep-swan-10",
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "quarter",
+                "direction": "cw"
+              }
+            },
+            "note": "Orient the swan upright"
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-swan",
+        "cursor": "fstep-swan-11",
+        "activeChild": {
+          "": "fstep-swan-1",
+          "fstep-swan-1": "fstep-swan-2",
+          "fstep-swan-2": "fstep-swan-3",
+          "fstep-swan-3": "fstep-swan-4",
+          "fstep-swan-4": "fstep-swan-5",
+          "fstep-swan-5": "fstep-swan-6",
+          "fstep-swan-6": "fstep-swan-7",
+          "fstep-swan-7": "fstep-swan-8",
+          "fstep-swan-8": "fstep-swan-9",
+          "fstep-swan-9": "fstep-swan-10",
+          "fstep-swan-10": "fstep-swan-11"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}
