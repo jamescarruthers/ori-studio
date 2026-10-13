@@ -12,7 +12,7 @@ import type { FontSubsetter } from '../fonts/fontSubset';
 import { diagramLayoutSteps, preparedPages } from './diagramPages';
 import { layoutDiagramPages } from './diagramPageLayout';
 import { estimateTextSetter } from './estimateTextSetter';
-import { laneFollowsPlacement, pageOffset, partBox } from './pagePlacement';
+import { laneFollowsPlacement, markOutsideMargin, outsideMarginSteps, pageOffset, partBox, translateCell } from './pagePlacement';
 import { previewPlacement } from './placementPreview';
 
 let subsetter: FontSubsetter;
@@ -170,8 +170,20 @@ describe('what is said of a placement (Zach, 2026-10-12)', () => {
     expect(placedAt([pastMargin, 0])[1]!.outsideMargin).toBe(true);
     // Past the paper's edge, where it may be clipped out of sight: the same notice.
     expect(placedAt([widthMm, 0])[1]!.outsideMargin).toBe(true);
-    // A step placed by no one is never said to be.
+    // The steps nobody moved stay inside the margin, and nothing is said of them.
     for (const i of [0, 2, 3]) expect(placedAt([widthMm, 0])[i]!.outsideMargin).toBeUndefined();
+  });
+
+  it('says it of a step nobody placed whose picture reaches past the margin: a held page keeps the box, not the picture', () => {
+    const layout = prepare(document()).layout;
+    const { widthMm } = layout.paper;
+    const cells = layout.pages[0]!.cells;
+    expect(cells[0]!.placed).toBeUndefined();
+    // As a new pose might carry it: the picture past the paper's left edge, its step never moved.
+    cells[0] = translateCell(cells[0]!, 'picture', -widthMm / 2, 0);
+    markOutsideMargin(layout);
+    expect(cells[0]!.outsideMargin).toBe(true);
+    expect(outsideMarginSteps(layout)).toEqual([cells[0]!.number]);
   });
 
   it('says nothing of a step placed over another step, over a symbol or the title, or where the path bends round it', () => {

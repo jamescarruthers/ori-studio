@@ -90,7 +90,7 @@ export interface DiagramExportBinding {
   /** The steps whose instruction is cut. */
   cut: number[];
   placed: number;
-  /** The steps placed by hand with a part past the margin (`outsideMarginSteps`): all that is said of a placement. */
+  /** The steps with a part past the margin (`outsideMarginSteps`): all that is said of where steps land. */
   outsideMargin: number[];
   /**
    * The pages that cannot hold their steps even at the smallest size, by how

@@ -125,30 +125,31 @@ export function partBox(cell: LayoutCell, part: PagePart): PageBox {
 const CELL_PARTS = ['number', 'picture', 'text'] as const;
 
 /**
- * Manual placement is honored, and one thing is said of it (Zach,
- * 2026-10-12): a placed step with a part past the margin — or past the
- * paper's edge, which lies past the margin too and may clip the part out of
- * sight — is marked `outsideMargin`. Derived, never stored in the document.
- * Nothing else a hand placement does is said: a step over another, over a
- * symbol or over its own parts, or the path bending round it, shows on the
- * page as plainly as it would print.
+ * One thing is said of where a step lands (Zach, 2026-10-12): a step with a
+ * part past the margin — or past the paper's edge, which lies past the margin
+ * too and may clip the part out of sight — is marked `outsideMargin`. Every
+ * step, not only one placed by hand: a held page keeps a step's box while its
+ * picture changes, so a new pose can carry a picture nobody moved past the
+ * paper's edge, where it would print clipped (the automatic layouts of the
+ * four real diagrams checked put no step there). Derived, never stored in the
+ * document. Nothing else is said: a step over another, over a symbol or over
+ * its own parts, or the path bending round it, shows on the page as plainly
+ * as it would print.
  */
 export function markOutsideMargin(layout: DiagramPagesLayout): void {
   const { widthMm: w, heightMm: h, marginMm: m } = layout.paper;
   for (const page of layout.pages)
     for (const cell of page.cells) {
-      const outside =
-        !!cell.placed &&
-        CELL_PARTS.some((part) => {
-          const b = partBox(cell, part);
-          return b.w > 0 && b.h > 0 && (b.x < m || b.y < m || b.x + b.w > w - m || b.y + b.h > h - m);
-        });
+      const outside = CELL_PARTS.some((part) => {
+        const b = partBox(cell, part);
+        return b.w > 0 && b.h > 0 && (b.x < m || b.y < m || b.x + b.w > w - m || b.y + b.h > h - m);
+      });
       if (outside) cell.outsideMargin = true;
       else delete cell.outsideMargin;
     }
 }
 
-/** The steps placed past the margin (`markOutsideMargin`), in print order. */
+/** The steps with a part past the margin (`markOutsideMargin`), in print order. */
 export function outsideMarginSteps(layout: Pick<DiagramPagesLayout, 'pages'>): number[] {
   return layout.pages.flatMap((page) => page.cells.filter((cell) => cell.outsideMargin).map((cell) => cell.number));
 }

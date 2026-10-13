@@ -29,7 +29,7 @@ export interface PageLayerRow {
   text: string;
   /** Placed by hand, any part or its size (`isPlacedStep`). */
   moved: boolean;
-  /** Placed by hand with a part past the margin, as the pages last laid it out (`LayoutCell.outsideMargin`). */
+  /** A part past the margin, as the pages last laid it out (`LayoutCell.outsideMargin`). */
   outsideMargin: boolean;
   /** The selection, with its frame — or no part, as a step selected by the keys or in the Steps view is. */
   pressed: boolean;

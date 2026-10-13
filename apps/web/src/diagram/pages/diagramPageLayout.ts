@@ -428,7 +428,7 @@ export interface LayoutCell {
      */
     auto: { mmPerUnit: number | null; frameMm: number | null; drawMm: PageBox; textWidthMm?: number };
   };
-  /** Placed by hand with a part past the margin, or past the paper's edge (`markOutsideMargin`): all the pages say of a placement. */
+  /** A part past the margin, or past the paper's edge (`markOutsideMargin`): all the pages say of where a step lands. */
   outsideMargin?: true;
   /** The picture's square box: where a fitted picture goes, and an empty step's placeholder. */
   pictureMm: { x: number; y: number; size: number };
