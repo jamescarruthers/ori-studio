@@ -194,15 +194,14 @@ describe.skipIf(!available)('a swivel’s reach over the real bridge', () => {
     const stored = step.op;
     if (stored.kind !== 'swivel' || !('fold' in stored)) throw new Error('step 7 is the swivel on a folded edge');
     const index = foldPickIndex(e.calls.scene(state), e.calls.landmarks(state, []), []);
-    const ask = swivelReachAsk(index, {
+    const asked = swivelReachAsk(index, {
       tool: 'swivel',
       swivelTarget: 'crease',
       picks: [meetingPick(index, stored.fold, true)],
       vertexDirection: 'valley',
-      compound: { swivelKind: 'inside' },
     });
-    if (!ask) throw new Error('no ask');
-    expect(ask.kind).toBe('inside');
+    if (!asked) throw new Error('no ask');
+    const ask = { ...asked, kind: 'inside' as const };
     const reach = swivelReach((op) => e.compound.compoundAnalysis(state, op), ask);
     const view = swivelReachView(reach);
     const edge = lineThrough(index, stored.edge);

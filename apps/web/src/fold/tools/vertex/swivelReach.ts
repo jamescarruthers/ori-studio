@@ -56,7 +56,11 @@ export interface FoldSwivelReachAsk {
   at: { pivot: SheetPoint } | { fold: SheetPoint };
   /** The way the folder would fold it, when it lands that way. */
   direction: FoldDirection;
-  /** On a folded edge, the kind the folder would fold, when it lands that kind: open until another is chosen, or absent. */
+  /**
+   * On a folded edge, the kind preferred where it lands: open when absent,
+   * as the canvas asks it, since a kind is chosen only once the swivel is
+   * previewed.
+   */
   kind?: FoldSwivelKind;
   /** The raw and folded edges a click can take. */
   edges: readonly FoldSwivelReachLine[];
@@ -172,9 +176,7 @@ export function swivelReach(ask: FoldSwivelAsk, request: FoldSwivelReachAsk): Fo
  */
 export function swivelReachAsk(
   index: FoldPickIndex,
-  tools: Pick<FoldToolState, 'tool' | 'swivelTarget' | 'picks' | 'vertexDirection'> & {
-    compound?: Pick<FoldToolState['compound'], 'swivelKind'>;
-  }
+  tools: Pick<FoldToolState, 'tool' | 'swivelTarget' | 'picks' | 'vertexDirection'>
 ): FoldSwivelReachAsk | null {
   const meet = tools.tool === 'swivel' && tools.swivelTarget === 'crease' ? tools.picks[0] : undefined;
   if (meet?.kind !== 'point') return null;
@@ -189,7 +191,6 @@ export function swivelReachAsk(
   return {
     at: swivelFoldPick(tools) ? { fold: meet.sheet } : { pivot: meet.sheet },
     direction: tools.vertexDirection,
-    kind: tools.compound?.swivelKind ?? 'open',
     edges: [...edges.values()],
     targets: [...targets.values()],
   };
