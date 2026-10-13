@@ -153,10 +153,15 @@ function swivelSteps(t: TFunction, target: FoldLineBy, host: FoldVertexStepsHost
       : t('tools:fold.vertex.steps.swivelSwing', 'Click the edge to swing onto a line.');
   return [
     coarse
-      ? t('tools:fold.vertex.steps.swivelMeetTouch', 'Tap where the creases meet: on a folded edge, or turn on Free point for any point.')
-      : t('tools:fold.vertex.steps.swivelMeet', 'Click where the creases meet: on a folded edge, or hold {{modifier}} for any point.', {
-          modifier: host.alt,
-        }),
+      ? t(
+          'tools:fold.vertex.steps.swivelMeetTouch',
+          'Tap the folded edge the creases meet on, anywhere along it. On flat paper, tap where they meet, or turn on Free point for any point.'
+        )
+      : t(
+          'tools:fold.vertex.steps.swivelMeet',
+          'Click the folded edge the creases meet on, anywhere along it. On flat paper, click where they meet, or hold {{modifier}} for any point.',
+          { modifier: host.alt }
+        ),
     swing,
     ...onto,
   ];

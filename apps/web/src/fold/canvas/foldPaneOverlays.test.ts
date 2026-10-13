@@ -189,4 +189,28 @@ describe('a free line drawn on the crease-pattern pane', () => {
     }).strokes!;
     expect(round(elsewhere.color[3]!)).toBeLessThan(1);
   });
+
+  it('draws a swivel’s folded edge lit and no dot where it was clicked: the preview finds where the creases meet', () => {
+    const [edge] = index.creasePattern.segments;
+    if (!edge) throw new Error('no line');
+    const [a, b] = edge.sheet;
+    const sheet: [number, number] = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const onFold: FoldPick = { kind: 'point', provenance: 'fold', sheet, mark: null, scene: { x: sheet[0], y: sheet[1] }, fold: edge };
+    for (const [picks, hovered] of [
+      [[onFold], null],
+      [[], onFold],
+    ] as const) {
+      const overlay = foldPaneOverlay({
+        pane: 'crease-pattern',
+        scene,
+        picks,
+        hovered: hovered && { pane: 'crease-pattern', at: { x: 0, y: 0 }, pick: hovered },
+        freeFrom: null,
+        marks: [],
+        inks: INKS,
+      });
+      expect(dots(overlay)).toEqual([]);
+      expect(overlay.strokes?.count).toBe(1);
+    }
+  });
 });

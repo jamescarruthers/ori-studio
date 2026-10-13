@@ -326,6 +326,44 @@ describe.skipIf(!available)('the swivel on a folded edge, made through the Swive
     expect(committed.fingerprint).toBe(stored.expect);
   });
 
+  it('takes the kite edge with Option held, the lower-left edge along its whole length, and commits the same open swivel from either end of it', async () => {
+    // Owner report, 2026-10-13: a click on the kite's edge, level with the
+    // model's side corners, lit the upper-left outer edge and the lower-right
+    // one, never the lower-left edge, and the centre line then previewed a
+    // fan over the whole left side — a pivot through every layer, which is
+    // what Alt held (or stuck) made of that click.
+    const stored = storedSwivel('swivel-on-edge.osf');
+    for (const end of [
+      { x: -0.3, y: 0.3 },
+      { x: -0.1036, y: 0.1036 },
+    ]) {
+      const { seen } = await squashWithSwivel();
+      const level = { x: KITE_LEFT.x + 0.293 * (KITE_TOP.x - KITE_LEFT.x), y: KITE_LEFT.y + 0.293 * (KITE_TOP.y - KITE_LEFT.y) };
+      syncHeldModifiersFromEvent({ ctrlKey: false, altKey: true, shiftKey: false, metaKey: false });
+      const meet = await click(seen, level);
+      clearHeldModifiers();
+      expect(meet?.pick).toMatchObject({ kind: 'point', fold: { kind: 'segment', segment: 'bend' } });
+      await until(() => readyReach(seen), 'the reach');
+      // Every point of the lower-left edge, from the left corner to the tip, takes an edge that swings.
+      for (let k = 1; k < 20; k += 1) {
+        const u = k / 20;
+        const hit = seen.current!.verbs.hitTest('folded', { x: -0.35355 * (1 - u), y: 0.35355 * (1 - u) }, RADII);
+        expect(hit?.pick?.kind, `lower-left edge at ${u}`).toBe('segment');
+      }
+      const swung = await click(seen, end);
+      expect(swung?.pick?.kind).toBe('segment');
+      const landed = await click(seen, CENTRE_LINE);
+      expect(landed?.pick?.kind).toBe('segment');
+      await until(() => previewed(seen, 'open'), 'the open preview');
+      const committed = await commit(seen);
+      expect(committed.op).toMatchObject({ kind: 'swivel', via: 'edge', direction: 'valley' });
+      expect(committed.fingerprint).toBe(stored.expect);
+      // The next end starts from the squash again.
+      act(() => root.unmount());
+      root = createRoot(host);
+    }
+  });
+
   it('commits the inside swivel when Inside is chosen in the window, to the fingerprint swivel-inside.osf stores', async () => {
     const stored = storedSwivel('swivel-inside.osf');
     const { tools, index, seen } = await squashWithSwivel();

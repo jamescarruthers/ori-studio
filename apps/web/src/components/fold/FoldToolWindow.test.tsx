@@ -324,7 +324,7 @@ describe('FoldToolWindow', () => {
       [
         'swivel',
         'Swings an edge of the paper onto a line.',
-        'Click where the creases meet: on a folded edge, or hold Alt for any point.',
+        'Click the folded edge the creases meet on, anywhere along it. On flat paper, click where they meet, or hold Alt for any point.',
         'Lands on',
         'Two points',
       ],

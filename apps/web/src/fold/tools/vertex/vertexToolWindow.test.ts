@@ -130,7 +130,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
     const swivel = foldToolWindow(t, view(vertex({ tool: 'swivel', lineBy: 'crease' })), calls, mouse);
     expect(swivel?.instructions.intro).toBe('Swings an edge of the paper onto a line.');
     expect(swivel?.instructions.items).toEqual([
-      'Click where the creases meet: on a folded edge, or hold Option for any point.',
+      'Click the folded edge the creases meet on, anywhere along it. On flat paper, click where they meet, or hold Option for any point.',
       'Click the edge to swing onto a line.',
       'Click the line it lands on.',
       'Press Enter to fold.',
@@ -157,7 +157,7 @@ describe('a vertex fold’s window while its clicks are made', () => {
     // A finger taps, and has no key to hold.
     const touch = foldToolWindow(t, view(vertex({ tool: 'swivel' })), calls, finger);
     expect(touch?.instructions.items).toEqual([
-      'Tap where the creases meet: on a folded edge, or turn on Free point for any point.',
+      'Tap the folded edge the creases meet on, anywhere along it. On flat paper, tap where they meet, or turn on Free point for any point.',
       'Tap the edge to swing onto a line.',
       'Tap the line it lands on.',
       'Tap Swivel fold to fold.',
@@ -345,7 +345,7 @@ describe('a vertex fold’s window while it previews', () => {
     expect(controls?.note).toBe('The creases meet at the dot, the edge lands on the bold line, and the lit paper moves.');
     // The same steps, the commit in hand: by key or by button, a stepper above it may hold the focus.
     expect(model?.instructions.items).toEqual([
-      'Click where the creases meet: on a folded edge, or hold Option for any point.',
+      'Click the folded edge the creases meet on, anywhere along it. On flat paper, click where they meet, or hold Option for any point.',
       'Click the edge to swing onto a line.',
       'Click the line it lands on.',
       'Press Enter, or click Swivel fold, to fold.',
