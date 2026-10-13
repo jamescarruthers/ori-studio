@@ -3,6 +3,8 @@ import { createDiagram, createTurn, type DiagramDocument } from '../document/dia
 import { cpStep } from '../document/diagramSteps.fixtures';
 import { diagramLayoutSteps, layoutDiagram } from './diagramPages';
 import { estimateTextSetter } from './estimateTextSetter';
+import { adoptPageArrangements } from './pageArrangements';
+import { cellSlots } from './stepPlaces';
 
 /**
  * A turn prints only between two steps (Zach, 12 Oct): one before the first
@@ -25,6 +27,21 @@ describe('turns on the pages', () => {
     expect(steps.every((step) => step.turnsAfter.length === 0)).toBe(true);
     // The document keeps all three.
     expect(document.steps).toHaveLength(5);
+  });
+
+  it('signs a flow page as it draws it: the store holds what the layout packed for a diagram with turns at its ends', () => {
+    const steps = Array.from({ length: 7 }, (_, index) => cpStep(`s${index}`));
+    const document: DiagramDocument = {
+      ...diagramOf([over('turn-lead'), ...steps, over('turn-tail')]),
+      page: { ...createDiagram().page, layout: 'flow', stepsPerPage: 4 },
+    };
+    const packed = layoutDiagram(document, estimateTextSetter).packed ?? {};
+    expect(Object.keys(packed)).toEqual(['s0', 's4']);
+    // The store signs each page as the layout does, so it takes in both pages and holds them.
+    expect(cellSlots(document).signatures).toEqual(Object.values(packed).map((arrangement) => arrangement.signature));
+    const adopted = adoptPageArrangements(document, packed);
+    expect(Object.keys(adopted.pageArrangements ?? {})).toEqual(['s0', 's4']);
+    expect(layoutDiagram(adopted, estimateTextSetter).packed).toBeUndefined();
   });
 
   it('lays a diagram of turns alone out as one empty page, none of them drawn', () => {

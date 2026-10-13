@@ -70,7 +70,7 @@ describe('pageSignature', () => {
       expect(changed(before, insertSteps(before, [cpStep('new')], 0))).toEqual([0, 1, 2]);
     });
 
-    it('the turns before each step, and after the last on the last page — but not which way a turn turns', () => {
+    it('the turns before each step but the first — but not which way a turn turns', () => {
       const before = diagram();
       const turn = (id: string, at: number) => insertSteps(before, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => id)], at);
       // Before s7, on page two.
@@ -79,8 +79,9 @@ describe('pageSignature', () => {
       expect(changed(before, turn('t1', stepIndex(before, 's5')))).toEqual([1]);
       // A second turn where one already stands.
       expect(changed(before, turn('t1', stepIndex(before, 's2')))).toEqual([0]);
-      // After the diagram’s last step.
-      expect(changed(before, turn('t1', before.steps.length))).toEqual([2]);
+      // Before the diagram’s first step, or after its last: the pages leave it out (Zach, 12 Oct), so it takes no room.
+      expect(changed(before, turn('t1', 0))).toEqual([]);
+      expect(changed(before, turn('t1', before.steps.length))).toEqual([]);
       // Over the other axis, or a rotation instead: the same room.
       expect(changed(before, setTurn(before, 't0', { kind: 'turn-over', axis: 'horizontal' }))).toEqual([]);
       expect(changed(before, setTurn(before, 't0', { kind: 'rotate', rotate: { amount: 'quarter', direction: 'cw' } }))).toEqual([]);

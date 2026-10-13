@@ -299,8 +299,9 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     // Moved from before s3 to before s10, on page two.
     expect(settle(turned, moveStep(turned, 'turn', stepIndex(turned, 's10') - 1)).sort()).toEqual([...ids(0, 8), ...ids(9, 12)].sort());
     expect(settle(turned, removeSteps(turned, ['turn']))).toEqual(ids(0, 8));
-    // After the last step: the last page's.
-    expect(settle(before, insertSteps(before, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'end')], before.steps.length))).toEqual(ids(13, 15));
+    // Before the first step or after the last, the pages leave it out (Zach, 12 Oct): no page changes, no frame goes.
+    expect(settle(before, insertSteps(before, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'end')], before.steps.length))).toEqual([]);
+    expect(settle(before, insertSteps(before, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'lead')], 0))).toEqual([]);
   });
 
   it('sends home the frames of a flow page whose stored arrangement goes — Re-pack Page — and only those', () => {

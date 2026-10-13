@@ -81,10 +81,13 @@ export function pageShape(page: PlannedPage, layout: DiagramPageLayout): string 
 
 /**
  * A diagram's steps as the pagination and a page's signature read them: every
- * step in order, a newer build's included, each with the turns before it — as
- * the layout lists them (`diagramLayoutSteps`), so a newer build's turn, which
- * it does not draw, is none here either — and whether it is enlarged, and the
- * last with the turns after it.
+ * step in order, a newer build's included, each with the turns before it and
+ * whether it is enlarged — exactly as the layout lists them
+ * (`diagramLayoutSteps`), so the store signs every page as the layout signs
+ * it, and holds what the layout packed. So a newer build's turn, which the
+ * layout does not draw, is none here either, and neither is a turn before the
+ * first step or after the last, which the pages leave out (Zach, 12 Oct): no
+ * step has turns after it.
  */
 export function signedSteps(document: DiagramDocument): SignedStep[] {
   const steps: SignedStep[] = [];
@@ -99,14 +102,12 @@ export function signedSteps(document: DiagramDocument): SignedStep[] {
       id,
       breakBefore,
       pageSteps,
-      turnsBefore: { length: turns },
+      turnsBefore: { length: steps.length > 0 ? turns : 0 },
       turnsAfter: { length: 0 },
       ...(zoom ? { zoom } : {}),
     });
     turns = 0;
   }
-  const last = steps.at(-1);
-  if (last && turns > 0) steps[steps.length - 1] = { ...last, turnsAfter: { length: turns } };
   return steps;
 }
 
