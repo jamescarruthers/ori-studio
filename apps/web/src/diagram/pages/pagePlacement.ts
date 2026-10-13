@@ -86,6 +86,12 @@ export function laneFollowsPlacement(cell: Pick<LayoutCell, 'placed'>): boolean 
   return !!offsets && LANE_FIELDS.some((field) => offsets[field] !== undefined);
 }
 
+/** How far across the page a step's picture reaches as drawn: where a flow bend may turn under it (`LaneStop.picture`). */
+export function laneAcross(cell: LayoutCell): { left: number; right: number } {
+  const picture = partBox(cell, 'picture');
+  return { left: picture.x, right: picture.x + picture.w };
+}
+
 export function partBox(cell: LayoutCell, part: PagePart): PageBox {
   switch (part) {
     case 'frame': {

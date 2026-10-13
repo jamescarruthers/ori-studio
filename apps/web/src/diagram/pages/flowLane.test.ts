@@ -17,6 +17,8 @@ import {
 import { estimateTextSetter } from './estimateTextSetter';
 import { partBox } from './pagePlacement';
 import {
+  ROUND_BEND,
+  bendXAt,
   curvePoint,
   curveStart,
   flowLane,
@@ -127,19 +129,29 @@ function radiusAt(from: LanePoint, curve: LaneCurve, t: number): number {
 }
 
 /**
- * Each half of each bend between bands with no step in it: the curve, where
- * it starts, and how far it falls or rises. The apex is the knot with an
- * upright handle that is no picture's centre: a step in a bend has one too.
+ * Each bend with no step in it on a page, as the lane draws it (`flowLane`'s `bends` and `into`): its curves from
+ * the row before's last knot round to the next row's first, the steps either side, the way it turns (+1 at the
+ * page's right), how far its rows are apart, and how much further in than the outer end a knot at either end runs.
  */
-function bendHalves(lane: Lane, cells: readonly LayoutCell[]): { from: LanePoint; curve: LaneCurve; drop: number }[] {
-  const centres = cells.map(centreOf);
-  const apex = (point: LanePoint) => !centres.some((centre) => Math.hypot(centre.x - point.x, centre.y - point.y) < 1e-9);
-  return lane.curves.flatMap((curve, index) => {
-    const from = curveStart(lane, index);
-    // Into an apex its last handle is upright; out of one, its first.
-    const into = Math.abs(curve.c2.x - curve.to.x) < 1e-9 && Math.abs(curve.c2.y - curve.to.y) > 1e-9 && apex(curve.to);
-    const out = Math.abs(curve.c1.x - from.x) < 1e-9 && Math.abs(curve.c1.y - from.y) > 1e-9 && apex(from);
-    return into || out ? [{ from, curve, drop: Math.abs(curve.to.y - from.y) }] : [];
+function bendsOf(page: LayoutPage) {
+  const { lane, bends, into } = flowLane(page.flow!)!;
+  return [...bends].map(([n, first]) => {
+    const curves = Array.from({ length: into[n]! - first + 1 }, (_, k) => ({ from: curveStart(lane, first + k), curve: lane.curves[first + k]! }));
+    const start = curves[0]!.from;
+    const end = curves.at(-1)!.curve.to;
+    const outward = page.flow!.stops[n - 1]!.rightToLeft ? -1 : 1;
+    const outer = Math.max(outward * start.x, outward * end.x);
+    return {
+      /** Where the lane is across at height `y` in the bend, as the layout stands a turn there. */
+      xAt: (y: number) => bendXAt(lane, first, y),
+      curves,
+      start,
+      end,
+      outward,
+      cells: [page.cells[n - 1]!, page.cells[n]!] as const,
+      drop: Math.abs(end.y - start.y),
+      further: (point: LanePoint) => outer - outward * point.x,
+    };
   });
 }
 
@@ -269,18 +281,33 @@ describe('the flow lane', () => {
     }
   });
 
-  it('runs through every picture’s centre, in reading order, behind the steps', () => {
-    const result = flow(steps(16));
-    for (const page of result.pages) {
-      const lane = page.band!;
-      const knots = [lane.from, ...lane.curves.map((curve) => curve.to)];
-      let after = -1;
-      for (const centre of page.cells.map(centreOf)) {
-        const at = knots.findIndex((knot, index) => index > after && Math.hypot(knot.x - centre.x, knot.y - centre.y) < 1e-9);
-        expect(at).toBeGreaterThan(after);
-        after = at;
+  it('runs behind every picture in reading order: through its centre, or for a row’s end beside a bend, level with it under its picture', () => {
+    let early = 0;
+    for (const setup of [{}, ...SETUPS]) {
+      const result = flow(steps(16), setup);
+      for (const page of result.pages) {
+        const lane = page.band!;
+        const knots = [lane.from, ...lane.curves.map((curve) => curve.to)];
+        let after = -1;
+        page.cells.forEach((cell, index) => {
+          const centre = centreOf(cell);
+          const picture = partBox(cell, 'picture');
+          // A row's end beside a bend: the step before or after it is in another band, or in a bend.
+          const beside = [page.cells[index - 1], page.cells[index + 1]].some((other) => other && (other.band !== cell.band || other.bend || cell.bend));
+          const at = knots.findIndex((knot, n) => {
+            if (n <= after) return false;
+            if (Math.hypot(knot.x - centre.x, knot.y - centre.y) < 1e-9) return true;
+            // Turned sooner: level with its centre, from its centre in to its inner edge — under its picture.
+            return beside && Math.abs(knot.y - centre.y) < 1e-9 && knot.x >= picture.x - 1e-9 && knot.x <= picture.x + picture.w + 1e-9;
+          });
+          expect(at, `${JSON.stringify(setup)} page ${page.number} step ${cell.number}`).toBeGreaterThan(after);
+          if (Math.hypot(knots[at]!.x - centre.x, knots[at]!.y - centre.y) > 1e-9) early += 1;
+          after = at;
+        });
       }
     }
+    // The case the rule is for: some row’s end turned under its picture rather than through its centre.
+    expect(early).toBeGreaterThan(0);
   });
 });
 
@@ -304,44 +331,58 @@ describe('the band’s width and colour (Zach, 2026-10-06: "an option for how wi
         if (result.bandWidthMm > result.cellMm.w) continue;
         const half = result.bandWidthMm / 2;
         for (const [index, page] of result.pages.entries()) {
-          const halves = bendHalves(page.band!, page.cells);
-          for (const [at, { from, curve, drop }] of halves.entries()) {
-            // A band that ends further in than the other: its half of the bend runs in further than the other
-            // half out. One curve a half then holds a band only up to half as wide as the bands are apart, and
-            // only while it runs in no further than the bend drops; past either no single curve turns that way
-            // clear of it.
-            const other = halves[at % 2 === 0 ? at + 1 : at - 1]!;
-            const across = (each: typeof other) => Math.abs(each.curve.to.x - each.from.x);
-            const further = Math.abs(across(halves[at]!) - across(other));
-            if (further > 1e-6 && (half > drop / 2 || further > drop)) continue;
-            // A band wider than its rows are apart covers its bend's inside: then the bend is round, as tight as they are apart.
-            const needs = Math.min(half, drop);
-            const tightest = Math.min(...Array.from({ length: 201 }, (_, n) => radiusAt(from, curve, n / 200)));
-            expect(tightest, `${JSON.stringify(setup)} ${pathWidthMm} mm, page ${index + 1}`).toBeGreaterThan(0.96 * needs);
+          for (const bend of bendsOf(page)) {
+            const drop = Math.abs(bend.end.y - bend.start.y);
+            for (const { from, curve } of bend.curves) {
+              // A band that ends further in than the other: its end runs in further than the other's before it
+              // turns. One curve then holds a band only up to half as wide as it drops, and only while it runs in
+              // no further than it drops; past either no single curve turns that way clear of it.
+              const further = Math.max(...[from, curve.to].map((point) => (point === bend.start || point === bend.end ? bend.further(point) : 0)));
+              const dy = Math.abs(curve.to.y - from.y);
+              if (further > 1e-6 && (half > dy / 2 || further > dy)) continue;
+              // A band wider than its rows are apart covers its bend's inside: then the bend is round, as tight as they are apart.
+              const needs = Math.min(half, drop / 2);
+              const tightest = Math.min(...Array.from({ length: 201 }, (_, n) => radiusAt(from, curve, n / 200)));
+              expect(tightest, `${JSON.stringify(setup)} ${pathWidthMm} mm, page ${index + 1}`).toBeGreaterThan(0.96 * needs);
+            }
           }
         }
       }
   });
 
-  it('turns a bend with no step in it at the page’s edge, half its margin in, and further out only for a band too wide to turn there', () => {
-    const apexes = (pathWidthMm: number) =>
-      flow(steps(16), { stepsPerPage: 9, pathWidthMm }).pages.flatMap((page) =>
-        bendHalves(page.band!, page.cells).flatMap(({ curve }) => (Math.abs(curve.c2.x - curve.to.x) < 1e-9 ? [curve.to] : []))
-      );
-    const { widthMm: W, marginMm: m } = flow(steps(16), { stepsPerPage: 9 }).paper;
-    /** How far an apex stands out past the page's edge less half its margin, at whichever side it turns. */
-    const past = (apex: LanePoint) => (apex.x < W / 2 ? m / 2 - apex.x : apex.x - (W - m / 2));
-    // The default, and a narrower one: at the edge.
-    for (const width of [8, DEFAULT_PATH_WIDTH_MM]) {
-      const at = apexes(width);
-      expect(at.length).toBeGreaterThan(0);
-      for (const apex of at) expect(past(apex)).toBeCloseTo(0, 9);
+  it.each(SETUPS)('keeps a bend’s band inside the margin where its rows’ end pictures leave it room, turning under them, and past it only as far as they make it: %j', (setup) => {
+    let inside = 0;
+    for (const pathWidthMm of [8, DEFAULT_PATH_WIDTH_MM, 26]) {
+      const result = flow(steps(23), { ...setup, pathWidthMm });
+      if (result.bandWidthMm > result.cellMm.w) continue;
+      const { widthMm: W, marginMm: m } = result.paper;
+      const half = result.bandWidthMm / 2;
+      for (const page of result.pages) {
+        for (const bend of bendsOf(page)) {
+          const label = `${JSON.stringify(setup)} ${pathWidthMm} mm, page ${page.number}, steps ${bend.cells.map((cell) => cell.number).join('→')}`;
+          const s = bend.outward;
+          // How far the band's outer edge runs past the margin there, and how far the apex may stand out.
+          const points = bend.curves.flatMap(({ from, curve }) => sample({ from, curves: [curve] })[0]!);
+          const past = Math.max(...points.map((point) => s * point.x)) + half - (s > 0 ? W - m : -m);
+          const cap = s > 0 ? W - m - half : -(m + half);
+          // The least radius a bend turns at (`ROUND_BEND`), and the furthest in each end's picture lets it turn.
+          const least = Math.min(ROUND_BEND.least * half, bend.drop / 2);
+          const limit = Math.max(...bend.cells.map((cell) => {
+            const picture = partBox(cell, 'picture');
+            return Math.min(s * centreOf(cell).x, s > 0 ? picture.x : -(picture.x + picture.w));
+          }));
+          if (limit + least <= cap + 1e-9) {
+            inside += 1;
+            expect(past, label).toBeLessThanOrEqual(1e-6);
+          } else {
+            // Forced: the pictures stand so near the margin that the least round bend does not fit inside it.
+            expect(past, label).toBeLessThanOrEqual(limit + least - cap + 1e-6);
+          }
+        }
+      }
     }
-    // Wider than its bends allow there: out past it, never in.
-    const wide = apexes(60);
-    expect(wide.length).toBeGreaterThan(0);
-    for (const apex of wide) expect(past(apex)).toBeGreaterThan(-1e-9);
-    expect(Math.max(...wide.map(past))).toBeGreaterThan(1);
+    // Every setup that turns at all has a bend its pictures leave room for: one row has none.
+    if (setup.stepsPerPage !== 2 || setup.orientation !== 'landscape') expect(inside).toBeGreaterThan(0);
   });
 
   it('keeps the band level and at one height over the spine, at any width', () => {
@@ -482,6 +523,115 @@ describe('a printed spread', () => {
   });
 });
 
+describe('a bend with no step in it, kept inside the margin (Zach, 2026-10-13: the crane, steps 3→4)', () => {
+  // Zach's crane_final, page 1 (A4, 12 mm margin, a 25 mm band): steps 3 and 4 end their bands against the right
+  // margin, 6 and 7 against the left. Each stop's picture as drawn, across.
+  const plan = flowPagePlan(0, 2, 'left', 3);
+  const [W, margin, halfWidth] = [210, 12, 12.5];
+  const crane: LaneStop[] = [
+    { x: 40.38, y: 62.4, row: 0, rightToLeft: false, picture: { left: 14.05, right: 66.7 } },
+    { x: 110.14, y: 62.4, row: 0, rightToLeft: false, picture: { left: 83.81, right: 136.46 } },
+    { x: 174.75, y: 58.3, row: 0, rightToLeft: false, picture: { left: 153.56, right: 195.94 } },
+    { x: 166.08, y: 139.92, row: 1, rightToLeft: true, picture: { left: 136.17, right: 196 } },
+    { x: 100.56, y: 153.5, row: 1, rightToLeft: true, placed: true, picture: { left: 75.2, right: 125.92 } },
+    { x: 36.17, y: 134.12, row: 1, rightToLeft: true, picture: { left: 14, right: 58.34 } },
+    { x: 38.77, y: 212.0, row: 2, rightToLeft: false, placed: true, picture: { left: 16.6, right: 60.94 } },
+    { x: 99.1, y: 239.22, row: 2, rightToLeft: false, placed: true, picture: { left: 69.26, right: 128.95 } },
+    { x: 171.22, y: 229.5, row: 2, rightToLeft: false, picture: { left: 149.05, right: 193.39 } },
+  ];
+  const laneOf = (stops: LaneStop[], at = margin) =>
+    flowLane({ stops, plan, pageWidth: W, margin: at, halfWidth, offPage: 10, spineIn: 232.7, spineOut: 232.7 })!;
+  /** A bend's curves, from the row before's last knot round to the next row's first. */
+  const bendCurves = ({ lane, bends, into }: ReturnType<typeof laneOf>, n: number) =>
+    Array.from({ length: into[n]! - bends.get(n)! + 1 }, (_, k) => {
+      const index = bends.get(n)! + k;
+      return { from: curveStart(lane, index), curve: lane.curves[index]! };
+    });
+  /** How far the band's outer edge runs past the margin in a bend at the page's right (+1) or left (−1). */
+  const pastMargin = (curves: ReturnType<typeof bendCurves>, outward: number, at = margin) =>
+    Math.max(...curves.flatMap(({ from, curve }) => sample({ from, curves: [curve] })[0]!.map((point) => outward * point.x))) +
+    halfWidth -
+    (outward > 0 ? W - at : -at);
+
+  it('keeps its band inside the margin, the lane turning under the rows’ end pictures rather than out past them', () => {
+    const result = laneOf(crane);
+    expect([...result.bends.keys()]).toEqual([3, 6]);
+    for (const [n, outward] of [[3, 1], [6, -1]] as const) {
+      const curves = bendCurves(result, n);
+      // The band's edge on the margin: as far out as it goes, and no further.
+      expect(pastMargin(curves, outward)).toBeCloseTo(0, 6);
+      // It leaves the row before and joins the next level with their pictures' centres, but from under each
+      // picture, between its centre and its inner edge — not past it, out toward the margin.
+      for (const [stop, point] of [[crane[n - 1]!, curves[0]!.from], [crane[n]!, curves.at(-1)!.curve.to]] as const) {
+        expect(point.y).toBeCloseTo(stop.y, 9);
+        const inner = outward > 0 ? stop.picture!.left : stop.picture!.right;
+        expect(outward * point.x).toBeLessThanOrEqual(outward * stop.x + 1e-9);
+        expect(outward * point.x).toBeGreaterThanOrEqual(outward * inner - 1e-9);
+      }
+    }
+    // Step 3, nearest the margin, is turned under rather than through.
+    expect(curveStart(result.lane, result.bends.get(3)!).x).toBeLessThan(crane[2]!.x - 5);
+  });
+
+  it('turns round, its band’s inner edge a curve: no tighter anywhere than ROUND_BEND says', () => {
+    const result = laneOf(crane);
+    for (const n of [3, 6]) {
+      const tightest = Math.min(
+        ...bendCurves(result, n).flatMap(({ from, curve }) => Array.from({ length: 401 }, (_, t) => radiusAt(from, curve, t / 400)))
+      );
+      expect(tightest).toBeGreaterThan(0.98 * ROUND_BEND.least * halfWidth);
+      // Here the pictures leave room for the round radius itself.
+      expect(tightest).toBeGreaterThan(0.98 * ROUND_BEND.round * halfWidth);
+    }
+  });
+
+  it('keeps one handle at every join (C1), and the spine’s handover as it was', () => {
+    const { lane } = laneOf(crane);
+    for (const { at, into, out } of joins(lane)) {
+      expect(Math.hypot(into.x - out.x, into.y - out.y), `${at.x},${at.y}`).toBeLessThan(1e-9);
+      expect(Math.hypot(out.x, out.y), `${at.x},${at.y}`).toBeGreaterThan(0.5);
+    }
+    // Over the spine at its height, level, and on into the bleed.
+    expect(lane.curves.at(-2)!.to).toEqual({ x: W, y: 232.7 });
+    expect(lane.curves.at(-1)!.to).toEqual({ x: W + 10, y: 232.7 });
+  });
+
+  it('passes under both end pictures: the lane runs through each one’s box', () => {
+    const result = laneOf(crane);
+    for (const n of [3, 6]) {
+      const points = bendCurves(result, n).flatMap(({ from, curve }) => sample({ from, curves: [curve] })[0]!);
+      for (const stop of [crane[n - 1]!, crane[n]!]) {
+        // Its box: across as drawn, and down far enough either side of its centre to hold the band.
+        const within = points.filter((point) => point.x >= stop.picture!.left && point.x <= stop.picture!.right && Math.abs(point.y - stop.y) <= halfWidth);
+        expect(within.length, `step ${crane.indexOf(stop) + 1}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('turns through the end pictures’ centres, out to the margin, where there is room past them', () => {
+    // The same rows with their pictures well in from the margin.
+    const inward = crane.map((stop) => ({ ...stop, x: stop.x * 0.7 + 30, picture: { left: stop.picture!.left * 0.7 + 30, right: stop.picture!.right * 0.7 + 30 } }));
+    const result = laneOf(inward);
+    const curves = bendCurves(result, 3);
+    expect(curves[0]!.from.x).toBeCloseTo(inward[2]!.x, 9);
+    expect(pastMargin(curves, 1)).toBeCloseTo(0, 6);
+  });
+
+  it('reaches into the margin only where a picture flush against it leaves no room to turn, and no further than it must', () => {
+    // Step 3 a narrow picture against the margin: its inner edge 6 mm from it, less than the least round bend needs.
+    const flush = crane.map((stop, index) => (index === 2 ? { ...stop, x: 195, picture: { left: 192, right: 198 } } : stop));
+    const result = laneOf(flush);
+    const curves = bendCurves(result, 3);
+    // It turns at that picture's inner edge, as soon as it may, and at the least round radius past it.
+    expect(curves[0]!.from.x).toBeCloseTo(192, 9);
+    const apex = Math.max(...curves.map(({ curve }) => curve.to.x));
+    expect(apex).toBeCloseTo(192 + ROUND_BEND.least * halfWidth, 9);
+    expect(pastMargin(curves, 1)).toBeCloseTo(192 + ROUND_BEND.least * halfWidth + halfWidth - (W - margin), 6);
+    // The other bend, with room, stays inside.
+    expect(pastMargin(bendCurves(result, 6), -1)).toBeLessThanOrEqual(1e-6);
+  });
+});
+
 describe('a step standing in a bend', () => {
   const plan = flowPagePlan(0, 1, 'left', 3);
   /** Two bands of two, and a step in the bend between them at the page's right, its centre midway down. */
@@ -493,7 +643,7 @@ describe('a step standing in a bend', () => {
     { x: 50, y: 128, row: 1, rightToLeft: true },
   ];
   const laneOf = (list: LaneStop[]) =>
-    flowLane({ stops: list, plan, pageWidth: 210, apexInset: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null })!;
+    flowLane({ stops: list, plan, pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null })!;
 
   it('is a stop the lane turns through, heading straight down there, with no apex beside it', () => {
     const { lane, bends, into } = laneOf(stops());
@@ -542,11 +692,11 @@ describe('a step standing in a bend', () => {
         )
       );
     // Level with the band before it, nearer than the band is half wide (10 mm): the lane runs on to it along the
-    // band, and turns round an apex past it at the page's edge (210 − 6).
+    // band, and turns round past it, its band's edge on the margin (210 − 6 − 10).
     const before = laneOf(stops(170, 55));
     expect([...before.bends.keys()]).toEqual([3]);
     expect(before.lane.curves[before.into[2]!]!.c2.y).toBeCloseTo(55, 9);
-    expect(curveStart(before.lane, before.into[3]!).x).toBeCloseTo(204, 9);
+    expect(Math.max(...before.lane.curves.slice(before.into[2]!, before.into[3]!).map((curve) => curve.to.x))).toBeCloseTo(194, 9);
     expect(tightest(before.lane, before.into[1]! + 1, before.into[3]! + 1)).toBeGreaterThan(10);
     // Level with the band after it: the apex is before it, and the lane runs on from it along the next band.
     const after = laneOf(stops(170, 125));
@@ -568,14 +718,15 @@ describe('a step standing in a bend', () => {
       { x: 72.95, y: 54.66, row: 2, rightToLeft: false, placed: true },
       { x: 125.49, y: 59.91, row: 2, rightToLeft: false, placed: true },
     ];
-    const { lane, bends, into } = flowLane({ stops: list, plan: up, pageWidth: 210, apexInset: 6, halfWidth: 12.5, offPage: 10, spineIn: null, spineOut: null })!;
-    // No bend between 16 and 17: the lane runs on to 17 along band 1, level, and turns after it, out at the edge.
+    const { lane, bends, into } = flowLane({ stops: list, plan: up, pageWidth: 210, margin: 6, halfWidth: 12.5, offPage: 10, spineIn: null, spineOut: null })!;
+    // No bend between 16 and 17: the lane runs on to 17 along band 1, level, and turns after it, toward the edge —
+    // these stops say nothing of their pictures, so past 17's centre, at the least round radius (`ROUND_BEND`).
     expect([...bends.keys()]).toEqual([3]);
     expect(lane.curves[into[2]!]!.c2.y).toBeCloseTo(136.58, 9);
-    expect(curveStart(lane, into[3]!).x).toBeCloseTo(6, 9);
+    expect(Math.min(...lane.curves.slice(into[2]!, into[3]!).map((curve) => curve.to.x))).toBeCloseTo(33.53 - ROUND_BEND.least * 12.5, 9);
     // From 16 to 18, no turn tighter than the band is half wide.
     const tightest = Math.min(
-      ...[into[2]!, into[2]! + 1, into[3]!].flatMap((curve) =>
+      ...Array.from({ length: into[3]! - into[2]! + 1 }, (_, k) => into[2]! + k).flatMap((curve) =>
         Array.from({ length: 201 }, (_, t) => radiusAt(curveStart(lane, curve), lane.curves[curve]!, t / 200))
       )
     );
@@ -590,14 +741,14 @@ describe('a step standing in a bend', () => {
       { x: 100, y: 140, row: 2, rightToLeft: false, placed: true },
       { x: 150, y: 54.66, row: 2, rightToLeft: false },
     ];
-    const { bends } = flowLane({ stops: list, plan: up, pageWidth: 210, apexInset: 6, halfWidth: 12.5, offPage: 10, spineIn: null, spineOut: null })!;
+    const { bends } = flowLane({ stops: list, plan: up, pageWidth: 210, margin: 6, halfWidth: 12.5, offPage: 10, spineIn: null, spineOut: null })!;
     expect([...bends.keys()]).toEqual([2]);
   });
 
   it('passes a placed picture on a slant where its band rises through it, never past either neighbour, and level at a top or a foot', () => {
     const plan = flowPagePlan(0, 1, 'left', 1);
     const laneThrough = (list: LaneStop[]) =>
-      flowLane({ stops: list, plan, pageWidth: 210, apexInset: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null })!;
+      flowLane({ stops: list, plan, pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null })!;
     // Rising through step 1, placed: the lane heads down the page there, as the band falls on the page.
     const rising: LaneStop[] = [
       { x: 30, y: 100, row: 0, rightToLeft: false },
@@ -633,7 +784,7 @@ describe('a step standing in a bend', () => {
 
   it('ends the diagram heading on down from a step in a bend that is its last', () => {
     const list = stops().slice(0, 3);
-    const { lane } = flowLane({ stops: list, plan: flowPagePlan(0, 1, 'left', 3), pageWidth: 210, apexInset: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null, tail: 8 })!;
+    const { lane } = flowLane({ stops: list, plan: flowPagePlan(0, 1, 'left', 3), pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null, tail: 8 })!;
     expect(lane.curves.at(-1)!.to).toEqual({ x: 170, y: 98 });
   });
 });
@@ -692,13 +843,27 @@ describe('a turn on a packed page, on the lane', () => {
               }
             } else {
               seen.add('bend');
-              // On the band where it turns, at the page's edge, out past both steps.
-              expect(distance(page.band!, turn.at), label).toBeLessThan(half);
-              expect(turn.at.y, label).toBeCloseTo((centreOf(before).y + centreOf(next).y) / 2, 9);
-              const outward = before.rightToLeft ? -1 : 1;
-              for (const cell of [before, next]) {
-                const edge = before.rightToLeft ? cell.cellMm.x : cell.cellMm.x + cell.cellMm.w;
-                expect((turn.at.x - edge) * outward, label).toBeGreaterThan(0);
+              // On the band where it turns, halfway between the two pictures' heights — the bend kept inside the
+              // margin (Zach, 2026-10-13), its glyph with it — where that is clear of every step; else moved off
+              // them, never further than to beyond the nearer.
+              const { widthMm: W, marginMm: m } = drawn.paper;
+              const bend = bendsOf(page).find((each) => each.cells[1] === next)!;
+              const y = (centreOf(before).y + centreOf(next).y) / 2;
+              const mid = { x: bend.xAt(y)!, y };
+              if (clear(mid, turn.box)) {
+                expect(turn.at.x, label).toBeCloseTo(mid.x, 9);
+                expect(turn.at.y, label).toBeCloseTo(mid.y, 9);
+                expect(distance(page.band!, turn.at), label).toBeLessThan(1e-3);
+                // Inside the margin wherever the bend is: its apex no further out than its band's edge on the margin.
+                if (bend.outward > 0 ? mid.x <= W - m - half + 1e-9 : mid.x >= m + half - 1e-9) {
+                  seen.add('bend inside');
+                  expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThanOrEqual(m - 1e-9);
+                  expect(turn.at.x + turn.box.w / 2, label).toBeLessThanOrEqual(W - m + 1e-9);
+                }
+              } else {
+                seen.add('bend moved');
+                const reach = Math.max(...[before, next].map((cell) => Math.hypot(cell.cellMm.w, cell.cellMm.h)));
+                expect(Math.hypot(turn.at.x - mid.x, turn.at.y - mid.y), label).toBeLessThan(reach);
               }
             }
           }
@@ -706,6 +871,6 @@ describe('a turn on a packed page, on the lane', () => {
       }
     }
     // A glyph beside a step in a bend has had to move off one at least once: the case the review found.
-    expect([...seen].sort()).toEqual(['beside', 'bend', 'gutter', 'moved'].sort());
+    expect([...seen].sort()).toEqual(['beside', 'bend', 'bend inside', 'bend moved', 'gutter', 'moved'].sort());
   });
 });

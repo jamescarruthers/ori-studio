@@ -1249,7 +1249,7 @@ describe('turns between steps on the page (D22)', () => {
     expect(byId.get('turn-end')!.at.x).toBeCloseTo(fourth.pictureMm.x + fourth.pictureMm.size + gutter / 2, 6);
   });
 
-  it('prints one across a flow page’s bend on the band, out at the page’s edge, going the way of the band it leads into', () => {
+  it('prints one across a flow page’s bend on the band, where the bend turns inside the margin, going the way of the band it leads into', () => {
     // Zach, 2026-10-06, the X-ray Heart's page 1: "the turn over step between
     // 3 and 4 should be rendered in the flow lane between steps 3 and 4, not
     // to the right of step 4." The prototype he chose stands it on the bend.
@@ -1264,10 +1264,11 @@ describe('turns between steps on the page (D22)', () => {
       expect(turn.rightToLeft, turn.id).toBe(Boolean(next.rightToLeft));
       if (before.band === next.band || before.bend || next.bend) continue;
       bends += 1;
-      // At the bend's apex, half the margin in from the paper's edge, held where its glyph keeps on the paper.
-      const apex = before.rightToLeft ? m / 2 : W - m / 2;
-      expect(Math.abs(turn.at.x - apex), turn.id).toBeLessThanOrEqual(TURN_GUTTER_MM / 2 - m / 2 + 1e-9);
+      // At the bend's apex, its band's edge on the margin (Zach, 2026-10-13: the margin is kept for marks like it),
+      // so its glyph stands inside the margin too.
       expect(laneDistance(page.band!, turn.at), turn.id).toBeLessThan(result.bandWidthMm / 2);
+      expect(turn.at.x - turn.box.w / 2, turn.id).toBeGreaterThanOrEqual(m - 1e-9);
+      expect(turn.at.x + turn.box.w / 2, turn.id).toBeLessThanOrEqual(W - m + 1e-9);
       expect(turn.at.y, turn.id).toBeCloseTo((before.drawMm.y + before.drawMm.h / 2 + next.drawMm.y + next.drawMm.h / 2) / 2, 9);
     }
     expect(bends).toBeGreaterThan(0);

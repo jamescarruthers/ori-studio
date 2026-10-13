@@ -253,8 +253,18 @@ Phase 3 (layout, 2026-10-12):
   second layout. A save built before an adoption leaves the project clean
   (`onlyPackedSince`). Export, Print and step files pack the same way through
   `layoutDiagram` and write nothing back.
-- Lane: a bend with no step turns at the paper's edge, half the margin in
-  (`apexInset`), moved out only as far as `bendReach` needs for a wide band.
+- Lane: a bend with no step keeps its band inside the margin (Zach,
+  2026-10-13: the margin holds turn and rotate symbols): it turns past the
+  rows' ends to the band's edge on the margin where a round bend fits there,
+  and otherwise turns under the end pictures, their row's level, no sooner
+  than a picture's inner edge (`bendKnots`). It is two quarter circles with a
+  straight upright between, at least `ROUND_BEND` × the band's half width
+  round (2 where it can, 1.5 at least) so the band's inner edge stays a curve,
+  or a half ellipse where it reaches further than the rows are half apart.
+  Only a picture too near the margin for even the least round bend sends it
+  into the margin, no further than that bend needs. A row ending further in
+  runs straight to where the bend starts. (It once turned at the paper's
+  edge, half the margin in, `apexInset`.)
   A step in a bend is a stop heading straight down or up, with no apex; each
   side turns through a quarter circle as wide as that side is near, with a
   straight run for the rest (`bendStepFeet`), and each side keeps its own
@@ -263,7 +273,8 @@ Phase 3 (layout, 2026-10-12):
   its neighbours'. The last page's band ends at the last box's edge, or heads
   on down from a step in a bend.
 - Turns: midway between two boxes in a band; on the band at a bend's apex
-  height (held on the paper, 7 mm in); on the lane midway between a step in a
+  height, inside the margin with the bend, moved the least way clear of a
+  step it would stand on; on the lane midway between a step in a
   bend and its neighbour; half the packed turn gutter outside a page's first
   or last box. A page with turns keeps its boxes `TURN_GUTTER_MM − 2` from the
   paper's edge in a narrower margin, as a grid does. An enlarge arrow keeps a
@@ -681,3 +692,4 @@ changes Decisions 4 and 6, or the note just above, this holds:
 - [ ] After F2, for Zach: steadiness only upward (a small page holds later pages down); a page below the default count held to 1.4× its cell.
 - [x] Hand moves keep their offsets across a re-pack while their steps keep page and band; Re-pack makes room for size pins, `pack-5` (Zach, 2026-10-13).
 - [ ] For Zach: a page whose pins no scale holds packs as before (decided here); kept offsets against homes moved inside their bands (evolution plan, part 2).
+- [x] Bends kept inside the margin, turning under the end pictures in round quarter circles; turns in a bend move with it (Zach, 2026-10-13).

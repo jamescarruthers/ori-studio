@@ -108,7 +108,7 @@ import { printPaper, type PrintPaper } from './printPaper';
 import { keepsMovedFrame } from './repackedFrames';
 import { normalizeStepPlace } from '../document/placeValues';
 import { pinnedCaptionWidth, setCaption } from './captionMeasure';
-import { laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
+import { laneAcross, laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
 import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 
 // The type a step is set in, which placement's hit boxes measure too.
@@ -1313,13 +1313,15 @@ export function layoutDiagramPages(
   );
 
   // The lane's stops on each flow page: every picture's centre as drawn, in
-  // its band, a step in a bend turned through.
+  // its band, a step in a bend turned through; and how far across its picture
+  // reaches, which a bend may turn under.
   const stopPages: LaneStop[][] = cellPages.map((cells) =>
     flow
       ? cells.map((cell): LaneStop => {
           const band = cell.band ?? 0;
           return {
             ...laneCentre(cell),
+            picture: laneAcross(cell),
             row: band,
             rightToLeft: band % 2 === 1,
             ...(cell.bend ? { bend: true } : {}),
@@ -1349,8 +1351,8 @@ export function layoutDiagramPages(
             stops: stopPages[pageIndex]!,
             plan,
             pageWidth: W,
-            // A bend with no step in it turns at the paper's edge, half its margin in.
-            apexInset: m / 2,
+            // A bend with no step in it keeps its band inside the margin where the pictures leave it room.
+            margin: m,
             halfWidth,
             offPage: OFF_PAGE_MM,
             spineIn: plan.entry === 'spine' ? spineAt(pageIndex - 1) : null,
@@ -1365,7 +1367,7 @@ export function layoutDiagramPages(
       placed.map(({ step }) => step),
       cells,
       flow ? (k) => cells[k]!.band ?? 0 : (k) => cut.slots[k]!.row,
-      flow ? { plan, lane, apexInset: m / 2 } : null,
+      flow ? { plan, lane, bendInset: m + halfWidth } : null,
       W,
       H
     );
@@ -1968,7 +1970,7 @@ function laneCentre(cell: LayoutCell): { x: number; y: number } {
  * Where the turns on a page print (D22): between two pictures on one row,
  * midway between them at their centres' height — on a flow page, between
  * their boxes, in the gutter the packing kept; across a flow page's bend with
- * no step in it, on the lane at the bend's apex, out at the page's edge
+ * no step in it, on the lane at the bend's apex, toward the page's edge
  * (`flowLane`, also when the lane is not shown); between a step in a bend
  * and its neighbour, midway between their pictures' centres; before a picture
  * that starts a grid's row or the page, at its leading edge — a page's first
@@ -1992,7 +1994,7 @@ function placeTurns(
   steps: readonly LayoutStep[],
   cells: readonly LayoutCell[],
   rowOf: (k: number) => number,
-  flow: { plan: FlowPagePlan; lane: ReturnType<typeof flowLane>; apexInset: number } | null,
+  flow: { plan: FlowPagePlan; lane: ReturnType<typeof flowLane>; bendInset: number } | null,
   pageWidth: number,
   pageHeight: number
 ): Pick<LayoutPage, 'turns' | 'zoomArrows'> {
@@ -2117,11 +2119,11 @@ function placeTurns(
           // then moves clear of both boxes.
           at = { x: (previous.x + next.x) / 2, y: (previous.y + next.y) / 2 };
         } else {
-          // On the bend's apex, out at the page's edge, where the lane turns between the two bands.
+          // On the bend's apex, where the lane turns between the two bands: its band's edge on the margin, as a rule.
           const y = (previous.y + next.y) / 2;
           const bend = lane?.bends.get(k);
           const onLane = lane && bend !== undefined ? bendXAt(lane.lane, bend, y) : null;
-          at = { x: onLane ?? (outward > 0 ? pageWidth - flow.apexInset : flow.apexInset), y };
+          at = { x: onLane ?? (outward > 0 ? pageWidth - flow.bendInset : flow.bendInset), y };
         }
         // An arrow there points at the step it leads to, not across the page.
         stack(before, at, k, step.id, { toward: next, outward });

@@ -1,6 +1,6 @@
 import type { DiagramPagesLayout, LayoutCell } from './diagramPageLayout';
 import { flowLane } from './flowLane';
-import { laneFollowsPlacement, markOutsideMargin, partBox, translateCell, type PagePart } from './pagePlacement';
+import { laneAcross, laneFollowsPlacement, markOutsideMargin, partBox, translateCell, type PagePart } from './pagePlacement';
 
 /**
  * Local preview geometry. No font loading, layout, document writes, or
@@ -55,6 +55,7 @@ export function previewPlacement(
         ...stop,
         x: cell.drawMm.x + cell.drawMm.w / 2,
         y: cell.drawMm.y + cell.drawMm.h / 2,
+        picture: laneAcross(cell),
         placed: placed?.index === index ? placed.follows : laneFollowsPlacement(cell),
       };
     }),
