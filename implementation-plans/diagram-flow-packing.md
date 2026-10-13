@@ -524,6 +524,53 @@ earlier note, this holds:
   dipped neighbour's, and a lane rule covers every packing that does. Before
   and after: `artifacts/layout-review/out/f2-lane-after/elbow-before-after.png`.
 
+Enlarged steps follow the size-pin rule (Zach, 2026-10-12: an enlarged step
+grows and shrinks "like every other step"). Where this changes hold-2, or
+16f's Size rule as #436 restored it on 2026-10-11, this holds:
+
+- An enlarged step's Size (`zoom.scale`, set by the Pages view's grips or the
+  Size field) is drawn at that Size, past its box or its room if need be, as
+  a size pinned by hand (`place.scale`) is; every other step stays as it was.
+  On a held page `resizedWindow` no longer cuts a changed Size to its box;
+  on a grid and in the flow's reference cell `zoomScales` no longer cuts a
+  Size to its room's fit, and a grid cell draws it past its room with its
+  caption below. Fill is unchanged: as large as its room or box allows, 1–6
+  times its area, and a long caption still draws a Fill step smaller alone.
+  The 1.25–6× range still holds the grip and the field.
+- Re-pack Page makes room: an enlarged step's reference scale is its Size
+  times its area, uncapped, so a page packed afresh packs its box for it
+  (F3's `grownToHold` then holds it as printed). A regular size pin is still
+  packed at its automatic scale and drawn past its box.
+- The grip scales the step's Size (under Fill, what it prints at), the base a
+  held page resizes from (`zoomScale`), so the drop draws what the drag
+  showed, also where the area prints on another page at another scale.
+- The read-out's "Asked ×N · prints ×M — the room is too small" is gone, as
+  no room holds a Size back; "Prints only ×N — draw a smaller area" stays for
+  Fill. `LayoutCell.zoom.reduced` is now only ever true for a Fill step.
+- A page packed before this with a Size its cell cut keeps the smaller window
+  it was packed at (held: drawn as kept, its read-out saying what it prints)
+  until Re-pack Page. The signature is untouched (a packing change never
+  re-packs a saved page).
+- Goldens: one page, "grid, enlarged steps at a Size of 2 and of 6" (its step
+  at 6 prints ×6, an 85.92 mm window, where it was held to ×4.89), page and
+  home digests. Every flow fixture is unchanged.
+- Browser (`artifacts/layout-review/zoom-grow-probe.mjs`, the crane's
+  `crane_final.osf`, page 3, `out/zoom-grow/`): step 24 (Fill, ×1.9, 48.6 mm)
+  grown by its right grip to ×4.1 is drawn at 102.4 mm on release, as the
+  drag showed it (266.5 px wide during, 266.3 after), and the cells of the
+  page's other seven steps are identical; Re-pack Page packs the page at k
+  0.775 (was 1.015) with step 24 at ×4.1 inside its box; a shrink to ×1.68
+  stays in its box; the Step pane's Size field at 5 draws ×5 (125 mm), the
+  read-out "Prints ×5", every other step identical. Before the change the
+  same drag snapped back to 48.6 mm, and Re-pack Page packed it at ×1.9
+  (`out/zoom-grow/prefix/`).
+- Left for Zach: making room at a lower page scale shrinks the boxes of
+  steps with size pins while their pins keep their size. On that page step
+  21's pinned picture and caption now meet step 26's number
+  (`out/zoom-grow/4-repacked.png`). Re-pack does not give a regular size pin
+  room; whether it should, as it now does for an enlarged step's Size, is his
+  call.
+
 ## Affected Areas
 
 - `apps/web/src/diagram/pages/`: a new pure `flowPacking.ts` (+ tests);
@@ -577,4 +624,5 @@ earlier note, this holds:
 - [x] F2: every step's reference scale from the diagram's one cell; the default steps per page in the signature; `pack-3`.
 - [ ] hold-3: a design call for Zach.
 - [x] The lane's corner at a bend step with a level neighbour (`flowLane.test.ts`, A5 at seven a page): rounded past it.
+- [x] An enlarged step's Size drawn past its box like a size pin, held, grid and fresh; Re-pack gives it room; the grip's drop draws what its drag showed (Zach, 2026-10-12).
 - [ ] After F2, for Zach: steadiness only upward (a small page holds later pages down); a page below the default count held to 1.4× its cell.
