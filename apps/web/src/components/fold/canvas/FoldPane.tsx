@@ -25,6 +25,7 @@ import { ptToDevicePx } from '../../../lib/paper/paperStyle';
 import { PAPER_STYLE_POLICIES } from '../../../lib/paper/paperStyleResolve';
 import type { FoldCreasePatternStrokes } from '../../../fold/canvas/useFoldCreasePatternStrokes';
 import type { WheelGesturePreference } from '../../../lib/wheelGesture';
+import { syncHeldModifiersFromEvent } from '../../../keyboard/heldModifiers';
 import { FOLD_UNITS_PER_CP_UNIT, foldUnitToUser } from '../../../fold/canvas/foldCanvasGeometry';
 import { joinFills, type FoldPaneOverlay } from '../../../fold/canvas/foldPaneOverlays';
 import { sameFoldHit, type FoldHit, type FoldHitRadii, type FoldPaneId } from '../../../fold/canvas/foldPicking';
@@ -267,7 +268,14 @@ export const FoldPane = forwardRef<CpSurfaceControls, FoldPaneProps>(function Fo
       // The pane takes the focus a press would otherwise leave on a rail
       // button, so Enter commits rather than pressing that button again.
       tabIndex={-1}
+      // The keys held are read off every pointer event before the canvas
+      // hit-tests it, as Edit's canvas does on a move: a modifier whose
+      // key-up landed elsewhere — another window took it without a blur —
+      // would otherwise stay held, and Alt makes every click a free point.
+      onPointerMoveCapture={syncHeldModifiersFromEvent}
+      onPointerUpCapture={syncHeldModifiersFromEvent}
       onPointerDownCapture={(event) => {
+        syncHeldModifiersFromEvent(event);
         onActivate?.();
         if (document.activeElement !== event.currentTarget) event.currentTarget.focus({ preventScroll: true });
       }}

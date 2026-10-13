@@ -597,9 +597,13 @@ export function useFoldCanvasVerbs(
           ...(remeet ? {} : swivelOffer(tool, reach)),
         });
         // A swivel's pivot may sit on a folded edge, where its creases meet:
-        // the edge lights with the point under the pointer.
-        if ((picksSwivelPivot(tool.tool, tool.picks.length) || remeet) && !free) {
-          return { pane, at, pick: resolveFoldEdgePoint(index, pane, at, radii, pick) };
+        // the edge lights under the pointer. With the free-point key held
+        // too — the engine finds where along it they meet, so a point placed
+        // freely there would only make a pivot through every layer, which
+        // no folder means on a folded edge (owner feedback, 2026-10-13).
+        if (picksSwivelPivot(tool.tool, tool.picks.length) || remeet) {
+          const onFold = free ? resolveFoldEdgePoint(index, pane, at, radii, null) : null;
+          return { pane, at, pick: onFold ?? (free ? pick : resolveFoldEdgePoint(index, pane, at, radii, pick)) };
         }
         return { pane, at, pick };
       },

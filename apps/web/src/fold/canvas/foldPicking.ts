@@ -612,8 +612,9 @@ function insideSheetSegment([a, b]: readonly [SheetPoint, SheetPoint], p: SheetP
  * of the nearest folded edge under the pointer, kept inside its crease's
  * ends (provenance `fold`). `point` is what the click would take otherwise
  * (`resolveFoldPick`): returned as it is when it is no point on a folded
- * edge, and when no folded edge is in reach. Never with the free-point key
- * held, which takes any point of the paper.
+ * edge, and when no folded edge is in reach. With the free-point key held
+ * the canvas asks with no `point`: a folded edge in reach still takes the
+ * click, and only off one does the key put a pivot anywhere.
  */
 export function resolveFoldEdgePoint(
   index: FoldPickIndex,
