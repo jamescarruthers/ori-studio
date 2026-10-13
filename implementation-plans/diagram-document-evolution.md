@@ -1,7 +1,7 @@
 # Diagram documents across app changes: saved layout holds
 
 **Status: parts 1 and 3 built, 2026-10-12, on `claude/diagram-launch-completion-59e60c`.
-Part 2 pending Zach's decision on hand moves across a re-pack.**
+Part 2 decided by Zach and built, 2026-10-13.**
 
 After launch people will have saved diagrams, and the app will keep changing.
 Three things would have hurt saved documents (Zach, 2026-10-12: "yikes yeah
@@ -44,7 +44,8 @@ new homes (reproduced with `artifacts/layout-review/crane_final_oldpack.osf`,
   the same, as the old format read it, still holds. No second format exists
   yet. `pageSignature.test.ts` pins three digests so such a change cannot slip
   through unnoticed.
-- `PACKER_VERSION = 'pack-4'` (`pages/flowArrangement.ts`) — the packer's own
+- `PACKER_VERSION` (`pages/flowArrangement.ts`; `pack-4` when this part was
+  built, `pack-5` since 2026-10-13: a size pin packed at its pin) — the packer's own
   version, stamped on each newly packed arrangement as `packer`
   (`DiagramPageArrangement.packer`): read leniently (any string kept as it
   came; anything else dropped alone, the page still held), written back,
@@ -76,17 +77,143 @@ Forward compatibility: a build from before this change reads a `packer`-stamped
 arrangement as a newer build's — it re-packs that page for display and writes
 the stored one back untouched. Only pre-launch builds are affected.
 
-### 2. A page packed afresh on open sends its hand-moved frames home (pending)
+### 2. A hand-moved step keeps its offset across a re-pack while it stays in its band (decided and built)
 
-**Pending Zach's decision on hand moves across a re-pack.** Zach expects a
-moved step's offset to be kept across a re-pack, and is deciding the exact
-rule (likely: keep the offset while the step stays in the same band, send it
-home only when its band or page changes). Nothing is built for it. Today the
-in-app paths (an edit that changes a page's structure, Re-pack Page) run
-`settlePlaces` and send that page's frames home; the open/adopt path and the
-layout's first draw keep stale offsets against new homes. With part 1, that
-path is reached only by a page whose structure changed outside the app (a
-hand-edited file) or an arrangement that does not read.
+**Zach's rule (2026-10-13): keep a moved step's frame offset across any
+re-pack while the step stays on the same page and in the same band; send it
+home — the frame offset cleared — only when its band or its page changes.**
+Part offsets (number, picture, text), size pins (`scale`) and caption widths
+(`textWidth`) are relative to the step's own frame and always stay. It holds
+for every way a flow page is packed afresh: an edit of its structure, Re-pack
+Page and Re-pack All Pages, and a page whose stored arrangement is stale or
+missing when the file opens. Reset This Page stays the way to clear hand moves
+on purpose. Grid pages keep their cell rule.
+
+Before this, an edit of a page's structure and Re-pack Page sent every frame
+on the page home in the edit (`settlePlaces`), and a page packed afresh on
+open kept every offset against its new homes with no check at all.
+
+**Definitions** (`pages/repackedFrames.ts`):
+
+- **Same band**: the arrangement the step was last held in placed it in the
+  band the new packing does (`DiagramArrangedStep.band`), and in a bend there
+  or not as now (`bend`). A step moved into or out of a bend has its home in
+  the page's edge column instead of its band, so that counts as a band change.
+- **Same page**: the page whose arrangement — held, stale or let go — is
+  stored under the step it starts with now. The store moves a stale
+  arrangement with its page as each edit lands
+  (`followPageArrangements`, which replaces `dropStalePageArrangements` in
+  the store's `commit`): a page keeps the arrangement under its first step; a
+  page that starts with another step now takes the arrangement of the page of
+  its number before the edit, when no page starts with that page's old first
+  step any more; any other arrangement goes. So, as for a grid page (which is
+  the same page while it keeps its number or its first step): a step put in
+  at the start of a page, or the page's first step deleted or moved away,
+  leaves its other steps on the same page; a page break before a page
+  renumbers it and it is still the same page; a step pushed onto the next
+  page, or pulled back onto the one before, changes page. Where no
+  arrangement ever placed a step, its page is the same page while it keeps
+  its number or its first step, and the step keeps its offset: no band is
+  known to have changed (Zach's default).
+- **Where it was**: the arrangement the step was last held in. A page whose
+  structure an edit changes keeps it, stale, until the page is packed and its
+  packing adopted; Re-pack Page and Re-pack All Pages let a held arrangement
+  go by re-signing it `LET_GO_SIGNATURE` (`"let-go"`, which matches no page)
+  instead of dropping it; a file opened with a stale one brings its own. A
+  file saved in between carries the stale or let-go arrangement (file
+  contract updated in `diagram-workspace.md`); a reader packs that page
+  afresh as for any stale one.
+
+**Built** — the new bands are known only once the layout packs the page,
+after the edit has committed, so the rule is applied in three places, each
+against the document's own stored arrangements:
+
+- **The edit** (`settlePlaces`, in `commit`): sends home, in its own undo
+  step, only the frames of steps it took off their page
+  (`staysOnFlowPage`), and a new step's. A flow step's `k` among its page's
+  steps no longer matters.
+- **The layout** (`layoutDiagramPages(…, arrangements, stored)`;
+  `layoutDiagram` passes the document's arrangements as `stored` in every
+  measuring pass): on a page it packs afresh — here, or in an earlier pass —
+  a moved step whose band or page changed is drawn at home, its frame offset
+  left out and the rest of its placement drawn, its cell's `placed.offsets`
+  without it, exactly as the adopted diagram lays out. So a read-only diagram,
+  an export, Print and step files are right without any adoption, and the
+  adopted diagram takes the same pages (`PreparedDiagramPages.adoptedAs`).
+- **Adoption** (`adoptPacking`, run by the store's
+  `adoptDiagramPageArrangements`): clears exactly the frame offsets the
+  layout drew at home (`framesSentHome`; a newer build's `placeNewer.frame`
+  with them, as `settlePlaces` does) and replaces the stale arrangements. Not
+  an edit: no undo entry, not dirty (`onlyPackedSince` holds: a file saved
+  before it packs and draws the same when it opens). Undo of the edit that
+  caused the re-pack restores the old frames and the old arrangement.
+- **The notice**: `diagramPlacesSettled` gains `added` beside `count`. It
+  counts only frames actually sent home: by the edit, then by the adoption,
+  which adds to the edit's notice when it follows it (`count` the edit's
+  total, one toast updated in place, its Undo the edit's), and which offers
+  no Undo where there is no edit (a diagram opened with a stale arrangement,
+  `entry: null`). `diagram placements reflowed` fires once each time with
+  `added`, so an edit and the adoption after it are two events, each with its
+  own frames (`docs/analytics.md`).
+
+Tests: `repackedFrames.test.ts` (the predicate; a stale arrangement opened:
+the layout draws the two band-changed steps of nine at home before any
+adoption, the adoption clears exactly those two and the adopted diagram draws
+cell for cell the same; Re-pack Page with the same split; never stored:
+every offset kept), `pageArrangements.test.ts` (following: own key kept, a
+step put in at a page's start, its first step deleted, a renumbered page;
+Re-pack lets go; `adoptPacking`: band change, a step into a bend, after an
+edit as the store lands it, a file whose pages changed outside the app, never
+stored), `stepPlaces.test.ts` (the edit's rule on flow pages held and not:
+a step put in at a page's start and one pushed onto the next page, one pulled
+back, page settings, renumbering, turns, Re-pack), the store's
+`diagramPageArrangements.test.ts` (Re-pack Page keeps the frames, adoption
+sends home the two band-changed ones with no undo entry, Undo restores the
+held diagram; an edit's and its adoption's frames as one notice; a stale
+arrangement opened: one frame home, `entry: null`, not dirty),
+`diagramPageCounts.test.ts`, `usePlacementReflowNotice.test.tsx`.
+`savedPagesHold.test.ts` and both goldens are unchanged.
+
+**Browser proof** (`artifacts/layout-review/repack-keeps-hand-moves-probe.mjs`
+on :5320; screenshots, logs and `report.json` in
+`artifacts/layout-review/out/repack-keeps-hand-moves/`: `baseline/` is the
+build before this part, `after/` and `after-ef/` this one):
+
+- `crane_final.osf` page 2 (steps 10–20, 9 frames moved: steps 11–19), Re-pack
+  Page: k 0.93 → 0.98 and the same plan, so **every moved step keeps its band**
+  (0, 0, 0 | 1, 1, 1 | 2, 2, 2) and all 9 offsets are kept, their homes
+  moving by up to 12 mm (step 13's box x 152.67 → 140.67, step 18's 60.36 →
+  49.18). Before, all 9 went home (count 9).
+- Bands set to 4 on the same file (an edit that re-packs every page): on page
+  2 four moved steps keep their bands and offsets (11, 12 in band 0, 14 in 1,
+  17 in 2) and five go home (13: 0 → 1; 15, 16: 1 → 2; 18, 19: 2 → 3); the
+  notice says 5; the diagram the edit left, laid out with nothing adopted,
+  draws page 2 box for box as the adopted one; Undo brings back the page cell
+  for cell, every frame with it.
+- Page 2's first step deleted: the arrangement follows the page to its new
+  first step (`step-0a37…`), the page is packed afresh, step 16 (was 17) goes
+  from band 2 into the bend after band 1 and home (count 1); the other 8 keep
+  their offsets; drawn the same before adoption.
+- `crane_final_oldpack.osf` (every arrangement signed by an old format, so
+  every page packed afresh on open): no step changes band on any page, so
+  every offset is kept, as before this part.
+
+**What it shows Zach (open).** On the crane the band rule keeps every offset
+through Re-pack Page and through opening `crane_final_oldpack.osf`, because no
+band changes there — the homes move inside their bands. The offsets were
+fitted tightly against the old homes, so both leave the clashes the brief
+reported for the old-format file: step 11's number on step 16's caption
+(20.6 mm²), step 13's number on step 15's caption (18.5 mm²), step 12's
+picture on step 13's caption (24.2 mm²) and steps 11 and 12's pictures
+(8.7 mm²) — the same four on the re-packed page 2 and on the old file opened
+(`after/A-page-2-repacked.png`, `after/D-oldpack-page-2.png`). Before this
+part Re-pack Page sent all 9 home, which made two other clashes (step 10's
+picture on step 16's caption, 81.9 mm²; step 12's number on step 15's
+caption, 22.0 mm²) and lost every hand move. With the Bands-4 edit the kept
+offsets sit against homes that moved across the page inside their bands
+(step 14's box 145.5 → 31.5 mm from the left). Whether "same band" should
+also ask the home to stay near where it was (or keep the frame where it was
+on the page) is his call; nothing here decides it.
 
 ### 3. Every page setting is written; an unsaid one reads as its legacy value (built)
 
@@ -160,7 +287,17 @@ legacy value.
 - `apps/web/src/diagram/document/diagramFile.ts` — file contract; every page
   setting written; `RETIRED_PAGE_KEYS`.
 - `apps/web/src/diagram/pages/stepPlaces.ts` — `signedSteps` reads steps as
-  the layout lists them.
+  the layout lists them. Part 2: `staysOnFlowPage`, `framesSentHome`;
+  `settlePlaces` sends a flow frame home only off its page; `sameCell` is the
+  grid's alone.
+- Part 2: `pages/repackedFrames.ts` (new: `keepsMovedFrame`, `placedIn`);
+  `pages/pageArrangements.ts` (`followPageArrangements` replaces
+  `dropStalePageArrangements`, `LET_GO_SIGNATURE`, `repackPages` lets go,
+  `adoptPacking`); `pages/diagramPageLayout.ts` (`stored`, a frame drawn at
+  home on a page packed afresh); `pages/diagramPages.ts`; the store's
+  `commit` and `adoptDiagramPageArrangements`, `diagramPlacesSettled.added`;
+  `pages/usePlacementReflowNotice.ts` (one toast per edit, no Undo without
+  an edit); `docs/analytics.md`; the file contract in `diagram-workspace.md`.
 - Tests: `pageSignature.test.ts` (frozen digests, packer never asked),
   `savedPagesHold.test.ts` with the frozen fixture
   `document/__fixtures__/diagram-held-pages.json` (a file saved before this
@@ -181,7 +318,9 @@ legacy value.
 - [x] Store and layout sign a diagram's first and last pages alike (turns at the ends)
 - [x] Frozen fixture: a file saved before the change opens with every page held, nothing adopted, every step in its box
 - [x] A bumped packer version holds every saved page and packs only a re-packed one, stamped with it
-- [ ] Part 2: frames of a page packed afresh on open — pending Zach's decision on hand moves across a re-pack
+- [x] Part 2 (Zach, 2026-10-13): a moved frame keeps its offset across any re-pack while its step stays on its page and in its band — the edit, the layout and adoption each apply it; stale and let-go arrangements kept for their bands; one notice per edit
+- [x] Part 2 browser proof in `artifacts/layout-review/out/repack-keeps-hand-moves/`
+- [ ] Part 2, for Zach: on the crane no band changes through Re-pack Page or the old-format open, so tight offsets clash against homes moved inside their bands
 - [x] Every page setting written; `PAGE_SETTINGS` with default and legacy values; `normalizePageSetup` reads legacy values
 - [x] File contract: settings said, adding (legacy value) and retiring (`RETIRED_PAGE_KEYS`) a setting
 - [x] Audit of the other fields written only when not default (table above); only page settings changed

@@ -569,7 +569,60 @@ grows and shrinks "like every other step"). Where this changes hold-2, or
   21's pinned picture and caption now meet step 26's number
   (`out/zoom-grow/4-repacked.png`). Re-pack does not give a regular size pin
   room; whether it should, as it now does for an enlarged step's Size, is his
-  call.
+  call. *Decided 2026-10-13: it does (below).*
+
+Hand moves and size pins across a re-pack (Zach, 2026-10-13). Where this
+changes Decisions 4 and 6, or the note just above, this holds:
+
+- **A frame moved by hand keeps its offset across any re-pack while its step
+  stays on its page and in its band**, and goes home only when its band (or
+  whether it stands in a bend) or its page changes; part offsets, size pins
+  and caption widths always stay. Replaces Decision 4's "frames placed by
+  hand on a repacked page go home" and Decision 6's "a page whose signature
+  changes sends its placed frames home in the same commit". The rule, the
+  "same page" definition (the page whose arrangement is stored under the step
+  it starts with now; a stale arrangement follows its page as edits land,
+  `followPageArrangements`), and where each part runs (the edit for a page
+  change, the layout and adoption for a band change) are in
+  `diagram-document-evolution.md`, part 2, and `pages/repackedFrames.ts`.
+- **Arrangements no page holds are kept until the page is packed again**,
+  for the bands their steps were in: an edit no longer drops a stale one
+  (`dropStalePageArrangements` is gone), and Re-pack Page lets one go by
+  signing it `"let-go"` rather than deleting it. Adoption replaces them, and
+  drops any no page keeps, as before. Re-pack Page does nothing on a page
+  that holds nothing (it is packed afresh already).
+- **Re-pack makes room for a size pinned by hand** (`place.scale`): a fresh
+  pack reads a pinned picture at its pin, measured there, the whole of it
+  fixed (`PackStep.marks` = its size), so no page scale changes it and its
+  box holds it, as an enlarged step's box holds its Size; `grownToHold`
+  measures it at its pin. The arrangement still keeps its automatic scale,
+  which the pin draws over (so a pin reset on a held page draws at that). A
+  pin is still not structure: a held page whose pin changes re-packs
+  nothing, the picture drawn past its box until Re-pack. `PACKER_VERSION` is
+  `pack-5`.
+- **Decided here, beyond the brief (for Zach to confirm):** a page whose pins
+  no plan holds at any page scale — pins that alone take more than the page
+  has — is packed as it was before, each pinned picture at its automatic
+  scale and drawn at its pin past its box. Packing those pins fixed found no
+  plan, and F5's least-overflow fallback then drew every box past the page:
+  the crane's page 2, all 11 steps pinned at 60–73 mm tall, re-packed to k
+  1.36 with `fits: false` and 13 clashes in a run before this fallback; with
+  it, k 0.98 and every box on the page
+  (`out/repack-keeps-hand-moves/after/A-page-2-repacked.png`).
+- Tests: `heldPages.test.ts` (a fresh pack holds a pin at its pin at 6, 9 and
+  12 a page, portrait and landscape, ×0.6–1.8, across several page scales; a held
+  page with a changed pin re-packs nothing, Re-pack makes room; a page whose
+  pins no scale holds packs as with none), `repackedFrames.test.ts` and the
+  others listed in the evolution plan. Goldens: no digest moved (no fixture
+  has a size pin or a moved frame on a re-packed page).
+- Browser (`repack-keeps-hand-moves-probe.mjs`, `crane_final.osf`):
+  step 24 grown to ×4.1 on page 3, then Re-pack Page: k 1.01 → 0.6, every
+  one of the page's 8 steps' pictures inside its box (step 21's box 55 ×
+  79.56 mm holds its pinned 36.22 × 60.77 mm picture; step 28's 79 × 86.1 mm
+  holds its 75 mm pin), and no clash (before: step 21's caption on step 26's
+  number, 15.6 mm², and step 21's and step 28's pictures past their boxes).
+  Re-pack Page on page 3 alone: k 1.01 → 0.79, every picture in its box
+  (`after/B-page-3-repacked.png`, `after/C-page-3-repacked.png`).
 
 ## Affected Areas
 
@@ -626,3 +679,5 @@ grows and shrinks "like every other step"). Where this changes hold-2, or
 - [x] The lane's corner at a bend step with a level neighbour (`flowLane.test.ts`, A5 at seven a page): rounded past it.
 - [x] An enlarged step's Size drawn past its box like a size pin, held, grid and fresh; Re-pack gives it room; the grip's drop draws what its drag showed (Zach, 2026-10-12).
 - [ ] After F2, for Zach: steadiness only upward (a small page holds later pages down); a page below the default count held to 1.4× its cell.
+- [x] Hand moves keep their offsets across a re-pack while their steps keep page and band; Re-pack makes room for size pins, `pack-5` (Zach, 2026-10-13).
+- [ ] For Zach: a page whose pins no scale holds packs as before (decided here); kept offsets against homes moved inside their bands (evolution plan, part 2).
