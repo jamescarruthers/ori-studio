@@ -1491,20 +1491,49 @@ describe('enlarged steps on the page (Revision 2)', () => {
     expect(cells.get('step-4')!.mmPerUnit).toBe(cells.get('step-0')!.mmPerUnit);
   });
 
-  it('prints at a typed Size times the area, held to its room, and a new arrow starts a run of its own', () => {
-    const list = steps(4, (index) =>
-      index === 1 ? enlarged({ arrowFrom: from('step-0'), scale: 2 }) : index === 2 ? enlarged({ scale: 2 }) : index === 3 ? enlarged({ scale: 6 }) : {}
-    );
-    const cells = cellsOf(layout(list));
+  it('prints at a typed Size times the area, past its room as a pin is, every other step where it was', () => {
+    const sized = (last: number) =>
+      steps(4, (index) =>
+        index === 1 ? enlarged({ arrowFrom: from('step-0'), scale: 2 }) : index === 2 ? enlarged({ scale: 2 }) : index === 3 ? enlarged({ scale: last }) : {}
+      );
+    const cells = cellsOf(layout(sized(6)));
     const areaMm = 0.3 * 400 * cells[0]!.mmPerUnit!;
     expect(cells[1]!.frameMm).toBeCloseTo(2 * areaMm, 9);
     expect(cells[1]!.zoom).toEqual({ asked: 2, printed: expect.closeTo(2, 9), reduced: false });
     // The same Size after it: the same run, the same size.
     expect(cells[2]!.frameMm).toBeCloseTo(2 * areaMm, 9);
-    // Six times the run's area is more than its room holds: as large as it does, and reduced.
-    expect(cells[3]!.zoom!.asked).toBe(6);
-    expect(cells[3]!.zoom!.reduced).toBe(true);
-    expect(cells[3]!.frameMm).toBeCloseTo(cells[3]!.drawMm.w, 6);
+    // Six times the run's area is more than its room holds: drawn so all the same, as a size pinned by hand is
+    // (Zach, 2026-10-12) — wider than the room, its caption pushed down under it, and nothing said of a room.
+    expect(cells[3]!.frameMm).toBeCloseTo(6 * areaMm, 9);
+    expect(cells[3]!.zoom).toEqual({ asked: 6, printed: expect.closeTo(6, 9), reduced: false });
+    expect(cells[3]!.scaleReduced).toBe(false);
+    expect(cells[3]!.drawMm.w).toBeCloseTo(6 * areaMm, 6);
+    expect(cells[3]!.drawMm.w).toBeGreaterThan(cells[0]!.drawMm.w);
+    expect(cells[3]!.text.firstBaseline).toBeGreaterThan(cells[3]!.drawMm.y + cells[3]!.drawMm.h);
+    expect(cells[3]!.drawMm.y + cells[3]!.drawMm.h).toBeGreaterThan(cells[3]!.cellMm.y + cells[3]!.cellMm.h);
+    // Nothing else moves for it: every other step is drawn as with a Size its room holds.
+    const small = cellsOf(layout(sized(1.25)));
+    const smallAreaMm = 0.3 * 400 * small[0]!.mmPerUnit!;
+    expect(small[3]!.frameMm).toBeCloseTo(1.25 * smallAreaMm, 9);
+    expect(small[3]!.drawMm.h).toBeLessThan(cells[3]!.drawMm.h);
+    for (const at of [0, 1, 2]) expect(cells[at], `step ${at}`).toEqual(small[at]);
+  });
+
+  it('packs a fresh flow page for an enlarged step’s Size, however large: its box holds it as it prints', () => {
+    // Six times the area is more than the reference cell's room: packed at it all the same, so Re-pack Page,
+    // which packs as a fresh page does, gives a Size grown past its box room for it.
+    const list = steps(4, (index) => (index === 1 ? enlarged({ arrowFrom: from('step-0'), scale: 6 }) : {}));
+    const result = layout(list, { layout: 'flow', stepsPerPage: 4 });
+    expect(result.pages[0]!.packing!.packed).toBe(true);
+    const [area, zoomed] = cellsOf(result);
+    const areaMm = 0.3 * 400 * area!.mmPerUnit!;
+    // To the arrangement's rounding: a packed page keeps its scales to a ten-thousandth of a mm.
+    expect(zoomed!.frameMm).toBeCloseTo(6 * areaMm, 3);
+    expect(zoomed!.zoom).toEqual({ asked: 6, printed: expect.closeTo(6, 4), reduced: false });
+    const { cellMm: box, drawMm: drawn } = zoomed!;
+    expect(drawn.x).toBeGreaterThanOrEqual(box.x - 1e-6);
+    expect(drawn.x + drawn.w).toBeLessThanOrEqual(box.x + box.w + 1e-6);
+    expect(drawn.y + drawn.h).toBeLessThanOrEqual(box.y + box.h + 1e-6);
   });
 
   it('measures every step of a run against the run’s area, whatever Size it asks for', () => {

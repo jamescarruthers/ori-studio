@@ -138,6 +138,13 @@ describe('pages as they printed before placement came', () => {
     // 1.4 times the 3 × 3 cell's, the packing's largest, 54 mm where they were
     // 59–63, and page 5 at 50 mm where it was 44). Rasterised and checked by
     // eye beside the pages before. Grid fixtures are unchanged.
+    // 2026-10-12, later (Zach): an enlarged step's Size is drawn past its room,
+    // as a size pinned by hand is. One page changed: the grid's enlarged steps
+    // at a Size of 2 and of 6, whose step at 6 prints at six times its area
+    // (a 85.92 mm window, drawn 49.12 × 86.10 mm) where #436 held it to its
+    // room at 4.89 times (69.99 mm, 48 × 70.17), its caption pushed down under
+    // it; every other step on the page, and its arrows, as they were. The flow
+    // fixture's Size of 2 fits its room, so its pages are unchanged.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -171,7 +178,7 @@ describe('pages as they printed before placement came', () => {
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "e7adcfca4f353a0a 86d43639bfc94328 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 1": "762034dc73a12f50 762034dc73a12f50 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 2": "09fc08ba3982c9d1 09fc08ba3982c9d1 4f53cda18c2baa0c",
-        "grid, enlarged steps at a Size of 2 and of 6 · page 1": "c9b60bfa75923571 c9b60bfa75923571 f2a6c074db74a98c",
+        "grid, enlarged steps at a Size of 2 and of 6 · page 1": "bd28d9cef4eb23d5 bd28d9cef4eb23d5 f2a6c074db74a98c",
         "grid, two pages · page 1": "55238bffde0a38d1 55238bffde0a38d1 4f53cda18c2baa0c",
         "grid, two pages · page 2": "776e2e1611d8dbc7 776e2e1611d8dbc7 4f53cda18c2baa0c",
         "no steps · page 1": "21be575f25d70a47 21be575f25d70a47 4f53cda18c2baa0c",
@@ -202,6 +209,10 @@ describe('homes as the layout computes them', () => {
     // packs under `pack-3`; a page stored by `pack-2` is packed afresh, its
     // placed frames sent home): "flow from the right" pages 2 and 3, and
     // every page of "pages with their own counts".
+    // 2026-10-12, later (Zach): an enlarged step's Size drawn past its room.
+    // The grid's enlarged steps at 2 and 6: step-zoom-6's caption starts
+    // under its picture at six times its area (first baseline 206.77 mm, was
+    // 190.83); its cell, its number and every other step's home as they were.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         preparedPages(document, FIXTURE_FONTS, subsetter).layout.pages.map((page, index) => [
@@ -244,7 +255,7 @@ describe('homes as the layout computes them', () => {
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "63e6925e3ad87871",
         "grid, a page break, turns and an upload · page 1": "b2981a60e29ba484",
         "grid, a page break, turns and an upload · page 2": "2866f10b51c574cb",
-        "grid, enlarged steps at a Size of 2 and of 6 · page 1": "7e2d6a88628ee042",
+        "grid, enlarged steps at a Size of 2 and of 6 · page 1": "bcebae4d18202957",
         "grid, two pages · page 1": "40d6b4db9bf8a7e0",
         "grid, two pages · page 2": "2cf18aff84ac502b",
         "no steps · page 1": "4f53cda18c2baa0c",

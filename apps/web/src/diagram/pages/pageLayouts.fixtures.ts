@@ -181,7 +181,7 @@ export function pageLayoutFixtures(): PageLayoutFixture[] {
     },
     {
       name: 'grid, enlarged steps at a Size of 2 and of 6',
-      // Twice the area fits its room; six times does not, and is held to it.
+      // Twice the area fits its room; six times does not, and is drawn past it, as a size pin is.
       document: diagram(
         [
           cpStep('step-a'),

@@ -51,7 +51,8 @@
  * An enlarged step (Revision 2) is laid out as its window — what its frame
  * takes in, of its content where its frame is cut — in runs of its own, never
  * the Fit each runs: as large as its room allows, at most six times the area
- * it enlarges as that prints, or at its Size times that ({@link zoomScales}).
+ * it enlarges as that prints, or at its Size times that, past its room if
+ * need be, as a size pinned by hand is ({@link zoomScales}).
  * The enlarge arrow before one, when the step before it shows an area, takes
  * a turn's places and gutter, after any turns standing there; a flow page
  * keeps that gutter before every enlarged step after another, whether the
@@ -452,8 +453,9 @@ export interface LayoutCell {
   /**
    * An enlarged step's size against the area it enlarges (Revision 2): the
    * Size asked for (null for Fill), how many times the area it prints at, and
-   * whether its room made it smaller than its run asked. Absent on a step that
-   * is not enlarged, or one whose area's size is not known.
+   * whether its room made it smaller than its run's Fill — never so for a
+   * Size, which is drawn as asked, past its room if need be. Absent on a step
+   * that is not enlarged, or one whose area's size is not known.
    */
   zoom?: { asked: number | null; printed: number; reduced: boolean };
   numberAt: { x: number; y: number };
@@ -1243,14 +1245,16 @@ export function layoutDiagramPages(
       const at = scale?.mmPerUnit ?? scale?.frameMm ?? null;
       const extent = at !== null && step.picture ? pictureExtent(step.picture, at) : null;
       const pin = pinStates.get(entry) ?? null;
-      // A picture taller at its scale than its box runs on down its room. Only
-      // a scale pinned by hand draws past the room (Decision 3A): an enlarged
-      // step's Size is held to it, as every other scale is.
+      // A picture taller at its scale than its box runs on down its room. A
+      // scale pinned by hand draws past the room, and so does an enlarged
+      // step's Size (Zach, 2026-10-12), its text below it; nothing else moves.
       const pinned = pin === 'applied';
+      const sized = step.zoom?.scale != null;
       const drawnH = extent?.height ?? 0;
-      const drawH = pinned ? drawnH : Math.min(Math.max(box, drawnH), roomH(entry));
+      const inRoom = Math.min(Math.max(box, drawnH), roomH(entry));
+      const drawH = pinned ? drawnH : sized ? Math.max(inRoom, drawnH) : inRoom;
       const ink = extent ?? { width: box, height: box };
-      const drawW = pinned ? Math.max(roomW, ink.width) : roomW;
+      const drawW = pinned || sized ? Math.max(roomW, ink.width) : roomW;
       const auto = autoScales.get(entry);
       const autoAt = auto?.mmPerUnit ?? auto?.frameMm ?? null;
       const autoH = autoAt !== null && step.picture ? pictureExtent(step.picture, autoAt).height : 0;
@@ -1424,9 +1428,9 @@ type CellScale = { mmPerUnit: number | null; frameMm: number | null; reduced: bo
  * its number at its box's top left, its picture centred under it and its
  * caption under that at the measure its box was packed for
  * (`flowArrangement.ts`). An enlarged step given another Size since its page
- * was packed is resized in its box for it, its own edit, as far as the box
- * holds it, and its read-out says what it prints. One whose picture, caption
- * or Size no longer fits its box is drawn whole past it, as the page shows:
+ * was packed is drawn at that Size, its own edit, as a size pinned by hand
+ * is, and its read-out says what it prints. One whose picture, caption or
+ * Size no longer fits its box is drawn whole past it, as the page shows:
  * nothing moves for it, and nothing is said of it (Zach, 2026-10-12) — Re-pack
  * Page gives it room.
  */
@@ -1486,13 +1490,15 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
 
   /**
    * An enlarged step whose Size has changed since its page was packed
-   * (`DiagramArrangedStep.zoomScale`): its own edit, which resizes it in its
-   * box. The window it now asks for — its kept window times the new Size over
-   * the one it was packed at (for one packed at Fill, the Size it prints at
-   * now, `printedNow`), or at Fill as large as its box's room allows, held to
-   * 1–6 times its area as that prints (`areaMm`, when known) — and what of
-   * that its box holds. Null where the Size is the one it was packed at, so
-   * the step is drawn as kept.
+   * (`DiagramArrangedStep.zoomScale`): its own edit, which resizes it. The
+   * window it now asks for, and the one it is drawn at: for a Size, its kept
+   * window times the new Size over the one it was packed at (for one packed
+   * at Fill, the Size it prints at now, `printedNow`), drawn so, past its box
+   * if need be, as a size pinned by hand is (Zach, 2026-10-12); at Fill, as
+   * large as its box's room allows, held to 1–6 times its area as that prints
+   * (`areaMm`, when known), and drawn as large as the room holds of that.
+   * Null where the Size is the one it was packed at, so the step is drawn as
+   * kept.
    */
   const resizedWindow = (
     step: LayoutStep,
@@ -1505,19 +1511,17 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     const zoom = step.zoom;
     const keptWindow = kept?.frameMm;
     if (!zoom || step.picture?.kind !== 'zoom' || keptWindow == null || zoom.scale === (place.zoomScale ?? null)) return null;
-    const inWindow = frameInWindowOf(zoom);
-    const fit = step.fitIn ? step.fitIn(room.w, room.h) : pictureFit(step.picture, room.w, room.h);
-    let wanted: number;
-    if (zoom.scale === null) {
-      if (fit === null) return null;
-      wanted = areaMm === null ? fit : Math.min(ZOOM_FILL.max * areaMm, Math.max(ZOOM_FILL.min * areaMm, fit * inWindow)) / inWindow;
-    } else {
+    if (zoom.scale !== null) {
       const was = place.zoomScale ?? printedNow;
       if (was === null || !(was > 0)) return null;
-      wanted = (keptWindow * zoom.scale) / was;
+      const wanted = (keptWindow * zoom.scale) / was;
+      return wanted > 0 && Number.isFinite(wanted) ? { wanted, drawn: wanted } : null;
     }
-    if (!(wanted > 0) || !Number.isFinite(wanted)) return null;
-    return { wanted, drawn: fit === null ? wanted : Math.min(wanted, fit) };
+    const fit = step.fitIn ? step.fitIn(room.w, room.h) : pictureFit(step.picture, room.w, room.h);
+    if (fit === null) return null;
+    const inWindow = frameInWindowOf(zoom);
+    const wanted = areaMm === null ? fit : Math.min(ZOOM_FILL.max * areaMm, Math.max(ZOOM_FILL.min * areaMm, fit * inWindow)) / inWindow;
+    return wanted > 0 && Number.isFinite(wanted) ? { wanted, drawn: Math.min(wanted, fit) } : null;
   };
 
   const arrangedCell = (entry: T, place: DiagramArrangedStep): LayoutCell => {
@@ -1539,7 +1543,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     const printedAt = (window: number) => (step.zoom && areaMm !== null ? (window * frameInWindowOf(step.zoom)) / areaMm : null);
     const keptPrinted = kept?.frameMm != null ? printedAt(kept.frameMm) : null;
     const resized = resizedWindow(step, place, kept, room, areaMm, keptPrinted ?? cellZoom?.printed ?? null);
-    // Its scale before any pin: as kept, or an enlarged step's at its new Size, as far as its box holds it.
+    // Its scale before any pin: as kept, or an enlarged step's at its new Size (a Fill as far as its box holds it).
     const auto: CellScale | null = resized ? { mmPerUnit: null, frameMm: resized.drawn, reduced: resized.drawn < resized.wanted * (1 - 1e-9) } : kept;
     const drawn = input.pinned(entry) ?? auto;
     // An empty step's placeholder fills the room its box leaves a picture.
@@ -1552,7 +1556,7 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     const frame = step.picture?.frame;
     const printedFrame = drawn?.mmPerUnit != null && frame ? drawn.mmPerUnit * Math.max(frame.width, frame.height) : drawn?.frameMm;
     if (printedFrame != null) printedFrames.set(step.id, printedFrame);
-    // Its read-out says what it prints, against its area as that prints here, and whether its room cut it down.
+    // Its read-out says what it prints, against its area as that prints here, and whether its room cut a Fill down.
     let zoom = cellZoom;
     if (zoom && step.zoom && drawn?.frameMm != null) {
       const printed = printedAt(drawn.frameMm) ?? (resized ? (zoom.printed * resized.drawn) / resized.wanted : zoom.printed);
@@ -1740,14 +1744,16 @@ function packStep(
  * (Zach, 2026-10-07): a Size starts no run of its own.
  *
  * - **Fill**: the run's Fill frames print at one size, the largest every one
- *   of them fits its room at, held to 1–6 times the area.
- * - **Size**: that many times the area, held the same.
+ *   of them fits its room at, held to 1–6 times the area. A step its room
+ *   cannot hold at that size — a long instruction took it — is drawn
+ *   smaller, alone, and says so.
+ * - **Size**: that many times the area, held the same, and drawn so, past
+ *   its room if need be, as a size pinned by hand is (Zach, 2026-10-12).
  *
- * A step its room cannot hold at its run's size — a long instruction took
- * it — is drawn smaller, alone, and says so. A frame that is turned is
- * smaller than its window, which is what the step is laid out in. What each
- * prints at against its area is the read-out, by step (`read`); a run whose
- * area's size is not known fills its room, and has none. And for each step
+ * A frame that is turned is smaller than its window, which is what the step
+ * is laid out in. What each prints at against its area is the read-out, by
+ * step (`read`); a run whose area's size is not known fills its room, and
+ * has none. And for each step
  * of a run measured against an area an arrow leaves, that area's step and
  * the area's share of its picture (`areas`), so a flow page drawn at its own
  * scale can say the read-out as it prints.
@@ -1833,7 +1839,7 @@ function zoomScales<T extends { step: LayoutStep }>(
       const frameMm = size !== null ? held(size * areaMm) : fillMm;
       if (!(frameMm > 0) || !Number.isFinite(frameMm)) return;
       const window = frameMm / frameInWindow(item);
-      const drawn = Math.min(window, fit.own);
+      const drawn = size !== null ? window : Math.min(window, fit.own);
       const reduced = drawn < window * (1 - 1e-9);
       scales.set(item, { mmPerUnit: null, frameMm: drawn, reduced });
       if (known) read.set(item, { asked: item.step.zoom!.scale, printed: (drawn * frameInWindow(item)) / areaMm, reduced });

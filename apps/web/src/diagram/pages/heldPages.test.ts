@@ -241,42 +241,56 @@ describe('an enlarged run on a held page', () => {
     expect(layOut(committed(document, withoutArea)).pages[0]!.zoomArrows).toEqual([]);
   });
 
-  it('resizes an enlarged step in its box for its own new Size, and says what it prints where the box is too small', () => {
+  it('draws an enlarged step at its own new Size, past its box as a size pin is, every other step as it was', () => {
     const document = adopted(fixture());
     const before = cellsOf(document);
     const was = before.get('step-zoom-2')!;
     expect(zoomReadout(was.zoom!)).toEqual({ kind: 'prints', asked: 2, printed: 2, warn: false });
     /** The read-out's share of the window as printed: one area for the run, so the same at any Size. */
     const perMm = (cell: LayoutCell) => cell.zoom!.printed / cell.frameMm!;
+    /** `document` with step-zoom-2 at `size`, landed: nothing re-packed, its layout, and every other step as before. */
+    const resized = (size: number | null) => {
+      const landed = committed(document, setFrameScale(document, 'step-zoom-2', size));
+      expect(landed.pageArrangements, `×${size}`).toBe(document.pageArrangements);
+      const layout = layOut(landed);
+      expect(layout.packed, `×${size}`).toBeUndefined();
+      for (const [id, cell] of before)
+        if (id !== 'step-zoom-2') expect(JSON.stringify(cellOf(layout, id)), `×${size}: ${id}`).toBe(JSON.stringify(cell));
+      return { landed, cell: cellOf(layout, 'step-zoom-2') };
+    };
 
-    // Smaller: its window at 1.25 / 2 of the one kept, in its place; nothing re-packed, no other step changed.
-    const smaller = committed(document, setFrameScale(document, 'step-zoom-2', 1.25));
-    expect(smaller.pageArrangements).toBe(document.pageArrangements);
-    const layout = layOut(smaller);
-    expect(layout.packed).toBeUndefined();
-    const after = cellOf(layout, 'step-zoom-2');
-    expect(after.frameMm).toBeCloseTo((was.frameMm! * 1.25) / 2, 9);
-    expect(home(after)).toEqual(home(was));
-    expect(pastItsBox(after)).toBeNull();
-    expect(perMm(after)).toBeCloseTo(perMm(was), 12);
-    expect(zoomReadout(after.zoom!)).toEqual({ kind: 'prints', asked: 1.25, printed: 1.25, warn: false });
-    for (const [id, cell] of before) if (id !== 'step-zoom-2') expect(cellOf(layout, id), id).toEqual(cell);
+    // Smaller: its window at 1.25 / 2 of the one kept, in its place.
+    const { cell: small } = resized(1.25);
+    expect(small.frameMm).toBeCloseTo((was.frameMm! * 1.25) / 2, 9);
+    expect(home(small)).toEqual(home(was));
+    expect(pastItsBox(small)).toBeNull();
+    expect(perMm(small)).toBeCloseTo(perMm(was), 12);
+    expect(zoomReadout(small.zoom!)).toEqual({ kind: 'prints', asked: 1.25, printed: 1.25, warn: false });
 
-    // Larger than its box holds: as large as the box allows, inside it, and its read-out says what it prints.
-    const larger = committed(document, setFrameScale(document, 'step-zoom-2', 6));
-    expect(larger.pageArrangements).toBe(document.pageArrangements);
-    const big = cellOf(layOut(larger), 'step-zoom-2');
-    expect(big.frameMm!).toBeCloseTo(was.frameMm!, 2);
-    expect(pastItsBox(big)).toBeNull();
+    // Larger than its box holds: drawn at it all the same, past its box, as a size pinned by hand is
+    // (Zach, 2026-10-12) — its home kept, its caption under it, and its read-out the Size asked.
+    const { landed: larger, cell: big } = resized(6);
+    expect(big.frameMm).toBeCloseTo((was.frameMm! * 6) / 2, 9);
+    // Printed against its area to the arrangement's rounding: both are kept to a ten-thousandth of a mm.
+    expect(big.zoom).toEqual({ asked: 6, printed: expect.closeTo(6, 4), reduced: false });
+    expect(home(big)).toEqual(home(was));
+    expect(pastItsBox(big)).toBe('picture');
+    expect(big.text.firstBaseline).toBeGreaterThan(big.drawMm.y + big.drawMm.h);
     expect(perMm(big)).toBeCloseTo(perMm(was), 12);
-    expect(zoomReadout(big.zoom!)).toMatchObject({ kind: 'room', asked: 6, warn: true });
+    expect(zoomReadout(big.zoom!)).toEqual({ kind: 'prints', asked: 6, printed: 6, warn: false });
 
-    // Re-pack Page packs it for its Size: its new place holds it, and it prints as large as that.
+    // Fill, as before: as large as its box's room allows, inside it.
+    const { cell: filled } = resized(null);
+    expect(filled.zoom!.asked).toBeNull();
+    expect(pastItsBox(filled)).toBeNull();
+    expect(filled.frameMm!).toBeLessThan(big.frameMm!);
+
+    // Re-pack Page packs it for its Size: its new place holds it, and it prints at it.
     const repacked = adopted(committed(larger, repackPages(larger, 0)));
     const packed = cellOf(layOut(repacked), 'step-zoom-2');
     expect(pastItsBox(packed)).toBeNull();
     expect(repacked.pageArrangements!['step-a']!.steps['step-zoom-2']!.zoomScale).toBe(6);
-    expect(packed.frameMm!).toBeGreaterThan(big.frameMm!);
+    expect(zoomReadout(packed.zoom!)).toEqual({ kind: 'prints', asked: 6, printed: 6, warn: false });
   });
 });
 

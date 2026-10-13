@@ -24,6 +24,7 @@ import { pageLayoutFixtures } from './pageLayouts.fixtures';
 import { cellPicture, layoutPicture, type CellPicture } from './pagePictures';
 import { placedZoomArrows } from './zoomArrows';
 import { enlargeArrowMm, paintEnlargeArrow } from '../zoom/enlargeArrow';
+import { setFrameScale } from '../zoom/zoomFrames';
 
 /**
  * Enlarged steps on the pages (Revision 2, 16f), from the document: the
@@ -137,15 +138,19 @@ describe('an enlarged step’s window on a page', () => {
   });
 });
 
-describe('an enlarged step at a Size on a grid page, as #436 printed it', () => {
+describe('an enlarged step at a Size on a grid page', () => {
   const round = (value: number) => Math.round(value * 1e4) / 1e4;
+  /** The room #436's build held step-zoom-6's picture to, mm: its cell's width less the gutter, and what its caption leaves. */
+  const ROOM_436 = { w: 48, h: 70.1667 };
 
-  it('prints twice its area at a Size of 2, and at 6, held to its room, smaller, and says so', () => {
+  it('prints twice its area at a Size of 2, and six times at 6, past its room as a pin is, every other step where it was', () => {
     const { document } = pageLayoutFixtures().find(({ name }) => name === 'grid, enlarged steps at a Size of 2 and of 6')!;
-    const cells = layoutDiagram(document, estimateTextSetter).pages.flatMap((page) => page.cells);
+    const cellsOf = (diagram: DiagramDocument) => layoutDiagram(diagram, estimateTextSetter).pages.flatMap((page) => page.cells);
+    const cells = cellsOf(document);
     const enlarged = cells.filter((cell) => cell.zoom);
-    // The values #436's build lays this diagram out at, to the last digit (`diagram-flow-pages.md`: an
-    // enlarged step's explicit Size held to its room again, as #436 held it).
+    // Step-zoom-2 as #436's build lays it out, to the last digit. Step-zoom-6 at the Size asked, past the room
+    // #436 held it to at ×4.89 (frame 69.99 mm, drawn 48 × 70.17): an enlarged step's Size is drawn as a size
+    // pinned by hand is (Zach, 2026-10-12).
     expect(
       enlarged.map(({ stepId, zoom, frameMm, drawMm, scaleReduced }) => ({
         stepId,
@@ -174,35 +179,39 @@ describe('an enlarged step at a Size on a grid page, as #436 printed it', () => 
         },
         {
           "drawMm": [
-            143,
+            142.4409,
             115.6667,
-            48,
-            70.1667,
+            49.1182,
+            86.1001,
           ],
-          "frameMm": 69.9903,
-          "scaleReduced": true,
+          "frameMm": 85.9238,
+          "scaleReduced": false,
           "stepId": "step-zoom-6",
           "zoom": {
             "asked": 6,
-            "printed": 4.8874,
-            "reduced": true,
+            "printed": 6,
+            "reduced": false,
           },
         },
       ]
     `);
     const [two, six] = enlarged;
     expect(two!.zoom).toEqual({ asked: 2, printed: expect.closeTo(2, 9), reduced: false });
-    expect(six!.zoom!.asked).toBe(6);
-    expect(six!.zoom!.reduced).toBe(true);
-    expect(six!.zoom!.printed).toBeLessThan(6);
-    // What it prints fits its room at the size it is drawn, and would not at the Size asked.
-    const fit = (cell: (typeof enlarged)[number], frameMm: number) => {
+    expect(six!.zoom).toEqual({ asked: 6, printed: expect.closeTo(6, 9), reduced: false });
+    // Both areas print alike, so six times is three times twice.
+    expect(six!.frameMm!).toBeCloseTo(3 * two!.frameMm!, 9);
+    // What it prints fits where it is drawn; the room #436 held it to would not hold it, and its caption is under it.
+    const fit = (cell: (typeof enlarged)[number], frameMm: number, room = { w: cell.drawMm.w, h: cell.drawMm.h }) => {
       const step = stepsOf(document).find((each) => each.id === cell.stepId)!;
-      return pictureFit(layoutPicture(step, document.assets, document.style, { frameMm }), cell.drawMm.w, cell.drawMm.h)!;
+      return pictureFit(layoutPicture(step, document.assets, document.style, { frameMm }), room.w, room.h)!;
     };
     for (const cell of [two!, six!]) expect(fit(cell, cell.frameMm!) / cell.frameMm!).toBeGreaterThan(1 - 1e-3);
-    const asked = (six!.frameMm! * 6) / six!.zoom!.printed;
-    expect(fit(six!, asked)).toBeLessThan(asked);
+    expect(fit(six!, six!.frameMm!, ROOM_436)).toBeLessThan(six!.frameMm!);
+    expect(six!.text.firstBaseline).toBeGreaterThan(six!.drawMm.y + six!.drawMm.h);
+    // Nothing else moves for it: every other step is drawn as with a Size its room holds.
+    const held = cellsOf(setFrameScale(document, 'step-zoom-6', 2));
+    expect(held.find((cell) => cell.stepId === 'step-zoom-6')!.drawMm.h).toBeLessThan(six!.drawMm.h);
+    for (const cell of cells) if (cell.stepId !== 'step-zoom-6') expect(cell, cell.stepId).toEqual(held.find((each) => each.stepId === cell.stepId));
   });
 });
 
