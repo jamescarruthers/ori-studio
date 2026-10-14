@@ -598,9 +598,9 @@ describe('in a focused form control', () => {
     ['a select', () => document.createElement('select')],
   ];
 
-  function focusIn(control: HTMLElement, overrides?: ShortcutOverrides) {
+  function focusIn(control: HTMLElement, overrides?: ShortcutOverrides, activeEditingContext: EditingContext = 'simulate') {
     const actions = {
-      ...createActions(selectEverything(createSampleProject()), { activeEditingContext: 'simulate' }),
+      ...createActions(selectEverything(createSampleProject()), { activeEditingContext }),
       getShortcutOverrides: () => overrides ?? {},
     };
     cleanups.push(installAppKeyboardListener(actions));
@@ -656,6 +656,20 @@ describe('in a focused form control', () => {
     }
     expect(actions.handleMenuAction).not.toHaveBeenCalled();
   });
+
+  // A slider keeps focus after its drag, so ⌘Z there undid nothing: Pose's
+  // spread sliders on #436 (Zach, 2026-10-14). It has no text to undo.
+  for (const type of ['range', 'checkbox', 'radio']) {
+    it(`undoes on ⌘Z and redoes on ⌘⇧Z from a focused ${type} input, which types nothing`, () => {
+      const control = Object.assign(document.createElement('input'), { type });
+      const actions = focusIn(control, undefined, 'diagram');
+
+      expect(press(control, { key: 'z', metaKey: true }).defaultPrevented).toBe(true);
+      expect(press(control, { key: 'Z', metaKey: true, shiftKey: true }).defaultPrevented).toBe(true);
+      expect(press(control, { key: 'z', ctrlKey: true }).defaultPrevented).toBe(true);
+      expect(actions.handleMenuAction.mock.calls).toEqual([['edit.undo'], ['edit.redo'], ['edit.undo']]);
+    });
+  }
 
   it('still types a letter that Save was rebound to', () => {
     const control = document.createElement('input');

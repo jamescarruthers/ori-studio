@@ -533,12 +533,15 @@ describe('spreading a flat fold’s layers (Phase 13)', () => {
     await controller.run({ verb: 'spread-kind', kind: 'affine' });
     const reads = vi.mocked(bindings.runtime!.paperScene).mock.calls.length;
     const past = state().diagramHistory.past.length;
+    const pictureOf = () => stepsIn(state().diagram!).find((step) => step.id === stepId)!.picture;
+    const unskewed = pictureOf();
     controller.previewSpread({ slider: 'skew', value: 0.4 });
     expect(heard.preview).toHaveBeenLastCalledWith(
       expect.objectContaining({ slide: { slider: 'skew', value: 0.4 }, spread: { ...AFFINE, skew: 0.4 } }),
       expect.any(String)
     );
     await controller.commitSpread();
+    const skewed = pictureOf();
     controller.previewSpread({ slider: 'axis', value: 30 });
     expect(heard.preview).toHaveBeenLastCalledWith(
       expect.objectContaining({ spread: { ...AFFINE, skew: 0.4, axisDeg: 30 } }),
@@ -548,6 +551,19 @@ describe('spreading a flat fold’s layers (Phase 13)', () => {
     expect(spreadOf(stepId)).toEqual({ ...AFFINE, skew: 0.4, axisDeg: 30 });
     expect(state().diagramHistory.past.length).toBe(past + 2);
     expect(bindings.runtime!.paperScene).toHaveBeenCalledTimes(reads);
+    const turned = pictureOf();
+    expect(new Set([unskewed, skewed, turned]).size).toBe(3);
+    // Each drag undoes on its own, the setting and the picture with it, and redoes.
+    state().undoDiagram();
+    expect(spreadOf(stepId)).toEqual({ ...AFFINE, skew: 0.4 });
+    expect(pictureOf()).toBe(skewed);
+    state().undoDiagram();
+    expect(spreadOf(stepId)).toEqual(AFFINE);
+    expect(pictureOf()).toBe(unskewed);
+    state().redoDiagram();
+    state().redoDiagram();
+    expect(spreadOf(stepId)).toEqual({ ...AFFINE, skew: 0.4, axisDeg: 30 });
+    expect(pictureOf()).toBe(turned);
     controller.dispose();
   });
 
