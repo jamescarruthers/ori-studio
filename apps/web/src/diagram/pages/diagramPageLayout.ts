@@ -85,6 +85,7 @@ import { roundPageArrangement } from '../document/pageArrangements';
 import {
   flowLane,
   flowPagePlan,
+  handoverHeight,
   pageSide,
   rowRightToLeft,
   type FlowPagePlan,
@@ -1329,12 +1330,13 @@ export function layoutDiagramPages(
         })
       : []
   );
-  // Across a spread the lane meets the spine at one height: halfway between
-  // where it leaves the left page and where it comes into the right one.
-  const spineAt = (leftIndex: number) => {
-    const out = stopPages[leftIndex]?.at(-1);
-    const into = stopPages[leftIndex + 1]?.[0];
-    return out && into ? (out.y + into.y) / 2 : null;
+  // The lane leaves a page and comes into the next at one height, over the
+  // spine or a page turn it hands over at (`handoverHeight`).
+  const handoverAt = (index: number) => {
+    const [before, after] = [stopPages[index], stopPages[index + 1]];
+    return before && after
+      ? handoverHeight({ plan: plans[index]!, stops: before }, { plan: plans[index + 1]!, stops: after }, bandWidthMm / 2)
+      : null;
   };
 
   const pages: LayoutPage[] = placedPages.map((placed, pageIndex) => {
@@ -1354,8 +1356,8 @@ export function layoutDiagramPages(
             margin: m,
             halfWidth,
             offPage: OFF_PAGE_MM,
-            spineIn: plan.entry === 'spine' ? spineAt(pageIndex - 1) : null,
-            spineOut: plan.exit === 'spine' ? spineAt(pageIndex) : null,
+            handoverIn: plan.entry === 'none' ? null : handoverAt(pageIndex - 1),
+            handoverOut: plan.exit === 'none' ? null : handoverAt(pageIndex),
             // The diagram's last page: the band ends just past its last step, at its box's edge.
             tail: plan.exit === 'none' ? Math.max(0, last.cellMm.w / 2 - halfWidth) : 0,
           }

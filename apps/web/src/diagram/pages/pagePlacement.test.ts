@@ -124,11 +124,11 @@ it('keeps the ribbon over moved pictures and keeps both sides of the spine level
     right = moved.pages[1]!;
   const centre = { x: cell.drawMm.x + cell.drawMm.w / 2 - 9, y: cell.drawMm.y + cell.drawMm.h / 2 - 7 };
   expect(left.band!.curves.some((c) => Math.hypot(c.to.x - centre.x, c.to.y - centre.y) <= base.bandWidthMm / 4 + 1e-8)).toBe(true);
-  expect(left.flow!.spineOut).toBe(right.flow!.spineIn);
+  expect(left.flow!.handoverOut).toBe(right.flow!.handoverIn);
   expect(left.band!.curves.at(-1)!.to.y).toBe(right.band!.from.y);
 });
 
-it('draws the lane again as a step is dragged only on its page and the page facing it across the spine', () => {
+it('draws the lane again as a step is dragged only on its page and the pages its lane meets over the spine and the page turn', () => {
   const doc = setPageSetup(
     insertSteps(
       createDiagram(),
@@ -138,14 +138,21 @@ it('draws the lane again as a step is dragged only on its page and the page faci
     { layout: 'flow', stepsPerPage: 7 },
   );
   const base = prepare(doc).layout;
-  // Pages 1–2 and 3–4 are spreads, a page turn between them: a step on page 3 moves the lane on pages 3 and 4 only.
+  // Pages 1–2 and 3–4 are spreads, a page turn between them: a step on page 3 moves the lane on pages 2, 3 and 4 only.
   expect(base.pages.map((page) => page.side)).toEqual(['left', 'right', 'left', 'right']);
   const moved = previewPlacement(base, base.pages[2]!.cells[3]!.stepId, 'picture', -6, 4);
   expect(moved.pages[0]!.band).toBe(base.pages[0]!.band);
-  expect(moved.pages[1]!.band).toBe(base.pages[1]!.band);
+  // Page 2 meets page 3's lane over the page turn at its first step, which did not move: drawn again, as it was.
+  expect(moved.pages[1]!.band).toEqual(base.pages[1]!.band);
   expect(moved.pages[2]!.band).not.toEqual(base.pages[2]!.band);
   expect(moved.pages[3]!.band).not.toBe(base.pages[3]!.band);
-  expect(moved.pages[2]!.flow!.spineOut).toBe(moved.pages[3]!.flow!.spineIn);
+  expect(moved.pages[2]!.flow!.handoverOut).toBe(moved.pages[3]!.flow!.handoverIn);
+  // Page 3's first step moved: the lane leaves page 2 at the height it now comes into page 3 at.
+  const first = previewPlacement(base, base.pages[2]!.cells[0]!.stepId, 'picture', 0, 6);
+  expect(first.pages[0]!.band).toBe(base.pages[0]!.band);
+  expect(first.pages[1]!.flow!.handoverOut).toBeCloseTo(base.pages[1]!.flow!.handoverOut! + 3, 9);
+  expect(first.pages[1]!.flow!.handoverOut).toBe(first.pages[2]!.flow!.handoverIn);
+  expect(first.pages[1]!.band!.curves.at(-1)!.to.y).toBe(first.pages[2]!.band!.from.y);
 });
 
 it('follows a step with the lane only where its picture was moved or resized, never for its number or its caption alone', () => {

@@ -14,10 +14,14 @@
  *   with an odd number of rows, from the top right with an even one. The
  *   packing gives such a page an odd number of bands (`flowPacking.ts`), so
  *   its first band starts at the top left and its last ends at the spine;
- * - across a page turn there is nothing to line up with: the next page starts
- *   at its top left as before, and the lane runs off a page, or comes in, only
- *   at its outer edge, never into the spine, where it would seem to go on on
- *   the facing page;
+ * - across a page turn the next page starts at its top left as before, and the
+ *   lane runs off a page, or comes in, only at its outer edge, never into the
+ *   spine, where it would seem to go on on the facing page. A right page the
+ *   lane came into over its spine reads up, so it leaves from its top row, and
+ *   the next page starts at its own top: the lane comes round the leaf's edge
+ *   at the height it left at (Zach's crane, 2026-10-14: "the end of the ribbon
+ *   on the 2nd page and the start of the ribbon on the 3rd don't line up"),
+ *   which {@link handoverHeight} chooses as it does over the spine;
  * - on the diagram's last page it ends just past its last step.
  *
  * **The curve** (Zach, 2026-10-14, choosing "(b4)" of the turns prototyped on
@@ -29,7 +33,7 @@
  * itself, the lane on level to it where it stands far out ({@link bendFoot}).
  * Where it runs off the paper, over the spine or off the outer edge
  * at a page turn, it is held level at the paper's edge, and runs straight on
- * from there, so the facing page's lane meets it at one height, heading one
+ * from there, so the next page's lane meets it at one height, heading one
  * way; its other ends have no curvature.
  *
  * **A turn** keeps its band inside the margin, which is kept for the turns and
@@ -174,8 +178,11 @@ export interface LaneTurn {
  * the index of the curve that runs into it (−1 for one the lane starts at).
  * `margin` is how far in from the paper's edge the page's printable area
  * starts, which its turns keep their band inside where they can
- * ({@link solveTurns}); `spineIn` and `spineOut` are its height at the spine,
- * coming in and going out, shared with the facing page; `offPage` how far
+ * ({@link solveTurns}); `handoverIn` and `handoverOut` are its height at the
+ * paper's edge, coming in and going out, shared with the page before and the
+ * page after, over the spine or a page turn ({@link handoverHeight}) — none
+ * where it meets no page there at one height, and over a page turn it then
+ * comes in, or runs off, level with its end picture; `offPage` how far
  * past the paper's edge it runs; `halfWidth` how far the band is drawn either
  * side of it; `tail` how far on past its last stop, the way it heads there, it
  * runs on a page it leaves nowhere — the diagram's last.
@@ -187,8 +194,8 @@ export function flowLane(input: {
   margin: number;
   halfWidth: number;
   offPage: number;
-  spineIn: number | null;
-  spineOut: number | null;
+  handoverIn: number | null;
+  handoverOut: number | null;
   tail?: number;
 }): { lane: Lane; turns: Map<number, LaneTurn>; into: number[] } | null {
   const stops = laneStops(input.stops, input.halfWidth);
@@ -220,6 +227,51 @@ export function flowLane(input: {
     ])
   );
   return { lane, turns: laneTurns, into };
+}
+
+/** A page as the lane on the page beside it meets it: how its rows run, and its stops. */
+export interface LanePage {
+  plan: FlowPagePlan;
+  stops: readonly LaneStop[];
+}
+
+/**
+ * The height the lane hands over at from page `before` to the page after it,
+ * held level at the paper's edge on both, so the two meet at one height
+ * heading one way: halfway between the centres of the picture it leaves the
+ * one from and the picture it comes into the other at, so it rises or falls
+ * on each page by half the difference, no further up or down the page than
+ * the two pictures stand.
+ * - Over the spine, always: a left page that hands over ends its bottom row
+ *   at the spine, and the right page reads up from its bottom row there.
+ * - Over a page turn, where the lane runs off the page before at its outer
+ *   edge and comes into the next at its own, and the page before read up to
+ *   its head — a right page the lane came into over its spine — as the next
+ *   page starts at its own head: turning the leaf, the lane comes round its
+ *   edge at the height it left at.
+ * - Nowhere else. The diagram's first page, standing alone on the right,
+ *   reads down from step 1 and leaves at its foot, and the next page starts
+ *   at its head: a height between would send each page's lane up or down
+ *   across its own rows. Each then runs off, or comes in, level with its own
+ *   end picture, as across every page turn before (`flowLane`).
+ * `halfWidth` is the band's, as {@link flowLane} turns through the stops.
+ */
+export function handoverHeight(before: LanePage, after: LanePage, halfWidth: number): number | null {
+  const out = laneStops(before.stops, halfWidth).at(-1);
+  const into = laneStops(after.stops, halfWidth)[0];
+  if (!out || !into) return null;
+  const turn = before.plan.up && runsOffAtTurn(before.plan, out) && comesInAtTurn(after.plan, into);
+  return before.plan.exit === 'spine' || turn ? (out.y + into.y) / 2 : null;
+}
+
+/** Whether the lane comes into a page over a page turn: at its outer edge, its first row reading in from there. */
+function comesInAtTurn(plan: FlowPagePlan, first: LaneStop): boolean {
+  return plan.entry === 'turn' && first.rightToLeft !== (plan.side === 'left');
+}
+
+/** Whether the lane runs off a page over a page turn: at its outer edge, its last row reading out to there. */
+function runsOffAtTurn(plan: FlowPagePlan, last: LaneStop): boolean {
+  return plan.exit === 'turn' && last.rightToLeft === (plan.side === 'left');
 }
 
 /** A straight run from `from` to `to`, as a cubic. */
@@ -260,17 +312,18 @@ function lanePoints(
   const points: LanePoint[] = [];
   let [start, end, stubIn, stubOut]: (LanePoint | null)[] = [null, null, null, null];
 
-  if (plan.entry === 'spine' && input.spineIn !== null) {
+  if (plan.entry === 'spine' && input.handoverIn !== null) {
     // In over the spine, at the facing page's height, level.
     const spine = outerLeft ? W : 0;
     const inward = outerLeft ? -1 : 1;
-    stubIn = { x: spine - inward * offPage, y: input.spineIn };
-    points.push({ x: spine, y: input.spineIn });
+    stubIn = { x: spine - inward * offPage, y: input.handoverIn };
+    points.push({ x: spine, y: input.handoverIn });
     start = { x: inward, y: 0 };
-  } else if (plan.entry === 'turn' && first.rightToLeft !== outerLeft) {
-    // In from the outer edge, at the first picture's height.
-    stubIn = { x: outerLeft ? -offPage : W + offPage, y: first.y };
-    points.push({ x: outerLeft ? 0 : W, y: first.y });
+  } else if (comesInAtTurn(plan, first)) {
+    // In from the outer edge, level: at the height the page before left at, or else the first picture's.
+    const y = input.handoverIn ?? first.y;
+    stubIn = { x: outerLeft ? -offPage : W + offPage, y };
+    points.push({ x: outerLeft ? 0 : W, y });
     start = along(first.rightToLeft);
   }
 
@@ -296,17 +349,19 @@ function lanePoints(
     points.push({ x: stop.x, y: stop.y });
   });
 
-  if (plan.exit === 'spine' && input.spineOut !== null) {
+  if (plan.exit === 'spine' && input.handoverOut !== null) {
     const spine = outerLeft ? W : 0;
     const outward = outerLeft ? 1 : -1;
-    points.push({ x: spine, y: input.spineOut });
+    points.push({ x: spine, y: input.handoverOut });
     end = { x: outward, y: 0 };
-    stubOut = { x: spine + outward * offPage, y: input.spineOut };
-  } else if (plan.exit === 'turn' && last.rightToLeft === outerLeft) {
-    // Off the outer edge, where the page turns; never into the spine.
-    points.push({ x: outerLeft ? 0 : W, y: last.y });
+    stubOut = { x: spine + outward * offPage, y: input.handoverOut };
+  } else if (runsOffAtTurn(plan, last)) {
+    // Off the outer edge, where the page turns, never into the spine: level, at the height the next page comes in at,
+    // or else the last picture's.
+    const y = input.handoverOut ?? last.y;
+    points.push({ x: outerLeft ? 0 : W, y });
     end = along(last.rightToLeft);
-    stubOut = { x: outerLeft ? -offPage : W + offPage, y: last.y };
+    stubOut = { x: outerLeft ? -offPage : W + offPage, y };
   } else if (plan.exit === 'none' && input.tail !== undefined && input.tail > 0) {
     // The diagram's end: on a little past the last step, the way its row reads — or down, from a step in a bend.
     const heading = last.bend ? { x: 0, y: plan.up ? -1 : 1 } : along(last.rightToLeft);

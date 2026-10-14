@@ -160,6 +160,42 @@ describe('a held page', () => {
   );
 });
 
+describe('the lane between two held pages (Zach’s crane, 2026-10-14: "the end of the ribbon on the 2nd page and the start of the ribbon on the 3rd don’t line up")', () => {
+  it('leaves one page and comes into the next at one height, over every spine and every page turn it hands over at, packing nothing', () => {
+    let [spines, turns] = [0, 0];
+    for (const { name, document: fixture } of pageLayoutFixtures().filter(({ document }) => document.page.layout === 'flow')) {
+      for (const firstPageSide of ['left', 'right'] as const) {
+        const document = adopted(setPageSetup(fixture, { firstPageSide }));
+        const layout = layOut(document);
+        // Held as adopted: no page is packed again for the lane.
+        expect(layout.packed, name).toBeUndefined();
+        const W = layout.paper.widthMm;
+        layout.pages.forEach((page, index) => {
+          const next = layout.pages[index + 1];
+          if (!next || !page.band || !next.band) return;
+          const label = `${name}, first page ${firstPageSide}, pages ${index + 1}–${index + 2}`;
+          // Off this page at its right edge — the spine of a left page, the outer edge of a right one — and onto
+          // the next at its left; a page that ends at its last picture hands over nothing.
+          if (page.band.curves.at(-1)!.to.x !== W + 10 || next.band.from.x !== -10) return;
+          const [out, into] = [page.band.curves.at(-2)!.to, next.band.curves[0]!.to];
+          const plan = page.flow!.plan;
+          // The diagram's first page alone on the right reads down from step 1 and leaves at its foot, the next
+          // starting at its head: each runs off at its own picture's height.
+          if (plan.exit === 'turn' && !plan.up) {
+            expect([out.y, into.y], label).toEqual([page.flow!.stops.at(-1)!.y, next.flow!.stops[0]!.y]);
+            return;
+          }
+          expect(into.y, label).toBeCloseTo(out.y, 9);
+          if (plan.exit === 'spine') spines += 1;
+          else turns += 1;
+        });
+      }
+    }
+    expect(spines).toBeGreaterThan(5);
+    expect(turns).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe('a caption resized on a held page (`diagram-caption-resize.md`)', () => {
   it.each(pageLayoutFixtures().map(({ name, document }) => [name, document] as const))(
     'sets only that caption, every other step byte for byte, and re-packs to hold it: %s',
@@ -457,10 +493,10 @@ describe('a structural edit', () => {
             return;
           }
           // Beside a page packed again, the lane leaving it or coming into it may meet the other page's at another
-          // height across their spine (halfway between the two, `spineAt`). Through the same stops as before, it
+          // height over their spine or page turn (halfway between the two, `handoverHeight`). Through the same stops as before, it
           // is one curve (`flowLane.ts`, "(b4)"), so all of it is drawn again — and a glyph standing at a turn's
           // middle on it with it. Every other glyph stands as it was.
-          const stopsOf = ({ spineIn: _in, spineOut: _out, ...rest }: NonNullable<LayoutPage['flow']>) => rest;
+          const stopsOf = ({ handoverIn: _in, handoverOut: _out, ...rest }: NonNullable<LayoutPage['flow']>) => rest;
           expect(stopsOf(page.flow!), at).toEqual(stopsOf(was.flow!));
           const middles = flowLane(page.flow!)!.turns;
           page.turns.forEach((turn, t) => {

@@ -1,13 +1,15 @@
-import { flowLane, type FlowPagePlan, type LaneStop } from './flowLane';
+import { handoverHeight, type flowLane, type FlowPagePlan, type LanePage, type LaneStop } from './flowLane';
 
 /**
  * Zach's crane_final (A4, a 12 mm margin, a 25 mm band), as the layout hands
  * its pages to the lane at #443's 8ca99df5e: each picture's centre, its row,
- * whether a hand placed it, and its box as drawn. The file whose turns chose
- * the lane's rule (`flowLane.ts`, Zach's "(b4)"): every turn on its three
- * pages stands on the margin, pages 1 and 2 each bowing twice to keep their
- * turns 22 mm round; on page 3, 23→24 bows 0.75 mm under step 25, and 26→27
- * is 29.8 mm round with no bow.
+ * whether a hand placed it, and its box as drawn; and the heights the lane
+ * hands over at between them, over the spine and the page turn, found as the
+ * layout finds them (`handoverHeight`). The file whose turns chose the lane's
+ * rule (`flowLane.ts`, Zach's "(b4)"): every turn on its three pages stands
+ * on the margin, pages 1 and 2 each bowing twice to keep their turns 22 mm
+ * round; on page 3, 23→24 bows 0.75 mm under step 25, and 26→27 is 29.8 mm
+ * round with no bow.
  */
 export const CRANE = { pageWidth: 210, margin: 12, halfWidth: 12.5, offPage: 10 } as const;
 
@@ -23,11 +25,9 @@ const stop = ([x, y, row, rightToLeft, placed, left, right, top, bottom]: Row): 
   picture: { left, right, top, bottom },
 });
 
-const PAGES: { plan: FlowPagePlan; spineIn: number | null; spineOut: number | null; tail: number; rows: Row[] }[] = [
+const PAGES: { plan: FlowPagePlan; tail: number; rows: Row[] }[] = [
   {
     plan: { side: 'left', up: false, firstRightToLeft: false, entry: 'none', exit: 'spine' },
-    spineIn: null,
-    spineOut: 232.7433,
     tail: 0,
     rows: [
       [40.375, 62.404, 0, false, false, 14.051, 66.699, 36.08, 88.728, 1],
@@ -43,8 +43,6 @@ const PAGES: { plan: FlowPagePlan; spineIn: number | null; spineOut: number | nu
   },
   {
     plan: { side: 'right', up: true, firstRightToLeft: false, entry: 'spine', exit: 'turn' },
-    spineIn: 232.7433,
-    spineOut: null,
     tail: 0,
     rows: [
       [37.215, 235.9823, 0, false, true, 12.312, 62.118, 201.85, 270.1146, 10],
@@ -62,8 +60,6 @@ const PAGES: { plan: FlowPagePlan; spineIn: number | null; spineOut: number | nu
   },
   {
     plan: { side: 'left', up: false, firstRightToLeft: false, entry: 'turn', exit: 'none' },
-    spineIn: null,
-    spineOut: null,
     tail: 13.72,
     rows: [
       [44.17, 67.8423, 0, false, true, 26.062, 62.278, 37.71, 97.9746, 21],
@@ -81,10 +77,22 @@ const PAGES: { plan: FlowPagePlan; spineIn: number | null; spineOut: number | nu
 /** The step numbers on each of the crane's pages, in reading order. */
 export const CRANE_STEPS: readonly (readonly number[])[] = PAGES.map((page) => page.rows.map((row) => row[9]));
 
+/** The crane's `index`th page as the lane on the page beside it meets it. */
+const lanePage = (index: number): LanePage | null => {
+  const page = PAGES[index];
+  return page ? { plan: page.plan, stops: page.rows.map(stop) } : null;
+};
+
+/** The height the lane hands over at from the crane's `index`th page to the next, as the layout finds it. */
+const handover = (index: number): number | null => {
+  const [before, after] = [lanePage(index), lanePage(index + 1)];
+  return before && after ? handoverHeight(before, after, CRANE.halfWidth) : null;
+};
+
 /** The lane's input for the crane's `index`th page. */
 export function craneFlow(index: number): Parameters<typeof flowLane>[0] {
   const page = PAGES[index]!;
-  return { ...CRANE, plan: page.plan, spineIn: page.spineIn, spineOut: page.spineOut, tail: page.tail, stops: page.rows.map(stop) };
+  return { ...CRANE, plan: page.plan, handoverIn: handover(index - 1), handoverOut: handover(index), tail: page.tail, stops: page.rows.map(stop) };
 }
 
 export const CRANE_PAGES = PAGES.length;

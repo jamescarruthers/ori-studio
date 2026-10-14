@@ -258,7 +258,14 @@ Phase 3 (layout, 2026-10-12):
   spline in chord length, `laneSpline.ts`), through every picture's centre
   and one point in each turn's middle, halfway between the rows' end pictures
   in height; held level at the paper's edge where it runs off over the spine
-  or at a page turn. A turn keeps its band inside the margin (the margin holds
+  or at a page turn, at one height on both pages: halfway between the picture
+  it leaves and the one it comes into (`handoverHeight`). Over the spine
+  always; over a page turn where the page before read up to its head (a right
+  page entered at its spine), so the lane comes round the leaf's edge where it
+  left (Zach's crane, 2026-10-14: pages 2 → 3 left at 58.10 mm and came in at
+  68.28; now both 63.19). The diagram's first page alone on the right reads
+  down and leaves at its foot, the next page starts at its head: no height
+  meets both, so each keeps its own. A turn keeps its band inside the margin (the margin holds
   turn and rotate symbols): with room for a round loop — its middle half the
   rows' pitch past the outer end picture — nothing else moves; without, its
   middle stands as deep as the margin lets it, the band's outer edge on the

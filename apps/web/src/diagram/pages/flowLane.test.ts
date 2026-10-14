@@ -409,7 +409,7 @@ describe('a turn between two rows (Zach, 2026-10-14: "(b4)")', () => {
   /** Zach's crane, page 1, its first two rows alone: one turn, 3→4, against the right margin. */
   const twoRows = (patch: (stop: LaneStop, index: number) => LaneStop = (stop) => stop) => {
     const page = craneFlow(0);
-    return { ...page, plan: flowPagePlan(0, 1, 'left', 2), spineOut: null, stops: page.stops.slice(0, 6).map(patch) };
+    return { ...page, plan: flowPagePlan(0, 1, 'left', 2), handoverOut: null, stops: page.stops.slice(0, 6).map(patch) };
   };
 
   it('bows a row by the least it must: a step less, and the turn would be tighter than TURN_RADIUS_MM', () => {
@@ -437,7 +437,7 @@ describe('a turn between two rows (Zach, 2026-10-14: "(b4)")', () => {
     const stops = page.stops
       .slice(0, 5)
       .map((stop, index) => (index === 2 ? shifted(stop, out) : index === 1 && lift !== undefined ? bowless(stop, -lift) : stop));
-    return { ...page, plan: flowPagePlan(0, 1, 'left', 2), spineOut: null, stops };
+    return { ...page, plan: flowPagePlan(0, 1, 'left', 2), handoverOut: null, stops };
   };
 
   it('bows a turn no bow can make TURN_RADIUS_MM round as round as one can, by the least that leaves it so: its bow never jumps from all to none', () => {
@@ -614,6 +614,45 @@ describe('a printed spread', () => {
       });
       expect(spreads, `${JSON.stringify(setup)} ${firstPageSide}`).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  it('carries the lane over a page turn at one height, as over the spine, where the page before read up to its head (Zach’s crane, 2026-10-14)', () => {
+    let [handed, foot] = [0, 0];
+    for (const setup of SETUPS) {
+      for (const firstPageSide of ['left', 'right'] as const) {
+        const result = flow(steps(4 * (setup.stepsPerPage ?? 9) + 2), { ...setup, firstPageSide });
+        const W = result.paper.widthMm;
+        result.pages.forEach((page, index) => {
+          const next = result.pages[index + 1];
+          if (page.side !== 'right' || !next) return;
+          const label = `${JSON.stringify(setup)} ${firstPageSide} pages ${page.number}–${next.number}`;
+          const [lane, nextLane] = [page.band!, next.band!];
+          // Where the lane runs off the right page's outer edge and into the next page's: else nothing meets.
+          if (lane.curves.at(-1)!.to.x !== W + 10 || nextLane.from.x !== -10) return;
+          const [out, into] = [lane.curves.at(-2)!.to, nextLane.curves[0]!.to];
+          const [last, first] = [page.flow!.stops.at(-1)!, next.flow!.stops[0]!];
+          expect([out.x, into.x], label).toEqual([W, 0]);
+          if (!page.flow!.plan.up) {
+            // The diagram's first page alone on the right reads down from step 1 and leaves at its foot; the next
+            // starts at its head. No one height meets both: each runs off level with its own picture.
+            foot += 1;
+            expect([out.y, into.y], label).toEqual([last.y, first.y]);
+            return;
+          }
+          handed += 1;
+          // One height on both pages — halfway between the picture it leaves and the one it comes into — level
+          // there, and on into the bleed both ways.
+          expect(into.y, label).toBeCloseTo(out.y, 9);
+          expect(out.y, label).toBeCloseTo((last.y + first.y) / 2, 9);
+          expect(lane.curves.at(-2)!.c2.y, label).toBeCloseTo(out.y, 9);
+          expect(lane.curves.at(-1)!.to.y, label).toBeCloseTo(out.y, 9);
+          expect(nextLane.from.y, label).toBeCloseTo(into.y, 9);
+          expect(nextLane.curves[1]!.c1.y, label).toBeCloseTo(into.y, 9);
+        });
+      }
+    }
+    expect(handed).toBeGreaterThan(20);
+    expect(foot).toBeGreaterThan(0);
   });
 
   it('starts the heart’s page 2 at its bottom left, its bands running up', () => {
@@ -800,13 +839,30 @@ describe('Zach’s crane_final, its turns as he chose them (2026-10-14: "(b4)", 
 
   it('hands over at the spine as before: level, at one height, and on into the bleed', () => {
     const [left, right] = [flowLane(pages[0]!.input)!.lane, flowLane(pages[1]!.input)!.lane];
-    const spine = pages[0]!.input.spineOut!;
+    const spine = pages[0]!.input.handoverOut!;
     expect(left.curves.at(-2)!.to).toEqual({ x: 210, y: spine });
     expect(left.curves.at(-2)!.c2.y).toBeCloseTo(spine, 9);
     expect(left.curves.at(-1)!.to).toEqual({ x: 220, y: spine });
     expect(right.from).toEqual({ x: -10, y: spine });
     expect(right.curves[0]!.to).toEqual({ x: 0, y: spine });
     expect(right.curves[1]!.c1.y).toBeCloseTo(spine, 9);
+  });
+
+  it('hands over from page 2 to page 3 at one height over the page turn: halfway between steps 20 and 21, level, on into the bleed', () => {
+    // Step 20 leaves page 2 at 56.66 mm, and step 21 starts page 3 at 67.84: each ran off at its own (Zach: "the end
+    // of the ribbon on the 2nd page and the start of the ribbon on the 3rd don't line up").
+    const [two, three] = [flowLane(pages[1]!.input)!.lane, flowLane(pages[2]!.input)!.lane];
+    const [twenty, twentyOne] = [pages[1]!.input.stops.at(-1)!, pages[2]!.input.stops[0]!];
+    const turn = (twenty.y + twentyOne.y) / 2;
+    expect(turn).toBeCloseTo(62.2523, 4);
+    expect(two.curves.at(-2)!.to.x).toBe(210);
+    expect(two.curves.at(-2)!.to.y).toBeCloseTo(turn, 9);
+    expect(two.curves.at(-2)!.c2.y).toBeCloseTo(turn, 9);
+    expect(two.curves.at(-1)!.to).toEqual({ x: 220, y: two.curves.at(-2)!.to.y });
+    expect(three.from).toEqual({ x: -10, y: three.curves[0]!.to.y });
+    expect(three.curves[0]!.to.x).toBe(0);
+    expect(three.curves[0]!.to.y).toBeCloseTo(turn, 9);
+    expect(three.curves[1]!.c1.y).toBeCloseTo(turn, 9);
   });
 });
 
@@ -821,7 +877,7 @@ describe('a step standing in a bend', () => {
     { x: 50, y: 128, row: 1, rightToLeft: true },
   ];
   const laneOf = (list: LaneStop[]) =>
-    flowLane({ stops: list, plan, pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null })!;
+    flowLane({ stops: list, plan, pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, handoverIn: null, handoverOut: null })!;
 
   it('is the middle of its turn: the lane turns through its centre, heading down there, with no middle beside it', () => {
     const { lane, turns, into } = laneOf(stops());
@@ -853,7 +909,7 @@ describe('a step standing in a bend', () => {
   it('is a step of the band it stands level with, the lane turning past it inside the margin: no elbow (A5, seven a page, page 2)', () => {
     // Level with the band before it, nearer than the band is half wide (10 mm): the lane runs on to it along the
     // band, and turns past it, its band's outer edge no further out than the margin (210 − 6 − 10).
-    const input = (list: LaneStop[]) => ({ stops: list, plan, pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null });
+    const input = (list: LaneStop[]) => ({ stops: list, plan, pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, handoverIn: null, handoverOut: null });
     const before = turnsOf(input(stops(170, 55)));
     expect(before.map(({ n }) => n)).toEqual([3]);
     expect(before[0]!.past).toBeLessThanOrEqual(1e-6);
@@ -878,7 +934,7 @@ describe('a step standing in a bend', () => {
       { x: 72.95, y: 54.66, row: 2, rightToLeft: false, placed: true },
       { x: 125.49, y: 59.91, row: 2, rightToLeft: false, placed: true },
     ];
-    const input = { stops: list, plan: up, pageWidth: 210, margin: 6, halfWidth: 12.5, offPage: 10, spineIn: null, spineOut: null };
+    const input = { stops: list, plan: up, pageWidth: 210, margin: 6, halfWidth: 12.5, offPage: 10, handoverIn: null, handoverOut: null };
     const { lane, turns, into } = flowLane(input)!;
     // No turn between 16 and 17: the lane runs on to 17 along band 1, and turns after it, toward the edge.
     expect([...turns.keys()]).toEqual([3]);
@@ -895,7 +951,7 @@ describe('a step standing in a bend', () => {
       { x: 100, y: 140, row: 2, rightToLeft: false, placed: true },
       { x: 150, y: 54.66, row: 2, rightToLeft: false },
     ];
-    const { turns } = flowLane({ stops: list, plan: up, pageWidth: 210, margin: 6, halfWidth: 12.5, offPage: 10, spineIn: null, spineOut: null })!;
+    const { turns } = flowLane({ stops: list, plan: up, pageWidth: 210, margin: 6, halfWidth: 12.5, offPage: 10, handoverIn: null, handoverOut: null })!;
     expect([...turns.keys()]).toEqual([2]);
   });
 
@@ -908,7 +964,7 @@ describe('a step standing in a bend', () => {
       { x: 120, y: 130, row: 0, rightToLeft: false },
       { x: 165, y: 136, row: 0, rightToLeft: false },
     ];
-    const { lane, into } = flowLane({ stops: rising, plan: one, pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null })!;
+    const { lane, into } = flowLane({ stops: rising, plan: one, pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, handoverIn: null, handoverOut: null })!;
     const [toward, from] = [lane.curves[into[1]!]!, lane.curves[into[1]! + 1]!];
     expect(toward.c2.y).toBeLessThan(118);
     expect(from.c1.y).toBeGreaterThan(118);
@@ -919,7 +975,7 @@ describe('a step standing in a bend', () => {
 
   it('ends the diagram on down from a step in a bend that is its last', () => {
     const list = stops().slice(0, 3);
-    const { lane } = flowLane({ stops: list, plan: flowPagePlan(0, 1, 'left', 3), pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, spineIn: null, spineOut: null, tail: 8 })!;
+    const { lane } = flowLane({ stops: list, plan: flowPagePlan(0, 1, 'left', 3), pageWidth: 210, margin: 6, halfWidth: 10, offPage: 10, handoverIn: null, handoverOut: null, tail: 8 })!;
     expect(lane.curves.at(-1)!.to).toEqual({ x: 170, y: 98 });
   });
 });
