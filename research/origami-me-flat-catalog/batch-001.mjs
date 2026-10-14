@@ -10,7 +10,7 @@ const hash = (data) => createHash('sha256').update(data).digest('hex');
 const stateHash = (t) => hash(JSON.stringify(t.e.canonical_keys(t.state).sort()));
 const template = JSON.parse(fs.readFileSync(path.join(dir, '../../tests/fixtures/fold-examples/petal-fold.osf')));
 
-function publish(t, source, observations = {}) {
+export function publish(t, source, observations = {}) {
   const filename = `models/${t.slug}.osf`;
   const manifestFile = path.join(dir, `batches/${t.slug}.validation.json`);
   const destination = path.join(dir, filename);

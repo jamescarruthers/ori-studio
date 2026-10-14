@@ -1,0 +1,38 @@
+{
+  "source": "https://origami.me/dog/",
+  "file": "models/dog.osf",
+  "fileSha256": "4bde941bae11c0967bac43fd003864397607036699a912095389974bde7454cb",
+  "nodes": 15,
+  "folds": 11,
+  "finalFaces": 28,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "2602e8d8a864cdfcb800efe26a70f6eae4f92dafb01644de1f23847e50ddb90b",
+    "ab7f6185d373d25d066a3f06965a16989ba6a43ecbe1d3177655d04f86a1f658",
+    "e317ecdbfcc1c8554264ba13e2d0c9aa15edcbea9ddfda001eeadae9564139ff",
+    "38d954c4683e68c80f9e7a1727f576d67c212d375502e902486161c5ec1ef5c8",
+    "8e800b9bd90274e1135db10b3c65c8fba5c8702ef9cec248a6e867c9c396ba35",
+    "1a9399db0e7cf1beddb590003ed9adbf5ac837a992add88f0b89179c22b9ffd4",
+    "e99b6a28c24e8429b0a0efe4f00b1bc7717c268a98c7b9399a0b2b91deedccdf",
+    "a9272dc119bf01eda4c205136ebf557216b5294f233c8b4468cb8ca71bff335a",
+    "3af6f19801003818c46bc1675e53523148e4357d55781a1402e19ef2712b3679",
+    "694b635193c7c647a43cf60702308e865e4dcf8d1e0fe47278e62aa2610fdedf",
+    "e3472ca23bbdc3bc4ccb41ea62714f7778aaca5894621e3eb7fc5e73fbfd28a7",
+    "8fd552ac4958c2cad445e04f12556aab0d9a1ad5048daa0b961fea78d3694761",
+    "aec9f2e0f45f9b63c99a7b80eeaab868831af5f8d4e0a824b28948a86e8295fb"
+  ],
+  "sourceStepsCompleted": 12,
+  "sourceSteps": 15,
+  "blockedAtSourceStep": 13,
+  "audit": "partial; native nodes reviewed, step 13 unresolved",
+  "proportions": {
+    "p1": 0.6371067811865476,
+    "p2": 0.8442135623730952,
+    "p3": 0.7892135623730951,
+    "top1": 1.2742135623730952,
+    "top2": 1.1642135623730951
+  }
+}

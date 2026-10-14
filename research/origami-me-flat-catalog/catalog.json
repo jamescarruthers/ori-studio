@@ -8,8 +8,6 @@
   ],
   "coverage": "All five pages of the current index, cross-checked against all 142 easy collection entries. Eligibility review ongoing.",
   "nextQueue": [
-    "bookmark",
-    "dog",
     "paper-envelope",
     "necktie"
   ],
@@ -134,13 +132,17 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 10,
+      "model": "models/bookmark.osf",
+      "gaps": [
+        "F006",
+        "F008"
+      ],
+      "notes": "Complete; audit half-length precrease and both hidden pocket layers.",
+      "report": "batches/002.md"
     },
     {
       "slug": "cat-face",
@@ -235,13 +237,17 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 12,
+      "model": "models/dog.osf",
+      "gaps": [
+        "F006",
+        "F009"
+      ],
+      "notes": "Partial through source 12. Step 13 layer/compound interpretation unresolved; no confirmed engine gap.",
+      "report": "batches/002.md"
     },
     {
       "slug": "duck",
@@ -2440,5 +2446,9 @@
       "gaps": [],
       "notes": ""
     }
-  ]
+  ],
+  "blockedInvestigations": [
+    "dog"
+  ],
+  "lastBatch": "batches/002.md"
 }

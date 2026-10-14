@@ -28,6 +28,8 @@ Check every intermediate step, visible paper side, layer order, tucked flap, and
 - Batch 0: [previous five-design report](../2026-10-13-origami-fold-trials/REPORT.md). Heart, Swan, and Cicada are existing flat sequences. Box and Crane are retained as excluded 3D completion / flat alternatives. Heart's corrected tuck order was acknowledged by the user; no blanket approval of all models is assumed.
 - Batch 1: [Easter Egg and Cat Face](batches/001.md), both **ready for audit**. Two native models, 18 numbered folds, all states replayed. No new missing flat primitive; one open audit UI gap (F006).
 
+- Batch 2: [Bookmark and Dog](batches/002.md). Bookmark is **ready for audit**; Dog is **blocked at source 13**, with its valid prefix saved. All 29 saved states replayed. Bookmark adds an internal pocket-order audit case; Dog remains an investigation, not a confirmed missing primitive.
+
 ## Functionality findings
 
 See [GAPS.md](GAPS.md). Separate missing operations, UI limitations, authoring mistakes, and ambiguous diagram proportions. Record a suspected issue before investigation; call it a confirmed engine gap only with a reproducible refusal or wrong result under correct inputs.
@@ -38,14 +40,15 @@ See [GAPS.md](GAPS.md). Separate missing operations, UI limitations, authoring m
 - [x] Carry forward previous models without overwriting user edits.
 - [x] Save and validate the first two new flat models.
 - [x] Schedule small continuation batches and maintain audit links.
+- [x] Complete batch 2 and retain exact blocked operations and last valid states.
 - [ ] Receive user audits and resolve corrections.
 - [ ] Classify and attempt every remaining eligible design.
 - [ ] Consolidate evidenced implementation requirements.
 
 ## Next work
 
-1. Audit [Easter Egg](models/easter-egg.osf) and [Cat Face](models/cat-face.osf); preserve user changes and record corrections.
-2. Continue the remaining Very Easy models, including Bookmark, Dog, Paper Envelope, and Necktie; classify each before authoring.
+1. Audit [Bookmark](models/bookmark.osf), plus the earlier [Easter Egg](models/easter-egg.osf) and [Cat Face](models/cat-face.osf); preserve user changes and record corrections.
+2. Next two queued Very Easy models: Paper Envelope and Necktie. Dog is retained separately as blocked at source 13 (F009); resolve its head-flap interpretation before claiming completion.
 3. Work through all remaining indexed designs in difficulty order, retaining explicit exclusions and access blockers.
 4. Apply audit corrections before expanding a disputed folding technique to more models.
 5. Reconcile the full catalog and group confirmed gaps into implementation work only after the evidence exists.
@@ -60,7 +63,7 @@ The machine-readable [catalog.json](catalog.json) is the per-design ledger. Run 
 
 ## Per-design progress
 
-Inventory: 151 entries. excluded 3D / flat variant: 2; queued: 144; ready for audit: 5.
+Inventory: 151 entries. blocked: 1; excluded 3D / flat variant: 2; queued: 142; ready for audit: 6.
 
 | Design / tutorial | Difficulty | Eligibility | Progress | Fold file / notes |
 | --- | --- | --- | --- | --- |
@@ -71,13 +74,13 @@ Inventory: 151 entries. excluded 3D / flat variant: 2; queued: 144; ready for au
 | [Origami Angelfish](https://origami.me/angelfish/) | Very Easy | unreviewed | queued |  |
 | [Origami Bird](https://origami.me/bird/) | Very Easy | unreviewed | queued |  |
 | [Origami Boat](https://origami.me/traditional-boat/) | Very Easy | unreviewed | queued |  |
-| [Origami Bookmark](https://origami.me/bookmark/) | Very Easy | unreviewed | queued |  |
+| [Origami Bookmark](https://origami.me/bookmark/) | Very Easy | flat | ready for audit | [Open .osf](models/bookmark.osf); [Batch notes](batches/002.md); Complete; audit half-length precrease and both hidden pocket layers. |
 | [Origami Cat Face](https://origami.me/cat-face/) | Very Easy | flat | ready for audit | [Open .osf](models/cat-face.osf); [Batch notes](batches/001.md); Complete flat sequence; audit pocket tuck and nose. Decorative eyes omitted. |
 | [Origami Christmas Tree](https://origami.me/christmas-tree/) | Very Easy | unreviewed | queued |  |
 | [Origami Cicada](https://origami.me/cicada/) | Very Easy | flat | ready for audit | [Open .osf](../2026-10-13-origami-fold-trials/models/cicada.osf); [Batch notes](../2026-10-13-origami-fold-trials/REPORT.md); Existing sequence; preserve local user edits. |
 | [Origami Cube](https://origami.me/cube/) | Very Easy | unreviewed | queued |  |
 | [Origami Cup](https://origami.me/cup/) | Very Easy | unreviewed | queued |  |
-| [Origami Dog](https://origami.me/dog/) | Very Easy | unreviewed | queued |  |
+| [Origami Dog](https://origami.me/dog/) | Very Easy | flat | blocked | [Open .osf](models/dog.osf); [Batch notes](batches/002.md); Partial through source 12. Step 13 layer/compound interpretation unresolved; no confirmed engine gap. |
 | [Origami Duck](https://origami.me/duck/) | Very Easy | unreviewed | queued |  |
 | [Origami Easter Egg](https://origami.me/easter-egg/) | Very Easy | flat | ready for audit | [Open .osf](models/easter-egg.osf); [Batch notes](batches/001.md); Complete flat sequence; approximate symmetric shaping. |
 | [Origami Elephant](https://origami.me/elephant/) | Very Easy | unreviewed | queued |  |

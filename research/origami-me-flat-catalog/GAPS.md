@@ -29,3 +29,19 @@ Non-flat simulation, inflated bodies, curved shaping, standing box walls, and 3D
 ## F007 — Cat Face target and seed selection
 
 **Resolved authoring investigation; no engine implementation requested.** An all-layer crown fold clipped the ears, a boundary seed was invalid, and choosing the exposed muzzle as the tuck target produced `tuck_infeasible`. The corrected depth seed and pocket support target complete the model using existing operations. Evidence and reproducible native state are in [batch 1](batches/001.md). Preserve this case for usability evaluation, but do not count the rejected inputs as unsupported flat folding.
+
+## F008 — Bookmark pocket depth is not determined by the exposed face
+
+**Resolved authoring investigation; no engine change needed.** Source: [Bookmark](https://origami.me/bookmark/), instruction 10. The initial outer-wall target was infeasible. Targeting the next wall gives a unique valid tuck between the original folded-corner pocket walls. A different feasible target inserts the same flap deeper and preserves both the silhouette and exposed material, so front-only checks are insufficient.
+
+[Batch 2](batches/002.md) retains the last valid native state, exact rejected and accepted requests, and a valid-but-wrong deeper placement. Acceptance checks compare both complete pocket stacks: old depths 0–1 stay above the inserted layers, and old depths 2–5 stay below them. Four exposed material points must also remain unchanged. This extends the audit method; it is not a request to disallow intentionally deeper tucks.
+
+## F009 — Dog body fold under the head flap
+
+**Blocked authoring/compound-operation investigation; not a confirmed engine gap.** Source: [Dog](https://origami.me/dog/), instruction 13, with dependent head lowering in 14. The editable [partial model](models/dog.osf) stops at native node 15, source 12. Source 15 is also unattempted.
+
+The required body fold must leave the overlying head flap available while its upper part passes underneath, on both sides of the model. A depth-one valley request includes that head paper in its connected moving block; the tuck version refuses `tuck_target_moves`, face 24. A tentative folded-edge swivel request refuses `swivel_not_a_fold`, which means the crease selection is not yet validated. [Inputs/results](batches/dog-step13-probe.json), [analysis/swivel attempt](batches/dog-step13-analysis.json), [recipe/probe](dog-step13-probe.mjs).
+
+Before implementation is proposed, resolve the correct layer anchors and local crease arrangement, including whether source steps 13–14 form one compound flat transition. Test existing reverse/swivel operations with those verified inputs. A successful completion must preserve the source's head-flap layering, remove the exposed white body region in the intended way, and retain an editable replay through the final flat profile. No silhouette-only workaround was saved. Do not expand scope to 3D or weaken guards.
+
+Related source ambiguity: source-12 text specifies a quarter turn but diagram 13 shows a 45° orientation. The file follows the diagram. A corner seed refusal in source 11 was separately corrected by an interior depth seed; it is not the blocker.

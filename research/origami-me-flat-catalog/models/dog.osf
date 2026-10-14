@@ -1,0 +1,471 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-dog",
+    "title": "Dog — partial through source step 12 (batch 2)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-dog",
+        "title": "Dog — partial through source step 12 (batch 2)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-dog-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Set-up: white side up, diamond orientation. Source: https://origami.me/dog/"
+          },
+          {
+            "id": "fstep-dog-2",
+            "parent": "fstep-dog-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.2828427124746189,
+                0.7071067811865475
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-dog-3",
+            "parent": "fstep-dog-2",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.0000000000000002
+                  ],
+                  [
+                    0.5857864376269051,
+                    0
+                  ]
+                ]
+              },
+              "moving": [
+                0.8485281374238569,
+                0.14142135623730956
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2a: Align the upper-left edge with the centerline."
+          },
+          {
+            "id": "fstep-dog-4",
+            "parent": "fstep-dog-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.0000000000000002
+                  ],
+                  [
+                    0,
+                    0.5857864376269051
+                  ]
+                ]
+              },
+              "moving": [
+                0.1414213562373094,
+                0.848528137423857
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2b: Repeat on the right."
+          },
+          {
+            "id": "fstep-dog-5",
+            "parent": "fstep-dog-4",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "3: Turn over."
+          },
+          {
+            "id": "fstep-dog-6",
+            "parent": "fstep-dog-5",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1.0000000000000002
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865477,
+                  0.7071067811865475
+                ],
+                "d": 0.7071067811865477
+              }
+            },
+            "note": "4: Bring the top corner to the bottom corner."
+          },
+          {
+            "id": "fstep-dog-7",
+            "parent": "fstep-dog-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.36289321881345277,
+                    0.7999999999999997
+                  ],
+                  [
+                    0.8000000000000005,
+                    0.36289321881345254
+                  ]
+                ]
+              },
+              "moving": [
+                0.98,
+                0.9500000000000002
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.98,
+                  0.9500000000000002
+                ],
+                "layers": 2
+              }
+            },
+            "note": "5: Raise the folded flap; first pleat width is 0.07 sheet units (approximate source reference)."
+          },
+          {
+            "id": "fstep-dog-8",
+            "parent": "fstep-dog-7",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "6: Turn over to the open kite edges."
+          },
+          {
+            "id": "fstep-dog-9",
+            "parent": "fstep-dog-8",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.9999999999999991,
+                      1
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      1.0000000000000002,
+                      1.1102230246251573e-16
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865472,
+                  0.7071067811865478
+                ],
+                "d": 0.8442135623730951
+              }
+            },
+            "note": "7: Bring the top corner to the bottom edge of the colored portion."
+          },
+          {
+            "id": "fstep-dog-10",
+            "parent": "fstep-dog-9",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.8055456351736996,
+                    0.6641242789363895
+                  ],
+                  [
+                    0.6641242789363904,
+                    0.8055456351736994
+                  ]
+                ]
+              },
+              "moving": [
+                0.9646446609406731,
+                0.9787867965644031
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.9646446609406731,
+                  0.9787867965644031
+                ],
+                "layers": 2
+              }
+            },
+            "note": "8: Raise the top flap; second pleat width is 0.055 sheet units (approximate source reference)."
+          },
+          {
+            "id": "fstep-dog-11",
+            "parent": "fstep-dog-10",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      1.0000000000000002,
+                      1.1102230246251573e-16
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865479,
+                  0.7071067811865472
+                ],
+                "d": 0.20710678118654763
+              }
+            },
+            "note": "9: Raise the lower corner to the bottom edge of the colored portion."
+          },
+          {
+            "id": "fstep-dog-12",
+            "parent": "fstep-dog-11",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.16058874503045717,
+                    0.04745166004060971
+                  ],
+                  [
+                    0.0474516600406097,
+                    0.16058874503045742
+                  ]
+                ]
+              },
+              "moving": [
+                0.007071067811865447,
+                0.02121320343559665
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.007071067811865447,
+                  0.02121320343559665
+                ],
+                "layers": 1
+              }
+            },
+            "note": "10: Lower the small corner flap; tail pleat width is 0.06 sheet units (approximate)."
+          },
+          {
+            "id": "fstep-dog-13",
+            "parent": "fstep-dog-12",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9499999999999996,
+                    0.8124999999999998
+                  ],
+                  [
+                    0.8125000000000002,
+                    0.9500000000000017
+                  ]
+                ]
+              },
+              "moving": [
+                0.97,
+                0.9900000000000028
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.97,
+                  0.9900000000000028
+                ],
+                "layers": 2
+              }
+            },
+            "note": "11: Lower the top point to the bottom edge of the top pleat."
+          },
+          {
+            "id": "fstep-dog-14",
+            "parent": "fstep-dog-13",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.02121320343559637,
+                    0.02121320343559649
+                  ],
+                  [
+                    0.9216621586905156,
+                    0.9216621586905138
+                  ]
+                ]
+              },
+              "moving": [
+                0.10606601717798211,
+                0.45961940777125593
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "12a: Mountain-fold the right half behind the left half."
+          },
+          {
+            "id": "fstep-dog-15",
+            "parent": "fstep-dog-14",
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "ccw"
+              }
+            },
+            "note": "12b: Orient the model to match diagram 13. The text says a quarter turn, but the drawing shows a 45-degree turn with a horizontal bottom edge."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-dog",
+        "cursor": "fstep-dog-15",
+        "activeChild": {
+          "": "fstep-dog-1",
+          "fstep-dog-1": "fstep-dog-2",
+          "fstep-dog-2": "fstep-dog-3",
+          "fstep-dog-3": "fstep-dog-4",
+          "fstep-dog-4": "fstep-dog-5",
+          "fstep-dog-5": "fstep-dog-6",
+          "fstep-dog-6": "fstep-dog-7",
+          "fstep-dog-7": "fstep-dog-8",
+          "fstep-dog-8": "fstep-dog-9",
+          "fstep-dog-9": "fstep-dog-10",
+          "fstep-dog-10": "fstep-dog-11",
+          "fstep-dog-11": "fstep-dog-12",
+          "fstep-dog-12": "fstep-dog-13",
+          "fstep-dog-13": "fstep-dog-14",
+          "fstep-dog-14": "fstep-dog-15"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}
