@@ -15,7 +15,9 @@
  * spine, whether it is the last page, its capacity, the diagram's steps per
  * page (the one cell every step's reference scale is found in), the page
  * setup's geometry (size, orientation, margin, the title tab shown, page
- * numbers shown), the five packing settings, and {@link SIGNATURE_VERSION}.
+ * numbers shown), the five packing settings, on the first page the title
+ * block's share while it is on (then no tab: the block carries the title, so
+ * typing one re-packs nothing there), and {@link SIGNATURE_VERSION}.
  * Never a picture, a caption, a mark, a hand placement, the band's width or
  * colour, or the style: an edit of those keeps every page as it is packed.
  * Whether an
@@ -39,7 +41,7 @@
 import type { DiagramPageArrangement, DiagramPageSetup } from '../document/diagramDocument';
 import { digest } from '../pictures/pictureKey';
 import { flowPagePlan } from './flowLane';
-import type { PaginatedStep, PlannedPage } from './pagePlan';
+import { hasTitleBlock, type PaginatedStep, type PlannedPage } from './pagePlan';
 
 /**
  * The signature's format, part of every signature: frozen at `pack-3`, the
@@ -54,6 +56,10 @@ import type { PaginatedStep, PlannedPage } from './pagePlan';
  * before: a page saved under the old format whose structure is the same, as
  * the old format read it, still holds ({@link holdsArrangement}). There is no
  * second format yet.
+ *
+ * An entry appended only under a setting no page was ever saved with keeps
+ * the format: every signature without it is as it was, and none with it can
+ * be one without. The title block's, added 2026-10-14, is the one.
  */
 export const SIGNATURE_VERSION = 'pack-3';
 
@@ -112,7 +118,9 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
   const last = pageIndex === pages.length - 1;
   const plan = flowPagePlan(pageIndex, pages.length, setup.firstPageSide, 1);
   const lastIndex = page.steps.at(-1);
-  // Each entry, and its place, is the format (`SIGNATURE_VERSION`): one added, taken out or read otherwise is a new one.
+  const titleBlock = pageIndex === 0 && hasTitleBlock(setup);
+  // Each entry, and its place, is the format (`SIGNATURE_VERSION`): one added, taken out or read otherwise is a new
+  // one — but for the title block's, appended only while it is on (`SIGNATURE_VERSION`).
   const structure = [
     SIGNATURE_VERSION,
     pageIndex,
@@ -125,7 +133,7 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
     setup.size,
     setup.orientation,
     setup.marginMm,
-    titleShown(setup, title),
+    !titleBlock && titleShown(setup, title),
     setup.pageNumbers.enabled,
     setup.flowBands,
     setup.flowPreferBands,
@@ -137,6 +145,7 @@ export function pageSignature(input: PageSignatureInput, pageIndex: number): str
       return [step.id, step.turnsBefore.length, arrowMayPrintBefore(step, index) ? 1 : 0];
     }),
     last && lastIndex !== undefined ? steps[lastIndex]!.turnsAfter.length : 0,
+    ...(titleBlock ? [['title-block', setup.titleBlock.heightShare]] : []),
   ];
   return `${SIGNATURE_VERSION}:${digest(JSON.stringify(structure))}`;
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  PAGE_SETTINGS,
   createDiagram,
   createStep,
   duplicateStep,
@@ -18,6 +19,7 @@ import {
 } from '../document/diagramDocument';
 import { countHoldsLaterPages, pageStepsRange, retainPageCounts, setPageSteps } from './pageCounts';
 import { paginate } from './pagePlan';
+import { cellSlots } from './stepPlaces';
 
 /**
  * Each flow page's own count, kept through every edit, and set by hand
@@ -25,7 +27,7 @@ import { paginate } from './pagePlan';
  * still"): a case for every rule, and for every boundary the verb moves.
  */
 
-/** Steps `s0`… on flow pages of 4 by default, `counts` and `breaks` by step index. */
+/** Steps `s0`… on flow pages of 4 by default, `counts` and `breaks` by step index; no title block unless `page` says. */
 function diagram(
   size: number,
   counts: Readonly<Record<number, number>> = {},
@@ -37,7 +39,12 @@ function diagram(
     breakBefore: breaks.includes(index),
     ...(counts[index] !== undefined ? { pageSteps: counts[index] } : {}),
   }));
-  return setPageSetup(insertSteps(createDiagram({ newId: () => 'diagram-1' }), steps, 0), { layout: 'flow', stepsPerPage: 4, ...page });
+  return setPageSetup(insertSteps(createDiagram({ newId: () => 'diagram-1' }), steps, 0), {
+    layout: 'flow',
+    stepsPerPage: 4,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
+    ...page,
+  });
 }
 
 /** The flow pages, as ids, with each one's own count where it has one: `s3:4 s4 s5 s6`. */
@@ -407,5 +414,29 @@ describe('setPageSteps', () => {
     expect(setPageSteps(locked, 1, 3)).toBe(locked);
     // A page whose boundary is clear of it is set.
     expect(counts(setPageSteps(locked, 2, 3))).toEqual({ s0: 4, s8: 3 });
+  });
+});
+
+describe('the first page with the title block (diagram-title-block.md)', () => {
+  /** Twelve steps, 4 a page by default and 3 on the first under the block: `s0 s1 s2 | s3 … s6 | s7 … s10 | s11`. */
+  const blocked = diagram(12, {}, [], { titleBlock: { enabled: true, heightShare: 0.27 } });
+  const joined = (ids: readonly (readonly string[])[]) => ids.map((page) => page.join(' '));
+
+  it('is cut alike by the pagination, the store’s cells and the counts', () => {
+    expect(pages(blocked)).toEqual(['s0 s1 s2', 's3 s4 s5 s6', 's7 s8 s9 s10', 's11']);
+    expect(joined(cellSlots(blocked).pages)).toEqual(pages(blocked));
+    // A count given a later page holds the first at the three it holds, as it holds every page in front.
+    expect(pages(setPageSteps(blocked, 1, 5))).toEqual(['s0:3 s1 s2', 's3:5 s4 s5 s6 s7', 's8 s9 s10 s11']);
+    expect(counts(setPageSteps(blocked, 2, 3))).toEqual({ s0: 3, s3: 4, s7: 3 });
+  });
+
+  it('keeps a first page’s own count through an edit on it, as without the block', () => {
+    const counted = setPageSteps(blocked, 0, 5);
+    expect(pages(counted)).toEqual(['s0:5 s1 s2 s3 s4', 's5 s6 s7 s8', 's9 s10 s11']);
+    expect(pages(kept(counted, (document) => insertSteps(document, [fresh('n')], after(document, 's1'))))).toEqual([
+      's0:6 s1 n s2 s3 s4',
+      's5 s6 s7 s8',
+      's9 s10 s11',
+    ]);
   });
 });

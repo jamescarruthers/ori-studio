@@ -1090,21 +1090,49 @@ until 1f.
   (c).
 
 **1b. Pagination and signatures**
-- [ ] `firstPageCapacity(setup)` inside `splitPages` and `paginate`, in the
+- [x] `firstPageCapacity(setup)` inside `splitPages` and `paginate`, in the
   flow and the grid (T-3 A, T-4 B). A page-1 count set by hand still wins.
   Tests through `paginate`, `cellSlots` and `pageCounts` that page 1 holds
   the same steps in each.
-- [ ] Page 1's signature gains the block's entry only when it is on. With
+- [x] Page 1's signature gains the block's entry only when it is on. With
   the block on, its tab entry is a constant. The format comment at
   `pageSignature.ts:115` and the `SIGNATURE_VERSION` doc say why `pack-3`
   stands.
-- [ ] A pinned test that with the block off every digest is today's.
+- [x] A pinned test that with the block off every digest is today's.
   `savedPagesHold.test.ts` and `heldPages.test.ts` green. The crane opens
   with no page re-packed.
-- [ ] Turning the block on: page 1 re-packs, and later pages re-paginate.
+- [x] Turning the block on: page 1 re-packs, and later pages re-paginate.
   Hand moves are kept by band, and frames on steps that change page go
   home, with the toast. One Undo restores the document exactly. Off again
   re-packs, with consent.
+
+*As built (1b).* As planned, with these calls:
+- `pagePlan.ts` has the rule's four pieces: `blockRows(setup)` (a grid's
+  rows under the block: nearest its share, at least one, never all, none
+  in a one-row grid), `titleBlockFits(setup)` (room for it, asked whether
+  or not it is on: the Page pane's predicate for disabling the toggle),
+  `hasTitleBlock(setup)` (on, and room) and `firstPageCapacity(setup)`.
+  `splitPages` and `paginate` read the first page's default through one
+  private helper; no caller changed.
+- A grid's first page keeps `rows` as the setup's (the cut, so every page
+  keeps one cell size) and its `rowCounts` lists only the rows under the
+  block, so they sum to its capacity. The layout (1c) offsets them by
+  `blockRows`.
+- Page 1's tab entry is `false` while the block is on, and its structure
+  ends with `['title-block', heightShare]`. `FROZEN_SIGNATURES` are
+  unchanged and now built with the block pinned off;
+  `FROZEN_BLOCK_SIGNATURES` pins the three digests with it on. Each new
+  signature test failed with the entry and the constant taken out.
+- The tests this phase touched that lay out a new diagram (`pagePlan`,
+  `pageSignature`, `pageCounts`, the store's arrangements test) pin the
+  block off now, so 1f's flip leaves them as they are.
+- The crane, through the real reader and layout (a check kept out of the
+  repo, under `artifacts/`, since the file is not committed): its three
+  pages held, their signatures the stored ones, every cell where it was
+  before this phase. Every crane page has its own count (9, 11, 9), so
+  turning the block on keeps nine steps on page 1 and re-packs page 1
+  alone. 1c's steadiness check should include that case: nine pictures in
+  a page 27% shorter.
 
 **1c. Layout**
 - [ ] `titleBlockGeometry(setup)`: the block, the title column, the

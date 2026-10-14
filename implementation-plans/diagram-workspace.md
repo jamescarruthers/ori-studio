@@ -1799,7 +1799,8 @@ on its next save.
   it starts with — `{ signature, k, steps: { "<step id>": { box: [x, y, w,
   h], scale, band, bend?, zoomScale? } } }`. `signature` is the page's
   structure when it was packed (`pages/pageSignature.ts`, tagged with the
-  packing's version), `k` its page scale, `box` the step's box on the page in
+  signature's format, `pack-3`; the first page's, while the title block is
+  on, ends with the block's share and no longer reads the title), `k` its page scale, `box` the step's box on the page in
   mm, `scale` its printed scale as a pin's (`{ mmPerUnit }` or `{ frameMm }`),
   `band` its band from 0 in reading order (0–4), `bend: true` a step standing
   in the bend after its band, and `zoomScale` (added in the review fixes) an
@@ -1841,7 +1842,13 @@ on its next save.
   first step's `pageSteps`, else `page.stepsPerPage`. A flow page is laid out
   for the steps it holds, but a last page without `pageSteps` for
   `page.stepsPerPage`, which its few steps fill in order. A grid's pages hold
-  `columns × rows` and ignore `pageSteps`, which they keep.
+  `columns × rows` and ignore `pageSteps`, which they keep. With
+  `page.titleBlock` on (2026-10-14), the first page's default is fewer: in
+  the flow `max(1, round(stepsPerPage × (1 − heightShare)))`, on a grid
+  `columns × (rows − r)`, `r` the whole rows nearest `heightShare × rows`,
+  at least 1 and at most `rows − 1`; a grid of one row has no room for the
+  block, and its pages are as without it. A `pageSteps` on the first step
+  still wins.
 - `source`, null for an empty step, or:
   - `{ kind: 'upload', assetId, rotationQuarterTurns (0–3), mirrored }`;
   - `{ kind: 'cp', scope: { kind: 'segment', region }, fingerprint,

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  PAGE_SETTINGS,
   createDiagram,
   insertSteps,
   setPageSetup,
@@ -36,11 +37,12 @@ const stored = () => Object.keys(state().diagram?.pageArrangements ?? {});
 
 const PLACE: DiagramStepPlace = { frame: [2, 1], text: [0, 1.5] };
 
-/** Twelve steps `s0`…, five a flow page — pages s0–s4, s5–s9, s10–s11 — installed as a file would be. */
+/** Twelve steps `s0`…, five a flow page — pages s0–s4, s5–s9, s10–s11 — installed as a file would be, with no title block. */
 function install(steps: DiagramStep[] = plain(12), readOnly = false): DiagramDocument {
   const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), steps, 0), {
     layout: 'flow',
     stepsPerPage: 5,
+    titleBlock: PAGE_SETTINGS.titleBlock.legacy,
   });
   state().installDiagram({ document, readOnly, raw: {} });
   return document;
@@ -289,5 +291,51 @@ describe('repackDiagramPage / repackDiagramPages', () => {
     state().setDiagramPage({ pathWidthMm: 30, pathColor: '#d6e8f5' });
     expect(state().diagramPlacesSettled).toBeNull();
     expect(stored()).toEqual(['s0', 's5', 's10']);
+  });
+});
+
+describe('the title block turned on or off (diagram-title-block.md)', () => {
+  const ON = { titleBlock: { enabled: true, heightShare: 0.27 } };
+  const OFF = { titleBlock: PAGE_SETTINGS.titleBlock.legacy };
+  const pages = () => cellSlots(state().diagram!).pages;
+
+  it('re-cuts the first page and every page after: frames that changed page go home, the rest by their band; one Undo restores it', () => {
+    install(plain(12).map((step) => ({ ...step, place: PLACE })));
+    const held = adoptAll();
+    expect(state().setDiagramPage(ON)).toBe(true);
+    // The first page holds four: s4 goes on to page two and s9 to page three, home in the edit, with Undo in the notice.
+    expect(pages()).toEqual([ids(0, 3), ids(4, 8), ids(9, 11)]);
+    expect(frames()).toEqual(ids(0, 11).filter((id) => id !== 's4' && id !== 's9'));
+    const atEdit = state().diagramPlacesSettled!;
+    expect([atEdit.count, atEdit.added]).toEqual([2, 2]);
+    expect(atEdit.entry).toBe(state().diagramHistory.past.at(-1));
+    expect(undoSteps()).toBe(1);
+    // No page holds what it was packed for; each keeps it for its bands until it is packed afresh.
+    expect(heldPageArrangements(state().diagram!)).toEqual({});
+    expect(stored()).toEqual(['s0', 's4', 's9']);
+    // Packed afresh: s1 lands in band 1, home; every other step keeps its band, and its offset.
+    const edited = state().diagram!;
+    expect(state().adoptDiagramPageArrangements(packed(edited, (id) => ({ band: id === 's1' ? 1 : 0 })), edited)).toBe(true);
+    expect(frames()).toEqual(ids(0, 11).filter((id) => !['s1', 's4', 's9'].includes(id)));
+    expect(state().diagramPlacesSettled).toMatchObject({ count: 3, added: 1, entry: atEdit.entry });
+    // One Undo: the diagram exactly as it was, every frame and every page's arrangement.
+    state().undoDiagram();
+    expect(state().diagram).toBe(held);
+    expect(frames()).toEqual(ids(0, 11));
+  });
+
+  it('turned off again, re-cuts the pages back as an edit of its own', () => {
+    install();
+    adoptAll();
+    state().setDiagramPage(ON);
+    adoptAll();
+    expect(Object.keys(heldPageArrangements(state().diagram!))).toEqual(['s0', 's4', 's9']);
+    expect(state().setDiagramPage(OFF)).toBe(true);
+    expect(pages()).toEqual([ids(0, 4), ids(5, 9), ids(10, 11)]);
+    expect(heldPageArrangements(state().diagram!)).toEqual({});
+    expect(undoSteps()).toBe(2);
+    // The same setting again changes nothing, and records nothing.
+    expect(state().setDiagramPage(OFF)).toBe(false);
+    expect(undoSteps()).toBe(2);
   });
 });

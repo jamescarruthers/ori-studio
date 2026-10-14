@@ -9,7 +9,9 @@
  * starts a page when it is the first, or has `breakBefore` or its own count
  * (`DiagramStep.pageSteps`), or the page has reached its capacity: its first
  * step's own count, else the default — a flow's steps per page, a grid's
- * columns × rows. A grid ignores the counts, and keeps them in the document.
+ * columns × rows; on the first page with the title block, fewer by the
+ * block's share ({@link firstPageCapacity}). A grid ignores the counts, and
+ * keeps them in the document.
  *
  * **Rows** (flow). Each page is laid out for its own number of steps, but an
  * automatic last page for its capacity, so that a few steps left over keep a
@@ -51,7 +53,7 @@ export interface PlannedPage {
   firstStepId: string | null;
   /** It holds its own count, its first step's `pageSteps`: in the flow only. */
   ownCount: boolean;
-  /** How many steps it may hold: its own count, else the default ({@link pageCapacity}). */
+  /** How many steps it may hold: its own count, else the default ({@link pageCapacity}; the first page's {@link firstPageCapacity}). */
   capacity: number;
   /**
    * How many steps it is laid out for: in the flow its own number of steps,
@@ -61,9 +63,17 @@ export interface PlannedPage {
    * grid always its capacity, every page cut into the same columns × rows.
    */
   layoutCount: number;
-  /** How many rows it is cut into: in the flow {@link flowRows} for its layout count; on a grid the setup's rows. */
+  /**
+   * How many rows it is cut into: in the flow {@link flowRows} for its layout
+   * count; on a grid the setup's rows, on the first page the title block's
+   * among them ({@link blockRows}).
+   */
   rows: number;
-  /** How many of its layout count each row holds, in reading order ({@link balancedRows}); every row of a grid its columns. */
+  /**
+   * How many of its layout count each row holds, in reading order
+   * ({@link balancedRows}); on a grid, each row its steps fill, every one its
+   * columns — on the first page the rows under the title block.
+   */
   rowCounts: readonly number[];
   /** Its longest row: the first. A grid's columns. */
   columns: number;
@@ -72,6 +82,39 @@ export interface PlannedPage {
 /** How many steps a page holds under a setup when it has no count of its own: a flow's steps per page, a grid's every cell. */
 export function pageCapacity(setup: Pick<DiagramPageSetup, 'layout' | 'stepsPerPage' | 'columns' | 'rows'>): number {
   return setup.layout === 'flow' ? setup.stepsPerPage : setup.columns * setup.rows;
+}
+
+/**
+ * How many of a grid's rows the first page's title block takes: the whole
+ * rows nearest its share, at least one and never every row — one for 2 to 5
+ * rows at 27%, two for 6. A grid of one row has no room for it: none.
+ */
+export function blockRows(setup: Pick<DiagramPageSetup, 'rows' | 'titleBlock'>): number {
+  if (setup.rows < 2) return 0;
+  return Math.min(setup.rows - 1, Math.max(1, Math.round(setup.titleBlock.heightShare * setup.rows)));
+}
+
+/** Whether the first page has room for a title block: always in the flow; on a grid, two rows or more. */
+export function titleBlockFits(setup: Pick<DiagramPageSetup, 'layout' | 'rows' | 'titleBlock'>): boolean {
+  return setup.layout === 'flow' || blockRows(setup) > 0;
+}
+
+/** Whether the first page carries the title block: turned on, and room for it. */
+export function hasTitleBlock(setup: Pick<DiagramPageSetup, 'layout' | 'rows' | 'titleBlock'>): boolean {
+  return setup.titleBlock.enabled && titleBlockFits(setup);
+}
+
+/**
+ * How many steps the first page holds when it has no count of its own: with
+ * the title block, fewer by its share — in the flow the steps per page less
+ * that share, rounded, at least one (9 → 7 at 27%); on a grid the cells of
+ * the rows under it — else every page's ({@link pageCapacity}).
+ */
+export function firstPageCapacity(setup: DiagramPageSetup): number {
+  if (!hasTitleBlock(setup)) return pageCapacity(setup);
+  return setup.layout === 'flow'
+    ? Math.max(1, Math.round(setup.stepsPerPage * (1 - setup.titleBlock.heightShare)))
+    : setup.columns * (setup.rows - blockRows(setup));
 }
 
 /**
@@ -176,18 +219,25 @@ export interface PageSplit {
 /** Which steps go on which page under `setup`, before any page is planned ({@link paginate}). */
 export function splitPages(steps: readonly PaginatedStep[], setup: DiagramPageSetup): PageSplit[] {
   const flow = setup.layout === 'flow';
-  const fallback = pageCapacity(setup);
   const pages: PageSplit[] = [];
+  const holds = defaultCapacities(setup);
   steps.forEach((step, index) => {
     const own = flow ? ownPageSteps(step) : null;
     const current = pages.at(-1);
-    if (!current || step.breakBefore || own !== null || current.steps.length >= (current.own ?? fallback)) {
+    if (!current || step.breakBefore || own !== null || current.steps.length >= (current.own ?? holds(pages.length - 1))) {
       pages.push({ steps: [index], own });
     } else {
       current.steps.push(index);
     }
   });
   return pages.length > 0 ? pages : [{ steps: [], own: null }];
+}
+
+/** How many steps each page holds under a setup without a count of its own, by its index: the first page its own. */
+function defaultCapacities(setup: DiagramPageSetup): (pageIndex: number) => number {
+  const first = firstPageCapacity(setup);
+  const rest = pageCapacity(setup);
+  return (pageIndex) => (pageIndex === 0 ? first : rest);
 }
 
 /**
@@ -197,23 +247,25 @@ export function splitPages(steps: readonly PaginatedStep[], setup: DiagramPageSe
  */
 export function paginate(steps: readonly PaginatedStep[], setup: DiagramPageSetup): PlannedPage[] {
   const pages = splitPages(steps, setup);
-  const fallback = pageCapacity(setup);
+  const holds = defaultCapacities(setup);
   if (setup.layout !== 'flow') {
-    const rowCounts = Array.from({ length: setup.rows }, () => setup.columns);
-    return pages.map((page) => ({
-      steps: page.steps,
-      firstStepId: firstId(steps, page),
-      ownCount: false,
-      capacity: fallback,
-      layoutCount: fallback,
-      rows: setup.rows,
-      rowCounts,
-      columns: setup.columns,
-    }));
+    return pages.map((page, pageIndex) => {
+      const capacity = holds(pageIndex);
+      return {
+        steps: page.steps,
+        firstStepId: firstId(steps, page),
+        ownCount: false,
+        capacity,
+        layoutCount: capacity,
+        rows: setup.rows,
+        rowCounts: Array.from({ length: capacity / setup.columns }, () => setup.columns),
+        columns: setup.columns,
+      };
+    });
   }
   const area = printableArea(setup);
   return pages.map((page, pageIndex) => {
-    const capacity = page.own ?? fallback;
+    const capacity = page.own ?? holds(pageIndex);
     const last = pageIndex === pages.length - 1;
     const layoutCount = last ? capacity : page.steps.length;
     // A left page handing over at its spine (`flowPagePlan`'s exit), which no row count changes.

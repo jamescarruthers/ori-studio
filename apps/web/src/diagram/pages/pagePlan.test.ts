@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PAGE_SETUP, STEPS_PER_PAGE_RANGE, type DiagramPageSetup } from '../document/diagramDocument';
+import { DEFAULT_PAGE_SETUP, PAGE_SETTINGS, STEPS_PER_PAGE_RANGE, type DiagramPageSetup } from '../document/diagramDocument';
 import { flowPagePlan } from './flowLane';
 import {
   asksForPage,
   balancedRows,
+  blockRows,
+  firstPageCapacity,
   flowRows,
   flowShape,
+  hasTitleBlock,
   ownPageSteps,
   pageCapacity,
   paginate,
+  splitPages,
+  titleBlockFits,
   PICTURE_HEIGHT_SHARE,
   printableArea,
   TURN_GUTTER_MM,
@@ -21,8 +26,9 @@ import {
  * page's own count, what it is laid out for, and its rows.
  */
 
-const FLOW: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, layout: 'flow', stepsPerPage: 9 };
-const GRID: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, layout: 'grid', columns: 3, rows: 3 };
+// No title block, as every page saved before it: the first page holds what every page does.
+const FLOW: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, layout: 'flow', stepsPerPage: 9, titleBlock: PAGE_SETTINGS.titleBlock.legacy };
+const GRID: DiagramPageSetup = { ...DEFAULT_PAGE_SETUP, layout: 'grid', columns: 3, rows: 3, titleBlock: PAGE_SETTINGS.titleBlock.legacy };
 
 /** Steps `s0`…, each with what `patch` gives it. */
 function steps(count: number, patch: (index: number) => Partial<PaginatedStep> = () => ({})): PaginatedStep[] {
@@ -220,5 +226,69 @@ describe('the pieces of a page plan', () => {
   it('measures the paper inside its margins, never less the header or the footer', () => {
     expect(printableArea({ size: 'a4', orientation: 'portrait', marginMm: 12 })).toEqual({ w: 186, h: 273 });
     expect(printableArea({ size: 'a4', orientation: 'landscape', marginMm: 0 })).toEqual({ w: 297, h: 210 });
+  });
+});
+
+describe('paginate: the first page with the title block (diagram-title-block.md, T-3 A, T-4 B)', () => {
+  const BLOCK = { enabled: true, heightShare: 0.27 };
+  const flow = (patch: Partial<DiagramPageSetup> = {}): DiagramPageSetup => ({ ...FLOW, titleBlock: BLOCK, ...patch });
+  const grid = (patch: Partial<DiagramPageSetup> = {}): DiagramPageSetup => ({ ...GRID, titleBlock: BLOCK, ...patch });
+
+  it('holds fewer steps on the first page of a flow, by the block’s share, rounded and at least one; the rest the default', () => {
+    expect(firstPageCapacity(flow())).toBe(7);
+    expect([2, 5, 9, 12, 16, 30].map((stepsPerPage) => firstPageCapacity(flow({ stepsPerPage })))).toEqual([1, 4, 7, 9, 12, 22]);
+    expect(firstPageCapacity(flow({ titleBlock: { enabled: true, heightShare: 0.5 }, stepsPerPage: 2 }))).toBe(1);
+    expect(firstPageCapacity(flow({ titleBlock: { enabled: true, heightShare: 0.15 } }))).toBe(8);
+    expect(sizes(steps(20), flow())).toEqual([7, 9, 4]);
+    expect(paginate(steps(20), flow()).map((page) => [page.capacity, page.layoutCount, page.ownCount])).toEqual([
+      [7, 7, false],
+      [9, 9, false],
+      [9, 9, false],
+    ]);
+    // A diagram of one page: laid out for what the first page holds.
+    expect(paginate(steps(3), flow())[0]).toMatchObject({ capacity: 7, layoutCount: 7 });
+    expect(splitPages(steps(20), flow()).map((page) => page.steps.length)).toEqual([7, 9, 4]);
+  });
+
+  it('lets a count set on the first page win, and a break end it early', () => {
+    const counted = (count: number) => steps(20, (index) => (index === 0 ? { pageSteps: count } : {}));
+    expect(sizes(counted(5), flow())).toEqual([5, 9, 6]);
+    expect(sizes(counted(9), flow())).toEqual([9, 9, 2]);
+    expect(paginate(counted(9), flow())[0]).toMatchObject({ ownCount: true, capacity: 9 });
+    expect(sizes(steps(20, (index) => (index === 3 ? { breakBefore: true } : {})), flow())).toEqual([3, 9, 8]);
+  });
+
+  it('takes the whole grid rows nearest its share, at least one and never all: a grid of one row has no room', () => {
+    const rows = [1, 2, 3, 4, 5, 6];
+    expect(rows.map((count) => blockRows(grid({ rows: count })))).toEqual([0, 1, 1, 1, 1, 2]);
+    const share = (heightShare: number) => rows.map((count) => blockRows(grid({ rows: count, titleBlock: { enabled: true, heightShare } })));
+    expect(share(0.5)).toEqual([0, 1, 2, 2, 3, 3]);
+    expect(share(0.15)).toEqual([0, 1, 1, 1, 1, 1]);
+    expect(rows.map((count) => titleBlockFits(grid({ rows: count })))).toEqual([false, true, true, true, true, true]);
+    // Whether it fits is the Page pane's to ask with the block off too; the flow always has room.
+    expect(titleBlockFits(grid({ rows: 2, titleBlock: PAGE_SETTINGS.titleBlock.legacy }))).toBe(true);
+    expect(titleBlockFits(flow({ rows: 1 }))).toBe(true);
+    expect(hasTitleBlock(grid({ rows: 1 }))).toBe(false);
+    expect(hasTitleBlock(grid({ titleBlock: PAGE_SETTINGS.titleBlock.legacy }))).toBe(false);
+    expect(hasTitleBlock(grid())).toBe(true);
+  });
+
+  it('holds the cells of the rows under it on a grid’s first page, every page cut into the same cells', () => {
+    expect(firstPageCapacity(grid())).toBe(6);
+    expect(sizes(steps(20), grid())).toEqual([6, 9, 5]);
+    const [first, second] = paginate(steps(20), grid());
+    expect(first).toMatchObject({ capacity: 6, layoutCount: 6, rows: 3, columns: 3, rowCounts: [3, 3], ownCount: false });
+    expect(second).toMatchObject({ capacity: 9, layoutCount: 9, rows: 3, columns: 3, rowCounts: [3, 3, 3] });
+    expect(paginate(steps(20), grid({ columns: 4, rows: 6 }))[0]).toMatchObject({ capacity: 16, rowCounts: [4, 4, 4, 4] });
+    // No room on a grid of one row: every page as without the block.
+    expect(paginate(steps(20), grid({ rows: 1 }))).toEqual(paginate(steps(20), { ...GRID, rows: 1 }));
+  });
+
+  it('leaves every page as it was with the block off, whatever its share', () => {
+    const list = steps(20, (index) => (index === 12 ? { pageSteps: 4 } : {}));
+    const off = { enabled: false, heightShare: 0.5 };
+    expect(paginate(list, { ...FLOW, titleBlock: off })).toEqual(paginate(list, FLOW));
+    expect(paginate(list, { ...GRID, titleBlock: off })).toEqual(paginate(list, GRID));
+    expect(firstPageCapacity({ ...FLOW, titleBlock: off })).toBe(pageCapacity(FLOW));
   });
 });
