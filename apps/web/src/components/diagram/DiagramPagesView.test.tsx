@@ -30,6 +30,7 @@ import { PAGES_PX_PER_MM as PX_PER_MM } from '../../diagram/pages/usePagesView';
 import { clearPathColorPick, publishPathColorPick } from '../../diagram/pages/pathColorPick';
 import { TooltipProvider } from '../ui/Tooltip';
 import { focusLeavesEnterToSteps, focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
+import { MAX_ZOOM_EXPONENT } from '../../lib/wheelGesture';
 import { DiagramPagesView } from './DiagramPagesView';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -778,4 +779,49 @@ it('comes back where the reader left it — from Pose or Annotate, which unmount
   root = createRoot(host);
   show(pages, doc);
   expect(transform()).toBe(framed);
+});
+
+/** Twenty steps over several pages, framed as the view opens: what the frames left to run would run. */
+function manyPages() {
+  const runFrames = framesByHand();
+  const doc = insertSteps(createDiagram({ title: 'Crane' }), Array.from({ length: 20 }, (_, index) => cpStep(`s${index}`)), 0);
+  useWorkspaceStore.getState().installDiagram({ document: doc, readOnly: false, raw: {} });
+  const pages = preparedPages(doc, FONTS, subsetter);
+  expect(pages.layout.pages.length).toBeGreaterThan(2);
+  render(pages, {}, pages.layout.bandInk, doc, null);
+  runFrames();
+  return runFrames;
+}
+
+/** The camera as the library stands it: the view's position, in px, and its scale. */
+function camera() {
+  const style = host.querySelector<HTMLElement>('.react-transform-component')!.style.transform;
+  const [, x, y, scale] = /translate\((.+)px, (.+)px\) scale\((.+)\)/.exec(style)!;
+  return { x: Number(x), y: Number(y), scale: Number(scale) };
+}
+
+/** A wheel over page 1, at (300, 200) in the view. */
+function wheelOverPage(init: WheelEventInit): WheelEvent {
+  const event = new WheelEvent('wheel', { clientX: 300, clientY: 200, bubbles: true, cancelable: true, ...init });
+  act(() => {
+    host.querySelector('[role="group"][data-page="0"]')!.dispatchEvent(event);
+  });
+  return event;
+}
+
+describe('the wheel over the pages, as the Edit canvas reads it (Zach, 2026-10-14)', () => {
+  it('zooms a Ctrl+wheel notch ×1.16 at most, as the Edit canvas steps, and a pinch’s small steps as it always has', () => {
+    manyPages();
+    const zoomBy = (init: WheelEventInit) => {
+      const before = camera().scale;
+      wheelOverPage(init);
+      return camera().scale / before;
+    };
+    // A Windows mouse notch is 100 px: one step, not a leap of ×3.
+    expect(zoomBy({ deltaY: -100, ctrlKey: true })).toBeCloseTo(Math.exp(MAX_ZOOM_EXPONENT), 9);
+    expect(zoomBy({ deltaY: 100, ctrlKey: true })).toBeCloseTo(Math.exp(-MAX_ZOOM_EXPONENT), 9);
+    // A trackpad pinch, a few px an event, on the pinch curve the pages have always had.
+    expect(zoomBy({ deltaY: -4, ctrlKey: true })).toBeCloseTo(Math.exp(4 * 0.011), 9);
+    expect(zoomBy({ deltaY: 6, ctrlKey: true })).toBeCloseTo(Math.exp(-6 * 0.011), 9);
+  });
 });

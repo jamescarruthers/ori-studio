@@ -4,6 +4,7 @@ import { getViewportFitScale } from '../lib/designViewport';
 import { unionPlotRect, type PlotRect } from '../lib/geometry';
 import { isPointerDown, trackPointerGestures } from '../lib/pointerGesture';
 import { viewportSizeFromElement } from '../lib/treeViewportPrimitives';
+import { resolveWheelGesture } from '../lib/wheelGesture';
 import {
   registerViewportShortcutExecutor,
   type ViewportSurface as ViewportSurfaceId,
@@ -41,7 +42,9 @@ export const VIEWPORT_PINCH_ZOOM = { step: 2.2 } as const;
 /**
  * Zoom per unit of trackpad-pinch delta, applied as `scale * exp(delta * k)`.
  * Multiplicative, so a pinch covers the same proportion of zoom whether you are
- * at 50% or 800% — which the library's additive wheel path cannot do.
+ * at 50% or 800% — which the library's additive wheel path cannot do. Slower
+ * than the Edit canvas' pinch, and this camera's own rate for its curve
+ * (`resolveWheelGesture`); the clamp on one event is the canvas'.
  */
 const PINCH_ZOOM_SENSITIVITY = 0.011;
 const CENTER_ANIMATION_MS = 160;
@@ -425,13 +428,16 @@ export function useViewportSurface({
     };
   }, [spaceToPan]);
 
-  // Trackpad pinch, taken over from the library.
+  // Trackpad pinch and Ctrl+wheel, taken over from the library.
   //
   // Its wheel path is additive — `scale + delta * step` — so one pinch moves you
   // a fixed amount regardless of where you are: coarse when zoomed out, and
   // barely perceptible when zoomed in. Zoom is inherently multiplicative, so
   // handle the gesture here and scale by a factor instead, anchored on the
-  // pointer so the paper stays under your fingers.
+  // pointer so the paper stays under your fingers. The factor is the Edit
+  // canvas' (`resolveWheelGesture`), on this camera's pinch rate: one event is
+  // at most its ×1.16 notch, so a mouse that reports 100 px a notch steps
+  // rather than leaps, and a pinch's few px an event are as they were.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
@@ -444,12 +450,11 @@ export function useViewportSurface({
       if (!api) return;
       event.preventDefault();
 
+      const gesture = resolveWheelGesture(event, 'pan', { pinchSensitivity: PINCH_ZOOM_SENSITIVITY });
+      if (gesture.kind !== 'zoom') return;
       const { scale, positionX, positionY } = api.instance.transformState;
       const { minScale, maxScale } = api.instance.setup;
-      const next = Math.min(
-        maxScale,
-        Math.max(minScale, scale * Math.exp(-event.deltaY * PINCH_ZOOM_SENSITIVITY))
-      );
+      const next = Math.min(maxScale, Math.max(minScale, scale * gesture.factor));
       if (next === scale) return;
 
       // Keep the point under the pointer fixed.

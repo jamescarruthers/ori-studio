@@ -83,6 +83,16 @@ function clamp(value: number, limit: number): number {
   return Math.min(limit, Math.max(-limit, value));
 }
 
+/** What a camera may set for itself; the canvas' own when left out. */
+export interface WheelGestureRates {
+  /**
+   * Zoom per pixel of a pinch's delta. The pan/zoom panes (`useViewportSurface`)
+   * keep the slower pinch they were tuned with; the wheel curve and the clamp
+   * are everyone's.
+   */
+  pinchSensitivity?: number;
+}
+
 /**
  * Decide what a wheel event means.
  *
@@ -96,14 +106,14 @@ function clamp(value: number, limit: number): number {
  */
 export function resolveWheelGesture(
   event: WheelGestureInput,
-  preference: WheelGesturePreference
+  preference: WheelGesturePreference,
+  { pinchSensitivity = PINCH_ZOOM_SENSITIVITY }: WheelGestureRates = {}
 ): WheelGesture {
   const zooms = preference === 'zoom' || event.ctrlKey || event.metaKey;
 
   if (zooms) {
     // Ctrl without Cmd is the pinch gesture; everything else is a wheel.
-    const sensitivity =
-      event.ctrlKey && !event.metaKey ? PINCH_ZOOM_SENSITIVITY : WHEEL_ZOOM_SENSITIVITY;
+    const sensitivity = event.ctrlKey && !event.metaKey ? pinchSensitivity : WHEEL_ZOOM_SENSITIVITY;
     const exponent = clamp(-toPixels(event.deltaY, event.deltaMode) * sensitivity, MAX_ZOOM_EXPONENT);
     return { kind: 'zoom', factor: Math.exp(exponent) };
   }
