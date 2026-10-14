@@ -8,11 +8,11 @@
   ],
   "coverage": "All five pages of the current index, cross-checked against all 142 easy collection entries. Eligibility review ongoing.",
   "nextQueue": [
-    "butterfly",
-    "camellia",
-    "candle",
-    "candy-box",
-    "celebration-crane"
+    "crow",
+    "devilish-heart",
+    "dolphin",
+    "dove",
+    "dragonfly"
   ],
   "designs": [
     {
@@ -1107,13 +1107,14 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 15 instructions, 17 diagrams and completed photograph reviewed. Source 15 adds lifted wings/body after the last flat fold. A fully flat endpoint before that styling is possible but remains a labeled variant, not full tutorial completion.",
+      "report": "batches/004.md"
     },
     {
       "slug": "camellia",
@@ -1123,13 +1124,16 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 6,
+      "model": "models/camellia.osf",
+      "gaps": [
+        "F027"
+      ],
+      "notes": "All 13 instructions and 14 diagrams reviewed. Seven nodes through source 6; all eight states checked in Fold. Inside-reverse closure works with the original bottom-fold opening. First squash refuses flap_not_free at several relevant picks; investigation.",
+      "report": "batches/004.md"
     },
     {
       "slug": "candle",
@@ -1139,13 +1143,14 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 15 instructions and 16 diagrams reviewed. Required source 13 rolls the body into a cylinder; source 14 locks it and source 15 shapes the flame. Excluded 3D completion.",
+      "report": "batches/004.md"
     },
     {
       "slug": "candy-box",
@@ -1155,13 +1160,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 22 instructions and 23 diagrams reviewed. Source 22 spreads the top and raises the base into an open container. Excluded 3D completion.",
+      "report": "batches/004.md"
     },
     {
       "slug": "celebration-crane",
@@ -1171,13 +1177,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 28 instructions, 30 diagrams (including the final drawing) and completed photograph reviewed. Source 28 opens the feather pleats into a spatial fan. Excluded 3D completion; a closed packet would be a labeled variant.",
+      "report": "batches/004.md"
     },
     {
       "slug": "chick",
@@ -1187,13 +1194,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 13 instructions, 14 diagrams and completed photograph reviewed. The current Basket Chick tutorial requires opening a hollow container at source 13; excluded 3D completion.",
+      "report": "batches/004.md"
     },
     {
       "slug": "chicken",
@@ -1203,13 +1211,16 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat (optional 3D styling omitted)",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 9,
+      "model": "models/chicken.osf",
+      "gaps": [
+        "F028"
+      ],
+      "notes": "All 17 instructions and 18 diagrams reviewed. Eleven nodes through source 9; all 12 states checked in Fold. Partial pinches and eight-ply inside reverse verified by material stacks. Source 10 connected wing squash and pinch naming remain under investigation.",
+      "report": "batches/004.md"
     },
     {
       "slug": "crab",
@@ -1219,13 +1230,17 @@
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat with cuts",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 11,
+      "model": "models/crab.osf",
+      "gaps": [
+        "F029",
+        "F011"
+      ],
+      "notes": "All 32 instructions and 34 diagrams reviewed. Twenty-nine nodes through source 11; all 30 states checked in Fold. Four pocket squashes work; first petal rejects the mapped geometry. Cutting is additionally required at sources 17, 19 and 25.",
+      "report": "batches/004.md"
     },
     {
       "slug": "crane",

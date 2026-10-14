@@ -161,3 +161,27 @@ Source 12 independently strengthens **F011**: cut only the outer layer from the 
 The full [20-step tutorial](https://origami.me/4-pointed-star/) and 21 diagrams were reviewed. The [native packet](models/4-pointed-star.osf) matches through source 14 (21 nodes / 22 Fold-checked states). Eight partial creases, alignment precreases, and front-layer packet folds succeed. Source 15 needs a swivel at the junction of two existing folded creases. The picked upper-left edge lands on the diagonal; analysis finds the intended vertex and landing, but application refuses `fan_ray_blocked` (face 9). Both direction/kind feasibility pairs are unavailable. Retain this as an authoring/compound investigation: the mapped second crease and intervening folded layer need resolution before claiming a missing primitive.
 
 Evidence: [exact request and analysis](batches/4-pointed-star-swivel-attempt.json), [refusal](batches/4-pointed-star-failure.json), [last valid scene](batches/4-pointed-star-before-swivel.json). No guard weakened or non-flat state introduced.
+
+## F027 — Camellia first squash after reverse closure (investigation)
+
+The [13-step tutorial](https://origami.me/camellia/) and 14 diagrams are flat. The [native prefix](models/camellia.osf) matches through source 6 (7 nodes / 8 Fold-checked states). The reverse fold requires choosing among two openings; the original bottom-fold spine gives the source result. This is supported functionality, not a gap. Material witnesses prove the bottom and right outer panels remain unchanged.
+
+Source 7 opens the lower flap while turning it upward. A direct squash and three relevant interior/spine-adjacent picks all refuse `squash_flap_not_free` (face 19; flap 13,15,20). A valid compound decomposition remains unproven; do not call this a missing squash primitive. Source 10 untuck and later locks remain unattempted.
+
+Evidence: [reverse selection](batches/camellia-reverse-attempt.json), [squash request](batches/camellia-first-squash-attempt.json), [pick controls](batches/camellia-squash-pick-controls.json), [refusal](batches/camellia-failure.json), [material checks](batches/camellia.material-checks.json).
+
+## F028 — Chicken connected wing squash and source landmark
+
+**Investigation / reference ambiguity; not a confirmed missing primitive.** [Chicken](https://origami.me/chicken/) source 10 follows an eight-ply inside reverse for the feet. A direct squash on the front wing refuses `squash_flap_not_free`, naming faces 26 and 30 outside flap 24/28. Three nearby picks give the same refusal. The connected opening may need a compound decomposition; none is established yet.
+
+[Native prefix](models/chicken.osf): eleven nodes through source 9, twelve states replayed and checked in Fold. [Exact requests and controls](batches/chicken-wing-controls.json), [failed operation](batches/chicken-failure.json), [pre-reverse state](batches/chicken-before-feet.json), [last valid state](batches/chicken-after-feet.json), and [material proof](batches/chicken.material-checks.json). The reverse uses the central original-diagonal opening, with eight moving layers between four unchanged front and four unchanged back layers at the overlap witness.
+
+The text calls the moving wing landmark the source-3 pinch, while the visible front-flap mark in the diagram appears to be the transformed source-4 pinch. This is an interpretation to resolve before asserting a target geometry or implementing a generalized squash. Later beak and comb operations remain unattempted. Keep the last valid prefix and establish the source's actual material/landing correspondence, then test an existing-operation decomposition. Do not weaken the free-flap guard.
+
+## F029 — Crab petal after four pocket squashes
+
+**Investigation; not a confirmed missing primitive.** [Crab](https://origami.me/crab/) source 12 lifts the truncated front flap after source 11's reference creases. The mapped petal returns `residual` 0.12132034355964205 at vertex 17 / face 31. A control before source 11 refuses `petal_no_flap` / `past_corner`; this does not establish the correct alternative geometry. The authoring correspondence between the source's preparation creases and the petal's computed hinges still needs resolving.
+
+[Native prefix](models/crab.osf): 29 nodes through source 11, all 30 states replayed and checked in Fold. [Petal request](batches/crab-petal-attempt.json), [failure](batches/crab-failure.json), [uncreased control](batches/crab-uncreased-petal-control.json), [state before petal preparation](batches/crab-before-petal.json), and [material checks](batches/crab.material-checks.json). The four preceding pocket squashes work; paper sides match the colored upper triangle and white lower split flaps. Preserve guards until the source mapping and connected layers are established.
+
+**Additional confirmed F011 cutting cases:** Crab sources 17 and 19 slit selected lower front/back flaps from the free tip into the paper, without discarding an offcut. Source 25 makes paired edge-inward incisions through every layer to free the upper tuck. Neither kind is expressible by the public Fold operations. These are required even if the earlier petal investigation is resolved.

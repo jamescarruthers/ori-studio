@@ -1,0 +1,29 @@
+{
+  "op": {
+    "kind": "squash",
+    "flap": [
+      0.24041630560342636,
+      0.15147186257614306
+    ],
+    "direction": "valley"
+  },
+  "analysis": {
+    "status": "refused",
+    "refusal": {
+      "code": "squash_flap_not_free",
+      "faces": [
+        19
+      ],
+      "flap": [
+        13,
+        15,
+        20
+      ]
+    },
+    "fixes": [],
+    "faces": [
+      19
+    ],
+    "vertices": []
+  }
+}

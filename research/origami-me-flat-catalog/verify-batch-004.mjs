@@ -13,6 +13,35 @@ for(const slug of process.argv.slice(2)){
  for(const n of d.steps){t.add(n.op,n.note,n.choices);states.push(hash(JSON.stringify(t.e.canonical_keys(t.state).sort())));}
  assert.deepEqual(states,manifest.stateHashes);
  const evidence={slug,allStatesReplayedIdentically:true};
+ if(slug==='crab'){
+  const p=[-.3,.35],before=t.at(p,0,t.states[12]),after=t.at(p,0,t.states[13]);
+  assert(eq(before,after),'The first right-pocket squash preserves the exposed left panel.');
+  evidence.firstSquashPreservesLeftPanel={point:p,before,after};
+  const s=t.scene();evidence.paperSides=[];
+  for(const [p,colored] of [[[.02,.4],true],[[-.05,.12],false],[[.05,.12],false]]){
+   const cell=s.subfaces.find(c=>inside(p,c.polygon));assert(cell);assert.equal(s.faces[cell.faces_top_to_bottom[0]].front_up,colored);
+   evidence.paperSides.push({point:p,colored,originalSheetPoint:t.at(p)});
+  }
+ }
+ if(slug==='chicken'){
+  assert.equal(t.e.scene(t.states[8]).crease_marks.length,8,'Two two-ply pinches plus four-ply partial reference retained.');
+  evidence.partialMarks=8;
+  const p=[.17,.9],before=Array.from({length:8},(_,i)=>t.at(p,i,t.states[10])),after=Array.from({length:16},(_,i)=>t.at(p,i));
+  for(let i=0;i<4;i++){assert(eq(before[i],after[i]));assert(eq(before[i+4],after[i+12]));}
+  evidence.insideFeetStack={point:p,before,after,oldWallsAtDepth:[0,1,2,3,12,13,14,15]};
+  for(let i=0;i<8;i++)assert(eq(t.at([.1,1.15],i,t.states[10]),t.at([.1,1.15],i)),'Feet reversal preserves all upper-body layers.');
+  evidence.upperBodyUnchanged=true;
+ }
+ if(slug==='camellia'){
+  evidence.unchangedOverlap=[];
+  for(const p of [[-.4,.23],[-.2,.6]]){
+   const before=t.at(p,0,t.states[6]),after=t.at(p);
+   assert(eq(before,after),'Reverse-fold closure preserves the bottom and right outer panels.');
+   evidence.unchangedOverlap.push({point:p,before,after});
+  }
+  const s=t.scene();assert(s.subfaces.every(c=>s.faces[c.faces_top_to_bottom[0]].front_up),'The closed packet is colored across its exposed face.');
+  evidence.exposedPacketColored=true;
+ }
  if(slug==='4-pointed-star'){
   const marks=t.e.scene(t.states[12]).crease_marks;
   assert.equal(marks.length,8,'All eight partial precreases retained as marks.');

@@ -1,0 +1,53 @@
+{
+  "slug": "crab",
+  "allStatesReplayedIdentically": true,
+  "firstSquashPreservesLeftPanel": {
+    "point": [
+      -0.3,
+      0.35
+    ],
+    "before": [
+      0.45961940777125576,
+      0.9646446609406727
+    ],
+    "after": [
+      0.45961940777125576,
+      0.9646446609406727
+    ]
+  },
+  "paperSides": [
+    {
+      "point": [
+        0.02,
+        0.4
+      ],
+      "colored": true,
+      "originalSheetPoint": [
+        0.5199999999999999,
+        0.19289321881345242
+      ]
+    },
+    {
+      "point": [
+        -0.05,
+        0.12
+      ],
+      "colored": false,
+      "originalSheetPoint": [
+        0.12020815280171313,
+        0.049497474683057985
+      ]
+    },
+    {
+      "point": [
+        0.05,
+        0.12
+      ],
+      "colored": false,
+      "originalSheetPoint": [
+        0.8797918471982867,
+        0.04949747468305772
+      ]
+    }
+  ]
+}

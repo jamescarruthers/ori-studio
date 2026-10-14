@@ -1,0 +1,468 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-chicken",
+    "title": "Chicken — Origami.me (batch 4)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-chicken",
+        "title": "Chicken — Origami.me (batch 4)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-chicken-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Orient the white-side-up square as a diamond. Source: https://origami.me/chicken/"
+          },
+          {
+            "id": "fstep-chicken-2",
+            "parent": "fstep-chicken-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.7121320343559643,
+                0.2878679656440359
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-chicken-3",
+            "parent": "fstep-chicken-2",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1.0000000000000002
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865475,
+                  0.7071067811865477
+                ],
+                "d": 0.7071067811865477
+              }
+            },
+            "note": "2: Fold the bottom corner up to the top."
+          },
+          {
+            "id": "fstep-chicken-4",
+            "parent": "fstep-chicken-3",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.04999999999999989,
+                    0.39350288425444035
+                  ],
+                  [
+                    -1.3877787807814462e-16,
+                    0.41421356237309515
+                  ]
+                ]
+              },
+              "moving": [
+                0.1514718625761429,
+                0.15147186257614303
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    0.04999999999999989,
+                    0.39350288425444035
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    -1.3877787807814462e-16,
+                    0.41421356237309515
+                  ]
+                }
+              }
+            },
+            "note": "3: Pinch only at the right edge on the 22.5° angle-bisector crease. Mark length 0.05 horizontally."
+          },
+          {
+            "id": "fstep-chicken-5",
+            "parent": "fstep-chicken-4",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.0707106781186547,
+                    0.7071067811865476
+                  ],
+                  [
+                    -5.551115123125785e-17,
+                    0.7071067811865475
+                  ]
+                ]
+              },
+              "moving": [
+                0.02419264196256444,
+                0.9434314575050764
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    0.0707106781186547,
+                    0.7071067811865476
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    -5.551115123125785e-17,
+                    0.7071067811865475
+                  ]
+                }
+              }
+            },
+            "note": "4: Bring the right corner to the first mark; pinch only at the right edge. Mark length 0.05 horizontally."
+          },
+          {
+            "id": "fstep-chicken-6",
+            "parent": "fstep-chicken-5",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      -2.3551386880256634e-16,
+                      -7.850462293418878e-17
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  1.1102230246251565e-16,
+                  -1
+                ],
+                "d": -0.4999999999999999
+              }
+            },
+            "note": "5a: Bring the left corner to the top."
+          },
+          {
+            "id": "fstep-chicken-7",
+            "parent": "fstep-chicken-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      1.0000000000000002
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      -2.3551386880256634e-16,
+                      -7.850462293418878e-17
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  1,
+                  0
+                ],
+                "d": 0.49999999999999983
+              }
+            },
+            "note": "5b: Bring the right corner to the top."
+          },
+          {
+            "id": "fstep-chicken-8",
+            "parent": "fstep-chicken-7",
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.7071067811865475,
+                    0.29289321881345237
+                  ],
+                  [
+                    0.5,
+                    0.7928932188134524
+                  ]
+                ]
+              },
+              "moving": [
+                0.44845671067449305,
+                0.6081118318204309
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    0.7071067811865475,
+                    0.29289321881345237
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.5,
+                    0.7928932188134524
+                  ]
+                }
+              }
+            },
+            "note": "6: Bring the bottom corner to the second pinch; crease only from the centerline to the right edge."
+          },
+          {
+            "id": "fstep-chicken-9",
+            "parent": "fstep-chicken-8",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.4999999999999999
+                  ],
+                  [
+                    1,
+                    -2.220446049250313e-16
+                  ]
+                ]
+              },
+              "moving": [
+                0.8131727983645296,
+                0.32824855787277973
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7: Fold the left half behind."
+          },
+          {
+            "id": "fstep-chicken-10",
+            "parent": "fstep-chicken-9",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.29289321881345254,
+                    0.7071067811865476
+                  ],
+                  [
+                    0.4694299052864705,
+                    0.6719914509508391
+                  ]
+                ]
+              },
+              "moving": [
+                0.44845671067449294,
+                0.579827560572969
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "8: Fold and unfold the bottom left edge onto the source-6 reference crease."
+          },
+          {
+            "id": "fstep-chicken-11",
+            "parent": "fstep-chicken-10",
+            "op": {
+              "kind": "inside-reverse",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.29289321881345254,
+                    0.7071067811865476
+                  ],
+                  [
+                    0.4694299052864705,
+                    0.6719914509508391
+                  ]
+                ]
+              },
+              "moving": [
+                0.44845671067449294,
+                0.579827560572969
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "opening": [
+                {
+                  "upper": [
+                    [
+                      0.569035593728849,
+                      0.3756608459243674
+                    ],
+                    [
+                      0.43096440627115096,
+                      0.3756608459243674
+                    ],
+                    [
+                      0.6243391540756327,
+                      0.4309644062711509
+                    ],
+                    [
+                      0.6243391540756327,
+                      0.5690355937288492
+                    ]
+                  ]
+                }
+              ]
+            },
+            "note": "9: Inside reverse the lower packet to make the feet, opening the original diagonal between the two packet halves."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-chicken",
+        "cursor": "fstep-chicken-11",
+        "activeChild": {
+          "": "fstep-chicken-1",
+          "fstep-chicken-1": "fstep-chicken-2",
+          "fstep-chicken-2": "fstep-chicken-3",
+          "fstep-chicken-3": "fstep-chicken-4",
+          "fstep-chicken-4": "fstep-chicken-5",
+          "fstep-chicken-5": "fstep-chicken-6",
+          "fstep-chicken-6": "fstep-chicken-7",
+          "fstep-chicken-7": "fstep-chicken-8",
+          "fstep-chicken-8": "fstep-chicken-9",
+          "fstep-chicken-9": "fstep-chicken-10",
+          "fstep-chicken-10": "fstep-chicken-11"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

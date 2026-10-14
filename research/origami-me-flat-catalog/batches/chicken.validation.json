@@ -1,0 +1,30 @@
+{
+  "source": "https://origami.me/chicken/",
+  "file": "models/chicken.osf",
+  "fileSha256": "786a87d089a702d7addae226095de7a2c6d7ca38ddfe2db6cf960551771a7de0",
+  "nodes": 11,
+  "folds": 10,
+  "finalFaces": 16,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "3f5c439b985c75eeb0d2d6b402ce274d640c9dad94b379824a0c1d302afb5cd7",
+    "5ae246d73d6e6e63ea2e280ee1c7ea012f5bf162889ab2b978c47c1546a07485",
+    "07ebb6a044c011657fe6c44c3c55bc5bb267f2e6a65afaaea7010c3273af6624",
+    "9626d3583aa771e4d6fba11ce88577e1c6dff0fd0fc9caf6319032bd96f10d7d",
+    "8adf3db9144f9d7992669e2acee695c799848b7c762ba6b9a480cf22f0b2fe6d",
+    "489f9d6fd97b52100920e38d6e34b18991679548f3a9bdfbe1976650a883cad8",
+    "d058e2a84b135a83c5a4f969cfd1d65f5ee192b296a964ebb64644934eedffb3",
+    "15d0715303426bb22b1bd212d54e0ded73c1c887f634c67924615fd3a25ce6ab",
+    "773ccb3b64372307e2213674a402e866cd4d7d20882d5e164fa84062312222c2"
+  ],
+  "sourceSteps": 17,
+  "sourceStepsCompleted": 9,
+  "sourceDiagramsReviewed": 18,
+  "audit": "valid prefix ready for audit; source 10 wing investigation",
+  "allSavedStatesVisuallyCheckedInFold": true,
+  "visuallyCheckedStates": 12,
+  "blockedAtSourceStep": 10
+}
