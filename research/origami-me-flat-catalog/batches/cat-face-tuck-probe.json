@@ -1,0 +1,158 @@
+{
+  "op": {
+    "kind": "tuck",
+    "direction": "valley",
+    "line": {
+      "via": "free",
+      "through": [
+        [
+          0.7737258300203045,
+          0.9434314575050762
+        ],
+        [
+          0.9434314575050761,
+          0.7737258300203047
+        ]
+      ]
+    },
+    "moving": [
+      0.9646446609406722,
+      0.9646446609406726
+    ],
+    "seed": {
+      "scope": "depth",
+      "at": [
+        0.9646446609406722,
+        0.9646446609406726
+      ],
+      "layers": 1
+    },
+    "target": [
+      0.14142135623730948,
+      0.21213203435596428
+    ]
+  },
+  "result": {
+    "status": "ok",
+    "outcome": "landed",
+    "state": 12,
+    "report": null,
+    "compound": {
+      "family": "tuck",
+      "line": {
+        "n": [
+          0.7071067811865475,
+          0.7071067811865476
+        ],
+        "d": 0.20000000000000004
+      },
+      "side": "negative",
+      "snap": {
+        "clusters": 2,
+        "angle": 0,
+        "max_shift": 2.220446049250313e-16
+      },
+      "direction": "valley",
+      "placement": "under",
+      "target": 32,
+      "moving": [
+        20
+      ],
+      "blocks": [
+        [
+          35
+        ]
+      ],
+      "created": [
+        67
+      ],
+      "unfolded": [],
+      "refolded": [],
+      "reversed": [],
+      "split": 1,
+      "motion": {
+        "kind": "visual",
+        "legs": [
+          {
+            "name": "spread",
+            "stacking": "parent",
+            "groups": [
+              {
+                "faces": [
+                  35
+                ],
+                "axis": {
+                  "n": [
+                    0.7071067811865475,
+                    0.7071067811865476
+                  ],
+                  "d": 0.20000000000000004
+                },
+                "side": "negative",
+                "from": 0,
+                "to": 1.5707963267948966
+              }
+            ]
+          },
+          {
+            "name": "close",
+            "stacking": "landed",
+            "groups": [
+              {
+                "faces": [
+                  35
+                ],
+                "axis": {
+                  "n": [
+                    0.7071067811865475,
+                    0.7071067811865476
+                  ],
+                  "d": 0.20000000000000004
+                },
+                "side": "negative",
+                "from": 1.5707963267948966,
+                "to": 3.141592653589793
+              }
+            ]
+          }
+        ]
+      },
+      "stored": {}
+    },
+    "summary": {
+      "step": 11,
+      "faces": 19,
+      "pairs": 93,
+      "creases": {
+        "border": 18,
+        "mountain": 17,
+        "valley": 10,
+        "flat": 0
+      },
+      "view": {
+        "flipped": false,
+        "rotation": 0.7853981633974483
+      },
+      "residual": 8.08254562088053e-16,
+      "sheet": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    "stored": {}
+  }
+}

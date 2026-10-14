@@ -1,0 +1,29 @@
+{
+  "source": "https://origami.me/easter-egg/",
+  "file": "models/easter-egg.osf",
+  "fileSha256": "aca9a35372d69d1036055e433ed6f3400184dfdce1beb6364b0991510547b9f6",
+  "nodes": 11,
+  "folds": 9,
+  "finalFaces": 22,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "2602e8d8a864cdfcb800efe26a70f6eae4f92dafb01644de1f23847e50ddb90b",
+    "ab7f6185d373d25d066a3f06965a16989ba6a43ecbe1d3177655d04f86a1f658",
+    "e2a4f25d033edbe9d0bde290a3e5e7cfc17c380e7887d078abeb0a474b702017",
+    "dcbf8be648d7c98812c75eab875893b94a887729989df68303b602e4d711f748",
+    "8eff5a0768e78c1128710b23c0f91aebb507f8d0470354396e9e74bd6727e0a6",
+    "c72acc00cae4160d1432dfc9ad9781524edcbe84f5d669776512d40c7a165bf4",
+    "c9a482a8438f56a7b0f7fde5a99aff0f624706e0e47944925e5e769b5bcde09b",
+    "fca0934fbca82d34cadcfede81d3c043de0c144c6c69799084b42963da62150b",
+    "1b470e914d25b61ee764431c6fe2ee31fd673608b921865b8ebb04d828af1405"
+  ],
+  "sourceSteps": 7,
+  "proportions": "Source steps 3, 5, 6 are approximate. Symmetric values are recorded in notes.",
+  "checks": [
+    "All exposed final subfaces show the colored/front paper side."
+  ],
+  "audit": "pending visual review"
+}
