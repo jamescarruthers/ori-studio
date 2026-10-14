@@ -138,7 +138,6 @@ import {
   carriedJson,
   isKnownAsset,
   normalizePageSetup,
-  PAGE_SETTINGS,
   PAGE_SETTING_KEYS,
   readHexColor,
   randomDiagramId,
@@ -244,7 +243,7 @@ export function readDiagram(value: unknown, options: ReadDiagramOptions = {}): R
     title: typeof value.title === 'string' ? xmlText(value.title) : '',
     hanStyle: readHanStyle(value.hanStyle),
     style: readStyle(value.style),
-    page: readPageSetup(value.page, newer?.page),
+    page: normalizePageSetup(value.page),
     steps,
     assets,
     ...(Object.keys(arranged.arrangements).length > 0 ? { pageArrangements: arranged.arrangements } : {}),
@@ -340,16 +339,6 @@ function readNewerFields(
     ...(Object.keys(titleBlockContent).length > 0 ? { titleBlockContent } : {}),
   };
   return Object.keys(newer).length > 0 ? newer : undefined;
-}
-
-/**
- * The page setup as read: each setting leniently (`normalizePageSetup`), but
- * a title block a newer build wrote (`newerPage`) as none — how that build
- * draws it is its own — until the block is set here.
- */
-function readPageSetup(value: unknown, newerPage: Readonly<Record<string, unknown>> | undefined): DiagramPageSetup {
-  const page = normalizePageSetup(value);
-  return newerPage && Object.hasOwn(newerPage, 'titleBlock') ? { ...page, titleBlock: PAGE_SETTINGS.titleBlock.legacy } : page;
 }
 
 /**

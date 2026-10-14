@@ -1767,8 +1767,10 @@ on its next save.
   heightShare: 0.27 }`, no block, as every first page before it; a field of
   it that does not read takes that field's legacy value. A number past its
   range, a `flowBands` word other than `auto`, or a field of `titleBlock`
-  this build has no name for, is a newer build's (rule 2); a newer build's
-  `titleBlock` is shown as no block.
+  this build has no name for, is a newer build's (rule 2). A newer build's
+  `titleBlock` is read as `pageNumbers` and the margin are: `enabled` as
+  written, `heightShare` held to its range, so the first page keeps a block
+  where that build drew one, and at the same share holds the same steps.
 - `titleBlockContent` (added 2026-10-14, `diagram-title-block.md`), only
   when a part is set: what the first page's title block shows, `{ model?,
   pattern?, byline? }`, written in that order. `model` (the finished model:

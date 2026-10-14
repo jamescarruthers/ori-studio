@@ -45,6 +45,7 @@ import {
 } from './diagramSteps.fixtures';
 import { markup, sceneOf, sheetWithCrease } from '../../lib/paper/paperScene.fixtures';
 import { diagramLayoutSteps } from '../pages/diagramPages';
+import { cellSlots } from '../pages/stepPlaces';
 
 function sequentialIds(): DiagramIdFactory {
   let next = 0;
@@ -326,18 +327,20 @@ describe('writeDiagram / readDiagram', () => {
       });
     });
 
-    it('carries a share past this build’s range, or a field it has no name for, as a newer build’s: no block here', () => {
+    it('carries a share past this build’s range, or a field it has no name for, as a newer build’s: shown as the nearest block here', () => {
       const on = throughJson(writeDiagram(setPageSetup(sampleDiagram(), { titleBlock: { enabled: true, heightShare: 0.3 } })));
-      for (const titleBlock of [
-        { enabled: true, heightShare: 0.6 },
-        { enabled: true, heightShare: 0.1 },
-        { enabled: true, heightShare: 0.3, at: 'bottom' },
-      ]) {
+      for (const [titleBlock, shown] of [
+        [{ enabled: true, heightShare: 0.6 }, { enabled: true, heightShare: 0.5 }],
+        [{ enabled: true, heightShare: 0.1 }, { enabled: true, heightShare: 0.15 }],
+        [{ enabled: true, heightShare: 0.3, at: 'bottom' }, { enabled: true, heightShare: 0.3 }],
+        [{ enabled: false, heightShare: 0.3, at: 'bottom' }, { enabled: false, heightShare: 0.3 }],
+      ] as const) {
         const written = { ...on, page: { ...on.page, titleBlock } };
         const read = readDiagram(written)!;
         expect(read.readOnly).toBe(false);
-        // How a newer build draws its block is its own: none here, its value written back as it came.
-        expect(read.document.page.titleBlock).toEqual(LEGACY);
+        // Each field it knows read as a margin past its range is (rule 2), so the first page holds what the newer
+        // build's held at the same share, and the pages after it keep their steps; its value written back as it came.
+        expect(read.document.page.titleBlock, JSON.stringify(titleBlock)).toEqual(shown);
         expect(read.document.newer).toEqual({ page: { titleBlock } });
         expect(throughJson(writeDiagram(read.document))).toEqual(written);
         // Another setting changed keeps it; the block set here is this build's.
@@ -346,6 +349,21 @@ describe('writeDiagram / readDiagram', () => {
         expect(chosen.newer).toBeUndefined();
         expect(throughJson(writeDiagram(chosen))).toEqual(on);
       }
+    });
+
+    it('cuts and signs every page of a newer build’s block with a field it has no name for as that block’s: none re-packs', () => {
+      // Twenty steps, nine a page: seven on the first under the block, then nine and four.
+      const steps = Array.from({ length: 20 }, (_, index) => cpStep(`s${index}`));
+      const saved = setPageSetup(insertSteps(createDiagram({ newId: sequentialIds() }), steps, 0), {
+        layout: 'flow',
+        stepsPerPage: 9,
+        titleBlock: { enabled: true, heightShare: 0.27 },
+      });
+      const written = throughJson(writeDiagram(saved));
+      const newer = readDiagram({ ...written, page: { ...written.page, titleBlock: { ...written.page.titleBlock, align: 'center' } } })!;
+      expect(newer.document.newer).toBeDefined();
+      expect(cellSlots(newer.document).pages.map((page) => page.length)).toEqual([7, 9, 4]);
+      expect(cellSlots(newer.document).signatures).toEqual(cellSlots(saved).signatures);
     });
 
     it('writes its content only when a part is set, in one order, and reads each part', () => {
@@ -861,7 +879,12 @@ describe('a newer build’s work', () => {
     [
       'a title block taller than it lays out',
       { page: { titleBlock: { enabled: true, heightShare: 0.6 } } },
-      { page: { titleBlock: { enabled: false, heightShare: 0.27 } } },
+      { page: { titleBlock: { enabled: true, heightShare: 0.5 } } },
+    ],
+    [
+      'a title block with a field it does not know',
+      { page: { titleBlock: { enabled: true, heightShare: 0.27, align: 'center' } } },
+      { page: { titleBlock: { enabled: true, heightShare: 0.27 } } },
     ],
     ['a title block part of a kind it does not know', { titleBlockContent: { model: { kind: 'own' } } }, {}],
   ])('falls back alone, stays editable and writes back as it came, a diagram with %s', (_label, patch, shown) => {

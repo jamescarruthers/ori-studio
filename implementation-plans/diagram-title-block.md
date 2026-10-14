@@ -744,13 +744,23 @@ A deliberate change to the frozen v1 format, made the way
 **`page.titleBlock`**: `{ enabled: boolean, heightShare: number }`.
 
 - It is written always, as the whole object (as `pageNumbers` is).
-- When unsaid, or damaged, it reads as the legacy `{ enabled: false,
-  heightShare: 0.27 }`.
+- When unsaid, or not an object, it reads as the legacy `{ enabled: false,
+  heightShare: 0.27 }`. A field of it that does not read takes that
+  field's legacy value alone, as a field of `pageNumbers` does: `{ enabled:
+  true }` reads as on at 0.27.
 - `heightShare` runs from 0.15 to 0.5. Past that range it is a newer
   build's (rule 2), and so is a field of `titleBlock` this build has no name
   for: `readNewerPage` (`diagramFile.ts:343-357`) gains a key set for it, as
-  `pageNumbers` has (`PAGE_NUMBERS_KEYS`, `:303`). Either way the page
-  falls back to the legacy value and the newer one is written back.
+  `pageNumbers` has (`PAGE_NUMBERS_KEYS`, `:303`). Either way the newer
+  object is written back as it came, and read as `pageNumbers` and the
+  margin are: `enabled` as written, the share held to its range. So the
+  block stays where the newer build drew one, and at the same share page 1
+  holds the same steps and every later page holds.
+- *Revised in the review of 1a and 1b.* The first draft read any damage
+  as the legacy value whole, and a newer build's block as no block. The
+  second re-cut every flow page of such a file in this build, moving layout
+  without consent, against the contract's rule 2 ("shown as this build's
+  default or nearest").
 - `PAGE_SETTINGS` (`document/pageSettings.ts:53-80`) gains the row,
   `normalizePageSetup` (`diagramDocument.ts:2544`) reads it,
   `pageSetupEquals` (`:2592`) compares it, and `writePageSetup`
@@ -1073,9 +1083,10 @@ until 1f.
 - A field of `titleBlock` that does not read takes that field's legacy
   value (`{ enabled: true }` reads as on at 0.27); no object at all reads
   as no block. A newer build's `titleBlock` (a share past 0.15–0.5, or a
-  field this build has no name for) is carried in `newer.page` and the
-  page reads as no block (`readPageSetup` in `diagramFile.ts`), as section
-  8 says, rather than clamped as a newer margin is.
+  field this build has no name for) is carried in `newer.page`, and its
+  known fields read as they read in any file (`normalizePageSetup`): on as
+  written, the share clamped, as a newer margin is. (The first build showed
+  it as no block; the review changed that, see section 8.)
 - `setTitleBlockContent(document, patch)` is the one edit: a part set to a
   source, `'auto'` to take it away, a byline of blanks taken away. Setting
   a part lets go of a newer build's value for that part only.
