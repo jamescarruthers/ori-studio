@@ -2,7 +2,8 @@
  * A diagram as it is stored in the project file (each of `workspace.diagrams`),
  * read leniently and written back exactly.
  *
- * Three rules, from implementation-plans/diagram-workspace.md (Contracts):
+ * Four rules, the first three from implementation-plans/diagram-workspace.md
+ * (Contracts):
  *
  * - **Malformed is dropped.** A step, annotation or asset that does not read is
  *   left out; the rest of the diagram opens. A diagram that is not an object at
@@ -22,6 +23,28 @@
  *   shown is a best-effort reading of it. Nothing else does: a document-level
  *   field or value a newer build wrote falls back alone, and is written back
  *   as it came (`DiagramNewerFields`, decision 2 of the launch review).
+ * - **Every setting is said; one unsaid is older, never the default.**
+ *   (`implementation-plans/diagram-document-evolution.md`.) Look tweaks reach
+ *   every diagram, but layout never moves without the user's consent, so a
+ *   file says every page setting it was saved with, defaults included
+ *   (`writePageSetup`). One it does not say was written by a build that did
+ *   not know it, or before every setting was said (2026-10-12), and reads as
+ *   that setting's *legacy* value — the value that draws the page as that
+ *   build drew it — never as today's default, which only a new diagram takes
+ *   (`PAGE_SETTINGS` in `pageSettings.ts`: both, in one table, so a default is
+ *   changed in one line).
+ *   - **Adding a setting:** give it a default and a legacy value in that
+ *     table. Its legacy value reproduces how pages were drawn before it
+ *     existed, and never changes once a build that knows it has shipped.
+ *   - **Retiring a setting:** put its key on the explicit list of retired
+ *     fields (`RETIRED_PAGE_KEYS`), read there on purpose — migrated into what
+ *     replaced it, or let go — and never write it again. A retired field is
+ *     never left to be carried forever as a newer build's unknown field.
+ *   Fields elsewhere left out at their default are either look (an
+ *   annotation's pen, a label's size: a change to their default restyles
+ *   every diagram, by design) or say something fixed by being absent (no
+ *   placement; Fill, for an enlarged step's Size), a meaning that is never
+ *   redefined; neither moves a page.
  *
  * Every string a user typed passes through `xmlText` on the way in, so what is
  * stored can always be written into an SVG page. Every uploaded SVG is
@@ -97,21 +120,24 @@ import {
   DIAGRAM_PAGE_SIDES,
   DIAGRAM_SHOW_AS,
   FIRST_PAGE_NUMBER_RANGE,
+  FLOW_BANDS_RANGE,
+  FLOW_WEIGHT_RANGE,
   PAGE_COLUMNS_RANGE,
   PAGE_MARGIN_MM_RANGE,
   PAGE_ROWS_RANGE,
+  PAGE_STEPS_RANGE,
   PAPER_SIZES,
   PATH_WIDTH_MM_RANGE,
   SPREAD_AMOUNT_RANGE,
   SPREAD_AXIS_RANGE,
   SPREAD_SKEW_RANGE,
+  STEPS_PER_PAGE_RANGE,
   isTurn,
   showAsOf,
   carriedJson,
   isKnownAsset,
   normalizePageSetup,
-  DEFAULT_PATH_COLOR,
-  DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTING_KEYS,
   readHexColor,
   randomDiagramId,
   withReferencedAssets,
@@ -158,8 +184,9 @@ import {
   type QuarterTurns,
   type ReferencesPlanSettings,
 } from './diagramDocument';
+import { readPageArrangements, writePageArrangements } from './pageArrangements';
 import { validateStepDiagramModel } from './stepDiagramModelFile';
-import { normalizeStepPlace, PLACE_OFFSETS, placeOffset, placeScale } from './stepPlace';
+import { normalizeStepPlace, PLACE_OFFSETS, placeOffset, placeScale, placeTextWidth } from './stepPlace';
 
 /** A diagram read from a file. */
 export interface ReadDiagram {
@@ -204,7 +231,8 @@ export function readDiagram(value: unknown, options: ReadDiagramOptions = {}): R
       steps.push(step);
     }
   }
-  const newer = readNewerFields(value);
+  const arranged = readPageArrangements(value.pageArrangements);
+  const newer = readNewerFields(value, arranged.newer);
   const document: DiagramDocument = {
     formatVersion: DIAGRAM_FORMAT_VERSION,
     id: typeof value.id === 'string' && value.id.length > 0 ? value.id : newId('diagram'),
@@ -214,6 +242,7 @@ export function readDiagram(value: unknown, options: ReadDiagramOptions = {}): R
     page: normalizePageSetup(value.page),
     steps,
     assets,
+    ...(Object.keys(arranged.arrangements).length > 0 ? { pageArrangements: arranged.arrangements } : {}),
     ...(newer ? { newer } : {}),
   };
   // The entries only a newer build's writing names go back with it, as they came.
@@ -235,30 +264,28 @@ const DOCUMENT_KEYS = new Set([
   'steps',
   'assets',
   'thumbnails',
+  'pageArrangements',
 ]);
-const PAGE_KEYS = new Set([
-  'size',
-  'orientation',
-  'marginMm',
-  'layout',
-  'columns',
-  'rows',
-  'showPath',
-  'pathWidthMm',
-  'pathColor',
-  'firstPageSide',
+/**
+ * The page fields a build once wrote that this one has retired (the rule at
+ * the top of this file), each with what a file that still says it is read
+ * as: migrated into what replaced it, or let go. Either way it is read here
+ * on purpose, never carried as a newer build's field, and never written.
+ */
+const RETIRED_PAGE_KEYS: ReadonlySet<string> = new Set([
   // Retired 2026-10-06, when every diagram came to fit each: the choice of One
-  // scale (`paper`) or Fit each (`fit`). Whatever it says is let go, and it is
-  // never written.
+  // scale (`paper`) or Fit each (`fit`). Whatever it says is let go.
   'scale',
-  'showTitle',
-  'pageNumbers',
 ]);
+/** Every page field this build reads: each page setting (`PAGE_SETTINGS`), and the retired ones. */
+const PAGE_KEYS: ReadonlySet<string> = new Set([...PAGE_SETTING_KEYS, ...RETIRED_PAGE_KEYS]);
 const PAGE_ENUMS: Record<string, readonly string[]> = {
   size: PAPER_SIZES,
   orientation: ['portrait', 'landscape'],
   layout: ['grid', 'flow'],
   firstPageSide: DIAGRAM_PAGE_SIDES,
+  // A word other than `auto`; a count is a number, read within its range below.
+  flowBands: ['auto'],
 };
 
 /** The ranges a page's numbers are read within: past one, a number is a newer build's. */
@@ -266,7 +293,12 @@ const PAGE_RANGES: Readonly<Record<string, { readonly min: number; readonly max:
   marginMm: PAGE_MARGIN_MM_RANGE,
   columns: PAGE_COLUMNS_RANGE,
   rows: PAGE_ROWS_RANGE,
+  stepsPerPage: STEPS_PER_PAGE_RANGE,
   pathWidthMm: PATH_WIDTH_MM_RANGE,
+  flowBands: FLOW_BANDS_RANGE,
+  flowPreferBands: FLOW_WEIGHT_RANGE,
+  flowNesting: FLOW_WEIGHT_RANGE,
+  flowSteadiness: FLOW_WEIGHT_RANGE,
 };
 const PAGE_NUMBERS_KEYS: ReadonlySet<string> = new Set(['enabled', 'first']);
 const STYLE_KEYS: ReadonlySet<string> = new Set(['preset', 'style']);
@@ -278,9 +310,11 @@ const STYLE_KEYS: ReadonlySet<string> = new Set(['preset', 'style']);
  * has no name for or whose value it does not read. Each falls back alone —
  * shown as this build's default or nearest, the rest of the diagram editable
  * — and is written back as it came until it is changed here. A value of the
- * wrong type is damage rather than news, and is replaced as before.
+ * wrong type is damage rather than news, and is replaced as before. So is a
+ * page arrangement this build does not read (`pageArrangements`, read by
+ * `readPageArrangements`): the page is packed here as if none were stored.
  */
-function readNewerFields(value: Record<string, unknown>): DiagramNewerFields | undefined {
+function readNewerFields(value: Record<string, unknown>, pageArrangements: Record<string, unknown>): DiagramNewerFields | undefined {
   const fields = Object.fromEntries(Object.entries(value).filter(([key]) => !DOCUMENT_KEYS.has(key)));
   const page = readNewerPage(value.page);
   const newer: DiagramNewerFields = {
@@ -288,6 +322,7 @@ function readNewerFields(value: Record<string, unknown>): DiagramNewerFields | u
     ...(typeof value.hanStyle === 'string' && !HAN_STYLES.includes(value.hanStyle) ? { hanStyle: value.hanStyle } : {}),
     ...(isRecord(value.style) && isNewerStyle(value.style) ? { style: value.style } : {}),
     ...(page ? { page } : {}),
+    ...(Object.keys(pageArrangements).length > 0 ? { pageArrangements } : {}),
   };
   return Object.keys(newer).length > 0 ? newer : undefined;
 }
@@ -356,6 +391,11 @@ export function writeDiagram(
   const { newer } = document;
   const thumbnails = new ThumbnailWriter(document, newer?.thumbnails);
   const steps = document.steps.map((step) => writeStep(step, thumbnails));
+  // Only a flow's: a grid packs no page, and a switch back to the flow packs its pages afresh.
+  const pageArrangements = writePageArrangements(
+    document.page.layout === 'flow' ? document.pageArrangements : undefined,
+    newer?.pageArrangements
+  );
   return {
     formatVersion: DIAGRAM_FORMAT_VERSION,
     id: document.id,
@@ -367,6 +407,7 @@ export function writeDiagram(
     assets: Object.fromEntries(
       Object.entries(document.assets).map(([id, asset]) => [id, writeAsset(asset)])
     ),
+    ...(pageArrangements ? { pageArrangements } : {}),
     ...thumbnails.table(),
     ...newer?.fields,
   };
@@ -431,23 +472,21 @@ function thumbnailJson(thumbnail: SheetThumbnail): string {
 }
 
 /**
- * The page setup as written: every field, but the first page's side only when
- * it is the right, and the flow band's width and colour only when not their
- * defaults — so a diagram that never chose, as every one before the choices,
- * opens in a build that does not know them as it was made.
- *
- * The layout is always written. One that is not said reads as the grid
- * (`UNSAID_PAGE_LAYOUT`), the layout of every diagram saved before the flow
- * became a new one's default; a new diagram's flow is said, so it stays one.
+ * The page setup as written: every setting, always, whatever its value, in
+ * the order of their table (`PAGE_SETTINGS`). A file says every choice it
+ * was saved with — a default included — so a later change to a default
+ * reaches only new diagrams, and a saved page is drawn and packed as it was.
+ * A file that does not say one was written before this build knew it, or
+ * before every setting was written (2026-10-12), and reads as its legacy
+ * value (`normalizePageSetup`).
  */
 function writePageSetup(page: DiagramPageSetup): Record<string, unknown> {
-  const { firstPageSide, pathWidthMm, pathColor, ...rest } = page;
-  return {
-    ...rest,
-    ...(pathWidthMm !== DEFAULT_PATH_WIDTH_MM ? { pathWidthMm } : {}),
-    ...(pathColor !== DEFAULT_PATH_COLOR ? { pathColor } : {}),
-    ...(firstPageSide === 'right' ? { firstPageSide } : {}),
-  };
+  return Object.fromEntries(
+    PAGE_SETTING_KEYS.map((key) => [
+      key,
+      key === 'pageNumbers' ? { enabled: page.pageNumbers.enabled, first: page.pageNumbers.first } : page[key],
+    ])
+  );
 }
 
 function writeStep(step: DiagramEntry, thumbnails: ThumbnailWriter): Record<string, unknown> {
@@ -467,6 +506,8 @@ function writeStep(step: DiagramEntry, thumbnails: ThumbnailWriter): Record<stri
     annotatedPictureKey: step.annotatedPictureKey,
     text: step.text,
     breakBefore: step.breakBefore,
+    // Only on a step that starts a page with its own count: a file without one saves as it did.
+    ...(step.pageSteps !== undefined ? { pageSteps: step.pageSteps } : {}),
     ...(step.zoom ? { zoom: writeStepZoom(step.zoom) } : {}),
     ...writeStepPlace(step),
   };
@@ -664,7 +705,7 @@ const PULLED_MARKS_KEYS: ReadonlySet<string> = new Set(['letters', 'highlights']
  * mode or a field it has no name for is a newer build's render.
  */
 const CP_RENDER_FIELDS: Readonly<Record<DiagramCpRender['mode'], ReadonlySet<string>>> = {
-  'crease-pattern': new Set(['mode', 'rotationDeg', 'side']),
+  'crease-pattern': new Set(['mode', 'rotationDeg', 'side', 'flipCreases']),
   'folded-flat': new Set(['mode', 'side', 'rotationDeg', 'foldCase', 'spread']),
   'folded-3d': new Set(['mode', 'camera', 'side']),
   // `shape` is Pose's mesh, which this build carries and never reads (`readCpRender`).
@@ -731,6 +772,7 @@ const STEP_KEYS: ReadonlySet<string> = new Set([
   'annotatedPictureKey',
   'text',
   'breakBefore',
+  'pageSteps',
   'zoom',
   'place',
 ]);
@@ -759,7 +801,8 @@ function isNewerWord(value: unknown, known: readonly string[]): boolean {
  * than this build keeps, or naming an asset of a kind this build does not
  * know, which only that newer build can draw ({@link readSource},
  * {@link readPicture}). So does a field of the step this build has no name
- * for ({@link STEP_KEYS}). One of a known kind that does not read — or that
+ * for ({@link STEP_KEYS}), and a page count past the most it lays out
+ * ({@link readPageSteps}). One of a known kind that does not read — or that
  * names an asset the file does not hold, or one dropped on the way in — is
  * left out, and the step keeps its words.
  */
@@ -775,6 +818,7 @@ function readStep(
   const zoom = value.zoom === undefined ? undefined : readStepZoom(value.zoom);
   // An enlarged step's marks are in its window's units, and reach as far as its window's reach.
   const reach = zoom && zoom !== NEWER && zoom.frame ? windowReach(zoom.frame) : PICTURE_REACH;
+  const pageSteps = readPageSteps(value.pageSteps);
   const base: DiagramStep = {
     id,
     revision: wholeNumber(value.revision) ?? 0,
@@ -786,6 +830,8 @@ function readStep(
       typeof value.annotatedPictureKey === 'string' ? value.annotatedPictureKey : null,
     text: typeof value.text === 'string' ? xmlText(value.text) : '',
     breakBefore: value.breakBefore === true,
+    // A count past the most this build lays out starts a page of that most, the step a newer build's (below).
+    ...(pageSteps === NEWER ? { pageSteps: PAGE_STEPS_RANGE.max } : typeof pageSteps === 'number' ? { pageSteps } : {}),
   };
   const paperFaces =
     isRecord(value.picture) && value.picture.kind === 'scene' && value.picture.paperFaces !== undefined
@@ -800,7 +846,13 @@ function readStep(
   // A newer build's step shows what this build reads of it (decision 2 of the
   // launch review): its picture, as its link and its frame say, and its marks
   // — never its hand placement, which this build would lay it out by.
-  if (hasNewerKey(value, STEP_KEYS) || paperFaces === NEWER_PAPER_FACES || sourceRead.newer || pictureRead.newer) {
+  if (
+    hasNewerKey(value, STEP_KEYS) ||
+    pageSteps === NEWER ||
+    paperFaces === NEWER_PAPER_FACES ||
+    sourceRead.newer ||
+    pictureRead.newer
+  ) {
     return { ...withPicture(framed, sourceRead.read, pictureRead.read, paperFaces), unknown: value };
   }
   return withPicture({ ...framed, ...readStepPlace(value.place) }, sourceRead.read, pictureRead.read, paperFaces);
@@ -1217,13 +1269,16 @@ function readCpRender(value: unknown): DiagramCpRender | null {
   switch (value.mode) {
     case 'crease-pattern': {
       const seen = readPatternSide(value.side);
+      const flipCreases = readFlag(value.flipCreases);
       // A newer build's side made the step a newer build's before this was reached.
-      if (rotationDeg === null || seen === null || seen === NEWER) return null;
-      // The front is written as no side at all, so a front read with one is written back without it.
+      if (rotationDeg === null || seen === null || seen === NEWER || flipCreases === null) return null;
+      // The front is written as no side at all, and Flip creases off as nothing, so either read
+      // said out loud is written back without it. Flip creases on the front is kept: the back brings it back.
       return {
         mode: 'crease-pattern',
         rotationDeg: normalizeDegrees(rotationDeg),
         ...(seen === 'back' ? { side: 'back' as const } : {}),
+        ...(flipCreases ? { flipCreases: true as const } : {}),
       };
     }
     case 'folded-flat': {
@@ -1854,7 +1909,11 @@ function readLabelText(value: unknown): string | typeof NEWER | null {
   return text.length > LABEL_MAX_LENGTH ? NEWER : text;
 }
 
-/** A label's Bold or halo (17b), or equal divisions' short dividers (Revision 3), read as `numbered` is: unsaid or false, no; true, yes; anything else, damage. */
+/**
+ * A label's Bold or halo (17b), equal divisions' short dividers (Revision 3),
+ * or a crease pattern's Flip creases, read as `numbered` is: unsaid or false,
+ * no; true, yes; anything else, damage.
+ */
 function readFlag(value: unknown): boolean | null {
   if (value === undefined) return false;
   return typeof value === 'boolean' ? value : null;
@@ -2149,7 +2208,7 @@ function writeStepZoom(zoom: DiagramStepZoom): Record<string, unknown> {
 }
 
 /** The fields a step's placement is written with, and its pin's; any other is a newer build's. */
-const PLACE_KEYS: ReadonlySet<string> = new Set([...PLACE_OFFSETS, 'scale']);
+const PLACE_KEYS: ReadonlySet<string> = new Set([...PLACE_OFFSETS, 'scale', 'textWidth']);
 const PLACE_SCALE_KEYS: ReadonlySet<string> = new Set(['mmPerUnit', 'frameMm']);
 
 /**
@@ -2174,6 +2233,8 @@ function readStepPlace(value: unknown): Pick<DiagramStep, 'place' | 'placeNewer'
   }
   const scale = placeScale(value.scale);
   if (scale) place.scale = scale;
+  const textWidth = placeTextWidth(value.textWidth);
+  if (textWidth !== null) place.textWidth = textWidth;
   return Object.keys(place).length > 0 ? { place } : {};
 }
 
@@ -2202,6 +2263,18 @@ function paperFacesFitScene(faces: DiagramPaperFaces, picture: DiagramScenePictu
   }
   if (!spread) return true;
   return faces.rings.every((ring, face) => ring.length === 0 || whole.get(face) === ring.length);
+}
+
+/**
+ * How many steps the page a step starts holds (`DiagramStep.pageSteps`):
+ * unsaid, none — the page fills with the default; a whole number past the
+ * most this build lays out, a newer build's; a whole number under one, a
+ * number not whole, or anything else, damage, dropped alone.
+ */
+function readPageSteps(value: unknown): number | undefined | typeof NEWER | null {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < PAGE_STEPS_RANGE.min) return null;
+  return value <= PAGE_STEPS_RANGE.max ? value : NEWER;
 }
 
 /** A pleat arrow's Zs: unsaid, one; a whole count past five, a newer build's; anything else, damage. */

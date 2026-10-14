@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_PAGE_SETUP,
+  PAGE_SETTINGS,
   snapshotDiagramStyle,
   createDiagram,
   createStep,
@@ -17,6 +18,7 @@ import {
   setDiagramTitle,
   setHanStyle,
   setPageSetup,
+  setPageStarts,
   setStepBreakBefore,
   setStepText,
   stepHasContent,
@@ -41,7 +43,9 @@ import {
   setLinkedPicture,
   showAsOf,
   creasePatternSide,
+  creasesFlipped,
   withCreasePatternSide,
+  withCreasesFlipped,
   withRememberedPoses,
   anchorTakesCard,
   createTurn,
@@ -191,6 +195,14 @@ describe('duplicateStep', () => {
     expect(stepsIn(document).map((step) => step.breakBefore)).toEqual([false, true, false]);
   });
 
+  it('keeps a page’s own count with the original: the copy is one more step on its page', () => {
+    const { diagram, ids } = diagramWith(2);
+    const counted = setPageStarts(diagram, new Map([['step-3', { pageSteps: 4 }]]));
+    const { document } = duplicateStep(counted, 'step-3', ids)!;
+    expect(stepsIn(document).map((step) => step.pageSteps)).toEqual([undefined, 4, undefined]);
+    expect('pageSteps' in stepsIn(document)[2]!).toBe(false);
+  });
+
   it('refuses a missing or locked step', () => {
     const { diagram } = diagramWith(1);
     expect(duplicateStep(diagram, 'missing')).toBeNull();
@@ -217,6 +229,31 @@ describe('step and document fields', () => {
     expect(isLockedStep(lockedStep)).toBe(true);
     expect(setStepText(locked, 'step-2', 'hello')).toBe(locked);
     expect(setStepBreakBefore(locked, 'step-2', true)).toBe(locked);
+    expect(setPageStarts(locked, new Map([['step-2', { pageSteps: 3, breakBefore: true }]]))).toBe(locked);
+  });
+
+  it('sets page starts at once — a count clamped to 1–30, null taking it away — and is a no-op when unchanged', () => {
+    const { diagram } = diagramWith(3);
+    const next = setPageStarts(
+      diagram,
+      new Map([
+        ['step-2', { pageSteps: 7 }],
+        ['step-3', { pageSteps: 40, breakBefore: true }],
+        ['step-4', { pageSteps: 0 }],
+        ['missing', { pageSteps: 3 }],
+      ])
+    );
+    expect(stepsIn(next).map((step) => [step.pageSteps, step.breakBefore])).toEqual([
+      [7, false],
+      [30, true],
+      [1, false],
+    ]);
+    expect(setPageStarts(next, new Map([['step-2', { pageSteps: 7 }], ['step-3', { breakBefore: true }]]))).toBe(next);
+    expect(setPageStarts(next, new Map([['step-2', { pageSteps: Number.NaN }]]))).toBe(next);
+    const cleared = setPageStarts(next, new Map([['step-2', { pageSteps: null }], ['step-3', { pageSteps: null, breakBefore: false }]]));
+    expect('pageSteps' in stepsIn(cleared)[0]!).toBe(false);
+    expect(stepsIn(cleared)[1]).toEqual(stepsIn(diagram)[1]);
+    expect(setPageStarts(diagram, new Map())).toBe(diagram);
   });
 
   it('sets the title, Han style, paper style and page break', () => {
@@ -234,14 +271,30 @@ describe('step and document fields', () => {
 describe('page setup', () => {
   it('clamps every field to its range and keeps the rest', () => {
     const { diagram } = diagramWith(0);
-    const next = setPageSetup(diagram, { columns: 9, rows: 0, marginMm: -4 });
-    expect(next.page).toMatchObject({ columns: 5, rows: 1, marginMm: 0, size: 'a4' });
+    const next = setPageSetup(diagram, { columns: 9, rows: 0, marginMm: -4, stepsPerPage: 40 });
+    expect(next.page).toMatchObject({ columns: 5, rows: 1, marginMm: 0, size: 'a4', stepsPerPage: 30 });
     expect(setPageSetup(diagram, { columns: 3 })).toBe(diagram);
+    expect(setPageSetup(diagram, { stepsPerPage: 9 })).toBe(diagram);
+    expect(setPageSetup(diagram, { stepsPerPage: 1 }).page.stepsPerPage).toBe(2);
+    // As many as a flow page's 5 × 6 held before it took a count.
+    expect(setPageSetup(diagram, { stepsPerPage: 30 }).page.stepsPerPage).toBe(30);
+    // Each is its own: the grid's columns leave the flow's steps per page as they were.
+    expect(setPageSetup(diagram, { columns: 4 }).page.stepsPerPage).toBe(9);
   });
 
   it('starts a new diagram in the flow layout', () => {
     expect(DEFAULT_PAGE_SETUP.layout).toBe('flow');
     expect(createDiagram().page.layout).toBe('flow');
+  });
+
+  it('takes a new diagram’s page setup from each setting’s default, and an unsaid one from its legacy value', () => {
+    const settings = Object.entries(PAGE_SETTINGS);
+    expect(createDiagram().page).toEqual(Object.fromEntries(settings.map(([key, values]) => [key, values.default])));
+    const legacy = Object.fromEntries(
+      settings.map(([key, values]) => [key, typeof values.legacy === 'function' ? values.legacy({ columns: 3, rows: 3 }) : values.legacy])
+    );
+    expect(normalizePageSetup(null)).toEqual(legacy);
+    expect(normalizePageSetup({})).toEqual(legacy);
   });
 
   it('reads anything, falling back field by field', () => {
@@ -258,8 +311,13 @@ describe('page setup', () => {
       size: 'letter',
       orientation: 'portrait',
       columns: 3,
+      // Unsaid: as many as the columns and rows hold.
+      stepsPerPage: 9,
       pageNumbers: { enabled: false, first: 1 },
     });
+    expect(normalizePageSetup({ layout: 'flow', columns: 4, rows: 2 }).stepsPerPage).toBe(8);
+    expect(normalizePageSetup({ layout: 'flow', columns: 5, rows: 6 }).stepsPerPage).toBe(30);
+    expect(normalizePageSetup({ layout: 'flow', columns: 4, rows: 2, stepsPerPage: 5 }).stepsPerPage).toBe(5);
   });
 });
 
@@ -668,6 +726,24 @@ describe('the ways a linked pattern is shown (D19)', () => {
     expect(creasePatternSide(back)).toBe('back');
     expect(withCreasePatternSide(back, 'front')).toEqual(pattern);
     expect('side' in withCreasePatternSide(back, 'front')).toBe(false);
+  });
+
+  // Zach, 2026-10-12: draw the pattern from the front, and flip its creases for the steps seen from the back.
+  it('flips a crease pattern’s creases on its back alone, and keeps the choice on the front, where it draws nothing', () => {
+    const back = withCreasePatternSide(pattern, 'back');
+    const flipped = withCreasesFlipped(back, true);
+    expect(flipped).toEqual({ mode: 'crease-pattern', rotationDeg: 45, side: 'back', flipCreases: true });
+    expect(creasesFlipped(back)).toBe(false);
+    expect(creasesFlipped(flipped)).toBe(true);
+    // Front again: kept, inert; the back again brings it back.
+    const front = withCreasePatternSide(flipped, 'front');
+    expect(front).toEqual({ mode: 'crease-pattern', rotationDeg: 45, flipCreases: true });
+    expect(creasesFlipped(front)).toBe(false);
+    expect(withCreasePatternSide(front, 'back')).toEqual(flipped);
+    // Off is written as nothing, in the file's own order.
+    expect(withCreasesFlipped(flipped, false)).toEqual(back);
+    expect('flipCreases' in withCreasesFlipped(flipped, false)).toBe(false);
+    expect(Object.keys(withCreasePatternSide(front, 'back'))).toEqual(['mode', 'rotationDeg', 'side', 'flipCreases']);
   });
 
   it('keeps a crease pattern’s back through the other ways, and starts them from the front at its own turn', () => {

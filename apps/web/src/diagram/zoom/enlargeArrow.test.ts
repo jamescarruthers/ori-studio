@@ -10,7 +10,6 @@ import {
   ENLARGE_ARROW_CHORD_MM,
   enlargeArrowMm,
   paintEnlargeArrow,
-  tallestEnlargeArrowMm,
 } from './enlargeArrow';
 
 const style = DEFAULT_DIAGRAM_STYLE;
@@ -128,7 +127,6 @@ describe('the enlarge arrow (Revision 2)', () => {
       const { w, h } = aimedEnlargeArrowMm(style, aim);
       expect(Math.abs(w - (maxX - minX + pen)), String(flipped)).toBeLessThan(0.1);
       expect(Math.abs(h - (maxY - minY + pen)), String(flipped)).toBeLessThan(0.1);
-      expect(h, String(flipped)).toBeLessThanOrEqual(tallestEnlargeArrowMm(style) + 1e-9);
       // Its head the furthest point along the aim: the tip lowest, a little left.
       const along = ([x, y]: [number, number]) => x * Math.cos(aim.angle) + y * Math.sin(aim.angle);
       const tip = points.reduce((best, point) => (along(point) > along(best) ? point : best));

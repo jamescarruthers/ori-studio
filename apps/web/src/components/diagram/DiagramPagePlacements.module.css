@@ -1,0 +1,13 @@
+.content {
+  padding: 0 var(--space-3) var(--space-2);
+}
+.note {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

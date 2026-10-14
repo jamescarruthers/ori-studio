@@ -123,6 +123,7 @@ function linkedPose(): DiagramLinkedPose {
     rotateTo: () => {},
     showAs: async () => true,
     setSide: async () => true,
+    setFlipCreases: async () => true,
     simulate: async () => {},
     wantsRest: () => false,
     spread: null,
@@ -548,16 +549,19 @@ describe('the Step pane on an enlarged step, out of the step detail', () => {
     expect(listAction('update-enlarged')).toBeNull();
   });
 
-  it('says what it prints at once the pages are laid out, amber where its room or its area holds it back (Z4)', async () => {
+  it('says what it prints at once the pages are laid out, amber where its area leaves Fill barely enlarged (Z4)', async () => {
     install();
     await enlarge();
     printed.zoom = { asked: null, printed: 4.43, reduced: false };
     status();
     expect(host!.textContent).toContain('SizeFill · prints ×4.4');
     expect(host!.querySelector('[role="status"], [data-tone="warning"]')).toBeNull();
-    printed.zoom = { asked: 3, printed: 2.38, reduced: true };
+    // A Size is drawn as asked, past its room if need be (Zach, 2026-10-12): no notice that a room holds it back.
+    printed.zoom = { asked: 3, printed: 3, reduced: false };
     status();
-    expect(host!.textContent).toContain('Asked ×3 · prints ×2.4 — the room is too small');
+    expect(host!.textContent).toContain(' · prints ×3');
+    expect(host!.textContent).not.toContain('room is too small');
+    expect(host!.querySelector('[role="status"], [data-tone="warning"]')).toBeNull();
     printed.zoom = { asked: null, printed: 1.08, reduced: false };
     status();
     expect(host!.textContent).toContain('Prints only ×1.1 — draw a smaller area');

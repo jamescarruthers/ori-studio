@@ -1,0 +1,758 @@
+{
+  "formatVersion": 1,
+  "id": "diagram-held",
+  "title": "Held pages",
+  "hanStyle": "sc",
+  "style": {
+    "preset": "diagram",
+    "style": {
+      "version": 1,
+      "paper": {
+        "front": "#ffffff",
+        "back": "#b3b3b3"
+      },
+      "edges": {
+        "width": 0.5,
+        "color": "#231f20",
+        "dash": null,
+        "cap": "butt"
+      },
+      "mountainFolds": {
+        "width": 0.25,
+        "color": "#231f20",
+        "dash": null,
+        "cap": "butt"
+      },
+      "valleyFolds": {
+        "width": 0.25,
+        "color": "#231f20",
+        "dash": null,
+        "cap": "butt"
+      },
+      "mountainDiagramCreases": {
+        "width": 0.75,
+        "color": "#231f20",
+        "dash": [
+          8,
+          2,
+          1,
+          2
+        ],
+        "cap": "butt"
+      },
+      "valleyDiagramCreases": {
+        "width": 0.75,
+        "color": "#231f20",
+        "dash": [
+          4,
+          2
+        ],
+        "cap": "butt"
+      },
+      "foldsAsEdges": false,
+      "auxCreases": {
+        "visible": true,
+        "pen": {
+          "width": 0.25,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "butt"
+        }
+      },
+      "arrows": {
+        "width": 0.75,
+        "color": "#231f20",
+        "dash": null,
+        "cap": "round"
+      },
+      "erode": 0.005,
+      "light": {
+        "enabled": true,
+        "azimuth": 322.19347,
+        "elevation": 42.80915
+      }
+    }
+  },
+  "page": {
+    "size": "a4",
+    "orientation": "portrait",
+    "marginMm": 12,
+    "layout": "flow",
+    "columns": 3,
+    "rows": 3,
+    "showPath": true,
+    "showTitle": true,
+    "pageNumbers": {
+      "enabled": true,
+      "first": 1
+    },
+    "stepsPerPage": 5
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "Fold in half and unfold.",
+      "breakBefore": false
+    },
+    {
+      "id": "step-2",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "",
+      "breakBefore": false,
+      "place": {
+        "frame": [
+          3,
+          -2
+        ],
+        "number": [
+          1.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "step-3",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "",
+      "breakBefore": false
+    },
+    {
+      "id": "turn-1",
+      "kind": "turn-over",
+      "axis": "vertical"
+    },
+    {
+      "id": "step-4",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "",
+      "breakBefore": false
+    },
+    {
+      "id": "step-5",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "Fold the corners to the centre, crease firmly, and unfold.",
+      "breakBefore": false,
+      "place": {
+        "picture": [
+          2,
+          0
+        ],
+        "scale": {
+          "mmPerUnit": 40
+        },
+        "textWidth": 30
+      }
+    },
+    {
+      "id": "step-6",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "",
+      "breakBefore": false
+    },
+    {
+      "id": "step-7",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "",
+      "breakBefore": false,
+      "place": {
+        "frame": [
+          -4,
+          6
+        ],
+        "text": [
+          0,
+          1.2
+        ]
+      }
+    },
+    {
+      "id": "step-8",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "",
+      "breakBefore": false
+    },
+    {
+      "id": "step-9",
+      "revision": 0,
+      "source": {
+        "kind": "cp",
+        "scope": {
+          "kind": "segment",
+          "region": {
+            "boundary": [
+              [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                },
+                {
+                  "x": 0,
+                  "y": 1
+                }
+              ]
+            ],
+            "bounds": {
+              "minX": 0,
+              "minY": 0,
+              "maxX": 1,
+              "maxY": 1
+            },
+            "segmentIdHint": 0
+          }
+        },
+        "fingerprint": "fp-1",
+        "thumbnail": "thumb-pxzlqcbzg4pr",
+        "render": {
+          "mode": "crease-pattern",
+          "rotationDeg": 0
+        }
+      },
+      "picture": {
+        "kind": "scene",
+        "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+        "paperScale": 100,
+        "styleKey": null,
+        "key": "scene-1"
+      },
+      "annotations": [],
+      "annotatedPictureKey": null,
+      "text": "",
+      "breakBefore": false
+    }
+  ],
+  "assets": {},
+  "pageArrangements": {
+    "step-1": {
+      "signature": "pack-3:1s3io7h171xaeq",
+      "k": 0.996453,
+      "steps": {
+        "step-1": {
+          "box": [
+            70.08,
+            28,
+            69.83,
+            76.93
+          ],
+          "scale": {
+            "mmPerUnit": 65.5687
+          },
+          "band": 0
+        },
+        "step-2": {
+          "box": [
+            117.83,
+            108.93,
+            69.83,
+            70.83
+          ],
+          "scale": {
+            "mmPerUnit": 65.5687
+          },
+          "band": 1
+        },
+        "step-3": {
+          "box": [
+            22.33,
+            108.93,
+            69.83,
+            70.83
+          ],
+          "scale": {
+            "mmPerUnit": 65.5687
+          },
+          "band": 1
+        },
+        "step-4": {
+          "box": [
+            22.33,
+            185.61,
+            69.83,
+            70.83
+          ],
+          "scale": {
+            "mmPerUnit": 65.5687
+          },
+          "band": 2
+        },
+        "step-5": {
+          "box": [
+            117.83,
+            183.77,
+            69.83,
+            89.23
+          ],
+          "scale": {
+            "mmPerUnit": 65.5687
+          },
+          "band": 2
+        }
+      }
+    },
+    "step-6": {
+      "signature": "pack-3:g3qli813souqb",
+      "k": 1.08613,
+      "steps": {
+        "step-6": {
+          "box": [
+            67.13,
+            195.13,
+            75.73,
+            76.73
+          ],
+          "scale": {
+            "mmPerUnit": 71.4699
+          },
+          "band": 0
+        },
+        "step-7": {
+          "box": [
+            114.88,
+            112.13,
+            75.73,
+            76.73
+          ],
+          "scale": {
+            "mmPerUnit": 71.4699
+          },
+          "band": 1
+        },
+        "step-8": {
+          "box": [
+            19.38,
+            112.13,
+            75.73,
+            76.73
+          ],
+          "scale": {
+            "mmPerUnit": 71.4699
+          },
+          "band": 1
+        },
+        "step-9": {
+          "box": [
+            19.38,
+            29.13,
+            75.73,
+            76.73
+          ],
+          "scale": {
+            "mmPerUnit": 71.4699
+          },
+          "band": 2
+        }
+      }
+    }
+  },
+  "thumbnails": {
+    "thumb-pxzlqcbzg4pr": "{\"viewBox\":\"0 0 100 100\",\"strokes\":[{\"x1\":0,\"y1\":0,\"x2\":100,\"y2\":0,\"role\":\"edge\"},{\"x1\":0,\"y1\":50,\"x2\":100,\"y2\":50,\"role\":\"mountain\"}]}"
+  }
+}

@@ -139,7 +139,8 @@
 }
 
 /* A finger needs the room a cursor does not: the track grows to hold a pill of
-   the touch target's height. */
+   the touch target's height, and a pill is never narrower than it is tall, so
+   a one-character label (the Packing section's Bands, 2–5) is still a target. */
 @media (pointer: coarse) {
   .track,
   .track[data-size='sm'],
@@ -149,6 +150,7 @@
 
   .option {
     min-height: var(--touch-target);
+    min-width: var(--touch-target);
   }
 }
 

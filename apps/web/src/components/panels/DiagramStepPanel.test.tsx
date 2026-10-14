@@ -19,7 +19,11 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramStepPanel } from './DiagramStepPanel';
 
-const side = vi.hoisted(() => ({ showCreasePatternSide: vi.fn(async () => true) }));
+const side = vi.hoisted(() => ({
+  showCreasePatternSide: vi.fn(async () => true),
+  flipCreasePatternCreases: vi.fn(async () => true),
+  creasePatternPaperShows: vi.fn(() => null),
+}));
 vi.mock('../../diagram/capture/creasePatternSide', () => side);
 
 /**
@@ -85,6 +89,17 @@ describe('DiagramStepPanel', () => {
     threeSteps();
     act(() => state().selectDiagramStep(null));
     expect(host?.textContent).toContain('Select a step to edit it.');
+  });
+
+  it('leaves where a step sits on the page to the Pages view’s Layers pane, in either view', () => {
+    threeSteps();
+    for (const view of ['steps', 'pages'] as const) {
+      act(() => state().setDiagramView(view));
+      expect(host?.textContent, view).toContain('Instruction');
+      expect(host?.textContent, view).not.toContain('On the page');
+      expect(host?.textContent, view).not.toContain('Reset Layout');
+      expect(host?.querySelector('input[aria-label="Size (mm)"]'), view).toBeNull();
+    }
   });
 
   it('writes the instruction to the selected step, as one undo step', () => {
@@ -330,6 +345,58 @@ describe('DiagramStepPanel', () => {
       expect(host?.textContent).not.toContain('from the back');
     });
 
+    // Zach, 2026-10-12: one pattern drawn from the front, turned over for a step seen from the back.
+    it('offers Flip creases right under Side on the back alone, off until turned on, held while read-only', () => {
+      side.flipCreasePatternCreases.mockClear();
+      const flip = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Flip creases"]');
+      const showWith = (render: DiagramCpRender) =>
+        act(() => {
+          useWorkspaceStore.setState({
+            diagram: { ...createDiagram({ newId: () => 'diagram-1' }), steps: [cpStep('step-cp', render)] },
+            // A pattern open, so the step can be captured again.
+            oristudioCpDocument: { handle: 1, document: cpDocument(), geometry: null } as unknown as OristudioCpDocumentState,
+          });
+          state().selectDiagramStep('step-cp');
+        });
+      // The front: the creases are drawn as they are, and there is nothing to flip — even with it kept on.
+      showWith({ mode: 'crease-pattern', rotationDeg: 0 });
+      expect(pressed('Side')).toBe('Front');
+      expect(flip()).toBeNull();
+      showWith({ mode: 'crease-pattern', rotationDeg: 0, flipCreases: true });
+      expect(flip()).toBeNull();
+      // The back: right under Side, off by default, with its help.
+      showWith({ mode: 'crease-pattern', rotationDeg: 0, side: 'back' });
+      expect(flip()).not.toBeNull();
+      expect(flip()!.getAttribute('aria-checked')).toBe('false');
+      const sideRow = host!.querySelector('[role="group"][aria-label="Side"]')!.closest('[data-field-row]')!;
+      const flipRow = flip()!.closest('[data-field-row]')!;
+      expect(sideRow.nextElementSibling).toBe(flipRow);
+      expect(flipRow.hasAttribute('data-nested')).toBe(false);
+      const help = flipRow.querySelector('[data-field-help]')?.getAttribute('aria-label');
+      expect(help).toBe(
+        'Turns the paper over, side to side: the crease pattern is mirrored and its mountains and valleys swap, as the creases read from the back.'
+      );
+      // One verb per press, the step's own.
+      act(() => flip()!.click());
+      expect(side.flipCreasePatternCreases).toHaveBeenCalledExactlyOnceWith('step-cp', true);
+      // On, it says so, and turns off.
+      showWith({ mode: 'crease-pattern', rotationDeg: 0, side: 'back', flipCreases: true });
+      expect(flip()!.getAttribute('aria-checked')).toBe('true');
+      expect(host?.textContent).toContain('Crease pattern, turned over');
+      act(() => flip()!.click());
+      expect(side.flipCreasePatternCreases).toHaveBeenLastCalledWith('step-cp', false);
+      expect(side.flipCreasePatternCreases).toHaveBeenCalledTimes(2);
+      // Held, as Side is, on a diagram that cannot change and while a capture of the step runs.
+      act(() => useWorkspaceStore.setState({ diagramReadOnly: true }));
+      expect(flip()!.disabled).toBe(true);
+      act(() => flip()!.click());
+      act(() => useWorkspaceStore.setState({ diagramReadOnly: false, diagramCaptures: { 'step-cp': { runId: null } } }));
+      expect(flip()!.disabled).toBe(true);
+      act(() => useWorkspaceStore.setState({ diagramCaptures: {} }));
+      expect(flip()!.disabled).toBe(false);
+      expect(side.flipCreasePatternCreases).toHaveBeenCalledTimes(2);
+    });
+
     it('poses a linked flat fold from the pane with the open step’s own verbs, and its turn as a field', () => {
       const pose = vi.fn();
       const rotateTo = vi.fn();
@@ -350,6 +417,7 @@ describe('DiagramStepPanel', () => {
           rotateTo,
           showAs: async () => true,
           setSide: async () => true,
+          setFlipCreases: async () => true,
           simulate: async () => {},
           wantsRest: () => false,
           spread: null,
@@ -402,6 +470,7 @@ describe('DiagramStepPanel', () => {
           rotateTo: () => {},
           showAs: async () => true,
           setSide: async () => true,
+          setFlipCreases: async () => true,
           simulate: async () => {},
           wantsRest: () => false,
           spread: controls && { ...controls, preview: verbs.preview, commit: verbs.commit, start: () => true },

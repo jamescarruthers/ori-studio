@@ -44,6 +44,7 @@ import { DEFAULT_FOLDED_MODEL, foldedFigureModelFromOrieditaMetadata } from '../
 import type { PaperScene, ScenePoint } from '../../lib/paper/paperScene';
 import {
   creasePatternSide,
+  creasesFlipped,
   type DiagramCpRender,
   type DiagramCpScope,
   type DiagramCpSource,
@@ -180,13 +181,19 @@ export async function captureSimulated(
   return scene ? storeScene(scene, null, simulatorSceneStyleKey(drawn)) : null;
 }
 
-/** A crease-pattern picture, from the document alone: no fold. Seen from the side its render says. */
+/**
+ * A crease-pattern picture, from the document alone: no fold. On the colour of
+ * the side its render says, its paper turned over when the render turns it.
+ */
 export function captureCreasePattern(
   document: OristudioCpDocumentSnapshot,
   creases: StepCreases,
   render: DiagramCreasePatternRender
 ): CapturedPicture {
-  const scene = creasePatternScene(document, creases, render.rotationDeg, creasePatternSide(render));
+  const scene = creasePatternScene(document, creases, render.rotationDeg, {
+    side: creasePatternSide(render),
+    flipped: creasesFlipped(render),
+  });
   return storeScene(scene, CAPTURE_PX_PER_UNIT, null);
 }
 

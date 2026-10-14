@@ -132,6 +132,23 @@ describe('resolveWheelGesture', () => {
       expect(factor).toBeCloseTo(1.16, 2);
     });
 
+    it('runs a pinch on a camera’s own rate when it names one, the wheel curve and the clamp as ever', () => {
+      // The pan/zoom panes' pinch (`useViewportSurface`) is slower than the canvas'.
+      const rates = { pinchSensitivity: 0.011 };
+      const pinch = resolveWheelGesture(wheel({ deltaY: -4, ctrlKey: true }), 'pan', rates);
+      expect(pinch).toEqual({ kind: 'zoom', factor: Math.exp(4 * 0.011) });
+      // Unnamed, it is the canvas' own.
+      expect(resolveWheelGesture(wheel({ deltaY: -4, ctrlKey: true }), 'pan')).toEqual({
+        kind: 'zoom',
+        factor: Math.exp(4 * PINCH_ZOOM_SENSITIVITY),
+      });
+      expect(resolveWheelGesture(wheel({ deltaY: -4, metaKey: true }), 'pan', rates)).toEqual(
+        resolveWheelGesture(wheel({ deltaY: -4, metaKey: true }), 'pan')
+      );
+      const notch = resolveWheelGesture(wheel({ deltaY: -100, ctrlKey: true }), 'pan', rates) as { factor: number };
+      expect(notch.factor).toBeCloseTo(Math.exp(MAX_ZOOM_EXPONENT), 12);
+    });
+
     it('leaves an ordinary mouse notch exactly at the clamp, unchanged from today', () => {
       const { factor } = resolveWheelGesture(wheel({ deltaY: -100 }), 'zoom') as {
         factor: number;

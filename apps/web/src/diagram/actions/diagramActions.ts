@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next';
 import type { ShortcutActionId } from '../../keyboard/shortcuts';
 import { MAX_STEP_ANNOTATIONS } from '../annotate/annotationModel';
 import type { DiagramLinkStatus } from '../capture/linkStatus';
-import { DIAGRAM_SHOW_AS, type DiagramShowAs } from '../document/diagramDocument';
+import { DIAGRAM_SHOW_AS, type DiagramShowAs, type DiagramStep } from '../document/diagramDocument';
 import type { DiagramTurnActionId } from './diagramTurnActions';
 
 /**
@@ -25,6 +25,9 @@ export type DiagramStepActionId =
   | 'move-earlier'
   | 'move-later'
   | 'start-page'
+  | 'reset-size'
+  | 'reset-position'
+  | 'reset-layout'
   | 'upload-picture'
   | 'link-pattern'
   | 'from-references'
@@ -162,6 +165,28 @@ export interface DiagramStepActionState {
    * other step, the verb then not offered.
    */
   heldAreas: { outOfDate: number } | null;
+  /**
+   * A step placed by hand on the pages: whether its size is pinned, whether
+   * any part is moved, and whether a newer build placed it — what Reset
+   * Size, Reset Position and Reset Layout are offered by. Absent for a step
+   * placed nowhere ({@link placementState}).
+   */
+  placement?: { size: boolean; position: boolean; newer: boolean };
+}
+
+/** A step's {@link DiagramStepActionState.placement}, to spread into its state: nothing for a step placed nowhere. */
+export function placementState(
+  step: Pick<DiagramStep, 'place' | 'placeNewer'>
+): Pick<DiagramStepActionState, 'placement'> {
+  const { place, placeNewer } = step;
+  if (!place && !placeNewer) return {};
+  return {
+    placement: {
+      size: !!place?.scale,
+      position: !!(place?.frame || place?.number || place?.picture || place?.text),
+      newer: !!placeNewer,
+    },
+  };
 }
 
 export interface DiagramStepActionDeps {
@@ -175,6 +200,7 @@ export interface DiagramStepActionDeps {
   move: (direction: 'earlier' | 'later') => void;
   /** Start a new page at the step, or stop doing so. */
   toggleBreak: () => void;
+  resetPlacement?: (part: 'scale' | 'position' | 'all') => void;
   /** Pick a file for the step's picture: its first, or in place of the one it has. */
   uploadPicture: () => void;
   /** Choose the pattern the step shows: the picker, in the Step pane. */
@@ -391,6 +417,12 @@ export function buildDiagramStepActions(
       checked: state.breakBefore,
     },
     { kind: 'separator', id: 'after-move' },
+    ...(state.placement ? [
+      ...(state.placement.size && !state.placement.newer ? [command('reset-size', t('panels:diagram.placement.resetSize', 'Reset Size'), () => deps.resetPlacement?.('scale'), state.locked)] : []),
+      ...(state.placement.position && !state.placement.newer ? [command('reset-position', t('panels:diagram.placement.resetPosition', 'Reset Position'), () => deps.resetPlacement?.('position'), state.locked)] : []),
+      command('reset-layout', t('panels:diagram.placement.resetLayout', 'Reset Layout'), () => deps.resetPlacement?.('all'), state.locked),
+      { kind: 'separator' as const, id: 'after-placement' },
+    ] : []),
     command(
       'upload-picture',
       state.hasPicture

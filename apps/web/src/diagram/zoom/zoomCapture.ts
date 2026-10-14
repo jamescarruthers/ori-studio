@@ -372,7 +372,8 @@ export function runShowAs(document: DiagramDocument, stepId: string): DiagramSho
  * run's source, or the step its area is on for a step that starts a run — so
  * what its frame shows of the paper faces the way it does there: the
  * source's rotation, which holds an Upright, and, from a flat fold, the side
- * it shows; a flat fold starts with `spread`, as every new flat pose does. A
+ * it shows, or from a crease pattern its side and whether it is turned over
+ * (Flip creases); a flat fold starts with `spread`, as every new flat pose does. A
  * step whose frame was captured before it had a pattern would otherwise start
  * at no turn, and its head point elsewhere. A step that continues a run but
  * is linked another way starts whole (review fix 3), and so at no turn, as a
@@ -397,7 +398,8 @@ export function firstLinkPose(
   const { render } = source;
   switch (render.mode) {
     case 'crease-pattern':
-      return { mode: 'crease-pattern', rotationDeg: render.rotationDeg };
+      // Its side and Flip creases too: a pattern turned over faces the other way.
+      return render;
     case 'folded-flat':
       return { mode: 'folded-flat', side: render.side, rotationDeg: render.rotationDeg, foldCase: 1, ...(spread ? { spread } : {}) };
     case 'folded-3d':

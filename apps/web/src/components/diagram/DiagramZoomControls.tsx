@@ -13,7 +13,7 @@ import styles from './DiagramZoomControls.module.css';
  * fixed multiple of the area as it prints), Edge (Cut, held where the
  * picture has no paper outline, or Whole), the Anchor row on a step whose
  * faces can be picked, a read-out — what a frame prints at once the pages
- * are laid out, amber when its room or its area holds it back; else what Size
+ * are laid out, amber when its area leaves Fill barely enlarged; else what Size
  * means — and the verbs: an
  * area's Update All and Go to its first enlarged step, a frame's
  * Go to its area, with a note on what places the frame again. Each change is

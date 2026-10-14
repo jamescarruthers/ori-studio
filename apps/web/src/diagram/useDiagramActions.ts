@@ -1,3 +1,4 @@
+import { resetPlacement } from './pages/placementActions';
 import { useCallback, useMemo, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +20,7 @@ import { DEFAULT_ROTATION } from './annotate/annotationModel';
 import { buildDiagramTurnActions } from './actions/diagramTurnActions';
 import {
   buildDiagramStepActions,
+  placementState,
   type DiagramStepAction,
   type DiagramStepActionState,
 } from './actions/diagramActions';
@@ -182,6 +184,7 @@ export function diagramStepActions(stepId: string, t: TFunction): DiagramStepAct
       count: diagram.steps.length,
       number: stepNumber(diagram, stepId) ?? 0,
       locked: isLockedStep(step),
+      ...placementState(step),
       readOnly: diagramReadOnly,
       hasPicture: hasDrawablePicture(step, diagram.assets),
       hasSource: stepHasPicture(step),
@@ -284,6 +287,7 @@ function bindStepActions(
         if (from < 0) return;
         store().moveDiagramStep(stepId, direction === 'earlier' ? from - 1 : from + 1);
       },
+      resetPlacement: (part) => resetPlacement(stepId, part, 'menu'),
       toggleBreak: () => {
         const current = store().diagram;
         const step = current ? stepById(current, stepId) : null;
@@ -435,6 +439,7 @@ export function useDiagramStepActions(stepId: string | null): DiagramStepAction[
               cardMarks,
               enlargedArea: enlargedAreaGate(areaNumber, stale, updating),
               heldAreas: heldAreasGate(heldStale),
+              ...placementState(step),
             },
             t,
             'pane',

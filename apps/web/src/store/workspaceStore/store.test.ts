@@ -43,11 +43,18 @@ import { registerPendingEditFlush, resetPendingEditsForTests } from '../../lib/p
 import { readDiagram } from '../../diagram/document/diagramFile';
 import {
   annotationsOutOfStep,
+  createDiagram,
+  insertSteps,
+  setPageSetup,
   stepAsset,
   stepIndex,
+  type DiagramDocument,
   type KnownDiagramAnnotation,
   type KnownDiagramAsset,
 } from '../../diagram/document/diagramDocument';
+import { FIXTURE_FONTS } from '../../diagram/fonts/diagramFonts.fixtures';
+import { layoutDiagram } from '../../diagram/pages/diagramPages';
+import { fontTextSetter } from '../../diagram/pages/fontTextSetter';
 import { sanitizeSvg } from '../../diagram/upload/svgSanitize';
 import { foldCancellationBuffer } from '../../lib/foldCancellation';
 import { registerCpCamera } from '../../cp-workspace/renderer/cpCameraRegistry';
@@ -250,7 +257,7 @@ vi.mock('./oristudioCpRuntime', async (importOriginal) => {
 import type { EngineClient } from './engineRuntime';
 import { hasDeletableDiagramSelection, selectWorkspaceCapabilities } from './capabilities';
 import { useWorkspaceStore } from './store';
-import { stepsIn } from '../../diagram/document/diagramSteps.fixtures';
+import { cpStep, stepsIn } from '../../diagram/document/diagramSteps.fixtures';
 
 type SnapshotOptions = Partial<
   Pick<
@@ -9781,6 +9788,69 @@ describe('the project diagram', () => {
       diagramReadOnly: false,
     });
     expect(state().diagramHistory.past).toEqual([]);
+  });
+
+  it('opens a flow diagram saved before its pages were packed, takes in their packing as no edit, and saves and reopens them held (`diagram-flow-packing.md`, Decision 5)', async () => {
+    const steps = Array.from({ length: 11 }, (_, index) => ({
+      ...cpStep(`step-${index}`),
+      text: index % 3 === 0 ? 'Fold the bottom edge up to the top edge, crease firmly, then unfold.' : 'Fold in half.',
+    }));
+    const document = setPageSetup(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-old' }), steps, 0), {
+      layout: 'flow',
+      stepsPerPage: 4,
+    });
+    state().installDiagram({ document, readOnly: false, raw: {} });
+    const saving = createFileService();
+    await state().saveProjectAs(saving);
+    const old = writtenFile(saving).options.contents;
+    // As a build before packing wrote it: no page's arrangement.
+    expect(JSON.parse(old).workspace.diagrams[0]).not.toHaveProperty('pageArrangements');
+
+    const open = async (text: string) => {
+      resetStores(seedSnapshot());
+      useLayoutStore.setState({ activateWorkspace: vi.fn() });
+      useWorkspaceStore.setState({ engineReady: true, status: 'ready' });
+      await expect(state().openProject(createFileService({ text, name: 'crane.osf', path: '/tmp/crane.osf' }))).resolves.toBe(true);
+      return state().diagram!;
+    };
+    // The Pages view's layout, with the real fonts.
+    const layOut = (diagram: DiagramDocument) =>
+      layoutDiagram(diagram, fontTextSetter((key, weight) => FIXTURE_FONTS.font(key, weight)?.metrics ?? null, diagram.hanStyle));
+
+    // Opened, it holds no packing, and every page is packed: four steps, four and three.
+    const first = layOut(await open(old));
+    expect(first.pages.map((page) => [page.cells.length, page.packing?.packed])).toEqual([
+      [4, true],
+      [4, true],
+      [3, true],
+    ]);
+    // Opened again, unsaved, it packs the same.
+    const opened = await open(old);
+    expect(opened.pageArrangements).toBeUndefined();
+    const packed = layOut(opened);
+    expect(packed.packed).toEqual(first.packed);
+    // Taken in as the Pages view takes it in: no edit, no undo step, the project as it was.
+    expect(state().adoptDiagramPageArrangements(packed.packed!, opened)).toBe(true);
+    const adopted = state().diagram!;
+    expect(Object.keys(adopted.pageArrangements!).sort()).toEqual(['step-0', 'step-4', 'step-8']);
+    expect(state().dirty).toBe(false);
+    expect(state().diagramHistory.past).toEqual([]);
+
+    // The next save writes them.
+    const again = createFileService();
+    await expect(state().saveProject(again)).resolves.toBe(true);
+    const saved = writtenFile(again).options.contents;
+    expect(Object.keys(JSON.parse(saved).workspace.diagrams[0].pageArrangements)).toEqual(['step-0', 'step-4', 'step-8']);
+    expect(state().dirty).toBe(false);
+
+    // Reopened, every page holds what was saved, and draws as it was packed: nothing is packed again.
+    const reopened = await open(saved);
+    expect(reopened.pageArrangements).toEqual(adopted.pageArrangements);
+    const held = layOut(reopened);
+    expect(held.packed).toBeUndefined();
+    expect(held.pages.map((page) => page.packing?.packed)).toEqual([false, false, false]);
+    expect(held.pages.map((page) => [page.cells, page.band, page.turns])).toEqual(packed.pages.map((page) => [page.cells, page.band, page.turns]));
+    expect(state().dirty).toBe(false);
   });
 
   it('opens the first of a project’s diagrams, and saves the others after it as they came', async () => {

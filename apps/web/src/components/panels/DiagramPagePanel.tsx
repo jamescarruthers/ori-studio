@@ -7,6 +7,7 @@ import {
   PAGE_MARGIN_MM_RANGE,
   PAGE_ROWS_RANGE,
   PATH_WIDTH_MM_RANGE,
+  STEPS_PER_PAGE_RANGE,
   type DiagramHanStyle,
   type DiagramPageLayout,
   type DiagramPageOrientation,
@@ -14,7 +15,11 @@ import {
   type DiagramPaperSize,
 } from '../../diagram/document/diagramDocument';
 import { layoutLabel, orientationLabel, paperSizeLabel } from '../../diagram/pages/pageSetupLabels';
+import { useCurrentDiagramPage } from '../../diagram/pages/useCurrentDiagramPage';
 import { useDiagramPageSetup } from '../../diagram/pages/useDiagramPageSetup';
+import { DiagramPagePacking } from '../diagram/DiagramPagePacking';
+import { DiagramPagePlacements } from '../diagram/DiagramPagePlacements';
+import { DiagramPageStepsRow } from '../diagram/DiagramPageStepsRow';
 import { DiagramPathColorRow } from '../diagram/DiagramPathColorRow';
 import { DiagramStyleControl } from '../diagram/DiagramStyleControl';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
@@ -25,17 +30,20 @@ import styles from './DiagramPagePanel.module.css';
 const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'];
 
 /**
- * The Page pane: the paper, how steps are laid out on it, what the header and
- * footer carry, and the style every step is drawn in (D10, D13).
+ * The Page pane: the paper, how steps are laid out on it — in the flow, how
+ * its pages are packed (`DiagramPagePacking`) — what the header and footer
+ * carry, and the style every step is drawn in (D10, D13).
  *
  * A composition site (AGENTS.md › Panel components): the bindings, each one
- * undo step and one count, are `useDiagramPageSetup`; the rows are the shared
- * field rows, but for the path's colour (`DiagramPathColorRow`), whose
- * pick re-renders its row and not the pane.
+ * undo step and one count, are `useDiagramPageSetup`, and the page a count of
+ * its own is for `useCurrentDiagramPage`; the rows are the shared field rows,
+ * but for the path's colour (`DiagramPathColorRow`), whose pick re-renders its
+ * row and not the pane, and the current page's count (`DiagramPageStepsRow`).
  */
 export function DiagramPagePanel() {
   const { t } = useTranslation();
   const setup = useDiagramPageSetup();
+  const current = useCurrentDiagramPage();
   const { page, readOnly, setPage } = setup;
   const flow = page.layout === 'flow';
   return (
@@ -99,28 +107,49 @@ export function DiagramPagePanel() {
               onChange={(layout) => setPage({ layout }, 'layout')}
             />
           </div>
-          <NumberRow
-            label={
-              flow
-                ? t('panels:diagram.pagePane.perRow', 'Steps per row')
-                : t('panels:diagram.pagePane.columns', 'Columns')
-            }
-            value={page.columns}
-            min={PAGE_COLUMNS_RANGE.min}
-            max={PAGE_COLUMNS_RANGE.max}
-            step={1}
-            disabled={readOnly}
-            onCommit={(columns) => setPage({ columns }, 'columns')}
-          />
-          <NumberRow
-            label={t('panels:diagram.pagePane.rows', 'Rows')}
-            value={page.rows}
-            min={PAGE_ROWS_RANGE.min}
-            max={PAGE_ROWS_RANGE.max}
-            step={1}
-            disabled={readOnly}
-            onCommit={(rows) => setPage({ rows }, 'rows')}
-          />
+          {flow ? (
+            <>
+              {/* The flow takes a number of steps and chooses its rows to suit the paper (`flowShape`): the
+                  default, and the current page's own. */}
+              <NumberRow
+                label={t('panels:diagram.pagePane.stepsPerPage', 'Steps per page')}
+                value={page.stepsPerPage}
+                min={STEPS_PER_PAGE_RANGE.min}
+                max={STEPS_PER_PAGE_RANGE.max}
+                step={1}
+                disabled={readOnly}
+                onCommit={(stepsPerPage) => setPage({ stepsPerPage }, 'steps_per_page')}
+              />
+              {current && current.page.steps.length > 0 && (
+                <DiagramPageStepsRow
+                  current={current}
+                  disabled={readOnly}
+                  onChange={(count) => setup.setPageSteps(current.index, count)}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <NumberRow
+                label={t('panels:diagram.pagePane.columns', 'Columns')}
+                value={page.columns}
+                min={PAGE_COLUMNS_RANGE.min}
+                max={PAGE_COLUMNS_RANGE.max}
+                step={1}
+                disabled={readOnly}
+                onCommit={(columns) => setPage({ columns }, 'columns')}
+              />
+              <NumberRow
+                label={t('panels:diagram.pagePane.rows', 'Rows')}
+                value={page.rows}
+                min={PAGE_ROWS_RANGE.min}
+                max={PAGE_ROWS_RANGE.max}
+                step={1}
+                disabled={readOnly}
+                onCommit={(rows) => setPage({ rows }, 'rows')}
+              />
+            </>
+          )}
           {flow && (
             <ToggleRow
               label={t('panels:diagram.pagePane.showPath', 'Show path')}
@@ -169,20 +198,9 @@ export function DiagramPagePanel() {
             ]}
             onChange={(side) => setPage({ firstPageSide: side as DiagramPageSide }, 'first_page_side')}
           />
-          <p className={styles.readout}>
-            {t('panels:diagram.pagePane.perPage', {
-              count: setup.perPage,
-              defaultValue_one: '1 step per page',
-              defaultValue_other: '{{count}} steps per page',
-            })}
-            {' · '}
-            {t('panels:diagram.pagePane.pageCount', {
-              count: setup.pageCount,
-              defaultValue_one: '1 page',
-              defaultValue_other: '{{count}} pages',
-            })}
-          </p>
         </CollapsibleSection>
+        {flow && <DiagramPagePacking page={page} readOnly={readOnly} setPage={setPage} />}
+        <DiagramPagePlacements />
         <CollapsibleSection title={t('panels:diagram.pagePane.headerFooter', 'Header & footer')}>
           <ToggleRow
             label={t('panels:diagram.pagePane.title', 'Title')}

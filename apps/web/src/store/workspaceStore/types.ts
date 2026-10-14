@@ -50,6 +50,7 @@ import type { CpSegment } from '../../lib/creasePatternSegmentation';
 import type { CreaseExportFoldResult } from '../../lib/creaseExportFold';
 import type { SegmentExportFormat } from '../../lib/creaseSegmentExport';
 import type { FoldedFigureCamera } from '../../cp-workspace/folded/folded3dCamera';
+import type { KeptCamera } from '../../hooks/useViewportSurface';
 import type { FoldArtifactStatus } from './foldArtifactResource';
 import type { SnapshotEntry, SnapshotHistory } from './snapshotHistory';
 import type {
@@ -62,6 +63,7 @@ import type {
   SentReferencesEntry,
   DiagramDocument,
   DiagramHanStyle,
+  DiagramPageArrangement,
   DiagramPageSetup,
   KnownDiagramAnnotation,
   DiagramStyle,
@@ -1934,6 +1936,7 @@ export interface DiagramSliceState {
   /** View state: not history, never dirty, but scoped to this diagram. */
   diagramView: DiagramViewMode;
   diagramSelectedStepId: string | null;
+  diagramPagesPart: 'frame' | 'number' | 'picture' | 'text' | null;
   /**
    * The step detail, open on the selected step, or null for the list. Never
    * open without a selection: whatever clears the selection closes it.
@@ -1994,16 +1997,25 @@ export interface DiagramSliceState {
    */
   diagramPaperFacesFetching: Readonly<Record<string, true>>;
   /**
-   * The newest edit that sent frames moved by hand back to their cells
-   * (`settlePlaces`, inside that edit's undo step): how many; a `nonce` that
-   * is new with every such edit, so what tells the user — a toast with
-   * Undo — shows once per edit, never for one already shown; and the undo
-   * `entry` the edit landed in (null when the history kept none), so that
-   * Undo undoes only while that entry is still the newest — never another
-   * edit made since, or a duplicate a failed capture already took back.
-   * Undo and redo leave it as it is. Not saved.
+   * The newest time frames moved by hand were sent home: by an edit
+   * (`settlePlaces`, inside that edit's undo step), or as a flow page packed
+   * afresh was adopted, where its steps changed band (`adoptPacking`). How
+   * many the edit sent home in all (`count`: an adoption after the edit that
+   * re-packed its page adds to the edit's), and how many this time
+   * (`added`); a `nonce` that is new each time, so what tells the user — a
+   * toast with Undo — shows once each time, never for one already shown;
+   * and the undo `entry` the edit landed in (null when the history kept none,
+   * as for a diagram opened with a page to pack), so that Undo undoes only
+   * while that entry is still the newest — never another edit made since, or
+   * a duplicate a failed capture already took back. Undo and redo leave it as
+   * it is. Not saved.
    */
-  diagramPlacesSettled: { count: number; nonce: number; entry: SnapshotEntry<DiagramDocument | null> | null } | null;
+  diagramPlacesSettled: {
+    count: number;
+    added: number;
+    nonce: number;
+    entry: SnapshotEntry<DiagramDocument | null> | null;
+  } | null;
   /**
    * The newest paste of annotations (18d review): the step it landed on, the
    * ids of the marks it put there, and a `nonce` that is new with every
@@ -2013,7 +2025,24 @@ export interface DiagramSliceState {
    * and redo leave it as it is. Not saved.
    */
   diagramPasted: { stepId: string; ids: readonly string[]; nonce: number } | null;
+  /**
+   * Where the Pages view's camera stood when it last left the screen — a step
+   * opened in Pose or Annotate, or the Steps view chosen — and the fit key it
+   * stood under (`KeptCamera`), so the view comes back where the reader was,
+   * not framed on page 1 (Zach, 2026-10-12); the pages it had on screen, from
+   * 0, so the panes and the pages' images are those pages' from its first
+   * frame back; and the step it had brought into view, which coming back with
+   * it still selected scrolls to no further. View state: never saved, never
+   * history, gone with the diagram.
+   */
+  diagramPagesCamera: DiagramPagesCamera | null;
 }
+
+/** The Pages view as it left the screen: its camera, the pages on screen, and the step it showed (`diagramPagesCamera`). */
+export type DiagramPagesCamera = KeptCamera & {
+  onScreen: { middle: number; first: number; last: number };
+  shownStepId: string | null;
+};
 
 /** What an anchor is being picked for: an enlarge area on a step, or the step's own frame. */
 export interface DiagramAnchorPick {
@@ -2147,11 +2176,21 @@ export interface DiagramSliceActions {
   setDiagramPage: (patch: Partial<DiagramPageSetup>, options?: { session?: number }) => boolean;
   /** Start a new page at the step, or stop doing so ("Start a new page here", D10). */
   setDiagramStepBreakBefore: (stepId: string, breakBefore: boolean) => boolean;
+  /**
+   * Give flow page `pageIndex` (from 0) its own count of steps, or — null —
+   * take it away so it fills with the default (`setPageSteps` in
+   * `diagram/pages/pageCounts.ts`): earlier pages without a count keep their
+   * size as one, and the boundary with the next page moves. One undo step;
+   * frames of steps it moves to another page go home, as after any edit.
+   * Whether it changed.
+   */
+  setDiagramPageSteps: (pageIndex: number, count: number | null) => boolean;
   /** The paper style every step is painted in (D9): a built-in by id, or a resolved style. */
   setDiagramStyle: (style: DiagramStyle) => boolean;
   /** How Han characters are drawn when nothing else in a text says (Decision 2). */
   setDiagramHanStyle: (hanStyle: DiagramHanStyle) => boolean;
   selectDiagramStep: (stepId: string | null) => void;
+  selectDiagramPagesPart: (part: 'frame' | 'number' | 'picture' | 'text' | null) => void;
   /**
    * Select a step and open it in detail, with Select in hand when the detail
    * was closed. False when there is no such step.
@@ -2190,6 +2229,8 @@ export interface DiagramSliceActions {
   /** Turn or flip an upload's picture; refused for a step `poseBlocker` names. */
   setDiagramStepPose: (stepId: string, pose: UploadPose) => boolean;
   setDiagramView: (view: DiagramViewMode) => void;
+  /** Keep where the Pages view's camera stood as it leaves the screen (`diagramPagesCamera`). */
+  keepDiagramPagesCamera: (camera: DiagramPagesCamera) => void;
   /**
    * Capture a linked step's picture from the crease pattern as it stands and
    * commit it as one undo step (`diagramCapture.ts`): Link pattern, Refresh,
@@ -2336,6 +2377,35 @@ export interface DiagramSliceActions {
    * and Reset All. One undo step. Whether it changed.
    */
   resetDiagramPlaces: (pageIndex: number | null) => boolean;
+  /**
+   * Take in the arrangements a layout of `ofDocument` packed, by the step each
+   * flow page starts with (`implementation-plans/diagram-flow-packing.md`,
+   * Decision 5; `adoptPageArrangements`): only while the diagram is still that
+   * very document, and never a read-only one. A page that holds an
+   * arrangement keeps it, one packed for another structure is refused, and a
+   * stored one no page holds goes. On a page that takes one, a frame moved by
+   * hand whose step changed band or page goes home, as the layout drew it
+   * (`repackedFrames.ts`), with the reflow notice. Not an edit: no undo
+   * entry, the undo history left as it is, and the project no dirtier than it
+   * was — they are written with the next save, and a file written before
+   * packs and draws the same when it opens. Whether it changed.
+   */
+  adoptDiagramPageArrangements: (
+    arrangements: Readonly<Record<string, DiagramPageArrangement>>,
+    ofDocument: DiagramDocument
+  ) => boolean;
+  /**
+   * Re-pack Page: let go of the arrangement flow page `pageIndex` (from 0, as
+   * the layout numbers them) holds, and of a newer build's, so the layout
+   * packs it afresh (`repackPages`). One undo step, which Undo takes back
+   * with the old arrangement. Frames placed by hand on it keep their offsets
+   * where their steps keep their bands; the others go home, with the reflow
+   * notice, as the packing is adopted. Whether it changed: false on a grid
+   * and where nothing is held.
+   */
+  repackDiagramPage: (pageIndex: number) => boolean;
+  /** Re-pack All Pages: {@link repackDiagramPage} for every page at once, one undo step. */
+  repackDiagramPages: () => boolean;
 }
 
 export type DiagramSlice = DiagramSliceState & DiagramSliceActions;

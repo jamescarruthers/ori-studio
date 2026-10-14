@@ -16,6 +16,7 @@ import type { PdfWriter } from '../../diagram/export/diagramPdf';
 import type { DiagramExportDependencies } from '../../diagram/export/useDiagramExport';
 import { FIXTURE_FONTS, fixtureSubsetter } from '../../diagram/fonts/diagramFonts.fixtures';
 import type { FontSubsetter } from '../../diagram/fonts/fontSubset';
+import { overflowingDiagram } from '../../diagram/pages/pageOverflow.fixtures';
 import type { FileService } from '../../platform/fileService';
 import { useSettingsStore } from '../../store/settingsStore';
 import { TooltipProvider } from '../ui/Tooltip';
@@ -133,6 +134,13 @@ async function click(element: HTMLElement) {
 }
 
 describe('DiagramExportDialog', () => {
+  it('says nothing of a flow step past its place, which the page shows as it prints', async () => {
+    await open(overflowingDiagram(subsetter).overflowing);
+    expect(host.querySelector('[data-overflow]')).toBeNull();
+    expect(host.querySelector('[data-outside-margin]')).toBeNull();
+    expect(notice()).not.toMatch(/no longer fit|Re-pack/);
+  });
+
   it('opens on a PDF of the pages: one shown, its size, and the steps that print blank', async () => {
     await open();
     expect(host.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
@@ -141,10 +149,27 @@ describe('DiagramExportDialog', () => {
     expect(exportButton().textContent).toBe('Export PDF');
     expect(exportButton().disabled).toBe(false);
     // The setup it lays out, and the name the save is offered.
-    expect(host.textContent).toContain('Page setupA4 Portrait · Flow, 3 × 3');
+    expect(host.textContent).toContain('Page setupA4 Portrait · Flow, 9 steps per page');
     expect(host.textContent).toContain('Crane.pdf');
     await click(radio('Step files (ZIP)'));
     expect(host.textContent).toContain('Crane.zip');
+  });
+
+  it('lists a step placed off the paper as past the margin, the one thing said of a placement, and counts it', async () => {
+    const document = diagram();
+    await open({
+      ...document,
+      steps: document.steps.map((entry) =>
+        entry.id === 'step-b' ? { ...entry, place: { picture: [0, 400] as [number, number] } } : entry
+      ),
+    });
+    expect(notice()).toContain('Part of step 3 crosses the margin.');
+    expect(notice()).not.toMatch(/placed over|off the paper|path|page boundaries/);
+    await click(exportButton());
+    expect(track).toHaveBeenCalledWith(
+      'diagram exported',
+      expect.objectContaining({ placed_step_bucket: '<=1', clash_bucket: '<=1' })
+    );
   });
 
   it('writes the PDF, saves it under the title, remembers how, and says so', async () => {
@@ -166,6 +191,8 @@ describe('DiagramExportDialog', () => {
       step_count_bucket: '<=5',
       empty_step_bucket: '<=1',
       enlarged_step_bucket: '<=0',
+      placed_step_bucket: '<=0',
+      clash_bucket: '<=0',
     });
   });
 
@@ -231,6 +258,8 @@ describe('DiagramExportDialog', () => {
       step_count_bucket: '<=20',
       empty_step_bucket: '<=0',
       enlarged_step_bucket: '<=0',
+      placed_step_bucket: '<=0',
+      clash_bucket: '<=0',
     });
     expect(useSettingsStore.getState().diagramExport.kind).toBe('svg');
   });

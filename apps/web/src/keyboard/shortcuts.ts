@@ -32,6 +32,7 @@ export type ShortcutScope =
   | 'viewport'
   | 'simulator'
   | 'references'
+  | 'diagram-place'
   | 'diagram-path'
   | 'diagram';
 export type ViewportShortcutId =
@@ -99,7 +100,12 @@ export type DiagramShortcutId =
   | 'diagram.moveStepEarlier'
   | 'diagram.moveStepLater'
   | DiagramAnnotateShortcutId
-  | DiagramPathShortcutId;
+  | DiagramPathShortcutId
+  | DiagramPlacementShortcutId;
+
+export type DiagramPlacementShortcutId =
+  | `diagram.nudgePlacement${'Left' | 'Right' | 'Up' | 'Down'}${'' | 'Large'}`
+  | 'diagram.placementUndo';
 
 /** Annotate's tools and Flip arc: live only while a step is open in Annotate. */
 export type DiagramAnnotateShortcutId =
@@ -558,7 +564,7 @@ function diagramShortcut(
   id: DiagramShortcutId,
   label: string,
   defaultChord: KeyChord | KeyChord[] | null,
-  scope: 'diagram' | 'diagram-path' = 'diagram'
+  scope: 'diagram' | 'diagram-path' | 'diagram-place' = 'diagram'
 ): ShortcutDefinition {
   const defaultChords = normalizeDefaultChords(defaultChord);
   return {
@@ -668,6 +674,21 @@ const DIAGRAM_SHORTCUTS: ShortcutDefinition[] = [
   // otherwise only ⌘X. Zach plans a shortcut pass before merge.
   diagramShortcut('diagram.toolXRay', 'X-Ray', { key: 'x' }),
   diagramShortcut('diagram.flipArc', 'Flip Arc', { key: 'f' }),
+  // The Pages view's nudges of a selected frame or part, and the Undo key that
+  // takes back a nudge still in its pause: in a scope of their own ahead of
+  // Edit Path's, whose executor claims a nudge only while a part of the
+  // selected step is selected on the pages, and Undo only while a nudge or a
+  // drag is in hand. Delete is not among them: it deletes the step, through
+  // `edit.delete`, as it does on the cards.
+  diagramShortcut('diagram.nudgePlacementLeft', 'Nudge Placement Left', { key: 'arrowleft' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementLeftLarge', 'Nudge Placement Left (Large)', { shift: true, key: 'arrowleft' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementRight', 'Nudge Placement Right', { key: 'arrowright' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementRightLarge', 'Nudge Placement Right (Large)', { shift: true, key: 'arrowright' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementUp', 'Nudge Placement Up', { key: 'arrowup' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementUpLarge', 'Nudge Placement Up (Large)', { shift: true, key: 'arrowup' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementDown', 'Nudge Placement Down', { key: 'arrowdown' }, 'diagram-place'),
+  diagramShortcut('diagram.nudgePlacementDownLarge', 'Nudge Placement Down (Large)', { shift: true, key: 'arrowdown' }, 'diagram-place'),
+  diagramShortcut('diagram.placementUndo', 'Cancel Page Placement', { primary: true, key: 'z' }, 'diagram-place'),
   // Edit Path's nudges (decision 6), on the step keys' own arrows: in a scope
   // of their own ahead of `diagram`, whose executor claims them only while
   // Edit Path has a node selected. Anywhere else it declines, and the arrows
@@ -1273,6 +1294,8 @@ export function findShortcutConflict(
 function shortcutScopesOverlap(a: ShortcutScope, b: ShortcutScope): boolean {
   if (a === b) return true;
   if (a === 'global' || b === 'global') return false;
+  // Page placement exists only inside Diagram and declines otherwise.
+  if (a === 'diagram-place' || b === 'diagram-place') return false;
   return a === 'viewport' || b === 'viewport';
 }
 
@@ -1317,6 +1340,7 @@ export interface ShortcutShadowing {
 const SHORTCUT_SCOPE_PRECEDENCE: Record<ShortcutScope, number> = {
   simulator: 0,
   references: 1,
+  'diagram-place': 1.5,
   'diagram-path': 2,
   diagram: 3,
   viewport: 4,
@@ -1332,6 +1356,7 @@ const SHORTCUT_SCOPE_PRECEDENCE: Record<ShortcutScope, number> = {
 const CONDITIONAL_SCOPES: ReadonlySet<ShortcutScope> = new Set([
   'simulator',
   'references',
+  'diagram-place',
   'diagram-path',
   'diagram',
 ]);

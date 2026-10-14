@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
-import { getShortcutDefinition } from '../keyboard/shortcuts';
+import { getShortcutDefinition, SHORTCUT_DEFINITIONS } from '../keyboard/shortcuts';
 import { shortcutActionLabel, shortcutCategoryLabel, shortcutScopeLabel } from './shortcutLabels';
 
 // Answers with the key, so a label read from the catalogue is told apart from
@@ -26,5 +26,14 @@ describe('shortcutActionLabel', () => {
     }
     expect(shortcutScopeLabel(keyOf, 'diagram')).toBe('tools:diagram.scopeLabel');
     expect(shortcutCategoryLabel(keyOf, 'Diagram')).toBe('tools:diagram.categoryLabel');
+  });
+
+  it('names every placement key on the pages, and its scope, from the catalogue', () => {
+    const placement = SHORTCUT_DEFINITIONS.filter((definition) => definition.scope === 'diagram-place');
+    expect(placement.length).toBe(9);
+    for (const definition of placement) {
+      expect(shortcutActionLabel(keyOf, definition)).toBe(`tools:${definition.id}`);
+    }
+    expect(shortcutScopeLabel(keyOf, 'diagram-place')).toBe('tools:diagram.placeScopeLabel');
   });
 });

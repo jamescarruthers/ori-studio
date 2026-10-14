@@ -5,6 +5,7 @@ import {
   buildDiagramStepActions,
   diagramStepChoice,
   diagramStepCommand,
+  placementState,
   type DiagramStepActionDeps,
   type DiagramStepActionState,
 } from './diagramActions';
@@ -485,5 +486,20 @@ describe('the diagram step verbs', () => {
     const actions = build({});
     expect(diagramStepCommand(actions, 'delete')?.danger).toBe(true);
     expect(diagramStepCommand(actions, 'duplicate')?.danger).toBeUndefined();
+  });
+});
+
+describe('placementState', () => {
+  it('says what of a step is placed by hand, and nothing for a step placed nowhere', () => {
+    expect(placementState({})).toEqual({});
+    expect(placementState({ place: { scale: { frameMm: 40 } } })).toEqual({
+      placement: { size: true, position: false, newer: false },
+    });
+    expect(placementState({ place: { text: [1, 0] } })).toEqual({
+      placement: { size: false, position: true, newer: false },
+    });
+    expect(placementState({ placeNewer: { basis: 2 } })).toEqual({
+      placement: { size: false, position: false, newer: true },
+    });
   });
 });

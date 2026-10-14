@@ -35,6 +35,17 @@ import { followAreaRecords, recordAreaBeforeEdit } from '../zoom/areaRecord';
 import { marksIntoUnits, startsWhole } from '../zoom/zoomFrames';
 import { stepReach } from '../zoom/zoomModel';
 import { authorMarksChanged, authorMarksOf, editedCardMarksGone, isCardMark, releaseCardMarks, withEditTags } from './cardMarks';
+import { samePageArrangements } from './pageArrangements';
+import { FLOW_BANDS_RANGE, FLOW_WEIGHT_RANGE, PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE } from './pageRanges';
+import {
+  DEFAULT_FLOW_PACKING,
+  DEFAULT_PAGE_SETUP,
+  DEFAULT_PATH_COLOR,
+  DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTINGS,
+  PAGE_SETTING_KEYS,
+  legacyStepsPerPage,
+} from './pageSettings';
 
 /** The version of this document's own shape, inside the project file. */
 export const DIAGRAM_FORMAT_VERSION = 1;
@@ -59,32 +70,76 @@ export type DiagramPageLayout = 'grid' | 'flow';
 export type DiagramPageSide = 'left' | 'right';
 export const DIAGRAM_PAGE_SIDES: readonly DiagramPageSide[] = ['left', 'right'];
 
+/**
+ * How a diagram's pages are set up. Every setting is written to the file,
+ * always; one a file does not say reads as its legacy value, and a new
+ * diagram starts from each one's default: both are in one table
+ * (`PAGE_SETTINGS`, `pageSettings.ts`).
+ */
 export interface DiagramPageSetup {
   size: DiagramPaperSize;
   orientation: DiagramPageOrientation;
   /** 0–30 mm. */
   marginMm: number;
   layout: DiagramPageLayout;
-  /** 2–5. */
+  /** Grid layout only: 2–5. */
   columns: number;
-  /** 1–6. */
+  /** Grid layout only: 1–6. */
   rows: number;
+  /**
+   * Flow layout only: how many steps a page holds ({@link STEPS_PER_PAGE_RANGE})
+   * when it has no count of its own ({@link DiagramStep.pageSteps}): the
+   * default. The layout cuts each page into the rows that print the largest
+   * pictures (`flowRows` in `pages/pagePlan.ts`). Kept on a grid, for when it
+   * turns back to flow. A file without it reads `columns × rows`
+   * ({@link legacyStepsPerPage}), as every flow file before it could be chosen.
+   */
+  stepsPerPage: number;
   /** Flow layout only: the band that joins one step to the next. */
   showPath: boolean;
-  /**
-   * The band's printed width, mm ({@link PATH_WIDTH_MM_RANGE}); written only
-   * when not {@link DEFAULT_PATH_WIDTH_MM}, which a file that does not say
-   * reads as.
-   */
+  /** The band's printed width, mm ({@link PATH_WIDTH_MM_RANGE}). */
   pathWidthMm: number;
-  /** The band's colour, `#rrggbb`; written only when not {@link DEFAULT_PATH_COLOR}. */
+  /** The band's colour, `#rrggbb`. */
   pathColor: string;
-  /** The side the first page prints on ({@link DiagramPageSide}); written to the file only when `right`. */
+  /** The side the first page prints on ({@link DiagramPageSide}). */
   firstPageSide: DiagramPageSide;
   /** Draws {@link DiagramDocument.title} in a tab at the top of every page. */
   showTitle: boolean;
   pageNumbers: { enabled: boolean; first: number };
+  /**
+   * Flow layout only, with the four after it: how a page is packed
+   * (`implementation-plans/diagram-flow-packing.md`, Decision 7), part of
+   * every flow page's signature. The bands a page's steps are packed
+   * into: `auto` tries each count and keeps the one that packs best, a number
+   * ({@link FLOW_BANDS_RANGE}) holds every page to it.
+   */
+  flowBands: DiagramFlowBands;
+  /** With {@link flowBands} `auto`: how strongly three bands are preferred, 0–1 ({@link FLOW_WEIGHT_RANGE}). */
+  flowPreferBands: number;
+  /** A step may stand in the bend between two bands, where that packs better. */
+  flowBendSteps: boolean;
+  /** How far a step rises or dips in its band to nest beside a taller one, 0–1. */
+  flowNesting: number;
+  /** How strongly a page's scale is held to the page before's, 0–1. */
+  flowSteadiness: number;
 }
+
+/** How many bands a flow page is packed into ({@link DiagramPageSetup.flowBands}): chosen per page, or fixed. */
+export type DiagramFlowBands = 'auto' | 2 | 3 | 4 | 5;
+
+// Every page setting's default and legacy value, in one table, and the defaults made of it.
+export {
+  DEFAULT_FLOW_PACKING,
+  DEFAULT_PAGE_SETUP,
+  DEFAULT_PATH_COLOR,
+  DEFAULT_PATH_WIDTH_MM,
+  PAGE_SETTINGS,
+  PAGE_SETTING_KEYS,
+  legacyStepsPerPage,
+};
+
+// A fixed band count, and the range of the packing's three weights: in the import-free module, for a stored arrangement's reader.
+export { FLOW_BANDS_RANGE, FLOW_WEIGHT_RANGE };
 
 /**
  * The paper style every step is painted in. A built-in with its saved values,
@@ -140,6 +195,16 @@ export type DiagramCpRender =
        * front, as every crease pattern was before.
        */
       side?: 'back';
+      /**
+       * On the back, the paper turned over side to side, as a real sheet is:
+       * the pattern mirrored, and its mountains drawn as valleys and its
+       * valleys as mountains — one pattern drawn from the front, read from
+       * the back (the Step pane's Flip creases; Zach, 2026-10-12). Its turn
+       * is the turned-over paper's, run the other way, as a flat fold's back
+       * is. Kept on the front, where it draws nothing, so the back brings it
+       * back. Written only when on.
+       */
+      flipCreases?: true;
     }
   | {
       mode: 'folded-flat';
@@ -355,13 +420,35 @@ export function creasePatternSide(render: DiagramCreasePatternRender): 'front' |
   return render.side === 'back' ? 'back' : 'front';
 }
 
-/** A crease pattern on the colour of `side`, its turn as it was: the front written as no side at all. */
+/**
+ * A crease pattern on the colour of `side`, its turn and Flip creases as they
+ * were: the front written as no side at all.
+ */
 export function withCreasePatternSide(
   render: DiagramCreasePatternRender,
   side: 'front' | 'back'
 ): DiagramCreasePatternRender {
-  const { side: _was, ...front } = render;
-  return side === 'back' ? { ...front, side: 'back' } : front;
+  return creasePatternRender(render.rotationDeg, side, render.flipCreases === true);
+}
+
+/** Whether a crease pattern is drawn turned over, mirrored and its mountains and valleys swapped: Flip creases on, and its back shown. */
+export function creasesFlipped(render: DiagramCreasePatternRender): boolean {
+  return render.side === 'back' && render.flipCreases === true;
+}
+
+/** A crease pattern with Flip creases on or off, its turn and side as they were: off written as nothing. */
+export function withCreasesFlipped(render: DiagramCreasePatternRender, on: boolean): DiagramCreasePatternRender {
+  return creasePatternRender(render.rotationDeg, creasePatternSide(render), on);
+}
+
+/** A crease pattern's render, its fields in the order the file writes them, each optional one only when said. */
+function creasePatternRender(rotationDeg: number, side: 'front' | 'back', flipCreases: boolean): DiagramCreasePatternRender {
+  return {
+    mode: 'crease-pattern',
+    rotationDeg,
+    ...(side === 'back' ? { side: 'back' as const } : {}),
+    ...(flipCreases ? { flipCreases: true as const } : {}),
+  };
 }
 
 /** How a render shows its pattern. */
@@ -402,7 +489,8 @@ export interface DiagramCpSource {
  * start — a crease pattern or a flat fold lying as the step lies now, from the
  * front at the first layer order. A flat fold's back at a turn is its front at
  * the opposite turn, mirrored (Turn Over, 12d), so its front's turn is the one
- * carried; a crease pattern's back is only its paper's colour, so its own turn
+ * carried, and so is a crease pattern's turned over (Flip creases); a crease
+ * pattern's back alone is only its paper's colour, so its own turn
  * is. A flat fold asked of creases that fold in 3D becomes the 3D one where it
  * is captured (`renderForRoute`). A flat fold started here, not
  * remembered, has its layers spread by `spread` (13g: on by default — the
@@ -422,14 +510,15 @@ export function renderToShowAs(
   if (way === 'simulated') {
     return { mode: 'simulated', foldPercent: 0, view: kept?.mode === 'simulated' ? kept.view : DEFAULT_SIMULATED_VIEW };
   }
+  const turnedOver =
+    (render.mode === 'crease-pattern' && creasesFlipped(render)) ||
+    (render.mode === 'folded-flat' && render.side === 'back');
   const turn =
-    render.mode === 'crease-pattern'
-      ? render.rotationDeg
-      : render.mode === 'folded-flat'
-        ? render.side === 'back'
-          ? (360 - render.rotationDeg) % 360
-          : render.rotationDeg
-        : 0;
+    render.mode === 'crease-pattern' || render.mode === 'folded-flat'
+      ? turnedOver
+        ? (360 - render.rotationDeg) % 360
+        : render.rotationDeg
+      : 0;
   return way === 'crease-pattern'
     ? { mode: 'crease-pattern', rotationDeg: turn }
     : { mode: 'folded-flat', side: 'front', rotationDeg: turn, foldCase: 1, ...(spread ? { spread } : {}) };
@@ -763,12 +852,8 @@ export interface DiagramStepPlace {
   /**
    * The whole step, away from its cell, mm, in the page's reading terms:
    * `along` its row's reading direction (right on a row read left to right,
-   * left on one read right to left), and `across` toward the page's next row
-   * (down a page whose rows read downward, up a flow page whose rows read
-   * up from its foot). So a frame keeps its place among its neighbours when
-   * a page turns its rows or reads them the other way, as a page renumbered
-   * or the first page's side changed does. Kept only while the step stays in
-   * its cell (`pages/stepPlaces.ts`).
+   * left on one read right to left), and `across` always down the page.
+   * Kept only while the step stays in its logical cell (`pages/stepPlaces.ts`).
    */
   frame?: [along: number, across: number];
   /** Each part away from where the layout puts it in the frame: mm, on the page's axes (+x right, +y down). */
@@ -783,6 +868,14 @@ export interface DiagramStepPlace {
    * comes back. Finite and above zero.
    */
   scale?: DiagramPlaceScale;
+  /**
+   * The caption's measure, pinned: the width its lines are set at, mm, to a
+   * tenth (`implementation-plans/diagram-caption-resize.md`). Its height is
+   * always its text's. Not structure: a flow page holding its arrangement
+   * keeps it, and a re-pack sizes the step's box for it. Finite and above
+   * zero; how wide it may print is the layout's to hold.
+   */
+  textWidth?: number;
 }
 
 /** A pinned scale ({@link DiagramStepPlace.scale}): the `PictureMeasure` the layout passes around. */
@@ -792,11 +885,12 @@ export type DiagramPlaceScale = { mmPerUnit: number } | { frameMm: number };
 export type DiagramPlaceOffset = 'frame' | 'number' | 'picture' | 'text';
 
 /**
- * What a reset of a step's placement clears: one offset, the pinned scale,
- * every offset (`position`), or the lot (`all`), which drops a newer build's
- * record too.
+ * What a reset of a step's placement clears: one offset — the text's with
+ * the caption's pinned width — the pinned scale, the pinned caption width
+ * alone (`textWidth`), every offset (`position`), or the lot (`all`), which
+ * drops a newer build's record too.
  */
-export type DiagramPlaceReset = DiagramPlaceOffset | 'scale' | 'position' | 'all';
+export type DiagramPlaceReset = DiagramPlaceOffset | 'scale' | 'textWidth' | 'position' | 'all';
 
 /**
  * How many ticks an equality mark draws: across each half of an angle mark,
@@ -1111,6 +1205,16 @@ export interface DiagramStep {
   text: string;
   /** Start a new page at this step. */
   breakBefore: boolean;
+  /**
+   * Flow layout only: a page starts at this step and holds this many steps
+   * (`implementation-plans/diagram-flow-pages.md`), a whole number in
+   * {@link PAGE_STEPS_RANGE}. It starts a page as {@link breakBefore} does,
+   * and stands for {@link DiagramPageSetup.stepsPerPage} on that page alone.
+   * Unset on a page that fills with the default. A grid ignores it and keeps
+   * it, for when it turns back to flow. Kept up to date by the store as steps
+   * come and go (`retainPageCounts`), so later pages stay still.
+   */
+  pageSteps?: number;
   /** Set when the step is enlarged (Revision 2): the frame of its picture it shows. */
   zoom?: DiagramStepZoom;
   /** Set when the step is placed by hand on the printed pages; never empty. */
@@ -1121,8 +1225,9 @@ export interface DiagramStep {
    * prints where the layout puts it and stays editable. Never beside
    * {@link place}. Carried as it is through every edit but for its `frame`,
    * which this build knows belongs to the step's cell: it goes home when the
-   * step changes cell, as this build's does, and a duplicate does not copy
-   * it. A reset of the whole placement drops the lot.
+   * step changes cell — in the flow, its page or its band — as this build's
+   * does, and a duplicate does not copy it. A reset of the whole placement
+   * drops the lot.
    */
   placeNewer?: Record<string, unknown>;
   /**
@@ -1188,8 +1293,68 @@ export interface DiagramDocument {
   steps: DiagramEntry[];
   /** Uploaded art, shared by id between steps, duplicates and undo snapshots. */
   assets: Record<string, DiagramAsset>;
+  /**
+   * How each flow page was packed, by the id of the step it starts with
+   * (`implementation-plans/diagram-flow-packing.md`, Decision 1): held while
+   * its signature matches the page's structure (`pages/pageSignature.ts`), so
+   * a picture or caption edit moves no step. Absent where none is stored; the
+   * layout packs such a page and the store adopts what it packed. A page whose
+   * structure changed, or that Re-pack Page let go, keeps the one it was last
+   * held in until then: not held, but saying which band each of its steps was
+   * in, which a frame moved by hand keeps its offset in
+   * (`pages/repackedFrames.ts`).
+   */
+  pageArrangements?: Readonly<Record<string, DiagramPageArrangement>>;
   /** What a newer build wrote here that this build cannot read, written back as it came. */
   newer?: DiagramNewerFields;
+}
+
+/**
+ * A flow page as it was packed (`diagram-flow-packing.md`, Decision 1): the
+ * structure it was packed for, its page scale, and each step's place. Its
+ * numbers are kept rounded (`document/pageArrangements.ts`): mm to a
+ * hundredth, scales to six significant digits.
+ */
+export interface DiagramPageArrangement {
+  /**
+   * The page's structure when it was packed (`pageSignature`): the arrangement
+   * holds while it matches. One Re-pack Page let go is signed for no page
+   * (`LET_GO_SIGNATURE` in `pages/pageArrangements.ts`).
+   */
+  signature: string;
+  /**
+   * The packer that packed it (`PACKER_VERSION` in `pages/flowArrangement.ts`),
+   * for a later build to offer a re-pack with a better one. Information only:
+   * it never decides whether the page holds. Absent on an arrangement saved
+   * before packers were recorded (every one that holds was packed by `pack-3`).
+   */
+  packer?: string;
+  /** The page scale it was packed at, which every step's reference scale was multiplied by. */
+  k: number;
+  /** Each of its steps' places, by step id. */
+  steps: Readonly<Record<string, DiagramArrangedStep>>;
+}
+
+/** One step's place on a packed flow page ({@link DiagramPageArrangement}). */
+export interface DiagramArrangedStep {
+  /** Its box on the page, mm: left, top, width and height, number, picture and caption inside it. */
+  box: [x: number, y: number, w: number, h: number];
+  /**
+   * The scale its picture prints at, absolute, in the measure a pin takes
+   * ({@link DiagramPlaceScale}), so another step's re-pose never resizes it.
+   */
+  scale: DiagramPlaceScale;
+  /** Its band, from 0 in reading order; a step standing in a bend, the band before that bend. */
+  band: number;
+  /** It stands in the bend after its band, between that band and the next. */
+  bend?: true;
+  /**
+   * An enlarged step's Size when it was packed (`DiagramStepZoom.scale`): so
+   * many times its area. Absent for Fill, and on a step that is not enlarged.
+   * What its printed scale was packed for, so a Size changed since resizes
+   * the step in its box rather than going unseen.
+   */
+  zoomScale?: number;
 }
 
 /**
@@ -1218,6 +1383,13 @@ export interface DiagramNewerFields {
    * name, as they came: written back while one of those steps is here.
    */
   thumbnails?: Readonly<Record<string, unknown>>;
+  /**
+   * Page arrangements with a field or a value this build has no name for,
+   * each under its page's first step id, as they came. The page is packed
+   * here as if none were stored; the newer one is written back in its place
+   * until the page is re-packed here.
+   */
+  pageArrangements?: Readonly<Record<string, unknown>>;
 }
 
 export type DiagramIdFactory = (prefix: 'diagram' | 'step' | 'turn' | 'annotation' | 'asset') => string;
@@ -1227,37 +1399,11 @@ export const randomDiagramId: DiagramIdFactory = (prefix) => `${prefix}-${crypto
 export const PAGE_MARGIN_MM_RANGE = { min: 0, max: 30 } as const;
 export const PAGE_COLUMNS_RANGE = { min: 2, max: 5 } as const;
 export const PAGE_ROWS_RANGE = { min: 1, max: 6 } as const;
+// How many steps a page holds, by default and by its own count: a module of their own, for the pagination.
+export { PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE };
 export const FIRST_PAGE_NUMBER_RANGE = { min: 1, max: 9999 } as const;
 /** The flow band's width, mm: from a thin line to three times the default. */
 export const PATH_WIDTH_MM_RANGE = { min: 4, max: 60 } as const;
-/**
- * The flow band's width where nothing else is chosen, mm: a new diagram's,
- * and a file's that does not say — every diagram saved before the width
- * could be chosen, which drew the band in proportion to its steps until
- * 2026-10-08 (`implementation-plans/diagram-review-fixes.md`, item 1).
- */
-export const DEFAULT_PATH_WIDTH_MM = 20;
-/** The flow band's colour: the mockup's light warm grey. */
-export const DEFAULT_PATH_COLOR = '#ecece8';
-
-/**
- * A new diagram's page setup. It starts in the flow layout; a page setup that
- * does not say its layout reads as the grid instead ({@link UNSAID_PAGE_LAYOUT}).
- */
-export const DEFAULT_PAGE_SETUP: DiagramPageSetup = {
-  size: 'a4',
-  orientation: 'portrait',
-  marginMm: 12,
-  layout: 'flow',
-  columns: 3,
-  rows: 3,
-  showPath: true,
-  pathWidthMm: DEFAULT_PATH_WIDTH_MM,
-  pathColor: DEFAULT_PATH_COLOR,
-  firstPageSide: 'left',
-  showTitle: true,
-  pageNumbers: { enabled: true, first: 1 },
-};
 
 export const DEFAULT_DIAGRAM_STYLE: DiagramStyle = snapshotDiagramStyle({ preset: 'diagram' });
 
@@ -1467,7 +1613,7 @@ export function duplicateStep(
   const original = document.steps[index];
   // A turn is not duplicated: two turns in a row are one turn, or none.
   if (isTurn(original) || isLockedStep(original)) return null;
-  const { place, placeNewer, ...kept } = original;
+  const { place, placeNewer, pageSteps: _pageSteps, ...kept } = original;
   // Its pin and its parts' offsets are the original's; a frame offset belongs
   // to the original's cell — a newer build's too, whose `frame` this one knows.
   const { frame: _cell, ...placed } = place ?? {};
@@ -1478,7 +1624,7 @@ export function duplicateStep(
     ...(Object.keys(newer).length > 0 ? { placeNewer: newer } : {}),
     id: newId('step'),
     revision: 0,
-    // A new page belongs to where the original starts one; the copy follows it.
+    // A new page, and its count, belong to where the original starts one; the copy follows it.
     breakBefore: false,
     annotations: original.annotations.map((annotation) => {
       const id = newId('annotation');
@@ -2107,8 +2253,8 @@ function jsonOnce(value: object): string {
 /**
  * Everything a newer build wrote that this build carries without reading, as
  * JSON, one part each: its steps and turns, the annotations and assets this
- * build cannot read, and the document's own fields, page fields and style it
- * does not read. An asset or a thumbnail named anywhere in it is kept, since
+ * build cannot read, and the document's own fields, page fields, style and
+ * page arrangements it does not read. An asset or a thumbnail named anywhere in it is kept, since
  * only that newer build knows what the name is for. The thumbnails carried
  * for those steps are no part of it: they are what it keeps.
  */
@@ -2126,7 +2272,7 @@ export function carriedJson(document: Pick<DiagramDocument, 'steps' | 'assets' |
     if (!isKnownAsset(asset)) parts.push(jsonOnce(asset.unknown));
   }
   const { newer } = document;
-  for (const part of [newer?.fields, newer?.page, newer?.style]) {
+  for (const part of [newer?.fields, newer?.page, newer?.style, newer?.pageArrangements]) {
     if (part) parts.push(jsonOnce(part));
   }
   return parts;
@@ -2179,6 +2325,46 @@ export function setStepBreakBefore(
   );
 }
 
+/** What starts a page at a step: its own count ({@link DiagramStep.pageSteps}; null, none) and its page break. Each left as it is when unsaid. */
+export interface DiagramPageStart {
+  pageSteps?: number | null;
+  breakBefore?: boolean;
+}
+
+/**
+ * Steps' page starts set at once, by step id: a count clamped to
+ * {@link PAGE_STEPS_RANGE}, null taking it away. A turn, an id the diagram
+ * does not have and a newer build's step are left as they are, as every edit
+ * leaves them (`updateStep`); the same document when nothing changes.
+ */
+export function setPageStarts(document: DiagramDocument, starts: ReadonlyMap<string, DiagramPageStart>): DiagramDocument {
+  if (starts.size === 0) return document;
+  let changed = false;
+  const steps = document.steps.map((entry) => {
+    const start = starts.get(entry.id);
+    if (!start || isTurn(entry) || isLockedStep(entry)) return entry;
+    const next = withPageStart(entry, start);
+    if (next !== entry) changed = true;
+    return next;
+  });
+  return changed ? { ...document, steps } : document;
+}
+
+/** A step with its page start set; the same step when it already is. A count that is no number is no change. */
+function withPageStart(step: DiagramStep, start: DiagramPageStart): DiagramStep {
+  const asked = start.pageSteps;
+  const pageSteps =
+    asked === null
+      ? undefined
+      : asked === undefined || !Number.isFinite(asked)
+        ? step.pageSteps
+        : clampInteger(Math.round(asked), PAGE_STEPS_RANGE.min, PAGE_STEPS_RANGE.max);
+  const breakBefore = start.breakBefore ?? step.breakBefore;
+  if (pageSteps === step.pageSteps && breakBefore === step.breakBefore) return step;
+  const { pageSteps: _was, ...rest } = step;
+  return { ...rest, breakBefore, ...(pageSteps !== undefined ? { pageSteps } : {}) };
+}
+
 export function setDiagramTitle(document: DiagramDocument, title: string): DiagramDocument {
   const clean = xmlText(title);
   return document.title === clean ? document : { ...document, title: clean };
@@ -2206,6 +2392,40 @@ export function setPageSetup(
   const newerPage = withoutKeys(document.newer?.page, Object.keys(patch));
   if (pageSetupEquals(document.page, next) && newerPage === document.newer?.page) return document;
   return withNewer({ ...document, page: next }, { ...document.newer, page: newerPage });
+}
+
+/**
+ * The document with `arrangements` as its stored page arrangements
+ * ({@link DiagramDocument.pageArrangements}), and no field at all when there
+ * are none; the same document when they say what it holds. A newer build's
+ * carried arrangements stay as they are: this build's stand beside them,
+ * and theirs are what the file writes.
+ */
+export function withPageArrangements(
+  document: DiagramDocument,
+  arrangements: Readonly<Record<string, DiagramPageArrangement>>
+): DiagramDocument {
+  if (samePageArrangements(document.pageArrangements, arrangements)) return document;
+  const { pageArrangements: _was, ...rest } = document;
+  return Object.keys(arrangements).length > 0 ? { ...rest, pageArrangements: arrangements } : rest;
+}
+
+/**
+ * The arrangements stored for the pages `firstStepIds` start with dropped —
+ * or every one, for null — a newer build's carried ones among them, which a
+ * re-pack here lets go of: Re-pack Page and Re-pack All Pages. The same
+ * document when none is stored there.
+ */
+export function withoutPageArrangements(document: DiagramDocument, firstStepIds: readonly string[] | null): DiagramDocument {
+  const own = document.pageArrangements;
+  const newer = document.newer?.pageArrangements;
+  const keys = firstStepIds ?? [...Object.keys(own ?? {}), ...Object.keys(newer ?? {})];
+  const keptOwn = withoutKeys(own, keys);
+  const keptNewer = withoutKeys(newer, keys);
+  if (keptOwn === own && keptNewer === newer) return document;
+  const { pageArrangements: _was, ...rest } = document;
+  const next = keptOwn ? { ...rest, pageArrangements: keptOwn as Readonly<Record<string, DiagramPageArrangement>> } : rest;
+  return keptNewer === newer ? next : withNewer(next, { ...document.newer, pageArrangements: keptNewer });
 }
 
 /** A document with the newer build's values that still stand, and no `newer` at all when none does. */
@@ -2314,48 +2534,59 @@ function updateStep(
 export const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'];
 
 /**
- * The layout of a page setup that does not say: the grid, which every diagram
- * was in until the flow became a new one's (2026-10-06). Every file written
- * says its layout, so this reads a hand-edited or damaged one as it would have
- * read before — never a saved grid as a flow — and a new diagram says `flow`.
- */
-export const UNSAID_PAGE_LAYOUT: DiagramPageLayout = 'grid';
-
-/**
  * A page setup from anything, every field checked and clamped, each falling
- * back to its default on its own. Used by the edit above and by the file
- * reader, so a hand-edited file and a stepper reach the same legal values.
+ * back on its own to its legacy value (`PAGE_SETTINGS`) where it is missing or
+ * damaged: a file that does not say a setting was written by a build that did
+ * not know it, and is drawn as that build drew it — never as today's default.
+ * Used by the edit above, which says every field, and by the file reader, so
+ * a hand-edited file and a stepper reach the same legal values.
  */
 export function normalizePageSetup(value: unknown): DiagramPageSetup {
+  const legacy = <K extends Exclude<keyof DiagramPageSetup, 'stepsPerPage'>>(key: K) => PAGE_SETTINGS[key].legacy;
   const source = isRecord(value) ? value : {};
   const numbers = isRecord(source.pageNumbers) ? source.pageNumbers : {};
+  const columns = clampWhole(source.columns, PAGE_COLUMNS_RANGE, legacy('columns'));
+  const rows = clampWhole(source.rows, PAGE_ROWS_RANGE, legacy('rows'));
   return {
-    size: PAPER_SIZES.includes(source.size as DiagramPaperSize)
-      ? (source.size as DiagramPaperSize)
-      : DEFAULT_PAGE_SETUP.size,
+    size: PAPER_SIZES.includes(source.size as DiagramPaperSize) ? (source.size as DiagramPaperSize) : legacy('size'),
     orientation:
-      source.orientation === 'landscape' || source.orientation === 'portrait'
-        ? source.orientation
-        : DEFAULT_PAGE_SETUP.orientation,
-    marginMm: clampNumber(source.marginMm, PAGE_MARGIN_MM_RANGE, DEFAULT_PAGE_SETUP.marginMm),
-    layout: source.layout === 'flow' || source.layout === 'grid' ? source.layout : UNSAID_PAGE_LAYOUT,
-    columns: clampWhole(source.columns, PAGE_COLUMNS_RANGE, DEFAULT_PAGE_SETUP.columns),
-    rows: clampWhole(source.rows, PAGE_ROWS_RANGE, DEFAULT_PAGE_SETUP.rows),
-    showPath: typeof source.showPath === 'boolean' ? source.showPath : DEFAULT_PAGE_SETUP.showPath,
-    pathWidthMm: clampNumber(source.pathWidthMm, PATH_WIDTH_MM_RANGE, DEFAULT_PAGE_SETUP.pathWidthMm),
-    pathColor: readHexColor(source.pathColor) ?? DEFAULT_PATH_COLOR,
-    // Unsaid, as in every file before there was a choice: the left.
-    firstPageSide: source.firstPageSide === 'right' ? 'right' : DEFAULT_PAGE_SETUP.firstPageSide,
-    showTitle:
-      typeof source.showTitle === 'boolean' ? source.showTitle : DEFAULT_PAGE_SETUP.showTitle,
+      source.orientation === 'landscape' || source.orientation === 'portrait' ? source.orientation : legacy('orientation'),
+    marginMm: clampNumber(source.marginMm, PAGE_MARGIN_MM_RANGE, legacy('marginMm')),
+    layout: source.layout === 'flow' || source.layout === 'grid' ? source.layout : legacy('layout'),
+    columns,
+    rows,
+    stepsPerPage: clampWhole(
+      source.stepsPerPage,
+      STEPS_PER_PAGE_RANGE,
+      PAGE_SETTINGS.stepsPerPage.legacy({ columns: wholeOr(source.columns, columns), rows: wholeOr(source.rows, rows) })
+    ),
+    showPath: typeof source.showPath === 'boolean' ? source.showPath : legacy('showPath'),
+    pathWidthMm: clampNumber(source.pathWidthMm, PATH_WIDTH_MM_RANGE, legacy('pathWidthMm')),
+    pathColor: readHexColor(source.pathColor) ?? legacy('pathColor'),
+    firstPageSide: DIAGRAM_PAGE_SIDES.includes(source.firstPageSide as DiagramPageSide)
+      ? (source.firstPageSide as DiagramPageSide)
+      : legacy('firstPageSide'),
+    showTitle: typeof source.showTitle === 'boolean' ? source.showTitle : legacy('showTitle'),
     pageNumbers: {
-      enabled:
-        typeof numbers.enabled === 'boolean'
-          ? numbers.enabled
-          : DEFAULT_PAGE_SETUP.pageNumbers.enabled,
-      first: clampWhole(numbers.first, FIRST_PAGE_NUMBER_RANGE, DEFAULT_PAGE_SETUP.pageNumbers.first),
+      enabled: typeof numbers.enabled === 'boolean' ? numbers.enabled : legacy('pageNumbers').enabled,
+      first: clampWhole(numbers.first, FIRST_PAGE_NUMBER_RANGE, legacy('pageNumbers').first),
     },
+    flowBands: readFlowBands(source.flowBands),
+    flowPreferBands: clampNumber(source.flowPreferBands, FLOW_WEIGHT_RANGE, legacy('flowPreferBands')),
+    flowBendSteps: typeof source.flowBendSteps === 'boolean' ? source.flowBendSteps : legacy('flowBendSteps'),
+    flowNesting: clampNumber(source.flowNesting, FLOW_WEIGHT_RANGE, legacy('flowNesting')),
+    flowSteadiness: clampNumber(source.flowSteadiness, FLOW_WEIGHT_RANGE, legacy('flowSteadiness')),
   };
+}
+
+/**
+ * A flow page's band count from anything: `auto`, or a count rounded whole
+ * and clamped to {@link FLOW_BANDS_RANGE}; anything else, the legacy value.
+ */
+function readFlowBands(value: unknown): DiagramFlowBands {
+  if (value === 'auto') return 'auto';
+  if (typeof value !== 'number' || !Number.isFinite(value)) return PAGE_SETTINGS.flowBands.legacy;
+  return clampWhole(value, FLOW_BANDS_RANGE, FLOW_BANDS_RANGE.min) as DiagramFlowBands;
 }
 
 export function pageSetupEquals(a: DiagramPageSetup, b: DiagramPageSetup): boolean {
@@ -2366,13 +2597,19 @@ export function pageSetupEquals(a: DiagramPageSetup, b: DiagramPageSetup): boole
     a.layout === b.layout &&
     a.columns === b.columns &&
     a.rows === b.rows &&
+    a.stepsPerPage === b.stepsPerPage &&
     a.showPath === b.showPath &&
     a.pathWidthMm === b.pathWidthMm &&
     a.pathColor === b.pathColor &&
     a.firstPageSide === b.firstPageSide &&
     a.showTitle === b.showTitle &&
     a.pageNumbers.enabled === b.pageNumbers.enabled &&
-    a.pageNumbers.first === b.pageNumbers.first
+    a.pageNumbers.first === b.pageNumbers.first &&
+    a.flowBands === b.flowBands &&
+    a.flowPreferBands === b.flowPreferBands &&
+    a.flowBendSteps === b.flowBendSteps &&
+    a.flowNesting === b.flowNesting &&
+    a.flowSteadiness === b.flowSteadiness
   );
 }
 
@@ -2401,6 +2638,11 @@ function clampNumber(
 function clampWhole(value: unknown, range: { min: number; max: number }, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   return clampInteger(Math.round(value), range.min, range.max);
+}
+
+/** `value` as said, rounded whole, when it is a finite number; else `fallback`. */
+function wholeOr(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : fallback;
 }
 
 function clampInteger(value: number, min: number, max: number): number {

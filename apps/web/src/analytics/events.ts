@@ -68,7 +68,7 @@ export type DiagramPictureUploadOutcome =
  * a double-click on an enlarge arrow in the Pages view, which opens the step
  * its area is on (Revision 2).
  */
-export type DiagramStepOpenedVia = 'keyboard' | 'double_click' | 'card' | 'command' | 'pose_again' | 'enlarge_arrow';
+export type DiagramStepOpenedVia = 'keyboard' | 'double_click' | 'card' | 'command' | 'pose_again';
 
 /** Which half of the detail a step opened in. */
 export type DiagramStepOpenedMode = 'pose' | 'annotate';
@@ -259,7 +259,7 @@ export type DiagramArrowShapeGesture =
  * Pose's simulator to rest at a fold % and camera, or spread a flat fold's
  * layers: on, off, the other kind, another amount or direction, or an affine
  * spread's other layer held still, skew or axis; or put a crease pattern's
- * paper on the colour of one side).
+ * paper on the colour of one side, or flip its creases on its back).
  */
 export type DiagramPoseAction =
   | 'rotate_left'
@@ -289,7 +289,10 @@ export type DiagramPoseAction =
   | 'spread_keep'
   | 'spread_skew'
   | 'spread_axis'
-  | 'paper_side';
+  | 'paper_side'
+  // A crease pattern on its back turned over side to side, or back (the Step pane's Flip creases).
+  | 'flip_creases_on'
+  | 'flip_creases_off';
 
 /**
  * A side of the paper, for `diagram picture posed`: the one a picture shows
@@ -417,7 +420,14 @@ export type DiagramPdfPreset = 'home' | 'print_shop';
 /** The Diagram's two views: the steps as cards, or the printed pages. */
 export type DiagramView = 'steps' | 'pages';
 
-/** Which page setting changed in the Page pane (D10). `scale` is retired: every diagram fits each since 2026-10-06. */
+/**
+ * Which page setting changed in the Page pane (D10). `scale` is retired: every diagram fits each since 2026-10-06.
+ * `columns` and `rows` are the grid's; the flow takes `steps_per_page` instead (since 2026-10-07).
+ * `page_steps` gives one flow page its own count of steps, and `page_steps_reset` returns it to the
+ * default (since 2026-10-11). The `flow_*` settings are the flow's packing, in the Page pane's
+ * Packing section (since 2026-10-12): Bands, Prefer three bands, Steps in bends, Nesting and
+ * Scale steadiness, set or reset to the default.
+ */
 export type DiagramPageSetting =
   | 'size'
   | 'orientation'
@@ -425,6 +435,14 @@ export type DiagramPageSetting =
   | 'layout'
   | 'columns'
   | 'rows'
+  | 'steps_per_page'
+  | 'page_steps'
+  | 'page_steps_reset'
+  | 'flow_bands'
+  | 'flow_prefer_bands'
+  | 'flow_bend_steps'
+  | 'flow_nesting'
+  | 'flow_steadiness'
   | 'path'
   | 'path_width'
   | 'path_color'
@@ -434,6 +452,17 @@ export type DiagramPageSetting =
   | 'first_page'
   | 'style'
   | 'han_style';
+
+/** What Re-pack packed afresh: one flow page (Re-pack Page) or every one (Re-pack All Pages). */
+export type DiagramRepackScope = 'page' | 'all';
+
+/**
+ * Where Re-pack was pressed: the Page pane's Packing section, the Layers
+ * pane's page list, or a page's context menu. (`notice`, the notice over the
+ * Pages view that a step no longer fit its place, was sent until 2026-10-12,
+ * when that notice went.)
+ */
+export type DiagramRepackVia = 'page_pane' | 'layers_pane' | 'context_menu';
 
 /** A diagram style as chosen: a built-in by id, the Settings export style, or a saved preset (`custom`). */
 export type DiagramStyleChoiceName = 'default' | 'diagram' | 'export-style' | 'custom';
@@ -1587,6 +1616,30 @@ export const ANALYTICS_EVENTS = {
    * and in which form.
    */
   diagramExported: 'diagram exported',
+  /**
+   * A step's frame, number, picture or text moved by hand on the Pages view,
+   * its picture's size set, or its caption's width set — by a width grip or
+   * the pane, or in lines by its bottom grip — and committed, by a drag, the
+   * arrow keys or the Step pane: whether hand placement is used, how, and on
+   * which layout.
+   */
+  diagramStepPlaced: 'diagram step placed',
+  /**
+   * A hand placement taken back — a part, a caption's width, a step, a page
+   * or the diagram — or a commit that left the part where the layout puts it:
+   * how often the automatic placement is returned to, and from where.
+   */
+  diagramPlacementReset: 'diagram placement reset',
+  /**
+   * An edit that put steps in other cells, and so sent frames moved by hand
+   * back to automatic placement: how often the reflow notice is seen.
+   */
+  diagramPlacementsReflowed: 'diagram placements reflowed',
+  /**
+   * A flow page, or every one, packed afresh on request (Re-pack Page, Re-pack
+   * All Pages): how often a held arrangement is let go, and from where.
+   */
+  diagramPagesRepacked: 'diagram pages repacked',
   /**
    * The References browser opened in the Diagram (D20), and for where: what
    * `diagram steps pulled from references` is read against.

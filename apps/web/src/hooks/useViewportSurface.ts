@@ -4,6 +4,7 @@ import { getViewportFitScale } from '../lib/designViewport';
 import { unionPlotRect, type PlotRect } from '../lib/geometry';
 import { isPointerDown, trackPointerGestures } from '../lib/pointerGesture';
 import { viewportSizeFromElement } from '../lib/treeViewportPrimitives';
+import { resolveWheelGesture } from '../lib/wheelGesture';
 import {
   registerViewportShortcutExecutor,
   type ViewportSurface as ViewportSurfaceId,
@@ -32,7 +33,7 @@ const ZOOM_ANIMATION_MS = 90;
  * a trackpad pinch, which the browser reports as ctrl+wheel.
  */
 export const VIEWPORT_WHEEL_ZOOM = {
-  // Plain wheel keeps panning; trackpad pinch is handled below, multiplicatively.
+  // Plain wheel keeps panning; Cmd/Ctrl+wheel and pinch are handled below, multiplicatively.
   wheelDisabled: true,
   touchPadDisabled: true,
 } as const;
@@ -41,11 +42,25 @@ export const VIEWPORT_PINCH_ZOOM = { step: 2.2 } as const;
 /**
  * Zoom per unit of trackpad-pinch delta, applied as `scale * exp(delta * k)`.
  * Multiplicative, so a pinch covers the same proportion of zoom whether you are
- * at 50% or 800% — which the library's additive wheel path cannot do.
+ * at 50% or 800% — which the library's additive wheel path cannot do. Slower
+ * than the Edit canvas' pinch, and this camera's own rate for its curve
+ * (`resolveWheelGesture`); the clamp on one event is the canvas'.
  */
 const PINCH_ZOOM_SENSITIVITY = 0.011;
 const CENTER_ANIMATION_MS = 160;
 const FIT_ANIMATION_MS = 180;
+
+/**
+ * Where a camera stood (`positionX`, `positionY` and `scale`, as the library
+ * keeps them) and the fit key it stood under: what a pane that leaves the
+ * screen hands back to stand there again ({@link UseViewportSurfaceOptions.keptCamera}).
+ */
+export interface KeptCamera {
+  key: string;
+  positionX: number;
+  positionY: number;
+  scale: number;
+}
 
 export interface UseViewportSurfaceOptions {
   /**
@@ -89,6 +104,16 @@ export interface UseViewportSurfaceOptions {
    * newly opened document is framed but ordinary edits never move the camera.
    */
   fitKey: string;
+  /**
+   * Where the camera stood when the pane last left the screen (`onLeave`):
+   * its first fit under the same fit key stands there again instead —
+   * for a pane another view takes the place of for a while, as Pose and
+   * Annotate take the Diagram's Pages view's. Read as the pane mounts, and
+   * used once.
+   */
+  keptCamera?: KeptCamera | null;
+  /** The camera as the pane leaves the screen, once it has been fitted or put back: for `keptCamera` on its next mount. */
+  onLeave?: (camera: KeptCamera) => void;
   /**
    * Upper bound on the fit scale. Panes that want a fixed readable scale (the
    * tree wants a unit edge to be a predictable size) pass it here and only zoom
@@ -146,11 +171,17 @@ export function useViewportSurface({
   spaceToPan = true,
   maxFitScale,
   onViewportShortcut,
+  keptCamera = null,
+  onLeave,
 }: UseViewportSurfaceOptions): ViewportSurface {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [zoomPercent, setZoomPercent] = useState(100);
   const [spacePressed, setSpacePressed] = useState(false);
+  // The camera to stand at again, as the pane mounted with it; gone once used.
+  const keptRef = useRef(keptCamera);
+  // The camera as it stands, once fitted or put back under `key`: what `onLeave` hands back.
+  const standingRef = useRef<KeptCamera | null>(null);
 
   // Attach the pointer counter before the pane can be clicked, so the very first
   // gesture is already visible to the fit guard below.
@@ -307,8 +338,16 @@ export function useViewportSurface({
       ) {
         return false;
       }
-      frame(animationTime);
+      // Fitted from here on, the transform this lands included (`onTransformed` keeps it under this key).
       lastFittedKeyRef.current = fitKey;
+      const kept = keptRef.current;
+      if (kept?.key === fitKey) {
+        // Back where the pane left it, rather than framed afresh.
+        keptRef.current = null;
+        transformRef.current.setTransform(kept.positionX, kept.positionY, kept.scale, 0);
+      } else {
+        frame(animationTime);
+      }
       return true;
     },
     [frame, fitKey]
@@ -389,31 +428,36 @@ export function useViewportSurface({
     };
   }, [spaceToPan]);
 
-  // Trackpad pinch, taken over from the library.
+  // Trackpad pinch and Cmd/Ctrl+wheel, taken over from the library.
   //
   // Its wheel path is additive — `scale + delta * step` — so one pinch moves you
   // a fixed amount regardless of where you are: coarse when zoomed out, and
   // barely perceptible when zoomed in. Zoom is inherently multiplicative, so
   // handle the gesture here and scale by a factor instead, anchored on the
-  // pointer so the paper stays under your fingers.
+  // pointer so the paper stays under your fingers. Which wheels zoom, and by
+  // what, is the Edit canvas' (`resolveWheelGesture`), on this camera's pinch
+  // rate: Cmd or Ctrl zooms, and one event is at most its ×1.16 notch, so a
+  // mouse that reports 100 px a notch steps rather than leaps, and a pinch's
+  // few px an event are as they were.
+  //
+  // Heard on the way down, before the library's wheel panning, which takes any
+  // wheel without Ctrl and stops it there: Cmd+wheel panned.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
 
     const onWheel = (event: WheelEvent) => {
-      // Only the pinch gesture: the browser reports it as ctrl+wheel. A plain
-      // wheel still belongs to panning.
-      if (!event.ctrlKey) return;
+      // A plain wheel still belongs to panning, the library's.
+      const gesture = resolveWheelGesture(event, 'pan', { pinchSensitivity: PINCH_ZOOM_SENSITIVITY });
+      if (gesture.kind !== 'zoom') return;
       const api = transformRef.current;
       if (!api) return;
       event.preventDefault();
+      event.stopPropagation();
 
       const { scale, positionX, positionY } = api.instance.transformState;
       const { minScale, maxScale } = api.instance.setup;
-      const next = Math.min(
-        maxScale,
-        Math.max(minScale, scale * Math.exp(-event.deltaY * PINCH_ZOOM_SENSITIVITY))
-      );
+      const next = Math.min(maxScale, Math.max(minScale, scale * gesture.factor));
       if (next === scale) return;
 
       // Keep the point under the pointer fixed.
@@ -425,8 +469,8 @@ export function useViewportSurface({
       api.setTransform(pointerX - worldX * next, pointerY - worldY * next, next, 0);
     };
 
-    container.addEventListener('wheel', onWheel, { passive: false });
-    return () => container.removeEventListener('wheel', onWheel);
+    container.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    return () => container.removeEventListener('wheel', onWheel, { capture: true });
   }, []);
 
   const onInit = useCallback((ref: ReactZoomPanPinchRef) => {
@@ -434,9 +478,28 @@ export function useViewportSurface({
     requestAnimationFrame(() => fitLoadedDocumentRef.current(0));
   }, []);
 
-  const onTransformed = useCallback((_ref: ReactZoomPanPinchRef, state: { scale: number }) => {
+  // Handed back as the pane leaves the screen, for `keptCamera` on its next mount.
+  const onLeaveRef = useRef(onLeave);
+  useEffect(() => {
+    onLeaveRef.current = onLeave;
+  }, [onLeave]);
+
+  const onTransformed = useCallback((ref: ReactZoomPanPinchRef, state: { scale: number }) => {
     setZoomPercent(Math.round(state.scale * 100));
+    if (!onLeaveRef.current) return;
+    // Kept only once the camera stands under its key: before the first fit it stands nowhere worth going back to.
+    const key = lastFittedKeyRef.current;
+    const { positionX, positionY, scale } = ref.state;
+    standingRef.current = key === null ? null : { key, positionX, positionY, scale };
   }, []);
+
+  useEffect(
+    () => () => {
+      const standing = standingRef.current;
+      if (standing) onLeaveRef.current?.(standing);
+    },
+    []
+  );
 
   return {
     containerRef,

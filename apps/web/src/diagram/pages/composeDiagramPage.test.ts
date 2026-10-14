@@ -217,13 +217,22 @@ describe('composeDiagramPage', () => {
       const xs = [...match[1]!.matchAll(/[ML](-?[\d.]+),/g)].map((each) => Number(each[1]));
       return Math.max(...xs) - Math.min(...xs);
     });
+  /**
+   * Rooms of many shapes: a new diagram's flow page; squat and narrow ones a
+   * grid's own columns and rows cut; and flow pages packed small, from many
+   * steps on a small sheet, and of an uneven count. (Thirty a page on A5 on
+   * its side is more than its boxes, each at least its caption's least
+   * measure across, can hold at any scale.)
+   */
   const SETUPS: Partial<DiagramPageSetup>[] = [
     {},
-    { orientation: 'landscape', columns: 3, rows: 5 },
-    { size: 'a5', columns: 4, rows: 1 },
-    { size: 'a5', orientation: 'landscape', columns: 3, rows: 6 },
-    { size: 'letter', columns: 2, rows: 6 },
-    { columns: 5, rows: 6 },
+    { layout: 'grid', orientation: 'landscape', columns: 3, rows: 5 },
+    { layout: 'grid', size: 'a5', columns: 4, rows: 1 },
+    { layout: 'grid', size: 'a5', orientation: 'landscape', columns: 3, rows: 6 },
+    { layout: 'grid', size: 'letter', columns: 2, rows: 6 },
+    { layout: 'grid', columns: 5, rows: 6 },
+    { stepsPerPage: 20, size: 'a5', orientation: 'landscape' },
+    { stepsPerPage: 7 },
   ];
   const setupName = (setup: Partial<DiagramPageSetup>) => JSON.stringify(setup);
 
@@ -401,7 +410,7 @@ describe('composeDiagramPage', () => {
     const made = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), [step], 0);
     const document: DiagramDocument = {
       ...made,
-      page: { ...made.page, size: 'letter', orientation: 'landscape', columns: 3, rows: 7 },
+      page: { ...made.page, layout: 'grid', size: 'letter', orientation: 'landscape', columns: 3, rows: 7 },
     };
     const layout = layoutDiagram(document, estimateTextSetter);
     const cell = layout.pages[0]!.cells[0]!;
@@ -464,9 +473,9 @@ describe('composeDiagramPage', () => {
     const heavy = { style: { ...DEFAULT_PAPER_STYLE, arrows: { ...DEFAULT_PAPER_STYLE.arrows, width: PEN_WIDTH_RANGE.max } } };
     const setups: Partial<DiagramPageSetup>[] = [
       ...SETUPS,
-      { size: 'letter', orientation: 'landscape', columns: 3, rows: 7 },
-      { columns: 5, rows: 1 },
-      { size: 'a5', orientation: 'landscape', columns: 2, rows: 2 },
+      { layout: 'grid', size: 'letter', orientation: 'landscape', columns: 3, rows: 7 },
+      { layout: 'grid', columns: 5, rows: 1 },
+      { layout: 'grid', size: 'a5', orientation: 'landscape', columns: 2, rows: 2 },
     ];
     for (const style of [made.style, heavy]) {
       for (const setup of setups) {
@@ -547,7 +556,7 @@ describe('composeDiagramPage', () => {
     let floored = 0;
     for (const [what, lettered] of cases) {
       const made = insertSteps(createDiagram({ title: 'Crane', hanStyle: 'sc' }), [lettered, cpStep('step-2'), cpStep('step-3')], 0);
-      for (const setup of [...SETUPS, { size: 'a5' as const, orientation: 'landscape' as const, columns: 3, rows: 5 }]) {
+      for (const setup of [...SETUPS, { layout: 'grid' as const, size: 'a5' as const, orientation: 'landscape' as const, columns: 3, rows: 5 }]) {
         const document: DiagramDocument = { ...made, page: { ...made.page, ...setup } };
         const layout = layoutDiagram(document, estimateTextSetter);
         const cell = layout.pages[0]!.cells[0]!;
@@ -665,7 +674,7 @@ describe('composeDiagramPage', () => {
 
   it('turns a turn-over side to side round on a flow row read right to left, to lead to the step after it', () => {
     // Two to a row: steps 3 and 4 are read right to left.
-    const document: DiagramDocument = { ...diagram(), page: { ...DEFAULT_PAGE_SETUP, layout: 'flow', columns: 2, rows: 3 } };
+    const document: DiagramDocument = { ...diagram(), page: { ...DEFAULT_PAGE_SETUP, layout: 'flow', stepsPerPage: 6 } };
     const over = () => createTurn({ kind: 'turn-over', axis: 'vertical' });
     const upright = createTurn({ kind: 'turn-over', axis: 'horizontal' });
     // Before steps 2 and 4, and a turn top to bottom beside the one before step 4.

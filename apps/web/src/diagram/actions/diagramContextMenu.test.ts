@@ -1,7 +1,8 @@
 import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { buildDiagramStepActions, type DiagramStepActionState } from './diagramActions';
-import { diagramStepMenuItems } from './diagramContextMenu';
+import { diagramPageMenuItems, diagramStepMenuItems } from './diagramContextMenu';
+import { buildDiagramPageActions } from './diagramPageActions';
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
 
@@ -141,5 +142,23 @@ describe('the step card menu', () => {
     );
     const earlier = items.find((item) => item.kind === 'action' && item.id === 'move-earlier');
     expect(earlier).toMatchObject({ disabled: true, hint: 'Already the first step' });
+  });
+});
+
+describe('diagramPageMenuItems', () => {
+  it('lays a flow page’s verbs out as rows, each running its own, with why it is held back', () => {
+    const deps = { t, repackPage: vi.fn(), repackAll: vi.fn() };
+    const items = diagramPageMenuItems(buildDiagramPageActions({ flow: true, readOnly: false }, deps));
+    expect(items).toMatchObject([
+      { kind: 'action', id: 'repack-page', label: 'Re-pack Page', disabled: false },
+      { kind: 'action', id: 'repack-all', label: 'Re-pack All Pages', disabled: false },
+    ]);
+    const all = items[1]!;
+    if (all.kind === 'action') all.onSelect();
+    expect(deps.repackAll).toHaveBeenCalledOnce();
+    expect(diagramPageMenuItems(buildDiagramPageActions({ flow: true, readOnly: true }, deps))).toMatchObject([
+      { kind: 'action', id: 'repack-page', disabled: true, hint: expect.stringMatching(/read-only/) },
+      { kind: 'action', id: 'repack-all', disabled: true, hint: expect.stringMatching(/read-only/) },
+    ]);
   });
 });

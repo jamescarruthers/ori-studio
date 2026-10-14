@@ -82,7 +82,8 @@ describe('a card pulled into an enlarged step, on its page', () => {
     // Enlarged again, then given another card: its marks in the frame pulled into the window.
     const enlarged = { ...filled, steps: filled.steps.map((entry) => (entry.id === 'step-filled' ? { ...entry, zoom } : entry)) };
     const replaced = pullReferencesSteps(enlarged, [card('steps-g')], { kind: 'replace', stepId: 'step-filled' }, { newId }).document;
-    const document = pullReferencesSteps(replaced, [card('steps-h')], { kind: 'end' }, { newId }).document;
+    // Cut into cells, whose rooms the marks are held to: a flow step's box hugs its picture as measured.
+    const document = setPageSetup(pullReferencesSteps(replaced, [card('steps-h')], { kind: 'end' }, { newId }).document, { layout: 'grid' });
     const cells = layoutDiagram(document, estimateTextSetter).pages.flatMap((page) => page.cells);
     expect(cells).toHaveLength(2);
     for (const cell of cells) {
@@ -115,7 +116,13 @@ describe('a diagram of pulled steps on its pages', () => {
         baked.pages.forEach((page, p) =>
           page.cells.forEach((cell, c) => {
             const other = pulled.pages[p]!.cells[c]!;
-            expect(other.cellMm).toEqual(cell.cellMm);
+            if (layout === 'grid') expect(other.cellMm).toEqual(cell.cellMm);
+            else {
+              // A flow step's box is packed round its picture as measured, which the two measure within 2%:
+              // the same band, its box within a couple of mm.
+              expect([other.band, other.bend]).toEqual([cell.band, cell.bend]);
+              for (const key of ['x', 'y', 'w', 'h'] as const) expect(Math.abs(other.cellMm[key] - cell.cellMm[key])).toBeLessThan(2);
+            }
             // A References sheet knows its size in the pattern's units: its scale is mm per unit.
             const scale = (of: typeof cell) => of.mmPerUnit ?? of.frameMm;
             expect(scale(cell)).not.toBeNull();

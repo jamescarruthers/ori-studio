@@ -1,13 +1,15 @@
 /**
  * Annotations that follow their picture (D8). A pose the app applied — a
  * quarter turn or a flip of an upload, a References step turned over, a
- * linked picture turned about its middle — moves what the picture shows by a
- * known amount, and every annotation is moved with it. A References step
+ * linked picture turned about its middle, a crease pattern turned over on its
+ * back (Flip creases) — moves what the picture shows by a known amount, and
+ * every annotation is moved with it. A References step or a crease pattern
  * turned over also shows the paper's other side, so a valley line or arrow
- * becomes a mountain and a mountain a valley, as the card's own folds do
- * (RM7). A crease pattern's paper put on the other side's colour moves
- * nothing and renames nothing (Zach, 2026-10-06), and every annotation stays
- * where it is, in step with the new picture. Anything else — a refold,
+ * becomes a mountain and a mountain a valley, as the card's own folds and the
+ * pattern's do (RM7; Zach, 2026-10-12). A crease pattern's paper put on the
+ * other side's colour moves nothing and renames nothing (Zach, 2026-10-06),
+ * and every annotation stays where it is, in step with the new picture.
+ * Anything else — a refold,
  * a Refresh, a new camera, the other side of a fold, a new picture — leaves
  * them where they were, and Annotate says the picture changed.
  *
@@ -22,10 +24,12 @@ import type { PaperFaceItem, PaperScene, SceneBounds, ScenePoint } from '../../l
 import { isCardMark } from '../document/cardMarks';
 import {
   creasePatternSide,
+  creasesFlipped,
   isKnownAnnotation,
   sameSpread,
   type DiagramAnnotation,
   type DiagramAsset,
+  type DiagramCpRender,
   type DiagramCpSource,
   type DiagramScenePicture,
   type DiagramStep,
@@ -94,16 +98,44 @@ export function sceneTurnMove(
   turnDeg: number,
   quarterTurns?: number
 ): PictureMove | null {
+  return sceneMove(before, after, turnDeg, false, quarterTurns);
+}
+
+/**
+ * A crease pattern's scene turned over side to side (Flip creases): mirrored
+ * about its own origin's vertical line — the paper's centre, which
+ * `creasePatternScene` draws it about — then turned clockwise by `turnDeg`,
+ * from one frame to the other. Its folds are named from the paper's other
+ * side, as References' Turn over names a card's (RM7).
+ */
+function sceneTurnOverMove(
+  before: SceneBounds,
+  after: SceneBounds,
+  turnDeg: number,
+  quarterTurns: number
+): PictureMove | null {
+  const move = sceneMove(before, after, turnDeg, true, quarterTurns);
+  return move && { ...move, otherSide: true };
+}
+
+function sceneMove(
+  before: SceneBounds,
+  after: SceneBounds,
+  turnDeg: number,
+  mirrors: boolean,
+  quarterTurns: number | undefined
+): PictureMove | null {
   const longerBefore = Math.max(before.maxX - before.minX, before.maxY - before.minY);
   const longerAfter = Math.max(after.maxX - after.minX, after.maxY - after.minY);
   if (!(longerBefore > 0) || !(longerAfter > 0)) return null;
   const turn = turnClockwise(turnDeg);
+  const across = mirrors ? -1 : 1;
   return {
     point: ([u, v]) => {
-      const { x, y } = turn({ x: before.minX + u * longerBefore, y: before.minY + v * longerBefore });
+      const { x, y } = turn({ x: across * (before.minX + u * longerBefore), y: before.minY + v * longerBefore });
       return [(x - after.minX) / longerAfter, (y - after.minY) / longerAfter];
     },
-    mirrors: false,
+    mirrors,
     turnDeg,
     ...(quarterTurns !== undefined ? { quarterTurns } : {}),
   };
@@ -130,8 +162,9 @@ function sameRegion(from: DiagramCpSource, to: DiagramCpSource): boolean {
 /**
  * Whether `after`'s picture is `before`'s in another colour and nothing else:
  * a crease pattern's paper put on the other side's colour (the Step pane's
- * Front | Back), of the same region and creases at the same turn — so every
- * line, and the frame, is where it was.
+ * Front | Back), of the same region and creases at the same turn, turned over
+ * or not as it was — so every line, and the frame, is where it was. Flip
+ * creases kept on the front, where it draws nothing, counts as the colour.
  */
 function recolouredOnly(before: DiagramStep, after: DiagramStep): boolean {
   const [from, to] = [before.source, after.source];
@@ -143,10 +176,23 @@ function recolouredOnly(before: DiagramStep, after: DiagramStep): boolean {
     wasRender.mode === 'crease-pattern' &&
     isRender.mode === 'crease-pattern' &&
     wasRender.rotationDeg === isRender.rotationDeg &&
-    creasePatternSide(wasRender) !== creasePatternSide(isRender) &&
+    creasesFlipped(wasRender) === creasesFlipped(isRender) &&
+    (creasePatternSide(wasRender) !== creasePatternSide(isRender) ||
+      (wasRender.flipCreases === true) !== (isRender.flipCreases === true)) &&
     from.fingerprint === to.fingerprint &&
     sameRegion(from, to)
   );
+}
+
+/**
+ * The quarter turns a pose counts for a turn-over's axis: its turn, rounded.
+ * A crease pattern turned over (Flip creases) rounds an eighth the other way,
+ * as its turn runs the other way: so turning it over, a mirror side to side,
+ * turns no axis even at an eighth — the crane's 315°, which is 45° over.
+ */
+function quarterTurnsOf(render: Extract<DiagramCpRender, { mode: 'crease-pattern' | 'folded-flat' }>): number {
+  const turns = render.rotationDeg / 90;
+  return render.mode === 'crease-pattern' && creasesFlipped(render) ? -Math.round(-turns) : Math.round(turns);
 }
 
 /** How the step's picture moved between `before` and `after`, when the app moved it; else null. */
@@ -192,6 +238,19 @@ function pictureMove(
     if (was.mode === 'folded-flat' && is.mode === 'folded-flat' && (was.side !== is.side || was.foldCase !== is.foldCase)) {
       return null;
     }
+    // The axis a turn-over turns about follows the poses' own quarter turns, so
+    // six 15° presses and a reset bring it back as they bring the picture back.
+    const quarters = quarterTurnsOf(is) - quarterTurnsOf(was);
+    if (was.mode === 'crease-pattern' && is.mode === 'crease-pattern' && creasesFlipped(was) !== creasesFlipped(is)) {
+      // Turned over side to side (Flip creases): each picture is its paper,
+      // turned over or not, then turned; so from one to the other is a mirror
+      // and the two turns — none at all as the switch leaves it, which runs
+      // the turn the other way.
+      const [sceneBefore, sceneAfter] = [storedScene(before.picture), storedScene(after.picture)];
+      if (!sceneBefore || !sceneAfter) return null;
+      const turnDeg = (((is.rotationDeg + was.rotationDeg) % 360) + 360) % 360;
+      return sceneTurnOverMove(sceneBefore.bounds, sceneAfter.bounds, turnDeg, quarters);
+    }
     const delta = is.rotationDeg - was.rotationDeg;
     // A depth spread steps the layers on the screen after the turn, so a
     // turn with it left on moves no face but the nearest as the turn does.
@@ -202,9 +261,6 @@ function pictureMove(
     if (delta === 0 && !spread) return null;
     const [sceneBefore, sceneAfter] = [storedScene(before.picture), storedScene(after.picture)];
     if (!sceneBefore || !sceneAfter) return null;
-    // The axis a turn-over turns about follows the poses' own quarter turns, so
-    // six 15° presses and a reset bring it back as they bring the picture back.
-    const quarters = Math.round(is.rotationDeg / 90) - Math.round(was.rotationDeg / 90);
     const turn = sceneTurnMove(sceneBefore.bounds, sceneAfter.bounds, delta, quarters);
     if (!turn || was.mode !== 'folded-flat') return turn;
     const places = { from: placesOnFaces.get(before.picture), to: placesOn(after.picture) };

@@ -729,10 +729,14 @@ vocabulary at paint time.**
     `diagram-references-annotations.md`).* A References Turn over also
     renames the folds on the step, drawn by hand or not: valley and mountain
     lines swap, and so do valley and mountain arrows, a shaped arrow's head
-    with them; turning back restores every name. Nothing else renames: a
-    crease-pattern step's Front | Back only recolours the face and carries
-    nothing (Zach, 2026-10-06), and Flip, an upload's mirror and a linked
-    picture's turn keep every name.
+    with them; turning back restores every name. A crease-pattern step's
+    Flip creases on the back does the same (2026-10-12, amended the same
+    day: "it's like flipping the paper over for real"): the paper turns over
+    side to side, so every mark is mirrored with the picture and renamed,
+    and turning it off brings every mark and name back. Nothing else
+    renames: Front | Back only recolours the face and carries nothing (Zach,
+    2026-10-06), and Flip, an upload's mirror and a linked picture's turn
+    keep every name.
   - **Anything else** leaves annotations in place: a refold, Refresh, a camera
     or fold-% change, a fold's turn-over (a different side), or a replace. Annotate then shows "The picture
     changed since these annotations were drawn" until they are touched.
@@ -770,6 +774,23 @@ vocabulary at paint time.**
 
 **D10. Pages come from one pure layout, at one paper scale, and the screen
 shows the composed page.**
+- **October 11 amendment** (supersedes the October 10 one, whose balanced
+  ribbon packing is deleted): the flow is #436's cells again, cut per page by
+  [diagram-flow-pages.md](diagram-flow-pages.md). Each page holds the flow's
+  steps per page, or its own count (`pageSteps` on the step it starts with);
+  its rows print the largest pictures, shared out evenly with the extra steps
+  on the first rows, and are held to an odd number on a left page that hands
+  over at its spine; every other step on a row sits a little lower; the ribbon
+  is one curve through the picture centres and ends just after the diagram's
+  last step. A step's home depends only on the page setup, the pagination and
+  its place on its page, never on any step's content, and a golden of every
+  fixture's homes freezes it. Page placement adds independent picture size
+  pins and frame/number/picture/text offsets on top of those homes, applied
+  after Fit each. Pages, PDF, Print and SVG share that result; step files
+  ignore page placement. See
+  [page placement as built](diagram-page-overrides.md#as-built-page-placement-and-balanced-ribbons-2026-10-10)
+  for the placement half, which stands.
+
 - **Print paper** (`diagram/pages/printPaper.ts`):
   - sizes `a4` 210×297, `a5` 148×210, `b5-jis` 182×257 (labelled "B5 (JIS)"; a
     CSS `B5` keyword would be ISO 176×250) and `letter` 215.9×279.4 mm;
@@ -1710,7 +1731,7 @@ on its next save.
 
 **A diagram** — `formatVersion: 1`, `id` (`diagram-<uuid>`), `title`,
 `hanStyle` (`sc`/`tc`/`jp`/`kr`), `style`, `page`, `steps`, `assets`,
-`thumbnails`:
+`pageArrangements`, `thumbnails`:
 - `style` is `{ preset: string, style: PaperStyle }`, a built-in with its
   saved values, or `{ style: PaperStyle }`, a custom or export style stored
   whole (D9). Saved values take precedence over the name, including a name
@@ -1721,10 +1742,19 @@ on its next save.
   checked on every font build and in the production deployment bundle.
 - `page`: `size` (`a4`/`a5`/`b5-jis`/`letter`), `orientation`, `marginMm`
   (0–30), `layout` (`grid`/`flow`; unsaid reads as the grid), `columns`
-  (2–5), `rows` (1–6), `showPath`, `pathWidthMm` (4–60, written only when
+  (2–5), `rows` (1–6), `stepsPerPage` (2–30, the flow's default count of a
+  page, written only when not `columns × rows` — the columns and rows the
+  file says, a newer build's past their ranges included — which a file
+  without it reads), `showPath`, `pathWidthMm` (4–60, written only when
   not 20), `pathColor` (`#rrggbb`, only when not `#ecece8`), `firstPageSide`
   (only when `right`), `showTitle`, `pageNumbers` (`{ enabled, first }`,
-  first 1–9999). `scale` is retired (2026-10-06): read and let go.
+  first 1–9999). `scale` is retired (2026-10-06): read and let go. The flow's
+  packing (added 2026-10-12, `diagram-flow-packing.md`), each written only
+  when not its default, which a file without it reads: `flowBands` (`auto`
+  or a whole 2–5; default `auto`), `flowPreferBands` (0–1, 0.5),
+  `flowBendSteps` (boolean, true), `flowNesting` (0–1, 0.8) and
+  `flowSteadiness` (0–1, 0.85). A number past its range, or a `flowBands`
+  word other than `auto`, is a newer build's (rule 2).
 - `steps`: the order, steps and the turns between them (D22). A turn is
   `{ id: 'turn-<uuid>', kind: 'turn-over', axis }` (unsaid: `vertical`) or
   `{ id, kind: 'rotate', rotate: { amount, direction } }` (unsaid: a quarter
@@ -1734,19 +1764,68 @@ on its next save.
   heightPx, bytes }`, a PNG or JPEG data URL whose header must agree with its
   size, at most 2,048 px a side (D7). One nothing names, no step of this
   build's and nothing a newer build wrote, is not written.
+- `pageArrangements` (added 2026-10-12, `diagram-flow-packing.md`), only
+  when one is stored: how each flow page was packed, by the id of the step
+  it starts with — `{ signature, k, steps: { "<step id>": { box: [x, y, w,
+  h], scale, band, bend?, zoomScale? } } }`. `signature` is the page's
+  structure when it was packed (`pages/pageSignature.ts`, tagged with the
+  packing's version), `k` its page scale, `box` the step's box on the page in
+  mm, `scale` its printed scale as a pin's (`{ mmPerUnit }` or `{ frameMm }`),
+  `band` its band from 0 in reading order (0–4), `bend: true` a step standing
+  in the bend after its band, and `zoomScale` (added in the review fixes) an
+  enlarged step's Size when it was packed, a number above 0, unsaid for Fill
+  and for a step that is not enlarged: a Size changed since resizes the step
+  in its box. Lengths are kept to 0.01 mm, scales and Sizes to six
+  significant digits. A page holds its arrangement while the signature
+  matches and it places every step on the page; a file without one packs the
+  page when opened. One a page does not hold — packed for a structure the
+  page has since lost, or let go by Re-pack Page, its `signature` then
+  `"let-go"` (added 2026-10-13) — is kept under the page's first step until
+  the page is packed again, for one thing: a step whose frame was moved by
+  hand keeps its offset on the page packed afresh while it stays in the
+  band it had there (`diagram-document-evolution.md`, part 2). A reader
+  packs that page afresh as for any stale arrangement. Keys and each page's
+  steps are written sorted. An
+  arrangement that does not read is dropped alone; one with a field, a scale
+  or a band past 4 this build has no name for is a newer build's (rule 2):
+  the page is packed here as if none were stored, and the newer one written
+  back, in its place, until the page is re-packed here. This build writes its
+  own arrangements only in the flow; a newer build's are carried as they came
+  in either layout, so a reader must accept `pageArrangements` on a grid
+  diagram too (a grid page is never re-packed, so they stay until the
+  diagram is back in the flow and its page re-packed there).
 - `thumbnails`: `{ "thumb-<digest>": "<a SheetThumbnail as JSON>" }`, every
   thumbnail a link shows, once, sorted by key (decision 4), and any entry
   something a newer build wrote names, as it came. A file from before the
   table holds each thumbnail inline in its source.
 
 **A step** — `id` (`step-<uuid>`), `revision`, `source`, `picture`,
-`annotations`, `annotatedPictureKey`, `text`, `breakBefore`, and `zoom` and
-`place` only when set:
+`annotations`, `annotatedPictureKey`, `text`, `breakBefore`, and `pageSteps`,
+`zoom` and `place` only when set:
+- `pageSteps` (added 2026-10-11, `diagram-flow-pages.md`), a whole number
+  1–30: a page starts at this step and holds this many steps. Past 30 it is a
+  newer build's (the step carried, locked); under 1 or not whole, damage,
+  dropped alone. **Pagination** (flow): walking the steps in order, turns
+  taking no place, a step starts a page when it is the first, or has
+  `breakBefore` or `pageSteps`, or the page has reached its capacity — its
+  first step's `pageSteps`, else `page.stepsPerPage`. A flow page is laid out
+  for the steps it holds, but a last page without `pageSteps` for
+  `page.stepsPerPage`, which its few steps fill in order. A grid's pages hold
+  `columns × rows` and ignore `pageSteps`, which they keep.
 - `source`, null for an empty step, or:
   - `{ kind: 'upload', assetId, rotationQuarterTurns (0–3), mirrored }`;
   - `{ kind: 'cp', scope: { kind: 'segment', region }, fingerprint,
     thumbnail, render, remembered? }`, `thumbnail` a key into the table;
-    `render` one of `{ mode: 'crease-pattern', rotationDeg, side?: 'back' }`,
+    `render` one of `{ mode: 'crease-pattern', rotationDeg, side?: 'back',
+    flipCreases?: true }` (`flipCreases`, added 2026-10-12, the Step pane's
+    Flip creases: on the back, the paper turned over side to side — the
+    pattern mirrored about its vertical centre line before `rotationDeg`
+    turns it, every mountain drawn as a valley and every valley as a
+    mountain; turning it on or off runs `rotationDeg` the other way, as a
+    flat fold's Turn Over does, so the picture is the mirror of the one
+    before it as displayed; kept on the front, where it draws nothing, and
+    the side changing on a step that keeps it turns the paper too; written
+    only when true, `false` read as unsaid, anything else damage),
     `{ mode: 'folded-flat', side, rotationDeg, foldCase, spread? }` (a spread
     `{ kind: 'depth', amount, toward }` or `{ kind: 'affine', amount, keep,
     skew, axisDeg }`; one with no kind is by depth), `{ mode: 'folded-3d',

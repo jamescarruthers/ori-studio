@@ -16,10 +16,13 @@ import { PT_PER_MM } from '../../lib/paper/paperSvg';
 import {
   isKnownAnnotation,
   type DiagramAsset,
+  type DiagramPageLayout,
   type DiagramStep,
   type DiagramStyle,
 } from '../document/diagramDocument';
-import { PICTURE_TOP_MM, type DiagramPagesLayout, type LayoutPage, type LayoutZoomArrow } from './diagramPageLayout';
+import type { DiagramPagesLayout, LayoutPage, LayoutZoomArrow } from './diagramPageLayout';
+import { asksForPage } from './pagePlan';
+import { partBox } from './pagePlacement';
 import { cellPicture, type CellPicture, type PictureText } from './pagePictures';
 
 /** An enlarge arrow as its page prints it: the layout's, lifted to its area where it stands alone beside it. */
@@ -52,14 +55,28 @@ export function placedZoomArrows(
       bottom: (picture.boundsPt.y + picture.boundsPt.height) / PT_PER_MM,
     });
     const [a, b] = [mm(areaPicture), mm(nextPicture)];
-    // Both pictures' overlap, below both numbers: the one at the gutter's side is either step's, by which way the row reads.
-    const numbers = Math.max(page.cells[areaIndex]!.cellMm.y, page.cells[nextIndex]!.cellMm.y) + PICTURE_TOP_MM;
+    // Both pictures' overlap, below both numbers — the top of a picture box, which stands under its number — the
+    // one at the gutter's side either step's, by which way the row reads.
+    const pair = [page.cells[areaIndex]!, page.cells[nextIndex]!];
+    const numbers = Math.max(...pair.map((cell) => (cell.placed ? partBox(cell, 'number').y + partBox(cell, 'number').h : cell.pictureMm.y)));
     const top = Math.max(a.top, b.top, numbers);
     const bottom = Math.min(a.bottom, b.bottom);
     const half = arrow.box.h / 2;
+    // A step placed by hand may leave no overlap to hold it: it stays where the layout put it.
+    if (bottom < top + arrow.box.h && pair.some((cell) => cell.placed)) return arrow;
     // Clear of the numbers first, where the overlap is too short to hold it.
     const y = Math.max(top + half, Math.min(centre, bottom - half));
-    return Number.isFinite(y) ? { ...arrow, at: { x: arrow.at.x, y } } : arrow;
+    if (!Number.isFinite(y)) return arrow;
+    const proposed = { ...arrow, at: { x: arrow.at.x, y } };
+    if (page.cells.some((cell) => cell.placed)) {
+      const g = { x: arrow.at.x - arrow.box.w / 2, y: y - half, ...arrow.box };
+      const overlap = page.cells.some(cell => (['number', 'picture', 'text'] as const).some(part => {
+        const b = partBox(cell, part);
+        return b.w > 0 && b.h > 0 && g.x < b.x + b.w && g.x + g.w > b.x && g.y < b.y + b.h && g.y + g.h > b.y;
+      }));
+      if (overlap) return arrow;
+    }
+    return proposed;
   });
 }
 
@@ -98,13 +115,19 @@ export interface ZoomSplit {
  * (Z3, "No keep-together rule"), where Start a New Page Here on the area's
  * step would bring the two together: the arrow then stands at the enlarged
  * step's leading edge, and the Pages view and the export say so. `steps`
- * are the steps laid out, for which start a new page by their own Start a
- * New Page Here. Left out: an enlarged step that starts its page so — the
- * break asked for — and one whose area's step starts its page already, where
- * no break brings them together.
+ * are the steps laid out, for which start a new page because they ask to —
+ * their own Start a New Page Here, or in the flow a page's own count
+ * (`asksForPage`) — under the page setup's `pageLayout`. Left out: an
+ * enlarged step that starts its page so — the break asked for — and one
+ * whose area's step starts its page already, where no break brings them
+ * together.
  */
-export function zoomSplits(layout: DiagramPagesLayout, steps: readonly { id: string; breakBefore: boolean }[]): ZoomSplit[] {
-  const breaks = new Set(steps.filter((step) => step.breakBefore).map((step) => step.id));
+export function zoomSplits(
+  layout: DiagramPagesLayout,
+  steps: readonly (Pick<DiagramStep, 'breakBefore' | 'pageSteps'> & { id: string })[],
+  pageLayout: DiagramPageLayout
+): ZoomSplit[] {
+  const breaks = new Set(steps.filter((step) => asksForPage(step, pageLayout)).map((step) => step.id));
   const numbers = new Map(layout.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell.number] as const)));
   /** The step each page starts with. */
   const firsts = new Set(layout.pages.map((page) => page.cells[0]?.stepId));

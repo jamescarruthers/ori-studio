@@ -973,14 +973,14 @@ export function closeUpMarks(annotations: readonly DiagramAnnotation[]): Diagram
  */
 export function annotationReach(
   drawing: AnnotationDrawing,
-  { xRays = false }: { xRays?: boolean } = {}
+  { xRays = false, includeFrame = true }: { xRays?: boolean; includeFrame?: boolean } = {}
 ): { x: number; y: number; width: number; height: number } {
   const { project } = drawing.context;
   const ink = project.ink;
-  let minX = 0;
-  let minY = 0;
-  let maxX = drawing.width;
-  let maxY = drawing.height;
+  let minX = includeFrame ? 0 : Infinity;
+  let minY = includeFrame ? 0 : Infinity;
+  let maxX = includeFrame ? drawing.width : -Infinity;
+  let maxY = includeFrame ? drawing.height : -Infinity;
   const take = (x: number, y: number, pad: number) => {
     minX = Math.min(minX, x - pad);
     minY = Math.min(minY, y - pad);
@@ -1049,7 +1049,9 @@ export function annotationReach(
     minY = Math.min(minY, reach.minY);
     maxY = Math.max(maxY, reach.maxY);
   }
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  return Number.isFinite(minX)
+    ? { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+    : { x: 0, y: 0, width: 0, height: 0 };
 }
 
 const round = (value: number) => Number(value.toFixed(3));

@@ -54,6 +54,8 @@ const NO_NOTICES: readonly SanitizeNotice[] = [];
  * (`DiagramStepZoomStatus`); in Pose, nothing — Pose only draws the frame —
  * but on a step Annotate cannot open yet, with no picture (one made after an
  * enlarged step starts enlarged), what it is, read-only, as out of the detail.
+ * Where a step sits on the page is the Pages view's Layers pane's
+ * (`DiagramPageLayers`), with the page it is on.
  */
 export function DiagramStepPanel() {
   const { t } = useTranslation();

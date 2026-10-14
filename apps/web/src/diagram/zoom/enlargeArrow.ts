@@ -134,15 +134,10 @@ interface ArrowMeasure {
  */
 interface ArrowReach extends ArrowMeasure {
   points: (readonly [number, number, number])[];
-  /** The tallest an aimed box is, at any angle, either way flipped. */
-  tallest?: number;
 }
 
 /** By the style, as JSON: its arrows' pen is what the box grows with. */
 const measured = new Map<string, ArrowReach>();
-
-/** Every how many radians the tallest aimed box is looked for: a degree. */
-const TALLEST_STEP = Math.PI / 180;
 
 function measure(style: DiagramStyle): ArrowReach {
   const key = JSON.stringify(style);
@@ -213,28 +208,11 @@ export function aimedEnlargeArrowMm(style: DiagramStyle, aim: LayoutArrowAim): {
   return { w, h };
 }
 
-/**
- * The tallest the arrow's box is aimed any way, mm: the room the row above a
- * flow row's end keeps for it, before the layout knows where it will aim.
- */
-export function tallestEnlargeArrowMm(style: DiagramStyle): number {
-  const reach = measure(style);
-  if (reach.tallest === undefined) {
-    let tallest = reach.h;
-    for (let angle = 0; angle < Math.PI; angle += TALLEST_STEP) {
-      for (const flipped of [false, true]) tallest = Math.max(tallest, aimedMeasure(style, { angle, flipped }).h);
-    }
-    reach.tallest = tallest;
-  }
-  return reach.tallest;
-}
-
-/** What the layout is handed of the arrow's size in `style` ({@link LayoutZoomArea}): along a row, aimed, and its tallest. */
-export function enlargeArrowSizes(style: DiagramStyle): Pick<LayoutZoomArea, 'box' | 'aimedBox' | 'tallest'> {
+/** What the layout is handed of the arrow's size in `style` ({@link LayoutZoomArea}): along a row, and aimed. */
+export function enlargeArrowSizes(style: DiagramStyle): Pick<LayoutZoomArea, 'box' | 'aimedBox'> {
   return {
     box: enlargeArrowMm(style),
     aimedBox: (aim) => aimedEnlargeArrowMm(style, aim),
-    tallest: tallestEnlargeArrowMm(style),
   };
 }
 

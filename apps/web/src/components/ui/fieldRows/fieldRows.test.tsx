@@ -289,6 +289,38 @@ describe('SliderRow', () => {
     expect(onGestureCommit).toHaveBeenCalledTimes(2);
   });
 
+  it('holds a drag itself and hands the value over once where it is let go', () => {
+    const onCommit = vi.fn();
+    const view = render(<SliderRow label="Nesting" min={0} max={1} step={0.05} value={0.8} onCommit={onCommit} />);
+    const input = view.querySelector<HTMLInputElement>('input[type="range"]');
+    if (!input) throw new Error('no slider');
+    const readout = () => view.querySelector('[data-field-readout]')?.textContent;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    const move = (value: string) =>
+      act(() => {
+        setter?.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    // The thumb and the readout follow the drag; nothing is handed over.
+    for (const value of ['0.7', '0.6', '0.55']) move(value);
+    expect(readout()).toBe('0.55');
+    expect(input.value).toBe('0.55');
+    expect(onCommit).not.toHaveBeenCalled();
+    act(() => {
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(onCommit).toHaveBeenCalledExactlyOnceWith(0.55);
+    // Let go, it shows its value again: the caller's, which here never took the commit.
+    expect(readout()).toBe('0.80');
+    // A drag that ends where it began hands nothing over.
+    move('0.6');
+    move('0.8');
+    act(() => {
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+  });
+
   it('shows the value with the step\'s decimals', () => {
     const view = render(
       <SliderRow label="Weight" min={0} max={2} step={0.1} value={0.7} onChange={() => {}} />

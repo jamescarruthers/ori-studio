@@ -79,6 +79,7 @@
     "layout": "flow",
     "columns": 4,
     "rows": 3,
+    "stepsPerPage": 7,
     "showPath": true,
     "showTitle": true,
     "pageNumbers": {
@@ -863,7 +864,8 @@
       "annotations": [],
       "annotatedPictureKey": null,
       "text": "Valley fold.",
-      "breakBefore": false
+      "breakBefore": false,
+      "pageSteps": 3
     },
     {
       "id": "step-3",

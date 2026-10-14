@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { readDiagram } from '../../diagram/document/diagramFile';
+import { handleMenuAction } from '../../commands/menuActions';
 import { handleShortcutRuntimeKeyDown } from '../../keyboard/shortcutRuntime';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { CommandDialogModal } from '../CommandDialogModal';
@@ -180,6 +181,36 @@ describe('DiagramPanel', () => {
       expect(options()).toHaveLength(0);
       expect(host?.querySelector('[role="status"]')).not.toBeNull();
     });
+
+    it('switches to the pages for a diagram of turns alone, which no step stands either side of', () => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        }
+      );
+      onTestFinished(() => {
+        vi.unstubAllGlobals();
+      });
+      act(() => {
+        state().insertDiagramTurn({ kind: 'turn-over', axis: 'vertical' });
+        state().insertDiagramTurn({ kind: 'turn-over', axis: 'horizontal' });
+      });
+      // In the Steps view the turns are cards.
+      expect(options()).toHaveLength(2);
+      const pages = [...(host?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [])].find(
+        (tab) => tab.textContent === 'Pages'
+      )!;
+      act(() => {
+        pages.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+      });
+      expect(state().diagramView).toBe('pages');
+      // The page view, not the cards: and no turn drawn on it, with no step either side.
+      expect(options()).toHaveLength(0);
+      expect(host?.querySelector('[role="status"]')).not.toBeNull();
+    });
   });
 
   describe('keys', () => {
@@ -336,6 +367,54 @@ describe('DiagramPanel', () => {
       act(() => cancel?.click());
       expect(state().diagram?.steps).toHaveLength(2);
       expect((document.activeElement as HTMLElement | null)?.dataset.stepId).toBe(first);
+    });
+
+    it('deletes a step selected on the pages with Delete or Backspace, through its confirm, as on the cards', async () => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        }
+      );
+      onTestFinished(() => {
+        vi.unstubAllGlobals();
+      });
+      const [first] = addSteps(2);
+      act(() => state().setDiagramStepText(first, 'Fold in half.'));
+      // The Diagram's panel active, as the menu's Delete reads it.
+      useWorkspaceStore.setState({ activePanelId: 'diagram' });
+      // A click on a step on the pages selects it and its frame (Decision 7).
+      act(() => {
+        state().setDiagramView('pages');
+        state().selectDiagramStep(first);
+        state().selectDiagramPagesPart('frame');
+      });
+      const dialogTitle = () => document.querySelector('[role="dialog"]')?.getAttribute('aria-label');
+      const dialogButton = (name: string) =>
+        [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(
+          (button) => button.textContent === name
+        );
+      for (const [key, answer] of [
+        ['Delete', 'Cancel'],
+        ['Backspace', 'Delete'],
+      ] as const) {
+        const menu = vi.fn(handleMenuAction);
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+        let claimed = false;
+        act(() => {
+          claimed = handleShortcutRuntimeKeyDown(event, { context: { activeEditingContext: 'diagram' }, menu });
+        });
+        expect(claimed, key).toBe(true);
+        expect(menu).toHaveBeenCalledExactlyOnceWith('edit.delete');
+        await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+        expect(dialogTitle()).toBe('Delete step 1?');
+        act(() => dialogButton(answer)?.click());
+        await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+      }
+      expect(stepsIn(state().diagram!).map((step) => step.id)).not.toContain(first);
+      expect(state().diagram?.steps).toHaveLength(1);
     });
 
     it('offers Add Step on the space between cards', () => {

@@ -23,38 +23,66 @@
  * model has grown much smaller, or out where it has grown for good. A picture
  * in a cell whose box gave room to text, and no longer fits there at its
  * run's scale, is drawn smaller, alone. Pictures with no paper — uploads, 3D
- * captures — keep one size of frame the same way.
+ * captures — keep one size of frame the same way. In the flow these are the
+ * pictures' reference scales, every step's found in one cell, the one a page
+ * of the diagram's steps per page is cut into ({@link pageGrid}), which each
+ * page's packing multiplies by its one page scale.
  *
- * In the flow layout the rows turn back at each end, and each page's rows run
- * so that the lane carries on across a printed spread ({@link flowPagePlan}):
- * a right page the lane comes into at its spine reads from the bottom row up.
- * The lane is one smooth curve through the pictures ({@link flowLane}).
+ * Which steps go on which page are the page plan's (`pagePlan.ts`,
+ * {@link paginate}). A grid page is cut into its columns × rows, and a row of
+ * fewer steps than the page's longest stands them at even shares of the
+ * page's width. A flow page is packed by its steps' shapes into bands and
+ * then held as packed (`flowPacking.ts`, `flowArrangement.ts`;
+ * `implementation-plans/diagram-flow-packing.md`): its bands turn back at
+ * each end, a step may stand in the bend between two, and each page's bands
+ * run so that the lane carries on across a printed spread
+ * ({@link flowPagePlan}): a right page the lane comes into at its spine reads
+ * from the bottom band up. The lane is one smooth curve through the pictures
+ * ({@link flowLane}).
  *
  * A turn between two steps (D22) has no cell: its glyph prints in the gutter
- * between the two pictures — midway on a row; across a flow row's end, on the
- * lane in its bend between the rows; at the next picture's leading edge across a
- * grid's row or a page; at the last picture's trailing edge after it. A
- * diagram with any turn keeps a gutter wide enough between all its pictures,
- * so its one paper scale stays one scale; a step before a flow row's end with
- * turns after it keeps their room under its text, and only it gives way.
+ * between the two pictures — midway on a row; across a flow page's bend, on
+ * the lane there; at the next picture's leading edge across a grid's row or a
+ * page; at the last picture's trailing edge after it. A grid with any turn
+ * keeps a gutter wide enough between all its pictures, so its one paper scale
+ * stays one scale; a flow page keeps one before each step a turn comes
+ * before.
  *
  * An enlarged step (Revision 2) is laid out as its window — what its frame
  * takes in, of its content where its frame is cut — in runs of its own, never
  * the Fit each runs: as large as its room allows, at most six times the area
- * it enlarges as that prints, or at its Size times that ({@link zoomScales}).
+ * it enlarges as that prints, or at its Size times that, past its room if
+ * need be, as a size pinned by hand is ({@link zoomScales}).
  * The enlarge arrow before one, when the step before it shows an area, takes
- * a turn's places and gutter, after any turns standing there.
+ * a turn's places and gutter, after any turns standing there; a flow page
+ * keeps that gutter before every enlarged step after another, whether the
+ * arrow prints or not, so a mark or a picture never re-packs a page.
  *
  * Measurement is injected ({@link TextSetter}): the composer sets text from
  * the font's own advances, tests with an estimate.
  *
  * Pure.
  */
-import type { DiagramPageSetup, DiagramPageSide, DiagramStepPlace, DiagramTurnKind } from '../document/diagramDocument';
+import type {
+  DiagramArrangedStep,
+  DiagramPageArrangement,
+  DiagramPageSetup,
+  DiagramPageSide,
+  DiagramPlaceScale,
+  DiagramStepPlace,
+  DiagramTurnKind,
+} from '../document/diagramDocument';
 import type { DiagramFontFace } from '../fonts/diagramFontFaces';
 import {
-  bendReach,
-  bendXAt,
+  arrangedBox,
+  arrangedCaptionWidth,
+  arrangedPictureRoom,
+  arrangementFits,
+  grownToHold,
+  packedArrangement,
+} from './flowArrangement';
+import { roundPageArrangement } from '../document/pageArrangements';
+import {
   flowLane,
   flowPagePlan,
   pageSide,
@@ -63,23 +91,36 @@ import {
   type Lane,
   type LaneStop,
 } from './flowLane';
+import {
+  PACKED_TURN_GUTTER_MM,
+  PICTURE_SIDE_MM,
+  captionCentreWidth,
+  packFlowPage,
+  packingArea,
+  stepPartsInBox,
+  type PackRect,
+  type PackStep,
+} from './flowPacking';
+import { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape, paginate, printableArea, type PlannedPage } from './pagePlan';
+import { holdsArrangement, keepsGlyphGutter, pageSignatures, titleShown } from './pageSignature';
 import { printPaper, type PrintPaper } from './printPaper';
+import { keepsMovedFrame } from './repackedFrames';
+import { normalizeStepPlace } from '../document/placeValues';
+import { pinnedCaptionWidth, setCaption } from './captionMeasure';
+import { lanePicture, laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
+import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 
-/** The instruction's size and leading, mm. */
-export const STEP_TEXT_SIZE_MM = 3.2;
-export const STEP_TEXT_LEADING_MM = 4.1;
-/** The step number: its size, and its baseline below the cell's top. */
-export const STEP_NUMBER_SIZE_MM = 6.2;
+// The type a step is set in, which placement's hit boxes measure too.
+export { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM } from './stepType';
+/** The step number's baseline below the cell's top, and its inset from the cell's side. */
 const STEP_NUMBER_BASELINE_MM = 7;
 const STEP_NUMBER_INSET_MM = 1.5;
-/** The top of the step number below the cell's top: its figures stand under three quarters of its size. */
-const STEP_NUMBER_TOP_MM = STEP_NUMBER_BASELINE_MM - 0.75 * STEP_NUMBER_SIZE_MM;
 /** The picture box's top below the cell's top: under the number. */
-export const PICTURE_TOP_MM = 8;
+const PICTURE_TOP_MM = 8;
+// The picture box's share of a cell and the turn gutter choose a flow page's rows, so they live with its plan.
+export { PICTURE_HEIGHT_SHARE, TURN_GUTTER_MM, flowShape } from './pagePlan';
 /** The instruction's first baseline below the picture box. */
 const TEXT_GAP_MM = 5;
-/** Room kept under the last baseline, for descenders. */
-const TEXT_DESCENT_MM = 1.5;
 /** The smallest a picture box gives way to text: half of it. */
 const PICTURE_FLOOR = 0.5;
 /** The header and the footer, when shown. */
@@ -99,8 +140,13 @@ const PAGE_NUMBER_RAISE_MM = 1.5;
  * margin. Past any bleed a print shop asks for, so the cut never shows paper.
  */
 const OFF_PAGE_MM = 10;
-/** Flow: every other cell of a row steps down by this share of the cell, and the text gives up as much. */
-const FLOW_STEP = 0.06;
+/**
+ * Flow: how far from the paper's edge a page with turns keeps its steps'
+ * boxes, so a turn standing at the page's edge, held on the paper, clears the
+ * pictures (whose boxes keep half their side room beside them): a turn's
+ * gutter from the edge to the picture, as a grid keeps.
+ */
+const EDGE_TURN_ROOM_MM = TURN_GUTTER_MM - PICTURE_SIDE_MM / 2;
 /** The room beside a picture box in its cell, together: the gutter between two pictures. */
 const PICTURE_SIDE_ROOM_MM = 6;
 /**
@@ -126,12 +172,6 @@ export const FIT_ZOOM = 1.3;
  * always given room.
  */
 export const MARKS_FLOOR = 0.5;
-/**
- * The gutter a diagram with turns keeps between its pictures (D22): the
- * turn-over glyph, the wider of the two at its printed size, and room either
- * side of it.
- */
-export const TURN_GUTTER_MM = 14;
 /**
  * A turn's glyph as it prints (`composeDiagramPage`, at the pictures' line
  * width), its ink measured with room for the stroke: the turn-over's long and
@@ -176,16 +216,6 @@ function glyphMm(glyph: BetweenGlyph, aim: LayoutArrowAim | null = null): { w: n
   return aim ? glyph.arrowFrom.aimedBox(aim) : glyph.arrowFrom.box;
 }
 
-/**
- * How tall glyphs standing in one place are, one above another, each clear of
- * the next: an enlarge arrow at its tallest where it is `aimed` across a flow
- * row's end, before the layout knows which way.
- */
-function stackHeight(glyphs: readonly BetweenGlyph[], aimed = false): number {
-  const height = (glyph: BetweenGlyph) => (aimed && glyph.kind === 'enlarge' ? glyph.arrowFrom.tallest : glyphMm(glyph).h);
-  return glyphs.reduce((sum, glyph) => sum + height(glyph), 0) + (glyphs.length - 1) * TURN_STACK_CLEAR_MM;
-}
-
 /** One run of a set line: a font and its text, placed from the line's start. */
 export interface SetRun {
   font: string;
@@ -227,6 +257,8 @@ export interface LayoutStep {
   id: string;
   text: string;
   breakBefore: boolean;
+  /** The page it starts holds this many steps (`DiagramStep.pageSteps`): in the flow only ({@link paginate}). */
+  pageSteps?: number;
   /**
    * The picture with what its marks reach past it — annotations, a
    * References step's letters — for its scale, in two parts: where
@@ -264,6 +296,12 @@ export interface LayoutStep {
    * smaller scale its run draws it at (`layoutDiagram`).
    */
   atMost?: number;
+  /**
+   * Its picture measured at `scale`, in its own measure, for how far its
+   * marks reach there (`layoutDiagram`): what a flow page is packed by, at
+   * the picture's reference scale. Absent, `picture` as measured.
+   */
+  pictureAt?: (scale: number) => LayoutStep['picture'];
   /** The turns between the step before and this one (D22), in order. */
   turnsBefore: readonly LayoutTurn[];
   /** The turns after the last step; empty on every other. */
@@ -280,8 +318,8 @@ export interface LayoutStep {
   /**
    * The step's hand placement (`implementation-plans/diagram-page-overrides.md`):
    * absent on a step placed by no one, a newer build's step, and one whose
-   * placement only a newer build reads. Not read yet: every step is laid out
-   * where its cell puts it, placed or not, until the layout applies it.
+   * placement only a newer build reads. Applied after the automatic layout,
+   * before ribbon and symbol placement.
    */
   place?: DiagramStepPlace;
 }
@@ -290,8 +328,8 @@ export interface LayoutStep {
  * The enlarge area an arrow leaves: on which step, which area there, and its
  * longer side in that step's picture units; and the box the arrow prints in,
  * mm, as its outline paints it (`enlargeArrowSizes`), which this module,
- * laying out and never painting, is handed — along a row, aimed across a flow
- * row's end, and the tallest it is aimed any way.
+ * laying out and never painting, is handed — along a row, and aimed across a
+ * flow page's bend.
  */
 export interface LayoutZoomArea {
   stepId: string;
@@ -299,7 +337,6 @@ export interface LayoutZoomArea {
   share: number;
   box: { w: number; h: number };
   aimedBox: (aim: LayoutArrowAim) => { w: number; h: number };
-  tallest: number;
 }
 
 /**
@@ -366,7 +403,34 @@ export interface LayoutCell {
   stepId: string;
   /** 1-based, as printed. */
   number: number;
+  /** Where the step is at home: its cell on a grid page, its box on a flow page, as its page's arrangement keeps it. */
   cellMm: { x: number; y: number; w: number; h: number };
+  /** Its band on its flow page, from 0 in reading order (`flowPacking.ts`); a step in a bend, the band before it. In the flow only. */
+  band?: number;
+  /** It stands in the bend after its band, between that band and the next: in the flow only. */
+  bend?: true;
+  /**
+   * Where each part is at home, for the Pages view's ghost of a moved one
+   * (`placeCell`): the frame where the layout puts the step, each other part
+   * where it sits in its frame, moved or not.
+   */
+  homeParts?: { frame: PageBox; number: PageBox; picture: PageBox; text: PageBox };
+  numberMm?: PageBox;
+  inkMm?: PageBox;
+  /** Its row reads right to left: every other band of a flow page. Every grid row reads left to right. */
+  rightToLeft?: boolean;
+  placed?: {
+    offsets: DiagramStepPlace;
+    pin: 'applied' | 'kind' | 'empty' | null;
+    /**
+     * What the layout gives the step with no pin: its picture's scale and
+     * room, and — where its caption's measure is pinned — the measure its
+     * caption would have (`textWidthMm`).
+     */
+    auto: { mmPerUnit: number | null; frameMm: number | null; drawMm: PageBox; textWidthMm?: number };
+  };
+  /** A part past the margin, or past the paper's edge (`markOutsideMargin`): all the pages say of where a step lands. */
+  outsideMargin?: true;
   /** The picture's square box: where a fitted picture goes, and an empty step's placeholder. */
   pictureMm: { x: number; y: number; size: number };
   /**
@@ -389,8 +453,9 @@ export interface LayoutCell {
   /**
    * An enlarged step's size against the area it enlarges (Revision 2): the
    * Size asked for (null for Fill), how many times the area it prints at, and
-   * whether its room made it smaller than its run asked. Absent on a step that
-   * is not enlarged, or one whose area's size is not known.
+   * whether its room made it smaller than its run's Fill — never so for a
+   * Size, which is drawn as asked, past its room if need be. Absent on a step
+   * that is not enlarged, or one whose area's size is not known.
    */
   zoom?: { asked: number | null; printed: number; reduced: boolean };
   numberAt: { x: number; y: number };
@@ -407,6 +472,15 @@ export interface LayoutPage {
   cells: LayoutCell[];
   /** The flow layout's lane, as drawn, or null. */
   band: Lane | null;
+  flow?: Parameters<typeof flowLane>[0];
+  /**
+   * A flow page's arrangement, as drawn: its page scale, whether it was packed
+   * by this layout (and is in {@link DiagramPagesLayout.packed}) rather than
+   * held, and whether every box fits the page's area — false only for a page
+   * no plan fitted even at the least scale, drawn overflowing. Absent on a
+   * grid, and on the one page of a diagram with no steps.
+   */
+  packing?: { k: number; packed: boolean; fits: boolean };
   /**
    * The turns on the page (D22), in the document's order: each glyph's centre
    * and printed box, the step it comes before — null for those after the last
@@ -446,7 +520,19 @@ export interface LayoutZoomArrow {
 export interface DiagramPagesLayout {
   paper: PrintPaper;
   pages: LayoutPage[];
+  /**
+   * The first page's cells: every grid page's. In the flow, the one cell
+   * every step finds its reference scale in ({@link pageGrid}); each step
+   * carries its own box.
+   */
   cellMm: { w: number; h: number };
+  /**
+   * The arrangements this layout packed, by the step each page starts with:
+   * every flow page that held none for its structure. What the store adopts
+   * (`adoptDiagramPageArrangements`), so the next layout holds them. Absent
+   * when nothing was packed.
+   */
+  packed?: Readonly<Record<string, DiagramPageArrangement>>;
   /** The title tab, when shown. */
   title: {
     tab: { x: number; y: number; w: number; h: number };
@@ -461,29 +547,54 @@ export interface DiagramPagesLayout {
 }
 
 /**
- * The columns and rows a page's cells are cut into under a setup: what the
- * layout cuts its pages by, and what every count of a page's cells reads —
- * the page count, and which cell a step is in (`stepPlaces.ts`). Read from
- * the setup alone, never the title, so typing a title never re-cuts a page
+ * The columns and rows a full page is cut into under a setup: a grid's own; a
+ * flow page of its default steps per page, {@link flowShape}'s on the paper
+ * inside its margins — the one cell every flow step finds its reference scale
+ * in, whatever page it is on. A flow page's own rows are its plan's
+ * (`pagePlan.ts`, {@link paginate}), which hold its own number of steps, odd
+ * on a left page that hands over at its spine; no picture's size reads them.
+ *
+ * Read from the setup alone, never the title, and never less the header and
+ * the footer: typing a title or turning page numbers on never re-cuts a page
  * (`implementation-plans/diagram-page-overrides.md`, Phase 1b).
  */
 export function pageGrid(setup: DiagramPageSetup): { columns: number; rows: number } {
-  return { columns: setup.columns, rows: setup.rows };
+  if (setup.layout !== 'flow') return { columns: setup.columns, rows: setup.rows };
+  return flowShape(setup.stepsPerPage, printableArea(setup));
 }
 
-/** How many steps a page holds under a setup ({@link pageGrid}). */
-export function cellsPerPage(setup: DiagramPageSetup): number {
-  const { columns, rows } = pageGrid(setup);
-  return columns * rows;
+/** Where a page's `k`th step stands in its rows: its row and its place along it, both in reading order, and how many the row holds. */
+interface RowSlot {
+  row: number;
+  along: number;
+  count: number;
 }
 
-/** The size of a page's cells under a setup: the page inside its margins, less the header and footer, cut into columns and rows. */
-export function pageCellMm(setup: DiagramPageSetup, title: string): { w: number; h: number } {
-  const { widthMm: W, heightMm: H, marginMm: m } = printPaper(setup);
-  const headH = setup.showTitle && title.trim() !== '' ? HEADER_MM : 0;
-  const footH = setup.pageNumbers.enabled ? FOOTER_MM : 0;
-  const { columns, rows } = pageGrid(setup);
-  return { w: (W - 2 * m) / columns, h: (H - 2 * m - headH - footH) / rows };
+/** Each place on a page, by `k`, from its plan's rows ({@link PlannedPage.rowCounts}): a grid's are its columns, row by row. */
+function rowSlots(page: PlannedPage): RowSlot[] {
+  return page.rowCounts.flatMap((count, row) => Array.from({ length: count }, (_, along) => ({ row, along, count })));
+}
+
+/**
+ * A cell of a page cut into columns × rows (D10): as tall as the page inside
+ * its margins, less the header and the footer, over the rows, and as wide as
+ * the paper inside its margins over the columns; a picture's room across it,
+ * the cell less the gutter between pictures; the square box, the lesser of
+ * that and the cell's {@link PICTURE_HEIGHT_SHARE}; and the instruction's
+ * width, as the mockup sets it.
+ */
+interface CellCut {
+  cellW: number;
+  cellH: number;
+  roomW: number;
+  fullBox: number;
+  textWidth: number;
+}
+
+/** How a page is cut: its plan and its places in its rows, and its cells — a grid's by its plan, every flow page's the diagram's one reference cell. */
+interface PageCut extends CellCut {
+  page: PlannedPage;
+  slots: RowSlot[];
 }
 
 /**
@@ -923,32 +1034,40 @@ export function pictureExtent(picture: NonNullable<LayoutStep['picture']>, scale
 }
 
 /**
- * Which steps go on which page, as indices: in order, a new page when one is
- * full or a step starts one. An empty diagram is one empty page.
+ * The pages of a diagram's steps, under its page setup: which steps go on
+ * which page, `pagePlan.ts`'s ({@link paginate}).
+ *
+ * A grid page is cut into its cells. A flow page is drawn from its
+ * arrangement (`implementation-plans/diagram-flow-packing.md`): the one
+ * `arrangements` holds for it, under the step it starts with, while that was
+ * packed for the page as it is (its signature, `pageSignature.ts`), each step
+ * at its kept scale in its kept box; else one packed now (`flowPacking.ts`),
+ * which the layout hands back (`DiagramPagesLayout.packed`) for the store to
+ * adopt. Packing reads each picture at its reference scale: the one Fit each
+ * gives it with every step of the diagram in one cell, the cell a page of its
+ * steps per page is cut into ({@link pageGrid}, {@link scaleRuns}), whatever
+ * page it is on, so a page's side, spine or own count sizes no picture.
+ *
+ * `stored` is what the document keeps (`DiagramDocument.pageArrangements`),
+ * where `arrangements` adds what an earlier pass of the same layout packed: a
+ * page packed afresh, here or there, draws a frame moved by hand at its
+ * offset only where its step keeps its band (`repackedFrames.ts`), and at
+ * home where the store, adopting the packing, will send it.
  */
-export function splitIntoPages(steps: readonly Pick<LayoutStep, 'breakBefore'>[], perPage: number): number[][] {
-  const pages: number[][] = [];
-  steps.forEach((step, index) => {
-    const current = pages.at(-1);
-    if (!current || current.length >= perPage || (step.breakBefore && current.length > 0)) pages.push([index]);
-    else current.push(index);
-  });
-  return pages.length === 0 ? [[]] : pages;
-}
-
-/** The pages of a diagram's steps, under its page setup. */
 export function layoutDiagramPages(
   steps: readonly LayoutStep[],
   setup: DiagramPageSetup,
   title: string,
-  setter: TextSetter
+  setter: TextSetter,
+  arrangements: Readonly<Record<string, DiagramPageArrangement>> = {},
+  stored: Readonly<Record<string, DiagramPageArrangement>> = arrangements
 ): DiagramPagesLayout {
   const paper = printPaper(setup);
   const { widthMm: W, heightMm: H, marginMm: m } = paper;
   const flow = setup.layout === 'flow';
-  const showTitle = setup.showTitle && title.trim() !== '';
+  const showTitle = titleShown(setup, title);
   const headH = showTitle ? HEADER_MM : 0;
-  const { w: cellW, h: cellH } = pageCellMm(setup, title);
+  const footH = setup.pageNumbers.enabled ? FOOTER_MM : 0;
   const bandWidthMm = setup.pathWidthMm;
   // An enlarge arrow stands where a turn would, and keeps the gutter a turn keeps.
   const turning = steps.some(
@@ -957,28 +1076,40 @@ export function layoutDiagramPages(
   // A turn at a row's end prints in the half gutter outside the outer picture,
   // which a narrow margin cannot give: the boxes give up what it lacks.
   const outerShortfall = turning ? Math.max(0, TURN_GUTTER_MM / 2 - m) : 0;
-  // A picture's room across the cell: the cell less the gutter between pictures.
-  const roomW = Math.max(12, cellW - (turning ? TURN_GUTTER_MM : PICTURE_SIDE_ROOM_MM) - 2 * outerShortfall);
-  const fullBox = Math.max(12, Math.min(roomW, cellH * 0.64));
-  const textWidth = cellW * 0.8;
-  const { columns, rows } = pageGrid(setup);
-  const perPage = cellsPerPage(setup);
 
-  const pagesOfSteps = splitIntoPages(steps, perPage).map((page) =>
-    page.map((index) => ({ step: steps[index]!, index }))
-  );
+  const planned = paginate(steps, setup);
+  const cutInto = ({ columns, rows }: { columns: number; rows: number }): CellCut => {
+    const cellW = (W - 2 * m) / columns;
+    const cellH = (H - 2 * m - headH - footH) / rows;
+    // A picture's room across the cell: the cell less the gutter between pictures.
+    const roomW = Math.max(12, cellW - (turning ? TURN_GUTTER_MM : PICTURE_SIDE_ROOM_MM) - 2 * outerShortfall);
+    const fullBox = Math.max(12, Math.min(roomW, cellH * PICTURE_HEIGHT_SHARE));
+    return { cellW, cellH, roomW, fullBox, textWidth: cellW * 0.8 };
+  };
+  // A grid page is cut into its plan's cells. Every flow step finds its
+  // reference scale in one cell, the diagram's ({@link pageGrid}), never its
+  // own page's: a page's own rows turn on its side, its spine, its own count
+  // and the odd rows a left page that hands over takes, which a picture's size
+  // must not (`diagram-flow-packing.md`, Reference size).
+  const referenceCut = flow ? cutInto(pageGrid(setup)) : null;
+  const cuts = planned.map((page): PageCut => ({ ...(referenceCut ?? cutInto(page)), page, slots: rowSlots(page) }));
+  const pagesOfSteps = planned.map((page) => page.steps.map((index) => ({ step: steps[index]!, index })));
   // Which way each page's rows run: in a grid, down and left to right; in a
-  // flow, so that the lane carries on across each spread.
-  const plans: FlowPagePlan[] = pagesOfSteps.map((_, pageIndex) =>
+  // flow, so that the lane carries on across each spread — every page's first
+  // band from the left, as the packing reads them.
+  const plans: FlowPagePlan[] = planned.map((_, pageIndex) =>
     flow
-      ? flowPagePlan(pageIndex, pagesOfSteps.length, setup.firstPageSide, rows)
+      ? flowPagePlan(pageIndex, planned.length, setup.firstPageSide, 1)
       : { side: pageSide(pageIndex, setup.firstPageSide), up: false, firstRightToLeft: false, entry: 'none', exit: 'none' }
   );
 
-  // Each cell's box and text, before the scale is known.
+  // Each cell's box and text, before the scale is known: a grid page's, and
+  // each flow step's in the one cell it finds its reference scale in.
   interface Placed {
     step: LayoutStep;
     index: number;
+    /** Its cell: its grid page's, or the flow's one reference cell. */
+    cut: CellCut;
     x: number;
     y: number;
     /** How far down the page the text's last line may sit. */
@@ -988,43 +1119,30 @@ export function layoutDiagramPages(
     overflow: boolean;
   }
   /**
-   * The top-left of a page's `k`th cell: rows down the page, or up it; a flow
-   * row that runs right to left from the right, every other cell lower.
+   * The top-left of a page's `k`th cell, rows down the page. A row stands its
+   * steps at even shares of the page's width, each centred in its share — a
+   * full row's cells side by side, a shorter row's spread across the page.
    */
-  const cellAt = (plan: FlowPagePlan, k: number) => {
-    const row = Math.floor(k / columns);
-    const k0 = k % columns;
-    const col = flow && rowRightToLeft(plan, row) ? columns - 1 - k0 : k0;
-    const down = plan.up ? rows - 1 - row : row;
-    return { x: m + col * cellW, y: m + headH + down * cellH + (flow && k0 % 2 === 1 ? cellH * FLOW_STEP : 0) };
+  const cellAt = (pageIndex: number, k: number) => {
+    // A flow step's reference cell: where on the page it stands changes nothing it measures.
+    if (referenceCut) return { x: m, y: m + headH };
+    const { page, cellW, cellH, slots } = cuts[pageIndex]!;
+    const { row, along, count } = slots[k]!;
+    const x = count === page.columns ? m + along * cellW : m + ((along + 0.5) / count) * (W - 2 * m) - cellW / 2;
+    return { x, y: m + headH + row * cellH };
   };
-  /** How far down the page the text of a page's `k`th cell may sit, by its cell. */
-  const cellFoot = (plan: FlowPagePlan, k: number) =>
-    cellAt(plan, k).y + cellH * (flow ? 1 - FLOW_STEP : 1) - TEXT_DESCENT_MM;
-  /**
-   * The same, over a flow row break with turns at it: above their room over
-   * the number of the step under it, clear of both (`placeTurns`). The break
-   * under a cell is after it on a page read down, before it on one read up.
-   */
-  const slotBottom = (entries: readonly { step: LayoutStep }[], k: number, plan: FlowPagePlan) => {
-    const own = cellFoot(plan, k);
-    const after = plan.up ? k : k + 1;
-    const next = after > 0 ? entries[after]?.step : undefined;
-    const glyphs = next ? glyphsBefore(next) : [];
-    if (!flow || glyphs.length === 0 || after % columns !== 0) return own;
-    const under = plan.up ? after - 1 : after;
-    const room = stackHeight(glyphs, true) + 2 * TURN_STACK_CLEAR_MM;
-    return Math.min(own, cellAt(plan, under).y + STEP_NUMBER_TOP_MM - room - TEXT_DESCENT_MM);
-  };
+  /** How far down the page the text of a page's `k`th cell may sit: by its cell. */
+  const cellFoot = (pageIndex: number, k: number) => cellAt(pageIndex, k).y + cuts[pageIndex]!.cellH - TEXT_DESCENT_MM;
   const firstBaselineOf = (cellTop: number, box: number) => cellTop + PICTURE_TOP_MM + box + TEXT_GAP_MM;
   /** How many lines fit between a box and the foot of its slot. */
   const slotLines = (slot: number, cellTop: number, box: number) =>
     Math.max(0, Math.floor((slot - firstBaselineOf(cellTop, box)) / STEP_TEXT_LEADING_MM + 1e-9) + 1);
   const placedPages: Placed[][] = pagesOfSteps.map((entries, pageIndex) =>
     entries.map(({ step, index }, k) => {
-      const plan = plans[pageIndex]!;
-      const { x, y } = cellAt(plan, k);
-      const slot = slotBottom(entries, k, plan);
+      const cut = cuts[pageIndex]!;
+      const { fullBox, textWidth } = cut;
+      const { x, y } = cellAt(pageIndex, k);
+      const slot = cellFoot(pageIndex, k);
       let box = fullBox;
       const full = setter.paragraph(step.text, textWidth, STEP_TEXT_SIZE_MM, Number.MAX_SAFE_INTEGER);
       let maxLines = slotLines(slot, y, box);
@@ -1042,30 +1160,27 @@ export function layoutDiagramPages(
           box = Math.max(0, slot - (firstBaselineOf(y, box) - box));
           maxLines = slotLines(slot, y, box);
         }
-      } else if (full.linesNeeded === 0 && slot < cellFoot(plan, k)) {
-        // No text, and turns kept under it: the picture ends where text would, above them.
-        box = Math.max(0, Math.min(box, slot + TEXT_DESCENT_MM - (y + PICTURE_TOP_MM)));
       }
       const text =
         full.linesNeeded <= maxLines ? full : setter.paragraph(step.text, textWidth, STEP_TEXT_SIZE_MM, maxLines);
-      return { step, index, x, y, slot, box, text, overflow: full.linesNeeded > maxLines };
+      return { step, index, cut, x, y, slot, box, text, overflow: full.linesNeeded > maxLines };
     })
   );
 
   // Each picture's room: across, the cell less its gutter; down, what its
   // text leaves, at least its box. It fits where both its sides do.
-  const roomH = ({ y, slot, box, text }: Placed) =>
+  const roomH = ({ y, slot, box, text }: Pick<Placed, 'y' | 'slot' | 'box' | 'text'>) =>
     Math.max(
       box,
       slot -
         (y + PICTURE_TOP_MM) -
         (text.lines.length > 0 ? TEXT_GAP_MM + (text.lines.length - 1) * STEP_TEXT_LEADING_MM : 0)
     );
-  const fitOf = ({ step, ...placed }: Placed): ScaleFit | null => {
-    const down = roomH({ step, ...placed });
+  const fitOf = ({ step, cut, ...placed }: Placed): ScaleFit | null => {
+    const down = roomH(placed);
     const fit = (across: number, room: number) => (step.fitIn ? step.fitIn(across, room) : pictureFit(step.picture, across, room));
-    const own = fit(roomW, down);
-    const shared = fit(roomW, Math.max(down, fullBox));
+    const own = fit(cut.roomW, down);
+    const shared = fit(cut.roomW, Math.max(down, cut.fullBox));
     if (own !== null && step.atMost !== undefined) return shared === null ? null : { own: Math.min(own, step.atMost), shared };
     return own === null || shared === null ? null : { own, shared };
   };
@@ -1088,25 +1203,96 @@ export function layoutDiagramPages(
       });
     });
   }
+  const autoScales = new Map(scales);
+  const pinStates = new Map<Placed, 'applied' | 'kind' | 'empty'>();
+  for (const entry of all) {
+    const pin = entry.step.place?.scale;
+    if (!pin) continue;
+    const picture = entry.step.picture;
+    if (!picture) { pinStates.set(entry, 'empty'); continue; }
+    const paperPin = 'mmPerUnit' in pin;
+    if (entry.step.zoom || (picture.kind === 'paper') !== paperPin) { pinStates.set(entry, 'kind'); continue; }
+    const units = paperPin ? Math.max(picture.frame.width, picture.frame.height) : 1;
+    const value = Math.max(4, Math.min(Math.max(W, H) - 2 * m, (paperPin ? pin.mmPerUnit : pin.frameMm) * units)) / units;
+    scales.set(entry, { mmPerUnit: paperPin ? value : null, frameMm: paperPin ? null : value, reduced: false });
+    pinStates.set(entry, 'applied');
+  }
   // Then the enlarged steps, every other scale known: an area's step may be on an earlier page, or after.
-  const zoomed = zoomScales(all, fitOf, scales, fullBox);
+  const { read: zoomed, areas: zoomAreasOf } = zoomScales(all, fitOf, scales, (entry) => entry.cut.fullBox);
 
-  const cellPages: LayoutCell[][] = placedPages.map((placed) =>
+  const flowPages = flow
+    ? arrangeFlowPages({
+        placedPages,
+        planned,
+        plans,
+        steps,
+        setup,
+        title,
+        setter,
+        arrangements,
+        stored,
+        area: packingArea(paper, headH, footH),
+        margin: m,
+        paper,
+        // A step's reference scale: Fit each's in its cell, before any pin — an enlarged step's, its run's.
+        referenceOf: (entry) => autoScales.get(entry) ?? (entry.step.zoom ? scales.get(entry) : undefined),
+        pinned: (entry) => (pinStates.get(entry) === 'applied' ? scales.get(entry)! : null),
+        pinState: (entry) => pinStates.get(entry) ?? null,
+        zoomed,
+        zoomAreasOf,
+      })
+    : null;
+
+  const cellPages: LayoutCell[][] = flowPages?.cells ?? placedPages.map((placed) =>
     placed.map((entry) => {
-      const { step, index, x, y, box, text, overflow } = entry;
+      const { step, index, cut, x, y, box, text, overflow } = entry;
+      const { cellW, cellH, roomW, textWidth } = cut;
       const pictureX = x + (cellW - box) / 2;
       const pictureY = y + PICTURE_TOP_MM;
       const scale = scales.get(entry);
       const at = scale?.mmPerUnit ?? scale?.frameMm ?? null;
-      // A picture taller at its scale than its box runs on down its room.
-      const drawnH = at !== null && step.picture ? pictureExtent(step.picture, at).height : 0;
-      const drawH = Math.min(Math.max(box, drawnH), roomH(entry));
-      return {
+      const extent = at !== null && step.picture ? pictureExtent(step.picture, at) : null;
+      const pin = pinStates.get(entry) ?? null;
+      // A picture taller at its scale than its box runs on down its room. A
+      // scale pinned by hand draws past the room, and so does an enlarged
+      // step's Size (Zach, 2026-10-12), its text below it; nothing else moves.
+      const pinned = pin === 'applied';
+      const sized = step.zoom?.scale != null;
+      const drawnH = extent?.height ?? 0;
+      const inRoom = Math.min(Math.max(box, drawnH), roomH(entry));
+      const drawH = pinned ? drawnH : sized ? Math.max(inRoom, drawnH) : inRoom;
+      const ink = extent ?? { width: box, height: box };
+      const drawW = pinned || sized ? Math.max(roomW, ink.width) : roomW;
+      const auto = autoScales.get(entry);
+      const autoAt = auto?.mmPerUnit ?? auto?.frameMm ?? null;
+      const autoH = autoAt !== null && step.picture ? pictureExtent(step.picture, autoAt).height : 0;
+      const place = normalizeStepPlace(step.place);
+      // A caption whose measure is pinned is set at it, whole, from where its
+      // cell starts it; the picture and every scale were worked out from the
+      // caption as the layout sets it, so nothing else changes for it.
+      const pinnedText = pinnedCaptionWidth(place, paper);
+      const autoDraw = { x: x + (cellW - roomW) / 2, y: pictureY, w: roomW, h: Math.min(Math.max(box, autoH), roomH(entry)) };
+      const cell: LayoutCell = {
         stepId: step.id,
         number: index + 1,
         cellMm: { x, y, w: cellW, h: cellH },
         pictureMm: { x: pictureX, y: pictureY, size: box },
-        drawMm: { x: x + (cellW - roomW) / 2, y: pictureY, w: roomW, h: drawH },
+        drawMm: { x: x + (cellW - drawW) / 2, y: pictureY, w: drawW, h: drawH },
+        inkMm: { x: x + (cellW - ink.width) / 2, y: pictureY + (drawH - ink.height) / 2, w: ink.width, h: ink.height },
+        ...(place
+          ? {
+              placed: {
+                offsets: place,
+                pin,
+                auto: {
+                  mmPerUnit: auto?.mmPerUnit ?? null,
+                  frameMm: auto?.frameMm ?? null,
+                  drawMm: autoDraw,
+                  ...(pinnedText !== null ? { textWidthMm: textWidth } : {}),
+                },
+              },
+            }
+          : {}),
         mmPerUnit: scale?.mmPerUnit ?? null,
         frameMm: scale?.frameMm ?? null,
         scaleReduced: scale?.reduced ?? false,
@@ -1115,32 +1301,34 @@ export function layoutDiagramPages(
         text: {
           x: x + cellW * 0.1,
           firstBaseline: pictureY + drawH + TEXT_GAP_MM,
-          widthMm: textWidth,
-          lines: text.lines,
+          widthMm: pinnedText ?? textWidth,
+          lines: pinnedText === null ? text.lines : setCaption(step.text, pinnedText, setter),
         },
-        textOverflow: overflow,
+        textOverflow: pinnedText === null && overflow,
       };
+      // Placed by hand on top of its home: every grid row reads left to right.
+      return placeCell(cell, step, false, setter);
     })
   );
 
-  // The lane's stops on each page: every picture's centre as drawn, and on a
-  // page that runs on to its spine, the empty cells after its last step.
-  const stopPages: LaneStop[][] = cellPages.map((cells, pageIndex) => {
-    if (!flow) return [];
-    const plan = plans[pageIndex]!;
-    const stop = (k: number, at: { x: number; y: number }): LaneStop => {
-      const row = Math.floor(k / columns);
-      return { ...at, row, rightToLeft: rowRightToLeft(plan, row) };
-    };
-    const stops = cells.map((cell, k) => stop(k, laneCentre(cell)));
-    if (plan.exit === 'spine') {
-      for (let k = cells.length; k < perPage; k += 1) {
-        const { x, y } = cellAt(plan, k);
-        stops.push(stop(k, { x: x + cellW / 2, y: y + PICTURE_TOP_MM + fullBox / 2 }));
-      }
-    }
-    return stops;
-  });
+  // The lane's stops on each flow page: every picture's centre as drawn, in
+  // its band, a step in a bend turned through; and its picture's box, which a
+  // row bowing over it keeps inside.
+  const stopPages: LaneStop[][] = cellPages.map((cells) =>
+    flow
+      ? cells.map((cell): LaneStop => {
+          const band = cell.band ?? 0;
+          return {
+            ...laneCentre(cell),
+            picture: lanePicture(cell),
+            row: band,
+            rightToLeft: band % 2 === 1,
+            ...(cell.bend ? { bend: true } : {}),
+            ...(laneFollowsPlacement(cell) ? { placed: true } : {}),
+          };
+        })
+      : []
+  );
   // Across a spread the lane meets the spine at one height: halfway between
   // where it leaves the left page and where it comes into the right one.
   const spineAt = (leftIndex: number) => {
@@ -1153,35 +1341,44 @@ export function layoutDiagramPages(
     const number = setup.pageNumbers.first + pageIndex;
     const plan = plans[pageIndex]!;
     const cells = cellPages[pageIndex]!;
-    const lane =
-      flow && cells.length > 0
-        ? flowLane({
+    const cut = cuts[pageIndex]!;
+    const halfWidth = bandWidthMm / 2;
+    const last = cells.at(-1);
+    const flowInput: Parameters<typeof flowLane>[0] | null =
+      flow && last
+        ? {
             stops: stopPages[pageIndex]!,
             plan,
             pageWidth: W,
-            cellW,
-            halfWidth: bandWidthMm / 2,
+            // A turn between two rows keeps its band inside the margin.
+            margin: m,
+            halfWidth,
             offPage: OFF_PAGE_MM,
             spineIn: plan.entry === 'spine' ? spineAt(pageIndex - 1) : null,
             spineOut: plan.exit === 'spine' ? spineAt(pageIndex) : null,
-          })
+            // The diagram's last page: the band ends just past its last step, at its box's edge.
+            tail: plan.exit === 'none' ? Math.max(0, last.cellMm.w / 2 - halfWidth) : 0,
+          }
         : null;
+    const lane = flowInput ? flowLane(flowInput) : null;
     const band = setup.showPath ? (lane?.lane ?? null) : null;
     const { turns, zoomArrows } = placeTurns(
       placed.map(({ step }) => step),
       cells,
-      columns,
-      flow ? plan : null,
-      lane,
+      flow ? (k) => cells[k]!.band ?? 0 : (k) => cut.slots[k]!.row,
+      flow ? { plan, lane, bendInset: m + halfWidth } : null,
       W,
-      bandWidthMm / 2
+      H
     );
     const right = plan.side === 'right';
+    const packing = flowPages?.packing[pageIndex];
     return {
       number,
       side: plan.side,
       cells,
       band,
+      ...(flowInput ? { flow: flowInput } : {}),
+      ...(packing ? { packing } : {}),
       turns,
       zoomArrows,
       pageNumberAt: setup.pageNumbers.enabled
@@ -1205,13 +1402,387 @@ export function layoutDiagramPages(
     };
   }
 
-  return {
+  const result: DiagramPagesLayout = {
     paper,
     pages,
-    cellMm: { w: cellW, h: cellH },
+    cellMm: { w: cuts[0]!.cellW, h: cuts[0]!.cellH },
     title: titleLayout,
     bandWidthMm,
     bandInk: setup.pathColor,
+    ...(flowPages && Object.keys(flowPages.packed).length > 0 ? { packed: flowPages.packed } : {}),
+  };
+  markOutsideMargin(result);
+  return result;
+}
+
+/** What a flow page reads of a step's cell: the step, its index, and its square picture box, which an empty step is laid out as. */
+interface ReferenceCell {
+  step: LayoutStep;
+  index: number;
+  box: number;
+}
+
+/** A picture's scale in a cell: mm per unit for a paper picture, else its frame's longer side; whether its room drew it smaller. */
+type CellScale = { mmPerUnit: number | null; frameMm: number | null; reduced: boolean };
+
+/**
+ * The flow pages, each drawn from its arrangement, in order, since a page's
+ * scale is held to the page before's (`flowPacking.ts`, steadiness): the one
+ * `arrangements` holds for it while its signature is the page's and it places
+ * every step on it; else one packed now from each step's reference scale
+ * (`referenceOf`), kept as the store will keep it (`packedArrangement`) and
+ * handed back in `packed`. Each page says its scale, whether it was packed
+ * now, and whether it fits its area (`packing`).
+ *
+ * A step is drawn at its kept scale — a pin by hand over it, as anywhere —
+ * its number at its box's top left, its picture centred under it and its
+ * caption under that at the measure its box was packed for
+ * (`flowArrangement.ts`). An enlarged step given another Size since its page
+ * was packed is drawn at that Size, its own edit, as a size pinned by hand
+ * is, and its read-out says what it prints. One whose picture, caption or
+ * Size no longer fits its box is drawn whole past it, as the page shows:
+ * nothing moves for it, and nothing is said of it (Zach, 2026-10-12) — Re-pack
+ * Page gives it room.
+ */
+function arrangeFlowPages<T extends ReferenceCell>(input: {
+  placedPages: readonly (readonly T[])[];
+  planned: readonly PlannedPage[];
+  plans: readonly FlowPagePlan[];
+  steps: readonly LayoutStep[];
+  setup: DiagramPageSetup;
+  title: string;
+  setter: TextSetter;
+  arrangements: Readonly<Record<string, DiagramPageArrangement>>;
+  /**
+   * The arrangements the document keeps, held, stale or let go: a page that
+   * holds its own is drawn as kept, and one packed afresh keeps a frame moved
+   * by hand only in its step's band there (`repackedFrames.ts`).
+   */
+  stored: Readonly<Record<string, DiagramPageArrangement>>;
+  area: PackRect;
+  /** The page's margin: one too narrow for a turn at the page's edge has the area give up what it lacks. */
+  margin: number;
+  /** The paper, which a caption's pinned measure is held to (`pinnedCaptionWidth`). */
+  paper: PrintPaper;
+  referenceOf: (entry: T) => CellScale | undefined;
+  pinned: (entry: T) => CellScale | null;
+  pinState: (entry: T) => 'applied' | 'kind' | 'empty' | null;
+  zoomed: ReadonlyMap<T, NonNullable<LayoutCell['zoom']>>;
+  zoomAreasOf: ReadonlyMap<T, { area: T; share: number }>;
+}): {
+  cells: LayoutCell[][];
+  packing: (LayoutPage['packing'] | undefined)[];
+  packed: Record<string, DiagramPageArrangement>;
+} {
+  const { placedPages, planned, plans, steps, setup, title, setter, arrangements, area } = input;
+  const signatures = pageSignatures({ steps, pages: planned, setup, title });
+  const packed: Record<string, DiagramPageArrangement> = {};
+  const packing: (LayoutPage['packing'] | undefined)[] = [];
+  // The longer side each picture's frame prints at, mm: what an enlarged step's read-out is measured against.
+  const printedFrames = new Map<string, number>();
+
+  /** A step's picture as its box draws it: at `scale`, with its marks; null with none to draw at it. */
+  const sizeAt = (picture: LayoutStep['picture'], scale: CellScale | null) => {
+    const at = scale?.mmPerUnit ?? scale?.frameMm ?? null;
+    if (!picture || at === null) return null;
+    const extent = pictureExtent(picture, at);
+    return { w: extent.width, h: extent.height };
+  };
+  /**
+   * A step's scale as its box keeps it, in its picture's own measure; a
+   * picture of the other measure — a new one — fitted to the room its box
+   * leaves it. Null for a step with no picture, or one that fits nowhere.
+   */
+  const keptScale = (step: LayoutStep, kept: DiagramPlaceScale, room: { w: number; h: number }): CellScale | null => {
+    const picture = step.picture;
+    if (!picture) return null;
+    const paper = picture.kind === 'paper';
+    if (paper && 'mmPerUnit' in kept) return { mmPerUnit: kept.mmPerUnit, frameMm: null, reduced: false };
+    if (!paper && 'frameMm' in kept) return { mmPerUnit: null, frameMm: kept.frameMm, reduced: false };
+    const fit = step.fitIn ? step.fitIn(room.w, room.h) : pictureFit(picture, room.w, room.h);
+    if (fit === null || !(fit > 0)) return null;
+    return { mmPerUnit: paper ? fit : null, frameMm: paper ? null : fit, reduced: false };
+  };
+
+  /**
+   * An enlarged step whose Size has changed since its page was packed
+   * (`DiagramArrangedStep.zoomScale`): its own edit, which resizes it. The
+   * window it now asks for, and the one it is drawn at: for a Size, its kept
+   * window times the new Size over the one it was packed at (for one packed
+   * at Fill, the Size it prints at now, `printedNow`), drawn so, past its box
+   * if need be, as a size pinned by hand is (Zach, 2026-10-12); at Fill, as
+   * large as its box's room allows, held to 1–6 times its area as that prints
+   * (`areaMm`, when known), and drawn as large as the room holds of that.
+   * Null where the Size is the one it was packed at, so the step is drawn as
+   * kept.
+   */
+  const resizedWindow = (
+    step: LayoutStep,
+    place: DiagramArrangedStep,
+    kept: CellScale | null,
+    room: { w: number; h: number },
+    areaMm: number | null,
+    printedNow: number | null
+  ): { wanted: number; drawn: number } | null => {
+    const zoom = step.zoom;
+    const keptWindow = kept?.frameMm;
+    if (!zoom || step.picture?.kind !== 'zoom' || keptWindow == null || zoom.scale === (place.zoomScale ?? null)) return null;
+    if (zoom.scale !== null) {
+      const was = place.zoomScale ?? printedNow;
+      if (was === null || !(was > 0)) return null;
+      const wanted = (keptWindow * zoom.scale) / was;
+      return wanted > 0 && Number.isFinite(wanted) ? { wanted, drawn: wanted } : null;
+    }
+    const fit = step.fitIn ? step.fitIn(room.w, room.h) : pictureFit(step.picture, room.w, room.h);
+    if (fit === null) return null;
+    const inWindow = frameInWindowOf(zoom);
+    const wanted = areaMm === null ? fit : Math.min(ZOOM_FILL.max * areaMm, Math.max(ZOOM_FILL.min * areaMm, fit * inWindow)) / inWindow;
+    return wanted > 0 && Number.isFinite(wanted) ? { wanted, drawn: Math.min(wanted, fit) } : null;
+  };
+
+  /** A step drawn in its place; `home`, with its frame drawn at home — sent home by a re-pack (`repackedFrames.ts`). */
+  const arrangedCell = (entry: T, place: DiagramArrangedStep, home: boolean): LayoutCell => {
+    const { index } = entry;
+    const step = home ? withFrameHome(entry.step) : entry.step;
+    const box = arrangedBox(place);
+    const autoMeasure = arrangedCaptionWidth(box);
+    const autoLines = setCaption(step.text, autoMeasure, setter);
+    // A pinned measure sets the caption alone: its picture's room is read from the caption as its box sets it.
+    const pinnedText = pinnedCaptionWidth(step.place, input.paper);
+    const measure = pinnedText ?? autoMeasure;
+    const lines = pinnedText === null ? autoLines : setCaption(step.text, pinnedText, setter);
+    const room = arrangedPictureRoom(box, autoLines.length);
+    const kept = keptScale(step, place.scale, room);
+    // An enlarged step is measured against its area as that prints here: each page draws at its own scale.
+    const run = input.zoomAreasOf.get(entry);
+    const areaFrame = run ? printedFrames.get(run.area.step.id) : undefined;
+    const areaMm = run && areaFrame !== undefined && areaFrame > 0 ? run.share * areaFrame : null;
+    const cellZoom = input.zoomed.get(entry);
+    const printedAt = (window: number) => (step.zoom && areaMm !== null ? (window * frameInWindowOf(step.zoom)) / areaMm : null);
+    const keptPrinted = kept?.frameMm != null ? printedAt(kept.frameMm) : null;
+    const resized = resizedWindow(step, place, kept, room, areaMm, keptPrinted ?? cellZoom?.printed ?? null);
+    // Its scale before any pin: as kept, or an enlarged step's at its new Size (a Fill as far as its box holds it).
+    const auto: CellScale | null = resized ? { mmPerUnit: null, frameMm: resized.drawn, reduced: resized.drawn < resized.wanted * (1 - 1e-9) } : kept;
+    const drawn = input.pinned(entry) ?? auto;
+    // An empty step's placeholder fills the room its box leaves a picture.
+    const placeholder = Math.min(room.w, room.h);
+    const autoSize = sizeAt(step.picture, auto) ?? { w: placeholder, h: placeholder };
+    const drawnSize = sizeAt(step.picture, drawn) ?? autoSize;
+    const parts = stepPartsInBox(box, drawnSize, captionCentreWidth(box.w, pinnedText ?? undefined));
+    const square = Math.min(drawnSize.w, drawnSize.h);
+    const offsets = normalizeStepPlace(step.place);
+    const frame = step.picture?.frame;
+    const printedFrame = drawn?.mmPerUnit != null && frame ? drawn.mmPerUnit * Math.max(frame.width, frame.height) : drawn?.frameMm;
+    if (printedFrame != null) printedFrames.set(step.id, printedFrame);
+    // Its read-out says what it prints, against its area as that prints here, and whether its room cut a Fill down.
+    let zoom = cellZoom;
+    if (zoom && step.zoom && drawn?.frameMm != null) {
+      const printed = printedAt(drawn.frameMm) ?? (resized ? (zoom.printed * resized.drawn) / resized.wanted : zoom.printed);
+      zoom = { asked: step.zoom.scale, printed, reduced: resized ? (auto?.reduced ?? false) : zoom.reduced };
+    }
+    const cell: LayoutCell = {
+      stepId: step.id,
+      number: index + 1,
+      cellMm: { ...box },
+      band: place.band,
+      ...(place.bend ? { bend: true as const } : {}),
+      pictureMm: { x: box.x + (box.w - square) / 2, y: parts.picture.y, size: square },
+      drawMm: parts.picture,
+      inkMm: { ...parts.picture },
+      ...(offsets
+        ? {
+            placed: {
+              offsets,
+              pin: input.pinState(entry),
+              auto: {
+                mmPerUnit: auto?.mmPerUnit ?? null,
+                frameMm: auto?.frameMm ?? null,
+                drawMm: stepPartsInBox(box, autoSize, autoMeasure).picture,
+                ...(pinnedText !== null ? { textWidthMm: autoMeasure } : {}),
+              },
+            },
+          }
+        : {}),
+      mmPerUnit: drawn?.mmPerUnit ?? null,
+      frameMm: drawn?.frameMm ?? null,
+      scaleReduced: false,
+      ...(zoom ? { zoom } : {}),
+      numberAt: parts.numberAt,
+      text: { x: parts.caption.x, firstBaseline: parts.caption.firstBaseline, widthMm: measure, lines },
+      textOverflow: false,
+    };
+    // Placed by hand on top of its home: a frame's offset runs along its band as the band reads.
+    return placeCell(cell, step, place.band % 2 === 1, setter);
+  };
+
+  /**
+   * Where a page's bands may go: its area, less what a margin too narrow for a
+   * turn standing at the page's edge lacks — before its first step, on a bend,
+   * after the diagram's last — where the page has any, so the glyph clears the
+   * pictures as a grid's does. Its turns are in its signature.
+   */
+  const areaOf = (entries: readonly T[]): PackRect => {
+    const turning = entries.some(({ step, index }) => keepsGlyphGutter(step, index) || step.turnsAfter.length > 0);
+    const lacks = turning ? Math.max(0, EDGE_TURN_ROOM_MM - input.margin) : 0;
+    return { ...area, x: area.x + lacks, w: area.w - 2 * lacks };
+  };
+
+  /**
+   * A page just packed, each box grown to hold its step's picture measured at
+   * the scale it prints at (`grownToHold`) — its pin's, where its size is
+   * pinned and the page was packed to hold its pins (`pins`) — as every later
+   * layout measures it (`LayoutStep.pictureAt`): so a step a page has just
+   * packed never prints past its box at once, which Re-pack Page, packing the
+   * same, could never mend.
+   */
+  const asMeasured = (
+    arrangement: DiagramPageArrangement,
+    entries: readonly T[],
+    pageArea: PackRect,
+    pins: boolean
+  ): DiagramPageArrangement => {
+    let grown = false;
+    const placed: Record<string, DiagramArrangedStep> = { ...arrangement.steps };
+    for (const entry of entries) {
+      const { step } = entry;
+      const place = placed[step.id];
+      const picture = step.picture;
+      if (!place || !picture || !step.pictureAt) continue;
+      const pin = pins ? input.pinned(entry) : null;
+      const pinAt = pin ? (pin.mmPerUnit ?? pin.frameMm) : null;
+      // A picture of the measure its scale is kept in: one with none drew at its box's side.
+      const paper = 'mmPerUnit' in place.scale;
+      if (pinAt === null && paper !== (picture.kind === 'paper')) continue;
+      const at = pinAt ?? ('mmPerUnit' in place.scale ? place.scale.mmPerUnit : place.scale.frameMm);
+      const measured = step.pictureAt(at);
+      if (!measured) continue;
+      const extent = pictureExtent(measured, at);
+      const box = arrangedBox(place);
+      const lines = setCaption(step.text, pinnedCaptionWidth(step.place, input.paper) ?? arrangedCaptionWidth(box), setter).length;
+      const held = grownToHold(box, { w: extent.width, h: extent.height }, lines, pageArea);
+      if (held === box) continue;
+      placed[step.id] = { ...place, box: [held.x, held.y, held.w, held.h] };
+      grown = true;
+    }
+    return grown ? roundPageArrangement({ ...arrangement, steps: placed }) : arrangement;
+  };
+
+  let kPrev: number | null = null;
+  const cells = placedPages.map((entries, pageIndex) => {
+    const page = planned[pageIndex]!;
+    const first = page.firstStepId;
+    if (first === null || entries.length === 0) {
+      packing.push(undefined);
+      return [];
+    }
+    const pageArea = areaOf(entries);
+    const stored = arrangements[first];
+    const ids = entries.map(({ step }) => step.id);
+    const holds = holdsArrangement(stored, signatures[pageIndex], ids);
+    let arrangement = holds ? stored : null;
+    if (!arrangement) {
+      const plan = plans[pageIndex]!;
+      /** The page packed with every size pin held at its pin (`pins`), or each pinned picture at its automatic scale. */
+      const pack = (pins: boolean) => {
+        const references = new Map<string, DiagramPlaceScale>();
+        const packSteps = entries.map((entry) =>
+          packStep(entry, input.referenceOf(entry), pins ? input.pinned(entry) : null, setter, references, input.paper)
+        );
+        const request = { steps: packSteps, layoutCount: page.layoutCount, area: pageArea, up: plan.up, handsOver: plan.exit === 'spine', settings: setup, kPrev };
+        return { found: packFlowPage(request, setter), references, pins };
+      };
+      // Room made for every size pinned by hand (Zach, 2026-10-13) where some plan holds the pins at some scale.
+      // Where none does — pins that take more than the page has, which no page scale shrinks — the page is packed as
+      // it was before, each pinned picture at its automatic scale and drawn at its pin past its box, rather than
+      // overflowing the page.
+      const pinned = entries.some((entry) => input.pinned(entry) !== null);
+      let chosen = pack(pinned);
+      if (pinned && !chosen.found.fits) chosen = pack(false);
+      // An enlarged step's Size, which its scale is packed for.
+      const zoomSizes = new Map(entries.flatMap(({ step }) => (step.zoom?.scale != null ? [[step.id, step.zoom.scale] as const] : [])));
+      const { found, references, pins } = chosen;
+      arrangement = asMeasured(packedArrangement(found, references, signatures[pageIndex]!, zoomSizes), entries, pageArea, pins);
+      packed[first] = arrangement;
+    }
+    kPrev = arrangement.k;
+    packing.push({ k: arrangement.k, packed: !holds, fits: arrangementFits(arrangement, pageArea) });
+    const kept = arrangement;
+    // Packed afresh — here, or by an earlier pass over the same diagram — rather than held as the document keeps
+    // it: a frame moved by hand keeps its offset only where its step keeps its band (`repackedFrames.ts`).
+    const asStored = holdsArrangement(input.stored[first], signatures[pageIndex], ids);
+    return entries.map((entry) => {
+      const place = kept.steps[entry.step.id]!;
+      const moved = entry.step.place?.frame !== undefined;
+      return arrangedCell(entry, place, !asStored && moved && !keepsMovedFrame(input.stored, first, entry.step.id, place));
+    });
+  });
+  return { cells, packing, packed };
+}
+
+/** A step with its frame at home: the rest of its placement — its parts' offsets, its pins — as it was. */
+function withFrameHome(step: LayoutStep): LayoutStep {
+  const { place, ...rest } = step;
+  const { frame: _home, ...parts } = place ?? {};
+  return Object.keys(parts).length > 0 ? { ...rest, place: parts } : rest;
+}
+
+/**
+ * A step as the packing reads it (`flowPacking.ts`): its picture at its
+ * reference scale with what its marks reach, measured there
+ * (`LayoutStep.pictureAt`) — the part they take at their pt size apart — or,
+ * with no picture or none it could be drawn at, its square
+ * picture box; its number's width; its caption; and whether a turn or an
+ * enlarge arrow may stand before it, which keeps their gutter — an arrow's
+ * whether or not it prints now (`keepsGlyphGutter`). Its reference
+ * scale is noted in `references`, in its own measure.
+ *
+ * A picture whose size is pinned by hand (`pinned`, the pin as it prints) is
+ * read at its pin, measured there, and the whole of it as fixed: a pin is
+ * absolute, so no page scale changes it, and its box is packed to hold it,
+ * as an enlarged step's box is packed for its Size (Zach, 2026-10-13). Its
+ * reference scale is still noted: the arrangement keeps the scale it would
+ * print at without the pin, which the pin draws over.
+ */
+function packStep(
+  entry: ReferenceCell,
+  reference: CellScale | undefined,
+  pinned: CellScale | null,
+  setter: TextSetter,
+  references: Map<string, DiagramPlaceScale>,
+  paper: PrintPaper
+): PackStep {
+  const { step, index, box } = entry;
+  // A caption's pinned measure is packed for: its lines, and its box's width.
+  const textWidth = pinnedCaptionWidth(step.place, paper);
+  const base = {
+    id: step.id,
+    numberWidth: setter.line(String(index + 1), STEP_NUMBER_SIZE_MM, 700).widthMm,
+    text: step.text,
+    ...(textWidth !== null ? { textWidth } : {}),
+    turnsBefore: keepsGlyphGutter(step, index),
+  };
+  const at = reference ? (reference.mmPerUnit ?? reference.frameMm) : null;
+  const noteReference = () => references.set(step.id, reference!.mmPerUnit !== null ? { mmPerUnit: at! } : { frameMm: at! });
+  const pin = pinned ? (pinned.mmPerUnit ?? pinned.frameMm) : null;
+  if (pin !== null && pin > 0 && step.picture) {
+    if (at !== null && at > 0) noteReference();
+    const size = pictureExtent((step.pictureAt ? step.pictureAt(pin) : null) ?? step.picture, pin);
+    return { ...base, size, marks: size };
+  }
+  // Measured there: its marks reach as far as they do at that scale.
+  const picture = at !== null && at > 0 && step.pictureAt ? step.pictureAt(at) : step.picture;
+  if (!picture || at === null || !(at > 0)) return { ...base, size: { width: box, height: box } };
+  noteReference();
+  const size = pictureExtent(picture, at);
+  // What grows with the picture; the rest is its marks at their pt size, which no page scale changes.
+  const grows = {
+    width: Math.max(picture.width, picture.frame.width) * at,
+    height: Math.max(picture.height, picture.frame.height) * at,
+  };
+  return {
+    ...base,
+    size,
+    marks: { width: Math.max(0, size.width - grows.width), height: Math.max(0, size.height - grows.height) },
   };
 }
 
@@ -1229,22 +1800,28 @@ export function layoutDiagramPages(
  * (Zach, 2026-10-07): a Size starts no run of its own.
  *
  * - **Fill**: the run's Fill frames print at one size, the largest every one
- *   of them fits its room at, held to 1–6 times the area.
- * - **Size**: that many times the area, held the same.
+ *   of them fits its room at, held to 1–6 times the area. A step its room
+ *   cannot hold at that size — a long instruction took it — is drawn
+ *   smaller, alone, and says so.
+ * - **Size**: that many times the area, held the same, and drawn so, past
+ *   its room if need be, as a size pinned by hand is (Zach, 2026-10-12).
  *
- * A step its room cannot hold at its run's size — a long instruction took
- * it — is drawn smaller, alone, and says so. A frame that is turned is
- * smaller than its window, which is what the step is laid out in. What each
- * prints at against its area is the read-out, by step; a run whose area's
- * size is not known fills its room, and has none.
+ * A frame that is turned is smaller than its window, which is what the step
+ * is laid out in. What each prints at against its area is the read-out, by
+ * step (`read`); a run whose area's size is not known fills its room, and
+ * has none. And for each step
+ * of a run measured against an area an arrow leaves, that area's step and
+ * the area's share of its picture (`areas`), so a flow page drawn at its own
+ * scale can say the read-out as it prints.
  */
 function zoomScales<T extends { step: LayoutStep }>(
   all: readonly T[],
   fitOf: (item: T) => ScaleFit | null,
   scales: Map<T, { mmPerUnit: number | null; frameMm: number | null; reduced: boolean }>,
-  boxMm: number
-): Map<T, NonNullable<LayoutCell['zoom']>> {
+  boxOf: (item: T) => number
+): { read: Map<T, NonNullable<LayoutCell['zoom']>>; areas: Map<T, { area: T; share: number }> } {
   const read = new Map<T, NonNullable<LayoutCell['zoom']>>();
+  const areas = new Map<T, { area: T; share: number }>();
   const byId = new Map(all.map((item) => [item.step.id, item]));
   /** The longer side `item`'s picture frame prints at, mm, at the scale it was given: an enlarged step's, its window's. */
   const printedFrame = (item: T): number | null => {
@@ -1257,7 +1834,7 @@ function zoomScales<T extends { step: LayoutStep }>(
    * How large `at`'s frame would print with no area to measure it by: its
    * share of its whole picture, at the scale the nearest step of its whole
    * picture's kind prints at — before it, else after — or, with none, its
-   * whole picture filling the square box.
+   * whole picture filling its square box.
    */
   const amongNeighbours = (at: number): number => {
     const zoom = all[at]!.step.zoom!;
@@ -1273,14 +1850,10 @@ function zoomScales<T extends { step: LayoutStep }>(
       return null;
     };
     const neighbour = nearest(at - 1, -1) ?? nearest(at + 1, 1);
-    const whole = neighbour === null ? boxMm : zoom.whole.kind === 'paper' ? neighbour * zoom.whole.units : neighbour;
+    const whole = neighbour === null ? boxOf(all[at]!) : zoom.whole.kind === 'paper' ? neighbour * zoom.whole.units : neighbour;
     return zoom.frameShare * whole;
   };
-  /** A step's frame's longer side as a share of its window's: one but for a turned rectangle. */
-  const frameInWindow = (item: T) => {
-    const { frameShare, windowShare } = item.step.zoom!;
-    return windowShare > 0 && frameShare > 0 ? frameShare / windowShare : 1;
-  };
+  const frameInWindow = (item: T) => frameInWindowOf(item.step.zoom!);
 
   const runs: number[][] = [];
   let current: number[] | null = null;
@@ -1322,13 +1895,69 @@ function zoomScales<T extends { step: LayoutStep }>(
       const frameMm = size !== null ? held(size * areaMm) : fillMm;
       if (!(frameMm > 0) || !Number.isFinite(frameMm)) return;
       const window = frameMm / frameInWindow(item);
-      const drawn = Math.min(window, fit.own);
+      const drawn = size !== null ? window : Math.min(window, fit.own);
       const reduced = drawn < window * (1 - 1e-9);
       scales.set(item, { mmPerUnit: null, frameMm: drawn, reduced });
       if (known) read.set(item, { asked: item.step.zoom!.scale, printed: (drawn * frameInWindow(item)) / areaMm, reduced });
+      if (known && area && zoom.arrowFrom && areaFrame !== null) areas.set(item, { area, share: zoom.arrowFrom.share });
     });
   }
-  return read;
+  return { read, areas };
+}
+
+/**
+ * How far a turn's or an arrow's glyph keeps from a flow step's number,
+ * picture and caption, mm: less than a turn-over lying across keeps from the
+ * picture beside it at a page's edge, held on the paper, where the margin is
+ * only as wide as a turn needs (`EDGE_TURN_ROOM_MM`, 0.7 mm).
+ */
+export const GLYPH_CLEAR_MM = 0.5;
+
+/**
+ * The nearest place to `at` where a box `size` centred there stands
+ * {@link GLYPH_CLEAR_MM} clear of every one of `obstacles`, its centre within
+ * `bounds`: `at` itself where it already does; else the nearest of the places
+ * that clear an obstacle's side, each way — where the least move lies, since
+ * a move that clears a box ends against one of its sides — the first found on
+ * a tie. `at` where there is none.
+ */
+export function clearSpot(
+  at: { x: number; y: number },
+  size: { w: number; h: number },
+  obstacles: readonly { x: number; y: number; w: number; h: number }[],
+  bounds: { x0: number; x1: number; y0: number; y1: number }
+): { x: number; y: number } {
+  const clear = GLYPH_CLEAR_MM - 1e-9;
+  const [halfW, halfH] = [size.w / 2, size.h / 2];
+  const free = (x: number, y: number) =>
+    x >= bounds.x0 - 1e-9 &&
+    x <= bounds.x1 + 1e-9 &&
+    y >= bounds.y0 - 1e-9 &&
+    y <= bounds.y1 + 1e-9 &&
+    obstacles.every(
+      (box) =>
+        x + halfW + clear <= box.x || x - halfW - clear >= box.x + box.w || y + halfH + clear <= box.y || y - halfH - clear >= box.y + box.h
+    );
+  if (free(at.x, at.y)) return at;
+  const xs = [at.x, ...obstacles.flatMap((box) => [box.x - halfW - GLYPH_CLEAR_MM, box.x + box.w + halfW + GLYPH_CLEAR_MM])];
+  const ys = [at.y, ...obstacles.flatMap((box) => [box.y - halfH - GLYPH_CLEAR_MM, box.y + box.h + halfH + GLYPH_CLEAR_MM])];
+  let nearest: { x: number; y: number } | null = null;
+  let distance = Infinity;
+  for (const x of xs) {
+    for (const y of ys) {
+      const d = (x - at.x) ** 2 + (y - at.y) ** 2;
+      if (d < distance - 1e-12 && free(x, y)) {
+        nearest = { x, y };
+        distance = d;
+      }
+    }
+  }
+  return nearest ?? at;
+}
+
+/** An enlarged step's frame's longer side as a share of its window's: one but for a turned rectangle. */
+function frameInWindowOf({ frameShare, windowShare }: LayoutZoom): number {
+  return windowShare > 0 && frameShare > 0 ? frameShare / windowShare : 1;
 }
 
 /** The middle of a picture as drawn, which a tall one has lower than its box's: where the lane passes behind it. */
@@ -1338,55 +1967,95 @@ function laneCentre(cell: LayoutCell): { x: number; y: number } {
 
 /**
  * Where the turns on a page print (D22): between two pictures on one row,
- * midway between them at their centres' height; across a flow row's end, on
- * the lane in its bend between the rows (`flowLane`, also when the lane is
- * not shown), midway from the last line of the upper step to the lower one's
- * number (the upper kept the room: `slotBottom`); before a picture that
- * starts a grid's row or the page, at its leading edge — a page's first step
- * has no row on the page to turn from, and the lane comes in at its leading
- * side; after the last picture, at its trailing edge. Several in one place
- * stand one above another, each glyph clear of the next, the stack centred on
- * the place. Kept on the paper.
+ * midway between them at their centres' height — on a flow page, between
+ * their boxes, in the gutter the packing kept; across a flow page's bend with
+ * no step in it, on the lane at the turn's middle, toward the page's edge
+ * (`flowLane`'s `LaneTurn`, also when the lane is not shown); between a step in a bend
+ * and its neighbour, midway between their pictures' centres; before a picture
+ * that starts a grid's row or the page, at its leading edge — a page's first
+ * step has no row on the page to turn from, and the lane comes in at its
+ * leading side; after the last picture, at its trailing edge. Several in one
+ * place stand one above another, each glyph clear of the next, the stack
+ * centred on the place. Kept on the paper, and on a flow page clear of every
+ * step's number, picture and caption, moved the least way off one it would
+ * stand on ({@link clearSpot}): beside a step in a bend no gutter is kept for
+ * it.
  *
  * An enlarge arrow (Revision 2) takes the same places, standing after the
  * turns before its step: a turn's places are the arrow's, so the two agree
  * however D22 places them. Alone in a row's gutter, beside the area's step,
- * it is `liftable`. Across a flow row's end it is aimed from its place at the
- * middle of the enlarged step's picture, the next row's (Zach, 2026-10-07),
- * its bow on the outside of the lane's bend, the way the row before it read:
- * it leaves heading on round the bend and comes into the step.
+ * it is `liftable`. Across a flow page's bend it is aimed from its place at
+ * the middle of the enlarged step's picture (Zach, 2026-10-07), its bow on
+ * the outside of the lane's bend, the way the row before it read: it leaves
+ * heading on round the bend and comes into the step.
  */
 function placeTurns(
   steps: readonly LayoutStep[],
   cells: readonly LayoutCell[],
-  columns: number,
-  plan: FlowPagePlan | null,
-  lane: ReturnType<typeof flowLane>,
+  rowOf: (k: number) => number,
+  flow: { plan: FlowPagePlan; lane: ReturnType<typeof flowLane>; bendInset: number } | null,
   pageWidth: number,
-  halfWidth: number
+  pageHeight: number
 ): Pick<LayoutPage, 'turns' | 'zoomArrows'> {
   const placed: LayoutPage['turns'] = [];
   const zoomArrows: LayoutZoomArrow[] = [];
-  const rowOf = (k: number) => Math.floor(k / columns);
-  const backwards = (k: number) => plan !== null && rowRightToLeft(plan, rowOf(k));
+  const backwards = (k: number) => flow !== null && rowRightToLeft(flow.plan, rowOf(k));
   const centre = laneCentre;
-  /** How far down a cell's own ink reaches: its text's last line, with its descenders, or its picture. */
-  const foot = (cell: LayoutCell) =>
-    cell.text.lines.length > 0
-      ? cell.text.firstBaseline + (cell.text.lines.length - 1) * STEP_TEXT_LEADING_MM + TEXT_DESCENT_MM
-      : cell.drawMm.y + cell.drawMm.h;
-  /** The edge of a picture facing the gutter before (`lead`) or after it, half a gutter out. */
+  /**
+   * The edge facing the gutter before (`lead`) or after a step, half a gutter
+   * out: a grid picture's, its cell's gutter shared either side of it; a flow
+   * step's box's, half the turn gutter the packing keeps beyond it.
+   */
   const edge = (k: number, lead: boolean) => {
     const cell = cells[k]!;
-    const gutter = cell.cellMm.w - cell.pictureMm.size;
     const left = lead !== backwards(k);
+    if (flow) {
+      const { x, w } = cell.cellMm;
+      return { x: left ? x - PACKED_TURN_GUTTER_MM / 2 : x + w + PACKED_TURN_GUTTER_MM / 2, y: centre(cell).y };
+    }
+    const gutter = cell.cellMm.w - cell.pictureMm.size;
     const x = left ? cell.pictureMm.x - gutter / 2 : cell.pictureMm.x + cell.pictureMm.size + gutter / 2;
     return { x, y: centre(cell).y };
   };
+  /** `glyphs` stood at `at`, held on the paper across: their place, an arrow's aim at `toward`, and each glyph's box and the stack's. */
+  const standAt = (glyphs: readonly BetweenGlyph[], at: { x: number; y: number }, toward: { x: number; y: number } | null, outward: number) => {
+    const x = Math.min(pageWidth - TURN_GUTTER_MM / 2, Math.max(TURN_GUTTER_MM / 2, at.x));
+    const angle = toward ? Math.atan2(toward.y - at.y, toward.x - x) : 0;
+    // Its bow on the `outward` side: the side unflipped is the one its turn puts its up on.
+    const aim: LayoutArrowAim | null = toward ? { angle, flipped: Math.sin(angle) * outward < 0 } : null;
+    const boxes = glyphs.map((glyph) => glyphMm(glyph, aim));
+    const size = {
+      w: Math.max(0, ...boxes.map((box) => box.w)),
+      h: boxes.reduce((sum, box) => sum + box.h, 0) + (glyphs.length - 1) * TURN_STACK_CLEAR_MM,
+    };
+    return { at: { x, y: at.y }, aim, boxes, size };
+  };
+  /**
+   * A step's part where the layout puts it, before any hand placement: a
+   * glyph keeps clear of where the layout puts the steps, and a part placed
+   * onto one shows there as placed: never a reason to move the glyph.
+   */
+  const homePart = (cell: LayoutCell, part: 'number' | 'picture' | 'text'): PageBox => {
+    if (!cell.placed || !cell.homeParts) return partBox(cell, part);
+    const [dx, dy] = pageOffset(cell.placed.offsets, 'frame', Boolean(cell.rightToLeft));
+    const home = cell.homeParts[part];
+    return { ...home, x: home.x - dx, y: home.y - dy };
+  };
+  // On a flow page a glyph stands clear of every step's number, picture and caption (`clearSpot`).
+  const obstacles = flow
+    ? cells.flatMap((cell) => [homePart(cell, 'number'), homePart(cell, 'picture'), ...(cell.text.lines.length > 0 ? [homePart(cell, 'text')] : [])])
+    : [];
+  const onPaper = (size: { w: number; h: number }) => ({
+    x0: TURN_GUTTER_MM / 2,
+    x1: pageWidth - TURN_GUTTER_MM / 2,
+    y0: size.h / 2,
+    y1: pageHeight - size.h / 2,
+  });
   /**
    * `glyphs` stood at `at`, in the row of the `k`th picture, which they go the
    * way of; an enlarge arrow among them aimed at `toward`, when given, its bow
-   * `outward` (+1 to the page's right, −1 to its left).
+   * `outward` (+1 to the page's right, −1 to its left). On a flow page, moved
+   * the least way clear of every step's box where they would stand on one.
    */
   const stack = (
     glyphs: readonly BetweenGlyph[],
@@ -1395,12 +2064,18 @@ function placeTurns(
     beforeStepId: string | null,
     { shared = false, toward = null, outward = 1 }: { shared?: boolean; toward?: { x: number; y: number } | null; outward?: number } = {}
   ) => {
-    const x = Math.min(pageWidth - TURN_GUTTER_MM / 2, Math.max(TURN_GUTTER_MM / 2, at.x));
-    const angle = toward ? Math.atan2(toward.y - at.y, toward.x - x) : 0;
-    // Its bow on the `outward` side: the side unflipped is the one its turn puts its up on.
-    const aim: LayoutArrowAim | null = toward ? { angle, flipped: Math.sin(angle) * outward < 0 } : null;
-    const boxes = glyphs.map((glyph) => glyphMm(glyph, aim));
-    let top = at.y - (boxes.reduce((sum, box) => sum + box.h, 0) + (glyphs.length - 1) * TURN_STACK_CLEAR_MM) / 2;
+    let stood = standAt(glyphs, at, toward, outward);
+    if (flow) {
+      const spot = clearSpot(stood.at, stood.size, obstacles, onPaper(stood.size));
+      if (spot !== stood.at) {
+        // An arrow aimed from its new place takes another box: clear of the boxes with either.
+        const moved = standAt(glyphs, spot, toward, outward);
+        const either = { w: Math.max(stood.size.w, moved.size.w), h: Math.max(stood.size.h, moved.size.h) };
+        stood = standAt(glyphs, clearSpot(stood.at, either, obstacles, onPaper(either)), toward, outward);
+      }
+    }
+    const { at: { x }, aim, boxes, size } = stood;
+    let top = stood.at.y - size.h / 2;
     glyphs.forEach((glyph, index) => {
       const box = boxes[index]!;
       const middle = { x, y: top + box.h / 2 };
@@ -1426,24 +2101,30 @@ function placeTurns(
   steps.forEach((step, k) => {
     const before = glyphsBefore(step);
     if (before.length > 0) {
-      if (k > 0 && rowOf(k - 1) === rowOf(k)) {
+      // A step in a bend has no row it shares with its neighbours.
+      const inBend = flow !== null && k > 0 && Boolean(cells[k - 1]!.bend || cells[k]!.bend);
+      if (k > 0 && rowOf(k - 1) === rowOf(k) && !inBend) {
         const a = centre(cells[k - 1]!);
         const b = centre(cells[k]!);
         const facing = (edge(k - 1, false).x + edge(k, true).x) / 2;
         stack(before, { x: facing, y: (a.y + b.y) / 2 }, k, step.id, { shared: true });
-      } else if (k > 0 && plan) {
-        // In the gap between the two rows, under the upper step's words and
-        // over the lower one's number, where the lane crosses it.
-        const [previous, next] = [cells[k - 1]!, cells[k]!];
-        const [upper, lower] = previous.cellMm.y < next.cellMm.y ? [previous, next] : [next, previous];
-        const y = (foot(upper) + lower.cellMm.y + STEP_NUMBER_TOP_MM) / 2;
-        const bend = lane?.bends.get(k);
-        const onLane = lane && bend !== undefined ? bendXAt(lane.lane, bend, y) : null;
-        const reach = bendReach(previous.cellMm.w, Math.abs(centre(next).y - centre(previous).y) / 2, halfWidth);
+      } else if (k > 0 && flow) {
+        const [previous, next] = [centre(cells[k - 1]!), centre(cells[k]!)];
         const outward = backwards(k - 1) ? -1 : 1;
-        const x = onLane ?? centre(previous).x + outward * reach;
+        const { lane } = flow;
+        let at: { x: number; y: number };
+        if (inBend) {
+          // Midway between the step in the bend and its neighbour's pictures, as the prototype stands it: its stack
+          // then moves clear of both boxes.
+          at = { x: (previous.x + next.x) / 2, y: (previous.y + next.y) / 2 };
+        } else {
+          // On the lane at the turn's middle, where it turns between the two bands: halfway between their heights, as
+          // deep as the margin lets the turn stand.
+          const middle = lane?.turns.get(k)?.at;
+          at = middle ? { ...middle } : { x: outward > 0 ? pageWidth - flow.bendInset : flow.bendInset, y: (previous.y + next.y) / 2 };
+        }
         // An arrow there points at the step it leads to, not across the page.
-        stack(before, { x, y }, k, step.id, { toward: centre(next), outward });
+        stack(before, at, k, step.id, { toward: next, outward });
       } else {
         stack(before, edge(k, true), k, step.id);
       }

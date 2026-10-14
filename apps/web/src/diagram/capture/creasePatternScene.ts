@@ -21,19 +21,31 @@ import type {
 import type { StepCreases } from './captureCreases';
 import { CAPTURE_PX_PER_UNIT, sceneBoundsOf, turnClockwise } from './captureGeometry';
 
-/** What a kernel line is on the paper, by its colour. */
-function lineRole(color: string): PaperLineRole {
+/** What a kernel line is on the paper, by its colour: a mountain and a valley swapped when `flipped`. */
+function lineRole(color: string, flipped: boolean): PaperLineRole {
   switch (color) {
     case 'Black0':
       return 'edge';
     case 'Red1':
-      return 'diagram-mountain';
+      return flipped ? 'diagram-valley' : 'diagram-mountain';
     case 'Blue2':
-      return 'diagram-valley';
+      return flipped ? 'diagram-mountain' : 'diagram-valley';
     default:
       // Cyan3, and any other colour a construction line can carry.
       return 'aux';
   }
+}
+
+/** How a crease pattern's paper is drawn (the Step pane's Side and Flip creases). */
+export interface CreasePatternPaper {
+  /** The side whose colour the paper is filled with. */
+  side?: 'front' | 'back';
+  /**
+   * The paper turned over side to side, as a real sheet is: mirrored about
+   * its vertical centre line before it is turned, and every mountain drawn
+   * as a valley and every valley as a mountain.
+   */
+  flipped?: boolean;
 }
 
 /** Which draws over which: aux lines under the folds, the paper's edge over all. */
@@ -53,20 +65,31 @@ const ROLE_LAYER: Partial<Record<PaperLineRole, number>> = {
  * `back` the paper is filled with the style's back colour, and every line is
  * where the front draws it, its mountains and valleys as they are (Zach,
  * 2026-10-06: "just change the color of the face and not flip the creases").
+ *
+ * `flipped` turns the paper over side to side, as a real sheet turns over
+ * (Flip creases, which the render keeps for its back; Zach, 2026-10-12: "it's
+ * like flipping the paper over for real"): mirrored about the vertical line
+ * through its centre, and then turned, so a pattern turned the other way —
+ * as Flip creases leaves it (`linkedPose`) — is the mirror of what it showed
+ * side to side, as it is drawn. Every mountain is drawn as a valley and every
+ * valley as a mountain; aux lines, the edge and the paper are mirrored with
+ * them, in the same order. A ring mirrored winds the other way, which no fill
+ * minds: one ring fills whichever way it winds, and several fill even-odd.
  */
 export function creasePatternScene(
   document: OristudioCpDocumentSnapshot,
   creases: StepCreases,
   rotationDeg: number,
-  side: 'front' | 'back' = 'front'
+  { side = 'front', flipped = false }: CreasePatternPaper = {}
 ): PaperScene {
   const paperBox = boxOf(creases.paper.flat());
   const span = Math.max(paperBox.maxX - paperBox.minX, paperBox.maxY - paperBox.minY);
   const epsilon = Math.max(span, 1) * 1e-6;
   const centre = { x: (paperBox.minX + paperBox.maxX) / 2, y: (paperBox.minY + paperBox.maxY) / 2 };
   const turn = turnClockwise(rotationDeg);
+  const across = flipped ? -1 : 1;
   const toScene = (point: Point): ScenePoint => {
-    const turned = turn({ x: point.x - centre.x, y: point.y - centre.y });
+    const turned = turn({ x: across * (point.x - centre.x), y: point.y - centre.y });
     return [turned.x * CAPTURE_PX_PER_UNIT, turned.y * CAPTURE_PX_PER_UNIT];
   };
 
@@ -75,7 +98,7 @@ export function creasePatternScene(
     const line = document.crease_pattern.line_segments[id - 1];
     if (!line) continue;
     if (Math.hypot(line.b.x - line.a.x, line.b.y - line.a.y) <= epsilon) continue;
-    drawn.push({ role: lineRole(line.color), a: line.a, b: line.b });
+    drawn.push({ role: lineRole(line.color, flipped), a: line.a, b: line.b });
   }
   drawn.sort((left, right) => (ROLE_LAYER[left.role] ?? 0) - (ROLE_LAYER[right.role] ?? 0));
 

@@ -146,7 +146,7 @@ import type { CanvasAnnotation } from '../../../cp-workspace/annotations/annotat
 import type { InlineSimulation } from '../../../cp-workspace/inlineSimulation/inlineSimulation';
 import { noteInlineSimulationIds } from '../../../cp-workspace/inlineSimulation/inlineSimulationIds';
 import { discardCpDocumentState } from '../cpDocumentState';
-import { diagramDataBytes, discardDiagramState, pickDiagramState } from '../diagramState';
+import { diagramDataBytes, discardDiagramState, onlyPackedSince, pickDiagramState } from '../diagramState';
 import { readDiagram, writeDiagram } from '../../../diagram/document/diagramFile';
 import { createCpFoldRuntime } from '../cpFoldRuntimeBindings';
 import {
@@ -1606,9 +1606,10 @@ export const createProjectSlice: WorkspaceSliceCreator<ProjectSlice> = (set, get
   /**
    * Whether the diagram changed after a save built its file — while the save
    * dialog was up. That edit is not in the file, so the save must not report
-   * the project clean.
+   * the project clean. A layout's packing adopted since is no edit: the file
+   * packs the same when it opens (`onlyPackedSince`).
    */
-  const diagramChangedSince = (written: DiagramDocument | null) => get().diagram !== written;
+  const diagramChangedSince = (written: DiagramDocument | null) => !onlyPackedSince(get().diagram, written);
 
   /** "Saved …", with a soft, non-blocking notice when the file embeds a lot. */
   const savedMessageFor = (name: string, embeddedBytes: number) =>

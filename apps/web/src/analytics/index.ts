@@ -40,6 +40,8 @@ export type {
   DiagramPictureUploadOutcome,
   DiagramPoseAction,
   DiagramPageSetting,
+  DiagramRepackScope,
+  DiagramRepackVia,
   DiagramSourceWorkspace,
   DiagramStepOpenedVia,
   DiagramStyleChoiceName,
@@ -144,6 +146,7 @@ export {
   trackDiagramTurnAdded,
   trackDiagramStepOpened,
   trackDiagramPageSetupChanged,
+  trackDiagramPagesRepacked,
   trackDiagramViewSwitched,
 } from './trackDiagram';
 export { trackDiagramEnlargementChanged, trackDiagramStepEnlarged } from './trackDiagramZoom';

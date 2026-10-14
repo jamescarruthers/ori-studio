@@ -10,6 +10,7 @@ import {
 } from '../../diagram/document/diagramDocument';
 import { cpStep, fixedPicture, scenePicture } from '../../diagram/document/diagramSteps.fixtures';
 import type { DiagramCardLinks } from '../../diagram/capture/useCardLinks';
+import type { StepPageFit } from '../../diagram/pages/pageOverflow';
 import { DiagramStepsGrid } from './DiagramStepsGrid';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -42,7 +43,7 @@ function render(
     links?: Partial<DiagramCardLinks>;
     patternOpen?: boolean;
     onLink?: (stepId: string) => void;
-    textCut?: ReadonlySet<string>;
+    pageFits?: ReadonlyMap<string, StepPageFit>;
     onAppend?: () => void;
     onInsertBefore?: (stepId: string) => void;
     onOpenIn?: (stepId: string, mode: 'pose' | 'annotate') => void;
@@ -77,7 +78,7 @@ function render(
           poseAgain: 0,
           ...options.links,
         }}
-        textCut={options.textCut ?? new Set()}
+        pageFits={options.pageFits ?? new Map()}
         patternOpen={options.patternOpen ?? false}
         onLink={options.onLink ?? vi.fn()}
         onFromReferences={vi.fn()}
@@ -388,18 +389,19 @@ describe('DiagramStepsGrid', () => {
     expect(stop).toHaveBeenCalledWith('step-d');
   });
 
-  it('says a 3D step was lit by another style, and that the pages cut a step’s text', () => {
+  it('says a 3D step was lit by another style and that the pages cut a step’s text, and nothing of a flow step past its place', () => {
     const lit = cpStep('step-3d', { mode: 'folded-3d', side: 'front', camera: { yaw: 0, pitch: 0, zoom: 1 } } as never, {
       ...scenePicture(),
       styleKey: 'another light',
     });
     render(null, vi.fn(), {
-      steps: [lit, { ...cpStep('step-cut'), text: 'A long one.' }],
-      links: { statuses: new Map([['step-3d', 'current'], ['step-cut', 'current']]) },
-      textCut: new Set(['step-cut']),
+      steps: [lit, { ...cpStep('step-cut'), text: 'A long one.' }, { ...cpStep('step-grown'), text: 'A longer one, held.' }],
+      links: { statuses: new Map([['step-3d', 'current'], ['step-cut', 'current'], ['step-grown', 'current']]) },
+      // The pages report only a cut instruction (`stepPageFits`): a flow step past its place shows on the page.
+      pageFits: new Map([['step-cut', 'text-cut']]),
     });
     const chips = options().map((card) => card.querySelector('[data-tone]')?.textContent ?? null);
-    expect(chips).toEqual(['Lighting changed', 'Text doesn’t fit']);
+    expect(chips).toEqual(['Lighting changed', 'Text doesn’t fit', null]);
   });
 
   it('offers an empty card a pattern to link only with one open, and Go to Edit without one', () => {

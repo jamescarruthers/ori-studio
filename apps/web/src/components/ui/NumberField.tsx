@@ -46,7 +46,8 @@ export function NumberField({
   id?: string;
   /** Accessible name for the field, and the noun the step buttons are named after. */
   label: string;
-  value: number;
+  /** Null while there is no number to show — a size not measured yet: the field is empty, and steps from `min`. */
+  value: number | null;
   min?: number;
   max?: number;
   step?: number;
@@ -94,7 +95,7 @@ export function NumberField({
   // number typed but not yet blurred out of still steps from where it was left.
   const numberIn = (raw: string): number => {
     const parsed = Number(raw);
-    return raw.trim() !== '' && Number.isFinite(parsed) ? parsed : value;
+    return raw.trim() !== '' && Number.isFinite(parsed) ? parsed : (value ?? min ?? 0);
   };
 
   // Fractional steps accumulate float noise (0.1 + 0.2), and a settings field is
@@ -225,7 +226,8 @@ export function NumberField({
   );
 }
 
-function formatNumber(value: number): string {
+function formatNumber(value: number | null): string {
+  if (value === null) return '';
   if (!Number.isFinite(value)) return '0';
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(4)));
 }
