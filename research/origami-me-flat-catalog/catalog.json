@@ -8,11 +8,11 @@
   ],
   "coverage": "All five pages of the current index, cross-checked against all 142 easy collection entries. Eligibility review ongoing.",
   "nextQueue": [
-    "crow",
-    "devilish-heart",
     "dolphin",
     "dove",
-    "dragonfly"
+    "dragonfly",
+    "flying-squirrel",
+    "frog"
   ],
   "designs": [
     {
@@ -1266,13 +1266,16 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 6,
+      "model": "models/crow.osf",
+      "gaps": [
+        "F020"
+      ],
+      "notes": "All 17 instructions and 20 diagrams reviewed. Fourteen nodes through source 6; all 15 states checked in Fold. Source-7 coupled kite opening remains the same investigation as Bird. Full-packet top fold has identical geometry; depth-one unfold also moves the wrong connected packet.",
+      "report": "batches/004.md"
     },
     {
       "slug": "devilish-heart",
@@ -1282,13 +1285,16 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
-      "gaps": [],
-      "notes": ""
+      "gaps": [
+        "F011"
+      ],
+      "notes": "All 20 instructions, 21 diagrams and completed photograph reviewed. Required source-20 center dimple retains a non-flat three-ray vertex. A flattened heart would be a variant. Source 12 additionally requires cutting the precreased square into two triangles; no native variant authored.",
+      "report": "batches/004.md"
     },
     {
       "slug": "dolphin",

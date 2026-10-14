@@ -13,6 +13,13 @@ for(const slug of process.argv.slice(2)){
  for(const n of d.steps){t.add(n.op,n.note,n.choices);states.push(hash(JSON.stringify(t.e.canonical_keys(t.state).sort())));}
  assert.deepEqual(states,manifest.stateHashes);
  const evidence={slug,allStatesReplayedIdentically:true};
+ if(slug==='crow'){
+  const p=[-.06,.3],before=t.at(p,0,t.states[12]),after=t.at(p,0,t.states[13]);
+  assert(eq(before,after),'The right kite fold preserves the folded left flap material.');
+  evidence.leftKiteUnchanged={point:p,before,after};
+  const s=t.scene();assert(s.subfaces.every(c=>s.faces[c.faces_top_to_bottom[0]].front_up));
+  evidence.exposedPacketColored=true;
+ }
  if(slug==='crab'){
   const p=[-.3,.35],before=t.at(p,0,t.states[12]),after=t.at(p,0,t.states[13]);
   assert(eq(before,after),'The first right-pocket squash preserves the exposed left panel.');

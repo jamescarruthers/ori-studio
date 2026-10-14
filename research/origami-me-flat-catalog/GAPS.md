@@ -185,3 +185,10 @@ The text calls the moving wing landmark the source-3 pinch, while the visible fr
 [Native prefix](models/crab.osf): 29 nodes through source 11, all 30 states replayed and checked in Fold. [Petal request](batches/crab-petal-attempt.json), [failure](batches/crab-failure.json), [uncreased control](batches/crab-uncreased-petal-control.json), [state before petal preparation](batches/crab-before-petal.json), and [material checks](batches/crab.material-checks.json). The four preceding pocket squashes work; paper sides match the colored upper triangle and white lower split flaps. Preserve guards until the source mapping and connected layers are established.
 
 **Additional confirmed F011 cutting cases:** Crab sources 17 and 19 slit selected lower front/back flaps from the free tip into the paper, without discarding an offcut. Source 25 makes paired edge-inward incisions through every layer to free the upper tuck. Neither kind is expressible by the public Fold operations. These are required even if the earlier petal investigation is resolved.
+
+
+### F020 additional case — Crow
+
+[Crow](https://origami.me/crow/) repeats the same square-base preparation and source-7 coupled kite opening. Its [native prefix](models/crow.osf) reaches source 6 (14 nodes / 15 states checked). Selecting all layers for the upper triangle gives exactly the same canonical states as Bird's depth-one request, so that choice does not resolve the issue. A depth-one unfold still moves the wrong connected packet; direct petal from the closed kite refuses `petal_no_flap / no_ends`. [Controls](batches/crow-opening-controls.json), [invalid downstream attempt](batches/crow-unverified-downstream.json), [material checks](batches/crow.material-checks.json). Correct decomposition is unresolved; this remains an investigation, not a new confirmed missing primitive.
+
+Devilish Heart source 12 also requires a diagonal cut separating two creased triangular sheets (F011), but its required final center dimple is non-flat. The tutorial is excluded from flat completion; no variant or new cut test was authored.

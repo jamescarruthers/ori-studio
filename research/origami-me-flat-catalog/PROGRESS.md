@@ -32,7 +32,7 @@ Check every intermediate step, visible paper side, layer order, tucked flap, and
 
 - Batch 2: [Bookmark and Dog](batches/002.md). Bookmark is **ready for audit**; Dog is **blocked at source 13**, with its valid prefix saved. All 29 saved states replayed. Bookmark adds an internal pocket-order audit case; Dog remains an investigation, not a confirmed missing primitive.
 
-- Batch 4: [current running report](batches/004.md). Penguin is ready for audit. Twenty native files have checked states; Witch Hat and the squash-selection case have confirmed restrictions, with remaining compound attempts marked as investigations.
+- Batch 4: [current running report](batches/004.md). Penguin is ready for audit. Twenty-one native files have checked states; Witch Hat and the squash-selection case have confirmed restrictions, with remaining compound attempts marked as investigations.
 
 ## Functionality findings
 
@@ -52,8 +52,8 @@ See [GAPS.md](GAPS.md). Separate missing operations, UI limitations, authoring m
 ## Next work
 
 1. Apply any user audit corrections first, preserving user-saved models.
-2. Very Easy classification and first attempts are recorded. Continue Easy: Crow, Devilish Heart, Dolphin, Dove, and Dragonfly. `catalog.json` holds the current queue.
-3. Batch 4 has one complete model (Penguin), verified prefixes for eighteen additional designs, explicit 3D exclusions, and Wallet's access blocker. A five-native-file audit checkpoint was reported while the completion count remains explicit.
+2. Very Easy classification and first attempts are recorded. Continue Easy: Dolphin, Dove, Dragonfly, Flying Squirrel, and Frog. `catalog.json` holds the current queue.
+3. Batch 4 has one complete model (Penguin), verified prefixes for nineteen additional designs, explicit 3D exclusions, and Wallet's access blocker. A five-native-file audit checkpoint was reported while the completion count remains explicit.
 4. Revisit connected opening and swivel investigations with exact source geometry; keep them distinct from confirmed limitations.
 5. Consolidate implementation requirements after evidence exists. Continue locally without a schedule, PR, or push.
 
@@ -67,7 +67,7 @@ The machine-readable [catalog.json](catalog.json) is the per-design ledger. Run 
 
 ## Per-design progress
 
-Inventory: 151 entries. blocked: 25; excluded 3D / flat variant: 31; queued: 83; ready for audit: 12.
+Inventory: 151 entries. blocked: 26; excluded 3D / flat variant: 32; queued: 81; ready for audit: 12.
 
 | Design / tutorial | Difficulty | Eligibility | Progress | Fold file / notes |
 | --- | --- | --- | --- | --- |
@@ -139,8 +139,8 @@ Inventory: 151 entries. blocked: 25; excluded 3D / flat variant: 31; queued: 83;
 | [Origami Chicken](https://origami.me/chicken/) | Easy | flat (optional 3D styling omitted) | blocked | [Open .osf](models/chicken.osf); [Batch notes](batches/004.md); All 17 instructions and 18 diagrams reviewed. Eleven nodes through source 9; all 12 states checked in Fold. Partial pinches and eight-ply inside reverse verified by material stacks. Source 10 connected wing squash and pinch naming remain under investigation. |
 | [Origami Crab](https://origami.me/crab/) | Easy | flat with cuts | blocked | [Open .osf](models/crab.osf); [Batch notes](batches/004.md); All 32 instructions and 34 diagrams reviewed. Twenty-nine nodes through source 11; all 30 states checked in Fold. Four pocket squashes work; first petal rejects the mapped geometry. Cutting is additionally required at sources 17, 19 and 25. |
 | [Origami Crane](https://origami.me/crane/) | Easy | 3D completion | excluded 3D / flat variant | [Open .osf](../2026-10-13-origami-fold-trials/models/crane.osf); Flat alternative retained; final wing opening excluded. |
-| [Origami Crow](https://origami.me/crow/) | Easy | unreviewed | queued |  |
-| [Origami Devilish Heart](https://origami.me/devilish-heart/) | Easy | unreviewed | queued |  |
+| [Origami Crow](https://origami.me/crow/) | Easy | flat | blocked | [Open .osf](models/crow.osf); [Batch notes](batches/004.md); All 17 instructions and 20 diagrams reviewed. Fourteen nodes through source 6; all 15 states checked in Fold. Source-7 coupled kite opening remains the same investigation as Bird. Full-packet top fold has identical geometry; depth-one unfold also moves the wrong connected packet. |
+| [Origami Devilish Heart](https://origami.me/devilish-heart/) | Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 20 instructions, 21 diagrams and completed photograph reviewed. Required source-20 center dimple retains a non-flat three-ray vertex. A flattened heart would be a variant. Source 12 additionally requires cutting the precreased square into two triangles; no native variant authored. |
 | [Origami Dolphin](https://origami.me/dolphin/) | Easy | unreviewed | queued |  |
 | [Origami Dove](https://origami.me/dove/) | Easy | unreviewed | queued |  |
 | [Origami Dragonfly](https://origami.me/dragonfly/) | Easy | unreviewed | queued |  |
