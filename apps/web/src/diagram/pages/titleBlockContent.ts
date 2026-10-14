@@ -13,7 +13,9 @@
  * which the Pages view says. A part only a newer build reads is not in the
  * content here, so it is Auto too.
  *
- * Auto's rule is a look: changing it moves no step. Pure.
+ * That a part unsaid is Auto is fixed for good; what Auto finds is a look
+ * (`diagram-document-evolution.md`, class (b)): a change to it moves no step,
+ * though it changes the picture a saved block shows. Pure.
  */
 import type { SheetThumbnail } from '../../cp-workspace/sheets/sheetThumbnail';
 import {

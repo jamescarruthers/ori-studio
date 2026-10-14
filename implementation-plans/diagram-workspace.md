@@ -1723,7 +1723,7 @@ page settings it does not say, which it gains at their legacy values (the
 flow's packing, 2026-10-12; the title block, off, 2026-10-14). The fixture
 stays unchanged, the migrated save is idempotent, and the legacy preset
 values are frozen in `paper-presets-v1.json`. `diagramFileTitleBlock.test.ts`
-holds two diagrams saved with a title block (`__fixtures__/diagram-title-block.json`,
+holds three diagrams saved with a title block (`__fixtures__/diagram-title-block.json`,
 2026-10-14) to them the same way, written back byte for byte. A change to
 anything below is a format change.
 
@@ -1785,8 +1785,11 @@ on its next save.
   has no name for, and a field of the content it has no name for, is a newer
   build's (rule 2): carried under its key and written back until that part
   is set here, Auto here, and an asset or a thumbnail it names is kept.
-  Auto's rule is a look, and the content is in no page's signature: neither
-  moves a step.
+  An unsaid part means Auto for good (class (c) in
+  `diagram-document-evolution.md`). What Auto finds is a look (class (b)):
+  a later build may change it for every file, which changes the step an old
+  file's block pictures but never moves a step. The content is in no page's
+  signature.
 - `steps`: the order, steps and the turns between them (D22). A turn is
   `{ id: 'turn-<uuid>', kind: 'turn-over', axis }` (unsaid: `vertical`) or
   `{ id, kind: 'rotate', rotate: { amount, direction } }` (unsaid: a quarter
@@ -1841,16 +1844,21 @@ on its next save.
   dropped alone. **Pagination** (flow): walking the steps in order, turns
   taking no place, a step starts a page when it is the first, or has
   `breakBefore` or `pageSteps`, or the page has reached its capacity — its
-  first step's `pageSteps`, else `page.stepsPerPage`. A flow page is laid out
-  for the steps it holds, but a last page without `pageSteps` for
-  `page.stepsPerPage`, which its few steps fill in order. A grid's pages hold
-  `columns × rows` and ignore `pageSteps`, which they keep. With
-  `page.titleBlock` on (2026-10-14), the first page's default is fewer: in
-  the flow `max(1, round(stepsPerPage × (1 − heightShare)))`, on a grid
-  `columns × (rows − r)`, `r` the whole rows nearest `heightShare × rows`,
-  at least 1 and at most `rows − 1`; a grid of one row has no room for the
-  block, and its pages are as without it. A `pageSteps` on the first step
-  still wins.
+  first step's `pageSteps`, else its default capacity: `page.stepsPerPage`,
+  but the first page's under the title block (below). A flow page is laid
+  out for the steps it holds, but a last page without `pageSteps` for its
+  default capacity, which its few steps fill in order (a lone first page
+  under the block for the first page's). A grid's pages hold `columns ×
+  rows` and ignore `pageSteps`, which they keep. With `page.titleBlock` on
+  (2026-10-14), the first page's default is fewer: in the flow `max(1,
+  round(stepsPerPage × (1 − heightShare)))`, on a grid `columns × (rows −
+  r)`, `r = min(rows − 1, max(1, round(heightShare × rows)))`; a grid of one
+  row has no room for the block, and its pages are as without it. `round`
+  takes a half up (JavaScript's `Math.round`), and each product is computed
+  in double precision as written, `stepsPerPage × (1 − heightShare)` and
+  `heightShare × rows`: another rounding or order would re-cut saved first
+  pages. (At 0.27, the only share this build writes, nothing ties.) A
+  `pageSteps` on the first step still wins.
 - `source`, null for an empty step, or:
   - `{ kind: 'upload', assetId, rotationQuarterTurns (0–3), mirrored }`;
   - `{ kind: 'cp', scope: { kind: 'segment', region }, fingerprint,
@@ -1908,7 +1916,8 @@ on its next save.
 **Reading** (`readDiagram`), lenient, in three rules:
 1. **Malformed is dropped.** A step, mark or asset that does not read, or a
    source or picture that does not, is left out; the rest of the diagram
-   opens. A value of the wrong type falls back to its default.
+   opens. A value of the wrong type falls back to its default, but a page
+   setting's to its legacy value (`PAGE_SETTINGS`), as an unsaid one does.
 2. **What a newer build wrote is carried, never dropped** (decisions 1 and
    2 of the launch review, 2026-10-09). A kind, field or value this build has
    no name for, at any depth, or content past what it keeps — an SVG, a scene
@@ -1917,7 +1926,8 @@ on its next save.
    asset a newer build's: kept verbatim in its `unknown` field, written back
    unchanged, and locked (moved or deleted, never edited). A locked step is
    drawn as far as this build reads it. At the document's level such a value
-   falls back alone, shown as this build's default or nearest, and is written
+   falls back alone, shown as this build's default or nearest (a page
+   setting as its legacy value or the nearest in its range), and is written
    back as it came until that field is set here (`DiagramNewerFields`).
 3. **A newer document opens read-only.** Only a `formatVersion` above 1 does;
    the file is written back as it came.

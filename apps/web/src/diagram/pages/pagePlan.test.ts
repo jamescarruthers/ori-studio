@@ -239,6 +239,9 @@ describe('paginate: the first page with the title block (diagram-title-block.md,
     expect([2, 5, 9, 12, 16, 30].map((stepsPerPage) => firstPageCapacity(flow({ stepsPerPage })))).toEqual([1, 4, 7, 9, 12, 22]);
     expect(firstPageCapacity(flow({ titleBlock: { enabled: true, heightShare: 0.5 }, stepsPerPage: 2 }))).toBe(1);
     expect(firstPageCapacity(flow({ titleBlock: { enabled: true, heightShare: 0.15 } }))).toBe(8);
+    // A half rounds up, the product taken as the contract writes it (`diagram-workspace.md`, Pagination): 6.5, 1.5.
+    expect(firstPageCapacity(flow({ titleBlock: { enabled: true, heightShare: 0.35 }, stepsPerPage: 10 }))).toBe(7);
+    expect(firstPageCapacity(flow({ titleBlock: { enabled: true, heightShare: 0.25 }, stepsPerPage: 2 }))).toBe(2);
     expect(sizes(steps(20), flow())).toEqual([7, 9, 4]);
     expect(paginate(steps(20), flow()).map((page) => [page.capacity, page.layoutCount, page.ownCount])).toEqual([
       [7, 7, false],

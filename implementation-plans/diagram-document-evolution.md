@@ -267,7 +267,8 @@ leave.
 | Path node `in`, `out`, `type` | `writePathNode` | (c) a straight node |
 | Crease-pattern render `side`, `flipCreases`; flat-fold `spread` | the source as read (`readCpRender`) | (c) the front, not flipped, no spread |
 | Picture `styleKey`, step-diagram `mirrored` | the picture as read | (c) |
-| `titleBlockContent` and each of its parts (added 2026-10-14, `diagram-title-block.md`) | `writeTitleBlockContent` | (c) Auto: the last step with a picture, the last linked pattern, no byline. Auto's rule is a look; the content is in no signature, so no step moves when it changes |
+| `titleBlockContent` and each of its parts (added 2026-10-14, `diagram-title-block.md`) | `writeTitleBlockContent` | (c) an unsaid part means Auto, and no byline, for good |
+| What Auto finds for the title block: the last step with a picture, the last linked pattern | `resolveTitleBlock` (`pages/titleBlockContent.ts`) | (b) a look, as an annotation's `anchor` rule is: the content is in no signature, so no step moves when it changes. Unlike a pen or a gap, a change to it changes content on old files (which model or pattern their block pictures), so it is Zach's call |
 
 Only (a) changed. A (c) field's absence is a value in its own right, so it is
 never redefined: to give new marks another default, write the new value on new

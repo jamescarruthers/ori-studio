@@ -438,6 +438,26 @@ describe('the first page with the title block (diagram-title-block.md)', () => {
     expect(counts(setPageSteps(lone, 0, 9))).toEqual({ s0: 9 });
   });
 
+  it('keeps a first page’s count, one a later page’s count held it at included, when the block comes or goes: only that page re-packs', () => {
+    // As built (`diagram-title-block.md`, T-20 B): a count on the first page wins, whoever wrote it. Zach's crane
+    // holds one on every page, so its first page keeps its steps in the block's shorter room.
+    const ON = { titleBlock: { enabled: true, heightShare: 0.27 } };
+    const OFF = { titleBlock: PAGE_SETTINGS.titleBlock.legacy };
+    const changed = (before: DiagramDocument, after: DiagramDocument) =>
+      cellSlots(after).signatures.map((signature, index) => signature !== cellSlots(before).signatures[index]);
+    const held = setPageSteps(diagram(12), 1, 5);
+    expect(pages(held)).toEqual(['s0:4 s1 s2 s3', 's4:5 s5 s6 s7 s8', 's9 s10 s11']);
+    const on = setPageSetup(held, ON);
+    expect(pages(on)).toEqual(pages(held));
+    expect(changed(held, on)).toEqual([true, false, false]);
+    // And back: a first page held at what it held under the block keeps it without.
+    const blocked = setPageSteps(diagram(12, {}, [], ON), 1, 5);
+    expect(pages(blocked)).toEqual(['s0:3 s1 s2', 's3:5 s4 s5 s6 s7', 's8 s9 s10 s11']);
+    const off = setPageSetup(blocked, OFF);
+    expect(pages(off)).toEqual(pages(blocked));
+    expect(changed(blocked, off)).toEqual([true, false, false]);
+  });
+
   it('keeps a first page’s own count through an edit on it, as without the block', () => {
     const counted = setPageSteps(blocked, 0, 5);
     expect(pages(counted)).toEqual(['s0:5 s1 s2 s3 s4', 's5 s6 s7 s8', 's9 s10 s11']);

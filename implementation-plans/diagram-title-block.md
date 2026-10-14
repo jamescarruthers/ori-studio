@@ -13,7 +13,8 @@ recommended. T-18 is built as recommended (A, with B as the fallback), but
 whether the release waits for it is Zach's call once the build is done. The
 PR goes into #436's branch and no agent merges it.
 
-The decisions are numbered T-1 to T-19. Each gives its options and a
+The decisions are numbered T-1 to T-19, and T-20, raised in the review of
+1a and 1b, still needs Zach's answer. Each gives its options and a
 recommendation. Four of them were the real forks:
 
 - **T-3**, how many steps page 1 holds. The recommendation re-paginates every
@@ -289,8 +290,10 @@ With the block on, page 1 is laid out like this.
   not drawn there, and the toggle row says it needs two rows.
 - **Page 1's capacity** (T-3 A). Page 1 holds fewer steps by default: in
   the flow, `max(1, round(stepsPerPage × (1 − heightShare)))`, so 9 becomes
-  7 at 27%. In the grid, `columns × (rows − blockRows)`. A count set on page
-  1 itself still wins. It is read from the page setup alone, through one
+  7 at 27%. In the grid, `columns × (rows − blockRows)`. A half rounds up,
+  and each product is taken as written; the contract says so, since another
+  rounding would re-cut saved first pages. A count set on page 1 itself
+  still wins (T-20). It is read from the page setup alone, through one
   function, `firstPageCapacity(setup)` in `pagePlan.ts`, called inside
   `splitPages` and `paginate` for the first page only. No caller changes:
   each already paginates through those two. The grid's "per page" readout
@@ -341,7 +344,11 @@ layout:
 - Page 1's count changes (T-3 A), so the steps after it shift and every
   later flow page re-packs. Frames on steps that change page go home, with
   the existing toast and Undo (`usePlacementReflowNotice.ts`). This is the
-  same kind of change as editing Steps per page.
+  same kind of change as editing Steps per page. A page 1 with its own
+  count keeps it, and only page 1 re-packs (T-20).
+- On a grid, every cell on page 1 moves under the block, so every frame
+  there goes home, as Decision 1A says of a cell that moves
+  (`stepPlaces.ts`, `pageShape`).
 - One Undo restores the document exactly.
 
 #### Decisions: page 1's layout
@@ -386,6 +393,31 @@ Zach's answer.**
 - C. The tab on every page, page 1 too, above the block.
 - **Recommended: A.** The block is the title, set large. A tab above it
   says the title twice. B gives one switch two jobs.
+
+**T-20. A count on page 1 when the block comes or goes. Raised in the
+review of 1a and 1b; built as B. Needs Zach's answer.** A count on page 1
+wins (T-3 A), and the app writes one itself. Setting a later page's count
+holds every page in front of it at its present size (`heldCounts`,
+`pages/pageCounts.ts`), so page 1 gets a count its author never set, and the
+toggle no longer changes what page 1 holds. Zach's crane has a count on
+every page (9, 11, 9).
+- A. When the block is turned on or off, or its share changes, a page-1
+  count equal to the old first-page default is taken as automatic. It moves
+  to the new default through Set Steps on Page, which keeps every later
+  page's last step, so page 2 takes up the difference. The crane becomes 7,
+  13, 8, and page 2's scale falls from 0.891 to 0.654 (measured on the
+  crane through the real reader and layout, before 1c).
+- B. As built: a count on page 1 wins, whoever wrote it. The crane keeps 9,
+  11, 8; only page 1 re-packs, its nine steps in the block's shorter room.
+  "Steps on page 1" in the Page pane shows the count, and setting it to 7
+  there is A by hand. After 1f, the reverse holds too: a new diagram whose
+  page 1 was held at 7 under the block keeps 7 when the block goes off.
+- **Recommended: B for the first cut.** A does not remove the crowding; it
+  moves it from page 1 to page 2. It also guesses that a count equal to the
+  default was the app's. Neither option is in the file's format; each is
+  only what the toggle does. So A can follow the release without moving any
+  saved page. `pageCounts.test.ts` pins B, and 1c's steadiness check
+  includes the crane under it.
 
 ### 3. Inside the block
 
@@ -779,9 +811,13 @@ titleBlockContent?: {
 
 - An unsaid part is Auto, or for the byline, empty. The field is written
   only when something in it is set: its absence is itself a value (Auto
-  everywhere), class (c) in the evolution plan's audit. Auto's rule (the
-  last step with a picture, the last linked pattern) is a look: changing it
-  later moves no step, so it may change for every file.
+  everywhere), class (c) in the evolution plan's audit, so an unsaid part
+  means Auto for good. What Auto finds (the last step with a picture, the
+  last linked pattern) is class (b), a look: changing it later moves no
+  step, so it may change for every file. Unlike a pen or a gap, it changes
+  content on old files (which model or pattern their block pictures), so a
+  change to it is Zach's call. (Split in the review of 1a and 1b: the
+  audit had both in one (c) row.)
 - The byline goes through `xmlText`, as the title does.
 - A part that does not read is dropped alone and reads as Auto.
 - A kind or field this build has no name for is a newer build's (rule 2).
@@ -917,6 +953,14 @@ see it.
   render.
 - **One select per part** (Model, Crease pattern): "Auto (step N)", the
   choices, None. Not a segmented control plus a list.
+- **A tie rounds up** (added in the review of 1a and 1b). Page 1's count
+  and a grid's block rows round a half up (`Math.round`), and the contract
+  says so, since the rule freezes with the release. So at a share of 0.5 a
+  three-row grid gives the block two rows, two thirds of the page. Nothing
+  ties at 0.27, the only share the first cut writes; ties come with the
+  Height slider (2d). But this build will read that build's files, so the
+  rule is decided now. Rounding a half down instead is a small change
+  before the release, and never one after it.
 - **A chosen step that is gone reads as Auto.** Its stale id is left in the
   document, not cleared by every delete verb. **A chosen step with no
   picture draws no model**, and the overlay says so.
@@ -1074,7 +1118,8 @@ until 1f.
   legacy value, and the frozen fixture is unchanged.
 - [x] The new fixture, round-tripped exactly; its unknown part carried, its
   asset kept, shown as Auto.
-- [x] A file without `titleBlock` reads off. A damaged one reads off.
+- [x] A file without `titleBlock` reads off. A damaged one reads off,
+  field by field.
 
 *As built (1a).* As planned, with these calls:
 - `titleBlock` is the last row of `PAGE_SETTINGS`, so it is written after
@@ -1090,10 +1135,11 @@ until 1f.
 - `setTitleBlockContent(document, patch)` is the one edit: a part set to a
   source, `'auto'` to take it away, a byline of blanks taken away. Setting
   a part lets go of a newer build's value for that part only.
-- The new fixture holds two diagrams, as one diagram cannot hold both a
+- The new fixture holds three diagrams, as one diagram cannot hold both a
   chosen model and a newer build's model: a flow (model a step, pattern
-  none, a Korean byline) and a grid at a share of 0.33 (pattern a step, an
-  `own` model naming an asset nothing else names). Its test is
+  none, a Korean byline), a grid at a share of 0.33 (pattern a step, an
+  `own` model naming an asset nothing else names), and a flow of eight
+  steps (model none, pattern unsaid; added in the review). Its test is
   `diagramFileTitleBlock.test.ts`; it failed before `carriedJson` read the
   slot (the asset was dropped).
 - The contract's page bullet is rewritten to say every setting is written,
@@ -1146,7 +1192,28 @@ until 1f.
   before this phase. Every crane page has its own count (9, 11, 9), so
   turning the block on keeps nine steps on page 1 and re-packs page 1
   alone. 1c's steadiness check should include that case: nine pictures in
-  a page 27% shorter.
+  a page 27% shorter. Whether it should is T-20, raised in the review.
+
+*Review of 1a and 1b (2026-10-14).* What it changed:
+- A newer build's `titleBlock` reads as the nearest block, not as none
+  (section 8), so such a file no longer has every page re-cut.
+- An edit holds a title block source to what the file reads: one rule,
+  `titleBlockSource`, for both. A step source with an empty id was stored
+  by the edit and dropped by the reader.
+- A grid's first page under the block is another cell shape (`pageShape`
+  counts the block's rows), so turning the block on or off sends every
+  frame on page 1 home, as Decision 1A says of a cell that moves. Before,
+  the steps that stayed on page 1 kept their offsets, over the block.
+- The fixture gained its third diagram (model none, pattern unsaid).
+- The contract says how ties round (a half up, products as written), that
+  a last page without a count is laid out for its default capacity, and
+  that a page setting falls back to its legacy value. The evolution audit
+  splits Auto: unsaid means Auto for good (c); what Auto finds is a look
+  (b).
+- T-20 (a held count on page 1) is raised for Zach, built as B and pinned.
+- Not done here: fast-forwarding `claude/diagram-title-block`. The review
+  ran in an agent isolated in another worktree; the branch is moved by
+  whoever runs the lanes.
 
 **1c. Layout**
 - [ ] `titleBlockGeometry(setup)`: the block, the title column, the
@@ -1162,7 +1229,17 @@ until 1f.
 - [ ] Steadiness: on the crane and on new diagrams of 9, 12 and 16 steps a
   page (A4, Letter, A4 landscape), page 1's scale is within ×1.09 of page
   2's, so page 2 is not held down. If not, the page-1 capacity rule is tuned
-  and the numbers shown to Zach.
+  and the numbers shown to Zach. The crane is measured under T-20 B, its
+  page 1 holding its own count of nine.
+- [ ] With the block on, typing or clearing the title leaves page 1's
+  packing area, and its held arrangement, unchanged: the signature already
+  reads no tab there (1b). On a grid, page 1's rows start at
+  `blockRows(setup)` (`pageShape` already counts them).
+- [ ] Once the page-1 rule is settled, the fixture's third diagram gains a
+  page-1 arrangement packed under the block by 1c's layout, and a test
+  opens it with every page held (`packing.packed === false`) and its
+  signatures the stored ones: the whole chain from read to hold, as
+  `savedPagesHold.test.ts` checks it for files without the block.
 
 **1d. Drawing**
 - [x] `resolveTitleBlock(document)`. Auto skips turns, empty and locked
@@ -1193,6 +1270,12 @@ give its part stays `from: 'step'` with nothing to draw (its `picture`
 null, or a null `thumbnail`), so the overlay can name it.
 
 **1e. The Page pane and the overlay**
+- [ ] **Order:** 1c is merged into `claude/diagram-title-block` before the
+  toggle is. Page 1's signature already assumes 1c's layout (the block's
+  entry, no tab), so a page 1 packed and saved with the block on before 1c,
+  in a PR preview say, would be held after it with steps under the block.
+  Until 1c is in, the toggle stays hidden, and nobody saves a block-on file
+  from an intermediate build.
 - [ ] `useDiagramTitleBlock` and `DiagramTitleBlockSection`, mounted by the
   Page pane after Layout (T-19 A). `setDiagramTitleBlockContent`, one undo
   step each.
@@ -1200,6 +1283,8 @@ null, or a null `thumbnail`), so the overlay can name it.
   patterns, each select naming what Auto finds. The toggle disabled in a
   one-row grid, with its hint. Read-only diagrams disable the section.
 - [ ] The overlay's placeholders. The Title help updated.
+- [ ] With the block on and page 1 holding its own count, "Steps on page
+  1" says the block does not change it (T-20 B).
 - [ ] Analytics and `docs/analytics.md`.
 - [ ] i18n: extract, eight locales, stamp, check.
 
