@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import saved from './__fixtures__/diagram-title-block.json';
 import { setStepText, setTitleBlockContent, type DiagramDocument } from './diagramDocument';
 import { readDiagram, writeDiagram } from './diagramFile';
+import { resolveTitleBlock } from '../pages/titleBlockContent';
 
 /**
  * Two diagrams saved with the first page's title block on
@@ -34,8 +35,11 @@ describe('a diagram saved with a title block', () => {
     const grid = read(1);
     expect(grid.readOnly).toBe(false);
     expect(grid.document.page).toMatchObject({ layout: 'grid', titleBlock: { enabled: true, heightShare: 0.33 } });
-    // The model it has no name for is Auto here: no model said.
+    // The model it has no name for is Auto here: no model said, so the last step with a picture.
     expect(grid.document.titleBlockContent).toEqual({ pattern: { kind: 'step', stepId: 'step-swan' } });
+    const shown = resolveTitleBlock(grid.document);
+    expect([shown.model.from, shown.model.step?.id]).toEqual(['auto', 'step-swan']);
+    expect([shown.pattern.from, shown.pattern.step?.id]).toEqual(['step', 'step-swan']);
     expect(grid.document.newer).toEqual({ titleBlockContent: { model: fixture()[1]!.titleBlockContent!.model } });
   });
 

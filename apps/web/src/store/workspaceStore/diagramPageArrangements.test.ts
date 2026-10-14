@@ -294,7 +294,7 @@ describe('repackDiagramPage / repackDiagramPages', () => {
   });
 });
 
-describe('the title block turned on or off (diagram-title-block.md)', () => {
+describe('the title block (diagram-title-block.md)', () => {
   const ON = { titleBlock: { enabled: true, heightShare: 0.27 } };
   const OFF = { titleBlock: PAGE_SETTINGS.titleBlock.legacy };
   const pages = () => cellSlots(state().diagram!).pages;
@@ -337,5 +337,42 @@ describe('the title block turned on or off (diagram-title-block.md)', () => {
     // The same setting again changes nothing, and records nothing.
     expect(state().setDiagramPage(OFF)).toBe(false);
     expect(undoSteps()).toBe(2);
+  });
+
+  it('sets what it shows one part at a time, each one undo step, which Undo takes back exactly', () => {
+    const installed = install();
+    expect(state().setDiagramTitleBlockContent({ model: { kind: 'step', stepId: 's11' } })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ pattern: { kind: 'none' } })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ byline: 'Design: Lang' })).toBe(true);
+    expect(state().diagram!.titleBlockContent).toEqual({
+      model: { kind: 'step', stepId: 's11' },
+      pattern: { kind: 'none' },
+      byline: 'Design: Lang',
+    });
+    expect(undoSteps()).toBe(3);
+    expect(state().diagramHistory.past.at(-1)?.label).toBe('Change title block');
+    expect(state().dirty).toBe(true);
+    state().undoDiagram();
+    expect(state().diagram!.titleBlockContent).toEqual({ model: { kind: 'step', stepId: 's11' }, pattern: { kind: 'none' } });
+    state().undoDiagram();
+    state().undoDiagram();
+    expect(state().diagram).toBe(installed);
+    // What changes nothing records nothing; a read-only diagram takes nothing.
+    expect(state().setDiagramTitleBlockContent({ model: 'auto', byline: '' })).toBe(false);
+    const readOnly = install(plain(12), true);
+    expect(state().setDiagramTitleBlockContent({ byline: 'Design: Lang' })).toBe(false);
+    expect(state().diagram).toBe(readOnly);
+  });
+
+  it('moves no step with what it shows: every page held as packed, no frame sent home', () => {
+    install(plain(12).map((step) => ({ ...step, place: PLACE })));
+    state().setDiagramPage(ON);
+    const adopted = adoptAll();
+    const notice = state().diagramPlacesSettled;
+    state().setDiagramTitleBlockContent({ model: { kind: 'none' }, pattern: { kind: 'step', stepId: 's3' }, byline: 'Design: Lang' });
+    expect(state().diagram!.pageArrangements).toBe(adopted.pageArrangements);
+    expect(Object.keys(heldPageArrangements(state().diagram!))).toEqual(['s0', 's4', 's9']);
+    expect(state().diagramPlacesSettled).toBe(notice);
+    expect(frames()).toEqual(stepsOf(adopted).filter((step) => step.place?.frame).map((step) => step.id));
   });
 });

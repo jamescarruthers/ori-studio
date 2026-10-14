@@ -17,6 +17,7 @@ import {
   setDiagramTitle,
   setHanStyle,
   setPageSetup,
+  setTitleBlockContent,
   setStepBreakBefore,
   setReferencesSide,
   setStepPicture,
@@ -561,6 +562,9 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       remember();
       return true;
     },
+
+    setDiagramTitleBlockContent: (patch) =>
+      commit('Change title block', (document) => setTitleBlockContent(document, patch)) !== null,
 
     setDiagramStepBreakBefore: (stepId, breakBefore) =>
       commit(breakBefore ? 'Start a new page' : 'Continue the page', (document) =>

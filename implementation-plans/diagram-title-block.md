@@ -1151,7 +1151,7 @@ until 1f.
   and the numbers shown to Zach.
 
 **1d. Drawing**
-- [ ] `resolveTitleBlock(document)`. Auto skips turns, empty and locked
+- [x] `resolveTitleBlock(document)`. Auto skips turns, empty and locked
   steps. A stale id reads as Auto. None. No linked step gives no pattern. A
   newer build's part reads as Auto.
 - [ ] The pattern as a `PaperScene` through `paperSceneSvgBody` (T-14 A),
@@ -1166,6 +1166,18 @@ until 1f.
   Zach. 1e goes on while he looks. The block's proportions are tuned on his
   word.
 
+*As built (1d, the resolution only; the drawing is its own lane).*
+`diagram/pages/titleBlockContent.ts`: `resolveTitleBlock(document)` gives
+each part's `from` (`auto`, `step` or `none`) and `step`, and the
+pattern's `thumbnail`. Auto is the last step `givesModel` (this build's,
+with a picture) or `givesPattern` (this build's, linked to a crease
+pattern, whatever it is shown as); `autoModelStep` and `autoPatternStep`
+name what Auto finds whatever is chosen, for the Page pane's "Auto (step
+N)". A chosen id that is no step of this build's (gone, a turn's, or a
+newer build's step) reads as Auto. A chosen step that is there but cannot
+give its part stays `from: 'step'` with nothing to draw (its `picture`
+null, or a null `thumbnail`), so the overlay can name it.
+
 **1e. The Page pane and the overlay**
 - [ ] `useDiagramTitleBlock` and `DiagramTitleBlockSection`, mounted by the
   Page pane after Layout (T-19 A). `setDiagramTitleBlockContent`, one undo
@@ -1176,6 +1188,15 @@ until 1f.
 - [ ] The overlay's placeholders. The Title help updated.
 - [ ] Analytics and `docs/analytics.md`.
 - [ ] i18n: extract, eight locales, stamp, check.
+
+*As built (1e, the store only; the pane is its own lane).* The slice
+action `setDiagramTitleBlockContent(patch)` commits `setTitleBlockContent`
+as one undo step labelled "Change title block"; a patch that changes
+nothing records nothing, and a read-only diagram takes nothing. Its tests
+(in `diagramPageArrangements.test.ts`, beside the block's toggle) also pin
+that what the block shows moves no step: every page held as packed, no
+frame sent home. The toggle stays `setDiagramPage({ titleBlock })`, and
+the pane disables it where `titleBlockFits(page)` is false.
 
 **1f. The default goes on**
 - [ ] `PAGE_SETTINGS.titleBlock.default` on, in a commit of its own. A new

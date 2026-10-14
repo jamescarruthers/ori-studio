@@ -65,6 +65,7 @@ import type {
   DiagramHanStyle,
   DiagramPageArrangement,
   DiagramPageSetup,
+  DiagramTitleBlockContentPatch,
   KnownDiagramAnnotation,
   DiagramStyle,
   KnownDiagramAsset,
@@ -2174,6 +2175,12 @@ export interface DiagramSliceActions {
    * its picker — are one undo step.
    */
   setDiagramPage: (patch: Partial<DiagramPageSetup>, options?: { session?: number }) => boolean;
+  /**
+   * Set what the first page's title block shows — its model, its crease
+   * pattern, its byline — each call one undo step. Its room is the page
+   * setup's (`setDiagramPage`, `titleBlock`); what it shows moves no step.
+   */
+  setDiagramTitleBlockContent: (patch: DiagramTitleBlockContentPatch) => boolean;
   /** Start a new page at the step, or stop doing so ("Start a new page here", D10). */
   setDiagramStepBreakBefore: (stepId: string, breakBefore: boolean) => boolean;
   /**
