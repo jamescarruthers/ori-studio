@@ -135,6 +135,7 @@ import {
   TITLE_BLOCK_SHARE_RANGE,
   isTurn,
   showAsOf,
+  titleBlockSource,
   carriedJson,
   isKnownAsset,
   normalizePageSetup,
@@ -413,8 +414,7 @@ function readTitleBlockSource(value: unknown): DiagramTitleBlockSource | 'newer'
   if (!isRecord(value) || typeof value.kind !== 'string') return null;
   const known = TITLE_BLOCK_SOURCE_KEYS.get(value.kind);
   if (!known || hasNewerKey(value, known)) return 'newer';
-  if (value.kind === 'none') return { kind: 'none' };
-  return typeof value.stepId === 'string' && value.stepId.length > 0 ? { kind: 'step', stepId: value.stepId } : null;
+  return titleBlockSource(value);
 }
 
 /** A finite number outside `range`: a newer build's, which reads further. */

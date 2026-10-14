@@ -413,6 +413,11 @@ describe('writeDiagram / readDiagram', () => {
       expect(content({ byline: 'Design\u0000: Lang' }).document.titleBlockContent).toEqual({ byline: 'Design: Lang' });
     });
 
+    it('reads back exactly what an edit set: the edit holds a source to what the file reads', () => {
+      const set = setTitleBlockContent(sampleDiagram(), { model: { kind: 'step', stepId: '' }, pattern: { kind: 'none' } });
+      expect(readDiagram(throughJson(writeDiagram(set)))!.document).toEqual(set);
+    });
+
     it('carries a part of a kind or with a field it has no name for, and a field of its own, as a newer build’s: Auto here', () => {
       const base = throughJson(writeDiagram(setTitleBlockContent(sampleDiagram(), { byline: 'Design: Lang' })));
       for (const [patch, carried] of [

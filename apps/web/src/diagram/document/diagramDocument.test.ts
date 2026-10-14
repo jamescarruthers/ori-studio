@@ -359,6 +359,13 @@ describe('the title block’s content', () => {
     expect(setTitleBlockContent(set, { model: { kind: 'step', stepId: 'step-1' } })).not.toBe(set);
   });
 
+  it('takes a step source without its id as Auto, as a file holding one reads', () => {
+    const { diagram } = diagramWith(2);
+    expect(setTitleBlockContent(diagram, { model: { kind: 'step', stepId: '' } })).toBe(diagram);
+    const chosen = setTitleBlockContent(diagram, { model: STEP, pattern: STEP });
+    expect(setTitleBlockContent(chosen, { pattern: { kind: 'step', stepId: '' } }).titleBlockContent).toEqual({ model: STEP });
+  });
+
   it('keeps only a source’s own fields, and cleans the byline as every string typed', () => {
     const { diagram } = diagramWith(2);
     const set = setTitleBlockContent(diagram, {

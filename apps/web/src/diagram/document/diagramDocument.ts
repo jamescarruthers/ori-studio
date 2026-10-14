@@ -2444,7 +2444,7 @@ export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTi
   const said = (key: keyof DiagramTitleBlockContentPatch) => patch[key] !== undefined;
   const source = (key: 'model' | 'pattern') => {
     const asked = patch[key];
-    return asked === undefined ? was[key] : asked === 'auto' ? undefined : copySource(asked);
+    return asked === undefined ? was[key] : asked === 'auto' ? undefined : (titleBlockSource(asked) ?? undefined);
   };
   const [model, pattern] = [source('model'), source('pattern')];
   const byline = patch.byline === undefined ? was.byline : xmlText(patch.byline);
@@ -2460,9 +2460,17 @@ export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTi
   return withNewer(content, { ...document.newer, titleBlockContent: newer });
 }
 
-/** A source as this build holds it: its own fields and no other. */
-function copySource(source: DiagramTitleBlockSource): DiagramTitleBlockSource {
-  return source.kind === 'step' ? { kind: 'step', stepId: source.stepId } : { kind: 'none' };
+/**
+ * A title block source as this build holds it, its own fields and no other;
+ * null for a kind it does not make, or a step without its id. The one rule
+ * for both the file (`readDiagram` drops such a part) and an edit (which
+ * takes it as Auto), so that what is set reads back the same.
+ */
+export function titleBlockSource(value: { readonly kind?: unknown; readonly stepId?: unknown }): DiagramTitleBlockSource | null {
+  if (value.kind === 'none') return { kind: 'none' };
+  return value.kind === 'step' && typeof value.stepId === 'string' && value.stepId.length > 0
+    ? { kind: 'step', stepId: value.stepId }
+    : null;
 }
 
 function sameTitleBlockContent(a: DiagramTitleBlockContent, b: DiagramTitleBlockContent): boolean {
