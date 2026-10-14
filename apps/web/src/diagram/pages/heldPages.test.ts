@@ -29,6 +29,7 @@ import { PACKER_VERSION } from './flowArrangement';
 import { FIXTURE_FONTS } from '../fonts/diagramFonts.fixtures';
 import type { LayoutCell, LayoutPage } from './diagramPageLayout';
 import { layoutDiagram } from './diagramPages';
+import { flowLane } from './flowLane';
 import { fontTextSetter } from './fontTextSetter';
 import { setFrameScale } from '../zoom/zoomFrames';
 import { zoomReadout } from '../zoom/zoomActions';
@@ -395,23 +396,6 @@ describe('a structural edit', () => {
     bend,
   });
 
-  /**
-   * A page's band from its first step's picture to its last's: the curves
-   * between the lane's first and last stops (the first, on the diagram's
-   * first page, where the lane starts).
-   */
-  const bandThroughSteps = (page: LayoutPage) => {
-    const { from, curves } = page.band!;
-    const centre = (cell: LayoutCell) => ({ x: cell.pictureMm.x + cell.pictureMm.size / 2, y: cell.drawMm.y + cell.drawMm.h / 2 });
-    const stopAt = (cell: LayoutCell) => {
-      const { x, y } = centre(cell);
-      return from.x === x && from.y === y ? -1 : curves.findIndex(({ to }) => to.x === x && to.y === y);
-    };
-    const [first, last] = [stopAt(page.cells[0]!), stopAt(page.cells.at(-1)!)];
-    expect(last).toBeGreaterThanOrEqual(Math.max(0, first));
-    return curves.slice(first + 1, last + 1);
-  };
-
   /** Each page, by the step it starts with, and its signature. */
   const signed = (document: DiagramDocument) => {
     const slots = cellSlots(document);
@@ -467,11 +451,25 @@ describe('a structural edit', () => {
           const was = pagesBefore.get(page.cells[0]!.stepId)!;
           const at = `${label}, page ${index + 1}`;
           // Each step where it was and drawn as it was; an edit before the page may renumber them.
-          expect([page.cells.map(drawn), page.turns], at).toEqual([was.cells.map(drawn), was.turns]);
-          // Its band through its steps as it was. Beside a page packed again, the lane leaving it or coming into it
-          // may meet the other page's at another height across their spine (halfway between the two, `spineAt`).
-          if (changed[index - 1] || changed[index + 1]) expect(bandThroughSteps(page), at).toEqual(bandThroughSteps(was));
-          else expect(page.band, at).toEqual(was.band);
+          expect(page.cells.map(drawn), at).toEqual(was.cells.map(drawn));
+          if (!changed[index - 1] && !changed[index + 1]) {
+            expect([page.turns, page.band], at).toEqual([was.turns, was.band]);
+            return;
+          }
+          // Beside a page packed again, the lane leaving it or coming into it may meet the other page's at another
+          // height across their spine (halfway between the two, `spineAt`). Through the same stops as before, it
+          // is one curve (`flowLane.ts`, "(b4)"), so all of it is drawn again — and a glyph standing at a turn's
+          // middle on it with it. Every other glyph stands as it was.
+          const stopsOf = ({ spineIn: _in, spineOut: _out, ...rest }: NonNullable<LayoutPage['flow']>) => rest;
+          expect(stopsOf(page.flow!), at).toEqual(stopsOf(was.flow!));
+          const middles = flowLane(page.flow!)!.turns;
+          page.turns.forEach((turn, t) => {
+            const old = was.turns[t]!;
+            expect({ ...turn, at: old.at }, at).toEqual(old);
+            if (turn.at.x === old.at.x && turn.at.y === old.at.y) return;
+            const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+            expect(turn.at, `${at}, ${turn.id}`).toEqual(middles.get(k)?.at);
+          });
         });
       }
     }

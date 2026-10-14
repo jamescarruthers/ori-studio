@@ -1,6 +1,6 @@
 import type { DiagramPagesLayout, LayoutCell } from './diagramPageLayout';
 import { flowLane } from './flowLane';
-import { laneAcross, laneFollowsPlacement, markOutsideMargin, partBox, translateCell, type PagePart } from './pagePlacement';
+import { lanePicture, laneFollowsPlacement, markOutsideMargin, partBox, translateCell, type PagePart } from './pagePlacement';
 
 /**
  * Local preview geometry. No font loading, layout, document writes, or
@@ -12,6 +12,9 @@ import { laneAcross, laneFollowsPlacement, markOutsideMargin, partBox, translate
  * pages' own setter) replaces the step's caption, and moves nothing else. The
  * lane follows the step where the drag moves or resizes its picture, and
  * otherwise as far as its placement already had it (`laneFollowsPlacement`).
+ * Only the step's page draws its lane again, and the page facing it across the
+ * spine, whose lane meets it there: a page's lane is one curve, solved anew
+ * on every move, so every other page keeps the lane it had.
  */
 export function previewPlacement(
   base: DiagramPagesLayout,
@@ -45,9 +48,18 @@ export function previewPlacement(
     follows.set(pageIndex, { index, follows: part === 'frame' || part === 'picture' || factor !== 1 || laneFollowsPlacement(old) });
     // Symbols are re-placed on drop, once the final layout is ready.
   });
+  // The pages whose lane may move: the step's, and the one facing it across the spine.
+  const redrawn = new Set<number>();
+  for (const pageIndex of follows.keys()) {
+    redrawn.add(pageIndex);
+    const plan = layout.pages[pageIndex]!.flow?.plan;
+    if (plan?.entry === 'spine') redrawn.add(pageIndex - 1);
+    if (plan?.exit === 'spine') redrawn.add(pageIndex + 1);
+  }
   // Both sides of a printed spread share the moved spine height.
-  const stops = layout.pages.map((page, pageIndex) =>
-    page.flow?.stops.map((stop, index) => {
+  const stops = layout.pages.map((page, pageIndex) => {
+    if (!redrawn.has(pageIndex)) return page.flow?.stops;
+    return page.flow?.stops.map((stop, index) => {
       const cell = page.cells[index];
       if (!cell) return stop;
       const placed = follows.get(pageIndex);
@@ -55,13 +67,13 @@ export function previewPlacement(
         ...stop,
         x: cell.drawMm.x + cell.drawMm.w / 2,
         y: cell.drawMm.y + cell.drawMm.h / 2,
-        picture: laneAcross(cell),
+        picture: lanePicture(cell),
         placed: placed?.index === index ? placed.follows : laneFollowsPlacement(cell),
       };
-    }),
-  );
+    });
+  });
   layout.pages.forEach((page, index) => {
-    if (!page.flow || !stops[index]) return;
+    if (!page.flow || !stops[index] || !redrawn.has(index)) return;
     const shared = (left: number) => {
       const a = stops[left]?.at(-1),
         b = stops[left + 1]?.[0];

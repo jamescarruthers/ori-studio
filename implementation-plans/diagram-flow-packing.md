@@ -253,27 +253,36 @@ Phase 3 (layout, 2026-10-12):
   second layout. A save built before an adoption leaves the project clean
   (`onlyPackedSince`). Export, Print and step files pack the same way through
   `layoutDiagram` and write nothing back.
-- Lane: a bend with no step keeps its band inside the margin (Zach,
-  2026-10-13: the margin holds turn and rotate symbols): it turns past the
-  rows' ends to the band's edge on the margin where a round bend fits there,
-  and otherwise turns under the end pictures, their row's level, no sooner
-  than a picture's inner edge (`bendKnots`). It is two quarter circles with a
-  straight upright between, at least `ROUND_BEND` × the band's half width
-  round (2 where it can, 1.5 at least) so the band's inner edge stays a curve,
-  or a half ellipse where it reaches further than the rows are half apart.
-  Only a picture too near the margin for even the least round bend sends it
-  into the margin, no further than that bend needs. A row ending further in
-  runs straight to where the bend starts. (It once turned at the paper's
-  edge, half the margin in, `apexInset`.)
-  A step in a bend is a stop heading straight down or up, with no apex; each
-  side turns through a quarter circle as wide as that side is near, with a
-  straight run for the rest (`bendStepFeet`), and each side keeps its own
-  handle at the step (tangent, not C1, there): a shared handle pinched the
-  wider turn to a radius of 2.7 mm. A straight run's handles never shorten
-  its neighbours'. The last page's band ends at the last box's edge, or heads
-  on down from a step in a bend.
-- Turns: midway between two boxes in a band; on the band at a bend's apex
-  height, inside the margin with the bend, moved the least way clear of a
+- Lane (Zach, 2026-10-14, "(b4)": "Beautiful, that looks exactly right"):
+  one curve on a page, its tangent and its curvature continuous (a C2 cubic
+  spline in chord length, `laneSpline.ts`), through every picture's centre
+  and one point in each turn's middle, halfway between the rows' end pictures
+  in height; held level at the paper's edge where it runs off over the spine
+  or at a page turn. A turn keeps its band inside the margin (the margin holds
+  turn and rotate symbols): with room for a round loop — its middle half the
+  rows' pitch past the outer end picture — nothing else moves; without, its
+  middle stands as deep as the margin lets it, the band's outer edge on the
+  margin, and the row bows over its next-to-last picture (over it on the way
+  in, mirrored on the way out, inside its picture) on whichever side needs
+  least, in 0.25 mm steps, the least that leaves the turn no tighter than
+  22 mm (`TURN_RADIUS_MM`; the band's half width where wider, half the
+  rows' pitch where less); where no bow can, the least that leaves it within
+  0.1 mm of as round as a bow over that side can (`AS_ROUND_MM`), as the
+  prototype did, so a turn's bow grows as its room shrinks and never jumps
+  from all to none. A turn stands past the margin only where its end picture
+  stands too near it. The middle of a row of three bows for one of its two
+  turns at most: the one that keeps the page's turns roundest — each turn's
+  shortfall from its target, the furthest short first, compared in turn
+  within 0.5 mm (`rounder`) — else needs the least bow. A step in a bend is its
+  turn's middle; where it stands much further out than down from a band, the
+  lane leaves that band's level as far short of it as it stands down, so it
+  turns into it round (`bendFoot`). On crane_final the four turns bow as the
+  prototype did (6.25 mm over step 2, 17.25 over 5, 12.25 over 15, 6.5 under
+  16; `craneLane.fixtures.ts`). It replaced the quarter circles under the end
+  pictures of 2026-10-13 (`bendKnots`; "more like a rounded square than a
+  natural curve"), which replaced the loop at the paper's edge.
+- Turns: midway between two boxes in a band; on the band at a turn's middle
+  (`LaneTurn.at`), inside the margin with the turn, moved the least way clear of a
   step it would stand on; on the lane midway between a step in a
   bend and its neighbour; half the packed turn gutter outside a page's first
   or last box. A page with turns keeps its boxes `TURN_GUTTER_MM − 2` from the
@@ -693,4 +702,8 @@ changes Decisions 4 and 6, or the note just above, this holds:
 - [x] Hand moves keep their offsets across a re-pack while their steps keep page and band; Re-pack makes room for size pins, `pack-5` (Zach, 2026-10-13).
 - [ ] For Zach: a page whose pins no scale holds packs as before (decided here); kept offsets against homes moved inside their bands (evolution plan, part 2).
 - [x] Bends kept inside the margin, turning under the end pictures in round quarter circles; turns in a bend move with it (Zach, 2026-10-13).
+- [x] The lane as one C2 curve, its turns on the margin with the least bow over a next-to-last picture, "(b4)" (Zach, 2026-10-14); a step in a bend turned into round.
+- [x] Review of (b4): a turn no bow makes 22 mm round bows as round as one can (the prototype's rule; it bowed nothing, its bow jumping from 20 mm to none); a shared next-to-last picture goes to the turn it makes round enough even where another turn on the page can't be (judged on every turn's shortfall, not the tightest alone); the drag preview solves only the dragged page's lane and its spread partner's.
+- [ ] For Zach: on dense pages (A5 at 7–8 a page; 15, 24 and 28 a page) and wide bands, a turn the margin leaves no room for may bend tighter than the band's half width even bowed, its inner edge then coming to a point; kept inside the margin. A floor at the half width would stand such turns up to 19 mm past the margin at the default band (28 a page), off a 12 mm margin's paper. Never on A4 at up to 12 a page at the default band (tested).
+- [ ] For Zach: rows of one picture, and rows whose pictures stand at alternating heights, swing through them rather than run level (one C2 curve through their centres); beside a row of one picture the band can leave the top or bottom margin (28 a page landscape, page 2: by 9.8 mm at the default band).
 - [x] A caption 3 mm under its picture, 2 before (`CAPTION_TOP_MM`; Zach, 2026-10-13): a look on held pages (boxes and pictures kept, captions a millimetre lower), taller captioned boxes on fresh packs, `pack-6`.

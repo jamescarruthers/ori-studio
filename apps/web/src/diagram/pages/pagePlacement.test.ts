@@ -128,6 +128,26 @@ it('keeps the ribbon over moved pictures and keeps both sides of the spine level
   expect(left.band!.curves.at(-1)!.to.y).toBe(right.band!.from.y);
 });
 
+it('draws the lane again as a step is dragged only on its page and the page facing it across the spine', () => {
+  const doc = setPageSetup(
+    insertSteps(
+      createDiagram(),
+      Array.from({ length: 28 }, (_, i) => cpStep(`s${i}`)),
+      0,
+    ),
+    { layout: 'flow', stepsPerPage: 7 },
+  );
+  const base = prepare(doc).layout;
+  // Pages 1–2 and 3–4 are spreads, a page turn between them: a step on page 3 moves the lane on pages 3 and 4 only.
+  expect(base.pages.map((page) => page.side)).toEqual(['left', 'right', 'left', 'right']);
+  const moved = previewPlacement(base, base.pages[2]!.cells[3]!.stepId, 'picture', -6, 4);
+  expect(moved.pages[0]!.band).toBe(base.pages[0]!.band);
+  expect(moved.pages[1]!.band).toBe(base.pages[1]!.band);
+  expect(moved.pages[2]!.band).not.toEqual(base.pages[2]!.band);
+  expect(moved.pages[3]!.band).not.toBe(base.pages[3]!.band);
+  expect(moved.pages[2]!.flow!.spineOut).toBe(moved.pages[3]!.flow!.spineIn);
+});
+
 it('follows a step with the lane only where its picture was moved or resized, never for its number or its caption alone', () => {
   const placed = (offsets: DiagramStepPlace) => ({ placed: { offsets, pin: null, auto: { mmPerUnit: null, frameMm: null, drawMm: { x: 0, y: 0, w: 1, h: 1 } } } });
   expect(laneFollowsPlacement({})).toBe(false);

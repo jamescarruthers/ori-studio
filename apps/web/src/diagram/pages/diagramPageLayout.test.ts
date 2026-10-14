@@ -39,7 +39,7 @@ import {
 import { enlargeArrowMm, enlargeArrowSizes } from '../zoom/enlargeArrow';
 import { zoomSplits } from './zoomArrows';
 import { readFontMetrics, type FontMetrics } from '../fonts/fontMetrics';
-import { curvePoint, curveStart, type Lane } from './flowLane';
+import { curvePoint, curveStart, flowLane, type Lane } from './flowLane';
 import { estimateTextSetter } from './estimateTextSetter';
 import { PACKED_TURN_GUTTER_MM, packingArea } from './flowPacking';
 import { pastItsBox } from './pageOverflow.fixtures';
@@ -1249,7 +1249,7 @@ describe('turns between steps on the page (D22)', () => {
     expect(byId.get('turn-end')!.at.x).toBeCloseTo(fourth.pictureMm.x + fourth.pictureMm.size + gutter / 2, 6);
   });
 
-  it('prints one across a flow page’s bend on the band, where the bend turns inside the margin, going the way of the band it leads into', () => {
+  it('prints one across a flow page’s bend on the band at the turn’s middle, inside the margin, going the way of the band it leads into', () => {
     // Zach, 2026-10-06, the X-ray Heart's page 1: "the turn over step between
     // 3 and 4 should be rendered in the flow lane between steps 3 and 4, not
     // to the right of step 4." The prototype he chose stands it on the bend.
@@ -1264,9 +1264,11 @@ describe('turns between steps on the page (D22)', () => {
       expect(turn.rightToLeft, turn.id).toBe(Boolean(next.rightToLeft));
       if (before.band === next.band || before.bend || next.bend) continue;
       bends += 1;
-      // At the bend's apex, its band's edge on the margin (Zach, 2026-10-13: the margin is kept for marks like it),
-      // so its glyph stands inside the margin too.
-      expect(laneDistance(page.band!, turn.at), turn.id).toBeLessThan(result.bandWidthMm / 2);
+      // On the ribbon at the turn's middle, its band's edge no further out than the margin (Zach, 2026-10-13: the
+      // margin is kept for marks like it; 2026-10-14, "(b4)"), so its glyph stands inside the margin too.
+      const middle = flowLane(page.flow!)!.turns.get(k)!;
+      expect(turn.at, turn.id).toEqual(middle.at);
+      expect(laneDistance(page.band!, turn.at), turn.id).toBeLessThan(1e-6);
       expect(turn.at.x - turn.box.w / 2, turn.id).toBeGreaterThanOrEqual(m - 1e-9);
       expect(turn.at.x + turn.box.w / 2, turn.id).toBeLessThanOrEqual(W - m + 1e-9);
       expect(turn.at.y, turn.id).toBeCloseTo((before.drawMm.y + before.drawMm.h / 2 + next.drawMm.y + next.drawMm.h / 2) / 2, 9);
@@ -1661,10 +1663,12 @@ describe('enlarged steps on the page (Revision 2)', () => {
       expect(arrow!.at.x).toBeCloseTo((next.cellMm.x + next.cellMm.w + before.cellMm.x) / 2, 6);
     });
 
-    it('prints across a flow page’s bend on the band, where a turn would', () => {
-      const { page, result, areaAt } = flowArrowed(9, atBend);
+    it('prints across a flow page’s bend on the band at the turn’s middle, where a turn would', () => {
+      const { page, areaAt } = flowArrowed(9, atBend);
       const [arrow] = page.zoomArrows;
-      expect(laneDistance(page.band!, arrow!.at)).toBeLessThan(result.bandWidthMm / 2);
+      const k = page.cells.findIndex((cell) => cell.stepId === arrow!.beforeStepId);
+      expect(arrow!.at).toEqual(flowLane(page.flow!)!.turns.get(k)!.at);
+      expect(laneDistance(page.band!, arrow!.at)).toBeLessThan(1e-6);
       expect(arrow!.liftable).toBe(false);
       // Where a turn there prints.
       const turned = layout(steps(9, (index) => (index === areaAt + 1 ? { turnsBefore: [over('turn-a')] } : {})), { layout: 'flow', stepsPerPage: 9 });

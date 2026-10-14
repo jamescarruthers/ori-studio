@@ -83,7 +83,6 @@ import {
 } from './flowArrangement';
 import { roundPageArrangement } from '../document/pageArrangements';
 import {
-  bendXAt,
   flowLane,
   flowPagePlan,
   pageSide,
@@ -108,7 +107,7 @@ import { printPaper, type PrintPaper } from './printPaper';
 import { keepsMovedFrame } from './repackedFrames';
 import { normalizeStepPlace } from '../document/placeValues';
 import { pinnedCaptionWidth, setCaption } from './captionMeasure';
-import { laneAcross, laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
+import { lanePicture, laneFollowsPlacement, markOutsideMargin, pageOffset, partBox, placeCell, type PageBox } from './pagePlacement';
 import { STEP_NUMBER_SIZE_MM, STEP_TEXT_LEADING_MM, STEP_TEXT_SIZE_MM, TEXT_DESCENT_MM } from './stepType';
 
 // The type a step is set in, which placement's hit boxes measure too.
@@ -1313,15 +1312,15 @@ export function layoutDiagramPages(
   );
 
   // The lane's stops on each flow page: every picture's centre as drawn, in
-  // its band, a step in a bend turned through; and how far across its picture
-  // reaches, which a bend may turn under.
+  // its band, a step in a bend turned through; and its picture's box, which a
+  // row bowing over it keeps inside.
   const stopPages: LaneStop[][] = cellPages.map((cells) =>
     flow
       ? cells.map((cell): LaneStop => {
           const band = cell.band ?? 0;
           return {
             ...laneCentre(cell),
-            picture: laneAcross(cell),
+            picture: lanePicture(cell),
             row: band,
             rightToLeft: band % 2 === 1,
             ...(cell.bend ? { bend: true } : {}),
@@ -1351,7 +1350,7 @@ export function layoutDiagramPages(
             stops: stopPages[pageIndex]!,
             plan,
             pageWidth: W,
-            // A bend with no step in it keeps its band inside the margin where the pictures leave it room.
+            // A turn between two rows keeps its band inside the margin.
             margin: m,
             halfWidth,
             offPage: OFF_PAGE_MM,
@@ -1970,8 +1969,8 @@ function laneCentre(cell: LayoutCell): { x: number; y: number } {
  * Where the turns on a page print (D22): between two pictures on one row,
  * midway between them at their centres' height — on a flow page, between
  * their boxes, in the gutter the packing kept; across a flow page's bend with
- * no step in it, on the lane at the bend's apex, toward the page's edge
- * (`flowLane`, also when the lane is not shown); between a step in a bend
+ * no step in it, on the lane at the turn's middle, toward the page's edge
+ * (`flowLane`'s `LaneTurn`, also when the lane is not shown); between a step in a bend
  * and its neighbour, midway between their pictures' centres; before a picture
  * that starts a grid's row or the page, at its leading edge — a page's first
  * step has no row on the page to turn from, and the lane comes in at its
@@ -2119,11 +2118,10 @@ function placeTurns(
           // then moves clear of both boxes.
           at = { x: (previous.x + next.x) / 2, y: (previous.y + next.y) / 2 };
         } else {
-          // On the bend's apex, where the lane turns between the two bands: its band's edge on the margin, as a rule.
-          const y = (previous.y + next.y) / 2;
-          const bend = lane?.bends.get(k);
-          const onLane = lane && bend !== undefined ? bendXAt(lane.lane, bend, y) : null;
-          at = { x: onLane ?? (outward > 0 ? pageWidth - flow.bendInset : flow.bendInset), y };
+          // On the lane at the turn's middle, where it turns between the two bands: halfway between their heights, as
+          // deep as the margin lets the turn stand.
+          const middle = lane?.turns.get(k)?.at;
+          at = middle ? { ...middle } : { x: outward > 0 ? pageWidth - flow.bendInset : flow.bendInset, y: (previous.y + next.y) / 2 };
         }
         // An arrow there points at the step it leads to, not across the page.
         stack(before, at, k, step.id, { toward: next, outward });
