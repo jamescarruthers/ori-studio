@@ -364,6 +364,27 @@ describe('the title block (diagram-title-block.md)', () => {
     expect(state().diagram).toBe(readOnly);
   });
 
+  it('takes a sitting at the byline as one undo step, and drops a byline typed into a diagram since replaced', () => {
+    install();
+    const loadId = state().diagramLoadId;
+    // The field commits at each pause in typing: one sitting, one step.
+    expect(state().setDiagramTitleBlockContent({ byline: 'Design' }, { loadId, session: 7 })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ byline: 'Design: Lang' }, { loadId, session: 7 })).toBe(true);
+    expect(undoSteps()).toBe(1);
+    // Another sitting is a step of its own, and so is the sitting's commit after another edit.
+    state().setDiagramTitleBlockContent({ byline: 'Design: Lang\nPaper: 35 cm' }, { loadId, session: 8 });
+    expect(undoSteps()).toBe(2);
+    state().setDiagramTitleBlockContent({ model: { kind: 'none' } });
+    state().setDiagramTitleBlockContent({ byline: 'Design: R. Lang\nPaper: 35 cm' }, { loadId, session: 8 });
+    expect(undoSteps()).toBe(4);
+    state().undoDiagram();
+    expect(state().diagram!.titleBlockContent).toEqual({ model: { kind: 'none' }, byline: 'Design: Lang\nPaper: 35 cm' });
+    // Typed against the diagram another has replaced since: it lands nowhere.
+    install();
+    expect(state().setDiagramTitleBlockContent({ byline: 'Design: Lang' }, { loadId, session: 9 })).toBe(false);
+    expect(state().diagram!.titleBlockContent).toBeUndefined();
+  });
+
   it('moves no step with what it shows: every page held as packed, no frame sent home', () => {
     install(plain(12).map((step) => ({ ...step, place: PLACE })));
     state().setDiagramPage(ON);

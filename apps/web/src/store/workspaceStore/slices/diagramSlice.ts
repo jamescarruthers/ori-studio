@@ -563,8 +563,14 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       return true;
     },
 
-    setDiagramTitleBlockContent: (patch) =>
-      commit('Change title block', (document) => setTitleBlockContent(document, patch)) !== null,
+    setDiagramTitleBlockContent: (patch, { loadId, session } = {}) => {
+      if (loadId !== undefined && loadId !== get().diagramLoadId) return false;
+      const { extend, remember } = sessionFor('title-block', session);
+      const next = commit('Change title block', (document) => setTitleBlockContent(document, patch), extend);
+      if (!next) return false;
+      remember();
+      return true;
+    },
 
     setDiagramStepBreakBefore: (stepId, breakBefore) =>
       commit(breakBefore ? 'Start a new page' : 'Continue the page', (document) =>

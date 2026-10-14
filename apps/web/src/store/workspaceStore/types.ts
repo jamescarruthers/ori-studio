@@ -2179,8 +2179,15 @@ export interface DiagramSliceActions {
    * Set what the first page's title block shows — its model, its crease
    * pattern, its byline — each call one undo step. Its room is the page
    * setup's (`setDiagramPage`, `titleBlock`); what it shows moves no step.
+   *
+   * `loadId` and `session` are the byline's, as for an instruction
+   * (`setDiagramStepText`): an edit that outlives its diagram is dropped, and
+   * the commits of one sitting at the field are one undo step.
    */
-  setDiagramTitleBlockContent: (patch: DiagramTitleBlockContentPatch) => boolean;
+  setDiagramTitleBlockContent: (
+    patch: DiagramTitleBlockContentPatch,
+    options?: { loadId?: number; session?: number }
+  ) => boolean;
   /** Start a new page at the step, or stop doing so ("Start a new page here", D10). */
   setDiagramStepBreakBefore: (stepId: string, breakBefore: boolean) => boolean;
   /**
