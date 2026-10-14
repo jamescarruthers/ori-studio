@@ -1,0 +1,32 @@
+{
+  "sourceStep": 11,
+  "viewPick": [
+    0.12,
+    0.42
+  ],
+  "op": {
+    "kind": "squash",
+    "flap": [
+      0.712132034355964,
+      0.8818376618407356
+    ],
+    "direction": "valley"
+  },
+  "result": {
+    "status": "refused",
+    "refusal": {
+      "code": "squash_no_flap",
+      "faces": [
+        39,
+        41
+      ],
+      "cause": "no_hinge"
+    },
+    "fixes": [],
+    "faces": [
+      39,
+      41
+    ],
+    "vertices": []
+  }
+}

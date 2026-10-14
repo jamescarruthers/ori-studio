@@ -1,0 +1,27 @@
+{
+  "source": "https://origami.me/pentagon-from-square-paper/",
+  "file": "models/pentagon-from-square-paper.osf",
+  "fileSha256": "fc90e71ee73143f2270d4fc3d70eb8d8f1e00e351df48b7f1382584c8f2d1bef",
+  "nodes": 9,
+  "folds": 7,
+  "finalFaces": 12,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "cedeefcbf771ee475cf1352aea0c73389389cd012819499550b4a4aace578e97",
+    "b9c5a0878a201539cdac85d19bdde5b6c950b725023755bb7672964749707677",
+    "7388c328d72cfe103f04f6f90a914a02352970ca33d8235eef2ed9fc40246dea",
+    "356208fb5c871a6c47c28c9fce94864b6fdcd05d11f5ff18e26cdd5db770b9df",
+    "21af54231f69d49766d7778d6c736992694719099f18ee75e9f17034163fa407",
+    "f91a4f25379c3b7ad3c5356391e450eebee38d6df5bfb1ca91e67eaa46fda053",
+    "697345ca233a31a578af5ed0a7629d7ee12508042aa6c0e1c4b7e2125bc1c36b",
+    "9ef88a9f0202a10e1dc477d108b72b55b51fb5550c3a10af8048ae826e53b841",
+    "9447777801a1f49d6f7e76f1b45f6d99b86f615e1f9b729dbf33723d544d8c00"
+  ],
+  "sourceSteps": 10,
+  "sourceStepsCompleted": 8,
+  "audit": "verified prefix; ready for user audit",
+  "allSavedStatesVisuallyCheckedInFold": true,
+  "checkedStates": 10,
+  "sourceDiagramsReviewed": 12
+}

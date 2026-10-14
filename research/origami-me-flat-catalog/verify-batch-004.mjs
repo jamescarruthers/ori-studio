@@ -13,6 +13,41 @@ for(const slug of process.argv.slice(2)){
  for(const n of d.steps){t.add(n.op,n.note,n.choices);states.push(hash(JSON.stringify(t.e.canonical_keys(t.state).sort())));}
  assert.deepEqual(states,manifest.stateHashes);
  const evidence={slug,allStatesReplayedIdentically:true};
+ if(slug==='4-pointed-star'){
+  const marks=t.e.scene(t.states[12]).crease_marks;
+  assert.equal(marks.length,8,'All eight partial precreases retained as marks.');
+  evidence.partialCreases=marks;
+  const s=t.scene();
+  for(const p of [[-.8,.6],[-.4,.6],[-.8,.2],[-.4,.2]]){
+   const cell=s.subfaces.find(c=>inside(p,c.polygon));assert(cell);
+   assert.equal(s.faces[cell.faces_top_to_bottom[0]].front_up,false,'Four exposed panels white after turnover.');
+  }
+  evidence.allFourPanelsWhite=true;
+ }
+ if(slug==='pentagon-from-square-paper'){
+  const marks=t.e.scene(t.states[3]).crease_marks;
+  assert.equal(marks.length,2);
+  assert(marks.every(m=>m.from.y<.5&&m.to.y<.5),'Reference pinches stay on the folded-up front ply, not the stationary back ply.');
+  evidence.frontPlyOnlyReferenceMarks=marks;
+ }
+ if(slug==='rectangle-to-hexagon'){
+  const marks=t.e.scene(t.states[2]).crease_marks;
+  assert.equal(marks.length,1);
+  assert(Math.abs(marks[0].from.y-Math.SQRT1_2/4)<1e-8);
+  evidence.quarterHeightPartialMark=marks;
+ }
+ if(slug==='goldfish'){
+  evidence.horns=[];
+  for(const p of [[-.2,.58],[.2,.58]]){
+   const before=t.at(p,0,t.states[9]),after=t.at(p);
+   assert(eq(before,after),'Hem and back folds preserve both horn materials.');
+   evidence.horns.push({point:p,before,after});
+  }
+  const s=t.scene();
+  const band=s.subfaces.find(c=>inside([.02,.4],c.polygon));
+  assert.equal(s.faces[band.faces_top_to_bottom[0]].front_up,false);
+  evidence.bandStaysWhite=true;
+ }
  if(slug.startsWith('ninja-star-')){
   const p=slug.endsWith('a')?[-.45,.57]:[-.8,.57];
   const before=t.at(p,0,t.states[8]),after=t.at(p,0,t.states[9]);

@@ -32,7 +32,7 @@ Check every intermediate step, visible paper side, layer order, tucked flap, and
 
 - Batch 2: [Bookmark and Dog](batches/002.md). Bookmark is **ready for audit**; Dog is **blocked at source 13**, with its valid prefix saved. All 29 saved states replayed. Bookmark adds an internal pocket-order audit case; Dog remains an investigation, not a confirmed missing primitive.
 
-- Batch 4: [current running report](batches/004.md). Penguin is ready for audit. Thirteen native files have checked states; Witch Hat and the squash-selection case have confirmed restrictions, with remaining compound attempts marked as investigations.
+- Batch 4: [current running report](batches/004.md). Penguin is ready for audit. Seventeen native files have checked states; Witch Hat and the squash-selection case have confirmed restrictions, with remaining compound attempts marked as investigations.
 
 ## Functionality findings
 
@@ -52,8 +52,8 @@ See [GAPS.md](GAPS.md). Separate missing operations, UI limitations, authoring m
 ## Next work
 
 1. Apply any user audit corrections first, preserving user-saved models.
-2. Continue Very Easy candidates: Fortune Teller, Goldfish, Heart Card, Rose, and Star. `catalog.json` holds the current queue.
-3. Batch 4 has one complete model (Penguin), verified prefixes for eleven additional designs, explicit 3D exclusions, and Wallet's access blocker. A five-native-file audit checkpoint was reported while the completion count remains explicit.
+2. Very Easy classification and first attempts are recorded. Continue Easy: Butterfly, Camellia, Candle, Candy Box, and Celebration Crane. `catalog.json` holds the current queue.
+3. Batch 4 has one complete model (Penguin), verified prefixes for fourteen additional designs, explicit 3D exclusions, and Wallet's access blocker. A five-native-file audit checkpoint was reported while the completion count remains explicit.
 4. Revisit connected opening and swivel investigations with exact source geometry; keep them distinct from confirmed limitations.
 5. Consolidate implementation requirements after evidence exists. Continue locally without a schedule, PR, or push.
 
@@ -67,13 +67,13 @@ The machine-readable [catalog.json](catalog.json) is the per-design ledger. Run 
 
 ## Per-design progress
 
-Inventory: 151 entries. blocked: 18; excluded 3D / flat variant: 15; in progress: 1; queued: 105; ready for audit: 12.
+Inventory: 151 entries. blocked: 22; excluded 3D / flat variant: 26; queued: 91; ready for audit: 12.
 
 | Design / tutorial | Difficulty | Eligibility | Progress | Fold file / notes |
 | --- | --- | --- | --- | --- |
 | [How to Make Rectangular Paper into a Square](https://origami.me/rectangle-paper-to-square/) | Very Easy | flat preparation | blocked | [Open .osf](models/rectangle-paper-to-square.osf); [Batch notes](batches/003.md); Flat preparation through source 2; required strip cut has no public Fold operation. |
 | [Origami 3D Butterfly](https://origami.me/yoshizawa-butterfly/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/003.md); Required curved sides in 7 and spatial wing shaping in 9. |
-| [Origami 5-Pointed Star](https://origami.me/5-pointed-star/) | Very Easy | modular; review pending | in progress | [Batch notes](batches/003.md); Full diagrams reviewed; confirm whether final assembly can lie flat. |
+| [Origami 5-Pointed Star](https://origami.me/5-pointed-star/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 10 instructions and 11 diagrams plus completed photograph reviewed. The finished modular star retains raised ridges; source describes a dimensional star. Excluded 3D completion, not a flat assembly blocked solely by F024. |
 | [Origami Angel](https://origami.me/angel/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/003.md); Source 11 partially closes the body into a standing pose. |
 | [Origami Angelfish](https://origami.me/angelfish/) | Very Easy | flat | ready for audit | [Open .osf](models/angelfish.osf); [Batch notes](batches/003.md); All steps replayed and visually checked in Fold; paper-side and material checks passed. |
 | [Origami Bird](https://origami.me/bird/) | Very Easy | flat folded endpoint; optional flapping action | blocked | [Open .osf](models/bird.osf); [Batch notes](batches/004.md); Square base and closed kite through source 6 verified. Source 7 opening moved wrong connected layers; exact invalid attempt retained separately. |
@@ -91,12 +91,12 @@ Inventory: 151 entries. blocked: 18; excluded 3D / flat variant: 15; in progress
 | [Origami Fan](https://origami.me/fan/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 11 instructions and 12 diagrams reviewed. Required source 11 spreads accordion pleats; completed fan retains out-of-plane ridges. |
 | [Origami Fish](https://origami.me/fish/) | Very Easy | flat | ready for audit | [Open .osf](models/fish.osf); [Batch notes](batches/003.md); All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed. |
 | [Origami Floral Swirls](https://origami.me/floral-swirls/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 22 instructions and 28 diagrams reviewed. Four preparation, six unit, twelve assembly steps. Required final curl makes petals non-flat. Flat assembly through 11 would be a labeled variant, not tutorial completion. |
-| [Origami Fortune Teller](https://origami.me/fortune-teller/) | Very Easy | unreviewed | queued |  |
+| [Origami Fortune Teller](https://origami.me/fortune-teller/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 11 instructions and 12 diagrams reviewed. Final finger-pocket opening produces a spatial toy; flat preparation is not tutorial completion. |
 | [Origami Fox](https://origami.me/fox/) | Very Easy | flat | blocked | [Open .osf](models/fox.osf); [Batch notes](batches/004.md); Central multi-ply squash unresolved; direct and tentative middle-fold requests lack a recognized spine. Prefix through 7 verified in Fold. |
-| [Origami Goldfish](https://origami.me/goldfish/) | Very Easy | unreviewed | queued |  |
+| [Origami Goldfish](https://origami.me/goldfish/) | Very Easy | flat | blocked | [Open .osf](models/goldfish.osf); [Batch notes](batches/004.md); All 14 instructions and 15 diagrams reviewed. Fourteen-node prefix through source 10 checked in Fold. Source 11 pocket collapse remains an investigation; source 12 requires missing layer-selective cuts. |
 | [Origami Happi](https://origami.me/happi/) | Very Easy | flat | blocked | [Open .osf](models/happi.osf); [Batch notes](batches/004.md); Source-6 collar reference unresolved; native file rolled back to the nine-node source-5 checkpoint. Invalid downstream attempt retained separately. |
 | [Origami Heart](https://origami.me/heart/) | Very Easy | flat | ready for audit | [Open .osf](../2026-10-13-origami-fold-trials/models/heart.osf); [Batch notes](../2026-10-13-origami-fold-trials/REPORT.md); Existing sequence; preserve local user edits. |
-| [Origami Heart Card](https://origami.me/heart-card/) | Very Easy | unreviewed | queued |  |
+| [Origami Heart Card](https://origami.me/heart-card/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 12 instructions and 13 diagrams reviewed. Required source 12 adjusts the center fold into a standing V. Flat source-11 card is a possible variant, not full tutorial completion. Step-2 JPG link is broken; the page’s actual PNG image was reviewed. |
 | [Origami Horse](https://origami.me/horse/) | Very Easy | flat | blocked | [Open .osf](models/horse.osf); [Batch notes](batches/004.md); Required source 8 partial cut through the front layer has no public Fold operation. Sixteen-node verified prefix; all 20 instructions and 21 diagrams reviewed. |
 | [Origami Jack-O'-Lantern](https://origami.me/jack-o-lantern/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 21 instructions and 22 diagrams reviewed. Required source-20 three-ray stem pinch and source-21 curved shaping retain a non-flat stem. The pumpkin face is flat, but a flat stem variant would not reproduce the shown finish. |
 | [Origami Kimono](https://origami.me/kimono/) | Very Easy | flat | blocked | [Open .osf](models/kimono.osf); [Batch notes](batches/003.md); Final connected sleeve collapse unresolved; single-pocket squash refusals are not proof of a missing primitive. Every saved prefix state checked in Fold. |
@@ -108,27 +108,27 @@ Inventory: 151 entries. blocked: 18; excluded 3D / flat variant: 15; in progress
 | [Origami Parrot](https://origami.me/parrot/) | Very Easy | flat | blocked | [Open .osf](models/parrot.osf); [Batch notes](batches/004.md); Eight-node prefix through opening the upper flap. Direct squash refuses squash_flap_not_free; connected wing interpretation remains under investigation. |
 | [Origami Penguin](https://origami.me/penguin/) | Very Easy | flat | ready for audit | [Open .osf](models/penguin.osf); [Batch notes](batches/004.md); All 12 states checked in Fold; outside reverse head wraps both neck walls, preserving white chest and colored wing. |
 | [Origami Pigeon](https://origami.me/pigeon/) | Very Easy | flat | ready for audit | [Open .osf](models/pigeon.osf); [Batch notes](batches/003.md); All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed. |
-| [Origami Rose](https://origami.me/rose/) | Very Easy | unreviewed | queued |  |
+| [Origami Rose](https://origami.me/rose/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 9 instructions and 10 diagrams plus the step-2 photograph reviewed. Required source 9 curls petals into non-flat surfaces. Flat source-8 variant is not tutorial completion. |
 | [Origami Santa](https://origami.me/santa/) | Very Easy | flat | ready for audit | [Open .osf](models/santa.osf); [Batch notes](batches/003.md); All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed. |
 | [Origami Shirt](https://origami.me/shirt/) | Very Easy | flat | blocked | [Open .osf](models/shirt.osf); [Batch notes](batches/004.md); Source 7 sleeve opening requires a validated compound mapping; direct squash has no hinge. Nine-node verified prefix. |
-| [Origami Star](https://origami.me/star/) | Very Easy | unreviewed | queued |  |
+| [Origami Star](https://origami.me/star/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 9 instructions and 12 diagrams reviewed. Required final pinching puffs the pentagonal packet into a 3D lucky star. |
 | [Origami Sunglasses](https://origami.me/sunglasses/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All nine instructions and ten diagrams reviewed. Source 9 requires both temples bent to 90 degrees out of plane. |
 | [Origami Swan](https://origami.me/swan/) | Very Easy | flat | ready for audit | [Open .osf](../2026-10-13-origami-fold-trials/models/swan.osf); [Batch notes](../2026-10-13-origami-fold-trials/REPORT.md); Outside reverse neck and head. |
 | [Origami Vampire Mouth](https://origami.me/vampire-mouth/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 16 instructions and 20 diagrams including alternative fangs reviewed, plus final photograph. Source 16 presses a three-ray lip dimple while leaving the model open; the final photo shows curved lower lip and raised center. Flat prefix/variant is not tutorial completion. |
 | [Origami Wallet](https://origami.me/wallet/) | Very Easy | access blocked | blocked | [Batch notes](batches/004.md); Public page exposes only Early Access notice; full tutorial unavailable. Eligibility unconfirmed; no access bypass attempted. |
-| [Origami Water Bomb](https://origami.me/waterbomb/) | Very Easy | unreviewed | queued |  |
+| [Origami Water Bomb](https://origami.me/waterbomb/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 9 instructions and 10 diagrams reviewed. Required source 9 inflates the packet into a volume; excluded completion. |
 | [Origami Whale](https://origami.me/whale/) | Very Easy | flat | blocked | [Open .osf](models/whale.osf); [Batch notes](batches/003.md); Precreased fish-base rabbit ear refuses fan_center; matching unprecreased control accepts both ears. Every saved prefix state checked in Fold. |
 | [Origami Witch Hat](https://origami.me/witch-hat/) | Very Easy | flat | blocked | [Open .osf](models/witch-hat.osf); [Batch notes](batches/004.md); Partial precrease on an existing flat crease refuses extent_misses_layers; 12-node valid prefix retained. |
 | [Origami Yoda](https://origami.me/yoda/) | Very Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 15 instructions, 16 diagrams and completed photo reviewed. Required source 15 rear stand is spatial; a flattened robe variant would not be tutorial completion. |
 | [Paper Envelope](https://origami.me/paper-envelope/) | Very Easy | flat | blocked | [Open .osf](models/paper-envelope.osf); [Batch notes](batches/003.md); Partial through source 7; wide swivel 8–9 refused; interpretation under investigation. |
-| [Rectangle to Hexagon](https://origami.me/rectangle-to-hexagon/) | Very Easy | unreviewed | queued |  |
-| [Square to Pentagon](https://origami.me/pentagon-from-square-paper/) | Very Easy | unreviewed | queued |  |
-| [Easy Origami Lazy Susan](https://origami.me/lazy-susan/) | Easy | unreviewed | queued |  |
-| [Origami 4-pointed Star](https://origami.me/4-pointed-star/) | Easy | unreviewed | queued |  |
-| [Origami Balloon Rabbit](https://origami.me/balloon-rabbit/) | Easy | unreviewed | queued |  |
-| [Origami Basket](https://origami.me/basket/) | Easy | unreviewed | queued |  |
-| [Origami Bat](https://origami.me/bat/) | Easy | unreviewed | queued |  |
-| [Origami Bellflower](https://origami.me/bellflower/) | Easy | unreviewed | queued |  |
+| [Rectangle to Hexagon](https://origami.me/rectangle-to-hexagon/) | Very Easy | flat preparation | blocked | [Open .osf](models/rectangle-to-hexagon.osf); [Batch notes](batches/004.md); All 11 instructions and 12 diagrams reviewed. Five-node prefix through source 5 verified in Fold. Source 6 requires an oblique cut through both folded layers; source 10 needs another cut. |
+| [Square to Pentagon](https://origami.me/pentagon-from-square-paper/) | Very Easy | flat preparation | blocked | [Open .osf](models/pentagon-from-square-paper.osf); [Batch notes](batches/004.md); All 10 instructions and 12 diagrams reviewed. Nine-node prefix includes orientation for source 9; all 10 states verified. Required straight cut through the packet is missing. Front-ply-only reference marks checked. |
+| [Easy Origami Lazy Susan](https://origami.me/lazy-susan/) | Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 18 instructions and 19 diagrams reviewed. Required steps 17–18 open and curve the compartments into a container; excluded 3D completion. |
+| [Origami 4-pointed Star](https://origami.me/4-pointed-star/) | Easy | flat | blocked | [Open .osf](models/4-pointed-star.osf); [Batch notes](batches/004.md); All 20 instructions and 21 diagrams reviewed. Twenty-one-node packet through source 14; all 22 states checked in Fold. Source 15 swivel refuses fan_ray_blocked; investigation, not a confirmed missing primitive. |
+| [Origami Balloon Rabbit](https://origami.me/balloon-rabbit/) | Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 15 instructions and 16 diagrams reviewed. Step 14 opens curved ears; required step 15 inflates the body. Excluded 3D completion. |
+| [Origami Basket](https://origami.me/basket/) | Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 20 instructions (3 preparation, 3 handle, 14 basket) and 21 diagrams reviewed. Curved handle plus basket steps 13–14 open and finish a spatial container. Excluded 3D completion. |
+| [Origami Bat](https://origami.me/bat/) | Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 12 instructions, 13 diagrams and completed photograph reviewed. Required step 12 spreads the wings while retaining a raised central pocket and ridges; photograph confirms non-flat completion. A pressed-flat alternative would be a variant. |
+| [Origami Bellflower](https://origami.me/bellflower/) | Easy | 3D completion | excluded 3D / flat variant | [Batch notes](batches/004.md); All 21 instructions and 23 diagrams reviewed. Source 17 explicitly starts non-flat folding, retained through completion; final petals curl. Excluded 3D completion. |
 | [Origami Box](https://origami.me/box/) | Easy | 3D completion | excluded 3D / flat variant | [Open .osf](../2026-10-13-origami-fold-trials/models/box.osf); Flat preparation only; upright walls excluded. |
 | [Origami Butterfly](https://origami.me/butterfly/) | Easy | unreviewed | queued |  |
 | [Origami Camellia](https://origami.me/camellia/) | Easy | unreviewed | queued |  |

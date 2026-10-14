@@ -8,11 +8,11 @@
   ],
   "coverage": "All five pages of the current index, cross-checked against all 142 easy collection entries. Eligibility review ongoing.",
   "nextQueue": [
-    "fortune-teller",
-    "goldfish",
-    "heart-card",
-    "rose",
-    "star"
+    "butterfly",
+    "camellia",
+    "candle",
+    "candy-box",
+    "celebration-crane"
   ],
   "designs": [
     {
@@ -59,14 +59,15 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "modular; review pending",
-      "status": "in progress",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": "Full diagrams reviewed; confirm whether final assembly can lie flat.",
-      "report": "batches/003.md"
+      "notes": "All 10 instructions and 11 diagrams plus completed photograph reviewed. The finished modular star retains raised ridges; source describes a dimensional star. Excluded 3D completion, not a flat assembly blocked solely by F024.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "angel",
@@ -388,13 +389,14 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 11 instructions and 12 diagrams reviewed. Final finger-pocket opening produces a spatial toy; flat preparation is not tutorial completion.",
+      "report": "batches/004.md"
     },
     {
       "slug": "fox",
@@ -424,13 +426,18 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 10,
+      "model": "models/goldfish.osf",
+      "gaps": [
+        "F025",
+        "F011"
+      ],
+      "notes": "All 14 instructions and 15 diagrams reviewed. Fourteen-node prefix through source 10 checked in Fold. Source 11 pocket collapse remains an investigation; source 12 requires missing layer-selective cuts.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "happi",
@@ -476,13 +483,15 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 12 instructions and 13 diagrams reviewed. Required source 12 adjusts the center fold into a standing V. Flat source-11 card is a possible variant, not full tutorial completion. Step-2 JPG link is broken; the page\u2019s actual PNG image was reviewed.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "horse",
@@ -701,13 +710,15 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 9 instructions and 10 diagrams plus the step-2 photograph reviewed. Required source 9 curls petals into non-flat surfaces. Flat source-8 variant is not tutorial completion.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "santa",
@@ -753,13 +764,15 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 9 instructions and 12 diagrams reviewed. Required final pinching puffs the pentagonal packet into a 3D lucky star.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "sunglasses",
@@ -842,13 +855,15 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 9 instructions and 10 diagrams reviewed. Required source 9 inflates the packet into a volume; excluded completion.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "whale",
@@ -933,13 +948,16 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat preparation",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 5,
+      "model": "models/rectangle-to-hexagon.osf",
+      "gaps": [
+        "F011"
+      ],
+      "notes": "All 11 instructions and 12 diagrams reviewed. Five-node prefix through source 5 verified in Fold. Source 6 requires an oblique cut through both folded layers; source 10 needs another cut.",
+      "report": "batches/004.md"
     },
     {
       "slug": "pentagon-from-square-paper",
@@ -949,13 +967,16 @@
       "difficulty": "Very Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat preparation",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 8,
+      "model": "models/pentagon-from-square-paper.osf",
+      "gaps": [
+        "F011"
+      ],
+      "notes": "All 10 instructions and 12 diagrams reviewed. Nine-node prefix includes orientation for source 9; all 10 states verified. Required straight cut through the packet is missing. Front-ply-only reference marks checked.",
+      "report": "batches/004.md"
     },
     {
       "slug": "lazy-susan",
@@ -965,13 +986,15 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 18 instructions and 19 diagrams reviewed. Required steps 17\u201318 open and curve the compartments into a container; excluded 3D completion.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "4-pointed-star",
@@ -981,13 +1004,16 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 14,
+      "model": "models/4-pointed-star.osf",
+      "gaps": [
+        "F026"
+      ],
+      "notes": "All 20 instructions and 21 diagrams reviewed. Twenty-one-node packet through source 14; all 22 states checked in Fold. Source 15 swivel refuses fan_ray_blocked; investigation, not a confirmed missing primitive.",
+      "report": "batches/004.md"
     },
     {
       "slug": "balloon-rabbit",
@@ -997,13 +1023,14 @@
       "difficulty": "Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 15 instructions and 16 diagrams reviewed. Step 14 opens curved ears; required step 15 inflates the body. Excluded 3D completion.",
+      "report": "batches/004.md"
     },
     {
       "slug": "basket",
@@ -1013,13 +1040,14 @@
       "difficulty": "Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 20 instructions (3 preparation, 3 handle, 14 basket) and 21 diagrams reviewed. Curved handle plus basket steps 13\u201314 open and finish a spatial container. Excluded 3D completion.",
+      "report": "batches/004.md"
     },
     {
       "slug": "bat",
@@ -1029,13 +1057,14 @@
       "difficulty": "Easy",
       "indexPage": 5,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 12 instructions, 13 diagrams and completed photograph reviewed. Required step 12 spreads the wings while retaining a raised central pocket and ridges; photograph confirms non-flat completion. A pressed-flat alternative would be a variant.",
+      "report": "batches/004.md"
     },
     {
       "slug": "bellflower",
@@ -1045,13 +1074,14 @@
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 21 instructions and 23 diagrams reviewed. Source 17 explicitly starts non-flat folding, retained through completion; final petals curl. Excluded 3D completion.",
+      "report": "batches/004.md"
     },
     {
       "slug": "box",

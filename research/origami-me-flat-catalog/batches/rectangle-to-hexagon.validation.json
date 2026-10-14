@@ -1,0 +1,23 @@
+{
+  "source": "https://origami.me/rectangle-to-hexagon/",
+  "file": "models/rectangle-to-hexagon.osf",
+  "fileSha256": "0afad37dc1023c45b3b7a31e8f8ce869e8c701f01994d4d1b1a6c6deace66f20",
+  "nodes": 5,
+  "folds": 5,
+  "finalFaces": 3,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "4d079cdc22679d3c4e0ae77030ab434aeac9a63375113c04be227bf2e9b49010",
+    "75c97261b1d22eff978f5208ed1bd9a79914402a3d220caae1e03a5a3a1f0a4e",
+    "b8ecd17a4856c5204a46b82aa62c82c0e6b0aeb2e2d047c7941cb29ea3bf256b",
+    "53daf648e5de4999f6722a4296e517a20a8be177792e931da8e4dbb24391a0e6",
+    "d8023074eeaf5a0e83aad32329a5631673fe72c5e2fac1aa3e9f1867e2af51dc",
+    "f737e918665bbab74ee551cdc3f95e83de42413b0fbcccd0eedc2031146eeff2"
+  ],
+  "sourceSteps": 11,
+  "sourceStepsCompleted": 5,
+  "audit": "verified prefix; ready for user audit",
+  "allSavedStatesVisuallyCheckedInFold": true,
+  "checkedStates": 6,
+  "sourceDiagramsReviewed": 12
+}

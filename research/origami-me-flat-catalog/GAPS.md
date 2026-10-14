@@ -137,3 +137,27 @@ Pajarita source 6's text says to unfold the preceding folds, while diagram 7 sho
 **Acceptance:** place independently authored sheets in one flat assembly with stable sheet/material identity; store relative translation/rotation and initial overlap order; permit selected flaps of one sheet to tuck into a second sheet's pocket; save/replay the complete sequence in Fold and verify both faces' material ordering. No 3D behavior is required.
 
 The initial module attempt used an all-layer second tip fold and moved the first tip again. A normal canvas depth seed fixes this authoring error; the invalid requests are retained in `batches/ninja-star-*-invalid-all-layers.json`. Material checks confirm the first tip stays unchanged and every exposed module subface is colored. Source 6's second-unit text says approximately 22 degrees, whereas the next diagram requires 45 degrees; the saved note explains following the diagram.
+
+
+## F025 — Goldfish pocket collapse investigation
+
+**Classification: authoring / compound-operation investigation, not a confirmed missing primitive.**
+
+The [Goldfish tutorial](https://origami.me/goldfish/) source 11 opens the helmet pocket and collapses it in the perpendicular direction. The native sequence preserves the verified source-10 helmet (14 nodes / 15 states). A direct front-band squash at view `[0.12, 0.42]` refuses `squash_no_flap / no_hinge`. Turning to the plain back and halving the pocket before squashing three interior points refuses `squash_flap_not_free`. Correct compound decomposition is still unresolved; these refusals alone do not prove a missing feature.
+
+Evidence: [direct request](batches/goldfish-opening-attempt.json), [prepared half-pocket control](batches/goldfish-half-pocket-control.json), [last valid state](batches/goldfish-before-opening.json), [native sequence](models/goldfish.osf). A rejected exact-vertex seed was fixed with an interior pick and is recorded separately as an authoring error.
+
+Source 12 independently strengthens **F011**: cut only the outer layer from the lower corner along the lower edge about two-thirds of its length, repeat from the other face, retain the other layers, then unwrap the cut material in source 14. There is no public cut operation. The cut and unwrap remain unattempted because source 11 is unresolved.
+
+
+### F011 additional preparation cases
+
+[Rectangle to Hexagon](models/rectangle-to-hexagon.osf) source 6 requires an oblique boundary-to-boundary cut through both folded layers, discarding a triangular offcut. The remaining cut boundary becomes the alignment reference for source 7; another cut occurs at source 10 before unfolding. The exact first-cut view path and last valid scene are in [cut requirement](batches/rectangle-to-hexagon-cut-requirement.json).
+
+[Square to Pentagon](models/pentagon-from-square-paper.osf) source 9 requires cutting a stacked packet along its nearest visible raw edge, retaining the lower wedge and unfolding it. [Cut requirement](batches/pentagon-from-square-paper-cut-requirement.json). Its partial reference pinches remain on the intended front ply, confirmed from original-sheet coordinates. Both preparation cases stop before the missing cut, without substituting a new polygon sheet.
+
+## F026 — Four-Pointed Star first packet swivel (investigation)
+
+The full [20-step tutorial](https://origami.me/4-pointed-star/) and 21 diagrams were reviewed. The [native packet](models/4-pointed-star.osf) matches through source 14 (21 nodes / 22 Fold-checked states). Eight partial creases, alignment precreases, and front-layer packet folds succeed. Source 15 needs a swivel at the junction of two existing folded creases. The picked upper-left edge lands on the diagonal; analysis finds the intended vertex and landing, but application refuses `fan_ray_blocked` (face 9). Both direction/kind feasibility pairs are unavailable. Retain this as an authoring/compound investigation: the mapped second crease and intervening folded layer need resolution before claiming a missing primitive.
+
+Evidence: [exact request and analysis](batches/4-pointed-star-swivel-attempt.json), [refusal](batches/4-pointed-star-failure.json), [last valid scene](batches/4-pointed-star-before-swivel.json). No guard weakened or non-flat state introduced.
