@@ -3,15 +3,17 @@ import { describe, expect, it } from 'vitest';
 import saved from './__fixtures__/diagram-title-block.json';
 import { setStepText, setTitleBlockContent, type DiagramDocument } from './diagramDocument';
 import { readDiagram, writeDiagram } from './diagramFile';
+import { cellSlots } from '../pages/stepPlaces';
 import { resolveTitleBlock } from '../pages/titleBlockContent';
 
 /**
- * Two diagrams saved with the first page's title block on
+ * Three diagrams saved with the first page's title block on
  * (`implementation-plans/diagram-title-block.md`, The file; 2026-10-14), as
  * this build writes them: a flow whose model is a chosen step, with no
- * pattern and a byline in Korean; and a grid at a share of its own, whose
+ * pattern and a byline in Korean; a grid at a share of its own, whose
  * pattern is a chosen step and whose model is of a kind only a newer build
- * reads — its own picture, naming an asset nothing else names.
+ * reads — its own picture, naming an asset nothing else names; and a flow of
+ * eight steps with no model and the pattern unsaid, Auto.
  *
  * A change that reads them otherwise, or writes them back otherwise, changes
  * what saved title blocks mean, and fails here first.
@@ -41,6 +43,17 @@ describe('a diagram saved with a title block', () => {
     expect([shown.model.from, shown.model.step?.id]).toEqual(['auto', 'step-swan']);
     expect([shown.pattern.from, shown.pattern.step?.id]).toEqual(['step', 'step-swan']);
     expect(grid.document.newer).toEqual({ titleBlockContent: { model: fixture()[1]!.titleBlockContent!.model } });
+    const auto = read(2);
+    expect(auto.readOnly).toBe(false);
+    expect(auto.document.newer).toBeUndefined();
+    expect(auto.document.titleBlockContent).toEqual({ model: { kind: 'none' } });
+    const autoShown = resolveTitleBlock(auto.document);
+    expect([autoShown.model.from, autoShown.model.step]).toEqual(['none', null]);
+    expect([autoShown.pattern.from, autoShown.pattern.step?.id]).toEqual(['auto', 'step-lily-8']);
+  });
+
+  it('cuts the first page under the block from the file: seven of nine steps a page', () => {
+    expect(cellSlots(read(2).document).pages.map((page) => page.length)).toEqual([7, 1]);
   });
 
   it('writes each back exactly, byte for byte', () => {
