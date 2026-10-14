@@ -63,6 +63,11 @@ export type ContextMenuItem =
       kind: 'checkbox';
       id: string;
       label: string;
+      /**
+       * For an on/off verb among verbs drawn with icons: the icon takes the
+       * leading slot, as its neighbours' do, and the check moves to the row's end.
+       */
+      icon?: ReactNode;
       checked: boolean;
       disabled?: boolean;
       /** Why the row is disabled, as its tooltip. */

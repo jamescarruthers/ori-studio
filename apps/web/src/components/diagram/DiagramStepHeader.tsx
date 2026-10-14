@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Copy, Trash2, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { DIAGRAM_ACTION_ICONS } from '../../diagram/actions/diagramActionIcons';
 import {
   diagramStepCommand,
   type DiagramStepAction,
@@ -10,11 +11,6 @@ import { registerPendingEditFlush } from '../../lib/pendingEdits';
 import { IconButton } from '../ui/IconButton';
 import { isComposingKey } from '../ui/fieldRows/isComposingKey';
 import styles from './DiagramStepHeader.module.css';
-
-const ICONS: Partial<Record<DiagramStepActionId, LucideIcon>> = {
-  duplicate: Copy,
-  delete: Trash2,
-};
 
 /** The verbs the Step pane's header shows, in this order; the rest are in the card's menu. */
 const HEADER_VERBS: readonly DiagramStepActionId[] = ['duplicate', 'delete'];
@@ -123,8 +119,8 @@ export function DiagramStepHeader({
         </IconButton>
         {HEADER_VERBS.map((id) => {
           const command = diagramStepCommand(actions, id);
-          const Icon = ICONS[id];
-          if (!command || !Icon) return null;
+          const Icon = DIAGRAM_ACTION_ICONS[id];
+          if (!command) return null;
           return (
             <IconButton
               key={id}

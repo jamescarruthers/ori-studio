@@ -725,10 +725,18 @@
       "firstHint": "Já é o primeiro passo",
       "firstPageHint": "O primeiro passo sempre começa uma página",
       "fromReferences": "De Referências…",
-      "insertAfter": "Inserir passo depois",
-      "insertBefore": "Inserir passo antes",
-      "insertRotate": "Inserir giro depois",
-      "insertTurnOver": "Inserir virada depois",
+      "groups": {
+        "insert": "Inserir",
+        "move": "Mover",
+        "page": "Na página",
+        "picture": "Imagem"
+      },
+      "insert": {
+        "rotateAfter": "Giro depois",
+        "stepAfter": "Passo depois",
+        "stepBefore": "Passo antes",
+        "turnOverAfter": "Virada depois"
+      },
       "lastHint": "Já é o último passo",
       "linkPattern": "Vincular padrão…",
       "lockedEditHint": "Criado com uma versão mais recente do Ori Studio: pode ser movido ou excluído, mas não alterado",
@@ -737,6 +745,10 @@
       "makeRotate": "Transformar em giro",
       "makeTurnOver": "Transformar em virada",
       "missingHint": "O padrão não existe mais: vincule-o a outro",
+      "move": {
+        "earlier": "Para antes",
+        "later": "Para depois"
+      },
       "moveEarlier": "Mover para antes",
       "moveLater": "Mover para depois",
       "noPatternHint": "Abra um padrão de vincos em Editar para vinculá-lo",

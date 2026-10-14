@@ -79,6 +79,16 @@ describe('a turn’s verbs (D22)', () => {
     ]);
   });
 
+  it('draws its verbs with the icons a step’s same verbs have, and its ways with their checks', () => {
+    const items = diagramStepMenuItems(build().actions);
+    const icons = items.flatMap((item) => (item.kind === 'action' ? [[item.id, item.icon != null]] : []));
+    expect(icons).toEqual([
+      ['move-earlier', true],
+      ['move-later', true],
+      ['delete', true],
+    ]);
+  });
+
   it('offers only its moves and Delete when a newer build made it', () => {
     const { actions } = build({ turn: { kind: 'turn-over', axis: 'vertical', unknown: { id: 'turn-9', kind: 'spin' } } });
     expect(diagramStepMenuItems(actions).flatMap((item) => (item.kind === 'separator' ? [] : [item.kind === 'submenu' ? item.id : item.id]))).toEqual([

@@ -106,6 +106,14 @@ export function MenuItemShortcut(props: SpanProps) {
   return <span className={styles.shortcut} {...props} />;
 }
 
+/**
+ * A check row's check at the row's end, for a row whose leading slot holds
+ * its icon. Its state is the row's `aria-checked`; this only draws it.
+ */
+export function MenuItemTrailingCheck(props: SpanProps) {
+  return <span className={styles.trailingCheck} data-menu-check="" aria-hidden {...props} />;
+}
+
 export function MenuSeparator(props: Unstyled<ComponentProps<typeof DropdownMenu.Separator>>) {
   return <DropdownMenu.Separator className={styles.separator} {...props} />;
 }

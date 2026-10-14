@@ -9,6 +9,7 @@ import {
   MenuItemIcon,
   MenuItemLabel,
   MenuItemShortcut,
+  MenuItemTrailingCheck,
   MenuSeparator,
   MenuSubContent,
   MenuSubTrigger,
@@ -99,8 +100,15 @@ function renderItem(
             item.onToggle();
           }}
         >
-          <MenuItemIcon>{item.checked && <Check size={12} />}</MenuItemIcon>
+          {/* An icon of its own takes the leading slot, as its neighbours'
+              icons do, and the check moves to the row's end. */}
+          <MenuItemIcon>{item.icon ?? (item.checked && <Check size={12} />)}</MenuItemIcon>
           <MenuItemLabel>{item.label}</MenuItemLabel>
+          {item.icon != null && item.checked && (
+            <MenuItemTrailingCheck>
+              <Check size={12} />
+            </MenuItemTrailingCheck>
+          )}
         </MenuCheckboxItem>
       );
     case 'color':

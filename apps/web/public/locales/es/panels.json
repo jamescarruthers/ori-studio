@@ -725,10 +725,18 @@
       "firstHint": "Ya es el primer paso",
       "firstPageHint": "El primer paso siempre empieza una página",
       "fromReferences": "Desde Referencias…",
-      "insertAfter": "Insertar paso después",
-      "insertBefore": "Insertar paso antes",
-      "insertRotate": "Insertar giro después",
-      "insertTurnOver": "Insertar vuelta después",
+      "groups": {
+        "insert": "Insertar",
+        "move": "Mover",
+        "page": "En la página",
+        "picture": "Imagen"
+      },
+      "insert": {
+        "rotateAfter": "Giro después",
+        "stepAfter": "Paso después",
+        "stepBefore": "Paso antes",
+        "turnOverAfter": "Vuelta después"
+      },
       "lastHint": "Ya es el último paso",
       "linkPattern": "Vincular patrón…",
       "lockedEditHint": "Creado con una versión más reciente de Ori Studio: se puede mover o eliminar, pero no cambiar",
@@ -737,6 +745,10 @@
       "makeRotate": "Convertir en giro",
       "makeTurnOver": "Convertir en vuelta",
       "missingHint": "Su patrón ya no está: vincúlalo a otro",
+      "move": {
+        "earlier": "Antes",
+        "later": "Después"
+      },
       "moveEarlier": "Mover antes",
       "moveLater": "Mover después",
       "noPatternHint": "Abre un patrón de pliegues en Editar para vincularlo",

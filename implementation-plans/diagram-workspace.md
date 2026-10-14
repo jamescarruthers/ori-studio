@@ -1988,10 +1988,14 @@ On a phone the tabs take a row of their own, styled in the panel's module.
   - a progress row with Stop while capturing;
   - footer: the instruction, or a muted "No instruction".
 - **Card verbs.** IconButtons for Adjust pose and Annotate show on hover and
-  focus. A context menu built from `diagramActions` carries:
-  - Insert before / after, Duplicate, Move earlier / later;
-  - Start a new page here;
-  - Replace picture…, Export picture…, Remove picture, Refresh;
+  focus. A context menu built from `diagramActions` carries, every row with
+  its icon (`diagramActionIcons.tsx`, shared with the Step pane):
+  - at the top, Adjust pose, Annotate, Duplicate, Show as ▸, and Refresh
+    (or Update) while the card's chip says the picture is behind; an empty
+    step leads with Upload…, Link pattern…, From References… and the turns;
+  - Insert ▸, Duplicate as ▸, Move ▸ (with Start a new page here), Picture ▸,
+    On the page ▸ (the resets, for a step placed by hand) — the catalog's
+    groups, each disabled with its reason when none of its verbs can run;
   - Delete.
 - **Empty card.** It offers **Link pattern…**, which selects the step and
   reveals the picker, plus **Upload…** and **From References…**, and accepts a

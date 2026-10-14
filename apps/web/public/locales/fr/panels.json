@@ -725,10 +725,18 @@
       "firstHint": "C’est déjà la première étape",
       "firstPageHint": "La première étape commence toujours une page",
       "fromReferences": "Depuis Références…",
-      "insertAfter": "Insérer une étape après",
-      "insertBefore": "Insérer une étape avant",
-      "insertRotate": "Insérer une rotation après",
-      "insertTurnOver": "Insérer un retournement après",
+      "groups": {
+        "insert": "Insérer",
+        "move": "Déplacer",
+        "page": "Sur la page",
+        "picture": "Image"
+      },
+      "insert": {
+        "rotateAfter": "Rotation après",
+        "stepAfter": "Étape après",
+        "stepBefore": "Étape avant",
+        "turnOverAfter": "Retournement après"
+      },
       "lastHint": "C’est déjà la dernière étape",
       "linkPattern": "Lier un patron…",
       "lockedEditHint": "Créée avec une version plus récente d’Ori Studio\u00a0: elle peut être déplacée ou supprimée, mais pas modifiée",
@@ -737,6 +745,10 @@
       "makeRotate": "Faire une rotation",
       "makeTurnOver": "Faire un retournement",
       "missingHint": "Son patron a disparu\u00a0: liez-le à un autre",
+      "move": {
+        "earlier": "Plus tôt",
+        "later": "Plus tard"
+      },
       "moveEarlier": "Avancer",
       "moveLater": "Reculer",
       "noPatternHint": "Ouvrez un patron de plis dans Édition pour le lier",

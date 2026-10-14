@@ -6,8 +6,10 @@ import {
   diagramStepChoice,
   diagramStepCommand,
   placementState,
+  type DiagramStepAction,
   type DiagramStepActionDeps,
   type DiagramStepActionState,
+  type DiagramStepGroup,
 } from './diagramActions';
 
 const t = ((_key: string, fallback: string) => fallback) as unknown as TFunction;
@@ -69,35 +71,150 @@ function build(state: Partial<DiagramStepActionState>, bound = deps()) {
   );
 }
 
+/** The catalog as the menu arranges it: an id per row, and a group as its id and its rows. */
+function outline(actions: readonly DiagramStepAction[]): (string | [string, string[]])[] {
+  return actions.map((action) => (action.kind === 'group' ? [action.id, action.items.map((item) => item.id)] : action.id));
+}
+
+function group(actions: readonly DiagramStepAction[], id: DiagramStepGroup['id']): DiagramStepGroup | undefined {
+  return actions.find((action): action is DiagramStepGroup => action.kind === 'group' && action.id === id);
+}
+
+/** Every verb, wherever the menu keeps it. */
+function commands(actions: readonly DiagramStepAction[]): DiagramStepAction[] {
+  return actions.flatMap((action) => (action.kind === 'group' ? commands(action.items) : [action]));
+}
+
+const INSERT: [string, string[]] = ['insert', ['insert-before', 'insert-after', 'insert-turn-over', 'insert-rotate']];
+const MOVE: [string, string[]] = ['move', ['move-earlier', 'move-later', 'start-page']];
+
 describe('the diagram step verbs', () => {
-  it('lists them in one order for every surface', () => {
-    expect(build({}).map((action) => action.id)).toEqual([
-      'insert-before',
-      'insert-after',
-      'insert-turn-over',
-      'insert-rotate',
+  it('leads a step with a picture with what is done to it, and groups the rest', () => {
+    const linked = build({
+      hasSource: true,
+      hasPicture: true,
+      link: 'current',
+      showAs: 'folded',
+      placement: { size: true, position: true, newer: false },
+    });
+    expect(outline(linked)).toEqual([
+      'adjust-pose',
+      'annotate',
       'duplicate',
-      'after-add',
-      'move-earlier',
-      'move-later',
-      'start-page',
-      'after-move',
+      'show-as',
+      'after-first',
+      INSERT,
+      'duplicate-as',
+      MOVE,
+      [
+        'picture',
+        ['upload-picture', 'link-pattern', 'refresh-picture', 'open-in-edit', 'picture-file', 'export-picture', 'remove-picture'],
+      ],
+      ['page', ['reset-size', 'reset-position', 'reset-layout']],
+      'after-groups',
+      'delete',
+    ]);
+    // An upload: nothing to show another way, refresh or open in Edit, and placed nowhere.
+    expect(outline(build({ hasSource: true, hasPicture: true }))).toEqual([
+      'adjust-pose',
+      'annotate',
+      'duplicate',
+      'after-first',
+      INSERT,
+      MOVE,
+      ['picture', ['upload-picture', 'link-pattern', 'picture-file', 'export-picture', 'remove-picture']],
+      'after-groups',
+      'delete',
+    ]);
+  });
+
+  it('leads an empty step with the ways to give it a picture, or make it a turn, as its Step pane does', () => {
+    expect(outline(build({}))).toEqual([
       'upload-picture',
       'link-pattern',
       'from-references',
       'make-turn-over',
       'make-rotate',
-      'adjust-pose',
-      'annotate',
-      'export-picture',
-      'remove-picture',
-      'after-picture',
+      'duplicate',
+      'after-first',
+      INSERT,
+      MOVE,
+      ['picture', ['adjust-pose', 'annotate', 'picture-file', 'export-picture', 'remove-picture']],
+      'after-groups',
       'delete',
     ]);
-    // A linked step can also be refreshed, and shown in Edit.
-    const linked = build({ link: 'stale' }).map((action) => action.id);
-    expect(linked).toContain('refresh-picture');
-    expect(linked).toContain('open-in-edit');
+    // None of its picture verbs can run, so the group says why for them all.
+    expect(group(build({}), 'picture')).toMatchObject({ disabled: true, hint: 'This step has no picture yet' });
+  });
+
+  it('leads with Refresh while the card says the picture is out of date, and keeps it in Picture otherwise', () => {
+    const placed = (state: Partial<DiagramStepActionState>) => {
+      const actions = build({ hasSource: true, hasPicture: true, ...state });
+      return {
+        first: actions.slice(0, actions.findIndex((action) => action.kind === 'separator')).map((action) => action.id),
+        inPicture: group(actions, 'picture')!.items.some((item) => item.id === 'refresh-picture'),
+      };
+    };
+    for (const behind of [{ link: 'stale' }, { link: 'current', lightingChanged: true }] as const) {
+      expect(placed(behind), JSON.stringify(behind)).toEqual({
+        first: ['adjust-pose', 'annotate', 'duplicate', 'refresh-picture'],
+        inPicture: false,
+      });
+    }
+    // Pose Again, for a step folded part way in the simulator, the same.
+    expect(placed({ link: 'stale', poseAgain: true }).first).toContain('refresh-picture');
+    // Up to date, not yet known, gone, or capturing: in Picture, held or not —
+    // and a flat fold missing its faces, which Refresh helps but no chip names.
+    for (const state of [
+      { link: 'current' },
+      { link: 'current', facesMissing: true },
+      { link: 'unknown' },
+      { link: 'missing' },
+      { link: 'stale', capturing: true },
+    ] as const) {
+      expect(placed(state), JSON.stringify(state)).toEqual({ first: ['adjust-pose', 'annotate', 'duplicate'], inPicture: true });
+    }
+  });
+
+  it('leads with an enlarged step’s Update while its area changed, as Refresh is led with (review fix 4)', () => {
+    const enlarged = (outOfDate: boolean) => {
+      const actions = build({ hasSource: true, hasPicture: true, enlargedArea: { number: 2, outOfDate, updating: false } });
+      return { top: actions.map((action) => action.id), picture: group(actions, 'picture')!.items.map((item) => item.id) };
+    };
+    expect(enlarged(true).top.indexOf('update-enlarged')).toBe(enlarged(true).top.indexOf('duplicate') + 1);
+    expect(enlarged(true).picture).not.toContain('update-enlarged');
+    expect(enlarged(false).top).not.toContain('update-enlarged');
+    expect(enlarged(false).picture).toContain('update-enlarged');
+  });
+
+  it('holds a group none of whose verbs can run, saying why', () => {
+    const readOnly = build({ readOnly: true, hasSource: true, hasPicture: true, placement: { size: false, position: false, newer: false } });
+    const readOnlyHint = 'This diagram was made with a newer Ori Studio and opens read-only';
+    expect(group(readOnly, 'insert')).toMatchObject({ disabled: true, hint: readOnlyHint });
+    expect(group(readOnly, 'move')).toMatchObject({ disabled: true, hint: readOnlyHint });
+    expect(group(readOnly, 'page')).toMatchObject({ disabled: true, hint: readOnlyHint });
+    // Export changes nothing, so Picture stays open.
+    expect(group(readOnly, 'picture')).toMatchObject({ disabled: false });
+    expect(group(readOnly, 'picture')?.hint).toBeUndefined();
+    // The only step: every reason its rows give, once each.
+    expect(group(build({ index: 0, count: 1, number: 1 }), 'move')).toMatchObject({
+      disabled: true,
+      hint: 'Already the first step\nAlready the last step\nThe first step always starts a page',
+    });
+    // A newer build's step keeps its placement.
+    expect(group(build({ locked: true, hasSource: true, placement: { size: true, position: false, newer: false } }), 'page')).toMatchObject({
+      disabled: true,
+      hint: 'Made with a newer Ori Studio: it can be moved or deleted, not changed',
+    });
+    // Any verb that can run opens it.
+    expect(group(build({ index: 0 }), 'move')).toMatchObject({ disabled: false });
+  });
+
+  it('offers On the Page only for a step placed by hand', () => {
+    expect(group(build({ hasSource: true }), 'page')).toBeUndefined();
+    expect(group(build({ placement: { size: false, position: false, newer: true } }), 'page')?.items.map((item) => item.id)).toEqual([
+      'reset-layout',
+    ]);
   });
 
   it('offers an empty step to be a turn instead, and no other (D24)', () => {
@@ -164,7 +281,7 @@ describe('the diagram step verbs', () => {
 
   it('disables every edit on a read-only diagram, with the reason, but not an export', () => {
     const actions = build({ readOnly: true, hasPicture: true, hasSource: true, link: 'stale' });
-    for (const action of actions) {
+    for (const action of commands(actions)) {
       // Exporting and showing the pattern in Edit change nothing in the diagram.
       if (action.kind !== 'command' || action.id === 'export-picture' || action.id === 'open-in-edit') continue;
       expect(action.disabled, action.id).toBe(true);
@@ -226,8 +343,10 @@ describe('the diagram step verbs', () => {
     ]);
     showAs.options[1]!.run();
     expect(bound.showAs).toHaveBeenCalledWith('folded');
+    // Duplicate As is a group of its own, after Insert; Show As leads.
     const ids = actions.map((action) => action.id);
-    expect(ids.indexOf('duplicate-as')).toBe(ids.indexOf('duplicate') + 1);
+    expect(ids.indexOf('duplicate-as')).toBe(ids.indexOf('insert') + 1);
+    expect(ids.indexOf('show-as')).toBe(ids.indexOf('duplicate') + 1);
     diagramStepChoice(actions, 'duplicate-as')!.options[1]!.run();
     expect(bound.duplicateAs).toHaveBeenCalledWith('folded');
     // Not for a step that is not linked to the pattern.
@@ -319,8 +438,10 @@ describe('the diagram step verbs', () => {
     const stale = { number: 22, outOfDate: true, updating: false };
     expect(diagramStepCommand(build({ hasSource: true, hasPicture: true }), 'update-enlarged')).toBeNull();
     const enlarged = build({ link: 'current', hasSource: true, hasPicture: true, enlargedArea: stale }, bound);
-    const ids = enlarged.map((action) => action.id);
-    expect(ids.indexOf('update-enlarged')).toBe(ids.indexOf('open-in-edit') + 1);
+    // Up to date with its area, it waits beside Refresh Picture.
+    const current = build({ link: 'current', hasSource: true, hasPicture: true, enlargedArea: { ...stale, outOfDate: false } });
+    const ids = group(current, 'picture')!.items.map((item) => item.id);
+    expect(ids.indexOf('update-enlarged')).toBe(ids.indexOf('refresh-picture') + 1);
     const update = diagramStepCommand(enlarged, 'update-enlarged')!;
     // Its tooltip names the area it updates from, as the card's menu shows it (review of review fix 4).
     expect(update).toMatchObject({
@@ -419,7 +540,7 @@ describe('the diagram step verbs', () => {
       expect(make).toMatchObject({ label: 'Make Marks Editable', disabled: false });
       make?.run();
       expect(bound.makeMarksEditable).toHaveBeenCalledOnce();
-      const ids = actions.map((action) => action.id);
+      const ids = group(actions, 'picture')!.items.map((action) => action.id);
       expect(ids.indexOf('make-marks-editable')).toBe(ids.indexOf('replace-from-references') + 1);
       expect(ids.indexOf('open-in-references')).toBe(ids.indexOf('make-marks-editable') + 1);
       // It splits the card the step already has: no pattern need be open.

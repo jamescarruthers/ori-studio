@@ -6,8 +6,11 @@ import { DIAGRAM_SHOW_AS, type DiagramShowAs, type DiagramStep } from '../docume
 import type { DiagramTurnActionId } from './diagramTurnActions';
 
 /**
- * The verbs a diagram step offers, in the order every surface presents them:
- * the Step pane's header, and the card's context menu.
+ * The verbs a diagram step offers, arranged as the card's context menu
+ * presents them: the verbs used most at the top, the rest grouped under
+ * Insert, Move, Picture and On the Page, then Delete. The Step pane picks its
+ * verbs from the same list by id ({@link diagramStepCommand}), wherever they
+ * sit in it.
  *
  * `foldedFigureActions.ts`'s shape: React-free and store-free, taking the
  * step's position plus bound callbacks and returning plain data, so the
@@ -15,7 +18,10 @@ import type { DiagramTurnActionId } from './diagramTurnActions';
  * testable on its own. Each surface owns only its rendering.
  */
 
-/** Icon names, resolved to components by each surface (this module stays JSX-free). */
+/**
+ * A step verb. The id is also its icon's name, resolved to a component by
+ * `diagramActionIcons.tsx` (this module stays JSX-free).
+ */
 export type DiagramStepActionId =
   | 'insert-before'
   | 'insert-after'
@@ -92,7 +98,21 @@ export interface DiagramStepChoice {
   options: { id: DiagramShowAs; label: string; checked?: boolean; run: () => void }[];
 }
 
-export type DiagramStepAction = DiagramStepCommand | DiagramStepSeparator | DiagramStepChoice;
+/**
+ * Verbs kept together under one name, which a menu draws as a submenu: Insert,
+ * Move, Picture, On the Page. Disabled, saying why, when none of its verbs can
+ * run, since a closed submenu cannot show its rows' own reasons.
+ */
+export interface DiagramStepGroup {
+  kind: 'group';
+  id: 'insert' | 'move' | 'picture' | 'page';
+  label: string;
+  disabled: boolean;
+  hint?: string;
+  items: (DiagramStepCommand | DiagramStepSeparator)[];
+}
+
+export type DiagramStepAction = DiagramStepCommand | DiagramStepSeparator | DiagramStepChoice | DiagramStepGroup;
 
 /** What the verbs are gated on. */
 export interface DiagramStepActionState {
@@ -346,62 +366,80 @@ export function buildDiagramStepActions(
     );
   };
 
-  return [
+  /**
+   * Verbs under one name (a menu's submenu), or nothing when none applies to
+   * the step. Disabled when none can run, with every reason its verbs give —
+   * once each, one to a line — or the one `hint` that says it for them all.
+   */
+  const group = (
+    id: DiagramStepGroup['id'],
+    label: string,
+    items: DiagramStepGroup['items'],
+    hint?: string
+  ): DiagramStepGroup[] => {
+    const verbs = items.filter((item): item is DiagramStepCommand => item.kind === 'command');
+    if (verbs.length === 0) return [];
+    const disabled = verbs.every((verb) => verb.disabled);
+    const why = hint ?? [...new Set(verbs.flatMap((verb) => (verb.hint ? [verb.hint] : [])))].join('\n');
+    return [{ kind: 'group', id, label, disabled, ...(disabled && why ? { hint: why } : {}), items }];
+  };
+  const present = (...actions: (DiagramStepCommand | null)[]): DiagramStepCommand[] =>
+    actions.filter((action): action is DiagramStepCommand => action !== null);
+
+  const insert = [
     command(
       'insert-before',
-      t('panels:diagram.actions.insertBefore', 'Insert Step Before'),
+      t('panels:diagram.actions.insert.stepBefore', 'Step Before'),
       () => deps.insert('before'),
       false
     ),
     command(
       'insert-after',
-      t('panels:diagram.actions.insertAfter', 'Insert Step After'),
+      t('panels:diagram.actions.insert.stepAfter', 'Step After'),
       () => deps.insert('after'),
       false
     ),
     command(
       'insert-turn-over',
-      t('panels:diagram.actions.insertTurnOver', 'Insert Turn Over After'),
+      t('panels:diagram.actions.insert.turnOverAfter', 'Turn Over After'),
       () => deps.insertTurn('turn-over'),
       false
     ),
     command(
       'insert-rotate',
-      t('panels:diagram.actions.insertRotate', 'Insert Rotate After'),
+      t('panels:diagram.actions.insert.rotateAfter', 'Rotate After'),
       () => deps.insertTurn('rotate'),
       false
     ),
-    command(
-      'duplicate',
-      t('panels:diagram.actions.duplicate', 'Duplicate Step'),
-      deps.duplicate,
-      state.locked,
-      t(
-        'panels:diagram.actions.lockedHint',
-        'Made with a newer Ori Studio: it can be moved or deleted, not copied'
-      )
-    ),
-    ...(state.showAs === null
+  ];
+  const duplicate = command(
+    'duplicate',
+    t('panels:diagram.actions.duplicate', 'Duplicate Step'),
+    deps.duplicate,
+    state.locked,
+    t('panels:diagram.actions.lockedHint', 'Made with a newer Ori Studio: it can be moved or deleted, not copied')
+  );
+  const duplicateAs =
+    state.showAs === null
       ? []
-      : [
-          choice(
-            'duplicate-as',
-            t('panels:diagram.actions.duplicateAs', 'Duplicate As'),
-            (way) => () => deps.duplicateAs(way),
-            null
-          ),
-        ]),
-    { kind: 'separator', id: 'after-add' },
+      : [choice('duplicate-as', t('panels:diagram.actions.duplicateAs', 'Duplicate As'), (way) => () => deps.duplicateAs(way), null)];
+  // How a linked pattern is shown: the Step pane's Show as row, as a submenu here.
+  const showAs =
+    state.showAs === null
+      ? []
+      : [choice('show-as', t('panels:diagram.actions.showAs', 'Show As'), (way) => () => deps.showAs(way), state.showAs)];
+
+  const move: DiagramStepGroup['items'] = [
     command(
       'move-earlier',
-      t('panels:diagram.actions.moveEarlier', 'Move Earlier'),
+      t('panels:diagram.actions.move.earlier', 'Earlier'),
       () => deps.move('earlier'),
       state.index <= 0,
       t('panels:diagram.actions.firstHint', 'Already the first step')
     ),
     command(
       'move-later',
-      t('panels:diagram.actions.moveLater', 'Move Later'),
+      t('panels:diagram.actions.move.later', 'Later'),
       () => deps.move('later'),
       state.index >= state.count - 1,
       t('panels:diagram.actions.lastHint', 'Already the last step')
@@ -416,202 +454,221 @@ export function buildDiagramStepActions(
       ),
       checked: state.breakBefore,
     },
-    { kind: 'separator', id: 'after-move' },
-    ...(state.placement ? [
-      ...(state.placement.size && !state.placement.newer ? [command('reset-size', t('panels:diagram.placement.resetSize', 'Reset Size'), () => deps.resetPlacement?.('scale'), state.locked)] : []),
-      ...(state.placement.position && !state.placement.newer ? [command('reset-position', t('panels:diagram.placement.resetPosition', 'Reset Position'), () => deps.resetPlacement?.('position'), state.locked)] : []),
-      command('reset-layout', t('panels:diagram.placement.resetLayout', 'Reset Layout'), () => deps.resetPlacement?.('all'), state.locked),
-      { kind: 'separator' as const, id: 'after-placement' },
-    ] : []),
-    command(
-      'upload-picture',
-      state.hasPicture
-        ? t('panels:diagram.actions.replacePicture', 'Replace Picture…')
-        : t('panels:diagram.actions.uploadPicture', 'Upload Picture…'),
-      deps.uploadPicture,
-      state.locked || state.capturing,
-      state.locked ? lockedEditHint : capturingHint
-    ),
-    command(
-      'link-pattern',
-      state.linkKind !== 'cp'
-        ? t('panels:diagram.actions.linkPattern', 'Link Pattern…')
-        : t('panels:diagram.actions.relinkPattern', 'Relink Pattern…'),
-      deps.linkPattern,
-      state.locked || !state.patternOpen || state.capturing,
-      state.locked
-        ? lockedEditHint
-        : !state.patternOpen
-          ? t('panels:diagram.actions.noPatternHint', 'Open a crease pattern in Edit to link it')
-          : capturingHint
-    ),
-    // An empty step's way to a picture from References: on a step with one,
-    // the cards would go after it, which the header's From References…
-    // already does.
-    ...(state.hasSource
+  ];
+
+  // A step placed by hand on the pages: the way back, part by part.
+  const { placement } = state;
+  const page = placement
+    ? [
+        ...(placement.size && !placement.newer
+          ? [command('reset-size', t('panels:diagram.placement.resetSize', 'Reset Size'), () => deps.resetPlacement?.('scale'), state.locked, lockedEditHint)]
+          : []),
+        ...(placement.position && !placement.newer
+          ? [command('reset-position', t('panels:diagram.placement.resetPosition', 'Reset Position'), () => deps.resetPlacement?.('position'), state.locked, lockedEditHint)]
+          : []),
+        command('reset-layout', t('panels:diagram.placement.resetLayout', 'Reset Layout'), () => deps.resetPlacement?.('all'), state.locked, lockedEditHint),
+      ]
+    : [];
+
+  const upload = command(
+    'upload-picture',
+    state.hasPicture
+      ? t('panels:diagram.actions.replacePicture', 'Replace Picture…')
+      : t('panels:diagram.actions.uploadPicture', 'Upload Picture…'),
+    deps.uploadPicture,
+    state.locked || state.capturing,
+    state.locked ? lockedEditHint : capturingHint
+  );
+  const link = command(
+    'link-pattern',
+    state.linkKind !== 'cp'
+      ? t('panels:diagram.actions.linkPattern', 'Link Pattern…')
+      : t('panels:diagram.actions.relinkPattern', 'Relink Pattern…'),
+    deps.linkPattern,
+    state.locked || !state.patternOpen || state.capturing,
+    state.locked
+      ? lockedEditHint
+      : !state.patternOpen
+        ? t('panels:diagram.actions.noPatternHint', 'Open a crease pattern in Edit to link it')
+        : capturingHint
+  );
+  // An empty step's way to a picture from References: on a step with one,
+  // the cards would go after it, which the header's From References…
+  // already does.
+  const fromReferences = state.hasSource
+    ? null
+    : command(
+        'from-references',
+        t('panels:diagram.actions.fromReferences', 'From References…'),
+        deps.fromReferences,
+        state.locked || !state.patternOpen || state.capturing,
+        state.locked
+          ? lockedEditHint
+          : !state.patternOpen
+            ? t('panels:diagram.actions.noPatternReferencesHint', 'Open a crease pattern in Edit to plan its folds')
+            : capturingHint
+      );
+  // An empty step can be a turn instead (D24): the verbs are noise on any other.
+  const makeTurn =
+    state.hasSource || state.locked
       ? []
       : [
-          command(
-            'from-references',
-            t('panels:diagram.actions.fromReferences', 'From References…'),
-            deps.fromReferences,
-            state.locked || !state.patternOpen || state.capturing,
-            state.locked
-              ? lockedEditHint
-              : !state.patternOpen
-                ? t(
-                    'panels:diagram.actions.noPatternReferencesHint',
-                    'Open a crease pattern in Edit to plan its folds'
-                  )
-                : capturingHint
-          ),
-        ]),
-    // An empty step can be a turn instead (D24): the verbs are noise on any other.
-    ...(state.hasSource || state.locked
-      ? []
-      : [
-          command(
-            'make-turn-over',
-            t('panels:diagram.actions.makeTurnOver', 'Make Turn Over'),
-            () => deps.makeTurn('turn-over'),
-            false
-          ),
+          command('make-turn-over', t('panels:diagram.actions.makeTurnOver', 'Make Turn Over'), () => deps.makeTurn('turn-over'), false),
           command('make-rotate', t('panels:diagram.actions.makeRotate', 'Make Rotate'), () => deps.makeTurn('rotate'), false),
-        ]),
-    // Only a linked pattern can be refreshed: on any other step the verb is noise.
-    ...(state.linkKind !== 'cp' || state.link === null
-      ? []
-      : [
+        ];
+  // Only a linked pattern can be refreshed: on any other step the verb is noise.
+  const patternLink = state.linkKind === 'cp' ? state.link : null;
+  const refresh =
+    patternLink === null
+      ? null
+      : command(
+          'refresh-picture',
+          state.poseAgain
+            ? t('panels:diagram.actions.poseAgain', 'Pose Again')
+            : t('panels:diagram.actions.refreshPicture', 'Refresh Picture'),
+          deps.refreshPicture,
+          state.capturing || !refreshable(patternLink, stillBehind(state), state.patternOpen),
+          state.capturing ? capturingHint : refreshHint(patternLink, stillBehind(state), state.patternOpen, t)
+        );
+  const openInEdit =
+    patternLink === null
+      ? null
+      : command(
+          'open-in-edit',
+          t('panels:diagram.actions.openInEdit', 'Open in Edit'),
+          deps.openInEdit,
+          !state.patternOpen,
+          t('panels:diagram.actions.noPatternOpenHint', 'Its crease pattern isn’t open')
+        );
+  // An enlarged step's frame placed again from its area as it is now, over any move made on it (review
+  // fix 4): what "Step N's area changed" asks for, as Refresh Picture is what "the pattern changed" does,
+  // and held, as that is, while there is nothing to bring up to date.
+  const update = state.enlargedArea === null ? null : updateEnlargedCommand(state.enlargedArea);
+  // The area's own step: every step enlarged from it that is out of date, as its Enlarged section offers.
+  const updateAll =
+    state.heldAreas === null
+      ? null
+      : withHint(
           command(
-            'refresh-picture',
-            state.poseAgain
-              ? t('panels:diagram.actions.poseAgain', 'Pose Again')
-              : t('panels:diagram.actions.refreshPicture', 'Refresh Picture'),
-            deps.refreshPicture,
-            state.capturing || !refreshable(state.link, stillBehind(state), state.patternOpen),
-            state.capturing ? capturingHint : refreshHint(state.link, stillBehind(state), state.patternOpen, t)
-          ),
-          command(
-            'open-in-edit',
-            t('panels:diagram.actions.openInEdit', 'Open in Edit'),
-            deps.openInEdit,
-            !state.patternOpen,
-            t('panels:diagram.actions.noPatternOpenHint', 'Its crease pattern isn’t open')
-          ),
-        ]),
-    // An enlarged step's frame placed again from its area as it is now, over any move made on it (review
-    // fix 4): what "Step N's area changed" asks for, as Refresh Picture is what "the pattern changed" does,
-    // and held, as that is, while there is nothing to bring up to date.
-    ...(state.enlargedArea === null ? [] : [updateEnlargedCommand(state.enlargedArea)]),
-    // The area's own step: every step enlarged from it that is out of date, as its Enlarged section offers.
-    ...(state.heldAreas === null
-      ? []
-      : [
-          withHint(
-            command(
-              'update-all-enlarged',
-              t('panels:diagram.annotations.updateAll', 'Update All'),
-              deps.updateAllEnlarged,
-              state.locked || state.heldAreas.outOfDate === 0,
-              state.locked
-                ? lockedEditHint
-                : t('panels:diagram.annotations.updateAllCurrent', 'Every step enlarged from this area is up to date')
-            ),
-            t(
-              'panels:diagram.annotations.updateAllHint',
-              'Place the frame again on each step enlarged from this area that is out of date, from the area as it is now'
-            )
-          ),
-        ]),
-    // A References step is never refreshed (D6): it leads back to its sheet.
-    ...(state.linkKind !== 'references'
-      ? []
-      : [
-          command(
-            'replace-from-references',
-            t('panels:diagram.actions.replaceFromReferences', 'Replace from References…'),
-            deps.replaceFromReferences,
-            state.locked || !state.patternOpen || state.capturing,
+            'update-all-enlarged',
+            t('panels:diagram.annotations.updateAll', 'Update All'),
+            deps.updateAllEnlarged,
+            state.locked || state.heldAreas.outOfDate === 0,
             state.locked
               ? lockedEditHint
-              : !state.patternOpen
-                ? t('panels:diagram.actions.noPatternOpenHint', 'Its crease pattern isn’t open')
-                : capturingHint
+              : t('panels:diagram.annotations.updateAllCurrent', 'Every step enlarged from this area is up to date')
           ),
-          // A step made before marks were lifted keeps them in its picture until asked (17e, RM8).
-          ...(state.cardMarks === null
-            ? []
-            : [
-                command(
-                  'make-marks-editable',
-                  t('panels:diagram.actions.makeMarksEditable', 'Make Marks Editable'),
-                  deps.makeMarksEditable,
-                  state.locked || !state.cardMarks.fits,
-                  state.locked ? lockedEditHint : tooManyMarksHint(state.cardMarks, t)
-                ),
-              ]),
-          command(
-            'open-in-references',
-            t('panels:diagram.actions.openInReferences', 'Open in References'),
-            deps.openInReferences,
-            !state.patternOpen,
-            t('panels:diagram.actions.noPatternOpenHint', 'Its crease pattern isn’t open')
-          ),
-        ]),
-    // How a linked pattern is shown: the Step pane's Show as row, as a submenu here.
-    ...(state.showAs === null
-      ? []
-      : [
-          choice(
-            'show-as',
-            t('panels:diagram.actions.showAs', 'Show As'),
-            (way) => () => deps.showAs(way),
-            state.showAs
-          ),
-        ]),
-    // Pose needs something to pose: a picture, or a link whose picture it
-    // chooses how to show.
-    command(
-      'adjust-pose',
-      t('panels:diagram.actions.adjustPose', 'Adjust Pose'),
-      deps.adjustPose,
-      state.locked || !state.hasSource,
-      state.locked ? lockedEditHint : t('panels:diagram.actions.poseNeedsPicture', 'Give the step a picture to pose')
+          t(
+            'panels:diagram.annotations.updateAllHint',
+            'Place the frame again on each step enlarged from this area that is out of date, from the area as it is now'
+          )
+        );
+  // A References step is never refreshed (D6): it leads back to its sheet.
+  const sent = state.linkKind === 'references';
+  const replaceFromReferences = !sent
+    ? null
+    : command(
+        'replace-from-references',
+        t('panels:diagram.actions.replaceFromReferences', 'Replace from References…'),
+        deps.replaceFromReferences,
+        state.locked || !state.patternOpen || state.capturing,
+        state.locked
+          ? lockedEditHint
+          : !state.patternOpen
+            ? t('panels:diagram.actions.noPatternOpenHint', 'Its crease pattern isn’t open')
+            : capturingHint
+      );
+  // A step made before marks were lifted keeps them in its picture until asked (17e, RM8).
+  const makeMarksEditable =
+    !sent || state.cardMarks === null
+      ? null
+      : command(
+          'make-marks-editable',
+          t('panels:diagram.actions.makeMarksEditable', 'Make Marks Editable'),
+          deps.makeMarksEditable,
+          state.locked || !state.cardMarks.fits,
+          state.locked ? lockedEditHint : tooManyMarksHint(state.cardMarks, t)
+        );
+  const openInReferences = !sent
+    ? null
+    : command(
+        'open-in-references',
+        t('panels:diagram.actions.openInReferences', 'Open in References'),
+        deps.openInReferences,
+        !state.patternOpen,
+        t('panels:diagram.actions.noPatternOpenHint', 'Its crease pattern isn’t open')
+      );
+  // Pose needs something to pose: a picture, or a link whose picture it
+  // chooses how to show.
+  const adjustPose = command(
+    'adjust-pose',
+    t('panels:diagram.actions.adjustPose', 'Adjust Pose'),
+    deps.adjustPose,
+    state.locked || !state.hasSource,
+    state.locked ? lockedEditHint : t('panels:diagram.actions.poseNeedsPicture', 'Give the step a picture to pose')
+  );
+  const annotate = command(
+    'annotate',
+    t('panels:diagram.actions.annotate', 'Annotate'),
+    deps.annotate,
+    state.locked || !state.hasPicture,
+    state.locked ? lockedEditHint : t('panels:diagram.detail.annotateNeedsPicture', 'Give the step a picture to annotate')
+  );
+  const noPictureHint = t('panels:diagram.actions.noPictureHint', 'This step has no picture yet');
+  const exportPicture = command(
+    'export-picture',
+    t('panels:diagram.actions.exportPicture', 'Export Picture…'),
+    deps.exportPicture,
+    !state.hasPicture,
+    noPictureHint
+  );
+  const removePicture = command(
+    'remove-picture',
+    t('panels:diagram.actions.removePicture', 'Remove Picture'),
+    deps.removePicture,
+    state.locked || !state.hasSource || state.capturing,
+    state.locked ? lockedEditHint : state.capturing ? capturingHint : noPictureHint
+  );
+
+  // What the card's chip says is behind — Out of date, Lighting or Style
+  // changed, Area changed — leads the menu while Refresh or Update can bring it
+  // up to date, and waits in Picture otherwise. Not a link that cannot be
+  // checked yet, nor a flat fold missing its faces, which no chip names.
+  const behind = state.link === 'stale' || (state.link === 'current' && state.lightingChanged);
+  const refreshFirst = refresh !== null && !refresh.disabled && behind;
+  const updateFirst = update !== null && !update.disabled && !update.waiting;
+  // A step with a picture leads with what is done to it; an empty one with the
+  // ways to give it one, or to make it a turn — what its Step pane offers.
+  const first = state.hasSource ? [adjustPose, annotate] : [upload, link, ...present(fromReferences), ...makeTurn];
+  const picture: DiagramStepGroup['items'] = [
+    ...(state.hasSource ? [upload, link] : [adjustPose, annotate]),
+    ...present(
+      replaceFromReferences,
+      makeMarksEditable,
+      refreshFirst ? null : refresh,
+      updateFirst ? null : update,
+      updateAll,
+      openInEdit,
+      openInReferences
     ),
-    command(
-      'annotate',
-      t('panels:diagram.actions.annotate', 'Annotate'),
-      deps.annotate,
-      state.locked || !state.hasPicture,
-      state.locked ? lockedEditHint : t('panels:diagram.detail.annotateNeedsPicture', 'Give the step a picture to annotate')
-    ),
-    command(
-      'export-picture',
-      t('panels:diagram.actions.exportPicture', 'Export Picture…'),
-      deps.exportPicture,
-      !state.hasPicture,
-      t('panels:diagram.actions.noPictureHint', 'This step has no picture yet')
-    ),
-    command(
-      'remove-picture',
-      t('panels:diagram.actions.removePicture', 'Remove Picture'),
-      deps.removePicture,
-      state.locked || !state.hasSource || state.capturing,
-      state.locked
-        ? lockedEditHint
-        : state.capturing
-          ? capturingHint
-          : t('panels:diagram.actions.noPictureHint', 'This step has no picture yet')
-    ),
-    { kind: 'separator', id: 'after-picture' },
-    command(
-      'delete',
-      t('panels:diagram.actions.delete', 'Delete Step'),
-      deps.remove,
-      false,
-      undefined,
-      true
-    ),
+    { kind: 'separator', id: 'picture-file' },
+    exportPicture,
+    removePicture,
+  ];
+
+  return [
+    ...first,
+    duplicate,
+    ...showAs,
+    ...present(refreshFirst ? refresh : null, updateFirst ? update : null),
+    { kind: 'separator', id: 'after-first' },
+    ...group('insert', t('panels:diagram.actions.groups.insert', 'Insert'), insert),
+    ...duplicateAs,
+    ...group('move', t('panels:diagram.actions.groups.move', 'Move'), move),
+    ...group('picture', t('panels:diagram.actions.groups.picture', 'Picture'), picture, state.hasSource ? undefined : noPictureHint),
+    ...group('page', t('panels:diagram.actions.groups.page', 'On the Page'), page),
+    { kind: 'separator', id: 'after-groups' },
+    command('delete', t('panels:diagram.actions.delete', 'Delete Step'), deps.remove, false, undefined, true),
   ];
 }
 
@@ -703,11 +760,20 @@ export function diagramStepChoice(
   return action?.kind === 'choice' ? action : null;
 }
 
-/** The command with this id, for a surface that places verbs one by one. */
+/**
+ * The command with this id, for a surface that places verbs one by one:
+ * wherever the menu keeps it, at the top or in a group.
+ */
 export function diagramStepCommand(
   actions: readonly DiagramStepAction[],
   id: DiagramStepActionId
 ): DiagramStepCommand | null {
-  const action = actions.find((candidate) => candidate.kind === 'command' && candidate.id === id);
-  return action?.kind === 'command' ? action : null;
+  for (const action of actions) {
+    if (action.kind === 'command' && action.id === id) return action;
+    if (action.kind === 'group') {
+      const found = diagramStepCommand(action.items, id);
+      if (found) return found;
+    }
+  }
+  return null;
 }

@@ -696,10 +696,18 @@
       "firstHint": "Bereits der erste Schritt",
       "firstPageHint": "Der erste Schritt beginnt immer eine Seite",
       "fromReferences": "Aus Referenzen…",
-      "insertAfter": "Schritt danach einfügen",
-      "insertBefore": "Schritt davor einfügen",
-      "insertRotate": "Drehen danach einfügen",
-      "insertTurnOver": "Umdrehen danach einfügen",
+      "groups": {
+        "insert": "Einfügen",
+        "move": "Verschieben",
+        "page": "Auf der Seite",
+        "picture": "Bild"
+      },
+      "insert": {
+        "rotateAfter": "Drehen danach",
+        "stepAfter": "Schritt danach",
+        "stepBefore": "Schritt davor",
+        "turnOverAfter": "Umdrehen danach"
+      },
       "lastHint": "Bereits der letzte Schritt",
       "linkPattern": "Muster verknüpfen…",
       "lockedEditHint": "Mit einem neueren Ori Studio erstellt: Er lässt sich verschieben oder löschen, aber nicht ändern",
@@ -708,6 +716,10 @@
       "makeRotate": "Zum Drehen machen",
       "makeTurnOver": "Zum Umdrehen machen",
       "missingHint": "Sein Muster ist weg: verknüpfe es mit einem anderen",
+      "move": {
+        "earlier": "Nach vorne",
+        "later": "Nach hinten"
+      },
       "moveEarlier": "Nach vorne",
       "moveLater": "Nach hinten",
       "noPatternHint": "Öffne ein Faltmuster in Bearbeiten, um es zu verknüpfen",

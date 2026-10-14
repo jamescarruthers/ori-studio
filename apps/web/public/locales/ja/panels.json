@@ -667,10 +667,18 @@
       "firstHint": "すでに最初のステップです",
       "firstPageHint": "最初のステップは常にページの始まりです",
       "fromReferences": "リファレンスから…",
-      "insertAfter": "後ろにステップを挿入",
-      "insertBefore": "前にステップを挿入",
-      "insertRotate": "後ろに回転を挿入",
-      "insertTurnOver": "後ろに裏返しを挿入",
+      "groups": {
+        "insert": "挿入",
+        "move": "移動",
+        "page": "ページ上",
+        "picture": "図"
+      },
+      "insert": {
+        "rotateAfter": "後ろに回転",
+        "stepAfter": "後ろにステップ",
+        "stepBefore": "前にステップ",
+        "turnOverAfter": "後ろに裏返し"
+      },
       "lastHint": "すでに最後のステップです",
       "linkPattern": "パターンをリンク…",
       "lockedEditHint": "新しい Ori Studio で作成されたステップです。移動と削除はできますが、変更はできません",
@@ -679,6 +687,10 @@
       "makeRotate": "回転にする",
       "makeTurnOver": "裏返しにする",
       "missingHint": "パターンがなくなりました：別のパターンにリンクし直してください",
+      "move": {
+        "earlier": "前へ",
+        "later": "後ろへ"
+      },
       "moveEarlier": "前へ移動",
       "moveLater": "後ろへ移動",
       "noPatternHint": "リンクするには編集で展開図を開いてください",

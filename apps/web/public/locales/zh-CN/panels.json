@@ -667,10 +667,18 @@
       "firstHint": "已经是第一步",
       "firstPageHint": "第一步总是新的一页的开始",
       "fromReferences": "来自参考…",
-      "insertAfter": "在后面插入步骤",
-      "insertBefore": "在前面插入步骤",
-      "insertRotate": "在后面插入旋转",
-      "insertTurnOver": "在后面插入翻面",
+      "groups": {
+        "insert": "插入",
+        "move": "移动",
+        "page": "在页面上",
+        "picture": "图片"
+      },
+      "insert": {
+        "rotateAfter": "在后面旋转",
+        "stepAfter": "在后面加一步",
+        "stepBefore": "在前面加一步",
+        "turnOverAfter": "在后面翻面"
+      },
       "lastHint": "已经是最后一步",
       "linkPattern": "链接图样…",
       "lockedEditHint": "由更新版本的 Ori Studio 创建：可以移动或删除，但不能修改",
@@ -679,6 +687,10 @@
       "makeRotate": "改为旋转",
       "makeTurnOver": "改为翻面",
       "missingHint": "其图样已不存在：请重新链接到其他图样",
+      "move": {
+        "earlier": "前移",
+        "later": "后移"
+      },
       "moveEarlier": "前移",
       "moveLater": "后移",
       "noPatternHint": "请先在编辑中打开折痕图再链接",

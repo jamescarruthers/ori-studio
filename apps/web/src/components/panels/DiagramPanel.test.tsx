@@ -299,30 +299,32 @@ describe('DiagramPanel', () => {
       });
       expect(state().diagramSelectedStepId).toBe(first);
       // Each row is its label, then the key that runs it where there is one.
+      // An empty step leads with the ways to give it a picture; the rest are submenus.
       const rows = menuItems();
-      expect(rows).toHaveLength(17);
+      expect(rows).toHaveLength(10);
       [
-        'Insert Step Before',
-        'Insert Step After',
-        'Insert Turn Over After',
-        'Insert Rotate After',
-        'Duplicate Step',
-        'Move Earlier',
-        'Move Later',
         'Upload Picture…',
         'Link Pattern…',
         'From References…',
         'Make Turn Over',
         'Make Rotate',
-        'Adjust Pose',
-        'Annotate',
-        'Export Picture…',
-        'Remove Picture',
+        'Duplicate Step',
+        'Insert',
+        'Move',
+        'Picture',
         'Delete Step',
       ].forEach((label, index) => expect(rows[index]).toMatch(new RegExp(`^${label}`)));
-      const moveLater = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
-        (item) => item.textContent?.startsWith('Move Later')
+      const move = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+        (item) => item.textContent === 'Move'
       );
+      act(() => {
+        move?.focus();
+        move?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      });
+      const moveLater = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+        (item) => item.textContent?.startsWith('Later')
+      );
+      expect(moveLater).toBeDefined();
       act(() => moveLater?.click());
       expect(stepsIn(state().diagram!).map((step) => step.id)).toEqual([second, first]);
     });

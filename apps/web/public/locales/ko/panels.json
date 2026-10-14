@@ -667,10 +667,18 @@
       "firstHint": "이미 첫 번째 단계입니다",
       "firstPageHint": "첫 단계는 항상 새 페이지에서 시작합니다",
       "fromReferences": "참조에서…",
-      "insertAfter": "뒤에 단계 삽입",
-      "insertBefore": "앞에 단계 삽입",
-      "insertRotate": "뒤에 회전 삽입",
-      "insertTurnOver": "뒤에 뒤집기 삽입",
+      "groups": {
+        "insert": "삽입",
+        "move": "이동",
+        "page": "페이지 배치",
+        "picture": "그림"
+      },
+      "insert": {
+        "rotateAfter": "뒤에 회전",
+        "stepAfter": "뒤에 단계",
+        "stepBefore": "앞에 단계",
+        "turnOverAfter": "뒤에 뒤집기"
+      },
       "lastHint": "이미 마지막 단계입니다",
       "linkPattern": "패턴 연결…",
       "lockedEditHint": "최신 Ori Studio에서 만든 단계입니다. 이동하거나 삭제할 수는 있지만 변경할 수는 없습니다",
@@ -679,6 +687,10 @@
       "makeRotate": "회전으로 바꾸기",
       "makeTurnOver": "뒤집기로 바꾸기",
       "missingHint": "패턴이 사라졌습니다: 다른 패턴에 다시 연결하세요",
+      "move": {
+        "earlier": "앞으로",
+        "later": "뒤로"
+      },
       "moveEarlier": "앞으로 이동",
       "moveLater": "뒤로 이동",
       "noPatternHint": "연결하려면 편집에서 전개도를 여세요",
