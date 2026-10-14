@@ -1112,8 +1112,11 @@ until 1f.
   in a one-row grid), `titleBlockFits(setup)` (room for it, asked whether
   or not it is on: the Page pane's predicate for disabling the toggle),
   `hasTitleBlock(setup)` (on, and room) and `firstPageCapacity(setup)`.
-  `splitPages` and `paginate` read the first page's default through one
-  private helper; no caller changed.
+  `splitPages` and `paginate` read each page's default through
+  `defaultPageCapacity(setup, pageIndex)`; no caller changed. The one place
+  outside them that compared a count with "the default", Set Steps on Page
+  leaving an automatic last page automatic (`pageCounts.ts`), now asks it
+  too: a lone first page under the block is laid out for 7, not 9.
 - A grid's first page keeps `rows` as the setup's (the cut, so every page
   keeps one cell size) and its `rowCounts` lists only the rows under the
   block, so they sum to its capacity. The layout (1c) offsets them by

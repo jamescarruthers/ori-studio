@@ -117,6 +117,11 @@ export function firstPageCapacity(setup: DiagramPageSetup): number {
     : setup.columns * (setup.rows - blockRows(setup));
 }
 
+/** How many steps the `pageIndex`th page holds when it has no count of its own: the first page's ({@link firstPageCapacity}), or every page's. */
+export function defaultPageCapacity(setup: DiagramPageSetup, pageIndex: number): number {
+  return pageIndex === 0 ? firstPageCapacity(setup) : pageCapacity(setup);
+}
+
 /**
  * The paper inside its margins, in mm: what a flow page's rows are chosen
  * on. Never less the header or the footer, so a title typed or page numbers
@@ -220,24 +225,16 @@ export interface PageSplit {
 export function splitPages(steps: readonly PaginatedStep[], setup: DiagramPageSetup): PageSplit[] {
   const flow = setup.layout === 'flow';
   const pages: PageSplit[] = [];
-  const holds = defaultCapacities(setup);
   steps.forEach((step, index) => {
     const own = flow ? ownPageSteps(step) : null;
     const current = pages.at(-1);
-    if (!current || step.breakBefore || own !== null || current.steps.length >= (current.own ?? holds(pages.length - 1))) {
+    if (!current || step.breakBefore || own !== null || current.steps.length >= (current.own ?? defaultPageCapacity(setup, pages.length - 1))) {
       pages.push({ steps: [index], own });
     } else {
       current.steps.push(index);
     }
   });
   return pages.length > 0 ? pages : [{ steps: [], own: null }];
-}
-
-/** How many steps each page holds under a setup without a count of its own, by its index: the first page its own. */
-function defaultCapacities(setup: DiagramPageSetup): (pageIndex: number) => number {
-  const first = firstPageCapacity(setup);
-  const rest = pageCapacity(setup);
-  return (pageIndex) => (pageIndex === 0 ? first : rest);
 }
 
 /**
@@ -247,10 +244,9 @@ function defaultCapacities(setup: DiagramPageSetup): (pageIndex: number) => numb
  */
 export function paginate(steps: readonly PaginatedStep[], setup: DiagramPageSetup): PlannedPage[] {
   const pages = splitPages(steps, setup);
-  const holds = defaultCapacities(setup);
   if (setup.layout !== 'flow') {
     return pages.map((page, pageIndex) => {
-      const capacity = holds(pageIndex);
+      const capacity = defaultPageCapacity(setup, pageIndex);
       return {
         steps: page.steps,
         firstStepId: firstId(steps, page),
@@ -265,7 +261,7 @@ export function paginate(steps: readonly PaginatedStep[], setup: DiagramPageSetu
   }
   const area = printableArea(setup);
   return pages.map((page, pageIndex) => {
-    const capacity = page.own ?? holds(pageIndex);
+    const capacity = page.own ?? defaultPageCapacity(setup, pageIndex);
     const last = pageIndex === pages.length - 1;
     const layoutCount = last ? capacity : page.steps.length;
     // A left page handing over at its spine (`flowPagePlan`'s exit), which no row count changes.

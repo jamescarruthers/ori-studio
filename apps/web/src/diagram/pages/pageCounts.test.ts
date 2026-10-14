@@ -430,6 +430,14 @@ describe('the first page with the title block (diagram-title-block.md)', () => {
     expect(counts(setPageSteps(blocked, 2, 3))).toEqual({ s0: 3, s3: 4, s7: 3 });
   });
 
+  it('leaves a lone first page automatic only when given what it is laid out for: its own default, not the steps per page', () => {
+    // Five steps on one page, laid out for the seven the first page holds under the block, not the nine of every other.
+    const lone = diagram(5, {}, [], { stepsPerPage: 9, titleBlock: { enabled: true, heightShare: 0.27 } });
+    expect(paginate(stepsOf(lone), lone.page)[0]).toMatchObject({ layoutCount: 7, ownCount: false });
+    expect(setPageSteps(lone, 0, 7)).toBe(lone);
+    expect(counts(setPageSteps(lone, 0, 9))).toEqual({ s0: 9 });
+  });
+
   it('keeps a first page’s own count through an edit on it, as without the block', () => {
     const counted = setPageSteps(blocked, 0, 5);
     expect(pages(counted)).toEqual(['s0:5 s1 s2 s3 s4', 's5 s6 s7 s8', 's9 s10 s11']);

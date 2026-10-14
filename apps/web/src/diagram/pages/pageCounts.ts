@@ -39,14 +39,20 @@ import {
   setPageStarts,
   stepsOf,
   type DiagramDocument,
+  type DiagramPageSetup,
   type DiagramPageStart,
   type DiagramStep,
 } from '../document/diagramDocument';
-import { splitPages, type PageSplit } from './pagePlan';
+import { defaultPageCapacity, splitPages, type PageSplit } from './pagePlan';
 
 /** The flow's pages of a document's steps, whatever its layout: the pages counts belong to. */
 function flowPages(document: DiagramDocument, steps: readonly DiagramStep[]): PageSplit[] {
-  return splitPages(steps, { ...document.page, layout: 'flow' });
+  return splitPages(steps, flowSetup(document));
+}
+
+/** A document's page setup as the flow's, whatever its layout. */
+function flowSetup(document: DiagramDocument): DiagramPageSetup {
+  return { ...document.page, layout: 'flow' };
 }
 
 function clampCount(count: number): number {
@@ -286,8 +292,8 @@ export function setPageSteps(document: DiagramDocument, pageIndex: number, count
   const held = heldCounts(steps, pages, pageIndex);
   const asked = Math.round(count);
   const limits = pageLimits(steps, pages, pageIndex, held);
-  // An automatic last page is already laid out for the default: given it, it stays automatic.
-  if (limits.automaticLast && asked === document.page.stepsPerPage) return document;
+  // An automatic last page is already laid out for its default: given it, it stays automatic.
+  if (limits.automaticLast && asked === defaultPageCapacity(flowSetup(document), pageIndex)) return document;
   const target = Math.min(limits.max, Math.max(limits.min, asked));
   if (page.own === target) return document;
   pages.forEach((each, index) => {
