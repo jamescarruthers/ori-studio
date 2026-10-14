@@ -6,7 +6,9 @@
  * 1A) a step's frame offset is kept while its cell is the same, and cleared
  * when its cell changes — whatever changed it. A step's cell is its place
  * among its page's steps, on its page, on a page of a given shape, its
- * columns × rows ({@link sameCell}). A page is the same page while it keeps
+ * columns × rows and the rows the first page's title block takes
+ * ({@link sameCell}), so the block turned on or off moves every cell on the
+ * first page (`diagram-title-block.md`). A page is the same page while it keeps
  * its number, or the step it starts with: a step inserted earlier can add a
  * page and renumber every later one while a page break keeps their steps
  * exactly where they were, and a reorder can change the step a page starts
@@ -77,10 +79,14 @@ export interface CellSlots {
 
 /**
  * What cuts a page into cells: in the flow, the number of steps it is laid
- * out for and its rows; on a grid, its columns and rows.
+ * out for and its rows; on a grid, its columns and rows, and on the first
+ * page the rows the title block takes above its cells, which move every
+ * cell there.
  */
 export function pageShape(page: PlannedPage, layout: DiagramPageLayout): string {
-  return layout === 'flow' ? `${page.layoutCount}/${page.rows}` : `${page.columns}x${page.rows}`;
+  if (layout === 'flow') return `${page.layoutCount}/${page.rows}`;
+  const blockRows = page.rows - page.rowCounts.length;
+  return blockRows > 0 ? `${page.columns}x${page.rows}-${blockRows}` : `${page.columns}x${page.rows}`;
 }
 
 /**

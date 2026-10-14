@@ -279,6 +279,18 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     expect(settle(before, setPageSetup(before, { columns: 4, rows: 2 }))).toEqual([]);
   });
 
+  it('sends home every frame on a grid’s first page when the title block comes or goes: its cells move under the block', () => {
+    // 3 × 3, s13 starting a page: s0–s8 | s9–s12 | s13–s15. The block takes the first page's top row: s0–s5 move
+    // a row down, s6–s8 go on to page two and s9–s12 along it; s13–s15 keep their cells on page three.
+    const off = placed(16, { titleBlock: { enabled: false, heightShare: 0.27 } });
+    const on = setPageSetup(off, { titleBlock: { enabled: true, heightShare: 0.27 } });
+    expect(cellSlots(on).pages.map((page) => page.length)).toEqual([6, 7, 3]);
+    expect(settle(off, on)).toEqual(ids(0, 12));
+    expect(settle(on, off)).toEqual(ids(0, 12));
+    // Without the block, a grid page's shape is its columns and rows, as it always was.
+    expect(cellSlots(off).shapes).toEqual(['3x3', '3x3', '3x3']);
+  });
+
   it('keeps a flow page’s frames when a page added after it makes it hand over at its spine: it is packed afresh, its steps on it', () => {
     // Its rows are three either way, but it is no longer the last page, and hands over at its spine: it is packed afresh.
     const one = placed(9, { layout: 'flow' }, []);
