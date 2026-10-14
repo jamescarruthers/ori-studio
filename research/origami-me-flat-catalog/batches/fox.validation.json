@@ -1,0 +1,26 @@
+{
+  "source": "https://origami.me/fox/",
+  "file": "models/fox.osf",
+  "fileSha256": "5419dacb781adc22e104e258fcb424879b93265a9cf2f39a4b8dc2d5499526c5",
+  "nodes": 9,
+  "folds": 6,
+  "finalFaces": 10,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "3f5c439b985c75eeb0d2d6b402ce274d640c9dad94b379824a0c1d302afb5cd7",
+    "3a6a4edd256e38e04fdb52bd218e5f8502e63acb8b0e5550cc0b28b2d1f3f95f",
+    "60d226ea64c476f76a272818cf194979509522dd76348b19287527c9b43e3cee",
+    "778de74ebe7b4bb3d2caf70d84be007815193f4ea249e4036fe6f7b8e07fa972",
+    "801345e7539d7b6a1da670f8ac56088ddd96e2158351df31f77825e316aa2dd3",
+    "e20b32350fc046a146efa0f85f439fa60547db4b0a11a81ecdb502d39175518c",
+    "15e12625e4363e694e98fa2dc52d4921d47430502c15d2c4e79c153ca9d6817d"
+  ],
+  "sourceStepsCompleted": 7,
+  "sourceSteps": 10,
+  "audit": "verified prefix; unresolved compound operation",
+  "proportions": "Ear crease and tail width are approximate as instructed. Decorative eyes omitted.",
+  "allNativeStatesVisuallyChecked": true
+}

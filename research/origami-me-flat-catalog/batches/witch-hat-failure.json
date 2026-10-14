@@ -1,0 +1,1323 @@
+{
+  "completed": 6,
+  "message": "Engine refusal: extent_misses_layers",
+  "attempts": [
+    {
+      "step": 1,
+      "note": "Set-up: white-side-up diamond. Source: https://origami.me/witch-hat/",
+      "op": {
+        "kind": "rotate",
+        "rotate": {
+          "amount": "eighth",
+          "direction": "cw"
+        }
+      },
+      "result": {
+        "status": "ok",
+        "state": 2,
+        "report": null,
+        "summary": {
+          "step": 1,
+          "faces": 1,
+          "pairs": 0,
+          "creases": {
+            "border": 4,
+            "mountain": 0,
+            "valley": 0,
+            "flat": 0
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 0,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 2,
+      "note": "1a: Precrease the vertical diagonal.",
+      "op": {
+        "kind": "precrease",
+        "line": {
+          "via": "free",
+          "through": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              1.0000000000000002
+            ]
+          ]
+        },
+        "moving": [
+          0.2828427124746189,
+          0.7071067811865475
+        ],
+        "seed": {
+          "scope": "all"
+        },
+        "direction": "valley"
+      },
+      "result": {
+        "status": "ok",
+        "state": 3,
+        "report": {
+          "line": {
+            "n": [
+              0.7071067811865476,
+              -0.7071067811865476
+            ],
+            "d": 0
+          },
+          "side": "negative",
+          "snap": {
+            "clusters": 2,
+            "angle": 0,
+            "max_shift": 2.220446049250313e-16
+          },
+          "direction": "mountain",
+          "flaps": [
+            {
+              "faces": [
+                0
+              ],
+              "witness": [
+                0.3333333333333333,
+                0.6666666666666666
+              ]
+            }
+          ],
+          "picked": [
+            0
+          ],
+          "added": [],
+          "moving": [
+            0
+          ],
+          "moving_faces": [
+            1
+          ],
+          "created": [
+            4
+          ],
+          "unfolded": [],
+          "refolded": [],
+          "split": 1
+        },
+        "summary": {
+          "step": 2,
+          "faces": 2,
+          "pairs": 0,
+          "creases": {
+            "border": 4,
+            "mountain": 0,
+            "valley": 0,
+            "flat": 1
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 0,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 3,
+      "note": "1b: Precrease the horizontal diagonal.",
+      "op": {
+        "kind": "precrease",
+        "line": {
+          "via": "free",
+          "through": [
+            [
+              1,
+              1.1102230246251565e-16
+            ],
+            [
+              -1.1102230246251565e-16,
+              1
+            ]
+          ]
+        },
+        "moving": [
+          0.14142135623730945,
+          0.282842712474619
+        ],
+        "seed": {
+          "scope": "all"
+        },
+        "direction": "valley"
+      },
+      "result": {
+        "status": "ok",
+        "state": 4,
+        "report": {
+          "line": {
+            "n": [
+              0.7071067811865476,
+              0.7071067811865476
+            ],
+            "d": 0.7071067811865476
+          },
+          "side": "negative",
+          "snap": {
+            "clusters": 2,
+            "angle": 1.4901161193847656e-8,
+            "max_shift": 1.1102230246251565e-16
+          },
+          "direction": "mountain",
+          "flaps": [
+            {
+              "faces": [
+                1,
+                2
+              ],
+              "witness": [
+                0.16666666666666666,
+                0.5
+              ]
+            }
+          ],
+          "picked": [
+            0
+          ],
+          "added": [],
+          "moving": [
+            1,
+            2
+          ],
+          "moving_faces": [
+            3,
+            5
+          ],
+          "created": [
+            7,
+            8
+          ],
+          "unfolded": [],
+          "refolded": [],
+          "split": 2
+        },
+        "summary": {
+          "step": 3,
+          "faces": 4,
+          "pairs": 0,
+          "creases": {
+            "border": 4,
+            "mountain": 0,
+            "valley": 0,
+            "flat": 4
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 0,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 4,
+      "note": "2a: Fold the upper-left edge to the middle.",
+      "op": {
+        "kind": "valley",
+        "line": {
+          "via": "free",
+          "through": [
+            [
+              1,
+              1.0000000000000002
+            ],
+            [
+              0.5857864376269051,
+              0
+            ]
+          ]
+        },
+        "moving": [
+          0.8485281374238569,
+          0.14142135623730956
+        ],
+        "seed": {
+          "scope": "all"
+        }
+      },
+      "result": {
+        "status": "ok",
+        "state": 5,
+        "report": {
+          "line": {
+            "n": [
+              0.923879532511287,
+              -0.3826834323650896
+            ],
+            "d": 0.5411961001461973
+          },
+          "side": "positive",
+          "snap": {
+            "clusters": 1,
+            "angle": 0,
+            "max_shift": 2.220446049250313e-16
+          },
+          "direction": "mountain",
+          "flaps": [
+            {
+              "faces": [
+                5,
+                6
+              ],
+              "witness": [
+                0.7642977396044843,
+                0.09763107293781745
+              ]
+            }
+          ],
+          "picked": [
+            0
+          ],
+          "added": [],
+          "moving": [
+            5,
+            6
+          ],
+          "moving_faces": [
+            7,
+            9
+          ],
+          "created": [
+            13,
+            14
+          ],
+          "unfolded": [],
+          "refolded": [],
+          "split": 2
+        },
+        "summary": {
+          "step": 4,
+          "faces": 6,
+          "pairs": 3,
+          "creases": {
+            "border": 5,
+            "mountain": 2,
+            "valley": 0,
+            "flat": 5
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 1.6653345369377348e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 5,
+      "note": "2b: Repeat on the right.",
+      "op": {
+        "kind": "valley",
+        "line": {
+          "via": "free",
+          "through": [
+            [
+              1,
+              1.0000000000000002
+            ],
+            [
+              0,
+              0.5857864376269051
+            ]
+          ]
+        },
+        "moving": [
+          0.1414213562373094,
+          0.848528137423857
+        ],
+        "seed": {
+          "scope": "all"
+        }
+      },
+      "result": {
+        "status": "ok",
+        "state": 6,
+        "report": {
+          "line": {
+            "n": [
+              0.38268343236508984,
+              -0.9238795325112867
+            ],
+            "d": -0.5411961001461969
+          },
+          "side": "negative",
+          "snap": {
+            "clusters": 1,
+            "angle": 0,
+            "max_shift": 2.220446049250313e-16
+          },
+          "direction": "mountain",
+          "flaps": [
+            {
+              "faces": [
+                3,
+                4
+              ],
+              "witness": [
+                0.09763107293781749,
+                0.7642977396044841
+              ]
+            }
+          ],
+          "picked": [
+            0
+          ],
+          "added": [],
+          "moving": [
+            3,
+            4
+          ],
+          "moving_faces": [
+            11,
+            13
+          ],
+          "created": [
+            19,
+            20
+          ],
+          "unfolded": [],
+          "refolded": [],
+          "split": 2
+        },
+        "summary": {
+          "step": 5,
+          "faces": 8,
+          "pairs": 6,
+          "creases": {
+            "border": 6,
+            "mountain": 4,
+            "valley": 0,
+            "flat": 6
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 2.220446049250313e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 6,
+      "note": "3a: Precrease at the boundary between colored and white paper.",
+      "op": {
+        "kind": "precrease",
+        "line": {
+          "via": "free",
+          "through": [
+            [
+              0.5857864376269052,
+              -3.646273558046584e-17
+            ],
+            [
+              1.1102230246251565e-16,
+              0.5857864376269046
+            ]
+          ]
+        },
+        "moving": [
+          0.028284271247461898,
+          0.042426406871192854
+        ],
+        "seed": {
+          "scope": "all"
+        },
+        "direction": "valley"
+      },
+      "result": {
+        "status": "ok",
+        "state": 7,
+        "report": {
+          "line": {
+            "n": [
+              0.7071067811865474,
+              0.7071067811865478
+            ],
+            "d": 0.4142135623730951
+          },
+          "side": "negative",
+          "snap": {
+            "clusters": 3,
+            "angle": 0,
+            "max_shift": 2.220446049250313e-16
+          },
+          "direction": "mountain",
+          "flaps": [
+            {
+              "faces": [
+                8,
+                12
+              ],
+              "witness": [
+                0.29289321881345254,
+                0.09763107293781753
+              ]
+            }
+          ],
+          "picked": [
+            0
+          ],
+          "added": [],
+          "moving": [
+            8,
+            12
+          ],
+          "moving_faces": [
+            15,
+            17
+          ],
+          "created": [
+            23,
+            24
+          ],
+          "unfolded": [],
+          "refolded": [],
+          "split": 2
+        },
+        "summary": {
+          "step": 6,
+          "faces": 10,
+          "pairs": 6,
+          "creases": {
+            "border": 6,
+            "mountain": 4,
+            "valley": 0,
+            "flat": 9
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 2.220446049250313e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 7,
+      "note": "3b: Turn over.",
+      "op": {
+        "kind": "turn",
+        "axis": "vertical"
+      },
+      "result": {
+        "status": "ok",
+        "state": 8,
+        "report": null,
+        "summary": {
+          "step": 7,
+          "faces": 10,
+          "pairs": 6,
+          "creases": {
+            "border": 6,
+            "mountain": 4,
+            "valley": 0,
+            "flat": 9
+          },
+          "view": {
+            "flipped": false,
+            "rotation": 0.7853981633974483
+          },
+          "residual": 2.220446049250313e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 8,
+      "note": "4: Precrease the lower tip onto the upper tip.",
+      "op": {
+        "kind": "precrease",
+        "line": {
+          "via": "axiom",
+          "axiom": 2,
+          "inputs": [
+            {
+              "kind": "point",
+              "at": [
+                0,
+                0
+              ]
+            },
+            {
+              "kind": "point",
+              "at": [
+                1,
+                1.0000000000000002
+              ]
+            }
+          ]
+        },
+        "seed": {
+          "scope": "all"
+        },
+        "direction": "valley"
+      },
+      "choices": {
+        "root": {
+          "n": [
+            0.7071067811865475,
+            0.7071067811865475
+          ],
+          "d": 0.7071067811865475
+        }
+      },
+      "result": {
+        "status": "ok",
+        "state": 9,
+        "report": {
+          "line": {
+            "n": [
+              0.7071067811865476,
+              0.7071067811865476
+            ],
+            "d": 0.7071067811865476
+          },
+          "side": "negative",
+          "snap": {
+            "clusters": 3,
+            "angle": 0,
+            "max_shift": 1.1102230246251565e-16
+          },
+          "direction": "valley",
+          "flaps": [
+            {
+              "faces": [
+                7,
+                9,
+                11,
+                13,
+                15,
+                16,
+                17,
+                18
+              ],
+              "witness": [
+                0.7642977396044845,
+                0.09763107293781731
+              ]
+            }
+          ],
+          "picked": [
+            0
+          ],
+          "added": [],
+          "moving": [
+            7,
+            9,
+            11,
+            13,
+            15,
+            16,
+            17,
+            18
+          ],
+          "moving_faces": [
+            7,
+            11,
+            15,
+            16,
+            17,
+            18,
+            19,
+            21
+          ],
+          "created": [
+            29,
+            30
+          ],
+          "unfolded": [],
+          "refolded": [],
+          "split": 2
+        },
+        "summary": {
+          "step": 8,
+          "faces": 12,
+          "pairs": 6,
+          "creases": {
+            "border": 8,
+            "mountain": 4,
+            "valley": 0,
+            "flat": 11
+          },
+          "view": {
+            "flipped": false,
+            "rotation": 0.7853981633974483
+          },
+          "residual": 2.220446049250313e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 9,
+      "note": "5a: Precrease the lower reference onto the upper one.",
+      "op": {
+        "kind": "precrease",
+        "line": {
+          "via": "free",
+          "through": [
+            [
+              0.18431457505076201,
+              0.6085786437626906
+            ],
+            [
+              0.6085786437626906,
+              0.18431457505076215
+            ]
+          ]
+        },
+        "moving": [
+          0.3252691193458118,
+          0.311126983722081
+        ],
+        "seed": {
+          "scope": "all"
+        },
+        "direction": "valley"
+      },
+      "result": {
+        "status": "ok",
+        "state": 10,
+        "report": {
+          "line": {
+            "n": [
+              0.7071067811865474,
+              0.7071067811865477
+            ],
+            "d": 0.5606601717798214
+          },
+          "side": "negative",
+          "snap": {
+            "clusters": 0,
+            "angle": 0,
+            "max_shift": 0
+          },
+          "direction": "valley",
+          "flaps": [
+            {
+              "faces": [
+                7,
+                11,
+                15,
+                16,
+                17,
+                18,
+                19,
+                21
+              ],
+              "witness": [
+                0.773829566007474,
+                0.06508738195854485
+              ]
+            }
+          ],
+          "picked": [
+            0
+          ],
+          "added": [],
+          "moving": [
+            7,
+            11,
+            15,
+            16,
+            17,
+            18,
+            19,
+            21
+          ],
+          "moving_faces": [
+            15,
+            17,
+            23,
+            25,
+            27,
+            29,
+            31,
+            33
+          ],
+          "created": [
+            45,
+            46,
+            47,
+            48,
+            49,
+            50
+          ],
+          "unfolded": [],
+          "refolded": [],
+          "split": 6
+        },
+        "summary": {
+          "step": 9,
+          "faces": 18,
+          "pairs": 10,
+          "creases": {
+            "border": 10,
+            "mountain": 6,
+            "valley": 0,
+            "flat": 20
+          },
+          "view": {
+            "flipped": false,
+            "rotation": 0.7853981633974483
+          },
+          "residual": 2.9893669801409083e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 10,
+      "note": "5b: Turn over.",
+      "op": {
+        "kind": "turn",
+        "axis": "vertical"
+      },
+      "result": {
+        "status": "ok",
+        "state": 11,
+        "report": null,
+        "summary": {
+          "step": 10,
+          "faces": 18,
+          "pairs": 10,
+          "creases": {
+            "border": 10,
+            "mountain": 6,
+            "valley": 0,
+            "flat": 20
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 2.9893669801409083e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 11,
+      "note": "6a: Open the left long flap.",
+      "op": {
+        "kind": "unfold",
+        "crease": [
+          0.7928932188134526,
+          0.5000000000000001
+        ],
+        "moving": [
+          0.9200000000000003,
+          0.385786437626905
+        ],
+        "seed": {
+          "scope": "flaps",
+          "at": [
+            [
+              0.9200000000000003,
+              0.385786437626905
+            ]
+          ]
+        },
+        "direction": "valley"
+      },
+      "result": {
+        "status": "ok",
+        "state": 12,
+        "report": {
+          "line": {
+            "n": [
+              0.9238795325112868,
+              -0.3826834323650896
+            ],
+            "d": 0.5411961001461972
+          },
+          "side": "negative",
+          "snap": {
+            "clusters": 4,
+            "angle": 0,
+            "max_shift": 1.1102230246251565e-16
+          },
+          "direction": "mountain",
+          "flaps": [
+            {
+              "faces": [
+                10,
+                14,
+                15,
+                17,
+                22,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                33,
+                34
+              ],
+              "witness": [
+                0.7357022603955159,
+                0.5976310729378174
+              ]
+            },
+            {
+              "faces": [
+                20,
+                23,
+                24,
+                31,
+                32
+              ],
+              "witness": [
+                0.9023689270621826,
+                0.5285954792089682
+              ]
+            }
+          ],
+          "picked": [
+            1
+          ],
+          "added": [],
+          "moving": [
+            20,
+            23,
+            24,
+            31,
+            32
+          ],
+          "moving_faces": [
+            20,
+            23,
+            24,
+            31,
+            32
+          ],
+          "created": [],
+          "unfolded": [
+            14,
+            33,
+            34
+          ],
+          "refolded": [],
+          "split": 0
+        },
+        "summary": {
+          "step": 11,
+          "faces": 18,
+          "pairs": 5,
+          "creases": {
+            "border": 10,
+            "mountain": 3,
+            "valley": 0,
+            "flat": 23
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 2.220446049250313e-16,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 12,
+      "note": "6b: Open the right long flap.",
+      "op": {
+        "kind": "unfold",
+        "crease": [
+          0.5000000000000001,
+          0.7928932188134524
+        ],
+        "moving": [
+          0.38578643762690495,
+          0.92
+        ],
+        "seed": {
+          "scope": "flaps",
+          "at": [
+            [
+              0.38578643762690495,
+              0.92
+            ]
+          ]
+        },
+        "direction": "valley"
+      },
+      "result": {
+        "status": "ok",
+        "state": 13,
+        "report": {
+          "line": {
+            "n": [
+              0.38268343236508984,
+              -0.9238795325112867
+            ],
+            "d": -0.5411961001461969
+          },
+          "side": "positive",
+          "snap": {
+            "clusters": 4,
+            "angle": 0,
+            "max_shift": 1.1102230246251565e-16
+          },
+          "direction": "mountain",
+          "flaps": [
+            {
+              "faces": [
+                10,
+                14,
+                15,
+                17,
+                20,
+                23,
+                24,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32
+              ],
+              "witness": [
+                0.7357022603955159,
+                0.5976310729378174
+              ]
+            },
+            {
+              "faces": [
+                22,
+                25,
+                26,
+                33,
+                34
+              ],
+              "witness": [
+                0.528595479208968,
+                0.9023689270621826
+              ]
+            }
+          ],
+          "picked": [
+            1
+          ],
+          "added": [],
+          "moving": [
+            22,
+            25,
+            26,
+            33,
+            34
+          ],
+          "moving_faces": [
+            22,
+            25,
+            26,
+            33,
+            34
+          ],
+          "created": [],
+          "unfolded": [
+            20,
+            37,
+            38
+          ],
+          "refolded": [],
+          "split": 0
+        },
+        "summary": {
+          "step": 12,
+          "faces": 18,
+          "pairs": 0,
+          "creases": {
+            "border": 10,
+            "mountain": 0,
+            "valley": 0,
+            "flat": 26
+          },
+          "view": {
+            "flipped": true,
+            "rotation": -0.7853981633974483
+          },
+          "residual": 0,
+          "sheet": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "step": 13,
+      "note": "7: Reverse only the middle section of the brim precrease; retain the flat unfolded endpoint.",
+      "op": {
+        "kind": "precrease",
+        "line": {
+          "via": "free",
+          "through": [
+            [
+              0.6464466094067263,
+              0.14644660940672632
+            ],
+            [
+              0.1464466094067262,
+              0.6464466094067265
+            ]
+          ]
+        },
+        "moving": [
+          0.35402020253553346,
+          0.3681623381592644
+        ],
+        "seed": {
+          "scope": "all"
+        },
+        "direction": "valley",
+        "extent": {
+          "kind": "segment",
+          "from": {
+            "kind": "point",
+            "at": [
+              0.6464466094067263,
+              0.14644660940672632
+            ]
+          },
+          "to": {
+            "kind": "point",
+            "at": [
+              0.1464466094067262,
+              0.6464466094067265
+            ]
+          }
+        }
+      },
+      "result": {
+        "status": "refused",
+        "refusal": {
+          "code": "extent_misses_layers"
+        },
+        "fixes": [],
+        "faces": [],
+        "vertices": []
+      }
+    }
+  ]
+}

@@ -8,9 +8,11 @@
   ],
   "coverage": "All five pages of the current index, cross-checked against all 142 easy collection entries. Eligibility review ongoing.",
   "nextQueue": [
-    "witch-hat",
-    "happi",
-    "parrot"
+    "fortune-teller",
+    "goldfish",
+    "heart-card",
+    "rose",
+    "star"
   ],
   "designs": [
     {
@@ -108,13 +110,18 @@
       "difficulty": "Very Easy",
       "indexPage": 5,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat folded endpoint; optional flapping action",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 6,
+      "model": "models/bird.osf",
+      "gaps": [
+        "F019",
+        "F020"
+      ],
+      "notes": "Square base and closed kite through source 6 verified. Source 7 opening moved wrong connected layers; exact invalid attempt retained separately.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "traditional-boat",
@@ -124,13 +131,15 @@
       "difficulty": "Very Easy",
       "indexPage": 5,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 8 instructions and 12 diagrams reviewed. Required final opening forms a spatial hull; completed photograph confirms open cavity.",
+      "sourceDifficulty": "Very Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "bookmark",
@@ -214,13 +223,15 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 12 instructions and 14 diagrams reviewed. Eight module steps plus four assembly steps. Assembly 3\u20134 closes six Sonobe units into a volume.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "cup",
@@ -230,13 +241,15 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 7 instructions and 8 diagrams reviewed. Required source 7 opens the top and presses a base into a curved container.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "dog",
@@ -266,13 +279,15 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full 13 instructions / 14 diagrams reviewed. Source 13 requires opening wings out of plane so it stands. Flat prefix is not tutorial completion.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "easter-egg",
@@ -301,13 +316,16 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 7,
+      "model": "models/elephant.osf",
+      "gaps": [
+        "F023"
+      ],
+      "notes": "Source 8 head swivel inputs remain tentative; swivel_fold_wide is not evidence of missing functionality. Eleven-node verified prefix.",
+      "report": "batches/004.md"
     },
     {
       "slug": "fan",
@@ -317,13 +335,15 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 11 instructions and 12 diagrams reviewed. Required source 11 spreads accordion pleats; completed fan retains out-of-plane ridges.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "fish",
@@ -350,13 +370,15 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 22 instructions and 28 diagrams reviewed. Four preparation, six unit, twelve assembly steps. Required final curl makes petals non-flat. Flat assembly through 11 would be a labeled variant, not tutorial completion.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "fortune-teller",
@@ -382,13 +404,17 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 7,
+      "model": "models/fox.osf",
+      "gaps": [
+        "F017"
+      ],
+      "notes": "Central multi-ply squash unresolved; direct and tentative middle-fold requests lack a recognized spine. Prefix through 7 verified in Fold.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "goldfish",
@@ -415,13 +441,15 @@
       "indexPage": 3,
       "earlyRelease": false,
       "eligibility": "flat",
-      "status": "queued",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": "Full nine-step tutorial and ten diagrams reviewed; eligible, authoring queued.",
-      "report": "batches/003.md"
+      "lastSourceStep": 5,
+      "model": "models/happi.osf",
+      "gaps": [
+        "F015"
+      ],
+      "notes": "Source-6 collar reference unresolved; native file rolled back to the nine-node source-5 checkpoint. Invalid downstream attempt retained separately.",
+      "report": "batches/004.md"
     },
     {
       "slug": "heart",
@@ -464,13 +492,16 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 7,
+      "model": "models/horse.osf",
+      "gaps": [
+        "F011"
+      ],
+      "notes": "Required source 8 partial cut through the front layer has no public Fold operation. Sixteen-node verified prefix; all 20 instructions and 21 diagrams reviewed.",
+      "report": "batches/004.md"
     },
     {
       "slug": "jack-o-lantern",
@@ -480,13 +511,15 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 21 instructions and 22 diagrams reviewed. Required source-20 three-ray stem pinch and source-21 curved shaping retain a non-flat stem. The pumpkin face is flat, but a flat stem variant would not reproduce the shown finish.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "kimono",
@@ -515,13 +548,17 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 4,
+      "model": "models/lantern.osf",
+      "gaps": [
+        "F018"
+      ],
+      "notes": "Three blintzes and turns verified. Source 5 requires a coupled swivel opening; direct squash is not free. Correct swivel inputs remain untested.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "leaf",
@@ -531,13 +568,15 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 11 instructions and 12 diagrams reviewed. Required final opening retains a raised center ridge and corrugated pleats, also visible in final photo; a flattened variant is not tutorial completion.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "necktie",
@@ -566,13 +605,20 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat modular",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 7,
+      "model": "models/ninja-star-a.osf",
+      "gaps": [
+        "F024"
+      ],
+      "notes": "Both mirrored modules through source 7 verified in Fold. Source 8 needs multi-sheet placement; 9 and 11 tuck one sheet into another. Public Fold has no assembly operation.",
+      "additionalModels": [
+        "models/ninja-star-b.osf"
+      ],
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "pajarita",
@@ -582,13 +628,17 @@
       "difficulty": "Very Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 7,
+      "model": "models/pajarita.osf",
+      "gaps": [
+        "F021"
+      ],
+      "notes": "Sixteen nodes through source 7 verified. First swivel inputs refuse at existing crease junction; uncreased control also refuses wide-fold geometry. Correct operation mapping unresolved.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "parrot",
@@ -598,13 +648,16 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 5,
+      "model": "models/parrot.osf",
+      "gaps": [
+        "F016"
+      ],
+      "notes": "Eight-node prefix through opening the upper flap. Direct squash refuses squash_flap_not_free; connected wing interpretation remains under investigation.",
+      "report": "batches/004.md"
     },
     {
       "slug": "penguin",
@@ -614,13 +667,14 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "lastSourceStep": 7,
+      "model": "models/penguin.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "All 12 states checked in Fold; outside reverse head wraps both neck walls, preserving white chest and colored wing.",
+      "report": "batches/004.md"
     },
     {
       "slug": "pigeon",
@@ -680,13 +734,16 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 6,
+      "model": "models/shirt.osf",
+      "gaps": [
+        "F022"
+      ],
+      "notes": "Source 7 sleeve opening requires a validated compound mapping; direct squash has no hinge. Nine-node verified prefix.",
+      "report": "batches/004.md"
     },
     {
       "slug": "star",
@@ -712,13 +769,15 @@
       "difficulty": "Very Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All nine instructions and ten diagrams reviewed. Source 9 requires both temples bent to 90 degrees out of plane.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "swan",
@@ -745,13 +804,15 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 16 instructions and 20 diagrams including alternative fangs reviewed, plus final photograph. Source 16 presses a three-ray lip dimple while leaving the model open; the final photo shows curved lower lip and raised center. Flat prefix/variant is not tutorial completion.",
+      "report": "batches/004.md",
+      "sourceDifficulty": "Easy"
     },
     {
       "slug": "wallet",
@@ -761,13 +822,17 @@
       "difficulty": "Very Easy",
       "indexPage": 1,
       "earlyRelease": true,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "access blocked",
+      "status": "blocked",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
-      "gaps": [],
-      "notes": ""
+      "gaps": [
+        "A001"
+      ],
+      "notes": "Public page exposes only Early Access notice; full tutorial unavailable. Eligibility unconfirmed; no access bypass attempted.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "waterbomb",
@@ -812,13 +877,16 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 6,
+      "model": "models/witch-hat.osf",
+      "gaps": [
+        "F014"
+      ],
+      "notes": "Partial precrease on an existing flat crease refuses extent_misses_layers; 12-node valid prefix retained.",
+      "report": "batches/004.md"
     },
     {
       "slug": "yoda",
@@ -828,13 +896,15 @@
       "difficulty": "Very Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "All 15 instructions, 16 diagrams and completed photo reviewed. Required source 15 rear stand is spatial; a flattened robe variant would not be tutorial completion.",
+      "sourceDifficulty": "Easy",
+      "report": "batches/004.md"
     },
     {
       "slug": "paper-envelope",
@@ -2478,5 +2548,5 @@
     "necktie",
     "kimono"
   ],
-  "lastBatch": "batches/003.md"
+  "lastBatch": "batches/004.md"
 }

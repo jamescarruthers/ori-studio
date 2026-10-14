@@ -1,0 +1,28 @@
+{
+  "source": "https://origami.me/penguin/",
+  "file": "models/penguin.osf",
+  "fileSha256": "04acea6af22e96f462818372310475cc948466cde674c3377cfbc61a16e378dc",
+  "nodes": 11,
+  "folds": 8,
+  "finalFaces": 14,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "1e6e9b20dec210a2a362bab16622e6d8adeefce7c6a5ee7f4a9590e06bcfe3c5",
+    "583efa56fca65c520cb7b5b46f05738d50b036340c90f592c67d230dd52e9d3c",
+    "ddc0e6e6a1f2998db8a49616229b4e15f6c1e987c3924a964917b6113de889a3",
+    "3fc180107716e1f42ed4749595ca5fa9769b66a32d112c9375de70fb6b83de25",
+    "289e237577e03e44af72d716f6890ffee4ac41e26c70a046e8c79e146514c5fe",
+    "66023f7e96e8b31d0aacfb32ed89b68674109dcfb63d9f73f482aeabfd05a74e",
+    "141bc094559158c82b38f9bb33ff624faea47220c76cb4c4505e945ae50c75f0",
+    "b62a5fbcb4611186551ae800b795ba53875edf5d3d815bd5e43d59e49926724f",
+    "31ef5dcbb3ecf215ad3765f69cf59b1b3c2832750fb815e900dd4c9e604f105a",
+    "20bff2c1906baa6efdc12d5449f9d86238367f7b5979c4b958cf38a4a0b2494c",
+    "b6598ef9a631df9897dfc83827ed9e1f8d650d8c6d2c7a57f9228de8c0ce6e40",
+    "40d71e2b00c63562e87d07986d0a644278104ca720c16272f2a4647510e9f06b"
+  ],
+  "sourceStepsCompleted": 7,
+  "sourceSteps": 7,
+  "audit": "ready for user audit",
+  "proportions": "Symmetric chest gap and side shaping; approximate head angle specified in saved free-line anchors. Flat profile endpoint; no spatial opening.",
+  "allNativeStatesVisuallyChecked": true
+}

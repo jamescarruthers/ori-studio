@@ -1,0 +1,274 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-parrot",
+    "title": "Parrot — Origami.me (batch 4)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-parrot",
+        "title": "Parrot — Origami.me (batch 4)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-parrot-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Set-up: white-side-up diamond. Source: https://origami.me/parrot/"
+          },
+          {
+            "id": "fstep-parrot-2",
+            "parent": "fstep-parrot-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.2828427124746189,
+                0.7071067811865475
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-parrot-3",
+            "parent": "fstep-parrot-2",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0.41421356237309503
+                  ]
+                ]
+              },
+              "moving": [
+                0.8485281374238569,
+                0.14142135623730956
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2a: Fold the lower-left edge onto the center."
+          },
+          {
+            "id": "fstep-parrot-4",
+            "parent": "fstep-parrot-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.4142135623730949,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.1414213562373094,
+                0.848528137423857
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2b: Fold the lower-right edge onto the center."
+          },
+          {
+            "id": "fstep-parrot-5",
+            "parent": "fstep-parrot-4",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    0.414213562373095
+                  ],
+                  [
+                    0.4142135623730949,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.9121677477306462,
+                0.9263098833543774
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "3: Fold the upper white triangle behind."
+          },
+          {
+            "id": "fstep-parrot-6",
+            "parent": "fstep-parrot-5",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    -2.2204460492503136e-16
+                  ],
+                  [
+                    0.7071067811865475,
+                    0.2928932188134524
+                  ]
+                ]
+              },
+              "moving": [
+                0.94,
+                0.33999999999999986
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.94,
+                  0.33999999999999986
+                ],
+                "layers": 1
+              }
+            },
+            "note": "4a: Fold the left upper edge onto the center."
+          },
+          {
+            "id": "fstep-parrot-7",
+            "parent": "fstep-parrot-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -1.0257123289739563e-16,
+                    1
+                  ],
+                  [
+                    0.29289321881345237,
+                    0.7071067811865476
+                  ]
+                ]
+              },
+              "moving": [
+                0.33999999999999986,
+                0.9400000000000001
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.33999999999999986,
+                  0.9400000000000001
+                ],
+                "layers": 1
+              }
+            },
+            "note": "4b: Fold the right upper edge onto the center."
+          },
+          {
+            "id": "fstep-parrot-8",
+            "parent": "fstep-parrot-7",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.7071067811865475,
+                0.9142135623730951
+              ],
+              "moving": [
+                0.6010407640085654,
+                0.8838834764831843
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.6010407640085654,
+                    0.8838834764831843
+                  ]
+                ]
+              },
+              "direction": "valley"
+            },
+            "note": "5: Open the right upper flap again."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-parrot",
+        "cursor": "fstep-parrot-8",
+        "activeChild": {
+          "": "fstep-parrot-1",
+          "fstep-parrot-1": "fstep-parrot-2",
+          "fstep-parrot-2": "fstep-parrot-3",
+          "fstep-parrot-3": "fstep-parrot-4",
+          "fstep-parrot-4": "fstep-parrot-5",
+          "fstep-parrot-5": "fstep-parrot-6",
+          "fstep-parrot-6": "fstep-parrot-7",
+          "fstep-parrot-7": "fstep-parrot-8"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

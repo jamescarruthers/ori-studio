@@ -1,0 +1,29 @@
+{
+  "source": "https://origami.me/ninja-star/",
+  "file": "models/ninja-star-a.osf",
+  "fileSha256": "55345af9239272eb4b86b7afaaaa60e3a236a26a08c832a959cf8c0e494447af",
+  "nodes": 11,
+  "folds": 9,
+  "finalFaces": 24,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "d71be3784e59de252fe9ddaf71331354f57c59566a4addeb7b9d6f55a7ed6191",
+    "7b57af9468e44b42bda44fe1f9e17c11032738cdc7ba13af31595aaae2c14743",
+    "ef3d1175251d243c46a3fba889b916b33caf1c207311514e3ad17591d0543f58",
+    "8edfb69331baa4218a256cb7fe1871317cf151bbb1e664d2e8455c582f06bfef",
+    "a3b56e000d2fd81d82e3cd01783c929a2254dce2899c7064680723d437ac78f2",
+    "3724772c75a8a7aa615618f594135ae47266ae3784756369c362cd7c5d695416",
+    "734c564226752f64f40befadbc931a1a52959eaefda7c3c6ab2cc7af8998bad8",
+    "6447cf8f673cf0ef4f896f214303ad45f16b622eba112cfa483eb3981126d608",
+    "a157d6b5b02935796898fc283a57286c8dc03deddad33672d7272649c1b27717",
+    "c2a2b84fcb611d6f01bcdd985fcd7f50836b8e9b3e4017623b0f80ed33a9a5bb",
+    "38c3b2bc676c76c74cdacdee7eb12152c1fe18918595c9bcb9caa246fdcf5183"
+  ],
+  "sourceStepsCompleted": 7,
+  "sourceSteps": 11,
+  "audit": "verified module; assembly blocked",
+  "unit": "a",
+  "assembly": "Not attempted: public Fold sequence has one paper and no assembly operation.",
+  "allNativeStatesVisuallyChecked": true
+}

@@ -1,0 +1,27 @@
+{
+  "source": "https://origami.me/happi/",
+  "file": "models/happi.osf",
+  "fileSha256": "0e9bc0aba84ff80f9648489162be5d0be2324c4f9329bccaaa4359fff5ab39df",
+  "nodes": 9,
+  "folds": 7,
+  "finalFaces": 7,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "39ea12779132f76c1e8bcd28b37de59a9d65da5cdf318434ded27e79dfd29e61",
+    "e25c182535288d6e03d7703495d9d8fc30a92ccddd6f8fd16d426ac291ecb326",
+    "f90654805326c6a09326b59f52043ec807586c9010451312c0fd7808c91d81a0",
+    "f009254cef99999b75de6f2b0548665ea3072bc7042b5c9cdbfc17364d581dda",
+    "3e7adb082e635a752afc202dc10bde183bd7fe9e1d2034e0897532594fb88071",
+    "bb402450aeb31e7dec2ca2a46a820dc67e89c5034319913fa39da120730ff9dc",
+    "2aa6c45a1c4d465adce2c9e0ecc6115bc4938024aaad5a9ae5b6344d89043140",
+    "88985d41a0ab804cb941ef7a71ce8fc9e38fe1d20ee097a1265bc5395caff449",
+    "c364cad1b530e2fdd0a51017997f13442da8d25571af1297015307e6d7ebc6f1",
+    "c475ba48f411f590fffc8422bfbe5f9b1c3c437ad80c37faa06a458c6c03a9ad"
+  ],
+  "sourceStepsCompleted": 5,
+  "sourceSteps": 9,
+  "audit": "retained valid prefix checked in Fold; blocked, not completed",
+  "blockedAtSourceStep": 6,
+  "proportions": "Top strip 0.15 sheet-width units; collar gap 0.20 (1.5 cm on the recommended 7.5 cm width).",
+  "allNativeStatesVisuallyChecked": true
+}

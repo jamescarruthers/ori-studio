@@ -1,0 +1,336 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-penguin",
+    "title": "Penguin — Origami.me (batch 4)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-penguin",
+        "title": "Penguin — Origami.me (batch 4)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "front"
+        },
+        "steps": [
+          {
+            "id": "fstep-penguin-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "ccw"
+              }
+            },
+            "note": "Set-up: colored-side-up diamond. Source: https://origami.me/penguin/"
+          },
+          {
+            "id": "fstep-penguin-2",
+            "parent": "fstep-penguin-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.7071067811865475,
+                0.28284271247461906
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1a: Precrease the vertical diagonal shown in the diagram (the text names the other diagonal)."
+          },
+          {
+            "id": "fstep-penguin-3",
+            "parent": "fstep-penguin-2",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "1b: Turn over."
+          },
+          {
+            "id": "fstep-penguin-4",
+            "parent": "fstep-penguin-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.0000000000000002
+                  ],
+                  [
+                    0.7071067811865475,
+                    5.551115123125783e-17
+                  ]
+                ]
+              },
+              "moving": [
+                0.9192388155425117,
+                0.07071067811865483
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2a: Fold the left upper edge inward, leaving a central white gap; chosen crease meets the lower edge at (-0.5,0.5)."
+          },
+          {
+            "id": "fstep-penguin-5",
+            "parent": "fstep-penguin-4",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.0000000000000002
+                  ],
+                  [
+                    -5.551115123125783e-17,
+                    0.7071067811865475
+                  ]
+                ]
+              },
+              "moving": [
+                0.07071067811865467,
+                0.9192388155425117
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2b: Repeat symmetrically on the right."
+          },
+          {
+            "id": "fstep-penguin-6",
+            "parent": "fstep-penguin-5",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "3: Turn over to the colored back."
+          },
+          {
+            "id": "fstep-penguin-7",
+            "parent": "fstep-penguin-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.1999999999999999,
+                    0.7656854249492381
+                  ],
+                  [
+                    -2.7755575615628914e-17,
+                    0.35355339059327373
+                  ]
+                ]
+              },
+              "moving": [
+                0.021213203435596406,
+                0.6858935777509511
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "4a: Fold the left side corner inward."
+          },
+          {
+            "id": "fstep-penguin-8",
+            "parent": "fstep-penguin-7",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.765685424949238,
+                    0.20000000000000007
+                  ],
+                  [
+                    0.35355339059327373,
+                    2.7755575615628914e-17
+                  ]
+                ]
+              },
+              "moving": [
+                0.6858935777509511,
+                0.021213203435596517
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "4b: Repeat the corner shaping on the right."
+          },
+          {
+            "id": "fstep-penguin-9",
+            "parent": "fstep-penguin-8",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -9.020562075079399e-17,
+                    0.3535533905932738
+                  ],
+                  [
+                    0.3535533905932738,
+                    3.4694469519536136e-17
+                  ]
+                ]
+              },
+              "moving": [
+                0.042426406871192854,
+                0.02828427124746191
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "5: Fold the bottom corner up at the lower ends of the side flaps."
+          },
+          {
+            "id": "fstep-penguin-10",
+            "parent": "fstep-penguin-9",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.1414213562373095,
+                    0.14142135623730956
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.49497474683058323,
+                0.6363961030678928
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "6: Fold the left half over to the right."
+          },
+          {
+            "id": "fstep-penguin-11",
+            "parent": "fstep-penguin-10",
+            "op": {
+              "kind": "outside-reverse",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.7636753236814712,
+                    0.7636753236814716
+                  ],
+                  [
+                    0.598404793504264,
+                    0.9855609122586483
+                  ]
+                ]
+              },
+              "moving": [
+                0.9086322138247133,
+                0.9298454172603103
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.9086322138247133,
+                  0.9298454172603103
+                ],
+                "layers": 1
+              }
+            },
+            "choices": {
+              "opening": [
+                {
+                  "upper": [
+                    [
+                      0.37093139453144686,
+                      0.9186415271573901
+                    ],
+                    [
+                      0.39607407360637725,
+                      0.6068572398438081
+                    ]
+                  ]
+                }
+              ]
+            },
+            "note": "7: Outside reverse the head across the neck, as the tutorial specifies; symmetric central opening."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-penguin",
+        "cursor": "fstep-penguin-11",
+        "activeChild": {
+          "": "fstep-penguin-1",
+          "fstep-penguin-1": "fstep-penguin-2",
+          "fstep-penguin-2": "fstep-penguin-3",
+          "fstep-penguin-3": "fstep-penguin-4",
+          "fstep-penguin-4": "fstep-penguin-5",
+          "fstep-penguin-5": "fstep-penguin-6",
+          "fstep-penguin-6": "fstep-penguin-7",
+          "fstep-penguin-7": "fstep-penguin-8",
+          "fstep-penguin-8": "fstep-penguin-9",
+          "fstep-penguin-9": "fstep-penguin-10",
+          "fstep-penguin-10": "fstep-penguin-11"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

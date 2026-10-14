@@ -9,7 +9,7 @@ window.__vite_plugin_react_preamble_installed__ = true;
 // Local research fixture loader. Uses the normal project reader and app;
 // avoids the embedded browser's inaccessible native File System Access picker.
 const model = new URLSearchParams(location.search).get('model');
-const filename = ['easter-egg','cat-face','bookmark','dog','paper-envelope','necktie','angelfish','christmas-tree','fish','rectangle-paper-to-square','whale','kimono','pigeon','santa'].includes(model) ? model + '.osf' : 'easter-egg.osf';
+const filename = ['easter-egg','cat-face','bookmark','dog','paper-envelope','necktie','angelfish','christmas-tree','fish','rectangle-paper-to-square','whale','kimono','pigeon','santa','witch-hat','happi','parrot','penguin','fox','lantern', 'bird', 'pajarita', 'shirt', 'elephant', 'horse', 'ninja-star-a', 'ninja-star-b'].includes(model) ? model + '.osf' : 'easter-egg.osf';
 const fixtureUrl = new URL('./models/' + filename, location.href);
 const { useWorkspaceStore } = await import('/src/store/workspaceStore.ts');
 await useWorkspaceStore.getState().initEngine();

@@ -1,0 +1,33 @@
+{
+  "source": "https://origami.me/lantern/",
+  "file": "models/lantern.osf",
+  "fileSha256": "0e2acb777d4959bf3a4894f6e96f86d01f55de03bf77f511b92bf86f2d931469",
+  "nodes": 17,
+  "folds": 14,
+  "finalFaces": 56,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "4202e025714baab5a29fe401bb368ca66f51cabf3cddfa457caa300efa995459",
+    "e68ff5ed6643eb4add1047fde0e3f540e8ad538636cc9db6f796c894b1fb478a",
+    "d4224c65399c8a7ee79063c00edb998b969fc97e1d1b54ba7661651b66443173",
+    "61fbb98934f91f0cebc47a5e66c63345413a76af4c2652985d0283943f50e875",
+    "e09f626228b80dea69ead2c0d23d6c726faadcac71d8463984ef018b15b65195",
+    "12c8f02f27ba252dcd1e9b0b14bf2e4818aeb4983e68f199a927a14b0563f563",
+    "002bf307c8084b6574447b27fbe6ddc4df3d2aadcafde05dc50a83bdbac55152",
+    "ec0cb4657101c5a192050a5020f90c778d599093db5346d281347f115a3494bd",
+    "acd135b8b2214f17b02a3c219cde2d3ec508610dbd4ee0e9ca66a67e07839ecc",
+    "d1ada0d71574436ee6eeb5c21816ff56c06928ec2fe763e2e9e8ef5498212724",
+    "ee54e5f449056b191370b7e810138fcbb952106e796e4a2db92a91baefd32d5b",
+    "0f2e9505a676c6429771749446a983bc4097c252fac1f9aae8f2f1f5294cdd06",
+    "04886fe44505e412b46842fea22e4e33f9efd553fa654233fd794e849e984cf5",
+    "eec35bde2a44413bed3681dba8374b68cff36eae554f77b90c3d88919ecd7ea2",
+    "856723041808cda03278df43145109707ec7258f2a9ee7f2f2508005231aee2c",
+    "9bce68cb4eff695595f197e6aa5353597e8566f6ce456f359c8e9f877d672ca9",
+    "f2eb72980aa0bfc574da2bd036ed833afa2bac72fb4d7644985ec20ac086252f"
+  ],
+  "sourceStepsCompleted": 4,
+  "sourceSteps": 5,
+  "audit": "verified prefix; unresolved compound operation",
+  "allNativeStatesVisuallyChecked": true
+}

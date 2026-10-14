@@ -1,0 +1,30 @@
+{
+  "source": "https://origami.me/witch-hat/",
+  "file": "models/witch-hat.osf",
+  "fileSha256": "33e04decf2e056d828f27462d8499cfbf80254bfeced21392cc2ca1ab8e032fd",
+  "nodes": 12,
+  "folds": 9,
+  "finalFaces": 18,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "78e5aa210477cfe0df3103ecaeaf18174bed27efdd5f205d0c004803cce3df6f",
+    "c92e7ee7782e49778273d26b8d65a6f5865cea0d8f133e965ca9802093d5bfe5",
+    "dee7ab54a10ce2bc0dcb94a37852ac16e608a21e1ad51eca914fb9de35b95294",
+    "99289bf474cea2dad2d188b93e98386a5f99178ae898c8ba01f59370457e7dbb",
+    "6991bc7e8a5fdb24649aa7d4546ccfc3d40f6dcbef05df6c540c989f402ddeee",
+    "e5b304131b82fb9a89e6c2873e01f980867ae310a49cebc500385a22ae29b65f",
+    "eeefba3681dbb9654f2c84425aaa20fe0a4d1970421d0aa1527a50d7c7687fc5",
+    "f4a580628f5455a5536d6f89d8a5cf6dfa8c372997d3f94501e61b7222fb992c",
+    "4173ed1a17dc76760ac8e128da5c63c7bf3538216d46948ded558802be4bd511",
+    "e903a21174fca11aef764848dae9e09b8022fda01d62ed91c6847cb98baaf3b0"
+  ],
+  "sourceStepsCompleted": 6,
+  "sourceSteps": 14,
+  "audit": "retained valid prefix checked in Fold; blocked, not completed",
+  "blockedAtSourceStep": 7,
+  "blocker": "Partial precrease on an existing flat crease refuses extent_misses_layers; coordinated brim collapse remains unattempted.",
+  "allNativeStatesVisuallyChecked": true
+}

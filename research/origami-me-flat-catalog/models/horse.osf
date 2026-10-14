@@ -1,0 +1,469 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-horse",
+    "title": "Horse — Origami.me (batch 4)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-horse",
+        "title": "Horse — Origami.me (batch 4)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "front"
+        },
+        "steps": [
+          {
+            "id": "fstep-horse-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "ccw"
+              }
+            },
+            "note": "Set-up: colored-side-up diamond. Source: https://origami.me/horse/"
+          },
+          {
+            "id": "fstep-horse-2",
+            "parent": "fstep-horse-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.7071067811865475,
+                0.28284271247461906
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1a: Precrease vertically."
+          },
+          {
+            "id": "fstep-horse-3",
+            "parent": "fstep-horse-2",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -1.1102230246251565e-16,
+                    1
+                  ],
+                  [
+                    1,
+                    1.1102230246251565e-16
+                  ]
+                ]
+              },
+              "moving": [
+                0.282842712474619,
+                0.1414213562373095
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1b: Precrease horizontally."
+          },
+          {
+            "id": "fstep-horse-4",
+            "parent": "fstep-horse-3",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "2: Turn over."
+          },
+          {
+            "id": "fstep-horse-5",
+            "parent": "fstep-horse-4",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    5.551115123125783e-17
+                  ],
+                  [
+                    0.49999999999999994,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.7778174593052023,
+                0.21213203435596428
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3a: Precrease between opposite edge midpoints."
+          },
+          {
+            "id": "fstep-horse-6",
+            "parent": "fstep-horse-5",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -5.551115123125783e-17,
+                    0.5
+                  ],
+                  [
+                    1,
+                    0.5000000000000001
+                  ]
+                ]
+              },
+              "moving": [
+                0.21213203435596412,
+                0.7778174593052023
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3b: Repeat for the other midpoints."
+          },
+          {
+            "id": "fstep-horse-7",
+            "parent": "fstep-horse-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1.0000000000000002
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865475,
+                  0.7071067811865477
+                ],
+                "d": 0.7071067811865477
+              }
+            },
+            "note": "4a: Begin the square-base collapse by bringing the upper point down."
+          },
+          {
+            "id": "fstep-horse-8",
+            "parent": "fstep-horse-7",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      1.0000000000000002
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865477,
+                  -0.7071067811865475
+                ],
+                "d": 0
+              }
+            },
+            "note": "4b: Fold the two-ply left half over to the right."
+          },
+          {
+            "id": "fstep-horse-9",
+            "parent": "fstep-horse-8",
+            "op": {
+              "kind": "squash",
+              "flap": [
+                0.6646803743153546,
+                0.1697056274847711
+              ],
+              "direction": "valley"
+            },
+            "note": "4c: Squash the first pocket; pick nearer its folded spine."
+          },
+          {
+            "id": "fstep-horse-10",
+            "parent": "fstep-horse-9",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "4d: Turn over to expose the remaining pocket."
+          },
+          {
+            "id": "fstep-horse-11",
+            "parent": "fstep-horse-10",
+            "op": {
+              "kind": "squash",
+              "flap": [
+                0.16970562748477125,
+                0.6646803743153545
+              ],
+              "direction": "valley"
+            },
+            "note": "4e: Squash the second pocket to complete the square base."
+          },
+          {
+            "id": "fstep-horse-12",
+            "parent": "fstep-horse-11",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -1.6653345369377353e-16,
+                    1.0000000000000002
+                  ],
+                  [
+                    0.5,
+                    0.7928932188134525
+                  ]
+                ]
+              },
+              "moving": [
+                0.45961940777125576,
+                0.9646446609406727
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.45961940777125576,
+                  0.9646446609406727
+                ],
+                "layers": 1
+              }
+            },
+            "note": "5a: Fold the front left edge to the center."
+          },
+          {
+            "id": "fstep-horse-13",
+            "parent": "fstep-horse-12",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    -1.6653345369377353e-16,
+                    1.0000000000000002
+                  ],
+                  [
+                    0.20710678118654746,
+                    0.5000000000000001
+                  ]
+                ]
+              },
+              "moving": [
+                0.03535533905932732,
+                0.5403805922287442
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.03535533905932732,
+                  0.5403805922287442
+                ],
+                "layers": 1
+              }
+            },
+            "note": "5b: Fold the front right edge to the center."
+          },
+          {
+            "id": "fstep-horse-14",
+            "parent": "fstep-horse-13",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5000000000000001,
+                    0.792893218813452
+                  ],
+                  [
+                    0.2071067811865476,
+                    0.4999999999999998
+                  ]
+                ]
+              },
+              "moving": [
+                0.4525483399593904,
+                0.5333095244168787
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.4525483399593904,
+                  0.5333095244168787
+                ],
+                "layers": 1
+              },
+              "direction": "valley"
+            },
+            "note": "6: Fold and unfold the upper triangle."
+          },
+          {
+            "id": "fstep-horse-15",
+            "parent": "fstep-horse-14",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.7500000000000001,
+                0.8964466094067257
+              ],
+              "moving": [
+                0.7000000000000001,
+                0.9299999999999996
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.7000000000000001,
+                    0.9299999999999996
+                  ]
+                ]
+              },
+              "direction": "valley"
+            },
+            "note": "7: Reopen the lower kite flap."
+          },
+          {
+            "id": "fstep-horse-16",
+            "parent": "fstep-horse-15",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.10355339059327372,
+                0.2499999999999998
+              ],
+              "moving": [
+                0.06999999999999997,
+                0.2999999999999998
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.06999999999999997,
+                    0.2999999999999998
+                  ]
+                ]
+              },
+              "direction": "valley"
+            },
+            "note": "7: Reopen the lower kite flap."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-horse",
+        "cursor": "fstep-horse-16",
+        "activeChild": {
+          "": "fstep-horse-1",
+          "fstep-horse-1": "fstep-horse-2",
+          "fstep-horse-2": "fstep-horse-3",
+          "fstep-horse-3": "fstep-horse-4",
+          "fstep-horse-4": "fstep-horse-5",
+          "fstep-horse-5": "fstep-horse-6",
+          "fstep-horse-6": "fstep-horse-7",
+          "fstep-horse-7": "fstep-horse-8",
+          "fstep-horse-8": "fstep-horse-9",
+          "fstep-horse-9": "fstep-horse-10",
+          "fstep-horse-10": "fstep-horse-11",
+          "fstep-horse-11": "fstep-horse-12",
+          "fstep-horse-12": "fstep-horse-13",
+          "fstep-horse-13": "fstep-horse-14",
+          "fstep-horse-14": "fstep-horse-15",
+          "fstep-horse-15": "fstep-horse-16"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

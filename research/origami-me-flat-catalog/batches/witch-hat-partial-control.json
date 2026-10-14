@@ -1,0 +1,123 @@
+{
+  "op": {
+    "kind": "precrease",
+    "line": {
+      "via": "free",
+      "through": [
+        [
+          0.6464466094067263,
+          0.14644660940672632
+        ],
+        [
+          0.1464466094067262,
+          0.6464466094067265
+        ]
+      ]
+    },
+    "moving": [
+      0.35402020253553346,
+      0.3681623381592644
+    ],
+    "seed": {
+      "scope": "all"
+    },
+    "direction": "valley",
+    "extent": {
+      "kind": "segment",
+      "from": {
+        "kind": "point",
+        "at": [
+          0.6464466094067263,
+          0.14644660940672632
+        ]
+      },
+      "to": {
+        "kind": "point",
+        "at": [
+          0.1464466094067262,
+          0.6464466094067265
+        ]
+      }
+    }
+  },
+  "result": {
+    "status": "ok",
+    "state": 3,
+    "report": {
+      "line": {
+        "n": [
+          0.7071067811865477,
+          0.7071067811865474
+        ],
+        "d": 0.5606601717798215
+      },
+      "side": "negative",
+      "snap": {
+        "clusters": 0,
+        "angle": 0,
+        "max_shift": 0
+      },
+      "direction": "mountain",
+      "flaps": [
+        {
+          "faces": [
+            0
+          ],
+          "witness": [
+            0.2642977396044842,
+            0.2642977396044843
+          ]
+        }
+      ],
+      "picked": [
+        0
+      ],
+      "added": [],
+      "moving": [
+        0
+      ],
+      "moving_faces": [
+        0
+      ],
+      "created": [],
+      "unfolded": [],
+      "refolded": [],
+      "split": 0
+    },
+    "summary": {
+      "step": 2,
+      "faces": 1,
+      "pairs": 0,
+      "creases": {
+        "border": 4,
+        "mountain": 0,
+        "valley": 0,
+        "flat": 0
+      },
+      "view": {
+        "flipped": true,
+        "rotation": -0.7853981633974483
+      },
+      "residual": 0,
+      "sheet": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "crease_marks": 1
+    }
+  }
+}
