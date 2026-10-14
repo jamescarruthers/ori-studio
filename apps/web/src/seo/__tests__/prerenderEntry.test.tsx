@@ -432,6 +432,14 @@ describe('the painted landing', () => {
     expect(() => prerenderSite(built, { ...scripts, body: 'var s = "</script>";' })).toThrow('</script>');
   });
 
+  /** The desktop shell's CSP, and which directives Tauri may add the bundled HTML's nonces and hashes to. */
+  const desktopSecurity = () =>
+    (
+      JSON.parse(
+        readFileSync(join(dirname(new URL(import.meta.url).pathname), '../../../../tauri/src-tauri/tauri.conf.json'), 'utf8')
+      ) as { app: { security: { csp: string; dangerousDisableAssetCspModification?: boolean | string[] } } }
+    ).app.security;
+
   it('can start in the desktop app, whose CSP allows an inline script only by its hash', () => {
     // A desktop bundle carries the prerender when it is built with a plain `tauri build`
     // (`release.yml`'s skips it). Then the body script is what starts the app, and
@@ -439,13 +447,24 @@ describe('the painted landing', () => {
     // bundled HTML into it at compile time — unless asset CSP modification is disabled for
     // script-src, which would leave the desktop app showing a copy that never starts.
     // Measured under that CSP in WebKit: with the hashes it boots; without them, it does not.
-    const conf = JSON.parse(
-      readFileSync(join(dirname(new URL(import.meta.url).pathname), '../../../../tauri/src-tauri/tauri.conf.json'), 'utf8')
-    ) as { app: { security: { csp: string; dangerousDisableAssetCspModification?: boolean | string[] } } };
-    const { csp, dangerousDisableAssetCspModification: disabled } = conf.app.security;
+    const { csp, dangerousDisableAssetCspModification: disabled } = desktopSecurity();
     const hashesInlineScripts =
       disabled === undefined || disabled === false || (Array.isArray(disabled) && !disabled.includes('script-src'));
     expect(hashesInlineScripts || /script-src[^;]*'unsafe-inline'/.test(csp)).toBe(true);
+  });
+
+  it('leaves the desktop app able to add a style element, which its CSP allows only without a nonce', () => {
+    // The same bundle has inline <style> elements too. Tauri gives each a nonce and adds it to
+    // style-src, and a nonce makes CSP ignore that directive's 'unsafe-inline': every <style> a
+    // library adds at run time is then refused. react-zoom-pan-pinch's sets the Pages view's
+    // transform origin, so the pages opened half a screen low and a pinch zoomed about the
+    // wrong point (measured in the desktop app); sonner's styles its toasts.
+    expect(landing).toMatch(/<style[\s>]/);
+    const { csp, dangerousDisableAssetCspModification: disabled } = desktopSecurity();
+    expect(csp).toMatch(/style-src [^;]*'unsafe-inline'/);
+    const addsStyleNonces =
+      disabled === undefined || disabled === false || (Array.isArray(disabled) && !disabled.includes('style-src'));
+    expect(addsStyleNonces).toBe(false);
   });
 
   it('refuses a template with no entry for the body script to start', () => {
