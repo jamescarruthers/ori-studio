@@ -33,7 +33,7 @@ const ZOOM_ANIMATION_MS = 90;
  * a trackpad pinch, which the browser reports as ctrl+wheel.
  */
 export const VIEWPORT_WHEEL_ZOOM = {
-  // Plain wheel keeps panning; trackpad pinch is handled below, multiplicatively.
+  // Plain wheel keeps panning; Cmd/Ctrl+wheel and pinch are handled below, multiplicatively.
   wheelDisabled: true,
   touchPadDisabled: true,
 } as const;
@@ -428,30 +428,33 @@ export function useViewportSurface({
     };
   }, [spaceToPan]);
 
-  // Trackpad pinch and Ctrl+wheel, taken over from the library.
+  // Trackpad pinch and Cmd/Ctrl+wheel, taken over from the library.
   //
   // Its wheel path is additive — `scale + delta * step` — so one pinch moves you
   // a fixed amount regardless of where you are: coarse when zoomed out, and
   // barely perceptible when zoomed in. Zoom is inherently multiplicative, so
   // handle the gesture here and scale by a factor instead, anchored on the
-  // pointer so the paper stays under your fingers. The factor is the Edit
-  // canvas' (`resolveWheelGesture`), on this camera's pinch rate: one event is
-  // at most its ×1.16 notch, so a mouse that reports 100 px a notch steps
-  // rather than leaps, and a pinch's few px an event are as they were.
+  // pointer so the paper stays under your fingers. Which wheels zoom, and by
+  // what, is the Edit canvas' (`resolveWheelGesture`), on this camera's pinch
+  // rate: Cmd or Ctrl zooms, and one event is at most its ×1.16 notch, so a
+  // mouse that reports 100 px a notch steps rather than leaps, and a pinch's
+  // few px an event are as they were.
+  //
+  // Heard on the way down, before the library's wheel panning, which takes any
+  // wheel without Ctrl and stops it there: Cmd+wheel panned.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
 
     const onWheel = (event: WheelEvent) => {
-      // Only the pinch gesture: the browser reports it as ctrl+wheel. A plain
-      // wheel still belongs to panning.
-      if (!event.ctrlKey) return;
+      // A plain wheel still belongs to panning, the library's.
+      const gesture = resolveWheelGesture(event, 'pan', { pinchSensitivity: PINCH_ZOOM_SENSITIVITY });
+      if (gesture.kind !== 'zoom') return;
       const api = transformRef.current;
       if (!api) return;
       event.preventDefault();
+      event.stopPropagation();
 
-      const gesture = resolveWheelGesture(event, 'pan', { pinchSensitivity: PINCH_ZOOM_SENSITIVITY });
-      if (gesture.kind !== 'zoom') return;
       const { scale, positionX, positionY } = api.instance.transformState;
       const { minScale, maxScale } = api.instance.setup;
       const next = Math.min(maxScale, Math.max(minScale, scale * gesture.factor));
@@ -466,8 +469,8 @@ export function useViewportSurface({
       api.setTransform(pointerX - worldX * next, pointerY - worldY * next, next, 0);
     };
 
-    container.addEventListener('wheel', onWheel, { passive: false });
-    return () => container.removeEventListener('wheel', onWheel);
+    container.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    return () => container.removeEventListener('wheel', onWheel, { capture: true });
   }, []);
 
   const onInit = useCallback((ref: ReactZoomPanPinchRef) => {

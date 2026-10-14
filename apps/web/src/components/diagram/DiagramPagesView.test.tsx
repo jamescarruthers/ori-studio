@@ -824,4 +824,30 @@ describe('the wheel over the pages, as the Edit canvas reads it (Zach, 2026-10-1
     expect(zoomBy({ deltaY: -4, ctrlKey: true })).toBeCloseTo(Math.exp(4 * 0.011), 9);
     expect(zoomBy({ deltaY: 6, ctrlKey: true })).toBeCloseTo(Math.exp(-6 * 0.011), 9);
   });
+
+  it('zooms on Cmd+wheel as on Ctrl+wheel, about the pointer, where it panned', () => {
+    manyPages();
+    // The world point under the pointer, which a zoom keeps there.
+    const underPointer = () => {
+      const { x, y, scale } = camera();
+      return { x: (300 - x) / scale, y: (200 - y) / scale };
+    };
+    for (const modifier of ['metaKey', 'ctrlKey'] as const) {
+      const before = { ...camera(), under: underPointer() };
+      const event = wheelOverPage({ deltaY: -100, [modifier]: true });
+      expect(event.defaultPrevented).toBe(true);
+      // A mouse notch, Cmd or Ctrl: the canvas' one step.
+      expect(camera().scale / before.scale).toBeCloseTo(Math.exp(MAX_ZOOM_EXPONENT), 9);
+      expect(underPointer().x).toBeCloseTo(before.under.x, 6);
+      expect(underPointer().y).toBeCloseTo(before.under.y, 6);
+    }
+    // A plain wheel still pans, at the scale it was (the library rounds where it pans to).
+    const before = camera();
+    wheelOverPage({ deltaY: 40 });
+    expect(camera()).toEqual({
+      x: expect.closeTo(before.x, 2),
+      y: expect.closeTo(before.y - 40, 2),
+      scale: before.scale,
+    });
+  });
 });
