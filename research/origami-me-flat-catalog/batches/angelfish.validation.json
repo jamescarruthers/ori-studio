@@ -1,0 +1,33 @@
+{
+  "source": "https://origami.me/angelfish/",
+  "file": "models/angelfish.osf",
+  "fileSha256": "75443e54e8919159af11a3584dc43bdad5920dc9feba8412944291aca173134e",
+  "nodes": 14,
+  "folds": 10,
+  "finalFaces": 12,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "1e6e9b20dec210a2a362bab16622e6d8adeefce7c6a5ee7f4a9590e06bcfe3c5",
+    "a1064139d762226fc155a685befee84fd8e9001e42516adf668ee09b96fe2b7e",
+    "d54fd5a88833de7ca6e5383f158fc4e6f616602e4e445def53aee1a4709302c1",
+    "f98034563c7cbb790e0bbdd216e6daf7466c2967f1541c734ffdef42d6b23668",
+    "03c90b73985ccd2b94938648a710944d0746cc8158c634ba3a174bff6c5cb85b",
+    "de1952e0bf220c5d9958dd11b5a5e3f0d233634fce7118c0d1cf0b9f18477675",
+    "de5cd3ad0e11564aee1eeab6a0edfa8dbff59308dd5d14b1b64ef7d8814dab95",
+    "34f95213ae8d4850cbd4eb8c8afad2777cf77b44e0cd507502addf43f32231c3",
+    "30352eb747c4c7f59c29928ac6a9b7c33a5c596b81f26dbb0152e790fd1fbe20",
+    "23e593f07d2d8c428934629b34046911775f8aac71b37dfd90f4e6bbbaaa6a52",
+    "5af75795997e0b05ebda829fb6fac6a3a96f232328edc6d3878d808d26461eff",
+    "02a306f67e3e8b5ec29e2d377985affbdcc170e5e22dae108ed96e0f7e5bd696",
+    "6c9956fece3db951e15697ff70f0d37c6b05ba29da287d3fb7adc79d314c8054",
+    "714476d8d94cb197b8779a7afdca84e20c4f1b5703c1b0b2fb88dad5fd1f9355",
+    "363e4371a43523af3c4ba2c923d6a5ffe3c46497a4a3d3541ceb77946233dacd"
+  ],
+  "audit": "ready for user audit; not user-approved",
+  "sourceStepsCompleted": 7,
+  "sourceSteps": 7,
+  "proportions": "Symmetric fin creases cross the base at one-third and two-thirds; the source says about one-third.",
+  "allNativeStatesVisuallyChecked": true,
+  "materialChecks": "angelfish.material-checks.json",
+  "screenshot": "angelfish-fold.png"
+}

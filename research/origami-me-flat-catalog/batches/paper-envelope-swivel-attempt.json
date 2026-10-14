@@ -1,0 +1,46 @@
+{
+  "sourceStep": "8–9",
+  "op": {
+    "kind": "swivel",
+    "via": "edge",
+    "fold": [
+      0.75,
+      0.4949747468305833
+    ],
+    "edge": [
+      1,
+      0.45961940777125593
+    ],
+    "target": {
+      "via": "free",
+      "through": [
+        [
+          0.8,
+          0.2803300858899107
+        ],
+        [
+          0.95,
+          0.2803300858899107
+        ]
+      ]
+    },
+    "direction": "valley",
+    "swivel": "open"
+  },
+  "result": {
+    "status": "refused",
+    "refusal": {
+      "code": "swivel_fold_wide",
+      "faces": [
+        16,
+        18
+      ]
+    },
+    "fixes": [],
+    "faces": [
+      16,
+      18
+    ],
+    "vertices": []
+  }
+}

@@ -1,6 +1,6 @@
 # Flat-fold functionality findings
 
-This is an evidence log, not a list of features inferred from design names. New work stays 2D. No new engine gap has yet been confirmed by the expanded campaign.
+This is an evidence log, not a list of features inferred from design names. New work stays 2D. The expanded campaign has confirmed a missing cutting operation and a rabbit-ear restriction on existing precreases; other compound refusals remain investigations.
 
 | ID | State / category | Design and evidence | Requirement / acceptance condition |
 | --- | --- | --- | --- |
@@ -45,3 +45,29 @@ The required body fold must leave the overlying head flap available while its up
 Before implementation is proposed, resolve the correct layer anchors and local crease arrangement, including whether source steps 13–14 form one compound flat transition. Test existing reverse/swivel operations with those verified inputs. A successful completion must preserve the source's head-flap layering, remove the exposed white body region in the intended way, and retain an editable replay through the final flat profile. No silhouette-only workaround was saved. Do not expand scope to 3D or weaken guards.
 
 Related source ambiguity: source-12 text specifies a quarter turn but diagram 13 shows a 45° orientation. The file follows the diagram. A corner seed refusal in source 11 was separately corrected by an interior depth seed; it is not the blocker.
+
+## F010 — Necktie protected back flap
+
+**Authoring/compound interpretation investigation; not a confirmed engine gap.** [Necktie](https://origami.me/necktie/) source 5 lowers the upper body while the previously folded narrow back flap rises and remains separate. A simple depth-one front fold carries that connected flap down too. The later squash refusal is downstream of this mismatch, so it cannot establish a missing squash feature. The native checkpoint is rolled back to source 4; invalid operations/states and the refusal remain in [batch 3](batches/003.md). Resolve the coupled crease/unfold arrangement and layer anchors before implementation. Acceptance requires the upright small knot triangle visible in source diagram 6, then the two independent knot squashes and final tuck.
+
+## F011 — Cutting paper in a Fold sequence
+
+**Confirmed missing public operation; flat paper-preparation scope.** [Rectangle to Square](https://origami.me/rectangle-paper-to-square/) source 3 removes the strip marked by source 2. `crates/oristudio-fold-wasm/src/wire.rs` defines the full public `Op` enum; it has no cut, trim, or sheet-splitting operation. The saved prefix retains the short diagonal pinch and full strip-boundary precrease. No fabricated unsupported request is submitted. Starting a square sheet is a usable preparation workaround, but loses the authored cut and discarded strip, so it does not count as this tutorial's completion. Acceptance for a future implementation: a replayable cut on the existing crease, explicit retained piece, correct new paper boundary and preserved marks, editable in Fold and saved natively. Multi-layer partial cuts need separate evidence; not implied by this single-sheet example.
+
+## F005 — Envelope follow-up
+
+[Paper Envelope](https://origami.me/paper-envelope/) source 8–9 now supplies a real tutorial case for the retained wide-swivel investigation. The native prefix matches source 7; the request on its vertical folded edge toward the source corner's target line refuses `swivel_fold_wide` (faces 16,18). [Exact input/output](batches/paper-envelope-swivel-attempt.json). Confirm the source's crease/target interpretation before labeling this a missing primitive. Preserve the existing guard; saving a non-flat intermediate or replacing the corner with a silhouette is not a workaround.
+
+## F012 — Rabbit ear on the tutorial's existing precreases
+
+**Confirmed limitation of the public rabbit-ear operation; open.** [Whale](https://origami.me/whale/) source 5 collapses the fish base after sources 1–4 establish diagonals and kite bisectors. The [native prefix](models/whale.osf) contains those seven nodes. The correctly oriented left-ear request refuses `fan_center` on the precreased central junction: [exact request/result](batches/whale-fish-base-attempt.json). A [control](whale-probe.mjs) with the same paper, triangle anchors and emergent direction, but without the extra source precreases, accepts both ears and produces the expected fish base; [first ear](batches/whale-control-probe.json), [second ear](batches/whale-control-second-ear.json). This distinguishes valid ear geometry from the existing-junction restriction. The engine's rabbit-ear tests explicitly exercise this guard.
+
+**Needed:** recognize a compatible existing crease fan and refold it without duplicate creases or losing stored material/layer identity. Acceptance starts from this exact precreased native state, reaches the tutorial's two-ear fish base, preserves crease provenance, saves replayable choices, and works through the Fold UI. Incompatible/intersecting fans must still refuse. A possible alternate multi-operation construction remains unproven; the finding does not claim that every possible public sequence has been exhausted. Omitting prescribed precreases is a control, not tutorial completion. No guard was weakened.
+
+## F013 — Kimono connected sleeve collapse
+
+**Authoring/compound investigation; not a confirmed engine gap.** [Kimono](https://origami.me/kimono/) source 8 raises the central front section while flattening two connected sleeves. The saved [prefix](models/kimono.osf) reaches source 7 (11 nodes). Direct squash requests at the central and side portions refuse `squash_flap_not_free`; a centerline witness also refuses as a boundary pick. Exact inputs/results are retained as `batches/kimono-squash-*.json`. The source needs a coupled collapse, so these single-pocket requests do not prove a missing squash primitive. Resolve its crease arrangement and test existing swivel/composed operations before specifying implementation. Acceptance must preserve the two long white front bands and colored sleeves on both sides, including the hidden connections.
+
+## Corrected inputs in batch 3
+
+Pigeon's first all-layer beak request also selected a raised wing and refused. Restricting the precrease to the two head plies and the reverse seed to the head flap succeeds. A material check proves the reversed tip lies between the original head walls and leaves wing, breast and tail unchanged. Santa's boundary-point depth seed was replaced by an interior witness on the same intended flap. Neither case requires engine changes. The rejected requests remain in the batch evidence.

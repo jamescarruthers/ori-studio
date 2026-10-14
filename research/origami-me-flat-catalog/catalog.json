@@ -8,8 +8,9 @@
   ],
   "coverage": "All five pages of the current index, cross-checked against all 142 easy collection entries. Eligibility review ongoing.",
   "nextQueue": [
-    "paper-envelope",
-    "necktie"
+    "witch-hat",
+    "happi",
+    "parrot"
   ],
   "designs": [
     {
@@ -20,13 +21,16 @@
       "difficulty": "Very Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat preparation",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 2,
+      "model": "models/rectangle-paper-to-square.osf",
+      "gaps": [
+        "F011"
+      ],
+      "notes": "Flat preparation through source 2; required strip cut has no public Fold operation.",
+      "report": "batches/003.md"
     },
     {
       "slug": "yoshizawa-butterfly",
@@ -36,13 +40,14 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Required curved sides in 7 and spatial wing shaping in 9.",
+      "report": "batches/003.md"
     },
     {
       "slug": "5-pointed-star",
@@ -52,13 +57,14 @@
       "difficulty": "Very Easy",
       "indexPage": 2,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "modular; review pending",
+      "status": "in progress",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full diagrams reviewed; confirm whether final assembly can lie flat.",
+      "report": "batches/003.md"
     },
     {
       "slug": "angel",
@@ -68,13 +74,14 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "3D completion",
+      "status": "excluded 3D / flat variant",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Source 11 partially closes the body into a standing pose.",
+      "report": "batches/003.md"
     },
     {
       "slug": "angelfish",
@@ -84,13 +91,14 @@
       "difficulty": "Very Easy",
       "indexPage": 5,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "lastSourceStep": 7,
+      "model": "models/angelfish.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "All steps replayed and visually checked in Fold; paper-side and material checks passed.",
+      "report": "batches/003.md"
     },
     {
       "slug": "bird",
@@ -172,13 +180,14 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "lastSourceStep": 8,
+      "model": "models/christmas-tree.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "All steps replayed and visually checked in Fold; paper-side and material checks passed.",
+      "report": "batches/003.md"
     },
     {
       "slug": "cicada",
@@ -324,13 +333,14 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "lastSourceStep": 8,
+      "model": "models/fish.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed.",
+      "report": "batches/003.md"
     },
     {
       "slug": "floral-swirls",
@@ -404,13 +414,14 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
+      "eligibility": "flat",
       "status": "queued",
       "audit": "pending",
       "lastSourceStep": null,
       "model": null,
       "gaps": [],
-      "notes": ""
+      "notes": "Full nine-step tutorial and ten diagrams reviewed; eligible, authoring queued.",
+      "report": "batches/003.md"
     },
     {
       "slug": "heart",
@@ -485,13 +496,16 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 7,
+      "model": "models/kimono.osf",
+      "gaps": [
+        "F013"
+      ],
+      "notes": "Final connected sleeve collapse unresolved; single-pocket squash refusals are not proof of a missing primitive. Every saved prefix state checked in Fold.",
+      "report": "batches/003.md"
     },
     {
       "slug": "lantern",
@@ -533,13 +547,16 @@
       "difficulty": "Very Easy",
       "indexPage": 4,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 4,
+      "model": "models/necktie.osf",
+      "gaps": [
+        "F010"
+      ],
+      "notes": "Source-5 back flap moved incorrectly; valid prefix rolled back to 4. Downstream squash refusal is not an engine gap.",
+      "report": "batches/003.md"
     },
     {
       "slug": "ninja-star",
@@ -613,13 +630,14 @@
       "difficulty": "Very Easy",
       "indexPage": 5,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "lastSourceStep": 11,
+      "model": "models/pigeon.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed.",
+      "report": "batches/003.md"
     },
     {
       "slug": "rose",
@@ -645,13 +663,14 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "ready for audit",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
+      "lastSourceStep": 14,
+      "model": "models/santa.osf",
       "gaps": [],
-      "notes": ""
+      "notes": "All steps freshly replayed and visually checked in Fold; material and exposed-side checks passed.",
+      "report": "batches/003.md"
     },
     {
       "slug": "shirt",
@@ -774,13 +793,16 @@
       "difficulty": "Very Easy",
       "indexPage": 3,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 4,
+      "model": "models/whale.osf",
+      "gaps": [
+        "F012"
+      ],
+      "notes": "Precreased fish-base rabbit ear refuses fan_center; matching unprecreased control accepts both ears. Every saved prefix state checked in Fold.",
+      "report": "batches/003.md"
     },
     {
       "slug": "witch-hat",
@@ -822,13 +844,16 @@
       "difficulty": "Very Easy",
       "indexPage": 1,
       "earlyRelease": false,
-      "eligibility": "unreviewed",
-      "status": "queued",
+      "eligibility": "flat",
+      "status": "blocked",
       "audit": "pending",
-      "lastSourceStep": null,
-      "model": null,
-      "gaps": [],
-      "notes": ""
+      "lastSourceStep": 7,
+      "model": "models/paper-envelope.osf",
+      "gaps": [
+        "F005"
+      ],
+      "notes": "Partial through source 7; wide swivel 8\u20139 refused; interpretation under investigation.",
+      "report": "batches/003.md"
     },
     {
       "slug": "rectangle-to-hexagon",
@@ -930,7 +955,7 @@
       "slug": "bat",
       "title": "Origami Bat",
       "url": "https://origami.me/bat/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Easy",
       "indexPage": 5,
       "earlyRelease": false,
@@ -1330,7 +1355,7 @@
       "slug": "hummingbird",
       "title": "Origami Hummingbird",
       "url": "https://origami.me/hummingbird/",
-      "designer": "by Cekouat León",
+      "designer": "by Cekouat Le\u00f3n",
       "difficulty": "Easy",
       "indexPage": 1,
       "earlyRelease": false,
@@ -1666,7 +1691,7 @@
       "slug": "squirrel",
       "title": "Origami Squirrel",
       "url": "https://origami.me/squirrel/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Easy",
       "indexPage": 4,
       "earlyRelease": false,
@@ -1858,7 +1883,7 @@
       "slug": "dragon",
       "title": "Origami Dragon",
       "url": "https://origami.me/dragon/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 2,
       "earlyRelease": false,
@@ -1922,7 +1947,7 @@
       "slug": "hedgehog",
       "title": "Origami Hedgehog",
       "url": "https://origami.me/hedgehog/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 1,
       "earlyRelease": true,
@@ -1970,7 +1995,7 @@
       "slug": "lion",
       "title": "Origami Lion",
       "url": "https://origami.me/lion/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 2,
       "earlyRelease": false,
@@ -2002,7 +2027,7 @@
       "slug": "mouse",
       "title": "Origami Mouse",
       "url": "https://origami.me/mouse/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 1,
       "earlyRelease": false,
@@ -2034,7 +2059,7 @@
       "slug": "skull",
       "title": "Origami Skull",
       "url": "https://origami.me/skull/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Challenging Easy",
       "indexPage": 4,
       "earlyRelease": false,
@@ -2130,7 +2155,7 @@
       "slug": "skull-advanced",
       "title": "Advanced Origami Skull",
       "url": "https://origami.me/skull-advanced/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Low-Intermediate",
       "indexPage": 1,
       "earlyRelease": false,
@@ -2146,7 +2171,7 @@
       "slug": "camel",
       "title": "Origami Camel",
       "url": "https://origami.me/camel/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Low-Intermediate",
       "indexPage": 5,
       "earlyRelease": false,
@@ -2194,7 +2219,7 @@
       "slug": "dragon-advanced",
       "title": "Origami Dragon v2",
       "url": "https://origami.me/dragon-advanced/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Low-Intermediate",
       "indexPage": 1,
       "earlyRelease": false,
@@ -2354,7 +2379,7 @@
       "slug": "tiger",
       "title": "Origami Tiger",
       "url": "https://origami.me/tiger/",
-      "designer": "by Sébastien Limet",
+      "designer": "by S\u00e9bastien Limet",
       "difficulty": "Low-Intermediate",
       "indexPage": 2,
       "earlyRelease": false,
@@ -2448,7 +2473,10 @@
     }
   ],
   "blockedInvestigations": [
-    "dog"
+    "dog",
+    "paper-envelope",
+    "necktie",
+    "kimono"
   ],
-  "lastBatch": "batches/002.md"
+  "lastBatch": "batches/003.md"
 }

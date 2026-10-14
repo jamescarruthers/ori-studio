@@ -1,0 +1,130 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-rectangle-paper-to-square",
+    "title": "Rectangle to square — before cutting (batch 3)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-rectangle-paper-to-square",
+        "title": "Rectangle to square — before cutting (batch 3)",
+        "paper": {
+          "shape": {
+            "kind": "rectangle",
+            "aspect": [
+              1,
+              0.7071067811865476
+            ]
+          },
+          "startSide": "front"
+        },
+        "steps": [
+          {
+            "id": "fstep-rectangle-paper-to-square-1",
+            "parent": null,
+            "op": {
+              "kind": "precrease",
+              "direction": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.6071067811865476,
+                    0.6071067811865476
+                  ],
+                  [
+                    0.7071067811865476,
+                    0.7071067811865476
+                  ]
+                ]
+              },
+              "moving": [
+                0.5871067811865476,
+                0.6671067811865475
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "extent": {
+                "kind": "segment",
+                "from": {
+                  "kind": "point",
+                  "at": [
+                    0.6071067811865476,
+                    0.6071067811865476
+                  ]
+                },
+                "to": {
+                  "kind": "point",
+                  "at": [
+                    0.7071067811865476,
+                    0.7071067811865476
+                  ]
+                }
+              }
+            },
+            "note": "1: Pinch near the upper edge by bringing the left edge onto the bottom edge. Source: https://origami.me/rectangle-paper-to-square/"
+          },
+          {
+            "id": "fstep-rectangle-paper-to-square-2",
+            "parent": "fstep-rectangle-paper-to-square-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.7071067811865476,
+                    0
+                  ],
+                  [
+                    0.7071067811865476,
+                    0.7071067811865476
+                  ]
+                ]
+              },
+              "moving": [
+                0.9,
+                0.4
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "2: Precrease the strip boundary vertically through the pinch mark."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-rectangle-paper-to-square",
+        "cursor": "fstep-rectangle-paper-to-square-2",
+        "activeChild": {
+          "": "fstep-rectangle-paper-to-square-1",
+          "fstep-rectangle-paper-to-square-1": "fstep-rectangle-paper-to-square-2"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

@@ -1,0 +1,237 @@
+[
+  {
+    "step": 1,
+    "note": "1: Pinch near the upper edge by bringing the left edge onto the bottom edge. Source: https://origami.me/rectangle-paper-to-square/",
+    "op": {
+      "kind": "precrease",
+      "direction": "valley",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.6071067811865476,
+            0.6071067811865476
+          ],
+          [
+            0.7071067811865476,
+            0.7071067811865476
+          ]
+        ]
+      },
+      "moving": [
+        0.5871067811865476,
+        0.6671067811865475
+      ],
+      "seed": {
+        "scope": "all"
+      },
+      "extent": {
+        "kind": "segment",
+        "from": {
+          "kind": "point",
+          "at": [
+            0.6071067811865476,
+            0.6071067811865476
+          ]
+        },
+        "to": {
+          "kind": "point",
+          "at": [
+            0.7071067811865476,
+            0.7071067811865476
+          ]
+        }
+      }
+    },
+    "result": {
+      "status": "ok",
+      "state": 2,
+      "report": {
+        "line": {
+          "n": [
+            0.7071067811865476,
+            -0.7071067811865476
+          ],
+          "d": 0
+        },
+        "side": "negative",
+        "snap": {
+          "clusters": 1,
+          "angle": 2.1073424255447017e-8,
+          "max_shift": 0
+        },
+        "direction": "valley",
+        "flaps": [
+          {
+            "faces": [
+              0
+            ],
+            "witness": [
+              0.23570226039551587,
+              0.4714045207910316
+            ]
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "added": [],
+        "moving": [
+          0
+        ],
+        "moving_faces": [
+          0
+        ],
+        "created": [],
+        "unfolded": [],
+        "refolded": [],
+        "split": 0
+      },
+      "summary": {
+        "step": 1,
+        "faces": 1,
+        "pairs": 0,
+        "creases": {
+          "border": 4,
+          "mountain": 0,
+          "valley": 0,
+          "flat": 0
+        },
+        "view": {
+          "flipped": false,
+          "rotation": 0
+        },
+        "residual": 0,
+        "sheet": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0.7071067811865476
+          ],
+          [
+            0,
+            0.7071067811865476
+          ]
+        ],
+        "crease_marks": 1
+      }
+    }
+  },
+  {
+    "step": 2,
+    "note": "2: Precrease the strip boundary vertically through the pinch mark.",
+    "op": {
+      "kind": "precrease",
+      "line": {
+        "via": "free",
+        "through": [
+          [
+            0.7071067811865476,
+            0
+          ],
+          [
+            0.7071067811865476,
+            0.7071067811865476
+          ]
+        ]
+      },
+      "moving": [
+        0.9,
+        0.4
+      ],
+      "seed": {
+        "scope": "all"
+      },
+      "direction": "valley"
+    },
+    "result": {
+      "status": "ok",
+      "state": 3,
+      "report": {
+        "line": {
+          "n": [
+            1,
+            0
+          ],
+          "d": 0.7071067811865477
+        },
+        "side": "positive",
+        "snap": {
+          "clusters": 0,
+          "angle": 0,
+          "max_shift": 0
+        },
+        "direction": "valley",
+        "flaps": [
+          {
+            "faces": [
+              0
+            ],
+            "witness": [
+              0.8535533905932738,
+              0.3535533905932738
+            ]
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "added": [],
+        "moving": [
+          0
+        ],
+        "moving_faces": [
+          1
+        ],
+        "created": [
+          8
+        ],
+        "unfolded": [],
+        "refolded": [],
+        "split": 1
+      },
+      "summary": {
+        "step": 2,
+        "faces": 2,
+        "pairs": 0,
+        "creases": {
+          "border": 6,
+          "mountain": 0,
+          "valley": 0,
+          "flat": 1
+        },
+        "view": {
+          "flipped": false,
+          "rotation": 0
+        },
+        "residual": 0,
+        "sheet": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0.7071067811865476
+          ],
+          [
+            0,
+            0.7071067811865476
+          ]
+        ],
+        "crease_marks": 1
+      }
+    }
+  }
+]

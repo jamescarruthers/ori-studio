@@ -1,0 +1,386 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-pigeon",
+    "title": "Pigeon — Origami.me (batch 3)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-pigeon",
+        "title": "Pigeon — Origami.me (batch 3)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-pigeon-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Set-up: white-side-up diamond. Source: https://origami.me/pigeon/"
+          },
+          {
+            "id": "fstep-pigeon-2",
+            "parent": "fstep-pigeon-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.2828427124746189,
+                0.7071067811865475
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-pigeon-3",
+            "parent": "fstep-pigeon-2",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1.0000000000000002
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0,
+                      0
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865475,
+                  0.7071067811865477
+                ],
+                "d": 0.7071067811865477
+              }
+            },
+            "note": "2: Fold the upper corner down."
+          },
+          {
+            "id": "fstep-pigeon-4",
+            "parent": "fstep-pigeon-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9495093791412857,
+                    0.3838239541920476
+                  ],
+                  [
+                    0.3838239541920476,
+                    0.9495093791412857
+                  ]
+                ]
+              },
+              "moving": [
+                0.9575735931288074,
+                0.9717157287525383
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "3: Raise both lower layers at the one-third height reference."
+          },
+          {
+            "id": "fstep-pigeon-5",
+            "parent": "fstep-pigeon-4",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.45455447307441466,
+                    0.10100108248114094
+                  ],
+                  [
+                    0.10100108248114097,
+                    0.45455447307441466
+                  ]
+                ]
+              },
+              "moving": [
+                0.023199495786908504,
+                0.03734163141063953
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.023199495786908504,
+                  0.03734163141063953
+                ],
+                "layers": 1
+              }
+            },
+            "note": "4: Lower only the front raised corner; crease one-third up the lower band."
+          },
+          {
+            "id": "fstep-pigeon-6",
+            "parent": "fstep-pigeon-5",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.10102092324485333,
+                    0.10102092324485337
+                  ],
+                  [
+                    0.8990187582825716,
+                    0.8990187582825718
+                  ]
+                ]
+              },
+              "moving": [
+                0.32824855787277984,
+                0.7525126265847084
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "5: Close right to left."
+          },
+          {
+            "id": "fstep-pigeon-7",
+            "parent": "fstep-pigeon-6",
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "quarter",
+                "direction": "ccw"
+              }
+            },
+            "note": "6: Rotate counterclockwise a quarter turn."
+          },
+          {
+            "id": "fstep-pigeon-8",
+            "parent": "fstep-pigeon-7",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.3283080801639165,
+                    0.6616414134972497
+                  ],
+                  [
+                    0.005064934696841432,
+                    0.3383982680301747
+                  ]
+                ]
+              },
+              "moving": [
+                0.05656854249492391,
+                0.9050966799187805
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.05656854249492391,
+                  0.9050966799187805
+                ],
+                "layers": 1
+              }
+            },
+            "note": "7: Raise the front wing at y=-r/3, leaving the rear wing down."
+          },
+          {
+            "id": "fstep-pigeon-9",
+            "parent": "fstep-pigeon-8",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "8: Turn over."
+          },
+          {
+            "id": "fstep-pigeon-10",
+            "parent": "fstep-pigeon-9",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.3383982680301748,
+                    0.0050649346968413235
+                  ],
+                  [
+                    0.6616414134972499,
+                    0.3283080801639165
+                  ]
+                ]
+              },
+              "moving": [
+                0.9050966799187808,
+                0.056568542494923824
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.9050966799187808,
+                  0.056568542494923824
+                ],
+                "layers": 1
+              }
+            },
+            "note": "9: Raise the second wing to meet the first."
+          },
+          {
+            "id": "fstep-pigeon-11",
+            "parent": "fstep-pigeon-10",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.10304689712358993,
+                    -2.5673907444456755e-16
+                  ],
+                  [
+                    0.16466053355164256,
+                    0.1646605335516425
+                  ]
+                ]
+              },
+              "moving": [
+                0.030310245126198385,
+                0.01616810950246749
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.030310245126198385,
+                  0.01616810950246749
+                ],
+                "layers": 2
+              },
+              "direction": "valley"
+            },
+            "note": "10: Precrease the beak; approximate line through (0.23,-0.072865) and (0.39,0)."
+          },
+          {
+            "id": "fstep-pigeon-12",
+            "parent": "fstep-pigeon-11",
+            "op": {
+              "kind": "inside-reverse",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.10304689712358993,
+                    -2.5673907444456755e-16
+                  ],
+                  [
+                    0.16466053355164256,
+                    0.1646605335516425
+                  ]
+                ]
+              },
+              "moving": [
+                0.030310245126198385,
+                0.01616810950246749
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.030310245126198385,
+                    0.01616810950246749
+                  ]
+                ]
+              }
+            },
+            "note": "11: Reverse the beak inside, between the two head walls."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-pigeon",
+        "cursor": "fstep-pigeon-12",
+        "activeChild": {
+          "": "fstep-pigeon-1",
+          "fstep-pigeon-1": "fstep-pigeon-2",
+          "fstep-pigeon-2": "fstep-pigeon-3",
+          "fstep-pigeon-3": "fstep-pigeon-4",
+          "fstep-pigeon-4": "fstep-pigeon-5",
+          "fstep-pigeon-5": "fstep-pigeon-6",
+          "fstep-pigeon-6": "fstep-pigeon-7",
+          "fstep-pigeon-7": "fstep-pigeon-8",
+          "fstep-pigeon-8": "fstep-pigeon-9",
+          "fstep-pigeon-9": "fstep-pigeon-10",
+          "fstep-pigeon-10": "fstep-pigeon-11",
+          "fstep-pigeon-11": "fstep-pigeon-12"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

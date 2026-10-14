@@ -1,0 +1,242 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-whale",
+    "title": "Whale — partial before fish-base collapse (batch 3)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-whale",
+        "title": "Whale — partial before fish-base collapse (batch 3)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-whale-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Set-up: white-side-up diamond. Source: https://origami.me/whale/"
+          },
+          {
+            "id": "fstep-whale-2",
+            "parent": "fstep-whale-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.2828427124746189,
+                0.7071067811865475
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: Precrease the vertical diagonal."
+          },
+          {
+            "id": "fstep-whale-3",
+            "parent": "fstep-whale-2",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.1102230246251565e-16
+                  ],
+                  [
+                    -1.1102230246251565e-16,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.14142135623730945,
+                0.282842712474619
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "2: Precrease the horizontal diagonal."
+          },
+          {
+            "id": "fstep-whale-4",
+            "parent": "fstep-whale-3",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0.41421356237309503
+                  ]
+                ]
+              },
+              "moving": [
+                0.8485281374238569,
+                0.14142135623730956
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3a: Precrease lower-left edge to center."
+          },
+          {
+            "id": "fstep-whale-5",
+            "parent": "fstep-whale-4",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.4142135623730949,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.1414213562373094,
+                0.848528137423857
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "3b: Repeat on the lower right."
+          },
+          {
+            "id": "fstep-whale-6",
+            "parent": "fstep-whale-5",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.0000000000000002
+                  ],
+                  [
+                    0.5857864376269051,
+                    0
+                  ]
+                ]
+              },
+              "moving": [
+                0.8485281374238569,
+                0.14142135623730956
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "4a: Precrease upper-left edge to center."
+          },
+          {
+            "id": "fstep-whale-7",
+            "parent": "fstep-whale-6",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.0000000000000002
+                  ],
+                  [
+                    0,
+                    0.5857864376269051
+                  ]
+                ]
+              },
+              "moving": [
+                0.1414213562373094,
+                0.848528137423857
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "4b: Repeat on the upper right."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-whale",
+        "cursor": "fstep-whale-7",
+        "activeChild": {
+          "": "fstep-whale-1",
+          "fstep-whale-1": "fstep-whale-2",
+          "fstep-whale-2": "fstep-whale-3",
+          "fstep-whale-3": "fstep-whale-4",
+          "fstep-whale-4": "fstep-whale-5",
+          "fstep-whale-5": "fstep-whale-6",
+          "fstep-whale-6": "fstep-whale-7"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

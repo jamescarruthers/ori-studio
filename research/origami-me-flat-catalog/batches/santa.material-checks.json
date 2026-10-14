@@ -1,0 +1,38 @@
+{
+  "slug": "santa",
+  "allStatesReplayed": true,
+  "exposedSides": [
+    {
+      "name": "hat",
+      "view": [
+        0.02,
+        1.2
+      ],
+      "colored": true
+    },
+    {
+      "name": "coat",
+      "view": [
+        0.16,
+        0.8
+      ],
+      "colored": true
+    },
+    {
+      "name": "beard",
+      "view": [
+        0.02,
+        0.9
+      ],
+      "colored": false
+    },
+    {
+      "name": "collar",
+      "view": [
+        0.02,
+        1.08
+      ],
+      "colored": false
+    }
+  ]
+}

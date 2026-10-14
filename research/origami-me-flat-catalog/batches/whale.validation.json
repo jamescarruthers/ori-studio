@@ -1,0 +1,24 @@
+{
+  "source": "https://origami.me/whale/",
+  "file": "models/whale.osf",
+  "fileSha256": "318db0a02a695fb216caf9b5003447cf005da28d189394949a0d9f4fef776d3c",
+  "nodes": 7,
+  "folds": 6,
+  "finalFaces": 12,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "78e5aa210477cfe0df3103ecaeaf18174bed27efdd5f205d0c004803cce3df6f",
+    "c670ec128dcf9079de68e8f9567c1b2be73f0c8efabfb224b4320a7f11a8b644",
+    "3ce47d710a8b30759a93cb7a516733c9effd211ecdd35f6b9aeb26bcabc2313f",
+    "4549409cf3f52b545d239273c7e62f7d52f800dfc1b56a13f59ee36c7bce27f8",
+    "8dda7b21b8b61760d33fcd112d1ecf27453543a76b7335b36a9a5e71e6c95404"
+  ],
+  "sourceStepsCompleted": 4,
+  "sourceSteps": 10,
+  "blockedAtSourceStep": 5,
+  "audit": "partial prefix checked in Fold; tutorial blocked, not complete",
+  "allNativeStatesVisuallyChecked": true
+}

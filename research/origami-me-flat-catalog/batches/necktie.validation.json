@@ -1,0 +1,23 @@
+{
+  "source": "https://origami.me/necktie/",
+  "file": "models/necktie.osf",
+  "fileSha256": "3de7d9b9567a5af4177d67606b556abe44cc9b014dd3c7b9eccbbe352dfe493b",
+  "nodes": 6,
+  "folds": 5,
+  "finalFaces": 8,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "a48fd768e198ce4db5cea7fedc84524f4ab5ef50251d27bd4dfda71f30241cbb",
+    "684bda005eaef43423c13f2b38db487932ac76d0237e278df4f50b620ec93545",
+    "2a4456d820c9471f313a8b04444f2153ce57e79755592a91054b2136604cfd6d",
+    "8a11ca51b060652c6b1a7bb563892749ddab7c9dbe0537b398e5d067367f9b6d",
+    "d2e00d5b712cf117527cc1a9ec9f49580bb85a3206ef03d34e2f204eb2f73c26",
+    "a53bb47660366746eb153072ef1c5358f8dea8a7eb03ecde3795525b2130ecc4",
+    "6d02ec833b96d0545c8ca8ba7342d7952bbee65d518d7fba2c99e609cb89623b"
+  ],
+  "sourceStepsCompleted": 4,
+  "sourceSteps": 10,
+  "audit": "partial prefix checked in Fold; tutorial blocked, not complete",
+  "blockedAtSourceStep": 5,
+  "allNativeStatesVisuallyChecked": true
+}

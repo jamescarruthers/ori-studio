@@ -1,0 +1,359 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-kimono",
+    "title": "Kimono — Origami.me (batch 3)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-kimono",
+        "title": "Kimono — Origami.me (batch 3)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-kimono-1",
+            "parent": null,
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0
+                  ],
+                  [
+                    0.5,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.8,
+                0.4
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1: Precrease vertically. Source: https://origami.me/kimono/"
+          },
+          {
+            "id": "fstep-kimono-2",
+            "parent": "fstep-kimono-1",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.5,
+                      0
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      0.5,
+                      1
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0,
+                  1
+                ],
+                "d": 0.5
+              }
+            },
+            "note": "2: Fold the lower half upward."
+          },
+          {
+            "id": "fstep-kimono-3",
+            "parent": "fstep-kimono-2",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    0.07000000000000006
+                  ],
+                  [
+                    0,
+                    0.07000000000000006
+                  ]
+                ]
+              },
+              "moving": [
+                0.4,
+                0.030000000000000027
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.4,
+                  0.030000000000000027
+                ],
+                "layers": 1
+              },
+              "direction": "valley"
+            },
+            "note": "3: Precrease a narrow top strip (7% of the sheet)."
+          },
+          {
+            "id": "fstep-kimono-4",
+            "parent": "fstep-kimono-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    0.07000000000000006
+                  ],
+                  [
+                    0.5700000000000001,
+                    0.5
+                  ]
+                ]
+              },
+              "moving": [
+                0.9,
+                0.44999999999999996
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "4a: Fold the lower-left corner, aligning its side with the strip crease."
+          },
+          {
+            "id": "fstep-kimono-5",
+            "parent": "fstep-kimono-4",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.07000000000000006
+                  ],
+                  [
+                    0.43,
+                    0.5
+                  ]
+                ]
+              },
+              "moving": [
+                0.1,
+                0.44999999999999996
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "4b: Repeat on the right."
+          },
+          {
+            "id": "fstep-kimono-6",
+            "parent": "fstep-kimono-5",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    0.07000000000000006
+                  ],
+                  [
+                    0,
+                    0.07000000000000006
+                  ]
+                ]
+              },
+              "moving": [
+                0.4,
+                0.030000000000000027
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.4,
+                  0.030000000000000027
+                ],
+                "layers": 1
+              }
+            },
+            "note": "5a: Fold the front top strip down."
+          },
+          {
+            "id": "fstep-kimono-7",
+            "parent": "fstep-kimono-6",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "5b: Turn over."
+          },
+          {
+            "id": "fstep-kimono-8",
+            "parent": "fstep-kimono-7",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0.9299999999999999
+                  ],
+                  [
+                    1,
+                    0.9299999999999999
+                  ]
+                ]
+              },
+              "moving": [
+                0.4,
+                0.97
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.4,
+                  0.97
+                ],
+                "layers": 1
+              }
+            },
+            "note": "6: Fold the remaining top strip down to match."
+          },
+          {
+            "id": "fstep-kimono-9",
+            "parent": "fstep-kimono-8",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.9299999999999999
+                  ],
+                  [
+                    0.25,
+                    0.68
+                  ]
+                ]
+              },
+              "moving": [
+                0.07999999999999999,
+                0.9599999999999996
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7a: Fold the left upper edge down to the middle."
+          },
+          {
+            "id": "fstep-kimono-10",
+            "parent": "fstep-kimono-9",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.5,
+                    0.9299999999999999
+                  ],
+                  [
+                    0.75,
+                    0.68
+                  ]
+                ]
+              },
+              "moving": [
+                0.92,
+                0.9599999999999999
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "7b: Repeat on the right."
+          },
+          {
+            "id": "fstep-kimono-11",
+            "parent": "fstep-kimono-10",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "7c: Turn over."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-kimono",
+        "cursor": "fstep-kimono-11",
+        "activeChild": {
+          "": "fstep-kimono-1",
+          "fstep-kimono-1": "fstep-kimono-2",
+          "fstep-kimono-2": "fstep-kimono-3",
+          "fstep-kimono-3": "fstep-kimono-4",
+          "fstep-kimono-4": "fstep-kimono-5",
+          "fstep-kimono-5": "fstep-kimono-6",
+          "fstep-kimono-6": "fstep-kimono-7",
+          "fstep-kimono-7": "fstep-kimono-8",
+          "fstep-kimono-8": "fstep-kimono-9",
+          "fstep-kimono-9": "fstep-kimono-10",
+          "fstep-kimono-10": "fstep-kimono-11"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

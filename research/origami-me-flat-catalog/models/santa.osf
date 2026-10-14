@@ -1,0 +1,690 @@
+{
+  "format": "oristudio.project",
+  "schemaVersion": 8,
+  "minimumReaderSchemaVersion": 10,
+  "createdBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "modifiedBy": {
+    "app": "Ori Studio",
+    "version": "0.5.2",
+    "savedAt": "2026-10-12T16:24:09.585Z"
+  },
+  "workspace": {
+    "id": "workspace-flat-catalog-santa",
+    "title": "Santa — Origami.me (batch 3)",
+    "activeDocumentId": "crease-pattern",
+    "designs": [],
+    "creasePattern": null,
+    "unknownDesigns": [],
+    "foldSequences": [
+      {
+        "formatVersion": 1,
+        "id": "fold-trial-santa",
+        "title": "Santa — Origami.me (batch 3)",
+        "paper": {
+          "shape": {
+            "kind": "square"
+          },
+          "startSide": "back"
+        },
+        "steps": [
+          {
+            "id": "fstep-santa-1",
+            "parent": null,
+            "op": {
+              "kind": "rotate",
+              "rotate": {
+                "amount": "eighth",
+                "direction": "cw"
+              }
+            },
+            "note": "Set-up: white-side-up diamond. Source: https://origami.me/santa/"
+          },
+          {
+            "id": "fstep-santa-2",
+            "parent": "fstep-santa-1",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    1.0000000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.2828427124746189,
+                0.7071067811865475
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1a: Precrease vertically."
+          },
+          {
+            "id": "fstep-santa-3",
+            "parent": "fstep-santa-2",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    1.1102230246251565e-16
+                  ],
+                  [
+                    -1.1102230246251565e-16,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.14142135623730945,
+                0.282842712474619
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "1b: Precrease horizontally."
+          },
+          {
+            "id": "fstep-santa-4",
+            "parent": "fstep-santa-3",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0.41421356237309503
+                  ]
+                ]
+              },
+              "moving": [
+                0.8485281374238569,
+                0.14142135623730956
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2a: Bring the lower-left edge to the center."
+          },
+          {
+            "id": "fstep-santa-5",
+            "parent": "fstep-santa-4",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.4142135623730949,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.1414213562373094,
+                0.848528137423857
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "2b: Bring the lower-right edge to the center."
+          },
+          {
+            "id": "fstep-santa-6",
+            "parent": "fstep-santa-5",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "axiom",
+                "axiom": 2,
+                "inputs": [
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1.0000000000000002
+                    ]
+                  },
+                  {
+                    "kind": "point",
+                    "at": [
+                      1,
+                      1.1102230246251565e-16
+                    ]
+                  }
+                ]
+              },
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "choices": {
+              "root": {
+                "n": [
+                  0.7071067811865472,
+                  0.7071067811865478
+                ],
+                "d": 1.2071067811865477
+              }
+            },
+            "note": "3: Precrease the upper tip onto the colored boundary; follow the double arrow showing unfolding."
+          },
+          {
+            "id": "fstep-santa-7",
+            "parent": "fstep-santa-6",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9571067811865475,
+                    0.6035533905932738
+                  ],
+                  [
+                    0.6035533905932737,
+                    0.9571067811865476
+                  ]
+                ]
+              },
+              "moving": [
+                0.9545941546018392,
+                0.9545941546018393
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "4: Lower the upper flap until the previous crease meets the colored boundary."
+          },
+          {
+            "id": "fstep-santa-8",
+            "parent": "fstep-santa-7",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9621320343559641,
+                    0.8914213562373096
+                  ],
+                  [
+                    0.8914213562373093,
+                    0.9621320343559643
+                  ]
+                ]
+              },
+              "moving": [
+                0.9752512626584706,
+                0.9893933982822016
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.9752512626584706,
+                  0.9893933982822016
+                ],
+                "layers": 1
+              }
+            },
+            "note": "5: Raise the front lower tip to the previous crease."
+          },
+          {
+            "id": "fstep-santa-9",
+            "parent": "fstep-santa-8",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.994974746830583,
+                    0.7121320343559642
+                  ],
+                  [
+                    0.7121320343559641,
+                    0.9949747468305832
+                  ]
+                ]
+              },
+              "moving": [
+                0.9505025253169417,
+                0.9646446609406724
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.9505025253169417,
+                  0.9646446609406724
+                ],
+                "layers": 1
+              }
+            },
+            "note": "6: Raise the bottom edge of the front flap along the existing crease."
+          },
+          {
+            "id": "fstep-santa-10",
+            "parent": "fstep-santa-9",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9583630944789014,
+                    0.6755203820042825
+                  ],
+                  [
+                    0.6755203820042824,
+                    0.9583630944789017
+                  ]
+                ]
+              },
+              "moving": [
+                0.8535533905932743,
+                0.8676955262170054
+              ],
+              "seed": {
+                "scope": "depth",
+                "at": [
+                  0.8535533905932743,
+                  0.8676955262170054
+                ],
+                "layers": 1
+              }
+            },
+            "note": "7: Halve the top flap upward."
+          },
+          {
+            "id": "fstep-santa-11",
+            "parent": "fstep-santa-10",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "8: Turn over."
+          },
+          {
+            "id": "fstep-santa-12",
+            "parent": "fstep-santa-11",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.6378679656440358,
+                    0.8500000000000002
+                  ],
+                  [
+                    0.34816233815926434,
+                    0.7300000000000002
+                  ]
+                ]
+              },
+              "moving": [
+                0.4808326112068522,
+                0.9333809511662428
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "9a: Precrease the left short edge onto the middle."
+          },
+          {
+            "id": "fstep-santa-13",
+            "parent": "fstep-santa-12",
+            "op": {
+              "kind": "precrease",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.8500000000000001,
+                    0.6378679656440359
+                  ],
+                  [
+                    0.7300000000000001,
+                    0.3481623381592645
+                  ]
+                ]
+              },
+              "moving": [
+                0.9333809511662428,
+                0.4808326112068524
+              ],
+              "seed": {
+                "scope": "all"
+              },
+              "direction": "valley"
+            },
+            "note": "9b: Repeat on the right."
+          },
+          {
+            "id": "fstep-santa-14",
+            "parent": "fstep-santa-13",
+            "op": {
+              "kind": "turn",
+              "axis": "vertical"
+            },
+            "note": "10a: Turn over."
+          },
+          {
+            "id": "fstep-santa-15",
+            "parent": "fstep-santa-14",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.5,
+                0.20710678118654763
+              ],
+              "direction": "valley",
+              "moving": [
+                0.5,
+                0.08000000000000006
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.5,
+                    0.08000000000000006
+                  ]
+                ]
+              }
+            },
+            "note": "10b: Open the left long flap."
+          },
+          {
+            "id": "fstep-santa-16",
+            "parent": "fstep-santa-15",
+            "op": {
+              "kind": "unfold",
+              "crease": [
+                0.2071067811865474,
+                0.5
+              ],
+              "direction": "valley",
+              "moving": [
+                0.07999999999999989,
+                0.5
+              ],
+              "seed": {
+                "scope": "flaps",
+                "at": [
+                  [
+                    0.07999999999999989,
+                    0.5
+                  ]
+                ]
+              }
+            },
+            "note": "10c: Open the right long flap."
+          },
+          {
+            "id": "fstep-santa-17",
+            "parent": "fstep-santa-16",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    1,
+                    0.17157287525381015
+                  ],
+                  [
+                    0.872836140246614,
+                    0.08660470065123194
+                  ]
+                ]
+              },
+              "moving": [
+                0.9737615433949869,
+                0.026238456605013283
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "11a: Align the upper-left outer edge with the nearest crease."
+          },
+          {
+            "id": "fstep-santa-18",
+            "parent": "fstep-santa-17",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.17157287525381004,
+                    1
+                  ],
+                  [
+                    0.08660470065123177,
+                    0.872836140246614
+                  ]
+                ]
+              },
+              "moving": [
+                0.026238456605013116,
+                0.9737615433949869
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "11b: Repeat on the right."
+          },
+          {
+            "id": "fstep-santa-19",
+            "parent": "fstep-santa-18",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0.41421356237309503
+                  ]
+                ]
+              },
+              "moving": [
+                0.8679838798035946,
+                0.024035436838350122
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "12a: Refold the left long flap on its existing hinge."
+          },
+          {
+            "id": "fstep-santa-20",
+            "parent": "fstep-santa-19",
+            "op": {
+              "kind": "valley",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.4142135623730949,
+                    1
+                  ]
+                ]
+              },
+              "moving": [
+                0.024035436838349855,
+                0.8679838798035948
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "12b: Refold the right long flap on its existing hinge."
+          },
+          {
+            "id": "fstep-santa-21",
+            "parent": "fstep-santa-20",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.7071067811865476,
+                    0.2000000000000001
+                  ],
+                  [
+                    0.19999999999999984,
+                    0.7071067811865476
+                  ]
+                ]
+              },
+              "moving": [
+                0.009999999999999896,
+                0.10000000000000005
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "13: Fold the lower flap behind at the horizontal diagonal."
+          },
+          {
+            "id": "fstep-santa-22",
+            "parent": "fstep-santa-21",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.9232233047033627,
+                    0.7110912703473985
+                  ],
+                  [
+                    0.7623759005323596,
+                    0.27
+                  ]
+                ]
+              },
+              "moving": [
+                1,
+                0.31999999999999995
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "14a: Fold the left side fully behind along its precrease."
+          },
+          {
+            "id": "fstep-santa-23",
+            "parent": "fstep-santa-22",
+            "op": {
+              "kind": "mountain",
+              "line": {
+                "via": "free",
+                "through": [
+                  [
+                    0.7110912703473984,
+                    0.9232233047033628
+                  ],
+                  [
+                    0.2699999999999999,
+                    0.7623759005323597
+                  ]
+                ]
+              },
+              "moving": [
+                0.31999999999999984,
+                1
+              ],
+              "seed": {
+                "scope": "all"
+              }
+            },
+            "note": "14b: Fold the right side fully behind. The source offers an optional stand; this model uses its flat finish."
+          }
+        ]
+      }
+    ],
+    "viewState": {
+      "fold": {
+        "v": 1,
+        "sequenceId": "fold-trial-santa",
+        "cursor": "fstep-santa-23",
+        "activeChild": {
+          "": "fstep-santa-1",
+          "fstep-santa-1": "fstep-santa-2",
+          "fstep-santa-2": "fstep-santa-3",
+          "fstep-santa-3": "fstep-santa-4",
+          "fstep-santa-4": "fstep-santa-5",
+          "fstep-santa-5": "fstep-santa-6",
+          "fstep-santa-6": "fstep-santa-7",
+          "fstep-santa-7": "fstep-santa-8",
+          "fstep-santa-8": "fstep-santa-9",
+          "fstep-santa-9": "fstep-santa-10",
+          "fstep-santa-10": "fstep-santa-11",
+          "fstep-santa-11": "fstep-santa-12",
+          "fstep-santa-12": "fstep-santa-13",
+          "fstep-santa-13": "fstep-santa-14",
+          "fstep-santa-14": "fstep-santa-15",
+          "fstep-santa-15": "fstep-santa-16",
+          "fstep-santa-16": "fstep-santa-17",
+          "fstep-santa-17": "fstep-santa-18",
+          "fstep-santa-18": "fstep-santa-19",
+          "fstep-santa-19": "fstep-santa-20",
+          "fstep-santa-20": "fstep-santa-21",
+          "fstep-santa-21": "fstep-santa-22",
+          "fstep-santa-22": "fstep-santa-23"
+        }
+      }
+    }
+  },
+  "artifacts": {},
+  "extensions": {}
+}

@@ -1,0 +1,23 @@
+{
+  "slug": "angelfish",
+  "allStatesReplayed": true,
+  "finOverlap": {
+    "viewBeforeTurn": [
+      0.5,
+      -0.05
+    ],
+    "firstFinOriginal": [
+      0.83,
+      0.05999999999999979
+    ],
+    "secondFinOriginal": [
+      0.8299999999999997,
+      0.9400000000000002
+    ],
+    "firstFinDepthAfter": [
+      2,
+      3
+    ]
+  },
+  "allFinalCellsColored": true
+}

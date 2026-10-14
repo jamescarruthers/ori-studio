@@ -1,0 +1,28 @@
+{
+  "source": "https://origami.me/paper-envelope/",
+  "file": "models/paper-envelope.osf",
+  "fileSha256": "cee9a373900f75326e21e1f576a05d4a093da8fa2683da6ff47afd0bada074df",
+  "nodes": 11,
+  "folds": 11,
+  "finalFaces": 12,
+  "allStatesReplayedIdentically": true,
+  "stateHashes": [
+    "4d079cdc22679d3c4e0ae77030ab434aeac9a63375113c04be227bf2e9b49010",
+    "f5e40db792ca12cf39a2c3e8e77e46a57a296bc0e642cd4d7c2f59b6b3e964f9",
+    "bc1e384309fb57ec9e03624e81516cb412ec9c20d26daab00c08638b22fff839",
+    "e2cb91f6aa614a3dd2f29e21827d936c98736ad96505dcbf560b4f0f3ec37700",
+    "417b4eeda931c7acbf29df9b3adf2f5edd2439406f11b9668b01042cd45145a5",
+    "05b63cf1a54ca5db1e6b6b402e1a83e2adf6ec75616537f8ab72ca93373d680a",
+    "9a389c582ebb305a001b59ef10cf94ad9c4bfaf8e36b67e1130efa10a7207903",
+    "e656815d6ec8be9bd7efab31f8a9efd61fceca32dd4b71c9234ac447e080fde8",
+    "d9f5a049ba76fb85eb192d4773a299f3de5bac921f3a80bf312af71488dac171",
+    "26a0def614da1156223f72033c99c80575b176007d6f6bbbf4466241666a77ab",
+    "6562c02a392c1a8c3fadeb490ee3ab11e3169665cd7c8201d7abdad0423050d4",
+    "eb8cdf19cdea7ae91cc58acf9646e45429b02b6f9e7f2e8284aa8cd649697b80"
+  ],
+  "sourceStepsCompleted": 7,
+  "sourceSteps": 14,
+  "audit": "partial prefix checked in Fold; tutorial blocked, not complete",
+  "blockedAtSourceStep": 8,
+  "allNativeStatesVisuallyChecked": true
+}
