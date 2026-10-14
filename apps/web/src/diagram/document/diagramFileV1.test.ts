@@ -53,6 +53,9 @@ describe('a diagram saved at launch (format v1)', () => {
     const marks = new Set(all.flatMap((step) => step.annotations.flatMap((mark) => (isKnownAnnotation(mark) ? [mark.kind] : []))));
     expect(marks.size).toBeGreaterThanOrEqual(25);
     expect(document.page).toMatchObject({ layout: 'flow', columns: 4, rows: 3, stepsPerPage: 7 });
+    // Saved before the title block: its first page has none.
+    expect(document.page.titleBlock).toEqual({ enabled: false, heightShare: 0.27 });
+    expect(document.titleBlockContent).toBeUndefined();
     expect(all.flatMap((step) => (step.pageSteps !== undefined ? [[step.id, step.pageSteps]] : []))).toEqual([['step-2', 3]]);
     expect(all.filter((step) => step.breakBefore).map((step) => step.id)).toEqual(['step-marks']);
   });
@@ -73,9 +76,14 @@ describe('a diagram saved at launch (format v1)', () => {
   it('only adds the explicit preset snapshot, and says the page settings it left unsaid, preserving the frozen legacy file', () => {
     const written = JSON.parse(JSON.stringify(writeDiagram(read().document)));
     // Every page setting is said (2026-10-12, `diagram-document-evolution.md`): the packing it did not say, at the
-    // legacy values it was packed by.
+    // legacy values it was packed by, and the title block it was saved before (2026-10-14): none.
     const packing = { flowBands: 'auto', flowPreferBands: 0.5, flowBendSteps: true, flowNesting: 0.8, flowSteadiness: 0.85 };
-    expect(written).toEqual({ ...frozen, style: snapshotDiagramStyle(read().document.style), page: { ...frozen.page, ...packing } });
+    const titleBlock = { enabled: false, heightShare: 0.27 };
+    expect(written).toEqual({
+      ...frozen,
+      style: snapshotDiagramStyle(read().document.style),
+      page: { ...frozen.page, ...packing, titleBlock },
+    });
     expect(readDiagram(written)!.document).toEqual(read().document);
     expect(writeDiagram(readDiagram(written)!.document)).toEqual(written);
   });

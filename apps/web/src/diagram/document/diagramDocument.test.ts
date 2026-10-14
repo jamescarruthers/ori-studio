@@ -21,6 +21,7 @@ import {
   setPageStarts,
   setStepBreakBefore,
   setStepText,
+  setTitleBlockContent,
   stepHasContent,
   insertPictureSteps,
   setStepPicture,
@@ -318,6 +319,53 @@ describe('page setup', () => {
     expect(normalizePageSetup({ layout: 'flow', columns: 4, rows: 2 }).stepsPerPage).toBe(8);
     expect(normalizePageSetup({ layout: 'flow', columns: 5, rows: 6 }).stepsPerPage).toBe(30);
     expect(normalizePageSetup({ layout: 'flow', columns: 4, rows: 2, stepsPerPage: 5 }).stepsPerPage).toBe(5);
+  });
+
+  it('sets the title block whole, its share held to its range: the same document where it already is so', () => {
+    const { diagram } = diagramWith(0);
+    expect(PAGE_SETTINGS.titleBlock.legacy).toEqual({ enabled: false, heightShare: 0.27 });
+    const on = setPageSetup(diagram, { titleBlock: { enabled: true, heightShare: 0.27 } });
+    expect(on.page.titleBlock).toEqual({ enabled: true, heightShare: 0.27 });
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.27 } })).toBe(on);
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.3 } }).page.titleBlock.heightShare).toBe(0.3);
+    expect(setPageSetup(on, { titleBlock: { enabled: true, heightShare: 0.05 } }).page.titleBlock.heightShare).toBe(0.15);
+    expect(setPageSetup(on, { titleBlock: { enabled: false, heightShare: 0.27 } }).page.titleBlock.enabled).toBe(false);
+  });
+});
+
+describe('the title block’s content', () => {
+  const STEP = { kind: 'step', stepId: 'step-2' } as const;
+
+  it('sets each part alone, and takes it away: a source by Auto, the byline by blanks', () => {
+    const { diagram } = diagramWith(2);
+    const model = setTitleBlockContent(diagram, { model: STEP });
+    expect(model.titleBlockContent).toEqual({ model: STEP });
+    const both = setTitleBlockContent(model, { pattern: { kind: 'none' }, byline: '設計：笠原邦彦' });
+    expect(both.titleBlockContent).toEqual({ model: STEP, pattern: { kind: 'none' }, byline: '設計：笠原邦彦' });
+    expect(setTitleBlockContent(both, { byline: ' \n ' }).titleBlockContent).toEqual({ model: STEP, pattern: { kind: 'none' } });
+    // Nothing left set: no content at all.
+    const auto = setTitleBlockContent(both, { model: 'auto', pattern: 'auto', byline: '' });
+    expect(auto).not.toHaveProperty('titleBlockContent');
+    expect(auto).toEqual(diagram);
+  });
+
+  it('is the same document where nothing changes', () => {
+    const { diagram } = diagramWith(2);
+    expect(setTitleBlockContent(diagram, {})).toBe(diagram);
+    expect(setTitleBlockContent(diagram, { model: 'auto', byline: '' })).toBe(diagram);
+    const set = setTitleBlockContent(diagram, { model: STEP, byline: 'Design: Lang' });
+    expect(setTitleBlockContent(set, { model: { kind: 'step', stepId: 'step-2' } })).toBe(set);
+    expect(setTitleBlockContent(set, { byline: 'Design: Lang' })).toBe(set);
+    expect(setTitleBlockContent(set, { model: { kind: 'step', stepId: 'step-1' } })).not.toBe(set);
+  });
+
+  it('keeps only a source’s own fields, and cleans the byline as every string typed', () => {
+    const { diagram } = diagramWith(2);
+    const set = setTitleBlockContent(diagram, {
+      model: { ...STEP, pose: 'front' } as never,
+      byline: 'Design\u0000: Lang',
+    });
+    expect(set.titleBlockContent).toEqual({ model: STEP, byline: 'Design: Lang' });
   });
 });
 

@@ -24,3 +24,10 @@ export const FLOW_BANDS_RANGE = { min: 2, max: 5 } as const;
 
 /** The range of the packing's three weights: `flowPreferBands`, `flowNesting` and `flowSteadiness`. */
 export const FLOW_WEIGHT_RANGE = { min: 0, max: 1 } as const;
+
+/**
+ * The share of the printable height the first page's title block takes
+ * (`DiagramPageSetup.titleBlock`). Here because page 1's capacity is read
+ * from it (`pages/pagePlan.ts`).
+ */
+export const TITLE_BLOCK_SHARE_RANGE = { min: 0.15, max: 0.5 } as const;

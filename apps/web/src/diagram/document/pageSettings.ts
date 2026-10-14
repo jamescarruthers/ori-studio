@@ -77,6 +77,9 @@ export const PAGE_SETTINGS: PageSettingValues = {
   flowBendSteps: { default: true, legacy: true },
   flowNesting: { default: 0.8, legacy: 0.8 },
   flowSteadiness: { default: 0.85, legacy: 0.85 },
+  // Off: every first page was drawn without one before it existed (2026-10-14, `diagram-title-block.md`). A new
+  // diagram's default stays off until the block is drawn on every surface.
+  titleBlock: { default: { enabled: false, heightShare: 0.27 }, legacy: { enabled: false, heightShare: 0.27 } },
 };
 
 /** The page settings, in the order a file writes them. */

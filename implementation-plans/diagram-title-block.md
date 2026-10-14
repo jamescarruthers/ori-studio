@@ -1050,21 +1050,44 @@ cut order. T-18 says what happens if it is not ready. The default stays off
 until 1f.
 
 **1a. The setting and the file**
-- [ ] `titleBlock` in `PAGE_SETTINGS` (default off until 1f, legacy off,
+- [x] `titleBlock` in `PAGE_SETTINGS` (default off until 1f, legacy off,
   share 0.27), the type, `normalizePageSetup`, `pageSetupEquals`,
   `writePageSetup` (whole), `readNewerPage` (the share's range and a key
   set: past either is a newer build's).
-- [ ] `titleBlockContent` (T-17 B): the type, the reader and the writer,
+- [x] `titleBlockContent` (T-17 B): the type, the reader and the writer,
   `DOCUMENT_KEYS`. Lenient parts. `DiagramNewerFields.titleBlockContent` for
   a newer build's part, by part, shown as Auto and written back.
-- [ ] `carriedJson` reads that slot, so an asset or thumbnail it names
+- [x] `carriedJson` reads that slot, so an asset or thumbnail it names
   survives an edit and a save. A test that fails before.
-- [ ] The v1 contract names both fields, and its stale "written only when"
+- [x] The v1 contract names both fields, and its stale "written only when"
   text is corrected. `diagramFileV1.test.ts` expects `titleBlock` at its
   legacy value, and the frozen fixture is unchanged.
-- [ ] The new fixture, round-tripped exactly; its unknown part carried, its
+- [x] The new fixture, round-tripped exactly; its unknown part carried, its
   asset kept, shown as Auto.
-- [ ] A file without `titleBlock` reads off. A damaged one reads off.
+- [x] A file without `titleBlock` reads off. A damaged one reads off.
+
+*As built (1a).* As planned, with these calls:
+- `titleBlock` is the last row of `PAGE_SETTINGS`, so it is written after
+  the packing. Its share's range, `TITLE_BLOCK_SHARE_RANGE`, is in
+  `pageRanges.ts` beside the other ranges the pagination reads.
+- A field of `titleBlock` that does not read takes that field's legacy
+  value (`{ enabled: true }` reads as on at 0.27); no object at all reads
+  as no block. A newer build's `titleBlock` (a share past 0.15–0.5, or a
+  field this build has no name for) is carried in `newer.page` and the
+  page reads as no block (`readPageSetup` in `diagramFile.ts`), as section
+  8 says, rather than clamped as a newer margin is.
+- `setTitleBlockContent(document, patch)` is the one edit: a part set to a
+  source, `'auto'` to take it away, a byline of blanks taken away. Setting
+  a part lets go of a newer build's value for that part only.
+- The new fixture holds two diagrams, as one diagram cannot hold both a
+  chosen model and a newer build's model: a flow (model a step, pattern
+  none, a Korean byline) and a grid at a share of 0.33 (pattern a step, an
+  `own` model naming an asset nothing else names). Its test is
+  `diagramFileTitleBlock.test.ts`; it failed before `carriedJson` read the
+  slot (the asset was dropped).
+- The contract's page bullet is rewritten to say every setting is written,
+  and the evolution plan's audit table gains `titleBlockContent` as class
+  (c).
 
 **1b. Pagination and signatures**
 - [ ] `firstPageCapacity(setup)` inside `splitPages` and `paginate`, in the

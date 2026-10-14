@@ -132,11 +132,13 @@ import {
   SPREAD_AXIS_RANGE,
   SPREAD_SKEW_RANGE,
   STEPS_PER_PAGE_RANGE,
+  TITLE_BLOCK_SHARE_RANGE,
   isTurn,
   showAsOf,
   carriedJson,
   isKnownAsset,
   normalizePageSetup,
+  PAGE_SETTINGS,
   PAGE_SETTING_KEYS,
   readHexColor,
   randomDiagramId,
@@ -172,6 +174,8 @@ import {
   type DiagramStepSource,
   type DiagramStyle,
   type DiagramSvgAsset,
+  type DiagramTitleBlockContent,
+  type DiagramTitleBlockSource,
   type DiagramTurn,
   type DiagramPaperFaces,
   type DiagramScenePicture,
@@ -232,17 +236,19 @@ export function readDiagram(value: unknown, options: ReadDiagramOptions = {}): R
     }
   }
   const arranged = readPageArrangements(value.pageArrangements);
-  const newer = readNewerFields(value, arranged.newer);
+  const titleBlock = readTitleBlockContent(value.titleBlockContent);
+  const newer = readNewerFields(value, arranged.newer, titleBlock.newer);
   const document: DiagramDocument = {
     formatVersion: DIAGRAM_FORMAT_VERSION,
     id: typeof value.id === 'string' && value.id.length > 0 ? value.id : newId('diagram'),
     title: typeof value.title === 'string' ? xmlText(value.title) : '',
     hanStyle: readHanStyle(value.hanStyle),
     style: readStyle(value.style),
-    page: normalizePageSetup(value.page),
+    page: readPageSetup(value.page, newer?.page),
     steps,
     assets,
     ...(Object.keys(arranged.arrangements).length > 0 ? { pageArrangements: arranged.arrangements } : {}),
+    ...(Object.keys(titleBlock.content).length > 0 ? { titleBlockContent: titleBlock.content } : {}),
     ...(newer ? { newer } : {}),
   };
   // The entries only a newer build's writing names go back with it, as they came.
@@ -265,6 +271,7 @@ const DOCUMENT_KEYS = new Set([
   'assets',
   'thumbnails',
   'pageArrangements',
+  'titleBlockContent',
 ]);
 /**
  * The page fields a build once wrote that this one has retired (the rule at
@@ -301,6 +308,7 @@ const PAGE_RANGES: Readonly<Record<string, { readonly min: number; readonly max:
   flowSteadiness: FLOW_WEIGHT_RANGE,
 };
 const PAGE_NUMBERS_KEYS: ReadonlySet<string> = new Set(['enabled', 'first']);
+const TITLE_BLOCK_KEYS: ReadonlySet<string> = new Set(['enabled', 'heightShare']);
 const STYLE_KEYS: ReadonlySet<string> = new Set(['preset', 'style']);
 
 /**
@@ -313,8 +321,14 @@ const STYLE_KEYS: ReadonlySet<string> = new Set(['preset', 'style']);
  * wrong type is damage rather than news, and is replaced as before. So is a
  * page arrangement this build does not read (`pageArrangements`, read by
  * `readPageArrangements`): the page is packed here as if none were stored.
+ * And so is a part of the title block's content (`readTitleBlockContent`):
+ * Auto, here.
  */
-function readNewerFields(value: Record<string, unknown>, pageArrangements: Record<string, unknown>): DiagramNewerFields | undefined {
+function readNewerFields(
+  value: Record<string, unknown>,
+  pageArrangements: Record<string, unknown>,
+  titleBlockContent: Record<string, unknown>
+): DiagramNewerFields | undefined {
   const fields = Object.fromEntries(Object.entries(value).filter(([key]) => !DOCUMENT_KEYS.has(key)));
   const page = readNewerPage(value.page);
   const newer: DiagramNewerFields = {
@@ -323,8 +337,19 @@ function readNewerFields(value: Record<string, unknown>, pageArrangements: Recor
     ...(isRecord(value.style) && isNewerStyle(value.style) ? { style: value.style } : {}),
     ...(page ? { page } : {}),
     ...(Object.keys(pageArrangements).length > 0 ? { pageArrangements } : {}),
+    ...(Object.keys(titleBlockContent).length > 0 ? { titleBlockContent } : {}),
   };
   return Object.keys(newer).length > 0 ? newer : undefined;
+}
+
+/**
+ * The page setup as read: each setting leniently (`normalizePageSetup`), but
+ * a title block a newer build wrote (`newerPage`) as none — how that build
+ * draws it is its own — until the block is set here.
+ */
+function readPageSetup(value: unknown, newerPage: Readonly<Record<string, unknown>> | undefined): DiagramPageSetup {
+  const page = normalizePageSetup(value);
+  return newerPage && Object.hasOwn(newerPage, 'titleBlock') ? { ...page, titleBlock: PAGE_SETTINGS.titleBlock.legacy } : page;
 }
 
 /**
@@ -354,7 +379,53 @@ function readNewerPage(value: unknown): Record<string, unknown> | undefined {
   if (isRecord(numbers) && (hasNewerKey(numbers, PAGE_NUMBERS_KEYS) || isPastRange(numbers.first, FIRST_PAGE_NUMBER_RANGE))) {
     page.pageNumbers = numbers;
   }
+  const titleBlock = value.titleBlock;
+  if (
+    isRecord(titleBlock) &&
+    (hasNewerKey(titleBlock, TITLE_BLOCK_KEYS) || isPastRange(titleBlock.heightShare, TITLE_BLOCK_SHARE_RANGE))
+  ) {
+    page.titleBlock = titleBlock;
+  }
   return Object.keys(page).length > 0 ? page : undefined;
+}
+
+/** The fields each kind of title block source this build knows has. */
+const TITLE_BLOCK_SOURCE_KEYS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ['step', new Set(['kind', 'stepId'])],
+  ['none', new Set(['kind'])],
+]);
+
+/**
+ * The title block's content (`titleBlockContent`), each part read alone. A
+ * source of a kind or with a field this build has no name for, and a field of
+ * the content it has no name for, is a newer build's: carried under its key
+ * and Auto here. A part that does not read — the wrong type, a step without
+ * its id — is dropped alone, and is Auto too; so is a byline of blanks.
+ */
+function readTitleBlockContent(value: unknown): { content: DiagramTitleBlockContent; newer: Record<string, unknown> } {
+  const content: DiagramTitleBlockContent = {};
+  const newer: Record<string, unknown> = {};
+  if (!isRecord(value)) return { content, newer };
+  for (const [key, part] of Object.entries(value)) {
+    if (key === 'model' || key === 'pattern') {
+      const source = readTitleBlockSource(part);
+      if (source === 'newer') newer[key] = part;
+      else if (source) content[key] = source;
+    } else if (key === 'byline') {
+      const byline = typeof part === 'string' ? xmlText(part) : '';
+      if (byline.trim() !== '') content.byline = byline;
+    } else newer[key] = part;
+  }
+  return { content, newer };
+}
+
+/** A part's source: this build's, a newer build's (`'newer'`), or null for one that does not read. */
+function readTitleBlockSource(value: unknown): DiagramTitleBlockSource | 'newer' | null {
+  if (!isRecord(value) || typeof value.kind !== 'string') return null;
+  const known = TITLE_BLOCK_SOURCE_KEYS.get(value.kind);
+  if (!known || hasNewerKey(value, known)) return 'newer';
+  if (value.kind === 'none') return { kind: 'none' };
+  return typeof value.stepId === 'string' && value.stepId.length > 0 ? { kind: 'step', stepId: value.stepId } : null;
 }
 
 /** A finite number outside `range`: a newer build's, which reads further. */
@@ -403,6 +474,7 @@ export function writeDiagram(
     hanStyle: newer?.hanStyle ?? document.hanStyle,
     style: newer?.style ?? snapshotDiagramStyle(document.style),
     page: { ...writePageSetup(document.page), ...newer?.page },
+    ...writeTitleBlockContent(document.titleBlockContent, newer?.titleBlockContent),
     steps,
     assets: Object.fromEntries(
       Object.entries(document.assets).map(([id, asset]) => [id, writeAsset(asset)])
@@ -481,12 +553,36 @@ function thumbnailJson(thumbnail: SheetThumbnail): string {
  * value (`normalizePageSetup`).
  */
 function writePageSetup(page: DiagramPageSetup): Record<string, unknown> {
-  return Object.fromEntries(
-    PAGE_SETTING_KEYS.map((key) => [
-      key,
-      key === 'pageNumbers' ? { enabled: page.pageNumbers.enabled, first: page.pageNumbers.first } : page[key],
-    ])
-  );
+  const whole = (key: keyof DiagramPageSetup): unknown =>
+    key === 'pageNumbers'
+      ? { enabled: page.pageNumbers.enabled, first: page.pageNumbers.first }
+      : key === 'titleBlock'
+        ? { enabled: page.titleBlock.enabled, heightShare: page.titleBlock.heightShare }
+        : page[key];
+  return Object.fromEntries(PAGE_SETTING_KEYS.map((key) => [key, whole(key)]));
+}
+
+/** The order a title block's parts are written in; a newer build's fields follow. */
+const TITLE_BLOCK_PARTS = ['model', 'pattern', 'byline'] as const;
+
+/**
+ * The title block's content as written, only when a part is set: each part
+ * set here, or a newer build's in its place as it came, in one order, then
+ * the fields only a newer build has names for.
+ */
+function writeTitleBlockContent(
+  content: DiagramTitleBlockContent | undefined,
+  carried: Readonly<Record<string, unknown>> | undefined
+): { titleBlockContent?: Record<string, unknown> } {
+  const parts: Record<string, unknown> = {};
+  for (const key of TITLE_BLOCK_PARTS) {
+    const part = carried?.[key] ?? content?.[key];
+    if (part !== undefined) parts[key] = part;
+  }
+  for (const [key, part] of Object.entries(carried ?? {})) {
+    if (!Object.hasOwn(parts, key)) parts[key] = part;
+  }
+  return Object.keys(parts).length > 0 ? { titleBlockContent: parts } : {};
 }
 
 function writeStep(step: DiagramEntry, thumbnails: ThumbnailWriter): Record<string, unknown> {

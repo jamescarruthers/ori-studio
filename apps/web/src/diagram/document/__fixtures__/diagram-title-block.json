@@ -1,0 +1,463 @@
+[
+  {
+    "formatVersion": 1,
+    "id": "diagram-title-block-flow",
+    "title": "학 · Crane",
+    "hanStyle": "kr",
+    "style": {
+      "preset": "diagram",
+      "style": {
+        "version": 1,
+        "paper": {
+          "front": "#ffffff",
+          "back": "#b3b3b3"
+        },
+        "edges": {
+          "width": 0.5,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "butt"
+        },
+        "mountainFolds": {
+          "width": 0.25,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "butt"
+        },
+        "valleyFolds": {
+          "width": 0.25,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "butt"
+        },
+        "mountainDiagramCreases": {
+          "width": 0.75,
+          "color": "#231f20",
+          "dash": [
+            8,
+            2,
+            1,
+            2
+          ],
+          "cap": "butt"
+        },
+        "valleyDiagramCreases": {
+          "width": 0.75,
+          "color": "#231f20",
+          "dash": [
+            4,
+            2
+          ],
+          "cap": "butt"
+        },
+        "foldsAsEdges": false,
+        "auxCreases": {
+          "visible": true,
+          "pen": {
+            "width": 0.25,
+            "color": "#231f20",
+            "dash": null,
+            "cap": "butt"
+          }
+        },
+        "arrows": {
+          "width": 0.75,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "round"
+        },
+        "erode": 0.005,
+        "light": {
+          "enabled": true,
+          "azimuth": 322.19347,
+          "elevation": 42.80915
+        }
+      }
+    },
+    "page": {
+      "size": "a4",
+      "orientation": "portrait",
+      "marginMm": 12,
+      "layout": "flow",
+      "columns": 3,
+      "rows": 3,
+      "stepsPerPage": 9,
+      "showPath": true,
+      "pathWidthMm": 20,
+      "pathColor": "#ecece8",
+      "firstPageSide": "left",
+      "showTitle": true,
+      "pageNumbers": {
+        "enabled": true,
+        "first": 1
+      },
+      "flowBands": "auto",
+      "flowPreferBands": 0.5,
+      "flowBendSteps": true,
+      "flowNesting": 0.8,
+      "flowSteadiness": 0.85,
+      "titleBlock": {
+        "enabled": true,
+        "heightShare": 0.27
+      }
+    },
+    "titleBlockContent": {
+      "model": {
+        "kind": "step",
+        "stepId": "step-model"
+      },
+      "pattern": {
+        "kind": "none"
+      },
+      "byline": "디자인: 김민수\n종이: 35 cm 정사각형"
+    },
+    "steps": [
+      {
+        "id": "step-fold",
+        "revision": 0,
+        "source": {
+          "kind": "cp",
+          "scope": {
+            "kind": "segment",
+            "region": {
+              "boundary": [
+                [
+                  {
+                    "x": 0,
+                    "y": 0
+                  },
+                  {
+                    "x": 1,
+                    "y": 0
+                  },
+                  {
+                    "x": 1,
+                    "y": 1
+                  },
+                  {
+                    "x": 0,
+                    "y": 1
+                  }
+                ]
+              ],
+              "bounds": {
+                "minX": 0,
+                "minY": 0,
+                "maxX": 1,
+                "maxY": 1
+              },
+              "segmentIdHint": 0
+            }
+          },
+          "fingerprint": "fp-1",
+          "thumbnail": "thumb-pxzlqcbzg4pr",
+          "render": {
+            "mode": "crease-pattern",
+            "rotationDeg": 0
+          }
+        },
+        "picture": {
+          "kind": "scene",
+          "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+          "paperScale": 100,
+          "styleKey": null,
+          "key": "scene-1"
+        },
+        "annotations": [],
+        "annotatedPictureKey": null,
+        "text": "반으로 접습니다.",
+        "breakBefore": false
+      },
+      {
+        "id": "step-model",
+        "revision": 0,
+        "source": {
+          "kind": "upload",
+          "assetId": "asset-model",
+          "rotationQuarterTurns": 0,
+          "mirrored": false
+        },
+        "picture": {
+          "kind": "asset",
+          "assetId": "asset-model",
+          "paperScale": null,
+          "key": "asset:asset-model"
+        },
+        "annotations": [],
+        "annotatedPictureKey": null,
+        "text": "완성.",
+        "breakBefore": false
+      }
+    ],
+    "assets": {
+      "asset-model": {
+        "id": "asset-model",
+        "kind": "raster",
+        "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAAAAAAA",
+        "widthPx": 64,
+        "heightPx": 48,
+        "bytes": 66
+      }
+    },
+    "thumbnails": {
+      "thumb-pxzlqcbzg4pr": "{\"viewBox\":\"0 0 100 100\",\"strokes\":[{\"x1\":0,\"y1\":0,\"x2\":100,\"y2\":0,\"role\":\"edge\"},{\"x1\":0,\"y1\":50,\"x2\":100,\"y2\":50,\"role\":\"mountain\"}]}"
+    }
+  },
+  {
+    "formatVersion": 1,
+    "id": "diagram-title-block-grid",
+    "title": "Swan",
+    "hanStyle": "sc",
+    "style": {
+      "preset": "diagram",
+      "style": {
+        "version": 1,
+        "paper": {
+          "front": "#ffffff",
+          "back": "#b3b3b3"
+        },
+        "edges": {
+          "width": 0.5,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "butt"
+        },
+        "mountainFolds": {
+          "width": 0.25,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "butt"
+        },
+        "valleyFolds": {
+          "width": 0.25,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "butt"
+        },
+        "mountainDiagramCreases": {
+          "width": 0.75,
+          "color": "#231f20",
+          "dash": [
+            8,
+            2,
+            1,
+            2
+          ],
+          "cap": "butt"
+        },
+        "valleyDiagramCreases": {
+          "width": 0.75,
+          "color": "#231f20",
+          "dash": [
+            4,
+            2
+          ],
+          "cap": "butt"
+        },
+        "foldsAsEdges": false,
+        "auxCreases": {
+          "visible": true,
+          "pen": {
+            "width": 0.25,
+            "color": "#231f20",
+            "dash": null,
+            "cap": "butt"
+          }
+        },
+        "arrows": {
+          "width": 0.75,
+          "color": "#231f20",
+          "dash": null,
+          "cap": "round"
+        },
+        "erode": 0.005,
+        "light": {
+          "enabled": true,
+          "azimuth": 322.19347,
+          "elevation": 42.80915
+        }
+      }
+    },
+    "page": {
+      "size": "a4",
+      "orientation": "portrait",
+      "marginMm": 12,
+      "layout": "grid",
+      "columns": 3,
+      "rows": 3,
+      "stepsPerPage": 9,
+      "showPath": true,
+      "pathWidthMm": 20,
+      "pathColor": "#ecece8",
+      "firstPageSide": "left",
+      "showTitle": true,
+      "pageNumbers": {
+        "enabled": true,
+        "first": 1
+      },
+      "flowBands": "auto",
+      "flowPreferBands": 0.5,
+      "flowBendSteps": true,
+      "flowNesting": 0.8,
+      "flowSteadiness": 0.85,
+      "titleBlock": {
+        "enabled": true,
+        "heightShare": 0.33
+      }
+    },
+    "titleBlockContent": {
+      "model": {
+        "kind": "own",
+        "step": {
+          "id": "title-model",
+          "revision": 2,
+          "source": {
+            "kind": "upload",
+            "assetId": "asset-own",
+            "rotationQuarterTurns": 0,
+            "mirrored": false
+          },
+          "picture": {
+            "kind": "asset",
+            "assetId": "asset-own",
+            "paperScale": 1,
+            "key": "upload-asset-own"
+          },
+          "annotations": [],
+          "annotatedPictureKey": null
+        }
+      },
+      "pattern": {
+        "kind": "step",
+        "stepId": "step-swan"
+      }
+    },
+    "steps": [
+      {
+        "id": "step-base",
+        "revision": 0,
+        "source": {
+          "kind": "cp",
+          "scope": {
+            "kind": "segment",
+            "region": {
+              "boundary": [
+                [
+                  {
+                    "x": 0,
+                    "y": 0
+                  },
+                  {
+                    "x": 1,
+                    "y": 0
+                  },
+                  {
+                    "x": 1,
+                    "y": 1
+                  },
+                  {
+                    "x": 0,
+                    "y": 1
+                  }
+                ]
+              ],
+              "bounds": {
+                "minX": 0,
+                "minY": 0,
+                "maxX": 1,
+                "maxY": 1
+              },
+              "segmentIdHint": 0
+            }
+          },
+          "fingerprint": "fp-1",
+          "thumbnail": "thumb-pxzlqcbzg4pr",
+          "render": {
+            "mode": "crease-pattern",
+            "rotationDeg": 0
+          }
+        },
+        "picture": {
+          "kind": "scene",
+          "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+          "paperScale": 100,
+          "styleKey": null,
+          "key": "scene-1"
+        },
+        "annotations": [],
+        "annotatedPictureKey": null,
+        "text": "",
+        "breakBefore": false
+      },
+      {
+        "id": "step-swan",
+        "revision": 0,
+        "source": {
+          "kind": "cp",
+          "scope": {
+            "kind": "segment",
+            "region": {
+              "boundary": [
+                [
+                  {
+                    "x": 0,
+                    "y": 0
+                  },
+                  {
+                    "x": 1,
+                    "y": 0
+                  },
+                  {
+                    "x": 1,
+                    "y": 1
+                  },
+                  {
+                    "x": 0,
+                    "y": 1
+                  }
+                ]
+              ],
+              "bounds": {
+                "minX": 0,
+                "minY": 0,
+                "maxX": 1,
+                "maxY": 1
+              },
+              "segmentIdHint": 0
+            }
+          },
+          "fingerprint": "fp-1",
+          "thumbnail": "thumb-pxzlqcbzg4pr",
+          "render": {
+            "mode": "crease-pattern",
+            "rotationDeg": 45
+          }
+        },
+        "picture": {
+          "kind": "scene",
+          "sceneJson": "{\"bounds\":{\"minX\":0,\"minY\":0,\"maxX\":100,\"maxY\":100},\"sheet\":100,\"items\":[{\"kind\":\"face\",\"face\":0,\"side\":\"front\",\"rings\":[[[0,0],[100,0],[100,100],[0,100]]],\"shade\":1,\"hidden\":false},{\"kind\":\"line\",\"role\":\"mountain\",\"a\":[0,50],\"b\":[100,50],\"onBoundary\":[true,true],\"face\":0,\"hidden\":false}]}",
+          "paperScale": 100,
+          "styleKey": null,
+          "key": "scene-1"
+        },
+        "annotations": [],
+        "annotatedPictureKey": null,
+        "text": "",
+        "breakBefore": false
+      }
+    ],
+    "assets": {
+      "asset-own": {
+        "id": "asset-own",
+        "kind": "raster",
+        "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAAAAAAAA",
+        "widthPx": 32,
+        "heightPx": 32,
+        "bytes": 66
+      }
+    },
+    "thumbnails": {
+      "thumb-pxzlqcbzg4pr": "{\"viewBox\":\"0 0 100 100\",\"strokes\":[{\"x1\":0,\"y1\":0,\"x2\":100,\"y2\":0,\"role\":\"edge\"},{\"x1\":0,\"y1\":50,\"x2\":100,\"y2\":50,\"role\":\"mountain\"}]}"
+    }
+  }
+]

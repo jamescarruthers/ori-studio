@@ -1718,10 +1718,14 @@ their summary. `diagram/document/diagramFileV1.test.ts` holds a frozen v1
 file (`__fixtures__/diagram-v1.json`, every kind of step, picture, render,
 turn and mark) to them: it must open editable, with nothing carried as a
 newer build's, and write back exactly except for the explicit pre-launch
-preset migration: an id-only preset gains its resolved values. The fixture
+preset migration — an id-only preset gains its resolved values — and the
+page settings it does not say, which it gains at their legacy values (the
+flow's packing, 2026-10-12; the title block, off, 2026-10-14). The fixture
 stays unchanged, the migrated save is idempotent, and the legacy preset
-values are frozen in `paper-presets-v1.json`. A change to anything below is
-a format change.
+values are frozen in `paper-presets-v1.json`. `diagramFileTitleBlock.test.ts`
+holds two diagrams saved with a title block (`__fixtures__/diagram-title-block.json`,
+2026-10-14) to them the same way, written back byte for byte. A change to
+anything below is a format change.
 
 **Where it lives.** `workspace.diagrams`, a list (D1), which asks for reader
 10. This build shows the first diagram and carries the rest verbatim
@@ -1730,8 +1734,8 @@ a format change.
 on its next save.
 
 **A diagram** — `formatVersion: 1`, `id` (`diagram-<uuid>`), `title`,
-`hanStyle` (`sc`/`tc`/`jp`/`kr`), `style`, `page`, `steps`, `assets`,
-`pageArrangements`, `thumbnails`:
+`hanStyle` (`sc`/`tc`/`jp`/`kr`), `style`, `page`, `titleBlockContent`,
+`steps`, `assets`, `pageArrangements`, `thumbnails`:
 - `style` is `{ preset: string, style: PaperStyle }`, a built-in with its
   saved values, or `{ style: PaperStyle }`, a custom or export style stored
   whole (D9). Saved values take precedence over the name, including a name
@@ -1740,21 +1744,47 @@ on its next save.
 - Fonts without a font-set id mean the frozen v1 Noto set. Its files, metrics
   and coverage cannot be replaced; `scripts/diagram-fonts/v1-lock.json` is
   checked on every font build and in the production deployment bundle.
-- `page`: `size` (`a4`/`a5`/`b5-jis`/`letter`), `orientation`, `marginMm`
-  (0–30), `layout` (`grid`/`flow`; unsaid reads as the grid), `columns`
-  (2–5), `rows` (1–6), `stepsPerPage` (2–30, the flow's default count of a
-  page, written only when not `columns × rows` — the columns and rows the
-  file says, a newer build's past their ranges included — which a file
-  without it reads), `showPath`, `pathWidthMm` (4–60, written only when
-  not 20), `pathColor` (`#rrggbb`, only when not `#ecece8`), `firstPageSide`
-  (only when `right`), `showTitle`, `pageNumbers` (`{ enabled, first }`,
-  first 1–9999). `scale` is retired (2026-10-06): read and let go. The flow's
-  packing (added 2026-10-12, `diagram-flow-packing.md`), each written only
-  when not its default, which a file without it reads: `flowBands` (`auto`
-  or a whole 2–5; default `auto`), `flowPreferBands` (0–1, 0.5),
-  `flowBendSteps` (boolean, true), `flowNesting` (0–1, 0.8) and
-  `flowSteadiness` (0–1, 0.85). A number past its range, or a `flowBands`
-  word other than `auto`, is a newer build's (rule 2).
+- `page`: every setting, always, whatever its value (since 2026-10-12,
+  `diagram-document-evolution.md`, part 3); one a file does not say was
+  written before this build knew it, or before every setting was said, and
+  reads as its legacy value (`PAGE_SETTINGS` in `pageSettings.ts`), never
+  today's default. `size` (`a4`/`a5`/`b5-jis`/`letter`), `orientation`,
+  `marginMm` (0–30), `layout` (`grid`/`flow`; unsaid reads as the grid),
+  `columns` (2–5), `rows` (1–6), `stepsPerPage` (2–30, the flow's default
+  count of a page; unsaid reads `columns × rows` — the columns and rows the
+  file says, a newer build's past their ranges included), `showPath`,
+  `pathWidthMm` (4–60; unsaid 20), `pathColor` (`#rrggbb`; unsaid
+  `#ecece8`), `firstPageSide` (unsaid `left`), `showTitle`, `pageNumbers`
+  (`{ enabled, first }`, first 1–9999). `scale` is retired (2026-10-06):
+  read and let go. The flow's packing (added 2026-10-12,
+  `diagram-flow-packing.md`), unsaid read as Zach's: `flowBands` (`auto` or
+  a whole 2–5; `auto`), `flowPreferBands` (0–1, 0.5), `flowBendSteps`
+  (boolean, true), `flowNesting` (0–1, 0.8) and `flowSteadiness` (0–1,
+  0.85). `titleBlock` (added 2026-10-14, `diagram-title-block.md`),
+  `{ enabled, heightShare }`, written whole: whether the first page has a
+  title block, and how tall it is as a share of the printable height
+  (0.15–0.5). Unsaid, or no object, it reads `{ enabled: false,
+  heightShare: 0.27 }`, no block, as every first page before it; a field of
+  it that does not read takes that field's legacy value. A number past its
+  range, a `flowBands` word other than `auto`, or a field of `titleBlock`
+  this build has no name for, is a newer build's (rule 2); a newer build's
+  `titleBlock` is shown as no block.
+- `titleBlockContent` (added 2026-10-14, `diagram-title-block.md`), only
+  when a part is set: what the first page's title block shows, `{ model?,
+  pattern?, byline? }`, written in that order. `model` (the finished model:
+  a step's picture) and `pattern` (the crease pattern: a linked step's
+  thumbnail) are each `{ kind: 'step', stepId }` or `{ kind: 'none' }`.
+  Unsaid is Auto: the last step with a picture, and the last step linked to
+  a crease pattern, whatever it is shown as (none when no step is linked),
+  turns and locked steps skipped. A chosen step that is gone, or locked,
+  reads as Auto, its id kept. `byline`, the author's credits as typed,
+  never blank (one of blanks reads as unsaid). A part that does not read is
+  dropped alone, and is Auto. A part of a kind, or with a field, this build
+  has no name for, and a field of the content it has no name for, is a newer
+  build's (rule 2): carried under its key and written back until that part
+  is set here, Auto here, and an asset or a thumbnail it names is kept.
+  Auto's rule is a look, and the content is in no page's signature: neither
+  moves a step.
 - `steps`: the order, steps and the turns between them (D22). A turn is
   `{ id: 'turn-<uuid>', kind: 'turn-over', axis }` (unsaid: `vertical`) or
   `{ id, kind: 'rotate', rotate: { amount, direction } }` (unsaid: a quarter

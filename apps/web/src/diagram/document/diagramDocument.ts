@@ -36,7 +36,13 @@ import { marksIntoUnits, startsWhole } from '../zoom/zoomFrames';
 import { stepReach } from '../zoom/zoomModel';
 import { authorMarksChanged, authorMarksOf, editedCardMarksGone, isCardMark, releaseCardMarks, withEditTags } from './cardMarks';
 import { samePageArrangements } from './pageArrangements';
-import { FLOW_BANDS_RANGE, FLOW_WEIGHT_RANGE, PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE } from './pageRanges';
+import {
+  FLOW_BANDS_RANGE,
+  FLOW_WEIGHT_RANGE,
+  PAGE_STEPS_RANGE,
+  STEPS_PER_PAGE_RANGE,
+  TITLE_BLOCK_SHARE_RANGE,
+} from './pageRanges';
 import {
   DEFAULT_FLOW_PACKING,
   DEFAULT_PAGE_SETUP,
@@ -122,6 +128,25 @@ export interface DiagramPageSetup {
   flowNesting: number;
   /** How strongly a page's scale is held to the page before's, 0–1. */
   flowSteadiness: number;
+  /**
+   * A title block at the top of the first page (`implementation-plans/
+   * diagram-title-block.md`): the title, the crease pattern and the finished
+   * model, in a band {@link DiagramTitleBlockSetup.heightShare} of the
+   * printable height tall. What it shows is the document's
+   * ({@link DiagramDocument.titleBlockContent}); this is the room it takes.
+   */
+  titleBlock: DiagramTitleBlockSetup;
+}
+
+/** The first page's title block, as the page setup says it ({@link DiagramPageSetup.titleBlock}). */
+export interface DiagramTitleBlockSetup {
+  enabled: boolean;
+  /**
+   * How tall it is, as a share of the printable height
+   * ({@link TITLE_BLOCK_SHARE_RANGE}): stored, so that no later build's
+   * proportions move a saved first page.
+   */
+  heightShare: number;
 }
 
 /** How many bands a flow page is packed into ({@link DiagramPageSetup.flowBands}): chosen per page, or fixed. */
@@ -1305,8 +1330,38 @@ export interface DiagramDocument {
    * (`pages/repackedFrames.ts`).
    */
   pageArrangements?: Readonly<Record<string, DiagramPageArrangement>>;
+  /**
+   * What the first page's title block shows (`implementation-plans/
+   * diagram-title-block.md`), each part set by hand; absent where none is.
+   * Never part of the page setup: what the block shows moves no step.
+   */
+  titleBlockContent?: DiagramTitleBlockContent;
   /** What a newer build wrote here that this build cannot read, written back as it came. */
   newer?: DiagramNewerFields;
+}
+
+/**
+ * Where a part of the title block comes from, set by hand: a step of the
+ * diagram's, or none. A part not set is Auto (`pages/titleBlockContent.ts`),
+ * and so is a step that is gone.
+ */
+export type DiagramTitleBlockSource = { kind: 'step'; stepId: string } | { kind: 'none' };
+
+/** The parts of the first page's title block set by hand ({@link DiagramDocument.titleBlockContent}). */
+export interface DiagramTitleBlockContent {
+  /** The finished model: a step's picture. */
+  model?: DiagramTitleBlockSource;
+  /** The crease pattern: a linked step's pattern. */
+  pattern?: DiagramTitleBlockSource;
+  /** Credits under the title, as the author writes them; never empty. */
+  byline?: string;
+}
+
+/** The parts of the title block an edit sets ({@link setTitleBlockContent}): `auto` takes a part's source away, an empty byline the byline. */
+export interface DiagramTitleBlockContentPatch {
+  model?: DiagramTitleBlockSource | 'auto';
+  pattern?: DiagramTitleBlockSource | 'auto';
+  byline?: string;
 }
 
 /**
@@ -1390,6 +1445,13 @@ export interface DiagramNewerFields {
    * until the page is re-packed here.
    */
   pageArrangements?: Readonly<Record<string, unknown>>;
+  /**
+   * Parts of the title block's content with a kind or a field this build has
+   * no name for, each under its part's key, as they came — and fields of the
+   * content it has no name for, under theirs. Each such part is Auto here,
+   * and is written back until that part is set here.
+   */
+  titleBlockContent?: Readonly<Record<string, unknown>>;
 }
 
 export type DiagramIdFactory = (prefix: 'diagram' | 'step' | 'turn' | 'annotation' | 'asset') => string;
@@ -1399,8 +1461,9 @@ export const randomDiagramId: DiagramIdFactory = (prefix) => `${prefix}-${crypto
 export const PAGE_MARGIN_MM_RANGE = { min: 0, max: 30 } as const;
 export const PAGE_COLUMNS_RANGE = { min: 2, max: 5 } as const;
 export const PAGE_ROWS_RANGE = { min: 1, max: 6 } as const;
-// How many steps a page holds, by default and by its own count: a module of their own, for the pagination.
-export { PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE };
+// How many steps a page holds, by default and by its own count, and the title block's share: a module of their own,
+// for the pagination.
+export { PAGE_STEPS_RANGE, STEPS_PER_PAGE_RANGE, TITLE_BLOCK_SHARE_RANGE };
 export const FIRST_PAGE_NUMBER_RANGE = { min: 1, max: 9999 } as const;
 /** The flow band's width, mm: from a thin line to three times the default. */
 export const PATH_WIDTH_MM_RANGE = { min: 4, max: 60 } as const;
@@ -2253,8 +2316,8 @@ function jsonOnce(value: object): string {
 /**
  * Everything a newer build wrote that this build carries without reading, as
  * JSON, one part each: its steps and turns, the annotations and assets this
- * build cannot read, and the document's own fields, page fields, style and
- * page arrangements it does not read. An asset or a thumbnail named anywhere in it is kept, since
+ * build cannot read, and the document's own fields, page fields, style, page
+ * arrangements and title block parts it does not read. An asset or a thumbnail named anywhere in it is kept, since
  * only that newer build knows what the name is for. The thumbnails carried
  * for those steps are no part of it: they are what it keeps.
  */
@@ -2272,7 +2335,7 @@ export function carriedJson(document: Pick<DiagramDocument, 'steps' | 'assets' |
     if (!isKnownAsset(asset)) parts.push(jsonOnce(asset.unknown));
   }
   const { newer } = document;
-  for (const part of [newer?.fields, newer?.page, newer?.style, newer?.pageArrangements]) {
+  for (const part of [newer?.fields, newer?.page, newer?.style, newer?.pageArrangements, newer?.titleBlockContent]) {
     if (part) parts.push(jsonOnce(part));
   }
   return parts;
@@ -2368,6 +2431,47 @@ function withPageStart(step: DiagramStep, start: DiagramPageStart): DiagramStep 
 export function setDiagramTitle(document: DiagramDocument, title: string): DiagramDocument {
   const clean = xmlText(title);
   return document.title === clean ? document : { ...document, title: clean };
+}
+
+/**
+ * The title block's content with each part `patch` says set: a source, or
+ * `auto` taking it away; a byline, one of blanks taking it away. A part it
+ * sets lets go of a newer build's value for it, even one shown as this
+ * value; the same document when nothing changes.
+ */
+export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTitleBlockContentPatch): DiagramDocument {
+  const was = document.titleBlockContent ?? {};
+  const said = (key: keyof DiagramTitleBlockContentPatch) => patch[key] !== undefined;
+  const source = (key: 'model' | 'pattern') => {
+    const asked = patch[key];
+    return asked === undefined ? was[key] : asked === 'auto' ? undefined : copySource(asked);
+  };
+  const [model, pattern] = [source('model'), source('pattern')];
+  const byline = patch.byline === undefined ? was.byline : xmlText(patch.byline);
+  const next: DiagramTitleBlockContent = {
+    ...(model ? { model } : {}),
+    ...(pattern ? { pattern } : {}),
+    ...(byline?.trim() ? { byline } : {}),
+  };
+  const newer = withoutKeys(document.newer?.titleBlockContent, (['model', 'pattern', 'byline'] as const).filter(said));
+  if (sameTitleBlockContent(was, next) && newer === document.newer?.titleBlockContent) return document;
+  const { titleBlockContent: _was, ...rest } = document;
+  const content = Object.keys(next).length > 0 ? { ...rest, titleBlockContent: next } : rest;
+  return withNewer(content, { ...document.newer, titleBlockContent: newer });
+}
+
+/** A source as this build holds it: its own fields and no other. */
+function copySource(source: DiagramTitleBlockSource): DiagramTitleBlockSource {
+  return source.kind === 'step' ? { kind: 'step', stepId: source.stepId } : { kind: 'none' };
+}
+
+function sameTitleBlockContent(a: DiagramTitleBlockContent, b: DiagramTitleBlockContent): boolean {
+  return sameSource(a.model, b.model) && sameSource(a.pattern, b.pattern) && a.byline === b.byline;
+}
+
+function sameSource(a: DiagramTitleBlockSource | undefined, b: DiagramTitleBlockSource | undefined): boolean {
+  if (a?.kind === 'step' || b?.kind === 'step') return a?.kind === 'step' && b?.kind === 'step' && a.stepId === b.stepId;
+  return a?.kind === b?.kind;
 }
 
 export function setHanStyle(document: DiagramDocument, hanStyle: DiagramHanStyle): DiagramDocument {
@@ -2576,6 +2680,17 @@ export function normalizePageSetup(value: unknown): DiagramPageSetup {
     flowBendSteps: typeof source.flowBendSteps === 'boolean' ? source.flowBendSteps : legacy('flowBendSteps'),
     flowNesting: clampNumber(source.flowNesting, FLOW_WEIGHT_RANGE, legacy('flowNesting')),
     flowSteadiness: clampNumber(source.flowSteadiness, FLOW_WEIGHT_RANGE, legacy('flowSteadiness')),
+    titleBlock: readTitleBlockSetup(source.titleBlock),
+  };
+}
+
+/** The title block's setup from anything: whole, each field checked and clamped, or the legacy value where it is no object. */
+function readTitleBlockSetup(value: unknown): DiagramTitleBlockSetup {
+  const legacy = PAGE_SETTINGS.titleBlock.legacy;
+  if (!isRecord(value)) return legacy;
+  return {
+    enabled: typeof value.enabled === 'boolean' ? value.enabled : legacy.enabled,
+    heightShare: clampNumber(value.heightShare, TITLE_BLOCK_SHARE_RANGE, legacy.heightShare),
   };
 }
 
@@ -2609,7 +2724,9 @@ export function pageSetupEquals(a: DiagramPageSetup, b: DiagramPageSetup): boole
     a.flowPreferBands === b.flowPreferBands &&
     a.flowBendSteps === b.flowBendSteps &&
     a.flowNesting === b.flowNesting &&
-    a.flowSteadiness === b.flowSteadiness
+    a.flowSteadiness === b.flowSteadiness &&
+    a.titleBlock.enabled === b.titleBlock.enabled &&
+    a.titleBlock.heightShare === b.titleBlock.heightShare
   );
 }
 
