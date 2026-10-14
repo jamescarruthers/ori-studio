@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { useViewportSurface, type KeptCamera } from '../../hooks/useViewportSurface';
+import type { ViewportShortcutId } from '../../keyboard/shortcuts';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { getViewportFitScale } from '../../lib/designViewport';
 import type { PlotRect } from '../../lib/geometry';
@@ -19,6 +20,8 @@ export const PAGES_CAPTION = 24;
 const PAN_SLOP = 4;
 const REVEAL_MS = 160;
 const PAGE_TURN_MS = 220;
+/** The camera's fit time (`useViewportSurface`), for Fit on the page the reader is on. */
+const PAGE_FIT_MS = 180;
 
 const OBSERVES = typeof IntersectionObserver !== 'undefined';
 
@@ -29,7 +32,7 @@ const NONE_ON_SCREEN: OnScreen = { middle: 0, first: 0, last: 0 };
 /**
  * The Pages view's behaviour (AGENTS.md › Panel components): its camera — the
  * BP panes' (`useViewportSurface`), registered with the Diagram's own viewport
- * keys — which page is in the middle of the view, which are on screen and
+ * keys, its Fit the page the reader is on — which page is in the middle of the view, which are on screen and
  * which was last pressed (published for the panes, `pageInView.ts`), which
  * pages are near enough
  * to compose, the selected step brought into view and given the focus, and
@@ -89,8 +92,13 @@ export function usePagesView({
     keptCamera: kept,
     onLeave,
   });
-  const { containerRef, transformRef, handleViewportShortcut, onTransformed: cameraTransformed } = camera;
-  useEffect(() => registerDiagramViewCamera(handleViewportShortcut), [handleViewportShortcut]);
+  const {
+    containerRef,
+    transformRef,
+    handleViewportShortcut: cameraShortcut,
+    fitToView: fitWorld,
+    onTransformed: cameraTransformed,
+  } = camera;
 
   // The page in the middle of the view and the pages on screen, and the page
   // last pressed, for the panes too once the pages are laid out (`pageInView.ts`):
@@ -140,7 +148,7 @@ export function usePagesView({
    * which on a phone is how it is read.
    */
   const goToPage = useCallback(
-    (index: number) => {
+    (index: number, animationTime = PAGE_TURN_MS) => {
       const api = transformRef.current;
       const view = containerRef.current;
       if (!api || !view || count === 0) return;
@@ -149,17 +157,41 @@ export function usePagesView({
       const target = Math.min(Math.max(0, index), count - 1);
       const width = pageW + 2 * PAGES_PAD;
       const height = pageH + PAGES_CAPTION + 2 * PAGES_PAD;
-      // The fit's own scale (`useViewportSurface`): a page turned to is framed as Fit frames page one.
+      // The fit's own scale (`useViewportSurface`): a page turned to is framed as the first fit frames page one.
       const scale = getViewportFitScale(viewport, { width, height });
       api.setTransform(
         (viewport.width - width * scale) / 2,
         (viewport.height - height * scale) / 2 - target * pitch * scale,
         scale,
-        PAGE_TURN_MS
+        animationTime
       );
     },
     [transformRef, containerRef, count, pageW, pageH, pitch]
   );
+
+  /**
+   * Fit, by the bar or the keys: the page the reader is on — the pager's — as
+   * a turn to it frames it. Only the fit as the view opens frames page one
+   * (`useViewportSurface`); before there are pages, Fit is the camera's.
+   */
+  const fitToView = useCallback(
+    // A control hands its click event in as the first argument; only a number is a duration.
+    (animationTime?: unknown) => {
+      const time = typeof animationTime === 'number' ? animationTime : PAGE_FIT_MS;
+      if (count === 0) fitWorld(time);
+      else goToPage(current, time);
+    },
+    [count, current, fitWorld, goToPage]
+  );
+  const handleViewportShortcut = useCallback(
+    (id: ViewportShortcutId) => {
+      if (id !== 'viewport.fit') return cameraShortcut(id);
+      fitToView();
+      return true;
+    },
+    [fitToView, cameraShortcut]
+  );
+  useEffect(() => registerDiagramViewCamera(handleViewportShortcut), [handleViewportShortcut]);
 
   // Pages are composed once they come within a view's height of the screen:
   // the first, or the ones round those a view coming back had on screen.
@@ -274,6 +306,8 @@ export function usePagesView({
 
   return {
     ...camera,
+    fitToView,
+    handleViewportShortcut,
     onTransformed,
     onPanningStart,
     onPanningStop,

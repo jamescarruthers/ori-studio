@@ -30,6 +30,7 @@ import { PAGES_PX_PER_MM as PX_PER_MM } from '../../diagram/pages/usePagesView';
 import { clearPathColorPick, publishPathColorPick } from '../../diagram/pages/pathColorPick';
 import { TooltipProvider } from '../ui/Tooltip';
 import { focusLeavesEnterToSteps, focusOwnsArrowKeys } from '../../diagram/actions/diagramShortcuts';
+import { isApplePlatform } from '../../lib/platform';
 import { MAX_ZOOM_EXPONENT } from '../../lib/wheelGesture';
 import { DiagramPagesView } from './DiagramPagesView';
 
@@ -850,4 +851,63 @@ describe('the wheel over the pages, as the Edit canvas reads it (Zach, 2026-10-1
       scale: before.scale,
     });
   });
+});
+
+it('fits the page the pager is on, by the bar’s Fit and by Mod+0, where the view first framed page 1 (Zach, 2026-10-14)', () => {
+  // The library animates on the clock: past an animation's end, its next frame lands it.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  onTestFinished(() => void vi.useRealTimers());
+  const runFrames = manyPages();
+  const settle = () => {
+    vi.setSystemTime(Date.now() + 1000);
+    runFrames();
+  };
+  const keys = createRoot(document.createElement('div'));
+  act(() => keys.render(<Keys />));
+  onTestFinished(() => act(() => keys.unmount()));
+  const at = (expected: ReturnType<typeof camera>) => ({
+    x: expect.closeTo(expected.x, 6),
+    y: expect.closeTo(expected.y, 6),
+    scale: expect.closeTo(expected.scale, 9),
+  });
+  const button = (name: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
+  const wander = () => {
+    wheelOverPage({ deltaY: -100, ctrlKey: true });
+    wheelOverPage({ deltaX: 20, deltaY: 30 });
+  };
+
+  // Opened on page 1.
+  expect(host.textContent).toContain('Page 1 of');
+  const pageOne = camera();
+  act(() => button('Next Page').click());
+  settle();
+  expect(host.textContent).toContain('Page 2 of');
+  const pageTwo = camera();
+  expect(pageTwo.y).not.toBeCloseTo(pageOne.y, 0);
+
+  // Wandered off page 2's frame, the pager on page 2 still: Fit frames page 2, not page 1.
+  wander();
+  expect(host.textContent).toContain('Page 2 of');
+  expect(camera()).not.toEqual(at(pageTwo));
+  act(() => button('Fit').click());
+  settle();
+  expect(camera()).toEqual(at(pageTwo));
+
+  // And the keys' Fit.
+  wander();
+  const event = new KeyboardEvent('keydown', {
+    key: '0',
+    ctrlKey: !isApplePlatform(),
+    metaKey: isApplePlatform(),
+    bubbles: true,
+    cancelable: true,
+  });
+  Object.defineProperty(event, 'target', { value: document.body });
+  let claimed = false;
+  act(() => {
+    claimed = handleShortcutRuntimeKeyDown(event, { context: { activeEditingContext: 'diagram' }, menu: () => undefined });
+  });
+  expect(claimed).toBe(true);
+  settle();
+  expect(camera()).toEqual(at(pageTwo));
 });
