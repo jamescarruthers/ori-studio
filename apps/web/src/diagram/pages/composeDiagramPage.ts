@@ -213,10 +213,12 @@ export type FontUse = (face: string, text: string) => void;
 /**
  * The first page's title block, back to front (`diagram-title-block.md`,
  * section 6 and Phase 1c): the band in the paper's colour, the subtitle's
- * rule and the credits' dividers; the crease pattern in its square, in the
- * style's fold pens; the finished model in front of it — in the pattern's
- * place, where there is no pattern; then the words: the subtitle, the title
- * on the band, the credits and the note.
+ * rule and the credits' dividers; the words — the subtitle, the title on the
+ * band, the credits and the note; then the crease pattern in its square, in
+ * the style's fold pens, and the finished model in front of it — in the
+ * pattern's place, where there is no pattern. The model is on top of
+ * everything in the block, the band and its words included, where it
+ * reaches them (Zach, 2026-10-15).
  */
 function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageInput, count: FontUse): string[] {
   const { geometry, subtitle, band, title, credits, note } = block;
@@ -228,7 +230,6 @@ function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageIn
   }
   if (subtitle?.rule) elements.push(ruleElement(subtitle.rule.x1, subtitle.rule.y, subtitle.rule.x2, subtitle.rule.y, SUBTITLE_RULE_PT, inks.rule));
   for (const { x: at, y1, y2 } of credits?.dividers ?? []) elements.push(ruleElement(at, y1, at, y2, DIVIDER_PT, inks.rule));
-  if (input.titleBlock) elements.push(...titleBlockArt(geometry, input.titleBlock, input, count));
   if (subtitle) elements.push(textElement([subtitle.line], x, subtitle.baseline, subtitle.sizeMm, 0, 700, TEXT_INK, count, subtitle.trackingMm));
   if (title) elements.push(textElement(title.lines, title.x, title.baseline, title.sizeMm, title.leadingMm, 700, inks.title, count));
   for (const column of credits?.columns ?? []) {
@@ -238,6 +239,7 @@ function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageIn
     );
   }
   if (note && note.lines.length > 0) elements.push(textElement(note.lines, x, note.firstBaseline, note.sizeMm, note.leadingMm, 400, TEXT_INK, count));
+  if (input.titleBlock) elements.push(...titleBlockArt(geometry, input.titleBlock, input, count));
   return elements;
 }
 

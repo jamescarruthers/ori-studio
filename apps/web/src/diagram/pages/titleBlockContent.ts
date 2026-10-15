@@ -261,8 +261,10 @@ const CUT_TAG_MM = 5;
  * 2026-10-15). The pattern and a model with no pattern in front of it would
  * print in one square, which is one room; so no two rooms overlap.
  * `drawnModel` is where the model is drawn, null where it is not
- * (`wholePictureRoom`), which the square's mark keeps clear of. For the
- * Pages view's overlay, never the page.
+ * (`wholePictureRoom`), which the square's mark keeps clear of, and the
+ * title's: the model stands on the band where it reaches it (Zach,
+ * 2026-10-15), and so does a missing model's mark. For the Pages view's
+ * overlay, never the page.
  */
 export function missingTitleBlockParts(
   block: LayoutTitleBlock,
@@ -278,8 +280,9 @@ export function missingTitleBlockParts(
   if (model.from !== 'none' && !model.step?.picture) (pattern.scene ? front : square).push(missing(model, 'model'));
   const unset = { step: null, number: null };
   const cut = cutMark(block);
+  const onBand = drawnModel ?? (front.length > 0 ? geometry.model : null);
   return [
-    ...(block.title ? [] : [{ room: 'title' as const, key: 'title', box: block.band, missing: [{ part: 'title' as const, ...unset }] }]),
+    ...(block.title ? [] : [{ room: 'title' as const, key: 'title', box: leftOf(block.band, onBand), missing: [{ part: 'title' as const, ...unset }] }]),
     ...(cut ? [cut] : []),
     ...(square.length > 0 ? [{ room: 'square' as const, key: 'square', box: squareMark(block, drawnModel), missing: square }] : []),
     ...(front.length > 0 ? [{ room: 'model' as const, key: 'model', box: geometry.model, missing: front }] : []),
@@ -306,7 +309,7 @@ function cutMark(block: LayoutTitleBlock): TitleBlockPlaceholder | null {
  * Where the pattern's square is marked, clear of a model drawn in it
  * (`inSquare`): the square, less the model — the strip it leaves above
  * itself or beside itself, whichever is larger — or, where it leaves no room
- * for words, the column under all it prints; the square itself
+ * for words, the column under all it prints, left of the model; the square itself
  * where neither has room.
  */
 function squareMark(block: LayoutTitleBlock, inSquare: PageBox | null): PageBox {
@@ -317,8 +320,14 @@ function squareMark(block: LayoutTitleBlock, inSquare: PageBox | null): PageBox 
   const strip = above.w * above.h >= beside.w * beside.h ? above : beside;
   if (Math.min(strip.w, strip.h) >= MARK_ROOM_MM) return strip;
   const top = columnFoot(block);
-  const under = { x: column.x, y: top, w: column.w, h: column.y + column.h - top };
+  const under = leftOf({ x: column.x, y: top, w: column.w, h: column.y + column.h - top }, inSquare);
   return Math.min(under.w, under.h) >= MARK_ROOM_MM ? under : square;
+}
+
+/** `box`, ending where `other` begins where the two meet: what of it stands left of `other`. */
+function leftOf(box: PageBox, other: PageBox | null): PageBox {
+  const meet = other && other.y < box.y + box.h && other.y + other.h > box.y && other.x < box.x + box.w;
+  return meet ? { ...box, w: Math.max(0, other.x - box.x) } : box;
 }
 
 /** How far down the column what it prints reaches: the band, the credits and the note. */

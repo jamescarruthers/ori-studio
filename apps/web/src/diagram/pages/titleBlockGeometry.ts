@@ -15,10 +15,11 @@
  * file: the crease pattern a square at the band's top right, the finished
  * model standing on its lower-left corner, each as large as the content's
  * sizes say ({@link fittedArtSizes}), and the text column from the left
- * margin to the art's left edge, a gutter clear of the pattern
- * (`titleBlockColumn.ts` sets it). They read the band and the sizes, never
- * what the block shows, so choosing another model or none reflows nothing.
- * The same on a left page and a right one.
+ * margin to the pattern, {@link HEADER_GAP_MM} short of it
+ * (`titleBlockColumn.ts` sets it). The model is drawn on top of the column
+ * where it reaches it, and never moves a word (Zach, 2026-10-15). They read
+ * the band and the sizes, never what the block shows, so choosing another
+ * model or none reflows nothing. The same on a left page and a right one.
  *
  * Pure.
  */
@@ -26,7 +27,7 @@ import type { DiagramPageSetup } from '../document/diagramDocument';
 import type { PageBox } from './pagePlacement';
 import { blockRows, hasTitleBlock } from './pagePlan';
 import { printPaper } from './printPaper';
-import { TITLE_BLOCK_TYPE } from './titleBlockColumn';
+import { HEADER_GAP_MM } from './titleBlockColumn';
 
 /** Neither the crease pattern's square nor the model's box is wider than this share of the band: a grid of two rows gives the band half the page. */
 const ART_WIDTH_SHARE = 0.45;
@@ -39,15 +40,6 @@ const MODEL_ANCHOR: PictureAlign = { x: 0.27, y: 0.66 };
  * side: the sizes that leave it less ({@link fittedArtSizes}) are not drawn, nor offered ({@link artSizeLimits}).
  */
 export const MODEL_COVER = 0.2;
-/** What the text column keeps clear of the crease pattern: J1b's credits' gutter, 12 pt. */
-export const ART_GAP_MM = (12 * 25.4) / 72;
-/** How far under the block's top J1b's band reaches, under its subtitle's row: what a model standing higher rises beside. */
-const BAND_FOOT_MM = TITLE_BLOCK_TYPE.subtitleRowMm + TITLE_BLOCK_TYPE.bandMm;
-/**
- * How far J1b's model rises beside the band, 3.9 pt, its box's corner there clear of the crane's ink: the band ends at
- * the box. A model that rises further has the band end that much further from it, up to {@link ART_GAP_MM}.
- */
-const MODEL_RISE_MM = (3.9 * 25.4) / 72;
 
 /** The band: layout, read from the page setup alone. */
 export interface TitleBlockBand {
@@ -80,13 +72,11 @@ export interface TitleBlockGeometry extends TitleBlockBand {
    * picture is set in its box: the corner stands at the same shares of the picture, whatever its shape.
    */
   modelAlign: PictureAlign;
-  /** The text column: from the left margin to the model's box, or a gutter short of the pattern, as tall as the band. */
-  column: PageBox;
   /**
-   * The column's rows under the band — the credits and the note — which the model's box stands beside: as the
-   * column, and a gutter short of the box too.
+   * The text column: from the left margin to {@link HEADER_GAP_MM} short of the pattern as its size says, as tall as
+   * the band. The model's size never moves it: the model is drawn on top of it where they meet.
    */
-  under: PageBox;
+  column: PageBox;
 }
 
 /**
@@ -112,18 +102,19 @@ export function titleBlockBand(setup: DiagramPageSetup, headMm: number, footMm: 
  * the band's and its right on the margin; the model's box, `modelSize` of the
  * band's height tall and at most {@link MODEL_ASPECT} as wide, standing on
  * the pattern's lower-left corner — the corner {@link MODEL_ANCHOR} into it,
- * or as near that as keeps the box in the band; and the text column, to the
- * model's box or {@link ART_GAP_MM} short of the pattern, whichever is
- * nearer — short of the box too, by as far as the model rises beside the band
- * past J1b's ({@link MODEL_RISE_MM}), up to the same gutter.
+ * or as near that as keeps the box in the band; and the text column, to
+ * {@link HEADER_GAP_MM} short of the pattern as `sizes` says it. Where a
+ * pair the sliders do not offer draws the pattern smaller, the column still
+ * ends at the pattern said, so that nothing of the model's moves a word.
  */
 export function titleBlockParts(band: TitleBlockBand, sizes: TitleBlockSizes): TitleBlockGeometry {
   const { block } = band;
   const foot = block.y + block.h;
   const end = block.x + block.w;
   const widest = block.w * ART_WIDTH_SHARE;
+  const square = (share: number) => Math.min(share * block.h, widest);
   const { modelSize, patternSize } = fittedArtSizes(sizes);
-  const side = Math.min(patternSize * block.h, widest);
+  const side = square(patternSize);
   const pattern = { x: end - side, y: block.y, w: side, h: side };
   const corner = { x: pattern.x, y: pattern.y + side };
   const h = modelSize * block.h;
@@ -132,11 +123,9 @@ export function titleBlockParts(band: TitleBlockBand, sizes: TitleBlockSizes): T
   const y = clamp(corner.y - MODEL_ANCHOR.y * h, block.y, foot - h);
   const model = { x, y, w, h };
   const modelAlign = { x: (corner.x - x) / w, y: (corner.y - y) / h };
-  const rise = block.y + BAND_FOOT_MM - MODEL_RISE_MM - model.y;
-  const columnEnd = Math.min(model.x - clamp(rise, 0, ART_GAP_MM), pattern.x - ART_GAP_MM);
+  const columnEnd = end - square(sizes.patternSize) - HEADER_GAP_MM;
   const column = { x: block.x, y: block.y, w: Math.max(0, columnEnd - block.x), h: block.h };
-  const under = { ...column, w: Math.max(0, Math.min(columnEnd, model.x - ART_GAP_MM) - block.x) };
-  return { ...band, pattern, model, modelAlign, column, under };
+  return { ...band, pattern, model, modelAlign, column };
 }
 
 /**

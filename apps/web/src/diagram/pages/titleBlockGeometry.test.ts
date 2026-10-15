@@ -9,8 +9,8 @@ import {
 import { FOOTER_MM, HEADER_MM } from './diagramPageLayout';
 import type { PageBox } from './pagePlacement';
 import { PRINT_PAPER_MM, printPaper } from './printPaper';
+import { HEADER_GAP_MM, TITLE_BLOCK_TYPE } from './titleBlockColumn';
 import {
-  ART_GAP_MM,
   artSizeLimits,
   fittedArtSizes,
   MODEL_COVER,
@@ -149,29 +149,46 @@ describe('titleBlockParts', () => {
     expect(failures).toEqual([]);
   });
 
-  it('runs the text column from the left margin to the model’s box, a gutter short of the pattern, never under the art (Zach, 2026-10-15)', () => {
-    // J1b's band, under its subtitle's row, reaches 26.4 mm under the block's top; its model rises 3.9 pt beside it.
-    const bandFoot = (12.5 * 25.4) / 72 + 22;
-    const rise = (3.9 * 25.4) / 72;
+  it('runs the text column from the left margin to the crease pattern, short of it by the subtitle rule’s room over the band (Zach, 2026-10-15)', () => {
     const failures: string[] = [];
     const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
-    sweep(({ block, column, under, pattern, model }, _sizes, label) => {
-      const end = right(column);
-      // The credits and the note, beside the model's box wherever it stands, a gutter short of it.
-      if (under.x !== column.x || under.y !== column.y || under.h !== column.h) failures.push(`under rows ${label}`);
-      if (!near(right(under), Math.min(end, model.x - ART_GAP_MM))) failures.push(`under ${label}`);
+    sweep(({ block, column, pattern }, sizes, label) => {
       if (column.x !== block.x || column.y !== block.y || column.h !== block.h) failures.push(`rows ${label}`);
-      if (end > Math.min(model.x, pattern.x - ART_GAP_MM) + 1e-9) failures.push(`under the art ${label}`);
-      // A model standing beside the band, higher than J1b's, a gutter clear of it; one no higher, the band to its box.
-      if (model.y <= block.y + bandFoot - rise - ART_GAP_MM && !near(end, Math.min(model.x, pattern.x) - ART_GAP_MM)) failures.push(`risen ${label}`);
-      if (model.y >= block.y + bandFoot - rise && !near(end, Math.min(model.x, pattern.x - ART_GAP_MM))) failures.push(`low ${label}`);
-      if (overlap(column, pattern) > 0 || overlap(column, model) > 0) failures.push(`overlap ${label}`);
-      // Each box at most 0.45 of the band: the column keeps at least a twentieth of it.
-      if (column.w <= 0.05 * block.w) failures.push(`narrow ${label}`);
+      // To the pattern as its size says — the pattern drawn wherever the sliders reach — less the gap.
+      const side = Math.min(sizes.patternSize * block.h, 0.45 * block.w);
+      if (!near(right(column), right(block) - side - HEADER_GAP_MM)) failures.push(`end ${label}`);
+      if (right(column) > pattern.x - HEADER_GAP_MM + 1e-9) failures.push(`under the pattern ${label}`);
+      // The pattern at most 0.45 of the band: the column keeps at least half of it, less the gap.
+      if (column.w < 0.55 * block.w - HEADER_GAP_MM - 1e-9) failures.push(`narrow ${label}`);
     });
     expect(failures).toEqual([]);
-    // 12 pt: the credits' gutter.
-    expect(ART_GAP_MM).toBeCloseTo(4.233, 3);
+    // The room between the subtitle's rule and the band's top: J1b's 10 pt, at the rule's place (the subtitle's
+    // capitals' middle) and the band's.
+    expect((HEADER_GAP_MM * 72) / 25.4).toBeCloseTo(10, 2);
+    expect(HEADER_GAP_MM).toBeCloseTo(TITLE_BLOCK_TYPE.subtitleRowMm - (0.714 * TITLE_BLOCK_TYPE.subtitleMm) / 2, 9);
+  });
+
+  it('never moves the text column for the model: at every model size the column is the same, and the model may stand on it (Zach, 2026-10-15)', () => {
+    const failures: string[] = [];
+    let over = 0;
+    for (const paper of EVERY_PAPER) {
+      for (const heightShare of [0.15, 0.23, 0.5]) {
+        for (const layout of [{ layout: 'flow' as const }, { layout: 'grid' as const, columns: 3, rows: 3 }]) {
+          for (const patternSize of [0.3, 0.59, 0.79, 0.88, 1]) {
+            const at = (modelSize: number) => geometryOf({ ...paper, ...layout, titleBlock: { enabled: true, heightShare } }, { modelSize, patternSize });
+            const { column } = at(min);
+            for (let modelSize = min; modelSize <= max + 1e-9; modelSize += 0.01) {
+              const geometry = at(modelSize);
+              if (JSON.stringify(geometry.column) !== JSON.stringify(column)) failures.push(JSON.stringify({ ...paper, ...layout, heightShare, patternSize, modelSize }));
+              if (overlap(geometry.model, column) > 0) over += 1;
+            }
+          }
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+    // The model is drawn in front of the band where they meet: some sizes stand it on the column.
+    expect(over).toBeGreaterThan(0);
   });
 
   it('draws the pattern no taller than leaves the model’s foot under its corner, and offers no size past that', () => {
@@ -195,7 +212,8 @@ describe('titleBlockParts', () => {
 
   it('gives J1b’s art on A4 portrait at a new diagram’s share and sizes, within a millimetre', () => {
     // J1b, in pt: the pattern's square x 421.27–561.26 from y 34.02; the crane's model drawn 115.02 × 104.99 from
-    // x 390.24, y 105.00, the pattern's corner 27% across it and 66% down; the band's right end at 390.24.
+    // x 390.24, y 105.00, the pattern's corner 27% across it and 66% down. The band's right end is the pattern's
+    // left less the subtitle rule's 10 pt over the band (Zach, 2026-10-15), not J1b's 390.24 at the model.
     const PT = 72 / 25.4;
     const { pattern, model, modelAlign, column } = geometryOf({ titleBlock: DEFAULT_PAGE_SETUP.titleBlock });
     const near = (mm: number, pt: number, what: string, within = 0.5) => expect(Math.abs(mm * PT - pt) / PT, what).toBeLessThanOrEqual(within);
@@ -205,7 +223,7 @@ describe('titleBlockParts', () => {
     near(model.x, 390.24, 'model left');
     near(model.y, 105.0, 'model top', 1);
     near(model.h, 104.99, 'model height');
-    near(right(column), 390.24, 'band end');
+    near(right(column), 411.27, 'band end');
     expect(modelAlign.x).toBeCloseTo(0.27, 9);
     expect(modelAlign.y).toBeCloseTo(0.66, 9);
   });

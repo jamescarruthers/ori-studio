@@ -41,7 +41,7 @@ export const TITLE_BLOCK_TYPE = {
   tracking: 0.12,
   /** How far under the block's top the band starts, where there is a subtitle. */
   subtitleRowMm: pt(12.5),
-  /** The room between the subtitle's last letter and its rule: half a credits' gutter. */
+  /** The room between the subtitle's last letter and its rule. */
   ruleGapMm: pt(6),
   bandMm: 22,
   titleMm: 16,
@@ -63,6 +63,12 @@ export const TITLE_BLOCK_TYPE = {
  */
 export const CAP_HEIGHT = 0.714;
 export const DESCENT = 0.24;
+/**
+ * The room between the subtitle's rule, at its capitals' middle, and the band's top — J1b's 10 pt — and so between
+ * the band's end, and the rule's, and the crease pattern (Zach, 2026-10-15): one room, measured from the column's
+ * own sizes, so that the two stay equal.
+ */
+export const HEADER_GAP_MM = TITLE_BLOCK_TYPE.subtitleRowMm - (CAP_HEIGHT * TITLE_BLOCK_TYPE.subtitleMm) / 2;
 /** The least the title is set at, as a share of its size: past that it is cut with "…". */
 const TITLE_LEAST = 0.3;
 /** Under this share of its size on one line, the title is set on two, as large as they fit. */
@@ -168,7 +174,7 @@ export function titleBlockLookOf(titles: DiagramTitles): TitleBlockLook {
 export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitles, setter: TextSetter): LayoutTitleBlock {
   const look = titleBlockLookOf(titles);
   const T = TITLE_BLOCK_TYPE;
-  const { column, under } = geometry;
+  const { column } = geometry;
   const foot = column.y + column.h;
   const subtitle = look.subtitle.trim();
   const printed = look.credits.map(({ label, value }) => ({ label: label.trim(), value: value.trim() })).filter(({ value }) => value !== '');
@@ -182,7 +188,7 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
   // The note's first line, at its tallest letter wherever the line breaks: one line of it at least has room.
   const S = STEP_TEXT_SIZE_MM;
   const noteLine = note === '' ? 0 : Math.max(CAP_HEIGHT * S, setter.ink(setter.line(note, S, 400), S).above) + DESCENT * S;
-  const rowsAt = (scale: number) => rowsOf(natural.map((width) => width * scale), T.gutterMm * scale, under.w);
+  const rowsAt = (scale: number) => rowsOf(natural.map((width) => width * scale), T.gutterMm * scale, column.w);
   const fitsAt = (withNote: boolean) => (scale: number) => {
     const rows = rowsAt(scale).map((row) => Math.max(...row.map((at) => labelAbove[at]!)));
     return scale * columnHeight(subtitle !== '', rows, withNote ? noteLine : 0) <= column.h + 1e-9;
@@ -204,8 +210,8 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
   let top = firstRowTop;
   for (const row of rowsAt(scale)) {
     const lines = row.map((at) => ({
-      label: trackedLine(setter, printed[at]!.label, labelSizeMm, 700, trackingMm, under.w),
-      value: setter.line(printed[at]!.value, valueSizeMm, 400, under.w),
+      label: trackedLine(setter, printed[at]!.label, labelSizeMm, 700, trackingMm, column.w),
+      value: setter.line(printed[at]!.value, valueSizeMm, 400, column.w),
     }));
     const above = Math.max(CAP_HEIGHT * labelSizeMm, ...lines.map(({ label }) => setter.ink(label, labelSizeMm).above));
     const labelBaseline = top + above;
@@ -214,7 +220,7 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
     if (valueBaseline + DESCENT * valueSizeMm > foot + 1e-9) break;
     let x = column.x;
     lines.forEach(({ label, value }, k) => {
-      const w = Math.min(under.w, Math.max(label.widthMm, value.widthMm));
+      const w = Math.min(column.w, Math.max(label.widthMm, value.widthMm));
       columns.push({ label, value, x, w, top, labelBaseline, valueBaseline });
       if (k < lines.length - 1) dividers.push({ x: x + w + (T.gutterMm * scale) / 2, y1: top, y2: valueBaseline });
       x += w + T.gutterMm * scale;
@@ -233,7 +239,7 @@ export function setTitleBlock(geometry: TitleBlockGeometry, titles: DiagramTitle
     band,
     title,
     credits: printed.length > 0 ? { labelSizeMm, valueSizeMm, trackingMm, columns, dividers, cut } : null,
-    note: setNote(note, under, noteTop, scale, setter),
+    note: setNote(note, column, noteTop, scale, setter),
   };
 }
 

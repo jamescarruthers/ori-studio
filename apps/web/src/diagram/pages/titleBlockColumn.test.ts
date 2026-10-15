@@ -139,6 +139,22 @@ describe('setTitleBlock: J1b on A4 portrait', () => {
     expect(none.geometry).toEqual(plain.geometry);
   });
 
+  it('sets every word of the header the same whatever the model’s size: the model stands on top of it (Zach, 2026-10-15)', () => {
+    const note = 'Use thin paper.\nThe neck and the tail are reverse folded at the same angle, so crease the first well before you match the second to it.';
+    const many = [...CREDITS, { label: 'DIAGRAMS', value: 'Zachary Marion' }, { label: 'PAPER', value: 'One uncut square of kami' }];
+    for (const setup of [J1B_SETUP, { ...J1B_SETUP, size: 'a5' as const, orientation: 'landscape' as const }]) {
+      for (const patternSize of [0.3, 0.79, 1]) {
+        // The subtitle and its rule, the band, the title, the credits and the note: their places, sizes, wrapping and cuts.
+        const words = (modelSize: number) => {
+          const { geometry, ...set } = setOf({ credits: many, note, sizes: { modelSize, patternSize } }, setup, 'The Traditional Crane, Flapping');
+          return { ...set, column: geometry.column };
+        };
+        const least = words(0.3);
+        for (let modelSize = 0.3; modelSize <= 1 + 1e-9; modelSize += 0.05) expect(words(modelSize), `${patternSize} ${modelSize}`).toEqual(least);
+      }
+    }
+  });
+
   it('prints no credit with an empty value and keeps no room for it, on the page or the Pages view (Zach, 2026-10-15)', () => {
     const set = setOf({ credits: [{ label: 'AUTHOR', value: '' }, { label: 'RECOMMENDED PAPER', value: ' ' }, { label: 'STEPS', value: '28' }] });
     expect(set.credits!.columns.map(({ label }) => label.text)).toEqual(['STEPS']);

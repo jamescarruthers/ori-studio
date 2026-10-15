@@ -823,12 +823,14 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     // Its picture alone: the step's callout is on its own page, not here.
     expect(svg).toContain(model.markup);
     expect(textsOf(svg)).not.toContain('Repeat behind');
-    // Back to front: the pattern, the model, the title.
+    // Back to front: the band and its words, the pattern, the model — on top of everything in the block, where it
+    // stands on the band (Zach, 2026-10-15).
     const [patternLine] = linesIn(svg, geometry.pattern);
     const patternAt = svg.indexOf(`x2="${Math.round(patternLine!.ends[2]! * PT_PER_MM * 1000) / 1000}"`);
     expect(patternAt).toBeGreaterThan(-1);
+    expect(svg.indexOf('>Crane')).toBeGreaterThan(-1);
+    expect(svg.indexOf('>Crane')).toBeLessThan(patternAt);
     expect(patternAt).toBeLessThan(svg.indexOf(model.markup));
-    expect(svg.indexOf(model.markup)).toBeLessThan(svg.indexOf('>Crane'));
     // Over the pattern's lower-left corner: the corner as far into its drawing as into its box, but for its pens' ink.
     const corner = { x: geometry.pattern.x, y: geometry.pattern.y + geometry.pattern.h };
     const drawn = { x: model.boundsPt.x / PT_PER_MM, y: model.boundsPt.y / PT_PER_MM, w: model.boundsPt.width / PT_PER_MM, h: model.boundsPt.height / PT_PER_MM };

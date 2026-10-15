@@ -399,7 +399,7 @@ describe('missingTitleBlockParts', () => {
     expect(missing(titleBlockDiagram([emptyStep('s1')], { model: { kind: 'none' }, pattern: { kind: 'none' } }))).toEqual([]);
   });
 
-  it('never stands the model on the column, nor one box of the overlay on another, on any paper, share, grid or size', () => {
+  it('never stands one box of the overlay on another, the model’s on the title’s included, on any paper, share, grid or size', () => {
     const right = (box: PageBox) => box.x + box.w;
     const foot = (box: PageBox) => box.y + box.h;
     const overlap = (a: PageBox, b: PageBox) =>
@@ -446,16 +446,19 @@ describe('missingTitleBlockParts', () => {
             const shape = titleBlockGeometry(setup, 11, 8, size)!;
             for (const content of contents) {
               const room = modelRoom(shape, content);
-              expect(overlap(room.box, shape.column), label).toBe(0);
               for (const look of looks) {
                 for (const title of ['', 'Crane']) {
                   const block = setTitleBlock(shape, { title, block: { ...emptyTitleBlockLook(), ...look, sizes: size } }, estimateTextSetter);
                   // The model as drawn where it is: tall, square or wide, standing where its room says.
                   for (const aspect of [3 / 4, 1, 4 / 3]) {
                     const drawn = content.model.step?.picture ? standing(room, aspect) : null;
-                    const boxes = missingTitleBlockParts(block, content, drawn).map(({ box }) => box);
+                    const marks = missingTitleBlockParts(block, content, drawn);
+                    const boxes = marks.map(({ box }) => box);
                     rooms += boxes.length;
                     boxes.forEach((a, index) => boxes.slice(index + 1).forEach((b) => expect(overlap(a, b), label).toBeLessThan(1e-9)));
+                    // The model is drawn on the band where it reaches it: the title's mark stops at it.
+                    const title = marks.find(({ room: kind }) => kind === 'title');
+                    if (title && drawn) expect(overlap(title.box, drawn), label).toBeLessThan(1e-9);
                   }
                 }
               }
