@@ -233,8 +233,10 @@ signature), re-packed it.
   one-line change to `default` alone.
 - `normalizePageSetup` falls back to the legacy value for a missing or damaged
   setting. Today every legacy value is what an unsaid setting already read as —
-  the default, but for the layout (`grid`) and the steps per page (the file's
-  columns × rows) — so no existing file opens differently.
+  the default, but for the layout (`grid`), the steps per page (the file's
+  columns × rows) and the title block (off, where a new diagram's is on; added
+  2026-10-14, `diagram-title-block.md`) — so no existing file opens
+  differently.
 - **Adding a setting:** give it a default and a legacy value in the table; its
   legacy value reproduces how pages were drawn before it existed and never
   changes once a build that knows it has shipped.
