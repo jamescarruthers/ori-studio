@@ -234,6 +234,12 @@ export interface SetLine {
   ellipsis: boolean;
 }
 
+/** How far a set line's ink reaches above its baseline and below it, mm. */
+export interface LineInk {
+  above: number;
+  below: number;
+}
+
 export interface SetText {
   lines: SetLine[];
   /** How many lines the whole text needs at this width. */
@@ -246,6 +252,13 @@ export interface TextSetter {
   paragraph: (text: string, widthMm: number, sizeMm: number, maxLines: number) => SetText;
   /** One line: a title or a number, cut with "…" at `maxWidthMm` when one is given. */
   line: (text: string, sizeMm: number, weight: 400 | 700, maxWidthMm?: number) => SetLine;
+  /**
+   * How far a set line's ink reaches above and below its baseline at
+   * `sizeMm`, in mm: its tallest letter's top in the face that set it — a
+   * capital's, an accented capital's or an ideograph's — and its lowest
+   * letter's foot, a descender's.
+   */
+  ink: (line: SetLine, sizeMm: number) => LineInk;
   /**
    * A run of an upload's text (`uploadText.ts`), set in `face`, in the faces
    * that set it: its own, or for a character its own lacks, the first font

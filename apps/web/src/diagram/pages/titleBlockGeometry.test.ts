@@ -37,6 +37,9 @@ const EVERY_PAPER = SIZES.flatMap((size) => (['portrait', 'landscape'] as const)
 
 const right = (box: PageBox) => box.x + box.w;
 const foot = (box: PageBox) => box.y + box.h;
+/** The area two boxes share, mm²: none where they only touch. */
+const overlap = (a: PageBox, b: PageBox) =>
+  Math.max(0, Math.min(right(a), right(b)) - Math.max(a.x, b.x)) * Math.max(0, Math.min(foot(a), foot(b)) - Math.max(a.y, b.y));
 const inside = (box: PageBox, around: PageBox) => {
   const near = 1e-9;
   expect(box.x).toBeGreaterThanOrEqual(around.x - near);
@@ -79,14 +82,35 @@ describe('titleBlockGeometry', () => {
       expect(model.w / model.h, label).toBeLessThanOrEqual(1.25 + 1e-9);
       // The art: the two together.
       expect(art, label).toEqual({ x: model.x, y: pattern.y, w: right(pattern) - model.x, h: pattern.h });
-      // The title runs to the pattern and the byline to the model, each 4 mm short; the byline under the title.
+      // The title runs to the art beside it and the byline to the model, each 4 mm short; the byline under the title.
       expect(title.x, label).toBe(block.x);
-      expect(right(title), label).toBeCloseTo(pattern.x - 4, 9);
+      expect(right(title), label).toBeCloseTo((model.y < foot(title) ? model.x : pattern.x) - 4, 9);
       expect(right(byline), label).toBeCloseTo(model.x - 4, 9);
       expect(byline.y, label).toBeGreaterThan(foot(title));
       expect(title.h).toBe(TITLE_BLOCK_TITLE_MM.max);
       for (const part of [title, byline, pattern, model, art]) inside(part, block);
     }
+  });
+
+  it('keeps the title and the byline clear of the pattern and the model at every share, on every paper and grid', () => {
+    const shares = [0.15, 0.27, 0.5];
+    const layouts: Partial<DiagramPageSetup>[] = [{ layout: 'flow' }, ...[2, 3, 4, 6].map((rows) => ({ layout: 'grid' as const, columns: 3, rows }))];
+    let titleBesideModel = 0;
+    for (const paper of EVERY_PAPER) {
+      for (const heightShare of shares) {
+        for (const layout of layouts) {
+          const label = JSON.stringify({ ...paper, heightShare, ...layout });
+          const { title, byline, pattern, model } = geometryOf({ ...paper, ...layout, titleBlock: { enabled: true, heightShare } });
+          // Text against art, and the title against the byline: no two of them share a point inside.
+          for (const [a, b] of [[title, pattern], [title, model], [byline, pattern], [byline, model], [title, byline]] as const) {
+            expect(overlap(a, b), label).toBe(0);
+          }
+          if (model.y < foot(title)) titleBesideModel += 1;
+        }
+      }
+    }
+    // The case the review found: a short block, where the model's box reaches up beside the title.
+    expect(titleBesideModel).toBeGreaterThan(0);
   });
 
   it('takes a grid’s whole rows nearest its share, and the header’s room above them, so every page keeps one cell', () => {
@@ -136,6 +160,33 @@ describe('setTitleBlock', () => {
     expect(title!.line.text).toBe('Crane');
     expect(title!.line.ellipsis).toBe(false);
     expect(title!.baseline).toBeCloseTo(geometry.block.y + 0.72 * TITLE_BLOCK_TITLE_MM.max, 9);
+  });
+
+  it('keeps a title’s ink in its row, its tallest letter on the block’s top: a capital’s, an accent’s, an ideograph’s', () => {
+    // The ink the faces' outlines give, per em: the line's highest top and lowest foot.
+    const inkOf = (text: string, face: string) => {
+      const glyphs = [...text].flatMap((character) => METRICS[face]!.ink(character.codePointAt(0)!) ?? []);
+      return { top: Math.max(...glyphs.map((glyph) => glyph.top)) / 1000, bottom: Math.min(...glyphs.map((glyph) => glyph.bottom)) / 1000 };
+    };
+    for (const [title, face] of [
+      ['Crane', 'latin-700'],
+      ['Origami', 'latin-700'],
+      ['Élan Ångström', 'latin-700'],
+      ['将底角', 'sc-700'],
+    ] as const) {
+      const set = setTitleBlock(geometry, { title, byline: '' }, fonts).title!;
+      const { top, bottom } = inkOf(title, face);
+      expect(set.baseline - top * set.sizeMm, title).toBeCloseTo(geometry.block.y, 9);
+      expect(set.baseline - bottom * set.sizeMm, title).toBeLessThanOrEqual(foot(geometry.title) + 1e-9);
+    }
+    // Taller than a capital: set further down than one; and an accent over a descender, smaller, to keep clear of the byline.
+    expect(setTitleBlock(geometry, { title: 'Élan', byline: '' }, fonts).title!.baseline).toBeGreaterThan(geometry.block.y + 0.9 * TITLE_BLOCK_TITLE_MM.max);
+    expect(setTitleBlock(geometry, { title: CJK.slice(0, 3), byline: '' }, fonts).title!.baseline).toBeGreaterThan(geometry.block.y + 0.82 * TITLE_BLOCK_TITLE_MM.max);
+    expect(setTitleBlock(geometry, { title: 'Crane', byline: '' }, fonts).title!.sizeMm).toBe(TITLE_BLOCK_TITLE_MM.max);
+    expect(setTitleBlock(geometry, { title: 'Élan Ångström', byline: '' }, fonts).title!.sizeMm).toBeLessThan(TITLE_BLOCK_TITLE_MM.max);
+    // Estimated where the fonts are not loaded: a capital's height, an ideograph's.
+    expect(set('Crane').title!.baseline).toBeCloseTo(geometry.block.y + 0.72 * TITLE_BLOCK_TITLE_MM.max, 9);
+    expect(set('千纸鹤').title!.baseline).toBeCloseTo(geometry.block.y + 0.88 * TITLE_BLOCK_TITLE_MM.max, 9);
   });
 
   it('sets a longer title smaller, as large as fits its column, and at its least size cuts it with "…"', () => {
