@@ -73,7 +73,7 @@ export function DiagramTitleBlockSection() {
               block.pattern,
               t('panels:diagram.pagePane.titleBlock.autoNoneLinked', 'Auto (none linked)'),
               (number) =>
-                t('panels:diagram.pagePane.titleBlock.stepNotLinked', 'Step {{number}} (not linked)', { number })
+                t('panels:diagram.pagePane.titleBlock.stepNoPattern', 'Step {{number}} (no crease pattern)', { number })
             )}
             onChange={block.setPattern}
           />

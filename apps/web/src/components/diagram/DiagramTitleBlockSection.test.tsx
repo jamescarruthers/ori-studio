@@ -219,6 +219,15 @@ describe('DiagramTitleBlockSection', () => {
     );
   });
 
+  it('offers no linked step whose pattern draws nothing, and names one chosen as the page’s overlay does', () => {
+    const blank: DiagramStep = { ...cpStep('s2'), source: { ...cpSource(), thumbnail: { viewBox: '0 0 100 100', strokes: [] } } };
+    install({ titleBlock: ON }, false, [cpStep('s1'), blank]);
+    render();
+    expect(optionsOf('Crease pattern')).toEqual(['Auto (step 1)', 'Step 1', 'None']);
+    act(() => state().setDiagramTitleBlockContent({ pattern: { kind: 'step', stepId: 's2' } }));
+    expect(select('Crease pattern')!.textContent).toBe('Step 2 (no crease pattern)');
+  });
+
   it('commits the byline as it is typed: a sitting at the field one undo step and one count', () => {
     vi.useFakeTimers();
     install({ titleBlock: ON });

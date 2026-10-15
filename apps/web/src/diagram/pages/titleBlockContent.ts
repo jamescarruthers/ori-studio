@@ -6,8 +6,8 @@
  *
  * Each part is Auto, a step chosen, or none. Auto is the last step that can
  * give the part ({@link givesModel}, {@link givesPattern}), so turns, empty
- * steps and a newer build's locked steps are passed over, and a diagram with
- * no linked step has no pattern. A chosen step that is gone — deleted, or
+ * steps, a newer build's locked steps and a link whose pattern draws no line
+ * are passed over, and a diagram with no linked step has no pattern. A chosen step that is gone — deleted, or
  * now a newer build's — reads as Auto; one that is there but can no longer
  * give its part, its picture removed or its link replaced, gives nothing,
  * which the Pages view says. A part only a newer build reads is not in the
@@ -64,9 +64,13 @@ export function givesModel(step: DiagramStep): boolean {
   return !isLockedStep(step) && step.picture !== null;
 }
 
-/** Whether a step can give the block's crease pattern: one of this build's linked to a crease pattern, whatever it is shown as. */
+/**
+ * Whether a step can give the block's crease pattern: one of this build's
+ * linked to a crease pattern, whatever it is shown as, whose stored lines
+ * draw something ({@link drawsPattern}).
+ */
 export function givesPattern(step: DiagramStep): step is DiagramStep & { source: DiagramCpSource } {
-  return !isLockedStep(step) && step.source?.kind === 'cp';
+  return !isLockedStep(step) && step.source?.kind === 'cp' && drawsPattern(step.source.thumbnail);
 }
 
 /** The step Auto finds for the model: the last that can give it; null where none can. */
@@ -128,17 +132,33 @@ const PATTERN_ROLES: Readonly<Record<SheetStrokeRole, PaperLineRole | null>> = {
  * with its own. Null where it has no line to draw.
  */
 export function patternScene(thumbnail: SheetThumbnail): PaperScene | null {
-  const [minX = 0, minY = 0, width = 0, height = 0] = thumbnail.viewBox.trim().split(/[\s,]+/).map(Number);
-  const sheet = Math.max(width, height);
-  if (!(sheet > 0) || !Number.isFinite(sheet)) return null;
+  const box = thumbnailBox(thumbnail);
   const items = thumbnail.strokes.flatMap((stroke): PaperLineItem[] => {
     const role = PATTERN_ROLES[stroke.role];
     return role
       ? [{ kind: 'line', role, a: [stroke.x1, stroke.y1], b: [stroke.x2, stroke.y2], onBoundary: [false, false], hidden: false }]
       : [];
   });
-  if (items.length === 0) return null;
-  return { bounds: { minX, minY, maxX: minX + width, maxY: minY + height }, sheet, items };
+  if (!box || items.length === 0) return null;
+  const { minX, minY, width, height } = box;
+  return { bounds: { minX, minY, maxX: minX + width, maxY: minY + height }, sheet: Math.max(width, height), items };
+}
+
+/**
+ * Whether a thumbnail has a line the block draws, as {@link patternScene}
+ * would: the one answer to "is there a pattern" for the page, the Pages
+ * view's overlay and the Page pane's choices. A capture that found no line,
+ * or only aux lines, has none.
+ */
+export function drawsPattern(thumbnail: SheetThumbnail): boolean {
+  return thumbnailBox(thumbnail) !== null && thumbnail.strokes.some((stroke) => PATTERN_ROLES[stroke.role] !== null);
+}
+
+/** A thumbnail's view box, null where it has no size to fit. */
+function thumbnailBox(thumbnail: SheetThumbnail): { minX: number; minY: number; width: number; height: number } | null {
+  const [minX = 0, minY = 0, width = 0, height = 0] = thumbnail.viewBox.trim().split(/[\s,]+/).map(Number);
+  const sheet = Math.max(width, height);
+  return sheet > 0 && Number.isFinite(sheet) ? { minX, minY, width, height } : null;
 }
 
 /** Where the block's model stands: in front of the pattern's lower left, or over the whole art where no pattern is drawn. */

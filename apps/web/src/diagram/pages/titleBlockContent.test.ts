@@ -18,7 +18,15 @@ import type { SheetStrokeRole, SheetThumbnail } from '../../cp-workspace/sheets/
 import { readDiagram, writeDiagram } from '../document/diagramFile';
 import { cpSource, cpStep, referencesStep } from '../document/diagramSteps.fixtures';
 import { estimateTextSetter } from './estimateTextSetter';
-import { autoModelStep, autoPatternStep, missingTitleBlockParts, modelRoom, patternScene, resolveTitleBlock } from './titleBlockContent';
+import {
+  autoModelStep,
+  autoPatternStep,
+  drawsPattern,
+  missingTitleBlockParts,
+  modelRoom,
+  patternScene,
+  resolveTitleBlock,
+} from './titleBlockContent';
 import { setTitleBlock, titleBlockGeometry } from './titleBlockGeometry';
 
 /**
@@ -124,6 +132,13 @@ describe('resolveTitleBlock', () => {
     expect(autoPatternStep(document)?.id).toBe('s2');
   });
 
+  it('passes over a linked step whose pattern draws nothing for Auto, and draws nothing for one chosen', () => {
+    const blank: DiagramStep = { ...cpStep('s2'), source: { ...cpSource(), thumbnail: { viewBox: '0 0 100 100', strokes: [] } } };
+    expect(shown(diagram([cpStep('s1'), blank])).pattern).toEqual(['auto', 's1']);
+    const chosen = resolveTitleBlock(diagram([cpStep('s1'), blank], { pattern: { kind: 'step', stepId: 's2' } })).pattern;
+    expect([chosen.from, chosen.step?.id, chosen.scene]).toEqual(['step', 's2', null]);
+  });
+
   it('gives the pattern’s lines as the painter draws them, none where it gives none', () => {
     const pattern = folded('s2');
     const { thumbnail, scene } = resolveTitleBlock(diagram([cpStep('s1'), pattern])).pattern;
@@ -157,6 +172,19 @@ describe('patternScene', () => {
     expect(patternScene({ viewBox: '0 0 100 100', strokes: [] })).toBeNull();
     expect(patternScene({ viewBox: '0 0 100 100', strokes: [stroke('aux', 50)] })).toBeNull();
     expect(patternScene({ viewBox: '0 0 0 0', strokes: [stroke('edge', 0)] })).toBeNull();
+  });
+
+  it('is drawn exactly where drawsPattern says a thumbnail draws: the one answer the pane and the page read', () => {
+    const thumbnails: SheetThumbnail[] = [
+      { viewBox: '0 0 100 100', strokes: [] },
+      { viewBox: '0 0 100 100', strokes: [stroke('aux', 50)] },
+      { viewBox: '0 0 100 100', strokes: [stroke('aux', 50), stroke('unassigned', 20)] },
+      { viewBox: '0 0 0 0', strokes: [stroke('edge', 0)] },
+      { viewBox: 'none', strokes: [stroke('valley', 0)] },
+      { viewBox: '-5 -5 110 110', strokes: [stroke('mountain', 0)] },
+    ];
+    expect(thumbnails.map(drawsPattern)).toEqual([false, false, true, false, false, true]);
+    expect(thumbnails.map((thumbnail) => patternScene(thumbnail) !== null)).toEqual(thumbnails.map(drawsPattern));
   });
 });
 

@@ -37,6 +37,11 @@ function otherPattern(id: string): DiagramStep {
   return { ...cpStep(id), source: { ...cpSource(), thumbnail } };
 }
 
+/** A step linked to a region whose thumbnail has no line the block draws: none at all (a capture that found none), or aux lines only. */
+function blankPattern(id: string, strokes: SheetThumbnail['strokes'] = []): DiagramStep {
+  return { ...cpStep(id), source: { ...cpSource(), thumbnail: { viewBox: '0 0 100 100', strokes } } };
+}
+
 function diagram(entries: DiagramEntry[], content: DiagramTitleBlockContentPatch = {}): DiagramDocument {
   return setTitleBlockContent(insertSteps(createDiagram({ title: 'Crane', newId: () => 'diagram-1' }), entries, 0), content);
 }
@@ -58,6 +63,15 @@ describe('titleBlockChoices', () => {
     // s1, s2 and s4 link one pattern, each through a thumbnail of its own with the same lines; s3 another.
     const document = diagram([cpStep('s1'), cpStep('s2'), otherPattern('s3'), cpStep('s4'), upload('s5')]);
     expect(offered(titleBlockChoices(document).pattern)).toEqual(['auto', 4, ['3', '4']]);
+  });
+
+  it('offers no linked step whose pattern draws nothing, and Auto passes over it, as the page does', () => {
+    const aux = [{ x1: 0, y1: 50, x2: 100, y2: 50, role: 'aux' as const }];
+    const document = diagram([cpStep('s1'), otherPattern('s2'), blankPattern('s3'), blankPattern('s4', aux)]);
+    expect(offered(titleBlockChoices(document).pattern)).toEqual(['auto', 2, ['1', '2']]);
+    // Chosen, it is listed as what the part is set to, marked as one that gives none.
+    const chosen = setTitleBlockContent(document, { pattern: { kind: 'step', stepId: 's4' } });
+    expect(offered(titleBlockChoices(chosen).pattern)).toEqual(['step:s4', 2, ['1', '2', '4!']]);
   });
 
   it('names a pattern by the step chosen for it, where that step links it', () => {

@@ -9,9 +9,11 @@
  * distinct pattern the steps link, told apart as the file's thumbnail table
  * tells them (`thumbnailJson`), each named by the last step that links it, or
  * by the step chosen where that one links it: fifty steps on one sheet are
- * one choice. A step chosen that can no longer give its part — its picture
- * removed, its link replaced — is listed too, in its place and marked, since
- * it is what the block is set to. Pure.
+ * one choice. Whether a step gives a part is the page's own answer
+ * (`givesModel`, `givesPattern`), so nothing offered prints nothing. A step
+ * chosen that can no longer give its part — its picture removed, its link
+ * replaced or drawing no line — is listed too, in its place and marked,
+ * since it is what the block is set to. Pure.
  */
 import { thumbnailJson } from '../document/diagramFile';
 import {
