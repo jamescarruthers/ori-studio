@@ -62,7 +62,7 @@ function install(
   act(() => state().installDiagram({ document, readOnly, raw: {} }));
 }
 
-const toggle = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Title block"]')!;
+const toggle = () => host!.querySelector<HTMLButtonElement>('button[role="switch"][aria-label="Show on first page"]')!;
 const select = (label: string) => host!.querySelector<HTMLButtonElement>(`button[role="combobox"][aria-label="${label}"]`);
 const byline = () => host!.querySelector<HTMLTextAreaElement>('textarea');
 
@@ -136,6 +136,20 @@ describe('DiagramTitleBlockSection', () => {
     act(() => toggle().click());
     expect(state().diagram!.page.titleBlock).toEqual({ ...ON, enabled: false });
     expect(select('Model')).toBeNull();
+  });
+
+  it('names the switch by what it does, not again by its section, and says what each select’s Auto follows', () => {
+    install({ titleBlock: ON });
+    render();
+    const group = host!.querySelector('[role="group"]');
+    expect(group?.getAttribute('aria-label')).toBe('Title block');
+    expect(group?.querySelector('button[role="switch"]')?.getAttribute('aria-label')).toBe('Show on first page');
+    const helpOf = (label: string) =>
+      select(label)!.closest('[data-field-row]')!.querySelector('[data-field-help]')?.getAttribute('aria-label');
+    expect(helpOf('Model')).toBe('The finished model, drawn from a step’s picture. Auto uses the last step with one.');
+    expect(helpOf('Crease pattern')).toBe(
+      'Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the last step that links it.'
+    );
   });
 
   it('offers the steps with a picture for the model and each linked pattern once, each select naming what Auto finds', () => {

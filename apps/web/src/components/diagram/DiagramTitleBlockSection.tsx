@@ -33,7 +33,7 @@ export function DiagramTitleBlockSection() {
   return (
     <CollapsibleSection title={t('panels:diagram.pagePane.titleBlock.section', 'Title block')}>
       <ToggleRow
-        label={t('panels:diagram.pagePane.titleBlock.show', 'Title block')}
+        label={t('panels:diagram.pagePane.titleBlock.show', 'Show on first page')}
         help={t(
           'panels:diagram.pagePane.titleBlock.showHelp',
           'The title, the crease pattern and the finished model, at the top of the first page.'
@@ -47,6 +47,10 @@ export function DiagramTitleBlockSection() {
         <>
           <SelectRow
             label={t('panels:diagram.pagePane.titleBlock.model', 'Model')}
+            help={t(
+              'panels:diagram.pagePane.titleBlock.modelHelp',
+              'The finished model, drawn from a step’s picture. Auto uses the last step with one.'
+            )}
             value={block.model.value}
             disabled={readOnly}
             options={options(
@@ -59,6 +63,10 @@ export function DiagramTitleBlockSection() {
           />
           <SelectRow
             label={t('panels:diagram.pagePane.titleBlock.pattern', 'Crease pattern')}
+            help={t(
+              'panels:diagram.pagePane.titleBlock.patternHelp',
+              'Drawn from the crease pattern a step links. Auto uses the last linked step; each pattern is listed once, by the last step that links it.'
+            )}
             value={block.pattern.value}
             disabled={readOnly}
             options={options(
