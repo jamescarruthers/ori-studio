@@ -4,7 +4,8 @@
  * the file. (The view leaves the flow band out and draws it under the image
  * from the same path and pen, so a colour pick repaints only the band.)
  *
- * From back to front: the flow band, the title tab and its rule, each cell's
+ * From back to front: the flow band, the title tab and its rule — on a first
+ * page with the title block, the block in their place — each cell's
  * picture, number and instruction, the turns between steps (D22) and the
  * enlarge arrows (Revision 2) in the gutters, and the page number. An arrow
  * alone beside the area it leaves is lifted to the area's height
@@ -41,9 +42,12 @@ import { paintTurnGlyph, TURN_FRAME_MM } from '../annotate/turnGlyph';
 import type { Lane } from './flowLane';
 import { setUploadText } from '../upload/uploadText';
 import { paintEnlargeArrow } from '../zoom/enlargeArrow';
-import { cellPicture, type CellPicture } from './pagePictures';
+import { cellPicture, fittedScene, wholePicture, type CellPicture } from './pagePictures';
 import { placedZoomArrows } from './zoomArrows';
 import type { PagePart } from './pagePlacement';
+import { diagramSurfaceStyle } from '../pictures/diagramPaperStyle';
+import { modelRoom, type ResolvedTitleBlock } from './titleBlockContent';
+import type { LayoutTitleBlock } from './titleBlockGeometry';
 
 export interface PageComposeOptions {
   band?: boolean;
@@ -78,6 +82,8 @@ export interface ComposeDiagramPageInput extends PageComposeOptions {
   setter: TextSetter;
   /** The page's `@font-face` rules for what it sets; `''` writes none. */
   embedFonts: (usage: FontUsage) => string;
+  /** What the first page's title block shows (`resolveTitleBlock`): drawn on a page that has the block. */
+  titleBlock: ResolvedTitleBlock;
   /**
    * Art past the trim on every side, mm, for a print shop's bleed: the page
    * grows by it, and what reaches the trim — the flow band — runs on into it.
@@ -117,7 +123,9 @@ export function composeDiagramPage(input: ComposeDiagramPageInput): ComposedPage
     );
   }
 
-  if (!input.only && layout.title) {
+  if (!input.only && page.titleBlock) {
+    body.push(...titleBlockElements(page.titleBlock, input, use));
+  } else if (!input.only && layout.title) {
     const { tab, textAt, line, rule } = layout.title;
     body.push(
       `<rect x="${pt(tab.x)}" y="${pt(tab.y)}" width="${pt(tab.w)}" height="${pt(tab.h)}" ` +
@@ -197,6 +205,29 @@ export function composeDiagramPage(input: ComposeDiagramPageInput): ComposedPage
 
 /** The characters each face sets, as a page counts them for its fonts. */
 export type FontUse = (face: string, text: string) => void;
+
+/**
+ * The first page's title block, back to front (`diagram-title-block.md`,
+ * section 6): the crease pattern in its square, in the style's fold pens; the
+ * finished model in front of it — over the pattern's square too, where there
+ * is no pattern; then the title and the byline.
+ */
+function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageInput, count: FontUse): string[] {
+  const { geometry, title, byline } = block;
+  const { model, pattern } = input.titleBlock;
+  const elements: string[] = [];
+  if (pattern.scene) elements.push(fittedScene(pattern.scene, diagramSurfaceStyle(input.style), geometry.pattern));
+  const text = { hanStyle: input.hanStyle, runs: input.setter.runs };
+  const room = modelRoom(geometry, input.titleBlock);
+  const picture = model.step ? wholePicture(model.step, input.assets, input.style, room, 'title-block-', text) : null;
+  if (picture) {
+    elements.push(picture.markup);
+    for (const { face, characters } of picture.text) count(face, characters);
+  }
+  if (title) elements.push(textElement([title.line], geometry.title.x, title.baseline, title.sizeMm, 0, 700, INK, count));
+  if (byline) elements.push(stepTextElement(byline.lines, geometry.byline.x, byline.firstBaseline, count));
+  return elements;
+}
 
 /**
  * A page or a step's file as an SVG document in pt: `widthPt` × `heightPt`

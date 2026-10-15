@@ -12,6 +12,7 @@ import {
   createStep,
   createTurn,
   insertSteps,
+  setTitleBlockContent,
   type DiagramDocument,
   type KnownDiagramAnnotation,
 } from '../../diagram/document/diagramDocument';
@@ -316,6 +317,45 @@ describe('DiagramPagesView', () => {
     });
     expect(useWorkspaceStore.getState().diagramDetail).toBeNull();
     expect(props.onPageClick).not.toHaveBeenCalled();
+  });
+
+  it('outlines the first page’s title block over the page, and marks where a part of it prints nothing, never in the page', () => {
+    const withBlock = (document: DiagramDocument): DiagramDocument => ({
+      ...document,
+      page: { ...document.page, titleBlock: { enabled: true, heightShare: 0.27 } },
+    });
+    const missing = () =>
+      [...host.querySelectorAll<HTMLElement>('[data-title-block-missing]')].map((box) => [box.dataset.titleBlockMissing, box.textContent]);
+    // Every part shown: the outline alone, where the block is.
+    const shown = preparedPages(withBlock(diagram()), FONTS, subsetter);
+    render(shown, {}, shown.layout.bandInk, withBlock(diagram()));
+    const outline = host.querySelector<HTMLElement>('[data-page="0"] [data-title-block]')!;
+    const { block } = shown.layout.pages[0]!.titleBlock!.geometry;
+    expect([outline.style.left, outline.style.top, outline.style.width, outline.style.height]).toEqual(
+      [block.x, block.y, block.w, block.h].map((mm) => `${mm * PX_PER_MM}px`)
+    );
+    expect(missing()).toEqual([]);
+    // No title, no linked step, no picture: each part says why, where it would print.
+    const bare = withBlock(insertSteps(createDiagram({ title: '' }), [{ ...createStep(() => 'step-empty'), text: 'Nothing yet.' }], 0));
+    const empty = preparedPages(bare, FONTS, subsetter);
+    render(empty, {}, empty.layout.bandInk, bare);
+    expect(missing()).toEqual([
+      ['title', 'Add a title'],
+      ['pattern', 'No step is linked to a crease pattern'],
+      ['model', 'No step has a picture yet'],
+    ]);
+    const svg = empty.compose(0).svg;
+    for (const [, words] of missing()) expect(svg).not.toContain(words);
+    // A step chosen for the model that has no picture is named by its number.
+    const chosen = setTitleBlockContent(withBlock(diagram()), { model: { kind: 'step', stepId: 'step-empty' } });
+    const chosenPages = preparedPages(chosen, FONTS, subsetter);
+    render(chosenPages, {}, chosenPages.layout.bandInk, chosen);
+    expect(missing()).toEqual([['model', 'Step 2 has no picture yet']]);
+    // A press on the block is a press on the page: it asks about the page.
+    const props = render(shown, {}, shown.layout.bandInk, withBlock(diagram()));
+    act(() => host.querySelector<HTMLElement>('[data-title-block]')!.click());
+    expect(props.onPageClick).toHaveBeenCalledOnce();
+    expect(props.onSelect).toHaveBeenLastCalledWith(null);
   });
 
   it('selects a step on a press, stays on the page on a double press, and elsewhere asks about the page and lets the selection go', () => {

@@ -1018,6 +1018,119 @@
       }
     ],
     "assets": {},
+    "pageArrangements": {
+      "step-lily-1": {
+        "signature": "pack-3:oah2ys1h4sc95",
+        "packer": "pack-6",
+        "k": 0.947908,
+        "steps": {
+          "step-lily-1": {
+            "box": [
+              13.18,
+              90.71,
+              57.1,
+              58.1
+            ],
+            "scale": {
+              "mmPerUnit": 52.832
+            },
+            "band": 0
+          },
+          "step-lily-2": {
+            "box": [
+              77.63,
+              90.71,
+              57.1,
+              58.1
+            ],
+            "scale": {
+              "mmPerUnit": 52.832
+            },
+            "band": 0
+          },
+          "step-lily-3": {
+            "box": [
+              140.9,
+              121.76,
+              57.1,
+              58.1
+            ],
+            "scale": {
+              "mmPerUnit": 52.832
+            },
+            "band": 0,
+            "bend": true
+          },
+          "step-lily-4": {
+            "box": [
+              77.63,
+              152.81,
+              57.1,
+              58.1
+            ],
+            "scale": {
+              "mmPerUnit": 52.832
+            },
+            "band": 1
+          },
+          "step-lily-5": {
+            "box": [
+              13.18,
+              152.81,
+              57.1,
+              58.1
+            ],
+            "scale": {
+              "mmPerUnit": 52.832
+            },
+            "band": 1
+          },
+          "step-lily-6": {
+            "box": [
+              28.7,
+              214.9,
+              57.1,
+              58.1
+            ],
+            "scale": {
+              "mmPerUnit": 52.832
+            },
+            "band": 2
+          },
+          "step-lily-7": {
+            "box": [
+              124.2,
+              214.9,
+              57.1,
+              58.1
+            ],
+            "scale": {
+              "mmPerUnit": 52.832
+            },
+            "band": 2
+          }
+        }
+      },
+      "step-lily-8": {
+        "signature": "pack-3:pvxmt61d40gmt",
+        "packer": "pack-6",
+        "k": 0.976076,
+        "steps": {
+          "step-lily-8": {
+            "box": [
+              12,
+              200.12,
+              58.67,
+              66.77
+            ],
+            "scale": {
+              "mmPerUnit": 54.402
+            },
+            "band": 0
+          }
+        }
+      }
+    },
     "thumbnails": {
       "thumb-pxzlqcbzg4pr": "{\"viewBox\":\"0 0 100 100\",\"strokes\":[{\"x1\":0,\"y1\":0,\"x2\":100,\"y2\":0,\"role\":\"edge\"},{\"x1\":0,\"y1\":50,\"x2\":100,\"y2\":50,\"role\":\"mountain\"}]}"
     }

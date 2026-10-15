@@ -169,8 +169,9 @@ it('follows a step with the lane only where its picture was moved or resized, ne
       { layout: 'flow', stepsPerPage: 7 },
     );
   // The page held as first packed: a caption's pin would otherwise be packed for.
-  const held = layoutDiagramPages(diagramLayoutSteps(flow()), flow().page, '', estimateTextSetter).packed!;
-  const band = (place?: DiagramStepPlace) => layoutDiagramPages(diagramLayoutSteps(flow(place)), flow().page, '', estimateTextSetter, held).pages[0]!.band;
+  const untitled = { title: '', byline: '' };
+  const held = layoutDiagramPages(diagramLayoutSteps(flow()), flow().page, untitled, estimateTextSetter).packed!;
+  const band = (place?: DiagramStepPlace) => layoutDiagramPages(diagramLayoutSteps(flow(place)), flow().page, untitled, estimateTextSetter, held).pages[0]!.band;
   expect(band({ text: [-6, 2], textWidth: 64, number: [1, 0] })).toEqual(band());
   expect(band({ picture: [0, 6] })).not.toEqual(band());
 });
