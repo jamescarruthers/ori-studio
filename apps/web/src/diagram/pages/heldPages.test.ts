@@ -6,6 +6,7 @@ import {
   editStepAnnotations,
   insertSteps,
   isLockedStep,
+  PAGE_SETTINGS,
   removeStepPicture,
   removeSteps,
   setLinkedPicture,
@@ -109,44 +110,79 @@ const EDITS: readonly { name: string; edit: (document: DiagramDocument, stepId: 
   { name: 'a photo', edit: (document, id) => setStepPicture(document, id, PHOTO), picture: true },
 ];
 
-/** The first, the middle and the last step this build reads on each page. */
-function sampled(document: DiagramDocument): string[] {
-  const readable = new Set(stepsOf(document).filter((step) => !isLockedStep(step)).map((step) => step.id));
-  return cellSlots(document).pages.flatMap((ids) => {
-    const own = ids.filter((id) => readable.has(id));
-    return [...new Set([own[0], own[Math.floor(own.length / 2)], own.at(-1)])].filter((id) => id !== undefined);
-  });
+/** The steps enlarged from an area marked on `stepId`'s picture. */
+function enlargedFrom(document: DiagramDocument, stepId: string): Set<string> {
+  const areas = new Set(stepsOf(document).find((step) => step.id === stepId)?.annotations.map((annotation) => annotation.id));
+  return new Set(stepsOf(document).flatMap((step) => (step.zoom && areas.has(step.zoom.from) ? [step.id] : [])));
+}
+
+/** Every step this build reads, page by page. */
+function readable(document: DiagramDocument): string[] {
+  const ours = new Set(stepsOf(document).filter((step) => !isLockedStep(step)).map((step) => step.id));
+  return cellSlots(document).pages.flatMap((ids) => ids.filter((id) => ours.has(id)));
+}
+
+/**
+ * Every fixture of the page goldens twice: as it is, the title block off, as
+ * every file saved before the block reads; and with the block, as a new
+ * diagram has it, its first page shorter and every later page holding other
+ * steps.
+ */
+function heldFixtures(): [string, DiagramDocument][] {
+  return pageLayoutFixtures().flatMap(({ name, document }): [string, DiagramDocument][] => [
+    [name, document],
+    [`${name}, with the title block`, setPageSetup(document, { titleBlock: { ...PAGE_SETTINGS.titleBlock.default, enabled: true } })],
+  ]);
 }
 
 describe('a held page', () => {
-  it.each(pageLayoutFixtures().map(({ name, document }) => [name, document] as const))(
+  it.each(heldFixtures())(
     'moves no step for an edit of a caption or a picture: %s',
     (name, fixture) => {
       const document = adopted(fixture);
       const flow = document.page.layout === 'flow';
       const before = cellsOf(document);
       const pictured = new Set(stepsOf(document).filter(stepHasPicture).map((step) => step.id));
+      const signatures = cellSlots(document).signatures;
       let edits = 0;
-      for (const stepId of sampled(document)) {
+      for (const stepId of readable(document)) {
         for (const { name: edit, edit: apply, picture } of EDITS) {
           const edited = apply(document, stepId);
           // An empty caption emptied is no edit.
           if (edited === document) continue;
           edits += 1;
           const landed = committed(document, edited);
+          const restructured = cellSlots(landed).signatures.flatMap((signature, page) => (signature === signatures[page] ? [] : [page]));
+          if (restructured.length > 0) {
+            // A photo filling an enlarged step that waits for its picture drops its window (`startsWhole`): an edit
+            // of its page's structure, which packs that page alone, every other drawn as it was.
+            const label = `${name}: ${edit} on ${stepId}`;
+            expect([edit, stepsOf(document).find((step) => step.id === stepId)?.zoom !== undefined], label).toEqual(['a photo', true]);
+            const pages = layOut(landed).pages;
+            const page = cellSlots(landed).pages.findIndex((ids) => ids.includes(stepId));
+            expect(restructured, label).toEqual([page]);
+            for (const [index, each] of pages.entries()) {
+              if (index !== page) for (const cell of each.cells) expect(cell, `${label}: ${cell.stepId}`).toEqual(before.get(cell.stepId));
+            }
+            continue;
+          }
           // The edit keeps every page's arrangement: nothing is packed again.
           expect(landed.pageArrangements, `${name}: ${edit} on ${stepId}`).toBe(document.pageArrangements);
           const layout = layOut(landed);
           expect(layout.packed, `${name}: ${edit} on ${stepId}`).toBeUndefined();
           const after = new Map(layout.pages.flatMap((page) => page.cells.map((cell) => [cell.stepId, cell] as const)));
+          const fromEdited = enlargedFrom(document, stepId);
           for (const [id, cell] of before) {
             const label = `${name}: ${id}, ${edit} on ${stepId}`;
             // Every step keeps its home, the edited one too.
             expect(home(after.get(id)!), label).toEqual(home(cell));
             if (!flow) continue;
-            // On a flow page every other step is drawn as it was, whole. A caption edit draws the step's own picture
-            // as it was too; an empty step's placeholder, which only fills the room its box leaves, gives way to it.
-            if (id !== stepId) expect(after.get(id), label).toEqual(cell);
+            // On a flow page every other step is drawn as it was, whole — a step enlarged from the edited one's area
+            // too, though what it prints against that area, its read-out, follows the area's new picture. A caption
+            // edit draws the step's own picture as it was too; an empty step's placeholder, which only fills the
+            // room its box leaves, gives way to it.
+            if (fromEdited.has(id)) expect({ ...after.get(id), zoom: { ...after.get(id)!.zoom!, printed: 0 } }, label).toEqual({ ...cell, zoom: { ...cell.zoom!, printed: 0 } });
+            else if (id !== stepId) expect(after.get(id), label).toEqual(cell);
             else if (!picture && pictured.has(id)) {
               expect(after.get(id)!.drawMm, label).toEqual(cell.drawMm);
               expect([after.get(id)!.mmPerUnit, after.get(id)!.frameMm], label).toEqual([cell.mmPerUnit, cell.frameMm]);
@@ -154,8 +190,8 @@ describe('a held page', () => {
           }
         }
       }
-      // A long caption, a wider capture and a photo are each an edit of every step sampled.
-      expect(edits).toBeGreaterThanOrEqual(3 * sampled(document).length);
+      // A long caption, a wider capture and a photo are each an edit of every step.
+      expect(edits).toBeGreaterThanOrEqual(3 * readable(document).length);
     }
   );
 });
@@ -163,7 +199,7 @@ describe('a held page', () => {
 describe('the lane between two held pages (Zach’s crane, 2026-10-14: "the end of the ribbon on the 2nd page and the start of the ribbon on the 3rd don’t line up")', () => {
   it('leaves one page and comes into the next at one height, over every spine and every page turn it hands over at, packing nothing', () => {
     let [spines, turns] = [0, 0];
-    for (const { name, document: fixture } of pageLayoutFixtures().filter(({ document }) => document.page.layout === 'flow')) {
+    for (const [name, fixture] of heldFixtures().filter(([, document]) => document.page.layout === 'flow')) {
       for (const firstPageSide of ['left', 'right'] as const) {
         const document = adopted(setPageSetup(fixture, { firstPageSide }));
         const layout = layOut(document);
@@ -197,15 +233,15 @@ describe('the lane between two held pages (Zach’s crane, 2026-10-14: "the end 
 });
 
 describe('a caption resized on a held page (`diagram-caption-resize.md`)', () => {
-  it.each(pageLayoutFixtures().map(({ name, document }) => [name, document] as const))(
+  it.each(heldFixtures())(
     'sets only that caption, every other step byte for byte, and re-packs to hold it: %s',
     (name, fixture) => {
       const document = adopted(fixture);
       const flow = document.page.layout === 'flow';
       const first = layOut(document);
       const before = cellsOf(document);
-      // A fixture with no caption sampled (no steps, only enlarged or a newer build's) has none to resize.
-      const texted = sampled(document).filter((id) => (before.get(id)?.text.lines.length ?? 0) > 0);
+      // A fixture with no caption (no steps, only enlarged or a newer build's) has none to resize.
+      const texted = readable(document).filter((id) => (before.get(id)?.text.lines.length ?? 0) > 0);
       if (texted.length === 0) return;
       for (const stepId of texted) {
         const at = before.get(stepId)!;

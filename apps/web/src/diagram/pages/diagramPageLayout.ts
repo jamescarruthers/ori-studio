@@ -1280,34 +1280,41 @@ export function layoutDiagramPages(
       const pictureX = x + (cellW - box) / 2;
       const pictureY = y + PICTURE_TOP_MM;
       const scale = scales.get(entry);
-      const at = scale?.mmPerUnit ?? scale?.frameMm ?? null;
-      const extent = at !== null && step.picture ? pictureExtent(step.picture, at) : null;
       const pin = pinStates.get(entry) ?? null;
-      // A picture taller at its scale than its box runs on down its room. A
-      // scale pinned by hand draws past the room, and so does an enlarged
-      // step's Size (Zach, 2026-10-12), its text below it; nothing else moves.
       const pinned = pin === 'applied';
       const sized = step.zoom?.scale != null;
-      const drawnH = extent?.height ?? 0;
-      const inRoom = Math.min(Math.max(box, drawnH), roomH(entry));
-      const drawH = pinned ? drawnH : sized ? Math.max(inRoom, drawnH) : inRoom;
-      const ink = extent ?? { width: box, height: box };
-      const drawW = pinned || sized ? Math.max(roomW, ink.width) : roomW;
-      const auto = autoScales.get(entry);
-      const autoAt = auto?.mmPerUnit ?? auto?.frameMm ?? null;
-      const autoH = autoAt !== null && step.picture ? pictureExtent(step.picture, autoAt).height : 0;
+      /**
+       * The picture's ink at a scale, and the box it is drawn in: a picture
+       * taller at its scale than its box runs on down its room. A scale
+       * pinned by hand draws past the room, and so does an enlarged step's
+       * Size (Zach, 2026-10-12), its text below it; nothing else moves.
+       */
+      const drawnAt = (drawn: CellScale | undefined, pinnedHere: boolean) => {
+        const at = drawn?.mmPerUnit ?? drawn?.frameMm ?? null;
+        const extent = at !== null && step.picture ? pictureExtent(step.picture, at) : null;
+        const drawnH = extent?.height ?? 0;
+        const inRoom = Math.min(Math.max(box, drawnH), roomH(entry));
+        const ink = extent ?? { width: box, height: box };
+        const w = pinnedHere || sized ? Math.max(roomW, ink.width) : roomW;
+        const h = pinnedHere ? drawnH : sized ? Math.max(inRoom, drawnH) : inRoom;
+        return { ink, box: { x: x + (cellW - w) / 2, y: pictureY, w, h } };
+      };
+      const { ink, box: drawBox } = drawnAt(scale, pinned);
+      const drawH = drawBox.h;
+      // What it prints at with no pin: its run's scale, or an enlarged step's own, which no pin changes.
+      const auto = autoScales.get(entry) ?? (step.zoom ? scale : undefined);
       const place = normalizeStepPlace(step.place);
       // A caption whose measure is pinned is set at it, whole, from where its
       // cell starts it; the picture and every scale were worked out from the
       // caption as the layout sets it, so nothing else changes for it.
       const pinnedText = pinnedCaptionWidth(place, paper);
-      const autoDraw = { x: x + (cellW - roomW) / 2, y: pictureY, w: roomW, h: Math.min(Math.max(box, autoH), roomH(entry)) };
+      const autoDraw = drawnAt(auto, false).box;
       const cell: LayoutCell = {
         stepId: step.id,
         number: index + 1,
         cellMm: { x, y, w: cellW, h: cellH },
         pictureMm: { x: pictureX, y: pictureY, size: box },
-        drawMm: { x: x + (cellW - drawW) / 2, y: pictureY, w: drawW, h: drawH },
+        drawMm: drawBox,
         inkMm: { x: x + (cellW - ink.width) / 2, y: pictureY + (drawH - ink.height) / 2, w: ink.width, h: ink.height },
         ...(place
           ? {
