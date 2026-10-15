@@ -1214,6 +1214,8 @@
         "auto": "Auto (étape {{number}})",
         "autoNoneLinked": "Auto (aucun lien)",
         "autoNoPicture": "Auto (aucune image)",
+        "bandColor": "Couleur du bandeau",
+        "bandColorHelp": "Le bandeau derrière le titre. Il suit la couleur du papier jusqu’à ce que vous en choisissiez une.",
         "creditLabel": "Libellé du crédit {{number}}",
         "creditLabelPlaceholder": "Libellé",
         "credits": "Crédits",

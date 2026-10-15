@@ -1140,6 +1140,8 @@
         "auto": "자동 ({{number}}단계)",
         "autoNoneLinked": "자동 (연결 없음)",
         "autoNoPicture": "자동 (그림 없음)",
+        "bandColor": "띠 색상",
+        "bandColorHelp": "제목 뒤의 띠입니다. 색상을 고르기 전까지는 종이 색상을 따릅니다.",
         "creditLabel": "크레딧 {{number}}의 레이블",
         "creditLabelPlaceholder": "레이블",
         "credits": "크레딧",

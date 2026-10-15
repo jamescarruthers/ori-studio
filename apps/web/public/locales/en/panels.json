@@ -1177,6 +1177,8 @@
         "auto": "Auto (step {{number}})",
         "autoNoneLinked": "Auto (none linked)",
         "autoNoPicture": "Auto (no pictures)",
+        "bandColor": "Band color",
+        "bandColorHelp": "The band behind the title. It follows the paper’s color until you pick one.",
         "creditLabel": "Label of credit {{number}}",
         "creditLabelPlaceholder": "Label",
         "credits": "Credits",

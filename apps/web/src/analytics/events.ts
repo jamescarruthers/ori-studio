@@ -429,7 +429,7 @@ export type DiagramView = 'steps' | 'pages';
  * Scale steadiness, set or reset to the default. The `title_block*` settings are the title block's,
  * in Header & footer: the toggle, and what the block shows — its model and crease pattern and their
  * sizes, its subtitle, credits and note (since 2026-10-15; until then a byline, `title_block_byline`,
- * on preview builds only).
+ * on preview builds only), and its band's colour (`title_block_band_color`, since 2026-10-15).
  */
 export type DiagramPageSetting =
   | 'size'
@@ -462,7 +462,8 @@ export type DiagramPageSetting =
   | 'title_block_pattern_size'
   | 'title_block_subtitle'
   | 'title_block_credits'
-  | 'title_block_note';
+  | 'title_block_note'
+  | 'title_block_band_color';
 
 /** Where the title block's model or crease pattern was set to come from: what Auto finds, a step chosen, or none. */
 export type DiagramTitleBlockChoice = 'auto' | 'step' | 'none';
@@ -478,6 +479,9 @@ export type DiagramTitleBlockTextShown = 'shown' | 'hidden';
 
 /** The title block's model or crease pattern size after the change: the app's default, or the author's own. */
 export type DiagramTitleBlockSize = 'default' | 'custom';
+
+/** The title block's band colour after the change: following the paper's colour, or one the author chose. */
+export type DiagramTitleBlockBand = 'paper' | 'custom';
 
 /** What Re-pack packed afresh: one flow page (Re-pack Page) or every one (Re-pack All Pages). */
 export type DiagramRepackScope = 'page' | 'all';

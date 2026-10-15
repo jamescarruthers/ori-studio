@@ -250,6 +250,22 @@ describe('setDiagramTitleBlockContent, every part of the header', () => {
     expect(undoSteps()).toBe(3);
   });
 
+  it('sets the band’s colour, a pick one undo step, and puts it back on the paper’s (Zach, 2026-10-15)', () => {
+    install();
+    // A pick writes as it settles, each write in its session: one undo step.
+    expect(state().setDiagramTitleBlockContent({ bandColor: '#2a4d8f' }, { session: -7 })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ bandColor: '#3b5ea0' }, { session: -7 })).toBe(true);
+    expect(content()).toEqual({ bandColor: '#3b5ea0' });
+    expect(undoSteps()).toBe(1);
+    // One that is no colour changes nothing; Reset is the paper's colour again, a step of its own.
+    expect(state().setDiagramTitleBlockContent({ bandColor: 'navy' })).toBe(false);
+    expect(state().setDiagramTitleBlockContent({ bandColor: 'paper' })).toBe(true);
+    expect(content()).toBeUndefined();
+    expect(undoSteps()).toBe(2);
+    state().undoDiagram();
+    expect(content()).toEqual({ bandColor: '#3b5ea0' });
+  });
+
   it('takes nothing on a read-only diagram, nor what was typed into a diagram since replaced', () => {
     const readOnly = install(true);
     for (const patch of [
@@ -257,6 +273,7 @@ describe('setDiagramTitleBlockContent, every part of the header', () => {
       { credits: { op: 'add' } },
       { note: 'Paper: 15 cm' },
       { modelSize: 0.75 },
+      { bandColor: '#2a4d8f' },
     ] as DiagramTitleBlockContentPatch[]) {
       expect(state().setDiagramTitleBlockContent(patch), JSON.stringify(patch)).toBe(false);
     }

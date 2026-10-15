@@ -1140,6 +1140,8 @@
         "auto": "自动（第 {{number}} 步）",
         "autoNoneLinked": "自动（无链接）",
         "autoNoPicture": "自动（无图）",
+        "bandColor": "色带颜色",
+        "bandColorHelp": "标题后面的色带。选择颜色之前，它跟随纸张的颜色。",
         "creditLabel": "第 {{number}} 条信息的标签",
         "creditLabelPlaceholder": "标签",
         "credits": "信息",

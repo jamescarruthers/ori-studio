@@ -1140,6 +1140,8 @@
         "auto": "自動（ステップ {{number}}）",
         "autoNoneLinked": "自動（リンクなし）",
         "autoNoPicture": "自動（図なし）",
+        "bandColor": "帯の色",
+        "bandColorHelp": "タイトルの背景の帯。色を選ぶまでは用紙の色になります。",
         "creditLabel": "クレジット {{number}} のラベル",
         "creditLabelPlaceholder": "ラベル",
         "credits": "クレジット",

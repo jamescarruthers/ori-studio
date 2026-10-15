@@ -139,4 +139,25 @@ describe('a diagram saved with a title block', () => {
     expect(sized.newer).toEqual({ titleBlockContent: { model: fixture()[1]!.titleBlockContent!.model } });
     expect(written(sized).titleBlockContent).not.toHaveProperty('modelSize');
   });
+
+  it('writes a band colour only where one is chosen, after the sizes, and reads one that is no colour as none (Zach, 2026-10-15)', () => {
+    const { document } = read(0);
+    expect(written(document).titleBlockContent).not.toHaveProperty('bandColor');
+    const coloured = setTitleBlockContent(document, { bandColor: '#2A4D8F' });
+    const content = written(coloured).titleBlockContent as Record<string, unknown>;
+    expect(content.bandColor).toBe('#2a4d8f');
+    // In the writer's order: after the sizes, before the room the layout measured.
+    const keys = Object.keys(content);
+    expect(keys.indexOf('bandColor')).toBe(keys.indexOf('patternSize') + 1);
+    expect(readDiagram(written(coloured))!.document.titleBlockContent?.bandColor).toBe('#2a4d8f');
+    // Lenient: a value that is no `#rrggbb` colour reads as none, the band on the paper's colour, carried nowhere.
+    for (const bad of ['pink', '#abc', 42, null, { r: 1 }]) {
+      const opened = readDiagram({ ...written(coloured), titleBlockContent: { ...content, bandColor: bad } })!.document;
+      expect(opened.titleBlockContent?.bandColor, JSON.stringify(bad)).toBeUndefined();
+      expect(opened.newer?.titleBlockContent ?? {}, JSON.stringify(bad)).not.toHaveProperty('bandColor');
+      expect(resolveTitleBlock(opened).bandColor).toBeUndefined();
+    }
+    // Reset: back on the paper's colour, written as none.
+    expect(written(setTitleBlockContent(coloured, { bandColor: 'paper' })).titleBlockContent).not.toHaveProperty('bandColor');
+  });
 });

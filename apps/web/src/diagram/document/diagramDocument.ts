@@ -1375,6 +1375,12 @@ export interface DiagramTitleBlockContent {
   /** The crease pattern's side, as a share of the block's height, within {@link TITLE_BLOCK_ART_SIZE_RANGE}. */
   patternSize?: number;
   /**
+   * The band's colour as its author chose it, `#rrggbb` (Zach, 2026-10-15): the band, the subtitle's rule and the
+   * credits' dividers, and what the title's white or ink is chosen against. Unsaid, they follow the paper's colour
+   * (`pages/titleBlockColumn.ts`, `titleBlockInks`), so a new paper colour changes an untouched band.
+   */
+  bandColor?: string;
+  /**
    * How tall its words stood, mm, as the layout measured them after the author's last edit of them, to half a
    * millimetre (`pages/titleBlockGeometry.ts`, `titleBlockRoom`; Zach, 2026-10-15: the header reflows): layout,
    * kept as the file says it, so a file opens as it was saved. The flow's block grows to it past its share, up to half
@@ -1401,7 +1407,8 @@ export type DiagramTitleBlockCreditEdit =
 
 /**
  * The parts of the title block an edit sets ({@link setTitleBlockContent}): `auto` takes a part's source away, a
- * blank subtitle or note takes it away, and `default` a size.
+ * blank subtitle or note takes it away, `default` a size, and `paper` the band's colour, which then follows the
+ * paper's.
  */
 export interface DiagramTitleBlockContentPatch {
   model?: DiagramTitleBlockSource | 'auto';
@@ -1411,10 +1418,11 @@ export interface DiagramTitleBlockContentPatch {
   note?: string;
   modelSize?: number | 'default';
   patternSize?: number | 'default';
+  bandColor?: string | 'paper';
 }
 
 /** The parts of the title block's content, in the order a file writes them. */
-export const TITLE_BLOCK_PARTS = ['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize', 'room'] as const;
+export const TITLE_BLOCK_PARTS = ['model', 'pattern', 'subtitle', 'credits', 'note', 'modelSize', 'patternSize', 'bandColor', 'room'] as const;
 
 export { TITLE_BLOCK_ART_SIZE_DEFAULTS, TITLE_BLOCK_ART_SIZE_RANGE };
 
@@ -2524,10 +2532,12 @@ export function setDiagramTitle(document: DiagramDocument, title: string): Diagr
 /**
  * The title block's content with each part `patch` says set: a source, or
  * `auto` taking it away; a subtitle or a note, a blank one taking it away; a
- * size, held to its range, the default taking it away; the credits by one
- * edit, an index past the list changing nothing and the last credit removed
- * taking them away. A part it sets lets go of a newer build's value for it,
- * even one shown as this value; the same document when nothing changes.
+ * size, held to its range, the default taking it away; the band's colour, a
+ * `#rrggbb` one (one that is no colour changing nothing), `paper` taking it
+ * away; the credits by one edit, an index past the list changing nothing and
+ * the last credit removed taking them away. A part it sets lets go of a newer
+ * build's value for it, even one shown as this value; the same document when
+ * nothing changes.
  */
 export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTitleBlockContentPatch): DiagramDocument {
   const was = document.titleBlockContent ?? {};
@@ -2547,6 +2557,7 @@ export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTi
     return asked === 'default' ? undefined : titleBlockArtSize(key, asked);
   };
   const credits = patch.credits ? editedCredits(was.credits ?? [], patch.credits) : was.credits;
+  const bandColor = patch.bandColor === 'paper' ? undefined : (readHexColor(patch.bandColor) ?? was.bandColor);
   const next = titleBlockContentOf({
     model: source('model'),
     pattern: source('pattern'),
@@ -2555,6 +2566,7 @@ export function setTitleBlockContent(document: DiagramDocument, patch: DiagramTi
     note: text('note', xmlText),
     modelSize: size('modelSize'),
     patternSize: size('patternSize'),
+    bandColor,
     room: was.room,
   });
   const newer = withoutKeys(
@@ -2684,6 +2696,7 @@ function sameTitleBlockContent(a: DiagramTitleBlockContent, b: DiagramTitleBlock
     a.note === b.note &&
     a.modelSize === b.modelSize &&
     a.patternSize === b.patternSize &&
+    a.bandColor === b.bandColor &&
     a.room === b.room
   );
 }

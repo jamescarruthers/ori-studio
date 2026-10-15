@@ -1013,6 +1013,29 @@ describe('the title block’s header on the first page (`diagram-title-block.md`
     expect(texts(preparedPages(fewer, FONTS, subsetter).compose(0).svg).map(({ text }) => text)).toContain('8');
   });
 
+  it('draws the band, its rule and dividers in the colour chosen for it, the title white or in ink against it, and follows the paper while none is (Zach, 2026-10-15)', () => {
+    const fills = (document: DiagramDocument) => {
+      const svg = preparedPages(document, FONTS, subsetter).compose(0).svg;
+      return {
+        band: parse(svg).querySelector('svg > rect')!.getAttribute('fill'),
+        title: texts(svg).find(({ text }) => text === 'Crane')!.fill,
+        rules: [...new Set(linesOf(svg).filter(({ width }) => width === 0.75 || width === 0.5).map(({ stroke }) => stroke))],
+      };
+    };
+    // A dark blue chosen on the pink paper: the band, the rule and the divider in it, the title white.
+    const pink = headerDiagram({ style: PINK });
+    expect(fills(setTitleBlockContent(pink, { bandColor: '#2a4d8f' }))).toEqual({ band: '#2a4d8f', title: '#ffffff', rules: ['#2a4d8f'] });
+    // A pale one: the title and the rules in ink, as on a pale paper — the contrast is the chosen colour's.
+    expect(fills(setTitleBlockContent(pink, { bandColor: '#f3ead2' }))).toEqual({ band: '#f3ead2', title: '#16191c', rules: ['#16191c'] });
+    // On the pale grey Diagram preset, a dark band chosen takes the title white again.
+    expect(fills(setTitleBlockContent(headerDiagram(), { bandColor: '#2a4d8f' })).title).toBe('#ffffff');
+    // None chosen: the paper's colour, which a new paper colour changes; a chosen band stays as chosen.
+    expect(fills(pink).band).toBe('#d982a5');
+    const green = { style: { ...DEFAULT_PAPER_STYLE, paper: { front: '#ffffff', back: '#2f9e44' } } };
+    expect(fills({ ...pink, style: green }).band).toBe('#2f9e44');
+    expect(fills({ ...setTitleBlockContent(pink, { bandColor: '#2a4d8f' }), style: green }).band).toBe('#2a4d8f');
+  });
+
   it('draws the Pages view’s “Add a title” where there is no title exactly as the title would print, and nowhere else (Zach, 2026-10-15)', () => {
     const untitled = { ...headerDiagram({ style: PINK }), title: '' };
     const pages = preparedPages(untitled, FONTS, subsetter);

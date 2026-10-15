@@ -10,6 +10,8 @@ import {
 } from '../../diagram/document/diagramDocument';
 import { cpStep } from '../../diagram/document/diagramSteps.fixtures';
 import { emptyStep, patternStep, titleBlockDiagram } from '../../diagram/pages/titleBlock.fixtures';
+import { titleBlockInksOf } from '../../diagram/pages/composeDiagramPage';
+import { COLOR_PICK_SETTLE_MS } from '../../diagram/pages/useSettledColorPick';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import { DiagramTitleBlockRows } from './DiagramTitleBlockRows';
@@ -95,6 +97,14 @@ const button = (name: string) =>
     (each) => each.getAttribute('aria-label') === name || each.textContent === name
   );
 const slider = (label: string) => host!.querySelector<HTMLInputElement>(`input[type="range"][aria-label="${label}"]`);
+const swatch = (label: string) => host!.querySelector<HTMLInputElement>(`input[type="color"][aria-label="${label}"]`);
+/** A colour picker's move to `color`, as the swatch reports it. */
+function pickColor(label: string, color: string) {
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(swatch(label), color);
+    swatch(label)!.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
 const credits = () => state().diagram!.titleBlockContent?.credits;
 const calls = () => analytics.trackDiagramPageSetupChanged.mock.calls;
 /** The note a select is described by, and whether it is a reason; null with none. */
@@ -265,6 +275,7 @@ describe('DiagramTitleBlockRows', () => {
     expect(names).toEqual([
       'Title block',
       'Subtitle',
+      'Band color',
       'Credits',
       'Description',
       'Model',
@@ -276,6 +287,7 @@ describe('DiagramTitleBlockRows', () => {
     expect(nested(toggle())).toBe(false);
     for (const each of [
       textField('Subtitle')!,
+      swatch('Band color')!,
       input('Label of credit 1')!,
       textField('Description')!,
       select('Model')!,
@@ -388,6 +400,35 @@ describe('DiagramTitleBlockRows', () => {
     expect(subtitle()!.value).toBe('');
     expect(undoSteps()).toBe(2);
     expect(calls().at(-1)).toEqual(['title_block_subtitle', { titleBlockSubtitle: 'hidden' }]);
+  });
+
+  it('colours the band as the paper until one is picked: a pick one undo step and one count, Reset back on the paper’s (Zach, 2026-10-15)', () => {
+    vi.useFakeTimers();
+    install({ titleBlock: ON }, false, undefined, CREDITED);
+    render();
+    // Unset: the swatch shows the colour the band prints in, the paper's, and offers no Reset.
+    const paper = titleBlockInksOf(state().diagram!.style).band;
+    expect(swatch('Band color')!.value).toBe(paper);
+    expect(button('Reset Band color to default')).toBeUndefined();
+    // A pick shows as it goes, and is written as it settles; carried on after a pause, it is still one undo step.
+    act(() => swatch('Band color')!.focus());
+    pickColor('Band color', '#2a4d8f');
+    pickColor('Band color', '#3b5ea0');
+    expect(swatch('Band color')!.value).toBe('#3b5ea0');
+    expect(state().diagram!.titleBlockContent?.bandColor).toBeUndefined();
+    act(() => vi.advanceTimersByTime(COLOR_PICK_SETTLE_MS));
+    expect(state().diagram!.titleBlockContent?.bandColor).toBe('#3b5ea0');
+    pickColor('Band color', '#1b3e80');
+    act(() => swatch('Band color')!.blur());
+    expect(state().diagram!.titleBlockContent).toEqual({ ...CREDITED, bandColor: '#1b3e80' });
+    expect(undoSteps()).toBe(1);
+    expect(calls()).toEqual([['title_block_band_color', { titleBlockBand: 'custom' }]]);
+    // Reset: the paper's colour again, a step and a count of its own.
+    act(() => button('Reset Band color to default')!.click());
+    expect(state().diagram!.titleBlockContent).toEqual(CREDITED);
+    expect(swatch('Band color')!.value).toBe(paper);
+    expect(undoSteps()).toBe(2);
+    expect(calls().at(-1)).toEqual(['title_block_band_color', { titleBlockBand: 'paper' }]);
   });
 
   it('lists the credits as label and value fields, the step count live and followed, with no way to add a second', () => {
@@ -595,6 +636,7 @@ describe('DiagramTitleBlockRows', () => {
     expect(select('Crease pattern')!.disabled).toBe(true);
     expect(textField('Subtitle')!.disabled).toBe(true);
     expect(textField('Description')!.disabled).toBe(true);
+    expect(swatch('Band color')!.disabled).toBe(true);
     expect(input('Label of credit 1')!.disabled).toBe(true);
     expect(input('Value of credit 1')!.disabled).toBe(true);
     for (const name of ['Remove credit 1', 'Type a value for credit 3 instead', 'Add Credit']) expect(button(name)!.disabled).toBe(true);

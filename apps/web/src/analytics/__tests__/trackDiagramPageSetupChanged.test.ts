@@ -74,4 +74,13 @@ describe('trackDiagramPageSetupChanged', () => {
       ['diagram page setup changed', { setting: 'title_block_pattern_size', title_block_size: 'default' }],
     ]);
   });
+
+  it('sends whether the band follows the paper’s colour, never the colour', () => {
+    trackDiagramPageSetupChanged('title_block_band_color', { titleBlockBand: 'custom' });
+    trackDiagramPageSetupChanged('title_block_band_color', { titleBlockBand: 'paper' });
+    expect(runtime.track.mock.calls).toEqual([
+      ['diagram page setup changed', { setting: 'title_block_band_color', title_block_band: 'custom' }],
+      ['diagram page setup changed', { setting: 'title_block_band_color', title_block_band: 'paper' }],
+    ]);
+  });
 });

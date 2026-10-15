@@ -219,8 +219,8 @@ export type FontUse = (face: string, text: string) => void;
 
 /**
  * The first page's title block, back to front (`diagram-title-block.md`,
- * section 6 and Phase 1c): the band in the paper's colour, the subtitle's
- * rule and the credits' dividers; the words — the subtitle, the title on the
+ * section 6 and Phase 1c): the band in the paper's colour or the one chosen
+ * for it, the subtitle's rule and the credits' dividers; the words — the subtitle, the title on the
  * band, the credits and the note; then the crease pattern in its square, in
  * the style's fold pens, and the finished model in front of it — in the
  * pattern's place, where there is no pattern. The model is on top of
@@ -231,7 +231,7 @@ function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageIn
   const { geometry, subtitle, band, credits, note } = block;
   // No title: the Pages view's "Add a title" in its place, as the title would print (`untitled`).
   const title = block.title ?? (input.untitled ? titleBlockTitle(block, input.untitled, input.setter) : null);
-  const inks = titleBlockInksOf(input.style);
+  const inks = titleBlockInksOf(input.style, input.titleBlock?.bandColor);
   const x = geometry.column.x;
   const elements: string[] = [];
   if (band.w > 0 && band.h > 0) {
@@ -252,9 +252,12 @@ function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageIn
   return elements;
 }
 
-/** The title block's band, title and rules in `style`'s paper and the page's ink (`titleBlockInks`): the page's, and what the Pages view marks the band in. */
-export function titleBlockInksOf(style: DiagramStyle): ReturnType<typeof titleBlockInks> {
-  return titleBlockInks(diagramSurfaceStyle(style).paper, INK);
+/**
+ * The title block's band, title and rules in `style`'s paper, or the band colour its author chose (`band`), and the
+ * page's ink (`titleBlockInks`): the page's, and the colour the Page pane's Band color shows while none is chosen.
+ */
+export function titleBlockInksOf(style: DiagramStyle, band?: string): ReturnType<typeof titleBlockInks> {
+  return titleBlockInks(diagramSurfaceStyle(style).paper, INK, band);
 }
 
 /** The subtitle's rule and the credits' dividers, in pt: J1b's. */

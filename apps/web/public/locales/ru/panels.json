@@ -1251,6 +1251,8 @@
         "auto": "Авто (шаг {{number}})",
         "autoNoneLinked": "Авто (нет связей)",
         "autoNoPicture": "Авто (нет картинок)",
+        "bandColor": "Цвет полосы",
+        "bandColorHelp": "Полоса за заголовком. Пока вы не выберете цвет, она повторяет цвет бумаги.",
         "creditLabel": "Название пункта {{number}}",
         "creditLabelPlaceholder": "Название",
         "credits": "Сведения",

@@ -1177,6 +1177,8 @@
         "auto": "Auto (Schritt {{number}})",
         "autoNoneLinked": "Auto (nichts verknüpft)",
         "autoNoPicture": "Auto (keine Bilder)",
+        "bandColor": "Bandfarbe",
+        "bandColorHelp": "Das Band hinter dem Titel. Es folgt der Farbe des Papiers, bis Sie eine Farbe wählen.",
         "creditLabel": "Bezeichnung der Angabe {{number}}",
         "creditLabelPlaceholder": "Bezeichnung",
         "credits": "Angaben",

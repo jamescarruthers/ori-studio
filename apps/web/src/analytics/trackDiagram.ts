@@ -59,6 +59,7 @@ import type {
   DiagramStepOpenedMode,
   DiagramStepOpenedVia,
   DiagramStyleChoiceName,
+  DiagramTitleBlockBand,
   DiagramTitleBlockChoice,
   DiagramTitleBlockCreditChange,
   DiagramTitleBlockSize,
@@ -332,8 +333,9 @@ export function trackDiagramViewSwitched(view: DiagramView): void {
  * where the title block's model or pattern now comes from, never which step;
  * and for the title block's text and sizes, what a reader of the page would
  * see change, never the text or the size: whether its subtitle or note
- * prints, how its credits changed and how many it has, bucketed, and whether
- * a size is the default.
+ * prints, how its credits changed and how many it has, bucketed, whether
+ * a size is the default, and whether the band follows the paper's colour —
+ * never the colour.
  */
 export function trackDiagramPageSetupChanged(
   setting: DiagramPageSetting,
@@ -346,6 +348,7 @@ export function trackDiagramPageSetupChanged(
     titleBlockSubtitle?: DiagramTitleBlockTextShown;
     titleBlockNote?: DiagramTitleBlockTextShown;
     titleBlockSize?: DiagramTitleBlockSize;
+    titleBlockBand?: DiagramTitleBlockBand;
   } = {}
 ): void {
   track(ANALYTICS_EVENTS.diagramPageSetupChanged, {
@@ -359,6 +362,7 @@ export function trackDiagramPageSetupChanged(
     ...(detail.titleBlockSubtitle ? { title_block_subtitle: detail.titleBlockSubtitle } : {}),
     ...(detail.titleBlockNote ? { title_block_note: detail.titleBlockNote } : {}),
     ...(detail.titleBlockSize ? { title_block_size: detail.titleBlockSize } : {}),
+    ...(detail.titleBlockBand ? { title_block_band: detail.titleBlockBand } : {}),
   });
 }
 

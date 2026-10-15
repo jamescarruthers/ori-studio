@@ -1214,6 +1214,8 @@
         "auto": "Auto (passo {{number}})",
         "autoNoneLinked": "Auto (nada vinculado)",
         "autoNoPicture": "Auto (sem imagens)",
+        "bandColor": "Cor da faixa",
+        "bandColorHelp": "A faixa atrás do título. Segue a cor do papel até você escolher uma.",
         "creditLabel": "Rótulo do crédito {{number}}",
         "creditLabelPlaceholder": "Rótulo",
         "credits": "Créditos",

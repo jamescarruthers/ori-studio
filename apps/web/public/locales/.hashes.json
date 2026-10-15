@@ -4474,7 +4474,9 @@
     "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
     "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092",
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
-    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6"
+    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
+    "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
   },
   "es": {
     "common:cancel": "19766ed6ccb2",
@@ -8951,7 +8953,9 @@
     "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
     "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092",
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
-    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6"
+    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
+    "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
   },
   "fr": {
     "common:cancel": "19766ed6ccb2",
@@ -13430,7 +13434,9 @@
     "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
     "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092",
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
-    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6"
+    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
+    "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
   },
   "ja": {
     "common:cancel": "19766ed6ccb2",
@@ -17810,7 +17816,9 @@
     "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
     "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092",
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
-    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6"
+    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
+    "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
   },
   "ko": {
     "common:cancel": "19766ed6ccb2",
@@ -22190,7 +22198,9 @@
     "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
     "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092",
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
-    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6"
+    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
+    "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
   },
   "pt-BR": {
     "common:cancel": "19766ed6ccb2",
@@ -26667,7 +26677,9 @@
     "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
     "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092",
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
-    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6"
+    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
+    "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
   },
   "ru": {
     "common:cancel": "19766ed6ccb2",
@@ -31144,7 +31156,9 @@
     "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
     "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092",
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
-    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6"
+    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
+    "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
   },
   "zh-CN": {
     "common:cancel": "19766ed6ccb2",
@@ -35524,6 +35538,8 @@
     "panels:diagram.titleBlock.default.paperSize": "e56d019bc4ab",
     "panels:diagram.titleBlock.default.recommendedPaper": "5b07990aa092",
     "panels:diagram.pagePane.titleBlock.description": "526e0087cc3f",
-    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6"
+    "panels:diagram.pagePane.titleBlock.descriptionHelp": "f44b57937cb6",
+    "panels:diagram.pagePane.titleBlock.bandColor": "776356bdb664",
+    "panels:diagram.pagePane.titleBlock.bandColorHelp": "591860cae368"
   }
 }

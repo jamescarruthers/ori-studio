@@ -4,6 +4,7 @@ import { TITLE_BLOCK_ART_SIZE_DEFAULTS, TITLE_BLOCK_ART_SIZE_RANGE } from '../..
 import type { TitleBlockPartChoices } from '../../diagram/pages/titleBlockChoices';
 import { useDiagramTitleBlock, type TitleBlockArtSize } from '../../diagram/pages/useDiagramTitleBlock';
 import { SelectRow, SliderRow, TextAreaRow, ToggleRow, type SelectRowOption } from '../ui/fieldRows';
+import { DiagramTitleBlockBandColorRow } from './DiagramTitleBlockBandColorRow';
 import { DiagramTitleBlockCredits } from './DiagramTitleBlockCredits';
 
 /** The sizes move by whole percents, so the defaults (59% and 79%) are stops. */
@@ -15,11 +16,12 @@ const SIZE_MAX = Math.round(TITLE_BLOCK_ART_SIZE_RANGE.max * 100);
  * The first page's title block, as rows the Page pane's Header & footer opens
  * with (`implementation-plans/diagram-title-block.md`, Phase 1c, H-16 A): the
  * toggle and, a step in under it while the page has a block, what it shows —
- * top to bottom as the block reads: the subtitle, the credits and the
- * description (the file's `note`), then the finished model and the crease
- * pattern, each Auto (named by the step it finds), a step, or None, with its
- * size while it is shown. Bound by `useDiagramTitleBlock`, which offers only
- * what the block can show.
+ * top to bottom as the block reads: the subtitle, the band's colour
+ * (`DiagramTitleBlockBandColorRow`), the credits and the description (the
+ * file's `note`), then the finished model and the crease pattern, each Auto
+ * (named by the step it finds), a step, or None, with its size while it is
+ * shown. Bound by `useDiagramTitleBlock`, which offers only what the block can
+ * show.
  */
 export function DiagramTitleBlockRows() {
   const { t, i18n } = useTranslation();
@@ -92,6 +94,7 @@ export function DiagramTitleBlockRows() {
             disabled={readOnly}
             onCommit={block.setSubtitle}
           />
+          <DiagramTitleBlockBandColorRow />
           <DiagramTitleBlockCredits
             credits={block.credits}
             stepCount={block.stepCount}

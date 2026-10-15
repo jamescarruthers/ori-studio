@@ -403,7 +403,8 @@ const STEP_COUNT_KEYS: ReadonlySet<string> = new Set(['kind']);
  * as the nearest here — a source as Auto, the credits as this build reads
  * them, a size held to its range. A part that does not read — the wrong type,
  * a step without its id — is dropped alone, and so is a blank subtitle or
- * note, and a credit that is no object.
+ * note, a band colour that is no `#rrggbb` colour (the band then follows the
+ * paper's), and a credit that is no object.
  *
  * `byline` is retired: this branch's credits as one text, never released. It
  * reads as the note where the file says none, and is never written.
@@ -431,6 +432,10 @@ function readTitleBlockContent(value: unknown): { content: DiagramTitleBlockCont
       if (typeof part !== 'number' || !Number.isFinite(part)) continue;
       if (isPastRange(part, TITLE_BLOCK_ART_SIZE_RANGE)) newer[key] = part;
       content[key] = Math.min(TITLE_BLOCK_ART_SIZE_RANGE.max, Math.max(TITLE_BLOCK_ART_SIZE_RANGE.min, part));
+    } else if (key === 'bandColor') {
+      // A look: one that is no `#rrggbb` colour reads as none, the band following the paper's colour.
+      const color = readHexColor(part);
+      if (color) content.bandColor = color;
     } else if (key === 'room') {
       // Layout, kept as said: a length the layout measured. One that is no length is dropped alone.
       if (typeof part === 'number' && Number.isFinite(part) && part > 0) content.room = part;

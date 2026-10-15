@@ -166,11 +166,16 @@ const PALE_CONTRAST = 2.5;
 /**
  * The block's inks for the paper `paper`: the band, the subtitle's rule and
  * the credits' dividers in the paper's colour — its coloured side, whichever
- * stands further from the white page — and the title white on it; on a pale
- * paper the title and the rules in `ink`.
+ * stands further from the white page — or in `band`, the colour its author
+ * chose (Zach, 2026-10-15); and the title white on it; on a pale colour the
+ * title and the rules in `ink`.
  */
-export function titleBlockInks(paper: { front: string; back: string }, ink: string): { band: string; title: string; rule: string } {
-  const colour = wcagContrast(paper.back, WHITE) > wcagContrast(paper.front, WHITE) ? paper.back : paper.front;
+export function titleBlockInks(
+  paper: { front: string; back: string },
+  ink: string,
+  band?: string
+): { band: string; title: string; rule: string } {
+  const colour = band ?? (wcagContrast(paper.back, WHITE) > wcagContrast(paper.front, WHITE) ? paper.back : paper.front);
   const pale = wcagContrast(colour, WHITE) < PALE_CONTRAST;
   return { band: colour, title: pale ? ink : WHITE, rule: pale ? ink : colour };
 }

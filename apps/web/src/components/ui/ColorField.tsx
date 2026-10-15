@@ -28,6 +28,8 @@ export function ColorField({
   layout = 'stacked',
   showValue = false,
   divider = true,
+  nested = false,
+  help,
   className,
 }: {
   label: string;
@@ -71,6 +73,10 @@ export function ColorField({
   layout?: 'stacked' | 'row' | 'inline';
   /** For the `row` layout: the rule under it (`FieldRow.divider`). */
   divider?: boolean;
+  /** For the `row` layout: a step in, for a colour that qualifies the setting above it (`FieldRow.nested`). */
+  nested?: boolean;
+  /** For the `row` layout: what the colour does, an info mark after the label (`FieldRow.help`). */
+  help?: string;
   /**
    * Show the hex alongside the swatch. Useful where the exact value is part of what is
    * being chosen — a colour that will be published, or one being matched to another —
@@ -129,9 +135,11 @@ export function ColorField({
       <FieldRow
         className={classes}
         label={label}
+        help={help}
         htmlFor={inputId}
         kind="color"
         disabled={disabled}
+        nested={nested}
         title={title}
         divider={divider}
       >

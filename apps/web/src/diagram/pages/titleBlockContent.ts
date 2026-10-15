@@ -65,6 +65,8 @@ export interface ResolvedTitleBlock {
    * null where it gives none or has no line to draw.
    */
   pattern: TitleBlockPart & { scene: PaperScene | null };
+  /** The band's colour its author chose (`DiagramTitleBlockContent.bandColor`); none, and it follows the paper's. */
+  bandColor?: string;
 }
 
 /** Whether a step can give the block's model: one of this build's, with a picture. */
@@ -99,14 +101,14 @@ function lastStep(document: DiagramDocument, gives: (step: DiagramStep) => boole
   return null;
 }
 
-/** What the first page's title block shows: each part's step, and the pattern's lines. */
+/** What the first page's title block shows: each part's step, the pattern's lines, and the band's colour where chosen. */
 export function resolveTitleBlock(document: DiagramDocument): ResolvedTitleBlock {
   const content = document.titleBlockContent;
   const numbers = stepNumbers(document);
   const model = resolvePart(document, numbers, content?.model, autoModelStep);
   const pattern = resolvePart(document, numbers, content?.pattern, autoPatternStep);
   const scene = pattern.step && givesPattern(pattern.step) ? patternScene(pattern.step.source.thumbnail) : null;
-  return { model, pattern: { ...pattern, scene } };
+  return { model, pattern: { ...pattern, scene }, ...(content?.bandColor ? { bandColor: content.bandColor } : {}) };
 }
 
 function resolvePart(

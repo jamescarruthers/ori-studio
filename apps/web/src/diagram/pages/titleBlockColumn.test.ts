@@ -386,4 +386,11 @@ describe('titleBlockInks', () => {
     expect(titleBlockInks({ front: '#ffffff', back: '#f3ead2' }, INK)).toEqual({ band: '#f3ead2', title: INK, rule: INK });
     expect(titleBlockInks({ front: '#ffffff', back: '#ffffff' }, INK)).toEqual({ band: '#ffffff', title: INK, rule: INK });
   });
+
+  it('takes the band’s colour its author chose over the paper’s, the title’s white or ink against it (Zach, 2026-10-15)', () => {
+    const pink = { front: '#ffffff', back: '#d982a5' };
+    expect(titleBlockInks(pink, INK, '#2a4d8f')).toEqual({ band: '#2a4d8f', title: '#ffffff', rule: '#2a4d8f' });
+    expect(titleBlockInks(pink, INK, '#f3ead2')).toEqual({ band: '#f3ead2', title: INK, rule: INK });
+    expect(titleBlockInks({ front: '#ffffff', back: '#b3b3b3' }, INK, '#2a4d8f')).toEqual({ band: '#2a4d8f', title: '#ffffff', rule: '#2a4d8f' });
+  });
 });
