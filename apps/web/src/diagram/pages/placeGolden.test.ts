@@ -218,6 +218,16 @@ describe('pages as they printed before placement came', () => {
     // (5→6, 20.0 mm) and 4 (12→13, 13.1 mm), "seven steps a page" page 1 (3→4,
     // 17.0 mm) and "flow landscape" page 1 (7→8, 8.2 mm). No home, arrow,
     // band or grid page moved.
+    // 2026-10-15, later still (Zach): a glyph between two steps on one flow row
+    // stands midway along the ribbon too, where it stood midway between the
+    // two boxes at the pictures' mean height; and glyphs clear nowhere along
+    // their stretch stand on its middle all the same. Six pages changed, both
+    // views, by one glyph each: "a page break and turns at a row's end" pages
+    // 1 (5→6, 7.3 mm) and 2 (9→10, 2.1 mm), "seven steps a page" pages 1 (6→7,
+    // 5.2 mm) and 2 (10→11, 6.6 mm), "a last page with its own count" page 1
+    // (4→5, 7.1 mm), and the enlarged steps' page 1, whose arrow beside its
+    // area moved 0.05 mm across before it is lifted to the area. No home, band
+    // or grid page moved.
     const digests = Object.fromEntries(
       pageLayoutFixtures().flatMap(({ name, document }) =>
         printed(document).pages.map((page, index) => [
@@ -230,24 +240,24 @@ describe('pages as they printed before placement came', () => {
       {
         "a newer build’s steps and turns · page 1": "f803ef9681c5a607 f803ef9681c5a607 4f53cda18c2baa0c",
         "a newer build’s steps and turns · page 2": "85e09522e6de28d1 85e09522e6de28d1 4f53cda18c2baa0c",
-        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "3fa6fe5067e94a63 63619d52ba0e645b f6e2e7dc17088d6f",
+        "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 1": "69c0bd25631007ce 89514ea704cdd27a e264fc6f3bfa35c3",
         "enlarged steps: a Fill run, a Size, and one waiting for its picture · page 2": "6f0a09122da36e45 ac52759daf91f1bb 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 1": "112071bbf0ef8d2a a17ea0be4c9ff643 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 2": "3806a26235e98c81 1a2ba3bcdc4a97af 4f53cda18c2baa0c",
         "flow from the right, across spreads, rows read upward · page 3": "4ffec0e00275d974 4e556a1f96e3d587 4f53cda18c2baa0c",
         "flow landscape, an odd row count · page 1": "372e464efe771b06 500178ad0c113c33 4f53cda18c2baa0c",
         "flow landscape, an odd row count · page 2": "4f156ef02e89e61b 75590eb5e9c8b775 4f53cda18c2baa0c",
-        "flow, a last page with its own count · page 1": "3ff926b1703c8e79 760ec382788b7393 4f53cda18c2baa0c",
+        "flow, a last page with its own count · page 1": "763637fa1fbfc08f 8cf35b99b1f4109e 4f53cda18c2baa0c",
         "flow, a last page with its own count · page 2": "c7945e9df33c6410 07afe7fb8e35e5b8 4f53cda18c2baa0c",
-        "flow, a page break and turns at a row’s end · page 1": "606a0f79289fb3cd ed5a6d63712086f7 4f53cda18c2baa0c",
-        "flow, a page break and turns at a row’s end · page 2": "77abe2641874bc12 bc6af1698ff96420 4f53cda18c2baa0c",
+        "flow, a page break and turns at a row’s end · page 1": "05993aee80b2115d 526b04916cacf11b 4f53cda18c2baa0c",
+        "flow, a page break and turns at a row’s end · page 2": "0180347d0422d7b8 79bae3e585680021 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 1": "b95ac905ca9104aa 7fcdc750dac69d2b 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 2": "8c4939afa8f7745c 84cbf972bb4500a1 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 3": "4cce1725247f86de 5f4e7c904e03cb91 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 4": "8ad2fbdc3b7376c2 12fab43f5f246697 4f53cda18c2baa0c",
         "flow, pages with their own counts · page 5": "ece26eda8a93adec 550b8d887bc9495a 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "766402a2801fd487 6e12da019e150db3 4f53cda18c2baa0c",
-        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "c7d1c2e266f5b707 22d6df0be18d2d81 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 1": "e77094730ef8afb3 d533a648e725b825 4f53cda18c2baa0c",
+        "flow, seven steps a page: short last rows, across a spread and a page turn · page 2": "e0bba33a1ff38a15 f2f7047421073473 4f53cda18c2baa0c",
         "flow, seven steps a page: short last rows, across a spread and a page turn · page 3": "26b0041be8aefdb8 d4e7c4bb5143c429 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 1": "762034dc73a12f50 762034dc73a12f50 4f53cda18c2baa0c",
         "grid, a page break, turns and an upload · page 2": "09fc08ba3982c9d1 09fc08ba3982c9d1 4f53cda18c2baa0c",

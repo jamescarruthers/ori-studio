@@ -1116,58 +1116,53 @@ describe('a turn on a packed page, on the lane', () => {
           };
           for (const turn of page.turns) {
             const label = `${JSON.stringify(setup)} ${firstPageSide} page ${page.number} ${turn.id}`;
-            // Wherever it stands, never on a step's number, picture or caption.
-            expect(clear(turn.at, turn.box), label).toBe(true);
             const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
-            if (k <= 0) continue;
+            if (k <= 0) {
+              // Before a page's first step: never on a step's number, picture or caption.
+              expect(clear(turn.at, turn.box), label).toBe(true);
+              continue;
+            }
             const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
             // Each goes the way of the step it comes before.
             expect(turn.rightToLeft, label).toBe(Boolean(next.rightToLeft));
-            if (before.band === next.band && !before.bend && !next.bend) {
-              seen.add('gutter');
-              // Midway between their boxes, in the gutter the packing kept, at their pictures' height.
-              const [left, right] = before.cellMm.x < next.cellMm.x ? [before, next] : [next, before];
-              expect(turn.at.x, label).toBeCloseTo((left.cellMm.x + left.cellMm.w + right.cellMm.x) / 2, 9);
-              expect(turn.at.y, label).toBeCloseTo((centreOf(before).y + centreOf(next).y) / 2, 9);
-              expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThan(left.cellMm.x + left.cellMm.w);
-              expect(turn.at.x + turn.box.w / 2, label).toBeLessThan(right.cellMm.x);
+            const where = before.band === next.band && !before.bend && !next.bend ? 'row' : before.bend || next.bend ? 'beside' : 'bend';
+            seen.add(where);
+            // On the lane, midway along it from where it leaves the one picture to where it reaches the other (Zach,
+            // 2026-10-15), where that is clear of every step as drawn; else as near that along it as is clear; and
+            // where nowhere along it is, on its middle all the same.
+            const solved = flowLane(page.flow!)!;
+            const stretch = laneStretch(solved.lane, solved.into, k - 1, k, lanePicture(before), lanePicture(next))!;
+            const length = stretch.at(-1)!.s;
+            const mid = spotAlong(stretch, length / 2);
+            // Every quarter millimetre out from its middle, either way.
+            const spots = Array.from({ length: Math.floor(length / 0.5) + 1 }, (_, n) => [length / 2 - n * 0.25, length / 2 + n * 0.25]).flatMap(
+              (pair) => pair.map((s) => spotAlong(stretch, s))
+            );
+            if (clear(mid, turn.box) || !spots.some((spot) => clear(spot, turn.box))) {
+              seen.add(clear(mid, turn.box) ? `${where} midway` : `${where} centred`);
+              expect(turn.at.x, label).toBeCloseTo(mid.x, 9);
+              expect(turn.at.y, label).toBeCloseTo(mid.y, 9);
             } else {
-              const bend = before.bend || next.bend ? 'beside' : 'bend';
-              seen.add(bend);
-              // On the lane, midway along it from where it leaves the one picture to where it reaches the other
-              // (Zach, 2026-10-15), where that is clear of every step; else as near that along it as is clear; and
-              // where nowhere along it is, moved off the steps from its middle, never further than to beyond the
-              // nearer.
-              const solved = flowLane(page.flow!)!;
-              const stretch = laneStretch(solved.lane, solved.into, k - 1, k, lanePicture(before), lanePicture(next))!;
-              const length = stretch.at(-1)!.s;
-              const mid = spotAlong(stretch, length / 2);
-              if (clear(mid, turn.box)) {
-                seen.add(`${bend} midway`);
-                expect(turn.at.x, label).toBeCloseTo(mid.x, 9);
-                expect(turn.at.y, label).toBeCloseTo(mid.y, 9);
-              } else {
-                seen.add(`${bend} moved`);
-                const onStretch = Array.from({ length: Math.ceil(length / 0.25) + 1 }, (_, n) => spotAlong(stretch, n * 0.25)).some(
-                  (spot) => Math.hypot(spot.x - turn.at.x, spot.y - turn.at.y) < 1e-6
-                );
-                const reach = Math.max(...[before, next].map((cell) => Math.hypot(cell.cellMm.w, cell.cellMm.h)));
-                expect(onStretch || Math.hypot(turn.at.x - mid.x, turn.at.y - mid.y) < reach, label).toBe(true);
-              }
-              // Inside the margin wherever the turn is: its band's outer edge no further out than the margin.
-              const middle = bend === 'bend' ? solved.turns.get(k)! : null;
-              if (middle && middle.stands !== 'past' && clear(mid, turn.box)) {
-                seen.add('bend inside');
-                const { widthMm: W, marginMm: m } = drawn.paper;
-                expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThanOrEqual(m - 1e-9);
-                expect(turn.at.x + turn.box.w / 2, label).toBeLessThanOrEqual(W - m + 1e-9);
-              }
+              seen.add(`${where} slid`);
+              expect(clear(turn.at, turn.box), label).toBe(true);
+              expect(spots.some((spot) => Math.hypot(spot.x - turn.at.x, spot.y - turn.at.y) < 1e-6), label).toBe(true);
+            }
+            // Inside the margin wherever the turn is: its band's outer edge no further out than the margin.
+            const middle = where === 'bend' ? solved.turns.get(k)! : null;
+            if (middle && middle.stands !== 'past' && clear(mid, turn.box)) {
+              seen.add('bend inside');
+              const { widthMm: W, marginMm: m } = drawn.paper;
+              expect(turn.at.x - turn.box.w / 2, label).toBeGreaterThanOrEqual(m - 1e-9);
+              expect(turn.at.x + turn.box.w / 2, label).toBeLessThanOrEqual(W - m + 1e-9);
             }
           }
         });
       }
     }
-    // A glyph beside a step in a bend has had to move off one at least once: the case the review found.
-    expect([...seen].sort()).toEqual(['beside', 'beside midway', 'beside moved', 'bend', 'bend inside', 'bend midway', 'bend moved', 'gutter'].sort());
+    // Within a row, across a bend and beside a step in one, each midway and slid along the lane off a step at least
+    // once; and beside a step in a bend, a glyph that stands clear nowhere along its stretch, centred on it.
+    expect([...seen].sort()).toEqual(
+      ['bend', 'bend inside', 'bend midway', 'bend slid', 'beside', 'beside centred', 'beside midway', 'beside slid', 'row', 'row midway', 'row slid'].sort()
+    );
   });
 });

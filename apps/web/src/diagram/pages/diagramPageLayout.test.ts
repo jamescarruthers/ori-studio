@@ -165,6 +165,7 @@ function alongLane(lane: Lane, before: LayoutCell, next: LayoutCell, at: { x: nu
     toNext: points[reach]!.s - points[g]!.s,
     offLane: Math.hypot(points[g]!.x - at.x, points[g]!.y - at.y),
     midway: points.find((point) => point.s >= half)!,
+    stretch: points.slice(leave, reach + 1),
   };
 }
 
@@ -1491,6 +1492,63 @@ describe('turns between steps on the page (D22)', () => {
     expect(slid).toBeGreaterThan(0);
   });
 
+  it('stands one between two steps on a flow row midway along the ribbon between their pictures, however unlike they are', () => {
+    // Zach, 2026-10-15: "equidistant between the two steps along the ribbon path", within a row as across a bend.
+    // The middle of the gutter between two boxes is that only where the two pictures fill their boxes alike: the
+    // crane's 19 → 20 stood 16.9 mm along the ribbon from 19's picture and 9.7 mm from 20's.
+    const tall = paper(150, 600);
+    const wide = paper(700, 300);
+    const cases = [
+      [paper(400), tall, wide, paper(400), wide, tall, paper(400), tall, wide],
+      [tall, wide, tall, wide, tall, wide, tall, wide, tall],
+    ];
+    let midway = 0;
+    for (const [n, shapes] of cases.entries()) {
+      const list = steps(9, (index) => ({ picture: shapes[index]!, text: index % 3 === 0 ? LONG : SHORT, ...(index > 0 ? { turnsBefore: [over(`turn-${index}`)] } : {}) }));
+      const page = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      for (const turn of page.turns) {
+        const k = page.cells.findIndex((cell) => cell.stepId === turn.beforeStepId);
+        const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+        if (before.band !== next.band || before.bend || next.bend) continue;
+        const along = alongLane(page.band!, before, next, turn.at);
+        const label = `case ${n} ${turn.id}: ${along.fromBefore.toFixed(2)} / ${along.toNext.toFixed(2)} mm`;
+        expect(along.offLane, label).toBeLessThan(0.05);
+        if (onAStep(page, along.midway, turn.box)) continue;
+        midway += 1;
+        expect(Math.abs(along.fromBefore - along.toNext), label).toBeLessThan(0.25);
+      }
+    }
+    expect(midway).toBeGreaterThan(4);
+  });
+
+  it('centres glyphs that stand clear nowhere along the ribbon on its middle all the same, over what they overlap', () => {
+    // Zach, 2026-10-15, the crane's enlarge arrow before step 24: "the middle of the arrow should kinda be sitting
+    // over the green centre", not moved off the ribbon to clear a caption and a number. Fourteen turn-overs stacked
+    // (98 mm) stand clear nowhere along most stretches between two pictures.
+    const stack = Array.from({ length: 14 }, (_, n) => over(`turn-${n}`));
+    const plain = layout(steps(9), { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+    const { widthMm: W, heightMm: H } = layout(steps(9), { layout: 'flow', stepsPerPage: 9 }).paper;
+    let centred = 0;
+    for (const k of plain.cells.keys()) {
+      if (k === 0) continue;
+      const list = steps(9, (index) => (index === k ? { turnsBefore: stack } : {}));
+      const page = layout(list, { layout: 'flow', stepsPerPage: 9 }).pages[0]!;
+      const [before, next] = [page.cells[k - 1]!, page.cells[k]!];
+      const [first, last] = [page.turns[0]!, page.turns.at(-1)!];
+      const size = { w: Math.max(...page.turns.map((turn) => turn.box.w)), h: last.at.y + last.box.h / 2 - (first.at.y - first.box.h / 2) };
+      const middle = { x: first.at.x, y: (first.at.y - first.box.h / 2 + last.at.y + last.box.h / 2) / 2 };
+      const along = alongLane(page.band!, before, next, middle);
+      const onPaper = (at: { x: number; y: number }) =>
+        at.x >= TURN_GUTTER_MM / 2 && at.x <= W - TURN_GUTTER_MM / 2 && at.y >= size.h / 2 && at.y <= H - size.h / 2;
+      if (along.stretch.some((point) => onPaper(point) && !onAStep(page, point, size))) continue;
+      centred += 1;
+      const label = `step ${k}: ${along.fromBefore.toFixed(2)} / ${along.toNext.toFixed(2)} mm, ${along.offLane.toFixed(2)} mm off`;
+      expect(along.offLane, label).toBeLessThan(0.05);
+      expect(Math.abs(along.fromBefore - along.toNext), label).toBeLessThan(0.25);
+    }
+    expect(centred).toBeGreaterThan(1);
+  });
+
   it('stands one across a bend midway along the ribbon past a step dragged off its home, clear of the steps as drawn', () => {
     // Zach's crane, page 2: every step placed by hand, step 15 dragged 32.5 mm in from where the layout put it. The
     // ribbon follows the pictures as placed; the glyph on it keeps clear of them as drawn, not of where 15 would
@@ -1568,7 +1626,8 @@ describe('turns between steps on the page (D22)', () => {
       if (turn.beforeStepId === null || !before || before.band !== next.band || before.bend || next.bend || !next.rightToLeft) continue;
       backwards += 1;
       expect(next.cellMm.x, turn.id).toBeLessThan(before.cellMm.x);
-      expect(turn.at.x, turn.id).toBeCloseTo((next.cellMm.x + next.cellMm.w + before.cellMm.x) / 2, 6);
+      expect(turn.at.x, turn.id).toBeGreaterThan(next.cellMm.x + next.cellMm.w);
+      expect(turn.at.x, turn.id).toBeLessThan(before.cellMm.x);
     }
     expect(byId.size).toBe(5);
     expect(backwards).toBeGreaterThan(0);
@@ -1910,7 +1969,10 @@ describe('enlarged steps on the page (Revision 2)', () => {
       expect(before.cellMm.x).toBeGreaterThan(next.cellMm.x);
       expect(arrow!.rightToLeft).toBe(true);
       expect(arrow!.liftable).toBe(true);
-      expect(arrow!.at.x).toBeCloseTo((next.cellMm.x + next.cellMm.w + before.cellMm.x) / 2, 6);
+      // On the band between the two boxes, the later on the left.
+      expect(arrow!.at.x).toBeGreaterThan(next.cellMm.x + next.cellMm.w);
+      expect(arrow!.at.x).toBeLessThan(before.cellMm.x);
+      expect(laneDistance(page.band!, arrow!.at)).toBeLessThan(0.01);
     });
 
     it('prints across a flow page’s bend on the band, where a turn would', () => {

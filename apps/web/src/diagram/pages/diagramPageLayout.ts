@@ -2057,22 +2057,22 @@ function laneCentre(cell: LayoutCell): { x: number; y: number } {
 }
 
 /**
- * Where the turns on a page print (D22): between two pictures on one row,
- * midway between them at their centres' height — on a flow page, between
- * their boxes, in the gutter the packing kept; across a flow page's bend, and
- * between a step in a bend and its neighbour, on the lane midway along it
- * between where it leaves the one picture and reaches the other (Zach,
- * 2026-10-15: "equidistant between the two steps along the ribbon path"; also
- * when the lane is not shown), or as near that along it as the glyphs stand
- * clear of the steps ({@link laneStretch}); before a picture
- * that starts a grid's row or the page, at its leading edge — a page's first
- * step has no row on the page to turn from, and the lane comes in at its
- * leading side; after the last picture, at its trailing edge. Several in one
- * place stand one above another, each glyph clear of the next, the stack
- * centred on the place. Kept on the paper, and on a flow page clear of every
- * step's number, picture and caption, moved the least way off one it would
- * stand on ({@link clearSpot}): beside a step in a bend no gutter is kept for
- * it.
+ * Where the turns on a page print (D22): on a flow page, between two steps —
+ * on one row, across a bend, or beside a step in one — on the lane midway
+ * along it between where it leaves the one picture and reaches the other
+ * (Zach, 2026-10-15: "equidistant between the two steps along the ribbon
+ * path"; also when the lane is not shown), or as near that along it as the
+ * glyphs stand clear of every step's number, picture and caption as drawn
+ * ({@link laneStretch}); where nowhere along it is clear, on its middle all
+ * the same, over what they overlap. On a grid, between two pictures on one
+ * row, midway between them at their centres' height. Before a picture that
+ * starts a grid's row or the page, at its leading edge — a page's first step
+ * has no row on the page to turn from, and the lane comes in at its leading
+ * side; after the last picture, at its trailing edge. Several in one place
+ * stand one above another, each glyph clear of the next, the stack centred on
+ * the place. Kept on the paper, and those at a flow page's first or last step
+ * clear of every step's number, picture and caption, moved the least way off
+ * one they would stand on ({@link clearSpot}).
  *
  * An enlarge arrow (Revision 2) takes the same places, standing after the
  * turns before its step: a turn's places are the arrow's, so the two agree
@@ -2175,9 +2175,8 @@ function placeTurns(
    * `outward` (+1 to the page's right, −1 to its left). On a flow page, moved
    * the least way clear of every step's box where they would stand on one.
    * Given a `stretch` of the lane between two pictures, they stand midway along
-   * it instead, or as near its middle along it as they stand clear; where
-   * nowhere along it they do, at its middle, moved the least way clear. Those
-   * clear the steps as drawn; every other glyph, where the layout puts them.
+   * it instead, or as near its middle along it as they stand clear of the
+   * steps as drawn; where nowhere along it they do, on its middle all the same.
    */
   const stack = (
     glyphs: readonly BetweenGlyph[],
@@ -2191,16 +2190,17 @@ function placeTurns(
       stretch = null,
     }: { shared?: boolean; toward?: { x: number; y: number } | null; outward?: number; stretch?: readonly LaneSpot[] | null } = {}
   ) => {
-    const slid = stretch ? alongStretch(glyphs, stretch, toward, outward) : null;
-    let stood = slid ?? standAt(glyphs, stretch ? spotAlong(stretch, stretch.at(-1)!.s / 2) : at, toward, outward);
-    if (flow && !slid) {
-      const clearOf = stretch ? drawn : obstacles;
-      const spot = clearSpot(stood.at, stood.size, clearOf, onPaper(stood.size));
+    // Along the lane: as near its middle as is clear, else on its middle all the same, over what it overlaps (Zach,
+    // 2026-10-15: "the middle of the arrow should kinda be sitting over the green centre").
+    const onLane = stretch ? (alongStretch(glyphs, stretch, toward, outward) ?? standAt(glyphs, spotAlong(stretch, stretch.at(-1)!.s / 2), toward, outward)) : null;
+    let stood = onLane ?? standAt(glyphs, at, toward, outward);
+    if (flow && !onLane) {
+      const spot = clearSpot(stood.at, stood.size, obstacles, onPaper(stood.size));
       if (spot !== stood.at) {
         // An arrow aimed from its new place takes another box: clear of the boxes with either.
         const moved = standAt(glyphs, spot, toward, outward);
         const either = { w: Math.max(stood.size.w, moved.size.w), h: Math.max(stood.size.h, moved.size.h) };
-        stood = standAt(glyphs, clearSpot(stood.at, either, clearOf, onPaper(either)), toward, outward);
+        stood = standAt(glyphs, clearSpot(stood.at, either, obstacles, onPaper(either)), toward, outward);
       }
     }
     const { at: { x }, aim, boxes, size } = stood;
@@ -2232,19 +2232,20 @@ function placeTurns(
     if (before.length > 0) {
       // A step in a bend has no row it shares with its neighbours.
       const inBend = flow !== null && k > 0 && Boolean(cells[k - 1]!.bend || cells[k]!.bend);
+      // On a flow page, on the lane, midway along it between where it leaves the one picture and reaches the other
+      // (Zach, 2026-10-15: "equidistant between the two steps along the ribbon path"): neither the middle of the
+      // gutter between two boxes nor a bend's deepest point is that, but where the two pictures stand alike.
+      const lane = flow?.lane;
+      const stretch = k > 0 && lane ? laneStretch(lane.lane, lane.into, k - 1, k, lanePicture(cells[k - 1]!), lanePicture(cells[k]!)) : null;
       if (k > 0 && rowOf(k - 1) === rowOf(k) && !inBend) {
         const a = centre(cells[k - 1]!);
         const b = centre(cells[k]!);
         const facing = (edge(k - 1, false).x + edge(k, true).x) / 2;
-        stack(before, { x: facing, y: (a.y + b.y) / 2 }, k, step.id, { shared: true });
+        stack(before, { x: facing, y: (a.y + b.y) / 2 }, k, step.id, { shared: true, stretch });
       } else if (k > 0 && flow) {
         const [previous, next] = [centre(cells[k - 1]!), centre(cells[k]!)];
         const outward = backwards(k - 1) ? -1 : 1;
-        const { lane } = flow;
-        // On the lane, midway along it between where it leaves the one picture and reaches the other (Zach,
-        // 2026-10-15): the turn's middle, halfway between the two in height, is that only where the two stand alike.
-        const stretch = lane ? laneStretch(lane.lane, lane.into, k - 1, k, lanePicture(cells[k - 1]!), lanePicture(cells[k]!)) : null;
-        // Else beside a step in a bend midway between the two pictures, and across a bend at its middle.
+        // With no stretch of lane: beside a step in a bend midway between the two pictures, across a bend at its middle.
         const at = inBend
           ? { x: (previous.x + next.x) / 2, y: (previous.y + next.y) / 2 }
           : (lane?.turns.get(k)?.at ?? { x: outward > 0 ? pageWidth - flow.bendInset : flow.bendInset, y: (previous.y + next.y) / 2 });

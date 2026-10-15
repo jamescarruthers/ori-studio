@@ -3353,6 +3353,21 @@ PDF's and the sheet's title, as any title does; the window title and the
 project's name do not read it. Evidence:
 `artifacts/title-block/default-title/final.png`.
 
+*As built (the turn glyph, 2026-10-15).* Zach, the crane's 14→15: the turn
+"should be equidistant between the two steps along the ribbon path". Every
+glyph between two steps on a flow page (a turn, or an enlarge arrow) stands
+on the lane midway along it between where it leaves the one picture's ink
+box and reaches the other's (`laneStretch`, `flowLane.ts`), within a row as
+across a bend, where it stood at the bend's deepest point or midway between
+two boxes; as near that along the lane as it stands clear of the steps as
+drawn; and where nowhere along it is clear, on its middle all the same
+("the middle of the arrow should kinda be sitting over the green centre").
+The crane's 14→15 went from 21.3 / 55.3 mm along the ribbon to 38.2 / 38.3;
+crane_final's 19→20 from 16.9 / 9.7 to 13.3 / 13.3. Computed at layout,
+never stored: a saved page keeps its arrangement and only its glyphs move.
+Commits 9c7700ded, 3649feee7 and the one after them. Evidence:
+`artifacts/turn-glyph/proposal-2.png` (agent worktree).
+
 *For Zach (header, 2026-10-15).* Pictures in `artifacts/title-block/
 header-fixes/` and `header-final/`.
 - **H-Q1. An empty credit on the page.** *Closed (Zach, 2026-10-15): empty
