@@ -202,7 +202,11 @@ export function FieldRow({
           and the line the switch sits on is the same with or without it. Empty
           rather than absent while nothing is overridden (see `overridable`). */}
       {noteLine && (
-        <span className={styles.note} data-field-note="" id={noteId}>
+        <span
+          className={styles.note}
+          data-field-note={overridden ? 'overridden' : note !== undefined ? 'reason' : ''}
+          id={noteId}
+        >
           {overridden ? t('common:fieldRow.overridden', 'Overridden') : note}
         </span>
       )}

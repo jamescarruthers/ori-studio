@@ -161,8 +161,15 @@
   text-overflow: ellipsis;
 }
 
+/* Why a disabled toggle cannot be switched (`FieldRow.note`): the one line on
+   a dimmed row that is there to be read, so it keeps the label's ink and is
+   not dimmed with the row. */
+.note[data-field-note='reason'] {
+  color: var(--text-secondary);
+}
+
 .row[data-disabled] .label,
-.row[data-disabled] .note,
+.row[data-disabled] .note:not([data-field-note='reason']),
 .row[data-disabled] .readout {
   opacity: 0.5;
 }

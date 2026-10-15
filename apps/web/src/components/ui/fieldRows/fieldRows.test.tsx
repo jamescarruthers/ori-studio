@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -46,6 +48,23 @@ function rerender(ui: React.ReactElement) {
   act(() => {
     root?.render(ui);
   });
+}
+
+/**
+ * The row's own stylesheet on the page, for what only CSS decides. jsdom gets
+ * no module class, so each class is read as the data attribute its element
+ * carries (`.note` as `[data-field-note]`). Vitest's root is `apps/web`.
+ */
+function withFieldRowStyles(check: () => void) {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(resolve(process.cwd(), 'src/components/ui/fieldRows/FieldRow.module.css'), 'utf8')
+    .replace(/\.([a-z]+)\b/g, '[data-field-$1]');
+  document.head.append(style);
+  try {
+    check();
+  } finally {
+    style.remove();
+  }
 }
 
 describe('ToggleRow', () => {
@@ -142,6 +161,22 @@ describe('ToggleRow', () => {
     rerender(<ToggleRow label="Aux" checked onChange={() => {}} />);
     expect(view.querySelector('[data-field-note]')).toBeNull();
     expect(row.hasAttribute('data-noted')).toBe(false);
+  });
+
+  it('dims a disabled row but not the reason it cannot be switched, which is what is left to read', () => {
+    withFieldRowStyles(() => {
+      const view = render(<ToggleRow label="Title block" checked={false} disabled note="Needs two rows or more" onChange={() => {}} />);
+      const opacity = (selector: string) => getComputedStyle(view.querySelector(selector)!).opacity;
+      const color = (selector: string) => getComputedStyle(view.querySelector(selector)!).color;
+      expect(opacity('[data-field-label]')).toBe('0.5');
+      expect(opacity('[data-field-note]')).not.toBe('0.5');
+      // In the label's ink, not the quieter one "Overridden" wears.
+      expect(color('[data-field-note]')).toBe(color('[data-field-label]'));
+      // "Overridden" dims with its row, as it always has.
+      rerender(<ToggleRow label="Grid" checked disabled inherited={false} onChange={() => {}} onReset={() => {}} />);
+      expect(view.querySelector('[data-field-note]')?.textContent).toBe('Overridden');
+      expect(opacity('[data-field-note]')).toBe('0.5');
+    });
   });
 
   it('says why it cannot be switched on the note’s line, read with the switch', () => {
