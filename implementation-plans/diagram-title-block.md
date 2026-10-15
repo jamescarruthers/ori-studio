@@ -18,6 +18,10 @@ at the end of Phase 1):
 - The header's look (sizes, a striking design on the left, a rich-text
   byline, the pane's order, a default byline) waits on mockups he will
   choose from; nothing of it is built here.
+- Reviewed the same day (round 2): fixed what the review found, and four
+  questions for him, Q1–Q4 under "For Zach (round 2, 2026-10-15)" — the
+  first two about hand positions on a page the toggle re-packs, which is
+  the first thing he will see when he turns the block on in the crane.
 
 **Zach's answer, 2026-10-14:** "Please implement the diagram title-page plan
 using your recommendations. Keep this work in a separate PR. I'll decide
@@ -1953,6 +1957,11 @@ if wanted: `scripts/setup-worktree.sh` copying `apps/web/public/fonts/diagram/`.
 **Zach's answers of 2026-10-15**
 - [x] A. Page counts shift (T-20, his answer; replaces B).
 - [x] B. Step 1 at the top left of the steps' area (1g's step 1 item).
+- [x] Round 2 review fixes: the toggle round-trips and never moves a break,
+  a newer build's counted page stops the shift, the help reworded
+  (28b5b9af9); `pack-7`, a first step's wide picture kept inside the
+  margin (bb3242311); the As-built corrected below.
+- [ ] Zach: Q1–Q4 under "For Zach (round 2, 2026-10-15)" below.
 
 *As built (A, the shift).* `pages/pageCounts.ts`:
 - `setPageSteps` sets a page's count, then `shiftLaterPages` moves the
@@ -2015,6 +2024,62 @@ if wanted: `scripts/setup-worktree.sh` copying `apps/web/public/fonts/diagram/`.
   74 mm down, 15 and 16 30 mm left): `a/crane-on/pdf-all.png`. Undo, or
   moving them home, clears it; whether a page whose first step changed
   should keep offsets is his call.
+- *Corrected in the review (2026-10-15), measured again on the dev server
+  at bb3242311 (`artifacts/title-block/round2-final/commit2/`):*
+  - **Off again does not give the saved layout back.** It gives 9 / 11 / 8
+    and the counts back, but since B the pages it re-packed (2 and 3) are
+    packed afresh under B's placement, not held: their first rows move
+    (page 3's 5.27 mm left; page 2's, whose step 10 is pinned past what
+    the page holds and now set in for it, 0.8 to 4.1 mm; 2.37 mm left at
+    28b5b9af9, before that), and every page is stamped `pack-7`. And the 13
+    steps the toggle sent home stay home. Only Undo restores the saved
+    layout, exactly. The sentence above was true when A was built, before B.
+  - **Which steps keep their hand positions.** Not 15 and 16: the toggle
+    sends 13 of the 22 steps Zach moved home — 5, 8, 12, 13, 15, 16, 19,
+    20, 22, 23, 25, 26 and 28 — four as it lands (8, 19, 20, 28, which
+    change page; the notice says 4) and nine more as the re-packed pages
+    are taken in (their bands changed; the notice grows to 13). The nine
+    that keep them — 7, 10, 11, 14, 17, 18, 21, 24 and 27 — are the ones
+    that overlap: on page 2, 17 beside 13 and over it, 14 under 15's
+    caption, 11's number on "Repeat step 16 behind", 11 past the margin.
+  - Both come from one rule (a step keeps its offset while it keeps its page
+    and band, 2026-10-13), and both are put to Zach under "For Zach" below.
+
+*For Zach (round 2, 2026-10-15).* Pictures:
+`artifacts/title-block/round2-final/crane-block-on-old-vs-new.png` (the
+crane with the block on, under the old count rule and the new);
+`artifacts/title-block/round2-review/E1-crane-on-pdf.png` and
+`E2-crane-on-off-vs-opened.png` (the review's).
+- **Q1. A page whose first step changes under a count shift: keep the hand
+  positions on it, or send them home?** Today a step keeps its offset while
+  it stays on its page and in its band, so the crane's page 2 overlaps when
+  the block goes on (above). A: keep the rule as it is (Undo, or moving
+  them home, is the remedy). B (recommended): a count shift — Set Steps on
+  Page or the block's toggle — that changes the step a page starts on
+  sends that page's hand positions home in the same edit, as "page
+  changed", with the existing notice and one Undo; a page whose first step
+  stays keeps them as now. B is what the crane needs and keeps his consent
+  rule (his own act, one notice, one Undo).
+- **Q2. Should the toggle be reversible without Undo?** Off again keeps the
+  counts but not the boxes or the hand positions (above). A (recommended):
+  no, Undo is the way back, and the notice says what moved; B: keep the
+  stored arrangement of a page whose first step the toggle changed until it
+  applies again, so off restores the saved boxes (hand positions still need
+  Undo, or Q1's answer); C: B, and keep the positions sent home with it.
+  B and C add state the file carries only to serve a round trip.
+- **Q3. Set Steps on Page at a break.** The toggle never moves a break now;
+  Set Steps on Page, on the page directly in front of a break, still moves
+  the break with that page's end (#436's behaviour). A (recommended): keep
+  it, a break set by hand moves only by his hand on the page in front of
+  it; B: never move a break there either, the page giving up steps to an
+  automatic page in front of the break and growing no further than it.
+- **Q4. The first row's spare width** (`round2-review/E3-landscape-left-
+  before-after-B.png`): since B, a page's first row has none before step 1
+  and a full share after its last step, so a short first row bunches left
+  and its turn into the next row moves in (51 mm on A4 landscape, First
+  page Left). A (recommended): keep it, as built; B: spread the spare
+  between the first row's steps only, its last step reaching the row's end.
+  B re-baselines the page goldens again.
 
 *As built (B, step 1 at the top left).* `pages/flowPacking.ts`: a page's
 first band starts at its packing area's left edge; its spare width is
