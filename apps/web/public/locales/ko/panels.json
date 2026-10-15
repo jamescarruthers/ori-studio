@@ -1190,7 +1190,6 @@
         "noPattern": "전개도에 연결된 단계가 없습니다",
         "noteCut": "메모의 나머지가 들어가지 않습니다",
         "noteNone": "메모가 들어가지 않습니다",
-        "noValue": "아직 내용이 없습니다",
         "stepNoPattern": "{{number}}단계에는 전개도가 없습니다",
         "stepNoPicture": "{{number}}단계에는 아직 그림이 없습니다"
       },

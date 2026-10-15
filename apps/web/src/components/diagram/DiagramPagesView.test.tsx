@@ -379,7 +379,7 @@ describe('DiagramPagesView', () => {
     expect(props.onSelect).toHaveBeenLastCalledWith(null);
   });
 
-  it('marks each credit with no value where it would print and where the note is cut, never in the page, and no empty note', () => {
+  it('marks where the note is cut, never in the page, and no credit with an empty value nor an empty note (Zach, 2026-10-15)', () => {
     const header = (credits: { label: string; value: string }[], note = '') => {
       const made = insertSteps(createDiagram({ title: 'Crane' }), [cpStep('step-1'), cpStep('step-2')], 0);
       const blocked = { ...made, page: { ...made.page, titleBlock: { enabled: true, heightShare: 0.23 } } };
@@ -397,13 +397,11 @@ describe('DiagramPagesView', () => {
     ]);
     const pages = preparedPages(document, FONTS, subsetter);
     render(pages, {}, pages.layout.bandInk, document);
-    expect(rooms()).toEqual([['credit', [['value', 'AUTHORNo value yet']]]]);
-    const credit = host.querySelector<HTMLElement>('[data-title-block-room="credit"]')!;
-    const { box } = pages.layout.pages[0]!.titleBlock!.emptyCredits[0]!;
-    expect([credit.style.left, credit.style.top, credit.style.width, credit.style.height]).toEqual([box.x, box.y, box.w, box.h].map((mm) => `${mm * PX_PER_MM}px`));
-    // Its words at the size its label prints at, so that the label is as wide as its room (review, 2026-10-15).
-    expect(credit.style.fontSize).toBe(`${pages.layout.pages[0]!.titleBlock!.labelSizeMm * PX_PER_MM}px`);
+    // An empty credit is not drawn, nor marked: no placeholder over the page, nothing on it.
+    expect(rooms()).toEqual([]);
+    expect(host.querySelector('[data-page="0"]')!.textContent).not.toContain('AUTHOR');
     expect(pages.compose(0).svg).not.toContain('AUTHOR');
+    expect(pages.compose(0).svg).toContain('STEPS');
     // A note longer than the block has room for: marked where it is cut, by a tag under the block.
     const long = header([{ label: 'Steps', value: '2' }], Array.from({ length: 40 }, (_, index) => `Line ${index + 1}`).join('\n'));
     const longPages = preparedPages(long, FONTS, subsetter);

@@ -18,14 +18,13 @@ const px = (mm: number) => mm * PAGES_PX_PER_MM;
 /**
  * Where the words go in each room: the title's in the band's middle; the
  * pattern's square's at the top of what a model standing in it leaves free;
- * the model's box's at its foot, under the pattern drawn behind it; a
- * credit's where its label would be; a cut's at the end of the line it marks.
+ * the model's box's at its foot, under the pattern drawn behind it; a cut's
+ * at the end of the line it marks.
  */
 const WORDS: Readonly<Record<TitleBlockPlaceholder['room'], 'top' | 'middle' | 'bottom'>> = {
   title: 'middle',
   square: 'top',
   model: 'bottom',
-  credit: 'top',
   cut: 'middle',
 };
 
@@ -33,9 +32,10 @@ const WORDS: Readonly<Record<TitleBlockPlaceholder['room'], 'top' | 'middle' | '
  * The first page's title block on the Pages view, over the page and never in
  * it (`implementation-plans/diagram-title-block.md`, section 6): its outline,
  * drawn as the margin guide is, and a box in each room of it where what
- * would print there prints nothing, saying why — the title, a credit with no
- * value, the crease pattern, the finished model — and where the header has
- * no more room for the credits or the note. No two boxes overlap. A press
+ * would print there prints nothing, saying why — the title, the crease
+ * pattern, the finished model — and where the header has no more room for
+ * the credits or the note. An empty credit or note is not drawn, and not
+ * marked either (Zach, 2026-10-15). No two boxes overlap. A press
  * passes through to the page, which brings the Page tab forward.
  */
 export function DiagramTitleBlockOverlay({
@@ -55,7 +55,7 @@ export function DiagramTitleBlockOverlay({
   paper: Pick<PrintPaper, 'widthMm' | 'heightMm'>;
 }) {
   const { t } = useTranslation();
-  const words = ({ part, step, number, label }: MissingTitleBlockPart): string[] => {
+  const words = ({ part, step, number }: MissingTitleBlockPart): string[] => {
     switch (part) {
       case 'title':
         return [t('panels:diagram.pages.titleBlock.addTitle', 'Add a title')];
@@ -71,8 +71,6 @@ export function DiagramTitleBlockOverlay({
             ? t('panels:diagram.pages.titleBlock.stepNoPicture', 'Step {{number}} has no picture yet', { number })
             : t('panels:diagram.pages.titleBlock.noModel', 'No step has a picture yet'),
         ];
-      case 'value':
-        return [...(label ? [label] : []), t('panels:diagram.pages.titleBlock.noValue', 'No value yet')];
       case 'credits':
         return [t('panels:diagram.pages.titleBlock.creditsCut', 'Some credits don’t fit')];
       case 'note':
@@ -91,15 +89,15 @@ export function DiagramTitleBlockOverlay({
         edges="foot"
         style={{ left: px(x), top: px(y), right: px(paper.widthMm - x - w), bottom: px(paper.heightMm - y - h) }}
       />
-      {missingTitleBlockParts(block, content, model).map(({ room, key, box, missing, sizeMm }) => (
+      {missingTitleBlockParts(block, content, model).map(({ room, key, box, missing }) => (
         <PagePlaceholder
           key={key}
-          kind={room === 'cut' ? 'cut' : room === 'credit' ? 'slot' : 'part'}
+          kind={room === 'cut' ? 'cut' : 'part'}
           words={WORDS[room]}
-          // The title's mark in the title's own ink, which reads on the band whatever its colour; a credit's at its label's size.
+          // The title's mark in the title's own ink, which reads on the band whatever its colour.
           ink={room === 'title' ? titleInk : undefined}
           data-title-block-room={room}
-          style={{ ...at(box), ...(sizeMm !== undefined ? { fontSize: px(sizeMm) } : {}) }}
+          style={at(box)}
         >
           {missing.map((part) => (
             <span key={part.part} data-title-block-missing={part.part}>

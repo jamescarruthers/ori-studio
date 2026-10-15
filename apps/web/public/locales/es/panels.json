@@ -1264,7 +1264,6 @@
         "noPattern": "Ningún paso está vinculado a un patrón de pliegues",
         "noteCut": "El resto de la nota no cabe",
         "noteNone": "La nota no cabe",
-        "noValue": "Sin valor todavía",
         "stepNoPattern": "El paso {{number}} no tiene patrón de pliegues",
         "stepNoPicture": "El paso {{number}} aún no tiene imagen"
       },

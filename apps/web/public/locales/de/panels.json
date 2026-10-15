@@ -1227,7 +1227,6 @@
         "noPattern": "Kein Schritt ist mit einem Faltmuster verknüpft",
         "noteCut": "Der Rest der Anmerkung passt nicht",
         "noteNone": "Die Anmerkung passt nicht",
-        "noValue": "Noch kein Wert",
         "stepNoPattern": "Schritt {{number}} hat kein Faltmuster",
         "stepNoPicture": "Schritt {{number}} hat noch kein Bild"
       },

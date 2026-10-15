@@ -1190,7 +1190,6 @@
         "noPattern": "展開図にリンクしたステップがありません",
         "noteCut": "備考の続きが入りきりません",
         "noteNone": "備考が入りきりません",
-        "noValue": "未入力",
         "stepNoPattern": "ステップ {{number}} には展開図がありません",
         "stepNoPicture": "ステップ {{number}} にはまだ図がありません"
       },

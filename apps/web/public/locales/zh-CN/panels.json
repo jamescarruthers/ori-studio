@@ -1190,7 +1190,6 @@
         "noPattern": "没有步骤链接到折痕图",
         "noteCut": "备注的其余部分放不下",
         "noteNone": "备注放不下",
-        "noValue": "尚无内容",
         "stepNoPattern": "第 {{number}} 步没有折痕图",
         "stepNoPicture": "第 {{number}} 步还没有图"
       },

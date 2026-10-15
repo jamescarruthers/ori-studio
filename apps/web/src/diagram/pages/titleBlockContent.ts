@@ -221,28 +221,22 @@ export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBl
 
 /** A part of the title block that prints nothing where it would show, and why. */
 export interface MissingTitleBlockPart {
-  /**
-   * The title, the pattern or the model; a credit's value; the credits' or the note's end, cut for want of room, or
-   * the whole note.
-   */
-  part: 'title' | 'pattern' | 'model' | 'value' | 'credits' | 'note' | 'wholeNote';
+  /** The title, the pattern or the model; the credits' or the note's end, cut for want of room, or the whole note. */
+  part: 'title' | 'pattern' | 'model' | 'credits' | 'note' | 'wholeNote';
   /** The step that cannot give it; null where Auto finds none, and for the rest. */
   step: DiagramStep | null;
   /** That step's number, as the pages print it. */
   number: number | null;
-  /** A credit's label, as printed, for its value. */
-  label?: string;
 }
 
 /** A room of the block where what would print there prints nothing ({@link missingTitleBlockParts}). */
 export interface TitleBlockPlaceholder {
   /**
    * The title's band; the pattern's square — the model's room too where no
-   * pattern is drawn; the model's box; a credit with no value; and where the
-   * column is cut.
+   * pattern is drawn; the model's box; and where the column is cut.
    */
-  room: 'title' | 'square' | 'model' | 'credit' | 'cut';
-  /** One for each mark: a credit's is its place among the marked credits. */
+  room: 'title' | 'square' | 'model' | 'cut';
+  /** One for each mark. */
   key: string;
   /**
    * Where it is marked: the room, or for the square, what a model drawn in it leaves free ({@link squareMark}); for
@@ -251,8 +245,6 @@ export interface TitleBlockPlaceholder {
   box: PageBox;
   /** What prints nothing there, in the order it would be drawn. */
   missing: MissingTitleBlockPart[];
-  /** A credit's: the size its label prints at, mm, which its mark's words are set at. */
-  sizeMm?: number;
 }
 
 /** The least room across, in mm, a mark's words are set in: two or three lines of them on the Pages view. */
@@ -262,11 +254,11 @@ const CUT_TAG_MM = 5;
 
 /**
  * What of the block prints nothing where it would show, room by room: the
- * title where the diagram has none; each credit with no value, where the
- * column has room to show it; where the credits or the note are cut; the
- * pattern and the model where they are Auto or a step, and no step gives
+ * title where the diagram has none; where the credits or the note are cut;
+ * the pattern and the model where they are Auto or a step, and no step gives
  * them — a part set to none is the author's, and is not missing, nor is an
- * empty note. The pattern and a model with no pattern in front of it would
+ * empty note or a credit with no value, which are simply not drawn (Zach,
+ * 2026-10-15). The pattern and a model with no pattern in front of it would
  * print in one square, which is one room; so no two rooms overlap.
  * `drawnModel` is where the model is drawn, null where it is not
  * (`wholePictureRoom`), which the square's mark keeps clear of. For the
@@ -288,13 +280,6 @@ export function missingTitleBlockParts(
   const cut = cutMark(block);
   return [
     ...(block.title ? [] : [{ room: 'title' as const, key: 'title', box: block.band, missing: [{ part: 'title' as const, ...unset }] }]),
-    ...block.emptyCredits.map(({ label, box }, index) => ({
-      room: 'credit' as const,
-      key: `credit-${index}`,
-      box,
-      missing: [{ part: 'value' as const, ...unset, label }],
-      sizeMm: block.labelSizeMm,
-    })),
     ...(cut ? [cut] : []),
     ...(square.length > 0 ? [{ room: 'square' as const, key: 'square', box: squareMark(block, drawnModel), missing: square }] : []),
     ...(front.length > 0 ? [{ room: 'model' as const, key: 'model', box: geometry.model, missing: front }] : []),
@@ -321,7 +306,7 @@ function cutMark(block: LayoutTitleBlock): TitleBlockPlaceholder | null {
  * Where the pattern's square is marked, clear of a model drawn in it
  * (`inSquare`): the square, less the model — the strip it leaves above
  * itself or beside itself, whichever is larger — or, where it leaves no room
- * for words, the column under all it prints and marks; the square itself
+ * for words, the column under all it prints; the square itself
  * where neither has room.
  */
 function squareMark(block: LayoutTitleBlock, inSquare: PageBox | null): PageBox {
@@ -336,13 +321,12 @@ function squareMark(block: LayoutTitleBlock, inSquare: PageBox | null): PageBox 
   return Math.min(under.w, under.h) >= MARK_ROOM_MM ? under : square;
 }
 
-/** How far down the column what it prints and marks reaches: the band, the credits, the marked credits and the note. */
+/** How far down the column what it prints reaches: the band, the credits and the note. */
 function columnFoot(block: LayoutTitleBlock): number {
-  const { band, credits, note, emptyCredits } = block;
+  const { band, credits, note } = block;
   const feet = [band.y + band.h];
   const lastRow = credits?.columns.at(-1);
   if (lastRow && credits) feet.push(lastRow.valueBaseline + DESCENT * credits.valueSizeMm);
-  for (const { box } of emptyCredits) feet.push(box.y + box.h);
   if (note && note.lines.length > 0) feet.push(note.firstBaseline + (note.lines.length - 1) * note.leadingMm + DESCENT * note.sizeMm);
   return Math.max(...feet);
 }

@@ -7,8 +7,7 @@ import styles from './PagePlaceholder.module.css';
  * step's picture is tinted as paper, its words in the middle (`picture`); a
  * part of the first page's title block is not, since the art in front of it
  * may show through, and its words stand at the box's `words` end, clear of
- * what may stand at the other (`part`); a credit's with no value is its
- * label over the reason, a line each (`slot`). Where the title block is cut, the
+ * what may stand at the other (`part`). Where the title block is cut, the
  * box is the strip under it, and its words a tag hanging at that strip's end,
  * over the page (`cut`). Its words in `ink` where they stand on something
  * printed in a colour of its own (the title's band). Placed by its parent.
@@ -21,7 +20,7 @@ export function PagePlaceholder({
   children,
   ...rest
 }: {
-  kind: 'picture' | 'part' | 'slot' | 'cut';
+  kind: 'picture' | 'part' | 'cut';
   words?: 'top' | 'middle' | 'bottom';
   ink?: string;
   style: CSSProperties;

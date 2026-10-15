@@ -305,7 +305,7 @@ describe('missingTitleBlockParts', () => {
     expect(missing(titleBlockDiagram([emptyStep('s1')], { pattern: { kind: 'none' } }))).toEqual([['square', geometry.pattern, [['model', null, null]]]]);
   });
 
-  it('marks each credit with no value where it would print, and no empty note', () => {
+  it('marks no credit with an empty value, nor an empty note: an empty part is simply not drawn (Zach, 2026-10-15)', () => {
     const content = resolveTitleBlock(titleBlockDiagram([cpStep('s1')]));
     const block = set('Crane', {
       credits: [
@@ -315,11 +315,7 @@ describe('missingTitleBlockParts', () => {
       ],
       note: '',
     });
-    const marks = missingTitleBlockParts(block, content, null);
-    expect(marks.map(({ room, key, box, missing: [part] }) => [room, key, box, part!.part, part!.label])).toEqual([
-      ['credit', 'credit-0', block.emptyCredits[0]!.box, 'value', 'AUTHOR'],
-      ['credit', 'credit-1', block.emptyCredits[1]!.box, 'value', ''],
-    ]);
+    expect(missingTitleBlockParts(block, content, null)).toEqual([]);
   });
 
   it('marks where the column is cut by a tag under the block’s foot, over nothing it prints: the note’s end, or credits left out', () => {
