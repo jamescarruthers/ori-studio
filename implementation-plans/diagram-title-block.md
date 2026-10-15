@@ -2238,9 +2238,10 @@ whose still-valid parts are folded in here; that file is history.
   (0.84 pt), its caps' top on the top margin (baseline 39.02). A rule in the
   paper's colour, 0.75 pt, at the caps' middle (y 36.52), from just after
   the text (x 120.49) to the band's right end (390.24).
-- **Band**: a rectangle in the paper's colour (the style's `paper.front`,
-  pink in the mock's style), x 34.02 → 390.24, y 46.52, 62.36 pt (22 mm)
-  tall: from the left margin to the art's left edge (the model's box).
+- **Band**: a rectangle in the paper's colour (the style's coloured side:
+  the crane's `paper.back`, pink, its front white), x 34.02 → 390.24, y
+  46.52, 62.36 pt (22 mm) tall: from the left margin to the art's left edge
+  (the model's box).
 - **Title**: white, bold, 45.35 pt (16 mm), 17 pt (6 mm) in from the band's
   left, its caps centred in the band (baseline 93.89); a long title shrinks
   to fit.
@@ -2266,15 +2267,17 @@ whose still-valid parts are folded in here; that file is history.
   setting's default (T-1, the evolution policy): it reaches new diagrams
   only; its legacy value stays 0.27, and a file saved with the block keeps
   its share.
-- **The pattern's side**: 49.39 / 62.08 = 0.796, so **0.8** of the block's
-  height: 50.23 mm at 0.23 on A4 portrait.
-- **The model's height**: 37.04 / 62.08 = 0.597, so **0.6** of the block's
-  height: 37.67 mm. Its top stands 25.12 mm under the block's top, the
-  pattern's foot 50.23 mm down: they overlap for 25.11 mm, 0.67 of the
+- **The pattern's side**: 49.39 / 62.79 (the block the page draws, not the
+  mock's 62.08) = 0.787, so **0.79** of the block's height: 49.60 mm at 0.23
+  on A4 portrait. (First derived against the mock's block as 0.8, 50.23 mm;
+  corrected in the geometry lane, see its as-built notes.)
+- **The model's height**: 37.04 / 62.79 = 0.590, so **0.59** of the block's
+  height: 37.05 mm. Its top stands 25.74 mm under the block's top, the
+  pattern's foot 49.60 mm down: they overlap for 23.86 mm, 0.64 of the
   model's height (the mock's 0.66).
-- Against today's 73.71 and 55.28 mm, both are 32% smaller: Zach's "maybe
+- Against today's 73.71 and 55.28 mm, both are 33% smaller: Zach's "maybe
   33%". A file saved with the block at 0.27 keeps its block; under the new
-  look its pattern is 58.97 mm and its model 44.23 mm (20% smaller), since
+  look its pattern is 58.23 mm and its model 43.49 mm (21% smaller), since
   the sizes are shares of the block's own height.
 - **Page 1's capacity at 0.23** (the rule is unchanged, `firstPageCapacity`):
   9 a page still gives 7 (`round(9 × 0.77)` = round(6.93)). Other counts
@@ -2339,7 +2342,7 @@ titleBlockContent?: {
   nothing printed (class (c)).
 - **`modelSize`**, **`patternSize`**: the model's height and the pattern's
   side as shares of the block's height, 0.3–1. Unsaid is the app's default,
-  0.6 and 0.8 (class (b), a look: no step moves). An edit to the default
+  0.59 and 0.79 (class (b), a look: no step moves). An edit to the default
   takes the size away, as Reset does; a finite number past the range is a
   newer build's (carried, read as the nearest, as `heightShare` is); one
   that is not a number is dropped alone.
@@ -2376,13 +2379,14 @@ credit's label or value (text, or the live count, and back). Each call is
 one undo step, the commits of one sitting at a text field one step
 (`session`, as the byline's were), and a read-only diagram takes nothing.
 
-#### The geometry and the drawing (the next lane)
+#### The geometry and the drawing (built: see its as-built notes)
 
 - `titleBlockGeometry` takes the content's sizes (the parts stay
   content-free otherwise: they never read what `resolveTitleBlock` finds).
   The pattern's square, `patternSize × h` (held to 0.45 of the block's
   width), at the top right; the model's box, `modelSize × h` tall, at most
-  1.25 times as wide, its foot on the block's foot, its right edge 0.6
+  1.1 times as wide (as built; 1.25 before, see the as-built notes) and 0.45
+  of the block's width, its foot on the block's foot, its right edge 0.6
   across the pattern; with no pattern drawn, the model keeps its size at the
   pattern's place.
 - The text column, from the left margin to the art's left edge: the
@@ -2392,15 +2396,19 @@ one undo step, the commits of one sitting at a text field one step
   the column needs, the column scales down together, and what still does
   not fit (the note's last lines, a credit past the band's end) is not
   printed and the Pages view marks where it is cut.
-- Labels print uppercase in the diagram's language (`toLocaleUpperCase`,
-  CJK unchanged); a credit with nothing in it prints nothing, one with only
-  a label prints the label (an unfinished credit shows, H-13 A).
-- Ink: the band, the rule and the dividers in the paper's colour (the
-  style's front); the title in white; labels, values and the note in the
-  step text's ink. `diagramFontTexts` lists the subtitle, labels and
-  values, the step count's digits and the note.
-- The overlay marks a missing title, pattern or model as now, and what is
-  cut.
+- Labels print uppercase (as built: Unicode's own mapping, the same on
+  every machine, not a locale's; CJK unchanged); a credit with an empty
+  value prints nothing, and the Pages view marks where it would go (as
+  built, by the lane's brief; this replaced "one with only a label prints
+  the label").
+- Ink: the band, the rule and the dividers in the paper's colour (as built:
+  the style's coloured side, whichever of front and back stands further
+  from white — the crane's back); the title in white, and on a pale paper
+  (white on it under 2.5:1) the title and the rules in ink; labels, values
+  and the note in the step text's ink. `diagramFontTexts` lists the
+  subtitle, labels and values, the step count's digits and the note.
+- The overlay marks a missing title, pattern or model as now, a credit
+  with no value, and what is cut.
 
 #### The Page pane (the next lane)
 
@@ -2465,11 +2473,11 @@ with your recs", for him to see:
   sitting; read-only refuses.
 
 **Geometry and drawing**
-- [ ] The parts take the sizes; the J1b column (subtitle row and rule,
+- [x] The parts take the sizes; the J1b column (subtitle row and rule,
   band, credits, note) scaled to the block; the overlay's cut marks.
-- [ ] The composer draws them in the style's paper colour and inks; fonts
+- [x] The composer draws them in the style's paper colour and inks; fonts
   listed; the live count printed and followed.
-- [ ] The tests that pin today's boxes (`titleBlockGeometry.test.ts`, the
+- [x] The tests that pin today's boxes (`titleBlockGeometry.test.ts`, the
   overlay sweep) re-baselined, at every paper, share and grid.
 
 **Page pane**
@@ -2568,6 +2576,137 @@ a new diagram's shorter block: the drawing and the pane are the next lanes.
   once they print; the toggle's share and the content on turning on are
   still the pane lane's (above), and the crane turned on today gets a 0.27
   block and no subtitle or credits.
+
+*As built (1c: the geometry, the drawing and the overlay, 2026-10-15).*
+Three commits: the header on the page (14fe16b5f), the Pages view's marks
+(b603516f9) and J1b's art sizes (7e5c3364b). The defaults' `(0.6 and 0.8)`
+in the notes above is the format lane's; they are 0.59 and 0.79 since
+7e5c3364b.
+- **The band and the parts** (`titleBlockGeometry.ts`, the addendum's
+  Common ground). `titleBlockBand(setup, head, foot)` is the layout: the
+  block and a grid's rows, from the page setup alone; `layoutDiagramPages`
+  reads it for page 1's area (`firstArea`) and nothing else.
+  `titleBlockParts(band, sizes)` is the look: the pattern's square at the
+  top right, its top on the block's; the model's box on the foot; and the
+  text `column` from the margin to the art's left edge (the nearer of the
+  model's box and the pattern). Content-free: they read the sizes, never
+  what `resolveTitleBlock` finds. A test lays page 1 out under five looks
+  (no words, every part, nine credits and a long note, both sizes at 1 and
+  at 0.3) and gets the same cells and block, held and packed afresh.
+- **The model's box is at most 1.1 times as wide as tall** (it was 1.25),
+  and 0.45 of the block's width, the pattern's own cap. The band ends at the
+  box's left, so the box is the crane's shape: its picture, 539 × 492 =
+  1.096, fills it, and the band ends at the drawn crane as in J1b. A model
+  narrower than that stands at the box's right and leaves room between it
+  and the band's end; wider, it is drawn shorter. With no pattern the model
+  keeps its own size at the pattern's place (`modelRoom`, H-4); the band
+  does not widen (content-free).
+- **The column** (`titleBlockColumn.ts`, new): `TITLE_BLOCK_TYPE` holds
+  J1b's sizes and rooms in mm (the subtitle 7 pt tracked 0.12 em; the band
+  12.5 pt under the block's top, 22 mm, the title from 16 mm 6 mm in; the
+  labels' caps 13 pt under the band, 7 pt, the values 4.2 mm 15 pt under
+  them; 12 pt gutters; 10 pt between rows and before the note).
+  `setTitleBlock` scales them together to fit the block, by the largest
+  scale at which the subtitle, the band and every row of credits fit, down
+  to `LEAST_SCALE` 0.5; what still has no room is not printed (a row of
+  credits and every row after it, counted; the note's lines past the foot,
+  the last cut with "…"; where a credit is cut the note is too). The note
+  never sizes the block. Rows are spaced by a capital's 0.714 em, each
+  row's baseline under its tallest label. A tracked line (`trackedLine`)
+  is measured with its letters' room and printed with `letter-spacing`,
+  each run placed with the room before it. The title is set as the old one
+  was, by its width and its ink, its capitals centred in the band, down to
+  0.3 of its size and then cut with "…".
+- **What it prints** (`titleBlockLook` in `titleBlockContent.ts`, one
+  answer for the layout and the fonts): the subtitle and labels in
+  capitals, by `toUpperCase` (the same on every machine, not the reader's
+  locale; the diagram has no language of its own); a text value as typed;
+  the live count as the last numbered step's number; the note; the sizes.
+  `diagramFontTexts` lists the subtitle and labels at 700, the values and
+  the note at 400, so a Chinese, Japanese or Korean header loads and embeds
+  its faces.
+- **The composer** draws, back to front, the band, the subtitle's rule and
+  the dividers, the art, then the words. Inks (`titleBlockInks`): the
+  paper's colour is its coloured side, whichever of front and back stands
+  further from white by WCAG contrast (the crane's back, pink; the plan's
+  "front" was the mock's misreading: the crane's front is white); the title
+  white and the rules in that colour, or both in ink where white on it is
+  under 2.5:1 (the Diagram preset's grey back, 2.1:1, takes ink). Labels,
+  values and the note in the step text's ink.
+- **The Pages view** (`DiagramTitleBlockOverlay`, `PagePlaceholder`): a
+  missing title is marked in the band; a credit with an empty value (the
+  lane's brief: not printed, a placeholder on the Pages view only) is
+  marked with its label over "No value yet", after the printed credits,
+  for as long as the block has room above the note (`LayoutTitleBlock.
+  emptyCredits`, none where a credit with a value is cut); where the note
+  or the credits are cut, a tag after the last thing printed on that line
+  (`kind` `cut`). An empty note is not marked. No two marks overlap on any
+  paper, share, grid or art size (the sweep in `titleBlockContent.test.ts`).
+  Three English strings (`panels:diagram.pages.titleBlock.noValue`,
+  `creditsCut`, `noteCut`); the other catalogs wait for the i18n pass, so
+  `i18n:check` reports their 24 gaps.
+- **The art sizes against the block the page draws.** The format lane took
+  J1b's pattern and model as shares of the mock's 62.08 mm block (0.8, 0.6),
+  but a new diagram's block is 62.79 mm, so the crane's pattern came out
+  0.85 mm larger and the band ended 1.2 mm short of J1b's. 0.79 and 0.59
+  are J1b's 49.39 and 37.04 mm over 62.79 (`TITLE_BLOCK_ART_SIZE_*` moved
+  to `document/pageRanges.ts`, re-exported, so that the page layout keeps
+  no runtime import of the document module: the column's default sizes
+  pulled it into `diagramPageLayout`'s graph and broke an import cycle
+  through the settings store).
+- **The crane against J1b** (A4 portrait, the block at 0.23, the J1b
+  content set through the store; `artifacts/title-block/header/
+  crane-j1b-measured.txt`): the subtitle, its rule, the band, the title,
+  the labels' and values' baselines, the dividers' tops, the pattern and
+  the drawn crane within 0.36 mm. Three things are not: the block's foot,
+  the model's top and step 1 stand 0.71 mm lower, the 0.23 share's (J1b's
+  block is 0.2274; at 0.227 page 1's capacity changes at 11 and 24 a page,
+  a page-count rule, so the share is left to Zach); the second and third
+  credit columns start 4.2 and 8.5 mm further left, since J1b's columns were
+  not its faces' advances ("Traditional" is 60.29 pt in Noto Sans; J1b drew
+  its column 66.27 pt); and page 1 holds 7 steps where J1b drew 9, the
+  crane's counts shifting when the block comes (T-20, as Zach answered).
+- **Tests.** `titleBlockGeometry.test.ts` (band, parts, column at every
+  paper, share 0.15–0.5, grid and both ends of each size, J1b within half
+  a millimetre); `titleBlockColumn.test.ts` (J1b's numbers with the fonts,
+  the subtitle cleared, empty values, wrapping, the note and its cut, the
+  title's shrink and cut, Chinese faces, the scale and containment at every
+  paper, share and grid, `trackedLine`, the inks);
+  `titleBlockContent.test.ts` (the look, the model's room, every mark and
+  the overlap sweep with sizes and a header); `composeDiagramPage.test.ts`
+  (the band's rect and colour, the tracked subtitle and labels, the white
+  title, no empty value, the live count followed, the rules, pale paper in
+  ink, the subtitle cleared, the Chinese header's faces embedded);
+  `diagramPageLayout.test.ts` (the header set; page 1 the same under every
+  look); `DiagramPagesView.test.tsx` (the marks over the page, never in it).
+  Re-baselined: the old geometry and byline tests, the overlay's portrait
+  model (now at its own size), the defaults' pins in the format and store
+  tests.
+- **Failing before.** The six test files of 14fe16b5f against the sources
+  of b363e0856: 38 of their tests fail. The marks' tests against the
+  sources of 14fe16b5f: 5 fail. The sizes' against 0.6 and 0.8: 4 fail.
+- Checked at 7e5c3364b: `tsc`; ESLint on every changed file; vitest over
+  `src/diagram`, `src/components/diagram`, `src/components/panels`,
+  `src/components/ui/fieldRows`, `src/export`, `src/print`, `src/store`,
+  `src/commands`, `src/keyboard`, `src/analytics`, `src/styles` and
+  `src/i18n` (342 files, 5376 tests): all pass. `i18n:check`: the 24
+  expected gaps. In the browser (5332, `artifacts/title-block/header/
+  capture.mjs`, Chromium): sixteen cases, each written as the Pages view,
+  the PDF, Print and the one-sheet SVG — the crane as J1b, First page
+  Right, the subtitle cleared, a note, a long title with six credits,
+  Japanese, a pale paper, empty values, no pattern, a new diagram in the
+  flow and a 3 × 3 grid, A4 and Letter landscape, A5 either way up, Letter
+  portrait. Looked at: every case's PDF page 1 (`headers-portrait.png`,
+  `headers-landscape.png`), the crane's PDF beside J1b
+  (`crane-j1b-beside-J1b.png`), its PDF, Print and Pages view stacked
+  (`crane-j1b-surfaces-head.png`), its sheet's header words, and the Pages
+  view in WebKit beside Chromium (`chromium-webkit-view-head.png`).
+- **For the next lanes, from this one:** the pane's Byline field still
+  edits the note and its help still says four lines
+  (`TITLE_BLOCK_BYLINE_LINES` is kept for it alone); the pane test's
+  comment names 0.23 as a new diagram's share, still true. The title is cut
+  at 0.3 of its size rather than set on two lines (a bold `paragraph` in
+  both setters would allow it).
 
 ### Phase 2: after the release
 
