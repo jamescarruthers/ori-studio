@@ -460,6 +460,7 @@ describe('cellPicture', () => {
         has,
         advance: () => 500,
         codePoints: () => [],
+        ink: () => null,
       });
       const latin = metrics((codePoint) => codePoint < 0x2000);
       const han = metrics((codePoint) => codePoint === 0x2192 || codePoint === 0x6298 || codePoint === 0x20);

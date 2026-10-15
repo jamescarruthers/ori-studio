@@ -9,7 +9,8 @@
  *
  * Reads `head` (units per em), `cmap` (formats 4 and 12, Unicode), `hhea` and
  * `hmtx`. Anything malformed is an error: a font that does not read is not
- * measured by a guess.
+ * measured by a guess. A glyph's ink, how far it reaches above and below the
+ * baseline, is read from `loca` and `glyf` when it is asked for.
  *
  * Pure: no DOM.
  */
@@ -22,6 +23,19 @@ export interface FontMetrics {
   advance: (codePoint: number) => number;
   /** Every code point the font maps, for coverage. */
   codePoints: () => Iterable<number>;
+  /**
+   * How far the code point's glyph reaches up and down, in font units: its
+   * outline's top and bottom, up from the baseline (a descender's bottom
+   * below zero). Null for one with no outline (a space, a glyph the font
+   * lacks) or where the font's outlines do not read.
+   */
+  ink: (codePoint: number) => GlyphInk | null;
+}
+
+/** A glyph's outline, top and bottom, in font units up from the baseline. */
+export interface GlyphInk {
+  top: number;
+  bottom: number;
 }
 
 export class FontReadError extends Error {
@@ -75,11 +89,41 @@ export function readFontMetrics(bytes: ArrayBuffer | Uint8Array): FontMetrics {
     u16(hmtx.offset + Math.min(glyph, numberOfHMetrics - 1) * 4);
 
   const glyphs = readCmap(view, table('cmap'), u16, u32);
+  const inkOfGlyph = outlines(view, tables, view.getInt16(table('head').offset + 50));
   return {
     unitsPerEm,
     has: (codePoint) => glyphs.has(codePoint),
     advance: (codePoint) => advanceOfGlyph(glyphs.get(codePoint) ?? 0),
     codePoints: () => glyphs.keys(),
+    ink: (codePoint) => {
+      const glyph = glyphs.get(codePoint);
+      return glyph === undefined ? null : inkOfGlyph(glyph);
+    },
+  };
+}
+
+/**
+ * Each glyph's outline, `yMax` and `yMin` of its `glyf` header, found through
+ * `loca` (short offsets, halved, where `indexToLocFormat` is 0; long ones
+ * where it is 1). Null for an empty glyph, and for any glyph of a font whose
+ * outline tables are missing or do not read: the ink is then not known,
+ * rather than the font refused, since its advances still measure.
+ */
+function outlines(view: DataView, tables: ReadonlyMap<string, Table>, indexToLocFormat: number): (glyph: number) => GlyphInk | null {
+  const loca = tables.get('loca');
+  const glyf = tables.get('glyf');
+  const fits = (table: Table | undefined): table is Table => !!table && table.offset + table.length <= view.byteLength;
+  if (!fits(loca) || !fits(glyf) || (indexToLocFormat !== 0 && indexToLocFormat !== 1)) return () => null;
+  const entry = indexToLocFormat === 0 ? 2 : 4;
+  const offsetOf = (glyph: number) =>
+    indexToLocFormat === 0 ? view.getUint16(loca.offset + glyph * entry) * 2 : view.getUint32(loca.offset + glyph * entry);
+  return (glyph) => {
+    if ((glyph + 2) * entry > loca.length) return null;
+    const start = offsetOf(glyph);
+    const end = offsetOf(glyph + 1);
+    // A header is ten bytes: contours, then xMin, yMin, xMax, yMax.
+    if (end - start < 10 || end > glyf.length) return null;
+    return { top: view.getInt16(glyf.offset + start + 8), bottom: view.getInt16(glyf.offset + start + 4) };
   };
 }
 

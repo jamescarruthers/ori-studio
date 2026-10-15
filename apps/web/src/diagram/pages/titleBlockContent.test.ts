@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { PageBox } from './pagePlacement';
+import { PRINT_PAPER_MM } from './printPaper';
 import {
   DEFAULT_PAGE_SETUP,
   createDiagram,
@@ -11,6 +13,7 @@ import {
   type DiagramCpSource,
   type DiagramDocument,
   type DiagramEntry,
+  type DiagramPageSetup,
   type DiagramStep,
   type DiagramTitleBlockContentPatch,
 } from '../document/diagramDocument';
@@ -192,36 +195,81 @@ describe('missingTitleBlockParts', () => {
   const geometry = titleBlockGeometry({ ...DEFAULT_PAGE_SETUP, layout: 'flow', titleBlock: { enabled: true, heightShare: 0.27 } }, 11, 8)!;
   const missing = (document: DiagramDocument, title = 'Crane') =>
     missingTitleBlockParts(setTitleBlock(geometry, { title, byline: '' }, estimateTextSetter), resolveTitleBlock(document)).map(
-      ({ part, box, step }) => [part, box, step?.id ?? null]
+      ({ room, box, missing: parts }) => [room, box, parts.map(({ part, step, number }) => [part, step?.id ?? null, number])]
     );
 
   it('marks nothing where every part prints', () => {
     expect(missing(diagram([cpStep('s1'), cpStep('s2')]))).toEqual([]);
   });
 
-  it('marks the title where there is none, and a part no step gives where it would print', () => {
-    // No linked step and no picture: the pattern in its square, the model over the whole art.
+  it('marks the title where there is none, and a part no step gives in the room it would print in, naming the step by its number', () => {
+    // No linked step and no picture: the pattern and the model would both stand in the pattern's square, one room.
     expect(missing(diagram([empty('s1')]), '')).toEqual([
-      ['title', geometry.title, null],
-      ['pattern', geometry.pattern, null],
-      ['model', geometry.art, null],
+      ['title', geometry.title, [['title', null, null]]],
+      ['square', geometry.pattern, [['pattern', null, null], ['model', null, null]]],
     ]);
-    // A chosen step that can no longer give its part names it; the model stands in front of a pattern drawn.
-    const chosen = diagram([cpStep('s1'), upload('s2')], { model: { kind: 'step', stepId: 's1' }, pattern: { kind: 'step', stepId: 's2' } });
-    expect(missing(removeStepPicture(chosen, 's1'))).toEqual([
-      ['pattern', geometry.pattern, 's2'],
-      ['model', geometry.art, 's1'],
-    ]);
+    // A chosen step that can no longer give its part names it, numbered as the pages number it, turns left out.
+    const chosen = diagram([cpStep('s1'), turn('t1'), upload('s2')], {
+      model: { kind: 'step', stepId: 's1' },
+      pattern: { kind: 'step', stepId: 's2' },
+    });
+    expect(missing(removeStepPicture(chosen, 's1'))).toEqual([['square', geometry.pattern, [['pattern', 's2', 2], ['model', 's1', 1]]]]);
+    // The model alone missing, in front of a pattern drawn: its own box.
     const pictureless = diagram([cpStep('s1'), cpStep('s2')], { model: { kind: 'step', stepId: 's2' } });
-    expect(missing(removeStepPicture(pictureless, 's2'))).toEqual([['model', geometry.model, 's2']]);
+    expect(missing(removeStepPicture(pictureless, 's2'))).toEqual([['model', geometry.model, [['model', 's2', 2]]]]);
+    // The pattern alone missing: the model stands in its square, which says why there is no pattern.
+    expect(missing(diagram([upload('s1')]))).toEqual([['square', geometry.pattern, [['pattern', null, null]]]]);
+    // The pattern set to none, the model missing: the model's room is the square.
+    expect(missing(diagram([empty('s1')], { pattern: { kind: 'none' } }))).toEqual([['square', geometry.pattern, [['model', null, null]]]]);
   });
 
   it('marks nothing the author set to none', () => {
     expect(missing(diagram([empty('s1')], { model: { kind: 'none' }, pattern: { kind: 'none' } }))).toEqual([]);
   });
 
-  it('stands the model in front of the pattern where one is drawn, and over its square too where none is', () => {
+  it('stands the model in front of the pattern where one is drawn, and in its square where none is', () => {
     expect(modelRoom(geometry, resolveTitleBlock(diagram([cpStep('s1')])))).toBe(geometry.model);
-    expect(modelRoom(geometry, resolveTitleBlock(diagram([cpStep('s1')], { pattern: { kind: 'none' } })))).toBe(geometry.art);
+    expect(modelRoom(geometry, resolveTitleBlock(diagram([cpStep('s1')], { pattern: { kind: 'none' } })))).toBe(geometry.pattern);
+    expect(modelRoom(geometry, resolveTitleBlock(diagram([upload('s1')])))).toBe(geometry.pattern);
+  });
+
+  it('never stands the model on the title or the byline, nor one box of the overlay on another, on any paper, share or grid', () => {
+    const right = (box: PageBox) => box.x + box.w;
+    const foot = (box: PageBox) => box.y + box.h;
+    const overlap = (a: PageBox, b: PageBox) =>
+      Math.max(0, Math.min(right(a), right(b)) - Math.max(a.x, b.x)) * Math.max(0, Math.min(foot(a), foot(b)) - Math.max(a.y, b.y));
+    const pictureless = diagram([cpStep('s1'), cpStep('s2')], { model: { kind: 'step', stepId: 's2' } });
+    const contents = [
+      diagram([cpStep('s1')]),
+      diagram([upload('s1')]),
+      diagram([empty('s1')]),
+      removeStepPicture(pictureless, 's2'),
+      diagram([upload('s1')], { pattern: { kind: 'none' } }),
+      diagram([empty('s1')], { pattern: { kind: 'none' } }),
+      diagram([cpStep('s1')], { model: { kind: 'none' } }),
+    ].map(resolveTitleBlock);
+    const papers = Object.keys(PRINT_PAPER_MM).flatMap((size) => (['portrait', 'landscape'] as const).map((orientation) => ({ size, orientation })));
+    const layouts = [{ layout: 'flow' as const }, ...[2, 3, 6].map((rows) => ({ layout: 'grid' as const, columns: 3, rows }))];
+    let rooms = 0;
+    for (const paper of papers) {
+      for (const heightShare of [0.15, 0.27, 0.5]) {
+        for (const layout of layouts) {
+          const setup = { ...DEFAULT_PAGE_SETUP, ...paper, ...layout, titleBlock: { enabled: true, heightShare } } as DiagramPageSetup;
+          const label = JSON.stringify({ ...paper, ...layout, heightShare });
+          const shape = titleBlockGeometry(setup, 11, 8)!;
+          for (const content of contents) {
+            const room = modelRoom(shape, content);
+            expect(overlap(room, shape.title), label).toBe(0);
+            expect(overlap(room, shape.byline), label).toBe(0);
+            for (const title of ['', 'Crane']) {
+              const boxes = missingTitleBlockParts(setTitleBlock(shape, { title, byline: '' }, estimateTextSetter), content).map(({ box }) => box);
+              rooms += boxes.length;
+              boxes.forEach((a, index) => boxes.slice(index + 1).forEach((b) => expect(overlap(a, b), label).toBe(0)));
+            }
+          }
+        }
+      }
+    }
+    expect(rooms).toBeGreaterThan(0);
   });
 });

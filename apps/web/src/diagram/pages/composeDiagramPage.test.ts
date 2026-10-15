@@ -726,7 +726,7 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
   const textsOf = (svg: string) => [...parse(svg).querySelectorAll('svg > text')].map((text) => text.textContent);
   /** The model as the block draws it into `room`. */
   const modelOf = (document: DiagramDocument, room: Box, pages = preparedPages(document, FONTS, subsetter)) =>
-    wholePicture(pages.titleBlock.model.step!, document.assets, document.style, room, 'title-block-', {
+    wholePicture(pages.titleBlock!.model.step!, document.assets, document.style, room, 'title-block-', {
       hanStyle: document.hanStyle,
       runs: pages.setter.runs,
     })!;
@@ -779,10 +779,12 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     // Set to its box's bottom right: its drawing's right and foot on the box's, but for its pens' ink.
     expect((model.boundsPt.x + model.boundsPt.width) / PT_PER_MM).toBeCloseTo(geometry.model.x + geometry.model.w, 0);
     expect((model.boundsPt.y + model.boundsPt.height) / PT_PER_MM).toBeCloseTo(geometry.model.y + geometry.model.h, 0);
-    // No pattern: the model over the whole art, the pattern's square too.
+    // No pattern: the model in the pattern's square, clear of the title's column.
     const alone = blockDiagram({ pattern: { kind: 'none' } }, marked);
     const alonePages = preparedPages(alone, FONTS, subsetter);
-    expect(alonePages.compose(0).svg).toContain(modelOf(alone, geometry.art, alonePages).markup);
+    const standing = modelOf(alone, geometry.pattern, alonePages);
+    expect(alonePages.compose(0).svg).toContain(standing.markup);
+    expect(standing.boundsPt.x / PT_PER_MM).toBeGreaterThanOrEqual(geometry.title.x + geometry.title.w);
   });
 
   it('draws only the words where there is neither pattern nor model, and keeps the block’s room', () => {
@@ -790,7 +792,8 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     const pages = preparedPages(document, FONTS, subsetter);
     const { geometry } = pages.layout.pages[0]!.titleBlock!;
     const svg = pages.compose(0).svg;
-    expect(linesIn(svg, geometry.art)).toEqual([]);
+    expect(linesIn(svg, geometry.pattern)).toEqual([]);
+    expect(linesIn(svg, geometry.model)).toEqual([]);
     expect(svg).not.toContain('title-block-');
     expect(textsOf(svg).slice(0, 2)).toEqual([TITLE, 'Design: 将底角Paper: 15 cm']);
     // Every step where it is with both parts shown.
@@ -828,6 +831,18 @@ describe('the title block on the first page (`diagram-title-block.md`, section 6
     // The tab: on the second page, not the first.
     expect(svg).not.toMatch(/<rect [^>]*rx=/);
     expect(pages.compose(1).svg).toMatch(/<rect [^>]*rx=/);
+  });
+
+  it('neither loads the byline’s faces nor works out what the block shows where the first page has no block', () => {
+    const off = { ...blockDiagram(), page: { ...blockDiagram().page, titleBlock: { ...ON, enabled: false } } };
+    // A Chinese byline left in a diagram with the block off asks for no face of its own.
+    expect(diagramFontTexts(off).map(({ text }) => text)).not.toContain(BYLINE);
+    expect(preparedPages(off, FONTS, subsetter).titleBlock).toBeNull();
+    // Nor where a grid of one row has no room for it.
+    const oneRow = { ...blockDiagram(), page: { ...blockDiagram().page, layout: 'grid' as const, rows: 1 } };
+    expect(diagramFontTexts(oneRow).map(({ text }) => text)).not.toContain(BYLINE);
+    expect(preparedPages(oneRow, FONTS, subsetter).titleBlock).toBeNull();
+    expect(preparedPages(blockDiagram(), FONTS, subsetter).titleBlock?.model.step?.id).toBe('step-9');
   });
 
   it('leaves the block out of a composition of one part, and draws it in the page without one', () => {

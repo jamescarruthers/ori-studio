@@ -35,7 +35,7 @@ const MODEL_RIGHT_SHARE = 0.6;
 const TEXT_CLEAR_MM = 4;
 /** The title: one bold line, the largest size up to `max` that fits its column, down to `min`, and past that cut with "…". */
 export const TITLE_BLOCK_TITLE_MM = { max: 10, min: 5 } as const;
-/** How far a bold line's capitals stand above its baseline, as a share of its size: the title's tops are at the block's. */
+/** How far the byline's capitals stand above its first baseline, as a share of its size. */
 const CAP_SHARE = 0.72;
 /** The room between the largest title's line and the byline's. */
 const BYLINE_GAP_MM = 1.5;
@@ -47,16 +47,18 @@ export interface TitleBlockGeometry {
   block: PageBox;
   /** How many of a grid's rows it takes; none in the flow. */
   rows: number;
-  /** Where the title goes: from the block's top, as tall as the largest title, as wide as its column to the pattern. */
+  /**
+   * Where the title goes: from the block's top, as tall as the largest title,
+   * as wide as its column to the art — the pattern, or the model's box where
+   * that reaches up beside the title.
+   */
   title: PageBox;
   /** Where the byline goes: under the title, as tall as its lines, as wide as its column to the model's box. */
   byline: PageBox;
-  /** The crease pattern's square, at the block's right, its foot on the block's. */
+  /** The crease pattern's square, at the block's right, its foot on the block's: the model's too where no pattern is drawn. */
   pattern: PageBox;
   /** The model's box, in front of the pattern's lower left, its foot on the block's. */
   model: PageBox;
-  /** The model's box and the pattern's square together: where the model stands with no pattern. */
-  art: PageBox;
 }
 
 /**
@@ -81,8 +83,9 @@ export function titleBlockGeometry(setup: DiagramPageSetup, headMm: number, foot
   const modelRight = pattern.x + side * MODEL_RIGHT_SHARE;
   const modelLeft = Math.max(block.x, modelRight - modelH * MODEL_ASPECT);
   const model = { x: modelLeft, y: foot - modelH, w: modelRight - modelLeft, h: modelH };
-  const art = { x: model.x, y: pattern.y, w: pattern.x + side - model.x, h: side };
-  const title = { x: block.x, y: block.y, w: Math.max(0, pattern.x - TEXT_CLEAR_MM - block.x), h: TITLE_BLOCK_TITLE_MM.max };
+  const titleH = TITLE_BLOCK_TITLE_MM.max;
+  const titleEnd = model.y < block.y + titleH ? model.x : pattern.x;
+  const title = { x: block.x, y: block.y, w: Math.max(0, titleEnd - TEXT_CLEAR_MM - block.x), h: titleH };
   const bylineTop = title.y + title.h + BYLINE_GAP_MM;
   const byline = {
     x: block.x,
@@ -91,7 +94,7 @@ export function titleBlockGeometry(setup: DiagramPageSetup, headMm: number, foot
     // Its lines, as far as the block has room for them.
     h: Math.max(0, Math.min(STEP_TEXT_SIZE_MM + (TITLE_BLOCK_BYLINE_LINES - 1) * STEP_TEXT_LEADING_MM + TEXT_DESCENT_MM, foot - bylineTop)),
   };
-  return { block, rows, title, byline, pattern, model, art };
+  return { block, rows, title, byline, pattern, model };
 }
 
 /** The words the pages print of their own: the diagram's title (`DiagramDocument.title`), and the title block's byline. */
@@ -111,9 +114,11 @@ export interface LayoutTitleBlock {
 
 /**
  * The block's title and byline, set by the layout's setter: the title on one
- * bold line, as large as fits its column within {@link TITLE_BLOCK_TITLE_MM},
- * and cut with "…" at its least size; the byline in the step text's weight
- * and size, its author's line breaks kept, on as many of
+ * bold line, as large as its ink fits its row within
+ * {@link TITLE_BLOCK_TITLE_MM} — across, and from its tallest letter's top,
+ * which stands on the block's (a capital's, an accent's, an ideograph's), to
+ * its lowest letter's foot — and cut with "…" at its least size; the byline
+ * in the step text's weight and size, its author's line breaks kept, on as many of
  * {@link TITLE_BLOCK_BYLINE_LINES} as the block has room for, the last cut
  * with "…". Text the block has no room for at all is not set. An empty
  * title or byline sets nothing, and the block keeps its room.
@@ -126,11 +131,15 @@ function setTitle(geometry: TitleBlockGeometry, title: string, setter: TextSette
   const room = geometry.title;
   if (title === '' || !(room.w > 0)) return null;
   const { max, min } = TITLE_BLOCK_TITLE_MM;
-  const widthAtMax = setter.line(title, max, 700).widthMm;
-  // A width is proportional to the size, so the size that fits is read off it; to a hundredth of a mm, down.
-  const fits = widthAtMax > 0 ? Math.floor(((max * room.w) / widthAtMax) * 100) / 100 : max;
-  const sizeMm = Math.max(min, Math.min(max, fits));
-  return { line: setter.line(title, sizeMm, 700, room.w), sizeMm, baseline: room.y + CAP_SHARE * sizeMm };
+  const whole = setter.line(title, max, 700);
+  const { above, below } = setter.ink(whole, max);
+  // A width and an ink's height are each proportional to the size, so the size that fits both is read off them at
+  // the largest; to a hundredth of a mm, down.
+  const across = whole.widthMm > 0 ? (max * room.w) / whole.widthMm : max;
+  const down = above + below > 0 ? (max * room.h) / (above + below) : max;
+  const sizeMm = Math.max(min, Math.min(max, Math.floor(Math.min(across, down) * 100) / 100));
+  const line = setter.line(title, sizeMm, 700, room.w);
+  return { line, sizeMm, baseline: room.y + setter.ink(line, sizeMm).above };
 }
 
 function setByline(geometry: TitleBlockGeometry, byline: string, setter: TextSetter): LayoutTitleBlock['byline'] {

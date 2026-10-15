@@ -651,6 +651,42 @@ describe('a printed spread', () => {
     expect(turn).toBeGreaterThan(0);
   });
 
+  it('keeps the first page’s lane under its title block, its band’s edge rising into the block’s foot by less than its half width', () => {
+    // A look, not a rule (diagram-title-block.md, 1c As built): the lane's curve through the first row may rise
+    // above the row's pictures, as on any page, where the header's room takes it; under the block, the block's foot.
+    const titleBlock = { enabled: true, heightShare: 0.27 };
+    let rises = 0;
+    // And the shortest blocks, on landscape and A5 pages, where the review saw it (2026-10-14).
+    const short: Partial<DiagramPageSetup>[] = [8, 9, 12, 16].flatMap((stepsPerPage) =>
+      (['a4', 'a5', 'letter'] as const).flatMap((size) =>
+        (['portrait', 'landscape'] as const).map((orientation) => ({ size, orientation, stepsPerPage }))
+      )
+    );
+    for (const setup of [...SETUPS, ...short]) {
+      for (const firstPageSide of ['left', 'right'] as const) {
+        const result = flow(steps(3 * (setup.stepsPerPage ?? 9) + 2), { ...setup, firstPageSide, titleBlock });
+        const one = result.pages[0]!;
+        const foot = one.titleBlock!.geometry.block.y + one.titleBlock!.geometry.block.h;
+        const half = result.bandWidthMm / 2;
+        const label = `${JSON.stringify(setup)} ${firstPageSide}`;
+        let from = one.band!.from;
+        let highest = Infinity;
+        for (const curve of one.band!.curves) {
+          const start = from;
+          const y = (t: number) =>
+            (1 - t) ** 3 * start.y + 3 * (1 - t) ** 2 * t * curve.c1.y + 3 * (1 - t) * t ** 2 * curve.c2.y + t ** 3 * curve.to.y;
+          highest = Math.min(highest, -furthest((t) => -y(t)));
+          from = curve.to;
+        }
+        // The lane's line stays under the block; only its band's upper half may reach into it.
+        expect(highest, label).toBeGreaterThan(foot);
+        if (highest - half < foot) rises += 1;
+      }
+    }
+    // It does, on dense first pages: shown to Zach with the first look rather than tuned here.
+    expect(rises).toBeGreaterThan(0);
+  });
+
   it('carries the lane over a page turn at one height, as over the spine, where the page before read up to its head (Zach’s crane, 2026-10-14)', () => {
     let [handed, foot] = [0, 0];
     for (const setup of SETUPS) {

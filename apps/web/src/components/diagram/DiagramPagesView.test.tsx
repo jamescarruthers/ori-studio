@@ -331,11 +331,14 @@ describe('DiagramPagesView', () => {
     render(shown, {}, shown.layout.bandInk, withBlock(diagram()));
     const outline = host.querySelector<HTMLElement>('[data-page="0"] [data-title-block]')!;
     const { block } = shown.layout.pages[0]!.titleBlock!.geometry;
-    expect([outline.style.left, outline.style.top, outline.style.width, outline.style.height]).toEqual(
-      [block.x, block.y, block.w, block.h].map((mm) => `${mm * PX_PER_MM}px`)
+    const { widthMm, heightMm } = shown.layout.paper;
+    // Inset into the page as the margin guide is.
+    expect([outline.style.left, outline.style.top, outline.style.right, outline.style.bottom]).toEqual(
+      [block.x, block.y, widthMm - block.x - block.w, heightMm - block.y - block.h].map((mm) => `${mm * PX_PER_MM}px`)
     );
     expect(missing()).toEqual([]);
-    // No title, no linked step, no picture: each part says why, where it would print.
+    // No title, no linked step, no picture: each part says why, in the room it would print in — the pattern and
+    // the model, which would stand in the pattern's square, in one box there.
     const bare = withBlock(insertSteps(createDiagram({ title: '' }), [{ ...createStep(() => 'step-empty'), text: 'Nothing yet.' }], 0));
     const empty = preparedPages(bare, FONTS, subsetter);
     render(empty, {}, empty.layout.bandInk, bare);
@@ -344,6 +347,13 @@ describe('DiagramPagesView', () => {
       ['pattern', 'No step is linked to a crease pattern'],
       ['model', 'No step has a picture yet'],
     ]);
+    const rooms = [...host.querySelectorAll<HTMLElement>('[data-title-block-room]')];
+    expect(rooms.map((room) => [room.dataset.titleBlockRoom, [...room.querySelectorAll<HTMLElement>('[data-title-block-missing]')].map((part) => part.dataset.titleBlockMissing)])).toEqual([
+      ['title', ['title']],
+      ['square', ['pattern', 'model']],
+    ]);
+    const { pattern } = empty.layout.pages[0]!.titleBlock!.geometry;
+    expect([rooms[1]!.style.left, rooms[1]!.style.width]).toEqual([pattern.x, pattern.w].map((mm) => `${mm * PX_PER_MM}px`));
     const svg = empty.compose(0).svg;
     for (const [, words] of missing()) expect(svg).not.toContain(words);
     // A step chosen for the model that has no picture is named by its number.
