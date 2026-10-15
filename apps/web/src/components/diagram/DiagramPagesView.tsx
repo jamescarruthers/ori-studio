@@ -252,7 +252,7 @@ export function DiagramPagesView({
                     {margin > 0 && (
                       <PageGuide style={{ left: mm(margin), top: mm(margin), right: mm(margin), bottom: mm(margin) }} />
                     )}
-                    {page.titleBlock && (
+                    {page.titleBlock && pages.titleBlock && (
                       <DiagramTitleBlockOverlay block={page.titleBlock} content={pages.titleBlock} paper={pages.layout.paper} />
                     )}
                     {page.cells.map((cell) => {
