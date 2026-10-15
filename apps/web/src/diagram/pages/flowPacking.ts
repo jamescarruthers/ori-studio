@@ -9,14 +9,21 @@
  * last page's stand-ins in the gitignored
  * `artifacts/layout-review/proto2/template.html`), which is the visual
  * reference: at the same inputs this packs the same plan at the same scale and
- * puts every box where the prototype does. Five things the prototype never
- * met are decided here: a fixed even band count on a left page that hands over
- * at its spine takes the odd count either side that packs larger (Decision 7);
- * a fixed count past the page's steps is held to them; Prefer three bands
- * weighs only in Auto; a step stands in a bend only with a real step after
- * it, never before only a short last page's stand-ins; and a page no plan
- * fits even at the least scale is drawn with its steps shared evenly over
- * whichever band count overflows least, and says so (`fits`).
+ * puts every box where the prototype does, but for a page's first band, whose
+ * first step stands at the area's left edge where the prototype set it in by
+ * half a share of the spare width (Zach, 2026-10-15: step 1 starts at the top
+ * left; every later page, a right-hand one entered at its spine included,
+ * starts on its left). Five things the prototype never met are decided here:
+ * a fixed even band count on a left page that hands over at its spine takes
+ * the odd count either side that packs larger (Decision 7); a fixed count past
+ * the page's steps is held to them; Prefer three bands weighs only in Auto; a
+ * step stands in a bend only with a real step after it, never before only a
+ * short last page's stand-ins; and a page no plan fits even at the least scale
+ * is drawn with its steps shared evenly over whichever band count overflows
+ * least, and says so (`fits`).
+ *
+ * Only a page packed now is placed so: a page held as saved keeps its boxes
+ * (`flowArrangement.ts`), so a saved diagram opens as it was.
  *
  * The search is exactly the prototype's, made fast without changing its
  * answer: a caption is set once per step and measure (its measure is the
@@ -719,11 +726,13 @@ export function packFlowPage(input: FlowPageInput, setter: TextSetter): FlowPage
     const leftCol = leftSeat >= 0 ? widthAt(leftSeat, k) + STEP_GAP_MM : 0;
     const rightCol = rightSeat >= 0 ? widthAt(rightSeat, k) + STEP_GAP_MM : 0;
     const avail = area.w - leftCol - rightCol;
-    // In reading order: each step's own gutter before it, then the spare width shared out evenly.
+    // In reading order: each step's own gutter before it, then the spare width shared out evenly — a share after
+    // each step, half of one before the first; but the page's first band keeps none before its first step, which
+    // stands at the area's left edge (Zach, 2026-10-15: step 1 starts "at the top left of the steps").
     let sum = 0;
     for (let i = start[b]!; i < end[b]!; i += 1) sum = sum + widthAt(i, k) + (i === start[b]! ? 0 : gapBefore[i]!);
     const space = Math.max(0, (avail - sum) / (end[b]! - start[b]!));
-    let cursor = space / 2;
+    let cursor = b === 0 ? 0 : space / 2;
     for (let i = start[b]!; i < end[b]!; i += 1) {
       const w = widthAt(i, k);
       cursor += i === start[b]! ? 0 : gapBefore[i]!;

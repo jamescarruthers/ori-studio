@@ -1820,7 +1820,7 @@ diagrams", the default and its tests together, so it reverts whole:
 - [ ] T-21 settled by Zach before this branch merges into #436 or ships
   (the header); if he cannot answer in time and might take C, the switch
   is hidden.
-- [ ] Zach: step 1 on page 1 under the block stands 20 mm in on A4 at 9 a
+- [x] Zach: step 1 on page 1 under the block stands 20 mm in on A4 at 9 a
   page (22.5 mm on Letter, 51 mm on A4 landscape, First page Left), where
   his rule puts it at the top left. The packer shares a band's spare width
   half a share before its first step (`flowPacking.ts`, `cursor = space /
@@ -1833,6 +1833,11 @@ diagrams", the default and its tests together, so it reverts whole:
   fresh block-off packs at 6 and 7 a page and in landscape too, so before
   and after renders go with it. Or keep the packer's look and record the
   exception. Renders: `artifacts/title-block/review-final/step1-*.png`.
+  **Zach, 2026-10-15:** "just needs to start at the top left of the steps
+  (its okay if there is space above it dedicated to the title)". Built on
+  every page's first band, not only the pages the lane does not come into:
+  his rule is that every later page starts on its left too (B, under
+  "Zach's answers of 2026-10-15").
 - [ ] Zach: whether "no turn tighter than half the band" must hold under
   the block (page 1 of A4 landscape at 12 a page bends 7.3 mm, 1f). If
   yes, a block-on case in `flowLane.test.ts` and the lane's bend on short
@@ -1947,7 +1952,7 @@ if wanted: `scripts/setup-worktree.sh` copying `apps/web/public/fonts/diagram/`.
 
 **Zach's answers of 2026-10-15**
 - [x] A. Page counts shift (T-20, his answer; replaces B).
-- [ ] B. Step 1 at the top left of the steps' area (1g's step 1 item).
+- [x] B. Step 1 at the top left of the steps' area (1g's step 1 item).
 
 *As built (A, the shift).* `pages/pageCounts.ts`:
 - `setPageSteps` sets a page's count, then `shiftLaterPages` moves the
@@ -2006,6 +2011,45 @@ if wanted: `scripts/setup-worktree.sh` copying `apps/web/public/fonts/diagram/`.
   74 mm down, 15 and 16 30 mm left): `a/crane-on/pdf-all.png`. Undo, or
   moving them home, clears it; whether a page whose first step changed
   should keep offsets is his call.
+
+*As built (B, step 1 at the top left).* `pages/flowPacking.ts`: a page's
+first band starts at its packing area's left edge; its spare width is
+shared between its steps and after the last, where it kept half a share
+before the first step. Every later band, every plan, scale and score, the
+lane's rules and the grid are as they were (placement only). On every page
+kind, since band 0 always reads left to right: page 1 with and without the
+block, First page Left and Right, a right-hand page entered at its spine
+(band 0 at its foot, from the spine), landscape. A page narrowed for a turn
+at its edge (`areaOf`) starts at the narrowed edge, the turn glyph in the
+margin that holds it. The port's own deviation from the prototype, noted in
+the module and in the prototype comparison of `flowPacking.test.ts`, which
+otherwise still checks every plan, scale and box.
+- **Nothing saved moves.** A held page keeps its stored boxes; only a page
+  packed now is placed so. Zach's crane on the dev server, before and after
+  this change: the Pages view, PDF and Print of its three pages AE 0, the
+  PDF and the one-sheet SVG the same to the byte, the layout dump the same,
+  nothing unsaved (`artifacts/title-block/answers-1015/crane-off-identical.txt`).
+- **Fresh packs, measured** (`step1-pre.txt`, `step1-post.txt`): each
+  page's first step from the margin, before → after: a new diagram on A4,
+  20.2 / 21.3 / 9.6 / 1.0 mm → 0 on all four pages; the same without the
+  block 0 / 0 / 7.0 / 0 → 0; A4 landscape, First page Left, 51.0 / 103.7 /
+  12.1 / 26.7 → 0; A4 landscape, First page Right, 6.3 / 103.7 / 12.1 /
+  26.7 → 0; 7 a page without the block 12.2 / 33.0 / 7.9 / 7.8 → 0. The
+  grid's pages unchanged to the byte. Renders: `b-step1-before-after.png`.
+- **Goldens re-baselined, deliberately** (`placeGolden.test.ts`, both
+  digests, with a dated note): the 17 flow fixture pages whose first band
+  had spare width — "a page break and turns at a row's end" page 2, "flow
+  from the right" pages 1–3, "seven steps a page" pages 1–3, "pages with
+  their own counts" pages 1–4, "a last page with its own count" pages 1–2,
+  "flow landscape" pages 1–2, the enlarged steps' pages 1–2. Unchanged: the
+  two flow pages whose first band had no spare width (a page break page 1,
+  own counts page 5), the empty diagram's page and every grid page. A first band of one step moves
+  furthest (up to 66 mm, near the middle to the left). Each rasterised
+  before and after and checked by eye (`fixtures-sheet-1.png`,
+  `fixtures-sheet-2.png`). No other golden, snapshot or digest changed; the
+  ribbon's tests (b4), the held-page sweeps and the layout budget pass.
+- A test that failed before: every page kind's first step at the area's
+  left, the spare shared between the band's steps and after its last.
 
 ### Phase 2: after the release
 

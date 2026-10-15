@@ -254,7 +254,8 @@ function layoutPage(items: ProtoStep[], best: { k: number; plan: ProtoPlan }, op
     const sum = seq.reduce((a, it) => a + it.bx.w + it.need, 0);
     const space = (avail - sum) / seq.length;
     const lefts: number[] = [];
-    let cursor = space / 2;
+    // Decided in the port, not the prototype (Zach, 2026-10-15): a page's first band starts at the area's left edge.
+    let cursor = b === 0 ? 0 : space / 2;
     for (const it of seq) {
       cursor += it.need;
       lefts.push(cursor);
@@ -543,6 +544,40 @@ describe('packFlowPage: placement', () => {
       }
     }
     expect(turns).toBeGreaterThan(0);
+  });
+
+  it('starts a page’s first band at the area’s left edge, the spare width shared between its steps and after the last (Zach, 2026-10-15)', () => {
+    const crane = craneSteps(setter);
+    const turning = (id: string) => crane.find((step) => step.id === id)?.turnsBefore ?? false;
+    const pagesOf = [
+      ...packCrane(7),
+      ...packCrane(9),
+      ...packCrane(13),
+      // A first page alone on the right, which leaves over a page turn; a right-hand page read up from its spine.
+      pack(alike(9)),
+      pack(alike(9), { up: true }),
+      pack(alike(5), { handsOver: true }),
+    ];
+    let pages = 0;
+    for (const page of pagesOf) {
+      const first = bandSteps(page)[0]!;
+      // Every page kind starts on its left: a page read up starts at its foot, from its spine.
+      expect(first[0]!.box.x).toBeCloseTo(area.x, 9);
+      // A short last page's stand-ins share the band out too, unseen: its own steps are spaced as a full page's.
+      if (page.summary.standIns > 0) continue;
+      // What a step in the bend after the band takes at its right.
+      const seat = page.steps.find((step) => step.bend && step.band === 0);
+      const right = area.x + area.w - (seat ? seat.box.w + STEP_GAP_MM : 0);
+      const last = first.at(-1)!;
+      const share = right - (last.box.x + last.box.w);
+      first.slice(1).forEach((step, j) => {
+        const before = first[j]!;
+        const gutter = turning(step.id) ? PACKED_TURN_GUTTER_MM : STEP_GAP_MM;
+        expect(step.box.x - (before.box.x + before.box.w)).toBeCloseTo(gutter + share, 9);
+      });
+      pages += 1;
+    }
+    expect(pages).toBeGreaterThan(10);
   });
 
   it('turns every other band back, and stacks the bands from the foot on a page read up', () => {
