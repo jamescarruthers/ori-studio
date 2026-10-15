@@ -3,7 +3,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { PAGE_STEPS_RANGE, isStep, stepsOf, type DiagramDocument, type DiagramPageSetup } from '../document/diagramDocument';
 import { countHoldsLaterPages, pageStepsRange, type PageStepsRange } from './pageCounts';
 import { usePageInView, type PagesInView } from './pageInView';
-import { paginate, type PlannedPage } from './pagePlan';
+import { firstPageCapacity, hasTitleBlock, paginate, type PlannedPage } from './pagePlan';
 
 /** The page a pane's "this page" means: its index, what it is called, and how the page setup cuts it. */
 export interface CurrentDiagramPage {
@@ -17,6 +17,12 @@ export interface CurrentDiagramPage {
   range: PageStepsRange;
   /** Its own count stays, holding a later page with one still (`countHoldsLaterPages`): it has no Use default. */
   holdsLaterPages: boolean;
+  /**
+   * The first page under the title block, holding a count of its own, which
+   * the block leaves as it is (T-20 B): the count it would hold by default
+   * (`firstPageCapacity`). Null on any other page.
+   */
+  titleBlockDefault: number | null;
 }
 
 /** What the Pages view captions page `index`: the number it prints, or its place when it prints none. */
@@ -57,6 +63,8 @@ export function currentDiagramPage(
     page: pages[index]!,
     range: pageStepsRange(document, index) ?? PAGE_STEPS_RANGE,
     holdsLaterPages: countHoldsLaterPages(document, index),
+    titleBlockDefault:
+      index === 0 && pages[0]!.ownCount && hasTitleBlock(document.page) ? firstPageCapacity(document.page) : null,
   };
 }
 

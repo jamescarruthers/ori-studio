@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stepsOf, type DiagramDocument, type DiagramPageArrangement } from '../../diagram/document/diagramDocument';
 import { usePublishPageInView } from '../../diagram/pages/pageInView';
-import { paginate } from '../../diagram/pages/pagePlan';
+import { firstPageCapacity, paginate } from '../../diagram/pages/pagePlan';
 import { heldPageArrangements } from '../../diagram/pages/pageArrangements';
 import { cellSlots } from '../../diagram/pages/stepPlaces';
 import { PATH_COLOR_SETTLE_MS } from '../../diagram/pages/usePathColorPick';
@@ -260,6 +260,27 @@ describe('DiagramPagePanel', () => {
     expect(state().diagram?.page.layout).toBe('flow');
     expect(analytics.trackDiagramPageSetupChanged).not.toHaveBeenCalled();
   });
+
+  it('puts the Title block section after Layout (T-19 A)', () => {
+    const sections = ['Paper', 'Layout', 'Title block', 'Header & footer', 'Style'];
+    const shown = [...host!.querySelectorAll('[role="group"][aria-label]')]
+      .map((group) => group.getAttribute('aria-label')!)
+      .filter((label) => sections.includes(label));
+    expect(shown).toEqual(sections);
+  });
+
+  it('says the title’s tab leaves the first page to the title block while the block is on (T-5 A)', () => {
+    const titleHelp = () =>
+      [...host!.querySelectorAll('[data-field-help]')]
+        .map((mark) => mark.getAttribute('aria-label'))
+        .find((help) => help?.startsWith('The diagram’s title'));
+    act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled: false } }));
+    expect(titleHelp()).toBe('The diagram’s title, in a tab at the top of every page.');
+    act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled: true } }));
+    expect(titleHelp()).toBe(
+      'The diagram’s title, in a tab at the top of every page after the first, whose title block carries it.'
+    );
+  });
 });
 
 describe('DiagramPagePanel › the current page’s own count', () => {
@@ -379,6 +400,29 @@ describe('DiagramPagePanel › the current page’s own count', () => {
     showPage(1);
     expect(useDefault()).toBeDefined();
     expect(host?.textContent).not.toContain('Keeps later pages in place');
+  });
+
+  it('says page 1 keeps a count of its own under the title block, and what the block would give it (T-20 B)', () => {
+    const blockHelp = () =>
+      [...host!.querySelectorAll('[data-field-help]')]
+        .map((mark) => mark.getAttribute('aria-label'))
+        .find((help) => help?.startsWith('This page has a count of its own'));
+    const block = (enabled: boolean) =>
+      act(() => state().setDiagramPage({ titleBlock: { ...state().diagram!.page.titleBlock, enabled } }));
+    block(true);
+    // The default under the block: nothing to say.
+    expect(field()?.value).toBe(String(firstPageCapacity(state().diagram!.page)));
+    expect(blockHelp()).toBeUndefined();
+    act(() => host!.querySelector<HTMLButtonElement>('button[aria-label="Decrease Steps on page 1"]')!.click());
+    expect(blockHelp()).toBe(
+      `This page has a count of its own, so the title block leaves it as it is. With the block, it would hold ${firstPageCapacity(state().diagram!.page)} by default.`
+    );
+    // Page 2 says nothing of it, and nor does page 1 with the block off.
+    showPage(1);
+    expect(blockHelp()).toBeUndefined();
+    showPage(0);
+    block(false);
+    expect(blockHelp()).toBeUndefined();
   });
 
   it('acts on the selected step’s page while no Pages view shows one', () => {

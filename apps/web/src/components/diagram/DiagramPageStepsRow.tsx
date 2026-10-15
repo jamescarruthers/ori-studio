@@ -22,7 +22,10 @@ import styles from './DiagramPageStepsRow.module.css';
  * can be given (`pageStepsRange`).
  *
  * The line under the field holds the note or the action, so the stepper
- * stays where it is as one gives way to the other.
+ * stays where it is as one gives way to the other. On the first page under
+ * the title block, a count of its own is kept as the block comes and goes
+ * (`implementation-plans/diagram-title-block.md`, T-20 B), and the row's help
+ * says so, with what the block would give it.
  */
 export function DiagramPageStepsRow({
   current,
@@ -35,7 +38,7 @@ export function DiagramPageStepsRow({
   onChange: (count: number | null) => void;
 }) {
   const { t } = useTranslation();
-  const { page, index, name, range, holdsLaterPages } = current;
+  const { page, index, name, range, holdsLaterPages, titleBlockDefault } = current;
   const own = page.ownCount;
   return (
     <div className={styles.row}>
@@ -43,6 +46,15 @@ export function DiagramPageStepsRow({
         // Another page, another field: a number half typed for one page is never committed to the next.
         key={index}
         label={t('panels:diagram.pagePane.pageSteps', 'Steps on page {{number}}', { number: name })}
+        help={
+          titleBlockDefault === null
+            ? undefined
+            : t(
+                'panels:diagram.pagePane.pageStepsTitleBlock',
+                'This page has a count of its own, so the title block leaves it as it is. With the block, it would hold {{number}} by default.',
+                { number: titleBlockDefault }
+              )
+        }
         value={page.layoutCount}
         min={range.min}
         max={range.max}

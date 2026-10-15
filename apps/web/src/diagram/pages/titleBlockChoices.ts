@@ -65,7 +65,13 @@ export function titleBlockChoices(document: DiagramDocument): TitleBlockChoices 
   const numbers = stepNumbers(document);
   const steps = stepsOf(document);
   const numberOf = (step: DiagramStep | null) => (step ? numbers.get(step.id)! : null);
-  const part = (chosen: TitleBlockPart, auto: DiagramStep | null, offered: ReadonlySet<DiagramStep>, gives: (step: DiagramStep) => boolean) => ({
+  /** A part's choices: the steps `offered`, and the step chosen for it whether or not it can give it. */
+  const part = (
+    chosen: TitleBlockPart,
+    auto: DiagramStep | null,
+    offered: ReadonlySet<DiagramStep>,
+    gives: (step: DiagramStep) => boolean
+  ): TitleBlockPartChoices => ({
     value: choiceOf(chosen),
     autoNumber: numberOf(auto),
     steps: steps

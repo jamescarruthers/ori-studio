@@ -14,6 +14,7 @@ import {
   type DiagramPageSide,
   type DiagramPaperSize,
 } from '../../diagram/document/diagramDocument';
+import { hasTitleBlock } from '../../diagram/pages/pagePlan';
 import { layoutLabel, orientationLabel, paperSizeLabel } from '../../diagram/pages/pageSetupLabels';
 import { useCurrentDiagramPage } from '../../diagram/pages/useCurrentDiagramPage';
 import { useDiagramPageSetup } from '../../diagram/pages/useDiagramPageSetup';
@@ -22,6 +23,7 @@ import { DiagramPagePlacements } from '../diagram/DiagramPagePlacements';
 import { DiagramPageStepsRow } from '../diagram/DiagramPageStepsRow';
 import { DiagramPathColorRow } from '../diagram/DiagramPathColorRow';
 import { DiagramStyleControl } from '../diagram/DiagramStyleControl';
+import { DiagramTitleBlockSection } from '../diagram/DiagramTitleBlockSection';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { NumberRow, SegmentedRow, SelectRow, ToggleRow } from '../ui/fieldRows';
 import { OptionCards } from '../ui/OptionCard';
@@ -31,8 +33,9 @@ const PAPER_SIZES: readonly DiagramPaperSize[] = ['a4', 'a5', 'b5-jis', 'letter'
 
 /**
  * The Page pane: the paper, how steps are laid out on it — in the flow, how
- * its pages are packed (`DiagramPagePacking`) — what the header and footer
- * carry, and the style every step is drawn in (D10, D13).
+ * its pages are packed (`DiagramPagePacking`) — the first page's title block
+ * (`DiagramTitleBlockSection`), what the header and footer carry, and the
+ * style every step is drawn in (D10, D13).
  *
  * A composition site (AGENTS.md › Panel components): the bindings, each one
  * undo step and one count, are `useDiagramPageSetup`, and the page a count of
@@ -199,12 +202,21 @@ export function DiagramPagePanel() {
             onChange={(side) => setPage({ firstPageSide: side as DiagramPageSide }, 'first_page_side')}
           />
         </CollapsibleSection>
+        <DiagramTitleBlockSection />
         {flow && <DiagramPagePacking page={page} readOnly={readOnly} setPage={setPage} />}
         <DiagramPagePlacements />
         <CollapsibleSection title={t('panels:diagram.pagePane.headerFooter', 'Header & footer')}>
           <ToggleRow
             label={t('panels:diagram.pagePane.title', 'Title')}
-            help={t('panels:diagram.pagePane.titleHelp', 'The diagram’s title, in a tab at the top of every page.')}
+            help={
+              // The title block carries the title on the first page, which prints no tab (T-5 A).
+              hasTitleBlock(page)
+                ? t(
+                    'panels:diagram.pagePane.titleHelpWithBlock',
+                    'The diagram’s title, in a tab at the top of every page after the first, whose title block carries it.'
+                  )
+                : t('panels:diagram.pagePane.titleHelp', 'The diagram’s title, in a tab at the top of every page.')
+            }
             checked={page.showTitle}
             disabled={readOnly}
             onChange={(showTitle) => setPage({ showTitle }, 'title')}
