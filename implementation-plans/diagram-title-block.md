@@ -2663,6 +2663,9 @@ scaffolded"), see "As built (1c: Zach's test and the review)":
   Description; the description's spaces kept (pre-wrap); an editable
   Band color, following the paper until chosen (e1b7eea50, 545497192,
   4f230e6a8, d0dc409f6).
+- [x] Superseded (Zach, 2026-10-15): no "Add a title" on the Pages view;
+  an empty title draws nothing. "Add a title" is the title's default
+  value instead, real text in the file, nine catalogs (4b0364cf6).
 
 *As built (1c: the format, the defaults and the store, 2026-10-15).* Three
 commits after the plan's (84f16afce): the format (d23293107), the defaults
@@ -3332,6 +3335,23 @@ colour). Checked: `tsc`; ESLint on every changed file; `i18n:extract`,
 `src/store/workspaceStore`, `src/analytics`, `src/i18n`, `src/styles`
 (347 files, 5268 tests). Evidence: `artifacts/title-block/small-fixes/
 final.png` (before at 9d579f1c5, after; Chromium, 5403).
+
+*As built (1c: the default title, 2026-10-15).* Zach: "If title is empty,
+then don't render anything. But the default value of title should be add a
+title." (1) above is undone: `PageComposeOptions.untitled`,
+`titleBlockTitle` and `panels:diagram.pages.titleBlock.addTitle` are gone,
+and an empty title draws nothing, on screen or in print. "Add a title"
+(`panels:diagram.titleBlock.default.title`, nine catalogs) is
+`TitleBlockDefaultWords.title`: a new diagram is created with it, and the
+block's toggle writes it where the diagram's title is empty, in the toggle's
+undo step; a typed title is never replaced, and a deleted one stays empty.
+The header's title field shows it before a diagram exists, as the Page pane
+shows the other default words. Being a real title, it also prints in the
+later pages' title tab, names the exports (`Add-a-title.pdf`, `.svg`,
+`.zip`, `Add-a-title-step-1.png`, `Add-a-title-step-1.svg`) and is the
+PDF's and the sheet's title, as any title does; the window title and the
+project's name do not read it. Evidence:
+`artifacts/title-block/default-title/final.png`.
 
 *For Zach (header, 2026-10-15).* Pictures in `artifacts/title-block/
 header-fixes/` and `header-final/`.
