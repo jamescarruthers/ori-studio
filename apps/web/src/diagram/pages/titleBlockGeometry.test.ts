@@ -67,7 +67,7 @@ describe('titleBlockGeometry', () => {
   it('stands the pattern square at its right, the model in front of its lower left, the title and byline down its left, inside it', () => {
     for (const paper of EVERY_PAPER) {
       const label = JSON.stringify(paper);
-      const { block, title, byline, pattern, model, art } = geometryOf(paper);
+      const { block, title, byline, pattern, model } = geometryOf(paper);
       // The pattern: a square as tall as the block, at its right, its foot on the block's.
       expect(pattern.w, label).toBeCloseTo(pattern.h, 9);
       expect(pattern.h, label).toBeCloseTo(block.h, 9);
@@ -80,15 +80,13 @@ describe('titleBlockGeometry', () => {
       expect(model.y, label).toBeGreaterThan(pattern.y);
       expect(model.h / pattern.h, label).toBeCloseTo(0.75, 9);
       expect(model.w / model.h, label).toBeLessThanOrEqual(1.25 + 1e-9);
-      // The art: the two together.
-      expect(art, label).toEqual({ x: model.x, y: pattern.y, w: right(pattern) - model.x, h: pattern.h });
       // The title runs to the art beside it and the byline to the model, each 4 mm short; the byline under the title.
       expect(title.x, label).toBe(block.x);
       expect(right(title), label).toBeCloseTo((model.y < foot(title) ? model.x : pattern.x) - 4, 9);
       expect(right(byline), label).toBeCloseTo(model.x - 4, 9);
       expect(byline.y, label).toBeGreaterThan(foot(title));
       expect(title.h).toBe(TITLE_BLOCK_TITLE_MM.max);
-      for (const part of [title, byline, pattern, model, art]) inside(part, block);
+      for (const part of [title, byline, pattern, model]) inside(part, block);
     }
   });
 

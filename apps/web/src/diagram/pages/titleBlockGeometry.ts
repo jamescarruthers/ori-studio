@@ -55,12 +55,10 @@ export interface TitleBlockGeometry {
   title: PageBox;
   /** Where the byline goes: under the title, as tall as its lines, as wide as its column to the model's box. */
   byline: PageBox;
-  /** The crease pattern's square, at the block's right, its foot on the block's. */
+  /** The crease pattern's square, at the block's right, its foot on the block's: the model's too where no pattern is drawn. */
   pattern: PageBox;
   /** The model's box, in front of the pattern's lower left, its foot on the block's. */
   model: PageBox;
-  /** The model's box and the pattern's square together: where the model stands with no pattern. */
-  art: PageBox;
 }
 
 /**
@@ -85,7 +83,6 @@ export function titleBlockGeometry(setup: DiagramPageSetup, headMm: number, foot
   const modelRight = pattern.x + side * MODEL_RIGHT_SHARE;
   const modelLeft = Math.max(block.x, modelRight - modelH * MODEL_ASPECT);
   const model = { x: modelLeft, y: foot - modelH, w: modelRight - modelLeft, h: modelH };
-  const art = { x: model.x, y: pattern.y, w: pattern.x + side - model.x, h: side };
   const titleH = TITLE_BLOCK_TITLE_MM.max;
   const titleEnd = model.y < block.y + titleH ? model.x : pattern.x;
   const title = { x: block.x, y: block.y, w: Math.max(0, titleEnd - TEXT_CLEAR_MM - block.x), h: titleH };
@@ -97,7 +94,7 @@ export function titleBlockGeometry(setup: DiagramPageSetup, headMm: number, foot
     // Its lines, as far as the block has room for them.
     h: Math.max(0, Math.min(STEP_TEXT_SIZE_MM + (TITLE_BLOCK_BYLINE_LINES - 1) * STEP_TEXT_LEADING_MM + TEXT_DESCENT_MM, foot - bylineTop)),
   };
-  return { block, rows, title, byline, pattern, model, art };
+  return { block, rows, title, byline, pattern, model };
 }
 
 /** The words the pages print of their own: the diagram's title (`DiagramDocument.title`), and the title block's byline. */

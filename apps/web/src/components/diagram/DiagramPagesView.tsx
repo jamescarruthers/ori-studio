@@ -253,7 +253,7 @@ export function DiagramPagesView({
                       <PageGuide style={{ left: mm(margin), top: mm(margin), right: mm(margin), bottom: mm(margin) }} />
                     )}
                     {page.titleBlock && (
-                      <DiagramTitleBlockOverlay block={page.titleBlock} content={pages.titleBlock} steps={steps} />
+                      <DiagramTitleBlockOverlay block={page.titleBlock} content={pages.titleBlock} paper={pages.layout.paper} />
                     )}
                     {page.cells.map((cell) => {
                       const step = stepsById.get(cell.stepId);

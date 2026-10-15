@@ -18,8 +18,8 @@
  * though it changes the picture a saved block shows.
  *
  * The pattern is drawn from its step's stored thumbnail, as a scene for the
- * shared painter ({@link patternScene}); the model in front of it, or over
- * the pattern's square too where none is drawn ({@link modelRoom}). What
+ * shared painter ({@link patternScene}); the model in front of it, or in
+ * the pattern's square where none is drawn ({@link modelRoom}). What
  * prints nothing where it would show, the Pages view marks
  * ({@link missingTitleBlockParts}). Pure.
  */
@@ -30,6 +30,7 @@ import type { LayoutTitleBlock, TitleBlockGeometry } from './titleBlockGeometry'
 import {
   isLockedStep,
   stepById,
+  stepNumbers,
   stepsOf,
   type DiagramCpSource,
   type DiagramDocument,
@@ -45,6 +46,8 @@ export interface TitleBlockPart {
   from: TitleBlockPartFrom;
   /** Auto's find or the step chosen; null for none, and where Auto finds no step. */
   step: DiagramStep | null;
+  /** That step's number, as the pages print it (`stepNumbers`); null with no step. */
+  number: number | null;
 }
 
 /** What the title block shows. */
@@ -101,10 +104,15 @@ function resolvePart(
   source: DiagramTitleBlockSource | undefined,
   auto: (document: DiagramDocument) => DiagramStep | null
 ): TitleBlockPart {
-  if (source?.kind === 'none') return { from: 'none', step: null };
+  const part = (from: TitleBlockPartFrom, step: DiagramStep | null): TitleBlockPart => ({
+    from,
+    step,
+    number: step ? (stepNumbers(document).get(step.id) ?? null) : null,
+  });
+  if (source?.kind === 'none') return part('none', null);
   const chosen = source?.kind === 'step' ? stepById(document, source.stepId) : null;
-  if (chosen && !isLockedStep(chosen)) return { from: 'step', step: chosen };
-  return { from: 'auto', step: auto(document) };
+  if (chosen && !isLockedStep(chosen)) return part('step', chosen);
+  return part('auto', auto(document));
 }
 
 /**
@@ -141,32 +149,52 @@ export function patternScene(thumbnail: SheetThumbnail): PaperScene | null {
   return { bounds: { minX, minY, maxX: minX + width, maxY: minY + height }, sheet, items };
 }
 
-/** Where the block's model stands: in front of the pattern's lower left, or over the whole art where no pattern is drawn. */
+/**
+ * Where the block's model stands: in front of the pattern's lower left, or in
+ * the pattern's square where no pattern is drawn — clear of the title's
+ * column either way.
+ */
 export function modelRoom(geometry: TitleBlockGeometry, content: ResolvedTitleBlock): PageBox {
-  return content.pattern.scene ? geometry.model : geometry.art;
+  return content.pattern.scene ? geometry.model : geometry.pattern;
 }
 
-/** A part of the title block that prints nothing where it would show ({@link missingTitleBlockParts}). */
+/** A part of the title block that prints nothing where it would show, and the step it comes from. */
 export interface MissingTitleBlockPart {
   part: 'title' | 'pattern' | 'model';
-  /** Where it would print. */
-  box: PageBox;
-  /** The step it comes from, which cannot give it; null where Auto finds none, and for the title. */
+  /** The step that cannot give it; null where Auto finds none, and for the title. */
   step: DiagramStep | null;
+  /** That step's number, as the pages print it. */
+  number: number | null;
+}
+
+/** A room of the block where what would print there prints nothing ({@link missingTitleBlockParts}). */
+export interface TitleBlockPlaceholder {
+  /** The title's column, the pattern's square — the model's room too where no pattern is drawn — or the model's box. */
+  room: 'title' | 'square' | 'model';
+  box: PageBox;
+  /** What prints nothing there, in the order it would be drawn. */
+  missing: MissingTitleBlockPart[];
 }
 
 /**
- * What of the block prints nothing where it would show: the title where the
- * diagram has none; the pattern and the model where they are Auto or a step,
- * and no step gives them — a part set to none is the author's, and is not
- * missing. For the Pages view's overlay, never the page.
+ * What of the block prints nothing where it would show, room by room: the
+ * title where the diagram has none; the pattern and the model where they are
+ * Auto or a step, and no step gives them — a part set to none is the
+ * author's, and is not missing. The pattern and a model with no pattern in
+ * front of it would print in one square, which is one room; so no two rooms
+ * overlap. For the Pages view's overlay, never the page.
  */
-export function missingTitleBlockParts(block: LayoutTitleBlock, content: ResolvedTitleBlock): MissingTitleBlockPart[] {
+export function missingTitleBlockParts(block: LayoutTitleBlock, content: ResolvedTitleBlock): TitleBlockPlaceholder[] {
   const { geometry } = block;
   const { model, pattern } = content;
-  const missing: MissingTitleBlockPart[] = [];
-  if (!block.title) missing.push({ part: 'title', box: geometry.title, step: null });
-  if (pattern.from !== 'none' && !pattern.scene) missing.push({ part: 'pattern', box: geometry.pattern, step: pattern.step });
-  if (model.from !== 'none' && !model.step?.picture) missing.push({ part: 'model', box: modelRoom(geometry, content), step: model.step });
-  return missing;
+  const missing = ({ step, number }: TitleBlockPart, part: MissingTitleBlockPart['part']) => ({ part, step, number });
+  const square: MissingTitleBlockPart[] = [];
+  const front: MissingTitleBlockPart[] = [];
+  if (pattern.from !== 'none' && !pattern.scene) square.push(missing(pattern, 'pattern'));
+  if (model.from !== 'none' && !model.step?.picture) (pattern.scene ? front : square).push(missing(model, 'model'));
+  return [
+    ...(block.title ? [] : [{ room: 'title' as const, box: geometry.title, missing: [{ part: 'title' as const, step: null, number: null }] }]),
+    ...(square.length > 0 ? [{ room: 'square' as const, box: geometry.pattern, missing: square }] : []),
+    ...(front.length > 0 ? [{ room: 'model' as const, box: geometry.model, missing: front }] : []),
+  ];
 }

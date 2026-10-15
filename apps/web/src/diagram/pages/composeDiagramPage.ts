@@ -209,8 +209,8 @@ export type FontUse = (face: string, text: string) => void;
 /**
  * The first page's title block, back to front (`diagram-title-block.md`,
  * section 6): the crease pattern in its square, in the style's fold pens; the
- * finished model in front of it — over the pattern's square too, where there
- * is no pattern; then the title and the byline.
+ * finished model in front of it — in the pattern's square, where there is no
+ * pattern; then the title and the byline.
  */
 function titleBlockElements(block: LayoutTitleBlock, input: ComposeDiagramPageInput, count: FontUse): string[] {
   const { geometry, title, byline } = block;
