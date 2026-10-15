@@ -1,0 +1,78 @@
+/* A text field in the panes (TextField.tsx): one line, one line wrapped, or
+   several. One look for every stacked row's field and every list of fields. */
+.field {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.74rem;
+}
+
+/* One line: as tall as the steppers and selects in the rows round it. */
+.field[data-lines='one'] {
+  height: 26px;
+  padding: 0 7px;
+}
+
+/* One line of text, wrapped where it does not fit: one line tall, and as tall
+   as its lines once it wraps — never the prose field's box. */
+.field[data-lines='wrap'] {
+  min-height: 26px;
+  padding: 4px 7px;
+  resize: none;
+  field-sizing: content;
+  line-height: 16px;
+}
+
+/* Prose: room for a few lines, and the author can make it taller. */
+.field[data-lines='many'] {
+  min-height: 64px;
+  padding: 6px 7px;
+  resize: vertical;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.field:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+}
+
+.field::placeholder {
+  color: var(--text-muted);
+}
+
+/* A value worked out for the author: read, not typed, so quieter than a field. */
+.field[readonly] {
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.field:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (pointer: coarse) {
+  /* Below 16px, iOS zooms the page to a field the moment it takes focus (the
+     global rule for every `textarea` loses to this module's class, so the field
+     says it again); and a one-line field stands as tall as the buttons beside
+     it, a finger's height. */
+  .field {
+    font-size: 16px;
+  }
+
+  .field[data-lines='one'] {
+    height: var(--touch-target);
+  }
+
+  .field[data-lines='wrap'] {
+    min-height: var(--touch-target);
+  }
+}

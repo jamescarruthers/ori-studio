@@ -1,17 +1,17 @@
 import { useId, type Ref } from 'react';
-import { FieldRowHelp } from './FieldRow';
-import { isComposingKey } from './isComposingKey';
-import styles from './TextAreaRow.module.css';
-import { usePendingText } from './usePendingText';
+import { StackedRow } from './StackedRow';
+import { TextField } from './TextField';
 
 /**
- * A multi-line text field in a row, its label above it.
+ * A text field in a row, its label above it: prose `rows` tall, or one line
+ * (`singleLine`) wrapped where it does not fit.
  *
- * Commits as it is typed (`usePendingText`): on blur, after `idleMs` without
- * typing, before any undo or redo runs, before a save or any question about
- * unsaved work, and when the row goes away — so nothing typed is ever lost.
- * Each commit carries the session it belongs to (one per focus), so a
- * consumer that records history can make one sitting at the field one entry.
+ * Commits as it is typed (`TextField`, `usePendingText`): on blur, after
+ * `idleMs` without typing, before any undo or redo runs, before a save or any
+ * question about unsaved work, and when the row goes away — so nothing typed
+ * is ever lost. Each commit carries the session it belongs to (one per focus),
+ * so a consumer that records history can make one sitting at the field one
+ * entry.
  *
  * Enter is a newline; Escape and Cmd/Ctrl+Enter leave the field, keeping what
  * was typed. There is nothing to revert to: the idle commits have already
@@ -54,8 +54,8 @@ export function TextAreaRow({
   /** How long typing must pause before the draft commits. */
   idleMs?: number;
   /**
-   * One line of text, wrapped where it does not fit: Enter leaves the field
-   * as Escape does, and a line break pasted in is a space.
+   * One line of text, one line tall and wrapped where it does not fit: Enter
+   * leaves the field as Escape does, and a line break pasted in is a space.
    */
   singleLine?: boolean;
   /** The field itself, for a caller that puts the focus in it. */
@@ -65,54 +65,21 @@ export function TextAreaRow({
   onEscape?: () => void;
 }) {
   const fieldId = useId();
-  const text = usePendingText({ value, idleMs, onCommit });
-
-  const labelElement = (
-    <label className={labelHidden ? styles.labelHidden : styles.label} htmlFor={fieldId}>
-      {label}
-    </label>
-  );
   return (
-    <div
-      className={styles.row}
-      data-nested={nested || undefined}
-      data-disabled={disabled || undefined}
-      title={title}
-    >
-      {help ? (
-        // Beside the label, not in it: a mark inside would join the field's name.
-        <span className={styles.head}>
-          {labelElement}
-          <FieldRowHelp help={help} />
-        </span>
-      ) : (
-        labelElement
-      )}
-      <textarea
-        ref={fieldRef}
+    <StackedRow label={label} labelFor={fieldId} labelHidden={labelHidden} help={help} nested={nested} disabled={disabled} title={title}>
+      <TextField
         id={fieldId}
-        className={styles.field}
-        value={text.shown}
+        value={value}
+        lines={singleLine ? 'wrap' : 'many'}
+        rows={rows}
         placeholder={placeholder}
         disabled={disabled}
-        rows={rows}
         maxLength={maxLength}
-        onFocus={text.begin}
-        onChange={(event) => text.change(singleLine ? event.target.value.replace(/[\r\n]+/g, ' ') : event.target.value)}
-        onBlur={text.end}
-        onKeyDown={(event) => {
-          // An input method's Enter and Escape accept or cancel a conversion.
-          if (isComposingKey(event)) return;
-          if (
-            event.key === 'Escape' ||
-            (event.key === 'Enter' && (singleLine || event.metaKey || event.ctrlKey))
-          ) {
-            event.preventDefault();
-            event.currentTarget.blur();
-            if (event.key === 'Escape') onEscape?.();
-          }
-        }}
+        idleMs={idleMs}
+        fieldRef={fieldRef}
+        onCommit={onCommit}
+        onEscape={onEscape}
       />
-    </div>
+    </StackedRow>
   );
 }

@@ -22,9 +22,11 @@
 }
 
 /* An option that qualifies the one above it — "Only where needed" under
-   "Precrease grid" — sits a step in, so the pair reads as one setting. */
+   "Precrease grid" — sits a step in, so the pair reads as one setting. The
+   stacked rows (StackedRow) step in by the same token, so the two kinds line
+   up under one toggle. */
 .row[data-nested] {
-  padding-left: 24px;
+  padding-left: var(--space-6);
 }
 
 /* The whole row is a button: an inspector action. */

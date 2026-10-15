@@ -96,13 +96,13 @@ describe('TextAreaRow', () => {
   it('explains itself behind a help mark beside its label, which stays out of the field’s name', () => {
     render(
       <TooltipProvider>
-        <TextAreaRow label="Byline" help="Credits under the title." value="" onCommit={vi.fn()} />
+        <TextAreaRow label="Note" help="Printed under the credits." value="" onCommit={vi.fn()} />
       </TooltipProvider>
     );
     const help = container?.querySelector('[data-field-help]');
-    expect(help?.getAttribute('aria-label')).toBe('Credits under the title.');
+    expect(help?.getAttribute('aria-label')).toBe('Printed under the credits.');
     const label = container?.querySelector('label');
-    expect(label?.textContent).toBe('Byline');
+    expect(label?.textContent).toBe('Note');
     expect(label?.contains(help!)).toBe(false);
   });
 
