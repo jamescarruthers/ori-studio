@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import saved from './__fixtures__/diagram-title-block.json';
 import { setStepText, setTitleBlockContent, type DiagramDocument } from './diagramDocument';
 import { readDiagram, writeDiagram } from './diagramFile';
+import { layoutDiagram } from '../pages/diagramPages';
+import { estimateTextSetter } from '../pages/estimateTextSetter';
+import { heldPageArrangements } from '../pages/pageArrangements';
 import { cellSlots } from '../pages/stepPlaces';
 import { resolveTitleBlock } from '../pages/titleBlockContent';
 
@@ -13,7 +16,8 @@ import { resolveTitleBlock } from '../pages/titleBlockContent';
  * pattern and a byline in Korean; a grid at a share of its own, whose
  * pattern is a chosen step and whose model is of a kind only a newer build
  * reads — its own picture, naming an asset nothing else names; and a flow of
- * eight steps with no model and the pattern unsaid, Auto.
+ * eight steps with no model and the pattern unsaid, Auto, its two pages
+ * saved as this build packed them, the first under the block.
  *
  * A change that reads them otherwise, or writes them back otherwise, changes
  * what saved title blocks mean, and fails here first.
@@ -54,6 +58,26 @@ describe('a diagram saved with a title block', () => {
 
   it('cuts the first page under the block from the file: seven of nine steps a page', () => {
     expect(cellSlots(read(2).document).pages.map((page) => page.length)).toEqual([7, 1]);
+  });
+
+  it('opens the flow of eight with its pages held as they were packed under the block: none packed afresh', () => {
+    const { document } = read(2);
+    const slots = cellSlots(document);
+    expect(Object.keys(document.pageArrangements ?? {})).toEqual(['step-lily-1', 'step-lily-8']);
+    expect(slots.signatures).toEqual(Object.values(document.pageArrangements!).map((arrangement) => arrangement.signature));
+    expect(heldPageArrangements(document, slots)).toEqual(document.pageArrangements);
+    const layout = layoutDiagram(document, estimateTextSetter);
+    expect(layout.packed).toBeUndefined();
+    expect(layout.pages.map((page) => page.packing?.packed)).toEqual([false, false]);
+    // Every step in the box it was saved in, the first page's under the block.
+    const { block } = layout.pages[0]!.titleBlock!.geometry;
+    for (const [index, page] of layout.pages.entries()) {
+      for (const cell of page.cells) {
+        const [x, y, w, h] = document.pageArrangements![page.cells[0]!.stepId]!.steps[cell.stepId]!.box;
+        expect([cell.cellMm.x, cell.cellMm.y, cell.cellMm.w, cell.cellMm.h], cell.stepId).toEqual([x, y, w, h]);
+        if (index === 0) expect(cell.cellMm.y, cell.stepId).toBeGreaterThan(block.y + block.h);
+      }
+    }
   });
 
   it('writes each back exactly, byte for byte', () => {
