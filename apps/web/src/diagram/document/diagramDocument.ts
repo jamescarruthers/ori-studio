@@ -880,7 +880,9 @@ export interface DiagramStepPlace {
    * The whole step, away from its cell, mm, in the page's reading terms:
    * `along` its row's reading direction (right on a row read left to right,
    * left on one read right to left), and `across` always down the page.
-   * Kept only while the step stays in its logical cell (`pages/stepPlaces.ts`).
+   * Kept only while the step keeps its place: its cell on a grid, its page,
+   * band and place along the band in the flow (`pages/stepPlaces.ts`,
+   * `pages/repackedFrames.ts`).
    */
   frame?: [along: number, across: number];
   /** Each part away from where the layout puts it in the frame: mm, on the page's axes (+x right, +y down). */
@@ -1252,8 +1254,9 @@ export interface DiagramStep {
    * prints where the layout puts it and stays editable. Never beside
    * {@link place}. Carried as it is through every edit but for its `frame`,
    * which this build knows belongs to the step's cell: it goes home when the
-   * step changes cell — in the flow, its page or its band — as this build's
-   * does, and a duplicate does not copy it. A reset of the whole placement
+   * step changes cell — in the flow, when it does not keep its place
+   * (`pages/repackedFrames.ts`) — as this build's does, and a duplicate does
+   * not copy it. A reset of the whole placement
    * drops the lot.
    */
   placeNewer?: Record<string, unknown>;

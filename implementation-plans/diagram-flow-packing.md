@@ -604,7 +604,12 @@ changes Decisions 4 and 6, or the note just above, this holds:
 - **A frame moved by hand keeps its offset across any re-pack while its step
   stays on its page and in its band**, and goes home only when its band (or
   whether it stands in a bend) or its page changes; part offsets, size pins
-  and caption widths always stay. Replaces Decision 4's "frames placed by
+  and caption widths always stay. *Replaced by Zach on 2026-10-15: the offset
+  is kept while the step keeps its **place** — its page, its band and its
+  place along the band as the band reads — and goes home when any of them
+  changes, a page whose rows now stack from its other end (the other side of
+  its spread) counting as another page; everything inside its box stays
+  (`diagram-document-evolution.md`, part 2).* Replaces Decision 4's "frames placed by
   hand on a repacked page go home" and Decision 6's "a page whose signature
   changes sends its placed frames home in the same commit". The rule, the
   "same page" definition (the page whose arrangement is stored under the step

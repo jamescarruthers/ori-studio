@@ -301,7 +301,7 @@ export function leastOverrunHeld(measureAt: (scale: number | null) => RoomMeasur
  * measuring never packs a page twice. The pages say what was packed
  * (`DiagramPagesLayout.packed`); nothing is written back here. On a page
  * packed afresh a frame moved by hand is drawn at its offset only where its
- * step keeps its band, judged against the document's own arrangements in
+ * step keeps its place, judged against the document's own arrangements in
  * every pass (`repackedFrames.ts`).
  */
 export function layoutDiagram(document: DiagramDocument, setter: TextSetter): DiagramPagesLayout {

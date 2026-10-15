@@ -1073,7 +1073,7 @@ export function pictureExtent(picture: NonNullable<LayoutStep['picture']>, scale
  * `stored` is what the document keeps (`DiagramDocument.pageArrangements`),
  * where `arrangements` adds what an earlier pass of the same layout packed: a
  * page packed afresh, here or there, draws a frame moved by hand at its
- * offset only where its step keeps its band (`repackedFrames.ts`), and at
+ * offset only where its step keeps its place (`repackedFrames.ts`), and at
  * home where the store, adopting the packing, will send it.
  *
  * The first page may carry the title block (`titleBlockGeometry.ts`), which
@@ -1756,12 +1756,12 @@ function arrangeFlowPages<T extends ReferenceCell>(input: {
     packing.push({ k: arrangement.k, packed: !holds, fits: arrangementFits(arrangement, pageArea) });
     const kept = arrangement;
     // Packed afresh — here, or by an earlier pass over the same diagram — rather than held as the document keeps
-    // it: a frame moved by hand keeps its offset only where its step keeps its band (`repackedFrames.ts`).
+    // it: a frame moved by hand keeps its offset only where its step keeps its place (`repackedFrames.ts`).
     const asStored = holdsArrangement(input.stored[first], signatures[pageIndex], ids);
     return entries.map((entry) => {
       const place = kept.steps[entry.step.id]!;
       const moved = entry.step.place?.frame !== undefined;
-      return arrangedCell(entry, place, !asStored && moved && !keepsMovedFrame(input.stored, first, entry.step.id, place));
+      return arrangedCell(entry, place, !asStored && moved && !keepsMovedFrame(input.stored, first, entry.step.id, kept));
     });
   });
   return { cells, packing, packed };

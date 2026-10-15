@@ -620,6 +620,24 @@ from its steps per page) and layout (grid or flow). The frame offset is kept
 while that cell is unchanged, and cleared automatically when it changes,
 whatever caused it. That is Decision 1, A.
 
+*On a flow page (Zach, 2026-10-15, replacing his rule of 2026-10-13 that
+kept the offset while the step stayed on its page and in its band):* a
+step's place is its page, its band (row) and its place along the band as
+the band reads, judged against the arrangement the page was last held in
+once the page is packed afresh. The frame offset is kept while that place is
+unchanged — even as a re-pack moves its home a little — and cleared when any
+of it changes: the title block's toggle, Steps on page N, a step put in,
+taken out or moved before it, a re-pack that moves it along or across.
+Everything inside the step's box (part offsets, caption width, size pin) is
+kept, as on a grid. A flow page is the same page by the rule below (its
+number, or the step it starts with) **only while its rows stack the same way
+up**: a page renumbered by one, or every page after the first when the first
+page's side changes, falls on the other side of its spread and stacks its
+rows from its other end, so every step on it is in a new place and goes
+home with the edit (`stepPlaces.ts`, `staysOnFlowPage`). Details:
+`diagram-document-evolution.md`, part 2, and `pages/repackedFrames.ts`. The
+grid's rule below is unchanged.
+
 A page is the same page while it keeps its number **or** the step it starts
 with *(amended in Phase 1; Zach, 2026-10-07: "3a sounds right")*:
 - **Its first step.** A step inserted earlier can add a page, renumbering

@@ -136,6 +136,19 @@ As built (Phase 1, `diagram/pages/pagePlan.ts` and `pageCounts.ts`):
   changes a page's rows sends its frames home: a page added after a left page
   (it then hands over at its spine, odd rows), the first page's side, or the
   orientation, where they change some page's rows.
+- *Superseded for flow pages, twice.* Since packing, a flow page's frames
+  are judged when the page is packed afresh, not by its cell. Zach's rule of
+  2026-10-13 kept an offset while the step stayed on its page and in its
+  band; his rule of 2026-10-15 replaces it: the offset is kept while the
+  step keeps its **place** — its page, its band and its place along the band
+  as it reads — and goes home when any changes, so Steps on page N, the title
+  block's toggle and a step put in or taken out before it send home the
+  steps they move along. A page that falls on the other side of its spread
+  (renumbered by one, or the first page's side changed) stacks its rows from
+  its other end, so every step on it is in a new place and goes home with
+  the edit; one renumbered by two keeps its side and its offsets.
+  Everything inside a step's box stays. See
+  `diagram-document-evolution.md`, part 2.
 
 As built (the second review, 2026-10-11; the layout itself unchanged):
 

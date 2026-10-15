@@ -49,10 +49,11 @@ import { cellSlots, pageShape, sameCell, settlePlaces } from './stepPlaces';
  * hand. On a grid, Decision 1A's: kept while its step stays in its cell, and
  * sent home when the cell changes, whatever changed it (`implementation-plans/
  * diagram-page-overrides.md`, "When an override clears"), one case per row
- * of the clearing table. In the flow (Zach, 2026-10-13): kept while its step
- * stays on its page and in its band — an edit sends home only the frames of
- * steps it takes off their page, and the band is judged as the page's packing
- * is adopted (`repackedFrames.test.ts`).
+ * of the clearing table. In the flow (Zach, 2026-10-15): kept while its step
+ * keeps its place — its page, its band and its place along the band — an
+ * edit sends home only the frames of steps it takes off their page, and the
+ * rest of the place is judged as the page's packing is adopted
+ * (`repackedFrames.test.ts`).
  */
 
 describe('cellSlots', () => {
@@ -270,13 +271,30 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     ['margin', { marginMm: 25 }],
     ['title shown', { showTitle: false }],
     ['page numbers', { pageNumbers: { enabled: false, first: 4 } }],
-    ['first page’s side', { firstPageSide: 'right' }],
     ['band count', { flowBands: 3 }],
     ['steps in bends', { flowBendSteps: false }],
     ['scale steadiness', { flowSteadiness: 0.5 }],
-  ] as const)('keeps every flow frame when the %s changes: every page is packed afresh, its steps on it, their bands for the layout to judge', (_label, patch) => {
+  ] as const)('keeps every flow frame when the %s changes: every page is packed afresh, its steps on it, their places for the layout to judge', (_label, patch) => {
     const before = placed(16, { layout: 'flow' });
     expect(settle(before, setPageSetup(before, patch as Partial<DiagramPageSetup>))).toEqual([]);
+  });
+
+  it('sends home every frame after the first flow page when the first page’s side changes: their rows now stack from the other end', () => {
+    // s0–s8 | s9–s12 | s13–s15. Each page after the first falls on the other side of its spread: a right page stacks
+    // its rows from its foot, a left one from its head, so every band of pages two and three is where another was.
+    // The first page's rows stack from its head on either side: its steps stay on it, their places for the layout.
+    const before = placed(16, { layout: 'flow' });
+    const after = setPageSetup(before, { firstPageSide: 'right' });
+    expect([cellSlots(before).up, cellSlots(after).up]).toEqual([
+      [false, true, false],
+      [false, false, true],
+    ]);
+    expect(settle(before, after)).toEqual(ids(9, 15));
+    expect(settle(after, before)).toEqual(ids(9, 15));
+    // A grid's pages have no side to stack from.
+    const grid = placed(16);
+    expect(cellSlots(grid).up).toEqual([]);
+    expect(settle(grid, setPageSetup(grid, { firstPageSide: 'right' }))).toEqual([]);
   });
 
   it('keeps a grid page’s frames through the paper, and a flow page’s through the grid’s columns and rows', () => {
@@ -308,14 +326,27 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     expect(settle(one, insertSteps(one, [createStep(() => 'next')], one.steps.length))).toEqual([]);
   });
 
-  it('keeps a flow page’s frames when an edit earlier renumbers it: it is the page that starts with the same step', () => {
+  it('keeps a flow page’s frames when an edit earlier renumbers it by two: it is the page that starts with the same step, on the same side', () => {
     // Breaks at s1 and s3 add two pages in front of the one s4 starts: the fourth now, packed afresh, as a grid's is
-    // the same page (above). s1–s3 leave page one for pages of their own.
+    // the same page (above), its rows stacking from its foot as before. s1–s3 leave page one for pages of their own.
     const before = placed(16, { layout: 'flow' }, [4, 13]);
     expect(cellSlots(before).slots.get('s5')).toEqual({ page: 1, first: 's4', k: 1 });
     const after = setStepBreakBefore(setStepBreakBefore(before, 's1', true), 's3', true);
     expect(cellSlots(after).slots.get('s5')).toEqual({ page: 3, first: 's4', k: 1 });
+    expect([cellSlots(before).up[1], cellSlots(after).up[3]]).toEqual([true, true]);
     expect(settle(before, after)).toEqual(ids(1, 3));
+  });
+
+  it('sends home every frame on a flow page an edit earlier renumbers by one: it falls on the other side, its rows stacking from the other end', () => {
+    // s0–s3 | s4–s12 | s13–s15. A break at s1 adds a page in front: s4's page is the third now, a left page whose
+    // rows stack from its head where they stacked from its foot, and s13's the fourth, the other way round. Each
+    // step keeps its band and its place along it, but every band is where another was (Zach, 2026-10-15).
+    const before = placed(16, { layout: 'flow' }, [4, 13]);
+    const after = setStepBreakBefore(before, 's1', true);
+    expect(cellSlots(after).pages).toEqual([['s0'], ids(1, 3), ids(4, 12), ids(13, 15)]);
+    expect(settle(before, after)).toEqual(ids(1, 15));
+    // Taken out again: the same pages go back to their sides, so the same frames go home.
+    expect(settle(after, setStepBreakBefore(after, 's1', false))).toEqual(ids(1, 15));
   });
 
   it('keeps the frames of the flow page a turn is added to, moved on or taken from: every step stays on its page', () => {
@@ -327,7 +358,7 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
     expect(settle(before, insertSteps(before, [createTurn({ kind: 'turn-over', axis: 'vertical' }, () => 'end')], before.steps.length))).toEqual([]);
   });
 
-  it('keeps the frames of a flow page Re-pack Page lets go of: they go home only as its packing changes their bands', () => {
+  it('keeps the frames of a flow page Re-pack Page lets go of: they go home only as its packing changes their places', () => {
     const before = withPageArrangements(placed(16, { layout: 'flow' }), packedFor(placed(16, { layout: 'flow' })));
     expect(settle(before, followPageArrangements(before, repackPages(before, 1)))).toEqual([]);
     expect(settle(before, followPageArrangements(before, repackPages(before, null)))).toEqual([]);
@@ -358,7 +389,7 @@ describe('settlePlaces: a frame goes home when its step lands in another cell (D
 
   it('keeps a left page’s frames when a page added or removed after it changes its rows to hand over at its spine', () => {
     // 4 steps print in 2 rows on A4 upright; a left page that hands over at its spine takes an odd number, 3
-    // (diagram-flow-pages.md, Decision 4), so it is packed afresh — its steps on it, their bands for the layout.
+    // (diagram-flow-pages.md, Decision 4), so it is packed afresh — its steps on it, their places for the layout.
     const one = placed(4, { layout: 'flow', stepsPerPage: 4 }, []);
     expect(cellSlots(one).shapes).toEqual(['4/2']);
     const added = insertSteps(one, [createStep(() => 'next')], one.steps.length);
@@ -480,7 +511,7 @@ function packedFor(document: DiagramDocument): Record<string, DiagramPageArrange
   );
 }
 
-describe('settlePlaces on flow pages packed and held (Zach, 2026-10-13: a frame stays while its step stays on its page and band)', () => {
+describe('settlePlaces on flow pages packed and held (Zach, 2026-10-15: a frame stays while its step keeps its place)', () => {
   /** Twelve flow steps `s0`…, five a page — s0–s4 | s5–s9 | s10–s11 — every frame moved, every page packed and held. */
   const held = () => {
     const before = placed(12, { layout: 'flow', stepsPerPage: 5 }, []);
@@ -495,7 +526,7 @@ describe('settlePlaces on flow pages packed and held (Zach, 2026-10-13: a frame 
     const after = insertSteps(document, [cpStep('new')], stepIndex(document, 's8'));
     expect(cellSlots(after).pages).toEqual([ids(0, 4), ['s5', 's6', 's7', 'new', 's8'], ids(9, 11)]);
     expect(landed(document, after)).toEqual(['s9']);
-    // Page two keeps its arrangement, which no longer holds it: the layout packs it afresh, and judges the bands.
+    // Page two keeps its arrangement, which no longer holds it: the layout packs it afresh, and judges the places.
     const followed = followPageArrangements(document, after);
     expect(followed.pageArrangements!.s5).toBe(document.pageArrangements!.s5);
   });
@@ -517,7 +548,7 @@ describe('settlePlaces on flow pages packed and held (Zach, 2026-10-13: a frame 
   });
 
   it('keeps a frame where no arrangement ever placed the step while it stays on the page of its number, or that starts with it', () => {
-    // No page packed and adopted: no band is known, and a page is the same page as a grid's is.
+    // No page packed and adopted: no place on it is known, and a page is the same page as a grid's is.
     const before = placed(12, { layout: 'flow', stepsPerPage: 5 }, []);
     expect(settle(before, insertSteps(before, [cpStep('new')], stepIndex(before, 's5')))).toEqual(['s9']);
   });

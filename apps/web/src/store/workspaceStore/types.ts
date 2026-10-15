@@ -2000,7 +2000,7 @@ export interface DiagramSliceState {
   /**
    * The newest time frames moved by hand were sent home: by an edit
    * (`settlePlaces`, inside that edit's undo step), or as a flow page packed
-   * afresh was adopted, where its steps changed band (`adoptPacking`). How
+   * afresh was adopted, where its steps changed place (`adoptPacking`). How
    * many the edit sent home in all (`count`: an adoption after the edit that
    * re-packed its page adds to the edit's), and how many this time
    * (`added`); a `nonce` that is new each time, so what tells the user — a

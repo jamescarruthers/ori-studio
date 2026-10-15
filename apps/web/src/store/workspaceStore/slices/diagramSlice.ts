@@ -202,13 +202,14 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
     const counted = retainPageCounts(base, edited);
     // Each flow page's arrangement follows its page, in the same undo step
     // (`diagram-flow-packing.md`): one the page no longer holds is kept for
-    // the bands its steps were in until the layout packs the page afresh, and
-    // one no page keeps goes, so the file never carries it.
+    // where its steps were until the layout packs the page afresh, and one no
+    // page keeps goes, so the file never carries it.
     const followed = followPageArrangements(base, counted);
     // A frame moved by hand whose step the edit took out of its cell — in the
     // flow, off its page — goes home, in this edit's undo step (Decision 1A;
-    // a flow step's band is judged as its page's packing is adopted): one
-    // rule, here, whatever the edit was, so no verb can forget it.
+    // a flow step's band and place along it are judged as its page's packing
+    // is adopted, Zach 2026-10-15): one rule, here, whatever the edit was, so
+    // no verb can forget it.
     const { document: settled, settled: count } = settlePlaces(base, followed);
     // An asset nothing refers to any more goes as the edit lands. Each undo
     // snapshot keeps its own assets table, so undo still has the picture a
@@ -818,7 +819,7 @@ export const createDiagramSlice: WorkspaceSliceCreator<DiagramSlice> = (set, get
       const { diagram, diagramReadOnly } = get();
       // Packed from a diagram that has changed since, or one that is shown and never edited: nothing to take in.
       if (diagramReadOnly || diagram === null || diagram !== ofDocument) return false;
-      // A frame moved by hand on a page packed afresh goes home where its step changed band, as the layout drew it.
+      // A frame moved by hand on a page packed afresh goes home where its step changed place, as the layout drew it.
       const { document: next, settled } = adoptPacking(diagram, arrangements);
       if (next === diagram) return false;
       // Not an edit: no undo entry, the history as it was, and the project no dirtier than it was.
