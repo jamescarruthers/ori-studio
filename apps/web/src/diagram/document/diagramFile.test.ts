@@ -399,7 +399,7 @@ describe('writeDiagram / readDiagram', () => {
       expect(throughJson(writeDiagram(read.document))).toEqual(written);
       // Every part back to Auto, its default or none: nothing written.
       const cleared = [
-        { model: 'auto', pattern: 'auto', subtitle: '', note: '', modelSize: 'default', patternSize: 0.8 },
+        { model: 'auto', pattern: 'auto', subtitle: '', note: '', modelSize: 'default', patternSize: 0.79 },
         { credits: { op: 'remove', at: 0 } },
         { credits: { op: 'remove', at: 0 } },
       ].reduce((document, patch) => setTitleBlockContent(document, patch as DiagramTitleBlockContentPatch), set);
@@ -408,9 +408,9 @@ describe('writeDiagram / readDiagram', () => {
 
     it('keeps a size a file says at the default as it says it: unsaid is the default, said is the author’s', () => {
       const base = throughJson(writeDiagram(sampleDiagram()));
-      const written = { ...base, titleBlockContent: { modelSize: 0.6, patternSize: 0.8 } };
+      const written = { ...base, titleBlockContent: { modelSize: 0.59, patternSize: 0.79 } };
       const read = readDiagram(written)!;
-      expect(read.document.titleBlockContent).toEqual({ modelSize: 0.6, patternSize: 0.8 });
+      expect(read.document.titleBlockContent).toEqual({ modelSize: 0.59, patternSize: 0.79 });
       expect(throughJson(writeDiagram(read.document))).toEqual(written);
     });
 

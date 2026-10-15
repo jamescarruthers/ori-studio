@@ -1790,7 +1790,7 @@ on its next save.
   kept. In the subtitle, a label and a text value a line break reads as a
   space. `modelSize` and `patternSize`, the model's height and the pattern's
   side as shares of the block's height (0.3–1); unsaid is the build's
-  default (0.6 and 0.8 since 2026-10-15), a look, and a size said is kept as
+  default (0.59 and 0.79 since 2026-10-15), a look, and a size said is kept as
   said, the default included. `byline` (this branch's credits as one text,
   never released) is retired: a string reads as the note where none is
   said, and is never written. A part that does not read is dropped alone,

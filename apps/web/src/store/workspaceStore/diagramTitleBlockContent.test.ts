@@ -174,11 +174,11 @@ describe('setDiagramTitleBlockContent, every part of the header', () => {
     expect(state().setDiagramTitleBlockContent({ modelSize: 0.75 })).toBe(true);
     expect(state().setDiagramTitleBlockContent({ patternSize: 0.5 })).toBe(true);
     expect(content()).toEqual({ modelSize: 0.75, patternSize: 0.5 });
-    expect(state().setDiagramTitleBlockContent({ modelSize: 'default', patternSize: 0.8 })).toBe(true);
+    expect(state().setDiagramTitleBlockContent({ modelSize: 'default', patternSize: 0.79 })).toBe(true);
     expect(content()).toBeUndefined();
     expect(undoSteps()).toBe(3);
     // The default where nothing is said: nothing to record.
-    expect(state().setDiagramTitleBlockContent({ modelSize: 0.6 })).toBe(false);
+    expect(state().setDiagramTitleBlockContent({ modelSize: 0.59 })).toBe(false);
     expect(undoSteps()).toBe(3);
   });
 

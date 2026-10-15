@@ -413,14 +413,14 @@ describe('the title block’s content', () => {
 
   it('holds a size to its range, and takes it away at its default', () => {
     const { diagram } = diagramWith(0);
-    expect(TITLE_BLOCK_ART_SIZE_DEFAULTS).toEqual({ modelSize: 0.6, patternSize: 0.8 });
-    expect(titleBlockArtSizes(diagram.titleBlockContent)).toEqual({ modelSize: 0.6, patternSize: 0.8 });
+    expect(TITLE_BLOCK_ART_SIZE_DEFAULTS).toEqual({ modelSize: 0.59, patternSize: 0.79 });
+    expect(titleBlockArtSizes(diagram.titleBlockContent)).toEqual({ modelSize: 0.59, patternSize: 0.79 });
     const set = setTitleBlockContent(diagram, { modelSize: 0.45, patternSize: 2 });
     expect(set.titleBlockContent).toEqual({ modelSize: 0.45, patternSize: 1 });
     expect(titleBlockArtSizes(set.titleBlockContent)).toEqual({ modelSize: 0.45, patternSize: 1 });
     expect(setTitleBlockContent(set, { modelSize: 0.1 }).titleBlockContent?.modelSize).toBe(0.3);
     expect(setTitleBlockContent(set, { modelSize: Number.NaN })).toBe(set);
-    expect(setTitleBlockContent(set, { modelSize: 0.6, patternSize: 'default' })).toEqual(diagram);
+    expect(setTitleBlockContent(set, { modelSize: 0.59, patternSize: 'default' })).toEqual(diagram);
   });
 
   it('starts a new diagram with the words it is given, and none where it is given none', () => {

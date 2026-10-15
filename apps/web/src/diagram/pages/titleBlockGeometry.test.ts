@@ -127,6 +127,22 @@ describe('titleBlockParts', () => {
     }
   });
 
+  it('gives J1b’s art on A4 portrait at a new diagram’s share and sizes, within half a millimetre', () => {
+    // J1b, in pt: the pattern's square x 421.27–561.26 from y 34.02; the crane's model drawn 115.02 × 104.99, its
+    // right edge at 505.26; the band's right end, the art's left edge, at 390.24.
+    const PT = 72 / 25.4;
+    const { pattern, model, column } = geometryOf({ titleBlock: DEFAULT_PAGE_SETUP.titleBlock });
+    const near = (mm: number, pt: number, what: string) => expect(Math.abs(mm * PT - pt) / PT, what).toBeLessThanOrEqual(0.5);
+    near(pattern.x, 421.27, 'pattern x');
+    near(pattern.y, 34.02, 'pattern y');
+    near(pattern.w, 139.99, 'pattern side');
+    near(right(model), 505.26, 'model right');
+    near(model.h, 104.99, 'model height');
+    near(right(column), 390.24, 'band end');
+    // The crane's picture, 539 × 492, fills the model's box from its right: its left on the band's end.
+    near(right(model) - (539 / 492) * model.h, 390.24, 'crane left');
+  });
+
   it('reads the band and the sizes alone: the band’s box is the layout’s, whatever the parts', () => {
     const band = titleBlockBand(setupOf(), HEADER_MM, FOOTER_MM)!;
     for (const sizes of EVERY_SIZE) {
