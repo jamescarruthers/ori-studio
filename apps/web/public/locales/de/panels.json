@@ -1184,7 +1184,7 @@
         "pattern": "Faltmuster",
         "patternHelp": "Gezeichnet nach dem Faltmuster, das ein Schritt verknüpft. Auto nimmt den letzten verknüpften Schritt; jedes Muster steht nur einmal in der Liste, unter dem letzten Schritt, der es verknüpft.",
         "section": "Titelblock",
-        "show": "Auf der ersten Seite zeigen",
+        "show": "Auf erster Seite zeigen",
         "showHelp": "Titel, Faltmuster und fertiges Modell oben auf der ersten Seite.",
         "step": "Schritt {{number}}",
         "stepNoPattern": "Schritt {{number}} (kein Faltmuster)",

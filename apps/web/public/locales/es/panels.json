@@ -1221,7 +1221,7 @@
         "pattern": "Patrón de pliegues",
         "patternHelp": "Se dibuja a partir del patrón de pliegues que vincula un paso. Auto usa el último paso vinculado; cada patrón aparece una sola vez, con el último paso que lo vincula.",
         "section": "Bloque de título",
-        "show": "Mostrar en la primera página",
+        "show": "En la primera página",
         "showHelp": "El título, el patrón de pliegues y el modelo terminado, en la parte superior de la primera página.",
         "step": "Paso {{number}}",
         "stepNoPattern": "Paso {{number}} (sin patrón de pliegues)",

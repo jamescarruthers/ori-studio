@@ -1221,7 +1221,7 @@
         "pattern": "Patron de plis",
         "patternHelp": "Dessiné d’après le patron de plis qu’une étape lie. Auto prend la dernière étape liée ; chaque patron n’apparaît qu’une fois, sous la dernière étape qui le lie.",
         "section": "Bloc titre",
-        "show": "Afficher sur la première page",
+        "show": "Sur la première page",
         "showHelp": "Le titre, le patron de plis et le modèle fini, en haut de la première page.",
         "step": "Étape {{number}}",
         "stepNoPattern": "Étape {{number}} (sans patron de plis)",

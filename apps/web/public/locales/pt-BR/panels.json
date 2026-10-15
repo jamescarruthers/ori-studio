@@ -1221,7 +1221,7 @@
         "pattern": "Padrão de vincos",
         "patternHelp": "Desenhado a partir do padrão de vincos que um passo vincula. Auto usa o último passo vinculado; cada padrão aparece uma só vez, pelo último passo que o vincula.",
         "section": "Bloco de título",
-        "show": "Mostrar na primeira página",
+        "show": "Na primeira página",
         "showHelp": "O título, o padrão de vincos e o modelo pronto, no alto da primeira página.",
         "step": "Passo {{number}}",
         "stepNoPattern": "Passo {{number}} (sem padrão de vincos)",
