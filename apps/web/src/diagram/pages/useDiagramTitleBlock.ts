@@ -4,6 +4,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { DEFAULT_PAGE_SETUP } from '../document/diagramDocument';
 import { hasTitleBlock, titleBlockFits } from './pagePlan';
 import { titleBlockChoiceSource, titleBlockChoices, type TitleBlockChoices } from './titleBlockChoices';
+import { setPageSetting } from './useDiagramPageSetup';
 
 const NO_CHOICES: TitleBlockChoices = {
   model: { value: 'auto', autoNumber: null, steps: [] },
@@ -24,15 +25,12 @@ export function useDiagramTitleBlock() {
   const readOnly = useWorkspaceStore((state) => state.diagramReadOnly);
   const loadId = useWorkspaceStore((state) => state.diagramLoadId);
   const page = document?.page ?? DEFAULT_PAGE_SETUP;
-  const choices = useMemo(() => (document ? titleBlockChoices(document) : NO_CHOICES), [document]);
+  const shown = hasTitleBlock(page);
+  // Only while the selects are there to offer them: a file without the block pays nothing.
+  const choices = useMemo(() => (document && shown ? titleBlockChoices(document) : NO_CHOICES), [document, shown]);
   /** The sitting at the byline last counted. */
   const countedSession = useRef<number | null>(null);
 
-  const setEnabled = useCallback((enabled: boolean) => {
-    const { diagram, setDiagramPage } = useWorkspaceStore.getState();
-    const titleBlock = (diagram?.page ?? DEFAULT_PAGE_SETUP).titleBlock;
-    if (setDiagramPage({ titleBlock: { ...titleBlock, enabled } })) trackDiagramPageSetupChanged('title_block');
-  }, []);
   const setModel = useCallback((choice: string) => choose('model', choice), []);
   const setPattern = useCallback((choice: string) => choose('pattern', choice), []);
   const setByline = useCallback(
@@ -52,7 +50,7 @@ export function useDiagramTitleBlock() {
     /** Whether the first page has room for a block: a grid of one row has none (`titleBlockFits`). */
     fits: titleBlockFits(page),
     /** Whether the first page carries the block: on, and room for it. */
-    shown: hasTitleBlock(page),
+    shown,
     model: choices.model,
     pattern: choices.pattern,
     byline: document?.titleBlockContent?.byline ?? '',
@@ -61,6 +59,12 @@ export function useDiagramTitleBlock() {
     setPattern,
     setByline,
   };
+}
+
+/** Turn the first page's title block on or off, at the height it has. */
+function setEnabled(enabled: boolean) {
+  const { titleBlock } = useWorkspaceStore.getState().diagram?.page ?? DEFAULT_PAGE_SETUP;
+  setPageSetting({ titleBlock: { ...titleBlock, enabled } }, 'title_block');
 }
 
 /** Set where a part of the block comes from, from the choice the Page pane offered. */

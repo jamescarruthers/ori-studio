@@ -22,6 +22,13 @@ vi.mock('../../analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../analytics')>()),
   ...analytics,
 }));
+/** What the selects offer, as built, watched for when it is worked out. */
+const choices = vi.hoisted(() => ({ titleBlockChoices: vi.fn() }));
+vi.mock('../../diagram/pages/titleBlockChoices', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../diagram/pages/titleBlockChoices')>();
+  choices.titleBlockChoices.mockImplementation(actual.titleBlockChoices);
+  return { ...actual, ...choices };
+});
 
 /**
  * The Page pane's Title block section (`implementation-plans/diagram-title-block.md`,
@@ -136,6 +143,15 @@ describe('DiagramTitleBlockSection', () => {
     act(() => toggle().click());
     expect(state().diagram!.page.titleBlock).toEqual({ ...ON, enabled: false });
     expect(select('Model')).toBeNull();
+  });
+
+  it('works out what the selects offer only while the first page has the block, as an old file has not', () => {
+    install();
+    render();
+    act(() => state().setDiagramTitleBlockContent({ byline: 'Design: Lang' }));
+    expect(choices.titleBlockChoices).not.toHaveBeenCalled();
+    act(() => toggle().click());
+    expect(choices.titleBlockChoices).toHaveBeenCalled();
   });
 
   it('names the switch by what it does, not again by its section, and says what each select’s Auto follows', () => {
