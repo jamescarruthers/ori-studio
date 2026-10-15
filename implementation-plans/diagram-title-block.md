@@ -13,8 +13,9 @@ recommended. T-18 is built as recommended (A, with B as the fallback), but
 whether the release waits for it is Zach's call once the build is done. The
 PR goes into #436's branch and no agent merges it.
 
-The decisions are numbered T-1 to T-19, and T-20, raised in the review of
-1a and 1b, still needs Zach's answer. Each gives its options and a
+The decisions are numbered T-1 to T-19. T-20, raised in the review of 1a
+and 1b, and T-21, raised in the review of 1c to 1e, still need Zach's
+answer, before 1f turns the default on. Each gives its options and a
 recommendation. Four of them were the real forks:
 
 - **T-3**, how many steps page 1 holds. The recommendation re-paginates every
@@ -418,6 +419,61 @@ every page (9, 11, 9).
   only what the toggle does. So A can follow the release without moving any
   saved page. `pageCounts.test.ts` pins B, and 1c's steadiness check
   includes the crane under it.
+- **What B costs, measured in 1c** (real reader, layout and fonts): the
+  crane's page 1 keeps its nine steps at a page scale of 0.864 instead of
+  1.251 as saved, 31% smaller, and its pages 2 and 3 are held as saved.
+  Under A its page 1 would hold 7 and page 2 fall from 0.891 to 0.654.
+  Either way the block costs the crane's first two pages about a quarter to
+  a third of their size; Zach chooses which page pays.
+
+**T-21. What the block costs a landscape diagram. Raised in the review of
+1c to 1e. Needs Zach's answer before 1f.** On a landscape page with First
+page Left, page 1 under the block is a left page that hands over at the
+spine, so its packing takes an odd number of bands (`flowPacking.ts`): one
+or three, in 123 mm on A4 and 77 mm on A5. With the block on, a new
+diagram's first two pages come out much smaller than without it. Page
+scales `k`, page 1 / page 2, block off → on (new diagrams of the crane's 29
+steps, First page Left; `artifacts/title-block/landscape.txt`, every paper
+4 to 16 steps a page, both first-page sides):
+
+| case | block off | block on | on ÷ off |
+| --- | --- | --- | --- |
+| A4 landscape, 8 a page | 0.79 / 0.85 | 0.50 / 0.51 | 0.64 / 0.60 |
+| A4 landscape, 9 a page | 0.78 / 0.82 | 0.67 / 0.65 | 0.87 / 0.80 |
+| A4 landscape, 12 a page | 0.92 / 1.00 | 0.67 / 0.73 | 0.73 / 0.73 |
+| A4 landscape, 16 a page | 1.03 / 1.03 | 0.73 / 0.77 | 0.71 / 0.75 |
+| Letter landscape, 8 a page | 1.05 / 0.96 | 0.60 / 0.66 | 0.57 / 0.69 |
+| Letter landscape, 12 a page | 0.97 / 1.06 | 0.69 / 0.76 | 0.72 / 0.72 |
+| A5 landscape, 8 a page | 0.55 / 0.60 | 0.26 / 0.29 | 0.48 / 0.48 |
+| A5 landscape, 9 a page | 0.62 / 0.63 | 0.37 / 0.40 | 0.60 / 0.64 |
+| A4 landscape, 4 a page | 0.91 / 0.95 | 1.38 / 0.93 | 1.52 / 0.97 |
+
+The pages after page 2 hold other steps with the block on, so their
+ratios are rough; they mostly climb back (A4 landscape 8 a page, pages 3–4:
+0.86). With First page Right page 1 stands alone and takes any number of
+bands; it comes out larger in most landscape cases (A4 landscape 9, 12 and
+16 a page: ×1.06, ×1.23, ×1.26) but not all (A4 landscape 8: ×0.86; A5
+landscape 8 and 9: ×0.73, ×0.75). Portrait pages lose less, and not
+always (A4 9 a page: 1.25 / 1.16 → 1.00 / 1.05; Letter 9: 1.18 / 1.29 →
+0.86 / 0.87). At 4 a page in landscape, page 1 comes out about half as
+large again as page 2 on the same spread.
+- A. As built: the block's share (27%) and page 1's count (T-3 A) on every
+  paper. A landscape diagram that minds can take First page Right, or set
+  Steps on page 1.
+- B. A smaller share by default on a landscape page (say 20%). The share is
+  written to the file, so this is only what a new diagram starts with; a
+  diagram turned to landscape later keeps its share.
+- C. Page 1's count from the bands its area holds, not from the block's
+  share: the count a left page that hands over packs into one or three full
+  bands. It is new layout, and page 1's rule is frozen with the release
+  (section 2), so it must be settled before any file is saved with the
+  block on.
+- **Recommended: A for the first cut, with these numbers in front of Zach.**
+  B moves the cost rather than removing it (a shorter block, the same
+  parity), and C is a new rule in the format the day before the release.
+  If A is not acceptable for landscape, T-18 B (default off) leaves the
+  rule unfrozen only until the first author turns the block on, so C would
+  still have to come first.
 
 ### 3. Inside the block
 
@@ -430,7 +486,8 @@ every page (9, 11, 9).
   the way across the pattern. Its picture is fitted inside, set to the box's
   bottom right.
 - **The title column** runs from the left margin to the pattern, with 4 mm
-  to spare. The title is the diagram's own (`DiagramDocument.title`), set
+  to spare — to the model's box instead where a short block brings that up
+  beside the title (revised in the review of 1c to 1e). The title is the diagram's own (`DiagramDocument.title`), set
   bold on one line with `setter.line`, at the largest size up to 10 mm that
   fits, and no smaller than 5 mm; past that, cut with an ellipsis. Two
   lines would need a bold `paragraph` in both setters, so it waits for the
@@ -441,8 +498,8 @@ every page (9, 11, 9).
 - **Text** is set by the layout's own setter, as the tab is, so CJK titles,
   the Han style and font embedding work as they do for captions. The
   byline joins `diagramFontTexts` (regular weight), so its faces load.
-- **When something is missing.** With no pattern, the model takes the
-  pattern's square, sized to the whole art area. With no model, the pattern
+- **When something is missing.** With no pattern, the model stands in the
+  pattern's square, clear of the title's column. With no model, the pattern
   stands alone. With neither, the area is empty. With no title, nothing
   prints. The block keeps its room in every case, so nothing re-packs. The
   Pages view marks what is missing in its overlay, which is never printed.
@@ -1226,27 +1283,36 @@ until 1f.
   keeps the room.
 - [x] The ribbon with First page Left (spine) and Right (page turn): page 1
   to page 2 lines up as before (952fc658e).
-- [x] Steadiness: on the crane and on new diagrams of 9, 12 and 16 steps a
+- [ ] Steadiness: on the crane and on new diagrams of 9, 12 and 16 steps a
   page (A4, Letter, A4 landscape), page 1's scale is within ×1.09 of page
   2's, so page 2 is not held down. If not, the page-1 capacity rule is tuned
   and the numbers shown to Zach. The crane is measured under T-20 B, its
-  page 1 holding its own count of nine.
+  page 1 holding its own count of nine. **Measured, not tuned; Zach
+  decides.** Page 2 is held down in 3 of the 9 new cases with the block (4
+  without), and no page-1 count clears it (As built below). Widened in the
+  review to 4–16 steps a page on A4, Letter and A5 either way up: the cost
+  is landscape with First page Left, put to Zach as T-21; the crane's is in
+  T-20.
 - [x] With the block on, typing or clearing the title leaves page 1's
   packing area, and its held arrangement, unchanged: the signature already
   reads no tab there (1b). On a grid, page 1's rows start at
   `blockRows(setup)` (`pageShape` already counts them).
-- [x] Once the page-1 rule is settled, the fixture's third diagram gains a
+- [ ] Once the page-1 rule is settled, the fixture's third diagram gains a
   page-1 arrangement packed under the block by 1c's layout, and a test
   opens it with every page held (`packing.packed === false`) and its
   signatures the stored ones: the whole chain from read to hold, as
-  `savedPagesHold.test.ts` checks it for files without the block.
+  `savedPagesHold.test.ts` checks it for files without the block. (Done
+  under the rule as built; the rule is not settled while T-20 and T-21 are
+  open, and the fixture's pages are packed again if either changes it.)
 
 *As built (1c).* As planned, with these calls:
 - `titleBlockGeometry(setup, headMm, footMm)` takes the header and footer
   the layout keeps, which a grid's rows are cut under (the block there is
   the header's room and its rows); the flow's block is read from the setup
   alone. It returns the block, `rows`, and boxes for the title, the byline,
-  the pattern, the model and the `art` (the two together). Two looks the
+  the pattern and the model. (A first build also returned the `art`, the
+  two together, as the model's room with no pattern; the review put the
+  model in the pattern's square instead, see below.) Two looks the
   plan did not fix: the pattern's square is held to 45% of the block's
   width (a two-row grid gives the block half the page), and the pattern and
   the model stand on the block's foot, so where the square is held the art
@@ -1255,8 +1321,8 @@ until 1f.
   (one at a share of 0.15 on A5 landscape).
 - `setTitleBlock` sets the text: the title's size is read off its width at
   10 mm (a width is proportional to the size), to a hundredth of a mm down,
-  then held to 5 mm and cut there; its capitals' tops stand at the block's
-  top.
+  then held to 5 mm and cut there; its tallest letter's top stands at the
+  block's top (a capital's in the first build; see the review below).
 - `layoutDiagramPages` takes the title and the byline together
   (`DiagramTitles`) where it took the title; `layoutDiagram` hands it the
   byline. `LayoutPage.titleBlock` is the only new field: a page with it
@@ -1290,11 +1356,13 @@ until 1f.
   sides, `sweep.test.ts`) found no rule that clears it: at 12 a page on A4
   only a count of 6 does, and on A4 landscape page 1 is held by its height
   (a left page that hands over takes three bands in 123 mm), whatever it
-  holds. The one place the block costs is landscape: page 2's scale is
-  20–27% under its scale without the block (its steps are not the same
-  ones, so this is a rough measure), and the pages after it climb back. The crane
-  under T-20 B keeps its nine on page 1 at 0.864, 31% smaller than as
-  saved, and page 2 is held as saved.
+  holds. At 9 a page on A4 landscape page 2 is not held (0.675 / 0.654):
+  it is smaller than without the block because it holds other steps, not
+  because of steadiness. That one row was all this table had of landscape;
+  the review's wider sweep (T-21) shows the cost there is larger and comes
+  from page 1's band parity under the block. The crane under T-20 B keeps
+  its nine on page 1 at 0.864, 31% smaller than as saved, and page 2 is
+  held as saved.
 - The fixture's flow of eight holds its two pages as this layout packed
   them, written through the real writer; the test opens it with both held.
 
@@ -1314,7 +1382,16 @@ until 1f.
   Zach. 1e goes on while he looks. The block's proportions are tuned on his
   word. (Made: the crane's page 1 as a PDF at print size and a PNG, and a
   new diagram's page 1 in the flow and on a 3 × 3 grid, under
-  `artifacts/title-block/first-look/`; his word is still to come.)
+  `artifacts/title-block/first-look/`; his word is still to come. Made
+  again in the review from the app's own PDF export in Chromium, the same
+  pixels as the first; with them, for his calls: a long title cut at 5 mm
+  with half the block empty under it (a two-line title waits on his word),
+  an untitled diagram with nothing linked, a model with no pattern, and A4
+  landscape (T-21). Also his to judge there: the block's empty stretches —
+  a two-row grid's block is half the page, its art standing on its foot;
+  the crane, with no byline, leaves most of the block's left blank — and
+  the ribbon's band reaching up to 6 mm into the block's foot on dense or
+  short first pages, pinned by a test in `flowLane.test.ts`.)
 
 *As built (1d, the resolution only; the drawing is its own lane).*
 `diagram/pages/titleBlockContent.ts`: `resolveTitleBlock(document)` gives
@@ -1340,30 +1417,102 @@ null, or a null `thumbnail`), so the overlay can name it.
   at the box's bottom right, then `cellPicture`), and `fittedScene`, the
   pattern (the module's own `placedScene` at the scale that fits the
   square). `modelRoom` is the one rule for where the model stands: in
-  front of the pattern, or over the whole art where no pattern is drawn.
+  front of the pattern, or in the pattern's square where no pattern is
+  drawn (the whole art in the first build, which ran it into the title).
 - The composer draws the block in the tab's place, `titleBlockElements`;
   `ComposeDiagramPageInput.titleBlock` is required, so the PDF's and the
   sheet's compositions (`composeEveryPage`) cannot leave the art out.
-  `PreparedDiagramPages.titleBlock` carries the resolution for the overlay.
+  `PreparedDiagramPages.titleBlock` carries the resolution for the overlay,
+  and is null where the first page has no block (`hasTitleBlock`), as the
+  input's is: the block is resolved, and the byline's faces listed in
+  `diagramFontTexts`, only where it prints.
 - The pattern is drawn in `diagramSurfaceStyle` (the style through the
   Diagram's policy), whose aux switch decides whether an `unassigned` line
   shows.
 
 *As built (1e, the overlay's placeholders; the pane is its own lane).*
-`DiagramTitleBlockOverlay` (with its CSS module) is mounted by the Pages
-view over the first page: the block's outline, drawn as the margin guide
-is, and a dashed box where a part would print and prints nothing, from
-`missingTitleBlockParts`: "Add a title"; the pattern in its square, where
-Auto finds no linked step ("No step is linked to a crease pattern") or the
-step it comes from has none ("Step N has no crease pattern"); the model in
-its room, likewise ("No step has a picture yet", "Step N has no picture
-yet"). A part set to none is the author's and is not marked. The words sit
-in the corners the other part leaves free (the pattern's top right, the
-model's foot). Its boxes take the empty step's box's inks, the page being
-white in either theme; one placeholder component for both would move the
-Pages view's `.placeholder` block, which needs its browser proof, so it is
-left for a CSS move of its own. Strings are inline English only; the
-catalogs are extracted and translated with the pane's.
+`DiagramTitleBlockOverlay` is mounted by the Pages view over the first
+page: the block's outline, and a dashed box in each room of the block
+where what would print there prints nothing, from `missingTitleBlockParts`:
+"Add a title" in the title's column; in the pattern's square, the pattern
+where Auto finds no linked step ("No step is linked to a crease pattern")
+or the step it comes from has none ("Step N has no crease pattern"), and
+the model likewise where no pattern is drawn in front of which it would
+stand ("No step has a picture yet", "Step N has no picture yet"); in the
+model's box, the model where a pattern is drawn. Each reason is a line of
+its own, the step named by its number as the pages print it (the
+resolution's `number`, from `stepNumbers`). A part set to none is the
+author's and is not marked. No two boxes overlap, on any paper, share or
+grid (a test sweeps them). The words stand at the top of the square, which
+a model standing in it leaves free, and at the foot of the model's box.
+
+The outline and the boxes are the Pages view's own two marks, shared:
+`PageGuide` (the margin guide's dashed accent outline) and
+`PagePlaceholder` (an empty step's dashed box, `kind="picture"`, or a
+part's, `kind="part"`, untinted, its words at an end). Each has its own
+module; the margin guide's and the empty step's rules moved there out of
+`DiagramPagesView.module.css` in a commit of their own, their computed
+styles the same in the browser before and after
+(`artifacts/title-block/browser/computed-styles.txt`). (The first build
+copied their inks into an overlay module of its own.)
+
+Strings are inline English only, five keys under
+`panels:diagram.pages.titleBlock.*`, so `i18n:check` fails on this lane
+until the one i18n step (1e's last item) extracts, translates and stamps
+them with the pane's. That step runs before the PR into #436 is opened.
+
+*Review of 1c to 1e, the layout lane (2026-10-14).* What it changed, each
+in a commit of its own with a test that failed before it:
+- **A model with no pattern** stands in the pattern's square. It stood over
+  the whole art, which began at the model's box, 21 mm under the title's
+  column: a long title beside a wide model collided.
+- **The overlay's boxes never cross.** For an untitled diagram with nothing
+  linked, the model's box held the pattern's and crossed the title's, a
+  dashed edge through the words. It now draws rooms (above), and a test
+  sweeps every paper, share, grid and missing part for overlaps. It wears
+  `PageGuide` and `PagePlaceholder` (a CSS move proven in the browser) and
+  numbers steps through `stepNumbers`.
+- **The title stays in its row.** Its baseline stood a Latin capital under
+  the block's top, so ideographs and accented capitals rose into the top
+  margin (1.3 and 2.1 mm at 10 mm). The fonts now give each glyph's ink
+  from its outline (`FontMetrics.ink`, read from `glyf`), the setter a
+  line's (`TextSetter.ink`): the tallest letter stands on the block's top,
+  and the title is as large as its ink fits its 10 mm row, so a descender
+  under an accent keeps off the byline. And where a short block brings the
+  model's box up beside the title (A5 landscape, any page at 0.15), the
+  title's column ends 4 mm short of it.
+- **Only where it prints.** The block is resolved, and the byline's faces
+  listed for loading, only where the first page has the block: a Korean
+  byline in a diagram with the block off no longer loads its face, nor
+  holds back adoption when that face cannot be had.
+- **The ribbon** may reach into the block's foot by up to half its band
+  (5.9 mm on A5 landscape), as it reaches into the header's room on other
+  pages: kept as a look for Zach, since each way to clear it costs
+  something (a deeper gap shrinks page 1, which T-21 already finds costly;
+  a paper panel under the block cuts the band flat; a ceiling in the lane
+  changes the curve he chose). A test pins that the lane's line stays under
+  the block.
+- **Landscape** (T-21) and the crane under T-20 B are put to Zach; the 1c
+  steadiness item is unticked, as measured and not tuned.
+
+Checked in the browser, on a production build of this lane served to
+Playwright with no server (`artifacts/title-block/browser/`, before and
+after side by side under `artifacts/title-block/before-after/`): the
+crane and new diagrams with the block on, in the flow (First page Left and
+Right), a 3 × 3 grid, a one-row grid (no block, the tab on page 1), A4 and
+A5 landscape, untitled and unlinked, a model with no pattern, long,
+accented and Korean titles; the Pages view in light and dark in Chromium,
+and the crane, a new flow, a 3 × 3 grid and the untitled case in WebKit at
+iPad size (1024 × 1366); the PDF (home) and the one-sheet SVG exported from
+the app for each. No page error in any. The Korean title's PDF does not
+export here, before or after the review, because the Japanese and Korean
+faces are not available offline (`no glyph for U+C885`): the same refusal
+a reader without them gets, not this lane's.
+
+Not done here: `claude/diagram-title-block` is still to be fast-forwarded
+to this lane's head. The review's agent was isolated in its own worktree,
+so whoever runs the lanes moves the branch, then checks the Pages view on
+the branch's dev server (5332) once more.
 
 **1e. The Page pane and the overlay**
 - [ ] **Order:** 1c is merged into `claude/diagram-title-block` before the
